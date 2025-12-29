@@ -1,0 +1,1648 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Resin Timer</title>
+  <style>
+    :root{
+      --bg:#0b0f14;
+      --panel: rgba(18,26,35,.88);
+      --panel2: rgba(15,22,32,.76);
+      --muted:#9bb0c6;
+      --text:#eaf2ff;
+      --border:rgba(255,255,255,.10);
+      --border2:rgba(255,255,255,.14);
+      --warn:#ffb020;
+      --bad:#ff5c5c;
+      --ok:#5dff9f;
+      --shadow2: 0 8px 20px rgba(0,0,0,.25);
+      --radius2:18px;
+
+      /* Density tokens (default = Comfort) */
+      --font-base: 16px;
+      --font-small: 12px;
+      --font-tiny: 11px;
+      --pad-input-y: 12px;
+      --pad-input-x: 12px;
+      --pad-card: 12px;
+      --gap: 10px;
+      --row-pad: 10px;
+      --radius-input: 14px;
+      --radius-row: 16px;
+      --toggle-w: 52px;
+      --toggle-h: 30px;
+      --toggle-knob: 24px;
+      --badge-font: 12px;
+    }
+
+    /* Compact */
+    body[data-density="compact"]{
+      --font-base: 15px;
+      --font-small: 11px;
+      --font-tiny: 10px;
+      --pad-input-y: 10px;
+      --pad-input-x: 10px;
+      --pad-card: 10px;
+      --gap: 8px;
+      --row-pad: 8px;
+      --radius-input: 13px;
+      --radius-row: 15px;
+      --toggle-w: 48px;
+      --toggle-h: 28px;
+      --toggle-knob: 22px;
+      --badge-font: 11px;
+    }
+
+    /* Dense */
+    body[data-density="dense"]{
+      --font-base: 11px;
+      --font-small: 9px;
+      --font-tiny: 8px;
+      --pad-input-y: 6px;
+      --pad-input-x: 7px;
+      --pad-card: 5px;
+      --gap: 4px;
+      --row-pad: 4px;
+      --radius-input: 10px;
+      --radius-row: 10px;
+      --toggle-w: 46px;
+      --toggle-h: 26px;
+      --toggle-knob: 20px;
+      --badge-font: 11px;
+    }
+
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background:
+        radial-gradient(1200px 600px at 20% -10%, rgba(74,163,255,.16), transparent 60%),
+        radial-gradient(800px 500px at 90% 0%, rgba(93,255,159,.10), transparent 55%),
+        var(--bg);
+      color:var(--text);
+      font-size: var(--font-base);
+    }
+    header{
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      padding: 14px 14px 10px 14px;
+      background: rgba(11,15,20,.92);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+    }
+    header h1{ margin:0; font-size:16px; letter-spacing:.2px; }
+    header .sub{ margin-top:6px; color:var(--muted); font-size: var(--font-small); line-height:1.35; }
+
+    main{
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 14px;
+      padding-bottom: 120px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .card{
+      position: relative;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius2);
+      padding: var(--pad-card);
+      box-shadow: var(--shadow2);
+      overflow: hidden;
+    }
+    .card::before{
+      content:"";
+      position:absolute;
+      inset:-2px;
+      background: linear-gradient(135deg, rgba(74,163,255,.14), rgba(93,255,159,.10), transparent 60%);
+      opacity: .55;
+      pointer-events:none;
+      filter: blur(14px);
+    }
+    .card > *{ position: relative; }
+
+    .card h2{ margin:0 0 10px 0; font-size:15px; letter-spacing:.2px; }
+    .muted{ color: var(--muted); font-size: var(--font-small); }
+    .tiny{ font-size: var(--font-tiny); color: var(--muted); margin-top: 6px; line-height: 1.35; }
+    .mono{
+      font-variant-numeric: tabular-nums;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
+    label{ display:block; font-size: var(--font-small); color: var(--muted); margin-bottom: 6px; }
+    input, select, textarea{
+      width: 100%;
+      padding: var(--pad-input-y) var(--pad-input-x);
+      border-radius: var(--radius-input);
+      border: 1px solid var(--border2);
+      background: rgba(0,0,0,.20);
+      color: var(--text);
+      outline: none;
+      font-size: var(--font-base);
+      transition: box-shadow .12s ease, border-color .12s ease, transform .06s ease;
+    }
+    input:focus, select:focus, textarea:focus{
+      border-color: rgba(74,163,255,.80);
+      box-shadow: 0 0 0 3px rgba(74,163,255,.16);
+    }
+    textarea{ min-height: 120px; resize: vertical; }
+
+    .grid3{ display:grid; gap: var(--gap); grid-template-columns: 1fr; }
+    @media (min-width: 720px){ .grid3{ grid-template-columns: 1.2fr 1fr 1fr; } }
+
+    .grid2{ display:grid; gap: var(--gap); grid-template-columns: 1fr; }
+    @media (min-width: 720px){ .grid2{ grid-template-columns: 1fr 1fr; } }
+
+    .gridAuto{ display:grid; gap: var(--gap); grid-template-columns: 1fr; }
+    @media (min-width: 720px){ .gridAuto{ grid-template-columns: repeat(3, 1fr); } }
+
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.18);
+      color: var(--muted);
+      font-size: var(--font-small);
+      white-space: nowrap;
+    }
+    .pill.badge-warn{
+      border-color: rgba(255,176,32,.55);
+      background: rgba(255,176,32,.12);
+      color: rgba(255,255,255,.92);
+      font-weight: 650;
+    }
+
+    .status{
+      margin-top:10px;
+      border-left: 4px solid var(--warn);
+      background: rgba(255,176,32,.08);
+      border-radius: 14px;
+      padding: 10px 12px;
+      font-size: 13px;
+    }
+    .status.bad{ border-left-color: rgba(255,92,92,.75); background: rgba(255,92,92,.08); }
+    .status.ok{ border-left-color: #5dff9f; background: rgba(93,255,159,.07); }
+    .status ul{ margin: 6px 0 0 0; padding-left: 18px; }
+
+    details.block{
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      overflow: hidden;
+      background: var(--panel2);
+      box-shadow: 0 8px 18px rgba(0,0,0,.20);
+    }
+    details.block[open]{ background: rgba(15,22,32,.90); }
+    summary{
+      list-style:none;
+      cursor:pointer;
+      padding: 12px;
+      display:flex;
+      align-items:center;
+      justify-content: space-between;
+      gap: 12px;
+      user-select:none;
+    }
+    summary::-webkit-details-marker{ display:none; }
+    .sumLeft{ display:flex; align-items:center; gap:10px; min-width: 0; }
+    .chev{
+      width: 10px; height: 10px;
+      border-right: 2px solid rgba(255,255,255,.45);
+      border-bottom: 2px solid rgba(255,255,255,.45);
+      transform: rotate(-45deg);
+      transition: transform .15s ease;
+      flex: 0 0 auto;
+      margin-left: 2px;
+    }
+    details[open] .chev{ transform: rotate(45deg); }
+    .blockBody{ padding: 0 12px 12px 12px; display:grid; gap: var(--gap); }
+    .layerTitle{ font-weight: 900; font-size: 14px; white-space: nowrap; }
+    .layerMeta{
+      color: var(--muted);
+      font-size: var(--font-small);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .copyBtn{
+      width:auto;
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.06);
+      color: rgba(255,255,255,.92);
+      font-weight: 900;
+      font-size: var(--font-small);
+      cursor: pointer;
+      box-shadow: none;
+      flex: 0 0 auto;
+    }
+
+ .hopperRow{
+  display:grid;
+  gap: var(--gap);
+  padding: var(--row-pad);
+  border-radius: var(--radius-row);
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.07);
+
+  /* key change: H# column is AUTO, so it hugs the badge */
+  grid-template-columns: auto minmax(140px, 1fr) 88px 72px;
+  align-items: center;
+}
+
+/* small screens: let resin column breathe even more */
+@media (max-width: 520px){
+  .hopperRow{
+    grid-template-columns: auto minmax(120px, 1fr) 78px 66px;
+    gap: 6px; /* tighter */
+  }
+
+  /* optional: hide the word "Track" on phones to save space */
+  .trackLabel{ display:none; }
+}
+
+    .hopperBadge{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.18);
+      font-weight: 950;
+      font-size: var(--badge-font);
+      width: fit-content;
+    }
+    .resinNameInput{
+      padding: var(--pad-input-y) var(--pad-input-x);
+      border-radius: var(--radius-input);
+      font-size: var(--font-base);
+    }
+    .splitInput{
+      padding: var(--pad-input-y) var(--pad-input-x);
+      border-radius: var(--radius-input);
+      font-size: var(--font-base);
+      text-align: right;
+    }
+
+    .trackWrap{
+      display:flex;
+      align-items:center;
+      justify-content: flex-end;
+      gap: 10px;
+      user-select: none;
+    }
+    .trackLabel{ font-size: var(--font-small); color: var(--muted); white-space: nowrap; }
+
+    .toggle{
+      position: relative;
+      width: var(--toggle-w);
+      height: var(--toggle-h);
+      border-radius: 999px;
+      background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.16);
+      cursor: pointer;
+      flex: 0 0 auto;
+    }
+    .toggle::after{
+      content:"";
+      position:absolute;
+      top: 3px; left: 3px;
+      width: var(--toggle-knob);
+      height: var(--toggle-knob);
+      border-radius: 999px;
+      background: rgba(255,255,255,.85);
+      transition: transform .15s ease;
+    }
+    .toggle.on{
+      background: rgba(74,163,255,.22);
+      border-color: rgba(74,163,255,.45);
+    }
+    .toggle.on::after{
+      /* shift equals (track width - knob - 6px) */
+      transform: translateX(calc(var(--toggle-w) - var(--toggle-knob) - 6px));
+    }
+
+    /* Weights */
+    .weightsGrid{ display:grid; gap: var(--gap); grid-template-columns: 1fr; }
+    @media (min-width: 720px){ .weightsGrid{ grid-template-columns: 1fr 1fr; } }
+    .weightsLayer{
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 18px;
+      padding: 10px;
+      background: rgba(0,0,0,.16);
+      display:grid;
+      gap: var(--gap);
+    }
+    .weightsTitle{ display:flex; align-items:center; justify-content: space-between; gap: 10px; }
+    .weightsTitle strong{ font-size: 13px; }
+    .weightsRow{
+      display:grid;
+      gap: var(--gap);
+      grid-template-columns: 70px 1fr;
+      align-items:center;
+      padding: 8px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.07);
+      background: rgba(255,255,255,.03);
+    }
+    .weightsRow input{ text-align:right; }
+
+    /* Results */
+    .resultGrid{ display:grid; gap: var(--gap); }
+    .resultRow{
+      display:grid;
+      grid-template-columns: 1fr auto;
+      gap: var(--gap);
+      padding: var(--row-pad);
+      border-radius: var(--radius-row);
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.07);
+      transition: opacity .12s ease, filter .12s ease, transform .08s ease;
+    }
+    .resultRow:hover{ transform: translateY(-1px); }
+    .resultRow .meta{
+      color: var(--muted);
+      font-size: var(--font-small);
+      margin-top: 4px;
+      line-height: 1.35;
+    }
+    .resultRow.done{ opacity: 0.42; filter: grayscale(1); }
+    .checkWrap{
+      display:flex;
+      align-items:center;
+      gap: 8px;
+      justify-content:flex-end;
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: var(--font-small);
+      user-select: none;
+    }
+    .checkWrap input{ width: 18px; height: 18px; padding:0; margin:0; border-radius: 6px; }
+
+    /* Resin calc */
+    .calcTable{ margin-top: 10px; display:grid; gap: var(--gap); }
+    .calcRow{
+      display:flex;
+      align-items:center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: var(--row-pad);
+      border-radius: var(--radius-row);
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.07);
+    }
+    .calcLeft{ display:flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .calcName{ font-weight: 950; overflow:hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .calcMeta{ font-size: var(--font-small); color: var(--muted); }
+
+    .hr{ height:1px; background: rgba(255,255,255,.10); margin: 12px 0; }
+
+    .actionBar{
+      position: fixed;
+      left: 0; right: 0; bottom: 28px;
+      z-index: 40;
+      padding: 10px 12px 12px 12px;
+      background: rgba(11,15,20,.92);
+      border-top: 1px solid var(--border);
+      backdrop-filter: blur(10px);
+    }
+    .btnRow{
+      max-width: 980px;
+      margin: 0 auto;
+      display:grid;
+      grid-template-columns: 1.2fr 1fr 1fr;
+      gap: 10px;
+    }
+    button{
+      width: 100%;
+      padding: 12px 12px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.16);
+      background: linear-gradient(135deg, rgba(74,163,255,.22), rgba(74,163,255,.10));
+      color: var(--text);
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 10px 18px rgba(0,0,0,.18);
+      transition: transform .08s ease, filter .12s ease;
+      font-size: var(--font-base);
+    }
+    button:hover{ filter: brightness(1.06); transform: translateY(-1px); }
+    button:active{ transform: translateY(0px); }
+    button.secondary{ background: rgba(255,255,255,.06); box-shadow:none; }
+    button.danger{ background: rgba(255,92,92,.12); box-shadow:none; }
+
+    footer{
+      position: fixed;
+      left: 0; right: 0; bottom: 0;
+      z-index: 41;
+      padding: 6px 12px;
+      background: rgba(11,15,20,.92);
+      border-top: 1px solid rgba(255,255,255,.08);
+      backdrop-filter: blur(10px);
+      color: var(--muted);
+      font-size: var(--font-tiny);
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body data-density="comfort">
+<header>
+  <h1>Resin Timer</h1>
+  <div class="sub">
+    Only as accurate as your hopper weights. v01.33
+  </div>
+</header>
+
+<main>
+  <section class="card">
+    <h2>1) Line setup</h2>
+
+    <div class="grid3">
+      <div>
+        <label for="lineRate">Line rate (lb/hr)</label>
+        <input id="lineRate" type="text" inputmode="decimal" placeholder="0" value="0" />
+        <div class="tiny">Line speed * film width * gauge * .048</div>
+      </div>
+
+      <div>
+        <label for="lineType">Line type</label>
+        <select id="lineType">
+          <option value="1">1-layer</option>
+          <option value="3" selected>3-layer</option>
+          <option value="5">5-layer</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="pctMode">Percent mode</label>
+        <select id="pctMode">
+          <option value="100" selected>Inputs are % (sum to 100)</option>
+          <option value="1">Inputs are fractions (sum to 1.0)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid3" style="margin-top:10px">
+      <div>
+        <label for="changeoverTime">Changeover time (deadline)</label>
+        <input id="changeoverTime" type="time" />
+      </div>
+
+      <div>
+        <label for="densitySel">Density</label>
+        <select id="densitySel">
+          <option value="comfort" selected>Comfort</option>
+          <option value="compact">Compact</option>
+          <option value="dense">Dense</option>
+        </select>
+        <div class="tiny">Compact/Dense reduce fonts, padding, and row height.</div>
+      </div>
+
+      <div>
+        <div class="muted" style="margin-top:22px">Layer offsets + layer splits are below in “Layer setup”.</div>
+      </div>
+    </div>
+
+    <div id="statusBox"></div>
+  </section>
+
+  <details class="block card" id="layerSetupBlock" open>
+    <summary>
+      <div class="sumLeft">
+        <div class="chev"></div>
+        <div style="min-width:0">
+          <div class="layerTitle">2) Layer setup (splits + offsets)</div>
+          <div class="layerMeta">Set layer % and downcomer offsets</div>
+        </div>
+      </div>
+      <span class="pill">Layers</span>
+    </summary>
+    <div class="blockBody">
+      <div class="grid2">
+        <div>
+          <h2 style="margin:0 0 6px 0; font-size:14px;">Layer split</h2>
+          <div class="muted">Enter % of total line rate assigned to each layer.</div>
+          <div id="layerInputs" class="grid2" style="margin-top:10px"></div>
+        </div>
+
+        <div>
+          <h2 style="margin:0 0 6px 0; font-size:14px;">Downcomer offset (min)</h2>
+          <div class="muted">Adds time for downcomer run-down.</div>
+          <div id="offsetInputs" class="gridAuto" style="margin-top:10px"></div>
+          <div class="tiny"><strong>(blender weight) / layer output * 60</strong></div>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <details class="block card" id="weightsBlock">
+    <summary>
+      <div class="sumLeft">
+        <div class="chev"></div>
+        <div style="min-width:0">
+          <div class="layerTitle">3) Hopper weights</div>
+          <div class="layerMeta">Amount of stored resin in your receiver hopper. Determines accuracy of your timing. </div>
+        </div>
+      </div>
+      <span class="pill">Collapsed</span>
+    </summary>
+    <div class="blockBody">
+      <div class="muted">Enter current resin weight in each hopper. Results need weight + split + track toggle.</div>
+      <div id="weightsArea" class="weightsGrid"></div>
+    </div>
+  </details>
+
+  <section class="card" id="splitsSection">
+    <h2>4) Hopper splits (per layer)</h2>
+    <div class="muted">Row format: H# • Resin name • Split • Track. Only tracked hoppers appear in Results.</div>
+    <div id="splitsArea" style="margin-top:10px; display:grid; gap:10px;"></div>
+  </section>
+
+  <details class="block card" id="resultsBlock" open>
+    <summary>
+      <div class="sumLeft">
+        <div class="chev"></div>
+        <div style="min-width:0">
+          <div class="layerTitle">5) Results</div>
+          <div class="layerMeta">Only tracked hoppers • Sorted by upcoming time</div>
+        </div>
+      </div>
+      <span class="pill">Live</span>
+    </summary>
+    <div class="blockBody">
+      <div class="muted">Sorted by upcoming time (Start by if changeover is set; otherwise Time to empty).</div>
+      <div id="resultsArea" class="resultGrid" style="margin-top:10px"></div>
+    </div>
+  </details>
+
+  <section class="card" id="resinCalcSection">
+    <h2>6) Resin Calculator</h2>
+    <div class="muted">Enter total pounds used at end of job. Allocates across layers/hoppers using splits and totals by resin name.</div>
+
+    <div class="grid2" style="margin-top:10px">
+      <div>
+        <label for="prodResinLb">Production Resin (lb)</label>
+        <input id="prodResinLb" type="text" inputmode="decimal" placeholder="0" value="0" />
+      </div>
+      <div>
+        <label for="scrapResinLb">Scrap Resin (lb)</label>
+        <input id="scrapResinLb" type="text" inputmode="decimal" placeholder="0" value="0" />
+      </div>
+    </div>
+
+    <div id="resinCalcSummary" style="margin-top:10px"></div>
+    <div id="resinCalcResults" class="calcTable"></div>
+  </section>
+
+  <section class="card" id="recipesSection">
+    <h2>7) Recipes (named configs)</h2>
+    <div class="muted">Save/load typical setups. Export/import JSON for sharing.</div>
+
+    <div class="grid2" style="margin-top:10px">
+      <div>
+        <label for="configName">Config name</label>
+        <input id="configName" type="text" placeholder="e.g. Line 9 typical" />
+      </div>
+      <div>
+        <label for="savedConfigs">Saved configs</label>
+        <select id="savedConfigs"></select>
+      </div>
+    </div>
+
+    <div class="grid2" style="margin-top:10px">
+      <button id="saveConfigBtn">Save / Update config</button>
+      <button id="loadConfigBtn" class="secondary">Load selected config</button>
+    </div>
+
+    <div class="grid2" style="margin-top:10px">
+      <button id="renameConfigBtn" class="secondary">Rename selected</button>
+      <button id="deleteConfigBtn" class="danger">Delete selected</button>
+    </div>
+
+    <div class="hr"></div>
+
+    <div class="grid2">
+      <button id="exportConfigBtn" class="secondary">Export selected (copy JSON)</button>
+      <button id="importConfigBtn" class="secondary">Import JSON (paste)</button>
+    </div>
+
+    <div id="importArea" style="display:none; margin-top:10px;">
+      <label for="importJson">Paste JSON here</label>
+      <textarea id="importJson" placeholder='{"name":"Line 9 typical","payload":{...}}'></textarea>
+      <div class="grid2" style="margin-top:10px;">
+        <button id="doImportBtn">Import now</button>
+        <button id="cancelImportBtn" class="secondary">Cancel</button>
+      </div>
+      <div id="recipeStatus" style="margin-top:10px"></div>
+    </div>
+
+    <div id="recipeStatus" style="margin-top:10px"></div>
+  </section>
+</main>
+
+<div class="actionBar">
+  <div class="btnRow">
+    <button id="recalcBtn">Recalculate</button>
+    <button id="copyBtn" class="secondary">Copy CSV</button>
+    <button id="resetBtn" class="danger">Reset</button>
+  </div>
+</div>
+
+<footer id="footerVer"></footer>
+
+<script>
+  const APP_VERSION = "0.08-density-singleline-splits";
+
+  const LS_SESSION_KEY = "resinTimer.session.v0.08";
+  const LS_CONFIGS_KEY = "resinTimer.configs.v0.08";
+
+  const HOPPERS_PER_LAYER = 6;
+
+  const state = {
+    lineRate: 0,
+    lineType: 3,
+    pctModeDivisor: 100,
+    changeoverTime: "",
+    offsets: {},
+    layers: [],
+    prodResinLb: 0,
+    scrapResinLb: 0,
+    density: "comfort"
+  };
+
+  const $ = (id) => document.getElementById(id);
+
+  function clampNum(x){
+    if (x === null || x === undefined) return 0;
+    const s = String(x).trim();
+    if (s === "") return 0;
+    const cleaned = s.replace(/,/g, "");
+    const n = Number(cleaned);
+    return Number.isFinite(n) ? n : 0;
+  }
+  function normName(s){ return String(s || "").trim().replace(/\s+/g, " "); }
+  function keyName(s){ return normName(s).toUpperCase(); }
+  function sum(arr){ return arr.reduce((a,b)=>a+b,0); }
+  function fmtNum(n, d=2){ return Number.isFinite(n) ? n.toFixed(d) : "—"; }
+  function hoursToHHMM(h){
+    if (!Number.isFinite(h) || h < 0) return "—";
+    const total = Math.floor(h*60 + 0.5);
+    const hh = Math.floor(total/60);
+    const mm = total % 60;
+    return `${hh}h ${String(mm).padStart(2,"0")}m`;
+  }
+  function minutesToHHMM(mins){
+    if (!Number.isFinite(mins) || mins < 0) return "—";
+    const total = Math.floor(mins + 0.5);
+    const hh = Math.floor(total/60);
+    const mm = total % 60;
+    return `${hh}h ${String(mm).padStart(2,"0")}m`;
+  }
+
+  function parseChangeoverDate(hhmm){
+    if (!hhmm) return null;
+    const m = /^(\d{2}):(\d{2})$/.exec(hhmm);
+    if (!m) return null;
+    const hh = Number(m[1]), mm = Number(m[2]);
+    const now = new Date();
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm, 0, 0);
+    if (d.getTime() < now.getTime() - 60*1000) d.setDate(d.getDate()+1);
+    return d;
+  }
+  function fmtTime(dateObj, baseDateObj){
+    if (!dateObj) return "—";
+    const t = dateObj.toLocaleTimeString([], {hour:"numeric", minute:"2-digit"});
+    if (!baseDateObj) return t;
+    const sameDay =
+      dateObj.getFullYear()===baseDateObj.getFullYear() &&
+      dateObj.getMonth()===baseDateObj.getMonth() &&
+      dateObj.getDate()===baseDateObj.getDate();
+    return sameDay ? t : `${t} (+1d)`;
+  }
+
+  function setStatus(html){ $("statusBox").innerHTML = html || ""; }
+  function statusMessage(messages){
+    if (!messages.length) return "";
+    const hasBad = messages.some(m=>m.type==="bad");
+    const hasWarn = messages.some(m=>m.type==="warn");
+    const cls = hasBad ? "status bad" : (hasWarn ? "status" : "status ok");
+    const title = hasBad ? "Fix before trusting results:" : (hasWarn ? "Heads up:" : "Looks good:");
+    const items = messages.map(m=>`<li>${m.text}</li>`).join("");
+    return `<div class="${cls}"><div style="font-weight:950;margin-bottom:6px">${title}</div><ul>${items}</ul></div>`;
+  }
+
+  function getLayerNamesForType(lineType){
+    if (lineType === 1) return ["A"];
+    if (lineType === 5) return ["A","B","C","D","E"];
+    return ["A","B","C"];
+  }
+  function getLayerCopyRules(lineType){
+    if (lineType === 3) return { "C": "A" };
+    if (lineType === 5) return { "D": "B", "E": "A" };
+    return {};
+  }
+
+  function ensureLayers(){
+    const names = getLayerNamesForType(state.lineType);
+    const prevByName = {};
+    (state.layers || []).forEach(L => { if (L?.name) prevByName[L.name] = L; });
+
+    state.layers = names.map(name => {
+      const p = prevByName[name];
+      if (p){
+        return {
+          name,
+          layerPct: clampNum(p.layerPct),
+          hoppers: Array.from({length:HOPPERS_PER_LAYER}, (_,i)=>{
+            const h = p.hoppers?.[i] || {};
+            return {
+              pct: clampNum(h.pct),
+              weight: clampNum(h.weight),
+              resinName: normName(h.resinName || ""),
+              track: !!h.track,
+              pumpOff: !!h.pumpOff
+            };
+          })
+        };
+      }
+      return {
+        name,
+        layerPct: 0,
+        hoppers: Array.from({length:HOPPERS_PER_LAYER}, ()=>({
+          pct:0, weight:0, resinName:"", track:false, pumpOff:false
+        }))
+      };
+    });
+
+    const nextOffsets = {};
+    names.forEach(n => nextOffsets[n] = clampNum(state.offsets?.[n] ?? 0));
+    state.offsets = nextOffsets;
+  }
+
+  function snapshotPayload(){
+    return {
+      version: APP_VERSION,
+      lineRate: state.lineRate,
+      lineType: state.lineType,
+      pctModeDivisor: state.pctModeDivisor,
+      changeoverTime: state.changeoverTime,
+      offsets: state.offsets,
+      layers: state.layers,
+      prodResinLb: state.prodResinLb,
+      scrapResinLb: state.scrapResinLb,
+      density: state.density,
+      layerSetupOpen: $("layerSetupBlock")?.open ?? true,
+      weightsOpen: $("weightsBlock")?.open ?? false,
+      resultsOpen: $("resultsBlock")?.open ?? true
+    };
+  }
+
+  function applyDensity(d){
+    state.density = (d === "compact" || d === "dense") ? d : "comfort";
+    document.body.setAttribute("data-density", state.density);
+    $("densitySel").value = state.density;
+  }
+
+  function applyPayload(payload, {rebuildUI=true} = {}){
+    if (!payload || typeof payload !== "object") return;
+
+    state.lineRate = clampNum(payload.lineRate);
+    state.lineType = [1,3,5].includes(Number(payload.lineType)) ? Number(payload.lineType) : 3;
+    state.pctModeDivisor = Number(payload.pctModeDivisor) === 1 ? 1 : 100;
+    state.changeoverTime = payload.changeoverTime || "";
+    state.offsets = payload.offsets || {};
+    state.prodResinLb = clampNum(payload.prodResinLb);
+    state.scrapResinLb = clampNum(payload.scrapResinLb);
+
+    applyDensity(payload.density || "comfort");
+
+    const names = getLayerNamesForType(state.lineType);
+    const oldLayers = Array.isArray(payload.layers) ? payload.layers : [];
+    state.layers = names.map(name => {
+      const found = oldLayers.find(x => x?.name === name) || {};
+      const layerPct = clampNum(found.layerPct);
+      const hoppers = Array.from({length:HOPPERS_PER_LAYER}, (_,i)=>{
+        const fh = found?.hoppers?.[i] || {};
+        return {
+          pct: clampNum(fh.pct),
+          weight: clampNum(fh.weight),
+          resinName: normName(fh.resinName || ""),
+          track: !!fh.track,
+          pumpOff: !!fh.pumpOff
+        };
+      });
+      return { name, layerPct, hoppers };
+    });
+
+    const nextOffsets = {};
+    names.forEach(n => nextOffsets[n] = clampNum(state.offsets?.[n] ?? 0));
+    state.offsets = nextOffsets;
+
+    $("lineRate").value = String(state.lineRate);
+    $("lineType").value = String(state.lineType);
+    $("pctMode").value = String(state.pctModeDivisor);
+    $("changeoverTime").value = state.changeoverTime;
+
+    $("prodResinLb").value = String(state.prodResinLb);
+    $("scrapResinLb").value = String(state.scrapResinLb);
+
+    if (rebuildUI) rebuildUIFromState(payload);
+    else validateAndCompute();
+  }
+
+  function saveSession(){
+    try{ localStorage.setItem(LS_SESSION_KEY, JSON.stringify(snapshotPayload())); }catch(e){}
+  }
+  function loadSession(){
+    try{
+      const raw = localStorage.getItem(LS_SESSION_KEY);
+      if (!raw) return false;
+      applyPayload(JSON.parse(raw), {rebuildUI:true});
+      return true;
+    }catch(e){ return false; }
+  }
+  function clearSession(){
+    try{ localStorage.removeItem(LS_SESSION_KEY); }catch(e){}
+  }
+
+  // Recipes (same as before)
+  function readConfigs(){
+    try{
+      const raw = localStorage.getItem(LS_CONFIGS_KEY);
+      if (!raw) return {};
+      const obj = JSON.parse(raw);
+      return (obj && typeof obj === "object") ? obj : {};
+    }catch(e){ return {}; }
+  }
+  function writeConfigs(obj){
+    try{ localStorage.setItem(LS_CONFIGS_KEY, JSON.stringify(obj)); }catch(e){}
+  }
+  function recipeStatus(msg, type="ok"){
+    const cls = type==="bad" ? "status bad" : (type==="warn" ? "status" : "status ok");
+    $("recipeStatus").innerHTML = `<div class="${cls}"><div style="font-weight:950">${msg}</div></div>`;
+    setTimeout(()=>{ $("recipeStatus").innerHTML = ""; }, 4500);
+  }
+  function refreshConfigDropdown(selectName){
+    const configs = readConfigs();
+    const sel = $("savedConfigs");
+    const names = Object.keys(configs).sort((a,b)=>a.localeCompare(b));
+    sel.innerHTML = "";
+    if (names.length === 0){
+      const o = document.createElement("option");
+      o.value = "";
+      o.textContent = "— none saved —";
+      sel.appendChild(o);
+      return;
+    }
+    names.forEach(n=>{
+      const o = document.createElement("option");
+      o.value = n;
+      o.textContent = n;
+      sel.appendChild(o);
+    });
+    if (selectName && names.includes(selectName)) sel.value = selectName;
+  }
+  function normalizeConfigName(name){ return (name || "").trim().replace(/\s+/g, " "); }
+  function saveNamedConfig(){
+    const name = normalizeConfigName($("configName").value);
+    if (!name){ recipeStatus("Please enter a config name first.", "warn"); return; }
+    const configs = readConfigs();
+    configs[name] = snapshotPayload();
+    writeConfigs(configs);
+    refreshConfigDropdown(name);
+    recipeStatus(`Saved config: "${name}"`, "ok");
+  }
+  function loadSelectedConfig(){
+    const sel = $("savedConfigs").value;
+    if (!sel){ recipeStatus("No config selected.", "warn"); return; }
+    const configs = readConfigs();
+    const payload = configs[sel];
+    if (!payload){ recipeStatus("Selected config not found.", "bad"); return; }
+    applyPayload(payload, {rebuildUI:true});
+    $("configName").value = sel;
+    recipeStatus(`Loaded config: "${sel}"`, "ok");
+    saveSession();
+  }
+  function renameSelectedConfig(){
+    const oldName = $("savedConfigs").value;
+    if (!oldName){ recipeStatus("No config selected to rename.", "warn"); return; }
+    const newName = normalizeConfigName($("configName").value);
+    if (!newName){ recipeStatus("Enter the new name in the Config name field.", "warn"); return; }
+    const configs = readConfigs();
+    if (!configs[oldName]){ recipeStatus("Selected config not found.", "bad"); return; }
+    if (oldName !== newName && configs[newName]){
+      recipeStatus("A config with that name already exists.", "warn");
+      return;
+    }
+    configs[newName] = configs[oldName];
+    delete configs[oldName];
+    writeConfigs(configs);
+    refreshConfigDropdown(newName);
+    recipeStatus(`Renamed "${oldName}" → "${newName}"`, "ok");
+  }
+  function deleteSelectedConfig(){
+    const name = $("savedConfigs").value;
+    if (!name){ recipeStatus("No config selected to delete.", "warn"); return; }
+    if (!confirm(`Delete config "${name}"?`)) return;
+    const configs = readConfigs();
+    delete configs[name];
+    writeConfigs(configs);
+    refreshConfigDropdown();
+    recipeStatus(`Deleted "${name}"`, "ok");
+  }
+
+  async function copyTextToClipboard(text){
+    try{ await navigator.clipboard.writeText(text); return true; }
+    catch(e){
+      try{
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        ta.remove();
+        return true;
+      }catch(e2){ return false; }
+    }
+  }
+
+  async function exportSelectedConfig(){
+    const name = $("savedConfigs").value || normalizeConfigName($("configName").value);
+    if (!name){ recipeStatus("Select a config (or type a name) to export.", "warn"); return; }
+    const configs = readConfigs();
+    const payload = configs[name] || snapshotPayload();
+    const wrapper = { name, exportedAt: new Date().toISOString(), version: APP_VERSION, payload };
+    const ok = await copyTextToClipboard(JSON.stringify(wrapper, null, 2));
+    recipeStatus(ok ? `Copied JSON for "${name}" to clipboard.` : "Could not copy to clipboard.", ok ? "ok" : "warn");
+  }
+
+  function showImportUI(show){
+    $("importArea").style.display = show ? "block" : "none";
+    if (show) $("importJson").focus();
+  }
+  function doImport(){
+    const raw = $("importJson").value.trim();
+    if (!raw){ recipeStatus("Paste JSON first.", "warn"); return; }
+    let obj;
+    try{ obj = JSON.parse(raw); }
+    catch(e){ recipeStatus("Invalid JSON.", "bad"); return; }
+
+    let name = normalizeConfigName(obj?.name);
+    let payload = obj?.payload && typeof obj.payload === "object" ? obj.payload : obj;
+
+    if (!name) name = normalizeConfigName(prompt("Name for this imported config:", "Imported config") || "");
+    if (!name){ recipeStatus("Import canceled (no name).", "warn"); return; }
+
+    const configs = readConfigs();
+    configs[name] = payload;
+    writeConfigs(configs);
+    refreshConfigDropdown(name);
+    $("configName").value = name;
+
+    const loadNow = confirm(`Imported "${name}". Load it now? (This will overwrite current inputs)`);
+    if (loadNow){
+      applyPayload(payload, {rebuildUI:true});
+      saveSession();
+    }
+
+    showImportUI(false);
+    $("importJson").value = "";
+    recipeStatus(`Imported config: "${name}"`, "ok");
+  }
+
+  function renderLayerInputs(){
+    const wrap = $("layerInputs");
+    wrap.innerHTML = "";
+    const div = state.pctModeDivisor;
+    state.layers.forEach((L,i)=>{
+      const id = `layerPct_${i}`;
+      const box = document.createElement("div");
+      box.innerHTML = `
+        <label for="${id}">Layer ${L.name} (${div===100?"%":"fraction"})</label>
+        <input id="${id}" type="text" inputmode="decimal" placeholder="0" value="${L.layerPct}" />
+      `;
+      wrap.appendChild(box);
+      box.querySelector("input").addEventListener("input",(e)=>{
+        L.layerPct = clampNum(e.target.value);
+        validateAndCompute();
+        saveSession();
+      });
+    });
+  }
+  function renderOffsetInputs(){
+    const wrap = $("offsetInputs");
+    wrap.innerHTML = "";
+    state.layers.forEach(L=>{
+      const id = `offset_${L.name}`;
+      const box = document.createElement("div");
+      box.innerHTML = `
+        <label for="${id}">Layer ${L.name} offset</label>
+        <input id="${id}" type="text" inputmode="numeric" placeholder="0" value="${clampNum(state.offsets[L.name] ?? 0)}" />
+      `;
+      wrap.appendChild(box);
+      box.querySelector("input").addEventListener("input",(e)=>{
+        state.offsets[L.name] = clampNum(e.target.value);
+        validateAndCompute();
+        saveSession();
+      });
+    });
+  }
+
+  function weightId(layerName, hi){ return `w_${layerName}_${hi}`; }
+  function renderWeightsArea(){
+    const area = $("weightsArea");
+    area.innerHTML = "";
+    state.layers.forEach(L=>{
+      const box = document.createElement("div");
+      box.className = "weightsLayer";
+      box.innerHTML = `
+        <div class="weightsTitle">
+          <strong>Layer ${L.name}</strong>
+          <span class="pill">Weights</span>
+        </div>
+        <div id="wg_${L.name}" style="display:grid; gap: var(--gap);"></div>
+      `;
+      area.appendChild(box);
+
+      const grid = box.querySelector(`#wg_${L.name}`);
+      for (let hi=0; hi<HOPPERS_PER_LAYER; hi++){
+        const id = weightId(L.name, hi);
+        const row = document.createElement("div");
+        row.className = "weightsRow";
+        row.innerHTML = `
+          <div class="mono" style="font-weight:950;">${L.name}${hi+1}</div>
+          <input id="${id}" type="text" inputmode="decimal" placeholder="0" value="${clampNum(L.hoppers[hi].weight)}" />
+        `;
+        grid.appendChild(row);
+
+        row.querySelector("input").addEventListener("input",(e)=>{
+          L.hoppers[hi].weight = clampNum(e.target.value);
+          validateAndCompute();
+          saveSession();
+        });
+      }
+    });
+  }
+
+  function renderSplitsArea(){
+    const area = $("splitsArea");
+    area.innerHTML = "";
+
+    const div = state.pctModeDivisor;
+    const copyRules = getLayerCopyRules(state.lineType);
+
+    function copyLayer(fromName, toName){
+      const from = state.layers.find(L=>L.name===fromName);
+      const to = state.layers.find(L=>L.name===toName);
+      if (!from || !to) return;
+      for (let i=0;i<HOPPERS_PER_LAYER;i++){
+        to.hoppers[i].pct = clampNum(from.hoppers[i].pct);
+        to.hoppers[i].resinName = normName(from.hoppers[i].resinName);
+        to.hoppers[i].track = !!from.hoppers[i].track;
+      }
+    }
+
+    state.layers.forEach((L, li)=>{
+      const det = document.createElement("details");
+      det.className = "block";
+      det.open = (li===0);
+
+      const layerPctText = `${fmtNum(L.layerPct,2)}${div===100?"%":""}`;
+      const off = clampNum(state.offsets?.[L.name] ?? 0);
+
+      const copyFrom = copyRules[L.name];
+      const copyBtnHTML = copyFrom
+        ? `<button type="button" class="copyBtn" data-copyfrom="${copyFrom}" data-copyto="${L.name}">Copy ${copyFrom} → ${L.name}</button>`
+        : "";
+
+      det.innerHTML = `
+        <summary>
+          <div class="sumLeft">
+            <div class="chev"></div>
+            <div style="min-width:0">
+              <div class="layerTitle">Layer ${L.name}</div>
+              <div class="layerMeta">Layer split: <span class="mono">${layerPctText}</span> • Offset: <span class="mono">${fmtNum(off,0)}</span> min</div>
+            </div>
+          </div>
+          <div style="display:flex; gap:8px; align-items:center;">
+            ${copyBtnHTML}
+            <span class="pill">Splits</span>
+          </div>
+        </summary>
+        <div class="blockBody">
+          <div class="hopperList" id="list_${L.name}"></div>
+        </div>
+      `;
+      area.appendChild(det);
+
+      const summary = det.querySelector("summary");
+      summary.addEventListener("click",(e)=>{ e.preventDefault(); det.open = !det.open; });
+
+      const copyBtn = det.querySelector(".copyBtn");
+      if (copyBtn){
+        copyBtn.addEventListener("click",(e)=>{
+          e.preventDefault(); e.stopPropagation();
+          const from = copyBtn.getAttribute("data-copyfrom");
+          const to = copyBtn.getAttribute("data-copyto");
+          const ok = confirm(`Copy split + resin name + track toggles from Layer ${from} → Layer ${to}?`);
+          if (!ok) return;
+          copyLayer(from, to);
+          renderSplitsArea();
+          validateAndCompute();
+          saveSession();
+        });
+        copyBtn.addEventListener("keydown",(e)=>e.stopPropagation());
+      }
+
+      const list = det.querySelector(`#list_${L.name}`);
+
+      for (let hi=0; hi<HOPPERS_PER_LAYER; hi++){
+        const resinFieldId = `r_${L.name}_${hi}`;
+        const pctFieldId = `p_${L.name}_${hi}`;
+        const toggleId = `t_${L.name}_${hi}`;
+
+        const row = document.createElement("div");
+        row.className = "hopperRow";
+        row.innerHTML = `
+          <div class="hopperBadge mono">${L.name}${hi+1}</div>
+          <input id="${resinFieldId}" class="resinNameInput" type="text" placeholder="Resin name" value="${(L.hoppers[hi].resinName || "").replace(/"/g,'&quot;')}" />
+          <input id="${pctFieldId}" class="splitInput" type="text" inputmode="decimal" placeholder="0" value="${clampNum(L.hoppers[hi].pct)}" />
+          <div class="trackWrap">
+            <span class="trackLabel">Track</span>
+            <div id="${toggleId}" class="toggle ${L.hoppers[hi].track ? "on":""}" role="switch" aria-checked="${L.hoppers[hi].track ? "true":"false"}" tabindex="0"></div>
+          </div>
+        `;
+        list.appendChild(row);
+
+        const resinEl = row.querySelector(`#${resinFieldId}`);
+        const pctEl = row.querySelector(`#${pctFieldId}`);
+        const togEl = row.querySelector(`#${toggleId}`);
+
+        resinEl.addEventListener("input",(e)=>{
+          L.hoppers[hi].resinName = normName(e.target.value);
+          renderResinCalculator();
+          saveSession();
+        });
+
+        pctEl.addEventListener("input",(e)=>{
+          L.hoppers[hi].pct = clampNum(e.target.value);
+          validateAndCompute();
+          saveSession();
+        });
+
+        function toggleTrack(){
+          L.hoppers[hi].track = !L.hoppers[hi].track;
+          togEl.classList.toggle("on", L.hoppers[hi].track);
+          togEl.setAttribute("aria-checked", L.hoppers[hi].track ? "true" : "false");
+          validateAndCompute();
+          saveSession();
+        }
+        togEl.addEventListener("click",(e)=>{ e.preventDefault(); toggleTrack(); });
+        togEl.addEventListener("keydown",(e)=>{
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleTrack(); }
+        });
+      }
+    });
+  }
+
+  function renderResinCalculator(){
+    const prod = clampNum(state.prodResinLb);
+    const scrap = clampNum(state.scrapResinLb);
+    const total = prod + scrap;
+
+    const div = state.pctModeDivisor;
+    const totals = new Map();
+
+    state.layers.forEach((L)=>{
+      const layerFrac = clampNum(L.layerPct) / div;
+      L.hoppers.forEach((h)=>{
+        const name = normName(h.resinName);
+        if (!name) return;
+        const hopperFrac = clampNum(h.pct) / div;
+        if (hopperFrac <= 0) return;
+        const lbs = total * layerFrac * hopperFrac;
+        if (!Number.isFinite(lbs) || lbs <= 0) return;
+
+        const k = keyName(name);
+        if (!totals.has(k)) totals.set(k, { displayName: name, lbs: 0 });
+        totals.get(k).lbs += lbs;
+      });
+    });
+
+    $("resinCalcSummary").innerHTML = `
+      <div class="status ok">
+        <div style="font-weight:950;margin-bottom:6px">Resin totals</div>
+        <div class="muted">
+          Production: <span class="mono">${fmtNum(prod,2)}</span> lb • Scrap: <span class="mono">${fmtNum(scrap,2)}</span> lb •
+          Total: <span class="mono">${fmtNum(total,2)}</span> lb
+        </div>
+      </div>
+    `;
+
+    const out = $("resinCalcResults");
+    out.innerHTML = "";
+    if (total <= 0){
+      out.innerHTML = `<div class="muted">Enter Production and/or Scrap pounds to calculate resin totals.</div>`;
+      return;
+    }
+    if (totals.size === 0){
+      out.innerHTML = `<div class="muted">Add resin names + splits to see totals here.</div>`;
+      return;
+    }
+    const rows = Array.from(totals.values()).sort((a,b)=>b.lbs - a.lbs);
+    rows.forEach(r=>{
+      const row = document.createElement("div");
+      row.className = "calcRow";
+      row.innerHTML = `
+        <div class="calcLeft">
+          <div class="calcName mono">${r.displayName}</div>
+          <div class="calcMeta">Allocated from splits</div>
+        </div>
+        <div class="mono" style="font-weight:950">${fmtNum(r.lbs,2)} lb</div>
+      `;
+      out.appendChild(row);
+    });
+  }
+
+  function validateAndCompute(){
+    const msgs = [];
+    const div = state.pctModeDivisor;
+
+    if (state.lineRate <= 0) msgs.push({type:"warn", text:"Line rate is 0 — rates/times will be 0."});
+
+    const layerFracs = state.layers.map(L => clampNum(L.layerPct)/div);
+    const layerSum = sum(layerFracs);
+    if (state.layers.length && Math.abs(layerSum - 1) > 0.0001){
+      msgs.push({type:"warn", text:`Layer split sums to ${div===100 ? fmtNum(layerSum*100,2)+"%" : fmtNum(layerSum,4)} (expected ${div===100?"100%":"1.0"}).`});
+    }
+
+    const tracked = [];
+    state.layers.forEach(L=>L.hoppers.forEach((h,hi)=>{ if (h.track) tracked.push({L,h,hi}); }));
+    if (tracked.length === 0){
+      msgs.push({type:"warn", text:"No hoppers are tracked. Turn on Track for the hopper(s) you want in Results."});
+    } else {
+      const missingW = tracked.filter(x=>clampNum(x.h.weight) <= 0).length;
+      if (missingW > 0){
+        msgs.push({type:"warn", text:`${missingW} tracked hopper(s) are missing weight. Open “Hopper weights” to enter them.`});
+      }
+    }
+
+    setStatus(statusMessage(msgs));
+
+    const changeoverDate = parseChangeoverDate(state.changeoverTime);
+    const flat = [];
+
+    state.layers.forEach((L)=>{
+      const layerRate = state.lineRate * (clampNum(L.layerPct)/div);
+      const offsetMin = clampNum(state.offsets?.[L.name] ?? 0);
+
+      L.hoppers.forEach((h, hi)=>{
+        if (!h.track) return;
+
+        const hopperRate = layerRate * (clampNum(h.pct)/div);
+        const weight = clampNum(h.weight);
+
+        let minutesToEmpty = null;
+        let totalMinutes = null;
+        let startByDate = null;
+
+        let timeText="—", startByText="—", totalRundownText="—";
+
+        if (hopperRate > 0 && weight > 0){
+          minutesToEmpty = (weight / hopperRate) * 60;
+          totalMinutes = minutesToEmpty + offsetMin;
+
+          timeText = hoursToHHMM(minutesToEmpty/60);
+          totalRundownText = minutesToHHMM(totalMinutes);
+
+          if (changeoverDate){
+            startByDate = new Date(changeoverDate.getTime() - totalMinutes*60*1000);
+            startByText = fmtTime(startByDate, changeoverDate);
+          }
+        } else if (hopperRate <= 0 && clampNum(h.pct) > 0){
+          timeText = "Not feeding";
+          startByText = "Not feeding";
+        } else {
+          timeText = "Missing data";
+        }
+
+        flat.push({
+          layer: L.name,
+          hopperLabel: `${L.name}${hi+1}`,
+          resinName: normName(h.resinName),
+          weight,
+          rate: hopperRate,
+          timeText,
+          startByText,
+          totalRundownText,
+          minutesToEmpty,
+          totalMinutes,
+          startByDate,
+          offsetMin,
+          pumpOff: !!h.pumpOff,
+          _ref: { h }
+        });
+      });
+    });
+
+    renderResultsFlat(flat, changeoverDate);
+    renderResinCalculator();
+    saveSession();
+  }
+
+  function renderResultsFlat(flat, changeoverDate){
+    const area = $("resultsArea");
+    area.innerHTML = "";
+
+    if (flat.length === 0){
+      area.innerHTML = `<div class="muted">No tracked hoppers yet. Turn on Track in “Hopper splits”.</div>`;
+      return;
+    }
+
+    flat.sort((a,b)=>{
+      if (changeoverDate){
+        const ta = a.startByDate ? a.startByDate.getTime() : Infinity;
+        const tb = b.startByDate ? b.startByDate.getTime() : Infinity;
+        if (ta !== tb) return ta - tb;
+      } else {
+        const ta = (typeof a.minutesToEmpty === "number" && isFinite(a.minutesToEmpty)) ? a.minutesToEmpty : Infinity;
+        const tb = (typeof b.minutesToEmpty === "number" && isFinite(b.minutesToEmpty)) ? b.minutesToEmpty : Infinity;
+        if (ta !== tb) return ta - tb;
+      }
+      if (a.layer !== b.layer) return a.layer.localeCompare(b.layer);
+      return a.hopperLabel.localeCompare(b.hopperLabel);
+    });
+
+    flat.forEach((h)=>{
+      const resinChip = h.resinName ? `<span class="pill mono">${h.resinName}</span>` : `<span class="pill badge-warn">No resin name</span>`;
+      const weightChip = h.weight > 0 ? `<span class="muted mono">${fmtNum(h.weight,2)} lb</span>` : `<span class="pill badge-warn">Missing weight</span>`;
+      const splitWarn = (h.rate <= 0 && h.weight > 0) ? `<span class="pill badge-warn">Split?</span>` : "";
+
+      const row = document.createElement("div");
+      row.className = "resultRow" + (h.pumpOff ? " done" : "");
+      row.innerHTML = `
+        <div>
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <span class="pill mono">Layer ${h.layer}</span>
+            <span class="pill mono">${h.hopperLabel}</span>
+            ${resinChip}
+            ${weightChip}
+            ${splitWarn}
+          </div>
+
+          <div class="meta">
+            Rate: <span class="mono">${fmtNum(h.rate,2)}</span> lb/hr • Offset: <span class="mono">${fmtNum(h.offsetMin,0)}</span> min<br/>
+            Time to empty: <span class="mono">${h.timeText}</span> • Total: <span class="mono">${h.totalRundownText}</span>
+          </div>
+        </div>
+
+        <div style="text-align:right; white-space:nowrap; min-width: 120px;">
+          <div class="muted" style="font-size:var(--font-small)">${changeoverDate ? "Start by" : "Soonest"}</div>
+          <div style="font-weight:950" class="mono">${changeoverDate ? h.startByText : h.timeText}</div>
+
+          <label class="checkWrap" title="Check when the hopper pump is turned off">
+            <input type="checkbox" ${h.pumpOff ? "checked" : ""}>
+            Pump off
+          </label>
+        </div>
+      `;
+
+      row.querySelector('input[type="checkbox"]').addEventListener("change",(e)=>{
+        h._ref.h.pumpOff = !!e.target.checked;
+        saveSession();
+        validateAndCompute();
+      });
+
+      area.appendChild(row);
+    });
+  }
+
+  async function copyResultsCSV(){
+    validateAndCompute();
+    const changeoverDate = parseChangeoverDate(state.changeoverTime);
+
+    const div = state.pctModeDivisor;
+    const flat = [];
+    state.layers.forEach(L=>{
+      const layerRate = state.lineRate * (clampNum(L.layerPct)/div);
+      const offsetMin = clampNum(state.offsets?.[L.name] ?? 0);
+      L.hoppers.forEach((h, hi)=>{
+        if (!h.track) return;
+        const hopperRate = layerRate * (clampNum(h.pct)/div);
+        const weight = clampNum(h.weight);
+
+        let minutesToEmpty=null, totalMinutes=null, startByDate=null;
+        let timeText="—", startByText="—", totalRundownText="—";
+        if (hopperRate > 0 && weight > 0){
+          minutesToEmpty = (weight / hopperRate) * 60;
+          totalMinutes = minutesToEmpty + offsetMin;
+          timeText = hoursToHHMM(minutesToEmpty/60);
+          totalRundownText = minutesToHHMM(totalMinutes);
+          if (changeoverDate){
+            startByDate = new Date(changeoverDate.getTime() - totalMinutes*60*1000);
+            startByText = fmtTime(startByDate, changeoverDate);
+          }
+        } else if (hopperRate <= 0 && clampNum(h.pct) > 0){
+          timeText = "Not feeding";
+          startByText = "Not feeding";
+        } else {
+          timeText = "Missing data";
+        }
+
+        flat.push({
+          layer: L.name,
+          hopper: `${L.name}${hi+1}`,
+          resin: normName(h.resinName).replace(/"/g,'""'),
+          split: clampNum(h.pct),
+          weight,
+          pumpOff: !!h.pumpOff,
+          sortKey: changeoverDate ? (startByDate ? startByDate.getTime() : Infinity) : (minutesToEmpty ?? Infinity),
+          showMain: changeoverDate ? startByText : timeText,
+          totalRundownText
+        });
+      });
+    });
+    flat.sort((a,b)=>a.sortKey - b.sortKey);
+
+    const header = [
+      "Version","Layer","Hopper","ResinName","Split",
+      "Weight_lb","Pump_off",
+      changeoverDate ? "Start_by" : "Time_to_empty",
+      "Total_with_offset"
+    ];
+    const lines = [`# Resin Timer v${APP_VERSION}`, header.join(",")];
+
+    flat.forEach(r=>{
+      lines.push([
+        APP_VERSION,
+        r.layer,
+        r.hopper,
+        `"${r.resin}"`,
+        r.split.toFixed(2),
+        r.weight.toFixed(2),
+        r.pumpOff ? "yes" : "no",
+        `"${r.showMain}"`,
+        `"${r.totalRundownText}"`
+      ].join(","));
+    });
+
+    const ok = await copyTextToClipboard(lines.join("\n"));
+    setStatus(statusMessage([{type: ok ? "ok" : "warn", text: ok ? `Copied CSV (v${APP_VERSION}).` : "Clipboard blocked by browser."}]));
+  }
+
+  function resetAll(){
+    const ok = confirm("Reset all fields?\n\nPress OK to reset.\nPress Cancel to keep current values.");
+    if (!ok) return;
+
+    const clearSaved = confirm("Also clear saved session (autosave) data on this device?");
+    if (clearSaved) clearSession();
+
+    state.lineRate = 0;
+    state.changeoverTime = "";
+    state.prodResinLb = 0;
+    state.scrapResinLb = 0;
+
+    ensureLayers();
+    state.layers.forEach(L=>{
+      L.layerPct = 0;
+      state.offsets[L.name] = 0;
+      L.hoppers.forEach(h=>{
+        h.pct = 0; h.weight = 0; h.resinName = ""; h.track = false; h.pumpOff = false;
+      });
+    });
+
+    $("lineRate").value = "0";
+    $("changeoverTime").value = "";
+    $("prodResinLb").value = "0";
+    $("scrapResinLb").value = "0";
+
+    rebuildUIFromState();
+    saveSession();
+  }
+
+  // Focus: select all numeric fields, not resin names
+  function selectAllSoon(el){
+    if (!el) return;
+    if (el.tagName === "SELECT") return;
+    if (el.type === "checkbox" || el.type === "radio") return;
+    if (el.readOnly || el.disabled) return;
+    setTimeout(()=>{
+      try{
+        el.focus({preventScroll:true});
+        if (typeof el.select === "function") el.select();
+        if (typeof el.setSelectionRange === "function"){
+          const v = el.value ?? "";
+          el.setSelectionRange(0, String(v).length);
+        }
+      }catch(e){}
+    }, 0);
+  }
+  document.addEventListener("focusin",(e)=>{
+    const el = e.target;
+    if (!(el instanceof HTMLElement)) return;
+    if (el.tagName === "INPUT" || el.tagName === "TEXTAREA"){
+      if (el.classList.contains("resinNameInput")) return;
+      selectAllSoon(el);
+    }
+  });
+
+  function rebuildUIFromState(payloadMaybe){
+    ensureLayers();
+    renderLayerInputs();
+    renderOffsetInputs();
+    renderWeightsArea();
+    renderSplitsArea();
+    renderResinCalculator();
+
+    if (payloadMaybe && typeof payloadMaybe === "object"){
+      if (typeof payloadMaybe.layerSetupOpen === "boolean") $("layerSetupBlock").open = payloadMaybe.layerSetupOpen;
+      if (typeof payloadMaybe.weightsOpen === "boolean") $("weightsBlock").open = payloadMaybe.weightsOpen;
+      if (typeof payloadMaybe.resultsOpen === "boolean") $("resultsBlock").open = payloadMaybe.resultsOpen;
+    }
+
+    validateAndCompute();
+  }
+
+  function hookDetailsPersistence(){
+    ["layerSetupBlock","weightsBlock","resultsBlock"].forEach(id=>{
+      const el = document.getElementById(id);
+      if (el) el.addEventListener("toggle", saveSession);
+    });
+  }
+
+  // Wire inputs
+  $("lineRate").addEventListener("input",(e)=>{ state.lineRate = clampNum(e.target.value); validateAndCompute(); saveSession(); });
+  $("lineType").addEventListener("change",(e)=>{
+    state.lineType = [1,3,5].includes(Number(e.target.value)) ? Number(e.target.value) : 3;
+    ensureLayers(); rebuildUIFromState(); saveSession();
+  });
+  $("pctMode").addEventListener("change",(e)=>{
+    state.pctModeDivisor = Number(e.target.value)===1 ? 1 : 100;
+    rebuildUIFromState(); saveSession();
+  });
+  $("changeoverTime").addEventListener("input",(e)=>{ state.changeoverTime = e.target.value || ""; validateAndCompute(); saveSession(); });
+
+  $("densitySel").addEventListener("change",(e)=>{
+    applyDensity(e.target.value);
+    saveSession();
+  });
+
+  $("prodResinLb").addEventListener("input",(e)=>{ state.prodResinLb = clampNum(e.target.value); renderResinCalculator(); saveSession(); });
+  $("scrapResinLb").addEventListener("input",(e)=>{ state.scrapResinLb = clampNum(e.target.value); renderResinCalculator(); saveSession(); });
+
+  $("recalcBtn").addEventListener("click", ()=>{ validateAndCompute(); saveSession(); });
+  $("copyBtn").addEventListener("click", copyResultsCSV);
+  $("resetBtn").addEventListener("click", resetAll);
+
+  // Recipe buttons
+  $("saveConfigBtn").addEventListener("click", saveNamedConfig);
+  $("loadConfigBtn").addEventListener("click", loadSelectedConfig);
+  $("renameConfigBtn").addEventListener("click", renameSelectedConfig);
+  $("deleteConfigBtn").addEventListener("click", deleteSelectedConfig);
+  $("exportConfigBtn").addEventListener("click", exportSelectedConfig);
+  $("importConfigBtn").addEventListener("click", ()=>showImportUI(true));
+  $("cancelImportBtn").addEventListener("click", ()=>{ showImportUI(false); $("importJson").value=""; });
+  $("doImportBtn").addEventListener("click", doImport);
+
+  // Init
+  (function init(){
+    $("footerVer").textContent = `Resin Timer • v${APP_VERSION}`;
+
+    ensureLayers();
+
+    const restored = loadSession();
+    if (!restored){
+      applyDensity("comfort");
+      rebuildUIFromState();
+    }
+
+    hookDetailsPersistence();
+    refreshConfigDropdown();
+
+    const selVal = $("savedConfigs").value;
+    if (selVal && selVal !== "— none saved —") $("configName").value = selVal;
+
+    saveSession();
+  })();
+
+  // Session
+  function loadSession(){
+    try{
+      const raw = localStorage.getItem(LS_SESSION_KEY);
+      if (!raw) return false;
+      applyPayload(JSON.parse(raw), {rebuildUI:true});
+      return true;
+    }catch(e){ return false; }
+  }
+</script>
+</body>
+</html>
