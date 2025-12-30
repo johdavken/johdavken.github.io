@@ -902,7 +902,7 @@
 <footer id="footerVer"></footer>
 
 <script>
-  const APP_VERSION = "0.08-density-singleline-splits";
+  const APP_VERSION = "0.08";
 
   const LS_SESSION_KEY = "resinTimer.session.v0.08";
   const LS_CONFIGS_KEY = "resinTimer.configs.v0.08";
@@ -1717,7 +1717,7 @@
       changeoverDate ? "Start_by" : "Time_to_empty",
       "Total_with_offset"
     ];
-    const lines = [`# Resin Timer v${APP_VERSION}`, header.join(",")];
+    const lines = [`# ResinIQ v${APP_VERSION}`, header.join(",")];
 
     flat.forEach(r=>{
       lines.push([
@@ -1869,7 +1869,7 @@ function hookDetailsPersistence(){
 
   // Init
   (function init(){
-    $("footerVer").textContent = `Resin Timer • v${APP_VERSION}`;
+    $("footerVer").textContent = `ResinIQ • v${APP_VERSION}`;
 
     ensureLayers();
 
