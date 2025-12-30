@@ -6,6 +6,18 @@
   <title>ResinIQ</title>
   <style>
 
+/* Formula color helpers */
+.formula-line{
+  line-height: 1.7;
+  font-size: var(--font-small);
+}
+
+.f-label{ color: var(--text); font-weight: 900; }
+.f-var1{ color: #5dff9f; }   /* dimensions / inputs */
+.f-var2{ color: #ffb020; }   /* speeds / counts */
+.f-var3{ color: #4aa3ff; }   /* gauges / targets */
+.f-const{ color: #9bb0c6; }  /* constants */
+    
   .appHeaderImage{
   display: flex;
   justify-content: center;
@@ -754,7 +766,20 @@
         <div class="hr"></div>
 
         <div class="mono" style="line-height:1.7; font-size: var(--font-small);">
-          <div><strong>Line output (lb/hr)</strong> = Web width × Line Speed × Gauge × .048 </div>
+<div class="mono formula-line">
+  <span class="f-label">Line output (lb/hr)</span>
+  =
+  <span class="f-var1">Web width</span>
+  ×
+  <span class="f-var2">Line Speed</span>
+  ×
+  <span class="f-var3">Gauge</span>
+  ×
+  <span class="f-const">0.048</span>
+</div>
+
+
+          
           <div><strong>Pounds per Thousandths</strong> = Width × Gauge × .8</div>
           <div><strong>Pounds per Thousandths</strong> = Max roll weight × Number of rolls ÷ Thounsands of feet</div>
           <div><strong>Short roll footage</strong> = Short roll weight x Target footage ÷ Last good roll weight</div>
