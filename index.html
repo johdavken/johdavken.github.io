@@ -239,6 +239,7 @@ input[readonly]:focus{
     }
     summary::-webkit-details-marker{ display:none; }
 
+
     .sumLeft{ display:flex; align-items:center; gap:10px; min-width: 0; }
     .chev{
       width: 10px; height: 10px;
@@ -249,7 +250,7 @@ input[readonly]:focus{
       flex: 0 0 auto;
       margin-left: 2px;
     }
-    details[open] .chev{ transform: rotate(45deg); }
+details[open] > summary .chev{ transform: rotate(45deg); }
 
     .blockBody{ padding: 0 12px 12px 12px; display:grid; gap: var(--gap); }
     .layerTitle{ font-weight: 900; font-size: 14px; white-space: nowrap; }
@@ -527,8 +528,8 @@ input[readonly]:focus{
         <div class="sumLeft">
           <div class="chev"></div>
           <div style="min-width:0">
-            <div class="layerTitle">1) Line setup</div>
-            <div class="layerMeta">Line rate • line type • changeover time • density</div>
+            <div class="layerTitle">Line setup</div>
+            <div class="layerMeta">Set output - Line Type - Changeover Time - Weights $ Offsets</div>
           </div>
         </div>
         <span class="pill">Setup</span>
@@ -620,8 +621,8 @@ input[readonly]:focus{
         <div class="sumLeft">
           <div class="chev"></div>
           <div style="min-width:0">
-            <div class="layerTitle">2) Hopper Percentages</div>
-            <div class="layerMeta">Layer % • resin name • hopper split • track</div>
+            <div class="layerTitle">Hopper Percentages</div>
+            <div class="layerMeta">Set layer and hopper % - Toggle Tracking</div>
           </div>
         </div>
         <span class="pill">Percentages</span>
@@ -639,7 +640,7 @@ input[readonly]:focus{
         <div class="sumLeft">
           <div class="chev"></div>
           <div style="min-width:0">
-            <div class="layerTitle">3) Run-Down Timeline</div>
+            <div class="layerTitle">Run-Down Timeline</div>
             <div class="layerMeta">Only tracked hoppers • Sorted by upcoming time</div>
           </div>
         </div>
@@ -657,7 +658,7 @@ input[readonly]:focus{
         <div class="sumLeft">
           <div class="chev"></div>
           <div style="min-width:0">
-            <div class="layerTitle">4) ResinIQ Totals</div>
+            <div class="layerTitle">Used Resin Totals</div>
             <div class="layerMeta">Totals by resin name</div>
           </div>
         </div>
@@ -665,7 +666,7 @@ input[readonly]:focus{
       </summary>
 
       <div class="blockBody">
-        <div class="muted">Enter total pounds used at end of job. Allocates across layers/hoppers using splits and totals by resin name.</div>
+        <div class="muted">Enter total pounds used at end of job.</div>
 
         <div class="grid2" style="margin-top:10px">
           <div>
@@ -689,7 +690,7 @@ input[readonly]:focus{
         <div class="sumLeft">
           <div class="chev"></div>
           <div style="min-width:0">
-            <div class="layerTitle">5) Recipes (named configs)</div>
+            <div class="layerTitle">Line Configurations</div>
             <div class="layerMeta">Save • load • export • import</div>
           </div>
         </div>
@@ -746,7 +747,7 @@ input[readonly]:focus{
         <div class="sumLeft">
           <div class="chev"></div>
           <div style="min-width:0">
-            <div class="layerTitle">6) Info</div>
+            <div class="layerTitle">Documentation</div>
             <div class="layerMeta">Formulas • changelog • notes</div>
           </div>
         </div>
@@ -844,7 +845,7 @@ input[readonly]:focus{
               </div>
             </div>
 
-            <div class="tiny">Notes: email johdavken@protonmail.com for any corrections or additions</div>
+            <div class="tiny">...</div>
           </div>
         </details>
 
