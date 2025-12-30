@@ -12,11 +12,10 @@
   gap: 8px; /* adjust to taste */
 }
 
-/* hopper rows slightly denser */
+/* hopper row inputs: slightly tighter, but still density-driven */
 .hopperRow input{
-  padding: 5px 8px;
+  padding: calc(var(--pad-input-y) - 2px) calc(var(--pad-input-x) - 4px);
   font-size: var(--font-small);
-  gap: 3px;
 }
 
     
@@ -26,38 +25,22 @@
 .f-var3{ color: #4aa3ff; }   /* gauges / targets */
 .f-const{ color: #9bb0c6; }  /* constants */
     
-  .appHeaderImage{
-  display: flex;
-  justify-content: center;
-  margin: 8px 0 14px 0;
-}
-
-.appHeaderImage img{
-  filter: drop-shadow(0 6px 18px rgba(74,163,255,.25));
-}
-
 .appHeaderImage{
+  display:flex;
+  justify-content:center;
+  margin: 8px 0 14px 0;
   opacity: 0.9;
 }
-
 .appHeaderImage img{
-  width: 100%;
-  max-width: 260px; /* mobile */
-  height: auto;
-  opacity: 0.95;
+  width:100%;
+  max-width:260px;
+  height:auto;
+  opacity:0.95;
+  filter: drop-shadow(0 6px 18px rgba(74,163,255,.25));
 }
+@media (min-width:600px){ .appHeaderImage img{ max-width:340px; } }
+@media (min-width:900px){ .appHeaderImage img{ max-width:420px; } }
 
-@media (min-width: 600px){
-  .appHeaderImage img{
-    max-width: 340px;
-  }
-}
-
-@media (min-width: 900px){
-  .appHeaderImage img{
-    max-width: 420px;
-  }
-}
 
 
     :root{
