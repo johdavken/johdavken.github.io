@@ -253,14 +253,14 @@
   border: 1px solid rgba(255,255,255,.07);
 
   /* key change: H# column is AUTO, so it hugs the badge */
-  grid-template-columns: auto minmax(140px, 1fr) 88px 72px;
+  grid-template-columns: auto minmax(140px, 1fr) 88px 120px;
   align-items: center;
 }
 
 /* small screens: let resin column breathe even more */
 @media (max-width: 520px){
   .hopperRow{
-    grid-template-columns: auto minmax(120px, 1fr) 78px 66px;
+    grid-template-columns: auto minmax(120px, 1fr) 78px 110px;
     gap: 6px; /* tighter */
   }
 
@@ -767,35 +767,35 @@
       </div>
     </details>
 
-    <!-- 8.3 Notes -->
-    <details class="block" id="notesBlock">
-      <summary>
-        <div class="sumLeft">
-          <div class="chev"></div>
-          <div style="min-width:0">
-            <div class="layerTitle" style="font-size:13px">Notes</div>
-            <div class="layerMeta">Tips about this tool</div>
-        </div>
-        <span class="pill">Log</span>
-      </summary>
-
-      <div class="blockBody">
-        <div class="muted">Hey</div>
-        <div class="hr"></div>
-
-        <div class="mono" style="line-height:1.7; font-size: var(--font-small);">
-          <div>> — As noted in the hopper weights section, hoppers hold volume. How's this affect timing? If you want to time hopper A5 on line 11 for example, we know it holds 2.2 buckets worth of resin at a minumum (level at valve). If we're running MS0100 in this scenario, that'll come to approximately 60lbs. White04? Much more. So in effect, using this tool, your timing would be spot on for the MS0100, but you'd have plenty White04 left because you timed 60lbs, not 2.2 buckets. '</div>
-          <div>> ~ Why this doesn't matter? We're mostly concerned with timing silo resins to prevent waste and effort (save for A0503). Timing additives will be fairly accurate depending on the density of that resin, A0450,301,600,etc...
-        </div>
-
-        <div class="tiny">
-          OCD ftw (weigh buckets of different resins and make a note)
-        </div>
+<!-- 8.3 Notes -->
+<details class="block" id="notesBlock">
+  <summary>
+    <div class="sumLeft">
+      <div class="chev"></div>
+      <div style="min-width:0">
+        <div class="layerTitle" style="font-size:13px">Notes</div>
+        <div class="layerMeta">Tips about this tool</div>
       </div>
-    </details>
+    </div>
+    <span class="pill">Notes</span>
+  </summary>
 
+  <div class="blockBody">
+    <div class="muted">Practical.</div>
+    <div class="hr"></div>
+
+    <div class="mono" style="line-height:1.7; font-size: var(--font-small);">
+      <div>• Hoppers hold volume, not weight. If you “time 60 lb” but the resin is denser, you’ll still have resin left.</div>
+      <div>• This matters most for silo resins and big changeovers. Additives are usually closer if you know approximate density.</div>
+      <div>• If you want better accuracy: weigh a bucket of each common resin and write it down.</div>
+    </div>
+
+    <div class="tiny">
+      OCD ftw (weigh buckets of different resins and make a note)
+    </div>
   </div>
 </details>
+
 
 </main>
 
@@ -950,9 +950,6 @@
       prodResinLb: state.prodResinLb,
       scrapResinLb: state.scrapResinLb,
       density: state.density,
-      layerSetupOpen: $("layerSetupBlock")?.open ?? false,
-      weightsOpen: $("weightsBlock")?.open ?? false,
-      resultsOpen: $("resultsBlock")?.open ?? true
     };
   }
 
@@ -1294,8 +1291,7 @@
       `;
       area.appendChild(det);
 
-      const summary = det.querySelector("summary");
-      summary.addEventListener("click",(e)=>{ e.preventDefault(); det.open = !det.open; });
+
 
       const copyBtn = det.querySelector(".copyBtn");
       if (copyBtn){
@@ -1712,22 +1708,38 @@
     renderWeightsArea();
     renderSplitsArea();
     renderResinCalculator();
-
     if (payloadMaybe && typeof payloadMaybe === "object"){
-      if (typeof payloadMaybe.layerSetupOpen === "boolean") $("layerSetupBlock").open = payloadMaybe.layerSetupOpen;
-      if (typeof payloadMaybe.weightsOpen === "boolean") $("weightsBlock").open = payloadMaybe.weightsOpen;
-      if (typeof payloadMaybe.resultsOpen === "boolean") $("resultsBlock").open = payloadMaybe.resultsOpen;
+      const o = payloadMaybe.blocksOpen;
+      if (o && typeof o === "object"){
+        Object.entries(o).forEach(([id, isOpen])=>{
+          const el = document.getElementById(id);
+          if (el && typeof isOpen === "boolean") el.open = isOpen;
+        });
+      }
     }
 
     validateAndCompute();
   }
 
-  function hookDetailsPersistence(){
-    ["layerSetupBlock","weightsBlock","resultsBlock"].forEach(id=>{
-      const el = document.getElementById(id);
-      if (el) el.addEventListener("toggle", saveSession);
-    });
-  }
+function hookDetailsPersistence(){
+  [
+    "lineSetupBlock",
+    "layerSetupBlock",
+    "weightsBlock",
+    "splitsBlock",
+    "resultsBlock",
+    "resinCalcBlock",
+    "recipesBlock",
+    "infoBlock",
+    "formulasBlock",
+    "changelogBlock",
+    "notesBlock"
+  ].forEach(id=>{
+    const el = document.getElementById(id);
+    if (el) el.addEventListener("toggle", saveSession);
+  });
+}
+
 
   // Wire inputs
   $("lineRate").addEventListener("input",(e)=>{ state.lineRate = clampNum(e.target.value); validateAndCompute(); saveSession(); });
@@ -1784,15 +1796,7 @@
     saveSession();
   })();
 
-  // Session
-  function loadSession(){
-    try{
-      const raw = localStorage.getItem(LS_SESSION_KEY);
-      if (!raw) return false;
-      applyPayload(JSON.parse(raw), {rebuildUI:true});
-      return true;
-    }catch(e){ return false; }
-  }
+
 </script>
 </body>
 </html>
