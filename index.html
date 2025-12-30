@@ -14,11 +14,16 @@
 
 /* hopper row inputs: slightly tighter, but still density-driven */
 .hopperRow input{
-  padding: calc(var(--pad-input-y) - 2px) calc(var(--pad-input-x) - 4px);
+  padding: max(4px, calc(var(--pad-input-y) - 2px))
+           max(6px, calc(var(--pad-input-x) - 4px));
   font-size: var(--font-small);
 }
+
+/* columns belong on the grid container */
 .hopperRow{
   grid-template-columns: auto minmax(140px, 1fr) 88px auto;
+  gap: calc(var(--gap) + 2px);       /* optional: a little more spacing between fields */
+  padding: max(4px, var(--row-pad)); /* optional: keep row from collapsing too much */
 }
     
 .f-label{ color: var(--text); font-weight: 900; }
