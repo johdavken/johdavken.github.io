@@ -189,7 +189,13 @@ input[readonly]:focus{
       color: var(--muted);
       font-size: var(--font-small);
       white-space: nowrap;
+
     }
+    /* TEMP: hide right-side card labels */
+details.block > summary .pill{
+  display: none;
+}
+
     .pill.badge-warn{
       border-color: rgba(255,176,32,.55);
       background: rgba(255,176,32,.12);
