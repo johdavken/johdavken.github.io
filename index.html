@@ -463,14 +463,24 @@
 </header>
 
 <main>
-  <section class="card">
-    <h2>1) Line setup</h2>
+<details class="block card" id="lineSetupBlock">
+  <summary>
+    <div class="sumLeft">
+      <div class="chev"></div>
+      <div style="min-width:0">
+        <div class="layerTitle">1) Line setup</div>
+        <div class="layerMeta">Line rate • line type • changeover time • density</div>
+      </div>
+    </div>
+    <span class="pill">Setup</span>
+  </summary>
 
+  <div class="blockBody">
     <div class="grid3">
       <div>
         <label for="lineRate">Line rate (lb/hr)</label>
         <input id="lineRate" type="text" inputmode="decimal" placeholder="0" value="0" />
-        <div class="tiny">Line speed * film width * gauge * .048</div>
+        <div class="tiny">Example: 1200</div>
       </div>
 
       <div>
@@ -498,7 +508,7 @@
       </div>
 
       <div>
-        <label for="densitySel">Density</label>
+        <label for="densitySel">View</label>
         <select id="densitySel">
           <option value="comfort" selected>Comfort</option>
           <option value="compact">Compact</option>
@@ -506,21 +516,18 @@
         </select>
         <div class="tiny">Compact/Dense reduce fonts, padding, and row height.</div>
       </div>
-
-      <div>
-        <div class="muted" style="margin-top:22px">Layer offsets + layer splits are below in “Layer setup”.</div>
-      </div>
     </div>
 
     <div id="statusBox"></div>
-  </section>
+  </div>
+</details>
 
-  <details class="block card" id="layerSetupBlock" open>
+<details class="block card" id="layerSetupBlock">
     <summary>
       <div class="sumLeft">
         <div class="chev"></div>
         <div style="min-width:0">
-          <div class="layerTitle">2) Layer setup (splits + offsets)</div>
+          <div class="layerTitle">2) Layer setup (layer % + offsets)</div>
           <div class="layerMeta">Set layer % and downcomer offsets</div>
         </div>
       </div>
@@ -529,7 +536,7 @@
     <div class="blockBody">
       <div class="grid2">
         <div>
-          <h2 style="margin:0 0 6px 0; font-size:14px;">Layer split</h2>
+          <h2 style="margin:0 0 6px 0; font-size:14px;">Layer %</h2>
           <div class="muted">Enter % of total line rate assigned to each layer.</div>
           <div id="layerInputs" class="grid2" style="margin-top:10px"></div>
         </div>
@@ -538,7 +545,6 @@
           <h2 style="margin:0 0 6px 0; font-size:14px;">Downcomer offset (min)</h2>
           <div class="muted">Adds time for downcomer run-down.</div>
           <div id="offsetInputs" class="gridAuto" style="margin-top:10px"></div>
-          <div class="tiny"><strong>(blender weight) / layer output * 60</strong></div>
         </div>
       </div>
     </div>
@@ -550,22 +556,35 @@
         <div class="chev"></div>
         <div style="min-width:0">
           <div class="layerTitle">3) Hopper weights</div>
-          <div class="layerMeta">Amount of stored resin in your receiver hopper. Determines accuracy of your timing. </div>
+          <div class="layerMeta">Amount of resin stored in receiver hopper</div>
         </div>
       </div>
       <span class="pill">Collapsed</span>
     </summary>
     <div class="blockBody">
-      <div class="muted">Enter current resin weight in each hopper. Results need weight + split + track toggle.</div>
+      <div class="muted">Hoppers hold volume, not weight. So this is a bit of guesswork. A bucket of silo resin typically weighs 25lbs for reference.</div>
       <div id="weightsArea" class="weightsGrid"></div>
     </div>
   </details>
 
-  <section class="card" id="splitsSection">
-    <h2>4) Hopper splits (per layer)</h2>
-    <div class="muted">Row format: H# • Resin name • Split • Track. Only tracked hoppers appear in Results.</div>
+<details class="block card" id="splitsBlock">
+  <summary>
+    <div class="sumLeft">
+      <div class="chev"></div>
+      <div style="min-width:0">
+        <div class="layerTitle">4) Hopper Percentages</div>
+        <div class="layerMeta">Resin name • Percentage • track</div>
+      </div>
+    </div>
+    <span class="pill">Percentages</span>
+  </summary>
+
+  <div class="blockBody">
+    <div class="muted">Row format: H# • Resin name • Percentage • Track. Only tracked hoppers appear in Results.</div>
     <div id="splitsArea" style="margin-top:10px; display:grid; gap:10px;"></div>
-  </section>
+  </div>
+</details>
+
 
   <details class="block card" id="resultsBlock" open>
     <summary>
@@ -584,8 +603,19 @@
     </div>
   </details>
 
-  <section class="card" id="resinCalcSection">
-    <h2>6) Resin Calculator</h2>
+  <details class="block card" id="resinCalcBlock">
+  <summary>
+    <div class="sumLeft">
+      <div class="chev"></div>
+      <div style="min-width:0">
+        <div class="layerTitle">6) Resin Calculator</div>
+        <div class="layerMeta">Totals by resin name</div>
+      </div>
+    </div>
+    <span class="pill">Calc</span>
+  </summary>
+
+  <div class="blockBody">
     <div class="muted">Enter total pounds used at end of job. Allocates across layers/hoppers using splits and totals by resin name.</div>
 
     <div class="grid2" style="margin-top:10px">
@@ -601,10 +631,22 @@
 
     <div id="resinCalcSummary" style="margin-top:10px"></div>
     <div id="resinCalcResults" class="calcTable"></div>
-  </section>
+  </div>
+</details>
 
-  <section class="card" id="recipesSection">
-    <h2>7) Recipes (named configs)</h2>
+<details class="block card" id="recipesBlock">
+  <summary>
+    <div class="sumLeft">
+      <div class="chev"></div>
+      <div style="min-width:0">
+        <div class="layerTitle">7) Recipes (named configs)</div>
+        <div class="layerMeta">Save • load • export • import</div>
+      </div>
+    </div>
+    <span class="pill">Configs</span>
+  </summary>
+
+  <div class="blockBody">
     <div class="muted">Save/load typical setups. Export/import JSON for sharing.</div>
 
     <div class="grid2" style="margin-top:10px">
@@ -646,13 +688,121 @@
     </div>
 
     <div id="recipeStatus" style="margin-top:10px"></div>
-  </section>
+  </div>
+</details>
+<details class="block card" id="infoBlock">
+  <summary>
+    <div class="sumLeft">
+      <div class="chev"></div>
+      <div style="min-width:0">
+        <div class="layerTitle">8) Info</div>
+        <div class="layerMeta">Formulas • changelog • notes</div>
+      </div>
+    </div>
+    <span class="pill">Help</span>
+  </summary>
+
+  <div class="blockBody">
+
+    <!-- 8.1 Operator formulas -->
+    <details class="block" id="formulasBlock">
+      <summary>
+        <div class="sumLeft">
+          <div class="chev"></div>
+          <div style="min-width:0">
+            <div class="layerTitle" style="font-size:13px">Operator formulas</div>
+            <div class="layerMeta">How times are calculated</div>
+          </div>
+        </div>
+        <span class="pill">Math</span>
+      </summary>
+
+      <div class="blockBody">
+        <div class="muted">
+          These are the formulas Resin Timer uses. (All splits are treated as % or fractions depending on Percent mode.)
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="mono" style="line-height:1.7; font-size: var(--font-small);">
+          <div><strong>Line output (lb/hr)</strong> = Web width × Line Speed × Gauge × .048 </div>
+          <div><strong>Pounds per Thousandths</strong> = Width × Gauge × .8</div>
+          <div><strong>Pounds per Thousandths</strong> = Max roll weight × Number of rolls ÷ Thounsands of feet</div>
+          <div><strong>Short roll footage</strong> = Short roll weight x Target footage ÷ Last good roll weight</div>
+          <div><strong>Weight adjustment (new line speed)</strong> = Wrong weight x line speed ÷ target weight</div>
+          </div>
+
+        <div class="tiny">
+          Notes: email johdavken@protonmail.com for any corrections or additions
+        </div>
+      </div>
+    </details>
+
+    <!-- 8.2 Changelog -->
+    <details class="block" id="changelogBlock">
+      <summary>
+        <div class="sumLeft">
+          <div class="chev"></div>
+          <div style="min-width:0">
+            <div class="layerTitle" style="font-size:13px">Changelog</div>
+            <div class="layerMeta">What changed between versions</div>
+          </div>
+        </div>
+        <span class="pill">Log</span>
+      </summary>
+
+      <div class="blockBody">
+        <div class="muted">What's new.</div>
+        <div class="hr"></div>
+
+        <div class="mono" style="line-height:1.7; font-size: var(--font-small);">
+          <div><strong>0.08</strong> — Added ability to name resins in each hopper.</div>
+          <div><strong>0.07</strong> — Added resin calculator. Uses resin names.</div>
+          <div><strong>0.06</strong> — Added formulas under new Info section.</div>
+        </div>
+
+        <div class="tiny">
+          Will I keep this updated?
+        </div>
+      </div>
+    </details>
+
+    <!-- 8.3 Notes -->
+    <details class="block" id="notesBlock">
+      <summary>
+        <div class="sumLeft">
+          <div class="chev"></div>
+          <div style="min-width:0">
+            <div class="layerTitle" style="font-size:13px">Notes</div>
+            <div class="layerMeta">Tips about this tool</div>
+        </div>
+        <span class="pill">Log</span>
+      </summary>
+
+      <div class="blockBody">
+        <div class="muted">Hey</div>
+        <div class="hr"></div>
+
+        <div class="mono" style="line-height:1.7; font-size: var(--font-small);">
+          <div>> — As noted in the hopper weights section, hoppers hold volume. How's this affect timing? If you want to time hopper A5 on line 11 for example, we know it holds 2.2 buckets worth of resin at a minumum (level at valve). If we're running MS0100 in this scenario, that'll come to approximately 60lbs. White04? Much more. So in effect, using this tool, your timing would be spot on for the MS0100, but you'd have plenty White04 left because you timed 60lbs, not 2.2 buckets. '</div>
+          <div>> ~ Why this doesn't matter? We're mostly concerned with timing silo resins to prevent waste and effort (save for A0503). Timing additives will be fairly accurate depending on the density of that resin, A0450,301,600,etc...
+        </div>
+
+        <div class="tiny">
+          OCD ftw (weigh buckets of different resins and make a note)
+        </div>
+      </div>
+    </details>
+
+  </div>
+</details>
+
 </main>
 
 <div class="actionBar">
   <div class="btnRow">
     <button id="recalcBtn">Recalculate</button>
-    <button id="copyBtn" class="secondary">Export</button>
+    <button id="copyBtn" class="secondary">Copy CSV</button>
     <button id="resetBtn" class="danger">Reset</button>
   </div>
 </div>
@@ -800,7 +950,7 @@
       prodResinLb: state.prodResinLb,
       scrapResinLb: state.scrapResinLb,
       density: state.density,
-      layerSetupOpen: $("layerSetupBlock")?.open ?? true,
+      layerSetupOpen: $("layerSetupBlock")?.open ?? false,
       weightsOpen: $("weightsBlock")?.open ?? false,
       resultsOpen: $("resultsBlock")?.open ?? true
     };
@@ -1079,7 +1229,7 @@
         const row = document.createElement("div");
         row.className = "weightsRow";
         row.innerHTML = `
-          <div class="mono" style="font-weight:950;">${L.name}${hi+1}</div>
+          <div class="mono" style="font-weight:950;">H${hi+1}</div>
           <input id="${id}" type="text" inputmode="decimal" placeholder="0" value="${clampNum(L.hoppers[hi].weight)}" />
         `;
         grid.appendChild(row);
@@ -1114,7 +1264,7 @@
     state.layers.forEach((L, li)=>{
       const det = document.createElement("details");
       det.className = "block";
-      det.open = (li===0);
+      det.open = false;
 
       const layerPctText = `${fmtNum(L.layerPct,2)}${div===100?"%":""}`;
       const off = clampNum(state.offsets?.[L.name] ?? 0);
@@ -1173,7 +1323,7 @@
         const row = document.createElement("div");
         row.className = "hopperRow";
         row.innerHTML = `
-          <div class="hopperBadge mono">${L.name}${hi+1}</div>
+          <div class="hopperBadge mono">H${hi+1}</div>
           <input id="${resinFieldId}" class="resinNameInput" type="text" placeholder="Resin name" value="${(L.hoppers[hi].resinName || "").replace(/"/g,'&quot;')}" />
           <input id="${pctFieldId}" class="splitInput" type="text" inputmode="decimal" placeholder="0" value="${clampNum(L.hoppers[hi].pct)}" />
           <div class="trackWrap">
@@ -1337,7 +1487,7 @@
 
         flat.push({
           layer: L.name,
-          hopperLabel: `${L.name}${hi+1}`,
+          hopperLabel: `H${hi+1}`,
           resinName: normName(h.resinName),
           weight,
           rate: hopperRate,
@@ -1460,7 +1610,7 @@
 
         flat.push({
           layer: L.name,
-          hopper: `${L.name}${hi+1}`,
+          hopper: `H${hi+1}`,
           resin: normName(h.resinName).replace(/"/g,'""'),
           split: clampNum(h.pct),
           weight,
@@ -1646,3 +1796,4 @@
 </script>
 </body>
 </html>
+
