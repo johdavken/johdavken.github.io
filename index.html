@@ -7,10 +7,9 @@
   <style>
 
 /* Formula color helpers */
-.formula-line{
-  line-height: 1.7;
-  font-size: var(--font-small);
-  margin-bottom: 8px;   /* ← THIS adds spacing */
+.formulaGroup{
+  display: grid;
+  gap: 8px; /* adjust to taste */
 }
 
 .f-label{ color: var(--text); font-weight: 900; }
@@ -767,6 +766,7 @@
         <div class="hr"></div>
 
         <div class="mono" style="line-height:1.7; font-size: var(--font-small);">
+<div class="formulaGroup">          
 <div class="mono formula-line">
   <span class="f-label">Line output (lb/hr)</span>
   =
@@ -818,7 +818,7 @@
   ÷
   <span class="f-var3">Target weight</span>
 </div>
-
+</div>
           </div>
 
         <div class="tiny">
