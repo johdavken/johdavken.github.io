@@ -3,8 +3,43 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Resin Timer</title>
+  <title>ResinIQ</title>
   <style>
+
+  .appHeaderImage{
+  display: flex;
+  justify-content: center;
+  margin: 8px 0 14px 0;
+}
+
+.appHeaderImage img{
+  filter: drop-shadow(0 6px 18px rgba(74,163,255,.25));
+}
+
+.appHeaderImage{
+  opacity: 0.9;
+}
+
+.appHeaderImage img{
+  width: 100%;
+  max-width: 260px; /* mobile */
+  height: auto;
+  opacity: 0.95;
+}
+
+@media (min-width: 600px){
+  .appHeaderImage img{
+    max-width: 340px;
+  }
+}
+
+@media (min-width: 900px){
+  .appHeaderImage img{
+    max-width: 420px;
+  }
+}
+
+
     :root{
       --bg:#0b0f14;
       --panel: rgba(18,26,35,.88);
@@ -71,6 +106,8 @@
       --toggle-knob: 20px;
       --badge-font: 11px;
     }
+
+
 
     *{ box-sizing:border-box; }
     body{
@@ -189,6 +226,7 @@
     .status.bad{ border-left-color: rgba(255,92,92,.75); background: rgba(255,92,92,.08); }
     .status.ok{ border-left-color: #5dff9f; background: rgba(93,255,159,.07); }
     .status ul{ margin: 6px 0 0 0; padding-left: 18px; }
+
 
     details.block{
       border: 1px solid var(--border);
@@ -456,13 +494,19 @@
 
 <body data-density="comfort">
 <header>
-  <h1>Resin Timer</h1>
+  <h1>ResinIQ</h1>
   <div class="sub">
-    Only as accurate as your hopper weights. v01.33
+    Smart resin run-down planning and tracking
   </div>
 </header>
 
 <main>
+
+<div class="appHeaderImage">
+  <img src="images/resiniqhead.png" alt="ResinIQ">
+</div>
+
+
 <details class="block card" id="lineSetupBlock">
   <summary>
     <div class="sumLeft">
