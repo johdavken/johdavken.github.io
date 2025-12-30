@@ -1318,7 +1318,7 @@
         const row = document.createElement("div");
         row.className = "weightsRow";
         row.innerHTML = `
-          <div class="mono" style="font-weight:950;">H${hi+1}</div>
+          <div class="mono" style="font-weight:950;">${L.name}${hi+1}</div>
           <input id="${id}" type="text" inputmode="decimal" placeholder="0" value="${clampNum(L.hoppers[hi].weight)}" />
         `;
         grid.appendChild(row);
@@ -1411,7 +1411,7 @@
         const row = document.createElement("div");
         row.className = "hopperRow";
         row.innerHTML = `
-          <div class="hopperBadge mono">H${hi+1}</div>
+          <div class="hopperBadge mono">${L.name}${hi+1}</div>
           <input id="${resinFieldId}" class="resinNameInput" type="text" placeholder="Resin name" value="${(L.hoppers[hi].resinName || "").replace(/"/g,'&quot;')}" />
           <input id="${pctFieldId}" class="splitInput" type="text" inputmode="decimal" placeholder="0" value="${clampNum(L.hoppers[hi].pct)}" />
           <div class="trackWrap">
@@ -1575,7 +1575,7 @@
 
         flat.push({
           layer: L.name,
-          hopperLabel: `H${hi+1}`,
+          hopperLabel: `${L.name}${hi+1}`,
           resinName: normName(h.resinName),
           weight,
           rate: hopperRate,
