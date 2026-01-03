@@ -171,7 +171,7 @@
       --f-const: #928374; /* gray */
     }
 
-
+    
     /* Nord */
     body[data-theme="nord"]{
       --bg: #2e3440;
@@ -526,7 +526,7 @@ main{
       background: linear-gradient(135deg, rgba(214,93,14,.12), rgba(152,151,26,.10), transparent 60%);
       opacity: .45;
     }
-
+    
     body[data-theme="nord"] .card::before{
       background: linear-gradient(135deg, rgba(136,192,208,.14), rgba(163,190,140,.10), transparent 60%);
       opacity: .45;
@@ -981,7 +981,7 @@ main{
     .f-var2{ color: var(--f-var2); }
     .f-var3{ color: var(--f-var3); }
     .f-const{ color: var(--f-const); }
-
+  
     /* ===== Additional theme accents (beyond variables) ===== */
 
     /* Focus ring per theme (uses existing focus vars) */
@@ -1675,7 +1675,7 @@ main{
 }
 
   function applyDensity(d){
-    const allowed = new Set(["dark","light","gruvbox-dark","gruvbox-light","nord","tokyo-night","dracula","solarized-dark","solarized-light","catppuccin-mocha","catppuccin-latte","amber","high-contrast","mono"]);
+    const allowed = new Set(["comfort","compact","dense"]);
     const density = allowed.has(String(d)) ? String(d) : "comfort";
     document.body.setAttribute("data-density", density);
     const sel = $("densitySel");
