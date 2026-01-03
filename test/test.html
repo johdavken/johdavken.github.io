@@ -55,10 +55,52 @@
       --field-bg: rgba(15,23,42,.06);
       --panelOpen: rgba(255,255,255,.95);
       --chev: rgba(15,23,42,.45);
+
       --warn: #d97706;
       --bad: #dc2626;
       --ok: #16a34a;
+
       --shadow2: 0 6px 18px rgba(0,0,0,.12);
+    }
+
+    /* Gruvbox Dark */
+    body[data-theme="gruvbox-dark"]{
+      --bg: #282828;              /* bg0 */
+      --panel: rgba(50,48,47,.95);/* bg0_s */
+      --panel2: rgba(60,56,54,.88);/* bg1 */
+      --text: #ebdbb2;            /* fg1 */
+      --muted: #a89984;           /* fg4 */
+      --border: rgba(80,73,69,.65); /* bg2 */
+      --border2: rgba(102,92,84,.55);/* bg3 */
+      --field-bg: rgba(60,56,54,.75); /* bg1 */
+      --panelOpen: rgba(50,48,47,.98);
+      --chev: rgba(235,219,178,.55);
+
+      --warn: #d79921;            /* yellow */
+      --bad: #cc241d;             /* red */
+      --ok: #98971a;              /* green */
+
+      --shadow2: 0 8px 20px rgba(0,0,0,.30);
+    }
+
+    /* Gruvbox Light */
+    body[data-theme="gruvbox-light"]{
+      --bg: #fbf1c7;               /* bg0 */
+      --panel: rgba(235,219,178,.92); /* bg1 */
+      --panel2: rgba(213,196,161,.86);/* bg2 */
+      --text: #3c3836;             /* fg0 (dark) */
+      --muted: #665c54;            /* bg3/fg2-ish */
+      --border: rgba(102,92,84,.35);
+      --border2: rgba(124,111,100,.35);
+      --field-bg: rgba(235,219,178,.70);
+      --panelOpen: rgba(235,219,178,.96);
+      --chev: rgba(60,56,54,.55);
+
+      --warn: #d79921;             /* yellow */
+      --bad: #cc241d;              /* red */
+      --ok: #98971a;               /* green */
+
+      --shadow2: 0 6px 18px rgba(0,0,0,.14);
     }
 
     /* Compact */
@@ -109,6 +151,15 @@
       font-size: var(--font-base);
     }
 
+    /* Tone down the blue/green glow a bit on Gruvbox themes (optional, but helps it feel “Gruvbox”) */
+    body[data-theme="gruvbox-dark"],
+    body[data-theme="gruvbox-light"]{
+      background:
+        radial-gradient(1200px 600px at 20% -10%, rgba(214,93,14,.10), transparent 60%),
+        radial-gradient(800px 500px at 90% 0%, rgba(152,151,26,.08), transparent 55%),
+        var(--bg);
+    }
+
     main{
       max-width: 980px;
       margin: 0 auto;
@@ -152,6 +203,12 @@
       pointer-events:none;
       filter: blur(14px);
     }
+    body[data-theme="gruvbox-dark"] .card::before,
+    body[data-theme="gruvbox-light"] .card::before{
+      background: linear-gradient(135deg, rgba(214,93,14,.12), rgba(152,151,26,.10), transparent 60%);
+      opacity: .45;
+    }
+
     .card > *{ position: relative; }
 
     .card h2{ margin:0 0 10px 0; font-size:15px; letter-spacing:.2px; }
@@ -178,6 +235,16 @@
       border-color: rgba(74,163,255,.80);
       box-shadow: 0 0 0 3px rgba(74,163,255,.16);
     }
+    body[data-theme="gruvbox-dark"] input:focus,
+    body[data-theme="gruvbox-dark"] select:focus,
+    body[data-theme="gruvbox-dark"] textarea:focus,
+    body[data-theme="gruvbox-light"] input:focus,
+    body[data-theme="gruvbox-light"] select:focus,
+    body[data-theme="gruvbox-light"] textarea:focus{
+      border-color: rgba(215,153,33,.80); /* gruvbox yellow */
+      box-shadow: 0 0 0 3px rgba(215,153,33,.18);
+    }
+
     textarea{ min-height: 120px; resize: vertical; }
 
     /* Read-only inputs (H1 auto %) should NOT look editable */
@@ -188,10 +255,17 @@
       border-color: rgba(255,255,255,.10);
       box-shadow: none;
     }
+    body[data-theme="gruvbox-light"] input[readonly]{
+      background: rgba(60,56,54,.06);
+      border-color: rgba(102,92,84,.25);
+    }
     input[readonly]:focus{
       outline: none;
       border-color: rgba(255,255,255,.10);
       box-shadow: none;
+    }
+    body[data-theme="gruvbox-light"] input[readonly]:focus{
+      border-color: rgba(102,92,84,.25);
     }
 
     .grid3{ display:grid; gap: var(--gap); grid-template-columns: 1fr; }
@@ -215,17 +289,19 @@
       font-size: var(--font-small);
       white-space: nowrap;
     }
-
     /* TEMP: hide right-side card labels */
-    details.block > summary .pill{
-      display: none;
-    }
+    details.block > summary .pill{ display: none; }
 
     .pill.badge-warn{
       border-color: rgba(255,176,32,.55);
       background: rgba(255,176,32,.12);
       color: rgba(255,255,255,.92);
       font-weight: 650;
+    }
+    body[data-theme="gruvbox-light"] .pill.badge-warn{
+      color: var(--text);
+      border-color: rgba(215,153,33,.55);
+      background: rgba(215,153,33,.18);
     }
 
     .status{
@@ -238,6 +314,28 @@
     }
     .status.bad{ border-left-color: rgba(255,92,92,.75); background: rgba(255,92,92,.08); }
     .status.ok{ border-left-color: #5dff9f; background: rgba(93,255,159,.07); }
+    body[data-theme="gruvbox-dark"] .status.ok{
+      border-left-color: var(--ok);
+      background: rgba(152,151,26,.10);
+    }
+    body[data-theme="gruvbox-light"] .status.ok{
+      border-left-color: var(--ok);
+      background: rgba(152,151,26,.14);
+    }
+    body[data-theme="gruvbox-dark"] .status.bad{
+      border-left-color: var(--bad);
+      background: rgba(204,36,29,.10);
+    }
+    body[data-theme="gruvbox-light"] .status.bad{
+      border-left-color: var(--bad);
+      background: rgba(204,36,29,.12);
+    }
+    body[data-theme="gruvbox-dark"] .status{
+      background: rgba(215,153,33,.10);
+    }
+    body[data-theme="gruvbox-light"] .status{
+      background: rgba(215,153,33,.14);
+    }
     .status ul{ margin: 6px 0 0 0; padding-left: 18px; }
 
     /* Blocks */
@@ -252,7 +350,7 @@
     }
     details.block[open]{ background: var(--panelOpen); }
 
-    /* Make nested blocks inside a card always span full width */
+    /* Make nested blocks inside a card always span full width (fixes "off to the right") */
     .blockBody > details.block{
       width: 100%;
       grid-column: 1 / -1;
@@ -270,8 +368,10 @@
     }
     summary::-webkit-details-marker{ display:none; }
 
-    summary:hover .chev{
-      border-color: rgba(74,163,255,.8);
+    summary:hover .chev{ border-color: rgba(74,163,255,.8); }
+    body[data-theme="gruvbox-dark"] summary:hover .chev,
+    body[data-theme="gruvbox-light"] summary:hover .chev{
+      border-color: rgba(215,153,33,.85);
     }
 
     .sumLeft{ display:flex; align-items:center; gap:10px; min-width: 0; }
@@ -309,8 +409,19 @@
       box-shadow: none;
       flex: 0 0 auto;
     }
+    body[data-theme="gruvbox-light"] .copyBtn{
+      color: var(--text);
+      border-color: rgba(102,92,84,.35);
+      background: rgba(60,56,54,.06);
+    }
+    body[data-theme="gruvbox-dark"] .copyBtn{
+      color: var(--text);
+      border-color: rgba(124,111,100,.35);
+      background: rgba(0,0,0,.10);
+    }
 
     .hr{ height:1px; background: rgba(255,255,255,.10); margin: 12px 0; }
+    body[data-theme="gruvbox-light"] .hr{ background: rgba(102,92,84,.25); }
 
     /* Hopper rows (splits) */
     .hopperList{ display: grid; gap: 10px; }
@@ -325,6 +436,15 @@
       align-items: center;
       grid-template-columns: auto minmax(140px, 1fr) 88px 120px;
     }
+    body[data-theme="gruvbox-light"] .hopperRow{
+      background: rgba(60,56,54,.04);
+      border-color: rgba(102,92,84,.22);
+    }
+    body[data-theme="gruvbox-dark"] .hopperRow{
+      background: rgba(235,219,178,.04);
+      border-color: rgba(102,92,84,.26);
+    }
+
     .hopperRow input{
       padding: max(4px, calc(var(--pad-input-y) - 2px))
                max(6px, calc(var(--pad-input-x) - 4px));
@@ -351,6 +471,15 @@
       font-size: var(--badge-font);
       width: fit-content;
     }
+    body[data-theme="gruvbox-light"] .hopperBadge{
+      border-color: rgba(102,92,84,.25);
+      background: rgba(60,56,54,.06);
+    }
+    body[data-theme="gruvbox-dark"] .hopperBadge{
+      border-color: rgba(124,111,100,.35);
+      background: rgba(0,0,0,.12);
+    }
+
     .resinNameInput{
       padding: var(--pad-input-y) var(--pad-input-x);
       border-radius: var(--radius-input);
@@ -399,6 +528,11 @@
     .toggle.on::after{
       transform: translateX(calc(var(--toggle-w) - var(--toggle-knob) - 6px));
     }
+    body[data-theme="gruvbox-dark"] .toggle.on,
+    body[data-theme="gruvbox-light"] .toggle.on{
+      background: rgba(215,153,33,.22);
+      border-color: rgba(215,153,33,.45);
+    }
 
     /* Weights */
     .weightsGrid{ display:grid; gap: var(--gap); grid-template-columns: 1fr; }
@@ -411,6 +545,15 @@
       display:grid;
       gap: var(--gap);
     }
+    body[data-theme="gruvbox-light"] .weightsLayer{
+      border-color: rgba(102,92,84,.25);
+      background: rgba(60,56,54,.04);
+    }
+    body[data-theme="gruvbox-dark"] .weightsLayer{
+      border-color: rgba(102,92,84,.30);
+      background: rgba(0,0,0,.10);
+    }
+
     .weightsTitle{ display:flex; align-items:center; justify-content: space-between; gap: 10px; }
     .weightsTitle strong{ font-size: 13px; }
     .weightsRow{
@@ -422,6 +565,14 @@
       border-radius: 14px;
       border: 1px solid rgba(255,255,255,.07);
       background: rgba(255,255,255,.03);
+    }
+    body[data-theme="gruvbox-light"] .weightsRow{
+      border-color: rgba(102,92,84,.22);
+      background: rgba(60,56,54,.03);
+    }
+    body[data-theme="gruvbox-dark"] .weightsRow{
+      border-color: rgba(102,92,84,.26);
+      background: rgba(235,219,178,.03);
     }
     .weightsRow input{ text-align:right; }
 
@@ -437,6 +588,15 @@
       border: 1px solid rgba(255,255,255,.07);
       transition: opacity .12s ease, filter .12s ease, transform .08s ease;
     }
+    body[data-theme="gruvbox-light"] .resultRow{
+      background: rgba(60,56,54,.03);
+      border-color: rgba(102,92,84,.22);
+    }
+    body[data-theme="gruvbox-dark"] .resultRow{
+      background: rgba(235,219,178,.03);
+      border-color: rgba(102,92,84,.26);
+    }
+
     .resultRow:hover{ transform: translateY(-1px); }
     .resultRow .meta{
       color: var(--muted);
@@ -468,6 +628,14 @@
       border-radius: var(--radius-row);
       background: rgba(255,255,255,.04);
       border: 1px solid rgba(255,255,255,.07);
+    }
+    body[data-theme="gruvbox-light"] .calcRow{
+      background: rgba(60,56,54,.03);
+      border-color: rgba(102,92,84,.22);
+    }
+    body[data-theme="gruvbox-dark"] .calcRow{
+      background: rgba(235,219,178,.03);
+      border-color: rgba(102,92,84,.26);
     }
     .calcLeft{ display:flex; flex-direction: column; gap: 2px; min-width: 0; }
     .calcName{ font-weight: 950; overflow:hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -505,6 +673,29 @@
     button.secondary{ background: rgba(255,255,255,.06); box-shadow:none; }
     button.danger{ background: rgba(255,92,92,.12); box-shadow:none; }
 
+    body[data-theme="gruvbox-dark"] button{
+      border-color: rgba(124,111,100,.40);
+      background: linear-gradient(135deg, rgba(215,153,33,.24), rgba(215,153,33,.10));
+      box-shadow: 0 10px 18px rgba(0,0,0,.20);
+    }
+    body[data-theme="gruvbox-light"] button{
+      border-color: rgba(102,92,84,.28);
+      background: linear-gradient(135deg, rgba(215,153,33,.22), rgba(215,153,33,.10));
+      box-shadow: 0 10px 18px rgba(0,0,0,.12);
+    }
+    body[data-theme="gruvbox-light"] button.secondary{
+      background: rgba(60,56,54,.06);
+    }
+    body[data-theme="gruvbox-dark"] button.secondary{
+      background: rgba(0,0,0,.10);
+    }
+    body[data-theme="gruvbox-dark"] button.danger{
+      background: rgba(204,36,29,.14);
+    }
+    body[data-theme="gruvbox-light"] button.danger{
+      background: rgba(204,36,29,.16);
+    }
+
     footer{
       position: fixed;
       left: 0; right: 0; bottom: 0;
@@ -517,6 +708,18 @@
       font-size: var(--font-tiny);
       text-align: center;
     }
+    body[data-theme="light"] footer{
+      background: rgba(244,247,251,.92);
+      border-top-color: rgba(15,23,42,.10);
+    }
+    body[data-theme="gruvbox-dark"] footer{
+      background: rgba(40,40,40,.92);
+      border-top-color: rgba(80,73,69,.55);
+    }
+    body[data-theme="gruvbox-light"] footer{
+      background: rgba(251,241,199,.92);
+      border-top-color: rgba(102,92,84,.28);
+    }
 
     /* Formula color helpers */
     .formulaGroup{ display: grid; gap: 8px; }
@@ -525,11 +728,20 @@
     .f-var2{ color: #ffb020; }
     .f-var3{ color: #4aa3ff; }
     .f-const{ color: #9bb0c6; }
+
+    /* Gruvbox semantic colors for formulas (optional) */
+    body[data-theme="gruvbox-dark"] .f-var1,
+    body[data-theme="gruvbox-light"] .f-var1{ color: #98971a; } /* green */
+    body[data-theme="gruvbox-dark"] .f-var2,
+    body[data-theme="gruvbox-light"] .f-var2{ color: #d79921; } /* yellow */
+    body[data-theme="gruvbox-dark"] .f-var3,
+    body[data-theme="gruvbox-light"] .f-var3{ color: #458588; } /* blue */
+    body[data-theme="gruvbox-dark"] .f-const,
+    body[data-theme="gruvbox-light"] .f-const{ color: #928374; } /* gray */
   </style>
 </head>
 
-<!-- ADDED: data-theme default so things are deterministic -->
-<body data-density="comfort" data-theme="dark">
+<body data-density="comfort">
 <main>
 
   <div class="appHeaderImage">
@@ -585,6 +797,8 @@
           <select id="themeSel">
             <option value="dark" selected>Dark</option>
             <option value="light">Light</option>
+            <option value="gruvbox-dark">Gruvbox Dark</option>
+            <option value="gruvbox-light">Gruvbox Light</option>
           </select>
 
           <div class="tiny">Compact/Dense reduce fonts, padding, and row height.</div>
@@ -776,7 +990,6 @@
     </summary>
 
     <div class="blockBody">
-
       <!-- 6.1 Operator formulas -->
       <details class="block" id="formulasBlock">
         <summary>
@@ -920,7 +1133,6 @@
           <div class="tiny">..</div>
         </div>
       </details>
-
     </div>
   </details>
 
@@ -951,16 +1163,8 @@
 
   const $ = (id) => document.getElementById(id);
 
-  // ✅ FIX #1 (core): applyDensity was missing, which can stop JS and leave splitsArea empty.
-  function applyDensity(d){
-    const dens = (d === "compact" || d === "dense") ? d : "comfort";
-    document.body.setAttribute("data-density", dens);
-    const sel = $("densitySel");
-    if (sel) sel.value = dens;
-    state.density = dens;
-  }
-
   function recomputeAutoH1(layer){
+    // Sum hoppers 2-6
     let sumOthers = 0;
     for (let i = 1; i < HOPPERS_PER_LAYER; i++){
       sumOthers += clampNum(layer.hoppers[i].pct);
@@ -1120,18 +1324,39 @@
   }
 
   function applyTheme(t){
-    const theme = (t === "light") ? "light" : "dark";
+    const allowed = new Set(["dark","light","gruvbox-dark","gruvbox-light"]);
+    const theme = allowed.has(String(t)) ? String(t) : "dark";
+
     document.body.setAttribute("data-theme", theme);
+
     const sel = $("themeSel");
     if (sel) sel.value = theme;
+
     state.theme = theme;
 
-    const logo = $("headerLogo");
-    if (logo){
-      logo.src = (theme === "light")
-        ? "images/resiniqhead-l.png"
-        : "images/resiniqhead.png";
-    }
+// Logo: choose logo based on theme
+const logo = $("headerLogo");
+if (logo){
+  let src = "images/resiniqhead.png"; // default (dark)
+
+  if (theme === "light") {
+    src = "images/resiniqhead-l.png";
+  } else if (theme === "gruvbox-light") {
+    src = "images/resiniqhead-gbl.png";
+  } else if (theme === "gruvbox-dark") {
+    src = "images/resiniqhead-gbd.png";
+  }
+
+  logo.src = src;
+}
+  }
+
+  function applyDensity(d){
+    const allowed = new Set(["comfort","compact","dense"]);
+    const density = allowed.has(String(d)) ? String(d) : "comfort";
+    document.body.setAttribute("data-density", density);
+    $("densitySel").value = density;
+    state.density = density;
   }
 
   function applyPayload(payload, {rebuildUI=true} = {}){
@@ -1166,14 +1391,16 @@
       return { name, layerPct, hoppers };
     });
 
-    state.layers.forEach(recomputeAutoH1);
-
     const nextOffsets = {};
     names.forEach(n => nextOffsets[n] = clampNum(state.offsets?.[n] ?? 0));
     state.offsets = nextOffsets;
 
     $("lineRate").value = String(state.lineRate);
     $("lineType").value = String(state.lineType);
+
+    const pm = $("pctMode");
+    if (pm) pm.value = String(state.pctModeDivisor);
+
     $("changeoverTime").value = state.changeoverTime;
 
     if (rebuildUI) rebuildUIFromState(payload);
@@ -1340,7 +1567,6 @@
     recipeStatus(`Imported config: "${name}"`, "ok");
   }
 
-  // Theme selector
   $("themeSel").addEventListener("change",(e)=>{
     applyTheme(e.target.value);
     saveSession();
@@ -1418,7 +1644,6 @@
         to.hoppers[i].track = !!from.hoppers[i].track;
       }
       to.layerPct = clampNum(from.layerPct);
-      recomputeAutoH1(to);
     }
 
     state.layers.forEach((L)=>{
@@ -1445,9 +1670,9 @@
                   id="lp_${L.name}"
                   type="text"
                   inputmode="decimal"
-                  placeholder="0"
+                  placeholder="${div===100 ? "0" : "0.0"}"
                   value="${clampNum(L.layerPct)}"
-                  aria-label="Layer ${L.name} percent"
+                  aria-label="Layer ${L.name} ${div===100 ? "percent" : "fraction"}"
                 />
               </div>
               <div class="layerMeta">Layer split: <span class="mono">${layerPctText}</span> • Offset: <span class="mono">${fmtNum(off,0)}</span> min</div>
@@ -1514,12 +1739,13 @@
 
         const resinEl = row.querySelector(`#${resinFieldId}`);
         const pctEl = row.querySelector(`#${pctFieldId}`);
-        const togEl = row.querySelector(`#${toggleId}`);
-
         if (hi === 0){
           pctEl.readOnly = true;
           pctEl.title = "Auto (100% minus other hoppers)";
+          pctEl.style.opacity = "0.85";
         }
+
+        const togEl = row.querySelector(`#${toggleId}`);
 
         resinEl.addEventListener("input",(e)=>{
           L.hoppers[hi].resinName = normName(e.target.value);
@@ -1530,9 +1756,11 @@
         pctEl.addEventListener("input",(e)=>{
           if (hi === 0) return;
           L.hoppers[hi].pct = clampNum(e.target.value);
+
           recomputeAutoH1(L);
 
-          const h1El = det.querySelector(`#p_${L.name}_0`);
+          const h1Id = `p_${L.name}_0`;
+          const h1El = det.querySelector(`#${h1Id}`);
           if (h1El) h1El.value = String(clampNum(L.hoppers[0].pct));
 
           validateAndCompute();
@@ -1558,8 +1786,8 @@
     const prod = clampNum(state.prodResinLb);
     const scrap = clampNum(state.scrapResinLb);
     const total = prod + scrap;
-    const div = 100;
 
+    const div = 100;
     const totals = new Map();
 
     state.layers.forEach((L)=>{
@@ -1766,6 +1994,63 @@
     });
   }
 
+  function resetAll(){
+    const ok = confirm("Reset all fields?\n\nPress OK to reset.\nPress Cancel to keep current values.");
+    if (!ok) return;
+
+    const clearSaved = confirm("Also clear saved session (autosave) data on this device?");
+    if (clearSaved) clearSession();
+
+    state.lineRate = 0;
+    state.changeoverTime = "";
+    state.prodResinLb = 0;
+    state.scrapResinLb = 0;
+
+    ensureLayers();
+    state.layers.forEach(L=>{
+      state.layers.forEach(recomputeAutoH1);
+      L.layerPct = 0;
+      state.offsets[L.name] = 0;
+      L.hoppers.forEach(h=>{
+        h.pct = 0; h.weight = 0; h.resinName = ""; h.track = false; h.pumpOff = false;
+      });
+    });
+
+    $("lineRate").value = "0";
+    $("changeoverTime").value = "";
+    $("prodResinLb").value = "0";
+    $("scrapResinLb").value = "0";
+
+    rebuildUIFromState();
+    saveSession();
+  }
+
+  // Focus: select all numeric fields, not resin names
+  function selectAllSoon(el){
+    if (!el) return;
+    if (el.tagName === "SELECT") return;
+    if (el.type === "checkbox" || el.type === "radio") return;
+    if (el.readOnly || el.disabled) return;
+    setTimeout(()=>{
+      try{
+        el.focus({preventScroll:true});
+        if (typeof el.select === "function") el.select();
+        if (typeof el.setSelectionRange === "function"){
+          const v = el.value ?? "";
+          el.setSelectionRange(0, String(v).length);
+        }
+      }catch(e){}
+    }, 0);
+  }
+  document.addEventListener("focusin",(e)=>{
+    const el = e.target;
+    if (!(el instanceof HTMLElement)) return;
+    if (el.tagName === "INPUT" || el.tagName === "TEXTAREA"){
+      if (el.classList.contains("resinNameInput")) return;
+      selectAllSoon(el);
+    }
+  });
+
   function rebuildUIFromState(payloadMaybe){
     ensureLayers();
     renderOffsetInputs();
@@ -1836,16 +2121,13 @@
   (function init(){
     $("footerVer").textContent = `ResinIQ • v${APP_VERSION}`;
 
-    // Set defaults early so any render uses valid tokens
-    applyTheme(state.theme || "dark");
-    applyDensity(state.density || "comfort");
-
     ensureLayers();
 
     const restored = loadSession();
     if (!restored){
+      applyDensity("comfort");
+      applyTheme("dark");
       rebuildUIFromState();
-      saveSession();
     }
 
     hookDetailsPersistence();
@@ -1853,6 +2135,10 @@
 
     const selVal = $("savedConfigs").value;
     if (selVal && selVal !== "— none saved —") $("configName").value = selVal;
+
+    // Ensure theme is applied even after restore (and selector matches)
+    applyTheme(state.theme || "dark");
+    saveSession();
   })();
 </script>
 </body>
