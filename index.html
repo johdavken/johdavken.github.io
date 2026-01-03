@@ -22,6 +22,12 @@
       --ok:#5dff9f;
       --shadow2: 0 8px 20px rgba(0,0,0,.25);
       --radius2:18px;
+      --field-bg: rgba(0,0,0,.20);
+      --panelOpen: rgba(18,26,35,.92); /* dark-mode open background */
+      --chev: rgba(255,255,255,.45);
+
+
+
 
       /* Density tokens (default = Comfort) */
       --font-base: 16px;
@@ -39,6 +45,28 @@
       --toggle-knob: 24px;
       --badge-font: 12px;
     }
+
+    /* Light theme */
+    body[data-theme="light"]{
+      --bg: #f4f7fb;
+      --panel: rgba(255,255,255,.95);
+      --panel2: rgba(255,255,255,.85);
+      --text: #0f172a;
+      --muted: #5b6b82;
+      --border: rgba(15,23,42,.12);
+      --border2: rgba(15,23,42,.18);
+      --field-bg: rgba(15,23,42,.06);
+      --panelOpen: rgba(255,255,255,.95);
+      --chev: rgba(15,23,42,.45);
+
+
+      --warn: #d97706;
+      --bad: #dc2626;
+      --ok: #16a34a;
+
+  --shadow2: 0 6px 18px rgba(0,0,0,.12);
+}
+
 
     /* Compact */
     body[data-density="compact"]{
@@ -147,7 +175,7 @@
       padding: var(--pad-input-y) var(--pad-input-x);
       border-radius: var(--radius-input);
       border: 1px solid var(--border2);
-      background: rgba(0,0,0,.20);
+      background: var(--field-bg);
       color: var(--text);
       outline: none;
       font-size: var(--font-base);
@@ -229,7 +257,8 @@ details.block > summary .pill{
       background: var(--panel2);
       box-shadow: 0 8px 18px rgba(0,0,0,.20);
     }
-    details.block[open]{ background: rgba(15,22,32,.90); }
+    details.block[open]{ background: var(--panelOpen); }
+
 
     /* Make nested blocks inside a card always span full width (fixes "off to the right") */
     .blockBody > details.block{
@@ -249,12 +278,16 @@ details.block > summary .pill{
     }
     summary::-webkit-details-marker{ display:none; }
 
+    summary:hover .chev{
+  border-color: rgba(74,163,255,.8);
+}
+
 
     .sumLeft{ display:flex; align-items:center; gap:10px; min-width: 0; }
     .chev{
       width: 10px; height: 10px;
-      border-right: 2px solid rgba(255,255,255,.45);
-      border-bottom: 2px solid rgba(255,255,255,.45);
+      border-right: 2px solid var(--chev);
+      border-bottom: 2px solid var(--chev);
       transform: rotate(-45deg);
       transition: transform .15s ease;
       flex: 0 0 auto;
@@ -527,7 +560,7 @@ details[open] > summary .chev{ transform: rotate(45deg); }
 <main>
 
   <div class="appHeaderImage">
-    <img src="images/resiniqhead.png" alt="ResinIQ">
+    <img id="headerLogo" src="images/resiniqhead.png" alt="ResinIQ">
   </div>
 
 
@@ -576,6 +609,12 @@ details[open] > summary .chev{ transform: rotate(45deg); }
               <option value="compact">Compact</option>
               <option value="dense">Dense</option>
             </select>
+            <label for="themeSel">Theme</label>
+<select id="themeSel">
+  <option value="dark" selected>Dark</option>
+  <option value="light">Light</option>
+</select>
+
             <div class="tiny">Compact/Dense reduce fonts, padding, and row height.</div>
           </div>
         </div>
@@ -946,7 +985,9 @@ details[open] > summary .chev{ transform: rotate(45deg); }
     layers: [],
     prodResinLb: 0,
     scrapResinLb: 0,
-    density: "comfort"
+    density: "comfort",
+    theme: "dark"
+
   };
 
   const $ = (id) => document.getElementById(id);
@@ -1091,6 +1132,7 @@ details[open] > summary .chev{ transform: rotate(45deg); }
       "formulasBlock",
       "changelogBlock",
       "notesBlock"
+
     ].forEach(id=>{
       const el = document.getElementById(id);
       if (el && typeof el.open === "boolean") blocksOpen[id] = !!el.open;
@@ -1107,15 +1149,34 @@ details[open] > summary .chev{ transform: rotate(45deg); }
       prodResinLb: state.prodResinLb,
       scrapResinLb: state.scrapResinLb,
       density: state.density,
+      theme: state.theme,
       blocksOpen
     };
+
+
+
   }
 
-  function applyDensity(d){
-    state.density = (d === "compact" || d === "dense") ? d : "comfort";
-    document.body.setAttribute("data-density", state.density);
-    $("densitySel").value = state.density;
+  function applyTheme(t){
+  const theme = (t === "light") ? "light" : "dark";
+  document.body.setAttribute("data-theme", theme);
+  $("themeSel").value = theme;
+  state.theme = theme;
+
+  const logo = $("headerLogo");
+  if (logo){
+    logo.src = (theme === "light")
+      ? "images/resiniqhead-l.png"
+      : "images/resiniqhead.png";
   }
+}
+
+
+
+
+
+
+
 
   function applyPayload(payload, {rebuildUI=true} = {}){
     if (!payload || typeof payload !== "object") return;
@@ -1128,6 +1189,7 @@ details[open] > summary .chev{ transform: rotate(45deg); }
     state.prodResinLb = clampNum(payload.prodResinLb);
     state.scrapResinLb = clampNum(payload.scrapResinLb);
 
+    applyTheme(payload.theme || "dark");
     applyDensity(payload.density || "comfort");
 
     const names = getLayerNamesForType(state.lineType);
@@ -1323,6 +1385,10 @@ details[open] > summary .chev{ transform: rotate(45deg); }
     $("importJson").value = "";
     recipeStatus(`Imported config: "${name}"`, "ok");
   }
+$("themeSel").addEventListener("change",(e)=>{
+  applyTheme(e.target.value);
+  saveSession();
+});
 
   function renderOffsetInputs(){
     const wrap = $("offsetInputs");
@@ -1974,6 +2040,8 @@ pctEl.addEventListener("input",(e)=>{
     if (selVal && selVal !== "— none saved —") $("configName").value = selVal;
 
     saveSession();
+    applyTheme(state.theme || "dark");
+
   })();
 </script>
 </body>
