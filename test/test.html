@@ -1711,6 +1711,13 @@ main{
 
     applyTheme(payload.theme || "dark");
     applyDensity(payload.density || "comfort");
+    $("lineRate").value = String(state.lineRate);
+    const g = $("gauge");
+    if (g) g.value = String(state.gauge);
+
+    $("lineType").value = String(state.lineType);
+    $("changeoverTime").value = state.changeoverTime;
+
 
     const names = getLayerNamesForType(state.lineType);
     const oldLayers = Array.isArray(payload.layers) ? payload.layers : [];
