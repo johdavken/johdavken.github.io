@@ -2021,7 +2021,7 @@ main{
                   aria-label="Layer ${L.name} percent"
                 />
               </div>
-              <div class="layerMeta">Split: <span class="mono" id="layerPctText_${L.name}">${layerPctText}</span> • Thickness: <span class="mono" id="layerThickText_${L.name}">${(clampNum(state.gauge)>0)?`${fmtTrim(clampNum(state.gauge)*(clampNum(L.layerPct)/100),3)} mil`:"—"}</span> • Offset: <span class="mono" id="layerOffText_${L.name}">${fmtNum(off,0)} min</span></div>
+              <div class="layerMeta"> Thickness: <span class="mono" id="layerThickText_${L.name}">${(clampNum(state.gauge)>0)?`${fmtTrim(clampNum(state.gauge)*(clampNum(L.layerPct)/100),3)} mil`:"—"}</span> • Offset: <span class="mono" id="layerOffText_${L.name}">${fmtNum(off,0)} min</span></div>
             </div>
           </div>
           <div style="display:flex; gap:8px; align-items:center;">
