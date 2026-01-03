@@ -1702,7 +1702,7 @@ main{
     if (!payload || typeof payload !== "object") return;
 
     state.lineRate = clampNum(payload.lineRate);
-    state.gauge = clampNum(payload.gauge);
+    if ("gauge" in payload) state.gauge = clampNum(payload.gauge);
     state.lineType = [1,3,5].includes(Number(payload.lineType)) ? Number(payload.lineType) : 3;
     state.changeoverTime = payload.changeoverTime || "";
     state.offsets = payload.offsets || {};
