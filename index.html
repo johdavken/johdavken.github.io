@@ -120,7 +120,7 @@
       max-width: 980px;
       margin: 0 auto;
       padding: 14px;
-      padding-bottom: 120px;
+      padding-bottom: 24px;
       display: grid;
       gap: 16px;
     }
@@ -498,23 +498,7 @@ details[open] > summary .chev{ transform: rotate(45deg); }
       font-size: var(--font-small);
     }
 
-    /* Action bar */
-    .actionBar{
-      position: fixed;
-      left: 0; right: 0; bottom: 28px;
-      z-index: 40;
-      padding: 10px 12px 12px 12px;
-      background: rgba(11,15,20,.92);
-      border-top: 1px solid var(--border);
-      backdrop-filter: blur(10px);
-    }
-    .btnRow{
-      max-width: 980px;
-      margin: 0 auto;
-      display:grid;
-      grid-template-columns: 1.2fr 1fr 1fr;
-      gap: 10px;
-    }
+
     button{
       width: 100%;
       padding: 12px 12px;
@@ -958,13 +942,6 @@ details[open] > summary .chev{ transform: rotate(45deg); }
 
 </main>
 
-<div class="actionBar">
-  <div class="btnRow">
-    <button id="recalcBtn" type="button">Recalculate</button>
-    <button id="copyBtn" type="button" class="secondary">Copy CSV</button>
-    <button id="resetBtn" type="button" class="danger">Reset</button>
-  </div>
-</div>
 
 <footer id="footerVer"></footer>
 
@@ -2006,10 +1983,6 @@ pctEl.addEventListener("input",(e)=>{
 
   $("prodResinLb").addEventListener("input",(e)=>{ state.prodResinLb = clampNum(e.target.value); renderResinCalculator(); saveSession(); });
   $("scrapResinLb").addEventListener("input",(e)=>{ state.scrapResinLb = clampNum(e.target.value); renderResinCalculator(); saveSession(); });
-
-  $("recalcBtn").addEventListener("click", ()=>{ validateAndCompute(); saveSession(); });
-  $("copyBtn").addEventListener("click", copyResultsCSV);
-  $("resetBtn").addEventListener("click", resetAll);
 
   // Recipe buttons
   $("saveConfigBtn").addEventListener("click", saveNamedConfig);
