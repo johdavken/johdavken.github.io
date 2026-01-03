@@ -1081,6 +1081,12 @@ main{
           <div class="tiny">Example: 1200</div>
         </div>
 
+        <div style="margin-top:10px">
+          <label for="gauge">Gauge (mil)</label>
+          <input id="gauge" type="text" inputmode="decimal" placeholder="0" value="0" />
+          <div class="tiny">Example: 1.5</div>
+        </div>
+
         <div>
           <label for="lineType">Line type</label>
           <select id="lineType">
@@ -1419,7 +1425,9 @@ main{
           <div class="hr"></div>
 
           <div class="mono" style="line-height:1.7; font-size: var(--font-small);">
+            <div><strong>0.11</strong> — Layer cards now display thickness. Must set gauge in Setup.</div>
             <div><strong>0.10</strong> — Added more themes (Nord, Tokyo Night, Dracula, Solarized, Catppuccin, Amber, High Contrast, Mono).</div>
+            <div><strong>0.09</strong> — Light and dark themes added to setup.</div>
             <div><strong>0.08</strong> — Added ability to name resins in each hopper.</div>
             <div><strong>0.07</strong> — Added resin calculator. Uses resin names.</div>
             <div><strong>0.06</strong> — Added formulas under new Info section.</div>
@@ -1463,7 +1471,7 @@ main{
 <footer id="footerVer"></footer>
 
 <script>
-  const APP_VERSION = "0.10";
+  const APP_VERSION = "0.11";
 
   const LS_SESSION_KEY = "resinTimer.session.v0.09";
   const LS_CONFIGS_KEY  = "resinTimer.configs.v0.09";
@@ -1493,7 +1501,8 @@ main{
     prodResinLb: 0,
     scrapResinLb: 0,
     density: "comfort",
-    theme: "dark"
+    theme: "dark",
+    gauge: 0
   };
 
   const $ = (id) => document.getElementById(id);
@@ -1510,6 +1519,11 @@ main{
   function keyName(s){ return normName(s).toUpperCase(); }
   function sum(arr){ return arr.reduce((a,b)=>a+b,0); }
   function fmtNum(n, d=2){ return Number.isFinite(n) ? n.toFixed(d) : "—"; }
+  function fmtTrim(n, d=3){
+    if (!Number.isFinite(n)) return "—";
+    return n.toFixed(d).replace(/\.0+$/,"").replace(/(\.\d*?)0+$/,"$1");
+  }
+
 
   function hoursToHHMM(h){
     if (!Number.isFinite(h) || h < 0) return "—";
@@ -1645,6 +1659,7 @@ main{
       scrapResinLb: state.scrapResinLb,
       density: state.density,
       theme: state.theme,
+      gauge: state.gauge,
       blocksOpen
     };
   }
@@ -1687,6 +1702,7 @@ main{
     if (!payload || typeof payload !== "object") return;
 
     state.lineRate = clampNum(payload.lineRate);
+    state.gauge = clampNum(payload.gauge);
     state.lineType = [1,3,5].includes(Number(payload.lineType)) ? Number(payload.lineType) : 3;
     state.changeoverTime = payload.changeoverTime || "";
     state.offsets = payload.offsets || {};
@@ -1914,6 +1930,7 @@ main{
         state.offsets[L.name] = clampNum(e.target.value);
         validateAndCompute();
         saveSession();
+        updateLayerMetaDisplays();
       });
     });
   }
@@ -2004,7 +2021,7 @@ main{
                   aria-label="Layer ${L.name} percent"
                 />
               </div>
-              <div class="layerMeta">Layer split: <span class="mono">${layerPctText}</span> • Offset: <span class="mono">${fmtNum(off,0)}</span> min</div>
+              <div class="layerMeta">Layer split: <span class="mono" id="layerPctText_${L.name}">${layerPctText}</span> • Layer thickness: <span class="mono" id="layerThickText_${L.name}">${(clampNum(state.gauge)>0)?`${fmtTrim(clampNum(state.gauge)*(clampNum(L.layerPct)/100),3)} mil`:"—"}</span> • Offset: <span class="mono" id="layerOffText_${L.name}">${fmtNum(off,0)} min</span></div>
             </div>
           </div>
           <div style="display:flex; gap:8px; align-items:center;">
@@ -2027,6 +2044,7 @@ main{
           L.layerPct = clampNum(e.target.value);
           validateAndCompute();
           saveSession();
+          updateLayerMetaDisplays();
         });
       }
 
@@ -2171,6 +2189,23 @@ main{
         <div class="mono" style="font-weight:950">${fmtNum(r.lbs,2)} lb</div>
       `;
       out.appendChild(row);
+    });
+  }
+
+  function updateLayerMetaDisplays(){
+    const g = clampNum(state.gauge);
+    state.layers.forEach(L=>{
+      const pct = clampNum(L.layerPct);
+
+      const pctEl = document.getElementById(`layerPctText_${L.name}`);
+      if (pctEl) pctEl.textContent = `${fmtNum(pct,2)}%`;
+
+      const thickEl = document.getElementById(`layerThickText_${L.name}`);
+      if (thickEl) thickEl.textContent = (g>0) ? `${fmtTrim(g*(pct/100),3)} mil` : "—";
+
+      const off = clampNum(state.offsets?.[L.name] ?? 0);
+      const offEl = document.getElementById(`layerOffText_${L.name}`);
+      if (offEl) offEl.textContent = `${fmtNum(off,0)} min`;
     });
   }
 
@@ -2337,6 +2372,7 @@ main{
 
     state.lineRate = 0;
     state.changeoverTime = "";
+    state.gauge = 0;
     state.prodResinLb = 0;
     state.scrapResinLb = 0;
 
@@ -2395,6 +2431,7 @@ main{
     renderWeightsArea();
     renderSplitsArea();
     renderResinCalculator();
+    updateLayerMetaDisplays();
 
     if (payloadMaybe && typeof payloadMaybe === "object"){
       const o = payloadMaybe.blocksOpen;
@@ -2418,6 +2455,7 @@ main{
 
   // Wire inputs
   $("lineRate")?.addEventListener("input",(e)=>{ state.lineRate = clampNum(e.target.value); validateAndCompute(); saveSession(); });
+  $("gauge").addEventListener("input",(e)=>{ state.gauge = clampNum(e.target.value); updateLayerMetaDisplays(); validateAndCompute(); saveSession(); });
   $("lineType")?.addEventListener("change",(e)=>{
     state.lineType = [1,3,5].includes(Number(e.target.value)) ? Number(e.target.value) : 3;
     ensureLayers();
