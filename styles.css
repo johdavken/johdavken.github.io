@@ -38,7 +38,9 @@
 
   --readonly-bg: rgba(255,255,255,.06);
   --readonly-border: rgba(255,255,255,.10);
-
+  --footer-height: 56px;      /* baseline footer height */
+  --footer-gap: 18px;         /* breathing room above footer */
+  --page-bottom-pad: calc(var(--footer-height) + var(--footer-gap) + env(safe-area-inset-bottom));
   --focus-border: rgba(74,163,255,.80);
   --focus-ring: rgba(74,163,255,.16);
 
@@ -102,6 +104,7 @@
 
   --footer-bg: rgba(11,15,20,.92);
   --footer-border: rgba(255,255,255,.08);
+
 }
 
 /* Compact */
@@ -160,7 +163,7 @@ body{
 main{
   max-width: 980px;
   margin: 0 auto;
-  padding: 14px 14px 24px;
+  padding: 14px 14px calc(24px + var(--page-bottom-pad));
   display: grid;
   gap: 16px;
 }
