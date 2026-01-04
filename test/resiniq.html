@@ -18,8 +18,8 @@
       --panel2: rgba(15,22,32,.76);
       --muted:#9bb0c6;
       --text:#eaf2ff;
-      --title: var(--text);
-      --subtitle: var(--muted);
+      --subtitle: #5dff9f;
+      --title: #4aa3ff;
 
       --border:rgba(255,255,255,.10);
       --border2:rgba(255,255,255,.14);
@@ -68,16 +68,6 @@
       --f-var2: #ffb020;
       --f-var3: #4aa3ff;
       --f-const: #9bb0c6;
-
-      /* Footer (bottom status bar) tokens */
-      --footer-bg: rgba(11,15,20,.92);
-      --footer-border: rgba(255,255,255,.08);
-      --footer-msg-color: var(--title, var(--text));
-      --footer-sub-color: var(--subtitle, var(--muted));
-      --footer-msg-size: 13px;
-      --footer-sub-size: 11px;
-      --footer-msg-weight: 950;
-      --footer-sub-weight: 650;
     }
 
     /* Light theme */
@@ -86,10 +76,8 @@
       --panel: rgba(255,255,255,.95);
       --panel2: rgba(255,255,255,.85);
       --text: #0f172a;
-      --footer-border: var(--border);
-      --footer-bg: color-mix(in srgb, var(--bg) 88%, transparent);
-      --subtitle: #5b6b82;
-      --title: #0f172a;
+      --subtitle: #475569;
+      --title: #1e40af;
       --muted: #5b6b82;
       --border: rgba(15,23,42,.12);
       --border2: rgba(15,23,42,.18);
@@ -121,8 +109,6 @@
       --panel: rgba(50,48,47,.95); /* bg0_s */
       --panel2: rgba(60,56,54,.88);/* bg1 */
       --text: #ebdbb2;             /* fg1 */
-      --footer-border: var(--border);
-      --footer-bg: color-mix(in srgb, var(--bg) 88%, transparent);
       --title: #fb4943;            /* fg1 (strong) */
       --subtitle: #83a598;         /* fg3 */
       --muted: #a89984;            /* fg4 */
@@ -160,11 +146,9 @@
       --bg: #fbf1c7;               /* bg0 */
       --panel: rgba(235,219,178,.92); /* bg1 */
       --panel2: rgba(213,196,161,.86);/* bg2 */
-      --text: #3c3836;             /* fg0 (dark) */
-      --footer-border: var(--border);
-      --footer-bg: color-mix(in srgb, var(--bg) 88%, transparent);
-      --subtitle: #076678;
-      --title: #9d0006;
+      --text: #3c3836;
+      --subtitle: #DB5F4B;
+      --title: #458588;             /* fg0 (dark) */
       --muted: #665c54;            /* fg2-ish */
       --border: rgba(102,92,84,.35);
       --border2: rgba(124,111,100,.35);
@@ -172,9 +156,18 @@
       --panelOpen: rgba(235,219,178,.96);
       --chev: rgba(60,56,54,.55);
 
+      --btn-text: var(--text);
+      --btn-border: var(--readonly-border);
+
+      --btn-primary-a: rgba(69,133,136,.22);  /* based on --title */
+      --btn-primary-b: rgba(69,133,136,.10);
+
+      --btn-secondary-bg: var(--readonly-bg);
+      --btn-danger-bg: rgba(204,36,29,.14);  /* based on --bad */
+
       --warn: #d79921;             /* yellow */
-      --bad: #cc241d;              /* red */
-      --ok: #98971a;               /* green */
+      --bad: #d79921;              /* red */
+      --ok: #d79921;               /* green */
 
       --shadow2: 0 6px 18px rgba(0,0,0,.14);
 
@@ -202,10 +195,8 @@
       --panel: rgba(59,66,82,.95);
       --panel2: rgba(67,76,94,.88);
       --text: #eceff4;
-      --footer-border: var(--border);
-      --footer-bg: color-mix(in srgb, var(--bg) 88%, transparent);
-      --subtitle: #81a1c1;
-      --title: #8fbcbb;
+      --subtitle: #a3be8c;
+      --title: #88c0d0;
       --muted: #d8dee9;
       --border: rgba(76,86,106,.55);
       --border2: rgba(94,129,172,.35);
@@ -226,9 +217,7 @@
       --panel: rgba(36,40,59,.95);
       --panel2: rgba(41,46,66,.88);
       --text: #c0caf5;
-      --footer-border: var(--border);
-      --footer-bg: color-mix(in srgb, var(--bg) 88%, transparent);
-      --subtitle: #a9b1d6;
+      --subtitle: #9ece6a;
       --title: #7aa2f7;
       --muted: #a9b1d6;
       --border: rgba(65,72,104,.55);
@@ -250,9 +239,7 @@
       --panel: rgba(68,71,90,.95);
       --panel2: rgba(52,55,70,.88);
       --text: #f8f8f2;
-      --footer-border: var(--border);
-      --footer-bg: color-mix(in srgb, var(--bg) 88%, transparent);
-      --subtitle: #8be9fd;
+      --subtitle: #50fa7b;
       --title: #bd93f9;
       --muted: #c7c3e0;
       --border: rgba(98,114,164,.45);
@@ -274,9 +261,7 @@
       --panel: rgba(7,54,66,.95);
       --panel2: rgba(0,43,54,.88);
       --text: #eee8d5;
-      --footer-border: var(--border);
-      --footer-bg: color-mix(in srgb, var(--bg) 88%, transparent);
-      --subtitle: #93a1a1;
+      --subtitle: #859900;
       --title: #268bd2;
       --muted: #93a1a1;
       --border: rgba(88,110,117,.45);
@@ -298,9 +283,7 @@
       --panel: rgba(255,255,255,.96);
       --panel2: rgba(238,232,213,.90);
       --text: #073642;
-      --footer-border: var(--border);
-      --footer-bg: color-mix(in srgb, var(--bg) 88%, transparent);
-      --subtitle: #586e75;
+      --subtitle: #859900;
       --title: #268bd2;
       --muted: #586e75;
       --border: rgba(147,161,161,.45);
@@ -322,9 +305,7 @@
       --panel: rgba(49,50,68,.95);
       --panel2: rgba(69,71,90,.88);
       --text: #cdd6f4;
-      --footer-border: var(--border);
-      --footer-bg: color-mix(in srgb, var(--bg) 88%, transparent);
-      --subtitle: #a6adc8;
+      --subtitle: #a6e3a1;
       --title: #89b4fa;
       --muted: #a6adc8;
       --border: rgba(88,91,112,.55);
@@ -346,9 +327,7 @@
       --panel: rgba(255,255,255,.96);
       --panel2: rgba(230,233,239,.90);
       --text: #4c4f69;
-      --footer-border: var(--border);
-      --footer-bg: color-mix(in srgb, var(--bg) 88%, transparent);
-      --subtitle: #6c6f85;
+      --subtitle: #40a02b;
       --title: #1e66f5;
       --muted: #6c6f85;
       --border: rgba(156,160,176,.40);
@@ -370,10 +349,8 @@
       --panel: rgba(20,16,10,.92);
       --panel2: rgba(18,14,8,.78);
       --text: #fffbeb;
-      --footer-border: var(--border);
-      --footer-bg: color-mix(in srgb, var(--bg) 88%, transparent);
-      --subtitle: rgba(252,211,77,.85);
-      --title: rgba(252,211,77,.95);
+      --subtitle: #84cc16;
+      --title: #fbbf24;
       --muted: rgba(252,211,77,.85);
       --border: rgba(251,191,36,.22);
       --border2: rgba(251,191,36,.28);
@@ -394,9 +371,7 @@
       --panel: rgba(0,0,0,.95);
       --panel2: rgba(0,0,0,.85);
       --text: #ffffff;
-      --footer-border: var(--border);
-      --footer-bg: color-mix(in srgb, var(--bg) 88%, transparent);
-      --subtitle: #d1d5db;
+      --subtitle: #ffffff;
       --title: #ffffff;
       --muted: #d1d5db;
       --border: rgba(255,255,255,.35);
@@ -418,8 +393,6 @@
       --panel: rgba(255,255,255,.96);
       --panel2: rgba(245,245,245,.92);
       --text: #111827;
-      --footer-border: var(--border);
-      --footer-bg: color-mix(in srgb, var(--bg) 88%, transparent);
       --subtitle: #374151;
       --title: #111827;
       --muted: #374151;
@@ -544,7 +517,6 @@ main{
       padding: 14px 14px 24px;
       display: grid;
       gap: 16px;
-      padding-bottom: 72px;
     }
 
     /* Small utility classes (replaces repeated inline styles) */
@@ -1003,7 +975,10 @@ main{
       padding: 12px 12px;
       border-radius: 16px;
       border: 1px solid rgba(255,255,255,.16);
-      background: linear-gradient(135deg, rgba(74,163,255,.22), rgba(74,163,255,.10));
+      background: linear-gradient(135deg,
+    var(--btn-primary-a, rgba(74,163,255,.22)),
+    var(--btn-primary-b, rgba(74,163,255,.10))
+  );
       color: var(--text);
       font-weight: 900;
       cursor: pointer;
@@ -1011,40 +986,44 @@ main{
       transition: transform .08s ease, filter .12s ease;
       font-size: var(--font-base);
     }
+
     button:hover{ filter: brightness(1.06); transform: translateY(-1px); }
     button:active{ transform: translateY(0px); }
-    button.secondary{ background: rgba(255,255,255,.06); box-shadow:none; }
-    button.danger{ background: rgba(255,92,92,.12); box-shadow:none; }
+    button.secondary{
+  background: var(--btn-secondary-bg, rgba(255,255,255,.06));
+  box-shadow:none;
+}
+    button.danger{
+  background: var(--btn-danger-bg, rgba(255,92,92,.12));
+  box-shadow:none;
+}
 
-    body[data-theme="gruvbox-dark"] button,
-    body[data-theme="gruvbox-light"] button{
-      border-color: var(--readonly-border);
-      background: linear-gradient(135deg, rgba(215,153,33,.22), rgba(215,153,33,.10));
-    }
-    body[data-theme="gruvbox-dark"] button.secondary,
-    body[data-theme="gruvbox-light"] button.secondary{
-      background: var(--readonly-bg);
-    }
-    body[data-theme="gruvbox-dark"] button.danger,
-    body[data-theme="gruvbox-light"] button.danger{
-      background: rgba(204,36,29,.14);
-    }
-    body[data-theme="light"] button.secondary{ background: rgba(15,23,42,.06); }
-    body[data-theme="light"] button.danger{ background: rgba(220,38,38,.12); }
+
+
+
+/* ===== Bottom status bar (Next Pump Off) ===== */
+:root{
+  --footer-msg-color: var(--text);
+  --footer-sub-color: var(--muted);
+  --footer-msg-size: 13px;
+  --footer-sub-size: 11px;
+  --footer-msg-weight: 950;
+  --footer-sub-weight: 650;
+}
 
 .footerBar{
   position: fixed;
   left: 0; right: 0; bottom: 0;
   z-index: 41;
   padding: 8px 12px;
-  background: var(--footer-bg);
-  border-top: 1px solid var(--footer-border);
+  background: rgba(11,15,20,.92);
+  border-top: 1px solid rgba(255,255,255,.08);
   backdrop-filter: blur(10px);
   text-align: center;
 }
 
 .footerMsg{
-  color: var(--footer-msg-color);
+  color: var(--title, var(--text));
   font-size: var(--footer-msg-size);
   font-weight: var(--footer-msg-weight);
   letter-spacing: .2px;
@@ -1052,12 +1031,40 @@ main{
 
 .footerSub{
   margin-top: 2px;
-  color: var(--footer-sub-color);
+  color: var(--subtitle, var(--muted));
   font-size: var(--footer-sub-size);
   font-weight: var(--footer-sub-weight);
 }
 
-/* Formula helpers */
+/* Keep your theme footer tint overrides working (update selectors) */
+body[data-theme="light"] .footerBar{
+  background: rgba(244,247,251,.92);
+  border-top-color: rgba(15,23,42,.10);
+}
+body[data-theme="gruvbox-dark"] .footerBar{
+  background: rgba(40,40,40,.92);
+  border-top-color: rgba(80,73,69,.55);
+}
+body[data-theme="gruvbox-light"] .footerBar{
+  background: rgba(251,241,199,.92);
+  border-top-color: rgba(102,92,84,.28);
+}
+
+    }
+    body[data-theme="light"] footer{
+      background: rgba(244,247,251,.92);
+      border-top-color: rgba(15,23,42,.10);
+    }
+    body[data-theme="gruvbox-dark"] footer{
+      background: rgba(40,40,40,.92);
+      border-top-color: rgba(80,73,69,.55);
+    }
+    body[data-theme="gruvbox-light"] footer{
+      background: rgba(251,241,199,.92);
+      border-top-color: rgba(102,92,84,.28);
+    }
+
+    /* Formula helpers */
     .formulaGroup{ display: grid; gap: 8px; }
     .f-label{ color: var(--text); font-weight: 900; }
     .f-var1{ color: var(--f-var1); }
@@ -1122,8 +1129,17 @@ main{
       color: var(--muted);
     }
 
-
-
+    /* Footer tint per theme */
+    body[data-theme="nord"] footer{ background: rgba(46,52,64,.92); border-top-color: rgba(76,86,106,.55); }
+    body[data-theme="tokyo-night"] footer{ background: rgba(26,27,38,.92); border-top-color: rgba(65,72,104,.55); }
+    body[data-theme="dracula"] footer{ background: rgba(40,42,54,.92); border-top-color: rgba(98,114,164,.45); }
+    body[data-theme="solarized-dark"] footer{ background: rgba(0,43,54,.92); border-top-color: rgba(88,110,117,.45); }
+    body[data-theme="solarized-light"] footer{ background: rgba(253,246,227,.92); border-top-color: rgba(147,161,161,.45); }
+    body[data-theme="catppuccin-mocha"] footer{ background: rgba(30,30,46,.92); border-top-color: rgba(88,91,112,.55); }
+    body[data-theme="catppuccin-latte"] footer{ background: rgba(239,241,245,.92); border-top-color: rgba(156,160,176,.40); }
+    body[data-theme="amber"] footer{ background: rgba(11,10,6,.92); border-top-color: rgba(251,191,36,.22); }
+    body[data-theme="high-contrast"] footer{ background: rgba(0,0,0,.98); border-top-color: rgba(255,255,255,.35); }
+    body[data-theme="mono"] footer{ background: rgba(246,246,246,.92); border-top-color: rgba(17,24,39,.18); }
 </style>
 </head>
 
@@ -1265,7 +1281,7 @@ main{
     </summary>
 
     <div class="blockBody">
-      <div class="muted">Layer rows include Layer % in the header. Hopper rows are labeled A1, A2, etc.</div>
+      <div class="muted">Resin name only assists with resin totals. If B and D, or A and E layers are the same, you can copy from one to the other.</div>
       <div id="splitsArea" class="mt10 gap10"></div>
     </div>
   </details>
@@ -1398,7 +1414,7 @@ main{
             <div class="chev"></div>
             <div style="min-width:0">
               <div class="layerTitle" style="font-size:13px">Operator formulas</div>
-              <div class="layerMeta">How times are calculated</div>
+              <div class="layerMeta">Figure lb/k or short roll footage.</div>
             </div>
           </div>
           <span class="pill">Math</span>
@@ -1499,6 +1515,9 @@ main{
           <div class="hr"></div>
 
           <div class="mono" style="line-height:1.7; font-size: var(--font-small);">
+            <div><strong>0.14</strong> — Updated logo and made several variations for themes. Probably still a placeholder.</div>
+            <div><strong>0.13</strong> — Enhanced the footer bar to reflect soonest tracked hopper.</div>
+            <div><strong>0.12</strong> — Lots of tweaks to theme settings, GruvboxDark is extra robust.</div>
             <div><strong>0.11</strong> — Layer cards now display thickness. Must set gauge in Setup.</div>
             <div><strong>0.10</strong> — Added more themes (Nord, Tokyo Night, Dracula, Solarized, Catppuccin, Amber, High Contrast, Mono).</div>
             <div><strong>0.09</strong> — Light and dark themes added to setup.</div>
@@ -1507,7 +1526,7 @@ main{
             <div><strong>0.06</strong> — Added formulas under new Info section.</div>
           </div>
 
-          <div class="tiny">..</div>
+          <div class="tiny">Any suggestions should be sent to John Kennedy. johdavken@proton.me</div>
         </div>
       </details>
 
@@ -1529,9 +1548,9 @@ main{
           <div class="hr"></div>
 
           <div class="mono" style="line-height:1.7; font-size: var(--font-small);">
-            <div>• Hoppers hold volume, not weight. If you “time 60 lb” but the resin is denser, you’ll still have resin left.</div>
-            <div>• This matters most for silo resins and big changeovers. Additives are usually closer if you know approximate density.</div>
-            <div>• If you want better accuracy: weigh a bucket of each common resin and write it down.</div>
+            <div>• While mostly intuitive, to get the most use out of this tool you have to know its limitations. It's entirely on the operator or assistant to enter the correct weights, offsets, and percentages. It's important to remember that hoppers hold a volume of resin, not a certain weight. For example, a hopper that holds 2.5 5gal buckets of resin currently running low density resin will contain about 63lb. High density would be slightly more, while a heavy resin (think anti-block, or a color) will weigh signficantly more.</div>
+            <div>• The main point of timing resin is to prevent resin waste, so silo resin will be the primary concern. If you have too much White04 left at the time of a changeover, you can simply drain it back into its box. Getting those times right does result in a faster, more efficient changeover though. So weighing buckets of these resins will allow you to update hopper weights accordingly.</div>
+            <div>• For tracking, you only need to enter the correct percentages for the hoppers you wish to track. Naming the resin assists with remembering what's in the hopper, but really only serves a purpose with resin totals. No details about the resin are applied to calculations with regards to tracking time (density). If all hopper percentages are correct and names entered, Used Resin Totals can be used for issuing materials at the end of the job.</div>
           </div>
 
           <div class="tiny">..</div>
@@ -1543,16 +1562,12 @@ main{
 </main>
 
 <footer class="footerBar">
-  <div id="footerMsg" class="footerMsg">
-    No hoppers are currently being tracked
-  </div>
-  <div id="footerSub" class="footerSub">
-    Enable tracking to see next hopper shutoff time
-  </div>
+  <div id="footerMsg" class="footerMsg">—</div>
+  <div id="footerSub" class="footerSub">—</div>
 </footer>
 
 <script>
-  const APP_VERSION = "0.11";
+  const APP_VERSION = "0.14";
 
   const LS_SESSION_KEY = "resinTimer.session.v0.09";
   const LS_CONFIGS_KEY  = "resinTimer.configs.v0.09";
