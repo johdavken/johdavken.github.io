@@ -1,0 +1,13 @@
+<svg width="400" height="120" viewBox="0 0 400 120" xmlns="http://www.w3.org/2000/svg">
+  <g id="hopper-icon" transform="translate(10, 10)">
+    <path d="M15 5 H65 L75 35 H5 Z" fill="#FFD700" />
+    <path d="M5 40 H75 L80 65 H0 Z" fill="#FFA500" />
+    <path d="M0 70 H80 L75 90 H5 Z" fill="#FF4500" />
+    <path d="M10 95 H70 L50 115 H30 Z" fill="#2E8B57" />
+    <rect x="5" y="118" width="70" height="4" rx="2" fill="#333" />
+  </g>
+
+  <text x="100" y="85" font-family="Arial, sans-serif" font-weight="900" font-size="64" font-style="italic">
+    <tspan fill="#FF4500">resin</tspan><tspan fill="#2E8B57">IQ</tspan>
+  </text>
+</svg>

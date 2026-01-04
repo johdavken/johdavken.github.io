@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="600" viewBox="0 0 1280 600" role="img" aria-label="ResinIQ">
+  <style>
+    :root {
+      /* Gruvbox Dark palette */
+      --fg: #ebdbb2;        /* light foreground */
+      --yellow: #fabd2f;   /* primary accent */
+      --orange: #fe8019;   /* secondary accent */
+    }
+
+    .wordmark {
+      font-family:
+        "Inter",
+        "IBM Plex Sans",
+        "Segoe UI",
+        "Roboto",
+        "Helvetica Neue",
+        Arial,
+        sans-serif;
+      font-weight: 600;
+      letter-spacing: -0.025em;
+    }
+
+    .resin {
+      fill: var(--fg);
+    }
+
+    .iq {
+      fill: var(--yellow);
+      font-weight: 800;
+      letter-spacing: -0.015em;
+    }
+
+    /* subtle Gruvbox edge: warm underline accent */
+    .accent-line {
+      stroke: var(--orange);
+      stroke-width: 6;
+      stroke-linecap: round;
+      opacity: 0.9;
+    }
+  </style>
+
+  <!-- Centered wordmark -->
+  <g transform="translate(640 300)" text-anchor="middle">
+    <text class="wordmark" font-size="172" dominant-baseline="central">
+      <tspan class="resin">Resin</tspan><tspan class="iq">IQ</tspan>
+    </text>
+
+    <!-- understated industrial accent -->
+    <line class="accent-line" x1="-210" x2="210" y1="92" y2="92"></line>
+  </g>
+</svg>
