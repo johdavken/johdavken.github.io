@@ -18,6 +18,8 @@
       --panel2: rgba(15,22,32,.76);
       --muted:#9bb0c6;
       --text:#eaf2ff;
+      --subtitle: #5dff9f;
+      --title: #4aa3ff;
 
       --border:rgba(255,255,255,.10);
       --border2:rgba(255,255,255,.14);
@@ -74,6 +76,8 @@
       --panel: rgba(255,255,255,.95);
       --panel2: rgba(255,255,255,.85);
       --text: #0f172a;
+      --subtitle: #475569;
+      --title: #1e40af;
       --muted: #5b6b82;
       --border: rgba(15,23,42,.12);
       --border2: rgba(15,23,42,.18);
@@ -142,7 +146,9 @@
       --bg: #fbf1c7;               /* bg0 */
       --panel: rgba(235,219,178,.92); /* bg1 */
       --panel2: rgba(213,196,161,.86);/* bg2 */
-      --text: #3c3836;             /* fg0 (dark) */
+      --text: #3c3836;
+      --subtitle: #076678;
+      --title: #9d0006;             /* fg0 (dark) */
       --muted: #665c54;            /* fg2-ish */
       --border: rgba(102,92,84,.35);
       --border2: rgba(124,111,100,.35);
@@ -173,13 +179,15 @@
       --f-const: #928374; /* gray */
     }
 
-    
+
     /* Nord */
     body[data-theme="nord"]{
       --bg: #2e3440;
       --panel: rgba(59,66,82,.95);
       --panel2: rgba(67,76,94,.88);
       --text: #eceff4;
+      --subtitle: #a3be8c;
+      --title: #88c0d0;
       --muted: #d8dee9;
       --border: rgba(76,86,106,.55);
       --border2: rgba(94,129,172,.35);
@@ -200,6 +208,8 @@
       --panel: rgba(36,40,59,.95);
       --panel2: rgba(41,46,66,.88);
       --text: #c0caf5;
+      --subtitle: #9ece6a;
+      --title: #7aa2f7;
       --muted: #a9b1d6;
       --border: rgba(65,72,104,.55);
       --border2: rgba(122,162,247,.30);
@@ -220,6 +230,8 @@
       --panel: rgba(68,71,90,.95);
       --panel2: rgba(52,55,70,.88);
       --text: #f8f8f2;
+      --subtitle: #50fa7b;
+      --title: #bd93f9;
       --muted: #c7c3e0;
       --border: rgba(98,114,164,.45);
       --border2: rgba(189,147,249,.28);
@@ -240,6 +252,8 @@
       --panel: rgba(7,54,66,.95);
       --panel2: rgba(0,43,54,.88);
       --text: #eee8d5;
+      --subtitle: #859900;
+      --title: #268bd2;
       --muted: #93a1a1;
       --border: rgba(88,110,117,.45);
       --border2: rgba(38,139,210,.28);
@@ -260,6 +274,8 @@
       --panel: rgba(255,255,255,.96);
       --panel2: rgba(238,232,213,.90);
       --text: #073642;
+      --subtitle: #859900;
+      --title: #268bd2;
       --muted: #586e75;
       --border: rgba(147,161,161,.45);
       --border2: rgba(38,139,210,.28);
@@ -280,6 +296,8 @@
       --panel: rgba(49,50,68,.95);
       --panel2: rgba(69,71,90,.88);
       --text: #cdd6f4;
+      --subtitle: #a6e3a1;
+      --title: #89b4fa;
       --muted: #a6adc8;
       --border: rgba(88,91,112,.55);
       --border2: rgba(137,180,250,.30);
@@ -300,6 +318,8 @@
       --panel: rgba(255,255,255,.96);
       --panel2: rgba(230,233,239,.90);
       --text: #4c4f69;
+      --subtitle: #40a02b;
+      --title: #1e66f5;
       --muted: #6c6f85;
       --border: rgba(156,160,176,.40);
       --border2: rgba(30,102,245,.22);
@@ -320,6 +340,8 @@
       --panel: rgba(20,16,10,.92);
       --panel2: rgba(18,14,8,.78);
       --text: #fffbeb;
+      --subtitle: #84cc16;
+      --title: #fbbf24;
       --muted: rgba(252,211,77,.85);
       --border: rgba(251,191,36,.22);
       --border2: rgba(251,191,36,.28);
@@ -340,6 +362,8 @@
       --panel: rgba(0,0,0,.95);
       --panel2: rgba(0,0,0,.85);
       --text: #ffffff;
+      --subtitle: #ffffff;
+      --title: #ffffff;
       --muted: #d1d5db;
       --border: rgba(255,255,255,.35);
       --border2: rgba(255,255,255,.45);
@@ -360,6 +384,8 @@
       --panel: rgba(255,255,255,.96);
       --panel2: rgba(245,245,245,.92);
       --text: #111827;
+      --subtitle: #374151;
+      --title: #111827;
       --muted: #374151;
       --border: rgba(17,24,39,.18);
       --border2: rgba(17,24,39,.22);
@@ -528,7 +554,7 @@ main{
       background: linear-gradient(135deg, rgba(214,93,14,.12), rgba(152,151,26,.10), transparent 60%);
       opacity: .45;
     }
-    
+
     body[data-theme="nord"] .card::before{
       background: linear-gradient(135deg, rgba(136,192,208,.14), rgba(163,190,140,.10), transparent 60%);
       opacity: .45;
@@ -969,17 +995,55 @@ main{
     body[data-theme="light"] button.secondary{ background: rgba(15,23,42,.06); }
     body[data-theme="light"] button.danger{ background: rgba(220,38,38,.12); }
 
-    footer{
-      position: fixed;
-      left: 0; right: 0; bottom: 0;
-      z-index: 41;
-      padding: 6px 12px;
-      background: rgba(11,15,20,.92);
-      border-top: 1px solid rgba(255,255,255,.08);
-      backdrop-filter: blur(10px);
-      color: var(--muted);
-      font-size: var(--font-tiny);
-      text-align: center;
+/* ===== Bottom status bar (Next Pump Off) ===== */
+:root{
+  --footer-msg-color: var(--text);
+  --footer-sub-color: var(--muted);
+  --footer-msg-size: 13px;
+  --footer-sub-size: 11px;
+  --footer-msg-weight: 950;
+  --footer-sub-weight: 650;
+}
+
+.footerBar{
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 41;
+  padding: 8px 12px;
+  background: rgba(11,15,20,.92);
+  border-top: 1px solid rgba(255,255,255,.08);
+  backdrop-filter: blur(10px);
+  text-align: center;
+}
+
+.footerMsg{
+  color: var(--title, var(--text));
+  font-size: var(--footer-msg-size);
+  font-weight: var(--footer-msg-weight);
+  letter-spacing: .2px;
+}
+
+.footerSub{
+  margin-top: 2px;
+  color: var(--subtitle, var(--muted));
+  font-size: var(--footer-sub-size);
+  font-weight: var(--footer-sub-weight);
+}
+
+/* Keep your theme footer tint overrides working (update selectors) */
+body[data-theme="light"] .footerBar{
+  background: rgba(244,247,251,.92);
+  border-top-color: rgba(15,23,42,.10);
+}
+body[data-theme="gruvbox-dark"] .footerBar{
+  background: rgba(40,40,40,.92);
+  border-top-color: rgba(80,73,69,.55);
+}
+body[data-theme="gruvbox-light"] .footerBar{
+  background: rgba(251,241,199,.92);
+  border-top-color: rgba(102,92,84,.28);
+}
+
     }
     body[data-theme="light"] footer{
       background: rgba(244,247,251,.92);
@@ -1001,7 +1065,7 @@ main{
     .f-var2{ color: var(--f-var2); }
     .f-var3{ color: var(--f-var3); }
     .f-const{ color: var(--f-const); }
-  
+
     /* ===== Additional theme accents (beyond variables) ===== */
 
     /* Focus ring per theme (uses existing focus vars) */
@@ -1488,7 +1552,10 @@ main{
 
 </main>
 
-<footer id="footerVer"></footer>
+<footer class="footerBar">
+  <div id="footerMsg" class="footerMsg">—</div>
+  <div id="footerSub" class="footerSub">—</div>
+</footer>
 
 <script>
   const APP_VERSION = "0.11";
@@ -2329,6 +2396,7 @@ main{
     });
 
     renderResultsFlat(flat, changeoverDate);
+    updateFooterNext(flat, changeoverDate);
     renderResinCalculator();
     saveSession();
   }
@@ -2437,6 +2505,8 @@ main{
     saveSession();
   }
 
+
+
   // Focus: select all numeric fields, not resin names
   function selectAllSoon(el){
     if (!el) return;
@@ -2490,6 +2560,60 @@ main{
       if (el) el.addEventListener("toggle", saveSession);
     });
   }
+function fmtRelFromNow(dateObj){
+  if (!dateObj) return "—";
+  const ms = dateObj.getTime() - Date.now();
+  const mins = Math.round(ms / 60000);
+
+  if (mins <= 0) return "now";
+  if (mins < 60) return `in ${mins}m`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return `in ${h}h ${String(m).padStart(2,"0")}m`;
+}
+
+function updateFooterNext(flat, changeoverDate){
+  const msgEl = document.getElementById("footerMsg");
+  const subEl = document.getElementById("footerSub");
+  if (!msgEl || !subEl) return;
+
+  if (!flat || flat.length === 0){
+    msgEl.textContent = "No tracked hoppers";
+    subEl.textContent = `ResinIQ • v${APP_VERSION}`;
+    return;
+  }
+
+  // Prefer “pump off by” (startByDate) when changeover is set; otherwise soonest empty.
+  let next = null;
+
+  if (changeoverDate){
+    const candidates = flat
+      .filter(x => x.startByDate && Number.isFinite(x.totalMinutes) && !x.pumpOff);
+    candidates.sort((a,b)=>a.startByDate.getTime()-b.startByDate.getTime());
+    next = candidates[0] || null;
+
+    if (next){
+      msgEl.textContent = `Next pump off: ${next.hopperLabel}${next.resinName ? ` • ${next.resinName}` : ""}`;
+      subEl.textContent = `${next.startByText} (${fmtRelFromNow(next.startByDate)}) • Changeover ${fmtTime(changeoverDate)}`;
+      return;
+    }
+  }
+
+  // Fallback: soonest empty (if no changeover or no valid start-by)
+  const candidates2 = flat
+    .filter(x => Number.isFinite(x.minutesToEmpty) && x.minutesToEmpty >= 0 && !x.pumpOff)
+    .sort((a,b)=>a.minutesToEmpty-b.minutesToEmpty);
+
+  next = candidates2[0] || null;
+
+  if (next){
+    msgEl.textContent = `Soonest empty: ${next.hopperLabel}${next.resinName ? ` • ${next.resinName}` : ""}`;
+    subEl.textContent = `${next.timeText} • Total ${next.totalRundownText}`;
+  } else {
+    msgEl.textContent = "No upcoming hoppers (all checked off or missing data)";
+    subEl.textContent = `ResinIQ • v${APP_VERSION}`;
+  }
+}
 
   // Wire inputs
   $("lineRate")?.addEventListener("input",(e)=>{ state.lineRate = clampNum(e.target.value); validateAndCompute(); saveSession(); });
@@ -2527,8 +2651,6 @@ main{
 
   // Init
   (function init(){
-    const fv = $("footerVer");
-    if (fv) fv.textContent = `ResinIQ • v${APP_VERSION}`;
 
     ensureLayers();
 

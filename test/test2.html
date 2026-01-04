@@ -18,8 +18,8 @@
       --panel2: rgba(15,22,32,.76);
       --muted:#9bb0c6;
       --text:#eaf2ff;
-      --subtitle: #5dff9f;
-      --title: #4aa3ff;
+      --title: var(--text);
+      --subtitle: var(--muted);
 
       --border:rgba(255,255,255,.10);
       --border2:rgba(255,255,255,.14);
@@ -68,6 +68,16 @@
       --f-var2: #ffb020;
       --f-var3: #4aa3ff;
       --f-const: #9bb0c6;
+
+      /* Footer (bottom status bar) tokens */
+      --footer-bg: rgba(11,15,20,.92);
+      --footer-border: rgba(255,255,255,.08);
+      --footer-msg-color: var(--title, var(--text));
+      --footer-sub-color: var(--subtitle, var(--muted));
+      --footer-msg-size: 13px;
+      --footer-sub-size: 11px;
+      --footer-msg-weight: 950;
+      --footer-sub-weight: 650;
     }
 
     /* Light theme */
@@ -76,8 +86,10 @@
       --panel: rgba(255,255,255,.95);
       --panel2: rgba(255,255,255,.85);
       --text: #0f172a;
-      --subtitle: #475569;
-      --title: #1e40af;
+      --footer-border: var(--border);
+      --footer-bg: color-mix(in srgb, var(--bg) 88%, transparent);
+      --subtitle: #5b6b82;
+      --title: #0f172a;
       --muted: #5b6b82;
       --border: rgba(15,23,42,.12);
       --border2: rgba(15,23,42,.18);
@@ -109,6 +121,8 @@
       --panel: rgba(50,48,47,.95); /* bg0_s */
       --panel2: rgba(60,56,54,.88);/* bg1 */
       --text: #ebdbb2;             /* fg1 */
+      --footer-border: var(--border);
+      --footer-bg: color-mix(in srgb, var(--bg) 88%, transparent);
       --title: #fb4943;            /* fg1 (strong) */
       --subtitle: #83a598;         /* fg3 */
       --muted: #a89984;            /* fg4 */
@@ -146,9 +160,11 @@
       --bg: #fbf1c7;               /* bg0 */
       --panel: rgba(235,219,178,.92); /* bg1 */
       --panel2: rgba(213,196,161,.86);/* bg2 */
-      --text: #3c3836;
+      --text: #3c3836;             /* fg0 (dark) */
+      --footer-border: var(--border);
+      --footer-bg: color-mix(in srgb, var(--bg) 88%, transparent);
       --subtitle: #076678;
-      --title: #9d0006;             /* fg0 (dark) */
+      --title: #9d0006;
       --muted: #665c54;            /* fg2-ish */
       --border: rgba(102,92,84,.35);
       --border2: rgba(124,111,100,.35);
@@ -186,8 +202,10 @@
       --panel: rgba(59,66,82,.95);
       --panel2: rgba(67,76,94,.88);
       --text: #eceff4;
-      --subtitle: #a3be8c;
-      --title: #88c0d0;
+      --footer-border: var(--border);
+      --footer-bg: color-mix(in srgb, var(--bg) 88%, transparent);
+      --subtitle: #81a1c1;
+      --title: #8fbcbb;
       --muted: #d8dee9;
       --border: rgba(76,86,106,.55);
       --border2: rgba(94,129,172,.35);
@@ -208,7 +226,9 @@
       --panel: rgba(36,40,59,.95);
       --panel2: rgba(41,46,66,.88);
       --text: #c0caf5;
-      --subtitle: #9ece6a;
+      --footer-border: var(--border);
+      --footer-bg: color-mix(in srgb, var(--bg) 88%, transparent);
+      --subtitle: #a9b1d6;
       --title: #7aa2f7;
       --muted: #a9b1d6;
       --border: rgba(65,72,104,.55);
@@ -230,7 +250,9 @@
       --panel: rgba(68,71,90,.95);
       --panel2: rgba(52,55,70,.88);
       --text: #f8f8f2;
-      --subtitle: #50fa7b;
+      --footer-border: var(--border);
+      --footer-bg: color-mix(in srgb, var(--bg) 88%, transparent);
+      --subtitle: #8be9fd;
       --title: #bd93f9;
       --muted: #c7c3e0;
       --border: rgba(98,114,164,.45);
@@ -252,7 +274,9 @@
       --panel: rgba(7,54,66,.95);
       --panel2: rgba(0,43,54,.88);
       --text: #eee8d5;
-      --subtitle: #859900;
+      --footer-border: var(--border);
+      --footer-bg: color-mix(in srgb, var(--bg) 88%, transparent);
+      --subtitle: #93a1a1;
       --title: #268bd2;
       --muted: #93a1a1;
       --border: rgba(88,110,117,.45);
@@ -274,7 +298,9 @@
       --panel: rgba(255,255,255,.96);
       --panel2: rgba(238,232,213,.90);
       --text: #073642;
-      --subtitle: #859900;
+      --footer-border: var(--border);
+      --footer-bg: color-mix(in srgb, var(--bg) 88%, transparent);
+      --subtitle: #586e75;
       --title: #268bd2;
       --muted: #586e75;
       --border: rgba(147,161,161,.45);
@@ -296,7 +322,9 @@
       --panel: rgba(49,50,68,.95);
       --panel2: rgba(69,71,90,.88);
       --text: #cdd6f4;
-      --subtitle: #a6e3a1;
+      --footer-border: var(--border);
+      --footer-bg: color-mix(in srgb, var(--bg) 88%, transparent);
+      --subtitle: #a6adc8;
       --title: #89b4fa;
       --muted: #a6adc8;
       --border: rgba(88,91,112,.55);
@@ -318,7 +346,9 @@
       --panel: rgba(255,255,255,.96);
       --panel2: rgba(230,233,239,.90);
       --text: #4c4f69;
-      --subtitle: #40a02b;
+      --footer-border: var(--border);
+      --footer-bg: color-mix(in srgb, var(--bg) 88%, transparent);
+      --subtitle: #6c6f85;
       --title: #1e66f5;
       --muted: #6c6f85;
       --border: rgba(156,160,176,.40);
@@ -340,8 +370,10 @@
       --panel: rgba(20,16,10,.92);
       --panel2: rgba(18,14,8,.78);
       --text: #fffbeb;
-      --subtitle: #84cc16;
-      --title: #fbbf24;
+      --footer-border: var(--border);
+      --footer-bg: color-mix(in srgb, var(--bg) 88%, transparent);
+      --subtitle: rgba(252,211,77,.85);
+      --title: rgba(252,211,77,.95);
       --muted: rgba(252,211,77,.85);
       --border: rgba(251,191,36,.22);
       --border2: rgba(251,191,36,.28);
@@ -362,7 +394,9 @@
       --panel: rgba(0,0,0,.95);
       --panel2: rgba(0,0,0,.85);
       --text: #ffffff;
-      --subtitle: #ffffff;
+      --footer-border: var(--border);
+      --footer-bg: color-mix(in srgb, var(--bg) 88%, transparent);
+      --subtitle: #d1d5db;
       --title: #ffffff;
       --muted: #d1d5db;
       --border: rgba(255,255,255,.35);
@@ -384,6 +418,8 @@
       --panel: rgba(255,255,255,.96);
       --panel2: rgba(245,245,245,.92);
       --text: #111827;
+      --footer-border: var(--border);
+      --footer-bg: color-mix(in srgb, var(--bg) 88%, transparent);
       --subtitle: #374151;
       --title: #111827;
       --muted: #374151;
@@ -508,6 +544,7 @@ main{
       padding: 14px 14px 24px;
       display: grid;
       gap: 16px;
+      padding-bottom: 72px;
     }
 
     /* Small utility classes (replaces repeated inline styles) */
@@ -995,29 +1032,19 @@ main{
     body[data-theme="light"] button.secondary{ background: rgba(15,23,42,.06); }
     body[data-theme="light"] button.danger{ background: rgba(220,38,38,.12); }
 
-/* ===== Bottom status bar (Next Pump Off) ===== */
-:root{
-  --footer-msg-color: var(--text);
-  --footer-sub-color: var(--muted);
-  --footer-msg-size: 13px;
-  --footer-sub-size: 11px;
-  --footer-msg-weight: 950;
-  --footer-sub-weight: 650;
-}
-
 .footerBar{
   position: fixed;
   left: 0; right: 0; bottom: 0;
   z-index: 41;
   padding: 8px 12px;
-  background: rgba(11,15,20,.92);
-  border-top: 1px solid rgba(255,255,255,.08);
+  background: var(--footer-bg);
+  border-top: 1px solid var(--footer-border);
   backdrop-filter: blur(10px);
   text-align: center;
 }
 
 .footerMsg{
-  color: var(--title, var(--text));
+  color: var(--footer-msg-color);
   font-size: var(--footer-msg-size);
   font-weight: var(--footer-msg-weight);
   letter-spacing: .2px;
@@ -1025,40 +1052,12 @@ main{
 
 .footerSub{
   margin-top: 2px;
-  color: var(--subtitle, var(--muted));
+  color: var(--footer-sub-color);
   font-size: var(--footer-sub-size);
   font-weight: var(--footer-sub-weight);
 }
 
-/* Keep your theme footer tint overrides working (update selectors) */
-body[data-theme="light"] .footerBar{
-  background: rgba(244,247,251,.92);
-  border-top-color: rgba(15,23,42,.10);
-}
-body[data-theme="gruvbox-dark"] .footerBar{
-  background: rgba(40,40,40,.92);
-  border-top-color: rgba(80,73,69,.55);
-}
-body[data-theme="gruvbox-light"] .footerBar{
-  background: rgba(251,241,199,.92);
-  border-top-color: rgba(102,92,84,.28);
-}
-
-    }
-    body[data-theme="light"] footer{
-      background: rgba(244,247,251,.92);
-      border-top-color: rgba(15,23,42,.10);
-    }
-    body[data-theme="gruvbox-dark"] footer{
-      background: rgba(40,40,40,.92);
-      border-top-color: rgba(80,73,69,.55);
-    }
-    body[data-theme="gruvbox-light"] footer{
-      background: rgba(251,241,199,.92);
-      border-top-color: rgba(102,92,84,.28);
-    }
-
-    /* Formula helpers */
+/* Formula helpers */
     .formulaGroup{ display: grid; gap: 8px; }
     .f-label{ color: var(--text); font-weight: 900; }
     .f-var1{ color: var(--f-var1); }
@@ -1123,17 +1122,8 @@ body[data-theme="gruvbox-light"] .footerBar{
       color: var(--muted);
     }
 
-    /* Footer tint per theme */
-    body[data-theme="nord"] footer{ background: rgba(46,52,64,.92); border-top-color: rgba(76,86,106,.55); }
-    body[data-theme="tokyo-night"] footer{ background: rgba(26,27,38,.92); border-top-color: rgba(65,72,104,.55); }
-    body[data-theme="dracula"] footer{ background: rgba(40,42,54,.92); border-top-color: rgba(98,114,164,.45); }
-    body[data-theme="solarized-dark"] footer{ background: rgba(0,43,54,.92); border-top-color: rgba(88,110,117,.45); }
-    body[data-theme="solarized-light"] footer{ background: rgba(253,246,227,.92); border-top-color: rgba(147,161,161,.45); }
-    body[data-theme="catppuccin-mocha"] footer{ background: rgba(30,30,46,.92); border-top-color: rgba(88,91,112,.55); }
-    body[data-theme="catppuccin-latte"] footer{ background: rgba(239,241,245,.92); border-top-color: rgba(156,160,176,.40); }
-    body[data-theme="amber"] footer{ background: rgba(11,10,6,.92); border-top-color: rgba(251,191,36,.22); }
-    body[data-theme="high-contrast"] footer{ background: rgba(0,0,0,.98); border-top-color: rgba(255,255,255,.35); }
-    body[data-theme="mono"] footer{ background: rgba(246,246,246,.92); border-top-color: rgba(17,24,39,.18); }
+
+
 </style>
 </head>
 
@@ -1553,8 +1543,12 @@ body[data-theme="gruvbox-light"] .footerBar{
 </main>
 
 <footer class="footerBar">
-  <div id="footerMsg" class="footerMsg">—</div>
-  <div id="footerSub" class="footerSub">—</div>
+  <div id="footerMsg" class="footerMsg">
+    No hoppers are currently being tracked
+  </div>
+  <div id="footerSub" class="footerSub">
+    Enable tracking to see next hopper shutoff time
+  </div>
 </footer>
 
 <script>
