@@ -239,6 +239,18 @@ main{
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
+/* Documentation intro text (above nested cards) */
+.docIntro{
+  padding: 10px 22px 6px;
+  font-size: var(--font-small);
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.docIntro + .blockBody{
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
 /* =======================================================================
  *   Forms
  *   ======================================================================= */
