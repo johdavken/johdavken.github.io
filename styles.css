@@ -634,8 +634,8 @@ button.danger{
   background: var(--btn-danger-bg);
   border-color: var(--btn-danger-border);
 }
-/* Button-like links */
-a.btn{
+/* Button-like links (works for <a> and <button>) */
+.btn{
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -657,18 +657,24 @@ a.btn{
   text-decoration: none;
 
   cursor: pointer;
-
+  -webkit-tap-highlight-color: transparent;
 
   transition: filter .12s ease, transform .06s ease;
 }
 
-a.btn:hover{
-  filter: brightness(1.05);
+.btn:hover{ filter: brightness(1.05); }
+.btn:active{ transform: translateY(1px); }
+
+.btn.secondary{
+  background: var(--btn-secondary-bg);
+  border-color: var(--btn-secondary-border);
 }
 
-a.btn:active{
-  transform: translateY(1px);
+.btn.danger{
+  background: var(--btn-danger-bg);
+  border-color: var(--btn-danger-border);
 }
+
 
 /* =======================================================================
  *   Footer bar (Next Pump Off)
