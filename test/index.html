@@ -105,6 +105,8 @@
       --panel: rgba(50,48,47,.95); /* bg0_s */
       --panel2: rgba(60,56,54,.88);/* bg1 */
       --text: #ebdbb2;             /* fg1 */
+      --title: #fb4943;            /* fg1 (strong) */
+      --subtitle: #83a598;         /* fg3 */
       --muted: #a89984;            /* fg4 */
       --border: rgba(80,73,69,.65);/* bg2 */
       --border2: rgba(102,92,84,.55);/* bg3 */
@@ -496,12 +498,12 @@ main{
     }
     .appHeaderImage img{
       width:100%;
-      max-width:260px;
+      max-width:360px;
       height:auto;
       opacity:0.95;
     }
-    @media (min-width:600px){ .appHeaderImage img{ max-width:340px; } }
-    @media (min-width:900px){ .appHeaderImage img{ max-width:420px; } }
+    @media (min-width:600px){ .appHeaderImage img{ max-width:460px; } }
+    @media (min-width:900px){ .appHeaderImage img{ max-width:560px; } }
 
     .card{
       position: relative;
@@ -556,6 +558,24 @@ main{
     }
     body[data-theme="high-contrast"] .card::before{ display:none; }
 .card > *{ position: relative; }
+
+    /* ===== Card header typography ===== */
+
+.layerTitle{
+  font-weight: 900;
+  font-size: 14px;
+  white-space: nowrap;
+  color: var(--title, var(--text));
+}
+
+.layerMeta{
+  color: var(--subtitle, var(--muted));
+  font-size: var(--font-small);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 
     .card h2{ margin:0 0 10px 0; font-size:15px; letter-spacing:.2px; }
     .muted{ color: var(--muted); font-size: var(--font-small); }
@@ -703,7 +723,7 @@ main{
     .blockBody{ padding: 0 12px 12px 12px; display:grid; gap: var(--gap); }
     .layerTitle{ font-weight: 900; font-size: 14px; white-space: nowrap; }
     .layerMeta{
-      color: var(--muted);
+      color: var(--subtitle, var(--muted));
       font-size: var(--font-small);
       overflow: hidden;
       text-overflow: ellipsis;
@@ -1081,10 +1101,10 @@ main{
           <div class="tiny">Example: 1200</div>
         </div>
 
-        <div style="margin-top:10px">
+        <div>
           <label for="gauge">Gauge (mil)</label>
           <input id="gauge" type="text" inputmode="decimal" placeholder="0" value="0" />
-          <div class="tiny">Example: 1.5</div>
+          <div class="tiny">Only necessary if you need layer thickness.</div>
         </div>
 
         <div>
@@ -1541,15 +1561,26 @@ main{
   }
 
   function parseChangeoverDate(hhmm){
-    if (!hhmm) return null;
-    const m = /^(\\d{2}):(\\d{2})$/.exec(hhmm);
-    if (!m) return null;
-    const hh = Number(m[1]), mm = Number(m[2]);
-    const now = new Date();
-    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm, 0, 0);
-    if (d.getTime() < now.getTime() - 60*1000) d.setDate(d.getDate()+1);
-    return d;
-  }
+  if (!hhmm) return null;
+
+  const s = String(hhmm).trim();
+
+  // Accept "H:MM", "HH:MM", and optional seconds "HH:MM:SS"
+  const m = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(s);
+  if (!m) return null;
+
+  const hh = Number(m[1]), mm = Number(m[2]);
+  if (!Number.isFinite(hh) || !Number.isFinite(mm)) return null;
+  if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return null;
+
+  const now = new Date();
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm, 0, 0);
+
+  // If the time is already in the past (give a small grace), assume it's tomorrow
+  if (d.getTime() < now.getTime() - 60*1000) d.setDate(d.getDate() + 1);
+
+  return d;
+}
   function fmtTime(dateObj, baseDateObj){
     if (!dateObj) return "—";
     const t = dateObj.toLocaleTimeString([], {hour:"numeric", minute:"2-digit"});
@@ -1711,6 +1742,13 @@ main{
 
     applyTheme(payload.theme || "dark");
     applyDensity(payload.density || "comfort");
+    $("lineRate").value = String(state.lineRate);
+    const g = $("gauge");
+    if (g) g.value = String(state.gauge);
+
+    $("lineType").value = String(state.lineType);
+    $("changeoverTime").value = state.changeoverTime;
+
 
     const names = getLayerNamesForType(state.lineType);
     const oldLayers = Array.isArray(payload.layers) ? payload.layers : [];
