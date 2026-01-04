@@ -1,51 +1,45 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="600" viewBox="0 0 1280 600" role="img" aria-label="ResinIQ">
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 1280 240"
+     role="img"
+     aria-label="ResinIQ"
+     preserveAspectRatio="xMidYMid meet">
   <style>
-    :root {
-      /* Gruvbox Dark palette */
-      --fg: #ebdbb2;        /* light foreground */
-      --yellow: #fabd2f;   /* primary accent */
-      --orange: #fe8019;   /* secondary accent */
+    .wordmark{
+    font-family:"Inter","IBM Plex Sans","Segoe UI","Roboto","Helvetica Neue",Arial,sans-serif;
+    font-weight:600;
+    letter-spacing:-0.025em;
     }
 
-    .wordmark {
-      font-family:
-        "Inter",
-        "IBM Plex Sans",
-        "Segoe UI",
-        "Roboto",
-        "Helvetica Neue",
-        Arial,
-        sans-serif;
-      font-weight: 600;
-      letter-spacing: -0.025em;
-    }
+    .resin{ fill: var(--fg, #ebdbb2); }
+    .iq{ fill: var(--yellow, #fabd2f); font-weight:800; letter-spacing:-0.015em; }
 
-    .resin {
-      fill: var(--fg);
-    }
+    .screw{ fill:none; stroke: var(--aqua,#8ec07c); opacity:0.4; }
+    .s1{ stroke-width:3; }
+    .s2{ stroke-width:4.5; }
+    .s3{ stroke-width:6; }
 
-    .iq {
-      fill: var(--yellow);
-      font-weight: 800;
-      letter-spacing: -0.015em;
-    }
 
-    /* subtle Gruvbox edge: warm underline accent */
-    .accent-line {
-      stroke: var(--orange);
-      stroke-width: 6;
-      stroke-linecap: round;
-      opacity: 0.9;
+    .accent-line{
+    stroke: var(--orange, #fe8019);
+    stroke-width:6;
+    stroke-linecap:round;
+    opacity:0.9;
     }
   </style>
 
-  <!-- Centered wordmark -->
-  <g transform="translate(640 300)" text-anchor="middle">
+  <!-- Extruder screw abstraction -->
+  <path class="screw"
+        d="M420 190
+        C460 170, 500 210, 540 190
+        C580 170, 620 210, 660 190
+        C700 170, 740 210, 780 190
+        C820 170, 860 210, 900 190" />
+
+  <g transform="translate(640 120)" text-anchor="middle">
     <text class="wordmark" font-size="172" dominant-baseline="central">
       <tspan class="resin">Resin</tspan><tspan class="iq">IQ</tspan>
     </text>
-
-    <!-- understated industrial accent -->
-    <line class="accent-line" x1="-210" x2="210" y1="92" y2="92"></line>
+    <line class="accent-line" x1="-210" x2="210" y1="92" y2="92" />
   </g>
 </svg>
+
