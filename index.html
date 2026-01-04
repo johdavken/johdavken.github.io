@@ -19,6 +19,7 @@
 
   <header class="site-header">
 
+
 <svg xmlns="http://www.w3.org/2000/svg"
      viewBox="0 0 1280 240"
      role="img"
@@ -26,94 +27,126 @@
      preserveAspectRatio="xMidYMid meet">
 
   <style>
-    .wordmark{
-      font-family:"Inter","IBM Plex Sans","Segoe UI","Roboto","Helvetica Neue",Arial,sans-serif;
-      font-weight:600;
-      letter-spacing:-0.025em;
+    /* --- Wordmark: match the "resinIQ" style you showed --- */
+    .resinWord{
+      /* italic serif vibe (falls back gracefully) */
+      font-family: "Merriweather","Georgia","Times New Roman",Times,serif;
+      font-style: italic;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      fill: var(--fg, #fe8019);
     }
-    .resin{ fill: var(--fg, #ebdbb2); }
-    .iq{ fill: var(--yellow, #fabd2f); font-weight:800; letter-spacing:-0.015em; }
+    .iWord{
+      font-family:"Inter","IBM Plex Sans","Segoe UI","Roboto","Helvetica Neue",Arial,sans-serif;
+      font-weight:900;
+      fill: var(--yellow, #bfbfbf);
+}
+
+    .qWord{
+      font-family:"Inter","IBM Plex Sans","Segoe UI","Roboto","Helvetica Neue",Arial,sans-serif;
+      font-weight:900;
+      fill: var(--yellow, #8c8c8c);
+}
+
+
+    /* subtle depth without screaming */
+    .wm-outline{
+      paint-order: stroke fill;
+      stroke: var(--bg, #0b0f14);
+      stroke-width: 10;
+      stroke-linejoin: round;
+      opacity: 0.45;
+    }
+    .wm-edge{
+      paint-order: stroke fill;
+      stroke: var(--orange, #fe8019);
+      stroke-width: 2;
+      stroke-linejoin: round;
+      opacity: 0.18;
+    }
 
     .accent-line{
       stroke: var(--orange, #fe8019);
-      stroke-width:6;
-      stroke-linecap:round;
-      opacity:0.9;
+      stroke-width: 6;
+      stroke-linecap: round;
+      opacity: 0.85;
     }
 
     /* PR2000-ish profile plot */
     .plot-frame{
       fill: rgba(0,0,0,0);
       stroke: var(--fg, #ebdbb2);
-      stroke-width:2;
-      opacity:0.18;
+      stroke-width: 2;
+      opacity: 0.18;
     }
     .grid-major{
       stroke: var(--fg, #ebdbb2);
-      stroke-width:1.5;
-      opacity:0.10;
-      shape-rendering:crispEdges;
-      stroke-dasharray:6 6;
+      stroke-width: 1.5;
+      opacity: 0.10;
+      shape-rendering: crispEdges;
+      stroke-dasharray: 6 6;
     }
     .grid-minor{
       stroke: var(--fg, #ebdbb2);
-      stroke-width:1;
-      opacity:0.06;
-      shape-rendering:crispEdges;
-      stroke-dasharray:3 7;
+      stroke-width: 1;
+      opacity: 0.06;
+      shape-rendering: crispEdges;
+      stroke-dasharray: 3 7;
     }
     .target{
       stroke: var(--red, #fb4934);
-      stroke-width:2;
-      opacity:0.22;
-      shape-rendering:crispEdges;
+      stroke-width: 2;
+      opacity: 0.22;
+      shape-rendering: crispEdges;
     }
     .midline{
       stroke: var(--fg, #ebdbb2);
-      stroke-width:2;
-      opacity:0.14;
-      shape-rendering:crispEdges;
+      stroke-width: 2;
+      opacity: 0.14;
+      shape-rendering: crispEdges;
     }
     .trace{
-      fill:none;
+      fill: none;
       stroke: var(--blue, #83a598);
-      stroke-width:2.5;
-      opacity:0.30;
-      stroke-linejoin:round;
-      stroke-linecap:round;
+      stroke-width: 2.5;
+      opacity: 0.30;
+      stroke-linejoin: round;
+      stroke-linecap: round;
     }
     .trace-glow{
-      fill:none;
+      fill: none;
       stroke: var(--blue, #83a598);
-      stroke-width:6;
-      opacity:0.07;
-      stroke-linejoin:round;
-      stroke-linecap:round;
+      stroke-width: 6;
+      opacity: 0.07;
+      stroke-linejoin: round;
+      stroke-linecap: round;
     }
     .plot-label{
       font-family:"Inter","IBM Plex Sans","Segoe UI","Roboto","Helvetica Neue",Arial,sans-serif;
-      font-size:12px;
+      font-size: 12px;
       fill: var(--fg, #ebdbb2);
-      opacity:0.20;
-      letter-spacing:0.02em;
+      opacity: 0.20;
+      letter-spacing: 0.02em;
     }
   </style>
 
   <defs>
-    <!-- clip the plot so it stays inside the chart window -->
     <clipPath id="plotClip">
       <rect x="80" y="132" width="1120" height="84" rx="6" ry="6"/>
     </clipPath>
+
+    <!-- soft shadow for the whole mark -->
+    <filter id="wmShadow" x="-20%" y="-40%" width="140%" height="180%">
+      <feDropShadow dx="0" dy="6" stdDeviation="6"
+                    flood-color="var(--bg, #0b0f14)" flood-opacity="0.35"/>
+    </filter>
   </defs>
 
   <!-- ===== Background: PR2000-style profile plot window ===== -->
   <g>
-    <!-- frame -->
     <rect class="plot-frame" x="80" y="132" width="1120" height="84" rx="6" ry="6"/>
 
-    <!-- grid (minor verticals) -->
     <g clip-path="url(#plotClip)">
-      <!-- minor vertical -->
       <g class="grid-minor">
         <line x1="140" y1="132" x2="140" y2="216"/>
         <line x1="200" y1="132" x2="200" y2="216"/>
@@ -135,7 +168,6 @@
         <line x1="1160" y1="132" x2="1160" y2="216"/>
       </g>
 
-      <!-- major vertical -->
       <g class="grid-major">
         <line x1="80" y1="132" x2="80" y2="216"/>
         <line x1="320" y1="132" x2="320" y2="216"/>
@@ -145,7 +177,6 @@
         <line x1="1200" y1="132" x2="1200" y2="216"/>
       </g>
 
-      <!-- horizontal grid -->
       <g class="grid-minor">
         <line x1="80" y1="148" x2="1200" y2="148"/>
         <line x1="80" y1="164" x2="1200" y2="164"/>
@@ -153,14 +184,10 @@
         <line x1="80" y1="196" x2="1200" y2="196"/>
       </g>
 
-      <!-- target bands (like the red upper/lower limits) -->
       <line class="target" x1="80" y1="156" x2="1200" y2="156"/>
       <line class="target" x1="80" y1="204" x2="1200" y2="204"/>
-
-      <!-- mid reference line -->
       <line class="midline" x1="80" y1="180" x2="1200" y2="180"/>
 
-      <!-- blue profile trace (hand-shaped to feel like real PR2000 output) -->
       <path class="trace-glow"
             d="M90 182
                L120 176 L150 188 L180 170 L210 178 L240 172
@@ -184,20 +211,34 @@
                L1140 180 L1170 164 L1200 154"/>
     </g>
 
-    <!-- subtle axis labels (optional, low opacity like the screenshot) -->
     <text class="plot-label" x="92" y="228">inches</text>
     <text class="plot-label" x="1180" y="228" text-anchor="end">mils</text>
   </g>
 
-  <!-- ===== Foreground wordmark (kept exactly as yours) ===== -->
-  <g transform="translate(640 120)" text-anchor="middle">
-    <text class="wordmark" font-size="172" dominant-baseline="central">
-      <tspan class="resin">Resin</tspan><tspan class="iq">IQ</tspan>
+  <!-- ===== Foreground wordmark (new style) ===== -->
+  <g transform="translate(640 112)" text-anchor="middle" filter="url(#wmShadow)">
+    <!-- Outline underlay (helps legibility over the plot) -->
+    <text class="wm-outline" font-size="176" dominant-baseline="central">
+      <tspan class="resinWord">resin</tspan><tspan class="iWord">I</tspan><tspan class="qWord">Q</tspan>
+
     </text>
-    <line class="accent-line" x1="-210" x2="210" y1="92" y2="92" />
+
+    <!-- Thin edge stroke (subtle polish) -->
+    <text class="wm-edge" font-size="176" dominant-baseline="central">
+      <tspan class="resinWord">resin</tspan><tspan class="iWord">I</tspan><tspan class="qWord">Q</tspan>
+
+    </text>
+
+    <!-- Fill -->
+    <text font-size="176" dominant-baseline="central">
+      <tspan class="resinWord">resin</tspan><tspan class="iWord">I</tspan><tspan class="qWord">Q</tspan>
+
+    </text>
   </g>
 
+
 </svg>
+
 
 
 
