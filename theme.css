@@ -14,7 +14,7 @@
 /* Default dark (no data-theme present) */
 html:not([data-theme]){
     --fg:     #eaeaea;
-    --yellow: #2689e0;
+    --yellow: #f2543f;
     --orange: #56e854;
 }
 
@@ -31,7 +31,7 @@ html:not([data-theme]){
     --footer-border: rgba(255,255,255,.08);
 
     --fg:     #eaeaea;
-    --yellow: #2689e0;
+    --yellow: #f2543f;
     --orange: #56e854;
 }
 
