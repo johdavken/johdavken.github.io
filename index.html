@@ -24,21 +24,17 @@
      role="img"
      aria-label="ResinIQ"
      preserveAspectRatio="xMidYMid meet">
-  <style>
-    :root{
-      --fg:#ebdbb2;
-      --yellow:#fabd2f;
-      --orange:#fe8019;
-    }
-    .wordmark{
-      font-family:"Inter","IBM Plex Sans","Segoe UI","Roboto","Helvetica Neue",Arial,sans-serif;
-      font-weight:600;
-      letter-spacing:-0.025em;
-    }
-    .resin{ fill:var(--fg); }
-    .iq{ fill:var(--yellow); font-weight:800; letter-spacing:-0.015em; }
-    .accent-line{ stroke:var(--orange); stroke-width:6; stroke-linecap:round; opacity:0.9; }
-  </style>
+<style>
+  .wordmark{
+    font-family:"Inter","IBM Plex Sans","Segoe UI","Roboto","Helvetica Neue",Arial,sans-serif;
+    font-weight:600;
+    letter-spacing:-0.025em;
+  }
+
+  .resin{ fill: var(--fg, #ebdbb2); }
+  .iq{ fill: var(--yellow, #fabd2f); font-weight:800; letter-spacing:-0.015em; }
+  .accent-line{ stroke: var(--orange, #fe8019); stroke-width:6; stroke-linecap:round; opacity:0.9; }
+</style>
 
   <g transform="translate(640 120)" text-anchor="middle">
     <text class="wordmark" font-size="172" dominant-baseline="central">

@@ -201,6 +201,16 @@ main{
   height: auto;
 }
 
+.site-header .logo{
+  width: 100%;
+  max-width: 900px;
+  height: auto;
+}
+@media (max-width: 520px){
+  .site-header{ padding: 2rem 1rem; } /* smaller padding so logo feels bigger */
+  .site-header .logo{ max-width: 520px; }
+}
+
 .appHeaderImage{
   display: flex;
   justify-content: center;
