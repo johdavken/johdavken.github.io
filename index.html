@@ -105,6 +105,8 @@
       --panel: rgba(50,48,47,.95); /* bg0_s */
       --panel2: rgba(60,56,54,.88);/* bg1 */
       --text: #ebdbb2;             /* fg1 */
+      --title: #fb4943;            /* fg1 (strong) */
+      --subtitle: #83a598;         /* fg3 */
       --muted: #a89984;            /* fg4 */
       --border: rgba(80,73,69,.65);/* bg2 */
       --border2: rgba(102,92,84,.55);/* bg3 */
@@ -557,6 +559,24 @@ main{
     body[data-theme="high-contrast"] .card::before{ display:none; }
 .card > *{ position: relative; }
 
+    /* ===== Card header typography ===== */
+
+.layerTitle{
+  font-weight: 900;
+  font-size: 14px;
+  white-space: nowrap;
+  color: var(--title, var(--text));
+}
+
+.layerMeta{
+  color: var(--subtitle, var(--muted));
+  font-size: var(--font-small);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
     .card h2{ margin:0 0 10px 0; font-size:15px; letter-spacing:.2px; }
     .muted{ color: var(--muted); font-size: var(--font-small); }
     .tiny{ font-size: var(--font-tiny); color: var(--muted); margin-top: 6px; line-height: 1.35; }
@@ -703,7 +723,7 @@ main{
     .blockBody{ padding: 0 12px 12px 12px; display:grid; gap: var(--gap); }
     .layerTitle{ font-weight: 900; font-size: 14px; white-space: nowrap; }
     .layerMeta{
-      color: var(--muted);
+      color: var(--subtitle, var(--muted));
       font-size: var(--font-small);
       overflow: hidden;
       text-overflow: ellipsis;
