@@ -30,6 +30,11 @@
   --panelOpen: rgba(18,26,35,.92);
   --chev: rgba(255,255,255,.45);
 
+  /* this is for the APK button */
+  --btn-pad-y: 10px;
+  --btn-pad-x: 12px;
+  --btn-radius: 14px;
+
   /* Common surface tokens */
   --row-bg: rgba(255,255,255,.04);
   --row-border: rgba(255,255,255,.07);
@@ -123,6 +128,9 @@
   --toggle-h: 28px;
   --toggle-knob: 22px;
   --badge-font: 11px;
+  --btn-pad-y: 7px;
+  --btn-pad-x: 10px;
+  --btn-radius: 12px;
 }
 
 /* Dense */
@@ -141,6 +149,9 @@
   --toggle-h: 20px;
   --toggle-knob: 17px;
   --badge-font: 11px;
+  --btn-pad-y: 6px;
+  --btn-pad-x: 8px;
+  --btn-radius: 10px;
 }
 
 /* =======================================================================
@@ -641,8 +652,8 @@ button.danger{
   justify-content: center;
   gap: 8px;
 
-  padding: 10px 12px;
-  border-radius: 10px;
+  padding: var(--btn-pad-y) var(--btn-pad-x);
+  border-radius: var(--btn-radius);
 
   border: 1px solid var(--btn-border, rgba(255,255,255,.16));
   background: linear-gradient(
