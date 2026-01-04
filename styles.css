@@ -241,7 +241,7 @@ main{
 
 /* Documentation intro text (above nested cards) */
 .docIntro{
-  padding: 10px 22px 6px;
+  padding: 10px 12px 6px;
   font-size: var(--font-small);
   line-height: 1.45;
   color: var(--muted);
@@ -633,6 +633,41 @@ button.secondary{
 button.danger{
   background: var(--btn-danger-bg);
   border-color: var(--btn-danger-border);
+}
+/* Button-like links */
+a.btn{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  padding: 10px 12px;
+  border-radius: 10px;
+
+  border: 1px solid var(--btn-border, rgba(255,255,255,.16));
+  background: linear-gradient(
+    180deg,
+    var(--btn-primary-a, rgba(74,163,255,.22)),
+                              var(--btn-primary-b, rgba(74,163,255,.10))
+  );
+
+  color: var(--btn-text, var(--text));
+  font-weight: 700;
+  font-size: var(--font-base);
+  text-decoration: none;
+
+  cursor: pointer;
+
+
+  transition: filter .12s ease, transform .06s ease;
+}
+
+a.btn:hover{
+  filter: brightness(1.05);
+}
+
+a.btn:active{
+  transform: translateY(1px);
 }
 
 /* =======================================================================
