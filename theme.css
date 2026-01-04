@@ -3,8 +3,16 @@
  *   Applies whether data-theme is set on <html> or <body>.
  *   ======================================================================= */
 
-:where(html, body)[data-theme="dark"]{
-    /* Dark is the default :root palette; keep this here for explicit "dark" */
+/* Default dark (no data-theme present) */
+html:not([data-theme]){
+    --fg:     #eaeaea;
+    --yellow: #2689e0;
+    --orange: #56e854;
+}
+
+/* Explicit dark */
+html[data-theme="dark"]{
+    /* existing dark tokens */
     --bg-glow-a: rgba(74,163,255,.16);
     --bg-glow-b: rgba(93,255,159,.10);
     --card-glow-a: rgba(74,163,255,.14);
@@ -13,7 +21,13 @@
     --toggle-on-border: rgba(74,163,255,.45);
     --footer-bg: rgba(11,15,20,.92);
     --footer-border: rgba(255,255,255,.08);
+
+    --fg:     #eaeaea;
+    --yellow: #2689e0;
+    --orange: #56e854;
 }
+
+
 
 /* -----------------------------------------------------------------------
  *   Light
@@ -25,8 +39,13 @@
 
     --text: #0f172a;
     --subtitle: #475569;
-    --title: #1e40af;
+    --title: #4a4f63;
     --muted: #5b6b82;
+
+    --fg:     #545352; /* near-black text */
+    --yellow: #f57451; /* muted gold */
+    --orange: #e06c00;
+
 
     --border: rgba(15,23,42,.12);
     --border2: rgba(15,23,42,.18);
@@ -95,8 +114,8 @@
 
 
     --fg:     #ebdbb2;
-    --yellow: #fabd2f;
-    --orange: #fe8019;
+    --yellow: #90db8f;
+    --orange: #eb6844;
 
     --border: rgba(80,73,69,.65);      /* bg2 */
     --border2: rgba(102,92,84,.55);    /* bg3 */
@@ -163,8 +182,8 @@
     --muted: #665c54;
 
 
-    --fg:     #3c3836;
-    --yellow: #d79921;
+    --fg:     #3d3d3d;
+    --yellow: #7d8799;
     --orange: #af3a03;
 
     --border: rgba(102,92,84,.35);
