@@ -1,4 +1,4 @@
-  const APP_VERSION = "0.15";
+  const APP_VERSION = "0.14";
 
   const LS_SESSION_KEY = "resinTimer.session.v0.09";
   const LS_CONFIGS_KEY  = "resinTimer.configs.v0.09";
