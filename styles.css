@@ -16,11 +16,6 @@
   --title: #f2543f;
   --subtitle: #cfcfcf;
 
-  --fg:     #eaeaea;
-  --yellow: #ff7f4d;
-  --orange: #ff7f4d;
-
-
   --border: rgba(255,255,255,.10);
   --border2: rgba(255,255,255,.14);
 
@@ -444,10 +439,13 @@ details[open] > summary .chev{ transform: rotate(45deg); }
 .hr{ height: 1px; background: var(--border); margin: 12px 0; }
 
 
+
 /* =======================================================================
  *   Setup toggles
  *   ======================================================================= */
 
+
+/* Setup toggle row (Line 9 hopper naming, etc.) */
 .setupToggleRow{
   display: flex;
   align-items: center;
@@ -468,19 +466,6 @@ details[open] > summary .chev{ transform: rotate(45deg); }
 }
 .setupToggleMeta{
   margin-top: 4px;
-}
-
-/* Make it stack nicely on small screens */
-@media (max-width: 520px){
-  .setupToggleRow{
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
-  }
-  .setupToggleRow .trackWrap{
-    justify-content: space-between !important;
-    width: 100%;
-  }
 }
 
 
@@ -783,3 +768,12 @@ button.danger{
 .f-var2{ color: var(--f-var2); }
 .f-var3{ color: var(--f-var3); }
 .f-const{ color: var(--f-const); }
+
+
+/* Results (Run-Down Timeline) toggle row */
+.resultsToggleRow{
+  padding: 10px 12px;
+  border-radius: var(--radius-row);
+  background: var(--row-bg-2);
+  border: 1px solid var(--row-border-2);
+}

@@ -1,3 +1,28 @@
+
+
+  function applyHopperNaming(v){
+    const val = (v === "main") ? "main" : "standard";
+    state.hopperNamingLine9 = val;
+
+    const t = $("hopperNamingToggle");
+    if (t){
+      const on = (val === "main");
+      t.classList.toggle("on", on);
+      t.setAttribute("aria-checked", String(on));
+    }
+  }
+
+  function hopperLabel(layerName, hopperIndex0){
+    const L = String(layerName || "");
+    const i = Number(hopperIndex0) || 0;
+    if (state.hopperNamingLine9 === "main"){
+      // Main + 1–5: AM, A1..A5 (also works for BM, CM, etc.)
+      return (i === 0) ? `${L}M` : `${L}${i}`;
+    }
+    // Standard: 1–6 => A1..A6
+    return `${L}${i+1}`;
+  }
+
   const APP_VERSION = "0.15";
 
   const LS_SESSION_KEY = "resinTimer.session.v0.09";
@@ -22,6 +47,8 @@
   const state = {
     lineRate: 0,
     lineType: 3,
+    hopperNamingLine9: "standard", // "standard" | "main"
+    showPumpOffTracked: false, // hide pump-off tracked hoppers in timeline by default
     changeoverTime: "",
     offsets: {},
     layers: [],
@@ -29,8 +56,7 @@
     scrapResinLb: 0,
     density: "comfort",
     theme: "dark",
-    gauge: 0,
-    hopperNamingLine9: "standard" // "standard" | "main"
+    gauge: 0
   };
 
   const $ = (id) => document.getElementById(id);
@@ -200,6 +226,7 @@
       theme: state.theme,
       gauge: state.gauge,
       hopperNamingLine9: state.hopperNamingLine9,
+      showPumpOffTracked: !!state.showPumpOffTracked,
       blocksOpen
     };
   }
@@ -238,30 +265,6 @@
     state.density = density;
   }
 
-  function applyHopperNaming(v){
-    const val = (v === "main") ? "main" : "standard";
-    state.hopperNamingLine9 = val;
-
-    const t = $("hopperNamingToggle");
-    if (t){
-      const on = (val === "main");
-      t.classList.toggle("on", on);
-      t.setAttribute("aria-checked", String(on));
-    }
-  }
-
-  function hopperLabel(layerName, hopperIndex0){
-    const L = String(layerName || "");
-    const i = Number(hopperIndex0) || 0;
-    if (state.hopperNamingLine9 === "main"){
-      // Main + 1–5: AM, A1..A5 (also works for BM, C M, etc.)
-      return (i === 0) ? `${L}M` : `${L}${i}`;
-    }
-    // Standard: 1–6 => A1..A6
-    return `${L}${i+1}`;
-  }
-
-
   function applyPayload(payload, {rebuildUI=true} = {}){
     if (!payload || typeof payload !== "object") return;
 
@@ -281,6 +284,11 @@
 
     $("lineType").value = String(state.lineType);
     $("changeoverTime").value = state.changeoverTime;
+
+    // Restore setup toggles
+    if ("hopperNamingLine9" in payload) applyHopperNaming(payload.hopperNamingLine9);
+    if ("showPumpOffTracked" in payload) state.showPumpOffTracked = !!payload.showPumpOffTracked;
+
 
 
     const names = getLayerNamesForType(state.lineType);
@@ -872,12 +880,14 @@
     if (!area) return;
     area.innerHTML = "";
 
-    if (flat.length === 0){
+    const viewFlat = state.showPumpOffTracked ? flat : flat.filter(x=>!x.pumpOff);
+
+    if (viewFlat.length === 0){
       area.innerHTML = `<div class="muted">No tracked hoppers yet. Turn on Track in “Hopper Percentages”.</div>`;
       return;
     }
 
-    flat.sort((a,b)=>{
+    viewFlat.sort((a,b)=>{
       if (changeoverDate){
         const ta = a.startByDate ? a.startByDate.getTime() : Infinity;
         const tb = b.startByDate ? b.startByDate.getTime() : Infinity;
@@ -891,7 +901,7 @@
       return a.hopperLabel.localeCompare(b.hopperLabel);
     });
 
-    flat.forEach((h)=>{
+    viewFlat.forEach((h)=>{
       const resinChip = h.resinName ? `<span class="pill mono">${h.resinName}</span>` : `<span class="pill badge-warn">No resin name</span>`;
       const weightChip = h.weight > 0 ? `<span class="muted mono">${fmtNum(h.weight,2)} lb</span>` : `<span class="pill badge-warn">Missing weight</span>`;
       const splitWarn = (h.rate <= 0 && h.weight > 0) ? `<span class="pill badge-warn">Split?</span>` : "";
@@ -947,8 +957,9 @@
     state.gauge = 0;
     state.prodResinLb = 0;
     state.scrapResinLb = 0;
-    state.hopperNamingLine9 = "standard";
 
+    state.hopperNamingLine9 = "standard";
+    state.showPumpOffTracked = false;
     ensureLayers();
     state.layers.forEach(L=>{
       L.layerPct = 0;
@@ -1129,6 +1140,35 @@ function updateFooterNext(flat, changeoverDate){
 
     // Ensure visual state matches loaded state
     applyHopperNaming(state.hopperNamingLine9);
+  })();
+
+  // Results: show/hide pump-off tracked hoppers in timeline
+  (function wireShowPumpOffToggle(){
+    const t = $("showPumpOffToggle");
+    if (!t) return;
+
+    function sync(){
+      const on = !!state.showPumpOffTracked;
+      t.classList.toggle("on", on);
+      t.setAttribute("aria-checked", String(on));
+    }
+
+    function flip(){
+      state.showPumpOffTracked = !state.showPumpOffTracked;
+      sync();
+      validateAndCompute(); // re-renders Results
+      saveSession();
+    }
+
+    t.addEventListener("click",(e)=>{ e.preventDefault(); flip(); });
+    t.addEventListener("keydown",(e)=>{
+      if (e.key === "Enter" || e.key === " "){
+        e.preventDefault();
+        flip();
+      }
+    });
+
+    sync();
   })();
 
   $("prodResinLb")?.addEventListener("input",(e)=>{ state.prodResinLb = clampNum(e.target.value); renderResinCalculator(); saveSession(); });

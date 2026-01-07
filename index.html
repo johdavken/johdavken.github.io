@@ -11,7 +11,8 @@
 
   <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="theme.css">
-<script src="app.js?v=2026-01-07-1" defer></script>
+<script src="app.js?v=2026-01-07-6" defer></script>
+
 
 </head>
 
@@ -340,7 +341,7 @@
         </div>
       </div>
 
-            <!-- Nested: weights -->
+      <!-- Nested: weights -->
       <details class="block" id="weightsBlock">
         <summary>
           <div class="sumLeft">
@@ -418,6 +419,10 @@
     <div class="blockBody">
       <div class="muted">Sorted by upcoming time (Start by if changeover is set; otherwise Time to empty).</div>
       <div id="resultsArea" class="resultGrid mt10"></div>
+       <div class="trackWrap" style="justify-content:flex-start">
+          <span class="trackLabel">Show all</span>
+          <div id="showPumpOffToggle" class="toggle" role="switch" aria-checked="false" tabindex="0" title="Toggle showing pump-off hoppers in the timeline"></div>
+        </div>
     </div>
   </details>
 
@@ -640,7 +645,7 @@
           <div class="hr"></div>
 
           <div class="mono" style="line-height:1.7; font-size: var(--font-small);">
-            <div><strong>0.15</strong> — Line 9 hopper naming toggle added to Line Setup.</div>
+            <div><strong>0.15</strong> — Line 9 hopper naming toggle added to Setup. Timeline now has a show all toggle to see pumps that have been turned off. </div>
             <div><strong>0.14</strong> — Updated logo and made several variations for themes. Probably still a placeholder.</div>
             <div><strong>0.13</strong> — Enhanced the footer bar to reflect soonest tracked hopper.</div>
             <div><strong>0.12</strong> — Lots of tweaks to theme settings, GruvboxDark is extra robust.</div>
