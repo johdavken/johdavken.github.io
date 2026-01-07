@@ -1,4 +1,4 @@
-  const APP_VERSION = "0.14";
+  const APP_VERSION = "0.15";
 
   const LS_SESSION_KEY = "resinTimer.session.v0.09";
   const LS_CONFIGS_KEY  = "resinTimer.configs.v0.09";
@@ -29,7 +29,8 @@
     scrapResinLb: 0,
     density: "comfort",
     theme: "dark",
-    gauge: 0
+    gauge: 0,
+    hopperNamingLine9: "standard" // "standard" | "main"
   };
 
   const $ = (id) => document.getElementById(id);
@@ -198,6 +199,7 @@
       density: state.density,
       theme: state.theme,
       gauge: state.gauge,
+      hopperNamingLine9: state.hopperNamingLine9,
       blocksOpen
     };
   }
@@ -235,6 +237,30 @@
     if (sel) sel.value = density;
     state.density = density;
   }
+
+  function applyHopperNaming(v){
+    const val = (v === "main") ? "main" : "standard";
+    state.hopperNamingLine9 = val;
+
+    const t = $("hopperNamingToggle");
+    if (t){
+      const on = (val === "main");
+      t.classList.toggle("on", on);
+      t.setAttribute("aria-checked", String(on));
+    }
+  }
+
+  function hopperLabel(layerName, hopperIndex0){
+    const L = String(layerName || "");
+    const i = Number(hopperIndex0) || 0;
+    if (state.hopperNamingLine9 === "main"){
+      // Main + 1–5: AM, A1..A5 (also works for BM, C M, etc.)
+      return (i === 0) ? `${L}M` : `${L}${i}`;
+    }
+    // Standard: 1–6 => A1..A6
+    return `${L}${i+1}`;
+  }
+
 
   function applyPayload(payload, {rebuildUI=true} = {}){
     if (!payload || typeof payload !== "object") return;
@@ -503,7 +529,7 @@
         const row = document.createElement("div");
         row.className = "weightsRow";
         row.innerHTML = `
-          <div class="mono" style="font-weight:950;">${L.name}${hi+1}</div>
+          <div class="mono" style="font-weight:950;">${hopperLabel(L.name, hi)}</div>
           <input id="${id}" type="text" inputmode="decimal" placeholder="0" value="${clampNum(L.hoppers[hi].weight)}" />
         `;
         grid.appendChild(row);
@@ -619,7 +645,7 @@
         const row = document.createElement("div");
         row.className = "hopperRow";
         row.innerHTML = `
-          <div class="hopperBadge mono">${L.name}${hi+1}</div>
+          <div class="hopperBadge mono">${hopperLabel(L.name, hi)}</div>
           <input id="${resinFieldId}" class="resinNameInput" type="text" placeholder="Resin name" value="${(L.hoppers[hi].resinName || "").replace(/"/g,'&quot;')}" />
           <input id="${pctFieldId}" class="splitInput" type="text" inputmode="decimal" placeholder="0" value="${clampNum(L.hoppers[hi].pct)}" />
           <div class="trackWrap">
@@ -818,7 +844,7 @@
 
         flat.push({
           layer: L.name,
-          hopperLabel: `${L.name}${hi+1}`,
+          hopperLabel: `${hopperLabel(L.name, hi)}`,
           resinName: normName(h.resinName),
           weight,
           rate: hopperRate,
@@ -921,6 +947,7 @@
     state.gauge = 0;
     state.prodResinLb = 0;
     state.scrapResinLb = 0;
+    state.hopperNamingLine9 = "standard";
 
     ensureLayers();
     state.layers.forEach(L=>{
@@ -1075,6 +1102,34 @@ function updateFooterNext(flat, changeoverDate){
     applyTheme(e.target.value);
     saveSession();
   });
+
+
+  // Line 9 hopper naming (AM/A1..A5 vs A1..A6)
+  (function wireHopperNamingToggle(){
+    const t = $("hopperNamingToggle");
+    if (!t) return;
+
+    function flip(){
+      const next = (state.hopperNamingLine9 === "main") ? "standard" : "main";
+      applyHopperNaming(next);
+      // Re-render labels everywhere they appear
+      renderWeightsArea();
+      renderSplitsArea();
+      validateAndCompute();
+      saveSession();
+    }
+
+    t.addEventListener("click",(e)=>{ e.preventDefault(); flip(); });
+    t.addEventListener("keydown",(e)=>{
+      if (e.key === "Enter" || e.key === " "){
+        e.preventDefault();
+        flip();
+      }
+    });
+
+    // Ensure visual state matches loaded state
+    applyHopperNaming(state.hopperNamingLine9);
+  })();
 
   $("prodResinLb")?.addEventListener("input",(e)=>{ state.prodResinLb = clampNum(e.target.value); renderResinCalculator(); saveSession(); });
   $("scrapResinLb")?.addEventListener("input",(e)=>{ state.scrapResinLb = clampNum(e.target.value); renderResinCalculator(); saveSession(); });

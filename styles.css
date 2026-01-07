@@ -16,6 +16,11 @@
   --title: #f2543f;
   --subtitle: #cfcfcf;
 
+  --fg:     #eaeaea;
+  --yellow: #ff7f4d;
+  --orange: #ff7f4d;
+
+
   --border: rgba(255,255,255,.10);
   --border2: rgba(255,255,255,.14);
 
@@ -437,6 +442,47 @@ details[open] > summary .chev{ transform: rotate(45deg); }
 }
 
 .hr{ height: 1px; background: var(--border); margin: 12px 0; }
+
+
+/* =======================================================================
+ *   Setup toggles
+ *   ======================================================================= */
+
+.setupToggleRow{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-row);
+  background: var(--row-bg-2);
+  border: 1px solid var(--row-border-2);
+}
+
+.setupToggleText{ min-width: 0; }
+.setupToggleTitle{
+  font-weight: 850;
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.2;
+}
+.setupToggleMeta{
+  margin-top: 4px;
+}
+
+/* Make it stack nicely on small screens */
+@media (max-width: 520px){
+  .setupToggleRow{
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .setupToggleRow .trackWrap{
+    justify-content: space-between !important;
+    width: 100%;
+  }
+}
+
 
 /* =======================================================================
  *   Hopper rows
