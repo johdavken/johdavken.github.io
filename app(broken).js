@@ -47,10 +47,7 @@
       scrapResinLb: 0,
       density: "comfort",
       theme: "dark",
-      gauge: 0,
-      hopperNamingLine9: "standard", // "standard" | "main"
-      showPumpOffTracked: false // show pump-off items in Run-Down Timeline
-
+      gauge: 0
     };
 
   
@@ -58,66 +55,6 @@
    * DOM helpers
    * ============================ */
   const $ = (id) => document.getElementById(id);
-
-  /* ============================
-   * Custom toggles
-   * ============================ */
-
-  function hopperBadgeLabel(layerName, hi){
-    // Only affects Line 9 naming toggle. Keeps other lines unchanged unless enabled.
-    if (state.hopperNamingLine9 === "main"){
-      // AM, A1..A5 (and likewise BM, B1..B5, etc.)
-      return (hi === 0) ? `${layerName}M` : `${layerName}${hi}`;
-    }
-    return `${layerName}${hi+1}`;
-  }
-
-  function syncToggleUI(id, on){
-    const el = $(id);
-    if (!el) return;
-    el.classList.toggle("on", !!on);
-    el.setAttribute("aria-checked", String(!!on));
-  }
-
-  function hookToggle(id, getOn, setOn){
-    const el = $(id);
-    if (!el || el._wired) return;
-    el._wired = true;
-
-    const flip = ()=>{
-      setOn(!getOn());
-      syncToggleUI(id, getOn());
-      saveSession();
-      // Rebuild only when labels change; validate for filtering changes
-      if (id === "hopperNamingToggle"){
-        rebuildUIFromState();
-      }
-      validateAndCompute();
-    };
-
-    el.addEventListener("click",(e)=>{ e.preventDefault(); flip(); });
-    el.addEventListener("keydown",(e)=>{
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); flip(); }
-    });
-
-    // initial
-    syncToggleUI(id, getOn());
-  }
-
-  function hookCustomToggles(){
-    hookToggle(
-      "hopperNamingToggle",
-      ()=> state.hopperNamingLine9 === "main",
-      (v)=> { state.hopperNamingLine9 = v ? "main" : "standard"; }
-    );
-
-    hookToggle(
-      "showPumpOffToggle",
-      ()=> !!state.showPumpOffTracked,
-      (v)=> { state.showPumpOffTracked = !!v; }
-    );
-  }
-
 
     function clampNum(x){
       if (x === null || x === undefined) return 0;
@@ -283,8 +220,6 @@
         density: state.density,
         theme: state.theme,
         gauge: state.gauge,
-        hopperNamingLine9: state.hopperNamingLine9,
-        showPumpOffTracked: !!state.showPumpOffTracked,
         blocksOpen
       };
     }
@@ -343,11 +278,6 @@
       $("lineRate").value = String(state.lineRate);
       const g = $("gauge");
       if (g) g.value = String(state.gauge);
-
-      // Custom toggles
-      state.hopperNamingLine9 = (payload.hopperNamingLine9 === "main") ? "main" : "standard";
-      state.showPumpOffTracked = !!payload.showPumpOffTracked;
-
 
       $("lineType").value = String(state.lineType);
       $("changeoverTime").value = state.changeoverTime;
@@ -719,7 +649,7 @@
           const row = document.createElement("div");
           row.className = "hopperRow";
           row.innerHTML = `
-            <div class="hopperBadge mono">${hopperBadgeLabel(L.name, hi)}</div>
+            <div class="hopperBadge mono">${L.name}${hi+1}</div>
             <input id="${resinFieldId}" class="resinNameInput" type="text" placeholder="Resin name" value="${(L.hoppers[hi].resinName || "").replace(/"/g,'&quot;')}" />
             <input id="${pctFieldId}" class="splitInput" type="text" inputmode="decimal" placeholder="0" value="${clampNum(L.hoppers[hi].pct)}" />
             <div class="trackWrap">
@@ -950,14 +880,12 @@
       if (!area) return;
       area.innerHTML = "";
 
-      const viewFlat = state.showPumpOffTracked ? flat : flat.filter(x=>!x.pumpOff);
-
-      if (viewFlat.length === 0){
-        area.innerHTML = `<div class="muted">No visible tracked hoppers. (Pump-off hoppers are hidden.) Toggle “Show pump-off hoppers” to view them.</div>`;
+      if (flat.length === 0){
+        area.innerHTML = `<div class="muted">No tracked hoppers yet. Turn on Track in “Hopper Percentages”.</div>`;
         return;
       }
 
-      viewFlat.sort((a,b)=>{
+      flat.sort((a,b)=>{
         if (changeoverDate){
           const ta = a.startByDate ? a.startByDate.getTime() : Infinity;
           const tb = b.startByDate ? b.startByDate.getTime() : Infinity;
@@ -971,7 +899,7 @@
         return a.hopperLabel.localeCompare(b.hopperLabel);
       });
 
-      viewFlat.forEach((h)=>{
+      flat.forEach((h)=>{
         const resinChip = h.resinName ? `<span class="pill mono">${h.resinName}</span>` : `<span class="pill badge-warn">No resin name</span>`;
         const weightChip = h.weight > 0 ? `<span class="muted mono">${fmtNum(h.weight,2)} lb</span>` : `<span class="pill badge-warn">Missing weight</span>`;
         const splitWarn = (h.rate <= 0 && h.weight > 0) ? `<span class="pill badge-warn">Split?</span>` : "";
@@ -1025,10 +953,6 @@
       state.lineRate = 0;
       state.changeoverTime = "";
       state.gauge = 0;
-      state.hopperNamingLine9 = "standard";
-      state.showPumpOffTracked = false;
-      syncToggleUI("hopperNamingToggle", false);
-      syncToggleUI("showPumpOffToggle", false);
       state.prodResinLb = 0;
       state.scrapResinLb = 0;
 
@@ -1212,11 +1136,6 @@
       }
 
       hookDetailsPersistence();
-      hookCustomToggles();
-      // Sync toggle UI after restore
-      syncToggleUI("hopperNamingToggle", state.hopperNamingLine9 === "main");
-      syncToggleUI("showPumpOffToggle", !!state.showPumpOffTracked);
-
       refreshConfigDropdown();
 
       const selVal = $("savedConfigs")?.value;
