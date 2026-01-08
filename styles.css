@@ -11,6 +11,10 @@
   --panel: rgba(18,26,35,.88);
   --panel2: rgba(15,22,32,.76);
 
+  --fg:     #c7c1bb; /* near-black text */
+  --yellow: #b02323; /* muted gold */
+  --orange: #e06c00;
+
   --text: #eaf2ff;
   --muted: #9bb0c6;
   --title: #f2543f;
@@ -468,7 +472,18 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   margin-top: 4px;
 }
 
-
+/* Make it stack nicely on small screens */
+@media (max-width: 520px){
+  .setupToggleRow{
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .setupToggleRow .trackWrap{
+    justify-content: space-between !important;
+    width: 100%;
+  }
+}
 /* =======================================================================
  *   Hopper rows
  *   ======================================================================= */
@@ -498,7 +513,7 @@ details[open] > summary .chev{ transform: rotate(45deg); }
     grid-template-columns: auto minmax(120px, 1fr) 58px 55px;
     gap: 6px;
   }
-  .trackLabel{ display: none; }
+  .hopperRow .trackLabel{ display: none; }
 }
 
 .hopperBadge{
