@@ -922,8 +922,8 @@
 
           flat.push({
             layer: L.name,
-            hopperLabel: `${L.name}${hi+1}`,
-            resinName: normName(h.resinName),
+            hopperLabel: hopperBadgeLabel(L.name, hi),
+                    resinName: normName(h.resinName),
             weight,
             rate: hopperRate,
             timeText,
