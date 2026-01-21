@@ -603,7 +603,7 @@
           const row = document.createElement("div");
           row.className = "weightsRow";
           row.innerHTML = `
-            <div class="mono" style="font-weight:950;">${L.name}${hi+1}</div>
+            <div class="mono" style="font-weight:950;">${hopperBadgeLabel(L.name, hi)}</div>
             <input id="${id}" type="text" inputmode="decimal" placeholder="0" value="${clampNum(L.hoppers[hi].weight)}" />
           `;
           grid.appendChild(row);
