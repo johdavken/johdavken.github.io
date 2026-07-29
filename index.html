@@ -10,7 +10,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 
   <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="theme.css">
+  <link rel="stylesheet" href="theme.css?v=0.16.1">
 <script src="app.js?v=0.16" defer></script>
 
 
@@ -431,9 +431,26 @@
     <div class="blockBody">
       <div class="muted">Sorted by upcoming time (Start by if changeover is set; otherwise Time to empty).</div>
        <div class="trackWrap" style="justify-content:flex-start">
-          <span class="trackLabel">Show all</span>
-          <div id="showPumpOffToggle" class="toggle" role="switch" aria-checked="false" tabindex="0" title="Toggle showing pump-off hoppers in the timeline"></div>
-        </div>
+  <span class="trackLabel">Show all</span>
+
+  <div
+    id="showPumpOffToggle"
+    class="toggle"
+    role="switch"
+    aria-checked="false"
+    tabindex="0"
+    title="Toggle showing pump-off hoppers in the timeline"
+  ></div>
+
+  <button
+    id="resetTrackingBtn"
+    class="copyBtn"
+    type="button"
+    title="Untrack every hopper"
+  >
+    Reset tracking
+  </button>
+</div>
       <div id="resultsArea" class="resultGrid mt10"></div>
 
     </div>
