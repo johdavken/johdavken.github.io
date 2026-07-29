@@ -12,7 +12,7 @@
   /* ============================
    * Versioning + storage keys
    * ============================ */
-  const APP_VERSION = "0.15";
+  const APP_VERSION = "0.16";
 
     const LS_SESSION_KEY = "resinTimer.session.v0.09";
     const LS_CONFIGS_KEY  = "resinTimer.configs.v0.09";
@@ -24,11 +24,7 @@
       "splitsBlock",
       "resultsBlock",
       "resinCalcBlock",
-      "recipesBlock",
-      "infoBlock",
-      "formulasBlock",
-      "changelogBlock",
-      "notesBlock"
+      "recipesBlock"
     ];
 
     const HOPPERS_PER_LAYER = 6;
@@ -49,7 +45,8 @@
       theme: "dark",
       gauge: 0,
       hopperNamingLine9: "standard", // "standard" | "main"
-      showPumpOffTracked: false // show pump-off items in Run-Down Timeline
+      showPumpOffTracked: false, // show pump-off items in Run-Down Timeline
+      uiMode: "everyday" // "everyday" | "advanced"
 
     };
 
@@ -285,6 +282,7 @@
         gauge: state.gauge,
         hopperNamingLine9: state.hopperNamingLine9,
         showPumpOffTracked: !!state.showPumpOffTracked,
+        uiMode: state.uiMode,
         blocksOpen
       };
     }
@@ -347,6 +345,7 @@
       // Custom toggles
       state.hopperNamingLine9 = (payload.hopperNamingLine9 === "main") ? "main" : "standard";
       state.showPumpOffTracked = !!payload.showPumpOffTracked;
+      state.uiMode = payload.uiMode === "advanced" ? "advanced" : "everyday";
 
 
       $("lineType").value = String(state.lineType);
@@ -1083,6 +1082,20 @@
       }
     });
 
+    function applyUIMode(mode){
+      state.uiMode = mode === "advanced" ? "advanced" : "everyday";
+      document.body.setAttribute("data-ui-mode", state.uiMode);
+      const advanced = state.uiMode === "advanced";
+      const everydayBtn = $("everydayModeBtn");
+      const advancedBtn = $("advancedModeBtn");
+      const description = $("modeDescription");
+      if (everydayBtn){ everydayBtn.classList.toggle("active", !advanced); everydayBtn.setAttribute("aria-pressed", String(!advanced)); }
+      if (advancedBtn){ advancedBtn.classList.toggle("active", advanced); advancedBtn.setAttribute("aria-pressed", String(advanced)); }
+      if (description){ description.textContent = advanced ? "Advanced mode includes line setup values, receiver weights, offsets, resin totals, configurations, and display settings." : "Everyday mode shows only the controls normally needed during a run."; }
+    }
+
+    function setUIMode(mode){ applyUIMode(mode); saveSession(); }
+
     function rebuildUIFromState(payloadMaybe){
       ensureLayers();
       renderOffsetInputs();
@@ -1189,6 +1202,9 @@
     $("prodResinLb")?.addEventListener("input",(e)=>{ state.prodResinLb = clampNum(e.target.value); renderResinCalculator(); saveSession(); });
     $("scrapResinLb")?.addEventListener("input",(e)=>{ state.scrapResinLb = clampNum(e.target.value); renderResinCalculator(); saveSession(); });
 
+    $("everydayModeBtn")?.addEventListener("click", ()=>setUIMode("everyday"));
+    $("advancedModeBtn")?.addEventListener("click", ()=>setUIMode("advanced"));
+
     // Recipe buttons
     $("saveConfigBtn")?.addEventListener("click", saveNamedConfig);
     $("loadConfigBtn")?.addEventListener("click", loadSelectedConfig);
@@ -1211,6 +1227,7 @@
         rebuildUIFromState();
       }
 
+      applyUIMode(state.uiMode);
       hookDetailsPersistence();
       hookCustomToggles();
       // Sync toggle UI after restore
