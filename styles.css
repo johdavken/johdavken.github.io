@@ -298,6 +298,10 @@ input:focus, select:focus, textarea:focus{
   border-color: var(--focus-border);
   box-shadow: 0 0 0 3px var(--focus-ring);
 }
+input[aria-invalid="true"]{
+  border-color: var(--bad);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--bad) 20%, transparent);
+}
 
 textarea{ min-height: 120px; resize: vertical; }
 
