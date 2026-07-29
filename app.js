@@ -16,6 +16,7 @@
 
     const LS_SESSION_KEY = "resinTimer.session.v0.09";
     const LS_CONFIGS_KEY  = "resinTimer.configs.v0.09";
+    const LS_WORKSPACE_KEY = "resinTimer.workspace.v0.16";
 
     const DETAILS_IDS = [
       "lineSetupBlock",
@@ -1569,14 +1570,36 @@
    * ============================ */
   function updateCollapsedSummaries(){
     const setupStatus = $("setupSummaryStatus");
-    if (setupStatus){
-      const setupParts = [];
-      if (state.lineRate > 0){
-        setupParts.push(`${state.lineRate.toLocaleString([], { maximumFractionDigits: 2 })} lb/hr`);
+      if (setupStatus){
+        const setupParts = [];
+        if (state.lineRate > 0){
+          setupParts.push(`${state.lineRate.toLocaleString([], { maximumFractionDigits: 2 })} lb/hr`);
+        }
+        const changeoverDate = parseChangeoverDate(state.changeoverTime);
+        if (changeoverDate) setupParts.push(`Changeover ${fmtTime(changeoverDate)}`);
+        setupStatus.textContent = setupParts.length ? setupParts.join(" · ") : "Not set";
+        const outputStatus = $("workspaceOutputStatus");
+        if (outputStatus){
+          outputStatus.textContent = state.lineRate > 0
+            ? `${state.lineRate.toLocaleString([], { maximumFractionDigits: 2 })} lb/hr`
+            : "Not set";
+        }
+        const changeoverStatus = $("workspaceChangeoverStatus");
+        if (changeoverStatus){
+          changeoverStatus.textContent = changeoverDate ? fmtTime(changeoverDate) : "Not set";
+        }
+        const workspaceStatus = $("workspaceSetupStatus");
+      if (workspaceStatus){
+        const hasOutput = state.lineRate > 0;
+        const hasChangeover = !!changeoverDate;
+        workspaceStatus.textContent = hasOutput && hasChangeover
+          ? "Ready"
+          : (hasOutput || hasChangeover ? "In progress" : "Needs setup");
+        workspaceStatus.closest(".workspaceNavButton")?.setAttribute(
+          "data-status",
+          hasOutput && hasChangeover ? "ok" : (hasOutput || hasChangeover ? "info" : "neutral")
+        );
       }
-      const changeoverDate = parseChangeoverDate(state.changeoverTime);
-      if (changeoverDate) setupParts.push(`Changeover ${fmtTime(changeoverDate)}`);
-      setupStatus.textContent = setupParts.length ? setupParts.join(" · ") : "Not set";
     }
 
     const splitsStatus = $("splitsSummaryStatus");
@@ -1594,12 +1617,30 @@
       splitsStatus.textContent = ready
         ? "Ready ✓"
         : `${errorCount} percentage ${errorCount === 1 ? "error" : "errors"}`;
+      const workspaceStatus = $("workspaceSplitsStatus");
+      if (workspaceStatus){
+        workspaceStatus.textContent = ready ? "Ready" : splitsStatus.textContent;
+        workspaceStatus.hidden = false;
+        workspaceStatus.closest(".workspaceNavButton")?.setAttribute("data-status", ready ? "ok" : "warn");
+      }
     }
 
     const timelineStatus = $("timelineSummaryStatus");
-    if (timelineStatus){
-      const trackedCount = sum(state.layers.map(L=>L.hoppers.filter(h=>h.track).length));
-      timelineStatus.textContent = `${trackedCount} ${trackedCount === 1 ? "resin" : "resins"} tracked`;
+      if (timelineStatus){
+        const trackedCount = sum(state.layers.map(L=>L.hoppers.filter(h=>h.track).length));
+        timelineStatus.textContent = `${trackedCount} ${trackedCount === 1 ? "resin" : "resins"} tracked`;
+        const trackedStatus = $("workspaceTrackedStatus");
+        if (trackedStatus) trackedStatus.textContent = String(trackedCount);
+        const workspaceStatus = $("workspaceTimelineStatus");
+      if (workspaceStatus){
+        workspaceStatus.textContent = trackedCount
+          ? `${trackedCount} tracked`
+          : "None tracked";
+        workspaceStatus.closest(".workspaceNavButton")?.setAttribute(
+          "data-status",
+          trackedCount ? "info" : "neutral"
+        );
+      }
     }
   }
 
@@ -1869,9 +1910,61 @@
       const advancedBtn = $("advancedModeBtn");
       if (everydayBtn){ everydayBtn.classList.toggle("active", !advanced); everydayBtn.setAttribute("aria-pressed", String(!advanced)); }
       if (advancedBtn){ advancedBtn.classList.toggle("active", advanced); advancedBtn.setAttribute("aria-pressed", String(advanced)); }
+      if (!advanced && ["resinCalcBlock", "recipesBlock", "toolsBlock"].includes(activeWorkspaceId)){
+        setWorkspacePanel("resultsBlock", { persist: false });
+      }
     }
 
     function setUIMode(mode){ applyUIMode(mode); saveSession(); }
+
+    let activeWorkspaceId = "resultsBlock";
+
+    function saveWorkspacePreference(id){
+      try{
+        localStorage.setItem(LS_WORKSPACE_KEY, id);
+      }catch(e){
+        showStorageWarning("Workspace preference could not be saved on this device.");
+      }
+    }
+
+    function loadWorkspacePreference(){
+      try{
+        const saved = localStorage.getItem(LS_WORKSPACE_KEY);
+        return DETAILS_IDS.includes(saved) && document.getElementById(saved)?.classList.contains("workspacePanel")
+          ? saved
+          : "resultsBlock";
+      }catch(e){
+        return "resultsBlock";
+      }
+    }
+
+    function setWorkspacePanel(id, { persist = true } = {}){
+      const target = document.getElementById(id);
+      if (!target?.classList.contains("workspacePanel")) return;
+      activeWorkspaceId = id;
+      document.querySelectorAll("main > .workspacePanel").forEach(panel=>{
+        panel.classList.toggle("desktop-active", panel.id === id);
+      });
+      document.querySelectorAll(".workspaceNavButton").forEach(button=>{
+        const active = button.dataset.workspaceTarget === id;
+        button.classList.toggle("active", active);
+        if (active) button.setAttribute("aria-current", "page");
+        else button.removeAttribute("aria-current");
+      });
+      if (window.matchMedia("(min-width: 901px)").matches) target.open = true;
+      if (persist) saveWorkspacePreference(id);
+    }
+
+    function syncWorkspaceForViewport(){
+      const desktop = window.matchMedia("(min-width: 901px)").matches;
+      const headerSvg = document.querySelector(".site-header svg");
+      if (headerSvg){
+        headerSvg.setAttribute("viewBox", desktop ? "0 125 1280 105" : "0 0 1280 240");
+      }
+      if (desktop){
+        setWorkspacePanel(activeWorkspaceId);
+      }
+    }
 
     function rebuildUIFromState(payloadMaybe){
       ensureLayers();
@@ -1915,11 +2008,19 @@
   function updateFooterNext(flat, changeoverDate){
     const msgEl = document.getElementById("footerMsg");
     const subEl = document.getElementById("footerSub");
+    const desktopMsgEl = document.getElementById("workspaceNextStatus");
+    const desktopSubEl = document.getElementById("workspaceNextDetail");
     if (!msgEl || !subEl) return;
 
+    const setNextStatus = (message, detail)=>{
+      msgEl.textContent = message;
+      subEl.textContent = detail;
+      if (desktopMsgEl) desktopMsgEl.textContent = message;
+      if (desktopSubEl) desktopSubEl.textContent = detail;
+    };
+
     if (!flat || flat.length === 0){
-      msgEl.textContent = "No tracked hoppers";
-      subEl.textContent = `ResinIQ • v${APP_VERSION}`;
+      setNextStatus("No tracked hoppers", "Track a resin to see the next action");
       return;
     }
 
@@ -1933,8 +2034,10 @@
       next = candidates[0] || null;
 
       if (next){
-        msgEl.textContent = `Next pump off: ${next.hopperLabel}${next.resinName ? ` • ${next.resinName}` : ""}`;
-        subEl.textContent = `${next.startByText} (${fmtRelFromNow(next.startByDate)}) • Changeover ${fmtTime(changeoverDate)}`;
+        setNextStatus(
+          `Next pump off: ${next.hopperLabel}${next.resinName ? ` • ${next.resinName}` : ""}`,
+          `${next.startByText} (${fmtRelFromNow(next.startByDate)}) • Changeover ${fmtTime(changeoverDate)}`
+        );
         return;
       }
     }
@@ -1947,11 +2050,15 @@
     next = candidates2[0] || null;
 
     if (next){
-      msgEl.textContent = `Soonest empty: ${next.hopperLabel}${next.resinName ? ` • ${next.resinName}` : ""}`;
-      subEl.textContent = `${next.timeText} • Total ${next.totalRundownText}`;
+      setNextStatus(
+        `Soonest empty: ${next.hopperLabel}${next.resinName ? ` • ${next.resinName}` : ""}`,
+        `${next.timeText} • Total ${next.totalRundownText}`
+      );
     } else {
-      msgEl.textContent = "No upcoming hoppers (all checked off or missing data)";
-      subEl.textContent = `ResinIQ • v${APP_VERSION}`;
+      setNextStatus(
+        "No upcoming hoppers",
+        "All tracked hoppers are checked off or missing data"
+      );
     }
   }
 
@@ -2173,6 +2280,15 @@
     $("everydayModeBtn")?.addEventListener("click", ()=>setUIMode("everyday"));
     $("advancedModeBtn")?.addEventListener("click", ()=>setUIMode("advanced"));
     $("resetTrackingBtn")?.addEventListener("click", resetTracking);
+    document.querySelectorAll(".workspaceNavButton").forEach(button=>{
+      button.addEventListener("click",()=>setWorkspacePanel(button.dataset.workspaceTarget));
+    });
+    document.querySelectorAll("main > .workspacePanel > summary").forEach(summary=>{
+      summary.addEventListener("click",event=>{
+        if (window.matchMedia("(min-width: 901px)").matches) event.preventDefault();
+      });
+    });
+    window.addEventListener("resize", syncWorkspaceForViewport);
 
     // Recipe buttons
     $("saveConfigBtn")?.addEventListener("click", saveNamedConfig);
@@ -2196,7 +2312,9 @@
         rebuildUIFromState();
       }
 
+      activeWorkspaceId = loadWorkspacePreference();
       applyUIMode(state.uiMode);
+      syncWorkspaceForViewport();
       hookDetailsPersistence();
       hookCustomToggles();
       // Sync toggle UI after restore

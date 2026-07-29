@@ -224,7 +224,7 @@
   </g>
 
   <!-- ===== Foreground wordmark (new style) ===== -->
-  <g transform="translate(1170 68)" text-anchor="end" filter="url(#wmShadow)">
+  <g class="headerWordmark" transform="translate(1170 68)" text-anchor="end" filter="url(#wmShadow)">
     <!-- Outline underlay (helps legibility over the plot) -->
     <text class="wm-outline" font-size="96" dominant-baseline="central">
       <tspan class="resinWord">resin</tspan><tspan class="iWord">I</tspan><tspan class="qWord">Q</tspan>
@@ -259,8 +259,58 @@
     </div>
   </section>
 
+  <nav class="workspaceNav" aria-label="ResinIQ sections">
+    <div class="workspaceBrand" aria-label="ResinIQ">
+      <span class="workspaceBrandResin">resin</span><span class="workspaceBrandI">I</span><span class="workspaceBrandQ">Q</span>
+    </div>
+    <button class="workspaceNavButton" type="button" data-workspace-target="lineSetupBlock" data-status="neutral">
+      <span>Setup</span>
+      <small id="workspaceSetupStatus">Needs setup</small>
+    </button>
+    <button class="workspaceNavButton" type="button" data-workspace-target="splitsBlock" data-status="warn">
+      <span>Hopper Percentages</span>
+      <small id="workspaceSplitsStatus">Check percentages</small>
+    </button>
+    <button class="workspaceNavButton active" type="button" data-workspace-target="resultsBlock" data-status="neutral">
+      <span>Run-Down Timeline</span>
+      <small id="workspaceTimelineStatus">0 resins tracked</small>
+    </button>
+    <button class="workspaceNavButton advancedOnly" type="button" data-workspace-target="resinCalcBlock">
+      <span>Resin Calculator</span>
+      <small>Usage totals</small>
+    </button>
+    <button class="workspaceNavButton advancedOnly" type="button" data-workspace-target="recipesBlock">
+      <span>Line Configurations</span>
+      <small>Save and load</small>
+    </button>
+    <button class="workspaceNavButton advancedOnly" type="button" data-workspace-target="toolsBlock">
+      <span>Tools</span>
+      <small>Production utilities</small>
+    </button>
+  </nav>
+
+  <div class="workspaceStatusBar" aria-label="Current production status">
+    <div class="workspaceStatusItem">
+      <span>Output</span>
+      <strong id="workspaceOutputStatus" class="mono">Not set</strong>
+    </div>
+    <div class="workspaceStatusItem">
+      <span>Changeover</span>
+      <strong id="workspaceChangeoverStatus" class="mono">Not set</strong>
+    </div>
+    <div class="workspaceStatusItem">
+      <span>Tracked</span>
+      <strong id="workspaceTrackedStatus" class="mono">0</strong>
+    </div>
+    <div class="workspaceStatusItem workspaceNextAction">
+      <span>Next action</span>
+      <strong id="workspaceNextStatus">No tracked hoppers</strong>
+      <small id="workspaceNextDetail">Track a resin to see the next action</small>
+    </div>
+  </div>
+
   <!-- 1) LINE SETUP -->
-  <details class="block card" id="lineSetupBlock">
+  <details class="block card workspacePanel" id="lineSetupBlock">
     <summary>
       <div class="sumLeft">
         <div class="chev"></div>
@@ -398,7 +448,7 @@
   </details>
 
   <!-- 2) HOPPER PERCENTAGES -->
-  <details class="block card" id="splitsBlock">
+  <details class="block card workspacePanel" id="splitsBlock">
     <summary>
       <div class="sumLeft">
         <div class="chev"></div>
@@ -417,7 +467,7 @@
   </details>
 
   <!-- 3) RESULTS -->
-  <details class="block card" id="resultsBlock" open>
+  <details class="block card workspacePanel desktop-active" id="resultsBlock" open>
     <summary>
       <div class="sumLeft">
         <div class="chev"></div>
@@ -458,7 +508,7 @@
   </details>
 
   <!-- 4) RESIN TOTALS -->
-  <details class="block card advancedOnly" id="resinCalcBlock">
+  <details class="block card advancedOnly workspacePanel" id="resinCalcBlock">
     <summary>
       <div class="sumLeft">
         <div class="chev"></div>
@@ -490,7 +540,7 @@
   </details>
 
   <!-- 5) RECIPES -->
-  <details class="block card advancedOnly" id="recipesBlock">
+  <details class="block card advancedOnly workspacePanel" id="recipesBlock">
     <summary>
       <div class="sumLeft">
         <div class="chev"></div>
@@ -547,7 +597,7 @@
   </details>
 
   <!-- 6) TOOLS -->
-  <details class="block card advancedOnly" id="toolsBlock">
+  <details class="block card advancedOnly workspacePanel" id="toolsBlock">
     <summary>
       <div class="sumLeft">
         <div class="chev"></div>
