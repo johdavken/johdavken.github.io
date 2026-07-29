@@ -19,7 +19,7 @@ test("configuration names are rendered as text, not HTML", () => {
 });
 
 test("resin names are assigned through safe DOM properties", () => {
-  assert.match(source, /resinEl\.value = L\.hoppers\[hi\]\.resinName/);
+  assert.match(source, /resinInput\.value = hopper\.resinName/);
   assert.match(source, /querySelector\("\[data-resin-name\]"\)\.textContent = r\.displayName/);
   assert.match(source, /resinChip\.textContent = h\.resinName/);
   assert.doesNotMatch(source, /\$\{(?:h\.resinName|r\.displayName)[^}]*\}/);

@@ -809,9 +809,10 @@
       const area = $("splitsArea");
       if (!area) return;
       area.innerHTML = "";
-
-      const div = 100;
       const copyRules = getLayerCopyRules(state.lineType);
+      const selected = new Set();
+      const cellRefs = new Map();
+      let bulkMode = false;
 
       function copyLayer(fromName, toName){
         const from = state.layers.find(L=>L.name===fromName);
@@ -825,121 +826,308 @@
         to.layerPct = clampNum(from.layerPct);
       }
 
-      state.layers.forEach((L)=>{
-        const det = document.createElement("details");
-        det.className = "block";
-        det.open = false;
+      const modeBar = document.createElement("div");
+      modeBar.className = "splitsBulkModeBar";
+      const modeButton = document.createElement("button");
+      modeButton.type = "button";
+      modeButton.className = "secondary";
+      modeButton.textContent = "Bulk edit";
+      modeButton.setAttribute("aria-expanded", "false");
+      modeBar.appendChild(modeButton);
+      area.appendChild(modeBar);
 
-        const layerPctText = `${fmtNum(L.layerPct,2)}%`;
-        const off = clampNum(state.offsets?.[L.name] ?? 0);
+      const toolbar = document.createElement("div");
+      toolbar.className = "splitsBulkBar hide";
+      toolbar.innerHTML = `
+        <label class="splitsBulkField" for="bulkResinName">
+          <span>Resin name</span>
+          <input id="bulkResinName" type="text" placeholder="Leave blank to keep names" />
+        </label>
+        <label class="splitsBulkField" for="bulkResinPct">
+          <span>Percentage</span>
+          <span class="splitsBulkPctInput">
+            <input id="bulkResinPct" type="text" inputmode="decimal" placeholder="Leave blank to keep %" />
+            <span>%</span>
+          </span>
+        </label>
+        <div class="splitsBulkActions">
+          <button id="applyBulkSplit" type="button" disabled>Apply to selected</button>
+          <button id="selectAllSplits" type="button" class="secondary">Select all</button>
+          <button id="clearSplitSelection" type="button" class="secondary">Clear selection</button>
+          <button id="resetAllSplits" type="button" class="danger">Reset all</button>
+        </div>
+        <div id="splitSelectionStatus" class="tiny splitsSelectionStatus" role="status" aria-live="polite">No hoppers selected</div>
+      `;
+      area.appendChild(toolbar);
+
+      const summary = document.createElement("div");
+      summary.className = "splitsMatrixSummary";
+      summary.setAttribute("role", "status");
+      summary.setAttribute("aria-live", "polite");
+      area.appendChild(summary);
+
+      const mobileLayerNav = document.createElement("div");
+      mobileLayerNav.className = "splitsMobileLayerNav";
+      mobileLayerNav.style.setProperty("--mobile-layer-count", String(state.layers.length));
+      mobileLayerNav.setAttribute("role", "tablist");
+      mobileLayerNav.setAttribute("aria-label", "Choose layer");
+      let activeMobileLayer = state.layers[0]?.name || "";
+      const mobileLayerButtons = new Map();
+      state.layers.forEach(L=>{
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "splitsMobileLayerButton";
+        button.textContent = L.name;
+        button.setAttribute("role", "tab");
+        button.setAttribute("aria-label", `Show Layer ${L.name}`);
+        mobileLayerButtons.set(L.name, button);
+        mobileLayerNav.appendChild(button);
+      });
+      area.appendChild(mobileLayerNav);
+
+      const scroll = document.createElement("div");
+      scroll.className = "splitsMatrixScroll";
+      const table = document.createElement("table");
+      table.className = "splitsMatrix";
+
+      const thead = document.createElement("thead");
+      const headerRow = document.createElement("tr");
+      const corner = document.createElement("th");
+      corner.scope = "col";
+      corner.textContent = "Hopper";
+      headerRow.appendChild(corner);
+
+      state.layers.forEach(L=>{
+        const th = document.createElement("th");
+        th.scope = "col";
+        th.className = "splitLayerHeader";
+        th.dataset.layerColumn = L.name;
+
+        const title = document.createElement("button");
+        title.type = "button";
+        title.className = "splitLayerTitle";
+        title.textContent = `Layer ${L.name}`;
+        title.title = `Select or clear all Layer ${L.name} hoppers`;
+        title.addEventListener("click",()=>{
+          if (!bulkMode) return;
+          const keys = Array.from({length:HOPPERS_PER_LAYER}, (_,hi)=>`${L.name}:${hi}`);
+          const select = keys.some(key=>!selected.has(key));
+          keys.forEach(key=>select ? selected.add(key) : selected.delete(key));
+          updateSelectionUI();
+        });
+
+        const pctWrap = document.createElement("label");
+        pctWrap.className = "splitLayerPct";
+        const pctInput = document.createElement("input");
+        pctInput.id = `lp_${L.name}`;
+        pctInput.type = "text";
+        pctInput.inputMode = "decimal";
+        pctInput.placeholder = "0";
+        pctInput.value = String(clampNum(L.layerPct));
+        pctInput.setAttribute("aria-label", `Layer ${L.name} percentage`);
+        const pctUnit = document.createElement("span");
+        pctUnit.textContent = "%";
+        pctWrap.append(pctInput, pctUnit);
+
+        const meta = document.createElement("div");
+        meta.id = `layerMeta_${L.name}`;
+        meta.className = "splitLayerMeta";
+        const thick = document.createElement("span");
+        thick.id = `layerThickText_${L.name}`;
+        thick.className = "mono";
+        const hasThickness = clampNum(state.gauge) > 0;
+        const initialOffset = clampNum(state.offsets?.[L.name] ?? 0);
+        const hasOffset = initialOffset !== 0;
+        thick.textContent = hasThickness
+          ? `${fmtTrim(clampNum(state.gauge) * (clampNum(L.layerPct) / 100), 3)} mil`
+          : "";
+        thick.hidden = !hasThickness;
+        const separator = document.createElement("span");
+        separator.id = `layerMetaSep_${L.name}`;
+        separator.textContent = " · ";
+        separator.hidden = !(hasThickness && hasOffset);
+        const offset = document.createElement("span");
+        offset.id = `layerOffText_${L.name}`;
+        offset.className = "mono";
+        offset.textContent = hasOffset ? `${fmtNum(initialOffset, 0)} min` : "";
+        offset.hidden = !hasOffset;
+        meta.hidden = !(hasThickness || hasOffset);
+        meta.append(thick, separator, offset);
+
+        const hopperTotal = document.createElement("div");
+        hopperTotal.id = `hopperTotal_${L.name}`;
+        hopperTotal.className = "splitColumnTotal";
+
+        th.append(title, pctWrap, meta, hopperTotal);
 
         const copyFrom = copyRules[L.name];
-        const copyBtnHTML = copyFrom
-          ? `<button type="button" class="copyBtn" data-copyfrom="${copyFrom}" data-copyto="${L.name}">Copy ${copyFrom} → ${L.name}</button>`
-          : "";
-
-        det.innerHTML = `
-          <summary>
-            <div class="sumLeft">
-              <div class="chev"></div>
-              <div style="min-width:0">
-                <div class="layerPctInline">
-                  <div class="layerTitle">Layer ${L.name}</div>
-                  <input
-                    id="lp_${L.name}"
-                    type="text"
-                    inputmode="decimal"
-                    placeholder="0"
-                    value="${clampNum(L.layerPct)}"
-                    aria-label="Layer ${L.name} percent"
-                  />
-                </div>
-                <div class="layerMeta"> Thickness: <span class="mono" id="layerThickText_${L.name}">${(clampNum(state.gauge)>0)?`${fmtTrim(clampNum(state.gauge)*(clampNum(L.layerPct)/100),3)} mil`:"—"}</span> • Offset: <span class="mono" id="layerOffText_${L.name}">${fmtNum(off,0)} min</span></div>
-              </div>
-            </div>
-            <div style="display:flex; gap:8px; align-items:center;">
-              ${copyBtnHTML}
-              <span class="pill hide">Splits</span>
-            </div>
-          </summary>
-          <div class="blockBody">
-            <div class="hopperList" id="list_${L.name}"></div>
-          </div>
-        `;
-        area.appendChild(det);
-
-        const lpEl = det.querySelector(`#lp_${L.name}`);
-        if (lpEl){
-          ["click","mousedown","keydown"].forEach(evt =>
-            lpEl.addEventListener(evt, (e)=> e.stopPropagation())
-          );
-          lpEl.addEventListener("input",(e)=>{
-            const accepted = acceptNumericInput(
-              e.target,
-              { min: 0, max: 100, label: `Layer ${L.name} percentage` },
-              value => { L.layerPct = value; }
-            );
-            if (!accepted) return;
-            validateAndCompute();
-            saveSession();
-            updateLayerMetaDisplays();
-          });
-        }
-
-        const copyBtn = det.querySelector(".copyBtn");
-        if (copyBtn){
-          copyBtn.addEventListener("click",(e)=>{
-            e.preventDefault(); e.stopPropagation();
-            const from = copyBtn.getAttribute("data-copyfrom");
-            const to = copyBtn.getAttribute("data-copyto");
-            const ok = confirm(`Copy layer % + splits + resin names + track toggles from Layer ${from} → Layer ${to}?`);
+        if (copyFrom){
+          const copyButton = document.createElement("button");
+          copyButton.type = "button";
+          copyButton.className = "copyBtn splitCopyBtn";
+          copyButton.textContent = `Copy ${copyFrom} → ${L.name}`;
+          copyButton.addEventListener("click",()=>{
+            const ok = confirm(`Copy layer % + splits + resin names + track toggles from Layer ${copyFrom} → Layer ${L.name}?`);
             if (!ok) return;
-            copyLayer(from, to);
+            copyLayer(copyFrom, L.name);
             renderSplitsArea();
             validateAndCompute();
             saveSession();
           });
-          copyBtn.addEventListener("keydown",(e)=>e.stopPropagation());
+          th.appendChild(copyButton);
         }
 
-        const list = det.querySelector(`#list_${L.name}`);
+        pctInput.addEventListener("input",(e)=>{
+          const accepted = acceptNumericInput(
+            e.target,
+            { min: 0, max: 100, label: `Layer ${L.name} percentage` },
+            value => { L.layerPct = value; }
+          );
+          if (!accepted) return;
+          updateSplitTotals();
+          updateLayerMetaDisplays();
+          validateAndCompute();
+          saveSession();
+        });
 
-        for (let hi=0; hi<HOPPERS_PER_LAYER; hi++){
-          const resinFieldId = `r_${L.name}_${hi}`;
-          const pctFieldId = `p_${L.name}_${hi}`;
-          const toggleId = `t_${L.name}_${hi}`;
+        headerRow.appendChild(th);
+      });
+      thead.appendChild(headerRow);
+      table.appendChild(thead);
 
-          const row = document.createElement("div");
-          row.className = "hopperRow";
-          row.innerHTML = `
-            <div class="hopperBadge mono">${hopperBadgeLabel(L.name, hi)}</div>
-            <input id="${resinFieldId}" class="resinNameInput" type="text" placeholder="Resin name" />
-            <input id="${pctFieldId}" class="splitInput" type="text" inputmode="decimal" placeholder="0" value="${clampNum(L.hoppers[hi].pct)}" />
-            <div class="trackWrap">
-              <span class="trackLabel">Track</span>
-              <div id="${toggleId}" class="toggle ${L.hoppers[hi].track ? "on":""}" role="switch" aria-checked="${L.hoppers[hi].track ? "true":"false"}" tabindex="0"></div>
-            </div>
-          `;
-          list.appendChild(row);
+      const tbody = document.createElement("tbody");
+      for (let hi=0; hi<HOPPERS_PER_LAYER; hi++){
+        const tr = document.createElement("tr");
+        const rowHeader = document.createElement("th");
+        rowHeader.scope = "row";
+        rowHeader.className = "splitRowHeader mono";
+        const rowSelect = document.createElement("button");
+        rowSelect.type = "button";
+        rowSelect.className = "splitRowSelect mono";
+        rowSelect.textContent = hopperPositionLabel(hi);
+        rowSelect.title = `Select or clear hopper ${hopperPositionLabel(hi)} across all layers`;
+        rowSelect.addEventListener("click",()=>{
+          if (!bulkMode) return;
+          const keys = state.layers.map(L=>`${L.name}:${hi}`);
+          const select = keys.some(key=>!selected.has(key));
+          keys.forEach(key=>select ? selected.add(key) : selected.delete(key));
+          updateSelectionUI();
+        });
+        rowHeader.appendChild(rowSelect);
+        tr.appendChild(rowHeader);
 
-          const resinEl = row.querySelector(`#${resinFieldId}`);
-          resinEl.value = L.hoppers[hi].resinName || "";
-          const pctEl = row.querySelector(`#${pctFieldId}`);
+        state.layers.forEach(L=>{
+          const hopper = L.hoppers[hi];
+          const key = `${L.name}:${hi}`;
+          const isInactive = !normName(hopper.resinName) && clampNum(hopper.pct) === 0 && !hopper.track;
+          const td = document.createElement("td");
+          td.className = `splitMatrixCell${isInactive ? " inactive" : ""}`;
+          td.dataset.layerColumn = L.name;
+
+          const addButton = document.createElement("button");
+          addButton.type = "button";
+          addButton.className = "splitAddResin";
+          addButton.textContent = "+ Add resin";
+          addButton.setAttribute("aria-label", `Add resin to ${hopperBadgeLabel(L.name, hi)}`);
+
+          const editor = document.createElement("div");
+          editor.className = "splitCellEditor";
+
+          const cellTop = document.createElement("div");
+          cellTop.className = "splitCellTop";
+          const selector = document.createElement("input");
+          selector.type = "checkbox";
+          selector.className = "splitCellSelector";
+          selector.setAttribute("aria-label", `Select ${hopperBadgeLabel(L.name, hi)} for bulk edit`);
+
+          const resinInput = document.createElement("input");
+          resinInput.id = `r_${L.name}_${hi}`;
+          resinInput.className = "resinNameInput";
+          resinInput.type = "text";
+          resinInput.placeholder = "Resin name";
+          resinInput.value = hopper.resinName || "";
+          resinInput.setAttribute("aria-label", `${hopperBadgeLabel(L.name, hi)} resin name`);
+          cellTop.append(selector, resinInput);
+
+          const controls = document.createElement("div");
+          controls.className = "splitCellControls";
+          const pctWrap = document.createElement("label");
+          pctWrap.className = "splitPctControl";
+          const pctInput = document.createElement("input");
+          pctInput.id = `p_${L.name}_${hi}`;
+          pctInput.className = "splitInput";
+          pctInput.type = "text";
+          pctInput.inputMode = "decimal";
+          pctInput.placeholder = "0";
+          pctInput.value = String(clampNum(hopper.pct));
+          pctInput.setAttribute("aria-label", `${hopperBadgeLabel(L.name, hi)} percentage`);
+          const pctUnit = document.createElement("span");
+          pctUnit.textContent = "%";
+          pctWrap.append(pctInput, pctUnit);
+
           if (hi === 0){
-            pctEl.readOnly = true;
-            pctEl.title = "Auto (100% minus other hoppers)";
-            pctEl.style.opacity = "0.85";
+            pctInput.readOnly = true;
+            pctInput.title = "Auto (100% minus other hoppers)";
+            const auto = document.createElement("span");
+            auto.className = "splitAutoLabel";
+            auto.textContent = "Auto";
+            pctWrap.prepend(auto);
           }
 
-          const togEl = row.querySelector(`#${toggleId}`);
+          const trackControl = document.createElement("div");
+          trackControl.className = "splitTrackControl";
+          const trackButton = document.createElement("button");
+          trackButton.id = `t_${L.name}_${hi}`;
+          trackButton.type = "button";
+          trackButton.className = `toggle splitTrackToggle${hopper.track ? " on" : ""}`;
+          trackButton.setAttribute("role", "switch");
+          trackButton.setAttribute("aria-checked", String(!!hopper.track));
+          trackButton.setAttribute("aria-label", `Track ${hopperBadgeLabel(L.name, hi)}`);
+          trackButton.title = `Track ${hopperBadgeLabel(L.name, hi)}`;
+          trackControl.appendChild(trackButton);
 
-          resinEl.addEventListener("input",(e)=>{
-            L.hoppers[hi].resinName = normName(e.target.value);
-            renderResinCalculator();
+          controls.append(pctWrap, trackControl);
+          editor.append(cellTop, controls);
+          td.append(addButton, editor);
+          tr.appendChild(td);
+
+          function refreshCellState(){
+            const inactive = !normName(hopper.resinName) && clampNum(hopper.pct) === 0 && !hopper.track;
+            td.classList.toggle("inactive", inactive);
+            trackButton.classList.toggle("on", !!hopper.track);
+            trackButton.setAttribute("aria-checked", String(!!hopper.track));
+            if (!inactive) td.classList.remove("editing");
+          }
+
+          cellRefs.set(key, {
+            td,
+            selector,
+            resinInput,
+            pctInput,
+            layer: L,
+            hopper,
+            hi,
+            refreshCellState
+          });
+
+          addButton.addEventListener("click",()=>{
+            td.classList.add("editing");
+            resinInput.focus();
+          });
+
+          selector.addEventListener("change",()=>{
+            selector.checked ? selected.add(key) : selected.delete(key);
+            updateSelectionUI();
+          });
+
+          resinInput.addEventListener("input",(e)=>{
+            hopper.resinName = normName(e.target.value);
+            refreshCellState();
+            validateAndCompute();
             saveSession();
           });
 
-          pctEl.addEventListener("input",(e)=>{
+          pctInput.addEventListener("input",(e)=>{
             if (hi === 0) return;
             const candidate = validation.validatePercentage(
               e.target.value,
@@ -952,8 +1140,8 @@
               return;
             }
 
-            const otherPercentages = L.hoppers.slice(1).map((hopper, index) =>
-              index === hi - 1 ? candidate.value : hopper.pct
+            const otherPercentages = L.hoppers.slice(1).map((item,index)=>
+              index === hi - 1 ? candidate.value : item.pct
             );
             const totalResult = validation.validateHopperPercentages(otherPercentages);
             e.target.setCustomValidity(totalResult.valid ? "" : totalResult.message);
@@ -961,31 +1149,205 @@
             e.target.title = totalResult.valid ? "" : totalResult.message;
             if (!totalResult.valid) return;
 
-            L.hoppers[hi].pct = candidate.value;
-
+            hopper.pct = candidate.value;
             recomputeAutoH1(L);
-
-            const h1Id = `p_${L.name}_0`;
-            const h1El = det.querySelector(`#${h1Id}`);
-            if (h1El) h1El.value = String(clampNum(L.hoppers[0].pct));
-
+            refreshCellState();
+            const h1Input = table.querySelector(`#p_${L.name}_0`);
+            if (h1Input) h1Input.value = String(clampNum(L.hoppers[0].pct));
+            updateSplitTotals();
             validateAndCompute();
             saveSession();
           });
 
-          function toggleTrack(){
-            L.hoppers[hi].track = !L.hoppers[hi].track;
-            togEl.classList.toggle("on", L.hoppers[hi].track);
-            togEl.setAttribute("aria-checked", L.hoppers[hi].track ? "true" : "false");
+          trackButton.addEventListener("click",()=>{
+            hopper.track = !hopper.track;
+            refreshCellState();
             validateAndCompute();
             saveSession();
+          });
+        });
+        tbody.appendChild(tr);
+      }
+      table.appendChild(tbody);
+      scroll.appendChild(table);
+      area.appendChild(scroll);
+
+      function showMobileLayer(layerName){
+        activeMobileLayer = layerName;
+        table.querySelectorAll("[data-layer-column]").forEach(cell=>{
+          cell.classList.toggle("mobile-layer-active", cell.dataset.layerColumn === activeMobileLayer);
+        });
+        mobileLayerButtons.forEach((button,name)=>{
+          const active = name === activeMobileLayer;
+          button.classList.toggle("active", active);
+          button.setAttribute("aria-selected", String(active));
+          button.tabIndex = active ? 0 : -1;
+        });
+      }
+      mobileLayerButtons.forEach((button,name)=>{
+        button.addEventListener("click",()=>showMobileLayer(name));
+      });
+      showMobileLayer(activeMobileLayer);
+
+      const bulkNameInput = toolbar.querySelector("#bulkResinName");
+      const bulkPctInput = toolbar.querySelector("#bulkResinPct");
+      const applyButton = toolbar.querySelector("#applyBulkSplit");
+      const selectionStatus = toolbar.querySelector("#splitSelectionStatus");
+
+      function hasBulkValue(){
+        return bulkNameInput.value.trim() !== "" || bulkPctInput.value.trim() !== "";
+      }
+
+      function updateSelectionUI(message, type=""){
+        cellRefs.forEach((ref,key)=>{
+          const isSelected = selected.has(key);
+          ref.selector.checked = isSelected;
+          ref.td.classList.toggle("selected", isSelected);
+        });
+        applyButton.disabled = selected.size === 0 || !hasBulkValue();
+        selectionStatus.className = `tiny splitsSelectionStatus${type ? ` ${type}` : ""}`;
+        selectionStatus.textContent = message || (
+          selected.size === 0
+            ? "No hoppers selected"
+            : `${selected.size} hopper${selected.size === 1 ? "" : "s"} selected`
+        );
+      }
+
+      function setBulkMode(enabled){
+        bulkMode = !!enabled;
+        area.classList.toggle("bulk-editing", bulkMode);
+        toolbar.classList.toggle("hide", !bulkMode);
+        modeButton.textContent = bulkMode ? "Done bulk editing" : "Bulk edit";
+        modeButton.setAttribute("aria-expanded", String(bulkMode));
+        table.querySelectorAll(".splitLayerTitle, .splitRowSelect").forEach(button=>{
+          button.tabIndex = bulkMode ? 0 : -1;
+          button.setAttribute("aria-disabled", String(!bulkMode));
+        });
+        if (!bulkMode) selected.clear();
+        updateSelectionUI();
+      }
+
+      modeButton.addEventListener("click",()=>setBulkMode(!bulkMode));
+
+      [bulkNameInput, bulkPctInput].forEach(input=>{
+        input.addEventListener("input",()=>{
+          input.setCustomValidity("");
+          input.setAttribute("aria-invalid", "false");
+          input.title = "";
+          updateSelectionUI();
+        });
+      });
+
+      toolbar.querySelector("#selectAllSplits").addEventListener("click",()=>{
+        cellRefs.forEach((_,key)=>selected.add(key));
+        updateSelectionUI();
+      });
+      toolbar.querySelector("#clearSplitSelection").addEventListener("click",()=>{
+        selected.clear();
+        updateSelectionUI();
+      });
+      toolbar.querySelector("#resetAllSplits").addEventListener("click",()=>{
+        const ok = confirm("Reset every hopper resin, percentage, and Track setting?");
+        if (!ok) return;
+
+        state.layers.forEach(L=>{
+          L.hoppers.forEach(hopper=>{
+            hopper.resinName = "";
+            hopper.pct = 0;
+            hopper.track = false;
+            hopper.pumpOff = false;
+          });
+        });
+        selected.clear();
+        bulkNameInput.value = "";
+        bulkPctInput.value = "";
+        renderSplitsArea();
+        validateAndCompute();
+        saveSession();
+      });
+
+      applyButton.addEventListener("click",()=>{
+        const applyName = bulkNameInput.value.trim() !== "";
+        const applyPct = bulkPctInput.value.trim() !== "";
+        const resinName = normName(bulkNameInput.value);
+        let percentage = null;
+
+        if (applyPct){
+          const result = validation.validatePercentage(bulkPctInput.value, "Bulk percentage");
+          bulkPctInput.setCustomValidity(result.valid ? "" : result.message);
+          bulkPctInput.setAttribute("aria-invalid", String(!result.valid));
+          bulkPctInput.title = result.valid ? "" : result.message;
+          if (!result.valid) return;
+          percentage = result.value;
+        }
+
+        if (applyPct){
+          for (const L of state.layers){
+            const projected = L.hoppers.slice(1).map((hopper,index)=>{
+              const key = `${L.name}:${index + 1}`;
+              return selected.has(key) ? percentage : hopper.pct;
+            });
+            const result = validation.validateHopperPercentages(projected);
+            if (!result.valid){
+              updateSelectionUI(`Cannot apply: Layer ${L.name} hoppers 2–6 would total ${fmtNum(result.total,2)}%.`, "warn");
+              return;
+            }
           }
-          togEl.addEventListener("click",(e)=>{ e.preventDefault(); toggleTrack(); });
-          togEl.addEventListener("keydown",(e)=>{
-            if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleTrack(); }
+        }
+
+        let percentageCount = 0;
+        selected.forEach(key=>{
+          const ref = cellRefs.get(key);
+          if (!ref) return;
+          if (applyName){
+            ref.hopper.resinName = resinName;
+            ref.resinInput.value = resinName;
+          }
+          if (applyPct && ref.hi > 0){
+            ref.hopper.pct = percentage;
+            ref.pctInput.value = String(percentage);
+            percentageCount++;
+          }
+          ref.refreshCellState();
+        });
+
+        if (applyPct){
+          state.layers.forEach(L=>{
+            recomputeAutoH1(L);
+            const h1Input = table.querySelector(`#p_${L.name}_0`);
+            if (h1Input) h1Input.value = String(clampNum(L.hoppers[0].pct));
           });
         }
+
+        updateSplitTotals();
+        validateAndCompute();
+        saveSession();
+
+        const changes = [];
+        if (applyName) changes.push(`resin “${resinName}”`);
+        if (applyPct) changes.push(`${fmtTrim(percentage,3)}% to ${percentageCount} editable hopper${percentageCount === 1 ? "" : "s"}`);
+        updateSelectionUI(`Applied ${changes.join(" and ")}.`, "ok");
       });
+
+      function updateSplitTotals(){
+        const layerTotal = sum(state.layers.map(L=>clampNum(L.layerPct)));
+        const layerOkay = Math.abs(layerTotal - 100) <= 0.0001;
+        summary.className = `splitsMatrixSummary ${layerOkay ? "ok" : "warn"}`;
+        summary.textContent = `Layer total: ${fmtNum(layerTotal,2)}% ${layerOkay ? "✓" : "— expected 100%"}`;
+
+        state.layers.forEach(L=>{
+          const hopperTotal = sum(L.hoppers.map(h=>clampNum(h.pct)));
+          const okay = Math.abs(hopperTotal - 100) <= 0.0001;
+          const el = table.querySelector(`#hopperTotal_${L.name}`);
+          if (!el) return;
+          el.hidden = okay;
+          el.className = `splitColumnTotal ${okay ? "ok" : "warn"}`;
+          el.textContent = okay ? "" : `Hoppers total: ${fmtNum(hopperTotal,2)}% — expected 100%`;
+        });
+      }
+
+      updateSplitTotals();
+      setBulkMode(false);
     }
 
     function renderResinCalculator(){
@@ -1061,11 +1423,24 @@
         if (pctEl) pctEl.textContent = `${fmtNum(pct,2)}%`;
 
         const thickEl = document.getElementById(`layerThickText_${L.name}`);
-        if (thickEl) thickEl.textContent = (g>0) ? `${fmtTrim(g*(pct/100),3)} mil` : "—";
+        const hasThickness = g > 0;
+        if (thickEl){
+          thickEl.textContent = hasThickness ? `${fmtTrim(g*(pct/100),3)} mil` : "";
+          thickEl.hidden = !hasThickness;
+        }
 
         const off = clampNum(state.offsets?.[L.name] ?? 0);
         const offEl = document.getElementById(`layerOffText_${L.name}`);
-        if (offEl) offEl.textContent = `${fmtNum(off,0)} min`;
+        const hasOffset = off !== 0;
+        if (offEl){
+          offEl.textContent = hasOffset ? `${fmtNum(off,0)} min` : "";
+          offEl.hidden = !hasOffset;
+        }
+
+        const separator = document.getElementById(`layerMetaSep_${L.name}`);
+        if (separator) separator.hidden = !(hasThickness && hasOffset);
+        const meta = document.getElementById(`layerMeta_${L.name}`);
+        if (meta) meta.hidden = !(hasThickness || hasOffset);
       });
     }
 
