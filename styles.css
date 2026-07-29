@@ -176,7 +176,7 @@ body{
 }
 
 main{
-  max-width: 980px;
+  max-width: 1100px;
   margin: 0 auto;
   padding: 14px 14px calc(24px + var(--page-bottom-pad));
   display: grid;
@@ -350,12 +350,29 @@ input[readonly]:focus{
 
 /* TEMP: hide right-side card labels */
 details.block > summary .pill{ display: none; }
+details.block:not([open]) > summary .summaryStatus{ display: inline-flex; }
+
+.summaryStatus{
+  max-width: 52%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.summaryStatus.badge-ok{
+  border-color: color-mix(in srgb, var(--ok) 55%, transparent);
+  background: color-mix(in srgb, var(--ok) 16%, transparent);
+  color: var(--ok);
+  font-weight: 700;
+}
 
 .pill.badge-warn{
   border-color: color-mix(in srgb, var(--warn) 55%, transparent);
   background: color-mix(in srgb, var(--warn) 18%, transparent);
   color: var(--text);
   font-weight: 650;
+}
+
+@media (max-width: 600px){
+  .summaryStatus{ max-width: 48%; }
 }
 
 /* =======================================================================
@@ -1157,11 +1174,9 @@ button.danger{
 /* =======================================================================
  *   Everyday / Advanced mode
  *   ======================================================================= */
-.modeBar{display:flex;align-items:center;justify-content:space-between;gap:16px}
-.modeTitle{color:var(--title,var(--text));font-size:14px;font-weight:900}
-.modeDescription{margin-top:3px;color:var(--muted);font-size:var(--font-small);line-height:1.35}
+.modeBar{display:flex;align-items:center;justify-content:flex-end}
 .modeSwitch{display:inline-grid;grid-template-columns:1fr 1fr;flex:0 0 auto;padding:3px;border:1px solid var(--border2);border-radius:999px;background:var(--field-bg)}
 .modeBtn{min-width:96px;padding:8px 13px;border:0;border-radius:999px;background:transparent;color:var(--muted);box-shadow:none}
 .modeBtn.active{background:linear-gradient(180deg,var(--btn-primary-a),var(--btn-primary-b));color:var(--text);box-shadow:inset 0 0 0 1px var(--focus-border)}
 body[data-ui-mode="everyday"] .advancedOnly{display:none!important}
-@media (max-width:600px){.modeBar{align-items:stretch;flex-direction:column}.modeSwitch{width:100%}.modeBtn{min-width:0}}
+@media (max-width:600px){.modeSwitch{width:100%}.modeBtn{min-width:0}}

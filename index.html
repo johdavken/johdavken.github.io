@@ -251,11 +251,7 @@
 
   </header>
 
-  <section class="modeBar card" aria-label="Display mode">
-    <div>
-      <div class="modeTitle">Operator view</div>
-      <div id="modeDescription" class="modeDescription">Basic mode shows only the controls normally needed during a run.</div>
-    </div>
+  <section class="modeBar" aria-label="Display mode">
     <div class="modeSwitch" role="group" aria-label="Choose display mode">
       <button id="everydayModeBtn" class="modeBtn active" type="button" aria-pressed="true">Basic</button>
       <button id="advancedModeBtn" class="modeBtn" type="button" aria-pressed="false">Advanced</button>
@@ -272,7 +268,7 @@
           <div class="layerMeta">Line Setup and App Settings</div>
         </div>
       </div>
-      <span class="pill">Setup</span>
+      <span id="setupSummaryStatus" class="pill summaryStatus">Not set</span>
     </summary>
 
     <div class="blockBody">
@@ -409,7 +405,7 @@
           <div class="layerMeta">Set layer and hopper % - Toggle Tracking</div>
         </div>
       </div>
-      <span class="pill">Percentages</span>
+      <span id="splitsSummaryStatus" class="pill summaryStatus">Check percentages</span>
     </summary>
 
     <div class="blockBody">
@@ -428,7 +424,7 @@
           <div class="layerMeta">Only tracked hoppers • Sorted by upcoming time</div>
         </div>
       </div>
-      <span class="pill">Live</span>
+      <span id="timelineSummaryStatus" class="pill summaryStatus">0 resins tracked</span>
     </summary>
 
     <div class="blockBody">

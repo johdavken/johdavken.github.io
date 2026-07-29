@@ -1448,6 +1448,42 @@
   /* ============================
    * Validation + compute + render
    * ============================ */
+  function updateCollapsedSummaries(){
+    const setupStatus = $("setupSummaryStatus");
+    if (setupStatus){
+      const setupParts = [];
+      if (state.lineRate > 0){
+        setupParts.push(`${state.lineRate.toLocaleString([], { maximumFractionDigits: 2 })} lb/hr`);
+      }
+      const changeoverDate = parseChangeoverDate(state.changeoverTime);
+      if (changeoverDate) setupParts.push(`Changeover ${fmtTime(changeoverDate)}`);
+      setupStatus.textContent = setupParts.length ? setupParts.join(" · ") : "Not set";
+    }
+
+    const splitsStatus = $("splitsSummaryStatus");
+    if (splitsStatus){
+      const layerTotal = sum(state.layers.map(L=>clampNum(L.layerPct)));
+      const badLayers = state.layers.filter(L=>{
+        const hopperTotal = sum(L.hoppers.map(h=>clampNum(h.pct)));
+        return Math.abs(hopperTotal - 100) > 0.0001;
+      });
+      const layerTotalBad = Math.abs(layerTotal - 100) > 0.0001;
+      const errorCount = badLayers.length + (layerTotalBad ? 1 : 0);
+      const ready = errorCount === 0 && state.layers.length > 0;
+      splitsStatus.classList.toggle("badge-ok", ready);
+      splitsStatus.classList.toggle("badge-warn", !ready);
+      splitsStatus.textContent = ready
+        ? "Ready ✓"
+        : `${errorCount} percentage ${errorCount === 1 ? "error" : "errors"}`;
+    }
+
+    const timelineStatus = $("timelineSummaryStatus");
+    if (timelineStatus){
+      const trackedCount = sum(state.layers.map(L=>L.hoppers.filter(h=>h.track).length));
+      timelineStatus.textContent = `${trackedCount} ${trackedCount === 1 ? "resin" : "resins"} tracked`;
+    }
+  }
+
   function validateAndCompute(){
       const msgs = [];
       const div = 100;
@@ -1532,6 +1568,7 @@
       renderResultsFlat(flat, changeoverDate);
       updateFooterNext(flat, changeoverDate);
       renderResinCalculator();
+      updateCollapsedSummaries();
       saveSession();
     }
 
@@ -1701,10 +1738,8 @@
       const advanced = state.uiMode === "advanced";
       const everydayBtn = $("everydayModeBtn");
       const advancedBtn = $("advancedModeBtn");
-      const description = $("modeDescription");
       if (everydayBtn){ everydayBtn.classList.toggle("active", !advanced); everydayBtn.setAttribute("aria-pressed", String(!advanced)); }
       if (advancedBtn){ advancedBtn.classList.toggle("active", advanced); advancedBtn.setAttribute("aria-pressed", String(advanced)); }
-      if (description){ description.textContent = advanced ? "Advanced mode includes line setup values, receiver weights, offsets, resin totals, configurations, and display settings." : "Everyday mode shows only the controls normally needed during a run."; }
     }
 
     function setUIMode(mode){ applyUIMode(mode); saveSession(); }
