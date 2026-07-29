@@ -214,7 +214,11 @@
     }
     function getLayerCopyRules(lineType){
       if (lineType === 3) return { "C": "A" };
-      if (lineType === 5) return { "D": "B", "E": "A" };
+      if (lineType === 5) return {
+        "C": "B",
+        "D": "B",
+        "E": "A"
+      };
       return {};
     }
 
@@ -295,6 +299,7 @@
       const allowed = new Set(["dark","light","gruvbox-dark","gruvbox-light","nord","tokyo-night","dracula","solarized-dark","solarized-light","catppuccin-mocha","catppuccin-latte","amber","high-contrast","mono"]);
       const theme = allowed.has(String(t)) ? String(t) : "dark";
 
+      document.documentElement.setAttribute("data-theme", theme);
       document.body.setAttribute("data-theme", theme);
 
       const sel = $("themeSel");
@@ -1013,7 +1018,26 @@
         area.appendChild(row);
       });
     }
+    function resetTracking(){
+      const hasTracked = state.layers.some(L =>
+      L.hoppers.some(h => h.track || h.pumpOff)
+      );
 
+      if (!hasTracked) return;
+
+      const ok = confirm("Untrack all hoppers and clear their Pump off status?");
+      if (!ok) return;
+
+      state.layers.forEach(L => {
+        L.hoppers.forEach(h => {
+          h.track = false;
+          h.pumpOff = false;
+        });
+      });
+
+      rebuildUIFromState();
+      saveSession();
+    }
     function resetAll(){
       const ok = confirm("Reset all fields?\\n\\nPress OK to reset.\\nPress Cancel to keep current values.");
       if (!ok) return;
@@ -1204,6 +1228,7 @@
 
     $("everydayModeBtn")?.addEventListener("click", ()=>setUIMode("everyday"));
     $("advancedModeBtn")?.addEventListener("click", ()=>setUIMode("advanced"));
+    $("resetTrackingBtn")?.addEventListener("click", resetTracking);
 
     // Recipe buttons
     $("saveConfigBtn")?.addEventListener("click", saveNamedConfig);
