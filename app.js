@@ -42,7 +42,7 @@
       prodResinLb: 0,
       scrapResinLb: 0,
       density: "comfort",
-      theme: "dark",
+      theme: "light",
       gauge: 0,
       hopperNamingLine9: "standard", // "standard" | "main"
       showPumpOffTracked: false, // show pump-off items in Run-Down Timeline
@@ -288,8 +288,8 @@
    * Theme
    * ============================ */
   function applyTheme(t){
-      const allowed = new Set(["dark","light","gruvbox-dark","gruvbox-light","nord","tokyo-night","dracula","solarized-dark","solarized-light","catppuccin-mocha","catppuccin-latte","amber","high-contrast","mono"]);
-      const theme = allowed.has(String(t)) ? String(t) : "dark";
+      const allowed = new Set(["dark","light","mse","gruvbox-dark","gruvbox-light","nord","tokyo-night","dracula","solarized-dark","solarized-light","catppuccin-mocha","catppuccin-latte","amber","high-contrast","mono"]);
+      const theme = allowed.has(String(t)) ? String(t) : "light";
 
       document.documentElement.setAttribute("data-theme", theme);
       document.body.setAttribute("data-theme", theme);
@@ -303,7 +303,7 @@
       const logo = $("headerLogo");
       if (logo){
         // Keep your dedicated Gruvbox header images; map the rest to light/dark
-        const lightish = new Set(["light","gruvbox-light","solarized-light","catppuccin-latte","mono"]);
+        const lightish = new Set(["light","mse","gruvbox-light","solarized-light","catppuccin-latte","mono"]);
         let src = lightish.has(theme) ? "images/resiniqhead-l.png" : "images/resiniqhead.png";
 
         if (theme === "gruvbox-light") src = "images/resiniqhead-gbl.png";
@@ -333,7 +333,7 @@
       state.prodResinLb = clampNum(payload.prodResinLb);
       state.scrapResinLb = clampNum(payload.scrapResinLb);
 
-      applyTheme(payload.theme || "dark");
+      applyTheme(payload.theme || "light");
       applyDensity(payload.density || "comfort");
       $("lineRate").value = String(state.lineRate);
       const g = $("gauge");
@@ -1068,10 +1068,6 @@
           if (hi === 0){
             pctInput.readOnly = true;
             pctInput.title = "Auto (100% minus other hoppers)";
-            const auto = document.createElement("span");
-            auto.className = "splitAutoLabel";
-            auto.textContent = "Auto";
-            pctWrap.prepend(auto);
           }
 
           const trackControl = document.createElement("div");
@@ -1889,7 +1885,7 @@
       const restored = loadSession();
       if (!restored){
         applyDensity("comfort");
-        applyTheme("dark");
+        applyTheme("light");
         rebuildUIFromState();
       }
 
@@ -1909,7 +1905,7 @@
       }
 
       // Ensure theme/logo applied even after restore
-      applyTheme(state.theme || "dark");
+      applyTheme(state.theme || "light");
       saveSession();
     })();
 

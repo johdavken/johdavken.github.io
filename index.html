@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -10,7 +10,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 
   <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="theme.css?v=0.16.1">
+  <link rel="stylesheet" href="theme.css?v=0.16.2">
 <script src="validation.js?v=0.16" defer></script>
 <script src="scheduling.js?v=0.16" defer></script>
 <script src="storage.js?v=0.16" defer></script>
@@ -19,7 +19,7 @@
 
 </head>
 
-<body data-density="comfort">
+<body data-density="comfort" data-theme="light">
 <main>
 
   <header class="site-header">
@@ -223,21 +223,21 @@
   </g>
 
   <!-- ===== Foreground wordmark (new style) ===== -->
-  <g transform="translate(640 112)" text-anchor="middle" filter="url(#wmShadow)">
+  <g transform="translate(1170 68)" text-anchor="end" filter="url(#wmShadow)">
     <!-- Outline underlay (helps legibility over the plot) -->
-    <text class="wm-outline" font-size="176" dominant-baseline="central">
+    <text class="wm-outline" font-size="96" dominant-baseline="central">
       <tspan class="resinWord">resin</tspan><tspan class="iWord">I</tspan><tspan class="qWord">Q</tspan>
 
     </text>
 
     <!-- Thin edge stroke (subtle polish) -->
-    <text class="wm-edge" font-size="176" dominant-baseline="central">
+    <text class="wm-edge" font-size="96" dominant-baseline="central">
       <tspan class="resinWord">resin</tspan><tspan class="iWord">I</tspan><tspan class="qWord">Q</tspan>
 
     </text>
 
     <!-- Fill -->
-    <text font-size="176" dominant-baseline="central">
+    <text font-size="96" dominant-baseline="central">
       <tspan class="resinWord">resin</tspan><tspan class="iWord">I</tspan><tspan class="qWord">Q</tspan>
 
     </text>
@@ -313,8 +313,9 @@
         <div class="advancedOnly">
           <label for="themeSel">Theme</label>
           <select id="themeSel">
-                        <option value="dark" selected>Dark</option>
-            <option value="light">Light</option>
+                        <option value="dark">Dark</option>
+            <option value="light" selected>Light</option>
+            <option value="mse">MSE</option>
             <option value="gruvbox-dark">Gruvbox Dark</option>
             <option value="gruvbox-light">Gruvbox Light</option>
             <option value="nord">Nord</option>
