@@ -4,57 +4,57 @@
 
 /* ----------------------------------------------------------------------- * Light * ----------------------------------------------------------------------- */
 :where(html, body)[data-theme="light"]{
-  --bg: #f4f7fb;
+  --bg: #f5f4f3;
   --panel: rgba(255,255,255,.95);
-  --panel2: rgba(255,255,255,.85);
-  --text: #0f172a;
-  --subtitle: #ab4016;
-  --title: #1e40af;
-  --muted: #5b6b82;
-  --fg: #545352;
+  --panel2: rgba(250,249,248,.90);
+  --text: #29282b;
+  --subtitle: #545352;
+  --title: #b3262e;
+  --muted: #666269;
+  --fg: #4a4948;
 
 /* near-black text */
-  --yellow: #f57451;
+  --yellow: #bd2830;
 
 /* muted gold */
-  --orange: #e06c00;
-  --border: rgba(15,23,42,.12);
-  --border2: rgba(15,23,42,.18);
-  --field-bg: rgba(15,23,42,.06);
+  --orange: #d43a36;
+  --border: rgba(74,73,72,.14);
+  --border2: rgba(74,73,72,.22);
+  --field-bg: rgba(74,73,72,.06);
   --panelOpen: rgba(255,255,255,.95);
-  --chev: rgba(15,23,42,.45);
+  --chev: rgba(74,73,72,.50);
   --warn: #d97706;
   --bad: #dc2626;
   --ok: #16a34a;
   --shadow2: 0 6px 18px rgba(0,0,0,.12);
-  --row-bg: rgba(15,23,42,.04);
-  --row-border: rgba(15,23,42,.10);
-  --row-bg-2: rgba(15,23,42,.03);
-  --row-border-2: rgba(15,23,42,.10);
-  --readonly-bg: rgba(15,23,42,.06);
-  --readonly-border: rgba(15,23,42,.12);
-  --focus-border: rgba(74,163,255,.80);
-  --focus-ring: rgba(74,163,255,.14);
+  --row-bg: rgba(74,73,72,.045);
+  --row-border: rgba(179,38,46,.12);
+  --row-bg-2: rgba(74,73,72,.03);
+  --row-border-2: rgba(74,73,72,.12);
+  --readonly-bg: rgba(74,73,72,.07);
+  --readonly-border: rgba(74,73,72,.16);
+  --focus-border: rgba(179,38,46,.82);
+  --focus-ring: rgba(179,38,46,.15);
   --f-var1: #16a34a;
   --f-var2: #d97706;
-  --f-var3: #1e40af;
-  --f-const: #5b6b82;
+  --f-var3: #b3262e;
+  --f-const: #666269;
   --btn-text: var(--text);
   --btn-border: var(--border2);
-  --btn-primary-a: rgba(30,64,175,.16);
-  --btn-primary-b: rgba(30,64,175,.08);
-  --btn-secondary-bg: rgba(15,23,42,.06);
-  --btn-secondary-border: rgba(15,23,42,.14);
+  --btn-primary-a: rgba(179,38,46,.18);
+  --btn-primary-b: rgba(179,38,46,.08);
+  --btn-secondary-bg: rgba(74,73,72,.07);
+  --btn-secondary-border: rgba(74,73,72,.18);
   --btn-danger-bg: rgba(220,38,38,.12);
   --btn-danger-border: rgba(220,38,38,.22);
-  --bg-glow-a: rgba(30,64,175,.10);
-  --bg-glow-b: rgba(22,163,74,.08);
-  --card-glow-a: rgba(30,64,175,.10);
-  --card-glow-b: rgba(22,163,74,.08);
-  --toggle-on-bg: rgba(30,64,175,.16);
-  --toggle-on-border: rgba(30,64,175,.30);
-  --footer-bg: rgba(244,247,251,.92);
-  --footer-border: rgba(15,23,42,.10);
+  --bg-glow-a: rgba(74,73,72,.08);
+  --bg-glow-b: rgba(179,38,46,.07);
+  --card-glow-a: rgba(179,38,46,.08);
+  --card-glow-b: rgba(74,73,72,.05);
+  --toggle-on-bg: rgba(179,38,46,.18);
+  --toggle-on-border: rgba(179,38,46,.38);
+  --footer-bg: rgba(240,239,238,.94);
+  --footer-border: rgba(74,73,72,.14);
 
 }
 
