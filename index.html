@@ -10,10 +10,11 @@
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 
   <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="theme.css?v=0.16.2">
+  <link rel="stylesheet" href="theme.css?v=0.16.3">
 <script src="validation.js?v=0.16" defer></script>
 <script src="scheduling.js?v=0.16" defer></script>
 <script src="storage.js?v=0.16" defer></script>
+<script src="calculators.js?v=0.16" defer></script>
 <script src="app.js?v=0.16" defer></script>
 
 
@@ -542,6 +543,86 @@
       </div>
 
       <div id="recipeStatus" class="mt10"></div>
+    </div>
+  </details>
+
+  <!-- 6) TOOLS -->
+  <details class="block card advancedOnly" id="toolsBlock">
+    <summary>
+      <div class="sumLeft">
+        <div class="chev"></div>
+        <div style="min-width:0">
+          <div class="layerTitle">Tools</div>
+          <div class="layerMeta">Production utilities</div>
+        </div>
+      </div>
+    </summary>
+
+    <div class="blockBody">
+      <section class="toolPanel" aria-labelledby="shortFootageTitle">
+        <div id="shortFootageTitle" class="layerTitle">Short Footage Calculator</div>
+        <div class="muted">Actual Weight × Target Footage ÷ Last Good Weight</div>
+
+        <div class="grid3 mt10">
+          <div>
+            <label for="shortActualWeight">Actual weight</label>
+            <input id="shortActualWeight" type="text" inputmode="decimal" placeholder="0" />
+          </div>
+          <div>
+            <label for="shortTargetFootage">Target footage</label>
+            <input id="shortTargetFootage" type="text" inputmode="decimal" placeholder="0" />
+          </div>
+          <div>
+            <label for="shortLastGoodWeight">Last good weight</label>
+            <input id="shortLastGoodWeight" type="text" inputmode="decimal" placeholder="0" />
+          </div>
+        </div>
+
+        <div class="toolResult mt10" aria-live="polite">
+          <span>Short footage</span>
+          <strong id="shortFootageResult" class="mono">—</strong>
+          <span id="shortFootageMessage" class="muted">Enter all three values.</span>
+        </div>
+      </section>
+
+      <section class="toolPanel" aria-labelledby="hopperWeightCalculatorTitle">
+        <div id="hopperWeightCalculatorTitle" class="layerTitle">Hopper Weight Calculator</div>
+        <div class="muted">Estimates usable resin weight from cylindrical hopper dimensions.</div>
+
+        <div class="grid3 mt10">
+          <div>
+            <label for="hopperCircumference">Hopper circumference (in)</label>
+            <input id="hopperCircumference" type="text" inputmode="decimal" placeholder="0" />
+          </div>
+          <div>
+            <label for="hopperUsableHeight">Hopper usable height (in)</label>
+            <input id="hopperUsableHeight" type="text" inputmode="decimal" placeholder="0" />
+          </div>
+          <div>
+            <label for="hopperBulkDensity">Resin bulk density (lb/ft³)</label>
+            <input id="hopperBulkDensity" type="text" inputmode="decimal" placeholder="Optional" />
+          </div>
+        </div>
+
+        <div class="grid2 mt10">
+          <div>
+            <label for="hopperPolymerDensity">Polymer density (g/cm³)</label>
+            <input id="hopperPolymerDensity" type="text" inputmode="decimal" placeholder="Use when bulk density is unknown" />
+          </div>
+          <div>
+            <label for="hopperPackingFactor">Packing factor</label>
+            <input id="hopperPackingFactor" type="text" inputmode="decimal" value="0.63" />
+            <div class="tiny">Adjustable from 0.58 to 0.68 for different pellet shapes.</div>
+          </div>
+        </div>
+
+        <div class="tiny">A directly entered bulk density takes priority over the polymer-density estimate.</div>
+        <div class="toolResult mt10" aria-live="polite">
+          <span>Hopper weight</span>
+          <strong id="hopperWeightResult" class="mono">—</strong>
+          <span id="hopperWeightMessage" class="muted">Enter hopper dimensions and either density value.</span>
+        </div>
+      </section>
     </div>
   </details>
 
