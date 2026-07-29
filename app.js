@@ -58,6 +58,132 @@
   const validation = window.ResinIQValidation;
   const { parseChangeoverDate, formatTime: fmtTime } = window.ResinIQScheduling;
   const { writeJson } = window.ResinIQStorage;
+  const COMMON_RESIN_NAMES = Object.freeze([
+    "MS0100", "MS0101", "MS0120", "MS0200", "MS0400", "MS0440", "MS0700", "MS0700B",
+    "MS1100", "MS1200", "MS1201", "MS1202", "MS3003", "MS5000", "MS5004", "MS5006",
+    "MS5009", "MS6000", "MS6600",
+    "A0100", "A0110", "A0300", "A0310", "A0502", "A0503", "A0600", "A0601", "A0700",
+    "A0711", "A0735", "A1901", "A2000", "A1010"
+  ]);
+
+  let resinAutocompletePopup = null;
+  let resinAutocompleteInput = null;
+  let resinAutocompleteOptions = [];
+  let resinAutocompleteIndex = -1;
+
+  function hideResinAutocomplete(){
+    if (resinAutocompleteInput){
+      resinAutocompleteInput.setAttribute("aria-expanded", "false");
+      resinAutocompleteInput.removeAttribute("aria-activedescendant");
+    }
+    if (resinAutocompletePopup) resinAutocompletePopup.hidden = true;
+    resinAutocompleteInput = null;
+    resinAutocompleteOptions = [];
+    resinAutocompleteIndex = -1;
+  }
+
+  function ensureResinAutocompletePopup(){
+    if (resinAutocompletePopup) return resinAutocompletePopup;
+    const popup = document.createElement("div");
+    popup.id = "resinAutocomplete";
+    popup.className = "resinAutocomplete";
+    popup.setAttribute("role", "listbox");
+    popup.hidden = true;
+    document.body.appendChild(popup);
+    resinAutocompletePopup = popup;
+    window.addEventListener("resize", hideResinAutocomplete);
+    window.addEventListener("scroll", hideResinAutocomplete, true);
+    return popup;
+  }
+
+  function showResinAutocomplete(input){
+    const popup = ensureResinAutocompletePopup();
+    const query = input.value.trim().toUpperCase();
+    const starts = COMMON_RESIN_NAMES.filter(name=>name.startsWith(query));
+    const contains = COMMON_RESIN_NAMES.filter(name=>!name.startsWith(query) && name.includes(query));
+    const matches = [...starts, ...contains];
+    if (!matches.length){
+      hideResinAutocomplete();
+      return;
+    }
+
+    popup.replaceChildren();
+    resinAutocompleteInput = input;
+    resinAutocompleteOptions = matches.map((name,index)=>{
+      const option = document.createElement("button");
+      option.id = `resinAutocompleteOption${index}`;
+      option.type = "button";
+      option.className = "resinAutocompleteOption";
+      option.setAttribute("role", "option");
+      option.textContent = name;
+      option.addEventListener("pointerdown", event=>event.preventDefault());
+      option.addEventListener("click",()=>{
+        input.value = name;
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        hideResinAutocomplete();
+        input.focus();
+      });
+      popup.appendChild(option);
+      return option;
+    });
+    resinAutocompleteIndex = -1;
+
+    const rect = input.getBoundingClientRect();
+    const width = Math.max(rect.width, 150);
+    popup.style.left = `${Math.min(rect.left, window.innerWidth - width - 8)}px`;
+    popup.style.top = `${rect.bottom + 4}px`;
+    popup.style.width = `${width}px`;
+    popup.hidden = false;
+    input.setAttribute("aria-expanded", "true");
+  }
+
+  function setActiveResinOption(index){
+    if (!resinAutocompleteOptions.length) return;
+    resinAutocompleteIndex = (index + resinAutocompleteOptions.length) % resinAutocompleteOptions.length;
+    resinAutocompleteOptions.forEach((option,optionIndex)=>{
+      const active = optionIndex === resinAutocompleteIndex;
+      option.classList.toggle("active", active);
+      option.setAttribute("aria-selected", String(active));
+    });
+    const active = resinAutocompleteOptions[resinAutocompleteIndex];
+    resinAutocompleteInput?.setAttribute("aria-activedescendant", active.id);
+    active.scrollIntoView({ block: "nearest" });
+  }
+
+  function attachResinAutocomplete(input){
+    if (!input || input.dataset.resinAutocomplete === "true") return;
+    input.dataset.resinAutocomplete = "true";
+    input.autocomplete = "off";
+    input.setAttribute("role", "combobox");
+    input.setAttribute("aria-autocomplete", "list");
+    input.setAttribute("aria-controls", "resinAutocomplete");
+    input.setAttribute("aria-expanded", "false");
+    input.addEventListener("focus",()=>showResinAutocomplete(input));
+    input.addEventListener("input",()=>showResinAutocomplete(input));
+    input.addEventListener("blur",()=>setTimeout(()=>{
+      if (document.activeElement !== resinAutocompletePopup) hideResinAutocomplete();
+    }, 100));
+    input.addEventListener("keydown",event=>{
+      if (event.key === "Escape"){
+        hideResinAutocomplete();
+        return;
+      }
+      if (event.key !== "ArrowDown" && event.key !== "ArrowUp" && event.key !== "Enter") return;
+      if (!resinAutocompletePopup || resinAutocompletePopup.hidden){
+        if (event.key === "Enter") return;
+        showResinAutocomplete(input);
+      }
+      if (!resinAutocompleteOptions.length) return;
+      if (event.key === "Enter"){
+        if (resinAutocompleteIndex < 0) return;
+        event.preventDefault();
+        resinAutocompleteOptions[resinAutocompleteIndex].click();
+        return;
+      }
+      event.preventDefault();
+      setActiveResinOption(resinAutocompleteIndex + (event.key === "ArrowDown" ? 1 : -1));
+    });
+  }
 
   function showStorageWarning(message){
     const host = $("statusBox") || document.body;
@@ -1043,6 +1169,7 @@
           resinInput.placeholder = "Resin name";
           resinInput.value = hopper.resinName || "";
           resinInput.setAttribute("aria-label", `${hopperBadgeLabel(L.name, hi)} resin name`);
+          attachResinAutocomplete(resinInput);
           cellTop.append(selector, resinInput);
 
           const controls = document.createElement("div");
@@ -1182,6 +1309,7 @@
       const bulkPctInput = toolbar.querySelector("#bulkResinPct");
       const applyButton = toolbar.querySelector("#applyBulkSplit");
       const selectionStatus = toolbar.querySelector("#splitSelectionStatus");
+      attachResinAutocomplete(bulkNameInput);
 
       function hasBulkValue(){
         return bulkNameInput.value.trim() !== "" || bulkPctInput.value.trim() !== "";
