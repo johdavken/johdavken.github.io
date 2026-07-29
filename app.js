@@ -615,34 +615,125 @@
     }
 
     function weightId(layerName, hi){ return `w_${layerName}_${hi}`; }
+    function hopperPositionLabel(hi){
+      if (state.hopperNamingLine9 === "main") return hi === 0 ? "Main" : String(hi);
+      return String(hi + 1);
+    }
+
     function renderWeightsArea(){
       const area = $("weightsArea");
       if (!area) return;
       area.innerHTML = "";
+      const selected = new Set();
+      const cellRefs = new Map();
+
+      const toolbar = document.createElement("div");
+      toolbar.className = "weightsBulkBar";
+      toolbar.innerHTML = `
+        <label class="weightsBulkField" for="bulkWeight">
+          <span>Weight to apply</span>
+          <span class="weightsInputWithUnit">
+            <input id="bulkWeight" type="text" inputmode="decimal" placeholder="0" />
+            <span>lb</span>
+          </span>
+        </label>
+        <div class="weightsBulkActions">
+          <button id="applyBulkWeight" type="button" disabled>Apply to selected</button>
+          <button id="selectAllWeights" type="button" class="secondary">Select all</button>
+          <button id="clearWeightSelection" type="button" class="secondary">Clear selection</button>
+        </div>
+        <div id="weightSelectionStatus" class="tiny weightsSelectionStatus" role="status" aria-live="polite">No hoppers selected</div>
+      `;
+      area.appendChild(toolbar);
+
+      const scroll = document.createElement("div");
+      scroll.className = "weightsMatrixScroll";
+      const table = document.createElement("table");
+      table.className = "weightsMatrix";
+
+      const thead = document.createElement("thead");
+      const headerRow = document.createElement("tr");
+      const corner = document.createElement("th");
+      corner.scope = "col";
+      corner.textContent = "Hopper";
+      headerRow.appendChild(corner);
       state.layers.forEach(L=>{
-        const box = document.createElement("div");
-        box.className = "weightsLayer";
-        box.innerHTML = `
-          <div class="weightsTitle">
-            <strong>Layer ${L.name}</strong>
-            <span class="pill">Weights</span>
-          </div>
-          <div id="wg_${L.name}" style="display:grid; gap: var(--gap);"></div>
-        `;
-        area.appendChild(box);
+        const th = document.createElement("th");
+        th.scope = "col";
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "weightsSelectHeader";
+        button.textContent = `Layer ${L.name}`;
+        button.title = `Select or clear all Layer ${L.name} hoppers`;
+        button.addEventListener("click", ()=>{
+          const keys = Array.from({length:HOPPERS_PER_LAYER}, (_,hi)=>`${L.name}:${hi}`);
+          const select = keys.some(key=>!selected.has(key));
+          keys.forEach(key=> select ? selected.add(key) : selected.delete(key));
+          updateSelectionUI();
+        });
+        th.appendChild(button);
+        headerRow.appendChild(th);
+      });
+      thead.appendChild(headerRow);
+      table.appendChild(thead);
 
-        const grid = box.querySelector(`#wg_${L.name}`);
-        for (let hi=0; hi<HOPPERS_PER_LAYER; hi++){
+      const tbody = document.createElement("tbody");
+      for (let hi=0; hi<HOPPERS_PER_LAYER; hi++){
+        const tr = document.createElement("tr");
+        const rowHeader = document.createElement("th");
+        rowHeader.scope = "row";
+        const rowButton = document.createElement("button");
+        rowButton.type = "button";
+        rowButton.className = "weightsSelectHeader mono";
+        rowButton.textContent = hopperPositionLabel(hi);
+        rowButton.title = `Select or clear hopper ${hopperPositionLabel(hi)} across all layers`;
+        rowButton.addEventListener("click", ()=>{
+          const keys = state.layers.map(L=>`${L.name}:${hi}`);
+          const select = keys.some(key=>!selected.has(key));
+          keys.forEach(key=> select ? selected.add(key) : selected.delete(key));
+          updateSelectionUI();
+        });
+        rowHeader.appendChild(rowButton);
+        tr.appendChild(rowHeader);
+
+        state.layers.forEach(L=>{
+          const key = `${L.name}:${hi}`;
           const id = weightId(L.name, hi);
-          const row = document.createElement("div");
-          row.className = "weightsRow";
-          row.innerHTML = `
-            <div class="mono" style="font-weight:950;">${hopperBadgeLabel(L.name, hi)}</div>
-            <input id="${id}" type="text" inputmode="decimal" placeholder="0" value="${clampNum(L.hoppers[hi].weight)}" />
-          `;
-          grid.appendChild(row);
+          const td = document.createElement("td");
+          td.className = "weightsMatrixCell";
 
-          row.querySelector("input").addEventListener("input",(e)=>{
+          const selector = document.createElement("input");
+          selector.type = "checkbox";
+          selector.className = "weightsCellSelector";
+          selector.setAttribute("aria-label", `Select ${hopperBadgeLabel(L.name, hi)}`);
+
+          const fieldWrap = document.createElement("span");
+          fieldWrap.className = "weightsInputWithUnit";
+          const input = document.createElement("input");
+          input.id = id;
+          input.type = "text";
+          input.inputMode = "decimal";
+          input.placeholder = "0";
+          input.value = String(clampNum(L.hoppers[hi].weight));
+          input.setAttribute("aria-label", `${hopperBadgeLabel(L.name, hi)} weight in pounds`);
+          const unit = document.createElement("span");
+          unit.textContent = "lb";
+          fieldWrap.append(input, unit);
+          td.append(selector, fieldWrap);
+          tr.appendChild(td);
+
+          cellRefs.set(key, { td, selector, input, layer: L, hi });
+
+          selector.addEventListener("change", ()=>{
+            selector.checked ? selected.add(key) : selected.delete(key);
+            updateSelectionUI();
+          });
+          td.addEventListener("click",(e)=>{
+            if (e.target === input || e.target === selector) return;
+            selector.checked = !selector.checked;
+            selector.dispatchEvent(new Event("change"));
+          });
+          input.addEventListener("input",(e)=>{
             const accepted = acceptNumericInput(
               e.target,
               { min: 0, label: `${hopperBadgeLabel(L.name, hi)} weight` },
@@ -652,8 +743,66 @@
             validateAndCompute();
             saveSession();
           });
-        }
+        });
+        tbody.appendChild(tr);
+      }
+      table.appendChild(tbody);
+      scroll.appendChild(table);
+      area.appendChild(scroll);
+
+      const bulkInput = toolbar.querySelector("#bulkWeight");
+      const applyButton = toolbar.querySelector("#applyBulkWeight");
+      const status = toolbar.querySelector("#weightSelectionStatus");
+      bulkInput.addEventListener("input", ()=>{
+        bulkInput.setCustomValidity("");
+        bulkInput.setAttribute("aria-invalid", "false");
+        bulkInput.title = "";
       });
+
+      function updateSelectionUI(message){
+        cellRefs.forEach((ref,key)=>{
+          const isSelected = selected.has(key);
+          ref.selector.checked = isSelected;
+          ref.td.classList.toggle("selected", isSelected);
+        });
+        applyButton.disabled = selected.size === 0;
+        status.textContent = message || (
+          selected.size === 0
+            ? "No hoppers selected"
+            : `${selected.size} hopper${selected.size === 1 ? "" : "s"} selected`
+        );
+      }
+
+      toolbar.querySelector("#selectAllWeights").addEventListener("click", ()=>{
+        cellRefs.forEach((_,key)=>selected.add(key));
+        updateSelectionUI();
+      });
+      toolbar.querySelector("#clearWeightSelection").addEventListener("click", ()=>{
+        selected.clear();
+        updateSelectionUI();
+      });
+      applyButton.addEventListener("click", ()=>{
+        const result = validation.validateNumber(
+          bulkInput.value,
+          { min: 0, label: "Bulk weight" }
+        );
+        bulkInput.setCustomValidity(result.valid ? "" : result.message);
+        bulkInput.setAttribute("aria-invalid", String(!result.valid));
+        bulkInput.title = result.valid ? "" : result.message;
+        if (!result.valid) return;
+
+        selected.forEach(key=>{
+          const ref = cellRefs.get(key);
+          if (!ref) return;
+          ref.layer.hoppers[ref.hi].weight = result.value;
+          ref.input.value = String(result.value);
+        });
+        validateAndCompute();
+        saveSession();
+        updateSelectionUI(`Applied ${result.value} lb to ${selected.size} hopper${selected.size === 1 ? "" : "s"}`);
+      });
+
+      updateSelectionUI();
     }
 
     function renderSplitsArea(){
