@@ -821,9 +821,7 @@
         for (let i=0;i<HOPPERS_PER_LAYER;i++){
           to.hoppers[i].pct = clampNum(from.hoppers[i].pct);
           to.hoppers[i].resinName = normName(from.hoppers[i].resinName);
-          to.hoppers[i].track = !!from.hoppers[i].track;
         }
-        to.layerPct = clampNum(from.layerPct);
       }
 
       const modeBar = document.createElement("div");
@@ -967,8 +965,6 @@
           copyButton.className = "copyBtn splitCopyBtn";
           copyButton.textContent = `Copy ${copyFrom} → ${L.name}`;
           copyButton.addEventListener("click",()=>{
-            const ok = confirm(`Copy layer % + splits + resin names + track toggles from Layer ${copyFrom} → Layer ${L.name}?`);
-            if (!ok) return;
             copyLayer(copyFrom, L.name);
             renderSplitsArea();
             validateAndCompute();
@@ -1072,15 +1068,13 @@
 
           const trackControl = document.createElement("div");
           trackControl.className = "splitTrackControl";
-          const trackButton = document.createElement("button");
-          trackButton.id = `t_${L.name}_${hi}`;
-          trackButton.type = "button";
-          trackButton.className = `toggle splitTrackToggle${hopper.track ? " on" : ""}`;
-          trackButton.setAttribute("role", "switch");
-          trackButton.setAttribute("aria-checked", String(!!hopper.track));
-          trackButton.setAttribute("aria-label", `Track ${hopperBadgeLabel(L.name, hi)}`);
-          trackButton.title = `Track ${hopperBadgeLabel(L.name, hi)}`;
-          trackControl.appendChild(trackButton);
+          const trackInput = document.createElement("input");
+          trackInput.id = `t_${L.name}_${hi}`;
+          trackInput.type = "checkbox";
+          trackInput.checked = !!hopper.track;
+          trackInput.setAttribute("aria-label", `Track ${hopperBadgeLabel(L.name, hi)}`);
+          trackInput.title = `Track ${hopperBadgeLabel(L.name, hi)}`;
+          trackControl.appendChild(trackInput);
 
           controls.append(pctWrap, trackControl);
           editor.append(cellTop, controls);
@@ -1090,8 +1084,7 @@
           function refreshCellState(){
             const inactive = !normName(hopper.resinName) && clampNum(hopper.pct) === 0 && !hopper.track;
             td.classList.toggle("inactive", inactive);
-            trackButton.classList.toggle("on", !!hopper.track);
-            trackButton.setAttribute("aria-checked", String(!!hopper.track));
+            trackInput.checked = !!hopper.track;
             if (!inactive) td.classList.remove("editing");
           }
 
@@ -1155,8 +1148,8 @@
             saveSession();
           });
 
-          trackButton.addEventListener("click",()=>{
-            hopper.track = !hopper.track;
+          trackInput.addEventListener("change",()=>{
+            hopper.track = trackInput.checked;
             refreshCellState();
             validateAndCompute();
             saveSession();
@@ -1492,13 +1485,23 @@
         msgs.push({type:"warn", text:`Layer split sums to ${fmtNum(layerSum*100,2)}% (expected 100%).`});
       }
 
+      const allWeightsUnset = state.layers.length > 0 && state.layers.every(L=>
+        L.hoppers.every(h=>clampNum(h.weight) === 0)
+      );
+      if (allWeightsUnset){
+        msgs.push({
+          type:"warn",
+          text:"Receiver hopper weights have not been set. Enter them for accurate run-down timing."
+        });
+      }
+
       const tracked = [];
       state.layers.forEach(L=>L.hoppers.forEach((h,hi)=>{ if (h.track) tracked.push({L,h,hi}); }));
       if (tracked.length === 0){
         msgs.push({type:"warn", text:"No hoppers are tracked. Turn on Track for the hopper(s) you want in Results."});
       } else {
         const missingW = tracked.filter(x=>clampNum(x.h.weight) <= 0).length;
-        if (missingW > 0){
+        if (missingW > 0 && !allWeightsUnset){
           msgs.push({type:"warn", text:`${missingW} tracked hopper(s) are missing weight. Open “Hopper weights” to enter them.`});
         }
       }

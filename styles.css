@@ -769,13 +769,11 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   color: var(--muted);
   white-space: nowrap;
 }
-.splitTrackToggle{
-  --toggle-w: 32px;
-  --toggle-h: 20px;
-  --toggle-knob: 14px;
-  min-width: var(--toggle-w);
+.splitTrackControl input{
+  width: 18px;
+  height: 18px;
+  margin: 0;
   padding: 0;
-  box-shadow: none;
 }
 @media (max-width: 700px){
   .splitsMobileLayerNav{
