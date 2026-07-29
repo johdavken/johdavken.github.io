@@ -24,7 +24,8 @@
       "splitsBlock",
       "resultsBlock",
       "resinCalcBlock",
-      "recipesBlock"
+      "recipesBlock",
+      "toolsBlock"
     ];
 
     const HOPPERS_PER_LAYER = 6;
@@ -56,6 +57,7 @@
    * ============================ */
   const $ = (id) => document.getElementById(id);
   const validation = window.ResinIQValidation;
+  const calculators = window.ResinIQCalculators;
   const { parseChangeoverDate, formatTime: fmtTime } = window.ResinIQScheduling;
   const { writeJson } = window.ResinIQStorage;
   const COMMON_RESIN_NAMES = Object.freeze([
@@ -1953,6 +1955,170 @@
     }
   }
 
+  function updateShortFootageCalculator(){
+    const actualInput = $("shortActualWeight");
+    const targetInput = $("shortTargetFootage");
+    const lastGoodInput = $("shortLastGoodWeight");
+    const resultEl = $("shortFootageResult");
+    const messageEl = $("shortFootageMessage");
+    if (!actualInput || !targetInput || !lastGoodInput || !resultEl || !messageEl) return;
+
+    const inputs = [
+      [actualInput, "Actual weight"],
+      [targetInput, "Target footage"],
+      [lastGoodInput, "Last good weight"]
+    ];
+    let invalidMessage = "";
+    const values = inputs.map(([input,label])=>{
+      const result = validation.validateNumber(input.value, { min: 0, label });
+      input.setCustomValidity(result.valid ? "" : result.message);
+      input.setAttribute("aria-invalid", String(!result.valid));
+      input.title = result.valid ? "" : result.message;
+      if (!result.valid && !invalidMessage) invalidMessage = result.message;
+      return result.valid ? result.value : null;
+    });
+
+    if (invalidMessage){
+      resultEl.textContent = "—";
+      messageEl.textContent = invalidMessage;
+      return;
+    }
+    if (inputs.some(([input])=>input.value.trim() === "")){
+      resultEl.textContent = "—";
+      messageEl.textContent = "Enter all three values.";
+      return;
+    }
+    if (values[2] === 0){
+      const message = "Last good weight must be greater than 0.";
+      lastGoodInput.setCustomValidity(message);
+      lastGoodInput.setAttribute("aria-invalid", "true");
+      lastGoodInput.title = message;
+      resultEl.textContent = "—";
+      messageEl.textContent = message;
+      return;
+    }
+
+    const shortFootage = (values[0] * values[1]) / values[2];
+    resultEl.textContent = `${shortFootage.toLocaleString([], { maximumFractionDigits: 2 })} ft`;
+    messageEl.textContent = "Calculated from the entered weights and target footage.";
+  }
+
+  function updateHopperWeightCalculator(){
+    const circumferenceInput = $("hopperCircumference");
+    const heightInput = $("hopperUsableHeight");
+    const bulkInput = $("hopperBulkDensity");
+    const polymerInput = $("hopperPolymerDensity");
+    const packingInput = $("hopperPackingFactor");
+    const resultEl = $("hopperWeightResult");
+    const messageEl = $("hopperWeightMessage");
+    if (
+      !circumferenceInput || !heightInput || !bulkInput || !polymerInput ||
+      !packingInput || !resultEl || !messageEl
+    ) return;
+
+    const clearValidity = input=>{
+      input.setCustomValidity("");
+      input.setAttribute("aria-invalid", "false");
+      input.title = "";
+    };
+    [circumferenceInput, heightInput, bulkInput, polymerInput, packingInput].forEach(clearValidity);
+
+    const requiredInputs = [
+      [circumferenceInput, "Hopper circumference"],
+      [heightInput, "Hopper usable height"]
+    ];
+    let invalidMessage = "";
+    const dimensions = requiredInputs.map(([input,label])=>{
+      const result = validation.validateNumber(input.value, { min: 0, label });
+      if (!result.valid){
+        input.setCustomValidity(result.message);
+        input.setAttribute("aria-invalid", "true");
+        input.title = result.message;
+        if (!invalidMessage) invalidMessage = result.message;
+      }
+      return result.valid ? result.value : null;
+    });
+
+    if (invalidMessage){
+      resultEl.textContent = "—";
+      messageEl.textContent = invalidMessage;
+      return;
+    }
+    if (requiredInputs.some(([input])=>input.value.trim() === "")){
+      resultEl.textContent = "—";
+      messageEl.textContent = "Enter hopper circumference and usable height.";
+      return;
+    }
+    const zeroDimensionIndex = dimensions.findIndex(value=>value === 0);
+    if (zeroDimensionIndex >= 0){
+      const [input,label] = requiredInputs[zeroDimensionIndex];
+      const message = `${label} must be greater than 0.`;
+      input.setCustomValidity(message);
+      input.setAttribute("aria-invalid", "true");
+      input.title = message;
+      resultEl.textContent = "—";
+      messageEl.textContent = message;
+      return;
+    }
+
+    const useDirectBulkDensity = bulkInput.value.trim() !== "";
+    let bulkDensity;
+    let densityMessage;
+    if (useDirectBulkDensity){
+      const result = validation.validateNumber(bulkInput.value, { min: 0, label: "Resin bulk density" });
+      if (!result.valid || result.value === 0){
+        const message = result.valid ? "Resin bulk density must be greater than 0." : result.message;
+        bulkInput.setCustomValidity(message);
+        bulkInput.setAttribute("aria-invalid", "true");
+        bulkInput.title = message;
+        resultEl.textContent = "—";
+        messageEl.textContent = message;
+        return;
+      }
+      bulkDensity = result.value;
+      densityMessage = `Using entered bulk density: ${bulkDensity.toLocaleString([], { maximumFractionDigits: 2 })} lb/ft³.`;
+    } else {
+      if (polymerInput.value.trim() === ""){
+        resultEl.textContent = "—";
+        messageEl.textContent = "Enter resin bulk density or polymer density.";
+        return;
+      }
+      const polymerResult = validation.validateNumber(
+        polymerInput.value,
+        { min: 0, label: "Polymer density" }
+      );
+      const packingResult = validation.validateNumber(
+        packingInput.value,
+        { min: 0.58, max: 0.68, label: "Packing factor" }
+      );
+      for (const [input,result] of [[polymerInput,polymerResult], [packingInput,packingResult]]){
+        if (!result.valid){
+          input.setCustomValidity(result.message);
+          input.setAttribute("aria-invalid", "true");
+          input.title = result.message;
+          resultEl.textContent = "—";
+          messageEl.textContent = result.message;
+          return;
+        }
+      }
+      if (polymerResult.value === 0){
+        const message = "Polymer density must be greater than 0.";
+        polymerInput.setCustomValidity(message);
+        polymerInput.setAttribute("aria-invalid", "true");
+        polymerInput.title = message;
+        resultEl.textContent = "—";
+        messageEl.textContent = message;
+        return;
+      }
+      bulkDensity = calculators.estimateBulkDensity(polymerResult.value, packingResult.value);
+      densityMessage = `Estimated bulk density: ${bulkDensity.toLocaleString([], { maximumFractionDigits: 2 })} lb/ft³.`;
+    }
+
+    const hopperWeight = calculators.calculateHopperWeight(dimensions[0], dimensions[1], bulkDensity);
+    resultEl.textContent = `${Math.round(hopperWeight).toLocaleString()} lb`;
+    messageEl.textContent = densityMessage;
+  }
+
     // Wire inputs
     $("lineRate")?.addEventListener("input",(e)=>{
       if (!acceptNumericInput(e.target, { min: 0, label: "Line rate" }, value => { state.lineRate = value; })) return;
@@ -1993,6 +2159,16 @@
       renderResinCalculator();
       saveSession();
     });
+    ["shortActualWeight", "shortTargetFootage", "shortLastGoodWeight"].forEach(id=>{
+      $(id)?.addEventListener("input", updateShortFootageCalculator);
+    });
+    [
+      "hopperCircumference",
+      "hopperUsableHeight",
+      "hopperBulkDensity",
+      "hopperPolymerDensity",
+      "hopperPackingFactor"
+    ].forEach(id=>$(id)?.addEventListener("input", updateHopperWeightCalculator));
 
     $("everydayModeBtn")?.addEventListener("click", ()=>setUIMode("everyday"));
     $("advancedModeBtn")?.addEventListener("click", ()=>setUIMode("advanced"));

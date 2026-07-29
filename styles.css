@@ -1201,6 +1201,41 @@ button.danger{
   background: var(--row-bg-2);
   border: 1px solid var(--row-border-2);
 }
+
+/* =======================================================================
+ *   Tools
+ *   ======================================================================= */
+.toolPanel{
+  padding: 12px;
+  border: 1px solid var(--row-border);
+  border-radius: var(--radius-row);
+  background: var(--row-bg);
+}
+.toolPanel + .toolPanel{ margin-top: var(--gap); }
+.toolResult{
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  gap: 10px;
+  align-items: baseline;
+  padding: 10px 12px;
+  border: 1px solid var(--readonly-border);
+  border-radius: var(--radius-input);
+  background: var(--readonly-bg);
+}
+.toolResult > span:first-child{ font-weight: 850; }
+.toolResult strong{
+  color: var(--title);
+  font-size: 1.1em;
+}
+.toolResult .muted{ text-align: right; }
+@media (max-width: 600px){
+  .toolResult{ grid-template-columns: 1fr auto; }
+  .toolResult .muted{
+    grid-column: 1 / -1;
+    text-align: left;
+  }
+}
+
 /* =======================================================================
  *   Everyday / Advanced mode
  *   ======================================================================= */
