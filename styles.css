@@ -318,6 +318,35 @@ input[readonly]:focus{
   box-shadow: none;
 }
 
+.resinAutocomplete{
+  position: fixed;
+  z-index: 1000;
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 4px;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-input);
+  background: var(--panelOpen);
+  box-shadow: var(--shadow2);
+}
+.resinAutocompleteOption{
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: calc(var(--radius-input) - 4px);
+  background: transparent;
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: var(--font-small);
+  text-align: left;
+}
+.resinAutocompleteOption:hover,
+.resinAutocompleteOption.active{
+  background: linear-gradient(180deg, var(--btn-primary-a), var(--btn-primary-b));
+  color: var(--text);
+}
+
 /* =======================================================================
  *   Grids
  *   ======================================================================= */
