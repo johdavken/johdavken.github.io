@@ -42,7 +42,7 @@
       prodResinLb: 0,
       scrapResinLb: 0,
       density: "comfort",
-      theme: "dark",
+      theme: "light",
       gauge: 0,
       hopperNamingLine9: "standard", // "standard" | "main"
       showPumpOffTracked: false, // show pump-off items in Run-Down Timeline
@@ -288,8 +288,8 @@
    * Theme
    * ============================ */
   function applyTheme(t){
-      const allowed = new Set(["dark","light","gruvbox-dark","gruvbox-light","nord","tokyo-night","dracula","solarized-dark","solarized-light","catppuccin-mocha","catppuccin-latte","amber","high-contrast","mono"]);
-      const theme = allowed.has(String(t)) ? String(t) : "dark";
+      const allowed = new Set(["dark","light","mse","gruvbox-dark","gruvbox-light","nord","tokyo-night","dracula","solarized-dark","solarized-light","catppuccin-mocha","catppuccin-latte","amber","high-contrast","mono"]);
+      const theme = allowed.has(String(t)) ? String(t) : "light";
 
       document.documentElement.setAttribute("data-theme", theme);
       document.body.setAttribute("data-theme", theme);
@@ -303,7 +303,7 @@
       const logo = $("headerLogo");
       if (logo){
         // Keep your dedicated Gruvbox header images; map the rest to light/dark
-        const lightish = new Set(["light","gruvbox-light","solarized-light","catppuccin-latte","mono"]);
+        const lightish = new Set(["light","mse","gruvbox-light","solarized-light","catppuccin-latte","mono"]);
         let src = lightish.has(theme) ? "images/resiniqhead-l.png" : "images/resiniqhead.png";
 
         if (theme === "gruvbox-light") src = "images/resiniqhead-gbl.png";
@@ -333,7 +333,7 @@
       state.prodResinLb = clampNum(payload.prodResinLb);
       state.scrapResinLb = clampNum(payload.scrapResinLb);
 
-      applyTheme(payload.theme || "dark");
+      applyTheme(payload.theme || "light");
       applyDensity(payload.density || "comfort");
       $("lineRate").value = String(state.lineRate);
       const g = $("gauge");
@@ -1068,10 +1068,6 @@
           if (hi === 0){
             pctInput.readOnly = true;
             pctInput.title = "Auto (100% minus other hoppers)";
-            const auto = document.createElement("span");
-            auto.className = "splitAutoLabel";
-            auto.textContent = "Auto";
-            pctWrap.prepend(auto);
           }
 
           const trackControl = document.createElement("div");
@@ -1448,6 +1444,42 @@
   /* ============================
    * Validation + compute + render
    * ============================ */
+  function updateCollapsedSummaries(){
+    const setupStatus = $("setupSummaryStatus");
+    if (setupStatus){
+      const setupParts = [];
+      if (state.lineRate > 0){
+        setupParts.push(`${state.lineRate.toLocaleString([], { maximumFractionDigits: 2 })} lb/hr`);
+      }
+      const changeoverDate = parseChangeoverDate(state.changeoverTime);
+      if (changeoverDate) setupParts.push(`Changeover ${fmtTime(changeoverDate)}`);
+      setupStatus.textContent = setupParts.length ? setupParts.join(" · ") : "Not set";
+    }
+
+    const splitsStatus = $("splitsSummaryStatus");
+    if (splitsStatus){
+      const layerTotal = sum(state.layers.map(L=>clampNum(L.layerPct)));
+      const badLayers = state.layers.filter(L=>{
+        const hopperTotal = sum(L.hoppers.map(h=>clampNum(h.pct)));
+        return Math.abs(hopperTotal - 100) > 0.0001;
+      });
+      const layerTotalBad = Math.abs(layerTotal - 100) > 0.0001;
+      const errorCount = badLayers.length + (layerTotalBad ? 1 : 0);
+      const ready = errorCount === 0 && state.layers.length > 0;
+      splitsStatus.classList.toggle("badge-ok", ready);
+      splitsStatus.classList.toggle("badge-warn", !ready);
+      splitsStatus.textContent = ready
+        ? "Ready ✓"
+        : `${errorCount} percentage ${errorCount === 1 ? "error" : "errors"}`;
+    }
+
+    const timelineStatus = $("timelineSummaryStatus");
+    if (timelineStatus){
+      const trackedCount = sum(state.layers.map(L=>L.hoppers.filter(h=>h.track).length));
+      timelineStatus.textContent = `${trackedCount} ${trackedCount === 1 ? "resin" : "resins"} tracked`;
+    }
+  }
+
   function validateAndCompute(){
       const msgs = [];
       const div = 100;
@@ -1532,6 +1564,7 @@
       renderResultsFlat(flat, changeoverDate);
       updateFooterNext(flat, changeoverDate);
       renderResinCalculator();
+      updateCollapsedSummaries();
       saveSession();
     }
 
@@ -1701,10 +1734,8 @@
       const advanced = state.uiMode === "advanced";
       const everydayBtn = $("everydayModeBtn");
       const advancedBtn = $("advancedModeBtn");
-      const description = $("modeDescription");
       if (everydayBtn){ everydayBtn.classList.toggle("active", !advanced); everydayBtn.setAttribute("aria-pressed", String(!advanced)); }
       if (advancedBtn){ advancedBtn.classList.toggle("active", advanced); advancedBtn.setAttribute("aria-pressed", String(advanced)); }
-      if (description){ description.textContent = advanced ? "Advanced mode includes line setup values, receiver weights, offsets, resin totals, configurations, and display settings." : "Everyday mode shows only the controls normally needed during a run."; }
     }
 
     function setUIMode(mode){ applyUIMode(mode); saveSession(); }
@@ -1854,7 +1885,7 @@
       const restored = loadSession();
       if (!restored){
         applyDensity("comfort");
-        applyTheme("dark");
+        applyTheme("light");
         rebuildUIFromState();
       }
 
@@ -1874,7 +1905,7 @@
       }
 
       // Ensure theme/logo applied even after restore
-      applyTheme(state.theme || "dark");
+      applyTheme(state.theme || "light");
       saveSession();
     })();
 
