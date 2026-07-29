@@ -520,6 +520,286 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   .hopperRow .trackLabel{ display: none; }
 }
 
+.splitsBulkModeBar{
+  display: flex;
+  justify-content: flex-end;
+}
+.splitsBulkModeBar button{
+  padding: 7px 11px;
+  font-size: var(--font-small);
+}
+.splitsBulkBar{
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(150px, .7fr) auto;
+  gap: var(--gap);
+  align-items: end;
+  padding: 10px;
+  border: 1px solid var(--row-border);
+  border-radius: var(--radius-row);
+  background: var(--readonly-bg);
+}
+.splitsBulkField{ margin: 0; }
+.splitsBulkField > span:first-child{
+  display: block;
+  margin-bottom: 6px;
+}
+.splitsBulkPctInput{
+  display: grid;
+  grid-template-columns: minmax(90px, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+}
+.splitsBulkPctInput > span{
+  color: var(--muted);
+  font-size: var(--font-small);
+}
+.splitsBulkActions{ display: flex; flex-wrap: wrap; gap: 8px; }
+.splitsSelectionStatus{
+  grid-column: 1 / -1;
+  min-height: 1.2em;
+}
+.splitsSelectionStatus.ok{ color: var(--ok); }
+.splitsSelectionStatus.warn{ color: var(--warn); }
+
+.splitsMatrixSummary{
+  padding: 9px 12px;
+  border: 1px solid var(--row-border);
+  border-radius: var(--radius-input);
+  background: var(--readonly-bg);
+  color: var(--muted);
+  font-size: var(--font-small);
+  font-weight: 850;
+}
+.splitsMatrixSummary.ok,
+.splitColumnTotal.ok{ color: var(--ok); }
+.splitsMatrixSummary.warn,
+.splitColumnTotal.warn{ color: var(--warn); }
+
+.splitsMobileLayerNav{ display: none; }
+
+.splitsMatrixScroll{
+  overflow-x: auto;
+  border: 1px solid var(--row-border);
+  border-radius: var(--radius-row);
+  background: var(--readonly-bg);
+}
+.splitsMatrix{
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.splitsMatrix th,
+.splitsMatrix td{
+  padding: 8px;
+  border-right: 1px solid var(--row-border-2);
+  border-bottom: 1px solid var(--row-border-2);
+}
+.splitsMatrix tr:last-child > *{ border-bottom: 0; }
+.splitsMatrix tr > *:last-child{ border-right: 0; }
+.splitsMatrix thead th{
+  min-width: 164px;
+  vertical-align: top;
+  background: var(--panelOpen);
+}
+.splitsMatrix th:first-child{
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  min-width: 64px;
+  width: 64px;
+  background: var(--panelOpen);
+  text-align: center;
+}
+.splitLayerTitle{
+  width: 100%;
+  padding: 6px 8px;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 950;
+  text-align: center;
+  cursor: default;
+}
+.splitLayerPct{
+  display: grid;
+  grid-template-columns: minmax(70px, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  margin: 7px 0 0;
+}
+.splitLayerPct input{
+  min-width: 0;
+  padding: 7px 9px;
+  text-align: right;
+}
+.splitLayerPct span,
+.splitLayerMeta{
+  color: var(--muted);
+  font-size: var(--font-small);
+}
+.splitLayerMeta{ margin-top: 5px; text-align: center; }
+.splitColumnTotal{
+  margin-top: 5px;
+  min-height: 1.2em;
+  font-size: var(--font-tiny);
+  text-align: center;
+}
+.splitCopyBtn{
+  width: 100%;
+  margin-top: 7px;
+  padding: 6px 8px;
+  font-size: var(--font-small);
+}
+.splitRowHeader{
+  color: var(--text);
+  font-weight: 950;
+}
+.splitRowSelect{
+  width: 100%;
+  padding: 7px 8px;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  cursor: default;
+}
+.splitMatrixCell{
+  min-width: 164px;
+  background: var(--row-bg-2);
+  transition: background .12s ease, box-shadow .12s ease;
+}
+.splitMatrixCell.selected{
+  background: var(--btn-primary-a);
+  box-shadow: inset 0 0 0 2px var(--focus-border);
+}
+.splitAddResin{
+  display: none;
+  width: 100%;
+  padding: 12px 10px;
+  border: 1px dashed var(--border2);
+  background: transparent;
+  color: var(--muted);
+  box-shadow: none;
+}
+.splitMatrixCell.inactive:not(.editing) .splitAddResin{ display: block; }
+.splitMatrixCell.inactive:not(.editing) .splitCellEditor{ display: none; }
+.bulk-editing .splitMatrixCell.inactive .splitAddResin{ display: none; }
+.bulk-editing .splitMatrixCell.inactive .splitCellEditor{ display: block; }
+.splitCellTop{
+  display: grid;
+  grid-template-columns: minmax(0,1fr);
+  gap: 5px;
+  align-items: center;
+}
+.splitCellSelector{
+  display: none;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  padding: 0;
+}
+.bulk-editing .splitCellTop{
+  grid-template-columns: 16px minmax(0,1fr);
+}
+.bulk-editing .splitCellSelector{ display: block; }
+.bulk-editing .splitLayerTitle,
+.bulk-editing .splitRowSelect{
+  border-color: var(--row-border-2);
+  background: var(--row-bg-2);
+  cursor: pointer;
+}
+.splitMatrixCell .resinNameInput{
+  padding: 7px 9px;
+  font-size: var(--font-small);
+}
+.splitCellControls{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  margin-top: 7px;
+}
+.splitPctControl{
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  margin: 0;
+}
+.splitPctControl input{
+  width: 48px;
+  min-width: 0;
+  padding: 6px 8px;
+  text-align: right;
+  font-size: var(--font-small);
+}
+.splitPctControl > span{
+  color: var(--muted);
+  font-size: var(--font-small);
+}
+.splitPctControl .splitAutoLabel{
+  color: var(--muted);
+  font-size: var(--font-tiny);
+}
+.splitTrackControl{
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.splitTrackToggle{
+  --toggle-w: 32px;
+  --toggle-h: 20px;
+  --toggle-knob: 14px;
+  min-width: var(--toggle-w);
+  padding: 0;
+  box-shadow: none;
+}
+@media (max-width: 700px){
+  .splitsMobileLayerNav{
+    position: sticky;
+    top: 0;
+    z-index: 6;
+    display: grid;
+    grid-template-columns: repeat(var(--mobile-layer-count, 4), minmax(44px, 1fr));
+    gap: 4px;
+    padding: 4px;
+    border: 1px solid var(--row-border);
+    border-radius: 999px;
+    background: var(--panel);
+    box-shadow: 0 5px 12px rgba(0,0,0,.22);
+  }
+  .splitsMobileLayerButton{
+    min-width: 0;
+    padding: 8px 10px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--muted);
+  }
+  .splitsMobileLayerButton.active{
+    background: linear-gradient(180deg,var(--btn-primary-a),var(--btn-primary-b));
+    color: var(--text);
+    box-shadow: inset 0 0 0 1px var(--focus-border);
+  }
+  .splitsMatrixScroll{ overflow-x: hidden; }
+  .splitsMatrix{ table-layout: fixed; }
+  .splitsMatrix [data-layer-column]{ display: none; }
+  .splitsMatrix [data-layer-column].mobile-layer-active{ display: table-cell; }
+  .splitsMatrix thead th{ min-width: 0; }
+  .splitsMatrix th:first-child{
+    min-width: 52px;
+    width: 52px;
+  }
+  .splitMatrixCell{ min-width: 0; }
+  .splitsBulkBar{ grid-template-columns: 1fr; align-items: stretch; }
+  .splitsSelectionStatus{ grid-column: 1; }
+  .splitsBulkActions{ display: grid; grid-template-columns: 1fr 1fr; }
+  .splitsBulkActions button:first-child{ grid-column: 1 / -1; }
+}
+
 .hopperBadge{
   display: inline-flex;
   align-items: center;
