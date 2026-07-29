@@ -55,6 +55,30 @@
    * DOM helpers
    * ============================ */
   const $ = (id) => document.getElementById(id);
+  const validation = window.ResinIQValidation;
+  const { parseChangeoverDate, formatTime: fmtTime } = window.ResinIQScheduling;
+  const { writeJson } = window.ResinIQStorage;
+
+  function showStorageWarning(message){
+    const host = $("statusBox") || document.body;
+    if (document.getElementById("storageWarning")) return;
+    const warning = document.createElement("div");
+    warning.id = "storageWarning";
+    warning.className = "status bad";
+    warning.setAttribute("role", "alert");
+    warning.textContent = message;
+    host.appendChild(warning);
+  }
+
+  function acceptNumericInput(el, options, onValid){
+    const result = validation.validateNumber(el.value, options);
+    el.setCustomValidity(result.valid ? "" : result.message);
+    el.setAttribute("aria-invalid", String(!result.valid));
+    el.title = result.valid ? "" : result.message;
+    if (!result.valid) return false;
+    onValid(result.value);
+    return true;
+  }
 
   /* ============================
    * Custom toggles
@@ -147,38 +171,6 @@
       const hh = Math.floor(total/60);
       const mm = total % 60;
       return `${hh}h ${String(mm).padStart(2,"0")}m`;
-    }
-
-    function parseChangeoverDate(hhmm){
-    if (!hhmm) return null;
-
-    const s = String(hhmm).trim();
-
-    // Accept "H:MM", "HH:MM", and optional seconds "HH:MM:SS"
-    const m = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(s);
-    if (!m) return null;
-
-    const hh = Number(m[1]), mm = Number(m[2]);
-    if (!Number.isFinite(hh) || !Number.isFinite(mm)) return null;
-    if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return null;
-
-    const now = new Date();
-    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm, 0, 0);
-
-    // If the time is already in the past (give a small grace), assume it's tomorrow
-    if (d.getTime() < now.getTime() - 60*1000) d.setDate(d.getDate() + 1);
-
-    return d;
-  }
-    function fmtTime(dateObj, baseDateObj){
-      if (!dateObj) return "—";
-      const t = dateObj.toLocaleTimeString([], {hour:"numeric", minute:"2-digit"});
-      if (!baseDateObj) return t;
-      const sameDay =
-        dateObj.getFullYear()===baseDateObj.getFullYear() &&
-        dateObj.getMonth()===baseDateObj.getMonth() &&
-        dateObj.getDate()===baseDateObj.getDate();
-      return sameDay ? t : `${t} (+1d)`;
     }
 
     function recomputeAutoH1(layer){
@@ -396,7 +388,12 @@
    * Persistence (session + configs)
    * ============================ */
   function saveSession(){
-      try{ localStorage.setItem(LS_SESSION_KEY, JSON.stringify(snapshotPayload())); }catch(e){}
+      const result = writeJson(localStorage, LS_SESSION_KEY, snapshotPayload());
+      if (!result.ok){
+        showStorageWarning("Autosave failed. Changes may be lost when this page closes.");
+        return false;
+      }
+      return true;
     }
     function loadSession(){
       try{
@@ -420,14 +417,20 @@
       }catch(e){ return {}; }
     }
     function writeConfigs(obj){
-      try{ localStorage.setItem(LS_CONFIGS_KEY, JSON.stringify(obj)); }catch(e){}
+      return writeJson(localStorage, LS_CONFIGS_KEY, obj).ok;
     }
     function recipeStatus(msg, type="ok"){
       const el = $("recipeStatus");
       if (!el) return;
       const cls = type==="bad" ? "status bad" : (type==="warn" ? "status" : "status ok");
-      el.innerHTML = `<div class="${cls}"><div style="font-weight:950">${msg}</div></div>`;
-      setTimeout(()=>{ el.innerHTML = ""; }, 4500);
+      const status = document.createElement("div");
+      status.className = cls;
+      const message = document.createElement("div");
+      message.style.fontWeight = "950";
+      message.textContent = msg;
+      status.appendChild(message);
+      el.replaceChildren(status);
+      setTimeout(()=>{ el.replaceChildren(); }, 4500);
     }
     function refreshConfigDropdown(selectName){
       const configs = readConfigs();
@@ -452,14 +455,17 @@
       if (selectName && names.includes(selectName)) sel.value = selectName;
     }
 
-    function normalizeConfigName(name){ return (name || "").trim().replace(/\\s+/g, " "); }
+    function normalizeConfigName(name){ return String(name || "").trim().replace(/\\s+/g, " "); }
 
     function saveNamedConfig(){
       const name = normalizeConfigName($("configName")?.value);
       if (!name){ recipeStatus("Please enter a config name first.", "warn"); return; }
       const configs = readConfigs();
       configs[name] = snapshotPayload();
-      writeConfigs(configs);
+      if (!writeConfigs(configs)){
+        recipeStatus(`Could not save "${name}". Browser storage is unavailable or full.`, "bad");
+        return;
+      }
       refreshConfigDropdown(name);
       recipeStatus(`Saved config: "${name}"`, "ok");
     }
@@ -487,7 +493,10 @@
       }
       configs[newName] = configs[oldName];
       delete configs[oldName];
-      writeConfigs(configs);
+      if (!writeConfigs(configs)){
+        recipeStatus(`Could not rename "${oldName}". Browser storage is unavailable or full.`, "bad");
+        return;
+      }
       refreshConfigDropdown(newName);
       recipeStatus(`Renamed "${oldName}" → "${newName}"`, "ok");
     }
@@ -497,7 +506,10 @@
       if (!confirm(`Delete config "${name}"?`)) return;
       const configs = readConfigs();
       delete configs[name];
-      writeConfigs(configs);
+      if (!writeConfigs(configs)){
+        recipeStatus(`Could not delete "${name}". Browser storage is unavailable or full.`, "bad");
+        return;
+      }
       refreshConfigDropdown();
       recipeStatus(`Deleted "${name}"`, "ok");
     }
@@ -543,12 +555,25 @@
       let name = normalizeConfigName(obj?.name);
       let payload = obj?.payload && typeof obj.payload === "object" ? obj.payload : obj;
 
+      const payloadResult = validation.validateConfigPayload(payload);
+      if (!payloadResult.valid){
+        const details = payloadResult.errors.slice(0, 3).join(" ");
+        const more = payloadResult.errors.length > 3
+          ? ` (${payloadResult.errors.length - 3} more issue(s))`
+          : "";
+        recipeStatus(`Malformed configuration: ${details}${more}`, "bad");
+        return;
+      }
+
       if (!name) name = normalizeConfigName(prompt("Name for this imported config:", "Imported config") || "");
       if (!name){ recipeStatus("Import canceled (no name).", "warn"); return; }
 
       const configs = readConfigs();
       configs[name] = payload;
-      writeConfigs(configs);
+      if (!writeConfigs(configs)){
+        recipeStatus(`Could not import "${name}". Browser storage is unavailable or full.`, "bad");
+        return;
+      }
       refreshConfigDropdown(name);
       const cn = $("configName"); if (cn) cn.value = name;
 
@@ -576,7 +601,12 @@
         `;
         wrap.appendChild(box);
         box.querySelector("input").addEventListener("input",(e)=>{
-          state.offsets[L.name] = clampNum(e.target.value);
+          const accepted = acceptNumericInput(
+            e.target,
+            { min: 0, label: `Layer ${L.name} offset` },
+            value => { state.offsets[L.name] = value; }
+          );
+          if (!accepted) return;
           validateAndCompute();
           saveSession();
           updateLayerMetaDisplays();
@@ -613,7 +643,12 @@
           grid.appendChild(row);
 
           row.querySelector("input").addEventListener("input",(e)=>{
-            L.hoppers[hi].weight = clampNum(e.target.value);
+            const accepted = acceptNumericInput(
+              e.target,
+              { min: 0, label: `${hopperBadgeLabel(L.name, hi)} weight` },
+              value => { L.hoppers[hi].weight = value; }
+            );
+            if (!accepted) return;
             validateAndCompute();
             saveSession();
           });
@@ -690,7 +725,12 @@
             lpEl.addEventListener(evt, (e)=> e.stopPropagation())
           );
           lpEl.addEventListener("input",(e)=>{
-            L.layerPct = clampNum(e.target.value);
+            const accepted = acceptNumericInput(
+              e.target,
+              { min: 0, max: 100, label: `Layer ${L.name} percentage` },
+              value => { L.layerPct = value; }
+            );
+            if (!accepted) return;
             validateAndCompute();
             saveSession();
             updateLayerMetaDisplays();
@@ -724,7 +764,7 @@
           row.className = "hopperRow";
           row.innerHTML = `
             <div class="hopperBadge mono">${hopperBadgeLabel(L.name, hi)}</div>
-            <input id="${resinFieldId}" class="resinNameInput" type="text" placeholder="Resin name" value="${(L.hoppers[hi].resinName || "").replace(/"/g,'&quot;')}" />
+            <input id="${resinFieldId}" class="resinNameInput" type="text" placeholder="Resin name" />
             <input id="${pctFieldId}" class="splitInput" type="text" inputmode="decimal" placeholder="0" value="${clampNum(L.hoppers[hi].pct)}" />
             <div class="trackWrap">
               <span class="trackLabel">Track</span>
@@ -734,6 +774,7 @@
           list.appendChild(row);
 
           const resinEl = row.querySelector(`#${resinFieldId}`);
+          resinEl.value = L.hoppers[hi].resinName || "";
           const pctEl = row.querySelector(`#${pctFieldId}`);
           if (hi === 0){
             pctEl.readOnly = true;
@@ -751,7 +792,27 @@
 
           pctEl.addEventListener("input",(e)=>{
             if (hi === 0) return;
-            L.hoppers[hi].pct = clampNum(e.target.value);
+            const candidate = validation.validatePercentage(
+              e.target.value,
+              `${hopperBadgeLabel(L.name, hi)} percentage`
+            );
+            if (!candidate.valid){
+              e.target.setCustomValidity(candidate.message);
+              e.target.setAttribute("aria-invalid", "true");
+              e.target.title = candidate.message;
+              return;
+            }
+
+            const otherPercentages = L.hoppers.slice(1).map((hopper, index) =>
+              index === hi - 1 ? candidate.value : hopper.pct
+            );
+            const totalResult = validation.validateHopperPercentages(otherPercentages);
+            e.target.setCustomValidity(totalResult.valid ? "" : totalResult.message);
+            e.target.setAttribute("aria-invalid", String(!totalResult.valid));
+            e.target.title = totalResult.valid ? "" : totalResult.message;
+            if (!totalResult.valid) return;
+
+            L.hoppers[hi].pct = candidate.value;
 
             recomputeAutoH1(L);
 
@@ -832,11 +893,12 @@
         row.className = "calcRow";
         row.innerHTML = `
           <div class="calcLeft">
-            <div class="calcName mono">${r.displayName}</div>
+            <div class="calcName mono" data-resin-name></div>
             <div class="calcMeta">Allocated from splits</div>
           </div>
           <div class="mono" style="font-weight:950">${fmtNum(r.lbs,2)} lb</div>
         `;
+        row.querySelector("[data-resin-name]").textContent = r.displayName;
         out.appendChild(row);
       });
     }
@@ -976,7 +1038,6 @@
       });
 
       viewFlat.forEach((h)=>{
-        const resinChip = h.resinName ? `<span class="pill mono">${h.resinName}</span>` : `<span class="pill badge-warn">No resin name</span>`;
         const weightChip = h.weight > 0 ? `<span class="muted mono">${fmtNum(h.weight,2)} lb</span>` : `<span class="pill badge-warn">Missing weight</span>`;
         const splitWarn = (h.rate <= 0 && h.weight > 0) ? `<span class="pill badge-warn">Split?</span>` : "";
 
@@ -987,7 +1048,7 @@
             <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
               <span class="pill mono">Layer ${h.layer}</span>
               <span class="pill mono">${h.hopperLabel}</span>
-              ${resinChip}
+              <span data-resin-chip></span>
               ${weightChip}
               ${splitWarn}
             </div>
@@ -1008,6 +1069,10 @@
             </label>
           </div>
         `;
+
+        const resinChip = row.querySelector("[data-resin-chip]");
+        resinChip.className = h.resinName ? "pill mono" : "pill badge-warn";
+        resinChip.textContent = h.resinName || "No resin name";
 
         row.querySelector('input[type="checkbox"]').addEventListener("change",(e)=>{
           h._ref.h.pumpOff = !!e.target.checked;
@@ -1203,8 +1268,17 @@
   }
 
     // Wire inputs
-    $("lineRate")?.addEventListener("input",(e)=>{ state.lineRate = clampNum(e.target.value); validateAndCompute(); saveSession(); });
-    $("gauge").addEventListener("input",(e)=>{ state.gauge = clampNum(e.target.value); updateLayerMetaDisplays(); validateAndCompute(); saveSession(); });
+    $("lineRate")?.addEventListener("input",(e)=>{
+      if (!acceptNumericInput(e.target, { min: 0, label: "Line rate" }, value => { state.lineRate = value; })) return;
+      validateAndCompute();
+      saveSession();
+    });
+    $("gauge").addEventListener("input",(e)=>{
+      if (!acceptNumericInput(e.target, { min: 0, label: "Gauge" }, value => { state.gauge = value; })) return;
+      updateLayerMetaDisplays();
+      validateAndCompute();
+      saveSession();
+    });
     $("lineType")?.addEventListener("change",(e)=>{
       state.lineType = [1,3,5].includes(Number(e.target.value)) ? Number(e.target.value) : 3;
       ensureLayers();
@@ -1223,8 +1297,16 @@
       saveSession();
     });
 
-    $("prodResinLb")?.addEventListener("input",(e)=>{ state.prodResinLb = clampNum(e.target.value); renderResinCalculator(); saveSession(); });
-    $("scrapResinLb")?.addEventListener("input",(e)=>{ state.scrapResinLb = clampNum(e.target.value); renderResinCalculator(); saveSession(); });
+    $("prodResinLb")?.addEventListener("input",(e)=>{
+      if (!acceptNumericInput(e.target, { min: 0, label: "Production resin" }, value => { state.prodResinLb = value; })) return;
+      renderResinCalculator();
+      saveSession();
+    });
+    $("scrapResinLb")?.addEventListener("input",(e)=>{
+      if (!acceptNumericInput(e.target, { min: 0, label: "Scrap resin" }, value => { state.scrapResinLb = value; })) return;
+      renderResinCalculator();
+      saveSession();
+    });
 
     $("everydayModeBtn")?.addEventListener("click", ()=>setUIMode("everyday"));
     $("advancedModeBtn")?.addEventListener("click", ()=>setUIMode("advanced"));
