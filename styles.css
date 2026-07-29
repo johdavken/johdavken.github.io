@@ -577,32 +577,104 @@ details[open] > summary .chev{ transform: rotate(45deg); }
  *   Weights
  *   ======================================================================= */
 
-.weightsGrid{ display: grid; gap: var(--gap); grid-template-columns: 1fr; }
-@media (min-width: 720px){ .weightsGrid{ grid-template-columns: 1fr 1fr; } }
-
-.weightsLayer{
-  border: 1px solid var(--row-border);
-  border-radius: 18px;
+.weightsGrid{ display: grid; gap: var(--gap); }
+.weightsBulkBar{
+  display: grid;
+  grid-template-columns: minmax(150px, 220px) 1fr;
+  gap: var(--gap);
+  align-items: end;
   padding: 10px;
+  border: 1px solid var(--row-border);
+  border-radius: var(--radius-row);
   background: var(--readonly-bg);
-  display: grid;
-  gap: var(--gap);
 }
-
-.weightsTitle{ display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.weightsTitle strong{ font-size: 13px; }
-
-.weightsRow{
+.weightsBulkField{ margin: 0; }
+.weightsInputWithUnit{
   display: grid;
-  gap: var(--gap);
-  grid-template-columns: 70px 1fr;
+  grid-template-columns: minmax(64px, 1fr) auto;
   align-items: center;
-  padding: 8px;
-  border-radius: 14px;
-  border: 1px solid var(--row-border-2);
-  background: var(--row-bg-2);
+  gap: 6px;
 }
-.weightsRow input{ text-align: right; }
+.weightsInputWithUnit > span{
+  color: var(--muted);
+  font-size: var(--font-small);
+}
+.weightsBulkActions{ display: flex; flex-wrap: wrap; gap: 8px; }
+.weightsSelectionStatus{ grid-column: 1 / -1; min-height: 1.2em; }
+
+.weightsMatrixScroll{
+  overflow-x: auto;
+  border: 1px solid var(--row-border);
+  border-radius: var(--radius-row);
+  background: var(--readonly-bg);
+}
+.weightsMatrix{
+  width: 100%;
+  min-width: 520px;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.weightsMatrix th,
+.weightsMatrix td{
+  padding: 7px;
+  border-right: 1px solid var(--row-border-2);
+  border-bottom: 1px solid var(--row-border-2);
+  text-align: center;
+}
+.weightsMatrix tr:last-child > *{ border-bottom: 0; }
+.weightsMatrix tr > *:last-child{ border-right: 0; }
+.weightsMatrix thead th{
+  background: var(--panelOpen);
+  color: var(--text);
+}
+.weightsMatrix th:first-child{
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  min-width: 76px;
+  background: var(--panelOpen);
+}
+.weightsSelectHeader{
+  width: 100%;
+  padding: 7px 8px;
+  border-color: var(--row-border-2);
+  background: var(--row-bg-2);
+  box-shadow: none;
+  white-space: nowrap;
+}
+.weightsMatrixCell{
+  min-width: 130px;
+  background: var(--row-bg-2);
+  cursor: pointer;
+  transition: background .12s ease, box-shadow .12s ease;
+}
+.weightsMatrixCell.selected{
+  background: var(--toggle-on-bg);
+  box-shadow: inset 0 0 0 2px var(--focus-border);
+}
+.weightsCellSelector{
+  width: 18px;
+  height: 18px;
+  margin: 0 6px 0 0;
+  padding: 0;
+  display: inline-block;
+  vertical-align: middle;
+}
+.weightsMatrixCell .weightsInputWithUnit{
+  display: inline-grid;
+  width: calc(100% - 30px);
+  vertical-align: middle;
+}
+.weightsMatrixCell .weightsInputWithUnit input{
+  min-width: 0;
+  text-align: right;
+}
+@media (max-width: 600px){
+  .weightsBulkBar{ grid-template-columns: 1fr; align-items: stretch; }
+  .weightsSelectionStatus{ grid-column: 1; }
+  .weightsBulkActions{ display: grid; grid-template-columns: 1fr 1fr; }
+  .weightsBulkActions button:first-child{ grid-column: 1 / -1; }
+}
 
 /* =======================================================================
  *   Results
@@ -696,6 +768,12 @@ button{
 }
 button:hover{ filter: brightness(1.05); }
 button:active{ transform: translateY(1px); }
+button:disabled{
+  opacity: .5;
+  cursor: not-allowed;
+  filter: none;
+  transform: none;
+}
 
 button.secondary{
   background: var(--btn-secondary-bg);
