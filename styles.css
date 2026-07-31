@@ -185,6 +185,7 @@ main{
 
 .workspaceNav,
 .workspaceStatusBar{ display: none; }
+.workspaceContent{ display: contents; }
 
 @media (min-width: 901px){
   main{
@@ -220,7 +221,7 @@ main{
     top: 14px;
     display: grid;
     grid-column: 1;
-    grid-row: 2 / span 2;
+    grid-row: 2;
     gap: 5px;
     padding: 5px;
     border: 1px solid var(--border);
@@ -233,8 +234,6 @@ main{
     top: 14px;
     z-index: 5;
     display: flex;
-    grid-column: 2;
-    grid-row: 2;
     flex-wrap: wrap;
     gap: 7px;
     padding: 6px;
@@ -243,6 +242,13 @@ main{
     background: color-mix(in srgb, var(--panel) 94%, transparent);
     box-shadow: var(--shadow2);
     backdrop-filter: blur(10px);
+  }
+  .workspaceContent{
+    display: grid;
+    grid-column: 2;
+    grid-row: 2;
+    gap: 16px;
+    min-width: 0;
   }
   .workspaceStatusItem{
     display: flex;
@@ -370,31 +376,29 @@ main{
     background: linear-gradient(180deg, var(--btn-primary-a), var(--btn-primary-b));
     color: var(--title);
   }
-  main > .workspacePanel{
-    grid-column: 2;
-    grid-row: 3;
+  .workspaceContent > .workspacePanel{
     min-width: 0;
   }
-  main > .workspacePanel:not(.desktop-active){ display: none !important; }
-  main > .workspacePanel.card,
-  main > .workspacePanel.card[open]{
+  .workspaceContent > .workspacePanel:not(.desktop-active){ display: none !important; }
+  .workspaceContent > .workspacePanel.card,
+  .workspaceContent > .workspacePanel.card[open]{
     border: 0;
     background: transparent;
     box-shadow: none;
   }
-  main > .workspacePanel > summary{
+  .workspaceContent > .workspacePanel > summary{
     padding: 3px 0 12px;
     border-bottom: 1px solid var(--border);
     cursor: default;
   }
-  main > .workspacePanel > summary .chev{ display: none; }
-  main > .workspacePanel > summary .layerTitle{ font-size: 18px; }
-  main > .workspacePanel > summary .layerMeta{
+  .workspaceContent > .workspacePanel > summary .chev{ display: none; }
+  .workspaceContent > .workspacePanel > summary .layerTitle{ font-size: 18px; }
+  .workspaceContent > .workspacePanel > summary .layerMeta{
     margin-top: 3px;
     font-size: 13px;
   }
-  main > details.block.workspacePanel[open] > summary .pill.summaryStatus{ display: inline-flex; }
-  main > .workspacePanel > .blockBody{ padding: 14px 0 0; }
+  .workspaceContent > details.block.workspacePanel[open] > summary .pill.summaryStatus{ display: inline-flex; }
+  .workspaceContent > .workspacePanel > .blockBody{ padding: 14px 0 0; }
   .footerBar{ display: none; }
 }
 
@@ -962,13 +966,13 @@ details[open] > summary .chev{ transform: rotate(45deg); }
 }
 .splitCellSelector{
   display: none;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   margin: 0;
   padding: 0;
 }
 .bulk-editing .splitCellTop{
-  grid-template-columns: 16px minmax(0,1fr);
+  grid-template-columns: 18px minmax(0,1fr);
 }
 .bulk-editing .splitCellSelector{ display: block; }
 .bulk-editing .splitLayerTitle,
@@ -976,6 +980,17 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   border-color: var(--row-border-2);
   background: var(--row-bg-2);
   cursor: pointer;
+}
+.bulk-editing .splitLayerTitle.selected,
+.bulk-editing .splitRowSelect.selected{
+  border-color: var(--focus-border);
+  background: linear-gradient(180deg, var(--btn-primary-a), var(--btn-primary-b));
+  color: var(--title);
+}
+.bulk-editing .splitLayerTitle.partiallySelected,
+.bulk-editing .splitRowSelect.partiallySelected{
+  border-color: color-mix(in srgb, var(--focus-border) 55%, var(--border));
+  background: color-mix(in srgb, var(--focus-ring) 55%, transparent);
 }
 .splitMatrixCell .resinNameInput{
   padding: 7px 9px;
@@ -1013,11 +1028,41 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   color: var(--muted);
   white-space: nowrap;
 }
-.splitTrackControl input{
+.splitTrackButton{
+  display: inline-grid;
+  place-items: center;
   width: 18px;
   height: 18px;
   margin: 0;
   padding: 0;
+  border: 1px solid var(--border2);
+  border-radius: 5px;
+  background: var(--field-bg);
+  color: var(--muted);
+  box-shadow: none;
+}
+.splitTrackButton svg{
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.splitTrackButton:hover{
+  border-color: var(--focus-border);
+  color: var(--title);
+}
+.splitTrackButton:focus-visible{
+  border-color: var(--focus-border);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+  outline: none;
+}
+.splitTrackButton.active{
+  border-color: var(--focus-border);
+  background: linear-gradient(180deg, var(--btn-primary-a), var(--btn-primary-b));
+  color: var(--title);
 }
 @media (max-width: 700px){
   .splitsMobileLayerNav{
@@ -1183,6 +1228,15 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   background: var(--row-bg-2);
   box-shadow: none;
   white-space: nowrap;
+}
+.weightsSelectHeader.selected{
+  border-color: var(--focus-border);
+  background: linear-gradient(180deg, var(--btn-primary-a), var(--btn-primary-b));
+  color: var(--title);
+}
+.weightsSelectHeader.partiallySelected{
+  border-color: color-mix(in srgb, var(--focus-border) 55%, var(--border));
+  background: color-mix(in srgb, var(--focus-ring) 55%, transparent);
 }
 .weightsMatrixCell{
   min-width: 130px;
@@ -1443,12 +1497,66 @@ button.danger{
   font-size: 1.1em;
 }
 .toolResult .muted{ text-align: right; }
+.resinLookupSearch{ position: relative; }
+.resinLookupSuggestions{
+  position: fixed;
+  z-index: 1000;
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 4px;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-input);
+  background: var(--panelOpen);
+  box-shadow: var(--shadow2);
+}
+.resinLookupOption{
+  display: grid;
+  grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+  gap: 9px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: calc(var(--radius-input) - 4px);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  box-shadow: none;
+}
+.resinLookupOption:hover,
+.resinLookupOption.active{
+  background: linear-gradient(180deg, var(--btn-primary-a), var(--btn-primary-b));
+}
+.resinLookupOptionCode{
+  overflow: hidden;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.resinLookupOptionDescription{
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+input.resinLookupValue[readonly]{
+  width: 100%;
+  color: var(--title);
+  font-weight: 800;
+  opacity: 1;
+  cursor: default;
+}
 @media (max-width: 600px){
   .toolResult{ grid-template-columns: 1fr auto; }
   .toolResult .muted{
     grid-column: 1 / -1;
     text-align: left;
   }
+  input.resinLookupValue[readonly]{
+    min-height: 44px;
+    font-size: 16px;
+  }
+  .resinLookupOption{ grid-template-columns: 1fr; gap: 2px; }
 }
 
 /* =======================================================================

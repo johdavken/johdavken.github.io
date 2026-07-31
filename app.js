@@ -59,6 +59,7 @@
   const $ = (id) => document.getElementById(id);
   const validation = window.ResinIQValidation;
   const calculators = window.ResinIQCalculators;
+  const resinLookup = window.ResinIQLookup;
   const { parseChangeoverDate, formatTime: fmtTime } = window.ResinIQScheduling;
   const { writeJson } = window.ResinIQStorage;
   const COMMON_RESIN_NAMES = Object.freeze([
@@ -73,6 +74,7 @@
   let resinAutocompleteInput = null;
   let resinAutocompleteOptions = [];
   let resinAutocompleteIndex = -1;
+  let resinAutocompletePointerActive = false;
 
   function hideResinAutocomplete(){
     if (resinAutocompleteInput){
@@ -94,8 +96,20 @@
     popup.hidden = true;
     document.body.appendChild(popup);
     resinAutocompletePopup = popup;
+    popup.addEventListener("pointerdown", ()=>{
+      resinAutocompletePointerActive = true;
+    });
+    window.addEventListener("pointerup", ()=>{
+      setTimeout(()=>{ resinAutocompletePointerActive = false; }, 150);
+    });
+    window.addEventListener("pointercancel", ()=>{
+      resinAutocompletePointerActive = false;
+    });
     window.addEventListener("resize", hideResinAutocomplete);
-    window.addEventListener("scroll", hideResinAutocomplete, true);
+    window.addEventListener("scroll", event=>{
+      if (event.target instanceof Node && resinAutocompletePopup?.contains(event.target)) return;
+      hideResinAutocomplete();
+    }, true);
     return popup;
   }
 
@@ -164,7 +178,9 @@
     input.addEventListener("focus",()=>showResinAutocomplete(input));
     input.addEventListener("input",()=>showResinAutocomplete(input));
     input.addEventListener("blur",()=>setTimeout(()=>{
-      if (document.activeElement !== resinAutocompletePopup) hideResinAutocomplete();
+      if (!resinAutocompletePointerActive && document.activeElement !== resinAutocompletePopup){
+        hideResinAutocomplete();
+      }
     }, 100));
     input.addEventListener("keydown",event=>{
       if (event.key === "Escape"){
@@ -755,6 +771,14 @@
       area.innerHTML = "";
       const selected = new Set();
       const cellRefs = new Map();
+      const columnSelectors = new Map();
+      const rowSelectors = new Map();
+
+      function toggleSelection(keys){
+        const select = keys.some(key=>!selected.has(key));
+        keys.forEach(key=> select ? selected.add(key) : selected.delete(key));
+        updateSelectionUI();
+      }
 
       const toolbar = document.createElement("div");
       toolbar.className = "weightsBulkBar";
@@ -794,12 +818,11 @@
         button.className = "weightsSelectHeader";
         button.textContent = `Layer ${L.name}`;
         button.title = `Select or clear all Layer ${L.name} hoppers`;
-        button.addEventListener("click", ()=>{
-          const keys = Array.from({length:HOPPERS_PER_LAYER}, (_,hi)=>`${L.name}:${hi}`);
-          const select = keys.some(key=>!selected.has(key));
-          keys.forEach(key=> select ? selected.add(key) : selected.delete(key));
-          updateSelectionUI();
-        });
+        button.setAttribute("aria-pressed", "false");
+        button.addEventListener("click", ()=>toggleSelection(
+          Array.from({length:HOPPERS_PER_LAYER}, (_,hi)=>`${L.name}:${hi}`)
+        ));
+        columnSelectors.set(L.name, button);
         th.appendChild(button);
         headerRow.appendChild(th);
       });
@@ -816,12 +839,11 @@
         rowButton.className = "weightsSelectHeader mono";
         rowButton.textContent = hopperPositionLabel(hi);
         rowButton.title = `Select or clear hopper ${hopperPositionLabel(hi)} across all layers`;
-        rowButton.addEventListener("click", ()=>{
-          const keys = state.layers.map(L=>`${L.name}:${hi}`);
-          const select = keys.some(key=>!selected.has(key));
-          keys.forEach(key=> select ? selected.add(key) : selected.delete(key));
-          updateSelectionUI();
-        });
+        rowButton.setAttribute("aria-pressed", "false");
+        rowButton.addEventListener("click", ()=>toggleSelection(
+          state.layers.map(L=>`${L.name}:${hi}`)
+        ));
+        rowSelectors.set(hi, rowButton);
         rowHeader.appendChild(rowButton);
         tr.appendChild(rowHeader);
 
@@ -894,6 +916,20 @@
           ref.selector.checked = isSelected;
           ref.td.classList.toggle("selected", isSelected);
         });
+        columnSelectors.forEach((button, layerName)=>{
+          const keys = Array.from({length:HOPPERS_PER_LAYER}, (_,hi)=>`${layerName}:${hi}`);
+          const count = keys.filter(key=>selected.has(key)).length;
+          button.classList.toggle("selected", count === keys.length);
+          button.classList.toggle("partiallySelected", count > 0 && count < keys.length);
+          button.setAttribute("aria-pressed", count === keys.length ? "true" : (count ? "mixed" : "false"));
+        });
+        rowSelectors.forEach((button, hi)=>{
+          const keys = state.layers.map(L=>`${L.name}:${hi}`);
+          const count = keys.filter(key=>selected.has(key)).length;
+          button.classList.toggle("selected", count === keys.length);
+          button.classList.toggle("partiallySelected", count > 0 && count < keys.length);
+          button.setAttribute("aria-pressed", count === keys.length ? "true" : (count ? "mixed" : "false"));
+        });
         applyButton.disabled = selected.size === 0;
         status.textContent = message || (
           selected.size === 0
@@ -941,7 +977,15 @@
       const copyRules = getLayerCopyRules(state.lineType);
       const selected = new Set();
       const cellRefs = new Map();
+      const columnSelectors = new Map();
+      const rowSelectors = new Map();
       let bulkMode = false;
+
+      function toggleSelection(keys){
+        const select = keys.some(key=>!selected.has(key));
+        keys.forEach(key=>select ? selected.add(key) : selected.delete(key));
+        updateSelectionUI();
+      }
 
       function copyLayer(fromName, toName){
         const from = state.layers.find(L=>L.name===fromName);
@@ -1035,13 +1079,12 @@
         title.className = "splitLayerTitle";
         title.textContent = `Layer ${L.name}`;
         title.title = `Select or clear all Layer ${L.name} hoppers`;
+        title.setAttribute("aria-pressed", "false");
         title.addEventListener("click",()=>{
           if (!bulkMode) return;
-          const keys = Array.from({length:HOPPERS_PER_LAYER}, (_,hi)=>`${L.name}:${hi}`);
-          const select = keys.some(key=>!selected.has(key));
-          keys.forEach(key=>select ? selected.add(key) : selected.delete(key));
-          updateSelectionUI();
+          toggleSelection(Array.from({length:HOPPERS_PER_LAYER}, (_,hi)=>`${L.name}:${hi}`));
         });
+        columnSelectors.set(L.name, title);
 
         const pctWrap = document.createElement("label");
         pctWrap.className = "splitLayerPct";
@@ -1131,13 +1174,12 @@
         rowSelect.className = "splitRowSelect mono";
         rowSelect.textContent = hopperPositionLabel(hi);
         rowSelect.title = `Select or clear hopper ${hopperPositionLabel(hi)} across all layers`;
+        rowSelect.setAttribute("aria-pressed", "false");
         rowSelect.addEventListener("click",()=>{
           if (!bulkMode) return;
-          const keys = state.layers.map(L=>`${L.name}:${hi}`);
-          const select = keys.some(key=>!selected.has(key));
-          keys.forEach(key=>select ? selected.add(key) : selected.delete(key));
-          updateSelectionUI();
+          toggleSelection(state.layers.map(L=>`${L.name}:${hi}`));
         });
+        rowSelectors.set(hi, rowSelect);
         rowHeader.appendChild(rowSelect);
         tr.appendChild(rowHeader);
 
@@ -1198,13 +1240,24 @@
 
           const trackControl = document.createElement("div");
           trackControl.className = "splitTrackControl";
-          const trackInput = document.createElement("input");
-          trackInput.id = `t_${L.name}_${hi}`;
-          trackInput.type = "checkbox";
-          trackInput.checked = !!hopper.track;
-          trackInput.setAttribute("aria-label", `Track ${hopperBadgeLabel(L.name, hi)}`);
-          trackInput.title = `Track ${hopperBadgeLabel(L.name, hi)}`;
-          trackControl.appendChild(trackInput);
+          const trackButton = document.createElement("button");
+          trackButton.id = `t_${L.name}_${hi}`;
+          trackButton.type = "button";
+          trackButton.className = "splitTrackButton";
+          trackButton.setAttribute("aria-label", `Track ${hopperBadgeLabel(L.name, hi)} in timeline`);
+
+          const clockIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+          clockIcon.setAttribute("viewBox", "0 0 24 24");
+          clockIcon.setAttribute("aria-hidden", "true");
+          const clockFace = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+          clockFace.setAttribute("cx", "12");
+          clockFace.setAttribute("cy", "12");
+          clockFace.setAttribute("r", "8.5");
+          const clockHands = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          clockHands.setAttribute("d", "M12 7.5v5l3.5 2");
+          clockIcon.append(clockFace, clockHands);
+          trackButton.appendChild(clockIcon);
+          trackControl.appendChild(trackButton);
 
           controls.append(pctWrap, trackControl);
           editor.append(cellTop, controls);
@@ -1214,7 +1267,11 @@
           function refreshCellState(){
             const inactive = !normName(hopper.resinName) && clampNum(hopper.pct) === 0 && !hopper.track;
             td.classList.toggle("inactive", inactive);
-            trackInput.checked = !!hopper.track;
+            trackButton.classList.toggle("active", !!hopper.track);
+            trackButton.setAttribute("aria-pressed", String(!!hopper.track));
+            trackButton.title = hopper.track
+              ? `Remove ${hopperBadgeLabel(L.name, hi)} from timeline`
+              : `Track ${hopperBadgeLabel(L.name, hi)} in timeline`;
             if (!inactive) td.classList.remove("editing");
           }
 
@@ -1278,12 +1335,13 @@
             saveSession();
           });
 
-          trackInput.addEventListener("change",()=>{
-            hopper.track = trackInput.checked;
+          trackButton.addEventListener("click",()=>{
+            hopper.track = !hopper.track;
             refreshCellState();
             validateAndCompute();
             saveSession();
           });
+          refreshCellState();
         });
         tbody.appendChild(tr);
       }
@@ -1323,6 +1381,20 @@
           const isSelected = selected.has(key);
           ref.selector.checked = isSelected;
           ref.td.classList.toggle("selected", isSelected);
+        });
+        columnSelectors.forEach((button, layerName)=>{
+          const keys = Array.from({length:HOPPERS_PER_LAYER}, (_,hi)=>`${layerName}:${hi}`);
+          const count = keys.filter(key=>selected.has(key)).length;
+          button.classList.toggle("selected", count === keys.length);
+          button.classList.toggle("partiallySelected", count > 0 && count < keys.length);
+          button.setAttribute("aria-pressed", count === keys.length ? "true" : (count ? "mixed" : "false"));
+        });
+        rowSelectors.forEach((button, hi)=>{
+          const keys = state.layers.map(L=>`${L.name}:${hi}`);
+          const count = keys.filter(key=>selected.has(key)).length;
+          button.classList.toggle("selected", count === keys.length);
+          button.classList.toggle("partiallySelected", count > 0 && count < keys.length);
+          button.setAttribute("aria-pressed", count === keys.length ? "true" : (count ? "mixed" : "false"));
         });
         applyButton.disabled = selected.size === 0 || !hasBulkValue();
         selectionStatus.className = `tiny splitsSelectionStatus${type ? ` ${type}` : ""}`;
@@ -1942,7 +2014,7 @@
       const target = document.getElementById(id);
       if (!target?.classList.contains("workspacePanel")) return;
       activeWorkspaceId = id;
-      document.querySelectorAll("main > .workspacePanel").forEach(panel=>{
+      document.querySelectorAll(".workspaceContent > .workspacePanel").forEach(panel=>{
         panel.classList.toggle("desktop-active", panel.id === id);
       });
       document.querySelectorAll(".workspaceNavButton").forEach(button=>{
@@ -2226,6 +2298,123 @@
     messageEl.textContent = densityMessage;
   }
 
+  let resinLookupMatches = [];
+  let resinLookupActiveIndex = -1;
+
+  function hideResinLookupSuggestions(){
+    const input = $("resinLookupInput");
+    const suggestions = $("resinLookupSuggestions");
+    if (suggestions) suggestions.hidden = true;
+    if (input){
+      input.setAttribute("aria-expanded", "false");
+      input.removeAttribute("aria-activedescendant");
+    }
+    resinLookupMatches = [];
+    resinLookupActiveIndex = -1;
+  }
+
+  function positionResinLookupSuggestions(){
+    const input = $("resinLookupInput");
+    const suggestions = $("resinLookupSuggestions");
+    if (!input || !suggestions || suggestions.hidden) return;
+
+    const rect = input.getBoundingClientRect();
+    const edgeGap = 8;
+    const popupGap = 4;
+    const width = Math.min(rect.width, window.innerWidth - edgeGap * 2);
+    const left = Math.max(edgeGap, Math.min(rect.left, window.innerWidth - width - edgeGap));
+    const spaceBelow = window.innerHeight - rect.bottom - popupGap - edgeGap;
+    const spaceAbove = rect.top - popupGap - edgeGap;
+    const openBelow = spaceBelow >= 160 || spaceBelow >= spaceAbove;
+    const availableHeight = Math.max(96, Math.min(240, openBelow ? spaceBelow : spaceAbove));
+
+    suggestions.style.left = `${left}px`;
+    suggestions.style.width = `${width}px`;
+    suggestions.style.maxHeight = `${availableHeight}px`;
+    if (openBelow){
+      suggestions.style.top = `${rect.bottom + popupGap}px`;
+      suggestions.style.bottom = "auto";
+    } else {
+      suggestions.style.top = "auto";
+      suggestions.style.bottom = `${window.innerHeight - rect.top + popupGap}px`;
+    }
+  }
+
+  function renderResinLookupResult(resin){
+    const descriptionEl = $("resinLookupDescription");
+    const densityEl = $("resinLookupDensity");
+    if (!descriptionEl || !densityEl || !resinLookup) return;
+    const result = resinLookup.formatResinResult(resin);
+    descriptionEl.value = result.description;
+    densityEl.value = result.density;
+  }
+
+  function selectResinLookupMatch(resin){
+    const input = $("resinLookupInput");
+    if (!input) return;
+    input.value = resin.code;
+    renderResinLookupResult(resin);
+    hideResinLookupSuggestions();
+    input.focus();
+  }
+
+  function setActiveResinLookupMatch(index){
+    const input = $("resinLookupInput");
+    const suggestions = $("resinLookupSuggestions");
+    if (!input || !suggestions || !resinLookupMatches.length) return;
+    resinLookupActiveIndex = (index + resinLookupMatches.length) % resinLookupMatches.length;
+    [...suggestions.children].forEach((option, optionIndex)=>{
+      const active = optionIndex === resinLookupActiveIndex;
+      option.classList.toggle("active", active);
+      option.setAttribute("aria-selected", String(active));
+    });
+    const activeOption = suggestions.children[resinLookupActiveIndex];
+    input.setAttribute("aria-activedescendant", activeOption.id);
+    activeOption.scrollIntoView({ block: "nearest" });
+  }
+
+  function updateResinLookup(){
+    const input = $("resinLookupInput");
+    const suggestions = $("resinLookupSuggestions");
+    if (!input || !suggestions || !resinLookup) return;
+
+    if (suggestions.parentElement !== document.body) document.body.appendChild(suggestions);
+    const exact = resinLookup.findExactResin(input.value);
+    renderResinLookupResult(exact);
+    resinLookupMatches = resinLookup.findResinSuggestions(input.value);
+    resinLookupActiveIndex = -1;
+    suggestions.replaceChildren();
+
+    if (!input.value.trim() || !resinLookupMatches.length){
+      hideResinLookupSuggestions();
+      return;
+    }
+
+    resinLookupMatches.forEach((resin, index)=>{
+      const option = document.createElement("button");
+      option.id = `resinLookupOption${index}`;
+      option.type = "button";
+      option.className = "resinLookupOption";
+      option.setAttribute("role", "option");
+      option.setAttribute("aria-selected", "false");
+
+      const code = document.createElement("span");
+      code.className = "resinLookupOptionCode";
+      code.textContent = resin.code;
+      const description = document.createElement("span");
+      description.className = "resinLookupOptionDescription";
+      description.textContent = resin.description || "Unknown description";
+      option.append(code, description);
+      option.addEventListener("pointerdown", event=>event.preventDefault());
+      option.addEventListener("click", ()=>selectResinLookupMatch(resin));
+      suggestions.appendChild(option);
+    });
+
+    suggestions.hidden = false;
+    input.setAttribute("aria-expanded", "true");
+    positionResinLookupSuggestions();
+  }
+
     // Wire inputs
     $("lineRate")?.addEventListener("input",(e)=>{
       if (!acceptNumericInput(e.target, { min: 0, label: "Line rate" }, value => { state.lineRate = value; })) return;
@@ -2276,6 +2465,31 @@
       "hopperPolymerDensity",
       "hopperPackingFactor"
     ].forEach(id=>$(id)?.addEventListener("input", updateHopperWeightCalculator));
+    $("resinLookupInput")?.addEventListener("input", updateResinLookup);
+    $("resinLookupInput")?.addEventListener("keydown", event=>{
+      if (event.key === "ArrowDown" && resinLookupMatches.length){
+        event.preventDefault();
+        setActiveResinLookupMatch(resinLookupActiveIndex + 1);
+      } else if (event.key === "ArrowUp" && resinLookupMatches.length){
+        event.preventDefault();
+        setActiveResinLookupMatch(resinLookupActiveIndex - 1);
+      } else if (event.key === "Enter" && resinLookupActiveIndex >= 0){
+        event.preventDefault();
+        selectResinLookupMatch(resinLookupMatches[resinLookupActiveIndex]);
+      } else if (event.key === "Escape"){
+        hideResinLookupSuggestions();
+      }
+    });
+    $("resinLookupInput")?.addEventListener("focus", updateResinLookup);
+    document.addEventListener("pointerdown", event=>{
+      if (!event.target.closest?.(".resinLookupSearch, .resinLookupSuggestions")) hideResinLookupSuggestions();
+    });
+    window.addEventListener("resize", hideResinLookupSuggestions);
+    window.addEventListener("scroll", event=>{
+      const suggestions = $("resinLookupSuggestions");
+      if (event.target instanceof Node && suggestions?.contains(event.target)) return;
+      hideResinLookupSuggestions();
+    }, true);
 
     $("everydayModeBtn")?.addEventListener("click", ()=>setUIMode("everyday"));
     $("advancedModeBtn")?.addEventListener("click", ()=>setUIMode("advanced"));
@@ -2283,7 +2497,7 @@
     document.querySelectorAll(".workspaceNavButton").forEach(button=>{
       button.addEventListener("click",()=>setWorkspacePanel(button.dataset.workspaceTarget));
     });
-    document.querySelectorAll("main > .workspacePanel > summary").forEach(summary=>{
+    document.querySelectorAll(".workspaceContent > .workspacePanel > summary").forEach(summary=>{
       summary.addEventListener("click",event=>{
         if (window.matchMedia("(min-width: 901px)").matches) event.preventDefault();
       });
