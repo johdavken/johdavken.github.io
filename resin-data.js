@@ -27,6 +27,8 @@
     { code: "A0425", description: "3% Flouropolymer", density: 0.930 },
     { code: "A0450", description: null, density: 0.935 },
     { code: "A0500", description: "80% Calcium Carbonat", density: 1.950 },
+    { code: "A0502", description: "Calcium Carbonate", density: null },
+    { code: "A0503", description: "Calcium Carbonate", density: null },
     { code: "A0600", description: "10% GMS Anti Stat", density: 0.923 },
     { code: "A0601", description: "Ethoxylated Amine", density: 0.978 },
     { code: "A0605", description: "Anti Stat", density: 0.953 },

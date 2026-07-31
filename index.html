@@ -16,6 +16,7 @@
 <script src="storage.js?v=0.16" defer></script>
 <script src="calculators.js?v=0.16" defer></script>
 <script src="resin-data.js?v=0.16.1" defer></script>
+<script src="resin-description-info.js?v=0.16.1" defer></script>
 <script src="resin-lookup.js?v=0.16.1" defer></script>
 <script src="app.js?v=0.16.1" defer></script>
 
@@ -708,8 +709,24 @@
           </div>
           <div>
             <label for="resinLookupDensity">Density</label>
-            <input id="resinLookupDensity" class="resinLookupValue mono" type="text" value="Unknown" readonly aria-live="polite" />
+            <div class="resinLookupDensityField">
+              <input
+                id="resinLookupDensity"
+                class="resinLookupValue resinLookupDensity mono"
+                type="text"
+                value="Unknown"
+                readonly
+                aria-live="polite"
+                aria-describedby="resinLookupCopyStatus"
+              />
+              <button id="copyResinDensity" class="resinLookupCopyButton secondary" type="button" disabled>Copy</button>
+            </div>
           </div>
+        </div>
+        <div id="resinLookupCopyStatus" class="tiny resinLookupCopyStatus" role="status" aria-live="polite"></div>
+        <div class="resinLookupInformation mt10">
+          <label for="resinLookupInformation">Material information</label>
+          <textarea id="resinLookupInformation" readonly>No additional material information is currently available.</textarea>
         </div>
       </section>
     </div>

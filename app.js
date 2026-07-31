@@ -2343,10 +2343,38 @@
   function renderResinLookupResult(resin){
     const descriptionEl = $("resinLookupDescription");
     const densityEl = $("resinLookupDensity");
-    if (!descriptionEl || !densityEl || !resinLookup) return;
+    const informationEl = $("resinLookupInformation");
+    if (!descriptionEl || !densityEl || !informationEl || !resinLookup) return;
     const result = resinLookup.formatResinResult(resin);
     descriptionEl.value = result.description;
     densityEl.value = result.density;
+    const details = resinLookup.getDescriptionDetails(resin?.description, resin?.code);
+    informationEl.value = details.typicalUses
+      ? `${details.information}\n\nTypical uses:\n${details.typicalUses}`
+      : details.information;
+    densityEl.classList.remove("copied");
+    const copyButton = $("copyResinDensity");
+    if (copyButton) copyButton.disabled = result.density === "Unknown";
+    const copyStatus = $("resinLookupCopyStatus");
+    if (copyStatus) copyStatus.textContent = "";
+  }
+
+  async function copyResinLookupDensity(){
+    const densityEl = $("resinLookupDensity");
+    const copyStatus = $("resinLookupCopyStatus");
+    if (!densityEl || !copyStatus) return;
+    if (densityEl.value === "Unknown"){
+      copyStatus.textContent = "No density is available to copy.";
+      return;
+    }
+
+    const numericDensity = densityEl.value.replace(/\s*g\/cm³$/, "");
+    const copied = await copyTextToClipboard(numericDensity);
+    copyStatus.textContent = copied
+      ? `Copied ${numericDensity} to the clipboard.`
+      : "Could not copy the density to the clipboard.";
+    densityEl.classList.toggle("copied", copied);
+    if (copied) setTimeout(()=>densityEl.classList.remove("copied"), 1200);
   }
 
   function selectResinLookupMatch(resin){
@@ -2481,6 +2509,7 @@
       }
     });
     $("resinLookupInput")?.addEventListener("focus", updateResinLookup);
+    $("copyResinDensity")?.addEventListener("click", copyResinLookupDensity);
     document.addEventListener("pointerdown", event=>{
       if (!event.target.closest?.(".resinLookupSearch, .resinLookupSuggestions")) hideResinLookupSuggestions();
     });

@@ -1546,6 +1546,41 @@ input.resinLookupValue[readonly]{
   opacity: 1;
   cursor: default;
 }
+.resinLookupDensityField{
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.resinLookupDensityField input{
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.resinLookupCopyButton{
+  min-width: 58px;
+  margin-left: -1px;
+  padding: 7px 10px;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  box-shadow: none;
+}
+input.resinLookupDensity.copied[readonly]{
+  border-color: var(--ok);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 18%, transparent);
+}
+.resinLookupCopyStatus:not(:empty){ min-height: 1.35em; }
+.resinLookupInformation textarea{
+  min-height: 148px;
+  border-color: var(--readonly-border);
+  background: var(--readonly-bg);
+  line-height: 1.5;
+  resize: none;
+  opacity: 1;
+  cursor: default;
+  box-shadow: none;
+}
+.resinLookupInformation textarea:focus{
+  border-color: var(--readonly-border);
+  box-shadow: none;
+}
 @media (max-width: 600px){
   .toolResult{ grid-template-columns: 1fr auto; }
   .toolResult .muted{
