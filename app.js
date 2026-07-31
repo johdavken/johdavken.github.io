@@ -12,7 +12,7 @@
   /* ============================
    * Versioning + storage keys
    * ============================ */
-  const APP_VERSION = "0.16";
+  const APP_VERSION = "0.17";
 
     const LS_SESSION_KEY = "resinTimer.session.v0.09";
     const LS_CONFIGS_KEY  = "resinTimer.configs.v0.09";
@@ -20,6 +20,7 @@
 
     const DETAILS_IDS = [
       "lineSetupBlock",
+      "lineSyncBlock",
       "weightsBlock",
       "offsetsBlock",
       "splitsBlock",
@@ -60,8 +61,18 @@
   const validation = window.ResinIQValidation;
   const calculators = window.ResinIQCalculators;
   const resinLookup = window.ResinIQLookup;
+  const activeJob = window.ResinIQActiveJob;
   const { parseChangeoverDate, formatTime: fmtTime } = window.ResinIQScheduling;
   const { writeJson } = window.ResinIQStorage;
+  let lineSync = null;
+
+  function snapshotSharedActiveJob(){
+    return activeJob.snapshotActiveJob(state, APP_VERSION);
+  }
+
+  function notifyActiveJobMutation(options){
+    lineSync?.notifyActiveJobMutation(options);
+  }
   const COMMON_RESIN_NAMES = Object.freeze([
     "MS0100", "MS0101", "MS0120", "MS0200", "MS0400", "MS0440", "MS0700", "MS0700B",
     "MS1100", "MS1200", "MS1201", "MS1202", "MS1230", "MS1255", "MS3003", "MS5000", "MS5004", "MS5006",
@@ -257,8 +268,10 @@
       // Rebuild only when labels change; validate for filtering changes
       if (id === "hopperNamingToggle"){
         rebuildUIFromState();
+        notifyActiveJobMutation({ immediate: true, kind: "hopper-naming" });
+      }else{
+        validateAndCompute({ sync: false });
       }
-      validateAndCompute();
     };
 
     el.addEventListener("click",(e)=>{ e.preventDefault(); flip(); });
@@ -426,6 +439,18 @@
         uiMode: state.uiMode,
         blocksOpen
       };
+    }
+
+    function applySharedActiveJob(payload){
+      const localPreferences = {
+        density: state.density,
+        theme: state.theme,
+        showPumpOffTracked: state.showPumpOffTracked,
+        uiMode: state.uiMode,
+        blocksOpen: snapshotPayload().blocksOpen
+      };
+      applyPayload({ ...payload, ...localPreferences }, { rebuildUI: true });
+      saveSession();
     }
 
   
@@ -613,6 +638,7 @@
       }
       refreshConfigDropdown(name);
       recipeStatus(`Saved config: "${name}"`, "ok");
+      lineSync?.notifySavedSetupUpsert(name, configs[name]);
     }
     function loadSelectedConfig(){
       const sel = $("savedConfigs")?.value;
@@ -624,6 +650,7 @@
       const cn = $("configName"); if (cn) cn.value = sel;
       recipeStatus(`Loaded config: "${sel}"`, "ok");
       saveSession();
+      notifyActiveJobMutation({ immediate: true, kind: "load-saved-setup" });
     }
     function renameSelectedConfig(){
       const oldName = $("savedConfigs")?.value;
@@ -644,6 +671,7 @@
       }
       refreshConfigDropdown(newName);
       recipeStatus(`Renamed "${oldName}" → "${newName}"`, "ok");
+      lineSync?.notifySavedSetupRename(oldName, newName);
     }
     function deleteSelectedConfig(){
       const name = $("savedConfigs")?.value;
@@ -657,6 +685,7 @@
       }
       refreshConfigDropdown();
       recipeStatus(`Deleted "${name}"`, "ok");
+      lineSync?.notifySavedSetupDelete(name);
     }
 
     async function copyTextToClipboard(text){
@@ -726,11 +755,13 @@
       if (loadNow){
         applyPayload(payload, {rebuildUI:true});
         saveSession();
+        notifyActiveJobMutation({ immediate: true, kind: "load-imported-setup" });
       }
 
       showImportUI(false);
       const ij = $("importJson"); if (ij) ij.value = "";
       recipeStatus(`Imported config: "${name}"`, "ok");
+      lineSync?.notifySavedSetupUpsert(name, payload);
     }
 
     function renderOffsetInputs(){
@@ -752,7 +783,7 @@
             value => { state.offsets[L.name] = value; }
           );
           if (!accepted) return;
-          validateAndCompute();
+          validateAndCompute({ sync: true });
           saveSession();
           updateLayerMetaDisplays();
         });
@@ -891,7 +922,7 @@
               value => { L.hoppers[hi].weight = value; }
             );
             if (!accepted) return;
-            validateAndCompute();
+            validateAndCompute({ sync: true });
             saveSession();
           });
         });
@@ -962,7 +993,7 @@
           ref.layer.hoppers[ref.hi].weight = result.value;
           ref.input.value = String(result.value);
         });
-        validateAndCompute();
+        validateAndCompute({ sync: true });
         saveSession();
         updateSelectionUI(`Applied ${result.value} lb to ${selected.size} hopper${selected.size === 1 ? "" : "s"}`);
       });
@@ -1139,7 +1170,7 @@
           copyButton.addEventListener("click",()=>{
             copyLayer(copyFrom, L.name);
             renderSplitsArea();
-            validateAndCompute();
+            validateAndCompute({ sync: true });
             saveSession();
           });
           th.appendChild(copyButton);
@@ -1154,7 +1185,7 @@
           if (!accepted) return;
           updateSplitTotals();
           updateLayerMetaDisplays();
-          validateAndCompute();
+          validateAndCompute({ sync: true });
           saveSession();
         });
 
@@ -1299,7 +1330,7 @@
           resinInput.addEventListener("input",(e)=>{
             hopper.resinName = normName(e.target.value);
             refreshCellState();
-            validateAndCompute();
+            validateAndCompute({ sync: true });
             saveSession();
           });
 
@@ -1331,14 +1362,14 @@
             const h1Input = table.querySelector(`#p_${L.name}_0`);
             if (h1Input) h1Input.value = String(clampNum(L.hoppers[0].pct));
             updateSplitTotals();
-            validateAndCompute();
+            validateAndCompute({ sync: true });
             saveSession();
           });
 
           trackButton.addEventListener("click",()=>{
             hopper.track = !hopper.track;
             refreshCellState();
-            validateAndCompute();
+            validateAndCompute({ sync: true, immediate: true, kind: "tracking" });
             saveSession();
           });
           refreshCellState();
@@ -1454,7 +1485,7 @@
         bulkNameInput.value = "";
         bulkPctInput.value = "";
         renderSplitsArea();
-        validateAndCompute();
+        validateAndCompute({ sync: true });
         saveSession();
       });
 
@@ -1512,7 +1543,7 @@
         }
 
         updateSplitTotals();
-        validateAndCompute();
+        validateAndCompute({ sync: true });
         saveSession();
 
         const changes = [];
@@ -1716,7 +1747,7 @@
     }
   }
 
-  function validateAndCompute(){
+  function validateAndCompute({ sync = false, immediate = false, kind = "edit" } = {}){
       const msgs = [];
       const div = 100;
 
@@ -1812,6 +1843,7 @@
       renderResinCalculator();
       updateCollapsedSummaries();
       saveSession();
+      if (sync) notifyActiveJobMutation({ immediate, kind });
     }
 
     function renderResultsFlat(flat, changeoverDate){
@@ -1880,7 +1912,7 @@
         row.querySelector('input[type="checkbox"]').addEventListener("change",(e)=>{
           h._ref.h.pumpOff = !!e.target.checked;
           saveSession();
-          validateAndCompute();
+          validateAndCompute({ sync: true, immediate: true, kind: "pump-off" });
         });
 
         area.appendChild(row);
@@ -1905,6 +1937,7 @@
 
       rebuildUIFromState();
       saveSession();
+      notifyActiveJobMutation({ immediate: true, kind: "reset-tracking" });
     }
     function resetAll(){
       const ok = confirm("Reset all fields?\\n\\nPress OK to reset.\\nPress Cancel to keep current values.");
@@ -1944,6 +1977,7 @@
 
       rebuildUIFromState();
       saveSession();
+      notifyActiveJobMutation({ immediate: true, kind: "reset-all" });
     }
 
 
@@ -2443,16 +2477,208 @@
     positionResinLookupSuggestions();
   }
 
+  function lineSyncErrorMessage(error){
+    const raw = String(error?.message || error || "Line Sync request failed.");
+    const known = {
+      transfer_ownership_before_leaving: "Transfer ownership to another linked device before leaving Line Sync.",
+      revision_conflict: "The shared line changed on another device. Retry to load the current version.",
+      owner_access_required: "Only the line owner can do that.",
+      workspace_access_denied: "This device no longer has access to that line.",
+      invalid_saved_setup_input: "That saved setting could not be synchronized.",
+      active_job_must_be_an_object: "The current job is not valid for synchronization."
+    };
+    const key = Object.keys(known).find(item=>raw.includes(item));
+    return key ? known[key] : raw;
+  }
+
+  async function runLineSyncAction(action){
+    try{ await action(); }
+    catch(error){
+      const message = lineSyncErrorMessage(error);
+      const target = $("lineSyncMessage");
+      if (target) target.textContent = message;
+      showStorageWarning(`Line Sync: ${message}`);
+    }
+  }
+
+  function renderLineSync(syncState){
+    const top = $("lineSyncTopStatus");
+    const summary = $("lineSyncSummaryStatus");
+    const status = syncState.status || "Local only";
+    const stateName = status.toLowerCase().replace(/\s+/g, "-");
+    if (top){ top.textContent = syncState.pendingCount ? `${status} (${syncState.pendingCount})` : status; top.dataset.state = stateName; }
+    if (summary){ summary.textContent = status; summary.className = `pill ${status === "Synced" ? "badge-ok" : status === "Error" ? "badge-bad" : ""}`; }
+    if ($("lineSyncMessage")) $("lineSyncMessage").textContent = syncState.message || "Local data remains available.";
+    if ($("lineSyncLastSync")) $("lineSyncLastSync").textContent = syncState.lastSyncAt ? new Date(syncState.lastSyncAt).toLocaleString() : "Never";
+    if ($("lineSyncPendingCount")) $("lineSyncPendingCount").textContent = String(syncState.pendingCount || 0);
+
+    const selector = $("lineSyncWorkspaceSelect");
+    if (selector){
+      const previous = selector.value;
+      selector.replaceChildren();
+      if (!syncState.workspaces.length){
+        const option = new Option("No linked lines", "");
+        selector.add(option);
+      }else{
+        syncState.workspaces.forEach(workspace=>selector.add(new Option(workspace.name, workspace.id)));
+      }
+      selector.value = syncState.selectedWorkspaceId || (syncState.workspaces.some(item=>item.id === previous) ? previous : "");
+    }
+    const nameInput = $("lineSyncWorkspaceName");
+    if (nameInput && document.activeElement !== nameInput) nameInput.value = syncState.selectedWorkspace?.name || "";
+    const labelInput = $("lineSyncDeviceLabel");
+    if (labelInput && document.activeElement !== labelInput) labelInput.value = syncState.deviceLabel || "";
+    const code = $("lineSyncGeneratedCode");
+    if (code){
+      code.textContent = syncState.generatedCode || "";
+      code.title = syncState.generatedCodeExpiresAt ? `Expires ${new Date(syncState.generatedCodeExpiresAt).toLocaleTimeString()}` : "";
+    }
+
+    const selected = syncState.selectedWorkspace;
+    const role = selected?.membership?.role || "";
+    const owner = role === "owner";
+    const connected = !!syncState.connected;
+    ["lineSyncRenameBtn", "lineSyncGenerateCodeBtn", "lineSyncNewJobBtn", "lineSyncDisconnectBtn"].forEach(id=>{
+      if ($(id)) $(id).disabled = !selected || !connected;
+    });
+    if ($("lineSyncLeaveBtn")) $("lineSyncLeaveBtn").disabled = !selected || !connected || owner;
+    if ($("lineSyncDeleteBtn")) $("lineSyncDeleteBtn").hidden = !owner;
+    if ($("lineSyncRetryBtn")) $("lineSyncRetryBtn").textContent = selected && !connected ? "Reconnect" : "Connect / retry";
+
+    const memberSection = $("lineSyncMembersSection");
+    const memberHost = $("lineSyncMembers");
+    if (memberSection) memberSection.hidden = !owner || !syncState.members.length;
+    if (memberHost){
+      memberHost.replaceChildren();
+      syncState.members.forEach(member=>{
+        const row = document.createElement("div");
+        row.className = "lineSyncMember";
+        const details = document.createElement("div");
+        const label = document.createElement("strong");
+        label.textContent = member.device_label || "Linked device";
+        const meta = document.createElement("div");
+        meta.className = "tiny";
+        meta.textContent = member.user_id === syncState.userId ? `${member.role} · this browser identity` : member.role;
+        details.append(label, meta);
+        const seen = document.createElement("span");
+        seen.className = "tiny";
+        seen.textContent = member.last_seen_at ? `Seen ${new Date(member.last_seen_at).toLocaleString()}` : "";
+        const actions = document.createElement("div");
+        actions.className = "lineSyncMemberActions";
+        if (owner && member.user_id !== syncState.userId){
+          const transfer = document.createElement("button");
+          transfer.type = "button"; transfer.className = "secondary"; transfer.textContent = "Make owner";
+          transfer.addEventListener("click",()=>{
+            if (confirm(`Transfer line ownership to ${member.device_label}?`)) runLineSyncAction(()=>lineSync.transferOwnership(member.user_id));
+          });
+          const remove = document.createElement("button");
+          remove.type = "button"; remove.className = "danger"; remove.textContent = "Remove device";
+          remove.addEventListener("click",()=>{
+            if (confirm(`Remove ${member.device_label} from this line?`)) runLineSyncAction(()=>lineSync.removeMember(member.user_id));
+          });
+          actions.append(transfer, remove);
+        }
+        row.append(details, seen, actions);
+        memberHost.appendChild(row);
+      });
+    }
+  }
+
+  function resolveLineSyncConflict(conflict){
+    const dialog = $("lineSyncConflictDialog");
+    if (!dialog?.showModal) return Promise.resolve("remote");
+    const detail = $("lineSyncConflictDetails");
+    if (detail) detail.textContent = `This device started from revision ${conflict.localRevision}; the shared line is now revision ${conflict.remoteRevision}.`;
+    return new Promise(resolve=>{
+      const finish = ()=>resolve(dialog.returnValue === "local" || dialog.returnValue === "remote" ? dialog.returnValue : "cancel");
+      dialog.addEventListener("close", finish, { once: true });
+      dialog.showModal();
+    });
+  }
+
+  function replaceSavedConfigsFromSync(configs){
+    if (!writeConfigs(configs)) showStorageWarning("Synced Line Settings could not be saved locally.");
+    refreshConfigDropdown();
+  }
+
+  function newJobPayload(){
+    const payload = snapshotSharedActiveJob();
+    payload.lineRate = 0;
+    payload.gauge = 0;
+    payload.changeoverTime = "";
+    payload.prodResinLb = 0;
+    payload.scrapResinLb = 0;
+    payload.layers.forEach(layer=>{
+      layer.layerPct = 0;
+      layer.hoppers.forEach((hopper,index)=>{
+        hopper.pct = index === 0 ? 100 : 0;
+        hopper.resinName = "";
+        hopper.track = false;
+        hopper.pumpOff = false;
+      });
+    });
+    return payload;
+  }
+
+  function setupLineSync(){
+    if (!window.ResinIQCloudSync || !window.ResinIQSyncStorage) return;
+    lineSync = window.ResinIQCloudSync.create({
+      config: window.RESINIQ_SUPABASE_CONFIG || {},
+      syncStorage: window.ResinIQSyncStorage,
+      storage: localStorage,
+      supabaseLibrary: window.supabase,
+      adapter: {
+        getActiveJob: snapshotSharedActiveJob,
+        validateActiveJob: validation.validateActiveJobPayload,
+        applyRemoteActiveJob: applySharedActiveJob,
+        applyLocalReplacement: applySharedActiveJob,
+        getSavedConfigs: readConfigs,
+        replaceSavedConfigs: replaceSavedConfigsFromSync,
+        resolveActiveConflict: resolveLineSyncConflict,
+        onStateChange: renderLineSync,
+        onStorageError: showStorageWarning
+      }
+    });
+
+    $("lineSyncWorkspaceSelect")?.addEventListener("change",event=>{
+      if (event.target.value) runLineSyncAction(()=>lineSync.selectWorkspace(event.target.value));
+    });
+    $("lineSyncDeviceLabel")?.addEventListener("change",event=>runLineSyncAction(()=>lineSync.updateDeviceLabel(event.target.value)));
+    $("lineSyncCreateBtn")?.addEventListener("click",()=>runLineSyncAction(()=>lineSync.createWorkspace(
+      $("lineSyncWorkspaceName")?.value, $("lineSyncDeviceLabel")?.value
+    )));
+    $("lineSyncJoinBtn")?.addEventListener("click",()=>runLineSyncAction(()=>lineSync.joinWorkspace(
+      $("lineSyncJoinCode")?.value, $("lineSyncDeviceLabel")?.value
+    )));
+    $("lineSyncGenerateCodeBtn")?.addEventListener("click",()=>runLineSyncAction(()=>lineSync.generateLinkCode()));
+    $("lineSyncRenameBtn")?.addEventListener("click",()=>runLineSyncAction(()=>lineSync.renameWorkspace($("lineSyncWorkspaceName")?.value)));
+    $("lineSyncRetryBtn")?.addEventListener("click",()=>runLineSyncAction(()=>lineSync.retry()));
+    $("lineSyncDisconnectBtn")?.addEventListener("click",()=>runLineSyncAction(()=>lineSync.disconnectLocal()));
+    $("lineSyncLeaveBtn")?.addEventListener("click",()=>{
+      if (confirm("Leave Line Sync on this browser identity? Local ResinIQ data will remain.")) runLineSyncAction(()=>lineSync.leaveWorkspace());
+    });
+    $("lineSyncDeleteBtn")?.addEventListener("click",()=>{
+      const name = lineSync.getState().selectedWorkspace?.name || "this line";
+      if (confirm(`Permanently delete the shared workspace “${name}” for every linked device?`)) runLineSyncAction(()=>lineSync.deleteWorkspace());
+    });
+    $("lineSyncNewJobBtn")?.addEventListener("click",()=>{
+      if (confirm("Start a new shared job? Hopper weights and offsets will be kept; production inputs and tracking will be cleared.")) {
+        runLineSyncAction(()=>lineSync.replaceActiveJob(newJobPayload(), "new-job"));
+      }
+    });
+    lineSync.initialize();
+  }
+
     // Wire inputs
     $("lineRate")?.addEventListener("input",(e)=>{
       if (!acceptNumericInput(e.target, { min: 0, label: "Line rate" }, value => { state.lineRate = value; })) return;
-      validateAndCompute();
+      validateAndCompute({ sync: true });
       saveSession();
     });
     $("gauge").addEventListener("input",(e)=>{
       if (!acceptNumericInput(e.target, { min: 0, label: "Gauge" }, value => { state.gauge = value; })) return;
       updateLayerMetaDisplays();
-      validateAndCompute();
+      validateAndCompute({ sync: true });
       saveSession();
     });
     $("lineType")?.addEventListener("change",(e)=>{
@@ -2460,8 +2686,9 @@
       ensureLayers();
       rebuildUIFromState();
       saveSession();
+      notifyActiveJobMutation({ immediate: true, kind: "line-type" });
     });
-    $("changeoverTime")?.addEventListener("input",(e)=>{ state.changeoverTime = e.target.value || ""; validateAndCompute(); saveSession(); });
+    $("changeoverTime")?.addEventListener("input",(e)=>{ state.changeoverTime = e.target.value || ""; validateAndCompute({ sync: true }); saveSession(); });
 
     $("densitySel")?.addEventListener("change",(e)=>{
       applyDensity(e.target.value);
@@ -2477,11 +2704,13 @@
       if (!acceptNumericInput(e.target, { min: 0, label: "Production resin" }, value => { state.prodResinLb = value; })) return;
       renderResinCalculator();
       saveSession();
+      notifyActiveJobMutation();
     });
     $("scrapResinLb")?.addEventListener("input",(e)=>{
       if (!acceptNumericInput(e.target, { min: 0, label: "Scrap resin" }, value => { state.scrapResinLb = value; })) return;
       renderResinCalculator();
       saveSession();
+      notifyActiveJobMutation();
     });
     ["shortActualWeight", "shortTargetFootage", "shortLastGoodWeight"].forEach(id=>{
       $(id)?.addEventListener("input", updateShortFootageCalculator);
@@ -2575,6 +2804,7 @@
       // Ensure theme/logo applied even after restore
       applyTheme(state.theme || "light");
       saveSession();
+      setupLineSync();
     })();
 
 })();

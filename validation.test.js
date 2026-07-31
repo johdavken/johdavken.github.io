@@ -6,7 +6,8 @@ const {
   validateNumber,
   validatePercentage,
   validateHopperPercentages,
-  validateConfigPayload
+  validateConfigPayload,
+  validateActiveJobPayload
 } = require("./validation.js");
 
 test("rejects negative numeric values", () => {
@@ -91,4 +92,14 @@ test("reports imported layer and hopper totals that do not equal 100", () => {
   assert.equal(result.valid, false);
   assert.match(result.errors.join(" "), /Layer percentages must total 100/);
   assert.match(result.errors.join(" "), /hopper percentages must total 100/);
+});
+
+test("active-job validation allows incomplete totals but rejects totals over 100", () => {
+  const partial = validPayload();
+  partial.layers[0].layerPct = 0;
+  partial.layers[0].hoppers[0].pct = 0;
+  assert.equal(validateActiveJobPayload(partial).valid, true);
+
+  partial.layers[0].layerPct = 101;
+  assert.equal(validateActiveJobPayload(partial).valid, false);
 });
