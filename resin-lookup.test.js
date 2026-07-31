@@ -3,7 +3,9 @@ const assert = require("node:assert/strict");
 const {
   findExactResin,
   findResinSuggestions,
-  formatResinResult
+  formatResinResult,
+  getDescriptionInformation,
+  noDescriptionInformation
 } = require("./resin-lookup.js");
 
 test("finds MS0440 by exact code", () => {
@@ -43,4 +45,25 @@ test("suggests partial codes and descriptions with exact matches first", () => {
   const similar = findResinSuggestions("MS0700");
   assert.deepEqual(similar.slice(0, 2).map(resin => resin.code), ["MS0700", "MS0700B"]);
   assert.ok(findResinSuggestions("density hexene").some(resin => resin.code === "MS0440"));
+});
+
+test("finds material information by exact description without regard to case", () => {
+  assert.match(getDescriptionInformation("anti block"), /prevent film layers from sticking/i);
+  assert.match(getDescriptionInformation("SLIP"), /surface friction/i);
+});
+
+test("finds material information using recognizable description keywords", () => {
+  assert.match(getDescriptionInformation("5% Oleamide Slip"), /surface friction/i);
+  assert.match(getDescriptionInformation("Clarity LDPE"), /flexible/i);
+  assert.match(getDescriptionInformation("MI\/MN HDPE"), /stiffer/i);
+  assert.match(getDescriptionInformation("6% EVA"), /sealing performance/i);
+});
+
+test("does not confuse LLDPE information with LDPE information", () => {
+  assert.match(getDescriptionInformation("Clear LLDPE"), /puncture resistance/i);
+});
+
+test("uses the fallback when no material information matches", () => {
+  assert.equal(getDescriptionInformation("Med. Density Hexene"), noDescriptionInformation);
+  assert.equal(getDescriptionInformation(null), noDescriptionInformation);
 });
