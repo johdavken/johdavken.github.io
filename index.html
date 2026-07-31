@@ -15,7 +15,9 @@
 <script src="scheduling.js?v=0.16" defer></script>
 <script src="storage.js?v=0.16" defer></script>
 <script src="calculators.js?v=0.16" defer></script>
-<script src="app.js?v=0.16" defer></script>
+<script src="resin-data.js?v=0.16.1" defer></script>
+<script src="resin-lookup.js?v=0.16.1" defer></script>
+<script src="app.js?v=0.16.1" defer></script>
 
 
 </head>
@@ -289,6 +291,7 @@
     </button>
   </nav>
 
+  <div class="workspaceContent">
   <div class="workspaceStatusBar" aria-label="Current production status">
     <div class="workspaceStatusItem">
       <span>Output</span>
@@ -673,8 +676,45 @@
           <span id="hopperWeightMessage" class="muted">Enter hopper dimensions and either density value.</span>
         </div>
       </section>
+
+      <section class="toolPanel" aria-labelledby="resinLookupTitle">
+        <div id="resinLookupTitle" class="layerTitle">Resin Lookup</div>
+        <div class="muted">Find a resin by code or description.</div>
+
+        <div class="grid3 mt10 resinLookupGrid">
+          <div class="resinLookupSearch">
+            <label for="resinLookupInput">Resin</label>
+            <input
+              id="resinLookupInput"
+              type="search"
+              placeholder="Code or description"
+              autocomplete="off"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-controls="resinLookupSuggestions"
+              aria-expanded="false"
+            />
+            <div
+              id="resinLookupSuggestions"
+              class="resinLookupSuggestions"
+              role="listbox"
+              aria-label="Matching resins"
+              hidden
+            ></div>
+          </div>
+          <div>
+            <label for="resinLookupDescription">Description</label>
+            <input id="resinLookupDescription" class="resinLookupValue" type="text" value="Unknown" readonly aria-live="polite" />
+          </div>
+          <div>
+            <label for="resinLookupDensity">Density</label>
+            <input id="resinLookupDensity" class="resinLookupValue mono" type="text" value="Unknown" readonly aria-live="polite" />
+          </div>
+        </div>
+      </section>
     </div>
   </details>
+  </div>
 
 </main>
 
