@@ -13,7 +13,7 @@
     }),
     "Slip": Object.freeze({
       exact: Object.freeze(["Slip"]),
-      keywords: Object.freeze(["slip", "oleamide"]),
+      keywords: Object.freeze(["slip", "viten", "oleamide"]),
       information: "Slip additives lower surface friction and help film move across equipment or against other film surfaces. They can improve winding, converting, and package-opening performance."
     }),
     "Process Aid": Object.freeze({
