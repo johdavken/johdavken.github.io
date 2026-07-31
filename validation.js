@@ -5,6 +5,8 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 
+  const SUPPORTED_ACTIVE_JOB_VERSIONS = Object.freeze(["0.17"]);
+
   function parseNumber(value) {
     const text = String(value ?? "").trim();
     if (text === "") return { valid: true, value: 0 };
@@ -55,7 +57,7 @@
     return { valid: true, total, values };
   }
 
-  function validateConfigPayload(payload) {
+  function validateConfigPayload(payload, { requireTotals = true } = {}) {
     const errors = [];
     if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
       return { valid: false, errors: ["Configuration payload must be an object."] };
@@ -136,6 +138,14 @@
           if (!weightResult.valid) errors.push(weightResult.message);
           if (hopper.resinName != null && typeof hopper.resinName !== "string") {
             errors.push(`Hopper ${label} resin name must be text.`);
+          } else if (typeof hopper.resinName === "string" && hopper.resinName.length > 100) {
+            errors.push(`Hopper ${label} resin name is too long.`);
+          }
+          if (hopper.track != null && typeof hopper.track !== "boolean") {
+            errors.push(`Hopper ${label} tracking state must be true or false.`);
+          }
+          if (hopper.pumpOff != null && typeof hopper.pumpOff !== "boolean") {
+            errors.push(`Hopper ${label} pump-off state must be true or false.`);
           }
         });
 
@@ -145,8 +155,10 @@
         }
         if (allPercentages.length === 6) {
           const hopperTotal = allPercentages.reduce((sum, value) => sum + value, 0);
-          if (Math.abs(hopperTotal - 100) > 0.0001) {
-            errors.push(`Layer ${name} hopper percentages must total 100%.`);
+          if ((requireTotals && Math.abs(hopperTotal - 100) > 0.0001) || (!requireTotals && hopperTotal > 100.0001)) {
+            errors.push(requireTotals
+              ? `Layer ${name} hopper percentages must total 100%.`
+              : `Layer ${name} hopper percentages cannot exceed 100%.`);
           }
         }
 
@@ -160,12 +172,29 @@
       }
       if (layerPercentages.length === expectedNames.length) {
         const layerTotal = layerPercentages.reduce((sum, value) => sum + value, 0);
-        if (Math.abs(layerTotal - 100) > 0.0001) {
-          errors.push("Layer percentages must total 100%.");
+        if ((requireTotals && Math.abs(layerTotal - 100) > 0.0001) || (!requireTotals && layerTotal > 100.0001)) {
+          errors.push(requireTotals ? "Layer percentages must total 100%." : "Layer percentages cannot exceed 100%.");
         }
       }
     }
 
+    return { valid: errors.length === 0, errors };
+  }
+
+  function validateActiveJobPayload(payload) {
+    const result = validateConfigPayload(payload, { requireTotals: false });
+    const errors = [...result.errors];
+    if (payload && typeof payload === "object" && !Array.isArray(payload)) {
+      if (typeof payload.version !== "string" || !SUPPORTED_ACTIVE_JOB_VERSIONS.includes(payload.version)) {
+        errors.push(`Active-job version must be one of: ${SUPPORTED_ACTIVE_JOB_VERSIONS.join(", ")}.`);
+      }
+      if (payload.hopperNamingLine9 != null && !["standard", "main"].includes(payload.hopperNamingLine9)) {
+        errors.push("Hopper naming mode must be standard or main.");
+      }
+      if (JSON.stringify(payload).length > 131072) {
+        errors.push("Active job is too large to synchronize.");
+      }
+    }
     return { valid: errors.length === 0, errors };
   }
 
@@ -174,6 +203,8 @@
     validateNumber,
     validatePercentage,
     validateHopperPercentages,
-    validateConfigPayload
+    validateConfigPayload,
+    validateActiveJobPayload,
+    SUPPORTED_ACTIVE_JOB_VERSIONS
   };
 });

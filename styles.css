@@ -402,6 +402,78 @@ main{
   .footerBar{ display: none; }
 }
 
+.lineSyncStatusItem strong[data-state="synced"]{ color: var(--ok); }
+.lineSyncStatusItem strong[data-state="pending"],
+.lineSyncStatusItem strong[data-state="offline"],
+.lineSyncStatusItem strong[data-state="conflict"]{ color: var(--warn); }
+.lineSyncStatusItem strong[data-state="error"]{ color: var(--bad); }
+
+.lineSyncPanel{ overflow: visible; }
+.lineSyncMetrics{ display:flex; flex-wrap:wrap; gap:8px; }
+.lineSyncMetrics span{
+  padding:5px 9px;
+  border:1px solid var(--row-border);
+  border-radius:999px;
+  background:var(--row-bg);
+  color:var(--muted);
+  font-size:var(--font-small);
+}
+.lineSyncMetrics strong{ color:var(--text); }
+.lineSyncJoin{
+  display:grid;
+  grid-template-columns:minmax(150px, 1fr) auto auto minmax(110px, auto);
+  gap:10px;
+  align-items:end;
+}
+.lineSyncCode{
+  min-height:40px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:0 14px;
+  border:1px dashed var(--border);
+  border-radius:var(--radius-input);
+  font-size:1.25rem;
+  font-weight:900;
+  letter-spacing:.14em;
+  color:var(--focus-border);
+}
+.lineSyncMembers{
+  padding:12px;
+  border:1px solid var(--border);
+  border-radius:var(--radius-row);
+  background:var(--panel2);
+}
+.lineSyncMember{
+  display:grid;
+  grid-template-columns:minmax(120px,1fr) auto auto;
+  gap:8px;
+  align-items:center;
+  padding:8px 0;
+  border-bottom:1px solid var(--border);
+}
+.lineSyncMember:last-child{ border-bottom:0; }
+.lineSyncMemberActions{ display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+.lineSyncConflictDialog{
+  max-width:560px;
+  color:var(--text);
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:var(--radius-row);
+  box-shadow:var(--shadow2);
+}
+.lineSyncConflictDialog::backdrop{ background:rgba(0,0,0,.48); }
+
+@media (max-width: 720px){
+  .lineSyncJoin{ grid-template-columns:1fr 1fr; }
+  .lineSyncJoin > div:first-child,
+  .lineSyncCode{ grid-column:1 / -1; }
+  .lineSyncMember{ grid-template-columns:1fr; }
+  .lineSyncMemberActions{ justify-content:flex-start; }
+  .lineSyncPrimaryActions button,
+  .lineSyncDangerActions button{ flex:1 1 160px; }
+}
+
 /* Small utility classes */
 .mt10{ margin-top: 10px; }
 .mt14{ margin-top: 14px; }

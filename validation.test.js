@@ -6,7 +6,8 @@ const {
   validateNumber,
   validatePercentage,
   validateHopperPercentages,
-  validateConfigPayload
+  validateConfigPayload,
+  validateActiveJobPayload
 } = require("./validation.js");
 
 test("rejects negative numeric values", () => {
@@ -48,6 +49,7 @@ function validPayload() {
     pumpOff: false
   }));
   return {
+    version: "0.17",
     lineType: 1,
     lineRate: 1000,
     gauge: 2,
@@ -91,4 +93,38 @@ test("reports imported layer and hopper totals that do not equal 100", () => {
   assert.equal(result.valid, false);
   assert.match(result.errors.join(" "), /Layer percentages must total 100/);
   assert.match(result.errors.join(" "), /hopper percentages must total 100/);
+});
+
+test("active-job validation allows incomplete totals but rejects totals over 100", () => {
+  const partial = validPayload();
+  partial.layers[0].layerPct = 0;
+  partial.layers[0].hoppers[0].pct = 0;
+  assert.equal(validateActiveJobPayload(partial).valid, true);
+
+  partial.layers[0].layerPct = 101;
+  assert.equal(validateActiveJobPayload(partial).valid, false);
+});
+
+test("active-job validation requires a supported string version", () => {
+  const missing = validPayload();
+  delete missing.version;
+  assert.equal(validateActiveJobPayload(missing).valid, false);
+
+  const numeric = validPayload();
+  numeric.version = 0.17;
+  assert.equal(validateActiveJobPayload(numeric).valid, false);
+
+  const unsupported = validPayload();
+  unsupported.version = "0.16";
+  assert.equal(validateActiveJobPayload(unsupported).valid, false);
+  assert.equal(validateActiveJobPayload(validPayload()).valid, true);
+});
+
+test("saved configuration validation remains compatible with legacy versions", () => {
+  for (const version of [undefined, "0.14", "0.15", "0.16"]){
+    const payload = validPayload();
+    if (version === undefined) delete payload.version;
+    else payload.version = version;
+    assert.equal(validateConfigPayload(payload).valid, true);
+  }
 });

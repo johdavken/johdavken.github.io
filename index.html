@@ -9,16 +9,21 @@
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=0.17">
   <link rel="stylesheet" href="theme.css?v=0.16.5">
-<script src="validation.js?v=0.16" defer></script>
+<script src="validation.js?v=0.17" defer></script>
 <script src="scheduling.js?v=0.16" defer></script>
 <script src="storage.js?v=0.16" defer></script>
 <script src="calculators.js?v=0.16" defer></script>
+<script src="active-job.js?v=0.17" defer></script>
+<script src="vendor/supabase.min.js?v=2.57.4" defer></script>
+<script src="supabase-config.js?v=0.17" defer></script>
+<script src="sync-storage.js?v=0.17" defer></script>
+<script src="cloud-sync.js?v=0.17" defer></script>
 <script src="resin-data.js?v=0.16.1" defer></script>
 <script src="resin-description-info.js?v=0.16.1" defer></script>
 <script src="resin-lookup.js?v=0.16.1" defer></script>
-<script src="app.js?v=0.16.1" defer></script>
+<script src="app.js?v=0.17" defer></script>
 
 
 </head>
@@ -306,6 +311,10 @@
       <span>Tracked</span>
       <strong id="workspaceTrackedStatus" class="mono">0</strong>
     </div>
+    <div class="workspaceStatusItem lineSyncStatusItem">
+      <span>Line Sync</span>
+      <strong id="lineSyncTopStatus">Local only</strong>
+    </div>
     <div class="workspaceStatusItem workspaceNextAction">
       <span>Next action</span>
       <strong id="workspaceNextStatus">No tracked hoppers</strong>
@@ -406,6 +415,72 @@
           </div>
         </div>
       </div>
+
+      <details class="block lineSyncBlock" id="lineSyncBlock">
+        <summary>
+          <div class="sumLeft">
+            <div class="chev"></div>
+            <div style="min-width:0">
+              <div class="layerTitle" style="font-size:13px">Line Sync</div>
+              <div class="layerMeta">Optional shared line data across devices</div>
+            </div>
+          </div>
+          <span id="lineSyncSummaryStatus" class="pill">Local only</span>
+        </summary>
+        <div class="blockBody lineSyncPanel">
+          <div id="lineSyncMessage" class="muted" role="status" aria-live="polite">
+            ResinIQ is fully usable locally. Connect only when this device should share a production line.
+          </div>
+          <div class="lineSyncMetrics mt10" aria-label="Line Sync details">
+            <span>Last sync <strong id="lineSyncLastSync">Never</strong></span>
+            <span>Unsynced changes <strong id="lineSyncPendingCount" class="mono">0</strong></span>
+          </div>
+
+          <div class="grid3 mt10">
+            <div>
+              <label for="lineSyncWorkspaceSelect">Selected line</label>
+              <select id="lineSyncWorkspaceSelect"><option value="">No linked lines</option></select>
+            </div>
+            <div>
+              <label for="lineSyncWorkspaceName">Line name</label>
+              <input id="lineSyncWorkspaceName" type="text" maxlength="80" placeholder="Example: Line 9" />
+            </div>
+            <div>
+              <label for="lineSyncDeviceLabel">This device</label>
+              <input id="lineSyncDeviceLabel" type="text" maxlength="80" placeholder="Example: Line 9 phone" />
+            </div>
+          </div>
+
+          <div class="buttonRow mt10 lineSyncPrimaryActions">
+            <button id="lineSyncCreateBtn" type="button">Create line</button>
+            <button id="lineSyncRenameBtn" class="secondary" type="button">Rename line</button>
+            <button id="lineSyncRetryBtn" class="secondary" type="button">Connect / retry</button>
+            <button id="lineSyncNewJobBtn" class="secondary" type="button">New job</button>
+          </div>
+
+          <div class="lineSyncJoin mt10">
+            <div>
+              <label for="lineSyncJoinCode">Link code</label>
+              <input id="lineSyncJoinCode" class="mono" type="text" maxlength="4" inputmode="text" autocomplete="one-time-code" placeholder="AB23" />
+            </div>
+            <button id="lineSyncJoinBtn" type="button">Join Line Sync</button>
+            <button id="lineSyncGenerateCodeBtn" class="secondary" type="button">Generate Link Code</button>
+            <output id="lineSyncGeneratedCode" class="lineSyncCode mono" aria-live="polite"></output>
+          </div>
+
+          <section id="lineSyncMembersSection" class="lineSyncMembers mt10" aria-labelledby="lineSyncMembersTitle" hidden>
+            <div id="lineSyncMembersTitle" class="layerTitle">Linked devices</div>
+            <div id="lineSyncMembers"></div>
+          </section>
+
+          <div class="buttonRow mt10 lineSyncDangerActions">
+            <button id="lineSyncDisconnectBtn" class="secondary" type="button">Disconnect on this device</button>
+            <button id="lineSyncLeaveBtn" class="secondary" type="button">Leave Line Sync</button>
+            <button id="lineSyncDeleteBtn" class="danger" type="button">Delete line workspace</button>
+          </div>
+          <div class="tiny mt10">Disconnect keeps server membership. Leave removes this device's membership. Only the owner can remove another device or delete the shared line.</div>
+        </div>
+      </details>
 
       <!-- Nested: weights -->
       <details class="block advancedOnly" id="weightsBlock">
@@ -734,6 +809,19 @@
   </div>
 
 </main>
+
+<dialog id="lineSyncConflictDialog" class="lineSyncConflictDialog" aria-labelledby="lineSyncConflictTitle">
+  <form method="dialog">
+    <div id="lineSyncConflictTitle" class="layerTitle">Line Sync conflict</div>
+    <p>The active job changed here and on another device. Both versions were backed up locally.</p>
+    <div id="lineSyncConflictDetails" class="muted"></div>
+    <div class="buttonRow mt10">
+      <button value="remote" type="submit">Use shared version</button>
+      <button value="local" class="secondary" type="submit">Keep this device's version</button>
+      <button value="cancel" class="secondary" type="submit">Decide later</button>
+    </div>
+  </form>
+</dialog>
 
 <footer class="footerBar">
   <div id="footerMsg" class="footerMsg">—</div>
