@@ -2348,7 +2348,10 @@
     const result = resinLookup.formatResinResult(resin);
     descriptionEl.value = result.description;
     densityEl.value = result.density;
-    informationEl.value = resinLookup.getDescriptionInformation(resin?.description);
+    const details = resinLookup.getDescriptionDetails(resin?.description, resin?.code);
+    informationEl.value = details.typicalUses
+      ? `${details.information}\n\nTypical uses:\n${details.typicalUses}`
+      : details.information;
     densityEl.classList.remove("copied");
     const copyButton = $("copyResinDensity");
     if (copyButton) copyButton.disabled = result.density === "Unknown";

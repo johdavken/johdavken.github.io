@@ -1568,7 +1568,7 @@ input.resinLookupDensity.copied[readonly]{
 }
 .resinLookupCopyStatus:not(:empty){ min-height: 1.35em; }
 .resinLookupInformation textarea{
-  min-height: 92px;
+  min-height: 148px;
   border-color: var(--readonly-border);
   background: var(--readonly-bg);
   line-height: 1.5;

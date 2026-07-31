@@ -50,20 +50,36 @@
 
   const noDescriptionInformation = "No additional material information is currently available.";
 
-  function getDescriptionInformation(description) {
+  function findDescriptionInformationEntry(description, code = "") {
     const normalizedDescription = normalizeSearch(description);
-    if (!normalizedDescription) return noDescriptionInformation;
+    const normalizedCode = normalizeSearch(code);
+    if (!normalizedDescription && !normalizedCode) return null;
     const entries = Object.values(descriptionInformation);
 
     const exactMatch = entries.find(entry =>
       entry.exact.some(label => normalizeSearch(label) === normalizedDescription)
     );
-    if (exactMatch) return exactMatch.information;
+    if (exactMatch) return exactMatch;
 
     const keywordMatch = entries.find(entry =>
-      entry.keywords.some(keyword => normalizedDescription.includes(normalizeSearch(keyword)))
+      entry.keywords.some(keyword => {
+        const normalizedKeyword = normalizeSearch(keyword);
+        return normalizedDescription.includes(normalizedKeyword) || normalizedCode.includes(normalizedKeyword);
+      })
     );
-    return keywordMatch?.information || noDescriptionInformation;
+    return keywordMatch || null;
+  }
+
+  function getDescriptionDetails(description, code = "") {
+    const entry = findDescriptionInformationEntry(description, code);
+    return {
+      information: entry?.information || noDescriptionInformation,
+      typicalUses: entry?.typicalUses || null
+    };
+  }
+
+  function getDescriptionInformation(description, code = "") {
+    return getDescriptionDetails(description, code).information;
   }
 
   return {
@@ -72,6 +88,7 @@
     findResinSuggestions,
     formatResinResult,
     getDescriptionInformation,
+    getDescriptionDetails,
     noDescriptionInformation
   };
 });
