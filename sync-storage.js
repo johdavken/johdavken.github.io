@@ -32,7 +32,14 @@
 
   function createStore(storage){
     const defaults = {
-      settings: { deviceId: "", deviceLabel: "", selectedWorkspaceId: "", disconnectedWorkspaceIds: [], workspaceCache: [] },
+      settings: {
+        deviceId: "",
+        deviceLabel: "",
+        selectedWorkspaceId: "",
+        disconnectedWorkspaceIds: [],
+        workspaceCache: [],
+        pendingWorkspaceCreation: null
+      },
       metadata: { workspaces: {}, lastSyncAt: "" },
       outbox: { activeJobs: {}, setupOperations: [] },
       backups: { items: [] }

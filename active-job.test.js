@@ -35,7 +35,7 @@ function stateFixture(){
 }
 
 test("active-job snapshot includes shared job state and excludes device UI state", () => {
-  const snapshot = snapshotActiveJob(stateFixture(), "0.16");
+  const snapshot = snapshotActiveJob(stateFixture(), "0.17");
   assert.equal(snapshot.layers[0].hoppers[0].track, true);
   assert.equal(snapshot.layers[0].hoppers[0].weight, 300);
   assert.equal(snapshot.theme, undefined);
@@ -46,18 +46,18 @@ test("active-job snapshot includes shared job state and excludes device UI state
 
 test("active-job snapshots are detached from mutable application state", () => {
   const state = stateFixture();
-  const snapshot = snapshotActiveJob(state, "0.16");
+  const snapshot = snapshotActiveJob(state, "0.17");
   state.layers[0].hoppers[0].resinName = "CHANGED";
   assert.equal(snapshot.layers[0].hoppers[0].resinName, "MS0440");
 });
 
 test("active-job equality ignores device-only fields", () => {
-  const first = snapshotActiveJob(stateFixture(), "0.16");
+  const first = snapshotActiveJob(stateFixture(), "0.17");
   const second = { ...first, theme: "light", blocksOpen: { resultsBlock: true } };
   assert.equal(activeJobsEqual(first, second), true);
 });
 
 test("meaningful active-job detection recognizes production state", () => {
-  assert.equal(hasMeaningfulActiveJob(snapshotActiveJob(stateFixture(), "0.16")), true);
+  assert.equal(hasMeaningfulActiveJob(snapshotActiveJob(stateFixture(), "0.17")), true);
   assert.equal(hasMeaningfulActiveJob({ lineRate: 0, gauge: 0, changeoverTime: "", layers: [] }), false);
 });

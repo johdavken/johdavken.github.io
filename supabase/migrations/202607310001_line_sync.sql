@@ -16,7 +16,8 @@ $$;
 create table public.line_workspaces (
   id uuid primary key default extensions.gen_random_uuid(),
   name text not null check (char_length(btrim(name)) between 1 and 80),
-  created_by uuid,
+  created_by uuid not null,
+  creation_operation_id uuid not null unique,
   revision bigint not null default 1 check (revision > 0),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -162,7 +163,10 @@ begin
 end;
 $$;
 
-create or replace function private.assert_active_job_payload(p_payload jsonb)
+create or replace function private.assert_active_job_payload(
+  p_payload jsonb,
+  p_allow_legacy_version boolean default false
+)
 returns void
 language plpgsql
 immutable
@@ -185,6 +189,18 @@ begin
   end if;
   if octet_length(p_payload::text) > 131072 then
     raise exception using errcode = '22023', message = 'active_job_too_large';
+  end if;
+
+  if p_allow_legacy_version then
+    if p_payload ? 'version'
+       and (jsonb_typeof(p_payload->'version') <> 'string'
+            or (p_payload->>'version') not in ('0.14', '0.15', '0.16', '0.17')) then
+      raise exception using errcode = '22023', message = 'unsupported_saved_setup_version';
+    end if;
+  elsif not (p_payload ? 'version')
+        or jsonb_typeof(p_payload->'version') <> 'string'
+        or (p_payload->>'version') not in ('0.17') then
+    raise exception using errcode = '22023', message = 'unsupported_active_job_version';
   end if;
 
   begin
@@ -287,7 +303,7 @@ begin
   if octet_length(coalesce(p_payload, '{}'::jsonb)::text) > 262144 then
     raise exception using errcode = '22023', message = 'saved_setup_too_large';
   end if;
-  perform private.assert_active_job_payload(p_payload);
+  perform private.assert_active_job_payload(p_payload, true);
 end;
 $$;
 
@@ -387,6 +403,8 @@ as $$
 declare
   v_user_id uuid := private.assert_authenticated();
   v_workspace public.line_workspaces;
+  v_active_revision bigint;
+  v_is_owner boolean;
 begin
   if char_length(btrim(coalesce(p_name, ''))) not between 1 and 80
      or char_length(btrim(coalesce(p_device_label, ''))) not between 1 and 80
@@ -395,9 +413,36 @@ begin
   end if;
   perform private.assert_active_job_payload(p_initial_active_job);
 
-  insert into public.line_workspaces(name, created_by)
-  values (regexp_replace(btrim(p_name), '\s+', ' ', 'g'), v_user_id)
+  insert into public.line_workspaces(name, created_by, creation_operation_id)
+  values (regexp_replace(btrim(p_name), '\s+', ' ', 'g'), v_user_id, p_operation_id)
+  on conflict (creation_operation_id) do nothing
   returning * into v_workspace;
+
+  if v_workspace.id is null then
+    select w.* into v_workspace
+    from public.line_workspaces w
+    where w.creation_operation_id = p_operation_id;
+
+    if v_workspace.created_by <> v_user_id then
+      raise exception using errcode = '42501', message = 'creation_operation_id_already_used';
+    end if;
+
+    select a.revision, m.role = 'owner'::public.line_workspace_role
+    into v_active_revision, v_is_owner
+    from public.active_jobs a
+    join public.line_workspace_members m
+      on m.workspace_id = a.workspace_id
+     and m.user_id = v_user_id
+    where a.workspace_id = v_workspace.id;
+
+    if not found then
+      raise exception using errcode = '42501', message = 'workspace_access_denied';
+    end if;
+
+    return query select v_workspace.id, v_workspace.name, v_workspace.revision,
+                        v_active_revision, v_is_owner;
+    return;
+  end if;
 
   insert into public.line_workspace_members(workspace_id, user_id, device_id, device_label, role)
   values (v_workspace.id, v_user_id, p_device_id,
@@ -626,7 +671,10 @@ begin
   perform private.assert_saved_setup_payload(p_payload);
 
   return query select s.id, s.name, s.payload, s.revision, s.last_operation_id, s.updated_at
-  from public.saved_setups s where s.id = p_setup_id and s.last_operation_id = p_operation_id;
+  from public.saved_setups s
+  where s.id = p_setup_id
+    and s.workspace_id = p_workspace_id
+    and s.last_operation_id = p_operation_id;
   if found then return; end if;
 
   insert into public.saved_setups as s(id, workspace_id, name, normalized_name, payload, last_operation_id, updated_by)

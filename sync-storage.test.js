@@ -39,3 +39,14 @@ test("reports localStorage failures without throwing", () => {
   const store = createStore({ getItem(){ return null; }, setItem(){ throw new Error("quota"); } });
   assert.equal(store.queueActiveJob("line-1", { operationId: "op" }).ok, false);
 });
+
+test("persists a pending workspace-creation operation for safe retries", () => {
+  const store = createStore(memoryStorage());
+  const settings = store.getSettings();
+  settings.pendingWorkspaceCreation = { name: "Line 9", operationId: "create-op-1" };
+  assert.equal(store.saveSettings(settings).ok, true);
+  assert.deepEqual(store.getSettings().pendingWorkspaceCreation, {
+    name: "Line 9",
+    operationId: "create-op-1"
+  });
+});

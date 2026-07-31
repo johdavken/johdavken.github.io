@@ -565,13 +565,24 @@
     async function createWorkspace(name, deviceLabel){
       if (!state.available) throw new Error("Line Sync is unavailable.");
       const current = ensureDeviceSettings();
+      const workspaceName = normalizeName(name);
       current.deviceLabel = normalizeName(deviceLabel) || current.deviceLabel;
+      const pendingCreation = current.pendingWorkspaceCreation;
+      const operationId = pendingCreation?.name === workspaceName
+        ? pendingCreation.operationId
+        : uuid();
+      current.pendingWorkspaceCreation = { name: workspaceName, operationId };
       saveSettings(current);
       const response = await rpc("create_workspace", {
-        p_name: normalizeName(name), p_device_id: current.deviceId, p_device_label: current.deviceLabel,
-        p_initial_active_job: adapter.getActiveJob(), p_operation_id: uuid()
+        p_name: workspaceName, p_device_id: current.deviceId, p_device_label: current.deviceLabel,
+        p_initial_active_job: adapter.getActiveJob(), p_operation_id: operationId
       });
       if (response.error) throw response.error;
+      const completedSettings = ensureDeviceSettings();
+      if (completedSettings.pendingWorkspaceCreation?.operationId === operationId){
+        delete completedSettings.pendingWorkspaceCreation;
+        saveSettings(completedSettings);
+      }
       await loadWorkspaces();
       const row = response.data[0];
       await selectWorkspace(row.workspace_id, { uploadLocalMissing: true });

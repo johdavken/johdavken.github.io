@@ -5,6 +5,8 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 
+  const SUPPORTED_ACTIVE_JOB_VERSIONS = Object.freeze(["0.17"]);
+
   function parseNumber(value) {
     const text = String(value ?? "").trim();
     if (text === "") return { valid: true, value: 0 };
@@ -183,6 +185,9 @@
     const result = validateConfigPayload(payload, { requireTotals: false });
     const errors = [...result.errors];
     if (payload && typeof payload === "object" && !Array.isArray(payload)) {
+      if (typeof payload.version !== "string" || !SUPPORTED_ACTIVE_JOB_VERSIONS.includes(payload.version)) {
+        errors.push(`Active-job version must be one of: ${SUPPORTED_ACTIVE_JOB_VERSIONS.join(", ")}.`);
+      }
       if (payload.hopperNamingLine9 != null && !["standard", "main"].includes(payload.hopperNamingLine9)) {
         errors.push("Hopper naming mode must be standard or main.");
       }
@@ -199,6 +204,7 @@
     validatePercentage,
     validateHopperPercentages,
     validateConfigPayload,
-    validateActiveJobPayload
+    validateActiveJobPayload,
+    SUPPORTED_ACTIVE_JOB_VERSIONS
   };
 });
