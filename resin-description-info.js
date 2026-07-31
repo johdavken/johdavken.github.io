@@ -50,6 +50,11 @@
       exact: Object.freeze(["HDPE", "High-Density Polyethylene"]),
       keywords: Object.freeze(["hdpe", "high density polyethylene", "high-density polyethylene"]),
       information: "High-density polyethylene is generally stiffer and denser than LDPE or LLDPE. It commonly provides improved moisture-barrier performance and strength, with less flexibility."
+    }),
+    "Flame Retardant": Object.freeze({
+      exact: Object.freeze(["Flame Retardant"]),
+      keywords: Object.freeze(["flame", "retardant"]),
+      information: "Flame retardants are added to polyolefins, polycarbonate, polyamides, polyester, and other polymers to increase resistance to ignition, reduce flame spread, suppress smoke formation, and prevent a polymer from dripping."
     })
   });
 });
