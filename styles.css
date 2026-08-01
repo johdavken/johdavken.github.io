@@ -1719,6 +1719,83 @@ input.resinLookupDensity.copied[readonly]{
 }
 
 /* =======================================================================
+ *   Help guide
+ *   ======================================================================= */
+.helpGuide{ gap: 14px; }
+.helpIntro{
+  padding: 12px 14px;
+  border-left: 4px solid var(--focus-border);
+  border-radius: var(--radius-input);
+  background: var(--row-bg);
+  color: var(--text);
+  line-height: 1.5;
+}
+.helpTopics{ display: grid; gap: 10px; }
+.helpTopic{
+  overflow: hidden;
+  border: 1px solid var(--row-border);
+  border-radius: var(--radius-row);
+  background: var(--row-bg);
+}
+.helpTopic > summary{
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 3px 12px;
+  padding: 12px 42px 12px 14px;
+}
+.helpTopic > summary::after{
+  content: "+";
+  position: absolute;
+  top: 50%;
+  right: 15px;
+  color: var(--muted);
+  font-size: 20px;
+  font-weight: 500;
+  transform: translateY(-50%);
+}
+.helpTopic[open] > summary::after{ content: "−"; }
+.helpTopic[open] > summary{ border-bottom: 1px solid var(--row-border); }
+.helpTopic > summary span{
+  color: var(--title);
+  font-weight: 900;
+}
+.helpTopic > summary small{
+  overflow: hidden;
+  color: var(--muted);
+  font-size: var(--font-small);
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.helpTopicBody{
+  padding: 12px 16px 14px;
+  color: var(--text);
+  line-height: 1.55;
+}
+.helpTopicBody ol,
+.helpTopicBody ul{ margin: 0; padding-left: 22px; }
+.helpTopicBody li + li{ margin-top: 7px; }
+.helpTopicBody h3{
+  margin: 16px 0 8px;
+  color: var(--title);
+  font-size: 14px;
+}
+.helpTip{
+  margin: 12px 0 0;
+  padding: 9px 11px;
+  border-radius: var(--radius-input);
+  background: var(--readonly-bg);
+  color: var(--muted);
+}
+
+@media (max-width: 600px){
+  .helpTopic > summary{ grid-template-columns: 1fr; }
+  .helpTopic > summary small{ text-align: left; }
+  .helpTopicBody{ padding-inline: 13px; }
+}
+
+/* =======================================================================
  *   Everyday / Advanced mode
  *   ======================================================================= */
 .modeBar{display:flex;align-items:center;justify-content:flex-end}

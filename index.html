@@ -9,7 +9,7 @@
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 
-  <link rel="stylesheet" href="styles.css?v=0.17.1">
+  <link rel="stylesheet" href="styles.css?v=0.17.2">
   <link rel="stylesheet" href="theme.css?v=0.16.5">
 <script src="validation.js?v=0.17" defer></script>
 <script src="scheduling.js?v=0.16" defer></script>
@@ -23,7 +23,7 @@
 <script src="resin-data.js?v=0.16.1" defer></script>
 <script src="resin-description-info.js?v=0.16.1" defer></script>
 <script src="resin-lookup.js?v=0.16.1" defer></script>
-<script src="app.js?v=0.17.2" defer></script>
+<script src="app.js?v=0.17.3" defer></script>
 
 
 </head>
@@ -298,6 +298,10 @@
     <button class="workspaceNavButton advancedOnly" type="button" data-workspace-target="toolsBlock">
       <span>Tools</span>
       <small>Production utilities</small>
+    </button>
+    <button class="workspaceNavButton" type="button" data-workspace-target="helpBlock">
+      <span>Help</span>
+      <small>Operator guide</small>
     </button>
   </nav>
 
@@ -809,6 +813,125 @@
           <textarea id="resinLookupInformation" readonly>No additional material information is currently available.</textarea>
         </div>
       </section>
+    </div>
+  </details>
+
+  <!-- 8) HELP -->
+  <details class="block card workspacePanel" id="helpBlock">
+    <summary>
+      <div class="sumLeft">
+        <div class="chev"></div>
+        <div style="min-width:0">
+          <div class="layerTitle">Help</div>
+          <div class="layerMeta">Operator guide for every section</div>
+        </div>
+      </div>
+      <span class="pill summaryStatus">Guide</span>
+    </summary>
+
+    <div class="blockBody helpGuide">
+      <div class="helpIntro">
+        Start with Setup and Hopper Percentages, then use the Run-Down Timeline during production. Advanced mode reveals the Resin Calculator, Line Configurations, and Tools.
+      </div>
+
+      <div class="helpTopics">
+        <details class="helpTopic" open>
+          <summary><span>Setup</span><small>Prepare the line and timing inputs</small></summary>
+          <div class="helpTopicBody">
+            <ol>
+              <li>Enter the current <strong>line rate</strong>, select the <strong>line type</strong>, and set a changeover deadline when one is known.</li>
+              <li>In Advanced mode, enter gauge for reference and choose the display size, theme, and optional Line 9 hopper naming.</li>
+              <li>Open <strong>Receiver hopper weights</strong> and enter the usable pounds held by each hopper. Accurate weights are required for useful run-down times.</li>
+              <li>For faster weight entry, select individual cells, click a hopper number to select its row, or click a layer heading to select its column. Enter one weight above the matrix and apply it to the selection.</li>
+              <li>Open <strong>Offsets</strong> and enter each layer's downcomer run-down time in minutes. Use zero when no offset is needed.</li>
+            </ol>
+            <p class="helpTip"><strong>Heads up:</strong> Changes save to this browser immediately. Setup warnings identify missing weights or other inputs that reduce timing accuracy.</p>
+          </div>
+        </details>
+
+        <details class="helpTopic">
+          <summary><span>Hopper Percentages</span><small>Build the layer and resin recipe</small></summary>
+          <div class="helpTopicBody">
+            <ol>
+              <li>Enter the percentage of total output assigned to each layer. The layer percentages should total 100%.</li>
+              <li>Select <strong>+ Add resin</strong> for every active hopper, then enter or choose its resin name.</li>
+              <li>Enter hopper percentages in hoppers 2–6. Hopper 1 is calculated automatically as the remaining percentage so each layer totals 100%.</li>
+              <li>Use the clock button beside a hopper to include it in the Run-Down Timeline. Bulk-selection checkboxes are separate and appear only in Bulk Edit mode.</li>
+              <li>Use a layer's <strong>Copy</strong> button when another layer uses the same resins and hopper percentages. Copy does not change the destination layer percentage.</li>
+            </ol>
+            <h3>Using Bulk Edit</h3>
+            <ol>
+              <li>Turn on <strong>Bulk Edit</strong>.</li>
+              <li>Select cells individually, a numbered row, a layer column, or all hoppers.</li>
+              <li>Enter a resin name, a hopper percentage, or both in the bulk fields.</li>
+              <li>Select <strong>Apply</strong>. Resin names apply to every selected cell; percentages apply only where editable and are rejected if they would push a layer over 100%.</li>
+              <li>Use <strong>Reset all</strong> to return every cell to <strong>+ Add resin</strong> and clear hopper percentages, tracking, and pump-off states before building a recipe again.</li>
+            </ol>
+            <p class="helpTip">A problem message appears below a layer only when its hopper percentages need attention.</p>
+          </div>
+        </details>
+
+        <details class="helpTopic">
+          <summary><span>Run-Down Timeline</span><small>Follow hopper changeover timing</small></summary>
+          <div class="helpTopicBody">
+            <ol>
+              <li>Only hoppers with their clock tracking button enabled appear in the timeline.</li>
+              <li>With a changeover deadline set, entries are sorted by the time each hopper should begin running down. Without a deadline, they are sorted by time to empty.</li>
+              <li>After physically turning off a hopper pump, mark <strong>Pump off</strong>. Completed hoppers are hidden unless <strong>Show all</strong> is enabled.</li>
+              <li>Use <strong>Reset tracking</strong> at the appropriate time to untrack every hopper and clear pump-off states.</li>
+            </ol>
+            <p class="helpTip">The footer on mobile shows the next tracked hopper and current Cloud Sync status.</p>
+          </div>
+        </details>
+
+        <details class="helpTopic">
+          <summary><span>Resin Calculator</span><small>Review production and scrap usage</small></summary>
+          <div class="helpTopicBody">
+            <ol>
+              <li>Available in Advanced mode. Build the active layer and hopper recipe first.</li>
+              <li>Enter the total production resin and scrap resin pounds at the end of the job.</li>
+              <li>Review the calculated pounds attributed to each named resin based on the current layer and hopper percentages.</li>
+            </ol>
+          </div>
+        </details>
+
+        <details class="helpTopic">
+          <summary><span>Cloud Sync</span><small>Share a production line across devices</small></summary>
+          <div class="helpTopicBody">
+            <ol>
+              <li>Create one permanent line workspace on the first device and give the device a recognizable label.</li>
+              <li>Generate a four-character link code. On another device, open Cloud Sync, enter that code, and select <strong>Join Cloud Sync</strong>.</li>
+              <li>Watch the status and unsynced-change count. Local changes save first, then upload; other connected devices update without a page refresh.</li>
+              <li><strong>Disconnect on this device</strong> pauses syncing but keeps membership. <strong>Leave Cloud Sync</strong> removes that device's membership.</li>
+              <li><strong>New job</strong> clears current job inputs and tracking while preserving the line workspace, linked devices, Saved Line Settings, hopper weights, and offsets.</li>
+            </ol>
+            <p class="helpTip">Link codes are one-time codes that expire after 30 minutes. The owner must transfer ownership before leaving and is the only device allowed to remove members or delete the shared line.</p>
+          </div>
+        </details>
+
+        <details class="helpTopic">
+          <summary><span>Line Configurations</span><small>Save and restore common line setups</small></summary>
+          <div class="helpTopicBody">
+            <ol>
+              <li>Available in Advanced mode. Enter a configuration name and choose <strong>Save / Update config</strong> to capture the current complete setup.</li>
+              <li>Select a saved configuration and choose <strong>Load</strong> to replace the active inputs with that setup.</li>
+              <li>Use Rename or Delete to maintain the list. When Cloud Sync is connected, these changes are shared with the line.</li>
+              <li>Export copies a configuration as JSON. Import validates pasted JSON before saving it and can optionally load it immediately.</li>
+            </ol>
+          </div>
+        </details>
+
+        <details class="helpTopic">
+          <summary><span>Tools</span><small>Production calculators and resin reference</small></summary>
+          <div class="helpTopicBody">
+            <ul>
+              <li><strong>Short Footage Calculator:</strong> Enter actual weight, target footage, and the last good weight to calculate adjusted short footage.</li>
+              <li><strong>Hopper Weight Calculator:</strong> Enter hopper circumference and usable height, then provide bulk density directly or estimate it from polymer density and the adjustable packing factor.</li>
+              <li><strong>Resin Lookup:</strong> Search by resin code or description. Select a suggestion to view description, density, material information, and typical uses. The Copy button copies the numeric density.</li>
+            </ul>
+          </div>
+        </details>
+      </div>
     </div>
   </details>
   </div>
