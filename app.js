@@ -27,7 +27,8 @@
       "resultsBlock",
       "resinCalcBlock",
       "recipesBlock",
-      "toolsBlock"
+      "toolsBlock",
+      "helpBlock"
     ];
 
     const HOPPERS_PER_LAYER = 6;
