@@ -51,3 +51,10 @@ test("same-day times have no day suffix", () => {
   assert.equal(calendarDayOffset(startBy, deadline), 0);
   assert.doesNotMatch(formatTime(startBy, deadline), /\([+-]\d+d\)$/);
 });
+
+test("time formatting defaults to 12-hour and supports 24-hour display", () => {
+  const afternoon = new Date(2026, 6, 29, 13, 5);
+
+  assert.match(formatTime(afternoon), /1:05\s*PM/i);
+  assert.equal(formatTime(afternoon, null, "24"), "13:05");
+});

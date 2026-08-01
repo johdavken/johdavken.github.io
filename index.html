@@ -9,10 +9,10 @@
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 
-  <link rel="stylesheet" href="styles.css?v=0.17.2">
+  <link rel="stylesheet" href="styles.css?v=0.17.4">
   <link rel="stylesheet" href="theme.css?v=0.16.5">
 <script src="validation.js?v=0.17" defer></script>
-<script src="scheduling.js?v=0.16" defer></script>
+<script src="scheduling.js?v=0.17" defer></script>
 <script src="storage.js?v=0.16" defer></script>
 <script src="calculators.js?v=0.16" defer></script>
 <script src="active-job.js?v=0.17" defer></script>
@@ -23,7 +23,7 @@
 <script src="resin-data.js?v=0.16.1" defer></script>
 <script src="resin-description-info.js?v=0.16.1" defer></script>
 <script src="resin-lookup.js?v=0.16.1" defer></script>
-<script src="app.js?v=0.17.3" defer></script>
+<script src="app.js?v=0.17.6" defer></script>
 
 
 </head>
@@ -260,13 +260,6 @@
 
   </header>
 
-  <section class="modeBar" aria-label="Display mode">
-    <div class="modeSwitch" role="group" aria-label="Choose display mode">
-      <button id="everydayModeBtn" class="modeBtn active" type="button" aria-pressed="true">Basic</button>
-      <button id="advancedModeBtn" class="modeBtn" type="button" aria-pressed="false">Advanced</button>
-    </div>
-  </section>
-
   <nav class="workspaceNav" aria-label="ResinIQ sections">
     <div class="workspaceBrand" aria-label="ResinIQ">
       <span class="workspaceBrandResin">resin</span><span class="workspaceBrandI">I</span><span class="workspaceBrandQ">Q</span>
@@ -282,10 +275,6 @@
     <button class="workspaceNavButton active" type="button" data-workspace-target="resultsBlock" data-status="neutral">
       <span>Run-Down Timeline</span>
       <small id="workspaceTimelineStatus">0 resins tracked</small>
-    </button>
-    <button class="workspaceNavButton advancedOnly" type="button" data-workspace-target="resinCalcBlock">
-      <span>Resin Calculator</span>
-      <small>Usage totals</small>
     </button>
     <button class="workspaceNavButton" type="button" data-workspace-target="lineSyncBlock">
       <span>Cloud Sync</span>
@@ -340,11 +329,16 @@
           <div class="layerMeta">Line Setup and App Settings</div>
         </div>
       </div>
-      <span id="setupSummaryStatus" class="pill summaryStatus">Not set</span>
+      <div class="modeSwitch setupModeSwitch" role="group" aria-label="Choose display mode">
+        <button id="everydayModeBtn" class="modeBtn active" type="button" aria-pressed="true">Simple</button>
+        <button id="advancedModeBtn" class="modeBtn" type="button" aria-pressed="false">Advanced</button>
+      </div>
     </summary>
 
     <div class="blockBody">
-      <div class="grid3">
+      <section class="setupSection" aria-labelledby="lineSetupGroupTitle">
+        <h3 id="lineSetupGroupTitle" class="setupSectionTitle">Line Setup</h3>
+      <div class="setupFields">
         <div>
           <label for="lineRate">Line rate (lb/hr)</label>
           <input id="lineRate" type="text" inputmode="decimal" placeholder="0" value="0" />
@@ -365,48 +359,15 @@
             <option value="5">5-layer</option>
           </select>
         </div>
-      </div>
-
-      <div class="grid3 mt10">
         <div>
           <label for="changeoverTime">Changeover time (deadline)</label>
           <input id="changeoverTime" type="time" />
-        </div>
-
-        <div class="advancedOnly">
-          <label for="densitySel">View</label>
-          <select id="densitySel">
-            <option value="comfort" selected>Comfort</option>
-            <option value="compact">Compact</option>
-            <option value="dense">Dense</option>
-          </select>
-        </div>
-
-        <div class="advancedOnly">
-          <label for="themeSel">Theme</label>
-          <select id="themeSel">
-                        <option value="dark">Dark</option>
-            <option value="light" selected>Light</option>
-            <option value="mse">MSE</option>
-            <option value="gruvbox-dark">Gruvbox Dark</option>
-            <option value="gruvbox-light">Gruvbox Light</option>
-            <option value="nord">Nord</option>
-            <option value="tokyo-night">Tokyo Night</option>
-            <option value="dracula">Dracula</option>
-            <option value="solarized-dark">Solarized Dark</option>
-            <option value="solarized-light">Solarized Light</option>
-            <option value="catppuccin-mocha">Catppuccin Mocha</option>
-            <option value="catppuccin-latte">Catppuccin Latte</option>
-            <option value="amber">Amber</option>
-            <option value="high-contrast">High Contrast</option>
-            <option value="mono">Monochrome</option>
-          </select>
         </div>
       </div>
 
 
       <!-- Hopper naming (Line 9) -->
-      <div class="grid3 mt10 advancedOnly" id="hopperNamingRow">
+      <div class="setupNaming advancedOnly" id="hopperNamingRow">
         <div>
           <label for="hopperNamingToggle"></label>
 
@@ -423,9 +384,51 @@
           </div>
         </div>
       </div>
+      </section>
+
+      <section class="setupSection advancedOnly" aria-labelledby="appearanceGroupTitle">
+        <h3 id="appearanceGroupTitle" class="setupSectionTitle">Appearance &amp; Preferences</h3>
+        <div class="setupFields setupPreferenceFields">
+          <div class="advancedOnly">
+            <label for="themeSel">Theme</label>
+            <select id="themeSel">
+              <option value="dark">Dark</option>
+              <option value="light" selected>Light</option>
+              <option value="mse">MSE</option>
+              <option value="gruvbox-dark">Gruvbox Dark</option>
+              <option value="gruvbox-light">Gruvbox Light</option>
+              <option value="nord">Nord</option>
+              <option value="tokyo-night">Tokyo Night</option>
+              <option value="dracula">Dracula</option>
+              <option value="solarized-dark">Solarized Dark</option>
+              <option value="solarized-light">Solarized Light</option>
+              <option value="catppuccin-mocha">Catppuccin Mocha</option>
+              <option value="catppuccin-latte">Catppuccin Latte</option>
+              <option value="amber">Amber</option>
+              <option value="high-contrast">High Contrast</option>
+              <option value="mono">Monochrome</option>
+            </select>
+          </div>
+          <div class="advancedOnly">
+            <label for="densitySel">View</label>
+            <select id="densitySel">
+              <option value="comfort" selected>Comfort</option>
+              <option value="compact">Compact</option>
+              <option value="dense">Dense</option>
+            </select>
+          </div>
+          <div>
+            <label for="timeFormatSel">Time format</label>
+            <select id="timeFormatSel">
+              <option value="12" selected>12-hour</option>
+              <option value="24">24-hour</option>
+            </select>
+          </div>
+        </div>
+      </section>
 
       <!-- Nested: weights -->
-      <details class="block advancedOnly" id="weightsBlock">
+      <details class="block" id="weightsBlock">
         <summary>
           <div class="sumLeft">
             <div class="chev"></div>
@@ -459,7 +462,7 @@
         </summary>
 
         <div class="blockBody">
-          <div class="muted">Adds time for downcomer run-down.</div>
+          <div class="muted">Add time to offset resin times for your downcomers.</div>
           <div id="offsetInputs" class="gridAuto mt10"></div>
         </div>
       </details>
@@ -528,39 +531,7 @@
     </div>
   </details>
 
-  <!-- 4) RESIN TOTALS -->
-  <details class="block card advancedOnly workspacePanel" id="resinCalcBlock">
-    <summary>
-      <div class="sumLeft">
-        <div class="chev"></div>
-        <div style="min-width:0">
-          <div class="layerTitle">Resin Calculator</div>
-          <div class="layerMeta">Totals by resin name</div>
-        </div>
-      </div>
-      <span class="pill">Calc</span>
-    </summary>
-
-    <div class="blockBody">
-      <div class="muted">Enter total pounds used at end of job.</div>
-
-      <div class="grid2 mt10">
-        <div>
-          <label for="prodResinLb">Production Resin (lb)</label>
-          <input id="prodResinLb" type="text" inputmode="decimal" placeholder="0" value="0" />
-        </div>
-        <div>
-          <label for="scrapResinLb">Scrap Resin (lb)</label>
-          <input id="scrapResinLb" type="text" inputmode="decimal" placeholder="0" value="0" />
-        </div>
-      </div>
-
-      <div id="resinCalcSummary" class="mt10"></div>
-      <div id="resinCalcResults" class="calcTable"></div>
-    </div>
-  </details>
-
-  <!-- 5) CLOUD SYNC -->
+  <!-- 4) CLOUD SYNC -->
   <details class="block card workspacePanel lineSyncBlock" id="lineSyncBlock">
     <summary>
       <div class="sumLeft">
@@ -627,7 +598,7 @@
     </div>
   </details>
 
-  <!-- 6) RECIPES -->
+  <!-- 5) RECIPES -->
   <details class="block card advancedOnly workspacePanel" id="recipesBlock">
     <summary>
       <div class="sumLeft">
@@ -684,7 +655,7 @@
     </div>
   </details>
 
-  <!-- 7) TOOLS -->
+  <!-- 6) TOOLS -->
   <details class="block card advancedOnly workspacePanel" id="toolsBlock">
     <summary>
       <div class="sumLeft">
@@ -697,6 +668,25 @@
     </summary>
 
     <div class="blockBody">
+      <section class="toolPanel" aria-labelledby="productionSummaryTitle">
+        <div id="productionSummaryTitle" class="layerTitle">Production Summary</div>
+        <div class="muted">Material totals for production and inventory issuance.</div>
+
+        <div class="grid2 mt10">
+          <div>
+            <label for="prodResinLb">Production Resin (lb)</label>
+            <input id="prodResinLb" type="text" inputmode="decimal" placeholder="0" value="0" />
+          </div>
+          <div>
+            <label for="scrapResinLb">Scrap Resin (lb)</label>
+            <input id="scrapResinLb" type="text" inputmode="decimal" placeholder="0" value="0" />
+          </div>
+        </div>
+
+        <div id="resinCalcSummary" class="mt10"></div>
+        <div id="resinCalcResults" class="calcTable"></div>
+      </section>
+
       <section class="toolPanel" aria-labelledby="shortFootageTitle">
         <div id="shortFootageTitle" class="layerTitle">Short Footage Calculator</div>
         <div class="muted">Actual Weight × Target Footage ÷ Last Good Weight</div>
@@ -816,7 +806,7 @@
     </div>
   </details>
 
-  <!-- 8) HELP -->
+  <!-- 7) HELP -->
   <details class="block card workspacePanel" id="helpBlock">
     <summary>
       <div class="sumLeft">
@@ -831,16 +821,31 @@
 
     <div class="blockBody helpGuide">
       <div class="helpIntro">
-        Start with Setup and Hopper Percentages, then use the Run-Down Timeline during production. Advanced mode reveals the Resin Calculator, Line Configurations, and Tools.
+        Start with Setup and Hopper Percentages, then use the Run-Down Timeline during production. Advanced mode reveals Line Configurations and Tools, including the Production Summary and production calculators.
       </div>
 
       <div class="helpTopics">
         <details class="helpTopic" open>
+          <summary><span>Quick Start</span><small>Set up ResinIQ in just a few minutes</small></summary>
+          <div class="helpTopicBody">
+            <p>ResinIQ can be set up in just a few minutes.</p>
+            <ol>
+              <li>Enter the line rate and select the line type.</li>
+              <li>Verify the receiver hopper weights.</li>
+              <li>Build the layer recipe on the <strong>Hopper Percentages</strong> page.</li>
+              <li>Turn on tracking for the hoppers involved in the changeover.</li>
+              <li>Open the <strong>Run-Down Timeline</strong> to see when each hopper should begin running down.</li>
+              <li>Use <strong>Production Summary</strong> at the end of the run to total material usage for inventory.</li>
+            </ol>
+          </div>
+        </details>
+
+        <details class="helpTopic">
           <summary><span>Setup</span><small>Prepare the line and timing inputs</small></summary>
           <div class="helpTopicBody">
             <ol>
               <li>Enter the current <strong>line rate</strong>, select the <strong>line type</strong>, and set a changeover deadline when one is known.</li>
-              <li>In Advanced mode, enter gauge for reference and choose the display size, theme, and optional Line 9 hopper naming.</li>
+              <li>In Advanced mode, use <strong>Appearance &amp; Preferences</strong> to choose the theme, display size, and a 12-hour or 24-hour clock. The 12-hour clock is the default. Advanced mode also provides gauge and optional Line 9 hopper naming.</li>
               <li>Open <strong>Receiver hopper weights</strong> and enter the usable pounds held by each hopper. Accurate weights are required for useful run-down times.</li>
               <li>For faster weight entry, select individual cells, click a hopper number to select its row, or click a layer heading to select its column. Enter one weight above the matrix and apply it to the selection.</li>
               <li>Open <strong>Offsets</strong> and enter each layer's downcomer run-down time in minutes. Use zero when no offset is needed.</li>
@@ -885,17 +890,6 @@
         </details>
 
         <details class="helpTopic">
-          <summary><span>Resin Calculator</span><small>Review production and scrap usage</small></summary>
-          <div class="helpTopicBody">
-            <ol>
-              <li>Available in Advanced mode. Build the active layer and hopper recipe first.</li>
-              <li>Enter the total production resin and scrap resin pounds at the end of the job.</li>
-              <li>Review the calculated pounds attributed to each named resin based on the current layer and hopper percentages.</li>
-            </ol>
-          </div>
-        </details>
-
-        <details class="helpTopic">
           <summary><span>Cloud Sync</span><small>Share a production line across devices</small></summary>
           <div class="helpTopicBody">
             <ol>
@@ -925,6 +919,7 @@
           <summary><span>Tools</span><small>Production calculators and resin reference</small></summary>
           <div class="helpTopicBody">
             <ul>
+              <li><strong>Production Summary:</strong> Build the active recipe first, then enter production and scrap pounds to calculate material totals by resin for production reporting and inventory issuance.</li>
               <li><strong>Short Footage Calculator:</strong> Enter actual weight, target footage, and the last good weight to calculate adjusted short footage.</li>
               <li><strong>Hopper Weight Calculator:</strong> Enter hopper circumference and usable height, then provide bulk density directly or estimate it from polymer density and the adjustable packing factor.</li>
               <li><strong>Resin Lookup:</strong> Search by resin code or description. Select a suggestion to view description, density, material information, and typical uses. The Copy button copies the numeric density.</li>

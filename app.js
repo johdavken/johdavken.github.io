@@ -25,7 +25,6 @@
       "offsetsBlock",
       "splitsBlock",
       "resultsBlock",
-      "resinCalcBlock",
       "recipesBlock",
       "toolsBlock",
       "helpBlock"
@@ -47,6 +46,7 @@
       scrapResinLb: 0,
       density: "comfort",
       theme: "light",
+      timeFormat: "12",
       gauge: 0,
       hopperNamingLine9: "standard", // "standard" | "main"
       showPumpOffTracked: false, // show pump-off items in Run-Down Timeline
@@ -63,7 +63,8 @@
   const calculators = window.ResinIQCalculators;
   const resinLookup = window.ResinIQLookup;
   const activeJob = window.ResinIQActiveJob;
-  const { parseChangeoverDate, formatTime: fmtTime } = window.ResinIQScheduling;
+  const { parseChangeoverDate, formatTime } = window.ResinIQScheduling;
+  const fmtTime = (date, baseDate) => formatTime(date, baseDate, state.timeFormat);
   const { writeJson } = window.ResinIQStorage;
   let lineSync = null;
 
@@ -434,6 +435,7 @@
         scrapResinLb: state.scrapResinLb,
         density: state.density,
         theme: state.theme,
+        timeFormat: state.timeFormat,
         gauge: state.gauge,
         hopperNamingLine9: state.hopperNamingLine9,
         showPumpOffTracked: !!state.showPumpOffTracked,
@@ -446,6 +448,7 @@
       const localPreferences = {
         density: state.density,
         theme: state.theme,
+        timeFormat: state.timeFormat,
         showPumpOffTracked: state.showPumpOffTracked,
         uiMode: state.uiMode,
         blocksOpen: snapshotPayload().blocksOpen
@@ -493,6 +496,13 @@
       state.density = density;
     }
 
+    function applyTimeFormat(value){
+      const timeFormat = String(value) === "24" ? "24" : "12";
+      state.timeFormat = timeFormat;
+      const sel = $("timeFormatSel");
+      if (sel) sel.value = timeFormat;
+    }
+
     function applyPayload(payload, {rebuildUI=true} = {}){
       if (!payload || typeof payload !== "object") return;
 
@@ -506,6 +516,7 @@
 
       applyTheme(payload.theme || "light");
       applyDensity(payload.density || "comfort");
+      applyTimeFormat(payload.timeFormat || "12");
       $("lineRate").value = String(state.lineRate);
       const g = $("gauge");
       if (g) g.value = String(state.gauge);
@@ -1673,37 +1684,42 @@
    * Validation + compute + render
    * ============================ */
   function updateCollapsedSummaries(){
+    const hopperWeightsUnset = state.layers.length > 0 && state.layers.every(layer =>
+      layer.hoppers.every(hopper => clampNum(hopper.weight) === 0)
+    );
+    const setupParts = [];
+    if (state.lineRate > 0){
+      setupParts.push(`${state.lineRate.toLocaleString([], { maximumFractionDigits: 2 })} lb/hr`);
+    }
+    const changeoverDate = parseChangeoverDate(state.changeoverTime);
+    if (changeoverDate) setupParts.push(`Changeover ${fmtTime(changeoverDate)}`);
     const setupStatus = $("setupSummaryStatus");
-      if (setupStatus){
-        const setupParts = [];
-        if (state.lineRate > 0){
-          setupParts.push(`${state.lineRate.toLocaleString([], { maximumFractionDigits: 2 })} lb/hr`);
-        }
-        const changeoverDate = parseChangeoverDate(state.changeoverTime);
-        if (changeoverDate) setupParts.push(`Changeover ${fmtTime(changeoverDate)}`);
-        setupStatus.textContent = setupParts.length ? setupParts.join(" · ") : "Not set";
-        const outputStatus = $("workspaceOutputStatus");
-        if (outputStatus){
-          outputStatus.textContent = state.lineRate > 0
-            ? `${state.lineRate.toLocaleString([], { maximumFractionDigits: 2 })} lb/hr`
-            : "Not set";
-        }
-        const changeoverStatus = $("workspaceChangeoverStatus");
-        if (changeoverStatus){
-          changeoverStatus.textContent = changeoverDate ? fmtTime(changeoverDate) : "Not set";
-        }
-        const workspaceStatus = $("workspaceSetupStatus");
-      if (workspaceStatus){
-        const hasOutput = state.lineRate > 0;
-        const hasChangeover = !!changeoverDate;
-        workspaceStatus.textContent = hasOutput && hasChangeover
+    if (setupStatus) setupStatus.textContent = setupParts.length ? setupParts.join(" · ") : "Not set";
+    const outputStatus = $("workspaceOutputStatus");
+    if (outputStatus){
+      outputStatus.textContent = state.lineRate > 0
+        ? `${state.lineRate.toLocaleString([], { maximumFractionDigits: 2 })} lb/hr`
+        : "Not set";
+    }
+    const changeoverStatus = $("workspaceChangeoverStatus");
+    if (changeoverStatus){
+      changeoverStatus.textContent = changeoverDate ? fmtTime(changeoverDate) : "Not set";
+    }
+    const workspaceStatus = $("workspaceSetupStatus");
+    if (workspaceStatus){
+      const hasOutput = state.lineRate > 0;
+      const hasChangeover = !!changeoverDate;
+      workspaceStatus.textContent = hopperWeightsUnset
+        ? "Needs hopper weights"
+        : (hasOutput && hasChangeover
           ? "Ready"
-          : (hasOutput || hasChangeover ? "In progress" : "Needs setup");
-        workspaceStatus.closest(".workspaceNavButton")?.setAttribute(
-          "data-status",
-          hasOutput && hasChangeover ? "ok" : (hasOutput || hasChangeover ? "info" : "neutral")
-        );
-      }
+          : (hasOutput || hasChangeover ? "In progress" : "Needs setup"));
+      workspaceStatus.closest(".workspaceNavButton")?.setAttribute(
+        "data-status",
+        hopperWeightsUnset
+          ? "warn"
+          : (hasOutput && hasChangeover ? "ok" : (hasOutput || hasChangeover ? "info" : "neutral"))
+      );
     }
 
     const splitsStatus = $("splitsSummaryStatus");
@@ -1739,7 +1755,7 @@
       if (workspaceStatus){
         workspaceStatus.textContent = trackedCount
           ? `${trackedCount} tracked`
-          : "None tracked";
+          : "No hoppers tracked";
         workspaceStatus.closest(".workspaceNavButton")?.setAttribute(
           "data-status",
           trackedCount ? "info" : "neutral"
@@ -2017,7 +2033,7 @@
       const advancedBtn = $("advancedModeBtn");
       if (everydayBtn){ everydayBtn.classList.toggle("active", !advanced); everydayBtn.setAttribute("aria-pressed", String(!advanced)); }
       if (advancedBtn){ advancedBtn.classList.toggle("active", advanced); advancedBtn.setAttribute("aria-pressed", String(advanced)); }
-      if (!advanced && ["resinCalcBlock", "recipesBlock", "toolsBlock"].includes(activeWorkspaceId)){
+      if (!advanced && ["recipesBlock", "toolsBlock"].includes(activeWorkspaceId)){
         setWorkspacePanel("resultsBlock", { persist: false });
       }
     }
@@ -2712,6 +2728,12 @@
       saveSession();
     });
 
+    $("timeFormatSel")?.addEventListener("change",(e)=>{
+      applyTimeFormat(e.target.value);
+      validateAndCompute({ sync: false });
+      saveSession();
+    });
+
     $("prodResinLb")?.addEventListener("input",(e)=>{
       if (!acceptNumericInput(e.target, { min: 0, label: "Production resin" }, value => { state.prodResinLb = value; })) return;
       renderResinCalculator();
@@ -2761,8 +2783,14 @@
       hideResinLookupSuggestions();
     }, true);
 
-    $("everydayModeBtn")?.addEventListener("click", ()=>setUIMode("everyday"));
-    $("advancedModeBtn")?.addEventListener("click", ()=>setUIMode("advanced"));
+    $("everydayModeBtn")?.addEventListener("click", event=>{
+      event.stopPropagation();
+      setUIMode("everyday");
+    });
+    $("advancedModeBtn")?.addEventListener("click", event=>{
+      event.stopPropagation();
+      setUIMode("advanced");
+    });
     $("resetTrackingBtn")?.addEventListener("click", resetTracking);
     document.querySelectorAll(".workspaceNavButton").forEach(button=>{
       button.addEventListener("click",()=>setWorkspacePanel(button.dataset.workspaceTarget));
@@ -2793,6 +2821,7 @@
       if (!restored){
         applyDensity("comfort");
         applyTheme("light");
+        applyTimeFormat("12");
         rebuildUIFromState();
       }
 
@@ -2815,6 +2844,7 @@
 
       // Ensure theme/logo applied even after restore
       applyTheme(state.theme || "light");
+      applyTimeFormat(state.timeFormat || "12");
       saveSession();
       setupLineSync();
     })();

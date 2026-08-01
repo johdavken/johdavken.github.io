@@ -39,9 +39,11 @@
     return Math.round((dateDay - baseDay) / 86400000);
   }
 
-  function formatTime(date, baseDate) {
+  function formatTime(date, baseDate, timeFormat = "12") {
     if (!date) return "—";
-    const time = date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    const time = date.toLocaleTimeString([], timeFormat === "24"
+      ? { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }
+      : { hour: "numeric", minute: "2-digit", hour12: true });
     if (!baseDate) return time;
 
     const dayOffset = calendarDayOffset(date, baseDate);

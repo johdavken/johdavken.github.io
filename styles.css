@@ -651,6 +651,21 @@ input[readonly]:focus{
 .gridAuto{ display: grid; gap: var(--gap); grid-template-columns: 1fr; }
 @media (min-width: 720px){ .gridAuto{ grid-template-columns: repeat(3, 1fr); } }
 
+.setupSection + .setupSection{ margin-top: 18px; }
+.setupSectionTitle{
+  margin: 0 0 10px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  font-size: 15px;
+}
+.setupFields{ display: grid; gap: var(--gap); grid-template-columns: 1fr; }
+.setupNaming{ margin-top: var(--gap); max-width: 320px; }
+@media (min-width: 720px){
+  .setupFields{ grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .setupPreferenceFields{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
 /* =======================================================================
  *   Badges / pills
  *   ======================================================================= */
@@ -1802,5 +1817,11 @@ input.resinLookupDensity.copied[readonly]{
 .modeSwitch{display:inline-grid;grid-template-columns:1fr 1fr;flex:0 0 auto;padding:3px;border:1px solid var(--border2);border-radius:999px;background:var(--field-bg)}
 .modeBtn{min-width:96px;padding:8px 13px;border:0;border-radius:999px;background:transparent;color:var(--muted);box-shadow:none}
 .modeBtn.active{background:linear-gradient(180deg,var(--btn-primary-a),var(--btn-primary-b));color:var(--text);box-shadow:inset 0 0 0 1px var(--focus-border)}
+.setupModeSwitch{ flex-shrink: 0; }
+.setupModeSwitch .modeBtn{ min-width: 82px; padding-block: 7px; }
 body[data-ui-mode="everyday"] .advancedOnly{display:none!important}
-@media (max-width:600px){.modeSwitch{width:100%}.modeBtn{min-width:0}}
+@media (max-width:600px){
+  .modeSwitch:not(.setupModeSwitch){width:100%}
+  .modeBtn{min-width:0}
+  .setupModeSwitch .modeBtn{ min-width: 68px; padding-inline: 9px; }
+}
