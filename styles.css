@@ -540,6 +540,27 @@ main{
   box-shadow:var(--shadow2);
 }
 .lineSyncConflictDialog::backdrop{ background:rgba(0,0,0,.48); }
+.mobileSyncLabel,
+.mobileSyncOnly{ display: none; }
+
+@media (max-width: 900px){
+  .lineSyncPanel .desktopSyncOnly,
+  .lineSyncPanel .desktopSyncLabel{ display: none !important; }
+  .lineSyncPanel .mobileSyncLabel{ display: inline; }
+  .lineSyncPanel .mobileSyncOnly{ display: block; }
+  .lineSyncPanel:not(.mobileHasWorkspaces) .lineSyncCurrentLineField{ display: none; }
+  .lineSyncPanel:not(.mobileHasLine) .lineSyncPrimaryActions,
+  .lineSyncPanel:not(.mobileHasLine) .lineSyncDangerActions{ display: none; }
+  .lineSyncPanel .lineSyncJoin{ display: none; }
+  .lineSyncPanel .lineSyncJoin.mobileJoinVisible{
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+  .lineSyncPanel .lineSyncJoin.mobileJoinVisible > div:first-child,
+  .lineSyncPanel .lineSyncJoin.mobileJoinVisible .lineSyncCode{ grid-column: auto; }
+  .lineSyncPanel .lineSyncPrimaryActions button,
+  .lineSyncPanel .lineSyncDangerActions button{ flex: 1 1 100%; }
+}
 
 @media (max-width: 720px){
   .lineSyncJoin{ grid-template-columns:1fr 1fr; }

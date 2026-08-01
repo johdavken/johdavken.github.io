@@ -9,7 +9,7 @@
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 
-  <link rel="stylesheet" href="styles.css?v=0.17.14">
+  <link rel="stylesheet" href="styles.css?v=0.17.15">
   <link rel="stylesheet" href="theme.css?v=0.16.9">
 <script src="validation.js?v=0.18" defer></script>
 <script src="scheduling.js?v=0.18" defer></script>
@@ -19,11 +19,11 @@
 <script src="vendor/supabase.min.js?v=2.57.4" defer></script>
 <script src="supabase-config.js?v=0.18" defer></script>
 <script src="sync-storage.js?v=0.18" defer></script>
-<script src="cloud-sync.js?v=0.18" defer></script>
+<script src="cloud-sync.js?v=0.18.1" defer></script>
 <script src="resin-data.js?v=0.16.1" defer></script>
 <script src="resin-description-info.js?v=0.16.1" defer></script>
 <script src="resin-lookup.js?v=0.18" defer></script>
-<script src="app.js?v=0.18.6" defer></script>
+<script src="app.js?v=0.18.7" defer></script>
 
 
 </head>
@@ -541,11 +541,11 @@
       </div>
 
       <div class="grid3 mt10">
-        <div>
-          <label for="lineSyncWorkspaceSelect">Selected line</label>
+        <div class="lineSyncCurrentLineField">
+          <label for="lineSyncWorkspaceSelect"><span class="desktopSyncLabel">Selected line</span><span class="mobileSyncLabel">Current line</span></label>
           <select id="lineSyncWorkspaceSelect"><option value="">No linked lines</option></select>
         </div>
-        <div>
+        <div class="desktopSyncOnly">
           <label for="lineSyncWorkspaceName">Line name</label>
           <input id="lineSyncWorkspaceName" type="text" maxlength="80" placeholder="Example: Line 9" />
         </div>
@@ -556,10 +556,10 @@
       </div>
 
       <div class="buttonRow mt10 lineSyncPrimaryActions">
-        <button id="lineSyncCreateBtn" type="button">Create line</button>
-        <button id="lineSyncRenameBtn" class="secondary" type="button">Rename line</button>
-        <button id="lineSyncRetryBtn" class="secondary" type="button">Connect / retry</button>
-        <button id="lineSyncNewJobBtn" class="secondary" type="button">New job</button>
+        <button id="lineSyncCreateBtn" class="desktopSyncOnly" type="button">Create line</button>
+        <button id="lineSyncRenameBtn" class="secondary desktopSyncOnly" type="button">Rename line</button>
+        <button id="lineSyncRetryBtn" class="secondary" type="button"><span id="lineSyncRetryDesktopLabel" class="desktopSyncLabel">Connect / retry</span><span class="mobileSyncLabel">Refresh</span></button>
+        <button id="lineSyncNewJobBtn" class="secondary desktopSyncOnly" type="button">New job</button>
       </div>
 
       <div class="lineSyncJoin mt10">
@@ -568,21 +568,22 @@
           <input id="lineSyncJoinCode" class="mono" type="text" maxlength="4" inputmode="text" autocomplete="one-time-code" placeholder="AB23" />
         </div>
         <button id="lineSyncJoinBtn" type="button">Join Cloud Sync</button>
-        <button id="lineSyncGenerateCodeBtn" class="secondary" type="button">Generate Link Code</button>
-        <output id="lineSyncGeneratedCode" class="lineSyncCode mono" aria-live="polite"></output>
+        <button id="lineSyncGenerateCodeBtn" class="secondary desktopSyncOnly" type="button">Generate Link Code</button>
+        <output id="lineSyncGeneratedCode" class="lineSyncCode mono desktopSyncOnly" aria-live="polite"></output>
       </div>
 
-      <section id="lineSyncMembersSection" class="lineSyncMembers mt10" aria-labelledby="lineSyncMembersTitle" hidden>
+      <section id="lineSyncMembersSection" class="lineSyncMembers mt10 desktopSyncOnly" aria-labelledby="lineSyncMembersTitle" hidden>
         <div id="lineSyncMembersTitle" class="layerTitle">Linked devices</div>
         <div id="lineSyncMembers"></div>
       </section>
 
       <div class="buttonRow mt10 lineSyncDangerActions">
-        <button id="lineSyncDisconnectBtn" class="secondary" type="button">Disconnect on this device</button>
+        <button id="lineSyncDisconnectBtn" class="secondary" type="button"><span class="desktopSyncLabel">Disconnect on this device</span><span class="mobileSyncLabel">Disconnect this device</span></button>
         <button id="lineSyncLeaveBtn" class="secondary" type="button">Leave Cloud Sync</button>
-        <button id="lineSyncDeleteBtn" class="danger" type="button">Delete line workspace</button>
+        <button id="lineSyncDeleteBtn" class="danger desktopSyncOnly" type="button">Delete line workspace</button>
       </div>
-      <div class="tiny mt10">Disconnect keeps server membership. Leave removes this device's membership. Only the owner can remove another device or delete the shared line.</div>
+      <div class="tiny mt10 desktopSyncOnly">Disconnect keeps server membership. Leave removes this device's membership. Only the owner can remove another device or delete the shared line.</div>
+      <div class="tiny mt10 mobileSyncOnly">Disconnect pauses this phone while preserving its line membership. Leave removes this phone from the line.</div>
     </div>
   </details>
 
@@ -890,6 +891,7 @@
             <ol>
               <li>Create one permanent line workspace on the first device and give the device a recognizable label.</li>
               <li>Generate a four-character link code. On another device, open Cloud Sync, enter that code, and select <strong>Join Cloud Sync</strong>.</li>
+              <li>On phones, Cloud Sync is simplified around the current line, device label, sync details, Refresh, Disconnect, and Leave. Line creation, naming, link-code generation, and device administration remain on desktop.</li>
               <li>Watch the status and unsynced-change count. Local changes save first, then upload; other connected devices update without a page refresh.</li>
               <li><strong>Disconnect on this device</strong> pauses syncing but keeps membership. <strong>Leave Cloud Sync</strong> removes that device's membership.</li>
               <li><strong>New job</strong> clears current job inputs and tracking while preserving the line workspace, linked devices, Saved Line Settings, hopper weights, and offsets.</li>

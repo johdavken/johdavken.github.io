@@ -2577,9 +2577,16 @@
     ["lineSyncRenameBtn", "lineSyncGenerateCodeBtn", "lineSyncNewJobBtn", "lineSyncDisconnectBtn"].forEach(id=>{
       if ($(id)) $(id).disabled = !selected || !connected;
     });
-    if ($("lineSyncLeaveBtn")) $("lineSyncLeaveBtn").disabled = !selected || !connected || owner;
+    if ($("lineSyncLeaveBtn")) $("lineSyncLeaveBtn").disabled = !selected || !syncState.available || owner;
     if ($("lineSyncDeleteBtn")) $("lineSyncDeleteBtn").hidden = !owner;
-    if ($("lineSyncRetryBtn")) $("lineSyncRetryBtn").textContent = selected && !connected ? "Reconnect" : "Connect / retry";
+    if ($("lineSyncRetryDesktopLabel")) $("lineSyncRetryDesktopLabel").textContent = selected && !connected ? "Reconnect" : "Connect / retry";
+    const joinPanel = document.querySelector(".lineSyncJoin");
+    if (joinPanel) joinPanel.classList.toggle("mobileJoinVisible", !selected);
+    const syncPanel = document.querySelector(".lineSyncPanel");
+    if (syncPanel){
+      syncPanel.classList.toggle("mobileHasLine", !!selected);
+      syncPanel.classList.toggle("mobileHasWorkspaces", syncState.workspaces.length > 0);
+    }
 
     const memberSection = $("lineSyncMembersSection");
     const memberHost = $("lineSyncMembers");
@@ -2688,7 +2695,11 @@
     )));
     $("lineSyncGenerateCodeBtn")?.addEventListener("click",()=>runLineSyncAction(()=>lineSync.generateLinkCode()));
     $("lineSyncRenameBtn")?.addEventListener("click",()=>runLineSyncAction(()=>lineSync.renameWorkspace($("lineSyncWorkspaceName")?.value)));
-    $("lineSyncRetryBtn")?.addEventListener("click",()=>runLineSyncAction(()=>lineSync.retry()));
+    $("lineSyncRetryBtn")?.addEventListener("click",()=>runLineSyncAction(()=>
+      window.matchMedia("(max-width: 900px)").matches && lineSync.getState().selectedWorkspaceId
+        ? lineSync.refreshSelected()
+        : lineSync.retry()
+    ));
     $("lineSyncDisconnectBtn")?.addEventListener("click",()=>runLineSyncAction(()=>lineSync.disconnectLocal()));
     $("lineSyncLeaveBtn")?.addEventListener("click",()=>{
       if (confirm("Leave Cloud Sync on this browser identity? Local Polyn data will remain.")) runLineSyncAction(()=>lineSync.leaveWorkspace());
