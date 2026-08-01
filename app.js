@@ -462,7 +462,7 @@
    * Theme
    * ============================ */
   function applyTheme(t){
-      const allowed = new Set(["dark","light","mse","gruvbox-dark","gruvbox-light","nord","tokyo-night","dracula","solarized-dark","solarized-light","catppuccin-mocha","catppuccin-latte","amber","high-contrast","mono"]);
+      const allowed = new Set(["dark","light","mse","industrial-slate-dark","gruvbox-dark","gruvbox-light","nord","tokyo-night","dracula","solarized-dark","solarized-light","catppuccin-mocha","catppuccin-latte","amber","high-contrast","mono"]);
       const theme = allowed.has(String(t)) ? String(t) : "light";
 
       document.documentElement.setAttribute("data-theme", theme);
@@ -2778,6 +2778,33 @@
     $("advancedModeBtn")?.addEventListener("click", event=>{
       event.stopPropagation();
       setUIMode("advanced");
+    });
+    const toolTabs = Array.from(document.querySelectorAll(".toolsIndexButton"));
+    function selectToolPanel(targetId, { focus = false } = {}){
+      if (!toolTabs.some(tab=>tab.dataset.toolTarget === targetId)) return;
+      toolTabs.forEach(tab=>{
+        const selected = tab.dataset.toolTarget === targetId;
+        tab.classList.toggle("active", selected);
+        tab.setAttribute("aria-selected", String(selected));
+        tab.tabIndex = selected ? 0 : -1;
+        if (selected && focus) tab.focus();
+      });
+      document.querySelectorAll(".toolWorkspacePanel").forEach(panel=>{
+        panel.hidden = panel.id !== targetId;
+      });
+    }
+    toolTabs.forEach((tab, index)=>{
+      tab.addEventListener("click", ()=>selectToolPanel(tab.dataset.toolTarget));
+      tab.addEventListener("keydown", event=>{
+        if (!["ArrowDown", "ArrowUp", "ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+        event.preventDefault();
+        let nextIndex = index;
+        if (["ArrowDown", "ArrowRight"].includes(event.key)) nextIndex = (index + 1) % toolTabs.length;
+        if (["ArrowUp", "ArrowLeft"].includes(event.key)) nextIndex = (index - 1 + toolTabs.length) % toolTabs.length;
+        if (event.key === "Home") nextIndex = 0;
+        if (event.key === "End") nextIndex = toolTabs.length - 1;
+        selectToolPanel(toolTabs[nextIndex].dataset.toolTarget, { focus: true });
+      });
     });
     $("resetTrackingBtn")?.addEventListener("click", resetTracking);
     document.querySelectorAll(".workspaceNavButton").forEach(button=>{

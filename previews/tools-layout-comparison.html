@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Polyn Tools Separation Preview</title>
+  <style>
+    :root{
+      color-scheme:light;
+      --bg:#f5f4f3;--panel:#fff;--panel2:#faf9f8;--text:#29282b;--muted:#666269;
+      --accent:#607d9b;--accent-soft:rgba(96,125,155,.13);--line:rgba(74,73,72,.17);
+      --field:rgba(74,73,72,.055);--shadow:0 7px 22px rgba(24,35,44,.10);--result:#eef2f5;
+    }
+    html[data-theme="dark"]{
+      color-scheme:dark;
+      --bg:#1d2021;--panel:#282828;--panel2:#242625;--text:#ebdbb2;--muted:#bdae93;
+      --accent:#83a598;--accent-soft:rgba(131,165,152,.14);--line:rgba(235,219,178,.17);
+      --field:rgba(235,219,178,.07);--shadow:0 8px 24px rgba(0,0,0,.28);--result:#303533;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+    button,input{font:inherit}
+    .pageHeader{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:18px clamp(18px,4vw,52px);border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(12px)}
+    h1{margin:0;font-size:clamp(23px,3vw,34px)}
+    .pageHeader p{margin:3px 0 0;color:var(--muted)}
+    .themeButton{flex:0 0 auto;padding:9px 14px;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--text);cursor:pointer}
+    main{width:min(1480px,100%);margin:auto;padding:26px clamp(14px,3vw,38px) 50px}
+    .intro{display:grid;grid-template-columns:1fr auto;gap:18px;align-items:start;margin-bottom:22px;padding:17px 19px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
+    .intro strong{color:var(--accent)}
+    .intro p{margin:0;color:var(--muted)}
+    .legend{display:flex;gap:8px;flex-wrap:wrap}
+    .chip{padding:5px 9px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:12px;font-weight:750}
+    .comparisonGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px}
+    .concept{overflow:hidden;border:2px solid transparent;border-radius:17px;background:var(--panel);box-shadow:var(--shadow)}
+    .concept.selected{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft),var(--shadow)}
+    .conceptTop{display:flex;justify-content:space-between;gap:14px;padding:16px 18px;border-bottom:1px solid var(--line)}
+    .conceptChoice{display:flex;gap:10px;align-items:flex-start;cursor:pointer}
+    .conceptChoice input{width:18px;height:18px;margin-top:2px;accent-color:var(--accent)}
+    .conceptTitle{font-size:17px;font-weight:850}
+    .conceptSummary{margin-top:2px;color:var(--muted);font-size:12px}
+    .recommended{align-self:start;padding:5px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:11px;font-weight:850;text-transform:uppercase;letter-spacing:.05em}
+    .tradeoffs{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:11px 18px;border-bottom:1px solid var(--line);background:var(--panel2);font-size:12px}
+    .tradeoffs span{color:var(--muted)}
+    .tradeoffs strong{display:block;color:var(--text)}
+    .preview{padding:16px;background:var(--panel2)}
+    .toolsShell{padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
+    .toolsHeading{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .toolsHeading h2{margin:0;font-size:18px}
+    .toolsHeading span{color:var(--muted);font-size:12px}
+    .toolStack{display:grid;gap:11px}
+    .tool{position:relative;border:1px solid var(--line);border-radius:12px;background:var(--field)}
+    .toolHead{padding:12px 13px 0}
+    .toolName{font-weight:850;color:var(--accent)}
+    .toolDesc{margin-top:1px;color:var(--muted);font-size:11px}
+    .toolBody{padding:10px 13px 13px}
+    .fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+    .fields.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+    label{display:grid;gap:4px;color:var(--muted);font-size:10px}
+    input{min-width:0;width:100%;padding:7px 8px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--text)}
+    .result{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:9px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--result);font-size:11px}
+    .result strong{color:var(--accent);font:800 14px ui-monospace,SFMono-Regular,Consolas,monospace}
+
+    /* Option 2: one decisive accent edge and clearer tool identity. */
+    .rail .tool{overflow:hidden;border-left:5px solid var(--accent);background:var(--panel)}
+    .rail .toolHead{padding-left:12px}
+    .rail .toolName{color:var(--text)}
+    .rail .toolHead::before{content:"UTILITY";display:block;margin-bottom:2px;color:var(--accent);font-size:8px;font-weight:900;letter-spacing:.12em}
+
+    /* Option 3: header/body separation makes scan boundaries explicit. */
+    .bands .tool{overflow:hidden;background:var(--panel)}
+    .bands .toolHead{padding:10px 12px;border-bottom:1px solid color-mix(in srgb,var(--accent) 28%,transparent);background:var(--accent-soft)}
+    .bands .toolBody{padding-top:12px}
+    .bands .toolName{color:var(--text)}
+
+    /* Option 4: selector keeps only one utility visually dominant. */
+    .workspaceLayout{display:grid;grid-template-columns:150px minmax(0,1fr);gap:10px}
+    .toolIndex{display:grid;align-content:start;gap:6px}
+    .toolIndex button{padding:9px;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--muted);text-align:left;cursor:pointer}
+    .toolIndex button.active{border-color:var(--accent);background:var(--accent-soft);color:var(--text);font-weight:800}
+    .workspaceTool{min-height:265px;padding:14px;border:1px solid var(--line);border-radius:11px;background:var(--panel)}
+    .workspaceTool .toolName{font-size:16px}
+    .workspaceTool .toolDesc{margin-bottom:14px}
+    .workspaceTool .fields{grid-template-columns:1fr}
+
+    @media(max-width:980px){.comparisonGrid{grid-template-columns:1fr}}
+    @media(max-width:620px){
+      .pageHeader{align-items:flex-start}.intro{grid-template-columns:1fr}.comparisonGrid{gap:16px}
+      .fields,.fields.two{grid-template-columns:1fr}.workspaceLayout{grid-template-columns:1fr}.toolIndex{grid-template-columns:repeat(2,1fr)}
+      .tradeoffs{grid-template-columns:1fr}.preview{padding:10px}
+    }
+  </style>
+</head>
+<body>
+  <header class="pageHeader">
+    <div><h1>Tools separation study</h1><p>Four ways to make Polyn’s production utilities easier to scan.</p></div>
+    <button id="themeButton" class="themeButton" type="button">Preview dark</button>
+  </header>
+  <main>
+    <section class="intro">
+      <p><strong>Recommendation:</strong> the accent-rail treatment creates the clearest boundaries with the smallest layout change. Banded headers are a close second when stronger visual grouping is preferred.</p>
+      <div class="legend"><span class="chip">Desktop preview</span><span class="chip">Responsive</span><span class="chip">Select a favorite</span></div>
+    </section>
+    <section id="comparisonGrid" class="comparisonGrid" aria-label="Tools layout comparisons"></section>
+  </main>
+  <script>
+    "use strict";
+    const toolMarkup = `
+      <section class="tool"><div class="toolHead"><div class="toolName">Production Summary</div><div class="toolDesc">Material totals for production and inventory issuance.</div></div><div class="toolBody"><div class="fields two"><label>Production Resin (lb)<input value="12,400" readonly></label><label>Scrap Resin (lb)<input value="320" readonly></label></div><div class="result"><span>Total material</span><strong>12,720 lb</strong></div></div></section>
+      <section class="tool"><div class="toolHead"><div class="toolName">Short Footage Calculator</div><div class="toolDesc">Actual Weight × Target Footage ÷ Last Good Weight</div></div><div class="toolBody"><div class="fields"><label>Actual weight<input value="48" readonly></label><label>Target footage<input value="2,000" readonly></label><label>Last good weight<input value="50" readonly></label></div><div class="result"><span>Short footage</span><strong>1,920 ft</strong></div></div></section>
+      <section class="tool"><div class="toolHead"><div class="toolName">Hopper Weight Calculator</div><div class="toolDesc">Estimate usable resin weight from hopper dimensions.</div></div><div class="toolBody"><div class="fields"><label>Circumference<input value="94" readonly></label><label>Usable height<input value="72" readonly></label><label>Bulk density<input value="36.4" readonly></label></div><div class="result"><span>Hopper weight</span><strong>1,166 lb</strong></div></div></section>
+      <section class="tool"><div class="toolHead"><div class="toolName">Resin Lookup</div><div class="toolDesc">Find a resin by code or description.</div></div><div class="toolBody"><div class="fields"><label>Resin<input value="MS0440" readonly></label><label>Description<input value="Med. Density Hexene" readonly></label><label>Density<input value="0.926 g/cm³" readonly></label></div></div></section>`;
+
+    const concepts = [
+      {id:"control",title:"1. Current treatment",summary:"Faint borders and spacing only.",good:"Quiet and familiar",cost:"Tools blend together",className:"control"},
+      {id:"rail",title:"2. Accent rail",summary:"A slim theme-colored edge anchors each utility.",good:"Fastest scanning",cost:"Slightly more visual color",className:"rail",recommended:true},
+      {id:"bands",title:"3. Banded headers",summary:"Tinted title bands separate identity from inputs.",good:"Strongest card boundaries",cost:"More vertical emphasis",className:"bands"},
+      {id:"workspace",title:"4. Tool index",summary:"Choose a utility from a compact internal menu.",good:"Shortest page",cost:"Only one tool visible",className:"workspace"}
+    ];
+
+    function standardPreview(className){
+      return `<div class="toolsShell ${className}"><div class="toolsHeading"><h2>Tools</h2><span>Production utilities</span></div><div class="toolStack">${toolMarkup}</div></div>`;
+    }
+    function workspacePreview(){
+      return `<div class="toolsShell"><div class="toolsHeading"><h2>Tools</h2><span>Production utilities</span></div><div class="workspaceLayout"><nav class="toolIndex" aria-label="Preview tool index"><button>Production Summary</button><button class="active">Short Footage</button><button>Hopper Weight</button><button>Resin Lookup</button></nav><section class="workspaceTool"><div class="toolName">Short Footage Calculator</div><div class="toolDesc">Actual Weight × Target Footage ÷ Last Good Weight</div><div class="fields"><label>Actual weight<input value="48" readonly></label><label>Target footage<input value="2,000" readonly></label><label>Last good weight<input value="50" readonly></label></div><div class="result"><span>Short footage</span><strong>1,920 ft</strong></div></section></div></div>`;
+    }
+
+    const grid = document.getElementById("comparisonGrid");
+    concepts.forEach((concept,index)=>{
+      const article=document.createElement("article");
+      article.className=`concept${index===1?" selected":""}`;
+      article.dataset.concept=concept.id;
+      article.innerHTML=`<div class="conceptTop"><label class="conceptChoice"><input type="radio" name="favorite" value="${concept.id}" ${index===1?"checked":""}><span><span class="conceptTitle">${concept.title}</span><span class="conceptSummary">${concept.summary}</span></span></label>${concept.recommended?'<span class="recommended">Recommended</span>':''}</div><div class="tradeoffs"><span><strong>Strength</strong>${concept.good}</span><span><strong>Tradeoff</strong>${concept.cost}</span></div><div class="preview">${concept.id==="workspace"?workspacePreview():standardPreview(concept.className)}</div>`;
+      grid.appendChild(article);
+    });
+    document.querySelectorAll('input[name="favorite"]').forEach(input=>input.addEventListener("change",()=>{
+      document.querySelectorAll(".concept").forEach(card=>card.classList.toggle("selected",card.dataset.concept===input.value));
+    }));
+    document.getElementById("themeButton").addEventListener("click",event=>{
+      const dark=document.documentElement.dataset.theme!=="dark";
+      document.documentElement.dataset.theme=dark?"dark":"light";
+      event.currentTarget.textContent=dark?"Preview light":"Preview dark";
+    });
+  </script>
+</body>
+</html>
