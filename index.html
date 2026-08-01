@@ -9,8 +9,8 @@
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 
-  <link rel="stylesheet" href="styles.css?v=0.17.25">
-  <link rel="stylesheet" href="theme.css?v=0.16.9">
+  <link rel="stylesheet" href="styles.css?v=0.17.28">
+  <link rel="stylesheet" href="theme.css?v=0.17.0">
 <script src="validation.js?v=0.18" defer></script>
 <script src="scheduling.js?v=0.18.3" defer></script>
 <script src="storage.js?v=0.18" defer></script>
@@ -23,7 +23,7 @@
 <script src="resin-data.js?v=0.16.2" defer></script>
 <script src="resin-description-info.js?v=0.16.1" defer></script>
 <script src="resin-lookup.js?v=0.18.1" defer></script>
-<script src="app.js?v=0.18.19" defer></script>
+<script src="app.js?v=0.18.21" defer></script>
 
 
 </head>
@@ -289,6 +289,7 @@
     <div class="modeSwitch statusModeSwitch" role="group" aria-label="Choose display mode">
       <button id="everydayModeBtn" class="modeBtn active" type="button" aria-pressed="true">Simple</button>
       <button id="advancedModeBtn" class="modeBtn" type="button" aria-pressed="false">Advanced</button>
+      <button id="mobileTimelineModeBtn" class="modeBtn mobileTimelineModeBtn" type="button" aria-pressed="false">Timeline</button>
     </div>
     <div class="workspaceStatusItem workspaceNextAction">
       <span>Next action</span>
@@ -302,7 +303,7 @@
     <summary>
       <div class="sumLeft">
         <div class="chev"></div>
-        <div style="min-width:0">
+        <div class="summaryText">
           <div class="layerTitle">Setup</div>
           <div class="layerMeta">Line Setup and App Settings</div>
         </div>
@@ -429,8 +430,8 @@
         <summary>
           <div class="sumLeft">
             <div class="chev"></div>
-            <div style="min-width:0">
-              <div class="layerTitle" style="font-size:13px">Receiver hopper weights</div>
+            <div class="summaryText">
+              <div class="layerTitle nestedLayerTitle">Receiver hopper weights</div>
               <div class="layerMeta">Stored capacity used by the run-down calculation</div>
             </div>
           </div>
@@ -450,8 +451,8 @@
         <summary>
           <div class="sumLeft">
             <div class="chev"></div>
-            <div style="min-width:0">
-              <div class="layerTitle" style="font-size:13px">Offsets</div>
+            <div class="summaryText">
+              <div class="layerTitle nestedLayerTitle">Offsets</div>
               <div class="layerMeta">Downcomer offset minutes</div>
             </div>
           </div>
@@ -473,7 +474,7 @@
     <summary>
       <div class="sumLeft">
         <div class="chev"></div>
-        <div style="min-width:0">
+        <div class="summaryText">
           <div class="layerTitle">Hopper Percentages</div>
           <div class="layerMeta">Set layer and hopper % - Toggle Tracking</div>
         </div>
@@ -492,7 +493,7 @@
     <summary>
       <div class="sumLeft">
         <div class="chev"></div>
-        <div style="min-width:0">
+        <div class="summaryText">
           <div class="layerTitle">Run-Down Timeline</div>
           <div class="layerMeta">Only tracked hoppers • Sorted by upcoming time</div>
         </div>
@@ -502,7 +503,7 @@
 
     <div class="blockBody">
       <div class="muted">Sorted by upcoming time (Start by if changeover is set; otherwise Time to empty).</div>
-       <div class="trackWrap" style="justify-content:flex-start">
+       <div class="trackWrap resultsToggleControls">
   <span class="trackLabel">Show all</span>
 
   <div
@@ -533,7 +534,7 @@
     <summary>
       <div class="sumLeft">
         <div class="chev"></div>
-        <div style="min-width:0">
+        <div class="summaryText">
           <div class="layerTitle">Cloud Sync</div>
           <div class="layerMeta">Optional shared line data across devices</div>
         </div>
@@ -604,7 +605,7 @@
     <summary>
       <div class="sumLeft">
         <div class="chev"></div>
-        <div style="min-width:0">
+        <div class="summaryText">
           <div class="layerTitle">Line Configurations</div>
           <div class="layerMeta">Save • load • export • import</div>
         </div>
@@ -658,7 +659,7 @@
     <summary>
       <div class="sumLeft">
         <div class="chev"></div>
-        <div style="min-width:0">
+        <div class="summaryText">
           <div class="layerTitle">Tools</div>
           <div class="layerMeta">Production utilities</div>
         </div>
@@ -820,7 +821,7 @@
     <summary>
       <div class="sumLeft">
         <div class="chev"></div>
-        <div style="min-width:0">
+        <div class="summaryText">
           <div class="layerTitle">Help</div>
           <div class="layerMeta">Operator guide for every section</div>
         </div>
@@ -864,7 +865,7 @@
           <div class="helpTopicBody">
             <ol>
               <li>Enter the percentage of total output assigned to each layer. The layer percentages should total 100%.</li>
-              <li>Select <strong>+ Add resin</strong> for every active hopper, then enter or choose its resin name.</li>
+              <li>Enter or choose a resin name in every active hopper's empty resin field.</li>
               <li>Enter hopper percentages in hoppers 2–6. Hopper 1 is calculated automatically as the remaining percentage so each layer totals 100%.</li>
               <li>Use the clock button beside a hopper to include it in the Run-Down Timeline. Bulk-selection checkboxes are separate and appear only in Bulk Edit mode.</li>
               <li>Use a layer's <strong>Copy</strong> button when another layer uses the same resins and hopper percentages. Copy does not change the destination layer percentage.</li>
@@ -875,7 +876,7 @@
               <li>Select cells individually, a numbered row, a layer column, or all hoppers.</li>
               <li>Enter a resin name, a hopper percentage, or both in the bulk fields.</li>
               <li>Select <strong>Apply</strong>. Resin names apply to every selected cell; percentages apply only where editable and are rejected if they would push a layer over 100%.</li>
-              <li>Use <strong>Reset all</strong> to return every cell to <strong>+ Add resin</strong> and clear hopper percentages, tracking, and pump-off states before building a recipe again.</li>
+              <li>Use <strong>Reset all</strong> to empty every resin field and clear hopper percentages, tracking, and pump-off states before building a recipe again.</li>
             </ol>
             <p class="helpTip">A problem message appears below a layer only when its hopper percentages need attention.</p>
           </div>
@@ -890,6 +891,7 @@
               <li>After physically turning off a hopper pump, mark <strong>Pump off</strong>. Completed hoppers are hidden unless <strong>Show all</strong> is enabled.</li>
               <li>Use <strong>Reset tracking</strong> at the appropriate time to untrack every hopper and clear pump-off states.</li>
             </ol>
+            <p class="helpTip">On mobile, select <strong>Timeline</strong> beneath the Polyn logo to hide every other section and keep only the timeline and production footer visible.</p>
             <p class="helpTip">The footer on mobile shows the next tracked hopper and current Cloud Sync status.</p>
           </div>
         </details>

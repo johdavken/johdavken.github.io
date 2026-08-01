@@ -59,7 +59,8 @@
       gauge: 0,
       hopperNamingLine9: "standard", // "standard" | "main"
       showPumpOffTracked: false, // show pump-off items in Run-Down Timeline
-      uiMode: "everyday" // "everyday" | "advanced"
+      uiMode: "everyday", // "everyday" | "advanced"
+      mobileTimelineOnly: false
 
     };
 
@@ -401,7 +402,7 @@
       const cls = hasBad ? "status bad" : (hasWarn ? "status" : "status ok");
       const title = hasBad ? "Fix before trusting results:" : (hasWarn ? "Heads up:" : "Looks good:");
       const items = messages.map(m=>`<li>${m.text}</li>`).join("");
-      return `<div class="${cls}"><div style="font-weight:950;margin-bottom:6px">${title}</div><ul>${items}</ul></div>`;
+      return `<div class="${cls}"><div class="statusTitle">${title}</div><ul>${items}</ul></div>`;
     }
 
     function getLayerNamesForType(lineType){
@@ -487,6 +488,7 @@
         hopperNamingLine9: state.hopperNamingLine9,
         showPumpOffTracked: !!state.showPumpOffTracked,
         uiMode: state.uiMode,
+        mobileTimelineOnly: !!state.mobileTimelineOnly,
         blocksOpen
       };
     }
@@ -500,6 +502,7 @@
         timelineStyle: state.timelineStyle,
         showPumpOffTracked: state.showPumpOffTracked,
         uiMode: state.uiMode,
+        mobileTimelineOnly: state.mobileTimelineOnly,
         blocksOpen: snapshotPayload().blocksOpen
       };
       applyPayload({ ...payload, ...localPreferences }, { rebuildUI: true });
@@ -582,6 +585,8 @@
       state.hopperNamingLine9 = (payload.hopperNamingLine9 === "main") ? "main" : "standard";
       state.showPumpOffTracked = !!payload.showPumpOffTracked;
       state.uiMode = payload.uiMode === "advanced" ? "advanced" : "everyday";
+      state.mobileTimelineOnly = !!payload.mobileTimelineOnly;
+      applyMobileTimelineMode(state.mobileTimelineOnly);
 
 
       $("lineType").value = String(state.lineType);
@@ -1672,7 +1677,7 @@
       if (sumEl){
         sumEl.innerHTML = `
           <div class="status ok">
-            <div style="font-weight:950;margin-bottom:6px">Resin totals</div>
+            <div class="statusTitle">Resin totals</div>
             <div class="muted">
               Production: <span class="mono">${fmtNum(prod,2)}</span> lb • Scrap: <span class="mono">${fmtNum(scrap,2)}</span> lb •
               Total: <span class="mono">${fmtNum(total,2)}</span> lb
@@ -1701,7 +1706,7 @@
             <div class="calcName mono" data-resin-name></div>
             <div class="calcMeta">Allocated from splits</div>
           </div>
-          <div class="mono" style="font-weight:950">${fmtNum(r.lbs,2)} lb</div>
+          <div class="mono calcValue">${fmtNum(r.lbs,2)} lb</div>
         `;
         row.querySelector("[data-resin-name]").textContent = r.displayName;
         out.appendChild(row);
@@ -2086,20 +2091,38 @@
       }
     });
 
+    function syncModeButtons(){
+      const timelineActive = state.mobileTimelineOnly && window.matchMedia("(max-width: 900px)").matches;
+      const advanced = state.uiMode === "advanced";
+      const everydayBtn = $("everydayModeBtn");
+      const advancedBtn = $("advancedModeBtn");
+      const timelineBtn = $("mobileTimelineModeBtn");
+      if (everydayBtn){ everydayBtn.classList.toggle("active", !timelineActive && !advanced); everydayBtn.setAttribute("aria-pressed", String(!timelineActive && !advanced)); }
+      if (advancedBtn){ advancedBtn.classList.toggle("active", !timelineActive && advanced); advancedBtn.setAttribute("aria-pressed", String(!timelineActive && advanced)); }
+      if (timelineBtn){ timelineBtn.classList.toggle("active", timelineActive); timelineBtn.setAttribute("aria-pressed", String(timelineActive)); }
+    }
+
+    function applyMobileTimelineMode(enabled){
+      state.mobileTimelineOnly = !!enabled;
+      document.body.setAttribute("data-mobile-timeline-only", String(state.mobileTimelineOnly));
+      if (state.mobileTimelineOnly && window.matchMedia("(max-width: 900px)").matches){
+        const results = $("resultsBlock");
+        if (results) results.open = true;
+      }
+      syncModeButtons();
+    }
+
     function applyUIMode(mode){
       state.uiMode = mode === "advanced" ? "advanced" : "everyday";
       document.body.setAttribute("data-ui-mode", state.uiMode);
       const advanced = state.uiMode === "advanced";
-      const everydayBtn = $("everydayModeBtn");
-      const advancedBtn = $("advancedModeBtn");
-      if (everydayBtn){ everydayBtn.classList.toggle("active", !advanced); everydayBtn.setAttribute("aria-pressed", String(!advanced)); }
-      if (advancedBtn){ advancedBtn.classList.toggle("active", advanced); advancedBtn.setAttribute("aria-pressed", String(advanced)); }
+      syncModeButtons();
       if (!advanced && activeWorkspaceId === "recipesBlock"){
         setWorkspacePanel("resultsBlock", { persist: false });
       }
     }
 
-    function setUIMode(mode){ applyUIMode(mode); saveSession(); }
+    function setUIMode(mode){ applyMobileTimelineMode(false); applyUIMode(mode); saveSession(); }
 
     let activeWorkspaceId = "resultsBlock";
 
@@ -2148,6 +2171,11 @@
       if (desktop){
         setWorkspacePanel(activeWorkspaceId);
       }
+      if (!desktop && state.mobileTimelineOnly){
+        const results = $("resultsBlock");
+        if (results) results.open = true;
+      }
+      syncModeButtons();
     }
 
     function rebuildUIFromState(payloadMaybe){
@@ -2874,6 +2902,11 @@
       event.stopPropagation();
       setUIMode("advanced");
     });
+    $("mobileTimelineModeBtn")?.addEventListener("click", event=>{
+      event.stopPropagation();
+      applyMobileTimelineMode(true);
+      saveSession();
+    });
     const toolTabs = Array.from(document.querySelectorAll(".toolsIndexButton"));
     function selectToolPanel(targetId, { focus = false } = {}){
       if (!toolTabs.some(tab=>tab.dataset.toolTarget === targetId)) return;
@@ -2907,7 +2940,8 @@
     });
     document.querySelectorAll(".workspaceContent > .workspacePanel > summary").forEach(summary=>{
       summary.addEventListener("click",event=>{
-        if (window.matchMedia("(min-width: 901px)").matches) event.preventDefault();
+        const timelineLockedOpen = state.mobileTimelineOnly && summary.closest("#resultsBlock") && window.matchMedia("(max-width: 900px)").matches;
+        if (window.matchMedia("(min-width: 901px)").matches || timelineLockedOpen) event.preventDefault();
       });
     });
     window.addEventListener("resize", syncWorkspaceForViewport);
@@ -2939,6 +2973,7 @@
 
       activeWorkspaceId = loadWorkspacePreference();
       applyUIMode(state.uiMode);
+      applyMobileTimelineMode(state.mobileTimelineOnly);
       syncWorkspaceForViewport();
       hookDetailsPersistence();
       hookCustomToggles();
