@@ -22,7 +22,6 @@
       "lineSetupBlock",
       "lineSyncBlock",
       "weightsBlock",
-      "offsetsBlock",
       "splitsBlock",
       "resultsBlock",
       "recipesBlock",
@@ -458,9 +457,7 @@
 
       state.layers.forEach(recomputeAutoH1);
 
-      const nextOffsets = {};
-      names.forEach(n => nextOffsets[n] = clampNum(state.offsets?.[n] ?? 0));
-      state.offsets = nextOffsets;
+      state.offsets = Object.fromEntries(names.map(name=>[name, 0]));
     }
 
     function snapshotPayload(){
@@ -565,10 +562,10 @@
       if (!payload || typeof payload !== "object") return;
 
       state.lineRate = clampNum(payload.lineRate);
-      if ("gauge" in payload) state.gauge = clampNum(payload.gauge);
+      state.gauge = 0;
       state.lineType = [1,3,5].includes(Number(payload.lineType)) ? Number(payload.lineType) : 3;
       state.changeoverTime = payload.changeoverTime || "";
-      state.offsets = payload.offsets || {};
+      state.offsets = {};
       state.prodResinLb = clampNum(payload.prodResinLb);
       state.scrapResinLb = clampNum(payload.scrapResinLb);
 
@@ -578,9 +575,6 @@
       applySurfaceStyle(payload.surfaceStyle || "divided");
       applyTimelineStyle(payload.timelineStyle || "event-rail");
       $("lineRate").value = String(state.lineRate);
-      const g = $("gauge");
-      if (g) g.value = String(state.gauge);
-
       // Custom toggles
       state.hopperNamingLine9 = (payload.hopperNamingLine9 === "main") ? "main" : "standard";
       state.showPumpOffTracked = !!payload.showPumpOffTracked;
@@ -611,9 +605,7 @@
         return { name, layerPct, hoppers };
       });
 
-      const nextOffsets = {};
-      names.forEach(n => nextOffsets[n] = clampNum(state.offsets?.[n] ?? 0));
-      state.offsets = nextOffsets;
+      state.offsets = Object.fromEntries(names.map(layerName=>[layerName, 0]));
 
       const lineRateEl = $("lineRate");
       if (lineRateEl) lineRateEl.value = String(state.lineRate);
@@ -836,32 +828,6 @@
       const ij = $("importJson"); if (ij) ij.value = "";
       recipeStatus(`Imported config: "${name}"`, "ok");
       lineSync?.notifySavedSetupUpsert(name, payload);
-    }
-
-    function renderOffsetInputs(){
-      const wrap = $("offsetInputs");
-      if (!wrap) return;
-      wrap.innerHTML = "";
-      state.layers.forEach(L=>{
-        const id = `offset_${L.name}`;
-        const box = document.createElement("div");
-        box.innerHTML = `
-          <label for="${id}">Layer ${L.name} offset</label>
-          <input id="${id}" type="text" inputmode="numeric" placeholder="0" value="${clampNum(state.offsets[L.name] ?? 0)}" />
-        `;
-        wrap.appendChild(box);
-        box.querySelector("input").addEventListener("input",(e)=>{
-          const accepted = acceptNumericInput(
-            e.target,
-            { min: 0, label: `Layer ${L.name} offset` },
-            value => { state.offsets[L.name] = value; }
-          );
-          if (!accepted) return;
-          validateAndCompute({ sync: true });
-          saveSession();
-          updateLayerMetaDisplays();
-        });
-      });
     }
 
     function weightId(layerName, hi){ return `w_${layerName}_${hi}`; }
@@ -1110,37 +1076,51 @@
       modeButton.textContent = "Bulk edit";
       modeButton.setAttribute("aria-expanded", "false");
       modeBar.appendChild(modeButton);
-      area.appendChild(modeBar);
 
       const toolbar = document.createElement("div");
       toolbar.className = "splitsBulkBar hide";
       toolbar.innerHTML = `
+        <div class="splitsBulkSteps" aria-label="Bulk editing steps">
+          <span><b>1</b> Select hoppers</span>
+          <span><b>2</b> Enter changes</span>
+          <span><b>3</b> Apply</span>
+        </div>
         <label class="splitsBulkField" for="bulkResinName">
           <span>Resin name</span>
-          <input id="bulkResinName" type="text" placeholder="Leave blank to keep names" />
+          <input id="bulkResinName" type="text" placeholder="No change" />
         </label>
         <label class="splitsBulkField" for="bulkResinPct">
           <span>Percentage</span>
           <span class="splitsBulkPctInput">
-            <input id="bulkResinPct" type="text" inputmode="decimal" placeholder="Leave blank to keep %" />
+            <input id="bulkResinPct" type="text" inputmode="decimal" placeholder="No change" />
             <span>%</span>
           </span>
         </label>
-        <div class="splitsBulkActions">
+        <div class="splitsBulkApply">
+          <div id="splitSelectionStatus" class="tiny splitsSelectionStatus" role="status" aria-live="polite">No hoppers selected</div>
           <button id="applyBulkSplit" type="button" disabled>Apply to selected</button>
-          <button id="selectAllSplits" type="button" class="secondary">Select all</button>
-          <button id="clearSplitSelection" type="button" class="secondary">Clear selection</button>
+        </div>
+        <div class="splitsBulkActions">
+          <button id="selectAllSplits" type="button" class="bulkTextAction">Select all</button>
+          <button id="clearSplitSelection" type="button" class="bulkTextAction">Clear selection</button>
           <button id="resetAllSplits" type="button" class="danger">Reset all</button>
         </div>
-        <div id="splitSelectionStatus" class="tiny splitsSelectionStatus" role="status" aria-live="polite">No hoppers selected</div>
+        <div class="splitsBulkNote tiny">Blank fields leave existing values unchanged.</div>
       `;
-      area.appendChild(toolbar);
-
       const summary = document.createElement("div");
       summary.className = "splitsMatrixSummary";
       summary.setAttribute("role", "status");
       summary.setAttribute("aria-live", "polite");
-      area.appendChild(summary);
+      const trackingHint = document.createElement("span");
+      trackingHint.className = "splitsTrackingHint";
+      trackingHint.textContent = "Colored clock = tracked";
+      const actionInfo = document.createElement("div");
+      actionInfo.className = "splitsMatrixActionInfo";
+      actionInfo.append(summary, trackingHint);
+      const actionRow = document.createElement("div");
+      actionRow.className = "splitsMatrixActions";
+      actionRow.append(actionInfo, modeBar);
+      area.append(actionRow, toolbar);
 
       const mobileLayerNav = document.createElement("div");
       mobileLayerNav.className = "splitsMobileLayerNav";
@@ -1170,7 +1150,8 @@
       const headerRow = document.createElement("tr");
       const corner = document.createElement("th");
       corner.scope = "col";
-      corner.textContent = "Hopper";
+      corner.className = "splitRowCorner";
+      corner.textContent = "Select row";
       headerRow.appendChild(corner);
 
       state.layers.forEach(L=>{
@@ -1204,36 +1185,15 @@
         pctUnit.textContent = "%";
         pctWrap.append(pctInput, pctUnit);
 
-        const meta = document.createElement("div");
-        meta.id = `layerMeta_${L.name}`;
-        meta.className = "splitLayerMeta";
-        const thick = document.createElement("span");
-        thick.id = `layerThickText_${L.name}`;
-        thick.className = "mono";
-        const hasThickness = clampNum(state.gauge) > 0;
-        const initialOffset = clampNum(state.offsets?.[L.name] ?? 0);
-        const hasOffset = initialOffset !== 0;
-        thick.textContent = hasThickness
-          ? `${fmtTrim(clampNum(state.gauge) * (clampNum(L.layerPct) / 100), 3)} mil`
-          : "";
-        thick.hidden = !hasThickness;
-        const separator = document.createElement("span");
-        separator.id = `layerMetaSep_${L.name}`;
-        separator.textContent = " · ";
-        separator.hidden = !(hasThickness && hasOffset);
-        const offset = document.createElement("span");
-        offset.id = `layerOffText_${L.name}`;
-        offset.className = "mono";
-        offset.textContent = hasOffset ? `${fmtNum(initialOffset, 0)} min` : "";
-        offset.hidden = !hasOffset;
-        meta.hidden = !(hasThickness || hasOffset);
-        meta.append(thick, separator, offset);
+        const headerMain = document.createElement("div");
+        headerMain.className = "splitLayerMain";
+        headerMain.append(title, pctWrap);
 
         const hopperTotal = document.createElement("div");
         hopperTotal.id = `hopperTotal_${L.name}`;
         hopperTotal.className = "splitColumnTotal";
 
-        th.append(title, pctWrap, meta, hopperTotal);
+        th.append(headerMain, hopperTotal);
 
         const copyFrom = copyRules[L.name];
         if (copyFrom){
@@ -1279,6 +1239,7 @@
         rowSelect.className = "splitRowSelect mono";
         rowSelect.textContent = hopperPositionLabel(hi);
         rowSelect.title = `Select or clear hopper ${hopperPositionLabel(hi)} across all layers`;
+        rowSelect.setAttribute("aria-label", `Select hopper ${hopperPositionLabel(hi)} across all layers`);
         rowSelect.setAttribute("aria-pressed", "false");
         rowSelect.addEventListener("click",()=>{
           if (!bulkMode) return;
@@ -1300,12 +1261,7 @@
           const hopperName = document.createElement("span");
           hopperName.className = "splitCellHopperName mono";
           hopperName.textContent = hopperBadgeLabel(L.name, hi);
-          const completeMark = document.createElement("span");
-          completeMark.className = "splitCellCompleteMark";
-          completeMark.textContent = "✓";
-          completeMark.title = "Resin and percentage entered";
-          completeMark.setAttribute("aria-label", "Resin and percentage entered");
-          cellHeader.append(hopperName, completeMark);
+          cellHeader.append(hopperName);
 
           const editor = document.createElement("div");
           editor.className = "splitCellEditor";
@@ -1335,8 +1291,10 @@
           pctInput.className = "splitInput";
           pctInput.type = "text";
           pctInput.inputMode = "decimal";
-          pctInput.placeholder = "0";
-          pctInput.value = String(clampNum(hopper.pct));
+          pctInput.placeholder = "—";
+          pctInput.value = clampNum(hopper.pct) === 0 && !normName(hopper.resinName)
+            ? ""
+            : String(clampNum(hopper.pct));
           pctInput.setAttribute("aria-label", `${hopperBadgeLabel(L.name, hi)} percentage`);
           const pctUnit = document.createElement("span");
           pctUnit.textContent = "%";
@@ -1375,8 +1333,9 @@
 
           function refreshCellState(){
             const complete = !!normName(hopper.resinName) && clampNum(hopper.pct) > 0;
+            const empty = !normName(hopper.resinName) && clampNum(hopper.pct) === 0 && !hopper.track;
             td.classList.toggle("complete", complete);
-            completeMark.hidden = !complete;
+            td.classList.toggle("empty", empty);
             trackButton.classList.toggle("active", !!hopper.track);
             trackButton.setAttribute("aria-pressed", String(!!hopper.track));
             trackButton.title = hopper.track
@@ -1502,6 +1461,9 @@
           button.setAttribute("aria-pressed", count === keys.length ? "true" : (count ? "mixed" : "false"));
         });
         applyButton.disabled = selected.size === 0 || !hasBulkValue();
+        applyButton.textContent = selected.size
+          ? `Apply to ${selected.size} hopper${selected.size === 1 ? "" : "s"}`
+          : "Apply to selected";
         selectionStatus.className = `tiny splitsSelectionStatus${type ? ` ${type}` : ""}`;
         selectionStatus.textContent = message || (
           selected.size === 0
@@ -1519,6 +1481,12 @@
         table.querySelectorAll(".splitLayerTitle, .splitRowSelect").forEach(button=>{
           button.tabIndex = bulkMode ? 0 : -1;
           button.setAttribute("aria-disabled", String(!bulkMode));
+        });
+        cellRefs.forEach(ref=>{
+          ref.resinInput.disabled = bulkMode;
+          ref.pctInput.disabled = bulkMode;
+          const trackButton = ref.td.querySelector(".splitTrackButton");
+          if (trackButton) trackButton.disabled = bulkMode;
         });
         if (!bulkMode) selected.clear();
         updateSelectionUI();
@@ -1633,6 +1601,7 @@
         const layerOkay = Math.abs(layerTotal - 100) <= 0.0001;
         summary.className = `splitsMatrixSummary ${layerOkay ? "ok" : "warn"}`;
         summary.textContent = `Layer total: ${fmtNum(layerTotal,2)}% ${layerOkay ? "✓" : "— expected 100%"}`;
+        summary.hidden = layerOkay;
 
         state.layers.forEach(L=>{
           const hopperTotal = sum(L.hoppers.map(h=>clampNum(h.pct)));
@@ -1714,32 +1683,11 @@
     }
 
     function updateLayerMetaDisplays(){
-      const g = clampNum(state.gauge);
       state.layers.forEach(L=>{
         const pct = clampNum(L.layerPct);
 
         const pctEl = document.getElementById(`layerPctText_${L.name}`);
         if (pctEl) pctEl.textContent = `${fmtNum(pct,2)}%`;
-
-        const thickEl = document.getElementById(`layerThickText_${L.name}`);
-        const hasThickness = g > 0;
-        if (thickEl){
-          thickEl.textContent = hasThickness ? `${fmtTrim(g*(pct/100),3)} mil` : "";
-          thickEl.hidden = !hasThickness;
-        }
-
-        const off = clampNum(state.offsets?.[L.name] ?? 0);
-        const offEl = document.getElementById(`layerOffText_${L.name}`);
-        const hasOffset = off !== 0;
-        if (offEl){
-          offEl.textContent = hasOffset ? `${fmtNum(off,0)} min` : "";
-          offEl.hidden = !hasOffset;
-        }
-
-        const separator = document.getElementById(`layerMetaSep_${L.name}`);
-        if (separator) separator.hidden = !(hasThickness && hasOffset);
-        const meta = document.getElementById(`layerMeta_${L.name}`);
-        if (meta) meta.hidden = !(hasThickness || hasOffset);
       });
     }
 
@@ -1748,9 +1696,10 @@
    * Validation + compute + render
    * ============================ */
   function updateCollapsedSummaries(){
-    const hopperWeightsUnset = state.layers.length > 0 && state.layers.every(layer =>
-      layer.hoppers.every(hopper => clampNum(hopper.weight) === 0)
-    );
+    const hopperWeightValues = state.layers.flatMap(layer=>layer.hoppers.map(hopper=>clampNum(hopper.weight)));
+    const configuredWeightCount = hopperWeightValues.filter(weight=>weight > 0).length;
+    const hopperWeightsUnset = hopperWeightValues.length > 0 && configuredWeightCount === 0;
+    const hopperWeightsComplete = hopperWeightValues.length > 0 && configuredWeightCount === hopperWeightValues.length;
     const setupParts = [];
     if (state.lineRate > 0){
       setupParts.push(`${state.lineRate.toLocaleString([], { maximumFractionDigits: 2 })} lb/hr`);
@@ -1773,14 +1722,14 @@
     if (workspaceStatus){
       const hasOutput = state.lineRate > 0;
       const hasChangeover = !!changeoverDate;
-      workspaceStatus.textContent = hopperWeightsUnset
+      workspaceStatus.textContent = !hopperWeightsComplete
         ? "Needs hopper weights"
         : (hasOutput && hasChangeover
           ? "Ready"
           : (hasOutput || hasChangeover ? "In progress" : "Needs setup"));
       workspaceStatus.closest(".workspaceNavButton")?.setAttribute(
         "data-status",
-        hopperWeightsUnset
+        !hopperWeightsComplete
           ? "warn"
           : (hasOutput && hasChangeover ? "ok" : (hasOutput || hasChangeover ? "info" : "neutral"))
       );
@@ -1868,7 +1817,7 @@
 
       state.layers.forEach((L)=>{
         const layerRate = state.lineRate * (clampNum(L.layerPct)/div);
-        const offsetMin = clampNum(state.offsets?.[L.name] ?? 0);
+        const offsetMin = 0;
 
         L.hoppers.forEach((h, hi)=>{
           if (!h.track) return;
@@ -1972,8 +1921,8 @@
             </div>
 
             <div class="meta">
-              Rate: <span class="mono">${fmtNum(h.rate,2)}</span> lb/hr • Offset: <span class="mono">${fmtNum(h.offsetMin,0)}</span> min<br/>
-              Time to empty: <span class="mono">${h.timeText}</span> • Total: <span class="mono">${h.totalRundownText}</span>
+              Rate: <span class="mono">${fmtNum(h.rate,2)}</span> lb/hr<br/>
+              Time to empty: <span class="mono">${h.timeText}</span>
             </div>
           </div>
 
@@ -2181,7 +2130,6 @@
     function rebuildUIFromState(payloadMaybe){
       ensureLayers();
       syncHopperNamingUI();
-      renderOffsetInputs();
       renderWeightsArea();
       renderSplitsArea();
       renderResinCalculator();
@@ -2265,7 +2213,7 @@
     if (next){
       setNextStatus(
         `Soonest empty: ${next.hopperLabel}${next.resinName ? ` • ${next.resinName}` : ""}`,
-        `${next.timeText} • Total ${next.totalRundownText}`
+        next.timeText
       );
     } else {
       setNextStatus(
@@ -2791,7 +2739,7 @@
       if (confirm(`Permanently delete the shared workspace “${name}” for every linked device?`)) runLineSyncAction(()=>lineSync.deleteWorkspace());
     });
     $("lineSyncNewJobBtn")?.addEventListener("click",()=>{
-      if (confirm("Start a new shared job? Hopper weights and offsets will be kept; production inputs and tracking will be cleared.")) {
+      if (confirm("Start a new shared job? Hopper weights will be kept; production inputs and tracking will be cleared.")) {
         runLineSyncAction(()=>lineSync.replaceActiveJob(newJobPayload(), "new-job"));
       }
     });
@@ -2804,14 +2752,22 @@
       validateAndCompute({ sync: true });
       saveSession();
     });
-    $("gauge").addEventListener("input",(e)=>{
-      if (!acceptNumericInput(e.target, { min: 0, label: "Gauge" }, value => { state.gauge = value; })) return;
-      updateLayerMetaDisplays();
-      validateAndCompute({ sync: true });
-      saveSession();
-    });
     $("lineType")?.addEventListener("change",(e)=>{
-      state.lineType = [1,3,5].includes(Number(e.target.value)) ? Number(e.target.value) : 3;
+      const previousType = state.lineType;
+      const nextType = [1,3,5].includes(Number(e.target.value)) ? Number(e.target.value) : 3;
+      const nextLayerNames = new Set(getLayerNamesForType(nextType));
+      const configuredRemovedLayers = state.layers.filter(layer=>!nextLayerNames.has(layer.name)).filter(layer=>
+        clampNum(layer.layerPct) > 0 ||
+        layer.hoppers.some((hopper,index)=>
+          (index === 0 ? Math.abs(clampNum(hopper.pct) - 100) > 0.0001 : clampNum(hopper.pct) > 0) ||
+          clampNum(hopper.weight) > 0 || !!hopper.resinName || !!hopper.track || !!hopper.pumpOff
+        )
+      );
+      if (configuredRemovedLayers.length && !confirm(`Changing to ${nextType} ${nextType === 1 ? "layer" : "layers"} will remove configured data for ${configuredRemovedLayers.map(layer=>layer.name).join(", ")}. Continue?`)){
+        e.target.value = String(previousType);
+        return;
+      }
+      state.lineType = nextType;
       ensureLayers();
       rebuildUIFromState();
       saveSession();
@@ -2945,6 +2901,20 @@
       });
     });
     window.addEventListener("resize", syncWorkspaceForViewport);
+    const statusPreferences = $("statusPreferences");
+    statusPreferences?.addEventListener("toggle",()=>{
+      const summary = statusPreferences.querySelector(":scope > summary");
+      if (summary) summary.setAttribute("aria-label", statusPreferences.open ? "Close appearance and preferences" : "Open appearance and preferences");
+    });
+    document.addEventListener("click",event=>{
+      if (statusPreferences?.open && !statusPreferences.contains(event.target)) statusPreferences.open = false;
+    });
+    document.addEventListener("keydown",event=>{
+      if (event.key === "Escape" && statusPreferences?.open){
+        statusPreferences.open = false;
+        statusPreferences.querySelector(":scope > summary")?.focus();
+      }
+    });
 
     // Recipe buttons
     $("saveConfigBtn")?.addEventListener("click", saveNamedConfig);
