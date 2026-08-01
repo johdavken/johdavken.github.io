@@ -21,6 +21,19 @@
     return resins.find(resin => normalizeSearch(resin.code) === query) || null;
   }
 
+  function getResinNames() {
+    const seen = new Set();
+    return resins.reduce((names, resin) => {
+      const code = String(resin?.code ?? "").trim();
+      const normalized = normalizeSearch(code);
+      if (normalized && !seen.has(normalized)) {
+        seen.add(normalized);
+        names.push(code);
+      }
+      return names;
+    }, []);
+  }
+
   function findResinSuggestions(value, limit = 20) {
     const query = normalizeSearch(value);
     if (!query) return [];
@@ -84,6 +97,7 @@
 
   return {
     normalizeSearch,
+    getResinNames,
     findExactResin,
     findResinSuggestions,
     formatResinResult,

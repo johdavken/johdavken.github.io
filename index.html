@@ -9,10 +9,10 @@
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 
-  <link rel="stylesheet" href="styles.css?v=0.17.20">
+  <link rel="stylesheet" href="styles.css?v=0.17.25">
   <link rel="stylesheet" href="theme.css?v=0.16.9">
 <script src="validation.js?v=0.18" defer></script>
-<script src="scheduling.js?v=0.18" defer></script>
+<script src="scheduling.js?v=0.18.3" defer></script>
 <script src="storage.js?v=0.18" defer></script>
 <script src="calculators.js?v=0.18" defer></script>
 <script src="active-job.js?v=0.18" defer></script>
@@ -20,10 +20,10 @@
 <script src="supabase-config.js?v=0.18" defer></script>
 <script src="sync-storage.js?v=0.18" defer></script>
 <script src="cloud-sync.js?v=0.18.1" defer></script>
-<script src="resin-data.js?v=0.16.1" defer></script>
+<script src="resin-data.js?v=0.16.2" defer></script>
 <script src="resin-description-info.js?v=0.16.1" defer></script>
-<script src="resin-lookup.js?v=0.18" defer></script>
-<script src="app.js?v=0.18.10" defer></script>
+<script src="resin-lookup.js?v=0.18.1" defer></script>
+<script src="app.js?v=0.18.19" defer></script>
 
 
 </head>
@@ -258,7 +258,7 @@
       <span>Line Configurations</span>
       <small>Save and load</small>
     </button>
-    <button class="workspaceNavButton advancedOnly" type="button" data-workspace-target="toolsBlock">
+    <button class="workspaceNavButton" type="button" data-workspace-target="toolsBlock">
       <span>Tools</span>
       <small>Production utilities</small>
     </button>
@@ -408,6 +408,17 @@
               <option value="accent-frame">Accent Frame</option>
               <option value="divided" selected>Divided Workspace</option>
               <option value="low-elevation">Low Elevation</option>
+            </select>
+          </div>
+          <div>
+            <label for="timelineStyleSel">Timeline style</label>
+            <select id="timelineStyleSel">
+              <option value="soft-cards">Soft Cards</option>
+              <option value="event-rail" selected>Vertical Event Rail</option>
+              <option value="data-strips">Precision Data Strips</option>
+              <option value="priority-lane">Time-First Priority Lane</option>
+              <option value="divided-list">Borderless Divided List</option>
+              <option value="command-rows">Compact Command Rows</option>
             </select>
           </div>
         </div>
@@ -643,7 +654,7 @@
   </details>
 
   <!-- 6) TOOLS -->
-  <details class="block card advancedOnly workspacePanel" id="toolsBlock">
+  <details class="block card workspacePanel" id="toolsBlock">
     <summary>
       <div class="sumLeft">
         <div class="chev"></div>
@@ -839,7 +850,7 @@
           <div class="helpTopicBody">
             <ol>
               <li>Enter the current <strong>line rate</strong>, select the <strong>line type</strong>, and set a changeover deadline when one is known.</li>
-              <li>In Advanced mode, use <strong>Appearance &amp; Preferences</strong> to choose the theme, surface style, and one of five views from Spacious through Maximum Data. You can also choose a 12-hour or 24-hour clock. Comfort, the 12-hour clock, and Divided Workspace are the defaults. Advanced mode also provides gauge and optional Line 9 hopper naming.</li>
+              <li>In Advanced mode, use <strong>Appearance &amp; Preferences</strong> to choose the theme, surface style, timeline style, and one of five views from Spacious through Maximum Data. You can also choose a 12-hour or 24-hour clock. Comfort, the 12-hour clock, Divided Workspace, and Vertical Event Rail are the defaults. Advanced mode also provides gauge and optional Line 9 hopper naming.</li>
               <li>Open <strong>Receiver hopper weights</strong> and enter the usable pounds held by each hopper. Accurate weights are required for useful run-down times.</li>
               <li>For faster weight entry, select individual cells, click a hopper number to select its row, or click a layer heading to select its column. Enter one weight above the matrix and apply it to the selection.</li>
               <li>Open <strong>Offsets</strong> and enter each layer's downcomer run-down time in minutes. Use zero when no offset is needed.</li>
