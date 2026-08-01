@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Polyn Logo Concepts</title>
+  <style>
+    :root{
+      color-scheme:dark;
+      --bg:#1d2021;--panel:#282828;--panel-2:#32302f;--text:#ebdbb2;--muted:#bdae93;
+      --line:#504945;--red:#cc241d;--orange:#d65d0e;--yellow:#d79921;--green:#689d6a;
+      --aqua:#689d6a;--blue:#458588;--select:#83a598;--shadow:rgba(0,0,0,.24);
+    }
+    html[data-theme="light"]{
+      color-scheme:light;
+      --bg:#f2e5bc;--panel:#fbf1c7;--panel-2:#ebdbb2;--text:#3c3836;--muted:#665c54;
+      --line:#d5c4a1;--red:#9d0006;--orange:#af3a03;--yellow:#b57614;--green:#79740e;
+      --aqua:#427b58;--blue:#076678;--select:#076678;--shadow:rgba(60,56,54,.14);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 ui-monospace,"Cascadia Mono","Liberation Mono",monospace}
+    button,input{font:inherit}
+    .pageHead{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:20px;padding:21px clamp(17px,4vw,52px);border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(12px)}
+    h1{margin:0;font-size:clamp(23px,4vw,38px);line-height:1.05;letter-spacing:-.055em}
+    .pageHead p{margin:7px 0 0;color:var(--muted);font-family:system-ui,sans-serif}
+    .themeButton{flex:none;padding:9px 13px;border:1px solid var(--line);border-radius:7px;background:var(--panel);color:var(--text);cursor:pointer;font-weight:800}
+    main{width:min(1500px,100%);margin:auto;padding:25px clamp(13px,3vw,38px) 55px}
+    .intro{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:20px;padding:13px 16px;border-left:4px solid var(--orange);background:var(--panel);color:var(--muted);font-family:system-ui,sans-serif}
+    .chips{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:7px}
+    .chip{padding:4px 8px;border:1px solid var(--line);border-radius:999px;color:var(--text);font:700 11px system-ui,sans-serif;white-space:nowrap}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+    .concept{overflow:hidden;border:2px solid transparent;border-radius:10px;background:var(--panel);box-shadow:0 8px 20px var(--shadow)}
+    .concept.selected{border-color:var(--select);box-shadow:0 0 0 3px color-mix(in srgb,var(--select) 20%,transparent),0 8px 20px var(--shadow)}
+    .conceptHead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:13px 15px;border-bottom:1px solid var(--line)}
+    .choice{display:flex;align-items:flex-start;gap:10px;cursor:pointer}
+    .choice input{width:17px;height:17px;margin:2px 0 0;accent-color:var(--select)}
+    .name{display:block;font-weight:900;color:var(--text)}
+    .idea{display:block;margin-top:2px;color:var(--muted);font:12px system-ui,sans-serif}
+    .number{color:var(--orange);font-weight:900}
+    .logoSurfaces{display:grid;grid-template-columns:1fr 1fr}
+    .surface{min-width:0;padding:18px}
+    .surface.light{background:#fbf1c7}
+    .surface.dark{background:#282828}
+    .surfaceLabel{margin-bottom:12px;color:#928374;font-size:10px;font-weight:900;letter-spacing:.1em;text-transform:uppercase}
+    .logo{display:block;width:100%;height:auto;overflow:visible}
+    .smallCheck{display:flex;align-items:center;gap:13px;margin-top:15px;padding-top:13px;border-top:1px solid rgba(146,131,116,.35)}
+    .smallCheck svg{width:34px;height:34px;flex:none}
+    .smallCheck span{color:#928374;font-size:10px}
+    .word{font-family:ui-monospace,"Cascadia Mono","Liberation Mono",monospace;font-weight:900;letter-spacing:-5px}
+    .word-light{fill:#3c3836}.word-dark{fill:#ebdbb2}
+    .tagline{font-family:ui-monospace,"Cascadia Mono","Liberation Mono",monospace;font-weight:700;letter-spacing:2.8px}
+    @media(max-width:900px){.grid{grid-template-columns:1fr}}
+    @media(max-width:580px){.pageHead{align-items:flex-start}.intro{align-items:flex-start;flex-direction:column}.chips{justify-content:flex-start}.logoSurfaces{grid-template-columns:1fr}.surface{padding:15px}}
+  </style>
+</head>
+<body>
+  <header class="pageHead">
+    <div><h1>POLYN // LOGO STUDY</h1><p>Ten retro-industrial marks inspired by resin, flowing film, and extrusion equipment.</p></div>
+    <button id="themeButton" class="themeButton" type="button">LIGHT UI</button>
+  </header>
+  <main>
+    <section class="intro">
+      <span>The symbols are designed to remain recognizable without the wordmark. Select a card to mark a favorite.</span>
+      <div class="chips"><span class="chip">Gruvbox palette</span><span class="chip">Vector only</span><span class="chip">Small-size check</span></div>
+    </section>
+    <section id="logoGrid" class="grid" aria-label="Polyn logo alternatives"></section>
+  </main>
+  <script>
+    "use strict";
+    const colors={red:"#cc241d",orange:"#d65d0e",yellow:"#d79921",green:"#689d6a",blue:"#458588",cream:"#ebdbb2",dark:"#3c3836"};
+    const concepts=[
+      {name:"Flow Die",idea:"Five polymer layers converge through an extrusion die.",icon:`<g fill="none" stroke-linecap="round" stroke-width="8"><path d="M8 17h37l16 16h23" stroke="${colors.red}"/><path d="M8 31h33l16 10h27" stroke="${colors.orange}"/><path d="M8 45h76" stroke="${colors.yellow}"/><path d="M8 59h33l16-10h27" stroke="${colors.green}"/><path d="M8 73h37l16-16h23" stroke="${colors.blue}"/></g>`},
+      {name:"Pellet Orbit",idea:"A resin pellet travels through a continuous production loop.",icon:`<path d="M21 68A35 35 0 1 1 72 73" fill="none" stroke="${colors.blue}" stroke-width="9" stroke-linecap="round"/><path d="m65 65 10 9-13 6" fill="none" stroke="${colors.blue}" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><rect x="31" y="28" width="29" height="29" rx="8" fill="${colors.orange}" transform="rotate(12 45.5 42.5)"/><path d="M36 39h19" stroke="${colors.cream}" stroke-width="4" stroke-linecap="round"/>`},
+      {name:"Film Roll",idea:"Layered film leaves a roll in a clean industrial monogram.",icon:`<circle cx="31" cy="47" r="22" fill="none" stroke="${colors.red}" stroke-width="9"/><circle cx="31" cy="47" r="7" fill="${colors.yellow}"/><path d="M51 31c13 0 18 6 29 6M52 44c12 0 17 6 28 6M50 57c13 0 18 6 30 6" fill="none" stroke-linecap="round" stroke-width="7" stroke="${colors.blue}"/>`},
+      {name:"Layer Stack",idea:"Five offset film layers form a compact factory badge.",icon:`<path d="m14 24 31-14 31 14-31 14Z" fill="${colors.red}"/><path d="m14 37 31-14 31 14-31 14Z" fill="${colors.orange}"/><path d="m14 50 31-14 31 14-31 14Z" fill="${colors.yellow}"/><path d="m14 63 31-14 31 14-31 14Z" fill="${colors.green}"/><path d="m14 76 31-14 31 14-31 14Z" fill="${colors.blue}"/>`},
+      {name:"Polymer Chain",idea:"Linked resin molecules become a bold geometric P.",icon:`<g fill="none" stroke-width="8"><circle cx="27" cy="24" r="12" stroke="${colors.red}"/><circle cx="57" cy="24" r="12" stroke="${colors.orange}"/><circle cx="57" cy="54" r="12" stroke="${colors.yellow}"/><circle cx="27" cy="54" r="12" stroke="${colors.green}"/><path d="M27 66v17" stroke="${colors.blue}" stroke-linecap="round"/></g>`},
+      {name:"Extruder Screw",idea:"A simplified screw profile pushes resin toward the die.",icon:`<rect x="7" y="20" width="76" height="54" rx="9" fill="none" stroke="${colors.blue}" stroke-width="7"/><path d="M16 60 28 34l12 26 12-26 12 26 11-26" fill="none" stroke="${colors.orange}" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><path d="M83 38h7v18h-7" fill="${colors.red}"/>`},
+      {name:"Bubble Tower",idea:"The blown-film bubble rises above a compact die ring.",icon:`<path d="M31 66C19 51 20 25 45 10c25 15 26 41 14 56Z" fill="none" stroke="${colors.green}" stroke-width="8"/><path d="M27 66h36M21 79h48" stroke="${colors.orange}" stroke-width="8" stroke-linecap="round"/><path d="M36 66V31M54 66V31" stroke="${colors.blue}" stroke-width="5" stroke-linecap="round"/>`},
+      {name:"Ribbon P",idea:"A continuous coextruded ribbon folds into the letter P.",icon:`<path d="M24 80V15h27c23 0 28 31 5 38H24" fill="none" stroke="${colors.red}" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M36 80V27h15c10 0 11 13 1 15H36" fill="none" stroke="${colors.orange}" stroke-width="6" stroke-linecap="round"/><circle cx="68" cy="68" r="9" fill="${colors.blue}"/>`},
+      {name:"Gauge Lines",idea:"Measured film bands suggest precision, gauge, and output.",icon:`<path d="M9 20h69M9 34h55M9 48h69M9 62h55M9 76h69" fill="none" stroke-linecap="round" stroke-width="8" stroke="${colors.green}"/><path d="M68 27v42" stroke="${colors.red}" stroke-width="8" stroke-linecap="round"/><circle cx="68" cy="48" r="7" fill="${colors.yellow}"/>`},
+      {name:"Resin Current",idea:"Pellets enter as points and leave as a unified film stream.",icon:`<g fill="${colors.orange}"><circle cx="13" cy="20" r="7"/><circle cx="13" cy="45" r="7"/><circle cx="13" cy="70" r="7"/></g><path d="M25 20c22 0 20 25 38 25h20M25 45h58M25 70c22 0 20-25 38-25" fill="none" stroke="${colors.blue}" stroke-width="8" stroke-linecap="round"/><path d="M73 33v24" stroke="${colors.red}" stroke-width="7" stroke-linecap="round"/>`}
+    ];
+
+    function logoSvg(concept,dark=false,iconOnly=false){
+      const wordClass=dark?"word-dark":"word-light";
+      const label=concept.name.replaceAll('"','');
+      if(iconOnly)return `<svg viewBox="0 0 92 92" role="img" aria-label="${label} icon">${concept.icon}</svg>`;
+      return `<svg class="logo" viewBox="0 0 430 104" role="img" aria-label="Polyn ${label} logo"><g transform="translate(5 6)">${concept.icon}</g><text x="116" y="67" class="word ${wordClass}" font-size="55">POLYN</text><text x="119" y="88" class="tagline" fill="${dark?"#bdae93":"#665c54"}" font-size="9">POLYMER INTELLIGENCE</text></svg>`;
+    }
+
+    const grid=document.getElementById("logoGrid");
+    concepts.forEach((concept,index)=>{
+      const article=document.createElement("article");
+      article.className="concept";
+      article.dataset.concept=String(index);
+      article.innerHTML=`<div class="conceptHead"><label class="choice"><input type="radio" name="favorite" value="${index}"><span><span class="name"><span class="number">${String(index+1).padStart(2,"0")}.</span> ${concept.name}</span><span class="idea">${concept.idea}</span></span></label></div><div class="logoSurfaces"><div class="surface light"><div class="surfaceLabel">Light surface</div>${logoSvg(concept,false)}<div class="smallCheck">${logoSvg(concept,false,true)}<span>Icon at 34px</span></div></div><div class="surface dark"><div class="surfaceLabel">Dark surface</div>${logoSvg(concept,true)}<div class="smallCheck">${logoSvg(concept,true,true)}<span>Icon at 34px</span></div></div></div>`;
+      grid.appendChild(article);
+    });
+    document.querySelectorAll('input[name="favorite"]').forEach(input=>input.addEventListener("change",()=>{
+      document.querySelectorAll(".concept").forEach(card=>card.classList.toggle("selected",card.dataset.concept===input.value));
+    }));
+    document.getElementById("themeButton").addEventListener("click",event=>{
+      const light=document.documentElement.dataset.theme!=="light";
+      document.documentElement.dataset.theme=light?"light":"dark";
+      event.currentTarget.textContent=light?"DARK UI":"LIGHT UI";
+    });
+  </script>
+</body>
+</html>

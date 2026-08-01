@@ -1,9 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 160" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 150" role="img" aria-labelledby="title desc">
   <title id="title">Polyn — dark background</title>
-  <desc id="desc">Five flowing polymer layers beside the Polyn wordmark.</desc>
-  <!-- Dark-background palette: teal, orange, and warm white -->
-  <path d="M28 42C55 22 80 23 105 42s30 20 43 3M28 61c27-20 52-19 77 0s30 20 43 3M28 99c27-20 52-19 77 0s30 20 43 3" fill="none" stroke="#35C9B7" stroke-width="11" stroke-linecap="round"/>
-  <path d="M28 80c27-20 52-19 77 0s30 20 43 3M28 118c27-20 52-19 77 0s30 20 43 3" fill="none" stroke="#FFAA4C" stroke-width="11" stroke-linecap="round"/>
-  <path d="M196 116V44h28c18 0 29 10 29 25s-11 25-29 25h-28m0-12h27c11 0 17-4 17-13s-6-13-17-13h-27M359 44v72h47M417 44l27 39v33m27-72-27 39M487 116V44l49 72V44" fill="none" stroke="#CBD5DC" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M304 55a25 25 0 1 1 0 50 25 25 0 1 1 0-50Z" fill="#35C9B7"/>
+  <desc id="desc">Five polymer streams converge through an extrusion die beside the Polyn wordmark.</desc>
+  <g fill="none" stroke-width="11" stroke-linecap="round" stroke-linejoin="round">
+    <path id="flow-red" d="M28 38h66l27 25h47" stroke="#fb4934"/>
+    <path id="flow-orange" d="M28 57h57l27 15h56" stroke="#fe8019"/>
+    <path id="flow-yellow" d="M28 76h140" stroke="#fabd2f"/>
+    <path id="flow-green" d="M28 95h57l27-15h56" stroke="#b8bb26"/>
+    <path id="flow-blue" d="M28 114h66l27-25h47" stroke="#83a598"/>
+  </g>
+  <text id="polyn-wordmark" x="198" y="107" fill="#ebdbb2" font-family="ui-monospace, Cascadia Mono, Liberation Mono, monospace" font-size="76" font-weight="900" letter-spacing="-7">POLYN</text>
+  <text id="polyn-tagline" x="202" y="130" fill="#bdae93" font-family="ui-monospace, Cascadia Mono, Liberation Mono, monospace" font-size="17" font-weight="800" letter-spacing=".8">POLYMER INTELLIGENCE</text>
 </svg>

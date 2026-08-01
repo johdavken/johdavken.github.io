@@ -281,15 +281,25 @@ main{
   padding: 2px 12px 4px;
   border-bottom: 1px solid var(--border);
 }
-.workspaceBrandLogo{ display: block; width: min(100%, 176px); height: auto; }
+.workspaceBrandLogo{ display: block; width: min(100%, 196px); height: auto; }
 .workspaceBrandLogo path{ stroke-linecap: round; stroke-linejoin: round; }
-.workspaceBrandLogo .polynLayerPrimary,
-.workspaceBrandLogo .polynLayerSecondary{ fill: none; stroke-width: 11; }
-.workspaceBrandLogo .polynLayerPrimary{ stroke: var(--title); }
-.workspaceBrandLogo .polynLayerSecondary{ stroke: var(--focus-border); }
-.workspaceBrandLogo .polynWord{ fill: none; stroke: var(--muted); stroke-width: 13; }
-.workspaceBrandLogo .polynPellet{ fill: var(--title); stroke: none; }
-.mobileBrand .workspaceBrandLogo{ width: 166px; }
+.workspaceBrandLogo [class^="polynFlow"]{ fill: none; stroke-width: 11; }
+.workspaceBrandLogo .polynFlowRed{ stroke: var(--bad); }
+.workspaceBrandLogo .polynFlowOrange{ stroke: var(--orange); }
+.workspaceBrandLogo .polynFlowYellow{ stroke: var(--warn); }
+.workspaceBrandLogo .polynFlowGreen{ stroke: var(--ok); }
+.workspaceBrandLogo .polynFlowBlue{ stroke: var(--focus-border); }
+.workspaceBrandLogo .polynWord{
+  fill: var(--text);
+  font: 900 76px/1 ui-monospace, "Cascadia Mono", "Liberation Mono", monospace;
+  letter-spacing: -7px;
+}
+.workspaceBrandLogo .polynTagline{
+  fill: var(--muted);
+  font: 800 17px/1 ui-monospace, "Cascadia Mono", "Liberation Mono", monospace;
+  letter-spacing: .8px;
+}
+.mobileBrand .workspaceBrandLogo{ width: min(100%, 190px); }
 
 @media (min-width: 901px){
   .mobileBrand{ display: none; }
