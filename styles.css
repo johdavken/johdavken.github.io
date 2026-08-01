@@ -308,6 +308,14 @@ main{
   letter-spacing: .8px;
 }
 .mobileBrand .workspaceBrandLogo{ width: min(100%, 190px); }
+.statusPreferences{position:relative;margin-left:auto}
+.statusPreferences > summary{display:flex;align-items:center;justify-content:center;width:34px;height:34px;padding:0;border:0;border-radius:0;background:transparent;color:var(--text);font-size:20px;line-height:1;cursor:pointer;list-style:none}
+.statusPreferences > summary::-webkit-details-marker{display:none}
+.statusPreferences > summary:hover,.statusPreferences[open] > summary{background:transparent;color:var(--title)}
+.statusPreferences > summary:focus-visible{outline:2px solid var(--focus-border);outline-offset:-3px}
+.statusPreferencesPanel{position:absolute;top:calc(100% + 8px);right:0;z-index:60;width:min(390px,calc(100vw - 24px));padding:14px;border:1px solid var(--border2);border-radius:var(--radius-row);background:var(--panelOpen);box-shadow:var(--shadow2)}
+.statusPreferencesHead{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:12px;padding-bottom:9px;border-bottom:1px solid var(--border)}
+.statusPreferencesHead strong{font-size:14px}.statusPreferencesHead small{color:var(--muted);font-size:var(--font-tiny)}
 
 @media (min-width: 901px){
   .mobileBrand{ display: none; }
@@ -358,8 +366,9 @@ main{
     z-index: 5;
     display: flex;
     flex-wrap: wrap;
-    gap: 7px;
-    padding: 6px;
+    gap: 5px;
+    min-height:34px;
+    padding:0;
     border: 1px solid transparent;
     border-radius: var(--radius-row);
     background: var(--readonly-bg);
@@ -376,8 +385,9 @@ main{
     display: flex;
     align-items: baseline;
     gap: 7px;
-    padding: 6px 9px;
-    border: 1px solid var(--row-border);
+    min-height:34px;
+    padding:4px 8px;
+    border: 0;
     border-radius: 999px;
     background: var(--row-bg);
     white-space: nowrap;
@@ -798,12 +808,16 @@ input[readonly]:focus{
   color: var(--text);
   font-size: 15px;
 }
+.setupSectionIntro{ margin:-3px 0 12px;color:var(--muted);font-size:var(--font-small); }
 .setupFields{ display: grid; gap: var(--gap); grid-template-columns: 1fr; }
 .setupNaming{ margin-top: var(--gap); max-width: 320px; }
+.setupPreferenceFields{ display:grid;gap:10px;grid-template-columns:repeat(2,minmax(0,1fr)); }
+.fieldRequirement{ display:block;margin-top:2px;color:var(--muted);font-size:var(--font-tiny);font-weight:600; }
+.fieldRequirement{ color:var(--warn); }
 @media (min-width: 720px){
-  .setupFields{ grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .setupPreferenceFields{ grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+  .setupFields{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
+@media (max-width:600px){.setupPreferenceFields{grid-template-columns:1fr}}
 
 /* =======================================================================
  *   Badges / pills
@@ -1063,8 +1077,11 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   font-size: var(--font-small);
 }
 .splitsBulkBar{
+  position:sticky;
+  top:54px;
+  z-index:7;
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) minmax(150px, .7fr) auto;
+  grid-template-columns:minmax(180px,1fr) minmax(150px,.7fr) minmax(180px,auto);
   gap: var(--gap);
   align-items: end;
   padding: 10px;
@@ -1072,6 +1089,9 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   border-radius: var(--radius-row);
   background: var(--readonly-bg);
 }
+.splitsBulkSteps{grid-column:1/-1;display:flex;align-items:center;gap:18px;padding-bottom:8px;border-bottom:1px solid var(--row-border)}
+.splitsBulkSteps span{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:var(--font-small)}
+.splitsBulkSteps b{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:999px;background:var(--btn-primary-a);color:var(--title);font-size:var(--font-tiny)}
 .splitsBulkField{ margin: 0; }
 .splitsBulkField > span:first-child{
   display: block;
@@ -1087,19 +1107,27 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   color: var(--muted);
   font-size: var(--font-small);
 }
-.splitsBulkActions{ display: flex; flex-wrap: wrap; gap: 8px; }
+.splitsBulkApply{display:grid;align-content:end;gap:6px}
+.splitsBulkApply button{width:100%}
+.splitsBulkActions{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding-top:4px;border-top:1px solid var(--row-border)}
+.splitsBulkActions .bulkTextAction{width:auto;min-height:0;padding:3px 2px;border:0;background:transparent;color:var(--muted);box-shadow:none}
+.splitsBulkActions .bulkTextAction:hover{color:var(--title);text-decoration:underline}
+.splitsBulkActions .danger{margin-left:auto}
+.splitsBulkNote{grid-column:1/-1;color:var(--muted)}
 .splitsSelectionStatus{
-  grid-column: 1 / -1;
   min-height: 1.2em;
 }
 .splitsSelectionStatus.ok{ color: var(--ok); }
 .splitsSelectionStatus.warn{ color: var(--warn); }
+.splitsMatrixActions{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:32px}
+.splitsMatrixActionInfo{display:flex;align-items:center;gap:12px;min-width:0}
+.splitsTrackingHint{color:var(--muted);font-size:var(--font-tiny);white-space:nowrap}
 
 .splitsMatrixSummary{
-  padding: 9px 12px;
-  border: 1px solid var(--row-border);
-  border-radius: var(--radius-input);
-  background: var(--readonly-bg);
+  padding: 2px 4px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: var(--muted);
   font-size: var(--font-small);
   font-weight: 850;
@@ -1115,7 +1143,7 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   overflow-x: auto;
   border: 1px solid var(--row-border);
   border-radius: var(--radius-row);
-  background: var(--readonly-bg);
+  background: transparent;
 }
 .splitsMatrix{
   width: 100%;
@@ -1125,13 +1153,16 @@ details[open] > summary .chev{ transform: rotate(45deg); }
 .splitsMatrix th,
 .splitsMatrix td{
   padding: 8px;
-  border-right: 1px solid var(--row-border-2);
+  border-right: 1px solid var(--row-border);
   border-bottom: 1px solid var(--row-border-2);
 }
 .splitsMatrix tr:last-child > *{ border-bottom: 0; }
 .splitsMatrix tr > *:last-child{ border-right: 0; }
+#splitsArea:not(.bulk-editing) .splitsMatrix tr > :first-child{display:none}
 .splitsMatrix thead th{
   min-width: 164px;
+  padding-top:6px;
+  padding-bottom:6px;
   vertical-align: top;
   background: var(--panelOpen);
 }
@@ -1144,9 +1175,15 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   background: var(--panelOpen);
   text-align: center;
 }
+.splitLayerMain{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+}
 .splitLayerTitle{
-  width: 100%;
-  padding: 6px 8px;
+  width: auto;
+  padding: 4px 2px;
   border-color: transparent;
   background: transparent;
   box-shadow: none;
@@ -1157,17 +1194,21 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   cursor: default;
 }
 .splitLayerPct{
-  display: grid;
-  grid-template-columns: minmax(70px, 1fr) auto;
+  display:flex;
   align-items: center;
-  gap: 6px;
-  margin: 7px 0 0;
+  gap:3px;
+  margin:0;
 }
 .splitLayerPct input{
-  min-width: 0;
-  padding: 7px 9px;
+  width:44px;
+  min-width:44px;
+  padding:4px 3px;
+  border-color:transparent;
+  background:transparent;
+  box-shadow:none;
   text-align: right;
 }
+.splitLayerPct input:hover,.splitLayerPct input:focus{border-color:var(--border2);background:var(--field-bg)}
 .splitLayerPct span,
 .splitLayerMeta{
   color: var(--muted);
@@ -1181,14 +1222,25 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   text-align: center;
 }
 .splitCopyBtn{
-  width: 100%;
-  margin-top: 7px;
-  padding: 6px 8px;
-  font-size: var(--font-small);
+  width:auto;
+  min-height:0;
+  margin:4px auto 0;
+  padding:2px 5px;
+  border:0;
+  background:transparent;
+  color:var(--muted);
+  font-size:var(--font-tiny);
+  box-shadow:none;
 }
+.splitCopyBtn:hover{background:transparent;color:var(--title);text-decoration:underline}
 .splitRowHeader{
   color: var(--text);
   font-weight: 950;
+}
+.splitRowCorner{
+  font-size:var(--font-tiny);
+  line-height:1.15;
+  white-space:normal;
 }
 .splitRowSelect{
   width: 100%;
@@ -1200,9 +1252,10 @@ details[open] > summary .chev{ transform: rotate(45deg); }
 }
 .splitMatrixCell{
   min-width: 164px;
-  background: var(--row-bg-2);
+  background: transparent;
   transition: background .12s ease, box-shadow .12s ease;
 }
+.splitsMatrix tbody tr:nth-child(even) .splitMatrixCell{background:color-mix(in srgb,var(--row-bg-2) 55%,transparent)}
 .splitsMatrix td.splitMatrixCell{ padding: 6px; }
 .splitCellHeader{
   display:flex;
@@ -1216,12 +1269,6 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   line-height:1;
 }
 .splitCellHopperName{ letter-spacing:.02em; }
-.splitCellCompleteMark{
-  color:var(--ok);
-  font-size:calc(var(--font-tiny) + 1px);
-  font-weight:950;
-}
-.splitCellCompleteMark[hidden]{ display:none; }
 .splitMatrixCell.selected{
   background: var(--btn-primary-a);
   box-shadow: inset 0 0 0 2px var(--focus-border);
@@ -1251,10 +1298,44 @@ details[open] > summary .chev{ transform: rotate(45deg); }
 .bulk-editing .splitCellSelector{ display: block; }
 .bulk-editing .splitLayerTitle,
 .bulk-editing .splitRowSelect{
-  border-color: var(--row-border-2);
-  background: var(--row-bg-2);
+  border-color:transparent;
+  background:transparent;
   cursor: pointer;
 }
+.bulk-editing .splitRowSelect{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+}
+.bulk-editing .splitRowSelect::before{
+  content:"";
+  display:grid;
+  place-items:center;
+  width:14px;
+  height:14px;
+  flex:0 0 14px;
+  border:1px solid var(--border-strong);
+  border-radius:3px;
+  background:var(--input-bg);
+  color:var(--btn-text);
+  font-family:system-ui,sans-serif;
+  font-size:11px;
+  font-weight:900;
+  line-height:1;
+}
+.bulk-editing .splitRowSelect.partiallySelected::before{
+  content:"−";
+  border-color:var(--focus-border);
+  background:var(--focus-ring);
+}
+.bulk-editing .splitRowSelect.selected::before{
+  content:"✓";
+  border-color:var(--focus-border);
+  background:var(--focus-border);
+  color:#fff;
+}
+.bulk-editing .splitLayerTitle:hover,.bulk-editing .splitRowSelect:hover{background:var(--row-bg-2);color:var(--title)}
 .bulk-editing .splitLayerTitle.selected,
 .bulk-editing .splitRowSelect.selected{
   border-color: var(--focus-border);
@@ -1266,10 +1347,16 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   border-color: color-mix(in srgb, var(--focus-border) 55%, var(--border));
   background: color-mix(in srgb, var(--focus-ring) 55%, transparent);
 }
+.bulk-editing .splitCopyBtn,.bulk-editing .splitTrackControl,.bulk-editing .splitsTrackingHint{display:none}
+.bulk-editing .splitMatrixCell .resinNameInput:disabled,.bulk-editing .splitMatrixCell .splitInput:disabled{opacity:.52;color:var(--muted);cursor:default}
 .splitMatrixCell .resinNameInput{
   padding: 7px 9px;
   font-size: var(--font-small);
 }
+.splitMatrixCell.empty .splitCellHopperName{color:color-mix(in srgb,var(--muted) 72%,transparent)}
+.splitMatrixCell.empty .resinNameInput:not(:focus),.splitMatrixCell.empty .splitPctControl input:not(:focus){border:0;background:transparent;box-shadow:none}
+.splitMatrixCell.empty .splitPctControl{opacity:.62}
+.splitMatrixCell.empty .splitPctControl > span{visibility:hidden}
 .splitCellControls{
   display: flex;
   align-items: center;
@@ -1310,9 +1397,9 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   min-height:21px;
   margin: 0;
   padding: 0;
-  border: 1px solid var(--border2);
+  border:0;
   border-radius: 5px;
-  background: var(--field-bg);
+  background:transparent;
   color: var(--muted);
   box-shadow: none;
 }
@@ -1326,7 +1413,7 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   stroke-linejoin: round;
 }
 .splitTrackButton:hover{
-  border-color: var(--focus-border);
+  background:var(--field-bg);
   color: var(--title);
 }
 .splitTrackButton:focus-visible{
@@ -1335,11 +1422,17 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   outline: none;
 }
 .splitTrackButton.active{
-  border-color: var(--focus-border);
   background: linear-gradient(180deg, var(--btn-primary-a), var(--btn-primary-b));
   color: var(--title);
 }
+@media (hover:hover){
+  .splitMatrixCell.empty .splitTrackButton:not(.active){opacity:0}
+  .splitMatrixCell.empty:hover .splitTrackButton,.splitMatrixCell.empty:focus-within .splitTrackButton{opacity:1}
+}
 @media (max-width: 700px){
+  .splitsBulkBar{top:38px}
+  .splitsBulkSteps{align-items:flex-start;flex-direction:column;gap:5px}
+  .splitsMatrixActions{align-items:flex-start}.splitsMatrixActionInfo{align-items:flex-start;flex-direction:column;gap:2px}
   .splitsMobileLayerNav{
     position: sticky;
     top: 0;
@@ -1378,8 +1471,8 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   .splitMatrixCell{ min-width: 0; }
   .splitsBulkBar{ grid-template-columns: 1fr; align-items: stretch; }
   .splitsSelectionStatus{ grid-column: 1; }
-  .splitsBulkActions{ display: grid; grid-template-columns: 1fr 1fr; }
-  .splitsBulkActions button:first-child{ grid-column: 1 / -1; }
+  .splitsBulkActions{display:grid;grid-template-columns:1fr 1fr}
+  .splitsBulkActions .danger{grid-column:1/-1;margin-left:0}
 }
 
 .hopperBadge{
@@ -2462,15 +2555,17 @@ body[data-surface-style="divided"] .helpTopic{
 .modeSwitch{display:inline-grid;grid-template-columns:1fr 1fr;flex:0 0 auto;padding:3px;border:1px solid var(--border2);border-radius:999px;background:var(--field-bg)}
 .modeBtn{min-width:96px;padding:8px 13px;border:0;border-radius:999px;background:transparent;color:var(--muted);box-shadow:none}
 .modeBtn.active{background:linear-gradient(180deg,var(--btn-primary-a),var(--btn-primary-b));color:var(--text);box-shadow:inset 0 0 0 1px var(--focus-border)}
-.statusModeSwitch{ align-self:center; }
+.statusModeSwitch{ display:none;align-self:center; }
+.workspaceStatusBar .statusModeSwitch{border:0}
+.workspaceStatusBar .modeBtn.active{box-shadow:none}
 .mobileTimelineModeBtn{ display:none; }
 .statusModeSwitch .modeBtn{
   min-width:66px;
   padding:5px 9px;
   font-size:var(--font-tiny);
 }
-body[data-ui-mode="everyday"] .advancedOnly{display:none!important}
 @media (max-width:900px){
+  body[data-ui-mode="everyday"] .advancedOnly{display:none!important}
   .mobileBrand{
     margin-bottom:calc(0px - var(--page-gap));
     border-bottom:0;
@@ -2481,16 +2576,20 @@ body[data-ui-mode="everyday"] .advancedOnly{display:none!important}
     z-index:40;
     display:flex;
     justify-content:center;
-    padding:5px var(--page-pad);
+    min-height:34px;
+    padding:0 var(--page-pad);
     border-bottom:1px solid var(--surface-chrome-border);
     background:var(--surface-chrome-bg);
     box-shadow:var(--surface-chrome-shadow);
     backdrop-filter:blur(10px);
   }
+  .statusPreferences{position:absolute;right:var(--page-pad);margin-left:0}
+  .statusPreferencesPanel{position:fixed;top:38px;right:var(--page-pad)}
   .workspaceStatusBar .workspaceStatusItem{ display:none; }
   .statusModeSwitch{
+    display:inline-grid;
     grid-template-columns:repeat(3, minmax(0, 1fr));
-    width:min(100%, 290px);
+    width:min(calc(100% - 48px), 290px);
   }
   .statusModeSwitch .modeBtn{ min-width:0; }
   .mobileTimelineModeBtn{ display:block; }

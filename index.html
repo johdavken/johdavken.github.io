@@ -10,7 +10,7 @@
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 
-  <link rel="stylesheet" href="styles.css?v=0.17.36">
+  <link rel="stylesheet" href="styles.css?v=0.17.44">
   <link rel="stylesheet" href="theme.css?v=0.17.0">
 <script src="validation.js?v=0.18" defer></script>
 <script src="scheduling.js?v=0.18.3" defer></script>
@@ -24,7 +24,7 @@
 <script src="resin-data.js?v=0.16.2" defer></script>
 <script src="resin-description-info.js?v=0.16.1" defer></script>
 <script src="resin-lookup.js?v=0.18.1" defer></script>
-<script src="app.js?v=0.18.22" defer></script>
+<script src="app.js?v=0.18.29" defer></script>
 
 
 </head>
@@ -298,6 +298,58 @@
       <strong id="workspaceNextStatus">No tracked hoppers</strong>
       <small id="workspaceNextDetail">Track a resin to see the next action</small>
     </div>
+    <details class="statusPreferences" id="statusPreferences">
+      <summary aria-label="Open appearance and preferences" title="Appearance and preferences">
+        <span aria-hidden="true">☰</span>
+      </summary>
+      <div class="statusPreferencesPanel">
+        <div class="statusPreferencesHead">
+          <strong>Appearance &amp; Preferences</strong>
+          <small>Saved on this device</small>
+        </div>
+        <div class="setupPreferenceFields">
+          <div>
+            <label for="themeSel">Theme</label>
+            <select id="themeSel">
+              <option value="dark">Dark</option><option value="light" selected>Light</option>
+              <option value="mse">Industrial Slate</option><option value="industrial-slate-dark">Industrial Slate Dark</option>
+              <option value="gruvbox-dark">Gruvbox Dark</option><option value="gruvbox-light">Gruvbox Light</option>
+              <option value="nord">Nord</option><option value="tokyo-night">Tokyo Night</option><option value="dracula">Dracula</option>
+              <option value="solarized-dark">Solarized Dark</option><option value="solarized-light">Solarized Light</option>
+              <option value="catppuccin-mocha">Catppuccin Mocha</option><option value="catppuccin-latte">Catppuccin Latte</option>
+              <option value="amber">Amber</option><option value="high-contrast">High Contrast</option><option value="mono">Monochrome</option>
+            </select>
+          </div>
+          <div>
+            <label for="densitySel">View density</label>
+            <select id="densitySel">
+              <option value="spacious">Spacious</option><option value="comfort" selected>Comfort</option>
+              <option value="compact">Compact</option><option value="dense">Dense</option><option value="maximum">Maximum Data</option>
+            </select>
+          </div>
+          <div>
+            <label for="timeFormatSel">Time format</label>
+            <select id="timeFormatSel"><option value="12" selected>12-hour</option><option value="24">24-hour</option></select>
+          </div>
+          <div>
+            <label for="surfaceStyleSel">Surface style</label>
+            <select id="surfaceStyleSel">
+              <option value="elevated">High Elevation</option><option value="flat">Pure Flat</option>
+              <option value="layered-flat">Layered Flat</option><option value="accent-frame">Accent Frame</option>
+              <option value="divided" selected>Divided Workspace</option><option value="low-elevation">Low Elevation</option>
+            </select>
+          </div>
+          <div>
+            <label for="timelineStyleSel">Timeline style</label>
+            <select id="timelineStyleSel">
+              <option value="soft-cards">Soft Cards</option><option value="event-rail" selected>Vertical Event Rail</option>
+              <option value="data-strips">Precision Data Strips</option><option value="priority-lane">Time-First Priority Lane</option>
+              <option value="divided-list">Borderless Divided List</option><option value="command-rows">Compact Command Rows</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </details>
   </div>
 
   <!-- 1) LINE SETUP -->
@@ -307,128 +359,36 @@
         <div class="chev"></div>
         <div class="summaryText">
           <div class="layerTitle">Setup</div>
-          <div class="layerMeta">Line Setup and App Settings</div>
+          <div class="layerMeta">Current changeover and line configuration</div>
         </div>
       </div>
     </summary>
 
     <div class="blockBody">
-      <section class="setupSection" aria-labelledby="lineSetupGroupTitle">
-        <h3 id="lineSetupGroupTitle" class="setupSectionTitle">Line Setup</h3>
-      <div class="setupFields">
-        <div>
-          <label for="lineRate">Line rate (lb/hr)</label>
-          <input id="lineRate" type="text" inputmode="decimal" placeholder="0" value="0" />
-          <div class="tiny">Example: 1200</div>
-        </div>
-
-        <div class="advancedOnly">
-          <label for="gauge">Gauge (mil)</label>
-          <input id="gauge" type="text" inputmode="decimal" placeholder="0" value="0" />
-          <div class="tiny">For reference.</div>
-        </div>
-
-        <div>
-          <label for="lineType">Line type</label>
-          <select id="lineType">
-            <option value="1">1-layer</option>
-            <option value="3" selected>3-layer</option>
-            <option value="5">5-layer</option>
-          </select>
-        </div>
-        <div>
-          <label for="changeoverTime">Changeover time (deadline)</label>
-          <input id="changeoverTime" type="time" />
-        </div>
-      </div>
-
-
-      <!-- Hopper naming (Line 9) -->
-      <div class="setupNaming advancedOnly" id="hopperNamingRow">
-        <div>
-          <div class="setupToggleRow">
-            <div class="setupToggleText">
-              <div class="setupToggleTitle">Line 9 Hopper Naming</div>
-              <div class="setupToggleMeta tiny">Choose how receiver hoppers are labeled.</div>
-            </div>
-
-            <div id="hopperNamingToggle" class="hopperNamingChoice" role="radiogroup" aria-label="Line 9 hopper naming">
-              <button class="active" type="button" role="radio" aria-checked="true" data-hopper-naming="standard">1–6</button>
-              <button type="button" role="radio" aria-checked="false" data-hopper-naming="main">Main + 1–5</button>
-            </div>
-          </div>
-        </div>
-      </div>
-      </section>
-
-      <section class="setupSection advancedOnly" aria-labelledby="appearanceGroupTitle">
-        <h3 id="appearanceGroupTitle" class="setupSectionTitle">Appearance &amp; Preferences</h3>
-        <div class="setupFields setupPreferenceFields">
-          <div class="advancedOnly">
-            <label for="themeSel">Theme</label>
-            <select id="themeSel">
-              <option value="dark">Dark</option>
-              <option value="light" selected>Light</option>
-              <option value="mse">Industrial Slate</option>
-              <option value="industrial-slate-dark">Industrial Slate Dark</option>
-              <option value="gruvbox-dark">Gruvbox Dark</option>
-              <option value="gruvbox-light">Gruvbox Light</option>
-              <option value="nord">Nord</option>
-              <option value="tokyo-night">Tokyo Night</option>
-              <option value="dracula">Dracula</option>
-              <option value="solarized-dark">Solarized Dark</option>
-              <option value="solarized-light">Solarized Light</option>
-              <option value="catppuccin-mocha">Catppuccin Mocha</option>
-              <option value="catppuccin-latte">Catppuccin Latte</option>
-              <option value="amber">Amber</option>
-              <option value="high-contrast">High Contrast</option>
-              <option value="mono">Monochrome</option>
-            </select>
-          </div>
-          <div class="advancedOnly">
-            <label for="densitySel">View</label>
-            <select id="densitySel">
-              <option value="spacious">Spacious</option>
-              <option value="comfort" selected>Comfort</option>
-              <option value="compact">Compact</option>
-              <option value="dense">Dense</option>
-              <option value="maximum">Maximum Data</option>
-            </select>
+      <section class="setupSection" aria-labelledby="currentChangeoverTitle">
+        <h3 id="currentChangeoverTitle" class="setupSectionTitle">Current Changeover</h3>
+        <p class="setupSectionIntro">Set the values that determine this run-down timeline.</p>
+        <div class="setupFields setupPrimaryFields">
+          <div>
+            <label for="changeoverTime">Changeover deadline <span class="fieldRequirement">Required for start-by times</span></label>
+            <input id="changeoverTime" type="time" />
           </div>
           <div>
-            <label for="timeFormatSel">Time format</label>
-            <select id="timeFormatSel">
-              <option value="12" selected>12-hour</option>
-              <option value="24">24-hour</option>
-            </select>
+            <label for="lineRate">Line rate (lb/hr) <span class="fieldRequirement">Required</span></label>
+            <input id="lineRate" type="text" inputmode="decimal" placeholder="e.g. 1200" value="0" />
           </div>
           <div>
-            <label for="surfaceStyleSel">Surface style</label>
-            <select id="surfaceStyleSel">
-              <option value="elevated">High Elevation</option>
-              <option value="flat">Pure Flat</option>
-              <option value="layered-flat">Layered Flat</option>
-              <option value="accent-frame">Accent Frame</option>
-              <option value="divided" selected>Divided Workspace</option>
-              <option value="low-elevation">Low Elevation</option>
-            </select>
-          </div>
-          <div>
-            <label for="timelineStyleSel">Timeline style</label>
-            <select id="timelineStyleSel">
-              <option value="soft-cards">Soft Cards</option>
-              <option value="event-rail" selected>Vertical Event Rail</option>
-              <option value="data-strips">Precision Data Strips</option>
-              <option value="priority-lane">Time-First Priority Lane</option>
-              <option value="divided-list">Borderless Divided List</option>
-              <option value="command-rows">Compact Command Rows</option>
-            </select>
+            <label for="lineType">Layer count <span class="fieldRequirement">Required</span></label>
+            <select id="lineType"><option value="1">1 layer</option><option value="3" selected>3 layers</option><option value="5">5 layers</option></select>
+            <div class="tiny">Changing this may add or remove configured layer data.</div>
           </div>
         </div>
       </section>
 
-      <!-- Nested: weights -->
-      <details class="block" id="weightsBlock">
+      <section class="setupSection" aria-labelledby="lineConfigurationTitle">
+        <h3 id="lineConfigurationTitle" class="setupSectionTitle">Line Configuration</h3>
+        <p class="setupSectionIntro">Equipment values that are normally set once for this line.</p>
+        <details class="block" id="weightsBlock">
         <summary>
           <div class="sumLeft">
             <div class="chev"></div>
@@ -446,26 +406,17 @@
           </div>
           <div id="weightsArea" class="weightsGrid mt10"></div>
         </div>
-      </details>
-
-      <!-- Nested: offsets -->
-      <details class="block advancedOnly" id="offsetsBlock">
-        <summary>
-          <div class="sumLeft">
-            <div class="chev"></div>
-            <div class="summaryText">
-              <div class="layerTitle nestedLayerTitle">Offsets</div>
-              <div class="layerMeta">Downcomer offset minutes</div>
+        </details>
+        <div class="setupNaming advancedOnly" id="hopperNamingRow">
+          <div class="setupToggleRow">
+            <div class="setupToggleText"><div class="setupToggleTitle">Receiver hopper labels</div><div class="setupToggleMeta tiny">Use numbered labels, or Main + 1–5 for Line 9.</div></div>
+            <div id="hopperNamingToggle" class="hopperNamingChoice" role="radiogroup" aria-label="Receiver hopper labels">
+              <button class="active" type="button" role="radio" aria-checked="true" data-hopper-naming="standard">1–6</button>
+              <button type="button" role="radio" aria-checked="false" data-hopper-naming="main">Main + 1–5</button>
             </div>
           </div>
-          <span class="pill">Offsets</span>
-        </summary>
-
-        <div class="blockBody">
-          <div class="muted">Add time to offset resin times for your downcomers.</div>
-          <div id="offsetInputs" class="gridAuto mt10"></div>
         </div>
-      </details>
+      </section>
 
       <div id="statusBox"></div>
     </div>
@@ -478,7 +429,7 @@
         <div class="chev"></div>
         <div class="summaryText">
           <div class="layerTitle">Hopper Percentages</div>
-          <div class="layerMeta">Set layer and hopper % - Toggle Tracking</div>
+          <div class="layerMeta">Set recipe percentages and choose which hoppers appear in the timeline</div>
         </div>
       </div>
       <span id="splitsSummaryStatus" class="pill summaryStatus">Check percentages</span>
@@ -838,7 +789,7 @@
           <div class="helpTopicBody">
             <p>Wechsel can be set up in just a few minutes.</p>
             <ol>
-              <li>Enter the line rate and select the line type.</li>
+              <li>Set the changeover deadline, enter the line rate, and select the layer count.</li>
               <li>Verify the receiver hopper weights.</li>
               <li>Build the layer recipe on the <strong>Hopper Percentages</strong> page.</li>
               <li>Turn on tracking for the hoppers involved in the changeover.</li>
@@ -852,11 +803,11 @@
           <summary><span>Setup</span><small>Prepare the line and timing inputs</small></summary>
           <div class="helpTopicBody">
             <ol>
-              <li>Enter the current <strong>line rate</strong>, select the <strong>line type</strong>, and set a changeover deadline when one is known.</li>
-              <li>In Advanced mode, use <strong>Appearance &amp; Preferences</strong> to choose the theme, surface style, timeline style, and one of five views from Spacious through Maximum Data. You can also choose a 12-hour or 24-hour clock. Comfort, the 12-hour clock, Divided Workspace, and Vertical Event Rail are the defaults. Advanced mode also provides gauge and optional Line 9 hopper naming.</li>
+              <li>Under <strong>Current Changeover</strong>, set the deadline, enter the current <strong>line rate</strong>, and select the <strong>layer count</strong>.</li>
+              <li>Use the ☰ menu at the right of the status bar to choose the theme, surface style, timeline style, view density, and time format.</li>
               <li>Open <strong>Receiver hopper weights</strong> and enter the usable pounds held by each hopper. Accurate weights are required for useful run-down times.</li>
               <li>For faster weight entry, select individual cells, click a hopper number to select its row, or click a layer heading to select its column. Enter one weight above the matrix and apply it to the selection.</li>
-              <li>Open <strong>Offsets</strong> and enter each layer's downcomer run-down time in minutes. Use zero when no offset is needed.</li>
+              <li>Choose whether receiver hoppers use numbered labels or Main + 1–5 labels. On mobile, this control is available in Advanced mode.</li>
             </ol>
             <p class="helpTip"><strong>Heads up:</strong> Changes save to this browser immediately. Setup warnings identify missing weights or other inputs that reduce timing accuracy.</p>
           </div>
@@ -907,7 +858,7 @@
               <li>On phones, Cloud Sync is simplified around the current line, device label, sync details, Refresh, Disconnect, and Leave. Line creation, naming, link-code generation, and device administration remain on desktop.</li>
               <li>Watch the status and unsynced-change count. Local changes save first, then upload; other connected devices update without a page refresh.</li>
               <li><strong>Disconnect on this device</strong> pauses syncing but keeps membership. <strong>Leave Cloud Sync</strong> removes that device's membership.</li>
-              <li><strong>New job</strong> clears current job inputs and tracking while preserving the line workspace, linked devices, Saved Line Settings, hopper weights, and offsets.</li>
+              <li><strong>New job</strong> clears current job inputs and tracking while preserving the line workspace, linked devices, Saved Line Settings, and hopper weights.</li>
             </ol>
             <p class="helpTip">Link codes are one-time codes that expire after 30 minutes. The owner must transfer ownership before leaving and is the only device allowed to remove members or delete the shared line.</p>
           </div>
@@ -917,7 +868,7 @@
           <summary><span>Line Configurations</span><small>Save and restore common line setups</small></summary>
           <div class="helpTopicBody">
             <ol>
-              <li>Available in Advanced mode. Enter a configuration name and choose <strong>Save / Update config</strong> to capture the current complete setup.</li>
+              <li>On mobile, open Advanced mode first. Enter a configuration name and choose <strong>Save / Update config</strong> to capture the current complete setup.</li>
               <li>Select a saved configuration and choose <strong>Load</strong> to replace the active inputs with that setup.</li>
               <li>Use Rename or Delete to maintain the list. When Cloud Sync is connected, these changes are shared with the line.</li>
               <li>Export copies a configuration as JSON. Import validates pasted JSON before saving it and can optionally load it immediately.</li>
