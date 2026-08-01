@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Polyn Action Button Comparison</title>
+  <style>
+    :root{color-scheme:light;--bg:#f5f4f3;--canvas:#eceff1;--panel:#fff;--panel2:#faf9f8;--text:#29282b;--muted:#666269;--accent:#607d9b;--line:rgba(74,73,72,.17);--field:#eef2f5;--danger:#b23a3a;--danger-soft:rgba(178,58,58,.10);--accent-soft:rgba(96,125,155,.15)}
+    html[data-theme="dark"]{color-scheme:dark;--bg:#1d2021;--canvas:#161b20;--panel:#282828;--panel2:#242625;--text:#ebdbb2;--muted:#bdae93;--accent:#83a598;--line:rgba(235,219,178,.17);--field:#303533;--danger:#df6a63;--danger-soft:rgba(223,106,99,.12);--accent-soft:rgba(131,165,152,.16)}
+    *{box-sizing:border-box}body{margin:0;background:var(--canvas);color:var(--text);font:14px/1.4 Inter,system-ui,-apple-system,"Segoe UI",sans-serif}button,input,select{font:inherit}
+    .pageHeader{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px clamp(18px,4vw,50px);border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--canvas) 92%,transparent);backdrop-filter:blur(12px)}
+    h1{margin:0;font-size:clamp(23px,3vw,35px)}.pageHeader p{margin:3px 0 0;color:var(--muted)}
+    .themeButton{padding:9px 14px;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--text);cursor:pointer}
+    main{width:min(1500px,100%);margin:auto;padding:24px clamp(12px,3vw,36px) 48px}
+    .intro{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:22px;padding:16px 18px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}.intro p{margin:0;color:var(--muted)}.intro strong{color:var(--accent)}
+    .chips{display:flex;gap:7px;flex-wrap:wrap}.chip{padding:5px 9px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:11px;font-weight:800}
+    .comparisonGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px}
+    .concept{overflow:hidden;border:2px solid transparent;border-radius:17px;background:var(--panel);box-shadow:0 6px 18px rgba(0,0,0,.10)}.concept.selected{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+    .conceptHeader{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:15px 17px;border-bottom:1px solid var(--line)}.choice{display:flex;gap:9px;cursor:pointer}.choice input{width:18px;height:18px;margin-top:2px;accent-color:var(--accent)}
+    .conceptName{font-size:17px;font-weight:850}.conceptNote{display:block;margin-top:2px;color:var(--muted);font-size:12px}.badge{padding:5px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.06em}
+    .tradeoffs{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px 17px;border-bottom:1px solid var(--line);background:var(--panel2);color:var(--muted);font-size:11px}.tradeoffs strong{display:block;color:var(--text)}
+    .preview{display:grid;gap:12px;padding:14px;background:var(--bg)}
+    .section{padding:13px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}.sectionTitle{font-size:15px;font-weight:850;color:var(--accent)}.sectionMeta{margin:2px 0 10px;color:var(--muted);font-size:11px}
+    .fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:10px}.field{color:var(--muted);font-size:9px}.field div{margin-top:3px;padding:7px 8px;border:1px solid var(--line);border-radius:8px;background:var(--field);color:var(--text);font-size:10px}
+    .actions{display:flex;flex-wrap:wrap;gap:7px}.actions + .actions{margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
+    .action{border:1px solid var(--line);background:var(--accent-soft);color:var(--text);font-weight:750;cursor:pointer}.action.secondary{background:transparent;color:var(--muted)}.action.danger{border-color:color-mix(in srgb,var(--danger) 38%,transparent);background:var(--danger-soft);color:var(--danger)}
+    .current .actions{display:grid;grid-template-columns:repeat(2,1fr)}.current .action{min-height:42px;padding:10px 12px;border-radius:14px}
+    .compact .action{min-height:30px;padding:5px 9px;border-radius:8px;font-size:11px}.compact .actions{justify-content:flex-start}
+    .quiet .action{min-height:30px;padding:5px 9px;border-radius:8px;font-size:11px}.quiet .action.secondary{padding-inline:6px;border-color:transparent;background:transparent}.quiet .action.danger{border-color:transparent;background:transparent}
+    .segmented .actions{display:inline-flex;gap:0;max-width:100%;overflow:auto;border:1px solid var(--line);border-radius:8px}.segmented .actions + .actions{display:inline-flex;margin-top:8px;padding-top:0}.segmented .action{min-height:30px;padding:5px 9px;border:0;border-right:1px solid var(--line);border-radius:0;background:transparent;font-size:10px;white-space:nowrap}.segmented .action:last-child{border-right:0}.segmented .action.primary{background:var(--accent-soft);color:var(--accent)}
+    .icons .action{display:inline-flex;align-items:center;gap:5px;min-height:30px;padding:5px 8px;border-radius:8px;background:transparent;font-size:11px}.iconMark{display:inline-grid;place-items:center;width:17px;height:17px;border-radius:5px;background:var(--accent-soft);color:var(--accent);font-size:10px;font-weight:900}.icons .danger .iconMark{background:var(--danger-soft);color:var(--danger)}
+    .overflowBar{display:flex;align-items:center;gap:7px}.overflowBar .action{min-height:31px;padding:5px 10px;border-radius:8px;font-size:11px}.more{position:relative}.more summary{list-style:none;padding:5px 10px;border:1px solid var(--line);border-radius:8px;color:var(--muted);font-size:11px;cursor:pointer}.more[open] .menu{display:grid}.menu{display:none;position:absolute;right:0;z-index:2;width:170px;margin-top:5px;padding:5px;border:1px solid var(--line);border-radius:9px;background:var(--panel);box-shadow:0 8px 18px rgba(0,0,0,.18)}.menu button{padding:7px;border:0;border-radius:6px;background:transparent;color:var(--text);font-size:11px;text-align:left}.menu button:hover{background:var(--field)}.menu button.danger{color:var(--danger)}
+    @media(max-width:980px){.comparisonGrid{grid-template-columns:1fr}}@media(max-width:580px){.pageHeader{align-items:flex-start}.intro{display:grid}.tradeoffs,.fields{grid-template-columns:1fr}.current .actions{grid-template-columns:1fr}.preview{padding:8px}}
+  </style>
+</head>
+<body>
+  <header class="pageHeader"><div><h1>Action button study</h1><p>Smaller controls for Cloud Sync and Line Configurations.</p></div><button id="themeButton" class="themeButton" type="button">Preview dark</button></header>
+  <main>
+    <section class="intro"><p><strong>Recommendation:</strong> Compact Auto-width keeps every action visible and familiar while removing the oversized full-row treatment. Primary + Quiet is the cleanest alternative when stronger action hierarchy is preferred.</p><div class="chips"><span class="chip">Desktop + mobile</span><span class="chip">Light + dark</span><span class="chip">Select a favorite</span></div></section>
+    <section id="comparisonGrid" class="comparisonGrid" aria-label="Action button comparisons"></section>
+  </main>
+  <script>
+    "use strict";
+    const concepts=[
+      {id:"current",name:"1. Current full-size",note:"Existing full-width grid buttons as the control.",strength:"Large targets",tradeoff:"Consumes the most space",css:"current"},
+      {id:"compact",name:"2. Compact Auto-width",note:"Short controls wrap naturally from the left.",strength:"Familiar and much smaller",tradeoff:"Rows may wrap on phones",css:"compact",recommended:true},
+      {id:"quiet",name:"3. Primary + Quiet",note:"Keep primary actions filled; render secondary actions as quiet text controls.",strength:"Best action hierarchy",tradeoff:"Secondary actions are less prominent",css:"quiet"},
+      {id:"segmented",name:"4. Segmented Toolbar",note:"Group related actions into compact horizontal bars.",strength:"Very space efficient",tradeoff:"Long labels may scroll",css:"segmented"},
+      {id:"icons",name:"5. Icon-leading Compact",note:"Small visual markers improve scanning without icon-only ambiguity.",strength:"Fast recognition",tradeoff:"Adds more visual symbols",css:"icons"},
+      {id:"overflow",name:"6. Primary + More Menu",note:"Show frequent actions and place maintenance actions in an overflow menu.",strength:"Cleanest surface",tradeoff:"Some actions require two taps",css:"overflow"}
+    ];
+    const cloudActions=[['Create line','primary','+'],['Rename line','secondary','R'],['Refresh','secondary','↻'],['New job','secondary','N'],['Disconnect','secondary','D'],['Leave Cloud Sync','secondary','L'],['Delete line','danger','×']];
+    const configActions=[['Save / Update','primary','✓'],['Load','secondary','↥'],['Rename','secondary','R'],['Delete','danger','×'],['Export','secondary','⇧'],['Import','secondary','⇩']];
+    function button(label,type,mark,icons=false){return `<button class="action ${type}">${icons?`<span class="iconMark">${mark}</span>`:''}${label}</button>`}
+    function standardActions(items,icons=false){const split=Math.ceil(items.length/2);return `<div class="actions">${items.slice(0,split).map(x=>button(...x,icons)).join('')}</div><div class="actions">${items.slice(split).map(x=>button(...x,icons)).join('')}</div>`}
+    function overflowActions(items){return `<div class="overflowBar">${button(items[0][0],items[0][1],items[0][2])}${button(items[1][0],items[1][1],items[1][2])}<details class="more"><summary>More…</summary><div class="menu">${items.slice(2).map(x=>`<button class="${x[1]}">${x[0]}</button>`).join('')}</div></details></div>`}
+    function section(title,meta,items,css){const actions=css==='overflow'?overflowActions(items):standardActions(items,css==='icons');return `<section class="section"><div class="sectionTitle">${title}</div><div class="sectionMeta">${meta}</div><div class="fields"><div class="field">${title==='Cloud Sync'?'Current line':'Config name'}<div>${title==='Cloud Sync'?'Line 9':'Line 9 typical'}</div></div><div class="field">${title==='Cloud Sync'?'This device':'Saved configs'}<div>${title==='Cloud Sync'?'Operator phone':'Line 9 typical'}</div></div></div>${actions}</section>`}
+    const grid=document.getElementById('comparisonGrid');
+    concepts.forEach(item=>{const article=document.createElement('article');article.className=`concept${item.recommended?' selected':''}`;article.dataset.concept=item.id;article.innerHTML=`<div class="conceptHeader"><label class="choice"><input type="radio" name="favorite" value="${item.id}" ${item.recommended?'checked':''}><span><span class="conceptName">${item.name}</span><span class="conceptNote">${item.note}</span></span></label>${item.recommended?'<span class="badge">Recommended</span>':''}</div><div class="tradeoffs"><span><strong>Strength</strong>${item.strength}</span><span><strong>Tradeoff</strong>${item.tradeoff}</span></div><div class="preview ${item.css}">${section('Cloud Sync','Shared line and device actions',cloudActions,item.css)}${section('Line Configurations','Save, load, and exchange setups',configActions,item.css)}</div>`;grid.appendChild(article)});
+    document.querySelectorAll('input[name="favorite"]').forEach(input=>input.addEventListener('change',()=>document.querySelectorAll('.concept').forEach(card=>card.classList.toggle('selected',card.dataset.concept===input.value))));
+    document.getElementById('themeButton').addEventListener('click',event=>{const dark=document.documentElement.dataset.theme!=='dark';document.documentElement.dataset.theme=dark?'dark':'light';event.currentTarget.textContent=dark?'Preview light':'Preview dark'});
+  </script>
+</body>
+</html>

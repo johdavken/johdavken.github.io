@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Polyn — Line 9 Hopper Naming Controls</title>
+  <style>
+    :root{color-scheme:light;--canvas:#eceff1;--panel:#fff;--panel2:#f7f7f6;--text:#29282b;--muted:#666269;--accent:#b3262e;--soft:rgba(179,38,46,.11);--line:rgba(74,73,72,.18);--field:rgba(74,73,72,.06)}
+    html[data-theme="dark"]{color-scheme:dark;--canvas:#161b20;--panel:#282828;--panel2:#222524;--text:#ebdbb2;--muted:#bdae93;--accent:#83a598;--soft:rgba(131,165,152,.16);--line:rgba(235,219,178,.18);--field:rgba(235,219,178,.06)}
+    *{box-sizing:border-box}body{margin:0;background:var(--canvas);color:var(--text);font:14px/1.4 Inter,system-ui,-apple-system,"Segoe UI",sans-serif}button{font:inherit}
+    header{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px clamp(18px,4vw,48px);border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--canvas) 92%,transparent);backdrop-filter:blur(12px)}
+    h1{margin:0;font-size:clamp(23px,3vw,34px)}header p{margin:3px 0 0;color:var(--muted)}.theme{padding:8px 13px;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--text);cursor:pointer}
+    main{width:min(1180px,100%);margin:auto;padding:24px clamp(12px,3vw,34px) 48px}.intro{margin-bottom:20px;padding:14px 16px;border:1px solid var(--line);border-radius:13px;background:var(--panel);color:var(--muted)}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.concept{overflow:hidden;border:2px solid transparent;border-radius:15px;background:var(--panel)}.concept.selected{border-color:var(--accent);box-shadow:0 0 0 3px var(--soft)}
+    .conceptHead{display:flex;justify-content:space-between;gap:12px;padding:14px 15px;border-bottom:1px solid var(--line)}.choice{display:flex;gap:9px;cursor:pointer}.choice input{width:18px;height:18px;margin-top:2px;accent-color:var(--accent)}.name{font-size:16px;font-weight:850}.note{display:block;margin-top:2px;color:var(--muted);font-size:11px}.badge{align-self:flex-start;padding:4px 7px;border-radius:999px;background:var(--soft);color:var(--accent);font-size:9px;font-weight:900;text-transform:uppercase}
+    .demo{padding:16px;background:var(--panel2)}.setupRow{display:flex;align-items:center;justify-content:space-between;gap:18px;min-height:76px;padding:12px;border:1px solid var(--line);border-radius:11px;background:var(--panel)}.title{font-weight:850}.meta{margin-top:3px;color:var(--muted);font-size:11px}.control{flex:0 0 auto}.previewState{display:flex;gap:5px;margin-top:12px;color:var(--muted);font-size:10px}.hopper{display:grid;place-items:center;min-width:34px;height:25px;padding:0 6px;border:1px solid var(--line);border-radius:6px;background:var(--field);color:var(--text);font-weight:750}
+    .switch{position:relative;width:52px;height:29px;padding:0;border:1px solid var(--line);border-radius:999px;background:var(--field);cursor:pointer}.switch::after{content:"";position:absolute;top:3px;left:3px;width:21px;height:21px;border-radius:50%;background:var(--muted);transition:.16s}.switch.on{border-color:var(--accent);background:var(--soft)}.switch.on::after{transform:translateX(23px);background:var(--accent)}
+    .segment{display:inline-flex;overflow:hidden;border:1px solid var(--line);border-radius:9px;background:var(--field)}.segment button{padding:7px 10px;border:0;border-right:1px solid var(--line);background:transparent;color:var(--muted);font-size:11px;font-weight:800;cursor:pointer}.segment button:last-child{border:0}.segment button.active{background:var(--soft);color:var(--accent)}
+    .cards{display:flex;gap:6px}.cards button{min-width:74px;padding:7px 8px;border:1px solid var(--line);border-radius:9px;background:transparent;color:var(--muted);font-size:10px;font-weight:800;cursor:pointer}.cards button strong{display:block;color:inherit;font-size:12px}.cards button.active{border-color:var(--accent);background:var(--soft);color:var(--accent)}
+    .labeledSwitch{display:grid;grid-template-columns:auto 48px auto;align-items:center;gap:7px}.labeledSwitch span{color:var(--muted);font-size:10px;font-weight:800}.labeledSwitch .activeLabel{color:var(--accent)}.labeledSwitch .switch{width:48px;height:26px}.labeledSwitch .switch::after{width:18px;height:18px}.labeledSwitch .switch.on::after{transform:translateX(22px)}
+    .hopperSelector{display:flex;gap:4px}.hopperSelector button{display:grid;place-items:center;min-width:27px;height:30px;padding:0 5px;border:1px solid var(--line);border-radius:6px;background:var(--field);color:var(--muted);font-size:10px;font-weight:850;cursor:pointer}.hopperSelector.on button{border-color:color-mix(in srgb,var(--accent) 38%,var(--line));color:var(--accent)}.hopperSelector button:first-child{background:var(--soft)}
+    .cycle{display:flex;align-items:center;gap:8px;padding:6px 8px 6px 10px;border:1px solid var(--line);border-radius:9px;background:var(--field);color:var(--text);cursor:pointer}.cycleText{text-align:left}.cycleText small{display:block;color:var(--muted);font-size:9px}.cycleText strong{font-size:11px}.cycleIcon{display:grid;place-items:center;width:25px;height:25px;border-radius:7px;background:var(--soft);color:var(--accent);font-weight:900}
+    @media(max-width:800px){.grid{grid-template-columns:1fr}}@media(max-width:480px){header{align-items:flex-start}.setupRow{align-items:stretch;flex-direction:column}.control{align-self:flex-start}.cards{width:100%}.cards button{flex:1}.previewState{overflow:auto}}
+  </style>
+</head>
+<body>
+  <header><div><h1>Line 9 naming control study</h1><p>Alternatives for choosing 1–6 or Main + 1–5 hopper labels.</p></div><button class="theme" id="themeButton" type="button">Preview dark</button></header>
+  <main>
+    <div class="intro">Click each control to compare both naming states. The hopper strip beneath it shows exactly how the selected naming scheme would appear.</div>
+    <section class="grid" id="grid"></section>
+  </main>
+  <script>
+    "use strict";
+    const concepts=[
+      {id:"current",name:"1. Current switch",note:"Existing control retained as the baseline.",kind:"switch"},
+      {id:"segment",name:"2. Explicit segmented choice",note:"Both outcomes stay visible; no Off/On translation required.",kind:"segment",recommended:true},
+      {id:"cards",name:"3. Naming cards",note:"Larger choices with a short label and example.",kind:"cards"},
+      {id:"labeled",name:"4. Labeled mechanical switch",note:"Familiar switch with meaningful labels on both sides.",kind:"labeled"},
+      {id:"hoppers",name:"5. Live hopper selector",note:"The control itself previews the resulting hopper names.",kind:"hoppers"},
+      {id:"cycle",name:"6. Compact naming button",note:"One compact button reports the active scheme and cycles it.",kind:"cycle"}
+    ];
+    function control(kind){
+      if(kind==="switch")return '<button class="switch js-toggle" role="switch" aria-checked="false" aria-label="Use Main hopper naming"></button>';
+      if(kind==="segment")return '<div class="segment"><button class="active js-choice" data-main="false">1–6</button><button class="js-choice" data-main="true">Main + 1–5</button></div>';
+      if(kind==="cards")return '<div class="cards"><button class="active js-choice" data-main="false"><strong>Standard</strong>1–6</button><button class="js-choice" data-main="true"><strong>Line 9</strong>Main + 1–5</button></div>';
+      if(kind==="labeled")return '<div class="labeledSwitch"><span class="activeLabel">1–6</span><button class="switch js-toggle" role="switch" aria-checked="false" aria-label="Change hopper naming"></button><span>Main + 1–5</span></div>';
+      if(kind==="hoppers")return '<div class="hopperSelector js-hopperToggle"><button>Main</button><button>1</button><button>2</button><button>3</button><button>4</button><button>5</button></div>';
+      return '<button class="cycle js-cycle"><span class="cycleText"><small>Hopper labels</small><strong>Standard · 1–6</strong></span><span class="cycleIcon">↔</span></button>';
+    }
+    function hopperStrip(main){return (main?["Main","1","2","3","4","5"]:["1","2","3","4","5","6"]).map(x=>`<span class="hopper">${x}</span>`).join("")}
+    const grid=document.getElementById("grid");
+    concepts.forEach(item=>{
+      const card=document.createElement("article");card.className=`concept${item.recommended?" selected":""}`;card.dataset.concept=item.id;card.dataset.main="false";
+      card.innerHTML=`<div class="conceptHead"><label class="choice"><input type="radio" name="favorite" value="${item.id}" ${item.recommended?"checked":""}><span><span class="name">${item.name}</span><span class="note">${item.note}</span></span></label>${item.recommended?'<span class="badge">Recommended</span>':""}</div><div class="demo"><div class="setupRow"><div><div class="title">Line 9 Hopper Naming</div><div class="meta">Choose how receiver hoppers are labeled.</div></div><div class="control">${control(item.kind)}</div></div><div class="previewState">${hopperStrip(false)}</div></div>`;
+      grid.appendChild(card);
+    });
+    function setState(card,main){card.dataset.main=String(main);card.querySelector(".previewState").innerHTML=hopperStrip(main);const sw=card.querySelector(".switch");if(sw){sw.classList.toggle("on",main);sw.setAttribute("aria-checked",String(main))}card.querySelectorAll(".js-choice").forEach(x=>x.classList.toggle("active",x.dataset.main===String(main)));const labels=card.querySelectorAll(".labeledSwitch span");labels.forEach((x,i)=>x.classList.toggle("activeLabel",main?i===1:i===0));card.querySelector(".js-hopperToggle")?.classList.toggle("on",main);const cycle=card.querySelector(".js-cycle strong");if(cycle)cycle.textContent=main?"Line 9 · Main + 1–5":"Standard · 1–6"}
+    grid.addEventListener("click",event=>{const card=event.target.closest(".concept");if(!card)return;if(event.target.closest(".js-toggle,.js-hopperToggle,.js-cycle"))setState(card,card.dataset.main!=="true");const choice=event.target.closest(".js-choice");if(choice)setState(card,choice.dataset.main==="true")});
+    document.querySelectorAll('input[name="favorite"]').forEach(input=>input.addEventListener("change",()=>document.querySelectorAll(".concept").forEach(card=>card.classList.toggle("selected",card.dataset.concept===input.value))));
+    document.getElementById("themeButton").addEventListener("click",event=>{const dark=document.documentElement.dataset.theme!=="dark";document.documentElement.dataset.theme=dark?"dark":"light";event.currentTarget.textContent=dark?"Preview light":"Preview dark"});
+  </script>
+</body>
+</html>
