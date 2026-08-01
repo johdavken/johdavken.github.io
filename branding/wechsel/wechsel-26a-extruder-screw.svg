@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 800" role="img" aria-labelledby="title desc">
+  <title id="title">Wechsel extruder screw logo</title>
+  <desc id="desc">Condensed Wechsel wordmark crossed by a horizontal extruder screw and orange die plate.</desc>
+  <rect width="1600" height="800" fill="#ebdbb2"/>
+
+  <!-- Editable wordmark. Convert this text to outlines before sending to a printer. -->
+  <text x="800" y="565" fill="#282828" font-family="Nimbus Sans Narrow, Arial Narrow, sans-serif"
+        font-size="500" font-weight="900" letter-spacing="-18" text-anchor="middle"
+        textLength="1180" lengthAdjust="spacingAndGlyphs">WECHSEL</text>
+
+  <!-- Screw drive -->
+  <g fill="#282828" stroke="#ebdbb2" stroke-width="10" stroke-linejoin="round">
+    <rect x="88" y="371" width="45" height="58" stroke="none"/>
+    <rect x="125" y="348" width="32" height="104"/>
+    <path d="M150 326h70l34 35v78l-34 35h-70z"/>
+    <path d="M168 347h53M168 374h53M168 400h53M168 426h53M168 453h53" fill="none"/>
+
+    <!-- Shaft -->
+    <rect x="244" y="367" width="1160" height="66"/>
+
+    <!-- Repeated helical flights -->
+    <path d="M280 345h43l51 110h-43z"/>
+    <path d="M375 345h43l51 110h-43z"/>
+    <path d="M470 345h43l51 110h-43z"/>
+    <path d="M565 345h43l51 110h-43z"/>
+    <path d="M660 345h43l51 110h-43z"/>
+    <path d="M755 345h43l51 110h-43z"/>
+    <path d="M850 345h43l51 110h-43z"/>
+    <path d="M945 345h43l51 110h-43z"/>
+    <path d="M1040 345h43l51 110h-43z"/>
+    <path d="M1135 345h43l51 110h-43z"/>
+    <path d="M1230 345h43l51 110h-43z"/>
+    <path d="M1325 345h43l42 91h-43z"/>
+  </g>
+
+  <!-- Breaker plate and Gruvbox-orange die -->
+  <rect x="1400" y="352" width="22" height="96" rx="2" fill="#282828"/>
+  <rect x="1440" y="322" width="46" height="156" rx="2" fill="#d65d0e"/>
+  <circle cx="1463" cy="352" r="9" fill="#ebdbb2"/>
+  <circle cx="1463" cy="448" r="9" fill="#ebdbb2"/>
+</svg>

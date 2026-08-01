@@ -3,13 +3,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Polyn</title>
+  <title>Wechsel</title>
   <!-- Favicons -->
+  <link rel="icon" type="image/svg+xml" sizes="any" href="branding/wechsel/wechsel-coex-icon.svg?v=1">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 
-  <link rel="stylesheet" href="styles.css?v=0.17.31">
+  <link rel="stylesheet" href="styles.css?v=0.17.36">
   <link rel="stylesheet" href="theme.css?v=0.17.0">
 <script src="validation.js?v=0.18" defer></script>
 <script src="scheduling.js?v=0.18.3" defer></script>
@@ -19,11 +20,11 @@
 <script src="vendor/supabase.min.js?v=2.57.4" defer></script>
 <script src="supabase-config.js?v=0.18" defer></script>
 <script src="sync-storage.js?v=0.18" defer></script>
-<script src="cloud-sync.js?v=0.18.1" defer></script>
+<script src="cloud-sync.js?v=0.18.2" defer></script>
 <script src="resin-data.js?v=0.16.2" defer></script>
 <script src="resin-description-info.js?v=0.16.1" defer></script>
 <script src="resin-lookup.js?v=0.18.1" defer></script>
-<script src="app.js?v=0.18.21" defer></script>
+<script src="app.js?v=0.18.22" defer></script>
 
 
 </head>
@@ -37,7 +38,7 @@
 <svg xmlns="http://www.w3.org/2000/svg"
      viewBox="0 0 1280 240"
      role="img"
-     aria-label="Polyn"
+     aria-label="Wechsel"
      preserveAspectRatio="xMidYMid meet">
 
   <style>
@@ -202,7 +203,7 @@
     <text class="plot-label" x="1180" y="228" text-anchor="end">mils</text>
   </g>
 
-  <!-- ===== Foreground Polyn wordmark ===== -->
+  <!-- ===== Legacy foreground wordmark artwork (hidden) ===== -->
   <g class="headerWordmark" transform="translate(690 4) scale(.8)">
     <path class="headerLayerPrimary" d="M28 42C55 22 80 23 105 42s30 20 43 3M28 61c27-20 52-19 77 0s30 20 43 3M28 99c27-20 52-19 77 0s30 20 43 3"/>
     <path class="headerLayerSecondary" d="M28 80c27-20 52-19 77 0s30 20 43 3M28 118c27-20 52-19 77 0s30 20 43 3"/>
@@ -218,29 +219,25 @@
 
   </header>
 
-  <div class="mobileBrand" aria-label="Polyn">
-    <svg class="workspaceBrandLogo" viewBox="0 0 440 150" aria-hidden="true">
-      <path class="polynFlowRed" d="M28 38h66l27 25h47"/>
-      <path class="polynFlowOrange" d="M28 57h57l27 15h56"/>
-      <path class="polynFlowYellow" d="M28 76h140"/>
-      <path class="polynFlowGreen" d="M28 95h57l27-15h56"/>
-      <path class="polynFlowBlue" d="M28 114h66l27-25h47"/>
-      <text class="polynWord" x="198" y="107">POLYN</text>
-      <text class="polynTagline" x="202" y="130">POLYMER INTELLIGENCE</text>
+  <div class="mobileBrand" aria-label="Wechsel">
+    <svg class="wechselCoexLogo" viewBox="0 0 620 160" role="img" aria-label="Wechsel">
+      <g transform="translate(5 28)">
+        <path class="coexW" d="M3 12h22l11 48 10-35 10 35 11-48h22L68 82H53l-7-28-8 28H23Z"/>
+        <path class="coexRed" d="M70 24h27v7H70Z"/><path class="coexOrange" d="M70 35h27v7H70Z"/>
+        <path class="coexYellow" d="M70 46h27v7H70Z"/><path class="coexGreen" d="M70 57h27v7H70Z"/>
+        <path class="coexBlue" d="M70 68h27v7H70Z"/>
+      </g>
+      <text class="coexWord" x="120" y="112">WECHSEL</text>
     </svg>
   </div>
 
-  <nav class="workspaceNav" aria-label="Polyn sections">
-    <div class="workspaceBrand" aria-label="Polyn">
-      <svg class="workspaceBrandLogo" viewBox="0 0 440 150" aria-hidden="true">
-        <!-- Five material streams converge through an extrusion die. -->
-        <path class="polynFlowRed" d="M28 38h66l27 25h47"/>
-        <path class="polynFlowOrange" d="M28 57h57l27 15h56"/>
-        <path class="polynFlowYellow" d="M28 76h140"/>
-        <path class="polynFlowGreen" d="M28 95h57l27-15h56"/>
-        <path class="polynFlowBlue" d="M28 114h66l27-25h47"/>
-        <text class="polynWord" x="198" y="107">POLYN</text>
-        <text class="polynTagline" x="202" y="130">POLYMER INTELLIGENCE</text>
+  <nav class="workspaceNav" aria-label="Wechsel sections">
+    <div class="workspaceBrand" aria-label="Wechsel">
+      <svg class="wechselSidebarIcon" viewBox="0 0 100 100" role="img" aria-label="Wechsel">
+        <path class="coexW" d="M3 12h22l11 48 10-35 10 35 11-48h22L68 82H53l-7-28-8 28H23Z"/>
+        <path class="coexRed" d="M70 24h27v7H70Z"/><path class="coexOrange" d="M70 35h27v7H70Z"/>
+        <path class="coexYellow" d="M70 46h27v7H70Z"/><path class="coexGreen" d="M70 57h27v7H70Z"/>
+        <path class="coexBlue" d="M70 68h27v7H70Z"/>
       </svg>
     </div>
     <button class="workspaceNavButton" type="button" data-workspace-target="lineSetupBlock" data-status="neutral">
@@ -548,7 +545,7 @@
     </summary>
     <div class="blockBody lineSyncPanel">
       <div id="lineSyncMessage" class="muted" role="status" aria-live="polite">
-        Polyn is fully usable locally. Connect only when this device should share a production line.
+        Wechsel is fully usable locally. Connect only when this device should share a production line.
       </div>
       <div class="lineSyncMetrics mt10" aria-label="Cloud Sync details">
         <span>Last sync <strong id="lineSyncLastSync">Never</strong></span>
@@ -837,9 +834,9 @@
     <div class="blockBody helpGuide">
       <div class="helpTopics">
         <details class="helpTopic" id="helpQuickStart" open>
-          <summary><span>Quick Start</span><small>Set up Polyn in just a few minutes</small></summary>
+          <summary><span>Quick Start</span><small>Set up Wechsel in just a few minutes</small></summary>
           <div class="helpTopicBody">
-            <p>Polyn can be set up in just a few minutes.</p>
+            <p>Wechsel can be set up in just a few minutes.</p>
             <ol>
               <li>Enter the line rate and select the line type.</li>
               <li>Verify the receiver hopper weights.</li>
@@ -896,7 +893,7 @@
               <li>After physically turning off a hopper pump, mark <strong>Pump off</strong>. Completed hoppers are hidden unless <strong>Show all</strong> is enabled.</li>
               <li>Use <strong>Reset tracking</strong> at the appropriate time to untrack every hopper and clear pump-off states.</li>
             </ol>
-            <p class="helpTip">On mobile, select <strong>Timeline</strong> beneath the Polyn logo to hide every other section and keep only the timeline and production footer visible.</p>
+            <p class="helpTip">On mobile, select <strong>Timeline</strong> beneath the Wechsel logo to hide every other section and keep only the timeline and production footer visible.</p>
             <p class="helpTip">The footer on mobile shows the next tracked hopper and current Cloud Sync status.</p>
           </div>
         </details>
@@ -931,7 +928,7 @@
         <details class="helpTopic" id="helpTools">
           <summary><span>Tools</span><small>Production calculators and resin reference</small></summary>
           <div class="helpTopicBody">
-            <p>Select a utility from the tool index. Polyn displays one tool at a time to keep the workspace focused and reduce scrolling.</p>
+            <p>Select a utility from the tool index. Wechsel displays one tool at a time to keep the workspace focused and reduce scrolling.</p>
             <ul>
               <li><strong>Production Summary:</strong> Build the active recipe first, then enter production and scrap pounds to calculate material totals by resin for production reporting and inventory issuance.</li>
               <li><strong>Short Footage Calculator:</strong> Enter actual weight, target footage, and the last good weight to calculate adjusted short footage.</li>

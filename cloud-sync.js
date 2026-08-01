@@ -16,7 +16,7 @@
   }
   function defaultDeviceLabel(){
     const mobile = typeof navigator !== "undefined" && /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
-    return mobile ? "Operator Phone" : "Polyn Desktop";
+    return mobile ? "Operator Phone" : "Wechsel Desktop";
   }
   function isConflictError(error){
     const text = `${error?.code || ""} ${error?.message || ""} ${error?.details || ""}`.toLowerCase();
@@ -566,7 +566,7 @@
         else setStatus("Local only", state.workspaces.length ? "Select a line to resume synchronization." : "Create or join a line when ready.");
       }catch(error){
         state.available = false;
-        setStatus("Local only", "Supabase is unavailable; Polyn remains local and fully usable.");
+        setStatus("Local only", "Supabase is unavailable; Wechsel remains local and fully usable.");
       }
       return state;
     }
@@ -680,7 +680,7 @@
       saveSettings(current);
       await loadWorkspaces();
       if (selectedId()) await reconcileSelected({ forceRemote: true });
-      else setStatus("Local only", "This device left Cloud Sync. Local Polyn data was preserved.");
+      else setStatus("Local only", "This device left Cloud Sync. Local Wechsel data was preserved.");
     }
 
     async function transferOwnership(userId){

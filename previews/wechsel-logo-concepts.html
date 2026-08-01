@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Wechsel Logo Study</title>
+  <style>
+    :root{color-scheme:light;--paper:#f1f0eb;--ink:#171918;--muted:#696d69;--line:#c9cac5;--accent:#f15a24;--card:#fbfbf8}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--paper);color:var(--ink);font-family:"Arial Narrow","Roboto Condensed",Arial,sans-serif}
+    header{display:flex;justify-content:space-between;gap:24px;align-items:end;padding:clamp(24px,5vw,68px);border-bottom:1px solid var(--line)}
+    .eyebrow{margin:0 0 12px;color:var(--accent);font:800 12px/1 ui-monospace,monospace;letter-spacing:.16em}
+    h1{margin:0;font-size:clamp(42px,8vw,104px);line-height:.8;letter-spacing:-.07em;text-transform:uppercase}
+    header p{max-width:390px;margin:0;color:var(--muted);font-size:15px;line-height:1.5}
+    main{width:min(1760px,100%);margin:auto;padding:clamp(18px,3vw,48px)}
+    .round{margin-bottom:clamp(32px,6vw,78px)}
+    .roundHead{display:flex;justify-content:space-between;gap:20px;align-items:end;margin-bottom:13px}
+    .roundHead h2{margin:0;font-size:18px;letter-spacing:.02em;text-transform:uppercase}
+    .roundHead p{margin:0;color:var(--muted);font:12px ui-monospace,monospace}
+    .board{overflow:hidden;border:1px solid var(--line);background:white;box-shadow:0 16px 45px rgba(22,25,23,.08)}
+    .board img{display:block;width:100%;height:auto}
+    .vectorPair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    .vectorPair .board{min-width:0}
+    .review{margin-top:24px}
+    .review h2{margin:0 0 5px;font-size:18px;letter-spacing:.02em;text-transform:uppercase}
+    .review>p{margin:0 0 16px;color:var(--muted)}
+    .choices{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+    .choice{position:relative;display:block;padding:14px 14px 13px;border:1px solid var(--line);background:var(--card);cursor:pointer;transition:.15s ease}
+    .choice:hover{border-color:#8d918c;transform:translateY(-1px)}
+    .choice:has(input:checked){border-color:var(--accent);box-shadow:inset 4px 0 var(--accent)}
+    .choice input{position:absolute;opacity:0}
+    .num{display:block;margin-bottom:7px;color:var(--accent);font:800 11px ui-monospace,monospace}
+    .name{display:block;font-size:14px;font-weight:800;line-height:1.15;text-transform:uppercase}
+    .idea{display:block;margin-top:5px;color:var(--muted);font:12px/1.35 Arial,sans-serif}
+    .status{min-height:21px;margin:15px 0 0;color:var(--muted);font:13px ui-monospace,monospace}
+    @media(max-width:900px){header{display:block}header p{margin-top:24px}.choices{grid-template-columns:repeat(2,minmax(0,1fr))}.vectorPair{grid-template-columns:1fr}}
+    @media(max-width:480px){.choices{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <header>
+    <div><p class="eyebrow">IDENTITY EXPLORATION / 01</p><h1>Wechsel</h1></div>
+    <p>Ten early directions for an industrial changeover brand—built from blown-film bubbles, film webs, resin flow, and directional change.</p>
+  </header>
+  <main>
+    <section class="round">
+      <div class="roundHead"><h2>27V + 28V — vector redraws</h2><p>NATIVE SVG / GRUVBOX</p></div>
+      <div class="vectorPair">
+        <div class="board"><img src="../branding/wechsel/wechsel-27-three-band-w.svg" alt="Concept 27 three-band W redrawn as SVG"></div>
+        <div class="board"><img src="../branding/wechsel/wechsel-28-letter-exchange.svg" alt="Concept 28 letter-exchange wordmark redrawn as SVG"></div>
+      </div>
+    </section>
+    <section class="round">
+      <div class="roundHead"><h2>26B — restrained screw + tighter type</h2><p>NATIVE SVG / REFINEMENT</p></div>
+      <div class="board" aria-label="Wechsel concept 26B with smaller extruder screw">
+        <img src="../branding/wechsel/wechsel-26b-extruder-screw.svg" alt="Tall condensed Wechsel wordmark with a slim extruder screw passing through its center">
+      </div>
+    </section>
+    <section class="round">
+      <div class="roundHead"><h2>26A — extruder screw refinement</h2><p>NATIVE SVG / CONCEPT 26</p></div>
+      <div class="board" aria-label="Wechsel concept 26A with extruder screw">
+        <img src="../branding/wechsel/wechsel-26a-extruder-screw.svg" alt="Heavy Wechsel wordmark with an extruder screw passing through its center">
+      </div>
+    </section>
+    <section class="round">
+      <div class="roundHead"><h2>Round 03 — Gruvbox industrial</h2><p>CONCEPTS 21–30 / GRUVBOX PALETTE</p></div>
+      <div class="board" aria-label="Wechsel logo concepts twenty-one through thirty">
+        <img src="../branding/wechsel/wechsel-logo-concepts-round-3-gruvbox.png" alt="Contact sheet showing ten Gruvbox-style Wechsel logo concepts">
+      </div>
+    </section>
+    <section class="round">
+      <div class="roundHead"><h2>Round 02 — changeover + die slit</h2><p>CONCEPTS 11–20 / NO BUBBLE FORMS</p></div>
+      <div class="board" aria-label="Wechsel logo concepts eleven through twenty">
+        <img src="../branding/wechsel/wechsel-logo-concepts-round-2.png" alt="Contact sheet showing ten new Wechsel industrial logo concepts">
+      </div>
+    </section>
+    <section class="round">
+      <div class="roundHead"><h2>Round 01 — broad exploration</h2><p>CONCEPTS 01–10</p></div>
+      <div class="board" aria-label="Wechsel logo concepts one through ten">
+        <img src="../branding/wechsel/wechsel-logo-concepts.png" alt="Contact sheet showing the first ten Wechsel industrial logo concepts">
+      </div>
+    </section>
+    <section class="review" aria-labelledby="review-title">
+      <h2 id="review-title">Mark your shortlist</h2>
+      <p>Select any concepts worth developing. Your picks stay saved in this browser.</p>
+      <div class="choices" id="choices"></div>
+      <p class="status" id="status" aria-live="polite"></p>
+    </section>
+  </main>
+  <script>
+    const concepts=[
+      ["Bubble W","Single W / blown-film bubble"],["Film Web W","Converging film webs"],
+      ["Changeover W","Circular swap arrow"],["Layered W","Three film layers"],
+      ["Die Slit","Inline extrusion detail"],["Pellet Ribbon","Resin becomes film"],
+      ["Swap Notch","Condensed tooling wordmark"],["Line Badge","Roll and directional switch"],
+      ["Loop C","Changeover inside the name"],["Modular W","Bubble silhouette monogram"],
+      ["Dual Arrows","W inside opposing arrows"],["Mid-Die Slit","Precision slit wordmark"],
+      ["Exchange Chevrons","Directional W symbol"],["Switch Crossbar","Transfer inside the name"],
+      ["Squared Loop","Angular changeover frame"],["Film Web Die","Film line through tooling"],
+      ["Tool Blocks","Interlocking change parts"],["Transfer Arrow","Movement inside wordmark"],
+      ["Negative W","Hard-edged circular mark"],["Die Plate","Slot with opposing arrows"],
+      ["Monogram Changeover","Opposing arrows through W"],["Five-Layer Slit","Coex bands through die"],
+      ["Modular Switch","Three-part color W"],["Transfer C","Changeover loop wordmark"],
+      ["W Die Badge","Compact industrial system"],["Inline Slit","Heavy interrupted wordmark"],
+      ["Three-Band W","Angular film-web mark"],["Letter Exchange","Colored segment transfer"],
+      ["Extruder W","Screw-to-film geometry"],["Coex Flow","Five-line film output"],
+      ["26A Screw Wordmark","Extruder screw through center"],
+      ["26B Refined Screw","Tighter type and smaller screw"],
+      ["27V Three-Band W","Native vector redraw"],["28V Letter Exchange","Native vector redraw"]
+    ];
+    const key="wechsel-logo-shortlist";
+    const saved=new Set(JSON.parse(localStorage.getItem(key)||"[]"));
+    const choices=document.getElementById("choices");
+    const status=document.getElementById("status");
+    concepts.forEach(([name,idea],index)=>{
+      const specialIds={30:"26A",31:"26B",32:"27V",33:"28V"};
+      const id=specialIds[index]||String(index+1).padStart(2,"0");
+      const label=document.createElement("label");
+      label.className="choice";
+      label.innerHTML=`<input type="checkbox" value="${id}" ${saved.has(id)?"checked":""}><span class="num">${id}</span><span class="name">${name}</span><span class="idea">${idea}</span>`;
+      choices.appendChild(label);
+    });
+    function update(){
+      const picks=[...document.querySelectorAll("input:checked")].map(input=>input.value);
+      localStorage.setItem(key,JSON.stringify(picks));
+      status.textContent=picks.length?`SHORTLIST: ${picks.join(" / ")}`:"No concepts selected yet.";
+    }
+    choices.addEventListener("change",update);update();
+  </script>
+</body>
+</html>

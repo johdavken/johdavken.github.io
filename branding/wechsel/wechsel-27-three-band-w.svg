@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 800" role="img" aria-labelledby="title desc">
+  <title id="title">Wechsel three-band W</title>
+  <desc id="desc">An angular W assembled from three Gruvbox-colored film-web ribbons.</desc>
+  <rect width="1600" height="800" fill="#ebdbb2"/>
+  <g transform="translate(210 55)">
+    <!-- Three separate film webs meet to form one engineered W. -->
+    <path fill="#cc241d" d="M180 130h185l145 410-88 115h-44z"/>
+    <path fill="#d65d0e" d="M422 655 590 205h73l168 450H646L618 531l-49 124z"/>
+    <path fill="#458588" d="m831 655 145-410h185L963 655z"/>
+    <!-- Deliberate die-slot separations keep the bands distinct in one-color use. -->
+    <path fill="#ebdbb2" d="m402 130 38 107 111 315-41 107-123-346-65-183z"/>
+    <path fill="#ebdbb2" d="m777 655 40-111 128-361 19-53h42l-21 59-153 466z"/>
+  </g>
+</svg>

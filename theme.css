@@ -1,6 +1,6 @@
-/* ======================================================================= * Polyn — Theme palettes + accents (corrected) * Fixes: * 1) Dark selector now matches whether data-theme is set on <html> or <body> * 2) Monochrome theme supports both data-theme="mono" and "monochrome" * Notes: * - html:not([data-theme]) remains as the implicit default (your dark baseline) * ======================================================================= */
+/* ======================================================================= * Wechsel — Theme palettes + accents (corrected) * Fixes: * 1) Dark selector now matches whether data-theme is set on <html> or <body> * 2) Monochrome theme supports both data-theme="mono" and "monochrome" * Notes: * - html:not([data-theme]) remains as the implicit default (your dark baseline) * ======================================================================= */
 
-/* ======================================================================= * Polyn — Theme palettes + accents * Applies whether data-theme is set on <html> or <body>. * ======================================================================= */
+/* ======================================================================= * Wechsel — Theme palettes + accents * Applies whether data-theme is set on <html> or <body>. * ======================================================================= */
 
 /* ----------------------------------------------------------------------- * Dark * ----------------------------------------------------------------------- */
 :where(html, body)[data-theme="dark"]{

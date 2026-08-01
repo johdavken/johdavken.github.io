@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 800" role="img" aria-labelledby="title desc">
+  <title id="title">Wechsel letter exchange wordmark</title>
+  <desc id="desc">A condensed Wechsel wordmark with colored letter segments and opposing transfer arrows.</desc>
+  <rect width="1600" height="800" fill="#ebdbb2"/>
+
+  <!-- Editable condensed wordmark. -->
+  <text x="800" y="520" fill="#282828"
+        font-family="Open Sans Condensed, Nimbus Sans Narrow, Arial Narrow, sans-serif"
+        font-size="410" font-weight="800" letter-spacing="-18" text-anchor="middle"
+        transform="translate(800 0) scale(.76 1) translate(-800 0)">WECHSEL</text>
+
+  <!-- Colored exchange windows are clipped-looking blocks by design. -->
+  <rect x="515" y="216" width="70" height="305" fill="#458588"/>
+  <path fill="#282828" d="M534 274h51v53h-51zm0 111h51v52h-51zm0 105h51v31h-51z"/>
+  <rect x="887" y="216" width="72" height="305" fill="#d65d0e"/>
+  <path fill="#282828" d="M887 274h52v53h-52zm0 111h52v52h-52zm0 105h52v31h-52z"/>
+
+  <!-- Opposing changeover arrows. -->
+  <path fill="#458588" d="M520 145h190v-42l98 67-98 67v-42H520z"/>
+  <path fill="#d65d0e" d="M1080 612H890v42l-98-67 98-67v42h190z"/>
+</svg>

@@ -1,5 +1,5 @@
 /* =======================================================================
- * Polyn / ResinTimer — app.js
+ * Wechsel / ResinTimer — app.js
  * Organization pass:
  * - Wrap in one module scope (IIFE) to avoid globals
  * - Add section headers for easier navigation
@@ -2784,7 +2784,7 @@
     ));
     $("lineSyncDisconnectBtn")?.addEventListener("click",()=>runLineSyncAction(()=>lineSync.disconnectLocal()));
     $("lineSyncLeaveBtn")?.addEventListener("click",()=>{
-      if (confirm("Leave Cloud Sync on this browser identity? Local Polyn data will remain.")) runLineSyncAction(()=>lineSync.leaveWorkspace());
+      if (confirm("Leave Cloud Sync on this browser identity? Local Wechsel data will remain.")) runLineSyncAction(()=>lineSync.leaveWorkspace());
     });
     $("lineSyncDeleteBtn")?.addEventListener("click",()=>{
       const name = lineSync.getState().selectedWorkspace?.name || "this line";

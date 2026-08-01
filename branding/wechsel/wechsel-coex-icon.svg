@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-labelledby="title">
+  <title id="title">Wechsel coextrusion W</title>
+  <path fill="#282828" d="M3 12h22l11 48 10-35 10 35 11-48h22L68 82H53l-7-28-8 28H23Z"/>
+  <path fill="#cc241d" d="M70 24h27v7H70Z"/>
+  <path fill="#d65d0e" d="M70 35h27v7H70Z"/>
+  <path fill="#d79921" d="M70 46h27v7H70Z"/>
+  <path fill="#689d6a" d="M70 57h27v7H70Z"/>
+  <path fill="#458588" d="M70 68h27v7H70Z"/>
+</svg>

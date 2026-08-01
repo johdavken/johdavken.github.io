@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Wechsel SVG Logo Study</title>
+  <style>
+    :root{color-scheme:dark;--page:#1d2021;--panel:#282828;--panel2:#32302f;--text:#ebdbb2;--muted:#bdae93;--line:#504945;--accent:#d65d0e;--select:#83a598;--shadow:rgba(0,0,0,.24)}
+    html[data-theme="light"]{color-scheme:light;--page:#f2e5bc;--panel:#fbf1c7;--panel2:#ebdbb2;--text:#3c3836;--muted:#665c54;--line:#d5c4a1;--accent:#af3a03;--select:#076678;--shadow:rgba(60,56,54,.14)}
+    *{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--text);font:14px/1.45 ui-monospace,"Cascadia Mono","Liberation Mono",monospace}
+    button{font:inherit}.pageHead{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:20px;padding:21px clamp(17px,4vw,52px);border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--page) 92%,transparent);backdrop-filter:blur(12px)}
+    h1{margin:0;font-size:clamp(23px,4vw,38px);line-height:1.05;letter-spacing:-.055em}.pageHead p{margin:7px 0 0;color:var(--muted);font-family:system-ui,sans-serif}.themeButton{flex:none;padding:9px 13px;border:1px solid var(--line);border-radius:7px;background:var(--panel);color:var(--text);cursor:pointer;font-weight:800}
+    main{width:min(1500px,100%);margin:auto;padding:25px clamp(13px,3vw,38px) 55px}.intro{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:20px;padding:13px 16px;border-left:4px solid var(--accent);background:var(--panel);color:var(--muted);font-family:system-ui,sans-serif}.chips{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:7px}.chip{padding:4px 8px;border:1px solid var(--line);border-radius:999px;color:var(--text);font:700 11px system-ui,sans-serif;white-space:nowrap}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.concept{overflow:hidden;border:2px solid transparent;border-radius:10px;background:var(--panel);box-shadow:0 8px 20px var(--shadow)}.concept.selected{border-color:var(--select);box-shadow:0 0 0 3px color-mix(in srgb,var(--select) 20%,transparent),0 8px 20px var(--shadow)}
+    .conceptHead{padding:13px 15px;border-bottom:1px solid var(--line)}.choice{display:flex;align-items:flex-start;gap:10px;cursor:pointer}.choice input{width:17px;height:17px;margin:2px 0 0;accent-color:var(--select)}.name{display:block;font-weight:900}.idea{display:block;margin-top:2px;color:var(--muted);font:12px system-ui,sans-serif}.number{color:var(--accent);font-weight:900}
+    .logoSurfaces{display:grid;grid-template-columns:1fr 1fr}.surface{min-width:0;padding:18px}.surface.light{--logo:#3c3836;--cut:#fbf1c7;background:#fbf1c7}.surface.dark{--logo:#ebdbb2;--cut:#282828;background:#282828}.surfaceLabel{margin-bottom:12px;color:#928374;font-size:10px;font-weight:900;letter-spacing:.1em;text-transform:uppercase}.logo{display:block;width:100%;height:auto;overflow:visible}.smallCheck{display:flex;align-items:center;gap:14px;margin-top:14px;padding-top:12px;border-top:1px solid rgba(146,131,116,.35)}.smallCheck svg{width:36px;height:36px;flex:none}.smallCheck span{color:#928374;font-size:10px}
+    .word{fill:var(--logo);font-family:"Open Sans Condensed","Arial Narrow",Impact,sans-serif;font-weight:900;letter-spacing:-3px}.cut{fill:var(--cut)}.ink{fill:var(--logo)}.stroke{fill:none;stroke:var(--logo);stroke-linecap:square;stroke-linejoin:miter}.orange{fill:#d65d0e}.orangeStroke{fill:none;stroke:#d65d0e}.blue{fill:#458588}.blueStroke{fill:none;stroke:#458588}.red{fill:#cc241d}.yellow{fill:#d79921}.green{fill:#689d6a}
+    @media(max-width:900px){.grid{grid-template-columns:1fr}}@media(max-width:580px){.pageHead{align-items:flex-start}.intro{align-items:flex-start;flex-direction:column}.chips{justify-content:flex-start}.logoSurfaces{grid-template-columns:1fr}.surface{padding:15px}}
+  </style>
+</head>
+<body>
+  <header class="pageHead"><div><h1>WECHSEL // SVG STUDY</h1><p>Ten theme-ready vector directions built directly in SVG.</p></div><button id="themeButton" class="themeButton" type="button">LIGHT UI</button></header>
+  <main>
+    <section class="intro"><span>No background rectangles and no bitmap tracing. Select a card to mark a favorite.</span><div class="chips"><span class="chip">Native SVG</span><span class="chip">Theme-aware</span><span class="chip">Small-size check</span></div></section>
+    <section id="logoGrid" class="grid" aria-label="Wechsel SVG logo alternatives"></section>
+  </main>
+  <script>
+    "use strict";
+    const concepts=[
+      {name:"Exchange W",idea:"Opposing arrows pass cleanly through a compact W.",icon:`<path class="ink" d="M8 15h22l15 47 15-47h22L58 79H32Z"/><path class="orange" d="M3 41h31V31l14 14-14 14V49H3Z"/><path class="blue" d="M87 49H56v10L42 45l14-14v10h31Z"/>`},
+      {name:"Die Slit",idea:"A precise extrusion slit interrupts the heavy wordmark.",icon:`<path class="ink" d="M7 17h76v60H7Z"/><path class="cut" d="M7 42h76v9H7Z"/><rect class="orange" x="41" y="38" width="8" height="17"/>`},
+      {name:"Letter Exchange",idea:"Colored letter segments trade position with opposing arrows.",icon:`<path class="ink" d="M8 16h18l8 42 11-32 11 32 8-42h18L66 78H52l-7-23-7 23H24Z"/><path class="blue" d="M18 8h32V2l13 10-13 10v-6H18Z"/><path class="orange" d="M72 82H40v6L27 78l13-10v6h32Z"/>`},
+      {name:"Coex Output",idea:"Five film layers exit a compact W die.",icon:`<path class="ink" d="M4 14h21l11 45 9-32 9 32 11-45h21L66 78H52l-7-25-7 25H24Z"/><path class="red" d="M68 24h20v6H68Z"/><path class="orange" d="M68 34h20v6H68Z"/><path class="yellow" d="M68 44h20v6H68Z"/><path class="green" d="M68 54h20v6H68Z"/><path class="blue" d="M68 64h20v6H68Z"/>`},
+      {name:"Tool Blocks",idea:"Two exchangeable tooling blocks lock into a W.",icon:`<path class="ink" d="M7 16h31v23h14V16h31L68 78H52L45 60l-7 18H22Z"/><rect class="orange" x="37" y="35" width="16" height="18"/><path class="cut" d="M41 39h8v10h-8Z"/>`},
+      {name:"Transfer C",idea:"The C becomes the changeover mechanism.",icon:`<path class="stroke" stroke-width="13" d="M73 25A31 31 0 1 0 73 68"/><path class="orange" d="m68 13 17 12-17 12Z"/><path class="blue" d="m68 56 17 12-17 12Z"/>`},
+      {name:"Screw Line",idea:"A simplified screw reads clearly without dominating.",icon:`<path class="ink" d="M7 18h76v58H7Z"/><rect class="cut" x="7" y="41" width="76" height="10"/><path class="orangeStroke" stroke-width="6" d="M8 46h8l6-7 8 14 8-14 8 14 8-14 8 14 8-14 7 7h9"/>`},
+      {name:"Three Web W",idea:"Three angular film bands form a reduced W.",icon:`<path class="red" d="M5 12h18l20 65H27Z"/><path class="orange" d="m27 77 18-52 18 52H48l-3-13-4 13Z"/><path class="blue" d="M67 12h18L63 77H48Z"/>`},
+      {name:"Die Badge",idea:"A compact equipment badge for navigation and app icons.",icon:`<rect class="stroke" x="7" y="10" width="76" height="70" rx="7" stroke-width="7"/><path class="ink" d="M18 20h17l10 31 10-31h17L58 61H32Z"/><path class="orange" d="M15 67h60v7H15Z"/><rect class="cut" x="41" y="63" width="8" height="15"/>`},
+      {name:"Inline Switch",idea:"A small bidirectional switch lives inside the name.",icon:`<path class="ink" d="M7 15h76v62H7Z"/><path class="cut" d="M12 40h66v13H12Z"/><path class="orange" d="M15 43h23v-7l12 10-12 10v-7H15Z"/><path class="blue" d="M75 49H52v7L40 46l12-10v7h23Z"/>`}
+    ];
+    function iconSvg(c){return `<svg viewBox="0 0 90 90" role="img" aria-label="${c.name}">${c.icon}</svg>`}
+    function logoSvg(c){return `<svg class="logo" viewBox="0 0 440 105" role="img" aria-label="Wechsel ${c.name} logo"><g transform="translate(5 7)">${c.icon}</g><text class="word" x="112" y="72" font-size="66" textLength="310" lengthAdjust="spacingAndGlyphs">WECHSEL</text></svg>`}
+    const grid=document.getElementById("logoGrid");
+    concepts.forEach((c,i)=>{const card=document.createElement("article");card.className="concept";card.dataset.concept=i;card.innerHTML=`<div class="conceptHead"><label class="choice"><input type="radio" name="favorite" value="${i}"><span><span class="name"><span class="number">${String(i+1).padStart(2,"0")}.</span> ${c.name}</span><span class="idea">${c.idea}</span></span></label></div><div class="logoSurfaces"><div class="surface light"><div class="surfaceLabel">Light app surface</div>${logoSvg(c)}<div class="smallCheck">${iconSvg(c)}<span>Icon at 36px</span></div></div><div class="surface dark"><div class="surfaceLabel">Dark app surface</div>${logoSvg(c)}<div class="smallCheck">${iconSvg(c)}<span>Icon at 36px</span></div></div></div>`;grid.appendChild(card)});
+    document.querySelectorAll('input[name="favorite"]').forEach(input=>input.addEventListener("change",()=>document.querySelectorAll(".concept").forEach(card=>card.classList.toggle("selected",card.dataset.concept===input.value))));
+    document.getElementById("themeButton").addEventListener("click",event=>{const light=document.documentElement.dataset.theme!=="light";document.documentElement.dataset.theme=light?"light":"dark";event.currentTarget.textContent=light?"DARK UI":"LIGHT UI"});
+  </script>
+</body>
+</html>
