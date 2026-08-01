@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Polyn Main View Style Comparison</title>
+  <style>
+    :root{color-scheme:dark;--bg:#1d2021;--canvas:#161b20;--panel:#282828;--panel2:#242625;--text:#ebdbb2;--muted:#bdae93;--accent:#83a598;--accent2:#607d9b;--line:rgba(235,219,178,.17);--field:#303533;--warn:#d79921;--ok:#75a978}
+    html[data-theme="light"]{color-scheme:light;--bg:#f5f4f3;--canvas:#eceff1;--panel:#fff;--panel2:#faf9f8;--text:#29282b;--muted:#666269;--accent:#607d9b;--accent2:#718ba5;--line:rgba(74,73,72,.17);--field:#eef2f5;--warn:#c17806;--ok:#25834b}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--canvas);color:var(--text);font:14px/1.4 Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+    button,input,select{font:inherit}
+    .pageHeader{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px clamp(18px,4vw,50px);border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--canvas) 92%,transparent);backdrop-filter:blur(12px)}
+    h1{margin:0;font-size:clamp(23px,3vw,35px)}
+    .pageHeader p{margin:3px 0 0;color:var(--muted)}
+    .themeButton{flex:0 0 auto;padding:9px 14px;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--text);cursor:pointer}
+    main{width:min(1540px,100%);margin:auto;padding:24px clamp(12px,3vw,36px) 48px}
+    .intro{display:grid;grid-template-columns:1fr auto;gap:18px;align-items:start;margin-bottom:22px;padding:16px 18px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
+    .intro p{margin:0;color:var(--muted)}.intro strong{color:var(--accent)}
+    .chips{display:flex;gap:7px;flex-wrap:wrap}.chip{padding:5px 9px;border-radius:999px;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent);font-size:11px;font-weight:800}
+    .comparisonGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px}
+    .concept{overflow:hidden;border:2px solid transparent;border-radius:17px;background:var(--panel);box-shadow:0 6px 20px rgba(0,0,0,.15)}
+    .concept.selected{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}
+    .conceptHeader{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:15px 17px;border-bottom:1px solid var(--line)}
+    .choice{display:flex;gap:9px;cursor:pointer}.choice input{width:18px;height:18px;margin-top:2px;accent-color:var(--accent)}
+    .conceptName{font-size:17px;font-weight:850}.conceptNote{display:block;margin-top:2px;color:var(--muted);font-size:12px}
+    .badge{padding:5px 8px;border-radius:999px;background:color-mix(in srgb,var(--accent) 17%,transparent);color:var(--accent);font-size:10px;font-weight:900;letter-spacing:.06em;text-transform:uppercase}
+    .tradeoffs{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px 17px;border-bottom:1px solid var(--line);background:var(--panel2);font-size:11px;color:var(--muted)}
+    .tradeoffs strong{display:block;color:var(--text)}
+    .preview{padding:14px;background:var(--canvas)}
+
+    /* Shared miniature main view. */
+    .appMock{display:grid;grid-template-columns:145px minmax(0,1fr);gap:12px;min-height:440px;padding:10px;border-radius:13px;background:var(--bg)}
+    .side{padding:8px;border:1px solid var(--line);border-radius:12px;background:var(--panel2)}
+    .brand{height:38px;margin-bottom:8px;border-bottom:1px solid var(--line);color:var(--accent);font-size:20px;font-weight:950;letter-spacing:.08em;text-align:center}.brand i{display:inline-block;width:9px;height:9px;margin:0 5px;border-radius:50%;background:var(--accent)}
+    .navItem{margin-top:4px;padding:8px;border:1px solid transparent;border-radius:8px;color:var(--muted);font-size:11px;font-weight:750}.navItem small{display:block;margin-top:2px;font-size:9px;font-weight:600}.navItem.active{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--text)}
+    .work{display:grid;align-content:start;gap:11px;min-width:0}
+    .status{display:flex;gap:5px;overflow:hidden;padding:5px;border:1px solid var(--line);border-radius:11px;background:var(--panel)}
+    .status span{padding:5px 7px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:9px;white-space:nowrap}.status b{color:var(--text)}
+    .mainCard{padding:12px;border:1px solid var(--line);border-radius:13px;background:var(--panel)}
+    .cardTop{display:flex;align-items:start;justify-content:space-between;gap:8px;padding-bottom:9px;border-bottom:1px solid var(--line)}
+    .cardTop h2{margin:0;color:var(--accent);font-size:16px}.cardTop p{margin:2px 0 0;color:var(--muted);font-size:10px}
+    .mode{padding:5px 8px;border:1px solid var(--accent);border-radius:999px;color:var(--accent);font-size:9px}
+    .sectionTitle{margin:12px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--line);font-size:12px;font-weight:850}
+    .fields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.field{color:var(--muted);font-size:9px}.field div{margin-top:4px;padding:7px;border:1px solid var(--line);border-radius:8px;background:var(--field);color:var(--text);font-size:10px}
+    .rows{display:grid;gap:7px;margin-top:10px}.row{padding:9px;border:1px solid var(--line);border-radius:9px;background:var(--panel2);font-size:10px;font-weight:750}.headsUp{margin-top:10px;padding:9px;border-left:4px solid var(--warn);border-radius:9px;background:color-mix(in srgb,var(--warn) 11%,var(--panel));font-size:9px}
+
+    /* 1. Control: current floating panels. */
+    .control .side,.control .status,.control .mainCard,.control .row{box-shadow:0 8px 20px rgba(0,0,0,.25)}
+
+    /* 2. Pure flat: shadow removal with borders doing all separation. */
+    .flat .side,.flat .status,.flat .mainCard,.flat .row{box-shadow:none}
+    .flat .appMock{background:var(--bg)}
+
+    /* 3. Layered flat: no shadows, separation comes from surface tone. */
+    .layered .side,.layered .status,.layered .mainCard,.layered .row{box-shadow:none;border-color:transparent}
+    .layered .appMock{background:var(--canvas)}
+    .layered .side,.layered .mainCard{background:var(--panel)}
+    .layered .status,.layered .row{background:var(--field)}
+
+    /* 4. Accent frame: restrained blue geometry reinforces active work. */
+    .accentFrame .side,.accentFrame .status,.accentFrame .mainCard,.accentFrame .row{box-shadow:none}
+    .accentFrame .mainCard{border-left:5px solid var(--accent)}
+    .accentFrame .status{border-color:color-mix(in srgb,var(--accent) 45%,transparent)}
+    .accentFrame .row{border-left:3px solid color-mix(in srgb,var(--accent) 65%,transparent)}
+
+    /* 5. Divided workspace: removes most card containers. */
+    .divided .appMock{gap:18px;background:var(--bg)}
+    .divided .side,.divided .status,.divided .mainCard,.divided .row{box-shadow:none}
+    .divided .mainCard{padding-inline:2px;border:0;border-radius:0;background:transparent}
+    .divided .row{border-width:1px 0 0;border-radius:0;background:transparent}
+    .divided .headsUp{border-top:1px solid var(--line);border-right:0;border-bottom:0;border-radius:0}
+
+    /* 6. Low elevation: almost flat, retaining only a grounding edge. */
+    .lowElevation .side,.lowElevation .status,.lowElevation .mainCard,.lowElevation .row{box-shadow:0 1px 2px rgba(0,0,0,.14)}
+    .lowElevation .mainCard{border-color:color-mix(in srgb,var(--accent) 20%,var(--line))}
+
+    @media(max-width:1000px){.comparisonGrid{grid-template-columns:1fr}}
+    @media(max-width:620px){.pageHeader{align-items:flex-start}.intro{grid-template-columns:1fr}.appMock{grid-template-columns:1fr}.side{display:none}.fields{grid-template-columns:repeat(2,1fr)}.tradeoffs{grid-template-columns:1fr}.preview{padding:8px}}
+  </style>
+</head>
+<body>
+  <header class="pageHeader"><div><h1>Main view style study</h1><p>Shadow removal and alternative separation systems for Polyn.</p></div><button id="themeButton" class="themeButton" type="button">Preview light</button></header>
+  <main>
+    <section class="intro"><p><strong>Suggested starting point:</strong> Layered Flat removes the floating-card feel while keeping sections readable through deliberate surface contrast. Accent Frame is stronger when active production areas need more emphasis.</p><div class="chips"><span class="chip">No production changes</span><span class="chip">Light + dark</span><span class="chip">Select a favorite</span></div></section>
+    <section id="comparisonGrid" class="comparisonGrid" aria-label="Main view style comparisons"></section>
+  </main>
+  <script>
+    "use strict";
+    const concepts=[
+      {id:"control",name:"1. Current elevation",note:"Existing drop shadows preserved as the control.",strength:"Clear floating layers",tradeoff:"Heaviest visual treatment",css:"control"},
+      {id:"flat",name:"2. Pure Flat",note:"Remove every shadow and rely on one-pixel borders.",strength:"Clean and predictable",tradeoff:"Can feel slightly clinical",css:"flat"},
+      {id:"layered",name:"3. Layered Flat",note:"Use surface tones instead of shadows for hierarchy.",strength:"Calm but well separated",tradeoff:"Needs careful theme contrast",css:"layered",recommended:true},
+      {id:"accent",name:"4. Accent Frame",note:"Flat panels with restrained theme-colored edges.",strength:"Strong production focus",tradeoff:"More visible accent color",css:"accentFrame"},
+      {id:"divided",name:"5. Divided Workspace",note:"Remove containers and organize with separators.",strength:"Most spacious and app-like",tradeoff:"Largest structural change",css:"divided"},
+      {id:"low",name:"6. Low Elevation",note:"Replace broad shadows with a subtle one-pixel lift.",strength:"Familiar but quieter",tradeoff:"Still technically elevated",css:"lowElevation"}
+    ];
+    const mock=`<div class="appMock"><aside class="side"><div class="brand">P<i></i>LYN</div><div class="navItem active">Setup<small>Needs hopper weights</small></div><div class="navItem">Hopper Percentages<small>1 percentage error</small></div><div class="navItem">Run-Down Timeline<small>No hoppers tracked</small></div><div class="navItem">Cloud Sync<small>Local only</small></div><div class="navItem">Tools<small>Production utilities</small></div><div class="navItem">Help<small>Operator guide</small></div></aside><div class="work"><div class="status"><span>Output <b>888 lb/hr</b></span><span>Changeover <b>12:55 PM</b></span><span>Tracked <b>0</b></span></div><section class="mainCard"><div class="cardTop"><div><h2>Setup</h2><p>Line Setup and App Settings</p></div><span class="mode">Advanced</span></div><div class="sectionTitle">Line Setup</div><div class="fields"><div class="field">Line rate<div>888</div></div><div class="field">Gauge<div>0</div></div><div class="field">Line type<div>5-layer</div></div><div class="field">Changeover<div>12:55 PM</div></div></div><div class="sectionTitle">Appearance &amp; Preferences</div><div class="fields"><div class="field">Theme<div>Industrial Slate</div></div><div class="field">View<div>Comfort</div></div><div class="field">Time format<div>12-hour</div></div></div><div class="rows"><div class="row">Receiver hopper weights</div><div class="row">Offsets</div></div><div class="headsUp"><b>Heads up:</b><br>Receiver hopper weights need to be set for accurate timing.</div></section></div></div>`;
+    const grid=document.getElementById("comparisonGrid");
+    concepts.forEach((item,index)=>{const article=document.createElement("article");article.className=`concept${item.recommended?" selected":""}`;article.dataset.concept=item.id;article.innerHTML=`<div class="conceptHeader"><label class="choice"><input type="radio" name="favorite" value="${item.id}" ${item.recommended?"checked":""}><span><span class="conceptName">${item.name}</span><span class="conceptNote">${item.note}</span></span></label>${item.recommended?'<span class="badge">Recommended</span>':''}</div><div class="tradeoffs"><span><strong>Strength</strong>${item.strength}</span><span><strong>Tradeoff</strong>${item.tradeoff}</span></div><div class="preview ${item.css}">${mock}</div>`;grid.appendChild(article)});
+    document.querySelectorAll('input[name="favorite"]').forEach(input=>input.addEventListener("change",()=>document.querySelectorAll(".concept").forEach(card=>card.classList.toggle("selected",card.dataset.concept===input.value))));
+    document.getElementById("themeButton").addEventListener("click",event=>{const light=document.documentElement.dataset.theme!=="light";document.documentElement.dataset.theme=light?"light":"dark";event.currentTarget.textContent=light?"Preview dark":"Preview light"});
+  </script>
+</body>
+</html>
