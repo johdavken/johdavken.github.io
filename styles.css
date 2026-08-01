@@ -1536,7 +1536,7 @@ details[open] > summary .chev{ transform: rotate(45deg); }
 .weightsGrid{ display: grid; gap: var(--gap); }
 .weightsBulkBar{
   display: grid;
-  grid-template-columns: minmax(150px, 220px) 1fr;
+  grid-template-columns:minmax(180px,1fr) minmax(180px,auto);
   gap: var(--gap);
   align-items: end;
   padding: 10px;
@@ -1544,7 +1544,11 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   border-radius: var(--radius-row);
   background: var(--readonly-bg);
 }
+.weightsBulkSteps{grid-column:1/-1;display:flex;align-items:center;gap:18px;padding-bottom:8px;border-bottom:1px solid var(--row-border)}
+.weightsBulkSteps span{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:var(--font-small)}
+.weightsBulkSteps b{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:999px;background:var(--btn-primary-a);color:var(--title);font-size:var(--font-tiny)}
 .weightsBulkField{ margin: 0; }
+.weightsBulkField > span:first-child{display:block;margin-bottom:6px}
 .weightsInputWithUnit{
   display: grid;
   grid-template-columns: minmax(64px, 1fr) auto;
@@ -1555,14 +1559,19 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   color: var(--muted);
   font-size: var(--font-small);
 }
-.weightsBulkActions{ display: flex; flex-wrap: wrap; gap: 8px; }
-.weightsSelectionStatus{ grid-column: 1 / -1; min-height: 1.2em; }
+.weightsBulkApply{display:grid;align-content:end;gap:6px}
+.weightsBulkApply button{width:100%}
+.weightsBulkActions{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding-top:4px;border-top:1px solid var(--row-border)}
+.weightsBulkActions .bulkTextAction{width:auto;min-height:0;padding:3px 2px;border:0;background:transparent;color:var(--muted);box-shadow:none}
+.weightsBulkActions .bulkTextAction:hover{color:var(--title);text-decoration:underline}
+.weightsBulkNote{grid-column:1/-1;color:var(--muted)}
+.weightsSelectionStatus{min-height:1.2em}
 
 .weightsMatrixScroll{
   overflow-x: auto;
   border: 1px solid var(--row-border);
   border-radius: var(--radius-row);
-  background: var(--readonly-bg);
+  background: transparent;
 }
 .weightsMatrix{
   width: 100%;
@@ -1580,7 +1589,7 @@ details[open] > summary .chev{ transform: rotate(45deg); }
 .weightsMatrix tr:last-child > *{ border-bottom: 0; }
 .weightsMatrix tr > *:last-child{ border-right: 0; }
 .weightsMatrix thead th{
-  background: var(--panelOpen);
+  background: transparent;
   color: var(--text);
 }
 .weightsMatrix th:first-child{
@@ -1588,16 +1597,26 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   left: 0;
   z-index: 2;
   min-width: 76px;
-  background: var(--panelOpen);
+  background:var(--panelOpen);
 }
+.weightsRowCorner{font-size:var(--font-tiny);line-height:1.15;white-space:normal}
 .weightsSelectHeader{
   width: 100%;
   padding: 7px 8px;
-  border-color: var(--row-border-2);
-  background: var(--row-bg-2);
+  border-color:transparent;
+  background:transparent;
   box-shadow: none;
   white-space: nowrap;
 }
+.weightsSelectHeader:hover{background:var(--row-bg-2);color:var(--title)}
+.weightsMatrix tbody th .weightsSelectHeader{display:flex;align-items:center;justify-content:center;gap:7px}
+.weightsMatrix tbody th .weightsSelectHeader::before{
+  content:"";display:grid;place-items:center;width:14px;height:14px;flex:0 0 14px;
+  border:1px solid var(--border-strong);border-radius:3px;background:var(--input-bg);
+  color:var(--btn-text);font-family:system-ui,sans-serif;font-size:11px;font-weight:900;line-height:1;
+}
+.weightsMatrix tbody th .weightsSelectHeader.partiallySelected::before{content:"−";border-color:var(--focus-border);background:var(--focus-ring)}
+.weightsMatrix tbody th .weightsSelectHeader.selected::before{content:"✓";border-color:var(--focus-border);background:var(--focus-border);color:#fff}
 .weightsSelectHeader.selected{
   border-color: var(--focus-border);
   background: linear-gradient(180deg, var(--btn-primary-a), var(--btn-primary-b));
@@ -1609,10 +1628,11 @@ details[open] > summary .chev{ transform: rotate(45deg); }
 }
 .weightsMatrixCell{
   min-width: 130px;
-  background: var(--row-bg-2);
+  background:transparent;
   cursor: pointer;
   transition: background .12s ease, box-shadow .12s ease;
 }
+.weightsMatrix tbody tr:nth-child(even) .weightsMatrixCell{background:color-mix(in srgb,var(--row-bg-2) 55%,transparent)}
 .weightsMatrixCell.selected{
   background: var(--toggle-on-bg);
   box-shadow: inset 0 0 0 2px var(--focus-border);
@@ -1633,12 +1653,14 @@ details[open] > summary .chev{ transform: rotate(45deg); }
 .weightsMatrixCell .weightsInputWithUnit input{
   min-width: 0;
   text-align: right;
+  border:0;
+  background:transparent;
+  box-shadow:none;
 }
 @media (max-width: 600px){
   .weightsBulkBar{ grid-template-columns: 1fr; align-items: stretch; }
-  .weightsSelectionStatus{ grid-column: 1; }
-  .weightsBulkActions{ display: grid; grid-template-columns: 1fr 1fr; }
-  .weightsBulkActions button:first-child{ grid-column: 1 / -1; }
+  .weightsBulkSteps{align-items:flex-start;flex-direction:column;gap:5px}
+  .weightsBulkActions{display:flex}
 }
 
 /* =======================================================================
