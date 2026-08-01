@@ -854,19 +854,27 @@
       const toolbar = document.createElement("div");
       toolbar.className = "weightsBulkBar";
       toolbar.innerHTML = `
+        <div class="weightsBulkSteps" aria-label="Bulk weight editing steps">
+          <span><b>1</b> Select hoppers</span>
+          <span><b>2</b> Enter weight</span>
+          <span><b>3</b> Apply</span>
+        </div>
         <label class="weightsBulkField" for="bulkWeight">
-          <span>Weight to apply</span>
+          <span>Receiver weight</span>
           <span class="weightsInputWithUnit">
-            <input id="bulkWeight" type="text" inputmode="decimal" placeholder="0" />
+            <input id="bulkWeight" type="text" inputmode="decimal" placeholder="No change" />
             <span>lb</span>
           </span>
         </label>
-        <div class="weightsBulkActions">
+        <div class="weightsBulkApply">
+          <div id="weightSelectionStatus" class="tiny weightsSelectionStatus" role="status" aria-live="polite">No hoppers selected</div>
           <button id="applyBulkWeight" type="button" disabled>Apply to selected</button>
-          <button id="selectAllWeights" type="button" class="secondary">Select all</button>
-          <button id="clearWeightSelection" type="button" class="secondary">Clear selection</button>
         </div>
-        <div id="weightSelectionStatus" class="tiny weightsSelectionStatus" role="status" aria-live="polite">No hoppers selected</div>
+        <div class="weightsBulkActions">
+          <button id="selectAllWeights" type="button" class="bulkTextAction">Select all</button>
+          <button id="clearWeightSelection" type="button" class="bulkTextAction">Clear selection</button>
+        </div>
+        <div class="weightsBulkNote tiny">Individual weights can still be edited directly in the table.</div>
       `;
       area.appendChild(toolbar);
 
@@ -879,7 +887,8 @@
       const headerRow = document.createElement("tr");
       const corner = document.createElement("th");
       corner.scope = "col";
-      corner.textContent = "Hopper";
+      corner.className = "weightsRowCorner";
+      corner.textContent = "Select row";
       headerRow.appendChild(corner);
       state.layers.forEach(L=>{
         const th = document.createElement("th");
@@ -910,6 +919,7 @@
         rowButton.className = "weightsSelectHeader mono";
         rowButton.textContent = hopperPositionLabel(hi);
         rowButton.title = `Select or clear hopper ${hopperPositionLabel(hi)} across all layers`;
+        rowButton.setAttribute("aria-label", `Select hopper ${hopperPositionLabel(hi)} across all layers`);
         rowButton.setAttribute("aria-pressed", "false");
         rowButton.addEventListener("click", ()=>toggleSelection(
           state.layers.map(L=>`${L.name}:${hi}`)
@@ -1002,6 +1012,9 @@
           button.setAttribute("aria-pressed", count === keys.length ? "true" : (count ? "mixed" : "false"));
         });
         applyButton.disabled = selected.size === 0;
+        applyButton.textContent = selected.size
+          ? `Apply to ${selected.size} hopper${selected.size === 1 ? "" : "s"}`
+          : "Apply to selected";
         status.textContent = message || (
           selected.size === 0
             ? "No hoppers selected"
