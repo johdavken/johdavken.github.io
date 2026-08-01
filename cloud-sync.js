@@ -1,7 +1,7 @@
 (function (root, factory) {
   const api = factory();
   if (typeof module === "object" && module.exports) module.exports = api;
-  if (root) root.ResinIQCloudSync = api;
+  if (root) root.PolynCloudSync = api;
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 
@@ -16,7 +16,7 @@
   }
   function defaultDeviceLabel(){
     const mobile = typeof navigator !== "undefined" && /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
-    return mobile ? "Operator Phone" : "ResinIQ Desktop";
+    return mobile ? "Operator Phone" : "Polyn Desktop";
   }
   function isConflictError(error){
     const text = `${error?.code || ""} ${error?.message || ""} ${error?.details || ""}`.toLowerCase();
@@ -566,7 +566,7 @@
         else setStatus("Local only", state.workspaces.length ? "Select a line to resume synchronization." : "Create or join a line when ready.");
       }catch(error){
         state.available = false;
-        setStatus("Local only", "Supabase is unavailable; ResinIQ remains local and fully usable.");
+        setStatus("Local only", "Supabase is unavailable; Polyn remains local and fully usable.");
       }
       return state;
     }
@@ -680,7 +680,7 @@
       saveSettings(current);
       await loadWorkspaces();
       if (selectedId()) await reconcileSelected({ forceRemote: true });
-      else setStatus("Local only", "This device left Cloud Sync. Local ResinIQ data was preserved.");
+      else setStatus("Local only", "This device left Cloud Sync. Local Polyn data was preserved.");
     }
 
     async function transferOwnership(userId){

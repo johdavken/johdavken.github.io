@@ -1,6 +1,6 @@
-/* ======================================================================= * ResinIQ — Theme palettes + accents (corrected) * Fixes: * 1) Dark selector now matches whether data-theme is set on <html> or <body> * 2) Monochrome theme supports both data-theme="mono" and "monochrome" * Notes: * - html:not([data-theme]) remains as the implicit default (your dark baseline) * ======================================================================= */
+/* ======================================================================= * Polyn — Theme palettes + accents (corrected) * Fixes: * 1) Dark selector now matches whether data-theme is set on <html> or <body> * 2) Monochrome theme supports both data-theme="mono" and "monochrome" * Notes: * - html:not([data-theme]) remains as the implicit default (your dark baseline) * ======================================================================= */
 
-/* ======================================================================= * ResinIQ — Theme palettes + accents * Applies whether data-theme is set on <html> or <body>. * ======================================================================= */
+/* ======================================================================= * Polyn — Theme palettes + accents * Applies whether data-theme is set on <html> or <body>. * ======================================================================= */
 
 /* ----------------------------------------------------------------------- * Light * ----------------------------------------------------------------------- */
 :where(html, body)[data-theme="light"]{
@@ -60,53 +60,53 @@
 
 /* ----------------------------------------------------------------------- * MSE * ----------------------------------------------------------------------- */
 :where(html, body)[data-theme="mse"]{
-  --bg: #f7f9fc;
-  --panel: rgba(255,255,255,.97);
-  --panel2: rgba(238,244,249,.94);
-  --text: #111827;
-  --subtitle: #0877b5;
-  --title: #15579a;
-  --muted: #46556b;
-  --fg: #163a63;
-  --yellow: #15579a;
-  --orange: #0877b5;
-  --border: rgba(21,87,154,.18);
-  --border2: rgba(21,87,154,.26);
-  --field-bg: rgba(21,87,154,.055);
-  --panelOpen: rgba(255,255,255,.99);
-  --chev: rgba(21,87,154,.58);
-  --warn: #b45309;
-  --bad: #b42318;
-  --ok: #16834b;
-  --shadow2: 0 7px 20px rgba(17,44,77,.14);
-  --row-bg: rgba(21,87,154,.055);
-  --row-border: rgba(21,87,154,.16);
-  --row-bg-2: rgba(21,87,154,.035);
-  --row-border-2: rgba(21,87,154,.13);
-  --readonly-bg: rgba(70,85,107,.07);
-  --readonly-border: rgba(70,85,107,.18);
-  --focus-border: rgba(8,119,181,.90);
-  --focus-ring: rgba(8,119,181,.16);
-  --f-var1: #16834b;
-  --f-var2: #b45309;
-  --f-var3: #15579a;
-  --f-const: #526176;
+  --bg: #f5f4f3;
+  --panel: rgba(255,255,255,.95);
+  --panel2: rgba(250,249,248,.90);
+  --text: #29282b;
+  --subtitle: #545352;
+  --title: #607d9b;
+  --muted: #666269;
+  --fg: #4a4948;
+  --yellow: #607d9b;
+  --orange: #718ba5;
+  --border: rgba(74,73,72,.14);
+  --border2: rgba(74,73,72,.22);
+  --field-bg: rgba(74,73,72,.06);
+  --panelOpen: rgba(255,255,255,.95);
+  --chev: rgba(74,73,72,.50);
+  --warn: #d97706;
+  --bad: #dc2626;
+  --ok: #16a34a;
+  --shadow2: 0 6px 18px rgba(0,0,0,.12);
+  --row-bg: rgba(74,73,72,.045);
+  --row-border: rgba(96,125,155,.14);
+  --row-bg-2: rgba(74,73,72,.03);
+  --row-border-2: rgba(74,73,72,.12);
+  --readonly-bg: rgba(74,73,72,.07);
+  --readonly-border: rgba(74,73,72,.16);
+  --focus-border: rgba(96,125,155,.86);
+  --focus-ring: rgba(96,125,155,.17);
+  --f-var1: #16a34a;
+  --f-var2: #d97706;
+  --f-var3: #607d9b;
+  --f-const: #666269;
   --btn-text: var(--text);
-  --btn-border: rgba(21,87,154,.28);
-  --btn-primary-a: rgba(21,87,154,.20);
-  --btn-primary-b: rgba(8,119,181,.09);
-  --btn-secondary-bg: rgba(8,119,181,.08);
-  --btn-secondary-border: rgba(8,119,181,.24);
-  --btn-danger-bg: rgba(180,35,24,.10);
-  --btn-danger-border: rgba(180,35,24,.24);
-  --bg-glow-a: rgba(21,87,154,.10);
-  --bg-glow-b: rgba(8,119,181,.06);
-  --card-glow-a: rgba(21,87,154,.09);
-  --card-glow-b: rgba(8,119,181,.055);
-  --toggle-on-bg: rgba(8,119,181,.20);
-  --toggle-on-border: rgba(8,119,181,.42);
-  --footer-bg: rgba(238,244,249,.96);
-  --footer-border: rgba(21,87,154,.18);
+  --btn-border: var(--border2);
+  --btn-primary-a: rgba(96,125,155,.20);
+  --btn-primary-b: rgba(96,125,155,.09);
+  --btn-secondary-bg: rgba(74,73,72,.07);
+  --btn-secondary-border: rgba(74,73,72,.18);
+  --btn-danger-bg: rgba(220,38,38,.12);
+  --btn-danger-border: rgba(220,38,38,.22);
+  --bg-glow-a: rgba(74,73,72,.08);
+  --bg-glow-b: rgba(96,125,155,.08);
+  --card-glow-a: rgba(96,125,155,.09);
+  --card-glow-b: rgba(74,73,72,.05);
+  --toggle-on-bg: rgba(96,125,155,.20);
+  --toggle-on-border: rgba(96,125,155,.42);
+  --footer-bg: rgba(240,239,238,.94);
+  --footer-border: rgba(74,73,72,.14);
 }
 
 /* ----------------------------------------------------------------------- * Gruvbox Dark * ----------------------------------------------------------------------- */

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 160" role="img" aria-labelledby="title desc">
+  <title id="title">Polyn — light background</title>
+  <desc id="desc">Five flowing polymer layers beside the Polyn wordmark.</desc>
+  <!-- Light-background brand colors -->
+  <path d="M28 42C55 22 80 23 105 42s30 20 43 3M28 61c27-20 52-19 77 0s30 20 43 3M28 99c27-20 52-19 77 0s30 20 43 3" fill="none" stroke="#18A999" stroke-width="11" stroke-linecap="round"/>
+  <path d="M28 80c27-20 52-19 77 0s30 20 43 3M28 118c27-20 52-19 77 0s30 20 43 3" fill="none" stroke="#F28C28" stroke-width="11" stroke-linecap="round"/>
+  <path d="M196 116V44h28c18 0 29 10 29 25s-11 25-29 25h-28m0-12h27c11 0 17-4 17-13s-6-13-17-13h-27M359 44v72h47M417 44l27 39v33m27-72-27 39M487 116V44l49 72V44" fill="none" stroke="#526273" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M304 55a25 25 0 1 1 0 50 25 25 0 1 1 0-50Z" fill="#18A999"/>
+</svg>

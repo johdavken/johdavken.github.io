@@ -1,13 +1,13 @@
-# ResinIQ
+# Polyn
 
-ResinIQ is a static, browser-based production utility. Browser `localStorage` is always the immediate working state; optional Supabase Cloud Sync adds remote persistence and live updates without making the application dependent on a network connection.
+Polyn is a static, browser-based production utility. Browser `localStorage` is always the immediate working state; optional Supabase Cloud Sync adds remote persistence and live updates without making the application dependent on a network connection.
 
 ## Optional Cloud Sync setup
 
 1. Create a Supabase project and enable anonymous sign-ins under Authentication.
 2. Run [`supabase/migrations/202607310001_line_sync.sql`](supabase/migrations/202607310001_line_sync.sql) in the Supabase SQL editor or through the Supabase CLI.
 3. Set the public project URL and publishable key in [`supabase-config.js`](supabase-config.js). These values are intentionally public client configuration. Never place a service-role or secret key in this repository.
-4. Deploy the static files normally. If Supabase, authentication, or the network is unavailable, ResinIQ continues in local-only mode.
+4. Deploy the static files normally. If Supabase, authentication, or the network is unavailable, Polyn continues in local-only mode.
 
 The migration creates private workspace membership, revision-checked active jobs, revision-checked Saved Line Settings, temporary four-character linking codes stored only as keyed digests, RLS policies, and the public RPC interface used by the browser client.
 

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 160" role="img" aria-labelledby="heavy-title heavy-desc">
+  <title id="heavy-title">Polyn logo with heavier wordmark</title>
+  <desc id="heavy-desc">The control logo with subtly heavier letter strokes.</desc>
+  <g id="stacked-wave-icon">
+    <path id="wave-primary" d="M28 42C55 22 80 23 105 42s30 20 43 3M28 61c27-20 52-19 77 0s30 20 43 3M28 99c27-20 52-19 77 0s30 20 43 3" fill="none" stroke="#B3262E" stroke-width="11" stroke-linecap="round"/>
+    <path id="wave-secondary" d="M28 80c27-20 52-19 77 0s30 20 43 3M28 118c27-20 52-19 77 0s30 20 43 3" fill="none" stroke="#B3262E" stroke-opacity=".82" stroke-width="11" stroke-linecap="round"/>
+  </g>
+  <g id="polyn-wordmark">
+    <path id="wordmark-letters" d="M196 116V44h28c18 0 29 10 29 25s-11 25-29 25h-28m0-12h27c11 0 17-4 17-13s-6-13-17-13h-27M359 44v72h47M417 44l27 39v33m27-72-27 39M487 116V44l49 72V44" fill="none" stroke="#666269" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
+    <path id="resin-pellet-o" d="M304 60a20 20 0 1 1 0 40 20 20 0 1 1 0-40Z" fill="#B3262E"/>
+  </g>
+</svg>

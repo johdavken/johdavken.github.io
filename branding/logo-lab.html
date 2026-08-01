@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Polyn Logo Lab</title>
+  <style>
+    :root{ color-scheme:light; font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif; }
+    *{ box-sizing:border-box; }
+    body{ margin:0; background:#eceff1; color:#27313a; }
+    header{ padding:28px clamp(18px,4vw,52px) 20px; background:#fff; border-bottom:1px solid #ccd3d8; }
+    h1{ margin:0 0 7px; font-size:clamp(25px,4vw,38px); }
+    header p{ margin:0; color:#66727b; }
+    main{ width:min(1500px,100%); margin:auto; padding:24px clamp(14px,3vw,40px) 48px; }
+    .logoGrid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,520px),1fr)); gap:20px; }
+    .variant{ overflow:hidden; border:2px solid transparent; border-radius:16px; background:#fff; box-shadow:0 5px 18px rgba(32,42,50,.08); }
+    .variant.selected{ border-color:#b3262e; box-shadow:0 0 0 3px rgba(179,38,46,.15),0 5px 18px rgba(32,42,50,.08); }
+    .variantHead{ display:flex; align-items:center; gap:10px; padding:14px 16px; border-bottom:1px solid #dce1e4; }
+    .variantHead label{ display:flex; align-items:center; gap:9px; font-weight:750; cursor:pointer; }
+    .variantHead input{ width:18px; height:18px; accent-color:#b3262e; }
+    .surface{ padding:16px; }
+    .surface + .surface{ border-top:1px solid #dce1e4; }
+    .surface.light{ background:#f7f6f4; }
+    .surface.dark{ background:#1c2229; color:#eef2f4; }
+    .surfaceTitle{ margin-bottom:11px; font-size:12px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; opacity:.72; }
+    .sizes{ display:grid; gap:13px; overflow-x:auto; }
+    .sample{ display:flex; align-items:center; gap:13px; min-height:46px; }
+    .sample span{ flex:0 0 67px; font:12px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace; opacity:.72; }
+    .sample img{ display:block; height:auto; max-width:none; }
+    .iconSection{ margin-top:28px; padding:20px; border-radius:16px; background:#fff; box-shadow:0 5px 18px rgba(32,42,50,.08); }
+    .iconSection h2{ margin:0 0 6px; }
+    .iconSection > p{ margin:0 0 18px; color:#66727b; }
+    .iconSurfaces{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); overflow:hidden; border:1px solid #d7dde1; border-radius:12px; }
+    .iconSurface{ padding:20px; }
+    .iconSurface.light{ background:#f7f6f4; }
+    .iconSurface.dark{ background:#1c2229; color:#eef2f4; }
+    .iconSizes{ display:flex; align-items:end; flex-wrap:wrap; gap:22px; min-height:170px; }
+    .iconSample{ display:grid; justify-items:center; gap:8px; font:12px ui-monospace,SFMono-Regular,Consolas,monospace; }
+    .iconSample img{ display:block; }
+    @media(max-width:650px){
+      .iconSurfaces{ grid-template-columns:1fr; }
+      .sample span{ flex-basis:58px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Polyn Logo Lab</h1>
+    <p>Select a favorite and compare every variation at production-relevant sizes.</p>
+  </header>
+  <main>
+    <section id="logoGrid" class="logoGrid" aria-label="Logo variations"></section>
+
+    <section class="iconSection" aria-labelledby="iconHeading">
+      <h2 id="iconHeading">Stacked-wave icon</h2>
+      <p>Standalone icon check at 128px, 64px, 32px, and 16px.</p>
+      <div id="iconSurfaces" class="iconSurfaces"></div>
+    </section>
+  </main>
+  <script>
+    "use strict";
+    const variants = [
+      ["control", "1. Current logo — control", "polyn-control.svg"],
+      ["dot115", "2. O-dot diameter +15%", "polyn-dot-115.svg"],
+      ["dot125", "3. O-dot diameter +25%", "polyn-dot-125.svg"],
+      ["tight", "4. Tighter icon spacing", "polyn-tight-spacing.svg"],
+      ["heavy", "5. Heavier wordmark", "polyn-heavy-wordmark.svg"]
+    ];
+    const logoSizes = [
+      ["400px wide", 400],
+      ["220px wide", 220],
+      ["140px wide", 140],
+      ["~32px tall", 120]
+    ];
+    const surfaces = [["light", "Light background"], ["dark", "Dark background"]];
+
+    const logoGrid = document.getElementById("logoGrid");
+    variants.forEach(([id, label, file], index) => {
+      const card = document.createElement("article");
+      card.className = `variant${index === 0 ? " selected" : ""}`;
+      card.dataset.variant = id;
+      const head = document.createElement("div");
+      head.className = "variantHead";
+      head.innerHTML = `<label><input type="radio" name="favorite" value="${id}" ${index === 0 ? "checked" : ""}>${label}</label>`;
+      card.appendChild(head);
+      surfaces.forEach(([surfaceClass, surfaceLabel]) => {
+        const surface = document.createElement("div");
+        surface.className = `surface ${surfaceClass}`;
+        const title = document.createElement("div");
+        title.className = "surfaceTitle";
+        title.textContent = surfaceLabel;
+        const sizes = document.createElement("div");
+        sizes.className = "sizes";
+        logoSizes.forEach(([sizeLabel, width]) => {
+          const sample = document.createElement("div");
+          sample.className = "sample";
+          sample.innerHTML = `<span>${sizeLabel}</span><img src="${file}" width="${width}" alt="${label} on ${surfaceLabel.toLowerCase()}">`;
+          sizes.appendChild(sample);
+        });
+        surface.append(title, sizes);
+        card.appendChild(surface);
+      });
+      logoGrid.appendChild(card);
+    });
+
+    document.querySelectorAll('input[name="favorite"]').forEach(input => {
+      input.addEventListener("change", () => {
+        document.querySelectorAll(".variant").forEach(card => card.classList.toggle("selected", card.dataset.variant === input.value));
+      });
+    });
+
+    const iconSurfaces = document.getElementById("iconSurfaces");
+    surfaces.forEach(([surfaceClass, surfaceLabel]) => {
+      const surface = document.createElement("div");
+      surface.className = `iconSurface ${surfaceClass}`;
+      surface.innerHTML = `<div class="surfaceTitle">${surfaceLabel}</div>`;
+      const sizes = document.createElement("div");
+      sizes.className = "iconSizes";
+      [128, 64, 32, 16].forEach(size => {
+        const sample = document.createElement("div");
+        sample.className = "iconSample";
+        sample.innerHTML = `<img src="polyn-icon.svg" width="${size}" height="${size}" alt="Polyn icon at ${size} pixels"><span>${size}px</span>`;
+        sizes.appendChild(sample);
+      });
+      surface.appendChild(sizes);
+      iconSurfaces.appendChild(surface);
+    });
+  </script>
+</body>
+</html>
