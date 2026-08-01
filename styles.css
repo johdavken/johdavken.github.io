@@ -75,6 +75,12 @@
   --toggle-knob: 24px;
 
   --badge-font: 12px;
+  --title-size: 14px;
+  --summary-pad: 12px;
+  --body-pad: 12px;
+  --tool-pad: 12px;
+  --page-pad: 14px;
+  --page-gap: 16px;
 
   /* -------------------------------------------------------------------
    *     Formula colors (defaults)
@@ -116,46 +122,116 @@
 
 }
 
+/* Spacious: presentation and touch-first spacing. */
+:where(html, body)[data-density="spacious"]{
+  --font-base: 17px;
+  --font-small: 13px;
+  --font-tiny: 12px;
+  --pad-input-y: 11px;
+  --pad-input-x: 14px;
+  --pad-card: 16px;
+  --gap: 14px;
+  --row-pad: 8px;
+  --radius-input: 18px;
+  --radius-row: 20px;
+  --radius2: 22px;
+  --toggle-w: 58px;
+  --toggle-h: 34px;
+  --toggle-knob: 28px;
+  --badge-font: 13px;
+  --btn-pad-y: 11px;
+  --btn-pad-x: 15px;
+  --btn-radius: 16px;
+  --title-size: 16px;
+  --summary-pad: 16px;
+  --body-pad: 16px;
+  --tool-pad: 16px;
+  --page-pad: 18px;
+  --page-gap: 20px;
+}
+
 /* Compact */
 :where(html, body)[data-density="compact"]{
-  --font-base: 15px;
-  --font-small: 11px;
-  --font-tiny: 10px;
-  --pad-input-y: 7px;
-  --pad-input-x: 10px;
-  --pad-card: 10px;
-  --gap: 8px;
-  --row-pad: 4px;
-  --radius-input: 13px;
-  --radius-row: 15px;
-  --toggle-w: 48px;
-  --toggle-h: 28px;
-  --toggle-knob: 22px;
-  --badge-font: 11px;
-  --btn-pad-y: 7px;
-  --btn-pad-x: 10px;
-  --btn-radius: 12px;
+  --font-base: 14px;
+  --font-small: 10px;
+  --font-tiny: 9px;
+  --pad-input-y: 6px;
+  --pad-input-x: 9px;
+  --pad-card: 8px;
+  --gap: 7px;
+  --row-pad: 3px;
+  --radius-input: 10px;
+  --radius-row: 12px;
+  --radius2: 14px;
+  --toggle-w: 46px;
+  --toggle-h: 26px;
+  --toggle-knob: 20px;
+  --badge-font: 10px;
+  --btn-pad-y: 6px;
+  --btn-pad-x: 9px;
+  --btn-radius: 10px;
+  --title-size: 13px;
+  --summary-pad: 9px;
+  --body-pad: 9px;
+  --tool-pad: 9px;
+  --page-pad: 10px;
+  --page-gap: 12px;
 }
 
 /* Dense */
 :where(html, body)[data-density="dense"]{
-  --font-base: 11px;
+  --font-base: 12px;
   --font-small: 9px;
   --font-tiny: 8px;
-  --pad-input-y: 6px;
-  --pad-input-x: 7px;
-  --pad-card: 5px;
+  --pad-input-y: 4px;
+  --pad-input-x: 6px;
+  --pad-card: 4px;
   --gap: 4px;
   --row-pad: 4px;
-  --radius-input: 10px;
-  --radius-row: 10px;
-  --toggle-w: 40px;
+  --radius-input: 7px;
+  --radius-row: 8px;
+  --radius2: 10px;
+  --toggle-w: 38px;
   --toggle-h: 20px;
-  --toggle-knob: 17px;
-  --badge-font: 11px;
-  --btn-pad-y: 6px;
-  --btn-pad-x: 8px;
-  --btn-radius: 10px;
+  --toggle-knob: 16px;
+  --badge-font: 9px;
+  --btn-pad-y: 4px;
+  --btn-pad-x: 6px;
+  --btn-radius: 7px;
+  --title-size: 12px;
+  --summary-pad: 7px;
+  --body-pad: 7px;
+  --tool-pad: 7px;
+  --page-pad: 7px;
+  --page-gap: 8px;
+}
+
+/* Maximum Data: prioritizes maximum on-screen information on large displays. */
+:where(html, body)[data-density="maximum"]{
+  --font-base: 10px;
+  --font-small: 8px;
+  --font-tiny: 7px;
+  --pad-input-y: 2px;
+  --pad-input-x: 4px;
+  --pad-card: 2px;
+  --gap: 2px;
+  --row-pad: 1px;
+  --radius-input: 4px;
+  --radius-row: 5px;
+  --radius2: 6px;
+  --toggle-w: 32px;
+  --toggle-h: 18px;
+  --toggle-knob: 14px;
+  --badge-font: 8px;
+  --btn-pad-y: 3px;
+  --btn-pad-x: 5px;
+  --btn-radius: 4px;
+  --title-size: 11px;
+  --summary-pad: 5px;
+  --body-pad: 5px;
+  --tool-pad: 5px;
+  --page-pad: 4px;
+  --page-gap: 5px;
 }
 
 /* =======================================================================
@@ -179,9 +255,9 @@ body{
 main{
   max-width: 1100px;
   margin: 0 auto;
-  padding: 14px 14px calc(24px + var(--page-bottom-pad));
+  padding: var(--page-pad) var(--page-pad) calc(24px + var(--page-bottom-pad));
   display: grid;
-  gap: 16px;
+  gap: var(--page-gap);
 }
 
 .workspaceNav,
@@ -243,10 +319,10 @@ main{
     grid-row: 1;
     gap: 5px;
     padding: 5px;
-    border: 1px solid var(--border);
+    border: 1px solid transparent;
     border-radius: var(--radius-row);
-    background: var(--panel2);
-    box-shadow: var(--shadow2);
+    background: var(--panel);
+    box-shadow: none;
   }
   .workspaceStatusBar{
     position: sticky;
@@ -256,17 +332,16 @@ main{
     flex-wrap: wrap;
     gap: 7px;
     padding: 6px;
-    border: 1px solid var(--border);
+    border: 1px solid transparent;
     border-radius: var(--radius-row);
-    background: color-mix(in srgb, var(--panel) 94%, transparent);
-    box-shadow: var(--shadow2);
-    backdrop-filter: blur(10px);
+    background: var(--readonly-bg);
+    box-shadow: none;
   }
   .workspaceContent{
     display: grid;
     grid-column: 2;
     grid-row: 1;
-    gap: 16px;
+    gap: var(--page-gap);
     min-width: 0;
   }
   .workspaceStatusItem{
@@ -384,8 +459,8 @@ main{
   .workspaceContent > .workspacePanel:not(.desktop-active){ display: none !important; }
   .workspaceContent > .workspacePanel.card,
   .workspaceContent > .workspacePanel.card[open]{
-    border: 0;
-    background: transparent;
+    border: 1px solid transparent;
+    background: var(--panel);
     box-shadow: none;
   }
   .workspaceContent > .workspacePanel > summary{
@@ -519,27 +594,19 @@ main{
 .card{
   position: relative;
   background: var(--panel);
-  border: 1px solid var(--border);
+  border: 1px solid transparent;
   border-radius: var(--radius2);
   padding: var(--pad-card);
-  box-shadow: var(--shadow2);
+  box-shadow: none;
   overflow: hidden;
 }
-.card::before{
-  content: "";
-  position: absolute;
-  inset: -2px;
-  background: linear-gradient(135deg, var(--card-glow-a), var(--card-glow-b), transparent 60%);
-  opacity: .55;
-  pointer-events: none;
-  filter: blur(14px);
-}
+.card::before{ display: none; }
 .card > *{ position: relative; }
 
 /* Typography helpers */
 .layerTitle{
   font-weight: 900;
-  font-size: 14px;
+  font-size: var(--title-size);
   white-space: nowrap;
   color: var(--title, var(--text));
 }
@@ -666,7 +733,7 @@ input[readonly]:focus{
 .setupNaming{ margin-top: var(--gap); max-width: 320px; }
 @media (min-width: 720px){
   .setupFields{ grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .setupPreferenceFields{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .setupPreferenceFields{ grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
 /* =======================================================================
@@ -742,11 +809,11 @@ details.block:not([open]) > summary .summaryStatus{ display: inline-flex; }
 details.block{
   display: block;
   width: 100%;
-  border: 1px solid var(--border);
+  border: 1px solid transparent;
   border-radius: 18px;
   overflow: hidden;
   background: var(--panel2);
-  box-shadow: 0 8px 18px rgba(0,0,0,.20);
+  box-shadow: none;
 }
 details.block[open]{ background: var(--panelOpen); }
 
@@ -754,12 +821,14 @@ details.block[open]{ background: var(--panelOpen); }
 .blockBody > details.block{
   width: 100%;
   grid-column: 1 / -1;
+  background: var(--readonly-bg);
 }
+.blockBody > details.block[open]{ background: var(--readonly-bg); }
 
 summary{
   list-style: none;
   cursor: pointer;
-  padding: 12px;
+  padding: var(--summary-pad);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -782,7 +851,7 @@ summary::-webkit-details-marker{ display: none; }
 summary:hover .chev{ border-color: var(--focus-border); }
 details[open] > summary .chev{ transform: rotate(45deg); }
 
-.blockBody{ padding: 0 12px 12px 12px; display: grid; gap: var(--gap); }
+.blockBody{ padding: 0 var(--body-pad) var(--body-pad); display: grid; gap: var(--gap); }
 
 /* Small copy chip button */
 .copyBtn{
@@ -1617,10 +1686,10 @@ button.danger{
  *   Tools
  *   ======================================================================= */
 .toolPanel{
-  padding: 12px;
-  border: 1px solid var(--row-border);
+  padding: var(--tool-pad);
+  border: 1px solid transparent;
   border-radius: var(--radius-row);
-  background: var(--row-bg);
+  background: var(--panel2);
 }
 .toolPanel + .toolPanel{ margin-top: var(--gap); }
 .toolsWorkspace{
@@ -1787,18 +1856,10 @@ input.resinLookupDensity.copied[readonly]{
  *   Help guide
  *   ======================================================================= */
 .helpGuide{ gap: 14px; }
-.helpIntro{
-  padding: 12px 14px;
-  border-left: 4px solid var(--focus-border);
-  border-radius: var(--radius-input);
-  background: var(--row-bg);
-  color: var(--text);
-  line-height: 1.5;
-}
 .helpTopics{ display: grid; gap: 10px; }
 .helpTopic{
   overflow: hidden;
-  border: 1px solid var(--row-border);
+  border: 1px solid transparent;
   border-radius: var(--radius-row);
   background: var(--row-bg);
 }
@@ -1858,6 +1919,108 @@ input.resinLookupDensity.copied[readonly]{
   .helpTopic > summary{ grid-template-columns: 1fr; }
   .helpTopic > summary small{ text-align: left; }
   .helpTopicBody{ padding-inline: 13px; }
+}
+
+/* =======================================================================
+ *   Surface styles
+ *   Layered Flat is the base treatment; these selectors provide alternatives.
+ *   ======================================================================= */
+body[data-surface-style="elevated"] .card{
+  border-color: var(--border);
+  box-shadow: var(--shadow2);
+}
+body[data-surface-style="elevated"] .card::before{
+  content: "";
+  display: block;
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(135deg, var(--card-glow-a), var(--card-glow-b), transparent 60%);
+  opacity: .55;
+  pointer-events: none;
+  filter: blur(14px);
+}
+body[data-surface-style="elevated"] details.block{
+  border-color: var(--border);
+  box-shadow: 0 8px 18px rgba(0,0,0,.20);
+}
+body[data-surface-style="elevated"] .blockBody > details.block{ background: var(--panel2); }
+body[data-surface-style="elevated"] .workspaceNav,
+body[data-surface-style="elevated"] .workspaceStatusBar{
+  border-color: var(--border);
+  box-shadow: var(--shadow2);
+}
+body[data-surface-style="elevated"] .workspaceNav{ background: var(--panel2); }
+body[data-surface-style="elevated"] .workspaceStatusBar{
+  background: color-mix(in srgb, var(--panel) 94%, transparent);
+  backdrop-filter: blur(10px);
+}
+@media (min-width: 901px){
+  body[data-surface-style="elevated"] .workspaceContent > .workspacePanel.card,
+  body[data-surface-style="elevated"] .workspaceContent > .workspacePanel.card[open]{
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+  }
+}
+
+body[data-surface-style="flat"] .card,
+body[data-surface-style="flat"] details.block,
+body[data-surface-style="flat"] .workspaceNav,
+body[data-surface-style="flat"] .workspaceStatusBar,
+body[data-surface-style="flat"] .toolPanel,
+body[data-surface-style="flat"] .helpTopic{
+  border-color: var(--border);
+  box-shadow: none;
+}
+body[data-surface-style="flat"] .blockBody > details.block{ background: var(--panel2); }
+body[data-surface-style="flat"] .workspaceStatusBar{ background: var(--panel); }
+body[data-surface-style="flat"] .workspaceContent > .workspacePanel.card,
+body[data-surface-style="flat"] .workspaceContent > .workspacePanel.card[open]{
+  border-color: var(--border);
+  background: var(--panel);
+}
+
+body[data-surface-style="accent-frame"] .workspaceContent > .workspacePanel.card,
+body[data-surface-style="accent-frame"] .workspaceContent > .workspacePanel.card[open]{
+  border-left: 5px solid var(--title);
+}
+body[data-surface-style="accent-frame"] .workspaceStatusBar{
+  border-color: color-mix(in srgb, var(--focus-border) 52%, transparent);
+}
+body[data-surface-style="accent-frame"] .blockBody > details.block,
+body[data-surface-style="accent-frame"] .toolPanel,
+body[data-surface-style="accent-frame"] .helpTopic{
+  border-left: 3px solid color-mix(in srgb, var(--focus-border) 72%, transparent);
+}
+
+body[data-surface-style="divided"] .workspaceContent > .workspacePanel.card,
+body[data-surface-style="divided"] .workspaceContent > .workspacePanel.card[open]{
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+body[data-surface-style="divided"] .blockBody > details.block,
+body[data-surface-style="divided"] .toolPanel,
+body[data-surface-style="divided"] .helpTopic{
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+}
+body[data-surface-style="divided"] .workspaceNav,
+body[data-surface-style="divided"] .workspaceStatusBar{
+  border-color: transparent;
+  border-radius: 0;
+}
+
+body[data-surface-style="low-elevation"] .card,
+body[data-surface-style="low-elevation"] details.block,
+body[data-surface-style="low-elevation"] .workspaceNav,
+body[data-surface-style="low-elevation"] .workspaceStatusBar,
+body[data-surface-style="low-elevation"] .toolPanel,
+body[data-surface-style="low-elevation"] .helpTopic{
+  border-color: color-mix(in srgb, var(--focus-border) 18%, var(--border));
+  box-shadow: 0 1px 2px rgba(0,0,0,.14);
 }
 
 /* =======================================================================

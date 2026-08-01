@@ -27,7 +27,14 @@
       "resultsBlock",
       "recipesBlock",
       "toolsBlock",
-      "helpBlock"
+      "helpBlock",
+      "helpQuickStart",
+      "helpSetup",
+      "helpHopperPercentages",
+      "helpTimeline",
+      "helpCloudSync",
+      "helpLineConfigurations",
+      "helpTools"
     ];
 
     const HOPPERS_PER_LAYER = 6;
@@ -47,6 +54,7 @@
       density: "comfort",
       theme: "light",
       timeFormat: "12",
+      surfaceStyle: "divided",
       gauge: 0,
       hopperNamingLine9: "standard", // "standard" | "main"
       showPumpOffTracked: false, // show pump-off items in Run-Down Timeline
@@ -436,6 +444,7 @@
         density: state.density,
         theme: state.theme,
         timeFormat: state.timeFormat,
+        surfaceStyle: state.surfaceStyle,
         gauge: state.gauge,
         hopperNamingLine9: state.hopperNamingLine9,
         showPumpOffTracked: !!state.showPumpOffTracked,
@@ -449,6 +458,7 @@
         density: state.density,
         theme: state.theme,
         timeFormat: state.timeFormat,
+        surfaceStyle: state.surfaceStyle,
         showPumpOffTracked: state.showPumpOffTracked,
         uiMode: state.uiMode,
         blocksOpen: snapshotPayload().blocksOpen
@@ -476,7 +486,7 @@
   }
 
     function applyDensity(d){
-      const allowed = new Set(["comfort","compact","dense"]);
+      const allowed = new Set(["spacious","comfort","compact","dense","maximum"]);
       const density = allowed.has(String(d)) ? String(d) : "comfort";
       document.body.setAttribute("data-density", density);
       const sel = $("densitySel");
@@ -489,6 +499,15 @@
       state.timeFormat = timeFormat;
       const sel = $("timeFormatSel");
       if (sel) sel.value = timeFormat;
+    }
+
+    function applySurfaceStyle(value){
+      const allowed = new Set(["elevated", "flat", "layered-flat", "accent-frame", "divided", "low-elevation"]);
+      const surfaceStyle = allowed.has(String(value)) ? String(value) : "divided";
+      state.surfaceStyle = surfaceStyle;
+      document.body.setAttribute("data-surface-style", surfaceStyle);
+      const sel = $("surfaceStyleSel");
+      if (sel) sel.value = surfaceStyle;
     }
 
     function applyPayload(payload, {rebuildUI=true} = {}){
@@ -505,6 +524,7 @@
       applyTheme(payload.theme || "light");
       applyDensity(payload.density || "comfort");
       applyTimeFormat(payload.timeFormat || "12");
+      applySurfaceStyle(payload.surfaceStyle || "divided");
       $("lineRate").value = String(state.lineRate);
       const g = $("gauge");
       if (g) g.value = String(state.gauge);
@@ -2722,6 +2742,11 @@
       saveSession();
     });
 
+    $("surfaceStyleSel")?.addEventListener("change",(e)=>{
+      applySurfaceStyle(e.target.value);
+      saveSession();
+    });
+
     $("prodResinLb")?.addEventListener("input",(e)=>{
       if (!acceptNumericInput(e.target, { min: 0, label: "Production resin" }, value => { state.prodResinLb = value; })) return;
       renderResinCalculator();
@@ -2837,6 +2862,7 @@
         applyDensity("comfort");
         applyTheme("light");
         applyTimeFormat("12");
+        applySurfaceStyle("divided");
         rebuildUIFromState();
       }
 
@@ -2860,6 +2886,7 @@
       // Ensure theme/logo applied even after restore
       applyTheme(state.theme || "light");
       applyTimeFormat(state.timeFormat || "12");
+      applySurfaceStyle(state.surfaceStyle || "divided");
       saveSession();
       setupLineSync();
     })();
