@@ -401,7 +401,7 @@
       const cls = hasBad ? "status bad" : (hasWarn ? "status" : "status ok");
       const title = hasBad ? "Fix before trusting results:" : (hasWarn ? "Heads up:" : "Looks good:");
       const items = messages.map(m=>`<li>${m.text}</li>`).join("");
-      return `<div class="${cls}"><div style="font-weight:950;margin-bottom:6px">${title}</div><ul>${items}</ul></div>`;
+      return `<div class="${cls}"><div class="statusTitle">${title}</div><ul>${items}</ul></div>`;
     }
 
     function getLayerNamesForType(lineType){
@@ -1672,7 +1672,7 @@
       if (sumEl){
         sumEl.innerHTML = `
           <div class="status ok">
-            <div style="font-weight:950;margin-bottom:6px">Resin totals</div>
+            <div class="statusTitle">Resin totals</div>
             <div class="muted">
               Production: <span class="mono">${fmtNum(prod,2)}</span> lb • Scrap: <span class="mono">${fmtNum(scrap,2)}</span> lb •
               Total: <span class="mono">${fmtNum(total,2)}</span> lb
@@ -1701,7 +1701,7 @@
             <div class="calcName mono" data-resin-name></div>
             <div class="calcMeta">Allocated from splits</div>
           </div>
-          <div class="mono" style="font-weight:950">${fmtNum(r.lbs,2)} lb</div>
+          <div class="mono calcValue">${fmtNum(r.lbs,2)} lb</div>
         `;
         row.querySelector("[data-resin-name]").textContent = r.displayName;
         out.appendChild(row);

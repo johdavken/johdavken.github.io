@@ -543,9 +543,9 @@ main{
 .lineSyncMemberActions{ display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
 .lineSyncMemberActions button{
   width:auto;
-  min-height:31px;
-  padding:5px 9px;
-  border-radius:8px;
+  min-height:var(--control-height);
+  padding:max(3px, calc(var(--btn-pad-y) - 3px)) var(--btn-pad-x);
+  border-radius:var(--control-radius);
   font-size:var(--font-small);
 }
 .lineSyncConflictDialog{
@@ -784,7 +784,7 @@ input[readonly]:focus{
 .setupNaming{ margin-top: var(--gap); max-width: 320px; }
 @media (min-width: 720px){
   .setupFields{ grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .setupPreferenceFields{ grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .setupPreferenceFields{ grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
 }
 
 /* =======================================================================
@@ -852,6 +852,7 @@ details.block:not([open]) > summary .summaryStatus{ display: inline-flex; }
   background: color-mix(in srgb, var(--ok) 10%, transparent);
 }
 .status ul{ margin: 6px 0 0 0; padding-left: 18px; }
+.statusTitle{ margin-bottom:6px; font-weight:950; }
 
 /* =======================================================================
  *   Details blocks
@@ -889,6 +890,8 @@ summary{
 summary::-webkit-details-marker{ display: none; }
 
 .sumLeft{ display: flex; align-items: center; gap: 10px; min-width: 0; }
+.summaryText{ min-width:0; }
+.nestedLayerTitle{ font-size:var(--font-small); }
 
 .chev{
   width: 15px; height: 15px;
@@ -907,8 +910,9 @@ details[open] > summary .chev{ transform: rotate(45deg); }
 /* Small copy chip button */
 .copyBtn{
   width: auto;
-  padding: 7px 10px;
-  border-radius: 999px;
+  min-height:var(--control-height);
+  padding:max(3px, calc(var(--btn-pad-y) - 3px)) var(--btn-pad-x);
+  border-radius:var(--control-radius);
   border: 1px solid var(--btn-border);
   background: var(--btn-secondary-bg);
   color: var(--btn-text);
@@ -955,13 +959,13 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   flex:0 0 auto;
   overflow:hidden;
   border:1px solid var(--btn-secondary-border);
-  border-radius:9px;
+  border-radius:var(--control-radius);
   background:var(--btn-secondary-bg);
 }
 .hopperNamingChoice button{
   width:auto;
-  min-height:32px;
-  padding:6px 11px;
+  min-height:var(--control-height);
+  padding:max(3px, calc(var(--btn-pad-y) - 3px)) var(--btn-pad-x);
   border:0;
   border-right:1px solid var(--btn-secondary-border);
   border-radius:0;
@@ -1283,9 +1287,9 @@ details[open] > summary .chev{ transform: rotate(45deg); }
 .splitTrackButton{
   display: inline-grid;
   place-items: center;
-  width: 18px;
-  height: 18px;
-  min-height:18px;
+  width: 21px;
+  height: 21px;
+  min-height:21px;
   margin: 0;
   padding: 0;
   border: 1px solid var(--border2);
@@ -1295,8 +1299,8 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   box-shadow: none;
 }
 .splitTrackButton svg{
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   fill: none;
   stroke: currentColor;
   stroke-width: 2;
@@ -1384,6 +1388,7 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   user-select: none;
 }
 .trackLabel{ font-size: var(--font-small); color: var(--muted); white-space: nowrap; }
+.resultsToggleControls{ justify-content:flex-start; flex-wrap:wrap; }
 
 .toggle{
   position: relative;
@@ -1723,6 +1728,7 @@ body[data-timeline-style="command-rows"] .resultHopper{ font-size:calc(var(--fon
   background: var(--row-bg-2);
   border: 1px solid var(--row-border-2);
 }
+.calcValue{ font-weight:950; }
 
 .calcLeft{ display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .calcName{ font-weight: 950; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1762,6 +1768,11 @@ button{
 }
 button:hover{ filter: brightness(1.05); }
 button:active{ transform: translateY(1px); }
+button:focus-visible{
+  border-color:var(--focus-border);
+  outline:2px solid var(--focus-border);
+  outline-offset:2px;
+}
 button:disabled{
   opacity: .5;
   cursor: not-allowed;
@@ -1772,6 +1783,11 @@ button:disabled{
 button.secondary{
   background: var(--btn-secondary-bg);
   border-color: var(--btn-secondary-border);
+}
+button.primary{
+  background:linear-gradient(180deg, var(--btn-primary-a), var(--btn-primary-b));
+  border-color:var(--btn-border);
+  color:var(--text);
 }
 button.danger{
   background: var(--btn-danger-bg);
@@ -1997,9 +2013,10 @@ button.compactAction{
 }
 .toolsIndexButton{
   width: 100%;
-  padding: 10px 11px;
+  min-height:var(--control-height);
+  padding:var(--btn-pad-y) var(--btn-pad-x);
   border: 1px solid transparent;
-  border-radius: var(--radius-input);
+  border-radius:var(--control-radius);
   background: transparent;
   color: var(--muted);
   box-shadow: none;
@@ -2097,17 +2114,14 @@ input.resinLookupValue[readonly]{
 .resinLookupDensityField{
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-}
-.resinLookupDensityField input{
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
+  align-items:end;
+  gap:6px;
 }
 .resinLookupCopyButton{
-  min-width: 58px;
-  margin-left: -1px;
-  padding: 7px 10px;
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
+  min-width:52px;
+  min-height:var(--control-height);
+  padding:max(3px, calc(var(--btn-pad-y) - 3px)) var(--btn-pad-x);
+  border-radius:var(--control-radius);
   box-shadow: none;
 }
 input.resinLookupDensity.copied[readonly]{
