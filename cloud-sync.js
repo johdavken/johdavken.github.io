@@ -724,6 +724,18 @@
       }
     }
 
+    async function refreshSelected(){
+      if (!enabled) return;
+      activeConflictPaused = false;
+      if (!state.available) await initialize();
+      if (!selectedId()) return;
+      const current = ensureDeviceSettings();
+      current.disconnectedWorkspaceIds = current.disconnectedWorkspaceIds.filter(id=>id !== selectedId());
+      saveSettings(current);
+      setStatus("Syncing", "Refreshing the selected line…");
+      await reconcileSelected({ forceRemote: true });
+    }
+
     if (typeof window !== "undefined"){
       window.addEventListener("online", retry);
       document.addEventListener("visibilitychange", ()=>{ if (!document.hidden) retry(); });
@@ -748,6 +760,7 @@
       removeMember,
       deleteWorkspace,
       replaceActiveJob,
+      refreshSelected,
       retry
     };
   }
