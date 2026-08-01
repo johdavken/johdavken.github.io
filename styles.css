@@ -38,6 +38,8 @@
   --btn-pad-y: 10px;
   --btn-pad-x: 12px;
   --btn-radius: 14px;
+  --control-height: 33px;
+  --control-radius: 8px;
 
   /* Common surface tokens */
   --row-bg: rgba(255,255,255,.04);
@@ -142,6 +144,8 @@
   --btn-pad-y: 11px;
   --btn-pad-x: 15px;
   --btn-radius: 16px;
+  --control-height: 40px;
+  --control-radius: 12px;
   --title-size: 16px;
   --summary-pad: 16px;
   --body-pad: 16px;
@@ -170,6 +174,8 @@
   --btn-pad-y: 6px;
   --btn-pad-x: 9px;
   --btn-radius: 10px;
+  --control-height: 30px;
+  --control-radius: 7px;
   --title-size: 13px;
   --summary-pad: 9px;
   --body-pad: 9px;
@@ -198,6 +204,8 @@
   --btn-pad-y: 4px;
   --btn-pad-x: 6px;
   --btn-radius: 7px;
+  --control-height: 26px;
+  --control-radius: 5px;
   --title-size: 12px;
   --summary-pad: 7px;
   --body-pad: 7px;
@@ -226,6 +234,8 @@
   --btn-pad-y: 3px;
   --btn-pad-x: 5px;
   --btn-radius: 4px;
+  --control-height: 22px;
+  --control-radius: 4px;
   --title-size: 11px;
   --summary-pad: 5px;
   --body-pad: 5px;
@@ -681,7 +691,7 @@ input, select, textarea{
 /* Sleek underline fields: compact without shrinking their readable text. */
 input:not([type="checkbox"]):not([type="radio"]),
 select{
-  min-height:33px;
+  min-height:var(--control-height);
   padding:min(5px, var(--pad-input-y)) 2px;
   border-width:0 0 1px;
   border-radius:0;
@@ -851,7 +861,7 @@ details.block{
   display: block;
   width: 100%;
   border: 1px solid transparent;
-  border-radius: 18px;
+  border-radius: var(--radius2);
   overflow: hidden;
   background: var(--panel2);
   box-shadow: none;
@@ -1275,6 +1285,7 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   place-items: center;
   width: 18px;
   height: 18px;
+  min-height:18px;
   margin: 0;
   padding: 0;
   border: 1px solid var(--border2);
@@ -1738,8 +1749,9 @@ body[data-timeline-style="command-rows"] .resultHopper{ font-size:calc(var(--fon
  *   ======================================================================= */
 
 button{
-  border-radius: 14px;
-  padding: 10px 12px;
+  min-height:var(--control-height);
+  border-radius:var(--control-radius);
+  padding:var(--btn-pad-y) var(--btn-pad-x);
   border: 1px solid var(--btn-border);
   background: linear-gradient(180deg, var(--btn-primary-a), var(--btn-primary-b));
   color: var(--btn-text);
@@ -1767,9 +1779,9 @@ button.danger{
 }
 button.compactAction{
   width:auto;
-  min-height:31px;
-  padding:5px 10px;
-  border-radius:8px;
+  min-height:var(--control-height);
+  padding:max(3px, calc(var(--btn-pad-y) - 3px)) var(--btn-pad-x);
+  border-radius:var(--control-radius);
   font-size:var(--font-small);
 }
 
@@ -1784,14 +1796,14 @@ button.compactAction{
   max-width:100%;
   overflow-x:auto;
   border:1px solid var(--btn-secondary-border);
-  border-radius:8px;
+  border-radius:var(--control-radius);
   background:var(--btn-secondary-bg);
 }
 .segmentedActionRow button{
   flex:0 0 auto;
   width:auto;
-  min-height:31px;
-  padding:5px 10px;
+  min-height:var(--control-height);
+  padding:max(3px, calc(var(--btn-pad-y) - 3px)) var(--btn-pad-x);
   border:0;
   border-right:1px solid var(--btn-secondary-border);
   border-radius:0;
@@ -2301,6 +2313,116 @@ body[data-surface-style="low-elevation"] .helpTopic{
   box-shadow: 0 1px 2px rgba(0,0,0,.14);
 }
 
+/* Unified surface contract: every selection styles the same panel families. */
+body{
+  --surface-main-bg:var(--panel);
+  --surface-main-border:transparent;
+  --surface-main-radius:var(--radius2);
+  --surface-main-shadow:none;
+  --surface-inner-bg:var(--panel2);
+  --surface-inner-border:transparent;
+  --surface-inner-radius:var(--radius-row);
+  --surface-inner-shadow:none;
+  --surface-chrome-bg:var(--panel);
+  --surface-chrome-border:transparent;
+  --surface-chrome-radius:var(--radius-row);
+  --surface-chrome-shadow:none;
+  --surface-accent-width:0px;
+}
+body[data-surface-style="elevated"]{
+  --surface-main-bg:var(--panel);
+  --surface-main-border:var(--border);
+  --surface-main-shadow:var(--shadow2);
+  --surface-inner-bg:var(--panel2);
+  --surface-inner-border:var(--border);
+  --surface-inner-shadow:0 5px 14px rgba(0,0,0,.16);
+  --surface-chrome-bg:var(--panel2);
+  --surface-chrome-border:var(--border);
+  --surface-chrome-shadow:var(--shadow2);
+}
+body[data-surface-style="flat"]{
+  --surface-main-bg:var(--panel);
+  --surface-main-border:var(--border);
+  --surface-inner-bg:var(--panel2);
+  --surface-inner-border:var(--border);
+  --surface-chrome-bg:var(--panel);
+  --surface-chrome-border:var(--border);
+}
+body[data-surface-style="accent-frame"]{
+  --surface-main-bg:var(--panel);
+  --surface-main-border:var(--border);
+  --surface-inner-bg:var(--panel2);
+  --surface-inner-border:var(--border);
+  --surface-chrome-bg:var(--panel);
+  --surface-chrome-border:color-mix(in srgb, var(--focus-border) 45%, var(--border));
+  --surface-accent-width:3px;
+}
+body[data-surface-style="divided"]{
+  --surface-main-bg:transparent;
+  --surface-main-border:transparent;
+  --surface-main-radius:0;
+  --surface-inner-bg:transparent;
+  --surface-inner-border:var(--border);
+  --surface-inner-radius:0;
+  --surface-chrome-bg:transparent;
+  --surface-chrome-border:transparent;
+  --surface-chrome-radius:0;
+}
+body[data-surface-style="low-elevation"]{
+  --surface-main-bg:var(--panel);
+  --surface-main-border:color-mix(in srgb, var(--focus-border) 18%, var(--border));
+  --surface-main-shadow:0 1px 2px rgba(0,0,0,.14);
+  --surface-inner-bg:var(--panel2);
+  --surface-inner-border:color-mix(in srgb, var(--focus-border) 18%, var(--border));
+  --surface-inner-shadow:0 1px 2px rgba(0,0,0,.12);
+  --surface-chrome-bg:var(--panel);
+  --surface-chrome-border:color-mix(in srgb, var(--focus-border) 18%, var(--border));
+  --surface-chrome-shadow:0 1px 2px rgba(0,0,0,.14);
+}
+
+body[data-surface-style="elevated"] .card::before{ display:none; }
+body[data-surface-style] .workspaceContent > .workspacePanel.card,
+body[data-surface-style] .workspaceContent > .workspacePanel.card[open]{
+  border-color:var(--surface-main-border);
+  border-radius:var(--surface-main-radius);
+  background:var(--surface-main-bg);
+  box-shadow:var(--surface-main-shadow);
+}
+body[data-surface-style] .blockBody > details.block,
+body[data-surface-style] .blockBody > details.block[open],
+body[data-surface-style] .toolPanel,
+body[data-surface-style] .helpTopic{
+  border-color:var(--surface-inner-border);
+  border-radius:var(--surface-inner-radius);
+  background:var(--surface-inner-bg);
+  box-shadow:var(--surface-inner-shadow);
+}
+body[data-surface-style] .workspaceNav,
+body[data-surface-style] .workspaceStatusBar{
+  border-color:var(--surface-chrome-border);
+  border-radius:var(--surface-chrome-radius);
+  background:var(--surface-chrome-bg);
+  box-shadow:var(--surface-chrome-shadow);
+}
+body[data-surface-style="accent-frame"] .workspaceContent > .workspacePanel.card,
+body[data-surface-style="accent-frame"] .workspaceContent > .workspacePanel.card[open]{
+  border-left:5px solid var(--title);
+  box-shadow:var(--surface-main-shadow);
+}
+body[data-surface-style="accent-frame"] .blockBody > details.block,
+body[data-surface-style="accent-frame"] .blockBody > details.block[open],
+body[data-surface-style="accent-frame"] .toolPanel,
+body[data-surface-style="accent-frame"] .helpTopic{
+  border-left:var(--surface-accent-width) solid var(--focus-border);
+}
+body[data-surface-style="divided"] .blockBody > details.block,
+body[data-surface-style="divided"] .blockBody > details.block[open],
+body[data-surface-style="divided"] .toolPanel,
+body[data-surface-style="divided"] .helpTopic{
+  border:0;
+  border-top:1px solid var(--surface-inner-border);
+}
+
 /* =======================================================================
  *   Everyday / Advanced mode
  *   ======================================================================= */
@@ -2323,8 +2445,9 @@ body[data-ui-mode="everyday"] .advancedOnly{display:none!important}
     display:flex;
     justify-content:flex-end;
     padding:5px var(--page-pad);
-    border-bottom:1px solid var(--border);
-    background:var(--footer-bg);
+    border-bottom:1px solid var(--surface-chrome-border);
+    background:var(--surface-chrome-bg);
+    box-shadow:var(--surface-chrome-shadow);
     backdrop-filter:blur(10px);
   }
   .workspaceStatusBar .workspaceStatusItem{ display:none; }

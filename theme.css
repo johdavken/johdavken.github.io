@@ -2,6 +2,28 @@
 
 /* ======================================================================= * Polyn — Theme palettes + accents * Applies whether data-theme is set on <html> or <body>. * ======================================================================= */
 
+/* ----------------------------------------------------------------------- * Dark * ----------------------------------------------------------------------- */
+:where(html, body)[data-theme="dark"]{
+  --bg:#0b0f14; --panel:rgba(18,26,35,.92); --panel2:rgba(15,22,32,.84);
+  --text:#eaf2ff; --subtitle:#cfcfcf; --title:#f2543f; --muted:#9bb0c6; --fg:#c7c1bb;
+  --yellow:#b02323; --orange:#e06c00; --border:rgba(255,255,255,.10); --border2:rgba(255,255,255,.14);
+  --field-bg:rgba(0,0,0,.20); --panelOpen:rgba(18,26,35,.96); --chev:rgba(255,255,255,.45);
+  --warn:#ffb020; --bad:#ff5c5c; --ok:#5dff9f; --shadow2:0 8px 20px rgba(0,0,0,.25);
+  --row-bg:rgba(255,255,255,.04); --row-border:rgba(255,255,255,.07);
+  --row-bg-2:rgba(255,255,255,.03); --row-border-2:rgba(255,255,255,.07);
+  --readonly-bg:rgba(255,255,255,.06); --readonly-border:rgba(255,255,255,.10);
+  --focus-border:rgba(74,163,255,.80); --focus-ring:rgba(74,163,255,.16);
+  --f-var1:var(--ok); --f-var2:var(--warn); --f-var3:var(--title); --f-const:var(--muted);
+  --btn-text:var(--text); --btn-border:rgba(255,255,255,.16);
+  --btn-primary-a:rgba(74,163,255,.22); --btn-primary-b:rgba(74,163,255,.10);
+  --btn-secondary-bg:rgba(255,255,255,.06); --btn-secondary-border:rgba(255,255,255,.16);
+  --btn-danger-bg:rgba(255,92,92,.12); --btn-danger-border:rgba(255,92,92,.28);
+  --bg-glow-a:rgba(74,163,255,.16); --bg-glow-b:rgba(93,255,159,.10);
+  --card-glow-a:rgba(74,163,255,.14); --card-glow-b:rgba(93,255,159,.10);
+  --toggle-on-bg:rgba(74,163,255,.22); --toggle-on-border:rgba(74,163,255,.45);
+  --footer-bg:rgba(11,15,20,.94); --footer-border:rgba(255,255,255,.08);
+}
+
 /* ----------------------------------------------------------------------- * Light * ----------------------------------------------------------------------- */
 :where(html, body)[data-theme="light"]{
   --bg: #f5f4f3;
@@ -65,7 +87,7 @@
   --panel2: #faf9f8;
   --text: #29282b;
   --subtitle: #5d7185;
-  --title: #607d9b;
+  --title: #4f6d8b;
   --muted: #666269;
   --fg: #4a4948;
   --yellow: #607d9b;
@@ -111,53 +133,53 @@
 
 /* ----------------------------------------------------------------------- * Industrial Slate Dark * ----------------------------------------------------------------------- */
 :where(html, body)[data-theme="industrial-slate-dark"]{
-  --bg: #1d2021;
-  --panel: #282828;
-  --panel2: #242625;
-  --text: #ebdbb2;
-  --subtitle: #9bb6ae;
-  --title: #83a598;
-  --muted: #bdae93;
-  --fg: #c6b995;
-  --yellow: #83a598;
-  --orange: #9bb6ae;
-  --border: rgba(235,219,178,.17);
-  --border2: rgba(235,219,178,.25);
-  --field-bg: rgba(235,219,178,.07);
-  --panelOpen: #282828;
-  --chev: rgba(189,174,147,.68);
-  --warn: #d79921;
-  --bad: #cc4b43;
-  --ok: #75a978;
+  --bg: #161b20;
+  --panel: #1e2730;
+  --panel2: #192129;
+  --text: #dce4ea;
+  --subtitle: #91a5b5;
+  --title: #8aa8c2;
+  --muted: #a4b1bc;
+  --fg: #c4d0d9;
+  --yellow: #8aa8c2;
+  --orange: #9bb1c4;
+  --border: rgba(164,177,188,.18);
+  --border2: rgba(138,168,194,.28);
+  --field-bg: rgba(138,168,194,.07);
+  --panelOpen: #202a34;
+  --chev: rgba(164,177,188,.66);
+  --warn: #d6a85f;
+  --bad: #d66f72;
+  --ok: #7eaf94;
   --shadow2: 0 8px 24px rgba(0,0,0,.28);
-  --row-bg: rgba(235,219,178,.055);
-  --row-border: rgba(131,165,152,.18);
-  --row-bg-2: rgba(131,165,152,.045);
-  --row-border-2: rgba(131,165,152,.15);
-  --readonly-bg: #303533;
-  --readonly-border: rgba(235,219,178,.17);
-  --focus-border: rgba(131,165,152,.88);
-  --focus-ring: rgba(131,165,152,.20);
-  --f-var1: #75a978;
-  --f-var2: #d79921;
-  --f-var3: #83a598;
-  --f-const: #bdae93;
+  --row-bg: rgba(138,168,194,.055);
+  --row-border: rgba(138,168,194,.18);
+  --row-bg-2: rgba(138,168,194,.035);
+  --row-border-2: rgba(138,168,194,.14);
+  --readonly-bg: #26313a;
+  --readonly-border: rgba(164,177,188,.18);
+  --focus-border: rgba(138,168,194,.90);
+  --focus-ring: rgba(138,168,194,.20);
+  --f-var1: #7eaf94;
+  --f-var2: #d6a85f;
+  --f-var3: #8aa8c2;
+  --f-const: #a4b1bc;
   --btn-text: var(--text);
   --btn-border: var(--border2);
-  --btn-primary-a: rgba(131,165,152,.24);
-  --btn-primary-b: rgba(131,165,152,.11);
-  --btn-secondary-bg: rgba(235,219,178,.07);
-  --btn-secondary-border: rgba(235,219,178,.20);
-  --btn-danger-bg: rgba(204,75,67,.15);
-  --btn-danger-border: rgba(204,75,67,.34);
-  --bg-glow-a: rgba(131,165,152,.08);
-  --bg-glow-b: rgba(189,174,147,.055);
-  --card-glow-a: rgba(131,165,152,.09);
-  --card-glow-b: rgba(189,174,147,.045);
-  --toggle-on-bg: rgba(131,165,152,.25);
-  --toggle-on-border: rgba(131,165,152,.50);
-  --footer-bg: rgba(36,38,37,.96);
-  --footer-border: rgba(235,219,178,.17);
+  --btn-primary-a: rgba(138,168,194,.24);
+  --btn-primary-b: rgba(138,168,194,.11);
+  --btn-secondary-bg: rgba(138,168,194,.08);
+  --btn-secondary-border: rgba(138,168,194,.22);
+  --btn-danger-bg: rgba(214,111,114,.15);
+  --btn-danger-border: rgba(214,111,114,.34);
+  --bg-glow-a: rgba(138,168,194,.09);
+  --bg-glow-b: rgba(104,124,142,.06);
+  --card-glow-a: rgba(138,168,194,.10);
+  --card-glow-b: rgba(104,124,142,.05);
+  --toggle-on-bg: rgba(138,168,194,.24);
+  --toggle-on-border: rgba(138,168,194,.48);
+  --footer-bg: rgba(22,27,32,.96);
+  --footer-border: rgba(164,177,188,.18);
 }
 
 /* ----------------------------------------------------------------------- * Gruvbox Dark * ----------------------------------------------------------------------- */
@@ -226,10 +248,10 @@
 
 /* bg2 */
   --text: #665c54;
-  --title: #458588;
+  --title: #2f6f72;
 
 /* blue */
-  --subtitle: #d65d0e;
+  --subtitle: #a34400;
 
 /* orange */
   --muted: #665c54;
@@ -301,6 +323,12 @@
   --bad: #bf616a;
   --ok: #a3be8c;
   --shadow2: 0 8px 20px rgba(0,0,0,.30);
+  --row-bg: rgba(216,222,233,.055);
+  --row-border: rgba(94,129,172,.22);
+  --row-bg-2: rgba(136,192,208,.035);
+  --row-border-2: rgba(76,86,106,.42);
+  --readonly-bg: rgba(46,52,64,.48);
+  --readonly-border: rgba(94,129,172,.28);
   --focus-border: rgba(136,192,208,.85);
   --focus-ring: rgba(136,192,208,.18);
   --f-var1: #a3be8c;
@@ -351,6 +379,12 @@
   --bad: #f7768e;
   --ok: #9ece6a;
   --shadow2: 0 8px 22px rgba(0,0,0,.30);
+  --row-bg: rgba(169,177,214,.05);
+  --row-border: rgba(122,162,247,.20);
+  --row-bg-2: rgba(122,162,247,.035);
+  --row-border-2: rgba(65,72,104,.44);
+  --readonly-bg: rgba(26,27,38,.48);
+  --readonly-border: rgba(122,162,247,.24);
   --focus-border: rgba(122,162,247,.85);
   --focus-ring: rgba(122,162,247,.18);
   --f-var1: #9ece6a;
@@ -397,6 +431,12 @@
   --bad: #ff5555;
   --ok: #50fa7b;
   --shadow2: 0 8px 22px rgba(0,0,0,.32);
+  --row-bg: rgba(248,248,242,.045);
+  --row-border: rgba(189,147,249,.20);
+  --row-bg-2: rgba(189,147,249,.035);
+  --row-border-2: rgba(98,114,164,.38);
+  --readonly-bg: rgba(40,42,54,.46);
+  --readonly-border: rgba(189,147,249,.24);
   --focus-border: rgba(189,147,249,.85);
   --focus-ring: rgba(189,147,249,.18);
   --f-var1: #50fa7b;
@@ -429,7 +469,7 @@
   --panel2: rgba(0,43,54,.88);
   --text: #eee8d5;
   --subtitle: #859900;
-  --title: #268bd2;
+  --title: #3aa6e8;
   --muted: #93a1a1;
   --border: rgba(88,110,117,.45);
   --border2: rgba(38,139,210,.28);
@@ -443,11 +483,17 @@
   --bad: #dc322f;
   --ok: #859900;
   --shadow2: 0 8px 22px rgba(0,0,0,.30);
+  --row-bg: rgba(147,161,161,.05);
+  --row-border: rgba(38,139,210,.20);
+  --row-bg-2: rgba(38,139,210,.03);
+  --row-border-2: rgba(88,110,117,.38);
+  --readonly-bg: rgba(0,43,54,.52);
+  --readonly-border: rgba(88,110,117,.42);
   --focus-border: rgba(38,139,210,.85);
   --focus-ring: rgba(38,139,210,.16);
   --f-var1: #859900;
   --f-var2: #b58900;
-  --f-var3: #268bd2;
+  --f-var3: #3aa6e8;
   --f-const: #93a1a1;
   --btn-text: var(--text);
   --btn-border: var(--border2);
@@ -474,8 +520,8 @@
   --panel: rgba(255,255,255,.96);
   --panel2: rgba(238,232,213,.90);
   --text: #073642;
-  --subtitle: #859900;
-  --title: #268bd2;
+  --subtitle: #5f7000;
+  --title: #1f6f9f;
   --muted: #586e75;
   --border: rgba(147,161,161,.45);
   --border2: rgba(38,139,210,.28);
@@ -543,6 +589,12 @@
   --bad: #f38ba8;
   --ok: #a6e3a1;
   --shadow2: 0 8px 22px rgba(0,0,0,.30);
+  --row-bg: rgba(205,214,244,.045);
+  --row-border: rgba(137,180,250,.20);
+  --row-bg-2: rgba(137,180,250,.03);
+  --row-border-2: rgba(88,91,112,.42);
+  --readonly-bg: rgba(30,30,46,.48);
+  --readonly-border: rgba(137,180,250,.24);
   --focus-border: rgba(137,180,250,.85);
   --focus-ring: rgba(137,180,250,.18);
   --f-var1: #a6e3a1;
@@ -574,9 +626,9 @@
   --panel: rgba(255,255,255,.96);
   --panel2: rgba(230,233,239,.90);
   --text: #4c4f69;
-  --subtitle: #40a02b;
-  --title: #1e66f5;
-  --muted: #6c6f85;
+  --subtitle: #28721f;
+  --title: #1855c9;
+  --muted: #66697f;
   --border: rgba(156,160,176,.40);
   --border2: rgba(30,102,245,.22);
   --field-bg: rgba(220,224,232,.70);
@@ -602,7 +654,7 @@
   --f-var1: #40a02b;
   --f-var2: #df8e1d;
   --f-var3: #1e66f5;
-  --f-const: #6c6f85;
+  --f-const: #66697f;
   --btn-text: var(--text);
   --btn-border: var(--border2);
   --btn-primary-a: rgba(30,102,245,.14);
@@ -643,6 +695,12 @@
   --bad: #ef4444;
   --ok: #84cc16;
   --shadow2: 0 8px 22px rgba(0,0,0,.32);
+  --row-bg: rgba(251,191,36,.055);
+  --row-border: rgba(251,191,36,.20);
+  --row-bg-2: rgba(245,158,11,.035);
+  --row-border-2: rgba(251,191,36,.16);
+  --readonly-bg: rgba(251,191,36,.065);
+  --readonly-border: rgba(251,191,36,.22);
   --focus-border: rgba(251,191,36,.85);
   --focus-ring: rgba(251,191,36,.18);
   --f-var1: #84cc16;
@@ -689,6 +747,12 @@
   --bad: #ef4444;
   --ok: #22c55e;
   --shadow2: 0 10px 28px rgba(0,0,0,.55);
+  --row-bg: rgba(255,255,255,.08);
+  --row-border: rgba(255,255,255,.38);
+  --row-bg-2: rgba(255,255,255,.055);
+  --row-border-2: rgba(255,255,255,.32);
+  --readonly-bg: rgba(255,255,255,.08);
+  --readonly-border: rgba(255,255,255,.42);
   --focus-border: rgba(255,255,255,.95);
   --focus-ring: rgba(255,255,255,.22);
   --f-var1: #ffffff;
