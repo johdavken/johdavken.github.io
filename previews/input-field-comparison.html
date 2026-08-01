@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Polyn — Input Field Comparison</title>
+  <style>
+    :root{color-scheme:light;--canvas:#eceff1;--panel:#fff;--panel2:#f7f7f6;--text:#29282b;--muted:#666269;--accent:#b3262e;--soft:rgba(179,38,46,.10);--line:rgba(74,73,72,.18);--field:rgba(74,73,72,.055);--focus:rgba(179,38,46,.78)}
+    html[data-theme="dark"]{color-scheme:dark;--canvas:#161b20;--panel:#282828;--panel2:#222524;--text:#ebdbb2;--muted:#bdae93;--accent:#83a598;--soft:rgba(131,165,152,.15);--line:rgba(235,219,178,.18);--field:rgba(235,219,178,.055);--focus:rgba(131,165,152,.88)}
+    *{box-sizing:border-box}body{margin:0;background:var(--canvas);color:var(--text);font:14px/1.4 Inter,system-ui,-apple-system,"Segoe UI",sans-serif}button,input,select{font:inherit}
+    header{position:sticky;top:0;z-index:5;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:18px clamp(18px,4vw,48px);border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--canvas) 92%,transparent);backdrop-filter:blur(12px)}h1{margin:0;font-size:clamp(23px,3vw,34px)}header p{margin:3px 0 0;color:var(--muted)}.theme{padding:8px 13px;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--text);cursor:pointer}
+    main{width:min(1440px,100%);margin:auto;padding:24px clamp(12px,3vw,34px) 48px}.intro{display:flex;justify-content:space-between;gap:16px;margin-bottom:20px;padding:14px 16px;border:1px solid var(--line);border-radius:13px;background:var(--panel);color:var(--muted)}.chip{flex:none;align-self:center;padding:5px 9px;border-radius:999px;background:var(--soft);color:var(--accent);font-size:10px;font-weight:850}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}.concept{overflow:hidden;border:2px solid transparent;border-radius:16px;background:var(--panel)}.concept.selected{border-color:var(--accent);box-shadow:0 0 0 3px var(--soft)}.conceptHead{display:flex;justify-content:space-between;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line)}.choice{display:flex;gap:9px;cursor:pointer}.choice input{width:18px;height:18px;margin-top:2px;accent-color:var(--accent)}.name{font-size:16px;font-weight:850}.note{display:block;margin-top:2px;color:var(--muted);font-size:11px}.measure{align-self:flex-start;padding:4px 7px;border-radius:999px;background:var(--soft);color:var(--accent);font-size:9px;font-weight:900;white-space:nowrap}
+    .preview{display:grid;gap:14px;padding:16px;background:var(--panel2)}.sectionTitle{font-weight:850;color:var(--accent)}.sectionMeta{margin-top:1px;color:var(--muted);font-size:10px}.fields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.field label{display:block;margin-bottom:4px;color:var(--muted);font-size:10px}.field input,.field select{display:block;width:100%;border:1px solid var(--line);background:var(--field);color:var(--text);outline:0;transition:border-color .12s,box-shadow .12s,background .12s}.field input:focus,.field select:focus{border-color:var(--focus);box-shadow:0 0 0 3px var(--soft)}.resinRow{display:grid;grid-template-columns:minmax(120px,1.4fr) 70px minmax(120px,1fr);gap:8px;align-items:end}.suffix{position:relative}.suffix input{padding-right:27px!important}.suffix span{position:absolute;right:9px;bottom:0;display:grid;place-items:center;height:var(--h);color:var(--muted);font-size:10px;pointer-events:none}
+    .current{--h:40px;--py:8px;--px:12px;--radius:14px;--font:14px}.slim{--h:34px;--py:5px;--px:10px;--radius:9px;--font:13px}.precision{--h:30px;--py:3px;--px:8px;--radius:6px;--font:12px}.pill{--h:34px;--py:5px;--px:12px;--radius:999px;--font:12px}.square{--h:32px;--py:4px;--px:9px;--radius:3px;--font:12px}.underline{--h:33px;--py:5px;--px:2px;--radius:0;--font:13px}
+    .preview input,.preview select{height:var(--h);padding:var(--py) var(--px);border-radius:var(--radius);font-size:var(--font)}
+    .underline input,.underline select{border-width:0 0 1px;background:transparent}.underline input:focus,.underline select:focus{box-shadow:0 2px 0 var(--accent)}
+    .square input,.square select{background:var(--panel)}.pill .field label{padding-left:10px}.pill .suffix span{right:12px}
+    .densityLine{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:10px}.densityLine::before{content:"";width:26px;height:2px;border-radius:2px;background:var(--accent)}
+    @media(max-width:980px){.grid{grid-template-columns:1fr}}@media(max-width:620px){header{align-items:flex-start}.intro{display:grid}.chip{justify-self:start}.fields{grid-template-columns:repeat(2,minmax(0,1fr))}.resinRow{grid-template-columns:minmax(0,1fr) 70px}.resinRow .field:last-child{grid-column:1/-1}}@media(max-width:390px){.fields{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <header><div><h1>Input field study</h1><p>Smaller, sleeker field proportions for Polyn.</p></div><button class="theme" id="themeButton" type="button">Preview dark</button></header>
+  <main>
+    <div class="intro"><span>Each concept uses the same realistic Setup and Hopper Percentage fields. Click into the controls to compare focus treatments.</span><span class="chip">Production UI unchanged</span></div>
+    <section class="grid" id="grid"></section>
+  </main>
+  <script>
+    "use strict";
+    const concepts=[
+      {id:"current",name:"1. Current comfort",note:"Existing rounded field proportions as the control.",css:"current",size:"40px · 14px radius"},
+      {id:"slim",name:"2. Slim soft rectangle",note:"Reduced height with restrained modern rounding.",css:"slim",size:"34px · 9px radius",recommended:true},
+      {id:"precision",name:"3. Precision compact",note:"Low-profile industrial controls with tighter corners.",css:"precision",size:"30px · 6px radius"},
+      {id:"pill",name:"4. Compact capsule",note:"A softer modern form that keeps the height controlled.",css:"pill",size:"34px · pill radius"},
+      {id:"square",name:"5. Technical frame",note:"Nearly square corners for an instrument-panel character.",css:"square",size:"32px · 3px radius"},
+      {id:"underline",name:"6. Minimal underline",note:"Removes the surrounding box for the quietest interface.",css:"underline",size:"33px · borderless"}
+    ];
+    function fields(){return `<div><div class="sectionTitle">Line Setup</div><div class="sectionMeta">Representative global fields</div></div><div class="fields"><div class="field"><label>Rate (lb/hr)</label><input value="888" inputmode="decimal"></div><div class="field"><label>Gauge (mil)</label><input value="2.5" inputmode="decimal"></div><div class="field"><label>Line type</label><select><option>5-layer</option></select></div><div class="field"><label>Changeover</label><input type="time" value="12:55"></div></div><div><div class="sectionTitle">Hopper Percentage</div><div class="sectionMeta">Compact data-entry row</div></div><div class="resinRow"><div class="field"><label>Resin</label><input value="MS0700B"></div><div class="field suffix"><label>Percent</label><input value="57"><span>%</span></div><div class="field"><label>Saved setup</label><select><option>Line 9 typical</option></select></div></div><div class="densityLine">Field height shown at actual CSS pixel size</div>`}
+    const grid=document.getElementById("grid");
+    concepts.forEach(item=>{const article=document.createElement("article");article.className=`concept${item.recommended?" selected":""}`;article.dataset.concept=item.id;article.innerHTML=`<div class="conceptHead"><label class="choice"><input type="radio" name="favorite" value="${item.id}" ${item.recommended?"checked":""}><span><span class="name">${item.name}</span><span class="note">${item.note}</span></span></label><span class="measure">${item.size}</span></div><div class="preview ${item.css}">${fields()}</div>`;grid.appendChild(article)});
+    document.querySelectorAll('input[name="favorite"]').forEach(input=>input.addEventListener("change",()=>document.querySelectorAll(".concept").forEach(card=>card.classList.toggle("selected",card.dataset.concept===input.value))));
+    document.getElementById("themeButton").addEventListener("click",event=>{const dark=document.documentElement.dataset.theme!=="dark";document.documentElement.dataset.theme=dark?"dark":"light";event.currentTarget.textContent=dark?"Preview light":"Preview dark"});
+  </script>
+</body>
+</html>

@@ -266,6 +266,45 @@
     el.setAttribute("aria-checked", String(!!on));
   }
 
+  function syncHopperNamingUI(){
+    const group = $("hopperNamingToggle");
+    if (!group) return;
+    const current = state.hopperNamingLine9 === "main" ? "main" : "standard";
+    group.querySelectorAll("[data-hopper-naming]").forEach(button=>{
+      const selected = button.dataset.hopperNaming === current;
+      button.classList.toggle("active", selected);
+      button.setAttribute("aria-checked", String(selected));
+      button.tabIndex = selected ? 0 : -1;
+    });
+  }
+
+  function hookHopperNamingChoice(){
+    const group = $("hopperNamingToggle");
+    if (!group || group._wired) return;
+    group._wired = true;
+    const choose = value=>{
+      const next = value === "main" ? "main" : "standard";
+      if (state.hopperNamingLine9 === next) return;
+      state.hopperNamingLine9 = next;
+      syncHopperNamingUI();
+      saveSession();
+      rebuildUIFromState();
+      notifyActiveJobMutation({ immediate: true, kind: "hopper-naming" });
+    };
+    group.addEventListener("click",event=>{
+      const button = event.target.closest("[data-hopper-naming]");
+      if (button) choose(button.dataset.hopperNaming);
+    });
+    group.addEventListener("keydown",event=>{
+      if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) return;
+      event.preventDefault();
+      const value = state.hopperNamingLine9 === "main" ? "standard" : "main";
+      choose(value);
+      group.querySelector(`[data-hopper-naming="${value}"]`)?.focus();
+    });
+    syncHopperNamingUI();
+  }
+
   function hookToggle(id, getOn, setOn){
     const el = $(id);
     if (!el || el._wired) return;
@@ -294,11 +333,7 @@
   }
 
   function hookCustomToggles(){
-    hookToggle(
-      "hopperNamingToggle",
-      ()=> state.hopperNamingLine9 === "main",
-      (v)=> { state.hopperNamingLine9 = v ? "main" : "standard"; }
-    );
+    hookHopperNamingChoice();
 
     hookToggle(
       "showPumpOffToggle",
@@ -1976,7 +2011,7 @@
       state.gauge = 0;
       state.hopperNamingLine9 = "standard";
       state.showPumpOffTracked = false;
-      syncToggleUI("hopperNamingToggle", false);
+      syncHopperNamingUI();
       syncToggleUI("showPumpOffToggle", false);
       state.prodResinLb = 0;
       state.scrapResinLb = 0;
@@ -2099,6 +2134,7 @@
 
     function rebuildUIFromState(payloadMaybe){
       ensureLayers();
+      syncHopperNamingUI();
       renderOffsetInputs();
       renderWeightsArea();
       renderSplitsArea();
@@ -2883,7 +2919,7 @@
       hookDetailsPersistence();
       hookCustomToggles();
       // Sync toggle UI after restore
-      syncToggleUI("hopperNamingToggle", state.hopperNamingLine9 === "main");
+      syncHopperNamingUI();
       syncToggleUI("showPumpOffToggle", !!state.showPumpOffTracked);
 
       refreshConfigDropdown();

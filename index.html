@@ -9,7 +9,7 @@
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 
-  <link rel="stylesheet" href="styles.css?v=0.17.15">
+  <link rel="stylesheet" href="styles.css?v=0.17.20">
   <link rel="stylesheet" href="theme.css?v=0.16.9">
 <script src="validation.js?v=0.18" defer></script>
 <script src="scheduling.js?v=0.18" defer></script>
@@ -23,7 +23,7 @@
 <script src="resin-data.js?v=0.16.1" defer></script>
 <script src="resin-description-info.js?v=0.16.1" defer></script>
 <script src="resin-lookup.js?v=0.18" defer></script>
-<script src="app.js?v=0.18.7" defer></script>
+<script src="app.js?v=0.18.10" defer></script>
 
 
 </head>
@@ -286,6 +286,10 @@
       <span>Cloud Sync</span>
       <strong id="lineSyncTopStatus">Local only</strong>
     </div>
+    <div class="modeSwitch statusModeSwitch" role="group" aria-label="Choose display mode">
+      <button id="everydayModeBtn" class="modeBtn active" type="button" aria-pressed="true">Simple</button>
+      <button id="advancedModeBtn" class="modeBtn" type="button" aria-pressed="false">Advanced</button>
+    </div>
     <div class="workspaceStatusItem workspaceNextAction">
       <span>Next action</span>
       <strong id="workspaceNextStatus">No tracked hoppers</strong>
@@ -302,10 +306,6 @@
           <div class="layerTitle">Setup</div>
           <div class="layerMeta">Line Setup and App Settings</div>
         </div>
-      </div>
-      <div class="modeSwitch setupModeSwitch" role="group" aria-label="Choose display mode">
-        <button id="everydayModeBtn" class="modeBtn active" type="button" aria-pressed="true">Simple</button>
-        <button id="advancedModeBtn" class="modeBtn" type="button" aria-pressed="false">Advanced</button>
       </div>
     </summary>
 
@@ -343,17 +343,15 @@
       <!-- Hopper naming (Line 9) -->
       <div class="setupNaming advancedOnly" id="hopperNamingRow">
         <div>
-          <label for="hopperNamingToggle"></label>
-
           <div class="setupToggleRow">
             <div class="setupToggleText">
               <div class="setupToggleTitle">Line 9 Hopper Naming</div>
-              <div class="setupToggleMeta tiny">Off = 1–6 / On = Main, 1-5</div>
+              <div class="setupToggleMeta tiny">Choose how receiver hoppers are labeled.</div>
             </div>
 
-            <div class="trackWrap" style="justify-content:flex-start">
-              <span class="trackLabel">off/on</span>
-              <div id="hopperNamingToggle" class="toggle" role="switch" aria-checked="false" tabindex="0" title="Toggle Line 9 hopper naming"></div>
+            <div id="hopperNamingToggle" class="hopperNamingChoice" role="radiogroup" aria-label="Line 9 hopper naming">
+              <button class="active" type="button" role="radio" aria-checked="true" data-hopper-naming="standard">1–6</button>
+              <button type="button" role="radio" aria-checked="false" data-hopper-naming="main">Main + 1–5</button>
             </div>
           </div>
         </div>
@@ -555,11 +553,20 @@
         </div>
       </div>
 
-      <div class="buttonRow mt10 lineSyncPrimaryActions">
-        <button id="lineSyncCreateBtn" class="desktopSyncOnly" type="button">Create line</button>
-        <button id="lineSyncRenameBtn" class="secondary desktopSyncOnly" type="button">Rename line</button>
-        <button id="lineSyncRetryBtn" class="secondary" type="button"><span id="lineSyncRetryDesktopLabel" class="desktopSyncLabel">Connect / retry</span><span class="mobileSyncLabel">Refresh</span></button>
-        <button id="lineSyncNewJobBtn" class="secondary desktopSyncOnly" type="button">New job</button>
+      <div class="segmentedActionToolbar mt10 lineSyncActionBar">
+        <div class="segmentedActionRow">
+          <button id="lineSyncCreateBtn" class="primary desktopSyncOnly" type="button">Create line</button>
+          <button id="lineSyncRenameBtn" class="secondary desktopSyncOnly" type="button">Rename line</button>
+          <button id="lineSyncRetryBtn" class="secondary" type="button"><span id="lineSyncRetryDesktopLabel" class="desktopSyncLabel">Connect / retry</span><span class="mobileSyncLabel">Refresh</span></button>
+          <button id="lineSyncNewJobBtn" class="secondary desktopSyncOnly" type="button">New job</button>
+        </div>
+        <div class="segmentedActionDivider" role="separator"></div>
+        <div class="segmentedActionRow">
+          <button id="lineSyncGenerateCodeBtn" class="secondary desktopSyncOnly" type="button">Generate Link Code</button>
+          <button id="lineSyncDisconnectBtn" class="secondary" type="button"><span class="desktopSyncLabel">Disconnect on this device</span><span class="mobileSyncLabel">Disconnect this device</span></button>
+          <button id="lineSyncLeaveBtn" class="secondary" type="button">Leave Cloud Sync</button>
+          <button id="lineSyncDeleteBtn" class="danger desktopSyncOnly" type="button">Delete line workspace</button>
+        </div>
       </div>
 
       <div class="lineSyncJoin mt10">
@@ -567,8 +574,7 @@
           <label for="lineSyncJoinCode">Link code</label>
           <input id="lineSyncJoinCode" class="mono" type="text" maxlength="4" inputmode="text" autocomplete="one-time-code" placeholder="AB23" />
         </div>
-        <button id="lineSyncJoinBtn" type="button">Join Cloud Sync</button>
-        <button id="lineSyncGenerateCodeBtn" class="secondary desktopSyncOnly" type="button">Generate Link Code</button>
+        <button id="lineSyncJoinBtn" class="compactAction" type="button">Join Cloud Sync</button>
         <output id="lineSyncGeneratedCode" class="lineSyncCode mono desktopSyncOnly" aria-live="polite"></output>
       </div>
 
@@ -577,11 +583,6 @@
         <div id="lineSyncMembers"></div>
       </section>
 
-      <div class="buttonRow mt10 lineSyncDangerActions">
-        <button id="lineSyncDisconnectBtn" class="secondary" type="button"><span class="desktopSyncLabel">Disconnect on this device</span><span class="mobileSyncLabel">Disconnect this device</span></button>
-        <button id="lineSyncLeaveBtn" class="secondary" type="button">Leave Cloud Sync</button>
-        <button id="lineSyncDeleteBtn" class="danger desktopSyncOnly" type="button">Delete line workspace</button>
-      </div>
       <div class="tiny mt10 desktopSyncOnly">Disconnect keeps server membership. Leave removes this device's membership. Only the owner can remove another device or delete the shared line.</div>
       <div class="tiny mt10 mobileSyncOnly">Disconnect pauses this phone while preserving its line membership. Leave removes this phone from the line.</div>
     </div>
@@ -614,21 +615,18 @@
         </div>
       </div>
 
-      <div class="grid2 mt10">
-        <button id="saveConfigBtn" type="button">Save / Update config</button>
-        <button id="loadConfigBtn" type="button" class="secondary">Load selected config</button>
-      </div>
-
-      <div class="grid2 mt10">
-        <button id="renameConfigBtn" type="button" class="secondary">Rename selected</button>
-        <button id="deleteConfigBtn" type="button" class="danger">Delete selected</button>
-      </div>
-
-      <div class="hr"></div>
-
-      <div class="grid2">
-        <button id="exportConfigBtn" type="button" class="secondary">Export selected (copy JSON)</button>
-        <button id="importConfigBtn" type="button" class="secondary">Import JSON (paste)</button>
+      <div class="segmentedActionToolbar mt10">
+        <div class="segmentedActionRow">
+          <button id="saveConfigBtn" class="primary" type="button">Save / Update</button>
+          <button id="loadConfigBtn" class="secondary" type="button">Load</button>
+          <button id="renameConfigBtn" class="secondary" type="button">Rename selected</button>
+        </div>
+        <div class="segmentedActionDivider" role="separator"></div>
+        <div class="segmentedActionRow">
+          <button id="deleteConfigBtn" class="danger" type="button">Delete selected</button>
+          <button id="exportConfigBtn" class="secondary" type="button">Export selected</button>
+          <button id="importConfigBtn" class="secondary" type="button">Import JSON</button>
+        </div>
       </div>
 
       <div id="importArea" class="hide mt10">
