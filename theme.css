@@ -58,33 +58,33 @@
 
 }
 
-/* ----------------------------------------------------------------------- * MSE * ----------------------------------------------------------------------- */
+/* ----------------------------------------------------------------------- * Industrial Slate (legacy value: mse) * ----------------------------------------------------------------------- */
 :where(html, body)[data-theme="mse"]{
   --bg: #f5f4f3;
-  --panel: rgba(255,255,255,.95);
-  --panel2: rgba(250,249,248,.90);
+  --panel: #ffffff;
+  --panel2: #faf9f8;
   --text: #29282b;
-  --subtitle: #545352;
+  --subtitle: #5d7185;
   --title: #607d9b;
   --muted: #666269;
   --fg: #4a4948;
   --yellow: #607d9b;
   --orange: #718ba5;
-  --border: rgba(74,73,72,.14);
-  --border2: rgba(74,73,72,.22);
-  --field-bg: rgba(74,73,72,.06);
-  --panelOpen: rgba(255,255,255,.95);
-  --chev: rgba(74,73,72,.50);
+  --border: rgba(74,73,72,.17);
+  --border2: rgba(74,73,72,.24);
+  --field-bg: rgba(74,73,72,.055);
+  --panelOpen: #ffffff;
+  --chev: rgba(96,125,155,.62);
   --warn: #d97706;
   --bad: #dc2626;
   --ok: #16a34a;
-  --shadow2: 0 6px 18px rgba(0,0,0,.12);
-  --row-bg: rgba(74,73,72,.045);
+  --shadow2: 0 7px 22px rgba(24,35,44,.10);
+  --row-bg: rgba(74,73,72,.055);
   --row-border: rgba(96,125,155,.14);
-  --row-bg-2: rgba(74,73,72,.03);
-  --row-border-2: rgba(74,73,72,.12);
-  --readonly-bg: rgba(74,73,72,.07);
-  --readonly-border: rgba(74,73,72,.16);
+  --row-bg-2: rgba(96,125,155,.045);
+  --row-border-2: rgba(96,125,155,.13);
+  --readonly-bg: #eef2f5;
+  --readonly-border: rgba(74,73,72,.17);
   --focus-border: rgba(96,125,155,.86);
   --focus-ring: rgba(96,125,155,.17);
   --f-var1: #16a34a;
@@ -95,18 +95,69 @@
   --btn-border: var(--border2);
   --btn-primary-a: rgba(96,125,155,.20);
   --btn-primary-b: rgba(96,125,155,.09);
-  --btn-secondary-bg: rgba(74,73,72,.07);
-  --btn-secondary-border: rgba(74,73,72,.18);
+  --btn-secondary-bg: rgba(74,73,72,.055);
+  --btn-secondary-border: rgba(74,73,72,.20);
   --btn-danger-bg: rgba(220,38,38,.12);
   --btn-danger-border: rgba(220,38,38,.22);
-  --bg-glow-a: rgba(74,73,72,.08);
+  --bg-glow-a: rgba(96,125,155,.07);
   --bg-glow-b: rgba(96,125,155,.08);
   --card-glow-a: rgba(96,125,155,.09);
-  --card-glow-b: rgba(74,73,72,.05);
+  --card-glow-b: rgba(74,73,72,.04);
   --toggle-on-bg: rgba(96,125,155,.20);
   --toggle-on-border: rgba(96,125,155,.42);
-  --footer-bg: rgba(240,239,238,.94);
-  --footer-border: rgba(74,73,72,.14);
+  --footer-bg: rgba(238,242,245,.96);
+  --footer-border: rgba(74,73,72,.17);
+}
+
+/* ----------------------------------------------------------------------- * Industrial Slate Dark * ----------------------------------------------------------------------- */
+:where(html, body)[data-theme="industrial-slate-dark"]{
+  --bg: #1d2021;
+  --panel: #282828;
+  --panel2: #242625;
+  --text: #ebdbb2;
+  --subtitle: #9bb6ae;
+  --title: #83a598;
+  --muted: #bdae93;
+  --fg: #c6b995;
+  --yellow: #83a598;
+  --orange: #9bb6ae;
+  --border: rgba(235,219,178,.17);
+  --border2: rgba(235,219,178,.25);
+  --field-bg: rgba(235,219,178,.07);
+  --panelOpen: #282828;
+  --chev: rgba(189,174,147,.68);
+  --warn: #d79921;
+  --bad: #cc4b43;
+  --ok: #75a978;
+  --shadow2: 0 8px 24px rgba(0,0,0,.28);
+  --row-bg: rgba(235,219,178,.055);
+  --row-border: rgba(131,165,152,.18);
+  --row-bg-2: rgba(131,165,152,.045);
+  --row-border-2: rgba(131,165,152,.15);
+  --readonly-bg: #303533;
+  --readonly-border: rgba(235,219,178,.17);
+  --focus-border: rgba(131,165,152,.88);
+  --focus-ring: rgba(131,165,152,.20);
+  --f-var1: #75a978;
+  --f-var2: #d79921;
+  --f-var3: #83a598;
+  --f-const: #bdae93;
+  --btn-text: var(--text);
+  --btn-border: var(--border2);
+  --btn-primary-a: rgba(131,165,152,.24);
+  --btn-primary-b: rgba(131,165,152,.11);
+  --btn-secondary-bg: rgba(235,219,178,.07);
+  --btn-secondary-border: rgba(235,219,178,.20);
+  --btn-danger-bg: rgba(204,75,67,.15);
+  --btn-danger-border: rgba(204,75,67,.34);
+  --bg-glow-a: rgba(131,165,152,.08);
+  --bg-glow-b: rgba(189,174,147,.055);
+  --card-glow-a: rgba(131,165,152,.09);
+  --card-glow-b: rgba(189,174,147,.045);
+  --toggle-on-bg: rgba(131,165,152,.25);
+  --toggle-on-border: rgba(131,165,152,.50);
+  --footer-bg: rgba(36,38,37,.96);
+  --footer-border: rgba(235,219,178,.17);
 }
 
 /* ----------------------------------------------------------------------- * Gruvbox Dark * ----------------------------------------------------------------------- */

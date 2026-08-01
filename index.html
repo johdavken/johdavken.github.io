@@ -9,8 +9,8 @@
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 
-  <link rel="stylesheet" href="styles.css?v=0.17.7">
-  <link rel="stylesheet" href="theme.css?v=0.16.7">
+  <link rel="stylesheet" href="styles.css?v=0.17.11">
+  <link rel="stylesheet" href="theme.css?v=0.16.9">
 <script src="validation.js?v=0.18" defer></script>
 <script src="scheduling.js?v=0.18" defer></script>
 <script src="storage.js?v=0.18" defer></script>
@@ -23,7 +23,7 @@
 <script src="resin-data.js?v=0.16.1" defer></script>
 <script src="resin-description-info.js?v=0.16.1" defer></script>
 <script src="resin-lookup.js?v=0.18" defer></script>
-<script src="app.js?v=0.18" defer></script>
+<script src="app.js?v=0.18.2" defer></script>
 
 
 </head>
@@ -218,6 +218,15 @@
 
   </header>
 
+  <div class="mobileBrand" aria-label="Polyn">
+    <svg class="workspaceBrandLogo" viewBox="0 0 600 160" aria-hidden="true">
+      <path class="polynLayerPrimary" d="M28 42C55 22 80 23 105 42s30 20 43 3M28 61c27-20 52-19 77 0s30 20 43 3M28 99c27-20 52-19 77 0s30 20 43 3"/>
+      <path class="polynLayerSecondary" d="M28 80c27-20 52-19 77 0s30 20 43 3M28 118c27-20 52-19 77 0s30 20 43 3"/>
+      <path class="polynWord" d="M196 116V44h28c18 0 29 10 29 25s-11 25-29 25h-28m0-12h27c11 0 17-4 17-13s-6-13-17-13h-27M359 44v72h47M417 44l27 39v33m27-72-27 39M487 116V44l49 72V44"/>
+      <path class="polynPellet" d="M304 55a25 25 0 1 1 0 50 25 25 0 1 1 0-50Z"/>
+    </svg>
+  </div>
+
   <nav class="workspaceNav" aria-label="Polyn sections">
     <div class="workspaceBrand" aria-label="Polyn">
       <svg class="workspaceBrandLogo" viewBox="0 0 600 160" aria-hidden="true">
@@ -359,7 +368,8 @@
             <select id="themeSel">
               <option value="dark">Dark</option>
               <option value="light" selected>Light</option>
-              <option value="mse">MSE</option>
+              <option value="mse">Industrial Slate</option>
+              <option value="industrial-slate-dark">Industrial Slate Dark</option>
               <option value="gruvbox-dark">Gruvbox Dark</option>
               <option value="gruvbox-light">Gruvbox Light</option>
               <option value="nord">Nord</option>
@@ -633,7 +643,16 @@
     </summary>
 
     <div class="blockBody">
-      <section class="toolPanel" aria-labelledby="productionSummaryTitle">
+      <div class="toolsWorkspace">
+        <nav class="toolsIndex" role="tablist" aria-label="Production tools">
+          <button id="productionSummaryToolTab" class="toolsIndexButton active" type="button" role="tab" aria-selected="true" aria-controls="productionSummaryTool" data-tool-target="productionSummaryTool">Production Summary</button>
+          <button id="shortFootageToolTab" class="toolsIndexButton" type="button" role="tab" aria-selected="false" aria-controls="shortFootageTool" data-tool-target="shortFootageTool" tabindex="-1">Short Footage</button>
+          <button id="hopperWeightToolTab" class="toolsIndexButton" type="button" role="tab" aria-selected="false" aria-controls="hopperWeightTool" data-tool-target="hopperWeightTool" tabindex="-1">Hopper Weight</button>
+          <button id="resinLookupToolTab" class="toolsIndexButton" type="button" role="tab" aria-selected="false" aria-controls="resinLookupTool" data-tool-target="resinLookupTool" tabindex="-1">Resin Lookup</button>
+        </nav>
+
+        <div class="toolsWorkspaceContent">
+      <section id="productionSummaryTool" class="toolPanel toolWorkspacePanel" role="tabpanel" aria-labelledby="productionSummaryToolTab productionSummaryTitle">
         <div id="productionSummaryTitle" class="layerTitle">Production Summary</div>
         <div class="muted">Material totals for production and inventory issuance.</div>
 
@@ -652,7 +671,7 @@
         <div id="resinCalcResults" class="calcTable"></div>
       </section>
 
-      <section class="toolPanel" aria-labelledby="shortFootageTitle">
+      <section id="shortFootageTool" class="toolPanel toolWorkspacePanel" role="tabpanel" aria-labelledby="shortFootageToolTab shortFootageTitle" hidden>
         <div id="shortFootageTitle" class="layerTitle">Short Footage Calculator</div>
         <div class="muted">Actual Weight × Target Footage ÷ Last Good Weight</div>
 
@@ -678,7 +697,7 @@
         </div>
       </section>
 
-      <section class="toolPanel" aria-labelledby="hopperWeightCalculatorTitle">
+      <section id="hopperWeightTool" class="toolPanel toolWorkspacePanel" role="tabpanel" aria-labelledby="hopperWeightToolTab hopperWeightCalculatorTitle" hidden>
         <div id="hopperWeightCalculatorTitle" class="layerTitle">Hopper Weight Calculator</div>
         <div class="muted">Estimates usable resin weight from cylindrical hopper dimensions.</div>
 
@@ -717,7 +736,7 @@
         </div>
       </section>
 
-      <section class="toolPanel" aria-labelledby="resinLookupTitle">
+      <section id="resinLookupTool" class="toolPanel toolWorkspacePanel" role="tabpanel" aria-labelledby="resinLookupToolTab resinLookupTitle" hidden>
         <div id="resinLookupTitle" class="layerTitle">Resin Lookup</div>
         <div class="muted">Find a resin by code or description.</div>
 
@@ -768,6 +787,8 @@
           <textarea id="resinLookupInformation" readonly>No additional material information is currently available.</textarea>
         </div>
       </section>
+        </div>
+      </div>
     </div>
   </details>
 
@@ -883,6 +904,7 @@
         <details class="helpTopic">
           <summary><span>Tools</span><small>Production calculators and resin reference</small></summary>
           <div class="helpTopicBody">
+            <p>Select a utility from the tool index. Polyn displays one tool at a time to keep the workspace focused and reduce scrolling.</p>
             <ul>
               <li><strong>Production Summary:</strong> Build the active recipe first, then enter production and scrap pounds to calculate material totals by resin for production reporting and inventory issuance.</li>
               <li><strong>Short Footage Calculator:</strong> Enter actual weight, target footage, and the last good weight to calculate adjusted short footage.</li>
