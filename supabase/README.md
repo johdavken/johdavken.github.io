@@ -1,6 +1,10 @@
-# Line Sync database interface
+# Cloud Sync database interface
 
 The authoritative schema is [`migrations/202607310001_line_sync.sql`](migrations/202607310001_line_sync.sql).
+
+If the initial migration was applied before the link-code qualification fix, also apply [`migrations/202607310002_fix_link_code_generation.sql`](migrations/202607310002_fix_link_code_generation.sql).
+
+If `join_workspace` reports an ambiguous `workspace_id`, apply [`migrations/202607310003_fix_join_workspace.sql`](migrations/202607310003_fix_join_workspace.sql).
 
 Public tables:
 

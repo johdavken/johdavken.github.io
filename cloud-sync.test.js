@@ -12,6 +12,21 @@ test("recognizes optimistic concurrency failures", () => {
   assert.equal(isConflictError({ code: "PGRST301", message: "offline" }), false);
 });
 
+test("a failed upload remains represented by one newest pending snapshot", () => {
+  const storage = (()=>{
+    const values = new Map();
+    return {
+      getItem: key=>values.get(key) || null,
+      setItem: (key,value)=>values.set(key,String(value))
+    };
+  })();
+  const store = require("./sync-storage.js").createStore(storage);
+  store.queueActiveJob("line-1", { operationId: "first", payload: { lineRate: 100 } });
+  store.queueActiveJob("line-1", { operationId: "latest", payload: { lineRate: 200 } });
+  assert.equal(store.pendingCount(), 1);
+  assert.equal(store.getOutbox().activeJobs["line-1"].operationId, "latest");
+});
+
 test("disabled configuration remains a no-op without Supabase", async () => {
   const storage = { getItem(){ return null; }, setItem(){} };
   const syncStorage = require("./sync-storage.js");

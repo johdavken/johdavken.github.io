@@ -1,8 +1,8 @@
 # ResinIQ
 
-ResinIQ is a static, browser-based production utility. Browser `localStorage` is always the immediate working state; optional Supabase Line Sync adds remote persistence and live updates without making the application dependent on a network connection.
+ResinIQ is a static, browser-based production utility. Browser `localStorage` is always the immediate working state; optional Supabase Cloud Sync adds remote persistence and live updates without making the application dependent on a network connection.
 
-## Optional Line Sync setup
+## Optional Cloud Sync setup
 
 1. Create a Supabase project and enable anonymous sign-ins under Authentication.
 2. Run [`supabase/migrations/202607310001_line_sync.sql`](supabase/migrations/202607310001_line_sync.sql) in the Supabase SQL editor or through the Supabase CLI.
@@ -11,10 +11,10 @@ ResinIQ is a static, browser-based production utility. Browser `localStorage` is
 
 The migration creates private workspace membership, revision-checked active jobs, revision-checked Saved Line Settings, temporary four-character linking codes stored only as keyed digests, RLS policies, and the public RPC interface used by the browser client.
 
-## Line Sync behavior
+## Cloud Sync behavior
 
 - **Disconnect on this device** stops synchronization locally and preserves membership.
-- **Leave Line Sync** removes the current anonymous browser identity from the line. An owner must transfer ownership first.
+- **Leave Cloud Sync** removes the current anonymous browser identity from the line. An owner must transfer ownership first.
 - **Remove linked device** lets an owner remove another member.
 - **Delete line workspace** permanently deletes the shared line and is owner-only.
 

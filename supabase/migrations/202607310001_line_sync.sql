@@ -508,7 +508,8 @@ begin
     raise exception using errcode = '42501', message = 'workspace_access_denied';
   end if;
 
-  delete from private.workspace_link_codes where expires_at <= now() or workspace_id = p_workspace_id;
+  delete from private.workspace_link_codes c
+  where c.expires_at <= now() or c.workspace_id = p_workspace_id;
   loop
     v_code := private.generate_unambiguous_link_code();
     begin
@@ -585,7 +586,7 @@ begin
   insert into public.line_workspace_members(workspace_id, user_id, device_id, device_label, role)
   values (v_workspace_id, v_user_id, p_device_id,
           regexp_replace(btrim(p_device_label), '\s+', ' ', 'g'), 'member')
-  on conflict (workspace_id, user_id) do update
+  on conflict on constraint line_workspace_members_pkey do update
   set device_id = excluded.device_id,
       device_label = excluded.device_label,
       last_seen_at = now();

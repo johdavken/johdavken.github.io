@@ -55,6 +55,18 @@ test("link codes are stored as digests in a private schema", () => {
   assert.match(sql, /expires_at > created_at/i);
 });
 
+test("link-code generation qualifies output-column names used in SQL queries", () => {
+  const body = functionSql("generate_link_code");
+  assert.match(body, /delete from private\.workspace_link_codes c[\s\S]*c\.expires_at <= now\(\)[\s\S]*c\.workspace_id = p_workspace_id/i);
+  assert.doesNotMatch(body, /delete from private\.workspace_link_codes\s+where\s+expires_at/i);
+});
+
+test("join_workspace avoids output-column ambiguity in its conflict target", () => {
+  const body = functionSql("join_workspace");
+  assert.match(body, /on conflict on constraint line_workspace_members_pkey do update/i);
+  assert.doesNotMatch(body, /on conflict \(workspace_id, user_id\)/i);
+});
+
 test("shared tables use RLS and client writes are RPC-only", () => {
   for (const table of ["line_workspaces", "line_workspace_members", "active_jobs", "saved_setups"]) {
     assert.match(sql, new RegExp(`alter table public\\.${table} enable row level security`, "i"));

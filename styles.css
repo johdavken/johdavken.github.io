@@ -1505,21 +1505,73 @@ button.danger{
   background: var(--footer-bg);
   border-top: 1px solid var(--footer-border);
   backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
   text-align: center;
 }
 
+.footerNextHopper{
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
 .footerMsg{
+  overflow: hidden;
   color: var(--title, var(--text));
   font-size: 13px;
   font-weight: 950;
   letter-spacing: .2px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .footerSub{
+  overflow: hidden;
   margin-top: 2px;
   color: var(--subtitle, var(--muted));
   font-size: 11px;
   font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cloudSyncFooterStatus{
+  display: grid;
+  flex: 0 0 auto;
+  gap: 1px;
+  min-width: 82px;
+  padding-left: 12px;
+  border-left: 1px solid var(--footer-border);
+  text-align: left;
+}
+.cloudSyncFooterStatus span{
+  color: var(--subtitle, var(--muted));
+  font-size: 10px;
+  font-weight: 650;
+}
+.cloudSyncFooterStatus strong{
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 850;
+  white-space: nowrap;
+}
+.cloudSyncFooterStatus[data-state="synced"] strong{ color: var(--ok); }
+.cloudSyncFooterStatus[data-state="pending"] strong,
+.cloudSyncFooterStatus[data-state="offline"] strong,
+.cloudSyncFooterStatus[data-state="conflict"] strong{ color: var(--warn); }
+.cloudSyncFooterStatus[data-state="error"] strong{ color: var(--bad); }
+
+@media (max-width: 420px){
+  .footerBar{ gap: 8px; padding-inline: 9px; }
+  .cloudSyncFooterStatus{ min-width: 74px; padding-left: 8px; }
+  .cloudSyncFooterStatus span{ font-size: 9px; }
+  .cloudSyncFooterStatus strong{ font-size: 10px; }
+}
+
+@media (min-width: 901px){
+  .footerBar{ display: none; }
 }
 
 /* =======================================================================
