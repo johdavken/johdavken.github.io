@@ -6,8 +6,19 @@ const {
   formatResinResult,
   getDescriptionInformation,
   getDescriptionDetails,
+  getResinNames,
   noDescriptionInformation
 } = require("./resin-lookup.js");
+
+test("shares one complete, case-insensitively unique resin-name list", () => {
+  const names = getResinNames();
+  assert.equal(names.length, 135);
+  assert.equal(new Set(names.map(name => name.toUpperCase())).size, names.length);
+  for (const code of ["MS1230", "MS1255", "MS5006", "MS5009", "MS6000", "A2000"]){
+    assert.ok(names.includes(code));
+    assert.equal(findExactResin(code).code, code);
+  }
+});
 
 test("finds MS0440 by exact code", () => {
   const resin = findExactResin("MS0440");

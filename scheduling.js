@@ -52,9 +52,24 @@
     return `${time} (${sign}${dayOffset}d)`;
   }
 
+  function formatTimelineStart(date, deadline, now = new Date(), timeFormat = "12") {
+    if (!date) return { text: "—", late: false };
+    const time = formatTime(date, null, timeFormat);
+    const late = date.getTime() < now.getTime();
+    if (!deadline) return { text: time, late };
+
+    const dayOffset = calendarDayOffset(date, deadline);
+    if (dayOffset !== 0){
+      const sign = dayOffset > 0 ? "+" : "";
+      return { text: `${time} (${sign}${dayOffset}d)`, late };
+    }
+    return { text: time, late };
+  }
+
   return {
     parseChangeoverDate,
     calendarDayOffset,
-    formatTime
+    formatTime,
+    formatTimelineStart
   };
 });

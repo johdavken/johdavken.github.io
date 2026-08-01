@@ -55,6 +55,7 @@
       theme: "light",
       timeFormat: "12",
       surfaceStyle: "divided",
+      timelineStyle: "event-rail",
       gauge: 0,
       hopperNamingLine9: "standard", // "standard" | "main"
       showPumpOffTracked: false, // show pump-off items in Run-Down Timeline
@@ -71,7 +72,7 @@
   const calculators = window.PolynCalculators;
   const resinLookup = window.PolynLookup;
   const activeJob = window.PolynActiveJob;
-  const { parseChangeoverDate, formatTime } = window.PolynScheduling;
+  const { parseChangeoverDate, formatTime, formatTimelineStart } = window.PolynScheduling;
   const fmtTime = (date, baseDate) => formatTime(date, baseDate, state.timeFormat);
   const { writeJson } = window.PolynStorage;
   let lineSync = null;
@@ -83,13 +84,7 @@
   function notifyActiveJobMutation(options){
     lineSync?.notifyActiveJobMutation(options);
   }
-  const COMMON_RESIN_NAMES = Object.freeze([
-    "MS0100", "MS0101", "MS0120", "MS0200", "MS0400", "MS0440", "MS0700", "MS0700B",
-    "MS1100", "MS1200", "MS1201", "MS1202", "MS1230", "MS1255", "MS3003", "MS5000", "MS5004", "MS5006",
-    "MS5009", "MS6000", "MS6600",
-    "A0100", "A0110", "A0300", "A0301",  "A0401", "A0450", "A0502", "A0503", "A0600", "A0601", "A0700",
-    "A0711", "A0735", "A1901", "A2000", "A1010"
-  ]);
+  const COMMON_RESIN_NAMES = Object.freeze(window.PolynLookup.getResinNames());
 
   let resinAutocompletePopup = null;
   let resinAutocompleteInput = null;
@@ -137,9 +132,16 @@
   function showResinAutocomplete(input){
     const popup = ensureResinAutocompletePopup();
     const query = input.value.trim().toUpperCase();
-    const starts = COMMON_RESIN_NAMES.filter(name=>name.startsWith(query));
-    const contains = COMMON_RESIN_NAMES.filter(name=>!name.startsWith(query) && name.includes(query));
-    const matches = [...starts, ...contains];
+    const exact = COMMON_RESIN_NAMES.filter(name=>name.toUpperCase() === query);
+    const starts = COMMON_RESIN_NAMES.filter(name=>{
+      const normalized = name.toUpperCase();
+      return normalized !== query && normalized.startsWith(query);
+    });
+    const contains = COMMON_RESIN_NAMES.filter(name=>{
+      const normalized = name.toUpperCase();
+      return !normalized.startsWith(query) && normalized.includes(query);
+    });
+    const matches = [...exact, ...starts, ...contains];
     if (!matches.length){
       hideResinAutocomplete();
       return;
@@ -480,6 +482,7 @@
         theme: state.theme,
         timeFormat: state.timeFormat,
         surfaceStyle: state.surfaceStyle,
+        timelineStyle: state.timelineStyle,
         gauge: state.gauge,
         hopperNamingLine9: state.hopperNamingLine9,
         showPumpOffTracked: !!state.showPumpOffTracked,
@@ -494,6 +497,7 @@
         theme: state.theme,
         timeFormat: state.timeFormat,
         surfaceStyle: state.surfaceStyle,
+        timelineStyle: state.timelineStyle,
         showPumpOffTracked: state.showPumpOffTracked,
         uiMode: state.uiMode,
         blocksOpen: snapshotPayload().blocksOpen
@@ -545,6 +549,15 @@
       if (sel) sel.value = surfaceStyle;
     }
 
+    function applyTimelineStyle(value){
+      const allowed = new Set(["soft-cards", "event-rail", "data-strips", "priority-lane", "divided-list", "command-rows"]);
+      const timelineStyle = allowed.has(String(value)) ? String(value) : "event-rail";
+      state.timelineStyle = timelineStyle;
+      document.body.setAttribute("data-timeline-style", timelineStyle);
+      const sel = $("timelineStyleSel");
+      if (sel) sel.value = timelineStyle;
+    }
+
     function applyPayload(payload, {rebuildUI=true} = {}){
       if (!payload || typeof payload !== "object") return;
 
@@ -560,6 +573,7 @@
       applyDensity(payload.density || "comfort");
       applyTimeFormat(payload.timeFormat || "12");
       applySurfaceStyle(payload.surfaceStyle || "divided");
+      applyTimelineStyle(payload.timelineStyle || "event-rail");
       $("lineRate").value = String(state.lineRate);
       const g = $("gauge");
       if (g) g.value = String(state.gauge);
@@ -1272,16 +1286,21 @@
         state.layers.forEach(L=>{
           const hopper = L.hoppers[hi];
           const key = `${L.name}:${hi}`;
-          const isInactive = !normName(hopper.resinName) && clampNum(hopper.pct) === 0 && !hopper.track;
           const td = document.createElement("td");
-          td.className = `splitMatrixCell${isInactive ? " inactive" : ""}`;
+          td.className = "splitMatrixCell";
           td.dataset.layerColumn = L.name;
 
-          const addButton = document.createElement("button");
-          addButton.type = "button";
-          addButton.className = "splitAddResin";
-          addButton.textContent = "+ Add resin";
-          addButton.setAttribute("aria-label", `Add resin to ${hopperBadgeLabel(L.name, hi)}`);
+          const cellHeader = document.createElement("div");
+          cellHeader.className = "splitCellHeader";
+          const hopperName = document.createElement("span");
+          hopperName.className = "splitCellHopperName mono";
+          hopperName.textContent = hopperBadgeLabel(L.name, hi);
+          const completeMark = document.createElement("span");
+          completeMark.className = "splitCellCompleteMark";
+          completeMark.textContent = "✓";
+          completeMark.title = "Resin and percentage entered";
+          completeMark.setAttribute("aria-label", "Resin and percentage entered");
+          cellHeader.append(hopperName, completeMark);
 
           const editor = document.createElement("div");
           editor.className = "splitCellEditor";
@@ -1297,7 +1316,6 @@
           resinInput.id = `r_${L.name}_${hi}`;
           resinInput.className = "resinNameInput";
           resinInput.type = "text";
-          resinInput.placeholder = "Resin name";
           resinInput.value = hopper.resinName || "";
           resinInput.setAttribute("aria-label", `${hopperBadgeLabel(L.name, hi)} resin name`);
           attachResinAutocomplete(resinInput);
@@ -1347,18 +1365,18 @@
 
           controls.append(pctWrap, trackControl);
           editor.append(cellTop, controls);
-          td.append(addButton, editor);
+          td.append(cellHeader, editor);
           tr.appendChild(td);
 
           function refreshCellState(){
-            const inactive = !normName(hopper.resinName) && clampNum(hopper.pct) === 0 && !hopper.track;
-            td.classList.toggle("inactive", inactive);
+            const complete = !!normName(hopper.resinName) && clampNum(hopper.pct) > 0;
+            td.classList.toggle("complete", complete);
+            completeMark.hidden = !complete;
             trackButton.classList.toggle("active", !!hopper.track);
             trackButton.setAttribute("aria-pressed", String(!!hopper.track));
             trackButton.title = hopper.track
               ? `Remove ${hopperBadgeLabel(L.name, hi)} from timeline`
               : `Track ${hopperBadgeLabel(L.name, hi)} in timeline`;
-            if (!inactive) td.classList.remove("editing");
           }
 
           cellRefs.set(key, {
@@ -1370,11 +1388,6 @@
             hopper,
             hi,
             refreshCellState
-          });
-
-          addButton.addEventListener("click",()=>{
-            td.classList.add("editing");
-            resinInput.focus();
           });
 
           selector.addEventListener("change",()=>{
@@ -1414,6 +1427,7 @@
             hopper.pct = candidate.value;
             recomputeAutoH1(L);
             refreshCellState();
+            cellRefs.get(`${L.name}:0`)?.refreshCellState();
             const h1Input = table.querySelector(`#p_${L.name}_0`);
             if (h1Input) h1Input.value = String(clampNum(L.hoppers[0].pct));
             updateSplitTotals();
@@ -1596,6 +1610,8 @@
             if (h1Input) h1Input.value = String(clampNum(L.hoppers[0].pct));
           });
         }
+
+        cellRefs.forEach(ref=>ref.refreshCellState());
 
         updateSplitTotals();
         validateAndCompute({ sync: true });
@@ -1859,7 +1875,7 @@
           let totalMinutes = null;
           let startByDate = null;
 
-          let timeText="—", startByText="—", totalRundownText="—";
+          let timeText="—", startByText="—", totalRundownText="—", isLate=false;
 
           if (hopperRate > 0 && weight > 0){
             minutesToEmpty = (weight / hopperRate) * 60;
@@ -1870,7 +1886,9 @@
 
             if (changeoverDate){
               startByDate = new Date(changeoverDate.getTime() - totalMinutes*60*1000);
-              startByText = fmtTime(startByDate, changeoverDate);
+              const startStatus = formatTimelineStart(startByDate, changeoverDate, new Date(), state.timeFormat);
+              startByText = startStatus.text;
+              isLate = startStatus.late;
             }
           } else if (hopperRate <= 0 && clampNum(h.pct) > 0){
             timeText = "Not feeding";
@@ -1887,6 +1905,7 @@
             rate: hopperRate,
             timeText,
             startByText,
+            isLate,
             totalRundownText,
             minutesToEmpty,
             totalMinutes,
@@ -1937,12 +1956,11 @@
         const splitWarn = (h.rate <= 0 && h.weight > 0) ? `<span class="pill badge-warn">Split?</span>` : "";
 
         const row = document.createElement("div");
-        row.className = "resultRow" + (h.pumpOff ? " done" : "");
+        row.className = "resultRow" + (h.pumpOff ? " done" : "") + (h.isLate && !h.pumpOff ? " late" : "");
         row.innerHTML = `
-          <div>
-            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-              <span class="pill mono">Layer ${h.layer}</span>
-              <span class="pill mono">${h.hopperLabel}</span>
+          <div class="resultMain">
+            <div class="resultIdentity">
+              <span class="pill mono resultHopper">${h.hopperLabel}</span>
               <span data-resin-chip></span>
               ${weightChip}
               ${splitWarn}
@@ -1954,9 +1972,9 @@
             </div>
           </div>
 
-          <div style="text-align:right; white-space:nowrap; min-width: 120px;">
-            <div class="muted" style="font-size:var(--font-small)">${changeoverDate ? "Start by" : "Soonest"}</div>
-            <div style="font-weight:950" class="mono">${changeoverDate ? h.startByText : h.timeText}</div>
+          <div class="resultTiming">
+            <div class="muted resultTimingLabel">${changeoverDate ? "Start by" : "Soonest"}</div>
+            <div class="mono resultTimingValue">${changeoverDate ? h.startByText : h.timeText}</div>
 
             <label class="checkWrap" title="Check when the hopper pump is turned off">
               <input type="checkbox" ${h.pumpOff ? "checked" : ""}>
@@ -2076,7 +2094,7 @@
       const advancedBtn = $("advancedModeBtn");
       if (everydayBtn){ everydayBtn.classList.toggle("active", !advanced); everydayBtn.setAttribute("aria-pressed", String(!advanced)); }
       if (advancedBtn){ advancedBtn.classList.toggle("active", advanced); advancedBtn.setAttribute("aria-pressed", String(advanced)); }
-      if (!advanced && ["recipesBlock", "toolsBlock"].includes(activeWorkspaceId)){
+      if (!advanced && activeWorkspaceId === "recipesBlock"){
         setWorkspacePanel("resultsBlock", { persist: false });
       }
     }
@@ -2794,6 +2812,11 @@
       saveSession();
     });
 
+    $("timelineStyleSel")?.addEventListener("change",(e)=>{
+      applyTimelineStyle(e.target.value);
+      saveSession();
+    });
+
     $("prodResinLb")?.addEventListener("input",(e)=>{
       if (!acceptNumericInput(e.target, { min: 0, label: "Production resin" }, value => { state.prodResinLb = value; })) return;
       renderResinCalculator();
@@ -2910,6 +2933,7 @@
         applyTheme("light");
         applyTimeFormat("12");
         applySurfaceStyle("divided");
+        applyTimelineStyle("event-rail");
         rebuildUIFromState();
       }
 
@@ -2934,6 +2958,7 @@
       applyTheme(state.theme || "light");
       applyTimeFormat(state.timeFormat || "12");
       applySurfaceStyle(state.surfaceStyle || "divided");
+      applyTimelineStyle(state.timelineStyle || "event-rail");
       saveSession();
       setupLineSync();
     })();

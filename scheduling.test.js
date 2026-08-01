@@ -5,7 +5,8 @@ const assert = require("node:assert/strict");
 const {
   parseChangeoverDate,
   calendarDayOffset,
-  formatTime
+  formatTime,
+  formatTimelineStart
 } = require("./scheduling.js");
 
 test("a just-after-midnight changeover rolls to tomorrow when entered before midnight", () => {
@@ -57,4 +58,18 @@ test("time formatting defaults to 12-hour and supports 24-hour display", () => {
 
   assert.match(formatTime(afternoon), /1:05\s*PM/i);
   assert.equal(formatTime(afternoon, null, "24"), "13:05");
+});
+
+test("timeline start labels distinguish previous-day timing from a late action", () => {
+  const deadline = new Date(2026, 6, 30, 0, 15);
+  const startBy = new Date(2026, 6, 29, 23, 45);
+
+  const upcoming = formatTimelineStart(startBy, deadline, new Date(2026, 6, 29, 23, 30));
+  assert.equal(upcoming.late, false);
+  assert.match(upcoming.text, /\(-1d\)$/);
+
+  const overdue = formatTimelineStart(startBy, deadline, new Date(2026, 6, 29, 23, 50));
+  assert.equal(overdue.late, true);
+  assert.match(overdue.text, /\(-1d\)$/);
+  assert.doesNotMatch(overdue.text, /Late/i);
 });
