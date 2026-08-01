@@ -35,7 +35,7 @@
       enabled,
       available: false,
       status: enabled ? "Connecting" : "Local only",
-      message: enabled ? "Preparing Line Sync…" : "Line Sync is unavailable; local mode is active.",
+      message: enabled ? "Preparing Cloud Sync…" : "Cloud Sync is unavailable; local mode is active.",
       userId: "",
       deviceLabel: "",
       connected: false,
@@ -74,7 +74,7 @@
     function settings(){ return store.getSettings(); }
     function saveSettings(next){
       const result = store.saveSettings(next);
-      if (!result.ok) adapter.onStorageError?.("Line Sync settings could not be saved locally.");
+      if (!result.ok) adapter.onStorageError?.("Cloud Sync settings could not be saved locally.");
       return result.ok;
     }
     function ensureDeviceSettings(){
@@ -97,13 +97,13 @@
       metadata.lastSyncAt = new Date().toISOString();
       const result = store.saveMetadata(metadata);
       state.lastSyncAt = metadata.lastSyncAt;
-      if (!result.ok) adapter.onStorageError?.("Line Sync metadata could not be saved locally.");
+      if (!result.ok) adapter.onStorageError?.("Cloud Sync metadata could not be saved locally.");
     }
     function saveActiveCache(workspaceId, payload){
       const { metadata, entry } = workspaceMetadata(workspaceId);
       entry.activePayload = payload;
       const result = store.saveMetadata(metadata);
-      if (!result.ok) adapter.onStorageError?.("The Line Sync job cache could not be saved locally.");
+      if (!result.ok) adapter.onStorageError?.("The Cloud Sync job cache could not be saved locally.");
     }
     function selectedId(){ return state.selectedWorkspaceId; }
     function isConnected(){
@@ -174,7 +174,7 @@
         id: uuid(), reason, workspaceId: selectedId(), createdAt: new Date().toISOString(),
         local: localPayload || null, remote: remotePayload || null
       });
-      if (!result.ok) adapter.onStorageError?.("A Line Sync conflict backup could not be saved.");
+      if (!result.ok) adapter.onStorageError?.("A Cloud Sync conflict backup could not be saved.");
     }
 
     async function applyRemoteActive(row, reason){
@@ -238,6 +238,7 @@
       if (!pending) return;
       flushingActive = true;
       activeInFlightOperationId = pending.operationId;
+      let continueWithNewerPending = false;
       setStatus("Syncing", "Uploading active-job changes…");
       try{
         const response = await rpc("update_active_job", {
@@ -263,15 +264,23 @@
         const newer = store.getOutbox().activeJobs[selectedId()];
         if (newer && newer.operationId !== pending.operationId && row){
           store.queueActiveJob(selectedId(), { ...newer, expectedRevision: Number(row.revision) });
+          continueWithNewerPending = true;
         }
         setStatus("Synced", "Active-job changes are synced.");
       }catch(error){
-        setStatus(navigator.onLine === false ? "Offline" : "Pending", "Changes are safe on this device and will retry.");
+        const offline = typeof navigator !== "undefined" && navigator.onLine === false;
+        const detail = String(error?.message || error?.details || error || "Unknown synchronization error");
+        setStatus(
+          offline ? "Offline" : "Pending",
+          offline
+            ? "Changes are safe on this device and will retry when the connection returns."
+            : `Changes are safe on this device. Upload failed: ${detail}`
+        );
       }finally{
         flushingActive = false;
         activeInFlightOperationId = "";
         emit();
-        if (!activeConflictPaused && state.available && isConnected() && store.getOutbox().activeJobs[selectedId()]){
+        if (continueWithNewerPending && !activeConflictPaused && state.available && isConnected() && store.getOutbox().activeJobs[selectedId()]){
           setTimeout(flushActiveJob, 0);
         }
       }
@@ -483,7 +492,7 @@
         .on("postgres_changes", { event: "*", schema: "public", table: "line_workspaces", filter: `id=eq.${selectedId()}` }, ()=>loadWorkspaces())
         .on("postgres_changes", { event: "*", schema: "public", table: "line_workspace_members", filter: `workspace_id=eq.${selectedId()}` }, ()=>loadMembers())
         .subscribe(status=>{
-          if (status === "SUBSCRIBED") setStatus("Synced", "Line Sync is connected.");
+          if (status === "SUBSCRIBED") setStatus("Synced", "Cloud Sync is connected.");
           else if (["CHANNEL_ERROR","TIMED_OUT"].includes(status)) setStatus("Pending", "Realtime connection will retry.");
         });
     }
@@ -506,7 +515,7 @@
       await reconcileSavedSetups({ uploadLocalMissing, replaceLocal: forceRemote && !uploadLocalMissing });
       await loadMembers();
       await subscribe();
-      setStatus("Synced", "Line Sync is up to date.");
+      setStatus("Synced", "Cloud Sync is up to date.");
     }
 
     async function selectWorkspace(workspaceId, { uploadLocalMissing = false } = {}){
@@ -563,7 +572,7 @@
     }
 
     async function createWorkspace(name, deviceLabel){
-      if (!state.available) throw new Error("Line Sync is unavailable.");
+      if (!state.available) throw new Error("Cloud Sync is unavailable.");
       const current = ensureDeviceSettings();
       const workspaceName = normalizeName(name);
       current.deviceLabel = normalizeName(deviceLabel) || current.deviceLabel;
@@ -592,7 +601,7 @@
     }
 
     async function joinWorkspace(code, deviceLabel){
-      if (!state.available) throw new Error("Line Sync is unavailable.");
+      if (!state.available) throw new Error("Cloud Sync is unavailable.");
       const current = ensureDeviceSettings();
       current.deviceLabel = normalizeName(deviceLabel) || current.deviceLabel;
       saveSettings(current);
@@ -617,12 +626,16 @@
     }
 
     async function generateLinkCode(){
+      state.generatedCode = "";
+      state.generatedCodeExpiresAt = "";
+      setStatus("Syncing", "Generating a new link code…");
       const response = await rpc("generate_link_code", { p_workspace_id: selectedId() });
       if (response.error) throw response.error;
-      const row = response.data[0];
+      const row = response.data?.[0];
+      if (!row?.link_code) throw new Error("Cloud Sync did not return a link code.");
       state.generatedCode = row.link_code;
       state.generatedCodeExpiresAt = row.expires_at;
-      emit();
+      setStatus("Synced", "A new one-time link code is ready for 30 minutes.");
       return row;
     }
 
@@ -667,7 +680,7 @@
       saveSettings(current);
       await loadWorkspaces();
       if (selectedId()) await reconcileSelected({ forceRemote: true });
-      else setStatus("Local only", "This device left Line Sync. Local ResinIQ data was preserved.");
+      else setStatus("Local only", "This device left Cloud Sync. Local ResinIQ data was preserved.");
     }
 
     async function transferOwnership(userId){

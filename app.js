@@ -2478,9 +2478,9 @@
   }
 
   function lineSyncErrorMessage(error){
-    const raw = String(error?.message || error || "Line Sync request failed.");
+    const raw = String(error?.message || error || "Cloud Sync request failed.");
     const known = {
-      transfer_ownership_before_leaving: "Transfer ownership to another linked device before leaving Line Sync.",
+      transfer_ownership_before_leaving: "Transfer ownership to another linked device before leaving Cloud Sync.",
       revision_conflict: "The shared line changed on another device. Retry to load the current version.",
       owner_access_required: "Only the line owner can do that.",
       workspace_access_denied: "This device no longer has access to that line.",
@@ -2497,7 +2497,7 @@
       const message = lineSyncErrorMessage(error);
       const target = $("lineSyncMessage");
       if (target) target.textContent = message;
-      showStorageWarning(`Line Sync: ${message}`);
+      showStorageWarning(`Cloud Sync: ${message}`);
     }
   }
 
@@ -2507,10 +2507,21 @@
     const status = syncState.status || "Local only";
     const stateName = status.toLowerCase().replace(/\s+/g, "-");
     if (top){ top.textContent = syncState.pendingCount ? `${status} (${syncState.pendingCount})` : status; top.dataset.state = stateName; }
+    const mobileStatus = $("lineSyncMobileStatus");
+    const mobileStatusHost = $("cloudSyncFooterStatus");
+    if (mobileStatus) mobileStatus.textContent = syncState.pendingCount ? `${status} (${syncState.pendingCount})` : status;
+    if (mobileStatusHost) mobileStatusHost.dataset.state = stateName;
     if (summary){ summary.textContent = status; summary.className = `pill ${status === "Synced" ? "badge-ok" : status === "Error" ? "badge-bad" : ""}`; }
     if ($("lineSyncMessage")) $("lineSyncMessage").textContent = syncState.message || "Local data remains available.";
     if ($("lineSyncLastSync")) $("lineSyncLastSync").textContent = syncState.lastSyncAt ? new Date(syncState.lastSyncAt).toLocaleString() : "Never";
     if ($("lineSyncPendingCount")) $("lineSyncPendingCount").textContent = String(syncState.pendingCount || 0);
+    const navStatus = $("workspaceCloudSyncStatus");
+    if (navStatus){
+      navStatus.textContent = syncState.pendingCount ? `${status} · ${syncState.pendingCount} pending` : status;
+      const navButton = navStatus.closest(".workspaceNavButton");
+      const navState = status === "Synced" ? "ok" : ["Pending", "Offline", "Conflict"].includes(status) ? "warn" : status === "Error" ? "bad" : "neutral";
+      navButton?.setAttribute("data-status", navState);
+    }
 
     const selector = $("lineSyncWorkspaceSelect");
     if (selector){
@@ -2655,7 +2666,7 @@
     $("lineSyncRetryBtn")?.addEventListener("click",()=>runLineSyncAction(()=>lineSync.retry()));
     $("lineSyncDisconnectBtn")?.addEventListener("click",()=>runLineSyncAction(()=>lineSync.disconnectLocal()));
     $("lineSyncLeaveBtn")?.addEventListener("click",()=>{
-      if (confirm("Leave Line Sync on this browser identity? Local ResinIQ data will remain.")) runLineSyncAction(()=>lineSync.leaveWorkspace());
+      if (confirm("Leave Cloud Sync on this browser identity? Local ResinIQ data will remain.")) runLineSyncAction(()=>lineSync.leaveWorkspace());
     });
     $("lineSyncDeleteBtn")?.addEventListener("click",()=>{
       const name = lineSync.getState().selectedWorkspace?.name || "this line";
