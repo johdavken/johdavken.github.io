@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-labelledby="title desc">
+  <title id="title">Polyn icon</title>
+  <desc id="desc">An abstract stack of five flowing polymer layers.</desc>
+  <!-- Five layers remain recognizable from favicon to app-icon sizes -->
+  <path d="M22 42C49 22 74 23 99 42s30 20 39 3M22 61c27-20 52-19 77 0s30 20 39 3M22 99c27-20 52-19 77 0s30 20 39 3" fill="none" stroke="#18A999" stroke-width="11" stroke-linecap="round"/>
+  <path d="M22 80c27-20 52-19 77 0s30 20 39 3M22 118c27-20 52-19 77 0s30 20 39 3" fill="none" stroke="#F28C28" stroke-width="11" stroke-linecap="round"/>
+</svg>

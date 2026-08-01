@@ -1,7 +1,7 @@
 (function (root, factory) {
   const api = factory();
   if (typeof module === "object" && module.exports) module.exports = api;
-  if (root) root.ResinIQStorage = api;
+  if (root) root.PolynStorage = api;
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 

@@ -1,11 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg"
      viewBox="0 0 1280 240"
      role="img"
-     aria-label="ResinIQ"
+     aria-label="Polyn"
      preserveAspectRatio="xMidYMid meet">
 
     <style>
-        /* --- Wordmark: match the "resinIQ" style you showed --- */
+        /* --- Legacy header artwork retained with the Polyn name --- */
         .resinWord{
         /* italic serif vibe (falls back gracefully) */
         font-family: "Merriweather","Georgia","Times New Roman",Times,serif;
@@ -193,17 +193,17 @@
             <g transform="translate(640 112)" text-anchor="middle" filter="url(#wmShadow)">
                 <!-- Outline underlay (helps legibility over the plot) -->
                 <text class="wm-outline" font-size="176" dominant-baseline="central">
-                    <tspan class="resinWord">resin</tspan><tspan class="iqWord">IQ</tspan>
+                    <tspan class="resinWord">Polyn</tspan>
                 </text>
 
                 <!-- Thin edge stroke (subtle polish) -->
                 <text class="wm-edge" font-size="176" dominant-baseline="central">
-                    <tspan class="resinWord">resin</tspan><tspan class="iqWord">IQ</tspan>
+                    <tspan class="resinWord">Polyn</tspan>
                 </text>
 
                 <!-- Fill -->
                 <text font-size="176" dominant-baseline="central">
-                    <tspan class="resinWord">resin</tspan><tspan class="iqWord">IQ</tspan>
+                    <tspan class="resinWord">Polyn</tspan>
                 </text>
             </g>
 

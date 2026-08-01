@@ -1,5 +1,5 @@
 /* =======================================================================
- * ResinIQ / ResinTimer — app.js
+ * Polyn / ResinTimer — app.js
  * Organization pass:
  * - Wrap in one module scope (IIFE) to avoid globals
  * - Add section headers for easier navigation
@@ -59,13 +59,13 @@
    * DOM helpers
    * ============================ */
   const $ = (id) => document.getElementById(id);
-  const validation = window.ResinIQValidation;
-  const calculators = window.ResinIQCalculators;
-  const resinLookup = window.ResinIQLookup;
-  const activeJob = window.ResinIQActiveJob;
-  const { parseChangeoverDate, formatTime } = window.ResinIQScheduling;
+  const validation = window.PolynValidation;
+  const calculators = window.PolynCalculators;
+  const resinLookup = window.PolynLookup;
+  const activeJob = window.PolynActiveJob;
+  const { parseChangeoverDate, formatTime } = window.PolynScheduling;
   const fmtTime = (date, baseDate) => formatTime(date, baseDate, state.timeFormat);
-  const { writeJson } = window.ResinIQStorage;
+  const { writeJson } = window.PolynStorage;
   let lineSync = null;
 
   function snapshotSharedActiveJob(){
@@ -473,18 +473,6 @@
 
       state.theme = theme;
 
-      // Logo per theme
-      const logo = $("headerLogo");
-      if (logo){
-        // Keep your dedicated Gruvbox header images; map the rest to light/dark
-        const lightish = new Set(["light","mse","gruvbox-light","solarized-light","catppuccin-latte","mono"]);
-        let src = lightish.has(theme) ? "images/resiniqhead-l.png" : "images/resiniqhead.png";
-
-        if (theme === "gruvbox-light") src = "images/resiniqhead-gbl.png";
-        if (theme === "gruvbox-dark")  src = "images/resiniqhead-gbd.png";
-
-        logo.src = src;
-      }
   }
 
     function applyDensity(d){
@@ -2649,10 +2637,10 @@
   }
 
   function setupLineSync(){
-    if (!window.ResinIQCloudSync || !window.ResinIQSyncStorage) return;
-    lineSync = window.ResinIQCloudSync.create({
-      config: window.RESINIQ_SUPABASE_CONFIG || {},
-      syncStorage: window.ResinIQSyncStorage,
+    if (!window.PolynCloudSync || !window.PolynSyncStorage) return;
+    lineSync = window.PolynCloudSync.create({
+      config: window.POLYN_SUPABASE_CONFIG || {},
+      syncStorage: window.PolynSyncStorage,
       storage: localStorage,
       supabaseLibrary: window.supabase,
       adapter: {
@@ -2683,7 +2671,7 @@
     $("lineSyncRetryBtn")?.addEventListener("click",()=>runLineSyncAction(()=>lineSync.retry()));
     $("lineSyncDisconnectBtn")?.addEventListener("click",()=>runLineSyncAction(()=>lineSync.disconnectLocal()));
     $("lineSyncLeaveBtn")?.addEventListener("click",()=>{
-      if (confirm("Leave Cloud Sync on this browser identity? Local ResinIQ data will remain.")) runLineSyncAction(()=>lineSync.leaveWorkspace());
+      if (confirm("Leave Cloud Sync on this browser identity? Local Polyn data will remain.")) runLineSyncAction(()=>lineSync.leaveWorkspace());
     });
     $("lineSyncDeleteBtn")?.addEventListener("click",()=>{
       const name = lineSync.getState().selectedWorkspace?.name || "this line";

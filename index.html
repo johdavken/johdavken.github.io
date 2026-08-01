@@ -3,27 +3,27 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ResinIQ</title>
+  <title>Polyn</title>
   <!-- Favicons -->
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 
-  <link rel="stylesheet" href="styles.css?v=0.17.4">
-  <link rel="stylesheet" href="theme.css?v=0.16.5">
-<script src="validation.js?v=0.17" defer></script>
-<script src="scheduling.js?v=0.17" defer></script>
-<script src="storage.js?v=0.16" defer></script>
-<script src="calculators.js?v=0.16" defer></script>
-<script src="active-job.js?v=0.17" defer></script>
+  <link rel="stylesheet" href="styles.css?v=0.17.7">
+  <link rel="stylesheet" href="theme.css?v=0.16.7">
+<script src="validation.js?v=0.18" defer></script>
+<script src="scheduling.js?v=0.18" defer></script>
+<script src="storage.js?v=0.18" defer></script>
+<script src="calculators.js?v=0.18" defer></script>
+<script src="active-job.js?v=0.18" defer></script>
 <script src="vendor/supabase.min.js?v=2.57.4" defer></script>
-<script src="supabase-config.js?v=0.17" defer></script>
-<script src="sync-storage.js?v=0.17" defer></script>
-<script src="cloud-sync.js?v=0.17.2" defer></script>
+<script src="supabase-config.js?v=0.18" defer></script>
+<script src="sync-storage.js?v=0.18" defer></script>
+<script src="cloud-sync.js?v=0.18" defer></script>
 <script src="resin-data.js?v=0.16.1" defer></script>
 <script src="resin-description-info.js?v=0.16.1" defer></script>
-<script src="resin-lookup.js?v=0.16.1" defer></script>
-<script src="app.js?v=0.17.6" defer></script>
+<script src="resin-lookup.js?v=0.18" defer></script>
+<script src="app.js?v=0.18" defer></script>
 
 
 </head>
@@ -31,55 +31,26 @@
 <body data-density="comfort" data-theme="light">
 <main>
 
-  <header class="site-header">
+  <header class="site-header" hidden>
 
 
 <svg xmlns="http://www.w3.org/2000/svg"
      viewBox="0 0 1280 240"
      role="img"
-     aria-label="ResinIQ"
+     aria-label="Polyn"
      preserveAspectRatio="xMidYMid meet">
 
   <style>
-    /* --- Wordmark: match the "resinIQ" style you showed --- */
-    .resinWord{
-      /* italic serif vibe (falls back gracefully) */
-      font-family: "Merriweather","Georgia","Times New Roman",Times,serif;
-      font-style: italic;
-      font-weight: 800;
-      letter-spacing: -0.02em;
-      fill: var(--fg, #fe8019);
+    .headerLayerPrimary,.headerLayerSecondary,.headerWord{
+      fill:none;
+      stroke-linecap:round;
+      stroke-linejoin:round;
     }
-    .iWord{
-      font-family:"Inter","IBM Plex Sans","Segoe UI","Roboto","Helvetica Neue",Arial,sans-serif;
-      font-weight:950;
-      fill: var(--logo-i, var(--yellow, #bfbfbf));
-
-}
-
-    .qWord{
-      font-family:"Inter","IBM Plex Sans","Segoe UI","Roboto","Helvetica Neue",Arial,sans-serif;
-      font-weight:950;
-      fill: var(--logo-q, var(--yellow, #8c8c8c));
-
-}
-
-
-    /* subtle depth without screaming */
-    .wm-outline{
-      paint-order: stroke fill;
-      stroke: var(--bg, #0b0f14);
-      stroke-width: 10;
-      stroke-linejoin: round;
-      opacity: 0.45;
-    }
-    .wm-edge{
-      paint-order: stroke fill;
-      stroke: var(--orange, #fe8019);
-      stroke-width: 2;
-      stroke-linejoin: round;
-      opacity: 0.18;
-    }
+    .headerLayerPrimary,.headerLayerSecondary{stroke-width:11}
+    .headerLayerPrimary{stroke:var(--title,#607d9b)}
+    .headerLayerSecondary{stroke:var(--focus-border,#718ba5)}
+    .headerWord{stroke:var(--muted,#666269);stroke-width:13}
+    .headerPellet{fill:var(--title,#607d9b)}
 
     .accent-line{
       stroke: var(--orange, #fe8019);
@@ -231,25 +202,12 @@
     <text class="plot-label" x="1180" y="228" text-anchor="end">mils</text>
   </g>
 
-  <!-- ===== Foreground wordmark (new style) ===== -->
-  <g class="headerWordmark" transform="translate(1170 68)" text-anchor="end" filter="url(#wmShadow)">
-    <!-- Outline underlay (helps legibility over the plot) -->
-    <text class="wm-outline" font-size="96" dominant-baseline="central">
-      <tspan class="resinWord">resin</tspan><tspan class="iWord">I</tspan><tspan class="qWord">Q</tspan>
-
-    </text>
-
-    <!-- Thin edge stroke (subtle polish) -->
-    <text class="wm-edge" font-size="96" dominant-baseline="central">
-      <tspan class="resinWord">resin</tspan><tspan class="iWord">I</tspan><tspan class="qWord">Q</tspan>
-
-    </text>
-
-    <!-- Fill -->
-    <text font-size="96" dominant-baseline="central">
-      <tspan class="resinWord">resin</tspan><tspan class="iWord">I</tspan><tspan class="qWord">Q</tspan>
-
-    </text>
+  <!-- ===== Foreground Polyn wordmark ===== -->
+  <g class="headerWordmark" transform="translate(690 4) scale(.8)">
+    <path class="headerLayerPrimary" d="M28 42C55 22 80 23 105 42s30 20 43 3M28 61c27-20 52-19 77 0s30 20 43 3M28 99c27-20 52-19 77 0s30 20 43 3"/>
+    <path class="headerLayerSecondary" d="M28 80c27-20 52-19 77 0s30 20 43 3M28 118c27-20 52-19 77 0s30 20 43 3"/>
+    <path class="headerWord" d="M196 116V44h28c18 0 29 10 29 25s-11 25-29 25h-28m0-12h27c11 0 17-4 17-13s-6-13-17-13h-27M359 44v72h47M417 44l27 39v33m27-72-27 39M487 116V44l49 72V44"/>
+    <path class="headerPellet" d="M304 55a25 25 0 1 1 0 50 25 25 0 1 1 0-50Z"/>
   </g>
 
 
@@ -260,9 +218,16 @@
 
   </header>
 
-  <nav class="workspaceNav" aria-label="ResinIQ sections">
-    <div class="workspaceBrand" aria-label="ResinIQ">
-      <span class="workspaceBrandResin">resin</span><span class="workspaceBrandI">I</span><span class="workspaceBrandQ">Q</span>
+  <nav class="workspaceNav" aria-label="Polyn sections">
+    <div class="workspaceBrand" aria-label="Polyn">
+      <svg class="workspaceBrandLogo" viewBox="0 0 600 160" aria-hidden="true">
+        <!-- Five flowing polymer layers -->
+        <path class="polynLayerPrimary" d="M28 42C55 22 80 23 105 42s30 20 43 3M28 61c27-20 52-19 77 0s30 20 43 3M28 99c27-20 52-19 77 0s30 20 43 3"/>
+        <path class="polynLayerSecondary" d="M28 80c27-20 52-19 77 0s30 20 43 3M28 118c27-20 52-19 77 0s30 20 43 3"/>
+        <!-- The smaller O reads as a resin pellet at compact sizes -->
+        <path class="polynWord" d="M196 116V44h28c18 0 29 10 29 25s-11 25-29 25h-28m0-12h27c11 0 17-4 17-13s-6-13-17-13h-27M359 44v72h47M417 44l27 39v33m27-72-27 39M487 116V44l49 72V44"/>
+        <path class="polynPellet" d="M304 55a25 25 0 1 1 0 50 25 25 0 1 1 0-50Z"/>
+      </svg>
     </div>
     <button class="workspaceNavButton" type="button" data-workspace-target="lineSetupBlock" data-status="neutral">
       <span>Setup</span>
@@ -545,7 +510,7 @@
     </summary>
     <div class="blockBody lineSyncPanel">
       <div id="lineSyncMessage" class="muted" role="status" aria-live="polite">
-        ResinIQ is fully usable locally. Connect only when this device should share a production line.
+        Polyn is fully usable locally. Connect only when this device should share a production line.
       </div>
       <div class="lineSyncMetrics mt10" aria-label="Cloud Sync details">
         <span>Last sync <strong id="lineSyncLastSync">Never</strong></span>
@@ -826,9 +791,9 @@
 
       <div class="helpTopics">
         <details class="helpTopic" open>
-          <summary><span>Quick Start</span><small>Set up ResinIQ in just a few minutes</small></summary>
+          <summary><span>Quick Start</span><small>Set up Polyn in just a few minutes</small></summary>
           <div class="helpTopicBody">
-            <p>ResinIQ can be set up in just a few minutes.</p>
+            <p>Polyn can be set up in just a few minutes.</p>
             <ol>
               <li>Enter the line rate and select the line type.</li>
               <li>Verify the receiver hopper weights.</li>

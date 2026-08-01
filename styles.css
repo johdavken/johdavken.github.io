@@ -1,5 +1,5 @@
 /* =======================================================================
- *   ResinIQ — Base styles (theme-agnostic)
+ *   Polyn — Base styles (theme-agnostic)
  *   Put theme palettes + per-theme accents in theme.css
  *   ======================================================================= */
 
@@ -221,7 +221,7 @@ main{
     top: 14px;
     display: grid;
     grid-column: 1;
-    grid-row: 2;
+    grid-row: 1;
     gap: 5px;
     padding: 5px;
     border: 1px solid var(--border);
@@ -246,7 +246,7 @@ main{
   .workspaceContent{
     display: grid;
     grid-column: 2;
-    grid-row: 2;
+    grid-row: 1;
     gap: 16px;
     min-width: 0;
   }
@@ -282,29 +282,20 @@ main{
   }
   .workspaceBrand{
     display: flex;
-    align-items: baseline;
+    align-items: center;
     justify-content: center;
     padding: 8px 8px 11px;
     border-bottom: 1px solid var(--border);
-    color: var(--fg);
-    font-size: 28px;
-    line-height: 1;
     user-select: none;
   }
-  .workspaceBrandResin{
-    color: var(--fg);
-    font-family: "Merriweather", Georgia, "Times New Roman", serif;
-    font-style: italic;
-    font-weight: 800;
-    letter-spacing: -.04em;
-  }
-  .workspaceBrandI,
-  .workspaceBrandQ{
-    font-family: Inter, "Segoe UI", Arial, sans-serif;
-    font-weight: 950;
-  }
-  .workspaceBrandI{ color: var(--logo-i, var(--yellow)); }
-  .workspaceBrandQ{ color: var(--logo-q, var(--yellow)); }
+  .workspaceBrandLogo{ display: block; width: min(100%, 176px); height: auto; }
+  .workspaceBrandLogo path{ stroke-linecap: round; stroke-linejoin: round; }
+  .workspaceBrandLogo .polynLayerPrimary,
+  .workspaceBrandLogo .polynLayerSecondary{ fill: none; stroke-width: 11; }
+  .workspaceBrandLogo .polynLayerPrimary{ stroke: var(--title); }
+  .workspaceBrandLogo .polynLayerSecondary{ stroke: var(--focus-border); }
+  .workspaceBrandLogo .polynWord{ fill: none; stroke: var(--muted); stroke-width: 13; }
+  .workspaceBrandLogo .polynPellet{ fill: var(--title); stroke: none; }
   .workspaceNavButton{
     display: grid;
     gap: 3px;
@@ -483,6 +474,7 @@ main{
 /* =======================================================================
  *   Header image
  *   ======================================================================= */
+.site-header[hidden]{ display: none !important; }
 .site-header{
   display: flex;
   justify-content: center;

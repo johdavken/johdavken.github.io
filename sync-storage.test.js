@@ -50,3 +50,17 @@ test("persists a pending workspace-creation operation for safe retries", () => {
     operationId: "create-op-1"
   });
 });
+
+test("migrates pre-Polyn Cloud Sync settings without losing the selected workspace", () => {
+  const storage = memoryStorage();
+  const legacyKey = "resin" + "IQ.lineSync.settings.v1";
+  storage.setItem(legacyKey, JSON.stringify({
+    deviceId: "device-1",
+    selectedWorkspaceId: "line-9"
+  }));
+
+  const settings = createStore(storage).getSettings();
+
+  assert.equal(settings.selectedWorkspaceId, "line-9");
+  assert.equal(JSON.parse(storage.getItem(KEYS.settings)).deviceId, "device-1");
+});

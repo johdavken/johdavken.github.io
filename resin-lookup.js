@@ -7,7 +7,7 @@
     : root.RESIN_DESCRIPTION_INFORMATION;
   const api = factory(data || [], descriptionInformation || {});
   if (typeof module === "object" && module.exports) module.exports = api;
-  if (root) root.ResinIQLookup = api;
+  if (root) root.PolynLookup = api;
 })(typeof globalThis !== "undefined" ? globalThis : this, function (resins, descriptionInformation) {
   "use strict";
 

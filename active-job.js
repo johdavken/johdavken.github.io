@@ -1,7 +1,7 @@
 (function (root, factory) {
   const api = factory();
   if (typeof module === "object" && module.exports) module.exports = api;
-  if (root) root.ResinIQActiveJob = api;
+  if (root) root.PolynActiveJob = api;
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 

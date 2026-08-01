@@ -11,7 +11,7 @@ Public tables:
 - `line_workspaces`: shared line identity, audit creator, workspace revision, and a globally unique creator-bound operation ID for idempotent creation retries.
 - `line_workspace_members`: `(workspace_id, user_id)` membership with `owner` or `member` role. A user may belong to multiple workspaces.
 - `active_jobs`: one full active-job snapshot per workspace with optimistic revision and operation ID.
-- `saved_setups`: revisioned, soft-deleted Saved Line Settings using the existing ResinIQ payload format.
+- `saved_setups`: revisioned, soft-deleted Saved Line Settings using the existing Polyn payload format.
 
 Link-code secrets, code digests, and attempt limits are in the inaccessible `private` schema. Plain linking codes are returned once and are never stored remotely.
 
