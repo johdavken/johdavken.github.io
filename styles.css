@@ -2445,6 +2445,7 @@ body[data-surface-style="divided"] .helpTopic{
 .modeBtn{min-width:96px;padding:8px 13px;border:0;border-radius:999px;background:transparent;color:var(--muted);box-shadow:none}
 .modeBtn.active{background:linear-gradient(180deg,var(--btn-primary-a),var(--btn-primary-b));color:var(--text);box-shadow:inset 0 0 0 1px var(--focus-border)}
 .statusModeSwitch{ align-self:center; }
+.mobileTimelineModeBtn{ display:none; }
 .statusModeSwitch .modeBtn{
   min-width:66px;
   padding:5px 9px;
@@ -2452,12 +2453,16 @@ body[data-surface-style="divided"] .helpTopic{
 }
 body[data-ui-mode="everyday"] .advancedOnly{display:none!important}
 @media (max-width:900px){
+  .mobileBrand{
+    margin-bottom:calc(0px - var(--page-gap));
+    border-bottom:0;
+  }
   .workspaceStatusBar{
     position:sticky;
     top:0;
     z-index:40;
     display:flex;
-    justify-content:flex-end;
+    justify-content:center;
     padding:5px var(--page-pad);
     border-bottom:1px solid var(--surface-chrome-border);
     background:var(--surface-chrome-bg);
@@ -2465,7 +2470,14 @@ body[data-ui-mode="everyday"] .advancedOnly{display:none!important}
     backdrop-filter:blur(10px);
   }
   .workspaceStatusBar .workspaceStatusItem{ display:none; }
-  .statusModeSwitch .modeBtn{ min-width:68px; }
+  .statusModeSwitch{
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+    width:min(100%, 290px);
+  }
+  .statusModeSwitch .modeBtn{ min-width:0; }
+  .mobileTimelineModeBtn{ display:block; }
+  body[data-mobile-timeline-only="true"] .workspaceContent > .workspacePanel:not(#resultsBlock){ display:none !important; }
+  body[data-mobile-timeline-only="true"] #resultsBlock{ display:block !important; }
 }
 @media (max-width:600px){
   .modeSwitch:not(.statusModeSwitch){width:100%}
