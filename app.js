@@ -1,5 +1,5 @@
 /* =======================================================================
- * Wechsel / ResinTimer — app.js
+ * Resin.Tools / ResinTimer — app.js
  * Organization pass:
  * - Wrap in one module scope (IIFE) to avoid globals
  * - Add section headers for easier navigation
@@ -2546,9 +2546,9 @@
   }
 
   function lineSyncErrorMessage(error){
-    const raw = String(error?.message || error || "Cloud Sync request failed.");
+    const raw = String(error?.message || error || "RT Sync request failed.");
     const known = {
-      transfer_ownership_before_leaving: "Transfer ownership to another linked device before leaving Cloud Sync.",
+      transfer_ownership_before_leaving: "Transfer ownership to another linked device before leaving RT Sync.",
       revision_conflict: "The shared line changed on another device. Retry to load the current version.",
       owner_access_required: "Only the line owner can do that.",
       workspace_access_denied: "This device no longer has access to that line.",
@@ -2565,7 +2565,7 @@
       const message = lineSyncErrorMessage(error);
       const target = $("lineSyncMessage");
       if (target) target.textContent = message;
-      showStorageWarning(`Cloud Sync: ${message}`);
+      showStorageWarning(`RT Sync: ${message}`);
     }
   }
 
@@ -2745,7 +2745,7 @@
     ));
     $("lineSyncDisconnectBtn")?.addEventListener("click",()=>runLineSyncAction(()=>lineSync.disconnectLocal()));
     $("lineSyncLeaveBtn")?.addEventListener("click",()=>{
-      if (confirm("Leave Cloud Sync on this browser identity? Local Wechsel data will remain.")) runLineSyncAction(()=>lineSync.leaveWorkspace());
+      if (confirm("Leave RT Sync on this browser identity? Local Resin.Tools data will remain.")) runLineSyncAction(()=>lineSync.leaveWorkspace());
     });
     $("lineSyncDeleteBtn")?.addEventListener("click",()=>{
       const name = lineSync.getState().selectedWorkspace?.name || "this line";

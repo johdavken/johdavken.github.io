@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Resin.Tools Mobile Logo Preview</title>
+  <style>
+    :root{color-scheme:dark;--page:#1d2021;--panel:#282828;--line:#504945;--text:#ebdbb2;--muted:#a89984;--green:#689d6a;--yellow:#fabd2f;--orange:#d65d0e;--steel:#657784}
+    *{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--text);font:14px/1.45 system-ui,sans-serif}header{padding:26px clamp(18px,5vw,56px);border-bottom:1px solid var(--line)}h1{margin:0;font:900 clamp(25px,5vw,44px)/1 ui-monospace,monospace;letter-spacing:-.055em}header p{margin:8px 0 0;color:var(--muted)}main{width:min(1040px,100%);margin:auto;padding:24px}.card{overflow:hidden;border:1px solid var(--line);border-radius:12px;background:var(--panel)}.cardHead{padding:14px 16px;border-bottom:1px solid var(--line)}.cardHead strong{display:block}.cardHead span{color:var(--muted);font-size:12px}.surfaces{display:grid;grid-template-columns:1fr 1fr}.surface{display:grid;place-items:center;min-height:220px;padding:38px 24px;position:relative}.surface.light{--ink:var(--steel);background:#f5f4f3}.surface.dark{--ink:#ebdbb2;background:#1d2021}.label{position:absolute;top:12px;left:14px;color:#928374;font:800 10px ui-monospace,monospace;letter-spacing:.09em}.logo{display:block;width:min(100%,360px);height:auto}.word{fill:var(--ink)}.bracket{fill:none;stroke:var(--green);stroke-width:10;stroke-linecap:square;stroke-linejoin:miter}.pellet{fill:var(--yellow)}.divider{fill:var(--orange)}.scaleChecks{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border-top:1px solid var(--line)}.check{display:grid;place-items:center;min-height:112px;padding:22px;background:var(--panel)}.check svg{max-width:100%;height:auto}.check:nth-child(1) svg{width:280px}.check:nth-child(2) svg{width:220px}.check:nth-child(3) svg{width:170px}.size{margin-top:10px;color:var(--muted);font:11px ui-monospace,monospace}.note{margin-top:18px;padding:13px 15px;border-left:4px solid var(--green);background:var(--panel);color:var(--muted)}@media(max-width:680px){.surfaces{grid-template-columns:1fr}.surface{min-height:180px}.scaleChecks{grid-template-columns:1fr}.check{min-height:100px}}
+  </style>
+</head>
+<body>
+  <header><h1>RESIN.TOOLS // MOBILE LOCKUP</h1><p>A full-name companion to the selected RT side-rail mark.</p></header>
+  <main>
+    <article class="card">
+      <div class="cardHead"><strong>Industrial bracket lockup</strong><span>The yellow pellet leads the name; the orange separator preserves the Resin.Tools domain reading.</span></div>
+      <div class="surfaces">
+        <div class="surface light"><span class="label">LIGHT APP HEADER</span><div data-logo></div></div>
+        <div class="surface dark"><span class="label">DARK APP HEADER</span><div data-logo></div></div>
+      </div>
+      <div class="scaleChecks">
+        <div class="check"><div data-logo></div><div class="size">280px / current mobile target</div></div>
+        <div class="check"><div data-logo></div><div class="size">220px / narrow phone</div></div>
+        <div class="check"><div data-logo></div><div class="size">170px / minimum check</div></div>
+      </div>
+    </article>
+    <div class="note">This is a preview asset only. The app header has not been changed.</div>
+  </main>
+  <template id="logoTemplate"><svg class="logo" viewBox="0 0 640 128" role="img" aria-label="Resin.Tools"><path class="bracket" d="M38 14H14v100h24M602 14h24v100h-24"/><circle class="pellet" cx="42" cy="64" r="9"/><g class="word"><text x="72" y="86" font-family="Arial Narrow,Roboto Condensed,Arial,sans-serif" font-size="70" font-weight="900" letter-spacing="-3">RESIN</text><circle class="divider" cx="301" cy="80" r="6"/><text x="316" y="86" textLength="252" lengthAdjust="spacingAndGlyphs" font-family="Arial Narrow,Roboto Condensed,Arial,sans-serif" font-size="70" font-weight="900" letter-spacing="-3">TOOLS</text></g></svg></template>
+  <script>document.querySelectorAll('[data-logo]').forEach(node=>node.append(document.getElementById('logoTemplate').content.cloneNode(true)))</script>
+</body>
+</html>

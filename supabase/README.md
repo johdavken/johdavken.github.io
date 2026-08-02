@@ -1,4 +1,4 @@
-# Cloud Sync database interface
+# RT Sync database interface
 
 The authoritative schema is [`migrations/202607310001_line_sync.sql`](migrations/202607310001_line_sync.sql).
 

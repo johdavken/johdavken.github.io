@@ -3,15 +3,12 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Wechsel</title>
+  <title>Resin.Tools</title>
   <!-- Favicons -->
-  <link rel="icon" type="image/svg+xml" sizes="any" href="branding/wechsel/wechsel-coex-icon.svg?v=1">
-  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/svg+xml" sizes="any" href="branding/resin-tools/rt-07-bracket.svg?v=1">
 
-  <link rel="stylesheet" href="styles.css?v=0.17.45">
-  <link rel="stylesheet" href="theme.css?v=0.17.0">
+  <link rel="stylesheet" href="styles.css?v=0.17.49">
+  <link rel="stylesheet" href="theme.css?v=0.17.1">
 <script src="validation.js?v=0.18" defer></script>
 <script src="scheduling.js?v=0.18.3" defer></script>
 <script src="storage.js?v=0.18" defer></script>
@@ -20,11 +17,11 @@
 <script src="vendor/supabase.min.js?v=2.57.4" defer></script>
 <script src="supabase-config.js?v=0.18" defer></script>
 <script src="sync-storage.js?v=0.18" defer></script>
-<script src="cloud-sync.js?v=0.18.2" defer></script>
+<script src="cloud-sync.js?v=0.18.4" defer></script>
 <script src="resin-data.js?v=0.16.2" defer></script>
 <script src="resin-description-info.js?v=0.16.1" defer></script>
 <script src="resin-lookup.js?v=0.18.1" defer></script>
-<script src="app.js?v=0.18.30" defer></script>
+<script src="app.js?v=0.18.32" defer></script>
 
 
 </head>
@@ -38,7 +35,7 @@
 <svg xmlns="http://www.w3.org/2000/svg"
      viewBox="0 0 1280 240"
      role="img"
-     aria-label="Wechsel"
+     aria-label="Resin.Tools"
      preserveAspectRatio="xMidYMid meet">
 
   <style>
@@ -219,25 +216,24 @@
 
   </header>
 
-  <div class="mobileBrand" aria-label="Wechsel">
-    <svg class="wechselCoexLogo" viewBox="0 0 620 160" role="img" aria-label="Wechsel">
-      <g transform="translate(5 28)">
-        <path class="coexW" d="M3 12h22l11 48 10-35 10 35 11-48h22L68 82H53l-7-28-8 28H23Z"/>
-        <path class="coexRed" d="M70 24h27v7H70Z"/><path class="coexOrange" d="M70 35h27v7H70Z"/>
-        <path class="coexYellow" d="M70 46h27v7H70Z"/><path class="coexGreen" d="M70 57h27v7H70Z"/>
-        <path class="coexBlue" d="M70 68h27v7H70Z"/>
+  <div class="mobileBrand" aria-label="Resin.Tools">
+    <svg class="resinToolsLogo" viewBox="0 0 640 128" role="img" aria-label="Resin.Tools">
+      <path class="rtBracket" d="M38 14H14v100h24M602 14h24v100h-24"/>
+      <circle class="rtPellet" cx="42" cy="64" r="9"/>
+      <g class="resinToolsWord">
+        <text x="72" y="86">RESIN</text>
+        <circle class="rtDivider" cx="301" cy="80" r="6"/>
+        <text x="316" y="86" textLength="252" lengthAdjust="spacingAndGlyphs">TOOLS</text>
       </g>
-      <text class="coexWord" x="120" y="112">WECHSEL</text>
     </svg>
   </div>
 
-  <nav class="workspaceNav" aria-label="Wechsel sections">
-    <div class="workspaceBrand" aria-label="Wechsel">
-      <svg class="wechselSidebarIcon" viewBox="0 0 100 100" role="img" aria-label="Wechsel">
-        <path class="coexW" d="M3 12h22l11 48 10-35 10 35 11-48h22L68 82H53l-7-28-8 28H23Z"/>
-        <path class="coexRed" d="M70 24h27v7H70Z"/><path class="coexOrange" d="M70 35h27v7H70Z"/>
-        <path class="coexYellow" d="M70 46h27v7H70Z"/><path class="coexGreen" d="M70 57h27v7H70Z"/>
-        <path class="coexBlue" d="M70 68h27v7H70Z"/>
+  <nav class="workspaceNav" aria-label="Resin.Tools sections">
+    <div class="workspaceBrand" aria-label="Resin.Tools">
+      <svg class="resinToolsSidebarIcon" viewBox="0 0 160 100" role="img" aria-label="Resin.Tools">
+        <path class="rtBracket" d="M27 14H10v72h17M133 14h17v72h-17"/>
+        <path class="rtInk" d="M34 20h50c21 0 31 9 31 25 0 10-5 17-15 21l21 14H96L73 61v19H54V36H34zm39 15v13h11c8 0 12-2 12-7 0-4-4-6-12-6zm35-15h31v16h-9v44h-19V36h-3z"/>
+        <circle class="rtPellet" cx="26" cy="50" r="5"/>
       </svg>
     </div>
     <button class="workspaceNavButton" type="button" data-workspace-target="lineSetupBlock" data-status="neutral">
@@ -253,7 +249,7 @@
       <small id="workspaceTimelineStatus">0 resins tracked</small>
     </button>
     <button class="workspaceNavButton" type="button" data-workspace-target="lineSyncBlock">
-      <span>Cloud Sync</span>
+      <span>RT Sync</span>
       <small id="workspaceCloudSyncStatus">Local only</small>
     </button>
     <button class="workspaceNavButton advancedOnly" type="button" data-workspace-target="recipesBlock">
@@ -285,7 +281,7 @@
       <strong id="workspaceTrackedStatus" class="mono">0</strong>
     </div>
     <div class="workspaceStatusItem lineSyncStatusItem">
-      <span>Cloud Sync</span>
+      <span>RT Sync</span>
       <strong id="lineSyncTopStatus">Local only</strong>
     </div>
     <div class="modeSwitch statusModeSwitch" role="group" aria-label="Choose display mode">
@@ -482,13 +478,13 @@
     </div>
   </details>
 
-  <!-- 4) CLOUD SYNC -->
+  <!-- 4) RT SYNC -->
   <details class="block card workspacePanel lineSyncBlock" id="lineSyncBlock">
     <summary>
       <div class="sumLeft">
         <div class="chev"></div>
         <div class="summaryText">
-          <div class="layerTitle">Cloud Sync</div>
+          <div class="layerTitle">RT Sync</div>
           <div class="layerMeta">Optional shared line data across devices</div>
         </div>
       </div>
@@ -496,9 +492,9 @@
     </summary>
     <div class="blockBody lineSyncPanel">
       <div id="lineSyncMessage" class="muted" role="status" aria-live="polite">
-        Wechsel is fully usable locally. Connect only when this device should share a production line.
+        Resin.Tools is fully usable locally. Connect only when this device should share a production line.
       </div>
-      <div class="lineSyncMetrics mt10" aria-label="Cloud Sync details">
+      <div class="lineSyncMetrics mt10" aria-label="RT Sync details">
         <span>Last sync <strong id="lineSyncLastSync">Never</strong></span>
         <span>Unsynced changes <strong id="lineSyncPendingCount" class="mono">0</strong></span>
       </div>
@@ -529,7 +525,7 @@
         <div class="segmentedActionRow">
           <button id="lineSyncGenerateCodeBtn" class="secondary desktopSyncOnly" type="button">Generate Link Code</button>
           <button id="lineSyncDisconnectBtn" class="secondary" type="button"><span class="desktopSyncLabel">Disconnect on this device</span><span class="mobileSyncLabel">Disconnect this device</span></button>
-          <button id="lineSyncLeaveBtn" class="secondary" type="button">Leave Cloud Sync</button>
+          <button id="lineSyncLeaveBtn" class="secondary" type="button">Leave RT Sync</button>
           <button id="lineSyncDeleteBtn" class="danger desktopSyncOnly" type="button">Delete line workspace</button>
         </div>
       </div>
@@ -539,7 +535,7 @@
           <label for="lineSyncJoinCode">Link code</label>
           <input id="lineSyncJoinCode" class="mono" type="text" maxlength="4" inputmode="text" autocomplete="one-time-code" placeholder="AB23" />
         </div>
-        <button id="lineSyncJoinBtn" class="compactAction" type="button">Join Cloud Sync</button>
+        <button id="lineSyncJoinBtn" class="compactAction" type="button">Join RT Sync</button>
         <output id="lineSyncGeneratedCode" class="lineSyncCode mono desktopSyncOnly" aria-live="polite"></output>
       </div>
 
@@ -785,9 +781,9 @@
     <div class="blockBody helpGuide">
       <div class="helpTopics">
         <details class="helpTopic" id="helpQuickStart" open>
-          <summary><span>Quick Start</span><small>Set up Wechsel in just a few minutes</small></summary>
+          <summary><span>Quick Start</span><small>Set up Resin.Tools in just a few minutes</small></summary>
           <div class="helpTopicBody">
-            <p>Wechsel can be set up in just a few minutes.</p>
+            <p>Resin.Tools can be set up in just a few minutes.</p>
             <ol>
               <li>Set the changeover deadline, enter the line rate, and select the layer count.</li>
               <li>Verify the receiver hopper weights.</li>
@@ -844,20 +840,20 @@
               <li>After physically turning off a hopper pump, mark <strong>Pump off</strong>. Completed hoppers are hidden unless <strong>Show all</strong> is enabled.</li>
               <li>Use <strong>Reset tracking</strong> at the appropriate time to untrack every hopper and clear pump-off states.</li>
             </ol>
-            <p class="helpTip">On mobile, select <strong>Timeline</strong> beneath the Wechsel logo to hide every other section and keep only the timeline and production footer visible.</p>
-            <p class="helpTip">The footer on mobile shows the next tracked hopper and current Cloud Sync status.</p>
+            <p class="helpTip">On mobile, select <strong>Timeline</strong> beneath the Resin.Tools logo to hide every other section and keep only the timeline and production footer visible.</p>
+            <p class="helpTip">The footer on mobile shows the next tracked hopper and current RT Sync status.</p>
           </div>
         </details>
 
         <details class="helpTopic" id="helpCloudSync">
-          <summary><span>Cloud Sync</span><small>Share a production line across devices</small></summary>
+          <summary><span>RT Sync</span><small>Share a production line across devices</small></summary>
           <div class="helpTopicBody">
             <ol>
               <li>Create one permanent line workspace on the first device and give the device a recognizable label.</li>
-              <li>Generate a four-character link code. On another device, open Cloud Sync, enter that code, and select <strong>Join Cloud Sync</strong>.</li>
-              <li>On phones, Cloud Sync is simplified around the current line, device label, sync details, Refresh, Disconnect, and Leave. Line creation, naming, link-code generation, and device administration remain on desktop.</li>
+              <li>Generate a four-character link code. On another device, open RT Sync, enter that code, and select <strong>Join RT Sync</strong>.</li>
+              <li>On phones, RT Sync is simplified around the current line, device label, sync details, Refresh, Disconnect, and Leave. Line creation, naming, link-code generation, and device administration remain on desktop.</li>
               <li>Watch the status and unsynced-change count. Local changes save first, then upload; other connected devices update without a page refresh.</li>
-              <li><strong>Disconnect on this device</strong> pauses syncing but keeps membership. <strong>Leave Cloud Sync</strong> removes that device's membership.</li>
+              <li><strong>Disconnect on this device</strong> pauses syncing but keeps membership. <strong>Leave RT Sync</strong> removes that device's membership.</li>
               <li><strong>New job</strong> clears current job inputs and tracking while preserving the line workspace, linked devices, Saved Line Settings, and hopper weights.</li>
             </ol>
             <p class="helpTip">Link codes are one-time codes that expire after 30 minutes. The owner must transfer ownership before leaving and is the only device allowed to remove members or delete the shared line.</p>
@@ -870,7 +866,7 @@
             <ol>
               <li>On mobile, open Advanced mode first. Enter a configuration name and choose <strong>Save / Update config</strong> to capture the current complete setup.</li>
               <li>Select a saved configuration and choose <strong>Load</strong> to replace the active inputs with that setup.</li>
-              <li>Use Rename or Delete to maintain the list. When Cloud Sync is connected, these changes are shared with the line.</li>
+              <li>Use Rename or Delete to maintain the list. When RT Sync is connected, these changes are shared with the line.</li>
               <li>Export copies a configuration as JSON. Import validates pasted JSON before saving it and can optionally load it immediately.</li>
             </ol>
           </div>
@@ -879,7 +875,7 @@
         <details class="helpTopic" id="helpTools">
           <summary><span>Tools</span><small>Production calculators and resin reference</small></summary>
           <div class="helpTopicBody">
-            <p>Select a utility from the tool index. Wechsel displays one tool at a time to keep the workspace focused and reduce scrolling.</p>
+            <p>Select a utility from the tool index. Resin.Tools displays one tool at a time to keep the workspace focused and reduce scrolling.</p>
             <ul>
               <li><strong>Production Summary:</strong> Build the active recipe first, then enter production and scrap pounds to calculate material totals by resin for production reporting and inventory issuance.</li>
               <li><strong>Short Footage Calculator:</strong> Enter actual weight, target footage, and the last good weight to calculate adjusted short footage.</li>
@@ -897,7 +893,7 @@
 
 <dialog id="lineSyncConflictDialog" class="lineSyncConflictDialog" aria-labelledby="lineSyncConflictTitle">
   <form method="dialog">
-    <div id="lineSyncConflictTitle" class="layerTitle">Cloud Sync conflict</div>
+    <div id="lineSyncConflictTitle" class="layerTitle">RT Sync conflict</div>
     <p>The active job changed here and on another device. Both versions were backed up locally.</p>
     <div id="lineSyncConflictDetails" class="muted"></div>
     <div class="buttonRow mt10">
@@ -914,7 +910,7 @@
     <div id="footerSub" class="footerSub">—</div>
   </div>
   <div id="cloudSyncFooterStatus" class="cloudSyncFooterStatus" data-state="local-only" aria-live="polite">
-    <span>Cloud Sync</span>
+    <span>RT Sync</span>
     <strong id="lineSyncMobileStatus">Local only</strong>
   </div>
 </footer>
