@@ -1182,7 +1182,7 @@
         const title = document.createElement("button");
         title.type = "button";
         title.className = "splitLayerTitle";
-        title.textContent = `Layer ${L.name}`;
+        title.textContent = L.name;
         title.title = `Select or clear all Layer ${L.name} hoppers`;
         title.setAttribute("aria-pressed", "false");
         title.addEventListener("click",()=>{
@@ -1345,7 +1345,8 @@
           trackButton.appendChild(clockIcon);
           trackControl.appendChild(trackButton);
 
-          controls.append(pctWrap, trackControl);
+          cellHeader.appendChild(trackControl);
+          controls.appendChild(pctWrap);
           editor.append(cellTop, controls);
           td.append(cellHeader, editor);
           tr.appendChild(td);
