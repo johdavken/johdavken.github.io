@@ -42,6 +42,10 @@ Recipe Panel / Resin Lookup
 
 Both resin-facing UI paths now consume the same normalized catalog records from `PolynResinCatalog`. The Recipe autocomplete updates its in-memory name list after a successful background refresh; Resin Lookup uses the same current records for exact matches and suggestions. Existing hard-coded data remains the service’s offline fallback.
 
+## Resin administration
+
+The Admin Login uses a dedicated, persisted email/password Supabase client whose auth storage key is separate from RT Sync’s anonymous session. Database authorization comes exclusively from `public.admin_users` and `resins` RLS policies; hiding the editor is not the authorization mechanism. Successful editor writes refresh `PolynResinCatalog` without reloading the page, so active recipe and lookup results update on subsequent interactions. See [the Supabase setup instructions](supabase/README.md#resin-administration); never add a service-role key to browser code.
+
 ## Tests
 
 Run the browser-independent test suite with:

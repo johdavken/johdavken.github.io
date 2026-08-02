@@ -14,6 +14,14 @@ Run [`migrations/202608020001_create_resins.sql`](migrations/202608020001_create
 
 RLS is enabled. Both `anon` and `authenticated` roles can select only records where `is_active` is true. No client insert, update, or delete policy exists, so anonymous and authenticated clients cannot mutate the catalog.
 
+## Resin administration
+
+After the catalog migration, run [`migrations/202608020002_resin_admin.sql`](migrations/202608020002_resin_admin.sql). It creates `public.admin_users(user_id, created_at)`, where `user_id` references `auth.users`, and adds a security-definer `public.is_resin_admin()` check used by `resins` RLS policies.
+
+To provision an administrator: create an email/password user in **Authentication → Users** in Supabase (do not expose public registration in the app), copy its UUID, then run `insert into public.admin_users (user_id) values ('USER-UUID-HERE');` in the SQL Editor. Sign into the app through **Admin Login**; a verified user sees **Resin Database**. An authenticated user absent from `admin_users` is signed out of the separate admin session and cannot read inactive rows or mutate records.
+
+`anon` and normal authenticated users retain active-only reads. Verified admins can read all resins and insert/update them; no client delete policy or delete privilege is granted. The browser uses only the publishable key and a separately persisted admin auth session. Never put a Supabase service-role key in client code.
+
 Public tables:
 
 - `line_workspaces`: shared line identity, audit creator, workspace revision, and a globally unique creator-bound operation ID for idempotent creation retries.
