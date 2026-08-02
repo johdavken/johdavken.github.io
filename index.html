@@ -842,6 +842,13 @@
               <li>Use the clock button beside a hopper to include it in the Timeline. Bulk-selection checkboxes are separate and appear only in Bulk Edit mode.</li>
               <li>Use a layer's <strong>Copy</strong> button when another layer uses the same resins and hopper percentages. Copy does not change the destination layer percentage.</li>
             </ol>
+            <h3>Rearranging Hoppers</h3>
+            <ol>
+              <li>On desktop, select <strong>Rearrange Hoppers</strong> to enter rearrange mode.</li>
+              <li>Drag an assigned hopper onto another hopper. Assignments move to an empty hopper or swap with the assignment already there, including across layers.</li>
+              <li>Hopper 1 is recalculated after each move. A move that would make a layer's percentages invalid is not applied.</li>
+              <li>Use <strong>Undo Last Move</strong> to step back, <strong>Cancel</strong> to restore the recipe as it was when rearrange mode started, or <strong>Done</strong> to keep the changes.</li>
+            </ol>
             <h3>Using Bulk Edit</h3>
             <ol>
               <li>Turn on <strong>Bulk Edit</strong>.</li>
@@ -884,14 +891,23 @@
         </details>
 
         <details class="helpTopic" id="helpLineConfigurations">
-          <summary><span>Line Configurations</span><small>Save and restore common line setups</small></summary>
+          <summary><span>Line Configurations</span><small>Use shared recipes and weight profiles, or local configurations</small></summary>
           <div class="helpTopicBody">
+            <h3>Shared Configurations</h3>
             <ol>
-              <li>On mobile, open Advanced mode first. Enter a configuration name and choose <strong>Save / Update config</strong> to capture the current complete setup.</li>
-              <li>Select a saved configuration and choose <strong>Load</strong> to replace the active inputs with that setup.</li>
-              <li>Use Rename or Delete to maintain the list. When RT Sync is connected, these changes are shared with the line.</li>
-              <li>Export copies a configuration as JSON. Import validates pasted JSON before saving it and can optionally load it immediately.</li>
+              <li>Connect to an RT Sync workspace to view its shared configurations. Use <strong>Refresh shared items</strong> to get the latest saved profiles and recipes.</li>
+              <li><strong>Save Current Weights</strong> creates a Receiver Weight Profile containing receiver hopper weights only. Loading one changes only those weights and requires a matching physical line layout.</li>
+              <li><strong>Save Current Recipe</strong> creates a Recipe containing the line type, hopper naming, layer percentages, resin assignments, and hopper blend percentages. Loading one keeps receiver weights, tracking, pump-off status, and runtime state unchanged.</li>
+              <li>Select a shared item to load or update it. Its more-actions menu lets you rename, duplicate, or delete it; Recipes can also be marked as favorites.</li>
+              <li>If you reuse a name, choose whether to update the existing shared item or enter a different name.</li>
             </ol>
+            <h3>Local Configurations</h3>
+            <ol>
+              <li>On mobile, open Advanced mode first. Enter a name and choose <strong>Save / Update</strong> to save the complete current setup in this browser.</li>
+              <li>Select a local configuration and choose <strong>Load</strong> to restore it. Use Rename or Delete to maintain the local list.</li>
+              <li><strong>Export selected</strong> copies a local configuration as JSON. <strong>Import JSON</strong> validates pasted JSON before saving it and can optionally load it immediately.</li>
+            </ol>
+            <p class="helpTip">Shared configurations belong to the connected RT Sync workspace. Local configurations remain separate on this browser.</p>
           </div>
         </details>
 
