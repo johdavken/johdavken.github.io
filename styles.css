@@ -1085,7 +1085,7 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   justify-content: flex-end;
 }
 .splitsBulkModeBar button{
-  padding: 7px 11px;
+  padding:5px 9px;
   font-size: var(--font-small);
 }
 .splitsBulkBar{
@@ -1131,9 +1131,16 @@ details[open] > summary .chev{ transform: rotate(45deg); }
 }
 .splitsSelectionStatus.ok{ color: var(--ok); }
 .splitsSelectionStatus.warn{ color: var(--warn); }
-.splitsMatrixActions{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:32px}
-.splitsMatrixActionInfo{display:flex;align-items:center;gap:12px;min-width:0}
-.splitsTrackingHint{color:var(--muted);font-size:var(--font-tiny);white-space:nowrap}
+.splitsMatrixActions{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:28px}
+.splitsMatrixActionInfo{position:relative;display:flex;align-items:center;gap:8px;min-width:0}
+.splitsInfo{position:relative}
+.splitsInfo > summary{display:grid;place-items:center;width:24px;height:24px;border:0;border-radius:50%;background:transparent;color:var(--muted);font-size:16px;line-height:1;cursor:pointer;list-style:none}
+.splitsInfo > summary::-webkit-details-marker{display:none}
+.splitsInfo > summary:hover,.splitsInfo[open] > summary{color:var(--title);background:var(--field-bg)}
+.splitsInfo > summary:focus-visible{outline:2px solid var(--focus-border);outline-offset:1px}
+.splitsInfoPanel{position:absolute;top:calc(100% + 6px);left:0;z-index:20;width:min(390px,calc(100vw - 48px));padding:10px 12px;border:1px solid var(--border2);border-radius:var(--control-radius);background:var(--panelOpen);color:var(--muted);font-size:var(--font-small);box-shadow:var(--shadow2)}
+.splitsInfoPanel p{margin:0}.splitsInfoPanel p+p{margin-top:7px}.splitsInfoPanel strong{color:var(--text)}
+#splitsArea{gap:6px}
 
 .splitsMatrixSummary{
   padding: 2px 4px;
@@ -1165,7 +1172,7 @@ details[open] > summary .chev{ transform: rotate(45deg); }
 .splitsMatrix th,
 .splitsMatrix td{
   padding: 8px;
-  border-right: 1px solid var(--row-border);
+  border-right:1px solid color-mix(in srgb,var(--row-border) 64%,transparent);
   border-bottom: 1px solid var(--row-border-2);
 }
 .splitsMatrix tr:last-child > *{ border-bottom: 0; }
@@ -1176,7 +1183,7 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   padding-top:6px;
   padding-bottom:6px;
   vertical-align: top;
-  background: var(--panelOpen);
+  background:color-mix(in srgb,var(--panelOpen) 72%,transparent);
 }
 .splitsMatrix th:first-child{
   position: sticky;
@@ -1218,6 +1225,9 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   border-color:transparent;
   background:transparent;
   box-shadow:none;
+  color:var(--muted);
+  font-size:var(--font-small);
+  font-variant-numeric:tabular-nums;
   text-align: right;
 }
 .splitLayerPct input:hover,.splitLayerPct input:focus{border-color:var(--border2);background:var(--field-bg)}
@@ -1242,9 +1252,10 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   background:transparent;
   color:var(--muted);
   font-size:var(--font-tiny);
+  opacity:.62;
   box-shadow:none;
 }
-.splitCopyBtn:hover{background:transparent;color:var(--title);text-decoration:underline}
+.splitCopyBtn:hover,.splitCopyBtn:focus-visible{background:transparent;color:var(--title);opacity:1;text-decoration:underline}
 .splitRowHeader{
   color: var(--text);
   font-weight: 950;
@@ -1268,31 +1279,37 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   transition: background .12s ease, box-shadow .12s ease;
 }
 .splitsMatrix tbody tr:nth-child(even) .splitMatrixCell{background:color-mix(in srgb,var(--row-bg-2) 55%,transparent)}
-.splitsMatrix td.splitMatrixCell{ padding: 6px; }
+.splitsMatrix tbody tr:hover .splitMatrixCell:not(.selected){background:color-mix(in srgb,var(--focus-ring) 34%,var(--row-bg-2))}
+.splitsMatrix td.splitMatrixCell{padding:4px 6px}
 .splitCellHeader{
   display:flex;
   align-items:center;
   gap:4px;
   min-height:15px;
-  margin-bottom:3px;
+  margin-bottom:1px;
   color:var(--muted);
   font-size:var(--font-tiny);
   font-weight:850;
   line-height:1;
 }
 .splitCellHopperName{ letter-spacing:.02em; }
+.splitMatrixCell:not(.has-resin) .splitCellHopperName{opacity:.72}
 .splitMatrixCell.selected{
   background: var(--btn-primary-a);
   box-shadow: inset 0 0 0 2px var(--focus-border);
 }
 .splitCellEditor{
-  display: grid;
-  grid-template-columns: minmax(64px, 1fr) auto;
-  gap: 5px;
-  align-items: center;
+  display:grid;
+  grid-template-columns:minmax(78px,1fr) auto;
+  grid-template-rows:auto auto;
+  column-gap:7px;
+  row-gap:0;
+  align-items:center;
 }
 .splitCellTop{
-  display: grid;
+  display:grid;
+  grid-column:1;
+  grid-row:1;
   grid-template-columns: minmax(0,1fr);
   gap: 5px;
   align-items: center;
@@ -1359,65 +1376,98 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   border-color: color-mix(in srgb, var(--focus-border) 55%, var(--border));
   background: color-mix(in srgb, var(--focus-ring) 55%, transparent);
 }
-.bulk-editing .splitCopyBtn,.bulk-editing .splitTrackControl,.bulk-editing .splitsTrackingHint{display:none}
+.bulk-editing .splitCopyBtn,.bulk-editing .splitTrackControl,.bulk-editing .splitsInfo{display:none}
 .bulk-editing .splitMatrixCell .resinNameInput:disabled,.bulk-editing .splitMatrixCell .splitInput:disabled{opacity:.52;color:var(--muted);cursor:default}
 .splitMatrixCell .resinNameInput{
-  padding: 7px 9px;
-  font-size: var(--font-small);
+  height:22px;
+  min-height:22px;
+  max-height:22px;
+  padding:0 2px;
+  border-color:transparent;
+  background:transparent;
+  box-shadow:none;
+  color:var(--muted);
+  font-size:calc(var(--font-small) + 2px);
+  font-weight:700;
+  line-height:21px;
+  letter-spacing:.01em;
+}
+.splitMatrixCell.has-resin .resinNameInput{
+  color:var(--text);
+  font-weight:900;
+}
+.splitMatrixCell .resinNameInput:hover,
+.splitMatrixCell .resinNameInput:focus{
+  border-color:var(--border2);
+  background:var(--field-bg);
 }
 .splitMatrixCell.empty .splitCellHopperName{color:color-mix(in srgb,var(--muted) 72%,transparent)}
 .splitMatrixCell.empty .resinNameInput:not(:focus),.splitMatrixCell.empty .splitPctControl input:not(:focus){border:0;background:transparent;box-shadow:none}
 .splitMatrixCell.empty .splitPctControl{opacity:.62}
 .splitMatrixCell.empty .splitPctControl > span{visibility:hidden}
 .splitCellControls{
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 4px;
-  margin-top: 0;
+  display:contents;
 }
 .splitPctControl{
-  display: flex;
-  align-items: center;
-  gap: 3px;
+  display:flex;
+  grid-column:1;
+  grid-row:2;
+  align-items:center;
+  justify-content:flex-start;
+  gap:1px;
   min-width: 0;
   margin: 0;
 }
 .splitPctControl input{
-  width: 44px;
+  width:34px;
+  height:18px;
+  min-height:18px;
+  max-height:18px;
   min-width: 0;
-  padding: 6px 8px;
-  text-align: right;
+  padding:0 2px;
+  border-color:transparent;
+  background:transparent;
+  box-shadow:none;
+  color:var(--muted);
+  text-align:left;
   font-size: var(--font-small);
+  line-height:17px;
+  font-variant-numeric:tabular-nums;
 }
+.splitPctControl input:hover,.splitPctControl input:focus{border-color:var(--border2);background:var(--field-bg);color:var(--text)}
+.splitPctControl input:read-only{color:color-mix(in srgb,var(--muted) 78%,transparent)}
 .splitPctControl > span{
   color: var(--muted);
   font-size: var(--font-small);
 }
 .splitTrackControl{
-  display: inline-flex;
-  align-items: center;
-  margin: 0;
+  display:inline-flex;
+  grid-column:2;
+  grid-row:1 / 3;
+  align-items:center;
+  align-self:center;
+  margin:0;
   color: var(--muted);
   white-space: nowrap;
 }
 .splitTrackButton{
   display: inline-grid;
   place-items: center;
-  width: 21px;
-  height: 21px;
-  min-height:21px;
+  width:25px;
+  height:25px;
+  min-height:25px;
   margin: 0;
   padding: 0;
   border:0;
   border-radius: 5px;
   background:transparent;
-  color: var(--muted);
+  color:var(--muted);
+  opacity:.52;
   box-shadow: none;
 }
 .splitTrackButton svg{
-  width: 16px;
-  height: 16px;
+  width:19px;
+  height:19px;
   fill: none;
   stroke: currentColor;
   stroke-width: 2;
@@ -1427,6 +1477,7 @@ details[open] > summary .chev{ transform: rotate(45deg); }
 .splitTrackButton:hover{
   background:var(--field-bg);
   color: var(--title);
+  opacity:1;
 }
 .splitTrackButton:focus-visible{
   border-color: var(--focus-border);
@@ -1436,6 +1487,7 @@ details[open] > summary .chev{ transform: rotate(45deg); }
 .splitTrackButton.active{
   background: linear-gradient(180deg, var(--btn-primary-a), var(--btn-primary-b));
   color: var(--title);
+  opacity:1;
 }
 @media (hover:hover){
   .splitMatrixCell.empty .splitTrackButton:not(.active){opacity:0}
