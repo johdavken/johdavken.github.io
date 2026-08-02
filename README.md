@@ -51,6 +51,22 @@ Both resin-facing UI paths now consume the same normalized catalog records from 
 
 The helpers intentionally coexist with the legacy full snapshot/save system and are not yet wired to production UI, storage, cloud services, or synchronization. Later database/service/UI phases should create and validate a payload with these helpers, apply it after their own user-flow checks, then orchestrate rendering and persistence outside the module. Favorite status belongs to the future saved-document record, not a recipe payload.
 
+## Workspace configuration service
+
+[`workspace-configurations-service.js`](workspace-configurations-service.js) provides the UI-independent `PolynWorkspaceConfigurations` service for the Phase 2 `workspace_configurations` database contract. Its API is `getCached`, `listCached`, `listRecipes`, `listReceiverWeightProfiles`, `refresh`, `create`, `update`, `rename`, `duplicate`, `delete`, `setFavorite`, `clearWorkspaceCache`, and `subscribe`.
+
+Documents are normalized to `{ id, workspaceId, type, name, normalizedName, schemaVersion, payload, favorite, createdBy, updatedBy, createdAt, updatedAt }`. The service uses the existing authenticated RT Sync client only through `lineSync.getWorkspaceConfigurationTransport()`; it never creates another session or exposes credentials. Each workspace has an isolated `polyn.workspaceConfigurations.v1::<workspace-id>` cache envelope containing version, workspace ID, timestamp, and separate profile/recipe arrays.
+
+Cached reads are safe offline, but writes are never queued. Cloud refreshes and all mutations use the Phase 2 RPCs, preserve the previous valid cache on failure, and notify subscribers only after a successful cache replacement. Creates and updates validate a detached payload through the Phase 1 helpers before calling Supabase. This is last-write-wins, has no Realtime subscription or polling. Never use a service-role key in browser code.
+
+## Shared workspace configuration viewer
+
+The existing **Line Configurations** panel now shows read-only **Receiver Weight Profiles** and **Recipes** for the currently connected RT Sync workspace, above the unchanged local configuration controls. It renders that workspace's cached items immediately, performs one refresh after a workspace change or panel initialization, and offers a manual refresh. Cached items remain visible with a concise stale/offline message if refresh fails; no workspace means no cloud items are shown.
+
+Every cloud load opens a confirmation dialog. Recipe loads use the Phase 1 recipe helper and may change line type, naming mode, layer percentages, and hopper assignments/percentages while preserving weights, tracking, pump-off state, offsets, runtime state, workspace identity, and preferences. Weight Profile loads use the corresponding Phase 1 helper and change only receiver weights; incompatible physical layouts are rejected without partial application. A successful load renders/calculates, persists ordinary local session state, and emits one normal RT Sync active-job mutation. This phase is read/load-only: it has no cloud editing controls, Realtime, polling, offline writes, or changes to legacy local configurations.
+
+Shared Workspace Configurations can now also be managed from this same panel. **Save Current Weights** creates a narrow Receiver Weight Profile; **Save Current Recipe** creates a narrow Recipe. Existing shared items can be updated from the current app state, renamed, duplicated, or deleted; Recipes alone can be favorited, which keeps them first in their existing alphabetical groups. Duplicate names present an explicit Cancel, Update Existing, or Choose Another Name decision. All changes use the Phase 3 service and preserve the current workspace/application state. The local Save/Load configuration system remains separate and unchanged; this adds no Realtime, polling, or offline write queue.
+
 ## Resin administration
 
 The Admin Login uses a dedicated, persisted email/password Supabase client whose auth storage key is separate from RT Sync’s anonymous session. Database authorization comes exclusively from `public.admin_users` and `resins` RLS policies; hiding the editor is not the authorization mechanism. Successful editor writes refresh `PolynResinCatalog` without reloading the page, so active recipe and lookup results update on subsequent interactions. See [the Supabase setup instructions](supabase/README.md#resin-administration); never add a service-role key to browser code.

@@ -77,6 +77,10 @@
   const fmtTime = (date, baseDate) => formatTime(date, baseDate, state.timeFormat);
   const { writeJson } = window.PolynStorage;
   let lineSync = null;
+  let workspaceConfigurations = null;
+  let workspaceConfigurationWorkspaceId = "";
+  let workspaceConfigurationRefreshInFlight = false;
+  let workspaceConfigurationPending = null;
 
   function snapshotSharedActiveJob(){
     return activeJob.snapshotActiveJob(state, APP_VERSION);
@@ -85,6 +89,78 @@
   function notifyActiveJobMutation(options){
     lineSync?.notifyActiveJobMutation(options);
   }
+
+  function workspaceConfigurationStatus(message){ const el=$("workspaceConfigurationsStatus"); if(el) el.textContent=message; }
+  function renderWorkspaceConfigurations(syncState){
+    const profiles=$("workspaceProfilesList"), recipes=$("workspaceRecipesList"), refresh=$("workspaceConfigurationsRefresh");
+    if(!profiles || !recipes) return;
+    const workspaceId=syncState?.selectedWorkspaceId || "";
+    if(refresh) refresh.disabled=!workspaceId || workspaceConfigurationRefreshInFlight;
+    profiles.replaceChildren(); recipes.replaceChildren();
+    if(!workspaceId){ workspaceConfigurationWorkspaceId=""; workspaceConfigurationStatus("Connect to an RT Sync workspace to view shared weight profiles and recipes."); return; }
+    workspaceConfigurationWorkspaceId=workspaceId;
+    const renderList=(host,items,kind)=>{
+      if(!items.length){ const empty=document.createElement("div"); empty.className="muted"; empty.textContent=kind==="recipe"?"No shared recipes saved for this workspace.":"No shared weight profiles saved for this workspace."; host.append(empty); return; }
+      items.forEach(item=>{ const row=document.createElement("div"); row.className="workspaceConfigurationRow"; const info=document.createElement("div"); const title=document.createElement("strong"); title.textContent=`${item.favorite ? "★ " : ""}${item.name}`; const meta=document.createElement("small"); meta.textContent=`Line type ${item.payload.line_type} · Updated ${item.updatedAt ? new Date(item.updatedAt).toLocaleString() : "unknown"}`; info.append(title,meta); const actions=document.createElement("div"); actions.className="workspaceConfigurationActions"; const action=(label,fn,cls="secondary")=>{const b=document.createElement("button");b.type="button";b.className=cls;b.textContent=label;b.addEventListener("click",fn);actions.append(b);}; action("Load",()=>previewWorkspaceConfiguration(item)); action("Update",()=>openWorkspaceConfigurationDialog("update",item)); action("Rename",()=>openWorkspaceConfigurationDialog("rename",item)); action("Duplicate",()=>openWorkspaceConfigurationDialog("duplicate",item)); if(kind==="recipe") action(item.favorite?"Unfavorite":"Favorite",()=>mutateWorkspaceConfiguration("favorite",item,!item.favorite)); action("Delete",()=>{if(confirm(`Delete shared configuration “${item.name}”?`)) mutateWorkspaceConfiguration("delete",item);},"danger"); row.append(info,actions); host.append(row); });
+    };
+    if(!workspaceConfigurations){ workspaceConfigurationStatus("Shared configurations service is unavailable."); return; }
+    renderList(profiles,workspaceConfigurations.listReceiverWeightProfiles(workspaceId).items,"profile");
+    renderList(recipes,workspaceConfigurations.listRecipes(workspaceId).items,"recipe");
+    workspaceConfigurationStatus("Showing shared configurations for the current RT Sync workspace.");
+  }
+  async function refreshWorkspaceConfigurations(){
+    const workspaceId=lineSync?.getState?.().selectedWorkspaceId || "";
+    if(!workspaceId || !workspaceConfigurations || workspaceConfigurationRefreshInFlight) return;
+    workspaceConfigurationRefreshInFlight=true; workspaceConfigurationStatus("Refreshing shared configurations…"); renderWorkspaceConfigurations(lineSync.getState());
+    const result=await workspaceConfigurations.refresh(workspaceId);
+    workspaceConfigurationRefreshInFlight=false;
+    if(workspaceId !== lineSync?.getState?.().selectedWorkspaceId) return;
+    renderWorkspaceConfigurations(lineSync.getState());
+    if(!result.ok) workspaceConfigurationStatus(result.cache?.cachedAt ? "Refresh failed; showing cached shared configurations." : "Shared configurations are unavailable right now.");
+  }
+  function previewWorkspaceConfiguration(item){
+    const dialog=$("workspaceConfigurationLoadDialog"), details=$("workspaceConfigurationLoadDetails"), confirm=$("workspaceConfigurationConfirmLoad"); if(!dialog?.showModal) return;
+    const recipe=item.type==="recipe";
+    const lineChange=recipe && Number(item.payload.line_type)!==Number(state.lineType)?` This recipe changes the line type from ${state.lineType} to ${item.payload.line_type}.`:"";
+    details.textContent=recipe ? `${item.name}. This will change line type, hopper naming mode, layer percentages, hopper resin assignments, and hopper blend percentages.${lineChange} It will not change receiver hopper weights, tracking selections, pump-off state, offsets, timeline/runtime state, workspace, RT Sync identity, or appearance preferences.` : `${item.name}. This will change receiver hopper weights only. It will not change line type, layer percentages, resin assignments, hopper blend percentages, tracking, pump-off state, timeline/runtime state, workspace, or RT Sync state.`;
+    confirm.textContent=recipe?"Load Recipe":"Load Weights";
+    dialog.addEventListener("close",()=>{ if(dialog.returnValue==="load") applyWorkspaceConfiguration(item); },{once:true}); dialog.showModal();
+  }
+  function applyWorkspaceConfiguration(item){
+    const helper=item.type==="recipe"?window.PolynWorkspaceConfigurationPayloads?.applyRecipePayload:window.PolynWorkspaceConfigurationPayloads?.applyReceiverWeightProfile;
+    const result=helper?.(state,item.payload); if(!result?.ok){ workspaceConfigurationStatus(result?.errors?.[0] || "This shared configuration could not be loaded."); return; }
+    if(item.type==="recipe"){ const lineType=$("lineType"); if(lineType) lineType.value=String(state.lineType); }
+    renderWeightsArea(); renderSplitsArea(); validateAndCompute(); saveSession(); notifyActiveJobMutation({immediate:true,kind:"load-workspace-configuration"});
+    workspaceConfigurationStatus(`${item.type==="recipe"?"Recipe":"Receiver Weight Profile"} loaded successfully.`);
+  }
+  function openWorkspaceConfigurationDialog(mode,item=null){
+    const dialog=$("workspaceConfigurationSaveDialog"), title=$("workspaceConfigurationSaveTitle"), detail=$("workspaceConfigurationSaveDetails"), name=$("workspaceConfigurationName"), confirm=$("workspaceConfigurationSaveConfirm"); if(!dialog?.showModal) return;
+    const type=item?.type || (mode==="save-profile" ? "receiver_weight_profile" : "recipe");
+    workspaceConfigurationPending={mode,item,type};
+    title.textContent=mode==="rename"?"Rename shared configuration":mode==="duplicate"?"Duplicate shared configuration":mode==="update"?"Update shared configuration":type==="recipe"?"Save Current Recipe":"Save Current Weights";
+    detail.textContent=type==="recipe"?"This will save line type, layer percentages, resin assignments, and hopper percentages. It will not save receiver weights, tracking, pump-off, timeline, or runtime state.":"This will save receiver hopper weights. It will not save recipe assignments, percentages, or runtime state.";
+    name.value=item?.name || ""; confirm.textContent=mode==="rename"?"Rename":mode==="duplicate"?"Duplicate":mode==="update"?"Update":"Save";
+    dialog.addEventListener("close",()=>{if(dialog.returnValue==="save") void submitWorkspaceConfigurationDialog();},{once:true}); dialog.showModal(); name.focus();
+  }
+  async function submitWorkspaceConfigurationDialog(){
+    const pending=workspaceConfigurationPending, name=$("workspaceConfigurationName")?.value?.trim() || ""; if(!pending || !name) return;
+    if(pending.mode==="rename") return mutateWorkspaceConfiguration("rename",pending.item,name);
+    if(pending.mode==="duplicate") return mutateWorkspaceConfiguration("duplicate",pending.item,name);
+    if(pending.mode==="update") return mutateWorkspaceConfiguration("update",pending.item);
+    const payload=pending.type==="recipe"?window.PolynWorkspaceConfigurationPayloads?.createRecipePayload(state):window.PolynWorkspaceConfigurationPayloads?.createReceiverWeightProfile(state);
+    const result=await workspaceConfigurations?.create(workspaceConfigurationWorkspaceId,pending.type,name,payload);
+    if(result?.code==="duplicate_name") return resolveWorkspaceConfigurationDuplicate(pending.type,name,payload);
+    finishWorkspaceConfigurationMutation(result,"Configuration saved successfully.");
+  }
+  function resolveWorkspaceConfigurationDuplicate(type,name,payload){
+    const dialog=$("workspaceConfigurationDuplicateDialog"); if(!dialog?.showModal) return; dialog.addEventListener("close",async()=>{if(dialog.returnValue==="choose") openWorkspaceConfigurationDialog(type==="recipe"?"save-recipe":"save-profile"); if(dialog.returnValue==="update"){const list=type==="recipe"?workspaceConfigurations.listRecipes(workspaceConfigurationWorkspaceId).items:workspaceConfigurations.listReceiverWeightProfiles(workspaceConfigurationWorkspaceId).items; const existing=list.find(item=>item.normalizedName===name.toLocaleLowerCase().replace(/\s+/g," ")); if(existing) finishWorkspaceConfigurationMutation(await workspaceConfigurations.update(workspaceConfigurationWorkspaceId,existing.id,payload),"Configuration updated successfully.");}},{once:true}); dialog.showModal();
+  }
+  async function mutateWorkspaceConfiguration(action,item,value){
+    const service=workspaceConfigurations; if(!service) return;
+    const result=action==="update"?await service.update(workspaceConfigurationWorkspaceId,item.id,item.type==="recipe"?window.PolynWorkspaceConfigurationPayloads.createRecipePayload(state):window.PolynWorkspaceConfigurationPayloads.createReceiverWeightProfile(state)):action==="rename"?await service.rename(workspaceConfigurationWorkspaceId,item.id,value):action==="duplicate"?await service.duplicate(workspaceConfigurationWorkspaceId,item.id,value):action==="delete"?await service.delete(workspaceConfigurationWorkspaceId,item.id):await service.setFavorite(workspaceConfigurationWorkspaceId,item.id,value);
+    finishWorkspaceConfigurationMutation(result,action==="delete"?"Configuration deleted.":action==="favorite"?"Recipe favorite updated.":action==="rename"?"Configuration renamed.":action==="duplicate"?"Configuration duplicated.":"Configuration updated successfully.");
+  }
+  function finishWorkspaceConfigurationMutation(result,message){ if(result?.ok){ workspaceConfigurationStatus(message); renderWorkspaceConfigurations(lineSync?.getState?.()||{}); } else workspaceConfigurationStatus(result?.message || "Shared configuration could not be changed."); }
   let resinCatalogRecords = resinCatalog?.getResins?.() || [];
   let commonResinNames = resinCatalogRecords.map(resin=>resin.resin_code);
   resinCatalog?.subscribe?.(resins=>{
@@ -2726,6 +2802,9 @@
         memberHost.appendChild(row);
       });
     }
+    const workspaceChanged = workspaceConfigurationWorkspaceId !== (syncState.selectedWorkspaceId || "");
+    renderWorkspaceConfigurations(syncState);
+    if (workspaceChanged && syncState.selectedWorkspaceId) void refreshWorkspaceConfigurations();
   }
 
   function resolveLineSyncConflict(conflict){
@@ -2783,6 +2862,18 @@
         onStorageError: showStorageWarning
       }
     });
+    if (window.PolynWorkspaceConfigurations){
+      workspaceConfigurations = window.PolynWorkspaceConfigurations.create({
+        storage: localStorage,
+        getTransport: ()=>lineSync?.getWorkspaceConfigurationTransport?.()
+      });
+      workspaceConfigurations.subscribe(snapshot=>{
+        if (snapshot.workspaceId === lineSync?.getState?.().selectedWorkspaceId) renderWorkspaceConfigurations(lineSync.getState());
+      });
+      $("workspaceConfigurationsRefresh")?.addEventListener("click",()=>void refreshWorkspaceConfigurations());
+      $("workspaceSaveProfile")?.addEventListener("click",()=>openWorkspaceConfigurationDialog("save-profile"));
+      $("workspaceSaveRecipe")?.addEventListener("click",()=>openWorkspaceConfigurationDialog("save-recipe"));
+    }
 
     $("lineSyncWorkspaceSelect")?.addEventListener("change",event=>{
       if (event.target.value) runLineSyncAction(()=>lineSync.selectWorkspace(event.target.value));

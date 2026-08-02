@@ -19,6 +19,7 @@
 <script src="supabase-config.js?v=0.18" defer></script>
 <script src="sync-storage.js?v=0.18" defer></script>
 <script src="cloud-sync.js?v=0.18.5" defer></script>
+<script src="workspace-configurations-service.js?v=0.21.0" defer></script>
 <script src="resin-data.js?v=0.16.2" defer></script>
 <script src="resin-description-info.js?v=0.16.1" defer></script>
 <script src="resin-catalog-service.js?v=0.19.0" defer></script>
@@ -578,6 +579,12 @@
     </summary>
 
     <div class="blockBody">
+      <section class="workspaceConfigurations" aria-labelledby="workspaceConfigurationsTitle">
+        <div class="workspaceConfigurationHeading"><div><div id="workspaceConfigurationsTitle" class="layerTitle">Shared Workspace Configurations</div><div id="workspaceConfigurationsStatus" class="muted" role="status">Connect to an RT Sync workspace to view shared weight profiles and recipes.</div></div><button id="workspaceConfigurationsRefresh" class="secondary" type="button">Refresh shared items</button></div>
+        <section class="workspaceConfigurationSection" aria-labelledby="workspaceProfilesTitle"><div class="workspaceConfigurationSectionTitle"><div><strong id="workspaceProfilesTitle">Receiver Weight Profiles</strong><small>Shared receiver hopper weights for this RT Sync workspace.</small></div><button id="workspaceSaveProfile" class="secondary" type="button">Save Current Weights</button></div><div id="workspaceProfilesList" class="workspaceConfigurationList"></div></section>
+        <section class="workspaceConfigurationSection" aria-labelledby="workspaceRecipesTitle"><div class="workspaceConfigurationSectionTitle"><div><strong id="workspaceRecipesTitle">Recipes</strong><small>Shared recipe assignments for this RT Sync workspace.</small></div><button id="workspaceSaveRecipe" class="secondary" type="button">Save Current Recipe</button></div><div id="workspaceRecipesList" class="workspaceConfigurationList"></div></section>
+      </section>
+      <hr class="workspaceConfigurationDivider" />
       <div class="muted">Save/load typical setups. Export/import JSON for sharing.</div>
 
       <div class="grid2 mt10">
@@ -944,6 +951,11 @@
     </div>
   </form>
 </dialog>
+<dialog id="workspaceConfigurationLoadDialog" class="lineSyncConflictDialog" aria-labelledby="workspaceConfigurationLoadTitle">
+  <form method="dialog"><div id="workspaceConfigurationLoadTitle" class="layerTitle">Load configuration</div><div id="workspaceConfigurationLoadDetails" class="muted mt10"></div><div class="segmentedActionToolbar mt10"><div class="segmentedActionRow"><button value="cancel" class="secondary" type="submit">Cancel</button><button id="workspaceConfigurationConfirmLoad" value="load" class="primary" type="submit">Load</button></div></div></form>
+</dialog>
+<dialog id="workspaceConfigurationSaveDialog" class="lineSyncConflictDialog" aria-labelledby="workspaceConfigurationSaveTitle"><form method="dialog"><div id="workspaceConfigurationSaveTitle" class="layerTitle">Save configuration</div><div id="workspaceConfigurationSaveDetails" class="muted mt10"></div><label class="mt10" for="workspaceConfigurationName">Name</label><input id="workspaceConfigurationName" maxlength="100" type="text" /><div class="segmentedActionToolbar mt10"><div class="segmentedActionRow"><button value="cancel" class="secondary" type="submit">Cancel</button><button id="workspaceConfigurationSaveConfirm" value="save" class="primary" type="submit">Save</button></div></div></form></dialog>
+<dialog id="workspaceConfigurationDuplicateDialog" class="lineSyncConflictDialog" aria-labelledby="workspaceConfigurationDuplicateTitle"><form method="dialog"><div id="workspaceConfigurationDuplicateTitle" class="layerTitle">Configuration name already exists</div><div class="muted mt10">A configuration with this name already exists.</div><div class="segmentedActionToolbar mt10"><div class="segmentedActionRow"><button value="cancel" class="secondary" type="submit">Cancel</button><button value="choose" class="secondary" type="submit">Choose Another Name</button><button value="update" class="primary" type="submit">Update Existing</button></div></div></form></dialog>
 
 <dialog id="adminLoginDialog" class="adminDialog" aria-labelledby="adminLoginTitle">
   <form id="adminLoginForm" class="adminForm">

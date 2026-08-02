@@ -743,6 +743,15 @@
       await reconcileSelected({ forceRemote: true });
     }
 
+    function getWorkspaceConfigurationTransport(){
+      if (!client || !state.available || !state.userId) return null;
+      return Object.freeze({
+        list: (workspaceId, fields) => client.from("workspace_configurations")
+          .select(fields).eq("workspace_id", workspaceId),
+        rpc: (name, args) => client.rpc(name, args)
+      });
+    }
+
     if (typeof window !== "undefined"){
       window.addEventListener("online", retry);
       document.addEventListener("visibilitychange", ()=>{ if (!document.hidden) retry(); });
@@ -751,6 +760,7 @@
     return {
       initialize,
       getState: ()=>JSON.parse(JSON.stringify(state)),
+      getWorkspaceConfigurationTransport,
       notifyActiveJobMutation,
       notifySavedSetupUpsert,
       notifySavedSetupRename,
