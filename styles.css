@@ -287,7 +287,7 @@ main{
 .resinToolsLogo .rtPellet{fill:#fabd2f}
 .resinToolsLogo .rtDivider{fill:#d65d0e}
 .resinToolsLogo .resinToolsWord text{font:900 70px/1 "Arial Narrow","Roboto Condensed",Arial,sans-serif;letter-spacing:-3px}
-.resinToolsSidebarIcon{display:block;width:110px;height:auto;color:var(--text);overflow:visible}
+.resinToolsSidebarIcon{display:block;width:137.5px;height:auto;color:var(--text);overflow:visible}
 .resinToolsSidebarIcon .rtInk{fill:currentColor}
 .resinToolsSidebarIcon .rtBracket{fill:none;stroke:#689d6a;stroke-width:8}
 .resinToolsSidebarIcon .rtPellet{fill:#fabd2f}

@@ -50,11 +50,11 @@
       layers: [],
       prodResinLb: 0,
       scrapResinLb: 0,
-      density: "comfort",
+      density: "spacious",
       theme: "light",
       timeFormat: "12",
-      surfaceStyle: "divided",
-      timelineStyle: "event-rail",
+      surfaceStyle: "layered-flat",
+      timelineStyle: "command-rows",
       gauge: 0,
       hopperNamingLine9: "standard", // "standard" | "main"
       showPumpOffTracked: false, // show pump-off items in Timeline
@@ -526,7 +526,7 @@
 
     function applyDensity(d){
       const allowed = new Set(["spacious","comfort","compact","dense","maximum"]);
-      const density = allowed.has(String(d)) ? String(d) : "comfort";
+      const density = allowed.has(String(d)) ? String(d) : "spacious";
       document.body.setAttribute("data-density", density);
       const sel = $("densitySel");
       if (sel) sel.value = density;
@@ -542,7 +542,7 @@
 
     function applySurfaceStyle(value){
       const allowed = new Set(["elevated", "flat", "layered-flat", "accent-frame", "divided", "low-elevation"]);
-      const surfaceStyle = allowed.has(String(value)) ? String(value) : "divided";
+      const surfaceStyle = allowed.has(String(value)) ? String(value) : "layered-flat";
       state.surfaceStyle = surfaceStyle;
       document.body.setAttribute("data-surface-style", surfaceStyle);
       const sel = $("surfaceStyleSel");
@@ -551,7 +551,7 @@
 
     function applyTimelineStyle(value){
       const allowed = new Set(["soft-cards", "event-rail", "data-strips", "priority-lane", "divided-list", "command-rows"]);
-      const timelineStyle = allowed.has(String(value)) ? String(value) : "event-rail";
+      const timelineStyle = allowed.has(String(value)) ? String(value) : "command-rows";
       state.timelineStyle = timelineStyle;
       document.body.setAttribute("data-timeline-style", timelineStyle);
       const sel = $("timelineStyleSel");
@@ -570,10 +570,10 @@
       state.scrapResinLb = clampNum(payload.scrapResinLb);
 
       applyTheme(payload.theme || "light");
-      applyDensity(payload.density || "comfort");
+      applyDensity(payload.density || "spacious");
       applyTimeFormat(payload.timeFormat || "12");
-      applySurfaceStyle(payload.surfaceStyle || "divided");
-      applyTimelineStyle(payload.timelineStyle || "event-rail");
+      applySurfaceStyle(payload.surfaceStyle || "layered-flat");
+      applyTimelineStyle(payload.timelineStyle || "command-rows");
       $("lineRate").value = String(state.lineRate);
       // Custom toggles
       state.hopperNamingLine9 = (payload.hopperNamingLine9 === "main") ? "main" : "standard";
@@ -2995,11 +2995,11 @@
 
       const restored = loadSession();
       if (!restored){
-        applyDensity("comfort");
+        applyDensity("spacious");
         applyTheme("light");
         applyTimeFormat("12");
-        applySurfaceStyle("divided");
-        applyTimelineStyle("event-rail");
+        applySurfaceStyle("layered-flat");
+        applyTimelineStyle("command-rows");
         rebuildUIFromState();
       }
 
@@ -3024,8 +3024,8 @@
       // Ensure theme/logo applied even after restore
       applyTheme(state.theme || "light");
       applyTimeFormat(state.timeFormat || "12");
-      applySurfaceStyle(state.surfaceStyle || "divided");
-      applyTimelineStyle(state.timelineStyle || "event-rail");
+      applySurfaceStyle(state.surfaceStyle || "layered-flat");
+      applyTimelineStyle(state.timelineStyle || "command-rows");
       saveSession();
       setupLineSync();
     })();
