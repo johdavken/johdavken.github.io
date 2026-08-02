@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Recipe Setup Layer Watermark Preview</title>
+  <style>
+    :root{color-scheme:dark;--page:#1d2021;--panel:#282828;--cell:#32302f;--line:#504945;--text:#ebdbb2;--muted:#a89984;--accent:#fb4934;--green:#689d6a}
+    *{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--text);font:14px/1.45 system-ui,sans-serif}header{padding:26px clamp(18px,5vw,54px);border-bottom:1px solid var(--line)}h1{margin:0;font:900 clamp(25px,5vw,42px)/1 ui-monospace,monospace;letter-spacing:-.055em}header p{margin:8px 0 0;color:var(--muted)}main{width:min(1180px,100%);margin:auto;padding:24px}.comparison{display:grid;grid-template-columns:1fr 1fr;gap:18px}.card{overflow:hidden;border:1px solid var(--line);border-radius:11px;background:var(--panel)}.cardHead{padding:13px 15px;border-bottom:1px solid var(--line)}.cardHead strong{display:block}.cardHead span{color:var(--muted);font-size:12px}.surface{padding:20px}.surface.light{--surface:#f5f4f3;--surface2:#fff;--ink:#657784;--sub:#7c858b;--rule:#d8dde0;--wash:#607d9b}.surface.dark{--surface:#111a22;--surface2:#18242e;--ink:#eaf2ff;--sub:#91a5b5;--rule:#30404d;--wash:#8aa8c2;background:var(--surface)}.surface.light{background:var(--surface)}.label{margin-bottom:9px;color:var(--sub);font:800 10px ui-monospace,monospace;letter-spacing:.09em}.matrix{display:grid;grid-template-columns:repeat(5,minmax(86px,1fr));overflow:hidden;border:1px solid var(--rule);border-radius:9px;background:var(--surface2)}.layer{position:relative;min-height:108px;padding:8px;border-right:1px solid var(--rule);text-align:center}.layer:last-child{border-right:0}.plain .letter{color:var(--ink);font-size:22px;font-weight:950;line-height:1}.plain .pct{margin-top:5px;color:var(--sub);font:700 14px ui-monospace,monospace}.copy{position:absolute;right:0;bottom:8px;left:0;color:var(--sub);font-size:10px}.watermark .layer::before{content:attr(data-layer);position:absolute;top:4px;left:50%;transform:translateX(-50%);color:var(--wash);font:950 70px/.9 "Arial Narrow",Impact,sans-serif;opacity:.13;pointer-events:none}.watermark .pct{position:relative;z-index:1;margin-top:34px;color:var(--ink);font:900 17px ui-monospace,monospace;text-shadow:0 1px 0 var(--surface2)}.watermark .copy{z-index:1}.note{margin-top:18px;padding:13px 15px;border-left:4px solid var(--green);background:var(--panel);color:var(--muted)}@media(max-width:800px){.comparison{grid-template-columns:1fr}.matrix{grid-template-columns:repeat(5,minmax(66px,1fr))}.layer{min-height:100px;padding:6px}.watermark .layer::before{font-size:60px}}
+    .watermark .letter{display:none}
+  </style>
+</head>
+<body>
+  <header><h1>RECIPE SETUP // LAYER WATERMARK</h1><p>Header-only treatment. No changes have been made to the application.</p></header>
+  <main>
+    <section class="comparison">
+      <article class="card">
+        <div class="cardHead"><strong>Current direction</strong><span>Letter and percentage share the foreground.</span></div>
+        <div class="surface light"><div class="label">LIGHT THEME</div><div class="matrix plain" data-matrix></div></div>
+        <div class="surface dark"><div class="label">DARK THEME</div><div class="matrix plain" data-matrix></div></div>
+      </article>
+      <article class="card">
+        <div class="cardHead"><strong>Ghosted layer letter</strong><span>The letter becomes orientation; percentage remains the readable value.</span></div>
+        <div class="surface light"><div class="label">LIGHT THEME</div><div class="matrix watermark" data-matrix></div></div>
+        <div class="surface dark"><div class="label">DARK THEME</div><div class="matrix watermark" data-matrix></div></div>
+      </article>
+    </section>
+    <div class="note">Recommended implementation: 13% opacity, header cells only, with the percentage kept above the watermark.</div>
+  </main>
+  <script>
+    const values=[['A','20',''],['B','15',''],['C','30','Copy B → C'],['D','15','Copy B → D'],['E','20','Copy A → E']];
+    document.querySelectorAll('[data-matrix]').forEach(matrix=>values.forEach(([letter,pct,copy])=>matrix.insertAdjacentHTML('beforeend',`<div class="layer" data-layer="${letter}"><div class="letter">${letter}</div><div class="pct">${pct}%</div><div class="copy">${copy}</div></div>`)));
+  </script>
+</body>
+</html>
