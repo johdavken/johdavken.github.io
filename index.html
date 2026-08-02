@@ -23,8 +23,8 @@
 <script src="resin-catalog-service.js?v=0.19.0" defer></script>
 <script src="resin-lookup.js?v=0.18.1" defer></script>
 <script src="resin-admin.js?v=0.20.0" defer></script>
-<script src="resin-admin-ui.js?v=0.20.0" defer></script>
 <script src="app.js?v=0.18.42" defer></script>
+<script src="resin-admin-ui.js?v=0.20.0" defer></script>
 
 
 </head>
@@ -271,7 +271,7 @@
       <span>Admin Login</span>
       <small>Resin database</small>
     </button>
-    <button id="resinDatabaseButton" class="workspaceNavButton adminNavButton" type="button" hidden>
+    <button id="resinDatabaseButton" class="workspaceNavButton adminNavButton" type="button" data-workspace-target="resinAdminBlock" hidden>
       <span>Resin Database</span>
       <small>Catalog editor</small>
     </button>
@@ -901,6 +901,32 @@
       </div>
     </div>
   </details>
+
+  <details class="block card workspacePanel adminResinPanel" id="resinAdminBlock">
+    <summary>
+      <div class="sumLeft"><div class="chev"></div><div class="summaryText"><div class="layerTitle">Resin Database</div><div class="layerMeta">Manage active and inactive catalog records</div></div></div>
+    </summary>
+    <div class="blockBody adminResinWorkspace">
+      <div class="adminToolbar"><input id="adminResinSearch" type="search" placeholder="Search code or description"><button id="addResinButton" type="button">Add resin</button></div>
+      <div id="adminResinMessage" class="tiny" role="status"></div>
+      <div class="adminResinColumns">
+        <div class="adminResinListPane"><div id="adminResinList" class="adminResinList" aria-live="polite"></div></div>
+        <form id="adminResinForm" class="adminResinForm" hidden>
+          <input id="adminResinId" type="hidden">
+          <div class="layerTitle" id="adminResinFormTitle">Edit resin</div>
+          <div class="adminFieldGrid">
+            <label>Resin code<input id="adminResinCode" required maxlength="100"></label>
+            <label>Density (g/cm³)<input id="adminResinDensity" inputmode="decimal" placeholder="Blank if unknown"></label>
+            <label>Display description<input id="adminResinDescription" maxlength="500"></label>
+            <label class="adminActiveField">Status<select id="adminResinActive"><option value="true" selected>Active</option><option value="false">Inactive</option></select></label>
+          </div>
+          <label>Information description<textarea id="adminResinInformation" maxlength="10000"></textarea></label>
+          <div id="adminResinFormMessage" class="tiny" role="status"></div>
+          <div class="buttonRow"><button id="adminResinSave" type="submit">Save resin</button><button id="adminResinCancel" class="secondary" type="button">Cancel</button></div>
+        </form>
+      </div>
+    </div>
+  </details>
   </div>
 
 </main>
@@ -928,27 +954,6 @@
   </form>
 </dialog>
 
-<dialog id="resinAdminDialog" class="adminDialog resinAdminDialog" aria-labelledby="resinAdminTitle">
-  <div class="adminForm resinAdminLayout">
-    <div class="dialogHead"><div><div id="resinAdminTitle" class="layerTitle">Resin Database</div><p class="muted">Manage active and inactive catalog records.</p></div><button class="secondary" type="button" data-resin-admin-close>Close</button></div>
-    <div class="adminToolbar"><input id="adminResinSearch" type="search" placeholder="Search code or description"><button id="addResinButton" type="button">Add resin</button></div>
-    <div id="adminResinMessage" class="tiny" role="status"></div>
-    <div id="adminResinList" class="adminResinList" aria-live="polite"></div>
-    <form id="adminResinForm" class="adminResinForm" hidden>
-      <input id="adminResinId" type="hidden">
-      <div class="layerTitle" id="adminResinFormTitle">Edit resin</div>
-      <div class="adminFieldGrid">
-        <label>Resin code<input id="adminResinCode" required maxlength="100"></label>
-        <label>Density (g/cm³)<input id="adminResinDensity" inputmode="decimal" placeholder="Blank if unknown"></label>
-        <label>Display description<input id="adminResinDescription" maxlength="500"></label>
-        <label class="adminActiveField">Status<select id="adminResinActive"><option value="true" selected>Active</option><option value="false">Inactive</option></select></label>
-      </div>
-      <label>Information description<textarea id="adminResinInformation" maxlength="10000"></textarea></label>
-      <div id="adminResinFormMessage" class="tiny" role="status"></div>
-      <div class="buttonRow"><button id="adminResinSave" type="submit">Save resin</button><button id="adminResinCancel" class="secondary" type="button">Cancel</button></div>
-    </form>
-  </div>
-</dialog>
 
 <footer class="footerBar">
   <div class="footerNextHopper">

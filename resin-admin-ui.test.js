@@ -24,3 +24,24 @@ test("admin UI includes login, editing, active state, and catalog refresh flow",
   assert.match(ui, /resin\?\.is_active \?\? true/);
   assert.match(ui, /value === "true"/);
 });
+
+test("Resin Database is an in-app workspace panel with a two-column responsive editor", () => {
+  assert.match(index, /id="resinDatabaseButton"[^>]*data-workspace-target="resinAdminBlock"/);
+  assert.match(index, /<details class="block card workspacePanel adminResinPanel" id="resinAdminBlock">/);
+  assert.match(index, /class="adminResinColumns"/);
+  assert.doesNotMatch(index, /id="resinAdminDialog"/);
+  assert.doesNotMatch(ui, /resinAdminDialog/);
+  const styles = fs.readFileSync("styles.css", "utf8");
+  assert.match(styles, /\.adminResinColumns\{ display:grid; grid-template-columns:/);
+  assert.match(styles, /@media \(max-width: 760px\)\{[\s\S]*\.adminResinColumns\{ grid-template-columns: 1fr; \}/);
+});
+
+test("selected inactive rows remain visible and sign-out exits the admin panel", () => {
+  assert.match(ui, /let selectedResinId = ""/);
+  assert.match(ui, /" selected"/);
+  assert.match(ui, /" inactive"/);
+  assert.match(ui, /data-workspace-target="resultsBlock"/);
+  assert.match(ui, /selectedResinId = result\.resin\.id/);
+  assert.match(ui, /adminResinSave/);
+  assert.match(ui, /adminResinCancel/);
+});

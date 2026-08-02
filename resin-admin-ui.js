@@ -5,6 +5,7 @@
   if (!serviceApi) return;
   const admin = serviceApi.create({ catalog: root.PolynResinCatalog });
   let resins = [];
+  let selectedResinId = "";
 
   function setMessage(id, message, type = ""){
     const el = $(id);
@@ -18,7 +19,14 @@
     $("adminLoginButton").hidden = initializing || adminAccess;
     $("resinDatabaseButton").hidden = !adminAccess;
     $("adminSignOutButton").hidden = !adminAccess;
-    if (!adminAccess){ $("resinAdminDialog")?.close(); $("adminResinForm").hidden = true; }
+    if (!adminAccess){
+      const panel = $("resinAdminBlock");
+      if (panel?.classList.contains("desktop-active") || panel?.open) document.querySelector('[data-workspace-target="resultsBlock"]')?.click();
+      panel?.classList.remove("desktop-active");
+      if (panel) panel.open = false;
+      selectedResinId = "";
+      $("adminResinForm").hidden = true;
+    }
   }
   function filteredResins(){
     const query = $("adminResinSearch")?.value.trim().toLocaleLowerCase() || "";
@@ -32,7 +40,7 @@
     filteredResins().forEach(resin => {
       const row = document.createElement("button");
       row.type = "button";
-      row.className = `adminResinRow${resin.is_active ? "" : " inactive"}`;
+      row.className = `adminResinRow${resin.is_active ? "" : " inactive"}${resin.id === selectedResinId ? " selected" : ""}`;
       row.textContent = `${resin.resin_code} — ${resin.display_description || "Unknown description"}${resin.is_active ? "" : " (inactive)"}`;
       row.addEventListener("click", ()=>showForm(resin));
       list.appendChild(row);
@@ -40,6 +48,8 @@
     if (!list.children.length) list.textContent = "No matching resin records.";
   }
   function showForm(resin){
+    selectedResinId = resin?.id || "";
+    renderList();
     $("adminResinForm").hidden = false;
     $("adminResinFormTitle").textContent = resin ? "Edit resin" : "Add resin";
     $("adminResinId").value = resin?.id || "";
@@ -51,7 +61,7 @@
     setMessage("adminResinFormMessage", "");
     $("adminResinCode").focus();
   }
-  function hideForm(){ $("adminResinForm").hidden = true; $("adminResinForm").reset(); }
+  function hideForm(){ selectedResinId = ""; $("adminResinForm").hidden = true; $("adminResinForm").reset(); renderList(); }
   async function loadResins(){
     setMessage("adminResinMessage", "Loading resin database…");
     const result = await admin.listResins();
@@ -79,10 +89,9 @@
   });
   $("resinDatabaseButton")?.addEventListener("click", async ()=>{
     if (!admin.getState().isAdmin) return;
-    $("resinAdminDialog")?.showModal(); hideForm(); await loadResins();
+    $("resinAdminBlock").open = true; hideForm(); await loadResins();
   });
   $("adminSignOutButton")?.addEventListener("click", ()=>admin.signOut());
-  document.querySelectorAll("[data-resin-admin-close]").forEach(button=>button.addEventListener("click", ()=>$("resinAdminDialog")?.close()));
   $("adminResinSearch")?.addEventListener("input", renderList);
   $("addResinButton")?.addEventListener("click", ()=>showForm(null));
   $("adminResinCancel")?.addEventListener("click", hideForm);
@@ -101,8 +110,10 @@
     const result = await admin.saveResin(id || null, values);
     save.disabled = false;
     if (!result.ok){ setMessage("adminResinFormMessage", result.message, "bad"); return; }
+    selectedResinId = result.resin.id;
     setMessage("adminResinMessage", "Resin saved. The active catalog has been refreshed.", "ok");
-    hideForm(); await loadResins();
+    await loadResins();
+    showForm(resins.find(resin=>resin.id === selectedResinId) || result.resin);
   });
   admin.initialize();
 })(typeof globalThis !== "undefined" ? globalThis : this);

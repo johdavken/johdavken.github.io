@@ -530,7 +530,7 @@ main{
 }
 .adminNavButton{ margin-top: 2px; }
 .adminNavButton[hidden]{ display: none !important; }
-.adminDialog{ width: min(94vw, 1040px); max-height: min(88vh, 900px); border: 1px solid var(--border2); border-radius: var(--radius-card); background: var(--panel); color: var(--text); padding: 0; }
+.adminDialog{ width: min(94vw, 560px); border: 1px solid var(--border2); border-radius: var(--radius-card); background: var(--panel); color: var(--text); padding: 0; }
 .adminDialog::backdrop{ background: rgba(0,0,0,.58); }
 .adminForm{ display: grid; gap: 13px; padding: 20px; }
 .dialogHead{ display: flex; align-items: start; justify-content: space-between; gap: 14px; }
@@ -539,12 +539,15 @@ main{
 .adminFieldGrid{ grid-template-columns: repeat(2,minmax(0,1fr)); }
 .adminFieldGrid label,.adminForm > label{ display: grid; gap: 5px; }
 .adminActiveField{ align-self: end; min-height: 38px; }
-.adminResinList{ display: grid; gap: 5px; max-height: 34vh; overflow: auto; border: 1px solid var(--border); border-radius: var(--radius-row); padding: 7px; }
+.adminResinColumns{ display:grid; grid-template-columns:minmax(260px,.9fr) minmax(360px,1.1fr); gap:16px; align-items:start; }
+.adminResinListPane{ min-height:0; }
+.adminResinList{ display: grid; gap: 5px; max-height: min(58vh, 620px); overflow: auto; border: 1px solid var(--border); border-radius: var(--radius-row); padding: 7px; }
 .adminResinRow{ text-align: left; background: var(--row-bg); color: var(--text); border: 1px solid transparent; padding: 8px 10px; border-radius: var(--radius-row); }
 .adminResinRow:hover{ border-color: var(--focus-border); }
+.adminResinRow.selected{ border-color: var(--focus-border); background: var(--focus-ring); }
 .adminResinRow.inactive{ opacity: .58; text-decoration: line-through; }
-.adminResinForm{ display: grid; gap: 11px; border-top: 1px solid var(--border); padding-top: 14px; }
-@media (max-width: 650px){ .adminFieldGrid{ grid-template-columns: 1fr; }.adminToolbar{ grid-template-columns: 1fr; }.adminDialog{ width: 96vw; } }
+.adminResinForm{ display: grid; gap: 11px; border: 1px solid var(--border); border-radius: var(--radius-card); padding: 14px; position:sticky; top:12px; }
+@media (max-width: 760px){ .adminFieldGrid,.adminToolbar,.adminResinColumns{ grid-template-columns: 1fr; }.adminResinList{ max-height: 42vh; }.adminResinForm{ position:static; }.adminDialog{ width: 96vw; } }
 
 .lineSyncStatusItem strong[data-state="synced"]{ color: var(--ok); }
 .lineSyncStatusItem strong[data-state="pending"],
