@@ -11,7 +11,7 @@
     outbox: "polyn.lineSync.outbox.v1",
     backups: "polyn.lineSync.backups.v1"
   });
-  // Read-once compatibility for devices that saved Cloud Sync state before the rename.
+  // Read-once compatibility for devices that saved sync state before the RT Sync rename.
   const LEGACY_KEYS = Object.freeze({
     settings: "resin" + "IQ.lineSync.settings.v1",
     metadata: "resin" + "IQ.lineSync.metadata.v1",

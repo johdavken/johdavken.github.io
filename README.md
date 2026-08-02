@@ -1,8 +1,8 @@
 # Polyn
 
-Polyn is a static, browser-based production utility. Browser `localStorage` is always the immediate working state; optional Supabase Cloud Sync adds remote persistence and live updates without making the application dependent on a network connection.
+Resin.Tools is a static, browser-based production utility. Browser `localStorage` is always the immediate working state; optional Supabase-backed RT Sync adds remote persistence and live updates without making the application dependent on a network connection.
 
-## Optional Cloud Sync setup
+## Optional RT Sync setup
 
 1. Create a Supabase project and enable anonymous sign-ins under Authentication.
 2. Run [`supabase/migrations/202607310001_line_sync.sql`](supabase/migrations/202607310001_line_sync.sql) in the Supabase SQL editor or through the Supabase CLI.
@@ -11,10 +11,10 @@ Polyn is a static, browser-based production utility. Browser `localStorage` is a
 
 The migration creates private workspace membership, revision-checked active jobs, revision-checked Saved Line Settings, temporary four-character linking codes stored only as keyed digests, RLS policies, and the public RPC interface used by the browser client.
 
-## Cloud Sync behavior
+## RT Sync behavior
 
 - **Disconnect on this device** stops synchronization locally and preserves membership.
-- **Leave Cloud Sync** removes the current anonymous browser identity from the line. An owner must transfer ownership first.
+- **Leave RT Sync** removes the current anonymous browser identity from the line. An owner must transfer ownership first.
 - **Remove linked device** lets an owner remove another member.
 - **Delete line workspace** permanently deletes the shared line and is owner-only.
 

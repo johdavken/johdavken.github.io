@@ -1,5 +1,5 @@
 /* =======================================================================
- *   Wechsel — Base styles (theme-agnostic)
+ *   Resin.Tools — Base styles (theme-agnostic)
  *   Put theme palettes + per-theme accents in theme.css
  *   ======================================================================= */
 
@@ -281,14 +281,23 @@ main{
   padding: 2px 12px 4px;
   border-bottom: 1px solid var(--border);
 }
-.wechselCoexLogo{display:block;width:min(100%,190px);height:auto;color:var(--text)}
-.mobileBrand .wechselCoexLogo{width:min(100%,280px)}
-.wechselCoexLogo .coexW,.wechselCoexLogo .coexWord{fill:currentColor}
-.wechselCoexLogo .coexWord{font:900 102px/1 "Open Sans Condensed","Arial Narrow",Impact,sans-serif;letter-spacing:-5px}
-.wechselCoexLogo .coexRed{fill:#cc241d}.wechselCoexLogo .coexOrange{fill:#d65d0e}.wechselCoexLogo .coexYellow{fill:#d79921}.wechselCoexLogo .coexGreen{fill:#689d6a}.wechselCoexLogo .coexBlue{fill:#458588}
-.wechselSidebarIcon{display:block;width:72px;height:72px;color:var(--text)}
-.wechselSidebarIcon .coexW{fill:currentColor}
-.wechselSidebarIcon .coexRed{fill:#cc241d}.wechselSidebarIcon .coexOrange{fill:#d65d0e}.wechselSidebarIcon .coexYellow{fill:#d79921}.wechselSidebarIcon .coexGreen{fill:#689d6a}.wechselSidebarIcon .coexBlue{fill:#458588}
+.resinToolsLogo{display:block;width:min(100%,280px);height:auto;color:var(--text)}
+.resinToolsLogo .resinToolsWord{fill:currentColor}
+.resinToolsLogo .rtBracket{fill:none;stroke:#689d6a;stroke-width:10;stroke-linecap:square;stroke-linejoin:miter}
+.resinToolsLogo .rtPellet{fill:#fabd2f}
+.resinToolsLogo .rtDivider{fill:#d65d0e}
+.resinToolsLogo .resinToolsWord text{font:900 70px/1 "Arial Narrow","Roboto Condensed",Arial,sans-serif;letter-spacing:-3px}
+.resinToolsSidebarIcon{display:block;width:110px;height:auto;color:var(--text);overflow:visible}
+.resinToolsSidebarIcon .rtInk{fill:currentColor}
+.resinToolsSidebarIcon .rtBracket{fill:none;stroke:#689d6a;stroke-width:8}
+.resinToolsSidebarIcon .rtPellet{fill:#fabd2f}
+:where(html,body)[data-theme="light"] :is(.resinToolsLogo,.resinToolsSidebarIcon),
+:where(html,body)[data-theme="mse"] :is(.resinToolsLogo,.resinToolsSidebarIcon),
+:where(html,body)[data-theme="gruvbox-light"] :is(.resinToolsLogo,.resinToolsSidebarIcon),
+:where(html,body)[data-theme="solarized-light"] :is(.resinToolsLogo,.resinToolsSidebarIcon),
+:where(html,body)[data-theme="catppuccin-latte"] :is(.resinToolsLogo,.resinToolsSidebarIcon){
+  color:#657784;
+}
 .workspaceBrandLogo{ display: block; width: min(100%, 196px); height: auto; }
 .workspaceBrandLogo path{ stroke-linecap: round; stroke-linejoin: round; }
 .workspaceBrandLogo [class^="polynFlow"]{ fill: none; stroke-width: 11; }

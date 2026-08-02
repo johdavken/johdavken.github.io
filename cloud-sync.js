@@ -16,7 +16,7 @@
   }
   function defaultDeviceLabel(){
     const mobile = typeof navigator !== "undefined" && /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
-    return mobile ? "Operator Phone" : "Wechsel Desktop";
+    return mobile ? "Operator Phone" : "Resin.Tools Desktop";
   }
   function isConflictError(error){
     const text = `${error?.code || ""} ${error?.message || ""} ${error?.details || ""}`.toLowerCase();
@@ -35,7 +35,7 @@
       enabled,
       available: false,
       status: enabled ? "Connecting" : "Local only",
-      message: enabled ? "Preparing Cloud Sync…" : "Cloud Sync is unavailable; local mode is active.",
+      message: enabled ? "Preparing RT Sync…" : "RT Sync is unavailable; local mode is active.",
       userId: "",
       deviceLabel: "",
       connected: false,
@@ -74,7 +74,7 @@
     function settings(){ return store.getSettings(); }
     function saveSettings(next){
       const result = store.saveSettings(next);
-      if (!result.ok) adapter.onStorageError?.("Cloud Sync settings could not be saved locally.");
+      if (!result.ok) adapter.onStorageError?.("RT Sync settings could not be saved locally.");
       return result.ok;
     }
     function ensureDeviceSettings(){
@@ -97,13 +97,13 @@
       metadata.lastSyncAt = new Date().toISOString();
       const result = store.saveMetadata(metadata);
       state.lastSyncAt = metadata.lastSyncAt;
-      if (!result.ok) adapter.onStorageError?.("Cloud Sync metadata could not be saved locally.");
+      if (!result.ok) adapter.onStorageError?.("RT Sync metadata could not be saved locally.");
     }
     function saveActiveCache(workspaceId, payload){
       const { metadata, entry } = workspaceMetadata(workspaceId);
       entry.activePayload = payload;
       const result = store.saveMetadata(metadata);
-      if (!result.ok) adapter.onStorageError?.("The Cloud Sync job cache could not be saved locally.");
+      if (!result.ok) adapter.onStorageError?.("The RT Sync job cache could not be saved locally.");
     }
     function selectedId(){ return state.selectedWorkspaceId; }
     function isConnected(){
@@ -174,7 +174,7 @@
         id: uuid(), reason, workspaceId: selectedId(), createdAt: new Date().toISOString(),
         local: localPayload || null, remote: remotePayload || null
       });
-      if (!result.ok) adapter.onStorageError?.("A Cloud Sync conflict backup could not be saved.");
+      if (!result.ok) adapter.onStorageError?.("An RT Sync conflict backup could not be saved.");
     }
 
     async function applyRemoteActive(row, reason){
@@ -492,7 +492,7 @@
         .on("postgres_changes", { event: "*", schema: "public", table: "line_workspaces", filter: `id=eq.${selectedId()}` }, ()=>loadWorkspaces())
         .on("postgres_changes", { event: "*", schema: "public", table: "line_workspace_members", filter: `workspace_id=eq.${selectedId()}` }, ()=>loadMembers())
         .subscribe(status=>{
-          if (status === "SUBSCRIBED") setStatus("Synced", "Cloud Sync is connected.");
+          if (status === "SUBSCRIBED") setStatus("Synced", "RT Sync is connected.");
           else if (["CHANNEL_ERROR","TIMED_OUT"].includes(status)) setStatus("Pending", "Realtime connection will retry.");
         });
     }
@@ -515,7 +515,7 @@
       await reconcileSavedSetups({ uploadLocalMissing, replaceLocal: forceRemote && !uploadLocalMissing });
       await loadMembers();
       await subscribe();
-      setStatus("Synced", "Cloud Sync is up to date.");
+      setStatus("Synced", "RT Sync is up to date.");
     }
 
     async function selectWorkspace(workspaceId, { uploadLocalMissing = false } = {}){
@@ -566,13 +566,13 @@
         else setStatus("Local only", state.workspaces.length ? "Select a line to resume synchronization." : "Create or join a line when ready.");
       }catch(error){
         state.available = false;
-        setStatus("Local only", "Supabase is unavailable; Wechsel remains local and fully usable.");
+        setStatus("Local only", "RT Sync is unavailable; Resin.Tools remains local and fully usable.");
       }
       return state;
     }
 
     async function createWorkspace(name, deviceLabel){
-      if (!state.available) throw new Error("Cloud Sync is unavailable.");
+      if (!state.available) throw new Error("RT Sync is unavailable.");
       const current = ensureDeviceSettings();
       const workspaceName = normalizeName(name);
       current.deviceLabel = normalizeName(deviceLabel) || current.deviceLabel;
@@ -601,7 +601,7 @@
     }
 
     async function joinWorkspace(code, deviceLabel){
-      if (!state.available) throw new Error("Cloud Sync is unavailable.");
+      if (!state.available) throw new Error("RT Sync is unavailable.");
       const current = ensureDeviceSettings();
       current.deviceLabel = normalizeName(deviceLabel) || current.deviceLabel;
       saveSettings(current);
@@ -632,7 +632,7 @@
       const response = await rpc("generate_link_code", { p_workspace_id: selectedId() });
       if (response.error) throw response.error;
       const row = response.data?.[0];
-      if (!row?.link_code) throw new Error("Cloud Sync did not return a link code.");
+      if (!row?.link_code) throw new Error("RT Sync did not return a link code.");
       state.generatedCode = row.link_code;
       state.generatedCodeExpiresAt = row.expires_at;
       setStatus("Synced", "A new one-time link code is ready for 30 minutes.");
@@ -680,7 +680,7 @@
       saveSettings(current);
       await loadWorkspaces();
       if (selectedId()) await reconcileSelected({ forceRemote: true });
-      else setStatus("Local only", "This device left Cloud Sync. Local Wechsel data was preserved.");
+      else setStatus("Local only", "This device left RT Sync. Local Resin.Tools data was preserved.");
     }
 
     async function transferOwnership(userId){

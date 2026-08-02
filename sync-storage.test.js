@@ -51,7 +51,7 @@ test("persists a pending workspace-creation operation for safe retries", () => {
   });
 });
 
-test("migrates pre-Polyn Cloud Sync settings without losing the selected workspace", () => {
+test("migrates legacy sync settings without losing the selected workspace", () => {
   const storage = memoryStorage();
   const legacyKey = "resin" + "IQ.lineSync.settings.v1";
   storage.setItem(legacyKey, JSON.stringify({
