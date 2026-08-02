@@ -22,6 +22,14 @@ Each browser has an anonymous Supabase identity and a separate local device ID. 
 
 No CAPTCHA is required in the initial version. Link-code generation, hashing, expiry, and attempt limiting are isolated in the database design so additional abuse protection can be introduced later without replacing the client data model.
 
+## Resin catalog service
+
+[`resin-catalog-service.js`](resin-catalog-service.js) provides the UI-independent `PolynResinCatalog` API: `getResins()`, `getResinByCode(code)`, `refreshResins()`, `getCachedResins()`, `clearResinCache()`, and `subscribe(listener)`. `getResins()` returns immediately, prioritizing a valid local cache and then the unchanged hard-coded catalog in [`resin-data.js`](resin-data.js), while refreshing Supabase in the background. `refreshResins()` returns `{ loaded, resins, reason? }` and never discards a valid cache when Supabase is unavailable or returns invalid data.
+
+The browser cache key is `polyn.resinCatalog.v1`. Its versioned JSON envelope is `{ version: 1, cachedAt, resins }`; it contains only normalized public resin records, never Supabase configuration or credentials. Invalid JSON, an incompatible version, or invalid catalog rows are ignored safely.
+
+The next UI integration phase should call `getResins()` for an immediate catalog, use `getResinByCode()` for code lookup, and optionally `subscribe()` to redraw after a successful background refresh. That phase may replace the current UI’s direct fallback reads; this phase intentionally does not.
+
 ## Tests
 
 Run the browser-independent test suite with:
