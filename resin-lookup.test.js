@@ -6,6 +6,7 @@ const {
   formatResinResult,
   getDescriptionInformation,
   getDescriptionDetails,
+  getResinDetails,
   getResinNames,
   noDescriptionInformation
 } = require("./resin-lookup.js");
@@ -16,13 +17,13 @@ test("shares one complete, case-insensitively unique resin-name list", () => {
   assert.equal(new Set(names.map(name => name.toUpperCase())).size, names.length);
   for (const code of ["MS1230", "MS1255", "MS5006", "MS5009", "MS6000", "A2000"]){
     assert.ok(names.includes(code));
-    assert.equal(findExactResin(code).code, code);
+    assert.equal(findExactResin(code).resin_code, code);
   }
 });
 
 test("finds MS0440 by exact code", () => {
   const resin = findExactResin("MS0440");
-  assert.equal(resin.code, "MS0440");
+  assert.equal(resin.resin_code, "MS0440");
   assert.deepEqual(formatResinResult(resin), {
     description: "Med. Density Hexene",
     density: "0.926 g/cm³"
@@ -30,13 +31,13 @@ test("finds MS0440 by exact code", () => {
 });
 
 test("exact lookup ignores case and surrounding spaces", () => {
-  assert.equal(findExactResin("ms0440").code, "MS0440");
-  assert.equal(findExactResin("  MS0440 ").code, "MS0440");
+  assert.equal(findExactResin("ms0440").resin_code, "MS0440");
+  assert.equal(findExactResin("  MS0440 ").resin_code, "MS0440");
 });
 
 test("does not confuse similar exact resin codes", () => {
-  assert.equal(findExactResin("MS0700").description, "MI/MN HDPE");
-  assert.equal(findExactResin("MS0700B").description, "Blending HDPE");
+  assert.equal(findExactResin("MS0700").display_description, "MI/MN HDPE");
+  assert.equal(findExactResin("MS0700B").display_description, "Blending HDPE");
 });
 
 test("shows Unknown for missing descriptions", () => {
@@ -55,8 +56,8 @@ test("returns Unknown fields for a code that does not exist", () => {
 
 test("suggests partial codes and descriptions with exact matches first", () => {
   const similar = findResinSuggestions("MS0700");
-  assert.deepEqual(similar.slice(0, 2).map(resin => resin.code), ["MS0700", "MS0700B"]);
-  assert.ok(findResinSuggestions("density hexene").some(resin => resin.code === "MS0440"));
+  assert.deepEqual(similar.slice(0, 2).map(resin => resin.resin_code), ["MS0700", "MS0700B"]);
+  assert.ok(findResinSuggestions("density hexene").some(resin => resin.resin_code === "MS0440"));
 });
 
 test("finds material information by exact description without regard to case", () => {
@@ -103,9 +104,9 @@ test("uses resin codes for specific information when descriptions are missing", 
 test("looks up A0502 and A0503 as calcium carbonate grades", () => {
   for (const code of ["A0502", "A0503"]){
     const resin = findExactResin(code);
-    assert.equal(resin.description, "Calcium Carbonate");
+    assert.equal(resin.display_description, "Calcium Carbonate");
     assert.equal(formatResinResult(resin).density, "Unknown");
-    assert.match(getDescriptionInformation(resin.description, resin.code), /increases stiffness and opacity/i);
+    assert.match(getDescriptionInformation(resin.display_description, resin.resin_code), /increases stiffness and opacity/i);
   }
 });
 
@@ -116,4 +117,11 @@ test("returns typical uses only for material entries that provide them", () => {
   const unknown = getDescriptionDetails("Elastomer", "MS5000");
   assert.equal(unknown.information, noDescriptionInformation);
   assert.equal(unknown.typicalUses, null);
+});
+
+test("uses a catalog informational description while retaining existing typical uses", () => {
+  const resin = findExactResin("MS0440");
+  const details = getResinDetails({ ...resin, information_description: "Catalog information" });
+  assert.equal(details.information, "Catalog information");
+  assert.match(details.typicalUses, /industrial liners/i);
 });

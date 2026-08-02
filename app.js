@@ -70,6 +70,7 @@
   const $ = (id) => document.getElementById(id);
   const validation = window.PolynValidation;
   const calculators = window.PolynCalculators;
+  const resinCatalog = window.PolynResinCatalog;
   const resinLookup = window.PolynLookup;
   const activeJob = window.PolynActiveJob;
   const { parseChangeoverDate, formatTime, formatTimelineStart } = window.PolynScheduling;
@@ -84,7 +85,15 @@
   function notifyActiveJobMutation(options){
     lineSync?.notifyActiveJobMutation(options);
   }
-  const COMMON_RESIN_NAMES = Object.freeze(window.PolynLookup.getResinNames());
+  let resinCatalogRecords = resinCatalog?.getResins?.() || [];
+  let commonResinNames = resinCatalogRecords.map(resin=>resin.resin_code);
+  resinCatalog?.subscribe?.(resins=>{
+    if (resins.length === resinCatalogRecords.length
+        && resins.every((resin,index)=>resin.updated_at === resinCatalogRecords[index]?.updated_at
+          && resin.resin_code === resinCatalogRecords[index]?.resin_code)) return;
+    resinCatalogRecords = resins;
+    commonResinNames = resinCatalogRecords.map(resin=>resin.resin_code);
+  });
 
   let resinAutocompletePopup = null;
   let resinAutocompleteInput = null;
@@ -132,12 +141,12 @@
   function showResinAutocomplete(input){
     const popup = ensureResinAutocompletePopup();
     const query = input.value.trim().toUpperCase();
-    const exact = COMMON_RESIN_NAMES.filter(name=>name.toUpperCase() === query);
-    const starts = COMMON_RESIN_NAMES.filter(name=>{
+    const exact = commonResinNames.filter(name=>name.toUpperCase() === query);
+    const starts = commonResinNames.filter(name=>{
       const normalized = name.toUpperCase();
       return normalized !== query && normalized.startsWith(query);
     });
-    const contains = COMMON_RESIN_NAMES.filter(name=>{
+    const contains = commonResinNames.filter(name=>{
       const normalized = name.toUpperCase();
       return !normalized.startsWith(query) && normalized.includes(query);
     });
@@ -2499,7 +2508,7 @@
     const result = resinLookup.formatResinResult(resin);
     descriptionEl.value = result.description;
     densityEl.value = result.density;
-    const details = resinLookup.getDescriptionDetails(resin?.description, resin?.code);
+    const details = resinLookup.getResinDetails(resin);
     informationEl.value = details.typicalUses
       ? `${details.information}\n\nTypical uses:\n${details.typicalUses}`
       : details.information;
@@ -2531,7 +2540,7 @@
   function selectResinLookupMatch(resin){
     const input = $("resinLookupInput");
     if (!input) return;
-    input.value = resin.code;
+    input.value = resin.resin_code;
     renderResinLookupResult(resin);
     hideResinLookupSuggestions();
     input.focus();
@@ -2558,9 +2567,9 @@
     if (!input || !suggestions || !resinLookup) return;
 
     if (suggestions.parentElement !== document.body) document.body.appendChild(suggestions);
-    const exact = resinLookup.findExactResin(input.value);
+    const exact = resinLookup.findExactResin(input.value, resinCatalogRecords);
     renderResinLookupResult(exact);
-    resinLookupMatches = resinLookup.findResinSuggestions(input.value);
+    resinLookupMatches = resinLookup.findResinSuggestions(input.value, 20, resinCatalogRecords);
     resinLookupActiveIndex = -1;
     suggestions.replaceChildren();
 
@@ -2579,10 +2588,10 @@
 
       const code = document.createElement("span");
       code.className = "resinLookupOptionCode";
-      code.textContent = resin.code;
+      code.textContent = resin.resin_code;
       const description = document.createElement("span");
       description.className = "resinLookupOptionDescription";
-      description.textContent = resin.description || "Unknown description";
+      description.textContent = resin.display_description || "Unknown description";
       option.append(code, description);
       option.addEventListener("pointerdown", event=>event.preventDefault());
       option.addEventListener("click", ()=>selectResinLookupMatch(resin));

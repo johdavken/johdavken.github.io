@@ -28,7 +28,19 @@ No CAPTCHA is required in the initial version. Link-code generation, hashing, ex
 
 The browser cache key is `polyn.resinCatalog.v1`. Its versioned JSON envelope is `{ version: 1, cachedAt, resins }`; it contains only normalized public resin records, never Supabase configuration or credentials. Invalid JSON, an incompatible version, or invalid catalog rows are ignored safely.
 
-The next UI integration phase should call `getResins()` for an immediate catalog, use `getResinByCode()` for code lookup, and optionally `subscribe()` to redraw after a successful background refresh. That phase may replace the current UI’s direct fallback reads; this phase intentionally does not.
+The Recipe Panel and Resin Lookup call `getResins()` for an immediate catalog and use `subscribe()` to adopt a successful background refresh without polling. Future resin-facing UI should use this same service rather than reading fallback data directly.
+
+## Resin UI data flow
+
+```text
+Supabase
+  ↓
+PolynResinCatalog
+  ↓
+Recipe Panel / Resin Lookup
+```
+
+Both resin-facing UI paths now consume the same normalized catalog records from `PolynResinCatalog`. The Recipe autocomplete updates its in-memory name list after a successful background refresh; Resin Lookup uses the same current records for exact matches and suggestions. Existing hard-coded data remains the service’s offline fallback.
 
 ## Tests
 

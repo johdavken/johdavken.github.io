@@ -1,30 +1,34 @@
 (function (root, factory) {
-  const data = typeof module === "object" && module.exports
-    ? require("./resin-data.js")
-    : root.RESIN_LOOKUP_DATA;
+  const catalog = typeof module === "object" && module.exports
+    ? require("./resin-catalog-service.js")
+    : root.PolynResinCatalog;
   const descriptionInformation = typeof module === "object" && module.exports
     ? require("./resin-description-info.js")
     : root.RESIN_DESCRIPTION_INFORMATION;
-  const api = factory(data || [], descriptionInformation || {});
+  const api = factory(catalog, descriptionInformation || {});
   if (typeof module === "object" && module.exports) module.exports = api;
   if (root) root.PolynLookup = api;
-})(typeof globalThis !== "undefined" ? globalThis : this, function (resins, descriptionInformation) {
+})(typeof globalThis !== "undefined" ? globalThis : this, function (catalog, descriptionInformation) {
   "use strict";
 
   function normalizeSearch(value) {
     return String(value ?? "").trim().toLocaleUpperCase();
   }
 
-  function findExactResin(value) {
-    const query = normalizeSearch(value);
-    if (!query) return null;
-    return resins.find(resin => normalizeSearch(resin.code) === query) || null;
+  function currentResins(resins) {
+    return Array.isArray(resins) ? resins : (catalog?.getResins?.() || []);
   }
 
-  function getResinNames() {
+  function findExactResin(value, resins) {
+    const query = normalizeSearch(value);
+    if (!query) return null;
+    return currentResins(resins).find(resin => normalizeSearch(resin.resin_code) === query) || null;
+  }
+
+  function getResinNames(resins) {
     const seen = new Set();
-    return resins.reduce((names, resin) => {
-      const code = String(resin?.code ?? "").trim();
+    return currentResins(resins).reduce((names, resin) => {
+      const code = String(resin?.resin_code ?? "").trim();
       const normalized = normalizeSearch(code);
       if (normalized && !seen.has(normalized)) {
         seen.add(normalized);
@@ -34,16 +38,16 @@
     }, []);
   }
 
-  function findResinSuggestions(value, limit = 20) {
+  function findResinSuggestions(value, limit = 20, resins) {
     const query = normalizeSearch(value);
     if (!query) return [];
     const exact = [];
     const codeStarts = [];
     const other = [];
 
-    resins.forEach(resin => {
-      const code = normalizeSearch(resin.code);
-      const description = normalizeSearch(resin.description);
+    currentResins(resins).forEach(resin => {
+      const code = normalizeSearch(resin.resin_code);
+      const description = normalizeSearch(resin.display_description);
       if (code === query) exact.push(resin);
       else if (code.startsWith(query)) codeStarts.push(resin);
       else if (code.includes(query) || description.includes(query)) other.push(resin);
@@ -54,9 +58,9 @@
 
   function formatResinResult(resin) {
     return {
-      description: resin?.description || "Unknown",
-      density: Number.isFinite(resin?.density) && resin.density > 0
-        ? `${resin.density.toFixed(3)} g/cm³`
+      description: resin?.display_description || "Unknown",
+      density: Number.isFinite(resin?.density_g_cm3) && resin.density_g_cm3 > 0
+        ? `${resin.density_g_cm3.toFixed(3)} g/cm³`
         : "Unknown"
     };
   }
@@ -95,12 +99,21 @@
     return getDescriptionDetails(description, code).information;
   }
 
+  function getResinDetails(resin) {
+    const details = getDescriptionDetails(resin?.display_description, resin?.resin_code);
+    return {
+      information: resin?.information_description || details.information,
+      typicalUses: details.typicalUses
+    };
+  }
+
   return {
     normalizeSearch,
     getResinNames,
     findExactResin,
     findResinSuggestions,
     formatResinResult,
+    getResinDetails,
     getDescriptionInformation,
     getDescriptionDetails,
     noDescriptionInformation
