@@ -880,8 +880,16 @@
 
       const scroll = document.createElement("div");
       scroll.className = "weightsMatrixScroll";
+      const frame = document.createElement("div");
+      frame.className = "weightsMatrixFrame";
       const table = document.createElement("table");
       table.className = "weightsMatrix";
+      const weightsSelectorWidth = 76;
+      const weightsTargetWidth = state.layers.length * 200;
+      table.style.setProperty(
+        "--weights-layer-width",
+        `${(weightsTargetWidth - weightsSelectorWidth) / state.layers.length}px`
+      );
 
       const thead = document.createElement("thead");
       const headerRow = document.createElement("tr");
@@ -896,7 +904,8 @@
         const button = document.createElement("button");
         button.type = "button";
         button.className = "weightsSelectHeader";
-        button.textContent = `Layer ${L.name}`;
+        button.textContent = L.name;
+        button.setAttribute("aria-label", `Select or clear all Layer ${L.name} hoppers`);
         button.title = `Select or clear all Layer ${L.name} hoppers`;
         button.setAttribute("aria-pressed", "false");
         button.addEventListener("click", ()=>toggleSelection(
@@ -979,7 +988,8 @@
         tbody.appendChild(tr);
       }
       table.appendChild(tbody);
-      scroll.appendChild(table);
+      frame.appendChild(table);
+      scroll.appendChild(frame);
       area.appendChild(scroll);
 
       const bulkInput = toolbar.querySelector("#bulkWeight");
@@ -1162,6 +1172,8 @@
 
       const scroll = document.createElement("div");
       scroll.className = "splitsMatrixScroll";
+      const frame = document.createElement("div");
+      frame.className = "splitsMatrixFrame";
       const table = document.createElement("table");
       table.className = "splitsMatrix";
 
@@ -1345,7 +1357,14 @@
           trackButton.appendChild(clockIcon);
           trackControl.appendChild(trackButton);
 
-          cellHeader.appendChild(trackControl);
+          const clearButton = document.createElement("button");
+          clearButton.type = "button";
+          clearButton.className = "splitClearButton";
+          clearButton.textContent = "×";
+          clearButton.setAttribute("aria-label", `Clear ${hopperBadgeLabel(L.name, hi)}`);
+          clearButton.title = `Clear ${hopperBadgeLabel(L.name, hi)}`;
+
+          cellHeader.append(trackControl, clearButton);
           controls.appendChild(pctWrap);
           editor.append(cellTop, controls);
           td.append(cellHeader, editor);
@@ -1356,11 +1375,13 @@
             const hasPercentage = clampNum(hopper.pct) > 0;
             const complete = hasResin && hasPercentage;
             const empty = !hasResin && !hasPercentage && !hopper.track;
+            const clearable = hasResin || (hi > 0 && hasPercentage) || !!hopper.track;
             td.classList.toggle("has-resin", hasResin);
             td.classList.toggle("has-percentage", hasPercentage);
             td.classList.toggle("tracked", !!hopper.track);
             td.classList.toggle("complete", complete);
             td.classList.toggle("empty", empty);
+            clearButton.hidden = !clearable;
             trackButton.classList.toggle("active", !!hopper.track);
             trackButton.setAttribute("aria-pressed", String(!!hopper.track));
             trackButton.title = hopper.track
@@ -1430,12 +1451,34 @@
             validateAndCompute({ sync: true, immediate: true, kind: "tracking" });
             saveSession();
           });
+          clearButton.addEventListener("click",()=>{
+            hopper.resinName = "";
+            if (hi > 0) hopper.pct = 0;
+            hopper.track = false;
+            resinInput.value = "";
+            if (hi > 0){
+              pctInput.value = "";
+              recomputeAutoH1(L);
+              const h1Ref = cellRefs.get(`${L.name}:0`);
+              if (h1Ref){
+                h1Ref.pctInput.value = String(clampNum(L.hoppers[0].pct));
+                h1Ref.refreshCellState();
+              }
+            }else{
+              pctInput.value = String(clampNum(hopper.pct));
+            }
+            refreshCellState();
+            updateSplitTotals();
+            validateAndCompute({ sync: true, immediate: true, kind: "recipe-clear" });
+            saveSession();
+          });
           refreshCellState();
         });
         tbody.appendChild(tr);
       }
       table.appendChild(tbody);
-      scroll.appendChild(table);
+      frame.appendChild(table);
+      scroll.appendChild(frame);
       area.appendChild(scroll);
 
       function showMobileLayer(layerName){
