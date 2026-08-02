@@ -13,10 +13,12 @@
     el.className = `tiny${type ? ` ${type}` : ""}`;
   }
   function renderAccess(state){
-    $("adminLoginButton").hidden = !!state.isAdmin;
-    $("resinDatabaseButton").hidden = !state.isAdmin;
-    $("adminSignOutButton").hidden = !state.isAdmin;
-    if (!state.isAdmin){ $("resinAdminDialog")?.close(); $("adminResinForm").hidden = true; }
+    const initializing = !state?.ready;
+    const adminAccess = !initializing && !!state?.isAdmin;
+    $("adminLoginButton").hidden = initializing || adminAccess;
+    $("resinDatabaseButton").hidden = !adminAccess;
+    $("adminSignOutButton").hidden = !adminAccess;
+    if (!adminAccess){ $("resinAdminDialog")?.close(); $("adminResinForm").hidden = true; }
   }
   function filteredResins(){
     const query = $("adminResinSearch")?.value.trim().toLocaleLowerCase() || "";
@@ -45,7 +47,7 @@
     $("adminResinDescription").value = resin?.display_description || "";
     $("adminResinDensity").value = resin?.density_g_cm3 ?? "";
     $("adminResinInformation").value = resin?.information_description || "";
-    $("adminResinActive").checked = resin?.is_active ?? true;
+    $("adminResinActive").value = String(resin?.is_active ?? true);
     setMessage("adminResinFormMessage", "");
     $("adminResinCode").focus();
   }
@@ -63,6 +65,7 @@
   }
 
   admin.subscribe(renderAccess);
+  renderAccess(admin.getState());
   $("adminLoginButton")?.addEventListener("click", ()=>{ setMessage("adminLoginMessage", ""); $("adminLoginDialog")?.showModal(); $("adminEmail")?.focus(); });
   document.querySelectorAll("[data-admin-close]").forEach(button=>button.addEventListener("click", ()=>$("adminLoginDialog")?.close()));
   $("adminLoginForm")?.addEventListener("submit", async event=>{
@@ -74,7 +77,10 @@
     if (!result.ok){ setMessage("adminLoginMessage", result.message, "bad"); return; }
     $("adminLoginDialog").close(); $("adminLoginForm").reset();
   });
-  $("resinDatabaseButton")?.addEventListener("click", async ()=>{ $("resinAdminDialog")?.showModal(); hideForm(); await loadResins(); });
+  $("resinDatabaseButton")?.addEventListener("click", async ()=>{
+    if (!admin.getState().isAdmin) return;
+    $("resinAdminDialog")?.showModal(); hideForm(); await loadResins();
+  });
   $("adminSignOutButton")?.addEventListener("click", ()=>admin.signOut());
   document.querySelectorAll("[data-resin-admin-close]").forEach(button=>button.addEventListener("click", ()=>$("resinAdminDialog")?.close()));
   $("adminResinSearch")?.addEventListener("input", renderList);
@@ -88,7 +94,7 @@
       display_description: $("adminResinDescription").value,
       density_g_cm3: $("adminResinDensity").value,
       information_description: $("adminResinInformation").value,
-      is_active: $("adminResinActive").checked
+      is_active: $("adminResinActive").value === "true"
     };
     if (duplicateCode(values.resin_code, id)){ setMessage("adminResinFormMessage", "That resin code already exists.", "bad"); return; }
     const save = $("adminResinSave"); save.disabled = true; setMessage("adminResinFormMessage", "Saving…");
