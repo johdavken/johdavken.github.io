@@ -529,6 +529,7 @@ main{
   .footerBar{ display: none; }
 }
 .adminNavButton{ margin-top: 2px; }
+.adminNavButton[hidden]{ display: none !important; }
 .adminDialog{ width: min(94vw, 1040px); max-height: min(88vh, 900px); border: 1px solid var(--border2); border-radius: var(--radius-card); background: var(--panel); color: var(--text); padding: 0; }
 .adminDialog::backdrop{ background: rgba(0,0,0,.58); }
 .adminForm{ display: grid; gap: 13px; padding: 20px; }
@@ -537,7 +538,7 @@ main{
 .adminToolbar,.adminFieldGrid{ display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: end; }
 .adminFieldGrid{ grid-template-columns: repeat(2,minmax(0,1fr)); }
 .adminFieldGrid label,.adminForm > label{ display: grid; gap: 5px; }
-.adminActiveField{ align-self: end; display: flex !important; align-items: center; gap: 8px; min-height: 38px; }
+.adminActiveField{ align-self: end; min-height: 38px; }
 .adminResinList{ display: grid; gap: 5px; max-height: 34vh; overflow: auto; border: 1px solid var(--border); border-radius: var(--radius-row); padding: 7px; }
 .adminResinRow{ text-align: left; background: var(--row-bg); color: var(--text); border: 1px solid transparent; padding: 8px 10px; border-radius: var(--radius-row); }
 .adminResinRow:hover{ border-color: var(--focus-border); }

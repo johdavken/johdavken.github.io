@@ -941,7 +941,7 @@
         <label>Resin code<input id="adminResinCode" required maxlength="100"></label>
         <label>Density (g/cm³)<input id="adminResinDensity" inputmode="decimal" placeholder="Blank if unknown"></label>
         <label>Display description<input id="adminResinDescription" maxlength="500"></label>
-        <label class="adminActiveField"><input id="adminResinActive" type="checkbox" checked> Active</label>
+        <label class="adminActiveField">Status<select id="adminResinActive"><option value="true" selected>Active</option><option value="false">Inactive</option></select></label>
       </div>
       <label>Information description<textarea id="adminResinInformation" maxlength="10000"></textarea></label>
       <div id="adminResinFormMessage" class="tiny" role="status"></div>
