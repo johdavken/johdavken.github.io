@@ -7,7 +7,7 @@
   <!-- Favicons -->
   <link rel="icon" type="image/svg+xml" sizes="any" href="branding/resin-tools/rt-07-bracket.svg?v=1">
 
-  <link rel="stylesheet" href="styles.css?v=0.17.70">
+  <link rel="stylesheet" href="styles.css?v=0.17.71">
   <link rel="stylesheet" href="theme.css?v=0.17.1">
 <script src="validation.js?v=0.18" defer></script>
 <script src="scheduling.js?v=0.18.3" defer></script>
@@ -21,12 +21,12 @@
 <script src="resin-data.js?v=0.16.2" defer></script>
 <script src="resin-description-info.js?v=0.16.1" defer></script>
 <script src="resin-lookup.js?v=0.18.1" defer></script>
-<script src="app.js?v=0.18.41" defer></script>
+<script src="app.js?v=0.18.42" defer></script>
 
 
 </head>
 
-<body data-density="comfort" data-theme="light" data-surface-style="divided">
+<body data-density="spacious" data-theme="light" data-surface-style="layered-flat" data-timeline-style="command-rows">
 <main>
 
   <header class="site-header" hidden>
@@ -307,7 +307,7 @@
           <div>
             <label for="themeSel">Theme</label>
             <select id="themeSel">
-              <option value="dark">Dark</option><option value="light" selected>Light</option>
+              <option value="dark">Dark</option><option value="light" selected>Light (Default)</option>
               <option value="mse">Industrial Slate</option><option value="industrial-slate-dark">Industrial Slate Dark</option>
               <option value="gruvbox-dark">Gruvbox Dark</option><option value="gruvbox-light">Gruvbox Light</option>
               <option value="nord">Nord</option><option value="tokyo-night">Tokyo Night</option><option value="dracula">Dracula</option>
@@ -319,28 +319,28 @@
           <div>
             <label for="densitySel">View density</label>
             <select id="densitySel">
-              <option value="spacious">Spacious</option><option value="comfort" selected>Comfort</option>
+              <option value="spacious" selected>Spacious (Default)</option><option value="comfort">Comfort</option>
               <option value="compact">Compact</option><option value="dense">Dense</option><option value="maximum">Maximum Data</option>
             </select>
           </div>
           <div>
             <label for="timeFormatSel">Time format</label>
-            <select id="timeFormatSel"><option value="12" selected>12-hour</option><option value="24">24-hour</option></select>
+            <select id="timeFormatSel"><option value="12" selected>12-hour (Default)</option><option value="24">24-hour</option></select>
           </div>
           <div>
             <label for="surfaceStyleSel">Surface style</label>
             <select id="surfaceStyleSel">
               <option value="elevated">High Elevation</option><option value="flat">Pure Flat</option>
-              <option value="layered-flat">Layered Flat</option><option value="accent-frame">Accent Frame</option>
-              <option value="divided" selected>Divided Workspace</option><option value="low-elevation">Low Elevation</option>
+              <option value="layered-flat" selected>Layered Flat (Default)</option><option value="accent-frame">Accent Frame</option>
+              <option value="divided">Divided Workspace</option><option value="low-elevation">Low Elevation</option>
             </select>
           </div>
           <div>
             <label for="timelineStyleSel">Timeline style</label>
             <select id="timelineStyleSel">
-              <option value="soft-cards">Soft Cards</option><option value="event-rail" selected>Vertical Event Rail</option>
+              <option value="soft-cards">Soft Cards</option><option value="event-rail">Vertical Event Rail</option>
               <option value="data-strips">Precision Data Strips</option><option value="priority-lane">Time-First Priority Lane</option>
-              <option value="divided-list">Borderless Divided List</option><option value="command-rows">Compact Command Rows</option>
+              <option value="divided-list">Borderless Divided List</option><option value="command-rows" selected>Compact Command (Default)</option>
             </select>
           </div>
         </div>
