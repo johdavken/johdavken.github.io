@@ -1,0 +1,164 @@
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const payloads = require("./workspace-configuration-payloads.js");
+
+function stateFixture(lineType = 3){
+  const names = payloads.expectedLayerNames(lineType);
+  const layerPercentages = lineType === 3 ? [34, 33, 33] : [100];
+  return {
+    lineType,
+    hopperNamingLine9: "standard",
+    lineRate: 900,
+    theme: "dark",
+    layers: names.map((name, layerIndex)=>({
+      name,
+      layerPct: layerPercentages[layerIndex] || 0,
+      hoppers: Array.from({ length: 6 }, (_, hopperIndex)=>({
+        pct: hopperIndex === 0 ? 80 : hopperIndex === 1 ? 20 : 0,
+        weight: layerIndex * 100 + hopperIndex + 1,
+        resinName: hopperIndex === 0 ? `RESIN-${name}` : hopperIndex === 1 ? "SLIP" : "",
+        track: hopperIndex === 0,
+        pumpOff: hopperIndex === 1
+      }))
+    }))
+  };
+}
+
+test("Receiver Weight Profiles include only physical layout and detached weights", () => {
+  const state = stateFixture();
+  const profile = payloads.createReceiverWeightProfile(state);
+  assert.deepEqual(Object.keys(profile), ["schema_version", "line_type", "hopper_naming_mode", "hoppers_per_layer", "layers"]);
+  assert.deepEqual(profile.layers[0].receiver_weights_lb, [1, 2, 3, 4, 5, 6]);
+  state.layers[0].hoppers[0].weight = 999;
+  assert.equal(profile.layers[0].receiver_weights_lb[0], 1);
+  assert.equal(profile.layers[0].resinName, undefined);
+});
+
+test("Receiver Weight Profile validation rejects bad versions and malformed physical layouts", () => {
+  const profile = payloads.createReceiverWeightProfile(stateFixture());
+  profile.schema_version = 2;
+  profile.layers[0].receiver_weights_lb.pop();
+  const result = payloads.validateReceiverWeightProfile(profile);
+  assert.equal(result.valid, false);
+  assert.match(result.errors.join(" "), /schema version/i);
+  assert.match(result.errors.join(" "), /exactly 6 receiver weights/i);
+});
+
+test("applying a Receiver Weight Profile changes weights only and is atomic", () => {
+  const state = stateFixture();
+  const profile = payloads.createReceiverWeightProfile(stateFixture());
+  profile.layers[0].receiver_weights_lb[0] = 250;
+  const before = JSON.parse(JSON.stringify(state));
+  assert.equal(payloads.applyReceiverWeightProfile(state, profile).ok, true);
+  assert.equal(state.layers[0].hoppers[0].weight, 250);
+  assert.equal(state.layers[0].hoppers[0].resinName, before.layers[0].hoppers[0].resinName);
+  assert.equal(state.layers[0].hoppers[0].pct, before.layers[0].hoppers[0].pct);
+  assert.equal(state.layers[0].hoppers[0].track, before.layers[0].hoppers[0].track);
+  assert.equal(state.layers[0].hoppers[0].pumpOff, before.layers[0].hoppers[0].pumpOff);
+
+  const incompatible = payloads.createReceiverWeightProfile(stateFixture(1));
+  const snapshot = JSON.stringify(state);
+  assert.equal(payloads.applyReceiverWeightProfile(state, incompatible).ok, false);
+  assert.equal(JSON.stringify(state), snapshot);
+
+  const malformed = payloads.createReceiverWeightProfile(stateFixture());
+  malformed.layers[0].receiver_weights_lb[2] = -1;
+  assert.equal(payloads.applyReceiverWeightProfile(state, malformed).ok, false);
+  assert.equal(JSON.stringify(state), snapshot);
+});
+
+test("Recipe payloads exclude equipment and runtime state and normalize blank resin names", () => {
+  const state = stateFixture();
+  state.layers[0].hoppers[2].resinName = "   ";
+  const recipe = payloads.createRecipePayload(state);
+  assert.deepEqual(Object.keys(recipe), ["schema_version", "line_type", "hopper_naming_mode", "layers"]);
+  assert.deepEqual(Object.keys(recipe.layers[0].hoppers[0]), ["resin_name", "pct"]);
+  assert.equal(recipe.layers[0].hoppers[2].resin_name, null);
+  state.layers[0].hoppers[0].resinName = "CHANGED";
+  assert.equal(recipe.layers[0].hoppers[0].resin_name, "RESIN-A");
+});
+
+test("Recipe validation uses existing H1 and percentage-total rules", () => {
+  const recipe = payloads.createRecipePayload(stateFixture());
+  assert.equal(payloads.validateRecipePayload(recipe).valid, true);
+  recipe.layers[0].hoppers[0].pct = 70;
+  recipe.layers[0].hoppers[2].pct = 30;
+  const result = payloads.validateRecipePayload(recipe);
+  assert.equal(result.valid, false);
+  assert.match(result.errors.join(" "), /hopper 1 percentage must match/i);
+  assert.match(result.errors.join(" "), /hopper percentages must total 100/i);
+});
+
+test("applying a Recipe changes only recipe fields and preserves physical/runtime fields", () => {
+  const state = stateFixture();
+  const recipe = payloads.createRecipePayload(stateFixture());
+  recipe.hopper_naming_mode = "main";
+  recipe.layers[0].layer_pct = 35;
+  recipe.layers[1].layer_pct = 32;
+  recipe.layers[2].layer_pct = 33;
+  recipe.layers[0].hoppers[1] = { resin_name: "NEW", pct: 25 };
+  recipe.layers[0].hoppers[0] = { resin_name: "BASE", pct: 75 };
+  const before = JSON.parse(JSON.stringify(state));
+  const result = payloads.applyRecipePayload(state, recipe);
+  assert.equal(result.ok, true);
+  assert.equal(state.hopperNamingLine9, "main");
+  assert.equal(state.layers[0].hoppers[1].resinName, "NEW");
+  assert.equal(state.layers[0].hoppers[0].pct, 75);
+  assert.equal(state.layers[0].hoppers[0].weight, before.layers[0].hoppers[0].weight);
+  assert.equal(state.layers[0].hoppers[0].track, before.layers[0].hoppers[0].track);
+  assert.equal(state.layers[0].hoppers[0].pumpOff, before.layers[0].hoppers[0].pumpOff);
+  assert.equal(state.lineRate, before.lineRate);
+  assert.equal(state.theme, before.theme);
+});
+
+test("a Recipe can change line type while preserving matching physical hoppers", () => {
+  const state = stateFixture();
+  const recipe = payloads.createRecipePayload(stateFixture(1));
+  recipe.layers[0].hoppers[0].resin_name = "UNKNOWN-INACTIVE-CODE";
+  const before = JSON.parse(JSON.stringify(state));
+  const result = payloads.applyRecipePayload(state, recipe);
+  assert.equal(result.ok, true);
+  assert.equal(result.lineTypeChanged, true);
+  assert.equal(state.lineType, 1);
+  assert.equal(state.layers.length, 1);
+  assert.equal(state.layers[0].hoppers[0].resinName, "UNKNOWN-INACTIVE-CODE");
+  assert.equal(state.layers[0].hoppers[0].weight, before.layers[0].hoppers[0].weight);
+  assert.equal(state.layers[0].hoppers[0].track, before.layers[0].hoppers[0].track);
+  assert.equal(state.layers[0].hoppers[0].pumpOff, before.layers[0].hoppers[0].pumpOff);
+});
+
+test("Recipe application recalculates Hopper 1 from hoppers 2–6", () => {
+  const state = stateFixture();
+  const recipe = payloads.createRecipePayload(stateFixture());
+  recipe.layers[0].hoppers[0] = { resin_name: "H1-RESIN", pct: 70 };
+  recipe.layers[0].hoppers[1] = { resin_name: "SECONDARY", pct: 30 };
+  const result = payloads.applyRecipePayload(state, recipe);
+  assert.equal(result.ok, true);
+  assert.equal(state.layers[0].hoppers[0].resinName, "H1-RESIN");
+  assert.equal(state.layers[0].hoppers[0].pct, 70);
+});
+
+test("invalid Recipes are rejected before changing state", () => {
+  const state = stateFixture();
+  const recipe = payloads.createRecipePayload(stateFixture());
+  recipe.schema_version = 9;
+  const before = JSON.stringify(state);
+  const result = payloads.applyRecipePayload(state, recipe);
+  assert.equal(result.ok, false);
+  assert.match(result.errors.join(" "), /schema version/i);
+  assert.equal(JSON.stringify(state), before);
+});
+
+test("malformed Recipe structures and invalid percentages apply nothing", () => {
+  const state = stateFixture();
+  const malformed = payloads.createRecipePayload(stateFixture());
+  malformed.layers.pop();
+  const before = JSON.stringify(state);
+  assert.equal(payloads.applyRecipePayload(state, malformed).ok, false);
+  assert.equal(JSON.stringify(state), before);
+
+  const invalid = payloads.createRecipePayload(stateFixture());
+  invalid.layers[0].hoppers[1].pct = 101;
+  assert.equal(payloads.applyRecipePayload(state, invalid).ok, false);
+  assert.equal(JSON.stringify(state), before);
+});

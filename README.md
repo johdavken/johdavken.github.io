@@ -42,6 +42,15 @@ Recipe Panel / Resin Lookup
 
 Both resin-facing UI paths now consume the same normalized catalog records from `PolynResinCatalog`. The Recipe autocomplete updates its in-memory name list after a successful background refresh; Resin Lookup uses the same current records for exact matches and suggestions. Existing hard-coded data remains the service’s offline fallback.
 
+## Workspace configuration payload helpers
+
+[`workspace-configuration-payloads.js`](workspace-configuration-payloads.js) exposes `PolynWorkspaceConfigurationPayloads`, a UI-independent boundary for future Workspace Configurations work. Version-1 payloads always include `schema_version: 1`; unsupported versions and malformed payloads are rejected with structured validation results before application.
+
+- A Receiver Weight Profile contains only line/layout identity, hopper naming mode, and six receiver weights per layer. Applying one is atomic, requires the current physical layout to match, and changes only `hopper.weight`.
+- A Recipe contains only line type, naming mode, layer percentages, and each hopper's resin name/code and blend percentage. Applying one atomically updates only recipe fields, preserves receiver weights and runtime flags, and recalculates Hopper 1 from Hoppers 2–6 using the current app rule. The payload retains Hopper 1's resin and stored percentage, but its percentage must agree with that remainder and is recalculated on application. A blank resin is `null` in the payload; unrecognized or inactive codes remain strings.
+
+The helpers intentionally coexist with the legacy full snapshot/save system and are not yet wired to production UI, storage, cloud services, or synchronization. Later database/service/UI phases should create and validate a payload with these helpers, apply it after their own user-flow checks, then orchestrate rendering and persistence outside the module. Favorite status belongs to the future saved-document record, not a recipe payload.
+
 ## Resin administration
 
 The Admin Login uses a dedicated, persisted email/password Supabase client whose auth storage key is separate from RT Sync’s anonymous session. Database authorization comes exclusively from `public.admin_users` and `resins` RLS policies; hiding the editor is not the authorization mechanism. Successful editor writes refresh `PolynResinCatalog` without reloading the page, so active recipe and lookup results update on subsequent interactions. See [the Supabase setup instructions](supabase/README.md#resin-administration); never add a service-role key to browser code.
