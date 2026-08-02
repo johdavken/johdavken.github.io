@@ -317,7 +317,7 @@ main{
   letter-spacing: .8px;
 }
 .mobileBrand .workspaceBrandLogo{ width: min(100%, 190px); }
-.statusPreferences{position:relative;margin-left:auto}
+.statusPreferences{position:relative;align-self:center;margin-left:auto}
 .statusPreferences > summary{display:flex;align-items:center;justify-content:center;width:34px;height:34px;padding:0;border:0;border-radius:0;background:transparent;color:var(--text);font-size:20px;line-height:1;cursor:pointer;list-style:none}
 .statusPreferences > summary::-webkit-details-marker{display:none}
 .statusPreferences > summary:hover,.statusPreferences[open] > summary{background:transparent;color:var(--title)}
@@ -373,11 +373,12 @@ main{
     position: sticky;
     top: 14px;
     z-index: 5;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
+    display:flex;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:10px;
     min-height:34px;
-    padding:0;
+    padding:0 8px;
     border: 1px solid transparent;
     border-radius: var(--radius-row);
     background: var(--readonly-bg);
@@ -391,15 +392,16 @@ main{
     min-width: 0;
   }
   .workspaceStatusItem{
-    display: flex;
-    align-items: baseline;
-    gap: 7px;
-    min-height:34px;
-    padding:4px 8px;
-    border: 0;
-    border-radius: 999px;
-    background: var(--row-bg);
-    white-space: nowrap;
+    display:flex;
+    align-items:center;
+    gap:7px;
+    min-height:0;
+    padding:0;
+    border:0;
+    border-radius:0;
+    background:transparent;
+    line-height:1;
+    white-space:nowrap;
   }
   .workspaceStatusItem span{
     color: var(--muted);
@@ -408,6 +410,7 @@ main{
   .workspaceStatusItem strong{
     color: var(--text);
     font-size: var(--font-small);
+    line-height:1;
   }
   .workspaceNextAction{
     min-width: 0;
@@ -2122,7 +2125,7 @@ button.compactAction{
 .f-const{ color: var(--f-const); }
 
 
-/* Results (Run-Down Timeline) toggle row */
+/* Results (Timeline) toggle row */
 .resultsToggleRow{
   padding: 10px 12px;
   border-radius: var(--radius-row);

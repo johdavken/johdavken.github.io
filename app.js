@@ -57,7 +57,7 @@
       timelineStyle: "event-rail",
       gauge: 0,
       hopperNamingLine9: "standard", // "standard" | "main"
-      showPumpOffTracked: false, // show pump-off items in Run-Down Timeline
+      showPumpOffTracked: false, // show pump-off items in Timeline
       uiMode: "everyday", // "everyday" | "advanced"
       mobileTimelineOnly: false
 

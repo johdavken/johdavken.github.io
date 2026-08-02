@@ -7,7 +7,7 @@
   <!-- Favicons -->
   <link rel="icon" type="image/svg+xml" sizes="any" href="branding/resin-tools/rt-07-bracket.svg?v=1">
 
-  <link rel="stylesheet" href="styles.css?v=0.17.49">
+  <link rel="stylesheet" href="styles.css?v=0.17.50">
   <link rel="stylesheet" href="theme.css?v=0.17.1">
 <script src="validation.js?v=0.18" defer></script>
 <script src="scheduling.js?v=0.18.3" defer></script>
@@ -241,11 +241,11 @@
       <small id="workspaceSetupStatus">Needs setup</small>
     </button>
     <button class="workspaceNavButton" type="button" data-workspace-target="splitsBlock" data-status="warn">
-      <span>Hopper Percentages</span>
+      <span>Recipe Setup</span>
       <small id="workspaceSplitsStatus">Check percentages</small>
     </button>
     <button class="workspaceNavButton active" type="button" data-workspace-target="resultsBlock" data-status="neutral">
-      <span>Run-Down Timeline</span>
+      <span>Timeline</span>
       <small id="workspaceTimelineStatus">0 resins tracked</small>
     </button>
     <button class="workspaceNavButton" type="button" data-workspace-target="lineSyncBlock">
@@ -363,7 +363,7 @@
     <div class="blockBody">
       <section class="setupSection" aria-labelledby="currentChangeoverTitle">
         <h3 id="currentChangeoverTitle" class="setupSectionTitle">Current Changeover</h3>
-        <p class="setupSectionIntro">Set the values that determine this run-down timeline.</p>
+        <p class="setupSectionIntro">Set the values that determine the Timeline.</p>
         <div class="setupFields setupPrimaryFields">
           <div>
             <label for="changeoverTime">Changeover deadline <span class="fieldRequirement">Required for start-by times</span></label>
@@ -418,13 +418,13 @@
     </div>
   </details>
 
-  <!-- 2) HOPPER PERCENTAGES -->
+  <!-- 2) RECIPE SETUP -->
   <details class="block card workspacePanel" id="splitsBlock">
     <summary>
       <div class="sumLeft">
         <div class="chev"></div>
         <div class="summaryText">
-          <div class="layerTitle">Hopper Percentages</div>
+          <div class="layerTitle">Recipe Setup</div>
           <div class="layerMeta">Set recipe percentages and choose which hoppers appear in the timeline</div>
         </div>
       </div>
@@ -443,7 +443,7 @@
       <div class="sumLeft">
         <div class="chev"></div>
         <div class="summaryText">
-          <div class="layerTitle">Run-Down Timeline</div>
+          <div class="layerTitle">Timeline</div>
           <div class="layerMeta">Only tracked hoppers • Sorted by upcoming time</div>
         </div>
       </div>
@@ -787,9 +787,9 @@
             <ol>
               <li>Set the changeover deadline, enter the line rate, and select the layer count.</li>
               <li>Verify the receiver hopper weights.</li>
-              <li>Build the layer recipe on the <strong>Hopper Percentages</strong> page.</li>
+              <li>Build the layer recipe on the <strong>Recipe Setup</strong> page.</li>
               <li>Turn on tracking for the hoppers involved in the changeover.</li>
-              <li>Open the <strong>Run-Down Timeline</strong> to see when each hopper should begin running down.</li>
+              <li>Open the <strong>Timeline</strong> to see when each hopper should begin running down.</li>
               <li>Use <strong>Production Summary</strong> at the end of the run to total material usage for inventory.</li>
             </ol>
           </div>
@@ -810,13 +810,13 @@
         </details>
 
         <details class="helpTopic" id="helpHopperPercentages">
-          <summary><span>Hopper Percentages</span><small>Build the layer and resin recipe</small></summary>
+          <summary><span>Recipe Setup</span><small>Build the layer and resin recipe</small></summary>
           <div class="helpTopicBody">
             <ol>
               <li>Enter the percentage of total output assigned to each layer. The layer percentages should total 100%.</li>
               <li>Enter or choose a resin name in every active hopper's empty resin field.</li>
               <li>Enter hopper percentages in hoppers 2–6. Hopper 1 is calculated automatically as the remaining percentage so each layer totals 100%.</li>
-              <li>Use the clock button beside a hopper to include it in the Run-Down Timeline. Bulk-selection checkboxes are separate and appear only in Bulk Edit mode.</li>
+              <li>Use the clock button beside a hopper to include it in the Timeline. Bulk-selection checkboxes are separate and appear only in Bulk Edit mode.</li>
               <li>Use a layer's <strong>Copy</strong> button when another layer uses the same resins and hopper percentages. Copy does not change the destination layer percentage.</li>
             </ol>
             <h3>Using Bulk Edit</h3>
@@ -832,7 +832,7 @@
         </details>
 
         <details class="helpTopic" id="helpTimeline">
-          <summary><span>Run-Down Timeline</span><small>Follow hopper changeover timing</small></summary>
+          <summary><span>Timeline</span><small>Follow hopper changeover timing</small></summary>
           <div class="helpTopicBody">
             <ol>
               <li>Only hoppers with their clock tracking button enabled appear in the timeline.</li>
