@@ -7,6 +7,13 @@
 
   function normalizeName(value){ return String(value || "").trim().replace(/\s+/g, " "); }
   function normalizedKey(value){ return normalizeName(value).toLocaleLowerCase(); }
+  function ownMembershipsByWorkspace(rows, userId){
+    return new Map(
+      (Array.isArray(rows) ? rows : [])
+        .filter(item=>item?.user_id === userId)
+        .map(item=>[item.workspace_id, item])
+    );
+  }
   function uuid(){
     if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
     return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, character=>{
@@ -130,14 +137,14 @@
         .from("line_workspace_members")
         .select("workspace_id,user_id,device_id,device_label,role,joined_at,last_seen_at");
       if (memberships.error) throw memberships.error;
-      const ids = memberships.data.map(item=>item.workspace_id);
+      const membershipByWorkspace = ownMembershipsByWorkspace(memberships.data, state.userId);
+      const ids = Array.from(membershipByWorkspace.keys());
       let workspaceRows = [];
       if (ids.length){
         const response = await client.from("line_workspaces").select("id,name,revision,created_at,updated_at").in("id", ids);
         if (response.error) throw response.error;
         workspaceRows = response.data;
       }
-      const membershipByWorkspace = new Map(memberships.data.map(item=>[item.workspace_id,item]));
       state.workspaces = workspaceRows
         .map(workspace=>({ ...workspace, membership: membershipByWorkspace.get(workspace.id) }))
         .sort((left,right)=>left.name.localeCompare(right.name));
@@ -765,5 +772,5 @@
     };
   }
 
-  return { create, normalizeName, normalizedKey, isConflictError };
+  return { create, normalizeName, normalizedKey, isConflictError, ownMembershipsByWorkspace };
 });
