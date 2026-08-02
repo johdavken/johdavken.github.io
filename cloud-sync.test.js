@@ -1,6 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { normalizeName, normalizedKey, isConflictError } = require("./cloud-sync.js");
+const { normalizeName, normalizedKey, isConflictError, ownMembershipsByWorkspace } = require("./cloud-sync.js");
 
 test("normalizes synchronized line and setup names", () => {
   assert.equal(normalizeName("  Line   9  "), "Line 9");
@@ -10,6 +10,16 @@ test("normalizes synchronized line and setup names", () => {
 test("recognizes optimistic concurrency failures", () => {
   assert.equal(isConflictError({ code: "40001", message: "revision_conflict" }), true);
   assert.equal(isConflictError({ code: "PGRST301", message: "offline" }), false);
+});
+
+test("workspace role comes from the current device membership", () => {
+  const memberships = [
+    { workspace_id: "line-1", user_id: "desktop", role: "owner" },
+    { workspace_id: "line-1", user_id: "phone", role: "member" }
+  ];
+  const desktopMembership = ownMembershipsByWorkspace(memberships, "desktop").get("line-1");
+  assert.equal(desktopMembership.role, "owner");
+  assert.equal(desktopMembership.user_id, "desktop");
 });
 
 test("a failed upload remains represented by one newest pending snapshot", () => {
