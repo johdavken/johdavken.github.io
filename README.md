@@ -57,7 +57,13 @@ The helpers intentionally coexist with the legacy full snapshot/save system and 
 
 Documents are normalized to `{ id, workspaceId, type, name, normalizedName, schemaVersion, payload, favorite, createdBy, updatedBy, createdAt, updatedAt }`. The service uses the existing authenticated RT Sync client only through `lineSync.getWorkspaceConfigurationTransport()`; it never creates another session or exposes credentials. Each workspace has an isolated `polyn.workspaceConfigurations.v1::<workspace-id>` cache envelope containing version, workspace ID, timestamp, and separate profile/recipe arrays.
 
-Cached reads are safe offline, but writes are never queued. Cloud refreshes and all mutations use the Phase 2 RPCs, preserve the previous valid cache on failure, and notify subscribers only after a successful cache replacement. Creates and updates validate a detached payload through the Phase 1 helpers before calling Supabase. This is last-write-wins, has no Realtime subscription or polling, and is not wired to UI yet. Never use a service-role key in browser code.
+Cached reads are safe offline, but writes are never queued. Cloud refreshes and all mutations use the Phase 2 RPCs, preserve the previous valid cache on failure, and notify subscribers only after a successful cache replacement. Creates and updates validate a detached payload through the Phase 1 helpers before calling Supabase. This is last-write-wins, has no Realtime subscription or polling. Never use a service-role key in browser code.
+
+## Shared workspace configuration viewer
+
+The existing **Line Configurations** panel now shows read-only **Receiver Weight Profiles** and **Recipes** for the currently connected RT Sync workspace, above the unchanged local configuration controls. It renders that workspace's cached items immediately, performs one refresh after a workspace change or panel initialization, and offers a manual refresh. Cached items remain visible with a concise stale/offline message if refresh fails; no workspace means no cloud items are shown.
+
+Every cloud load opens a confirmation dialog. Recipe loads use the Phase 1 recipe helper and may change line type, naming mode, layer percentages, and hopper assignments/percentages while preserving weights, tracking, pump-off state, offsets, runtime state, workspace identity, and preferences. Weight Profile loads use the corresponding Phase 1 helper and change only receiver weights; incompatible physical layouts are rejected without partial application. A successful load renders/calculates, persists ordinary local session state, and emits one normal RT Sync active-job mutation. This phase is read/load-only: it has no cloud editing controls, Realtime, polling, offline writes, or changes to legacy local configurations.
 
 ## Resin administration
 

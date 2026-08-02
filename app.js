@@ -77,6 +77,9 @@
   const fmtTime = (date, baseDate) => formatTime(date, baseDate, state.timeFormat);
   const { writeJson } = window.PolynStorage;
   let lineSync = null;
+  let workspaceConfigurations = null;
+  let workspaceConfigurationWorkspaceId = "";
+  let workspaceConfigurationRefreshInFlight = false;
 
   function snapshotSharedActiveJob(){
     return activeJob.snapshotActiveJob(state, APP_VERSION);
@@ -84,6 +87,50 @@
 
   function notifyActiveJobMutation(options){
     lineSync?.notifyActiveJobMutation(options);
+  }
+
+  function workspaceConfigurationStatus(message){ const el=$("workspaceConfigurationsStatus"); if(el) el.textContent=message; }
+  function renderWorkspaceConfigurations(syncState){
+    const profiles=$("workspaceProfilesList"), recipes=$("workspaceRecipesList"), refresh=$("workspaceConfigurationsRefresh");
+    if(!profiles || !recipes) return;
+    const workspaceId=syncState?.selectedWorkspaceId || "";
+    if(refresh) refresh.disabled=!workspaceId || workspaceConfigurationRefreshInFlight;
+    profiles.replaceChildren(); recipes.replaceChildren();
+    if(!workspaceId){ workspaceConfigurationWorkspaceId=""; workspaceConfigurationStatus("Connect to an RT Sync workspace to view shared weight profiles and recipes."); return; }
+    workspaceConfigurationWorkspaceId=workspaceId;
+    const renderList=(host,items,kind)=>{
+      if(!items.length){ const empty=document.createElement("div"); empty.className="muted"; empty.textContent=kind==="recipe"?"No shared recipes saved for this workspace.":"No shared weight profiles saved for this workspace."; host.append(empty); return; }
+      items.forEach(item=>{ const row=document.createElement("div"); row.className="workspaceConfigurationRow"; const info=document.createElement("div"); const title=document.createElement("strong"); title.textContent=`${item.favorite ? "★ " : ""}${item.name}`; const meta=document.createElement("small"); meta.textContent=`Line type ${item.payload.line_type} · Updated ${item.updatedAt ? new Date(item.updatedAt).toLocaleString() : "unknown"}`; info.append(title,meta); const load=document.createElement("button"); load.type="button"; load.className="secondary"; load.textContent="Load"; load.addEventListener("click",()=>previewWorkspaceConfiguration(item)); row.append(info,load); host.append(row); });
+    };
+    if(!workspaceConfigurations){ workspaceConfigurationStatus("Shared configurations service is unavailable."); return; }
+    renderList(profiles,workspaceConfigurations.listReceiverWeightProfiles(workspaceId).items,"profile");
+    renderList(recipes,workspaceConfigurations.listRecipes(workspaceId).items,"recipe");
+    workspaceConfigurationStatus("Showing shared configurations for the current RT Sync workspace.");
+  }
+  async function refreshWorkspaceConfigurations(){
+    const workspaceId=lineSync?.getState?.().selectedWorkspaceId || "";
+    if(!workspaceId || !workspaceConfigurations || workspaceConfigurationRefreshInFlight) return;
+    workspaceConfigurationRefreshInFlight=true; workspaceConfigurationStatus("Refreshing shared configurations…"); renderWorkspaceConfigurations(lineSync.getState());
+    const result=await workspaceConfigurations.refresh(workspaceId);
+    workspaceConfigurationRefreshInFlight=false;
+    if(workspaceId !== lineSync?.getState?.().selectedWorkspaceId) return;
+    renderWorkspaceConfigurations(lineSync.getState());
+    if(!result.ok) workspaceConfigurationStatus(result.cache?.cachedAt ? "Refresh failed; showing cached shared configurations." : "Shared configurations are unavailable right now.");
+  }
+  function previewWorkspaceConfiguration(item){
+    const dialog=$("workspaceConfigurationLoadDialog"), details=$("workspaceConfigurationLoadDetails"), confirm=$("workspaceConfigurationConfirmLoad"); if(!dialog?.showModal) return;
+    const recipe=item.type==="recipe";
+    const lineChange=recipe && Number(item.payload.line_type)!==Number(state.lineType)?` This recipe changes the line type from ${state.lineType} to ${item.payload.line_type}.`:"";
+    details.textContent=recipe ? `${item.name}. This will change line type, hopper naming mode, layer percentages, hopper resin assignments, and hopper blend percentages.${lineChange} It will not change receiver hopper weights, tracking selections, pump-off state, offsets, timeline/runtime state, workspace, RT Sync identity, or appearance preferences.` : `${item.name}. This will change receiver hopper weights only. It will not change line type, layer percentages, resin assignments, hopper blend percentages, tracking, pump-off state, timeline/runtime state, workspace, or RT Sync state.`;
+    confirm.textContent=recipe?"Load Recipe":"Load Weights";
+    dialog.addEventListener("close",()=>{ if(dialog.returnValue==="load") applyWorkspaceConfiguration(item); },{once:true}); dialog.showModal();
+  }
+  function applyWorkspaceConfiguration(item){
+    const helper=item.type==="recipe"?window.PolynWorkspaceConfigurationPayloads?.applyRecipePayload:window.PolynWorkspaceConfigurationPayloads?.applyReceiverWeightProfile;
+    const result=helper?.(state,item.payload); if(!result?.ok){ workspaceConfigurationStatus(result?.errors?.[0] || "This shared configuration could not be loaded."); return; }
+    if(item.type==="recipe"){ const lineType=$("lineType"); if(lineType) lineType.value=String(state.lineType); }
+    renderWeightsArea(); renderSplitsArea(); validateAndCompute(); saveSession(); notifyActiveJobMutation({immediate:true,kind:"load-workspace-configuration"});
+    workspaceConfigurationStatus(`${item.type==="recipe"?"Recipe":"Receiver Weight Profile"} loaded successfully.`);
   }
   let resinCatalogRecords = resinCatalog?.getResins?.() || [];
   let commonResinNames = resinCatalogRecords.map(resin=>resin.resin_code);
@@ -2726,6 +2773,9 @@
         memberHost.appendChild(row);
       });
     }
+    const workspaceChanged = workspaceConfigurationWorkspaceId !== (syncState.selectedWorkspaceId || "");
+    renderWorkspaceConfigurations(syncState);
+    if (workspaceChanged && syncState.selectedWorkspaceId) void refreshWorkspaceConfigurations();
   }
 
   function resolveLineSyncConflict(conflict){
@@ -2783,6 +2833,16 @@
         onStorageError: showStorageWarning
       }
     });
+    if (window.PolynWorkspaceConfigurations){
+      workspaceConfigurations = window.PolynWorkspaceConfigurations.create({
+        storage: localStorage,
+        getTransport: ()=>lineSync?.getWorkspaceConfigurationTransport?.()
+      });
+      workspaceConfigurations.subscribe(snapshot=>{
+        if (snapshot.workspaceId === lineSync?.getState?.().selectedWorkspaceId) renderWorkspaceConfigurations(lineSync.getState());
+      });
+      $("workspaceConfigurationsRefresh")?.addEventListener("click",()=>void refreshWorkspaceConfigurations());
+    }
 
     $("lineSyncWorkspaceSelect")?.addEventListener("change",event=>{
       if (event.target.value) runLineSyncAction(()=>lineSync.selectWorkspace(event.target.value));

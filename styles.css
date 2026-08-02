@@ -617,6 +617,7 @@ main{
   box-shadow:var(--shadow2);
 }
 .lineSyncConflictDialog::backdrop{ background:rgba(0,0,0,.48); }
+.workspaceConfigurations{display:grid;gap:12px}.workspaceConfigurationHeading,.workspaceConfigurationSectionTitle,.workspaceConfigurationRow{display:flex;gap:12px;justify-content:space-between;align-items:center}.workspaceConfigurationHeading{align-items:flex-start}.workspaceConfigurationSection{border:1px solid var(--border);border-radius:var(--radius-row);padding:10px;background:var(--panel2)}.workspaceConfigurationSectionTitle small{display:block;color:var(--muted);margin-top:3px}.workspaceConfigurationList{display:grid;gap:7px;margin-top:9px}.workspaceConfigurationRow{padding:9px;border-radius:var(--control-radius);background:color-mix(in srgb,var(--panel) 70%,transparent)}.workspaceConfigurationRow small{display:block;color:var(--muted);margin-top:2px}.workspaceConfigurationDivider{border:0;border-top:1px solid var(--border);margin:16px 0}@media(max-width:600px){.workspaceConfigurationHeading,.workspaceConfigurationRow{align-items:stretch;flex-direction:column}.workspaceConfigurationHeading button,.workspaceConfigurationRow button{width:100%}}
 .mobileSyncLabel,
 .mobileSyncOnly{ display: none; }
 
