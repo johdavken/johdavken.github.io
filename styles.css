@@ -1184,9 +1184,9 @@ details[open] > summary .chev{ transform: rotate(45deg); }
 .splitsMatrix tr > *:last-child{ border-right: 0; }
 #splitsArea:not(.bulk-editing) .splitsMatrix tr > :first-child{display:none}
 .splitsMatrix thead th{
-  min-width:200px;
-  width:200px;
-  max-width:200px;
+  min-width:180px;
+  width:180px;
+  max-width:180px;
   padding-top:6px;
   padding-bottom:6px;
   vertical-align: top;
@@ -1295,9 +1295,9 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   cursor: default;
 }
 .splitMatrixCell{
-  min-width:200px;
-  width:200px;
-  max-width:200px;
+  min-width:180px;
+  width:180px;
+  max-width:180px;
   background: transparent;
   transition: background .12s ease, box-shadow .12s ease;
 }
@@ -1714,9 +1714,9 @@ details[open] > summary .chev{ transform: rotate(45deg); }
 }
 .weightsMatrix thead th:not(:first-child),
 .weightsMatrixCell{
-  width:var(--weights-layer-width,200px);
-  min-width:var(--weights-layer-width,200px);
-  max-width:var(--weights-layer-width,200px);
+  width:180px;
+  min-width:180px;
+  max-width:180px;
 }
 .weightsMatrix th:first-child{
   position: sticky;

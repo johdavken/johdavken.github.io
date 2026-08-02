@@ -884,12 +884,6 @@
       frame.className = "weightsMatrixFrame";
       const table = document.createElement("table");
       table.className = "weightsMatrix";
-      const weightsSelectorWidth = 76;
-      const weightsTargetWidth = state.layers.length * 200;
-      table.style.setProperty(
-        "--weights-layer-width",
-        `${(weightsTargetWidth - weightsSelectorWidth) / state.layers.length}px`
-      );
 
       const thead = document.createElement("thead");
       const headerRow = document.createElement("tr");
