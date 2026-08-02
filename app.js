@@ -1124,12 +1124,18 @@
       summary.className = "splitsMatrixSummary";
       summary.setAttribute("role", "status");
       summary.setAttribute("aria-live", "polite");
-      const trackingHint = document.createElement("span");
-      trackingHint.className = "splitsTrackingHint";
-      trackingHint.textContent = "Colored clock = tracked";
+      const recipeInfo = document.createElement("details");
+      recipeInfo.className = "splitsInfo";
+      recipeInfo.innerHTML = `
+        <summary aria-label="Recipe Setup information" title="Recipe Setup information">ⓘ</summary>
+        <div class="splitsInfoPanel">
+          <p>Resin names are optional. If B and D, or A and E layers are the same, you can copy from one to the other.</p>
+          <p><strong>Colored clock</strong> = tracked in the Timeline.</p>
+        </div>
+      `;
       const actionInfo = document.createElement("div");
       actionInfo.className = "splitsMatrixActionInfo";
-      actionInfo.append(summary, trackingHint);
+      actionInfo.append(summary, recipeInfo);
       const actionRow = document.createElement("div");
       actionRow.className = "splitsMatrixActions";
       actionRow.append(actionInfo, modeBar);
@@ -1345,8 +1351,13 @@
           tr.appendChild(td);
 
           function refreshCellState(){
-            const complete = !!normName(hopper.resinName) && clampNum(hopper.pct) > 0;
-            const empty = !normName(hopper.resinName) && clampNum(hopper.pct) === 0 && !hopper.track;
+            const hasResin = !!normName(hopper.resinName);
+            const hasPercentage = clampNum(hopper.pct) > 0;
+            const complete = hasResin && hasPercentage;
+            const empty = !hasResin && !hasPercentage && !hopper.track;
+            td.classList.toggle("has-resin", hasResin);
+            td.classList.toggle("has-percentage", hasPercentage);
+            td.classList.toggle("tracked", !!hopper.track);
             td.classList.toggle("complete", complete);
             td.classList.toggle("empty", empty);
             trackButton.classList.toggle("active", !!hopper.track);
