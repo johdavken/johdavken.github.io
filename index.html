@@ -22,6 +22,8 @@
 <script src="resin-description-info.js?v=0.16.1" defer></script>
 <script src="resin-catalog-service.js?v=0.19.0" defer></script>
 <script src="resin-lookup.js?v=0.18.1" defer></script>
+<script src="resin-admin.js?v=0.20.0" defer></script>
+<script src="resin-admin-ui.js?v=0.20.0" defer></script>
 <script src="app.js?v=0.18.42" defer></script>
 
 
@@ -264,6 +266,18 @@
     <button class="workspaceNavButton" type="button" data-workspace-target="helpBlock">
       <span>Help</span>
       <small>Operator guide</small>
+    </button>
+    <button id="adminLoginButton" class="workspaceNavButton adminNavButton" type="button" hidden>
+      <span>Admin Login</span>
+      <small>Resin database</small>
+    </button>
+    <button id="resinDatabaseButton" class="workspaceNavButton adminNavButton" type="button" hidden>
+      <span>Resin Database</span>
+      <small>Catalog editor</small>
+    </button>
+    <button id="adminSignOutButton" class="workspaceNavButton adminNavButton" type="button" hidden>
+      <span>Admin Account</span>
+      <small>Sign out</small>
     </button>
   </nav>
 
@@ -902,6 +916,38 @@
       <button value="cancel" class="secondary" type="submit">Decide later</button>
     </div>
   </form>
+</dialog>
+
+<dialog id="adminLoginDialog" class="adminDialog" aria-labelledby="adminLoginTitle">
+  <form id="adminLoginForm" class="adminForm">
+    <div class="dialogHead"><div><div id="adminLoginTitle" class="layerTitle">Admin Login</div><p class="muted">Authorized resin database access only.</p></div><button class="secondary" type="button" data-admin-close>Close</button></div>
+    <label>Email<input id="adminEmail" type="email" autocomplete="email" required></label>
+    <label>Password<input id="adminPassword" type="password" autocomplete="current-password" required></label>
+    <div id="adminLoginMessage" class="tiny" role="status"></div>
+    <div class="buttonRow"><button id="adminLoginSubmit" type="submit">Sign in</button><button class="secondary" type="button" data-admin-close>Cancel</button></div>
+  </form>
+</dialog>
+
+<dialog id="resinAdminDialog" class="adminDialog resinAdminDialog" aria-labelledby="resinAdminTitle">
+  <div class="adminForm resinAdminLayout">
+    <div class="dialogHead"><div><div id="resinAdminTitle" class="layerTitle">Resin Database</div><p class="muted">Manage active and inactive catalog records.</p></div><button class="secondary" type="button" data-resin-admin-close>Close</button></div>
+    <div class="adminToolbar"><input id="adminResinSearch" type="search" placeholder="Search code or description"><button id="addResinButton" type="button">Add resin</button></div>
+    <div id="adminResinMessage" class="tiny" role="status"></div>
+    <div id="adminResinList" class="adminResinList" aria-live="polite"></div>
+    <form id="adminResinForm" class="adminResinForm" hidden>
+      <input id="adminResinId" type="hidden">
+      <div class="layerTitle" id="adminResinFormTitle">Edit resin</div>
+      <div class="adminFieldGrid">
+        <label>Resin code<input id="adminResinCode" required maxlength="100"></label>
+        <label>Density (g/cm³)<input id="adminResinDensity" inputmode="decimal" placeholder="Blank if unknown"></label>
+        <label>Display description<input id="adminResinDescription" maxlength="500"></label>
+        <label class="adminActiveField"><input id="adminResinActive" type="checkbox" checked> Active</label>
+      </div>
+      <label>Information description<textarea id="adminResinInformation" maxlength="10000"></textarea></label>
+      <div id="adminResinFormMessage" class="tiny" role="status"></div>
+      <div class="buttonRow"><button id="adminResinSave" type="submit">Save resin</button><button id="adminResinCancel" class="secondary" type="button">Cancel</button></div>
+    </form>
+  </div>
 </dialog>
 
 <footer class="footerBar">
