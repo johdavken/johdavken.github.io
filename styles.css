@@ -1196,9 +1196,10 @@ details[open] > summary .chev{ transform: rotate(45deg); }
 }
 .splitLayerMain{
   display:flex;
+  flex-direction:column;
   align-items:center;
   justify-content:center;
-  gap:8px;
+  gap:1px;
 }
 .splitLayerTitle{
   width: auto;
@@ -1207,7 +1208,8 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   background: transparent;
   box-shadow: none;
   color: var(--text);
-  font-size: 13px;
+  font-size:20px;
+  line-height:1;
   font-weight: 950;
   text-align: center;
   cursor: default;
@@ -1215,12 +1217,12 @@ details[open] > summary .chev{ transform: rotate(45deg); }
 .splitLayerPct{
   display:flex;
   align-items: center;
-  gap:3px;
+  gap:1px;
   margin:0;
 }
 .splitLayerPct input{
-  width:44px;
-  min-width:44px;
+  width:32px;
+  min-width:32px;
   padding:4px 3px;
   border-color:transparent;
   background:transparent;
@@ -1228,7 +1230,7 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   color:var(--muted);
   font-size:var(--font-small);
   font-variant-numeric:tabular-nums;
-  text-align: right;
+  text-align:right;
 }
 .splitLayerPct input:hover,.splitLayerPct input:focus{border-color:var(--border2);background:var(--field-bg)}
 .splitLayerPct span,
@@ -1280,11 +1282,15 @@ details[open] > summary .chev{ transform: rotate(45deg); }
 }
 .splitsMatrix tbody tr:nth-child(even) .splitMatrixCell{background:color-mix(in srgb,var(--row-bg-2) 55%,transparent)}
 .splitsMatrix tbody tr:hover .splitMatrixCell:not(.selected){background:color-mix(in srgb,var(--focus-ring) 34%,var(--row-bg-2))}
+.splitsMatrix tbody .splitMatrixCell.tracked:not(.selected){
+  background:color-mix(in srgb,var(--focus-ring) 52%,transparent);
+  box-shadow:inset 3px 0 0 color-mix(in srgb,var(--title) 78%,var(--focus-border));
+}
 .splitsMatrix td.splitMatrixCell{padding:4px 6px}
 .splitCellHeader{
   display:flex;
   align-items:center;
-  gap:4px;
+  gap:5px;
   min-height:15px;
   margin-bottom:1px;
   color:var(--muted);
@@ -1426,7 +1432,7 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   box-shadow:none;
   color:var(--muted);
   text-align:right;
-  font-size: var(--font-small);
+  font-size:calc(var(--font-small) + 3px);
   line-height:21px;
   font-variant-numeric:tabular-nums;
 }
@@ -1434,7 +1440,7 @@ details[open] > summary .chev{ transform: rotate(45deg); }
 .splitPctControl input:read-only{color:color-mix(in srgb,var(--muted) 78%,transparent)}
 .splitPctControl > span{
   color: var(--muted);
-  font-size: var(--font-small);
+  font-size:calc(var(--font-small) + 3px);
 }
 .splitTrackControl{
   display:inline-flex;
@@ -1446,9 +1452,9 @@ details[open] > summary .chev{ transform: rotate(45deg); }
 .splitTrackButton{
   display: inline-grid;
   place-items: center;
-  width:25px;
-  height:25px;
-  min-height:25px;
+  width:23px;
+  height:23px;
+  min-height:23px;
   margin: 0;
   padding: 0;
   border:0;
