@@ -847,7 +847,7 @@
     area.innerHTML = "";
 
     if (flat.length === 0){
-      area.innerHTML = `<div class="muted">No tracked hoppers yet. Turn on Track in “Hopper Percentages”.</div>`;
+      area.innerHTML = `<div class="muted">No tracked hoppers yet. Turn on Track in “Recipe Setup”.</div>`;
       return;
     }
 
@@ -1114,4 +1114,3 @@ function updateFooterNext(flat, changeoverDate){
     applyTheme(state.theme || "dark");
     saveSession();
   })();
-
