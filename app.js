@@ -82,6 +82,7 @@
   let workspaceConfigurationRefreshInFlight = false;
   let workspaceConfigurationPending = null;
   let selectedWorkspaceConfigurationId = "";
+  let hopperRearrangement = null;
 
   function snapshotSharedActiveJob(){
     return activeJob.snapshotActiveJob(state, APP_VERSION);
@@ -91,7 +92,7 @@
     lineSync?.notifyActiveJobMutation(options);
   }
 
-  function workspaceConfigurationStatus(message){ const el=$("workspaceConfigurationsStatus"); if(el) el.textContent=message; }
+  function workspaceConfigurationStatus(message){ const el=$("workspaceConfigurationsStatus"); if(el){el.textContent=message||"";el.hidden=!message;} }
   function renderWorkspaceConfigurations(syncState){
     const profiles=$("workspaceProfilesList"), recipes=$("workspaceRecipesList"), refresh=$("workspaceConfigurationsRefresh"), workspaceLabel=$("workspaceConfigurationsWorkspace");
     if(!profiles || !recipes) return;
@@ -100,15 +101,15 @@
     profiles.replaceChildren(); recipes.replaceChildren();
     if(!workspaceId){ workspaceConfigurationWorkspaceId=""; selectedWorkspaceConfigurationId=""; if(workspaceLabel) workspaceLabel.hidden=true; workspaceConfigurationStatus("Connect to an RT Sync workspace to view shared weight profiles and recipes."); return; }
     workspaceConfigurationWorkspaceId=workspaceId;
-    if(workspaceLabel){ workspaceLabel.hidden=false; workspaceLabel.textContent=`Workspace: ${syncState.selectedWorkspace?.name || "Connected workspace"}`; }
+    if(workspaceLabel){ workspaceLabel.hidden=false; workspaceLabel.textContent=`${syncState.selectedWorkspace?.name || "Connected workspace"} · RT Sync workspace`; }
     const renderList=(host,items,kind)=>{
       if(!items.length){ const empty=document.createElement("div"); empty.className="muted"; empty.textContent=kind==="recipe"?"No shared recipes saved for this workspace.":"No shared weight profiles saved for this workspace."; host.append(empty); return; }
-      items.forEach(item=>{ const row=document.createElement("div"); row.className="workspaceConfigurationRow"; row.tabIndex=0; row.setAttribute("role","group"); row.setAttribute("aria-label",`${item.name} configuration`); const select=()=>{selectedWorkspaceConfigurationId=item.id; renderWorkspaceConfigurations(syncState);}; row.classList.toggle("selected",selectedWorkspaceConfigurationId===item.id); row.addEventListener("click",event=>{if(!event.target.closest("button,summary,details")) select();}); row.addEventListener("keydown",event=>{if((event.key==="Enter"||event.key===" ")&&!event.target.closest("button,summary")){event.preventDefault();select();}}); const info=document.createElement("div"); const title=document.createElement("strong"); if(item.favorite){const star=document.createElement("span");star.className="workspaceConfigurationFavorite";star.setAttribute("aria-label","Favorite recipe");star.textContent="★";title.append(star," ");} title.append(item.name); const meta=document.createElement("small"); const count=kind==="recipe"&&Array.isArray(item.payload?.layers)?item.payload.layers.reduce((n,layer)=>n+(Array.isArray(layer?.hoppers)?layer.hoppers.filter(h=>typeof h?.resin_name==="string"&&h.resin_name.trim()).length:0),0):kind!=="recipe"&&Array.isArray(item.payload?.layers)?item.payload.layers.reduce((n,layer)=>n+(Array.isArray(layer?.receiver_weights_lb)&&layer.receiver_weights_lb.length===6?6:0),0):null; meta.textContent=`${item.payload.line_type} Layer${count===null?"":` · ${count} ${kind==="recipe"?"assigned hoppers":"receiver weights"}`} · Updated ${item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : "unknown"}`; info.append(title,meta); const actions=document.createElement("div"); actions.className="workspaceConfigurationActions"; const action=(label,fn,cls="secondary")=>{const b=document.createElement("button");b.type="button";b.className=cls;b.textContent=label;b.addEventListener("click",event=>{event.stopPropagation();fn();});return b;}; actions.append(action("Load",()=>previewWorkspaceConfiguration(item),"primary"),action("Update",()=>openWorkspaceConfigurationDialog("update",item))); const menu=document.createElement("details"); menu.className="workspaceConfigurationOverflow"; menu.addEventListener("click",event=>event.stopPropagation()); const summary=document.createElement("summary"); summary.setAttribute("aria-label",`More actions for ${item.name}`); summary.textContent="⋯"; const menuActions=document.createElement("div"); menuActions.className="workspaceConfigurationOverflowMenu"; const menuAction=(label,fn,cls="secondary")=>{const button=action(label,()=>{menu.open=false;fn();},cls);menuActions.append(button);}; menuAction("Rename",()=>openWorkspaceConfigurationDialog("rename",item)); menuAction("Duplicate",()=>openWorkspaceConfigurationDialog("duplicate",item)); if(kind==="recipe") menuAction(item.favorite?"Unfavorite":"Favorite",()=>mutateWorkspaceConfiguration("favorite",item,!item.favorite)); menuAction("Delete",()=>{if(confirm(`Delete shared configuration “${item.name}”?`)) mutateWorkspaceConfiguration("delete",item);},"danger"); menu.append(summary,menuActions); actions.append(menu); row.append(info,actions); host.append(row); });
+      items.forEach(item=>{ const row=document.createElement("div"); row.className="workspaceConfigurationRow"; row.tabIndex=0; row.setAttribute("role","group"); row.setAttribute("aria-label",`${item.name} configuration`); const select=()=>{selectedWorkspaceConfigurationId=item.id; renderWorkspaceConfigurations(syncState);}; const selected=selectedWorkspaceConfigurationId===item.id; row.classList.toggle("selected",selected); row.addEventListener("click",event=>{if(!event.target.closest("button,summary,details")) select();}); row.addEventListener("keydown",event=>{if((event.key==="Enter"||event.key===" ")&&!event.target.closest("button,summary")){event.preventDefault();select();}}); const info=document.createElement("div"); info.className="workspaceConfigurationInfo"; info.addEventListener("click",event=>{event.stopPropagation();select();}); const title=document.createElement("strong"); if(item.favorite){const star=document.createElement("span");star.className="workspaceConfigurationFavorite";star.setAttribute("aria-label","Favorite recipe");star.textContent="★";title.append(star," ");} title.append(item.name); const meta=document.createElement("small"); const count=kind==="recipe"&&Array.isArray(item.payload?.layers)?item.payload.layers.reduce((n,layer)=>n+(Array.isArray(layer?.hoppers)?layer.hoppers.filter(h=>typeof h?.resin_name==="string"&&h.resin_name.trim()).length:0),0):kind!=="recipe"&&Array.isArray(item.payload?.layers)?item.payload.layers.reduce((n,layer)=>n+(Array.isArray(layer?.receiver_weights_lb)&&layer.receiver_weights_lb.length===6?6:0),0):null; meta.textContent=`${item.payload.line_type} Layer${count===null?"":` · ${count} ${kind==="recipe"?"assigned hoppers":"receiver weights"}`} · Updated ${item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : "unknown"}`; info.append(title,meta); row.append(info); if(selected){const actions=document.createElement("div"); actions.className="workspaceConfigurationActions"; const action=(label,fn,cls="secondary")=>{const b=document.createElement("button");b.type="button";b.className=cls;b.textContent=label;b.addEventListener("click",event=>{event.stopPropagation();fn();});return b;}; actions.append(action("Load",()=>previewWorkspaceConfiguration(item),"primary"),action("Update",()=>openWorkspaceConfigurationDialog("update",item))); const menu=document.createElement("details"); menu.className="workspaceConfigurationOverflow"; menu.addEventListener("click",event=>event.stopPropagation()); const summary=document.createElement("summary"); summary.setAttribute("aria-label",`More actions for ${item.name}`); summary.textContent="⋯"; const menuActions=document.createElement("div"); menuActions.className="workspaceConfigurationOverflowMenu"; const menuAction=(label,fn,cls="secondary")=>{const button=action(label,()=>{menu.open=false;fn();},cls);menuActions.append(button);}; menuAction("Rename",()=>openWorkspaceConfigurationDialog("rename",item)); menuAction("Duplicate",()=>openWorkspaceConfigurationDialog("duplicate",item)); if(kind==="recipe") menuAction(item.favorite?"Unfavorite":"Favorite",()=>mutateWorkspaceConfiguration("favorite",item,!item.favorite)); menuAction("Delete",()=>{if(confirm(`Delete shared configuration “${item.name}”?`)) mutateWorkspaceConfiguration("delete",item);},"danger"); menu.append(summary,menuActions); actions.append(menu); row.append(actions);} host.append(row); });
     };
     if(!workspaceConfigurations){ workspaceConfigurationStatus("Shared configurations service is unavailable."); return; }
     renderList(profiles,workspaceConfigurations.listReceiverWeightProfiles(workspaceId).items,"profile");
     renderList(recipes,workspaceConfigurations.listRecipes(workspaceId).items,"recipe");
-    workspaceConfigurationStatus("Showing shared configurations for the current RT Sync workspace.");
+    workspaceConfigurationStatus("");
   }
   async function refreshWorkspaceConfigurations(){
     const workspaceId=lineSync?.getState?.().selectedWorkspaceId || "";
@@ -1180,6 +1181,9 @@
       modeButton.textContent = "Bulk edit";
       modeButton.setAttribute("aria-expanded", "false");
       modeBar.appendChild(modeButton);
+      const rearrangeButton=document.createElement("button"); rearrangeButton.type="button"; rearrangeButton.className="secondary rearrangeDesktopOnly"; rearrangeButton.textContent=hopperRearrangement?.active?"Rearranging":"Rearrange Hoppers"; rearrangeButton.disabled=!state.layers.some(L=>L.hoppers.some(h=>normName(h.resinName)||clampNum(h.pct)>0)); modeBar.appendChild(rearrangeButton);
+      if(hopperRearrangement?.active){const bar=document.createElement("div");bar.className="rearrangeModeBar";bar.innerHTML='<div class="rearrangeModeMessage"><strong>Rearrange mode</strong><span>Drag assignments between hoppers. Hopper 1 is recalculated after each move.</span></div>';const actions=document.createElement("div");actions.className="rearrangeModeActions";const undo=document.createElement("button");undo.type="button";undo.className="secondary";undo.textContent="Undo Last Move";undo.disabled=!hopperRearrangement.undo.length;const cancel=document.createElement("button");cancel.type="button";cancel.className="secondary";cancel.textContent="Cancel";const done=document.createElement("button");done.type="button";done.className="primary";done.textContent="Done";undo.addEventListener("click",()=>{const shot=hopperRearrangement.undo.pop();if(shot)window.PolynHopperRearrangement.apply(state.layers,shot);renderSplitsArea();validateAndCompute();});cancel.addEventListener("click",()=>{window.PolynHopperRearrangement.apply(state.layers,hopperRearrangement.baseline);hopperRearrangement=null;renderSplitsArea();validateAndCompute();});done.addEventListener("click",()=>{hopperRearrangement=null;renderSplitsArea();validateAndCompute();saveSession();notifyActiveJobMutation({immediate:true,kind:"rearrange-hoppers"});});actions.append(undo,cancel,done);bar.append(actions);area.append(bar);}
+      rearrangeButton.addEventListener("click",()=>{if(window.matchMedia("(max-width: 900px)").matches)return;hopperRearrangement={active:true,baseline:window.PolynHopperRearrangement.snapshot(state.layers),undo:[]};renderSplitsArea();});
 
       const toolbar = document.createElement("div");
       toolbar.className = "splitsBulkBar hide";
@@ -1293,6 +1297,7 @@
         pctInput.placeholder = "0";
         pctInput.value = String(clampNum(L.layerPct));
         pctInput.setAttribute("aria-label", `Layer ${L.name} percentage`);
+        if(hopperRearrangement?.active) pctInput.disabled=true;
         const pctUnit = document.createElement("span");
         pctUnit.textContent = "%";
         pctWrap.append(pctInput, pctUnit);
@@ -1367,6 +1372,7 @@
           const td = document.createElement("td");
           td.className = "splitMatrixCell";
           td.dataset.layerColumn = L.name;
+          if(hopperRearrangement?.active){td.draggable=true;td.classList.add("rearrangeTarget");td.setAttribute("aria-label",`Rearrange ${hopperBadgeLabel(L.name,hi)}`);td.addEventListener("dragstart",event=>{if(!normName(hopper.resinName)&&!clampNum(hopper.pct)){event.preventDefault();return;}hopperRearrangement.drag={layer:L.name,index:hi};td.classList.add("rearrangeSource");event.dataTransfer.effectAllowed="move";});td.addEventListener("dragend",()=>{hopperRearrangement.drag=null;td.classList.remove("rearrangeSource");});td.addEventListener("dragover",event=>{if(hopperRearrangement.drag){event.preventDefault();td.classList.add("rearrangeOver");}});td.addEventListener("dragleave",()=>td.classList.remove("rearrangeOver"));td.addEventListener("drop",event=>{event.preventDefault();td.classList.remove("rearrangeOver");const result=window.PolynHopperRearrangement.move(state.layers,hopperRearrangement.drag,{layer:L.name,index:hi});if(result.ok){hopperRearrangement.undo.push(result.before);renderSplitsArea();validateAndCompute();}else summary.textContent=result.reason==="invalid"?"Move rejected: hopper percentages would be invalid.":"No rearrangement made.";});}
 
           const cellHeader = document.createElement("div");
           cellHeader.className = "splitCellHeader";
@@ -1444,6 +1450,7 @@
           clearButton.textContent = "×";
           clearButton.setAttribute("aria-label", `Clear ${hopperBadgeLabel(L.name, hi)}`);
           clearButton.title = `Clear ${hopperBadgeLabel(L.name, hi)}`;
+          if(hopperRearrangement?.active){selector.disabled=true;resinInput.disabled=true;pctInput.disabled=true;trackButton.disabled=true;clearButton.disabled=true;}
 
           cellHeader.append(trackControl, clearButton);
           controls.appendChild(pctWrap);
