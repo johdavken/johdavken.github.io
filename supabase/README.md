@@ -6,6 +6,25 @@ If the initial migration was applied before the link-code qualification fix, als
 
 If `join_workspace` reports an ambiguous `workspace_id`, apply [`migrations/202607310003_fix_join_workspace.sql`](migrations/202607310003_fix_join_workspace.sql).
 
+## Workspace Configurations (Phase 2 database contract)
+
+After the line-sync migration and its two fixes above, run [`migrations/202608020003_workspace_configurations.sql`](migrations/202608020003_workspace_configurations.sql) once. This additive migration creates the long-term `public.workspace_configurations` store; it does not modify the legacy `saved_setups` table or its RPCs.
+
+The single table holds two document types with separate name namespaces: `receiver_weight_profile` and `recipe`. Names are trimmed, internal whitespace is collapsed, and case-insensitively normalized on the server; `(workspace_id, configuration_type, normalized_name)` is unique, so duplicate names are rejected rather than overwritten. Documents use schema version `1` only, JSON-object payloads up to 128 KiB, and are validated against their respective narrow payload boundary.
+
+Receiver Weight Profiles contain physical layout identity and receiver weights only. Recipes contain line/layer percentages and hopper resin assignments/percentages only. Recipe `favorite` is document metadata, never payload data; profiles are always non-favorites. Unknown or inactive resin codes remain valid recipe strings.
+
+RLS permits authenticated workspace members (including the app's authenticated anonymous users) to read only their own workspace's configurations. Browser roles have no direct write privilege. The security-definer RPCs, granted only to `authenticated`, check authentication and existing workspace membership, derive names and audit IDs server-side, and implement simple last-write-wins operations:
+
+- `create_workspace_configuration(uuid, uuid, text, text, integer, jsonb, boolean)`
+- `update_workspace_configuration(uuid, uuid, integer, jsonb)`
+- `rename_workspace_configuration(uuid, uuid, text)`
+- `duplicate_workspace_configuration(uuid, uuid, text)`
+- `delete_workspace_configuration(uuid, uuid)` — hard-deletes only the selected reusable document
+- `set_workspace_configuration_favorite(uuid, uuid, boolean)`
+
+Configurations are intentionally not added to the Realtime publication and have no offline mutation queue. Never use a Supabase service-role key in browser code. A later service/UI phase will call these RPCs; the current app and its legacy local/saved-setup workflow remain unchanged.
+
 ## Resin catalog
 
 Run [`migrations/202608020001_create_resins.sql`](migrations/202608020001_create_resins.sql) first, then run [`seeds/202608020001_resins.sql`](seeds/202608020001_resins.sql). The migration creates `public.resins`; the seed adds the 135 resin records currently baked into the application. Run each file once in the Supabase SQL Editor, in that order.
