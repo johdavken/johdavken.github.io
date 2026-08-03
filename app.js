@@ -1171,6 +1171,63 @@
       updateSelectionUI();
     }
 
+    function printRecipeSheet(){
+      const existing = document.getElementById("recipePrintSheet");
+      if (existing) existing.remove();
+
+      const sheet = document.createElement("div");
+      sheet.id = "recipePrintSheet";
+
+      const header = document.createElement("div");
+      header.className = "printSheetHeader";
+      const title = document.createElement("h1");
+      title.textContent = "Recipe Setup";
+      const meta = document.createElement("div");
+      meta.className = "printSheetMeta";
+      const workspaceName = lineSync?.getState?.().selectedWorkspace?.name || "Local";
+      const lineTypeLabel = `${state.lineType} layer${state.lineType === 1 ? "" : "s"}`;
+      const namingLabel = state.hopperNamingLine9 === "main" ? "Main + 1–5" : "1–6";
+      meta.textContent = `${workspaceName} · ${lineTypeLabel} · Hopper naming: ${namingLabel} · Printed ${new Date().toLocaleString()}`;
+      header.append(title, meta);
+      sheet.append(header);
+
+      const layersGrid = document.createElement("div");
+      layersGrid.className = "printSheetLayers";
+
+      state.layers.forEach(L=>{
+        const table = document.createElement("table");
+        table.className = "printSheetLayerTable";
+        const caption = document.createElement("caption");
+        caption.textContent = `Layer ${L.name} — ${fmtNum(clampNum(L.layerPct), 2)}%`;
+        const thead = document.createElement("thead");
+        const headRow = document.createElement("tr");
+        ["Hopper", "Resin", "Blend %"].forEach(text=>{
+          const th = document.createElement("th");
+          th.textContent = text;
+          headRow.appendChild(th);
+        });
+        thead.appendChild(headRow);
+        const tbody = document.createElement("tbody");
+        L.hoppers.forEach((h, hi)=>{
+          const row = document.createElement("tr");
+          const hopperCell = document.createElement("td");
+          hopperCell.textContent = hopperBadgeLabel(L.name, hi);
+          const resinCell = document.createElement("td");
+          resinCell.textContent = normName(h.resinName) || "—";
+          const pctCell = document.createElement("td");
+          pctCell.textContent = `${fmtNum(clampNum(h.pct), 2)}%`;
+          row.append(hopperCell, resinCell, pctCell);
+          tbody.appendChild(row);
+        });
+        table.append(caption, thead, tbody);
+        layersGrid.append(table);
+      });
+      sheet.append(layersGrid);
+
+      document.body.appendChild(sheet);
+      window.print();
+    }
+
     function renderSplitsArea(){
       const area = $("splitsArea");
       if (!area) return;
@@ -1220,6 +1277,9 @@
         hopperRearrangement={active:true,baseline:window.PolynHopperRearrangement.snapshot(state.layers),undo:[]};
         renderSplitsArea();
       });
+
+      const printButton=document.createElement("button"); printButton.type="button"; printButton.className="secondary rearrangeDesktopOnly"; printButton.textContent="Print Recipe"; printButton.disabled=!state.layers.some(L=>L.hoppers.some(h=>normName(h.resinName)||clampNum(h.pct)>0)); modeBar.appendChild(printButton);
+      printButton.addEventListener("click", printRecipeSheet);
 
       const toolbar = document.createElement("div");
       toolbar.className = "splitsBulkBar hide";

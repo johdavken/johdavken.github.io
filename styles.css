@@ -2909,3 +2909,20 @@ body[data-surface-style="divided"] .helpTopic{
   body[data-mobile-timeline-only="true"] .workspaceContent > .workspacePanel:not(#resultsBlock){ display:none !important; }
   body[data-mobile-timeline-only="true"] #resultsBlock{ display:block !important; }
 }
+
+#recipePrintSheet{ display:none; }
+@page{ margin:12mm; }
+@media print{
+  html, body{ background:#fff !important; }
+  body > *:not(#recipePrintSheet){ display:none !important; }
+  #recipePrintSheet{ display:block !important; background:#fff !important; color:#000 !important; }
+  #recipePrintSheet *{ color:#000 !important; background:transparent !important; }
+  #recipePrintSheet .printSheetHeader{ margin-bottom:10px; }
+  #recipePrintSheet .printSheetHeader h1{ font-size:18px; margin:0 0 3px; }
+  #recipePrintSheet .printSheetMeta{ font-size:11px; }
+  #recipePrintSheet .printSheetLayers{ display:grid; grid-template-columns:repeat(2, 1fr); gap:4px 14px; }
+  #recipePrintSheet .printSheetLayerTable{ width:100%; border-collapse:collapse; margin-bottom:4px; page-break-inside:avoid; }
+  #recipePrintSheet .printSheetLayerTable caption{ caption-side:top; text-align:left; font-weight:600; font-size:12px; margin-bottom:2px; }
+  #recipePrintSheet .printSheetLayerTable th,
+  #recipePrintSheet .printSheetLayerTable td{ border:1px solid #000; padding:2px 6px; text-align:left; font-size:11px; line-height:1.3; }
+}
