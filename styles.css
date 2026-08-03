@@ -404,6 +404,7 @@ main{
     font-size: var(--font-small);
     line-height:1;
   }
+  .workspaceStatusItem strong.stale{ color: var(--warn); }
   .workspaceNextAction{
     min-width: 0;
     margin-left: auto;
@@ -2311,6 +2312,7 @@ button.compactAction{
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.footerMsg.stale{ color: var(--warn); }
 
 .footerSub{
   overflow: hidden;
@@ -2892,6 +2894,7 @@ body[data-surface-style="divided"] .helpTopic{
   }
   .workspaceStatusBar .workspaceStatusItem span{ color:var(--muted); font-size:var(--font-tiny); }
   .workspaceStatusBar .workspaceStatusItem strong{ color:var(--text); font-size:var(--font-small); line-height:1; }
+  .workspaceStatusBar .workspaceStatusItem strong.stale{ color:var(--warn); }
   body[data-mobile-timeline-only="true"] .workspaceContent > .workspacePanel:not(#resultsBlock){ display:none !important; }
   body[data-mobile-timeline-only="true"] #resultsBlock{ display:block !important; }
 }

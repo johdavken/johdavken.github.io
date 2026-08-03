@@ -46,6 +46,7 @@
       lineRate: 0,
       lineType: 3,
       changeoverTime: "",
+      changeoverSetAt: null, // epoch ms the changeover field was last edited; used to flag a stale/forgotten deadline
       offsets: {},
       layers: [],
       prodResinLb: 0,
@@ -73,7 +74,7 @@
   const resinCatalog = window.PolynResinCatalog;
   const resinLookup = window.PolynLookup;
   const activeJob = window.PolynActiveJob;
-  const { parseChangeoverDate, formatTime, formatTimelineStart } = window.PolynScheduling;
+  const { parseChangeoverDate, formatTime, formatTimelineStart, isChangeoverStale } = window.PolynScheduling;
   const fmtTime = (date, baseDate) => formatTime(date, baseDate, state.timeFormat);
   const { writeJson } = window.PolynStorage;
   let lineSync = null;
@@ -566,6 +567,7 @@
         lineRate: state.lineRate,
         lineType: state.lineType,
         changeoverTime: state.changeoverTime,
+        changeoverSetAt: state.changeoverSetAt,
         offsets: state.offsets,
         layers: state.layers,
         prodResinLb: state.prodResinLb,
@@ -668,6 +670,9 @@
       state.gauge = 0;
       state.lineType = [1,3,5].includes(Number(payload.lineType)) ? Number(payload.lineType) : 3;
       state.changeoverTime = payload.changeoverTime || "";
+      state.changeoverSetAt = state.changeoverTime
+        ? (Number.isFinite(payload.changeoverSetAt) ? payload.changeoverSetAt : Date.now())
+        : null;
       state.offsets = {};
       state.prodResinLb = clampNum(payload.prodResinLb);
       state.scrapResinLb = clampNum(payload.scrapResinLb);
@@ -2180,6 +2185,7 @@
 
       state.lineRate = 0;
       state.changeoverTime = "";
+      state.changeoverSetAt = null;
       state.gauge = 0;
       state.hopperNamingLine9 = "standard";
       state.showPumpOffTracked = false;
@@ -2343,11 +2349,28 @@
     return `in ${h}h ${String(m).padStart(2,"0")}m`;
   }
 
+  function fmtAgo(setAtMs){
+    if (!Number.isFinite(setAtMs)) return "";
+    const mins = Math.max(0, Math.round((Date.now() - setAtMs) / 60000));
+    if (mins < 60) return `${mins}m ago`;
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return m ? `${h}h ${m}m ago` : `${h}h ago`;
+  }
+
   function updateChangeoverCountdown(){
     const el = $("workspaceChangeoverCountdownStatus");
     if (!el) return;
     const changeoverDate = parseChangeoverDate(state.changeoverTime);
-    el.textContent = changeoverDate ? fmtRelFromNow(changeoverDate) : "Not set";
+    const stale = !!changeoverDate && isChangeoverStale(state.changeoverSetAt);
+    el.classList.toggle("stale", stale);
+    if (!changeoverDate){
+      el.title = "";
+      el.textContent = "Not set";
+      return;
+    }
+    el.textContent = stale ? "Needs update" : fmtRelFromNow(changeoverDate);
+    el.title = stale ? `Changeover time was last set ${fmtAgo(state.changeoverSetAt)} — confirm or update it.` : "";
   }
 
   function updateFooterNext(flat, changeoverDate){
@@ -2357,15 +2380,27 @@
     const desktopSubEl = document.getElementById("workspaceNextDetail");
     if (!msgEl || !subEl) return;
 
-    const setNextStatus = (message, detail)=>{
+    const setNextStatus = (message, detail, { stale=false } = {})=>{
       msgEl.textContent = message;
       subEl.textContent = detail;
       if (desktopMsgEl) desktopMsgEl.textContent = message;
       if (desktopSubEl) desktopSubEl.textContent = detail;
+      msgEl.classList.toggle("stale", stale);
+      if (desktopMsgEl) desktopMsgEl.classList.toggle("stale", stale);
     };
 
     if (!flat || flat.length === 0){
       setNextStatus("No tracked hoppers", "Track a resin to see the next action");
+      return;
+    }
+
+    const changeoverStale = !!changeoverDate && isChangeoverStale(state.changeoverSetAt);
+    if (changeoverStale){
+      setNextStatus(
+        "Changeover time may be outdated",
+        `Last set ${fmtAgo(state.changeoverSetAt)} — update it to see accurate pump-off timing`,
+        { stale: true }
+      );
       return;
     }
 
@@ -2866,6 +2901,7 @@
     payload.lineRate = 0;
     payload.gauge = 0;
     payload.changeoverTime = "";
+    payload.changeoverSetAt = null;
     payload.prodResinLb = 0;
     payload.scrapResinLb = 0;
     payload.layers.forEach(layer=>{
@@ -2972,7 +3008,12 @@
       saveSession();
       notifyActiveJobMutation({ immediate: true, kind: "line-type" });
     });
-    $("changeoverTime")?.addEventListener("input",(e)=>{ state.changeoverTime = e.target.value || ""; validateAndCompute({ sync: true }); saveSession(); });
+    $("changeoverTime")?.addEventListener("input",(e)=>{
+      state.changeoverTime = e.target.value || "";
+      state.changeoverSetAt = state.changeoverTime ? Date.now() : null;
+      validateAndCompute({ sync: true });
+      saveSession();
+    });
 
     $("densitySel")?.addEventListener("change",(e)=>{
       applyDensity(e.target.value);

@@ -33,6 +33,19 @@
     return deadline;
   }
 
+  // How long a changeover time can go unedited before we stop trusting it as
+  // "today's deadline" and flag it as stale instead. Comfortably longer than
+  // a single shift, comfortably shorter than a full day, so normal shift-start
+  // edits never trip it but a forgotten field from a prior day does.
+  const CHANGEOVER_STALE_MS = 20 * 60 * 60 * 1000;
+
+  function isChangeoverStale(setAt, now = new Date()) {
+    if (!setAt && setAt !== 0) return false;
+    const setAtMs = setAt instanceof Date ? setAt.getTime() : Number(setAt);
+    if (!Number.isFinite(setAtMs)) return false;
+    return (now.getTime() - setAtMs) > CHANGEOVER_STALE_MS;
+  }
+
   function calendarDayOffset(date, baseDate) {
     const dateDay = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
     const baseDay = Date.UTC(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate());
@@ -70,6 +83,8 @@
     parseChangeoverDate,
     calendarDayOffset,
     formatTime,
-    formatTimelineStart
+    formatTimelineStart,
+    isChangeoverStale,
+    CHANGEOVER_STALE_MS
   };
 });
