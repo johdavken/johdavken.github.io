@@ -51,12 +51,12 @@
       layers: [],
       prodResinLb: 0,
       scrapResinLb: 0,
-      density: "spacious",
-      theme: "light",
+      density: "comfort",
+      theme: "everforest",
       timeFormat: "12",
-      surfaceStyle: "layered-flat",
+      surfaceStyle: "divided",
       timelineStyle: "command-rows",
-      headerStyle: "gruvbox-dark",
+      headerStyle: "modern",
       gauge: 0,
       hopperNamingLine9: "standard", // "standard" | "main"
       showPumpOffTracked: false, // show pump-off items in Timeline
@@ -608,7 +608,7 @@
    * ============================ */
   function applyTheme(t){
       const allowed = new Set(["dark","light","mse","industrial-slate-dark","gruvbox-dark","gruvbox-light","nord","tokyo-night","dracula","solarized-dark","solarized-light","catppuccin-mocha","catppuccin-latte","rose-pine","rose-pine-dawn","everforest","everforest-light","one-dark","high-contrast","mono"]);
-      const theme = allowed.has(String(t)) ? String(t) : "light";
+      const theme = allowed.has(String(t)) ? String(t) : "everforest";
 
       document.documentElement.setAttribute("data-theme", theme);
       document.body.setAttribute("data-theme", theme);
@@ -622,7 +622,7 @@
 
     function applyDensity(d){
       const allowed = new Set(["spacious","comfort","compact","dense","maximum"]);
-      const density = allowed.has(String(d)) ? String(d) : "spacious";
+      const density = allowed.has(String(d)) ? String(d) : "comfort";
       document.body.setAttribute("data-density", density);
       const sel = $("densitySel");
       if (sel) sel.value = density;
@@ -636,9 +636,14 @@
       if (sel) sel.value = timeFormat;
     }
 
+    // Divided Workspace is the default on desktop; mobile defaults to Layered Flat instead.
+    function defaultSurfaceStyle(){
+      return window.matchMedia("(max-width: 900px)").matches ? "layered-flat" : "divided";
+    }
+
     function applySurfaceStyle(value){
       const allowed = new Set(["elevated", "flat", "layered-flat", "accent-frame", "divided", "low-elevation"]);
-      const surfaceStyle = allowed.has(String(value)) ? String(value) : "layered-flat";
+      const surfaceStyle = allowed.has(String(value)) ? String(value) : defaultSurfaceStyle();
       state.surfaceStyle = surfaceStyle;
       document.body.setAttribute("data-surface-style", surfaceStyle);
       const sel = $("surfaceStyleSel");
@@ -656,7 +661,7 @@
 
     function applyHeaderStyle(value){
       const allowed = new Set(["gruvbox-dark", "industrial-slate", "modern"]);
-      const headerStyle = allowed.has(String(value)) ? String(value) : "gruvbox-dark";
+      const headerStyle = allowed.has(String(value)) ? String(value) : "modern";
       state.headerStyle = headerStyle;
       document.body.setAttribute("data-header-style", headerStyle);
       const sel = $("headerStyleSel");
@@ -677,12 +682,12 @@
       state.prodResinLb = clampNum(payload.prodResinLb);
       state.scrapResinLb = clampNum(payload.scrapResinLb);
 
-      applyTheme(payload.theme || "light");
-      applyDensity(payload.density || "spacious");
+      applyTheme(payload.theme || "everforest");
+      applyDensity(payload.density || "comfort");
       applyTimeFormat(payload.timeFormat || "12");
-      applySurfaceStyle(payload.surfaceStyle || "layered-flat");
+      applySurfaceStyle(payload.surfaceStyle || defaultSurfaceStyle());
       applyTimelineStyle(payload.timelineStyle || "command-rows");
-      applyHeaderStyle(payload.headerStyle || "gruvbox-dark");
+      applyHeaderStyle(payload.headerStyle || "modern");
       $("lineRate").value = String(state.lineRate);
       // Custom toggles
       state.hopperNamingLine9 = (payload.hopperNamingLine9 === "main") ? "main" : "standard";
@@ -3166,10 +3171,10 @@
 
       const restored = loadSession();
       if (!restored){
-        applyDensity("spacious");
-        applyTheme("light");
+        applyDensity("comfort");
+        applyTheme("everforest");
         applyTimeFormat("12");
-        applySurfaceStyle("layered-flat");
+        applySurfaceStyle(defaultSurfaceStyle());
         applyTimelineStyle("command-rows");
         rebuildUIFromState();
       }
@@ -3192,11 +3197,11 @@
       }
 
       // Ensure theme/logo applied even after restore
-      applyTheme(state.theme || "light");
+      applyTheme(state.theme || "everforest");
       applyTimeFormat(state.timeFormat || "12");
-      applySurfaceStyle(state.surfaceStyle || "layered-flat");
+      applySurfaceStyle(state.surfaceStyle || defaultSurfaceStyle());
       applyTimelineStyle(state.timelineStyle || "command-rows");
-      applyHeaderStyle(state.headerStyle || "gruvbox-dark");
+      applyHeaderStyle(state.headerStyle || "modern");
       saveSession();
       setupLineSync();
     })();

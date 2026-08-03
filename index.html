@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="everforest">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -32,7 +32,7 @@
 
 </head>
 
-<body data-density="spacious" data-theme="light" data-surface-style="layered-flat" data-timeline-style="command-rows" data-header-style="gruvbox-dark">
+<body data-density="comfort" data-theme="everforest" data-surface-style="divided" data-timeline-style="command-rows" data-header-style="modern">
 <main>
 
   <header class="site-header" hidden>
@@ -334,14 +334,14 @@
           <div>
             <label for="themeSel">Theme</label>
             <select id="themeSel">
-              <option value="dark">Dark</option><option value="light" selected>Light (Default)</option>
+              <option value="dark">Dark</option><option value="light">Light</option>
               <option value="mse">Industrial Slate</option><option value="industrial-slate-dark">Industrial Slate Dark</option>
               <option value="gruvbox-dark">Gruvbox Dark</option><option value="gruvbox-light">Gruvbox Light</option>
               <option value="nord">Nord</option><option value="tokyo-night">Tokyo Night</option><option value="dracula">Dracula</option>
               <option value="solarized-dark">Solarized Dark</option><option value="solarized-light">Solarized Light</option>
               <option value="catppuccin-mocha">Catppuccin Mocha</option><option value="catppuccin-latte">Catppuccin Latte</option>
               <option value="rose-pine">Rosé Pine</option><option value="rose-pine-dawn">Rosé Pine Dawn</option>
-              <option value="everforest">Everforest</option><option value="everforest-light">Everforest Light</option>
+              <option value="everforest" selected>Everforest (Default)</option><option value="everforest-light">Everforest Light</option>
               <option value="one-dark">One Dark</option>
               <option value="high-contrast">High Contrast</option><option value="mono">Monochrome</option>
             </select>
@@ -349,7 +349,7 @@
           <div>
             <label for="densitySel">View density</label>
             <select id="densitySel">
-              <option value="spacious" selected>Spacious (Default)</option><option value="comfort">Comfort</option>
+              <option value="spacious">Spacious</option><option value="comfort" selected>Comfort (Default)</option>
               <option value="compact">Compact</option><option value="dense">Dense</option><option value="maximum">Maximum Data</option>
             </select>
           </div>
@@ -361,8 +361,8 @@
             <label for="surfaceStyleSel">Surface style</label>
             <select id="surfaceStyleSel">
               <option value="elevated">High Elevation</option><option value="flat">Pure Flat</option>
-              <option value="layered-flat" selected>Layered Flat (Default)</option><option value="accent-frame">Accent Frame</option>
-              <option value="divided">Divided Workspace</option><option value="low-elevation">Low Elevation</option>
+              <option value="layered-flat">Layered Flat (Default on Mobile)</option><option value="accent-frame">Accent Frame</option>
+              <option value="divided" selected>Divided Workspace (Default)</option><option value="low-elevation">Low Elevation</option>
             </select>
           </div>
           <div>
@@ -376,9 +376,9 @@
           <div>
             <label for="headerStyleSel">Header style</label>
             <select id="headerStyleSel">
-              <option value="gruvbox-dark" selected>Monospace (Default)</option>
+              <option value="gruvbox-dark">Monospace</option>
               <option value="industrial-slate">Condensed</option>
-              <option value="modern">System Sans</option>
+              <option value="modern" selected>System Sans (Default)</option>
             </select>
           </div>
         </div>
