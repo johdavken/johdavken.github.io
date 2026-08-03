@@ -693,6 +693,15 @@ main{
 .card::before{ display: none; }
 .card > *{ position: relative; }
 
+/* Mobile: the outer .card padding already insets the summary, so the
+   summary's own padding (meant for the non-card desktop treatment) would
+   otherwise stack on top of it and make collapsed cards taller than needed. */
+@media (max-width: 900px){
+  .workspacePanel.card > summary{
+    padding: calc(var(--summary-pad) / 2);
+  }
+}
+
 /* Typography helpers */
 .layerTitle{
   font-weight: 900;
