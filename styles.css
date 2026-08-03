@@ -712,27 +712,52 @@ main{
 
 /* Header style (Appearance & Preferences > Header style). Independent of
    the color theme — this only varies the font treatment of section titles,
-   always set in caps per the chosen style. */
-body[data-header-style="gruvbox-dark"] .layerTitle{
+   always set in caps per the chosen style. The desktop sidebar nav label
+   (.workspaceNavButton span) is the same heading tier as .layerTitle — it
+   names the same section — so it gets the identical treatment. */
+body[data-header-style="gruvbox-dark"] .layerTitle,
+body[data-header-style="gruvbox-dark"] .workspaceNavButton span{
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: .07em;
 }
-body[data-header-style="industrial-slate"] .layerTitle{
+body[data-header-style="industrial-slate"] .layerTitle,
+body[data-header-style="industrial-slate"] .workspaceNavButton span{
   font-family: "Arial Narrow", "Roboto Condensed", Impact, sans-serif;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: .1em;
+}
+body[data-header-style="industrial-slate"] .layerTitle{
   display: inline-block;
   border-bottom: 2px solid currentColor;
   padding-bottom: 2px;
 }
-body[data-header-style="modern"] .layerTitle{
+body[data-header-style="modern"] .layerTitle,
+body[data-header-style="modern"] .workspaceNavButton span{
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: .045em;
+}
+
+/* One level down: section-level headings pick up the same font, but stay
+   in sentence case — they support a header, they aren't one. */
+body[data-header-style="gruvbox-dark"] .setupSectionTitle,
+body[data-header-style="gruvbox-dark"] .setupToggleTitle,
+body[data-header-style="gruvbox-dark"] .toolsIndexButton{
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+body[data-header-style="industrial-slate"] .setupSectionTitle,
+body[data-header-style="industrial-slate"] .setupToggleTitle,
+body[data-header-style="industrial-slate"] .toolsIndexButton{
+  font-family: "Arial Narrow", "Roboto Condensed", Impact, sans-serif;
+}
+body[data-header-style="modern"] .setupSectionTitle,
+body[data-header-style="modern"] .setupToggleTitle,
+body[data-header-style="modern"] .toolsIndexButton{
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
 }
 .srOnly{
   position: absolute;
