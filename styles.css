@@ -281,26 +281,14 @@ main{
   padding: 2px 12px 4px;
   border-bottom: 1px solid var(--border);
 }
-.resinToolsLogo{display:block;width:min(100%,280px);height:auto;color:var(--text)}
-.resinToolsLogo .resinToolsWord{fill:currentColor}
-.resinToolsLogo .rtBracket{fill:none;stroke:#689d6a;stroke-width:10;stroke-linecap:square;stroke-linejoin:miter}
-.resinToolsLogo .rtPellet{fill:#fabd2f}
-.resinToolsLogo .rtDivider{fill:#d65d0e}
-.resinToolsLogo .resinToolsWord text{font:900 70px/1 "Arial Narrow","Roboto Condensed",Arial,sans-serif;letter-spacing:-3px}
+.resinToolsLogo{display:block;width:min(100%,280px);height:auto}
 .resinToolsSidebarIcon{display:block;width:137.5px;height:auto}
-.resinToolsSidebarIcon .rtLayerRed{fill:var(--bad)}
-.resinToolsSidebarIcon .rtLayerOrange{fill:var(--orange)}
-.resinToolsSidebarIcon .rtLayerYellow{fill:var(--warn)}
-.resinToolsSidebarIcon .rtLayerGreen{fill:var(--ok)}
-.resinToolsSidebarIcon .rtLayerBlue{fill:var(--focus-border)}
-.resinToolsSidebarIcon .rtWord{fill:var(--text);font:900 66px/1 ui-monospace,"Cascadia Mono","Liberation Mono",monospace;letter-spacing:-4px}
-:where(html,body)[data-theme="light"] .resinToolsLogo,
-:where(html,body)[data-theme="mse"] .resinToolsLogo,
-:where(html,body)[data-theme="gruvbox-light"] .resinToolsLogo,
-:where(html,body)[data-theme="solarized-light"] .resinToolsLogo,
-:where(html,body)[data-theme="catppuccin-latte"] .resinToolsLogo{
-  color:#657784;
-}
+:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerRed{fill:var(--bad)}
+:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerOrange{fill:var(--orange)}
+:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerYellow{fill:var(--warn)}
+:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerGreen{fill:var(--ok)}
+:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerBlue{fill:var(--focus-border)}
+:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtWord{fill:var(--text);font:900 66px/1 ui-monospace,"Cascadia Mono","Liberation Mono",monospace;letter-spacing:-4px}
 .workspaceBrandLogo{ display: block; width: min(100%, 196px); height: auto; }
 .workspaceBrandLogo path{ stroke-linecap: round; stroke-linejoin: round; }
 .workspaceBrandLogo [class^="polynFlow"]{ fill: none; stroke-width: 11; }
