@@ -1196,9 +1196,20 @@
       modeButton.textContent = "Bulk edit";
       modeButton.setAttribute("aria-expanded", "false");
       modeBar.appendChild(modeButton);
-      const rearrangeButton=document.createElement("button"); rearrangeButton.type="button"; rearrangeButton.className="secondary rearrangeDesktopOnly"; rearrangeButton.textContent=hopperRearrangement?.active?"Rearranging":"Rearrange Hoppers"; rearrangeButton.disabled=!state.layers.some(L=>L.hoppers.some(h=>normName(h.resinName)||clampNum(h.pct)>0)); modeBar.appendChild(rearrangeButton);
-      if(hopperRearrangement?.active){const bar=document.createElement("div");bar.className="rearrangeModeBar";bar.innerHTML='<div class="rearrangeModeMessage"><strong>Rearrange mode</strong><span>Drag assignments between hoppers. Hopper 1 is recalculated after each move.</span></div>';const actions=document.createElement("div");actions.className="rearrangeModeActions";const undo=document.createElement("button");undo.type="button";undo.className="secondary";undo.textContent="Undo Last Move";undo.disabled=!hopperRearrangement.undo.length;const cancel=document.createElement("button");cancel.type="button";cancel.className="secondary";cancel.textContent="Cancel";const done=document.createElement("button");done.type="button";done.className="primary";done.textContent="Done";undo.addEventListener("click",()=>{const shot=hopperRearrangement.undo.pop();if(shot)window.PolynHopperRearrangement.apply(state.layers,shot);renderSplitsArea();validateAndCompute();});cancel.addEventListener("click",()=>{window.PolynHopperRearrangement.apply(state.layers,hopperRearrangement.baseline);hopperRearrangement=null;renderSplitsArea();validateAndCompute();});done.addEventListener("click",()=>{hopperRearrangement=null;renderSplitsArea();validateAndCompute();saveSession();notifyActiveJobMutation({immediate:true,kind:"rearrange-hoppers"});});actions.append(undo,cancel,done);bar.append(actions);area.append(bar);}
-      rearrangeButton.addEventListener("click",()=>{if(window.matchMedia("(max-width: 900px)").matches)return;hopperRearrangement={active:true,baseline:window.PolynHopperRearrangement.snapshot(state.layers),undo:[]};renderSplitsArea();});
+      const rearrangeButton=document.createElement("button"); rearrangeButton.type="button"; rearrangeButton.className="secondary rearrangeDesktopOnly"; rearrangeButton.textContent=hopperRearrangement?.active?"Done Rearranging":"Rearrange Hoppers"; rearrangeButton.setAttribute("aria-expanded", String(!!hopperRearrangement?.active)); rearrangeButton.disabled=!state.layers.some(L=>L.hoppers.some(h=>normName(h.resinName)||clampNum(h.pct)>0)); modeBar.appendChild(rearrangeButton);
+      rearrangeButton.addEventListener("click",()=>{
+        if(hopperRearrangement?.active){
+          hopperRearrangement=null;
+          renderSplitsArea();
+          validateAndCompute();
+          saveSession();
+          notifyActiveJobMutation({immediate:true,kind:"rearrange-hoppers"});
+          return;
+        }
+        if(window.matchMedia("(max-width: 900px)").matches)return;
+        hopperRearrangement={active:true,baseline:window.PolynHopperRearrangement.snapshot(state.layers),undo:[]};
+        renderSplitsArea();
+      });
 
       const toolbar = document.createElement("div");
       toolbar.className = "splitsBulkBar hide";
@@ -1250,6 +1261,23 @@
       actionRow.className = "splitsMatrixActions";
       actionRow.append(actionInfo, modeBar);
       area.append(actionRow, toolbar);
+
+      if(hopperRearrangement?.active){
+        const bar=document.createElement("div");
+        bar.className="rearrangeModeBar";
+        bar.innerHTML='<div class="rearrangeModeMessage"><strong>Rearrange mode</strong><span>Drag assignments between hoppers. Hopper 1 is recalculated after each move.</span></div>';
+        const actions=document.createElement("div");
+        actions.className="rearrangeModeActions";
+        const undo=document.createElement("button");
+        undo.type="button"; undo.className="secondary"; undo.textContent="Undo Last Move"; undo.disabled=!hopperRearrangement.undo.length;
+        const cancel=document.createElement("button");
+        cancel.type="button"; cancel.className="secondary"; cancel.textContent="Cancel";
+        undo.addEventListener("click",()=>{const shot=hopperRearrangement.undo.pop();if(shot)window.PolynHopperRearrangement.apply(state.layers,shot);renderSplitsArea();validateAndCompute();});
+        cancel.addEventListener("click",()=>{window.PolynHopperRearrangement.apply(state.layers,hopperRearrangement.baseline);hopperRearrangement=null;renderSplitsArea();validateAndCompute();});
+        actions.append(undo,cancel);
+        bar.append(actions);
+        area.append(bar);
+      }
 
       const mobileLayerNav = document.createElement("div");
       mobileLayerNav.className = "splitsMobileLayerNav";
