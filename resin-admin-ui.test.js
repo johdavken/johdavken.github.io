@@ -34,6 +34,7 @@ test("Resin Database is an in-app workspace panel with a two-column responsive e
   const styles = fs.readFileSync("styles.css", "utf8");
   assert.match(styles, /\.adminResinColumns\{ display:grid; grid-template-columns:/);
   assert.match(styles, /@media \(max-width: 760px\)\{[\s\S]*\.adminResinColumns\{ grid-template-columns: 1fr; \}/);
+  assert.match(styles, /@media \(max-width:900px\)\{[\s\S]*\.adminResinPanel\{ display:none!important; \}/);
 });
 
 test("selected inactive rows remain visible and sign-out exits the admin panel", () => {

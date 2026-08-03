@@ -2755,6 +2755,8 @@ body[data-surface-style="divided"] .helpTopic{
 }
 @media (max-width:900px){
   body[data-ui-mode="everyday"] .advancedOnly{display:none!important}
+  /* The catalog editor is an admin-only desktop workspace. */
+  .adminResinPanel{ display:none!important; }
   .mobileBrand{
     margin-bottom:calc(0px - var(--page-gap));
     border-bottom:0;
