@@ -2097,8 +2097,7 @@ body[data-timeline-style="command-rows"] .resultHopper{ font-size:calc(var(--fon
 
 @media (max-width:600px){
   .resultRow{ grid-template-columns:1fr; }
-  .resultTiming{ min-width:0; text-align:left; }
-  .checkWrap{ justify-content:flex-start; }
+  .resultTiming{ min-width:0; }
   body[data-timeline-style="event-rail"] .resultRow,
   body[data-timeline-style="priority-lane"] .resultRow{
     grid-template-columns:minmax(78px,auto) minmax(0,1fr);
@@ -2110,6 +2109,7 @@ body[data-timeline-style="command-rows"] .resultHopper{ font-size:calc(var(--fon
   body[data-timeline-style="command-rows"] .resultTiming{
     display:flex;
     align-items:center;
+    justify-content:flex-end;
     gap:8px;
   }
   body[data-timeline-style="data-strips"] .checkWrap,
