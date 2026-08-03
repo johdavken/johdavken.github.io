@@ -709,6 +709,31 @@ main{
   white-space: nowrap;
   color: var(--title, var(--text));
 }
+
+/* Header style (Appearance & Preferences > Header style). Independent of
+   the color theme — this only varies the font treatment of section titles,
+   always set in caps per the chosen style. */
+body[data-header-style="gruvbox-dark"] .layerTitle{
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+}
+body[data-header-style="industrial-slate"] .layerTitle{
+  font-family: "Arial Narrow", "Roboto Condensed", Impact, sans-serif;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  display: inline-block;
+  border-bottom: 2px solid currentColor;
+  padding-bottom: 2px;
+}
+body[data-header-style="modern"] .layerTitle{
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .045em;
+}
 .srOnly{
   position: absolute;
   width: 1px;

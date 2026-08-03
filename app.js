@@ -55,6 +55,7 @@
       timeFormat: "12",
       surfaceStyle: "layered-flat",
       timelineStyle: "command-rows",
+      headerStyle: "gruvbox-dark",
       gauge: 0,
       hopperNamingLine9: "standard", // "standard" | "main"
       showPumpOffTracked: false, // show pump-off items in Timeline
@@ -574,6 +575,7 @@
         timeFormat: state.timeFormat,
         surfaceStyle: state.surfaceStyle,
         timelineStyle: state.timelineStyle,
+        headerStyle: state.headerStyle,
         gauge: state.gauge,
         hopperNamingLine9: state.hopperNamingLine9,
         showPumpOffTracked: !!state.showPumpOffTracked,
@@ -589,6 +591,7 @@
         timeFormat: state.timeFormat,
         surfaceStyle: state.surfaceStyle,
         timelineStyle: state.timelineStyle,
+        headerStyle: state.headerStyle,
         showPumpOffTracked: state.showPumpOffTracked,
         mobileTimelineOnly: state.mobileTimelineOnly,
         blocksOpen: snapshotPayload().blocksOpen
@@ -649,6 +652,15 @@
       if (sel) sel.value = timelineStyle;
     }
 
+    function applyHeaderStyle(value){
+      const allowed = new Set(["gruvbox-dark", "industrial-slate", "modern"]);
+      const headerStyle = allowed.has(String(value)) ? String(value) : "gruvbox-dark";
+      state.headerStyle = headerStyle;
+      document.body.setAttribute("data-header-style", headerStyle);
+      const sel = $("headerStyleSel");
+      if (sel) sel.value = headerStyle;
+    }
+
     function applyPayload(payload, {rebuildUI=true} = {}){
       if (!payload || typeof payload !== "object") return;
 
@@ -665,6 +677,7 @@
       applyTimeFormat(payload.timeFormat || "12");
       applySurfaceStyle(payload.surfaceStyle || "layered-flat");
       applyTimelineStyle(payload.timelineStyle || "command-rows");
+      applyHeaderStyle(payload.headerStyle || "gruvbox-dark");
       $("lineRate").value = String(state.lineRate);
       // Custom toggles
       state.hopperNamingLine9 = (payload.hopperNamingLine9 === "main") ? "main" : "standard";
@@ -2959,6 +2972,11 @@
       saveSession();
     });
 
+    $("headerStyleSel")?.addEventListener("change",(e)=>{
+      applyHeaderStyle(e.target.value);
+      saveSession();
+    });
+
     $("prodResinLb")?.addEventListener("input",(e)=>{
       if (!acceptNumericInput(e.target, { min: 0, label: "Production resin" }, value => { state.prodResinLb = value; })) return;
       renderResinCalculator();
@@ -3109,6 +3127,7 @@
       applyTimeFormat(state.timeFormat || "12");
       applySurfaceStyle(state.surfaceStyle || "layered-flat");
       applyTimelineStyle(state.timelineStyle || "command-rows");
+      applyHeaderStyle(state.headerStyle || "gruvbox-dark");
       saveSession();
       setupLineSync();
     })();
