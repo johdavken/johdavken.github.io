@@ -2416,7 +2416,7 @@
       if (next){
         setNextStatus(
           `Next pump off: ${next.hopperLabel}${next.resinName ? ` • ${next.resinName}` : ""}`,
-          `${next.startByText} (${fmtRelFromNow(next.startByDate)}) • Changeover ${fmtTime(changeoverDate)}`
+          `${next.startByText} • Changeover ${fmtTime(changeoverDate)}`
         );
         return;
       }
