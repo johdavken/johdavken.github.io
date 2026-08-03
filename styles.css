@@ -1192,6 +1192,7 @@ details[open] > summary .chev{ transform: rotate(45deg); }
 .splitsBulkModeBar{
   display: flex;
   justify-content: flex-end;
+  gap: 8px;
 }
 .splitsBulkModeBar button{
   padding:5px 9px;
