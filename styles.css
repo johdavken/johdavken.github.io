@@ -4,6 +4,7 @@
  *   ======================================================================= */
 
 :root{
+  color-scheme: light dark;
   /* -------------------------------------------------------------------
    *     Core theme tokens (defaults = Dark)
    *     ------------------------------------------------------------------- */
@@ -825,6 +826,15 @@ select{
   background:transparent;
 }
 select{ padding-right:24px; }
+
+/* The closed control stays transparent (sleek underline look above), but the
+   native option list is its own opaque surface in most browsers/OSes — give
+   it explicit theme colors so it doesn't fall back to a light system default
+   that's unreadable against light text in dark themes. */
+select option{
+  background-color: var(--panelOpen);
+  color: var(--text);
+}
 
 input:focus, select:focus, textarea:focus{
   border-color: var(--focus-border);
