@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Resin.Tools RT Layer Stack</title>
+  <style>
+    :root{
+      color-scheme:dark;
+      --bg:#1d2021;--panel:#282828;--text:#ebdbb2;--muted:#bdae93;--line:#504945;--orange:#d65d0e;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 ui-monospace,"Cascadia Mono","Liberation Mono",monospace}
+    header{padding:21px clamp(17px,4vw,52px);border-bottom:1px solid var(--line)}
+    h1{margin:0;font-size:clamp(23px,4vw,38px);line-height:1.05;letter-spacing:-.055em}
+    header p{margin:7px 0 0;color:var(--muted);font-family:system-ui,sans-serif}
+    main{width:min(1100px,100%);margin:auto;padding:25px clamp(13px,3vw,38px) 55px}
+    .concept{overflow:hidden;border-radius:10px;background:var(--panel);box-shadow:0 8px 20px rgba(0,0,0,.24)}
+    .conceptHead{padding:13px 15px;border-bottom:1px solid var(--line);font-family:system-ui,sans-serif}
+    .name{font-weight:900}
+    .idea{display:block;margin-top:2px;color:var(--muted);font-size:12px}
+    .logoSurfaces{display:grid;grid-template-columns:1fr 1fr}
+    .surface{min-width:0;padding:18px}
+    .surface.light{background:#fbf1c7}
+    .surface.dark{background:#282828}
+    .surfaceLabel{margin-bottom:12px;color:#928374;font-size:10px;font-weight:900;letter-spacing:.1em;text-transform:uppercase}
+    .logo{display:block;width:100%;max-width:340px;height:auto}
+    .smallCheck{display:flex;align-items:center;gap:13px;margin-top:15px;padding-top:13px;border-top:1px solid rgba(146,131,116,.35)}
+    .smallCheck svg{width:34px;height:34px;flex:none}
+    .smallCheck span{color:#928374;font-size:10px}
+    @media(max-width:580px){.logoSurfaces{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>RESIN.TOOLS // LAYER STACK</h1>
+    <p>Concept 04 from polyn-logo-concepts.html, wordmark swapped from POLYN to RT. Icon and layout unchanged.</p>
+  </header>
+  <main>
+    <section class="concept">
+      <div class="conceptHead"><span class="name">04. Layer Stack (RT)</span><span class="idea">Five offset film layers form a compact factory badge, paired with the RT wordmark.</span></div>
+      <div class="logoSurfaces">
+        <div class="surface light">
+          <div class="surfaceLabel">Light surface</div>
+          <img class="logo" src="../branding/resin-tools/rt6-01-layer-stack-light.svg" alt="Resin.Tools RT Layer Stack, light surface">
+          <div class="smallCheck"><img src="../branding/resin-tools/rt6-02-layer-stack-icon.svg" alt="Layer Stack icon at small size"><span>Icon at 34px</span></div>
+        </div>
+        <div class="surface dark">
+          <div class="surfaceLabel">Dark surface</div>
+          <img class="logo" src="../branding/resin-tools/rt6-01-layer-stack-dark.svg" alt="Resin.Tools RT Layer Stack, dark surface">
+          <div class="smallCheck"><img src="../branding/resin-tools/rt6-02-layer-stack-icon.svg" alt="Layer Stack icon at small size"><span>Icon at 34px</span></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
