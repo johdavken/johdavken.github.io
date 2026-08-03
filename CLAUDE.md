@@ -498,6 +498,39 @@ Source-level SQL contract tests are currently used where no local Postgres/Supab
 
 ---
 
+# Browser Preview and UI Testing
+
+Claude may use browser automation solely to preview and test the local Resin.tools application.
+
+Permitted tools:
+
+- Playwright through MCP
+- Claude in Chrome browser integration
+- An existing local development server
+
+This permission is limited to:
+
+- opening the locally served app;
+- resizing the viewport;
+- taking screenshots;
+- inspecting rendered HTML and CSS;
+- checking browser console and network errors;
+- testing user interactions;
+- verifying desktop and mobile layouts.
+
+Browser automation must not:
+
+- become a runtime dependency of Resin.tools;
+- be bundled into the production application;
+- introduce a frontend framework or build system;
+- modify application files unless the task explicitly requests implementation;
+- access unrelated websites, accounts, or local files;
+- submit real production data without explicit permission.
+
+Prefer installing browser tooling outside the project or configuring it as an MCP development tool. Do not add Playwright to package.json unless explicitly requested.
+
+---
+
 # Git and Workflow Rules
 
 Work in small feature branches.

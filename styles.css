@@ -700,6 +700,17 @@ main{
   white-space: nowrap;
   color: var(--title, var(--text));
 }
+.srOnly{
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+  border: 0;
+}
 .layerMeta{
   color: var(--subtitle, var(--muted));
   font-size: var(--font-small);
@@ -2732,20 +2743,29 @@ body[data-surface-style="divided"] .helpTopic{
  *   Everyday / Advanced mode
  *   ======================================================================= */
 .modeBar{display:flex;align-items:center;justify-content:flex-end}
-.modeSwitch{display:inline-grid;grid-template-columns:1fr 1fr;flex:0 0 auto;padding:3px;border:1px solid var(--border2);border-radius:999px;background:var(--field-bg)}
-.modeBtn{min-width:96px;padding:8px 13px;border:0;border-radius:999px;background:transparent;color:var(--muted);box-shadow:none}
-.modeBtn.active{background:linear-gradient(180deg,var(--btn-primary-a),var(--btn-primary-b));color:var(--text);box-shadow:inset 0 0 0 1px var(--focus-border)}
-.statusModeSwitch{ display:none;align-self:center; }
-.workspaceStatusBar .statusModeSwitch{border:0}
-.workspaceStatusBar .modeBtn.active{box-shadow:none}
-.mobileTimelineModeBtn{ display:none; }
-.statusModeSwitch .modeBtn{
-  min-width:66px;
-  padding:5px 9px;
+.statusTimelineToggle{ display:none; }
+.statusChangeoverCountdown{ display:none; }
+.chipToggle{
+  align-items:center;
+  gap:5px;
+  padding:4px 10px 4px 8px;
+  border-radius:999px;
+  border:1px solid color-mix(in srgb, var(--text) 22%, transparent);
+  background:transparent;
+  color:var(--muted);
   font-size:var(--font-tiny);
+  font-weight:700;
+  cursor:pointer;
+  flex:0 0 auto;
+  white-space:nowrap;
+}
+.chipToggle svg{ width:12px; height:12px; flex:0 0 auto; }
+.chipToggle.on{
+  background:var(--toggle-on-bg);
+  border-color:var(--toggle-on-border);
+  color:var(--text);
 }
 @media (max-width:900px){
-  body[data-ui-mode="everyday"] .advancedOnly{display:none!important}
   /* The catalog editor is an admin-only desktop workspace. */
   .adminResinPanel{ display:none!important; }
   .mobileBrand{
@@ -2757,7 +2777,9 @@ body[data-surface-style="divided"] .helpTopic{
     top:0;
     z-index:40;
     display:flex;
-    justify-content:center;
+    align-items:center;
+    flex-wrap:wrap;
+    justify-content:flex-start;
     min-height:34px;
     padding:0 var(--page-pad);
     border-bottom:1px solid var(--surface-chrome-border);
@@ -2768,17 +2790,18 @@ body[data-surface-style="divided"] .helpTopic{
   .statusPreferences{position:absolute;right:var(--page-pad);margin-left:0}
   .statusPreferencesPanel{position:fixed;top:38px;right:var(--page-pad)}
   .workspaceStatusBar .workspaceStatusItem{ display:none; }
-  .statusModeSwitch{
-    display:inline-grid;
-    grid-template-columns:repeat(3, minmax(0, 1fr));
-    width:min(calc(100% - 48px), 290px);
+  .statusTimelineToggle{ display:inline-flex; }
+  .workspaceStatusBar .workspaceStatusItem.statusChangeoverCountdown{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    line-height:1;
+    white-space:nowrap;
+    margin-left:auto;
+    margin-right:38px;
   }
-  .statusModeSwitch .modeBtn{ min-width:0; }
-  .mobileTimelineModeBtn{ display:block; }
+  .workspaceStatusBar .workspaceStatusItem span{ color:var(--muted); font-size:var(--font-tiny); }
+  .workspaceStatusBar .workspaceStatusItem strong{ color:var(--text); font-size:var(--font-small); line-height:1; }
   body[data-mobile-timeline-only="true"] .workspaceContent > .workspacePanel:not(#resultsBlock){ display:none !important; }
   body[data-mobile-timeline-only="true"] #resultsBlock{ display:block !important; }
-}
-@media (max-width:600px){
-  .modeSwitch:not(.statusModeSwitch){width:100%}
-  .modeBtn{min-width:0}
 }
