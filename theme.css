@@ -4,6 +4,7 @@
 
 /* ----------------------------------------------------------------------- * Dark * ----------------------------------------------------------------------- */
 :where(html, body)[data-theme="dark"]{
+  color-scheme: dark;
   --bg:#0b0f14; --panel:rgba(18,26,35,.92); --panel2:rgba(15,22,32,.84);
   --text:#eaf2ff; --subtitle:#cfcfcf; --title:#f2543f; --muted:#9bb0c6; --fg:#c7c1bb;
   --yellow:#b02323; --orange:#e06c00; --border:rgba(255,255,255,.10); --border2:rgba(255,255,255,.14);
@@ -26,6 +27,7 @@
 
 /* ----------------------------------------------------------------------- * Light * ----------------------------------------------------------------------- */
 :where(html, body)[data-theme="light"]{
+  color-scheme: light;
   --bg: #f5f4f3;
   --panel: rgba(255,255,255,.95);
   --panel2: rgba(250,249,248,.90);
@@ -82,6 +84,7 @@
 
 /* ----------------------------------------------------------------------- * Industrial Slate (legacy value: mse) * ----------------------------------------------------------------------- */
 :where(html, body)[data-theme="mse"]{
+  color-scheme: light;
   --bg: #f5f4f3;
   --panel: #ffffff;
   --panel2: #faf9f8;
@@ -133,6 +136,7 @@
 
 /* ----------------------------------------------------------------------- * Industrial Slate Dark * ----------------------------------------------------------------------- */
 :where(html, body)[data-theme="industrial-slate-dark"]{
+  color-scheme: dark;
   --bg: #161b20;
   --panel: #1e2730;
   --panel2: #192129;
@@ -184,6 +188,7 @@
 
 /* ----------------------------------------------------------------------- * Gruvbox Dark * ----------------------------------------------------------------------- */
 :where(html, body)[data-theme="gruvbox-dark"]{
+  color-scheme: dark;
   --bg: #1d2021;
   --panel: rgba(40,40,40,.97);
   --panel2: rgba(50,48,47,.94);
@@ -238,6 +243,7 @@
 
 /* ----------------------------------------------------------------------- * Gruvbox Light (primary = blue, secondary = orange) * ----------------------------------------------------------------------- */
 :where(html, body)[data-theme="gruvbox-light"]{
+  color-scheme: light;
   --bg: #fbf1c7;
 
 /* bg0 */
@@ -304,6 +310,7 @@
 
 /* ----------------------------------------------------------------------- * Nord * ----------------------------------------------------------------------- */
 :where(html, body)[data-theme="nord"]{
+  color-scheme: dark;
   --bg: #2e3440;
   --panel: rgba(59,66,82,.95);
   --panel2: rgba(67,76,94,.88);
@@ -356,6 +363,7 @@
 
 /* ----------------------------------------------------------------------- * Tokyo Night * ----------------------------------------------------------------------- */
 :where(html, body)[data-theme="tokyo-night"]{
+  color-scheme: dark;
   --bg: #1a1b26;
   --panel: rgba(36,40,59,.95);
   --panel2: rgba(41,46,66,.88);
@@ -412,6 +420,7 @@
 
 /* ----------------------------------------------------------------------- * Dracula * ----------------------------------------------------------------------- */
 :where(html, body)[data-theme="dracula"]{
+  color-scheme: dark;
   --bg: #282a36;
   --panel: rgba(68,71,90,.95);
   --panel2: rgba(52,55,70,.88);
@@ -464,6 +473,7 @@
 
 /* ----------------------------------------------------------------------- * Solarized Dark * ----------------------------------------------------------------------- */
 :where(html, body)[data-theme="solarized-dark"]{
+  color-scheme: dark;
   --bg: #002b36;
   --panel: rgba(7,54,66,.95);
   --panel2: rgba(0,43,54,.88);
@@ -516,6 +526,7 @@
 
 /* ----------------------------------------------------------------------- * Solarized Light * ----------------------------------------------------------------------- */
 :where(html, body)[data-theme="solarized-light"]{
+  color-scheme: light;
   --bg: #fdf6e3;
   --panel: rgba(255,255,255,.96);
   --panel2: rgba(238,232,213,.90);
@@ -568,6 +579,7 @@
 
 /* ----------------------------------------------------------------------- * Catppuccin Mocha * ----------------------------------------------------------------------- */
 :where(html, body)[data-theme="catppuccin-mocha"]{
+  color-scheme: dark;
   --bg: #1e1e2e;
   --panel: rgba(49,50,68,.95);
   --panel2: rgba(69,71,90,.88);
@@ -622,6 +634,7 @@
 
 /* ----------------------------------------------------------------------- * Catppuccin Latte * ----------------------------------------------------------------------- */
 :where(html, body)[data-theme="catppuccin-latte"]{
+  color-scheme: light;
   --bg: #eff1f5;
   --panel: rgba(255,255,255,.96);
   --panel2: rgba(230,233,239,.90);
@@ -674,60 +687,9 @@
 
 }
 
-/* ----------------------------------------------------------------------- * Amber * ----------------------------------------------------------------------- */
-:where(html, body)[data-theme="amber"]{
-  --bg: #0b0a06;
-  --panel: rgba(20,16,10,.92);
-  --panel2: rgba(18,14,8,.78);
-  --text: #fffbeb;
-  --subtitle: #f59e0b;
-  --title: #fbbf24;
-  --muted: rgba(252,211,77,.85);
-  --border: rgba(251,191,36,.22);
-  --border2: rgba(251,191,36,.28);
-  --field-bg: rgba(251,191,36,.10);
-  --panelOpen: rgba(20,16,10,.95);
-  --chev: rgba(255,251,235,.55);
-  --fg: #ffbf00;
-  --yellow: #ffcc33;
-  --orange: #ff8c00;
-  --warn: #f59e0b;
-  --bad: #ef4444;
-  --ok: #84cc16;
-  --shadow2: 0 8px 22px rgba(0,0,0,.32);
-  --row-bg: rgba(251,191,36,.055);
-  --row-border: rgba(251,191,36,.20);
-  --row-bg-2: rgba(245,158,11,.035);
-  --row-border-2: rgba(251,191,36,.16);
-  --readonly-bg: rgba(251,191,36,.065);
-  --readonly-border: rgba(251,191,36,.22);
-  --focus-border: rgba(251,191,36,.85);
-  --focus-ring: rgba(251,191,36,.18);
-  --f-var1: #84cc16;
-  --f-var2: #fbbf24;
-  --f-var3: #f59e0b;
-  --f-const: rgba(252,211,77,.90);
-  --btn-text: var(--text);
-  --btn-border: var(--border2);
-  --btn-primary-a: rgba(251,191,36,.20);
-  --btn-primary-b: rgba(251,191,36,.09);
-  --btn-secondary-bg: rgba(245,158,11,.14);
-  --btn-secondary-border: rgba(245,158,11,.30);
-  --btn-danger-bg: rgba(239,68,68,.14);
-  --btn-danger-border: rgba(239,68,68,.26);
-  --bg-glow-a: rgba(251,191,36,.10);
-  --bg-glow-b: rgba(245,158,11,.07);
-  --card-glow-a: rgba(251,191,36,.12);
-  --card-glow-b: rgba(245,158,11,.08);
-  --toggle-on-bg: rgba(251,191,36,.22);
-  --toggle-on-border: rgba(251,191,36,.45);
-  --footer-bg: rgba(11,10,6,.92);
-  --footer-border: rgba(251,191,36,.22);
-
-}
-
 /* ----------------------------------------------------------------------- * High Contrast * ----------------------------------------------------------------------- */
 :where(html, body)[data-theme="high-contrast"]{
+  color-scheme: dark;
   --bg: #000000;
   --panel: rgba(0,0,0,.95);
   --panel2: rgba(0,0,0,.85);
@@ -780,6 +742,7 @@
 
 /* ----------------------------------------------------------------------- * Monochrome * ----------------------------------------------------------------------- */
 :where(html, body)[data-theme="mono"], :where(html, body)[data-theme="monochrome"]{
+  color-scheme: light;
   --bg: #f6f6f6;
   --panel: rgba(255,255,255,.96);
   --panel2: rgba(245,245,245,.92);
