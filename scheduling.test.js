@@ -6,7 +6,9 @@ const {
   parseChangeoverDate,
   calendarDayOffset,
   formatTime,
-  formatTimelineStart
+  formatTimelineStart,
+  isChangeoverStale,
+  CHANGEOVER_STALE_MS
 } = require("./scheduling.js");
 
 test("a just-after-midnight changeover rolls to tomorrow when entered before midnight", () => {
@@ -72,4 +74,29 @@ test("timeline start labels distinguish previous-day timing from a late action",
   assert.equal(overdue.late, true);
   assert.match(overdue.text, /\(-1d\)$/);
   assert.doesNotMatch(overdue.text, /Late/i);
+});
+
+test("a changeover time with no recorded set-at is never flagged stale", () => {
+  assert.equal(isChangeoverStale(null), false);
+  assert.equal(isChangeoverStale(undefined), false);
+});
+
+test("a changeover time edited within a normal shift is not stale", () => {
+  const setAt = new Date(2026, 6, 29, 6, 0).getTime();
+  const now = new Date(2026, 6, 29, 18, 0); // 12h later
+  assert.equal(isChangeoverStale(setAt, now), false);
+});
+
+test("a changeover time left untouched for about a day is flagged stale", () => {
+  const setAt = new Date(2026, 6, 28, 6, 0).getTime();
+  const now = new Date(2026, 6, 29, 6, 1); // just over 24h later
+  assert.equal(isChangeoverStale(setAt, now), true);
+});
+
+test("staleness threshold is comfortably inside a day but past a single shift", () => {
+  const setAt = new Date(2026, 6, 29, 0, 0).getTime();
+  const justUnder = new Date(setAt + CHANGEOVER_STALE_MS - 60000);
+  const justOver = new Date(setAt + CHANGEOVER_STALE_MS + 60000);
+  assert.equal(isChangeoverStale(setAt, justUnder), false);
+  assert.equal(isChangeoverStale(setAt, justOver), true);
 });
