@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mobile Status Bar — Improvement Options</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="../theme.css">
+<style>
+  /* Page chrome only — everything inside .phone reuses the real app's classes/tokens */
+  body{ margin:0; background:#e7e3da; font-family:system-ui,sans-serif; padding:28px 16px 80px; }
+  .pageHead{ max-width:900px; margin:0 auto 28px; }
+  .pageHead h1{ font-size:20px; margin:0 0 6px; }
+  .pageHead p{ margin:0; color:#5a5650; font-size:14px; line-height:1.5; }
+  .row{ max-width:900px; margin:0 auto 36px; }
+  .rowLabel{ font:700 12px/1 system-ui,sans-serif; letter-spacing:.04em; text-transform:uppercase; color:#8a8578; margin:0 0 8px; display:flex; align-items:center; gap:8px; }
+  .rowLabel .tag{ font-size:10px; padding:2px 7px; border-radius:999px; background:#dcd6c8; color:#5a5650; text-transform:none; letter-spacing:0; }
+  .phone{
+    width:390px;
+    max-width:100%;
+    border:1px solid #cfc9ba;
+    border-radius:14px;
+    overflow:hidden;
+    background:var(--bg);
+    box-shadow:0 6px 18px rgba(0,0,0,.10);
+  }
+
+  /* ===== shared candidate layout (fixes the missing gap + adds grouping) ===== */
+  .previewBar{
+    position:relative;
+    display:flex;
+    align-items:center;
+    flex-wrap:wrap;
+    justify-content:center;
+    gap:10px;
+    min-height:34px;
+    padding:0 14px;
+    border-bottom:1px solid var(--surface-chrome-border);
+    background:var(--surface-chrome-bg);
+    box-shadow:var(--surface-chrome-shadow);
+  }
+  .previewBar .workspaceStatusItem{ display:flex; align-items:center; gap:6px; line-height:1; white-space:nowrap; }
+  .previewBar .workspaceStatusItem span{ color:var(--muted); font-size:var(--font-tiny); }
+  .previewBar .workspaceStatusItem strong{ color:var(--text); font-size:var(--font-small); line-height:1; }
+  .previewBar.divided .workspaceStatusItem + .workspaceStatusItem:not(.statusTimelineToggle){
+    padding-left:10px;
+    border-left:1px solid color-mix(in srgb, var(--text) 16%, transparent);
+  }
+  .previewBar .statusPreferences{ margin-left:2px; }
+  .previewBar .statusPreferences summary{ list-style:none; cursor:pointer; }
+  .previewBar .statusPreferences summary::-webkit-details-marker{ display:none; }
+
+  /* ===== toggle option A: same switch component, sized down for this context ===== */
+  .miniToggleWrap{ display:flex; align-items:center; gap:6px; }
+  .miniToggleWrap .trackLabel{ font-size:var(--font-tiny); }
+  .miniToggleWrap .toggle{ --toggle-w:34px; --toggle-h:18px; --toggle-knob:14px; }
+
+  /* ===== toggle option B: icon-only button ===== */
+  .iconToggle{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:26px; height:26px;
+    border-radius:8px;
+    border:1px solid color-mix(in srgb, var(--text) 22%, transparent);
+    background:transparent;
+    color:var(--muted);
+    cursor:pointer;
+    flex:0 0 auto;
+  }
+  .iconToggle svg{ width:15px; height:15px; }
+  .iconToggle.on{
+    background:var(--toggle-on-bg);
+    border-color:var(--toggle-on-border);
+    color:var(--text);
+  }
+
+  /* ===== toggle option C: chip/pill button ===== */
+  .chipToggle{
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    padding:4px 10px 4px 8px;
+    border-radius:999px;
+    border:1px solid color-mix(in srgb, var(--text) 22%, transparent);
+    background:transparent;
+    color:var(--muted);
+    font-size:var(--font-tiny);
+    font-weight:700;
+    cursor:pointer;
+    flex:0 0 auto;
+    white-space:nowrap;
+  }
+  .chipToggle svg{ width:12px; height:12px; flex:0 0 auto; }
+  .chipToggle.on{
+    background:var(--toggle-on-bg);
+    border-color:var(--toggle-on-border);
+    color:var(--text);
+  }
+</style>
+</head>
+<body data-density="spacious" data-theme="light" data-surface-style="layered-flat">
+
+<div class="pageHead">
+  <h1>Mobile status bar — layout &amp; toggle options</h1>
+  <p>All bars below use the real app stylesheets/theme tokens (spacious density, light theme, layered-flat surface — same defaults as the screenshot). Only the bar-specific rules are candidate CSS, isolated in this page so they render without needing an actual narrow viewport. Toggle theme/density by editing the &lt;body&gt; attributes if you want to sanity-check another combination.</p>
+</div>
+
+<div class="row">
+  <div class="rowLabel">Current (as shipped) <span class="tag">bug: no gap between items</span></div>
+  <div class="phone">
+    <div class="previewBar" style="gap:0">
+      <div class="workspaceStatusItem"><span>Output</span><strong class="mono">1,200 lb/hr</strong></div>
+      <div class="workspaceStatusItem"><span>Changeover</span><strong class="mono">2:55 AM</strong></div>
+      <div class="workspaceStatusItem"><span>Tracked</span><strong class="mono">3</strong></div>
+      <div class="trackWrap statusTimelineToggle"><span class="trackLabel">Timeline only</span><div class="toggle" role="switch" aria-checked="false" tabindex="0"></div></div>
+      <details class="statusPreferences"><summary>☰</summary></details>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="rowLabel">Option A <span class="tag">fixed gap + dividers, same switch — just sized down</span></div>
+  <div class="phone">
+    <div class="previewBar divided">
+      <div class="workspaceStatusItem"><span>Output</span><strong class="mono">1,200 lb/hr</strong></div>
+      <div class="workspaceStatusItem"><span>Changeover</span><strong class="mono">2:55 AM</strong></div>
+      <div class="workspaceStatusItem"><span>Tracked</span><strong class="mono">3</strong></div>
+      <div class="miniToggleWrap statusTimelineToggle"><span class="trackLabel">Timeline</span><div class="toggle" role="switch" aria-checked="false" tabindex="0"></div></div>
+      <details class="statusPreferences"><summary>☰</summary></details>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="rowLabel">Option B <span class="tag">icon-only toggle button</span></div>
+  <div class="phone">
+    <div class="previewBar divided">
+      <div class="workspaceStatusItem"><span>Output</span><strong class="mono">1,200 lb/hr</strong></div>
+      <div class="workspaceStatusItem"><span>Changeover</span><strong class="mono">2:55 AM</strong></div>
+      <div class="workspaceStatusItem"><span>Tracked</span><strong class="mono">3</strong></div>
+      <button class="iconToggle" type="button" title="Timeline only" aria-pressed="false">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M2 12V8M6 12V4M10 12V9M14 12V6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+      <details class="statusPreferences"><summary>☰</summary></details>
+    </div>
+  </div>
+  <div class="phone" style="margin-top:8px">
+    <div class="previewBar divided">
+      <div class="workspaceStatusItem"><span>Output</span><strong class="mono">1,200 lb/hr</strong></div>
+      <div class="workspaceStatusItem"><span>Changeover</span><strong class="mono">2:55 AM</strong></div>
+      <div class="workspaceStatusItem"><span>Tracked</span><strong class="mono">3</strong></div>
+      <button class="iconToggle on" type="button" title="Timeline only" aria-pressed="true">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M2 12V8M6 12V4M10 12V9M14 12V6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+      <details class="statusPreferences"><summary>☰</summary></details>
+    </div>
+  </div>
+  <div class="rowLabel" style="margin-top:4px;font-weight:400;text-transform:none;letter-spacing:0">↑ off / on states — background fill communicates state, no label text needed</div>
+</div>
+
+<div class="row">
+  <div class="rowLabel">Option C <span class="tag">chip button</span></div>
+  <div class="phone">
+    <div class="previewBar divided">
+      <div class="workspaceStatusItem"><span>Output</span><strong class="mono">1,200 lb/hr</strong></div>
+      <div class="workspaceStatusItem"><span>Changeover</span><strong class="mono">2:55 AM</strong></div>
+      <div class="workspaceStatusItem"><span>Tracked</span><strong class="mono">3</strong></div>
+      <button class="chipToggle" type="button" aria-pressed="false">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M2 12V8M6 12V4M10 12V9M14 12V6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        Timeline
+      </button>
+      <details class="statusPreferences"><summary>☰</summary></details>
+    </div>
+  </div>
+  <div class="phone" style="margin-top:8px">
+    <div class="previewBar divided">
+      <div class="workspaceStatusItem"><span>Output</span><strong class="mono">1,200 lb/hr</strong></div>
+      <div class="workspaceStatusItem"><span>Changeover</span><strong class="mono">2:55 AM</strong></div>
+      <div class="workspaceStatusItem"><span>Tracked</span><strong class="mono">3</strong></div>
+      <button class="chipToggle on" type="button" aria-pressed="true">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M2 12V8M6 12V4M10 12V9M14 12V6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        Timeline
+      </button>
+      <details class="statusPreferences"><summary>☰</summary></details>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="rowLabel">Narrower phone (~360px) — worst-case width check, Option B</div>
+  <div class="phone" style="width:360px">
+    <div class="previewBar divided">
+      <div class="workspaceStatusItem"><span>Output</span><strong class="mono">1,200 lb/hr</strong></div>
+      <div class="workspaceStatusItem"><span>Changeover</span><strong class="mono">2:55 AM</strong></div>
+      <div class="workspaceStatusItem"><span>Tracked</span><strong class="mono">3</strong></div>
+      <button class="iconToggle" type="button" title="Timeline only" aria-pressed="false">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M2 12V8M6 12V4M10 12V9M14 12V6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+      <details class="statusPreferences"><summary>☰</summary></details>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

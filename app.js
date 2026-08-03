@@ -58,7 +58,6 @@
       gauge: 0,
       hopperNamingLine9: "standard", // "standard" | "main"
       showPumpOffTracked: false, // show pump-off items in Timeline
-      uiMode: "everyday", // "everyday" | "advanced"
       mobileTimelineOnly: false
 
     };
@@ -430,6 +429,12 @@
       ()=> !!state.showPumpOffTracked,
       (v)=> { state.showPumpOffTracked = !!v; }
     );
+
+    hookToggle(
+      "mobileTimelineToggle",
+      ()=> !!state.mobileTimelineOnly,
+      (v)=> applyMobileTimelineMode(!!v)
+    );
   }
 
 
@@ -572,7 +577,6 @@
         gauge: state.gauge,
         hopperNamingLine9: state.hopperNamingLine9,
         showPumpOffTracked: !!state.showPumpOffTracked,
-        uiMode: state.uiMode,
         mobileTimelineOnly: !!state.mobileTimelineOnly,
         blocksOpen
       };
@@ -586,7 +590,6 @@
         surfaceStyle: state.surfaceStyle,
         timelineStyle: state.timelineStyle,
         showPumpOffTracked: state.showPumpOffTracked,
-        uiMode: state.uiMode,
         mobileTimelineOnly: state.mobileTimelineOnly,
         blocksOpen: snapshotPayload().blocksOpen
       };
@@ -666,7 +669,6 @@
       // Custom toggles
       state.hopperNamingLine9 = (payload.hopperNamingLine9 === "main") ? "main" : "standard";
       state.showPumpOffTracked = !!payload.showPumpOffTracked;
-      state.uiMode = payload.uiMode === "advanced" ? "advanced" : "everyday";
       state.mobileTimelineOnly = !!payload.mobileTimelineOnly;
       applyMobileTimelineMode(state.mobileTimelineOnly);
 
@@ -1874,6 +1876,7 @@
     if (changeoverStatus){
       changeoverStatus.textContent = changeoverDate ? fmtTime(changeoverDate) : "Not set";
     }
+    updateChangeoverCountdown();
     const workspaceStatus = $("workspaceSetupStatus");
     if (workspaceStatus){
       const hasOutput = state.lineRate > 0;
@@ -2196,17 +2199,6 @@
       }
     });
 
-    function syncModeButtons(){
-      const timelineActive = state.mobileTimelineOnly && window.matchMedia("(max-width: 900px)").matches;
-      const advanced = state.uiMode === "advanced";
-      const everydayBtn = $("everydayModeBtn");
-      const advancedBtn = $("advancedModeBtn");
-      const timelineBtn = $("mobileTimelineModeBtn");
-      if (everydayBtn){ everydayBtn.classList.toggle("active", !timelineActive && !advanced); everydayBtn.setAttribute("aria-pressed", String(!timelineActive && !advanced)); }
-      if (advancedBtn){ advancedBtn.classList.toggle("active", !timelineActive && advanced); advancedBtn.setAttribute("aria-pressed", String(!timelineActive && advanced)); }
-      if (timelineBtn){ timelineBtn.classList.toggle("active", timelineActive); timelineBtn.setAttribute("aria-pressed", String(timelineActive)); }
-    }
-
     function applyMobileTimelineMode(enabled){
       state.mobileTimelineOnly = !!enabled;
       document.body.setAttribute("data-mobile-timeline-only", String(state.mobileTimelineOnly));
@@ -2214,20 +2206,8 @@
         const results = $("resultsBlock");
         if (results) results.open = true;
       }
-      syncModeButtons();
+      syncToggleUI("mobileTimelineToggle", state.mobileTimelineOnly);
     }
-
-    function applyUIMode(mode){
-      state.uiMode = mode === "advanced" ? "advanced" : "everyday";
-      document.body.setAttribute("data-ui-mode", state.uiMode);
-      const advanced = state.uiMode === "advanced";
-      syncModeButtons();
-      if (!advanced && activeWorkspaceId === "recipesBlock"){
-        setWorkspacePanel("resultsBlock", { persist: false });
-      }
-    }
-
-    function setUIMode(mode){ applyMobileTimelineMode(false); applyUIMode(mode); saveSession(); }
 
     let activeWorkspaceId = "resultsBlock";
 
@@ -2280,7 +2260,7 @@
         const results = $("resultsBlock");
         if (results) results.open = true;
       }
-      syncModeButtons();
+      syncToggleUI("mobileTimelineToggle", state.mobileTimelineOnly);
     }
 
     function rebuildUIFromState(payloadMaybe){
@@ -2320,6 +2300,13 @@
     const h = Math.floor(mins / 60);
     const m = mins % 60;
     return `in ${h}h ${String(m).padStart(2,"0")}m`;
+  }
+
+  function updateChangeoverCountdown(){
+    const el = $("workspaceChangeoverCountdownStatus");
+    if (!el) return;
+    const changeoverDate = parseChangeoverDate(state.changeoverTime);
+    el.textContent = changeoverDate ? fmtRelFromNow(changeoverDate) : "Not set";
   }
 
   function updateFooterNext(flat, changeoverDate){
@@ -3021,19 +3008,6 @@
       hideResinLookupSuggestions();
     }, true);
 
-    $("everydayModeBtn")?.addEventListener("click", event=>{
-      event.stopPropagation();
-      setUIMode("everyday");
-    });
-    $("advancedModeBtn")?.addEventListener("click", event=>{
-      event.stopPropagation();
-      setUIMode("advanced");
-    });
-    $("mobileTimelineModeBtn")?.addEventListener("click", event=>{
-      event.stopPropagation();
-      applyMobileTimelineMode(true);
-      saveSession();
-    });
     const toolTabs = Array.from(document.querySelectorAll(".toolsIndexButton"));
     function selectToolPanel(targetId, { focus = false } = {}){
       if (!toolTabs.some(tab=>tab.dataset.toolTarget === targetId)) return;
@@ -3072,6 +3046,7 @@
       });
     });
     window.addEventListener("resize", syncWorkspaceForViewport);
+    setInterval(updateChangeoverCountdown, 30000);
     const statusPreferences = $("statusPreferences");
     statusPreferences?.addEventListener("toggle",()=>{
       const summary = statusPreferences.querySelector(":scope > summary");
@@ -3113,7 +3088,6 @@
       }
 
       activeWorkspaceId = loadWorkspacePreference();
-      applyUIMode(state.uiMode);
       applyMobileTimelineMode(state.mobileTimelineOnly);
       syncWorkspaceForViewport();
       hookDetailsPersistence();
