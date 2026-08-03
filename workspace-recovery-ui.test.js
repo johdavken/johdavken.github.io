@@ -1,0 +1,123 @@
+"use strict";
+
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+
+const index = fs.readFileSync("index.html", "utf8");
+const ui = fs.readFileSync("workspace-recovery-ui.js", "utf8");
+const app = fs.readFileSync("app.js", "utf8");
+const cloudSync = fs.readFileSync("cloud-sync.js", "utf8");
+const resinAdmin = fs.readFileSync("resin-admin.js", "utf8");
+const resinAdminUi = fs.readFileSync("resin-admin-ui.js", "utf8");
+const styles = fs.readFileSync("styles.css", "utf8");
+
+test("Workspace Management is hidden during initialization, when signed out, and for non-admins", () => {
+  assert.match(index, /id="workspaceManagementButton"[^>]*hidden/);
+  assert.match(ui, /const initializing = !state\?\.ready/);
+  assert.match(ui, /const adminAccess = !initializing && !!state\?\.isAdmin/);
+  assert.match(ui, /button\.hidden = initializing \|\| !adminAccess/);
+  assert.match(ui, /if \(!adminAccess\) resetPanel\(\)/);
+  assert.match(styles, /\.adminNavButton\[hidden\]\{ display: none !important; \}/);
+});
+
+test("visibility is driven by the shared admin instance, not a second admin session", () => {
+  assert.match(resinAdminUi, /root\.PolynResinAdminInstance = admin/);
+  const returnStatement = resinAdmin.match(/return \{ initialize[\s\S]*?\};/)?.[0];
+  assert.ok(returnStatement, "Expected resin-admin.js create() to return an API object");
+  assert.match(returnStatement, /getClient/);
+  assert.match(ui, /adminInstance\.subscribe\(renderAccess\)/);
+  assert.doesNotMatch(ui, /createClient/i);
+  assert.doesNotMatch(ui, /supabaseLibrary/i);
+});
+
+test("Add This Device reads the target identity from the existing RT Sync client only, never a typed UUID", () => {
+  assert.match(app, /window\.PolynRtSyncBridge = \{/);
+  assert.match(app, /getRecoveryDescriptor: \(\) => lineSync\?\.getRecoveryDescriptor\?\.\(\)/);
+  assert.match(cloudSync, /function getRecoveryDescriptor\(\)/);
+  assert.match(cloudSync, /ready: !!\(state\.available && state\.userId\)/);
+  assert.doesNotMatch(cloudSync, /getRecoveryDescriptor[\s\S]{0,300}(token|session|outbox)/i);
+  assert.match(ui, /bridge\(\)\?\.getRecoveryDescriptor\?\.\(\)/);
+  assert.doesNotMatch(index, /workspaceRecoveryTargetUserId.*type="text"/i);
+  assert.doesNotMatch(ui, /prompt\(/);
+});
+
+test("the workspace list and recovery actions go through the admin RPC service only", () => {
+  assert.match(ui, /service\.listWorkspaces/);
+  assert.match(ui, /service\.getWorkspaceDetails/);
+  assert.match(ui, /service\.addDeviceToWorkspace/);
+  assert.match(ui, /service\.removeWorkspaceMember/);
+  assert.doesNotMatch(ui, /\.from\("line_workspace_members"\)/);
+  assert.doesNotMatch(ui, /\.from\("line_workspaces"\)/);
+  assert.match(ui, /admin_list_line_workspaces|listWorkspaces/);
+});
+
+test("Add This Device requires an explicit confirmation dialog before mutating membership", () => {
+  assert.match(index, /id="workspaceRecoveryConfirmDialog"/);
+  assert.match(ui, /This will not:/);
+  assert.match(ui, /transfer workspace ownership/);
+  assert.match(ui, /function confirmAddDevice\(\)/);
+  assert.match(ui, /dialog\.showModal\(\)/);
+  assert.match(ui, /if \(dialog\.returnValue === "confirm"\) void addDevice\(\)/);
+  assert.doesNotMatch(ui, /addDevice\(\);\s*\}\s*\);\s*dialog\.showModal/);
+});
+
+test("successful recovery reconnects through established RT Sync APIs and refreshes configurations", () => {
+  assert.match(app, /reconnectAfterRecovery: async \(workspaceId\) => \{/);
+  assert.match(app, /await lineSync\.loadWorkspaces\(\)/);
+  assert.match(app, /await lineSync\.selectWorkspace\(workspaceId\)/);
+  assert.match(app, /await refreshWorkspaceConfigurations\(\)/);
+  assert.match(cloudSync, /loadWorkspaces,/);
+  assert.match(ui, /await bridge\(\)\?\.reconnectAfterRecovery\?\.\(workspaceId\)/);
+  assert.doesNotMatch(ui, /location\.reload/);
+});
+
+test("a failed recovery attempt never reconnects or mutates state", () => {
+  const body = ui.slice(ui.indexOf("async function addDevice()"), ui.indexOf("async function removeMember"));
+  assert.match(body, /if \(!result\.ok\)\{ setMessage\(result\.message, "bad"\); return; \}/);
+  const beforeReturn = body.slice(0, body.indexOf('if (!result.ok)'));
+  assert.doesNotMatch(beforeReturn, /reconnectAfterRecovery/);
+});
+
+test("sign-out closes Workspace Management and admin/RT Sync sessions stay separate", () => {
+  assert.match(ui, /function resetPanel\(\)/);
+  assert.match(ui, /if \(panel\) panel\.open = false/);
+  assert.match(ui, /data-workspace-target="resultsBlock"/);
+  assert.doesNotMatch(app, /PolynResinAdminInstance/);
+  assert.doesNotMatch(resinAdminUi, /PolynRtSyncBridge/);
+});
+
+test("Workspace Management is a main-panel workspacePanel, not an oversized modal", () => {
+  assert.match(index, /id="workspaceManagementButton"[^>]*data-workspace-target="workspaceManagementBlock"/);
+  assert.match(index, /<details class="block card workspacePanel adminResinPanel" id="workspaceManagementBlock">/);
+  assert.match(index, /Use this panel to reconnect a line computer after browser data/);
+});
+
+test("ownership reassignment is a distinct, explicit action separate from Add This Device", () => {
+  assert.match(index, /id="workspaceRecoveryTransferOwnershipBtn"[^>]*disabled/);
+  assert.match(index, /id="workspaceRecoveryOwnershipConfirmDialog"/);
+  assert.match(ui, /function confirmTransferOwnership\(\)/);
+  assert.match(ui, /service\.transferOwnership/);
+  const confirmAddDeviceBody = ui.slice(ui.indexOf("function confirmAddDevice()"), ui.indexOf("async function addDevice()"));
+  assert.doesNotMatch(confirmAddDeviceBody, /transferOwnership/);
+});
+
+test("ownership reassignment is only enabled once this device is already a member, and warns it cannot verify the previous owner is gone", () => {
+  assert.match(ui, /currentMembership = members\.find\(m => m\.member_user_id === descriptor\?\.userId\)/);
+  assert.match(ui, /transferBtn\.disabled = !descriptor\?\.ready \|\| !currentMembership \|\| currentMembership\.member_role === "owner"/);
+  assert.match(ui, /Resin\.Tools cannot verify that from here/);
+  assert.match(ui, /demote the previous owner's membership row to an ordinary member \(it is not deleted\)/);
+});
+
+test("a failed ownership reassignment never reconnects or mutates local state", () => {
+  const body = ui.slice(ui.indexOf("async function transferOwnership()"), ui.indexOf("async function removeMember"));
+  assert.match(body, /if \(!result\.ok\)\{ setMessage\(result\.message, "bad"\); if \(transferBtn\) transferBtn\.disabled = false; return; \}/);
+});
+
+test("diagnostic details are opt-in and member identifiers are abbreviated in the UI layer", () => {
+  assert.match(index, /workspaceRecoveryDiagnostic/);
+  assert.match(index, /<summary>Diagnostic details<\/summary>/);
+  assert.match(ui, /function shortId\(id\)/);
+  assert.match(ui, /shortId\(descriptor\.userId\)/);
+  assert.match(ui, /shortId\(member\.member_user_id\)/);
+});

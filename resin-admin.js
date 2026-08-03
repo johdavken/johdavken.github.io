@@ -110,7 +110,7 @@
       }
     }
     function subscribe(listener){ listeners.add(listener); return ()=>listeners.delete(listener); }
-    return { initialize, signIn, signOut, listResins, saveResin, subscribe, getState: ()=>({ ...state }) };
+    return { initialize, signIn, signOut, listResins, saveResin, subscribe, getState: ()=>({ ...state }), getClient };
   }
   return { AUTH_STORAGE_KEY, RESIN_FIELDS, validateResin, create };
 });

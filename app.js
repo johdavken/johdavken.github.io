@@ -2984,6 +2984,21 @@
       }
     });
     lineSync.initialize();
+
+    // Narrow bridge consumed only by workspace-recovery-ui.js: a read-only
+    // descriptor of this browser's current RT Sync identity, and a way to
+    // reconnect through established RT Sync APIs after admin-assisted
+    // recovery. No tokens, sessions, or outbox internals are exposed.
+    window.PolynRtSyncBridge = {
+      getRecoveryDescriptor: () => lineSync?.getRecoveryDescriptor?.()
+        || { ready: false, userId: "", deviceId: "", deviceLabel: "" },
+      reconnectAfterRecovery: async (workspaceId) => {
+        if (!lineSync || !workspaceId) return;
+        await lineSync.loadWorkspaces();
+        await lineSync.selectWorkspace(workspaceId);
+        await refreshWorkspaceConfigurations();
+      }
+    };
   }
 
     // Wire inputs

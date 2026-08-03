@@ -4,6 +4,9 @@
   const serviceApi = root.PolynResinAdmin;
   if (!serviceApi) return;
   const admin = serviceApi.create({ catalog: root.PolynResinCatalog });
+  // Shared with workspace-recovery-ui.js so recovery reuses this same admin
+  // client/session instead of creating a second admin Supabase client.
+  root.PolynResinAdminInstance = admin;
   let resins = [];
   let selectedResinId = "";
 

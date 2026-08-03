@@ -26,8 +26,10 @@
 <script src="resin-catalog-service.js?v=0.19.0" defer></script>
 <script src="resin-lookup.js?v=0.18.1" defer></script>
 <script src="resin-admin.js?v=0.20.0" defer></script>
+<script src="workspace-recovery.js?v=0.1.0" defer></script>
 <script src="app.js?v=0.18.47" defer></script>
 <script src="resin-admin-ui.js?v=0.20.0" defer></script>
+<script src="workspace-recovery-ui.js?v=0.1.0" defer></script>
 
 
 </head>
@@ -283,6 +285,10 @@
     <button id="resinDatabaseButton" class="workspaceNavButton adminNavButton" type="button" data-workspace-target="resinAdminBlock" hidden>
       <span>Resin Database</span>
       <small>Catalog editor</small>
+    </button>
+    <button id="workspaceManagementButton" class="workspaceNavButton adminNavButton" type="button" data-workspace-target="workspaceManagementBlock" hidden>
+      <span>Workspace Management</span>
+      <small>Device recovery</small>
     </button>
     <button id="adminSignOutButton" class="workspaceNavButton adminNavButton" type="button" hidden>
       <span>Admin Account</span>
@@ -972,6 +978,38 @@
       </div>
     </div>
   </details>
+
+  <details class="block card workspacePanel adminResinPanel" id="workspaceManagementBlock">
+    <summary>
+      <div class="sumLeft"><div class="chev"></div><div class="summaryText"><div class="layerTitle">Workspace Management</div><div class="layerMeta">Reconnect a line computer after a browser reset</div></div></div>
+    </summary>
+    <div class="blockBody workspaceRecoveryPanel">
+      <p class="muted">Use this panel to reconnect a line computer after browser data or the device's local RT Sync identity has been reset. The workspace and its shared recipes and weight profiles are not affected.</p>
+
+      <div id="workspaceRecoveryDeviceCard" class="workspaceRecoveryDeviceCard">
+        <div><strong id="workspaceRecoveryDeviceLabel">This device</strong></div>
+        <div id="workspaceRecoveryDeviceStatus" class="tiny" role="status">Checking RT Sync status…</div>
+        <details class="workspaceRecoveryDiagnostic"><summary>Diagnostic details</summary><div id="workspaceRecoveryDeviceIds" class="tiny mono"></div></details>
+      </div>
+
+      <div class="adminToolbar"><div id="workspaceRecoveryMessage" class="tiny" role="status"></div><button id="workspaceRecoveryRefreshBtn" type="button">Refresh workspaces</button></div>
+
+      <div id="workspaceRecoveryList" class="workspaceRecoveryList" aria-live="polite"></div>
+
+      <div id="workspaceRecoveryDetail" class="workspaceRecoveryDetail" hidden>
+        <div class="layerTitle" id="workspaceRecoveryDetailName"></div>
+        <div id="workspaceRecoveryDetailMeta" class="tiny muted"></div>
+        <div class="buttonRow mt10">
+          <button id="workspaceRecoveryAddDeviceBtn" type="button" class="primary">Add This Device</button>
+          <button id="workspaceRecoveryDetailRefreshBtn" type="button" class="secondary">Refresh details</button>
+        </div>
+        <div class="buttonRow mt10">
+          <button id="workspaceRecoveryTransferOwnershipBtn" type="button" class="secondary" disabled>Reassign Ownership to This Device</button>
+        </div>
+        <details class="workspaceRecoveryDiagnostic mt10"><summary>Members (diagnostic details)</summary><div id="workspaceRecoveryMembersList" class="workspaceRecoveryMembersList"></div></details>
+      </div>
+    </div>
+  </details>
   </div>
 
 </main>
@@ -1001,6 +1039,22 @@
     <label>Password<input id="adminPassword" type="password" autocomplete="current-password" required></label>
     <div id="adminLoginMessage" class="tiny" role="status"></div>
     <div class="buttonRow"><button id="adminLoginSubmit" type="submit">Sign in</button><button class="secondary" type="button" data-admin-close>Cancel</button></div>
+  </form>
+</dialog>
+
+<dialog id="workspaceRecoveryConfirmDialog" class="adminDialog" aria-labelledby="workspaceRecoveryConfirmTitle">
+  <form method="dialog" class="adminForm">
+    <div id="workspaceRecoveryConfirmTitle" class="layerTitle">Reconnect This Device</div>
+    <div id="workspaceRecoveryConfirmDetails" class="tiny"></div>
+    <div class="buttonRow"><button value="confirm" type="submit" class="primary">Add This Device</button><button value="cancel" class="secondary" type="submit">Cancel</button></div>
+  </form>
+</dialog>
+
+<dialog id="workspaceRecoveryOwnershipConfirmDialog" class="adminDialog" aria-labelledby="workspaceRecoveryOwnershipConfirmTitle">
+  <form method="dialog" class="adminForm">
+    <div id="workspaceRecoveryOwnershipConfirmTitle" class="layerTitle">Reassign Ownership</div>
+    <div id="workspaceRecoveryOwnershipConfirmDetails" class="tiny"></div>
+    <div class="buttonRow"><button value="confirm" type="submit" class="primary">Reassign Ownership</button><button value="cancel" class="secondary" type="submit">Cancel</button></div>
   </form>
 </dialog>
 

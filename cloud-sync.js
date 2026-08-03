@@ -752,6 +752,19 @@
       });
     }
 
+    // Narrow, read-only descriptor for admin-assisted device recovery. Exposes
+    // only what's needed to identify "this browser's current RT Sync identity"
+    // to the separate admin client — never tokens, sessions, or outbox state.
+    function getRecoveryDescriptor(){
+      const current = settings();
+      return Object.freeze({
+        ready: !!(state.available && state.userId),
+        userId: state.userId || "",
+        deviceId: current.deviceId || "",
+        deviceLabel: current.deviceLabel || ""
+      });
+    }
+
     if (typeof window !== "undefined"){
       window.addEventListener("online", retry);
       document.addEventListener("visibilitychange", ()=>{ if (!document.hidden) retry(); });
@@ -761,6 +774,8 @@
       initialize,
       getState: ()=>JSON.parse(JSON.stringify(state)),
       getWorkspaceConfigurationTransport,
+      getRecoveryDescriptor,
+      loadWorkspaces,
       notifyActiveJobMutation,
       notifySavedSetupUpsert,
       notifySavedSetupRename,

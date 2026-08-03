@@ -220,6 +220,18 @@ Do not couple reusable saved configurations to the live-state outbox.
 
 ---
 
+# Identity, Durable Data, and Admin-Assisted Device Recovery
+
+These are three distinct concepts. Keep them distinct in any change that touches RT Sync, workspaces, or admin tooling.
+
+**Anonymous browser identity.** Each device's RT Sync access is a Supabase anonymous Auth user, persisted only in that browser's local storage alongside its device ID. This identity is disposable: it exists to authenticate the device, not to represent anything durable on its own. Clearing browser storage destroys it permanently; the browser mints a brand-new anonymous identity on next load, with no path back to the old one.
+
+**Durable Supabase workspace/data.** The workspace itself — `line_workspaces`, its `active_jobs` row, `saved_setups`, `workspace_configurations` (shared recipes and receiver-weight profiles) — lives entirely server-side and is never lost when a browser's identity is lost. Only the membership link between a specific anonymous identity and the workspace can go stale.
+
+**Admin-assisted device recovery.** When a device's anonymous identity is lost, an admin (existing `public.admin_users` / `is_resin_admin()` authorization — the same one used for Resin Database, not a new authorization system) can use **Workspace Management** to attach that browser's *current* anonymous identity to the workspace as an ordinary member. This never restores the old identity (it is gone forever) and never transfers ownership — it only adds a new, ordinary membership row for the identity that exists right now. See [`supabase/README.md`](supabase/README.md#admin-workspace-recovery) for the RPCs and flow, and `workspace-recovery.js`/`workspace-recovery-ui.js` for the implementation.
+
+---
+
 # Workspace Configurations
 
 Cloud Workspace Configurations are reusable documents, not live synchronized state.
