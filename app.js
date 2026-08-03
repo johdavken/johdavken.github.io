@@ -605,7 +605,7 @@
    * Theme
    * ============================ */
   function applyTheme(t){
-      const allowed = new Set(["dark","light","mse","industrial-slate-dark","gruvbox-dark","gruvbox-light","nord","tokyo-night","dracula","solarized-dark","solarized-light","catppuccin-mocha","catppuccin-latte","high-contrast","mono"]);
+      const allowed = new Set(["dark","light","mse","industrial-slate-dark","gruvbox-dark","gruvbox-light","nord","tokyo-night","dracula","solarized-dark","solarized-light","catppuccin-mocha","catppuccin-latte","rose-pine","rose-pine-dawn","everforest","everforest-light","one-dark","high-contrast","mono"]);
       const theme = allowed.has(String(t)) ? String(t) : "light";
 
       document.documentElement.setAttribute("data-theme", theme);

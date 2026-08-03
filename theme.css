@@ -687,6 +687,271 @@
 
 }
 
+/* ----------------------------------------------------------------------- * Rosé Pine * ----------------------------------------------------------------------- */
+:where(html, body)[data-theme="rose-pine"]{
+  color-scheme: dark;
+  --bg: #191724;
+  --panel: rgba(31,29,46,.95);
+  --panel2: rgba(38,35,58,.88);
+  --text: #e0def4;
+  --subtitle: #c4a7e7;
+  --title: #eb6f92;
+  --muted: #908caa;
+  --border: rgba(144,140,170,.28);
+  --border2: rgba(196,167,231,.30);
+  --field-bg: rgba(38,35,58,.62);
+  --panelOpen: rgba(31,29,46,.98);
+  --chev: rgba(224,222,244,.55);
+  --fg: #e0def4;
+  --yellow: #f6c177;
+  --orange: #ebbcba;
+  --warn: #f6c177;
+  --bad: #eb6f92;
+  --ok: #9ccfd8;
+  --shadow2: 0 9px 24px rgba(0,0,0,.38);
+  --row-bg: rgba(224,222,244,.045);
+  --row-border: rgba(196,167,231,.22);
+  --row-bg-2: rgba(38,35,58,.34);
+  --row-border-2: rgba(144,140,170,.28);
+  --readonly-bg: rgba(31,29,46,.55);
+  --readonly-border: rgba(144,140,170,.28);
+  --focus-border: rgba(156,207,216,.85);
+  --focus-ring: rgba(156,207,216,.18);
+  --f-var1: #9ccfd8;
+  --f-var2: #f6c177;
+  --f-var3: #c4a7e7;
+  --f-const: #908caa;
+  --btn-text: var(--text);
+  --btn-border: rgba(196,167,231,.30);
+  --btn-primary-a: rgba(196,167,231,.24);
+  --btn-primary-b: rgba(196,167,231,.10);
+  --btn-secondary-bg: rgba(156,207,216,.14);
+  --btn-secondary-border: rgba(156,207,216,.32);
+  --btn-danger-bg: rgba(235,111,146,.14);
+  --btn-danger-border: rgba(235,111,146,.32);
+  --bg-glow-a: rgba(196,167,231,.09);
+  --bg-glow-b: rgba(235,111,146,.06);
+  --card-glow-a: rgba(196,167,231,.10);
+  --card-glow-b: rgba(156,207,216,.06);
+  --toggle-on-bg: rgba(196,167,231,.24);
+  --toggle-on-border: rgba(196,167,231,.48);
+  --footer-bg: rgba(25,23,36,.94);
+  --footer-border: rgba(144,140,170,.28);
+
+}
+
+/* ----------------------------------------------------------------------- * Rosé Pine Dawn * ----------------------------------------------------------------------- */
+:where(html, body)[data-theme="rose-pine-dawn"]{
+  color-scheme: light;
+  --bg: #faf4ed;
+  --panel: rgba(255,250,243,.96);
+  --panel2: rgba(242,233,225,.90);
+  --text: #575279;
+  --subtitle: #907aa9;
+  --title: #b4637a;
+  --muted: #797593;
+  --border: rgba(121,117,147,.30);
+  --border2: rgba(144,122,169,.30);
+  --field-bg: rgba(242,233,225,.70);
+  --panelOpen: rgba(255,250,243,.96);
+  --chev: rgba(87,82,121,.55);
+  --fg: #575279;
+  --yellow: #ea9d34;
+  --orange: #d7827e;
+  --warn: #ea9d34;
+  --bad: #b4637a;
+  --ok: #56949f;
+  --shadow2: 0 6px 18px rgba(0,0,0,.12);
+  --row-bg: rgba(87,82,121,.045);
+  --row-border: rgba(144,122,169,.22);
+  --row-bg-2: rgba(87,82,121,.03);
+  --row-border-2: rgba(121,117,147,.22);
+  --readonly-bg: rgba(87,82,121,.05);
+  --readonly-border: rgba(121,117,147,.25);
+  --focus-border: rgba(86,148,159,.80);
+  --focus-ring: rgba(86,148,159,.16);
+  --f-var1: #56949f;
+  --f-var2: #ea9d34;
+  --f-var3: #907aa9;
+  --f-const: #797593;
+  --btn-text: var(--text);
+  --btn-border: rgba(144,122,169,.28);
+  --btn-primary-a: rgba(144,122,169,.18);
+  --btn-primary-b: rgba(144,122,169,.08);
+  --btn-secondary-bg: rgba(86,148,159,.12);
+  --btn-secondary-border: rgba(86,148,159,.26);
+  --btn-danger-bg: rgba(180,99,122,.12);
+  --btn-danger-border: rgba(180,99,122,.26);
+  --bg-glow-a: rgba(144,122,169,.08);
+  --bg-glow-b: rgba(180,99,122,.06);
+  --card-glow-a: rgba(144,122,169,.08);
+  --card-glow-b: rgba(86,148,159,.06);
+  --toggle-on-bg: rgba(144,122,169,.16);
+  --toggle-on-border: rgba(144,122,169,.36);
+  --footer-bg: rgba(250,244,237,.92);
+  --footer-border: rgba(121,117,147,.28);
+
+}
+
+/* ----------------------------------------------------------------------- * Everforest * ----------------------------------------------------------------------- */
+:where(html, body)[data-theme="everforest"]{
+  color-scheme: dark;
+  --bg: #2d353b;
+  --panel: rgba(52,63,68,.95);
+  --panel2: rgba(61,72,77,.88);
+  --text: #d3c6aa;
+  --subtitle: #83c092;
+  --title: #a7c080;
+  --muted: #9da9a0;
+  --border: rgba(157,169,160,.24);
+  --border2: rgba(167,192,128,.28);
+  --field-bg: rgba(61,72,77,.62);
+  --panelOpen: rgba(52,63,68,.98);
+  --chev: rgba(211,198,170,.55);
+  --fg: #d3c6aa;
+  --yellow: #dbbc7f;
+  --orange: #e69875;
+  --warn: #dbbc7f;
+  --bad: #e67e80;
+  --ok: #a7c080;
+  --shadow2: 0 8px 22px rgba(0,0,0,.30);
+  --row-bg: rgba(211,198,170,.045);
+  --row-border: rgba(167,192,128,.20);
+  --row-bg-2: rgba(131,192,146,.035);
+  --row-border-2: rgba(157,169,160,.30);
+  --readonly-bg: rgba(45,53,59,.48);
+  --readonly-border: rgba(157,169,160,.28);
+  --focus-border: rgba(131,192,146,.85);
+  --focus-ring: rgba(131,192,146,.18);
+  --f-var1: #a7c080;
+  --f-var2: #dbbc7f;
+  --f-var3: #83c092;
+  --f-const: #9da9a0;
+  --btn-text: var(--text);
+  --btn-border: rgba(157,169,160,.30);
+  --btn-primary-a: rgba(167,192,128,.22);
+  --btn-primary-b: rgba(167,192,128,.10);
+  --btn-secondary-bg: rgba(131,192,146,.14);
+  --btn-secondary-border: rgba(131,192,146,.30);
+  --btn-danger-bg: rgba(230,126,128,.14);
+  --btn-danger-border: rgba(230,126,128,.28);
+  --bg-glow-a: rgba(167,192,128,.10);
+  --bg-glow-b: rgba(131,192,146,.07);
+  --card-glow-a: rgba(167,192,128,.12);
+  --card-glow-b: rgba(131,192,146,.08);
+  --toggle-on-bg: rgba(167,192,128,.24);
+  --toggle-on-border: rgba(167,192,128,.48);
+  --footer-bg: rgba(45,53,59,.94);
+  --footer-border: rgba(157,169,160,.26);
+
+}
+
+/* ----------------------------------------------------------------------- * Everforest Light * ----------------------------------------------------------------------- */
+:where(html, body)[data-theme="everforest-light"]{
+  color-scheme: light;
+  --bg: #fdf6e3;
+  --panel: rgba(255,255,255,.96);
+  --panel2: rgba(239,235,212,.90);
+  --text: #5c6a72;
+  --subtitle: #35a77c;
+  --title: #8da101;
+  --muted: #a6b0a0;
+  --border: rgba(92,106,114,.28);
+  --border2: rgba(141,161,1,.28);
+  --field-bg: rgba(239,235,212,.70);
+  --panelOpen: rgba(255,255,255,.96);
+  --chev: rgba(92,106,114,.55);
+  --fg: #5c6a72;
+  --yellow: #dfa000;
+  --orange: #f57d26;
+  --warn: #dfa000;
+  --bad: #f85552;
+  --ok: #8da101;
+  --shadow2: 0 6px 18px rgba(0,0,0,.12);
+  --row-bg: rgba(92,106,114,.045);
+  --row-border: rgba(141,161,1,.20);
+  --row-bg-2: rgba(92,106,114,.03);
+  --row-border-2: rgba(92,106,114,.20);
+  --readonly-bg: rgba(92,106,114,.05);
+  --readonly-border: rgba(92,106,114,.22);
+  --focus-border: rgba(53,167,124,.80);
+  --focus-ring: rgba(53,167,124,.16);
+  --f-var1: #8da101;
+  --f-var2: #dfa000;
+  --f-var3: #35a77c;
+  --f-const: #a6b0a0;
+  --btn-text: var(--text);
+  --btn-border: rgba(141,161,1,.26);
+  --btn-primary-a: rgba(141,161,1,.16);
+  --btn-primary-b: rgba(141,161,1,.07);
+  --btn-secondary-bg: rgba(53,167,124,.12);
+  --btn-secondary-border: rgba(53,167,124,.26);
+  --btn-danger-bg: rgba(248,85,82,.12);
+  --btn-danger-border: rgba(248,85,82,.24);
+  --bg-glow-a: rgba(141,161,1,.08);
+  --bg-glow-b: rgba(53,167,124,.06);
+  --card-glow-a: rgba(141,161,1,.08);
+  --card-glow-b: rgba(53,167,124,.06);
+  --toggle-on-bg: rgba(141,161,1,.16);
+  --toggle-on-border: rgba(141,161,1,.36);
+  --footer-bg: rgba(253,246,227,.92);
+  --footer-border: rgba(92,106,114,.24);
+
+}
+
+/* ----------------------------------------------------------------------- * One Dark * ----------------------------------------------------------------------- */
+:where(html, body)[data-theme="one-dark"]{
+  color-scheme: dark;
+  --bg: #282c34;
+  --panel: rgba(47,51,61,.95);
+  --panel2: rgba(33,37,43,.88);
+  --text: #abb2bf;
+  --subtitle: #c678dd;
+  --title: #61afef;
+  --muted: #828997;
+  --border: rgba(92,99,112,.32);
+  --border2: rgba(97,175,239,.28);
+  --field-bg: rgba(33,37,43,.62);
+  --panelOpen: rgba(47,51,61,.98);
+  --chev: rgba(171,178,191,.55);
+  --fg: #abb2bf;
+  --yellow: #e5c07b;
+  --orange: #d19a66;
+  --warn: #e5c07b;
+  --bad: #e06c75;
+  --ok: #98c379;
+  --shadow2: 0 8px 22px rgba(0,0,0,.34);
+  --row-bg: rgba(171,178,191,.045);
+  --row-border: rgba(97,175,239,.20);
+  --row-bg-2: rgba(97,175,239,.035);
+  --row-border-2: rgba(92,99,112,.38);
+  --readonly-bg: rgba(33,37,43,.50);
+  --readonly-border: rgba(92,99,112,.30);
+  --focus-border: rgba(97,175,239,.85);
+  --focus-ring: rgba(97,175,239,.18);
+  --f-var1: #98c379;
+  --f-var2: #e5c07b;
+  --f-var3: #c678dd;
+  --f-const: #828997;
+  --btn-text: var(--text);
+  --btn-border: rgba(92,99,112,.32);
+  --btn-primary-a: rgba(97,175,239,.22);
+  --btn-primary-b: rgba(97,175,239,.10);
+  --btn-secondary-bg: rgba(152,195,121,.14);
+  --btn-secondary-border: rgba(152,195,121,.30);
+  --btn-danger-bg: rgba(224,108,117,.14);
+  --btn-danger-border: rgba(224,108,117,.28);
+  --bg-glow-a: rgba(97,175,239,.10);
+  --bg-glow-b: rgba(198,120,221,.07);
+  --card-glow-a: rgba(97,175,239,.12);
+  --card-glow-b: rgba(198,120,221,.08);
+  --toggle-on-bg: rgba(97,175,239,.24);
+  --toggle-on-border: rgba(97,175,239,.48);
+  --footer-bg: rgba(33,37,43,.94);
+  --footer-border: rgba(92,99,112,.30);
+
+}
+
 /* ----------------------------------------------------------------------- * High Contrast * ----------------------------------------------------------------------- */
 :where(html, body)[data-theme="high-contrast"]{
   color-scheme: dark;
