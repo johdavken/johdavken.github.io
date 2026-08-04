@@ -60,6 +60,8 @@
     };
     let client = null;
     let channel = null;
+    let channelWorkspaceId = "";
+    let channelStatus = "";
     let activeUploadTimer = null;
     let flushingActive = false;
     let flushingSetups = false;
@@ -490,15 +492,37 @@
       await applyRemoteActive(row, "realtime");
     }
 
+    // Cleared together so no stale channel/workspace/status combination can
+    // ever be read as "still healthy" after teardown.
+    async function teardownChannel(){
+      if (channel) await client.removeChannel(channel);
+      channel = null;
+      channelWorkspaceId = "";
+      channelStatus = "";
+    }
+
     async function subscribe(){
-      if (channel){ await client.removeChannel(channel); channel = null; }
-      if (!selectedId() || !isConnected()) return;
-      channel = client.channel(`line-sync-${selectedId()}`)
-        .on("postgres_changes", { event: "UPDATE", schema: "public", table: "active_jobs", filter: `workspace_id=eq.${selectedId()}` }, handleRealtimeActive)
-        .on("postgres_changes", { event: "*", schema: "public", table: "saved_setups", filter: `workspace_id=eq.${selectedId()}` }, ()=>reconcileSavedSetups({ replaceLocal: true }))
-        .on("postgres_changes", { event: "*", schema: "public", table: "line_workspaces", filter: `id=eq.${selectedId()}` }, ()=>loadWorkspaces())
-        .on("postgres_changes", { event: "*", schema: "public", table: "line_workspace_members", filter: `workspace_id=eq.${selectedId()}` }, ()=>loadMembers())
+      const targetId = selectedId();
+      const targetConnected = !!targetId && isConnected();
+      const healthy = !!channel
+        && channelWorkspaceId === targetId
+        && targetConnected
+        && channelStatus !== "CHANNEL_ERROR"
+        && channelStatus !== "TIMED_OUT";
+      if (healthy) return;
+
+      if (channel) await teardownChannel();
+      if (!targetConnected) return;
+
+      channelWorkspaceId = targetId;
+      channelStatus = "PENDING";
+      channel = client.channel(`line-sync-${targetId}`)
+        .on("postgres_changes", { event: "UPDATE", schema: "public", table: "active_jobs", filter: `workspace_id=eq.${targetId}` }, handleRealtimeActive)
+        .on("postgres_changes", { event: "*", schema: "public", table: "saved_setups", filter: `workspace_id=eq.${targetId}` }, ()=>reconcileSavedSetups({ replaceLocal: true }))
+        .on("postgres_changes", { event: "*", schema: "public", table: "line_workspaces", filter: `id=eq.${targetId}` }, ()=>loadWorkspaces())
+        .on("postgres_changes", { event: "*", schema: "public", table: "line_workspace_members", filter: `workspace_id=eq.${targetId}` }, ()=>loadMembers())
         .subscribe(status=>{
+          channelStatus = status;
           if (status === "SUBSCRIBED") setStatus("Synced", "RT Sync is connected.");
           else if (["CHANNEL_ERROR","TIMED_OUT"].includes(status)) setStatus("Pending", "Realtime connection will retry.");
         });
@@ -673,7 +697,7 @@
       const current = ensureDeviceSettings();
       if (selectedId() && !current.disconnectedWorkspaceIds.includes(selectedId())) current.disconnectedWorkspaceIds.push(selectedId());
       saveSettings(current);
-      if (channel){ await client.removeChannel(channel); channel = null; }
+      await teardownChannel();
       setStatus("Local only", "Disconnected on this device. Server membership is preserved.");
     }
 
@@ -687,7 +711,10 @@
       saveSettings(current);
       await loadWorkspaces();
       if (selectedId()) await reconcileSelected({ forceRemote: true });
-      else setStatus("Local only", "This device left RT Sync. Local Resin.Tools data was preserved.");
+      else {
+        await teardownChannel();
+        setStatus("Local only", "This device left RT Sync. Local Resin.Tools data was preserved.");
+      }
     }
 
     async function transferOwnership(userId){
@@ -711,7 +738,10 @@
       saveSettings(current);
       await loadWorkspaces();
       if (selectedId()) await reconcileSelected({ forceRemote: true });
-      else setStatus("Local only", "The shared line workspace was deleted. Local data remains available.");
+      else {
+        await teardownChannel();
+        setStatus("Local only", "The shared line workspace was deleted. Local data remains available.");
+      }
     }
 
     async function replaceActiveJob(payload, reason="new-job"){
