@@ -36,6 +36,10 @@
     const storage = options.storage;
     const adapter = options.adapter;
     const sdk = options.supabaseLibrary;
+    // Reuses the existing, already-tested field-scoped comparator from
+    // active-job.js rather than a second one; falls back to the global UMD
+    // export so no other caller needs to change how it wires this module up.
+    const activeJobLib = options.activeJob || (typeof globalThis !== "undefined" ? globalThis.PolynActiveJob : null);
     const store = syncStorage?.createStore(storage);
     const enabled = !!(config.enabled && config.url && config.publishableKey && sdk?.createClient && store);
     const state = {
@@ -267,7 +271,7 @@
         const row = response.data?.[0];
         if (row){
           state.activeRevision = Number(row.revision);
-          saveWorkspaceMetadata(selectedId(), { activeRevision: state.activeRevision });
+          saveWorkspaceMetadata(selectedId(), { activeRevision: state.activeRevision, activePayload: row.payload });
         }
         store.clearActiveJob(selectedId(), pending.operationId);
         const newer = store.getOutbox().activeJobs[selectedId()];
@@ -300,6 +304,16 @@
       const payload = adapter.getActiveJob();
       const validationResult = adapter.validateActiveJob?.(payload);
       if (validationResult && !validationResult.valid) return;
+
+      // No-op guard: compare against whatever is already queued for this
+      // workspace, else the last known accepted/persisted payload for it.
+      // Workspace-scoped on both sides, so a different workspace's baseline
+      // can never suppress this one's first save.
+      const workspaceId = selectedId();
+      const queuedPending = store.getOutbox().activeJobs[workspaceId];
+      const baseline = queuedPending ? queuedPending.payload : workspaceMetadata(workspaceId).entry.activePayload;
+      if (baseline && activeJobLib?.activeJobsEqual?.(baseline, payload)) return;
+
       const pending = {
         payload,
         expectedRevision: state.activeRevision,
@@ -307,9 +321,9 @@
         kind,
         createdAt: new Date().toISOString()
       };
-      const result = store.queueActiveJob(selectedId(), pending);
+      const result = store.queueActiveJob(workspaceId, pending);
       if (!result.ok){ adapter.onStorageError?.("Unsynced active-job changes could not be queued."); return; }
-      saveActiveCache(selectedId(), payload);
+      saveActiveCache(workspaceId, payload);
       emit();
       clearTimeout(activeUploadTimer);
       if (immediate) flushActiveJob();
@@ -484,7 +498,7 @@
       if (pending?.operationId === row.last_operation_id){
         store.clearActiveJob(selectedId(), pending.operationId);
         state.activeRevision = Number(row.revision);
-        saveWorkspaceMetadata(selectedId(), { activeRevision: state.activeRevision });
+        saveWorkspaceMetadata(selectedId(), { activeRevision: state.activeRevision, activePayload: row.payload });
         setStatus("Synced", "Active-job changes are synced.");
         return;
       }
