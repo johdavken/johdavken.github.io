@@ -93,7 +93,8 @@ function fakeRealtimeClient(rowsByTable){
       name,
       status: null,
       _statusCallback: null,
-      on(event, filter, handler){ handlers.push({ filter, handler }); return chan; },
+      handlers, // exposed so tests can inspect exactly which postgres_changes handlers were registered
+      on(event, filter, handler){ handlers.push({ event, filter, handler }); return chan; },
       subscribe(callback){ chan._statusCallback = callback; return chan; },
       emit(status){ chan.status = status; chan._statusCallback?.(status); },
       // Test-only helper to simulate a postgres_changes UPDATE on active_jobs
@@ -199,6 +200,19 @@ function createSync(rows, getPayload){
   });
   return { sync, storage, syncStorageModule, ...harness };
 }
+
+test("the created channel registers only one postgres_changes handler, for active_jobs", async () => {
+  const { sync, channels } = createSync(workspaceFixtures({ id: "ws-a", name: "Line A" }));
+  await sync.initialize();
+  assert.equal(channels.length, 1);
+  assert.equal(channels[0].handlers.length, 1, "supabase_realtime now publishes only active_jobs; saved_setups/line_workspaces/line_workspace_members must not be subscribed");
+  const [handler] = channels[0].handlers;
+  assert.equal(handler.event, "postgres_changes");
+  assert.equal(handler.filter.event, "UPDATE");
+  assert.equal(handler.filter.schema, "public");
+  assert.equal(handler.filter.table, "active_jobs");
+  assert.equal(handler.filter.filter, "workspace_id=eq.ws-a");
+});
 
 test("repeated reconcile calls for the same workspace create only one channel", async () => {
   const { sync, channelCalls, removeChannelCalls, channels } = createSync(workspaceFixtures({ id: "ws-a", name: "Line A" }));

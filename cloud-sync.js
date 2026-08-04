@@ -530,11 +530,12 @@
 
       channelWorkspaceId = targetId;
       channelStatus = "PENDING";
+      // supabase_realtime currently publishes only public.active_jobs;
+      // saved_setups/line_workspaces/line_workspace_members refresh through
+      // their existing explicit REST/RPC paths (init, workspace selection,
+      // reconnect, manual refresh) instead of a live subscription.
       channel = client.channel(`line-sync-${targetId}`)
         .on("postgres_changes", { event: "UPDATE", schema: "public", table: "active_jobs", filter: `workspace_id=eq.${targetId}` }, handleRealtimeActive)
-        .on("postgres_changes", { event: "*", schema: "public", table: "saved_setups", filter: `workspace_id=eq.${targetId}` }, ()=>reconcileSavedSetups({ replaceLocal: true }))
-        .on("postgres_changes", { event: "*", schema: "public", table: "line_workspaces", filter: `id=eq.${targetId}` }, ()=>loadWorkspaces())
-        .on("postgres_changes", { event: "*", schema: "public", table: "line_workspace_members", filter: `workspace_id=eq.${targetId}` }, ()=>loadMembers())
         .subscribe(status=>{
           channelStatus = status;
           if (status === "SUBSCRIBED") setStatus("Synced", "RT Sync is connected.");
