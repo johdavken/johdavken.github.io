@@ -71,6 +71,7 @@
     let flushingSetups = false;
     let activeConflictPaused = false;
     let activeInFlightOperationId = "";
+    let realtimeAuthListenerRegistered = false;
 
     function emit(){
       state.pendingCount = store?.pendingCount?.() || 0;
@@ -124,6 +125,40 @@
       return !!selectedId() && !current.disconnectedWorkspaceIds.includes(selectedId());
     }
     function rpc(name, args){ return client.rpc(name, args); }
+
+    // Passes the token straight through to the existing client's Realtime
+    // transport - never stored, logged, or read back from anywhere else.
+    function setRealtimeAuth(accessToken){
+      if (accessToken) client?.realtime?.setAuth(accessToken);
+    }
+
+    // Reused both right before a channel is created and by the auth-state
+    // listener below, so a filtered/unfiltered subscribe always carries the
+    // current session's token rather than joining anonymously and being
+    // rejected by RLS on delivery.
+    async function applyCurrentRealtimeAuth(){
+      if (!client) return;
+      const current = await client.auth.getSession();
+      setRealtimeAuth(current?.data?.session?.access_token);
+    }
+
+    // Registered once per client instance (guarded so a second initialize()
+    // call - which already creates a new client, an existing, unrelated
+    // behavior this fix doesn't change - can't stack a second listener on
+    // top). Keeps Realtime's auth current for the lifetime of the page;
+    // there is no broader "destroy this cloud-sync instance" lifecycle to
+    // hook an unsubscribe into.
+    function registerRealtimeAuthListener(){
+      if (realtimeAuthListenerRegistered || !client) return;
+      realtimeAuthListenerRegistered = true;
+      client.auth.onAuthStateChange((event, session) => {
+        if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION"){
+          setRealtimeAuth(session?.access_token);
+        } else if (event === "SIGNED_OUT"){
+          teardownChannel();
+        }
+      });
+    }
 
     async function ensureAnonymousSession(){
       const current = await client.auth.getSession();
@@ -531,6 +566,12 @@
       if (channel) await teardownChannel();
       if (!targetConnected) return;
 
+      // Must complete before the channel is created/subscribed: otherwise
+      // it joins without the current access_token and the server rejects
+      // delivered rows under RLS (401 Unauthorized), even though the join
+      // itself succeeds.
+      await applyCurrentRealtimeAuth();
+
       channelWorkspaceId = targetId;
       channelStatus = "PENDING";
       // supabase_realtime currently publishes only public.active_jobs;
@@ -614,6 +655,7 @@
         client = sdk.createClient(config.url, config.publishableKey, {
           auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
         });
+        registerRealtimeAuthListener();
         await ensureAnonymousSession();
         state.available = true;
         await loadWorkspaces();

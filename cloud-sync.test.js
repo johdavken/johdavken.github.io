@@ -54,17 +54,28 @@ test("disabled configuration remains a no-op without Supabase", async () => {
 
 function memoryStorage(){
   const values = new Map();
-  return { getItem: key=>values.get(key) ?? null, setItem: (key,value)=>values.set(key,String(value)) };
+  return { getItem: key=>values.get(key) ?? null, setItem: (key,value)=>values.set(key,String(value)), values };
 }
 
 // Minimal fake Supabase client: a table query builder that resolves against
 // in-memory fixture rows, and a channel mock whose status callback is the
 // real one cloud-sync.js passes to .subscribe(), so emit() exercises the
 // actual channelStatus-tracking code rather than a re-implementation of it.
-function fakeRealtimeClient(rowsByTable){
+//
+// options.session seeds what auth.getSession()/signInAnonymously() return;
+// pass null to simulate no current session. setSession()/fireAuthStateChange()
+// let a test change that mid-flow and drive the real onAuthStateChange
+// listener cloud-sync.js registers.
+function fakeRealtimeClient(rowsByTable, options = {}){
   const channelCalls = [];
   const removeChannelCalls = [];
   const channels = [];
+  const realtimeSetAuthCalls = [];
+  const authStateListeners = [];
+  const callOrder = []; // shared ordering log, e.g. "setAuth:<token>" / "channel:<name>"
+  let currentSession = "session" in options
+    ? options.session
+    : { user: { id: "user-1" }, access_token: "initial-access-token" };
 
   function resolveRows(table, filters){
     let rows = rowsByTable[table] || [];
@@ -111,11 +122,25 @@ function fakeRealtimeClient(rowsByTable){
 
   const client = {
     auth: {
-      async getSession(){ return { data: { session: { user: { id: "user-1" } } } }; },
-      async signInAnonymously(){ return { data: { session: { user: { id: "user-1" } } } }; }
+      async getSession(){ return { data: { session: currentSession } }; },
+      async signInAnonymously(){
+        if (!currentSession) currentSession = { user: { id: "user-1" }, access_token: "initial-access-token" };
+        return { data: { session: currentSession } };
+      },
+      onAuthStateChange(callback){
+        authStateListeners.push(callback);
+        return { data: { subscription: { unsubscribe(){} } } };
+      }
+    },
+    realtime: {
+      setAuth(token){
+        realtimeSetAuthCalls.push(token);
+        callOrder.push(`setAuth:${token}`);
+      }
     },
     channel(name){
       channelCalls.push(name);
+      callOrder.push(`channel:${name}`);
       const chan = makeChannel(name);
       channels.push(chan);
       return chan;
@@ -142,7 +167,12 @@ function fakeRealtimeClient(rowsByTable){
     }
   };
 
-  return { client, channelCalls, removeChannelCalls, channels, rpcCalls };
+  return {
+    client, channelCalls, removeChannelCalls, channels, rpcCalls,
+    realtimeSetAuthCalls, callOrder, authStateListeners,
+    fireAuthStateChange(event, session){ authStateListeners.forEach(cb => cb(event, session)); },
+    setSession(session){ currentSession = session; }
+  };
 }
 
 // getPayload lets a test control what the app "currently shows" as of each
@@ -186,8 +216,8 @@ function workspaceFixtures(...workspaces){
   return rows;
 }
 
-function createSync(rows, getPayload){
-  const harness = fakeRealtimeClient(rows);
+function createSync(rows, getPayload, clientOptions){
+  const harness = fakeRealtimeClient(rows, clientOptions);
   const storage = memoryStorage();
   const syncStorageModule = require("./sync-storage.js");
   const sync = require("./cloud-sync.js").create({
@@ -420,4 +450,91 @@ test("switching workspaces does not reuse the previous workspace's comparison ba
   assert.equal(calls.length, 1, "ws-a's baseline must not suppress a genuinely different save in ws-b");
   assert.equal(calls[0].args.p_workspace_id, "ws-b");
   assert.equal(calls[0].args.p_payload.lineRate, 111);
+});
+
+// --- Realtime authentication token (setAuth) ------------------------------
+
+test("setAuth is called with the current session access token before subscribe()", async () => {
+  const { sync, realtimeSetAuthCalls, callOrder, channelCalls } = createSync(workspaceFixtures({ id: "ws-a", name: "Line A" }));
+  await sync.initialize();
+
+  assert.ok(realtimeSetAuthCalls.includes("initial-access-token"), "setAuth must be called with the session's access_token");
+  assert.equal(channelCalls.length, 1, "the channel must still be created once auth is applied");
+
+  const setAuthIndex = callOrder.indexOf("setAuth:initial-access-token");
+  const channelIndex = callOrder.indexOf("channel:line-sync-ws-a");
+  assert.ok(setAuthIndex > -1 && channelIndex > -1 && setAuthIndex < channelIndex,
+    "setAuth must complete before the channel is created/subscribed");
+});
+
+test("no token value is logged or stored outside the Supabase client", async () => {
+  const originalLog = console.log, originalWarn = console.warn, originalError = console.error;
+  const logged = [];
+  console.log = (...args) => logged.push(args);
+  console.warn = (...args) => logged.push(args);
+  console.error = (...args) => logged.push(args);
+  try{
+    const { sync, storage } = createSync(workspaceFixtures({ id: "ws-a", name: "Line A" }));
+    await sync.initialize();
+
+    const loggedText = JSON.stringify(logged);
+    assert.doesNotMatch(loggedText, /initial-access-token/, "the access token must never be logged");
+
+    // Inspect exactly what was persisted to local storage (the same object
+    // passed in as `storage`) - the token must not appear anywhere in it.
+    const persisted = JSON.stringify(Object.fromEntries(storage.values ? storage.values : []));
+    assert.doesNotMatch(persisted, /initial-access-token/, "the access token must never be persisted to local storage");
+
+    // getState() is the only snapshot handed to the rest of the app (UI,
+    // adapter.onStateChange, etc.) - it must not carry the token either.
+    const stateText = JSON.stringify(sync.getState());
+    assert.doesNotMatch(stateText, /initial-access-token/, "the access token must not appear in the public sync state");
+  } finally {
+    console.log = originalLog; console.warn = originalWarn; console.error = originalError;
+  }
+});
+
+test("TOKEN_REFRESHED updates Realtime auth", async () => {
+  const { sync, realtimeSetAuthCalls, fireAuthStateChange } = createSync(workspaceFixtures({ id: "ws-a", name: "Line A" }));
+  await sync.initialize();
+  assert.ok(realtimeSetAuthCalls.includes("initial-access-token"));
+
+  fireAuthStateChange("TOKEN_REFRESHED", { user: { id: "user-1" }, access_token: "refreshed-token" });
+
+  assert.ok(realtimeSetAuthCalls.includes("refreshed-token"), "a refreshed token must be applied to Realtime auth");
+});
+
+test("SIGNED_OUT tears down the existing channel", async () => {
+  const { sync, channels, removeChannelCalls, fireAuthStateChange } = createSync(workspaceFixtures({ id: "ws-a", name: "Line A" }));
+  await sync.initialize();
+  channels[0].emit("SUBSCRIBED");
+  assert.equal(removeChannelCalls.length, 0);
+
+  fireAuthStateChange("SIGNED_OUT", null);
+  // teardownChannel() is async and not awaited by the listener; give its
+  // microtask a turn to run.
+  await Promise.resolve();
+  await Promise.resolve();
+
+  assert.equal(removeChannelCalls.length, 1, "SIGNED_OUT must tear down the channel through the existing cleanup path");
+  assert.equal(removeChannelCalls[0], channels[0]);
+});
+
+test("repeated initialization does not register duplicate auth listeners", async () => {
+  const { sync, authStateListeners } = createSync(workspaceFixtures({ id: "ws-a", name: "Line A" }));
+  await sync.initialize();
+  await sync.initialize();
+  assert.equal(authStateListeners.length, 1, "a second initialize() must not attach a second onAuthStateChange listener");
+});
+
+test("absence of a session/token does not crash and does not falsely authenticate Realtime", async () => {
+  const rows = workspaceFixtures({ id: "ws-a", name: "Line A" }, { id: "ws-b", name: "Line B" });
+  const { sync, realtimeSetAuthCalls, setSession } = createSync(rows);
+  await sync.initialize();
+  const callsAfterInit = realtimeSetAuthCalls.length;
+
+  setSession(null); // simulate the session becoming unavailable
+  await assert.doesNotReject(() => sync.selectWorkspace("ws-b"), "switching workspaces with no session must not throw");
+
+  assert.equal(realtimeSetAuthCalls.length, callsAfterInit, "setAuth must not be called with a missing/undefined token");
 });
