@@ -211,7 +211,50 @@ test("the created channel registers only one postgres_changes handler, for activ
   assert.equal(handler.filter.event, "UPDATE");
   assert.equal(handler.filter.schema, "public");
   assert.equal(handler.filter.table, "active_jobs");
-  assert.equal(handler.filter.filter, "workspace_id=eq.ws-a");
+});
+
+test("the registered active_jobs handler has no server-side filter", async () => {
+  // Workaround for the bundled realtime-js/server combination rejecting a
+  // workspace_id filter here ("invalid column for filter workspace_id").
+  const { sync, channels } = createSync(workspaceFixtures({ id: "ws-a", name: "Line A" }));
+  await sync.initialize();
+  const [handler] = channels[0].handlers;
+  assert.equal(handler.filter.filter, undefined);
+  assert.equal(Object.hasOwn(handler.filter, "filter"), false);
+});
+
+test("an active_jobs event for the selected workspace is handled", async () => {
+  const seedPayload = activeJobPayload({ lineRate: 100 });
+  const rows = workspaceFixtures({ id: "ws-a", name: "Line A", payload: seedPayload });
+  const { sync, channels } = createSync(rows, () => seedPayload);
+  await sync.initialize();
+  assert.equal(sync.getState().activeRevision, 1);
+
+  const remotePayload = activeJobPayload({ lineRate: 777 });
+  await channels[0].fireActiveJobUpdate({
+    workspace_id: "ws-a", payload: remotePayload, revision: 2,
+    last_operation_id: "remote-op", updated_at: new Date().toISOString(), updated_by: "other-device"
+  });
+
+  assert.equal(sync.getState().activeRevision, 2, "an event for this channel's own workspace must be applied");
+});
+
+test("an active_jobs event for a different workspace is ignored (client-side guard, since the subscription is unfiltered)", async () => {
+  const seedPayload = activeJobPayload({ lineRate: 100 });
+  const rows = workspaceFixtures(
+    { id: "ws-a", name: "Line A", payload: seedPayload },
+    { id: "ws-b", name: "Line B", payload: activeJobPayload({ lineRate: 200 }) }
+  );
+  const { sync, channels } = createSync(rows, () => seedPayload);
+  await sync.initialize(); // subscribes to ws-a only
+  assert.equal(sync.getState().activeRevision, 1);
+
+  await channels[0].fireActiveJobUpdate({
+    workspace_id: "ws-b", payload: activeJobPayload({ lineRate: 999 }), revision: 5,
+    last_operation_id: "other-workspace-op", updated_at: new Date().toISOString(), updated_by: "other-device"
+  });
+
+  assert.equal(sync.getState().activeRevision, 1, "an event for a workspace other than the one this channel was created for must be ignored");
 });
 
 test("repeated reconcile calls for the same workspace create only one channel", async () => {

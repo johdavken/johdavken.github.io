@@ -482,7 +482,10 @@
 
     async function handleRealtimeActive(payload){
       const row = payload.new;
-      if (!row || row.workspace_id !== selectedId() || Number(row.revision) <= state.activeRevision) return;
+      // No server-side filter on this subscription (see subscribe()), so
+      // events for every workspace arrive here - only act on the one this
+      // channel was actually created for, ignore everything else.
+      if (!row || row.workspace_id !== channelWorkspaceId || Number(row.revision) <= state.activeRevision) return;
       const pending = store.getOutbox().activeJobs[selectedId()];
       if (activeInFlightOperationId && row.last_operation_id === activeInFlightOperationId){
         state.activeRevision = Number(row.revision);
@@ -534,8 +537,15 @@
       // saved_setups/line_workspaces/line_workspace_members refresh through
       // their existing explicit REST/RPC paths (init, workspace selection,
       // reconnect, manual refresh) instead of a live subscription.
+      //
+      // No `filter` here: the bundled realtime-js 2.15.5 / server combination
+      // rejects a workspace_id filter on this table ("invalid column for
+      // filter workspace_id"). Temporary workaround until that's resolved -
+      // subscribe unfiltered and reject other workspaces' events client-side
+      // in handleRealtimeActive instead (guarded against channelWorkspaceId,
+      // the id this channel was created for).
       channel = client.channel(`line-sync-${targetId}`)
-        .on("postgres_changes", { event: "UPDATE", schema: "public", table: "active_jobs", filter: `workspace_id=eq.${targetId}` }, handleRealtimeActive)
+        .on("postgres_changes", { event: "UPDATE", schema: "public", table: "active_jobs" }, handleRealtimeActive)
         .subscribe(status=>{
           channelStatus = status;
           if (status === "SUBSCRIBED") setStatus("Synced", "RT Sync is connected.");
