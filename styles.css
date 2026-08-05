@@ -626,6 +626,13 @@ main{
 .workspaceConfigurationWorkspace{font-size:var(--font-small);font-weight:700;color:var(--focus-border);margin-top:2px}.workspaceConfigurationRow{cursor:pointer}.workspaceConfigurationRow.selected strong{font-weight:750;color:var(--text)}.workspaceConfigurationRow:focus-visible{outline:2px solid var(--focus-border);outline-offset:2px}.workspaceConfigurationFavorite{color:var(--warn);font-size:13px}
 .workspaceConfigurationRow strong{font-size:var(--font-small);font-weight:600;color:var(--muted);letter-spacing:.01em}
 .rearrangeTarget{cursor:grab;user-select:none}.rearrangeSource{opacity:.5;outline:2px dashed var(--focus-border)}.rearrangeOver{outline:2px solid var(--ok);background:color-mix(in srgb,var(--ok) 12%,var(--panel2))}@media(max-width:900px){.rearrangeDesktopOnly{display:none!important}}
+/* Disabled form controls don't reliably dispatch/bubble click events (some
+   browsers suppress them entirely) - without this, a tap that lands on the
+   resin name/percentage field inside a rearranging cell can silently do
+   nothing instead of reaching the cell's tap-to-select handler. Excluding
+   disabled fields from hit-testing makes every tap on the cell land on the
+   td, regardless of which child it visually lands on. */
+.rearrangeTarget :disabled{ pointer-events:none; }
 /* On mobile, the layer panel stays put when Bulk Edit or Rearrange Hoppers
    is toggled: the trigger buttons and the resulting toolbar/mode bar render
    below the panel instead of above it, in the same spot either way. Both

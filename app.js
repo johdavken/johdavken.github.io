@@ -452,6 +452,10 @@
     function keyName(s){ return normName(s).toUpperCase(); }
     function sum(arr){ return arr.reduce((a,b)=>a+b,0); }
     function fmtNum(n, d=2){ return Number.isFinite(n) ? n.toFixed(d) : "—"; }
+    // Production Summary pounds are entered and tracked without decimals -
+    // truncate (not round-to-nearest) so e.g. 534.6 reads as 534, matching
+    // the whole-pound units the operator already works in.
+    function fmtLb(n){ return Number.isFinite(n) ? String(Math.floor(n)) : "—"; }
     function fmtTrim(n, d=3){
       if (!Number.isFinite(n)) return "—";
       return n.toFixed(d).replace(/\.0+$/,"").replace(/(\.\d*?)0+$/,"$1");
@@ -1764,10 +1768,15 @@
           button.setAttribute("aria-disabled", String(!bulkMode));
         });
         cellRefs.forEach(ref=>{
-          ref.resinInput.disabled = bulkMode;
-          ref.pctInput.disabled = bulkMode;
+          // setBulkMode(false) runs unconditionally at the end of every
+          // render (see below) to reset newly-created cells to a consistent
+          // baseline - it must not re-enable inputs that rearrange mode
+          // just disabled moments earlier in the same render pass.
+          const rearranging = !!hopperRearrangement?.active;
+          ref.resinInput.disabled = bulkMode || rearranging;
+          ref.pctInput.disabled = bulkMode || rearranging;
           const trackButton = ref.td.querySelector(".splitTrackButton");
-          if (trackButton) trackButton.disabled = bulkMode;
+          if (trackButton) trackButton.disabled = bulkMode || rearranging;
         });
         if (!bulkMode) selected.clear();
         updateSelectionUI();
@@ -1929,8 +1938,8 @@
           <div class="status ok">
             <div class="statusTitle">Resin totals</div>
             <div class="muted">
-              Production: <span class="mono">${fmtNum(prod,2)}</span> lb • Scrap: <span class="mono">${fmtNum(scrap,2)}</span> lb •
-              Total: <span class="mono">${fmtNum(total,2)}</span> lb
+              Production: <span class="mono">${fmtLb(prod)}</span> lb • Scrap: <span class="mono">${fmtLb(scrap)}</span> lb •
+              Total: <span class="mono">${fmtLb(total)}</span> lb
             </div>
           </div>
         `;
@@ -1956,7 +1965,7 @@
             <div class="calcName mono" data-resin-name></div>
             <div class="calcMeta">Allocated from splits</div>
           </div>
-          <div class="mono calcValue">${fmtNum(r.lbs,2)} lb</div>
+          <div class="mono calcValue">${fmtLb(r.lbs)} lb</div>
         `;
         row.querySelector("[data-resin-name]").textContent = r.displayName;
         out.appendChild(row);

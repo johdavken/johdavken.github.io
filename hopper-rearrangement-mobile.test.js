@@ -147,3 +147,22 @@ test("the bulk-edit bar and the rearrange mode bar both get tighter padding/gap 
   assert.match(narrowBlock, /\.splitsBulkBar\{ padding:8px; gap:8px; \}/);
   assert.match(narrowBlock, /\.rearrangeModeBar\{padding:8px;gap:8px\}/);
 });
+
+// --- Rearrange mode cells no longer swallow taps on data-entry fields ----
+
+test("setBulkMode's per-cell disable pass keeps rearrange-mode disabling in place instead of clobbering it back to enabled", () => {
+  const setBulkModeStart = app.indexOf("function setBulkMode(enabled){");
+  const setBulkModeBody = app.slice(setBulkModeStart, app.indexOf("\n      }", setBulkModeStart));
+  assert.match(setBulkModeBody, /const rearranging = !!hopperRearrangement\?\.active;/);
+  assert.match(setBulkModeBody, /ref\.resinInput\.disabled = bulkMode \|\| rearranging;/);
+  assert.match(setBulkModeBody, /ref\.pctInput\.disabled = bulkMode \|\| rearranging;/);
+  assert.match(setBulkModeBody, /trackButton\.disabled = bulkMode \|\| rearranging;/);
+});
+
+test("setBulkMode(false) runs at the end of every render, which is exactly why the clobbering bug existed", () => {
+  assert.match(splitsArea, /setBulkMode\(false\);/);
+});
+
+test("disabled fields inside a rearranging cell are excluded from hit-testing, so a tap anywhere on the cell reaches the td instead of being silently swallowed", () => {
+  assert.match(styles, /\.rearrangeTarget :disabled\{ pointer-events:none; \}/);
+});
