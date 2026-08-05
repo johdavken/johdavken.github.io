@@ -3047,7 +3047,15 @@
     $("lineSyncGenerateCodeBtn")?.addEventListener("click",()=>runLineSyncAction(()=>lineSync.generateLinkCode()));
     $("lineSyncRenameBtn")?.addEventListener("click",()=>runLineSyncAction(()=>lineSync.renameWorkspace($("lineSyncWorkspaceName")?.value)));
     $("lineSyncRetryBtn")?.addEventListener("click",()=>runLineSyncAction(()=>
-      window.matchMedia("(max-width: 900px)").matches && lineSync.getState().selectedWorkspaceId
+      // refreshSelected() clears the locally-disconnected flag before
+      // reconciling, which retry() deliberately doesn't (retry() also runs
+      // automatically on tab visibility change, where silently reconnecting
+      // a line the operator explicitly disconnected would be wrong). This
+      // button is an explicit "reconnect" action on both desktop and
+      // mobile, so it must always use refreshSelected() when a line is
+      // selected - previously only mobile did, leaving desktop with no
+      // working way back into a disconnected line.
+      lineSync.getState().selectedWorkspaceId
         ? lineSync.refreshSelected()
         : lineSync.retry()
     ));
