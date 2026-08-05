@@ -626,6 +626,18 @@ main{
 .workspaceConfigurationWorkspace{font-size:var(--font-small);font-weight:700;color:var(--focus-border);margin-top:2px}.workspaceConfigurationRow{cursor:pointer}.workspaceConfigurationRow.selected strong{font-weight:750;color:var(--text)}.workspaceConfigurationRow:focus-visible{outline:2px solid var(--focus-border);outline-offset:2px}.workspaceConfigurationFavorite{color:var(--warn);font-size:13px}
 .workspaceConfigurationRow strong{font-size:var(--font-small);font-weight:600;color:var(--muted);letter-spacing:.01em}
 .rearrangeTarget{cursor:grab;user-select:none}.rearrangeSource{opacity:.5;outline:2px dashed var(--focus-border)}.rearrangeOver{outline:2px solid var(--ok);background:color-mix(in srgb,var(--ok) 12%,var(--panel2))}@media(max-width:900px){.rearrangeDesktopOnly{display:none!important}}
+/* On mobile, the layer panel stays put when Bulk Edit or Rearrange Hoppers
+   is toggled: the trigger buttons and the resulting toolbar/mode bar render
+   below the panel instead of above it, in the same spot either way. Both
+   also drop their sticky-to-top positioning here - sticky plus being
+   reordered after the table meant they'd suddenly jump to the top of the
+   viewport once their normal flow position scrolled past it, forcing an
+   unwanted scroll. */
+@media(max-width:900px){
+  #splitsArea > .splitsMatrixActions,
+  #splitsArea > .splitsBulkBar,
+  #splitsArea > .rearrangeModeBar{ order:1; position:static; }
+}
 .rearrangeModeBar{position:sticky;top:54px;z-index:7;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px;border:1px solid var(--row-border);border-radius:var(--radius-row);background:var(--readonly-bg)}.rearrangeModeMessage{display:flex;align-items:baseline;gap:7px;min-width:0}.rearrangeModeMessage strong{color:var(--title);white-space:nowrap}.rearrangeModeMessage span{color:var(--muted);font-size:var(--font-small)}.rearrangeModeActions{display:flex;align-items:center;gap:6px;flex:0 0 auto}@media(max-width:700px){.rearrangeModeBar{top:38px;align-items:stretch;flex-direction:column}.rearrangeModeMessage{align-items:flex-start;flex-direction:column;gap:2px}.rearrangeModeActions{display:grid;grid-template-columns:1fr 1fr 1fr}.rearrangeModeActions button{min-width:0;padding-inline:6px}}
 .mobileSyncLabel,
 .mobileSyncOnly{ display: none; }
@@ -1654,8 +1666,11 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   .splitMatrixCell.empty:hover .splitTrackButton,.splitMatrixCell.empty:focus-within .splitTrackButton{opacity:1}
 }
 @media (max-width: 700px){
-  .splitsBulkBar{top:38px}
-  .splitsBulkSteps{align-items:flex-start;flex-direction:column;gap:5px}
+  .splitsBulkBar{ padding:8px; gap:8px; }
+  .splitsBulkSteps{justify-content:flex-end;gap:8px;padding-bottom:0;border-bottom:0}
+  .splitsBulkSteps span{gap:3px;font-size:var(--font-tiny)}
+  .splitsBulkSteps b{width:14px;height:14px;font-size:9px}
+  .rearrangeModeBar{padding:8px;gap:8px}
   .splitsMatrixActions{align-items:flex-start}.splitsMatrixActionInfo{align-items:flex-start;flex-direction:column;gap:2px}
   .splitsMobileLayerNav{
     position: sticky;
@@ -1697,8 +1712,8 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   .splitMatrixCell{min-width:0;width:auto;max-width:none}
   .splitsBulkBar{ grid-template-columns: 1fr; align-items: stretch; }
   .splitsSelectionStatus{ grid-column: 1; }
-  .splitsBulkActions{display:grid;grid-template-columns:1fr 1fr}
-  .splitsBulkActions .danger{grid-column:1/-1;margin-left:0}
+  .splitsBulkActions{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding-top:2px}
+  .splitsBulkActions .danger{grid-column:1/-1;margin-left:0;min-height:0;padding:4px 2px;border:0;background:transparent;color:var(--bad);box-shadow:none;font-weight:600}
 
   /* Only one layer column is visible at a time on mobile, so each cell has
      far more width than the desktop-sized text needs. Grow the text that

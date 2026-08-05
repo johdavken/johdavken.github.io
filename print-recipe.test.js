@@ -14,10 +14,11 @@ function functionBody(name){
   return app.slice(start, next === -1 ? undefined : next);
 }
 
-test("Print Recipe sits next to Rearrange Hoppers and is desktop-only, matching that button's pattern", () => {
+test("Print Recipe sits next to Rearrange Hoppers and remains desktop-only, even though Rearrange Hoppers itself no longer is", () => {
   const modeBarStart = app.indexOf('modeBar.className = "splitsBulkModeBar"');
   const modeBar = app.slice(modeBarStart, app.indexOf("const toolbar = document.createElement", modeBarStart));
-  assert.match(modeBar, /rearrangeButton\.className="secondary rearrangeDesktopOnly"/);
+  assert.match(modeBar, /rearrangeButton\.className="secondary"/);
+  assert.doesNotMatch(modeBar, /rearrangeButton\.className="secondary rearrangeDesktopOnly"/);
   assert.match(modeBar, /printButton\.className="secondary rearrangeDesktopOnly"/);
   assert.match(modeBar, /modeBar\.appendChild\(rearrangeButton\)[\s\S]*modeBar\.appendChild\(printButton\)/);
   assert.match(modeBar, /printButton\.addEventListener\("click", printRecipeSheet\)/);

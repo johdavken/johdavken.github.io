@@ -1263,7 +1263,7 @@
       modeButton.textContent = "Bulk edit";
       modeButton.setAttribute("aria-expanded", "false");
       modeBar.appendChild(modeButton);
-      const rearrangeButton=document.createElement("button"); rearrangeButton.type="button"; rearrangeButton.className="secondary rearrangeDesktopOnly"; rearrangeButton.textContent=hopperRearrangement?.active?"Done Rearranging":"Rearrange Hoppers"; rearrangeButton.setAttribute("aria-expanded", String(!!hopperRearrangement?.active)); rearrangeButton.disabled=!state.layers.some(L=>L.hoppers.some(h=>normName(h.resinName)||clampNum(h.pct)>0)); modeBar.appendChild(rearrangeButton);
+      const rearrangeButton=document.createElement("button"); rearrangeButton.type="button"; rearrangeButton.className="secondary"; rearrangeButton.textContent=hopperRearrangement?.active?"Done Rearranging":"Rearrange Hoppers"; rearrangeButton.setAttribute("aria-expanded", String(!!hopperRearrangement?.active)); rearrangeButton.disabled=!state.layers.some(L=>L.hoppers.some(h=>normName(h.resinName)||clampNum(h.pct)>0)); modeBar.appendChild(rearrangeButton);
       rearrangeButton.addEventListener("click",()=>{
         if(hopperRearrangement?.active){
           hopperRearrangement=null;
@@ -1273,10 +1273,22 @@
           notifyActiveJobMutation({immediate:true,kind:"rearrange-hoppers"});
           return;
         }
-        if(window.matchMedia("(max-width: 900px)").matches)return;
-        hopperRearrangement={active:true,baseline:window.PolynHopperRearrangement.snapshot(state.layers),undo:[]};
+        hopperRearrangement={active:true,baseline:window.PolynHopperRearrangement.snapshot(state.layers),undo:[],tapSource:null};
         renderSplitsArea();
       });
+
+      // Native HTML5 drag-and-drop (used below, on each cell) never fires
+      // from a touch gesture, so rearrange mode also supports
+      // tap-to-select-source, then tap-a-destination, reusing the same
+      // PolynHopperRearrangement.move() call and undo/failure handling as
+      // the drag path. This exists because a successful tap move re-renders
+      // (clearing everything fresh) but a failed one deliberately doesn't -
+      // mirroring how a failed drop leaves the table alone and only updates
+      // the summary text - so the previously-selected cell's highlight has
+      // to be cleared by hand instead.
+      function clearTapSourceHighlight(){
+        table.querySelectorAll(".rearrangeSource").forEach(el=>el.classList.remove("rearrangeSource"));
+      }
 
       const printButton=document.createElement("button"); printButton.type="button"; printButton.className="secondary rearrangeDesktopOnly"; printButton.textContent="Print Recipe"; printButton.disabled=!state.layers.some(L=>L.hoppers.some(h=>normName(h.resinName)||clampNum(h.pct)>0)); modeBar.appendChild(printButton);
       printButton.addEventListener("click", printRecipeSheet);
@@ -1335,14 +1347,14 @@
       if(hopperRearrangement?.active){
         const bar=document.createElement("div");
         bar.className="rearrangeModeBar";
-        bar.innerHTML='<div class="rearrangeModeMessage"><strong>Rearrange mode</strong><span>Drag assignments between hoppers. Hopper 1 is recalculated after each move.</span></div>';
+        bar.innerHTML='<div class="rearrangeModeMessage"><strong>Rearrange mode</strong><span>Drag, or tap a hopper then tap another, to move assignments. Hopper 1 is recalculated after each move.</span></div>';
         const actions=document.createElement("div");
         actions.className="rearrangeModeActions";
         const undo=document.createElement("button");
         undo.type="button"; undo.className="secondary"; undo.textContent="Undo Last Move"; undo.disabled=!hopperRearrangement.undo.length;
         const cancel=document.createElement("button");
         cancel.type="button"; cancel.className="secondary"; cancel.textContent="Cancel";
-        undo.addEventListener("click",()=>{const shot=hopperRearrangement.undo.pop();if(shot)window.PolynHopperRearrangement.apply(state.layers,shot);renderSplitsArea();validateAndCompute();});
+        undo.addEventListener("click",()=>{const shot=hopperRearrangement.undo.pop();if(shot)window.PolynHopperRearrangement.apply(state.layers,shot);hopperRearrangement.tapSource=null;renderSplitsArea();validateAndCompute();});
         cancel.addEventListener("click",()=>{window.PolynHopperRearrangement.apply(state.layers,hopperRearrangement.baseline);hopperRearrangement=null;renderSplitsArea();validateAndCompute();});
         actions.append(undo,cancel);
         bar.append(actions);
@@ -1485,7 +1497,7 @@
           const td = document.createElement("td");
           td.className = "splitMatrixCell";
           td.dataset.layerColumn = L.name;
-          if(hopperRearrangement?.active){td.draggable=true;td.classList.add("rearrangeTarget");td.setAttribute("aria-label",`Rearrange ${hopperBadgeLabel(L.name,hi)}`);td.addEventListener("dragstart",event=>{if(!normName(hopper.resinName)&&!clampNum(hopper.pct)){event.preventDefault();return;}hopperRearrangement.drag={layer:L.name,index:hi};td.classList.add("rearrangeSource");event.dataTransfer.effectAllowed="move";});td.addEventListener("dragend",()=>{hopperRearrangement.drag=null;td.classList.remove("rearrangeSource");});td.addEventListener("dragover",event=>{if(hopperRearrangement.drag){event.preventDefault();td.classList.add("rearrangeOver");}});td.addEventListener("dragleave",()=>td.classList.remove("rearrangeOver"));td.addEventListener("drop",event=>{event.preventDefault();td.classList.remove("rearrangeOver");const result=window.PolynHopperRearrangement.move(state.layers,hopperRearrangement.drag,{layer:L.name,index:hi});if(result.ok){hopperRearrangement.undo.push(result.before);renderSplitsArea();validateAndCompute();}else summary.textContent=result.reason==="invalid"?"Move rejected: hopper percentages would be invalid.":"No rearrangement made.";});}
+          if(hopperRearrangement?.active){td.draggable=true;td.classList.add("rearrangeTarget");td.setAttribute("aria-label",`Rearrange ${hopperBadgeLabel(L.name,hi)}`);td.addEventListener("dragstart",event=>{if(!normName(hopper.resinName)&&!clampNum(hopper.pct)){event.preventDefault();return;}hopperRearrangement.tapSource=null;clearTapSourceHighlight();hopperRearrangement.drag={layer:L.name,index:hi};td.classList.add("rearrangeSource");event.dataTransfer.effectAllowed="move";});td.addEventListener("dragend",()=>{hopperRearrangement.drag=null;td.classList.remove("rearrangeSource");});td.addEventListener("dragover",event=>{if(hopperRearrangement.drag){event.preventDefault();td.classList.add("rearrangeOver");}});td.addEventListener("dragleave",()=>td.classList.remove("rearrangeOver"));td.addEventListener("drop",event=>{event.preventDefault();td.classList.remove("rearrangeOver");const result=window.PolynHopperRearrangement.move(state.layers,hopperRearrangement.drag,{layer:L.name,index:hi});if(result.ok){hopperRearrangement.undo.push(result.before);renderSplitsArea();validateAndCompute();}else summary.textContent=result.reason==="invalid"?"Move rejected: hopper percentages would be invalid.":"No rearrangement made.";});td.addEventListener("click",()=>{const current=hopperRearrangement.tapSource;if(current&&current.layer===L.name&&current.index===hi){hopperRearrangement.tapSource=null;td.classList.remove("rearrangeSource");return;}if(!current){if(!normName(hopper.resinName)&&!clampNum(hopper.pct))return;hopperRearrangement.tapSource={layer:L.name,index:hi};td.classList.add("rearrangeSource");return;}const result=window.PolynHopperRearrangement.move(state.layers,current,{layer:L.name,index:hi});hopperRearrangement.tapSource=null;if(result.ok){hopperRearrangement.undo.push(result.before);renderSplitsArea();validateAndCompute();}else{clearTapSourceHighlight();summary.textContent=result.reason==="invalid"?"Move rejected: hopper percentages would be invalid.":"No rearrangement made.";}});}
 
           const cellHeader = document.createElement("div");
           cellHeader.className = "splitCellHeader";
