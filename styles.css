@@ -2870,6 +2870,7 @@ body[data-surface-style="divided"] .helpTopic{
  *   ======================================================================= */
 .modeBar{display:flex;align-items:center;justify-content:flex-end}
 .statusTimelineToggle{ display:none; }
+.statusRecipeToggle{ display:none; }
 .statusChangeoverCountdown{ display:none; }
 .chipToggle{
   align-items:center;
@@ -2917,6 +2918,7 @@ body[data-surface-style="divided"] .helpTopic{
   .statusPreferencesPanel{position:fixed;top:38px;right:var(--page-pad)}
   .workspaceStatusBar .workspaceStatusItem{ display:none; }
   .statusTimelineToggle{ display:inline-flex; }
+  .statusRecipeToggle{ display:inline-flex; }
   .workspaceStatusBar .workspaceStatusItem.statusChangeoverCountdown{
     display:flex;
     align-items:center;
@@ -2931,6 +2933,8 @@ body[data-surface-style="divided"] .helpTopic{
   .workspaceStatusBar .workspaceStatusItem strong.stale{ color:var(--warn); }
   body[data-mobile-timeline-only="true"] .workspaceContent > .workspacePanel:not(#resultsBlock){ display:none !important; }
   body[data-mobile-timeline-only="true"] #resultsBlock{ display:block !important; }
+  body[data-mobile-recipe-only="true"] .workspaceContent > .workspacePanel:not(#splitsBlock){ display:none !important; }
+  body[data-mobile-recipe-only="true"] #splitsBlock{ display:block !important; }
 }
 
 #recipePrintSheet{ display:none; }

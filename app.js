@@ -60,7 +60,8 @@
       gauge: 0,
       hopperNamingLine9: "standard", // "standard" | "main"
       showPumpOffTracked: false, // show pump-off items in Timeline
-      mobileTimelineOnly: false
+      mobileTimelineOnly: false,
+      mobileRecipeOnly: false
 
     };
 
@@ -437,6 +438,12 @@
       ()=> !!state.mobileTimelineOnly,
       (v)=> applyMobileTimelineMode(!!v)
     );
+
+    hookToggle(
+      "mobileRecipeToggle",
+      ()=> !!state.mobileRecipeOnly,
+      (v)=> applyMobileRecipeMode(!!v)
+    );
   }
 
 
@@ -586,6 +593,7 @@
         hopperNamingLine9: state.hopperNamingLine9,
         showPumpOffTracked: !!state.showPumpOffTracked,
         mobileTimelineOnly: !!state.mobileTimelineOnly,
+        mobileRecipeOnly: !!state.mobileRecipeOnly,
         blocksOpen
       };
     }
@@ -600,6 +608,7 @@
         headerStyle: state.headerStyle,
         showPumpOffTracked: state.showPumpOffTracked,
         mobileTimelineOnly: state.mobileTimelineOnly,
+        mobileRecipeOnly: state.mobileRecipeOnly,
         blocksOpen: snapshotPayload().blocksOpen
       };
       applyPayload({ ...payload, ...localPreferences }, { rebuildUI: true });
@@ -698,6 +707,8 @@
       state.showPumpOffTracked = !!payload.showPumpOffTracked;
       state.mobileTimelineOnly = !!payload.mobileTimelineOnly;
       applyMobileTimelineMode(state.mobileTimelineOnly);
+      state.mobileRecipeOnly = !!payload.mobileRecipeOnly;
+      applyMobileRecipeMode(state.mobileRecipeOnly);
 
 
       $("lineType").value = String(state.lineType);
@@ -2334,12 +2345,34 @@
 
     function applyMobileTimelineMode(enabled){
       state.mobileTimelineOnly = !!enabled;
+      // The two "isolate this panel" modes are mutually exclusive - both
+      // active at once would hide each other's panel and leave nothing shown.
+      if (state.mobileTimelineOnly && state.mobileRecipeOnly){
+        state.mobileRecipeOnly = false;
+        document.body.setAttribute("data-mobile-recipe-only", "false");
+        syncToggleUI("mobileRecipeToggle", false);
+      }
       document.body.setAttribute("data-mobile-timeline-only", String(state.mobileTimelineOnly));
       if (state.mobileTimelineOnly && window.matchMedia("(max-width: 900px)").matches){
         const results = $("resultsBlock");
         if (results) results.open = true;
       }
       syncToggleUI("mobileTimelineToggle", state.mobileTimelineOnly);
+    }
+
+    function applyMobileRecipeMode(enabled){
+      state.mobileRecipeOnly = !!enabled;
+      if (state.mobileRecipeOnly && state.mobileTimelineOnly){
+        state.mobileTimelineOnly = false;
+        document.body.setAttribute("data-mobile-timeline-only", "false");
+        syncToggleUI("mobileTimelineToggle", false);
+      }
+      document.body.setAttribute("data-mobile-recipe-only", String(state.mobileRecipeOnly));
+      if (state.mobileRecipeOnly && window.matchMedia("(max-width: 900px)").matches){
+        const splits = $("splitsBlock");
+        if (splits) splits.open = true;
+      }
+      syncToggleUI("mobileRecipeToggle", state.mobileRecipeOnly);
     }
 
     let activeWorkspaceId = "resultsBlock";
@@ -2393,7 +2426,12 @@
         const results = $("resultsBlock");
         if (results) results.open = true;
       }
+      if (!desktop && state.mobileRecipeOnly){
+        const splits = $("splitsBlock");
+        if (splits) splits.open = true;
+      }
       syncToggleUI("mobileTimelineToggle", state.mobileTimelineOnly);
+      syncToggleUI("mobileRecipeToggle", state.mobileRecipeOnly);
     }
 
     function rebuildUIFromState(payloadMaybe){
