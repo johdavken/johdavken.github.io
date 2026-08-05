@@ -138,6 +138,28 @@
     renderWeightsArea(); renderSplitsArea(); validateAndCompute(); saveSession(); notifyActiveJobMutation({immediate:true,kind:"load-workspace-configuration"});
     workspaceConfigurationStatus(`${item.type==="recipe"?"Recipe":"Receiver Weight Profile"} loaded successfully.`);
   }
+  function hasNonEmptyRecipe(){
+    return state.layers.some(layer=>layer.hoppers.some(hopper=>hopper.resinName && hopper.resinName.trim()));
+  }
+  // Converts a sanitized recipe-scan result into a recipe payload (see
+  // recipe-scan-mapping.js) and applies it through the same guarded
+  // apply/render/save/notify pathway as loading a shared cloud recipe -
+  // no separate mutation logic for scanned recipes.
+  function applyScannedRecipe(scanRecipe, orientation){
+    const mapping = window.PolynRecipeScanMapping;
+    if (!mapping) return { ok:false, message:"Recipe scan mapping is unavailable." };
+    const built = mapping.buildRecipePayloadFromScan(scanRecipe, {
+      lineType: state.lineType,
+      orientation,
+      hopperNamingMode: state.hopperNamingLine9==="main" ? "main" : "standard"
+    });
+    if (!built.ok) return { ok:false, message: built.message || "This scan could not be applied." };
+    const result = window.PolynWorkspaceConfigurationPayloads?.applyRecipePayload(state, built.payload);
+    if (!result?.ok) return { ok:false, message: result?.errors?.[0] || "This scan could not be applied." };
+    renderWeightsArea(); renderSplitsArea(); validateAndCompute(); saveSession();
+    notifyActiveJobMutation({immediate:true,kind:"apply-recipe-scan"});
+    return { ok:true };
+  }
   function openWorkspaceConfigurationDialog(mode,item=null){
     const dialog=$("workspaceConfigurationSaveDialog"), title=$("workspaceConfigurationSaveTitle"), detail=$("workspaceConfigurationSaveDetails"), name=$("workspaceConfigurationName"), confirm=$("workspaceConfigurationSaveConfirm"); if(!dialog?.showModal) return;
     const type=item?.type || (mode==="save-profile" ? "receiver_weight_profile" : "recipe");
@@ -3125,6 +3147,19 @@
         await lineSync.selectWorkspace(workspaceId);
         await refreshWorkspaceConfigurations();
       }
+    };
+
+    // Narrow bridge consumed only by recipe-scan-ui.js: enough to call the
+    // recipe-scan Edge Function (workspace id, a fresh access token) and to
+    // apply a validated result through the existing guarded recipe-apply
+    // pathway. Scanning requires an active RT Sync workspace connection by
+    // design - there is no local-only path.
+    window.PolynRecipeScanBridge = {
+      getWorkspaceId: () => lineSync?.getState?.().selectedWorkspaceId || "",
+      getAccessToken: () => lineSync?.getAccessToken?.() || Promise.resolve(null),
+      getLineType: () => state.lineType,
+      hasNonEmptyRecipe,
+      applyScannedRecipe
     };
   }
 

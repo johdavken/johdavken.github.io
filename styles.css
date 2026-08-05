@@ -2474,6 +2474,19 @@ button.compactAction{
   .toolsIndexButton{ text-align: center; }
   .toolsIndexButton.active{ box-shadow: inset 0 -3px 0 var(--title); }
 }
+
+.toolTitleRow{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.recipeScanOptions{ display:grid; gap:12px; }
+.recipeScanOption{ display:grid; gap:4px; }
+.recipeScanOption button{ width:100%; }
+.recipeScanReviewDialog{ max-width: 560px; width: 92vw; max-height: 86vh; overflow-y: auto; }
+.recipeScanReviewContent{ display:grid; gap:12px; }
+.recipeScanReviewLayer{ border:1px solid var(--border); border-radius:8px; padding:8px 10px; display:grid; gap:6px; }
+.recipeScanReviewLayerHead{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; font-weight:600; }
+.recipeScanReviewHopper{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; font-size: 0.9em; }
+.recipeScanReviewHopper .muted{ font-style:italic; }
+.recipeScanReviewEstimated{ color: var(--warn); }
+.recipeScanReviewWarningText{ color: var(--warn); }
 .toolResult{
   display: grid;
   grid-template-columns: auto auto 1fr;

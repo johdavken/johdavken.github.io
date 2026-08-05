@@ -538,3 +538,38 @@ test("absence of a session/token does not crash and does not falsely authenticat
 
   assert.equal(realtimeSetAuthCalls.length, callsAfterInit, "setAuth must not be called with a missing/undefined token");
 });
+
+// --- getAccessToken() - narrow accessor for calling the recipe-scan Edge Function directly ---
+
+test("getAccessToken returns the current session's access token after initialize", async () => {
+  const rows = workspaceFixtures({ id: "ws-a", name: "Line A" });
+  const { sync } = createSync(rows, undefined, { session: { user: { id: "user-1" }, access_token: "token-abc" } });
+  await sync.initialize();
+  assert.equal(await sync.getAccessToken(), "token-abc");
+});
+
+test("getAccessToken reflects a session change made after initialize, not a stale cached value", async () => {
+  const rows = workspaceFixtures({ id: "ws-a", name: "Line A" });
+  const { sync, setSession } = createSync(rows, undefined, { session: { user: { id: "user-1" }, access_token: "token-abc" } });
+  await sync.initialize();
+  setSession({ user: { id: "user-1" }, access_token: "token-refreshed" });
+  assert.equal(await sync.getAccessToken(), "token-refreshed");
+});
+
+test("getAccessToken returns null when there's no live session", async () => {
+  const rows = workspaceFixtures({ id: "ws-a", name: "Line A" });
+  const { sync, setSession } = createSync(rows);
+  await sync.initialize();
+  setSession(null);
+  assert.equal(await sync.getAccessToken(), null);
+});
+
+test("getAccessToken returns null when cloud sync was never initialized (no client yet)", async () => {
+  const storage = { getItem(){ return null; }, setItem(){} };
+  const syncStorage = require("./sync-storage.js");
+  const sync = require("./cloud-sync.js").create({
+    config: { enabled: false }, syncStorage, storage,
+    adapter: { onStateChange(){} }
+  });
+  assert.equal(await sync.getAccessToken(), null);
+});

@@ -36,7 +36,9 @@ test("Add This Device reads the target identity from the existing RT Sync client
   assert.match(app, /getRecoveryDescriptor: \(\) => lineSync\?\.getRecoveryDescriptor\?\.\(\)/);
   assert.match(cloudSync, /function getRecoveryDescriptor\(\)/);
   assert.match(cloudSync, /ready: !!\(state\.available && state\.userId\)/);
-  assert.doesNotMatch(cloudSync, /getRecoveryDescriptor[\s\S]{0,300}(token|session|outbox)/i);
+  const descriptorBody = cloudSync.match(/function getRecoveryDescriptor\(\)\{[\s\S]*?\n    \}/)?.[0];
+  assert.ok(descriptorBody, "expected to find the getRecoveryDescriptor function body");
+  assert.doesNotMatch(descriptorBody, /(token|session|outbox)/i);
   assert.match(ui, /bridge\(\)\?\.getRecoveryDescriptor\?\.\(\)/);
   assert.doesNotMatch(index, /workspaceRecoveryTargetUserId.*type="text"/i);
   assert.doesNotMatch(ui, /prompt\(/);

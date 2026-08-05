@@ -849,6 +849,17 @@
       });
     }
 
+    // Narrow accessor for calling the recipe-scan Edge Function directly
+    // (not through PostgREST/RPC, so it can't go through the transport
+    // above) - returns just the current access token string, or null if
+    // there's no live session. Never cached/stored by the caller; read
+    // fresh immediately before each request.
+    async function getAccessToken(){
+      if (!client) return null;
+      const current = await client.auth.getSession();
+      return current?.data?.session?.access_token || null;
+    }
+
     // Narrow, read-only descriptor for admin-assisted device recovery. Exposes
     // only what's needed to identify "this browser's current RT Sync identity"
     // to the separate admin client — never tokens, sessions, or outbox state.
@@ -872,6 +883,7 @@
       getState: ()=>JSON.parse(JSON.stringify(state)),
       getWorkspaceConfigurationTransport,
       getRecoveryDescriptor,
+      getAccessToken,
       loadWorkspaces,
       notifyActiveJobMutation,
       notifySavedSetupUpsert,
