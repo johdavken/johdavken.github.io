@@ -2955,6 +2955,14 @@ body[data-surface-style="divided"] .helpTopic{
 @media (max-width:900px){
   /* The catalog editor is an admin-only desktop workspace. */
   .adminResinPanel{ display:none!important; }
+  /* Scoped to just the top-level card summaries (.layerTitle is a generic
+     heading class reused by dialogs, tool panels, admin forms, etc. - a
+     blanket size bump there would spill into all of those). Subtitle stays
+     hidden while collapsed to cut the visual noise of 7+ stacked cards, and
+     reappears once a card is open, where it's actually useful context. */
+  .workspaceContent > .workspacePanel > summary .layerTitle{ font-size: calc(var(--title-size) * 1.25); }
+  .workspaceContent > .workspacePanel > summary .layerMeta{ display: none; }
+  .workspaceContent > .workspacePanel[open] > summary .layerMeta{ display: block; }
   .mobileBrand{
     margin-bottom:calc(0px - var(--page-gap));
     border-bottom:0;
