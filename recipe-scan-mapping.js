@@ -34,7 +34,13 @@
   // (no designation, or a designation two+ components both claimed) fills
   // the remaining slots in printed order. Matches the "reduce, don't replace,
   // the manual drag step" design.
-  function fillHoppers(components) {
+  function fillHoppers(rawComponents) {
+    // A component read at exactly 0% isn't in the blend - drop it rather
+    // than placing it as a resin name sitting at 0%, which would misreport
+    // an unused hopper as an active one. A null/unread percentage is a
+    // different case (a real resin whose percentage just couldn't be read)
+    // and still gets placed, marked estimated, same as before.
+    const components = rawComponents.filter(component => component.percentage !== 0);
     const slots = new Array(HOPPERS_PER_LAYER).fill(null);
     const designationCounts = new Map();
     components.forEach(component => {

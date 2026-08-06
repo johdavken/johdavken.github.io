@@ -85,6 +85,10 @@
   let workspaceConfigurationPending = null;
   let selectedWorkspaceConfigurationId = "";
   let hopperRearrangement = null;
+  // Persists across renderSplitsArea() re-renders (e.g. after a rearrange
+  // move) so the mobile layer view stays where the operator left it instead
+  // of jumping back to Layer A on every redraw.
+  let lastActiveMobileLayer = "";
 
   function snapshotSharedActiveJob(){
     return activeJob.snapshotActiveJob(state, APP_VERSION);
@@ -1400,7 +1404,8 @@
       mobileLayerNav.style.setProperty("--mobile-layer-count", String(state.layers.length));
       mobileLayerNav.setAttribute("role", "tablist");
       mobileLayerNav.setAttribute("aria-label", "Choose layer");
-      let activeMobileLayer = state.layers[0]?.name || "";
+      const layerNames = state.layers.map(L=>L.name);
+      let activeMobileLayer = layerNames.includes(lastActiveMobileLayer) ? lastActiveMobileLayer : (layerNames[0] || "");
       const mobileLayerButtons = new Map();
       state.layers.forEach(L=>{
         const button = document.createElement("button");
@@ -1730,6 +1735,7 @@
 
       function showMobileLayer(layerName){
         activeMobileLayer = layerName;
+        lastActiveMobileLayer = layerName;
         table.querySelectorAll("[data-layer-column]").forEach(cell=>{
           cell.classList.toggle("mobile-layer-active", cell.dataset.layerColumn === activeMobileLayer);
         });
