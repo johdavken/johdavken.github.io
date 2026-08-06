@@ -58,6 +58,7 @@
       workspaceRevision: 0,
       lastSyncAt: "",
       pendingCount: store?.pendingCount?.() || 0,
+      pendingSummary: [],
       generatedCode: "",
       generatedCodeExpiresAt: "",
       isApplyingRemote: false
@@ -73,8 +74,36 @@
     let activeInFlightOperationId = "";
     let realtimeAuthListenerRegistered = false;
 
+    // Raw kind/action strings only - which internal mutation "kind" values
+    // mean what is a UI presentation concern, not this module's.
+    function buildPendingSummary(){
+      const outbox = store?.getOutbox?.() || { activeJobs: {}, setupOperations: [] };
+      const workspaceName = (id) => state.workspaces.find(w=>w.id === id)?.name || null;
+      const items = [];
+      Object.entries(outbox.activeJobs).forEach(([workspaceId, pending])=>{
+        items.push({
+          type: "active-job",
+          workspaceId,
+          workspaceName: workspaceName(workspaceId),
+          kind: pending?.kind || "edit",
+          createdAt: pending?.createdAt || ""
+        });
+      });
+      outbox.setupOperations.forEach(operation=>{
+        items.push({
+          type: "saved-setup",
+          workspaceId: operation.workspaceId,
+          workspaceName: workspaceName(operation.workspaceId),
+          action: operation.action,
+          name: operation.name || "",
+          createdAt: operation.createdAt || ""
+        });
+      });
+      return items;
+    }
     function emit(){
       state.pendingCount = store?.pendingCount?.() || 0;
+      state.pendingSummary = buildPendingSummary();
       const current = store?.getSettings?.() || {};
       state.deviceLabel = current.deviceLabel || "";
       state.connected = isConnected();
@@ -84,6 +113,15 @@
       state.status = status;
       state.message = message || "";
       emit();
+    }
+    // "Synced" is only accurate when the whole local outbox is empty - not
+    // just the specific workspace/operation the caller happens to have just
+    // finished with. Without this, a stuck change for a different workspace
+    // (or a saved-setup operation) gets silently overwritten by an unrelated
+    // "Synced" label, showing "Synced (2)" - accurate count, false status.
+    function setSyncedStatus(syncedMessage, pendingMessage){
+      if (store.pendingCount() === 0) setStatus("Synced", syncedMessage);
+      else setStatus("Pending", pendingMessage);
     }
     function settings(){ return store.getSettings(); }
     function saveSettings(next){
@@ -240,7 +278,7 @@
       }finally{
         state.isApplyingRemote = false;
       }
-      setStatus("Synced", "Shared active job is up to date.");
+      setSyncedStatus("Shared active job is up to date.", "Shared active job is up to date, but other changes are still waiting to sync.");
     }
 
     async function resolveActiveConflict(pending, remoteRow){
@@ -314,7 +352,7 @@
           store.queueActiveJob(selectedId(), { ...newer, expectedRevision: Number(row.revision) });
           continueWithNewerPending = true;
         }
-        setStatus("Synced", "Active-job changes are synced.");
+        setSyncedStatus("Active-job changes are synced.", "Active-job changes are synced, but other changes are still waiting.");
       }catch(error){
         const offline = typeof navigator !== "undefined" && navigator.onLine === false;
         const detail = String(error?.message || error?.details || error || "Unknown synchronization error");
@@ -406,7 +444,7 @@
           saveWorkspaceMetadata(selectedId(), {});
           store.clearSetupOperation(operation.operationId);
         }
-        setStatus("Synced", "Saved Line Settings are synced.");
+        setSyncedStatus("Saved Line Settings are synced.", "Saved Line Settings are synced, but other changes are still waiting.");
       }catch(error){
         setStatus(navigator.onLine === false ? "Offline" : "Pending", "Saved-setting changes will retry.");
       }finally{
@@ -530,14 +568,18 @@
           store.queueActiveJob(selectedId(), { ...pending, expectedRevision: state.activeRevision });
         }
         saveWorkspaceMetadata(selectedId(), { activeRevision: state.activeRevision, activePayload: row.payload });
-        setStatus(pending && pending.operationId !== activeInFlightOperationId ? "Syncing" : "Synced", "Active-job changes are syncing.");
+        if (pending && pending.operationId !== activeInFlightOperationId){
+          setStatus("Syncing", "Active-job changes are syncing.");
+        } else {
+          setSyncedStatus("Active-job changes are synced.", "Active-job changes are synced, but other changes are still waiting.");
+        }
         return;
       }
       if (pending?.operationId === row.last_operation_id){
         store.clearActiveJob(selectedId(), pending.operationId);
         state.activeRevision = Number(row.revision);
         saveWorkspaceMetadata(selectedId(), { activeRevision: state.activeRevision, activePayload: row.payload });
-        setStatus("Synced", "Active-job changes are synced.");
+        setSyncedStatus("Active-job changes are synced.", "Active-job changes are synced, but other changes are still waiting.");
         return;
       }
       if (pending){ await resolveActiveConflict(pending, row); return; }
@@ -589,7 +631,7 @@
         .on("postgres_changes", { event: "UPDATE", schema: "public", table: "active_jobs" }, handleRealtimeActive)
         .subscribe(status=>{
           channelStatus = status;
-          if (status === "SUBSCRIBED") setStatus("Synced", "RT Sync is connected.");
+          if (status === "SUBSCRIBED") setSyncedStatus("RT Sync is connected.", "RT Sync is connected, but local changes are still waiting to sync.");
           else if (["CHANNEL_ERROR","TIMED_OUT"].includes(status)) setStatus("Pending", "Realtime connection will retry.");
         });
     }
@@ -612,7 +654,7 @@
       await reconcileSavedSetups({ uploadLocalMissing, replaceLocal: forceRemote && !uploadLocalMissing });
       await loadMembers();
       await subscribe();
-      setStatus("Synced", "RT Sync is up to date.");
+      setSyncedStatus("RT Sync is up to date.", "This line is up to date, but other changes are still waiting to sync.");
     }
 
     async function selectWorkspace(workspaceId, { uploadLocalMissing = false } = {}){

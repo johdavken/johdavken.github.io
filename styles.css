@@ -570,6 +570,15 @@ main{
   font-size:var(--font-small);
 }
 .lineSyncMetrics strong{ color:var(--text); }
+.lineSyncPendingList{ margin:8px 0 0; padding-left:0; list-style:none; display:grid; gap:4px; }
+.lineSyncPendingList li{
+  padding:5px 9px;
+  border:1px solid var(--row-border);
+  border-radius:8px;
+  background:var(--row-bg);
+  color:var(--muted);
+  font-size:var(--font-small);
+}
 .lineSyncJoin{
   display:grid;
   grid-template-columns:minmax(150px, 1fr) auto minmax(110px, auto);

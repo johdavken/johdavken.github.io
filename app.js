@@ -2916,6 +2916,41 @@
     }
   }
 
+  const ACTIVE_JOB_PENDING_LABELS = {
+    edit: "Production changes",
+    "apply-recipe-scan": "Recipe scan applied",
+    "hopper-naming": "Hopper naming changed",
+    "line-type": "Line type changed",
+    "load-imported-setup": "Imported setup loaded",
+    "load-saved-setup": "Saved setup loaded",
+    "load-workspace-configuration": "Shared recipe/weights loaded",
+    "pump-off": "Pump-off state changed",
+    "rearrange-hoppers": "Hoppers rearranged",
+    "recipe-clear": "Recipe cleared",
+    "reset-all": "Everything reset",
+    "reset-tracking": "Tracking reset",
+    tracking: "Tracking changed"
+  };
+  const SETUP_ACTION_LABELS = { create: "Saved setup created", update: "Saved setup updated", rename: "Saved setup renamed", delete: "Saved setup deleted" };
+
+  function renderPendingList(items){
+    const host = $("lineSyncPendingList");
+    if (!host) return;
+    host.replaceChildren();
+    host.hidden = !items?.length;
+    if (!items?.length) return;
+    items.forEach(item=>{
+      const li = document.createElement("li");
+      const line = item.type === "active-job"
+        ? (ACTIVE_JOB_PENDING_LABELS[item.kind] || item.kind)
+        : `${SETUP_ACTION_LABELS[item.action] || item.action}${item.name ? ` “${item.name}”` : ""}`;
+      const where = item.workspaceName || "an unknown line (you may have left it)";
+      const when = item.createdAt ? new Date(item.createdAt).toLocaleString() : "";
+      li.textContent = `${line} — ${where}${when ? ` · ${when}` : ""}`;
+      host.append(li);
+    });
+  }
+
   function renderLineSync(syncState){
     const top = $("lineSyncTopStatus");
     const summary = $("lineSyncSummaryStatus");
@@ -2930,6 +2965,7 @@
     if ($("lineSyncMessage")) $("lineSyncMessage").textContent = syncState.message || "Local data remains available.";
     if ($("lineSyncLastSync")) $("lineSyncLastSync").textContent = syncState.lastSyncAt ? new Date(syncState.lastSyncAt).toLocaleString() : "Never";
     if ($("lineSyncPendingCount")) $("lineSyncPendingCount").textContent = String(syncState.pendingCount || 0);
+    renderPendingList(syncState.pendingSummary);
     const navStatus = $("workspaceCloudSyncStatus");
     if (navStatus){
       navStatus.textContent = syncState.pendingCount ? `${status} · ${syncState.pendingCount} pending` : status;

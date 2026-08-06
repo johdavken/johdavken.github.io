@@ -573,3 +573,84 @@ test("getAccessToken returns null when cloud sync was never initialized (no clie
   });
   assert.equal(await sync.getAccessToken(), null);
 });
+
+// --- "Synced" only when the whole outbox is actually empty -----------------
+//
+// setStatus("Synced", ...) used to fire unconditionally whenever the
+// currently-selected workspace's own flush/reconcile/subscribe succeeded,
+// even if a *different* workspace's change (or a saved-setup operation) was
+// still stuck in the outbox - producing a self-contradictory "Synced (2)".
+
+test("a stuck outbox entry for a different, non-selected workspace keeps status accurately Pending after initialize/reconcile - never a false Synced", async () => {
+  const rows = workspaceFixtures({ id: "ws-a", name: "Line A" });
+  const { sync, storage, syncStorageModule } = createSync(rows);
+  // Seed a stuck change for a workspace that will never be selected/flushed.
+  syncStorageModule.createStore(storage).queueActiveJob("ws-b", {
+    payload: { version: "0.17" }, expectedRevision: 1, operationId: "stuck-op", kind: "edit", createdAt: new Date().toISOString()
+  });
+  const state = await sync.initialize();
+  assert.equal(state.pendingCount, 1);
+  assert.notEqual(state.status, "Synced", "status must not claim Synced while an unrelated workspace's change is still stuck");
+});
+
+test("refreshSelected (the 'reconnect'/refresh action) also respects a stuck entry for another workspace - status stays Pending, not falsely Synced", async () => {
+  const rows = workspaceFixtures({ id: "ws-a", name: "Line A" });
+  const { sync, storage, syncStorageModule } = createSync(rows);
+  await sync.initialize();
+  syncStorageModule.createStore(storage).queueActiveJob("ws-b", {
+    payload: { version: "0.17" }, expectedRevision: 1, operationId: "stuck-op", kind: "edit", createdAt: new Date().toISOString()
+  });
+  await sync.refreshSelected();
+  const state = sync.getState();
+  assert.equal(state.pendingCount, 1);
+  assert.notEqual(state.status, "Synced");
+});
+
+test("once the outbox is genuinely empty, refreshSelected correctly reports Synced - the fix doesn't just permanently pin status to Pending", async () => {
+  const rows = workspaceFixtures({ id: "ws-a", name: "Line A" });
+  const { sync } = createSync(rows);
+  await sync.initialize();
+  await sync.refreshSelected();
+  const state = sync.getState();
+  assert.equal(state.pendingCount, 0);
+  assert.equal(state.status, "Synced");
+});
+
+// --- pendingSummary: what's actually not synced -----------------------------
+
+test("pendingSummary lists a stuck active-job entry with its workspace name and mutation kind", async () => {
+  const rows = workspaceFixtures({ id: "ws-a", name: "Line A" }, { id: "ws-b", name: "Line B" });
+  const { sync, storage, syncStorageModule } = createSync(rows);
+  await sync.initialize();
+  syncStorageModule.createStore(storage).queueActiveJob("ws-b", {
+    payload: { version: "0.17" }, expectedRevision: 1, operationId: "stuck-op", kind: "apply-recipe-scan", createdAt: "2026-08-06T00:00:00.000Z"
+  });
+  // Re-trigger emit() by making an unrelated state-changing call.
+  await sync.refreshSelected();
+  const summary = sync.getState().pendingSummary;
+  assert.equal(summary.length, 1);
+  assert.equal(summary[0].type, "active-job");
+  assert.equal(summary[0].workspaceId, "ws-b");
+  assert.equal(summary[0].workspaceName, "Line B");
+  assert.equal(summary[0].kind, "apply-recipe-scan");
+  assert.equal(summary[0].createdAt, "2026-08-06T00:00:00.000Z");
+});
+
+test("pendingSummary falls back to null workspaceName when the workspace isn't in the current membership list (e.g. left since)", async () => {
+  const rows = workspaceFixtures({ id: "ws-a", name: "Line A" });
+  const { sync, storage, syncStorageModule } = createSync(rows);
+  await sync.initialize();
+  syncStorageModule.createStore(storage).queueActiveJob("ws-unknown", {
+    payload: {}, expectedRevision: 0, operationId: "op", kind: "edit", createdAt: ""
+  });
+  await sync.refreshSelected();
+  const summary = sync.getState().pendingSummary;
+  assert.equal(summary[0].workspaceName, null);
+});
+
+test("pendingSummary is empty when the outbox is empty", async () => {
+  const rows = workspaceFixtures({ id: "ws-a", name: "Line A" });
+  const { sync } = createSync(rows);
+  await sync.initialize();
+  assert.deepEqual(sync.getState().pendingSummary, []);
+});
