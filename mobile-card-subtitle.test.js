@@ -22,7 +22,11 @@ function mobileBlock(){
 
 test("the card title font-size bump is scoped to top-level card summaries only, not the generic .layerTitle class reused by dialogs/tool panels/admin forms", () => {
   const mobile = mobileBlock();
-  assert.match(mobile, /\.workspaceContent > \.workspacePanel > summary \.layerTitle\{ font-size: calc\(var\(--title-size\) \* 1\.25\); \}/);
+  const ruleStart = mobile.indexOf(".workspaceContent > .workspacePanel > summary .layerTitle{");
+  assert.notEqual(ruleStart, -1);
+  const ruleEnd = mobile.indexOf("}", ruleStart);
+  const rule = mobile.slice(ruleStart, ruleEnd);
+  assert.match(rule, /font-size: calc\(var\(--title-size\) \* 1\.25\);/);
   // Guard against a future edit widening this to the bare class, which
   // would also resize every dialog/tool-panel/admin-form title on mobile.
   assert.doesNotMatch(mobile, /(?<!summary )\.layerTitle\{[^}]*font-size/);

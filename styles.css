@@ -1757,6 +1757,28 @@ details[open] > summary .chev{ transform: rotate(45deg); }
     line-height: 26px;
   }
   .splitPctControl > span{ font-size: var(--font-base); }
+
+  /* Collapse the two-row cell (label+clock+clear on top, resin+percent
+     below) into one row - there's a full-width column to work with on
+     mobile since only one layer is visible at a time, unlike desktop's
+     180px matrix columns where two rows are needed. Pure CSS: unwrap
+     .splitCellHeader (display:contents) so its children become direct
+     flex items of the cell, then reorder with `order` instead of
+     touching the DOM/JS - .splitCellEditor keeps its own existing
+     resin-left/percent-right grid internally, completely untouched.
+     Selector must match .mobile-layer-active's own specificity (3
+     classes/attrs) - a bare .splitMatrixCell{display:flex} loses the
+     cascade to that rule's display:table-cell and silently no-ops. */
+  .splitsMatrix [data-layer-column].mobile-layer-active.splitMatrixCell{
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .splitCellHeader{ display: contents; }
+  .splitCellHopperName{ order: 1; }
+  .splitTrackControl{ order: 2; }
+  .splitCellEditor{ order: 3; flex: 1; min-width: 0; }
+  .splitClearButton{ order: 4; margin-left: 0; }
 }
 
 .hopperBadge{
@@ -2959,8 +2981,18 @@ body[data-surface-style="divided"] .helpTopic{
      heading class reused by dialogs, tool panels, admin forms, etc. - a
      blanket size bump there would spill into all of those). Subtitle stays
      hidden while collapsed to cut the visual noise of 7+ stacked cards, and
-     reappears once a card is open, where it's actually useful context. */
-  .workspaceContent > .workspacePanel > summary .layerTitle{ font-size: calc(var(--title-size) * 1.25); }
+     reappears once a card is open, where it's actually useful context.
+     Title color reuses the same two-tone treatment desktop's sidebar nav
+     already has (.workspaceNavButton: --muted normally, --title once
+     .active) - open vs. collapsed stands in for the desktop nav's active
+     vs. inactive. --muted/--title are theme-aware tokens already, so this
+     is theme-agnostic on purpose - confirmed on Dark and Light first, now
+     applied everywhere rather than enumerating every data-theme value. */
+  .workspaceContent > .workspacePanel > summary .layerTitle{
+    font-size: calc(var(--title-size) * 1.25);
+    color: var(--muted);
+  }
+  .workspaceContent > .workspacePanel[open] > summary .layerTitle{ color: var(--title); }
   .workspaceContent > .workspacePanel > summary .layerMeta{ display: none; }
   .workspaceContent > .workspacePanel[open] > summary .layerMeta{ display: block; }
   .mobileBrand{
