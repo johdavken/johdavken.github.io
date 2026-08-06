@@ -221,6 +221,56 @@ test("percentage_estimated flags a hopper whose component percentage was null - 
   assert.equal(hoppers[2].percentage_estimated, false, "an empty hopper slot is not 'estimated', it's just empty");
 });
 
+// --- a component read at exactly 0% is dropped, not placed at 0% -----------
+
+test("a component scanned at exactly 0% is not placed - the resin isn't in the blend, so the hopper stays empty", () => {
+  const scan = threeLayerScan({
+    layers: [
+      layer({ position: "inside", components: [component({ resin_code: "R1", percentage: 0 }), component({ resin_code: "R2", percentage: 100 })] }),
+      layer({ position: "core" }),
+      layer({ position: "outside" })
+    ]
+  });
+  const result = buildRecipePayloadFromScan(scan, { lineType: 3, orientation: "inside" });
+  const hoppers = result.payload.layers[0].hoppers;
+  // R1 is dropped entirely - R2 fills H1 (auto-remainder) instead of H1
+  // holding the dropped R1 and R2 sliding to H2.
+  assert.equal(hoppers[0].resin_name, "R2");
+  assert.equal(hoppers[1].resin_name, null);
+  assert.equal(hoppers[1].pct, 0);
+});
+
+test("a component scanned at exactly 0% does not reserve its handwritten hopper_designation slot either", () => {
+  const scan = threeLayerScan({
+    layers: [
+      layer({ position: "inside", components: [
+        component({ resin_code: "R1", percentage: 0, hopper_designation: "H3" }),
+        component({ resin_code: "R2", percentage: 100 })
+      ] }),
+      layer({ position: "core" }),
+      layer({ position: "outside" })
+    ]
+  });
+  const result = buildRecipePayloadFromScan(scan, { lineType: 3, orientation: "inside" });
+  const hoppers = result.payload.layers[0].hoppers;
+  assert.equal(hoppers[2].resin_name, null, "H3 (index 2) stays empty - the 0% component never claims it");
+  assert.equal(hoppers[0].resin_name, "R2");
+});
+
+test("a null percentage is still placed as estimated - only an exact 0% read is dropped, not an unread one", () => {
+  const scan = threeLayerScan({
+    layers: [
+      layer({ position: "inside", components: [component({ resin_code: "R1", percentage: null }), component({ resin_code: "R2", percentage: 100 })] }),
+      layer({ position: "core" }),
+      layer({ position: "outside" })
+    ]
+  });
+  const result = buildRecipePayloadFromScan(scan, { lineType: 3, orientation: "inside" });
+  const hoppers = result.payload.layers[0].hoppers;
+  assert.equal(hoppers[0].resin_name, "R1");
+  assert.equal(hoppers[0].percentage_estimated, true);
+});
+
 test("layer_pct_estimated flags a layer whose printed percentage was null and could not be derived (two or more missing)", () => {
   const scan = threeLayerScan({
     layers: [
