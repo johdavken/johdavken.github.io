@@ -2378,10 +2378,19 @@ button.compactAction{
   flex: 0 0 auto;
   gap: 1px;
   min-width: 82px;
-  padding-left: 12px;
+  padding: 4px 4px 4px 12px;
+  margin: -4px 0;
   border-left: 1px solid var(--footer-border);
+  border-top: none; border-right: none; border-bottom: none;
+  border-radius: 6px;
+  background: none;
+  font: inherit;
   text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
+.cloudSyncFooterStatus:hover, .cloudSyncFooterStatus:focus-visible{ background: var(--row-bg); }
+.cloudSyncFooterStatus:active{ opacity: 0.7; }
 .cloudSyncFooterStatus span{
   color: var(--subtitle, var(--muted));
   font-size: 10px;

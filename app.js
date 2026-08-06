@@ -3161,6 +3161,15 @@
         ? lineSync.refreshSelected()
         : lineSync.retry()
     ));
+    // Same reconnect/refresh action as lineSyncRetryBtn above, reachable
+    // from the mobile footer without opening the RT Sync panel - tapping it
+    // reconciles the selected line (flushing any unsynced change) or
+    // retries the connection if nothing is selected yet.
+    $("cloudSyncFooterStatus")?.addEventListener("click",()=>runLineSyncAction(()=>
+      lineSync.getState().selectedWorkspaceId
+        ? lineSync.refreshSelected()
+        : lineSync.retry()
+    ));
     $("lineSyncDisconnectBtn")?.addEventListener("click",()=>runLineSyncAction(()=>lineSync.disconnectLocal()));
     $("lineSyncLeaveBtn")?.addEventListener("click",()=>{
       if (confirm("Leave RT Sync on this browser identity? Local Resin.Tools data will remain.")) runLineSyncAction(()=>lineSync.leaveWorkspace());
