@@ -1043,6 +1043,51 @@
             <p class="helpTip"><strong>Review carefully:</strong> a scan can misread handwriting or a low-quality photo. Check every layer, hopper, and percentage on the review screen - and watch for its warnings about percentages that don't total 100% - before applying.</p>
           </div>
         </details>
+
+        <details class="helpTopic" id="helpChangelog">
+          <summary><span>Changelog</span><small>A running history of what's been added, most recent first</small></summary>
+          <div class="helpTopicBody">
+            <h3>Recipe Scanner &amp; mobile polish - August 5-6, 2026</h3>
+            <ul>
+              <li>Added <strong>Scan Recipe</strong>: reads a photo of a Job Traveler, a Dosing Screen, or a Heat Sheet and fills Recipe Setup automatically, with a review screen before anything is applied. A camera-icon shortcut in the mobile status bar jumps straight to it.</li>
+              <li>RT Sync now shows exactly which changes haven't synced yet, with a way to discard one that's stuck against an unreachable line. Tapping the mobile footer status refreshes and retries.</li>
+              <li>Recipe Setup on mobile: cards open one at a time instead of stacking up, collapsed card titles are bigger with the subtitle hidden until opened, swipe left/right to switch layers, hopper rows now fit on a single line, and Layers A/B can copy from E/D (in addition to C/D/E copying from A/B).</li>
+              <li>Fixed Production Summary showing a stale, hidden number after reloading the page.</li>
+            </ul>
+
+            <h3>Reliability &amp; appearance - August 3-4, 2026</h3>
+            <ul>
+              <li>Added admin-assisted <strong>Workspace Recovery</strong>, for reconnecting a line computer after its browser data is reset.</li>
+              <li>Added a desktop <strong>Print Recipe</strong> button.</li>
+              <li>Added a warning when the changeover time looks stale instead of silently rolling it forward to the next day.</li>
+              <li>Five more color themes (Rosé Pine, Rosé Pine Dawn, Everforest, Everforest Light, One Dark) and a Header style preference.</li>
+              <li>Reworked mobile's Bulk Edit and Rearrange Hoppers to support tap-to-move, not just drag.</li>
+              <li>Ongoing RT Sync reliability work to cut unnecessary syncing and keep multiple devices in sync smoothly.</li>
+            </ul>
+
+            <h3>Resin catalog &amp; shared configurations - August 1-2, 2026</h3>
+            <ul>
+              <li>Added the Supabase-backed <strong>resin catalog</strong> with an admin-only editor (add, edit, activate/deactivate resins).</li>
+              <li>Added <strong>shared cloud recipes and receiver-weight profiles</strong> for an RT Sync workspace - save, load, rename, duplicate, delete, and favorite recipes.</li>
+              <li>Added desktop <strong>hopper rearrangement</strong> (drag-and-drop, with Undo/Cancel/Done).</li>
+              <li>Added customizable view density and surface style, and the current Layer Stack logo/RT branding.</li>
+            </ul>
+
+            <h3>RT Sync &amp; rebrand - late July 2026</h3>
+            <ul>
+              <li>Added <strong>RT Sync</strong>: share a live production line across devices.</li>
+              <li>Redesigned receiver hopper weight entry as a selectable matrix, and reworked hopper percentage editing.</li>
+              <li>Added built-in resin autocomplete, a starter resin catalog, and resin material information (density, typical uses, handling notes).</li>
+              <li>Added the Production Summary, Short Footage, and Hopper Weight calculators.</li>
+              <li>Added this Help guide, and settled on the app's name: <strong>Resin.Tools</strong>.</li>
+            </ul>
+
+            <h3>Initial build - December 2025 to January 2026</h3>
+            <ul>
+              <li>The original hopper run-down calculator: weight and percentage entry, run-down formulas, and the first responsive layout.</li>
+            </ul>
+          </div>
+        </details>
       </div>
     </div>
   </details>

@@ -2995,6 +2995,7 @@ body[data-surface-style="divided"] .helpTopic{
   .workspaceContent > .workspacePanel[open] > summary .layerTitle{ color: var(--title); }
   .workspaceContent > .workspacePanel > summary .layerMeta{ display: none; }
   .workspaceContent > .workspacePanel[open] > summary .layerMeta{ display: block; }
+  .workspaceContent > .workspacePanel > summary .pill.summaryStatus{ display: none !important; }
   .mobileBrand{
     margin-bottom:calc(0px - var(--page-gap));
     border-bottom:0;
