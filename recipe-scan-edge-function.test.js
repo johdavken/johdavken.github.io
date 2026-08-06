@@ -49,3 +49,47 @@ test("source_type is required and validated against the known set before anythin
 test("dosing_screen requests are sanitized with sanitizeDosingScreenScanResult, job_traveler with sanitizeRecipeScanResult", () => {
   assert.match(source, /const sanitized = isDosingScreen \? sanitizeDosingScreenScanResult\(raw\) : sanitizeRecipeScanResult\(raw\);/);
 });
+
+// --- setpoint vs actual: multiple redundant cues, not just bold-vs-small ---
+// A real printout showed the model picking the wrong number depending on
+// capture method (camera vs. loaded file) - image quality made a
+// bold-weight-only cue unreliable. Position and the '%' symbol are
+// independent of font rendering and should hold even when boldness doesn't.
+
+test("the dosing prompt gives position as a cue for setpoint vs actual, independent of font weight", () => {
+  const promptStart = source.indexOf("const DOSING_SCREEN_PROMPT = [");
+  const promptEnd = source.indexOf("].join(\" \");", promptStart);
+  const prompt = source.slice(promptStart, promptEnd);
+  assert.match(prompt, /positioned ABOVE the other one/);
+  assert.match(prompt, /positioned BELOW the setpoint/);
+});
+
+test("the dosing prompt gives the '%' symbol as a second independent cue - only the actual reading has one directly attached", () => {
+  const promptStart = source.indexOf("const DOSING_SCREEN_PROMPT = [");
+  const promptEnd = source.indexOf("].join(\" \");", promptStart);
+  const prompt = source.slice(promptStart, promptEnd);
+  assert.match(prompt, /no '%' symbol directly attached/);
+  assert.match(prompt, /with a '%' symbol printed immediately next to it/);
+});
+
+test("the dosing prompt tells the model to prefer position when cues conflict, rather than leaving it to guess", () => {
+  const promptStart = source.indexOf("const DOSING_SCREEN_PROMPT = [");
+  const promptEnd = source.indexOf("].join(\" \");", promptStart);
+  const prompt = source.slice(promptStart, promptEnd);
+  assert.match(prompt, /if they conflict, prefer position/);
+});
+
+test("the dosing prompt recognizes the literal 'NOT USED' label for a genuinely empty slot, distinct from a real component reading 0.00%", () => {
+  const promptStart = source.indexOf("const DOSING_SCREEN_PROMPT = [");
+  const promptEnd = source.indexOf("].join(\" \");", promptStart);
+  const prompt = source.slice(promptStart, promptEnd);
+  assert.match(prompt, /literal text 'NOT USED'/);
+  assert.match(prompt, /not an empty slot; report its actual resin_code and a/);
+});
+
+test("the dosing prompt tells the model to strip the descriptive suffix from a resin code cell (e.g. 'MS0440 - Med. Den' -> 'MS0440')", () => {
+  const promptStart = source.indexOf("const DOSING_SCREEN_PROMPT = [");
+  const promptEnd = source.indexOf("].join(\" \");", promptStart);
+  const prompt = source.slice(promptStart, promptEnd);
+  assert.match(prompt, /drop everything from the dash onward/);
+});
