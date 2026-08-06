@@ -37,10 +37,11 @@ import {
   DOSING_SCREEN_COMPONENTS_PER_LAYER,
   sanitizeRecipeScanResult,
   sanitizeDosingScreenScanResult,
+  sanitizeHeatSheetScanResult,
   validateImage
 } from "./schema.ts";
 
-const SOURCE_TYPES = ["job_traveler", "dosing_screen"] as const;
+const SOURCE_TYPES = ["job_traveler", "dosing_screen", "heat_sheet"] as const;
 type SourceType = typeof SOURCE_TYPES[number];
 
 const ALLOWED_ORIGINS = [
@@ -212,6 +213,49 @@ function dosingScreenResponseJsonSchema() {
   };
 }
 
+function heatSheetLayerJsonSchema() {
+  return {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      position: { type: ["string", "null"], enum: [...ALL_POSITIONS, null] },
+      position_confidence: { type: ["number", "null"] },
+      layer_letter: { type: ["string", "null"], enum: [...LAYER_LETTERS, null] },
+      layer_letter_confidence: { type: ["number", "null"] },
+      layer_percentage: { type: ["number", "null"] },
+      layer_percentage_confidence: { type: ["number", "null"] },
+      components: { type: "array", maxItems: MAX_COMPONENTS_PER_LAYER, items: componentJsonSchema() }
+    },
+    required: [
+      "position", "position_confidence", "layer_letter", "layer_letter_confidence",
+      "layer_percentage", "layer_percentage_confidence", "components"
+    ]
+  };
+}
+
+function heatSheetResponseJsonSchema() {
+  return {
+    name: "heat_sheet_scan_result",
+    strict: true,
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        recipe: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            name: { type: ["string", "null"] },
+            layers: { type: "array", maxItems: MAX_LAYERS, items: heatSheetLayerJsonSchema() }
+          },
+          required: ["name", "layers"]
+        }
+      },
+      required: ["recipe"]
+    }
+  };
+}
+
 const PROMPT = [
   "Return only structured JSON matching the provided schema - no prose, no markdown fences.",
   "Use null for anything uncertain. Never invent a resin code or percentage - a guess is worse than null.",
@@ -308,10 +352,72 @@ const DOSING_SCREEN_PROMPT = [
   "apply the same null-for-illegible rule as any other uncertain value."
 ].join(" ");
 
+const HEAT_SHEET_PROMPT = [
+  "Return only structured JSON matching the provided schema - no prose, no markdown fences.",
+  "Use null for anything uncertain. Never invent a resin code or percentage - a guess is worse than null.",
+  "Return per-field confidence (0-1, or null) wherever the schema provides a confidence field.",
+  "Confidence is a review hint only, not a claim of correctness.",
+  "",
+  "This is a printed 'BLENDER / LAYER SETTINGS' heat sheet - a stack of blocks, each with its own SILO,",
+  "LBS, %, and LOT NUMBERS columns. Each block is one physical film layer. Blocks are stacked top to",
+  "bottom in physical layer order (the same order the line runs them) - identify each layer by BLOCK",
+  "POSITION, top to bottom, not by any letter that may or may not be written on the form. Return only the",
+  "layers actually present - do not pad to 5. Do not guess a layer count other than what the blocks",
+  "actually show.",
+  "",
+  "Some operators write a single letter (A-E) near a block as an informal label - read that into",
+  "layer_letter as an informational cross-check only if present and legible; block position is what",
+  "actually determines which layer a block belongs to, never the letter. Leave layer_letter null when no",
+  "such label is present.",
+  "",
+  "Each block's SILO column lists one row per resin actually used in that layer. Unlike a fixed-slot form,",
+  "an unused hopper is not printed at all - there is no padding row, no '0' resin code, nothing to skip.",
+  "Only include a component for a SILO row that is actually written. The LBS column is normally blank on",
+  "this form and can be ignored. The LOT NUMBERS column can always be ignored - never extract it.",
+  "",
+  "Each SILO row's resin code may occasionally have a longer description appended after a dash - extract",
+  "only the short code itself, dropping everything from the dash onward, same as any other resin code.",
+  "",
+  "Every SILO row has its own component percentage in the % column, one per row, top to bottom, matching",
+  "the SILO rows in the same order. In addition, the block as a whole has its own layer percentage - the",
+  "share of the overall film this whole layer represents, separate from any individual SILO's percentage.",
+  "This layer percentage is written in one of two places, and both are common:",
+  "  1. In its own separate spot near the block (often to the left of the % column, roughly level with the",
+  "  block as a whole rather than any specific SILO row) - not part of the per-SILO % column at all.",
+  "  2. As the topmost entry directly in the % column itself, printed above the per-SILO percentages - in",
+  "  this layout the % column will have exactly one more entry than there are SILO rows, and the first",
+  "  (topmost) one is the layer percentage, not tied to any SILO.",
+  "A useful check: if the % column has exactly as many entries as SILO rows, none of them is the layer",
+  "percentage - it must be written separately, and if you can't find it, leave layer_percentage null rather",
+  "than guessing which SILO's percentage it might be. If the % column has exactly one more entry than SILO",
+  "rows, the extra topmost one is the layer percentage and the rest map one-to-one to the SILO rows below it.",
+  "",
+  "Operators sometimes hand-write a hopper assignment next to a resin component while planning where to",
+  "load it - formats include 'H1' through 'H6', 'M' (meaning hopper 1, an alternate naming convention) with",
+  "H2-H6 for the rest, or bare numbers '1' through '6'. When present and legible, normalize this to the",
+  "hopper_designation field as exactly 'H1' through 'H6' (so 'M' becomes 'H1', bare '3' becomes 'H3').",
+  "Leave hopper_designation null when no such handwritten note is present or it isn't legible - do not",
+  "invent one.",
+  "",
+  "Handwritten corrections on the form (strikethroughs, replacement values written near a printed one)",
+  "override the printed value only when legible and clear. Otherwise use the printed value. If neither is",
+  "legible or you are not confident, use null rather than guessing."
+].join(" ");
+
+// Chunked rather than one String.fromCharCode call per byte - a large,
+// high-resolution photo (multiple MB, common for a dense handwritten form
+// where legibility matters) turned that into millions of individual string
+// concatenations and exceeded the Edge Function's memory limit before ever
+// reaching OpenAI. 8192 is an arbitrary but safely small spread-argument
+// count; it doesn't need to be a multiple of 3 since btoa runs once at the
+// end, not per chunk.
 async function fileToBase64(file: File): Promise<string> {
   const buffer = new Uint8Array(await file.arrayBuffer());
+  const chunkSize = 8192;
   let binary = "";
-  for (let i = 0; i < buffer.length; i++) binary += String.fromCharCode(buffer[i]);
+  for (let i = 0; i < buffer.length; i += chunkSize) {
+    binary += String.fromCharCode(...buffer.subarray(i, i + chunkSize));
+  }
   return btoa(binary);
 }
 
@@ -450,33 +556,39 @@ async function handleRequest(req: Request): Promise<Response> {
   if (!imageCheck.ok) return errorResponse(400, imageCheck.error as string, origin);
 
   const isDosingScreen = (sourceType as SourceType) === "dosing_screen";
+  const isHeatSheet = (sourceType as SourceType) === "heat_sheet";
+
+  const systemPrompt = isDosingScreen ? DOSING_SCREEN_PROMPT : isHeatSheet ? HEAT_SHEET_PROMPT : PROMPT;
+  const userText = isDosingScreen
+    ? "Extract this dosing screen's material overview table."
+    : isHeatSheet
+    ? "Extract this heat sheet's blender/layer settings table."
+    : "Extract this job traveler's product blend table.";
+  const jsonSchema = isDosingScreen ? dosingScreenResponseJsonSchema() : isHeatSheet ? heatSheetResponseJsonSchema() : responseJsonSchema();
 
   let raw: unknown;
   try {
-    raw = await callOpenAI(
-      openaiApiKey,
-      openaiModel,
-      image,
-      isDosingScreen ? DOSING_SCREEN_PROMPT : PROMPT,
-      isDosingScreen ? "Extract this dosing screen's material overview table." : "Extract this job traveler's product blend table.",
-      isDosingScreen ? dosingScreenResponseJsonSchema() : responseJsonSchema()
-    );
+    raw = await callOpenAI(openaiApiKey, openaiModel, image, systemPrompt, userText, jsonSchema);
   } catch {
     return errorResponse(502, "parse_failed", origin);
   }
 
-  const sanitized = isDosingScreen ? sanitizeDosingScreenScanResult(raw) : sanitizeRecipeScanResult(raw);
+  const sanitized = isDosingScreen
+    ? sanitizeDosingScreenScanResult(raw)
+    : isHeatSheet
+    ? sanitizeHeatSheetScanResult(raw)
+    : sanitizeRecipeScanResult(raw);
   if (!sanitized.ok) {
     // TEMPORARY diagnostic logging - remove once root-caused.
     console.error("recipe-scan: sanitize rejected the AI response", sourceType, JSON.stringify(sanitized.errors).slice(0, 500));
     return errorResponse(502, "parse_failed", origin);
   }
-  if (isDosingScreen) {
+  if (isDosingScreen || isHeatSheet) {
     // TEMPORARY diagnostic logging - remove once the layer_percentage/
-    // component-ordering prompt fix is confirmed against a real scan.
+    // component-ordering prompt behavior is confirmed against real scans.
     // Never logs the image itself, just the sanitized structure.
     const layers = (sanitized.value as { recipe: { layers: Array<{ layer_percentage: number | null; components: Array<{ resin_code: string | null }> }> } }).recipe.layers;
-    console.log("recipe-scan: dosing_screen result", JSON.stringify(layers.map((l) => ({
+    console.log(`recipe-scan: ${sourceType} result`, JSON.stringify(layers.map((l) => ({
       layer_percentage: l.layer_percentage,
       resin_codes: l.components.map((c) => c.resin_code)
     }))).slice(0, 1000));

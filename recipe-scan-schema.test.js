@@ -2,7 +2,7 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { sanitizeRecipeScanResult, sanitizeDosingScreenScanResult, validateImage, totalStatus, DOSING_SCREEN_COMPONENTS_PER_LAYER } = require("./recipe-scan-schema.js");
+const { sanitizeRecipeScanResult, sanitizeDosingScreenScanResult, sanitizeHeatSheetScanResult, validateImage, totalStatus, DOSING_SCREEN_COMPONENTS_PER_LAYER } = require("./recipe-scan-schema.js");
 
 function validComponent(overrides = {}) {
   return {
@@ -370,4 +370,128 @@ test("dosing screen: rejects a non-object response and a missing/non-array layer
   assert.equal(sanitizeDosingScreenScanResult(null).ok, false);
   assert.equal(sanitizeDosingScreenScanResult("oops").ok, false);
   assert.equal(sanitizeDosingScreenScanResult({ recipe: { name: null } }).ok, false);
+});
+
+// --- sanitizeHeatSheetScanResult ---------------------------------------
+//
+// Structurally close to Job Traveler (position from block order, optional
+// hopper_designation, an unused hopper simply omitted rather than padded),
+// plus an optional layer_letter cross-check field like Dosing Screen's,
+// since operators sometimes label a block when filling one out with this
+// tool.
+
+function heatSheetLayer(position, overrides = {}) {
+  return {
+    position, position_confidence: 0.9,
+    layer_letter: null, layer_letter_confidence: null,
+    layer_percentage: 20, layer_percentage_confidence: 0.8,
+    components: [validComponent({ percentage: 71 }), validComponent({ resin_code: "MS1307", percentage: 21 })],
+    ...overrides
+  };
+}
+function threeLayerHeatSheetRecipe(overrides = {}) {
+  return {
+    recipe: { name: null, layers: [heatSheetLayer("inside"), heatSheetLayer("core"), heatSheetLayer("outside")] },
+    ...overrides
+  };
+}
+
+test("heat sheet: accepts a well-formed 3-layer result, position derived from block order same as Job Traveler", () => {
+  const result = sanitizeHeatSheetScanResult(threeLayerHeatSheetRecipe());
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.errors, []);
+  assert.equal(result.value.recipe.layer_count, 3);
+  assert.deepEqual(result.value.recipe.layers.map(l => l.position), ["inside", "core", "outside"]);
+});
+
+test("heat sheet: layer_letter is informational only - null is accepted, not required", () => {
+  const result = sanitizeHeatSheetScanResult(threeLayerHeatSheetRecipe());
+  assert.equal(result.ok, true);
+  assert.equal(result.value.recipe.layers[0].layer_letter, null);
+});
+
+test("heat sheet: accepts a legible layer_letter label and rejects one outside A-E", () => {
+  const labeled = sanitizeHeatSheetScanResult({
+    recipe: { name: null, layers: [heatSheetLayer("inside", { layer_letter: "A", layer_letter_confidence: 0.8 }), heatSheetLayer("core"), heatSheetLayer("outside")] }
+  });
+  assert.equal(labeled.ok, true);
+  assert.equal(labeled.value.recipe.layers[0].layer_letter, "A");
+
+  const invalid = sanitizeHeatSheetScanResult({
+    recipe: { name: null, layers: [heatSheetLayer("inside", { layer_letter: "F" }), heatSheetLayer("core"), heatSheetLayer("outside")] }
+  });
+  assert.equal(invalid.ok, false);
+});
+
+test("heat sheet: layer count must match a real line configuration (1, 3, or 5)", () => {
+  const result = sanitizeHeatSheetScanResult({
+    recipe: { name: null, layers: [heatSheetLayer("inside"), heatSheetLayer("core")] } // 2 layers
+  });
+  assert.equal(result.ok, false);
+  assert.match(result.errors[0], /doesn't match a valid line configuration/);
+});
+
+test("heat sheet: does not require padding components up to 6 - an unused hopper isn't written on this form at all", () => {
+  const result = sanitizeHeatSheetScanResult(threeLayerHeatSheetRecipe());
+  assert.equal(result.ok, true);
+  assert.equal(result.value.recipe.layers[0].components.length, 2);
+});
+
+test("heat sheet: rejects a layer with zero components and rejects more than 6", () => {
+  const empty = sanitizeHeatSheetScanResult({
+    recipe: { name: null, layers: [heatSheetLayer("inside", { components: [] }), heatSheetLayer("core"), heatSheetLayer("outside")] }
+  });
+  assert.equal(empty.ok, false);
+
+  const tooMany = sanitizeHeatSheetScanResult({
+    recipe: {
+      name: null,
+      layers: [heatSheetLayer("inside", { components: Array.from({ length: 7 }, () => validComponent()) }), heatSheetLayer("core"), heatSheetLayer("outside")]
+    }
+  });
+  assert.equal(tooMany.ok, false);
+});
+
+test("heat sheet: accepts an optional hand-written hopper_designation on a component, same as Job Traveler", () => {
+  const result = sanitizeHeatSheetScanResult({
+    recipe: {
+      name: null,
+      layers: [
+        heatSheetLayer("inside", { components: [validComponent({ hopper_designation: "H3", hopper_designation_confidence: 0.7 })] }),
+        heatSheetLayer("core"), heatSheetLayer("outside")
+      ]
+    }
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.value.recipe.layers[0].components[0].hopper_designation, "H3");
+});
+
+test("heat sheet: a layer's own percentage is independent of whether its components sum to 100 - flagged, not rejected", () => {
+  const result = sanitizeHeatSheetScanResult({
+    recipe: {
+      name: null,
+      layers: [
+        heatSheetLayer("inside", { components: [validComponent({ percentage: 50 }), validComponent({ percentage: 30 })] }), // sums to 80
+        heatSheetLayer("core"), heatSheetLayer("outside")
+      ]
+    }
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.value.recipe.layers[0].component_percentage_total_status, "invalid");
+});
+
+test("heat sheet: strips unknown properties instead of failing the whole request", () => {
+  const result = sanitizeHeatSheetScanResult({
+    unexpected_envelope_field: "provider metadata",
+    recipe: { name: null, layers: [heatSheetLayer("inside", { some_extra_field: "ignored" }), heatSheetLayer("core"), heatSheetLayer("outside")] }
+  });
+  assert.equal(result.ok, true);
+  assert.equal("unexpected_envelope_field" in result.value, false);
+  assert.equal("some_extra_field" in result.value.recipe.layers[0], false);
+});
+
+test("heat sheet: rejects a non-object response and a missing/non-array layers field", () => {
+  assert.equal(sanitizeHeatSheetScanResult(null).ok, false);
+  assert.equal(sanitizeHeatSheetScanResult("oops").ok, false);
+  assert.equal(sanitizeHeatSheetScanResult({ recipe: { name: null } }).ok, false);
 });

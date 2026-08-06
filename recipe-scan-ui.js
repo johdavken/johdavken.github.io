@@ -16,10 +16,14 @@
     dosing_screen: {
       title: "Scan Dosing Screen",
       description: "Take a photo of the dosing controller's material overview screen, or choose an existing photo (screen photo or printout)."
+    },
+    heat_sheet: {
+      title: "Scan Heat Sheet",
+      description: "Take a photo of the blender/layer settings heat sheet, or choose an existing photo."
     }
   };
 
-  let pendingSourceType = null;  // "job_traveler" | "dosing_screen"
+  let pendingSourceType = null;  // "job_traveler" | "dosing_screen" | "heat_sheet"
   let pendingOrientation = null; // "inside" | "outside" | null (null = 1-layer line or dosing_screen - neither needs it)
   let pendingScan = null;        // sanitized recipe-scan result (.recipe), as returned by the Edge Function
   let pendingPayload = null;     // built via PolynRecipeScanMapping's mapping functions, for review + apply
@@ -285,6 +289,20 @@
 
       content.append(card);
     });
+
+    // Enter advances to the next layer percentage input instead of doing
+    // nothing (there's no surrounding <form> to submit) - saves the operator
+    // from clicking/scrolling to each of up to 5 fields individually.
+    const layerPctInputs = Array.from(content.querySelectorAll(".recipeScanReviewLayerPctInput input"));
+    layerPctInputs.forEach((input, index) => {
+      input.addEventListener("keydown", event => {
+        if (event.key !== "Enter") return;
+        event.preventDefault();
+        const next = layerPctInputs[index + 1];
+        if (next) next.focus();
+        else input.blur();
+      });
+    });
   }
 
   function openReviewDialog(){
@@ -326,6 +344,7 @@
 
   $("recipeScanJobTravelerBtn")?.addEventListener("click", () => startScan("job_traveler"));
   $("recipeScanDosingScreenBtn")?.addEventListener("click", () => startScan("dosing_screen"));
+  $("recipeScanHeatSheetBtn")?.addEventListener("click", () => startScan("heat_sheet"));
 
   $("recipeScanCaptureBtn")?.addEventListener("click", () => $("recipeScanCaptureInput")?.click());
   $("recipeScanCaptureInput")?.addEventListener("change", event => submitFile(event.target.files?.[0]));

@@ -36,18 +36,28 @@ test("callOpenAI also takes the prompt, user text, and JSON schema as parameters
   assert.match(body, /json_schema: jsonSchema/);
 });
 
-test("the actual API call site passes the env-sourced model and branches prompt/schema on source_type - Job Traveler vs Dosing Screen", () => {
-  assert.match(source, /callOpenAI\(\s*openaiApiKey,\s*openaiModel,\s*image,\s*isDosingScreen \? DOSING_SCREEN_PROMPT : PROMPT,/);
-  assert.match(source, /isDosingScreen \? dosingScreenResponseJsonSchema\(\) : responseJsonSchema\(\)/);
+test("the actual API call site passes the env-sourced model and branches prompt/schema on source_type - Job Traveler vs Dosing Screen vs Heat Sheet", () => {
+  assert.match(source, /const systemPrompt = isDosingScreen \? DOSING_SCREEN_PROMPT : isHeatSheet \? HEAT_SHEET_PROMPT : PROMPT;/);
+  assert.match(source, /const jsonSchema = isDosingScreen \? dosingScreenResponseJsonSchema\(\) : isHeatSheet \? heatSheetResponseJsonSchema\(\) : responseJsonSchema\(\);/);
+  assert.match(source, /raw = await callOpenAI\(openaiApiKey, openaiModel, image, systemPrompt, userText, jsonSchema\);/);
 });
 
 test("source_type is required and validated against the known set before anything else happens", () => {
-  assert.match(source, /const SOURCE_TYPES = \["job_traveler", "dosing_screen"\] as const;/);
+  assert.match(source, /const SOURCE_TYPES = \["job_traveler", "dosing_screen", "heat_sheet"\] as const;/);
   assert.match(source, /if \(typeof sourceType !== "string" \|\| !\(SOURCE_TYPES as readonly string\[\]\)\.includes\(sourceType\)\)/);
 });
 
-test("dosing_screen requests are sanitized with sanitizeDosingScreenScanResult, job_traveler with sanitizeRecipeScanResult", () => {
-  assert.match(source, /const sanitized = isDosingScreen \? sanitizeDosingScreenScanResult\(raw\) : sanitizeRecipeScanResult\(raw\);/);
+test("dosing_screen requests are sanitized with sanitizeDosingScreenScanResult, heat_sheet with sanitizeHeatSheetScanResult, job_traveler with sanitizeRecipeScanResult", () => {
+  const sanitizedStart = source.indexOf("const sanitized = isDosingScreen");
+  const sanitizedEnd = source.indexOf(";", sanitizedStart);
+  const body = source.slice(sanitizedStart, sanitizedEnd);
+  assert.match(body, /sanitizeDosingScreenScanResult\(raw\)/);
+  assert.match(body, /sanitizeHeatSheetScanResult\(raw\)/);
+  assert.match(body, /sanitizeRecipeScanResult\(raw\)/);
+});
+
+test("heat_sheet result logging joins the dosing screen diagnostic condition, not a separate branch", () => {
+  assert.match(source, /if \(isDosingScreen \|\| isHeatSheet\) \{/);
 });
 
 // --- setpoint vs actual: multiple redundant cues, not just bold-vs-small ---
@@ -114,4 +124,74 @@ test("the dosing prompt explicitly distinguishes layer_percentage from a row's o
   assert.match(prompt, /will almost always sum to \(approximately\) 100%/);
   assert.match(prompt, /completely unrelated to/);
   assert.match(prompt, /Do not calculate, derive, or infer layer_percentage/);
+});
+
+// --- Heat Sheet: layers identified by block order (like Job Traveler's
+// column order, ambiguous without an orientation answer), unused hoppers
+// simply omitted (not padded, unlike Dosing Screen), layer_letter carried
+// only as an informational cross-check, and the layer percentage can sit in
+// one of two different spots on this specific form. -----------------------
+
+function heatSheetPromptBody() {
+  const promptStart = source.indexOf("const HEAT_SHEET_PROMPT = [");
+  const promptEnd = source.indexOf("].join(\" \");", promptStart);
+  return source.slice(promptStart, promptEnd);
+}
+
+test("the heat sheet prompt identifies layers by block position top to bottom, not by any written letter", () => {
+  const prompt = heatSheetPromptBody();
+  assert.match(prompt, /identify each layer by BLOCK\s*",\s*"POSITION, top to bottom/);
+  assert.match(prompt, /not by any letter that may or may not be written on the form/);
+});
+
+test("the heat sheet prompt treats a written layer letter as an informational cross-check only, never authoritative", () => {
+  const prompt = heatSheetPromptBody();
+  assert.match(prompt, /layer_letter as an informational cross-check only/);
+  assert.match(prompt, /block position is what/);
+});
+
+test("the heat sheet prompt says an unused hopper is never printed at all - no padding row, unlike Dosing Screen's fixed slots", () => {
+  const prompt = heatSheetPromptBody();
+  assert.match(prompt, /an unused hopper is not printed at all/);
+  assert.match(prompt, /no padding row, no '0' resin code/);
+});
+
+test("the heat sheet prompt ignores the LOT NUMBERS column and the normally-blank LBS column", () => {
+  const prompt = heatSheetPromptBody();
+  assert.match(prompt, /LOT NUMBERS column can always be ignored/);
+  assert.match(prompt, /LBS column is normally blank on/);
+});
+
+test("the heat sheet prompt covers both places the layer's own percentage can appear, with a count-based rule to tell them apart", () => {
+  const prompt = heatSheetPromptBody();
+  assert.match(prompt, /In its own separate spot near the block/);
+  assert.match(prompt, /As the topmost entry directly in the % column itself/);
+  assert.match(prompt, /the % column will have exactly one more entry than there are SILO rows/);
+  assert.match(prompt, /if the % column has exactly as many entries as SILO rows, none of them is the layer/);
+});
+
+test("the heat sheet prompt reuses Job Traveler's hopper_designation normalization rules verbatim", () => {
+  const prompt = heatSheetPromptBody();
+  assert.match(prompt, /'H1' through 'H6', 'M' \(meaning hopper 1, an alternate naming convention\)/);
+  assert.match(prompt, /Leave hopper_designation null when no such handwritten note is present/);
+});
+
+// --- fileToBase64: a large, high-resolution photo (e.g. a dense
+// handwritten form photographed for legibility) exceeded the Edge
+// Function's memory limit with a naive one-byte-at-a-time string build. ---
+
+test("fileToBase64 builds the binary string in chunks, not one String.fromCharCode call per byte - the latter exceeded the Edge Function's memory limit on a large photo", () => {
+  const fnStart = source.indexOf("async function fileToBase64(");
+  const fnEnd = source.indexOf("\n}", fnStart);
+  const body = source.slice(fnStart, fnEnd);
+  assert.doesNotMatch(body, /binary \+= String\.fromCharCode\(buffer\[i\]\);/, "must not concatenate one character at a time - this is what exceeded the memory limit");
+  assert.match(body, /binary \+= String\.fromCharCode\(\.\.\.buffer\.subarray\(i, i \+ chunkSize\)\);/);
+});
+
+test("heatSheetLayerJsonSchema requires layer_letter alongside position, both optional, matching the prompt's cross-check-only rule", () => {
+  const fnStart = source.indexOf("function heatSheetLayerJsonSchema()");
+  const fnEnd = source.indexOf("\n}", fnStart);
+  const body = source.slice(fnStart, fnEnd);
+  assert.match(body, /layer_letter: \{ type: \["string", "null"\], enum: \[\.\.\.LAYER_LETTERS, null\] \}/);
+  assert.match(body, /components: \{ type: "array", maxItems: MAX_COMPONENTS_PER_LAYER, items: componentJsonSchema\(\) \}/);
 });

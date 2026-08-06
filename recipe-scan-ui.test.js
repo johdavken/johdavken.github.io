@@ -143,6 +143,18 @@ test("a derived layer percentage (auto-solved from the others) is shown as read-
   assert.match(body, /\(calculated\)/);
 });
 
+test("pressing Enter in a layer-percentage input advances focus to the next one instead of doing nothing - saves clicking/scrolling to each of up to 5 fields", () => {
+  const fnStart = ui.indexOf("function renderReview(");
+  const fnEnd = ui.indexOf("\n  }", fnStart);
+  const body = ui.slice(fnStart, fnEnd);
+  assert.match(body, /content\.querySelectorAll\("\.recipeScanReviewLayerPctInput input"\)/);
+  assert.match(body, /if \(event\.key !== "Enter"\) return;/);
+  assert.match(body, /event\.preventDefault\(\);/);
+  assert.match(body, /const next = layerPctInputs\[index \+ 1\];/);
+  assert.match(body, /if \(next\) next\.focus\(\);/);
+  assert.match(body, /else input\.blur\(\);/);
+});
+
 test("the review screen warns before overwriting an existing non-empty recipe", () => {
   const fnStart = ui.indexOf("function renderReview(");
   const fnEnd = ui.indexOf("\n  }", fnStart);
@@ -169,9 +181,18 @@ test("Cancel from the review dialog fully resets pending scan state", () => {
 test("every dialog action button and file input is wired exactly once at the bottom of the module", () => {
   assert.match(ui, /\$\("recipeScanJobTravelerBtn"\)\?\.addEventListener\("click", \(\) => startScan\("job_traveler"\)\);/);
   assert.match(ui, /\$\("recipeScanDosingScreenBtn"\)\?\.addEventListener\("click", \(\) => startScan\("dosing_screen"\)\);/);
+  assert.match(ui, /\$\("recipeScanHeatSheetBtn"\)\?\.addEventListener\("click", \(\) => startScan\("heat_sheet"\)\);/);
   assert.match(ui, /\$\("recipeScanCaptureBtn"\)\?\.addEventListener\("click", \(\) => \$\("recipeScanCaptureInput"\)\?\.click\(\)\);/);
   assert.match(ui, /\$\("recipeScanCaptureInput"\)\?\.addEventListener\("change", event => submitFile\(event\.target\.files\?\.\[0\]\)\);/);
   assert.match(ui, /\$\("recipeScanReviewApplyBtn"\)\?\.addEventListener\("click", applyReview\);/);
+});
+
+test("heat_sheet has its own CAPTURE_COPY entry and skips orientation only via the shared 1-layer/dosing_screen rule, same as Job Traveler", () => {
+  assert.match(ui, /heat_sheet: \{\s*\n\s*title: "Scan Heat Sheet",/);
+  const fnStart = ui.indexOf("function startScan(");
+  const fnEnd = ui.indexOf("\n  }", fnStart);
+  const body = ui.slice(fnStart, fnEnd);
+  assert.doesNotMatch(body, /heat_sheet/, "heat_sheet must not get a special case - it should fall through to the same orientation rule as job_traveler");
 });
 
 // --- index.html: capture dialog structure --------------
@@ -186,6 +207,11 @@ test("all three recipe-scan dialogs exist in index.html", () => {
   assert.match(index, /<dialog id="recipeScanOrientationDialog"/);
   assert.match(index, /<dialog id="recipeScanCaptureDialog"/);
   assert.match(index, /<dialog id="recipeScanReviewDialog"/);
+});
+
+test("the Heat Sheet scan button is enabled, matching Job Traveler and Dosing Screen", () => {
+  assert.match(index, /<button id="recipeScanHeatSheetBtn" class="secondary" type="button">Scan Heat Sheet<\/button>/);
+  assert.doesNotMatch(index, /recipeScanHeatSheetBtn"[^>]*disabled/);
 });
 
 test("recipe-scan-ui.js loads after app.js, so window.PolynRecipeScanBridge already exists when it runs", () => {

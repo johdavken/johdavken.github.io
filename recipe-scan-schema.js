@@ -12,8 +12,8 @@
   // the same allowlist/flagging rules, and to pre-check an image client-side
   // before upload.
   //
-  // Covers Job Traveler and Dosing Screen, matching the Edge Function's two
-  // sanitize functions - Heat Sheet isn't wired up yet.
+  // Covers Job Traveler, Dosing Screen, and Heat Sheet, matching the Edge
+  // Function's three sanitize functions.
 
   const VALID_LAYER_COUNTS = [1, 3, 5];
   const MAX_LAYERS = 5;
@@ -274,6 +274,98 @@
     };
   }
 
+  // --- Heat Sheet: structurally closer to Job Traveler than Dosing Screen -
+  // layers identified by block order (top to bottom), optional
+  // hopper_designation, an unused hopper simply omitted rather than padded.
+  // Adds an optional layer_letter cross-check, same field/reasoning as
+  // Dosing Screen's, since operators sometimes label a block when filling
+  // one out with this tool.
+
+  function sanitizeHeatSheetLayer(raw, expectedPositions, errors, index) {
+    const path = `recipe.layers[${index}]`;
+    if (!isPlainObject(raw)) { errors.push(`${path}: layer must be an object`); return null; }
+
+    let position = null;
+    if (raw.position !== null && raw.position !== undefined) {
+      if (typeof raw.position === "string" && expectedPositions.includes(raw.position)) position = raw.position;
+      else errors.push(`${path}.position: must be one of ${expectedPositions.join(", ")}, or null`);
+    }
+    const positionConfidence = sanitizeConfidence(raw.position_confidence);
+    if (!positionConfidence.ok) errors.push(`${path}.position_confidence: must be 0-1, or null`);
+
+    const layerLetter = sanitizeLayerLetter(raw.layer_letter);
+    if (!layerLetter.ok) errors.push(`${path}.layer_letter: must be one of A-E, or null`);
+    const layerLetterConfidence = sanitizeConfidence(raw.layer_letter_confidence);
+    if (!layerLetterConfidence.ok) errors.push(`${path}.layer_letter_confidence: must be 0-1, or null`);
+
+    const layerPercentage = sanitizePercentage(raw.layer_percentage);
+    if (!layerPercentage.ok) errors.push(`${path}.layer_percentage: must be 0-100, or null`);
+    const layerPercentageConfidence = sanitizeConfidence(raw.layer_percentage_confidence);
+    if (!layerPercentageConfidence.ok) errors.push(`${path}.layer_percentage_confidence: must be 0-1, or null`);
+
+    const rawComponents = Array.isArray(raw.components) ? raw.components : null;
+    if (!rawComponents) errors.push(`${path}.components: must be an array`);
+    else if (rawComponents.length === 0) errors.push(`${path}.components: at least one component is required`);
+    else if (rawComponents.length > MAX_COMPONENTS_PER_LAYER) errors.push(`${path}.components: at most ${MAX_COMPONENTS_PER_LAYER} components allowed`);
+
+    const components = (rawComponents || [])
+      .slice(0, 20)
+      .map((component, componentIndex) => sanitizeComponent(component, errors, `${path}.components[${componentIndex}]`))
+      .filter(component => component !== null);
+
+    return {
+      position, position_confidence: positionConfidence.value,
+      layer_letter: layerLetter.value, layer_letter_confidence: layerLetterConfidence.value,
+      layer_percentage: layerPercentage.value, layer_percentage_confidence: layerPercentageConfidence.value,
+      components,
+      component_percentage_total_status: totalStatus(components.map(c => c.percentage))
+    };
+  }
+
+  function sanitizeHeatSheetScanResult(raw) {
+    const errors = [];
+    if (!isPlainObject(raw)) {
+      return { ok: false, errors: ["response must be an object"], value: null };
+    }
+
+    const recipe = isPlainObject(raw.recipe) ? raw.recipe : null;
+    if (!recipe) return { ok: false, errors: ["recipe: must be an object"], value: null };
+
+    const name = sanitizeString(recipe.name, MAX_NAME_LENGTH);
+    if (!name.ok) errors.push(`recipe.name: must be a string of at most ${MAX_NAME_LENGTH} characters, or null`);
+
+    const rawLayers = Array.isArray(recipe.layers) ? recipe.layers : null;
+    if (!rawLayers) return { ok: false, errors: ["recipe.layers: must be an array"], value: null };
+    if (rawLayers.length === 0) return { ok: false, errors: ["recipe.layers: at least one layer is required"], value: null };
+    if (rawLayers.length > MAX_LAYERS) return { ok: false, errors: [`recipe.layers: at most ${MAX_LAYERS} layers allowed`], value: null };
+
+    if (!VALID_LAYER_COUNTS.includes(rawLayers.length)) {
+      return {
+        ok: false,
+        errors: [`recipe.layers: detected ${rawLayers.length} layers, which doesn't match a valid line configuration (1, 3, or 5)`],
+        value: null
+      };
+    }
+
+    const expectedPositions = POSITIONS_BY_LAYER_COUNT[rawLayers.length];
+    const layers = rawLayers.map((layer, index) => sanitizeHeatSheetLayer(layer, expectedPositions, errors, index));
+
+    if (errors.length > 0) return { ok: false, errors, value: null };
+
+    return {
+      ok: true,
+      errors: [],
+      value: {
+        recipe: {
+          name: name.value,
+          layers,
+          layer_count: layers.length,
+          layer_percentage_total_status: totalStatus(layers.map(l => l.layer_percentage))
+        }
+      }
+    };
+  }
+
   function matchesImageSignature(bytes, type) {
     if (type === "image/jpeg") {
       return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
@@ -310,6 +402,7 @@
     totalStatus,
     sanitizeRecipeScanResult,
     sanitizeDosingScreenScanResult,
+    sanitizeHeatSheetScanResult,
     validateImage
   };
 });

@@ -15,7 +15,7 @@
 <script src="calculators.js?v=0.18" defer></script>
 <script src="active-job.js?v=0.18" defer></script>
 <script src="workspace-configuration-payloads.js?v=0.20.0" defer></script>
-<script src="recipe-scan-schema.js?v=0.2.0" defer></script>
+<script src="recipe-scan-schema.js?v=0.3.0" defer></script>
 <script src="recipe-scan-mapping.js?v=0.2.0" defer></script>
 <script src="hopper-rearrangement.js?v=0.22.0" defer></script>
 <script src="vendor/supabase.min.js?v=2.57.4" defer></script>
@@ -32,7 +32,7 @@
 <script src="app.js?v=0.18.60" defer></script>
 <script src="resin-admin-ui.js?v=0.20.1" defer></script>
 <script src="workspace-recovery-ui.js?v=0.1.0" defer></script>
-<script src="recipe-scan-ui.js?v=0.2.0" defer></script>
+<script src="recipe-scan-ui.js?v=0.3.0" defer></script>
 
 
 </head>
@@ -836,8 +836,8 @@
             <p class="tiny muted">Reads resin blends directly from the dosing controller's material overview screen or a printout of it - no hopper letters to sort out afterward. Validated for lines 9-11 (same dosing screen). Does not include layer percentages; you'll enter those on the review screen.</p>
           </div>
           <div class="recipeScanOption">
-            <button id="recipeScanHeatSheetBtn" class="secondary" type="button" disabled>Scan Heat Sheet</button>
-            <p class="tiny muted">Not yet available.</p>
+            <button id="recipeScanHeatSheetBtn" class="secondary" type="button">Scan Heat Sheet</button>
+            <p class="tiny muted">Reads layer/blender settings from a printed heat sheet and fills them into Recipe Setup. Like Job Traveler, you'll be asked which end is which, and unused hoppers just aren't written down. Legible handwriting matters most here - and writing in layer percentages and hopper designations helps it import cleanly.</p>
           </div>
         </div>
       </section>
