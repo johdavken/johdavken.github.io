@@ -54,3 +54,36 @@ test("the pending list has its own CSS, reusing the existing pill/row visual lan
   assert.match(styles, /\.lineSyncPendingList\{/);
   assert.match(styles, /\.lineSyncPendingList li\{/);
 });
+
+// --- discard: the only recovery for an item stuck on an unreachable workspace ---
+
+test("each pending item gets a Discard button, using the existing danger button convention", () => {
+  const fnStart = app.indexOf("function renderPendingList(");
+  const fnEnd = app.indexOf("\n  }", fnStart);
+  const body = app.slice(fnStart, fnEnd);
+  assert.match(body, /discard\.className = "danger lineSyncPendingDiscardBtn";/);
+  assert.match(body, /discard\.textContent = "Discard";/);
+});
+
+test("discarding requires an explicit confirm() naming what will be lost and that it's irreversible - matching the app's other destructive-action confirmations", () => {
+  const fnStart = app.indexOf("function renderPendingList(");
+  const fnEnd = app.indexOf("\n  }", fnStart);
+  const body = app.slice(fnStart, fnEnd);
+  assert.match(body, /if \(!confirm\(/);
+  assert.match(body, /cannot be undone/i);
+});
+
+test("confirming discard calls lineSync.discardPendingItem with the exact item clicked, only after the confirm() check", () => {
+  const fnStart = app.indexOf("function renderPendingList(");
+  const fnEnd = app.indexOf("\n  }", fnStart);
+  const body = app.slice(fnStart, fnEnd);
+  const confirmIndex = body.indexOf("if (!confirm(");
+  const discardCallIndex = body.indexOf("lineSync?.discardPendingItem(item);");
+  assert.ok(confirmIndex !== -1 && discardCallIndex !== -1 && confirmIndex < discardCallIndex);
+});
+
+test("cloud-sync.js exposes discardPendingItem publicly for app.js to call", () => {
+  const cloudSync = fs.readFileSync("cloud-sync.js", "utf8");
+  assert.match(cloudSync, /function discardPendingItem\(item\)\{/);
+  assert.match(cloudSync, /^\s*discardPendingItem\s*$/m);
+});

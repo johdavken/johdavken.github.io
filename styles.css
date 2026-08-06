@@ -578,7 +578,13 @@ main{
   background:var(--row-bg);
   color:var(--muted);
   font-size:var(--font-small);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  flex-wrap:wrap;
 }
+.lineSyncPendingDiscardBtn{ padding:4px 10px; font-size:var(--font-tiny); flex-shrink:0; }
 .lineSyncJoin{
   display:grid;
   grid-template-columns:minmax(150px, 1fr) auto minmax(110px, auto);

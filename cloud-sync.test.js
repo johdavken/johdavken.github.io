@@ -654,3 +654,42 @@ test("pendingSummary is empty when the outbox is empty", async () => {
   await sync.initialize();
   assert.deepEqual(sync.getState().pendingSummary, []);
 });
+
+// --- discardPendingItem: the only way to clear an unreachable stuck item ---
+
+test("discardPendingItem removes a stuck active-job entry for an unreachable workspace, reducing pendingCount", async () => {
+  const rows = workspaceFixtures({ id: "ws-a", name: "Line A" });
+  const { sync, storage, syncStorageModule } = createSync(rows);
+  await sync.initialize();
+  syncStorageModule.createStore(storage).queueActiveJob("ws-unknown", {
+    payload: {}, expectedRevision: 0, operationId: "stuck-op", kind: "edit", createdAt: "2026-08-05T00:00:00.000Z"
+  });
+  await sync.refreshSelected();
+  const item = sync.getState().pendingSummary.find(i => i.workspaceId === "ws-unknown");
+  const result = sync.discardPendingItem(item);
+  assert.equal(result.ok, true);
+  assert.equal(sync.getState().pendingCount, 0);
+  assert.equal(sync.getState().pendingSummary.length, 0);
+});
+
+test("discardPendingItem removes a stuck saved-setup operation", async () => {
+  const rows = workspaceFixtures({ id: "ws-a", name: "Line A" });
+  const { sync, storage, syncStorageModule } = createSync(rows);
+  await sync.initialize();
+  syncStorageModule.createStore(storage).queueSetupOperation({
+    workspaceId: "ws-unknown", action: "rename", setupId: "setup-1", name: "Line 40", operationId: "setup-op", expectedRevision: 1, createdAt: "2026-08-05T00:00:00.000Z"
+  });
+  await sync.refreshSelected();
+  const item = sync.getState().pendingSummary.find(i => i.type === "saved-setup");
+  const result = sync.discardPendingItem(item);
+  assert.equal(result.ok, true);
+  assert.equal(sync.getState().pendingCount, 0);
+});
+
+test("discardPendingItem is a no-op (ok:false) for a missing or malformed item, never throws", () => {
+  const rows = workspaceFixtures({ id: "ws-a", name: "Line A" });
+  const { sync } = createSync(rows);
+  assert.equal(sync.discardPendingItem(null).ok, false);
+  assert.equal(sync.discardPendingItem({}).ok, false);
+  assert.equal(sync.discardPendingItem({ type: "unknown-type" }).ok, false);
+});

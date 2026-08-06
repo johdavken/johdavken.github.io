@@ -86,7 +86,8 @@
           workspaceId,
           workspaceName: workspaceName(workspaceId),
           kind: pending?.kind || "edit",
-          createdAt: pending?.createdAt || ""
+          createdAt: pending?.createdAt || "",
+          operationId: pending?.operationId || ""
         });
       });
       outbox.setupOperations.forEach(operation=>{
@@ -96,10 +97,24 @@
           workspaceName: workspaceName(operation.workspaceId),
           action: operation.action,
           name: operation.name || "",
-          createdAt: operation.createdAt || ""
+          createdAt: operation.createdAt || "",
+          operationId: operation.operationId || ""
         });
       });
       return items;
+    }
+    // Permanently discards one pending-outbox item without ever trying to
+    // sync it - the only recovery for an entry pinned to a workspace this
+    // device is no longer a member of, which flushActiveJob/
+    // flushSetupOperations (both scoped to the *selected* workspace) can
+    // never reach no matter how many times sync retries.
+    function discardPendingItem(item){
+      if (!item || !item.type) return { ok: false };
+      if (item.type === "active-job") store.clearActiveJob(item.workspaceId, item.operationId);
+      else if (item.type === "saved-setup") store.clearSetupOperation(item.operationId);
+      else return { ok: false };
+      emit();
+      return { ok: true };
     }
     function emit(){
       state.pendingCount = store?.pendingCount?.() || 0;
@@ -944,7 +959,8 @@
       deleteWorkspace,
       replaceActiveJob,
       refreshSelected,
-      retry
+      retry,
+      discardPendingItem
     };
   }
 

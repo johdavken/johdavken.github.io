@@ -2946,7 +2946,18 @@
         : `${SETUP_ACTION_LABELS[item.action] || item.action}${item.name ? ` “${item.name}”` : ""}`;
       const where = item.workspaceName || "an unknown line (you may have left it)";
       const when = item.createdAt ? new Date(item.createdAt).toLocaleString() : "";
-      li.textContent = `${line} — ${where}${when ? ` · ${when}` : ""}`;
+      const text = document.createElement("span");
+      text.textContent = `${line} — ${where}${when ? ` · ${when}` : ""}`;
+      const discard = document.createElement("button");
+      discard.type = "button";
+      discard.className = "danger lineSyncPendingDiscardBtn";
+      discard.textContent = "Discard";
+      discard.setAttribute("aria-label", `Discard unsynced change: ${line} — ${where}`);
+      discard.addEventListener("click", ()=>{
+        if (!confirm(`Permanently discard this unsynced change?\n\n${line} — ${where}\n\nThis cannot be undone - the change will not be applied anywhere.`)) return;
+        lineSync?.discardPendingItem(item);
+      });
+      li.append(text, discard);
       host.append(li);
     });
   }
