@@ -1743,6 +1743,36 @@
       });
       showMobileLayer(activeMobileLayer);
 
+      // Swipe left/right between layers - same showMobileLayer the tab bar
+      // already uses, just a second way to reach it. Evaluated once on
+      // touchend (total displacement) rather than tracked live on
+      // touchmove, so this stays a passive listener and never fights the
+      // page's normal vertical scroll. Bounded at the ends (no wrap), and
+      // ignored when the gesture starts inside a field so selecting/
+      // dragging text in a hopper input isn't mistaken for a swipe.
+      let touchStartX = null;
+      let touchStartY = null;
+      scroll.addEventListener("touchstart", event=>{
+        const touch = event.touches[0];
+        if (!touch || event.target.closest("input, select, textarea")){ touchStartX = null; return; }
+        touchStartX = touch.clientX;
+        touchStartY = touch.clientY;
+      }, { passive: true });
+      scroll.addEventListener("touchend", event=>{
+        if (touchStartX === null) return;
+        const touch = event.changedTouches[0];
+        const dx = touch ? touch.clientX - touchStartX : 0;
+        const dy = touch ? touch.clientY - touchStartY : 0;
+        touchStartX = null;
+        if (!touch || Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return;
+        const names = state.layers.map(L=>L.name);
+        const index = names.indexOf(activeMobileLayer);
+        if (index === -1) return;
+        const nextIndex = dx < 0 ? index + 1 : index - 1;
+        if (nextIndex < 0 || nextIndex >= names.length) return;
+        showMobileLayer(names[nextIndex]);
+      }, { passive: true });
+
       const bulkNameInput = toolbar.querySelector("#bulkResinName");
       const bulkPctInput = toolbar.querySelector("#bulkResinPct");
       const applyButton = toolbar.querySelector("#applyBulkSplit");
