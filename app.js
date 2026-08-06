@@ -2487,6 +2487,23 @@
         if (el) el.addEventListener("toggle", saveSession);
       });
     }
+
+    // On mobile, the top-level cards stack vertically with no shared height
+    // budget - leaving several open at once means a lot of scrolling to get
+    // back to any one of them. Opening one now closes whichever other one
+    // was open, so only one card is ever expanded at a time. Desktop is
+    // unaffected: it already shows a single panel via setWorkspacePanel's
+    // own .desktop-active mechanism, not by closing <details> elements.
+    function hookMobileAccordion(){
+      const panels = Array.from(document.querySelectorAll(".workspaceContent > .workspacePanel"));
+      panels.forEach(panel=>{
+        panel.addEventListener("toggle", ()=>{
+          if (!panel.open) return;
+          if (!window.matchMedia("(max-width: 900px)").matches) return;
+          panels.forEach(other=>{ if (other !== panel && other.open) other.open = false; });
+        });
+      });
+    }
   function fmtRelFromNow(dateObj){
     if (!dateObj) return "—";
     const ms = dateObj.getTime() - Date.now();
@@ -3421,6 +3438,7 @@
       applyMobileTimelineMode(state.mobileTimelineOnly);
       syncWorkspaceForViewport();
       hookDetailsPersistence();
+      hookMobileAccordion();
       hookCustomToggles();
       // Sync toggle UI after restore
       syncHopperNamingUI();
