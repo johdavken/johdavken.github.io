@@ -829,15 +829,15 @@
         <div class="recipeScanOptions mt10">
           <div class="recipeScanOption">
             <button id="recipeScanJobTravelerBtn" class="secondary" type="button">Scan Job Traveler</button>
-            <p class="tiny muted">Reads layer percentages and resin blends from a printed job traveler and fills them into Recipe Setup.</p>
+            <p class="tiny muted">See help for more information.</p>
           </div>
           <div class="recipeScanOption">
             <button id="recipeScanDosingScreenBtn" class="secondary" type="button">Scan Dosing Screen</button>
-            <p class="tiny muted">Reads resin blends directly from the dosing controller's material overview screen or a printout of it - no hopper letters to sort out afterward. Validated for lines 9-11 (same dosing screen). Does not include layer percentages; you'll enter those on the review screen.</p>
+            <p class="tiny muted">See help for more information.</p>
           </div>
           <div class="recipeScanOption">
             <button id="recipeScanHeatSheetBtn" class="secondary" type="button">Scan Heat Sheet</button>
-            <p class="tiny muted">Reads layer/blender settings from a printed heat sheet and fills them into Recipe Setup. Like Job Traveler, you'll be asked which end is which, and unused hoppers just aren't written down. Legible handwriting matters most here - and writing in layer percentages and hopper designations helps it import cleanly.</p>
+            <p class="tiny muted">See help for more information.</p>
           </div>
         </div>
       </section>
@@ -940,11 +940,12 @@
               <li>Create one permanent line workspace on the first device and give the device a recognizable label.</li>
               <li>Generate a four-character link code. On another device, open RT Sync, enter that code, and select <strong>Join RT Sync</strong>.</li>
               <li>On phones, RT Sync is simplified around the current line, device label, sync details, Refresh, Disconnect, and Leave. Line creation, naming, link-code generation, and device administration remain on desktop.</li>
-              <li>Watch the status and unsynced-change count. Local changes save first, then upload; other connected devices update without a page refresh.</li>
+              <li>Watch the status and unsynced-change count. When something is pending, a list appears showing exactly what hasn't synced yet, with a Discard option for anything stuck against an unreachable workspace. Local changes save first, then upload; other connected devices update without a page refresh.</li>
               <li><strong>Disconnect on this device</strong> pauses syncing but keeps membership. <strong>Leave RT Sync</strong> removes that device's membership.</li>
               <li><strong>New job</strong> clears current job inputs and tracking while preserving the line workspace, linked devices, Saved Line Settings, and hopper weights.</li>
             </ol>
             <p class="helpTip">Link codes are one-time codes that expire after 30 minutes. The owner must transfer ownership before leaving and is the only device allowed to remove members or delete the shared line.</p>
+            <p class="helpTip">On mobile, tap the footer's RT Sync status to refresh the connection and apply any unsynced changes immediately.</p>
           </div>
         </details>
 
@@ -978,7 +979,33 @@
               <li><strong>Short Footage Calculator:</strong> Enter actual weight, target footage, and the last good weight to calculate adjusted short footage.</li>
               <li><strong>Hopper Weight Calculator:</strong> Enter hopper circumference and usable height, then provide bulk density directly or estimate it from polymer density and the adjustable packing factor.</li>
               <li><strong>Resin Lookup:</strong> Search by resin code or description. Select a suggestion to view description, density, material information, and typical uses. The Copy button copies the numeric density.</li>
+              <li><strong>Scan Recipe:</strong> Fill Recipe Setup from a photo of a job traveler, dosing screen, or heat sheet. See the Scan Recipe topic below for what each source needs and what to check before applying.</li>
             </ul>
+          </div>
+        </details>
+
+        <details class="helpTopic" id="helpRecipeScan">
+          <summary><span>Scan Recipe</span><small>Fill Recipe Setup from a photo</small></summary>
+          <div class="helpTopicBody">
+            <p>Scan Recipe reads a photo of a paper or screen source and builds a draft recipe for you to review. Nothing is written to Recipe Setup until you select Apply.</p>
+            <h3>Scan Job Traveler</h3>
+            <ol>
+              <li>On a 3- or 5-layer line, you'll first be asked which physical end layer A represents, since the printed table doesn't label this itself.</li>
+              <li>Take or choose a photo of the job traveler's product blend table. Hand-written hopper numbers next to a resin are read automatically when legible.</li>
+            </ol>
+            <h3>Scan Dosing Screen</h3>
+            <ol>
+              <li>Take or choose a photo of the dosing controller's material overview screen, or a printout of it. Validated for lines 9-11.</li>
+              <li>No orientation question - component position maps directly to hopper number, so there are no hopper letters to sort out afterward.</li>
+              <li>This screen never prints layer percentages; enter them on the review screen.</li>
+            </ol>
+            <h3>Scan Heat Sheet</h3>
+            <ol>
+              <li>On a 3- or 5-layer line, you'll first be asked which physical end layer A represents, same as Job Traveler.</li>
+              <li>Take or choose a photo of the blender/layer settings heat sheet. An unused hopper is simply not written down, not padded with a zero row.</li>
+              <li>Legible handwriting matters most here. Writing in layer percentages and hopper designations when you fill one out helps it import cleanly.</li>
+            </ol>
+            <p class="helpTip"><strong>Review carefully:</strong> a scan can misread handwriting or a low-quality photo. Check every layer, hopper, and percentage on the review screen - and watch for its warnings about percentages that don't total 100% - before applying.</p>
           </div>
         </details>
       </div>
