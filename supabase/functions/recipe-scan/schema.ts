@@ -1,12 +1,10 @@
-// Pure validation/allowlisting for a Job Traveler scan's AI response. No I/O,
-// no Supabase/OpenAI calls here - only used by index.ts after the provider
-// call returns, and by its own tests.
+// Pure validation/allowlisting for a recipe scan's AI response. No I/O, no
+// Supabase/OpenAI calls here - only used by index.ts after the provider call
+// returns, and by its own tests.
 //
-// Scoped to Job Traveler only - Dosing Screen and Heat Sheet aren't wired
-// yet (their buttons are disabled in the UI). When they're built, this will
-// need to grow a source_type split rather than being extended in place,
-// since their schema differs meaningfully (hopper letters instead of
-// AI-derived position, handwritten-mode legibility expectations).
+// Two source types, two separate sanitize functions rather than one relaxed
+// in place - see the Dosing Screen section below for why. Heat Sheet isn't
+// wired up yet (its button is disabled in the UI).
 //
 // Two different kinds of problems, handled differently:
 //  - Malformed/untrustworthy AI output (wrong type, out-of-domain value,
@@ -192,6 +190,138 @@ export function sanitizeRecipeScanResult(raw: unknown): SanitizeResult {
 
   const expectedPositions = POSITIONS_BY_LAYER_COUNT[rawLayers.length];
   const layers = rawLayers.map((layer, index) => sanitizeLayer(layer, expectedPositions, errors, index));
+
+  if (errors.length > 0) return { ok: false, errors, value: null };
+
+  return {
+    ok: true,
+    errors: [],
+    value: {
+      recipe: {
+        name: name.value,
+        layers,
+        layer_count: layers.length,
+        layer_percentage_total_status: totalStatus(layers.map((l) => l!.layer_percentage))
+      }
+    }
+  };
+}
+
+// --- Dosing Screen (material overview HMI screen or its printout) --------
+//
+// Meaningfully different from Job Traveler, not just a relaxed variant:
+//  - Layers are identified by row order (top to bottom = A to E), exactly
+//    like Job Traveler's column order - never by reading the row's letter
+//    as if it were authoritative. layer_letter is carried through only as
+//    an informational cross-check for the review screen, same reasoning as
+//    "identify by position, not header text."
+//  - Components map directly to hopper position (component 1 = H1, etc.) on
+//    lines where that dosing-controller naming convention is enabled, so
+//    there is no hopper_designation concept here at all - and unlike Job
+//    Traveler's "omit blank padding rows," every layer must return exactly
+//    DOSING_SCREEN_COMPONENTS_PER_LAYER slots (null resin/percentage for an
+//    unused one) so array position reliably maps to hopper position.
+//  - layer_percentage is structurally never printed on this screen - the
+//    schema still carries the field (client-side auto-derives a single
+//    missing layer, same as Job Traveler), it just means every layer scan
+//    will actually have it null.
+
+export const DOSING_SCREEN_COMPONENTS_PER_LAYER = 6; // matches hopper capacity (H1-H6); always exactly this many, never omitted
+const LAYER_LETTERS = ["A", "B", "C", "D", "E"] as const;
+
+function sanitizeLayerLetter(v: unknown): { ok: boolean; value: string | null } {
+  if (v === null || v === undefined) return { ok: true, value: null };
+  if (typeof v === "string" && (LAYER_LETTERS as readonly string[]).includes(v)) return { ok: true, value: v };
+  return { ok: false, value: null };
+}
+
+function sanitizeDosingScreenComponent(raw: unknown, errors: string[], path: string) {
+  if (!isPlainObject(raw)) {
+    errors.push(`${path}: component must be an object`);
+    return null;
+  }
+  const resinCode = sanitizeString(raw.resin_code, MAX_NAME_LENGTH);
+  if (!resinCode.ok) errors.push(`${path}.resin_code: must be a string of at most ${MAX_NAME_LENGTH} characters, or null`);
+  const resinCodeConfidence = sanitizeConfidence(raw.resin_code_confidence);
+  if (!resinCodeConfidence.ok) errors.push(`${path}.resin_code_confidence: must be 0-1, or null`);
+  // The setpoint value, never the small live/actual reading shown next to it.
+  const percentage = sanitizePercentage(raw.percentage);
+  if (!percentage.ok) errors.push(`${path}.percentage: must be 0-100, or null`);
+  const percentageConfidence = sanitizeConfidence(raw.percentage_confidence);
+  if (!percentageConfidence.ok) errors.push(`${path}.percentage_confidence: must be 0-1, or null`);
+
+  return {
+    resin_code: resinCode.value,
+    resin_code_confidence: resinCodeConfidence.value,
+    percentage: percentage.value,
+    percentage_confidence: percentageConfidence.value
+  };
+}
+
+function sanitizeDosingScreenLayer(raw: unknown, errors: string[], index: number) {
+  const path = `recipe.layers[${index}]`;
+  if (!isPlainObject(raw)) {
+    errors.push(`${path}: layer must be an object`);
+    return null;
+  }
+
+  const layerLetter = sanitizeLayerLetter(raw.layer_letter);
+  if (!layerLetter.ok) errors.push(`${path}.layer_letter: must be one of A-E, or null`);
+  const layerLetterConfidence = sanitizeConfidence(raw.layer_letter_confidence);
+  if (!layerLetterConfidence.ok) errors.push(`${path}.layer_letter_confidence: must be 0-1, or null`);
+
+  const layerPercentage = sanitizePercentage(raw.layer_percentage);
+  if (!layerPercentage.ok) errors.push(`${path}.layer_percentage: must be 0-100, or null`);
+  const layerPercentageConfidence = sanitizeConfidence(raw.layer_percentage_confidence);
+  if (!layerPercentageConfidence.ok) errors.push(`${path}.layer_percentage_confidence: must be 0-1, or null`);
+
+  const rawComponents = Array.isArray(raw.components) ? raw.components : null;
+  if (!rawComponents || rawComponents.length !== DOSING_SCREEN_COMPONENTS_PER_LAYER) {
+    errors.push(`${path}.components: must be an array of exactly ${DOSING_SCREEN_COMPONENTS_PER_LAYER} entries (empty slots included), so position maps reliably to hopper number`);
+  }
+  const components = (rawComponents || [])
+    .slice(0, DOSING_SCREEN_COMPONENTS_PER_LAYER)
+    .map((component, componentIndex) => sanitizeDosingScreenComponent(component, errors, `${path}.components[${componentIndex}]`))
+    .filter((component): component is NonNullable<typeof component> => component !== null);
+
+  return {
+    layer_letter: layerLetter.value,
+    layer_letter_confidence: layerLetterConfidence.value,
+    layer_percentage: layerPercentage.value,
+    layer_percentage_confidence: layerPercentageConfidence.value,
+    components,
+    component_percentage_total_status: totalStatus(components.map((c) => c.percentage))
+  };
+}
+
+export function sanitizeDosingScreenScanResult(raw: unknown): SanitizeResult {
+  const errors: string[] = [];
+  if (!isPlainObject(raw)) {
+    return { ok: false, errors: ["response must be an object"], value: null };
+  }
+
+  const recipe = isPlainObject(raw.recipe) ? raw.recipe : null;
+  if (!recipe) return { ok: false, errors: ["recipe: must be an object"], value: null };
+
+  const name = sanitizeString(recipe.name, MAX_NAME_LENGTH);
+  if (!name.ok) errors.push(`recipe.name: must be a string of at most ${MAX_NAME_LENGTH} characters, or null`);
+
+  const rawLayers = Array.isArray(recipe.layers) ? recipe.layers : null;
+  if (!rawLayers) return { ok: false, errors: ["recipe.layers: must be an array"], value: null };
+  if (rawLayers.length === 0) return { ok: false, errors: ["recipe.layers: at least one layer is required"], value: null };
+  if (rawLayers.length > MAX_LAYERS) return { ok: false, errors: [`recipe.layers: at most ${MAX_LAYERS} layers allowed`], value: null };
+
+  // Same physical-line constraint as Job Traveler - still required even
+  // though this source is "less restrictive" in other ways.
+  if (!(VALID_LAYER_COUNTS as readonly number[]).includes(rawLayers.length)) {
+    return {
+      ok: false,
+      errors: [`recipe.layers: detected ${rawLayers.length} layers, which doesn't match a valid line configuration (1, 3, or 5)`],
+      value: null
+    };
+  }
+
+  const layers = rawLayers.map((layer, index) => sanitizeDosingScreenLayer(layer, errors, index));
 
   if (errors.length > 0) return { ok: false, errors, value: null };
 

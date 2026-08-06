@@ -1,10 +1,13 @@
-// Recipe Import - Scan Job Traveler. Parses a photo of a QA-030-style job
-// traveler into a structured draft (layer positions, resin components, and
-// any handwritten hopper plan) for the operator to review and confirm
-// before anything touches Recipe Setup. This function never writes to
-// Postgres and never applies anything - it only returns a sanitized draft.
-// Applying a confirmed draft is a client-side concern (a later phase),
-// through the app's existing guarded Recipe Setup mutation path.
+// Recipe Import - Scan Job Traveler or Scan Dosing Screen. Parses a photo
+// into a structured draft (layer identity, resin components) for the
+// operator to review and confirm before anything touches Recipe Setup.
+// This function never writes to Postgres and never applies anything - it
+// only returns a sanitized draft. Applying a confirmed draft is a
+// client-side concern, through the app's existing guarded Recipe Setup
+// mutation path. The client's source_type form field ("job_traveler" or
+// "dosing_screen") selects which prompt/schema/sanitizer this request uses -
+// see schema.ts for why these are two genuinely different shapes, not one
+// relaxed in place.
 //
 // Required environment (Edge Function secrets):
 //   SUPABASE_URL       - auto-provided by Supabase to every Edge Function.
@@ -31,9 +34,14 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import {
   MAX_COMPONENTS_PER_LAYER,
   MAX_LAYERS,
+  DOSING_SCREEN_COMPONENTS_PER_LAYER,
   sanitizeRecipeScanResult,
+  sanitizeDosingScreenScanResult,
   validateImage
 } from "./schema.ts";
+
+const SOURCE_TYPES = ["job_traveler", "dosing_screen"] as const;
+type SourceType = typeof SOURCE_TYPES[number];
 
 const ALLOWED_ORIGINS = [
   "https://resin.tools",
@@ -142,6 +150,68 @@ function responseJsonSchema() {
   };
 }
 
+const LAYER_LETTERS = ["A", "B", "C", "D", "E"];
+
+function dosingScreenComponentJsonSchema() {
+  return {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      resin_code: { type: ["string", "null"] },
+      resin_code_confidence: { type: ["number", "null"] },
+      percentage: { type: ["number", "null"] },
+      percentage_confidence: { type: ["number", "null"] }
+    },
+    required: ["resin_code", "resin_code_confidence", "percentage", "percentage_confidence"]
+  };
+}
+
+function dosingScreenLayerJsonSchema() {
+  return {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      layer_letter: { type: ["string", "null"], enum: [...LAYER_LETTERS, null] },
+      layer_letter_confidence: { type: ["number", "null"] },
+      layer_percentage: { type: ["number", "null"] },
+      layer_percentage_confidence: { type: ["number", "null"] },
+      // Exactly this many, always - never omitted - so array position maps
+      // reliably to hopper position on the client. minItems === maxItems is
+      // deliberate, not a typo.
+      components: {
+        type: "array",
+        minItems: DOSING_SCREEN_COMPONENTS_PER_LAYER,
+        maxItems: DOSING_SCREEN_COMPONENTS_PER_LAYER,
+        items: dosingScreenComponentJsonSchema()
+      }
+    },
+    required: ["layer_letter", "layer_letter_confidence", "layer_percentage", "layer_percentage_confidence", "components"]
+  };
+}
+
+function dosingScreenResponseJsonSchema() {
+  return {
+    name: "dosing_screen_scan_result",
+    strict: true,
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        recipe: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            name: { type: ["string", "null"] },
+            layers: { type: "array", maxItems: MAX_LAYERS, items: dosingScreenLayerJsonSchema() }
+          },
+          required: ["name", "layers"]
+        }
+      },
+      required: ["recipe"]
+    }
+  };
+}
+
 const PROMPT = [
   "Return only structured JSON matching the provided schema - no prose, no markdown fences.",
   "Use null for anything uncertain. Never invent a resin code or percentage - a guess is worse than null.",
@@ -176,6 +246,42 @@ const PROMPT = [
   "invent one."
 ].join(" ");
 
+const DOSING_SCREEN_PROMPT = [
+  "Return only structured JSON matching the provided schema - no prose, no markdown fences.",
+  "Use null for anything uncertain. Never invent a resin code or percentage - a guess is worse than null.",
+  "Return per-field confidence (0-1, or null) wherever the schema provides a confidence field.",
+  "Confidence is a review hint only, not a claim of correctness.",
+  "",
+  "This is a dosing/material-overview screen from an extrusion line's gravimetric blending controller",
+  "(either a live photo of the touchscreen or a printout of the same table) - a 'material overview' grid",
+  "with one row per physical film layer and up to six weighed components per row. Rows are already listed",
+  "top to bottom in physical layer order (the same order the line's own software displays them in) -",
+  "identify each layer by ROW POSITION, top to bottom. Each row is also labeled with a letter (e.g. 'A',",
+  "'B', or 'Main' for the first row on lines where that naming convention is enabled) - read that letter",
+  "into layer_letter as an informational cross-check only; row position is what actually determines which",
+  "layer a row belongs to, not the label text (a row labeled 'Main' is still simply the first row).",
+  "Return only the layers actually present - do not pad to 5. Do not guess a layer count other than what",
+  "the rows actually show.",
+  "",
+  "Each row lists up to six weighed components, one per physical hopper, in a fixed left-to-right or",
+  "top-to-bottom order matching hopper 1 through hopper 6 (on lines where this dosing naming convention is",
+  "enabled, which it is for the lines this scan option supports). You MUST return exactly six component",
+  "entries per layer, in that fixed order - for any hopper position with no resin dosed (blank or showing",
+  "only zeros), return { resin_code: null, percentage: null } for that position rather than omitting it;",
+  "omitting a slot would break the position-to-hopper mapping for every slot after it.",
+  "",
+  "Each component typically shows two percentage numbers close together: a bold target/setpoint value and",
+  "a smaller live/actual reading that fluctuates in real time. Always read the bold setpoint value into",
+  "percentage - never the small live/actual reading.",
+  "",
+  "This screen never prints an overall percentage split between layers (that is a separate thickness/die",
+  "setting not shown here) - leave layer_percentage null on every layer; do not guess it from component",
+  "percentages or anything else on screen.",
+  "",
+  "If this is a printout rather than a live screen photo, print quality may degrade specific numbers -",
+  "apply the same null-for-illegible rule as any other uncertain value."
+].join(" ");
+
 async function fileToBase64(file: File): Promise<string> {
   const buffer = new Uint8Array(await file.arrayBuffer());
   let binary = "";
@@ -183,7 +289,14 @@ async function fileToBase64(file: File): Promise<string> {
   return btoa(binary);
 }
 
-async function callOpenAI(apiKey: string, model: string, file: File): Promise<unknown> {
+async function callOpenAI(
+  apiKey: string,
+  model: string,
+  file: File,
+  systemPrompt: string,
+  userText: string,
+  jsonSchema: Record<string, unknown>
+): Promise<unknown> {
   const base64 = await fileToBase64(file);
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -194,16 +307,16 @@ async function callOpenAI(apiKey: string, model: string, file: File): Promise<un
     body: JSON.stringify({
       model,
       messages: [
-        { role: "system", content: PROMPT },
+        { role: "system", content: systemPrompt },
         {
           role: "user",
           content: [
-            { type: "text", text: "Extract this job traveler's product blend table." },
+            { type: "text", text: userText },
             { type: "image_url", image_url: { url: `data:${file.type};base64,${base64}` } }
           ]
         }
       ],
-      response_format: { type: "json_schema", json_schema: responseJsonSchema() }
+      response_format: { type: "json_schema", json_schema: jsonSchema }
     })
   });
 
@@ -261,11 +374,15 @@ async function handleRequest(req: Request): Promise<Response> {
   const workspaceId = form.get("workspace_id");
   const requestId = form.get("request_id");
   const image = form.get("image");
+  const sourceType = form.get("source_type");
 
   if (typeof workspaceId !== "string" || !/^[0-9a-f-]{36}$/i.test(workspaceId)) {
     return errorResponse(400, "invalid_request", origin);
   }
   if (!(image instanceof File)) {
+    return errorResponse(400, "invalid_request", origin);
+  }
+  if (typeof sourceType !== "string" || !(SOURCE_TYPES as readonly string[]).includes(sourceType)) {
     return errorResponse(400, "invalid_request", origin);
   }
 
@@ -306,17 +423,26 @@ async function handleRequest(req: Request): Promise<Response> {
   const imageCheck = validateImage(imageBytes, image.type, imageBytes.byteLength);
   if (!imageCheck.ok) return errorResponse(400, imageCheck.error as string, origin);
 
+  const isDosingScreen = (sourceType as SourceType) === "dosing_screen";
+
   let raw: unknown;
   try {
-    raw = await callOpenAI(openaiApiKey, openaiModel, image);
+    raw = await callOpenAI(
+      openaiApiKey,
+      openaiModel,
+      image,
+      isDosingScreen ? DOSING_SCREEN_PROMPT : PROMPT,
+      isDosingScreen ? "Extract this dosing screen's material overview table." : "Extract this job traveler's product blend table.",
+      isDosingScreen ? dosingScreenResponseJsonSchema() : responseJsonSchema()
+    );
   } catch {
     return errorResponse(502, "parse_failed", origin);
   }
 
-  const sanitized = sanitizeRecipeScanResult(raw);
+  const sanitized = isDosingScreen ? sanitizeDosingScreenScanResult(raw) : sanitizeRecipeScanResult(raw);
   if (!sanitized.ok) {
     // TEMPORARY diagnostic logging - remove once root-caused.
-    console.error("recipe-scan: sanitizeRecipeScanResult rejected the AI response", JSON.stringify(sanitized.errors).slice(0, 500));
+    console.error("recipe-scan: sanitize rejected the AI response", sourceType, JSON.stringify(sanitized.errors).slice(0, 500));
     return errorResponse(502, "parse_failed", origin);
   }
 

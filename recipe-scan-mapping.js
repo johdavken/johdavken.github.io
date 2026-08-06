@@ -71,6 +71,26 @@
     }));
   }
 
+  // If exactly one layer's percentage is missing, it's solvable the same way
+  // H1's hopper percentage always is: 100 minus the rest. Two or more missing
+  // is genuinely unsolvable (not enough knowns for the unknowns) and is left
+  // for the operator to fill in on the review screen instead of guessed at.
+  // Shared by both source types - Dosing Screen hits the "two or more
+  // missing" branch on almost every scan, since it never prints any layer
+  // percentage at all.
+  function applySingleMissingLayerDerive(layers) {
+    const missing = layers.filter(layer => layer.layer_pct_estimated);
+    if (missing.length === 1) {
+      const knownTotal = layers.filter(layer => !layer.layer_pct_estimated).reduce((total, layer) => total + layer.layer_pct, 0);
+      const derived = 100 - knownTotal;
+      if (derived >= 0 && derived <= 100) {
+        missing[0].layer_pct = derived;
+        missing[0].layer_pct_estimated = false;
+        missing[0].layer_pct_derived = true;
+      }
+    }
+  }
+
   function buildRecipePayloadFromScan(scanRecipe, options) {
     const lineType = Number(options && options.lineType);
     const names = payloads.expectedLayerNames(lineType);
@@ -89,11 +109,14 @@
       return {
         name,
         layer_pct: scannedLayer.layer_percentage == null ? 0 : scannedLayer.layer_percentage,
-        // Review-screen hint only - applyRecipePayload ignores unknown layer fields.
+        // Review-screen hints only - applyRecipePayload ignores unknown layer fields.
         layer_pct_estimated: scannedLayer.layer_percentage == null,
+        layer_pct_derived: false,
         hoppers
       };
     });
+
+    applySingleMissingLayerDerive(layers);
 
     return {
       ok: true,
@@ -106,5 +129,58 @@
     };
   }
 
-  return { expectedPositionsForLetters, buildRecipePayloadFromScan };
+  // Dosing Screen: no orientation (layers are already listed top-to-bottom in
+  // physical A-E order by the controller itself, unlike Job Traveler's
+  // ambiguous "which end is A"), and no fill algorithm (component position
+  // maps directly to hopper position on lines where that dosing naming
+  // convention is enabled - the schema guarantees exactly 6 slots per layer,
+  // nulls included, so array index is reliably hopper index).
+  function mapDosingScreenComponents(components) {
+    const slots = (components || []).slice(0, HOPPERS_PER_LAYER);
+    while (slots.length < HOPPERS_PER_LAYER) slots.push({ resin_code: null, percentage: null });
+    return slots.map(component => ({
+      resin_name: component.resin_code || null,
+      pct: component.percentage == null ? 0 : component.percentage,
+      // A real resin is dosing here but its percentage couldn't be read -
+      // distinct from a genuinely empty/unused hopper (both resin and
+      // percentage null), which is not "estimated", just empty.
+      percentage_estimated: component.resin_code != null && component.percentage == null
+    }));
+  }
+
+  function buildDosingScreenRecipePayloadFromScan(scanRecipe, options) {
+    const lineType = Number(options && options.lineType);
+    const names = payloads.expectedLayerNames(lineType);
+    if (!names) return { ok: false, reason: "invalid_line_type", message: "Unknown line configuration." };
+    if (!scanRecipe || scanRecipe.layer_count !== lineType) {
+      return { ok: false, reason: "layer_count_mismatch", message: "Wrong layer configuration for active line" };
+    }
+
+    const layers = names.map((name, index) => {
+      const scannedLayer = scanRecipe.layers[index];
+      const hoppers = mapDosingScreenComponents(scannedLayer.components);
+      hoppers[0].pct = 100 - hoppers.slice(1).reduce((total, hopper) => total + hopper.pct, 0);
+      return {
+        name,
+        layer_pct: scannedLayer.layer_percentage == null ? 0 : scannedLayer.layer_percentage,
+        layer_pct_estimated: scannedLayer.layer_percentage == null,
+        layer_pct_derived: false,
+        hoppers
+      };
+    });
+
+    applySingleMissingLayerDerive(layers);
+
+    return {
+      ok: true,
+      payload: {
+        schema_version: payloads.SCHEMA_VERSION,
+        line_type: lineType,
+        hopper_naming_mode: (options && options.hopperNamingMode) === "main" ? "main" : "standard",
+        layers
+      }
+    };
+  }
+
+  return { expectedPositionsForLetters, buildRecipePayloadFromScan, buildDosingScreenRecipePayloadFromScan };
 });

@@ -2485,6 +2485,8 @@ button.compactAction{
 .recipeScanReviewLayerHead{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; font-weight:600; }
 .recipeScanReviewHopper{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; font-size: 0.9em; }
 .recipeScanReviewHopper .muted{ font-style:italic; }
+.recipeScanReviewLayerPctInput{ display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
+.recipeScanReviewLayerPctInput input{ width:5em; }
 .recipeScanReviewEstimated{ color: var(--warn); }
 .recipeScanReviewWarningText{ color: var(--warn); }
 .toolResult{

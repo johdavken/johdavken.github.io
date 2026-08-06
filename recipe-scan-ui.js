@@ -8,9 +8,21 @@
   function schema(){ return root.PolynRecipeScanSchema || null; }
   function config(){ return root.POLYN_SUPABASE_CONFIG || null; }
 
-  let pendingOrientation = null; // "inside" | "outside" | null (null = 1-layer line, no orientation needed)
+  const CAPTURE_COPY = {
+    job_traveler: {
+      title: "Scan Job Traveler",
+      description: "Take a photo of the job traveler's product blend table, or choose an existing photo."
+    },
+    dosing_screen: {
+      title: "Scan Dosing Screen",
+      description: "Take a photo of the dosing controller's material overview screen, or choose an existing photo (screen photo or printout)."
+    }
+  };
+
+  let pendingSourceType = null;  // "job_traveler" | "dosing_screen"
+  let pendingOrientation = null; // "inside" | "outside" | null (null = 1-layer line or dosing_screen - neither needs it)
   let pendingScan = null;        // sanitized recipe-scan result (.recipe), as returned by the Edge Function
-  let pendingPayload = null;     // built via PolynRecipeScanMapping.buildRecipePayloadFromScan, for review + apply
+  let pendingPayload = null;     // built via PolynRecipeScanMapping's mapping functions, for review + apply
   let scanInFlight = false;      // guards against a second submission while one request is already in flight
 
   function setStatus(id, text, isError){
@@ -21,12 +33,12 @@
   }
 
   function resetCaptureInputs(){
-    const camera = $("recipeScanCameraInput"), gallery = $("recipeScanGalleryInput");
-    if (camera) camera.value = "";
-    if (gallery) gallery.value = "";
+    const input = $("recipeScanCaptureInput");
+    if (input) input.value = "";
   }
 
   function resetPendingScan(){
+    pendingSourceType = null;
     pendingOrientation = null;
     pendingScan = null;
     pendingPayload = null;
@@ -35,14 +47,18 @@
 
   // --- entry point -----------------------------------------------------
 
-  function startScan(){
+  function startScan(sourceType){
     if (!serviceApi.getWorkspaceId()){
-      alert("Connect to an RT Sync workspace before scanning a job traveler.");
+      alert("Connect to an RT Sync workspace before scanning.");
       return;
     }
     resetPendingScan();
+    pendingSourceType = sourceType;
+    // Dosing Screen never needs the orientation prompt - the controller
+    // already prints/labels each row with its physical layer letter, unlike
+    // Job Traveler's column order, which is ambiguous without it.
     const lineType = Number(serviceApi.getLineType());
-    if (lineType === 1) openCaptureDialog();
+    if (sourceType === "dosing_screen" || lineType === 1) openCaptureDialog();
     else openOrientationDialog();
   }
 
@@ -67,6 +83,11 @@
     setStatus("recipeScanCaptureStatus", "");
     resetCaptureInputs();
     scanInFlight = false;
+    const copy = CAPTURE_COPY[pendingSourceType] || CAPTURE_COPY.job_traveler;
+    const title = $("recipeScanCaptureTitle");
+    const description = $("recipeScanCaptureDescription");
+    if (title) title.textContent = copy.title;
+    if (description) description.textContent = copy.description;
     $("recipeScanCaptureDialog")?.showModal?.();
   }
 
@@ -121,6 +142,7 @@
       form.append("workspace_id", serviceApi.getWorkspaceId());
       form.append("request_id", requestId);
       form.append("image", file);
+      form.append("source_type", pendingSourceType);
 
       const response = await fetch(`${base}/functions/v1/recipe-scan`, {
         method: "POST",
@@ -135,9 +157,13 @@
         return;
       }
 
-      const built = mapping()?.buildRecipePayloadFromScan(body.result.recipe, {
+      const buildFn = pendingSourceType === "dosing_screen"
+        ? mapping()?.buildDosingScreenRecipePayloadFromScan
+        : mapping()?.buildRecipePayloadFromScan;
+      const built = buildFn?.(body.result.recipe, {
         lineType: Number(serviceApi.getLineType()),
-        orientation: pendingOrientation
+        orientation: pendingOrientation,
+        hopperNamingMode: serviceApi.getHopperNamingMode?.()
       });
       if (!built?.ok){
         setStatus("recipeScanCaptureStatus", built?.message || "This scan could not be applied.", true);
@@ -179,6 +205,42 @@
     return value;
   }
 
+  // Only layer percentage is ever editable here - it's the one field that
+  // structurally blocks Apply entirely when missing (applyRecipePayload
+  // requires all layers to sum to 100% before anything is written), unlike
+  // a single uncertain hopper, which can be applied as a 0% placeholder and
+  // fixed afterward in Recipe Setup. Hopper resin/percentage stay read-only
+  // by design - Recipe Setup's own inputs are better suited to that editing,
+  // especially on mobile.
+  function layerPctNode(layer, layerIndex){
+    if (layer.layer_pct_estimated){
+      const wrap = document.createElement("span");
+      wrap.className = "recipeScanReviewLayerPctInput";
+      const label = document.createElement("span");
+      label.className = "recipeScanReviewEstimated";
+      label.textContent = `Layer ${layer.name} percentage: `;
+      const input = document.createElement("input");
+      input.type = "number";
+      input.min = "0";
+      input.max = "100";
+      input.step = "0.01";
+      input.setAttribute("aria-label", `Layer ${layer.name} percentage`);
+      input.addEventListener("input", () => {
+        const value = parseFloat(input.value);
+        pendingPayload.layers[layerIndex].layer_pct = Number.isFinite(value) ? value : 0;
+      });
+      const percentSign = document.createElement("span");
+      percentSign.textContent = "%";
+      wrap.append(label, input, percentSign);
+      return wrap;
+    }
+    const span = document.createElement("span");
+    span.textContent = layer.layer_pct_derived
+      ? `Layer ${layer.name}: ${layer.layer_pct}% (calculated)`
+      : `Layer ${layer.name}: ${layer.layer_pct}%`;
+    return span;
+  }
+
   function renderReview(){
     const content = $("recipeScanReviewContent");
     const warning = $("recipeScanReviewWarning");
@@ -203,14 +265,7 @@
 
       const head = document.createElement("div");
       head.className = "recipeScanReviewLayerHead";
-      const pctSpan = document.createElement("span");
-      if (layer.layer_pct_estimated){
-        pctSpan.className = "recipeScanReviewEstimated";
-        pctSpan.textContent = `Layer ${layer.name}: percentage not read`;
-      } else {
-        pctSpan.textContent = `Layer ${layer.name}: ${layer.layer_pct}%`;
-      }
-      head.append(pctSpan);
+      head.append(layerPctNode(layer, index));
       if (scannedLayer?.component_percentage_total_status && scannedLayer.component_percentage_total_status !== "ok"){
         const flag = document.createElement("span");
         flag.className = "recipeScanReviewEstimated";
@@ -245,8 +300,8 @@
   }
 
   function applyReview(){
-    if (!pendingScan){ closeReviewDialog(); return; }
-    const result = serviceApi.applyScannedRecipe(pendingScan, pendingOrientation);
+    if (!pendingPayload){ closeReviewDialog(); return; }
+    const result = serviceApi.applyPayload(pendingPayload);
     if (!result?.ok){
       setStatus("recipeScanReviewStatus", result?.message || "This scan could not be applied.", true);
       return;
@@ -269,12 +324,11 @@
 
   // --- wiring ------------------------------------------------------------
 
-  $("recipeScanJobTravelerBtn")?.addEventListener("click", startScan);
+  $("recipeScanJobTravelerBtn")?.addEventListener("click", () => startScan("job_traveler"));
+  $("recipeScanDosingScreenBtn")?.addEventListener("click", () => startScan("dosing_screen"));
 
-  $("recipeScanCameraBtn")?.addEventListener("click", () => $("recipeScanCameraInput")?.click());
-  $("recipeScanGalleryBtn")?.addEventListener("click", () => $("recipeScanGalleryInput")?.click());
-  $("recipeScanCameraInput")?.addEventListener("change", event => submitFile(event.target.files?.[0]));
-  $("recipeScanGalleryInput")?.addEventListener("change", event => submitFile(event.target.files?.[0]));
+  $("recipeScanCaptureBtn")?.addEventListener("click", () => $("recipeScanCaptureInput")?.click());
+  $("recipeScanCaptureInput")?.addEventListener("change", event => submitFile(event.target.files?.[0]));
   $("recipeScanCaptureCancelBtn")?.addEventListener("click", () => { closeCaptureDialog(); resetPendingScan(); });
 
   $("recipeScanReviewCancelBtn")?.addEventListener("click", cancelReview);

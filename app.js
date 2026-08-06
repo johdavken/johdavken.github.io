@@ -141,20 +141,15 @@
   function hasNonEmptyRecipe(){
     return state.layers.some(layer=>layer.hoppers.some(hopper=>hopper.resinName && hopper.resinName.trim()));
   }
-  // Converts a sanitized recipe-scan result into a recipe payload (see
-  // recipe-scan-mapping.js) and applies it through the same guarded
-  // apply/render/save/notify pathway as loading a shared cloud recipe -
-  // no separate mutation logic for scanned recipes.
-  function applyScannedRecipe(scanRecipe, orientation){
-    const mapping = window.PolynRecipeScanMapping;
-    if (!mapping) return { ok:false, message:"Recipe scan mapping is unavailable." };
-    const built = mapping.buildRecipePayloadFromScan(scanRecipe, {
-      lineType: state.lineType,
-      orientation,
-      hopperNamingMode: state.hopperNamingLine9==="main" ? "main" : "standard"
-    });
-    if (!built.ok) return { ok:false, message: built.message || "This scan could not be applied." };
-    const result = window.PolynWorkspaceConfigurationPayloads?.applyRecipePayload(state, built.payload);
+  // Applies an already-built recipe payload (see recipe-scan-mapping.js,
+  // which the scan UI runs once when a scan arrives and again live as the
+  // operator edits the review screen's layer-percentage fields) through the
+  // same guarded apply/render/save/notify pathway as loading a shared cloud
+  // recipe. Deliberately payload-in, not scan-in - this function doesn't
+  // know or care where the payload came from, so review-screen edits are
+  // submitted as-is rather than being silently recomputed from the raw scan.
+  function applyScannedRecipePayload(payload){
+    const result = window.PolynWorkspaceConfigurationPayloads?.applyRecipePayload(state, payload);
     if (!result?.ok) return { ok:false, message: result?.errors?.[0] || "This scan could not be applied." };
     renderWeightsArea(); renderSplitsArea(); validateAndCompute(); saveSession();
     notifyActiveJobMutation({immediate:true,kind:"apply-recipe-scan"});
@@ -3158,8 +3153,9 @@
       getWorkspaceId: () => lineSync?.getState?.().selectedWorkspaceId || "",
       getAccessToken: () => lineSync?.getAccessToken?.() || Promise.resolve(null),
       getLineType: () => state.lineType,
+      getHopperNamingMode: () => state.hopperNamingLine9==="main" ? "main" : "standard",
       hasNonEmptyRecipe,
-      applyScannedRecipe
+      applyPayload: applyScannedRecipePayload
     };
   }
 

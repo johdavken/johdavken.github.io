@@ -831,8 +831,8 @@
             <p class="tiny muted">Reads layer percentages and resin blends from a printed job traveler and fills them into Recipe Setup.</p>
           </div>
           <div class="recipeScanOption">
-            <button id="recipeScanDosingScreenBtn" class="secondary" type="button" disabled>Scan Dosing Screen</button>
-            <p class="tiny muted">Not yet available.</p>
+            <button id="recipeScanDosingScreenBtn" class="secondary" type="button">Scan Dosing Screen</button>
+            <p class="tiny muted">Reads resin blends directly from the dosing controller's material overview screen or a printout of it - no hopper letters to sort out afterward. Validated for lines 9-11 (same dosing screen). Does not include layer percentages; you'll enter those on the review screen.</p>
           </div>
           <div class="recipeScanOption">
             <button id="recipeScanHeatSheetBtn" class="secondary" type="button" disabled>Scan Heat Sheet</button>
@@ -1079,17 +1079,11 @@
 
 <dialog id="recipeScanCaptureDialog" class="lineSyncConflictDialog" aria-labelledby="recipeScanCaptureTitle">
   <div id="recipeScanCaptureTitle" class="layerTitle">Scan Job Traveler</div>
-  <div class="muted mt10">Take a photo of the job traveler's product blend table, or choose an existing photo.</div>
-  <div class="segmentedActionToolbar mt10">
-    <div class="segmentedActionRow">
-      <button id="recipeScanCameraBtn" class="secondary" type="button">Take Photo</button>
-      <button id="recipeScanGalleryBtn" class="secondary" type="button">Choose from Gallery</button>
-    </div>
-  </div>
+  <div id="recipeScanCaptureDescription" class="muted mt10">Take a photo of the job traveler's product blend table, or choose an existing photo.</div>
+  <div class="buttonRow mt10"><button id="recipeScanCaptureBtn" type="button">Scan</button></div>
   <div id="recipeScanCaptureStatus" class="tiny mt10" role="status"></div>
   <div class="buttonRow mt10"><button id="recipeScanCaptureCancelBtn" class="secondary" type="button">Cancel</button></div>
-  <input id="recipeScanCameraInput" type="file" accept="image/*" capture="environment" hidden />
-  <input id="recipeScanGalleryInput" type="file" accept="image/*" hidden />
+  <input id="recipeScanCaptureInput" type="file" accept="image/*" hidden />
 </dialog>
 
 <dialog id="recipeScanReviewDialog" class="lineSyncConflictDialog recipeScanReviewDialog" aria-labelledby="recipeScanReviewTitle">

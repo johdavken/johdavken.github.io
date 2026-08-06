@@ -30,7 +30,7 @@ test("the panel is clearly marked experimental, using the existing warning-pill 
   assert.match(styles, /\.pill\.badge-warn\{/, "badge-warn must already exist - this feature reuses it rather than inventing new badge CSS");
 });
 
-test("all three scan options are present; only Job Traveler is enabled, the other two are natively disabled (not just unwired)", () => {
+test("all three scan options are present; Job Traveler and Dosing Screen are enabled, Heat Sheet is natively disabled (not just unwired)", () => {
   const sectionStart = html.indexOf('<section id="recipeScanTool"');
   const sectionEnd = html.indexOf("</section>", sectionStart);
   const section = html.slice(sectionStart, sectionEnd);
@@ -39,7 +39,7 @@ test("all three scan options are present; only Job Traveler is enabled, the othe
   assert.doesNotMatch(jobTraveler, /disabled/);
 
   const dosingScreen = section.match(/<button id="recipeScanDosingScreenBtn"[^>]*>/)[0];
-  assert.match(dosingScreen, /disabled/);
+  assert.doesNotMatch(dosingScreen, /disabled/);
 
   const heatSheet = section.match(/<button id="recipeScanHeatSheetBtn"[^>]*>/)[0];
   assert.match(heatSheet, /disabled/);

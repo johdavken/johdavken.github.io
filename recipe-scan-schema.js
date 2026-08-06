@@ -12,8 +12,8 @@
   // the same allowlist/flagging rules, and to pre-check an image client-side
   // before upload.
   //
-  // Scoped to Job Traveler only, matching the Edge Function - see that
-  // file's header for why Dosing Screen/Heat Sheet aren't included yet.
+  // Covers Job Traveler and Dosing Screen, matching the Edge Function's two
+  // sanitize functions - Heat Sheet isn't wired up yet.
 
   const VALID_LAYER_COUNTS = [1, 3, 5];
   const MAX_LAYERS = 5;
@@ -167,6 +167,113 @@
     };
   }
 
+  // --- Dosing Screen: layers identified by row order (never by reading the
+  // letter as authoritative), components always exactly 6 slots (nulls for
+  // unused, never omitted) so array position maps reliably to hopper number.
+  // See schema.ts's header for why this isn't just a relaxed Job Traveler.
+
+  const DOSING_SCREEN_COMPONENTS_PER_LAYER = 6;
+  const LAYER_LETTERS = ["A", "B", "C", "D", "E"];
+
+  function sanitizeLayerLetter(v) {
+    if (v === null || v === undefined) return { ok: true, value: null };
+    if (typeof v === "string" && LAYER_LETTERS.includes(v)) return { ok: true, value: v };
+    return { ok: false, value: null };
+  }
+
+  function sanitizeDosingScreenComponent(raw, errors, path) {
+    if (!isPlainObject(raw)) { errors.push(`${path}: component must be an object`); return null; }
+    const resinCode = sanitizeString(raw.resin_code, MAX_NAME_LENGTH);
+    if (!resinCode.ok) errors.push(`${path}.resin_code: must be a string of at most ${MAX_NAME_LENGTH} characters, or null`);
+    const resinCodeConfidence = sanitizeConfidence(raw.resin_code_confidence);
+    if (!resinCodeConfidence.ok) errors.push(`${path}.resin_code_confidence: must be 0-1, or null`);
+    const percentage = sanitizePercentage(raw.percentage);
+    if (!percentage.ok) errors.push(`${path}.percentage: must be 0-100, or null`);
+    const percentageConfidence = sanitizeConfidence(raw.percentage_confidence);
+    if (!percentageConfidence.ok) errors.push(`${path}.percentage_confidence: must be 0-1, or null`);
+
+    return {
+      resin_code: resinCode.value,
+      resin_code_confidence: resinCodeConfidence.value,
+      percentage: percentage.value,
+      percentage_confidence: percentageConfidence.value
+    };
+  }
+
+  function sanitizeDosingScreenLayer(raw, errors, index) {
+    const path = `recipe.layers[${index}]`;
+    if (!isPlainObject(raw)) { errors.push(`${path}: layer must be an object`); return null; }
+
+    const layerLetter = sanitizeLayerLetter(raw.layer_letter);
+    if (!layerLetter.ok) errors.push(`${path}.layer_letter: must be one of A-E, or null`);
+    const layerLetterConfidence = sanitizeConfidence(raw.layer_letter_confidence);
+    if (!layerLetterConfidence.ok) errors.push(`${path}.layer_letter_confidence: must be 0-1, or null`);
+
+    const layerPercentage = sanitizePercentage(raw.layer_percentage);
+    if (!layerPercentage.ok) errors.push(`${path}.layer_percentage: must be 0-100, or null`);
+    const layerPercentageConfidence = sanitizeConfidence(raw.layer_percentage_confidence);
+    if (!layerPercentageConfidence.ok) errors.push(`${path}.layer_percentage_confidence: must be 0-1, or null`);
+
+    const rawComponents = Array.isArray(raw.components) ? raw.components : null;
+    if (!rawComponents || rawComponents.length !== DOSING_SCREEN_COMPONENTS_PER_LAYER) {
+      errors.push(`${path}.components: must be an array of exactly ${DOSING_SCREEN_COMPONENTS_PER_LAYER} entries (empty slots included), so position maps reliably to hopper number`);
+    }
+    const components = (rawComponents || [])
+      .slice(0, DOSING_SCREEN_COMPONENTS_PER_LAYER)
+      .map((component, componentIndex) => sanitizeDosingScreenComponent(component, errors, `${path}.components[${componentIndex}]`))
+      .filter(component => component !== null);
+
+    return {
+      layer_letter: layerLetter.value, layer_letter_confidence: layerLetterConfidence.value,
+      layer_percentage: layerPercentage.value, layer_percentage_confidence: layerPercentageConfidence.value,
+      components,
+      component_percentage_total_status: totalStatus(components.map(c => c.percentage))
+    };
+  }
+
+  function sanitizeDosingScreenScanResult(raw) {
+    const errors = [];
+    if (!isPlainObject(raw)) {
+      return { ok: false, errors: ["response must be an object"], value: null };
+    }
+
+    const recipe = isPlainObject(raw.recipe) ? raw.recipe : null;
+    if (!recipe) return { ok: false, errors: ["recipe: must be an object"], value: null };
+
+    const name = sanitizeString(recipe.name, MAX_NAME_LENGTH);
+    if (!name.ok) errors.push(`recipe.name: must be a string of at most ${MAX_NAME_LENGTH} characters, or null`);
+
+    const rawLayers = Array.isArray(recipe.layers) ? recipe.layers : null;
+    if (!rawLayers) return { ok: false, errors: ["recipe.layers: must be an array"], value: null };
+    if (rawLayers.length === 0) return { ok: false, errors: ["recipe.layers: at least one layer is required"], value: null };
+    if (rawLayers.length > MAX_LAYERS) return { ok: false, errors: [`recipe.layers: at most ${MAX_LAYERS} layers allowed`], value: null };
+
+    if (!VALID_LAYER_COUNTS.includes(rawLayers.length)) {
+      return {
+        ok: false,
+        errors: [`recipe.layers: detected ${rawLayers.length} layers, which doesn't match a valid line configuration (1, 3, or 5)`],
+        value: null
+      };
+    }
+
+    const layers = rawLayers.map((layer, index) => sanitizeDosingScreenLayer(layer, errors, index));
+
+    if (errors.length > 0) return { ok: false, errors, value: null };
+
+    return {
+      ok: true,
+      errors: [],
+      value: {
+        recipe: {
+          name: name.value,
+          layers,
+          layer_count: layers.length,
+          layer_percentage_total_status: totalStatus(layers.map(l => l.layer_percentage))
+        }
+      }
+    };
+  }
+
   function matchesImageSignature(bytes, type) {
     if (type === "image/jpeg") {
       return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
@@ -199,8 +306,10 @@
     MAX_IMAGE_BYTES,
     ALLOWED_IMAGE_TYPES,
     HOPPER_DESIGNATIONS,
+    DOSING_SCREEN_COMPONENTS_PER_LAYER,
     totalStatus,
     sanitizeRecipeScanResult,
+    sanitizeDosingScreenScanResult,
     validateImage
   };
 });
