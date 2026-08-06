@@ -93,3 +93,25 @@ test("the dosing prompt tells the model to strip the descriptive suffix from a r
   const prompt = source.slice(promptStart, promptEnd);
   assert.match(prompt, /drop everything from the dash onward/);
 });
+
+// --- two failure modes seen on a real scan: components silently reordered,
+// layer_percentage confused with the row's own component total -----------
+
+test("the dosing prompt explicitly forbids reordering/compacting components - a null slot must stay at its true position, not get pushed to the end", () => {
+  const promptStart = source.indexOf("const DOSING_SCREEN_PROMPT = [");
+  const promptEnd = source.indexOf("].join(\" \");", promptStart);
+  const prompt = source.slice(promptStart, promptEnd);
+  assert.match(prompt, /do not reorder or compact the six positions/);
+  assert.match(prompt, /\[real, real, null, real, real, real\]/);
+  assert.match(prompt, /NOT \[real, real, real,/);
+});
+
+test("the dosing prompt explicitly distinguishes layer_percentage from a row's own component total, since the two coincidentally both approach 100%", () => {
+  const promptStart = source.indexOf("const DOSING_SCREEN_PROMPT = [");
+  const promptEnd = source.indexOf("].join(\" \");", promptStart);
+  const prompt = source.slice(promptStart, promptEnd);
+  assert.match(prompt, /the six components/);
+  assert.match(prompt, /will almost always sum to \(approximately\) 100%/);
+  assert.match(prompt, /completely unrelated to/);
+  assert.match(prompt, /Do not calculate, derive, or infer layer_percentage/);
+});

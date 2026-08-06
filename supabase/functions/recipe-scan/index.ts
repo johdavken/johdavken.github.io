@@ -274,6 +274,13 @@ const DOSING_SCREEN_PROMPT = [
   "that is a real, assigned component at zero, not an empty slot; report its actual resin_code and a",
   "percentage of 0, not null.",
   "",
+  "CRITICAL - do not reorder or compact the six positions. Each output position is that exact numbered",
+  "position on screen, nothing else - never move a real component earlier to close a gap, and never push a",
+  "null/unused position later to the end of the array. If position 3 is unused but 1, 2, 4, 5, and 6 have real",
+  "components, the correct output order is [real, real, null, real, real, real] - NOT [real, real, real,",
+  "real, real, null]. A component's array index must always match the physical position it was printed in,",
+  "with no exceptions, even when that means a null value sits in the middle of the array.",
+  "",
   "The resin code cell often has a longer description appended after a dash, e.g. 'MS0440 - Med. Den' or",
   "'A0600 - 10% GMS Antiblock'. Extract only the short code itself (e.g. 'MS0440', 'A0600') into resin_code -",
   "drop everything from the dash onward.",
@@ -290,8 +297,12 @@ const DOSING_SCREEN_PROMPT = [
   "position and the '%' symbol instead. All three cues should agree; if they conflict, prefer position.",
   "",
   "This screen never prints an overall percentage split between layers (that is a separate thickness/die",
-  "setting not shown here) - leave layer_percentage null on every layer; do not guess it from component",
-  "percentages or anything else on screen.",
+  "setting not shown here) - leave layer_percentage null on every layer. Specifically: the six components",
+  "within a single row will almost always sum to (approximately) 100% - that is simply how gravimetric",
+  "dosing works, each hopper's share of that ONE layer's own blend. This is completely unrelated to",
+  "layer_percentage, which is that layer's share of the overall multi-layer film - a different, separate",
+  "number that is not printed anywhere on this screen. Do not calculate, derive, or infer layer_percentage",
+  "from a row's component percentages, their total, or anything else visible here - it must be null.",
   "",
   "If this is a printout rather than a live screen photo, print quality may degrade specific numbers -",
   "apply the same null-for-illegible rule as any other uncertain value."
@@ -459,6 +470,16 @@ async function handleRequest(req: Request): Promise<Response> {
     // TEMPORARY diagnostic logging - remove once root-caused.
     console.error("recipe-scan: sanitize rejected the AI response", sourceType, JSON.stringify(sanitized.errors).slice(0, 500));
     return errorResponse(502, "parse_failed", origin);
+  }
+  if (isDosingScreen) {
+    // TEMPORARY diagnostic logging - remove once the layer_percentage/
+    // component-ordering prompt fix is confirmed against a real scan.
+    // Never logs the image itself, just the sanitized structure.
+    const layers = (sanitized.value as { recipe: { layers: Array<{ layer_percentage: number | null; components: Array<{ resin_code: string | null }> }> } }).recipe.layers;
+    console.log("recipe-scan: dosing_screen result", JSON.stringify(layers.map((l) => ({
+      layer_percentage: l.layer_percentage,
+      resin_codes: l.components.map((c) => c.resin_code)
+    }))).slice(0, 1000));
   }
 
   const responseBody = JSON.stringify({ ok: true, result: sanitized.value });
