@@ -2502,7 +2502,19 @@ button.compactAction{
 .toolTitleRow{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
 .recipeScanOptions{ display:grid; gap:12px; }
 .recipeScanOption{ display:grid; gap:4px; }
-.recipeScanOption button{ width:100%; }
+.recipeScanOptionRow{ display:flex; align-items:center; gap:8px; }
+.recipeScanOptionRow button{ flex:1; width:auto; }
+.recipeScanInfo{ position:relative; flex-shrink:0; }
+.recipeScanInfo > summary{ display:grid; place-items:center; width:24px; height:24px; border:0; border-radius:50%; background:transparent; color:var(--muted); font-size:16px; line-height:1; cursor:pointer; list-style:none; }
+.recipeScanInfo > summary::-webkit-details-marker{ display:none; }
+.recipeScanInfo > summary:hover,.recipeScanInfo[open] > summary{ color:var(--title); background:var(--field-bg); }
+.recipeScanInfo > summary:focus-visible{ outline:2px solid var(--focus-border); outline-offset:1px; }
+/* Opens upward, not downward: with only 3 stacked options the container's
+   overflow:hidden boundary sits close beneath every one of them, not just
+   the last - the 2nd option clipped too. Upward always has the title/
+   description text above for room, regardless of which option it is. */
+.recipeScanInfoPanel{ position:absolute; bottom:calc(100% + 6px); right:0; z-index:20; width:min(300px,calc(100vw - 100px)); padding:10px 12px; border:1px solid var(--border2); border-radius:var(--control-radius); background:var(--panelOpen); color:var(--muted); font-size:var(--font-small); box-shadow:var(--shadow2); }
+.recipeScanInfoPanel p{ margin:0; } .recipeScanInfoPanel p+p{ margin-top:7px; }
 .recipeScanReviewDialog{ max-width: 560px; width: 92vw; max-height: 86vh; overflow-y: auto; }
 .recipeScanReviewContent{ display:grid; gap:12px; }
 .recipeScanReviewLayer{ border:1px solid var(--border); border-radius:8px; padding:8px 10px; display:grid; gap:6px; }

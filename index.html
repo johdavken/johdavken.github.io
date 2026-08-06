@@ -7,7 +7,7 @@
   <!-- Favicons -->
   <link rel="icon" type="image/svg+xml" sizes="any" href="branding/resin-tools/rt6-02-layer-stack-icon.svg?v=2">
 
-  <link rel="stylesheet" href="styles.css?v=0.17.91">
+  <link rel="stylesheet" href="styles.css?v=0.17.92">
   <link rel="stylesheet" href="theme.css?v=0.17.3">
 <script src="validation.js?v=0.18" defer></script>
 <script src="scheduling.js?v=0.18.4" defer></script>
@@ -828,16 +828,40 @@
 
         <div class="recipeScanOptions mt10">
           <div class="recipeScanOption">
-            <button id="recipeScanJobTravelerBtn" class="secondary" type="button">Scan Job Traveler</button>
-            <p class="tiny muted">See help for more information.</p>
+            <div class="recipeScanOptionRow">
+              <button id="recipeScanJobTravelerBtn" class="secondary" type="button">Scan Job Traveler</button>
+              <details class="recipeScanInfo">
+                <summary aria-label="Scan Job Traveler information" title="Scan Job Traveler information">ⓘ</summary>
+                <div class="recipeScanInfoPanel">
+                  <p>Reads layer percentages and resin blends from a printed job traveler.</p>
+                  <p>On a 3- or 5-layer line, you'll be asked which end layer A represents. Hand-written hopper numbers next to a resin are read automatically when legible.</p>
+                </div>
+              </details>
+            </div>
           </div>
           <div class="recipeScanOption">
-            <button id="recipeScanDosingScreenBtn" class="secondary" type="button">Scan Dosing Screen</button>
-            <p class="tiny muted">See help for more information.</p>
+            <div class="recipeScanOptionRow">
+              <button id="recipeScanDosingScreenBtn" class="secondary" type="button">Scan Dosing Screen</button>
+              <details class="recipeScanInfo">
+                <summary aria-label="Scan Dosing Screen information" title="Scan Dosing Screen information">ⓘ</summary>
+                <div class="recipeScanInfoPanel">
+                  <p>Reads resin blends directly from the dosing controller's material overview screen, or a printout of it. Validated for lines 9-11.</p>
+                  <p>No orientation question - component position maps directly to hopper number. This screen doesn't print layer percentages; you'll enter those on the review screen.</p>
+                </div>
+              </details>
+            </div>
           </div>
           <div class="recipeScanOption">
-            <button id="recipeScanHeatSheetBtn" class="secondary" type="button">Scan Heat Sheet</button>
-            <p class="tiny muted">See help for more information.</p>
+            <div class="recipeScanOptionRow">
+              <button id="recipeScanHeatSheetBtn" class="secondary" type="button">Scan Heat Sheet</button>
+              <details class="recipeScanInfo">
+                <summary aria-label="Scan Heat Sheet information" title="Scan Heat Sheet information">ⓘ</summary>
+                <div class="recipeScanInfoPanel">
+                  <p>Reads layer/blender settings from a printed heat sheet. On a 3- or 5-layer line, you'll be asked which end layer A represents, same as Job Traveler.</p>
+                  <p>Legible handwriting matters most here. Writing in layer percentages and hopper designations when you fill one out helps it import cleanly.</p>
+                </div>
+              </details>
+            </div>
           </div>
         </div>
       </section>

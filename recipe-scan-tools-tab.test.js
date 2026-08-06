@@ -45,14 +45,27 @@ test("all three scan options are present and enabled", () => {
   assert.doesNotMatch(heatSheet, /disabled/);
 });
 
-test("each option has an adjacent description, matching the panel's stated purpose", () => {
+test("each option has an adjacent info disclosure with real explanatory content, not just a bare 'see help' pointer", () => {
   const sectionStart = html.indexOf('<section id="recipeScanTool"');
   const sectionEnd = html.indexOf("</section>", sectionStart);
   const section = html.slice(sectionStart, sectionEnd);
-  const optionBlocks = section.match(/<div class="recipeScanOption">[\s\S]*?<\/div>/g);
+  const optionBlocks = section.match(/<div class="recipeScanOption">[\s\S]*?<\/details>\s*<\/div>\s*<\/div>/g);
   assert.equal(optionBlocks.length, 3);
   optionBlocks.forEach(block => {
     assert.match(block, /<button[^>]*>[^<]+<\/button>/);
-    assert.match(block, /<p class="tiny muted">[^<]+<\/p>/);
+    assert.match(block, /<details class="recipeScanInfo">/);
+    assert.match(block, /<summary aria-label="[^"]+ information" title="[^"]+ information">ⓘ<\/summary>/);
+    assert.match(block, /<div class="recipeScanInfoPanel">\s*<p>[^<]+<\/p>/);
   });
+});
+
+test("all three options use the native <details>/<summary> disclosure pattern, one aria-labeled icon per option, not a new JS-driven tooltip", () => {
+  const summaryPattern = /<summary aria-label="[^"]+ information" title="[^"]+ information">ⓘ<\/summary>/g;
+  assert.equal((html.match(summaryPattern) || []).length, 3);
+});
+
+test("the info icon reuses Recipe Setup's existing ⓘ disclosure convention (app.js's splitsInfo) rather than inventing a new one", () => {
+  const app = fs.readFileSync("app.js", "utf8");
+  assert.match(app, /<summary aria-label="Recipe Setup information" title="Recipe Setup information">ⓘ<\/summary>/, "Recipe Setup's own icon, rendered by app.js, is the pattern this reuses");
+  assert.match(styles, /\.recipeScanInfo > summary\{[^}]*border-radius:50%/, "must reuse the round-icon-button treatment, not a plain link/button");
 });
