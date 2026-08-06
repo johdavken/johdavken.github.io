@@ -2932,7 +2932,11 @@ body[data-surface-style="divided"] .helpTopic{
 .statusRecipeToggle{ display:none; }
 .statusChangeoverCountdown{ display:none; }
 .chipToggle{
-  display:flex;
+  /* No display here on purpose: .statusTimelineToggle/.statusRecipeToggle
+     own visibility (display:none by default, inline-flex only inside the
+     mobile media query below) - a display here at equal specificity would
+     win the cascade over that display:none since this rule comes later in
+     the file, showing the chips on desktop too. */
   align-items:center;
   justify-content:center;
   width:28px;

@@ -1941,6 +1941,14 @@
       const scrap = clampNum(state.scrapResinLb);
       const total = prod + scrap;
 
+      // Keep the inputs themselves in sync with state (session restore, a
+      // shared job apply, Reset all) - never touch whichever one the
+      // operator currently has focused, so this doesn't fight live typing.
+      const prodInput = $("prodResinLb");
+      if (prodInput && document.activeElement !== prodInput) prodInput.value = prod ? String(prod) : "";
+      const scrapInput = $("scrapResinLb");
+      if (scrapInput && document.activeElement !== scrapInput) scrapInput.value = scrap ? String(scrap) : "";
+
       const div = 100;
       const totals = new Map();
 
@@ -2324,8 +2332,9 @@
 
       const lr = $("lineRate"); if (lr) lr.value = "0";
       const co = $("changeoverTime"); if (co) co.value = "";
-      const pr = $("prodResinLb"); if (pr) pr.value = "0";
-      const sr = $("scrapResinLb"); if (sr) sr.value = "0";
+      // prodResinLb/scrapResinLb are synced from state by renderResinCalculator()
+      // itself now (called via rebuildUIFromState below), same path session
+      // restore and shared-job-apply already go through - no separate write needed.
 
       rebuildUIFromState();
       saveSession();

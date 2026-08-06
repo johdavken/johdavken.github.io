@@ -134,3 +134,31 @@ test("the mobile status bar has a gap so adjacent icon-only controls (scan short
   const bar = styles.slice(barStart, barEnd);
   assert.match(bar, /gap:8px;/);
 });
+
+// --- desktop visibility regression ----------------------------------------
+//
+// .chipToggle and .statusTimelineToggle/.statusRecipeToggle apply to the
+// same elements. .statusTimelineToggle{ display:none; } is unconditional;
+// its mobile-only override to display:inline-flex lives inside the
+// @media(max-width:900px) block further down. If .chipToggle ever declares
+// its own `display`, that declaration - same specificity, later in the
+// file - wins the cascade over display:none and shows the chips on desktop
+// too. .chipToggle must never set display; visibility belongs entirely to
+// the two mobile-only classes.
+
+test("chipToggle does not declare display - that would win the cascade over statusTimelineToggle/statusRecipeToggle's display:none on desktop", () => {
+  const chipStart = styles.indexOf(".chipToggle{");
+  const chipEnd = styles.indexOf("}", chipStart);
+  const chipBody = styles.slice(chipStart, chipEnd).replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.doesNotMatch(chipBody, /\bdisplay:/, "a display here, even display:flex, would override the desktop-hidden rule below since it comes later in the file at equal specificity");
+});
+
+test("the desktop-hidden rule for both chips still comes strictly before .chipToggle in source order, and the mobile override still comes strictly after", () => {
+  const timelineHiddenIndex = styles.indexOf(".statusTimelineToggle{ display:none; }");
+  const recipeHiddenIndex = styles.indexOf(".statusRecipeToggle{ display:none; }");
+  const chipToggleIndex = styles.indexOf(".chipToggle{");
+  const mobileBlockIndex = styles.indexOf("@media (max-width:900px)");
+  assert.ok(timelineHiddenIndex > -1 && timelineHiddenIndex < chipToggleIndex);
+  assert.ok(recipeHiddenIndex > -1 && recipeHiddenIndex < chipToggleIndex);
+  assert.ok(mobileBlockIndex > chipToggleIndex, "the mobile display:inline-flex override must come after .chipToggle so it's the one that ends up winning on mobile");
+});

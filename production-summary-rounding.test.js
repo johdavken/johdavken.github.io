@@ -44,3 +44,33 @@ test("each per-resin allocated total also uses fmtLb, not fmtNum", () => {
 test("fmtNum itself is unchanged - this only affects Production Summary's lb display, not the rest of the app", () => {
   assert.match(app, /function fmtNum\(n, d=2\)\{ return Number\.isFinite\(n\) \? n\.toFixed\(d\) : "—"; \}/);
 });
+
+// --- inputs must reflect restored state, not just write into it -----------
+//
+// The fields have no HTML default value (blank until typed), but a session
+// restore / shared-job apply / Reset all changes state.prodResinLb directly -
+// nothing previously wrote that back into the <input>'s own .value. Result:
+// after a reload with a previously-entered amount, the field showed blank
+// (looked untouched) while the stale number silently still counted toward
+// the total, since renderResinCalculator's math reads state, not the DOM.
+
+test("renderResinCalculator writes prod/scrap back into their own inputs, skipping whichever one currently has focus", () => {
+  assert.match(renderResinCalculator, /const prodInput = \$\("prodResinLb"\);/);
+  assert.match(renderResinCalculator, /if \(prodInput && document\.activeElement !== prodInput\) prodInput\.value = prod \? String\(prod\) : "";/);
+  assert.match(renderResinCalculator, /const scrapInput = \$\("scrapResinLb"\);/);
+  assert.match(renderResinCalculator, /if \(scrapInput && document\.activeElement !== scrapInput\) scrapInput\.value = scrap \? String\(scrap\) : "";/);
+});
+
+test("a zero value renders as blank (matching the no-default-value input), not a literal '0' string", () => {
+  const syncLine = renderResinCalculator.match(/prodInput\.value = prod \? String\(prod\) : "";/)[0];
+  assert.match(syncLine, /: "";$/, "falsy (0) must fall through to blank, not \"0\"");
+});
+
+test("Reset all no longer duplicates this write - it relies on rebuildUIFromState -> renderResinCalculator, the same path session restore uses", () => {
+  const resetAll = functionBody("resetAll");
+  assert.doesNotMatch(resetAll, /pr\.value = "0";/);
+  assert.doesNotMatch(resetAll, /sr\.value = "0";/);
+  assert.match(resetAll, /state\.prodResinLb = 0;/);
+  assert.match(resetAll, /state\.scrapResinLb = 0;/);
+  assert.match(resetAll, /rebuildUIFromState\(\);/);
+});
