@@ -7,7 +7,7 @@
   <!-- Favicons -->
   <link rel="icon" type="image/svg+xml" sizes="any" href="branding/resin-tools/rt6-02-layer-stack-icon.svg?v=2">
 
-  <link rel="stylesheet" href="styles.css?v=0.17.92">
+  <link rel="stylesheet" href="styles.css?v=0.17.93">
   <link rel="stylesheet" href="theme.css?v=0.17.3">
 <script src="validation.js?v=0.18" defer></script>
 <script src="scheduling.js?v=0.18.4" defer></script>
@@ -32,7 +32,7 @@
 <script src="app.js?v=0.18.60" defer></script>
 <script src="resin-admin-ui.js?v=0.20.1" defer></script>
 <script src="workspace-recovery-ui.js?v=0.1.0" defer></script>
-<script src="recipe-scan-ui.js?v=0.3.0" defer></script>
+<script src="recipe-scan-ui.js?v=0.3.1" defer></script>
 
 
 </head>
@@ -317,13 +317,24 @@
       <span>RT Sync</span>
       <strong id="lineSyncTopStatus">Local only</strong>
     </div>
-    <div id="mobileTimelineToggle" class="chipToggle statusTimelineToggle" role="switch" aria-checked="false" tabindex="0" title="Hide everything except the timeline">
-      <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 12V8M6 12V4M10 12V9M14 12V6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-      Timeline
+    <details class="statusScanShortcut" id="statusScanShortcut">
+      <summary aria-label="Scan a recipe source" title="Scan a recipe source">
+        <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M2 6a1 1 0 0 1 1-1h1.3l.9-1.3a1 1 0 0 1 .8-.4h3.6a1 1 0 0 1 .9.4L11.4 5H13a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+          <circle cx="8" cy="9" r="2" stroke="currentColor" stroke-width="1.4"/>
+        </svg>
+      </summary>
+      <div class="statusScanShortcutPanel">
+        <button id="statusScanJobTravelerBtn" type="button">Scan Job Traveler</button>
+        <button id="statusScanDosingScreenBtn" type="button">Scan Dosing Screen</button>
+        <button id="statusScanHeatSheetBtn" type="button">Scan Heat Sheet</button>
+      </div>
+    </details>
+    <div id="mobileTimelineToggle" class="chipToggle statusTimelineToggle" role="switch" aria-checked="false" tabindex="0" aria-label="Timeline only" title="Hide everything except the timeline">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="2"/><path d="M12 7.5v5l3.5 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </div>
-    <div id="mobileRecipeToggle" class="chipToggle statusRecipeToggle" role="switch" aria-checked="false" tabindex="0" title="Hide everything except Recipe Setup">
-      <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 4h10M3 8h10M3 12h7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-      Recipe
+    <div id="mobileRecipeToggle" class="chipToggle statusRecipeToggle" role="switch" aria-checked="false" tabindex="0" aria-label="Recipe only" title="Hide everything except Recipe Setup">
+      <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 4.2C6.5 3 4.5 2.8 2.8 3.3v8.6c1.7-.5 3.7-.3 5.2.9 1.5-1.2 3.5-1.4 5.2-.9V3.3c-1.7-.5-3.7-.3-5.2.9Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M8 4.2v8.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
     </div>
     <div class="workspaceStatusItem statusChangeoverCountdown">
       <span>Changeover</span>

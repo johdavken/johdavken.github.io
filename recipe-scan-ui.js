@@ -346,6 +346,26 @@
   $("recipeScanDosingScreenBtn")?.addEventListener("click", () => startScan("dosing_screen"));
   $("recipeScanHeatSheetBtn")?.addEventListener("click", () => startScan("heat_sheet"));
 
+  // Mobile status-bar shortcut - same startScan entry point as the Tools
+  // panel buttons above, just reachable without navigating to Tools first.
+  const statusScanShortcut = $("statusScanShortcut");
+  function pickFromShortcut(sourceType){
+    if (statusScanShortcut) statusScanShortcut.open = false;
+    startScan(sourceType);
+  }
+  $("statusScanJobTravelerBtn")?.addEventListener("click", () => pickFromShortcut("job_traveler"));
+  $("statusScanDosingScreenBtn")?.addEventListener("click", () => pickFromShortcut("dosing_screen"));
+  $("statusScanHeatSheetBtn")?.addEventListener("click", () => pickFromShortcut("heat_sheet"));
+  document.addEventListener("click", event => {
+    if (statusScanShortcut?.open && !statusScanShortcut.contains(event.target)) statusScanShortcut.open = false;
+  });
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && statusScanShortcut?.open){
+      statusScanShortcut.open = false;
+      statusScanShortcut.querySelector(":scope > summary")?.focus();
+    }
+  });
+
   $("recipeScanCaptureBtn")?.addEventListener("click", () => $("recipeScanCaptureInput")?.click());
   $("recipeScanCaptureInput")?.addEventListener("change", event => submitFile(event.target.files?.[0]));
   $("recipeScanCaptureCancelBtn")?.addEventListener("click", () => { closeCaptureDialog(); resetPendingScan(); });

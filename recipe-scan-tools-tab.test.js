@@ -69,3 +69,38 @@ test("the info icon reuses Recipe Setup's existing ⓘ disclosure convention (ap
   assert.match(app, /<summary aria-label="Recipe Setup information" title="Recipe Setup information">ⓘ<\/summary>/, "Recipe Setup's own icon, rendered by app.js, is the pattern this reuses");
   assert.match(styles, /\.recipeScanInfo > summary\{[^}]*border-radius:50%/, "must reuse the round-icon-button treatment, not a plain link/button");
 });
+
+// --- mobile status-bar scan shortcut -------------------------------------
+
+test("the status-bar scan shortcut sits immediately to the left of the Timeline chip, icon-only (no text label - there's no room for one)", () => {
+  const barStart = html.indexOf('<div class="workspaceStatusBar"');
+  const barEnd = html.indexOf('<details class="statusPreferences"', barStart);
+  const bar = html.slice(barStart, barEnd);
+  assert.match(bar, /<details class="statusScanShortcut" id="statusScanShortcut">[\s\S]*?<div id="mobileTimelineToggle"/, "must appear before the Timeline chip in document order");
+  const shortcutStart = bar.indexOf('<details class="statusScanShortcut"');
+  const shortcutEnd = bar.indexOf("</details>", shortcutStart);
+  const shortcut = bar.slice(shortcutStart, shortcutEnd);
+  const summaryStart = shortcut.indexOf("<summary");
+  const summaryEnd = shortcut.indexOf("</summary>", summaryStart);
+  const summary = shortcut.slice(summaryStart, summaryEnd);
+  assert.match(summary, /aria-label="Scan a recipe source" title="Scan a recipe source"/);
+  assert.doesNotMatch(summary.replace(/<svg[\s\S]*?<\/svg>/, ""), />\s*[A-Za-z]/, "summary must carry only the icon, no visible text");
+});
+
+test("the shortcut panel offers all three scan modes, each wired through the same startScan button IDs recipe-scan-ui.js expects", () => {
+  const shortcutStart = html.indexOf('<details class="statusScanShortcut"');
+  const shortcutEnd = html.indexOf("</details>", shortcutStart);
+  const shortcut = html.slice(shortcutStart, shortcutEnd);
+  assert.match(shortcut, /<div class="statusScanShortcutPanel">/);
+  assert.match(shortcut, /<button id="statusScanJobTravelerBtn" type="button">Scan Job Traveler<\/button>/);
+  assert.match(shortcut, /<button id="statusScanDosingScreenBtn" type="button">Scan Dosing Screen<\/button>/);
+  assert.match(shortcut, /<button id="statusScanHeatSheetBtn" type="button">Scan Heat Sheet<\/button>/);
+});
+
+test("the shortcut is hidden by default and only shown inside the existing mobile status-bar media query, same convention as the Timeline/Recipe chips", () => {
+  assert.match(styles, /\.statusScanShortcut\{ display:none;/);
+  const mobileStart = styles.indexOf('@media (max-width:900px)');
+  const mobileEnd = styles.indexOf("\n}", mobileStart);
+  const mobileBlock = styles.slice(mobileStart, mobileEnd);
+  assert.match(mobileBlock, /\.statusScanShortcut\{ display:inline-block; \}/);
+});

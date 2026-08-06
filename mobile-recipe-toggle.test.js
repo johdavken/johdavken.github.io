@@ -20,7 +20,7 @@ test("the Recipe chip sits next to the Timeline chip in the mobile status bar, s
   const recipeIndex = html.indexOf('id="mobileRecipeToggle"');
   assert.ok(timelineIndex > -1 && recipeIndex > -1 && timelineIndex < recipeIndex,
     "the recipe chip must immediately follow the timeline chip");
-  assert.match(html, /<div id="mobileRecipeToggle" class="chipToggle statusRecipeToggle" role="switch" aria-checked="false" tabindex="0" title="Hide everything except Recipe Setup">/);
+  assert.match(html, /<div id="mobileRecipeToggle" class="chipToggle statusRecipeToggle" role="switch" aria-checked="false" tabindex="0" aria-label="Recipe only" title="Hide everything except Recipe Setup">/);
 });
 
 test("both chips share the same base class, so the new one automatically matches size/style", () => {
@@ -80,4 +80,57 @@ test("syncWorkspaceForViewport forces splitsBlock open and syncs the recipe chip
   assert.match(body, /if \(!desktop && state\.mobileRecipeOnly\)\{/);
   assert.match(body, /const splits = \$\("splitsBlock"\);/);
   assert.match(body, /syncToggleUI\("mobileRecipeToggle", state\.mobileRecipeOnly\);/);
+});
+
+// --- icon-only chips: no room for text at this width, so each chip must
+// carry its meaning through icon shape + an aria-label, not visible text ---
+
+function chipMarkup(id){
+  const start = html.indexOf(`id="${id}"`);
+  const divStart = html.lastIndexOf("<div", start);
+  const divEnd = html.indexOf("</div>", start);
+  return html.slice(divStart, divEnd);
+}
+
+test("neither chip has a visible text label - only an icon and an aria-label carry its meaning", () => {
+  const timeline = chipMarkup("mobileTimelineToggle");
+  const recipe = chipMarkup("mobileRecipeToggle");
+  assert.match(timeline, /aria-label="Timeline only"/);
+  assert.match(recipe, /aria-label="Recipe only"/);
+  // Nothing but whitespace between the </svg> and the closing </div>.
+  assert.match(timeline, /<\/svg>\s*$/);
+  assert.match(recipe, /<\/svg>\s*$/);
+});
+
+test("the Timeline chip reuses the exact clock icon geometry from the hopper track buttons (app.js's clockIcon), not a new drawing", () => {
+  assert.match(app, /clockFace\.setAttribute\("r", "8\.5"\);/);
+  assert.match(app, /clockHands\.setAttribute\("d", "M12 7\.5v5l3\.5 2"\);/);
+  const timeline = chipMarkup("mobileTimelineToggle");
+  assert.match(timeline, /viewBox="0 0 24 24"/);
+  assert.match(timeline, /<circle cx="12" cy="12" r="8\.5" stroke="currentColor" stroke-width="2"\/>/);
+  assert.match(timeline, /<path d="M12 7\.5v5l3\.5 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"\/>/);
+});
+
+test("the Recipe chip uses an open-book icon", () => {
+  const recipe = chipMarkup("mobileRecipeToggle");
+  assert.match(recipe, /viewBox="0 0 16 16"/);
+  assert.match(recipe, /M8 4\.2C6\.5 3 4\.5 2\.8 2\.8 3\.3/, "the open-book path");
+});
+
+test("chipToggle is a fixed-size round icon button now that there's no text to size around, and the active-state highlight rule is untouched", () => {
+  const chipStart = styles.indexOf(".chipToggle{");
+  const chipEnd = styles.indexOf("}", chipStart);
+  const chipBody = styles.slice(chipStart, chipEnd);
+  assert.match(chipBody, /width:28px;/);
+  assert.match(chipBody, /height:28px;/);
+  assert.match(chipBody, /justify-content:center;/);
+  assert.match(styles, /\.chipToggle\.on\{/, "the existing on/off highlight must still apply - icon color alone now carries the active state");
+});
+
+test("the mobile status bar has a gap so adjacent icon-only controls (scan shortcut, timeline, recipe) aren't touching - easier to tap", () => {
+  const mobileStart = styles.indexOf("@media (max-width:900px)");
+  const barStart = styles.indexOf(".workspaceStatusBar{", mobileStart);
+  const barEnd = styles.indexOf("}", barStart);
+  const bar = styles.slice(barStart, barEnd);
+  assert.match(bar, /gap:8px;/);
 });

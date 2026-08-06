@@ -187,6 +187,23 @@ test("every dialog action button and file input is wired exactly once at the bot
   assert.match(ui, /\$\("recipeScanReviewApplyBtn"\)\?\.addEventListener\("click", applyReview\);/);
 });
 
+test("the mobile status-bar shortcut buttons call the exact same startScan entry point as the Tools panel buttons, not a parallel code path", () => {
+  assert.match(ui, /function pickFromShortcut\(sourceType\)\{/);
+  const fnStart = ui.indexOf("function pickFromShortcut(");
+  const fnEnd = ui.indexOf("\n  }", fnStart);
+  const body = ui.slice(fnStart, fnEnd);
+  assert.match(body, /statusScanShortcut\.open = false;/);
+  assert.match(body, /startScan\(sourceType\);/);
+  assert.match(ui, /\$\("statusScanJobTravelerBtn"\)\?\.addEventListener\("click", \(\) => pickFromShortcut\("job_traveler"\)\);/);
+  assert.match(ui, /\$\("statusScanDosingScreenBtn"\)\?\.addEventListener\("click", \(\) => pickFromShortcut\("dosing_screen"\)\);/);
+  assert.match(ui, /\$\("statusScanHeatSheetBtn"\)\?\.addEventListener\("click", \(\) => pickFromShortcut\("heat_sheet"\)\);/);
+});
+
+test("the shortcut menu closes on an outside click and on Escape, same behavior as the existing appearance-preferences menu in app.js", () => {
+  assert.match(ui, /if \(statusScanShortcut\?\.open && !statusScanShortcut\.contains\(event\.target\)\) statusScanShortcut\.open = false;/);
+  assert.match(ui, /if \(event\.key === "Escape" && statusScanShortcut\?\.open\)\{/);
+});
+
 test("heat_sheet has its own CAPTURE_COPY entry and skips orientation only via the shared 1-layer/dosing_screen rule, same as Job Traveler", () => {
   assert.match(ui, /heat_sheet: \{\s*\n\s*title: "Scan Heat Sheet",/);
   const fnStart = ui.indexOf("function startScan(");

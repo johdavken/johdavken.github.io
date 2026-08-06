@@ -2920,29 +2920,34 @@ body[data-surface-style="divided"] .helpTopic{
  *   Everyday / Advanced mode
  *   ======================================================================= */
 .modeBar{display:flex;align-items:center;justify-content:flex-end}
+.statusScanShortcut{ display:none; position:relative; align-self:center; }
+.statusScanShortcut > summary{ display:flex; align-items:center; justify-content:center; width:24px; height:24px; padding:0; border:0; border-radius:50%; background:transparent; color:var(--muted); cursor:pointer; list-style:none; }
+.statusScanShortcut > summary svg{ width:15px; height:15px; }
+.statusScanShortcut > summary::-webkit-details-marker{ display:none; }
+.statusScanShortcut > summary:hover,.statusScanShortcut[open] > summary{ color:var(--title); background:var(--field-bg); }
+.statusScanShortcut > summary:focus-visible{ outline:2px solid var(--focus-border); outline-offset:1px; }
+.statusScanShortcutPanel{ position:absolute; top:calc(100% + 6px); left:0; z-index:60; display:grid; gap:6px; width:min(220px,calc(100vw - 32px)); padding:8px; border:1px solid var(--border2); border-radius:var(--control-radius); background:var(--panelOpen); box-shadow:var(--shadow2); }
+.statusScanShortcutPanel button{ width:100%; text-align:left; }
 .statusTimelineToggle{ display:none; }
 .statusRecipeToggle{ display:none; }
 .statusChangeoverCountdown{ display:none; }
 .chipToggle{
+  display:flex;
   align-items:center;
-  gap:5px;
-  padding:4px 10px 4px 8px;
+  justify-content:center;
+  width:28px;
+  height:28px;
+  padding:0;
+  border:0;
   border-radius:999px;
-  border:1px solid color-mix(in srgb, var(--text) 22%, transparent);
   background:transparent;
   color:var(--muted);
-  font-size:var(--font-tiny);
-  font-weight:700;
   cursor:pointer;
   flex:0 0 auto;
-  white-space:nowrap;
 }
-.chipToggle svg{ width:12px; height:12px; flex:0 0 auto; }
-.chipToggle.on{
-  background:var(--toggle-on-bg);
-  border-color:var(--toggle-on-border);
-  color:var(--text);
-}
+.chipToggle svg{ width:16px; height:16px; flex:0 0 auto; }
+.chipToggle:hover{ color:var(--title); background:var(--field-bg); }
+.chipToggle.on{ color:var(--title); }
 @media (max-width:900px){
   /* The catalog editor is an admin-only desktop workspace. */
   .adminResinPanel{ display:none!important; }
@@ -2958,6 +2963,7 @@ body[data-surface-style="divided"] .helpTopic{
     align-items:center;
     flex-wrap:wrap;
     justify-content:flex-start;
+    gap:8px;
     min-height:34px;
     padding:0 var(--page-pad);
     border-bottom:1px solid var(--surface-chrome-border);
@@ -2968,6 +2974,7 @@ body[data-surface-style="divided"] .helpTopic{
   .statusPreferences{position:absolute;right:var(--page-pad);margin-left:0}
   .statusPreferencesPanel{position:fixed;top:38px;right:var(--page-pad)}
   .workspaceStatusBar .workspaceStatusItem{ display:none; }
+  .statusScanShortcut{ display:inline-block; }
   .statusTimelineToggle{ display:inline-flex; }
   .statusRecipeToggle{ display:inline-flex; }
   .workspaceStatusBar .workspaceStatusItem.statusChangeoverCountdown{
