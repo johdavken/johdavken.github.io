@@ -208,16 +208,24 @@ async function callOpenAI(apiKey: string, model: string, file: File): Promise<un
   });
 
   if (!response.ok) {
-    // Provider status/body is intentionally not surfaced to the caller of
-    // this function - callOpenAI's caller maps this to a generic error.
+    // TEMPORARY diagnostic logging (never includes the API key) - remove
+    // once the "every scan fails" issue is root-caused. Provider status/body
+    // is intentionally not surfaced to the *client* caller of this function -
+    // this only goes to the Edge Function's own runtime logs.
+    const errorBody = await response.text().catch(() => "");
+    console.error("recipe-scan: OpenAI request failed", response.status, errorBody.slice(0, 500));
     throw new Error(`openai_http_${response.status}`);
   }
   const payload = await response.json();
   const content = payload?.choices?.[0]?.message?.content;
-  if (typeof content !== "string") throw new Error("openai_missing_content");
+  if (typeof content !== "string") {
+    console.error("recipe-scan: OpenAI response missing content", JSON.stringify(payload).slice(0, 500));
+    throw new Error("openai_missing_content");
+  }
   try {
     return JSON.parse(content);
   } catch {
+    console.error("recipe-scan: OpenAI content was not valid JSON", content.slice(0, 500));
     throw new Error("openai_invalid_json");
   }
 }
@@ -307,6 +315,8 @@ async function handleRequest(req: Request): Promise<Response> {
 
   const sanitized = sanitizeRecipeScanResult(raw);
   if (!sanitized.ok) {
+    // TEMPORARY diagnostic logging - remove once root-caused.
+    console.error("recipe-scan: sanitizeRecipeScanResult rejected the AI response", JSON.stringify(sanitized.errors).slice(0, 500));
     return errorResponse(502, "parse_failed", origin);
   }
 
