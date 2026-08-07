@@ -74,7 +74,7 @@ test("setupPrimaryFields now holds only Changeover deadline and Line rate, in th
 
 // --- Changeover deadline / Line rate: gauge tiles, no "Required" text ------
 
-test("Changeover deadline and Line rate are gauge tiles with an icon, the input, and a label caption - no 'Required' text anywhere", () => {
+test("Changeover deadline and Line rate are gauge tiles with the input and a label caption - no 'Required' text anywhere", () => {
   const start = html.indexOf('class="setupFields setupPrimaryFields mt10"');
   const end = html.indexOf("</div>\n      </section>", start);
   const body = html.slice(start, end);
@@ -83,13 +83,19 @@ test("Changeover deadline and Line rate are gauge tiles with an icon, the input,
   assert.doesNotMatch(body, /class="fieldRequirement"/);
   const changeoverStart = body.indexOf('class="gaugeTile"');
   const changeoverTile = body.slice(changeoverStart, body.indexOf("</div>", body.indexOf("</div>", changeoverStart) + 1));
-  assert.match(changeoverTile, /class="gaugeIcon"/);
+  // No decorative gaugeIcon here - a native <input type="time"> already
+  // draws its own clock/picker indicator, so the SVG on top was a second,
+  // purely decorative clock duplicating the functional one inside the
+  // field. Line rate's gaugeIcon (a gauge glyph, not a clock) is unrelated
+  // and stays, checked separately below.
+  assert.doesNotMatch(changeoverTile, /class="gaugeIcon"/);
   assert.match(changeoverTile, /<input id="changeoverTime" type="time" \/>/);
   assert.match(changeoverTile, /<label for="changeoverTime">Changeover<\/label>/);
   const lineRateStart = body.indexOf('class="gaugeTile"', changeoverStart + 1);
   const lineRateTile = body.slice(lineRateStart, body.indexOf("</div>", body.indexOf("</div>", lineRateStart) + 1));
+  assert.match(lineRateTile, /class="gaugeIcon"/);
   assert.match(lineRateTile, /<input id="lineRate" type="text" inputmode="decimal" placeholder="e\.g\. 1200" value="0" \/>/);
-  assert.match(lineRateTile, /<label for="lineRate">Line rate \(lb\/hr\)<\/label>/);
+  assert.match(lineRateTile, /<label for="lineRate">Output \(lb\/hr\)<\/label>/);
 });
 
 test("on desktop the two gauge tiles sit in a tight flex row instead of the far-apart two-column grid, same gap as .setupTopRow above them", () => {

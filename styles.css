@@ -1014,7 +1014,11 @@ input[readonly]:focus{
    icon, bold value, small caption - instead of a labeled underline field.
    No "Required" text; an empty/zero gauge is already visually obvious. */
 .gaugeTile{
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   max-width: 200px;
+  height: 100%;
   border: 1px solid var(--border2);
   border-radius: 14px;
   background: var(--field-bg);
