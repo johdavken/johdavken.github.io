@@ -648,18 +648,17 @@ main{
    disabled fields from hit-testing makes every tap on the cell land on the
    td, regardless of which child it visually lands on. */
 .rearrangeTarget :disabled{ pointer-events:none; }
-/* On mobile, the layer panel stays put when Bulk Edit or Rearrange Hoppers
-   is toggled: the trigger buttons and the resulting toolbar/mode bar render
-   below the panel instead of above it, in the same spot either way. Both
-   also drop their sticky-to-top positioning here - sticky plus being
-   reordered after the table meant they'd suddenly jump to the top of the
-   viewport once their normal flow position scrolled past it, forcing an
-   unwanted scroll. */
-@media(max-width:900px){
-  #splitsArea > .splitsMatrixActions,
-  #splitsArea > .splitsBulkBar,
-  #splitsArea > .rearrangeModeBar{ order:1; position:static; }
-}
+/* The layer panel stays put when Bulk Edit or Rearrange Hoppers is
+   toggled, on both mobile and desktop: the trigger buttons and the
+   resulting toolbar/mode bar render below the panel instead of above it,
+   in the same spot either way. Both also drop their sticky-to-top
+   positioning here - sticky plus being reordered after the table meant
+   they'd suddenly jump to the top of the viewport once their normal
+   flow position scrolled past it, forcing an unwanted scroll. */
+#splitsArea > .splitsMatrixActions,
+#splitsArea > .splitsBulkBar,
+#splitsArea > .splitsSavedRecipesPanel,
+#splitsArea > .rearrangeModeBar{ order:1; position:static; }
 .rearrangeModeBar{position:sticky;top:54px;z-index:7;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px;border:1px solid var(--row-border);border-radius:var(--radius-row);background:var(--readonly-bg)}.rearrangeModeMessage{display:flex;align-items:baseline;gap:7px;min-width:0}.rearrangeModeMessage strong{color:var(--title);white-space:nowrap}.rearrangeModeMessage span{color:var(--muted);font-size:var(--font-small)}.rearrangeModeActions{display:flex;align-items:center;gap:6px;flex:0 0 auto}@media(max-width:700px){.rearrangeModeBar{top:38px;align-items:stretch;flex-direction:column}.rearrangeModeMessage{align-items:flex-start;flex-direction:column;gap:2px}.rearrangeModeActions{display:grid;grid-template-columns:1fr 1fr 1fr}.rearrangeModeActions button{min-width:0;padding-inline:6px}}
 .mobileSyncLabel,
 .mobileSyncOnly{ display: none; }
@@ -1225,7 +1224,8 @@ details[open] > summary .chev{ transform: rotate(45deg); }
 
 .splitsBulkModeBar{
   display: flex;
-  justify-content: flex-end;
+  flex-wrap: wrap;
+  justify-content: flex-start;
   gap: 8px;
 }
 .splitsBulkModeBar button{
@@ -1245,6 +1245,48 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   border-radius: var(--radius-row);
   background: var(--readonly-bg);
 }
+.splitsSavedRecipesPanel{
+  padding: 10px;
+  border: 1px solid var(--row-border);
+  border-radius: var(--radius-row);
+  background: var(--readonly-bg);
+}
+/* Save Current / Load / Update / (rename, duplicate, favorite, delete) -
+   a single consolidated bar acting on whichever recipe is selected below,
+   instead of each row carrying its own Load/Update/overflow buttons. */
+.splitsSavedRecipesActions{ display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.splitsSavedRecipesActions .overflow-disabled summary{ opacity: .45; cursor: not-allowed; }
+
+/* Scan Recipe: a <details> popup sitting among plain <button>s in the same
+   row (Bulk edit, Rearrange, Print Recipe) - the summary is styled to
+   match those siblings' actual computed style exactly: not just
+   button.secondary's base rule, but also .splitsBulkModeBar button's
+   size override (padding/font-size don't match otherwise, since that
+   selector only ever matches real <button> elements, never a <summary>).
+   Reuses .statusScanShortcutPanel (the mobile status-bar shortcut's own
+   dropdown) for the panel itself, but flipped to open upward - this row
+   sits at the bottom of the panel, so opening downward clips against the
+   viewport, same reasoning as the ⓘ info panel nearby. */
+.splitsScanShortcut{ position: relative; }
+.splitsScanShortcut > summary{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--control-height);
+  border-radius: var(--control-radius);
+  padding: 5px 9px;
+  border: 1px solid var(--btn-secondary-border);
+  background: var(--btn-secondary-bg);
+  color: var(--btn-text);
+  font-weight: 700;
+  font-size: var(--font-small);
+  cursor: pointer;
+  list-style: none;
+}
+.splitsScanShortcut > summary::-webkit-details-marker{ display: none; }
+.splitsScanShortcut > summary:hover{ filter: brightness(1.05); }
+.splitsScanShortcut > summary:focus-visible{ border-color: var(--focus-border); outline: 2px solid var(--focus-border); outline-offset: 2px; }
+.splitsScanShortcut .statusScanShortcutPanel{ left: 0; top: auto; bottom: calc(100% + 6px); }
 .splitsBulkSteps{grid-column:1/-1;display:flex;align-items:center;gap:18px;padding-bottom:8px;border-bottom:1px solid var(--row-border)}
 .splitsBulkSteps span{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:var(--font-small)}
 .splitsBulkSteps b{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:999px;background:var(--btn-primary-a);color:var(--title);font-size:var(--font-tiny)}
@@ -1275,14 +1317,22 @@ details[open] > summary .chev{ transform: rotate(45deg); }
 }
 .splitsSelectionStatus.ok{ color: var(--ok); }
 .splitsSelectionStatus.warn{ color: var(--warn); }
-.splitsMatrixActions{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:28px}
+/* Stacked (summary above buttons), both flush to the panel's own left
+   edge - deliberately NOT centered under .splitsMatrixFrame (the table),
+   since the table's width (and therefore its centered position) changes
+   with layer count. Pinning to the panel's left edge keeps the button row
+   in a fixed spot regardless of switching between a 1/3/5-layer line. A
+   divider (border-top) marks the seam against the table above it, since
+   this row is reordered to render right after it (see the reorder rule
+   below). */
+.splitsMatrixActions{display:flex;flex-direction:column;align-items:flex-start;gap:8px;border-top:1px solid var(--row-border);padding-top:12px}
 .splitsMatrixActionInfo{position:relative;display:flex;align-items:center;gap:8px;min-width:0}
 .splitsInfo{position:relative}
 .splitsInfo > summary{display:grid;place-items:center;width:24px;height:24px;border:0;border-radius:50%;background:transparent;color:var(--muted);font-size:16px;line-height:1;cursor:pointer;list-style:none}
 .splitsInfo > summary::-webkit-details-marker{display:none}
 .splitsInfo > summary:hover,.splitsInfo[open] > summary{color:var(--title);background:var(--field-bg)}
 .splitsInfo > summary:focus-visible{outline:2px solid var(--focus-border);outline-offset:1px}
-.splitsInfoPanel{position:absolute;top:calc(100% + 6px);left:0;z-index:20;width:min(390px,calc(100vw - 48px));padding:10px 12px;border:1px solid var(--border2);border-radius:var(--control-radius);background:var(--panelOpen);color:var(--muted);font-size:var(--font-small);box-shadow:var(--shadow2)}
+.splitsInfoPanel{position:absolute;bottom:calc(100% + 6px);right:0;z-index:20;width:min(390px,calc(100vw - 48px));padding:10px 12px;border:1px solid var(--border2);border-radius:var(--control-radius);background:var(--panelOpen);color:var(--muted);font-size:var(--font-small);box-shadow:var(--shadow2)}
 .splitsInfoPanel p{margin:0}.splitsInfoPanel p+p{margin-top:7px}.splitsInfoPanel strong{color:var(--text)}
 #splitsArea{gap:6px}
 
@@ -1688,12 +1738,18 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   .splitMatrixCell.empty:hover .splitTrackButton,.splitMatrixCell.empty:focus-within .splitTrackButton{opacity:1}
 }
 @media (max-width: 700px){
+  /* Anchoring to either edge (like desktop's right:0) clips on a narrow
+     phone screen - the button row wraps here, and the icon ends up too
+     close to center for either hard edge to leave 390px of room on its
+     own side. Centered on the icon instead, capped narrower so it always
+     clears both edges regardless of exactly where the row wraps. */
+  .splitsInfoPanel{ left:50%; right:auto; transform:translateX(-50%); width:min(320px, calc(100vw - 32px)); }
   .splitsBulkBar{ padding:8px; gap:8px; }
   .splitsBulkSteps{justify-content:flex-end;gap:8px;padding-bottom:0;border-bottom:0}
   .splitsBulkSteps span{gap:3px;font-size:var(--font-tiny)}
   .splitsBulkSteps b{width:14px;height:14px;font-size:9px}
   .rearrangeModeBar{padding:8px;gap:8px}
-  .splitsMatrixActions{align-items:flex-start}.splitsMatrixActionInfo{align-items:flex-start;flex-direction:column;gap:2px}
+  .splitsMatrixActionInfo{align-items:flex-start;flex-direction:column;gap:2px}
   .splitsMobileLayerNav{
     position: sticky;
     top: 0;
@@ -3050,9 +3106,12 @@ body[data-surface-style="divided"] .helpTopic{
   #recipePrintSheet .printSheetHeader{ margin-bottom:10px; }
   #recipePrintSheet .printSheetHeader h1{ font-size:18px; margin:0 0 3px; }
   #recipePrintSheet .printSheetMeta{ font-size:11px; }
-  #recipePrintSheet .printSheetLayers{ display:grid; grid-template-columns:repeat(2, 1fr); gap:4px 14px; }
-  #recipePrintSheet .printSheetLayerTable{ width:100%; border-collapse:collapse; margin-bottom:4px; page-break-inside:avoid; }
-  #recipePrintSheet .printSheetLayerTable caption{ caption-side:top; text-align:left; font-weight:600; font-size:12px; margin-bottom:2px; }
-  #recipePrintSheet .printSheetLayerTable th,
-  #recipePrintSheet .printSheetLayerTable td{ border:1px solid #000; padding:2px 6px; text-align:left; font-size:11px; line-height:1.3; }
+  #recipePrintSheet .printSheetTable{ width:100%; border-collapse:collapse; table-layout:fixed; }
+  #recipePrintSheet .printSheetTable th,
+  #recipePrintSheet .printSheetTable td{ border:1px solid #000; padding:4px 6px; text-align:left; vertical-align:top; }
+  #recipePrintSheet .printSheetTable thead th{ font-size:11px; font-weight:600; }
+  #recipePrintSheet .printSheetLayerLabel{ font-size:20px; font-weight:700; text-align:center; vertical-align:middle; }
+  #recipePrintSheet .printSheetResin{ font-size:11px; font-weight:600; line-height:1.3; }
+  #recipePrintSheet .printSheetPct{ font-size:13px; line-height:1.3; }
+  #recipePrintSheet .printSheetLayerPct{ font-size:13px; font-weight:600; text-align:center; vertical-align:middle; }
 }

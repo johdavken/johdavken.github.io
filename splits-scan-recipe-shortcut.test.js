@@ -1,0 +1,118 @@
+"use strict";
+
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+
+const app = fs.readFileSync("app.js", "utf8");
+const styles = fs.readFileSync("styles.css", "utf8");
+const ui = fs.readFileSync("recipe-scan-ui.js", "utf8");
+
+function functionBody(name){
+  const start = app.indexOf(`function ${name}(`);
+  assert.notEqual(start, -1, `Expected function ${name}`);
+  const next = app.indexOf("\n  function ", start + 1);
+  return app.slice(start, next === -1 ? undefined : next);
+}
+
+// Recipe Setup's Scan Recipe button: sits between Rearrange and Print
+// Recipe, pops the same three-option menu as the mobile status-bar scan
+// shortcut, and does NOT join the Bulk edit/Rearrange/Saved Recipes
+// mutually-exclusive panel group - it's a small popup, not a dropped panel.
+
+test("Rearrange Hoppers was renamed to just Rearrange", () => {
+  assert.match(app, /rearrangeButton\.textContent=hopperRearrangement\?\.active\?"Done Rearranging":"Rearrange";/);
+  assert.doesNotMatch(app, /"Rearrange Hoppers"/);
+});
+
+test("the Scan Recipe button sits between Rearrange and Print Recipe in modeBar's append order", () => {
+  const modeBarStart = app.indexOf('modeBar.className = "splitsBulkModeBar"');
+  const modeBar = app.slice(modeBarStart, app.indexOf("const toolbar = document.createElement", modeBarStart));
+  const rearrangeAppend = modeBar.indexOf("modeBar.appendChild(rearrangeButton)");
+  const scanAppend = modeBar.indexOf("modeBar.appendChild(scanRecipeButton)");
+  const printAppend = modeBar.indexOf("modeBar.appendChild(printButton)");
+  assert.ok(rearrangeAppend > -1 && scanAppend > rearrangeAppend && printAppend > scanAppend,
+    "expected append order: rearrangeButton, then scanRecipeButton, then printButton");
+});
+
+test("Scan Recipe is desktop-only, same as Print Recipe right next to it - mobile already has its own status-bar scan shortcut", () => {
+  assert.match(app, /scanRecipeButton\.className = "splitsScanShortcut rearrangeDesktopOnly";/);
+});
+
+test("Scan Recipe is a <details> popup, not one of the three mutually-exclusive expandable panels - it isn't added to splitsBulkModeActive/splitsSavedRecipesOpen/hopperRearrangement's coordination", () => {
+  const start = app.indexOf("const scanRecipeButton = document.createElement(\"details\")");
+  assert.notEqual(start, -1);
+  const end = app.indexOf("modeBar.appendChild(scanRecipeButton);", start);
+  const body = app.slice(start, end);
+  assert.doesNotMatch(body, /splitsBulkModeActive|splitsSavedRecipesOpen|hopperRearrangement/);
+});
+
+test("the popup offers the same three scan sources, same labels, as the mobile status-bar shortcut", () => {
+  const start = app.indexOf("scanRecipeButton.innerHTML = `");
+  const body = app.slice(start, app.indexOf("`;", start));
+  assert.match(body, /data-scan-source="job_traveler"[^>]*>Scan Job Traveler</);
+  assert.match(body, /data-scan-source="dosing_screen"[^>]*>Scan Dosing Screen</);
+  assert.match(body, /data-scan-source="heat_sheet"[^>]*>Scan Heat Sheet</);
+  assert.match(body, /class="statusScanShortcutPanel"/, "reuses the mobile shortcut's own panel styling");
+});
+
+test("choosing a source closes the popup and calls the exact same startScan flow as every other scan entry point, via the exported window.PolynRecipeScanUI - not a duplicated implementation", () => {
+  const start = app.indexOf("scanRecipeButton.querySelectorAll(\"[data-scan-source]\")");
+  const end = app.indexOf("modeBar.appendChild(scanRecipeButton);", start);
+  const body = app.slice(start, end);
+  assert.match(body, /scanRecipeButton\.open = false;/);
+  assert.match(body, /window\.PolynRecipeScanUI\?\.startScan\(button\.dataset\.scanSource\);/);
+});
+
+test("recipe-scan-ui.js exports startScan precisely so this button can call it", () => {
+  assert.match(ui, /root\.PolynRecipeScanUI = \{ startScan \};/);
+});
+
+test("splitsScanShortcut is reassigned to the current instance on every render, so the outside-click/Escape handlers below always check the live element", () => {
+  assert.match(app, /splitsScanShortcut = scanRecipeButton;/);
+});
+
+test("the outside-click and Escape handlers are registered once at module scope, not inside renderSplitsArea, so they never stack across repeated renders", () => {
+  const renderSplitsAreaStart = app.indexOf("function renderSplitsArea(){");
+  const moduleScopeSection = app.slice(0, renderSplitsAreaStart);
+  assert.match(moduleScopeSection, /let splitsScanShortcut = null;/);
+  assert.match(moduleScopeSection, /document\.addEventListener\("click", event=>\{\s*\n\s*if \(splitsScanShortcut\?\.open && !splitsScanShortcut\.contains\(event\.target\)\) splitsScanShortcut\.open = false;/);
+  assert.match(moduleScopeSection, /document\.addEventListener\("keydown", event=>\{\s*\n\s*if \(event\.key === "Escape" && splitsScanShortcut\?\.open\)\{/);
+  // And renderSplitsArea itself must not register a second copy.
+  const splitsAreaBody = functionBody("renderSplitsArea");
+  assert.doesNotMatch(splitsAreaBody, /document\.addEventListener\("click"/);
+  assert.doesNotMatch(splitsAreaBody, /document\.addEventListener\("keydown"/);
+});
+
+test("the summary is styled to match button.secondary, since class=\"secondary\" alone wouldn't apply to a non-<button> element", () => {
+  const ruleStart = styles.indexOf(".splitsScanShortcut > summary{");
+  assert.notEqual(ruleStart, -1);
+  const rule = styles.slice(ruleStart, styles.indexOf("}", ruleStart) + 1);
+  assert.match(rule, /background: var\(--btn-secondary-bg\);/);
+  assert.match(rule, /border: 1px solid var\(--btn-secondary-border\);/);
+  assert.match(rule, /list-style: none;/);
+});
+
+test("the summary matches its actual sibling buttons' computed size (.splitsBulkModeBar button's padding/font-size override), not just button.secondary's base rule - that override only ever matches real <button> elements, never a <summary>", () => {
+  const ruleStart = styles.indexOf(".splitsScanShortcut > summary{");
+  const rule = styles.slice(ruleStart, styles.indexOf("}", ruleStart) + 1);
+  assert.match(rule, /padding: 5px 9px;/);
+  assert.match(rule, /font-size: var\(--font-small\);/);
+  const siblingRuleStart = styles.indexOf(".splitsBulkModeBar button{");
+  const siblingRule = styles.slice(siblingRuleStart, styles.indexOf("}", siblingRuleStart) + 1);
+  assert.match(siblingRule, /padding:5px 9px;/);
+  assert.match(siblingRule, /font-size: var\(--font-small\);/);
+});
+
+test("the dropdown panel reuses .statusScanShortcutPanel's own styling (border/background/shadow/width) rather than a second copy, only overriding position", () => {
+  assert.doesNotMatch(styles, /\.splitsScanShortcut\s+\.statusScanShortcutPanel\{[^}]*background:/);
+  assert.match(styles, /\.statusScanShortcutPanel\{ position:absolute;/);
+});
+
+test("the panel opens upward, not downward - this row sits at the bottom of the panel, so opening downward would clip against the viewport, same reasoning as the ⓘ info panel", () => {
+  const ruleStart = styles.indexOf(".splitsScanShortcut .statusScanShortcutPanel{");
+  assert.notEqual(ruleStart, -1);
+  const rule = styles.slice(ruleStart, styles.indexOf("}", ruleStart) + 1);
+  assert.match(rule, /top: auto;/);
+  assert.match(rule, /bottom: calc\(100% \+ 6px\);/);
+});

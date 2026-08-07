@@ -373,4 +373,10 @@
   $("recipeScanReviewCancelBtn")?.addEventListener("click", cancelReview);
   $("recipeScanReviewRetakeBtn")?.addEventListener("click", retakeScan);
   $("recipeScanReviewApplyBtn")?.addEventListener("click", applyReview);
+
+  // Narrow export so other entry points into scanning (currently: Recipe
+  // Setup's own Scan Recipe shortcut, app.js) can trigger the exact same
+  // flow as the Tools panel/status-bar buttons above, without duplicating
+  // startScan's orientation-prompt/dialog logic.
+  root.PolynRecipeScanUI = { startScan };
 })(typeof globalThis !== "undefined" ? globalThis : this);

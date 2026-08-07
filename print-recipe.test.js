@@ -14,7 +14,7 @@ function functionBody(name){
   return app.slice(start, next === -1 ? undefined : next);
 }
 
-test("Print Recipe sits next to Rearrange Hoppers and remains desktop-only, even though Rearrange Hoppers itself no longer is", () => {
+test("Print Recipe sits next to Rearrange and remains desktop-only, even though Rearrange itself no longer is", () => {
   const modeBarStart = app.indexOf('modeBar.className = "splitsBulkModeBar"');
   const modeBar = app.slice(modeBarStart, app.indexOf("const toolbar = document.createElement", modeBarStart));
   assert.match(modeBar, /rearrangeButton\.className="secondary"/);
@@ -38,7 +38,7 @@ test("printing is a pure read/output action: no confirmation, no state mutation,
 test("the print sheet is built from state and reflects only recipe fields, not weights/tracking/runtime state", () => {
   const body = functionBody("printRecipeSheet");
   assert.match(body, /state\.layers\.forEach/);
-  assert.match(body, /hopperBadgeLabel\(L\.name, hi\)/);
+  assert.match(body, /L\.hoppers\.forEach\(h=>\{/);
   assert.match(body, /normName\(h\.resinName\)/);
   assert.match(body, /clampNum\(h\.pct\)/);
   assert.match(body, /clampNum\(L\.layerPct\)/);
@@ -49,7 +49,7 @@ test("the print sheet is built from state and reflects only recipe fields, not w
 
 test("resin names and other user-controlled text are assigned via textContent, never interpolated into HTML", () => {
   const body = functionBody("printRecipeSheet");
-  assert.match(body, /resinCell\.textContent = normName\(h\.resinName\) \|\| "—"/);
+  assert.match(body, /nameLine\.textContent = resinName \|\| "NOT USED"/);
   assert.doesNotMatch(body, /innerHTML/);
   assert.doesNotMatch(body, /\$\{[^}]*resinName[^}]*\}/);
 });
@@ -75,13 +75,49 @@ test("print CSS hides the whole app and shows only the print sheet, forced to bl
   assert.match(printBlock, /#recipePrintSheet \*\{ color:#000 !important; background:transparent !important; \}/);
 });
 
-test("layer tables are arranged in a compact two-column grid so a 5-layer recipe fits on one printed page", () => {
+// --- single dosing-controller-style overview table, layers x hoppers ------
+
+test("layers are rows and hoppers are columns in one combined table, not a separate table per layer", () => {
   const body = functionBody("printRecipeSheet");
-  assert.match(body, /layersGrid\.className = "printSheetLayers"/);
-  assert.match(body, /layersGrid\.append\(table\)/);
-  assert.match(body, /sheet\.append\(layersGrid\)/);
-  assert.doesNotMatch(body, /sheet\.append\(table\)/, "tables must go into the grid wrapper, not directly on the sheet");
+  assert.match(body, /table\.className = "printSheetTable"/);
+  assert.match(body, /sheet\.append\(table\)/);
+  assert.doesNotMatch(body, /printSheetLayerTable|layersGrid|printSheetLayers/, "the old per-layer-table/grid structure should be fully replaced");
+});
+
+test("each layer row starts with the big layer-letter header cell, matching the dosing controller printout's row labels", () => {
+  const body = functionBody("printRecipeSheet");
+  assert.match(body, /layerLabel\.className = "printSheetLayerLabel"/);
+  assert.match(body, /layerLabel\.textContent = L\.name/);
+  assert.match(styles, /#recipePrintSheet \.printSheetLayerLabel\{[^}]*font-size:20px[^}]*font-weight:700/);
+});
+
+test("each hopper cell stacks the resin name and its blend percentage, like the controller's stacked value/percent readout", () => {
+  const body = functionBody("printRecipeSheet");
+  assert.match(body, /nameLine\.className = "printSheetResin"/);
+  assert.match(body, /pctLine\.className = "printSheetPct"/);
+  assert.match(body, /cell\.append\(nameLine, pctLine\)/);
+});
+
+test("an empty hopper prints as NOT USED, the controller printout's own label for an unused slot", () => {
+  const body = functionBody("printRecipeSheet");
+  assert.match(body, /nameLine\.textContent = resinName \|\| "NOT USED"/);
+});
+
+test("hopper column headers are naming-mode aware but not per-layer, since a shared header row can't repeat the layer letter per column", () => {
+  const body = functionBody("printRecipeSheet");
+  assert.match(body, /state\.hopperNamingLine9 === "main"\s*\n\s*\? \["Main", "1", "2", "3", "4", "5"\]\s*\n\s*: \["H1", "H2", "H3", "H4", "H5", "H6"\]/);
+});
+
+test("the overall layer percentage (distinct from any hopper's blend percentage) survives as a trailing column, since the dosing printout has no equivalent of it", () => {
+  const body = functionBody("printRecipeSheet");
+  assert.match(body, /layerPctHead\.textContent = "Layer %"/);
+  assert.match(body, /layerPctCell\.className = "printSheetLayerPct"/);
+  assert.match(body, /layerPctCell\.textContent = `\$\{fmtNum\(clampNum\(L\.layerPct\), 2\)\}%`/);
+});
+
+test("the print table is bordered and left-aligned like the source printout, not the app's own dark theme", () => {
+  const printBlock = styles.slice(styles.indexOf("@media print{"));
+  assert.match(printBlock, /#recipePrintSheet \.printSheetTable\{ width:100%; border-collapse:collapse; table-layout:fixed; \}/);
+  assert.match(printBlock, /#recipePrintSheet \.printSheetTable th,\s*\n\s*#recipePrintSheet \.printSheetTable td\{ border:1px solid #000;/);
   assert.match(styles, /@page\{ margin:12mm; \}/);
-  assert.match(styles, /#recipePrintSheet \.printSheetLayers\{ display:grid; grid-template-columns:repeat\(2, 1fr\); gap:4px 14px; \}/);
-  assert.match(styles, /#recipePrintSheet \.printSheetLayerTable\{[^}]*page-break-inside:avoid/);
 });

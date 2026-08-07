@@ -85,10 +85,36 @@
   let workspaceConfigurationPending = null;
   let selectedWorkspaceConfigurationId = "";
   let hopperRearrangement = null;
+  // Recipe Setup's three expandable panels (Bulk edit, Rearrange Hoppers,
+  // Saved Recipes) are mutually exclusive - opening one closes the other
+  // two. hopperRearrangement above already persists across re-renders and
+  // carries real session data (baseline/undo/tapSource); these two are
+  // plain open/closed flags, but need the same module-level persistence so
+  // a render triggered by exiting rearrange (see the click handlers below)
+  // can correctly seed the panel operators actually meant to open next,
+  // instead of resetting every panel to closed.
+  let splitsBulkModeActive = false;
+  let splitsSavedRecipesOpen = false;
   // Persists across renderSplitsArea() re-renders (e.g. after a rearrange
   // move) so the mobile layer view stays where the operator left it instead
   // of jumping back to Layer A on every redraw.
   let lastActiveMobileLayer = "";
+  // Recipe Setup's own Scan Recipe shortcut - a small popup, not one of the
+  // three mutually-exclusive panels above. Rebuilt fresh on every
+  // renderSplitsArea() call like everything else in that panel, so the
+  // outside-click/Escape handlers below are registered once, at module
+  // scope, and always check whichever instance this variable currently
+  // points to rather than being re-registered (and stacking) every render.
+  let splitsScanShortcut = null;
+  document.addEventListener("click", event=>{
+    if (splitsScanShortcut?.open && !splitsScanShortcut.contains(event.target)) splitsScanShortcut.open = false;
+  });
+  document.addEventListener("keydown", event=>{
+    if (event.key === "Escape" && splitsScanShortcut?.open){
+      splitsScanShortcut.open = false;
+      splitsScanShortcut.querySelector(":scope > summary")?.focus();
+    }
+  });
 
   function snapshotSharedActiveJob(){
     return activeJob.snapshotActiveJob(state, APP_VERSION);
@@ -99,22 +125,82 @@
   }
 
   function workspaceConfigurationStatus(message){ const el=$("workspaceConfigurationsStatus"); if(el){el.textContent=message||"";el.hidden=!message;} }
+  // Shared by both surfaces that list shared configurations: Line
+  // Configurations' own Receiver Weight Profiles/Recipes sections, and
+  // Recipe Setup's Saved Recipes panel (recipes only - see renderSplitsSavedRecipes).
+  // Both read from the same workspaceConfigurations service/cache, so a
+  // selection or mutation made from either surface is reflected in both -
+  // select() below re-renders through renderWorkspaceConfigurations, which
+  // always refreshes Recipe Setup's copy too.
+  function renderConfigurationList(host,items,kind,syncState,{ showRowActions = true } = {}){
+    host.replaceChildren();
+    if(!items.length){ const empty=document.createElement("div"); empty.className="muted"; empty.textContent=kind==="recipe"?"No shared recipes saved for this workspace.":"No shared weight profiles saved for this workspace."; host.append(empty); return; }
+    items.forEach(item=>{ const row=document.createElement("div"); row.className="workspaceConfigurationRow"; row.tabIndex=0; row.setAttribute("role","group"); row.setAttribute("aria-label",`${item.name} configuration`); const select=()=>{selectedWorkspaceConfigurationId=item.id; renderWorkspaceConfigurations(syncState);}; const selected=selectedWorkspaceConfigurationId===item.id; row.classList.toggle("selected",selected); row.addEventListener("click",event=>{if(!event.target.closest("button,summary,details")) select();}); row.addEventListener("keydown",event=>{if((event.key==="Enter"||event.key===" ")&&!event.target.closest("button,summary")){event.preventDefault();select();}}); const info=document.createElement("div"); info.className="workspaceConfigurationInfo"; info.addEventListener("click",event=>{event.stopPropagation();select();}); const title=document.createElement("strong"); if(item.favorite){const star=document.createElement("span");star.className="workspaceConfigurationFavorite";star.setAttribute("aria-label","Favorite recipe");star.textContent="★";title.append(star," ");} title.append(item.name); const meta=document.createElement("small"); const count=kind==="recipe"&&Array.isArray(item.payload?.layers)?item.payload.layers.reduce((n,layer)=>n+(Array.isArray(layer?.hoppers)?layer.hoppers.filter(h=>typeof h?.resin_name==="string"&&h.resin_name.trim()).length:0),0):kind!=="recipe"&&Array.isArray(item.payload?.layers)?item.payload.layers.reduce((n,layer)=>n+(Array.isArray(layer?.receiver_weights_lb)&&layer.receiver_weights_lb.length===6?6:0),0):null; meta.textContent=`${item.payload.line_type} Layer${count===null?"":` · ${count} ${kind==="recipe"?"assigned hoppers":"receiver weights"}`} · Updated ${item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : "unknown"}`; info.append(title,meta); row.append(info); if(selected&&showRowActions){const actions=document.createElement("div"); actions.className="workspaceConfigurationActions"; const action=(label,fn,cls="secondary")=>{const b=document.createElement("button");b.type="button";b.className=cls;b.textContent=label;b.addEventListener("click",event=>{event.stopPropagation();fn();});return b;}; actions.append(action("Load",()=>previewWorkspaceConfiguration(item),"primary"),action("Update",()=>openWorkspaceConfigurationDialog("update",item))); const menu=document.createElement("details"); menu.className="workspaceConfigurationOverflow"; menu.addEventListener("click",event=>event.stopPropagation()); const summary=document.createElement("summary"); summary.setAttribute("aria-label",`More actions for ${item.name}`); summary.textContent="⋯"; const menuActions=document.createElement("div"); menuActions.className="workspaceConfigurationOverflowMenu"; const menuAction=(label,fn,cls="secondary")=>{const button=action(label,()=>{menu.open=false;fn();},cls);menuActions.append(button);}; menuAction("Rename",()=>openWorkspaceConfigurationDialog("rename",item)); menuAction("Duplicate",()=>openWorkspaceConfigurationDialog("duplicate",item)); if(kind==="recipe") menuAction(item.favorite?"Unfavorite":"Favorite",()=>mutateWorkspaceConfiguration("favorite",item,!item.favorite)); menuAction("Delete",()=>{if(confirm(`Delete shared configuration “${item.name}”?`)) mutateWorkspaceConfiguration("delete",item);},"danger"); menu.append(summary,menuActions); actions.append(menu); row.append(actions);} host.append(row); });
+  }
+  // Recipe Setup's own copy of the shared recipe list (Line Configurations
+  // keeps the original - this is an additional, independent surface reading
+  // the same service/cache, not a replacement). Only recipes, not receiver
+  // weight profiles - Recipe Setup doesn't concern itself with equipment
+  // weights. Rebuilt fresh by renderSplitsArea() on every render, so this
+  // always re-populates it with current data rather than leaving it blank
+  // until some unrelated RT Sync event happens to fire next.
+  // The panel's own Load/Update/(rename, duplicate, favorite, delete) act
+  // on whichever recipe is currently selected (selectedWorkspaceConfigurationId,
+  // the same selection the list rows themselves set on click) rather than
+  // each row carrying its own action buttons - a consolidated bar instead
+  // of one per row. Wired fresh on every call since the buttons are static
+  // elements built once by renderSplitsArea() but this function runs far
+  // more often (any selection change, cache update, etc.) without a full
+  // rebuild - .onclick assignment (not addEventListener) so re-wiring never
+  // stacks duplicate handlers across repeated calls.
+  function wireSplitsSavedRecipesActions(items){
+    const loadBtn=$("splitsLoadRecipe"), updateBtn=$("splitsUpdateRecipe"), overflow=$("splitsRecipeOverflow");
+    const overflowSummary=overflow?.querySelector("summary");
+    const renameBtn=$("splitsRenameRecipe"), duplicateBtn=$("splitsDuplicateRecipe"), favoriteBtn=$("splitsFavoriteRecipe"), deleteBtn=$("splitsDeleteRecipe");
+    const selectedItem = items.find(item=>item.id===selectedWorkspaceConfigurationId) || null;
+    if(loadBtn) loadBtn.disabled = !selectedItem;
+    if(updateBtn) updateBtn.disabled = !selectedItem;
+    // <details>/<summary> has no native disabled state - stays visible
+    // (matching Load/Update, which are visible-but-disabled rather than
+    // hidden) and a click-time guard blocks it from opening instead.
+    if(overflow){
+      overflow.classList.toggle("overflow-disabled", !selectedItem);
+      if(!selectedItem) overflow.open = false;
+    }
+    if(overflowSummary) overflowSummary.onclick = event=>{ if(!selectedItem) event.preventDefault(); };
+    if(favoriteBtn) favoriteBtn.textContent = selectedItem?.favorite ? "Unfavorite" : "Favorite";
+    if(loadBtn) loadBtn.onclick = ()=>{ if(selectedItem) previewWorkspaceConfiguration(selectedItem); };
+    if(updateBtn) updateBtn.onclick = ()=>{ if(selectedItem) openWorkspaceConfigurationDialog("update",selectedItem); };
+    if(renameBtn) renameBtn.onclick = ()=>{ if(overflow) overflow.open=false; if(selectedItem) openWorkspaceConfigurationDialog("rename",selectedItem); };
+    if(duplicateBtn) duplicateBtn.onclick = ()=>{ if(overflow) overflow.open=false; if(selectedItem) openWorkspaceConfigurationDialog("duplicate",selectedItem); };
+    if(favoriteBtn) favoriteBtn.onclick = ()=>{ if(overflow) overflow.open=false; if(selectedItem) mutateWorkspaceConfiguration("favorite",selectedItem,!selectedItem.favorite); };
+    if(deleteBtn) deleteBtn.onclick = ()=>{ if(overflow) overflow.open=false; if(selectedItem && confirm(`Delete shared configuration “${selectedItem.name}”?`)) mutateWorkspaceConfiguration("delete",selectedItem); };
+  }
+  function renderSplitsSavedRecipes(syncState){
+    const host=$("splitsSavedRecipesList");
+    if(!host) return;
+    const status=$("splitsSavedRecipesStatus");
+    const setStatus=message=>{ if(status){ status.textContent=message||""; status.hidden=!message; } };
+    const workspaceId=syncState?.selectedWorkspaceId || "";
+    if(!workspaceId){ host.replaceChildren(); setStatus("Connect to an RT Sync workspace to view shared recipes."); wireSplitsSavedRecipesActions([]); return; }
+    if(!workspaceConfigurations){ host.replaceChildren(); setStatus("Shared configurations service is unavailable."); wireSplitsSavedRecipesActions([]); return; }
+    setStatus("");
+    const items=workspaceConfigurations.listRecipes(workspaceId).items;
+    wireSplitsSavedRecipesActions(items);
+    renderConfigurationList(host,items,"recipe",syncState,{ showRowActions:false });
+  }
   function renderWorkspaceConfigurations(syncState){
+    renderSplitsSavedRecipes(syncState);
     const profiles=$("workspaceProfilesList"), recipes=$("workspaceRecipesList"), refresh=$("workspaceConfigurationsRefresh"), workspaceLabel=$("workspaceConfigurationsWorkspace");
     if(!profiles || !recipes) return;
     const workspaceId=syncState?.selectedWorkspaceId || "";
     if(refresh) refresh.disabled=!workspaceId || workspaceConfigurationRefreshInFlight;
-    profiles.replaceChildren(); recipes.replaceChildren();
-    if(!workspaceId){ workspaceConfigurationWorkspaceId=""; selectedWorkspaceConfigurationId=""; if(workspaceLabel) workspaceLabel.hidden=true; workspaceConfigurationStatus("Connect to an RT Sync workspace to view shared weight profiles and recipes."); return; }
+    if(!workspaceId){ workspaceConfigurationWorkspaceId=""; selectedWorkspaceConfigurationId=""; if(workspaceLabel) workspaceLabel.hidden=true; workspaceConfigurationStatus("Connect to an RT Sync workspace to view shared weight profiles and recipes."); profiles.replaceChildren(); recipes.replaceChildren(); return; }
     workspaceConfigurationWorkspaceId=workspaceId;
     if(workspaceLabel){ workspaceLabel.hidden=false; workspaceLabel.textContent=`${syncState.selectedWorkspace?.name || "Connected workspace"} · RT Sync workspace`; }
-    const renderList=(host,items,kind)=>{
-      if(!items.length){ const empty=document.createElement("div"); empty.className="muted"; empty.textContent=kind==="recipe"?"No shared recipes saved for this workspace.":"No shared weight profiles saved for this workspace."; host.append(empty); return; }
-      items.forEach(item=>{ const row=document.createElement("div"); row.className="workspaceConfigurationRow"; row.tabIndex=0; row.setAttribute("role","group"); row.setAttribute("aria-label",`${item.name} configuration`); const select=()=>{selectedWorkspaceConfigurationId=item.id; renderWorkspaceConfigurations(syncState);}; const selected=selectedWorkspaceConfigurationId===item.id; row.classList.toggle("selected",selected); row.addEventListener("click",event=>{if(!event.target.closest("button,summary,details")) select();}); row.addEventListener("keydown",event=>{if((event.key==="Enter"||event.key===" ")&&!event.target.closest("button,summary")){event.preventDefault();select();}}); const info=document.createElement("div"); info.className="workspaceConfigurationInfo"; info.addEventListener("click",event=>{event.stopPropagation();select();}); const title=document.createElement("strong"); if(item.favorite){const star=document.createElement("span");star.className="workspaceConfigurationFavorite";star.setAttribute("aria-label","Favorite recipe");star.textContent="★";title.append(star," ");} title.append(item.name); const meta=document.createElement("small"); const count=kind==="recipe"&&Array.isArray(item.payload?.layers)?item.payload.layers.reduce((n,layer)=>n+(Array.isArray(layer?.hoppers)?layer.hoppers.filter(h=>typeof h?.resin_name==="string"&&h.resin_name.trim()).length:0),0):kind!=="recipe"&&Array.isArray(item.payload?.layers)?item.payload.layers.reduce((n,layer)=>n+(Array.isArray(layer?.receiver_weights_lb)&&layer.receiver_weights_lb.length===6?6:0),0):null; meta.textContent=`${item.payload.line_type} Layer${count===null?"":` · ${count} ${kind==="recipe"?"assigned hoppers":"receiver weights"}`} · Updated ${item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : "unknown"}`; info.append(title,meta); row.append(info); if(selected){const actions=document.createElement("div"); actions.className="workspaceConfigurationActions"; const action=(label,fn,cls="secondary")=>{const b=document.createElement("button");b.type="button";b.className=cls;b.textContent=label;b.addEventListener("click",event=>{event.stopPropagation();fn();});return b;}; actions.append(action("Load",()=>previewWorkspaceConfiguration(item),"primary"),action("Update",()=>openWorkspaceConfigurationDialog("update",item))); const menu=document.createElement("details"); menu.className="workspaceConfigurationOverflow"; menu.addEventListener("click",event=>event.stopPropagation()); const summary=document.createElement("summary"); summary.setAttribute("aria-label",`More actions for ${item.name}`); summary.textContent="⋯"; const menuActions=document.createElement("div"); menuActions.className="workspaceConfigurationOverflowMenu"; const menuAction=(label,fn,cls="secondary")=>{const button=action(label,()=>{menu.open=false;fn();},cls);menuActions.append(button);}; menuAction("Rename",()=>openWorkspaceConfigurationDialog("rename",item)); menuAction("Duplicate",()=>openWorkspaceConfigurationDialog("duplicate",item)); if(kind==="recipe") menuAction(item.favorite?"Unfavorite":"Favorite",()=>mutateWorkspaceConfiguration("favorite",item,!item.favorite)); menuAction("Delete",()=>{if(confirm(`Delete shared configuration “${item.name}”?`)) mutateWorkspaceConfiguration("delete",item);},"danger"); menu.append(summary,menuActions); actions.append(menu); row.append(actions);} host.append(row); });
-    };
-    if(!workspaceConfigurations){ workspaceConfigurationStatus("Shared configurations service is unavailable."); return; }
-    renderList(profiles,workspaceConfigurations.listReceiverWeightProfiles(workspaceId).items,"profile");
-    renderList(recipes,workspaceConfigurations.listRecipes(workspaceId).items,"recipe");
+    if(!workspaceConfigurations){ workspaceConfigurationStatus("Shared configurations service is unavailable."); profiles.replaceChildren(); recipes.replaceChildren(); return; }
+    renderConfigurationList(profiles,workspaceConfigurations.listReceiverWeightProfiles(workspaceId).items,"profile",syncState);
+    renderConfigurationList(recipes,workspaceConfigurations.listRecipes(workspaceId).items,"recipe",syncState);
     workspaceConfigurationStatus("");
   }
   async function refreshWorkspaceConfigurations(){
@@ -1229,38 +1315,61 @@
       header.append(title, meta);
       sheet.append(header);
 
-      const layersGrid = document.createElement("div");
-      layersGrid.className = "printSheetLayers";
+      // A single overview table - layers as rows, hoppers as columns - to
+      // read like the printouts operators already get off the dosing
+      // controller itself (material overview: one row per layer, one
+      // column per hopper, resin code and value stacked in each cell).
+      // Column headers are naming-mode-generic (not per-layer, unlike
+      // hopperBadgeLabel) since H1's label is otherwise identical across
+      // every layer in "standard" mode and the row already carries the
+      // layer letter.
+      const hopperColumnLabels = state.hopperNamingLine9 === "main"
+        ? ["Main", "1", "2", "3", "4", "5"]
+        : ["H1", "H2", "H3", "H4", "H5", "H6"];
 
-      state.layers.forEach(L=>{
-        const table = document.createElement("table");
-        table.className = "printSheetLayerTable";
-        const caption = document.createElement("caption");
-        caption.textContent = `Layer ${L.name} — ${fmtNum(clampNum(L.layerPct), 2)}%`;
-        const thead = document.createElement("thead");
-        const headRow = document.createElement("tr");
-        ["Hopper", "Resin", "Blend %"].forEach(text=>{
-          const th = document.createElement("th");
-          th.textContent = text;
-          headRow.appendChild(th);
-        });
-        thead.appendChild(headRow);
-        const tbody = document.createElement("tbody");
-        L.hoppers.forEach((h, hi)=>{
-          const row = document.createElement("tr");
-          const hopperCell = document.createElement("td");
-          hopperCell.textContent = hopperBadgeLabel(L.name, hi);
-          const resinCell = document.createElement("td");
-          resinCell.textContent = normName(h.resinName) || "—";
-          const pctCell = document.createElement("td");
-          pctCell.textContent = `${fmtNum(clampNum(h.pct), 2)}%`;
-          row.append(hopperCell, resinCell, pctCell);
-          tbody.appendChild(row);
-        });
-        table.append(caption, thead, tbody);
-        layersGrid.append(table);
+      const table = document.createElement("table");
+      table.className = "printSheetTable";
+      const thead = document.createElement("thead");
+      const headRow = document.createElement("tr");
+      headRow.appendChild(document.createElement("th"));
+      hopperColumnLabels.forEach(text=>{
+        const th = document.createElement("th");
+        th.textContent = text;
+        headRow.appendChild(th);
       });
-      sheet.append(layersGrid);
+      const layerPctHead = document.createElement("th");
+      layerPctHead.textContent = "Layer %";
+      headRow.appendChild(layerPctHead);
+      thead.appendChild(headRow);
+
+      const tbody = document.createElement("tbody");
+      state.layers.forEach(L=>{
+        const row = document.createElement("tr");
+        const layerLabel = document.createElement("th");
+        layerLabel.className = "printSheetLayerLabel";
+        layerLabel.scope = "row";
+        layerLabel.textContent = L.name;
+        row.appendChild(layerLabel);
+        L.hoppers.forEach(h=>{
+          const cell = document.createElement("td");
+          const resinName = normName(h.resinName);
+          const nameLine = document.createElement("div");
+          nameLine.className = "printSheetResin";
+          nameLine.textContent = resinName || "NOT USED";
+          const pctLine = document.createElement("div");
+          pctLine.className = "printSheetPct";
+          pctLine.textContent = `${fmtNum(clampNum(h.pct), 2)}%`;
+          cell.append(nameLine, pctLine);
+          row.appendChild(cell);
+        });
+        const layerPctCell = document.createElement("td");
+        layerPctCell.className = "printSheetLayerPct";
+        layerPctCell.textContent = `${fmtNum(clampNum(L.layerPct), 2)}%`;
+        row.appendChild(layerPctCell);
+        tbody.appendChild(row);
+      });
+      table.append(thead, tbody);
+      sheet.append(table);
 
       document.body.appendChild(sheet);
       window.print();
@@ -1275,7 +1384,7 @@
       const cellRefs = new Map();
       const columnSelectors = new Map();
       const rowSelectors = new Map();
-      let bulkMode = false;
+      let bulkMode = splitsBulkModeActive;
 
       function toggleSelection(keys){
         const select = keys.some(key=>!selected.has(key));
@@ -1295,13 +1404,23 @@
 
       const modeBar = document.createElement("div");
       modeBar.className = "splitsBulkModeBar";
+      // Recipe Setup's own entry point into the same shared-recipe list
+      // Line Configurations already has (see renderSplitsSavedRecipes) -
+      // Load is the action operators reach for most from here, so it leads
+      // the row rather than sitting after the editing tools.
+      const savedRecipesButton = document.createElement("button");
+      savedRecipesButton.type = "button";
+      savedRecipesButton.className = "secondary";
+      savedRecipesButton.textContent = "Saved Recipes";
+      savedRecipesButton.setAttribute("aria-expanded", "false");
+      modeBar.appendChild(savedRecipesButton);
       const modeButton = document.createElement("button");
       modeButton.type = "button";
       modeButton.className = "secondary";
       modeButton.textContent = "Bulk edit";
       modeButton.setAttribute("aria-expanded", "false");
       modeBar.appendChild(modeButton);
-      const rearrangeButton=document.createElement("button"); rearrangeButton.type="button"; rearrangeButton.className="secondary"; rearrangeButton.textContent=hopperRearrangement?.active?"Done Rearranging":"Rearrange Hoppers"; rearrangeButton.setAttribute("aria-expanded", String(!!hopperRearrangement?.active)); rearrangeButton.disabled=!state.layers.some(L=>L.hoppers.some(h=>normName(h.resinName)||clampNum(h.pct)>0)); modeBar.appendChild(rearrangeButton);
+      const rearrangeButton=document.createElement("button"); rearrangeButton.type="button"; rearrangeButton.className="secondary"; rearrangeButton.textContent=hopperRearrangement?.active?"Done Rearranging":"Rearrange"; rearrangeButton.setAttribute("aria-expanded", String(!!hopperRearrangement?.active)); rearrangeButton.disabled=!state.layers.some(L=>L.hoppers.some(h=>normName(h.resinName)||clampNum(h.pct)>0)); modeBar.appendChild(rearrangeButton);
       rearrangeButton.addEventListener("click",()=>{
         if(hopperRearrangement?.active){
           hopperRearrangement=null;
@@ -1311,6 +1430,8 @@
           notifyActiveJobMutation({immediate:true,kind:"rearrange-hoppers"});
           return;
         }
+        splitsBulkModeActive = false;
+        splitsSavedRecipesOpen = false;
         hopperRearrangement={active:true,baseline:window.PolynHopperRearrangement.snapshot(state.layers),undo:[],tapSource:null};
         renderSplitsArea();
       });
@@ -1327,6 +1448,30 @@
       function clearTapSourceHighlight(){
         table.querySelectorAll(".rearrangeSource").forEach(el=>el.classList.remove("rearrangeSource"));
       }
+
+      // Same three-option popup as the mobile status bar's scan shortcut,
+      // not one of the mutually-exclusive expandable panels above - a
+      // click here goes straight into the existing scan flow
+      // (recipe-scan-ui.js's startScan, exposed via window.PolynRecipeScanUI)
+      // rather than dropping a panel of its own.
+      const scanRecipeButton = document.createElement("details");
+      scanRecipeButton.className = "splitsScanShortcut rearrangeDesktopOnly";
+      scanRecipeButton.innerHTML = `
+        <summary aria-label="Scan a recipe source" title="Scan a recipe source">Scan Recipe</summary>
+        <div class="statusScanShortcutPanel">
+          <button type="button" data-scan-source="job_traveler">Scan Job Traveler</button>
+          <button type="button" data-scan-source="dosing_screen">Scan Dosing Screen</button>
+          <button type="button" data-scan-source="heat_sheet">Scan Heat Sheet</button>
+        </div>
+      `;
+      scanRecipeButton.querySelectorAll("[data-scan-source]").forEach(button=>{
+        button.addEventListener("click", ()=>{
+          scanRecipeButton.open = false;
+          window.PolynRecipeScanUI?.startScan(button.dataset.scanSource);
+        });
+      });
+      modeBar.appendChild(scanRecipeButton);
+      splitsScanShortcut = scanRecipeButton;
 
       const printButton=document.createElement("button"); printButton.type="button"; printButton.className="secondary rearrangeDesktopOnly"; printButton.textContent="Print Recipe"; printButton.disabled=!state.layers.some(L=>L.hoppers.some(h=>normName(h.resinName)||clampNum(h.pct)>0)); modeBar.appendChild(printButton);
       printButton.addEventListener("click", printRecipeSheet);
@@ -1361,6 +1506,61 @@
         </div>
         <div class="splitsBulkNote tiny">Blank fields leave existing values unchanged.</div>
       `;
+
+      // Recipe Setup's own copy of the shared recipe list already available
+      // under Line Configurations (see renderSplitsSavedRecipes) - same
+      // service/cache, same Load/Update/Rename/Duplicate/Favorite/Delete
+      // actions, just a second, closer-to-the-work entry point. Line
+      // Configurations' own section is untouched.
+      const savedRecipesPanel = document.createElement("div");
+      savedRecipesPanel.className = "splitsSavedRecipesPanel hide";
+      savedRecipesPanel.innerHTML = `
+        <div class="workspaceConfigurationSectionTitle">
+          <div>
+            <strong>Saved Recipes</strong>
+            <small>Shared recipe assignments for this RT Sync workspace.</small>
+          </div>
+          <div class="splitsSavedRecipesActions">
+            <button id="splitsSaveRecipe" class="secondary" type="button">Save Current Recipe</button>
+            <button id="splitsLoadRecipe" class="primary" type="button" disabled>Load</button>
+            <button id="splitsUpdateRecipe" class="secondary" type="button" disabled>Update</button>
+            <details class="workspaceConfigurationOverflow overflow-disabled" id="splitsRecipeOverflow">
+              <summary aria-label="More actions for the selected recipe">⋯</summary>
+              <div class="workspaceConfigurationOverflowMenu">
+                <button id="splitsRenameRecipe" type="button" class="secondary">Rename</button>
+                <button id="splitsDuplicateRecipe" type="button" class="secondary">Duplicate</button>
+                <button id="splitsFavoriteRecipe" type="button" class="secondary">Favorite</button>
+                <button id="splitsDeleteRecipe" type="button" class="danger">Delete</button>
+              </div>
+            </details>
+          </div>
+        </div>
+        <div id="splitsSavedRecipesStatus" class="muted" role="status" hidden></div>
+        <div id="splitsSavedRecipesList" class="workspaceConfigurationList"></div>
+      `;
+      savedRecipesPanel.querySelector("#splitsSaveRecipe").addEventListener("click", ()=>openWorkspaceConfigurationDialog("save-recipe"));
+      function setSavedRecipesOpen(open){
+        savedRecipesPanel.classList.toggle("hide", !open);
+        savedRecipesButton.textContent = open ? "Hide Saved Recipes" : "Saved Recipes";
+        savedRecipesButton.setAttribute("aria-expanded", String(open));
+        splitsSavedRecipesOpen = !!open;
+      }
+      savedRecipesButton.addEventListener("click", ()=>{
+        const turningOn = savedRecipesPanel.classList.contains("hide");
+        if (turningOn && hopperRearrangement?.active){
+          hopperRearrangement = null;
+          splitsSavedRecipesOpen = true;
+          splitsBulkModeActive = false;
+          renderSplitsArea();
+          validateAndCompute();
+          saveSession();
+          notifyActiveJobMutation({immediate:true,kind:"rearrange-hoppers"});
+          return;
+        }
+        if (turningOn) setBulkMode(false);
+        setSavedRecipesOpen(turningOn);
+      });
+
       const summary = document.createElement("div");
       summary.className = "splitsMatrixSummary";
       summary.setAttribute("role", "status");
@@ -1376,11 +1576,16 @@
       `;
       const actionInfo = document.createElement("div");
       actionInfo.className = "splitsMatrixActionInfo";
-      actionInfo.append(summary, recipeInfo);
+      actionInfo.append(summary);
+      // Lives at the right end of the button row, not next to the summary
+      // text - modeBar is display:flex, so appending it last here puts it
+      // after Print Recipe regardless of which of the three buttons are
+      // present/disabled.
+      modeBar.appendChild(recipeInfo);
       const actionRow = document.createElement("div");
       actionRow.className = "splitsMatrixActions";
       actionRow.append(actionInfo, modeBar);
-      area.append(actionRow, toolbar);
+      area.append(actionRow, toolbar, savedRecipesPanel);
 
       if(hopperRearrangement?.active){
         const bar=document.createElement("div");
@@ -1825,6 +2030,7 @@
 
       function setBulkMode(enabled){
         bulkMode = !!enabled;
+        splitsBulkModeActive = bulkMode;
         area.classList.toggle("bulk-editing", bulkMode);
         toolbar.classList.toggle("hide", !bulkMode);
         modeButton.textContent = bulkMode ? "Done bulk editing" : "Bulk edit";
@@ -1834,10 +2040,12 @@
           button.setAttribute("aria-disabled", String(!bulkMode));
         });
         cellRefs.forEach(ref=>{
-          // setBulkMode(false) runs unconditionally at the end of every
-          // render (see below) to reset newly-created cells to a consistent
-          // baseline - it must not re-enable inputs that rearrange mode
-          // just disabled moments earlier in the same render pass.
+          // Called once unconditionally at the end of every render (see
+          // below) to (re)wire newly-created cells to the resolved bulkMode
+          // for this render - reading hopperRearrangement fresh here (not
+          // just trusting bulkMode) still matters even though the two are
+          // mutually exclusive by construction, so a rearrange-disabled
+          // input is never accidentally re-enabled.
           const rearranging = !!hopperRearrangement?.active;
           ref.resinInput.disabled = bulkMode || rearranging;
           ref.pctInput.disabled = bulkMode || rearranging;
@@ -1848,7 +2056,21 @@
         updateSelectionUI();
       }
 
-      modeButton.addEventListener("click",()=>setBulkMode(!bulkMode));
+      modeButton.addEventListener("click",()=>{
+        const turningOn = !bulkMode;
+        if (turningOn && hopperRearrangement?.active){
+          hopperRearrangement = null;
+          splitsBulkModeActive = true;
+          splitsSavedRecipesOpen = false;
+          renderSplitsArea();
+          validateAndCompute();
+          saveSession();
+          notifyActiveJobMutation({immediate:true,kind:"rearrange-hoppers"});
+          return;
+        }
+        if (turningOn) setSavedRecipesOpen(false);
+        setBulkMode(turningOn);
+      });
 
       [bulkNameInput, bulkPctInput].forEach(input=>{
         input.addEventListener("input",()=>{
@@ -1971,7 +2193,13 @@
       }
 
       updateSplitTotals();
-      setBulkMode(false);
+      // Reapply (not force-close) the resolved state to this render's
+      // freshly-created elements - both default to closed, but a render
+      // triggered by switching panels (see the click handlers above) seeds
+      // one of them open via splitsBulkModeActive/splitsSavedRecipesOpen.
+      setBulkMode(bulkMode);
+      setSavedRecipesOpen(splitsSavedRecipesOpen);
+      renderSplitsSavedRecipes(lineSync?.getState?.());
     }
 
     function renderResinCalculator(){

@@ -236,3 +236,7 @@ test("recipe-scan-ui.js loads after app.js, so window.PolynRecipeScanBridge alre
   const uiIndex = index.indexOf('src="recipe-scan-ui.js');
   assert.ok(appIndex !== -1 && uiIndex !== -1 && appIndex < uiIndex);
 });
+
+test("startScan is exported so other entry points (Recipe Setup's own Scan Recipe shortcut) can trigger the same flow without duplicating its orientation/dialog logic", () => {
+  assert.match(ui, /root\.PolynRecipeScanUI = \{ startScan \};/);
+});

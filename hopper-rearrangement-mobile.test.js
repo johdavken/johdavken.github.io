@@ -16,32 +16,79 @@ function functionBody(name){
 
 const splitsArea = functionBody("renderSplitsArea");
 
-// --- Bulk edit no longer pushes the panel down on mobile -----------------
+// --- Bulk edit/Rearrange/Print Recipe live at the bottom of the panel,
+// on both mobile and desktop -----------------------------------------------
 
-test("the action row, bulk-edit toolbar, and active-rearrange mode bar all reorder below the panel on mobile", () => {
-  assert.match(styles, /@media\(max-width:900px\)\{\s*#splitsArea > \.splitsMatrixActions,\s*#splitsArea > \.splitsBulkBar,\s*#splitsArea > \.rearrangeModeBar\{ order:1; position:static; \}\s*\}/);
+test("the action row, bulk-edit toolbar, saved-recipes panel, and active-rearrange mode bar all reorder below the table, unscoped to any viewport width", () => {
+  assert.match(styles, /#splitsArea > \.splitsMatrixActions,\s*#splitsArea > \.splitsBulkBar,\s*#splitsArea > \.splitsSavedRecipesPanel,\s*#splitsArea > \.rearrangeModeBar\{ order:1; position:static; \}/);
+  // Not gated behind a mobile-only media query anymore - desktop gets the
+  // same bottom placement now, not just mobile.
+  assert.doesNotMatch(styles, /@media\(max-width:900px\)\{\s*#splitsArea > \.splitsMatrixActions/);
 });
 
-test("both reordered bars also drop their sticky-to-top positioning, so they can't jump/force-scroll once moved after the table", () => {
-  const reorderRuleStart = styles.indexOf("@media(max-width:900px){\n  #splitsArea");
-  const reorderRule = styles.slice(reorderRuleStart, styles.indexOf("}\n", reorderRuleStart) + 2);
+test("the reordered bars also drop their sticky-to-top positioning, so they can't jump/force-scroll once moved after the table", () => {
+  const reorderRuleStart = styles.indexOf("#splitsArea > .splitsMatrixActions,");
+  const reorderRule = styles.slice(reorderRuleStart, styles.indexOf("}", reorderRuleStart) + 1);
   assert.match(reorderRule, /position:static/);
   // Both elements' base rules define position:sticky elsewhere in the
-  // file - this override only needs to win at this breakpoint, not remove
-  // the base declaration (still correct for desktop).
+  // file - this override only needs to win once reordered, not remove
+  // the base declaration (still correct when not reordered).
   assert.match(styles, /\.splitsBulkBar\{\s*position:sticky;/);
   assert.match(styles, /\.rearrangeModeBar\{position:sticky;/);
 });
 
-test("the action row (Bulk edit + Rearrange Hoppers) and the bulk toolbar are still the same direct children of #splitsArea targeted by the reorder rule", () => {
-  assert.match(splitsArea, /actionRow\.className = "splitsMatrixActions"/);
-  assert.match(splitsArea, /toolbar\.className = "splitsBulkBar hide"/);
-  assert.match(splitsArea, /area\.append\(actionRow, toolbar\)/);
+test("the layer-total summary stacks above the button row, both flush to the same left edge - not spread apart edge-to-edge, not inline with each other", () => {
+  assert.match(styles, /\.splitsMatrixActions\{display:flex;flex-direction:column;align-items:flex-start;gap:8px;border-top:1px solid var\(--row-border\);padding-top:12px\}/);
 });
 
-// --- Rearrange Hoppers is now reachable and active on mobile --------------
+test("the action row is pinned to the panel's own left edge, not centered under the table - the table's width (and centered position) changes with layer count, so centering against it would move the buttons around", () => {
+  const actionsRule = styles.slice(styles.indexOf(".splitsMatrixActions{"), styles.indexOf("}", styles.indexOf(".splitsMatrixActions{")) + 1);
+  assert.doesNotMatch(actionsRule, /width:max-content/);
+  assert.doesNotMatch(actionsRule, /margin-inline:auto/);
+});
 
-test("Rearrange Hoppers is no longer desktop-only, while Print Recipe still is", () => {
+test("a divider (border-top) separates the button row from the table above it, since the row is reordered to render right after it", () => {
+  const actionsRule = styles.slice(styles.indexOf(".splitsMatrixActions{"), styles.indexOf("}", styles.indexOf(".splitsMatrixActions{")) + 1);
+  assert.match(actionsRule, /border-top:1px solid var\(--row-border\)/);
+});
+
+// --- info icon lives at the right end of the button row, opens upward -----
+
+test("the info icon (ⓘ) is appended into modeBar, not actionInfo - it now sits after Print Recipe, not next to the summary text", () => {
+  assert.match(splitsArea, /actionInfo\.append\(summary\);/);
+  assert.doesNotMatch(splitsArea, /actionInfo\.append\(summary, recipeInfo\)/);
+  const modeBarAppend = splitsArea.indexOf("modeBar.appendChild(recipeInfo);");
+  assert.notEqual(modeBarAppend, -1);
+  // Appended after the button-creation calls, so it lands last in modeBar's
+  // flex order regardless of which buttons are enabled/disabled.
+  assert.ok(modeBarAppend > splitsArea.indexOf('modeBar.appendChild(printButton)'));
+});
+
+test("the info panel opens upward and to the left, since the icon sits at the right end of the row where opening downward or rightward clips against the panel/viewport edge (verified live: right:0 stays clear of the viewport at both 1080px and 1280px; left:0 overflows the right edge at both)", () => {
+  assert.match(styles, /\.splitsInfoPanel\{position:absolute;bottom:calc\(100% \+ 6px\);right:0;/);
+  assert.doesNotMatch(styles, /\.splitsInfoPanel\{position:absolute;top:calc\(100% \+ 6px\);left:0;/);
+  assert.doesNotMatch(styles, /\.splitsInfoPanel\{position:absolute;bottom:calc\(100% \+ 6px\);left:0;/);
+});
+
+test("on narrow mobile, where the button row wraps and the icon lands too close to center for either hard edge to clear a 390px screen, the panel centers on the icon instead (verified live at 390px: edge-anchored clipped on whichever side it opened toward; centered did not)", () => {
+  const narrowBlock = styles.slice(styles.indexOf("@media (max-width: 700px){"));
+  const ruleStart = narrowBlock.indexOf(".splitsInfoPanel{");
+  const rule = narrowBlock.slice(ruleStart, narrowBlock.indexOf("}", ruleStart) + 1);
+  assert.match(rule, /left:50%/);
+  assert.match(rule, /right:auto/);
+  assert.match(rule, /transform:translateX\(-50%\)/);
+});
+
+test("the action row, bulk toolbar, and saved-recipes panel are still the same direct children of #splitsArea targeted by the reorder rule", () => {
+  assert.match(splitsArea, /actionRow\.className = "splitsMatrixActions"/);
+  assert.match(splitsArea, /toolbar\.className = "splitsBulkBar hide"/);
+  assert.match(splitsArea, /savedRecipesPanel\.className = "splitsSavedRecipesPanel hide"/);
+  assert.match(splitsArea, /area\.append\(actionRow, toolbar, savedRecipesPanel\)/);
+});
+
+// --- Rearrange is now reachable and active on mobile --------------
+
+test("Rearrange is no longer desktop-only, while Print Recipe still is", () => {
   const modeBarStart = app.indexOf('modeBar.className = "splitsBulkModeBar"');
   const modeBar = app.slice(modeBarStart, app.indexOf("const toolbar = document.createElement", modeBarStart));
   assert.match(modeBar, /rearrangeButton\.className="secondary"/);
@@ -159,8 +206,11 @@ test("setBulkMode's per-cell disable pass keeps rearrange-mode disabling in plac
   assert.match(setBulkModeBody, /trackButton\.disabled = bulkMode \|\| rearranging;/);
 });
 
-test("setBulkMode(false) runs at the end of every render, which is exactly why the clobbering bug existed", () => {
-  assert.match(splitsArea, /setBulkMode\(false\);/);
+test("setBulkMode runs unconditionally at the end of every render (reapplying the resolved bulkMode, not hardcoded false, so a render triggered by switching panels can seed bulk edit open) - this per-cell disable pass is exactly why the clobbering bug existed", () => {
+  const endOfRenderStart = splitsArea.indexOf("updateSplitTotals();");
+  const endOfRender = splitsArea.slice(endOfRenderStart, splitsArea.indexOf("renderSplitsSavedRecipes", endOfRenderStart));
+  assert.match(endOfRender, /setBulkMode\(bulkMode\);/);
+  assert.doesNotMatch(endOfRender, /setBulkMode\(false\);/);
 });
 
 test("disabled fields inside a rearranging cell are excluded from hit-testing, so a tap anywhere on the cell reaches the td instead of being silently swallowed", () => {
