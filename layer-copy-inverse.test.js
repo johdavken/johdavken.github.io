@@ -21,6 +21,11 @@ function functionBody(name){
 // carries the same data-layer-column attribute the <td> cells use for
 // mobile show/hide) is already fully generic and driven only by whether
 // getLayerCopyRules(lineType)[layerName] exists - no new UI code needed.
+//
+// The 3-layer line's A/C pair was left one-way (C<-A only) when the above
+// was done. Same fix, same reasoning: A now also copies from C, matching
+// the mutual-pair pattern already used for 5-layer's A/E and B/D. B (the
+// line's middle/core layer, same role as 5-layer's C) still has no mirror.
 
 test("a 5-layer line now offers both directions for the A/E and B/D pairs, leaving C's existing one-way copy from B untouched", () => {
   const rules = functionBody("getLayerCopyRules");
@@ -34,9 +39,9 @@ test("a 5-layer line now offers both directions for the A/E and B/D pairs, leavi
   assert.match(fiveLayerBody, /"E": "A"/, "E's existing rule must be untouched");
 });
 
-test("the 3-layer line's copy rule is unaffected - only the 5-layer case was asked for", () => {
+test("the 3-layer line's A/C pair is now mutual too, leaving B without a copy button", () => {
   const rules = functionBody("getLayerCopyRules");
-  assert.match(rules, /if \(lineType === 3\) return \{ "C": "A" \};/);
+  assert.match(rules, /if \(lineType === 3\) return \{ "A": "C", "C": "A" \};/);
 });
 
 test("no new rendering code was needed - the copy button is still purely driven by copyRules[L.name], appended once per layer's <th>", () => {

@@ -132,9 +132,9 @@ test("bulk edit still needs the letter - it's the tap target for selecting an en
   assert.match(mobileBlock, /\.bulk-editing \.splitLayerPct\{ margin-top: 25px; \}/);
 });
 
-// --- Layer % + Copy: two equal, squared-off chips side by side ---
+// --- Layer % + Copy: mockup option 10, "minimal ghost, no chip borders" ---
 
-test("the layer header becomes a grid pairing the percentage chip and the Copy chip side by side, with the (rare) hopper-total warning spanning full width beneath both", () => {
+test("the layer header becomes a grid pairing the percentage and Copy side by side (percentage auto-width, Copy taking the rest), with the (rare) hopper-total warning spanning full width beneath both", () => {
   const mobileStart = styles.indexOf("@media (max-width: 700px){");
   assert.notEqual(mobileStart, -1);
   const mobileBlock = styles.slice(mobileStart, styles.indexOf("\n}\n", mobileStart));
@@ -142,7 +142,7 @@ test("the layer header becomes a grid pairing the percentage chip and the Copy c
   assert.notEqual(ruleStart, -1);
   const rule = mobileBlock.slice(ruleStart, mobileBlock.indexOf("}", ruleStart) + 1);
   assert.match(rule, /display: grid;/);
-  assert.match(rule, /grid-template-columns: 1fr 1fr;/);
+  assert.match(rule, /grid-template-columns: auto 1fr;/);
   assert.match(rule, /grid-template-areas: "pct copy" "total total";/);
   assert.match(mobileBlock, /\.splitColumnTotal\{ grid-area: total; \}/);
 });
@@ -153,7 +153,7 @@ test("the grid display is scoped specifically enough to beat .splitsMatrix [data
   assert.match(styles, /\.splitsMatrix th\.splitLayerHeader\.mobile-layer-active\{\s*\n\s*display: grid;/);
 });
 
-test("a layer with no copy source (e.g. Layer A/B at 3 layers) collapses to a single full-width percentage chip instead of leaving an empty gap where Copy would be", () => {
+test("a layer with no copy source (e.g. Layer B at 3 layers) collapses to a single full-width percentage row instead of leaving an empty gap where Copy would be", () => {
   assert.match(app, /th\.classList\.toggle\("noCopy", !copyFrom\);/);
   const mobileStart = styles.indexOf("@media (max-width: 700px){");
   const mobileBlock = styles.slice(mobileStart, styles.indexOf("\n}\n", mobileStart));
@@ -164,24 +164,37 @@ test("a layer with no copy source (e.g. Layer A/B at 3 layers) collapses to a si
   assert.match(rule, /grid-template-areas: "pct" "total";/);
 });
 
-test("both chips are squared off (var(--control-radius), matching the stepper-style controls elsewhere) rather than fully rounded pills, with matching border/background so they read as one pair", () => {
+test("neither the percentage nor Copy has a chip background/border any more - the percentage reads as an inline-edit field via its own focus-colored underline, Copy is plain link-style text, and a single light divider sits under the whole row instead", () => {
   const mobileStart = styles.indexOf("@media (max-width: 700px){");
   const mobileBlock = styles.slice(mobileStart, styles.indexOf("\n}\n", mobileStart));
-  const pctChipStart = mobileBlock.indexOf("\n  .splitLayerMain{");
-  const pctChip = mobileBlock.slice(pctChipStart, mobileBlock.indexOf("}", pctChipStart) + 1);
-  assert.match(pctChip, /grid-area: pct;/);
-  assert.match(pctChip, /border-radius: var\(--control-radius\);/);
-  assert.match(pctChip, /border: 1px solid var\(--btn-secondary-border\);/);
-  assert.match(pctChip, /background: var\(--btn-secondary-bg\);/);
+  const rowRuleStart = mobileBlock.indexOf(".splitsMatrix th.splitLayerHeader.mobile-layer-active{");
+  const rowRule = mobileBlock.slice(rowRuleStart, mobileBlock.indexOf("}", rowRuleStart) + 1);
+  assert.match(rowRule, /border-bottom: 1px solid var\(--border\);/);
+  const mainRuleStart = mobileBlock.indexOf("\n  .splitLayerMain{");
+  const mainRule = mobileBlock.slice(mainRuleStart, mobileBlock.indexOf("}", mainRuleStart) + 1);
+  assert.doesNotMatch(mainRule, /border:/);
+  assert.doesNotMatch(mainRule, /background:/);
+  const pctRuleStart = mobileBlock.indexOf("\n  .splitLayerPct{");
+  const pctRule = mobileBlock.slice(pctRuleStart, mobileBlock.indexOf("}", pctRuleStart) + 1);
+  assert.match(pctRule, /border-bottom: 2px solid var\(--focus-border\);/);
   const copyChipStart = mobileBlock.indexOf("\n  .splitCopyBtn{");
   const copyChip = mobileBlock.slice(copyChipStart, mobileBlock.indexOf("}", copyChipStart) + 1);
   assert.match(copyChip, /grid-area: copy;/);
-  assert.match(copyChip, /border-radius: var\(--control-radius\);/);
-  assert.match(copyChip, /border: 1px solid var\(--btn-secondary-border\);/);
-  assert.match(copyChip, /background: var\(--btn-secondary-bg\);/);
+  assert.match(copyChip, /border: none;/);
+  assert.match(copyChip, /background: none;/);
+  assert.match(copyChip, /justify-self: end;/);
 });
 
-test("long Copy text truncates with an ellipsis instead of overflowing its half-width chip on a narrow phone", () => {
+test("Copy gets a subtle trailing arrow via ::after (decorative only - not part of the button's accessible text) to read as a tappable link", () => {
+  const mobileStart = styles.indexOf("@media (max-width: 700px){");
+  const mobileBlock = styles.slice(mobileStart, styles.indexOf("\n}\n", mobileStart));
+  const afterRuleStart = mobileBlock.indexOf(".splitCopyBtn::after{");
+  assert.notEqual(afterRuleStart, -1);
+  const afterRule = mobileBlock.slice(afterRuleStart, mobileBlock.indexOf("}", afterRuleStart) + 1);
+  assert.match(afterRule, /content: " ›";/);
+});
+
+test("long Copy text still truncates with an ellipsis instead of overflowing on a narrow phone, even without a chip box constraining its width", () => {
   const mobileStart = styles.indexOf("@media (max-width: 700px){");
   const mobileBlock = styles.slice(mobileStart, styles.indexOf("\n}\n", mobileStart));
   const copyChipStart = mobileBlock.indexOf("\n  .splitCopyBtn{");
@@ -191,22 +204,15 @@ test("long Copy text truncates with an ellipsis instead of overflowing its half-
   assert.match(copyChip, /text-overflow: ellipsis;/);
 });
 
-test("the percentage input keeps its existing compact desktop text sizing (no oversized box, no size=3 attribute) - the chip is what changed on mobile, not the input's own font/width", () => {
+test("the percentage input is deliberately large and bold on mobile (unlike the old chip design, which left the input at its compact desktop size) - no size=3 attribute is used to do this, it's pure CSS", () => {
   assert.doesNotMatch(app, /pctInput\.size = 3;/);
   const mobileStart = styles.indexOf("@media (max-width: 700px){");
   const mobileBlock = styles.slice(mobileStart, styles.indexOf("\n}\n", mobileStart));
-  assert.doesNotMatch(mobileBlock, /\.splitLayerPct input\{/);
-});
-
-test("the chip is genuinely compact - marginally taller than its own text, not inflated by the shared input's touch-target min-height/padding stacking on top of the chip's own padding", () => {
-  const mobileStart = styles.indexOf("@media (max-width: 700px){");
-  const mobileBlock = styles.slice(mobileStart, styles.indexOf("\n}\n", mobileStart));
-  const mainRuleStart = mobileBlock.indexOf("\n  .splitLayerMain{");
-  const mainRule = mobileBlock.slice(mainRuleStart, mobileBlock.indexOf("}", mainRuleStart) + 1);
-  assert.match(mainRule, /padding: 6px;/);
   const inputRuleStart = mobileBlock.indexOf('.splitLayerPct input:not([type="checkbox"]):not([type="radio"]){');
   assert.notEqual(inputRuleStart, -1);
   const inputRule = mobileBlock.slice(inputRuleStart, mobileBlock.indexOf("}", inputRuleStart) + 1);
   assert.match(inputRule, /min-height: 0;/);
   assert.match(inputRule, /padding: 0;/);
+  assert.match(inputRule, /font-weight: 900;/);
+  assert.match(inputRule, /color: var\(--text\);/);
 });

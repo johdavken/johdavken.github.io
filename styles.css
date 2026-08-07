@@ -1962,22 +1962,27 @@ details[open] > summary .chevSatellite{
   .bulk-editing .splitLayerMain{ min-height: 58px; }
   .bulk-editing .splitLayerPct{ margin-top: 25px; }
 
-  /* With the ghosted letter gone, the percentage and Copy sit as two equal
-     chip-shaped panes side by side (squared-off corners, same radius as the
-     stepper-style controls elsewhere) instead of stacking under the old
-     header. The hopper-total warning (rare - only shown when a layer's
-     hoppers don't sum to 100%) spans the full width beneath both. When a
-     layer has no copy source, the percentage chip alone fills the row.
+  /* With the ghosted letter gone, the percentage and Copy sit side by side
+     (mockup option 10, "minimal ghost, no chip borders"): no chip
+     background or border on either - the percentage reads as an
+     inline-edit field (bold number, focus-colored underline of its own)
+     and Copy as plain link-style text, with one light divider under the
+     whole row separating the header from the hopper rows beneath it. The
+     hopper-total warning (rare - only shown when a layer's hoppers don't
+     sum to 100%) still spans the full width beneath both. When a layer has
+     no copy source, the percentage alone fills the row.
      Specificity note: .splitsMatrix [data-layer-column].mobile-layer-active
      (shared with the <td> body cells, which must stay display:table-cell)
      otherwise wins over a plain .splitLayerHeader and this silently stays
      table-cell instead of becoming a grid. */
   .splitsMatrix th.splitLayerHeader.mobile-layer-active{
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: auto 1fr;
     grid-template-areas: "pct copy" "total total";
-    align-items: stretch;
+    align-items: center;
     gap: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
   }
   .splitsMatrix th.splitLayerHeader.noCopy.mobile-layer-active{
     grid-template-columns: 1fr;
@@ -1986,42 +1991,53 @@ details[open] > summary .chevSatellite{
   .splitLayerMain{
     grid-area: pct;
     min-height: 0;
-    padding: 6px;
-    border: 1px solid var(--btn-secondary-border);
-    border-radius: var(--control-radius);
-    background: var(--btn-secondary-bg);
+    padding: 0;
+    justify-content: flex-start;
   }
   .splitLayerPct{
     margin-top: 0;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 1px;
+    border-bottom: 2px solid var(--focus-border);
+    padding-bottom: 2px;
   }
   /* The shared "sleek underline field" rule gives every text input its own
      touch-target min-height and padding (--control-height 33-40px, plus
      padding:min(5px,--pad-input-y) 2px) - appropriate for a field someone
-     taps into directly, but far taller than this compact chip needs on top
-     of the chip's own padding. Let the input shrink to bare text and have
-     the chip provide the only padding. :not([type=checkbox]):
+     taps into directly, but far taller than this compact row needs. Let
+     the input shrink to bare text and carry the large-number treatment
+     itself; the underline lives on .splitLayerPct (above) so it spans the
+     input and the "%" unit together. :not([type=checkbox]):
      not([type=radio]) matches that rule's own specificity - a plain
      ".splitLayerPct input" selector loses to it and silently no-ops. */
   .splitLayerPct input:not([type="checkbox"]):not([type="radio"]){
     min-height: 0;
     padding: 0;
+    font-size: 20px;
+    font-weight: 900;
+    color: var(--text);
   }
   .splitCopyBtn{
     grid-area: copy;
-    width: 100%;
+    justify-self: end;
+    align-self: center;
+    width: auto;
+    min-height: 0;
     margin: 0;
-    padding: 9px 6px;
-    border: 1px solid var(--btn-secondary-border);
-    border-radius: var(--control-radius);
-    background: var(--btn-secondary-bg);
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: none;
     color: var(--title);
     opacity: 1;
-    font-weight: 750;
+    font-weight: 700;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  .splitCopyBtn::after{
+    content: " ›";
+    opacity: .7;
   }
   .splitColumnTotal{ grid-area: total; }
   .splitsMatrixScroll{ overflow-x: hidden; }

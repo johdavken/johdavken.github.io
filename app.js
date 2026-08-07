@@ -737,7 +737,7 @@
       return ["A","B","C"];
     }
     function getLayerCopyRules(lineType){
-      if (lineType === 3) return { "C": "A" };
+      if (lineType === 3) return { "A": "C", "C": "A" };
       if (lineType === 5) return {
         "A": "E",
         "B": "D",

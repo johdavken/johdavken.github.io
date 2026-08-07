@@ -51,7 +51,7 @@ test("Copy's hover/focus state shifts to the same gradient-fill treatment used e
   assert.doesNotMatch(hoverRule, /text-decoration:underline/);
 });
 
-test("the mobile two-chip layout still fully overrides both properties on narrow screens - this desktop refinement doesn't leak into or conflict with it", () => {
+test("the mobile layout still fully overrides the desktop pill treatment on narrow screens - this desktop refinement doesn't leak into or conflict with it", () => {
   // Anchored to the landmark itself (there's more than one
   // "@media (max-width: 700px){" block in the file now, e.g. the Saved
   // Recipes icon-button row's own mobile block) rather than blindly taking
@@ -64,5 +64,9 @@ test("the mobile two-chip layout still fully overrides both properties on narrow
   assert.notEqual(mobileCopyStart, -1);
   const mobileCopyRule = mobileBlock.slice(mobileCopyStart, mobileBlock.indexOf("}", mobileCopyStart) + 1);
   assert.match(mobileCopyRule, /grid-area: copy;/);
-  assert.match(mobileCopyRule, /width: 100%;/);
+  // Mobile (option 10, "minimal ghost") deliberately drops the desktop
+  // pill's border/background/radius - not a leak, an intentional override.
+  assert.match(mobileCopyRule, /border: none;/);
+  assert.match(mobileCopyRule, /background: none;/);
+  assert.match(mobileCopyRule, /border-radius: 0;/);
 });
