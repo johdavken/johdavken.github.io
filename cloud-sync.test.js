@@ -1,6 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { normalizeName, normalizedKey, isConflictError, ownMembershipsByWorkspace } = require("./cloud-sync.js");
+const fs = require("node:fs");
+const { normalizeName, normalizedKey, isConflictError, isAccessDeniedError, ownMembershipsByWorkspace } = require("./cloud-sync.js");
 
 test("normalizes synchronized line and setup names", () => {
   assert.equal(normalizeName("  Line   9  "), "Line 9");
@@ -10,6 +11,12 @@ test("normalizes synchronized line and setup names", () => {
 test("recognizes optimistic concurrency failures", () => {
   assert.equal(isConflictError({ code: "40001", message: "revision_conflict" }), true);
   assert.equal(isConflictError({ code: "PGRST301", message: "offline" }), false);
+});
+
+test("recognizes permanent access-denied failures, distinct from transient conflicts", () => {
+  assert.equal(isAccessDeniedError({ code: "42501", message: "workspace_access_denied" }), true);
+  assert.equal(isAccessDeniedError({ code: "PGRST301", message: "offline" }), false);
+  assert.equal(isAccessDeniedError({ code: "40001", message: "revision_conflict" }), false, "a conflict is retryable, not access-denied");
 });
 
 test("workspace role comes from the current device membership", () => {
@@ -655,7 +662,10 @@ test("pendingSummary is empty when the outbox is empty", async () => {
   assert.deepEqual(sync.getState().pendingSummary, []);
 });
 
-// --- discardPendingItem: the only way to clear an unreachable stuck item ---
+// --- discardPendingItem: the manual way to clear an unreachable stuck item
+// (flushActiveJob/flushSetupOperations below now do this automatically, but
+// only for the one error class - workspace_access_denied - where retrying
+// is provably futile; anything else still needs an operator decision) ---
 
 test("discardPendingItem removes a stuck active-job entry for an unreachable workspace, reducing pendingCount", async () => {
   const rows = workspaceFixtures({ id: "ws-a", name: "Line A" });
@@ -692,4 +702,74 @@ test("discardPendingItem is a no-op (ok:false) for a missing or malformed item, 
   assert.equal(sync.discardPendingItem(null).ok, false);
   assert.equal(sync.discardPendingItem({}).ok, false);
   assert.equal(sync.discardPendingItem({ type: "unknown-type" }).ok, false);
+});
+
+// --- Automatic recovery from workspace_access_denied ----------------------
+// Root cause of a real CPU spike: a device with a queued change for a
+// workspace it's no longer a member of got workspace_access_denied on every
+// flush, but the item was never removed - so retry() (fired on every
+// online/visibilitychange event, uncapped) re-attempted the same doomed RPC
+// forever. Fixed two ways: the doomed item is now discarded automatically
+// (below), and the automatic retry triggers are debounced (further below).
+
+test("flushActiveJob discards a stuck active-job change on workspace_access_denied instead of leaving it to fail forever", async () => {
+  const seedPayload = activeJobPayload({ lineRate: 100 });
+  const rows = workspaceFixtures({ id: "ws-a", name: "Line A", payload: seedPayload });
+  let currentPayload = seedPayload;
+  const { sync, storage, syncStorageModule, client } = createSync(rows, () => currentPayload);
+  await sync.initialize();
+
+  currentPayload = activeJobPayload({ lineRate: 250 });
+  sync.notifyActiveJobMutation();
+  assert.ok(syncStorageModule.createStore(storage).getOutbox().activeJobs["ws-a"], "sanity check: the change is queued");
+
+  client.rpc = async (name) => name === "update_active_job"
+    ? { data: null, error: { code: "42501", message: "workspace_access_denied" } }
+    : { data: null, error: null };
+
+  await sync.retry();
+
+  assert.equal(syncStorageModule.createStore(storage).getOutbox().activeJobs["ws-a"], undefined,
+    "the doomed change must be discarded, not left queued to retry forever");
+  assert.equal(sync.getState().status, "Error");
+  assert.match(sync.getState().message, /no longer has access/);
+});
+
+test("flushSetupOperations discards every queued operation for the denied workspace, not just the one that happened to run first", async () => {
+  const rows = workspaceFixtures({ id: "ws-a", name: "Line A" });
+  const { sync, storage, syncStorageModule, client } = createSync(rows);
+  await sync.initialize();
+
+  const store = syncStorageModule.createStore(storage);
+  store.queueSetupOperation({
+    workspaceId: "ws-a", action: "create", setupId: "setup-1", name: "Line 40",
+    payload: {}, operationId: "op-1", expectedRevision: 0, createdAt: "2026-08-06T21:00:00.000Z"
+  });
+  store.queueSetupOperation({
+    workspaceId: "ws-a", action: "create", setupId: "setup-2", name: "Line 41",
+    payload: {}, operationId: "op-2", expectedRevision: 0, createdAt: "2026-08-06T21:00:01.000Z"
+  });
+
+  client.rpc = async (name) => name === "create_saved_setup"
+    ? { data: null, error: { code: "42501", message: "workspace_access_denied" } }
+    : { data: null, error: null };
+
+  await sync.retry();
+
+  const remaining = syncStorageModule.createStore(storage).getOutbox().setupOperations.filter(item => item.workspaceId === "ws-a");
+  assert.equal(remaining.length, 0, "both queued operations for the denied workspace must be discarded, not just op-1");
+  assert.equal(sync.getState().status, "Error");
+});
+
+test("the automatic retry triggers (online/visibilitychange) are debounced with a cooldown, so a flapping connection can't fire a burst of RPCs - manual retry (the Retry button) stays uncapped", () => {
+  // window/document don't exist in this Node test environment, so the
+  // listeners themselves can't be exercised end-to-end here - this checks
+  // the cooldown wrapper is actually what's wired to both automatic
+  // triggers, and that retry() itself (used by the manual Retry button and
+  // runLineSyncAction) is untouched by it.
+  const source = fs.readFileSync("cloud-sync.js", "utf8");
+  assert.match(source, /const AUTO_RETRY_COOLDOWN_MS = 4000;/);
+  assert.match(source, /if \(now - lastAutoRetryAt < AUTO_RETRY_COOLDOWN_MS\) return;/);
+  assert.match(source, /window\.addEventListener\("online", autoRetry\);/);
+  assert.match(source, /document\.addEventListener\("visibilitychange", \(\)=>\{ if \(!document\.hidden\) autoRetry\(\); \}\);/);
 });

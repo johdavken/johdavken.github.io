@@ -29,6 +29,15 @@
     const text = `${error?.code || ""} ${error?.message || ""} ${error?.details || ""}`.toLowerCase();
     return text.includes("40001") || text.includes("revision_conflict");
   }
+  // Membership was revoked (or the workspace is gone) - every RPC this
+  // device's queued outbox items depend on raises this from the server
+  // side, and no amount of retrying will ever make it succeed. Distinct
+  // from isConflictError, which is transient (retrying after reconciling
+  // does resolve it).
+  function isAccessDeniedError(error){
+    const text = `${error?.code || ""} ${error?.message || ""} ${error?.details || ""}`.toLowerCase();
+    return text.includes("42501") || text.includes("workspace_access_denied");
+  }
 
   function create(options){
     const config = options.config || {};
@@ -73,6 +82,10 @@
     let activeConflictPaused = false;
     let activeInFlightOperationId = "";
     let realtimeAuthListenerRegistered = false;
+    let lastAutoRetryAt = 0;
+    // Set by flushActiveJob's workspace_access_denied branch, reset at the
+    // top of every retry() cycle - see retry()'s own comment for why.
+    let lastActiveFlushDenied = false;
 
     // Raw kind/action strings only - which internal mutation "kind" values
     // mean what is a UI presentation concern, not this module's.
@@ -369,6 +382,18 @@
         }
         setSyncedStatus("Active-job changes are synced.", "Active-job changes are synced, but other changes are still waiting.");
       }catch(error){
+        if (isAccessDeniedError(error)){
+          // Same permanent condition discardPendingItem exists for (see its
+          // own comment above) - retrying can never succeed once membership
+          // is gone, so this reuses that exact recovery instead of leaving
+          // the item to be silently re-attempted (and re-failing) on every
+          // future reconnect/tab-focus retry until the operator happens to
+          // notice and discard it manually.
+          discardPendingItem({ type: "active-job", workspaceId: selectedId(), operationId: pending.operationId });
+          setStatus("Error", "This device no longer has access to this line. The unsynced change was discarded - reconnect via RT Sync to resume.");
+          lastActiveFlushDenied = true;
+          return;
+        }
         const offline = typeof navigator !== "undefined" && navigator.onLine === false;
         const detail = String(error?.message || error?.details || error || "Unknown synchronization error");
         setStatus(
@@ -461,7 +486,19 @@
         }
         setSyncedStatus("Saved Line Settings are synced.", "Saved Line Settings are synced, but other changes are still waiting.");
       }catch(error){
-        setStatus(navigator.onLine === false ? "Offline" : "Pending", "Saved-setting changes will retry.");
+        if (isAccessDeniedError(error)){
+          // Same permanent condition as flushActiveJob, and the whole
+          // workspace's queue is equally unreachable, not just the
+          // operation that happened to run first - discard all of it via
+          // the same recovery discardPendingItem exists for, instead of
+          // re-failing one at a time across future retries.
+          store.getOutbox().setupOperations
+            .filter(item=>item.workspaceId === selectedId())
+            .forEach(item=>discardPendingItem({ type: "saved-setup", workspaceId: item.workspaceId, operationId: item.operationId }));
+          setStatus("Error", "This device no longer has access to this line. Unsynced saved-setting changes were discarded - reconnect via RT Sync to resume.");
+        } else {
+          setStatus(navigator.onLine === false ? "Offline" : "Pending", "Saved-setting changes will retry.");
+        }
       }finally{
         flushingSetups = false;
         emit();
@@ -653,6 +690,11 @@
 
     async function reconcileSelected({ forceRemote = false, uploadLocalMissing = false } = {}){
       if (!selectedId() || !isConnected()) return;
+      // Reset here (not just in retry()) so this always reflects only what
+      // happens during *this* call, regardless of caller - refreshSelected()
+      // and initialize() both call reconcileSelected() directly, without
+      // going through retry() first.
+      lastActiveFlushDenied = false;
       const { entry } = workspaceMetadata(selectedId());
       state.activeRevision = Number(entry.activeRevision) || 0;
       const remote = await fetchActiveRow();
@@ -669,7 +711,11 @@
       await reconcileSavedSetups({ uploadLocalMissing, replaceLocal: forceRemote && !uploadLocalMissing });
       await loadMembers();
       await subscribe();
-      setSyncedStatus("RT Sync is up to date.", "This line is up to date, but other changes are still waiting to sync.");
+      // Skip this if the flushActiveJob() call just above discarded a
+      // workspace_access_denied item and set status to Error - otherwise
+      // this unconditional "up to date" status immediately overwrites it,
+      // and the operator never actually sees why their change was dropped.
+      if (!lastActiveFlushDenied) setSyncedStatus("RT Sync is up to date.", "This line is up to date, but other changes are still waiting to sync.");
     }
 
     async function selectWorkspace(workspaceId, { uploadLocalMissing = false } = {}){
@@ -877,11 +923,18 @@
     async function retry(){
       if (!enabled) return;
       activeConflictPaused = false;
+      lastActiveFlushDenied = false;
       if (!state.available) await initialize();
       else {
         await reconcileSelected();
         await flushActiveJob();
-        await flushSetupOperations();
+        // Skip the trailing flush if this cycle's active-job flush (whether
+        // run just above or nested inside reconcileSelected) just discarded
+        // a workspace_access_denied item and set status to Error - with
+        // nothing else queued, flushSetupOperations' own setSyncedStatus
+        // would otherwise immediately overwrite that with "Synced",
+        // silently hiding the message the operator most needs to see.
+        if (!lastActiveFlushDenied) await flushSetupOperations();
       }
     }
 
@@ -930,9 +983,26 @@
       });
     }
 
+    // A flaky connection (e.g. spotty wifi) can fire "online" and
+    // visibilitychange repeatedly within seconds of itself - each one calls
+    // retry(), which hits the database (reconcileSelected + two outbox
+    // flushes). Without a cooldown, a flapping connection turns into a
+    // rapid-fire burst of RPCs instead of one settled retry. 4s is short
+    // enough that a genuine reconnect is still handled promptly, long
+    // enough to collapse a flap into a single attempt. Manual retry (the
+    // Retry button, runLineSyncAction) calls retry() directly and is
+    // intentionally NOT throttled by this - only these two automatic
+    // triggers are.
+    const AUTO_RETRY_COOLDOWN_MS = 4000;
+    function autoRetry(){
+      const now = Date.now();
+      if (now - lastAutoRetryAt < AUTO_RETRY_COOLDOWN_MS) return;
+      lastAutoRetryAt = now;
+      retry();
+    }
     if (typeof window !== "undefined"){
-      window.addEventListener("online", retry);
-      document.addEventListener("visibilitychange", ()=>{ if (!document.hidden) retry(); });
+      window.addEventListener("online", autoRetry);
+      document.addEventListener("visibilitychange", ()=>{ if (!document.hidden) autoRetry(); });
     }
 
     return {
@@ -964,5 +1034,5 @@
     };
   }
 
-  return { create, normalizeName, normalizedKey, isConflictError, ownMembershipsByWorkspace };
+  return { create, normalizeName, normalizedKey, isConflictError, isAccessDeniedError, ownMembershipsByWorkspace };
 });

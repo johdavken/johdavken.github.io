@@ -33,8 +33,9 @@ test("retry() is still the fallback only when nothing is selected, and is otherw
   assert.doesNotMatch(retryFn, /disconnectedWorkspaceIds/);
 });
 
-test("retry() is still what fires automatically on tab visibility change - the fix didn't touch that path", () => {
-  assert.match(cloudSync, /document\.addEventListener\("visibilitychange", \(\)=>\{ if \(!document\.hidden\) retry\(\); \}\);/);
+test("retry() is still what fires automatically on tab visibility change, now via the debounced autoRetry() wrapper (a later, separate fix for a retry-storm on flaky connections) - this reconnect-button fix didn't touch that path", () => {
+  assert.match(cloudSync, /document\.addEventListener\("visibilitychange", \(\)=>\{ if \(!document\.hidden\) autoRetry\(\); \}\);/);
+  assert.match(cloudSync, /function autoRetry\(\)\{[^}]*retry\(\);[^}]*\}/s);
 });
 
 test("refreshSelected() clears the disconnected flag before reconciling - the actual mechanism the fix now exercises on desktop too", () => {
