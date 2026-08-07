@@ -636,9 +636,9 @@ main{
   box-shadow:var(--shadow2);
 }
 .lineSyncConflictDialog::backdrop{ background:rgba(0,0,0,.48); }
-.workspaceConfigurations{display:grid;gap:10px}.workspaceConfigurationHeading,.workspaceConfigurationSectionTitle,.workspaceConfigurationRow{display:flex;gap:10px;justify-content:space-between;align-items:center}.workspaceConfigurationHeading{align-items:flex-start}.workspaceConfigurationSection{border:1px solid var(--border);border-radius:var(--radius-row);padding:9px;background:var(--panel2)}.workspaceConfigurationSectionTitle small{display:block;color:var(--muted);margin-top:2px}.workspaceConfigurationList{display:grid;gap:5px;max-height:330px;margin-top:7px;overflow-y:auto;padding-right:2px}.workspaceConfigurationRow{min-height:52px;padding:7px 9px;border-radius:var(--control-radius);background:color-mix(in srgb,var(--panel) 70%,transparent)}.workspaceConfigurationRow small{display:block;color:var(--muted);margin-top:1px}.workspaceConfigurationDivider{border:0;border-top:1px solid var(--border);margin:16px 0}@media(max-width:600px){.workspaceConfigurationHeading,.workspaceConfigurationRow{align-items:stretch;flex-direction:column}.workspaceConfigurationHeading button,.workspaceConfigurationRow button{width:100%}}
+.workspaceConfigurationSectionTitle,.workspaceConfigurationRow{display:flex;gap:10px;justify-content:space-between;align-items:center}.workspaceConfigurationSectionTitle small{display:block;color:var(--muted);margin-top:2px}.workspaceConfigurationList{display:grid;gap:5px;max-height:330px;margin-top:7px;overflow-y:auto;padding-right:2px}.workspaceConfigurationRow{min-height:52px;padding:7px 9px;border-radius:var(--control-radius);background:color-mix(in srgb,var(--panel) 70%,transparent)}.workspaceConfigurationRow small{display:block;color:var(--muted);margin-top:1px}@media(max-width:600px){.workspaceConfigurationRow{align-items:stretch;flex-direction:column}.workspaceConfigurationRow button{width:100%}}
 .workspaceConfigurationActions{display:flex;gap:5px;align-items:center;justify-content:flex-end}.workspaceConfigurationActions button{font-size:12px;padding:5px 8px}.workspaceConfigurationOverflow{position:relative}.workspaceConfigurationOverflow summary{cursor:pointer;list-style:none;border:1px solid var(--border);border-radius:var(--control-radius);padding:4px 9px;font-size:18px;line-height:1}.workspaceConfigurationOverflow summary::-webkit-details-marker{display:none}.workspaceConfigurationOverflowMenu{position:absolute;right:0;top:calc(100% + 4px);z-index:30;display:grid;gap:4px;min-width:130px;padding:6px;border:1px solid var(--border2);border-radius:var(--control-radius);background:var(--panelOpen);box-shadow:var(--shadow2)}.workspaceConfigurationOverflowMenu button{text-align:left;white-space:nowrap}
-.workspaceConfigurationWorkspace{font-size:var(--font-small);font-weight:700;color:var(--focus-border);margin-top:2px}.workspaceConfigurationRow{cursor:pointer}.workspaceConfigurationRow.selected strong{font-weight:750;color:var(--text)}.workspaceConfigurationRow:focus-visible{outline:2px solid var(--focus-border);outline-offset:2px}.workspaceConfigurationFavorite{color:var(--warn);font-size:13px}
+.workspaceConfigurationRow{cursor:pointer}.workspaceConfigurationRow.selected strong{font-weight:750;color:var(--text)}.workspaceConfigurationRow:focus-visible{outline:2px solid var(--focus-border);outline-offset:2px}.workspaceConfigurationFavorite{color:var(--warn);font-size:13px}
 .workspaceConfigurationRow strong{font-size:var(--font-small);font-weight:600;color:var(--muted);letter-spacing:.01em}
 .rearrangeTarget{cursor:grab;user-select:none}.rearrangeSource{opacity:.5;outline:2px dashed var(--focus-border)}.rearrangeOver{outline:2px solid var(--ok);background:color-mix(in srgb,var(--ok) 12%,var(--panel2))}@media(max-width:900px){.rearrangeDesktopOnly{display:none!important}}
 /* Disabled form controls don't reliably dispatch/bubble click events (some
@@ -750,71 +750,29 @@ main{
 
 /* Typography helpers */
 .layerTitle{
-  font-weight: 900;
   font-size: var(--title-size);
   white-space: nowrap;
   color: var(--title, var(--text));
 }
 
-/* Header style (Appearance & Preferences > Header style). Independent of
-   the color theme — this only varies the font treatment of section titles,
-   always set in caps per the chosen style. The desktop sidebar nav label
-   (.workspaceNavButton span) is the same heading tier as .layerTitle — it
-   names the same section — so it gets the identical treatment. */
-body[data-header-style="gruvbox-dark"] .layerTitle,
-body[data-header-style="gruvbox-dark"] .workspaceNavButton span{
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .07em;
-}
-body[data-header-style="industrial-slate"] .layerTitle,
-body[data-header-style="industrial-slate"] .workspaceNavButton span{
-  font-family: "Arial Narrow", "Roboto Condensed", Impact, sans-serif;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: .1em;
-}
-body[data-header-style="industrial-slate"] .layerTitle{
-  display: inline-block;
-  border-bottom: 2px solid currentColor;
-  padding-bottom: 2px;
-}
-body[data-header-style="modern"] .layerTitle,
-body[data-header-style="modern"] .workspaceNavButton span{
+/* Wide Display was chosen (out of several previewed options) as the
+   permanent header typography - thin weight, wide tracking, always caps.
+   The desktop sidebar nav label (.workspaceNavButton span) is the same
+   heading tier as .layerTitle - it names the same section - so it gets
+   identical treatment. */
+.layerTitle,
+.workspaceNavButton span{
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-  font-weight: 800;
+  font-weight: 300;
   text-transform: uppercase;
-  letter-spacing: .045em;
+  letter-spacing: .22em;
 }
 
 /* One level down: section-level headings pick up the same font, but stay
    in sentence case — they support a header, they aren't one. */
-body[data-header-style="gruvbox-dark"] .setupSectionTitle,
-body[data-header-style="gruvbox-dark"] .setupToggleTitle,
-body[data-header-style="gruvbox-dark"] .toolsIndexButton{
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-}
-body[data-header-style="industrial-slate"] .setupSectionTitle,
-body[data-header-style="industrial-slate"] .setupToggleTitle,
-body[data-header-style="industrial-slate"] .toolsIndexButton{
-  font-family: "Arial Narrow", "Roboto Condensed", Impact, sans-serif;
-}
-body[data-header-style="modern"] .setupSectionTitle,
-body[data-header-style="modern"] .setupToggleTitle,
-body[data-header-style="modern"] .toolsIndexButton{
+.setupSectionTitle,
+.toolsIndexButton{
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-}
-.srOnly{
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0,0,0,0);
-  white-space: nowrap;
-  border: 0;
 }
 .layerMeta{
   color: var(--subtitle, var(--muted));
@@ -930,7 +888,7 @@ input[readonly]:focus{
   border: 0;
   border-radius: calc(var(--radius-input) - 4px);
   background: transparent;
-  color: var(--text);
+  color: var(--muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   font-size: var(--font-small);
   text-align: left;
@@ -938,7 +896,7 @@ input[readonly]:focus{
 .resinAutocompleteOption:hover,
 .resinAutocompleteOption.active{
   background: linear-gradient(180deg, var(--btn-primary-a), var(--btn-primary-b));
-  color: var(--text);
+  color: var(--muted);
 }
 
 /* =======================================================================
@@ -962,16 +920,115 @@ input[readonly]:focus{
   color: var(--text);
   font-size: 15px;
 }
-.setupSectionIntro{ margin:-3px 0 12px;color:var(--muted);font-size:var(--font-small); }
 .setupFields{ display: grid; gap: var(--gap); grid-template-columns: 1fr; }
 .setupNaming{ margin-top: var(--gap); max-width: 320px; }
 .setupPreferenceFields{ display:grid;gap:10px;grid-template-columns:repeat(2,minmax(0,1fr)); }
-.fieldRequirement{ display:block;margin-top:2px;color:var(--muted);font-size:var(--font-tiny);font-weight:600; }
-.fieldRequirement{ color:var(--warn); }
-@media (min-width: 720px){
-  .setupFields{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
-}
+/* Changeover deadline and Line rate: side by side on both desktop and
+   mobile - minmax(0,1fr) lets each column shrink to fit a narrow viewport. */
+.setupPrimaryFields{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (max-width:600px){.setupPreferenceFields{grid-template-columns:1fr}}
+/* On desktop the two-column grid leaves a lot of empty space beside each
+   (max-width-capped) gauge tile, making them look far apart even though the
+   grid gap itself is small. Pack them into a plain flex row instead, same
+   gap as .setupTopRow above, so the two rows read at a consistent rhythm. */
+@media (min-width: 901px){
+  .setupPrimaryFields{
+    display: flex;
+    gap: 16px;
+  }
+  .setupPrimaryFields > div{ flex: 0 0 auto; }
+}
+
+/* Layer count tiles and the Line 9 hopper naming toggle: paired in one row
+   above Changeover deadline/Line rate - both controls are the same height,
+   so they read as one group rather than two unrelated rows. */
+.setupTopRow{
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* Layer count: graphic-only tiles (no visible label - the stacked-diamond
+   glyph is self-explanatory), left-aligned. */
+.layerCountTiles{
+  display: flex;
+  gap: 6px;
+}
+.layerCountTile{
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--border2);
+  border-radius: var(--control-radius);
+  background: var(--field-bg);
+  color: var(--muted);
+  cursor: pointer;
+}
+.layerCountTile svg{ width: 26px; height: 18px; overflow: visible; }
+.layerCountTile.active{
+  border-color: var(--focus-border);
+  background: linear-gradient(180deg, var(--btn-primary-a), var(--btn-primary-b));
+  color: var(--title);
+  box-shadow: 0 0 0 1px var(--focus-ring);
+}
+.layerCountTile:focus-visible{
+  outline: 2px solid var(--focus-border);
+  outline-offset: 2px;
+}
+
+/* Changeover deadline / Line rate: big centered dashboard-style readouts -
+   icon, bold value, small caption - instead of a labeled underline field.
+   No "Required" text; an empty/zero gauge is already visually obvious. */
+.gaugeTile{
+  max-width: 200px;
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  background: var(--field-bg);
+  padding: 12px 12px 10px;
+  text-align: center;
+}
+.gaugeTile:focus-within{
+  border-color: var(--focus-border);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+.gaugeTile .gaugeIcon{
+  display: block;
+  width: 20px;
+  height: 20px;
+  margin: 0 auto 4px;
+  color: var(--title);
+  stroke: currentColor;
+  fill: none;
+}
+/* :not([type=checkbox]):not([type=radio]) matches the "sleek underline
+   fields" rule's own specificity above - without it, that rule's
+   border-width/focus box-shadow would still win and leave a stray
+   underline stripe inside the tile. */
+.gaugeTile input:not([type="checkbox"]):not([type="radio"]){
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 22px;
+  font-weight: 850;
+  text-align: center;
+  padding: 0;
+}
+.gaugeTile input:not([type="checkbox"]):not([type="radio"]):focus{ box-shadow: none; }
+.gaugeTile label{
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: var(--font-tiny);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
 
 /* =======================================================================
  *   Badges / pills
@@ -1009,7 +1066,7 @@ details.block:not([open]) > summary .summaryStatus{ display: inline-flex; }
 .pill.badge-warn{
   border-color: color-mix(in srgb, var(--warn) 55%, transparent);
   background: color-mix(in srgb, var(--warn) 18%, transparent);
-  color: var(--text);
+  color: var(--muted);
   font-weight: 650;
 }
 
@@ -1055,6 +1112,10 @@ details.block{
 }
 details.block[open]{ background: var(--panelOpen); }
 
+/* Receiver Hopper Weights and Receiver Weight Profiles otherwise sit flush
+   against each other with no spacing of their own. */
+#weightsBlock + #setupWeightProfilesBlock{ margin-top: var(--gap); }
+
 /* Make nested blocks inside a card always span full width */
 .blockBody > details.block{
   width: 100%;
@@ -1080,6 +1141,7 @@ summary::-webkit-details-marker{ display: none; }
 .nestedLayerTitle{ font-size:var(--font-small); }
 
 .chev{
+  position: relative;
   width: 15px; height: 15px;
   border-right: 2px solid var(--chev);
   border-bottom: 2px solid var(--chev);
@@ -1088,10 +1150,36 @@ summary::-webkit-details-marker{ display: none; }
   flex: 0 0 auto;
   margin-left: 2px;
 }
+/* Ambient ring: a thin conic-gradient ring, masked down to just its outer
+   edge, that fades in and slowly spins for as long as the panel stays open
+   - an idle "active" glow rather than a one-shot transition. Sized with a
+   small -3px overhang so it clears .card's overflow:hidden even at the
+   tightest (Maximum Data) density/summary padding combination. */
+.chev::before{
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 999px;
+  background: conic-gradient(var(--focus-border), transparent 40%);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+          mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .3s ease;
+}
 summary:hover .chev{ border-color: var(--focus-border); }
 details[open] > summary .chev{ transform: rotate(45deg); }
+details[open] > summary .chev::before{
+  opacity: .55;
+  animation: chevAmbientSpin 2.2s linear infinite;
+}
+@keyframes chevAmbientSpin{ to{ transform: rotate(360deg); } }
 
-.blockBody{ padding: 0 var(--body-pad) var(--body-pad); display: grid; gap: var(--gap); }
+/* grid-template-columns is explicit (not the default auto) so a long nowrap
+   descendant (e.g. a summary subtitle) can't grow this single column past
+   the container's own width - minmax(0,1fr) lets the track shrink to fit
+   instead of sizing to its widest child's min-content. */
+.blockBody{ padding: 0 var(--body-pad) var(--body-pad); display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--gap); }
 
 /* Small copy chip button */
 .copyBtn{
@@ -1118,28 +1206,8 @@ details[open] > summary .chev{ transform: rotate(45deg); }
  *   ======================================================================= */
 
 
-/* Setup toggle row (Line 9 hopper naming, etc.) */
-.setupToggleRow{
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 12px;
-  border-radius: var(--radius-row);
-  background: var(--row-bg-2);
-  border: 1px solid var(--row-border-2);
-}
-
-.setupToggleText{ min-width: 0; }
-.setupToggleTitle{
-  font-weight: 850;
-  font-size: 13px;
-  color: var(--text);
-  line-height: 1.2;
-}
-.setupToggleMeta{
-  margin-top: 4px;
-}
+/* Line 9 hopper naming toggle - sits next to the layer count tiles in
+   .setupTopRow, both controls being the same height. */
 .hopperNamingChoice{
   display:inline-flex;
   flex:0 0 auto;
@@ -1164,7 +1232,7 @@ details[open] > summary .chev{ transform: rotate(45deg); }
 .hopperNamingChoice button:last-child{ border-right:0; }
 .hopperNamingChoice button.active{
   background:linear-gradient(180deg, var(--btn-primary-a), var(--btn-primary-b));
-  color:var(--text);
+  color:var(--muted);
 }
 .hopperNamingChoice button:focus-visible{
   position:relative;
@@ -1173,23 +1241,6 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   outline-offset:-2px;
 }
 
-/* Make it stack nicely on small screens */
-@media (max-width: 520px){
-  .setupToggleRow{
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
-  }
-  .setupToggleRow .trackWrap{
-    justify-content: space-between !important;
-    width: 100%;
-  }
-  .hopperNamingChoice{
-    align-self:stretch;
-    width:100%;
-  }
-  .hopperNamingChoice button{ flex:1 1 50%; }
-}
 /* =======================================================================
  *   Hopper rows
  *   ======================================================================= */
@@ -1222,15 +1273,40 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   .hopperRow .trackLabel{ display: none; }
 }
 
+/* One unified bordered strip instead of five individually-bordered
+   buttons floating side by side - each action becomes a flat, transparent
+   segment separated by a divider, so the whole row reads as one toolbar.
+   align-items:stretch equalizes every segment (buttons, the Scan Recipe
+   <details>, the info <details>) to the row's own height automatically,
+   without needing to zero out each one's own min-height individually. */
 .splitsBulkModeBar{
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-start;
-  gap: 8px;
+  align-items: stretch;
+  border: 1px solid var(--btn-secondary-border);
+  border-radius: var(--control-radius);
+  background: var(--btn-secondary-bg);
 }
-.splitsBulkModeBar button{
-  padding:5px 9px;
+.splitsBulkModeBar button.secondary{
+  border: 0;
+  border-right: 1px solid var(--btn-secondary-border);
+  border-radius: 0;
+  background: transparent;
+  padding: 8px 13px;
   font-size: var(--font-small);
+}
+.splitsBulkModeBar button.secondary:last-of-type{ border-right: 0; }
+.splitsBulkModeBar button.secondary:hover{
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  filter: none;
+}
+/* Round only the strip's own outer corners (first segment's left edge,
+   last segment's right edge) instead of clipping with overflow:hidden on
+   the container - that would also clip Scan Recipe's popup, which
+   intentionally escapes this row via position:absolute to open upward. */
+.splitsBulkModeBar button.secondary:first-child{
+  border-top-left-radius: var(--control-radius);
+  border-bottom-left-radius: var(--control-radius);
 }
 .splitsBulkBar{
   position:sticky;
@@ -1259,24 +1335,24 @@ details[open] > summary .chev{ transform: rotate(45deg); }
 
 /* Scan Recipe: a <details> popup sitting among plain <button>s in the same
    row (Bulk edit, Rearrange, Print Recipe) - the summary is styled to
-   match those siblings' actual computed style exactly: not just
-   button.secondary's base rule, but also .splitsBulkModeBar button's
-   size override (padding/font-size don't match otherwise, since that
-   selector only ever matches real <button> elements, never a <summary>).
-   Reuses .statusScanShortcutPanel (the mobile status-bar shortcut's own
-   dropdown) for the panel itself, but flipped to open upward - this row
-   sits at the bottom of the panel, so opening downward clips against the
-   viewport, same reasoning as the ⓘ info panel nearby. */
+   match those siblings' actual computed style exactly, now the flat
+   divided-segment look .splitsBulkModeBar button.secondary uses instead
+   of a separate bordered pill (that selector only ever matches real
+   <button> elements, never a <summary>, so it needs its own copy of the
+   same values). Reuses .statusScanShortcutPanel (the mobile status-bar
+   shortcut's own dropdown) for the panel itself, but flipped to open
+   upward - this row sits at the bottom of the panel, so opening downward
+   clips against the viewport, same reasoning as the ⓘ info panel nearby. */
 .splitsScanShortcut{ position: relative; }
 .splitsScanShortcut > summary{
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: var(--control-height);
-  border-radius: var(--control-radius);
-  padding: 5px 9px;
-  border: 1px solid var(--btn-secondary-border);
-  background: var(--btn-secondary-bg);
+  height: 100%;
+  border-right: 1px solid var(--btn-secondary-border);
+  padding: 8px 13px;
+  border-radius: 0;
+  background: transparent;
   color: var(--btn-text);
   font-weight: 700;
   font-size: var(--font-small);
@@ -1284,8 +1360,8 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   list-style: none;
 }
 .splitsScanShortcut > summary::-webkit-details-marker{ display: none; }
-.splitsScanShortcut > summary:hover{ filter: brightness(1.05); }
-.splitsScanShortcut > summary:focus-visible{ border-color: var(--focus-border); outline: 2px solid var(--focus-border); outline-offset: 2px; }
+.splitsScanShortcut > summary:hover{ background: color-mix(in srgb, var(--text) 6%, transparent); }
+.splitsScanShortcut > summary:focus-visible{ outline: 2px solid var(--focus-border); outline-offset: -2px; }
 .splitsScanShortcut .statusScanShortcutPanel{ left: 0; top: auto; bottom: calc(100% + 6px); }
 .splitsBulkSteps{grid-column:1/-1;display:flex;align-items:center;gap:18px;padding-bottom:8px;border-bottom:1px solid var(--row-border)}
 .splitsBulkSteps span{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:var(--font-small)}
@@ -1328,10 +1404,14 @@ details[open] > summary .chev{ transform: rotate(45deg); }
 .splitsMatrixActions{display:flex;flex-direction:column;align-items:flex-start;gap:8px;border-top:1px solid var(--row-border);padding-top:12px}
 .splitsMatrixActionInfo{position:relative;display:flex;align-items:center;gap:8px;min-width:0}
 .splitsInfo{position:relative}
-.splitsInfo > summary{display:grid;place-items:center;width:24px;height:24px;border:0;border-radius:50%;background:transparent;color:var(--muted);font-size:16px;line-height:1;cursor:pointer;list-style:none}
+/* Right end of .splitsBulkModeBar's own toolbar strip (see the reorder
+   comment above), so it's a flat divided segment matching that row, not
+   the standalone circular icon button this used to be. */
+.splitsInfo > summary{display:grid;place-items:center;height:100%;padding:0 12px;border-left:1px solid var(--btn-secondary-border);border-radius:0;background:transparent;color:var(--muted);font-size:16px;line-height:1;cursor:pointer;list-style:none}
+.splitsBulkModeBar > .splitsInfo:last-child > summary{border-top-right-radius:var(--control-radius);border-bottom-right-radius:var(--control-radius)}
 .splitsInfo > summary::-webkit-details-marker{display:none}
-.splitsInfo > summary:hover,.splitsInfo[open] > summary{color:var(--title);background:var(--field-bg)}
-.splitsInfo > summary:focus-visible{outline:2px solid var(--focus-border);outline-offset:1px}
+.splitsInfo > summary:hover,.splitsInfo[open] > summary{color:var(--title);background:color-mix(in srgb, var(--text) 6%, transparent)}
+.splitsInfo > summary:focus-visible{outline:2px solid var(--focus-border);outline-offset:-2px}
 .splitsInfoPanel{position:absolute;bottom:calc(100% + 6px);right:0;z-index:20;width:min(390px,calc(100vw - 48px));padding:10px 12px;border:1px solid var(--border2);border-radius:var(--control-radius);background:var(--panelOpen);color:var(--muted);font-size:var(--font-small);box-shadow:var(--shadow2)}
 .splitsInfoPanel p{margin:0}.splitsInfoPanel p+p{margin-top:7px}.splitsInfoPanel strong{color:var(--text)}
 #splitsArea{gap:6px}
@@ -1433,15 +1513,15 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   margin-top:25px;
 }
 .splitLayerPct input{
-  width:32px;
-  min-width:32px;
+  width:36px;
+  min-width:36px;
   padding:4px 3px;
   border-color:transparent;
   background:transparent;
   box-shadow:none;
-  color:var(--text);
-  font-size:calc(var(--font-small) + 2px);
-  font-weight:850;
+  color:var(--muted);
+  font-size:15px;
+  font-weight:900;
   font-variant-numeric:tabular-nums;
   text-align:right;
 }
@@ -1461,21 +1541,28 @@ details[open] > summary .chev{ transform: rotate(45deg); }
 .splitCopyBtn{
   width:auto;
   min-height:0;
-  margin:4px auto 0;
-  padding:2px 5px;
-  border:0;
-  background:transparent;
-  color:var(--muted);
+  margin:6px auto 0;
+  padding:4px 10px;
+  border:1px solid var(--btn-secondary-border);
+  border-radius:999px;
+  background:var(--btn-secondary-bg);
+  color:var(--title);
   font-size:var(--font-tiny);
-  opacity:.62;
+  opacity:1;
   box-shadow:none;
 }
-.splitCopyBtn:hover,.splitCopyBtn:focus-visible{background:transparent;color:var(--title);opacity:1;text-decoration:underline}
+.splitCopyBtn:hover,.splitCopyBtn:focus-visible{
+  border-color:var(--focus-border);
+  background:linear-gradient(180deg, var(--btn-primary-a), var(--btn-primary-b));
+  color:var(--title);
+  opacity:1;
+}
 .splitRowHeader{
-  color: var(--text);
+  color: var(--muted);
   font-weight: 950;
 }
 .splitRowCorner{
+  color: var(--muted);
   font-size:var(--font-tiny);
   line-height:1.15;
   white-space:normal;
@@ -1513,7 +1600,22 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   font-weight:850;
   line-height:1;
 }
-.splitCellHopperName{ letter-spacing:.02em; }
+/* Small boxed badge instead of plain muted text - applies on both desktop
+   and mobile (shipped on mobile first, then ported here unchanged). */
+.splitCellHopperName{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 22px;
+  padding: 0 5px;
+  border-radius: 6px;
+  background: var(--field-bg);
+  color: var(--muted);
+  font-weight: 900;
+  font-size: 12.5px;
+  letter-spacing:.02em;
+}
 .splitMatrixCell:not(.has-resin) .splitCellHopperName{opacity:.72}
 .splitClearButton{
   display:grid;
@@ -1640,7 +1742,7 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   letter-spacing:.01em;
 }
 .splitMatrixCell.has-resin .resinNameInput{
-  color:var(--text);
+  color:var(--muted);
   font-weight:900;
 }
 .splitMatrixCell .resinNameInput:focus{
@@ -1681,7 +1783,7 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   line-height:21px;
   font-variant-numeric:tabular-nums;
 }
-.splitPctControl input:hover,.splitPctControl input:focus{border-color:var(--border2);background:var(--field-bg);color:var(--text)}
+.splitPctControl input:hover,.splitPctControl input:focus{border-color:var(--border2);background:var(--field-bg);color:var(--muted)}
 .splitPctControl input:read-only{color:color-mix(in srgb,var(--muted) 78%,transparent)}
 .splitPctControl > span{
   color: var(--muted);
@@ -1751,31 +1853,130 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   .rearrangeModeBar{padding:8px;gap:8px}
   .splitsMatrixActionInfo{align-items:flex-start;flex-direction:column;gap:2px}
   .splitsMobileLayerNav{
-    position: sticky;
-    top: 0;
-    z-index: 6;
-    display: grid;
-    grid-template-columns: repeat(var(--mobile-layer-count, 4), minmax(44px, 1fr));
-    gap: 4px;
-    padding: 4px;
-    border: 1px solid var(--row-border);
-    border-radius: 999px;
-    background: var(--panel);
-    box-shadow: 0 5px 12px rgba(0,0,0,.22);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 6px 4px;
   }
-  .splitsMobileLayerButton{
-    min-width: 0;
-    padding: 8px 10px;
-    border: 0;
+  .splitsMobileLayerArrow{
+    width: 34px;
+    height: 34px;
+    flex: 0 0 auto;
+    padding: 0;
+    border: 1px solid var(--btn-secondary-border);
     border-radius: 999px;
-    background: transparent;
+    background: var(--btn-secondary-bg);
     color: var(--muted);
+    font-size: 16px;
+    line-height: 1;
   }
-  .splitsMobileLayerButton.active{
+  .splitsMobileLayerArrow:disabled{ opacity: .35; }
+  .splitsMobileLayerCurrent{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  .splitsMobileLayerBadge{
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
     background: linear-gradient(180deg,var(--btn-primary-a),var(--btn-primary-b));
-    color: var(--text);
     box-shadow: inset 0 0 0 1px var(--focus-border);
+    color: var(--title);
+    font-weight: 900;
+    font-size: 18px;
   }
+  .splitsMobileLayerDots{ display: flex; gap: 5px; }
+  .splitsMobileLayerDot{
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--border2);
+  }
+  .splitsMobileLayerDot.active{
+    width: 16px;
+    border-radius: 999px;
+    background: var(--title);
+  }
+
+  /* The pager above already shows which layer is active, so the big
+     ghosted column-header letter is redundant here - drop it (and the
+     header space it needed) to help offset the pager's extra height.
+     Bulk edit still needs it though: it's also the tap target for
+     "select every hopper in this layer", so it stays visible and full
+     size whenever bulk-editing is active. */
+  .splitLayerTitle{ display: none; }
+  .bulk-editing .splitLayerTitle{ display: inline-block; }
+  .bulk-editing .splitLayerMain{ min-height: 58px; }
+  .bulk-editing .splitLayerPct{ margin-top: 25px; }
+
+  /* With the ghosted letter gone, the percentage and Copy sit as two equal
+     chip-shaped panes side by side (squared-off corners, same radius as the
+     stepper-style controls elsewhere) instead of stacking under the old
+     header. The hopper-total warning (rare - only shown when a layer's
+     hoppers don't sum to 100%) spans the full width beneath both. When a
+     layer has no copy source, the percentage chip alone fills the row.
+     Specificity note: .splitsMatrix [data-layer-column].mobile-layer-active
+     (shared with the <td> body cells, which must stay display:table-cell)
+     otherwise wins over a plain .splitLayerHeader and this silently stays
+     table-cell instead of becoming a grid. */
+  .splitsMatrix th.splitLayerHeader.mobile-layer-active{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas: "pct copy" "total total";
+    align-items: stretch;
+    gap: 8px;
+  }
+  .splitsMatrix th.splitLayerHeader.noCopy.mobile-layer-active{
+    grid-template-columns: 1fr;
+    grid-template-areas: "pct" "total";
+  }
+  .splitLayerMain{
+    grid-area: pct;
+    min-height: 0;
+    padding: 6px;
+    border: 1px solid var(--btn-secondary-border);
+    border-radius: var(--control-radius);
+    background: var(--btn-secondary-bg);
+  }
+  .splitLayerPct{
+    margin-top: 0;
+    justify-content: center;
+    gap: 1px;
+  }
+  /* The shared "sleek underline field" rule gives every text input its own
+     touch-target min-height and padding (--control-height 33-40px, plus
+     padding:min(5px,--pad-input-y) 2px) - appropriate for a field someone
+     taps into directly, but far taller than this compact chip needs on top
+     of the chip's own padding. Let the input shrink to bare text and have
+     the chip provide the only padding. :not([type=checkbox]):
+     not([type=radio]) matches that rule's own specificity - a plain
+     ".splitLayerPct input" selector loses to it and silently no-ops. */
+  .splitLayerPct input:not([type="checkbox"]):not([type="radio"]){
+    min-height: 0;
+    padding: 0;
+  }
+  .splitCopyBtn{
+    grid-area: copy;
+    width: 100%;
+    margin: 0;
+    padding: 9px 6px;
+    border: 1px solid var(--btn-secondary-border);
+    border-radius: var(--control-radius);
+    background: var(--btn-secondary-bg);
+    color: var(--title);
+    opacity: 1;
+    font-weight: 750;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .splitColumnTotal{ grid-area: total; }
   .splitsMatrixScroll{ overflow-x: hidden; }
   .splitsMatrixFrame{width:100%;margin-inline:0}
   .splitsMatrix{ table-layout: fixed; }
@@ -1797,7 +1998,6 @@ details[open] > summary .chev{ transform: rotate(45deg); }
      far more width than the desktop-sized text needs. Grow the text that
      fills it — hopper name, resin name, percentage — without touching the
      cell/table layout itself. */
-  .splitCellHopperName{ font-size: var(--font-small); }
   .splitMatrixCell .resinNameInput{
     height: 27px;
     min-height: 27px;
@@ -1835,6 +2035,28 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   .splitTrackControl{ order: 2; }
   .splitCellEditor{ order: 3; flex: 1; min-width: 0; }
   .splitClearButton{ order: 4; margin-left: 0; }
+
+  /* The track button becomes a real bordered pill (30px, was 23px) with a
+     filled active state on mobile only - bigger and easier to hit than the
+     default desktop-sized clock icon. The designation badge itself (see
+     .splitCellHopperName above) applies on both desktop and mobile. */
+  .splitTrackButton{
+    width: 30px;
+    height: 30px;
+    min-height: 30px;
+    border: 1px solid var(--btn-secondary-border);
+    border-radius: 999px;
+    background: var(--btn-secondary-bg);
+    color: var(--muted);
+    opacity: 1;
+  }
+  .splitTrackButton svg{ width: 16px; height: 16px; }
+  .splitTrackButton.active{
+    background: linear-gradient(180deg, var(--btn-primary-a), var(--btn-primary-b));
+    border-color: var(--focus-border);
+    color: var(--title);
+    box-shadow: 0 0 0 1px var(--focus-ring);
+  }
 }
 
 .hopperBadge{
@@ -1911,6 +2133,7 @@ details[open] > summary .chev{ transform: rotate(45deg); }
 .weightsBulkSteps b{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:999px;background:var(--btn-primary-a);color:var(--title);font-size:var(--font-tiny)}
 .weightsBulkField{ margin: 0; }
 .weightsBulkField > span:first-child{display:block;margin-bottom:6px}
+.weightsBulkField .weightsInputWithUnit input{color:var(--muted)}
 .weightsInputWithUnit{
   display: grid;
   grid-template-columns: minmax(64px, 1fr) auto;
@@ -1956,7 +2179,7 @@ details[open] > summary .chev{ transform: rotate(45deg); }
 .weightsMatrix tr > *:last-child{ border-right: 0; }
 .weightsMatrix thead th{
   background: transparent;
-  color: var(--text);
+  color: var(--muted);
 }
 .weightsMatrix thead th:not(:first-child),
 .weightsMatrixCell{
@@ -1971,12 +2194,13 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   min-width: 76px;
   background:var(--panelOpen);
 }
-.weightsRowCorner{font-size:var(--font-tiny);line-height:1.15;white-space:normal}
+.weightsRowCorner{color:var(--muted);font-size:var(--font-tiny);line-height:1.15;white-space:normal}
 .weightsSelectHeader{
   width: 100%;
   padding: 7px 8px;
   border-color:transparent;
   background:transparent;
+  color:var(--muted);
   box-shadow: none;
   white-space: nowrap;
 }
@@ -2042,6 +2266,7 @@ details[open] > summary .chev{ transform: rotate(45deg); }
   text-align: right;
   border:0;
   background:transparent;
+  color:var(--muted);
   box-shadow:none;
 }
 @media (max-width: 600px){
@@ -2057,20 +2282,35 @@ details[open] > summary .chev{ transform: rotate(45deg); }
 .resultGrid{ display: grid; gap: var(--gap); }
 
 .resultRow{
+  position: relative;
   display: grid;
   grid-template-columns: 1fr auto;
   gap: var(--gap);
-  padding: var(--row-pad);
-  border-radius: var(--radius-row);
-  background: var(--row-bg-2);
+  min-height: 48px;
+  padding: 6px 9px 6px 17px;
+  border-radius: 7px;
+  background: var(--panel);
   border: 1px solid var(--row-border-2);
   transition: opacity .12s ease, filter .12s ease, transform .08s ease;
 }
+.resultRow::before{
+  content:"";
+  position:absolute;
+  top:5px;
+  bottom:5px;
+  left:5px;
+  width:5px;
+  border-radius:4px;
+  background:var(--focus-border);
+}
+.resultRow.done::before{ background:var(--row-border); }
+.resultRow.late::before{ background:var(--warn); }
 .resultRow:hover{ transform: translateY(-1px); }
 .resultIdentity{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.resultHopper{ font-size:calc(var(--font-base) + 1px); font-weight:950; }
 .resultTiming{ min-width:120px; text-align:right; white-space:nowrap; }
 .resultTimingLabel{ font-size:var(--font-small); }
-.resultTimingValue{ font-weight:950; }
+.resultTimingValue{ font-weight:950; color:var(--muted); }
 .resultRow.late .resultTimingValue{ color:var(--warn); }
 
 .resultRow .meta{
@@ -2093,143 +2333,25 @@ details[open] > summary .chev{ transform: rotate(45deg); }
 }
 .checkWrap input{ width: 18px; height: 18px; padding: 0; margin: 0; border-radius: 6px; }
 
-/* Timeline appearance choices */
-body[data-timeline-style="event-rail"] .resultGrid{
-  position:relative;
-  gap:0;
-  padding-left:22px;
-}
-body[data-timeline-style="event-rail"] .resultGrid::before{
-  content:"";
-  position:absolute;
-  top:13px;
-  bottom:13px;
-  left:8px;
-  width:1px;
-  background:var(--row-border);
-}
-body[data-timeline-style="event-rail"] .resultRow{
-  position:relative;
-  grid-template-columns:minmax(92px,auto) minmax(0,1fr);
-  align-items:center;
-  min-height:58px;
-  padding:7px 5px 7px 9px;
-  border:0;
-  border-bottom:1px solid var(--row-border-2);
-  border-radius:0;
-  background:transparent;
-}
-body[data-timeline-style="event-rail"] .resultRow:last-child{ border-bottom:0; }
-body[data-timeline-style="event-rail"] .resultRow::before{
-  content:"";
-  position:absolute;
-  left:-20px;
-  width:8px;
-  height:8px;
-  border:3px solid var(--panel);
-  border-radius:50%;
-  background:var(--focus-border);
-}
-body[data-timeline-style="event-rail"] .resultRow.late::before{ background:var(--warn); }
-body[data-timeline-style="event-rail"] .resultTiming{
-  grid-column:1;
-  grid-row:1;
-  min-width:0;
-  text-align:left;
-}
-body[data-timeline-style="event-rail"] .resultMain{ grid-column:2; grid-row:1; }
-body[data-timeline-style="event-rail"] .checkWrap{ justify-content:flex-start; }
-
-body[data-timeline-style="data-strips"] .resultGrid{ gap:0; }
-body[data-timeline-style="data-strips"] .resultRow{
-  min-height:42px;
-  padding:5px 8px;
-  border-width:0 0 1px;
-  border-radius:0;
-  background:transparent;
-}
-body[data-timeline-style="data-strips"] .resultRow:first-child{ border-top:1px solid var(--row-border-2); }
-body[data-timeline-style="data-strips"] .resultRow .meta{ margin-top:2px; }
-body[data-timeline-style="data-strips"] .resultIdentity .pill{
-  padding:2px 6px;
-  border-color:transparent;
-  background:transparent;
-}
-body[data-timeline-style="data-strips"] .resultHopper{ color:var(--title); font-weight:950; }
-
-body[data-timeline-style="priority-lane"] .resultGrid{ gap:0; }
-body[data-timeline-style="priority-lane"] .resultRow{
-  grid-template-columns:minmax(108px,auto) minmax(0,1fr);
-  align-items:center;
-  padding:8px 10px;
-  border-width:0 0 1px 3px;
-  border-radius:0;
-  background:var(--row-bg-2);
-}
-body[data-timeline-style="priority-lane"] .resultRow:first-child{ border-radius:8px 8px 0 0; }
-body[data-timeline-style="priority-lane"] .resultRow:last-child{ border-bottom:0; border-radius:0 0 8px 8px; }
-body[data-timeline-style="priority-lane"] .resultRow.late{ border-left-color:var(--warn); }
-body[data-timeline-style="priority-lane"] .resultTiming{
-  grid-column:1;
-  grid-row:1;
-  min-width:0;
-  text-align:left;
-}
-body[data-timeline-style="priority-lane"] .resultMain{ grid-column:2; grid-row:1; }
-body[data-timeline-style="priority-lane"] .resultTimingValue{ font-size:calc(var(--font-base) + 2px); }
-body[data-timeline-style="priority-lane"] .checkWrap{ justify-content:flex-start; }
-
-body[data-timeline-style="divided-list"] .resultGrid{ gap:0; }
-body[data-timeline-style="divided-list"] .resultRow{
-  padding:9px 2px;
-  border-width:0 0 1px;
-  border-radius:0;
-  background:transparent;
-}
-body[data-timeline-style="divided-list"] .resultRow:last-child{ border-bottom:0; }
-body[data-timeline-style="divided-list"] .resultHopper{ color:var(--title); font-weight:950; }
-
-body[data-timeline-style="command-rows"] .resultRow{
-  position:relative;
-  min-height:48px;
-  padding:6px 9px 6px 17px;
-  border-radius:7px;
-  background:var(--panel);
-}
-body[data-timeline-style="command-rows"] .resultRow::before{
-  content:"";
-  position:absolute;
-  top:5px;
-  bottom:5px;
-  left:5px;
-  width:5px;
-  border-radius:4px;
-  background:var(--focus-border);
-}
-body[data-timeline-style="command-rows"] .resultRow.done::before{ background:var(--row-border); }
-body[data-timeline-style="command-rows"] .resultRow.late::before{ background:var(--warn); }
-body[data-timeline-style="command-rows"] .resultHopper{ font-size:calc(var(--font-base) + 1px); font-weight:950; }
-
 @media (max-width:600px){
   .resultRow{ grid-template-columns:1fr; }
-  .resultTiming{ min-width:0; }
-  body[data-timeline-style="event-rail"] .resultRow,
-  body[data-timeline-style="priority-lane"] .resultRow{
-    grid-template-columns:minmax(78px,auto) minmax(0,1fr);
-  }
-  body[data-timeline-style="event-rail"] .resultIdentity,
-  body[data-timeline-style="priority-lane"] .resultIdentity{ gap:5px; }
-  body[data-timeline-style="data-strips"] .resultTiming,
-  body[data-timeline-style="divided-list"] .resultTiming,
-  body[data-timeline-style="command-rows"] .resultTiming{
+  .resultTiming{
+    min-width:0;
+    /* Reset the base rule's white-space:nowrap - at this width the
+       label+value+checkbox group is wider than the card, and nowrap text
+       right-aligned via justify-content:flex-end overflows leftward past
+       the card edge instead of wrapping (looks like it slides under the
+       card). Letting it wrap, with flex-wrap as a second line of defense,
+       keeps it inside the card no matter how long "Not feeding"/"Missing
+       data" etc. get. */
+    white-space:normal;
     display:flex;
+    flex-wrap:wrap;
     align-items:center;
     justify-content:flex-end;
     gap:8px;
   }
-  body[data-timeline-style="data-strips"] .checkWrap,
-  body[data-timeline-style="divided-list"] .checkWrap,
-  body[data-timeline-style="command-rows"] .checkWrap{ margin-top:0; }
+  .checkWrap{ margin-top:0; }
 }
 
 /* =======================================================================

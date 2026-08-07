@@ -24,7 +24,6 @@
       "weightsBlock",
       "splitsBlock",
       "resultsBlock",
-      "recipesBlock",
       "toolsBlock",
       "helpBlock",
       "helpQuickStart",
@@ -32,7 +31,6 @@
       "helpHopperPercentages",
       "helpTimeline",
       "helpCloudSync",
-      "helpLineConfigurations",
       "helpTools"
     ];
 
@@ -52,11 +50,9 @@
       prodResinLb: 0,
       scrapResinLb: 0,
       density: "comfort",
-      theme: "everforest",
+      theme: "mse",
       timeFormat: "12",
       surfaceStyle: "divided",
-      timelineStyle: "command-rows",
-      headerStyle: "modern",
       gauge: 0,
       hopperNamingLine9: "standard", // "standard" | "main"
       showPumpOffTracked: false, // show pump-off items in Timeline
@@ -137,11 +133,11 @@
     if(!items.length){ const empty=document.createElement("div"); empty.className="muted"; empty.textContent=kind==="recipe"?"No shared recipes saved for this workspace.":"No shared weight profiles saved for this workspace."; host.append(empty); return; }
     items.forEach(item=>{ const row=document.createElement("div"); row.className="workspaceConfigurationRow"; row.tabIndex=0; row.setAttribute("role","group"); row.setAttribute("aria-label",`${item.name} configuration`); const select=()=>{selectedWorkspaceConfigurationId=item.id; renderWorkspaceConfigurations(syncState);}; const selected=selectedWorkspaceConfigurationId===item.id; row.classList.toggle("selected",selected); row.addEventListener("click",event=>{if(!event.target.closest("button,summary,details")) select();}); row.addEventListener("keydown",event=>{if((event.key==="Enter"||event.key===" ")&&!event.target.closest("button,summary")){event.preventDefault();select();}}); const info=document.createElement("div"); info.className="workspaceConfigurationInfo"; info.addEventListener("click",event=>{event.stopPropagation();select();}); const title=document.createElement("strong"); if(item.favorite){const star=document.createElement("span");star.className="workspaceConfigurationFavorite";star.setAttribute("aria-label","Favorite recipe");star.textContent="★";title.append(star," ");} title.append(item.name); const meta=document.createElement("small"); const count=kind==="recipe"&&Array.isArray(item.payload?.layers)?item.payload.layers.reduce((n,layer)=>n+(Array.isArray(layer?.hoppers)?layer.hoppers.filter(h=>typeof h?.resin_name==="string"&&h.resin_name.trim()).length:0),0):kind!=="recipe"&&Array.isArray(item.payload?.layers)?item.payload.layers.reduce((n,layer)=>n+(Array.isArray(layer?.receiver_weights_lb)&&layer.receiver_weights_lb.length===6?6:0),0):null; meta.textContent=`${item.payload.line_type} Layer${count===null?"":` · ${count} ${kind==="recipe"?"assigned hoppers":"receiver weights"}`} · Updated ${item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : "unknown"}`; info.append(title,meta); row.append(info); if(selected&&showRowActions){const actions=document.createElement("div"); actions.className="workspaceConfigurationActions"; const action=(label,fn,cls="secondary")=>{const b=document.createElement("button");b.type="button";b.className=cls;b.textContent=label;b.addEventListener("click",event=>{event.stopPropagation();fn();});return b;}; actions.append(action("Load",()=>previewWorkspaceConfiguration(item),"primary"),action("Update",()=>openWorkspaceConfigurationDialog("update",item))); const menu=document.createElement("details"); menu.className="workspaceConfigurationOverflow"; menu.addEventListener("click",event=>event.stopPropagation()); const summary=document.createElement("summary"); summary.setAttribute("aria-label",`More actions for ${item.name}`); summary.textContent="⋯"; const menuActions=document.createElement("div"); menuActions.className="workspaceConfigurationOverflowMenu"; const menuAction=(label,fn,cls="secondary")=>{const button=action(label,()=>{menu.open=false;fn();},cls);menuActions.append(button);}; menuAction("Rename",()=>openWorkspaceConfigurationDialog("rename",item)); menuAction("Duplicate",()=>openWorkspaceConfigurationDialog("duplicate",item)); if(kind==="recipe") menuAction(item.favorite?"Unfavorite":"Favorite",()=>mutateWorkspaceConfiguration("favorite",item,!item.favorite)); menuAction("Delete",()=>{if(confirm(`Delete shared configuration “${item.name}”?`)) mutateWorkspaceConfiguration("delete",item);},"danger"); menu.append(summary,menuActions); actions.append(menu); row.append(actions);} host.append(row); });
   }
-  // Recipe Setup's own copy of the shared recipe list (Line Configurations
-  // keeps the original - this is an additional, independent surface reading
-  // the same service/cache, not a replacement). Only recipes, not receiver
-  // weight profiles - Recipe Setup doesn't concern itself with equipment
-  // weights. Rebuilt fresh by renderSplitsArea() on every render, so this
+  // Recipe Setup's own copy of the shared recipe list - an independent
+  // surface reading the same service/cache, not the only one (Setup has its
+  // own Receiver Weight Profiles list the same way). Only recipes, not
+  // receiver weight profiles - Recipe Setup doesn't concern itself with
+  // equipment weights. Rebuilt fresh by renderSplitsArea() on every render, so this
   // always re-populates it with current data rather than leaving it blank
   // until some unrelated RT Sync event happens to fire next.
   // The panel's own Load/Update/(rename, duplicate, favorite, delete) act
@@ -189,8 +185,47 @@
     wireSplitsSavedRecipesActions(items);
     renderConfigurationList(host,items,"recipe",syncState,{ showRowActions:false });
   }
+  // Setup panel's own copy of the shared receiver weight profile list (Line
+  // Configurations keeps the original). Same consolidated action-bar
+  // pattern as Recipe Setup's Saved Recipes, minus the favorite toggle -
+  // only recipes support favoriting. Unlike Saved Recipes' buttons, these
+  // live in static index.html markup (not rebuilt per render), but still
+  // need re-wiring on every call since which item they act on changes
+  // with the selection - .onclick assignment keeps that idempotent.
+  function wireSetupWeightProfileActions(items){
+    const loadBtn=$("setupLoadWeightProfile"), updateBtn=$("setupUpdateWeightProfile"), overflow=$("setupWeightProfileOverflow");
+    const overflowSummary=overflow?.querySelector("summary");
+    const renameBtn=$("setupRenameWeightProfile"), duplicateBtn=$("setupDuplicateWeightProfile"), deleteBtn=$("setupDeleteWeightProfile");
+    const selectedItem = items.find(item=>item.id===selectedWorkspaceConfigurationId) || null;
+    if(loadBtn) loadBtn.disabled = !selectedItem;
+    if(updateBtn) updateBtn.disabled = !selectedItem;
+    if(overflow){
+      overflow.classList.toggle("overflow-disabled", !selectedItem);
+      if(!selectedItem) overflow.open = false;
+    }
+    if(overflowSummary) overflowSummary.onclick = event=>{ if(!selectedItem) event.preventDefault(); };
+    if(loadBtn) loadBtn.onclick = ()=>{ if(selectedItem) previewWorkspaceConfiguration(selectedItem); };
+    if(updateBtn) updateBtn.onclick = ()=>{ if(selectedItem) openWorkspaceConfigurationDialog("update",selectedItem); };
+    if(renameBtn) renameBtn.onclick = ()=>{ if(overflow) overflow.open=false; if(selectedItem) openWorkspaceConfigurationDialog("rename",selectedItem); };
+    if(duplicateBtn) duplicateBtn.onclick = ()=>{ if(overflow) overflow.open=false; if(selectedItem) openWorkspaceConfigurationDialog("duplicate",selectedItem); };
+    if(deleteBtn) deleteBtn.onclick = ()=>{ if(overflow) overflow.open=false; if(selectedItem && confirm(`Delete shared configuration “${selectedItem.name}”?`)) mutateWorkspaceConfiguration("delete",selectedItem); };
+  }
+  function renderSetupWeightProfiles(syncState){
+    const host=$("setupWeightProfilesList");
+    if(!host) return;
+    const status=$("setupWeightProfilesStatus");
+    const setStatus=message=>{ if(status){ status.textContent=message||""; status.hidden=!message; } };
+    const workspaceId=syncState?.selectedWorkspaceId || "";
+    if(!workspaceId){ host.replaceChildren(); setStatus("Connect to an RT Sync workspace to view shared weight profiles."); wireSetupWeightProfileActions([]); return; }
+    if(!workspaceConfigurations){ host.replaceChildren(); setStatus("Shared configurations service is unavailable."); wireSetupWeightProfileActions([]); return; }
+    setStatus("");
+    const items=workspaceConfigurations.listReceiverWeightProfiles(workspaceId).items;
+    wireSetupWeightProfileActions(items);
+    renderConfigurationList(host,items,"profile",syncState,{ showRowActions:false });
+  }
   function renderWorkspaceConfigurations(syncState){
     renderSplitsSavedRecipes(syncState);
+    renderSetupWeightProfiles(syncState);
     const profiles=$("workspaceProfilesList"), recipes=$("workspaceRecipesList"), refresh=$("workspaceConfigurationsRefresh"), workspaceLabel=$("workspaceConfigurationsWorkspace");
     if(!profiles || !recipes) return;
     const workspaceId=syncState?.selectedWorkspaceId || "";
@@ -224,7 +259,7 @@
   function applyWorkspaceConfiguration(item){
     const helper=item.type==="recipe"?window.PolynWorkspaceConfigurationPayloads?.applyRecipePayload:window.PolynWorkspaceConfigurationPayloads?.applyReceiverWeightProfile;
     const result=helper?.(state,item.payload); if(!result?.ok){ workspaceConfigurationStatus(result?.errors?.[0] || "This shared configuration could not be loaded."); return; }
-    if(item.type==="recipe"){ const lineType=$("lineType"); if(lineType) lineType.value=String(state.lineType); }
+    if(item.type==="recipe") syncLineTypeUI();
     renderWeightsArea(); renderSplitsArea(); validateAndCompute(); saveSession(); notifyActiveJobMutation({immediate:true,kind:"load-workspace-configuration"});
     workspaceConfigurationStatus(`${item.type==="recipe"?"Recipe":"Receiver Weight Profile"} loaded successfully.`);
   }
@@ -504,6 +539,60 @@
     syncHopperNamingUI();
   }
 
+  const LINE_TYPES = [1, 3, 5];
+
+  function syncLineTypeUI(){
+    const group = $("lineTypeToggle");
+    if (!group) return;
+    const current = LINE_TYPES.includes(Number(state.lineType)) ? Number(state.lineType) : 3;
+    group.querySelectorAll("[data-line-type]").forEach(button=>{
+      const selected = Number(button.dataset.lineType) === current;
+      button.classList.toggle("active", selected);
+      button.setAttribute("aria-checked", String(selected));
+      button.tabIndex = selected ? 0 : -1;
+    });
+  }
+
+  function hookLineTypeChoice(){
+    const group = $("lineTypeToggle");
+    if (!group || group._wired) return;
+    group._wired = true;
+    const choose = value=>{
+      const nextType = LINE_TYPES.includes(Number(value)) ? Number(value) : 3;
+      if (nextType === state.lineType) return;
+      const nextLayerNames = new Set(getLayerNamesForType(nextType));
+      const configuredRemovedLayers = state.layers.filter(layer=>!nextLayerNames.has(layer.name)).filter(layer=>
+        clampNum(layer.layerPct) > 0 ||
+        layer.hoppers.some((hopper,index)=>
+          (index === 0 ? Math.abs(clampNum(hopper.pct) - 100) > 0.0001 : clampNum(hopper.pct) > 0) ||
+          clampNum(hopper.weight) > 0 || !!hopper.resinName || !!hopper.track || !!hopper.pumpOff
+        )
+      );
+      if (configuredRemovedLayers.length && !confirm(`Changing to ${nextType} ${nextType === 1 ? "layer" : "layers"} will remove configured data for ${configuredRemovedLayers.map(layer=>layer.name).join(", ")}. Continue?`)){
+        return;
+      }
+      state.lineType = nextType;
+      ensureLayers();
+      syncLineTypeUI();
+      rebuildUIFromState();
+      saveSession();
+      notifyActiveJobMutation({ immediate: true, kind: "line-type" });
+    };
+    group.addEventListener("click",event=>{
+      const button = event.target.closest("[data-line-type]");
+      if (button) choose(button.dataset.lineType);
+    });
+    group.addEventListener("keydown",event=>{
+      if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+      event.preventDefault();
+      const idx = LINE_TYPES.indexOf(LINE_TYPES.includes(Number(state.lineType)) ? Number(state.lineType) : 3);
+      const nextIdx = event.key === "ArrowLeft" ? Math.max(0, idx - 1) : Math.min(LINE_TYPES.length - 1, idx + 1);
+      choose(LINE_TYPES[nextIdx]);
+      group.querySelector(`[data-line-type="${LINE_TYPES[nextIdx]}"]`)?.focus();
+    });
+    syncLineTypeUI();
+  }
+
   function hookToggle(id, getOn, setOn){
     const el = $(id);
     if (!el || el._wired) return;
@@ -533,6 +622,7 @@
 
   function hookCustomToggles(){
     hookHopperNamingChoice();
+    hookLineTypeChoice();
 
     hookToggle(
       "showPumpOffToggle",
@@ -696,8 +786,6 @@
         theme: state.theme,
         timeFormat: state.timeFormat,
         surfaceStyle: state.surfaceStyle,
-        timelineStyle: state.timelineStyle,
-        headerStyle: state.headerStyle,
         gauge: state.gauge,
         hopperNamingLine9: state.hopperNamingLine9,
         showPumpOffTracked: !!state.showPumpOffTracked,
@@ -713,8 +801,6 @@
         theme: state.theme,
         timeFormat: state.timeFormat,
         surfaceStyle: state.surfaceStyle,
-        timelineStyle: state.timelineStyle,
-        headerStyle: state.headerStyle,
         showPumpOffTracked: state.showPumpOffTracked,
         mobileTimelineOnly: state.mobileTimelineOnly,
         mobileRecipeOnly: state.mobileRecipeOnly,
@@ -730,7 +816,7 @@
    * ============================ */
   function applyTheme(t){
       const allowed = new Set(["dark","light","mse","industrial-slate-dark","gruvbox-dark","gruvbox-light","nord","tokyo-night","dracula","solarized-dark","solarized-light","catppuccin-mocha","catppuccin-latte","rose-pine","rose-pine-dawn","everforest","everforest-light","one-dark","high-contrast","mono"]);
-      const theme = allowed.has(String(t)) ? String(t) : "everforest";
+      const theme = allowed.has(String(t)) ? String(t) : "mse";
 
       document.documentElement.setAttribute("data-theme", theme);
       document.body.setAttribute("data-theme", theme);
@@ -772,24 +858,6 @@
       if (sel) sel.value = surfaceStyle;
     }
 
-    function applyTimelineStyle(value){
-      const allowed = new Set(["soft-cards", "event-rail", "data-strips", "priority-lane", "divided-list", "command-rows"]);
-      const timelineStyle = allowed.has(String(value)) ? String(value) : "command-rows";
-      state.timelineStyle = timelineStyle;
-      document.body.setAttribute("data-timeline-style", timelineStyle);
-      const sel = $("timelineStyleSel");
-      if (sel) sel.value = timelineStyle;
-    }
-
-    function applyHeaderStyle(value){
-      const allowed = new Set(["gruvbox-dark", "industrial-slate", "modern"]);
-      const headerStyle = allowed.has(String(value)) ? String(value) : "modern";
-      state.headerStyle = headerStyle;
-      document.body.setAttribute("data-header-style", headerStyle);
-      const sel = $("headerStyleSel");
-      if (sel) sel.value = headerStyle;
-    }
-
     function applyPayload(payload, {rebuildUI=true} = {}){
       if (!payload || typeof payload !== "object") return;
 
@@ -804,12 +872,10 @@
       state.prodResinLb = clampNum(payload.prodResinLb);
       state.scrapResinLb = clampNum(payload.scrapResinLb);
 
-      applyTheme(payload.theme || "everforest");
+      applyTheme(payload.theme || "mse");
       applyDensity(payload.density || "comfort");
       applyTimeFormat(payload.timeFormat || "12");
       applySurfaceStyle(payload.surfaceStyle || defaultSurfaceStyle());
-      applyTimelineStyle(payload.timelineStyle || "command-rows");
-      applyHeaderStyle(payload.headerStyle || "modern");
       $("lineRate").value = String(state.lineRate);
       // Custom toggles
       state.hopperNamingLine9 = (payload.hopperNamingLine9 === "main") ? "main" : "standard";
@@ -820,7 +886,7 @@
       applyMobileRecipeMode(state.mobileRecipeOnly);
 
 
-      $("lineType").value = String(state.lineType);
+      syncLineTypeUI();
       $("changeoverTime").value = state.changeoverTime;
 
 
@@ -846,8 +912,7 @@
 
       const lineRateEl = $("lineRate");
       if (lineRateEl) lineRateEl.value = String(state.lineRate);
-      const lineTypeEl = $("lineType");
-      if (lineTypeEl) lineTypeEl.value = String(state.lineType);
+      syncLineTypeUI();
 
       const coEl = $("changeoverTime");
       if (coEl) coEl.value = state.changeoverTime;
@@ -1113,7 +1178,6 @@
         </div>
         <div class="weightsBulkNote tiny">Individual weights can still be edited directly in the table.</div>
       `;
-      area.appendChild(toolbar);
 
       const scroll = document.createElement("div");
       scroll.className = "weightsMatrixScroll";
@@ -1222,6 +1286,7 @@
       frame.appendChild(table);
       scroll.appendChild(frame);
       area.appendChild(scroll);
+      area.appendChild(toolbar);
 
       const bulkInput = toolbar.querySelector("#bulkWeight");
       const applyButton = toolbar.querySelector("#applyBulkWeight");
@@ -1404,10 +1469,10 @@
 
       const modeBar = document.createElement("div");
       modeBar.className = "splitsBulkModeBar";
-      // Recipe Setup's own entry point into the same shared-recipe list
-      // Line Configurations already has (see renderSplitsSavedRecipes) -
-      // Load is the action operators reach for most from here, so it leads
-      // the row rather than sitting after the editing tools.
+      // Recipe Setup's own entry point into the shared-recipe list
+      // (see renderSplitsSavedRecipes) - Load is the action operators reach
+      // for most from here, so it leads the row rather than sitting after
+      // the editing tools.
       const savedRecipesButton = document.createElement("button");
       savedRecipesButton.type = "button";
       savedRecipesButton.className = "secondary";
@@ -1507,11 +1572,10 @@
         <div class="splitsBulkNote tiny">Blank fields leave existing values unchanged.</div>
       `;
 
-      // Recipe Setup's own copy of the shared recipe list already available
-      // under Line Configurations (see renderSplitsSavedRecipes) - same
-      // service/cache, same Load/Update/Rename/Duplicate/Favorite/Delete
-      // actions, just a second, closer-to-the-work entry point. Line
-      // Configurations' own section is untouched.
+      // Recipe Setup's own copy of the shared recipe list
+      // (see renderSplitsSavedRecipes) - same service/cache, same
+      // Load/Update/Rename/Duplicate/Favorite/Delete actions, just a
+      // closer-to-the-work entry point.
       const savedRecipesPanel = document.createElement("div");
       savedRecipesPanel.className = "splitsSavedRecipesPanel hide";
       savedRecipesPanel.innerHTML = `
@@ -1606,21 +1670,41 @@
 
       const mobileLayerNav = document.createElement("div");
       mobileLayerNav.className = "splitsMobileLayerNav";
-      mobileLayerNav.style.setProperty("--mobile-layer-count", String(state.layers.length));
-      mobileLayerNav.setAttribute("role", "tablist");
+      mobileLayerNav.setAttribute("role", "group");
       mobileLayerNav.setAttribute("aria-label", "Choose layer");
       const layerNames = state.layers.map(L=>L.name);
       let activeMobileLayer = layerNames.includes(lastActiveMobileLayer) ? lastActiveMobileLayer : (layerNames[0] || "");
-      const mobileLayerButtons = new Map();
+
+      const mobileLayerPrev = document.createElement("button");
+      mobileLayerPrev.type = "button";
+      mobileLayerPrev.className = "splitsMobileLayerArrow";
+      mobileLayerPrev.textContent = "‹";
+      mobileLayerPrev.setAttribute("aria-label", "Previous layer");
+
+      const mobileLayerCurrent = document.createElement("div");
+      mobileLayerCurrent.className = "splitsMobileLayerCurrent";
+      const mobileLayerBadge = document.createElement("div");
+      mobileLayerBadge.className = "splitsMobileLayerBadge";
+      mobileLayerBadge.setAttribute("aria-live", "polite");
+      const mobileLayerDots = document.createElement("div");
+      mobileLayerDots.className = "splitsMobileLayerDots";
+      mobileLayerDots.setAttribute("aria-hidden", "true");
+      mobileLayerCurrent.append(mobileLayerBadge, mobileLayerDots);
+
+      const mobileLayerNext = document.createElement("button");
+      mobileLayerNext.type = "button";
+      mobileLayerNext.className = "splitsMobileLayerArrow";
+      mobileLayerNext.textContent = "›";
+      mobileLayerNext.setAttribute("aria-label", "Next layer");
+
+      mobileLayerNav.append(mobileLayerPrev, mobileLayerCurrent, mobileLayerNext);
+
+      const mobileLayerDotEls = new Map();
       state.layers.forEach(L=>{
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "splitsMobileLayerButton";
-        button.textContent = L.name;
-        button.setAttribute("role", "tab");
-        button.setAttribute("aria-label", `Show Layer ${L.name}`);
-        mobileLayerButtons.set(L.name, button);
-        mobileLayerNav.appendChild(button);
+        const dot = document.createElement("span");
+        dot.className = "splitsMobileLayerDot";
+        mobileLayerDotEls.set(L.name, dot);
+        mobileLayerDots.appendChild(dot);
       });
       area.appendChild(mobileLayerNav);
 
@@ -1675,13 +1759,10 @@
         headerMain.className = "splitLayerMain";
         headerMain.append(title, pctWrap);
 
-        const hopperTotal = document.createElement("div");
-        hopperTotal.id = `hopperTotal_${L.name}`;
-        hopperTotal.className = "splitColumnTotal";
-
-        th.append(headerMain, hopperTotal);
+        th.append(headerMain);
 
         const copyFrom = copyRules[L.name];
+        th.classList.toggle("noCopy", !copyFrom);
         if (copyFrom){
           const copyButton = document.createElement("button");
           copyButton.type = "button";
@@ -1695,6 +1776,11 @@
           });
           th.appendChild(copyButton);
         }
+
+        const hopperTotal = document.createElement("div");
+        hopperTotal.id = `hopperTotal_${L.name}`;
+        hopperTotal.className = "splitColumnTotal";
+        th.appendChild(hopperTotal);
 
         pctInput.addEventListener("input",(e)=>{
           const accepted = acceptNumericInput(
@@ -1944,15 +2030,21 @@
         table.querySelectorAll("[data-layer-column]").forEach(cell=>{
           cell.classList.toggle("mobile-layer-active", cell.dataset.layerColumn === activeMobileLayer);
         });
-        mobileLayerButtons.forEach((button,name)=>{
-          const active = name === activeMobileLayer;
-          button.classList.toggle("active", active);
-          button.setAttribute("aria-selected", String(active));
-          button.tabIndex = active ? 0 : -1;
+        mobileLayerBadge.textContent = activeMobileLayer;
+        mobileLayerDotEls.forEach((dot,name)=>{
+          dot.classList.toggle("active", name === activeMobileLayer);
         });
+        const index = layerNames.indexOf(activeMobileLayer);
+        mobileLayerPrev.disabled = index <= 0;
+        mobileLayerNext.disabled = index === -1 || index >= layerNames.length - 1;
       }
-      mobileLayerButtons.forEach((button,name)=>{
-        button.addEventListener("click",()=>showMobileLayer(name));
+      mobileLayerPrev.addEventListener("click",()=>{
+        const index = layerNames.indexOf(activeMobileLayer);
+        if (index > 0) showMobileLayer(layerNames[index - 1]);
+      });
+      mobileLayerNext.addEventListener("click",()=>{
+        const index = layerNames.indexOf(activeMobileLayer);
+        if (index !== -1 && index < layerNames.length - 1) showMobileLayer(layerNames[index + 1]);
       });
       showMobileLayer(activeMobileLayer);
 
@@ -3426,6 +3518,7 @@
       $("workspaceConfigurationsRefresh")?.addEventListener("click",()=>void refreshWorkspaceConfigurations());
       $("workspaceSaveProfile")?.addEventListener("click",()=>openWorkspaceConfigurationDialog("save-profile"));
       $("workspaceSaveRecipe")?.addEventListener("click",()=>openWorkspaceConfigurationDialog("save-recipe"));
+      $("setupSaveWeightProfile")?.addEventListener("click",()=>openWorkspaceConfigurationDialog("save-profile"));
     }
 
     $("lineSyncWorkspaceSelect")?.addEventListener("change",event=>{
@@ -3438,6 +3531,15 @@
     $("lineSyncJoinBtn")?.addEventListener("click",()=>runLineSyncAction(()=>lineSync.joinWorkspace(
       $("lineSyncJoinCode")?.value, $("lineSyncDeviceLabel")?.value
     )));
+    // Link codes are case-insensitive (joinWorkspace uppercases before the
+    // RPC call), but mobile keyboards default to lowercase entry despite
+    // autocapitalize="characters" - some keyboards ignore it or the operator
+    // switches off autocorrect. Force the displayed value to uppercase as
+    // they type so what's on screen always matches the printed/shared code.
+    $("lineSyncJoinCode")?.addEventListener("input",event=>{
+      const upper = event.target.value.toUpperCase();
+      if (event.target.value !== upper) event.target.value = upper;
+    });
     $("lineSyncGenerateCodeBtn")?.addEventListener("click",()=>runLineSyncAction(()=>lineSync.generateLinkCode()));
     $("lineSyncRenameBtn")?.addEventListener("click",()=>runLineSyncAction(()=>lineSync.renameWorkspace($("lineSyncWorkspaceName")?.value)));
     $("lineSyncRetryBtn")?.addEventListener("click",()=>runLineSyncAction(()=>
@@ -3513,27 +3615,6 @@
       validateAndCompute({ sync: true });
       saveSession();
     });
-    $("lineType")?.addEventListener("change",(e)=>{
-      const previousType = state.lineType;
-      const nextType = [1,3,5].includes(Number(e.target.value)) ? Number(e.target.value) : 3;
-      const nextLayerNames = new Set(getLayerNamesForType(nextType));
-      const configuredRemovedLayers = state.layers.filter(layer=>!nextLayerNames.has(layer.name)).filter(layer=>
-        clampNum(layer.layerPct) > 0 ||
-        layer.hoppers.some((hopper,index)=>
-          (index === 0 ? Math.abs(clampNum(hopper.pct) - 100) > 0.0001 : clampNum(hopper.pct) > 0) ||
-          clampNum(hopper.weight) > 0 || !!hopper.resinName || !!hopper.track || !!hopper.pumpOff
-        )
-      );
-      if (configuredRemovedLayers.length && !confirm(`Changing to ${nextType} ${nextType === 1 ? "layer" : "layers"} will remove configured data for ${configuredRemovedLayers.map(layer=>layer.name).join(", ")}. Continue?`)){
-        e.target.value = String(previousType);
-        return;
-      }
-      state.lineType = nextType;
-      ensureLayers();
-      rebuildUIFromState();
-      saveSession();
-      notifyActiveJobMutation({ immediate: true, kind: "line-type" });
-    });
     $("changeoverTime")?.addEventListener("input",(e)=>{
       state.changeoverTime = e.target.value || "";
       state.changeoverSetAt = state.changeoverTime ? Date.now() : null;
@@ -3559,16 +3640,6 @@
 
     $("surfaceStyleSel")?.addEventListener("change",(e)=>{
       applySurfaceStyle(e.target.value);
-      saveSession();
-    });
-
-    $("timelineStyleSel")?.addEventListener("change",(e)=>{
-      applyTimelineStyle(e.target.value);
-      saveSession();
-    });
-
-    $("headerStyleSel")?.addEventListener("change",(e)=>{
-      applyHeaderStyle(e.target.value);
       saveSession();
     });
 
@@ -3693,10 +3764,9 @@
       const restored = loadSession();
       if (!restored){
         applyDensity("comfort");
-        applyTheme("everforest");
+        applyTheme("mse");
         applyTimeFormat("12");
         applySurfaceStyle(defaultSurfaceStyle());
-        applyTimelineStyle("command-rows");
         rebuildUIFromState();
       }
 
@@ -3719,11 +3789,9 @@
       }
 
       // Ensure theme/logo applied even after restore
-      applyTheme(state.theme || "everforest");
+      applyTheme(state.theme || "mse");
       applyTimeFormat(state.timeFormat || "12");
       applySurfaceStyle(state.surfaceStyle || defaultSurfaceStyle());
-      applyTimelineStyle(state.timelineStyle || "command-rows");
-      applyHeaderStyle(state.headerStyle || "modern");
       saveSession();
       setupLineSync();
     })();

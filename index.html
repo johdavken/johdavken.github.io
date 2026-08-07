@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-theme="everforest">
+<html lang="en" data-theme="mse">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -7,7 +7,7 @@
   <!-- Favicons -->
   <link rel="icon" type="image/svg+xml" sizes="any" href="branding/resin-tools/rt6-02-layer-stack-icon.svg?v=2">
 
-  <link rel="stylesheet" href="styles.css?v=0.18.9">
+  <link rel="stylesheet" href="styles.css?v=0.37.0">
   <link rel="stylesheet" href="theme.css?v=0.17.3">
 <script src="validation.js?v=0.18" defer></script>
 <script src="scheduling.js?v=0.18.4" defer></script>
@@ -29,7 +29,7 @@
 <script src="resin-lookup.js?v=0.18.1" defer></script>
 <script src="resin-admin.js?v=0.20.1" defer></script>
 <script src="workspace-recovery.js?v=0.1.0" defer></script>
-<script src="app.js?v=0.18.70" defer></script>
+<script src="app.js?v=0.18.82" defer></script>
 <script src="resin-admin-ui.js?v=0.20.1" defer></script>
 <script src="workspace-recovery-ui.js?v=0.1.0" defer></script>
 <script src="recipe-scan-ui.js?v=0.3.2" defer></script>
@@ -37,7 +37,7 @@
 
 </head>
 
-<body data-density="comfort" data-theme="everforest" data-surface-style="divided" data-timeline-style="command-rows" data-header-style="modern">
+<body data-density="comfort" data-theme="mse" data-surface-style="divided">
 <main>
 
   <header class="site-header" hidden>
@@ -254,7 +254,7 @@
       </svg>
     </div>
     <button class="workspaceNavButton" type="button" data-workspace-target="lineSetupBlock" data-status="neutral">
-      <span>Setup</span>
+      <span>Line Setup</span>
       <small id="workspaceSetupStatus">Needs setup</small>
     </button>
     <button class="workspaceNavButton" type="button" data-workspace-target="splitsBlock" data-status="warn">
@@ -268,10 +268,6 @@
     <button class="workspaceNavButton" type="button" data-workspace-target="lineSyncBlock">
       <span>RT Sync</span>
       <small id="workspaceCloudSyncStatus">Local only</small>
-    </button>
-    <button class="workspaceNavButton" type="button" data-workspace-target="recipesBlock">
-      <span>Line Configurations</span>
-      <small>Save and load</small>
     </button>
     <button class="workspaceNavButton" type="button" data-workspace-target="toolsBlock">
       <span>Tools</span>
@@ -359,13 +355,13 @@
             <label for="themeSel">Theme</label>
             <select id="themeSel">
               <option value="dark">Dark</option><option value="light">Light</option>
-              <option value="mse">Industrial Slate</option><option value="industrial-slate-dark">Industrial Slate Dark</option>
+              <option value="mse" selected>Industrial Slate (Default)</option><option value="industrial-slate-dark">Industrial Slate Dark</option>
               <option value="gruvbox-dark">Gruvbox Dark</option><option value="gruvbox-light">Gruvbox Light</option>
               <option value="nord">Nord</option><option value="tokyo-night">Tokyo Night</option><option value="dracula">Dracula</option>
               <option value="solarized-dark">Solarized Dark</option><option value="solarized-light">Solarized Light</option>
               <option value="catppuccin-mocha">Catppuccin Mocha</option><option value="catppuccin-latte">Catppuccin Latte</option>
               <option value="rose-pine">Rosé Pine</option><option value="rose-pine-dawn">Rosé Pine Dawn</option>
-              <option value="everforest" selected>Everforest (Default)</option><option value="everforest-light">Everforest Light</option>
+              <option value="everforest">Everforest</option><option value="everforest-light">Everforest Light</option>
               <option value="one-dark">One Dark</option>
               <option value="high-contrast">High Contrast</option><option value="mono">Monochrome</option>
             </select>
@@ -389,22 +385,6 @@
               <option value="divided" selected>Divided Workspace (Default)</option><option value="low-elevation">Low Elevation</option>
             </select>
           </div>
-          <div>
-            <label for="timelineStyleSel">Timeline style</label>
-            <select id="timelineStyleSel">
-              <option value="soft-cards">Soft Cards</option><option value="event-rail">Vertical Event Rail</option>
-              <option value="data-strips">Precision Data Strips</option><option value="priority-lane">Time-First Priority Lane</option>
-              <option value="divided-list">Borderless Divided List</option><option value="command-rows" selected>Compact Command (Default)</option>
-            </select>
-          </div>
-          <div>
-            <label for="headerStyleSel">Header style</label>
-            <select id="headerStyleSel">
-              <option value="gruvbox-dark">Monospace</option>
-              <option value="industrial-slate">Condensed</option>
-              <option value="modern" selected>System Sans (Default)</option>
-            </select>
-          </div>
         </div>
       </div>
     </details>
@@ -423,29 +403,53 @@
     </summary>
 
     <div class="blockBody">
-      <section class="setupSection" aria-labelledby="currentChangeoverTitle">
-        <h3 id="currentChangeoverTitle" class="setupSectionTitle">Current Changeover</h3>
-        <p class="setupSectionIntro">Set the values that determine the Timeline.</p>
-        <div class="setupFields setupPrimaryFields">
+      <section class="setupSection">
+        <div class="setupTopRow">
+          <div class="layerCountTiles" id="lineTypeToggle" role="radiogroup" aria-label="Layer count">
+            <button type="button" class="layerCountTile" role="radio" aria-checked="false" aria-label="1 layer" title="1 layer" data-line-type="1">
+              <svg viewBox="0 0 26 18" aria-hidden="true"><path d="M13 4 L23 9 L13 14 L3 9 Z" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+            </button>
+            <button type="button" class="layerCountTile" role="radio" aria-checked="true" aria-label="3 layers" title="3 layers" data-line-type="3">
+              <svg viewBox="0 0 26 18" aria-hidden="true">
+                <path d="M13 2 L23 6 L13 10 L3 6 Z" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M13 7 L23 11 L13 15 L3 11 Z" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M13 12 L23 16 L13 20 L3 16 Z" fill="none" stroke="currentColor" stroke-width="1.5"/>
+              </svg>
+            </button>
+            <button type="button" class="layerCountTile" role="radio" aria-checked="false" aria-label="5 layers" title="5 layers" data-line-type="5">
+              <svg viewBox="0 0 26 18" aria-hidden="true">
+                <path d="M13 1 L22 4.4 L13 7.8 L4 4.4 Z" fill="none" stroke="currentColor" stroke-width="1.2"/>
+                <path d="M13 4.6 L22 8 L13 11.4 L4 8 Z" fill="none" stroke="currentColor" stroke-width="1.2"/>
+                <path d="M13 8.2 L22 11.6 L13 15 L4 11.6 Z" fill="none" stroke="currentColor" stroke-width="1.2"/>
+                <path d="M13 11.8 L22 15.2 L13 18.6 L4 15.2 Z" fill="none" stroke="currentColor" stroke-width="1.2"/>
+                <path d="M13 15.4 L22 18.8 L13 22.2 L4 18.8 Z" fill="none" stroke="currentColor" stroke-width="1.2"/>
+              </svg>
+            </button>
+          </div>
+          <div id="hopperNamingToggle" class="hopperNamingChoice" role="radiogroup" aria-label="Receiver hopper labels" title="Receiver hopper labels — 1–6, or Main + 1–5 for Line 9">
+            <button class="active" type="button" role="radio" aria-checked="true" data-hopper-naming="standard">1–6</button>
+            <button type="button" role="radio" aria-checked="false" data-hopper-naming="main">Main + 1–5</button>
+          </div>
+        </div>
+        <div class="setupFields setupPrimaryFields mt10">
           <div>
-            <label for="changeoverTime">Changeover deadline <span class="fieldRequirement">Required for start-by times</span></label>
-            <input id="changeoverTime" type="time" />
+            <div class="gaugeTile">
+              <svg class="gaugeIcon" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.2"/><path d="M8 4.6V8l2.6 1.6"/></svg>
+              <input id="changeoverTime" type="time" />
+              <label for="changeoverTime">Changeover</label>
+            </div>
           </div>
           <div>
-            <label for="lineRate">Line rate (lb/hr) <span class="fieldRequirement">Required</span></label>
-            <input id="lineRate" type="text" inputmode="decimal" placeholder="e.g. 1200" value="0" />
-          </div>
-          <div>
-            <label for="lineType">Layer count <span class="fieldRequirement">Required</span></label>
-            <select id="lineType"><option value="1">1 layer</option><option value="3" selected>3 layers</option><option value="5">5 layers</option></select>
-            <div class="tiny">Changing this may add or remove configured layer data.</div>
+            <div class="gaugeTile">
+              <svg class="gaugeIcon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 12.5a5.5 5.5 0 0 1 11 0"/><path d="M8 12.5 10.4 8.3"/><circle cx="8" cy="12.5" r=".8" fill="currentColor"/></svg>
+              <input id="lineRate" type="text" inputmode="decimal" placeholder="e.g. 1200" value="0" />
+              <label for="lineRate">Line rate (lb/hr)</label>
+            </div>
           </div>
         </div>
       </section>
 
-      <section class="setupSection" aria-labelledby="lineConfigurationTitle">
-        <h3 id="lineConfigurationTitle" class="setupSectionTitle">Line Configuration</h3>
-        <p class="setupSectionIntro">Equipment values that are normally set once for this line.</p>
+      <section class="setupSection">
         <details class="block" id="weightsBlock">
         <summary>
           <div class="sumLeft">
@@ -465,15 +469,43 @@
           <div id="weightsArea" class="weightsGrid mt10"></div>
         </div>
         </details>
-        <div class="setupNaming" id="hopperNamingRow">
-          <div class="setupToggleRow">
-            <div class="setupToggleText"><div class="setupToggleTitle">Receiver hopper labels</div><div class="setupToggleMeta tiny">Use numbered labels, or Main + 1–5 for Line 9.</div></div>
-            <div id="hopperNamingToggle" class="hopperNamingChoice" role="radiogroup" aria-label="Receiver hopper labels">
-              <button class="active" type="button" role="radio" aria-checked="true" data-hopper-naming="standard">1–6</button>
-              <button type="button" role="radio" aria-checked="false" data-hopper-naming="main">Main + 1–5</button>
+
+        <details class="block" id="setupWeightProfilesBlock">
+        <summary>
+          <div class="sumLeft">
+            <div class="chev"></div>
+            <div class="summaryText">
+              <div class="layerTitle nestedLayerTitle">Receiver Weight Profiles</div>
+              <div class="layerMeta">Shared receiver hopper weights</div>
             </div>
           </div>
+          <span class="pill">Profiles</span>
+        </summary>
+
+        <div class="blockBody">
+          <div class="workspaceConfigurationSectionTitle">
+            <div>
+              <strong>Receiver Weight Profiles</strong>
+              <small>Shared receiver hopper weights for this RT Sync workspace.</small>
+            </div>
+            <div class="splitsSavedRecipesActions">
+              <button id="setupSaveWeightProfile" class="secondary" type="button">Save Current Weights</button>
+              <button id="setupLoadWeightProfile" class="primary" type="button" disabled>Load</button>
+              <button id="setupUpdateWeightProfile" class="secondary" type="button" disabled>Update</button>
+              <details class="workspaceConfigurationOverflow overflow-disabled" id="setupWeightProfileOverflow">
+                <summary aria-label="More actions for the selected profile">⋯</summary>
+                <div class="workspaceConfigurationOverflowMenu">
+                  <button id="setupRenameWeightProfile" type="button" class="secondary">Rename</button>
+                  <button id="setupDuplicateWeightProfile" type="button" class="secondary">Duplicate</button>
+                  <button id="setupDeleteWeightProfile" type="button" class="danger">Delete</button>
+                </div>
+              </details>
+            </div>
+          </div>
+          <div id="setupWeightProfilesStatus" class="muted" role="status" hidden></div>
+          <div id="setupWeightProfilesList" class="workspaceConfigurationList"></div>
         </div>
+        </details>
       </section>
 
       <div id="statusBox"></div>
@@ -595,7 +627,7 @@
       <div class="lineSyncJoin mt10">
         <div>
           <label for="lineSyncJoinCode">Link code</label>
-          <input id="lineSyncJoinCode" class="mono" type="text" maxlength="4" inputmode="text" autocomplete="one-time-code" placeholder="AB23" />
+          <input id="lineSyncJoinCode" class="mono" type="text" maxlength="4" inputmode="text" autocomplete="one-time-code" autocapitalize="characters" autocorrect="off" spellcheck="false" placeholder="AB23" />
         </div>
         <button id="lineSyncJoinBtn" class="compactAction" type="button">Join RT Sync</button>
         <output id="lineSyncGeneratedCode" class="lineSyncCode mono desktopSyncOnly" aria-live="polite"></output>
@@ -608,66 +640,6 @@
 
       <div class="tiny mt10 desktopSyncOnly">Disconnect keeps server membership. Leave removes this device's membership. Only the owner can remove another device or delete the shared line.</div>
       <div class="tiny mt10 mobileSyncOnly">Disconnect pauses this phone while preserving its line membership. Leave removes this phone from the line.</div>
-    </div>
-  </details>
-
-  <!-- 5) RECIPES -->
-  <details class="block card workspacePanel" id="recipesBlock">
-    <summary>
-      <div class="sumLeft">
-        <div class="chev"></div>
-        <div class="summaryText">
-          <div class="layerTitle">Line Configurations</div>
-          <div class="layerMeta">Save • load • export • import</div>
-        </div>
-      </div>
-      <span class="pill">Configs</span>
-    </summary>
-
-    <div class="blockBody">
-      <section class="workspaceConfigurations" aria-labelledby="workspaceConfigurationsTitle">
-        <div class="workspaceConfigurationHeading"><div><div id="workspaceConfigurationsTitle" class="srOnly">Shared Configurations</div><div id="workspaceConfigurationsWorkspace" class="workspaceConfigurationWorkspace" hidden></div><div id="workspaceConfigurationsStatus" class="muted" role="status">Connect to an RT Sync workspace to view shared weight profiles and recipes.</div></div><button id="workspaceConfigurationsRefresh" class="secondary" type="button">Refresh shared items</button></div>
-        <section class="workspaceConfigurationSection" aria-labelledby="workspaceProfilesTitle"><div class="workspaceConfigurationSectionTitle"><div><strong id="workspaceProfilesTitle">Receiver Weight Profiles</strong><small>Shared receiver hopper weights for this RT Sync workspace.</small></div><button id="workspaceSaveProfile" class="secondary" type="button">Save Current Weights</button></div><div id="workspaceProfilesList" class="workspaceConfigurationList"></div></section>
-        <section class="workspaceConfigurationSection" aria-labelledby="workspaceRecipesTitle"><div class="workspaceConfigurationSectionTitle"><div><strong id="workspaceRecipesTitle">Recipes</strong><small>Shared recipe assignments for this RT Sync workspace.</small></div><button id="workspaceSaveRecipe" class="secondary" type="button">Save Current Recipe</button></div><div id="workspaceRecipesList" class="workspaceConfigurationList"></div></section>
-      </section>
-      <hr class="workspaceConfigurationDivider" />
-      <div class="muted">Save/load typical setups. Export/import JSON for sharing.</div>
-
-      <div class="grid2 mt10">
-        <div>
-          <label for="configName">Config name</label>
-          <input id="configName" type="text" placeholder="e.g. Line 9 typical" />
-        </div>
-        <div>
-          <label for="savedConfigs">Saved configs</label>
-          <select id="savedConfigs"></select>
-        </div>
-      </div>
-
-      <div class="segmentedActionToolbar mt10">
-        <div class="segmentedActionRow">
-          <button id="saveConfigBtn" class="primary" type="button">Save / Update</button>
-          <button id="loadConfigBtn" class="secondary" type="button">Load</button>
-          <button id="renameConfigBtn" class="secondary" type="button">Rename selected</button>
-        </div>
-        <div class="segmentedActionDivider" role="separator"></div>
-        <div class="segmentedActionRow">
-          <button id="deleteConfigBtn" class="danger" type="button">Delete selected</button>
-          <button id="exportConfigBtn" class="secondary" type="button">Export selected</button>
-          <button id="importConfigBtn" class="secondary" type="button">Import JSON</button>
-        </div>
-      </div>
-
-      <div id="importArea" class="hide mt10">
-        <label for="importJson">Paste JSON here</label>
-        <textarea id="importJson" placeholder='{"name":"Line 9 typical","payload":{...}}'></textarea>
-        <div class="grid2 mt10">
-          <button id="doImportBtn" type="button">Import now</button>
-          <button id="cancelImportBtn" type="button" class="secondary">Cancel</button>
-        </div>
-      </div>
-
-      <div id="recipeStatus" class="mt10"></div>
     </div>
   </details>
 
@@ -984,27 +956,6 @@
           </div>
         </details>
 
-        <details class="helpTopic" id="helpLineConfigurations">
-          <summary><span>Line Configurations</span><small>Use shared recipes and weight profiles, or local configurations</small></summary>
-          <div class="helpTopicBody">
-            <h3>Shared Configurations</h3>
-            <ol>
-              <li>Connect to an RT Sync workspace to view its shared configurations. Use <strong>Refresh shared items</strong> to get the latest saved profiles and recipes.</li>
-              <li><strong>Save Current Weights</strong> creates a Receiver Weight Profile containing receiver hopper weights only. Loading one changes only those weights and requires a matching physical line layout.</li>
-              <li><strong>Save Current Recipe</strong> creates a Recipe containing the line type, hopper naming, layer percentages, resin assignments, and hopper blend percentages. Loading one keeps receiver weights, tracking, pump-off status, and runtime state unchanged.</li>
-              <li>Select a shared item to load or update it. Its more-actions menu lets you rename, duplicate, or delete it; Recipes can also be marked as favorites.</li>
-              <li>If you reuse a name, choose whether to update the existing shared item or enter a different name.</li>
-            </ol>
-            <h3>Local Configurations</h3>
-            <ol>
-              <li>On mobile, open Advanced mode first. Enter a name and choose <strong>Save / Update</strong> to save the complete current setup in this browser.</li>
-              <li>Select a local configuration and choose <strong>Load</strong> to restore it. Use Rename or Delete to maintain the local list.</li>
-              <li><strong>Export selected</strong> copies a local configuration as JSON. <strong>Import JSON</strong> validates pasted JSON before saving it and can optionally load it immediately.</li>
-            </ol>
-            <p class="helpTip">Shared configurations belong to the connected RT Sync workspace. Local configurations remain separate on this browser.</p>
-          </div>
-        </details>
-
         <details class="helpTopic" id="helpTools">
           <summary><span>Tools</span><small>Production calculators and resin reference</small></summary>
           <div class="helpTopicBody">
@@ -1047,6 +998,16 @@
         <details class="helpTopic" id="helpChangelog">
           <summary><span>Changelog</span><small>A running history of what's been added, most recent first</small></summary>
           <div class="helpTopicBody">
+            <h3>Recipe Setup polish, Timeline cleanup &amp; readability - August 7, 2026</h3>
+            <ul>
+              <li>Recipe Setup on mobile: redesigned the layer percentage and hopper cells with squared chips, a bolder hopper-designation badge, and easier-to-tap track buttons; the hopper-designation badge and a refined percentage/copy layout were also carried over to desktop.</li>
+              <li>Recipe Setup's action buttons (Saved Recipes, Bulk edit, Rearrange, Scan Recipe, Print Recipe) are now one unified toolbar strip instead of separate floating buttons, on both desktop and mobile. Fixed a bug where this caused the Scan Recipe popup to get clipped/hidden.</li>
+              <li>Fixed black-looking text in light themes across the Recipe chart and Line Setup - resin names, hopper percentages, row headers, warning pills, and more now use a proper dark grey.</li>
+              <li>The RT Sync join-code field now forces uppercase as you type, matching how link codes are printed/shared.</li>
+              <li>Timeline: removed the Timeline style picker and kept the single "Compact Command" card look. Fixed the "Start by" time reading as near-black text, and a mobile layout bug where the time/Pump off row could slide off the left edge of the card.</li>
+              <li>Changed the default theme to <strong>Industrial Slate</strong>. Also tried out several Header style options (Bold Slab, Editorial Serif, Rounded Grotesk, Wide Display) via a temporary picker, then removed the picker and kept <strong>Wide Display</strong> as the permanent header typography.</li>
+            </ul>
+
             <h3>Recipe Scanner &amp; mobile polish - August 5-6, 2026</h3>
             <ul>
               <li>Added <strong>Scan Recipe</strong>: reads a photo of a Job Traveler, a Dosing Screen, or a Heat Sheet and fills Recipe Setup automatically, with a review screen before anything is applied. A camera-icon shortcut in the mobile status bar jumps straight to it.</li>

@@ -58,3 +58,43 @@ test(".splitCellEditor's own internal resin-left/percent-right grid is reused as
   assert.match(editorBody, /display:grid/);
   assert.match(editorBody, /grid-template-columns:minmax\(78px,1fr\) auto/, "resin (flexible, left) then percent controls (auto width, right) - unchanged");
 });
+
+// --- Hopper designation badge (desktop + mobile) + filled track button (mobile only) ---
+
+test("the hopper designation is a small boxed badge on both desktop and mobile - shipped on mobile first, then ported to the shared base rule unchanged, replacing the old plain muted text", () => {
+  const badgeStart = styles.indexOf("\n.splitCellHopperName{");
+  assert.notEqual(badgeStart, -1);
+  const badgeRule = styles.slice(badgeStart, styles.indexOf("}", badgeStart) + 1);
+  assert.match(badgeRule, /background: var\(--field-bg\);/);
+  assert.match(badgeRule, /border-radius: 6px;/);
+  assert.match(badgeRule, /color: var\(--muted\);/, "dark grey, not near-black --text - avoids black-looking text in light themes");
+  assert.match(badgeRule, /font-weight: 900;/);
+  assert.match(badgeRule, /letter-spacing:\.02em;/, "desktop's original letter-spacing carries over into the shared badge rule");
+  // The mobile block still legitimately sets order:1 for the flex reorder,
+  // but must not have a second, now-redundant copy of the badge styling.
+  const mobile = mobileBlock();
+  assert.match(mobile, /\.splitCellHopperName\{ order: 1; \}/);
+  assert.doesNotMatch(mobile, /\.splitCellHopperName\{\s*\n\s*display: flex;/);
+});
+
+test("the track button grows from the desktop 23px icon-only button to a 30px bordered pill, filled (not just recolored) when active, on mobile only - opacity:1 by default so it's never near-invisible on a touch device with no hover", () => {
+  const mobile = mobileBlock();
+  const btnStart = mobile.indexOf("\n  .splitTrackButton{");
+  assert.notEqual(btnStart, -1);
+  const btnRule = mobile.slice(btnStart, mobile.indexOf("}", btnStart) + 1);
+  assert.match(btnRule, /width: 30px;/);
+  assert.match(btnRule, /height: 30px;/);
+  assert.match(btnRule, /border: 1px solid var\(--btn-secondary-border\);/);
+  assert.match(btnRule, /border-radius: 999px;/);
+  assert.match(btnRule, /opacity: 1;/);
+  const activeStart = mobile.indexOf(".splitTrackButton.active{");
+  assert.notEqual(activeStart, -1);
+  const activeRule = mobile.slice(activeStart, mobile.indexOf("}", activeStart) + 1);
+  assert.match(activeRule, /background: linear-gradient\(180deg, var\(--btn-primary-a\), var\(--btn-primary-b\)\);/, "matches the same active-state treatment used by the layer tiles/naming toggle/pager elsewhere in this redesign");
+  assert.match(activeRule, /color: var\(--title\);/);
+});
+
+test("the track icon itself shrinks slightly (19px desktop -> 16px) to sit comfortably inside the smaller-diameter mobile pill", () => {
+  const mobile = mobileBlock();
+  assert.match(mobile, /\.splitTrackButton svg\{ width: 16px; height: 16px; \}/);
+});

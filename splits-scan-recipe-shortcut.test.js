@@ -84,23 +84,23 @@ test("the outside-click and Escape handlers are registered once at module scope,
   assert.doesNotMatch(splitsAreaBody, /document\.addEventListener\("keydown"/);
 });
 
-test("the summary is styled to match button.secondary, since class=\"secondary\" alone wouldn't apply to a non-<button> element", () => {
+test("the summary is a flat divided segment (no border/background of its own) matching .splitsBulkModeBar's unified toolbar strip, not a standalone bordered pill", () => {
   const ruleStart = styles.indexOf(".splitsScanShortcut > summary{");
   assert.notEqual(ruleStart, -1);
   const rule = styles.slice(ruleStart, styles.indexOf("}", ruleStart) + 1);
-  assert.match(rule, /background: var\(--btn-secondary-bg\);/);
-  assert.match(rule, /border: 1px solid var\(--btn-secondary-border\);/);
+  assert.match(rule, /background: transparent;/);
+  assert.match(rule, /border-right: 1px solid var\(--btn-secondary-border\);/);
   assert.match(rule, /list-style: none;/);
 });
 
-test("the summary matches its actual sibling buttons' computed size (.splitsBulkModeBar button's padding/font-size override), not just button.secondary's base rule - that override only ever matches real <button> elements, never a <summary>", () => {
+test("the summary matches its actual sibling buttons' computed size (.splitsBulkModeBar button.secondary's padding/font-size), not just button.secondary's base rule - that override only ever matches real <button> elements, never a <summary>", () => {
   const ruleStart = styles.indexOf(".splitsScanShortcut > summary{");
   const rule = styles.slice(ruleStart, styles.indexOf("}", ruleStart) + 1);
-  assert.match(rule, /padding: 5px 9px;/);
+  assert.match(rule, /padding: 8px 13px;/);
   assert.match(rule, /font-size: var\(--font-small\);/);
-  const siblingRuleStart = styles.indexOf(".splitsBulkModeBar button{");
+  const siblingRuleStart = styles.indexOf(".splitsBulkModeBar button.secondary{");
   const siblingRule = styles.slice(siblingRuleStart, styles.indexOf("}", siblingRuleStart) + 1);
-  assert.match(siblingRule, /padding:5px 9px;/);
+  assert.match(siblingRule, /padding: 8px 13px;/);
   assert.match(siblingRule, /font-size: var\(--font-small\);/);
 });
 

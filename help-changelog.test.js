@@ -41,8 +41,8 @@ test("the changelog is organized into dated periods with h3 headings, newest fir
   const end = section.indexOf("</details>", start);
   const body = section.slice(start, end);
   const headings = [...body.matchAll(/<h3>([^<]+)<\/h3>/g)].map(m => m[1]);
-  assert.ok(headings.length >= 5, `expected at least 5 dated periods, found ${headings.length}`);
-  assert.match(headings[0], /August 5-6, 2026/, "most recent period must be first");
+  assert.ok(headings.length >= 6, `expected at least 6 dated periods, found ${headings.length}`);
+  assert.match(headings[0], /August 7, 2026/, "most recent period must be first");
   assert.match(headings[headings.length - 1], /December 2025 to January 2026/, "oldest period must be last");
 });
 
