@@ -282,14 +282,43 @@ main{
   padding: 2px 12px 4px;
   border-bottom: 1px solid var(--border);
 }
-.resinToolsLogo{display:block;width:min(100%,280px);height:auto}
+.resinToolsLogo{display:block;width:min(100%,210px);height:auto}
 .resinToolsSidebarIcon{display:block;width:137.5px;height:auto}
-:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerRed{fill:var(--bad)}
-:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerOrange{fill:var(--orange)}
-:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerYellow{fill:var(--warn)}
-:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerGreen{fill:var(--ok)}
-:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerBlue{fill:var(--focus-border)}
+:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerRed{color:var(--bad);stroke:var(--bad)}
+:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerOrange{color:var(--orange);stroke:var(--orange)}
+:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerYellow{color:var(--warn);stroke:var(--warn)}
+:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerGreen{color:var(--ok);stroke:var(--ok)}
+:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerBlue{color:var(--focus-border);stroke:var(--focus-border)}
 :is(.resinToolsLogo,.resinToolsSidebarIcon) .rtWord{fill:var(--text);font:900 66px/1 ui-monospace,"Cascadia Mono","Liberation Mono",monospace;letter-spacing:-4px}
+/* Draw-on-loop (chosen from the animated-logo mockup round): each layer
+   continuously re-traces its outline, fills solid, holds, fades, and
+   restarts - staggered per layer so the mark always has exactly one
+   segment mid-draw. stroke-dasharray:137 matches this path's actual
+   perimeter (a rhombus, 4 equal sides of sqrt(31^2+14^2) =~ 34.01 each)
+   so the traced line closes with no visible seam. */
+:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerRed,
+:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerOrange,
+:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerYellow,
+:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerGreen,
+:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerBlue{
+  stroke-width:2.5;
+  stroke-dasharray:137;
+  stroke-dashoffset:137;
+  animation:rtLogoDrawLoop 3s ease-in-out infinite;
+}
+:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerRed{animation-delay:0s}
+:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerOrange{animation-delay:.25s}
+:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerYellow{animation-delay:.5s}
+:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerGreen{animation-delay:.75s}
+:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerBlue{animation-delay:1s}
+@keyframes rtLogoDrawLoop{
+  0%{ stroke-dashoffset:137; fill:transparent; opacity:1; }
+  28%{ stroke-dashoffset:0; fill:transparent; }
+  40%{ stroke-dashoffset:0; fill:currentColor; }
+  70%{ stroke-dashoffset:0; fill:currentColor; opacity:1; }
+  88%{ stroke-dashoffset:0; fill:currentColor; opacity:0; }
+  100%{ stroke-dashoffset:137; fill:transparent; opacity:0; }
+}
 .workspaceBrandLogo{ display: block; width: min(100%, 196px); height: auto; }
 .workspaceBrandLogo path{ stroke-linecap: round; stroke-linejoin: round; }
 .workspaceBrandLogo [class^="polynFlow"]{ fill: none; stroke-width: 11; }
@@ -1140,40 +1169,50 @@ summary::-webkit-details-marker{ display: none; }
 .summaryText{ min-width:0; }
 .nestedLayerTitle{ font-size:var(--font-small); }
 
+/* Disclosure indicator (chosen from the "no chevron" mockup round: "Orbit
+   Ring") - no arrow/corner shape at all. Closed, it's a plain dot. Open, a
+   faint dashed ring appears around it with a small bright satellite
+   continuously circling - an idle "active" motion for as long as the panel
+   stays open, not just a one-shot transition. The .chev class name is kept
+   (only its contents/rules changed) so no markup beyond the three inner
+   spans needed touching across every summary that uses it. */
 .chev{
   position: relative;
-  width: 15px; height: 15px;
-  border-right: 2px solid var(--chev);
-  border-bottom: 2px solid var(--chev);
-  transform: rotate(-45deg);
-  transition: transform .15s ease, border-color .12s ease;
+  width: 18px; height: 18px;
   flex: 0 0 auto;
   margin-left: 2px;
 }
-/* Ambient ring: a thin conic-gradient ring, masked down to just its outer
-   edge, that fades in and slowly spins for as long as the panel stays open
-   - an idle "active" glow rather than a one-shot transition. Sized with a
-   small -3px overhang so it clears .card's overflow:hidden even at the
-   tightest (Maximum Data) density/summary padding combination. */
-.chev::before{
-  content: "";
-  position: absolute;
-  inset: -3px;
+.chevCore{
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  width: 6px; height: 6px; border-radius: 999px;
+  background: var(--chev);
+  transition: background .15s ease;
+}
+.chevRing{
+  position: absolute; inset: 0;
   border-radius: 999px;
-  background: conic-gradient(var(--focus-border), transparent 40%);
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
-          mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+  border: 1px dashed var(--btn-secondary-border);
   opacity: 0;
-  pointer-events: none;
-  transition: opacity .3s ease;
+  transition: opacity .2s ease;
 }
-summary:hover .chev{ border-color: var(--focus-border); }
-details[open] > summary .chev{ transform: rotate(45deg); }
-details[open] > summary .chev::before{
-  opacity: .55;
-  animation: chevAmbientSpin 2.2s linear infinite;
+.chevSatellite{
+  position: absolute; top: 50%; left: 50%;
+  width: 3.5px; height: 3.5px; border-radius: 999px;
+  background: var(--title);
+  opacity: 0;
+  transform-origin: -7px 0;
 }
-@keyframes chevAmbientSpin{ to{ transform: rotate(360deg); } }
+summary:hover .chevCore{ background: var(--focus-border); }
+details[open] > summary .chevCore{ background: var(--focus-border); }
+details[open] > summary .chevRing{ opacity: 1; }
+details[open] > summary .chevSatellite{
+  opacity: 1;
+  animation: chevOrbit 2.6s linear infinite;
+}
+@keyframes chevOrbit{
+  from{ transform: translate(-50%,-50%) rotate(0deg) translateX(7px); }
+  to{ transform: translate(-50%,-50%) rotate(360deg) translateX(7px); }
+}
 
 /* grid-template-columns is explicit (not the default auto) so a long nowrap
    descendant (e.g. a summary subtitle) can't grow this single column past
@@ -1333,6 +1372,7 @@ details[open] > summary .chev::before{
 .splitsSavedRecipesActions{ display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .splitsSavedRecipesActions .overflow-disabled summary{ opacity: .45; cursor: not-allowed; }
 
+
 /* Scan Recipe: a <details> popup sitting among plain <button>s in the same
    row (Bulk edit, Rearrange, Print Recipe) - the summary is styled to
    match those siblings' actual computed style exactly, now the flat
@@ -1430,7 +1470,7 @@ details[open] > summary .chev::before{
 .splitsMatrixSummary.warn,
 .splitColumnTotal.warn{ color: var(--warn); }
 
-.splitsMobileLayerNav{ display: none; }
+.splitsMobileLayerRail{ display: none; }
 
 .splitsMatrixScroll{
   overflow-x:auto;
@@ -1846,70 +1886,77 @@ details[open] > summary .chev::before{
      own side. Centered on the icon instead, capped narrower so it always
      clears both edges regardless of exactly where the row wraps. */
   .splitsInfoPanel{ left:50%; right:auto; transform:translateX(-50%); width:min(320px, calc(100vw - 32px)); }
+  /* Saved Recipes header actions ("icon-first compact bar", chosen from the
+     mockup round): Save/Load/Update collapse to small round icon buttons
+     and the row stops wrapping under the title. Each button's real text
+     (e.g. "Save Current Recipe") stays in the DOM as its accessible name -
+     only the visual glyph is swapped in via font-size:0 + ::before, so
+     screen readers still get the full label even though sighted mobile
+     users see just an icon. Desktop keeps the original spelled-out buttons
+     unchanged; there's no wrapping problem at that width.
+     .splitsSavedRecipesActions is a shared layout class - Line Setup's
+     Receiver Weight Profiles row (#setupSaveWeightProfile etc.) reuses it
+     too, and those buttons keep their full text on mobile, so nowrap must
+     stay scoped to the Saved Recipes panel specifically or the weight-
+     profile row would overflow instead of wrapping. */
+  .splitsSavedRecipesPanel .splitsSavedRecipesActions{ flex-wrap: nowrap; }
+  #splitsSaveRecipe, #splitsLoadRecipe, #splitsUpdateRecipe{
+    width: 32px; height: 32px; min-height: 0; flex: 0 0 auto;
+    padding: 0; border-radius: 999px;
+    display: grid; place-items: center;
+    font-size: 0; line-height: 0;
+  }
+  #splitsSaveRecipe::before{ content: "+"; font-size: 17px; line-height: 1; }
+  #splitsLoadRecipe::before{ content: "✓"; font-size: 14px; line-height: 1; }
+  #splitsUpdateRecipe::before{ content: "✎"; font-size: 13px; line-height: 1; }
+  #splitsRecipeOverflow > summary{
+    width: 32px; height: 32px; padding: 0; border-radius: 999px;
+    display: grid; place-items: center; font-size: 15px;
+  }
   .splitsBulkBar{ padding:8px; gap:8px; }
   .splitsBulkSteps{justify-content:flex-end;gap:8px;padding-bottom:0;border-bottom:0}
   .splitsBulkSteps span{gap:3px;font-size:var(--font-tiny)}
   .splitsBulkSteps b{width:14px;height:14px;font-size:9px}
   .rearrangeModeBar{padding:8px;gap:8px}
   .splitsMatrixActionInfo{align-items:flex-start;flex-direction:column;gap:2px}
-  .splitsMobileLayerNav{
+  /* The layer switcher sits beside the table as a vertical rail, not in a
+     row above it - .splitsMobileLayerLayout is scroll (the table) and
+     .splitsMobileLayerRail side by side, rail on the right, so it costs no
+     extra vertical space of its own. */
+  .splitsMobileLayerLayout{
     display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 14px;
-    padding: 6px 4px;
+    align-items: flex-start;
+    gap: 8px;
   }
-  .splitsMobileLayerArrow{
-    width: 34px;
-    height: 34px;
-    flex: 0 0 auto;
-    padding: 0;
-    border: 1px solid var(--btn-secondary-border);
-    border-radius: 999px;
-    background: var(--btn-secondary-bg);
-    color: var(--muted);
-    font-size: 16px;
-    line-height: 1;
-  }
-  .splitsMobileLayerArrow:disabled{ opacity: .35; }
-  .splitsMobileLayerCurrent{
+  .splitsMobileLayerLayout .splitsMatrixScroll{ flex: 1; min-width: 0; }
+  .splitsMobileLayerRail{
     display: flex;
     flex-direction: column;
-    align-items: center;
     gap: 6px;
+    flex: 0 0 auto;
   }
-  .splitsMobileLayerBadge{
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 999px;
-    background: linear-gradient(180deg,var(--btn-primary-a),var(--btn-primary-b));
-    box-shadow: inset 0 0 0 1px var(--focus-border);
+  .splitsMobileLayerRailBtn{
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 1px solid var(--btn-secondary-border);
+    border-radius: var(--control-radius);
+    background: var(--btn-secondary-bg);
+    color: var(--muted);
+    font-weight: 700;
+    font-size: 12px;
+  }
+  .splitsMobileLayerRailBtn.active{
+    border-color: var(--focus-border);
+    background: var(--btn-primary-a);
     color: var(--title);
-    font-weight: 900;
-    font-size: 18px;
-  }
-  .splitsMobileLayerDots{ display: flex; gap: 5px; }
-  .splitsMobileLayerDot{
-    width: 6px;
-    height: 6px;
-    border-radius: 999px;
-    background: var(--border2);
-  }
-  .splitsMobileLayerDot.active{
-    width: 16px;
-    border-radius: 999px;
-    background: var(--title);
   }
 
-  /* The pager above already shows which layer is active, so the big
-     ghosted column-header letter is redundant here - drop it (and the
-     header space it needed) to help offset the pager's extra height.
-     Bulk edit still needs it though: it's also the tap target for
-     "select every hopper in this layer", so it stays visible and full
-     size whenever bulk-editing is active. */
+  /* The rail already shows which layer is active, so the big ghosted
+     column-header letter is redundant here - drop it. Bulk edit still
+     needs it though: it's also the tap target for "select every hopper in
+     this layer", so it stays visible and full size whenever bulk-editing
+     is active. */
   .splitLayerTitle{ display: none; }
   .bulk-editing .splitLayerTitle{ display: inline-block; }
   .bulk-editing .splitLayerMain{ min-height: 58px; }
@@ -2663,6 +2710,29 @@ button.compactAction{
   position: sticky;
   top: 70px;
 }
+/* Mobile collapses the tab list into a <details> dropdown trigger (see the
+   mobile media query below for its open/closed styling) - desktop keeps
+   the original always-visible list. .toolsIndex is deliberately a *sibling*
+   of .toolsIndexDropdown, not nested inside it: Chromium internally treats
+   a closed <details>'s non-summary content as content-visibility:hidden,
+   which skips layout/paint even when author CSS overrides `display` back
+   to visible - nesting the real nav in there and trying to force it open
+   with CSS alone silently failed to render on desktop. As a sibling,
+   .toolsIndex is never subject to that at all.
+   The whole .toolsIndexDropdown element - not just its <summary> - is
+   display:none by default: .toolsWorkspace is a 2-column grid
+   (170px nav | content), and a *hidden-but-still-present* grid item still
+   consumes a track. Hiding only the summary left an invisible .details
+   occupying column 1, bumping .toolsIndex into column 2 and
+   .toolsWorkspaceContent down into row 2 - exactly the "buttons on the
+   right, panel on the left" bug this fixes. Removing the dropdown from
+   grid participation entirely restores the original 2-column layout. */
+.toolsIndexDropdown{ display: none; }
+.toolsIndexDropdown > summary{
+  list-style: none;
+  cursor: pointer;
+}
+.toolsIndexDropdown > summary::-webkit-details-marker{ display: none; }
 .toolsIndexButton{
   width: 100%;
   min-height:var(--control-height);
@@ -2691,12 +2761,55 @@ button.compactAction{
 .toolsWorkspaceContent .toolPanel + .toolPanel{ margin-top: 0; }
 @media (max-width: 720px){
   .toolsWorkspace{ grid-template-columns: 1fr; }
-  .toolsIndex{
-    position: static;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .toolsIndexDropdown{ display: block; }
+  /* The trigger is styled as the .layerTitle heading it replaces - same
+     thin-weight tracked uppercase treatment as every other card/panel
+     title - rather than a boxed pill, so tapping it to change tools reads
+     as "the heading is the control" instead of introducing a second,
+     differently-styled name for the same tool right above the heading
+     that used to repeat it (see the .toolWorkspacePanel > .layerTitle
+     rule below, which retires that redundant second heading on mobile). */
+  .toolsIndexDropdown > summary{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: var(--control-height);
+    padding: 6px 2px;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    font-size: var(--title-size);
+    font-weight: 300;
+    text-transform: uppercase;
+    letter-spacing: .22em;
+    color: var(--title, var(--text));
   }
-  .toolsIndexButton{ text-align: center; }
-  .toolsIndexButton.active{ box-shadow: inset 0 -3px 0 var(--title); }
+  .toolsIndexDropdownLabel{
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .toolsIndexDropdown > summary::after{
+    content: "▾";
+    color: var(--muted);
+    font-size: var(--font-small);
+    letter-spacing: normal;
+    flex: 0 0 auto;
+  }
+  .toolsIndexDropdown[open] > summary::after{ content: "▴"; }
+  .toolsIndex{ display: none; }
+  .toolsIndexDropdown[open] + .toolsIndex{
+    display: grid;
+    position: static;
+    grid-template-columns: 1fr;
+    margin-top: 6px;
+  }
+  .toolsIndexButton{ text-align: left; }
+  .toolsIndexButton.active{ box-shadow: inset 3px 0 0 var(--title); }
+  /* Retired in favor of the dropdown trigger above, which now carries the
+     active tool's name using the same heading treatment this rule would
+     otherwise duplicate immediately below it. */
+  .toolWorkspacePanel > .layerTitle{ display: none; }
 }
 
 .toolTitleRow{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
@@ -3158,8 +3271,11 @@ body[data-surface-style="divided"] .helpTopic{
   /* Scoped to just the top-level card summaries (.layerTitle is a generic
      heading class reused by dialogs, tool panels, admin forms, etc. - a
      blanket size bump there would spill into all of those). Subtitle stays
-     hidden while collapsed to cut the visual noise of 7+ stacked cards, and
-     reappears once a card is open, where it's actually useful context.
+     hidden both collapsed and open - collapsed, it cuts the visual noise of
+     7+ stacked cards; open, it was found to be redundant with the card's
+     own content in almost every case (e.g. Setup's "Current changeover and
+     line configuration" tells you nothing the open panel doesn't already
+     show), so it no longer reappears there either.
      Title color reuses the same two-tone treatment desktop's sidebar nav
      already has (.workspaceNavButton: --muted normally, --title once
      .active) - open vs. collapsed stands in for the desktop nav's active
@@ -3172,7 +3288,6 @@ body[data-surface-style="divided"] .helpTopic{
   }
   .workspaceContent > .workspacePanel[open] > summary .layerTitle{ color: var(--title); }
   .workspaceContent > .workspacePanel > summary .layerMeta{ display: none; }
-  .workspaceContent > .workspacePanel[open] > summary .layerMeta{ display: block; }
   .workspaceContent > .workspacePanel > summary .pill.summaryStatus{ display: none !important; }
   .mobileBrand{
     margin-bottom:calc(0px - var(--page-gap));

@@ -7,15 +7,16 @@ const fs = require("node:fs");
 const app = fs.readFileSync("app.js", "utf8");
 const styles = fs.readFileSync("styles.css", "utf8");
 
-// Recipe Setup's mobile layer switcher was a sticky pill tab strip (one
-// button per layer). Replaced with a swipe/paged control - prev/next
-// arrows, a big current-layer badge, and position dots - because it stays
-// a fixed size regardless of layer count instead of getting cramped at 5
-// layers. The underlying switch mechanism (showMobileLayer, the
-// [data-layer-column] show/hide, the swipe listeners) is unchanged. The
-// pager itself is a bare row with no outer frame - just the individually
-// styled arrow buttons and badge sitting directly above the layer table,
-// not pinned while scrolling.
+// Recipe Setup's mobile layer switcher went through two shapes before this
+// one: originally a sticky pill tab strip, then a swipe/paged control
+// (prev/next arrows, a badge, dot indicators) sitting in a row above the
+// table. Both cost a full row of vertical space. This round (mockup option
+// 05, "vertical edge rail") drops that row entirely: one button per layer,
+// stacked in a vertical rail that sits beside the table instead of above
+// it, in .splitsMobileLayerLayout (a flex row: the table's scroll
+// container on the left, the rail on the right). Direct tap to any layer -
+// no prev/next stepping. The underlying switch mechanism (showMobileLayer,
+// the [data-layer-column] show/hide, the swipe listeners) is unchanged.
 
 function fnBody(name){
   const start = app.indexOf(`function ${name}(`);
@@ -24,92 +25,89 @@ function fnBody(name){
   return app.slice(start, next === -1 ? undefined : next);
 }
 
-test("the old per-layer tab buttons are gone - no splitsMobileLayerButton, no role=tab, no tablist", () => {
-  assert.doesNotMatch(app, /splitsMobileLayerButton/);
-  assert.doesNotMatch(app, /mobileLayerButtons/);
-  assert.doesNotMatch(app, /mobileLayerNav\.setAttribute\("role", "tablist"\)/);
+test("the old pager pieces are gone - no prev/next arrows, no badge, no dots", () => {
+  assert.doesNotMatch(app, /splitsMobileLayerArrow/);
+  assert.doesNotMatch(app, /splitsMobileLayerBadge/);
+  assert.doesNotMatch(app, /splitsMobileLayerDot/);
+  assert.doesNotMatch(app, /splitsMobileLayerCurrent/);
+  assert.doesNotMatch(app, /mobileLayerPrev/);
+  assert.doesNotMatch(app, /mobileLayerNext/);
 });
 
-test("the nav is a plain group: prev arrow, a current-layer badge+dots, next arrow, in that order", () => {
-  const start = app.indexOf('mobileLayerNav.setAttribute("role", "group")');
+test("one real button per layer, each with the layer's own name as its visible label and tracked in mobileLayerButtonEls keyed by layer name", () => {
+  const start = app.indexOf("const mobileLayerButtonEls = new Map();");
   assert.notEqual(start, -1);
-  const appendCall = app.indexOf("mobileLayerNav.append(", start);
-  const appendLine = app.slice(appendCall, app.indexOf(";", appendCall) + 1);
-  assert.match(appendLine, /mobileLayerNav\.append\(mobileLayerPrev, mobileLayerCurrent, mobileLayerNext\);/);
-  assert.match(app, /mobileLayerPrev\.className = "splitsMobileLayerArrow";/);
-  assert.match(app, /mobileLayerPrev\.textContent = "‹";/);
-  assert.match(app, /mobileLayerPrev\.setAttribute\("aria-label", "Previous layer"\);/);
-  assert.match(app, /mobileLayerNext\.className = "splitsMobileLayerArrow";/);
-  assert.match(app, /mobileLayerNext\.textContent = "›";/);
-  assert.match(app, /mobileLayerNext\.setAttribute\("aria-label", "Next layer"\);/);
+  const body = app.slice(start, app.indexOf("const scroll = document.createElement", start));
+  assert.match(body, /btn\.className = "splitsMobileLayerRailBtn";/);
+  assert.match(body, /btn\.textContent = L\.name;/);
+  assert.match(body, /mobileLayerButtonEls\.set\(L\.name, btn\);/);
+  assert.match(body, /btn\.addEventListener\("click", \(\)=> showMobileLayer\(L\.name\)\);/);
 });
 
-test("the current-layer badge announces changes to screen readers, and the dots are decorative (aria-hidden) since the badge already carries the info", () => {
-  assert.match(app, /mobileLayerBadge\.setAttribute\("aria-live", "polite"\);/);
-  assert.match(app, /mobileLayerDots\.setAttribute\("aria-hidden", "true"\);/);
+test("the rail is a role=group (not a tablist) with an aria-label, and each button reports its own selected state via aria-pressed rather than a separate live region", () => {
+  assert.match(app, /mobileLayerNav\.setAttribute\("role", "group"\);/);
+  assert.match(app, /mobileLayerNav\.setAttribute\("aria-label", "Choose layer"\);/);
+  assert.match(app, /btn\.setAttribute\("aria-pressed", "false"\);/);
 });
 
-test("one dot is created per layer and tracked in mobileLayerDotEls, keyed by layer name - same map pattern the old tab buttons used", () => {
-  assert.match(app, /const mobileLayerDotEls = new Map\(\);/);
-  const start = app.indexOf("const mobileLayerDotEls = new Map();");
-  const body = app.slice(start, app.indexOf("area.appendChild(mobileLayerNav);", start));
-  assert.match(body, /dot\.className = "splitsMobileLayerDot";/);
-  assert.match(body, /mobileLayerDotEls\.set\(L\.name, dot\);/);
-});
-
-test("showMobileLayer updates the badge text, the active dot, and disables an arrow at each end - same function the tab bar and swipe both called before", () => {
+test("showMobileLayer updates the active button (class + aria-pressed) for every layer, same function the old pager and swipe both called", () => {
   const body = fnBody("showMobileLayer");
   assert.match(body, /activeMobileLayer = layerName;/);
   assert.match(body, /lastActiveMobileLayer = layerName;/);
-  assert.match(body, /mobileLayerBadge\.textContent = activeMobileLayer;/);
-  assert.match(body, /dot\.classList\.toggle\("active", name === activeMobileLayer\);/);
-  assert.match(body, /mobileLayerPrev\.disabled = index <= 0;/);
-  assert.match(body, /mobileLayerNext\.disabled = index === -1 \|\| index >= layerNames\.length - 1;/);
+  assert.match(body, /mobileLayerButtonEls\.forEach\(\(btn,name\)=>\{/);
+  assert.match(body, /const active = name === activeMobileLayer;/);
+  assert.match(body, /btn\.classList\.toggle\("active", active\);/);
+  assert.match(body, /btn\.setAttribute\("aria-pressed", String\(active\)\);/);
 });
 
-test("the arrows step to the adjacent layer and stop at the ends, without wrapping", () => {
-  const prevStart = app.indexOf('mobileLayerPrev.addEventListener("click"');
-  const prevBody = app.slice(prevStart, app.indexOf("});", prevStart));
-  assert.match(prevBody, /if \(index > 0\) showMobileLayer\(layerNames\[index - 1\]\);/);
-  const nextStart = app.indexOf('mobileLayerNext.addEventListener("click"');
-  const nextBody = app.slice(nextStart, app.indexOf("});", nextStart));
-  assert.match(nextBody, /if \(index !== -1 && index < layerNames\.length - 1\) showMobileLayer\(layerNames\[index \+ 1\]\);/);
-});
-
-test("swiping still drives the same showMobileLayer, unaffected by the tab-to-pager change", () => {
+test("swiping still drives the same showMobileLayer, unaffected by the pager-to-rail change", () => {
   assert.match(app, /showMobileLayer\(names\[nextIndex\]\);/);
 });
 
-test(".splitsMobileLayerNav is a centered flex row under the mobile breakpoint now, not the old fixed-column tab grid", () => {
+test("the table's scroll container and the rail are siblings inside .splitsMobileLayerLayout, appended to the DOM together (scroll first, rail second) so the rail lands on the right", () => {
+  const start = app.indexOf("mobileLayerLayout.className = \"splitsMobileLayerLayout\";");
+  assert.notEqual(start, -1);
+  const body = app.slice(start, start + 300);
+  assert.match(body, /mobileLayerLayout\.append\(scroll, mobileLayerNav\);/);
+  assert.match(body, /area\.appendChild\(mobileLayerLayout\);/);
+});
+
+test(".splitsMobileLayerRail is hidden by default (desktop) - same pattern the old .splitsMobileLayerNav used", () => {
+  assert.match(styles, /\.splitsMobileLayerRail\{ display: none; \}/);
+});
+
+test("on mobile, .splitsMobileLayerLayout is a flex row (table content flexes to fill, rail stays a fixed-width column) - not the old stacked pager-above-table layout", () => {
   const mobileStart = styles.indexOf("@media (max-width: 700px){");
   assert.notEqual(mobileStart, -1);
-  const ruleStart = styles.indexOf(".splitsMobileLayerNav{", mobileStart);
-  assert.notEqual(ruleStart, -1);
-  const rule = styles.slice(ruleStart, styles.indexOf("}", ruleStart) + 1);
-  assert.match(rule, /display: flex;/);
-  assert.match(rule, /justify-content: center;/);
-  assert.doesNotMatch(styles, /grid-template-columns: repeat\(var\(--mobile-layer-count/);
+  const layoutStart = styles.indexOf(".splitsMobileLayerLayout{", mobileStart);
+  assert.notEqual(layoutStart, -1);
+  const layoutRule = styles.slice(layoutStart, styles.indexOf("}", layoutStart) + 1);
+  assert.match(layoutRule, /display: flex;/);
+  const scrollRuleStart = styles.indexOf(".splitsMobileLayerLayout .splitsMatrixScroll{", mobileStart);
+  assert.notEqual(scrollRuleStart, -1);
+  const scrollRule = styles.slice(scrollRuleStart, styles.indexOf("}", scrollRuleStart) + 1);
+  assert.match(scrollRule, /flex: 1;/);
+  const railRuleStart = styles.indexOf(".splitsMobileLayerRail{", mobileStart);
+  assert.notEqual(railRuleStart, -1);
+  const railRule = styles.slice(railRuleStart, styles.indexOf("}", railRuleStart) + 1);
+  assert.match(railRule, /flex-direction: column;/);
+  assert.match(railRule, /flex: 0 0 auto;/);
 });
 
-test("the pager has no outer frame - no border, background, box-shadow, or sticky positioning; only the individual arrow buttons and badge carry their own pill styling", () => {
+test("rail buttons are squared off (var(--control-radius)) matching the layer-header chips, not fully round pills, and the active one is highlighted the same way as those chips (tinted background + focus-colored border)", () => {
   const mobileStart = styles.indexOf("@media (max-width: 700px){");
-  const ruleStart = styles.indexOf(".splitsMobileLayerNav{", mobileStart);
-  const rule = styles.slice(ruleStart, styles.indexOf("}", ruleStart) + 1);
-  assert.doesNotMatch(rule, /border:/);
-  assert.doesNotMatch(rule, /background:/);
-  assert.doesNotMatch(rule, /box-shadow:/);
-  assert.doesNotMatch(rule, /position: sticky;/);
-  assert.match(styles, /\.splitsMobileLayerArrow\{[^}]*border: 1px solid var\(--btn-secondary-border\);/);
-  assert.match(styles, /\.splitsMobileLayerBadge\{[^}]*background: linear-gradient/);
+  const btnRuleStart = styles.indexOf(".splitsMobileLayerRailBtn{", mobileStart);
+  assert.notEqual(btnRuleStart, -1);
+  const btnRule = styles.slice(btnRuleStart, styles.indexOf("}", btnRuleStart) + 1);
+  assert.match(btnRule, /border-radius: var\(--control-radius\);/);
+  const activeRuleStart = styles.indexOf(".splitsMobileLayerRailBtn.active{", mobileStart);
+  assert.notEqual(activeRuleStart, -1);
+  const activeRule = styles.slice(activeRuleStart, styles.indexOf("}", activeRuleStart) + 1);
+  assert.match(activeRule, /border-color: var\(--focus-border\);/);
+  assert.match(activeRule, /background: var\(--btn-primary-a\);/);
 });
 
-test("the badge and dots exist as their own styled pieces", () => {
-  assert.match(styles, /\.splitsMobileLayerBadge\{/);
-  assert.match(styles, /\.splitsMobileLayerDots\{ display: flex; gap: 5px; \}/);
-  assert.match(styles, /\.splitsMobileLayerDot\.active\{/);
-});
-
-// --- Ghosted column-header letter dropped on mobile to offset the pager's added height ---
+// --- Ghosted column-header letter dropped on mobile - the rail already shows the active layer ---
 
 test("the big ghosted layer letter is hidden by default under the mobile breakpoint, and the header shrinks to reclaim its space", () => {
   const mobileStart = styles.indexOf("@media (max-width: 700px){");

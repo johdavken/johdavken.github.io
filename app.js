@@ -120,7 +120,19 @@
     lineSync?.notifyActiveJobMutation(options);
   }
 
-  function workspaceConfigurationStatus(message){ const el=$("workspaceConfigurationsStatus"); if(el){el.textContent=message||"";el.hidden=!message;} }
+  // "workspaceConfigurationsStatus" (plural) was the old, now-removed
+  // standalone Line Configurations panel's own status line. That panel is
+  // gone from index.html, but this generic status setter is still the sole
+  // feedback path for save/update/rename/duplicate/delete/favorite/load
+  // results from *both* remaining surfaces - Recipe Setup's Saved Recipes
+  // panel and Line Setup's Receiver Weight Profiles panel - so it writes to
+  // both of their status lines rather than one nonexistent element. A given
+  // action only ever really concerns one of the two, but showing the same
+  // confirmation/error in both is harmless and far better than the silent
+  // no-op this was reaching before.
+  function workspaceConfigurationStatus(message){
+    [$("splitsSavedRecipesStatus"), $("setupWeightProfilesStatus")].forEach(el=>{ if(el){ el.textContent=message||""; el.hidden=!message; } });
+  }
   // Shared by both surfaces that list shared configurations: Line
   // Configurations' own Receiver Weight Profiles/Recipes sections, and
   // Recipe Setup's Saved Recipes panel (recipes only - see renderSplitsSavedRecipes).
@@ -226,12 +238,20 @@
   function renderWorkspaceConfigurations(syncState){
     renderSplitsSavedRecipes(syncState);
     renderSetupWeightProfiles(syncState);
+    // workspaceConfigurationWorkspaceId is load-bearing for every save/
+    // update/rename/duplicate/delete/favorite action from *both* remaining
+    // surfaces (Recipe Setup's Saved Recipes panel, Line Setup's Receiver
+    // Weight Profiles panel) - it must be kept in sync unconditionally,
+    // before the old Line Configurations panel's now-permanently-missing
+    // elements (workspaceProfilesList/workspaceRecipesList, removed from
+    // index.html) can short-circuit the rest of this function.
+    const workspaceId=syncState?.selectedWorkspaceId || "";
+    if(!workspaceId){ workspaceConfigurationWorkspaceId=""; selectedWorkspaceConfigurationId=""; }
+    else workspaceConfigurationWorkspaceId=workspaceId;
     const profiles=$("workspaceProfilesList"), recipes=$("workspaceRecipesList"), refresh=$("workspaceConfigurationsRefresh"), workspaceLabel=$("workspaceConfigurationsWorkspace");
     if(!profiles || !recipes) return;
-    const workspaceId=syncState?.selectedWorkspaceId || "";
     if(refresh) refresh.disabled=!workspaceId || workspaceConfigurationRefreshInFlight;
-    if(!workspaceId){ workspaceConfigurationWorkspaceId=""; selectedWorkspaceConfigurationId=""; if(workspaceLabel) workspaceLabel.hidden=true; workspaceConfigurationStatus("Connect to an RT Sync workspace to view shared weight profiles and recipes."); profiles.replaceChildren(); recipes.replaceChildren(); return; }
-    workspaceConfigurationWorkspaceId=workspaceId;
+    if(!workspaceId){ if(workspaceLabel) workspaceLabel.hidden=true; workspaceConfigurationStatus("Connect to an RT Sync workspace to view shared weight profiles and recipes."); profiles.replaceChildren(); recipes.replaceChildren(); return; }
     if(workspaceLabel){ workspaceLabel.hidden=false; workspaceLabel.textContent=`${syncState.selectedWorkspace?.name || "Connected workspace"} · RT Sync workspace`; }
     if(!workspaceConfigurations){ workspaceConfigurationStatus("Shared configurations service is unavailable."); profiles.replaceChildren(); recipes.replaceChildren(); return; }
     renderConfigurationList(profiles,workspaceConfigurations.listReceiverWeightProfiles(workspaceId).items,"profile",syncState);
@@ -307,7 +327,11 @@
     const result=action==="update"?await service.update(workspaceConfigurationWorkspaceId,item.id,item.type==="recipe"?window.PolynWorkspaceConfigurationPayloads.createRecipePayload(state):window.PolynWorkspaceConfigurationPayloads.createReceiverWeightProfile(state)):action==="rename"?await service.rename(workspaceConfigurationWorkspaceId,item.id,value):action==="duplicate"?await service.duplicate(workspaceConfigurationWorkspaceId,item.id,value):action==="delete"?await service.delete(workspaceConfigurationWorkspaceId,item.id):await service.setFavorite(workspaceConfigurationWorkspaceId,item.id,value);
     finishWorkspaceConfigurationMutation(result,action==="delete"?"Configuration deleted.":action==="favorite"?"Recipe favorite updated.":action==="rename"?"Configuration renamed.":action==="duplicate"?"Configuration duplicated.":"Configuration updated successfully.");
   }
-  function finishWorkspaceConfigurationMutation(result,message){ if(result?.ok){ workspaceConfigurationStatus(message); renderWorkspaceConfigurations(lineSync?.getState?.()||{}); } else workspaceConfigurationStatus(result?.message || "Shared configuration could not be changed."); }
+  // Render before setting the success message, not after: renderWorkspaceConfigurations
+  // re-derives each panel's own "" (no problem) status as part of its normal
+  // render, which would otherwise immediately overwrite "Configuration saved
+  // successfully." with nothing the instant it appeared.
+  function finishWorkspaceConfigurationMutation(result,message){ if(result?.ok){ renderWorkspaceConfigurations(lineSync?.getState?.()||{}); workspaceConfigurationStatus(message); } else workspaceConfigurationStatus(result?.message || "Shared configuration could not be changed."); }
   let resinCatalogRecords = resinCatalog?.getResins?.() || [];
   let commonResinNames = resinCatalogRecords.map(resin=>resin.resin_code);
   resinCatalog?.subscribe?.(resins=>{
@@ -1668,45 +1692,27 @@
         area.append(bar);
       }
 
+      // A vertical rail of per-layer buttons, sitting to the right of the
+      // table (see .splitsMobileLayerLayout below) rather than a pager row
+      // above it - direct tap to any layer, no prev/next stepping needed.
       const mobileLayerNav = document.createElement("div");
-      mobileLayerNav.className = "splitsMobileLayerNav";
+      mobileLayerNav.className = "splitsMobileLayerRail";
       mobileLayerNav.setAttribute("role", "group");
       mobileLayerNav.setAttribute("aria-label", "Choose layer");
       const layerNames = state.layers.map(L=>L.name);
       let activeMobileLayer = layerNames.includes(lastActiveMobileLayer) ? lastActiveMobileLayer : (layerNames[0] || "");
 
-      const mobileLayerPrev = document.createElement("button");
-      mobileLayerPrev.type = "button";
-      mobileLayerPrev.className = "splitsMobileLayerArrow";
-      mobileLayerPrev.textContent = "‹";
-      mobileLayerPrev.setAttribute("aria-label", "Previous layer");
-
-      const mobileLayerCurrent = document.createElement("div");
-      mobileLayerCurrent.className = "splitsMobileLayerCurrent";
-      const mobileLayerBadge = document.createElement("div");
-      mobileLayerBadge.className = "splitsMobileLayerBadge";
-      mobileLayerBadge.setAttribute("aria-live", "polite");
-      const mobileLayerDots = document.createElement("div");
-      mobileLayerDots.className = "splitsMobileLayerDots";
-      mobileLayerDots.setAttribute("aria-hidden", "true");
-      mobileLayerCurrent.append(mobileLayerBadge, mobileLayerDots);
-
-      const mobileLayerNext = document.createElement("button");
-      mobileLayerNext.type = "button";
-      mobileLayerNext.className = "splitsMobileLayerArrow";
-      mobileLayerNext.textContent = "›";
-      mobileLayerNext.setAttribute("aria-label", "Next layer");
-
-      mobileLayerNav.append(mobileLayerPrev, mobileLayerCurrent, mobileLayerNext);
-
-      const mobileLayerDotEls = new Map();
+      const mobileLayerButtonEls = new Map();
       state.layers.forEach(L=>{
-        const dot = document.createElement("span");
-        dot.className = "splitsMobileLayerDot";
-        mobileLayerDotEls.set(L.name, dot);
-        mobileLayerDots.appendChild(dot);
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "splitsMobileLayerRailBtn";
+        btn.textContent = L.name;
+        btn.setAttribute("aria-pressed", "false");
+        btn.addEventListener("click", ()=> showMobileLayer(L.name));
+        mobileLayerButtonEls.set(L.name, btn);
+        mobileLayerNav.appendChild(btn);
       });
-      area.appendChild(mobileLayerNav);
 
       const scroll = document.createElement("div");
       scroll.className = "splitsMatrixScroll";
@@ -2022,7 +2028,10 @@
       table.appendChild(tbody);
       frame.appendChild(table);
       scroll.appendChild(frame);
-      area.appendChild(scroll);
+      const mobileLayerLayout = document.createElement("div");
+      mobileLayerLayout.className = "splitsMobileLayerLayout";
+      mobileLayerLayout.append(scroll, mobileLayerNav);
+      area.appendChild(mobileLayerLayout);
 
       function showMobileLayer(layerName){
         activeMobileLayer = layerName;
@@ -2030,22 +2039,12 @@
         table.querySelectorAll("[data-layer-column]").forEach(cell=>{
           cell.classList.toggle("mobile-layer-active", cell.dataset.layerColumn === activeMobileLayer);
         });
-        mobileLayerBadge.textContent = activeMobileLayer;
-        mobileLayerDotEls.forEach((dot,name)=>{
-          dot.classList.toggle("active", name === activeMobileLayer);
+        mobileLayerButtonEls.forEach((btn,name)=>{
+          const active = name === activeMobileLayer;
+          btn.classList.toggle("active", active);
+          btn.setAttribute("aria-pressed", String(active));
         });
-        const index = layerNames.indexOf(activeMobileLayer);
-        mobileLayerPrev.disabled = index <= 0;
-        mobileLayerNext.disabled = index === -1 || index >= layerNames.length - 1;
       }
-      mobileLayerPrev.addEventListener("click",()=>{
-        const index = layerNames.indexOf(activeMobileLayer);
-        if (index > 0) showMobileLayer(layerNames[index - 1]);
-      });
-      mobileLayerNext.addEventListener("click",()=>{
-        const index = layerNames.indexOf(activeMobileLayer);
-        if (index !== -1 && index < layerNames.length - 1) showMobileLayer(layerNames[index + 1]);
-      });
       showMobileLayer(activeMobileLayer);
 
       // Swipe left/right between layers - same showMobileLayer the tab bar
@@ -3693,6 +3692,15 @@
     }, true);
 
     const toolTabs = Array.from(document.querySelectorAll(".toolsIndexButton"));
+    // Mobile collapses the tab list into a <details> dropdown (desktop keeps
+    // the original always-visible list - see styles.css). The summary's
+    // label mirrors whichever tab is active regardless of how selection
+    // changed (click or arrow-key), but the dropdown itself only closes on
+    // an actual click selection, not on arrow-key movement - otherwise
+    // arrowing through options while it's open would slam it shut after the
+    // very first press, before the operator could see the other choices.
+    const toolsIndexDropdown = document.querySelector(".toolsIndexDropdown");
+    const toolsIndexDropdownLabel = document.querySelector(".toolsIndexDropdownLabel");
     function selectToolPanel(targetId, { focus = false } = {}){
       if (!toolTabs.some(tab=>tab.dataset.toolTarget === targetId)) return;
       toolTabs.forEach(tab=>{
@@ -3700,14 +3708,20 @@
         tab.classList.toggle("active", selected);
         tab.setAttribute("aria-selected", String(selected));
         tab.tabIndex = selected ? 0 : -1;
-        if (selected && focus) tab.focus();
+        if (selected){
+          if (toolsIndexDropdownLabel) toolsIndexDropdownLabel.textContent = tab.textContent;
+          if (focus) tab.focus();
+        }
       });
       document.querySelectorAll(".toolWorkspacePanel").forEach(panel=>{
         panel.hidden = panel.id !== targetId;
       });
     }
     toolTabs.forEach((tab, index)=>{
-      tab.addEventListener("click", ()=>selectToolPanel(tab.dataset.toolTarget));
+      tab.addEventListener("click", ()=>{
+        selectToolPanel(tab.dataset.toolTarget);
+        if (toolsIndexDropdown) toolsIndexDropdown.open = false;
+      });
       tab.addEventListener("keydown", event=>{
         if (!["ArrowDown", "ArrowUp", "ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
         event.preventDefault();
@@ -3738,11 +3752,16 @@
     });
     document.addEventListener("click",event=>{
       if (statusPreferences?.open && !statusPreferences.contains(event.target)) statusPreferences.open = false;
+      if (toolsIndexDropdown?.open && !toolsIndexDropdown.contains(event.target)) toolsIndexDropdown.open = false;
     });
     document.addEventListener("keydown",event=>{
       if (event.key === "Escape" && statusPreferences?.open){
         statusPreferences.open = false;
         statusPreferences.querySelector(":scope > summary")?.focus();
+      }
+      if (event.key === "Escape" && toolsIndexDropdown?.open){
+        toolsIndexDropdown.open = false;
+        toolsIndexDropdown.querySelector(":scope > summary")?.focus();
       }
     });
 

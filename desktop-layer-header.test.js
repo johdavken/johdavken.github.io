@@ -52,7 +52,13 @@ test("Copy's hover/focus state shifts to the same gradient-fill treatment used e
 });
 
 test("the mobile two-chip layout still fully overrides both properties on narrow screens - this desktop refinement doesn't leak into or conflict with it", () => {
-  const mobileStart = styles.indexOf("@media (max-width: 700px){");
+  // Anchored to the landmark itself (there's more than one
+  // "@media (max-width: 700px){" block in the file now, e.g. the Saved
+  // Recipes icon-button row's own mobile block) rather than blindly taking
+  // the first match, which would grab the wrong one.
+  const copyBtnLandmark = styles.indexOf("\n  .splitCopyBtn{");
+  assert.notEqual(copyBtnLandmark, -1);
+  const mobileStart = styles.lastIndexOf("@media (max-width: 700px){", copyBtnLandmark);
   const mobileBlock = styles.slice(mobileStart, styles.indexOf("\n}\n", mobileStart));
   const mobileCopyStart = mobileBlock.indexOf("\n  .splitCopyBtn{");
   assert.notEqual(mobileCopyStart, -1);

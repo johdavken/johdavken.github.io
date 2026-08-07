@@ -7,7 +7,7 @@
   <!-- Favicons -->
   <link rel="icon" type="image/svg+xml" sizes="any" href="branding/resin-tools/rt6-02-layer-stack-icon.svg?v=2">
 
-  <link rel="stylesheet" href="styles.css?v=0.37.0">
+  <link rel="stylesheet" href="styles.css?v=0.46.0">
   <link rel="stylesheet" href="theme.css?v=0.17.3">
 <script src="validation.js?v=0.18" defer></script>
 <script src="scheduling.js?v=0.18.4" defer></script>
@@ -29,7 +29,7 @@
 <script src="resin-lookup.js?v=0.18.1" defer></script>
 <script src="resin-admin.js?v=0.20.1" defer></script>
 <script src="workspace-recovery.js?v=0.1.0" defer></script>
-<script src="app.js?v=0.18.82" defer></script>
+<script src="app.js?v=0.18.85" defer></script>
 <script src="resin-admin-ui.js?v=0.20.1" defer></script>
 <script src="workspace-recovery-ui.js?v=0.1.0" defer></script>
 <script src="recipe-scan-ui.js?v=0.3.2" defer></script>
@@ -258,7 +258,7 @@
       <small id="workspaceSetupStatus">Needs setup</small>
     </button>
     <button class="workspaceNavButton" type="button" data-workspace-target="splitsBlock" data-status="warn">
-      <span>Recipe Setup</span>
+      <span>Recipe</span>
       <small id="workspaceSplitsStatus">Check percentages</small>
     </button>
     <button class="workspaceNavButton active" type="button" data-workspace-target="resultsBlock" data-status="neutral">
@@ -394,7 +394,7 @@
   <details class="block card workspacePanel" id="lineSetupBlock">
     <summary>
       <div class="sumLeft">
-        <div class="chev"></div>
+        <div class="chev"><span class="chevRing"></span><span class="chevSatellite"></span><span class="chevCore"></span></div>
         <div class="summaryText">
           <div class="layerTitle">Setup</div>
           <div class="layerMeta">Current changeover and line configuration</div>
@@ -453,7 +453,7 @@
         <details class="block" id="weightsBlock">
         <summary>
           <div class="sumLeft">
-            <div class="chev"></div>
+            <div class="chev"><span class="chevRing"></span><span class="chevSatellite"></span><span class="chevCore"></span></div>
             <div class="summaryText">
               <div class="layerTitle nestedLayerTitle">Receiver hopper weights</div>
               <div class="layerMeta">Stored capacity used by the run-down calculation</div>
@@ -473,7 +473,7 @@
         <details class="block" id="setupWeightProfilesBlock">
         <summary>
           <div class="sumLeft">
-            <div class="chev"></div>
+            <div class="chev"><span class="chevRing"></span><span class="chevSatellite"></span><span class="chevCore"></span></div>
             <div class="summaryText">
               <div class="layerTitle nestedLayerTitle">Receiver Weight Profiles</div>
               <div class="layerMeta">Shared receiver hopper weights</div>
@@ -516,9 +516,9 @@
   <details class="block card workspacePanel" id="splitsBlock">
     <summary>
       <div class="sumLeft">
-        <div class="chev"></div>
+        <div class="chev"><span class="chevRing"></span><span class="chevSatellite"></span><span class="chevCore"></span></div>
         <div class="summaryText">
-          <div class="layerTitle">Recipe Setup</div>
+          <div class="layerTitle">Recipe</div>
           <div class="layerMeta">Set recipe percentages and choose which hoppers appear in the timeline</div>
         </div>
       </div>
@@ -534,7 +534,7 @@
   <details class="block card workspacePanel desktop-active" id="resultsBlock" open>
     <summary>
       <div class="sumLeft">
-        <div class="chev"></div>
+        <div class="chev"><span class="chevRing"></span><span class="chevSatellite"></span><span class="chevCore"></span></div>
         <div class="summaryText">
           <div class="layerTitle">Timeline</div>
           <div class="layerMeta">Only tracked hoppers • Sorted by upcoming time</div>
@@ -575,7 +575,7 @@
   <details class="block card workspacePanel lineSyncBlock" id="lineSyncBlock">
     <summary>
       <div class="sumLeft">
-        <div class="chev"></div>
+        <div class="chev"><span class="chevRing"></span><span class="chevSatellite"></span><span class="chevCore"></span></div>
         <div class="summaryText">
           <div class="layerTitle">RT Sync</div>
           <div class="layerMeta">Optional shared line data across devices</div>
@@ -647,7 +647,7 @@
   <details class="block card workspacePanel" id="toolsBlock">
     <summary>
       <div class="sumLeft">
-        <div class="chev"></div>
+        <div class="chev"><span class="chevRing"></span><span class="chevSatellite"></span><span class="chevCore"></span></div>
         <div class="summaryText">
           <div class="layerTitle">Tools</div>
           <div class="layerMeta">Production utilities</div>
@@ -657,6 +657,9 @@
 
     <div class="blockBody">
       <div class="toolsWorkspace">
+        <details class="toolsIndexDropdown">
+          <summary><span class="toolsIndexDropdownLabel">Production Summary</span></summary>
+        </details>
         <nav class="toolsIndex" role="tablist" aria-label="Production tools">
           <button id="productionSummaryToolTab" class="toolsIndexButton active" type="button" role="tab" aria-selected="true" aria-controls="productionSummaryTool" data-tool-target="productionSummaryTool">Production Summary</button>
           <button id="shortFootageToolTab" class="toolsIndexButton" type="button" role="tab" aria-selected="false" aria-controls="shortFootageTool" data-tool-target="shortFootageTool" tabindex="-1">Short Footage</button>
@@ -857,7 +860,7 @@
   <details class="block card workspacePanel" id="helpBlock">
     <summary>
       <div class="sumLeft">
-        <div class="chev"></div>
+        <div class="chev"><span class="chevRing"></span><span class="chevSatellite"></span><span class="chevCore"></span></div>
         <div class="summaryText">
           <div class="layerTitle">Help</div>
           <div class="layerMeta">Operator guide for every section</div>
@@ -1055,7 +1058,7 @@
 
   <details class="block card workspacePanel adminResinPanel" id="resinAdminBlock">
     <summary>
-      <div class="sumLeft"><div class="chev"></div><div class="summaryText"><div class="layerTitle">Resin Database</div><div class="layerMeta">Manage active and inactive catalog records</div></div></div>
+      <div class="sumLeft"><div class="chev"><span class="chevRing"></span><span class="chevSatellite"></span><span class="chevCore"></span></div><div class="summaryText"><div class="layerTitle">Resin Database</div><div class="layerMeta">Manage active and inactive catalog records</div></div></div>
     </summary>
     <div class="blockBody adminResinWorkspace">
       <div class="adminToolbar"><input id="adminResinSearch" type="search" placeholder="Search code or description"><button id="addResinButton" type="button">Add resin</button></div>
@@ -1081,7 +1084,7 @@
 
   <details class="block card workspacePanel adminResinPanel" id="workspaceManagementBlock">
     <summary>
-      <div class="sumLeft"><div class="chev"></div><div class="summaryText"><div class="layerTitle">Workspace Management</div><div class="layerMeta">Reconnect a line computer after a browser reset</div></div></div>
+      <div class="sumLeft"><div class="chev"><span class="chevRing"></span><span class="chevSatellite"></span><span class="chevCore"></span></div><div class="summaryText"><div class="layerTitle">Workspace Management</div><div class="layerMeta">Reconnect a line computer after a browser reset</div></div></div>
     </summary>
     <div class="blockBody workspaceRecoveryPanel">
       <p class="muted">Use this panel to reconnect a line computer after browser data or the device's local RT Sync identity has been reset. The workspace and its shared recipes and weight profiles are not affected.</p>
