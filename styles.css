@@ -2824,8 +2824,12 @@ button.compactAction{
   .toolsIndexButton.active{ box-shadow: inset 3px 0 0 var(--title); }
   /* Retired in favor of the dropdown trigger above, which now carries the
      active tool's name using the same heading treatment this rule would
-     otherwise duplicate immediately below it. */
-  .toolWorkspacePanel > .layerTitle{ display: none; }
+     otherwise duplicate immediately below it. A descendant selector, not
+     a direct-child one: Scan Recipe wraps its title in .toolTitleRow
+     alongside the "Experimental" badge, one level deeper than every other
+     panel's title - ">" alone missed that one and left its title showing.
+     The badge is unaffected; only .layerTitle itself is hidden. */
+  .toolWorkspacePanel .layerTitle{ display: none; }
 }
 
 .toolTitleRow{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }

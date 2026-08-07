@@ -99,10 +99,20 @@ test("the trigger's label truncates with an ellipsis instead of wrapping or over
 });
 
 test("each tool panel's own duplicate heading is hidden on mobile, since the dropdown trigger above now carries the active tool's name using the same heading treatment", () => {
-  const mobileStart = styles.lastIndexOf("@media (max-width: 720px){", styles.indexOf(".toolWorkspacePanel > .layerTitle{ display: none; }"));
+  const mobileStart = styles.lastIndexOf("@media (max-width: 720px){", styles.indexOf(".toolWorkspacePanel .layerTitle{ display: none; }"));
   assert.notEqual(mobileStart, -1);
   const mobileBlock = styles.slice(mobileStart, styles.indexOf("\n}", mobileStart));
-  assert.match(mobileBlock, /\.toolWorkspacePanel > \.layerTitle\{ display: none; \}/);
+  // A descendant selector, not ">" - Scan Recipe wraps its title one level
+  // deeper (inside .toolTitleRow, alongside the "Experimental" badge) than
+  // every other panel's title, and a direct-child selector missed it.
+  assert.match(mobileBlock, /\.toolWorkspacePanel \.layerTitle\{ display: none; \}/);
+});
+
+test("Scan Recipe's title lives inside .toolTitleRow next to the Experimental badge - hiding .layerTitle must not also hide the badge", () => {
+  const sectionStart = html.indexOf('id="recipeScanTool"');
+  assert.notEqual(sectionStart, -1);
+  const sectionBody = html.slice(sectionStart, html.indexOf("</section>", sectionStart));
+  assert.match(sectionBody, /<div class="toolTitleRow">\s*<div id="recipeScanTitle" class="layerTitle">Scan Recipe<\/div>\s*<span class="pill badge-warn">Experimental<\/span>/);
 });
 
 test("selectToolPanel keeps the dropdown's summary label in sync with whichever tab is active, regardless of how selection changed", () => {
