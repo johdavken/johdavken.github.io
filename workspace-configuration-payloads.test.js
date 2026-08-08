@@ -44,28 +44,21 @@ test("Receiver Weight Profile validation rejects bad versions and malformed phys
   assert.match(result.errors.join(" "), /exactly 6 receiver weights/i);
 });
 
-test("Receiver Weight Profiles include Smart Hoppers geometry (usable height, circumference, packing factor) alongside receiver_weights_lb - same physical-equipment category, so it travels with the profile the same way", () => {
+test("Receiver Weight Profiles include Smart Hoppers geometry (usable height, circumference) alongside receiver_weights_lb - same physical-equipment category, so it travels with the profile the same way. Packing factor is not part of this - it's a trait of the resin, not the hopper", () => {
   const state = stateFixture();
   state.layers[0].hoppers[0].usableHeight = 24;
   state.layers[0].hoppers[0].circumference = 40;
-  state.layers[0].hoppers[0].packingFactor = 0.6;
   const profile = payloads.createReceiverWeightProfile(state);
   assert.equal(profile.layers[0].usable_heights_in[0], 24);
   assert.equal(profile.layers[0].circumferences_in[0], 40);
-  assert.equal(profile.layers[0].packing_factors[0], 0.6);
-  // A hopper that never had Smart Hoppers geometry set still gets a real
-  // (default) packing factor - it's meaningless without height/circumference
-  // anyway, but this keeps every hopper's packing factor consistent once a
-  // profile with the field at all is loaded on another device.
-  assert.equal(profile.layers[0].packing_factors[1], 0.63);
   assert.equal(profile.layers[0].usable_heights_in[1], 0);
+  assert.equal(profile.layers[0].packing_factors, undefined);
 });
 
 test("Receiver Weight Profile validation still accepts profiles saved before Smart Hoppers existed (no geometry arrays at all)", () => {
   const profile = payloads.createReceiverWeightProfile(stateFixture());
   delete profile.layers[0].usable_heights_in;
   delete profile.layers[0].circumferences_in;
-  delete profile.layers[0].packing_factors;
   assert.equal(payloads.validateReceiverWeightProfile(profile).valid, true);
 });
 
@@ -81,41 +74,30 @@ test("Receiver Weight Profile validation rejects malformed geometry when present
   result = payloads.validateReceiverWeightProfile(negativeCircumference);
   assert.equal(result.valid, false);
   assert.match(result.errors.join(" "), /circumference must be a finite value of 0 or greater/i);
-
-  const badPackingFactor = payloads.createReceiverWeightProfile(stateFixture());
-  badPackingFactor.layers[0].packing_factors[0] = 0.9;
-  result = payloads.validateReceiverWeightProfile(badPackingFactor);
-  assert.equal(result.valid, false);
-  assert.match(result.errors.join(" "), /packing factor must be between 0.58 and 0.68/i);
 });
 
-test("applying a Receiver Weight Profile with geometry writes usableHeight/circumference/packingFactor onto the matching hoppers", () => {
+test("applying a Receiver Weight Profile with geometry writes usableHeight/circumference onto the matching hoppers", () => {
   const state = stateFixture();
   const profile = payloads.createReceiverWeightProfile(stateFixture());
   profile.layers[0].usable_heights_in[0] = 30;
   profile.layers[0].circumferences_in[0] = 45;
-  profile.layers[0].packing_factors[0] = 0.65;
   assert.equal(payloads.applyReceiverWeightProfile(state, profile).ok, true);
   assert.equal(state.layers[0].hoppers[0].usableHeight, 30);
   assert.equal(state.layers[0].hoppers[0].circumference, 45);
-  assert.equal(state.layers[0].hoppers[0].packingFactor, 0.65);
 });
 
 test("applying an old Receiver Weight Profile (no geometry arrays) leaves this device's already-configured Smart Hopper geometry untouched, rather than resetting it to 0", () => {
   const state = stateFixture();
   state.layers[0].hoppers[0].usableHeight = 22;
   state.layers[0].hoppers[0].circumference = 38;
-  state.layers[0].hoppers[0].packingFactor = 0.6;
   const oldProfile = payloads.createReceiverWeightProfile(stateFixture());
   delete oldProfile.layers[0].usable_heights_in;
   delete oldProfile.layers[0].circumferences_in;
-  delete oldProfile.layers[0].packing_factors;
   oldProfile.layers[0].receiver_weights_lb[0] = 500;
   assert.equal(payloads.applyReceiverWeightProfile(state, oldProfile).ok, true);
   assert.equal(state.layers[0].hoppers[0].weight, 500, "the weight itself still applies");
   assert.equal(state.layers[0].hoppers[0].usableHeight, 22, "geometry untouched, not reset to 0");
   assert.equal(state.layers[0].hoppers[0].circumference, 38);
-  assert.equal(state.layers[0].hoppers[0].packingFactor, 0.6);
 });
 
 test("applying a Receiver Weight Profile changes weights only and is atomic", () => {
@@ -185,11 +167,10 @@ test("applying a Recipe changes only recipe fields and preserves physical/runtim
   assert.equal(state.theme, before.theme);
 });
 
-test("applying a Recipe preserves this hopper's Smart Hoppers geometry (usableHeight/circumference/packingFactor) - a recipe never carries physical-equipment values, same as it already preserves weight/track/pumpOff", () => {
+test("applying a Recipe preserves this hopper's Smart Hoppers geometry (usableHeight/circumference) - a recipe never carries physical-equipment values, same as it already preserves weight/track/pumpOff", () => {
   const state = stateFixture();
   state.layers[0].hoppers[0].usableHeight = 26;
   state.layers[0].hoppers[0].circumference = 42;
-  state.layers[0].hoppers[0].packingFactor = 0.61;
   const recipe = payloads.createRecipePayload(stateFixture());
   recipe.layers[0].hoppers[0] = { resin_name: "NEW-RESIN", pct: 80 };
   const result = payloads.applyRecipePayload(state, recipe);
@@ -197,7 +178,6 @@ test("applying a Recipe preserves this hopper's Smart Hoppers geometry (usableHe
   assert.equal(state.layers[0].hoppers[0].resinName, "NEW-RESIN");
   assert.equal(state.layers[0].hoppers[0].usableHeight, 26);
   assert.equal(state.layers[0].hoppers[0].circumference, 42);
-  assert.equal(state.layers[0].hoppers[0].packingFactor, 0.61);
 });
 
 test("a Recipe can change line type while preserving matching physical hoppers", () => {

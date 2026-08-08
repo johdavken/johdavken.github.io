@@ -18,13 +18,19 @@ const rearrangement = fs.readFileSync("hopper-rearrangement.js", "utf8");
 // is, and (as of stage 2) part of the Receiver Weight Profile save/load
 // contract too (see workspace-configuration-payloads.test.js).
 //
-// Stage 2: a packing factor field alongside height/circumference in the
-// wrench popover, and the actual computation - a smaller, non-interactive
-// number under the operator's own weight field, shown only when this
-// hopper's geometry (height, circumference, packing factor) and its
-// assigned resin's known density are all available. Not wired yet: feeding
-// that computed number into the run-down formula instead of the operator's
-// entered weight - that's the next stage.
+// Stage 2: the actual computation - a smaller, non-interactive number
+// under the operator's own weight field, shown only when this hopper's
+// geometry (height, circumference) and its assigned resin's known density
+// are all available. Packing factor is deliberately NOT a per-hopper
+// field: it's a trait of the resin (like density), not the hopper, and
+// belongs in the resin database once that field exists there. Until then,
+// TEMP_RESIN_PACKING_FACTOR stands in as a fixed placeholder for every
+// resin. Also: a small green "SMART" badge next to the tracking clock in
+// Recipe Setup, shown under the exact same condition, so an operator
+// looking at the recipe (not the weights grid) can still see at a glance
+// that a hopper's weight is being computed rather than manually entered.
+// Not wired yet: feeding the computed number into the run-down formula
+// instead of the operator's entered weight - that's the next stage.
 
 function functionBody(name){
   const start = app.indexOf(`function ${name}(`);
@@ -185,28 +191,26 @@ test("the panel is position:fixed with JS-computed placement, not position:absol
   assert.match(body, /if \(top \+ panelHeight > window\.innerHeight - 8\)\{/);
 });
 
-// --- Stage 2: packing factor, and the computed-weight readout ---
+// --- Stage 2: the computed-weight readout, and the Recipe Setup badge ---
 
-test("state's default packing factor (0.63) matches the Tools > Hopper Weight Calculator's own default, and ensureLayers/applyPayload give every hopper a packingFactor field", () => {
-  assert.match(app, /const DEFAULT_PACKING_FACTOR = 0\.63;/);
+test("packing factor is not a per-hopper field anywhere - no packingFactor on the data model, no third wrench field. TEMP_RESIN_PACKING_FACTOR is a single fixed placeholder standing in for every resin until the resin database has its own per-resin value. (The Tools > Hopper Weight Calculator's own unrelated hopperPackingFactor field is untouched - checked separately, scoped to Smart Hoppers' own code only.)", () => {
+  assert.match(app, /const TEMP_RESIN_PACKING_FACTOR = 0\.634;/);
+  assert.doesNotMatch(app, /packingFactor/, "no camelCase packingFactor field anywhere (case-sensitive - distinct from the Tools calculator's own hopperPackingFactor id)");
   const ensureBody = functionBody("ensureLayers");
-  assert.match(ensureBody, /packingFactor: clampNum\(h\.packingFactor\) \|\| DEFAULT_PACKING_FACTOR/);
-  assert.match(ensureBody, /packingFactor: DEFAULT_PACKING_FACTOR\s*\n\s*\}\)\)/);
+  assert.doesNotMatch(ensureBody, /packing/i);
   const applyStart = app.indexOf("function applyPayload(");
   const applyBody = app.slice(applyStart, app.indexOf("\n    function ", applyStart + 1));
-  assert.match(applyBody, /packingFactor: clampNum\(fh\.packingFactor\) \|\| DEFAULT_PACKING_FACTOR/);
+  assert.doesNotMatch(applyBody, /packing/i);
+
+  const weightsAreaStart = app.indexOf("function renderWeightsArea(");
+  const weightsAreaBody = app.slice(weightsAreaStart, app.indexOf("\n    function printRecipeSheet", weightsAreaStart));
+  assert.doesNotMatch(weightsAreaBody, /packingInput/, "no third wrench field - the Tools calculator's own packingInput lives in a different function entirely");
 });
 
-test("the wrench popover has a third field for packing factor, validated to the same 0.58-0.68 range as the Tools calculator, with a hint explaining the range", () => {
+test("the wrench popover has exactly two fields (usable height, circumference) - no packing factor field", () => {
   const start = app.indexOf("function renderWeightsArea(");
   const body = app.slice(start, app.indexOf("\n    function printRecipeSheet", start));
-  assert.match(body, /packingInput\.id = `gp_\$\{L\.name\}_\$\{hi\}`;/);
-  assert.match(body, /packingCaption\.textContent = "Packing factor";/);
-  assert.match(body, /packingHint\.textContent = "0\.58–0\.68 for different pellet shapes";/);
-  assert.match(body, /packingHint\.className = "tiny";/, "reuses the existing .tiny utility instead of new CSS");
-  assert.match(body, /value => \{ L\.hoppers\[hi\]\.packingFactor = value; \}/);
-  const packingBlock = body.slice(body.indexOf("packingInput.addEventListener"), body.indexOf("// The smaller"));
-  assert.match(packingBlock, /\{ min: 0\.58, max: 0\.68, label: `\$\{hopperBadgeLabel\(L\.name, hi\)\} packing factor` \}/);
+  assert.match(body, /panel\.append\(heightLabel, circLabel\);/);
 });
 
 test("the computed-weight element is appended after .weightsCellRow, not before - it must sit visually below the weight field", () => {
@@ -231,29 +235,49 @@ test("the computed-weight element starts hidden and is only ever built when Smar
   assert.match(ifBlock, /computedWeight\.hidden = true;/);
 });
 
-test("refreshSmartHopperComputedWeights looks up the hopper's assigned resin via the same resinLookup/resinCatalogRecords the rest of the app already uses, and computes via the shared calculators module (estimateBulkDensity -> calculateHopperWeight) - no duplicated formula logic", () => {
-  const body = functionBody("refreshSmartHopperComputedWeights");
-  assert.match(body, /if \(!state\.smartHoppersEnabled\) return;/);
+test("the Recipe Setup matrix gets a small \"SMART\" badge next to the tracking clock, for every hopper (unlike the wrench, it's not gated on Smart Hoppers being on - it just stays hidden)", () => {
+  const start = app.indexOf('trackButton.appendChild(clockIcon);');
+  const body = app.slice(start, app.indexOf("cellHeader.append(", start) + 200);
+  assert.match(body, /const smartBadge = document\.createElement\("span"\);/);
+  assert.match(body, /smartBadge\.id = smartBadgeId\(L\.name, hi\);/);
+  assert.match(body, /smartBadge\.className = "splitSmartBadge";/);
+  assert.match(body, /smartBadge\.textContent = "SMART";/);
+  assert.match(body, /smartBadge\.hidden = true;/);
+  assert.match(body, /cellHeader\.append\(trackControl, smartBadge, clearButton\);/);
+});
+
+test("refreshSmartHopperState looks up the hopper's assigned resin via the same resinLookup/resinCatalogRecords the rest of the app already uses, computes via the shared calculators module (estimateBulkDensity -> calculateHopperWeight) using the temporary fixed packing factor, and updates both the weights-grid readout and the Recipe Setup badge from one pass - no duplicated formula or lookup logic", () => {
+  const body = functionBody("refreshSmartHopperState");
   assert.match(body, /resinLookup\?\.findExactResin\?\.\(hopper\.resinName, resinCatalogRecords\)/);
-  assert.match(body, /const bulkDensity = calculators\.estimateBulkDensity\(density, packingVal\);/);
+  assert.match(body, /calculators\.estimateBulkDensity\(density, TEMP_RESIN_PACKING_FACTOR\)/);
   assert.match(body, /const value = calculators\.calculateHopperWeight\(circVal, heightVal, bulkDensity\);/);
+  assert.match(body, /const computedEl = document\.getElementById\(computedWeightId\(L\.name, hi\)\);/);
+  assert.match(body, /const badgeEl = document\.getElementById\(smartBadgeId\(L\.name, hi\)\);/);
+  assert.match(body, /if \(badgeEl\) badgeEl\.hidden = computed === null;/);
 });
 
-test("a computed weight requires all three: usable height and circumference (both > 0) and a known resin density - missing any one falls back to hiding the readout, not a fake/zero value", () => {
-  const body = functionBody("refreshSmartHopperComputedWeights");
-  assert.match(body, /const resin = \(heightVal > 0 && circVal > 0 && hopper\.resinName\)/);
-  assert.match(body, /if \(heightVal > 0 && circVal > 0 && density\)\{/);
+test("a computed weight (and therefore the SMART badge) requires Smart Hoppers to be enabled AND all three: usable height and circumference (both > 0) and a known resin density - missing any one falls back to hiding both, not a fake/zero value", () => {
+  const body = functionBody("refreshSmartHopperState");
+  assert.match(body, /const resin = \(state\.smartHoppersEnabled && heightVal > 0 && circVal > 0 && hopper\.resinName\)/);
   assert.match(body, /if \(computed !== null\)\{/);
-  assert.match(body, /el\.hidden = false;/);
-  assert.match(body, /el\.hidden = true;/);
+  assert.match(body, /computedEl\.hidden = false;/);
+  assert.match(body, /computedEl\.hidden = true;/);
 });
 
-test("refreshSmartHopperComputedWeights runs after the initial render (so values are correct on first paint) and again from validateAndCompute (so it stays correct after any edit anywhere - the wrench popover, or a resin change in Recipe Setup) - never from a full re-render, which would close an open popover mid-edit", () => {
+test("refreshSmartHopperState runs after the initial render (so values are correct on first paint) and again from validateAndCompute (so it stays correct after any edit anywhere - the wrench popover, or a resin change in Recipe Setup) - never from a full re-render, which would close an open popover mid-edit", () => {
   const renderStart = app.indexOf("function renderWeightsArea(");
-  const renderBody = app.slice(renderStart, app.indexOf("\n    function refreshSmartHopperComputedWeights", renderStart));
-  assert.match(renderBody, /refreshSmartHopperComputedWeights\(\);\s*\n\s*\}/);
+  const renderBody = app.slice(renderStart, app.indexOf("\n    function refreshSmartHopperState", renderStart));
+  assert.match(renderBody, /refreshSmartHopperState\(\);\s*\n\s*\}/);
 
   const vacStart = app.indexOf("function validateAndCompute(");
   const vacBody = app.slice(vacStart, app.indexOf("\n    function renderResultsFlat", vacStart));
-  assert.match(vacBody, /refreshSmartHopperComputedWeights\(\);/);
+  assert.match(vacBody, /refreshSmartHopperState\(\);/);
+});
+
+test("the SMART badge is small, green, and reuses the semantic --ok token rather than a new color", () => {
+  const ruleStart = styles.indexOf(".splitSmartBadge{");
+  assert.notEqual(ruleStart, -1);
+  const rule = styles.slice(ruleStart, styles.indexOf("}", ruleStart) + 1);
+  assert.match(rule, /color: var\(--ok\);/);
+  assert.match(rule, /font-size: 9px;/);
 });

@@ -35,7 +35,13 @@
     ];
 
     const HOPPERS_PER_LAYER = 6;
-    const DEFAULT_PACKING_FACTOR = 0.63; // matches the Tools > Hopper Weight Calculator's default
+    // Packing factor is a trait of the resin (like density), not the
+    // hopper - it belongs in the resin database alongside each resin's own
+    // density, not as a per-hopper Smart Hoppers setting. That field
+    // doesn't exist in the resin database yet (pending accurate values
+    // tested against several real resins), so this fixed placeholder
+    // stands in for every resin until it does.
+    const TEMP_RESIN_PACKING_FACTOR = 0.634;
 
   
   /* ============================
@@ -771,8 +777,7 @@
                 track: !!h.track,
                 pumpOff: !!h.pumpOff,
                 usableHeight: clampNum(h.usableHeight),
-                circumference: clampNum(h.circumference),
-                packingFactor: clampNum(h.packingFactor) || DEFAULT_PACKING_FACTOR
+                circumference: clampNum(h.circumference)
               };
             })
           };
@@ -787,8 +792,7 @@
             track: false,
             pumpOff: false,
             usableHeight: 0,
-            circumference: 0,
-            packingFactor: DEFAULT_PACKING_FACTOR
+            circumference: 0
           }))
         };
       });
@@ -940,8 +944,7 @@
             track: !!fh.track,
             pumpOff: !!fh.pumpOff,
             usableHeight: clampNum(fh.usableHeight),
-            circumference: clampNum(fh.circumference),
-            packingFactor: clampNum(fh.packingFactor) || DEFAULT_PACKING_FACTOR
+            circumference: clampNum(fh.circumference)
           };
         });
         return { name, layerPct, hoppers };
@@ -1173,6 +1176,7 @@
 
     function weightId(layerName, hi){ return `w_${layerName}_${hi}`; }
     function computedWeightId(layerName, hi){ return `cw_${layerName}_${hi}`; }
+    function smartBadgeId(layerName, hi){ return `sm_${layerName}_${hi}`; }
     function hopperPositionLabel(hi){
       if (state.hopperNamingLine9 === "main") return hi === 0 ? "Main" : String(hi);
       return String(hi + 1);
@@ -1350,21 +1354,9 @@
             circInput.setAttribute("aria-label", `${hopperBadgeLabel(L.name, hi)} circumference in inches`);
             circLabel.append(circCaption, circInput);
 
-            const packingLabel = document.createElement("label");
-            const packingCaption = document.createElement("span");
-            packingCaption.textContent = "Packing factor";
-            const packingInput = document.createElement("input");
-            packingInput.id = `gp_${L.name}_${hi}`;
-            packingInput.type = "text";
-            packingInput.inputMode = "decimal";
-            packingInput.value = String(clampNum(L.hoppers[hi].packingFactor) || DEFAULT_PACKING_FACTOR);
-            packingInput.setAttribute("aria-label", `${hopperBadgeLabel(L.name, hi)} packing factor`);
-            const packingHint = document.createElement("div");
-            packingHint.className = "tiny";
-            packingHint.textContent = "0.58–0.68 for different pellet shapes";
-            packingLabel.append(packingCaption, packingInput, packingHint);
-
-            panel.append(heightLabel, circLabel, packingLabel);
+            // Packing factor is a trait of the resin, not this hopper - see
+            // TEMP_RESIN_PACKING_FACTOR - so there's no third field here.
+            panel.append(heightLabel, circLabel);
             geometryPopover.append(trigger, panel);
             cellRow.appendChild(geometryPopover);
 
@@ -1408,21 +1400,10 @@
               validateAndCompute({ sync: true });
               saveSession();
             });
-            packingInput.addEventListener("input",(e)=>{
-              const accepted = acceptNumericInput(
-                e.target,
-                { min: 0.58, max: 0.68, label: `${hopperBadgeLabel(L.name, hi)} packing factor` },
-                value => { L.hoppers[hi].packingFactor = value; }
-              );
-              if (!accepted) return;
-              validateAndCompute({ sync: true });
-              saveSession();
-            });
-
             // The smaller, non-interactive computed-weight readout - only
             // shown when this hopper's geometry + its assigned resin's known
             // density make a computed weight possible. Kept in sync by
-            // refreshSmartHopperComputedWeights() (called from
+            // refreshSmartHopperState() (called from
             // validateAndCompute, and once here for the initial render)
             // rather than a full re-render, so typing in this popover never
             // closes itself. Appended after .weightsCellRow below (not here)
@@ -1544,46 +1525,55 @@
         (v)=>{ state.smartHoppersEnabled = !!v; renderWeightsArea(); }
       );
 
-      refreshSmartHopperComputedWeights();
+      refreshSmartHopperState();
     }
 
-    // Recomputes and updates every visible .weightsComputedWeight readout
+    // Recomputes, for every hopper, whether a Smart Hoppers weight is
+    // currently computable, and updates every UI surface that reflects it
     // in place - never a re-render, so this is safe to call from
     // validateAndCompute() on every keystroke (including while a wrench
-    // popover is open) without ever closing anything. A hopper's computed
-    // weight depends on state.layers[].hoppers[] fields (usableHeight,
-    // circumference, packingFactor, resinName) that can change from
-    // several places - the wrench popover itself, and Recipe Setup's own
-    // resin inputs - so this is called centrally from validateAndCompute
-    // rather than wired individually into every one of those call sites.
-    function refreshSmartHopperComputedWeights(){
-      if (!state.smartHoppersEnabled) return;
+    // popover is open) without ever closing anything. That depends on
+    // state.layers[].hoppers[] fields (usableHeight, circumference,
+    // resinName) that can change from several places - the wrench popover
+    // in Receiver Hopper Weights, and Recipe Setup's own resin input - so
+    // this is called centrally from validateAndCompute rather than wired
+    // individually into every one of those call sites. Surfaces updated:
+    // the computed-weight readout under the weight field (Receiver Hopper
+    // Weights), and the small "SMART" badge next to the tracking clock
+    // (Recipe Setup).
+    function refreshSmartHopperState(){
       state.layers.forEach(L=>{
         L.hoppers.forEach((hopper, hi)=>{
-          const el = document.getElementById(computedWeightId(L.name, hi));
-          if (!el) return;
           const heightVal = clampNum(hopper.usableHeight);
           const circVal = clampNum(hopper.circumference);
-          const packingVal = clampNum(hopper.packingFactor) || DEFAULT_PACKING_FACTOR;
-          const resin = (heightVal > 0 && circVal > 0 && hopper.resinName)
+          const resin = (state.smartHoppersEnabled && heightVal > 0 && circVal > 0 && hopper.resinName)
             ? resinLookup?.findExactResin?.(hopper.resinName, resinCatalogRecords)
             : null;
           const density = resin?.density_g_cm3;
           let computed = null;
-          if (heightVal > 0 && circVal > 0 && density){
-            const bulkDensity = calculators.estimateBulkDensity(density, packingVal);
+          if (density){
+            // TEMP_RESIN_PACKING_FACTOR stands in for every resin until
+            // the resin database has its own per-resin packing factor.
+            const bulkDensity = calculators.estimateBulkDensity(density, TEMP_RESIN_PACKING_FACTOR);
             const value = calculators.calculateHopperWeight(circVal, heightVal, bulkDensity);
             if (Number.isFinite(value) && value > 0) computed = value;
           }
-          if (computed !== null){
-            el.hidden = false;
-            el.textContent = `≈ ${fmtNum(computed, 1)} lb`;
-            el.title = `Computed from ${hopperBadgeLabel(L.name, hi)}'s geometry and ${resin.resin_code}'s density (${density} g/cm³).`;
-          } else {
-            el.hidden = true;
-            el.textContent = "";
-            el.removeAttribute("title");
+
+          const computedEl = document.getElementById(computedWeightId(L.name, hi));
+          if (computedEl){
+            if (computed !== null){
+              computedEl.hidden = false;
+              computedEl.textContent = `≈ ${fmtNum(computed, 1)} lb`;
+              computedEl.title = `Computed from ${hopperBadgeLabel(L.name, hi)}'s geometry and ${resin.resin_code}'s density (${density} g/cm³).`;
+            } else {
+              computedEl.hidden = true;
+              computedEl.textContent = "";
+              computedEl.removeAttribute("title");
+            }
           }
+
+          const badgeEl = document.getElementById(smartBadgeId(L.name, hi));
+          if (badgeEl) badgeEl.hidden = computed === null;
         });
       });
     }
@@ -2109,6 +2099,20 @@
           trackButton.appendChild(clockIcon);
           trackControl.appendChild(trackButton);
 
+          // Smart Hoppers indicator: shows when this hopper's weight is
+          // currently being computed from geometry + its resin's known
+          // density (see refreshSmartHopperState) rather than only
+          // discoverable back in Receiver Hopper Weights. Always present in
+          // the DOM (unlike the wrench, which only exists when Smart
+          // Hoppers is on) - simplest to just keep it hidden by default and
+          // let the same central refresh function control visibility.
+          const smartBadge = document.createElement("span");
+          smartBadge.id = smartBadgeId(L.name, hi);
+          smartBadge.className = "splitSmartBadge";
+          smartBadge.textContent = "SMART";
+          smartBadge.hidden = true;
+          smartBadge.title = `${hopperBadgeLabel(L.name, hi)}'s weight is computed from Smart Hopper geometry and its resin's density`;
+
           const clearButton = document.createElement("button");
           clearButton.type = "button";
           clearButton.className = "splitClearButton";
@@ -2117,7 +2121,7 @@
           clearButton.title = `Clear ${hopperBadgeLabel(L.name, hi)}`;
           if(hopperRearrangement?.active){selector.disabled=true;resinInput.disabled=true;pctInput.disabled=true;trackButton.disabled=true;clearButton.disabled=true;}
 
-          cellHeader.append(trackControl, clearButton);
+          cellHeader.append(trackControl, smartBadge, clearButton);
           controls.appendChild(pctWrap);
           editor.append(cellTop, controls);
           td.append(cellHeader, editor);
@@ -2763,7 +2767,7 @@
       updateFooterNext(flat, changeoverDate);
       renderResinCalculator();
       updateCollapsedSummaries();
-      refreshSmartHopperComputedWeights();
+      refreshSmartHopperState();
       saveSession();
       if (sync) notifyActiveJobMutation({ immediate, kind });
     }

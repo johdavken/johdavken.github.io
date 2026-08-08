@@ -47,21 +47,19 @@ test("all the original validation rules survive unchanged - schema version, line
   }
 });
 
-test("Smart Hoppers geometry (usable_heights_in, circumferences_in, packing_factors) is validated only when present - absence is not an error, matching profiles saved before this feature existed", () => {
+test("Smart Hoppers geometry (usable_heights_in, circumferences_in) is validated only when present - absence is not an error, matching profiles saved before this feature existed. Packing factor is deliberately not part of this payload - it's a trait of the resin, not the hopper, and belongs in the resin database instead", () => {
   assert.match(sql, /if v_layer \? 'usable_heights_in' then/);
   assert.match(sql, /if v_layer \? 'circumferences_in' then/);
-  assert.match(sql, /if v_layer \? 'packing_factors' then/);
+  assert.doesNotMatch(sql, /packing_factors/);
   // Each is gated behind its own "if v_layer ? '...'" check, so a payload
   // missing the key entirely skips validation for it rather than failing.
 });
 
-test("each geometry array, when present, must be exactly 6 numeric values - usable height/circumference non-negative, packing factor between 0.58 and 0.68 (matching the client's own range)", () => {
+test("each geometry array, when present, must be exactly 6 non-negative numeric values", () => {
   assert.match(sql, /jsonb_array_length\(v_layer->'usable_heights_in'\) <> 6/);
   assert.match(sql, /\(v_layer->'usable_heights_in'->>v_hopper_index\)::numeric < 0/);
   assert.match(sql, /jsonb_array_length\(v_layer->'circumferences_in'\) <> 6/);
   assert.match(sql, /\(v_layer->'circumferences_in'->>v_hopper_index\)::numeric < 0/);
-  assert.match(sql, /jsonb_array_length\(v_layer->'packing_factors'\) <> 6/);
-  assert.match(sql, /\(v_layer->'packing_factors'->>v_hopper_index\)::numeric not between 0\.58 and 0\.68/);
 });
 
 test("geometry validation only applies on the receiver_weight_profile branch, not the recipe branch - a recipe payload can't carry physical-equipment fields at all", () => {
@@ -70,7 +68,6 @@ test("geometry validation only applies on the receiver_weight_profile branch, no
   const recipeBranch = sql.slice(recipeBranchStart, sql.indexOf("end if;\n  end loop;", recipeBranchStart));
   assert.doesNotMatch(recipeBranch, /usable_heights_in/);
   assert.doesNotMatch(recipeBranch, /circumferences_in/);
-  assert.doesNotMatch(recipeBranch, /packing_factors/);
 });
 
 test("this migration is additive - every distinct error message that existed in the base migration's receiver_weight_profile branch also appears here unchanged", () => {

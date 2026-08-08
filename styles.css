@@ -1879,6 +1879,17 @@ details[open] > summary .chevSatellite{
   color: var(--title);
   opacity:1;
 }
+/* Shown when this hopper's weight is currently computed from Smart Hopper
+   geometry + its resin's known density (see refreshSmartHopperState in
+   app.js), rather than the operator's own entered weight. */
+.splitSmartBadge{
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .04em;
+  color: var(--ok);
+  white-space: nowrap;
+}
+.splitSmartBadge[hidden]{ display: none; }
 @media (hover:hover){
   .splitMatrixCell.empty .splitTrackButton:not(.active){opacity:0}
   .splitMatrixCell.empty:hover .splitTrackButton,.splitMatrixCell.empty:focus-within .splitTrackButton{opacity:1}

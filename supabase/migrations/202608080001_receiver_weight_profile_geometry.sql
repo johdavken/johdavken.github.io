@@ -1,10 +1,12 @@
 begin;
 
--- Smart Hoppers geometry (usable height, circumference, packing factor) is
--- optional on a receiver_weight_profile payload: profiles saved before this
--- feature existed simply won't have usable_heights_in/circumferences_in/
--- packing_factors, and that's fine - only *malformed* geometry (wrong
--- length, non-numeric, out-of-range) is rejected. Not applied yet; this is
+-- Smart Hoppers geometry (usable height, circumference) is optional on a
+-- receiver_weight_profile payload: profiles saved before this feature
+-- existed simply won't have usable_heights_in/circumferences_in, and
+-- that's fine - only *malformed* geometry (wrong length, non-numeric,
+-- negative) is rejected. Packing factor is not part of this: it's a trait
+-- of the resin, not the hopper, and belongs in the resin database instead
+-- once that field exists there. Not applied yet; this is
 -- server-side hardening to match the client-side validation already added
 -- in workspace-configuration-payloads.js. The existing function already
 -- accepted these extra JSONB keys without complaint (it doesn't reject
@@ -115,18 +117,6 @@ begin
           if jsonb_typeof(v_layer->'circumferences_in'->v_hopper_index) <> 'number'
              or (v_layer->'circumferences_in'->>v_hopper_index)::numeric < 0 then
             raise exception using errcode = '22023', message = 'invalid_hopper_circumference';
-          end if;
-        end loop;
-      end if;
-      if v_layer ? 'packing_factors' then
-        if jsonb_typeof(v_layer->'packing_factors') <> 'array'
-           or jsonb_array_length(v_layer->'packing_factors') <> 6 then
-          raise exception using errcode = '22023', message = 'invalid_hopper_packing_factors';
-        end if;
-        for v_hopper_index in 0..5 loop
-          if jsonb_typeof(v_layer->'packing_factors'->v_hopper_index) <> 'number'
-             or (v_layer->'packing_factors'->>v_hopper_index)::numeric not between 0.58 and 0.68 then
-            raise exception using errcode = '22023', message = 'invalid_hopper_packing_factor';
           end if;
         end loop;
       end if;

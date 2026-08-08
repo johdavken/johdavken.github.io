@@ -7,7 +7,6 @@
 
   const SCHEMA_VERSION = 1;
   const HOPPERS_PER_LAYER = 6;
-  const DEFAULT_PACKING_FACTOR = 0.63; // must match app.js's own DEFAULT_PACKING_FACTOR
   const LINE_LAYERS = Object.freeze({ 1: ["A"], 3: ["A", "B", "C"], 5: ["A", "B", "C", "D", "E"] });
 
   function expectedLayerNames(lineType){ return LINE_LAYERS[Number(lineType)] || null; }
@@ -56,8 +55,7 @@
           // same way. Optional on read (see validate/apply below) so
           // profiles saved before this existed keep loading unchanged.
           usable_heights_in: Array.from({ length: HOPPERS_PER_LAYER }, (_, index)=>layer?.hoppers?.[index]?.usableHeight ?? 0),
-          circumferences_in: Array.from({ length: HOPPERS_PER_LAYER }, (_, index)=>layer?.hoppers?.[index]?.circumference ?? 0),
-          packing_factors: Array.from({ length: HOPPERS_PER_LAYER }, (_, index)=>layer?.hoppers?.[index]?.packingFactor ?? DEFAULT_PACKING_FACTOR)
+          circumferences_in: Array.from({ length: HOPPERS_PER_LAYER }, (_, index)=>layer?.hoppers?.[index]?.circumference ?? 0)
         };
       })
     };
@@ -98,15 +96,6 @@
           });
         }
       }
-      if (layer?.packing_factors !== undefined){
-        if (!Array.isArray(layer.packing_factors) || layer.packing_factors.length !== HOPPERS_PER_LAYER){
-          errors.push(`Layer ${layer.name} packing factors must contain exactly ${HOPPERS_PER_LAYER} values.`);
-        } else {
-          layer.packing_factors.forEach((value, index)=>{
-            if (!finiteInRange(value, 0.58, 0.68)) errors.push(`Layer ${layer.name} hopper ${index + 1} packing factor must be between 0.58 and 0.68.`);
-          });
-        }
-      }
     });
     return validationResult(errors);
   }
@@ -132,9 +121,6 @@
       }
       if (Array.isArray(profileLayer.circumferences_in)){
         profileLayer.circumferences_in.forEach((value, hopperIndex)=>{ state.layers[layerIndex].hoppers[hopperIndex].circumference = value; });
-      }
-      if (Array.isArray(profileLayer.packing_factors)){
-        profileLayer.packing_factors.forEach((value, hopperIndex)=>{ state.layers[layerIndex].hoppers[hopperIndex].packingFactor = value; });
       }
     });
     return { ok: true, lineTypeChanged: false };
@@ -210,14 +196,13 @@
             resinName: normalizeResinName(hopper.resin_name) || "",
             // Matches the app's ensureLayers() defaults when a recipe adds a layer.
             // A recipe never carries physical-equipment values - weight, and now
-            // Smart Hoppers' usableHeight/circumference/packingFactor, always come
-            // from the hopper already in state, never from the recipe payload.
+            // Smart Hoppers' usableHeight/circumference, always come from the
+            // hopper already in state, never from the recipe payload.
             weight: physical?.weight ?? 0,
             track: !!physical?.track,
             pumpOff: !!physical?.pumpOff,
             usableHeight: physical?.usableHeight ?? 0,
-            circumference: physical?.circumference ?? 0,
-            packingFactor: physical?.packingFactor ?? DEFAULT_PACKING_FACTOR
+            circumference: physical?.circumference ?? 0
           };
         })
       };
