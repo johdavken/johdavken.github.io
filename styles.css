@@ -2420,11 +2420,15 @@ details[open] > summary .chevSatellite{
 
 /* The computed-weight readout: a smaller, non-interactive number under the
    operator's own weight field - only shown when this hopper's geometry and
-   its assigned resin's known density make a computed value possible. */
+   its assigned resin's known density make a computed value possible.
+   Mockup option 9 ("checkmark-verified"): --ok green + a checkmark rather
+   than the theme's own accent color (--title), which in several themes
+   (e.g. Light, where it's a brick red) reads as a warning rather than a
+   confirmed/validated value. */
 .weightsComputedWeight{
   margin-top: 2px;
   font-size: var(--font-tiny);
-  color: var(--title);
+  color: var(--ok);
   font-weight: 700;
 }
 .weightsMatrixCell .weightsInputWithUnit input{

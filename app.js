@@ -1582,7 +1582,7 @@
           if (computedEl){
             if (smart){
               computedEl.hidden = false;
-              computedEl.textContent = `≈ ${fmtNum(smart.value, 1)} lb`;
+              computedEl.textContent = `✓ ${fmtNum(smart.value, 1)} lb`;
               computedEl.title = `Computed from ${hopperBadgeLabel(L.name, hi)}'s geometry and ${smart.resin.resin_code}'s density (${smart.density} g/cm³). Used for the run-down formula instead of the entered weight above.`;
             } else {
               computedEl.hidden = true;

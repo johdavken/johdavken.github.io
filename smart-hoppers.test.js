@@ -326,3 +326,13 @@ test("the \"weights not set\" and \"missing weight\" warnings also account for s
   assert.match(body, /L\.hoppers\.every\(h=>effectiveHopperWeight\(h\) === 0\)/);
   assert.match(body, /tracked\.filter\(x=>effectiveHopperWeight\(x\.h\) <= 0\)\.length/);
 });
+
+test("the computed-weight readout uses the checkmark-verified style (mockup option 9): a checkmark, and --ok green instead of the theme's own accent color, since --title reads as a warning in some themes (e.g. Light, a brick red)", () => {
+  const body = functionBody("refreshSmartHopperState");
+  assert.match(body, /computedEl\.textContent = `✓ \$\{fmtNum\(smart\.value, 1\)\} lb`;/);
+  const ruleStart = styles.indexOf(".weightsComputedWeight{");
+  assert.notEqual(ruleStart, -1);
+  const rule = styles.slice(ruleStart, styles.indexOf("}", ruleStart) + 1);
+  assert.match(rule, /color: var\(--ok\);/);
+  assert.doesNotMatch(rule, /color: var\(--title\);/);
+});
