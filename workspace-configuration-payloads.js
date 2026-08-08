@@ -7,6 +7,7 @@
 
   const SCHEMA_VERSION = 1;
   const HOPPERS_PER_LAYER = 6;
+  const DEFAULT_PACKING_FACTOR = 0.63; // must match app.js's own DEFAULT_PACKING_FACTOR
   const LINE_LAYERS = Object.freeze({ 1: ["A"], 3: ["A", "B", "C"], 5: ["A", "B", "C", "D", "E"] });
 
   function expectedLayerNames(lineType){ return LINE_LAYERS[Number(lineType)] || null; }
@@ -47,7 +48,17 @@
       hoppers_per_layer: HOPPERS_PER_LAYER,
       layers: names.map(name=>{
         const layer = state?.layers?.find(item=>item?.name === name);
-        return { name, receiver_weights_lb: Array.from({ length: HOPPERS_PER_LAYER }, (_, index)=>layer?.hoppers?.[index]?.weight) };
+        return {
+          name,
+          receiver_weights_lb: Array.from({ length: HOPPERS_PER_LAYER }, (_, index)=>layer?.hoppers?.[index]?.weight),
+          // Smart Hoppers geometry - same physical-equipment category as
+          // receiver_weights_lb above, so it travels with the profile the
+          // same way. Optional on read (see validate/apply below) so
+          // profiles saved before this existed keep loading unchanged.
+          usable_heights_in: Array.from({ length: HOPPERS_PER_LAYER }, (_, index)=>layer?.hoppers?.[index]?.usableHeight ?? 0),
+          circumferences_in: Array.from({ length: HOPPERS_PER_LAYER }, (_, index)=>layer?.hoppers?.[index]?.circumference ?? 0),
+          packing_factors: Array.from({ length: HOPPERS_PER_LAYER }, (_, index)=>layer?.hoppers?.[index]?.packingFactor ?? DEFAULT_PACKING_FACTOR)
+        };
       })
     };
   }
@@ -66,6 +77,36 @@
       layer.receiver_weights_lb.forEach((weight, index)=>{
         if (!finiteInRange(weight, 0)) errors.push(`Layer ${layer.name} hopper ${index + 1} weight must be a finite value of 0 or greater.`);
       });
+      // Each geometry array is optional (absent entirely = a profile saved
+      // before Smart Hoppers existed) but if present must be fully valid -
+      // partial/malformed arrays are rejected rather than silently ignored.
+      if (layer?.usable_heights_in !== undefined){
+        if (!Array.isArray(layer.usable_heights_in) || layer.usable_heights_in.length !== HOPPERS_PER_LAYER){
+          errors.push(`Layer ${layer.name} usable heights must contain exactly ${HOPPERS_PER_LAYER} values.`);
+        } else {
+          layer.usable_heights_in.forEach((value, index)=>{
+            if (!finiteInRange(value, 0)) errors.push(`Layer ${layer.name} hopper ${index + 1} usable height must be a finite value of 0 or greater.`);
+          });
+        }
+      }
+      if (layer?.circumferences_in !== undefined){
+        if (!Array.isArray(layer.circumferences_in) || layer.circumferences_in.length !== HOPPERS_PER_LAYER){
+          errors.push(`Layer ${layer.name} circumferences must contain exactly ${HOPPERS_PER_LAYER} values.`);
+        } else {
+          layer.circumferences_in.forEach((value, index)=>{
+            if (!finiteInRange(value, 0)) errors.push(`Layer ${layer.name} hopper ${index + 1} circumference must be a finite value of 0 or greater.`);
+          });
+        }
+      }
+      if (layer?.packing_factors !== undefined){
+        if (!Array.isArray(layer.packing_factors) || layer.packing_factors.length !== HOPPERS_PER_LAYER){
+          errors.push(`Layer ${layer.name} packing factors must contain exactly ${HOPPERS_PER_LAYER} values.`);
+        } else {
+          layer.packing_factors.forEach((value, index)=>{
+            if (!finiteInRange(value, 0.58, 0.68)) errors.push(`Layer ${layer.name} hopper ${index + 1} packing factor must be between 0.58 and 0.68.`);
+          });
+        }
+      }
     });
     return validationResult(errors);
   }
@@ -83,6 +124,18 @@
     }
     payload.layers.forEach((profileLayer, layerIndex)=>{
       profileLayer.receiver_weights_lb.forEach((weight, hopperIndex)=>{ state.layers[layerIndex].hoppers[hopperIndex].weight = weight; });
+      // Absent (not just falsy) means an old profile predating Smart
+      // Hoppers - leave whatever is already configured locally untouched
+      // rather than resetting it to 0.
+      if (Array.isArray(profileLayer.usable_heights_in)){
+        profileLayer.usable_heights_in.forEach((value, hopperIndex)=>{ state.layers[layerIndex].hoppers[hopperIndex].usableHeight = value; });
+      }
+      if (Array.isArray(profileLayer.circumferences_in)){
+        profileLayer.circumferences_in.forEach((value, hopperIndex)=>{ state.layers[layerIndex].hoppers[hopperIndex].circumference = value; });
+      }
+      if (Array.isArray(profileLayer.packing_factors)){
+        profileLayer.packing_factors.forEach((value, hopperIndex)=>{ state.layers[layerIndex].hoppers[hopperIndex].packingFactor = value; });
+      }
     });
     return { ok: true, lineTypeChanged: false };
   }
@@ -156,9 +209,15 @@
             pct: hopper.pct,
             resinName: normalizeResinName(hopper.resin_name) || "",
             // Matches the app's ensureLayers() defaults when a recipe adds a layer.
+            // A recipe never carries physical-equipment values - weight, and now
+            // Smart Hoppers' usableHeight/circumference/packingFactor, always come
+            // from the hopper already in state, never from the recipe payload.
             weight: physical?.weight ?? 0,
             track: !!physical?.track,
-            pumpOff: !!physical?.pumpOff
+            pumpOff: !!physical?.pumpOff,
+            usableHeight: physical?.usableHeight ?? 0,
+            circumference: physical?.circumference ?? 0,
+            packingFactor: physical?.packingFactor ?? DEFAULT_PACKING_FACTOR
           };
         })
       };

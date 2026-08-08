@@ -2406,6 +2406,16 @@ details[open] > summary .chevSatellite{
 }
 .hopperGeometryPanel label:first-child{ margin-top: 0; }
 .hopperGeometryPanel input{ width: 100%; margin-top: 3px; }
+
+/* The computed-weight readout: a smaller, non-interactive number under the
+   operator's own weight field - only shown when this hopper's geometry and
+   its assigned resin's known density make a computed value possible. */
+.weightsComputedWeight{
+  margin-top: 2px;
+  font-size: var(--font-tiny);
+  color: var(--title);
+  font-weight: 700;
+}
 .weightsMatrixCell .weightsInputWithUnit input{
   min-width: 0;
   text-align: right;

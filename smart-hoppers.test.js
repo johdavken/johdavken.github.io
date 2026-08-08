@@ -11,14 +11,20 @@ const rearrangement = fs.readFileSync("hopper-rearrangement.js", "utf8");
 // Smart Hoppers, stage 1: the toggle (replacing "Select row" in the
 // Receiver Hopper Weights corner cell), the per-hopper wrench popover for
 // entering usable height/circumference, and the underlying data model.
-// Not wired yet: computing weight from those values + a resin's known
-// density, or feeding a computed weight into the run-down formula - that's
-// a later stage. Height/circumference are physical-equipment values, same
-// category as the existing `weight` field - they should behave exactly
-// like it: attached to the physical hopper slot (untouched by
-// rearrangement, unaffected by which resin is currently assigned), synced
-// via RT Sync same as weight already is, but not yet part of the
-// Receiver Weight Profile save/load contract.
+// Height/circumference are physical-equipment values, same category as the
+// existing `weight` field - they behave exactly like it: attached to the
+// physical hopper slot (untouched by rearrangement, unaffected by which
+// resin is currently assigned), synced via RT Sync same as weight already
+// is, and (as of stage 2) part of the Receiver Weight Profile save/load
+// contract too (see workspace-configuration-payloads.test.js).
+//
+// Stage 2: a packing factor field alongside height/circumference in the
+// wrench popover, and the actual computation - a smaller, non-interactive
+// number under the operator's own weight field, shown only when this
+// hopper's geometry (height, circumference, packing factor) and its
+// assigned resin's known density are all available. Not wired yet: feeding
+// that computed number into the run-down formula instead of the operator's
+// entered weight - that's the next stage.
 
 function functionBody(name){
   const start = app.indexOf(`function ${name}(`);
@@ -177,4 +183,77 @@ test("the panel is position:fixed with JS-computed placement, not position:absol
   assert.match(body, /const rect = trigger\.getBoundingClientRect\(\);/);
   assert.match(body, /left = Math\.max\(8, Math\.min\(left, window\.innerWidth - panelWidth - 8\)\);/);
   assert.match(body, /if \(top \+ panelHeight > window\.innerHeight - 8\)\{/);
+});
+
+// --- Stage 2: packing factor, and the computed-weight readout ---
+
+test("state's default packing factor (0.63) matches the Tools > Hopper Weight Calculator's own default, and ensureLayers/applyPayload give every hopper a packingFactor field", () => {
+  assert.match(app, /const DEFAULT_PACKING_FACTOR = 0\.63;/);
+  const ensureBody = functionBody("ensureLayers");
+  assert.match(ensureBody, /packingFactor: clampNum\(h\.packingFactor\) \|\| DEFAULT_PACKING_FACTOR/);
+  assert.match(ensureBody, /packingFactor: DEFAULT_PACKING_FACTOR\s*\n\s*\}\)\)/);
+  const applyStart = app.indexOf("function applyPayload(");
+  const applyBody = app.slice(applyStart, app.indexOf("\n    function ", applyStart + 1));
+  assert.match(applyBody, /packingFactor: clampNum\(fh\.packingFactor\) \|\| DEFAULT_PACKING_FACTOR/);
+});
+
+test("the wrench popover has a third field for packing factor, validated to the same 0.58-0.68 range as the Tools calculator, with a hint explaining the range", () => {
+  const start = app.indexOf("function renderWeightsArea(");
+  const body = app.slice(start, app.indexOf("\n    function printRecipeSheet", start));
+  assert.match(body, /packingInput\.id = `gp_\$\{L\.name\}_\$\{hi\}`;/);
+  assert.match(body, /packingCaption\.textContent = "Packing factor";/);
+  assert.match(body, /packingHint\.textContent = "0\.58–0\.68 for different pellet shapes";/);
+  assert.match(body, /packingHint\.className = "tiny";/, "reuses the existing .tiny utility instead of new CSS");
+  assert.match(body, /value => \{ L\.hoppers\[hi\]\.packingFactor = value; \}/);
+  const packingBlock = body.slice(body.indexOf("packingInput.addEventListener"), body.indexOf("// The smaller"));
+  assert.match(packingBlock, /\{ min: 0\.58, max: 0\.68, label: `\$\{hopperBadgeLabel\(L\.name, hi\)\} packing factor` \}/);
+});
+
+test("the computed-weight element is appended after .weightsCellRow, not before - it must sit visually below the weight field", () => {
+  const start = app.indexOf("function renderWeightsArea(");
+  const body = app.slice(start, app.indexOf("\n    function printRecipeSheet", start));
+  const cellRowAppend = body.indexOf("td.appendChild(cellRow);");
+  const computedAppend = body.indexOf("if (computedWeight) td.appendChild(computedWeight);");
+  assert.notEqual(cellRowAppend, -1);
+  assert.notEqual(computedAppend, -1);
+  assert.ok(cellRowAppend < computedAppend, "cellRow must be appended to the <td> before computedWeight");
+});
+
+test("the computed-weight element starts hidden and is only ever built when Smart Hoppers is enabled, same gating as the wrench", () => {
+  const start = app.indexOf("function renderWeightsArea(");
+  const body = app.slice(start, app.indexOf("\n    function printRecipeSheet", start));
+  const ifStart = body.indexOf("if (state.smartHoppersEnabled){");
+  const ifEnd = body.indexOf("\n          }", ifStart);
+  const ifBlock = body.slice(ifStart, ifEnd);
+  assert.match(ifBlock, /computedWeight = document\.createElement\("div"\);/);
+  assert.match(ifBlock, /computedWeight\.id = computedWeightId\(L\.name, hi\);/);
+  assert.match(ifBlock, /computedWeight\.className = "weightsComputedWeight";/);
+  assert.match(ifBlock, /computedWeight\.hidden = true;/);
+});
+
+test("refreshSmartHopperComputedWeights looks up the hopper's assigned resin via the same resinLookup/resinCatalogRecords the rest of the app already uses, and computes via the shared calculators module (estimateBulkDensity -> calculateHopperWeight) - no duplicated formula logic", () => {
+  const body = functionBody("refreshSmartHopperComputedWeights");
+  assert.match(body, /if \(!state\.smartHoppersEnabled\) return;/);
+  assert.match(body, /resinLookup\?\.findExactResin\?\.\(hopper\.resinName, resinCatalogRecords\)/);
+  assert.match(body, /const bulkDensity = calculators\.estimateBulkDensity\(density, packingVal\);/);
+  assert.match(body, /const value = calculators\.calculateHopperWeight\(circVal, heightVal, bulkDensity\);/);
+});
+
+test("a computed weight requires all three: usable height and circumference (both > 0) and a known resin density - missing any one falls back to hiding the readout, not a fake/zero value", () => {
+  const body = functionBody("refreshSmartHopperComputedWeights");
+  assert.match(body, /const resin = \(heightVal > 0 && circVal > 0 && hopper\.resinName\)/);
+  assert.match(body, /if \(heightVal > 0 && circVal > 0 && density\)\{/);
+  assert.match(body, /if \(computed !== null\)\{/);
+  assert.match(body, /el\.hidden = false;/);
+  assert.match(body, /el\.hidden = true;/);
+});
+
+test("refreshSmartHopperComputedWeights runs after the initial render (so values are correct on first paint) and again from validateAndCompute (so it stays correct after any edit anywhere - the wrench popover, or a resin change in Recipe Setup) - never from a full re-render, which would close an open popover mid-edit", () => {
+  const renderStart = app.indexOf("function renderWeightsArea(");
+  const renderBody = app.slice(renderStart, app.indexOf("\n    function refreshSmartHopperComputedWeights", renderStart));
+  assert.match(renderBody, /refreshSmartHopperComputedWeights\(\);\s*\n\s*\}/);
+
+  const vacStart = app.indexOf("function validateAndCompute(");
+  const vacBody = app.slice(vacStart, app.indexOf("\n    function renderResultsFlat", vacStart));
+  assert.match(vacBody, /refreshSmartHopperComputedWeights\(\);/);
 });

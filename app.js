@@ -35,6 +35,7 @@
     ];
 
     const HOPPERS_PER_LAYER = 6;
+    const DEFAULT_PACKING_FACTOR = 0.63; // matches the Tools > Hopper Weight Calculator's default
 
   
   /* ============================
@@ -770,7 +771,8 @@
                 track: !!h.track,
                 pumpOff: !!h.pumpOff,
                 usableHeight: clampNum(h.usableHeight),
-                circumference: clampNum(h.circumference)
+                circumference: clampNum(h.circumference),
+                packingFactor: clampNum(h.packingFactor) || DEFAULT_PACKING_FACTOR
               };
             })
           };
@@ -785,7 +787,8 @@
             track: false,
             pumpOff: false,
             usableHeight: 0,
-            circumference: 0
+            circumference: 0,
+            packingFactor: DEFAULT_PACKING_FACTOR
           }))
         };
       });
@@ -937,7 +940,8 @@
             track: !!fh.track,
             pumpOff: !!fh.pumpOff,
             usableHeight: clampNum(fh.usableHeight),
-            circumference: clampNum(fh.circumference)
+            circumference: clampNum(fh.circumference),
+            packingFactor: clampNum(fh.packingFactor) || DEFAULT_PACKING_FACTOR
           };
         });
         return { name, layerPct, hoppers };
@@ -1168,6 +1172,7 @@
     }
 
     function weightId(layerName, hi){ return `w_${layerName}_${hi}`; }
+    function computedWeightId(layerName, hi){ return `cw_${layerName}_${hi}`; }
     function hopperPositionLabel(hi){
       if (state.hopperNamingLine9 === "main") return hi === 0 ? "Main" : String(hi);
       return String(hi + 1);
@@ -1307,6 +1312,7 @@
           cellRow.append(selector, fieldWrap);
 
           let geometryPopover = null;
+          let computedWeight = null;
           if (state.smartHoppersEnabled){
             geometryPopover = document.createElement("details");
             geometryPopover.className = "hopperGeometryPopover";
@@ -1344,7 +1350,21 @@
             circInput.setAttribute("aria-label", `${hopperBadgeLabel(L.name, hi)} circumference in inches`);
             circLabel.append(circCaption, circInput);
 
-            panel.append(heightLabel, circLabel);
+            const packingLabel = document.createElement("label");
+            const packingCaption = document.createElement("span");
+            packingCaption.textContent = "Packing factor";
+            const packingInput = document.createElement("input");
+            packingInput.id = `gp_${L.name}_${hi}`;
+            packingInput.type = "text";
+            packingInput.inputMode = "decimal";
+            packingInput.value = String(clampNum(L.hoppers[hi].packingFactor) || DEFAULT_PACKING_FACTOR);
+            packingInput.setAttribute("aria-label", `${hopperBadgeLabel(L.name, hi)} packing factor`);
+            const packingHint = document.createElement("div");
+            packingHint.className = "tiny";
+            packingHint.textContent = "0.58–0.68 for different pellet shapes";
+            packingLabel.append(packingCaption, packingInput, packingHint);
+
+            panel.append(heightLabel, circLabel, packingLabel);
             geometryPopover.append(trigger, panel);
             cellRow.appendChild(geometryPopover);
 
@@ -1388,9 +1408,33 @@
               validateAndCompute({ sync: true });
               saveSession();
             });
+            packingInput.addEventListener("input",(e)=>{
+              const accepted = acceptNumericInput(
+                e.target,
+                { min: 0.58, max: 0.68, label: `${hopperBadgeLabel(L.name, hi)} packing factor` },
+                value => { L.hoppers[hi].packingFactor = value; }
+              );
+              if (!accepted) return;
+              validateAndCompute({ sync: true });
+              saveSession();
+            });
+
+            // The smaller, non-interactive computed-weight readout - only
+            // shown when this hopper's geometry + its assigned resin's known
+            // density make a computed weight possible. Kept in sync by
+            // refreshSmartHopperComputedWeights() (called from
+            // validateAndCompute, and once here for the initial render)
+            // rather than a full re-render, so typing in this popover never
+            // closes itself. Appended after .weightsCellRow below (not here)
+            // so it visually sits underneath the weight field, not above it.
+            computedWeight = document.createElement("div");
+            computedWeight.id = computedWeightId(L.name, hi);
+            computedWeight.className = "weightsComputedWeight";
+            computedWeight.hidden = true;
           }
 
           td.appendChild(cellRow);
+          if (computedWeight) td.appendChild(computedWeight);
           tr.appendChild(td);
 
           cellRefs.set(key, { td, selector, input, layer: L, hi });
@@ -1499,6 +1543,49 @@
         ()=> !!state.smartHoppersEnabled,
         (v)=>{ state.smartHoppersEnabled = !!v; renderWeightsArea(); }
       );
+
+      refreshSmartHopperComputedWeights();
+    }
+
+    // Recomputes and updates every visible .weightsComputedWeight readout
+    // in place - never a re-render, so this is safe to call from
+    // validateAndCompute() on every keystroke (including while a wrench
+    // popover is open) without ever closing anything. A hopper's computed
+    // weight depends on state.layers[].hoppers[] fields (usableHeight,
+    // circumference, packingFactor, resinName) that can change from
+    // several places - the wrench popover itself, and Recipe Setup's own
+    // resin inputs - so this is called centrally from validateAndCompute
+    // rather than wired individually into every one of those call sites.
+    function refreshSmartHopperComputedWeights(){
+      if (!state.smartHoppersEnabled) return;
+      state.layers.forEach(L=>{
+        L.hoppers.forEach((hopper, hi)=>{
+          const el = document.getElementById(computedWeightId(L.name, hi));
+          if (!el) return;
+          const heightVal = clampNum(hopper.usableHeight);
+          const circVal = clampNum(hopper.circumference);
+          const packingVal = clampNum(hopper.packingFactor) || DEFAULT_PACKING_FACTOR;
+          const resin = (heightVal > 0 && circVal > 0 && hopper.resinName)
+            ? resinLookup?.findExactResin?.(hopper.resinName, resinCatalogRecords)
+            : null;
+          const density = resin?.density_g_cm3;
+          let computed = null;
+          if (heightVal > 0 && circVal > 0 && density){
+            const bulkDensity = calculators.estimateBulkDensity(density, packingVal);
+            const value = calculators.calculateHopperWeight(circVal, heightVal, bulkDensity);
+            if (Number.isFinite(value) && value > 0) computed = value;
+          }
+          if (computed !== null){
+            el.hidden = false;
+            el.textContent = `≈ ${fmtNum(computed, 1)} lb`;
+            el.title = `Computed from ${hopperBadgeLabel(L.name, hi)}'s geometry and ${resin.resin_code}'s density (${density} g/cm³).`;
+          } else {
+            el.hidden = true;
+            el.textContent = "";
+            el.removeAttribute("title");
+          }
+        });
+      });
     }
 
     function printRecipeSheet(){
@@ -2676,6 +2763,7 @@
       updateFooterNext(flat, changeoverDate);
       renderResinCalculator();
       updateCollapsedSummaries();
+      refreshSmartHopperComputedWeights();
       saveSession();
       if (sync) notifyActiveJobMutation({ immediate, kind });
     }
