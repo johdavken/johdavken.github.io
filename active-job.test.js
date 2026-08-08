@@ -61,3 +61,17 @@ test("meaningful active-job detection recognizes production state", () => {
   assert.equal(hasMeaningfulActiveJob(snapshotActiveJob(stateFixture(), "0.17")), true);
   assert.equal(hasMeaningfulActiveJob({ lineRate: 0, gauge: 0, changeoverTime: "", layers: [] }), false);
 });
+
+test("meaningful active-job detection also recognizes Smart Hoppers geometry (usable height / circumference) on an otherwise-empty hopper", () => {
+  const withHeight = { lineRate: 0, gauge: 0, changeoverTime: "", layers: [{
+    name: "A", layerPct: 0,
+    hoppers: [{ pct: 0, weight: 0, resinName: "", track: false, pumpOff: false, usableHeight: 24, circumference: 0 }]
+  }] };
+  assert.equal(hasMeaningfulActiveJob(withHeight), true);
+
+  const withCircumference = { lineRate: 0, gauge: 0, changeoverTime: "", layers: [{
+    name: "A", layerPct: 0,
+    hoppers: [{ pct: 0, weight: 0, resinName: "", track: false, pumpOff: false, usableHeight: 0, circumference: 40 }]
+  }] };
+  assert.equal(hasMeaningfulActiveJob(withCircumference), true);
+});

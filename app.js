@@ -57,7 +57,8 @@
       hopperNamingLine9: "standard", // "standard" | "main"
       showPumpOffTracked: false, // show pump-off items in Timeline
       mobileTimelineOnly: false,
-      mobileRecipeOnly: false
+      mobileRecipeOnly: false,
+      smartHoppersEnabled: false // local display preference; reveals per-hopper geometry wrench in Receiver Hopper Weights
 
     };
 
@@ -589,7 +590,8 @@
         clampNum(layer.layerPct) > 0 ||
         layer.hoppers.some((hopper,index)=>
           (index === 0 ? Math.abs(clampNum(hopper.pct) - 100) > 0.0001 : clampNum(hopper.pct) > 0) ||
-          clampNum(hopper.weight) > 0 || !!hopper.resinName || !!hopper.track || !!hopper.pumpOff
+          clampNum(hopper.weight) > 0 || !!hopper.resinName || !!hopper.track || !!hopper.pumpOff ||
+          clampNum(hopper.usableHeight) > 0 || clampNum(hopper.circumference) > 0
         )
       );
       if (configuredRemovedLayers.length && !confirm(`Changing to ${nextType} ${nextType === 1 ? "layer" : "layers"} will remove configured data for ${configuredRemovedLayers.map(layer=>layer.name).join(", ")}. Continue?`)){
@@ -766,7 +768,9 @@
                 weight: clampNum(h.weight),
                 resinName: normName(h.resinName || ""),
                 track: !!h.track,
-                pumpOff: !!h.pumpOff
+                pumpOff: !!h.pumpOff,
+                usableHeight: clampNum(h.usableHeight),
+                circumference: clampNum(h.circumference)
               };
             })
           };
@@ -779,7 +783,9 @@
             weight: 0,
             resinName: "",
             track: false,
-            pumpOff: false
+            pumpOff: false,
+            usableHeight: 0,
+            circumference: 0
           }))
         };
       });
@@ -815,6 +821,7 @@
         showPumpOffTracked: !!state.showPumpOffTracked,
         mobileTimelineOnly: !!state.mobileTimelineOnly,
         mobileRecipeOnly: !!state.mobileRecipeOnly,
+        smartHoppersEnabled: !!state.smartHoppersEnabled,
         blocksOpen
       };
     }
@@ -828,6 +835,7 @@
         showPumpOffTracked: state.showPumpOffTracked,
         mobileTimelineOnly: state.mobileTimelineOnly,
         mobileRecipeOnly: state.mobileRecipeOnly,
+        smartHoppersEnabled: state.smartHoppersEnabled,
         blocksOpen: snapshotPayload().blocksOpen
       };
       applyPayload({ ...payload, ...localPreferences }, { rebuildUI: true });
@@ -908,6 +916,7 @@
       applyMobileTimelineMode(state.mobileTimelineOnly);
       state.mobileRecipeOnly = !!payload.mobileRecipeOnly;
       applyMobileRecipeMode(state.mobileRecipeOnly);
+      state.smartHoppersEnabled = !!payload.smartHoppersEnabled;
 
 
       syncLineTypeUI();
@@ -926,7 +935,9 @@
             weight: clampNum(fh.weight),
             resinName: normName(fh.resinName || ""),
             track: !!fh.track,
-            pumpOff: !!fh.pumpOff
+            pumpOff: !!fh.pumpOff,
+            usableHeight: clampNum(fh.usableHeight),
+            circumference: clampNum(fh.circumference)
           };
         });
         return { name, layerPct, hoppers };
@@ -1215,7 +1226,19 @@
       const corner = document.createElement("th");
       corner.scope = "col";
       corner.className = "weightsRowCorner";
-      corner.textContent = "Select row";
+      const smartWrap = document.createElement("div");
+      smartWrap.className = "weightsSmartToggleWrap";
+      const smartLabel = document.createElement("span");
+      smartLabel.className = "weightsSmartToggleLabel";
+      smartLabel.textContent = "Smart";
+      const smartToggle = document.createElement("div");
+      smartToggle.id = "smartHoppersToggle";
+      smartToggle.className = "toggle";
+      smartToggle.setAttribute("role", "switch");
+      smartToggle.setAttribute("tabindex", "0");
+      smartToggle.title = "Smart Hoppers: compute weight from hopper geometry and resin density when known";
+      smartWrap.append(smartLabel, smartToggle);
+      corner.appendChild(smartWrap);
       headerRow.appendChild(corner);
       state.layers.forEach(L=>{
         const th = document.createElement("th");
@@ -1261,6 +1284,8 @@
           const id = weightId(L.name, hi);
           const td = document.createElement("td");
           td.className = "weightsMatrixCell";
+          const cellRow = document.createElement("div");
+          cellRow.className = "weightsCellRow";
 
           const selector = document.createElement("input");
           selector.type = "checkbox";
@@ -1279,7 +1304,93 @@
           const unit = document.createElement("span");
           unit.textContent = "lb";
           fieldWrap.append(input, unit);
-          td.append(selector, fieldWrap);
+          cellRow.append(selector, fieldWrap);
+
+          let geometryPopover = null;
+          if (state.smartHoppersEnabled){
+            geometryPopover = document.createElement("details");
+            geometryPopover.className = "hopperGeometryPopover";
+            geometryPopover.setAttribute("name", "hopperGeometry");
+            const trigger = document.createElement("summary");
+            trigger.className = "hopperGeometryTrigger";
+            const geometryLabel = `Set ${hopperBadgeLabel(L.name, hi)} height and circumference`;
+            trigger.setAttribute("aria-label", geometryLabel);
+            trigger.title = geometryLabel;
+            trigger.textContent = "🔧";
+            const panel = document.createElement("div");
+            panel.className = "hopperGeometryPanel";
+
+            const heightLabel = document.createElement("label");
+            const heightCaption = document.createElement("span");
+            heightCaption.textContent = "Usable height (in)";
+            const heightInput = document.createElement("input");
+            heightInput.id = `gh_${L.name}_${hi}`;
+            heightInput.type = "text";
+            heightInput.inputMode = "decimal";
+            heightInput.placeholder = "0";
+            heightInput.value = String(clampNum(L.hoppers[hi].usableHeight));
+            heightInput.setAttribute("aria-label", `${hopperBadgeLabel(L.name, hi)} usable height in inches`);
+            heightLabel.append(heightCaption, heightInput);
+
+            const circLabel = document.createElement("label");
+            const circCaption = document.createElement("span");
+            circCaption.textContent = "Circumference (in)";
+            const circInput = document.createElement("input");
+            circInput.id = `gc_${L.name}_${hi}`;
+            circInput.type = "text";
+            circInput.inputMode = "decimal";
+            circInput.placeholder = "0";
+            circInput.value = String(clampNum(L.hoppers[hi].circumference));
+            circInput.setAttribute("aria-label", `${hopperBadgeLabel(L.name, hi)} circumference in inches`);
+            circLabel.append(circCaption, circInput);
+
+            panel.append(heightLabel, circLabel);
+            geometryPopover.append(trigger, panel);
+            cellRow.appendChild(geometryPopover);
+
+            // position:fixed, placed via JS on open - the matrix scrolls
+            // inside an overflow:hidden frame, so a plain absolute panel
+            // gets clipped for any hopper near the table's bottom/right
+            // edge. Fixed positioning escapes that entirely; clamped to
+            // the viewport so it never runs off-screen either.
+            geometryPopover.addEventListener("toggle", ()=>{
+              if (!geometryPopover.open) return;
+              const rect = trigger.getBoundingClientRect();
+              const panelWidth = panel.offsetWidth || 190;
+              let left = rect.right - panelWidth;
+              left = Math.max(8, Math.min(left, window.innerWidth - panelWidth - 8));
+              let top = rect.bottom + 6;
+              const panelHeight = panel.offsetHeight || 120;
+              if (top + panelHeight > window.innerHeight - 8){
+                top = rect.top - panelHeight - 6;
+              }
+              panel.style.left = `${left}px`;
+              panel.style.top = `${Math.max(8, top)}px`;
+            });
+
+            heightInput.addEventListener("input",(e)=>{
+              const accepted = acceptNumericInput(
+                e.target,
+                { min: 0, label: `${hopperBadgeLabel(L.name, hi)} usable height` },
+                value => { L.hoppers[hi].usableHeight = value; }
+              );
+              if (!accepted) return;
+              validateAndCompute({ sync: true });
+              saveSession();
+            });
+            circInput.addEventListener("input",(e)=>{
+              const accepted = acceptNumericInput(
+                e.target,
+                { min: 0, label: `${hopperBadgeLabel(L.name, hi)} circumference` },
+                value => { L.hoppers[hi].circumference = value; }
+              );
+              if (!accepted) return;
+              validateAndCompute({ sync: true });
+              saveSession();
+            });
+          }
+
+          td.appendChild(cellRow);
           tr.appendChild(td);
 
           cellRefs.set(key, { td, selector, input, layer: L, hi });
@@ -1289,7 +1400,7 @@
             updateSelectionUI();
           });
           td.addEventListener("click",(e)=>{
-            if (e.target === input || e.target === selector) return;
+            if (e.target === input || e.target === selector || e.target.closest(".hopperGeometryPopover")) return;
             selector.checked = !selector.checked;
             selector.dispatchEvent(new Event("change"));
           });
@@ -1382,6 +1493,12 @@
       });
 
       updateSelectionUI();
+
+      hookToggle(
+        "smartHoppersToggle",
+        ()=> !!state.smartHoppersEnabled,
+        (v)=>{ state.smartHoppersEnabled = !!v; renderWeightsArea(); }
+      );
     }
 
     function printRecipeSheet(){
@@ -3753,6 +3870,9 @@
     document.addEventListener("click",event=>{
       if (statusPreferences?.open && !statusPreferences.contains(event.target)) statusPreferences.open = false;
       if (toolsIndexDropdown?.open && !toolsIndexDropdown.contains(event.target)) toolsIndexDropdown.open = false;
+      document.querySelectorAll(".hopperGeometryPopover[open]").forEach(popover=>{
+        if (!popover.contains(event.target)) popover.open = false;
+      });
     });
     document.addEventListener("keydown",event=>{
       if (event.key === "Escape" && statusPreferences?.open){
@@ -3762,6 +3882,12 @@
       if (event.key === "Escape" && toolsIndexDropdown?.open){
         toolsIndexDropdown.open = false;
         toolsIndexDropdown.querySelector(":scope > summary")?.focus();
+      }
+      if (event.key === "Escape"){
+        document.querySelectorAll(".hopperGeometryPopover[open]").forEach(popover=>{
+          popover.open = false;
+          popover.querySelector(":scope > summary")?.focus();
+        });
       }
     });
 
