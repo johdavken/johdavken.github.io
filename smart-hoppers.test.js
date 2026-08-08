@@ -29,8 +29,13 @@ const rearrangement = fs.readFileSync("hopper-rearrangement.js", "utf8");
 // Recipe Setup, shown under the exact same condition, so an operator
 // looking at the recipe (not the weights grid) can still see at a glance
 // that a hopper's weight is being computed rather than manually entered.
-// Not wired yet: feeding the computed number into the run-down formula
-// instead of the operator's entered weight - that's the next stage.
+// Stage 3: the computed number now actually drives the run-down formula.
+// smartHopperComputation(hopper) is the single source of truth for "is this
+// hopper's weight computable, and what is it" - both refreshSmartHopperState
+// (display) and effectiveHopperWeight (the value validateAndCompute's
+// run-down math, and its "weights not set"/"missing weight" warnings, all
+// use in place of the old bare hopper.weight) read from it, so there's
+// exactly one computation, never two that could drift apart.
 
 function functionBody(name){
   const start = app.indexOf(`function ${name}(`);
@@ -246,22 +251,23 @@ test("the Recipe Setup matrix gets a small \"SMART\" badge next to the tracking 
   assert.match(body, /cellHeader\.append\(trackControl, smartBadge, clearButton\);/);
 });
 
-test("refreshSmartHopperState looks up the hopper's assigned resin via the same resinLookup/resinCatalogRecords the rest of the app already uses, computes via the shared calculators module (estimateBulkDensity -> calculateHopperWeight) using the temporary fixed packing factor, and updates both the weights-grid readout and the Recipe Setup badge from one pass - no duplicated formula or lookup logic", () => {
+test("refreshSmartHopperState delegates entirely to smartHopperComputation and updates both the weights-grid readout and the Recipe Setup badge from that one result - no duplicated formula or lookup logic in this function itself", () => {
   const body = functionBody("refreshSmartHopperState");
-  assert.match(body, /resinLookup\?\.findExactResin\?\.\(hopper\.resinName, resinCatalogRecords\)/);
-  assert.match(body, /calculators\.estimateBulkDensity\(density, TEMP_RESIN_PACKING_FACTOR\)/);
-  assert.match(body, /const value = calculators\.calculateHopperWeight\(circVal, heightVal, bulkDensity\);/);
+  assert.match(body, /const smart = smartHopperComputation\(hopper\);/);
   assert.match(body, /const computedEl = document\.getElementById\(computedWeightId\(L\.name, hi\)\);/);
   assert.match(body, /const badgeEl = document\.getElementById\(smartBadgeId\(L\.name, hi\)\);/);
-  assert.match(body, /if \(badgeEl\) badgeEl\.hidden = computed === null;/);
+  assert.match(body, /if \(badgeEl\) badgeEl\.hidden = !smart;/);
 });
 
 test("a computed weight (and therefore the SMART badge) requires Smart Hoppers to be enabled AND all three: usable height and circumference (both > 0) and a known resin density - missing any one falls back to hiding both, not a fake/zero value", () => {
-  const body = functionBody("refreshSmartHopperState");
-  assert.match(body, /const resin = \(state\.smartHoppersEnabled && heightVal > 0 && circVal > 0 && hopper\.resinName\)/);
-  assert.match(body, /if \(computed !== null\)\{/);
-  assert.match(body, /computedEl\.hidden = false;/);
-  assert.match(body, /computedEl\.hidden = true;/);
+  const body = functionBody("smartHopperComputation");
+  assert.match(body, /if \(!state\.smartHoppersEnabled\) return null;/);
+  assert.match(body, /if \(!\(heightVal > 0 && circVal > 0 && hopper\.resinName\)\) return null;/);
+  assert.match(body, /if \(!density\) return null;/);
+  const refreshBody = functionBody("refreshSmartHopperState");
+  assert.match(refreshBody, /if \(smart\)\{/);
+  assert.match(refreshBody, /computedEl\.hidden = false;/);
+  assert.match(refreshBody, /computedEl\.hidden = true;/);
 });
 
 test("refreshSmartHopperState runs after the initial render (so values are correct on first paint) and again from validateAndCompute (so it stays correct after any edit anywhere - the wrench popover, or a resin change in Recipe Setup) - never from a full re-render, which would close an open popover mid-edit", () => {
@@ -280,4 +286,43 @@ test("the SMART badge is small, green, and reuses the semantic --ok token rather
   const rule = styles.slice(ruleStart, styles.indexOf("}", ruleStart) + 1);
   assert.match(rule, /color: var\(--ok\);/);
   assert.match(rule, /font-size: 9px;/);
+});
+
+// --- Stage 3: the computed weight actually drives the run-down formula ---
+
+test("smartHopperComputation is the one place that decides whether a hopper is smart-computable and what the value is - returns null (never a fallback number) when Smart Hoppers is off, geometry is incomplete, or the resin's density is unknown", () => {
+  const body = functionBody("smartHopperComputation");
+  assert.match(body, /if \(!state\.smartHoppersEnabled\) return null;/);
+  assert.match(body, /if \(!\(heightVal > 0 && circVal > 0 && hopper\.resinName\)\) return null;/);
+  assert.match(body, /if \(!density\) return null;/);
+  assert.match(body, /if \(!Number\.isFinite\(value\) \|\| value <= 0\) return null;/);
+  assert.match(body, /return \{ value, resin, density \};/);
+});
+
+test("refreshSmartHopperState and effectiveHopperWeight both read from smartHopperComputation - no second copy of the resin-lookup/formula logic", () => {
+  const refreshBody = functionBody("refreshSmartHopperState");
+  assert.match(refreshBody, /const smart = smartHopperComputation\(hopper\);/);
+  assert.doesNotMatch(refreshBody, /calculators\.estimateBulkDensity/, "the formula call itself should only exist inside smartHopperComputation now");
+
+  const effectiveBody = functionBody("effectiveHopperWeight");
+  assert.match(effectiveBody, /return smartHopperComputation\(hopper\)\?\.value \?\? clampNum\(hopper\.weight\);/);
+});
+
+test("the computed-weight tooltip now says it's used for the run-down formula, since stage 3 makes that true", () => {
+  const body = functionBody("refreshSmartHopperState");
+  assert.match(body, /Used for the run-down formula instead of the entered weight above\./);
+});
+
+test("validateAndCompute's run-down math uses effectiveHopperWeight instead of the bare hopper weight, so a computed weight (when available) actually drives minutesToEmpty/timeline results, not just the display", () => {
+  const start = app.indexOf("function validateAndCompute(");
+  const body = app.slice(start, app.indexOf("\n    function renderResultsFlat", start));
+  assert.match(body, /const weight = effectiveHopperWeight\(h\);/);
+  assert.doesNotMatch(body, /const weight = clampNum\(h\.weight\);/);
+});
+
+test("the \"weights not set\" and \"missing weight\" warnings also account for smart-computed weight, not just the operator's raw entry - a hopper fully covered by Smart Hoppers shouldn't be flagged as missing", () => {
+  const start = app.indexOf("function validateAndCompute(");
+  const body = app.slice(start, app.indexOf("\n    function renderResultsFlat", start));
+  assert.match(body, /L\.hoppers\.every\(h=>effectiveHopperWeight\(h\) === 0\)/);
+  assert.match(body, /tracked\.filter\(x=>effectiveHopperWeight\(x\.h\) <= 0\)\.length/);
 });

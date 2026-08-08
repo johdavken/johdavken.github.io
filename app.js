@@ -1528,6 +1528,38 @@
       refreshSmartHopperState();
     }
 
+    // The single source of truth for whether a hopper's weight is
+    // Smart-Hoppers-computable, and what that value is. Used both for
+    // display (refreshSmartHopperState below) and for the run-down formula
+    // itself (effectiveHopperWeight, used from validateAndCompute) - so
+    // there's exactly one place that decides "is this hopper smart" and
+    // one formula, never two implementations that could drift apart.
+    // Returns null (not a fallback value) when any of the three conditions
+    // aren't met, so callers can't accidentally treat "not computable" as 0.
+    function smartHopperComputation(hopper){
+      if (!state.smartHoppersEnabled) return null;
+      const heightVal = clampNum(hopper.usableHeight);
+      const circVal = clampNum(hopper.circumference);
+      if (!(heightVal > 0 && circVal > 0 && hopper.resinName)) return null;
+      const resin = resinLookup?.findExactResin?.(hopper.resinName, resinCatalogRecords);
+      const density = resin?.density_g_cm3;
+      if (!density) return null;
+      // TEMP_RESIN_PACKING_FACTOR stands in for every resin until the resin
+      // database has its own per-resin packing factor.
+      const bulkDensity = calculators.estimateBulkDensity(density, TEMP_RESIN_PACKING_FACTOR);
+      const value = calculators.calculateHopperWeight(circVal, heightVal, bulkDensity);
+      if (!Number.isFinite(value) || value <= 0) return null;
+      return { value, resin, density };
+    }
+
+    // The weight the run-down formula (and anything else that needs "how
+    // much resin is actually in this hopper") should use: the Smart
+    // Hoppers computed value when available, otherwise the operator's own
+    // entered weight - never both, never neither silently.
+    function effectiveHopperWeight(hopper){
+      return smartHopperComputation(hopper)?.value ?? clampNum(hopper.weight);
+    }
+
     // Recomputes, for every hopper, whether a Smart Hoppers weight is
     // currently computable, and updates every UI surface that reflects it
     // in place - never a re-render, so this is safe to call from
@@ -1544,27 +1576,14 @@
     function refreshSmartHopperState(){
       state.layers.forEach(L=>{
         L.hoppers.forEach((hopper, hi)=>{
-          const heightVal = clampNum(hopper.usableHeight);
-          const circVal = clampNum(hopper.circumference);
-          const resin = (state.smartHoppersEnabled && heightVal > 0 && circVal > 0 && hopper.resinName)
-            ? resinLookup?.findExactResin?.(hopper.resinName, resinCatalogRecords)
-            : null;
-          const density = resin?.density_g_cm3;
-          let computed = null;
-          if (density){
-            // TEMP_RESIN_PACKING_FACTOR stands in for every resin until
-            // the resin database has its own per-resin packing factor.
-            const bulkDensity = calculators.estimateBulkDensity(density, TEMP_RESIN_PACKING_FACTOR);
-            const value = calculators.calculateHopperWeight(circVal, heightVal, bulkDensity);
-            if (Number.isFinite(value) && value > 0) computed = value;
-          }
+          const smart = smartHopperComputation(hopper);
 
           const computedEl = document.getElementById(computedWeightId(L.name, hi));
           if (computedEl){
-            if (computed !== null){
+            if (smart){
               computedEl.hidden = false;
-              computedEl.textContent = `≈ ${fmtNum(computed, 1)} lb`;
-              computedEl.title = `Computed from ${hopperBadgeLabel(L.name, hi)}'s geometry and ${resin.resin_code}'s density (${density} g/cm³).`;
+              computedEl.textContent = `≈ ${fmtNum(smart.value, 1)} lb`;
+              computedEl.title = `Computed from ${hopperBadgeLabel(L.name, hi)}'s geometry and ${smart.resin.resin_code}'s density (${smart.density} g/cm³). Used for the run-down formula instead of the entered weight above.`;
             } else {
               computedEl.hidden = true;
               computedEl.textContent = "";
@@ -1573,7 +1592,7 @@
           }
 
           const badgeEl = document.getElementById(smartBadgeId(L.name, hi));
-          if (badgeEl) badgeEl.hidden = computed === null;
+          if (badgeEl) badgeEl.hidden = !smart;
         });
       });
     }
@@ -2682,7 +2701,7 @@
       }
 
       const allWeightsUnset = state.layers.length > 0 && state.layers.every(L=>
-        L.hoppers.every(h=>clampNum(h.weight) === 0)
+        L.hoppers.every(h=>effectiveHopperWeight(h) === 0)
       );
       if (allWeightsUnset){
         msgs.push({
@@ -2696,7 +2715,7 @@
       if (tracked.length === 0){
         msgs.push({type:"warn", text:"No hoppers are tracked. Turn on Track for the hopper(s) you want in Results."});
       } else {
-        const missingW = tracked.filter(x=>clampNum(x.h.weight) <= 0).length;
+        const missingW = tracked.filter(x=>effectiveHopperWeight(x.h) <= 0).length;
         if (missingW > 0 && !allWeightsUnset){
           msgs.push({type:"warn", text:`${missingW} tracked hopper(s) are missing weight. Open “Hopper weights” to enter them.`});
         }
@@ -2715,7 +2734,7 @@
           if (!h.track) return;
 
           const hopperRate = layerRate * (clampNum(h.pct)/div);
-          const weight = clampNum(h.weight);
+          const weight = effectiveHopperWeight(h);
 
           let minutesToEmpty = null;
           let totalMinutes = null;

@@ -7,8 +7,16 @@ test("validates required codes, nullable fields, and density bounds", () => {
   assert.equal(adminApi.validateResin({ resin_code: "A", density_g_cm3: "11", is_active: true }).valid, false);
   assert.deepEqual(adminApi.validateResin({ resin_code: " A ", display_description: " ", density_g_cm3: "", information_description: " ", is_active: true }), {
     valid: true,
-    value: { resin_code: "A", display_description: null, density_g_cm3: null, information_description: null, is_active: true }
+    value: { resin_code: "A", display_description: null, density_g_cm3: null, bulk_density_lb_ft3: null, information_description: null, is_active: true }
   });
+});
+
+test("validates bulk density bounds independently of density (g/cm3) - a trait of the resin, distinct field, own 1-100 lb/ft3 range", () => {
+  assert.equal(adminApi.validateResin({ resin_code: "A", bulk_density_lb_ft3: "0.5", is_active: true }).valid, false);
+  assert.equal(adminApi.validateResin({ resin_code: "A", bulk_density_lb_ft3: "150", is_active: true }).valid, false);
+  const result = adminApi.validateResin({ resin_code: "A", bulk_density_lb_ft3: "37.2", is_active: true });
+  assert.equal(result.valid, true);
+  assert.equal(result.value.bulk_density_lb_ft3, 37.2);
 });
 
 function client({ admin = true, saveError = null, sessionUser = null } = {}){

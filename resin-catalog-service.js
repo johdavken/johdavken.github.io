@@ -13,7 +13,7 @@
 
   const CACHE_KEY = "polyn.resinCatalog.v1";
   const CACHE_SCHEMA_VERSION = 1;
-  const REMOTE_FIELDS = "id,resin_code,display_description,density_g_cm3,information_description,is_active,updated_at";
+  const REMOTE_FIELDS = "id,resin_code,display_description,density_g_cm3,bulk_density_lb_ft3,information_description,is_active,updated_at";
 
   function normalizeCode(value) {
     return typeof value === "string" ? value.trim() : "";
@@ -28,6 +28,14 @@
   function nullableDensity(value) {
     const density = typeof value === "number" ? value : Number.NaN;
     return Number.isFinite(density) && density > 0 ? density : null;
+  }
+
+  // Bulk density (lb/ft³) - a directly-measured trait of the resin,
+  // distinct from density_g_cm3 (polymer density). Not used by Smart
+  // Hoppers yet; see TEMP_RESIN_PACKING_FACTOR in app.js.
+  function nullableBulkDensity(value) {
+    const bulkDensity = typeof value === "number" ? value : Number.NaN;
+    return Number.isFinite(bulkDensity) && bulkDensity > 0 ? bulkDensity : null;
   }
 
   function fallbackInformation(description, code) {
@@ -52,6 +60,7 @@
       resin_code: resinCode,
       display_description: nullableText(fallback ? row?.description : row?.display_description),
       density_g_cm3: nullableDensity(fallback ? row?.density : row?.density_g_cm3),
+      bulk_density_lb_ft3: nullableBulkDensity(fallback ? row?.bulk_density : row?.bulk_density_lb_ft3),
       information_description: fallback
         ? fallbackInformation(row?.description, row?.code)
         : nullableText(row?.information_description),

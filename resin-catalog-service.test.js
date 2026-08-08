@@ -25,6 +25,7 @@ const cachedResin = {
   resin_code: "CACHED-A",
   display_description: null,
   density_g_cm3: 0.925,
+  bulk_density_lb_ft3: null,
   information_description: null,
   is_active: true,
   updated_at: null
@@ -126,15 +127,23 @@ test("looks up resin codes without regard to case or surrounding whitespace", ()
 });
 
 test("normalization retains unknown values as null", () => {
-  assert.deepEqual(service.normalizeResin({ resin_code: "UNKNOWN", density_g_cm3: 0, is_active: "yes" }), {
+  assert.deepEqual(service.normalizeResin({ resin_code: "UNKNOWN", density_g_cm3: 0, bulk_density_lb_ft3: 0, is_active: "yes" }), {
     id: null,
     resin_code: "UNKNOWN",
     display_description: null,
     density_g_cm3: null,
+    bulk_density_lb_ft3: null,
     information_description: null,
     is_active: null,
     updated_at: null
   });
+});
+
+test("bulk density normalizes like density - positive numbers pass through, zero/negative/non-numeric become null, and the fallback shape reads bulk_density instead of bulk_density_lb_ft3", () => {
+  assert.equal(service.normalizeResin({ resin_code: "X", bulk_density_lb_ft3: 37.2 }).bulk_density_lb_ft3, 37.2);
+  assert.equal(service.normalizeResin({ resin_code: "X", bulk_density_lb_ft3: 0 }).bulk_density_lb_ft3, null);
+  assert.equal(service.normalizeResin({ resin_code: "X", bulk_density_lb_ft3: -5 }).bulk_density_lb_ft3, null);
+  assert.equal(service.normalizeResin({ code: "X", bulk_density: 40 }, { fallback: true }).bulk_density_lb_ft3, 40);
 });
 
 test("the fallback retains existing rule-derived material information", () => {

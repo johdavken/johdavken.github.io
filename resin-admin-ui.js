@@ -59,6 +59,7 @@
     $("adminResinCode").value = resin?.resin_code || "";
     $("adminResinDescription").value = resin?.display_description || "";
     $("adminResinDensity").value = resin?.density_g_cm3 ?? "";
+    $("adminResinBulkDensity").value = resin?.bulk_density_lb_ft3 ?? "";
     $("adminResinInformation").value = resin?.information_description || "";
     $("adminResinActive").value = String(resin?.is_active ?? true);
     setMessage("adminResinFormMessage", "");
@@ -105,6 +106,7 @@
       resin_code: $("adminResinCode").value,
       display_description: $("adminResinDescription").value,
       density_g_cm3: $("adminResinDensity").value,
+      bulk_density_lb_ft3: $("adminResinBulkDensity").value,
       information_description: $("adminResinInformation").value,
       is_active: $("adminResinActive").value === "true"
     };

@@ -25,6 +25,13 @@ test("admin UI includes login, editing, active state, and catalog refresh flow",
   assert.match(ui, /value === "true"/);
 });
 
+test("admin form includes bulk density (lb/ft³), populated on edit and submitted alongside density - not yet used by Smart Hoppers, just an entry field for now", () => {
+  assert.match(index, /id="adminResinBulkDensity"/);
+  assert.match(index, /Bulk density \(lb\/ft³\)/);
+  assert.match(ui, /\$\("adminResinBulkDensity"\)\.value = resin\?\.bulk_density_lb_ft3 \?\? "";/);
+  assert.match(ui, /bulk_density_lb_ft3: \$\("adminResinBulkDensity"\)\.value,/);
+});
+
 test("Resin Database is an in-app workspace panel with a two-column responsive editor", () => {
   assert.match(index, /id="resinDatabaseButton"[^>]*data-workspace-target="resinAdminBlock"/);
   assert.match(index, /<details class="block card workspacePanel adminResinPanel" id="resinAdminBlock">/);
