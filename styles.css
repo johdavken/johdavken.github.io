@@ -275,6 +275,7 @@ main{
 .workspaceStatusBar{ display: none; }
 .mobileWorkspaceHome{ display:none; }
 .mobileQuickActions{ display:none; }
+.mobileAppearancePanelHeader{ display:none; }
 .workspaceContent{ display: contents; }
 .mobileBrand{
   display: flex;
@@ -4030,41 +4031,57 @@ body[data-surface-style="divided"] .helpTopic{
   .workspaceStatusBar{ display:contents!important; }
   .workspaceStatusBar > :not(.statusPreferences){ display:none!important; }
   .workspaceStatusBar .statusPreferences{ display:none; }
-  .workspaceStatusBar .statusPreferences[open]{
+  body[data-mobile-workspace="appearance"] .workspaceNav{ display:none; }
+  body[data-mobile-workspace="appearance"] .workspaceStatusBar .statusPreferences[open]{
     display:block;
-    position:fixed;
-    inset:0;
-    z-index:80;
-    background:color-mix(in srgb,var(--bg) 72%,transparent);
-    backdrop-filter:blur(5px);
+    position:static;
+    width:100%;
+    margin:0;
   }
-  .workspaceStatusBar .statusPreferences[open] > summary{
-    position:absolute;
-    top:14px;
-    right:14px;
-    z-index:1;
-    width:34px;
-    height:34px;
-    border:1px solid var(--border2);
-    border-radius:50%;
-    background:var(--panel);
-    font-size:0;
-  }
-  .workspaceStatusBar .statusPreferences[open] > summary::before{
-    content:"×";
-    font-size:23px;
-    line-height:1;
-  }
-  .workspaceStatusBar .statusPreferencesPanel{
-    position:absolute;
-    top:50%;
-    right:var(--page-pad);
-    bottom:auto;
-    left:var(--page-pad);
+  body[data-mobile-workspace="appearance"] .workspaceStatusBar .statusPreferences[open] > summary{ display:none; }
+  body[data-mobile-workspace="appearance"] .workspaceStatusBar .statusPreferencesPanel{
+    position:static;
     width:auto;
-    max-width:460px;
+    max-width:none;
+    margin:0;
+    padding:0 0 calc(14px + env(safe-area-inset-bottom));
+    border:0;
+    border-radius:0;
+    background:transparent;
+    box-shadow:none;
+    transform:none;
+  }
+  body[data-mobile-workspace="appearance"] .statusPreferencesHead{ display:none; }
+  body[data-mobile-workspace="appearance"] .mobileAppearancePanelHeader{
+    position:sticky;
+    top:0;
+    z-index:2;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:12px;
+    padding:8px 0 10px;
+    border-bottom:1px solid var(--border);
+    background:var(--bg);
+  }
+  body[data-mobile-workspace="appearance"] .mobileAppearancePanelHeader strong{ display:block; color:var(--title); font-size:calc(var(--title-size) * 1.05); font-weight:650; letter-spacing:.04em; }
+  body[data-mobile-workspace="appearance"] .mobileAppearancePanelHeader small{ display:block; margin-top:2px; color:var(--muted); font-size:11px; }
+  body[data-mobile-workspace="appearance"] .mobileAppearancePanelHeader button{
+    display:flex;
+    flex:0 0 auto;
+    width:30px;
+    height:30px;
+    padding:0;
+    border:1px solid color-mix(in srgb,var(--focus-border) 34%,transparent);
+    border-radius:7px;
+    background:transparent;
+  }
+  body[data-mobile-workspace="appearance"] .mobileAppearancePanelHeader button span{
+    width:18px;
+    height:18px;
     margin:auto;
-    transform:translateY(-50%);
+    background:linear-gradient(var(--focus-border) 0 0) 1px 1px / 6px 6px no-repeat,linear-gradient(var(--focus-border) 0 0) calc(100% - 1px) 1px / 6px 6px no-repeat,linear-gradient(var(--focus-border) 0 0) 1px calc(100% - 1px) / 6px 6px no-repeat,linear-gradient(var(--focus-border) 0 0) calc(100% - 1px) calc(100% - 1px) / 6px 6px no-repeat;
   }
   main{ padding-bottom:calc(24px + var(--page-bottom-pad)); }
 }
