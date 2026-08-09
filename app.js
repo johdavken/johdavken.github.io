@@ -3986,6 +3986,12 @@
     document.querySelectorAll(".workspaceContent > .workspacePanel > summary").forEach(summary=>{
       summary.addEventListener("click",event=>{
         const timelineLockedOpen = state.mobileTimelineOnly && summary.closest("#resultsBlock") && window.matchMedia("(max-width: 900px)").matches;
+        const mobilePanel = summary.closest(".workspacePanel");
+        if (mobilePanel && window.matchMedia("(max-width: 900px)").matches && document.body.dataset.mobileWorkspace === "panel"){
+          event.preventDefault();
+          showMobileWorkspaceHome();
+          return;
+        }
         if (window.matchMedia("(min-width: 901px)").matches || timelineLockedOpen) event.preventDefault();
       });
     });

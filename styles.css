@@ -273,6 +273,7 @@ main{
 
 .workspaceNav,
 .workspaceStatusBar{ display: none; }
+.mobileWorkspaceHome{ display:none; }
 .workspaceContent{ display: contents; }
 .mobileBrand{
   display: flex;
@@ -3488,9 +3489,22 @@ body[data-surface-style="divided"] .helpTopic{
   body[data-mobile-workspace="panel"] .workspaceNav{ display:none; }
   body[data-mobile-workspace="home"] .workspaceContent > .workspacePanel{ display:none!important; }
   body[data-mobile-workspace="panel"] .workspaceContent > .workspacePanel:not(.mobile-active){ display:none!important; }
-  body[data-mobile-workspace="panel"] .workspaceContent > .workspacePanel.mobile-active > summary{ display:none; }
+  body[data-mobile-workspace="panel"] .workspaceContent > .workspacePanel.mobile-active > summary{
+    display:flex;
+    min-height:46px;
+    padding:8px 2px 10px;
+    border-bottom:1px solid var(--border);
+  }
+  body[data-mobile-workspace="panel"] .workspaceContent > .workspacePanel.mobile-active > summary::after{
+    content:"All sections";
+    color:var(--focus-border);
+    font-size:var(--font-small);
+    font-weight:750;
+    white-space:nowrap;
+  }
+  body[data-mobile-workspace="panel"] .workspaceContent > .workspacePanel.mobile-active > summary .chev{ display:none; }
+  body[data-mobile-workspace="panel"] .workspaceContent > .workspacePanel.mobile-active > summary .layerMeta{ display:none; }
   .mobileWorkspaceHome{
-    display:none;
     align-items:center;
     gap:5px;
     min-height:30px;
