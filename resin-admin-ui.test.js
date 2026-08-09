@@ -8,6 +8,7 @@ test("admin navigation is explicitly hidden during initialization and rendered f
   assert.match(index, /id="resinDatabaseButton"[^>]*hidden/);
   assert.match(ui, /const initializing = !state\?\.ready/);
   assert.match(ui, /adminLoginButton"\)\.hidden = initializing \|\| adminAccess/);
+  assert.match(index, /id="adminLoginButton"[\s\S]*?class="workspaceTileIcon"[\s\S]*?Admin Login/);
   assert.match(ui, /resinDatabaseButton"\)\.hidden = !adminAccess/);
   assert.match(ui, /renderAccess\(admin\.getState\(\)\)/);
   assert.match(fs.readFileSync("styles.css", "utf8"), /\.adminNavButton\[hidden\]\{ display: none !important; \}/);
