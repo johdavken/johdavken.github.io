@@ -54,6 +54,7 @@
       timeFormat: "12",
       surfaceStyle: "divided",
       mobileTileStyle: "accent",
+      mobileBackgroundStyle: "layer-glow",
       mobileTimelineAlarm: false,
       gauge: 0,
       hopperNamingLine9: "standard", // "standard" | "main"
@@ -821,6 +822,7 @@
         timeFormat: state.timeFormat,
         surfaceStyle: state.surfaceStyle,
         mobileTileStyle: state.mobileTileStyle,
+        mobileBackgroundStyle: state.mobileBackgroundStyle,
         mobileTimelineAlarm: !!state.mobileTimelineAlarm,
         gauge: state.gauge,
         hopperNamingLine9: state.hopperNamingLine9,
@@ -839,6 +841,7 @@
         timeFormat: state.timeFormat,
         surfaceStyle: state.surfaceStyle,
         mobileTileStyle: state.mobileTileStyle,
+        mobileBackgroundStyle: state.mobileBackgroundStyle,
         mobileTimelineAlarm: state.mobileTimelineAlarm,
         showPumpOffTracked: state.showPumpOffTracked,
         mobileTimelineOnly: state.mobileTimelineOnly,
@@ -905,6 +908,16 @@
       document.body.dataset.mobileTileStyle = style;
       document.querySelectorAll("[data-mobile-tile-style]").forEach(button=>{
         button.setAttribute("aria-checked", String(button.dataset.mobileTileStyle === style));
+      });
+    }
+
+    function applyMobileBackgroundStyle(value){
+      const allowed = new Set(["layer-glow", "industrial-grid"]);
+      const style = allowed.has(String(value)) ? String(value) : "layer-glow";
+      state.mobileBackgroundStyle = style;
+      document.body.dataset.mobileBackgroundStyle = style;
+      document.querySelectorAll("[data-mobile-background-style]").forEach(button=>{
+        button.setAttribute("aria-checked", String(button.dataset.mobileBackgroundStyle === style));
       });
     }
 
@@ -1012,6 +1025,7 @@
       applyTimeFormat(payload.timeFormat || "12");
       applySurfaceStyle(payload.surfaceStyle || defaultSurfaceStyle());
       applyMobileTileStyle(payload.mobileTileStyle || "accent");
+      applyMobileBackgroundStyle(payload.mobileBackgroundStyle || "layer-glow");
       applyMobileTimelineAlarm(!!payload.mobileTimelineAlarm);
       $("lineRate").value = String(state.lineRate);
       // Custom toggles
@@ -4006,6 +4020,12 @@
         saveSession();
       });
     });
+    document.querySelectorAll("[data-mobile-background-style]").forEach(button=>{
+      button.addEventListener("click",()=>{
+        applyMobileBackgroundStyle(button.dataset.mobileBackgroundStyle);
+        saveSession();
+      });
+    });
     $("mobileTimelineAlarmToggle")?.addEventListener("change",async event=>{
       const enabled = !!event.target.checked;
       if (enabled){
@@ -4237,6 +4257,7 @@
       applyTimeFormat(state.timeFormat || "12");
       applySurfaceStyle(state.surfaceStyle || defaultSurfaceStyle());
       applyMobileTileStyle(state.mobileTileStyle || "accent");
+      applyMobileBackgroundStyle(state.mobileBackgroundStyle || "layer-glow");
       applyMobileTimelineAlarm(!!state.mobileTimelineAlarm);
       saveSession();
       setupLineSync();

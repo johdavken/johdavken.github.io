@@ -13,7 +13,7 @@ test("mobile appearance includes a persistent pump-off alarm preference",()=>{
   assert.match(app,/mobileTimelineAlarm: false/);
   assert.match(app,/mobileTimelineAlarm: !!state\.mobileTimelineAlarm/);
   assert.match(app,/applyMobileTimelineAlarm\(!!payload\.mobileTimelineAlarm\)/);
-  assert.match(styles,/\.mobileTileStyleSection,\.mobileTimelineAlarmSection\{ display:none; \}/);
+  assert.match(styles,/\.mobileTileStyleSection,\.mobileBackgroundStyleSection,\.mobileTimelineAlarmSection\{ display:none; \}/);
 });
 
 test("timeline computation reschedules sound, vibration, and notification alerts",()=>{

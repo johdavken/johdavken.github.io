@@ -565,7 +565,7 @@ main{
 .adminNavButton{ margin-top: 2px; }
 .adminNavButton[hidden]{ display: none !important; }
 .appearanceNavTile{ display:none!important; }
-.mobileTileStyleSection,.mobileTimelineAlarmSection{ display:none; }
+.mobileTileStyleSection,.mobileBackgroundStyleSection,.mobileTimelineAlarmSection{ display:none; }
 .pumpOffAlarmBanner{ position:fixed; right:12px; bottom:12px; left:12px; z-index:100; display:grid; grid-template-columns:1fr auto; gap:3px 12px; padding:14px; border:1px solid var(--warn); border-radius:var(--radius-row); background:var(--panelOpen); color:var(--text); box-shadow:var(--shadow2); }
 .pumpOffAlarmBanner strong{ color:var(--warn); }
 .pumpOffAlarmBanner span{ grid-column:1; color:var(--muted); font-size:var(--font-small); }
@@ -3762,6 +3762,25 @@ body[data-surface-style="divided"] .helpTopic{
   .mobileTileStyleChoices button[data-mobile-tile-style="outline"] span{ border:2px solid var(--focus-border); background:transparent; }
   .mobileTileStyleChoices button[data-mobile-tile-style="glass"] span{ border:1px solid color-mix(in srgb,var(--text) 30%,transparent); border-radius:9px; background:color-mix(in srgb,var(--text) 10%,transparent); box-shadow:0 3px 7px color-mix(in srgb,var(--text) 12%,transparent); }
   .mobileTileStyleChoices button[data-mobile-tile-style="minimal"] span{ height:14px; border:0; border-bottom:2px solid var(--title); border-radius:0; background:transparent; }
+  .mobileBackgroundStyleSection{ display:block; margin:14px 0 0; padding:12px 0 0; border:0; border-top:1px solid var(--border); }
+  .mobileBackgroundStyleSection legend{ padding:0; color:var(--title); font-size:13px; font-weight:750; }
+  .mobileBackgroundStyleChoices{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; margin-top:9px; }
+  .mobileBackgroundStyleChoices button{ display:grid; grid-template-columns:42px 1fr; align-items:center; gap:9px; min-height:48px; padding:7px 9px; border:1px solid var(--border); border-radius:var(--control-radius); background:var(--row-bg); color:var(--muted); font-size:12px; text-align:left; }
+  .mobileBackgroundStyleChoices button[aria-checked="true"]{ border-color:var(--focus-border); background:var(--focus-ring); color:var(--text); }
+  .mobileBackgroundStyleChoices button span{ width:42px; height:30px; border:1px solid var(--border2); border-radius:7px; background-color:var(--bg); }
+  .mobileBackgroundStyleChoices button[data-mobile-background-style="layer-glow"] span{
+    background:
+      radial-gradient(circle at 20% 20%,color-mix(in srgb,var(--bad) 34%,transparent),transparent 45%),
+      radial-gradient(circle at 82% 72%,color-mix(in srgb,var(--ok) 28%,transparent),transparent 48%),
+      var(--bg);
+  }
+  .mobileBackgroundStyleChoices button[data-mobile-background-style="industrial-grid"] span{
+    background:
+      linear-gradient(color-mix(in srgb,var(--focus-border) 18%,transparent) 1px,transparent 1px),
+      linear-gradient(90deg,color-mix(in srgb,var(--focus-border) 18%,transparent) 1px,transparent 1px),
+      var(--bg);
+    background-size:8px 8px;
+  }
   .mobileTimelineAlarmSection{ display:block; margin:14px 0 0; padding:12px 0 0; border:0; border-top:1px solid var(--border); }
   .mobileTimelineAlarmSection legend{ padding:0; color:var(--title); font-size:13px; font-weight:750; }
   .mobileTimelineAlarmChoice{ display:flex; align-items:flex-start; gap:10px; margin-top:9px; padding:10px; border:1px solid var(--border); border-radius:var(--control-radius); background:var(--row-bg); }
@@ -3769,6 +3788,48 @@ body[data-surface-style="divided"] .helpTopic{
   .mobileTimelineAlarmChoice span{ display:grid; gap:3px; }
   .mobileTimelineAlarmChoice strong{ color:var(--text); font-size:13px; }
   .mobileTimelineAlarmChoice small{ color:var(--muted); font-size:11px; line-height:1.35; }
+
+  body[data-mobile-background-style="layer-glow"]{
+    background:
+      radial-gradient(circle at 8% 22%,color-mix(in srgb,var(--bad) 12%,transparent),transparent 30%),
+      radial-gradient(circle at 94% 34%,color-mix(in srgb,var(--ok) 11%,transparent),transparent 33%),
+      radial-gradient(circle at 48% 72%,color-mix(in srgb,var(--orange) 7%,transparent),transparent 37%),
+      var(--bg);
+    background-attachment:fixed;
+  }
+  body[data-mobile-background-style="layer-glow"] .workspaceNav{
+    position:relative;
+    isolation:isolate;
+    overflow:hidden;
+    background:color-mix(in srgb,var(--surface-chrome-bg) 86%,transparent);
+  }
+  body[data-mobile-background-style="layer-glow"] .workspaceNav::before{
+    content:"";
+    position:absolute;
+    z-index:0;
+    top:-72px;
+    right:-68px;
+    width:240px;
+    height:240px;
+    pointer-events:none;
+    opacity:.42;
+    transform:rotate(45deg);
+    background:
+      linear-gradient(135deg,transparent 38%,color-mix(in srgb,var(--bad) 18%,transparent) 38% 43%,transparent 43% 50%,color-mix(in srgb,var(--orange) 15%,transparent) 50% 55%,transparent 55% 62%,color-mix(in srgb,var(--ok) 14%,transparent) 62% 67%,transparent 67%);
+  }
+  body[data-mobile-background-style="layer-glow"] .workspaceNavButton{ position:relative; z-index:1; }
+  body[data-mobile-background-style="industrial-grid"]{
+    background:
+      linear-gradient(color-mix(in srgb,var(--focus-border) 8%,transparent) 1px,transparent 1px),
+      linear-gradient(90deg,color-mix(in srgb,var(--focus-border) 8%,transparent) 1px,transparent 1px),
+      radial-gradient(circle at 50% 0,color-mix(in srgb,var(--focus-border) 9%,transparent),transparent 46%),
+      var(--bg);
+    background-size:24px 24px,24px 24px,auto,auto;
+    background-attachment:fixed;
+  }
+  body[data-mobile-background-style="industrial-grid"] .workspaceNav{
+    background:color-mix(in srgb,var(--surface-chrome-bg) 80%,transparent);
+  }
 
   body[data-mobile-tile-style="solid"] .workspaceNavButton{ border-color:color-mix(in srgb,var(--tile-accent) 42%,var(--border)); background:color-mix(in srgb,var(--tile-accent) 20%,var(--panel)); box-shadow:none; }
   body[data-mobile-tile-style="solid"] .workspaceTileIcon{ background:color-mix(in srgb,var(--tile-accent) 28%,transparent); }
