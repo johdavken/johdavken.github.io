@@ -3622,6 +3622,7 @@ body[data-surface-style="divided"] .helpTopic{
   }
   body[data-mobile-workspace="panel"] .workspaceContent > .workspacePanel.mobile-active > summary .chev{ display:none; }
   body[data-mobile-workspace="panel"] .workspaceContent > .workspacePanel.mobile-active > summary .layerMeta{ display:none; }
+  body[data-mobile-workspace="panel"] .workspaceContent > .workspacePanel.mobile-active > .blockBody{ padding-top:10px; }
   .mobileWorkspaceHome{
     align-items:center;
     gap:5px;
