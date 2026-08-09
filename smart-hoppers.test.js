@@ -22,10 +22,8 @@ const rearrangement = fs.readFileSync("hopper-rearrangement.js", "utf8");
 // under the operator's own weight field, shown only when this hopper's
 // geometry (height, circumference) and its assigned resin's known density
 // are all available. Packing factor is deliberately NOT a per-hopper
-// field: it's a trait of the resin (like density), not the hopper, and
-// belongs in the resin database once that field exists there. Until then,
-// TEMP_RESIN_PACKING_FACTOR stands in as a fixed placeholder for every
-// resin. Also: a small green "SMART" badge next to the tracking clock in
+// field: it's a trait of the resin (like density), not the hopper.
+// Also: a small green "SMART" badge next to the tracking clock in
 // Recipe Setup, shown under the exact same condition, so an operator
 // looking at the recipe (not the weights grid) can still see at a glance
 // that a hopper's weight is being computed rather than manually entered.
@@ -36,6 +34,13 @@ const rearrangement = fs.readFileSync("hopper-rearrangement.js", "utf8");
 // run-down math, and its "weights not set"/"missing weight" warnings, all
 // use in place of the old bare hopper.weight) read from it, so there's
 // exactly one computation, never two that could drift apart.
+// Stage 4: after testing several real resins, packing factor turned out to
+// be too much of a guessing game to estimate bulk density from polymer
+// density automatically. Smart Hoppers now requires the resin's own
+// directly-measured bulk_density_lb_ft3 (from the resin database) and
+// never estimates it - a resin without a measured bulk density simply
+// isn't computable, and the hopper falls back to the operator's entered
+// weight, same as any other missing-data case.
 
 function functionBody(name){
   const start = app.indexOf(`function ${name}(`);
@@ -198,8 +203,8 @@ test("the panel is position:fixed with JS-computed placement, not position:absol
 
 // --- Stage 2: the computed-weight readout, and the Recipe Setup badge ---
 
-test("packing factor is not a per-hopper field anywhere - no packingFactor on the data model, no third wrench field. TEMP_RESIN_PACKING_FACTOR is a single fixed placeholder standing in for every resin until the resin database has its own per-resin value. (The Tools > Hopper Weight Calculator's own unrelated hopperPackingFactor field is untouched - checked separately, scoped to Smart Hoppers' own code only.)", () => {
-  assert.match(app, /const TEMP_RESIN_PACKING_FACTOR = 0\.634;/);
+test("packing factor is not a per-hopper field anywhere, and Smart Hoppers never estimates bulk density from polymer density + a packing factor - it reads the resin's own measured bulk_density_lb_ft3 directly. (The Tools > Hopper Weight Calculator's own unrelated hopperPackingFactor field is untouched - checked separately, scoped to Smart Hoppers' own code only.)", () => {
+  assert.doesNotMatch(app, /TEMP_RESIN_PACKING_FACTOR/);
   assert.doesNotMatch(app, /packingFactor/, "no camelCase packingFactor field anywhere (case-sensitive - distinct from the Tools calculator's own hopperPackingFactor id)");
   const ensureBody = functionBody("ensureLayers");
   assert.doesNotMatch(ensureBody, /packing/i);
@@ -210,6 +215,10 @@ test("packing factor is not a per-hopper field anywhere - no packingFactor on th
   const weightsAreaStart = app.indexOf("function renderWeightsArea(");
   const weightsAreaBody = app.slice(weightsAreaStart, app.indexOf("\n    function printRecipeSheet", weightsAreaStart));
   assert.doesNotMatch(weightsAreaBody, /packingInput/, "no third wrench field - the Tools calculator's own packingInput lives in a different function entirely");
+
+  const smartBody = functionBody("smartHopperComputation");
+  assert.doesNotMatch(smartBody, /estimateBulkDensity/, "no packing-factor-based estimation - bulk density must come straight from the resin");
+  assert.match(smartBody, /const bulkDensity = resin\?\.bulk_density_lb_ft3;/);
 });
 
 test("the wrench popover has exactly two fields (usable height, circumference) - no packing factor field", () => {
@@ -259,11 +268,11 @@ test("refreshSmartHopperState delegates entirely to smartHopperComputation and u
   assert.match(body, /if \(badgeEl\) badgeEl\.hidden = !smart;/);
 });
 
-test("a computed weight (and therefore the SMART badge) requires Smart Hoppers to be enabled AND all three: usable height and circumference (both > 0) and a known resin density - missing any one falls back to hiding both, not a fake/zero value", () => {
+test("a computed weight (and therefore the SMART badge) requires Smart Hoppers to be enabled AND all three: usable height and circumference (both > 0) and a known resin bulk density - missing any one falls back to hiding both, not a fake/zero value", () => {
   const body = functionBody("smartHopperComputation");
   assert.match(body, /if \(!state\.smartHoppersEnabled\) return null;/);
   assert.match(body, /if \(!\(heightVal > 0 && circVal > 0 && hopper\.resinName\)\) return null;/);
-  assert.match(body, /if \(!density\) return null;/);
+  assert.match(body, /if \(!bulkDensity\) return null;/);
   const refreshBody = functionBody("refreshSmartHopperState");
   assert.match(refreshBody, /if \(smart\)\{/);
   assert.match(refreshBody, /computedEl\.hidden = false;/);
@@ -290,13 +299,13 @@ test("the SMART badge is small, green, and reuses the semantic --ok token rather
 
 // --- Stage 3: the computed weight actually drives the run-down formula ---
 
-test("smartHopperComputation is the one place that decides whether a hopper is smart-computable and what the value is - returns null (never a fallback number) when Smart Hoppers is off, geometry is incomplete, or the resin's density is unknown", () => {
+test("smartHopperComputation is the one place that decides whether a hopper is smart-computable and what the value is - returns null (never a fallback number) when Smart Hoppers is off, geometry is incomplete, or the resin's bulk density is unknown", () => {
   const body = functionBody("smartHopperComputation");
   assert.match(body, /if \(!state\.smartHoppersEnabled\) return null;/);
   assert.match(body, /if \(!\(heightVal > 0 && circVal > 0 && hopper\.resinName\)\) return null;/);
-  assert.match(body, /if \(!density\) return null;/);
+  assert.match(body, /if \(!bulkDensity\) return null;/);
   assert.match(body, /if \(!Number\.isFinite\(value\) \|\| value <= 0\) return null;/);
-  assert.match(body, /return \{ value, resin, density \};/);
+  assert.match(body, /return \{ value, resin, bulkDensity \};/);
 });
 
 test("refreshSmartHopperState and effectiveHopperWeight both read from smartHopperComputation - no second copy of the resin-lookup/formula logic", () => {
@@ -311,6 +320,12 @@ test("refreshSmartHopperState and effectiveHopperWeight both read from smartHopp
 test("the computed-weight tooltip now says it's used for the run-down formula, since stage 3 makes that true", () => {
   const body = functionBody("refreshSmartHopperState");
   assert.match(body, /Used for the run-down formula instead of the entered weight above\./);
+});
+
+test("the computed-weight tooltip cites the resin's bulk density in lb/ft³, not polymer density in g/cm³ - stage 4 dropped the packing-factor estimate entirely", () => {
+  const body = functionBody("refreshSmartHopperState");
+  assert.match(body, /bulk density \(\$\{smart\.bulkDensity\} lb\/ft³\)/);
+  assert.doesNotMatch(body, /g\/cm³/);
 });
 
 test("validateAndCompute's run-down math uses effectiveHopperWeight instead of the bare hopper weight, so a computed weight (when available) actually drives minutesToEmpty/timeline results, not just the display", () => {

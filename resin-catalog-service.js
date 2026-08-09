@@ -31,8 +31,10 @@
   }
 
   // Bulk density (lb/ft³) - a directly-measured trait of the resin,
-  // distinct from density_g_cm3 (polymer density). Not used by Smart
-  // Hoppers yet; see TEMP_RESIN_PACKING_FACTOR in app.js.
+  // distinct from density_g_cm3 (polymer density). Smart Hoppers requires
+  // this to be set on a resin before it will compute that hopper's weight;
+  // it never estimates bulk density from polymer density and a packing
+  // factor (see smartHopperComputation in app.js).
   function nullableBulkDensity(value) {
     const bulkDensity = typeof value === "number" ? value : Number.NaN;
     return Number.isFinite(bulkDensity) && bulkDensity > 0 ? bulkDensity : null;

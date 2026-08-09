@@ -35,13 +35,6 @@
     ];
 
     const HOPPERS_PER_LAYER = 6;
-    // Packing factor is a trait of the resin (like density), not the
-    // hopper - it belongs in the resin database alongside each resin's own
-    // density, not as a per-hopper Smart Hoppers setting. That field
-    // doesn't exist in the resin database yet (pending accurate values
-    // tested against several real resins), so this fixed placeholder
-    // stands in for every resin until it does.
-    const TEMP_RESIN_PACKING_FACTOR = 0.634;
 
   
   /* ============================
@@ -1354,8 +1347,9 @@
             circInput.setAttribute("aria-label", `${hopperBadgeLabel(L.name, hi)} circumference in inches`);
             circLabel.append(circCaption, circInput);
 
-            // Packing factor is a trait of the resin, not this hopper - see
-            // TEMP_RESIN_PACKING_FACTOR - so there's no third field here.
+            // Packing factor/bulk density is a trait of the resin, not this
+            // hopper, and comes from the resin database - so there's no
+            // third field here.
             panel.append(heightLabel, circLabel);
             geometryPopover.append(trigger, panel);
             cellRow.appendChild(geometryPopover);
@@ -1536,20 +1530,22 @@
     // one formula, never two implementations that could drift apart.
     // Returns null (not a fallback value) when any of the three conditions
     // aren't met, so callers can't accidentally treat "not computable" as 0.
+    // Requires the resin's own measured bulk_density_lb_ft3 - deliberately
+    // does not estimate bulk density from polymer density and a packing
+    // factor, since packing factor varies too much per resin to guess at
+    // safely. A hopper without a measured bulk density on its resin simply
+    // isn't computable; the operator's own entered weight is used instead.
     function smartHopperComputation(hopper){
       if (!state.smartHoppersEnabled) return null;
       const heightVal = clampNum(hopper.usableHeight);
       const circVal = clampNum(hopper.circumference);
       if (!(heightVal > 0 && circVal > 0 && hopper.resinName)) return null;
       const resin = resinLookup?.findExactResin?.(hopper.resinName, resinCatalogRecords);
-      const density = resin?.density_g_cm3;
-      if (!density) return null;
-      // TEMP_RESIN_PACKING_FACTOR stands in for every resin until the resin
-      // database has its own per-resin packing factor.
-      const bulkDensity = calculators.estimateBulkDensity(density, TEMP_RESIN_PACKING_FACTOR);
+      const bulkDensity = resin?.bulk_density_lb_ft3;
+      if (!bulkDensity) return null;
       const value = calculators.calculateHopperWeight(circVal, heightVal, bulkDensity);
       if (!Number.isFinite(value) || value <= 0) return null;
-      return { value, resin, density };
+      return { value, resin, bulkDensity };
     }
 
     // The weight the run-down formula (and anything else that needs "how
@@ -1583,7 +1579,7 @@
             if (smart){
               computedEl.hidden = false;
               computedEl.textContent = `✓ ${fmtNum(smart.value, 1)} lb`;
-              computedEl.title = `Computed from ${hopperBadgeLabel(L.name, hi)}'s geometry and ${smart.resin.resin_code}'s density (${smart.density} g/cm³). Used for the run-down formula instead of the entered weight above.`;
+              computedEl.title = `Computed from ${hopperBadgeLabel(L.name, hi)}'s geometry and ${smart.resin.resin_code}'s bulk density (${smart.bulkDensity} lb/ft³). Used for the run-down formula instead of the entered weight above.`;
             } else {
               computedEl.hidden = true;
               computedEl.textContent = "";
