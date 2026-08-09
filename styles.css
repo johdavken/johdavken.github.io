@@ -3531,8 +3531,11 @@ body[data-surface-style="divided"] .helpTopic{
     border-bottom:0;
   }
   .workspaceStatusBar{
-    position:sticky;
-    top:0;
+    position:fixed;
+    right:0;
+    bottom:0;
+    left:0;
+    top:auto;
     z-index:40;
     display:flex;
     align-items:center;
@@ -3546,8 +3549,9 @@ body[data-surface-style="divided"] .helpTopic{
     box-shadow:var(--surface-chrome-shadow);
     backdrop-filter:blur(10px);
   }
+  main{ padding-bottom:calc(58px + var(--page-bottom-pad)); }
   .statusPreferences{position:absolute;right:var(--page-pad);margin-left:0}
-  .statusPreferencesPanel{position:fixed;top:38px;right:var(--page-pad)}
+  .statusPreferencesPanel{position:fixed;top:auto;right:var(--page-pad);bottom:46px}
   .workspaceStatusBar .workspaceStatusItem{ display:none; }
   .statusScanShortcut{ display:inline-block; }
   .statusTimelineToggle{ display:inline-flex; }
@@ -3564,6 +3568,22 @@ body[data-surface-style="divided"] .helpTopic{
   .workspaceStatusBar .workspaceStatusItem span{ color:var(--muted); font-size:var(--font-tiny); }
   .workspaceStatusBar .workspaceStatusItem strong{ color:var(--text); font-size:var(--font-small); line-height:1; }
   .workspaceStatusBar .workspaceStatusItem strong.stale{ color:var(--warn); }
+  /* Compact action icons share the tile icon system's line weight and
+     accent color, so the persistent bar reads as one deliberate control
+     family rather than a row of unrelated glyphs. */
+  .statusScanShortcut > summary,
+  .statusTimelineToggle,
+  .statusRecipeToggle{ color:var(--focus-border); }
+  .statusScanShortcut > summary{ width:28px; height:28px; }
+  .statusScanShortcut svg,
+  .chipToggle svg{
+    width:18px;
+    height:18px;
+    stroke-width:1.7;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+  }
+  body[data-mobile-workspace="panel"] .statusScanShortcut{ display:none; }
   body[data-mobile-timeline-only="true"] .workspaceContent > .workspacePanel:not(#resultsBlock){ display:none !important; }
   body[data-mobile-timeline-only="true"] #resultsBlock{ display:block !important; }
   body[data-mobile-recipe-only="true"] .workspaceContent > .workspacePanel:not(#splitsBlock){ display:none !important; }
