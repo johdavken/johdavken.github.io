@@ -274,6 +274,7 @@ main{
 .workspaceNav,
 .workspaceStatusBar{ display: none; }
 .mobileWorkspaceHome{ display:none; }
+.mobileQuickActions{ display:none; }
 .workspaceContent{ display: contents; }
 .mobileBrand{
   display: flex;
@@ -3751,6 +3752,92 @@ body[data-surface-style="divided"] .helpTopic{
   .workspaceContent > .workspacePanel{ display:none!important; }
   body[data-mobile-workspace="panel"] .workspaceContent > .workspacePanel.mobile-active{ display:block!important; }
   .appearanceNavTile{ display:grid!important; }
+  body[data-mobile-workspace="home"] .mobileQuickActions{
+    position:fixed;
+    right:max(16px,env(safe-area-inset-right));
+    bottom:calc(var(--footer-height) + 16px + env(safe-area-inset-bottom));
+    z-index:45;
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    gap:10px;
+  }
+  .mobileQuickActionsMenu{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    gap:8px;
+    pointer-events:none;
+  }
+  .mobileQuickActionsMenu button{
+    display:grid;
+    grid-template-columns:auto 38px;
+    align-items:center;
+    gap:10px;
+    min-height:46px;
+    padding:4px 4px 4px 14px;
+    border:1px solid color-mix(in srgb,var(--focus-border) 42%,var(--border));
+    border-radius:999px;
+    background:color-mix(in srgb,var(--panelOpen) 94%,transparent);
+    color:var(--text);
+    box-shadow:0 7px 20px color-mix(in srgb,#000 22%,transparent);
+    opacity:0;
+    transform:translateY(12px) scale(.94);
+    transition:opacity .18s ease,transform .22s cubic-bezier(.2,.8,.2,1),border-color .16s ease;
+    backdrop-filter:blur(10px);
+  }
+  .mobileQuickActionsMenu button:nth-child(1){ transition-delay:0s; }
+  .mobileQuickActionsMenu button:nth-child(2){ transition-delay:.035s; }
+  .mobileQuickActions[data-open="true"] .mobileQuickActionsMenu{ pointer-events:auto; }
+  .mobileQuickActions[data-open="true"] .mobileQuickActionsMenu button{ opacity:1; transform:translateY(0) scale(1); }
+  .mobileQuickActions[data-open="true"] .mobileQuickActionsMenu button:nth-child(1){ transition-delay:.045s; }
+  .mobileQuickActions[data-open="true"] .mobileQuickActionsMenu button:nth-child(2){ transition-delay:0s; }
+  .mobileQuickActionsMenu button:hover,.mobileQuickActionsMenu button:focus-visible{ border-color:var(--focus-border); background:var(--panelOpen); }
+  .mobileQuickActionsMenu button span{ font-size:12px; font-weight:750; white-space:nowrap; }
+  .mobileQuickActionsMenu button svg{
+    width:36px;
+    height:36px;
+    padding:7px;
+    border-radius:50%;
+    background:color-mix(in srgb,var(--focus-border) 14%,var(--field-bg));
+    fill:none;
+    stroke:var(--focus-border);
+    stroke-width:1.8;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+  }
+  .mobileQuickActionsToggle{
+    position:relative;
+    display:grid;
+    place-items:center;
+    width:56px;
+    height:56px;
+    padding:0;
+    border:1px solid color-mix(in srgb,var(--title) 60%,var(--border));
+    border-radius:50%;
+    background:linear-gradient(145deg,color-mix(in srgb,var(--title) 24%,var(--panel)),var(--panel));
+    color:var(--title);
+    box-shadow:0 8px 22px color-mix(in srgb,#000 28%,transparent),inset 0 1px 0 color-mix(in srgb,var(--text) 24%,transparent);
+  }
+  .mobileQuickActionsToggle::before{
+    content:"";
+    position:absolute;
+    inset:-5px;
+    border:1px solid color-mix(in srgb,var(--title) 34%,transparent);
+    border-radius:50%;
+    animation:quickActionPulse 2.4s ease-out infinite;
+  }
+  .mobileQuickActionsToggle svg{ width:30px; height:30px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+  .mobileQuickActionsToggle .quickActionPlus{ transform-origin:16px 16px; transition:transform .24s ease; }
+  .mobileQuickActionsToggle .quickActionSpark{ animation:quickActionSpark 2.4s ease-in-out infinite; }
+  .mobileQuickActions[data-open="true"] .mobileQuickActionsToggle .quickActionPlus{ transform:rotate(45deg); }
+  .mobileQuickActions[data-open="true"] .mobileQuickActionsToggle::before{ animation:none; opacity:0; }
+  @keyframes quickActionPulse{ 0%,55%{ transform:scale(.9); opacity:0; } 70%{ opacity:.75; } 100%{ transform:scale(1.18); opacity:0; } }
+  @keyframes quickActionSpark{ 0%,45%,100%{ opacity:.35; transform:scale(.82); } 60%,72%{ opacity:1; transform:scale(1); } }
+  @media (prefers-reduced-motion:reduce){
+    .mobileQuickActionsToggle::before,.mobileQuickActionsToggle .quickActionSpark{ animation:none; }
+    .mobileQuickActionsMenu button,.mobileQuickActionsToggle .quickActionPlus{ transition:none; }
+  }
   .mobileTileStyleSection{ display:block; margin:14px 0 0; padding:12px 0 0; border:0; border-top:1px solid var(--border); }
   .mobileTileStyleSection legend{ padding:0; color:var(--title); font-size:13px; font-weight:750; }
   .mobileTileStyleChoices{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; margin-top:9px; }

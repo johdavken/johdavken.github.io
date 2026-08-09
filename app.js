@@ -3155,10 +3155,24 @@
     function showMobileWorkspaceHome(){
       if (!window.matchMedia("(max-width: 900px)").matches) return;
       document.body.dataset.mobileWorkspace = "home";
+      setMobileQuickActionsOpen(false);
       document.querySelectorAll(".workspaceNavButton").forEach(button=>{
         button.classList.remove("active");
         button.removeAttribute("aria-current");
       });
+    }
+
+    function setMobileQuickActionsOpen(open){
+      const quickActions = $("mobileQuickActions");
+      const toggle = $("mobileQuickActionsToggle");
+      const menu = $("mobileQuickActionsMenu");
+      if (!quickActions || !toggle || !menu) return;
+      const expanded = !!open;
+      quickActions.dataset.open = String(expanded);
+      toggle.setAttribute("aria-expanded", String(expanded));
+      toggle.setAttribute("aria-label", expanded ? "Close quick actions" : "Open quick actions");
+      menu.setAttribute("aria-hidden", String(!expanded));
+      menu.inert = !expanded;
     }
 
     function syncWorkspaceForViewport(){
@@ -4127,6 +4141,29 @@
       tile.addEventListener("click",()=>selectToolPanel(tile.dataset.mobileToolTarget));
     });
     $("mobileToolsBack")?.addEventListener("click",()=>{ document.body.dataset.mobileTools = "home"; });
+    $("mobileQuickActionsToggle")?.addEventListener("click",event=>{
+      event.stopPropagation();
+      setMobileQuickActionsOpen($("mobileQuickActions")?.dataset.open !== "true");
+    });
+    $("mobileQuickActionsMenu")?.addEventListener("click",event=>event.stopPropagation());
+    $("quickScanDosingScreenBtn")?.addEventListener("click",()=>{
+      setMobileQuickActionsOpen(false);
+      window.PolynRecipeScanUI?.startScan("dosing_screen");
+    });
+    $("quickProductionSummaryBtn")?.addEventListener("click",()=>{
+      setMobileQuickActionsOpen(false);
+      setWorkspacePanel("toolsBlock", { reveal: true });
+      selectToolPanel("productionSummaryTool");
+    });
+    document.addEventListener("click",event=>{
+      const quickActions = $("mobileQuickActions");
+      if (quickActions?.dataset.open === "true" && !quickActions.contains(event.target)) setMobileQuickActionsOpen(false);
+    });
+    document.addEventListener("keydown",event=>{
+      if (event.key !== "Escape" || $("mobileQuickActions")?.dataset.open !== "true") return;
+      setMobileQuickActionsOpen(false);
+      $("mobileQuickActionsToggle")?.focus();
+    });
     document.querySelectorAll(".mobileHelpTile").forEach(tile=>{
       tile.addEventListener("click",()=>{
         const topic = document.getElementById(tile.dataset.mobileHelpTarget);
