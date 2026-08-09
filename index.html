@@ -7,7 +7,7 @@
   <!-- Favicons -->
   <link rel="icon" type="image/svg+xml" sizes="any" href="branding/resin-tools/rt6-02-layer-stack-icon.svg?v=2">
 
-  <link rel="stylesheet" href="styles.css?v=0.55.7">
+  <link rel="stylesheet" href="styles.css?v=0.55.8">
   <link rel="stylesheet" href="theme.css?v=0.17.3">
 <script src="validation.js?v=0.18" defer></script>
 <script src="scheduling.js?v=0.18.4" defer></script>
@@ -29,7 +29,7 @@
 <script src="resin-lookup.js?v=0.18.1" defer></script>
 <script src="resin-admin.js?v=0.20.1" defer></script>
 <script src="workspace-recovery.js?v=0.1.0" defer></script>
-<script src="app.js?v=0.18.98" defer></script>
+<script src="app.js?v=0.18.99" defer></script>
 <script src="resin-admin-ui.js?v=0.20.1" defer></script>
 <script src="workspace-recovery-ui.js?v=0.1.0" defer></script>
 <script src="recipe-scan-ui.js?v=0.3.2" defer></script>
@@ -658,7 +658,15 @@
     </summary>
 
     <div class="blockBody">
+      <div class="mobileToolsHome" aria-label="Production tools">
+        <button class="mobileToolTile" type="button" data-mobile-tool-target="productionSummaryTool"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 25V15M16 25V7M26 25V11"/><path d="M3 25h26"/></svg><span>Production Summary</span><small>Material totals</small></button>
+        <button class="mobileToolTile" type="button" data-mobile-tool-target="shortFootageTool"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 24 12 17l5 3 10-12"/><path d="M21 8h6v6"/></svg><span>Short Footage</span><small>Footage calculator</small></button>
+        <button class="mobileToolTile" type="button" data-mobile-tool-target="hopperWeightTool"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M9 6h14l3 20H6L9 6Z"/><path d="M8 14h16M11 10h10"/></svg><span>Hopper Weight</span><small>Capacity estimate</small></button>
+        <button class="mobileToolTile" type="button" data-mobile-tool-target="resinLookupTool"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="14" cy="14" r="8"/><path d="m20 20 7 7M11 14h6M14 11v6"/></svg><span>Resin Lookup</span><small>Material reference</small></button>
+        <button class="mobileToolTile" type="button" data-mobile-tool-target="recipeScanTool"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 10V6h4M22 6h4v4M26 22v4h-4M10 26H6v-4"/><path d="M10 16h12M10 12h8M10 20h9"/></svg><span>Scan Recipe</span><small>Import from photo</small></button>
+      </div>
       <div class="toolsWorkspace">
+        <button id="mobileToolsBack" class="mobileToolsBack" type="button" aria-label="Back to tools" title="Back to tools"><span aria-hidden="true"></span></button>
         <details class="toolsIndexDropdown">
           <summary><span class="toolsIndexDropdownLabel">Production Summary</span></summary>
         </details>

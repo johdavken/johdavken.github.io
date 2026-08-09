@@ -2894,6 +2894,50 @@ button.compactAction{
 .toolsWorkspaceContent{ min-width: 0; }
 .toolWorkspacePanel[hidden]{ display: none !important; }
 .toolsWorkspaceContent .toolPanel + .toolPanel{ margin-top: 0; }
+.mobileToolsHome,.mobileToolsBack{ display:none; }
+@media (width <= 900px){
+  #toolsBlock .mobileToolsHome{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:8px;
+  }
+  #toolsBlock .mobileToolTile{
+    display:grid;
+    align-content:center;
+    gap:6px;
+    min-height:104px;
+    padding:12px;
+    border:1px solid var(--border);
+    border-radius:var(--control-radius);
+    background:var(--row-bg);
+    color:var(--text);
+    text-align:left;
+  }
+  #toolsBlock .mobileToolTile svg{ width:28px; height:28px; fill:none; stroke:var(--focus-border); stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+  #toolsBlock .mobileToolTile span{ font-size:13px; font-weight:700; line-height:1.15; }
+  #toolsBlock .mobileToolTile small{ color:var(--muted); font-size:11px; }
+  #toolsBlock .mobileToolTile:hover{ border-color:var(--focus-border); background:var(--focus-ring); }
+  #toolsBlock .toolsWorkspace{ display:none; grid-template-columns:1fr; }
+  body[data-mobile-tools="panel"] #toolsBlock .mobileToolsHome{ display:none; }
+  body[data-mobile-tools="panel"] #toolsBlock .toolsWorkspace{ display:grid; }
+  #toolsBlock .toolsIndexDropdown,#toolsBlock .toolsIndex{ display:none!important; }
+  #toolsBlock .mobileToolsBack{
+    display:flex;
+    justify-self:end;
+    width:30px;
+    height:30px;
+    padding:0;
+    border:1px solid color-mix(in srgb,var(--focus-border) 34%,transparent);
+    border-radius:7px;
+    background:transparent;
+  }
+  #toolsBlock .mobileToolsBack span{
+    width:18px;
+    height:18px;
+    margin:auto;
+    background:linear-gradient(var(--focus-border) 0 0) 1px 1px / 6px 6px no-repeat,linear-gradient(var(--focus-border) 0 0) calc(100% - 1px) 1px / 6px 6px no-repeat,linear-gradient(var(--focus-border) 0 0) 1px calc(100% - 1px) / 6px 6px no-repeat,linear-gradient(var(--focus-border) 0 0) calc(100% - 1px) calc(100% - 1px) / 6px 6px no-repeat;
+  }
+}
 @media (max-width: 720px){
   .toolsWorkspace{ grid-template-columns: 1fr; }
   .toolsIndexDropdown{ display: block; }
