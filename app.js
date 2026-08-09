@@ -3105,6 +3105,10 @@
         panel.addEventListener("toggle", ()=>{
           if (!panel.open) return;
           if (!window.matchMedia("(max-width: 900px)").matches) return;
+          // Restoring an open <details> from saved session state can emit a
+          // toggle during startup. The tile home is authoritative until an
+          // explicit tile click changes the mobile workspace to "panel".
+          if (document.body.dataset.mobileWorkspace !== "panel") return;
           panels.forEach(other=>{ if (other !== panel && other.open) other.open = false; });
           setWorkspacePanel(panel.id, { reveal: false });
         });
