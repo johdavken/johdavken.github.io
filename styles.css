@@ -564,6 +564,7 @@ main{
 }
 .adminNavButton{ margin-top: 2px; }
 .adminNavButton[hidden]{ display: none !important; }
+.appearanceNavTile{ display:none!important; }
 .adminDialog{ width: min(94vw, 560px); border: 1px solid var(--border2); border-radius: var(--radius-card); background: var(--panel); color: var(--text); padding: 0; }
 .adminDialog::backdrop{ background: rgba(0,0,0,.58); }
 .adminForm{ display: grid; gap: 13px; padding: 20px; }
@@ -3650,6 +3651,53 @@ body[data-surface-style="divided"] .helpTopic{
   body[data-mobile-timeline-only="true"] #resultsBlock{ display:block !important; }
   body[data-mobile-recipe-only="true"] .workspaceContent > .workspacePanel:not(#splitsBlock){ display:none !important; }
   body[data-mobile-recipe-only="true"] #splitsBlock{ display:block !important; }
+}
+
+/* Mobile uses the tile home instead of the old status bar. The existing
+   preferences control becomes a modal sheet, keeping one source of truth
+   for all appearance settings without changing the desktop menu. */
+@media (width <= 900px){
+  .appearanceNavTile{ display:grid!important; }
+  .workspaceStatusBar{ display:contents!important; }
+  .workspaceStatusBar > :not(.statusPreferences){ display:none!important; }
+  .workspaceStatusBar .statusPreferences{ display:none; }
+  .workspaceStatusBar .statusPreferences[open]{
+    display:block;
+    position:fixed;
+    inset:0;
+    z-index:80;
+    background:color-mix(in srgb,var(--bg) 72%,transparent);
+    backdrop-filter:blur(5px);
+  }
+  .workspaceStatusBar .statusPreferences[open] > summary{
+    position:absolute;
+    top:14px;
+    right:14px;
+    z-index:1;
+    width:34px;
+    height:34px;
+    border:1px solid var(--border2);
+    border-radius:50%;
+    background:var(--panel);
+    font-size:0;
+  }
+  .workspaceStatusBar .statusPreferences[open] > summary::before{
+    content:"×";
+    font-size:23px;
+    line-height:1;
+  }
+  .workspaceStatusBar .statusPreferencesPanel{
+    position:absolute;
+    top:50%;
+    right:var(--page-pad);
+    bottom:auto;
+    left:var(--page-pad);
+    width:auto;
+    max-width:460px;
+    margin:auto;
+    transform:translateY(-50%);
+  }
+  main{ padding-bottom:calc(24px + var(--page-bottom-pad)); }
 }
 
 #recipePrintSheet{ display:none; }

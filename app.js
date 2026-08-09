@@ -3990,6 +3990,11 @@
     document.querySelectorAll(".workspaceNavButton").forEach(button=>{
       button.addEventListener("click",()=>setWorkspacePanel(button.dataset.workspaceTarget, { reveal: true }));
     });
+    $("mobileAppearanceTile")?.addEventListener("click",()=>{
+      if (!window.matchMedia("(max-width: 900px)").matches) return;
+      const preferences = $("statusPreferences");
+      if (preferences) preferences.open = true;
+    });
     $("mobileWorkspaceHome")?.addEventListener("click", showMobileWorkspaceHome);
     document.querySelectorAll(".workspaceContent > .workspacePanel > summary").forEach(summary=>{
       summary.addEventListener("click",event=>{
