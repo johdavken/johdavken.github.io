@@ -3536,24 +3536,35 @@ body[data-surface-style="divided"] .helpTopic{
   }
   .workspaceNav .workspaceBrand{ display:none; }
   .workspaceNavButton{
+    --tile-accent:var(--focus-border);
     display:grid;
     grid-template-columns:1fr;
     align-content:center;
     gap:7px;
     min-height:78px;
     padding:12px;
-    border:1px solid var(--border);
+    border:1px solid color-mix(in srgb,var(--tile-accent) 24%,var(--border));
     border-radius:var(--control-radius);
-    background:var(--row-bg);
+    background:linear-gradient(145deg,color-mix(in srgb,var(--tile-accent) 9%,var(--row-bg)),var(--row-bg) 68%);
     color:var(--muted);
     text-align:left;
-    box-shadow:none;
+    box-shadow:inset 0 2px 0 color-mix(in srgb,var(--tile-accent) 60%,transparent);
+    transition:border-color .16s ease,background .16s ease,transform .16s ease;
   }
+  .workspaceNavButton[data-workspace-target="lineSetupBlock"]{ --tile-accent:var(--orange); }
+  .workspaceNavButton[data-workspace-target="splitsBlock"]{ --tile-accent:var(--title); }
+  .workspaceNavButton[data-workspace-target="resultsBlock"]{ --tile-accent:var(--focus-border); }
+  .workspaceNavButton[data-workspace-target="lineSyncBlock"]{ --tile-accent:var(--ok); }
+  .workspaceNavButton[data-workspace-target="toolsBlock"]{ --tile-accent:var(--warn); }
+  .workspaceNavButton[data-workspace-target="helpBlock"]{ --tile-accent:var(--focus-border); }
+  .workspaceNavButton[data-workspace-target="resinAdminBlock"]{ --tile-accent:var(--ok); }
+  .workspaceNavButton[data-workspace-target="workspaceManagementBlock"]{ --tile-accent:var(--focus-border); }
+  .appearanceNavTile{ --tile-accent:var(--title); }
   .workspaceNavButton span{
     display:flex;
     align-items:center;
     gap:9px;
-    color:inherit;
+    color:var(--text);
     font-size:13px;
     font-weight:700;
     line-height:1.1;
@@ -3562,9 +3573,13 @@ body[data-surface-style="divided"] .helpTopic{
     white-space:normal;
   }
   .workspaceTileIcon{
-    width:28px;
-    height:28px;
-    color:var(--focus-border);
+    width:34px;
+    height:34px;
+    padding:5px;
+    border:1px solid color-mix(in srgb,var(--tile-accent) 38%,transparent);
+    border-radius:9px;
+    background:color-mix(in srgb,var(--tile-accent) 12%,transparent);
+    color:var(--tile-accent);
   }
   .workspaceNavButton small{
     display:flex;
@@ -3597,6 +3612,7 @@ body[data-surface-style="divided"] .helpTopic{
     color:var(--title);
   }
   .workspaceNavButton.active .workspaceTileIcon{ color:var(--title); }
+  .workspaceNavButton:hover{ border-color:color-mix(in srgb,var(--tile-accent) 64%,var(--border)); transform:translateY(-1px); }
   .workspaceNavButton:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
   body[data-mobile-workspace="panel"] .workspaceNav{ display:none; }
   body[data-mobile-workspace="home"] .workspaceContent > .workspacePanel{ display:none!important; }
