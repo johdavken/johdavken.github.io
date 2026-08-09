@@ -3009,6 +3009,7 @@
       activeWorkspaceId = id;
       document.querySelectorAll(".workspaceContent > .workspacePanel").forEach(panel=>{
         panel.classList.toggle("desktop-active", panel.id === id);
+        panel.classList.toggle("mobile-active", panel.id === id);
       });
       document.querySelectorAll(".workspaceNavButton").forEach(button=>{
         const active = button.dataset.workspaceTarget === id;
@@ -3017,11 +3018,23 @@
         else button.removeAttribute("aria-current");
       });
       if (window.matchMedia("(min-width: 901px)").matches) target.open = true;
-      if (window.matchMedia("(max-width: 900px)").matches && !target.open) target.open = true;
+      if (window.matchMedia("(max-width: 900px)").matches){
+        document.body.dataset.mobileWorkspace = "panel";
+        if (!target.open) target.open = true;
+      }
       if (persist) saveWorkspacePreference(id);
       if (reveal && window.matchMedia("(max-width: 900px)").matches){
         requestAnimationFrame(()=>target.scrollIntoView({ behavior:"smooth", block:"start" }));
       }
+    }
+
+    function showMobileWorkspaceHome(){
+      if (!window.matchMedia("(max-width: 900px)").matches) return;
+      document.body.dataset.mobileWorkspace = "home";
+      document.querySelectorAll(".workspaceNavButton").forEach(button=>{
+        button.classList.remove("active");
+        button.removeAttribute("aria-current");
+      });
     }
 
     function syncWorkspaceForViewport(){
@@ -3034,10 +3047,7 @@
         setWorkspacePanel(activeWorkspaceId);
       }
       if (!desktop){
-        // The mobile tab strip is the section chooser.  Keep its selected
-        // panel open on entry so the first screen is useful work, not a
-        // stack of closed disclosures.
-        setWorkspacePanel(activeWorkspaceId, { persist: false });
+        if (!document.body.dataset.mobileWorkspace) showMobileWorkspaceHome();
       }
       if (!desktop && state.mobileTimelineOnly){
         const results = $("resultsBlock");
@@ -3972,6 +3982,7 @@
     document.querySelectorAll(".workspaceNavButton").forEach(button=>{
       button.addEventListener("click",()=>setWorkspacePanel(button.dataset.workspaceTarget, { reveal: true }));
     });
+    $("mobileWorkspaceHome")?.addEventListener("click", showMobileWorkspaceHome);
     document.querySelectorAll(".workspaceContent > .workspacePanel > summary").forEach(summary=>{
       summary.addEventListener("click",event=>{
         const timelineLockedOpen = state.mobileTimelineOnly && summary.closest("#resultsBlock") && window.matchMedia("(max-width: 900px)").matches;
