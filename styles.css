@@ -2895,7 +2895,7 @@ button.compactAction{
 .toolsWorkspaceContent{ min-width: 0; }
 .toolWorkspacePanel[hidden]{ display: none !important; }
 .toolsWorkspaceContent .toolPanel + .toolPanel{ margin-top: 0; }
-.mobileToolsHome,.mobileToolsBack,.mobileHelpHome,.mobileHelpBack{ display:none; }
+.mobileToolsHome,.mobileToolsBack,.mobileToolHeader,.mobileHelpHome,.mobileHelpBack{ display:none; }
 @media (width <= 900px){
   #helpBlock .mobileHelpHome{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
   #helpBlock .mobileHelpTile{ display:grid; align-content:center; gap:5px; min-height:88px; padding:12px; border:1px solid var(--border); border-radius:var(--control-radius); background:var(--row-bg); color:var(--text); text-align:left; }
@@ -2932,9 +2932,11 @@ button.compactAction{
   body[data-mobile-tools="panel"] #toolsBlock .mobileToolsHome{ display:none; }
   body[data-mobile-tools="panel"] #toolsBlock .toolsWorkspace{ display:grid; }
   #toolsBlock .toolsIndexDropdown,#toolsBlock .toolsIndex{ display:none!important; }
+  #toolsBlock .mobileToolHeader{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px; padding-bottom:9px; border-bottom:1px solid var(--border); }
+  #toolsBlock .mobileToolHeader > div{ color:var(--title); font-size:calc(var(--title-size) * 1.05); font-weight:650; letter-spacing:.04em; }
   #toolsBlock .mobileToolsBack{
     display:flex;
-    justify-self:end;
+    flex:0 0 auto;
     width:30px;
     height:30px;
     padding:0;

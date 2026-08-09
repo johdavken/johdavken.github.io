@@ -3954,6 +3954,7 @@
     // very first press, before the operator could see the other choices.
     const toolsIndexDropdown = document.querySelector(".toolsIndexDropdown");
     const toolsIndexDropdownLabel = document.querySelector(".toolsIndexDropdownLabel");
+    const mobileToolHeaderLabel = $("mobileToolHeaderLabel");
     function selectToolPanel(targetId, { focus = false } = {}){
       if (!toolTabs.some(tab=>tab.dataset.toolTarget === targetId)) return;
       toolTabs.forEach(tab=>{
@@ -3963,6 +3964,7 @@
         tab.tabIndex = selected ? 0 : -1;
         if (selected){
           if (toolsIndexDropdownLabel) toolsIndexDropdownLabel.textContent = tab.textContent;
+          if (mobileToolHeaderLabel) mobileToolHeaderLabel.textContent = tab.textContent;
           if (focus) tab.focus();
         }
       });
