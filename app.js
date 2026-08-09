@@ -3021,6 +3021,7 @@
       if (window.matchMedia("(max-width: 900px)").matches){
         document.body.dataset.mobileWorkspace = "panel";
         if (id === "toolsBlock") document.body.dataset.mobileTools = "home";
+        if (id === "helpBlock") document.body.dataset.mobileHelp = "home";
         target.querySelector(":scope > summary")?.setAttribute("aria-label", "Back to all sections");
         target.querySelector(":scope > summary")?.setAttribute("title", "Back to all sections");
         if (!target.open) target.open = true;
@@ -3970,6 +3971,16 @@
       tile.addEventListener("click",()=>selectToolPanel(tile.dataset.mobileToolTarget));
     });
     $("mobileToolsBack")?.addEventListener("click",()=>{ document.body.dataset.mobileTools = "home"; });
+    document.querySelectorAll(".mobileHelpTile").forEach(tile=>{
+      tile.addEventListener("click",()=>{
+        const topic = document.getElementById(tile.dataset.mobileHelpTarget);
+        if (!topic) return;
+        document.querySelectorAll("#helpBlock .helpTopic").forEach(item=>item.classList.toggle("mobile-help-active", item === topic));
+        topic.open = true;
+        document.body.dataset.mobileHelp = "panel";
+      });
+    });
+    $("mobileHelpBack")?.addEventListener("click",()=>{ document.body.dataset.mobileHelp = "home"; });
     toolTabs.forEach((tab, index)=>{
       tab.addEventListener("click", ()=>{
         selectToolPanel(tab.dataset.toolTarget);

@@ -2895,8 +2895,18 @@ button.compactAction{
 .toolsWorkspaceContent{ min-width: 0; }
 .toolWorkspacePanel[hidden]{ display: none !important; }
 .toolsWorkspaceContent .toolPanel + .toolPanel{ margin-top: 0; }
-.mobileToolsHome,.mobileToolsBack{ display:none; }
+.mobileToolsHome,.mobileToolsBack,.mobileHelpHome,.mobileHelpBack{ display:none; }
 @media (width <= 900px){
+  #helpBlock .mobileHelpHome{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+  #helpBlock .mobileHelpTile{ display:grid; align-content:center; gap:5px; min-height:88px; padding:12px; border:1px solid var(--border); border-radius:var(--control-radius); background:var(--row-bg); color:var(--text); text-align:left; }
+  #helpBlock .mobileHelpTile span{ color:var(--focus-border); font-size:13px; font-weight:750; }
+  #helpBlock .mobileHelpTile small{ color:var(--muted); font-size:11px; }
+  #helpBlock .helpTopics{ display:none; }
+  body[data-mobile-help="panel"] #helpBlock .mobileHelpHome{ display:none; }
+  body[data-mobile-help="panel"] #helpBlock .helpTopics{ display:block; }
+  body[data-mobile-help="panel"] #helpBlock .helpTopic{ display:none!important; }
+  body[data-mobile-help="panel"] #helpBlock .helpTopic.mobile-help-active{ display:block!important; }
+  body[data-mobile-help="panel"] #helpBlock .mobileHelpBack{ display:block; margin-left:auto; border:1px solid var(--border); border-radius:7px; background:transparent; color:var(--focus-border); }
   #toolsBlock .mobileToolsHome{
     display:grid;
     grid-template-columns:repeat(2,minmax(0,1fr));
