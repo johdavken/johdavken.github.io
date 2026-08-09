@@ -3020,6 +3020,8 @@
       if (window.matchMedia("(min-width: 901px)").matches) target.open = true;
       if (window.matchMedia("(max-width: 900px)").matches){
         document.body.dataset.mobileWorkspace = "panel";
+        target.querySelector(":scope > summary")?.setAttribute("aria-label", "Back to all sections");
+        target.querySelector(":scope > summary")?.setAttribute("title", "Back to all sections");
         if (!target.open) target.open = true;
       }
       if (persist) saveWorkspacePreference(id);

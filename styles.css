@@ -3496,11 +3496,17 @@ body[data-surface-style="divided"] .helpTopic{
     border-bottom:1px solid var(--border);
   }
   body[data-mobile-workspace="panel"] .workspaceContent > .workspacePanel.mobile-active > summary::after{
-    content:"All sections";
-    color:var(--focus-border);
-    font-size:var(--font-small);
-    font-weight:750;
-    white-space:nowrap;
+    content:"";
+    width:22px;
+    height:22px;
+    flex:0 0 auto;
+    background:
+      linear-gradient(var(--focus-border) 0 0) 2px 2px / 7px 7px no-repeat,
+      linear-gradient(var(--focus-border) 0 0) calc(100% - 2px) 2px / 7px 7px no-repeat,
+      linear-gradient(var(--focus-border) 0 0) 2px calc(100% - 2px) / 7px 7px no-repeat,
+      linear-gradient(var(--focus-border) 0 0) calc(100% - 2px) calc(100% - 2px) / 7px 7px no-repeat;
+    border:1px solid color-mix(in srgb,var(--focus-border) 34%,transparent);
+    border-radius:7px;
   }
   body[data-mobile-workspace="panel"] .workspaceContent > .workspacePanel.mobile-active > summary .chev{ display:none; }
   body[data-mobile-workspace="panel"] .workspaceContent > .workspacePanel.mobile-active > summary .layerMeta{ display:none; }
@@ -3516,8 +3522,6 @@ body[data-surface-style="divided"] .helpTopic{
     font-weight:750;
   }
   body[data-mobile-workspace="panel"] .mobileWorkspaceHome{ display:flex; }
-  /* The catalog editor is an admin-only desktop workspace. */
-  .adminResinPanel{ display:none!important; }
   /* Scoped to just the top-level card summaries (.layerTitle is a generic
      heading class reused by dialogs, tool panels, admin forms, etc. - a
      blanket size bump there would spill into all of those). Subtitle stays
