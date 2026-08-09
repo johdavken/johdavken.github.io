@@ -3393,6 +3393,87 @@ body[data-surface-style="divided"] .helpTopic{
 .chipToggle:hover{ color:var(--title); background:var(--field-bg); }
 .chipToggle.on{ color:var(--title); }
 @media (max-width:900px){
+  /* Mobile workspace navigation: reuse the live section state from the
+     desktop sidebar as a compact, horizontally scrollable control strip.
+     This replaces the previous screen of indistinguishable collapsed cards
+     with direct routes to the active operational areas. */
+  .mobileBrand{
+    min-height:52px;
+    padding:3px 12px;
+  }
+  .resinToolsLogo{ width:min(100%,122px); }
+  .workspaceNav{
+    display:flex;
+    gap:4px;
+    overflow-x:auto;
+    overscroll-behavior-x:contain;
+    padding:7px var(--page-pad) 8px;
+    margin:0 calc(-1 * var(--page-pad));
+    border-top:1px solid var(--border);
+    border-bottom:1px solid var(--surface-chrome-border);
+    background:var(--surface-chrome-bg);
+    scrollbar-width:none;
+  }
+  .workspaceNav::-webkit-scrollbar{ display:none; }
+  .workspaceNav .workspaceBrand{ display:none; }
+  .workspaceNavButton{
+    display:grid;
+    grid-template-columns:auto 1fr;
+    align-items:center;
+    column-gap:6px;
+    flex:0 0 auto;
+    min-width:98px;
+    min-height:42px;
+    padding:6px 9px;
+    border:1px solid var(--border);
+    border-radius:var(--control-radius);
+    background:var(--row-bg);
+    color:var(--muted);
+    text-align:left;
+    box-shadow:none;
+  }
+  .workspaceNavButton span{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    color:inherit;
+    font-size:11px;
+    font-weight:700;
+    line-height:1.1;
+    letter-spacing:.02em;
+    text-transform:none;
+    white-space:nowrap;
+  }
+  .workspaceNavButton > span::before{
+    content:"";
+    width:7px;
+    height:7px;
+    flex:0 0 auto;
+    border-radius:50%;
+    background:var(--muted);
+  }
+  .workspaceNavButton[data-status="info"] > span::before{ background:var(--focus-border); }
+  .workspaceNavButton[data-status="ok"] > span::before{ background:var(--ok); }
+  .workspaceNavButton[data-status="warn"] > span::before{ background:var(--warn); }
+  .workspaceNavButton[data-status="bad"] > span::before{ background:var(--bad); }
+  .workspaceNavButton small{
+    grid-column:2;
+    display:block;
+    max-width:105px;
+    overflow:hidden;
+    color:inherit;
+    font-size:10px;
+    line-height:1.15;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    opacity:.82;
+  }
+  .workspaceNavButton.active{
+    border-color:var(--focus-border);
+    background:var(--focus-ring);
+    color:var(--title);
+  }
+  .workspaceNavButton:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
   /* The catalog editor is an admin-only desktop workspace. */
   .adminResinPanel{ display:none!important; }
   /* Scoped to just the top-level card summaries (.layerTitle is a generic
@@ -3410,8 +3491,9 @@ body[data-surface-style="divided"] .helpTopic{
      is theme-agnostic on purpose - confirmed on Dark and Light first, now
      applied everywhere rather than enumerating every data-theme value. */
   .workspaceContent > .workspacePanel > summary .layerTitle{
-    font-size: calc(var(--title-size) * 1.25);
+    font-size: calc(var(--title-size) * 1.05);
     color: var(--muted);
+    letter-spacing:.08em;
   }
   .workspaceContent > .workspacePanel[open] > summary .layerTitle{ color: var(--title); }
   .workspaceContent > .workspacePanel > summary .layerMeta{ display: none; }

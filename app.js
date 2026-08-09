@@ -3003,7 +3003,7 @@
       }
     }
 
-    function setWorkspacePanel(id, { persist = true } = {}){
+    function setWorkspacePanel(id, { persist = true, reveal = false } = {}){
       const target = document.getElementById(id);
       if (!target?.classList.contains("workspacePanel")) return;
       activeWorkspaceId = id;
@@ -3017,7 +3017,11 @@
         else button.removeAttribute("aria-current");
       });
       if (window.matchMedia("(min-width: 901px)").matches) target.open = true;
+      if (window.matchMedia("(max-width: 900px)").matches && !target.open) target.open = true;
       if (persist) saveWorkspacePreference(id);
+      if (reveal && window.matchMedia("(max-width: 900px)").matches){
+        requestAnimationFrame(()=>target.scrollIntoView({ behavior:"smooth", block:"start" }));
+      }
     }
 
     function syncWorkspaceForViewport(){
@@ -3028,6 +3032,12 @@
       }
       if (desktop){
         setWorkspacePanel(activeWorkspaceId);
+      }
+      if (!desktop){
+        // The mobile tab strip is the section chooser.  Keep its selected
+        // panel open on entry so the first screen is useful work, not a
+        // stack of closed disclosures.
+        setWorkspacePanel(activeWorkspaceId, { persist: false });
       }
       if (!desktop && state.mobileTimelineOnly){
         const results = $("resultsBlock");
@@ -3082,6 +3092,7 @@
           if (!panel.open) return;
           if (!window.matchMedia("(max-width: 900px)").matches) return;
           panels.forEach(other=>{ if (other !== panel && other.open) other.open = false; });
+          setWorkspacePanel(panel.id, { reveal: false });
         });
       });
     }
@@ -3959,7 +3970,7 @@
     });
     $("resetTrackingBtn")?.addEventListener("click", resetTracking);
     document.querySelectorAll(".workspaceNavButton").forEach(button=>{
-      button.addEventListener("click",()=>setWorkspacePanel(button.dataset.workspaceTarget));
+      button.addEventListener("click",()=>setWorkspacePanel(button.dataset.workspaceTarget, { reveal: true }));
     });
     document.querySelectorAll(".workspaceContent > .workspacePanel > summary").forEach(summary=>{
       summary.addEventListener("click",event=>{

@@ -12,7 +12,9 @@ const styles = fs.readFileSync("styles.css", "utf8");
 // visual noise before anything is even opened. The subtitle is hidden on
 // mobile in both states now - collapsed (cuts the noise) and open (found to
 // be redundant with the card's own content in almost every case) - and the
-// title itself gets a 25% size bump to carry more of the weight on its own.
+// title remains visible as the open panel's heading. The compact mobile tab
+// strip now carries section selection and live status, so this heading uses a
+// restrained bump rather than competing with the primary navigation.
 
 function mobileBlock(){
   const start = styles.indexOf("@media (max-width:900px)");
@@ -27,15 +29,15 @@ test("the card title font-size bump is scoped to top-level card summaries only, 
   assert.notEqual(ruleStart, -1);
   const ruleEnd = mobile.indexOf("}", ruleStart);
   const rule = mobile.slice(ruleStart, ruleEnd);
-  assert.match(rule, /font-size: calc\(var\(--title-size\) \* 1\.25\);/);
+  assert.match(rule, /font-size: calc\(var\(--title-size\) \* 1\.05\);/);
   // Guard against a future edit widening this to the bare class, which
   // would also resize every dialog/tool-panel/admin-form title on mobile.
   assert.doesNotMatch(mobile, /(?<!summary )\.layerTitle\{[^}]*font-size/);
 });
 
-test("the subtitle uses the base density token (25% larger than the un-scaled --title-size, not a hardcoded px value) so it still respects the user's chosen view density", () => {
+test("the open-panel heading uses the base density token rather than a hardcoded px value, so it still respects the user's chosen view density", () => {
   const mobile = mobileBlock();
-  assert.match(mobile, /calc\(var\(--title-size\) \* 1\.25\)/);
+  assert.match(mobile, /calc\(var\(--title-size\) \* 1\.05\)/);
 });
 
 test("the card subtitle is hidden on mobile in both states - collapsed and open - not just while collapsed", () => {
