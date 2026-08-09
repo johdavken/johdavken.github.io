@@ -3990,8 +3990,9 @@
     document.querySelectorAll(".workspaceNavButton").forEach(button=>{
       button.addEventListener("click",()=>setWorkspacePanel(button.dataset.workspaceTarget, { reveal: true }));
     });
-    $("mobileAppearanceTile")?.addEventListener("click",()=>{
+    $("mobileAppearanceTile")?.addEventListener("click",event=>{
       if (!window.matchMedia("(max-width: 900px)").matches) return;
+      event.stopPropagation();
       const preferences = $("statusPreferences");
       if (preferences) preferences.open = true;
     });
@@ -4064,6 +4065,9 @@
       }
 
       activeWorkspaceId = loadWorkspacePreference();
+      // A phone always starts at the tile home. Desktop keeps restoring the
+      // most recently used workspace through activeWorkspaceId.
+      if (window.matchMedia("(max-width: 900px)").matches) showMobileWorkspaceHome();
       applyMobileTimelineMode(state.mobileTimelineOnly);
       syncWorkspaceForViewport();
       hookDetailsPersistence();
