@@ -3657,6 +3657,10 @@ body[data-surface-style="divided"] .helpTopic{
    preferences control becomes a modal sheet, keeping one source of truth
    for all appearance settings without changing the desktop menu. */
 @media (width <= 900px){
+  /* The safe mobile default is always the tile home. Restored <details>
+     state must never expose a workspace before a tile explicitly selects it. */
+  .workspaceContent > .workspacePanel{ display:none!important; }
+  body[data-mobile-workspace="panel"] .workspaceContent > .workspacePanel.mobile-active{ display:block!important; }
   .appearanceNavTile{ display:grid!important; }
   .workspaceStatusBar{ display:contents!important; }
   .workspaceStatusBar > :not(.statusPreferences){ display:none!important; }
