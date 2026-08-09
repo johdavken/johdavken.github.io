@@ -15,6 +15,7 @@ test("mobile Appearance uses a focused section with a return-to-tiles control",(
   assert.match(app,/\$\("mobileAppearanceBack"\)\?\.addEventListener\("click",\(\)=>\{/);
   assert.match(styles,/body\[data-mobile-workspace="appearance"\] \.workspaceNav\{ display:none; \}/);
   assert.match(styles,/body\[data-mobile-workspace="appearance"\] \.workspaceStatusBar \.statusPreferences\[open\]\{/);
+  assert.match(styles,/body\[data-mobile-workspace="appearance"\] \.mobileAppearancePanelHeader\{[\s\S]*?background:transparent;/);
 });
 
 test("the old full-screen mobile preferences modal is removed",()=>{

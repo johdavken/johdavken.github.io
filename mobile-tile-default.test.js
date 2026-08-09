@@ -10,6 +10,8 @@ const html = fs.readFileSync("index.html","utf8");
 test("minimal is the default mobile tile appearance",()=>{
   assert.match(app,/mobileTileStyle: "minimal"/);
   assert.match(app,/allowed\.has\(String\(value\)\) \? String\(value\) : "minimal"/);
+  assert.match(app,/"layered"/);
+  assert.match(html,/data-mobile-tile-style="layered"/);
   assert.match(app,/applyMobileTileStyle\(payload\.mobileTileStyle \|\| "minimal"\)/);
   assert.match(app,/applyMobileTileStyle\(state\.mobileTileStyle \|\| "minimal"\)/);
 

@@ -3850,6 +3850,7 @@ body[data-surface-style="divided"] .helpTopic{
   .mobileTileStyleChoices button[data-mobile-tile-style="outline"] span{ border:2px solid var(--focus-border); background:transparent; }
   .mobileTileStyleChoices button[data-mobile-tile-style="glass"] span{ border:1px solid color-mix(in srgb,var(--text) 30%,transparent); border-radius:9px; background:color-mix(in srgb,var(--text) 10%,transparent); box-shadow:0 3px 7px color-mix(in srgb,var(--text) 12%,transparent); }
   .mobileTileStyleChoices button[data-mobile-tile-style="minimal"] span{ height:14px; border:0; border-bottom:2px solid var(--title); border-radius:0; background:transparent; }
+  .mobileTileStyleChoices button[data-mobile-tile-style="layered"] span{ border:1px solid color-mix(in srgb,var(--focus-border) 45%,var(--border)); background:color-mix(in srgb,var(--focus-border) 12%,var(--row-bg)); box-shadow:3px 3px 0 color-mix(in srgb,var(--title) 26%,var(--row-bg)),6px 6px 0 color-mix(in srgb,var(--orange) 18%,var(--row-bg)); }
   .mobileBackgroundStyleSection{ display:block; margin:14px 0 0; padding:12px 0 0; border:0; border-top:1px solid var(--border); }
   .mobileBackgroundStyleSection legend{ padding:0; color:var(--title); font-size:13px; font-weight:750; }
   .mobileBackgroundStyleChoices{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; margin-top:9px; }
@@ -3869,6 +3870,12 @@ body[data-surface-style="divided"] .helpTopic{
       var(--bg);
     background-size:8px 8px;
   }
+  .mobileBackgroundStyleChoices button[data-mobile-background-style="paper-grain"] span{ background:repeating-radial-gradient(circle at 20% 30%,color-mix(in srgb,var(--text) 16%,transparent) 0 1px,transparent 1px 5px),var(--bg); background-size:8px 8px; }
+  .mobileBackgroundStyleChoices button[data-mobile-background-style="dot-matrix"] span{ background:radial-gradient(circle,color-mix(in srgb,var(--focus-border) 42%,transparent) 1px,transparent 1.5px),var(--bg); background-size:7px 7px; }
+  .mobileBackgroundStyleChoices button[data-mobile-background-style="blueprint"] span{ background:linear-gradient(color-mix(in srgb,var(--focus-border) 24%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,var(--focus-border) 24%,transparent) 1px,transparent 1px),color-mix(in srgb,var(--focus-border) 13%,var(--bg)); background-size:9px 9px; }
+  .mobileBackgroundStyleChoices button[data-mobile-background-style="contour-lines"] span{ background:repeating-radial-gradient(ellipse at 20% 80%,transparent 0 4px,color-mix(in srgb,var(--ok) 27%,transparent) 5px 6px,transparent 7px 10px),var(--bg); }
+  .mobileBackgroundStyleChoices button[data-mobile-background-style="prism-fade"] span{ background:linear-gradient(135deg,color-mix(in srgb,var(--bad) 34%,var(--bg)),transparent 48%),linear-gradient(315deg,color-mix(in srgb,var(--ok) 30%,var(--bg)),var(--bg) 64%); }
+  .mobileBackgroundStyleChoices button[data-mobile-background-style="pinstripe"] span{ background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--title) 26%,transparent) 0 1px,transparent 1px 5px),var(--bg); }
   .mobileTimelineAlarmSection{ display:block; margin:14px 0 0; padding:12px 0 0; border:0; border-top:1px solid var(--border); }
   .mobileTimelineAlarmSection legend{ padding:0; color:var(--title); font-size:13px; font-weight:750; }
   .mobileTimelineAlarmChoice{ display:flex; align-items:flex-start; gap:10px; margin-top:9px; padding:10px; border:1px solid var(--border); border-radius:var(--control-radius); background:var(--row-bg); }
@@ -3918,6 +3925,52 @@ body[data-surface-style="divided"] .helpTopic{
   body[data-mobile-background-style="industrial-grid"] .workspaceNav{
     background:color-mix(in srgb,var(--surface-chrome-bg) 80%,transparent);
   }
+  body[data-mobile-background-style="paper-grain"]{
+    background:
+      repeating-radial-gradient(circle at 12% 18%,color-mix(in srgb,var(--text) 6%,transparent) 0 1px,transparent 1px 7px),
+      radial-gradient(circle at 86% 12%,color-mix(in srgb,var(--warn) 7%,transparent),transparent 40%),
+      var(--bg);
+    background-size:12px 12px,auto,auto;
+    background-attachment:fixed;
+  }
+  body[data-mobile-background-style="dot-matrix"]{
+    background:
+      radial-gradient(circle,color-mix(in srgb,var(--focus-border) 18%,transparent) 1px,transparent 1.6px),
+      radial-gradient(circle at 50% 10%,color-mix(in srgb,var(--title) 8%,transparent),transparent 46%),
+      var(--bg);
+    background-size:18px 18px,auto,auto;
+    background-attachment:fixed;
+  }
+  body[data-mobile-background-style="blueprint"]{
+    background:
+      linear-gradient(color-mix(in srgb,var(--focus-border) 12%,transparent) 1px,transparent 1px),
+      linear-gradient(90deg,color-mix(in srgb,var(--focus-border) 12%,transparent) 1px,transparent 1px),
+      linear-gradient(135deg,color-mix(in srgb,var(--focus-border) 14%,var(--bg)),var(--bg) 62%);
+    background-size:28px 28px,28px 28px,auto;
+    background-attachment:fixed;
+  }
+  body[data-mobile-background-style="contour-lines"]{
+    background:
+      repeating-radial-gradient(ellipse at 4% 88%,transparent 0 28px,color-mix(in srgb,var(--ok) 10%,transparent) 29px 30px,transparent 31px 47px),
+      repeating-radial-gradient(ellipse at 96% 8%,transparent 0 34px,color-mix(in srgb,var(--focus-border) 9%,transparent) 35px 36px,transparent 37px 54px),
+      var(--bg);
+    background-attachment:fixed;
+  }
+  body[data-mobile-background-style="prism-fade"]{
+    background:
+      linear-gradient(135deg,color-mix(in srgb,var(--bad) 14%,transparent),transparent 43%),
+      linear-gradient(230deg,color-mix(in srgb,var(--focus-border) 13%,transparent),transparent 48%),
+      linear-gradient(315deg,color-mix(in srgb,var(--ok) 11%,transparent),transparent 53%),
+      var(--bg);
+    background-attachment:fixed;
+  }
+  body[data-mobile-background-style="pinstripe"]{
+    background:
+      repeating-linear-gradient(135deg,color-mix(in srgb,var(--title) 7%,transparent) 0 1px,transparent 1px 10px),
+      radial-gradient(circle at 14% 12%,color-mix(in srgb,var(--title) 9%,transparent),transparent 38%),
+      var(--bg);
+    background-attachment:fixed;
+  }
 
   body[data-mobile-tile-style="solid"] .workspaceNavButton{ border-color:color-mix(in srgb,var(--tile-accent) 42%,var(--border)); background:color-mix(in srgb,var(--tile-accent) 20%,var(--panel)); box-shadow:none; }
   body[data-mobile-tile-style="solid"] .workspaceTileIcon{ background:color-mix(in srgb,var(--tile-accent) 28%,transparent); }
@@ -3928,6 +3981,9 @@ body[data-surface-style="divided"] .helpTopic{
   body[data-mobile-tile-style="minimal"] .workspaceNav{ gap:2px 10px; }
   body[data-mobile-tile-style="minimal"] .workspaceNavButton{ min-height:68px; padding:10px 4px; border:0; border-bottom:1px solid color-mix(in srgb,var(--tile-accent) 45%,var(--border)); border-radius:0; background:transparent; box-shadow:none; }
   body[data-mobile-tile-style="minimal"] .workspaceTileIcon{ width:30px; height:30px; padding:3px; border:0; border-radius:0; background:transparent; }
+  body[data-mobile-tile-style="layered"] .workspaceNav{ gap:10px; }
+  body[data-mobile-tile-style="layered"] .workspaceNavButton{ border-color:color-mix(in srgb,var(--tile-accent) 36%,var(--border)); border-radius:12px; background:linear-gradient(145deg,color-mix(in srgb,var(--tile-accent) 11%,var(--row-bg)),var(--row-bg) 72%); box-shadow:3px 3px 0 color-mix(in srgb,var(--tile-accent) 22%,var(--panel)),6px 6px 0 color-mix(in srgb,var(--border2) 55%,transparent); }
+  body[data-mobile-tile-style="layered"] .workspaceTileIcon{ border-radius:7px; background:color-mix(in srgb,var(--tile-accent) 15%,var(--row-bg)); }
 
   /* Gruvbox mobile home: warm, tactile surfaces and the full retro palette.
      Each existing tile treatment keeps its character, but is rendered with
@@ -3962,7 +4018,7 @@ body[data-surface-style="divided"] .helpTopic{
     --gruv-blue:#076678;
     --gruv-purple:#8f3f71;
   }
-  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]){
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]):not([data-mobile-background-style]){
     background:
       repeating-linear-gradient(135deg,transparent 0 12px,color-mix(in srgb,var(--gruv-mobile-edge) 5%,transparent) 12px 13px),
       radial-gradient(circle at 12% 18%,color-mix(in srgb,var(--gruv-orange) 13%,transparent),transparent 34%),
@@ -4063,7 +4119,7 @@ body[data-surface-style="divided"] .helpTopic{
     margin-bottom:12px;
     padding:8px 0 10px;
     border-bottom:1px solid var(--border);
-    background:var(--bg);
+    background:transparent;
   }
   body[data-mobile-workspace="appearance"] .mobileAppearancePanelHeader strong{ display:block; color:var(--title); font-size:calc(var(--title-size) * 1.05); font-weight:650; letter-spacing:.04em; }
   body[data-mobile-workspace="appearance"] .mobileAppearancePanelHeader small{ display:block; margin-top:2px; color:var(--muted); font-size:11px; }

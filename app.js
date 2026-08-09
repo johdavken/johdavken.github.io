@@ -902,7 +902,7 @@
     }
 
     function applyMobileTileStyle(value){
-      const allowed = new Set(["accent", "solid", "outline", "glass", "minimal"]);
+      const allowed = new Set(["accent", "solid", "outline", "glass", "minimal", "layered"]);
       const style = allowed.has(String(value)) ? String(value) : "minimal";
       state.mobileTileStyle = style;
       document.body.dataset.mobileTileStyle = style;
@@ -912,7 +912,7 @@
     }
 
     function applyMobileBackgroundStyle(value){
-      const allowed = new Set(["layer-glow", "industrial-grid"]);
+      const allowed = new Set(["layer-glow", "industrial-grid", "paper-grain", "dot-matrix", "blueprint", "contour-lines", "prism-fade", "pinstripe"]);
       const style = allowed.has(String(value)) ? String(value) : "layer-glow";
       state.mobileBackgroundStyle = style;
       document.body.dataset.mobileBackgroundStyle = style;
