@@ -7,7 +7,7 @@
   <!-- Favicons -->
   <link rel="icon" type="image/svg+xml" sizes="any" href="branding/resin-tools/rt6-02-layer-stack-icon.svg?v=2">
 
-  <link rel="stylesheet" href="styles.css?v=0.55.16">
+  <link rel="stylesheet" href="styles.css?v=0.55.17">
   <link rel="stylesheet" href="theme.css?v=0.17.3">
 <script src="validation.js?v=0.18" defer></script>
 <script src="scheduling.js?v=0.18.4" defer></script>
@@ -29,7 +29,7 @@
 <script src="resin-lookup.js?v=0.18.1" defer></script>
 <script src="resin-admin.js?v=0.20.1" defer></script>
 <script src="workspace-recovery.js?v=0.1.0" defer></script>
-<script src="app.js?v=0.18.105" defer></script>
+<script src="app.js?v=0.18.106" defer></script>
 <script src="resin-admin-ui.js?v=0.20.1" defer></script>
 <script src="workspace-recovery-ui.js?v=0.1.0" defer></script>
 <script src="recipe-scan-ui.js?v=0.3.2" defer></script>
@@ -402,6 +402,13 @@
             <button type="button" role="radio" aria-checked="false" data-mobile-tile-style="glass"><span></span>Glass</button>
             <button type="button" role="radio" aria-checked="false" data-mobile-tile-style="minimal"><span></span>Minimal</button>
           </div>
+        </fieldset>
+        <fieldset class="mobileTimelineAlarmSection">
+          <legend>Timeline alarm</legend>
+          <label class="mobileTimelineAlarmChoice" for="mobileTimelineAlarmToggle">
+            <input id="mobileTimelineAlarmToggle" type="checkbox">
+            <span><strong>Alarm when pump-off is due</strong><small id="mobileTimelineAlarmStatus">Sound and vibration while Resin.Tools is open.</small></span>
+          </label>
         </fieldset>
       </div>
     </details>

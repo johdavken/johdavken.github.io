@@ -565,7 +565,11 @@ main{
 .adminNavButton{ margin-top: 2px; }
 .adminNavButton[hidden]{ display: none !important; }
 .appearanceNavTile{ display:none!important; }
-.mobileTileStyleSection{ display:none; }
+.mobileTileStyleSection,.mobileTimelineAlarmSection{ display:none; }
+.pumpOffAlarmBanner{ position:fixed; right:12px; bottom:12px; left:12px; z-index:100; display:grid; grid-template-columns:1fr auto; gap:3px 12px; padding:14px; border:1px solid var(--warn); border-radius:var(--radius-row); background:var(--panelOpen); color:var(--text); box-shadow:var(--shadow2); }
+.pumpOffAlarmBanner strong{ color:var(--warn); }
+.pumpOffAlarmBanner span{ grid-column:1; color:var(--muted); font-size:var(--font-small); }
+.pumpOffAlarmBanner button{ grid-column:2; grid-row:1 / 3; align-self:center; }
 .adminDialog{ width: min(94vw, 560px); border: 1px solid var(--border2); border-radius: var(--radius-card); background: var(--panel); color: var(--text); padding: 0; }
 .adminDialog::backdrop{ background: rgba(0,0,0,.58); }
 .adminForm{ display: grid; gap: 13px; padding: 20px; }
@@ -3758,6 +3762,13 @@ body[data-surface-style="divided"] .helpTopic{
   .mobileTileStyleChoices button[data-mobile-tile-style="outline"] span{ border:2px solid var(--focus-border); background:transparent; }
   .mobileTileStyleChoices button[data-mobile-tile-style="glass"] span{ border:1px solid color-mix(in srgb,var(--text) 30%,transparent); border-radius:9px; background:color-mix(in srgb,var(--text) 10%,transparent); box-shadow:0 3px 7px color-mix(in srgb,var(--text) 12%,transparent); }
   .mobileTileStyleChoices button[data-mobile-tile-style="minimal"] span{ height:14px; border:0; border-bottom:2px solid var(--title); border-radius:0; background:transparent; }
+  .mobileTimelineAlarmSection{ display:block; margin:14px 0 0; padding:12px 0 0; border:0; border-top:1px solid var(--border); }
+  .mobileTimelineAlarmSection legend{ padding:0; color:var(--title); font-size:13px; font-weight:750; }
+  .mobileTimelineAlarmChoice{ display:flex; align-items:flex-start; gap:10px; margin-top:9px; padding:10px; border:1px solid var(--border); border-radius:var(--control-radius); background:var(--row-bg); }
+  .mobileTimelineAlarmChoice input{ width:20px; height:20px; flex:0 0 auto; margin:1px 0 0; accent-color:var(--focus-border); }
+  .mobileTimelineAlarmChoice span{ display:grid; gap:3px; }
+  .mobileTimelineAlarmChoice strong{ color:var(--text); font-size:13px; }
+  .mobileTimelineAlarmChoice small{ color:var(--muted); font-size:11px; line-height:1.35; }
 
   body[data-mobile-tile-style="solid"] .workspaceNavButton{ border-color:color-mix(in srgb,var(--tile-accent) 42%,var(--border)); background:color-mix(in srgb,var(--tile-accent) 20%,var(--panel)); box-shadow:none; }
   body[data-mobile-tile-style="solid"] .workspaceTileIcon{ background:color-mix(in srgb,var(--tile-accent) 28%,transparent); }

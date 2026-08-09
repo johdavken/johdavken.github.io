@@ -54,6 +54,7 @@
       timeFormat: "12",
       surfaceStyle: "divided",
       mobileTileStyle: "accent",
+      mobileTimelineAlarm: false,
       gauge: 0,
       hopperNamingLine9: "standard", // "standard" | "main"
       showPumpOffTracked: false, // show pump-off items in Timeline
@@ -83,6 +84,8 @@
   let workspaceConfigurationPending = null;
   let selectedWorkspaceConfigurationId = "";
   let hopperRearrangement = null;
+  const pumpOffAlertTimers = new Map();
+  let pumpOffAudioContext = null;
   // Recipe Setup's three expandable panels (Bulk edit, Rearrange Hoppers,
   // Saved Recipes) are mutually exclusive - opening one closes the other
   // two. hopperRearrangement above already persists across re-renders and
@@ -818,6 +821,7 @@
         timeFormat: state.timeFormat,
         surfaceStyle: state.surfaceStyle,
         mobileTileStyle: state.mobileTileStyle,
+        mobileTimelineAlarm: !!state.mobileTimelineAlarm,
         gauge: state.gauge,
         hopperNamingLine9: state.hopperNamingLine9,
         showPumpOffTracked: !!state.showPumpOffTracked,
@@ -835,6 +839,7 @@
         timeFormat: state.timeFormat,
         surfaceStyle: state.surfaceStyle,
         mobileTileStyle: state.mobileTileStyle,
+        mobileTimelineAlarm: state.mobileTimelineAlarm,
         showPumpOffTracked: state.showPumpOffTracked,
         mobileTimelineOnly: state.mobileTimelineOnly,
         mobileRecipeOnly: state.mobileRecipeOnly,
@@ -903,6 +908,91 @@
       });
     }
 
+    function applyMobileTimelineAlarm(enabled){
+      state.mobileTimelineAlarm = !!enabled;
+      const toggle = $("mobileTimelineAlarmToggle");
+      if (toggle) toggle.checked = state.mobileTimelineAlarm;
+      const status = $("mobileTimelineAlarmStatus");
+      if (status){
+        const notificationState = "Notification" in window ? Notification.permission : "unsupported";
+        status.textContent = state.mobileTimelineAlarm
+          ? (notificationState === "granted" ? "Sound, vibration, and notifications enabled." : "Sound and vibration enabled while Resin.Tools is open.")
+          : "Sound and vibration while Resin.Tools is open.";
+      }
+      if (!state.mobileTimelineAlarm){
+        pumpOffAlertTimers.forEach(timer=>clearTimeout(timer));
+        pumpOffAlertTimers.clear();
+        navigator.vibrate?.(0);
+      }
+    }
+
+    function playPumpOffAlarm(){
+      try{
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) return;
+        pumpOffAudioContext ||= new AudioContextClass();
+        const start = pumpOffAudioContext.currentTime;
+        [0,.34,.68].forEach(offset=>{
+          const oscillator = pumpOffAudioContext.createOscillator();
+          const gain = pumpOffAudioContext.createGain();
+          oscillator.frequency.value = 880;
+          gain.gain.setValueAtTime(.0001,start+offset);
+          gain.gain.exponentialRampToValueAtTime(.22,start+offset+.02);
+          gain.gain.exponentialRampToValueAtTime(.0001,start+offset+.24);
+          oscillator.connect(gain).connect(pumpOffAudioContext.destination);
+          oscillator.start(start+offset);
+          oscillator.stop(start+offset+.25);
+        });
+      }catch(_error){}
+    }
+
+    async function showPumpOffNotification(item){
+      if (!("Notification" in window) || Notification.permission !== "granted") return;
+      const title = `Pump off ${item.hopperLabel}`;
+      const options = { body:item.resinName ? `${item.resinName} is due now.` : "Hopper pump-off is due now.", tag:`pump-off-${item.layer}-${item.hopperLabel}`, vibrate:[500,200,500] };
+      try{
+        const registration = await navigator.serviceWorker?.getRegistration();
+        if (registration) await registration.showNotification(title,options);
+        else new Notification(title,options);
+      }catch(_error){}
+    }
+
+    function firePumpOffAlert(item){
+      if (!state.mobileTimelineAlarm || item._ref.h.pumpOff) return;
+      navigator.vibrate?.([500,200,500,200,800]);
+      playPumpOffAlarm();
+      showPumpOffNotification(item);
+      document.querySelector(".pumpOffAlarmBanner")?.remove();
+      const banner = document.createElement("div");
+      banner.className = "pumpOffAlarmBanner";
+      banner.setAttribute("role","alert");
+      banner.innerHTML = `<strong>Pump off ${item.hopperLabel}</strong><span>${item.resinName || "Tracked hopper"} is due now.</span><button type="button">Dismiss</button>`;
+      banner.querySelector("button").addEventListener("click",()=>{ navigator.vibrate?.(0); banner.remove(); });
+      document.body.appendChild(banner);
+    }
+
+    function schedulePumpOffAlerts(flat,changeoverDate){
+      pumpOffAlertTimers.forEach(timer=>clearTimeout(timer));
+      pumpOffAlertTimers.clear();
+      if (!state.mobileTimelineAlarm || !changeoverDate) return;
+      const now = Date.now();
+      flat.filter(item=>item.startByDate && !item.pumpOff).forEach(item=>{
+        const due = item.startByDate.getTime();
+        if (due <= now) return;
+        const key = `${item.layer}:${item.hopperLabel}:${due}`;
+        const arm = ()=>{
+          const remaining = due-Date.now();
+          if (remaining > 1000){
+            pumpOffAlertTimers.set(key,setTimeout(arm,Math.min(remaining,2147483647)));
+            return;
+          }
+          pumpOffAlertTimers.delete(key);
+          firePumpOffAlert(item);
+        };
+        pumpOffAlertTimers.set(key,setTimeout(arm,Math.min(due-now,2147483647)));
+      });
+    }
+
     function applyPayload(payload, {rebuildUI=true} = {}){
       if (!payload || typeof payload !== "object") return;
 
@@ -922,6 +1012,7 @@
       applyTimeFormat(payload.timeFormat || "12");
       applySurfaceStyle(payload.surfaceStyle || defaultSurfaceStyle());
       applyMobileTileStyle(payload.mobileTileStyle || "accent");
+      applyMobileTimelineAlarm(!!payload.mobileTimelineAlarm);
       $("lineRate").value = String(state.lineRate);
       // Custom toggles
       state.hopperNamingLine9 = (payload.hopperNamingLine9 === "main") ? "main" : "standard";
@@ -2793,6 +2884,7 @@
       });
 
       renderResultsFlat(flat, changeoverDate);
+      schedulePumpOffAlerts(flat, changeoverDate);
       updateFooterNext(flat, changeoverDate);
       renderResinCalculator();
       updateCollapsedSummaries();
@@ -3914,6 +4006,24 @@
         saveSession();
       });
     });
+    $("mobileTimelineAlarmToggle")?.addEventListener("change",async event=>{
+      const enabled = !!event.target.checked;
+      if (enabled){
+        try{
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (AudioContextClass){
+            pumpOffAudioContext ||= new AudioContextClass();
+            await pumpOffAudioContext.resume();
+          }
+          navigator.vibrate?.(1);
+          if ("serviceWorker" in navigator) await navigator.serviceWorker.register("service-worker.js");
+          if ("Notification" in window && Notification.permission === "default") await Notification.requestPermission();
+        }catch(_error){}
+      }
+      applyMobileTimelineAlarm(enabled);
+      validateAndCompute({ sync:false });
+      saveSession();
+    });
 
     $("prodResinLb")?.addEventListener("input",(e)=>{
       if (!acceptNumericInput(e.target, { min: 0, label: "Production resin" }, value => { state.prodResinLb = value; })) return;
@@ -4127,6 +4237,7 @@
       applyTimeFormat(state.timeFormat || "12");
       applySurfaceStyle(state.surfaceStyle || defaultSurfaceStyle());
       applyMobileTileStyle(state.mobileTileStyle || "accent");
+      applyMobileTimelineAlarm(!!state.mobileTimelineAlarm);
       saveSession();
       setupLineSync();
     })();
