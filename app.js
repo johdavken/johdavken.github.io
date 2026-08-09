@@ -53,6 +53,7 @@
       theme: "mse",
       timeFormat: "12",
       surfaceStyle: "divided",
+      mobileTileStyle: "accent",
       gauge: 0,
       hopperNamingLine9: "standard", // "standard" | "main"
       showPumpOffTracked: false, // show pump-off items in Timeline
@@ -816,6 +817,7 @@
         theme: state.theme,
         timeFormat: state.timeFormat,
         surfaceStyle: state.surfaceStyle,
+        mobileTileStyle: state.mobileTileStyle,
         gauge: state.gauge,
         hopperNamingLine9: state.hopperNamingLine9,
         showPumpOffTracked: !!state.showPumpOffTracked,
@@ -832,6 +834,7 @@
         theme: state.theme,
         timeFormat: state.timeFormat,
         surfaceStyle: state.surfaceStyle,
+        mobileTileStyle: state.mobileTileStyle,
         showPumpOffTracked: state.showPumpOffTracked,
         mobileTimelineOnly: state.mobileTimelineOnly,
         mobileRecipeOnly: state.mobileRecipeOnly,
@@ -890,6 +893,16 @@
       if (sel) sel.value = surfaceStyle;
     }
 
+    function applyMobileTileStyle(value){
+      const allowed = new Set(["accent", "solid", "outline", "glass", "minimal"]);
+      const style = allowed.has(String(value)) ? String(value) : "accent";
+      state.mobileTileStyle = style;
+      document.body.dataset.mobileTileStyle = style;
+      document.querySelectorAll("[data-mobile-tile-style]").forEach(button=>{
+        button.setAttribute("aria-checked", String(button.dataset.mobileTileStyle === style));
+      });
+    }
+
     function applyPayload(payload, {rebuildUI=true} = {}){
       if (!payload || typeof payload !== "object") return;
 
@@ -908,6 +921,7 @@
       applyDensity(payload.density || "comfort");
       applyTimeFormat(payload.timeFormat || "12");
       applySurfaceStyle(payload.surfaceStyle || defaultSurfaceStyle());
+      applyMobileTileStyle(payload.mobileTileStyle || "accent");
       $("lineRate").value = String(state.lineRate);
       // Custom toggles
       state.hopperNamingLine9 = (payload.hopperNamingLine9 === "main") ? "main" : "standard";
@@ -3894,6 +3908,12 @@
       applySurfaceStyle(e.target.value);
       saveSession();
     });
+    document.querySelectorAll("[data-mobile-tile-style]").forEach(button=>{
+      button.addEventListener("click",()=>{
+        applyMobileTileStyle(button.dataset.mobileTileStyle);
+        saveSession();
+      });
+    });
 
     $("prodResinLb")?.addEventListener("input",(e)=>{
       if (!acceptNumericInput(e.target, { min: 0, label: "Production resin" }, value => { state.prodResinLb = value; })) return;
@@ -4106,6 +4126,7 @@
       applyTheme(state.theme || "mse");
       applyTimeFormat(state.timeFormat || "12");
       applySurfaceStyle(state.surfaceStyle || defaultSurfaceStyle());
+      applyMobileTileStyle(state.mobileTileStyle || "accent");
       saveSession();
       setupLineSync();
     })();
