@@ -18,7 +18,7 @@ test("the desktop sidebar nav label for the Recipe Setup panel reads just \"Reci
   const start = html.indexOf('data-workspace-target="splitsBlock"');
   assert.notEqual(start, -1);
   const tag = html.slice(start, html.indexOf("</button>", start));
-  assert.match(tag, /<span>Recipe<\/span>/);
+  assert.match(tag, /<span>(?:<svg[^>]*>[\s\S]*?<\/svg>)?Recipe<\/span>/);
   assert.doesNotMatch(tag, />Recipe Setup</);
 });
 

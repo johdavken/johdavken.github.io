@@ -3413,9 +3413,9 @@ body[data-surface-style="divided"] .helpTopic{
   .workspaceNav .workspaceBrand{ display:none; }
   .workspaceNavButton{
     display:grid;
-    grid-template-columns:auto 1fr;
-    align-items:center;
-    column-gap:6px;
+    grid-template-columns:1fr;
+    align-content:center;
+    gap:7px;
     min-height:78px;
     padding:12px;
     border:1px solid var(--border);
@@ -3428,30 +3428,30 @@ body[data-surface-style="divided"] .helpTopic{
   .workspaceNavButton span{
     display:flex;
     align-items:center;
-    gap:6px;
+    gap:9px;
     color:inherit;
     font-size:13px;
     font-weight:700;
     line-height:1.1;
     letter-spacing:.02em;
     text-transform:none;
-    white-space:nowrap;
+    white-space:normal;
   }
-  .workspaceNavButton > span::before{
-    content:"";
-    width:7px;
-    height:7px;
+  .workspaceTileIcon{
+    width:28px;
+    height:28px;
     flex:0 0 auto;
-    border-radius:50%;
-    background:var(--muted);
+    fill:none;
+    stroke:currentColor;
+    stroke-width:1.7;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+    color:var(--focus-border);
   }
-  .workspaceNavButton[data-status="info"] > span::before{ background:var(--focus-border); }
-  .workspaceNavButton[data-status="ok"] > span::before{ background:var(--ok); }
-  .workspaceNavButton[data-status="warn"] > span::before{ background:var(--warn); }
-  .workspaceNavButton[data-status="bad"] > span::before{ background:var(--bad); }
   .workspaceNavButton small{
-    grid-column:2;
-    display:block;
+    display:flex;
+    align-items:center;
+    gap:5px;
     max-width:145px;
     overflow:hidden;
     color:inherit;
@@ -3461,11 +3461,24 @@ body[data-surface-style="divided"] .helpTopic{
     white-space:nowrap;
     opacity:.82;
   }
+  .workspaceNavButton small::before{
+    content:"";
+    width:6px;
+    height:6px;
+    flex:0 0 auto;
+    border-radius:50%;
+    background:var(--muted);
+  }
+  .workspaceNavButton[data-status="info"] small::before{ background:var(--focus-border); }
+  .workspaceNavButton[data-status="ok"] small::before{ background:var(--ok); }
+  .workspaceNavButton[data-status="warn"] small::before{ background:var(--warn); }
+  .workspaceNavButton[data-status="bad"] small::before{ background:var(--bad); }
   .workspaceNavButton.active{
     border-color:var(--focus-border);
     background:var(--focus-ring);
     color:var(--title);
   }
+  .workspaceNavButton.active .workspaceTileIcon{ color:var(--title); }
   .workspaceNavButton:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
   body[data-mobile-workspace="panel"] .workspaceNav{ display:none; }
   body[data-mobile-workspace="home"] .workspaceContent > .workspacePanel{ display:none!important; }
