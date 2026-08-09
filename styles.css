@@ -284,6 +284,17 @@ main{
 }
 .resinToolsLogo{display:block;width:min(100%,210px);height:auto}
 .resinToolsSidebarIcon{display:block;width:137.5px;height:auto}
+.workspaceTileIcon{
+  width:15px;
+  height:15px;
+  flex:0 0 auto;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.7;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  color:var(--muted);
+}
 :is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerRed{color:var(--bad);stroke:var(--bad)}
 :is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerOrange{color:var(--orange);stroke:var(--orange)}
 :is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerYellow{color:var(--warn);stroke:var(--warn)}
@@ -3440,12 +3451,6 @@ body[data-surface-style="divided"] .helpTopic{
   .workspaceTileIcon{
     width:28px;
     height:28px;
-    flex:0 0 auto;
-    fill:none;
-    stroke:currentColor;
-    stroke-width:1.7;
-    stroke-linecap:round;
-    stroke-linejoin:round;
     color:var(--focus-border);
   }
   .workspaceNavButton small{
