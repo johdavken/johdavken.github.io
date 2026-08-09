@@ -53,7 +53,7 @@
       theme: "mse",
       timeFormat: "12",
       surfaceStyle: "divided",
-      mobileTileStyle: "accent",
+      mobileTileStyle: "minimal",
       mobileBackgroundStyle: "layer-glow",
       mobileTimelineAlarm: false,
       gauge: 0,
@@ -903,7 +903,7 @@
 
     function applyMobileTileStyle(value){
       const allowed = new Set(["accent", "solid", "outline", "glass", "minimal"]);
-      const style = allowed.has(String(value)) ? String(value) : "accent";
+      const style = allowed.has(String(value)) ? String(value) : "minimal";
       state.mobileTileStyle = style;
       document.body.dataset.mobileTileStyle = style;
       document.querySelectorAll("[data-mobile-tile-style]").forEach(button=>{
@@ -1024,7 +1024,7 @@
       applyDensity(payload.density || "comfort");
       applyTimeFormat(payload.timeFormat || "12");
       applySurfaceStyle(payload.surfaceStyle || defaultSurfaceStyle());
-      applyMobileTileStyle(payload.mobileTileStyle || "accent");
+      applyMobileTileStyle(payload.mobileTileStyle || "minimal");
       applyMobileBackgroundStyle(payload.mobileBackgroundStyle || "layer-glow");
       applyMobileTimelineAlarm(!!payload.mobileTimelineAlarm);
       $("lineRate").value = String(state.lineRate);
@@ -4256,7 +4256,7 @@
       applyTheme(state.theme || "mse");
       applyTimeFormat(state.timeFormat || "12");
       applySurfaceStyle(state.surfaceStyle || defaultSurfaceStyle());
-      applyMobileTileStyle(state.mobileTileStyle || "accent");
+      applyMobileTileStyle(state.mobileTileStyle || "minimal");
       applyMobileBackgroundStyle(state.mobileBackgroundStyle || "layer-glow");
       applyMobileTimelineAlarm(!!state.mobileTimelineAlarm);
       saveSession();
