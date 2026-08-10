@@ -37,11 +37,29 @@
     });
   }
 
+  // JSON.stringify preserves insertion order for object properties. Active
+  // jobs can arrive from the server or be reconstructed by several client
+  // paths, so nested layer/hopper objects may carry the same values in a
+  // different key order. Sort every object recursively while preserving
+  // array order: arrays are semantic (layer/hopper position), object key
+  // order is not.
+  function canonicalJsonValue(value) {
+    if (Array.isArray(value)) return value.map(canonicalJsonValue);
+    if (value && typeof value === "object") {
+      const ordered = {};
+      Object.keys(value).sort().forEach(key => {
+        ordered[key] = canonicalJsonValue(value[key]);
+      });
+      return ordered;
+    }
+    return value;
+  }
+
   function canonicalActiveJob(payload) {
     if (!payload || typeof payload !== "object" || Array.isArray(payload)) return "";
     const ordered = {};
     ACTIVE_JOB_FIELDS.forEach(field => {
-      if (field in payload) ordered[field] = payload[field];
+      if (field in payload) ordered[field] = canonicalJsonValue(payload[field]);
     });
     return JSON.stringify(ordered);
   }
@@ -64,6 +82,7 @@
 
   return {
     ACTIVE_JOB_FIELDS,
+    canonicalJsonValue,
     snapshotActiveJob,
     canonicalActiveJob,
     activeJobsEqual,

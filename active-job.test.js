@@ -2,6 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const {
   snapshotActiveJob,
+  canonicalActiveJob,
   activeJobsEqual,
   hasMeaningfulActiveJob
 } = require("./active-job.js");
@@ -55,6 +56,29 @@ test("active-job equality ignores device-only fields", () => {
   const first = snapshotActiveJob(stateFixture(), "0.17");
   const second = { ...first, theme: "light", blocksOpen: { resultsBlock: true } };
   assert.equal(activeJobsEqual(first, second), true);
+});
+
+test("active-job equality ignores nested layer, hopper, and offset key order while preserving their values", () => {
+  const first = {
+    version: "0.18", lineRate: 100, lineType: 5, gauge: 2, changeoverTime: "10:00",
+    offsets: { B: 2, A: 1 },
+    layers: [{ name: "A", layerPct: 100, hoppers: [{ pct: 100, weight: 240, resinName: "MS0440", track: true, pumpOff: false, usableHeight: 24, circumference: 40 }] }],
+    prodResinLb: 0, scrapResinLb: 0, hopperNamingLine9: "standard"
+  };
+  const second = {
+    hopperNamingLine9: "standard", scrapResinLb: 0, prodResinLb: 0,
+    layers: [{ hoppers: [{ circumference: 40, usableHeight: 24, pumpOff: false, track: true, resinName: "MS0440", weight: 240, pct: 100 }], layerPct: 100, name: "A" }],
+    offsets: { A: 1, B: 2 }, changeoverTime: "10:00", gauge: 2, lineType: 5, lineRate: 100, version: "0.18"
+  };
+  assert.equal(activeJobsEqual(first, second), true);
+  assert.equal(canonicalActiveJob(first), canonicalActiveJob(second));
+});
+
+test("active-job equality still distinguishes a real nested hopper value change", () => {
+  const first = snapshotActiveJob(stateFixture(), "0.18");
+  const second = JSON.parse(JSON.stringify(first));
+  second.layers[0].hoppers[0].usableHeight = 24;
+  assert.equal(activeJobsEqual(first, second), false);
 });
 
 test("meaningful active-job detection recognizes production state", () => {

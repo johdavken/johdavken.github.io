@@ -310,6 +310,17 @@
     }
 
     async function resolveActiveConflict(pending, remoteRow){
+      // A queued item can survive a page refresh from before the client-side
+      // no-op guard ran. If it is semantically identical to the current
+      // remote row, this is a stale-revision no-op, not a real operator
+      // conflict. Discard it instead of prompting/re-queueing and feeding a
+      // retry storm.
+      if (activeJobLib?.activeJobsEqual?.(pending.payload, remoteRow?.payload)){
+        activeConflictPaused = false;
+        store.clearActiveJob(selectedId(), pending.operationId);
+        await applyRemoteActive(remoteRow, "conflict-noop");
+        return;
+      }
       backup("active-job-conflict", pending.payload, remoteRow.payload);
       const choice = await adapter.resolveActiveConflict?.({
         local: pending.payload,

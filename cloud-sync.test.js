@@ -364,6 +364,45 @@ test("identical payload after initial remote load does not call update_active_jo
   assert.equal(writeCalls(rpcCalls).length, 0, "no write should follow a payload identical to the just-loaded remote state");
 });
 
+test("nested hopper key-order drift after a remote load does not queue or write an active job", async () => {
+  const remotePayload = activeJobPayload({
+    layers: [{ name: "A", layerPct: 100, hoppers: [{ pct: 100, track: true, weight: 240, pumpOff: false, resinName: "MS0440", usableHeight: 24, circumference: 40 }] }]
+  });
+  const localPayload = activeJobPayload({
+    layers: [{ hoppers: [{ pct: 100, weight: 240, resinName: "MS0440", track: true, pumpOff: false, usableHeight: 24, circumference: 40 }], layerPct: 100, name: "A" }]
+  });
+  const { sync, rpcCalls, storage, syncStorageModule } = createSync(workspaceFixtures({ id: "ws-a", name: "Line A", payload: remotePayload }), () => localPayload);
+  await sync.initialize();
+  sync.notifyActiveJobMutation({ immediate: true });
+  assert.equal(writeCalls(rpcCalls).length, 0);
+  assert.equal(syncStorageModule.createStore(storage).getOutbox().activeJobs["ws-a"], undefined);
+});
+
+test("a stale queued payload with only nested key-order drift is discarded without another write", async () => {
+  const remotePayload = activeJobPayload({
+    layers: [{ name: "A", layerPct: 100, hoppers: [{ pct: 100, track: true, weight: 240, pumpOff: false, resinName: "MS0440", usableHeight: 24, circumference: 40 }] }]
+  });
+  const stalePayload = activeJobPayload({
+    layers: [{ hoppers: [{ pct: 100, weight: 240, resinName: "MS0440", track: true, pumpOff: false, usableHeight: 24, circumference: 40 }], layerPct: 100, name: "A" }]
+  });
+  const rows = workspaceFixtures({ id: "ws-a", name: "Line A", payload: remotePayload });
+  const { sync, rpcCalls, storage, syncStorageModule } = createSync(rows, () => stalePayload);
+  await sync.initialize();
+
+  const store = syncStorageModule.createStore(storage);
+  store.queueActiveJob("ws-a", {
+    payload: stalePayload, expectedRevision: 1, operationId: "stale-key-order-only",
+    kind: "edit", createdAt: "2026-08-10T00:00:00.000Z"
+  });
+  rows.active_jobs[0].revision = 2;
+
+  await sync.retry();
+
+  assert.equal(store.getOutbox().activeJobs["ws-a"], undefined);
+  assert.equal(writeCalls(rpcCalls).length, 0);
+  assert.equal(sync.getState().activeRevision, 2);
+});
+
 test("repeated notify calls with the same queued payload create only one queued/write attempt", async () => {
   const seedPayload = activeJobPayload({ lineRate: 100 });
   const rows = workspaceFixtures({ id: "ws-a", name: "Line A", payload: seedPayload });
