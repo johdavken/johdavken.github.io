@@ -7,7 +7,7 @@
   <!-- Favicons -->
   <link rel="icon" type="image/svg+xml" sizes="any" href="branding/resin-tools/rt6-02-layer-stack-icon.svg?v=2">
 
-  <link rel="stylesheet" href="styles.css?v=0.55.23">
+  <link rel="stylesheet" href="styles.css?v=0.55.24">
   <link rel="stylesheet" href="theme.css?v=0.17.3">
 <script src="validation.js?v=0.18" defer></script>
 <script src="scheduling.js?v=0.18.4" defer></script>
@@ -21,16 +21,16 @@
 <script src="vendor/supabase.min.js?v=2.57.4" defer></script>
 <script src="supabase-config.js?v=0.18" defer></script>
 <script src="sync-storage.js?v=0.18" defer></script>
-<script src="cloud-sync.js?v=0.18.16" defer></script>
+<script src="cloud-sync.js?v=0.18.17" defer></script>
 <script src="workspace-configurations-service.js?v=0.21.0" defer></script>
 <script src="resin-data.js?v=0.16.2" defer></script>
 <script src="resin-description-info.js?v=0.16.1" defer></script>
 <script src="resin-catalog-service.js?v=0.19.0" defer></script>
 <script src="resin-lookup.js?v=0.18.1" defer></script>
-<script src="resin-admin.js?v=0.20.1" defer></script>
+<script src="resin-admin.js?v=0.20.2" defer></script>
 <script src="workspace-recovery.js?v=0.1.2" defer></script>
-<script src="app.js?v=0.18.114" defer></script>
-<script src="resin-admin-ui.js?v=0.20.1" defer></script>
+<script src="app.js?v=0.18.116" defer></script>
+<script src="resin-admin-ui.js?v=0.20.2" defer></script>
 <script src="workspace-recovery-ui.js?v=0.1.2" defer></script>
 <script src="recipe-scan-ui.js?v=0.3.2" defer></script>
 
@@ -511,6 +511,12 @@
         <summary>
           <div class="sumLeft">
             <div class="chev"><span class="chevRing"></span><span class="chevSatellite"></span><span class="chevCore"></span></div>
+            <svg class="mobileSetupEntryArt mobileWeightsEntryArt" viewBox="0 0 48 48" aria-hidden="true">
+              <path class="entryHopperShell" d="M15 6h18l4 8v23l-5 5H16l-5-5V14z"/>
+              <path class="entryHopperFill" d="M17 27h14v10H17z"/>
+              <path class="entryGaugeArc" d="M19 20a6 6 0 0 1 10 0"/>
+              <circle class="entryGaugeDot" cx="24" cy="20" r="1.5"/>
+            </svg>
             <div class="summaryText">
               <div class="layerTitle nestedLayerTitle">Receiver hopper weights</div>
               <div class="layerMeta">Stored capacity used by the run-down calculation</div>
@@ -521,7 +527,7 @@
 
         <div class="blockBody">
           <div class="muted">
-            These values are normally set once for this line. Accurate weights are essential for reliable run-down times. A bucket of silo resin typically weighs about 25 lb for reference.
+            Enter a conservative usable weight to prevent running out early. For <strong>Smart Hoppers</strong>, enter the hopper circumference and usable height (base to fill valve). When bulk density is available, Smart Hoppers calculates the resin-specific weight.
           </div>
           <div id="weightsArea" class="weightsGrid mt10"></div>
         </div>
@@ -531,6 +537,12 @@
         <summary>
           <div class="sumLeft">
             <div class="chev"><span class="chevRing"></span><span class="chevSatellite"></span><span class="chevCore"></span></div>
+            <svg class="mobileSetupEntryArt mobileProfilesEntryArt" viewBox="0 0 48 48" aria-hidden="true">
+              <path class="entryProfileBack" d="M12 13h22v24H12z"/>
+              <path class="entryProfileFront" d="M16 8h20v24H16z"/>
+              <path class="entryProfileLine" d="M21 15h10M21 20h10M21 25h6"/>
+              <circle class="entryProfileMark" cx="29" cy="25" r="3"/>
+            </svg>
             <div class="summaryText">
               <div class="layerTitle nestedLayerTitle">Receiver Weight Profiles</div>
               <div class="layerMeta">Shared receiver hopper weights</div>
@@ -1165,7 +1177,7 @@
           </div>
           <label>Information description<textarea id="adminResinInformation" maxlength="10000"></textarea></label>
           <div id="adminResinFormMessage" class="tiny" role="status"></div>
-          <div class="buttonRow"><button id="adminResinSave" type="submit">Save resin</button><button id="adminResinCancel" class="secondary" type="button">Cancel</button></div>
+          <div class="buttonRow"><button id="adminResinSave" type="submit">Save resin</button><button id="adminResinCancel" class="secondary" type="button">Cancel</button><button id="adminResinDelete" class="danger" type="button" hidden>Delete resin</button></div>
         </form>
       </div>
     </div>

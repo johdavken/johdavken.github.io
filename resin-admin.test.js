@@ -28,7 +28,7 @@ function client({ admin = true, saveError = null, sessionUser = null } = {}){
   return { auth, from(table){
     if (table === "admin_users") return { select(){ return this; }, eq(){ return this; }, async maybeSingle(){ return { data: admin ? { user_id: "admin-id" } : null, error: null }; } };
     return {
-      select(){ return this; }, eq(){ return this; }, update(){ return this; }, insert(){ return this; },
+      select(){ return this; }, eq(){ return this; }, update(){ return this; }, insert(){ return this; }, delete(){ return this; },
       async order(){ return { data: [{ id: "1", resin_code: "INACTIVE", is_active: false }], error: null }; },
       async single(){ return { data: saveError ? null : { id: "2", resin_code: "NEW", is_active: true }, error: saveError }; }
     };
@@ -70,4 +70,12 @@ test("failed mutations do not refresh the shared catalog", async () => {
   assert.equal(result.ok, false);
   assert.match(result.message, /already exists/i);
   assert.equal(refreshes, 0);
+});
+
+test("verified admins can delete a selected resin and refresh the shared catalog", async () => {
+  let refreshes = 0;
+  const service = adminApi.create({ client: client(), catalog: { async refreshResins(){ refreshes++; } } });
+  await service.signIn("admin@example.com", "password");
+  assert.equal((await service.deleteResin("2")).ok, true);
+  assert.equal(refreshes, 1);
 });

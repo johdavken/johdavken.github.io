@@ -62,6 +62,7 @@
     $("adminResinBulkDensity").value = resin?.bulk_density_lb_ft3 ?? "";
     $("adminResinInformation").value = resin?.information_description || "";
     $("adminResinActive").value = String(resin?.is_active ?? true);
+    $("adminResinDelete").hidden = !resin?.id;
     setMessage("adminResinFormMessage", "");
     $("adminResinCode").focus();
   }
@@ -99,6 +100,21 @@
   $("adminResinSearch")?.addEventListener("input", renderList);
   $("addResinButton")?.addEventListener("click", ()=>showForm(null));
   $("adminResinCancel")?.addEventListener("click", hideForm);
+  $("adminResinDelete")?.addEventListener("click", async ()=>{
+    const id = $("adminResinId").value;
+    const resin = resins.find(item => item.id === id);
+    if (!id || !resin) return;
+    if (!confirm(`Permanently delete ${resin.resin_code}? Use Inactive instead if this catalog record may be needed again. This cannot be undone.`)) return;
+    const button = $("adminResinDelete");
+    button.disabled = true;
+    setMessage("adminResinFormMessage", "Deleting…");
+    const result = await admin.deleteResin(id);
+    button.disabled = false;
+    if (!result.ok){ setMessage("adminResinFormMessage", result.message, "bad"); return; }
+    hideForm();
+    await loadResins();
+    setMessage("adminResinMessage", `${resin.resin_code} deleted.`, "ok");
+  });
   $("adminResinForm")?.addEventListener("submit", async event=>{
     event.preventDefault();
     const id = $("adminResinId").value;

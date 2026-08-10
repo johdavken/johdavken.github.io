@@ -1388,11 +1388,12 @@
       controls.appendChild(viewToggle);
       area.appendChild(controls);
 
+      let smartLegend = null;
       if (state.smartHoppersEnabled){
         const legend = document.createElement("div");
         legend.className = "mobileWeightsSmartLegend";
         legend.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 10v6M12 7.2h.01"/></svg><div><strong>Smart Hopper guide</strong><small><b>W</b> is manual weight; <b>H</b> is usable height. When recipe resin and measured bulk density are available, calculated weight drives run-down timing.</small></div>';
-        area.appendChild(legend);
+        smartLegend = legend;
       }
 
       const matrix = document.createElement("div");
@@ -1475,6 +1476,7 @@
         matrix.appendChild(column);
       });
       area.appendChild(matrix);
+      if (smartLegend) area.appendChild(smartLegend);
 
       const bulkBar = document.createElement("div");
       bulkBar.id = "mobileWeightsBulkBar";
@@ -1584,14 +1586,29 @@
       refreshSmartHopperState();
     }
 
+    function placeSetupWeightProfiles(){
+      const weightsBlock = $("weightsBlock");
+      const profilesBlock = $("setupWeightProfilesBlock");
+      const setupSection = weightsBlock?.closest(".setupSection");
+      if (!weightsBlock || !profilesBlock || !setupSection) return;
+      if (window.matchMedia("(max-width: 900px)").matches){
+        const weightsBody = weightsBlock.querySelector(":scope > .blockBody");
+        if (weightsBody && profilesBlock.parentElement !== weightsBody) weightsBody.appendChild(profilesBlock);
+        return;
+      }
+      if (profilesBlock.parentElement !== setupSection) weightsBlock.after(profilesBlock);
+    }
+
     function renderWeightsArea(){
       const area = $("weightsArea");
       if (!area) return;
       area.innerHTML = "";
       if (window.matchMedia("(max-width: 900px)").matches){
         renderMobileWeightsArea(area);
+        placeSetupWeightProfiles();
         return;
       }
+      placeSetupWeightProfiles();
       const selected = new Set();
       const cellRefs = new Map();
       const columnSelectors = new Map();
@@ -2574,7 +2591,15 @@
           clearButton.title = `Clear ${hopperBadgeLabel(L.name, hi)}`;
           if(hopperRearrangement?.active){selector.disabled=true;resinInput.disabled=true;pctInput.disabled=true;trackButton.disabled=true;clearButton.disabled=true;}
 
-          cellHeader.append(trackControl, smartBadge, clearButton);
+          // On phone-width Recipe Setup, Smart describes the resin-derived
+          // value, so it belongs immediately after the resin name. Desktop
+          // keeps the compact control-strip placement above the editor.
+          if (window.matchMedia("(max-width: 900px)").matches) {
+            cellTop.appendChild(smartBadge);
+            cellHeader.append(trackControl, clearButton);
+          }else{
+            cellHeader.append(trackControl, smartBadge, clearButton);
+          }
           controls.appendChild(pctWrap);
           editor.append(cellTop, controls);
           td.append(cellHeader, editor);

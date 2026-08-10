@@ -775,7 +775,12 @@
         await loadWorkspaces();
         const current = settings();
         if (selectedId() && !current.disconnectedWorkspaceIds.includes(selectedId())) await reconcileSelected();
-        else setStatus("Local only", state.workspaces.length ? "Select a line to resume synchronization." : "Create or join a line when ready.");
+        else {
+          const joinPrompt = typeof window !== "undefined" && window.matchMedia?.("(max-width: 900px)").matches
+            ? "Join a line when ready."
+            : "Create or join a line when ready.";
+          setStatus("Local only", state.workspaces.length ? "Select a line to resume synchronization." : joinPrompt);
+        }
       }catch(error){
         state.available = false;
         setStatus("Local only", "RT Sync is unavailable; Resin.Tools remains local and fully usable.");

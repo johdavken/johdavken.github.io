@@ -603,6 +603,7 @@ main{
 .workspaceRecoveryMemberRow{ display: flex; align-items: center; justify-content: space-between; gap: 10px; border: 1px solid var(--border); border-radius: var(--radius-row); padding: 6px 10px; }
 .workspaceRecoveryMerge{ display: grid; grid-template-columns: minmax(0,1fr) minmax(150px, .55fr) auto; align-items: end; gap: 10px; border: 1px solid var(--border); border-radius: var(--radius-row); padding: 10px; }
 .workspaceRecoveryMerge label{ display: grid; gap: 4px; }
+.mobileSetupEntryArt{ display:none; }
 
 .lineSyncStatusItem strong[data-state="synced"]{ color: var(--ok); }
 .lineSyncStatusItem strong[data-state="pending"],
@@ -2156,6 +2157,11 @@ details[open] > summary .chevSatellite{
   .splitTrackControl{ order: 2; }
   .splitCellEditor{ order: 3; flex: 1; min-width: 0; }
   .splitClearButton{ order: 4; margin-left: 0; }
+  /* Smart belongs to the resin-derived value, not the physical hopper ID.
+     On phones it sits directly after the resin name inside the editor. */
+  .splitCellTop{ display:flex; min-width:0; gap:5px; }
+  .splitCellTop .resinNameInput{ min-width:0; flex:1 1 auto; }
+  .splitCellTop .splitSmartBadge{ flex:0 0 auto; }
 
   /* The track button becomes a real bordered pill (30px, was 23px) with a
      filled active state on mobile only - bigger and easier to hit than the
@@ -2572,10 +2578,10 @@ details[open] > summary .chevSatellite{
   .mobileWeightsMatrix{
     display:grid;
     grid-template-columns:repeat(var(--mobile-weight-layer-count),minmax(0,1fr));
-    gap:4px;
+    gap:3px;
     align-items:start;
   }
-  .mobileWeightsLayer{ display:grid; gap:4px; min-width:0; }
+  .mobileWeightsLayer{ display:grid; gap:3px; min-width:0; }
   .mobileWeightsLayerHeading{
     display:grid;
     place-items:center;
@@ -2643,15 +2649,19 @@ details[open] > summary .chevSatellite{
     white-space:nowrap;
   }
   .mobileWeightVisualReadout{display:none}
-  #weightsArea[data-mobile-weight-view="visual"] .mobileWeightCell{height:104px;min-height:104px;padding:6px 5px}
+  /* Five columns are deliberately kept visible. The visual cell reserves its
+     limited width for the two readings; the hopper becomes a compact cue. */
+  #weightsArea[data-mobile-weight-view="visual"] .mobileWeightCell{height:100px;min-height:100px;padding:5px 3px}
   #weightsArea[data-mobile-weight-view="visual"] .mobileWeightValueFields{display:none}
-  #weightsArea[data-mobile-weight-view="visual"] .mobileWeightVisualReadout{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:9px}
-  .mobileWeightVisualReadout svg{width:25px;height:38px;color:var(--focus-border);fill:none;stroke:currentColor;stroke-width:1.5}
+  #weightsArea[data-mobile-weight-view="visual"] .mobileWeightVisualReadout{display:grid;grid-template-columns:18px minmax(0,1fr);align-items:center;justify-content:stretch;gap:2px;margin-top:9px}
+  .mobileWeightVisualReadout svg{width:18px;height:31px;color:var(--focus-border);fill:none;stroke:currentColor;stroke-width:1.5}
   .mobileWeightVisualReadout .mobileHopperFill{fill:color-mix(in srgb,var(--focus-border) 30%,transparent);stroke:none}
-  .mobileWeightVisualValues{display:grid;gap:4px;min-width:0;text-align:right}
-  .mobileWeightVisualValues b{display:block;color:var(--text);font-size:13px;line-height:1;font-variant-numeric:tabular-nums}
-  .mobileWeightVisualValues small{display:block;margin-top:2px;color:var(--muted);font-size:7px;font-weight:700;text-transform:uppercase;letter-spacing:.03em}
-  #weightsArea[data-mobile-weight-view="visual"] .mobileWeightsComputedWeight{position:absolute;right:5px;bottom:5px;left:5px;min-height:11px;padding-top:0}
+  .mobileWeightVisualValues{display:grid;gap:3px;min-width:0;text-align:right}
+  .mobileWeightVisualValues b{display:block;min-width:0;color:var(--text);font-size:14px;line-height:1;font-variant-numeric:tabular-nums}
+  .mobileWeightVisualValues small{display:block;margin-top:1px;color:var(--muted);font-size:0;font-weight:700;text-transform:uppercase;letter-spacing:.03em}
+  .mobileWeightVisualValues b:first-child small::after{content:"lb";font-size:7px}
+  .mobileWeightVisualValues b:nth-child(2) small::after{content:"in";font-size:7px}
+  #weightsArea[data-mobile-weight-view="visual"] .mobileWeightsComputedWeight{position:absolute;right:3px;bottom:4px;left:3px;min-height:11px;padding-top:0}
   #weightsArea[data-mobile-bulk-mode="true"] .mobileWeightCell{ cursor:pointer; }
   #weightsArea[data-mobile-bulk-mode="true"] .mobileWeightCellSelector{ display:block; }
   .mobileWeightsBulkBar{
@@ -3788,8 +3798,8 @@ body[data-surface-style="divided"] .helpTopic{
     white-space:normal;
   }
   .workspaceTileIcon{
-    width:34px;
-    height:34px;
+    width:calc(34px * 1.25);
+    height:calc(34px * 1.25);
     padding:5px;
     border:1px solid color-mix(in srgb,var(--tile-accent) 38%,transparent);
     border-radius:9px;
@@ -3885,9 +3895,92 @@ body[data-surface-style="divided"] .helpTopic{
     color: var(--muted);
     letter-spacing:.08em;
   }
+  /* Mobile has less room to create hierarchy with layout alone. Keep body
+     copy calm, but give every heading and card label a decisive, consistent
+     weight across all themes. */
+  :is(h1,h2,h3,h4,h5,h6),
+  .layerTitle,
+  .workspaceNavButton span,
+  .workspaceConfigurationInfo strong,
+  .workspaceConfigurationSectionTitle strong,
+  .workspaceRecoveryDetail strong,
+  .mobileTileStyleSection legend,
+  .mobileBackgroundStyleSection legend{ font-weight:800; font-synthesis:none; }
   .workspaceContent > .workspacePanel[open] > summary .layerTitle{ color: var(--title); }
   .workspaceContent > .workspacePanel > summary .layerMeta{ display: none; }
   .workspaceContent > .workspacePanel > summary .pill.summaryStatus{ display: none !important; }
+  /* These two Setup entries keep their familiar desktop summary markup, but
+     become purpose-built mobile entry cards. SVG inherits the active theme's
+     colors and the animation is transform-only, so it stays inexpensive. */
+  #lineSetupBlock #weightsBlock,
+  #lineSetupBlock #setupWeightProfilesBlock{
+    margin-top:12px;
+    overflow:visible;
+    border:1px solid color-mix(in srgb,var(--focus-border) 36%,var(--border));
+    border-radius:18px;
+    background:linear-gradient(120deg,color-mix(in srgb,var(--focus-ring) 58%,var(--panel2)),var(--panel2));
+    box-shadow:0 9px 18px color-mix(in srgb,#000 16%,transparent);
+  }
+  #lineSetupBlock #weightsBlock + #setupWeightProfilesBlock{ margin-top:12px; }
+  /* On phones profiles are part of the weights task, not a second setup
+     destination. Keep a clear divider while preserving the same controls. */
+  #lineSetupBlock #weightsBlock > .blockBody > #setupWeightProfilesBlock{
+    margin:16px 0 0;
+    border-width:1px 0 0;
+    border-radius:0;
+    background:transparent;
+    box-shadow:none;
+  }
+  #lineSetupBlock #weightsBlock > .blockBody > #setupWeightProfilesBlock > summary{
+    min-height:64px;
+    padding:10px 0;
+  }
+  #lineSetupBlock #weightsBlock > summary,
+  #lineSetupBlock #setupWeightProfilesBlock > summary{
+    min-height:78px;
+    padding:12px 15px;
+    border:0;
+    cursor:pointer;
+  }
+  #lineSetupBlock #weightsBlock > summary .chev,
+  #lineSetupBlock #setupWeightProfilesBlock > summary .chev{ display:none; }
+  #lineSetupBlock #weightsBlock > summary .sumLeft,
+  #lineSetupBlock #setupWeightProfilesBlock > summary .sumLeft{ width:100%; align-items:center; gap:13px; }
+  #lineSetupBlock #weightsBlock > summary .summaryText,
+  #lineSetupBlock #setupWeightProfilesBlock > summary .summaryText{ min-width:0; }
+  #lineSetupBlock #weightsBlock > summary .nestedLayerTitle,
+  #lineSetupBlock #setupWeightProfilesBlock > summary .nestedLayerTitle{ color:var(--title); font-size:14px; letter-spacing:.12em; }
+  #lineSetupBlock #weightsBlock > summary .layerMeta,
+  #lineSetupBlock #setupWeightProfilesBlock > summary .layerMeta{ display:block; margin-top:4px; color:var(--muted); font-size:12px; }
+  #lineSetupBlock #setupWeightProfilesBlock > summary > .pill{ display:none; }
+  #lineSetupBlock #weightsBlock > summary::after,
+  #lineSetupBlock #setupWeightProfilesBlock > summary::after{
+    content:"";
+    width:9px;
+    height:9px;
+    margin-left:auto;
+    border-right:2px solid var(--focus-border);
+    border-bottom:2px solid var(--focus-border);
+    transform:rotate(45deg) translateY(-3px);
+    transition:transform .2s ease;
+  }
+  #lineSetupBlock #weightsBlock[open] > summary::after,
+  #lineSetupBlock #setupWeightProfilesBlock[open] > summary::after{ transform:rotate(225deg) translateY(-1px); }
+  .mobileSetupEntryArt{ display:block; width:46px; height:46px; flex:0 0 auto; overflow:visible; color:var(--focus-border); }
+  .mobileSetupEntryArt path,.mobileSetupEntryArt circle{ fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+  .mobileWeightsEntryArt .entryHopperFill{ fill:color-mix(in srgb,var(--ok) 28%,transparent); stroke:none; transform-origin:24px 37px; animation:mobileHopperFill 3.4s ease-in-out infinite; }
+  .mobileWeightsEntryArt .entryGaugeDot{ fill:var(--orange); stroke:none; animation:mobileGaugePulse 2.2s ease-in-out infinite; }
+  .mobileProfilesEntryArt .entryProfileFront{ fill:color-mix(in srgb,var(--focus-ring) 70%,transparent); }
+  .mobileProfilesEntryArt .entryProfileMark{ fill:var(--ok); stroke:none; animation:mobileProfileMark 2.8s ease-in-out infinite; }
+  #lineSetupBlock #weightsBlock[open] .mobileWeightsEntryArt{ color:var(--ok); }
+  #lineSetupBlock #setupWeightProfilesBlock[open] .mobileProfilesEntryArt{ color:var(--title); }
+  @keyframes mobileHopperFill{ 0%,100%{ transform:scaleY(.62); opacity:.62; } 50%{ transform:scaleY(1); opacity:1; } }
+  @keyframes mobileGaugePulse{ 0%,100%{ transform:scale(.8); opacity:.55; } 50%{ transform:scale(1.25); opacity:1; } }
+  @keyframes mobileProfileMark{ 0%,100%{ transform:translateX(0); } 50%{ transform:translateX(2px); } }
+  @media (prefers-reduced-motion:reduce){
+    .mobileWeightsEntryArt .entryHopperFill,.mobileWeightsEntryArt .entryGaugeDot,.mobileProfilesEntryArt .entryProfileMark{ animation:none; }
+    #lineSetupBlock #weightsBlock > summary::after,#lineSetupBlock #setupWeightProfilesBlock > summary::after{ transition:none; }
+  }
   .mobileBrand{
     margin-bottom:calc(0px - var(--page-gap));
     border-bottom:0;
@@ -4188,7 +4281,7 @@ body[data-surface-style="divided"] .helpTopic{
   body[data-mobile-tile-style="glass"] .workspaceTileIcon{ border-radius:50%; }
   body[data-mobile-tile-style="minimal"] .workspaceNav{ gap:2px 10px; }
   body[data-mobile-tile-style="minimal"] .workspaceNavButton{ min-height:68px; padding:10px 4px; border:0; border-bottom:1px solid color-mix(in srgb,var(--tile-accent) 45%,var(--border)); border-radius:0; background:transparent; box-shadow:none; }
-  body[data-mobile-tile-style="minimal"] .workspaceTileIcon{ width:30px; height:30px; padding:3px; border:0; border-radius:0; background:transparent; }
+  body[data-mobile-tile-style="minimal"] .workspaceTileIcon{ width:calc(30px * 1.25); height:calc(30px * 1.25); padding:3px; border:0; border-radius:0; background:transparent; }
   body[data-mobile-tile-style="layered"] .workspaceNav{ gap:10px; }
   body[data-mobile-tile-style="layered"] .workspaceNavButton{ border-color:color-mix(in srgb,var(--tile-accent) 36%,var(--border)); border-radius:12px; background:linear-gradient(145deg,color-mix(in srgb,var(--tile-accent) 11%,var(--row-bg)),var(--row-bg) 72%); box-shadow:3px 3px 0 color-mix(in srgb,var(--tile-accent) 22%,var(--panel)),6px 6px 0 color-mix(in srgb,var(--border2) 55%,transparent); }
   body[data-mobile-tile-style="layered"] .workspaceTileIcon{ border-radius:7px; background:color-mix(in srgb,var(--tile-accent) 15%,var(--row-bg)); }

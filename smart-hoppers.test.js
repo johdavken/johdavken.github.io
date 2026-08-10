@@ -251,7 +251,7 @@ test("the computed-weight element starts hidden and is only ever built when Smar
   assert.match(ifBlock, /computedWeight\.hidden = true;/);
 });
 
-test("the Recipe Setup matrix gets a small \"SMART\" badge next to the tracking clock, for every hopper (unlike the wrench, it's not gated on Smart Hoppers being on - it just stays hidden)", () => {
+test("the Recipe Setup matrix gets a small \"SMART\" badge for every hopper (unlike the wrench, it's not gated on Smart Hoppers being on - it just stays hidden)", () => {
   const start = app.indexOf('trackButton.appendChild(clockIcon);');
   const body = app.slice(start, app.indexOf("cellHeader.append(", start) + 200);
   assert.match(body, /const smartBadge = document\.createElement\("span"\);/);
@@ -259,7 +259,9 @@ test("the Recipe Setup matrix gets a small \"SMART\" badge next to the tracking 
   assert.match(body, /smartBadge\.className = "splitSmartBadge";/);
   assert.match(body, /smartBadge\.textContent = "SMART";/);
   assert.match(body, /smartBadge\.hidden = true;/);
-  assert.match(body, /cellHeader\.append\(trackControl, smartBadge, clearButton\);/);
+  assert.match(body, /cellTop\.appendChild\(smartBadge\);/);
+  assert.match(body, /cellHeader\.append\(trackControl, clearButton\);/);
+  assert.match(body, /else\{\s*cellHeader\.append\(trackControl, smartBadge, clearButton\);/);
 });
 
 test("refreshSmartHopperState delegates entirely to smartHopperComputation and updates both the weights-grid readout and the Recipe Setup badge from that one result - no duplicated formula or lookup logic in this function itself", () => {

@@ -14,7 +14,7 @@ test("admin navigation is explicitly hidden during initialization and rendered f
   assert.match(fs.readFileSync("styles.css", "utf8"), /\.adminNavButton\[hidden\]\{ display: none !important; \}/);
 });
 
-test("admin UI includes login, editing, active state, and catalog refresh flow", () => {
+test("admin UI includes login, editing, active state, deletion, and catalog refresh flow", () => {
   assert.match(index, /id="adminLoginForm"/);
   assert.match(index, /id="adminResinActive"/);
   assert.match(index, /<option value="false">Inactive<\/option>/);
@@ -24,6 +24,9 @@ test("admin UI includes login, editing, active state, and catalog refresh flow",
   assert.match(ui, /if \(!admin\.getState\(\)\.isAdmin\) return;/);
   assert.match(ui, /resin\?\.is_active \?\? true/);
   assert.match(ui, /value === "true"/);
+  assert.match(index, /id="adminResinDelete"[^>]*class="danger"[^>]*hidden/);
+  assert.match(ui, /admin\.deleteResin/);
+  assert.match(ui, /Permanently delete/);
 });
 
 test("admin form includes bulk density (lb/ft³), populated on edit and submitted alongside density - not yet used by Smart Hoppers, just an entry field for now", () => {

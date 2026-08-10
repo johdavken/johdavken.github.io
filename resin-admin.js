@@ -114,8 +114,18 @@
         return { ok: false, message: duplicate ? "That resin code already exists." : "Could not save the resin. No changes were applied." };
       }
     }
+    async function deleteResin(id){
+      if (!state.isAdmin) return { ok: false, message: "Admin access is required." };
+      if (!id) return { ok: false, message: "Choose a resin to delete." };
+      try{
+        const response = await getClient().from("resins").delete().eq("id", id);
+        if (response.error) throw response.error;
+        await catalog?.refreshResins?.();
+        return { ok: true };
+      }catch(error){ return { ok: false, message: "Could not delete the resin. No changes were applied." }; }
+    }
     function subscribe(listener){ listeners.add(listener); return ()=>listeners.delete(listener); }
-    return { initialize, signIn, signOut, listResins, saveResin, subscribe, getState: ()=>({ ...state }), getClient };
+    return { initialize, signIn, signOut, listResins, saveResin, deleteResin, subscribe, getState: ()=>({ ...state }), getClient };
   }
   return { AUTH_STORAGE_KEY, RESIN_FIELDS, validateResin, create };
 });
