@@ -1294,10 +1294,247 @@
       return String(hi + 1);
     }
 
+    function renderMobileWeightsArea(area){
+      const selected = new Set();
+      const cellRefs = new Map();
+      let bulkMode = false;
+
+      const controls = document.createElement("div");
+      controls.className = "mobileWeightsControls";
+
+      const smartControl = document.createElement("div");
+      smartControl.className = "mobileWeightsSmartControl";
+      const smartCopy = document.createElement("div");
+      smartCopy.innerHTML = "<strong>Smart Hoppers</strong><small>Use hopper height and resin bulk density</small>";
+      const smartToggle = document.createElement("div");
+      smartToggle.id = "smartHoppersToggle";
+      smartToggle.className = "toggle";
+      smartToggle.setAttribute("role", "switch");
+      smartToggle.setAttribute("tabindex", "0");
+      smartToggle.setAttribute("aria-label", "Enable Smart Hoppers");
+      smartToggle.title = "Smart Hoppers: compute weight from shared circumference, hopper height, and resin density when known";
+      smartControl.append(smartCopy, smartToggle);
+      controls.appendChild(smartControl);
+
+      if (state.smartHoppersEnabled){
+        const allCircumferences = state.layers.flatMap(L=>L.hoppers.map(h=>clampNum(h.circumference)));
+        const firstCircumference = allCircumferences[0] || 0;
+        const sharedCircumference = allCircumferences.every(value=>value === firstCircumference) ? firstCircumference : null;
+        const circumferenceLabel = document.createElement("label");
+        circumferenceLabel.className = "mobileSharedCircumference";
+        circumferenceLabel.innerHTML = "<span>Shared hopper circumference</span><small>Applied to every hopper</small>";
+        const circumferenceInput = document.createElement("input");
+        circumferenceInput.id = "mobileSharedCircumference";
+        circumferenceInput.type = "text";
+        circumferenceInput.inputMode = "decimal";
+        circumferenceInput.placeholder = sharedCircumference === null ? "Set all" : "0";
+        circumferenceInput.value = sharedCircumference === null ? "" : String(sharedCircumference);
+        circumferenceInput.setAttribute("aria-label", "Shared hopper circumference in inches, applied to every hopper");
+        circumferenceLabel.appendChild(circumferenceInput);
+        controls.appendChild(circumferenceLabel);
+        circumferenceInput.addEventListener("input", event=>{
+          const accepted = acceptNumericInput(
+            event.target,
+            { min: 0, label: "Shared hopper circumference" },
+            value=>state.layers.forEach(L=>L.hoppers.forEach(hopper=>{ hopper.circumference = value; }))
+          );
+          if (!accepted) return;
+          validateAndCompute({ sync: true });
+          saveSession();
+        });
+      }
+
+      const bulkToggleRow = document.createElement("div");
+      bulkToggleRow.className = "mobileWeightsBulkToggleRow";
+      bulkToggleRow.innerHTML = "<div><strong>Bulk entry</strong><small>Select cells, then apply values together</small></div>";
+      const bulkToggle = document.createElement("div");
+      bulkToggle.id = "mobileWeightsBulkToggle";
+      bulkToggle.className = "toggle";
+      bulkToggle.setAttribute("role", "switch");
+      bulkToggle.setAttribute("tabindex", "0");
+      bulkToggle.setAttribute("aria-label", "Enable bulk receiver hopper entry");
+      bulkToggleRow.appendChild(bulkToggle);
+      controls.appendChild(bulkToggleRow);
+      area.appendChild(controls);
+
+      const matrix = document.createElement("div");
+      matrix.className = "mobileWeightsMatrix";
+      matrix.style.setProperty("--mobile-weight-layer-count", String(state.layers.length));
+      state.layers.forEach(L=>{
+        const column = document.createElement("section");
+        column.className = "mobileWeightsLayer";
+        const heading = document.createElement("div");
+        heading.className = "mobileWeightsLayerHeading";
+        heading.textContent = L.name;
+        column.appendChild(heading);
+
+        for (let hi=0; hi<HOPPERS_PER_LAYER; hi++){
+          const key = `${L.name}:${hi}`;
+          const hopper = L.hoppers[hi];
+          const cell = document.createElement("div");
+          cell.className = "mobileWeightCell";
+          const label = document.createElement("span");
+          label.className = "mobileWeightCellLabel";
+          label.textContent = hopperPositionLabel(hi);
+          cell.appendChild(label);
+
+          const selector = document.createElement("input");
+          selector.type = "checkbox";
+          selector.className = "mobileWeightCellSelector";
+          selector.setAttribute("aria-label", `Select ${hopperBadgeLabel(L.name, hi)} for bulk entry`);
+          cell.appendChild(selector);
+
+          const valueFields = document.createElement("div");
+          valueFields.className = "mobileWeightValueFields";
+          const makeValueField = (shortLabel, value, ariaLabel, onValue)=>{
+            const wrap = document.createElement("label");
+            wrap.className = "mobileWeightValueField";
+            const caption = document.createElement("span");
+            caption.textContent = shortLabel;
+            const input = document.createElement("input");
+            input.type = "text";
+            input.inputMode = "decimal";
+            input.placeholder = "0";
+            input.value = String(clampNum(value));
+            input.setAttribute("aria-label", ariaLabel);
+            wrap.append(caption, input);
+            input.addEventListener("input", event=>{
+              const accepted = acceptNumericInput(event.target, { min: 0, label: ariaLabel }, onValue);
+              if (!accepted) return;
+              validateAndCompute({ sync: true });
+              saveSession();
+            });
+            valueFields.appendChild(wrap);
+            return input;
+          };
+          const weightInput = makeValueField("W", hopper.weight, `${hopperBadgeLabel(L.name, hi)} weight in pounds`, value=>{ hopper.weight = value; });
+          let heightInput = null;
+          if (state.smartHoppersEnabled){
+            heightInput = makeValueField("H", hopper.usableHeight, `${hopperBadgeLabel(L.name, hi)} usable height in inches`, value=>{ hopper.usableHeight = value; });
+          }
+          cell.appendChild(valueFields);
+          column.appendChild(cell);
+          cellRefs.set(key, { cell, selector, weightInput, heightInput, hopper });
+
+          selector.addEventListener("change", ()=>{
+            selector.checked ? selected.add(key) : selected.delete(key);
+            updateSelectionUI();
+          });
+          cell.addEventListener("click", event=>{
+            if (!bulkMode || event.target.closest("input")) return;
+            selector.checked = !selector.checked;
+            selector.dispatchEvent(new Event("change"));
+          });
+        }
+        matrix.appendChild(column);
+      });
+      area.appendChild(matrix);
+
+      const bulkBar = document.createElement("div");
+      bulkBar.id = "mobileWeightsBulkBar";
+      bulkBar.className = "mobileWeightsBulkBar";
+      bulkBar.hidden = true;
+      bulkBar.innerHTML = `
+        <label><span>Weight</span><input id="mobileBulkWeight" type="text" inputmode="decimal" placeholder="No change" /></label>
+        ${state.smartHoppersEnabled ? '<label><span>Height</span><input id="mobileBulkHeight" type="text" inputmode="decimal" placeholder="No change" /></label>' : ""}
+        <div class="mobileWeightsBulkActions"><small id="mobileWeightSelectionStatus" role="status">No hoppers selected</small><button id="applyMobileBulkWeights" type="button" disabled>Apply</button></div>
+        <div class="mobileWeightsBulkTextActions"><button id="selectAllMobileWeights" type="button">Select all</button><button id="clearMobileWeightSelection" type="button">Clear</button></div>
+      `;
+      area.appendChild(bulkBar);
+
+      const applyButton = bulkBar.querySelector("#applyMobileBulkWeights");
+      const selectionStatus = bulkBar.querySelector("#mobileWeightSelectionStatus");
+      const bulkWeight = bulkBar.querySelector("#mobileBulkWeight");
+      const bulkHeight = bulkBar.querySelector("#mobileBulkHeight");
+
+      function updateSelectionUI(message){
+        cellRefs.forEach((ref,key)=>{
+          const isSelected = selected.has(key);
+          ref.selector.checked = isSelected;
+          ref.cell.classList.toggle("selected", isSelected);
+        });
+        applyButton.disabled = selected.size === 0;
+        selectionStatus.textContent = message || (selected.size ? `${selected.size} selected` : "No hoppers selected");
+      }
+
+      function setMobileWeightBulkMode(enabled){
+        bulkMode = !!enabled;
+        area.dataset.mobileBulkMode = String(bulkMode);
+        bulkToggle.classList.toggle("on", bulkMode);
+        bulkToggle.setAttribute("aria-checked", String(bulkMode));
+        bulkBar.hidden = !bulkMode;
+        if (!bulkMode){
+          selected.clear();
+          updateSelectionUI();
+        }
+      }
+
+      const flipBulkMode = ()=>setMobileWeightBulkMode(!bulkMode);
+      bulkToggle.addEventListener("click", flipBulkMode);
+      bulkToggle.addEventListener("keydown", event=>{
+        if (event.key === "Enter" || event.key === " "){
+          event.preventDefault();
+          flipBulkMode();
+        }
+      });
+      bulkBar.querySelector("#selectAllMobileWeights").addEventListener("click", ()=>{
+        cellRefs.forEach((_,key)=>selected.add(key));
+        updateSelectionUI();
+      });
+      bulkBar.querySelector("#clearMobileWeightSelection").addEventListener("click", ()=>{
+        selected.clear();
+        updateSelectionUI();
+      });
+      applyButton.addEventListener("click", ()=>{
+        const readOptional = (input, label)=>{
+          if (!input || !input.value.trim()) return { valid:true, value:null };
+          const result = validation.validateNumber(input.value, { min:0, label });
+          input.setCustomValidity(result.valid ? "" : result.message);
+          input.setAttribute("aria-invalid", String(!result.valid));
+          input.title = result.valid ? "" : result.message;
+          return result;
+        };
+        const weightResult = readOptional(bulkWeight, "Bulk weight");
+        const heightResult = readOptional(bulkHeight, "Bulk height");
+        if (!weightResult.valid || !heightResult.valid) return;
+        if (weightResult.value === null && heightResult.value === null){
+          selectionStatus.textContent = "Enter a weight or height to apply";
+          return;
+        }
+        selected.forEach(key=>{
+          const ref = cellRefs.get(key);
+          if (!ref) return;
+          if (weightResult.value !== null){
+            ref.hopper.weight = weightResult.value;
+            ref.weightInput.value = String(weightResult.value);
+          }
+          if (heightResult.value !== null && ref.heightInput){
+            ref.hopper.usableHeight = heightResult.value;
+            ref.heightInput.value = String(heightResult.value);
+          }
+        });
+        validateAndCompute({ sync:true });
+        saveSession();
+        updateSelectionUI("Bulk values applied");
+      });
+
+      setMobileWeightBulkMode(false);
+      hookToggle(
+        "smartHoppersToggle",
+        ()=> !!state.smartHoppersEnabled,
+        value=>{ state.smartHoppersEnabled = !!value; renderWeightsArea(); }
+      );
+      refreshSmartHopperState();
+    }
+
     function renderWeightsArea(){
       const area = $("weightsArea");
       if (!area) return;
       area.innerHTML = "";
+      if (window.matchMedia("(max-width: 900px)").matches){
+        renderMobileWeightsArea(area);
+        return;
+      }
       const selected = new Set();
       const cellRefs = new Map();
       const columnSelectors = new Map();

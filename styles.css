@@ -2465,6 +2465,118 @@ details[open] > summary .chevSatellite{
   .weightsBulkActions{display:flex}
 }
 
+/* Mobile receiver hopper weights: five compact layer columns are visible at
+   once. Smart Hoppers adds a second, per-hopper height value while one
+   shared circumference control writes the common physical dimension. */
+@media (width <= 900px){
+  #weightsArea{ display:grid; gap:10px; }
+  .mobileWeightsControls{ display:grid; gap:8px; }
+  .mobileWeightsSmartControl,.mobileWeightsBulkToggleRow{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding:9px 10px;
+    border:1px solid var(--row-border-2);
+    border-radius:var(--control-radius);
+    background:var(--row-bg-2);
+  }
+  .mobileWeightsSmartControl strong,.mobileWeightsBulkToggleRow strong{ display:block; color:var(--text); font-size:12px; }
+  .mobileWeightsSmartControl small,.mobileWeightsBulkToggleRow small{ display:block; margin-top:2px; color:var(--muted); font-size:10px; line-height:1.25; }
+  .mobileSharedCircumference{
+    display:grid;
+    grid-template-columns:1fr 106px;
+    align-items:center;
+    gap:3px 10px;
+    padding:9px 10px;
+    border:1px solid color-mix(in srgb,var(--focus-border) 28%,var(--row-border-2));
+    border-radius:var(--control-radius);
+    background:color-mix(in srgb,var(--focus-ring) 32%,var(--row-bg-2));
+  }
+  .mobileSharedCircumference span{ color:var(--text); font-size:12px; font-weight:700; }
+  .mobileSharedCircumference small{ grid-column:1; color:var(--muted); font-size:10px; }
+  .mobileSharedCircumference input{ grid-column:2; grid-row:1 / span 2; width:100%; min-width:0; text-align:right; }
+  .mobileWeightsMatrix{
+    display:grid;
+    grid-template-columns:repeat(var(--mobile-weight-layer-count),minmax(0,1fr));
+    gap:4px;
+    align-items:start;
+  }
+  .mobileWeightsLayer{ display:grid; gap:4px; min-width:0; }
+  .mobileWeightsLayerHeading{
+    display:grid;
+    place-items:center;
+    min-height:27px;
+    border-bottom:1px solid color-mix(in srgb,var(--focus-border) 38%,var(--border));
+    color:var(--title);
+    font-family:"Arial Narrow","Roboto Condensed",system-ui,sans-serif;
+    font-size:18px;
+    font-weight:850;
+    line-height:1;
+  }
+  .mobileWeightCell{
+    position:relative;
+    display:grid;
+    gap:3px;
+    min-height:48px;
+    padding:5px 3px 4px;
+    border:1px solid var(--row-border-2);
+    border-radius:7px;
+    background:var(--row-bg-2);
+    transition:border-color .14s ease,background .14s ease,box-shadow .14s ease;
+  }
+  .mobileWeightCell.selected{ border-color:var(--focus-border); background:var(--focus-ring); box-shadow:inset 0 0 0 1px var(--focus-border); }
+  .mobileWeightCellLabel{ position:absolute; top:3px; left:4px; color:var(--muted); font-size:9px; font-weight:800; line-height:1; }
+  .mobileWeightValueFields{ display:grid; gap:3px; margin-top:8px; }
+  .mobileWeightValueField{ display:grid; grid-template-columns:9px minmax(0,1fr); align-items:center; gap:2px; margin:0; }
+  .mobileWeightValueField span{ color:var(--muted); font-size:8px; font-weight:850; text-align:center; }
+  .mobileWeightValueField input{
+    min-width:0;
+    height:20px;
+    padding:1px 2px;
+    border:0;
+    border-bottom:1px solid color-mix(in srgb,var(--border2) 75%,transparent);
+    border-radius:0;
+    background:transparent;
+    box-shadow:none;
+    color:var(--text);
+    font-size:11px;
+    line-height:1;
+    text-align:right;
+  }
+  .mobileWeightValueField input:focus{ border-bottom-color:var(--focus-border); box-shadow:0 1px 0 var(--focus-border); }
+  .mobileWeightCellSelector{
+    position:absolute;
+    top:3px;
+    right:3px;
+    z-index:1;
+    display:none;
+    width:14px;
+    height:14px;
+    margin:0;
+    accent-color:var(--focus-border);
+  }
+  #weightsArea[data-mobile-bulk-mode="true"] .mobileWeightCell{ cursor:pointer; }
+  #weightsArea[data-mobile-bulk-mode="true"] .mobileWeightCellSelector{ display:block; }
+  .mobileWeightsBulkBar{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:8px;
+    padding:10px;
+    border:1px solid color-mix(in srgb,var(--focus-border) 34%,var(--border));
+    border-radius:var(--control-radius);
+    background:var(--panel2);
+  }
+  .mobileWeightsBulkBar[hidden]{ display:none; }
+  .mobileWeightsBulkBar label{ display:grid; gap:4px; margin:0; color:var(--muted); font-size:10px; }
+  .mobileWeightsBulkBar input{ min-width:0; }
+  .mobileWeightsBulkActions{ display:flex; grid-column:1 / -1; align-items:center; justify-content:space-between; gap:8px; }
+  .mobileWeightsBulkActions small{ color:var(--muted); font-size:10px; }
+  .mobileWeightsBulkActions button{ min-height:30px; padding:4px 9px; font-size:11px; }
+  .mobileWeightsBulkTextActions{ display:flex; grid-column:1 / -1; gap:12px; }
+  .mobileWeightsBulkTextActions button{ min-height:auto; padding:0; border:0; background:transparent; color:var(--focus-border); font-size:11px; box-shadow:none; }
+}
+
 /* =======================================================================
  *   Results
  *   ======================================================================= */
