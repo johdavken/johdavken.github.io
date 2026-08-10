@@ -81,6 +81,14 @@ test("active-job equality still distinguishes a real nested hopper value change"
   assert.equal(activeJobsEqual(first, second), false);
 });
 
+test("active-job snapshots carry the shared workspace hopper circumference", () => {
+  const state = stateFixture();
+  state.hopperCircumference = 42;
+  const snapshot = snapshotActiveJob(state, "0.18");
+  assert.equal(snapshot.hopperCircumference, 42);
+  assert.ok(canonicalActiveJob(snapshot).includes('"hopperCircumference":42'));
+});
+
 test("meaningful active-job detection recognizes production state", () => {
   assert.equal(hasMeaningfulActiveJob(snapshotActiveJob(stateFixture(), "0.17")), true);
   assert.equal(hasMeaningfulActiveJob({ lineRate: 0, gauge: 0, changeoverTime: "", layers: [] }), false);

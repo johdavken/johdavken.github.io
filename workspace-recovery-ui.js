@@ -99,14 +99,12 @@
       info.className = "tiny mono";
       info.textContent = `${member.member_device_label || "Unnamed device"} · ${member.member_role} · ${shortId(member.member_user_id)} · Last seen ${fmtDate(member.member_last_seen_at)}${isCurrent ? " · this device" : ""}`;
       row.append(info);
-      if (member.member_role !== "owner"){
-        const removeBtn = document.createElement("button");
-        removeBtn.type = "button";
-        removeBtn.className = "secondary";
-        removeBtn.textContent = "Remove";
-        removeBtn.addEventListener("click", () => removeMember(member, isCurrent));
-        row.append(removeBtn);
-      }
+      const removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = "secondary";
+      removeBtn.textContent = "Disconnect";
+      removeBtn.addEventListener("click", () => removeMember(member, isCurrent));
+      row.append(removeBtn);
       host.appendChild(row);
     });
   }
@@ -114,10 +112,13 @@
   function renderDetail(){
     const panel = $("workspaceRecoveryDetail");
     const transferBtn = $("workspaceRecoveryTransferOwnershipBtn");
+    const mergeTarget = $("workspaceRecoveryMergeTarget");
+    const mergeBtn = $("workspaceRecoveryMergeBtn");
     if (!panel) return;
     if (!selectedWorkspaceRow){
       panel.hidden = true;
       if (transferBtn) transferBtn.disabled = true;
+      if (mergeBtn) mergeBtn.disabled = true;
       return;
     }
     panel.hidden = false;
@@ -129,6 +130,18 @@
       const descriptor = bridge()?.getRecoveryDescriptor?.();
       const currentMembership = members.find(m => m.member_user_id === descriptor?.userId);
       transferBtn.disabled = !descriptor?.ready || !currentMembership || currentMembership.member_role === "owner";
+    }
+    if (mergeTarget){
+      mergeTarget.replaceChildren();
+      const targets = workspaces.filter(workspace => workspace.workspace_id !== selectedWorkspaceId);
+      if (!targets.length){
+        mergeTarget.append(new Option("No other workspace", ""));
+      }else{
+        mergeTarget.append(new Option("Choose target workspace…", ""));
+        targets.forEach(workspace => mergeTarget.append(new Option(workspace.workspace_name, workspace.workspace_id)));
+      }
+      mergeTarget.disabled = !targets.length;
+      if (mergeBtn) mergeBtn.disabled = !targets.length;
     }
   }
 
@@ -277,15 +290,60 @@
     const service = ensureRecovery();
     if (!service || !selectedWorkspaceId) return;
     const label = member.member_device_label || "this device";
+    const ownerWarning = member.member_role === "owner"
+      ? " This is the workspace owner; disconnecting it can leave the workspace without an owner."
+      : "";
     const warning = isCurrent
-      ? `${label} is the device you just recovered. Remove its membership anyway?`
-      : `Remove membership for ${label}?`;
+      ? `${label} is the device you just recovered. Disconnect it anyway?${ownerWarning}`
+      : `Disconnect ${label} from this workspace?${ownerWarning}`;
     if (!confirm(warning)) return;
     const result = await service.removeWorkspaceMember({ workspaceId: selectedWorkspaceId, memberUserId: member.member_user_id });
     if (!result.ok){ setMessage(result.message, "bad"); return; }
-    setMessage("Membership removed.", "ok");
+    setMessage("Device disconnected. Its next RT Sync request will be denied.", "ok");
     await loadWorkspaces();
     await selectWorkspace(selectedWorkspaceId);
+  }
+
+  async function deleteWorkspace(){
+    const service = ensureRecovery();
+    if (!service || !selectedWorkspaceRow) return;
+    const workspaceId = selectedWorkspaceRow.workspace_id;
+    const name = selectedWorkspaceRow.workspace_name;
+    if (!confirm(`Permanently delete “${name}”? This deletes its active job, recipes, weight profiles, and every linked-device membership. This cannot be undone.`)) return;
+    const button = $("workspaceRecoveryDeleteWorkspaceBtn");
+    if (button) button.disabled = true;
+    setMessage("Deleting workspace…");
+    const result = await service.deleteWorkspace({ workspaceId });
+    if (button) button.disabled = false;
+    if (!result.ok){ setMessage(result.message, "bad"); return; }
+    selectedWorkspaceId = "";
+    selectedWorkspaceRow = null;
+    members = [];
+    await loadWorkspaces();
+    setMessage(`Deleted ${name}.`, "ok");
+  }
+
+  async function mergeWorkspace(){
+    const service = ensureRecovery();
+    const targetSelect = $("workspaceRecoveryMergeTarget");
+    if (!service || !selectedWorkspaceRow || !targetSelect?.value) return;
+    const sourceWorkspaceId = selectedWorkspaceRow.workspace_id;
+    const sourceName = selectedWorkspaceRow.workspace_name;
+    const targetWorkspaceId = targetSelect.value;
+    const targetName = workspaces.find(workspace => workspace.workspace_id === targetWorkspaceId)?.workspace_name || "the selected workspace";
+    const warning = `Merge “${sourceName}” into “${targetName}”? Recipes and receiver-weight profiles will be copied. Existing same-name items in the target are preserved; imported duplicates are renamed with “(from ${sourceName})”. “${sourceName}”, its active job, and its linked-device memberships will then be permanently deleted.`;
+    if (!confirm(warning)) return;
+    const button = $("workspaceRecoveryMergeBtn");
+    if (button) button.disabled = true;
+    setMessage("Merging workspace…");
+    const result = await service.mergeWorkspace({ sourceWorkspaceId, targetWorkspaceId });
+    if (button) button.disabled = false;
+    if (!result.ok){ setMessage(result.message, "bad"); return; }
+    selectedWorkspaceId = "";
+    selectedWorkspaceRow = null;
+    members = [];
+    await loadWorkspaces();
+    setMessage(`Merged ${result.recipesMerged} recipe${result.recipesMerged === 1 ? "" : "s"} and ${result.profilesMerged} weight profile${result.profilesMerged === 1 ? "" : "s"} into ${targetName}; deleted ${sourceName}.`, "ok");
   }
 
   function resetPanel(){
@@ -328,4 +386,6 @@
   $("workspaceRecoveryDetailRefreshBtn")?.addEventListener("click", () => { if (selectedWorkspaceId) void selectWorkspace(selectedWorkspaceId); });
   $("workspaceRecoveryAddDeviceBtn")?.addEventListener("click", confirmAddDevice);
   $("workspaceRecoveryTransferOwnershipBtn")?.addEventListener("click", confirmTransferOwnership);
+  $("workspaceRecoveryDeleteWorkspaceBtn")?.addEventListener("click", () => void deleteWorkspace());
+  $("workspaceRecoveryMergeBtn")?.addEventListener("click", () => void mergeWorkspace());
 })(typeof globalThis !== "undefined" ? globalThis : this);

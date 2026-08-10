@@ -13,6 +13,20 @@ const baseSql = fs.readFileSync(
   path.join(__dirname, "supabase/migrations/202607310001_line_sync.sql"),
   "utf8"
 );
+const incidentSql = fs.readFileSync(
+  path.join(__dirname, "supabase/migrations/202608100001_admin_workspace_incident_controls.sql"),
+  "utf8"
+);
+const mergeSql = fs.readFileSync(
+  path.join(__dirname, "supabase/migrations/202608100002_admin_workspace_merge.sql"),
+  "utf8"
+);
+
+function incidentFunctionSql(name){
+  const match = incidentSql.match(new RegExp(`create or replace function public\\.${name}\\([\\s\\S]*?\\n\\$\\$;`, "i"));
+  assert.ok(match, `Expected incident SQL function ${name}`);
+  return match[0];
+}
 
 function functionSql(name){
   const match = sql.match(new RegExp(`create or replace function (?:public|private)\\.${name}\\([\\s\\S]*?\\n\\$\\$;`, "i"));
@@ -150,6 +164,36 @@ test("member removal protects the workspace owner and requires an existing membe
   assert.match(body, /owner_cannot_be_removed/i);
   assert.match(body, /v_role = 'owner'::public\.line_workspace_role/i);
   assert.doesNotMatch(body, /delete from public\.line_workspaces\b/i);
+});
+
+test("incident controls let admins revoke any device, including an owner, and delete a workspace", () => {
+  const disconnect = incidentFunctionSql("admin_remove_workspace_member");
+  const removeWorkspace = incidentFunctionSql("admin_delete_line_workspace");
+  assert.match(disconnect, /private\.assert_admin\(\)/);
+  assert.match(disconnect, /membership_not_found/i);
+  assert.match(disconnect, /delete from public\.line_workspace_members/i);
+  assert.doesNotMatch(disconnect, /owner_cannot_be_removed/i);
+  assert.match(removeWorkspace, /private\.assert_admin\(\)/);
+  assert.match(removeWorkspace, /for update/i);
+  assert.match(removeWorkspace, /delete from public\.line_workspaces/i);
+  assert.match(incidentSql, /revoke execute on function public\.delete_workspace\(uuid,bigint\) from authenticated/i);
+  assert.match(incidentSql, /grant execute on function public\.admin_delete_line_workspace\(uuid\) to authenticated/i);
+  assert.doesNotMatch(incidentSql, /service_role/i);
+});
+
+test("workspace merging is admin-only, copies configurations to the target, and deletes the source atomically", () => {
+  const body = mergeSql.match(/create or replace function public\.admin_merge_line_workspaces\([\s\S]*?\n\$\$;/i)?.[0];
+  assert.ok(body, "Expected admin_merge_line_workspaces SQL function");
+  assert.match(body, /private\.assert_admin\(\)/);
+  assert.match(body, /p_source_workspace_id = p_target_workspace_id/i);
+  assert.match(body, /for update/i);
+  assert.match(body, /from public\.workspace_configurations/i);
+  assert.match(body, /workspace_id = p_target_workspace_id/i);
+  assert.match(body, /private\.normalize_setup_name/i);
+  assert.match(body, /delete from public\.line_workspaces where id = p_source_workspace_id/i);
+  assert.match(mergeSql, /revoke all on function public\.admin_merge_line_workspaces\(uuid,uuid\) from public, anon/i);
+  assert.match(mergeSql, /grant execute on function public\.admin_merge_line_workspaces\(uuid,uuid\) to authenticated/i);
+  assert.doesNotMatch(mergeSql, /service_role/i);
 });
 
 test("recovery actions are recorded in a private audit table with no secret payload data", () => {

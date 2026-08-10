@@ -17,7 +17,7 @@ const styles = fs.readFileSync("styles.css", "utf8");
 // restrained bump rather than competing with the primary navigation.
 
 function mobileBlock(){
-  const start = styles.indexOf("@media (max-width:900px)");
+  const start = styles.lastIndexOf("@media (max-width:900px)");
   assert.notEqual(start, -1, "expected the mobile media query block");
   const end = styles.indexOf("\n}", start);
   return styles.slice(start, end);

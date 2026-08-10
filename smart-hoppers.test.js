@@ -130,17 +130,17 @@ test("each wrench popover is a <details> using the same exclusive name so only o
   const start = app.indexOf("function renderWeightsArea(");
   const body = app.slice(start, app.indexOf("\n    function printRecipeSheet", start));
   assert.match(body, /geometryPopover\.setAttribute\("name", "hopperGeometry"\);/);
-  assert.match(body, /const geometryLabel = `Set \$\{hopperBadgeLabel\(L\.name, hi\)\} height and circumference`;/);
+  assert.match(body, /const geometryLabel = `Set \$\{hopperBadgeLabel\(L\.name, hi\)\} usable height`;/);
 });
 
-test("the wrench panel has two numeric fields (usable height, circumference), each validated and written straight to the hopper - same acceptNumericInput/validateAndCompute/saveSession pattern the weight field already uses", () => {
+test("the wrench panel has one per-hopper usable-height field; circumference is a shared workspace setting", () => {
   const start = app.indexOf("function renderWeightsArea(");
   const body = app.slice(start, app.indexOf("\n    function printRecipeSheet", start));
   assert.match(body, /heightInput\.id = `gh_\$\{L\.name\}_\$\{hi\}`;/);
-  assert.match(body, /circInput\.id = `gc_\$\{L\.name\}_\$\{hi\}`;/);
-  assert.match(body, /value => \{ L\.hoppers\[hi\]\.usableHeight = value; \}/);
-  assert.match(body, /value => \{ L\.hoppers\[hi\]\.circumference = value; \}/);
-  const heightBlock = body.slice(body.indexOf("heightInput.addEventListener"), body.indexOf("circInput.addEventListener"));
+  assert.match(body, /value => \{ L\.hoppers\[hi\]\.usableHeight = value;/);
+  assert.match(body, /id="desktopSharedCircumference"/);
+  assert.match(body, /setWorkspaceHopperCircumference/);
+  const heightBlock = body.slice(body.indexOf("heightInput.addEventListener"), body.indexOf("computedWeight = document.createElement"));
   assert.match(heightBlock, /validateAndCompute\(\{ sync: true \}\);/);
   assert.match(heightBlock, /saveSession\(\);/);
 });
@@ -148,7 +148,8 @@ test("the wrench panel has two numeric fields (usable height, circumference), ea
 test("clicking the wrench (or anything inside its popover) does not also toggle the cell's bulk-select checkbox", () => {
   const start = app.indexOf("function renderWeightsArea(");
   const body = app.slice(start, app.indexOf("\n    function printRecipeSheet", start));
-  assert.match(body, /if \(e\.target === input \|\| e\.target === selector \|\| e\.target\.closest\("\.hopperGeometryPopover"\)\) return;/);
+  assert.match(body, /e\.target\.closest\("\.hopperGeometryPopover"\)/);
+  assert.match(body, /e\.target\.closest\("\.desktopWeightVisualReadout input"\)/);
 });
 
 test("clicking outside any open wrench popover, or pressing Escape, closes it - same established pattern as the appearance-preferences and tools dropdowns", () => {
@@ -221,10 +222,11 @@ test("packing factor is not a per-hopper field anywhere, and Smart Hoppers never
   assert.match(smartBody, /const bulkDensity = resin\?\.bulk_density_lb_ft3;/);
 });
 
-test("the wrench popover has exactly two fields (usable height, circumference) - no packing factor field", () => {
+test("the wrench popover has exactly one per-hopper field (usable height) - no circumference or packing factor field", () => {
   const start = app.indexOf("function renderWeightsArea(");
   const body = app.slice(start, app.indexOf("\n    function printRecipeSheet", start));
-  assert.match(body, /panel\.append\(heightLabel, circLabel\);/);
+  assert.match(body, /panel\.append\(heightLabel\);/);
+  assert.doesNotMatch(body, /circInput\.id/);
 });
 
 test("the computed-weight element is appended after .weightsCellRow, not before - it must sit visually below the weight field", () => {
@@ -344,7 +346,9 @@ test("the \"weights not set\" and \"missing weight\" warnings also account for s
 
 test("the computed-weight readout uses the checkmark-verified style (mockup option 9): a checkmark, and --ok green instead of the theme's own accent color, since --title reads as a warning in some themes (e.g. Light, a brick red)", () => {
   const body = functionBody("refreshSmartHopperState");
-  assert.match(body, /computedEl\.textContent = `✓ \$\{fmtNum\(smart\.value, 1\)\} lb`;/);
+  assert.match(body, /computedEl\.classList\.contains\("mobileWeightsComputedWeight"\)/);
+  assert.match(body, /`✓ \$\{fmtNum\(smart\.value, 1\)\} lb`/);
+  assert.match(body, /`✓ Calculated: \$\{fmtNum\(smart\.value, 1\)\} lb`/);
   const ruleStart = styles.indexOf(".weightsComputedWeight{");
   assert.notEqual(ruleStart, -1);
   const rule = styles.slice(ruleStart, styles.indexOf("}", ruleStart) + 1);

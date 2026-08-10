@@ -21,17 +21,19 @@ test("Receiver Hopper Weights switches to an all-layer mobile matrix without cha
 
   const mobile = functionBody("renderMobileWeightsArea");
   assert.match(mobile,/matrix\.style\.setProperty\("--mobile-weight-layer-count", String\(state\.layers\.length\)\);/);
-  assert.match(mobile,/heading\.textContent = L\.name;/);
+  assert.match(mobile,/label\.textContent = `\$\{L\.name\}\$\{hopperPositionLabel\(hi\)\}`;/);
   assert.match(mobile,/for \(let hi=0; hi<HOPPERS_PER_LAYER; hi\+\+\)/);
   assert.match(styles,/grid-template-columns:repeat\(var\(--mobile-weight-layer-count\),minmax\(0,1fr\)\);/);
 });
 
-test("mobile Smart Hoppers uses shared circumference plus a height in every cell, not a wrench popover",()=>{
+test("mobile Smart Hoppers uses a workspace circumference plus a height in every cell, not a wrench popover",()=>{
   const mobile = functionBody("renderMobileWeightsArea");
   assert.match(mobile,/id = "mobileSharedCircumference"/);
-  assert.match(mobile,/state\.layers\.forEach\(L=>L\.hoppers\.forEach\(hopper=>\{ hopper\.circumference = value; \}\)\)/);
+  assert.match(mobile,/value=>setWorkspaceHopperCircumference\(value\)/);
   assert.match(mobile,/makeValueField\("W", hopper\.weight/);
   assert.match(mobile,/makeValueField\("H", hopper\.usableHeight/);
+  assert.match(mobile,/mobileWeightsSmartLegend/);
+  assert.match(mobile,/mobileWeightsComputedWeight/);
   assert.doesNotMatch(mobile,/hopperGeometryPopover/);
   assert.match(mobile,/smartToggle\.id = "smartHoppersToggle"/);
 });

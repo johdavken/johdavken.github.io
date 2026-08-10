@@ -27,7 +27,7 @@ function stateFixture(lineType = 3){
 test("Receiver Weight Profiles include only physical layout and detached weights", () => {
   const state = stateFixture();
   const profile = payloads.createReceiverWeightProfile(state);
-  assert.deepEqual(Object.keys(profile), ["schema_version", "line_type", "hopper_naming_mode", "hoppers_per_layer", "layers"]);
+  assert.deepEqual(Object.keys(profile), ["schema_version", "line_type", "hopper_naming_mode", "hoppers_per_layer", "hopper_circumference_in", "layers"]);
   assert.deepEqual(profile.layers[0].receiver_weights_lb, [1, 2, 3, 4, 5, 6]);
   state.layers[0].hoppers[0].weight = 999;
   assert.equal(profile.layers[0].receiver_weights_lb[0], 1);
@@ -53,6 +53,19 @@ test("Receiver Weight Profiles include Smart Hoppers geometry (usable height, ci
   assert.equal(profile.layers[0].circumferences_in[0], 40);
   assert.equal(profile.layers[0].usable_heights_in[1], 0);
   assert.equal(profile.layers[0].packing_factors, undefined);
+});
+
+test("Receiver Weight Profiles carry one shared hopper circumference and apply it to every physical hopper", () => {
+  const state = stateFixture();
+  state.hopperCircumference = 44;
+  const profile = payloads.createReceiverWeightProfile(state);
+  assert.equal(profile.hopper_circumference_in, 44);
+
+  const target = stateFixture();
+  const result = payloads.applyReceiverWeightProfile(target, profile);
+  assert.equal(result.ok, true);
+  assert.equal(target.hopperCircumference, 44);
+  target.layers.flatMap(layer=>layer.hoppers).forEach(hopper=>assert.equal(hopper.circumference, 44));
 });
 
 test("Receiver Weight Profile validation still accepts profiles saved before Smart Hoppers existed (no geometry arrays at all)", () => {

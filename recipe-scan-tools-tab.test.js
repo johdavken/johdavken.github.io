@@ -99,7 +99,7 @@ test("the shortcut panel offers all three scan modes, each wired through the sam
 
 test("the shortcut is hidden by default and only shown inside the existing mobile status-bar media query, same convention as the Timeline/Recipe chips", () => {
   assert.match(styles, /\.statusScanShortcut\{ display:none;/);
-  const mobileStart = styles.indexOf('@media (max-width:900px)');
+  const mobileStart = styles.lastIndexOf('@media (max-width:900px)');
   const mobileEnd = styles.indexOf("\n}", mobileStart);
   const mobileBlock = styles.slice(mobileStart, mobileEnd);
   assert.match(mobileBlock, /\.statusScanShortcut\{ display:inline-block; \}/);

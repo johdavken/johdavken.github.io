@@ -49,6 +49,8 @@ test("the workspace list and recovery actions go through the admin RPC service o
   assert.match(ui, /service\.getWorkspaceDetails/);
   assert.match(ui, /service\.addDeviceToWorkspace/);
   assert.match(ui, /service\.removeWorkspaceMember/);
+  assert.match(ui, /service\.deleteWorkspace/);
+  assert.match(ui, /service\.mergeWorkspace/);
   assert.doesNotMatch(ui, /\.from\("line_workspace_members"\)/);
   assert.doesNotMatch(ui, /\.from\("line_workspaces"\)/);
   assert.match(ui, /admin_list_line_workspaces|listWorkspaces/);
@@ -92,7 +94,7 @@ test("sign-out closes Workspace Management and admin/RT Sync sessions stay separ
 test("Workspace Management is a main-panel workspacePanel, not an oversized modal", () => {
   assert.match(index, /id="workspaceManagementButton"[^>]*data-workspace-target="workspaceManagementBlock"/);
   assert.match(index, /<details class="block card workspacePanel adminResinPanel" id="workspaceManagementBlock">/);
-  assert.match(index, /Use this panel to reconnect a line computer after browser data/);
+  assert.match(index, /Reconnect a line computer after a browser reset/);
 });
 
 test("ownership reassignment is a distinct, explicit action separate from Add This Device", () => {
@@ -122,4 +124,25 @@ test("diagnostic details are opt-in and member identifiers are abbreviated in th
   assert.match(ui, /function shortId\(id\)/);
   assert.match(ui, /shortId\(descriptor\.userId\)/);
   assert.match(ui, /shortId\(member\.member_user_id\)/);
+});
+
+test("incident controls can disconnect every linked device and delete a workspace only through admin RPCs", () => {
+  assert.match(index, /id="workspaceRecoveryDeleteWorkspaceBtn"[^>]*class="danger"/);
+  assert.match(index, /<summary>Linked devices<\/summary>/);
+  assert.match(ui, /removeBtn\.textContent = "Disconnect"/);
+  assert.doesNotMatch(ui, /member\.member_role !== "owner"/);
+  assert.match(ui, /function deleteWorkspace\(\)/);
+  assert.match(ui, /Permanently delete/);
+  assert.doesNotMatch(index, /id="lineSyncDeleteBtn"/);
+  assert.doesNotMatch(app, /lineSyncDeleteBtn/);
+});
+
+test("workspace merge presents an explicit target, preserves target data, and deletes only the selected source", () => {
+  assert.match(index, /id="workspaceRecoveryMergeTarget"/);
+  assert.match(index, /id="workspaceRecoveryMergeBtn"[^>]*>Merge &amp; Delete This Workspace/);
+  assert.match(ui, /function mergeWorkspace\(\)/);
+  assert.match(ui, /sourceWorkspaceId/);
+  assert.match(ui, /targetWorkspaceId/);
+  assert.match(ui, /Existing same-name items in the target are preserved/);
+  assert.match(ui, /active job, and its linked-device memberships will then be permanently deleted/);
 });

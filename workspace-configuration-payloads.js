@@ -45,6 +45,9 @@
       line_type: state?.lineType,
       hopper_naming_mode: state?.hopperNamingLine9 === "main" ? "main" : "standard",
       hoppers_per_layer: HOPPERS_PER_LAYER,
+      // One physical circumference per line workspace. Keep the legacy
+      // per-hopper arrays below while older shared profiles still exist.
+      hopper_circumference_in: state?.hopperCircumference ?? 0,
       layers: names.map(name=>{
         const layer = state?.layers?.find(item=>item?.name === name);
         return {
@@ -66,6 +69,9 @@
     const names = validateHeader(payload, errors);
     if (!names) return validationResult(errors);
     if (payload.hoppers_per_layer !== HOPPERS_PER_LAYER) errors.push(`Profiles must define ${HOPPERS_PER_LAYER} hoppers per layer.`);
+    if (payload.hopper_circumference_in !== undefined && !finiteInRange(payload.hopper_circumference_in, 0)){
+      errors.push("Shared hopper circumference must be a finite value of 0 or greater.");
+    }
     if (!sameNames(payload.layers, names)) errors.push(`Layers must be exactly ${names.join(", ")}.`);
     if (Array.isArray(payload.layers)) payload.layers.forEach(layer=>{
       if (!Array.isArray(layer?.receiver_weights_lb) || layer.receiver_weights_lb.length !== HOPPERS_PER_LAYER){
@@ -123,6 +129,19 @@
         profileLayer.circumferences_in.forEach((value, hopperIndex)=>{ state.layers[layerIndex].hoppers[hopperIndex].circumference = value; });
       }
     });
+    const legacyCircumference = payload.layers.flatMap(layer=>layer?.circumferences_in || [])
+      .find(value=>finiteInRange(value, 0) && value > 0);
+    // A zero from a pre-setting profile means "not configured", so retain
+    // existing equipment geometry unless the profile supplies a real shared
+    // value (or an older non-zero per-hopper value).
+    const sharedCircumference = finiteInRange(payload.hopper_circumference_in, 0)
+      && payload.hopper_circumference_in > 0
+      ? payload.hopper_circumference_in
+      : legacyCircumference;
+    if (sharedCircumference !== undefined){
+      state.hopperCircumference = sharedCircumference;
+      state.layers.forEach(layer=>layer.hoppers.forEach(hopper=>{ hopper.circumference = sharedCircumference; }));
+    }
     return { ok: true, lineTypeChanged: false };
   }
 

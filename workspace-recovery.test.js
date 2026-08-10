@@ -23,6 +23,8 @@ test("with no client every call fails locally without a network attempt", async 
   assert.equal((await service.getWorkspaceDetails("ws-1")).ok, false);
   assert.equal((await service.addDeviceToWorkspace({ workspaceId: "ws-1", targetUserId: "u", deviceId: "d" })).ok, false);
   assert.equal((await service.removeWorkspaceMember({ workspaceId: "ws-1", memberUserId: "u" })).ok, false);
+  assert.equal((await service.deleteWorkspace({ workspaceId: "ws-1" })).ok, false);
+  assert.equal((await service.mergeWorkspace({ sourceWorkspaceId: "ws-1", targetWorkspaceId: "ws-2" })).ok, false);
 });
 
 test("listWorkspaces calls the admin RPC with the current RT Sync identity and returns rows unmodified", async () => {
@@ -69,8 +71,7 @@ test("failure messages are understandable and never leak raw Postgres/Supabase d
     ["admin_access_required", "Admin access is required."],
     ["workspace_not_found", "That workspace no longer exists."],
     ["invalid_target_identity", "This device's RT Sync identity is not valid for recovery."],
-    ["device_already_in_use", "That device ID is already registered to a different member of this workspace."],
-    ["owner_cannot_be_removed", "The workspace owner cannot be removed here."]
+    ["device_already_in_use", "That device ID is already registered to a different member of this workspace."]
   ];
   for (const [code, message] of cases) {
     const client = fakeClient({
@@ -91,6 +92,28 @@ test("removeWorkspaceMember calls the admin RPC with the workspace and member on
   const result = await service.removeWorkspaceMember({ workspaceId: "ws-1", memberUserId: "u-2" });
   assert.equal(result.ok, true);
   assert.deepEqual(client.calls[0], { name: "admin_remove_workspace_member", args: { p_workspace_id: "ws-1", p_member_user_id: "u-2" } });
+});
+
+test("deleteWorkspace calls the dedicated admin RPC", async () => {
+  const client = fakeClient({ admin_delete_line_workspace: () => ({ data: true, error: null }) });
+  const service = recoveryApi.create({ client });
+  const result = await service.deleteWorkspace({ workspaceId: "ws-1" });
+  assert.equal(result.ok, true);
+  assert.deepEqual(client.calls[0], { name: "admin_delete_line_workspace", args: { p_workspace_id: "ws-1" } });
+});
+
+test("mergeWorkspace copies into a distinct target through the dedicated admin RPC", async () => {
+  const client = fakeClient({
+    admin_merge_line_workspaces: () => ({ data: [{ recipes_merged: 3, receiver_weight_profiles_merged: 2 }], error: null })
+  });
+  const service = recoveryApi.create({ client });
+  assert.equal((await service.mergeWorkspace({ sourceWorkspaceId: "ws-1", targetWorkspaceId: "ws-1" })).ok, false);
+  const result = await service.mergeWorkspace({ sourceWorkspaceId: "ws-1", targetWorkspaceId: "ws-2" });
+  assert.deepEqual(result, { ok: true, recipesMerged: 3, profilesMerged: 2 });
+  assert.deepEqual(client.calls[0], {
+    name: "admin_merge_line_workspaces",
+    args: { p_source_workspace_id: "ws-1", p_target_workspace_id: "ws-2" }
+  });
 });
 
 test("transferOwnership requires a workspace and member before calling the RPC", async () => {

@@ -128,7 +128,7 @@ test("chipToggle is a fixed-size round icon button now that there's no text to s
 });
 
 test("the mobile status bar has a gap so adjacent icon-only controls (scan shortcut, timeline, recipe) aren't touching - easier to tap", () => {
-  const mobileStart = styles.indexOf("@media (max-width:900px)");
+  const mobileStart = styles.lastIndexOf("@media (max-width:900px)");
   const barStart = styles.indexOf(".workspaceStatusBar{", mobileStart);
   const barEnd = styles.indexOf("}", barStart);
   const bar = styles.slice(barStart, barEnd);
@@ -157,7 +157,7 @@ test("the desktop-hidden rule for both chips still comes strictly before .chipTo
   const timelineHiddenIndex = styles.indexOf(".statusTimelineToggle{ display:none; }");
   const recipeHiddenIndex = styles.indexOf(".statusRecipeToggle{ display:none; }");
   const chipToggleIndex = styles.indexOf(".chipToggle{");
-  const mobileBlockIndex = styles.indexOf("@media (max-width:900px)");
+  const mobileBlockIndex = styles.lastIndexOf("@media (max-width:900px)");
   assert.ok(timelineHiddenIndex > -1 && timelineHiddenIndex < chipToggleIndex);
   assert.ok(recipeHiddenIndex > -1 && recipeHiddenIndex < chipToggleIndex);
   assert.ok(mobileBlockIndex > chipToggleIndex, "the mobile display:inline-flex override must come after .chipToggle so it's the one that ends up winning on mobile");

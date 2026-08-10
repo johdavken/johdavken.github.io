@@ -13,8 +13,8 @@
 <script src="scheduling.js?v=0.18.4" defer></script>
 <script src="storage.js?v=0.18" defer></script>
 <script src="calculators.js?v=0.18" defer></script>
-<script src="active-job.js?v=0.18.1" defer></script>
-<script src="workspace-configuration-payloads.js?v=0.20.0" defer></script>
+<script src="active-job.js?v=0.18.2" defer></script>
+<script src="workspace-configuration-payloads.js?v=0.20.1" defer></script>
 <script src="recipe-scan-schema.js?v=0.3.0" defer></script>
 <script src="recipe-scan-mapping.js?v=0.2.1" defer></script>
 <script src="hopper-rearrangement.js?v=0.22.0" defer></script>
@@ -28,10 +28,10 @@
 <script src="resin-catalog-service.js?v=0.19.0" defer></script>
 <script src="resin-lookup.js?v=0.18.1" defer></script>
 <script src="resin-admin.js?v=0.20.1" defer></script>
-<script src="workspace-recovery.js?v=0.1.0" defer></script>
-<script src="app.js?v=0.18.112" defer></script>
+<script src="workspace-recovery.js?v=0.1.2" defer></script>
+<script src="app.js?v=0.18.114" defer></script>
 <script src="resin-admin-ui.js?v=0.20.1" defer></script>
-<script src="workspace-recovery-ui.js?v=0.1.0" defer></script>
+<script src="workspace-recovery-ui.js?v=0.1.2" defer></script>
 <script src="recipe-scan-ui.js?v=0.3.2" defer></script>
 
 
@@ -677,7 +677,6 @@
           <button id="lineSyncGenerateCodeBtn" class="secondary desktopSyncOnly" type="button">Generate Link Code</button>
           <button id="lineSyncDisconnectBtn" class="secondary" type="button"><span class="desktopSyncLabel">Disconnect on this device</span><span class="mobileSyncLabel">Disconnect this device</span></button>
           <button id="lineSyncLeaveBtn" class="secondary" type="button">Leave RT Sync</button>
-          <button id="lineSyncDeleteBtn" class="danger desktopSyncOnly" type="button">Delete line workspace</button>
         </div>
       </div>
 
@@ -1174,10 +1173,10 @@
 
   <details class="block card workspacePanel adminResinPanel" id="workspaceManagementBlock">
     <summary>
-      <div class="sumLeft"><div class="chev"><span class="chevRing"></span><span class="chevSatellite"></span><span class="chevCore"></span></div><div class="summaryText"><div class="layerTitle">Workspace Management</div><div class="layerMeta">Reconnect a line computer after a browser reset</div></div></div>
+      <div class="sumLeft"><div class="chev"><span class="chevRing"></span><span class="chevSatellite"></span><span class="chevCore"></span></div><div class="summaryText"><div class="layerTitle">Workspace Management</div><div class="layerMeta">Recover access and respond to RT Sync incidents</div></div></div>
     </summary>
     <div class="blockBody workspaceRecoveryPanel">
-      <p class="muted">Use this panel to reconnect a line computer after browser data or the device's local RT Sync identity has been reset. The workspace and its shared recipes and weight profiles are not affected.</p>
+      <p class="muted">Reconnect a line computer after a browser reset, remotely disconnect a linked device, or permanently remove a workspace during an incident.</p>
 
       <div id="workspaceRecoveryDeviceCard" class="workspaceRecoveryDeviceCard">
         <div><strong id="workspaceRecoveryDeviceLabel">This device</strong></div>
@@ -1198,8 +1197,14 @@
         </div>
         <div class="buttonRow mt10">
           <button id="workspaceRecoveryTransferOwnershipBtn" type="button" class="secondary" disabled>Reassign Ownership to This Device</button>
+          <button id="workspaceRecoveryDeleteWorkspaceBtn" type="button" class="danger">Delete Workspace</button>
         </div>
-        <details class="workspaceRecoveryDiagnostic mt10"><summary>Members (diagnostic details)</summary><div id="workspaceRecoveryMembersList" class="workspaceRecoveryMembersList"></div></details>
+        <div class="workspaceRecoveryMerge mt10">
+          <div><strong>Merge duplicate workspace</strong><div class="tiny muted">Copy this workspace's recipes and weight profiles into the selected target, then delete this workspace. The target keeps its active job and linked devices.</div></div>
+          <label class="tiny" for="workspaceRecoveryMergeTarget">Merge into<select id="workspaceRecoveryMergeTarget"></select></label>
+          <button id="workspaceRecoveryMergeBtn" type="button" class="danger">Merge &amp; Delete This Workspace</button>
+        </div>
+        <details class="workspaceRecoveryDiagnostic mt10"><summary>Linked devices</summary><div class="tiny muted mt10">Disconnect immediately revokes this browser identity's RT Sync access. It takes effect when the device next reads or writes.</div><div id="workspaceRecoveryMembersList" class="workspaceRecoveryMembersList"></div></details>
       </div>
     </div>
   </details>

@@ -15,7 +15,8 @@
     "layers",
     "prodResinLb",
     "scrapResinLb",
-    "hopperNamingLine9"
+    "hopperNamingLine9",
+    "hopperCircumference"
   ]);
 
   function cloneJson(value) {
@@ -33,7 +34,8 @@
       layers: state.layers,
       prodResinLb: state.prodResinLb,
       scrapResinLb: state.scrapResinLb,
-      hopperNamingLine9: state.hopperNamingLine9
+      hopperNamingLine9: state.hopperNamingLine9,
+      hopperCircumference: state.hopperCircumference
     });
   }
 

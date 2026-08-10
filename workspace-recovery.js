@@ -14,7 +14,6 @@
     if (source.includes("device_already_in_use")) return "That device ID is already registered to a different member of this workspace.";
     if (source.includes("invalid_device_label")) return "Device name is too long.";
     if (source.includes("invalid_recovery_input") || source.includes("invalid_workspace_id")) return "Recovery could not be completed: missing information.";
-    if (source.includes("owner_cannot_be_removed")) return "The workspace owner cannot be removed here.";
     if (source.includes("membership_not_found")) return "That membership no longer exists.";
     if (source.includes("new_owner_must_be_a_member")) return "Add this device to the workspace before reassigning ownership to it.";
     return "Recovery could not be completed.";
@@ -87,7 +86,31 @@
       }catch(error){ return { ok: false, message: friendlyError(error) }; }
     }
 
-    return { listWorkspaces, getWorkspaceDetails, addDeviceToWorkspace, removeWorkspaceMember, transferOwnership };
+    async function deleteWorkspace({ workspaceId } = {}){
+      if (!client) return { ok: false, message: "Admin connection is unavailable." };
+      if (!workspaceId) return { ok: false, message: "A workspace is required." };
+      try{
+        const response = await client.rpc("admin_delete_line_workspace", { p_workspace_id: workspaceId });
+        if (response.error) throw response.error;
+        return { ok: true };
+      }catch(error){ return { ok: false, message: friendlyError(error) }; }
+    }
+
+    async function mergeWorkspace({ sourceWorkspaceId, targetWorkspaceId } = {}){
+      if (!client) return { ok: false, message: "Admin connection is unavailable." };
+      if (!sourceWorkspaceId || !targetWorkspaceId || sourceWorkspaceId === targetWorkspaceId) return { ok: false, message: "Choose a different target workspace." };
+      try{
+        const response = await client.rpc("admin_merge_line_workspaces", {
+          p_source_workspace_id: sourceWorkspaceId,
+          p_target_workspace_id: targetWorkspaceId
+        });
+        if (response.error) throw response.error;
+        const row = response.data?.[0] || {};
+        return { ok: true, recipesMerged: Number(row.recipes_merged || 0), profilesMerged: Number(row.receiver_weight_profiles_merged || 0) };
+      }catch(error){ return { ok: false, message: friendlyError(error) }; }
+    }
+
+    return { listWorkspaces, getWorkspaceDetails, addDeviceToWorkspace, removeWorkspaceMember, transferOwnership, deleteWorkspace, mergeWorkspace };
   }
 
   return { friendlyError, create };
