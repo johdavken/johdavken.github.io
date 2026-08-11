@@ -9,6 +9,9 @@
    *     Core theme tokens (defaults = Dark)
    *     ------------------------------------------------------------------- */
   --bg: #0b0f14;
+  /* Desktop can use a quieter workspace canvas without changing the
+     document/mobile background token. Individual themes may override it. */
+  --desktop-canvas-bg: var(--bg);
   --panel: rgba(18,26,35,.88);
   --panel2: rgba(15,22,32,.76);
 

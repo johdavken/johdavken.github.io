@@ -86,6 +86,7 @@
 :where(html, body)[data-theme="mse"]{
   color-scheme: light;
   --bg: #f5f4f3;
+  --desktop-canvas-bg: #e3eaf0;
   --panel: #ffffff;
   --panel2: #faf9f8;
   --text: #29282b;

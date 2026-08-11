@@ -24,12 +24,32 @@ test("desktop Changeover exposes one formatted value while retaining the native 
 });
 
 test("desktop Setup is a two-region workspace with a compact five-column receiver matrix", () => {
-  assert.match(desktop, /#lineSetupBlock > \.blockBody\{[\s\S]*?grid-template-columns:minmax\(280px,min\(24vw,320px\)\) minmax\(620px,1fr\)/);
+  assert.match(desktop, /#lineSetupBlock > \.blockBody\{[\s\S]*?grid-template-columns:minmax\(214px,220px\) minmax\(0,1fr\)/);
+  assert.match(desktop, /#lineSetupBlock \.setupPrimaryFields\{display:grid;grid-template-columns:152px;justify-items:start;gap:10px/);
+  assert.match(desktop, /#lineSetupBlock \.gaugeTile\{position:relative;width:152px;max-width:152px/);
   assert.match(desktop, /\.weightsMatrix\{width:100%;min-width:620px;table-layout:fixed\}/);
   assert.match(desktop, /\.weightsMatrixCell\{height:54px;/);
   assert.doesNotMatch(app, /desktopWeightVisualReadout[\s\S]{0,300}<svg/);
   assert.match(app, /desktopSummaryWeightId/);
   assert.match(app, /desktopWeightSummaryWeight.*smart/);
+});
+
+test("desktop canvas and receiver typography use the shared theme and desktop tokens", () => {
+  const theme = fs.readFileSync("theme.css", "utf8");
+  const mse = theme.slice(theme.indexOf(':where(html, body)[data-theme="mse"]{'), theme.indexOf('/* ----------------------------------------------------------------------- * Industrial Slate Dark'));
+  assert.match(mse, /--desktop-canvas-bg: #e3eaf0;/);
+  assert.match(desktop, /body\{overflow:hidden;background:var\(--desktop-canvas-bg\)\}/);
+  assert.match(desktop, /\.desktopWeightSummaryValues b\{[\s\S]*?font-size:18px;font-weight:850/);
+  assert.match(desktop, /\.desktopWeightSummaryValues b \+ b\{color:var\(--muted\);font-size:13px/);
+  assert.match(desktop, /\.desktopWeightEditFields input\{[\s\S]*?font-size:14px;font-weight:800/);
+});
+
+test("desktop type scale strengthens navigation and compact operational text without mobile rules", () => {
+  assert.match(desktop, /--desktop-type-body:14px;[\s\S]*?--desktop-type-secondary:12px;[\s\S]*?--desktop-type-label:11px;[\s\S]*?--desktop-type-heading:16px/);
+  assert.match(desktop, /\.workspaceNavButton span\{font-size:14px;font-weight:650;letter-spacing:\.06em;text-transform:uppercase\}/);
+  assert.match(desktop, /\.workspaceNavButton small\{font-size:var\(--desktop-type-secondary\);font-weight:600/);
+  assert.match(desktop, /\.workspaceStatusItem span\{font-size:var\(--desktop-type-label\);font-weight:650/);
+  assert.match(desktop, /\.desktopWeightsActionToolbar button\{[\s\S]*?font-size:var\(--desktop-type-control\);font-weight:750/);
 });
 
 test("desktop refinements keep Smart Hoppers obvious and utility/sidebar chrome restrained", () => {

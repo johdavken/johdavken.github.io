@@ -3,8 +3,15 @@
  *   Desktop viewport workspace
  *   ======================================================================= */
 @media (min-width:901px){
+  :root{
+    --desktop-type-body:14px;
+    --desktop-type-secondary:12px;
+    --desktop-type-control:12px;
+    --desktop-type-label:11px;
+    --desktop-type-heading:16px;
+  }
   html,body{height:100%;min-height:0}
-  body{overflow:hidden}
+  body{overflow:hidden;background:var(--desktop-canvas-bg)}
   main{
     width:100%;
     max-width:none;
@@ -45,8 +52,14 @@
     overflow:visible;
   }
   .workspaceStatusItem{min-width:0}
+  .workspaceStatusItem span{font-size:var(--desktop-type-label);font-weight:650;letter-spacing:.01em}
+  .workspaceStatusItem strong{font-size:var(--desktop-type-secondary);font-weight:750}
   .workspaceNextAction{min-width:130px;max-width:min(31vw,430px)}
   .workspaceNextAction strong{max-width:100%}
+  .workspaceNavButton{gap:5px}
+  .workspaceNavButton span{font-size:14px;font-weight:650;letter-spacing:.06em;text-transform:uppercase}
+  .workspaceNavButton small{font-size:var(--desktop-type-secondary);font-weight:600;color:color-mix(in srgb,var(--muted) 88%,var(--text));letter-spacing:0}
+  .workspaceNavButton .workspaceTileIcon{width:17px;height:17px;stroke-width:1.8}
   .desktopUtilityCluster{display:flex;align-items:center;flex:0 0 auto;gap:10px;margin-left:auto}
   .workspaceContent > .workspacePanel.desktop-active{
     display:flex!important;
@@ -106,7 +119,7 @@
      native time input remains full-size, focusable, and picker-capable as
      its transparent interaction layer, avoiding the duplicated native
      value/oversized picker indicator that caused the regression. */
-  #lineSetupBlock .gaugeTile{position:relative;width:148px;max-width:148px;min-height:78px;padding:9px 10px 8px}
+  #lineSetupBlock .gaugeTile{position:relative;width:152px;max-width:152px;min-height:78px;padding:9px 10px 8px}
   #lineSetupBlock .gaugeTile input[type="time"]{position:absolute;inset:0;z-index:2;width:100%;height:100%;opacity:0;cursor:pointer}
   #lineSetupBlock .gaugeTimeValue{display:flex;align-items:center;justify-content:center;gap:6px;color:var(--text);font-size:20px;font-weight:850;line-height:1;white-space:nowrap;font-variant-numeric:tabular-nums}
   #lineSetupBlock .gaugeTimeValue svg{width:18px;height:18px;flex:0 0 auto;fill:none;stroke:var(--title);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
@@ -117,16 +130,16 @@
      the receiver matrix at right. Both consume the shared viewport budget. */
   #lineSetupBlock > .blockBody{
     display:grid;
-    grid-template-columns:minmax(280px,min(24vw,320px)) minmax(620px,1fr);
+    grid-template-columns:minmax(214px,220px) minmax(0,1fr);
     grid-template-rows:minmax(0,1fr) auto;
-    gap:12px 18px;
+    gap:12px;
     overflow:hidden;
   }
   #lineSetupBlock .setupLineConfiguration{
     grid-column:1;
     grid-row:1;
     min-width:0;
-    padding:12px 16px 12px 4px;
+    padding:12px 12px 12px 4px;
     border-right:1px solid var(--border);
   }
   #lineSetupBlock .setupLineConfiguration + .setupSection{
@@ -142,28 +155,28 @@
     overflow:hidden;
   }
   #lineSetupBlock #statusBox{grid-column:1;grid-row:2;min-width:0;max-height:230px;overflow:auto}
-  #lineSetupBlock .setupSectionHeading{margin:0 0 14px;font-size:18px}
-  #lineSetupBlock .setupTopRow{display:grid;grid-template-columns:1fr;gap:12px}
+  #lineSetupBlock .setupSectionHeading{margin:0 0 14px;font-size:var(--desktop-type-heading)}
+  #lineSetupBlock .setupTopRow{display:grid;grid-template-columns:1fr;justify-items:start;gap:12px}
   #lineSetupBlock .setupControlGroup{display:grid;gap:5px}
-  #lineSetupBlock .setupControlLabel{color:var(--muted);font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
-  #lineSetupBlock .setupPrimaryFields{display:flex;gap:10px;margin-top:14px!important}
+  #lineSetupBlock .setupControlLabel{color:var(--muted);font-size:var(--desktop-type-label);font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+  #lineSetupBlock .setupPrimaryFields{display:grid;grid-template-columns:152px;justify-items:start;gap:10px;margin-top:14px!important}
   #lineSetupBlock .setupPrimaryFields > div{min-width:0}
   #lineSetupBlock #weightsBlock{display:grid;grid-template-rows:minmax(0,1fr);height:100%;max-height:100%;min-height:0;margin:0;padding:0;border:0;background:transparent;box-shadow:none;overflow:hidden}
   #lineSetupBlock #weightsBlock > summary{display:none}
   #lineSetupBlock #weightsBlock > .blockBody{display:grid;grid-template-rows:auto minmax(0,1fr);height:100%;max-height:100%;min-height:0;padding:0;overflow:hidden}
   #lineSetupBlock #setupWeightProfilesBlock{display:none!important}
-  #lineSetupBlock .weightsIntroduction{display:flex;align-items:center;gap:12px;min-width:0;margin:0 0 7px;padding-left:8px;color:var(--muted);font-size:10px;line-height:1.3}
+  #lineSetupBlock .weightsIntroduction{display:flex;align-items:center;gap:12px;min-width:0;margin:0 0 7px;padding-left:8px;color:var(--muted);font-size:var(--desktop-type-secondary);line-height:1.35}
   #lineSetupBlock .weightsIntroduction > span{min-width:0}
   #lineSetupBlock .weightsSmartHow{position:relative;flex:0 0 auto}
-  #lineSetupBlock .weightsSmartHow > summary{padding:3px 5px;color:var(--focus-border);font-size:10px;font-weight:800;white-space:nowrap}
+  #lineSetupBlock .weightsSmartHow > summary{padding:3px 5px;color:var(--focus-border);font-size:var(--desktop-type-label);font-weight:750;white-space:nowrap}
   #lineSetupBlock .weightsSmartHow > p{position:absolute;top:calc(100% + 5px);right:0;z-index:30;width:min(360px,50vw);margin:0;padding:9px 10px;border:1px solid var(--border2);border-radius:var(--control-radius);background:var(--panelOpen);box-shadow:var(--shadow2)}
   #weightsArea{display:grid;grid-template-rows:auto minmax(0,1fr) auto auto;gap:6px;width:min(100%,1100px);height:100%;max-height:100%;min-height:0;margin-top:0!important;overflow:hidden}
   .desktopWeightsControls{display:grid;grid-template-columns:minmax(170px,1fr) minmax(145px,190px) auto;align-items:center;gap:8px;min-width:0}
   .desktopWeightsSmartControl{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;padding:6px 8px;border:1px solid var(--row-border-2);border-radius:var(--control-radius);background:var(--row-bg-2)}
-  .desktopWeightsSmartControl strong{display:block;color:var(--text);font-size:11px}
-  .desktopWeightsSmartControl small{display:block;margin-top:1px;color:var(--muted);font-size:9px;white-space:nowrap}
+  .desktopWeightsSmartControl strong{display:block;color:var(--text);font-size:var(--desktop-type-control)}
+  .desktopWeightsSmartControl small{display:block;margin-top:1px;color:var(--muted);font-size:var(--desktop-type-label);white-space:nowrap}
   .desktopWeightsSmartControl .toggle{transform:scale(.82)}
-  .desktopSmartHopperState{color:var(--muted);font-size:10px;font-weight:850;white-space:nowrap}
+  .desktopSmartHopperState{color:var(--muted);font-size:var(--desktop-type-label);font-weight:750;white-space:nowrap}
   .desktopSmartHopperState[data-state="on"]{color:var(--ok)}
   .desktopWeightsSmartControl .toggle.on{background:color-mix(in srgb,var(--ok) 72%,var(--row-bg-2));border-color:color-mix(in srgb,var(--ok) 85%,var(--border-strong))}
   .desktopWeightsSmartControl .toggle.on::after{background:var(--panelOpen)}
@@ -172,7 +185,7 @@
      status line becomes compact, naturally wrapping text. */
   .workspaceNavButton small{display:block;justify-self:stretch;max-width:none;padding:0;border:0;border-radius:0;background:transparent;overflow:visible;text-overflow:clip;white-space:normal;overflow-wrap:anywhere;line-height:1.25}
   .workspaceNavButton[data-workspace-target="resultsBlock"] small{color:var(--focus-border)}
-  .desktopSharedCircumference{display:grid;grid-template-columns:1fr minmax(54px,70px);align-items:end;gap:6px;margin:0;padding:5px 8px;border:1px solid var(--row-border-2);border-radius:var(--control-radius);background:var(--row-bg-2);color:var(--muted);font-size:10px;font-weight:750}
+  .desktopSharedCircumference{display:grid;grid-template-columns:1fr minmax(54px,70px);align-items:end;gap:6px;margin:0;padding:5px 8px;border:1px solid var(--row-border-2);border-radius:var(--control-radius);background:var(--row-bg-2);color:var(--muted);font-size:var(--desktop-type-label);font-weight:750}
   .desktopSharedCircumference .weightsInputWithUnit{grid-template-columns:minmax(36px,1fr) auto;gap:3px}
   .desktopSharedCircumference input{min-height:27px;padding:2px;text-align:right}
   .desktopWeightsViewToggle{justify-content:flex-end;white-space:nowrap}
@@ -189,7 +202,7 @@
   .weightsMatrix thead th:not(:first-child),.weightsMatrixCell{width:auto;min-width:0;max-width:none}
   .weightsMatrix thead th{height:30px}
   .weightsMatrix thead .weightsSelectHeader{height:28px;min-height:28px;font-family:inherit;font-size:15px;line-height:1;font-weight:900;opacity:.72}
-  .weightsMatrix tbody th .weightsSelectHeader{min-height:52px;padding:3px;font-size:10px}
+  .weightsMatrix tbody th .weightsSelectHeader{min-height:52px;padding:3px;font-size:var(--desktop-type-label)}
   .weightsMatrix tbody th .weightsSelectHeader::before{display:none}
   #weightsArea[data-desktop-bulk-mode="true"] .weightsMatrix tbody th .weightsSelectHeader::before{display:grid}
   .weightsMatrixCell{height:54px;vertical-align:middle;cursor:default;box-shadow:inset 0 0 0 1px var(--row-border-2)}
@@ -199,23 +212,23 @@
   #weightsArea[data-desktop-bulk-mode="true"] .weightsMatrixCell.selected::after{content:"";position:absolute;top:5px;right:5px;width:7px;height:7px;border-radius:2px;background:var(--focus-border)}
   .weightsCellRow,.weightsCellSelector,.hopperGeometryPopover,.weightsComputedWeight{display:none!important}
   .desktopWeightVisualReadout{position:relative;display:grid!important;align-items:center;min-height:46px;padding:5px 4px 3px}
-  .desktopWeightVisualId{top:2px;left:2px;font-size:9px}
+  .desktopWeightVisualId{top:2px;left:2px;font-size:var(--desktop-type-label)}
   .desktopWeightVisualValues{display:block;min-width:0;text-align:right}
   .desktopWeightSummaryValues{display:grid;gap:3px;padding-top:8px}
-  .desktopWeightSummaryValues b{display:flex;align-items:baseline;justify-content:flex-end;gap:3px;color:var(--text);font-size:14px;line-height:1;font-variant-numeric:tabular-nums}
-  .desktopWeightSummaryValues b + b{color:var(--muted);font-size:12px}
-  .desktopWeightSummaryValues small{color:var(--muted);font-size:8px;font-weight:750;text-transform:uppercase}
+  .desktopWeightSummaryValues b{display:flex;align-items:baseline;justify-content:flex-end;gap:3px;color:var(--text);font-size:18px;font-weight:850;line-height:1;font-variant-numeric:tabular-nums}
+  .desktopWeightSummaryValues b + b{color:var(--muted);font-size:13px;font-weight:750}
+  .desktopWeightSummaryValues small{color:var(--muted);font-size:10px;font-weight:750;text-transform:uppercase}
   .desktopWeightSummaryWeight.smart{color:var(--ok)}
   .desktopWeightEditFields{display:none;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;padding-top:7px}
   .desktopWeightEditFields label{display:grid;gap:1px;margin:0;min-width:0}
-  .desktopWeightEditFields input{width:100%;height:22px;min-height:22px;padding:0 2px;font-size:12px;text-align:right}
-  .desktopWeightEditFields small{color:var(--muted);font-size:7px;white-space:nowrap}
+  .desktopWeightEditFields input{width:100%;height:22px;min-height:22px;padding:0 2px;font-size:14px;font-weight:800;text-align:right}
+  .desktopWeightEditFields small{color:var(--muted);font-size:9px;white-space:nowrap}
   #weightsArea[data-desktop-weight-view="edit"] .weightsMatrixCell{height:64px}
   #weightsArea[data-desktop-weight-view="edit"] .desktopWeightSummaryValues{display:none}
   #weightsArea[data-desktop-weight-view="edit"] .desktopWeightEditFields{display:grid}
 
   .desktopWeightsActionToolbar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;overflow:hidden;border:1px solid var(--row-border-2);border-radius:var(--control-radius);background:var(--row-bg-2)}
-  .desktopWeightsActionToolbar button{display:flex;align-items:center;justify-content:center;gap:7px;min-height:34px;padding:5px 8px;border:0;border-radius:0;background:transparent;color:var(--text);font:inherit;font-size:11px;font-weight:850;box-shadow:none}
+  .desktopWeightsActionToolbar button{display:flex;align-items:center;justify-content:center;gap:7px;min-height:34px;padding:5px 8px;border:0;border-radius:0;background:transparent;color:var(--text);font:inherit;font-size:var(--desktop-type-control);font-weight:750;box-shadow:none}
   .desktopWeightsActionToolbar button + button{border-left:1px solid var(--row-border-2)}
   .desktopWeightsActionToolbar button svg{width:17px;height:17px;fill:none;stroke:var(--focus-border);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
   .desktopWeightsActionToolbar button:hover,.desktopWeightsActionToolbar button:focus-visible,.desktopWeightsActionToolbar button.active{background:var(--focus-ring);outline:0}
@@ -226,6 +239,7 @@
   .desktopWeightsBulkContext #doneBulkWeights{margin-left:auto;color:var(--focus-border);font-weight:850}
   .desktopWeightsBulkContext .weightsBulkApply{grid-template-columns:minmax(0,1fr) auto;align-items:end}
   .desktopWeightsBulkContext .weightsBulkApply button{width:auto;min-height:30px;padding:4px 9px}
+  .desktopWeightsBulkContext .weightsInputWithUnit input{font-size:14px;font-weight:800}
 
   /* Profiles use the same bounded overlay on desktop, with a centered
      surface and an internally scrolling list. */
