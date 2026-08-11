@@ -3828,8 +3828,18 @@
       });
 
       viewFlat.forEach((h)=>{
-        const weightChip = h.weight > 0 ? `<span class="muted mono">${fmtNum(h.weight,2)} lb</span>` : `<span class="pill badge-warn">Missing weight</span>`;
-        const splitWarn = (h.rate <= 0 && h.weight > 0) ? `<span class="pill badge-warn">Split?</span>` : "";
+        const hasRate = h.rate > 0 && h.weight > 0;
+        const notFeeding = h.rate <= 0 && h.weight > 0;
+        const weightChip = h.weight > 0
+          ? `<span class="mono resultWeight">${fmtNum(h.weight,1)} lb</span>`
+          : `<span class="resultStatusChip badge-warn">Missing weight</span>`;
+        const splitWarn = (h.rate <= 0 && h.weight > 0) ? `<span class="resultStatusChip badge-warn">Split?</span>` : "";
+        const runSummary = hasRate
+          ? `<span><b class="mono">${fmtNum(h.rate,1)} lb/hr</b></span><span><b>Empty in ${h.timeText}</b></span>`
+          : `<span class="resultNotFeeding">${notFeeding ? "Not feeding" : "Awaiting data"}</span>`;
+        const hasStart = !!(changeoverDate && h.startByDate);
+        const timingLabel = hasStart ? "Start" : "Start unavailable";
+        const timingValue = hasStart ? h.startByText : "";
 
         const row = document.createElement("div");
         row.className = "resultRow" + (h.pumpOff ? " done" : "") + (h.isLate && !h.pumpOff ? " late" : "");
@@ -3841,16 +3851,12 @@
               ${weightChip}
               ${splitWarn}
             </div>
-
-            <div class="meta">
-              Rate: <span class="mono">${fmtNum(h.rate,2)}</span> lb/hr<br/>
-              Time to empty: <span class="mono">${h.timeText}</span>
-            </div>
           </div>
 
+          <div class="resultRun">${runSummary}</div>
+
           <div class="resultTiming">
-            <div class="muted resultTimingLabel">${changeoverDate ? "Start by" : "Soonest"}</div>
-            <div class="mono resultTimingValue">${changeoverDate ? h.startByText : h.timeText}</div>
+            <span class="resultStart"><span class="muted resultTimingLabel">${timingLabel}</span>${timingValue ? `<span class="mono resultTimingValue">${timingValue}</span>` : ""}</span>
 
             <label class="checkWrap" title="Check when the hopper pump is turned off">
               <input type="checkbox" ${h.pumpOff ? "checked" : ""}>
@@ -3860,8 +3866,8 @@
         `;
 
         const resinChip = row.querySelector("[data-resin-chip]");
-        resinChip.className = h.resinName ? "pill mono" : "pill badge-warn";
-        resinChip.textContent = h.resinName || "No resin name";
+        resinChip.className = h.resinName ? "pill mono resultResin" : "resultStatusChip badge-warn";
+        resinChip.textContent = h.resinName || "No resin";
 
         row.querySelector('input[type="checkbox"]').addEventListener("change",(e)=>{
           h._ref.h.pumpOff = !!e.target.checked;

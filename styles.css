@@ -3246,19 +3246,26 @@ details[open] > summary .chevSatellite{
  *   Results
  *   ======================================================================= */
 
-.resultGrid{ display: grid; gap: var(--gap); }
+.resultGrid{
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  align-items:start;
+  gap:10px;
+  width:min(100%,760px);
+  min-width:0;
+}
 
 .resultRow{
-  position: relative;
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: var(--gap);
-  min-height: 48px;
-  padding: 6px 9px 6px 17px;
-  border-radius: 7px;
-  background: var(--panel);
-  border: 1px solid var(--row-border-2);
-  transition: opacity .12s ease, filter .12s ease, transform .08s ease;
+  position:relative;
+  display:grid;
+  align-self:start;
+  min-width:0;
+  gap:3px;
+  padding:5px 10px 5px 17px;
+  border:1px solid var(--row-border-2);
+  border-radius:7px;
+  background:var(--panel);
+  transition:opacity .12s ease,filter .12s ease,transform .08s ease;
 }
 .resultRow::before{
   content:"";
@@ -3273,52 +3280,42 @@ details[open] > summary .chevSatellite{
 .resultRow.done::before{ background:var(--row-border); }
 .resultRow.late::before{ background:var(--warn); }
 .resultRow:hover{ transform: translateY(-1px); }
-.resultIdentity{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-.resultHopper{ font-size:calc(var(--font-base) + 1px); font-weight:950; }
-.resultTiming{ min-width:120px; text-align:right; white-space:nowrap; }
-.resultTimingLabel{ font-size:var(--font-small); }
-.resultTimingValue{ font-weight:950; color:var(--muted); }
-.resultRow.late .resultTimingValue{ color:var(--warn); }
-
-.resultRow .meta{
-  color: var(--muted);
-  font-size: var(--font-small);
-  margin-top: 4px;
-  line-height: 1.35;
-}
+.resultMain,.resultRun,.resultTiming{min-width:0}
+.resultIdentity{display:flex;align-items:center;gap:5px;min-width:0;flex-wrap:wrap}
+.resultHopper{font-size:calc(var(--font-base) + 1px);font-weight:950}
+.resultResin{max-width:100%;overflow-wrap:anywhere}
+.resultWeight{color:var(--muted);font-size:var(--font-small);white-space:nowrap}
+.resultStatusChip{display:inline-flex;align-items:center;min-height:22px;max-width:100%;padding:2px 6px;border-radius:999px;font-size:10px;font-weight:800;line-height:1.15;white-space:normal;overflow-wrap:anywhere}
+.resultRun{display:flex;align-items:baseline;gap:4px 12px;flex-wrap:wrap;color:var(--muted);font-size:var(--font-small);line-height:1.15}
+.resultRun > span{display:inline-flex;align-items:baseline;min-width:0}
+.resultRun b{color:var(--text);font-weight:850}
+.resultNotFeeding{color:var(--muted);font-weight:800}
+.resultTiming{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px}
+.resultStart{display:flex;align-items:baseline;gap:4px;min-width:0;flex-wrap:wrap}
+.resultTimingLabel{font-size:var(--font-small)}
+.resultTimingValue{min-width:0;font-weight:950;color:var(--muted);overflow-wrap:anywhere}
+.resultRow.late .resultTimingValue{color:var(--warn)}
 .resultRow.done{ opacity: 0.42; filter: grayscale(1); }
 
 .checkWrap{
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  justify-content: flex-end;
-  margin-top: 8px;
-  color: var(--muted);
-  font-size: var(--font-small);
-  user-select: none;
+  display:flex;
+  align-items:center;
+  flex:0 0 auto;
+  gap:6px;
+  min-height:26px;
+  margin:0;
+  color:var(--muted);
+  font-size:var(--font-small);
+  user-select:none;
+  white-space:nowrap;
 }
 .checkWrap input{ width: 18px; height: 18px; padding: 0; margin: 0; border-radius: 6px; }
 
 @media (max-width:600px){
-  .resultRow{ grid-template-columns:1fr; }
-  .resultTiming{
-    min-width:0;
-    /* Reset the base rule's white-space:nowrap - at this width the
-       label+value+checkbox group is wider than the card, and nowrap text
-       right-aligned via justify-content:flex-end overflows leftward past
-       the card edge instead of wrapping (looks like it slides under the
-       card). Letting it wrap, with flex-wrap as a second line of defense,
-       keeps it inside the card no matter how long "Not feeding"/"Missing
-       data" etc. get. */
-    white-space:normal;
-    display:flex;
-    flex-wrap:wrap;
-    align-items:center;
-    justify-content:flex-end;
-    gap:8px;
-  }
-  .checkWrap{ margin-top:0; }
+  .resultGrid{gap:8px}
+  .resultRow{gap:5px;padding:6px 9px 6px 16px}
+  .resultTiming{gap:6px}
+  .resultStatusChip{font-size:9px}
 }
 
 /* =======================================================================
@@ -4760,13 +4757,13 @@ body[data-surface-style="divided"] .helpTopic{
   .mobileBackgroundStyleChoices button[data-mobile-background-style="contour-lines"] span{ background:repeating-radial-gradient(ellipse at 20% 80%,transparent 0 4px,color-mix(in srgb,var(--ok) 27%,transparent) 5px 6px,transparent 7px 10px),var(--bg); }
   .mobileBackgroundStyleChoices button[data-mobile-background-style="prism-fade"] span{ background:linear-gradient(135deg,color-mix(in srgb,var(--bad) 34%,var(--bg)),transparent 48%),linear-gradient(315deg,color-mix(in srgb,var(--ok) 30%,var(--bg)),var(--bg) 64%); }
   .mobileBackgroundStyleChoices button[data-mobile-background-style="pinstripe"] span{ background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--title) 26%,transparent) 0 1px,transparent 1px 5px),var(--bg); }
-  .mobileTimelineAlarmSection{ display:block; margin:14px 0 0; padding:12px 0 0; border:0; border-top:1px solid var(--border); }
-  .mobileTimelineAlarmSection legend{ padding:0; color:var(--title); font-size:13px; font-weight:750; }
-  .mobileTimelineAlarmChoice{ display:flex; align-items:flex-start; gap:10px; margin-top:9px; padding:10px; border:1px solid var(--border); border-radius:var(--control-radius); background:var(--row-bg); }
-  .mobileTimelineAlarmChoice input{ width:20px; height:20px; flex:0 0 auto; margin:1px 0 0; accent-color:var(--focus-border); }
-  .mobileTimelineAlarmChoice span{ display:grid; gap:3px; }
-  .mobileTimelineAlarmChoice strong{ color:var(--text); font-size:13px; }
-  .mobileTimelineAlarmChoice small{ color:var(--muted); font-size:11px; line-height:1.35; }
+  .mobileTimelineAlarmSection{display:block;margin:8px 0 0;padding:8px 0 0;border:0;border-top:1px solid var(--border)}
+  .mobileTimelineAlarmSection legend{padding:0;color:var(--title);font-size:11px;font-weight:800}
+  .mobileTimelineAlarmChoice{display:flex;align-items:center;gap:8px;min-height:44px;margin-top:5px;padding:6px 8px;border:1px solid var(--border);border-radius:var(--control-radius);background:var(--row-bg)}
+  .mobileTimelineAlarmChoice input{width:20px;height:20px;flex:0 0 auto;margin:0;accent-color:var(--focus-border)}
+  .mobileTimelineAlarmChoice span{display:grid;min-width:0;gap:1px}
+  .mobileTimelineAlarmChoice strong{color:var(--text);font-size:11px}
+  .mobileTimelineAlarmChoice small{color:var(--muted);font-size:10px;line-height:1.25}
 
   body[data-mobile-background-style="layer-glow"]{
     background:

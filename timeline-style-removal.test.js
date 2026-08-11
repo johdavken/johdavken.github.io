@@ -36,14 +36,14 @@ test("styles.css has no leftover body[data-timeline-style=...] rules for any of 
   }
 });
 
-test("Compact Command's look (rounded panel card, colored accent bar, bold hopper label) is now the unconditional base .resultRow style", () => {
+test("Timeline cards retain their colored status rail while using compact responsive-grid styling", () => {
   const start = styles.indexOf(".resultRow{");
   const rule = styles.slice(start, styles.indexOf("}", start) + 1);
-  assert.match(rule, /position: relative;/);
-  assert.match(rule, /min-height: 48px;/);
-  assert.match(rule, /padding: 6px 9px 6px 17px;/);
-  assert.match(rule, /border-radius: 7px;/);
-  assert.match(rule, /background: var\(--panel\);/);
+  assert.match(rule, /position:relative;/);
+  assert.doesNotMatch(rule, /min-height:/);
+  assert.match(rule, /padding:5px 10px 5px 17px;/);
+  assert.match(rule, /border-radius:7px;/);
+  assert.match(rule, /background:var\(--panel\);/);
 
   const beforeStart = styles.indexOf(".resultRow::before{");
   const beforeRule = styles.slice(beforeStart, styles.indexOf("}", beforeStart) + 1);
@@ -51,7 +51,7 @@ test("Compact Command's look (rounded panel card, colored accent bar, bold hoppe
   assert.match(styles, /\.resultRow\.done::before\{ background:var\(--row-border\); \}/);
   assert.match(styles, /\.resultRow\.late::before\{ background:var\(--warn\); \}/);
 
-  assert.match(styles, /\.resultHopper\{ font-size:calc\(var\(--font-base\) \+ 1px\); font-weight:950; \}/);
+  assert.match(styles, /\.resultHopper\{font-size:calc\(var\(--font-base\) \+ 1px\);font-weight:950\}/);
 });
 
 test("the Start-by/Soonest time value is dark grey, not near-black - it was inheriting --text with no color rule of its own before this fix", () => {
@@ -59,18 +59,25 @@ test("the Start-by/Soonest time value is dark grey, not near-black - it was inhe
   const rule = styles.slice(start, styles.indexOf("}", start) + 1);
   assert.match(rule, /color:var\(--muted\);/);
   // A late hopper still overrides to the warning color - untouched by this fix.
-  assert.match(styles, /\.resultRow\.late \.resultTimingValue\{ color:var\(--warn\); \}/);
+  assert.match(styles, /\.resultRow\.late \.resultTimingValue\{color:var\(--warn\)\}/);
 });
 
-test("on mobile, the Start-by/checkbox group can wrap instead of overflowing past the card's left edge", () => {
-  const resultRowBase = styles.indexOf(".resultRow{");
-  const mediaStart = styles.indexOf("@media (max-width:600px){", resultRowBase);
-  assert.notEqual(mediaStart, -1);
-  const media = styles.slice(mediaStart, styles.indexOf("\n}\n", mediaStart));
-  const timingStart = media.indexOf(".resultTiming{");
-  const timingRule = media.slice(timingStart, media.indexOf("}", timingStart) + 1);
-  assert.match(timingRule, /white-space:normal;/,
-    "resets the base rule's white-space:nowrap, which - combined with justify-content:flex-end - was overflowing leftward past the card instead of wrapping");
-  assert.match(timingRule, /flex-wrap:wrap;/, "second line of defense if the wrapped text still doesn't fit on one row");
-  assert.match(timingRule, /justify-content:flex-end;/);
+test("Timeline uses a constrained single-column grid and compact timing regions", () => {
+  const gridStart = styles.indexOf(".resultGrid{");
+  const gridRule = styles.slice(gridStart, styles.indexOf("}", gridStart) + 1);
+  assert.match(gridRule, /grid-template-columns:minmax\(0,1fr\)/);
+  assert.match(gridRule, /width:min\(100%,760px\)/);
+  assert.match(gridRule, /align-items:start;/);
+  assert.match(styles, /\.resultTiming\{display:grid;grid-template-columns:minmax\(0,1fr\) auto;/);
+  assert.match(styles, /\.resultStatusChip\{display:inline-flex;align-items:center;min-height:22px/);
+});
+
+test("Timeline display rounds only presentation values and uses concise missing-data labels", () => {
+  const start = app.indexOf("function renderResultsFlat");
+  const body = app.slice(start, app.indexOf("function resetTracking", start));
+  assert.match(body, /fmtNum\(h\.weight,1\)\} lb/);
+  assert.match(body, /fmtNum\(h\.rate,1\)\} lb\/hr/);
+  assert.match(body, /h\.resinName \|\| "No resin"/);
+  assert.match(body, /"Not feeding"/);
+  assert.match(body, /"Start unavailable"/);
 });

@@ -62,18 +62,18 @@ test("time formatting defaults to 12-hour and supports 24-hour display", () => {
   assert.equal(formatTime(afternoon, null, "24"), "13:05");
 });
 
-test("timeline start labels distinguish previous-day timing from a late action", () => {
+test("timeline start labels use readable late and changeover-day wording", () => {
   const deadline = new Date(2026, 6, 30, 0, 15);
   const startBy = new Date(2026, 6, 29, 23, 45);
 
   const upcoming = formatTimelineStart(startBy, deadline, new Date(2026, 6, 29, 23, 30));
   assert.equal(upcoming.late, false);
-  assert.match(upcoming.text, /\(-1d\)$/);
+  assert.match(upcoming.text, /Day before$/);
 
-  const overdue = formatTimelineStart(startBy, deadline, new Date(2026, 6, 29, 23, 50));
+  const overdue = formatTimelineStart(startBy, deadline, new Date(2026, 6, 30, 23, 50));
   assert.equal(overdue.late, true);
-  assert.match(overdue.text, /\(-1d\)$/);
-  assert.doesNotMatch(overdue.text, /Late/i);
+  assert.match(overdue.text, /1 day late$/);
+  assert.doesNotMatch(overdue.text, /\(-1d\)/);
 });
 
 test("a changeover time with no recorded set-at is never flagged stale", () => {

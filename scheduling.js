@@ -69,12 +69,21 @@
     if (!date) return { text: "—", late: false };
     const time = formatTime(date, null, timeFormat);
     const late = date.getTime() < now.getTime();
+    if (late){
+      const daysLate = Math.max(0, calendarDayOffset(now, date));
+      const lateLabel = daysLate > 0
+        ? `${daysLate} day${daysLate === 1 ? "" : "s"} late`
+        : "late";
+      return { text: `${time} · ${lateLabel}`, late };
+    }
     if (!deadline) return { text: time, late };
 
     const dayOffset = calendarDayOffset(date, deadline);
     if (dayOffset !== 0){
-      const sign = dayOffset > 0 ? "+" : "";
-      return { text: `${time} (${sign}${dayOffset}d)`, late };
+      const days = Math.abs(dayOffset);
+      const relation = dayOffset < 0 ? "before" : "after";
+      const relative = days === 1 ? `Day ${relation}` : `${days} days ${relation}`;
+      return { text: `${time} · ${relative}`, late };
     }
     return { text: time, late };
   }
