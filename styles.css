@@ -2184,6 +2184,178 @@ details[open] > summary .chevSatellite{
     color: var(--title);
     box-shadow: 0 0 0 1px var(--focus-ring);
   }
+
+  /* Recipe Setup uses the same five-column compact matrix as Receiver
+     Hopper Weights. Each layer remains editable in place; the old layer
+     rail is unnecessary when every layer is visible at once. */
+  .splitsMobileLayerLayout:has(.compactMobileRecipe){
+    display:block;
+    padding:5px;
+    border:1px solid var(--row-border-2);
+    border-radius:14px;
+    background:var(--panel2);
+  }
+  .splitsMatrix.compactMobileRecipe [data-layer-column]{ display:table-cell!important; }
+  .splitsMatrix.compactMobileRecipe [data-layer-column].mobile-layer-active.splitMatrixCell{ display:table-cell; }
+  .splitsMatrix.compactMobileRecipe th:first-child{ display:none; }
+  .splitsMatrix.compactMobileRecipe thead th{
+    width:20%;
+    min-width:0;
+    padding:3px 2px 5px;
+    vertical-align:top;
+  }
+  .splitsMatrix.compactMobileRecipe .splitLayerHeader{
+    border-bottom:1px solid color-mix(in srgb,var(--focus-border) 38%,var(--border));
+  }
+  .splitsMatrix.compactMobileRecipe .splitLayerMain{
+    display:grid;
+    grid-template-columns:1fr;
+    justify-items:center;
+    min-height:39px;
+    padding:0;
+  }
+  .splitsMatrix.compactMobileRecipe .splitLayerTitle{
+    position:static;
+    width:auto;
+    height:auto;
+    min-height:0;
+    transform:none;
+    color:var(--title);
+    font-size:16px;
+    line-height:1;
+    opacity:1;
+  }
+  .splitsMatrix.compactMobileRecipe .splitLayerPct{
+    margin-top:2px;
+    padding-bottom:1px;
+    border-bottom:1px solid var(--border2);
+  }
+  .splitsMatrix.compactMobileRecipe .splitLayerPct input:not([type="checkbox"]):not([type="radio"]){
+    width:27px;
+    min-width:27px;
+    min-height:0;
+    padding:0;
+    color:var(--text);
+    font-size:11px;
+    line-height:14px;
+  }
+  .splitsMatrix.compactMobileRecipe .splitLayerPct span{ font-size:10px; }
+  .splitsMatrix.compactMobileRecipe .splitCopyBtn{
+    display:grid;
+    place-items:center;
+    width:42px;
+    min-height:20px;
+    margin:2px auto 0;
+    padding:0;
+    border:0;
+    border-radius:5px;
+    background:transparent;
+    color:var(--focus-border);
+    font-size:0;
+  }
+  .splitsMatrix.compactMobileRecipe .splitCopyBtn::after{ content:"Copy " attr(data-mobile-copy-source); font-size:9px; font-weight:800; line-height:1; }
+  .splitsMatrix.compactMobileRecipe .splitColumnTotal{ display:none; }
+  .splitsMatrix.compactMobileRecipe td.splitMatrixCell{
+    width:20%;
+    min-width:0;
+    padding:4px 3px;
+    border-color:var(--row-border-2);
+  }
+  .splitsMatrix.compactMobileRecipe .splitMatrixCell{
+    --compact-recipe-cell-bg:var(--row-bg-2);
+    background:var(--compact-recipe-cell-bg);
+  }
+  /* A small alternating tint gives each layer a stable vertical lane without
+     reintroducing the old per-section color treatment. */
+  .splitsMatrix.compactMobileRecipe tbody tr > .splitMatrixCell:nth-child(2),
+  .splitsMatrix.compactMobileRecipe tbody tr > .splitMatrixCell:nth-child(4),
+  .splitsMatrix.compactMobileRecipe tbody tr > .splitMatrixCell:nth-child(6){
+    --compact-recipe-cell-bg:color-mix(in srgb,var(--row-bg-2) 93%,var(--focus-border));
+  }
+  .splitsMatrix.compactMobileRecipe tbody tr > .splitMatrixCell:nth-child(3),
+  .splitsMatrix.compactMobileRecipe tbody tr > .splitMatrixCell:nth-child(5){
+    --compact-recipe-cell-bg:color-mix(in srgb,var(--row-bg-2) 98%,var(--panel2));
+  }
+  .splitsMatrix.compactMobileRecipe .splitMatrixCell.tracked:not(.selected){
+    background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--focus-border) 16%,transparent) 0 1px,transparent 1px 7px),var(--compact-recipe-cell-bg);
+    box-shadow:none;
+  }
+  .splitsMatrix.compactMobileRecipe .splitCellHeader{
+    display:flex;
+    min-height:18px;
+    margin:0;
+    gap:2px;
+  }
+  .splitsMatrix.compactMobileRecipe .splitCellHopperName{
+    min-width:0;
+    height:auto;
+    padding:0;
+    border-radius:0;
+    background:transparent;
+    color:var(--muted);
+    font-size:10px;
+    line-height:1;
+  }
+  .splitsMatrix.compactMobileRecipe .splitCellHopperName.smart{ color:var(--ok); }
+  .splitsMatrix.compactMobileRecipe .splitClearButton{ display:none; }
+  .splitsMatrix.compactMobileRecipe .splitTrackControl{ margin-left:auto; }
+  .splitsMatrix.compactMobileRecipe .splitTrackButton{
+    width:18px;
+    height:18px;
+    min-height:18px;
+    padding:0;
+    border:0;
+    border-radius:0;
+    background:transparent;
+    color:var(--muted);
+    box-shadow:none;
+  }
+  .splitsMatrix.compactMobileRecipe .splitTrackButton svg{ width:15px; height:15px; stroke-width:1.8; }
+  .splitsMatrix.compactMobileRecipe .splitTrackButton.active{
+    background:transparent;
+    color:var(--focus-border);
+    box-shadow:none;
+    animation:compactRecipeTrackPulse 1.8s ease-in-out infinite;
+  }
+  .splitsMatrix.compactMobileRecipe .splitTrackButton.active svg path{
+    transform-box:fill-box;
+    transform-origin:center;
+    animation:compactRecipeClockHands 2.2s linear infinite;
+  }
+  @keyframes compactRecipeTrackPulse{
+    0%,100%{ transform:scale(1); opacity:.75; }
+    50%{ transform:scale(1.18); opacity:1; }
+  }
+  @keyframes compactRecipeClockHands{ to{ transform:rotate(360deg); } }
+  @media (prefers-reduced-motion:reduce){
+    .splitsMatrix.compactMobileRecipe .splitTrackButton.active,
+    .splitsMatrix.compactMobileRecipe .splitTrackButton.active svg path{ animation:none; }
+  }
+  .splitsMatrix.compactMobileRecipe .splitCellEditor{ display:grid; grid-template-columns:1fr; gap:3px; }
+  .splitsMatrix.compactMobileRecipe .splitCellTop{ display:block; min-width:0; }
+  .splitsMatrix.compactMobileRecipe .splitCellTop .splitSmartBadge{ display:none!important; }
+  .splitsMatrix.compactMobileRecipe .resinNameInput{
+    width:100%;
+    height:20px;
+    min-height:20px;
+    max-height:20px;
+    padding:0 1px;
+    font-size:10px;
+    line-height:19px;
+    text-align:left;
+  }
+  .splitsMatrix.compactMobileRecipe .splitCellControls{ justify-content:flex-end; }
+  .splitsMatrix.compactMobileRecipe .splitPctControl input{
+    width:36px;
+    height:18px;
+    min-height:18px;
+    max-height:18px;
+    padding:0 1px;
+    color:var(--text);
+    font-size:12px;
+    line-height:17px;
+  }
+  .splitsMatrix.compactMobileRecipe .splitPctControl > span{ font-size:10px; }
 }
 
 .hopperBadge{

@@ -64,11 +64,12 @@ test("swiping still drives the same showMobileLayer, unaffected by the pager-to-
   assert.match(app, /showMobileLayer\(names\[nextIndex\]\);/);
 });
 
-test("the table's scroll container and the rail are siblings inside .splitsMobileLayerLayout, appended to the DOM together (scroll first, rail second) so the rail lands on the right", () => {
+test("the compact mobile matrix keeps all layer columns in the table and omits the rail", () => {
   const start = app.indexOf("mobileLayerLayout.className = \"splitsMobileLayerLayout\";");
   assert.notEqual(start, -1);
   const body = app.slice(start, start + 300);
-  assert.match(body, /mobileLayerLayout\.append\(scroll, mobileLayerNav\);/);
+  assert.match(body, /mobileLayerLayout\.append\(scroll\);/);
+  assert.match(body, /if \(!compactMobileRecipe\) mobileLayerLayout\.append\(mobileLayerNav\);/);
   assert.match(body, /area\.appendChild\(mobileLayerLayout\);/);
 });
 

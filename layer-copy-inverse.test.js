@@ -47,7 +47,7 @@ test("the 3-layer line's A/C pair is now mutual too, leaving B without a copy bu
 test("no new rendering code was needed - the copy button is still purely driven by copyRules[L.name], appended once per layer's <th>", () => {
   const renderStart = app.indexOf("const copyFrom = copyRules[L.name];");
   assert.notEqual(renderStart, -1);
-  const body = app.slice(renderStart, renderStart + 700);
+  const body = app.slice(renderStart, renderStart + 1100);
   assert.match(body, /copyButton\.textContent = `Copy \$\{copyFrom\} → \$\{L\.name\}`;/);
   assert.match(body, /th\.appendChild\(copyButton\);/);
 });

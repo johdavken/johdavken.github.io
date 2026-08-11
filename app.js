@@ -1303,6 +1303,7 @@
     function weightId(layerName, hi){ return `w_${layerName}_${hi}`; }
     function computedWeightId(layerName, hi){ return `cw_${layerName}_${hi}`; }
     function smartBadgeId(layerName, hi){ return `sm_${layerName}_${hi}`; }
+    function hopperNameId(layerName, hi){ return `hn_${layerName}_${hi}`; }
     function hopperPositionLabel(hi){
       if (state.hopperNamingLine9 === "main") return hi === 0 ? "Main" : String(hi);
       return String(hi + 1);
@@ -2044,6 +2045,8 @@
 
           const badgeEl = document.getElementById(smartBadgeId(L.name, hi));
           if (badgeEl) badgeEl.hidden = !smart;
+          const hopperNameEl = document.getElementById(hopperNameId(L.name, hi));
+          if (hopperNameEl) hopperNameEl.classList.toggle("smart", !!smart);
         });
       });
     }
@@ -2359,6 +2362,7 @@
       // A vertical rail of per-layer buttons, sitting to the right of the
       // table (see .splitsMobileLayerLayout below) rather than a pager row
       // above it - direct tap to any layer, no prev/next stepping needed.
+      const compactMobileRecipe = window.matchMedia("(max-width: 700px)").matches;
       const mobileLayerNav = document.createElement("div");
       mobileLayerNav.className = "splitsMobileLayerRail";
       mobileLayerNav.setAttribute("role", "group");
@@ -2384,6 +2388,7 @@
       frame.className = "splitsMatrixFrame";
       const table = document.createElement("table");
       table.className = "splitsMatrix";
+      table.classList.toggle("compactMobileRecipe", compactMobileRecipe);
 
       const thead = document.createElement("thead");
       const headerRow = document.createElement("tr");
@@ -2438,6 +2443,9 @@
           copyButton.type = "button";
           copyButton.className = "copyBtn splitCopyBtn";
           copyButton.textContent = `Copy ${copyFrom} → ${L.name}`;
+          copyButton.setAttribute("aria-label", `Copy Layer ${copyFrom} into Layer ${L.name}`);
+          copyButton.dataset.mobileCopySource = copyFrom;
+          copyButton.title = `Copy Layer ${copyFrom} into Layer ${L.name}`;
           copyButton.addEventListener("click",()=>{
             copyLayer(copyFrom, L.name);
             renderSplitsArea();
@@ -2502,6 +2510,7 @@
           const cellHeader = document.createElement("div");
           cellHeader.className = "splitCellHeader";
           const hopperName = document.createElement("span");
+          hopperName.id = hopperNameId(L.name, hi);
           hopperName.className = "splitCellHopperName mono";
           hopperName.textContent = hopperBadgeLabel(L.name, hi);
           cellHeader.append(hopperName);
@@ -2716,14 +2725,15 @@
       scroll.appendChild(frame);
       const mobileLayerLayout = document.createElement("div");
       mobileLayerLayout.className = "splitsMobileLayerLayout";
-      mobileLayerLayout.append(scroll, mobileLayerNav);
+      mobileLayerLayout.append(scroll);
+      if (!compactMobileRecipe) mobileLayerLayout.append(mobileLayerNav);
       area.appendChild(mobileLayerLayout);
 
       function showMobileLayer(layerName){
         activeMobileLayer = layerName;
         lastActiveMobileLayer = layerName;
         table.querySelectorAll("[data-layer-column]").forEach(cell=>{
-          cell.classList.toggle("mobile-layer-active", cell.dataset.layerColumn === activeMobileLayer);
+          cell.classList.toggle("mobile-layer-active", compactMobileRecipe || cell.dataset.layerColumn === activeMobileLayer);
         });
         mobileLayerButtonEls.forEach((btn,name)=>{
           const active = name === activeMobileLayer;
