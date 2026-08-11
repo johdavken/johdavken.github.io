@@ -613,6 +613,9 @@ main{
 .lineSyncStatusItem strong[data-state="error"]{ color: var(--bad); }
 
 .lineSyncPanel{ overflow: visible; }
+.mobileLineSyncStatus,
+.mobileSyncSectionLabel,
+.mobileSyncJoinHint{ display:none; }
 .lineSyncMetrics{ display:flex; flex-wrap:wrap; gap:8px; }
 .lineSyncMetrics span{
   padding:5px 9px;
@@ -721,15 +724,82 @@ main{
   .lineSyncPanel .desktopSyncLabel{ display: none !important; }
   .lineSyncPanel .mobileSyncLabel{ display: inline; }
   .lineSyncPanel .mobileSyncOnly{ display: block; }
+  .lineSyncPanel > #lineSyncMessage,
+  .lineSyncPanel > .lineSyncMetrics{ display:none; }
+  .lineSyncPanel .mobileLineSyncStatus{
+    display:grid;
+    grid-template-columns:30px minmax(0,1fr);
+    gap:9px;
+    align-items:start;
+    padding:8px 0 9px;
+    border-bottom:1px solid var(--border);
+    color:var(--muted);
+  }
+  .mobileLineSyncStatusIcon{
+    width:24px;
+    height:24px;
+    margin-top:1px;
+    fill:none;
+    stroke:currentColor;
+    stroke-width:1.7;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+  }
+  .mobileLineSyncStatusCopy{display:grid;min-width:0;gap:2px}
+  .mobileLineSyncStatusCopy strong{color:var(--text);font-size:var(--font-small);font-weight:850}
+  .mobileLineSyncStatusCopy > span{font-size:var(--font-small);line-height:1.25;overflow-wrap:anywhere}
+  .mobileLineSyncStatusCopy > #mobileLineSyncEvent{font-size:10px}
+  .mobileLineSyncMetadata{display:flex;flex-wrap:wrap;gap:3px 10px;margin-top:2px;color:var(--muted);font-size:10px;line-height:1.2}
+  .mobileLineSyncStatus[data-state="synced"]{color:var(--ok)}
+  .mobileLineSyncStatus[data-state="synced"] .mobileLineSyncStatusCopy strong{color:var(--ok)}
+  .mobileLineSyncStatus[data-state="pending"],
+  .mobileLineSyncStatus[data-state="offline"],
+  .mobileLineSyncStatus[data-state="conflict"]{color:var(--warn)}
+  .mobileLineSyncStatus[data-state="error"]{color:var(--bad)}
+  .mobileLineSyncStatus[data-state="error"] .mobileLineSyncStatusCopy strong{color:var(--bad)}
+  .mobileSyncSectionLabel{display:none;margin-top:11px;color:var(--title);font-size:11px;font-weight:850;letter-spacing:.12em}
+  .lineSyncPanel.mobileHasLine .mobileSyncConnectionTitle{display:block}
+  .lineSyncPanel:not(.mobileHasLine) .mobileSyncJoinPreTitle{display:block}
+  .lineSyncPanel .lineSyncConnectionFields{gap:7px;margin-top:6px}
+  .lineSyncPanel .lineSyncConnectionFields > div{
+    display:grid;
+    gap:3px;
+    padding:7px 9px;
+    border:1px solid var(--row-border);
+    border-radius:var(--control-radius);
+    background:var(--row-bg);
+  }
+  .lineSyncPanel .lineSyncConnectionFields label{margin:0;color:var(--muted);font-size:10px;font-weight:750}
+  .lineSyncPanel .lineSyncConnectionFields input,
+  .lineSyncPanel .lineSyncConnectionFields select{min-height:34px;padding:4px 0;border-width:0 0 1px;border-radius:0;background:transparent}
   .lineSyncPanel:not(.mobileHasWorkspaces) .lineSyncCurrentLineField{ display: none; }
   .lineSyncPanel:not(.mobileHasLine) .lineSyncActionBar{ display: none; }
+  .lineSyncPanel:not(.mobileConnected) #lineSyncDisconnectBtn{display:none}
+  .lineSyncPanel:not(.mobileConnected) #lineSyncMobileActionHint{display:none}
   .lineSyncPanel .lineSyncJoin{ display: none; }
   .lineSyncPanel .lineSyncJoin.mobileJoinVisible{
     display: grid;
     grid-template-columns: 1fr;
+    gap:8px;
+    margin-top:10px;
   }
-  .lineSyncPanel .lineSyncJoin.mobileJoinVisible > div:first-child,
+  .lineSyncPanel .lineSyncJoin.mobileJoinVisible .lineSyncJoinField,
   .lineSyncPanel .lineSyncJoin.mobileJoinVisible .lineSyncCode{ grid-column: auto; }
+  .lineSyncPanel .lineSyncJoinField{display:grid;gap:4px;padding:7px 9px;border:1px solid var(--row-border);border-radius:var(--control-radius);background:var(--row-bg)}
+  .lineSyncPanel .lineSyncJoinField label{margin:0;color:var(--muted);font-size:10px;font-weight:750}
+  .lineSyncPanel .mobileSyncJoinHint{display:block;color:var(--muted);font-size:10px;line-height:1.25}
+  .lineSyncPanel .lineSyncJoinField input{min-height:36px;padding:4px 0;border-width:0 0 1px;border-radius:0;background:transparent;letter-spacing:.12em}
+  .lineSyncPanel .lineSyncJoin .compactAction{width:100%;min-height:38px}
+  .lineSyncPanel .lineSyncActionBar{gap:7px;margin-top:10px}
+  .lineSyncPanel .lineSyncActionBar .segmentedActionRow{width:100%;overflow:visible}
+  .lineSyncPanel .lineSyncActionBar .segmentedActionRow button{flex:1 1 0;min-width:0;min-height:38px;padding-inline:8px}
+  .lineSyncPanel .lineSyncActionBar .segmentedActionDivider{width:100%}
+  .mobileSyncRefreshLabel{display:inline-flex!important;align-items:center;justify-content:center;gap:6px}
+  .mobileSyncRefreshLabel svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .lineSyncPanel #lineSyncRetryBtn{color:var(--focus-border);font-weight:800}
+  .lineSyncPanel #lineSyncLeaveBtn{color:var(--bad)}
+  .lineSyncPanel.syncActionBusy #lineSyncRetryBtn,
+  .lineSyncPanel.syncActionBusy #lineSyncJoinBtn{cursor:progress}
 }
 
 @media (max-width: 720px){

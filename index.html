@@ -560,6 +560,18 @@
       <span id="lineSyncSummaryStatus" class="pill summaryStatus">Local only</span>
     </summary>
     <div class="blockBody lineSyncPanel">
+      <section id="mobileLineSyncStatus" class="mobileLineSyncStatus" data-state="local-only" role="status" aria-live="polite">
+        <svg class="mobileLineSyncStatusIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7a8 8 0 0 1 13 1l2 3M19 17a8 8 0 0 1-13-1l-2-3"/><path d="M20 5v6h-6M4 19v-6h6"/></svg>
+        <div class="mobileLineSyncStatusCopy">
+          <strong id="mobileLineSyncState">Not connected</strong>
+          <span id="mobileLineSyncDetail">This device is using local data only.</span>
+          <span id="mobileLineSyncEvent" hidden>Local Resin.Tools data was preserved.</span>
+          <div class="mobileLineSyncMetadata" aria-label="RT Sync details">
+            <span id="mobileLineSyncLastSync">No sync history</span>
+            <span id="mobileLineSyncPending">No pending local changes</span>
+          </div>
+        </div>
+      </section>
       <div id="lineSyncMessage" class="muted" role="status" aria-live="polite">
         Resin.Tools is fully usable locally. Connect only when this device should share a production line.
       </div>
@@ -569,7 +581,9 @@
       </div>
       <ul id="lineSyncPendingList" class="lineSyncPendingList" hidden></ul>
 
-      <div class="grid3 mt10">
+      <div class="mobileSyncSectionLabel mobileSyncJoinPreTitle">JOIN RT SYNC</div>
+      <div class="mobileSyncSectionLabel mobileSyncConnectionTitle">CONNECTION</div>
+      <div class="grid3 mt10 lineSyncConnectionFields">
         <div class="lineSyncCurrentLineField">
           <label for="lineSyncWorkspaceSelect"><span class="desktopSyncLabel">Selected line</span><span class="mobileSyncLabel">Current line</span></label>
           <select id="lineSyncWorkspaceSelect"><option value="">No linked lines</option></select>
@@ -578,7 +592,7 @@
           <label for="lineSyncWorkspaceName">Line name</label>
           <input id="lineSyncWorkspaceName" type="text" maxlength="80" placeholder="Example: Line 9" />
         </div>
-        <div>
+        <div class="lineSyncDeviceField">
           <label for="lineSyncDeviceLabel">This device</label>
           <input id="lineSyncDeviceLabel" type="text" maxlength="80" placeholder="Example: Line 9 phone" />
         </div>
@@ -588,7 +602,7 @@
         <div class="segmentedActionRow">
           <button id="lineSyncCreateBtn" class="primary desktopSyncOnly" type="button">Create line</button>
           <button id="lineSyncRenameBtn" class="secondary desktopSyncOnly" type="button">Rename line</button>
-          <button id="lineSyncRetryBtn" class="secondary" type="button"><span id="lineSyncRetryDesktopLabel" class="desktopSyncLabel">Connect / retry</span><span class="mobileSyncLabel">Refresh</span></button>
+          <button id="lineSyncRetryBtn" class="secondary" type="button" aria-label="Refresh RT Sync now"><span id="lineSyncRetryDesktopLabel" class="desktopSyncLabel">Connect / retry</span><span class="mobileSyncRefreshLabel mobileSyncLabel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7a8 8 0 0 1 13 1l2 3M19 17a8 8 0 0 1-13-1l-2-3"/><path d="M20 5v6h-6M4 19v-6h6"/></svg><span id="lineSyncRetryMobileLabel">Refresh now</span></span></button>
           <button id="lineSyncNewJobBtn" class="secondary desktopSyncOnly" type="button">New job</button>
         </div>
         <div class="segmentedActionDivider" role="separator"></div>
@@ -600,11 +614,12 @@
       </div>
 
       <div class="lineSyncJoin mt10">
-        <div>
+        <div class="lineSyncJoinField">
           <label for="lineSyncJoinCode">Link code</label>
-          <input id="lineSyncJoinCode" class="mono" type="text" maxlength="4" inputmode="text" autocomplete="one-time-code" autocapitalize="characters" autocorrect="off" spellcheck="false" placeholder="AB23" />
+          <small id="lineSyncJoinCodeHint" class="mobileSyncJoinHint">Enter this workspace’s four-character link code.</small>
+          <input id="lineSyncJoinCode" class="mono" type="text" maxlength="4" inputmode="text" autocomplete="one-time-code" autocapitalize="characters" autocorrect="off" spellcheck="false" pattern="[A-Za-z0-9]{4}" aria-describedby="lineSyncJoinCodeHint" placeholder="AB23" />
         </div>
-        <button id="lineSyncJoinBtn" class="compactAction" type="button">Join RT Sync</button>
+        <button id="lineSyncJoinBtn" class="compactAction" type="button" disabled>Join RT Sync</button>
         <output id="lineSyncGeneratedCode" class="lineSyncCode mono desktopSyncOnly" aria-live="polite"></output>
       </div>
 
@@ -614,7 +629,7 @@
       </section>
 
       <div class="tiny mt10 desktopSyncOnly">Disconnect keeps server membership. Leave removes this device's membership. Only the owner can remove another device or delete the shared line.</div>
-      <div class="tiny mt10 mobileSyncOnly">Disconnect pauses this phone while preserving its line membership. Leave removes this phone from the line.</div>
+      <div id="lineSyncMobileActionHint" class="tiny mt10 mobileSyncOnly">Disconnect pauses this device while preserving its line membership. Leave removes this device from the line.</div>
     </div>
   </details>
 

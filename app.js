@@ -83,6 +83,8 @@
   const fmtTime = (date, baseDate) => formatTime(date, baseDate, state.timeFormat);
   const { writeJson } = window.PolynStorage;
   let lineSync = null;
+  let lineSyncActionInFlight = false;
+  let lineSyncBusyAction = "";
   let workspaceConfigurations = null;
   let workspaceConfigurationWorkspaceId = "";
   let workspaceConfigurationRefreshInFlight = false;
@@ -4661,13 +4663,114 @@
     return key ? known[key] : raw;
   }
 
-  async function runLineSyncAction(action){
+  function updateLineSyncJoinAvailability(syncState = lineSync?.getState?.() || {}){
+    const join = $("lineSyncJoinBtn");
+    const code = $("lineSyncJoinCode")?.value || "";
+    if (join) join.disabled = lineSyncActionInFlight || !syncState.available || !/^[A-Z0-9]{4}$/.test(code.trim());
+  }
+
+  function setLineSyncActionBusy(busy, action = ""){
+    lineSyncActionInFlight = busy;
+    lineSyncBusyAction = busy ? action : "";
+    const panel = document.querySelector(".lineSyncPanel");
+    panel?.classList.toggle("syncActionBusy", busy);
+    panel?.setAttribute("aria-busy", String(busy));
+    const refreshLabel = $("lineSyncRetryMobileLabel");
+    if (refreshLabel) refreshLabel.textContent = busy && action === "refresh" ? "Refreshing…" : "Refresh now";
+    const join = $("lineSyncJoinBtn");
+    if (join) join.textContent = busy && action === "join" ? "Joining…" : "Join RT Sync";
+    const refresh = $("lineSyncRetryBtn");
+    if (refresh) refresh.disabled = busy;
+    updateLineSyncJoinAvailability();
+  }
+
+  function formatLineSyncTimestamp(value){
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    const today = new Date();
+    const sameDate = date.toDateString() === today.toDateString();
+    const time = date.toLocaleTimeString([], state.timeFormat === "24"
+      ? { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }
+      : { hour: "numeric", minute: "2-digit", hour12: true });
+    return sameDate ? time : `${date.toLocaleDateString([], { month:"short", day:"numeric" })}, ${time}`;
+  }
+
+  function renderMobileLineSyncStatus(syncState, override = null){
+    const host = $("mobileLineSyncStatus");
+    if (!host) return;
+    const status = override?.status || syncState.status || "Local only";
+    const connected = !!syncState.connected;
+    const pending = Number(syncState.pendingCount || 0);
+    const message = override?.message || syncState.message || "";
+    const lastSync = formatLineSyncTimestamp(syncState.lastSyncAt);
+    let state = "local-only";
+    let title = "Not connected";
+    let detail = "This device is using local data only.";
+    let eventNote = "";
+    let last = lastSync ? `Last connected sync: ${lastSync}` : "No sync history";
+    let pendingText = pending ? "Local changes are not syncing" : "No pending local changes";
+
+    if (status === "Error"){
+      state = "error";
+      title = "Error";
+      detail = message || "RT Sync needs attention.";
+      pendingText = pending ? `${pending} pending change${pending === 1 ? "" : "s"}` : "No pending changes";
+    } else if (connected && status === "Synced" && !pending){
+      state = "synced";
+      title = "Synced";
+      detail = "Saved line settings are synced";
+      last = lastSync ? `Last sync ${lastSync}` : "No sync recorded yet";
+      pendingText = "No pending changes";
+    } else if (connected && status === "Syncing"){
+      state = "connecting";
+      title = "Refreshing";
+      detail = message || "Checking saved line settings…";
+      last = lastSync ? `Last sync ${lastSync}` : "No sync recorded yet";
+      pendingText = pending ? `${pending} pending change${pending === 1 ? "" : "s"}` : "No pending changes";
+    } else if (connected && status === "Pending"){
+      state = "pending";
+      title = "Pending changes";
+      detail = message || "Local changes are waiting to sync.";
+      last = lastSync ? `Last sync ${lastSync}` : "No sync recorded yet";
+      pendingText = `${pending || 1} pending change${pending === 1 ? "" : "s"}`;
+    } else if (connected && status === "Offline"){
+      state = "offline";
+      title = "Offline";
+      detail = message || "RT Sync will resume when this device reconnects.";
+      last = lastSync ? `Last sync ${lastSync}` : "No sync recorded yet";
+      pendingText = pending ? `${pending} pending change${pending === 1 ? "" : "s"}` : "No pending changes";
+    } else if (connected && status === "Conflict"){
+      state = "conflict";
+      title = "Sync conflict";
+      detail = message || "Shared changes need attention.";
+      last = lastSync ? `Last sync ${lastSync}` : "No sync recorded yet";
+      pendingText = pending ? `${pending} pending change${pending === 1 ? "" : "s"}` : "No pending changes";
+    } else if (/left RT Sync/i.test(message)){
+      eventNote = "Local Resin.Tools data was preserved.";
+    }
+
+    host.dataset.state = state;
+    $("mobileLineSyncState").textContent = title;
+    $("mobileLineSyncDetail").textContent = detail;
+    const event = $("mobileLineSyncEvent");
+    if (event){ event.hidden = !eventNote; event.textContent = eventNote; }
+    $("mobileLineSyncLastSync").textContent = last;
+    $("mobileLineSyncPending").textContent = pendingText;
+  }
+
+  async function runLineSyncAction(action, actionName = ""){
+    if (lineSyncActionInFlight) return;
+    setLineSyncActionBusy(true, actionName);
     try{ await action(); }
     catch(error){
       const message = lineSyncErrorMessage(error);
       const target = $("lineSyncMessage");
       if (target) target.textContent = message;
+      renderMobileLineSyncStatus(lineSync?.getState?.() || {}, { status:"Error", message });
       showStorageWarning(`RT Sync: ${message}`);
+    } finally {
+      setLineSyncActionBusy(false);
     }
   }
 
@@ -4731,6 +4834,7 @@
     if ($("lineSyncMessage")) $("lineSyncMessage").textContent = syncState.message || "Local data remains available.";
     if ($("lineSyncLastSync")) $("lineSyncLastSync").textContent = syncState.lastSyncAt ? new Date(syncState.lastSyncAt).toLocaleString() : "Never";
     if ($("lineSyncPendingCount")) $("lineSyncPendingCount").textContent = String(syncState.pendingCount || 0);
+    renderMobileLineSyncStatus(syncState);
     renderPendingList(syncState.pendingSummary);
     const navStatus = $("workspaceCloudSyncStatus");
     if (navStatus){
@@ -4767,9 +4871,10 @@
     const owner = role === "owner";
     const connected = !!syncState.connected;
     ["lineSyncRenameBtn", "lineSyncGenerateCodeBtn", "lineSyncNewJobBtn", "lineSyncDisconnectBtn"].forEach(id=>{
-      if ($(id)) $(id).disabled = !selected || !connected;
+      if ($(id)) $(id).disabled = lineSyncActionInFlight || !selected || !connected;
     });
-    if ($("lineSyncLeaveBtn")) $("lineSyncLeaveBtn").disabled = !selected || !syncState.available || owner;
+    if ($("lineSyncLeaveBtn")) $("lineSyncLeaveBtn").disabled = lineSyncActionInFlight || !selected || !syncState.available || owner;
+    if ($("lineSyncRetryBtn")) $("lineSyncRetryBtn").disabled = lineSyncActionInFlight;
     if ($("lineSyncRetryDesktopLabel")) $("lineSyncRetryDesktopLabel").textContent = selected && !connected ? "Reconnect" : "Connect / retry";
     const joinPanel = document.querySelector(".lineSyncJoin");
     if (joinPanel) joinPanel.classList.toggle("mobileJoinVisible", !selected);
@@ -4777,7 +4882,9 @@
     if (syncPanel){
       syncPanel.classList.toggle("mobileHasLine", !!selected);
       syncPanel.classList.toggle("mobileHasWorkspaces", syncState.workspaces.length > 0);
+      syncPanel.classList.toggle("mobileConnected", connected);
     }
+    updateLineSyncJoinAvailability(syncState);
 
     const memberSection = $("lineSyncMembersSection");
     const memberHost = $("lineSyncMembers");
@@ -4900,7 +5007,7 @@
     )));
     $("lineSyncJoinBtn")?.addEventListener("click",()=>runLineSyncAction(()=>lineSync.joinWorkspace(
       $("lineSyncJoinCode")?.value, $("lineSyncDeviceLabel")?.value
-    )));
+    ), "join"));
     // Link codes are case-insensitive (joinWorkspace uppercases before the
     // RPC call), but mobile keyboards default to lowercase entry despite
     // autocapitalize="characters" - some keyboards ignore it or the operator
@@ -4909,6 +5016,7 @@
     $("lineSyncJoinCode")?.addEventListener("input",event=>{
       const upper = event.target.value.toUpperCase();
       if (event.target.value !== upper) event.target.value = upper;
+      updateLineSyncJoinAvailability();
     });
     $("lineSyncGenerateCodeBtn")?.addEventListener("click",()=>runLineSyncAction(()=>lineSync.generateLinkCode()));
     $("lineSyncRenameBtn")?.addEventListener("click",()=>runLineSyncAction(()=>lineSync.renameWorkspace($("lineSyncWorkspaceName")?.value)));
@@ -4924,7 +5032,7 @@
       lineSync.getState().selectedWorkspaceId
         ? lineSync.refreshSelected()
         : lineSync.retry()
-    ));
+    , "refresh"));
     // Same reconnect/refresh action as lineSyncRetryBtn above, reachable
     // from the mobile footer without opening the RT Sync panel - tapping it
     // reconciles the selected line (flushing any unsynced change) or
@@ -4933,7 +5041,7 @@
       lineSync.getState().selectedWorkspaceId
         ? lineSync.refreshSelected()
         : lineSync.retry()
-    ));
+    , "refresh"));
     $("lineSyncDisconnectBtn")?.addEventListener("click",()=>runLineSyncAction(()=>lineSync.disconnectLocal()));
     $("lineSyncLeaveBtn")?.addEventListener("click",()=>{
       if (confirm("Leave RT Sync on this browser identity? Local Resin.Tools data will remain.")) runLineSyncAction(()=>lineSync.leaveWorkspace());
