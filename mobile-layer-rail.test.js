@@ -73,6 +73,16 @@ test("the compact mobile matrix keeps all layer columns in the table and omits t
   assert.match(body, /area\.appendChild\(mobileLayerLayout\);/);
 });
 
+test("compact mobile recipe actions remain inside the matrix frame while bulk values open in a dedicated sheet", () => {
+  assert.match(app, /actionTray\.append\(modeBar, mobileBulkContext, mobileRearrangeContext\);/);
+  assert.match(app, /mobileLayerLayout\.append\(actionTray\);/);
+  assert.match(app, /mobileBulkEditSheet\.querySelector\("\.mobileBulkEditBody"\)\.appendChild\(toolbar\);/);
+  assert.match(app, /mobileBulkEditSheet\.showModal\(\);/);
+  assert.match(app, /mobileSavedRecipesSheet\?\.showModal\(\);/);
+  assert.match(app, /toast\.className="mobileRearrangeToast";/);
+  assert.match(styles, /\.mobileBulkEditSheet \.splitsBulkBar/);
+});
+
 test(".splitsMobileLayerRail is hidden by default (desktop) - same pattern the old .splitsMobileLayerNav used", () => {
   assert.match(styles, /\.splitsMobileLayerRail\{ display: none; \}/);
 });

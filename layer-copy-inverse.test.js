@@ -48,7 +48,8 @@ test("no new rendering code was needed - the copy button is still purely driven 
   const renderStart = app.indexOf("const copyFrom = copyRules[L.name];");
   assert.notEqual(renderStart, -1);
   const body = app.slice(renderStart, renderStart + 1100);
-  assert.match(body, /copyButton\.textContent = `Copy \$\{copyFrom\} → \$\{L\.name\}`;/);
+  assert.match(body, /copyButton\.textContent = `Match \$\{copyFrom\}`;/);
+  assert.match(body, /copyButton\.setAttribute\("aria-label", `Make Layer \$\{L\.name\} match Layer \$\{copyFrom\}`\);/);
   assert.match(body, /th\.appendChild\(copyButton\);/);
 });
 

@@ -79,11 +79,12 @@ test("on narrow mobile, where the button row wraps and the icon lands too close 
   assert.match(rule, /transform:translateX\(-50%\)/);
 });
 
-test("the action row, bulk toolbar, and saved-recipes panel are still the same direct children of #splitsArea targeted by the reorder rule", () => {
+test("the action row and saved-recipes panel remain direct children while the bulk toolbar stays direct on desktop and moves into its mobile dialog", () => {
   assert.match(splitsArea, /actionRow\.className = "splitsMatrixActions"/);
   assert.match(splitsArea, /toolbar\.className = "splitsBulkBar hide"/);
   assert.match(splitsArea, /savedRecipesPanel\.className = "splitsSavedRecipesPanel hide"/);
-  assert.match(splitsArea, /area\.append\(actionRow, toolbar, savedRecipesPanel\)/);
+  assert.match(splitsArea, /area\.append\(actionRow\);\s*if\(!compactMobileRecipe\) area\.append\(toolbar\);\s*area\.append\(savedRecipesPanel\);/);
+  assert.match(splitsArea, /mobileBulkEditSheet\.querySelector\("\.mobileBulkEditBody"\)\.appendChild\(toolbar\);/);
 });
 
 // --- Rearrange is now reachable and active on mobile --------------
@@ -110,40 +111,34 @@ test("each rearrange-mode cell keeps its drag handlers and also gets a tap/click
   assert.match(splitsArea, /td\.addEventListener\("dragstart"/);
   assert.match(splitsArea, /td\.addEventListener\("dragover"/);
   assert.match(splitsArea, /td\.addEventListener\("drop"/);
-  assert.match(splitsArea, /td\.addEventListener\("click",\(\)=>\{const current=hopperRearrangement\.tapSource;/);
+  assert.match(splitsArea, /td\.addEventListener\("click",event=>\{/);
+  assert.match(splitsArea, /activateCell\(\);/);
+  assert.match(splitsArea, /td\.addEventListener\("keydown",event=>\{/);
 });
 
 test("tapping the already-selected source cell again deselects it without attempting a move", () => {
-  const clickStart = splitsArea.indexOf('td.addEventListener("click"');
-  const clickHandler = splitsArea.slice(clickStart, splitsArea.indexOf("\n", clickStart));
-  assert.match(clickHandler, /if\(current&&current\.layer===L\.name&&current\.index===hi\)\{hopperRearrangement\.tapSource=null;td\.classList\.remove\("rearrangeSource"\);return;\}/);
+  assert.match(splitsArea, /if\(current&&current\.layer===L\.name&&current\.index===hi\)\{\s*hopperRearrangement\.tapSource=null;\s*td\.classList\.remove\("rearrangeSource"\);/);
+  assert.match(splitsArea, /td\.setAttribute\("aria-pressed","false"\);/);
 });
 
 test("tapping an empty hopper as a source is a no-op, matching drag's guard against picking up nothing", () => {
-  const clickStart = splitsArea.indexOf('td.addEventListener("click"');
-  const clickHandler = splitsArea.slice(clickStart, splitsArea.indexOf("\n", clickStart));
-  assert.match(clickHandler, /if\(!current\)\{if\(!normName\(hopper\.resinName\)&&!clampNum\(hopper\.pct\)\)return;/);
-  const dragStart = splitsArea.indexOf('td.addEventListener("dragstart"');
-  const dragHandler = splitsArea.slice(dragStart, splitsArea.indexOf("\n", dragStart));
-  assert.match(dragHandler, /if\(!normName\(hopper\.resinName\)&&!clampNum\(hopper\.pct\)\)\{event\.preventDefault\(\);return;\}/);
+  assert.match(splitsArea, /const hasAssignment=\(\)=>!!normName\(hopper\.resinName\)\|\|clampNum\(hopper\.pct\)>0;/);
+  assert.match(splitsArea, /if\(!current\)\{\s*if\(!hasAssignment\(\)\) return;/);
+  assert.match(splitsArea, /if\(!hasAssignment\(\)\)\{event\.preventDefault\(\);return;\}/);
 });
 
 test("tapping a second, different cell calls the exact same move() used by drop, with the same undo/failure handling", () => {
-  const clickStart = splitsArea.indexOf('td.addEventListener("click"');
-  const clickHandler = splitsArea.slice(clickStart, splitsArea.indexOf("\n", clickStart));
-  assert.match(clickHandler, /const result=window\.PolynHopperRearrangement\.move\(state\.layers,current,\{layer:L\.name,index:hi\}\);/);
-  assert.match(clickHandler, /hopperRearrangement\.undo\.push\(result\.before\);renderSplitsArea\(\);validateAndCompute\(\);/);
-  assert.match(clickHandler, /summary\.textContent=result\.reason==="invalid"\?"Move rejected: hopper percentages would be invalid\.":"No rearrangement made\.";/);
-
-  const dropStart = splitsArea.indexOf('td.addEventListener("drop"');
-  const dropHandler = splitsArea.slice(dropStart, splitsArea.indexOf("\n", dropStart));
-  assert.match(dropHandler, /window\.PolynHopperRearrangement\.move\(state\.layers,hopperRearrangement\.drag,\{layer:L\.name,index:hi\}\)/);
+  assert.match(splitsArea, /completeMove\(current,window\.PolynHopperRearrangement\.move\(state\.layers,current,destination\)\);/);
+  assert.match(splitsArea, /completeMove\(source,window\.PolynHopperRearrangement\.move\(state\.layers,source,destination\)\);/);
+  assert.match(splitsArea, /hopperRearrangement\.undo\.push\(result\.before\);/);
+  assert.match(splitsArea, /hopperRearrangement\.undoVisibleUntil=Date\.now\(\)\+5000;/);
 });
 
 test("a failed tap-move clears the stale source highlight instead of leaving it stuck, without a full re-render", () => {
-  const clickStart = splitsArea.indexOf('td.addEventListener("click"');
-  const clickHandler = splitsArea.slice(clickStart, splitsArea.indexOf("\n", clickStart));
-  const failureBranch = clickHandler.slice(clickHandler.indexOf("}else{"));
+  const completeStart=splitsArea.indexOf("function completeMove(source,result)");
+  const successStart=splitsArea.indexOf("hopperRearrangement.undo.push",completeStart);
+  const failureBranch=splitsArea.slice(completeStart,successStart);
+  assert.match(failureBranch,/if\(!result\.ok\)\{/);
   assert.match(failureBranch, /clearTapSourceHighlight\(\);/);
   assert.doesNotMatch(failureBranch, /renderSplitsArea\(\)/);
 });
@@ -153,15 +148,22 @@ test("clearTapSourceHighlight is scoped to the table, not the whole document", (
 });
 
 test("starting a native drag cancels any pending tap-selection first, so the two input modes can't get out of sync", () => {
-  const dragStart = splitsArea.indexOf('td.addEventListener("dragstart"');
-  const dragHandler = splitsArea.slice(dragStart, splitsArea.indexOf("\n", dragStart));
-  assert.match(dragHandler, /hopperRearrangement\.tapSource=null;clearTapSourceHighlight\(\);/);
+  assert.match(splitsArea, /td\.addEventListener\("dragstart",event=>\{[\s\S]*?hopperRearrangement\.tapSource=null;\s*clearTapSourceHighlight\(\);/);
 });
 
 test("Undo Last Move also clears any pending tap-selection", () => {
-  const undoStart = splitsArea.indexOf('undo.addEventListener("click"');
-  const undoHandler = splitsArea.slice(undoStart, splitsArea.indexOf("\n", undoStart));
+  const undoStart=splitsArea.indexOf("function undoRearrangement()");
+  const undoHandler=splitsArea.slice(undoStart,splitsArea.indexOf("\n      }",undoStart));
   assert.match(undoHandler, /hopperRearrangement\.tapSource=null;/);
+});
+
+test("mobile rearrange uses a contextual toolbar and temporary Undo toast instead of the large mode card",()=>{
+  assert.match(splitsArea,/mobileRearrangeContext\.innerHTML=/);
+  assert.match(splitsArea,/mobileRearrangeCancel/);
+  assert.match(splitsArea,/mobileRearrangeDone/);
+  assert.match(splitsArea,/if\(hopperRearrangement\?\.active&&!compactMobileRecipe\)\{/);
+  assert.match(splitsArea,/toast\.className="mobileRearrangeToast";/);
+  assert.match(styles,/\.mobileRearrangeToast\{/);
 });
 
 test("the rearrange-mode help text mentions tapping as well as dragging", () => {
@@ -207,7 +209,7 @@ test("setBulkMode's per-cell disable pass keeps rearrange-mode disabling in plac
 });
 
 test("setBulkMode runs unconditionally at the end of every render (reapplying the resolved bulkMode, not hardcoded false, so a render triggered by switching panels can seed bulk edit open) - this per-cell disable pass is exactly why the clobbering bug existed", () => {
-  const endOfRenderStart = splitsArea.indexOf("updateSplitTotals();");
+  const endOfRenderStart = splitsArea.lastIndexOf("updateSplitTotals();");
   const endOfRender = splitsArea.slice(endOfRenderStart, splitsArea.indexOf("renderSplitsSavedRecipes", endOfRenderStart));
   assert.match(endOfRender, /setBulkMode\(bulkMode\);/);
   assert.doesNotMatch(endOfRender, /setBulkMode\(false\);/);

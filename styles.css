@@ -1454,6 +1454,11 @@ details[open] > summary .chevSatellite{
 .splitsBulkSteps span{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:var(--font-small)}
 .splitsBulkSteps b{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:999px;background:var(--btn-primary-a);color:var(--title);font-size:var(--font-tiny)}
 .splitsBulkField{ margin: 0; }
+.mobileBulkFieldHeading > label:first-child{
+  display:block;
+  margin-bottom:6px;
+}
+.mobileBulkChange{display:none}
 .splitsBulkField > span:first-child{
   display: block;
   margin-bottom: 6px;
@@ -1518,6 +1523,7 @@ details[open] > summary .chevSatellite{
 .splitColumnTotal.warn{ color: var(--warn); }
 
 .splitsMobileLayerRail{ display: none; }
+.mobileRecipeMore{ display:none; }
 
 .splitsMatrixScroll{
   overflow-x:auto;
@@ -2253,7 +2259,7 @@ details[open] > summary .chevSatellite{
     color:var(--focus-border);
     font-size:0;
   }
-  .splitsMatrix.compactMobileRecipe .splitCopyBtn::after{ content:"Copy " attr(data-mobile-copy-source); font-size:9px; font-weight:800; line-height:1; }
+  .splitsMatrix.compactMobileRecipe .splitCopyBtn::after{ content:"Match " attr(data-mobile-copy-source); font-size:9px; font-weight:800; line-height:1; }
   .splitsMatrix.compactMobileRecipe .splitColumnTotal{ display:none; }
   .splitsMatrix.compactMobileRecipe td.splitMatrixCell{
     width:20%;
@@ -2262,23 +2268,21 @@ details[open] > summary .chevSatellite{
     border-color:var(--row-border-2);
   }
   .splitsMatrix.compactMobileRecipe .splitMatrixCell{
-    --compact-recipe-cell-bg:var(--row-bg-2);
-    background:var(--compact-recipe-cell-bg);
+    --compact-recipe-row-bg:var(--row-bg-2);
+    position:relative;
+    overflow:hidden;
+    background:var(--compact-recipe-row-bg);
   }
-  /* A small alternating tint gives each layer a stable vertical lane without
-     reintroducing the old per-section color treatment. */
-  .splitsMatrix.compactMobileRecipe tbody tr > .splitMatrixCell:nth-child(2),
-  .splitsMatrix.compactMobileRecipe tbody tr > .splitMatrixCell:nth-child(4),
-  .splitsMatrix.compactMobileRecipe tbody tr > .splitMatrixCell:nth-child(6){
-    --compact-recipe-cell-bg:color-mix(in srgb,var(--row-bg-2) 93%,var(--focus-border));
-  }
-  .splitsMatrix.compactMobileRecipe tbody tr > .splitMatrixCell:nth-child(3),
-  .splitsMatrix.compactMobileRecipe tbody tr > .splitMatrixCell:nth-child(5){
-    --compact-recipe-cell-bg:color-mix(in srgb,var(--row-bg-2) 98%,var(--panel2));
+  .splitsMatrix.compactMobileRecipe tbody tr:nth-child(even) > .splitMatrixCell{
+    --compact-recipe-row-bg:color-mix(in srgb,var(--row-bg-2) 76%,var(--panel2));
   }
   .splitsMatrix.compactMobileRecipe .splitMatrixCell.tracked:not(.selected){
-    background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--focus-border) 16%,transparent) 0 1px,transparent 1px 7px),var(--compact-recipe-cell-bg);
-    box-shadow:none;
+    background:color-mix(in srgb,#72b9e8 18%,var(--compact-recipe-row-bg));
+    border-color:color-mix(in srgb,#4d9bd0 72%,var(--row-border-2));
+    box-shadow:inset 0 0 0 2px #4d9bd0;
+  }
+  .splitsMatrix.compactMobileRecipe tbody tr:hover > .splitMatrixCell:not(.selected){
+    background:var(--compact-recipe-row-bg);
   }
   .splitsMatrix.compactMobileRecipe .splitCellHeader{
     display:flex;
@@ -2296,7 +2300,7 @@ details[open] > summary .chevSatellite{
     font-size:10px;
     line-height:1;
   }
-  .splitsMatrix.compactMobileRecipe .splitCellHopperName.smart{ color:var(--ok); }
+  .splitsMatrix.compactMobileRecipe .splitCellHopperName.smart{ color:color-mix(in srgb,#2f9e62 78%,var(--text)); }
   .splitsMatrix.compactMobileRecipe .splitClearButton{ display:none; }
   .splitsMatrix.compactMobileRecipe .splitTrackControl{ margin-left:auto; }
   .splitsMatrix.compactMobileRecipe .splitTrackButton{
@@ -2308,28 +2312,402 @@ details[open] > summary .chevSatellite{
     border-radius:0;
     background:transparent;
     color:var(--muted);
+    opacity:.58;
     box-shadow:none;
   }
   .splitsMatrix.compactMobileRecipe .splitTrackButton svg{ width:15px; height:15px; stroke-width:1.8; }
   .splitsMatrix.compactMobileRecipe .splitTrackButton.active{
-    background:transparent;
-    color:var(--focus-border);
-    box-shadow:none;
-    animation:compactRecipeTrackPulse 1.8s ease-in-out infinite;
-  }
-  .splitsMatrix.compactMobileRecipe .splitTrackButton.active svg path{
-    transform-box:fill-box;
-    transform-origin:center;
-    animation:compactRecipeClockHands 2.2s linear infinite;
+    border-radius:50%;
+    background:#397fae;
+    color:#f6fbff;
+    opacity:1;
+    box-shadow:0 0 0 1px color-mix(in srgb,#b9e2ff 70%,transparent);
+    animation:compactRecipeTrackPulse 2.2s ease-in-out infinite;
   }
   @keyframes compactRecipeTrackPulse{
-    0%,100%{ transform:scale(1); opacity:.75; }
-    50%{ transform:scale(1.18); opacity:1; }
+    0%,100%{ transform:scale(1); box-shadow:0 0 0 1px color-mix(in srgb,#b9e2ff 70%,transparent); }
+    50%{ transform:scale(1.06); box-shadow:0 0 0 3px color-mix(in srgb,#72b9e8 24%,transparent); }
   }
-  @keyframes compactRecipeClockHands{ to{ transform:rotate(360deg); } }
   @media (prefers-reduced-motion:reduce){
-    .splitsMatrix.compactMobileRecipe .splitTrackButton.active,
-    .splitsMatrix.compactMobileRecipe .splitTrackButton.active svg path{ animation:none; }
+    .splitsMatrix.compactMobileRecipe .splitTrackButton.active{ animation:none; }
+  }
+
+  /* Bottom action tray: one stable mobile pattern for the major recipe
+     actions, rather than a desktop toolbar stranded above the matrix. */
+  .mobileRecipeActionTray{
+    position:sticky;
+    bottom:max(6px,env(safe-area-inset-bottom));
+    z-index:12;
+    margin-top:10px;
+    padding-top:10px;
+    border-top:1px solid var(--row-border-2);
+    background:var(--panel2);
+  }
+  .mobileRecipeActionTray .splitsBulkModeBar{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:6px;
+    border:0;
+    border-radius:0;
+    background:transparent;
+  }
+  .mobileRecipeActionTray .splitsBulkModeBar[hidden]{display:none!important}
+  .mobileRecipeActionTray .splitsBulkModeBar button.secondary{
+    height:42px;
+    min-height:42px;
+    padding:7px 5px;
+    border:1px solid var(--row-border-2);
+    border-radius:10px;
+    background:var(--row-bg-2);
+    color:var(--muted);
+    font-size:10px;
+    font-weight:800;
+    line-height:1.1;
+    letter-spacing:.01em;
+    box-shadow:inset 0 1px 0 color-mix(in srgb,#fff 10%,transparent);
+    white-space:nowrap;
+  }
+  .mobileRecipeActionTray .splitsBulkModeBar button.secondary:hover,
+  .mobileRecipeActionTray .splitsBulkModeBar button.secondary:focus-visible{
+    border-color:var(--focus-border);
+    background:var(--focus-ring);
+    color:var(--title);
+  }
+  .mobileRecipeActionTray .splitsBulkModeBar button.secondary[aria-expanded="true"]{
+    border-color:var(--focus-border);
+    color:var(--title);
+    box-shadow:inset 0 2px 0 var(--focus-border);
+  }
+  .mobileRecipeActionTray .splitsBulkModeBar > .splitsInfo{ display:none!important; }
+  .mobileBulkContext{
+    display:grid;
+    grid-template-columns:auto minmax(0,1fr) auto;
+    align-items:center;
+    gap:8px;
+  }
+  .mobileBulkContext[hidden]{display:none}
+  .mobileBulkContext button{
+    min-height:42px;
+    padding:7px 10px;
+    border:1px solid var(--row-border-2);
+    border-radius:10px;
+    background:var(--row-bg-2);
+    color:var(--muted);
+    font-size:10px;
+    font-weight:850;
+    box-shadow:none;
+  }
+  .mobileBulkContext .mobileBulkEditSelected{
+    border-color:var(--focus-border);
+    background:var(--btn-primary-a);
+    color:var(--title);
+  }
+  .mobileBulkContext .mobileBulkEditSelected:disabled{border-color:var(--row-border-2);background:var(--row-bg-2);color:var(--muted);opacity:.48}
+  .mobileBulkCount{min-width:0;color:var(--title);font-size:11px;text-align:center}
+  .mobileRearrangeContext{
+    display:grid;
+    grid-template-columns:auto minmax(0,1fr) auto;
+    align-items:center;
+    gap:8px;
+  }
+  .mobileRearrangeContext[hidden]{display:none}
+  .mobileRearrangeContext button{
+    min-height:42px;
+    padding:7px 12px;
+    border:1px solid var(--row-border-2);
+    border-radius:10px;
+    background:var(--row-bg-2);
+    color:var(--muted);
+    font-size:10px;
+    font-weight:850;
+    box-shadow:none;
+  }
+  .mobileRearrangeContext .mobileRearrangeDone{border-color:var(--focus-border);background:var(--btn-primary-a);color:var(--title)}
+  .mobileRearrangePrompt{min-width:0;color:var(--title);font-size:10px;line-height:1.2;text-align:center}
+  .mobileRearrangeToast{
+    position:fixed;
+    left:50%;
+    bottom:calc(62px + env(safe-area-inset-bottom));
+    z-index:55;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:14px;
+    width:min(calc(100vw - 28px),360px);
+    min-height:44px;
+    padding:7px 8px 7px 12px;
+    transform:translateX(-50%);
+    border:1px solid var(--focus-border);
+    border-radius:11px;
+    background:var(--panelOpen);
+    color:var(--title);
+    font-size:10px;
+    font-weight:800;
+    box-shadow:var(--shadow2);
+    animation:mobileRearrangeToastIn .18s ease-out both;
+  }
+  .mobileRearrangeToast button{min-height:32px;padding:5px 11px;border-radius:8px;font-size:10px;font-weight:850}
+  @keyframes mobileRearrangeToastIn{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}
+  .mobileRecipeMore{display:block;position:relative;min-width:0}
+  .mobileRecipeMore > summary{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:4px;
+    height:42px;
+    min-height:42px;
+    padding:7px 4px;
+    border:1px solid var(--row-border-2);
+    border-radius:10px;
+    background:var(--row-bg-2);
+    color:var(--muted);
+    font-size:10px;
+    font-weight:800;
+    line-height:1.1;
+    cursor:pointer;
+    list-style:none;
+  }
+  .mobileRecipeMore > summary::-webkit-details-marker{display:none}
+  .mobileRecipeMore > summary svg{width:15px;height:15px;fill:currentColor}
+  .mobileRecipeMore[open] > summary,.mobileRecipeMore > summary:focus-visible{border-color:var(--focus-border);background:var(--focus-ring);color:var(--title)}
+  .mobileRecipeMoreMenu{
+    position:absolute;
+    right:0;
+    bottom:calc(100% + 6px);
+    z-index:30;
+    display:grid;
+    gap:3px;
+    width:max-content;
+    min-width:166px;
+    padding:6px;
+    border:1px solid var(--border2);
+    border-radius:10px;
+    background:var(--panelOpen);
+    box-shadow:var(--shadow2);
+  }
+  .mobileRecipeMoreMenu button{min-height:34px;padding:6px 9px;border:0;border-radius:7px;background:transparent;color:var(--text);font-size:11px;text-align:left;box-shadow:none}
+  .mobileRecipeMoreMenu button:hover,.mobileRecipeMoreMenu button:focus-visible{background:var(--focus-ring)}
+
+  .srOnly{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+  .mobileSavedRecipesSheet{
+    position:fixed;
+    inset:auto 0 0;
+    width:min(100%,560px);
+    max-width:none;
+    max-height:min(82dvh,720px);
+    margin:auto auto 0;
+    padding:0 14px calc(14px + env(safe-area-inset-bottom));
+    overflow:hidden;
+    border:1px solid var(--border2);
+    border-bottom:0;
+    border-radius:20px 20px 0 0;
+    background:var(--panelOpen);
+    color:var(--text);
+    box-shadow:0 -14px 36px color-mix(in srgb,#000 34%,transparent);
+  }
+  .mobileSavedRecipesSheet[open]{display:grid;grid-template-rows:auto auto auto minmax(0,1fr)}
+  .mobileSavedRecipesSheet::backdrop{background:color-mix(in srgb,#000 58%,transparent);backdrop-filter:blur(2px)}
+  .mobileSavedRecipesGrabber{width:42px;height:4px;margin:8px auto 5px;border-radius:999px;background:color-mix(in srgb,var(--muted) 45%,transparent)}
+  .mobileSavedRecipesHeader{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:5px 0 10px}
+  .mobileSavedRecipesHeader strong{display:block;color:var(--title);font-size:16px;font-weight:850}
+  .mobileSavedRecipesHeader small{display:block;margin-top:2px;color:var(--muted);font-size:10px}
+  .mobileSavedRecipesClose{display:grid;place-items:center;width:36px;height:36px;min-height:36px;padding:0;border:1px solid var(--row-border-2);border-radius:10px;background:var(--row-bg-2);color:var(--muted);font-size:22px;line-height:1;box-shadow:none}
+  .mobileSavedRecipesTools{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px;padding:0 0 10px}
+  .mobileSavedRecipesTools label{margin:0}
+  .mobileSavedRecipesTools input{width:100%;min-width:0;height:38px;padding:6px 10px;border:1px solid var(--row-border-2);border-radius:10px;background:var(--field-bg);font-size:12px}
+  .mobileSavedRecipesTools button{min-height:38px;padding:6px 11px;border-radius:10px;font-size:11px;font-weight:800}
+  .mobileSavedRecipesStatus{padding:7px 8px;margin-bottom:6px;border-radius:8px;background:var(--focus-ring);color:var(--muted);font-size:10px}
+  .mobileSavedRecipesList{display:grid;align-content:start;gap:6px;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:0 1px 4px}
+  .mobileSavedRecipesEmpty{padding:28px 12px;color:var(--muted);font-size:12px;text-align:center}
+  .mobileSavedRecipeRow{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:5px;min-height:54px;padding:5px;border:1px solid var(--row-border-2);border-radius:10px;background:var(--row-bg-2);transition:border-color .14s ease,background .14s ease,opacity .14s ease}
+  .mobileSavedRecipeRow.selected{border-color:var(--focus-border);background:var(--focus-ring);box-shadow:inset 2px 0 0 var(--focus-border)}
+  .mobileSavedRecipeRow.loading{opacity:.58;pointer-events:none}
+  .mobileSavedRecipeChoose{display:grid;gap:3px;min-width:0;min-height:40px;padding:5px 6px;border:0;border-radius:7px;background:transparent;color:var(--text);text-align:left;box-shadow:none}
+  .mobileSavedRecipeName{overflow:hidden;font-size:11px;font-weight:800;text-overflow:ellipsis;white-space:nowrap}
+  .mobileSavedRecipeFavorite{color:var(--warn)}
+  .mobileSavedRecipeMeta{overflow:hidden;color:var(--muted);font-size:9px;text-overflow:ellipsis;white-space:nowrap}
+  .mobileSavedRecipeLoad{min-height:34px;padding:5px 9px;border-radius:8px;font-size:10px;font-weight:800}
+  .mobileSavedRecipeOverflow{position:relative}
+  .mobileSavedRecipeOverflow > summary{display:grid;place-items:center;width:34px;height:34px;padding:0;border:1px solid var(--row-border-2);border-radius:8px;background:transparent;color:var(--muted);font-size:18px;line-height:1;cursor:pointer;list-style:none}
+  .mobileSavedRecipeOverflow > summary::-webkit-details-marker{display:none}
+  .mobileSavedRecipeOverflow[open] > summary{border-color:var(--focus-border);background:var(--focus-ring);color:var(--title)}
+  .mobileSavedRecipeMenu{position:absolute;right:0;top:calc(100% + 4px);z-index:40;display:grid;gap:3px;min-width:132px;padding:5px;border:1px solid var(--border2);border-radius:9px;background:var(--panelOpen);box-shadow:var(--shadow2)}
+  .mobileSavedRecipeMenu button{min-height:32px;padding:5px 8px;border:0;border-radius:6px;background:transparent;color:var(--text);font-size:10px;text-align:left;box-shadow:none}
+  .mobileSavedRecipeMenu button:hover,.mobileSavedRecipeMenu button:focus-visible{background:var(--focus-ring)}
+  .mobileSavedRecipeMenu button.danger{color:var(--bad)}
+  .mobileBulkEditSheet{max-height:min(76dvh,620px)}
+  .mobileBulkEditSheet[open]{display:grid;grid-template-rows:auto auto minmax(0,1fr)}
+  .mobileBulkEditBody{min-height:0;overflow-y:auto;padding-bottom:2px}
+  .mobileBulkEditSheet .splitsBulkBar{
+    position:static;
+    display:grid;
+    grid-template-columns:1fr;
+    gap:12px;
+    padding:2px 0 0;
+    border:0;
+    border-radius:0;
+    background:transparent;
+  }
+  .mobileBulkEditSheet .splitsBulkSteps,
+  .mobileBulkEditSheet .splitsBulkActions,
+  .mobileBulkEditSheet .splitsBulkNote{display:none}
+  .mobileBulkEditSheet .splitsBulkField{
+    display:grid;
+    gap:7px;
+    padding:11px;
+    border:1px solid var(--row-border-2);
+    border-radius:11px;
+    background:var(--row-bg-2);
+  }
+  .mobileBulkFieldHeading{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .mobileBulkFieldHeading > label:first-child{margin:0;color:var(--title);font-size:12px;font-weight:850}
+  .mobileBulkChange{display:inline-flex;align-items:center;gap:5px;margin:0;color:var(--muted);font-size:9px;font-weight:800;cursor:pointer}
+  .mobileBulkChange input{
+    appearance:none;
+    width:16px;
+    height:16px;
+    min-height:16px;
+    margin:0;
+    border:1px solid var(--row-border-2);
+    border-radius:5px;
+    background:var(--field-bg);
+  }
+  .mobileBulkChange input:checked{border-color:var(--focus-border);background:var(--focus-border)}
+  .mobileBulkChange input:checked::before{content:"✓";display:grid;place-items:center;height:100%;color:var(--panel);font-size:11px;font-weight:950;line-height:1}
+  .mobileBulkEditSheet .splitsBulkField > input,
+  .mobileBulkEditSheet .splitsBulkPctInput input{height:40px;min-height:40px;border-radius:9px;font-size:13px}
+  .mobileBulkEditSheet .splitsBulkField input:disabled{opacity:.46;cursor:not-allowed}
+  .mobileBulkEditSheet .splitsBulkApply{gap:8px}
+  .mobileBulkEditSheet .splitsBulkApply button{min-height:42px;border-radius:10px;font-size:11px;font-weight:850}
+  .mobileBulkEditSheet .splitsSelectionStatus{font-size:10px;text-align:center}
+
+  .bulk-editing .splitsMatrix.compactMobileRecipe .splitMatrixCell{cursor:pointer}
+  .bulk-editing .splitsMatrix.compactMobileRecipe .splitTrackControl{visibility:hidden}
+  .bulk-editing .splitsMatrix.compactMobileRecipe .splitCellTop{display:block}
+  .bulk-editing .splitsMatrix.compactMobileRecipe .splitCellSelector{
+    appearance:none;
+    position:absolute;
+    z-index:3;
+    top:4px;
+    right:4px;
+    display:grid;
+    place-items:center;
+    width:17px;
+    height:17px;
+    min-height:17px;
+    margin:0;
+    border:1px solid color-mix(in srgb,var(--muted) 60%,transparent);
+    border-radius:5px;
+    background:color-mix(in srgb,var(--panel2) 88%,transparent);
+    cursor:pointer;
+  }
+  .bulk-editing .splitsMatrix.compactMobileRecipe .splitCellSelector:checked{border-color:var(--focus-border);background:var(--focus-border)}
+  .bulk-editing .splitsMatrix.compactMobileRecipe .splitCellSelector:checked::before{content:"✓";color:var(--panel);font-size:11px;font-weight:950;line-height:1}
+  .bulk-editing .splitsMatrix.compactMobileRecipe .splitMatrixCell.selected{
+    background:var(--compact-recipe-row-bg);
+    border-color:color-mix(in srgb,var(--focus-border) 65%,var(--row-border-2));
+    box-shadow:inset 0 0 0 1px var(--focus-border);
+  }
+  .bulk-editing .splitsMatrix.compactMobileRecipe .splitMatrixCell :is(input,button):disabled{pointer-events:none}
+  .splitsMatrix.compactMobileRecipe .rearrangeTarget{cursor:pointer;outline:0;user-select:none}
+  .splitsMatrix.compactMobileRecipe .rearrangeTarget .splitTrackControl{visibility:hidden}
+  .splitsMatrix.compactMobileRecipe .rearrangeTarget:focus-visible{z-index:2;box-shadow:inset 0 0 0 2px var(--focus-border)}
+  .splitsMatrix.compactMobileRecipe .splitMatrixCell.rearrangeTarget.rearrangeSource{
+    z-index:2;
+    opacity:1;
+    outline:0;
+    border-color:var(--focus-border);
+    background:color-mix(in srgb,var(--focus-ring) 38%,var(--compact-recipe-row-bg));
+    box-shadow:inset 0 0 0 2px var(--focus-border);
+  }
+  .splitsMatrix.compactMobileRecipe .splitMatrixCell.rearrangeTarget.rearrangeSource::before{
+    content:"↗";
+    position:absolute;
+    top:3px;
+    right:4px;
+    display:grid;
+    place-items:center;
+    width:17px;
+    height:17px;
+    border-radius:5px;
+    background:var(--focus-border);
+    color:var(--panel);
+    font-size:11px;
+    font-weight:950;
+    line-height:1;
+  }
+  .splitsMatrix.compactMobileRecipe .splitMatrixCell.rearrangeTarget.rearrangeOver{outline:0;border-color:var(--ok);box-shadow:inset 0 0 0 2px var(--ok)}
+  @media (prefers-reduced-motion:reduce){.mobileRearrangeToast{animation:none}}
+  .splitsMobileLayerLayout:has(.compactMobileRecipe) > .splitsBulkBar,
+  .splitsMobileLayerLayout:has(.compactMobileRecipe) > .splitsSavedRecipesPanel,
+  .splitsMobileLayerLayout:has(.compactMobileRecipe) > .rearrangeModeBar{
+    position:static;
+    margin:8px 0 0;
+    padding:10px 0 2px;
+    border-width:1px 0 0;
+    border-color:var(--row-border-2);
+    border-radius:0;
+    background:transparent;
+    box-shadow:none;
+  }
+  .splitsMobileLayerLayout:has(.compactMobileRecipe) > .splitsSavedRecipesPanel .workspaceConfigurationSectionTitle{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    align-items:center;
+    gap:8px;
+  }
+  .splitsMobileLayerLayout:has(.compactMobileRecipe) > .splitsSavedRecipesPanel .workspaceConfigurationSectionTitle strong{
+    color:var(--title);
+    font-size:13px;
+    line-height:1.2;
+  }
+  .splitsMobileLayerLayout:has(.compactMobileRecipe) > .splitsSavedRecipesPanel .workspaceConfigurationSectionTitle small{
+    max-width:180px;
+    margin-top:2px;
+    color:var(--muted);
+    font-size:9px;
+    line-height:1.3;
+  }
+  .splitsMobileLayerLayout:has(.compactMobileRecipe) > .splitsSavedRecipesPanel .splitsSavedRecipesActions{
+    display:grid;
+    grid-template-columns:repeat(4,32px);
+    gap:5px;
+  }
+  .splitsMobileLayerLayout:has(.compactMobileRecipe) > .splitsSavedRecipesPanel :is(#splitsSaveRecipe,#splitsLoadRecipe,#splitsUpdateRecipe),
+  .splitsMobileLayerLayout:has(.compactMobileRecipe) > .splitsSavedRecipesPanel #splitsRecipeOverflow > summary{
+    width:32px;
+    height:32px;
+    border:1px solid var(--row-border-2);
+    border-radius:8px;
+    background:var(--row-bg-2);
+    color:var(--muted);
+    box-shadow:none;
+  }
+  .splitsMobileLayerLayout:has(.compactMobileRecipe) > .splitsSavedRecipesPanel :is(#splitsSaveRecipe,#splitsLoadRecipe,#splitsUpdateRecipe):not(:disabled):hover,
+  .splitsMobileLayerLayout:has(.compactMobileRecipe) > .splitsSavedRecipesPanel #splitsRecipeOverflow > summary:hover{
+    border-color:var(--focus-border);
+    background:var(--focus-ring);
+    color:var(--title);
+  }
+  .splitsMobileLayerLayout:has(.compactMobileRecipe) > .splitsSavedRecipesPanel .workspaceConfigurationList{
+    gap:5px;
+    margin-top:9px;
+    padding-right:0;
+  }
+  .splitsMobileLayerLayout:has(.compactMobileRecipe) > .splitsSavedRecipesPanel .workspaceConfigurationRow{
+    min-height:0;
+    padding:8px;
+    border:1px solid color-mix(in srgb,var(--row-border-2) 72%,transparent);
+    border-radius:8px;
+    background:color-mix(in srgb,var(--row-bg-2) 82%,var(--panel2));
+  }
+  .splitsMobileLayerLayout:has(.compactMobileRecipe) > .splitsSavedRecipesPanel .workspaceConfigurationRow strong{
+    font-size:11px;
+  }
+  .splitsMobileLayerLayout:has(.compactMobileRecipe) > .splitsSavedRecipesPanel .workspaceConfigurationRow small{
+    font-size:9px;
+    line-height:1.3;
+  }
   }
   .splitsMatrix.compactMobileRecipe .splitCellEditor{ display:grid; grid-template-columns:1fr; gap:3px; }
   .splitsMatrix.compactMobileRecipe .splitCellTop{ display:block; min-width:0; }
