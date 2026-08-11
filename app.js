@@ -3576,12 +3576,9 @@
       const sumEl = $("resinCalcSummary");
       if (sumEl){
         sumEl.innerHTML = `
-          <div class="status ok">
-            <div class="statusTitle">Resin totals</div>
-            <div class="muted">
-              Production: <span class="mono">${fmtLb(prod)}</span> lb • Scrap: <span class="mono">${fmtLb(scrap)}</span> lb •
-              Total: <span class="mono">${fmtLb(total)}</span> lb
-            </div>
+          <div class="productionSummaryStatus">
+            <strong>Resin totals</strong>
+            <span>Production <b class="mono">${fmtLb(prod)}</b> lb <i>·</i> Scrap <b class="mono">${fmtLb(scrap)}</b> lb <i>·</i> Total <b class="mono">${fmtLb(total)}</b> lb</span>
           </div>
         `;
       }
@@ -3594,17 +3591,17 @@
         return;
       }
       if (totals.size === 0){
-        out.innerHTML = `<div class="muted">Add resin names + splits to see totals here.</div>`;
+        out.innerHTML = `<div class="muted">Add resin names and recipe percentages to see totals here.</div>`;
         return;
       }
       const rows = Array.from(totals.values()).sort((a,b)=>b.lbs - a.lbs);
+      out.innerHTML = `<div class="productionSummaryMaterialsIntro"><strong>By material</strong><span>Calculated from the current recipe percentages.</span></div>`;
       rows.forEach(r=>{
         const row = document.createElement("div");
-        row.className = "calcRow";
+        row.className = "calcRow productionSummaryMaterialRow";
         row.innerHTML = `
           <div class="calcLeft">
             <div class="calcName mono" data-resin-name></div>
-            <div class="calcMeta">Allocated from splits</div>
           </div>
           <div class="mono calcValue">${fmtLb(r.lbs)} lb</div>
         `;
@@ -4047,8 +4044,6 @@
         $("appFooterMain")?.removeAttribute("aria-current");
         if (id === "toolsBlock") document.body.dataset.mobileTools = "home";
         if (id === "helpBlock") document.body.dataset.mobileHelp = "home";
-        target.querySelector(":scope > summary")?.setAttribute("aria-label", "Main menu");
-        target.querySelector(":scope > summary")?.setAttribute("title", "Main menu");
         if (!target.open) target.open = true;
       }
       if (persist) saveWorkspacePreference(id);
@@ -5225,6 +5220,8 @@
     });
     $("quickScanDosingScreenBtn")?.addEventListener("click",()=>{
       setMobileQuickActionsOpen(false);
+      setWorkspacePanel("toolsBlock", { reveal: true });
+      selectToolPanel("recipeScanTool");
       window.PolynRecipeScanUI?.startScan("dosing_screen");
     });
     $("quickProductionSummaryBtn")?.addEventListener("click",()=>{
@@ -5270,16 +5267,23 @@
         else if (!event.shiftKey && document.activeElement === last){ event.preventDefault(); first.focus(); }
       }
     });
+    const mobileHelpHeaderLabel = $("mobileHelpHeaderLabel");
+    let mobileHelpReturnTile = null;
     document.querySelectorAll(".mobileHelpTile").forEach(tile=>{
       tile.addEventListener("click",()=>{
         const topic = document.getElementById(tile.dataset.mobileHelpTarget);
         if (!topic) return;
         document.querySelectorAll("#helpBlock .helpTopic").forEach(item=>item.classList.toggle("mobile-help-active", item === topic));
         topic.open = true;
+        if (mobileHelpHeaderLabel) mobileHelpHeaderLabel.textContent = tile.querySelector("span")?.textContent || "Help";
+        mobileHelpReturnTile = tile;
         document.body.dataset.mobileHelp = "panel";
       });
     });
-    $("mobileHelpBack")?.addEventListener("click",()=>{ document.body.dataset.mobileHelp = "home"; });
+    $("mobileHelpBack")?.addEventListener("click",()=>{
+      document.body.dataset.mobileHelp = "home";
+      requestAnimationFrame(()=>mobileHelpReturnTile?.focus());
+    });
     toolTabs.forEach((tab, index)=>{
       tab.addEventListener("click", ()=>{
         selectToolPanel(tab.dataset.toolTarget);
@@ -5300,14 +5304,12 @@
     document.querySelectorAll(".workspaceNavButton").forEach(button=>{
       button.addEventListener("click",()=>setWorkspacePanel(button.dataset.workspaceTarget, { reveal: true }));
     });
-    $("mobileWorkspaceHome")?.addEventListener("click", showMobileWorkspaceHome);
     document.querySelectorAll(".workspaceContent > .workspacePanel > summary").forEach(summary=>{
       summary.addEventListener("click",event=>{
         const timelineLockedOpen = state.mobileTimelineOnly && summary.closest("#resultsBlock") && window.matchMedia("(max-width: 900px)").matches;
         const mobilePanel = summary.closest(".workspacePanel");
         if (mobilePanel && window.matchMedia("(max-width: 900px)").matches && document.body.dataset.mobileWorkspace === "panel"){
           event.preventDefault();
-          showMobileWorkspaceHome();
           return;
         }
         if (window.matchMedia("(min-width: 901px)").matches || timelineLockedOpen) event.preventDefault();

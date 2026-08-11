@@ -9,7 +9,7 @@ const styles = fs.readFileSync("styles.css", "utf8");
 
 test("Scan Recipe is a fifth tab in the existing Tools tablist, using the same toolsIndexButton pattern as every other tool", () => {
   assert.match(html, /<button id="recipeScanToolTab" class="toolsIndexButton" type="button" role="tab" aria-selected="false" aria-controls="recipeScanTool" data-tool-target="recipeScanTool" tabindex="-1">Scan Recipe<\/button>/);
-  // It must sit after Resin Lookup, inside the same <nav role="tablist">, so
+  // It must sit after Resin Reference, inside the same <nav role="tablist">, so
   // the existing generic tab-switching JS (which queries .toolsIndexButton /
   // .toolWorkspacePanel dynamically) picks it up with no JS changes needed.
   const navStart = html.indexOf('<nav class="toolsIndex"');

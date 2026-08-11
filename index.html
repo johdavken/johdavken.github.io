@@ -281,9 +281,6 @@
 
   <div class="workspaceContent">
   <div class="workspaceStatusBar" aria-label="Current production status">
-    <button id="mobileWorkspaceHome" class="mobileWorkspaceHome" type="button" aria-label="Back to sections">
-      <span aria-hidden="true">←</span> Sections
-    </button>
     <div class="workspaceStatusItem">
       <span>Output</span>
       <strong id="workspaceOutputStatus" class="mono">Not set</strong>
@@ -338,8 +335,9 @@
     <summary>
       <div class="sumLeft">
         <div class="chev"><span class="chevRing"></span><span class="chevSatellite"></span><span class="chevCore"></span></div>
+        <svg class="mobileSectionHeaderIcon" viewBox="0 0 32 32" aria-hidden="true"><path d="M5 9h22M5 23h22M10 6v6M22 20v6"/><circle cx="10" cy="9" r="3"/><circle cx="22" cy="23" r="3"/></svg>
         <div class="summaryText">
-          <div class="layerTitle">Setup</div>
+          <div class="layerTitle" role="heading" aria-level="1">Line Setup</div>
           <div class="layerMeta">Current changeover and line configuration</div>
         </div>
       </div>
@@ -486,8 +484,9 @@
     <summary>
       <div class="sumLeft">
         <div class="chev"><span class="chevRing"></span><span class="chevSatellite"></span><span class="chevCore"></span></div>
+        <svg class="mobileSectionHeaderIcon" viewBox="0 0 32 32" aria-hidden="true"><path d="m16 4 11 5.5L16 15 5 9.5 16 4Z"/><path d="m5 15 11 5.5L27 15M5 20.5 16 26l11-5.5"/></svg>
         <div class="summaryText">
-          <div class="layerTitle">Recipe</div>
+          <div class="layerTitle" role="heading" aria-level="1">Recipe</div>
           <div class="layerMeta">Set recipe percentages and choose which hoppers appear in the timeline</div>
         </div>
       </div>
@@ -504,8 +503,9 @@
     <summary>
       <div class="sumLeft">
         <div class="chev"><span class="chevRing"></span><span class="chevSatellite"></span><span class="chevCore"></span></div>
+        <svg class="mobileSectionHeaderIcon" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="11"/><path d="M16 9v7l5 3M5 16h3M24 16h3"/></svg>
         <div class="summaryText">
-          <div class="layerTitle">Timeline</div>
+          <div class="layerTitle" role="heading" aria-level="1">Timeline</div>
           <div class="layerMeta">Only tracked hoppers • Sorted by upcoming time</div>
         </div>
       </div>
@@ -552,8 +552,9 @@
     <summary>
       <div class="sumLeft">
         <div class="chev"><span class="chevRing"></span><span class="chevSatellite"></span><span class="chevCore"></span></div>
+        <svg class="mobileSectionHeaderIcon" viewBox="0 0 32 32" aria-hidden="true"><circle cx="8" cy="16" r="3"/><circle cx="24" cy="9" r="3"/><circle cx="24" cy="23" r="3"/><path d="m10.7 14.7 10.6-4.4M10.7 17.3l10.6 4.4"/></svg>
         <div class="summaryText">
-          <div class="layerTitle">RT Sync</div>
+          <div class="layerTitle" role="heading" aria-level="1">RT Sync</div>
           <div class="layerMeta">Optional shared line data across devices</div>
         </div>
       </div>
@@ -638,8 +639,9 @@
     <summary>
       <div class="sumLeft">
         <div class="chev"><span class="chevRing"></span><span class="chevSatellite"></span><span class="chevCore"></span></div>
+        <svg class="mobileSectionHeaderIcon" viewBox="0 0 32 32" aria-hidden="true"><path d="m19 6 7 7-4 4-4-1-8 8-4-4 8-8-1-4 4-4 2 4Z"/><path d="m7 25 2 2"/></svg>
         <div class="summaryText">
-          <div class="layerTitle">Tools</div>
+          <div class="layerTitle" role="heading" aria-level="1">Tools</div>
           <div class="layerMeta">Production utilities</div>
         </div>
       </div>
@@ -650,7 +652,7 @@
         <button class="mobileToolTile" type="button" data-mobile-tool-target="productionSummaryTool"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 25V15M16 25V7M26 25V11"/><path d="M3 25h26"/></svg><span>Production Summary</span><small>Material totals</small></button>
         <button class="mobileToolTile" type="button" data-mobile-tool-target="shortFootageTool"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 24 12 17l5 3 10-12"/><path d="M21 8h6v6"/></svg><span>Short Footage</span><small>Footage calculator</small></button>
         <button class="mobileToolTile" type="button" data-mobile-tool-target="hopperWeightTool"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M9 6h14l3 20H6L9 6Z"/><path d="M8 14h16M11 10h10"/></svg><span>Hopper Weight</span><small>Capacity estimate</small></button>
-        <button class="mobileToolTile" type="button" data-mobile-tool-target="resinLookupTool"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="14" cy="14" r="8"/><path d="m20 20 7 7M11 14h6M14 11v6"/></svg><span>Resin Lookup</span><small>Material reference</small></button>
+        <button class="mobileToolTile" type="button" data-mobile-tool-target="resinLookupTool"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="14" cy="14" r="8"/><path d="m20 20 7 7M11 14h6M14 11v6"/></svg><span>Resin Reference</span><small>Codes, density and material information</small></button>
         <button class="mobileToolTile" type="button" data-mobile-tool-target="recipeScanTool"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 10V6h4M22 6h4v4M26 22v4h-4M10 26H6v-4"/><path d="M10 16h12M10 12h8M10 20h9"/></svg><span>Scan Recipe</span><small>Import from photo</small></button>
       </div>
       <div class="toolsWorkspace">
@@ -661,14 +663,14 @@
           <button id="productionSummaryToolTab" class="toolsIndexButton active" type="button" role="tab" aria-selected="true" aria-controls="productionSummaryTool" data-tool-target="productionSummaryTool">Production Summary</button>
           <button id="shortFootageToolTab" class="toolsIndexButton" type="button" role="tab" aria-selected="false" aria-controls="shortFootageTool" data-tool-target="shortFootageTool" tabindex="-1">Short Footage</button>
           <button id="hopperWeightToolTab" class="toolsIndexButton" type="button" role="tab" aria-selected="false" aria-controls="hopperWeightTool" data-tool-target="hopperWeightTool" tabindex="-1">Hopper Weight</button>
-          <button id="resinLookupToolTab" class="toolsIndexButton" type="button" role="tab" aria-selected="false" aria-controls="resinLookupTool" data-tool-target="resinLookupTool" tabindex="-1">Resin Lookup</button>
+          <button id="resinLookupToolTab" class="toolsIndexButton" type="button" role="tab" aria-selected="false" aria-controls="resinLookupTool" data-tool-target="resinLookupTool" tabindex="-1">Resin Reference</button>
           <button id="recipeScanToolTab" class="toolsIndexButton" type="button" role="tab" aria-selected="false" aria-controls="recipeScanTool" data-tool-target="recipeScanTool" tabindex="-1">Scan Recipe</button>
         </nav>
 
         <div class="toolsWorkspaceContent">
       <div class="mobileToolHeader">
-        <div id="mobileToolHeaderLabel">Production Summary</div>
-        <button id="mobileToolsBack" class="mobileToolsBack" type="button" aria-label="Back to tools" title="Back to tools"><span aria-hidden="true"></span></button>
+        <button id="mobileToolsBack" class="mobileToolsBack" type="button" aria-label="Back to Tools" title="Back to Tools"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5-7 7 7 7"/></svg><span>Tools</span></button>
+        <h1 id="mobileToolHeaderLabel">Production Summary</h1>
       </div>
       <section id="productionSummaryTool" class="toolPanel toolWorkspacePanel" role="tabpanel" aria-labelledby="productionSummaryToolTab productionSummaryTitle">
         <div id="productionSummaryTitle" class="layerTitle">Production Summary</div>
@@ -690,7 +692,7 @@
       </section>
 
       <section id="shortFootageTool" class="toolPanel toolWorkspacePanel" role="tabpanel" aria-labelledby="shortFootageToolTab shortFootageTitle" hidden>
-        <div id="shortFootageTitle" class="layerTitle">Short Footage Calculator</div>
+        <div id="shortFootageTitle" class="layerTitle">Short Footage</div>
         <div class="muted">Actual Weight × Target Footage ÷ Last Good Weight</div>
 
         <div class="grid3 mt10">
@@ -716,7 +718,7 @@
       </section>
 
       <section id="hopperWeightTool" class="toolPanel toolWorkspacePanel" role="tabpanel" aria-labelledby="hopperWeightToolTab hopperWeightCalculatorTitle" hidden>
-        <div id="hopperWeightCalculatorTitle" class="layerTitle">Hopper Weight Calculator</div>
+        <div id="hopperWeightCalculatorTitle" class="layerTitle">Hopper Weight</div>
         <div class="muted">Estimates usable resin weight from cylindrical hopper dimensions.</div>
 
         <div class="grid3 mt10">
@@ -755,7 +757,7 @@
       </section>
 
       <section id="resinLookupTool" class="toolPanel toolWorkspacePanel" role="tabpanel" aria-labelledby="resinLookupToolTab resinLookupTitle" hidden>
-        <div id="resinLookupTitle" class="layerTitle">Resin Lookup</div>
+        <div id="resinLookupTitle" class="layerTitle">Resin Reference</div>
         <div class="muted">Find a resin by code or description.</div>
 
         <div class="grid3 mt10 resinLookupGrid">
@@ -862,8 +864,9 @@
     <summary>
       <div class="sumLeft">
         <div class="chev"><span class="chevRing"></span><span class="chevSatellite"></span><span class="chevCore"></span></div>
+        <svg class="mobileSectionHeaderIcon" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 9c-3-2.5-6.5-2.7-10-1.5v16c3.5-1.2 7-1 10 1.5 3-2.5 6.5-2.7 10-1.5v-16C22.5 6.3 19 6.5 16 9Z"/><path d="M16 9v16"/></svg>
         <div class="summaryText">
-          <div class="layerTitle">Help</div>
+          <div class="layerTitle" role="heading" aria-level="1">Help</div>
           <div class="layerMeta">Operator guide for every section</div>
         </div>
       </div>
@@ -872,16 +875,19 @@
 
     <div class="blockBody helpGuide">
       <div class="mobileHelpHome" aria-label="Help topics">
-        <button class="mobileHelpTile" type="button" data-mobile-help-target="helpQuickStart"><span>Start</span><small>Quick start guide</small></button>
+        <button class="mobileHelpTile" type="button" data-mobile-help-target="helpQuickStart"><span>Quick Start</span><small>Quick start guide</small></button>
         <button class="mobileHelpTile" type="button" data-mobile-help-target="helpSetup"><span>Setup</span><small>Line configuration</small></button>
         <button class="mobileHelpTile" type="button" data-mobile-help-target="helpHopperPercentages"><span>Recipe</span><small>Layers and hoppers</small></button>
         <button class="mobileHelpTile" type="button" data-mobile-help-target="helpTimeline"><span>Timeline</span><small>Changeover timing</small></button>
         <button class="mobileHelpTile" type="button" data-mobile-help-target="helpCloudSync"><span>RT Sync</span><small>Shared workspaces</small></button>
-        <button class="mobileHelpTile" type="button" data-mobile-help-target="helpTools"><span>Tools</span><small>Calculators and lookup</small></button>
+        <button class="mobileHelpTile" type="button" data-mobile-help-target="helpTools"><span>Tools</span><small>Calculators and reference</small></button>
         <button class="mobileHelpTile" type="button" data-mobile-help-target="helpRecipeScan"><span>Scan Recipe</span><small>Import from photo</small></button>
         <button class="mobileHelpTile" type="button" data-mobile-help-target="helpChangelog"><span>Changelog</span><small>Recent changes</small></button>
       </div>
-      <button id="mobileHelpBack" class="mobileHelpBack" type="button" aria-label="Back to help topics" title="Back to help topics">▦</button>
+      <div class="mobileHelpHeader">
+        <button id="mobileHelpBack" class="mobileHelpBack" type="button" aria-label="Back to Help" title="Back to Help"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5-7 7 7 7"/></svg><span>Help</span></button>
+        <h1 id="mobileHelpHeaderLabel">Quick Start</h1>
+      </div>
       <div class="helpTopics">
         <details class="helpTopic" id="helpQuickStart" open>
           <summary><span>Quick Start</span><small>Set up Resin.Tools in just a few minutes</small></summary>
@@ -980,7 +986,7 @@
               <li><strong>Production Summary:</strong> Build the active recipe first, then enter production and scrap pounds to calculate material totals by resin for production reporting and inventory issuance.</li>
               <li><strong>Short Footage Calculator:</strong> Enter actual weight, target footage, and the last good weight to calculate adjusted short footage.</li>
               <li><strong>Hopper Weight Calculator:</strong> Enter hopper circumference and usable height, then provide bulk density directly or estimate it from polymer density and the adjustable packing factor.</li>
-              <li><strong>Resin Lookup:</strong> Search by resin code or description. Select a suggestion to view description, density, material information, and typical uses. The Copy button copies the numeric density.</li>
+              <li><strong>Resin Reference:</strong> Search by resin code or description. Select a suggestion to view description, density, material information, and typical uses. The Copy button copies the numeric density.</li>
               <li><strong>Scan Recipe:</strong> Fill Recipe Setup from a photo of a job traveler, dosing screen, or heat sheet. See the Scan Recipe topic below for what each source needs and what to check before applying.</li>
             </ul>
           </div>

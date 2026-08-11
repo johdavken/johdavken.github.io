@@ -25,7 +25,7 @@ function setupBlock(){
 // --- "Current Changeover" / "Line Configuration" headers removed ----------
 
 test("the panel's own subtitle survives - only the two inner section headers are gone", () => {
-  assert.match(html, /<div class="layerTitle">Setup<\/div>\s*<div class="layerMeta">Current changeover and line configuration<\/div>/);
+  assert.match(html, /<div class="layerTitle" role="heading" aria-level="1">Line Setup<\/div>\s*<div class="layerMeta">Current changeover and line configuration<\/div>/);
   assert.doesNotMatch(setupBlock(), /Current Changeover<\/h3>/);
   assert.doesNotMatch(setupBlock(), /Line Configuration<\/h3>/);
   assert.doesNotMatch(setupBlock(), /class="setupSectionTitle"/);

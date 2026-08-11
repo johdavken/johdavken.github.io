@@ -274,7 +274,6 @@ main{
 
 .workspaceNav,
 .workspaceStatusBar{ display: none; }
-.mobileWorkspaceHome{ display:none; }
 .mobileQuickActions{ display:none; }
 .mobileAppearancePanelHeader{ display:none; }
 .workspaceContent{ display: contents; }
@@ -556,6 +555,29 @@ main{
     cursor: default;
   }
   .workspaceContent > .workspacePanel > summary .chev{ display: none; }
+  .workspaceContent > .workspacePanel > summary .mobileSectionHeaderIcon{
+    display:block;
+    flex:0 0 auto;
+    width:26px;
+    height:26px;
+    fill:none;
+    stroke:currentColor;
+    stroke-width:1.7;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+  }
+  #lineSetupBlock .mobileSectionHeaderIcon{color:var(--orange)}
+  #splitsBlock .mobileSectionHeaderIcon{color:var(--title)}
+  #resultsBlock .mobileSectionHeaderIcon{color:var(--focus-border)}
+  #lineSyncBlock .mobileSectionHeaderIcon{color:var(--ok)}
+  #toolsBlock .mobileSectionHeaderIcon{color:var(--warn)}
+  #helpBlock .mobileSectionHeaderIcon{color:var(--focus-border)}
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) #lineSetupBlock .mobileSectionHeaderIcon{color:var(--gruv-orange)}
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) #splitsBlock .mobileSectionHeaderIcon{color:var(--gruv-yellow)}
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) #resultsBlock .mobileSectionHeaderIcon{color:var(--gruv-blue)}
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) #lineSyncBlock .mobileSectionHeaderIcon{color:var(--gruv-aqua)}
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) #toolsBlock .mobileSectionHeaderIcon{color:var(--gruv-purple)}
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) #helpBlock .mobileSectionHeaderIcon{color:var(--gruv-blue)}
   .workspaceContent > .workspacePanel > summary .layerTitle{ font-size: 18px; }
   .workspaceContent > .workspacePanel > summary .layerMeta{
     margin-top: 3px;
@@ -3410,6 +3432,29 @@ details[open] > summary .chevSatellite{
 .calcName{ font-weight: 950; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .calcMeta{ font-size: var(--font-small); color: var(--muted); }
 
+/* Production Summary keeps the totals and material allocations compact while
+   retaining the shared calc-row grammar used elsewhere in the application. */
+.productionSummaryStatus{
+  display:grid;
+  gap:3px;
+  padding:9px 11px;
+  border:1px solid var(--row-border-2);
+  border-radius:var(--radius-row);
+  background:var(--row-bg);
+}
+.productionSummaryStatus > strong{color:var(--title);font-size:var(--font-small);font-weight:900}
+.productionSummaryStatus > span{color:var(--muted);font-size:var(--font-small);line-height:1.35}
+.productionSummaryStatus b{color:var(--text);font-weight:850}
+.productionSummaryStatus i{padding:0 2px;color:var(--muted);font-style:normal}
+.productionSummaryMaterialsIntro{display:grid;gap:1px;margin:1px 0 0;color:var(--muted);font-size:var(--font-small);line-height:1.25}
+.productionSummaryMaterialsIntro strong{color:var(--title);font-size:var(--font-small);font-weight:900}
+.productionSummaryMaterialRow{min-height:38px;padding:7px 10px;border-radius:var(--control-radius)}
+.productionSummaryMaterialRow .calcValue{flex:0 0 auto;white-space:nowrap}
+@media (max-width:600px){
+  .productionSummaryStatus{padding:8px 10px}
+  .productionSummaryMaterialRow{min-height:36px;padding:6px 9px}
+}
+
 /* Inline layer % in the splits summary */
 .layerPctInline{
   display: flex;
@@ -3746,7 +3791,8 @@ button.compactAction{
 .toolsWorkspaceContent{ min-width: 0; }
 .toolWorkspacePanel[hidden]{ display: none !important; }
 .toolsWorkspaceContent .toolPanel + .toolPanel{ margin-top: 0; }
-.mobileToolsHome,.mobileToolsBack,.mobileToolHeader,.mobileHelpHome,.mobileHelpBack{ display:none; }
+.mobileToolsHome,.mobileToolsBack,.mobileToolHeader,.mobileHelpHome,.mobileHelpBack,.mobileHelpHeader{ display:none; }
+.mobileSectionHeaderIcon{ display:none; }
 @media (width <= 900px){
   #helpBlock .mobileHelpHome{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
   #helpBlock .mobileHelpTile{ display:grid; align-content:center; gap:5px; min-height:88px; padding:12px; border:1px solid var(--border); border-radius:var(--control-radius); background:var(--row-bg); color:var(--text); text-align:left; }
@@ -3757,7 +3803,8 @@ button.compactAction{
   body[data-mobile-help="panel"] #helpBlock .helpTopics{ display:block; }
   body[data-mobile-help="panel"] #helpBlock .helpTopic{ display:none!important; }
   body[data-mobile-help="panel"] #helpBlock .helpTopic.mobile-help-active{ display:block!important; }
-  body[data-mobile-help="panel"] #helpBlock .mobileHelpBack{ display:block; margin-left:auto; border:1px solid var(--border); border-radius:7px; background:transparent; color:var(--focus-border); }
+  body[data-mobile-help="panel"] #helpBlock > summary{ display:none; }
+  body[data-mobile-help="panel"] #helpBlock .helpTopic.mobile-help-active > summary{ display:none; }
   #toolsBlock .mobileToolsHome{
     display:grid;
     grid-template-columns:repeat(2,minmax(0,1fr));
@@ -3782,25 +3829,33 @@ button.compactAction{
   #toolsBlock .toolsWorkspace{ display:none; grid-template-columns:1fr; }
   body[data-mobile-tools="panel"] #toolsBlock .mobileToolsHome{ display:none; }
   body[data-mobile-tools="panel"] #toolsBlock .toolsWorkspace{ display:grid; }
+  body[data-mobile-tools="panel"] #toolsBlock > summary{ display:none; }
   #toolsBlock .toolsIndexDropdown,#toolsBlock .toolsIndex{ display:none!important; }
-  #toolsBlock .mobileToolHeader{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px; padding-bottom:9px; border-bottom:1px solid var(--border); }
-  #toolsBlock .mobileToolHeader > div{ color:var(--title); font-size:calc(var(--title-size) * 1.05); font-weight:650; letter-spacing:.04em; }
-  #toolsBlock .mobileToolsBack{
-    display:flex;
+  #toolsBlock .mobileToolHeader,
+  body[data-mobile-help="panel"] #helpBlock .mobileHelpHeader{ display:flex; align-items:center; gap:8px; margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+  #toolsBlock .mobileToolHeader h1,
+  body[data-mobile-help="panel"] #helpBlock .mobileHelpHeader h1{ min-width:0; margin:0; color:var(--title); font:inherit; font-size:calc(var(--title-size) * 1.05); font-weight:800; letter-spacing:.035em; line-height:1.15; overflow-wrap:anywhere; }
+  #toolsBlock .mobileToolsBack,
+  body[data-mobile-help="panel"] #helpBlock .mobileHelpBack{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:4px;
     flex:0 0 auto;
-    width:30px;
-    height:30px;
-    padding:0;
-    border:1px solid color-mix(in srgb,var(--focus-border) 34%,transparent);
-    border-radius:7px;
+    min-width:44px;
+    min-height:44px;
+    padding:0 6px;
+    border:0;
+    border-radius:var(--control-radius);
     background:transparent;
+    color:var(--focus-border);
+    font-size:11px;
+    font-weight:850;
   }
-  #toolsBlock .mobileToolsBack span{
-    width:18px;
-    height:18px;
-    margin:auto;
-    background:linear-gradient(var(--focus-border) 0 0) 1px 1px / 6px 6px no-repeat,linear-gradient(var(--focus-border) 0 0) calc(100% - 1px) 1px / 6px 6px no-repeat,linear-gradient(var(--focus-border) 0 0) 1px calc(100% - 1px) / 6px 6px no-repeat,linear-gradient(var(--focus-border) 0 0) calc(100% - 1px) calc(100% - 1px) / 6px 6px no-repeat;
-  }
+  #toolsBlock .mobileToolsBack svg,
+  body[data-mobile-help="panel"] #helpBlock .mobileHelpBack svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  #toolsBlock .mobileToolsBack:focus-visible,
+  body[data-mobile-help="panel"] #helpBlock .mobileHelpBack:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
 }
 
 /* Matrix action bars share one compact surface. The Recipe bar has four
@@ -4494,38 +4549,34 @@ body[data-surface-style="divided"] .helpTopic{
   body[data-mobile-workspace="panel"] .workspaceContent > .workspacePanel:not(.mobile-active){ display:none!important; }
   body[data-mobile-workspace="panel"] .workspaceContent > .workspacePanel.mobile-active > summary{
     display:flex;
+    align-items:center;
     min-height:46px;
     padding:8px 2px 10px;
     border-bottom:1px solid var(--border);
   }
-  body[data-mobile-workspace="panel"] .workspaceContent > .workspacePanel.mobile-active > summary::after{
-    content:"";
-    width:22px;
-    height:22px;
-    flex:0 0 auto;
-    background:
-      linear-gradient(var(--focus-border) 0 0) 2px 2px / 7px 7px no-repeat,
-      linear-gradient(var(--focus-border) 0 0) calc(100% - 2px) 2px / 7px 7px no-repeat,
-      linear-gradient(var(--focus-border) 0 0) 2px calc(100% - 2px) / 7px 7px no-repeat,
-      linear-gradient(var(--focus-border) 0 0) calc(100% - 2px) calc(100% - 2px) / 7px 7px no-repeat;
-    border:1px solid color-mix(in srgb,var(--focus-border) 34%,transparent);
-    border-radius:7px;
-  }
+  body[data-mobile-workspace="panel"] .workspaceContent > .workspacePanel.mobile-active > summary::after{ display:none; }
   body[data-mobile-workspace="panel"] .workspaceContent > .workspacePanel.mobile-active > summary .chev{ display:none; }
+  body[data-mobile-workspace="panel"] .workspaceContent > .workspacePanel.mobile-active > summary .sumLeft{display:flex;align-items:center;gap:9px;min-width:0}
+  body[data-mobile-workspace="panel"] .workspaceContent > .workspacePanel.mobile-active > summary .summaryText{min-width:0}
+  body[data-mobile-workspace="panel"] .workspaceContent > .workspacePanel.mobile-active > summary .mobileSectionHeaderIcon{
+    display:block;
+    flex:0 0 auto;
+    width:26px;
+    height:26px;
+    fill:none;
+    stroke:currentColor;
+    stroke-width:1.7;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+  }
+  #lineSetupBlock .mobileSectionHeaderIcon{color:var(--orange)}
+  #splitsBlock .mobileSectionHeaderIcon{color:var(--title)}
+  #resultsBlock .mobileSectionHeaderIcon{color:var(--focus-border)}
+  #lineSyncBlock .mobileSectionHeaderIcon{color:var(--ok)}
+  #toolsBlock .mobileSectionHeaderIcon{color:var(--warn)}
+  #helpBlock .mobileSectionHeaderIcon{color:var(--focus-border)}
   body[data-mobile-workspace="panel"] .workspaceContent > .workspacePanel.mobile-active > summary .layerMeta{ display:none; }
   body[data-mobile-workspace="panel"] .workspaceContent > .workspacePanel.mobile-active > .blockBody{ padding-top:10px; }
-  .mobileWorkspaceHome{
-    align-items:center;
-    gap:5px;
-    min-height:30px;
-    padding:0 4px;
-    border:0;
-    background:transparent;
-    color:var(--title);
-    font-size:var(--font-small);
-    font-weight:750;
-  }
-  body[data-mobile-workspace="panel"] .mobileWorkspaceHome{ display:flex; }
   /* Scoped to just the top-level card summaries (.layerTitle is a generic
      heading class reused by dialogs, tool panels, admin forms, etc. - a
      blanket size bump there would spill into all of those). Subtitle stays
@@ -5003,6 +5054,12 @@ body[data-surface-style="divided"] .helpTopic{
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNavButton[data-workspace-target="lineSyncBlock"]{ --tile-accent:var(--gruv-aqua); }
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNavButton[data-workspace-target="toolsBlock"]{ --tile-accent:var(--gruv-purple); }
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNavButton[data-workspace-target="helpBlock"]{ --tile-accent:var(--gruv-blue); }
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) #lineSetupBlock .mobileSectionHeaderIcon{color:var(--gruv-orange)}
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) #splitsBlock .mobileSectionHeaderIcon{color:var(--gruv-yellow)}
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) #resultsBlock .mobileSectionHeaderIcon{color:var(--gruv-blue)}
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) #lineSyncBlock .mobileSectionHeaderIcon{color:var(--gruv-aqua)}
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) #toolsBlock .mobileSectionHeaderIcon{color:var(--gruv-purple)}
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) #helpBlock .mobileSectionHeaderIcon{color:var(--gruv-blue)}
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .appearanceNavTile{ --tile-accent:var(--gruv-red); }
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNavButton span{ color:var(--gruv-mobile-ink); }
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceTileIcon{

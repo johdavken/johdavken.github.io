@@ -28,9 +28,9 @@ test("Production Summary's totals line (Production/Scrap/Total) uses fmtLb, not 
     renderResinCalculator.indexOf('sumEl.innerHTML'),
     renderResinCalculator.indexOf('const out = $("resinCalcResults")')
   );
-  assert.match(summaryBlock, /Production: <span class="mono">\$\{fmtLb\(prod\)\}<\/span> lb/);
-  assert.match(summaryBlock, /Scrap: <span class="mono">\$\{fmtLb\(scrap\)\}<\/span> lb/);
-  assert.match(summaryBlock, /Total: <span class="mono">\$\{fmtLb\(total\)\}<\/span> lb/);
+  assert.match(summaryBlock, /Production <b class="mono">\$\{fmtLb\(prod\)\}<\/b> lb/);
+  assert.match(summaryBlock, /Scrap <b class="mono">\$\{fmtLb\(scrap\)\}<\/b> lb/);
+  assert.match(summaryBlock, /Total <b class="mono">\$\{fmtLb\(total\)\}<\/b> lb/);
   assert.doesNotMatch(summaryBlock, /fmtNum\(prod/);
   assert.doesNotMatch(summaryBlock, /fmtNum\(scrap/);
   assert.doesNotMatch(summaryBlock, /fmtNum\(total/);
@@ -39,6 +39,13 @@ test("Production Summary's totals line (Production/Scrap/Total) uses fmtLb, not 
 test("each per-resin allocated total also uses fmtLb, not fmtNum", () => {
   assert.match(renderResinCalculator, /<div class="mono calcValue">\$\{fmtLb\(r\.lbs\)\} lb<\/div>/);
   assert.doesNotMatch(renderResinCalculator, /fmtNum\(r\.lbs/);
+});
+
+test("Production Summary explains recipe allocation once, rather than repeating obsolete splits language per material", () => {
+  assert.match(renderResinCalculator, /By material/);
+  assert.match(renderResinCalculator, /Calculated from the current recipe percentages\./);
+  assert.doesNotMatch(renderResinCalculator, /Allocated from splits/);
+  assert.doesNotMatch(renderResinCalculator, /splits to see totals/);
 });
 
 test("fmtNum itself is unchanged - this only affects Production Summary's lb display, not the rest of the app", () => {

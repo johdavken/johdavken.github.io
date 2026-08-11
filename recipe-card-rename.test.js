@@ -26,7 +26,7 @@ test("the shared card title (mobile accordion / desktop in-panel header) reads j
   const start = html.indexOf('id="splitsBlock"');
   const summaryEnd = html.indexOf("</summary>", start);
   const summary = html.slice(start, summaryEnd);
-  assert.match(summary, /<div class="layerTitle">Recipe<\/div>/);
+  assert.match(summary, /<div class="layerTitle" role="heading" aria-level="1">Recipe<\/div>/);
   assert.doesNotMatch(summary, />Recipe Setup</);
   // The subtitle itself is untouched - only the title shortened.
   assert.match(summary, /Set recipe percentages and choose which hoppers appear in the timeline/);

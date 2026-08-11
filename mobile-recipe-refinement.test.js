@@ -34,8 +34,8 @@ test("layer controls describe matching rather than copying without changing the 
   assert.match(app,/copyLayer\(copyFrom, L\.name\);/);
 });
 
-test("the existing four-square panel summary is named Main menu when it is the mobile return control",()=>{
-  assert.match(app,/target\.querySelector\(":scope > summary"\)\?\.setAttribute\("aria-label", "Main menu"\);/);
-  assert.match(app,/target\.querySelector\(":scope > summary"\)\?\.setAttribute\("title", "Main menu"\);/);
-  assert.match(styles,/workspacePanel\.mobile-active > summary::after\{[\s\S]*?linear-gradient/);
+test("top-level mobile headers no longer act as the redundant Main-menu return control",()=>{
+  assert.doesNotMatch(app,/target\.querySelector\(":scope > summary"\)\?\.setAttribute\("aria-label", "Main menu"\);/);
+  assert.doesNotMatch(app,/target\.querySelector\(":scope > summary"\)\?\.setAttribute\("title", "Main menu"\);/);
+  assert.match(styles,/workspacePanel\.mobile-active > summary::after\{ display:none; \}/);
 });
