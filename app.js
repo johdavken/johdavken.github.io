@@ -719,7 +719,45 @@
     });
   }
 
+  /* ============================
+   * Attention center facts
+   * ============================
+   * Facts only. Every value below is written by the code that already
+   * computes it for the application's own validation and status rendering -
+   * validateAndCompute, updateCollapsedSummaries, effectiveHopperWeight and
+   * cloud-sync's own status machine. PolynAttentionCenter normalizes them
+   * into notification entries; nothing here re-derives a rule, so the bell
+   * can never disagree with the contextual validation beside the field. */
+  const attentionFacts = {
+    setup: { lineRateSet: true, hopperWeightsUnset: false, missingTrackedWeightCount: 0 },
+    recipe: { layerTotalPct: 100, layerTotalValid: true, invalidLayerNames: [] },
+    timeline: { trackedCount: 0 },
+    sync: { enabled: false, connected: false, status: "Local only", pendingCount: 0, message: "", oldestPendingAt: "" },
+    storage: []
+  };
+  // Installed by setupAttentionCenter() during init - the notification UI
+  // needs setWorkspacePanel and the footer-sheet machinery, which live in
+  // the init scope, so the renderer is registered rather than the whole of
+  // that scope being hoisted out (or exposed globally) to reach it.
+  let renderAttentionCenter = null;
+  function publishAttention(){ renderAttentionCenter?.(attentionFacts); }
+
+  // A local-storage write failure is a transient event, not live state, so
+  // the attention center ages it out (see PolynAttentionCenter's TTL) rather
+  // than pinning it forever. Recorded before showStorageWarning's
+  // already-shown guard so a second distinct failure still reaches the bell.
+  function recordAttentionStorageError(message){
+    const detail = String(message || "").trim();
+    if (!detail) return;
+    attentionFacts.storage = attentionFacts.storage
+      .filter(item=>item.message !== detail)
+      .concat({ message: detail, at: Date.now() })
+      .slice(-5);
+    publishAttention();
+  }
+
   function showStorageWarning(message){
+    recordAttentionStorageError(message);
     const host = $("statusBox") || document.body;
     if (document.getElementById("storageWarning")) return;
     const warning = document.createElement("div");
@@ -3883,6 +3921,10 @@
       const layerTotalBad = Math.abs(layerTotal - 100) > 0.0001;
       const errorCount = badLayers.length + (layerTotalBad ? 1 : 0);
       const ready = errorCount === 0 && state.layers.length > 0;
+      // Same badLayers the Recipe pill and the per-layer column totals
+      // already use - the attention center reads this result, it does not
+      // recompute the rule.
+      attentionFacts.recipe.invalidLayerNames = badLayers.map(L=>L.name);
       splitsStatus.classList.toggle("badge-ok", ready);
       splitsStatus.classList.toggle("badge-warn", !ready);
       splitsStatus.textContent = ready
@@ -3910,12 +3952,16 @@
       const div = 100;
 
       if (state.lineRate <= 0) msgs.push({type:"warn", text:"Line rate is 0 — rates/times will be 0."});
+      attentionFacts.setup.lineRateSet = state.lineRate > 0;
 
       const layerFracs = state.layers.map(L => clampNum(L.layerPct)/div);
       const layerSum = sum(layerFracs);
-      if (state.layers.length && Math.abs(layerSum - 1) > 0.0001){
+      const layerTotalValid = !state.layers.length || Math.abs(layerSum - 1) <= 0.0001;
+      if (!layerTotalValid){
         msgs.push({type:"warn", text:`Layer split sums to ${fmtNum(layerSum*100,2)}% (expected 100%).`});
       }
+      attentionFacts.recipe.layerTotalValid = layerTotalValid;
+      attentionFacts.recipe.layerTotalPct = layerSum * 100;
 
       const allWeightsUnset = state.layers.length > 0 && state.layers.every(L=>
         L.hoppers.every(h=>effectiveHopperWeight(h) === 0)
@@ -3927,17 +3973,24 @@
         });
       }
 
+      attentionFacts.setup.hopperWeightsUnset = allWeightsUnset;
+
       const tracked = [];
       state.layers.forEach(L=>L.hoppers.forEach((h,hi)=>{ if (h.track) tracked.push({L,h,hi}); }));
+      attentionFacts.timeline.trackedCount = tracked.length;
+      attentionFacts.setup.missingTrackedWeightCount = 0;
       if (tracked.length === 0){
         msgs.push({type:"warn", text:"No hoppers are tracked. Turn on Track for the hopper(s) you want in Results."});
       } else {
         const missingW = tracked.filter(x=>effectiveHopperWeight(x.h) <= 0).length;
+        attentionFacts.setup.missingTrackedWeightCount = allWeightsUnset ? 0 : missingW;
         if (missingW > 0 && !allWeightsUnset){
           msgs.push({type:"warn", text:`${missingW} tracked hopper(s) are missing weight. Open “Hopper weights” to enter them.`});
         }
       }
 
+      // Mobile keeps the in-panel heads-up list; desktop hides #statusBox and
+      // reads the same conditions through the notification bell instead.
       setStatus(statusMessage(msgs));
 
       const changeoverDate = parseChangeoverDate(state.changeoverTime);
@@ -4005,6 +4058,7 @@
       updateFooterNext(flat, changeoverDate);
       renderResinCalculator();
       updateCollapsedSummaries();
+      publishAttention();
       refreshSmartHopperState();
       lastTimelineFlat = flat;
       lastTimelineChangeoverDate = changeoverDate;
@@ -4370,7 +4424,12 @@
       return {
         display: [$("appFooterDisplay"), $("displaySheet")],
         shortcuts: [$("appFooterShortcuts"), $("footerShortcutsMenu")],
-        account: [$("appFooterAccount"), $("footerAccountMenu")]
+        account: [$("appFooterAccount"), $("footerAccountMenu")],
+        // Desktop-only. Registered here so opening it closes Display or
+        // Account (and vice versa) through the one existing mutual-exclusion
+        // path, rather than a second overlay system that could leave a stale
+        // backdrop or inert workspace behind.
+        notifications: [$("desktopNotificationsToggle"), $("footerNotificationsMenu")]
       };
     }
 
@@ -4383,12 +4442,26 @@
       return name === "account" && window.matchMedia("(min-width: 901px)").matches;
     }
 
-    function positionDesktopAccountPopover(trigger = activeFooterSheetTrigger, sheet = $("footerAccountMenu")){
-      if (!trigger || !sheet?.open || !isDesktopAccountPopover()) return;
+    function isDesktopNotificationsPopover(name = activeFooterSheetName){
+      return name === "notifications" && window.matchMedia("(min-width: 901px)").matches;
+    }
+
+    // Status-bar popovers: anchored to their trigger, nonmodal, no backdrop,
+    // workspace left interactive. Both Account and Notifications qualify.
+    function isDesktopPopover(name = activeFooterSheetName){
+      return isDesktopAccountPopover(name) || isDesktopNotificationsPopover(name);
+    }
+
+    function desktopPopoverWidth(sheet){
+      return sheet?.id === "footerNotificationsMenu" ? 380 : 290;
+    }
+
+    function positionDesktopPopover(trigger = activeFooterSheetTrigger, sheet = footerSheetPairs()[activeFooterSheetName]?.[1]){
+      if (!trigger || !sheet?.open || !isDesktopPopover()) return;
       const triggerRect = trigger.getBoundingClientRect();
       const viewportMargin = 14;
       const gap = 8;
-      const width = Math.min(290, window.innerWidth - (viewportMargin * 2));
+      const width = Math.min(desktopPopoverWidth(sheet), window.innerWidth - (viewportMargin * 2));
       const height = sheet.getBoundingClientRect().height;
       const left = Math.max(viewportMargin, Math.min(triggerRect.right - width, window.innerWidth - width - viewportMargin));
       const below = triggerRect.bottom + gap;
@@ -4441,10 +4514,10 @@
         toggle?.setAttribute("aria-expanded", String(key === name));
       });
       trigger?.setAttribute("aria-expanded", "true");
-      const desktopAccountPopover = isDesktopAccountPopover(name);
+      const nonmodalPopover = isDesktopAccountPopover(name) || isDesktopNotificationsPopover(name);
       if (sheet){
-        sheet.setAttribute("aria-modal", String(!desktopAccountPopover));
-        if (desktopAccountPopover) sheet.dataset.presentation = "popover";
+        sheet.setAttribute("aria-modal", String(!nonmodalPopover));
+        if (nonmodalPopover) sheet.dataset.presentation = "popover";
         else delete sheet.dataset.presentation;
       }
       // show(), rather than showModal(), keeps the persistent footer operable
@@ -4453,11 +4526,11 @@
       if (sheet?.show) sheet.show();
       else if (sheet) sheet.open = true;
       const backdrop = $("footerSheetBackdrop");
-      if (backdrop) backdrop.hidden = desktopAccountPopover;
+      if (backdrop) backdrop.hidden = nonmodalPopover;
       const main = document.querySelector("body > main");
-      if (main) main.inert = !desktopAccountPopover;
+      if (main) main.inert = !nonmodalPopover;
       requestAnimationFrame(()=>{
-        if (desktopAccountPopover) positionDesktopAccountPopover(trigger, sheet);
+        if (nonmodalPopover) positionDesktopPopover(trigger, sheet);
         const first = footerSheetFocusable(sheet)[0];
         (first || sheet)?.focus();
       });
@@ -5165,6 +5238,21 @@
     if ($("lineSyncPendingCount")) $("lineSyncPendingCount").textContent = String(syncState.pendingCount || 0);
     renderMobileLineSyncStatus(syncState);
     renderPendingList(syncState.pendingSummary);
+    // cloud-sync already decides what condition it is in; the attention
+    // center only reads that decision. oldestPendingAt lets it separate an
+    // ordinary brief "Pending" upload from one that has visibly stalled.
+    attentionFacts.sync = {
+      enabled: !!syncState.enabled,
+      connected: !!syncState.connected,
+      status,
+      pendingCount: syncState.pendingCount || 0,
+      message: syncState.message || "",
+      oldestPendingAt: (syncState.pendingSummary || [])
+        .map(item=>item.createdAt)
+        .filter(Boolean)
+        .sort()[0] || ""
+    };
+    publishAttention();
     const navStatus = $("workspaceCloudSyncStatus");
     if (navStatus){
       navStatus.textContent = syncState.pendingCount ? `${status} · ${syncState.pendingCount} pending` : status;
@@ -5605,6 +5693,214 @@
       applySurfaceStyle(state.surfaceStyle);
     });
     $("desktopDisplayToggle")?.addEventListener("click",openDisplaySheet);
+
+    /* ------------------------------------------------------------------
+     *   Desktop notification center
+     * ------------------------------------------------------------------
+     * Presentation and navigation only. Every entry rendered here comes from
+     * PolynAttentionCenter.derive(attentionFacts), which is a pure function
+     * of state the application already validated - so an item disappears the
+     * moment its condition clears, re-rendering can never duplicate one, and
+     * closing the popover never dismisses anything unresolved. */
+    function setupAttentionCenter(){
+      const toggle = $("desktopNotificationsToggle");
+      const badge = $("desktopNotificationsBadge");
+      const announcer = $("desktopNotificationsAnnouncer");
+      const list = $("desktopNotificationsList");
+      const summaryLine = $("desktopNotificationsSummary");
+      const attention = window.PolynAttentionCenter;
+      if (!toggle || !list || !attention) return;
+
+      let knownIds = null;
+      let announcedKey = "";
+      let emphasisTimer = 0;
+
+      // Resolved inside the frame after setWorkspacePanel, because which
+      // controls are actually rendered and visible depends on the panel that
+      // was just revealed. A control that is hidden, zero-sized or disabled
+      // is skipped rather than silently swallowing the focus.
+      function focusSoon(resolve){
+        requestAnimationFrame(()=>{
+          const element = typeof resolve === "function" ? resolve() : resolve;
+          if (!usableControl(element)) return;
+          try{ element.focus(); }catch(error){ /* control went away */ }
+        });
+      }
+      function usableControl(element){
+        return !!element && !element.disabled && element.getClientRects().length > 0;
+      }
+      // Prefer the control the operator actually has to correct: the field
+      // contextual validation already flagged with aria-invalid, then the
+      // control that owns this particular condition, then the first usable
+      // field in the section. The bell reuses the existing aria-invalid
+      // marker rather than keeping its own idea of which field is wrong.
+      function responsibleControl(hostId, preferred){
+        const host = $(hostId);
+        if (!host) return null;
+        const find = selector => Array.from(host.querySelectorAll(selector)).find(usableControl) || null;
+        return find('[aria-invalid="true"]')
+          || (preferred ? find(preferred) : null)
+          || find("input:not([type=checkbox]):not([type=radio]), select");
+      }
+
+      const ATTENTION_ACTIONS = {
+        "review-setup": ()=>{
+          setWorkspacePanel("lineSetupBlock", { reveal:true });
+          focusSoon(()=>$("lineRate"));
+        },
+        // On desktop the weight fields are only rendered in the matrix's Edit
+        // view, so when they are hidden the responsible control is the Edit
+        // toggle that reveals them.
+        "open-weights": ()=>{
+          setWorkspacePanel("lineSetupBlock", { reveal:true });
+          focusSoon(()=>responsibleControl("weightsArea", '[data-weight-view="edit"]'));
+        },
+        "open-recipe": ()=>{
+          setWorkspacePanel("splitsBlock", { reveal:true });
+          focusSoon(()=>responsibleControl("splitsArea", 'input[id^="lp_"], input.splitInput'));
+        },
+        // Reuses the existing Reconnect control rather than adding a second
+        // retry path, so RT Sync keeps exactly one recovery implementation.
+        "retry-sync": ()=>{
+          setWorkspacePanel("lineSyncBlock", { reveal:true });
+          const retry = $("lineSyncRetryBtn");
+          if (retry && !retry.disabled) retry.click();
+          focusSoon(()=>retry);
+        }
+      };
+
+      function severityIcon(severity){
+        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svg.setAttribute("viewBox", "0 0 24 24");
+        svg.setAttribute("aria-hidden", "true");
+        svg.setAttribute("class", "desktopNotificationIcon");
+        // Distinct outlines, not just distinct colors: a triangle for
+        // attention, an octagon for a blocking error.
+        const outline = severity === "error"
+          ? "M8.6 3h6.8L21 8.6v6.8L15.4 21H8.6L3 15.4V8.6L8.6 3Z"
+          : "M12 3.6 21.2 20H2.8L12 3.6Z";
+        [outline, "M12 9v4.6", "M12 16.6v.01"].forEach(d=>{
+          const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          path.setAttribute("d", d);
+          svg.appendChild(path);
+        });
+        return svg;
+      }
+
+      function renderList(summary){
+        list.replaceChildren();
+        if (!summary.count){
+          const empty = document.createElement("p");
+          empty.className = "desktopNotificationsEmpty";
+          empty.textContent = "Nothing needs attention right now.";
+          list.append(empty);
+          return;
+        }
+        summary.items.forEach(item=>{
+          const row = document.createElement("div");
+          row.className = "desktopNotificationItem";
+          row.dataset.severity = item.severity;
+          row.setAttribute("role", "listitem");
+
+          const body = document.createElement("div");
+          body.className = "desktopNotificationBody";
+
+          const head = document.createElement("div");
+          head.className = "desktopNotificationHeadRow";
+          const title = document.createElement("strong");
+          title.textContent = item.title;
+          const tag = document.createElement("span");
+          tag.className = "desktopNotificationSeverityTag";
+          tag.textContent = item.severityLabel;
+          head.append(title, tag);
+          body.append(head);
+
+          if (item.message){
+            const message = document.createElement("p");
+            message.className = "desktopNotificationMessage";
+            message.textContent = item.message;
+            body.append(message);
+          }
+
+          const foot = document.createElement("div");
+          foot.className = "desktopNotificationFoot";
+          const section = document.createElement("span");
+          section.className = "desktopNotificationSection";
+          section.textContent = item.section;
+          foot.append(section);
+          const handler = item.action ? ATTENTION_ACTIONS[item.action.id] : null;
+          if (handler){
+            const action = document.createElement("button");
+            action.type = "button";
+            action.className = "desktopNotificationAction";
+            action.textContent = item.action.label;
+            action.addEventListener("click",()=>{
+              closeFooterSheets({ returnFocus:false });
+              handler();
+            });
+            foot.append(action);
+          }
+          body.append(foot);
+
+          row.append(severityIcon(item.severity), body);
+          list.append(row);
+        });
+      }
+
+      function summaryText(summary){
+        if (!summary.count) return "Nothing needs attention";
+        const parts = [];
+        if (summary.errorCount) parts.push(`${summary.errorCount} blocking`);
+        if (summary.warningCount) parts.push(`${summary.warningCount} needing attention`);
+        return parts.join(" · ");
+      }
+
+      renderAttentionCenter = facts=>{
+        const summary = attention.derive(facts);
+        const ids = summary.items.map(item=>item.id);
+        const label = attention.badgeLabel(summary);
+
+        toggle.dataset.severity = summary.severity;
+        toggle.setAttribute("aria-label", label);
+        toggle.title = summary.count ? label : "Notifications";
+        if (badge){
+          badge.hidden = summary.count === 0;
+          badge.textContent = summary.count ? String(summary.count) : "";
+          badge.dataset.severity = summary.severity;
+        }
+        if (summaryLine) summaryLine.textContent = summaryText(summary);
+        renderList(summary);
+
+        // A genuinely new condition gets one short emphasis, never a
+        // continuous pulse - and only for an id that was not already present,
+        // so re-renders, clock ticks and sync refreshes stay silent. The
+        // first render is the operator arriving at conditions that already
+        // existed, so it never emphasizes.
+        const introduced = knownIds !== null && ids.some(id=>!knownIds.has(id));
+        knownIds = new Set(ids);
+        if (introduced){
+          clearTimeout(emphasisTimer);
+          toggle.dataset.attentionNew = "true";
+          emphasisTimer = setTimeout(()=>{ delete toggle.dataset.attentionNew; }, 1400);
+        }
+        // Announce only when the set of conditions changes, so a polite live
+        // region never repeats itself on every render.
+        const key = ids.join("|");
+        if (announcer && key !== announcedKey){
+          announcedKey = key;
+          announcer.textContent = label;
+        }
+      };
+
+      toggle.addEventListener("click",event=>{
+        event.stopPropagation();
+        setFooterSheetOpen("notifications", true, event.currentTarget);
+      });
+
+      publishAttention();
+    }
+    setupAttentionCenter();
+
     $("appFooterAccount")?.addEventListener("click",event=>{
       event.stopPropagation();
       const login = $("adminLoginButton");
@@ -5617,14 +5913,17 @@
     });
     $("footerSheetBackdrop")?.addEventListener("click",()=>closeFooterSheets());
     document.addEventListener("pointerdown",event=>{
-      if (!isDesktopAccountPopover()) return;
-      const sheet = $("footerAccountMenu");
-      const trigger = activeFooterSheetTrigger || $("appFooterAccount");
-      if (sheet?.contains(event.target) || trigger?.contains(event.target)) return;
-      closeFooterSheets();
+      if (!isDesktopPopover()) return;
+      const [trigger, sheet] = footerSheetPairs()[activeFooterSheetName] || [];
+      const anchor = activeFooterSheetTrigger || trigger;
+      if (sheet?.contains(event.target) || anchor?.contains(event.target)) return;
+      // pointerdown lands before focus moves, so returning focus here would
+      // yank it back out of whatever the operator just clicked. Keyboard
+      // dismissal (Escape, below) still restores focus to the trigger.
+      closeFooterSheets({ returnFocus:false });
     });
     window.addEventListener("resize",()=>{
-      if (isDesktopAccountPopover()) positionDesktopAccountPopover();
+      if (isDesktopPopover()) positionDesktopPopover();
     });
     $("adminSignOutButton")?.addEventListener("click",()=>closeFooterSheets({ returnFocus:false }));
     document.querySelectorAll(".footerAdminDestination").forEach(button=>{
@@ -5642,7 +5941,7 @@
         return;
       }
       if (event.key === "Tab"){
-        if (isDesktopAccountPopover()) return;
+        if (isDesktopPopover()) return;
         const sheet = footerSheetPairs()[activeFooterSheetName]?.[1];
         const focusable = footerSheetFocusable(sheet);
         if (!focusable.length){ event.preventDefault(); sheet?.focus(); return; }
