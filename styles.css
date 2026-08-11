@@ -125,6 +125,7 @@
 
 }
 
+
 /* Spacious: presentation and touch-first spacing. */
 :where(html, body)[data-density="spacious"]{
   --font-base: 17px;
@@ -2196,10 +2197,11 @@ details[open] > summary .chevSatellite{
      rail is unnecessary when every layer is visible at once. */
   .splitsMobileLayerLayout:has(.compactMobileRecipe){
     display:block;
-    padding:5px;
-    border:1px solid var(--row-border-2);
-    border-radius:14px;
-    background:var(--panel2);
+    min-width:0;
+    padding:0;
+    border:0;
+    border-radius:0;
+    background:transparent;
   }
   .splitsMatrix.compactMobileRecipe [data-layer-column]{ display:table-cell!important; }
   .splitsMatrix.compactMobileRecipe [data-layer-column].mobile-layer-active.splitMatrixCell{ display:table-cell; }
@@ -2333,51 +2335,57 @@ details[open] > summary .chevSatellite{
   }
 
   /* Bottom action tray: one stable mobile pattern for the major recipe
-     actions, rather than a desktop toolbar stranded above the matrix. */
+     actions, visually separate from the dense matrix it controls. */
   .mobileRecipeActionTray{
-    position:sticky;
-    bottom:max(6px,env(safe-area-inset-bottom));
+    position:static;
+    bottom:auto!important;
     z-index:12;
-    margin-top:10px;
-    padding-top:10px;
-    border-top:1px solid var(--row-border-2);
-    background:var(--panel2);
+    min-width:0;
+    margin-top:8px;
+    padding:0;
+    border:0;
+    background:transparent;
   }
   .mobileRecipeActionTray .splitsBulkModeBar{
     display:grid;
     grid-template-columns:repeat(4,minmax(0,1fr));
-    gap:6px;
-    border:0;
-    border-radius:0;
-    background:transparent;
+    gap:0;
+    overflow:visible;
+    border:1px solid var(--row-border-2);
+    border-radius:var(--control-radius);
+    background:var(--row-bg-2);
   }
   .mobileRecipeActionTray .splitsBulkModeBar[hidden]{display:none!important}
   .mobileRecipeActionTray .splitsBulkModeBar button.secondary{
     height:42px;
     min-height:42px;
     padding:7px 5px;
-    border:1px solid var(--row-border-2);
-    border-radius:10px;
-    background:var(--row-bg-2);
+    border:0;
+    border-right:1px solid var(--row-border-2);
+    border-radius:0;
+    background:transparent;
     color:var(--muted);
     font-size:10px;
     font-weight:800;
     line-height:1.1;
     letter-spacing:.01em;
-    box-shadow:inset 0 1px 0 color-mix(in srgb,#fff 10%,transparent);
+    box-shadow:none;
     white-space:nowrap;
   }
   .mobileRecipeActionTray .splitsBulkModeBar button.secondary:hover,
   .mobileRecipeActionTray .splitsBulkModeBar button.secondary:focus-visible{
-    border-color:var(--focus-border);
+    border-color:var(--row-border-2);
     background:var(--focus-ring);
     color:var(--title);
+    box-shadow:inset 0 0 0 2px var(--focus-border);
   }
   .mobileRecipeActionTray .splitsBulkModeBar button.secondary[aria-expanded="true"]{
-    border-color:var(--focus-border);
+    border-color:var(--row-border-2);
     color:var(--title);
-    box-shadow:inset 0 2px 0 var(--focus-border);
+    background:var(--focus-ring);
+    box-shadow:inset 0 0 0 2px var(--focus-border);
   }
+  .mobileRecipeActionTray .splitsBulkModeBar > button.secondary:last-of-type{border-right:0}
   .mobileRecipeActionTray .splitsBulkModeBar > .splitsInfo{ display:none!important; }
   .mobileBulkContext{
     display:grid;
@@ -2457,9 +2465,10 @@ details[open] > summary .chevSatellite{
     height:42px;
     min-height:42px;
     padding:7px 4px;
-    border:1px solid var(--row-border-2);
-    border-radius:10px;
-    background:var(--row-bg-2);
+    border:0;
+    border-left:1px solid var(--row-border-2);
+    border-radius:0;
+    background:transparent;
     color:var(--muted);
     font-size:10px;
     font-weight:800;
@@ -2469,7 +2478,7 @@ details[open] > summary .chevSatellite{
   }
   .mobileRecipeMore > summary::-webkit-details-marker{display:none}
   .mobileRecipeMore > summary svg{width:15px;height:15px;fill:currentColor}
-  .mobileRecipeMore[open] > summary,.mobileRecipeMore > summary:focus-visible{border-color:var(--focus-border);background:var(--focus-ring);color:var(--title)}
+  .mobileRecipeMore[open] > summary,.mobileRecipeMore > summary:focus-visible{border-color:var(--row-border-2);background:var(--focus-ring);color:var(--title);box-shadow:inset 0 0 0 2px var(--focus-border)}
   .mobileRecipeMoreMenu{
     position:absolute;
     right:0;
@@ -3725,6 +3734,30 @@ button.compactAction{
     margin:auto;
     background:linear-gradient(var(--focus-border) 0 0) 1px 1px / 6px 6px no-repeat,linear-gradient(var(--focus-border) 0 0) calc(100% - 1px) 1px / 6px 6px no-repeat,linear-gradient(var(--focus-border) 0 0) 1px calc(100% - 1px) / 6px 6px no-repeat,linear-gradient(var(--focus-border) 0 0) calc(100% - 1px) calc(100% - 1px) / 6px 6px no-repeat;
   }
+}
+
+/* Matrix action bars share one compact surface. The Recipe bar has four
+   segments and Receiver Weights has two; each distributes only its own
+   actions while retaining the same visual grammar. */
+@media (max-width:700px){
+  .mobileMatrixActionBar{width:100%;max-width:100%;min-width:0;margin-top:8px}
+  .mobileWeightsActionToolbar.mobileMatrixActionBar,
+  .mobileRecipeActionTray.mobileMatrixActionBar .splitsBulkModeBar{
+    min-height:42px;
+    border:1px solid var(--row-border-2);
+    border-radius:var(--control-radius);
+    background:var(--row-bg-2);
+  }
+  .mobileWeightsActionToolbar.mobileMatrixActionBar button,
+  .mobileRecipeActionTray.mobileMatrixActionBar .splitsBulkModeBar button.secondary,
+  .mobileRecipeActionTray.mobileMatrixActionBar .mobileRecipeMore > summary{
+    min-height:42px;
+    color:var(--text);
+    font-size:11px;
+    font-weight:850;
+  }
+  .mobileWeightsActionToolbar.mobileMatrixActionBar button svg,
+  .mobileRecipeActionTray.mobileMatrixActionBar .mobileRecipeMore > summary svg{width:18px;height:18px}
 }
 @media (max-width: 720px){
   .toolsWorkspace{ grid-template-columns: 1fr; }
@@ -5011,4 +5044,501 @@ body[data-surface-style="divided"] .helpTopic{
   #recipePrintSheet .printSheetResin{ font-size:11px; font-weight:600; line-height:1.3; }
   #recipePrintSheet .printSheetPct{ font-size:13px; line-height:1.3; }
   #recipePrintSheet .printSheetLayerPct{ font-size:13px; font-weight:600; text-align:center; vertical-align:middle; }
+}
+
+/* =======================================================================
+ *   Simplified application shell
+ *   ======================================================================= */
+.desktopDisplayToggle{
+  display:grid;
+  place-items:center;
+  width:38px;
+  height:38px;
+  margin-left:auto;
+  padding:0;
+  border:1px solid var(--border);
+  border-radius:var(--control-radius);
+  background:var(--row-bg);
+  color:var(--focus-border);
+}
+.desktopDisplayToggle svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round}
+.desktopDisplayToggle:focus-visible{outline:2px solid var(--focus-border);outline-offset:2px}
+
+.displaySheet{
+  width:min(430px,calc(100vw - 28px));
+  max-height:min(620px,calc(100dvh - 28px));
+  padding:0;
+  border:1px solid var(--border2);
+  border-radius:16px;
+  background:var(--panelOpen);
+  color:var(--text);
+  box-shadow:var(--shadow2);
+}
+.displaySheetPanel{display:grid;gap:15px;padding:18px}
+.displaySheetPanel > label,.desktopDisplaySettings label{display:grid;gap:6px;margin:0;color:var(--muted);font-size:12px;font-weight:750}
+.displaySheetPanel select{width:100%;min-height:44px}
+.displaySheetHead{display:flex;align-items:center;justify-content:flex-start;gap:12px;padding-bottom:11px;border-bottom:1px solid var(--border)}
+.displaySheetHead strong{display:block;color:var(--title);font-size:18px}
+.displaySheetHead small{display:block;margin-top:2px;color:var(--muted);font-size:11px}
+.desktopDisplaySettings{display:grid;gap:9px;margin:0;padding:13px;border:1px solid var(--border);border-radius:var(--control-radius)}
+.desktopDisplaySettings legend{padding:0 5px;color:var(--title);font-size:12px;font-weight:800}
+.visuallyHidden{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+.footerSheet{z-index:72}
+.footerSheetBackdrop{position:fixed;inset:0;z-index:60;padding:0;border:0;background:rgba(0,0,0,.42);backdrop-filter:blur(1.5px)}
+.footerSheetBackdrop[hidden]{display:none!important}
+
+@media (width <= 900px){
+  :root{--app-dock-height:72px}
+
+  /* The old production strip is retained for desktop context only. Mobile
+     uses one persistent application dock on every primary screen. */
+  .workspaceStatusBar{display:none!important}
+  .desktopDisplaySettings{display:none}
+  .desktopDisplayToggle{display:none}
+  main{padding-bottom:calc(var(--app-dock-height) + env(safe-area-inset-bottom) + 22px)!important}
+
+  body[data-theme="mse"][data-mobile-background-style="theme-native"]{
+    background:radial-gradient(circle at 20% 0,color-mix(in srgb,var(--focus-border) 7%,transparent),transparent 42%),var(--bg);
+    background-attachment:fixed;
+  }
+  body[data-theme="industrial-slate-dark"][data-mobile-background-style="theme-native"]{
+    background:radial-gradient(circle at 18% 0,color-mix(in srgb,var(--focus-border) 8%,transparent),transparent 44%),var(--bg);
+    background-attachment:fixed;
+  }
+  body[data-theme="gruvbox-dark"][data-mobile-background-style="theme-native"]{
+    background:radial-gradient(circle at 18% 0,color-mix(in srgb,#fe8019 7%,transparent),transparent 42%),var(--bg);
+    background-attachment:fixed;
+  }
+
+  /* One fixed Minimal destination language: no card fill, icon chips,
+     shadows, or stored cosmetic variants. */
+  body[data-mobile-workspace="home"] .workspaceNav{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    grid-auto-rows:minmax(92px,auto);
+    gap:4px 14px;
+    padding:12px 16px 18px;
+    border:0;
+    border-radius:0;
+    background:transparent!important;
+    box-shadow:none!important;
+    overflow:visible;
+  }
+  .workspaceNavButton,
+  body[data-mobile-tile-style] .workspaceNavButton,
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"])[data-mobile-tile-style] .workspaceNavButton{
+    min-width:0;
+    min-height:92px;
+    padding:12px 5px 10px;
+    border:0;
+    border-bottom:1px solid color-mix(in srgb,var(--tile-accent) 42%,var(--border));
+    border-radius:0;
+    background:transparent;
+    box-shadow:none;
+    transform:none;
+    transition:background .15s ease,border-color .15s ease,transform .08s ease;
+  }
+  .workspaceNavButton:hover{background:color-mix(in srgb,var(--tile-accent) 6%,transparent);border-bottom-color:var(--tile-accent);transform:none}
+  .workspaceNavButton:active{background:color-mix(in srgb,var(--tile-accent) 11%,transparent);transform:translateY(1px)}
+  .workspaceNavButton:focus-visible{outline:2px solid var(--focus-border);outline-offset:-2px;background:var(--focus-ring)}
+  .workspaceNavButton > span{min-width:0;gap:8px;font-size:14px;font-weight:850;white-space:nowrap}
+  .workspaceNavButton .workspaceTileIcon,
+  body[data-mobile-tile-style] .workspaceNavButton .workspaceTileIcon,
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"])[data-mobile-tile-style] .workspaceTileIcon{
+    width:40px;
+    height:40px;
+    padding:2px;
+    border:0;
+    border-radius:0;
+    background:transparent;
+    color:var(--tile-accent);
+  }
+  .workspaceNavButton small{max-width:100%;font-size:10.5px}
+
+  .footerBar{
+    position:fixed;
+    right:0;
+    bottom:0;
+    left:0;
+    z-index:70;
+    display:grid;
+    grid-template-columns:repeat(5,minmax(0,1fr));
+    align-items:stretch;
+    gap:0;
+    min-height:calc(var(--app-dock-height) + env(safe-area-inset-bottom));
+    padding:4px max(4px,env(safe-area-inset-right)) env(safe-area-inset-bottom) max(4px,env(safe-area-inset-left));
+    border-top:1px solid var(--border2);
+    background:color-mix(in srgb,var(--panelOpen) 94%,transparent);
+    box-shadow:0 -8px 26px color-mix(in srgb,#000 12%,transparent);
+    text-align:center;
+    backdrop-filter:blur(14px);
+  }
+  .appDockMenuHost{position:relative;display:grid;min-width:0}
+  .appDockControl,.cloudSyncFooterStatus{
+    display:flex;
+    min-width:0;
+    min-height:64px;
+    margin:0;
+    padding:5px 2px;
+    border:0;
+    border-radius:8px;
+    background:transparent;
+    color:var(--muted);
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+    gap:3px;
+    font:inherit;
+    text-align:center;
+  }
+  .appDockControl svg,.cloudSyncFooterStatus svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .appDockControl > span,.cloudSyncFooterStatus > span{overflow:hidden;max-width:100%;color:inherit;font-size:9px;font-weight:800;line-height:1.05;text-overflow:ellipsis;white-space:nowrap}
+  .appDockControl:hover,.appDockControl:focus-visible,.cloudSyncFooterStatus:hover,.cloudSyncFooterStatus:focus-visible{background:var(--row-bg);color:var(--title)}
+  .appDockControl:focus-visible,.cloudSyncFooterStatus:focus-visible{outline:2px solid var(--focus-border);outline-offset:-2px}
+  .appDockControl[aria-current="page"],.appDockControl[aria-expanded="true"]{color:var(--title);background:var(--focus-ring)}
+  .appDockMain{
+    position:relative;
+    top:-5px;
+    justify-self:center;
+    width:calc(100% - 8px);
+    min-height:68px;
+    border:1px solid color-mix(in srgb,var(--focus-border) 24%,var(--border));
+    border-radius:13px;
+    background:color-mix(in srgb,var(--focus-ring) 72%,var(--panelOpen));
+  }
+  .appDockMain svg{width:25px;height:25px}
+  .appDockMain[aria-current="page"]{border-color:color-mix(in srgb,var(--focus-border) 48%,var(--border));background:color-mix(in srgb,var(--focus-ring) 94%,var(--panelOpen));color:var(--title)}
+  .appDockMain:not([aria-current="page"]){color:var(--muted);background:color-mix(in srgb,var(--row-bg) 82%,var(--panelOpen))}
+  .appDockControl:disabled{opacity:.58}
+  .cloudSyncFooterStatus{border:0;text-align:center}
+  .cloudSyncFooterStatus strong{max-width:100%;overflow:hidden;color:var(--text);font-size:8px;font-weight:850;line-height:1;text-overflow:ellipsis;white-space:nowrap}
+  .cloudSyncFooterStatus[data-state="synced"]{color:var(--ok)}
+  .cloudSyncFooterStatus[data-state="pending"],.cloudSyncFooterStatus[data-state="offline"],.cloudSyncFooterStatus[data-state="conflict"]{color:var(--warn)}
+  .cloudSyncFooterStatus[data-state="error"]{color:var(--bad)}
+
+  .footerSheet{
+    position:fixed;
+    right:auto;
+    bottom:calc(var(--app-dock-height) + env(safe-area-inset-bottom) + 10px);
+    left:50%;
+    top:auto;
+    z-index:72;
+    width:min(410px,calc(100vw - 20px));
+    max-width:calc(100vw - 20px);
+    margin:0;
+    padding:0;
+    transform:translateX(-50%);
+    border:1px solid var(--border2);
+    border-radius:14px;
+    background:var(--panelOpen);
+    color:var(--text);
+    box-shadow:0 12px 32px color-mix(in srgb,#000 30%,transparent);
+  }
+  .footerDockMenu{
+    display:grid;
+    gap:4px;
+    max-height:calc(100dvh - var(--app-dock-height) - 32px);
+    padding:8px;
+    overflow:auto;
+    text-align:left;
+  }
+  .footerSheet:not([open]){display:none!important}
+  .footerDockMenu [hidden]{display:none!important}
+  .footerSheetHead{padding:10px 11px 11px;border-bottom:1px solid var(--border)}
+  .footerSheetHead strong{color:var(--title);font-size:14px}
+  .footerDockMenu button{display:grid;grid-template-columns:28px minmax(0,1fr);align-items:center;gap:10px;min-height:48px;padding:8px 11px;border:0;border-radius:9px;background:transparent;color:var(--text);font:inherit;text-align:left}
+  .footerDockMenu button:not(:has(svg)){grid-template-columns:1fr}
+  .footerDockMenu button:hover,.footerDockMenu button:focus-visible{background:var(--row-bg);outline:0}
+  .footerDockMenu button:focus-visible{box-shadow:inset 0 0 0 2px var(--focus-border)}
+  .footerDockMenu button svg{width:24px;height:24px;fill:none;stroke:var(--focus-border);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .footerDockMenu button span{font-size:13px;font-weight:800}
+  .footerAccountDetails{display:grid;gap:2px;padding:10px 11px 12px;border-bottom:1px solid var(--border)}
+  .footerAccountDetails[hidden]{display:none}
+  .footerAccountDetails strong{color:var(--title);font-size:13px}
+  .footerAccountDetails small{overflow:hidden;color:var(--muted);font-size:11px;text-overflow:ellipsis;white-space:nowrap}
+
+  .displaySheet{max-height:calc(100dvh - var(--app-dock-height) - 32px)}
+  .displaySheetPanel{padding:16px}
+  .footerSheetBackdrop{bottom:calc(var(--app-dock-height) + env(safe-area-inset-bottom));z-index:69}
+
+  .timelineAlarmSetting{margin:12px 0 0}
+  .mobileRecipeActionTray{bottom:calc(var(--app-dock-height) + env(safe-area-inset-bottom) + 6px)!important}
+  .mobileRearrangeToast{bottom:calc(var(--app-dock-height) + env(safe-area-inset-bottom) + 8px)!important}
+  .pumpOffAlarmBanner{bottom:calc(var(--app-dock-height) + env(safe-area-inset-bottom) + 10px)}
+}
+
+@media (width <= 340px){
+  .workspaceNavButton > span{gap:5px;font-size:12.5px}
+  .workspaceNavButton .workspaceTileIcon{width:36px;height:36px}
+  .appDockControl > span,.cloudSyncFooterStatus > span{font-size:8px}
+  .appDockMain{width:calc(100% - 4px)}
+}
+
+/* Footer state refinement: selection is communicated by the theme accent,
+   without a persistent button-shaped container.  Touch targets remain full
+   sized and focus/press feedback stays available. */
+@media (width <= 900px){
+  .appDockControl,
+  .cloudSyncFooterStatus{
+    background:transparent;
+    box-shadow:none;
+  }
+  .appDockControl:hover,
+  .cloudSyncFooterStatus:hover{
+    background:transparent;
+    color:var(--title);
+  }
+  .appDockControl[aria-current="page"],
+  .appDockControl[aria-expanded="true"]{
+    background:transparent;
+    color:var(--title);
+    box-shadow:none;
+  }
+  .appDockControl[aria-current="page"] > span,
+  .appDockControl[aria-expanded="true"] > span{
+    color:var(--title);
+    font-weight:900;
+  }
+  .appDockControl[aria-current="page"] svg,
+  .appDockControl[aria-expanded="true"] svg{
+    color:var(--title);
+    transform:scale(1.04);
+  }
+
+  /* Main keeps its raised, larger touch target, but has no visible block. */
+  .appDockMain,
+  .appDockMain[aria-current="page"],
+  .appDockMain:not([aria-current="page"]){
+    border:0;
+    border-color:transparent;
+    border-radius:0;
+    background:transparent;
+    box-shadow:none;
+  }
+  .appDockMain[aria-current="page"]{color:var(--title)}
+  .appDockMain:not([aria-current="page"]){color:var(--muted)}
+
+  /* Preserve a clear keyboard affordance without turning focus into a
+     persistent selected container. */
+  .appDockControl:focus-visible,
+  .cloudSyncFooterStatus:focus-visible{
+    background:transparent;
+    color:var(--title);
+    outline:2px solid var(--focus-border);
+    outline-offset:-2px;
+  }
+  .appDockControl:active:not(.cloudSyncFooterStatus){
+    background:color-mix(in srgb,var(--title) 10%,transparent);
+    color:var(--title);
+    transform:translateY(1px);
+  }
+  .appDockMain:active:not(.cloudSyncFooterStatus){transform:translateY(-4px)}
+}
+
+@media (min-width:901px){
+  /* Desktop keeps its established sidebar and production status strip. The
+     Account utility remains reachable without reintroducing admin tiles. */
+  .footerBar{display:contents}
+  .footerBar > :not(.footerAccountHost){display:none!important}
+  .footerAccountHost{position:fixed;top:15px;right:66px;z-index:65;display:block}
+  #appFooterAccount{display:grid;place-items:center;width:38px;height:38px;padding:0;border:1px solid var(--border);border-radius:var(--control-radius);background:var(--row-bg);color:var(--focus-border)}
+  #appFooterAccount svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  #appFooterAccount > span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+  #appFooterAccount:hover,#appFooterAccount:focus-visible,#appFooterAccount[aria-expanded="true"]{background:var(--focus-ring);color:var(--title)}
+  #appFooterAccount:focus-visible{outline:2px solid var(--focus-border);outline-offset:2px}
+  .footerAccountMenu{position:absolute;top:46px;right:0;display:grid;gap:4px;width:290px;padding:8px;border:1px solid var(--border2);border-radius:12px;background:var(--panelOpen);box-shadow:var(--shadow2)}
+  .footerAccountMenu[hidden],.footerAccountMenu [hidden]{display:none!important}
+  .footerAccountMenu button{min-height:42px;padding:8px 10px;border:0;border-radius:8px;background:transparent;color:var(--text);font:inherit;font-weight:750;text-align:left}
+  .footerAccountMenu button:hover,.footerAccountMenu button:focus-visible{background:var(--row-bg);outline:0;box-shadow:inset 0 0 0 2px var(--focus-border)}
+  .footerAccountDetails{display:grid;gap:2px;padding:9px 10px 11px;border-bottom:1px solid var(--border)}
+  .footerAccountDetails[hidden]{display:none}
+  .footerAccountDetails strong{color:var(--title);font-size:13px}.footerAccountDetails small{color:var(--muted);font-size:11px}
+}
+
+/* =======================================================================
+ *   Mobile Setup refinement
+ *   ======================================================================= */
+@media (width <= 900px){
+  #lineSetupBlock .setupLineConfiguration{margin-top:0;padding:10px 0 2px}
+  #lineSetupBlock .setupSectionHeading{
+    margin:0 0 10px;
+    color:var(--title);
+    font-size:13px;
+    font-weight:850;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+  }
+  #lineSetupBlock .setupTopRow{
+    grid-template-columns:1fr;
+    width:min(100%,480px);
+    gap:10px;
+  }
+  #lineSetupBlock .setupControlGroup{display:grid;gap:5px;min-width:0}
+  #lineSetupBlock .setupControlLabel{color:var(--muted);font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+  #lineSetupBlock .layerCountTiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;width:100%}
+  #lineSetupBlock .layerCountTile{
+    display:flex;
+    width:auto;
+    height:42px;
+    gap:7px;
+    border-color:var(--row-border-2);
+    border-radius:var(--control-radius);
+    background:var(--row-bg-2);
+    color:var(--muted);
+    font-size:13px;
+    font-weight:850;
+  }
+  #lineSetupBlock .layerCountTile svg{width:23px;height:17px}
+  #lineSetupBlock .layerCountTile.active{
+    border-color:color-mix(in srgb,var(--focus-border) 66%,var(--row-border-2));
+    background:transparent;
+    color:var(--title);
+    box-shadow:inset 0 -2px 0 var(--focus-border);
+  }
+  #lineSetupBlock .hopperNamingChoice{width:100%;background:var(--row-bg-2);border-color:var(--row-border-2)}
+  #lineSetupBlock .hopperNamingChoice button{flex:1;min-height:40px;font-size:11px}
+  #lineSetupBlock .hopperNamingChoice button.active{background:transparent;color:var(--title);box-shadow:inset 0 -2px 0 var(--focus-border)}
+  #lineSetupBlock .setupPrimaryFields{margin-top:12px!important;gap:10px}
+  #lineSetupBlock .gaugeTile{
+    position:relative;
+    min-height:94px;
+    max-width:none;
+    padding:10px 10px 9px;
+    border-color:var(--row-border-2);
+    border-radius:var(--control-radius);
+    background:var(--row-bg-2);
+  }
+  #lineSetupBlock .gaugeTile input:not([type="checkbox"]):not([type="radio"]){
+    min-width:0;
+    color:var(--text);
+    font-size:clamp(19px,6vw,25px);
+    line-height:1.05;
+    letter-spacing:-.03em;
+    font-variant-numeric:tabular-nums;
+  }
+  #lineSetupBlock .gaugeTile input[type="time"]{min-width:0;padding-inline:0}
+  #lineSetupBlock .gaugeTile input[type="time"]{
+    position:absolute;
+    inset:0;
+    z-index:2;
+    width:100%;
+    height:100%;
+    opacity:0;
+    cursor:pointer;
+  }
+  #lineSetupBlock .gaugeTimeValue{display:flex;align-items:center;justify-content:center;gap:7px;min-width:0;color:var(--text);font-size:clamp(19px,6vw,25px);font-weight:850;line-height:1.05;font-variant-numeric:tabular-nums;letter-spacing:-.03em;white-space:nowrap}
+  #lineSetupBlock .gaugeTimeValue svg{width:22px;height:22px;flex:0 0 auto;fill:none;stroke:var(--title);stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+  #lineSetupBlock .gaugeTile label{margin-top:6px;color:var(--muted);font-size:9px;letter-spacing:.08em}
+  #lineSetupBlock .gaugeTile .gaugeIcon{width:17px;height:17px;margin-bottom:3px}
+
+  #lineSetupBlock #weightsBlock{border:0;border-radius:0;background:transparent;box-shadow:none}
+  #lineSetupBlock #weightsBlock > summary{
+    min-height:62px;
+    padding:8px 0 10px;
+    border-bottom:1px solid var(--border);
+  }
+  #lineSetupBlock #weightsBlock > summary .sumLeft{gap:9px;min-width:0}
+  #lineSetupBlock #weightsBlock > summary .mobileSetupEntryArt{width:35px;height:35px}
+  #lineSetupBlock #weightsBlock > summary .summaryText{overflow:visible}
+  #lineSetupBlock #weightsBlock > summary .nestedLayerTitle{font-size:13px;letter-spacing:.08em;white-space:normal}
+  #lineSetupBlock #weightsBlock > summary .layerMeta{margin-top:2px;font-size:10px;line-height:1.25;white-space:normal}
+  #lineSetupBlock #weightsBlock > summary::after{width:8px;height:8px}
+  #lineSetupBlock #weightsBlock > .blockBody{min-width:0;padding-top:10px}
+  #lineSetupBlock #setupWeightProfilesBlock{display:none!important}
+  .weightsIntroduction{display:grid;min-width:0;width:100%;max-width:100%;gap:6px;margin:0;color:var(--muted);font-size:11px;line-height:1.38}
+  .weightsIntroduction > *{min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere}
+  .weightsSmartHow{display:block;min-width:0;width:100%;max-width:100%;box-sizing:border-box;font-size:10px;white-space:normal}
+  .weightsSmartHow summary{min-width:0;max-width:100%;color:var(--focus-border);font-weight:800;white-space:normal;overflow-wrap:anywhere;cursor:pointer}
+  .weightsSmartHow p{min-width:0;max-width:100%;margin:6px 0 0;padding:8px;box-sizing:border-box;border-left:2px solid var(--focus-border);background:color-mix(in srgb,var(--focus-ring) 34%,transparent);font-size:10px;line-height:1.35;white-space:normal;overflow-wrap:anywhere}
+
+  .mobileWeightsControlRail{grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:7px}
+  .mobileWeightsSmartControl{
+    min-height:52px;
+    padding:7px 8px;
+    border:1px solid var(--row-border-2);
+    border-radius:var(--control-radius);
+    background:var(--row-bg-2);
+    color:var(--text);
+    box-shadow:none;
+  }
+  .mobileWeightsSmartControl strong{font-size:11px}
+  .mobileWeightsSmartControl small{font-size:8px}
+  .mobileSharedCircumference{grid-template-columns:minmax(0,1fr) auto;gap:1px 7px;min-height:52px;padding:6px 8px}
+  .mobileSharedCircumference > span{align-self:end;color:var(--text);font-size:10px;font-weight:800;white-space:nowrap}
+  .mobileSharedCircumference small{grid-column:1;text-align:left}
+  .mobileSharedCircumference input{grid-column:2;grid-row:1 / span 2;width:48px;height:32px;font-size:16px}
+  .mobileWeightsViewToggle{padding-top:2px}
+  .mobileWeightsViewToggle button{border-radius:var(--control-radius)}
+  .mobileWeightsViewToggle button.active{background:transparent;box-shadow:inset 0 -2px 0 var(--focus-border)}
+
+  #weightsArea[data-mobile-weight-view="visual"] .mobileWeightCell{height:70px;min-height:68px;padding:5px}
+  #weightsArea[data-mobile-weight-view="visual"] .mobileWeightVisualReadout{display:block;margin-top:17px}
+  .mobileWeightVisualValues{display:grid;gap:3px;min-width:0;text-align:left}
+  .mobileWeightVisualValues b{display:flex;align-items:baseline;justify-content:flex-end;gap:2px;min-width:0;font-size:13px;line-height:1}
+  .mobileWeightVisualValues small{display:inline;margin:0;color:var(--muted);font-size:7px!important}
+  .mobileWeightVisualValues b:first-child small::after,.mobileWeightVisualValues b:nth-child(2) small::after{content:none}
+  #weightsArea[data-mobile-weight-view="edit"] .mobileWeightCell{min-height:78px}
+  .mobileWeightsBulkActions small{font-weight:800}
+  .mobileWeightsBulkActions button{font-weight:850}
+
+  /* Profiles and bulk editing belong with the bottom of the matrix. The
+     toolbar uses the same compact, equal actions as the Recipe panel. */
+  .mobileWeightsActionToolbar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;margin-top:8px;border:1px solid var(--row-border-2);border-radius:var(--control-radius);overflow:hidden;background:var(--row-bg-2)}
+  .mobileWeightsActionToolbar button{display:flex;align-items:center;justify-content:center;gap:7px;min-height:42px;padding:7px 8px;border:0;border-radius:0;background:transparent;color:var(--text);font:inherit;font-size:12px;font-weight:850;box-shadow:none}
+  .mobileWeightsActionToolbar button + button{border-left:1px solid var(--row-border-2)}
+  .mobileWeightsActionToolbar button svg{width:18px;height:18px;fill:none;stroke:var(--focus-border);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .mobileWeightsActionToolbar button:hover,.mobileWeightsActionToolbar button:focus-visible{background:var(--row-bg);outline:0}
+  .mobileWeightsActionToolbar button:focus-visible{box-shadow:inset 0 0 0 2px var(--focus-border)}
+  .mobileWeightsActionToolbar .mobileWeightsBulkToggleRow.on{color:var(--title);background:var(--focus-ring)}
+  .mobileWeightsActionToolbar.bulkActive{grid-template-columns:1fr}
+  .mobileWeightsActionToolbar.bulkActive .mobileWeightsProfilesAction{display:none}
+  .mobileWeightsActionToolbar.bulkActive .mobileWeightsBulkToggleRow{border-left:0}
+  .mobileWeightsActionToolbar .mobileWeightsProfilesAction[aria-expanded="true"]{color:var(--title);background:var(--focus-ring)}
+
+  .mobileSavedRecipesSheet{bottom:calc(var(--app-dock-height) + env(safe-area-inset-bottom) + 8px);width:min(410px,calc(100vw - 20px));max-width:calc(100vw - 20px);max-height:min(74dvh,620px);margin:0;padding:0 12px 12px;border:1px solid var(--border2);border-radius:16px;background:var(--panelOpen);box-shadow:0 12px 32px color-mix(in srgb,#000 30%,transparent)}
+  .mobileSavedRecipesSheet[open]{display:grid;grid-template-rows:auto auto auto minmax(0,1fr)}
+  .mobileSavedRecipesSheet::backdrop{background:color-mix(in srgb,#000 48%,transparent);backdrop-filter:blur(1.5px)}
+  .mobileSavedRecipesGrabber{display:block;width:42px;height:5px;min-height:5px;margin:8px auto 5px;padding:0;border:0;border-radius:999px;background:color-mix(in srgb,var(--muted) 45%,transparent);box-shadow:none}
+  .mobileSavedRecipesGrabber:focus-visible{outline:2px solid var(--focus-border);outline-offset:3px}
+  .mobileSavedRecipesHeader{padding:5px 0 10px}
+  .mobileSavedRecipesTools button{font-size:10px}
+
+  /* Receiver bulk selection: cells themselves are the controls. A corner
+     marker, inset outline, and tint keep selection clear without a second
+     column of egg-shaped checkboxes. */
+  #weightsArea[data-mobile-bulk-mode="true"] .mobileWeightCell{cursor:pointer}
+  #weightsArea[data-mobile-bulk-mode="true"] .mobileWeightCell:focus-visible{outline:2px solid var(--focus-border);outline-offset:1px}
+  #weightsArea[data-mobile-bulk-mode="true"] .mobileWeightCell.selected{
+    border-width:1px;
+    background:color-mix(in srgb,var(--focus-ring) 72%,var(--row-bg-2));
+    box-shadow:inset 0 0 0 2px var(--focus-border);
+  }
+  #weightsArea[data-mobile-bulk-mode="true"] .mobileWeightCell.selected::after{
+    content:"";
+    position:absolute;
+    top:5px;
+    right:5px;
+    width:7px;
+    height:7px;
+    border-radius:2px;
+    background:var(--focus-border);
+  }
+  .mobileWeightCellSelector{display:none!important}
+
+  /* In Summary, Smart capacity replaces the manual display in place. */
+  .mobileWeightSummaryWeight.smart{color:var(--ok)}
+  #weightsArea[data-mobile-weight-view="visual"] .mobileWeightsComputedWeight{display:none!important}
+
+  /* Recipes and receiver profiles share Display's centered mobile sheet
+     geometry instead of relying on dialog's edge-to-edge default margins. */
+  .mobileSavedRecipesSheet{
+    position:fixed;
+    inset:auto;
+    right:auto;
+    bottom:calc(var(--app-dock-height) + env(safe-area-inset-bottom) + 10px);
+    left:50%;
+    transform:translateX(-50%);
+    width:min(410px,calc(100vw - 20px));
+    max-width:calc(100vw - 20px);
+    margin:0;
+  }
 }

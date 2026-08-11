@@ -8,10 +8,11 @@ test("admin navigation is explicitly hidden during initialization and rendered f
   assert.match(index, /id="resinDatabaseButton"[^>]*hidden/);
   assert.match(ui, /const initializing = !state\?\.ready/);
   assert.match(ui, /adminLoginButton"\)\.hidden = initializing \|\| adminAccess/);
-  assert.match(index, /id="adminLoginButton"[\s\S]*?class="workspaceTileIcon"[\s\S]*?Admin Login/);
+  assert.match(index, /id="appFooterAccount"[\s\S]*?id="adminLoginButton"[\s\S]*?Admin Login/);
   assert.match(ui, /resinDatabaseButton"\)\.hidden = !adminAccess/);
   assert.match(ui, /renderAccess\(admin\.getState\(\)\)/);
-  assert.match(fs.readFileSync("styles.css", "utf8"), /\.adminNavButton\[hidden\]\{ display: none !important; \}/);
+  assert.match(ui,/accountButton\.disabled = initializing/);
+  assert.match(fs.readFileSync("styles.css", "utf8"), /\.footerDockMenu \[hidden\]\{display:none!important\}/);
 });
 
 test("admin UI includes login, editing, active state, deletion, and catalog refresh flow", () => {

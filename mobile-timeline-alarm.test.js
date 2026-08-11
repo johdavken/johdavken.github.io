@@ -8,8 +8,11 @@ const app = fs.readFileSync("app.js","utf8");
 const html = fs.readFileSync("index.html","utf8");
 const styles = fs.readFileSync("styles.css","utf8");
 
-test("mobile appearance includes a persistent pump-off alarm preference",()=>{
+test("Timeline includes the persistent pump-off alarm preference",()=>{
   assert.match(html,/id="mobileTimelineAlarmToggle"/);
+  const timeline = html.slice(html.indexOf('id="resultsBlock"'),html.indexOf('id="lineSyncBlock"'));
+  assert.match(timeline,/id="mobileTimelineAlarmToggle"/);
+  assert.doesNotMatch(html,/statusPreferences/);
   assert.match(app,/mobileTimelineAlarm: false/);
   assert.match(app,/mobileTimelineAlarm: !!state\.mobileTimelineAlarm/);
   assert.match(app,/applyMobileTimelineAlarm\(!!payload\.mobileTimelineAlarm\)/);

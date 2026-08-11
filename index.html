@@ -277,43 +277,7 @@
       <span><svg class="workspaceTileIcon" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 9c-3-2.5-6.5-2.7-10-1.5v16c3.5-1.2 7-1 10 1.5 3-2.5 6.5-2.7 10-1.5v-16C22.5 6.3 19 6.5 16 9Z"/><path d="M16 9v16"/></svg>Help</span>
       <small>Operator guide</small>
     </button>
-    <button id="mobileAppearanceTile" class="workspaceNavButton appearanceNavTile" type="button">
-      <span><svg class="workspaceTileIcon" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="11"/><circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="20" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="20" r="1.7" fill="currentColor" stroke="none"/><path d="M20 20h.01" stroke-width="3.4"/></svg>Appearance</span>
-      <small>Theme and display</small>
-    </button>
-    <button id="adminLoginButton" class="workspaceNavButton adminNavButton" type="button" hidden>
-      <span><svg class="workspaceTileIcon" viewBox="0 0 32 32" aria-hidden="true"><rect x="7" y="14" width="18" height="13" rx="3"/><path d="M11 14v-3a5 5 0 0 1 10 0v3"/><circle cx="16" cy="20" r="2"/><path d="M16 22v2"/></svg>Admin Login</span>
-      <small>Resin database</small>
-    </button>
-    <button id="resinDatabaseButton" class="workspaceNavButton adminNavButton" type="button" data-workspace-target="resinAdminBlock" hidden>
-      <span><svg class="workspaceTileIcon" viewBox="0 0 32 32" aria-hidden="true"><ellipse cx="16" cy="7" rx="9" ry="3.5"/><path d="M7 7v12c0 2 4 3.5 9 3.5s9-1.5 9-3.5V7M7 13c0 2 4 3.5 9 3.5s9-1.5 9-3.5"/></svg>Resin Database</span>
-      <small>Catalog editor</small>
-    </button>
-    <button id="workspaceManagementButton" class="workspaceNavButton adminNavButton" type="button" data-workspace-target="workspaceManagementBlock" hidden>
-      <span><svg class="workspaceTileIcon" viewBox="0 0 32 32" aria-hidden="true"><rect x="5" y="7" width="9" height="8" rx="1"/><rect x="18" y="17" width="9" height="8" rx="1"/><path d="M14 11h4M16 11v6M16 21h2"/></svg>Workspace Management</span>
-      <small>Device recovery</small>
-    </button>
-    <button id="adminSignOutButton" class="workspaceNavButton adminNavButton" type="button" hidden>
-      <span><svg class="workspaceTileIcon" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="11" r="5"/><path d="M7 27c.8-5 4-8 9-8s8.2 3 9 8"/></svg>Admin Account</span>
-      <small>Sign out</small>
-    </button>
   </nav>
-
-  <div id="mobileQuickActions" class="mobileQuickActions" data-open="false">
-    <div id="mobileQuickActionsMenu" class="mobileQuickActionsMenu" role="menu" aria-hidden="true" inert>
-      <button id="quickProductionSummaryBtn" type="button" role="menuitem">
-        <span>Production Summary</span>
-        <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 25V15M16 25V7M26 25V11"/><path d="M3 25h26"/></svg>
-      </button>
-      <button id="quickScanDosingScreenBtn" type="button" role="menuitem">
-        <span>Scan Dosing Screen</span>
-        <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 10V6h4M22 6h4v4M26 22v4h-4M10 26H6v-4"/><path d="M10 16h12M10 12h8M10 20h9"/></svg>
-      </button>
-    </div>
-    <button id="mobileQuickActionsToggle" class="mobileQuickActionsToggle" type="button" aria-expanded="false" aria-controls="mobileQuickActionsMenu" aria-label="Open quick actions" title="Quick actions">
-      <svg viewBox="0 0 32 32" aria-hidden="true"><path class="quickActionRing" d="M16 4a12 12 0 1 1-8.5 3.5"/><path class="quickActionPlus" d="M16 10v12M10 16h12"/><path class="quickActionSpark" d="M7 4v5M4.5 6.5h5"/></svg>
-    </button>
-  </div>
 
   <div class="workspaceContent">
   <div class="workspaceStatusBar" aria-label="Current production status">
@@ -364,88 +328,9 @@
       <strong id="workspaceNextStatus">No tracked hoppers</strong>
       <small id="workspaceNextDetail">Track a resin to see the next action</small>
     </div>
-    <details class="statusPreferences" id="statusPreferences">
-      <summary aria-label="Open appearance and preferences" title="Appearance and preferences">
-        <span aria-hidden="true">☰</span>
-      </summary>
-      <div class="statusPreferencesPanel">
-        <div class="mobileAppearancePanelHeader">
-          <div><strong>Appearance</strong><small>Theme and display</small></div>
-          <button id="mobileAppearanceBack" type="button" aria-label="Back to sections" title="Back to sections"><span aria-hidden="true"></span></button>
-        </div>
-        <div class="statusPreferencesHead">
-          <strong>Appearance &amp; Preferences</strong>
-          <small>Saved on this device</small>
-        </div>
-        <div class="setupPreferenceFields">
-          <div>
-            <label for="themeSel">Theme</label>
-            <select id="themeSel">
-              <option value="dark">Dark</option><option value="light">Light</option>
-              <option value="mse" selected>Industrial Slate (Default)</option><option value="industrial-slate-dark">Industrial Slate Dark</option>
-              <option value="gruvbox-dark">Gruvbox Dark</option><option value="gruvbox-light">Gruvbox Light</option>
-              <option value="nord">Nord</option><option value="tokyo-night">Tokyo Night</option><option value="dracula">Dracula</option>
-              <option value="solarized-dark">Solarized Dark</option><option value="solarized-light">Solarized Light</option>
-              <option value="catppuccin-mocha">Catppuccin Mocha</option><option value="catppuccin-latte">Catppuccin Latte</option>
-              <option value="rose-pine">Rosé Pine</option><option value="rose-pine-dawn">Rosé Pine Dawn</option>
-              <option value="everforest">Everforest</option><option value="everforest-light">Everforest Light</option>
-              <option value="one-dark">One Dark</option>
-              <option value="high-contrast">High Contrast</option><option value="mono">Monochrome</option>
-            </select>
-          </div>
-          <div>
-            <label for="densitySel">View density</label>
-            <select id="densitySel">
-              <option value="spacious">Spacious</option><option value="comfort" selected>Comfort (Default)</option>
-              <option value="compact">Compact</option><option value="dense">Dense</option><option value="maximum">Maximum Data</option>
-            </select>
-          </div>
-          <div>
-            <label for="timeFormatSel">Time format</label>
-            <select id="timeFormatSel"><option value="12" selected>12-hour (Default)</option><option value="24">24-hour</option></select>
-          </div>
-          <div>
-            <label for="surfaceStyleSel">Surface style</label>
-            <select id="surfaceStyleSel">
-              <option value="elevated">High Elevation</option><option value="flat">Pure Flat</option>
-              <option value="layered-flat">Layered Flat (Default on Mobile)</option><option value="accent-frame">Accent Frame</option>
-              <option value="divided" selected>Divided Workspace (Default)</option><option value="low-elevation">Low Elevation</option>
-            </select>
-          </div>
-        </div>
-        <fieldset class="mobileTileStyleSection">
-          <legend>Tile appearance</legend>
-          <div class="mobileTileStyleChoices" role="radiogroup" aria-label="Mobile tile appearance">
-            <button type="button" role="radio" aria-checked="false" data-mobile-tile-style="accent"><span></span>Color accent</button>
-            <button type="button" role="radio" aria-checked="false" data-mobile-tile-style="solid"><span></span>Color fill</button>
-            <button type="button" role="radio" aria-checked="false" data-mobile-tile-style="outline"><span></span>Outline</button>
-            <button type="button" role="radio" aria-checked="false" data-mobile-tile-style="glass"><span></span>Glass</button>
-            <button type="button" role="radio" aria-checked="true" data-mobile-tile-style="minimal"><span></span>Minimal</button>
-            <button type="button" role="radio" aria-checked="false" data-mobile-tile-style="layered"><span></span>Layered</button>
-          </div>
-        </fieldset>
-        <fieldset class="mobileBackgroundStyleSection">
-          <legend>Background</legend>
-          <div class="mobileBackgroundStyleChoices" role="radiogroup" aria-label="Mobile background">
-            <button type="button" role="radio" aria-checked="true" data-mobile-background-style="layer-glow"><span></span>Layer glow</button>
-            <button type="button" role="radio" aria-checked="false" data-mobile-background-style="industrial-grid"><span></span>Industrial grid</button>
-            <button type="button" role="radio" aria-checked="false" data-mobile-background-style="paper-grain"><span></span>Paper grain</button>
-            <button type="button" role="radio" aria-checked="false" data-mobile-background-style="dot-matrix"><span></span>Dot matrix</button>
-            <button type="button" role="radio" aria-checked="false" data-mobile-background-style="blueprint"><span></span>Blueprint</button>
-            <button type="button" role="radio" aria-checked="false" data-mobile-background-style="contour-lines"><span></span>Contour lines</button>
-            <button type="button" role="radio" aria-checked="false" data-mobile-background-style="prism-fade"><span></span>Prism fade</button>
-            <button type="button" role="radio" aria-checked="false" data-mobile-background-style="pinstripe"><span></span>Pinstripe</button>
-          </div>
-        </fieldset>
-        <fieldset class="mobileTimelineAlarmSection">
-          <legend>Timeline alarm</legend>
-          <label class="mobileTimelineAlarmChoice" for="mobileTimelineAlarmToggle">
-            <input id="mobileTimelineAlarmToggle" type="checkbox">
-            <span><strong>Alarm when pump-off is due</strong><small id="mobileTimelineAlarmStatus">Sound and vibration while Resin.Tools is open.</small></span>
-          </label>
-        </fieldset>
-      </div>
-    </details>
+    <button id="desktopDisplayToggle" class="desktopDisplayToggle" type="button" aria-expanded="false" aria-controls="displaySheet" aria-label="Open display settings" title="Display settings">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/></svg>
+    </button>
   </div>
 
   <!-- 1) LINE SETUP -->
@@ -461,11 +346,15 @@
     </summary>
 
     <div class="blockBody">
-      <section class="setupSection">
+      <section class="setupSection setupLineConfiguration">
+        <h2 class="setupSectionHeading">Line configuration</h2>
         <div class="setupTopRow">
-          <div class="layerCountTiles" id="lineTypeToggle" role="radiogroup" aria-label="Layer count">
-            <button type="button" class="layerCountTile" role="radio" aria-checked="false" aria-label="1 layer" title="1 layer" data-line-type="1">
+          <div class="setupControlGroup setupLayerCountGroup">
+            <span class="setupControlLabel">Layers</span>
+            <div class="layerCountTiles" id="lineTypeToggle" role="radiogroup" aria-label="Layers">
+              <button type="button" class="layerCountTile" role="radio" aria-checked="false" aria-label="1 layer" title="1 layer" data-line-type="1">
               <svg viewBox="0 0 26 18" aria-hidden="true"><path d="M13 4 L23 9 L13 14 L3 9 Z" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+              <span>1</span>
             </button>
             <button type="button" class="layerCountTile" role="radio" aria-checked="true" aria-label="3 layers" title="3 layers" data-line-type="3">
               <svg viewBox="0 0 26 18" aria-hidden="true">
@@ -473,6 +362,7 @@
                 <path d="M13 7 L23 11 L13 15 L3 11 Z" fill="none" stroke="currentColor" stroke-width="1.5"/>
                 <path d="M13 12 L23 16 L13 20 L3 16 Z" fill="none" stroke="currentColor" stroke-width="1.5"/>
               </svg>
+              <span>3</span>
             </button>
             <button type="button" class="layerCountTile" role="radio" aria-checked="false" aria-label="5 layers" title="5 layers" data-line-type="5">
               <svg viewBox="0 0 26 18" aria-hidden="true">
@@ -482,17 +372,23 @@
                 <path d="M13 11.8 L22 15.2 L13 18.6 L4 15.2 Z" fill="none" stroke="currentColor" stroke-width="1.2"/>
                 <path d="M13 15.4 L22 18.8 L13 22.2 L4 18.8 Z" fill="none" stroke="currentColor" stroke-width="1.2"/>
               </svg>
+              <span>5</span>
             </button>
+            </div>
           </div>
-          <div id="hopperNamingToggle" class="hopperNamingChoice" role="radiogroup" aria-label="Receiver hopper labels" title="Receiver hopper labels — 1–6, or Main + 1–5 for Line 9">
-            <button class="active" type="button" role="radio" aria-checked="true" data-hopper-naming="standard">1–6</button>
-            <button type="button" role="radio" aria-checked="false" data-hopper-naming="main">Main + 1–5</button>
+          <div class="setupControlGroup setupNamingGroup">
+            <span class="setupControlLabel">Line 9 hopper names</span>
+            <div id="hopperNamingToggle" class="hopperNamingChoice" role="radiogroup" aria-label="Line 9 hopper names" title="Receiver hopper labels — 1–6, or Main + 1–5 for Line 9">
+              <button class="active" type="button" role="radio" aria-checked="true" data-hopper-naming="standard">1–6</button>
+              <button type="button" role="radio" aria-checked="false" data-hopper-naming="main">Main + 1–5</button>
+            </div>
           </div>
         </div>
         <div class="setupFields setupPrimaryFields mt10">
           <div>
             <div class="gaugeTile">
               <input id="changeoverTime" type="time" />
+              <span class="gaugeTimeValue" aria-hidden="true"><span id="changeoverTimeDisplay">Set time</span><svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="7.5"/><path d="M10 5.6v4.8l3.2 1.9"/></svg></span>
               <label for="changeoverTime">Changeover</label>
             </div>
           </div>
@@ -519,15 +415,19 @@
             </svg>
             <div class="summaryText">
               <div class="layerTitle nestedLayerTitle">Receiver hopper weights</div>
-              <div class="layerMeta">Stored capacity used by the run-down calculation</div>
+              <div class="layerMeta">Set usable capacity or calculate it with Smart Hoppers.</div>
             </div>
           </div>
           <span class="pill">Weights</span>
         </summary>
 
         <div class="blockBody">
-          <div class="muted">
-            Enter a conservative usable weight to prevent running out early. For <strong>Smart Hoppers</strong>, enter the hopper circumference and usable height (base to fill valve). When bulk density is available, Smart Hoppers calculates the resin-specific weight.
+          <div class="weightsIntroduction muted">
+            <span>Enter a conservative usable weight, or use Smart Hoppers to calculate capacity from hopper dimensions and resin density.</span>
+            <details class="weightsSmartHow">
+              <summary>How Smart Hoppers work</summary>
+              <p>Smart Hoppers uses the shared hopper circumference, each hopper’s usable height, its assigned recipe resin, and that resin’s measured bulk density. Manual weights remain available at all times.</p>
+            </details>
           </div>
           <div id="weightsArea" class="weightsGrid mt10"></div>
         </div>
@@ -635,6 +535,13 @@
     Reset tracking
   </button>
 </div>
+      <fieldset class="mobileTimelineAlarmSection timelineAlarmSetting">
+        <legend>Timeline alarm</legend>
+        <label class="mobileTimelineAlarmChoice" for="mobileTimelineAlarmToggle">
+          <input id="mobileTimelineAlarmToggle" type="checkbox">
+          <span><strong>Alarm when pump-off is due</strong><small id="mobileTimelineAlarmStatus">Sound and vibration while Resin.Tools is open.</small></span>
+        </label>
+      </fieldset>
       <div id="resultsArea" class="resultGrid mt10"></div>
 
     </div>
@@ -1306,15 +1213,68 @@
 </dialog>
 
 
-<footer class="footerBar">
-  <div class="footerNextHopper">
-    <div id="footerMsg" class="footerMsg">—</div>
-    <div id="footerSub" class="footerSub">—</div>
+<dialog id="displaySheet" class="footerSheet displaySheet" aria-labelledby="displaySheetTitle" aria-modal="true" tabindex="-1">
+  <form method="dialog" class="displaySheetPanel">
+    <div class="displaySheetHead">
+      <div><strong id="displaySheetTitle">Display</strong><small>Saved on this device</small></div>
+    </div>
+    <label for="themeSel">Theme
+      <select id="themeSel">
+        <option value="mse" selected>Light</option>
+        <option value="industrial-slate-dark">Dark</option>
+        <option value="gruvbox-dark">Gruvbox</option>
+      </select>
+    </label>
+    <label for="timeFormatSel">Time format
+      <select id="timeFormatSel"><option value="12" selected>12-hour</option><option value="24">24-hour</option></select>
+    </label>
+    <fieldset class="desktopDisplaySettings">
+      <legend>Desktop layout</legend>
+      <label for="surfaceStyleSel">Surface style
+        <select id="surfaceStyleSel">
+          <option value="elevated">High Elevation</option><option value="flat">Pure Flat</option>
+          <option value="layered-flat">Layered Flat</option><option value="accent-frame">Accent Frame</option>
+          <option value="divided" selected>Divided Workspace</option><option value="low-elevation">Low Elevation</option>
+        </select>
+      </label>
+    </fieldset>
+  </form>
+</dialog>
+
+<footer class="footerBar" aria-label="App navigation">
+  <button type="button" id="appFooterDisplay" class="appDockControl" aria-expanded="false" aria-controls="displaySheet" aria-label="Display settings">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9c0-1-.8-1.8-1.8-1.8h-2.1a2 2 0 0 1-2-2V6.8C15.1 4.7 13.9 3 12 3Z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="8.5" cy="16" r="1"/></svg><span>Display</span>
+  </button>
+  <div class="appDockMenuHost">
+    <button type="button" id="appFooterShortcuts" class="appDockControl" aria-expanded="false" aria-controls="footerShortcutsMenu" aria-label="Shortcuts">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m13 2-8 12h7l-1 8 8-12h-7l1-8Z"/></svg><span>Shortcuts</span>
+    </button>
+    <dialog id="footerShortcutsMenu" class="footerSheet footerDockMenu" aria-labelledby="footerShortcutsTitle" aria-modal="true" tabindex="-1">
+      <div class="footerSheetHead"><strong id="footerShortcutsTitle">Shortcuts</strong></div>
+      <button id="quickProductionSummaryBtn" type="button" role="menuitem"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 25V15M16 25V7M26 25V11"/><path d="M3 25h26"/></svg><span>Production Summary</span></button>
+      <button id="quickScanDosingScreenBtn" type="button" role="menuitem"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 10V6h4M22 6h4v4M26 22v4h-4M10 26H6v-4"/><path d="M10 16h12M10 12h8M10 20h9"/></svg><span>Scan Dosing Screen</span></button>
+    </dialog>
   </div>
-  <button type="button" id="cloudSyncFooterStatus" class="cloudSyncFooterStatus" data-state="local-only" aria-live="polite" aria-label="RT Sync status - tap to refresh and apply any unsynced changes">
-    <span>RT Sync</span>
-    <strong id="lineSyncMobileStatus">Local only</strong>
+  <button type="button" id="appFooterMain" class="appDockControl appDockMain" aria-label="Main menu" aria-current="page">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span>Main</span>
+  </button>
+  <div class="appDockMenuHost footerAccountHost">
+    <button type="button" id="appFooterAccount" class="appDockControl" aria-expanded="false" aria-controls="footerAccountMenu" aria-label="Account" disabled>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c.8-5 3.5-7 8-7s7.2 2 8 7"/></svg><span id="footerAccountStatus">Account</span>
+    </button>
+    <dialog id="footerAccountMenu" class="footerSheet footerDockMenu footerAccountMenu" aria-labelledby="footerAccountTitle" aria-modal="true" tabindex="-1">
+      <div id="footerAccountDetails" class="footerAccountDetails" hidden><strong>Admin account</strong><small id="footerAccountEmail">Administrator</small></div>
+      <strong id="footerAccountTitle" class="visuallyHidden">Admin account</strong>
+      <button id="adminLoginButton" type="button" role="menuitem" hidden><span>Admin Login</span></button>
+      <button id="resinDatabaseButton" class="footerAdminDestination" type="button" role="menuitem" data-workspace-target="resinAdminBlock" hidden><span>Resin Database</span></button>
+      <button id="workspaceManagementButton" class="footerAdminDestination" type="button" role="menuitem" data-workspace-target="workspaceManagementBlock" hidden><span>Workspace Management</span></button>
+      <button id="adminSignOutButton" type="button" role="menuitem" hidden><span>Sign out</span></button>
+    </dialog>
+  </div>
+  <button type="button" id="cloudSyncFooterStatus" class="appDockControl cloudSyncFooterStatus" data-state="local-only" aria-live="polite" aria-label="RT Sync status - tap to refresh and apply any unsynced changes">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7a8 8 0 0 1 13 1l2 3M19 17a8 8 0 0 1-13-1l-2-3"/><path d="M20 5v6h-6M4 19v-6h6"/></svg><span>RT Sync</span><strong id="lineSyncMobileStatus">Local only</strong>
   </button>
 </footer>
+<button id="footerSheetBackdrop" class="footerSheetBackdrop" type="button" aria-label="Close open sheet" hidden></button>
 </body>
 </html>

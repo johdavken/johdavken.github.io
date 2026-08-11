@@ -54,7 +54,7 @@
       timeFormat: "12",
       surfaceStyle: "divided",
       mobileTileStyle: "minimal",
-      mobileBackgroundStyle: "layer-glow",
+      mobileBackgroundStyle: "theme-native",
       mobileTimelineAlarm: false,
       gauge: 0,
       hopperNamingLine9: "standard", // "standard" | "main"
@@ -102,6 +102,8 @@
   let splitsBulkModeActive = false;
   let splitsSavedRecipesOpen = false;
   let splitsSavedRecipesSearch = "";
+  let mobileWeightProfilesOpen = false;
+  let mobileWeightProfilesSearch = "";
   // Persists across renderSplitsArea() re-renders (e.g. after a rearrange
   // move) so the mobile layer view stays where the operator left it instead
   // of jumping back to Layer A on every redraw.
@@ -142,7 +144,7 @@
   // confirmation/error in both is harmless and far better than the silent
   // no-op this was reaching before.
   function workspaceConfigurationStatus(message){
-    [$("splitsSavedRecipesStatus"), $("setupWeightProfilesStatus")].forEach(el=>{ if(el){ el.textContent=message||""; el.hidden=!message; } });
+    [$("splitsSavedRecipesStatus"), $("setupWeightProfilesStatus"), $("mobileWeightProfilesStatus")].forEach(el=>{ if(el){ el.textContent=message||""; el.hidden=!message; } });
   }
   // Shared by both surfaces that list shared configurations: Line
   // Configurations' own Receiver Weight Profiles/Recipes sections, and
@@ -239,6 +241,111 @@
       host.appendChild(row);
     });
   }
+  function renderMobileWeightProfileRows(items,syncState){
+    const sheet=$("mobileWeightProfilesSheet"), host=$("mobileWeightProfilesList"), search=$("mobileWeightProfilesSearch");
+    if(!sheet || !host) return;
+    sheet.setAttribute("aria-busy",String(!!workspaceConfigurationRefreshInFlight));
+    const query=(search?.value ?? mobileWeightProfilesSearch).trim().toLocaleLowerCase();
+    mobileWeightProfilesSearch=query;
+    const filtered=items.filter(item=>!query || item.name.toLocaleLowerCase().includes(query))
+      .sort((a,b)=>new Date(b.updatedAt||0)-new Date(a.updatedAt||0));
+    host.replaceChildren();
+    if(!filtered.length){
+      const empty=document.createElement("div");
+      empty.className="mobileSavedRecipesEmpty";
+      empty.textContent=query?"No profiles match this search.":"No receiver weight profiles in this workspace yet.";
+      host.appendChild(empty);
+      return;
+    }
+    filtered.forEach(item=>{
+      const count=Array.isArray(item.payload?.layers)
+        ? item.payload.layers.reduce((total,layer)=>total+(Array.isArray(layer?.receiver_weights_lb)?layer.receiver_weights_lb.length:0),0)
+        : 0;
+      const row=document.createElement("article");
+      row.className="mobileSavedRecipeRow";
+      row.classList.toggle("selected",selectedWorkspaceConfigurationId===item.id);
+      const choose=document.createElement("button");
+      choose.type="button";
+      choose.className="mobileSavedRecipeChoose";
+      choose.setAttribute("aria-pressed",String(selectedWorkspaceConfigurationId===item.id));
+      choose.innerHTML='<span class="mobileSavedRecipeName"></span><span class="mobileSavedRecipeMeta"></span>';
+      choose.querySelector(".mobileSavedRecipeName").textContent=item.name;
+      choose.querySelector(".mobileSavedRecipeMeta").textContent=`${item.payload?.line_type || "?"} layers · ${count} receiver weights · ${item.updatedAt?new Date(item.updatedAt).toLocaleDateString():"date unknown"}`;
+      choose.addEventListener("click",()=>{ selectedWorkspaceConfigurationId=item.id; renderWorkspaceConfigurations(syncState); });
+      const load=document.createElement("button");
+      load.type="button";
+      load.className="mobileSavedRecipeLoad";
+      load.textContent="Load";
+      load.setAttribute("aria-label",`Load ${item.name}`);
+      load.addEventListener("click",()=>{
+        selectedWorkspaceConfigurationId=item.id;
+        sheet.close("load");
+        mobileWeightProfilesOpen=false;
+        previewWorkspaceConfiguration(item);
+      });
+      const overflow=document.createElement("details");
+      overflow.className="mobileSavedRecipeOverflow";
+      const overflowSummary=document.createElement("summary");
+      overflowSummary.setAttribute("aria-label",`More actions for ${item.name}`);
+      overflowSummary.textContent="⋯";
+      const menu=document.createElement("div");
+      menu.className="mobileSavedRecipeMenu";
+      const action=(label,handler,className="")=>{
+        const button=document.createElement("button");
+        button.type="button";
+        button.textContent=label;
+        if(className) button.className=className;
+        button.addEventListener("click",async()=>{ overflow.open=false; await handler(); });
+        menu.appendChild(button);
+      };
+      action("Update",()=>openWorkspaceConfigurationDialog("update",item));
+      action("Rename",()=>openWorkspaceConfigurationDialog("rename",item));
+      action("Duplicate",()=>openWorkspaceConfigurationDialog("duplicate",item));
+      action("Delete",()=>{ if(confirm(`Delete shared configuration “${item.name}”?`)) return mutateWorkspaceConfiguration("delete",item); },"danger");
+      overflow.append(overflowSummary,menu);
+      row.append(choose,load,overflow);
+      host.appendChild(row);
+    });
+  }
+  function ensureMobileWeightProfilesSheet(trigger){
+    let sheet=$("mobileWeightProfilesSheet");
+    if(sheet) return sheet;
+    sheet=document.createElement("dialog");
+    sheet.id="mobileWeightProfilesSheet";
+    sheet.className="mobileSavedRecipesSheet mobileWeightProfilesSheet";
+    sheet.setAttribute("aria-labelledby","mobileWeightProfilesTitle");
+    sheet.tabIndex=-1;
+    sheet.innerHTML=`
+      <button type="button" class="mobileSavedRecipesGrabber" aria-label="Close receiver weight profiles"></button>
+      <header class="mobileSavedRecipesHeader"><div><strong id="mobileWeightProfilesTitle">Receiver weight profiles</strong><small>Shared with this RT Sync workspace</small></div></header>
+      <div class="mobileSavedRecipesTools"><label><span class="srOnly">Search receiver weight profiles</span><input id="mobileWeightProfilesSearch" type="search" placeholder="Search profiles" autocomplete="off" /></label><button id="mobileWeightProfilesSave" type="button">Save current weights</button></div>
+      <div id="mobileWeightProfilesStatus" class="mobileSavedRecipesStatus" role="status" hidden></div>
+      <div id="mobileWeightProfilesList" class="mobileSavedRecipesList"></div>`;
+    document.body.appendChild(sheet);
+    sheet.querySelector("#mobileWeightProfilesSearch").value=mobileWeightProfilesSearch;
+    sheet.querySelector("#mobileWeightProfilesSearch").addEventListener("input",event=>{
+      mobileWeightProfilesSearch=event.target.value;
+      renderSetupWeightProfiles(lineSync?.getState?.()||{});
+    });
+    sheet.querySelector("#mobileWeightProfilesSave").addEventListener("click",()=>{
+      sheet.close("save");
+      mobileWeightProfilesOpen=false;
+      openWorkspaceConfigurationDialog("save-profile");
+    });
+    const close=()=>sheet.close("close");
+    sheet.querySelector(".mobileSavedRecipesGrabber").addEventListener("click",close);
+    sheet.addEventListener("click",event=>{
+      if(event.target!==sheet) return;
+      const rect=sheet.getBoundingClientRect();
+      if(event.clientY<rect.top || event.clientX<rect.left || event.clientX>rect.right) close();
+    });
+    sheet.addEventListener("close",()=>{
+      mobileWeightProfilesOpen=false;
+      trigger?.setAttribute("aria-expanded","false");
+      if(sheet.returnValue!=="save" && sheet.returnValue!=="load" && trigger?.isConnected) trigger.focus();
+    });
+    return sheet;
+  }
   // Recipe Setup's own copy of the shared recipe list - an independent
   // surface reading the same service/cache, not the only one (Setup has its
   // own Receiver Weight Profiles list the same way). Only recipes, not
@@ -321,15 +428,16 @@
   function renderSetupWeightProfiles(syncState){
     const host=$("setupWeightProfilesList");
     if(!host) return;
-    const status=$("setupWeightProfilesStatus");
-    const setStatus=message=>{ if(status){ status.textContent=message||""; status.hidden=!message; } };
+    const status=$("setupWeightProfilesStatus"), mobileStatus=$("mobileWeightProfilesStatus");
+    const setStatus=message=>{ [status,mobileStatus].forEach(element=>{ if(element){ element.textContent=message||""; element.hidden=!message; } }); };
     const workspaceId=syncState?.selectedWorkspaceId || "";
-    if(!workspaceId){ host.replaceChildren(); setStatus("Connect to an RT Sync workspace to view shared weight profiles."); wireSetupWeightProfileActions([]); return; }
-    if(!workspaceConfigurations){ host.replaceChildren(); setStatus("Shared configurations service is unavailable."); wireSetupWeightProfileActions([]); return; }
+    if(!workspaceId){ host.replaceChildren(); setStatus("Connect to an RT Sync workspace to view shared weight profiles."); wireSetupWeightProfileActions([]); renderMobileWeightProfileRows([],syncState); return; }
+    if(!workspaceConfigurations){ host.replaceChildren(); setStatus("Shared configurations service is unavailable."); wireSetupWeightProfileActions([]); renderMobileWeightProfileRows([],syncState); return; }
     setStatus("");
     const items=workspaceConfigurations.listReceiverWeightProfiles(workspaceId).items;
     wireSetupWeightProfileActions(items);
     renderConfigurationList(host,items,"profile",syncState,{ showRowActions:false });
+    renderMobileWeightProfileRows(items,syncState);
   }
   function renderWorkspaceConfigurations(syncState){
     renderSplitsSavedRecipes(syncState);
@@ -949,8 +1057,18 @@
    * Theme
    * ============================ */
   function applyTheme(t){
-      const allowed = new Set(["dark","light","mse","industrial-slate-dark","gruvbox-dark","gruvbox-light","nord","tokyo-night","dracula","solarized-dark","solarized-light","catppuccin-mocha","catppuccin-latte","rose-pine","rose-pine-dawn","everforest","everforest-light","one-dark","high-contrast","mono"]);
-      const theme = allowed.has(String(t)) ? String(t) : "mse";
+      const saved = String(t || "");
+      const migrations = new Map([
+        ["light", "mse"],
+        ["mse", "mse"],
+        ["dark", "industrial-slate-dark"],
+        ["industrial-slate-dark", "industrial-slate-dark"],
+        ["gruvbox-dark", "gruvbox-dark"]
+      ]);
+      // Removed themes have a deterministic Light fallback. This also
+      // safely migrates old locally stored and imported preferences without
+      // leaving a theme value that the simplified selector cannot display.
+      const theme = migrations.get(saved) || "mse";
 
       document.documentElement.setAttribute("data-theme", theme);
       document.body.setAttribute("data-theme", theme);
@@ -976,6 +1094,7 @@
       state.timeFormat = timeFormat;
       const sel = $("timeFormatSel");
       if (sel) sel.value = timeFormat;
+      syncChangeoverTimeDisplay();
     }
 
     // Divided Workspace is the default on desktop; mobile defaults to Layered Flat instead.
@@ -993,8 +1112,7 @@
     }
 
     function applyMobileTileStyle(value){
-      const allowed = new Set(["accent", "solid", "outline", "glass", "minimal", "layered"]);
-      const style = allowed.has(String(value)) ? String(value) : "minimal";
+      const style = "minimal";
       state.mobileTileStyle = style;
       document.body.dataset.mobileTileStyle = style;
       document.querySelectorAll("[data-mobile-tile-style]").forEach(button=>{
@@ -1003,8 +1121,7 @@
     }
 
     function applyMobileBackgroundStyle(value){
-      const allowed = new Set(["layer-glow", "industrial-grid", "paper-grain", "dot-matrix", "blueprint", "contour-lines", "prism-fade", "pinstripe"]);
-      const style = allowed.has(String(value)) ? String(value) : "layer-glow";
+      const style = "theme-native";
       state.mobileBackgroundStyle = style;
       document.body.dataset.mobileBackgroundStyle = style;
       document.querySelectorAll("[data-mobile-background-style]").forEach(button=>{
@@ -1097,6 +1214,20 @@
       });
     }
 
+    function syncChangeoverTimeDisplay(){
+      const display=$("changeoverTimeDisplay");
+      if(!display) return;
+      const value=state.changeoverTime || "";
+      if(!/^\d{2}:\d{2}$/.test(value)){ display.textContent="Set time"; return; }
+      const [hours,minutes]=value.split(":").map(Number);
+      if(state.timeFormat === "24"){
+        display.textContent=`${String(hours).padStart(2,"0")}:${String(minutes).padStart(2,"0")}`;
+        return;
+      }
+      const suffix=hours>=12 ? "PM" : "AM";
+      display.textContent=`${hours % 12 || 12}:${String(minutes).padStart(2,"0")} ${suffix}`;
+    }
+
     function applyPayload(payload, {rebuildUI=true} = {}){
       if (!payload || typeof payload !== "object") return;
 
@@ -1115,8 +1246,8 @@
       applyDensity(payload.density || "comfort");
       applyTimeFormat(payload.timeFormat || "12");
       applySurfaceStyle(payload.surfaceStyle || defaultSurfaceStyle());
-      applyMobileTileStyle(payload.mobileTileStyle || "minimal");
-      applyMobileBackgroundStyle(payload.mobileBackgroundStyle || "layer-glow");
+        applyMobileTileStyle("minimal");
+        applyMobileBackgroundStyle("theme-native");
       applyMobileTimelineAlarm(!!payload.mobileTimelineAlarm);
       $("lineRate").value = String(state.lineRate);
       // Custom toggles
@@ -1131,6 +1262,7 @@
 
       syncLineTypeUI();
       $("changeoverTime").value = state.changeoverTime;
+      syncChangeoverTimeDisplay();
 
 
       const names = getLayerNamesForType(state.lineType);
@@ -1170,6 +1302,7 @@
 
       const coEl = $("changeoverTime");
       if (coEl) coEl.value = state.changeoverTime;
+      syncChangeoverTimeDisplay();
 
       if (rebuildUI) rebuildUIFromState(payload);
       else validateAndCompute();
@@ -1388,6 +1521,7 @@
 
     function weightId(layerName, hi){ return `w_${layerName}_${hi}`; }
     function computedWeightId(layerName, hi){ return `cw_${layerName}_${hi}`; }
+    function mobileSummaryWeightId(layerName, hi){ return `msw_${layerName}_${hi}`; }
     function smartBadgeId(layerName, hi){ return `sm_${layerName}_${hi}`; }
     function hopperNameId(layerName, hi){ return `hn_${layerName}_${hi}`; }
     function hopperPositionLabel(hi){
@@ -1404,6 +1538,11 @@
     }
 
     function renderMobileWeightsArea(area){
+      const previousProfilesSheet=$("mobileWeightProfilesSheet");
+      if(previousProfilesSheet){
+        if(previousProfilesSheet.open) previousProfilesSheet.close("rerender");
+        previousProfilesSheet.remove();
+      }
       const selected = new Set();
       const cellRefs = new Map();
       let bulkMode = false;
@@ -1418,7 +1557,7 @@
       const smartControl = document.createElement("div");
       smartControl.className = "mobileWeightsSmartControl";
       const smartCopy = document.createElement("div");
-      smartCopy.innerHTML = "<strong>Smart</strong><small>computed weight</small>";
+      smartCopy.innerHTML = "<strong>Smart Hoppers</strong><small>Calculate capacity</small>";
       const smartToggle = document.createElement("div");
       smartToggle.id = "smartHoppersToggle";
       smartToggle.className = "toggle";
@@ -1433,7 +1572,7 @@
       if (state.smartHoppersEnabled){
         const circumferenceLabel = document.createElement("label");
         circumferenceLabel.className = "mobileSharedCircumference";
-        circumferenceLabel.innerHTML = "<span>Ø</span><small>in</small>";
+        circumferenceLabel.innerHTML = "<span>Circumference</span><small>in</small>";
         const circumferenceInput = document.createElement("input");
         circumferenceInput.id = "mobileSharedCircumference";
         circumferenceInput.type = "text";
@@ -1455,33 +1594,13 @@
         });
       }
 
-      const bulkToggleRow = document.createElement("div");
-      bulkToggleRow.className = "mobileWeightsBulkToggleRow";
-      bulkToggleRow.innerHTML = "<div><strong>Bulk</strong><small>select cells</small></div>";
-      const bulkToggle = document.createElement("div");
-      bulkToggle.id = "mobileWeightsBulkToggle";
-      bulkToggle.className = "toggle";
-      bulkToggle.setAttribute("role", "switch");
-      bulkToggle.setAttribute("tabindex", "0");
-      bulkToggle.setAttribute("aria-label", "Enable bulk receiver hopper entry");
-      bulkToggle.innerHTML = '<svg viewBox="0 0 28 28" aria-hidden="true"><rect x="4" y="4" width="8" height="8" rx="1"/><rect x="16" y="4" width="8" height="8" rx="1"/><rect x="4" y="16" width="8" height="8" rx="1"/><path d="M17 20l2 2 5-6"/></svg>';
-      bulkToggleRow.appendChild(bulkToggle);
-      controlRail.appendChild(bulkToggleRow);
       controls.appendChild(controlRail);
 
       const viewToggle = document.createElement("div");
       viewToggle.className = "mobileWeightsViewToggle";
-      viewToggle.innerHTML = '<span>View</span><button type="button" data-weight-view="visual" class="active">Visual</button><button type="button" data-weight-view="edit">Edit</button>';
+      viewToggle.innerHTML = '<span>View</span><button type="button" data-weight-view="visual" class="active">Summary</button><button type="button" data-weight-view="edit">Edit</button>';
       controls.appendChild(viewToggle);
       area.appendChild(controls);
-
-      let smartLegend = null;
-      if (state.smartHoppersEnabled){
-        const legend = document.createElement("div");
-        legend.className = "mobileWeightsSmartLegend";
-        legend.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 10v6M12 7.2h.01"/></svg><div><strong>Smart Hopper guide</strong><small><b>W</b> is manual weight; <b>H</b> is usable height. When recipe resin and measured bulk density are available, calculated weight drives run-down timing.</small></div>';
-        smartLegend = legend;
-      }
 
       const matrix = document.createElement("div");
       matrix.className = "mobileWeightsMatrix";
@@ -1494,24 +1613,21 @@
           const hopper = L.hoppers[hi];
           const cell = document.createElement("div");
           cell.className = "mobileWeightCell";
+          cell.setAttribute("role", "gridcell");
+          cell.setAttribute("aria-selected", "false");
+          cell.tabIndex = -1;
           const label = document.createElement("span");
           label.className = "mobileWeightCellLabel";
           label.textContent = `${L.name}${hopperPositionLabel(hi)}`;
           cell.appendChild(label);
-
-          const selector = document.createElement("input");
-          selector.type = "checkbox";
-          selector.className = "mobileWeightCellSelector";
-          selector.setAttribute("aria-label", `Select ${hopperBadgeLabel(L.name, hi)} for bulk entry`);
-          cell.appendChild(selector);
 
           const valueFields = document.createElement("div");
           valueFields.className = "mobileWeightValueFields";
           const visualReadout = document.createElement("div");
           visualReadout.className = "mobileWeightVisualReadout";
           visualReadout.innerHTML = `
-            <svg viewBox="0 0 28 42" aria-hidden="true"><path d="M6 3h16l2 6v27l-4 3H8l-4-3V9z"/><path class="mobileHopperFill" d="M8 22h12v13H8z"/></svg>
-            <span class="mobileWeightVisualValues"><b>${clampNum(hopper.weight)}<small>lb manual</small></b><b>${clampNum(hopper.usableHeight)}<small>in height</small></b></span>`;
+            <span class="mobileWeightVisualValues"><b id="${mobileSummaryWeightId(L.name, hi)}" class="mobileWeightSummaryWeight"><span>${clampNum(hopper.weight)}</span><small>lb</small></b><b><span>${clampNum(hopper.usableHeight)}</span><small>in</small></b></span>`;
+          const summaryWeight = visualReadout.querySelector(".mobileWeightSummaryWeight");
           const makeValueField = (shortLabel, value, ariaLabel, onValue)=>{
             const wrap = document.createElement("label");
             wrap.className = "mobileWeightValueField";
@@ -1533,37 +1649,60 @@
             valueFields.appendChild(wrap);
             return input;
           };
-          const weightInput = makeValueField("W", hopper.weight, `${hopperBadgeLabel(L.name, hi)} manual weight in pounds`, value=>{ hopper.weight = value; visualReadout.querySelectorAll("b")[0].firstChild.nodeValue = value; });
+          const weightInput = makeValueField("W", hopper.weight, `${hopperBadgeLabel(L.name, hi)} manual weight in pounds`, value=>{
+            hopper.weight = value;
+            summaryWeight.querySelector("span").textContent = value;
+            summaryWeight.classList.remove("smart");
+            summaryWeight.removeAttribute("title");
+          });
           let heightInput = null;
           if (state.smartHoppersEnabled){
-            heightInput = makeValueField("H", hopper.usableHeight, `${hopperBadgeLabel(L.name, hi)} usable height in inches`, value=>{ hopper.usableHeight = value; visualReadout.querySelectorAll("b")[1].firstChild.nodeValue = value; });
+            heightInput = makeValueField("H", hopper.usableHeight, `${hopperBadgeLabel(L.name, hi)} usable height in inches`, value=>{ hopper.usableHeight = value; visualReadout.querySelectorAll("b")[1].querySelector("span").textContent = value; });
           }
           cell.appendChild(valueFields);
           cell.appendChild(visualReadout);
-          if (state.smartHoppersEnabled){
-            const computedWeight = document.createElement("div");
-            computedWeight.id = computedWeightId(L.name, hi);
-            computedWeight.className = "mobileWeightsComputedWeight";
-            computedWeight.hidden = true;
-            cell.appendChild(computedWeight);
-          }
           column.appendChild(cell);
-          cellRefs.set(key, { cell, selector, weightInput, heightInput, hopper });
+          cellRefs.set(key, { cell, weightInput, heightInput, hopper, hopperLabel: hopperBadgeLabel(L.name, hi) });
 
-          selector.addEventListener("change", ()=>{
-            selector.checked ? selected.add(key) : selected.delete(key);
+          const toggleCellSelection = ()=>{
+            selected.has(key) ? selected.delete(key) : selected.add(key);
             updateSelectionUI();
-          });
+          };
           cell.addEventListener("click", event=>{
             if (!bulkMode || event.target.closest("input")) return;
-            selector.checked = !selector.checked;
-            selector.dispatchEvent(new Event("change"));
+            toggleCellSelection();
+          });
+          cell.addEventListener("keydown", event=>{
+            if (!bulkMode || !["Enter", " "].includes(event.key)) return;
+            event.preventDefault();
+            toggleCellSelection();
           });
         }
         matrix.appendChild(column);
       });
       area.appendChild(matrix);
-      if (smartLegend) area.appendChild(smartLegend);
+
+      // Actions live after the full matrix, alongside their resulting bulk
+      // controls. This keeps calculation/presentation controls above the
+      // grid and prevents a top-of-panel action from opening inputs far away.
+      const actionToolbar = document.createElement("div");
+      actionToolbar.className = "mobileWeightsActionToolbar mobileMatrixActionBar";
+      const profilesAction = document.createElement("button");
+      profilesAction.type = "button";
+      profilesAction.id = "mobileWeightProfilesButton";
+      profilesAction.className = "mobileWeightsProfilesAction";
+      profilesAction.setAttribute("aria-expanded", "false");
+      profilesAction.setAttribute("aria-label", "Open receiver weight profiles");
+      profilesAction.innerHTML = '<span>Profiles</span><svg viewBox="0 0 28 28" aria-hidden="true"><path d="M7 4h14l3 5v14l-4 3H8l-4-3V9z"/><path d="M9 12h10M9 16h10M9 20h6"/></svg>';
+      const bulkToggleRow = document.createElement("button");
+      bulkToggleRow.type = "button";
+      bulkToggleRow.id = "mobileWeightsBulkToggle";
+      bulkToggleRow.className = "mobileWeightsBulkToggleRow";
+      bulkToggleRow.setAttribute("aria-pressed", "false");
+      bulkToggleRow.setAttribute("aria-label", "Start receiver hopper bulk edit");
+      bulkToggleRow.innerHTML = '<span>Bulk edit</span><svg viewBox="0 0 28 28" aria-hidden="true"><rect x="4" y="4" width="8" height="8" rx="1"/><rect x="16" y="4" width="8" height="8" rx="1"/><rect x="4" y="16" width="8" height="8" rx="1"/><path d="M17 20l2 2 5-6"/></svg>';
+      actionToolbar.append(profilesAction, bulkToggleRow);
+      area.appendChild(actionToolbar);
 
       const bulkBar = document.createElement("div");
       bulkBar.id = "mobileWeightsBulkBar";
@@ -1585,19 +1724,27 @@
       function updateSelectionUI(message){
         cellRefs.forEach((ref,key)=>{
           const isSelected = selected.has(key);
-          ref.selector.checked = isSelected;
           ref.cell.classList.toggle("selected", isSelected);
+          ref.cell.setAttribute("aria-selected",String(isSelected));
+          ref.cell.setAttribute("aria-label",`${isSelected ? "Selected " : ""}${ref.hopperLabel} receiver hopper`);
         });
-        applyButton.disabled = selected.size === 0;
+        const optionalInputs = [bulkWeight, bulkHeight].filter(Boolean);
+        const hasValue = optionalInputs.some(input=>input.value.trim() !== "");
+        const valuesAreValid = optionalInputs.every(input=>!input.value.trim() || validation.validateNumber(input.value, { min:0 }).valid);
+        applyButton.disabled = selected.size === 0 || !hasValue || !valuesAreValid;
         selectionStatus.textContent = message || (selected.size ? `${selected.size} selected` : "No hoppers selected");
+        bulkToggleRow.querySelector("span").textContent = bulkMode ? "Done" : "Bulk edit";
+        bulkToggleRow.setAttribute("aria-label", bulkMode ? "Done editing receiver hopper bulk selection" : "Start receiver hopper bulk edit");
       }
 
       function setMobileWeightBulkMode(enabled){
         bulkMode = !!enabled;
         area.dataset.mobileBulkMode = String(bulkMode);
-        bulkToggle.classList.toggle("on", bulkMode);
-        bulkToggle.setAttribute("aria-checked", String(bulkMode));
+        bulkToggleRow.classList.toggle("on", bulkMode);
+        bulkToggleRow.setAttribute("aria-pressed", String(bulkMode));
+        actionToolbar.classList.toggle("bulkActive", bulkMode);
         bulkBar.hidden = !bulkMode;
+        cellRefs.forEach(ref=>{ ref.cell.tabIndex=bulkMode ? 0 : -1; });
         if (!bulkMode){
           selected.clear();
           updateSelectionUI();
@@ -1611,16 +1758,10 @@
       }
 
       const flipBulkMode = ()=>setMobileWeightBulkMode(!bulkMode);
-      bulkToggle.addEventListener("click", flipBulkMode);
+      bulkToggleRow.addEventListener("click", flipBulkMode);
       viewToggle.addEventListener("click", event=>{
         const button = event.target.closest("button[data-weight-view]");
         if (button) setMobileWeightView(button.dataset.weightView);
-      });
-      bulkToggle.addEventListener("keydown", event=>{
-        if (event.key === "Enter" || event.key === " "){
-          event.preventDefault();
-          flipBulkMode();
-        }
       });
       bulkBar.querySelector("#selectAllMobileWeights").addEventListener("click", ()=>{
         cellRefs.forEach((_,key)=>selected.add(key));
@@ -1629,6 +1770,21 @@
       bulkBar.querySelector("#clearMobileWeightSelection").addEventListener("click", ()=>{
         selected.clear();
         updateSelectionUI();
+      });
+      [bulkWeight, bulkHeight].filter(Boolean).forEach(input=>input.addEventListener("input", ()=>updateSelectionUI()));
+      const profilesSheet=ensureMobileWeightProfilesSheet(profilesAction);
+      profilesAction.addEventListener("click",()=>{
+        const opening=!profilesSheet.open;
+        if(opening){
+          document.querySelectorAll(".mobileSavedRecipesSheet[open]").forEach(sheet=>{ if(sheet!==profilesSheet) sheet.close("replace"); });
+          profilesSheet.showModal();
+          mobileWeightProfilesOpen=true;
+          profilesAction.setAttribute("aria-expanded","true");
+          renderSetupWeightProfiles(lineSync?.getState?.()||{});
+          profilesSheet.focus({preventScroll:true});
+        }else{
+          profilesSheet.close("close");
+        }
       });
       applyButton.addEventListener("click", ()=>{
         const readOptional = (input, label)=>{
@@ -1679,8 +1835,6 @@
       const setupSection = weightsBlock?.closest(".setupSection");
       if (!weightsBlock || !profilesBlock || !setupSection) return;
       if (window.matchMedia("(max-width: 900px)").matches){
-        const weightsBody = weightsBlock.querySelector(":scope > .blockBody");
-        if (weightsBody && profilesBlock.parentElement !== weightsBody) weightsBody.appendChild(profilesBlock);
         return;
       }
       if (profilesBlock.parentElement !== setupSection) weightsBlock.after(profilesBlock);
@@ -2114,6 +2268,20 @@
         L.hoppers.forEach((hopper, hi)=>{
           const smart = smartHopperComputation(hopper);
 
+          const mobileSummaryWeight=document.getElementById(mobileSummaryWeightId(L.name, hi));
+          if(mobileSummaryWeight){
+            const value=smart ? Math.round(smart.value) : clampNum(hopper.weight);
+            mobileSummaryWeight.querySelector("span").textContent=String(value);
+            mobileSummaryWeight.classList.toggle("smart",!!smart);
+            if(smart){
+              mobileSummaryWeight.setAttribute("aria-label",`${hopperBadgeLabel(L.name, hi)} Smart-calculated weight, ${value} pounds`);
+              mobileSummaryWeight.title=`Smart-calculated from ${hopperBadgeLabel(L.name, hi)} geometry and ${smart.resin.resin_code} bulk density.`;
+            }else{
+              mobileSummaryWeight.setAttribute("aria-label",`${hopperBadgeLabel(L.name, hi)} manual weight, ${value} pounds`);
+              mobileSummaryWeight.removeAttribute("title");
+            }
+          }
+
           const computedEl = document.getElementById(computedWeightId(L.name, hi));
           if (computedEl){
             if (smart){
@@ -2452,11 +2620,11 @@
         mobileSavedRecipesSheet.id="mobileSavedRecipesSheet";
         mobileSavedRecipesSheet.className="mobileSavedRecipesSheet";
         mobileSavedRecipesSheet.setAttribute("aria-labelledby","mobileSavedRecipesTitle");
+        mobileSavedRecipesSheet.tabIndex=-1;
         mobileSavedRecipesSheet.innerHTML=`
-          <div class="mobileSavedRecipesGrabber" aria-hidden="true"></div>
+          <button type="button" class="mobileSavedRecipesGrabber" aria-label="Close recipes"></button>
           <header class="mobileSavedRecipesHeader">
-            <div><strong id="mobileSavedRecipesTitle">Saved recipes</strong><small>Shared with this RT Sync workspace</small></div>
-            <button type="button" class="mobileSavedRecipesClose" aria-label="Close saved recipes">×</button>
+            <div><strong id="mobileSavedRecipesTitle">Recipes</strong><small>Shared with this RT Sync workspace</small></div>
           </header>
           <div class="mobileSavedRecipesTools">
             <label><span class="srOnly">Search saved recipes</span><input id="mobileSavedRecipesSearch" type="search" placeholder="Search recipes" autocomplete="off" /></label>
@@ -2466,7 +2634,12 @@
           <div id="mobileSavedRecipesList" class="mobileSavedRecipesList"></div>`;
         document.body.appendChild(mobileSavedRecipesSheet);
         mobileSavedRecipesSheet.querySelector("#mobileSavedRecipesSearch").value=splitsSavedRecipesSearch;
-        mobileSavedRecipesSheet.querySelector(".mobileSavedRecipesClose").addEventListener("click",()=>mobileSavedRecipesSheet.close("close"));
+        mobileSavedRecipesSheet.querySelector(".mobileSavedRecipesGrabber").addEventListener("click",()=>mobileSavedRecipesSheet.close("close"));
+        mobileSavedRecipesSheet.addEventListener("click",event=>{
+          if(event.target!==mobileSavedRecipesSheet) return;
+          const rect=mobileSavedRecipesSheet.getBoundingClientRect();
+          if(event.clientY<rect.top || event.clientX<rect.left || event.clientX>rect.right) mobileSavedRecipesSheet.close("close");
+        });
         mobileSavedRecipesSheet.querySelector("#mobileSavedRecipesNew").addEventListener("click",()=>{
           splitsSavedRecipesOpen=false;
           mobileSavedRecipesSheet.close("new");
@@ -2507,8 +2680,9 @@
           savedRecipesButton.setAttribute("aria-expanded",String(open));
           splitsSavedRecipesOpen=!!open;
           if(open&&!mobileSavedRecipesSheet?.open){
+            document.querySelectorAll(".mobileSavedRecipesSheet[open]").forEach(sheet=>{ if(sheet!==mobileSavedRecipesSheet) sheet.close("replace"); });
             mobileSavedRecipesSheet?.showModal();
-            requestAnimationFrame(()=>mobileSavedRecipesSheet?.querySelector("#mobileSavedRecipesSearch")?.focus());
+            mobileSavedRecipesSheet?.focus({preventScroll:true});
           }else if(!open&&mobileSavedRecipesSheet?.open){
             mobileSavedRecipesSheet.close("close");
           }
@@ -3030,21 +3204,20 @@
       if (!compactMobileRecipe) mobileLayerLayout.append(mobileLayerNav);
       area.appendChild(mobileLayerLayout);
       if (compactMobileRecipe){
-        // Keep the primary recipe actions anchored to the work they affect:
-        // after the full matrix and inside its frame on phones. Expanded
-        // Saved Recipes, Bulk Edit, and Rearrange panels stay in that same
-        // framed surface instead of dropping outside it.
+        // Keep recipe actions immediately after the matrix, but outside its
+        // visual frame. The dense grid stays a single relationship-focused
+        // surface while modes expand directly below it.
         const actionTray = document.createElement("div");
-        actionTray.className = "mobileRecipeActionTray";
+        actionTray.className = "mobileRecipeActionTray mobileMatrixActionBar";
         actionTray.append(modeBar, mobileBulkContext, mobileRearrangeContext);
-        mobileLayerLayout.append(actionTray);
+        area.append(actionTray);
         if(hopperRearrangement?.active&&hopperRearrangement.undo?.length&&hopperRearrangement.undoVisibleUntil>Date.now()){
           const toast=document.createElement("div");
           toast.className="mobileRearrangeToast";
           toast.setAttribute("role","status");
           toast.innerHTML=`<span>${hopperRearrangement.lastMoveLabel||"Hopper moved"}</span><button type="button">Undo</button>`;
           toast.querySelector("button").addEventListener("click",undoRearrangement);
-          mobileLayerLayout.appendChild(toast);
+          area.appendChild(toast);
           setTimeout(()=>toast.remove(),Math.max(0,hopperRearrangement.undoVisibleUntil-Date.now()));
         }
       }
@@ -3521,16 +3694,6 @@
         timelineStatus.textContent = `${trackedCount} ${trackedCount === 1 ? "resin" : "resins"} tracked`;
         const trackedStatus = $("workspaceTrackedStatus");
         if (trackedStatus) trackedStatus.textContent = String(trackedCount);
-        const workspaceStatus = $("workspaceTimelineStatus");
-      if (workspaceStatus){
-        workspaceStatus.textContent = trackedCount
-          ? `${trackedCount} tracked`
-          : "No hoppers tracked";
-        workspaceStatus.closest(".workspaceNavButton")?.setAttribute(
-          "data-status",
-          trackedCount ? "info" : "neutral"
-        );
-      }
     }
   }
 
@@ -3764,6 +3927,7 @@
 
       const lr = $("lineRate"); if (lr) lr.value = "0";
       const co = $("changeoverTime"); if (co) co.value = "";
+      syncChangeoverTimeDisplay();
       // prodResinLb/scrapResinLb are synced from state by renderResinCalculator()
       // itself now (called via rebuildUIFromState below), same path session
       // restore and shared-job-apply already go through - no separate write needed.
@@ -3870,9 +4034,9 @@
       });
       if (window.matchMedia("(min-width: 901px)").matches) target.open = true;
       if (window.matchMedia("(max-width: 900px)").matches){
-        const preferences = $("statusPreferences");
-        if (preferences) preferences.open = false;
+        closeFooterMenus();
         document.body.dataset.mobileWorkspace = "panel";
+        $("appFooterMain")?.removeAttribute("aria-current");
         if (id === "toolsBlock") document.body.dataset.mobileTools = "home";
         if (id === "helpBlock") document.body.dataset.mobileHelp = "home";
         target.querySelector(":scope > summary")?.setAttribute("aria-label", "Main menu");
@@ -3888,36 +4052,93 @@
     function showMobileWorkspaceHome(){
       if (!window.matchMedia("(max-width: 900px)").matches) return;
       document.body.dataset.mobileWorkspace = "home";
-      setMobileQuickActionsOpen(false);
-      const preferences = $("statusPreferences");
-      if (preferences) preferences.open = false;
+      closeFooterMenus();
+      $("appFooterMain")?.setAttribute("aria-current", "page");
       document.querySelectorAll(".workspaceNavButton").forEach(button=>{
         button.classList.remove("active");
         button.removeAttribute("aria-current");
       });
     }
 
-    function showMobileAppearancePanel(){
-      if (!window.matchMedia("(max-width: 900px)").matches) return;
-      document.body.dataset.mobileWorkspace = "appearance";
-      setMobileQuickActionsOpen(false);
-      const preferences = $("statusPreferences");
-      if (preferences) preferences.open = true;
-      requestAnimationFrame(()=>$("mobileAppearanceBack")?.focus());
+    function setMobileQuickActionsOpen(open){
+      setFooterSheetOpen("shortcuts", open, $("appFooterShortcuts"));
     }
 
-    function setMobileQuickActionsOpen(open){
-      const quickActions = $("mobileQuickActions");
-      const toggle = $("mobileQuickActionsToggle");
-      const menu = $("mobileQuickActionsMenu");
-      if (!quickActions || !toggle || !menu) return;
-      const expanded = !!open;
-      quickActions.dataset.open = String(expanded);
-      toggle.setAttribute("aria-expanded", String(expanded));
-      toggle.setAttribute("aria-label", expanded ? "Close quick actions" : "Open quick actions");
-      menu.setAttribute("aria-hidden", String(!expanded));
-      menu.inert = !expanded;
+    let activeFooterSheetName = "";
+    let activeFooterSheetTrigger = null;
+
+    function footerSheetPairs(){
+      return {
+        display: [$("appFooterDisplay"), $("displaySheet")],
+        shortcuts: [$("appFooterShortcuts"), $("footerShortcutsMenu")],
+        account: [$("appFooterAccount"), $("footerAccountMenu")]
+      };
     }
+
+    function footerSheetFocusable(sheet){
+      return Array.from(sheet?.querySelectorAll('button:not([disabled]):not([hidden]),select:not([disabled]),input:not([disabled]),[href],[tabindex]:not([tabindex="-1"])') || [])
+        .filter(element=>!element.closest("[hidden]") && element.getClientRects().length > 0);
+    }
+
+    function closeFooterSheets({ returnFocus = true } = {}){
+      const focusTarget = activeFooterSheetTrigger;
+      focusTarget?.setAttribute("aria-expanded", "false");
+      activeFooterSheetName = "";
+      activeFooterSheetTrigger = null;
+      Object.values(footerSheetPairs()).forEach(([toggle, sheet])=>{
+        toggle?.setAttribute("aria-expanded", "false");
+        if (sheet?.open) sheet.close();
+      });
+      const backdrop = $("footerSheetBackdrop");
+      if (backdrop) backdrop.hidden = true;
+      const main = document.querySelector("body > main");
+      if (main) main.inert = false;
+      if (returnFocus && focusTarget) requestAnimationFrame(()=>focusTarget.focus());
+    }
+
+    function setFooterSheetOpen(name, open, requestedTrigger){
+      const pairs = footerSheetPairs();
+      const pair = pairs[name];
+      if (!pair) { closeFooterSheets(); return; }
+      const [defaultTrigger, sheet] = pair;
+      const trigger = requestedTrigger || defaultTrigger;
+      const alreadyOpen = activeFooterSheetName === name && !!sheet?.open;
+      if (!open || alreadyOpen){ closeFooterSheets(); return; }
+
+      closeFooterSheets({ returnFocus:false });
+      activeFooterSheetName = name;
+      activeFooterSheetTrigger = trigger;
+      Object.entries(pairs).forEach(([key, pairValue])=>{
+        const [toggle] = pairValue;
+        toggle?.setAttribute("aria-expanded", String(key === name));
+      });
+      trigger?.setAttribute("aria-expanded", "true");
+      // show(), rather than showModal(), keeps the persistent footer operable
+      // so the active control can toggle its sheet and sibling controls can
+      // replace it. Focus trapping and the backdrop are managed below.
+      if (sheet?.show) sheet.show();
+      else if (sheet) sheet.open = true;
+      const backdrop = $("footerSheetBackdrop");
+      if (backdrop) backdrop.hidden = false;
+      const main = document.querySelector("body > main");
+      if (main) main.inert = true;
+      requestAnimationFrame(()=>{
+        const first = footerSheetFocusable(sheet)[0];
+        (first || sheet)?.focus();
+      });
+    }
+
+    function closeFooterMenus(options){
+      closeFooterSheets(options);
+    }
+
+    function openDisplaySheet(event){
+      event?.stopPropagation?.();
+      const trigger = event?.currentTarget || $("appFooterDisplay");
+      setFooterSheetOpen("display", true, trigger);
+    }
+
+    window.PolynFooterSheetUI = { close:()=>closeFooterSheets({ returnFocus:false }) };
 
     function syncWorkspaceForViewport(){
       const desktop = window.matchMedia("(min-width: 901px)").matches;
@@ -4033,19 +4254,23 @@
     const subEl = document.getElementById("footerSub");
     const desktopMsgEl = document.getElementById("workspaceNextStatus");
     const desktopSubEl = document.getElementById("workspaceNextDetail");
-    if (!msgEl || !subEl) return;
+    const tileEl = document.getElementById("workspaceTimelineStatus");
 
-    const setNextStatus = (message, detail, { stale=false } = {})=>{
-      msgEl.textContent = message;
-      subEl.textContent = detail;
+    const setNextStatus = (message, detail, { stale=false, tile=message, tileState="info" } = {})=>{
+      if (msgEl) msgEl.textContent = message;
+      if (subEl) subEl.textContent = detail;
       if (desktopMsgEl) desktopMsgEl.textContent = message;
       if (desktopSubEl) desktopSubEl.textContent = detail;
-      msgEl.classList.toggle("stale", stale);
+      if (tileEl){
+        tileEl.textContent = tile;
+        tileEl.closest(".workspaceNavButton")?.setAttribute("data-status", tileState);
+      }
+      if (msgEl) msgEl.classList.toggle("stale", stale);
       if (desktopMsgEl) desktopMsgEl.classList.toggle("stale", stale);
     };
 
     if (!flat || flat.length === 0){
-      setNextStatus("No tracked hoppers", "Track a resin to see the next action");
+      setNextStatus("No tracked hoppers", "Track a resin to see the next action", { tileState:"neutral" });
       return;
     }
 
@@ -4054,7 +4279,7 @@
       setNextStatus(
         "Changeover time may be outdated",
         `Last set ${fmtAgo(state.changeoverSetAt)} — update it to see accurate pump-off timing`,
-        { stale: true }
+        { stale: true, tile:"Update changeover time", tileState:"warn" }
       );
       return;
     }
@@ -4069,9 +4294,16 @@
       next = candidates[0] || null;
 
       if (next){
+        const minutesUntil = Math.ceil((next.startByDate.getTime() - Date.now()) / 60000);
+        const tile = minutesUntil <= 0
+          ? `${next.hopperLabel} pump-off due`
+          : (minutesUntil < 60
+            ? `Next: ${next.hopperLabel} in ${minutesUntil} min`
+            : `Next: ${next.hopperLabel} at ${fmtTime(next.startByDate)}`);
         setNextStatus(
           `Next pump off: ${next.hopperLabel}${next.resinName ? ` • ${next.resinName}` : ""}`,
-          `${next.startByText} • Changeover ${fmtTime(changeoverDate)}`
+          `${next.startByText} • Changeover ${fmtTime(changeoverDate)}`,
+          { tile, tileState:minutesUntil <= 0 ? "warn" : "info" }
         );
         return;
       }
@@ -4085,14 +4317,17 @@
     next = candidates2[0] || null;
 
     if (next){
+      const minutes = Math.max(0, Math.ceil(next.minutesToEmpty));
       setNextStatus(
         `Soonest empty: ${next.hopperLabel}${next.resinName ? ` • ${next.resinName}` : ""}`,
-        next.timeText
+        next.timeText,
+        { tile:minutes < 60 ? `Next: ${next.hopperLabel} in ${minutes} min` : `Next: ${next.hopperLabel} in ${Math.ceil(minutes / 60)} hr` }
       );
     } else {
       setNextStatus(
         "No upcoming hoppers",
-        "All tracked hoppers are checked off or missing data"
+        "All tracked hoppers are checked off or missing data",
+        { tile:"Tracked data unavailable", tileState:"warn" }
       );
     }
   }
@@ -4735,6 +4970,12 @@
   }
 
     // Wire inputs
+    document.querySelectorAll(".gaugeTile").forEach(tile=>{
+      tile.addEventListener("click",event=>{
+        if(event.target.matches("input")) return;
+        tile.querySelector("input")?.focus();
+      });
+    });
     $("lineRate")?.addEventListener("input",(e)=>{
       if (!acceptNumericInput(e.target, { min: 0, label: "Line rate" }, value => { state.lineRate = value; })) return;
       validateAndCompute({ sync: true });
@@ -4743,12 +4984,8 @@
     $("changeoverTime")?.addEventListener("input",(e)=>{
       state.changeoverTime = e.target.value || "";
       state.changeoverSetAt = state.changeoverTime ? Date.now() : null;
+      syncChangeoverTimeDisplay();
       validateAndCompute({ sync: true });
-      saveSession();
-    });
-
-    $("densitySel")?.addEventListener("change",(e)=>{
-      applyDensity(e.target.value);
       saveSession();
     });
 
@@ -4766,18 +5003,6 @@
     $("surfaceStyleSel")?.addEventListener("change",(e)=>{
       applySurfaceStyle(e.target.value);
       saveSession();
-    });
-    document.querySelectorAll("[data-mobile-tile-style]").forEach(button=>{
-      button.addEventListener("click",()=>{
-        applyMobileTileStyle(button.dataset.mobileTileStyle);
-        saveSession();
-      });
-    });
-    document.querySelectorAll("[data-mobile-background-style]").forEach(button=>{
-      button.addEventListener("click",()=>{
-        applyMobileBackgroundStyle(button.dataset.mobileBackgroundStyle);
-        saveSession();
-      });
     });
     $("mobileTimelineAlarmToggle")?.addEventListener("change",async event=>{
       const enabled = !!event.target.checked;
@@ -4880,11 +5105,10 @@
       tile.addEventListener("click",()=>selectToolPanel(tile.dataset.mobileToolTarget));
     });
     $("mobileToolsBack")?.addEventListener("click",()=>{ document.body.dataset.mobileTools = "home"; });
-    $("mobileQuickActionsToggle")?.addEventListener("click",event=>{
+    $("appFooterShortcuts")?.addEventListener("click",event=>{
       event.stopPropagation();
-      setMobileQuickActionsOpen($("mobileQuickActions")?.dataset.open !== "true");
+      setFooterSheetOpen("shortcuts", true, event.currentTarget);
     });
-    $("mobileQuickActionsMenu")?.addEventListener("click",event=>event.stopPropagation());
     $("quickScanDosingScreenBtn")?.addEventListener("click",()=>{
       setMobileQuickActionsOpen(false);
       window.PolynRecipeScanUI?.startScan("dosing_screen");
@@ -4894,14 +5118,43 @@
       setWorkspacePanel("toolsBlock", { reveal: true });
       selectToolPanel("productionSummaryTool");
     });
-    document.addEventListener("click",event=>{
-      const quickActions = $("mobileQuickActions");
-      if (quickActions?.dataset.open === "true" && !quickActions.contains(event.target)) setMobileQuickActionsOpen(false);
+    $("appFooterMain")?.addEventListener("click",showMobileWorkspaceHome);
+    $("appFooterDisplay")?.addEventListener("click",openDisplaySheet);
+    $("desktopDisplayToggle")?.addEventListener("click",openDisplaySheet);
+    $("appFooterAccount")?.addEventListener("click",event=>{
+      event.stopPropagation();
+      const login = $("adminLoginButton");
+      if (login && !login.hidden){
+        closeFooterSheets({ returnFocus:false });
+        login.click();
+        return;
+      }
+      setFooterSheetOpen("account", true, event.currentTarget);
+    });
+    $("footerSheetBackdrop")?.addEventListener("click",()=>closeFooterSheets());
+    $("adminSignOutButton")?.addEventListener("click",()=>closeFooterSheets({ returnFocus:false }));
+    document.querySelectorAll(".footerAdminDestination").forEach(button=>{
+      button.addEventListener("click",()=>{
+        closeFooterMenus();
+        setWorkspacePanel(button.dataset.workspaceTarget, { reveal:true });
+      });
     });
     document.addEventListener("keydown",event=>{
-      if (event.key !== "Escape" || $("mobileQuickActions")?.dataset.open !== "true") return;
-      setMobileQuickActionsOpen(false);
-      $("mobileQuickActionsToggle")?.focus();
+      if (!activeFooterSheetName) return;
+      if (event.key === "Escape"){
+        event.preventDefault();
+        closeFooterSheets();
+        return;
+      }
+      if (event.key === "Tab"){
+        const sheet = footerSheetPairs()[activeFooterSheetName]?.[1];
+        const focusable = footerSheetFocusable(sheet);
+        if (!focusable.length){ event.preventDefault(); sheet?.focus(); return; }
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first){ event.preventDefault(); last.focus(); }
+        else if (!event.shiftKey && document.activeElement === last){ event.preventDefault(); first.focus(); }
+      }
     });
     document.querySelectorAll(".mobileHelpTile").forEach(tile=>{
       tile.addEventListener("click",()=>{
@@ -4933,16 +5186,7 @@
     document.querySelectorAll(".workspaceNavButton").forEach(button=>{
       button.addEventListener("click",()=>setWorkspacePanel(button.dataset.workspaceTarget, { reveal: true }));
     });
-    $("mobileAppearanceTile")?.addEventListener("click",event=>{
-      if (!window.matchMedia("(max-width: 900px)").matches) return;
-      event.stopPropagation();
-      showMobileAppearancePanel();
-    });
     $("mobileWorkspaceHome")?.addEventListener("click", showMobileWorkspaceHome);
-    $("mobileAppearanceBack")?.addEventListener("click",()=>{
-      showMobileWorkspaceHome();
-      $("mobileAppearanceTile")?.focus();
-    });
     document.querySelectorAll(".workspaceContent > .workspacePanel > summary").forEach(summary=>{
       summary.addEventListener("click",event=>{
         const timelineLockedOpen = state.mobileTimelineOnly && summary.closest("#resultsBlock") && window.matchMedia("(max-width: 900px)").matches;
@@ -4957,31 +5201,13 @@
     });
     window.addEventListener("resize", syncWorkspaceForViewport);
     setInterval(updateChangeoverCountdown, 30000);
-    const statusPreferences = $("statusPreferences");
-    statusPreferences?.addEventListener("toggle",()=>{
-      const summary = statusPreferences.querySelector(":scope > summary");
-      if (summary) summary.setAttribute("aria-label", statusPreferences.open ? "Close appearance and preferences" : "Open appearance and preferences");
-    });
     document.addEventListener("click",event=>{
-      if (statusPreferences?.open && !statusPreferences.contains(event.target)){
-        if (window.matchMedia("(max-width: 900px)").matches && document.body.dataset.mobileWorkspace === "appearance") showMobileWorkspaceHome();
-        else statusPreferences.open = false;
-      }
       if (toolsIndexDropdown?.open && !toolsIndexDropdown.contains(event.target)) toolsIndexDropdown.open = false;
       document.querySelectorAll(".hopperGeometryPopover[open]").forEach(popover=>{
         if (!popover.contains(event.target)) popover.open = false;
       });
     });
     document.addEventListener("keydown",event=>{
-      if (event.key === "Escape" && statusPreferences?.open){
-        if (window.matchMedia("(max-width: 900px)").matches && document.body.dataset.mobileWorkspace === "appearance"){
-          showMobileWorkspaceHome();
-          $("mobileAppearanceTile")?.focus();
-        }else{
-          statusPreferences.open = false;
-          statusPreferences.querySelector(":scope > summary")?.focus();
-        }
-      }
       if (event.key === "Escape" && toolsIndexDropdown?.open){
         toolsIndexDropdown.open = false;
         toolsIndexDropdown.querySelector(":scope > summary")?.focus();
@@ -5043,8 +5269,8 @@
       applyTheme(state.theme || "mse");
       applyTimeFormat(state.timeFormat || "12");
       applySurfaceStyle(state.surfaceStyle || defaultSurfaceStyle());
-      applyMobileTileStyle(state.mobileTileStyle || "minimal");
-      applyMobileBackgroundStyle(state.mobileBackgroundStyle || "layer-glow");
+      applyMobileTileStyle("minimal");
+      applyMobileBackgroundStyle("theme-native");
       applyMobileTimelineAlarm(!!state.mobileTimelineAlarm);
       saveSession();
       setupLineSync();

@@ -14,18 +14,17 @@ test("mobile tile icons are 25% larger in both normal and minimal tile treatment
   assert.match(styles, /mobile-tile-style="minimal"\] \.workspaceTileIcon\{ width:calc\(30px \* 1\.25\); height:calc\(30px \* 1\.25\);/);
 });
 
-test("the pre-existing tile options and themed backgrounds remain available", () => {
-  assert.match(html, /data-mobile-tile-style="accent"><span><\/span>Color accent/);
-  assert.match(html, /data-mobile-tile-style="solid"><span><\/span>Color fill/);
-  assert.match(styles, /body\[data-mobile-background-style="industrial-grid"\]\{/);
-  assert.doesNotMatch(styles, /--mobile-home-night:#16233a/);
+test("main menu is a stable six-destination grid with no cosmetic or admin tiles", () => {
+  const nav = html.slice(html.indexOf('<nav class="workspaceNav"'),html.indexOf('</nav>',html.indexOf('<nav class="workspaceNav"')));
+  assert.equal((nav.match(/class="workspaceNavButton/g) || []).length,6);
+  assert.doesNotMatch(nav,/Appearance|Admin Login|Resin Database|Workspace Management/);
+  assert.match(styles,/grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
 });
 
 test("the shared receiver-weight guidance explains conservative usable weight and Smart Hopper inputs", () => {
-  assert.match(html, /Enter a conservative usable weight to prevent running out early\./);
-  assert.match(html, /<strong>Smart Hoppers<\/strong>/);
-  assert.match(html, /usable height \(base to fill valve\)/);
-  assert.match(html, /resin-specific weight/);
+  assert.match(html, /Enter a conservative usable weight, or use Smart Hoppers to calculate capacity from hopper dimensions and resin density\./);
+  assert.match(html, /How Smart Hoppers work/);
+  assert.match(html, /shared hopper circumference/);
 });
 
 test("mobile RT Sync explains joining only, while desktop retains its create-or-join guidance", () => {
@@ -37,8 +36,9 @@ test("on mobile Recipe Setup, the Smart badge follows the resin input rather tha
   assert.match(styles, /\.splitCellTop \.splitSmartBadge\{ flex:0 0 auto; \}/);
 });
 
-test("mobile weights place the Smart guide and receiver weight profiles below the hopper grid", () => {
-  assert.match(app, /area\.appendChild\(matrix\);\s*if \(smartLegend\) area\.appendChild\(smartLegend\);/);
-  assert.match(app, /weightsBody\.appendChild\(profilesBlock\)/);
-  assert.match(styles, /#weightsBlock > \.blockBody > #setupWeightProfilesBlock/);
+test("mobile weights keep the grid compact and open receiver profiles in a shared sheet", () => {
+  assert.match(app, /area\.appendChild\(matrix\);/);
+  assert.match(app, /mobileWeightProfilesButton/);
+  assert.match(app, /ensureMobileWeightProfilesSheet\(profilesAction\)/);
+  assert.match(styles, /#lineSetupBlock #setupWeightProfilesBlock\{display:none!important\}/);
 });

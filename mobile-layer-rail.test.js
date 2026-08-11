@@ -73,9 +73,10 @@ test("the compact mobile matrix keeps all layer columns in the table and omits t
   assert.match(body, /area\.appendChild\(mobileLayerLayout\);/);
 });
 
-test("compact mobile recipe actions remain inside the matrix frame while bulk values open in a dedicated sheet", () => {
+test("compact mobile recipe actions sit immediately after the matrix while bulk values open in a dedicated sheet", () => {
   assert.match(app, /actionTray\.append\(modeBar, mobileBulkContext, mobileRearrangeContext\);/);
-  assert.match(app, /mobileLayerLayout\.append\(actionTray\);/);
+  assert.match(app, /area\.append\(actionTray\);/);
+  assert.doesNotMatch(app, /mobileLayerLayout\.append\(actionTray\);/);
   assert.match(app, /mobileBulkEditSheet\.querySelector\("\.mobileBulkEditBody"\)\.appendChild\(toolbar\);/);
   assert.match(app, /mobileBulkEditSheet\.showModal\(\);/);
   assert.match(app, /mobileSavedRecipesSheet\?\.showModal\(\);/);

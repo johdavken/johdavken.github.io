@@ -9,7 +9,7 @@ const index = fs.readFileSync("index.html", "utf8");
 const styles = fs.readFileSync("styles.css", "utf8");
 
 test("the mobile footer sync status is a real button, not a div - native tap/keyboard support for free", () => {
-  assert.match(index, /<button type="button" id="cloudSyncFooterStatus" class="cloudSyncFooterStatus" data-state="local-only" aria-live="polite" aria-label="RT Sync status - tap to refresh and apply any unsynced changes">/);
+  assert.match(index, /<button type="button" id="cloudSyncFooterStatus" class="appDockControl cloudSyncFooterStatus" data-state="local-only" aria-live="polite" aria-label="RT Sync status - tap to refresh and apply any unsynced changes">/);
   assert.doesNotMatch(index, /<div id="cloudSyncFooterStatus"/);
 });
 
@@ -31,11 +31,8 @@ test("the footer button's click handler is wrapped in runLineSyncAction, matchin
   assert.match(body, /runLineSyncAction\(/);
 });
 
-test("button-chrome CSS is reset (no default border/background) while the existing visual divider and layout are preserved", () => {
-  const ruleStart = styles.indexOf(".cloudSyncFooterStatus{");
-  const ruleEnd = styles.indexOf("}", ruleStart);
-  const rule = styles.slice(ruleStart, ruleEnd);
-  assert.match(rule, /background:\s*none;/);
-  assert.match(rule, /cursor:\s*pointer;/);
-  assert.match(rule, /border-left:\s*1px solid var\(--footer-border\);/);
+test("sync is integrated into the five-control dock with distinct status colors", () => {
+  assert.match(styles,/grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/);
+  assert.match(styles,/\.cloudSyncFooterStatus\[data-state="synced"\]\{color:var\(--ok\)\}/);
+  assert.match(styles,/\.cloudSyncFooterStatus\[data-state="error"\]\{color:var\(--bad\)\}/);
 });

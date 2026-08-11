@@ -18,28 +18,23 @@ const styles = fs.readFileSync("styles.css", "utf8");
 // .layerTitle/.workspaceNavButton span/.setupSectionTitle/.toolsIndexButton
 // styling, with no body[data-header-style] switch left to key off of.
 
-test("Industrial Slate (mse) is the default theme in the initial markup, not just the JS fallback", () => {
+test("Light reuses Industrial Slate (mse) as the default implementation", () => {
   assert.match(html, /<html lang="en" data-theme="mse">/);
   assert.match(html, /<body[^>]*data-theme="mse"/);
   const optStart = html.indexOf('value="mse"');
   const opt = html.slice(optStart, html.indexOf("</option>", optStart));
   assert.match(opt, /selected/);
-  assert.match(opt, /Industrial Slate \(Default\)/);
-  // Everforest no longer claims to be the default.
-  const everforestOpt = html.slice(html.indexOf('value="everforest"'), html.indexOf("</option>", html.indexOf('value="everforest"')));
-  assert.doesNotMatch(everforestOpt, /selected|Default/);
+  assert.match(opt, />Light/);
+  assert.doesNotMatch(html, /value="everforest"/);
 });
 
-test("every JS fallback path defaults to mse, not everforest", () => {
-  // Everforest remains a selectable theme (still listed in applyTheme's
-  // `allowed` set) - it's just no longer what any fallback/default resolves
-  // to. Check the specific default expressions, not the word's every use.
+test("theme migration has a deterministic mse fallback", () => {
   assert.doesNotMatch(app, /: String\(t\) : "everforest"/);
   assert.doesNotMatch(app, /payload\.theme \|\| "everforest"/);
   assert.doesNotMatch(app, /applyTheme\("everforest"\)/);
   assert.doesNotMatch(app, /state\.theme \|\| "everforest"/);
   assert.match(app, /theme: "mse",/);
-  assert.match(app, /\? String\(t\) : "mse";/);
+  assert.match(app, /const theme = migrations\.get\(saved\) \|\| "mse";/);
   assert.match(app, /applyTheme\(payload\.theme \|\| "mse"\);/);
   assert.match(app, /applyTheme\("mse"\);/);
   assert.match(app, /applyTheme\(state\.theme \|\| "mse"\);/);

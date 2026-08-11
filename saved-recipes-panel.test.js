@@ -129,6 +129,14 @@ test("the Saved Recipes button leads the button row (Load is the primary action 
   assert.match(app, /savedRecipesButton\.setAttribute\("aria-expanded", String\(open\)\)/);
 });
 
+test("Recipes and receiver profiles use centered sheets without opening the search keyboard",()=>{
+  assert.match(styles,/\.mobileSavedRecipesSheet\{[\s\S]*?left:50%;[\s\S]*?transform:translateX\(-50%\);[\s\S]*?width:min\(410px,calc\(100vw - 20px\)\);/);
+  assert.match(app,/mobileSavedRecipesSheet\?\.focus\(\{preventScroll:true\}\)/);
+  assert.match(app,/profilesSheet\.focus\(\{preventScroll:true\}\)/);
+  assert.doesNotMatch(app,/mobileSavedRecipesSearch"\)\?\.focus\(\)/);
+  assert.doesNotMatch(app,/mobileWeightProfilesSearch"\)\?\.focus\(\)/);
+});
+
 test("the panel's own Save Current Recipe button reuses the exact same dialog flow as Line Configurations', not a parallel save path", () => {
   assert.match(app, /savedRecipesPanel\.querySelector\("#splitsSaveRecipe"\)\.addEventListener\("click", \(\)=>openWorkspaceConfigurationDialog\("save-recipe"\)\)/);
 });

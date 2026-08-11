@@ -108,7 +108,7 @@ test("on desktop the two gauge tiles sit in a tight flex row instead of the far-
   assert.match(topRowRule, /gap: 16px;/); // must match the desktop override above, verbatim
 });
 
-test("the layer count tiles are three graphic-only buttons for 1/3/5 layers, each with an accessible name since there's no visible text", () => {
+test("the Layers segmented control keeps three named 1/3/5 options with their SVG cues", () => {
   const block = setupBlock();
   const start = block.indexOf('id="lineTypeToggle"');
   const end = block.indexOf('class="setupFields setupPrimaryFields', start);
@@ -119,9 +119,10 @@ test("the layer count tiles are three graphic-only buttons for 1/3/5 layers, eac
   assert.match(tiles, /aria-label="1 layer"/);
   assert.match(tiles, /aria-label="3 layers"/);
   assert.match(tiles, /aria-label="5 layers"/);
-  assert.match(tiles, /role="radiogroup" aria-label="Layer count"/);
+  assert.match(tiles, /role="radiogroup" aria-label="Layers"/);
   const svgCount = (tiles.match(/<svg/g) || []).length;
   assert.equal(svgCount, 3, "expected one svg glyph per tile");
+  ["1","3","5"].forEach(n=>assert.match(tiles,new RegExp(`<span>${n}</span>`)));
 });
 
 test("the tiles are left-aligned (plain flex row, no centering/justify-content) and stay a fixed small size rather than stretching", () => {

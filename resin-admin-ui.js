@@ -22,7 +22,22 @@
     $("adminLoginButton").hidden = initializing || adminAccess;
     $("resinDatabaseButton").hidden = !adminAccess;
     $("adminSignOutButton").hidden = !adminAccess;
+    const accountButton = $("appFooterAccount");
+    const accountLabel = $("footerAccountStatus");
+    const accountDetails = $("footerAccountDetails");
+    const accountEmail = $("footerAccountEmail");
+    if (accountButton){
+      accountButton.disabled = initializing;
+      accountButton.dataset.state = initializing ? "loading" : (adminAccess ? "admin" : "signed-out");
+      accountButton.setAttribute("aria-label", initializing ? "Account loading" : (adminAccess ? "Admin account" : "Admin Login"));
+    }
+    if (accountLabel) accountLabel.textContent = initializing ? "Account" : (adminAccess ? "Admin" : "Account");
+    if (accountDetails) accountDetails.hidden = !adminAccess;
+    if (accountEmail) accountEmail.textContent = state?.email || "Administrator";
     if (!adminAccess){
+      const accountMenu = $("footerAccountMenu");
+      if (accountMenu?.open) root.PolynFooterSheetUI?.close?.();
+      accountButton?.setAttribute("aria-expanded", "false");
       const panel = $("resinAdminBlock");
       if (panel?.classList.contains("desktop-active") || panel?.open) document.querySelector('[data-workspace-target="resultsBlock"]')?.click();
       panel?.classList.remove("desktop-active");
