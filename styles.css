@@ -5224,6 +5224,12 @@ body[data-surface-style="divided"] .helpTopic{
 .displaySheetHead small{display:block;margin-top:2px;color:var(--muted);font-size:11px}
 .visuallyHidden{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
 .appOverlayRoot{position:fixed;inset:0;z-index:70;pointer-events:none}
+/* The notification center is a desktop-only surface: its bell is inside the
+   desktop production strip and its styling lives in desktop.css. This is the
+   safety net that keeps it from ever presenting as an unstyled dialog if a
+   viewport change catches it open. */
+.desktopNotificationsMenu:not([open]){display:none!important}
+@media (width <= 900px){ .desktopNotificationsMenu{display:none!important} }
 .footerSheet{z-index:72}
 .footerSheetBackdrop{position:fixed;inset:0;z-index:60;padding:0;border:0;background:rgba(0,0,0,.42);backdrop-filter:blur(1.5px)}
 .footerSheetBackdrop[hidden]{display:none!important}

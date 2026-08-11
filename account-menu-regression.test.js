@@ -15,16 +15,21 @@ test("desktop Account is portalled outside the inert desktop workspace", () => {
   assert.match(css, /\.appOverlayRoot > \.footerAccountMenu\{pointer-events:auto\}/);
 });
 
+// The nonmodal-popover presentation is now shared by Account and the
+// desktop notification bell, so these assertions track the generalized
+// helpers. Account must still be part of that set - asserted explicitly.
 test("desktop Account uses a nonmodal popover while mobile retains the sheet", () => {
-  assert.match(app, /const desktopAccountPopover = isDesktopAccountPopover\(name\)/);
-  assert.match(app, /sheet\.setAttribute\("aria-modal", String\(!desktopAccountPopover\)\)/);
-  assert.match(app, /backdrop\.hidden = desktopAccountPopover/);
-  assert.match(app, /main\.inert = !desktopAccountPopover/);
-  assert.match(app, /if \(isDesktopAccountPopover\(\)\) return;/);
+  assert.match(app, /function isDesktopAccountPopover\(name = activeFooterSheetName\)\{\s*\n\s*return name === "account" && window\.matchMedia\("\(min-width: 901px\)"\)\.matches;/);
+  assert.match(app, /return isDesktopAccountPopover\(name\) \|\| isDesktopNotificationsPopover\(name\);/);
+  assert.match(app, /const nonmodalPopover = isDesktopAccountPopover\(name\) \|\| isDesktopNotificationsPopover\(name\);/);
+  assert.match(app, /sheet\.setAttribute\("aria-modal", String\(!nonmodalPopover\)\)/);
+  assert.match(app, /backdrop\.hidden = nonmodalPopover/);
+  assert.match(app, /main\.inert = !nonmodalPopover/);
+  assert.match(app, /if \(isDesktopPopover\(\)\) return;/);
 });
 
 test("desktop Account supports viewport anchoring and nonmodal dismissal", () => {
-  assert.match(app, /function positionDesktopAccountPopover/);
+  assert.match(app, /function positionDesktopPopover/);
   assert.match(app, /Math\.min\(triggerRect\.right - width, window\.innerWidth - width - viewportMargin\)/);
   assert.match(app, /document\.addEventListener\("pointerdown"/);
   assert.match(app, /window\.addEventListener\("resize"/);

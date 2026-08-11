@@ -111,6 +111,153 @@
   }
   .footerAccountMenu[data-presentation="popover"]{pointer-events:auto}
   .footerAccountMenu:not([open]){display:none!important}
+
+  /* -------------------------------------------------------------------
+   *   Notification center
+   * -------------------------------------------------------------------
+   * The bell replaces the large global heads-up banner that used to sit in
+   * Line Setup on desktop. It matches the borderless Display/Account icon
+   * treatment exactly - no pill, no outline, no filled block. */
+  .desktopNotificationsToggle{
+    position:relative;
+    display:grid;
+    place-items:center;
+    width:38px;
+    height:38px;
+    margin:0;
+    padding:0;
+    border:1px solid transparent;
+    border-radius:var(--control-radius);
+    background:transparent;
+    color:var(--focus-border);
+    box-shadow:none;
+  }
+  .desktopNotificationsToggle svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .desktopNotificationsToggle:hover{background:color-mix(in srgb,var(--focus-border) 9%,transparent);color:var(--title)}
+  .desktopNotificationsToggle:active{background:color-mix(in srgb,var(--focus-border) 15%,transparent);transform:scale(.96)}
+  .desktopNotificationsToggle:focus-visible{outline:2px solid var(--focus-border);outline-offset:2px}
+  .desktopNotificationsToggle[aria-expanded="true"]{background:var(--focus-ring);color:var(--title)}
+  .desktopNotificationsToggle[data-severity="warning"]{color:var(--warn)}
+  .desktopNotificationsToggle[data-severity="error"]{color:var(--bad)}
+
+  /* Count badge. Severity is carried by shape as well as color - a rounded
+     square for attention, a circle for a blocking error - so the state is
+     still distinguishable without color. */
+  .desktopNotificationsBadge{
+    position:absolute;
+    top:2px;
+    right:1px;
+    display:grid;
+    place-items:center;
+    min-width:15px;
+    height:15px;
+    padding:0 3px;
+    border:1.5px solid var(--panel);
+    border-radius:5px;
+    background:var(--warn);
+    color:#12161c;
+    font-size:10px;
+    font-weight:900;
+    font-variant-numeric:tabular-nums;
+    line-height:1;
+  }
+  .desktopNotificationsBadge[data-severity="error"]{border-radius:50%;background:var(--bad);color:#fff}
+  .desktopNotificationsBadge[hidden]{display:none!important}
+
+  /* One short emphasis when a genuinely new condition appears. Never a
+     continuous pulse, and skipped entirely under reduced-motion. */
+  @keyframes desktopNotificationsEmphasis{
+    0%{transform:scale(1)}
+    35%{transform:scale(1.18)}
+    100%{transform:scale(1)}
+  }
+  .desktopNotificationsToggle[data-attention-new="true"] .desktopNotificationsBadge{
+    animation:desktopNotificationsEmphasis .42s ease-out 2;
+  }
+  @media (prefers-reduced-motion:reduce){
+    .desktopNotificationsToggle[data-attention-new="true"] .desktopNotificationsBadge{animation:none}
+    .desktopNotificationsToggle:active{transform:none}
+  }
+
+  .desktopNotificationsMenu{
+    position:fixed;
+    inset:59px 14px auto auto;
+    z-index:72;
+    display:grid;
+    gap:0;
+    width:min(380px,calc(100vw - 28px));
+    max-height:min(430px,calc(100dvh - 86px));
+    margin:0;
+    padding:0;
+    border:1px solid var(--border2);
+    border-radius:12px;
+    background:var(--panelOpen);
+    color:var(--text);
+    box-shadow:var(--shadow2);
+    overflow:hidden;
+    pointer-events:auto;
+  }
+  .desktopNotificationsMenu:not([open]){display:none!important}
+  .desktopNotificationsMenu:focus-visible{outline:2px solid var(--focus-border);outline-offset:-2px}
+  .desktopNotificationsHead{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:10px;
+    padding:11px 13px 9px;
+    border-bottom:1px solid var(--border);
+  }
+  .desktopNotificationsHead strong{color:var(--title);font-size:13px;font-weight:850}
+  .desktopNotificationsHead small{color:var(--muted);font-size:var(--desktop-type-label);font-weight:700}
+  .desktopNotificationsList{display:grid;gap:0;max-height:100%;overflow:auto}
+  .desktopNotificationsEmpty{margin:0;padding:18px 13px;color:var(--muted);font-size:var(--desktop-type-secondary);text-align:center}
+  .desktopNotificationItem{
+    display:grid;
+    grid-template-columns:19px minmax(0,1fr);
+    align-items:start;
+    gap:9px;
+    padding:10px 13px;
+  }
+  .desktopNotificationItem + .desktopNotificationItem{border-top:1px solid var(--border)}
+  .desktopNotificationIcon{width:17px;height:17px;margin-top:1px;fill:none;stroke:var(--warn);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .desktopNotificationItem[data-severity="error"] .desktopNotificationIcon{stroke:var(--bad)}
+  .desktopNotificationBody{display:grid;gap:3px;min-width:0}
+  .desktopNotificationHeadRow{display:flex;align-items:baseline;justify-content:space-between;gap:8px;min-width:0}
+  .desktopNotificationHeadRow strong{min-width:0;color:var(--text);font-size:var(--desktop-type-body);font-weight:750;line-height:1.25}
+  .desktopNotificationSeverityTag{
+    flex:0 0 auto;
+    color:var(--warn);
+    font-size:9px;
+    font-weight:850;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+  }
+  .desktopNotificationItem[data-severity="error"] .desktopNotificationSeverityTag{color:var(--bad)}
+  .desktopNotificationMessage{margin:0;color:var(--muted);font-size:var(--desktop-type-secondary);line-height:1.35}
+  .desktopNotificationFoot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:2px}
+  .desktopNotificationSection{color:var(--muted);font-size:var(--desktop-type-label);font-weight:700;letter-spacing:.03em;text-transform:uppercase}
+  .desktopNotificationAction{
+    min-height:26px;
+    padding:3px 9px;
+    border:1px solid var(--border2);
+    border-radius:var(--control-radius);
+    background:var(--row-bg);
+    color:var(--focus-border);
+    font:inherit;
+    font-size:var(--desktop-type-control);
+    font-weight:750;
+    box-shadow:none;
+  }
+  .desktopNotificationAction:hover{background:var(--focus-ring);color:var(--title)}
+  .desktopNotificationAction:focus-visible{outline:2px solid var(--focus-border);outline-offset:1px}
+
+  /* The notification center supersedes the large global heads-up banner on
+     desktop. The banner itself is untouched (mobile still renders it from
+     the same setStatus path) - it is simply not shown here, so the same
+     conditions are reported once, in one place. Contextual validation -
+     invalid-field outlines, per-layer column totals, the Recipe/Setup
+     section pills - is deliberately left in place. */
+  #lineSetupBlock #statusBox{display:none}
   .displaySheet:not([open]){display:none!important}
   .displaySheet[open]{position:fixed;inset:50% auto auto 50%;margin:0;transform:translate(-50%,-50%);overflow:auto}
   .adminDialog{max-height:calc(100dvh - 48px);overflow:auto}
@@ -154,7 +301,6 @@
     margin:0;
     overflow:hidden;
   }
-  #lineSetupBlock #statusBox{grid-column:1;grid-row:2;min-width:0;max-height:230px;overflow:auto}
   #lineSetupBlock .setupSectionHeading{margin:0 0 14px;font-size:var(--desktop-type-heading)}
   #lineSetupBlock .setupTopRow{display:grid;grid-template-columns:1fr;justify-items:start;gap:12px}
   #lineSetupBlock .setupControlGroup{display:grid;gap:5px}
