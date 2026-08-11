@@ -13,7 +13,11 @@ test("the mobile dock exposes five stable, accessible controls",()=>{
   }
   assert.match(footer,/id="appFooterMain"[^>]*aria-label="Main menu"/);
   assert.match(footer,/id="appFooterAccount"[^>]*aria-label="Account"/);
-  assert.match(styles,/min-height:calc\(var\(--app-dock-height\) \+ env\(safe-area-inset-bottom\)\)/);
+  assert.match(styles,/height:calc\(var\(--app-dock-height\) \+ env\(safe-area-inset-bottom\)\)/);
+  assert.match(styles,/html\{min-height:100%;height:auto\}/);
+  assert.match(styles,/body\{height:auto;min-height:100vh;min-height:100dvh;overflow-x:hidden;overflow-y:auto\}/);
+  assert.match(styles,/main\{height:auto;min-height:100vh;min-height:100dvh;padding-bottom:calc\(var\(--app-dock-height\) \+ env\(safe-area-inset-bottom\) \+ 22px\)!important\}/);
+  assert.match(styles,/\.footerBar\{[\s\S]*?z-index:71;[\s\S]*?display:grid/);
   const order = ["appFooterDisplay","appFooterShortcuts","appFooterMain","appFooterAccount","cloudSyncFooterStatus"].map(id=>footer.indexOf(`id="${id}"`));
   assert.deepEqual(order,[...order].sort((a,b)=>a-b));
   assert.match(styles,/\.appDockMain\{[\s\S]*?top:-5px;[\s\S]*?min-height:68px;/);

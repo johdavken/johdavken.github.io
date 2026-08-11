@@ -5228,6 +5228,13 @@ body[data-surface-style="divided"] .helpTopic{
 @media (width <= 900px){
   :root{--app-dock-height:72px}
 
+  /* Mobile is a document-scrolling shell. Keep the viewport fill dynamic so
+     browser chrome changes do not become an extra content-sized block, while
+     leaving the desktop fixed-height shell in desktop.css untouched. */
+  html{min-height:100%;height:auto}
+  body{height:auto;min-height:100vh;min-height:100dvh;overflow-x:hidden;overflow-y:auto}
+  main{height:auto;min-height:100vh;min-height:100dvh;padding-bottom:calc(var(--app-dock-height) + env(safe-area-inset-bottom) + 22px)!important}
+
   /* The old production strip is retained for desktop context only. Mobile
      uses one persistent application dock on every primary screen. */
   .workspaceStatusBar{display:none!important}
@@ -5296,12 +5303,13 @@ body[data-surface-style="divided"] .helpTopic{
     right:0;
     bottom:0;
     left:0;
-    z-index:70;
+    z-index:71;
     display:grid;
     grid-template-columns:repeat(5,minmax(0,1fr));
     align-items:stretch;
     gap:0;
-    min-height:calc(var(--app-dock-height) + env(safe-area-inset-bottom));
+    height:calc(var(--app-dock-height) + env(safe-area-inset-bottom));
+    min-height:0;
     padding:4px max(4px,env(safe-area-inset-right)) env(safe-area-inset-bottom) max(4px,env(safe-area-inset-left));
     border-top:1px solid var(--border2);
     background:color-mix(in srgb,var(--panelOpen) 94%,transparent);
