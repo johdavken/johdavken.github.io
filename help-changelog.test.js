@@ -42,7 +42,7 @@ test("the changelog is organized into dated periods with h3 headings, newest fir
   const body = section.slice(start, end);
   const headings = [...body.matchAll(/<h3>([^<]+)<\/h3>/g)].map(m => m[1]);
   assert.ok(headings.length >= 6, `expected at least 6 dated periods, found ${headings.length}`);
-  assert.match(headings[0], /August 9, 2026/, "most recent period must be first");
+  assert.match(headings[0], /August 11, 2026/, "most recent period must be first");
   assert.match(headings[headings.length - 1], /December 2025 to January 2026/, "oldest period must be last");
 });
 
@@ -57,13 +57,14 @@ test("references the app's actual major milestones - RT Sync, Scan Recipe, and t
   assert.match(body, /Workspace Recovery/);
 });
 
-test("the latest entry documents the mobile workspace redesign and its primary shortcuts", () => {
+test("the latest entry documents the Line 9, bulk density, and Smart Hopper refinements", () => {
   const section = helpTopicsSection();
   const start = section.indexOf('id="helpChangelog"');
   const end = section.indexOf("</details>", start);
   const body = section.slice(start, end);
-  assert.match(body, /Mobile workspace redesign/);
-  assert.match(body, /Quick Actions/);
-  assert.match(body, /Scan Dosing Screen/);
-  assert.match(body, /Production Summary/);
+  const latest = body.slice(0, body.indexOf("<h3>Mobile workspace redesign"));
+  assert.match(latest, /Line 9/);
+  assert.match(latest, /Bulk Density Measurement/);
+  assert.match(latest, /Smart Hopper/);
+  assert.match(latest, /Account\/Admin/);
 });
