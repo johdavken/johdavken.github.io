@@ -26,7 +26,8 @@ test("finds MS0440 by exact code", () => {
   assert.equal(resin.resin_code, "MS0440");
   assert.deepEqual(formatResinResult(resin), {
     description: "Med. Density Hexene",
-    density: "0.926 g/cm³"
+    density: "0.926 g/cm³",
+    bulkDensity: "Unknown"
   });
 });
 
@@ -51,7 +52,7 @@ test("shows Unknown for unavailable and zero source densities", () => {
 
 test("returns Unknown fields for a code that does not exist", () => {
   assert.equal(findExactResin("DOES-NOT-EXIST"), null);
-  assert.deepEqual(formatResinResult(null), { description: "Unknown", density: "Unknown" });
+  assert.deepEqual(formatResinResult(null), { description: "Unknown", density: "Unknown", bulkDensity: "Unknown" });
 });
 
 test("suggests partial codes and descriptions with exact matches first", () => {

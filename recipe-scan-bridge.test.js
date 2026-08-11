@@ -11,7 +11,7 @@ test("PolynRecipeScanBridge exposes only what recipe-scan-ui.js needs - no raw c
   assert.match(app, /getWorkspaceId: \(\) => lineSync\?\.getState\?\.\(\)\.selectedWorkspaceId \|\| ""/);
   assert.match(app, /getAccessToken: \(\) => lineSync\?\.getAccessToken\?\.\(\) \|\| Promise\.resolve\(null\)/);
   assert.match(app, /getLineType: \(\) => state\.lineType/);
-  assert.match(app, /getHopperNamingMode: \(\) => state\.hopperNamingLine9===?"main" \? "main" : "standard"/);
+  assert.match(app, /getHopperNamingMode: \(\) => derivedHopperNamingMode\(\)/);
   assert.match(app, /applyPayload: applyScannedRecipePayload/);
   assert.doesNotMatch(app, /PolynRecipeScanBridge[\s\S]{0,400}createClient/i);
 });

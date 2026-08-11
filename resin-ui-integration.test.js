@@ -30,7 +30,8 @@ test("the lookup helper keeps the shared service fallback available offline", ()
   assert.equal(resin.resin_code, "MS0440");
   assert.deepEqual(formatResinResult(resin), {
     description: "Med. Density Hexene",
-    density: "0.926 g/cm³"
+    density: "0.926 g/cm³",
+    bulkDensity: "Unknown"
   });
   assert.deepEqual(findResinSuggestions("MS0700").slice(0, 2).map(item => item.resin_code), ["MS0700", "MS0700B"]);
 });

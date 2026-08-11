@@ -31,6 +31,14 @@
     return { valid: true, value: { resin_code, display_description, density_g_cm3, bulk_density_lb_ft3, information_description, is_active: !!values?.is_active } };
   }
 
+  function validateBulkDensity(value){
+    const number = Number(value);
+    if (!Number.isFinite(number) || number < 1 || number > 100){
+      return { valid:false, message:"Bulk density must be between 1 and 100 lb/ft³." };
+    }
+    return { valid:true, value:number };
+  }
+
   function create(options = {}){
     const config = options.config || globalThis.POLYN_SUPABASE_CONFIG || {};
     const sdk = options.supabaseLibrary || globalThis.supabase;
@@ -114,6 +122,40 @@
         return { ok: false, message: duplicate ? "That resin code already exists." : "Could not save the resin. No changes were applied." };
       }
     }
+    async function updateBulkDensity(id, expectedUpdatedAt, value){
+      if (!state.isAdmin) return { ok:false, code:"unauthorized", message:"Admin access is required." };
+      if (!id) return { ok:false, code:"missing_resin", message:"Choose an active Resin Database record." };
+      const checked = validateBulkDensity(value);
+      if (!checked.valid) return { ok:false, code:"invalid_bulk_density", message:checked.message };
+      try{
+        let mutation = getClient()
+          .from("resins")
+          .update({ bulk_density_lb_ft3:checked.value })
+          .eq("id", id)
+          .eq("is_active", true);
+        if (expectedUpdatedAt) mutation = mutation.eq("updated_at", expectedUpdatedAt);
+        const response = await mutation.select(RESIN_FIELDS).maybeSingle();
+        if (response.error) throw response.error;
+        if (!response.data){
+          const current = await getClient().from("resins").select(RESIN_FIELDS).eq("id", id).maybeSingle();
+          if (current.error) throw current.error;
+          if (!current.data) return { ok:false, code:"missing_resin", message:"That resin no longer exists." };
+          if (!current.data.is_active) return { ok:false, code:"inactive_resin", message:"That resin is no longer active." };
+          return { ok:false, code:"record_changed", message:"That resin changed after it was selected. Review the current value and measure again." };
+        }
+        catalog?.acceptConfirmedResin?.(response.data);
+        const refresh = await catalog?.refreshResins?.();
+        return { ok:true, resin:response.data, catalogRefreshed:refresh?.loaded !== false };
+      }catch(error){
+        if (error?.code === "42501" || /permission|policy|authorized/i.test(error?.message || "")){
+          return { ok:false, code:"unauthorized", message:"Admin access is required to update bulk density." };
+        }
+        if (error?.code === "23514" || /constraint|range/i.test(error?.message || "")){
+          return { ok:false, code:"invalid_bulk_density", message:"The measured bulk density is outside the Resin Database constraint." };
+        }
+        return { ok:false, code:"network_error", message:"Could not update bulk density. No database change was confirmed." };
+      }
+    }
     async function deleteResin(id){
       if (!state.isAdmin) return { ok: false, message: "Admin access is required." };
       if (!id) return { ok: false, message: "Choose a resin to delete." };
@@ -125,7 +167,7 @@
       }catch(error){ return { ok: false, message: "Could not delete the resin. No changes were applied." }; }
     }
     function subscribe(listener){ listeners.add(listener); return ()=>listeners.delete(listener); }
-    return { initialize, signIn, signOut, listResins, saveResin, deleteResin, subscribe, getState: ()=>({ ...state }), getClient };
+    return { initialize, signIn, signOut, listResins, saveResin, updateBulkDensity, deleteResin, subscribe, getState: ()=>({ ...state }), getClient };
   }
-  return { AUTH_STORAGE_KEY, RESIN_FIELDS, validateResin, create };
+  return { AUTH_STORAGE_KEY, RESIN_FIELDS, validateResin, validateBulkDensity, create };
 });

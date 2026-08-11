@@ -104,14 +104,16 @@ test("hopper rearrangement only ever moves resinName/pct - height/circumference 
   assert.doesNotMatch(rearrangement, /circumference/);
 });
 
-test("the corner cell (formerly plain \"Select row\" text) now holds the Smart Hoppers toggle: a role=switch styled like the existing Setup toggles, with an explanatory title", () => {
+test("desktop keeps the matrix corner compact and places the Smart Hoppers switch with the configuration controls above the grid", () => {
   const start = app.indexOf('corner.className = "weightsRowCorner";');
   const body = app.slice(start, app.indexOf("headerRow.appendChild(corner);", start));
   assert.doesNotMatch(body, /corner\.textContent = "Select row"/);
-  assert.match(body, /smartToggle\.id = "smartHoppersToggle";/);
-  assert.match(body, /smartToggle\.className = "toggle";/);
-  assert.match(body, /smartToggle\.setAttribute\("role", "switch"\);/);
-  assert.match(body, /smartToggle\.title = "Smart Hoppers:/);
+  assert.match(body, /corner\.textContent = "Hopper"/);
+
+  const renderStart = app.indexOf("function renderWeightsArea(");
+  const renderBody = app.slice(renderStart, app.indexOf("\n    function printRecipeSheet", renderStart));
+  assert.match(renderBody, /desktopControls\.className = "desktopWeightsControls"/);
+  assert.match(renderBody, /id="smartHoppersToggle" class="toggle" role="switch" tabindex="0" title="Smart Hoppers:/);
 });
 
 test("the toggle is wired through the shared hookToggle helper (same as the other Setup switches), re-wired on every render since the corner cell is rebuilt each time", () => {

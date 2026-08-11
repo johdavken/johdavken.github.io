@@ -61,6 +61,9 @@
       description: resin?.display_description || "Unknown",
       density: Number.isFinite(resin?.density_g_cm3) && resin.density_g_cm3 > 0
         ? `${resin.density_g_cm3.toFixed(3)} g/cm³`
+        : "Unknown",
+      bulkDensity: Number.isFinite(resin?.bulk_density_lb_ft3) && resin.bulk_density_lb_ft3 > 0
+        ? `${resin.bulk_density_lb_ft3.toFixed(1)} lb/ft³`
         : "Unknown"
     };
   }

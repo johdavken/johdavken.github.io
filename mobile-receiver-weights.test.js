@@ -22,7 +22,7 @@ test("Receiver Hopper Weights switches to an all-layer mobile matrix without cha
 
   const mobile = functionBody("renderMobileWeightsArea");
   assert.match(mobile,/matrix\.style\.setProperty\("--mobile-weight-layer-count", String\(state\.layers\.length\)\);/);
-  assert.match(mobile,/label\.textContent = `\$\{L\.name\}\$\{hopperPositionLabel\(hi\)\}`;/);
+  assert.match(mobile,/label\.textContent = hopperBadgeLabel\(L\.name, hi\);/);
   assert.match(mobile,/for \(let hi=0; hi<HOPPERS_PER_LAYER; hi\+\+\)/);
   assert.match(styles,/grid-template-columns:repeat\(var\(--mobile-weight-layer-count\),minmax\(0,1fr\)\);/);
 });

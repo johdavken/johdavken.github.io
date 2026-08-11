@@ -126,6 +126,17 @@ test("looks up resin codes without regard to case or surrounding whitespace", ()
   assert.equal(catalog.getResinByCode("missing"), null);
 });
 
+test("a server-confirmed admin update refreshes cache subscribers immediately", () => {
+  const storage = createStorage({ [service.CACHE_KEY]: cachedEnvelope([cachedResin]) });
+  const catalog = service.create({ storage, fallbackCatalog:fallback, config:{ enabled:false } });
+  let notification;
+  catalog.subscribe((resins, result) => { notification = { resins, result }; });
+  assert.equal(catalog.acceptConfirmedResin({ ...cachedResin, bulk_density_lb_ft3:48.8, updated_at:"2026-08-11T12:00:00Z" }), true);
+  assert.equal(catalog.getCachedResins()[0].bulk_density_lb_ft3, 48.8);
+  assert.equal(notification.result.reason, "confirmed-admin-update");
+  assert.equal(notification.resins[0].bulk_density_lb_ft3, 48.8);
+});
+
 test("normalization retains unknown values as null", () => {
   assert.deepEqual(service.normalizeResin({ resin_code: "UNKNOWN", density_g_cm3: 0, bulk_density_lb_ft3: 0, is_active: "yes" }), {
     id: null,

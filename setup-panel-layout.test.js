@@ -145,7 +145,7 @@ test("the gauge tiles have a fixed max-width so they don't stretch wide on a roo
 
 // --- Layer count logic moved from a <select> change handler to a custom toggle ---
 
-test("syncLineTypeUI mirrors syncHopperNamingUI's pattern - toggles .active/aria-checked/tabIndex on the selected tile", () => {
+test("syncLineTypeUI toggles .active/aria-checked/tabIndex on the selected tile", () => {
   const body = functionBody("syncLineTypeUI");
   assert.match(body, /const group = \$\("lineTypeToggle"\);/);
   assert.match(body, /button\.classList\.toggle\("active", selected\)/);
@@ -161,9 +161,10 @@ test("hookLineTypeChoice preserves the original <select> change handler's exact 
   assert.match(body, /notifyActiveJobMutation\(\{ immediate: true, kind: "line-type" \}\);/);
 });
 
-test("hookLineTypeChoice is wired from hookCustomToggles, same as hookHopperNamingChoice", () => {
+test("hookLineTypeChoice is wired from hookCustomToggles", () => {
   const body = functionBody("hookCustomToggles");
-  assert.match(body, /hookHopperNamingChoice\(\);\s*\n\s*hookLineTypeChoice\(\);/);
+  assert.match(body, /hookLineTypeChoice\(\);/);
+  assert.doesNotMatch(body, /hookHopperNamingChoice/);
 });
 
 test("every former DOM write to the old <select id=\"lineType\"> now goes through syncLineTypeUI instead", () => {
@@ -171,30 +172,18 @@ test("every former DOM write to the old <select id=\"lineType\"> now goes throug
   assert.doesNotMatch(app, /\$\("lineType"\)\?\.addEventListener\("change"/);
 });
 
-test("the hopper naming toggle no longer lives inside the Receiver Hopper Weights <summary> - it moved up next to the layer count tiles", () => {
+test("the obsolete hopper naming selector is absent from Setup", () => {
   const block = setupBlock();
   const weightsSummaryStart = block.indexOf('id="weightsBlock"');
   const weightsSummaryEnd = block.indexOf("</summary>", weightsSummaryStart);
   const summary = block.slice(weightsSummaryStart, weightsSummaryEnd);
   assert.doesNotMatch(summary, /hopperNamingToggle/);
   assert.match(summary, /<span class="pill">Weights<\/span>/);
+  assert.doesNotMatch(block, /hopperNamingToggle|data-hopper-naming|Line 9 hopper names/);
+  assert.doesNotMatch(app, /hopperNamingToggle|hookHopperNamingChoice|syncHopperNamingUI/);
 });
 
-test("the hopper naming toggle sits in .setupTopRow right after the layer count tiles, same height, same row", () => {
-  const block = setupBlock();
-  const rowStart = block.indexOf('class="setupTopRow"');
-  assert.notEqual(rowStart, -1);
-  const rowEnd = block.indexOf("</div>\n        <div class=\"setupFields setupPrimaryFields", rowStart);
-  const row = block.slice(rowStart, rowEnd);
-  const tilesIndex = row.indexOf('id="lineTypeToggle"');
-  const namingIndex = row.indexOf('id="hopperNamingToggle"');
-  assert.ok(tilesIndex > -1 && namingIndex > tilesIndex, "expected lineTypeToggle before hopperNamingToggle, both inside setupTopRow");
-  assert.match(row, /data-hopper-naming="standard"/);
-  assert.match(row, /data-hopper-naming="main"/);
-  assert.match(app, /const group = \$\("hopperNamingToggle"\);/);
-});
-
-test(".setupTopRow pairs the two controls with a plain gap, not space-between, and wraps rather than overflowing on narrow screens", () => {
+test(".setupTopRow keeps the layer selector wrapping safely on narrow screens", () => {
   const ruleStart = styles.indexOf(".setupTopRow{");
   assert.notEqual(ruleStart, -1);
   const rule = styles.slice(ruleStart, styles.indexOf("}", ruleStart) + 1);
@@ -203,14 +192,9 @@ test(".setupTopRow pairs the two controls with a plain gap, not space-between, a
   assert.doesNotMatch(rule, /justify-content/);
 });
 
-test("the naming toggle's click handler no longer needs to guard against toggling an enclosing <summary> - that guard only made sense while it lived inside one", () => {
-  const body = functionBody("hookHopperNamingChoice");
-  const clickHandlerStart = body.indexOf('group.addEventListener("click"');
-  const clickHandlerEnd = body.indexOf("});", clickHandlerStart);
-  const clickHandler = body.slice(clickHandlerStart, clickHandlerEnd);
-  assert.doesNotMatch(clickHandler, /event\.preventDefault\(\)/);
-  assert.doesNotMatch(clickHandler, /event\.stopPropagation\(\)/);
-  assert.match(clickHandler, /choose\(button\.dataset\.hopperNaming\)/);
+test("workspace-derived naming has no user click handler", () => {
+  assert.doesNotMatch(app, /button\.dataset\.hopperNaming|data-hopper-naming|kind: "hopper-naming"/);
+  assert.match(app, /document\.body\.dataset\.hopperNaming = next/);
 });
 
 // --- Receiver hopper weights: bulk toolbar moved below the table ----------

@@ -26,6 +26,7 @@
       "resultsBlock",
       "toolsBlock",
       "helpBlock",
+      "bulkDensityMeasurementBlock",
       "helpQuickStart",
       "helpSetup",
       "helpHopperPercentages",
@@ -57,7 +58,9 @@
       mobileBackgroundStyle: "theme-native",
       mobileTimelineAlarm: false,
       gauge: 0,
-      hopperNamingLine9: "standard", // "standard" | "main"
+      // Legacy compatibility only. Current labels are derived from the
+      // selected RT Sync workspace and never from this stored preference.
+      hopperNamingLine9: "standard",
       showPumpOffTracked: false, // show pump-off items in Timeline
       mobileTimelineOnly: false,
       mobileRecipeOnly: false,
@@ -546,6 +549,8 @@
           && resin.resin_code === resinCatalogRecords[index]?.resin_code)) return;
     resinCatalogRecords = resins;
     commonResinNames = resinCatalogRecords.map(resin=>resin.resin_code);
+    validateAndCompute({ sync:false });
+    if ($("resinLookupInput")?.value.trim()) updateResinLookup();
   });
 
   let resinAutocompletePopup = null;
@@ -715,12 +720,7 @@
    * ============================ */
 
   function hopperBadgeLabel(layerName, hi){
-    // Only affects Line 9 naming toggle. Keeps other lines unchanged unless enabled.
-    if (state.hopperNamingLine9 === "main"){
-      // AM, A1..A5 (and likewise BM, B1..B5, etc.)
-      return (hi === 0) ? `${layerName}M` : `${layerName}${hi}`;
-    }
-    return `${layerName}${hi+1}`;
+    return window.PolynLineIdentity?.hopperBadgeLabel(layerName, hi, lineSync?.getState?.()) || `${layerName}${hi + 1}`;
   }
 
   function syncToggleUI(id, on){
@@ -728,45 +728,30 @@
     if (!el) return;
     el.classList.toggle("on", !!on);
     el.setAttribute("aria-checked", String(!!on));
-  }
-
-  function syncHopperNamingUI(){
-    const group = $("hopperNamingToggle");
-    if (!group) return;
-    const current = state.hopperNamingLine9 === "main" ? "main" : "standard";
-    group.querySelectorAll("[data-hopper-naming]").forEach(button=>{
-      const selected = button.dataset.hopperNaming === current;
-      button.classList.toggle("active", selected);
-      button.setAttribute("aria-checked", String(selected));
-      button.tabIndex = selected ? 0 : -1;
+    document.querySelectorAll(`[data-toggle-state-for="${id}"]`).forEach(status=>{
+      status.textContent = on ? "Enabled" : "Disabled";
+      status.dataset.state = on ? "on" : "off";
     });
   }
 
-  function hookHopperNamingChoice(){
-    const group = $("hopperNamingToggle");
-    if (!group || group._wired) return;
-    group._wired = true;
-    const choose = value=>{
-      const next = value === "main" ? "main" : "standard";
-      if (state.hopperNamingLine9 === next) return;
-      state.hopperNamingLine9 = next;
-      syncHopperNamingUI();
-      saveSession();
-      rebuildUIFromState();
-      notifyActiveJobMutation({ immediate: true, kind: "hopper-naming" });
-    };
-    group.addEventListener("click",event=>{
-      const button = event.target.closest("[data-hopper-naming]");
-      if (button) choose(button.dataset.hopperNaming);
-    });
-    group.addEventListener("keydown",event=>{
-      if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) return;
-      event.preventDefault();
-      const value = state.hopperNamingLine9 === "main" ? "standard" : "main";
-      choose(value);
-      group.querySelector(`[data-hopper-naming="${value}"]`)?.focus();
-    });
-    syncHopperNamingUI();
+  let renderedHopperNamingMode = "";
+
+  function derivedHopperNamingMode(syncState = lineSync?.getState?.()){
+    return window.PolynLineIdentity?.hopperNamingMode(syncState) || "standard";
+  }
+
+  function syncDerivedHopperNaming(syncState, { rerender = true } = {}){
+    const next = derivedHopperNamingMode(syncState);
+    const changed = renderedHopperNamingMode !== next;
+    renderedHopperNamingMode = next;
+    document.body.dataset.hopperNaming = next;
+    if (changed && rerender && state.layers.length && $("weightsArea") && $("splitsArea")){
+      renderWeightsArea();
+      renderSplitsArea();
+      updateLayerMetaDisplays();
+      validateAndCompute({ sync:false });
+    }
+    return changed;
   }
 
   const LINE_TYPES = [1, 3, 5];
@@ -833,13 +818,7 @@
       setOn(!getOn());
       syncToggleUI(id, getOn());
       saveSession();
-      // Rebuild only when labels change; validate for filtering changes
-      if (id === "hopperNamingToggle"){
-        rebuildUIFromState();
-        notifyActiveJobMutation({ immediate: true, kind: "hopper-naming" });
-      }else{
-        validateAndCompute({ sync: false });
-      }
+      validateAndCompute({ sync: false });
     };
 
     el.addEventListener("click",(e)=>{ e.preventDefault(); flip(); });
@@ -852,7 +831,6 @@
   }
 
   function hookCustomToggles(){
-    hookHopperNamingChoice();
     hookLineTypeChoice();
 
     hookToggle(
@@ -1099,18 +1077,21 @@
       syncChangeoverTimeDisplay();
     }
 
-    // Divided Workspace is the default on desktop; mobile defaults to Layered Flat instead.
     function defaultSurfaceStyle(){
-      return window.matchMedia("(max-width: 900px)").matches ? "layered-flat" : "divided";
+      return "layered-flat";
     }
 
     function applySurfaceStyle(value){
       const allowed = new Set(["elevated", "flat", "layered-flat", "accent-frame", "divided", "low-elevation"]);
-      const surfaceStyle = allowed.has(String(value)) ? String(value) : defaultSurfaceStyle();
-      state.surfaceStyle = surfaceStyle;
-      document.body.setAttribute("data-surface-style", surfaceStyle);
-      const sel = $("surfaceStyleSel");
-      if (sel) sel.value = surfaceStyle;
+      const storedSurfaceStyle = allowed.has(String(value)) ? String(value) : defaultSurfaceStyle();
+      // Desktop surface selection was retired in favor of Layered Flat. Keep
+      // the stored value solely so the existing mobile presentation does not
+      // change as a side effect of this desktop-only decision.
+      const renderedSurfaceStyle = window.matchMedia("(min-width: 901px)").matches
+        ? "layered-flat"
+        : storedSurfaceStyle;
+      state.surfaceStyle = storedSurfaceStyle;
+      document.body.setAttribute("data-surface-style", renderedSurfaceStyle);
     }
 
     function applyMobileTileStyle(value){
@@ -1524,11 +1505,11 @@
     function weightId(layerName, hi){ return `w_${layerName}_${hi}`; }
     function computedWeightId(layerName, hi){ return `cw_${layerName}_${hi}`; }
     function mobileSummaryWeightId(layerName, hi){ return `msw_${layerName}_${hi}`; }
+    function desktopSummaryWeightId(layerName, hi){ return `dsw_${layerName}_${hi}`; }
     function smartBadgeId(layerName, hi){ return `sm_${layerName}_${hi}`; }
     function hopperNameId(layerName, hi){ return `hn_${layerName}_${hi}`; }
     function hopperPositionLabel(hi){
-      if (state.hopperNamingLine9 === "main") return hi === 0 ? "Main" : String(hi);
-      return String(hi + 1);
+      return window.PolynLineIdentity?.hopperPositionLabel(hi, lineSync?.getState?.()) || String(hi + 1);
     }
 
     function setWorkspaceHopperCircumference(value){
@@ -1559,7 +1540,7 @@
       const smartControl = document.createElement("div");
       smartControl.className = "mobileWeightsSmartControl";
       const smartCopy = document.createElement("div");
-      smartCopy.innerHTML = "<strong>Smart Hoppers</strong><small>Calculate capacity</small>";
+      smartCopy.innerHTML = '<strong>Smart Hoppers</strong><small>Calculate capacity · <span class="smartHopperState" data-toggle-state-for="smartHoppersToggle" aria-live="polite">Disabled</span></small>';
       const smartToggle = document.createElement("div");
       smartToggle.id = "smartHoppersToggle";
       smartToggle.className = "toggle";
@@ -1620,7 +1601,7 @@
           cell.tabIndex = -1;
           const label = document.createElement("span");
           label.className = "mobileWeightCellLabel";
-          label.textContent = `${L.name}${hopperPositionLabel(hi)}`;
+          label.textContent = hopperBadgeLabel(L.name, hi);
           cell.appendChild(label);
 
           const valueFields = document.createElement("div");
@@ -1851,11 +1832,18 @@
         placeSetupWeightProfiles();
         return;
       }
+      const previousProfilesSheet = $("mobileWeightProfilesSheet");
+      if (previousProfilesSheet){
+        if (previousProfilesSheet.open) previousProfilesSheet.close("rerender");
+        previousProfilesSheet.remove();
+      }
       placeSetupWeightProfiles();
       const selected = new Set();
       const cellRefs = new Map();
       const columnSelectors = new Map();
       const rowSelectors = new Map();
+      let desktopBulkMode = false;
+      let desktopWeightView = "summary";
 
       function toggleSelection(keys){
         const select = keys.some(key=>!selected.has(key));
@@ -1864,13 +1852,9 @@
       }
 
       const toolbar = document.createElement("div");
-      toolbar.className = "weightsBulkBar";
+      toolbar.className = "weightsBulkBar desktopWeightsBulkContext";
+      toolbar.hidden = true;
       toolbar.innerHTML = `
-        <div class="weightsBulkSteps" aria-label="Bulk hopper editing steps">
-          <span><b>1</b> Select hoppers</span>
-          <span><b>2</b> Enter weight</span>
-          <span><b>3</b> Apply</span>
-        </div>
         <label class="weightsBulkField" for="bulkWeight">
           <span>Receiver weight</span>
           <span class="weightsInputWithUnit">
@@ -1886,26 +1870,24 @@
         <div class="weightsBulkActions">
           <button id="selectAllWeights" type="button" class="bulkTextAction">Select all</button>
           <button id="clearWeightSelection" type="button" class="bulkTextAction">Clear selection</button>
+          <button id="doneBulkWeights" type="button" class="bulkTextAction">Done</button>
         </div>
-        <div class="weightsBulkNote tiny">Individual weights can still be edited directly in the table.</div>
       `;
 
-      let smartWorkspaceControl = null;
-      if (state.smartHoppersEnabled){
-        smartWorkspaceControl = document.createElement("div");
-        smartWorkspaceControl.className = "desktopSmartHopperInfo";
-        smartWorkspaceControl.innerHTML = `
-          <div><strong>Smart Hoppers</strong><small>Calculated weight uses each hopper's usable height, this workspace circumference, its recipe resin, and that resin's measured bulk density.</small></div>
-          <label>Shared circumference (in)<input id="desktopSharedCircumference" type="text" inputmode="decimal" placeholder="0" value="${clampNum(state.hopperCircumference)}" /></label>
-        `;
-        const circumferenceInput = smartWorkspaceControl.querySelector("input");
-        circumferenceInput.addEventListener("input", event=>{
-          const accepted = acceptNumericInput(event.target, { min: 0, label: "Shared hopper circumference" }, setWorkspaceHopperCircumference);
-          if (!accepted) return;
-          validateAndCompute({ sync: true });
-          saveSession();
-        });
-      }
+      const desktopControls = document.createElement("div");
+      desktopControls.className = "desktopWeightsControls";
+      desktopControls.innerHTML = `
+        <div class="desktopWeightsSmartControl"><div><strong>Smart Hoppers</strong><small>Resin-specific calculated capacity</small></div><span class="desktopSmartHopperState" data-toggle-state-for="smartHoppersToggle" aria-live="polite">Disabled</span><div id="smartHoppersToggle" class="toggle" role="switch" tabindex="0" title="Smart Hoppers: compute weight from hopper geometry and resin density when known"></div></div>
+        <label class="desktopSharedCircumference"><span>Circumference</span><span class="weightsInputWithUnit"><input id="desktopSharedCircumference" type="text" inputmode="decimal" placeholder="0" value="${clampNum(state.hopperCircumference)}" /><span>in</span></span></label>
+        <div class="desktopWeightsViewToggle" role="group" aria-label="Receiver hopper weight view"><span>View</span><button class="active" type="button" data-weight-view="summary">Summary</button><button type="button" data-weight-view="edit">Edit</button></div>
+      `;
+      const circumferenceInput = desktopControls.querySelector("#desktopSharedCircumference");
+      circumferenceInput.addEventListener("input", event=>{
+        const accepted = acceptNumericInput(event.target, { min: 0, label: "Shared hopper circumference" }, setWorkspaceHopperCircumference);
+        if (!accepted) return;
+        validateAndCompute({ sync: true });
+        saveSession();
+      });
 
       const scroll = document.createElement("div");
       scroll.className = "weightsMatrixScroll";
@@ -1919,19 +1901,7 @@
       const corner = document.createElement("th");
       corner.scope = "col";
       corner.className = "weightsRowCorner";
-      const smartWrap = document.createElement("div");
-      smartWrap.className = "weightsSmartToggleWrap";
-      const smartLabel = document.createElement("span");
-      smartLabel.className = "weightsSmartToggleLabel";
-      smartLabel.textContent = "Smart";
-      const smartToggle = document.createElement("div");
-      smartToggle.id = "smartHoppersToggle";
-      smartToggle.className = "toggle";
-      smartToggle.setAttribute("role", "switch");
-      smartToggle.setAttribute("tabindex", "0");
-      smartToggle.title = "Smart Hoppers: compute weight from hopper geometry and resin density when known";
-      smartWrap.append(smartLabel, smartToggle);
-      corner.appendChild(smartWrap);
+      corner.textContent = "Hopper";
       headerRow.appendChild(corner);
       state.layers.forEach(L=>{
         const th = document.createElement("th");
@@ -1943,9 +1913,10 @@
         button.setAttribute("aria-label", `Select or clear all Layer ${L.name} hoppers`);
         button.title = `Select or clear all Layer ${L.name} hoppers`;
         button.setAttribute("aria-pressed", "false");
-        button.addEventListener("click", ()=>toggleSelection(
-          Array.from({length:HOPPERS_PER_LAYER}, (_,hi)=>`${L.name}:${hi}`)
-        ));
+        button.addEventListener("click", ()=>{
+          if (!desktopBulkMode) return;
+          toggleSelection(Array.from({length:HOPPERS_PER_LAYER}, (_,hi)=>`${L.name}:${hi}`));
+        });
         columnSelectors.set(L.name, button);
         th.appendChild(button);
         headerRow.appendChild(th);
@@ -1965,9 +1936,10 @@
         rowButton.title = `Select or clear hopper ${hopperPositionLabel(hi)} across all layers`;
         rowButton.setAttribute("aria-label", `Select hopper ${hopperPositionLabel(hi)} across all layers`);
         rowButton.setAttribute("aria-pressed", "false");
-        rowButton.addEventListener("click", ()=>toggleSelection(
-          state.layers.map(L=>`${L.name}:${hi}`)
-        ));
+        rowButton.addEventListener("click", ()=>{
+          if (!desktopBulkMode) return;
+          toggleSelection(state.layers.map(L=>`${L.name}:${hi}`));
+        });
         rowSelectors.set(hi, rowButton);
         rowHeader.appendChild(rowButton);
         tr.appendChild(rowHeader);
@@ -2001,10 +1973,20 @@
 
           const visualReadout = document.createElement("div");
           visualReadout.className = "desktopWeightVisualReadout";
+          const initialSmartWeight = smartHopperComputation(L.hoppers[hi]);
+          const initialSummaryWeight = initialSmartWeight ? Math.round(initialSmartWeight.value) : clampNum(L.hoppers[hi].weight);
           visualReadout.innerHTML = `
-            <span class="desktopWeightVisualId">${L.name}${hopperPositionLabel(hi)}</span>
-            <svg viewBox="0 0 40 62" aria-hidden="true"><path d="M9 4h22l4 8v40l-6 5H11l-6-5V12z"/><path class="desktopHopperFill" d="M11 32h18v18H11z"/></svg>
-            <span class="desktopWeightVisualValues"><label><input class="desktopVisualWeight" type="text" inputmode="decimal" value="${clampNum(L.hoppers[hi].weight)}" aria-label="${hopperBadgeLabel(L.name, hi)} manual weight in pounds"/><small>lb manual</small></label>${state.smartHoppersEnabled ? `<label><input class="desktopVisualHeight" type="text" inputmode="decimal" value="${clampNum(L.hoppers[hi].usableHeight)}" aria-label="${hopperBadgeLabel(L.name, hi)} usable height in inches"/><small>in height</small></label>` : ""}</span>`;
+            <span class="desktopWeightVisualId">${hopperBadgeLabel(L.name, hi)}</span>
+            <span class="desktopWeightVisualValues">
+              <span class="desktopWeightSummaryValues">
+                <b id="${desktopSummaryWeightId(L.name, hi)}" class="desktopWeightSummaryWeight${initialSmartWeight ? " smart" : ""}" aria-label="${hopperBadgeLabel(L.name, hi)} ${initialSmartWeight ? "Smart-calculated" : "manual"} weight, ${initialSummaryWeight} pounds"><span>${initialSummaryWeight}</span><small>lb</small></b>
+                <b><span>${clampNum(L.hoppers[hi].usableHeight)}</span><small>in</small></b>
+              </span>
+              <span class="desktopWeightEditFields">
+                <label><input class="desktopVisualWeight" type="text" inputmode="decimal" value="${clampNum(L.hoppers[hi].weight)}" aria-label="${hopperBadgeLabel(L.name, hi)} manual weight in pounds"/><small>Weight (lb)</small></label>
+                ${state.smartHoppersEnabled ? `<label><input class="desktopVisualHeight" type="text" inputmode="decimal" value="${clampNum(L.hoppers[hi].usableHeight)}" aria-label="${hopperBadgeLabel(L.name, hi)} usable height in inches"/><small>Height (in)</small></label>` : ""}
+              </span>
+            </span>`;
           const visualWeightInput = visualReadout.querySelector(".desktopVisualWeight");
           const visualHeightInput = visualReadout.querySelector(".desktopVisualHeight");
 
@@ -2098,7 +2080,13 @@
             updateSelectionUI();
           });
           td.addEventListener("click",(e)=>{
-            if (e.target === input || e.target === selector || e.target.closest(".hopperGeometryPopover") || e.target.closest(".desktopWeightVisualReadout input")) return;
+            if (!desktopBulkMode || e.target === input || e.target === selector || e.target.closest(".hopperGeometryPopover") || e.target.closest(".desktopWeightVisualReadout input")) return;
+            selector.checked = !selector.checked;
+            selector.dispatchEvent(new Event("change"));
+          });
+          td.addEventListener("keydown", event=>{
+            if (!desktopBulkMode || !["Enter", " "].includes(event.key) || event.target.closest("input")) return;
+            event.preventDefault();
             selector.checked = !selector.checked;
             selector.dispatchEvent(new Event("change"));
           });
@@ -2118,7 +2106,11 @@
             validateAndCompute({ sync:true }); saveSession();
           });
           visualHeightInput?.addEventListener("input", event=>{
-            const accepted = acceptNumericInput(event.target, { min:0, label:`${hopperBadgeLabel(L.name, hi)} usable height` }, value=>{ L.hoppers[hi].usableHeight = value; });
+            const accepted = acceptNumericInput(event.target, { min:0, label:`${hopperBadgeLabel(L.name, hi)} usable height` }, value=>{
+              L.hoppers[hi].usableHeight = value;
+              const summaryHeight = visualReadout.querySelector(".desktopWeightSummaryValues b:nth-child(2) > span");
+              if (summaryHeight) summaryHeight.textContent = String(value);
+            });
             if (!accepted) return;
             validateAndCompute({ sync:true }); saveSession();
           });
@@ -2128,9 +2120,25 @@
       table.appendChild(tbody);
       frame.appendChild(table);
       scroll.appendChild(frame);
+      const actionToolbar = document.createElement("div");
+      actionToolbar.className = "desktopWeightsActionToolbar mobileMatrixActionBar";
+      const profilesAction = document.createElement("button");
+      profilesAction.type = "button";
+      profilesAction.id = "desktopWeightProfilesButton";
+      profilesAction.setAttribute("aria-expanded", "false");
+      profilesAction.setAttribute("aria-label", "Open receiver weight profiles");
+      profilesAction.innerHTML = '<span>Profiles</span><svg viewBox="0 0 28 28" aria-hidden="true"><path d="M7 4h14l3 5v14l-4 3H8l-4-3V9z"/><path d="M9 12h10M9 16h10M9 20h6"/></svg>';
+      const bulkModeButton = document.createElement("button");
+      bulkModeButton.type = "button";
+      bulkModeButton.id = "desktopWeightsBulkToggle";
+      bulkModeButton.setAttribute("aria-pressed", "false");
+      bulkModeButton.innerHTML = '<span>Bulk edit</span><svg viewBox="0 0 28 28" aria-hidden="true"><rect x="4" y="4" width="8" height="8" rx="1"/><rect x="16" y="4" width="8" height="8" rx="1"/><rect x="4" y="16" width="8" height="8" rx="1"/><path d="M17 20l2 2 5-6"/></svg>';
+      actionToolbar.append(profilesAction, bulkModeButton);
+
+      area.appendChild(desktopControls);
       area.appendChild(scroll);
+      area.appendChild(actionToolbar);
       area.appendChild(toolbar);
-      if (smartWorkspaceControl) area.appendChild(smartWorkspaceControl);
 
       const bulkInput = toolbar.querySelector("#bulkWeight");
       const bulkHeightInput = toolbar.querySelector("#bulkHeight");
@@ -2147,6 +2155,8 @@
           const isSelected = selected.has(key);
           ref.selector.checked = isSelected;
           ref.td.classList.toggle("selected", isSelected);
+          ref.td.setAttribute("aria-selected", String(isSelected));
+          ref.td.tabIndex = desktopBulkMode ? 0 : -1;
         });
         columnSelectors.forEach((button, layerName)=>{
           const keys = Array.from({length:HOPPERS_PER_LAYER}, (_,hi)=>`${layerName}:${hi}`);
@@ -2162,7 +2172,10 @@
           button.classList.toggle("partiallySelected", count > 0 && count < keys.length);
           button.setAttribute("aria-pressed", count === keys.length ? "true" : (count ? "mixed" : "false"));
         });
-        applyButton.disabled = selected.size === 0;
+        const bulkInputs = [bulkInput, bulkHeightInput].filter(Boolean);
+        const hasBulkValue = bulkInputs.some(field=>field.value.trim() !== "");
+        const validBulkValues = bulkInputs.every(field=>!field.value.trim() || validation.validateNumber(field.value, { min:0 }).valid);
+        applyButton.disabled = selected.size === 0 || !hasBulkValue || !validBulkValues;
         applyButton.textContent = selected.size
           ? `Apply to ${selected.size} hopper${selected.size === 1 ? "" : "s"}`
           : "Apply to selected";
@@ -2180,6 +2193,45 @@
       toolbar.querySelector("#clearWeightSelection").addEventListener("click", ()=>{
         selected.clear();
         updateSelectionUI();
+      });
+      function setDesktopBulkMode(enabled){
+        desktopBulkMode = !!enabled;
+        area.dataset.desktopBulkMode = String(desktopBulkMode);
+        toolbar.hidden = !desktopBulkMode;
+        actionToolbar.classList.toggle("bulkActive", desktopBulkMode);
+        bulkModeButton.classList.toggle("active", desktopBulkMode);
+        bulkModeButton.setAttribute("aria-pressed", String(desktopBulkMode));
+        bulkModeButton.querySelector("span").textContent = desktopBulkMode ? "Done" : "Bulk edit";
+        if (!desktopBulkMode) selected.clear();
+        updateSelectionUI();
+      }
+      function setDesktopWeightView(mode){
+        desktopWeightView = mode === "edit" ? "edit" : "summary";
+        area.dataset.desktopWeightView = desktopWeightView;
+        desktopControls.querySelectorAll("[data-weight-view]").forEach(button=>{
+          const active = button.dataset.weightView === desktopWeightView;
+          button.classList.toggle("active", active);
+          button.setAttribute("aria-pressed", String(active));
+        });
+      }
+      bulkModeButton.addEventListener("click", ()=>setDesktopBulkMode(!desktopBulkMode));
+      toolbar.querySelector("#doneBulkWeights").addEventListener("click", ()=>setDesktopBulkMode(false));
+      desktopControls.querySelector(".desktopWeightsViewToggle").addEventListener("click", event=>{
+        const button = event.target.closest("button[data-weight-view]");
+        if (button) setDesktopWeightView(button.dataset.weightView);
+      });
+      [bulkInput, bulkHeightInput].filter(Boolean).forEach(field=>field.addEventListener("input", ()=>updateSelectionUI()));
+      const profilesSheet = ensureMobileWeightProfilesSheet(profilesAction);
+      profilesAction.addEventListener("click", ()=>{
+        const opening = !profilesSheet.open;
+        if (opening){
+          document.querySelectorAll(".mobileSavedRecipesSheet[open]").forEach(sheet=>{ if (sheet !== profilesSheet) sheet.close("replace"); });
+          profilesSheet.showModal();
+          mobileWeightProfilesOpen = true;
+          profilesAction.setAttribute("aria-expanded", "true");
+          renderSetupWeightProfiles(lineSync?.getState?.() || {});
+          profilesSheet.focus({ preventScroll:true });
+        } else profilesSheet.close("close");
       });
       applyButton.addEventListener("click", ()=>{
         const optionalValue = (field, label)=>{
@@ -2207,7 +2259,7 @@
       });
 
       updateSelectionUI();
-      area.dataset.desktopWeightView = "visual";
+      setDesktopWeightView("summary");
 
       hookToggle(
         "smartHoppersToggle",
@@ -2284,6 +2336,16 @@
             }
           }
 
+          const desktopSummaryWeight=document.getElementById(desktopSummaryWeightId(L.name, hi));
+          if(desktopSummaryWeight){
+            const value=smart ? Math.round(smart.value) : clampNum(hopper.weight);
+            desktopSummaryWeight.querySelector("span").textContent=String(value);
+            desktopSummaryWeight.classList.toggle("smart",!!smart);
+            desktopSummaryWeight.setAttribute("aria-label",`${hopperBadgeLabel(L.name, hi)} ${smart ? "Smart-calculated" : "manual"} weight, ${value} pounds`);
+            if(smart) desktopSummaryWeight.title=`Smart-calculated from ${hopperBadgeLabel(L.name, hi)} geometry and ${smart.resin.resin_code} bulk density.`;
+            else desktopSummaryWeight.removeAttribute("title");
+          }
+
           const computedEl = document.getElementById(computedWeightId(L.name, hi));
           if (computedEl){
             if (smart){
@@ -2322,7 +2384,7 @@
       meta.className = "printSheetMeta";
       const workspaceName = lineSync?.getState?.().selectedWorkspace?.name || "Local";
       const lineTypeLabel = `${state.lineType} layer${state.lineType === 1 ? "" : "s"}`;
-      const namingLabel = state.hopperNamingLine9 === "main" ? "Main + 1–5" : "1–6";
+      const namingLabel = derivedHopperNamingMode() === "main" ? "Main + 1–5" : "1–6";
       meta.textContent = `${workspaceName} · ${lineTypeLabel} · Hopper naming: ${namingLabel} · Printed ${new Date().toLocaleString()}`;
       header.append(title, meta);
       sheet.append(header);
@@ -2335,7 +2397,7 @@
       // hopperBadgeLabel) since H1's label is otherwise identical across
       // every layer in "standard" mode and the row already carries the
       // layer letter.
-      const hopperColumnLabels = state.hopperNamingLine9 === "main"
+      const hopperColumnLabels = derivedHopperNamingMode() === "main"
         ? ["Main", "1", "2", "3", "4", "5"]
         : ["H1", "H2", "H3", "H4", "H5", "H6"];
 
@@ -3911,7 +3973,6 @@
       state.gauge = 0;
       state.hopperNamingLine9 = "standard";
       state.showPumpOffTracked = false;
-      syncHopperNamingUI();
       syncToggleUI("showPumpOffToggle", false);
       state.prodResinLb = 0;
       state.scrapResinLb = 0;
@@ -4037,7 +4098,10 @@
         if (active) button.setAttribute("aria-current", "page");
         else button.removeAttribute("aria-current");
       });
-      if (window.matchMedia("(min-width: 901px)").matches) target.open = true;
+      if (window.matchMedia("(min-width: 901px)").matches){
+        target.open = true;
+        if (id === "lineSetupBlock") $("weightsBlock")?.setAttribute("open", "");
+      }
       if (window.matchMedia("(max-width: 900px)").matches){
         closeFooterMenus();
         document.body.dataset.mobileWorkspace = "panel";
@@ -4083,6 +4147,28 @@
         .filter(element=>!element.closest("[hidden]") && element.getClientRects().length > 0);
     }
 
+    function isDesktopAccountPopover(name = activeFooterSheetName){
+      return name === "account" && window.matchMedia("(min-width: 901px)").matches;
+    }
+
+    function positionDesktopAccountPopover(trigger = activeFooterSheetTrigger, sheet = $("footerAccountMenu")){
+      if (!trigger || !sheet?.open || !isDesktopAccountPopover()) return;
+      const triggerRect = trigger.getBoundingClientRect();
+      const viewportMargin = 14;
+      const gap = 8;
+      const width = Math.min(290, window.innerWidth - (viewportMargin * 2));
+      const height = sheet.getBoundingClientRect().height;
+      const left = Math.max(viewportMargin, Math.min(triggerRect.right - width, window.innerWidth - width - viewportMargin));
+      const below = triggerRect.bottom + gap;
+      const top = below + height <= window.innerHeight - viewportMargin
+        ? below
+        : Math.max(viewportMargin, triggerRect.top - height - gap);
+      sheet.style.left = `${Math.round(left)}px`;
+      sheet.style.top = `${Math.round(top)}px`;
+      sheet.style.right = "auto";
+      sheet.style.bottom = "auto";
+    }
+
     function closeFooterSheets({ returnFocus = true } = {}){
       const focusTarget = activeFooterSheetTrigger;
       focusTarget?.setAttribute("aria-expanded", "false");
@@ -4091,6 +4177,13 @@
       Object.values(footerSheetPairs()).forEach(([toggle, sheet])=>{
         toggle?.setAttribute("aria-expanded", "false");
         if (sheet?.open) sheet.close();
+        if (sheet?.dataset.presentation === "popover"){
+          delete sheet.dataset.presentation;
+          sheet.style.removeProperty("left");
+          sheet.style.removeProperty("top");
+          sheet.style.removeProperty("right");
+          sheet.style.removeProperty("bottom");
+        }
       });
       const backdrop = $("footerSheetBackdrop");
       if (backdrop) backdrop.hidden = true;
@@ -4116,16 +4209,23 @@
         toggle?.setAttribute("aria-expanded", String(key === name));
       });
       trigger?.setAttribute("aria-expanded", "true");
+      const desktopAccountPopover = isDesktopAccountPopover(name);
+      if (sheet){
+        sheet.setAttribute("aria-modal", String(!desktopAccountPopover));
+        if (desktopAccountPopover) sheet.dataset.presentation = "popover";
+        else delete sheet.dataset.presentation;
+      }
       // show(), rather than showModal(), keeps the persistent footer operable
       // so the active control can toggle its sheet and sibling controls can
       // replace it. Focus trapping and the backdrop are managed below.
       if (sheet?.show) sheet.show();
       else if (sheet) sheet.open = true;
       const backdrop = $("footerSheetBackdrop");
-      if (backdrop) backdrop.hidden = false;
+      if (backdrop) backdrop.hidden = desktopAccountPopover;
       const main = document.querySelector("body > main");
-      if (main) main.inert = true;
+      if (main) main.inert = !desktopAccountPopover;
       requestAnimationFrame(()=>{
+        if (desktopAccountPopover) positionDesktopAccountPopover(trigger, sheet);
         const first = footerSheetFocusable(sheet)[0];
         (first || sheet)?.focus();
       });
@@ -4169,7 +4269,7 @@
 
     function rebuildUIFromState(payloadMaybe){
       ensureLayers();
-      syncHopperNamingUI();
+      syncDerivedHopperNaming(lineSync?.getState?.(), { rerender:false });
       renderWeightsArea();
       renderSplitsArea();
       renderResinCalculator();
@@ -4544,11 +4644,13 @@
   function renderResinLookupResult(resin){
     const descriptionEl = $("resinLookupDescription");
     const densityEl = $("resinLookupDensity");
+    const bulkDensityEl = $("resinLookupBulkDensity");
     const informationEl = $("resinLookupInformation");
-    if (!descriptionEl || !densityEl || !informationEl || !resinLookup) return;
+    if (!descriptionEl || !densityEl || !bulkDensityEl || !informationEl || !resinLookup) return;
     const result = resinLookup.formatResinResult(resin);
     descriptionEl.value = result.description;
     densityEl.value = result.density;
+    bulkDensityEl.value = result.bulkDensity;
     const details = resinLookup.getResinDetails(resin);
     informationEl.value = details.typicalUses
       ? `${details.information}\n\nTypical uses:\n${details.typicalUses}`
@@ -4862,6 +4964,7 @@
     }
 
     const selected = syncState.selectedWorkspace;
+    syncDerivedHopperNaming(syncState);
     const role = selected?.membership?.role || "";
     const owner = role === "owner";
     const connected = !!syncState.connected;
@@ -5072,7 +5175,7 @@
       getWorkspaceId: () => lineSync?.getState?.().selectedWorkspaceId || "",
       getAccessToken: () => lineSync?.getAccessToken?.() || Promise.resolve(null),
       getLineType: () => state.lineType,
-      getHopperNamingMode: () => state.hopperNamingLine9==="main" ? "main" : "standard",
+      getHopperNamingMode: () => derivedHopperNamingMode(),
       hasNonEmptyRecipe,
       applyPayload: applyScannedRecipePayload
     };
@@ -5109,10 +5212,6 @@
       saveSession();
     });
 
-    $("surfaceStyleSel")?.addEventListener("change",(e)=>{
-      applySurfaceStyle(e.target.value);
-      saveSession();
-    });
     $("mobileTimelineAlarmToggle")?.addEventListener("change",async event=>{
       const enabled = !!event.target.checked;
       if (enabled){
@@ -5231,6 +5330,31 @@
     });
     $("appFooterMain")?.addEventListener("click",showMobileWorkspaceHome);
     $("appFooterDisplay")?.addEventListener("click",openDisplaySheet);
+    const desktopUtilityMedia = window.matchMedia("(min-width: 901px)");
+    const placeAccountUtility = ()=>{
+      const accountHost = document.querySelector(".footerAccountHost");
+      const accountMenu = $("footerAccountMenu");
+      const overlayRoot = $("appOverlayRoot");
+      const desktopCluster = $("desktopUtilityCluster");
+      const footer = document.querySelector(".footerBar");
+      const syncControl = $("cloudSyncFooterStatus");
+      if (!accountHost || !desktopCluster || !footer) return;
+      if (desktopUtilityMedia.matches){
+        if (accountHost.parentElement !== desktopCluster) desktopCluster.append(accountHost);
+        if (accountMenu && overlayRoot && accountMenu.parentElement !== overlayRoot) overlayRoot.append(accountMenu);
+      }else if (accountHost.parentElement !== footer){
+        footer.insertBefore(accountHost, syncControl || null);
+        if (accountMenu && accountMenu.parentElement !== accountHost) accountHost.append(accountMenu);
+      }else if (accountMenu && accountMenu.parentElement !== accountHost){
+        accountHost.append(accountMenu);
+      }
+    };
+    placeAccountUtility();
+    desktopUtilityMedia.addEventListener?.("change",()=>{
+      closeFooterSheets({ returnFocus:false });
+      placeAccountUtility();
+      applySurfaceStyle(state.surfaceStyle);
+    });
     $("desktopDisplayToggle")?.addEventListener("click",openDisplaySheet);
     $("appFooterAccount")?.addEventListener("click",event=>{
       event.stopPropagation();
@@ -5243,9 +5367,20 @@
       setFooterSheetOpen("account", true, event.currentTarget);
     });
     $("footerSheetBackdrop")?.addEventListener("click",()=>closeFooterSheets());
+    document.addEventListener("pointerdown",event=>{
+      if (!isDesktopAccountPopover()) return;
+      const sheet = $("footerAccountMenu");
+      const trigger = activeFooterSheetTrigger || $("appFooterAccount");
+      if (sheet?.contains(event.target) || trigger?.contains(event.target)) return;
+      closeFooterSheets();
+    });
+    window.addEventListener("resize",()=>{
+      if (isDesktopAccountPopover()) positionDesktopAccountPopover();
+    });
     $("adminSignOutButton")?.addEventListener("click",()=>closeFooterSheets({ returnFocus:false }));
     document.querySelectorAll(".footerAdminDestination").forEach(button=>{
       button.addEventListener("click",()=>{
+        if (button.dataset.adminOnly === "true" && (button.hidden || button.disabled)) return;
         closeFooterMenus();
         setWorkspacePanel(button.dataset.workspaceTarget, { reveal:true });
       });
@@ -5258,6 +5393,7 @@
         return;
       }
       if (event.key === "Tab"){
+        if (isDesktopAccountPopover()) return;
         const sheet = footerSheetPairs()[activeFooterSheetName]?.[1];
         const focusable = footerSheetFocusable(sheet);
         if (!focusable.length){ event.preventDefault(); sheet?.focus(); return; }
@@ -5370,7 +5506,6 @@
       hookMobileAccordion();
       hookCustomToggles();
       // Sync toggle UI after restore
-      syncHopperNamingUI();
       syncToggleUI("showPumpOffToggle", !!state.showPumpOffTracked);
 
       refreshConfigDropdown();

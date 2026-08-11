@@ -105,7 +105,7 @@ test("an empty hopper prints as NOT USED, the controller printout's own label fo
 
 test("hopper column headers are naming-mode aware but not per-layer, since a shared header row can't repeat the layer letter per column", () => {
   const body = functionBody("printRecipeSheet");
-  assert.match(body, /state\.hopperNamingLine9 === "main"\s*\n\s*\? \["Main", "1", "2", "3", "4", "5"\]\s*\n\s*: \["H1", "H2", "H3", "H4", "H5", "H6"\]/);
+  assert.match(body, /derivedHopperNamingMode\(\) === "main"\s*\n\s*\? \["Main", "1", "2", "3", "4", "5"\]\s*\n\s*: \["H1", "H2", "H3", "H4", "H5", "H6"\]/);
 });
 
 test("the overall layer percentage (distinct from any hopper's blend percentage) survives as a trailing column, since the dosing printout has no equivalent of it", () => {

@@ -7,8 +7,9 @@
   <!-- Favicons -->
   <link rel="icon" type="image/svg+xml" sizes="any" href="branding/resin-tools/rt6-02-layer-stack-icon.svg?v=2">
 
-  <link rel="stylesheet" href="styles.css?v=0.55.39">
+  <link rel="stylesheet" href="styles.css?v=0.55.40">
   <link rel="stylesheet" href="theme.css?v=0.17.3">
+  <link rel="stylesheet" href="desktop.css?v=0.1.1">
 <script src="validation.js?v=0.18" defer></script>
 <script src="scheduling.js?v=0.18.4" defer></script>
 <script src="storage.js?v=0.18" defer></script>
@@ -22,15 +23,18 @@
 <script src="supabase-config.js?v=0.18" defer></script>
 <script src="sync-storage.js?v=0.18" defer></script>
 <script src="cloud-sync.js?v=0.18.17" defer></script>
+<script src="line-identity.js?v=0.2.0" defer></script>
 <script src="workspace-configurations-service.js?v=0.21.0" defer></script>
 <script src="resin-data.js?v=0.16.2" defer></script>
 <script src="resin-description-info.js?v=0.16.1" defer></script>
-<script src="resin-catalog-service.js?v=0.19.0" defer></script>
-<script src="resin-lookup.js?v=0.18.1" defer></script>
-<script src="resin-admin.js?v=0.20.2" defer></script>
+<script src="resin-catalog-service.js?v=0.19.1" defer></script>
+<script src="resin-lookup.js?v=0.18.2" defer></script>
+<script src="resin-admin.js?v=0.20.3" defer></script>
+<script src="bulk-density-measurement.js?v=0.1.0" defer></script>
 <script src="workspace-recovery.js?v=0.1.2" defer></script>
-<script src="app.js?v=0.18.125" defer></script>
-<script src="resin-admin-ui.js?v=0.20.2" defer></script>
+<script src="app.js?v=0.18.126" defer></script>
+<script src="resin-admin-ui.js?v=0.20.3" defer></script>
+<script src="bulk-density-measurement-ui.js?v=0.1.0" defer></script>
 <script src="workspace-recovery-ui.js?v=0.1.2" defer></script>
 <script src="recipe-scan-ui.js?v=0.3.2" defer></script>
 
@@ -325,9 +329,11 @@
       <strong id="workspaceNextStatus">No tracked hoppers</strong>
       <small id="workspaceNextDetail">Track a resin to see the next action</small>
     </div>
-    <button id="desktopDisplayToggle" class="desktopDisplayToggle" type="button" aria-expanded="false" aria-controls="displaySheet" aria-label="Open display settings" title="Display settings">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/></svg>
-    </button>
+    <div id="desktopUtilityCluster" class="desktopUtilityCluster">
+      <button id="desktopDisplayToggle" class="desktopDisplayToggle" type="button" aria-expanded="false" aria-controls="displaySheet" aria-label="Open display settings" title="Display settings">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/></svg>
+      </button>
+    </div>
   </div>
 
   <!-- 1) LINE SETUP -->
@@ -372,13 +378,6 @@
               </svg>
               <span>5</span>
             </button>
-            </div>
-          </div>
-          <div class="setupControlGroup setupNamingGroup">
-            <span class="setupControlLabel">Line 9 hopper names</span>
-            <div id="hopperNamingToggle" class="hopperNamingChoice" role="radiogroup" aria-label="Line 9 hopper names" title="Receiver hopper labels — 1–6, or Main + 1–5 for Line 9">
-              <button class="active" type="button" role="radio" aria-checked="true" data-hopper-naming="standard">1–6</button>
-              <button type="button" role="radio" aria-checked="false" data-hopper-naming="main">Main + 1–5</button>
             </div>
           </div>
         </div>
@@ -800,6 +799,10 @@
               <button id="copyResinDensity" class="resinLookupCopyButton secondary" type="button" disabled>Copy</button>
             </div>
           </div>
+          <div>
+            <label for="resinLookupBulkDensity">Bulk density</label>
+            <input id="resinLookupBulkDensity" class="resinLookupValue mono" type="text" value="Unknown" readonly aria-live="polite" />
+          </div>
         </div>
         <div id="resinLookupCopyStatus" class="tiny resinLookupCopyStatus" role="status" aria-live="polite"></div>
         <div class="resinLookupInformation mt10">
@@ -909,7 +912,7 @@
           <div class="helpTopicBody">
             <ol>
               <li>Under <strong>Current Changeover</strong>, set the deadline, enter the current <strong>line rate</strong>, and select the <strong>layer count</strong>.</li>
-              <li>Use the ☰ menu at the right of the status bar to choose the theme, surface style, timeline style, view density, and time format.</li>
+              <li>Use Display to choose the theme and time format.</li>
               <li>Open <strong>Receiver hopper weights</strong> and enter the usable pounds held by each hopper. Accurate weights are required for useful run-down times.</li>
               <li>Turn on <strong>Smart Hoppers</strong> to compute a hopper's weight automatically instead of entering it by hand. Use the wrench icon on a hopper to enter its usable height and circumference. A computed weight (marked with a green checkmark) only appears once the assigned resin has a measured bulk density in the Resin Database - until then, the entered weight above is used. When available, the computed weight is what drives the run-down, not the manual entry.</li>
               <li>For faster weight entry, select individual cells, click a hopper number to select its row, or click a layer heading to select its column. Enter one weight above the matrix and apply it to the selection.</li>
@@ -1148,6 +1151,58 @@
       </div>
     </div>
   </details>
+
+  <details class="block card workspacePanel adminResinPanel bulkDensityMeasurementPanel" id="bulkDensityMeasurementBlock">
+    <summary>
+      <div class="sumLeft"><div class="chev"><span class="chevRing"></span><span class="chevSatellite"></span><span class="chevCore"></span></div><div class="summaryText"><div class="layerTitle">Bulk Density Measurement</div><div class="layerMeta">Measure and save resin-specific bulk density</div></div></div>
+    </summary>
+    <div class="blockBody bulkDensityMeasurementWorkspace">
+      <div class="bulkDensityMeasurementIntro">
+        <div><span class="setupControlLabel">Water calibration</span><strong class="mono">32.0 lb net</strong></div>
+        <p>Fill the same dry container to the same level used for the water calibration. Enter resin weight after subtracting the bucket.</p>
+      </div>
+
+      <div class="bulkDensityMeasurementForm">
+        <section class="bulkDensityMeasureSection" aria-labelledby="bulkDensityResinHeading">
+          <div class="bulkDensitySectionHead"><span class="setupControlLabel">Resin</span><strong id="bulkDensityResinHeading">Select an existing record to enable saving</strong></div>
+          <div class="bulkDensityResinSearch">
+            <label for="bulkDensityResinSearch">Search active resins</label>
+            <input id="bulkDensityResinSearch" type="search" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="bulkDensityResinSuggestions" placeholder="Code or description">
+            <div id="bulkDensityResinSuggestions" class="bulkDensityResinSuggestions" role="listbox" hidden></div>
+          </div>
+          <div id="bulkDensitySelectedResin" class="bulkDensitySelectedResin" hidden>
+            <div><strong id="bulkDensitySelectedCode"></strong><span id="bulkDensitySelectedDescription"></span></div>
+            <div><small>Current bulk density</small><strong id="bulkDensityCurrentValue" class="mono">Not set</strong></div>
+          </div>
+        </section>
+
+        <section class="bulkDensityMeasureSection" aria-labelledby="bulkDensityMeasurementHeading">
+          <div class="bulkDensitySectionHead"><span class="setupControlLabel">Measurement</span><strong id="bulkDensityMeasurementHeading">Same calibrated container and fill level</strong></div>
+          <div class="bulkDensityInputGrid">
+            <label for="bulkDensityPolymerDensity">Polymer density<span class="bulkDensityInputWithUnit"><input id="bulkDensityPolymerDensity" type="text" inputmode="decimal" placeholder="Optional"><span>g/cm³</span></span></label>
+            <label for="bulkDensityResinWeight">Measured resin weight<span class="bulkDensityInputWithUnit"><input id="bulkDensityResinWeight" type="text" inputmode="decimal" placeholder="Net weight" aria-describedby="bulkDensityWeightHint"><span>lb net</span></span></label>
+          </div>
+          <p id="bulkDensityWeightHint" class="tiny muted">Measured resin weight must exclude the bucket. Polymer density is used only to calculate packing factor.</p>
+        </section>
+
+        <section class="bulkDensityResultSurface" aria-labelledby="bulkDensityResultsHeading" aria-live="polite">
+          <div class="bulkDensitySectionHead"><span class="setupControlLabel">Result</span><strong id="bulkDensityResultsHeading">Direct measurement from the water/resin weight ratio</strong></div>
+          <div class="bulkDensityPrimaryResult"><strong id="bulkDensityResultLbFt3" class="mono">—</strong><span>lb/ft³</span></div>
+          <div class="bulkDensitySecondaryResults">
+            <div><span>Bulk density</span><strong id="bulkDensityResultGCm3" class="mono">— g/cm³</strong></div>
+            <div><span>Packing factor</span><strong id="bulkDensityPackingFactor" class="mono">—</strong></div>
+          </div>
+          <div id="bulkDensityWarnings" class="bulkDensityWarnings" role="status"></div>
+        </section>
+      </div>
+
+      <div class="bulkDensitySaveBar">
+        <div><strong>Database update</strong><span id="bulkDensitySaveHint">Select a resin and enter a valid measurement.</span></div>
+        <button id="bulkDensitySaveButton" type="button" class="primary" disabled>Save to Resin Database</button>
+      </div>
+      <div id="bulkDensityStatus" class="tiny" role="status" aria-live="polite"></div>
+    </div>
+  </details>
   </div>
 
 </main>
@@ -1233,6 +1288,15 @@
   </form>
 </dialog>
 
+<dialog id="bulkDensitySaveDialog" class="adminDialog bulkDensitySaveDialog" aria-labelledby="bulkDensitySaveTitle">
+  <form method="dialog" class="adminForm">
+    <div id="bulkDensitySaveTitle" class="layerTitle">Save Bulk Density</div>
+    <p id="bulkDensitySaveConfirmation"></p>
+    <div id="bulkDensitySaveDialogStatus" class="tiny" role="status"></div>
+    <div class="buttonRow"><button id="bulkDensityConfirmSave" value="confirm" type="button" class="primary">Confirm update</button><button value="cancel" type="submit" class="secondary">Cancel</button></div>
+  </form>
+</dialog>
+
 
 <dialog id="displaySheet" class="footerSheet displaySheet" aria-labelledby="displaySheetTitle" aria-modal="true" tabindex="-1">
   <form method="dialog" class="displaySheetPanel">
@@ -1249,16 +1313,6 @@
     <label for="timeFormatSel">Time format
       <select id="timeFormatSel"><option value="12" selected>12-hour</option><option value="24">24-hour</option></select>
     </label>
-    <fieldset class="desktopDisplaySettings">
-      <legend>Desktop layout</legend>
-      <label for="surfaceStyleSel">Surface style
-        <select id="surfaceStyleSel">
-          <option value="elevated">High Elevation</option><option value="flat">Pure Flat</option>
-          <option value="layered-flat">Layered Flat</option><option value="accent-frame">Accent Frame</option>
-          <option value="divided" selected>Divided Workspace</option><option value="low-elevation">Low Elevation</option>
-        </select>
-      </label>
-    </fieldset>
   </form>
 </dialog>
 
@@ -1280,15 +1334,16 @@
     <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span>Main</span>
   </button>
   <div class="appDockMenuHost footerAccountHost">
-    <button type="button" id="appFooterAccount" class="appDockControl" aria-expanded="false" aria-controls="footerAccountMenu" aria-label="Account" disabled>
+    <button type="button" id="appFooterAccount" class="appDockControl" aria-expanded="false" aria-controls="footerAccountMenu" aria-haspopup="dialog" aria-label="Account" disabled>
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c.8-5 3.5-7 8-7s7.2 2 8 7"/></svg><span id="footerAccountStatus">Account</span>
     </button>
     <dialog id="footerAccountMenu" class="footerSheet footerDockMenu footerAccountMenu" aria-labelledby="footerAccountTitle" aria-modal="true" tabindex="-1">
       <div id="footerAccountDetails" class="footerAccountDetails" hidden><strong>Admin account</strong><small id="footerAccountEmail">Administrator</small></div>
       <strong id="footerAccountTitle" class="visuallyHidden">Admin account</strong>
       <button id="adminLoginButton" type="button" role="menuitem" hidden><span>Admin Login</span></button>
-      <button id="resinDatabaseButton" class="footerAdminDestination" type="button" role="menuitem" data-workspace-target="resinAdminBlock" hidden><span>Resin Database</span></button>
-      <button id="workspaceManagementButton" class="footerAdminDestination" type="button" role="menuitem" data-workspace-target="workspaceManagementBlock" hidden><span>Workspace Management</span></button>
+      <button id="resinDatabaseButton" class="footerAdminDestination" type="button" role="menuitem" data-admin-only="true" data-workspace-target="resinAdminBlock" hidden><span>Resin Database</span></button>
+      <button id="workspaceManagementButton" class="footerAdminDestination" type="button" role="menuitem" data-admin-only="true" data-workspace-target="workspaceManagementBlock" hidden><span>Workspace Management</span></button>
+      <button id="bulkDensityMeasurementButton" class="footerAdminDestination" type="button" role="menuitem" data-admin-only="true" data-workspace-target="bulkDensityMeasurementBlock" hidden><span>Bulk Density Measurement</span></button>
       <button id="adminSignOutButton" type="button" role="menuitem" hidden><span>Sign out</span></button>
     </dialog>
   </div>
@@ -1296,6 +1351,7 @@
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7a8 8 0 0 1 13 1l2 3M19 17a8 8 0 0 1-13-1l-2-3"/><path d="M20 5v6h-6M4 19v-6h6"/></svg><span>RT Sync</span><strong id="lineSyncMobileStatus">Local only</strong>
   </button>
 </footer>
+<div id="appOverlayRoot" class="appOverlayRoot"></div>
 <button id="footerSheetBackdrop" class="footerSheetBackdrop" type="button" aria-label="Close open sheet" hidden></button>
 </body>
 </html>

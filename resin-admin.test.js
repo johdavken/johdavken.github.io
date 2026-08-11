@@ -30,7 +30,8 @@ function client({ admin = true, saveError = null, sessionUser = null } = {}){
     return {
       select(){ return this; }, eq(){ return this; }, update(){ return this; }, insert(){ return this; }, delete(){ return this; },
       async order(){ return { data: [{ id: "1", resin_code: "INACTIVE", is_active: false }], error: null }; },
-      async single(){ return { data: saveError ? null : { id: "2", resin_code: "NEW", is_active: true }, error: saveError }; }
+      async single(){ return { data: saveError ? null : { id: "2", resin_code: "NEW", is_active: true }, error: saveError }; },
+      async maybeSingle(){ return { data: saveError ? null : { id:"2", resin_code:"NEW", bulk_density_lb_ft3:48.8, is_active:true, updated_at:"2026-08-11T12:00:00Z" }, error:saveError }; }
     };
   }};
 }
@@ -78,4 +79,73 @@ test("verified admins can delete a selected resin and refresh the shared catalog
   await service.signIn("admin@example.com", "password");
   assert.equal((await service.deleteResin("2")).ok, true);
   assert.equal(refreshes, 1);
+});
+
+test("bulk-density updates are field-scoped, admin-only, concurrency-aware, and refresh the catalog", async () => {
+  const operations = [];
+  let refreshes = 0;
+  const scopedClient = client();
+  const originalFrom = scopedClient.from;
+  scopedClient.from = table => {
+    const query = originalFrom(table);
+    if (table !== "resins") return query;
+    query.update = values => { operations.push(["update", values]); return query; };
+    query.eq = (field, value) => { operations.push(["eq", field, value]); return query; };
+    query.select = fields => { operations.push(["select", fields]); return query; };
+    return query;
+  };
+  const service = adminApi.create({ client:scopedClient, catalog:{ async refreshResins(){ refreshes++; return { loaded:true }; } } });
+  assert.equal((await service.updateBulkDensity("2", "old", 48.8)).code, "unauthorized");
+  await service.signIn("admin@example.com", "password");
+  const result = await service.updateBulkDensity("2", "2026-08-11T10:00:00Z", 48.8);
+  assert.equal(result.ok, true);
+  assert.deepEqual(operations.find(operation=>operation[0] === "update"), ["update", { bulk_density_lb_ft3:48.8 }]);
+  assert.ok(operations.some(operation=>operation[1] === "updated_at"));
+  assert.equal(refreshes, 1);
+});
+
+test("bulk-density update reports changed, inactive, missing, and invalid records without success", async () => {
+  assert.equal(adminApi.validateBulkDensity(0).valid, false);
+  assert.equal(adminApi.validateBulkDensity(101).valid, false);
+  assert.equal(adminApi.validateBulkDensity(48.8).valid, true);
+
+  function conflictClient(current){
+    const base = client();
+    let mutation = false;
+    const originalFrom = base.from;
+    base.from = table => {
+      const query = originalFrom(table);
+      if (table !== "resins") return query;
+      query.update = () => { mutation = true; return query; };
+      query.select = () => query;
+      query.eq = () => query;
+      query.maybeSingle = async () => mutation
+        ? (mutation = false, { data:null, error:null })
+        : { data:current, error:null };
+      return query;
+    };
+    return base;
+  }
+
+  for (const [current, code] of [
+    [{ id:"2", is_active:true, updated_at:"new" }, "record_changed"],
+    [{ id:"2", is_active:false, updated_at:"old" }, "inactive_resin"],
+    [null, "missing_resin"]
+  ]){
+    const service = adminApi.create({ client:conflictClient(current) });
+    await service.signIn("admin@example.com", "password");
+    assert.equal((await service.updateBulkDensity("2", "old", 48.8)).code, code);
+  }
+});
+
+test("bulk-density update distinguishes authorization, constraint, and network failures", async () => {
+  for (const [error, code] of [
+    [{ code:"42501", message:"row-level policy" }, "unauthorized"],
+    [{ code:"23514", message:"check constraint" }, "invalid_bulk_density"],
+    [new Error("network unavailable"), "network_error"]
+  ]){
+    const service = adminApi.create({ client:client({ saveError:error }) });
+    await service.signIn("admin@example.com", "password");
+    assert.equal((await service.updateBulkDensity("2", "old", 48.8)).code, code);
+  }
 });

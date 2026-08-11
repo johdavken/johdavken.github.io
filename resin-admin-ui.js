@@ -16,6 +16,12 @@
     el.textContent = message || "";
     el.className = `tiny${type ? ` ${type}` : ""}`;
   }
+  function closeLoginDialog({ reset = false, returnFocus = true } = {}){
+    const dialog = $("adminLoginDialog");
+    if (dialog?.open) dialog.close();
+    if (reset) $("adminLoginForm")?.reset();
+    if (returnFocus) requestAnimationFrame(() => $("appFooterAccount")?.focus());
+  }
   function renderAccess(state){
     const initializing = !state?.ready;
     const adminAccess = !initializing && !!state?.isAdmin;
@@ -97,7 +103,7 @@
   admin.subscribe(renderAccess);
   renderAccess(admin.getState());
   $("adminLoginButton")?.addEventListener("click", ()=>{ setMessage("adminLoginMessage", ""); $("adminLoginDialog")?.showModal(); $("adminEmail")?.focus(); });
-  document.querySelectorAll("[data-admin-close]").forEach(button=>button.addEventListener("click", ()=>$("adminLoginDialog")?.close()));
+  document.querySelectorAll("[data-admin-close]").forEach(button=>button.addEventListener("click", ()=>closeLoginDialog()));
   $("adminLoginForm")?.addEventListener("submit", async event=>{
     event.preventDefault();
     const submit = $("adminLoginSubmit"); submit.disabled = true;
@@ -105,7 +111,7 @@
     const result = await admin.signIn($("adminEmail").value, $("adminPassword").value);
     submit.disabled = false;
     if (!result.ok){ setMessage("adminLoginMessage", result.message, "bad"); return; }
-    $("adminLoginDialog").close(); $("adminLoginForm").reset();
+    closeLoginDialog({ reset:true });
   });
   $("resinDatabaseButton")?.addEventListener("click", async ()=>{
     if (!admin.getState().isAdmin) return;

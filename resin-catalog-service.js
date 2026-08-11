@@ -209,6 +209,20 @@
       }
     }
 
+    function acceptConfirmedResin(row){
+      const resin = normalizeResin(row, { fallback:false });
+      if (!resin?.id || resin.is_active !== true) return false;
+      const key = resin.resin_code.toLocaleLowerCase();
+      const next = currentCatalog().filter(item => item.id !== resin.id
+        && item.resin_code.toLocaleLowerCase() !== key);
+      next.push(resin);
+      cachedCatalog = sortResins(next);
+      cacheRead = true;
+      writeCache(cachedCatalog);
+      notify({ loaded:true, reason:"confirmed-admin-update", resins:cloneResins(cachedCatalog) });
+      return true;
+    }
+
     function clearResinCache() {
       cachedCatalog = undefined;
       cacheRead = true;
@@ -221,7 +235,7 @@
       return () => listeners.delete(listener);
     }
 
-    return { getResins, getResinByCode, refreshResins, getCachedResins, clearResinCache, subscribe };
+    return { getResins, getResinByCode, refreshResins, acceptConfirmedResin, getCachedResins, clearResinCache, subscribe };
   }
 
   const shared = create();
@@ -234,6 +248,7 @@
     getResins: shared.getResins,
     getResinByCode: shared.getResinByCode,
     refreshResins: shared.refreshResins,
+    acceptConfirmedResin: shared.acceptConfirmedResin,
     getCachedResins: shared.getCachedResins,
     clearResinCache: shared.clearResinCache,
     subscribe: shared.subscribe

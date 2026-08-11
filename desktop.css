@@ -1,0 +1,292 @@
+
+/* =======================================================================
+ *   Desktop viewport workspace
+ *   ======================================================================= */
+@media (min-width:901px){
+  html,body{height:100%;min-height:0}
+  body{overflow:hidden}
+  main{
+    width:100%;
+    max-width:none;
+    height:100dvh;
+    min-height:0;
+    margin:0;
+    padding:12px;
+    grid-template-columns:220px minmax(0,1fr);
+    grid-template-rows:minmax(0,1fr);
+    gap:12px;
+    align-items:stretch;
+  }
+  .workspaceNav{
+    position:sticky;
+    top:12px;
+    height:calc(100dvh - 24px);
+    min-height:0;
+    overflow:auto;
+  }
+  .workspaceContent{
+    display:grid;
+    grid-column:2;
+    grid-row:1;
+    grid-template-rows:40px minmax(0,1fr);
+    gap:10px;
+    width:100%;
+    height:calc(100dvh - 24px);
+    min-width:0;
+    min-height:0;
+  }
+  .workspaceStatusBar{
+    position:static;
+    grid-row:1;
+    min-width:0;
+    min-height:40px;
+    padding:0 2px 0 10px;
+    flex-wrap:nowrap;
+    overflow:visible;
+  }
+  .workspaceStatusItem{min-width:0}
+  .workspaceNextAction{min-width:130px;max-width:min(31vw,430px)}
+  .workspaceNextAction strong{max-width:100%}
+  .desktopUtilityCluster{display:flex;align-items:center;flex:0 0 auto;gap:10px;margin-left:auto}
+  .workspaceContent > .workspacePanel.desktop-active{
+    display:flex!important;
+    flex-direction:column;
+    grid-row:2;
+    width:100%;
+    height:100%;
+    min-width:0;
+    min-height:0;
+    overflow:hidden;
+  }
+  .workspaceContent > .workspacePanel.desktop-active::details-content{flex:1 1 0;min-height:0;overflow:hidden}
+  .workspaceContent > .workspacePanel > summary{min-width:0}
+  .workspaceContent > .workspacePanel > .blockBody{
+    flex:1 1 0;
+    height:100%;
+    min-width:0;
+    min-height:0;
+    overflow:auto;
+    overscroll-behavior:contain;
+    scrollbar-gutter:stable;
+  }
+
+  /* Display and Account form one stable utility cluster at the right end
+     of the production strip. Dialogs explicitly disappear when closed so
+     their author styles cannot override the browser's closed-dialog rule. */
+  .desktopDisplayToggle{
+    position:static;
+    margin:0;
+    border-color:transparent;
+    background:transparent;
+    box-shadow:none;
+  }
+  .footerBar{display:contents}
+  .footerBar > :not(.footerAccountHost){display:none!important}
+  .footerAccountHost{position:static;display:block}
+  #appFooterAccount{width:38px;height:38px;border-color:transparent;background:transparent;box-shadow:none}
+  .desktopDisplayToggle:hover,#appFooterAccount:hover{background:color-mix(in srgb,var(--focus-border) 9%,transparent);color:var(--title)}
+  .desktopDisplayToggle:active,#appFooterAccount:active{background:color-mix(in srgb,var(--focus-border) 15%,transparent);transform:scale(.96)}
+  .desktopDisplayToggle:focus-visible,#appFooterAccount:focus-visible{outline:2px solid var(--focus-border);outline-offset:2px}
+  #appFooterAccount[aria-expanded="true"]{background:var(--focus-ring);color:var(--title)}
+  .footerAccountMenu{
+    position:fixed;
+    inset:59px 14px auto auto;
+    width:min(290px,calc(100vw - 28px));
+    max-height:calc(100dvh - 73px);
+    margin:0;
+    overflow:auto;
+  }
+  .footerAccountMenu[data-presentation="popover"]{pointer-events:auto}
+  .footerAccountMenu:not([open]){display:none!important}
+  .displaySheet:not([open]){display:none!important}
+  .displaySheet[open]{position:fixed;inset:50% auto auto 50%;margin:0;transform:translate(-50%,-50%);overflow:auto}
+  .adminDialog{max-height:calc(100dvh - 48px);overflow:auto}
+
+  /* The formatted readout is the single visible Changeover value. The
+     native time input remains full-size, focusable, and picker-capable as
+     its transparent interaction layer, avoiding the duplicated native
+     value/oversized picker indicator that caused the regression. */
+  #lineSetupBlock .gaugeTile{position:relative;width:148px;max-width:148px;min-height:78px;padding:9px 10px 8px}
+  #lineSetupBlock .gaugeTile input[type="time"]{position:absolute;inset:0;z-index:2;width:100%;height:100%;opacity:0;cursor:pointer}
+  #lineSetupBlock .gaugeTimeValue{display:flex;align-items:center;justify-content:center;gap:6px;color:var(--text);font-size:20px;font-weight:850;line-height:1;white-space:nowrap;font-variant-numeric:tabular-nums}
+  #lineSetupBlock .gaugeTimeValue svg{width:18px;height:18px;flex:0 0 auto;fill:none;stroke:var(--title);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  #lineSetupBlock .gaugeTile .gaugeIcon{width:17px;height:17px;margin-bottom:2px}
+  #lineSetupBlock .gaugeTile input:not([type="checkbox"]):not([type="radio"]){font-size:20px;line-height:1}
+
+  /* Setup is a two-region workstation: compact line controls at left and
+     the receiver matrix at right. Both consume the shared viewport budget. */
+  #lineSetupBlock > .blockBody{
+    display:grid;
+    grid-template-columns:minmax(280px,min(24vw,320px)) minmax(620px,1fr);
+    grid-template-rows:minmax(0,1fr) auto;
+    gap:12px 18px;
+    overflow:hidden;
+  }
+  #lineSetupBlock .setupLineConfiguration{
+    grid-column:1;
+    grid-row:1;
+    min-width:0;
+    padding:12px 16px 12px 4px;
+    border-right:1px solid var(--border);
+  }
+  #lineSetupBlock .setupLineConfiguration + .setupSection{
+    grid-column:2;
+    grid-row:1 / span 2;
+    min-width:0;
+    min-height:0;
+    height:100%;
+    max-height:100%;
+    align-self:stretch;
+    contain:size layout;
+    margin:0;
+    overflow:hidden;
+  }
+  #lineSetupBlock #statusBox{grid-column:1;grid-row:2;min-width:0;max-height:230px;overflow:auto}
+  #lineSetupBlock .setupSectionHeading{margin:0 0 14px;font-size:18px}
+  #lineSetupBlock .setupTopRow{display:grid;grid-template-columns:1fr;gap:12px}
+  #lineSetupBlock .setupControlGroup{display:grid;gap:5px}
+  #lineSetupBlock .setupControlLabel{color:var(--muted);font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+  #lineSetupBlock .setupPrimaryFields{display:flex;gap:10px;margin-top:14px!important}
+  #lineSetupBlock .setupPrimaryFields > div{min-width:0}
+  #lineSetupBlock #weightsBlock{display:grid;grid-template-rows:minmax(0,1fr);height:100%;max-height:100%;min-height:0;margin:0;padding:0;border:0;background:transparent;box-shadow:none;overflow:hidden}
+  #lineSetupBlock #weightsBlock > summary{display:none}
+  #lineSetupBlock #weightsBlock > .blockBody{display:grid;grid-template-rows:auto minmax(0,1fr);height:100%;max-height:100%;min-height:0;padding:0;overflow:hidden}
+  #lineSetupBlock #setupWeightProfilesBlock{display:none!important}
+  #lineSetupBlock .weightsIntroduction{display:flex;align-items:center;gap:12px;min-width:0;margin:0 0 7px;padding-left:8px;color:var(--muted);font-size:10px;line-height:1.3}
+  #lineSetupBlock .weightsIntroduction > span{min-width:0}
+  #lineSetupBlock .weightsSmartHow{position:relative;flex:0 0 auto}
+  #lineSetupBlock .weightsSmartHow > summary{padding:3px 5px;color:var(--focus-border);font-size:10px;font-weight:800;white-space:nowrap}
+  #lineSetupBlock .weightsSmartHow > p{position:absolute;top:calc(100% + 5px);right:0;z-index:30;width:min(360px,50vw);margin:0;padding:9px 10px;border:1px solid var(--border2);border-radius:var(--control-radius);background:var(--panelOpen);box-shadow:var(--shadow2)}
+  #weightsArea{display:grid;grid-template-rows:auto minmax(0,1fr) auto auto;gap:6px;width:min(100%,1100px);height:100%;max-height:100%;min-height:0;margin-top:0!important;overflow:hidden}
+  .desktopWeightsControls{display:grid;grid-template-columns:minmax(170px,1fr) minmax(145px,190px) auto;align-items:center;gap:8px;min-width:0}
+  .desktopWeightsSmartControl{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;padding:6px 8px;border:1px solid var(--row-border-2);border-radius:var(--control-radius);background:var(--row-bg-2)}
+  .desktopWeightsSmartControl strong{display:block;color:var(--text);font-size:11px}
+  .desktopWeightsSmartControl small{display:block;margin-top:1px;color:var(--muted);font-size:9px;white-space:nowrap}
+  .desktopWeightsSmartControl .toggle{transform:scale(.82)}
+  .desktopSmartHopperState{color:var(--muted);font-size:10px;font-weight:850;white-space:nowrap}
+  .desktopSmartHopperState[data-state="on"]{color:var(--ok)}
+  .desktopWeightsSmartControl .toggle.on{background:color-mix(in srgb,var(--ok) 72%,var(--row-bg-2));border-color:color-mix(in srgb,var(--ok) 85%,var(--border-strong))}
+  .desktopWeightsSmartControl .toggle.on::after{background:var(--panelOpen)}
+
+  /* Sidebar destinations retain their selected surface; only the secondary
+     status line becomes compact, naturally wrapping text. */
+  .workspaceNavButton small{display:block;justify-self:stretch;max-width:none;padding:0;border:0;border-radius:0;background:transparent;overflow:visible;text-overflow:clip;white-space:normal;overflow-wrap:anywhere;line-height:1.25}
+  .workspaceNavButton[data-workspace-target="resultsBlock"] small{color:var(--focus-border)}
+  .desktopSharedCircumference{display:grid;grid-template-columns:1fr minmax(54px,70px);align-items:end;gap:6px;margin:0;padding:5px 8px;border:1px solid var(--row-border-2);border-radius:var(--control-radius);background:var(--row-bg-2);color:var(--muted);font-size:10px;font-weight:750}
+  .desktopSharedCircumference .weightsInputWithUnit{grid-template-columns:minmax(36px,1fr) auto;gap:3px}
+  .desktopSharedCircumference input{min-height:27px;padding:2px;text-align:right}
+  .desktopWeightsViewToggle{justify-content:flex-end;white-space:nowrap}
+  .desktopWeightsViewToggle button{border-radius:var(--control-radius)}
+
+  .weightsMatrixScroll{height:100%;min-width:0;min-height:0;overflow:auto}
+  .weightsMatrixFrame{width:100%;height:100%;max-width:100%;margin:0;overflow:auto;border-radius:var(--control-radius)}
+  #weightsArea:not([data-desktop-bulk-mode="true"]){grid-template-rows:auto auto auto 0;align-content:start}
+  #weightsArea:not([data-desktop-bulk-mode="true"]) .weightsMatrixScroll,
+  #weightsArea:not([data-desktop-bulk-mode="true"]) .weightsMatrixFrame{height:auto}
+  .weightsMatrix{width:100%;min-width:620px;table-layout:fixed}
+  .weightsMatrix th,.weightsMatrix td{padding:3px 5px}
+  .weightsMatrix th:first-child{width:48px;min-width:48px}
+  .weightsMatrix thead th:not(:first-child),.weightsMatrixCell{width:auto;min-width:0;max-width:none}
+  .weightsMatrix thead th{height:30px}
+  .weightsMatrix thead .weightsSelectHeader{height:28px;min-height:28px;font-family:inherit;font-size:15px;line-height:1;font-weight:900;opacity:.72}
+  .weightsMatrix tbody th .weightsSelectHeader{min-height:52px;padding:3px;font-size:10px}
+  .weightsMatrix tbody th .weightsSelectHeader::before{display:none}
+  #weightsArea[data-desktop-bulk-mode="true"] .weightsMatrix tbody th .weightsSelectHeader::before{display:grid}
+  .weightsMatrixCell{height:54px;vertical-align:middle;cursor:default;box-shadow:inset 0 0 0 1px var(--row-border-2)}
+  #weightsArea[data-desktop-bulk-mode="true"] .weightsMatrixCell{cursor:pointer}
+  #weightsArea[data-desktop-bulk-mode="true"] .weightsMatrixCell:focus-visible{outline:2px solid var(--focus-border);outline-offset:-3px}
+  #weightsArea[data-desktop-bulk-mode="true"] .weightsMatrixCell.selected{background:color-mix(in srgb,var(--focus-ring) 72%,var(--row-bg-2));box-shadow:inset 0 0 0 2px var(--focus-border)}
+  #weightsArea[data-desktop-bulk-mode="true"] .weightsMatrixCell.selected::after{content:"";position:absolute;top:5px;right:5px;width:7px;height:7px;border-radius:2px;background:var(--focus-border)}
+  .weightsCellRow,.weightsCellSelector,.hopperGeometryPopover,.weightsComputedWeight{display:none!important}
+  .desktopWeightVisualReadout{position:relative;display:grid!important;align-items:center;min-height:46px;padding:5px 4px 3px}
+  .desktopWeightVisualId{top:2px;left:2px;font-size:9px}
+  .desktopWeightVisualValues{display:block;min-width:0;text-align:right}
+  .desktopWeightSummaryValues{display:grid;gap:3px;padding-top:8px}
+  .desktopWeightSummaryValues b{display:flex;align-items:baseline;justify-content:flex-end;gap:3px;color:var(--text);font-size:14px;line-height:1;font-variant-numeric:tabular-nums}
+  .desktopWeightSummaryValues b + b{color:var(--muted);font-size:12px}
+  .desktopWeightSummaryValues small{color:var(--muted);font-size:8px;font-weight:750;text-transform:uppercase}
+  .desktopWeightSummaryWeight.smart{color:var(--ok)}
+  .desktopWeightEditFields{display:none;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;padding-top:7px}
+  .desktopWeightEditFields label{display:grid;gap:1px;margin:0;min-width:0}
+  .desktopWeightEditFields input{width:100%;height:22px;min-height:22px;padding:0 2px;font-size:12px;text-align:right}
+  .desktopWeightEditFields small{color:var(--muted);font-size:7px;white-space:nowrap}
+  #weightsArea[data-desktop-weight-view="edit"] .weightsMatrixCell{height:64px}
+  #weightsArea[data-desktop-weight-view="edit"] .desktopWeightSummaryValues{display:none}
+  #weightsArea[data-desktop-weight-view="edit"] .desktopWeightEditFields{display:grid}
+
+  .desktopWeightsActionToolbar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;overflow:hidden;border:1px solid var(--row-border-2);border-radius:var(--control-radius);background:var(--row-bg-2)}
+  .desktopWeightsActionToolbar button{display:flex;align-items:center;justify-content:center;gap:7px;min-height:34px;padding:5px 8px;border:0;border-radius:0;background:transparent;color:var(--text);font:inherit;font-size:11px;font-weight:850;box-shadow:none}
+  .desktopWeightsActionToolbar button + button{border-left:1px solid var(--row-border-2)}
+  .desktopWeightsActionToolbar button svg{width:17px;height:17px;fill:none;stroke:var(--focus-border);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .desktopWeightsActionToolbar button:hover,.desktopWeightsActionToolbar button:focus-visible,.desktopWeightsActionToolbar button.active{background:var(--focus-ring);outline:0}
+  .desktopWeightsActionToolbar button:focus-visible{box-shadow:inset 0 0 0 2px var(--focus-border)}
+  .desktopWeightsBulkContext{grid-template-columns:minmax(120px,1fr) minmax(120px,1fr) minmax(155px,auto);gap:8px;padding:7px 9px;border-radius:var(--control-radius)}
+  .desktopWeightsBulkContext[hidden]{display:none!important}
+  .desktopWeightsBulkContext .weightsBulkActions{grid-column:1/-1;padding-top:3px}
+  .desktopWeightsBulkContext #doneBulkWeights{margin-left:auto;color:var(--focus-border);font-weight:850}
+  .desktopWeightsBulkContext .weightsBulkApply{grid-template-columns:minmax(0,1fr) auto;align-items:end}
+  .desktopWeightsBulkContext .weightsBulkApply button{width:auto;min-height:30px;padding:4px 9px}
+
+  /* Profiles use the same bounded overlay on desktop, with a centered
+     surface and an internally scrolling list. */
+  .mobileWeightProfilesSheet{
+    position:fixed;
+    inset:50% auto auto 50%;
+    display:none;
+    grid-template-rows:auto auto auto minmax(0,1fr);
+    width:min(680px,calc(100vw - 48px));
+    max-height:min(720px,calc(100dvh - 48px));
+    margin:0;
+    padding:0 16px 16px;
+    transform:translate(-50%,-50%);
+    border:1px solid var(--border2);
+    border-radius:16px;
+    background:var(--panelOpen);
+    color:var(--text);
+    box-shadow:var(--shadow2);
+  }
+  .mobileWeightProfilesSheet[open]{display:grid}
+  .mobileWeightProfilesSheet::backdrop{background:rgba(0,0,0,.48)}
+  .mobileWeightProfilesSheet .mobileSavedRecipesList{min-height:0;overflow:auto}
+  .mobileWeightProfilesSheet .mobileSavedRecipesGrabber{display:block;width:42px;height:5px;min-height:5px;margin:9px auto 6px;padding:0;border:0;border-radius:999px;background:color-mix(in srgb,var(--muted) 45%,transparent)}
+  .mobileWeightProfilesSheet .mobileSavedRecipesHeader{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:5px 0 11px;border-bottom:1px solid var(--border)}
+  .mobileWeightProfilesSheet .mobileSavedRecipesHeader strong{display:block;color:var(--title);font-size:16px}
+  .mobileWeightProfilesSheet .mobileSavedRecipesHeader small{display:block;margin-top:2px;color:var(--muted);font-size:11px}
+  .mobileWeightProfilesSheet .mobileSavedRecipesTools{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:10px;padding:11px 0}
+  .mobileWeightProfilesSheet .mobileSavedRecipesTools label{margin:0}
+  .mobileWeightProfilesSheet .mobileSavedRecipesStatus{padding:0 0 8px;color:var(--muted);font-size:12px}
+
+  /* Variable-length sections receive the remaining workspace height and
+     scroll internally without changing chronological or keyboard order. */
+  #resultsBlock > .blockBody{display:grid;grid-template-rows:auto auto auto minmax(0,1fr);align-content:start;overflow:hidden}
+  #resultsArea{min-height:0;overflow:auto;overscroll-behavior:contain;padding-right:4px}
+  #lineSyncBlock > .blockBody{overflow:auto}
+  #lineSyncBlock .lineSyncConnectionFields{grid-template-columns:minmax(180px,1fr) minmax(180px,1fr) minmax(180px,1fr)}
+  #lineSyncBlock .lineSyncPanel{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(300px,.9fr);align-content:start;gap:10px 18px}
+  #lineSyncBlock .lineSyncPanel > :is(#lineSyncMessage,.lineSyncMetrics,.lineSyncPendingList,.lineSyncConnectionFields){grid-column:1/-1}
+  #lineSyncBlock #lineSyncMessage{grid-row:1}
+  #lineSyncBlock .lineSyncMetrics{grid-row:2}
+  #lineSyncBlock .lineSyncPendingList{grid-row:3}
+  #lineSyncBlock .lineSyncConnectionFields{grid-row:4;margin-top:0}
+  #lineSyncBlock .lineSyncActionBar{grid-column:1;grid-row:5;margin-top:0}
+  #lineSyncBlock .lineSyncJoin{grid-column:1;grid-row:6;margin-top:0}
+  #lineSyncBlock .lineSyncMembers{grid-column:2;grid-row:5 / span 3;margin-top:0;min-height:0;max-height:360px;overflow:auto}
+  #lineSyncBlock .lineSyncPanel > .tiny.desktopSyncOnly{grid-column:1;grid-row:7;margin-top:0}
+  #toolsBlock > .blockBody{overflow:hidden}
+  #toolsBlock .toolsWorkspace{height:100%;min-height:0;align-items:stretch}
+  #toolsBlock .toolsIndex{position:static;max-height:100%;overflow:auto}
+  #toolsBlock .toolsWorkspaceContent{min-height:0;overflow:hidden}
+  #toolsBlock .toolWorkspacePanel{height:100%;min-height:0;overflow:auto}
+  #productionSummaryTool{display:grid;grid-template-rows:auto auto auto auto minmax(0,1fr);align-content:start}
+  #resinCalcResults{min-height:0;overflow:auto}
+  #helpBlock > .blockBody{overflow:auto}
+  #resinAdminBlock > .blockBody,#workspaceManagementBlock > .blockBody,#bulkDensityMeasurementBlock > .blockBody{overflow:auto}
+}
+
+@media (min-width:901px) and (max-width:1180px){
+  main{grid-template-columns:190px minmax(0,1fr)}
+  #lineSetupBlock > .blockBody{grid-template-columns:minmax(255px,300px) minmax(560px,1fr);gap:10px 14px}
+  .workspaceStatusBar{gap:7px}
+  .workspaceStatusItem span{font-size:9px}
+  .workspaceStatusItem strong{font-size:10px}
+}
