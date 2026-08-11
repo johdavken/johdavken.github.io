@@ -2,7 +2,7 @@
 <html lang="en" data-theme="mse">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>Resin.Tools</title>
   <!-- Favicons -->
   <link rel="icon" type="image/svg+xml" sizes="any" href="branding/resin-tools/rt6-02-layer-stack-icon.svg?v=2">
@@ -20,6 +20,14 @@
 <script src="recipe-scan-mapping.js?v=0.2.1" defer></script>
 <script src="hopper-rearrangement.js?v=0.22.0" defer></script>
 <script src="vendor/supabase.min.js?v=2.57.4" defer></script>
+<!-- Android back handling only: no Capacitor script is loaded here. The
+     native Android shell injects its own complete window.Capacitor bridge
+     (confirmed empirically - Plugins.App works with zero vendored JS on
+     native); loading Capacitor's browser build here would only serve to
+     create a window.Capacitor stub on the ordinary website, which is
+     exactly what this file must NOT rely on for native detection. See
+     android-back-button.js for the isNativePlatform() gate. -->
+<script src="android-back-button.js?v=0.2.0" defer></script>
 <script src="supabase-config.js?v=0.18" defer></script>
 <script src="sync-storage.js?v=0.18" defer></script>
 <script src="cloud-sync.js?v=0.18.17" defer></script>
@@ -32,7 +40,7 @@
 <script src="resin-admin.js?v=0.20.3" defer></script>
 <script src="bulk-density-measurement.js?v=0.1.0" defer></script>
 <script src="workspace-recovery.js?v=0.1.2" defer></script>
-<script src="app.js?v=0.18.126" defer></script>
+<script src="app.js?v=0.18.128" defer></script>
 <script src="resin-admin-ui.js?v=0.20.3" defer></script>
 <script src="bulk-density-measurement-ui.js?v=0.1.0" defer></script>
 <script src="workspace-recovery-ui.js?v=0.1.2" defer></script>
@@ -1250,7 +1258,18 @@
 <dialog id="recipeScanCaptureDialog" class="lineSyncConflictDialog" aria-labelledby="recipeScanCaptureTitle">
   <div id="recipeScanCaptureTitle" class="layerTitle">Scan Job Traveler</div>
   <div id="recipeScanCaptureDescription" class="muted mt10">Take a photo of the job traveler's product blend table, or choose an existing photo.</div>
-  <div class="buttonRow mt10"><button id="recipeScanCaptureBtn" type="button">Scan</button></div>
+  <!-- Web (and any platform without a native camera): a single "Scan" button
+       opens the plain file input below, unchanged from before. -->
+  <div class="buttonRow mt10" id="recipeScanCaptureWebRow"><button id="recipeScanCaptureBtn" type="button">Scan</button></div>
+  <!-- Native Android only (shown/hidden by recipe-scan-ui.js based on
+       Capacitor.isNativePlatform() - never both at once): the file input's
+       photo picker has no camera option on Android, so native gets an
+       explicit choice instead. Both feed the same submitFile() the web
+       input already uses - see recipe-scan-ui.js. -->
+  <div class="buttonRow mt10" id="recipeScanCaptureNativeRow" hidden>
+    <button id="recipeScanTakePhotoBtn" type="button">Take Photo</button>
+    <button id="recipeScanChoosePhotoBtn" type="button" class="secondary">Choose Photo</button>
+  </div>
   <div id="recipeScanCaptureStatus" class="tiny mt10" role="status"></div>
   <div class="buttonRow mt10"><button id="recipeScanCaptureCancelBtn" class="secondary" type="button">Cancel</button></div>
   <input id="recipeScanCaptureInput" type="file" accept="image/*" hidden />

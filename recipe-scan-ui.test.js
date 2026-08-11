@@ -74,7 +74,7 @@ test("a missing access token is treated as not-ready and blocks the request, rat
   const fnStart = ui.indexOf("async function submitFile(");
   const fnEnd = ui.indexOf("\n  }", fnStart);
   const body = ui.slice(fnStart, fnEnd);
-  assert.match(body, /if \(!token\)\{[\s\S]{0,150}scanInFlight = false;\s*\n\s*return;/);
+  assert.match(body, /if \(!token\)\{[\s\S]{0,220}scanInFlight = false;\s*\n\s*return;/);
 });
 
 test("a layer-count mismatch from the mapping function surfaces its own message and never reaches the review dialog", () => {

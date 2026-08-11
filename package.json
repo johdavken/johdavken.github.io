@@ -1,0 +1,25 @@
+{
+  "name": "resin-tools-android-shell",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Capacitor Android shell for Resin.tools. The canonical web app is the repo root; this only wraps it for Android. Not used by the GitHub Pages web deployment.",
+  "scripts": {
+    "build:android": "node scripts/build-www.js",
+    "sync:android": "npm run build:android && npx cap sync android",
+    "open:android": "npx cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.5.0",
+    "@capacitor/app": "8.1.1",
+    "@capacitor/camera": "8.2.2",
+    "@capacitor/cli": "8.5.0",
+    "@capacitor/core": "8.5.0",
+    "@capacitor/local-notifications": "8.2.1"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5"
+  },
+  "allowScripts": {
+    "sharp@0.32.6": true
+  }
+}

@@ -113,6 +113,31 @@
   // move) so the mobile layer view stays where the operator left it instead
   // of jumping back to Layer A on every redraw.
   let lastActiveMobileLayer = "";
+  // For handleAndroidBack (below): lets it ask "is bulk edit active" and
+  // exit it without duplicating each render closure's own logic. exit*
+  // are rebound whenever their owning render function runs, so they
+  // always call the current closure's real setBulkMode/finishRearrangement.
+  let weightsBulkModeActive = false;
+  let exitWeightsBulkModeFn = null;
+  let exitSplitsBulkModeFn = null;
+  let exitRearrangeModeFn = null;
+  // Timeline clock ticker (see refreshTimelinePresentation): the last flat/
+  // changeoverDate validateAndCompute actually computed from real data.
+  // Ticks re-render from these on a timer without recomputing weights/rates
+  // or touching state - only the time-derived fields (startByText, isLate,
+  // the footer's "in X min") can go stale between data changes.
+  let lastTimelineFlat = null;
+  let lastTimelineChangeoverDate = null;
+  let timelineTickerStarted = false;
+  // RT Sync's own connected/disconnected toggle (disconnectLocal) leaves
+  // selectedWorkspaceId untouched, so renderLineSync's workspace-change check
+  // alone misses it - tracked separately to still trigger a native alarm
+  // resync when a workspace disconnects without switching.
+  let lastLineSyncConnectedState = null;
+  // Which native Timeline alarm notification ids are currently scheduled,
+  // so a resync can cancel exactly the ones that no longer apply (untracked,
+  // pumped off, removed) instead of cancelling-and-rescheduling everything.
+  let scheduledTimelineNotificationIds = new Set();
   // Recipe Setup's own Scan Recipe shortcut - a small popup, not one of the
   // three mutually-exclusive panels above. Rebuilt fresh on every
   // renderSplitsArea() call like everything else in that panel, so the
@@ -1197,6 +1222,122 @@
       });
     }
 
+    // --- native (Android) Timeline alarms ---------------------------------
+    //
+    // The web alarm above (setTimeout + Web Audio + navigator.vibrate) only
+    // fires while this page's JS is actually running - Android suspends a
+    // backgrounded/screen-off WebView's timers, so it silently never fires
+    // there. This is the native replacement: real OS-scheduled notifications
+    // via AlarmManager, which keep working regardless of whether the app or
+    // screen is active. No Capacitor script is loaded anywhere in this app
+    // (see android-back-button.js) - native already injects
+    // Plugins.LocalNotifications on its own, same as Plugins.App/Camera.
+    function nativeLocalNotifications(){ return window.Capacitor?.Plugins?.LocalNotifications || null; }
+
+    // A stable 1..2147483647 int (Android notification ids are 32-bit) from
+    // workspace+layer+hopper identity only - deliberately NOT from anything
+    // that changes on every edit (changeover time, weight, resin). The same
+    // hopper always maps to the same id, so re-scheduling it just replaces
+    // the existing notification (Android's own behavior for re-scheduling a
+    // known id) instead of ever duplicating one.
+    function stableNotificationId(seed){
+      let hash = 2166136261;
+      for (let i = 0; i < seed.length; i++){
+        hash ^= seed.charCodeAt(i);
+        hash = Math.imul(hash, 16777619);
+      }
+      return ((hash >>> 0) % 2147483647) + 1;
+    }
+
+    const TIMELINE_ALARM_CHANNEL_ID = "timeline-alarms";
+
+    // Resyncs native alarms to exactly what the web timers above just
+    // computed - reuses the same flat/changeoverDate schedulePumpOffAlerts
+    // was just given, rather than a second pass over state. Called from
+    // every validateAndCompute, which is already the single place every
+    // trigger this needs to react to (data edits, track/untrack, pump-off,
+    // deadline changes, RT Sync apply, the alarm toggle itself) already
+    // flows through - see the call site above. A no-op on web/desktop:
+    // nativeLocalNotifications() is null there.
+    async function syncNativeTimelineAlarms(flat, changeoverDate){
+      const LocalNotifications = nativeLocalNotifications();
+      if (!LocalNotifications) return;
+
+      const workspaceId = lineSync?.getState?.().selectedWorkspaceId || "local";
+      const desired = new Map();
+      if (state.mobileTimelineAlarm && changeoverDate){
+        (flat || []).forEach(item=>{
+          if (!item.startByDate || item.pumpOff) return;
+          const due = item.startByDate.getTime();
+          if (due <= Date.now()) return; // matches schedulePumpOffAlerts: never (re)notify for something already due/late
+          const id = stableNotificationId(`${workspaceId}:${item.layer}:${item.hopperLabel}`);
+          desired.set(id, {
+            id,
+            title: `Pump off ${item.hopperLabel}`,
+            body: item.resinName ? `${item.resinName} is due now.` : "Hopper pump-off is due now.",
+            channelId: TIMELINE_ALARM_CHANNEL_ID,
+            schedule: { at: new Date(due), allowWhileIdle: true },
+            extra: { openTimeline: true }
+          });
+        });
+      }
+
+      const toCancel = [...scheduledTimelineNotificationIds].filter(id=>!desired.has(id));
+      try{
+        if (toCancel.length) await LocalNotifications.cancel({ notifications: toCancel.map(id=>({ id })) });
+        if (desired.size) await LocalNotifications.schedule({ notifications: [...desired.values()] });
+      }catch(error){
+        console.error("Timeline alarms: failed to sync native notifications.", error);
+      }
+      scheduledTimelineNotificationIds = new Set(desired.keys());
+    }
+
+    // Called once at init (native only, see setup below): creates the
+    // Android notification channel and wires a tap on a Timeline alarm to
+    // open Timeline, reusing the existing setWorkspacePanel navigation
+    // rather than a new API. Requesting notification permission is
+    // deliberately NOT done here - only when the operator actually turns
+    // the alarm toggle on, at $("mobileTimelineAlarmToggle")'s own change
+    // handler.
+    async function registerNativeTimelineAlarmSupport(){
+      const LocalNotifications = nativeLocalNotifications();
+      if (!LocalNotifications) return;
+      try{
+        await LocalNotifications.createChannel({
+          id: TIMELINE_ALARM_CHANNEL_ID,
+          name: "Timeline Alarms",
+          description: "Pump-off reminders from Resin Tools' Timeline",
+          importance: 4,
+          visibility: 1
+        });
+      }catch(error){
+        console.error("Timeline alarms: failed to create the notification channel.", error);
+      }
+      LocalNotifications.addListener?.("localNotificationActionPerformed", (action)=>{
+        if (action?.notification?.extra?.openTimeline) setWorkspacePanel("resultsBlock", { reveal: true });
+      });
+    }
+
+    // Called only from the alarm toggle's own change handler (operator just
+    // turned it on) - never at launch or from session/payload restore.
+    async function requestNativeTimelineAlarmPermission(){
+      const LocalNotifications = nativeLocalNotifications();
+      const status = $("mobileTimelineAlarmStatus");
+      if (!LocalNotifications) return;
+      try{
+        let permission = await LocalNotifications.checkPermissions();
+        if (permission.display !== "granted") permission = await LocalNotifications.requestPermissions();
+        if (permission.display === "granted"){
+          if (status) status.textContent = "Sound, vibration, and notifications enabled - alarms will fire even while the app is closed or the screen is off.";
+          validateAndCompute({ sync: false });
+        } else if (status) {
+          status.textContent = "Notifications are turned off for Resin Tools, so alarms won't fire while the app is closed or the screen is off - sound and vibration still work while it's open. Turn this off and on to ask again, or enable notifications for Resin Tools in Android Settings.";
+        }
+      }catch(error){
+        console.error("Timeline alarms: failed to request notification permission.", error);
+      }
+    }
+
     function syncChangeoverTimeDisplay(){
       const display=$("changeoverTimeDisplay");
       if(!display) return;
@@ -1722,6 +1863,7 @@
 
       function setMobileWeightBulkMode(enabled){
         bulkMode = !!enabled;
+        weightsBulkModeActive = bulkMode;
         area.dataset.mobileBulkMode = String(bulkMode);
         bulkToggleRow.classList.toggle("on", bulkMode);
         bulkToggleRow.setAttribute("aria-pressed", String(bulkMode));
@@ -1733,6 +1875,7 @@
           updateSelectionUI();
         }
       }
+      exitWeightsBulkModeFn = () => setMobileWeightBulkMode(false);
 
       function setMobileWeightView(mode){
         visualMode = mode === "visual";
@@ -2196,6 +2339,7 @@
       });
       function setDesktopBulkMode(enabled){
         desktopBulkMode = !!enabled;
+        weightsBulkModeActive = desktopBulkMode;
         area.dataset.desktopBulkMode = String(desktopBulkMode);
         toolbar.hidden = !desktopBulkMode;
         actionToolbar.classList.toggle("bulkActive", desktopBulkMode);
@@ -2205,6 +2349,7 @@
         if (!desktopBulkMode) selected.clear();
         updateSelectionUI();
       }
+      exitWeightsBulkModeFn = () => setDesktopBulkMode(false);
       function setDesktopWeightView(mode){
         desktopWeightView = mode === "edit" ? "edit" : "summary";
         area.dataset.desktopWeightView = desktopWeightView;
@@ -2507,6 +2652,7 @@
         saveSession();
         if(!cancelled) notifyActiveJobMutation({immediate:true,kind:"rearrange-hoppers"});
       }
+      exitRearrangeModeFn = () => finishRearrangement(true);
       function undoRearrangement(){
         const shot=hopperRearrangement?.undo?.pop();
         if(shot) window.PolynHopperRearrangement.apply(state.layers,shot);
@@ -3422,6 +3568,7 @@
         if (!bulkMode) selected.clear();
         updateSelectionUI();
       }
+      exitSplitsBulkModeFn = () => setBulkMode(false);
 
       modeButton.addEventListener("click",()=>{
         const turningOn = !bulkMode;
@@ -3854,12 +4001,52 @@
 
       renderResultsFlat(flat, changeoverDate);
       schedulePumpOffAlerts(flat, changeoverDate);
+      syncNativeTimelineAlarms(flat, changeoverDate);
       updateFooterNext(flat, changeoverDate);
       renderResinCalculator();
       updateCollapsedSummaries();
       refreshSmartHopperState();
+      lastTimelineFlat = flat;
+      lastTimelineChangeoverDate = changeoverDate;
       saveSession();
       if (sync) notifyActiveJobMutation({ immediate, kind });
+    }
+
+    // The Timeline clock ticker's only job: make startByText/isLate (and the
+    // footer's "in X min"/"pump-off due" wording) advance with real wall-
+    // clock time between data changes, without doing anything else
+    // validateAndCompute does. Deliberately reuses renderResultsFlat/
+    // updateFooterNext - the exact same render path a real data change
+    // already goes through - rather than a second presentation path, and
+    // deliberately does NOT call saveSession, schedulePumpOffAlerts,
+    // syncNativeTimelineAlarms, or notifyActiveJobMutation: the underlying
+    // schedule hasn't changed, only how "now" compares to it, so nothing
+    // needs rewriting, persisting, or re-broadcasting on a tick.
+    function refreshTimelinePresentation(){
+      if (!lastTimelineFlat) return;
+      const now = new Date();
+      const refreshed = lastTimelineFlat.map(item=>{
+        if (!item.startByDate) return item;
+        const startStatus = formatTimelineStart(item.startByDate, lastTimelineChangeoverDate, now, state.timeFormat);
+        return { ...item, startByText: startStatus.text, isLate: startStatus.late };
+      });
+      renderResultsFlat(refreshed, lastTimelineChangeoverDate);
+      updateFooterNext(refreshed, lastTimelineChangeoverDate);
+    }
+
+    // Started once at app init (see setup below) - guarded so re-entering/
+    // leaving Timeline repeatedly can never stack up duplicate intervals.
+    // A plain setInterval is deliberately not cleared while backgrounded:
+    // Android/browsers already throttle or fully suspend timers on a
+    // stopped Activity/hidden tab on their own, and the appStateChange/
+    // visibilitychange listeners below force one immediate, correct
+    // refresh the moment the app is actually visible again - the interval
+    // resuming on its own cadence after that is enough, nothing needs
+    // manual pause/resume bookkeeping.
+    function startTimelineTicker(){
+      if (timelineTickerStarted) return;
+      timelineTickerStarted = true;
+      setInterval(refreshTimelinePresentation, 20000);
     }
 
     function renderResultsFlat(flat, changeoverDate){
@@ -4130,6 +4317,51 @@
     function setMobileQuickActionsOpen(open){
       setFooterSheetOpen("shortcuts", open, $("appFooterShortcuts"));
     }
+
+    // Android hardware/gesture Back. The only entry point android-back-
+    // button.js calls - everything it needs to decide "was this handled"
+    // lives here, reading this module's own real state and calling its own
+    // real close/exit functions, never guessing from arbitrary DOM
+    // structure. Order matches the requested priority: topmost
+    // dialog/sheet, then Bulk Edit, then Rearrange, then Tool->Tools,
+    // Help article->Help, section->Main. Returns false only when there is
+    // truly nothing for Back to do here (caller then minimizes the app).
+    //
+    // Deliberately NOT covered here: the small contextual <details>
+    // popovers (the Smart Hoppers wrench, Tools index dropdown, Workspace
+    // Configuration overflow menu, etc). Each manages its own outside-
+    // tap/Escape dismissal independently and there's no shared registry of
+    // "currently open small popovers" to hook into without inventing one -
+    // that's more than this pass's "smallest possible API" scope. A tap
+    // elsewhere already dismisses them, so this is a minor gap, not a
+    // trap.
+    function handleAndroidBack(){
+      const dialog = document.querySelector("dialog[open]");
+      if (dialog){ dialog.close(); return true; }
+
+      if (activeFooterSheetName){ window.PolynFooterSheetUI.close(); return true; }
+
+      if (weightsBulkModeActive){ exitWeightsBulkModeFn?.(); return true; }
+      if (splitsBulkModeActive){ exitSplitsBulkModeFn?.(); return true; }
+
+      if (hopperRearrangement?.active){ exitRearrangeModeFn?.(); return true; }
+
+      if (window.matchMedia("(max-width: 900px)").matches && document.body.dataset.mobileWorkspace === "panel"){
+        if (activeWorkspaceId === "toolsBlock" && document.body.dataset.mobileTools === "panel"){
+          $("mobileToolsBack")?.click();
+          return true;
+        }
+        if (activeWorkspaceId === "helpBlock" && document.body.dataset.mobileHelp === "panel"){
+          $("mobileHelpBack")?.click();
+          return true;
+        }
+        showMobileWorkspaceHome();
+        return true;
+      }
+
+      return false;
+    }
+    window.handleAndroidBack = handleAndroidBack;
 
     let activeFooterSheetName = "";
     let activeFooterSheetTrigger = null;
@@ -5024,6 +5256,17 @@
     const workspaceChanged = workspaceConfigurationWorkspaceId !== (syncState.selectedWorkspaceId || "");
     renderWorkspaceConfigurations(syncState);
     if (workspaceChanged && syncState.selectedWorkspaceId) void refreshWorkspaceConfigurations();
+
+    // Native Timeline alarms are seeded by workspace id (see
+    // syncNativeTimelineAlarms), so a workspace switch, leave, or a bare
+    // disconnect (which leaves selectedWorkspaceId unchanged and only flips
+    // `connected`) must all resync pending notifications - otherwise a
+    // previous workspace's alarms could keep firing after leaving it.
+    const connectedChanged = lastLineSyncConnectedState !== null && lastLineSyncConnectedState !== connected;
+    lastLineSyncConnectedState = connected;
+    if ((workspaceChanged || connectedChanged) && lastTimelineFlat){
+      syncNativeTimelineAlarms(lastTimelineFlat, lastTimelineChangeoverDate);
+    }
   }
 
   function resolveLineSyncConflict(conflict){
@@ -5229,6 +5472,12 @@
       applyMobileTimelineAlarm(enabled);
       validateAndCompute({ sync:false });
       saveSession();
+      // Notification permission is requested here, and only here - the
+      // operator's own explicit action of turning this on - never
+      // automatically at app launch. A denial doesn't undo the toggle: the
+      // in-app sound/vibration/banner alarm above still works while Resin
+      // Tools is open, only background notifications need this permission.
+      if (enabled) await requestNativeTimelineAlarmPermission();
     });
 
     $("prodResinLb")?.addEventListener("input",(e)=>{
@@ -5525,6 +5774,30 @@
       applyMobileTimelineAlarm(!!state.mobileTimelineAlarm);
       saveSession();
       setupLineSync();
+
+      // Timeline clock: makes card status/relative time advance with real
+      // time between data changes (see refreshTimelinePresentation's own
+      // comment for why this doesn't just call validateAndCompute). Started
+      // once here, not per Timeline visit, so navigating in and out of
+      // Timeline can never stack up duplicate intervals.
+      startTimelineTicker();
+      registerNativeTimelineAlarmSupport();
+
+      // Foreground/resume: force one immediate, correct refresh rather than
+      // waiting for the next tick, and reconcile native alarms (covers a
+      // notification firing, a schedule changing while backgrounded, or a
+      // completely fresh device that never got today's schedule at all).
+      window.Capacitor?.Plugins?.App?.addListener?.("appStateChange", ({ isActive })=>{
+        if (!isActive) return;
+        refreshTimelinePresentation();
+        if (lastTimelineFlat) syncNativeTimelineAlarms(lastTimelineFlat, lastTimelineChangeoverDate);
+      });
+      // Ordinary browser tabs get suspended/throttled the same way, without
+      // Capacitor's own appStateChange event - this keeps the website
+      // correct after returning to a backgrounded tab too.
+      document.addEventListener("visibilitychange", ()=>{
+        if (!document.hidden) refreshTimelinePresentation();
+      });
     })();
 
 })();

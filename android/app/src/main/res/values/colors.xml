@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Matches the web app's default "Industrial Slate" theme (the title
+         and bg tokens in theme.css) so the native chrome doesn't clash with
+         first paint. -->
+    <color name="colorPrimary">#4f6d8b</color>
+    <color name="colorPrimaryDark">#33475c</color>
+    <color name="colorAccent">#4f6d8b</color>
+</resources>

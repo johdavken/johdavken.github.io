@@ -1,0 +1,11 @@
+{
+  "appId": "tools.resin.app",
+  "appName": "Resin Tools",
+  "webDir": "www",
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_timeline",
+      "iconColor": "#458588"
+    }
+  }
+}

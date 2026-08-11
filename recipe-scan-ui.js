@@ -8,6 +8,66 @@
   function schema(){ return root.PolynRecipeScanSchema || null; }
   function config(){ return root.POLYN_SUPABASE_CONFIG || null; }
 
+  // Native Android only. No Capacitor script is loaded anywhere in this app
+  // (see index.html/android-back-button.js) - native already injects a
+  // complete window.Capacitor bridge, including Plugins.Camera, on its own.
+  // isNativePlatform() (not mere existence of window.Capacitor) is what
+  // keeps this off on the ordinary website, where window.Capacitor never
+  // exists at all.
+  function isNativePlatform(){ return !!root.Capacitor?.isNativePlatform?.(); }
+  function nativeCamera(){ return root.Capacitor?.Plugins?.Camera || null; }
+
+  // The Capacitor Camera plugin's own Android source rejects a cancelled
+  // capture/picker rather than resolving with no result. Matched
+  // defensively against both known phrasings (source-confirmed for gallery
+  // cancellation; takePhoto's own wording isn't in the plugin's public
+  // source, so this also catches anything mentioning "cancel") rather than
+  // a single exact string, and re-verified live per this feature's own
+  // test pass - see the Phase 2 report for what was actually observed on
+  // device.
+  function isCaptureCancelledError(error){
+    const message = String(error?.message || error || "");
+    return /cancel/i.test(message) || /no picture taken/i.test(message);
+  }
+
+  // Converts a Capacitor MediaResult (from takePhoto/chooseFromGallery)
+  // into the same File shape the plain <input type="file"> path already
+  // hands to submitFile() - one shared function processes every source,
+  // never a second copy of the OCR request logic.
+  async function mediaResultToFile(result, sourceType){
+    const path = result?.webPath || result?.uri;
+    if (!path) throw new Error("native_media_missing_path");
+    const response = await fetch(path);
+    if (!response.ok) throw new Error("native_media_fetch_failed");
+    const blob = await response.blob();
+    const mimeType = blob.type || "image/jpeg";
+    const extension = mimeType === "image/png" ? "png" : "jpg";
+    return new File([blob], `${sourceType || "capture"}-${Date.now()}.${extension}`, { type: mimeType });
+  }
+
+  // Survives activity recreation while the native Camera activity is in the
+  // foreground (Android can kill this app's process under memory pressure
+  // while a separate Camera app is on top). Persisted just before handing
+  // off to takePhoto(), read back by the appRestoredResult listener below,
+  // cleared as soon as either is no longer needed. Deliberately minimal -
+  // only what's needed to resume submitFile() with the right source_type,
+  // not a general session-restore mechanism.
+  const NATIVE_CAPTURE_CONTEXT_KEY = "resinTools.nativeCaptureContext.v1";
+  function persistNativeCaptureContext(){
+    try {
+      sessionStorage.setItem(NATIVE_CAPTURE_CONTEXT_KEY, JSON.stringify({ sourceType: pendingSourceType, orientation: pendingOrientation }));
+    } catch { /* best-effort only - worst case, a killed-process capture can't resume */ }
+  }
+  function readNativeCaptureContext(){
+    try {
+      const raw = sessionStorage.getItem(NATIVE_CAPTURE_CONTEXT_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  }
+  function clearNativeCaptureContext(){
+    try { sessionStorage.removeItem(NATIVE_CAPTURE_CONTEXT_KEY); } catch { /* ignore */ }
+  }
+
   const CAPTURE_COPY = {
     job_traveler: {
       title: "Scan Job Traveler",
@@ -92,6 +152,15 @@
     const description = $("recipeScanCaptureDescription");
     if (title) title.textContent = copy.title;
     if (description) description.textContent = copy.description;
+    // The file input's photo picker has no camera option on Android (see
+    // this feature's diagnosis notes), so native gets an explicit Take
+    // Photo/Choose Photo choice instead of the web's single Scan button.
+    // Never both at once.
+    const native = isNativePlatform();
+    const webRow = $("recipeScanCaptureWebRow");
+    const nativeRow = $("recipeScanCaptureNativeRow");
+    if (webRow) webRow.hidden = native;
+    if (nativeRow) nativeRow.hidden = !native;
     $("recipeScanCaptureDialog")?.showModal?.();
   }
 
@@ -99,6 +168,11 @@
     $("recipeScanCaptureDialog")?.close?.();
   }
 
+  // Server-reported error codes (image validation, auth, workspace access,
+  // OCR parsing, server config). Distinct from the client-only failure
+  // modes (unreadable file, unreachable network, malformed response) that
+  // submitFile() below handles itself, since the server never sees those
+  // requests at all.
   function captureErrorMessage(code){
     switch (code){
       case "unauthorized": return "Your session has expired. Reload the page and try again.";
@@ -114,76 +188,206 @@
     }
   }
 
+  // The one shared entry point for the OCR request - the plain web file
+  // input, the native Take Photo path, and the native Choose Photo path
+  // all call this same function with a File, so there is exactly one
+  // upload/parse/apply implementation to maintain. Every failure branch
+  // sets a specific, actionable status message (never a single generic
+  // "scan failed") and logs the real technical detail to the console -
+  // never the reverse.
   async function submitFile(file){
     if (!file || scanInFlight) return;
     scanInFlight = true;
     setStatus("recipeScanCaptureStatus", "Scanning…");
+
+    // 1. Unable to read the image file itself (corrupt file, revoked
+    // content:// permission, native webPath fetch that returned something
+    // unreadable).
+    let bytes;
     try {
-      const bytes = new Uint8Array(await file.arrayBuffer());
-      const imageCheck = schema()?.validateImage?.(bytes, file.type, bytes.byteLength);
-      if (imageCheck && !imageCheck.ok){
-        setStatus("recipeScanCaptureStatus", captureErrorMessage(imageCheck.error), true);
-        scanInFlight = false;
-        return;
-      }
+      bytes = new Uint8Array(await file.arrayBuffer());
+    } catch (error) {
+      console.error("Scan Recipe: could not read the selected image.", error);
+      setStatus("recipeScanCaptureStatus", "That photo couldn't be read. Try a different photo.", true);
+      scanInFlight = false;
+      return;
+    }
 
-      const token = await serviceApi.getAccessToken();
-      if (!token){
-        setStatus("recipeScanCaptureStatus", "Your RT Sync session isn't ready yet. Wait a moment and try again.", true);
-        scanInFlight = false;
-        return;
-      }
+    // 2. Unsupported/invalid image (wrong type, empty, too large, bad
+    // signature) - checked client-side first so a bad file never leaves
+    // the device.
+    const imageCheck = schema()?.validateImage?.(bytes, file.type, bytes.byteLength);
+    if (imageCheck && !imageCheck.ok){
+      setStatus("recipeScanCaptureStatus", captureErrorMessage(imageCheck.error), true);
+      scanInFlight = false;
+      return;
+    }
 
-      const base = config()?.url;
-      if (!base){
-        setStatus("recipeScanCaptureStatus", "Recipe scanning is unavailable right now.", true);
-        scanInFlight = false;
-        return;
-      }
+    // 3. Authentication not ready yet (no RT Sync session at all).
+    const token = await serviceApi.getAccessToken();
+    if (!token){
+      console.error("Scan Recipe: no RT Sync access token available.");
+      setStatus("recipeScanCaptureStatus", "Your RT Sync session isn't ready yet. Wait a moment and try again.", true);
+      scanInFlight = false;
+      return;
+    }
 
-      const requestId = (root.crypto && root.crypto.randomUUID) ? root.crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
-      const form = new FormData();
-      form.append("workspace_id", serviceApi.getWorkspaceId());
-      form.append("request_id", requestId);
-      form.append("image", file);
-      form.append("source_type", pendingSourceType);
+    const base = config()?.url;
+    if (!base){
+      setStatus("recipeScanCaptureStatus", "Recipe scanning is unavailable right now.", true);
+      scanInFlight = false;
+      return;
+    }
 
-      const response = await fetch(`${base}/functions/v1/recipe-scan`, {
+    const requestId = (root.crypto && root.crypto.randomUUID) ? root.crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
+    const form = new FormData();
+    form.append("workspace_id", serviceApi.getWorkspaceId());
+    form.append("request_id", requestId);
+    form.append("image", file);
+    form.append("source_type", pendingSourceType);
+
+    // 4. Network unavailable / request never reached the server. A CORS
+    // rejection and a true offline failure both surface to JS as the same
+    // generic "Failed to fetch" - browsers deliberately don't distinguish
+    // them (so a page can't probe cross-origin availability) - so
+    // navigator.onLine is the best available signal for which message to
+    // show. Either way, the real error is logged, not hidden.
+    let response;
+    try {
+      response = await fetch(`${base}/functions/v1/recipe-scan`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: form
       });
-      let body = null;
-      try { body = await response.json(); } catch { body = null; }
-      if (!response.ok || !body?.ok){
-        setStatus("recipeScanCaptureStatus", captureErrorMessage(body?.error), true);
-        scanInFlight = false;
-        return;
-      }
-
-      const buildFn = pendingSourceType === "dosing_screen"
-        ? mapping()?.buildDosingScreenRecipePayloadFromScan
-        : mapping()?.buildRecipePayloadFromScan;
-      const built = buildFn?.(body.result.recipe, {
-        lineType: Number(serviceApi.getLineType()),
-        orientation: pendingOrientation,
-        hopperNamingMode: serviceApi.getHopperNamingMode?.()
-      });
-      if (!built?.ok){
-        setStatus("recipeScanCaptureStatus", built?.message || "This scan could not be applied.", true);
-        scanInFlight = false;
-        return;
-      }
-
-      pendingScan = body.result.recipe;
-      pendingPayload = built.payload;
+    } catch (error) {
+      console.error("Scan Recipe: the OCR request failed before reaching the server.", error);
+      const offline = typeof navigator !== "undefined" && navigator.onLine === false;
+      setStatus(
+        "recipeScanCaptureStatus",
+        offline ? "You're offline. Reconnect and try again." : "Couldn't reach the scan service. Check your connection and try again.",
+        true
+      );
       scanInFlight = false;
-      closeCaptureDialog();
-      openReviewDialog();
-    } catch {
-      setStatus("recipeScanCaptureStatus", "The scan could not be completed. Check your connection and try again.", true);
-      scanInFlight = false;
+      return;
     }
+
+    let body = null;
+    let bodyParseFailed = false;
+    try { body = await response.json(); } catch (error) { bodyParseFailed = true; }
+
+    // 5. Authentication/authorization failure, or the OCR service itself
+    // failing (5xx) - distinct from a malformed-but-200 response (6, below).
+    if (!response.ok){
+      console.error(`Scan Recipe: OCR request failed (HTTP ${response.status}).`, body);
+      if (response.status === 401) setStatus("recipeScanCaptureStatus", captureErrorMessage("unauthorized"), true);
+      else if (response.status === 403) setStatus("recipeScanCaptureStatus", captureErrorMessage("workspace_access_denied"), true);
+      else if (response.status >= 500) setStatus("recipeScanCaptureStatus", "The scan service is temporarily unavailable. Try again shortly.", true);
+      else setStatus("recipeScanCaptureStatus", captureErrorMessage(body?.error), true);
+      scanInFlight = false;
+      return;
+    }
+
+    // 6. Invalid/unparseable OCR response - the request succeeded but the
+    // body isn't the shape this client understands.
+    if (bodyParseFailed || !body?.ok || !body?.result?.recipe){
+      console.error("Scan Recipe: the OCR response was not well-formed.", body);
+      setStatus("recipeScanCaptureStatus", "The scan service returned an unexpected response. Try again.", true);
+      scanInFlight = false;
+      return;
+    }
+
+    const buildFn = pendingSourceType === "dosing_screen"
+      ? mapping()?.buildDosingScreenRecipePayloadFromScan
+      : mapping()?.buildRecipePayloadFromScan;
+    const built = buildFn?.(body.result.recipe, {
+      lineType: Number(serviceApi.getLineType()),
+      orientation: pendingOrientation,
+      hopperNamingMode: serviceApi.getHopperNamingMode?.()
+    });
+    if (!built?.ok){
+      setStatus("recipeScanCaptureStatus", built?.message || "This scan could not be applied.", true);
+      scanInFlight = false;
+      return;
+    }
+
+    pendingScan = body.result.recipe;
+    pendingPayload = built.payload;
+    scanInFlight = false;
+    closeCaptureDialog();
+    openReviewDialog();
+  }
+
+  // --- native capture (Android) -------------------------------------------
+
+  async function captureFromNativeCamera(){
+    const Camera = nativeCamera();
+    if (!Camera || scanInFlight) return;
+    setStatus("recipeScanCaptureStatus", "");
+    persistNativeCaptureContext();
+    let result;
+    try {
+      result = await Camera.takePhoto({});
+    } catch (error) {
+      clearNativeCaptureContext();
+      if (isCaptureCancelledError(error)) return;
+      console.error("Scan Recipe: native camera capture failed.", error);
+      setStatus("recipeScanCaptureStatus", "The camera couldn't be opened. Try again.", true);
+      return;
+    }
+    clearNativeCaptureContext();
+    await submitCapturedMedia(result);
+  }
+
+  async function captureFromNativeGallery(){
+    const Camera = nativeCamera();
+    if (!Camera || scanInFlight) return;
+    setStatus("recipeScanCaptureStatus", "");
+    let results;
+    try {
+      results = await Camera.chooseFromGallery({});
+    } catch (error) {
+      if (isCaptureCancelledError(error)) return;
+      console.error("Scan Recipe: native gallery selection failed.", error);
+      setStatus("recipeScanCaptureStatus", "That photo couldn't be opened. Try a different photo.", true);
+      return;
+    }
+    const first = results?.results?.[0];
+    if (!first) return;
+    await submitCapturedMedia(first);
+  }
+
+  async function submitCapturedMedia(mediaResult){
+    let file;
+    try {
+      file = await mediaResultToFile(mediaResult, pendingSourceType);
+    } catch (error) {
+      console.error("Scan Recipe: could not convert the captured photo for upload.", error);
+      setStatus("recipeScanCaptureStatus", "That photo couldn't be read. Try again.", true);
+      return;
+    }
+    await submitFile(file);
+  }
+
+  // Android can kill this app's process while its native Camera activity is
+  // in the foreground. If that happened mid-capture, Capacitor redelivers
+  // the result here instead of resolving takePhoto()'s original promise
+  // (which no longer exists) - resume with whatever source_type/orientation
+  // were persisted right before the camera opened. A restart with nothing
+  // persisted (or a result for some other, non-capture plugin call) is not
+  // this flow's concern and is left alone.
+  function registerNativeAppRestoredResult(){
+    const App = root.Capacitor?.Plugins?.App;
+    if (!App?.addListener) return;
+    App.addListener("appRestoredResult", async (data) => {
+      const context = readNativeCaptureContext();
+      if (!context || !data?.pluginCallId) return;
+      clearNativeCaptureContext();
+      if (data.success === false || !data.data) return;
+      pendingSourceType = context.sourceType;
+      pendingOrientation = context.orientation;
+      openCaptureDialog();
+      await submitCapturedMedia(data.data);
+    });
   }
 
   // --- review dialog ------------------------------------------------------
@@ -368,7 +572,10 @@
 
   $("recipeScanCaptureBtn")?.addEventListener("click", () => $("recipeScanCaptureInput")?.click());
   $("recipeScanCaptureInput")?.addEventListener("change", event => submitFile(event.target.files?.[0]));
+  $("recipeScanTakePhotoBtn")?.addEventListener("click", captureFromNativeCamera);
+  $("recipeScanChoosePhotoBtn")?.addEventListener("click", captureFromNativeGallery);
   $("recipeScanCaptureCancelBtn")?.addEventListener("click", () => { closeCaptureDialog(); resetPendingScan(); });
+  registerNativeAppRestoredResult();
 
   $("recipeScanReviewCancelBtn")?.addEventListener("click", cancelReview);
   $("recipeScanReviewRetakeBtn")?.addEventListener("click", retakeScan);

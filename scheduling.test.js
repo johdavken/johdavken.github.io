@@ -76,6 +76,25 @@ test("timeline start labels use readable late and changeover-day wording", () =>
   assert.doesNotMatch(overdue.text, /\(-1d\)/);
 });
 
+test("a future entry transitions from upcoming to late purely as the supplied clock advances - the same date/deadline, only 'now' changes, matching the Timeline ticker's own refresh call", () => {
+  const deadline = new Date(2026, 6, 29, 22, 0);
+  const startBy = new Date(2026, 6, 29, 20, 0);
+
+  const wellBefore = formatTimelineStart(startBy, deadline, new Date(2026, 6, 29, 18, 0));
+  assert.equal(wellBefore.late, false);
+
+  const justBefore = formatTimelineStart(startBy, deadline, new Date(2026, 6, 29, 19, 59));
+  assert.equal(justBefore.late, false);
+
+  const justAfter = formatTimelineStart(startBy, deadline, new Date(2026, 6, 29, 20, 1));
+  assert.equal(justAfter.late, true);
+  assert.match(justAfter.text, /· late$/);
+
+  const muchLater = formatTimelineStart(startBy, deadline, new Date(2026, 6, 30, 21, 0));
+  assert.equal(muchLater.late, true);
+  assert.match(muchLater.text, /1 day late$/);
+});
+
 test("a changeover time with no recorded set-at is never flagged stale", () => {
   assert.equal(isChangeoverStale(null), false);
   assert.equal(isChangeoverStale(undefined), false);

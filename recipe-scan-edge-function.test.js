@@ -195,3 +195,30 @@ test("heatSheetLayerJsonSchema requires layer_letter alongside position, both op
   assert.match(body, /layer_letter: \{ type: \["string", "null"\], enum: \[\.\.\.LAYER_LETTERS, null\] \}/);
   assert.match(body, /components: \{ type: "array", maxItems: MAX_COMPONENTS_PER_LAYER, items: componentJsonSchema\(\) \}/);
 });
+
+// --- ALLOWED_ORIGINS: the Android app was hitting CORS failures on every
+// scan attempt - the bundled Capacitor WebView's real origin
+// (https://localhost, confirmed via on-device diagnostics: `Loading app at
+// https://localhost`) wasn't in the allowlist, so the browser blocked the
+// response before the client ever saw it, regardless of what the server
+// actually returned. ---
+
+test("the Capacitor Android app's real origin (https://localhost, no port) is explicitly allowed - not folded into the localhost dev-server regexes, which require a port and http (not https)", () => {
+  const listStart = source.indexOf("const ALLOWED_ORIGINS = [");
+  const listEnd = source.indexOf("];", listStart);
+  const body = source.slice(listStart, listEnd);
+  assert.match(body, /"https:\/\/localhost"/);
+});
+
+test("the dev-server regexes still require http (not https) and a port, so they can never accidentally match the native app's origin", () => {
+  const listStart = source.indexOf("const ALLOWED_ORIGINS = [");
+  const listEnd = source.indexOf("];", listStart);
+  const body = source.slice(listStart, listEnd);
+  assert.match(body, /\/\^http:\\\/\\\/localhost:\\d\+\$\//);
+  assert.doesNotMatch(body, /\/\^https:\\\/\\\/localhost/, "must not be a regex that could also match arbitrary https localhost ports");
+});
+
+test("ALLOWED_ORIGINS is not a wildcard - CORS is still origin-scoped, not opened up for every caller", () => {
+  assert.doesNotMatch(source, /Access-Control-Allow-Origin["'\s:]*\*/);
+  assert.doesNotMatch(source, /ALLOWED_ORIGINS\s*=\s*\[\s*"\*"/);
+});

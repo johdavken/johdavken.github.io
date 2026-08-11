@@ -46,6 +46,14 @@ type SourceType = typeof SOURCE_TYPES[number];
 
 const ALLOWED_ORIGINS = [
   "https://resin.tools",
+  // The bundled Android app (Capacitor) - not a web dev server. Capacitor's
+  // Android WebView always serves the app from exactly this origin (no
+  // port, https scheme - confirmed via on-device diagnostics: a scan
+  // attempt from the app failed CORS entirely because this origin wasn't
+  // allowed). Listed as its own exact entry, not folded into the
+  // localhost-dev regexes below, since it's a distinct, permanent client
+  // origin rather than an ephemeral dev server port.
+  "https://localhost",
   /^http:\/\/localhost:\d+$/,
   /^http:\/\/127\.0\.0\.1:\d+$/
 ];
