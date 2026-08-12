@@ -189,8 +189,12 @@ test("both derivations share one workspace identity module and one lifecycle hoo
   assert.match(app, /syncDerivedHopperNaming\(syncState\);\s*\n(?:\s*\/\/.*\n)*\s*syncDerivedLayerCount\(syncState\);/);
   assert.match(app, /window\.PolynLineIdentity\?\.requiredLayerCountForSync\(syncState\)/);
   assert.match(app, /const identity = window\.PolynLineIdentity;/);
-  assert.match(app, /identity\?\.linkedLineNumber\(syncState\) \?\? null/);
   assert.match(app, /identity\?\.linkedWorkspace\(syncState\) \|\| null/);
+  // app.js no longer resolves the line number itself - it stopped needing one
+  // when the "Set by Line N" readout was removed. linkedLineNumber is still
+  // the single resolver, now reached through getLineConfigurationForSync.
+  assert.doesNotMatch(app, /linkedLineNumber/);
+  assert.match(fs.readFileSync("line-identity.js", "utf8"), /return getLineConfiguration\(linkedLineNumber\(syncState\)\);/);
   // The same module answers the naming question.
   assert.match(app, /window\.PolynLineIdentity\?\.hopperNamingMode\(syncState\)/);
   // No second workspace-label parser and no second copy of the mapping:
@@ -261,17 +265,59 @@ test("the manual tiles are hidden and disabled while a line dictates the count",
   assert.match(app, /if \(!\["ArrowLeft", "ArrowRight"\]\.includes\(event\.key\)\) return;\s*\n\s*if \(lockedLayerCount !== null\) return;/);
 });
 
-test("one compact read-only readout replaces the tiles on both viewports", () => {
-  assert.match(html, /<p id="setupLayerCountDerived" class="setupLayerCountDerived" hidden><\/p>/);
-  assert.match(app, /`\$\{required\} \$\{required === 1 \? "layer" : "layers"\} · Set by Line \$\{lineNumber\}`/);
+test("nothing is shown in place of the tiles - Overview already reports the line and count", () => {
+  // The old "3 layers · Set by Line 9" readout duplicated Overview and is
+  // gone, element and styles included. No replacement caption took its place.
+  assert.doesNotMatch(html, /setupLayerCountDerived/);
+  assert.doesNotMatch(app, /setupLayerCountDerived/);
+  assert.doesNotMatch(styles, /setupLayerCountDerived/);
+  assert.doesNotMatch(app, /Set by Line/);
   // Same single control on desktop and mobile, so one rule covers both and
   // no viewport-specific override reintroduces the tiles.
   assert.equal(html.match(/id="lineTypeToggle"/g).length, 1);
-  assert.match(styles, /\.setupLayerCountDerived\{/);
   // Must outrank the mobile `#lineSetupBlock .layerCountTiles` display
   // override, or the tiles stay visible on mobile despite [hidden].
   assert.match(styles, /#lineSetupBlock \.layerCountTiles\[hidden\]\{ display: none; \}/);
   assert.doesNotMatch(styles, /\.layerCountTiles\{[^}]*display:\s*(flex|grid)\s*!important/);
+});
+
+test("the Layers heading is hidden with its control while a line dictates the count", () => {
+  // The heading lives on the group, not the tiles, so hiding only the tiles
+  // would strand a "Layers" caption above empty space.
+  assert.match(html, /<div class="setupControlGroup setupLayerCountGroup" id="setupLayerCountGroup">\s*\n\s*<span class="setupControlLabel">Layers<\/span>/);
+  assert.match(app, /const layerCountGroup = \$\("setupLayerCountGroup"\);\s*\n\s*if \(layerCountGroup\) layerCountGroup\.hidden = required !== null;/);
+  // `[hidden]` alone loses to `#lineSetupBlock .setupControlGroup{display:grid}`.
+  assert.match(styles, /#lineSetupBlock \.setupLayerCountGroup\[hidden\]\{ display: none; \}/);
+});
+
+/* The manual selector is the only way to set a layer count when RT Sync is
+ * not linked to a recognized line, so every part of it has to survive the
+ * connected-state cleanup above. */
+test("the manual fallback selector survives intact for the disconnected state", () => {
+  // Markup: heading, radiogroup, and all three tiles still present and
+  // visible by default - the group is only hidden when the lock is applied.
+  assert.match(html, /<span class="setupControlLabel">Layers<\/span>/);
+  assert.doesNotMatch(html, /id="setupLayerCountGroup"[^>]*\shidden/, "the group must not start hidden");
+  assert.doesNotMatch(html, /id="lineTypeToggle"[^>]*\shidden/, "the tiles must not start hidden");
+  for (const count of [1, 3, 5]){
+    assert.match(html, new RegExp(`data-line-type="${count}"`), `the ${count}-layer tile must remain`);
+  }
+  assert.match(html, /id="lineTypeToggle" role="radiogroup" aria-label="Layers"/);
+
+  // Behavior: handlers, state application and keyboard support all intact.
+  assert.match(app, /function hookLineTypeChoice\(\)/);
+  assert.match(app, /group\.addEventListener\("click"/);
+  assert.match(app, /applyLineTypeChange\(/);
+  assert.match(app, /state\.lineType = nextType;/);
+
+  // Unlinking clears the lock, which is what makes both reappear.
+  assert.match(app, /lockedLayerCount = required;/);
+  const lock = app.slice(app.indexOf("function applyLayerCountLock("));
+  const body = lock.slice(0, lock.indexOf("\n  let layerEnforcementScheduled"));
+  assert.match(body, /if \(group\) group\.hidden = required !== null;/);
+  assert.match(body, /layerCountGroup\.hidden = required !== null;/);
+  // Both are driven by the same null check, so they can never disagree.
+  assert.equal((body.match(/hidden = required !== null;/g) || []).length, 2);
 });
 
 test("unlinking leaves the current layer configuration alone", () => {

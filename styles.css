@@ -1197,24 +1197,91 @@ input[readonly]:focus{
   outline: 2px solid var(--focus-border);
   outline-offset: 2px;
 }
-/* Shown in place of the tiles when the linked RT Sync line dictates the
-   physical layer count. Deliberately a plain readout, not a pill or panel:
-   the operator has nothing to act on here. Identical on desktop and mobile,
-   because the tiles it replaces are the same control on both. */
-.setupLayerCountDerived{
-  margin: 0;
-  min-height: 34px;
-  display: flex;
-  align-items: center;
-  color: var(--text);
-  font-size: 13px;
-  font-weight: 750;
-}
-.setupLayerCountDerived[hidden]{ display: none; }
-/* Id-qualified so it outranks the mobile `#lineSetupBlock .layerCountTiles`
-   display override further down this file - a plain `[hidden]` rule loses
-   that specificity contest and leaves the tiles visible on mobile. */
+/* Id-qualified so these outrank the `#lineSetupBlock .layerCountTiles` and
+   `#lineSetupBlock .setupControlGroup` display rules further down this file -
+   a plain `[hidden]` rule loses that specificity contest and leaves the
+   control visible on mobile. The group carries the "Layers" heading as well
+   as the tiles, so hiding it removes both while a line sets the count. */
 #lineSetupBlock .layerCountTiles[hidden]{ display: none; }
+#lineSetupBlock .setupLayerCountGroup[hidden]{ display: none; }
+
+/* ---- Line Setup: Overview ------------------------------------------------
+   Status, not form. Everything here is derived from the connected line, so it
+   reads as a quiet readout beneath the Changeover/Output gauges: no field
+   borders, no control backgrounds, no tap targets. Sized to survive the
+   ~214px desktop setup column, and built only from theme tokens so light,
+   dark and Gruvbox all follow the palette they already define. */
+.lineOverview{
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+/* Tighter than the section heading it inherits from - this one labels a small
+   readout, not a whole region. Id-qualified to outrank both the desktop and
+   mobile `#lineSetupBlock .setupSectionHeading` rules. */
+#lineSetupBlock .lineOverview .setupSectionHeading{ margin: 0 0 9px; }
+.lineOverviewFacts{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 12px;
+  margin: 0;
+}
+.lineOverviewFact{ min-width: 0; }
+.lineOverviewFacts dt{
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.lineOverviewFacts dd{
+  margin: 1px 0 0;
+  color: var(--title);
+  font-size: 19px;
+  font-weight: 850;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+/* No line resolved yet - the dash should not carry the weight of a real value. */
+.lineOverviewFacts dd.lineOverviewUnknown{ color: var(--muted); font-weight: 700; }
+
+.lineOverviewOrder{ margin-top: 11px; }
+.lineOverviewOrder[hidden]{ display: none; }
+.lineOverviewOrderLabel{
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+/* Two columns rather than a dt/dd flex row: the layer letters stay aligned
+   under each other no matter how wide "Outside" renders in a given theme. */
+.lineOverviewOrderRows{
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 2px 14px;
+  margin: 5px 0 0;
+}
+.lineOverviewOrderRows dt{
+  color: var(--title);
+  font-size: var(--font-small);
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
+}
+.lineOverviewOrderRows dd{
+  margin: 0;
+  color: var(--text);
+  font-size: var(--font-small);
+  font-weight: 650;
+}
+.lineOverviewNote{
+  margin: 9px 0 0;
+  color: var(--muted);
+  font-size: var(--font-small);
+  font-weight: 650;
+}
+.lineOverviewNote[hidden]{ display: none; }
 
 /* Changeover deadline / Line rate: big centered dashboard-style readouts -
    icon, bold value, small caption - instead of a labeled underline field.

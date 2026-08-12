@@ -84,7 +84,7 @@
   };
 
   let pendingSourceType = null;  // "job_traveler" | "dosing_screen" | "heat_sheet"
-  let pendingOrientation = null; // "inside" | "outside" | null (null = 1-layer line or dosing_screen - neither needs it)
+  let pendingOrientation = null; // "inside" | "outside" | null. Resolved from the connected line in startScan; stays null for a 1-layer line or dosing_screen, neither of which needs it.
   let pendingScan = null;        // sanitized recipe-scan result (.recipe), as returned by the Edge Function
   let pendingPayload = null;     // built via PolynRecipeScanMapping's mapping functions, for review + apply
   let scanInFlight = false;      // guards against a second submission while one request is already in flight
@@ -118,15 +118,27 @@
     }
     resetPendingScan();
     pendingSourceType = sourceType;
-    // Dosing Screen never needs the orientation prompt - the controller
-    // already prints/labels each row with its physical layer letter, unlike
-    // Job Traveler's column order, which is ambiguous without it.
+    // Dosing Screen never needs orientation - the controller already prints
+    // each row in physical layer order, unlike Job Traveler's column order
+    // and Heat Sheet's block order, which are ambiguous without it.
     const lineType = Number(serviceApi.getLineType());
-    if (sourceType === "dosing_screen" || lineType === 1) openCaptureDialog();
-    else openOrientationDialog();
+    if (sourceType === "dosing_screen" || lineType === 1){ openCaptureDialog(); return; }
+    // The connected line already determines which end Layer A is on, so the
+    // operator is never asked a question the app can answer. Resolved through
+    // the shared line configuration - never a layer-order rule of its own.
+    const orientation = serviceApi.getLineConfiguration?.()?.layerAPosition || null;
+    if (orientation){
+      pendingOrientation = orientation;
+      openCaptureDialog();
+      return;
+    }
+    // Only reachable on a workspace that maps to no known line. Guessing here
+    // would silently mirror the whole recipe, so the operator is asked rather
+    // than assumed at - this is the fallback, not the normal path.
+    openOrientationDialog();
   }
 
-  // --- orientation dialog ------------------------------------------------
+  // --- orientation fallback (unrecognized lines only) ----------------------
 
   function openOrientationDialog(){
     const dialog = $("recipeScanOrientationDialog");

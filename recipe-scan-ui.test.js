@@ -20,12 +20,37 @@ test("scanning is refused with a clear message when no workspace is connected - 
   assert.match(body, /alert\(/);
 });
 
-test("the orientation dialog is skipped for a 1-layer line or a dosing_screen scan, but required otherwise", () => {
+test("the orientation dialog is skipped for a 1-layer line or a dosing_screen scan", () => {
   const fnStart = ui.indexOf("function startScan(");
   const fnEnd = ui.indexOf("\n  }", fnStart);
   const body = ui.slice(fnStart, fnEnd);
   assert.match(body, /const lineType = Number\(serviceApi\.getLineType\(\)\);/);
-  assert.match(body, /if \(sourceType === "dosing_screen" \|\| lineType === 1\) openCaptureDialog\(\);\s*\n\s*else openOrientationDialog\(\);/);
+  assert.match(body, /if \(sourceType === "dosing_screen" \|\| lineType === 1\)\{ openCaptureDialog\(\); return; \}/);
+});
+
+test("a multilayer scan takes its orientation from the connected line instead of asking the operator", () => {
+  const fnStart = ui.indexOf("function startScan(");
+  const fnEnd = ui.indexOf("\n  }", fnStart);
+  const body = ui.slice(fnStart, fnEnd);
+  // Read through the shared line configuration - never a layer-order rule of
+  // this scanner's own, and never a per-source-type branch.
+  assert.match(body, /serviceApi\.getLineConfiguration\?\.\(\)\?\.layerAPosition/);
+  assert.doesNotMatch(body, /\b(?:inside|outside)\b\s*[:=]/, "startScan must not hard-code an orientation value");
+  assert.doesNotMatch(body, /lineNumber\s*[><=]/, "startScan must not re-derive orientation from a line number range");
+  const resolved = body.indexOf("if (orientation){");
+  assert.ok(resolved > -1, "expected the resolved orientation to short-circuit the prompt");
+  assert.ok(body.indexOf("pendingOrientation = orientation;", resolved) > -1);
+  // The prompt survives only as the unmapped-line fallback, after the check.
+  assert.ok(body.indexOf("openOrientationDialog();") > resolved, "the dialog must only be reachable once orientation could not be resolved");
+});
+
+test("neither Job Traveler nor Heat Sheet gets its own orientation path - both fall through the same shared resolution", () => {
+  const fnStart = ui.indexOf("function startScan(");
+  const fnEnd = ui.indexOf("\n  }", fnStart);
+  const body = ui.slice(fnStart, fnEnd);
+  assert.doesNotMatch(body, /heat_sheet/, "heat_sheet must not be special-cased");
+  assert.doesNotMatch(body, /job_traveler/, "job_traveler must not be special-cased");
+  assert.equal((body.match(/getLineConfiguration/g) || []).length, 1, "orientation should be resolved exactly once, for every source type");
 });
 
 test("orientation dialog only proceeds on an explicit inside/outside choice, not cancel or a stray close", () => {
@@ -204,12 +229,8 @@ test("the shortcut menu closes on an outside click and on Escape, same behavior 
   assert.match(ui, /if \(event\.key === "Escape" && statusScanShortcut\?\.open\)\{/);
 });
 
-test("heat_sheet has its own CAPTURE_COPY entry and skips orientation only via the shared 1-layer/dosing_screen rule, same as Job Traveler", () => {
+test("heat_sheet has its own CAPTURE_COPY entry while sharing Job Traveler's orientation resolution", () => {
   assert.match(ui, /heat_sheet: \{\s*\n\s*title: "Scan Heat Sheet",/);
-  const fnStart = ui.indexOf("function startScan(");
-  const fnEnd = ui.indexOf("\n  }", fnStart);
-  const body = ui.slice(fnStart, fnEnd);
-  assert.doesNotMatch(body, /heat_sheet/, "heat_sheet must not get a special case - it should fall through to the same orientation rule as job_traveler");
 });
 
 // --- index.html: capture dialog structure --------------
