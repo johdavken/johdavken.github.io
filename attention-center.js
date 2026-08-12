@@ -28,6 +28,9 @@
   const SECTION = {
     setup: "Setup",
     recipe: "Recipe",
+    // The planned recipe is a separate section, never folded into "Recipe":
+    // an unfinished plan is a planning note, not a fault on the running job.
+    nextRecipe: "Next Recipe",
     timeline: "Timeline",
     sync: "RT Sync"
   };
@@ -112,6 +115,27 @@
     return items;
   }
 
+  /* The layers whose hoppers do not total 100%. Accepts either the richer
+   * [{name, totalPct}] form the application now supplies, or a plain list of
+   * names - the totals are what the grid used to print beside the column, so
+   * a caller that only knows the names still gets a correct (if less
+   * detailed) entry rather than none at all. */
+  function invalidLayers(source){
+    if (Array.isArray(source.invalidLayers)){
+      return source.invalidLayers
+        .filter(layer=>layer && text(layer.name))
+        .map(layer=>({ name: text(layer.name), totalPct: layer.totalPct }));
+    }
+    return (Array.isArray(source.invalidLayerNames) ? source.invalidLayerNames : [])
+      .filter(Boolean)
+      .map(name=>({ name: text(name), totalPct: null }));
+  }
+  function layerTotalsSentence(layers){
+    const withTotals = layers.filter(layer=>layer.totalPct !== null && layer.totalPct !== undefined);
+    if (!withTotals.length) return "";
+    return `${withTotals.map(layer=>`Layer ${layer.name} totals ${fmtPct(layer.totalPct)}`).join(" · ")}. `;
+  }
+
   function recipeEntries(recipe){
     const items = [];
     if (recipe.layerTotalValid === false){
@@ -123,14 +147,48 @@
           actionLabel: "Open Recipe"
         }));
     }
-    const invalid = Array.isArray(recipe.invalidLayerNames) ? recipe.invalidLayerNames.filter(Boolean) : [];
+    const invalid = invalidLayers(recipe);
     if (invalid.length){
       items.push(entry("recipe.hopper-totals", SEVERITY.warning,
-        `Hopper percentages are off in ${plural(invalid.length, "layer", "layers")} ${invalid.join(", ")}`, {
-          message: "Each layer's hoppers are expected to total 100%.",
+        `Hopper percentages are off in ${plural(invalid.length, "layer", "layers")} ${invalid.map(layer=>layer.name).join(", ")}`, {
+          message: `${layerTotalsSentence(invalid)}Each layer's hoppers are expected to total 100%.`,
           section: SECTION.recipe,
           action: "open-recipe",
           actionLabel: "Open Recipe"
+        }));
+    }
+    return items;
+  }
+
+  /* The planned recipe for the upcoming changeover. Two things keep this from
+   * being noise:
+   *
+   *   - a plan nobody has started (planned !== true) raises nothing at all, so
+   *     operators who never open the Next page never see an entry here;
+   *   - an unfinished plan is described as unfinished, not as an error. It is
+   *     never a fault on the running job, and it never touches the Recipe
+   *     section's own readiness, which describes the current recipe only.
+   */
+  function nextRecipeEntries(next){
+    if (next.planned !== true) return [];
+    const items = [];
+    if (next.layerTotalValid === false){
+      items.push(entry("next-recipe.layer-total", SEVERITY.warning,
+        `Next Recipe layer percentages total ${fmtPct(next.layerTotalPct)}`, {
+          message: "The planned recipe is not finished. Layer splits are expected to total 100% before it can be loaded.",
+          section: SECTION.nextRecipe,
+          action: "open-next-recipe",
+          actionLabel: "Open Next Recipe"
+        }));
+    }
+    const invalid = invalidLayers(next);
+    if (invalid.length){
+      items.push(entry("next-recipe.hopper-totals", SEVERITY.warning,
+        `Next Recipe hopper percentages are off in ${plural(invalid.length, "layer", "layers")} ${invalid.map(layer=>layer.name).join(", ")}`, {
+          message: `${layerTotalsSentence(invalid)}The planned recipe is not finished; each layer's hoppers are expected to total 100% before it can be loaded.`,
+          section: SECTION.nextRecipe,
+          action: "open-next-recipe",
+          actionLabel: "Open Next Recipe"
         }));
     }
     return items;
@@ -240,6 +298,7 @@
       ...syncEntries(source.sync || {}, now, stallMs),
       ...storageEntries(source.storage, now, ttlMs),
       ...recipeEntries(source.recipe || {}),
+      ...nextRecipeEntries(source.nextRecipe || {}),
       ...setupEntries(source.setup || {}),
       ...timelineEntries(source.timeline || {})
     ];

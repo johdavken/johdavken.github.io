@@ -126,7 +126,10 @@ test("the bell renders only what PolynAttentionCenter derives", () => {
 test("facts are written by the code that already computes them, not recomputed", () => {
   assert.match(app, /attentionFacts\.setup\.lineRateSet = state\.lineRate > 0;/);
   assert.match(app, /attentionFacts\.recipe\.layerTotalValid = layerTotalValid;/);
-  assert.match(app, /attentionFacts\.recipe\.invalidLayerNames = badLayers\.map\(L=>L\.name\);/);
+  assert.match(app, /attentionFacts\.recipe\.invalidLayers = badLayers;/);
+  // The plan's totals come from the Recipe editor's own working copy through
+  // the hook, not from a second calculation living in the bell.
+  assert.match(app, /attentionFacts\.nextRecipe = readNextRecipeFacts\?\.\(\)/);
   assert.match(app, /attentionFacts\.setup\.hopperWeightsUnset = allWeightsUnset;/);
   assert.match(app, /attentionFacts\.timeline\.trackedCount = tracked\.length;/);
   assert.match(app, /attentionFacts\.setup\.missingTrackedWeightCount = allWeightsUnset \? 0 : missingW;/);
@@ -183,7 +186,10 @@ test("transient storage failures get a real lifecycle instead of living forever"
 test("each action opens the right section and reveals the responsible control", () => {
   assert.match(app, /"review-setup": \(\)=>\{\s*\n\s*setWorkspacePanel\("lineSetupBlock", \{ reveal:true \}\);\s*\n\s*focusSoon\(\(\)=>\$\("lineRate"\)\);/);
   assert.match(app, /"open-weights": \(\)=>\{\s*\n\s*setWorkspacePanel\("lineSetupBlock", \{ reveal:true \}\);\s*\n\s*focusSoon\(\(\)=>responsibleControl\("weightsArea", '\[data-weight-view="edit"\]'\)\);/);
-  assert.match(app, /"open-recipe": \(\)=>\{\s*\n\s*setWorkspacePanel\("splitsBlock", \{ reveal:true \}\);\s*\n\s*focusSoon\(\(\)=>responsibleControl\("splitsArea", 'input\[id\^="lp_"\], input\.splitInput'\)\);/);
+  assert.match(app, /"open-recipe": \(\)=>\{\s*\n\s*setWorkspacePanel\("splitsBlock", \{ reveal:true \}\);\s*\n\s*setRecipePage\("current"\);\s*\n\s*focusSoon\(\(\)=>responsibleControl\("splitsArea", 'input\[id\^="lp_"\], input\.splitInput'\)\);/);
+  // A planning issue belongs to the Next page, so its action lands there -
+  // through the tab strip's own switch, not a second page-switching path.
+  assert.match(app, /"open-next-recipe": \(\)=>\{\s*\n\s*setWorkspacePanel\("splitsBlock", \{ reveal:true \}\);\s*\n\s*setRecipePage\("next"\);\s*\n\s*focusSoon\(\(\)=>responsibleControl\("splitsArea", 'input\[id\^="lp_"\], input\.splitInput'\)\);/);
   assert.match(app, /"retry-sync": \(\)=>\{\s*\n\s*setWorkspacePanel\("lineSyncBlock", \{ reveal:true \}\);/);
 });
 
@@ -234,15 +240,27 @@ test("contextual validation surfaces are all retained", () => {
   // Invalid-field outlines and accessible error relationships.
   assert.match(app, /el\.setAttribute\("aria-invalid", String\(!result\.valid\)\)/);
   assert.match(app, /el\.setCustomValidity\(result\.valid \? "" : result\.message\)/);
-  // Per-layer and per-column totals beside the fields. `tone` is "warn" on the
-  // running recipe and a muted "planning" on the Next page, where an unfinished
-  // total is expected rather than a fault.
-  assert.match(app, /summary\.className = `splitsMatrixSummary \$\{layerOkay \? "ok" : tone\}`/);
-  assert.match(app, /el\.className = `splitColumnTotal \$\{okay \? "ok" : tone\}`/);
-  assert.match(app, /const tone = planning \? "planning" : "warn";/);
   // Section-level markers in the sidebar and section pills.
   assert.match(app, /navButton\?\.setAttribute\("data-status", navState\)/);
   assert.match(app, /splitsStatus\.classList\.toggle\("badge-warn", !ready\)/);
+});
+
+test("percentage totals are not printed inline in the Recipe panel any more - they move the working surface when they appear and disappear", () => {
+  // Neither the layer-total line under the grid nor the per-column hopper
+  // total inside it is rendered; both conditions live in the bell instead.
+  assert.doesNotMatch(app, /splitsMatrixSummary/);
+  assert.doesNotMatch(app, /splitColumnTotal/);
+  assert.doesNotMatch(app, /hopperTotal_/);
+  assert.doesNotMatch(app, /Layer total: /);
+  assert.doesNotMatch(app, /function updateSplitTotals\(\)/);
+  const styles = fs.readFileSync("styles.css", "utf8");
+  assert.doesNotMatch(styles, /\.splitsMatrixSummary|\.splitColumnTotal|\.splitsMatrixActionInfo/);
+});
+
+test("the rule the inline totals used is unchanged - only where it is reported moved", () => {
+  // Same 0.0001 tolerance, same comparison, still computed in the app.
+  assert.match(app, /Math\.abs\(L\.totalPct - 100\) > 0\.0001/);
+  assert.match(app, /const layerTotalValid = !state\.layers\.length \|\| Math\.abs\(layerSum - 1\) <= 0\.0001;/);
 });
 
 test("the RT Sync status control and its tap-to-refresh behavior are preserved", () => {

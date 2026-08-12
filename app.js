@@ -569,6 +569,18 @@
    * recipe: whatever is now on this page is what its lot map describes. */
   function applyRecipeToActivePage(payload,{kind,lotByResin}={}){
     if(!isNextRecipePage()){
+      // applyRecipePayload writes state.lineType straight from the payload,
+      // which would silently override the layer count this line is locked to
+      // (see applyLayerCountLock). A scanned sheet is the likeliest source of
+      // a wrong one - handwriting, a sheet from the wrong line - and the
+      // resulting disagreement is not harmless: renderLineSync would keep
+      // trying to enforce the line's real layer count against a recipe that
+      // keeps asserting a different one. Refuse the load instead, and say
+      // why; the operator's current recipe is left exactly as it was.
+      const required=derivedRequiredLayerCount();
+      if(required!==null && Number(payload?.line_type)!==required){
+        return { ok:false, message:`This recipe is set up for ${payload?.line_type} layers, but this line runs ${required}. Nothing was changed.` };
+      }
       const result=window.PolynWorkspaceConfigurationPayloads?.applyRecipePayload(state,payload);
       if(!result?.ok) return { ok:false, message:result?.errors?.[0] };
       state.resinLots=rekeyLotMap(lotByResin);
@@ -806,7 +818,11 @@
    * can never disagree with the contextual validation beside the field. */
   const attentionFacts = {
     setup: { lineRateSet: true, hopperWeightsUnset: false, missingTrackedWeightCount: 0 },
-    recipe: { layerTotalPct: 100, layerTotalValid: true, invalidLayerNames: [] },
+    recipe: { layerTotalPct: 100, layerTotalValid: true, invalidLayers: [] },
+    // The planned recipe. `planned` is PolynNextRecipe.isMeaningful - a plan
+    // nobody has started raises nothing, so this stays silent for operators
+    // who never use the Next page.
+    nextRecipe: { planned: false, layerTotalPct: 100, layerTotalValid: true, invalidLayers: [] },
     timeline: { trackedCount: 0 },
     sync: { enabled: false, connected: false, status: "Local only", pendingCount: 0, message: "", oldestPendingAt: "" },
     storage: []
@@ -816,6 +832,11 @@
   // the init scope, so the renderer is registered rather than the whole of
   // that scope being hoisted out (or exposed globally) to reach it.
   let renderAttentionCenter = null;
+  // Also installed by init. The planned recipe's live value is the working
+  // copy inside the Recipe editor's scope, which only becomes
+  // state.nextRecipe on save - reading the durable payload from here would
+  // leave the bell one keystroke behind the operator.
+  let readNextRecipeFacts = null;
   function publishAttention(){ renderAttentionCenter?.(attentionFacts); }
 
   // A local-storage write failure is a transient event, not live state, so
@@ -3028,6 +3049,42 @@
       return isNextRecipePage() ? ensureNextRecipeWorking() : state.layers;
     }
 
+    /* The plan's own percentage totals, for the notification bell only (see
+     * readNextRecipeFacts). The same two rules the current recipe is measured
+     * by, applied to the plan - not a second set of validation rules.
+     *
+     * Reads the working copy when the operator has one open so the bell keeps
+     * up with live editing, and the durable payload otherwise (a plan restored
+     * from a session or arriving over RT Sync is reported without the Next
+     * page ever having been visited). */
+    readNextRecipeFacts = function(){
+      const layers = nextRecipeWorking
+        || (window.PolynNextRecipe?.normalize(state.nextRecipe)?.layers || []).map(layer=>({
+          name: layer.name,
+          layerPct: layer.layer_pct,
+          hoppers: layer.hoppers.map(hopper=>({ pct: hopper.pct, resinName: hopper.resin_name || "" }))
+        }));
+      const payload = layers.length
+        ? window.PolynNextRecipe?.fromCurrent({
+          lineType: state.lineType,
+          hopperNamingLine9: state.hopperNamingLine9,
+          layers
+        })
+        : null;
+      if (!window.PolynNextRecipe?.isMeaningful(payload)){
+        return { planned: false, layerTotalPct: 100, layerTotalValid: true, invalidLayers: [] };
+      }
+      const layerTotal = sum(layers.map(L=>clampNum(L.layerPct)));
+      return {
+        planned: true,
+        layerTotalPct: layerTotal,
+        layerTotalValid: Math.abs(layerTotal - 100) <= 0.0001,
+        invalidLayers: layers
+          .map(L=>({ name: L.name, totalPct: sum(L.hoppers.map(h=>clampNum(h.pct))) }))
+          .filter(L=>Math.abs(L.totalPct - 100) > 0.0001)
+      };
+    };
+
     /* ---- Load Next Recipe -------------------------------------------------
      * Promotion is applyRecipePayload - the identical call Saved Recipes
      * makes - so the plan becomes the live recipe under semantics that already
@@ -3496,10 +3553,6 @@
         setSavedRecipesOpen(turningOn);
       });
 
-      const summary = document.createElement("div");
-      summary.className = "splitsMatrixSummary";
-      summary.setAttribute("role", "status");
-      summary.setAttribute("aria-live", "polite");
       const recipeInfo = document.createElement("details");
       recipeInfo.className = "splitsInfo";
       recipeInfo.innerHTML = `
@@ -3509,17 +3562,18 @@
           <p><strong>Colored clock</strong> = tracked in the Timeline.</p>
         </div>
       `;
-      const actionInfo = document.createElement("div");
-      actionInfo.className = "splitsMatrixActionInfo";
-      actionInfo.append(summary);
-      // Lives at the right end of the button row, not next to the summary
-      // text - modeBar is display:flex, so appending it last here puts it
-      // after Print Recipe regardless of which of the three buttons are
-      // present/disabled.
+      // Lives at the right end of the button row - modeBar is display:flex,
+      // so appending it last here puts it after Print Recipe regardless of
+      // which of the three buttons are present/disabled.
       modeBar.appendChild(recipeInfo);
+      // Percentage problems are not printed here. They are conditions of the
+      // recipe, not of this render, so they belong in the notification bell
+      // (see attentionFacts.recipe / attentionFacts.nextRecipe) where they
+      // resolve on their own - an inline message that appears and disappears
+      // moves the whole working surface underneath the operator's hands.
       const actionRow = document.createElement("div");
       actionRow.className = "splitsMatrixActions";
-      actionRow.append(actionInfo, modeBar);
+      actionRow.append(modeBar);
       area.append(actionRow);
       if(!compactMobileRecipe) area.append(toolbar);
       area.append(savedRecipesPanel);
@@ -3636,11 +3690,6 @@
           th.appendChild(copyButton);
         }
 
-        const hopperTotal = document.createElement("div");
-        hopperTotal.id = `hopperTotal_${L.name}`;
-        hopperTotal.className = "splitColumnTotal";
-        th.appendChild(hopperTotal);
-
         pctInput.addEventListener("input",(e)=>{
           const accepted = acceptNumericInput(
             e.target,
@@ -3648,7 +3697,6 @@
             value => { L.layerPct = value; }
           );
           if (!accepted) return;
-          updateSplitTotals();
           updateLayerMetaDisplays();
           validateAndCompute({ sync: true });
           saveSession();
@@ -3946,7 +3994,6 @@
             cellRefs.get(`${L.name}:0`)?.refreshCellState();
             const h1Input = table.querySelector(`#p_${L.name}_0`);
             if (h1Input) h1Input.value = String(clampNum(L.hoppers[0].pct));
-            updateSplitTotals();
             validateAndCompute({ sync: true });
             saveSession();
           });
@@ -3974,7 +4021,6 @@
               pctInput.value = String(clampNum(hopper.pct));
             }
             refreshCellState();
-            updateSplitTotals();
             validateAndCompute({ sync: true, immediate: true, kind: "recipe-clear" });
             saveSession();
           });
@@ -4289,7 +4335,6 @@
 
         cellRefs.forEach(ref=>ref.refreshCellState());
 
-        updateSplitTotals();
         validateAndCompute({ sync: true });
         saveSession();
 
@@ -4303,33 +4348,6 @@
         }
       });
 
-      function updateSplitTotals(){
-        // The same arithmetic on both pages, but a different voice. On Current
-        // an incomplete total is a problem with the running job. On Next it is
-        // just a plan that isn't finished yet, so it reads as a note rather
-        // than a warning - and never as a current-job fault.
-        const planning = isNextRecipePage();
-        const tone = planning ? "planning" : "warn";
-        const shortfall = planning ? "of 100% planned" : "— expected 100%";
-
-        const layerTotal = sum(recipeLayers().map(L=>clampNum(L.layerPct)));
-        const layerOkay = Math.abs(layerTotal - 100) <= 0.0001;
-        summary.className = `splitsMatrixSummary ${layerOkay ? "ok" : tone}`;
-        summary.textContent = `Layer total: ${fmtNum(layerTotal,2)}% ${layerOkay ? "✓" : shortfall}`;
-        summary.hidden = layerOkay;
-
-        recipeLayers().forEach(L=>{
-          const hopperTotal = sum(L.hoppers.map(h=>clampNum(h.pct)));
-          const okay = Math.abs(hopperTotal - 100) <= 0.0001;
-          const el = table.querySelector(`#hopperTotal_${L.name}`);
-          if (!el) return;
-          el.hidden = okay;
-          el.className = `splitColumnTotal ${okay ? "ok" : tone}`;
-          el.textContent = okay ? "" : `Hoppers total: ${fmtNum(hopperTotal,2)}% ${shortfall}`;
-        });
-      }
-
-      updateSplitTotals();
       // Reapply (not force-close) the resolved state to this render's
       // freshly-created elements - both default to closed, but a render
       // triggered by switching panels (see the click handlers above) seeds
@@ -4472,17 +4490,17 @@
     const splitsStatus = $("splitsSummaryStatus");
     if (splitsStatus){
       const layerTotal = sum(state.layers.map(L=>clampNum(L.layerPct)));
-      const badLayers = state.layers.filter(L=>{
-        const hopperTotal = sum(L.hoppers.map(h=>clampNum(h.pct)));
-        return Math.abs(hopperTotal - 100) > 0.0001;
-      });
+      const badLayers = state.layers
+        .map(L=>({ name: L.name, totalPct: sum(L.hoppers.map(h=>clampNum(h.pct))) }))
+        .filter(L=>Math.abs(L.totalPct - 100) > 0.0001);
       const layerTotalBad = Math.abs(layerTotal - 100) > 0.0001;
       const errorCount = badLayers.length + (layerTotalBad ? 1 : 0);
       const ready = errorCount === 0 && state.layers.length > 0;
-      // Same badLayers the Recipe pill and the per-layer column totals
-      // already use - the attention center reads this result, it does not
-      // recompute the rule.
-      attentionFacts.recipe.invalidLayerNames = badLayers.map(L=>L.name);
+      // Same badLayers the Recipe pill already uses - the attention center
+      // reads this result, it does not recompute the rule. The totals travel
+      // with the names because the bell is now the only place they are
+      // printed; the grid no longer carries an inline copy.
+      attentionFacts.recipe.invalidLayers = badLayers;
       splitsStatus.classList.toggle("badge-ok", ready);
       splitsStatus.classList.toggle("badge-warn", !ready);
       splitsStatus.textContent = ready
@@ -4520,6 +4538,12 @@
       }
       attentionFacts.recipe.layerTotalValid = layerTotalValid;
       attentionFacts.recipe.layerTotalPct = layerSum * 100;
+      // Planning facts only. They are read here so every existing edit path
+      // republishes them, but they are deliberately kept out of msgs, out of
+      // the Recipe pill and out of readiness: an unfinished plan never makes
+      // the running job unready.
+      attentionFacts.nextRecipe = readNextRecipeFacts?.()
+        || { planned: false, layerTotalPct: 100, layerTotalValid: true, invalidLayers: [] };
 
       const allWeightsUnset = state.layers.length > 0 && state.layers.every(L=>
         L.hoppers.every(h=>effectiveHopperWeight(h) === 0)
@@ -6337,6 +6361,14 @@
         },
         "open-recipe": ()=>{
           setWorkspacePanel("splitsBlock", { reveal:true });
+          setRecipePage("current");
+          focusSoon(()=>responsibleControl("splitsArea", 'input[id^="lp_"], input.splitInput'));
+        },
+        // Reuses the tab strip's own page switch, so arriving from the bell
+        // leaves the editor in exactly the state clicking "Next" would.
+        "open-next-recipe": ()=>{
+          setWorkspacePanel("splitsBlock", { reveal:true });
+          setRecipePage("next");
           focusSoon(()=>responsibleControl("splitsArea", 'input[id^="lp_"], input.splitInput'));
         },
         // Reuses the existing Reconnect control rather than adding a second
