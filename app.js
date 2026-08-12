@@ -2931,6 +2931,11 @@
         });
         return source || { name, layerPct: clampNum(savedLayer?.layer_pct), hoppers };
       });
+      // H1 is derived, exactly as ensureLayers() does for the live recipe. A
+      // layer the operator never touched would otherwise sit at 0 instead of
+      // the automatic remainder, and the plan could never satisfy the H1
+      // parity rule that gates promotion.
+      nextRecipeWorking.forEach(recomputeAutoH1);
       return nextRecipeWorking;
     }
 
@@ -2965,6 +2970,78 @@
     /** The layers the Recipe editor should read and write right now. */
     function recipeLayers(){
       return isNextRecipePage() ? ensureNextRecipeWorking() : state.layers;
+    }
+
+    /* ---- Load Next Recipe -------------------------------------------------
+     * Promotion is applyRecipePayload - the identical call Saved Recipes
+     * makes - so the plan becomes the live recipe under semantics that already
+     * exist and are already tested: layer percentages, resin assignments and
+     * hopper percentages are replaced; receiver weights, tracking, pump-off
+     * and Smart Hopper dimensions carry forward from the hopper already in
+     * that position; H1 is recalculated. Nothing else on the line is touched.
+     *
+     * The plan is deliberately kept afterward. The operator may want to check
+     * what was applied against the printed sheet, and silently destroying
+     * carefully prepared data on success would be the wrong default. */
+
+    function renderLoadNextRecipeSummary(host, summary){
+      host.replaceChildren();
+      if (!summary) return;
+      if (summary.unchanged){
+        const same = document.createElement("p");
+        same.className = "muted";
+        same.textContent = "The planned recipe matches the current one — loading it changes nothing.";
+        host.append(same);
+        return;
+      }
+      summary.layerChanges.forEach(change=>{
+        const row = document.createElement("div");
+        row.className = "loadNextSummaryRow";
+        const name = document.createElement("strong");
+        name.textContent = `Layer ${change.name}`;
+        const value = document.createElement("span");
+        value.textContent = change.from === null || change.from === undefined
+          ? `${fmtNum(change.to, 2)}%`
+          : `${fmtNum(change.from, 2)}% → ${fmtNum(change.to, 2)}%`;
+        row.append(name, value);
+        host.append(row);
+      });
+      const counts = [];
+      if (summary.resinChanges) counts.push(`${summary.resinChanges} resin change${summary.resinChanges === 1 ? "" : "s"}`);
+      if (summary.percentageChanges) counts.push(`${summary.percentageChanges} percentage change${summary.percentageChanges === 1 ? "" : "s"}`);
+      if (counts.length){
+        const totals = document.createElement("p");
+        totals.className = "muted tiny";
+        totals.textContent = counts.join(" · ");
+        host.append(totals);
+      }
+    }
+
+    function openLoadNextRecipeDialog(){
+      const dialog = $("loadNextRecipeDialog");
+      if (!dialog?.showModal) return;
+      if (!window.PolynNextRecipe?.isPromotable(state.nextRecipe)) return;
+      const summary = window.PolynNextRecipe.summarizeChange(
+        window.PolynNextRecipe.fromCurrent(state),
+        state.nextRecipe
+      );
+      renderLoadNextRecipeSummary($("loadNextRecipeSummary"), summary);
+      dialog.addEventListener("close",()=>{
+        if (dialog.returnValue === "load") loadNextRecipeIntoCurrent();
+      }, { once:true });
+      dialog.showModal();
+    }
+
+    function loadNextRecipeIntoCurrent(){
+      const plan = window.PolynNextRecipe?.normalize(state.nextRecipe);
+      if (!plan) return { ok:false };
+      const result = window.PolynWorkspaceConfigurationPayloads?.applyRecipePayload(state, plan);
+      if (!result?.ok) return { ok:false, message: result?.errors?.[0] };
+      // state.nextRecipe is untouched by applyRecipePayload - the plan stays.
+      syncLineTypeUI();
+      renderWeightsArea(); renderSplitsArea(); validateAndCompute(); saveSession();
+      notifyActiveJobMutation({ immediate:true, kind:"load-next-recipe" });
+      return { ok:true };
     }
 
     function syncRecipePageUI(){
@@ -3131,6 +3208,27 @@
 
       const printButton=document.createElement("button"); printButton.type="button"; printButton.className="secondary rearrangeDesktopOnly"; printButton.textContent="Print Recipe"; printButton.disabled=!recipeLayers().some(L=>L.hoppers.some(h=>normName(h.resinName)||clampNum(h.pct)>0)); modeBar.appendChild(printButton);
       printButton.addEventListener("click", printRecipeSheet);
+
+      // The deliberate bridge from planned to running. Current-page only: on
+      // the Next page you are looking at the plan, so there is nothing to
+      // promote into. Disabled - rather than hidden - while the plan is
+      // incomplete, so the button explains itself instead of disappearing.
+      if (!isNextRecipePage()){
+        const loadNextButton = document.createElement("button");
+        loadNextButton.type = "button";
+        loadNextButton.id = "loadNextRecipeBtn";
+        loadNextButton.className = "secondary";
+        loadNextButton.textContent = "Load Next Recipe";
+        const planned = hasPlannedRecipe();
+        const promotable = !!window.PolynNextRecipe?.isPromotable(state.nextRecipe);
+        loadNextButton.hidden = !planned;
+        loadNextButton.disabled = !promotable;
+        loadNextButton.title = promotable
+          ? "Replace the current recipe with the planned Next Recipe"
+          : "The planned recipe isn't complete yet — its percentages need to total 100%";
+        loadNextButton.addEventListener("click", openLoadNextRecipeDialog);
+        modeBar.appendChild(loadNextButton);
+      }
 
       const mobileMoreButton=document.createElement("details");
       mobileMoreButton.className="mobileRecipeMore";
@@ -5567,6 +5665,7 @@
   const ACTIVE_JOB_PENDING_LABELS = {
     edit: "Production changes",
     "apply-recipe-scan": "Recipe scan applied",
+    "load-next-recipe": "Next Recipe loaded",
     "hopper-naming": "Hopper naming changed",
     "line-type": "Line type changed",
     "load-imported-setup": "Imported setup loaded",
