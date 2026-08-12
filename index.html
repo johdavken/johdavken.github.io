@@ -913,128 +913,339 @@
         <details class="helpTopic" id="helpQuickStart" open>
           <summary><span>Quick Start</span><small>Set up Resin.Tools in just a few minutes</small></summary>
           <div class="helpTopicBody">
-            <p>Resin.Tools can be set up in just a few minutes.</p>
-            <ol>
-              <li>Set the changeover deadline, enter the line rate, and select the layer count.</li>
-              <li>Verify the receiver hopper weights.</li>
-              <li>Build the layer recipe on the <strong>Recipe Setup</strong> page.</li>
-              <li>Turn on tracking for the hoppers involved in the changeover.</li>
-              <li>Open the <strong>Timeline</strong> to see when each hopper should begin running down.</li>
-              <li>Use <strong>Production Summary</strong> at the end of the run to total material usage for inventory.</li>
-            </ol>
+            <p class="helpLede">Six steps from a cold start to a tracked changeover. Everything after that is refinement.</p>
+
+            <div class="helpAsideRow">
+              <figure class="helpShot helpAside" style="--shot-w:220px">
+                <img src="branding/help/ui-nav.png" alt="Two navigation entries: Line Setup with an orange status reading Needs hopper weights, and Recipe, selected, with a green status reading Ready." loading="lazy">
+                <figcaption>Each section reports its own state. Work down the list until nothing is asking for attention.</figcaption>
+              </figure>
+              <ol class="helpSteps">
+                <li>Connect to your line with <a class="helpTopicLink" href="#helpCloudSync">RT Sync</a>. The line setup, including layer count, loads automatically.</li>
+                <li>Set the changeover deadline, enter the line rate, and verify the <a class="helpTopicLink" href="#helpSetup">receiver hopper weights</a>.</li>
+                <li>Build the layer recipe in <a class="helpTopicLink" href="#helpHopperPercentages">Recipe</a>.</li>
+                <li>Turn on <a class="helpTopicLink" href="#helpHopperPercentages">tracking</a> for the hoppers involved in the changeover.</li>
+                <li>Open the <a class="helpTopicLink" href="#helpTimeline">Timeline</a> to see when each hopper should begin running down.</li>
+                <li>Use <a class="helpTopicLink" href="#helpTools">Production Summary</a> at the end of the run to total material usage for inventory.</li>
+              </ol>
+            </div>
+
+            <hr class="helpRule">
+            <p class="helpEyebrow">Always visible</p>
+            <h3>The status bar</h3>
+            <figure class="helpShot helpWide" style="--shot-w:920px">
+              <img src="branding/help/ui-statusbar.png" alt="Status bar reading Output 1,150 lb/hr, Changeover 6:41 PM, Tracked 5, RT Sync Local only, and Next action: Next pump off A2, Purge Compound." loading="lazy">
+              <figcaption>Output, changeover, tracked count, sync state, and the single next thing to do — on every screen.</figcaption>
+            </figure>
           </div>
         </details>
 
         <details class="helpTopic" id="helpSetup">
           <summary><span>Setup</span><small>Prepare the line and timing inputs</small></summary>
           <div class="helpTopicBody">
-            <ol>
-              <li>Under <strong>Current Changeover</strong>, set the deadline, enter the current <strong>line rate</strong>, and select the <strong>layer count</strong>.</li>
-              <li>Use Display to choose the theme and time format.</li>
-              <li>Open <strong>Receiver hopper weights</strong> and enter the usable pounds held by each hopper. Accurate weights are required for useful run-down times.</li>
-              <li>Turn on <strong>Smart Hoppers</strong> to compute a hopper's weight automatically instead of entering it by hand. Use the wrench icon on a hopper to enter its usable height and circumference. A computed weight (marked with a green checkmark) only appears once the assigned resin has a measured bulk density in the Resin Database - until then, the entered weight above is used. When available, the computed weight is what drives the run-down, not the manual entry.</li>
-              <li>For faster weight entry, select individual cells, click a hopper number to select its row, or click a layer heading to select its column. Enter one weight above the matrix and apply it to the selection.</li>
-              <li>Choose whether receiver hoppers use numbered labels or Main + 1–5 labels. On mobile, this control is available in Advanced mode.</li>
-            </ol>
-            <p class="helpTip"><strong>Heads up:</strong> Changes save to this browser immediately. Setup warnings identify missing weights or other inputs that reduce timing accuracy.</p>
+            <p class="helpLede">Two things drive every run-down time: <strong>how fast the line runs</strong> and <strong>how much each hopper holds</strong>. Get those right and the Timeline takes care of itself.</p>
+
+            <div class="helpSplit is-autoMedia">
+              <figure class="helpShot" style="--shot-w:214px">
+                <img src="branding/help/setup-config.png" alt="Line configuration panel with a 1, 3, 5 layer selector set to 3, a changeover tile reading 6:41 PM, and an output tile reading 1150 pounds per hour." loading="lazy">
+              </figure>
+              <div>
+                <p class="helpEyebrow">Left column</p>
+                <h3>Line configuration</h3>
+                <p>Pick the <strong>layer count</strong>, set the <strong>changeover deadline</strong>, and enter the current <strong>output</strong> in lb/hr.</p>
+                <p class="helpCaption">Connected to RT Sync? Layer count arrives with the line — you won't set it here.</p>
+              </div>
+            </div>
+
+            <hr class="helpRule">
+            <p class="helpEyebrow">Right column</p>
+            <h3>Receiver hopper weights</h3>
+            <p>Enter the <strong>usable pounds</strong> each hopper holds — conservative beats optimistic. Without these, run-down times can't be calculated.</p>
+            <figure class="helpShot helpWide" style="--shot-w:909px">
+              <img src="branding/help/setup-matrix.png" alt="Receiver hopper weight matrix, six numbered hopper rows against layer columns A, B and C, with weights such as 1450 lb, 1850 lb and 980 lb entered in the first two rows." loading="lazy">
+              <figcaption>Click a hopper number to select that row, a layer letter to select the column, or cells individually — then apply one weight to everything selected via <strong>Bulk edit</strong>.</figcaption>
+            </figure>
+
+            <div class="helpCallout is-stacked">
+              <figure class="helpShot" style="--shot-w:548px">
+                <img src="branding/help/setup-smart.png" alt="Smart Hoppers control row, labelled Resin-specific calculated capacity, with its toggle switched to Disabled." loading="lazy">
+              </figure>
+              <div>
+                <strong class="helpCalloutTitle">Smart Hoppers</strong>
+                <p>Calculates capacity from hopper dimensions and resin density instead of a typed weight. Add each hopper's usable height and circumference with its wrench icon.</p>
+                <p class="helpCaption">A computed weight (green checkmark) appears only once that resin has a measured bulk density on file. When it appears, it drives the run-down instead of the typed value.</p>
+              </div>
+            </div>
+
+            <p class="helpTip"><strong>Heads up:</strong> Changes save to this browser immediately. Setup warnings call out missing weights and anything else that reduces timing accuracy.</p>
           </div>
         </details>
 
         <details class="helpTopic" id="helpHopperPercentages">
-          <summary><span>Recipe Setup</span><small>Build the layer and resin recipe</small></summary>
+          <summary><span>Recipe</span><small>Build the layer and resin recipe</small></summary>
           <div class="helpTopicBody">
-            <ol>
-              <li>Enter the percentage of total output assigned to each layer. The layer percentages should total 100%.</li>
-              <li>Enter or choose a resin name in every active hopper's empty resin field.</li>
-              <li>Enter hopper percentages in hoppers 2–6. Hopper 1 is calculated automatically as the remaining percentage so each layer totals 100%.</li>
-              <li>Use the clock button beside a hopper to include it in the Timeline. Bulk-selection checkboxes are separate and appear only in Bulk Edit mode.</li>
-              <li>Use a layer's <strong>Copy</strong> button when another layer uses the same resins and hopper percentages. Copy does not change the destination layer percentage.</li>
+            <p class="helpLede">Layer percentages, resin names, and hopper blend percentages for the current job. One toolbar at the bottom holds every recipe action.</p>
+
+            <div class="helpSplit is-autoMedia">
+              <figure class="helpShot" style="--shot-w:541px">
+                <img src="branding/help/recipe-grid.png" alt="Recipe hopper grid for layers A, B and C. Layer percentages read 20, 50 and 30 percent. Hoppers A1, A2, B1, C1 and C2 hold resin names and blend percentages; the rest are empty." loading="lazy">
+              </figure>
+              <div>
+                <p class="helpEyebrow">Read the grid</p>
+                <h3>Layers across, hoppers down</h3>
+                <p>Each column is a layer with its share of total output. Each row is a hopper position feeding that layer.</p>
+                <p class="helpCaption">Layer percentages should total 100%. A problem message appears under a layer only when its hoppers need attention.</p>
+              </div>
+            </div>
+
+            <div class="helpCallout">
+              <figure class="helpShot" style="--shot-w:181px">
+                <img src="branding/help/recipe-cell.png" alt="A single hopper cell labelled A1 with a highlighted clock icon, a clear button, the resin MSO 440, and 85 percent." loading="lazy">
+              </figure>
+              <div>
+                <strong class="helpCalloutTitle">One hopper, four controls</strong>
+                <p>The <strong>badge</strong> names the position. The <strong>clock</strong> adds it to the Timeline — colored means tracked. The <strong>×</strong> clears it. Then the resin name and its blend percentage.</p>
+              </div>
+            </div>
+
+            <ol class="helpSteps">
+              <li>Enter each layer's percentage of total output, above the grid.</li>
+              <li>Type or pick a resin name. Optional — a hopper can carry a percentage without one.</li>
+              <li>Fill hoppers 2–6. <strong>Hopper 1 is calculated for you</strong> as the remainder, so every layer lands on 100%.</li>
+              <li>Click the clock on each hopper involved in the changeover.</li>
             </ol>
-            <h3>Rearranging Hoppers</h3>
-            <ol>
-              <li>On desktop, select <strong>Rearrange Hoppers</strong> to enter rearrange mode.</li>
-              <li>Drag an assigned hopper onto another hopper. Assignments move to an empty hopper or swap with the assignment already there, including across layers.</li>
-              <li>Hopper 1 is recalculated after each move. A move that would make a layer's percentages invalid is not applied.</li>
-              <li>Use <strong>Undo Last Move</strong> to step back, <strong>Cancel</strong> to restore the recipe as it was when rearrange mode started, or <strong>Done</strong> to keep the changes.</li>
+
+            <p class="helpTip">Where a layer offers <span class="helpKey">Match</span> — B and D, or A and E — it copies that layer's resins and hopper percentages across. It leaves the destination layer's own percentage alone.</p>
+
+            <hr class="helpRule">
+            <p class="helpEyebrow">Bottom of the panel</p>
+            <h3>The toolbar</h3>
+            <figure class="helpShot helpWide" style="--shot-w:509px">
+              <img src="branding/help/recipe-toolbar.png" alt="Recipe toolbar with buttons for Saved recipes, Bulk edit, Rearrange, Scan Recipe, Print Recipe, and an information icon." loading="lazy">
+              <figcaption>The ⓘ is a reminder that resin names are optional and a colored clock means tracked.</figcaption>
+            </figure>
+
+            <div class="helpGrid">
+              <div class="helpCard"><strong>Saved Recipes</strong><span>Load, save, rename, duplicate, favorite, or delete a recipe shared with your RT Sync workspace.</span></div>
+              <div class="helpCard"><strong>Bulk Edit</strong><span>Apply one resin or percentage to many hoppers at once.</span></div>
+              <div class="helpCard"><strong>Rearrange</strong><span>Move or swap assignments between hoppers, including across layers.</span></div>
+              <div class="helpCard"><strong>Scan Recipe</strong><span>Fill the grid from a photo. See <a class="helpTopicLink" href="#helpRecipeScan">Scan Recipe</a>.</span></div>
+            </div>
+
+            <p class="helpTip"><strong>Loading a recipe</strong> replaces layer percentages, resin names, and hopper percentages only. Receiver hopper weights and tracking are never touched.</p>
+
+            <hr class="helpRule">
+            <h3>Bulk Edit</h3>
+            <div class="helpSplit is-autoMedia">
+              <figure class="helpShot" style="--shot-w:605px">
+                <img src="branding/help/recipe-bulk-grid.png" alt="Recipe grid in Bulk Edit mode. A Select row column of numbers 1 to 6 runs down the left, layer letters head each column, and every hopper cell carries a checkbox." loading="lazy">
+              </figure>
+              <div>
+                <p>The grid gains a <strong>Select row</strong> column and clickable layer headings. Pick a whole hopper position across every layer, a whole layer, or cell by cell.</p>
+              </div>
+            </div>
+            <figure class="helpShot helpWide" style="--shot-w:920px">
+              <img src="branding/help/recipe-bulk-panel.png" alt="Bulk edit panel showing three numbered stages — Select hoppers, Enter changes, Apply — above Resin name and Percentage fields, an Apply to selected button, Select all and Clear selection links, and a Reset all button." loading="lazy">
+              <figcaption>The panel walks the same three stages every time.</figcaption>
+            </figure>
+            <ol class="helpSteps">
+              <li>Select the hoppers — individually, a numbered row, a layer heading, or <span class="helpKey">Select all</span>.</li>
+              <li>Enter a resin name, a percentage, or both. Blank fields leave existing values alone.</li>
+              <li><span class="helpKey">Apply to selected</span>. Percentages are rejected where they would push a layer past 100%.</li>
             </ol>
-            <h3>Using Bulk Edit</h3>
-            <ol>
-              <li>Turn on <strong>Bulk Edit</strong>.</li>
-              <li>Select cells individually, a numbered row, a layer column, or all hoppers.</li>
-              <li>Enter a resin name, a hopper percentage, or both in the bulk fields.</li>
-              <li>Select <strong>Apply</strong>. Resin names apply to every selected cell; percentages apply only where editable and are rejected if they would push a layer over 100%.</li>
-              <li>Use <strong>Reset all</strong> to empty every resin field and clear hopper percentages, tracking, and pump-off states before building a recipe again.</li>
-            </ol>
-            <p class="helpTip">A problem message appears below a layer only when its hopper percentages need attention.</p>
+            <p class="helpTip"><span class="helpKey">Reset all</span> empties every resin field and clears percentages, tracking, and pump-off states — a clean slate before building a new recipe.</p>
+
+            <hr class="helpRule">
+            <h3>Rearrange</h3>
+            <figure class="helpShot helpWide" style="--shot-w:920px">
+              <img src="branding/help/recipe-rearrange-bar.png" alt="Rearrange mode bar reading: drag, or tap a hopper then tap another, to move assignments. Hopper 1 is recalculated after each move. Undo Last Move and Cancel buttons sit at the right." loading="lazy">
+            </figure>
+            <p>Drag one hopper onto another on desktop, or tap a source then a destination on a touch screen. Dropping onto an empty hopper moves the assignment; onto a filled one, they swap — including across layers.</p>
+            <p class="helpTip">Only the resin and its percentage move. <strong>Receiver weight, tracking, and pump-off stay with the physical hopper.</strong></p>
+            <p class="helpTip">Hopper 1 recalculates after every move, and a move that would make a layer invalid is refused. <span class="helpKey">Undo Last Move</span> steps back, <span class="helpKey">Cancel</span> restores the recipe as it was, <span class="helpKey">Done Rearranging</span> keeps it.</p>
+
+            <hr class="helpRule">
+            <h3>On mobile</h3>
+            <div class="helpSplit is-autoMedia">
+              <figure class="helpShot is-device" style="--shot-w:390px">
+                <img src="branding/help/recipe-mobile-overflow.png" alt="Mobile Recipe view showing one layer at a time with layer tabs A, B and C on the right, and the toolbar overflow menu open showing Scan job traveler, Scan dosing screen, Scan heat sheet, and Print recipe." loading="lazy">
+              </figure>
+              <div>
+                <p>One layer at a time — switch with the <strong>A / B / C tabs</strong> down the right edge.</p>
+                <p>Saved Recipes, Bulk Edit, and Rearrange stay on the toolbar. Scan Recipe's three sources and Print Recipe move into the <strong>•••</strong> menu.</p>
+                <p class="helpCaption">Bulk Edit opens as a bottom sheet here rather than an inline panel.</p>
+              </div>
+            </div>
           </div>
         </details>
 
         <details class="helpTopic" id="helpTimeline">
           <summary><span>Timeline</span><small>Follow hopper changeover timing</small></summary>
           <div class="helpTopicBody">
-            <ol>
-              <li>Only hoppers with their clock tracking button enabled appear in the timeline.</li>
-              <li>With a changeover deadline set, entries are sorted by the time each hopper should begin running down. Without a deadline, they are sorted by time to empty.</li>
-              <li>After physically turning off a hopper pump, mark <strong>Pump off</strong>. Completed hoppers are hidden unless <strong>Show all</strong> is enabled.</li>
-              <li>Use <strong>Reset tracking</strong> at the appropriate time to untrack every hopper and clear pump-off states.</li>
-            </ol>
-            <p class="helpTip">On mobile, select <strong>Timeline</strong> beneath the Resin.Tools logo to hide every other section and keep only the timeline and production footer visible.</p>
-            <p class="helpTip">The footer on mobile shows the next tracked hopper and current RT Sync status.</p>
+            <p class="helpLede">The running order for the changeover: which hopper to pump off next, and when.</p>
+
+            <figure class="helpShot helpWide" style="--shot-w:760px">
+              <img src="branding/help/timeline-list.png" alt="Timeline list of five tracked hoppers: A2 Purge Compound, C2 Regrind Blend, A1 MSO 440, B1 LLDPE 1001 and C1 Color Concentrate Blue. Each row shows a feed rate, an empty-in duration, a start time, and a Pump off checkbox." loading="lazy">
+              <figcaption>Only tracked hoppers appear here, ordered by what needs attention first.</figcaption>
+            </figure>
+
+            <div class="helpCallout">
+              <figure class="helpShot" style="--shot-w:470px">
+                <img src="branding/help/timeline-entry.png" alt="The data half of one timeline row: hopper A2, resin Purge Compound, 620 pounds, 34.5 pounds per hour, empty in 17 hours 58 minutes, start 12:42 AM." loading="lazy">
+              </figure>
+              <div>
+                <strong class="helpCalloutTitle">Reading a row</strong>
+                <p>Hopper and resin, how much it holds, how fast it's drawing, and how long until it runs dry. <strong>Start</strong> is the clock time to begin running it down.</p>
+                <p class="helpCaption">With a changeover deadline set, rows sort by start time. Without one, they sort by time to empty.</p>
+              </div>
+            </div>
+
+            <div class="helpSplit is-autoMedia">
+              <figure class="helpShot" style="--shot-w:227px">
+                <img src="branding/help/timeline-controls.png" alt="Timeline controls: a Show all toggle, switched off, beside a Reset tracking button." loading="lazy">
+              </figure>
+              <div>
+                <p>Tick <span class="helpKey">Pump off</span> once you've physically shut a pump down. That row then hides itself unless <span class="helpKey">Show all</span> is on.</p>
+                <p><span class="helpKey">Reset tracking</span> untracks every hopper and clears pump-off states, ready for the next job.</p>
+              </div>
+            </div>
+
+            <hr class="helpRule">
+            <h3>On mobile</h3>
+            <div class="helpSplit is-narrowMedia is-reverse">
+              <figure class="helpShot is-device" style="--shot-w:366px">
+                <img src="branding/help/mobile-timeline.png" alt="Mobile Timeline showing the Show all toggle, Reset tracking, a Timeline alarm option, and the list of tracked hopper rows, above the persistent app dock." loading="lazy">
+              </figure>
+              <div>
+                <p>The phone layout is the same list, sized for a glance across the floor.</p>
+                <p>Turn on <strong>Alarm when pump-off is due</strong> for sound and vibration while Resin.Tools is open.</p>
+                <figure class="helpShot" style="--shot-w:366px">
+                  <img src="branding/help/mobile-footer.png" alt="Mobile app dock with Display, Shortcuts, Main, Account, and an RT Sync status button reading Local only." loading="lazy">
+                  <figcaption>The dock carries the next tracked hopper and live RT Sync status on every screen.</figcaption>
+                </figure>
+              </div>
+            </div>
           </div>
         </details>
 
         <details class="helpTopic" id="helpCloudSync">
           <summary><span>RT Sync</span><small>Share a production line across devices</small></summary>
           <div class="helpTopicBody">
-            <ol>
-              <li>Create one permanent line workspace on the first device and give the device a recognizable label.</li>
-              <li>Generate a four-character link code. On another device, open RT Sync, enter that code, and select <strong>Join RT Sync</strong>.</li>
-              <li>On phones, RT Sync is simplified around the current line, device label, sync details, Refresh, Disconnect, and Leave. Line creation, naming, link-code generation, and device administration remain on desktop.</li>
-              <li>Watch the status and unsynced-change count. When something is pending, a list appears showing exactly what hasn't synced yet, with a Discard option for anything stuck against an unreachable workspace. Local changes save first, then upload; other connected devices update without a page refresh.</li>
-              <li><strong>Disconnect on this device</strong> pauses syncing but keeps membership. <strong>Leave RT Sync</strong> removes that device's membership.</li>
-              <li><strong>New job</strong> clears current job inputs and tracking while preserving the line workspace, linked devices, Saved Line Settings, and hopper weights.</li>
+            <p class="helpLede">One shared job state across every device on the line. Resin.Tools works fully offline — connect only when a line should be shared.</p>
+
+            <p class="helpEyebrow">First device</p>
+            <h3>Create the line</h3>
+            <ol class="helpSteps">
+              <li>Create one permanent workspace for the line and give this device a recognizable label.</li>
+              <li>Generate a four-character link code.</li>
             </ol>
-            <p class="helpTip">Link codes are one-time codes that expire after 30 minutes. The owner must transfer ownership before leaving and is the only device allowed to remove members or delete the shared line.</p>
-            <p class="helpTip">On mobile, tap the footer's RT Sync status to refresh the connection and apply any unsynced changes immediately.</p>
+
+            <div class="helpSplit is-autoMedia">
+              <figure class="helpShot" style="--shot-w:500px">
+                <img src="branding/help/sync-join.png" alt="Link code field containing AB23, beside a Join RT Sync button." loading="lazy">
+              </figure>
+              <div>
+                <p class="helpEyebrow">Every other device</p>
+                <h3>Join it</h3>
+                <p>Open RT Sync, type the code, and select <span class="helpKey">Join RT Sync</span>.</p>
+                <p class="helpCaption">Codes are single-use and expire after 30 minutes.</p>
+              </div>
+            </div>
+
+            <hr class="helpRule">
+            <p class="helpEyebrow">Day to day</p>
+            <h3>Knowing where you stand</h3>
+            <div class="helpSplit is-autoMedia">
+              <figure class="helpShot" style="--shot-w:255px">
+                <img src="branding/help/sync-metrics.png" alt="Two status pills reading Last sync Never and Unsynced changes 0." loading="lazy">
+              </figure>
+              <div>
+                <p>Local changes always save first, then upload. Other devices update without a refresh.</p>
+                <p>When something is pending, a list appears naming exactly what hasn't synced — with a Discard option for anything stuck against an unreachable workspace.</p>
+              </div>
+            </div>
+
+            <figure class="helpShot helpWide" style="--shot-w:432px">
+              <img src="branding/help/sync-actions.png" alt="RT Sync action toolbar with Create line, Rename line, Connect / retry and New job on the first row, and Generate Link Code, Disconnect on this device and Leave RT Sync on the second." loading="lazy">
+            </figure>
+            <div class="helpGrid">
+              <div class="helpCard"><strong>New job</strong><span>Clears job inputs and tracking. Keeps the workspace, linked devices, saved settings, and hopper weights.</span></div>
+              <div class="helpCard"><strong>Disconnect on this device</strong><span>Pauses syncing here but keeps membership.</span></div>
+              <div class="helpCard"><strong>Leave RT Sync</strong><span>Removes this device's membership entirely.</span></div>
+            </div>
+
+            <p class="helpTip">Only the owner can remove another device or delete the shared line, and must transfer ownership before leaving.</p>
+            <p class="helpTip">Phones show a simplified panel — current line, device label, sync details, Refresh, Disconnect, Leave. Creating and naming lines, link codes, and device administration stay on desktop. Tap the dock's RT Sync status to refresh immediately.</p>
           </div>
         </details>
 
         <details class="helpTopic" id="helpTools">
           <summary><span>Tools</span><small>Production calculators and resin reference</small></summary>
           <div class="helpTopicBody">
-            <p>Select a utility from the tool index. Resin.Tools displays one tool at a time to keep the workspace focused and reduce scrolling.</p>
-            <ul>
-              <li><strong>Production Summary:</strong> Build the active recipe first, then enter production and scrap pounds to calculate material totals by resin for production reporting and inventory issuance.</li>
-              <li><strong>Short Footage Calculator:</strong> Enter actual weight, target footage, and the last good weight to calculate adjusted short footage.</li>
-              <li><strong>Hopper Weight Calculator:</strong> Enter hopper circumference and usable height, then provide bulk density directly or estimate it from polymer density and the adjustable packing factor.</li>
-              <li><strong>Resin Reference:</strong> Search by resin code or description. Select a suggestion to view description, density, material information, and typical uses. The Copy button copies the numeric density.</li>
-              <li><strong>Scan Recipe:</strong> Fill Recipe Setup from a photo of a job traveler, dosing screen, or heat sheet. See the Scan Recipe topic below for what each source needs and what to check before applying.</li>
-            </ul>
+            <p class="helpLede">Five utilities, one at a time, so the workspace stays focused.</p>
+
+            <div class="helpSplit is-autoMedia">
+              <figure class="helpShot" style="--shot-w:170px">
+                <img src="branding/help/tools-index.png" alt="Tool index listing Production Summary, Short Footage, Hopper Weight, Resin Reference, and Scan Recipe, with Production Summary selected." loading="lazy">
+                <figcaption>Pick from the index; the panel swaps beside it.</figcaption>
+              </figure>
+              <div class="helpGrid" style="margin:0">
+                <div class="helpCard"><strong>Production Summary</strong><span>Material totals by resin for reporting and inventory issuance.</span></div>
+                <div class="helpCard"><strong>Short Footage</strong><span>Adjusted short footage from actual weight, target footage, and last good weight.</span></div>
+                <div class="helpCard"><strong>Hopper Weight</strong><span>Capacity from circumference and usable height, with bulk density entered or estimated.</span></div>
+                <div class="helpCard"><strong>Resin Reference</strong><span>Search by code or description for density, material information, and typical uses.</span></div>
+              </div>
+            </div>
+
+            <hr class="helpRule">
+            <p class="helpEyebrow">End of run</p>
+            <h3>Production Summary</h3>
+            <p>Build the recipe first, then enter production and scrap pounds. Totals are split by material using the current recipe percentages.</p>
+            <figure class="helpShot helpWide" style="--shot-w:920px">
+              <img src="branding/help/tools-summary.png" alt="Production Summary results: a totals band reading Production 1624 lb, Scrap 534 lb, Total 2158 lb, followed by a by-material list with LLDPE 1001 at 1079 lb, Color Concentrate Blue at 582 lb, MSO 440 at 366 lb and Purge Compound at 64 lb." loading="lazy">
+              <figcaption>Pounds per resin, ready to hand to inventory.</figcaption>
+            </figure>
           </div>
         </details>
 
         <details class="helpTopic" id="helpRecipeScan">
-          <summary><span>Scan Recipe</span><small>Fill Recipe Setup from a photo</small></summary>
+          <summary><span>Scan Recipe</span><small>Fill Recipe from a photo</small></summary>
           <div class="helpTopicBody">
-            <p>Scan Recipe reads a photo of a paper or screen source and builds a draft recipe for you to review. Nothing is written to Recipe Setup until you select Apply.</p>
-            <h3>Scan Job Traveler</h3>
-            <ol>
-              <li>On a 3- or 5-layer line, you'll first be asked which physical end layer A represents, since the printed table doesn't label this itself.</li>
-              <li>Take or choose a photo of the job traveler's product blend table. Hand-written hopper numbers next to a resin are read automatically when legible.</li>
+            <p class="helpLede">Photograph a paper or screen source and Resin.Tools drafts the recipe for you. <strong>Nothing is written until you select Apply.</strong></p>
+
+            <div class="helpSplit is-autoMedia">
+              <figure class="helpShot" style="--shot-w:232px">
+                <img src="branding/help/scan-menu.png" alt="Scan Recipe menu open on the Recipe toolbar, offering Scan Job Traveler, Scan Dosing Screen, and Scan Heat Sheet." loading="lazy">
+              </figure>
+              <div>
+                <p>Three sources, from the Recipe toolbar or the Tools index. Each reads a different document, so pick the one in your hand.</p>
+              </div>
+            </div>
+
+            <p class="helpEyebrow">Source</p>
+            <h3>Job Traveler</h3>
+            <ol class="helpSteps">
+              <li>On a 3- or 5-layer line, say which physical end layer A represents — the printed table doesn't record it.</li>
+              <li>Photograph the product blend table. Hand-written hopper numbers beside a resin are read automatically when legible.</li>
             </ol>
-            <h3>Scan Dosing Screen</h3>
-            <ol>
-              <li>Take or choose a photo of the dosing controller's material overview screen, or a printout of it. Validated for lines 9-11.</li>
-              <li>No orientation question - component position maps directly to hopper number, so there are no hopper letters to sort out afterward.</li>
-              <li>This screen never prints layer percentages; enter them on the review screen.</li>
+
+            <p class="helpEyebrow">Source</p>
+            <h3>Dosing Screen</h3>
+            <ol class="helpSteps">
+              <li>Photograph the dosing controller's material overview screen, or a printout. Validated for lines 9–11.</li>
+              <li>No orientation question — component position maps straight to hopper number.</li>
+              <li>Enter layer percentages on the review screen; this source never prints them.</li>
             </ol>
-            <h3>Scan Heat Sheet</h3>
-            <ol>
-              <li>On a 3- or 5-layer line, you'll first be asked which physical end layer A represents, same as Job Traveler.</li>
-              <li>Take or choose a photo of the blender/layer settings heat sheet. An unused hopper is simply not written down, not padded with a zero row.</li>
-              <li>Legible handwriting matters most here. Writing in layer percentages and hopper designations when you fill one out helps it import cleanly.</li>
+
+            <p class="helpEyebrow">Source</p>
+            <h3>Heat Sheet</h3>
+            <ol class="helpSteps">
+              <li>Same layer-A orientation question as Job Traveler.</li>
+              <li>Photograph the blender / layer settings sheet. Unused hoppers are simply absent, not zero rows.</li>
+              <li>Legible handwriting matters most here. Writing in layer percentages and hopper designations helps it import cleanly.</li>
             </ol>
-            <p class="helpTip"><strong>Review carefully:</strong> a scan can misread handwriting or a low-quality photo. Check every layer, hopper, and percentage on the review screen - and watch for its warnings about percentages that don't total 100% - before applying.</p>
+
+            <p class="helpTip is-warn"><strong>Always review before applying.</strong> A scan can misread handwriting or a poor photo. Check every layer, hopper, and percentage on the review screen, and watch its warnings about totals that miss 100%.</p>
           </div>
         </details>
 
