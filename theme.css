@@ -82,11 +82,11 @@
 
 }
 
-/* ----------------------------------------------------------------------- * Industrial Slate (legacy value: mse) * ----------------------------------------------------------------------- */
-:where(html, body)[data-theme="mse"]{
+/* ----------------------------------------------------------------------- * Industrial Slate * ----------------------------------------------------------------------- */
+:where(html, body)[data-theme="industrial-slate"]{
   color-scheme: light;
   --bg: #f5f4f3;
-  --desktop-canvas-bg: #e3eaf0;
+  --desktop-canvas-bg: #9dafbf;
   --panel: #ffffff;
   --panel2: #faf9f8;
   --text: #29282b;

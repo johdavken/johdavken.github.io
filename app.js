@@ -51,7 +51,7 @@
       prodResinLb: 0,
       scrapResinLb: 0,
       density: "comfort",
-      theme: "mse",
+      theme: "industrial-slate",
       timeFormat: "12",
       surfaceStyle: "divided",
       mobileTileStyle: "minimal",
@@ -1206,16 +1206,18 @@
   function applyTheme(t){
       const saved = String(t || "");
       const migrations = new Map([
-        ["light", "mse"],
-        ["mse", "mse"],
+        ["light", "industrial-slate"],
+        ["mse", "industrial-slate"],
+        ["industrial-slate", "industrial-slate"],
         ["dark", "industrial-slate-dark"],
         ["industrial-slate-dark", "industrial-slate-dark"],
         ["gruvbox-dark", "gruvbox-dark"]
       ]);
-      // Removed themes have a deterministic Light fallback. This also
-      // safely migrates old locally stored and imported preferences without
-      // leaving a theme value that the simplified selector cannot display.
-      const theme = migrations.get(saved) || "mse";
+      // Removed themes have a deterministic Industrial Slate fallback. This
+      // also safely migrates old locally stored and imported preferences
+      // (including the legacy "light"/"mse" values) without leaving a theme
+      // value that the simplified selector cannot display.
+      const theme = migrations.get(saved) || "industrial-slate";
 
       document.documentElement.setAttribute("data-theme", theme);
       document.body.setAttribute("data-theme", theme);
@@ -1508,7 +1510,7 @@
       state.prodResinLb = clampNum(payload.prodResinLb);
       state.scrapResinLb = clampNum(payload.scrapResinLb);
 
-      applyTheme(payload.theme || "mse");
+      applyTheme(payload.theme || "industrial-slate");
       applyDensity(payload.density || "comfort");
       applyTimeFormat(payload.timeFormat || "12");
       applySurfaceStyle(payload.surfaceStyle || defaultSurfaceStyle());
@@ -6165,7 +6167,7 @@
       const restored = loadSession();
       if (!restored){
         applyDensity("comfort");
-        applyTheme("mse");
+        applyTheme("industrial-slate");
         applyTimeFormat("12");
         applySurfaceStyle(defaultSurfaceStyle());
         rebuildUIFromState();
@@ -6192,7 +6194,7 @@
       }
 
       // Ensure theme/logo applied even after restore
-      applyTheme(state.theme || "mse");
+      applyTheme(state.theme || "industrial-slate");
       applyTimeFormat(state.timeFormat || "12");
       applySurfaceStyle(state.surfaceStyle || defaultSurfaceStyle());
       applyMobileTileStyle("minimal");

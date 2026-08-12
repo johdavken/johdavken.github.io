@@ -10,7 +10,7 @@ test("Appearance is replaced by a compact Display sheet",()=>{
   assert.doesNotMatch(html,/mobileAppearanceTile|statusPreferences|densitySel/);
   assert.match(html,/id="displaySheet"/);
   assert.match(html,/id="appFooterDisplay"[^>]*aria-label="Display settings"/);
-  assert.match(html,/id="themeSel"[\s\S]*?>Light<[\s\S]*?>Dark<[\s\S]*?>Gruvbox</);
+  assert.match(html,/id="themeSel"[\s\S]*?>Industrial Slate<[\s\S]*?>Dark<[\s\S]*?>Gruvbox</);
   assert.match(html,/id="timeFormatSel"/);
   assert.match(app,/function openDisplaySheet\(event\)/);
   assert.doesNotMatch(html,/displaySheetClose|Close display settings/);

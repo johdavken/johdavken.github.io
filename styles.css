@@ -5268,7 +5268,7 @@ body[data-surface-style="divided"] .helpTopic{
   .desktopDisplayToggle{display:none}
   main{padding-bottom:calc(var(--app-dock-height) + env(safe-area-inset-bottom) + 22px)!important}
 
-  body[data-theme="mse"][data-mobile-background-style="theme-native"]{
+  body[data-theme="industrial-slate"][data-mobile-background-style="theme-native"]{
     background:radial-gradient(circle at 20% 0,color-mix(in srgb,var(--focus-border) 7%,transparent),transparent 42%),var(--bg);
     background-attachment:fixed;
   }
