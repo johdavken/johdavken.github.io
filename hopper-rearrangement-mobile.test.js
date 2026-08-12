@@ -99,7 +99,7 @@ test("Rearrange is no longer desktop-only, while Print Recipe still is", () => {
   const modeBar = app.slice(modeBarStart, app.indexOf("const toolbar = document.createElement", modeBarStart));
   assert.match(modeBar, /rearrangeButton\.className="secondary"/);
   assert.doesNotMatch(modeBar, /rearrangeButton\.className="secondary rearrangeDesktopOnly"/);
-  assert.match(modeBar, /printButton\.className="secondary rearrangeDesktopOnly"/);
+  assert.match(modeBar, /printButton\.className="secondary rearrangeDesktopOnly recipeActionTertiary"/);
 });
 
 test("entering rearrange mode no longer bails out at mobile widths", () => {

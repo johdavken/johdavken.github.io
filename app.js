@@ -3323,10 +3323,17 @@
       // click here goes straight into the existing scan flow
       // (recipe-scan-ui.js's startScan, exposed via window.PolynRecipeScanUI)
       // rather than dropping a panel of its own.
+      // Scan Recipe is the action a recipe workflow revolves around, so it
+      // gets .recipeUtilityTab's primary sibling treatment here: the same
+      // gradient button.primary uses everywhere else, plus an icon (see
+      // .splitsBulkModeBar .splitsScanShortcut > summary in styles.css).
+      // The icon carries over unchanged into .splitsMobilePrimaryRow's own
+      // scaled-down version on Next's mobile row - it's the same <summary>
+      // content either way, only the surrounding CSS differs.
       const scanRecipeButton = document.createElement("details");
       scanRecipeButton.className = "splitsScanShortcut rearrangeDesktopOnly";
       scanRecipeButton.innerHTML = `
-        <summary aria-label="Scan a recipe source" title="Scan a recipe source">Scan Recipe</summary>
+        <summary aria-label="Scan a recipe source" title="Scan a recipe source"><svg class="recipeActionIcon" viewBox="0 0 32 32" aria-hidden="true"><path d="M8 4H6a2 2 0 0 0-2 2v2"/><path d="M24 4h2a2 2 0 0 1 2 2v2"/><path d="M8 28H6a2 2 0 0 1-2-2v-2"/><path d="M24 28h2a2 2 0 0 0 2-2v-2"/><path d="M5 16h22"/></svg>Scan Recipe</summary>
         <div class="statusScanShortcutPanel">
           <button type="button" data-scan-source="job_traveler">Scan Job Traveler</button>
           <button type="button" data-scan-source="dosing_screen">Scan Dosing Screen</button>
@@ -3342,7 +3349,12 @@
       modeBar.appendChild(scanRecipeButton);
       splitsScanShortcut = scanRecipeButton;
 
-      const printButton=document.createElement("button"); printButton.type="button"; printButton.className="secondary rearrangeDesktopOnly"; printButton.textContent="Print Recipe"; printButton.disabled=!recipeLayers().some(L=>L.hoppers.some(h=>normName(h.resinName)||clampNum(h.pct)>0)); modeBar.appendChild(printButton);
+      // Tertiary: quieter than Load Next Recipe below, text+icon only
+      // until hovered (see .splitsBulkModeBar button.recipeActionTertiary).
+      // Appended after the Load Next Recipe block below, so the desktop
+      // action row reads Scan (primary) -> Load Next (secondary) -> Print
+      // (tertiary), left to right in descending priority.
+      const printButton=document.createElement("button"); printButton.type="button"; printButton.className="secondary rearrangeDesktopOnly recipeActionTertiary"; printButton.innerHTML=`<svg class="recipeActionIcon" viewBox="0 0 32 32" aria-hidden="true"><path d="M9 12V5h14v7"/><rect x="6" y="12" width="20" height="10" rx="1.5"/><path d="M9 20h14v7H9z"/></svg>Print Recipe`; printButton.disabled=!recipeLayers().some(L=>L.hoppers.some(h=>normName(h.resinName)||clampNum(h.pct)>0));
       printButton.addEventListener("click", printRecipeSheet);
 
       // The deliberate bridge from planned to running. Current-page only: on
@@ -3357,9 +3369,15 @@
         loadNextButton.type = "button";
         loadNextButton.id = "loadNextRecipeBtn";
         loadNextButton.className = "secondary";
-        loadNextButton.textContent = "Load Next Recipe";
-        // Visible mobile label is shorter; the accessible name stays the
-        // full "Load Next Recipe" regardless of which text is on screen.
+        // Secondary: the app's ordinary secondary-button look, one step
+        // down from Scan Recipe's primary gradient, one step up from Print
+        // Recipe's tertiary ghost treatment (see .splitsBulkModeBar
+        // button.secondary in styles.css).
+        loadNextButton.innerHTML = `<svg class="recipeActionIcon" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 5v16"/><path d="M10 15l6 6 6-6"/><path d="M6 26h20"/></svg>Load Next Recipe`;
+        // Visible mobile label is shorter (icon dropped along with it,
+        // since .textContent replaces the whole icon+label innerHTML); the
+        // accessible name stays the full "Load Next Recipe" regardless of
+        // which text is on screen.
         loadNextButton.setAttribute("aria-label", "Load Next Recipe");
         const planned = hasPlannedRecipe();
         const promotable = !!window.PolynNextRecipe?.isPromotable(state.nextRecipe);
@@ -3371,6 +3389,11 @@
         loadNextButton.addEventListener("click", openLoadNextRecipeDialog);
         modeBar.appendChild(loadNextButton);
       }
+      // Print Recipe is appended last (after Load Next Recipe, which may or
+      // may not exist depending on Current/Next), so the desktop row always
+      // reads Scan -> Load Next -> Print, left to right in descending
+      // priority - Load Next simply drops out of the row on the Next page.
+      modeBar.appendChild(printButton);
 
       // On Next, Scan Recipe is promoted to a primary mobile action (see the
       // two-tier assembly below) with its own 3-source popup, so the same 3
@@ -3588,15 +3611,17 @@
       const recipeInfo = document.createElement("details");
       recipeInfo.className = "splitsInfo";
       recipeInfo.innerHTML = `
-        <summary aria-label="Recipe Setup information" title="Recipe Setup information">ⓘ</summary>
+        <summary aria-label="Recipe Setup information" title="Recipe Setup information"><svg class="recipeActionIcon" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="11"/><path d="M16 14v8"/><circle cx="16" cy="10.5" r="1" fill="currentColor" stroke="none"/></svg></summary>
         <div class="splitsInfoPanel">
           <p>Resin names are optional. If B and D, or A and E layers are the same, you can copy from one to the other.</p>
           <p><strong>Colored clock</strong> = tracked in the Timeline.</p>
         </div>
       `;
-      // Lives at the right end of the button row - modeBar is display:flex,
-      // so appending it last here puts it after Print Recipe regardless of
-      // which of the three buttons are present/disabled.
+      // Lives at the far right of the action row, separated from Scan/Load
+      // Next/Print by margin-left:auto (see .splitsBulkModeBar > .splitsInfo
+      // in styles.css) rather than ending the row as a fourth equal action -
+      // appending it last here just keeps it after them in DOM/tab order,
+      // which is what the auto-margin needs to push it rightward correctly.
       modeBar.appendChild(recipeInfo);
 
       // Two intentional mobile tiers, built by moving the same real buttons

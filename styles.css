@@ -1573,40 +1573,61 @@ details[open] > summary .chevSatellite{
   .hopperRow .trackLabel{ display: none; }
 }
 
-/* One unified bordered strip instead of five individually-bordered
-   buttons floating side by side - each action becomes a flat, transparent
-   segment separated by a divider, so the whole row reads as one toolbar.
-   align-items:stretch equalizes every segment (buttons, the Scan Recipe
-   <details>, the info <details>) to the row's own height automatically,
-   without needing to zero out each one's own min-height individually. */
+/* Recipe Actions: Scan Recipe, Load Next Recipe and Print Recipe as three
+   individually-shaped buttons at descending visual weight - primary,
+   secondary, tertiary - instead of one flat divided strip where all three
+   (plus the info icon) read as equally-weighted footer controls. Recipe
+   Setup information is a separate small icon button pushed to the row's
+   far right (see .splitsBulkModeBar > .splitsInfo below), not a fourth
+   segment ending the strip. No border/background of its own any more -
+   each button now carries its own chrome, so the row reads as part of the
+   Recipe section's normal rhythm rather than a boxed-off footer widget. */
 .splitsBulkModeBar{
   display: flex;
   flex-wrap: wrap;
-  align-items: stretch;
+  align-items: center;
+  gap: 8px;
+}
+.recipeActionIcon{
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* Secondary: Load Next Recipe. The app's ordinary secondary button - same
+   tokens as everywhere else - just with an icon and shared row height. */
+.splitsBulkModeBar button.secondary{
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: var(--control-height);
   border: 1px solid var(--btn-secondary-border);
   border-radius: var(--control-radius);
   background: var(--btn-secondary-bg);
-}
-.splitsBulkModeBar button.secondary{
-  border: 0;
-  border-right: 1px solid var(--btn-secondary-border);
-  border-radius: 0;
-  background: transparent;
-  padding: 8px 13px;
+  padding: var(--btn-pad-y) var(--btn-pad-x);
   font-size: var(--font-small);
+  font-weight: 700;
 }
-.splitsBulkModeBar button.secondary:last-of-type{ border-right: 0; }
-.splitsBulkModeBar button.secondary:hover{
-  background: color-mix(in srgb, var(--text) 6%, transparent);
+.splitsBulkModeBar button.secondary:hover:not(:disabled){
+  background: color-mix(in srgb, var(--text) 6%, var(--btn-secondary-bg));
   filter: none;
 }
-/* Round only the strip's own outer corners (first segment's left edge,
-   last segment's right edge) instead of clipping with overflow:hidden on
-   the container - that would also clip Scan Recipe's popup, which
-   intentionally escapes this row via position:absolute to open upward. */
-.splitsBulkModeBar button.secondary:first-child{
-  border-top-left-radius: var(--control-radius);
-  border-bottom-left-radius: var(--control-radius);
+/* Tertiary: Print Recipe. Quieter than Load Next - no border/fill of its
+   own until hovered, so it reads as the lowest-priority action here. */
+.splitsBulkModeBar button.recipeActionTertiary{
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 600;
+}
+.splitsBulkModeBar button.recipeActionTertiary:hover:not(:disabled){
+  border-color: var(--btn-secondary-border);
+  background: var(--btn-secondary-bg);
+  color: var(--text);
 }
 .splitsBulkBar{
   position:sticky;
@@ -1634,16 +1655,13 @@ details[open] > summary .chevSatellite{
 .splitsSavedRecipesActions .overflow-disabled summary{ opacity: .45; cursor: not-allowed; }
 
 
-/* Scan Recipe: a <details> popup sitting among plain <button>s in the same
-   row (Bulk edit, Rearrange, Print Recipe) - the summary is styled to
-   match those siblings' actual computed style exactly, now the flat
-   divided-segment look .splitsBulkModeBar button.secondary uses instead
-   of a separate bordered pill (that selector only ever matches real
-   <button> elements, never a <summary>, so it needs its own copy of the
-   same values). Reuses .statusScanShortcutPanel (the mobile status-bar
+/* Scan Recipe: a <details> popup styled like a real button (this base rule
+   is a shared fallback - both real contexts override it: the desktop
+   Recipe Actions row below, and .splitsMobilePrimaryRow's own mobile
+   sizing). Reuses .statusScanShortcutPanel (the mobile status-bar
    shortcut's own dropdown) for the panel itself, but flipped to open
    upward - this row sits at the bottom of the panel, so opening downward
-   clips against the viewport, same reasoning as the ⓘ info panel nearby. */
+   clips against the viewport, same reasoning as the info panel nearby. */
 .splitsScanShortcut{ position: relative; }
 .splitsScanShortcut > summary{
   display: inline-flex;
@@ -1664,6 +1682,31 @@ details[open] > summary .chevSatellite{
 .splitsScanShortcut > summary:hover{ background: color-mix(in srgb, var(--text) 6%, transparent); }
 .splitsScanShortcut > summary:focus-visible{ outline: 2px solid var(--focus-border); outline-offset: -2px; }
 .splitsScanShortcut .statusScanShortcutPanel{ left: 0; top: auto; bottom: calc(100% + 6px); }
+/* Primary: Scan Recipe, in the desktop Recipe Actions row specifically -
+   the same gradient button.primary uses everywhere else, so it reads as
+   "the" action here rather than a bespoke one-off treatment. Higher
+   specificity than the shared fallback above (2 classes vs 1), and never
+   in scope on mobile (modeBar/.splitsBulkModeBar is desktop-only - see
+   renderSplitsArea in app.js). */
+.splitsBulkModeBar .splitsScanShortcut > summary{
+  gap: 7px;
+  height: auto;
+  min-height: var(--control-height);
+  border: 1px solid var(--btn-border);
+  border-radius: var(--control-radius);
+  padding: var(--btn-pad-y) calc(var(--btn-pad-x) + 2px);
+  background: linear-gradient(180deg, var(--btn-primary-a), var(--btn-primary-b));
+  color: var(--text);
+  font-weight: 800;
+}
+.splitsBulkModeBar .splitsScanShortcut > summary:hover{
+  background: linear-gradient(180deg, var(--btn-primary-a), var(--btn-primary-b));
+  filter: brightness(1.08);
+}
+.splitsBulkModeBar .splitsScanShortcut > summary:focus-visible{
+  outline: 2px solid var(--focus-border);
+  outline-offset: 2px;
+}
 .splitsBulkSteps{grid-column:1/-1;display:flex;align-items:center;gap:18px;padding-bottom:8px;border-bottom:1px solid var(--row-border)}
 .splitsBulkSteps span{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:var(--font-small)}
 .splitsBulkSteps b{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:999px;background:var(--btn-primary-a);color:var(--title);font-size:var(--font-tiny)}
@@ -1762,14 +1805,33 @@ details[open] > summary .chevSatellite{
 .splitsBulkBar,
 .splitsSavedRecipesPanel{ margin-top: -7px; }
 .splitsInfo{position:relative}
-/* Right end of .splitsBulkModeBar's own toolbar strip (see the reorder
-   comment above), so it's a flat divided segment matching that row, not
-   the standalone circular icon button this used to be. */
+/* Shared fallback for the summary icon - the desktop Recipe Actions row
+   overrides this below; .splitsMobileSecondaryRow's own rule hides the
+   summary outright on mobile (Recipe info opens from the More menu
+   there instead), so this base rule never actually renders on its own. */
 .splitsInfo > summary{display:grid;place-items:center;height:100%;padding:0 12px;border-left:1px solid var(--btn-secondary-border);border-radius:0;background:transparent;color:var(--muted);font-size:16px;line-height:1;cursor:pointer;list-style:none}
-.splitsBulkModeBar > .splitsInfo:last-child > summary{border-top-right-radius:var(--control-radius);border-bottom-right-radius:var(--control-radius)}
 .splitsInfo > summary::-webkit-details-marker{display:none}
 .splitsInfo > summary:hover,.splitsInfo[open] > summary{color:var(--title);background:color-mix(in srgb, var(--text) 6%, transparent)}
 .splitsInfo > summary:focus-visible{outline:2px solid var(--focus-border);outline-offset:-2px}
+/* Recipe Setup information, in the desktop Recipe Actions row: pushed to
+   the row's far right (margin-left:auto - the row's flex-wrap:wrap still
+   lets it drop to its own line first if the row is ever too narrow) and
+   reduced to a small round icon-only control, separated from Scan/Load
+   Next/Print rather than ending the row as a fourth equal action. */
+.splitsBulkModeBar > .splitsInfo{ margin-left: auto; }
+.splitsBulkModeBar > .splitsInfo > summary{
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: transparent;
+}
+.splitsBulkModeBar > .splitsInfo > summary:hover,
+.splitsBulkModeBar > .splitsInfo[open] > summary{
+  border-color: var(--btn-secondary-border);
+  background: var(--btn-secondary-bg);
+}
 .splitsInfoPanel{position:absolute;bottom:calc(100% + 6px);right:0;z-index:20;width:min(390px,calc(100vw - 48px));padding:10px 12px;border:1px solid var(--border2);border-radius:var(--control-radius);background:var(--panelOpen);color:var(--muted);font-size:var(--font-small);box-shadow:var(--shadow2)}
 .splitsInfoPanel p{margin:0}.splitsInfoPanel p+p{margin-top:7px}.splitsInfoPanel strong{color:var(--text)}
 #splitsArea{gap:6px}
@@ -2752,6 +2814,11 @@ body[data-recipe-page="next"] .splitsInfo{ display: none; }
      (set when no plan exists) would silently stop working here and an empty
      "Load Next" would occupy a primary-row slot with nothing to promote. */
   .splitsMobilePrimaryRow [hidden]{ display:none!important; }
+  /* The desktop Recipe Actions icons (see .recipeActionIcon) don't fit
+     these four equal-width slots without clipping the label - verified
+     live: "Scan Recipe" overflowed its own slot once the icon took part
+     of the width. Mobile keeps the pre-existing icon-free text label. */
+  .splitsMobilePrimaryRow .recipeActionIcon{ display:none; }
   .splitsMobilePrimaryRow button.secondary,
   .splitsMobilePrimaryRow .splitsScanShortcut > summary{
     display:flex;

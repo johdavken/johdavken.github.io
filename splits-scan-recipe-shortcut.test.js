@@ -84,24 +84,20 @@ test("the outside-click and Escape handlers are registered once at module scope,
   assert.doesNotMatch(splitsAreaBody, /document\.addEventListener\("keydown"/);
 });
 
-test("the summary is a flat divided segment (no border/background of its own) matching .splitsBulkModeBar's unified toolbar strip, not a standalone bordered pill", () => {
+test("the base summary rule is an unstyled shared fallback - both real contexts (desktop's Recipe Actions row, mobile's primary row) override it, so this rule never actually renders on its own", () => {
   const ruleStart = styles.indexOf(".splitsScanShortcut > summary{");
   assert.notEqual(ruleStart, -1);
   const rule = styles.slice(ruleStart, styles.indexOf("}", ruleStart) + 1);
   assert.match(rule, /background: transparent;/);
-  assert.match(rule, /border-right: 1px solid var\(--btn-secondary-border\);/);
   assert.match(rule, /list-style: none;/);
 });
 
-test("the summary matches its actual sibling buttons' computed size (.splitsBulkModeBar button.secondary's padding/font-size), not just button.secondary's base rule - that override only ever matches real <button> elements, never a <summary>", () => {
-  const ruleStart = styles.indexOf(".splitsScanShortcut > summary{");
+test("on desktop, Scan Recipe's summary gets the primary button.primary treatment - the same gradient used everywhere else in the app, so it reads as the row's primary action", () => {
+  const ruleStart = styles.indexOf(".splitsBulkModeBar .splitsScanShortcut > summary{");
+  assert.notEqual(ruleStart, -1, "expected a desktop-specific override scoped under .splitsBulkModeBar");
   const rule = styles.slice(ruleStart, styles.indexOf("}", ruleStart) + 1);
-  assert.match(rule, /padding: 8px 13px;/);
-  assert.match(rule, /font-size: var\(--font-small\);/);
-  const siblingRuleStart = styles.indexOf(".splitsBulkModeBar button.secondary{");
-  const siblingRule = styles.slice(siblingRuleStart, styles.indexOf("}", siblingRuleStart) + 1);
-  assert.match(siblingRule, /padding: 8px 13px;/);
-  assert.match(siblingRule, /font-size: var\(--font-small\);/);
+  assert.match(rule, /background: linear-gradient\(180deg, var\(--btn-primary-a\), var\(--btn-primary-b\)\);/);
+  assert.match(rule, /font-weight: 800;/);
 });
 
 test("the dropdown panel reuses .statusScanShortcutPanel's own styling (border/background/shadow/width) rather than a second copy, only overriding position", () => {

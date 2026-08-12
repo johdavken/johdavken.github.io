@@ -73,13 +73,18 @@ test("desktop's own branch turns Saved recipes/Bulk edit/Rearrange into a role=t
   assert.match(app, /toolbar\.id = "splitsBulkBar";/);
 });
 
-test("the visible mobile label shortens to Load Next, but the accessible name stays Load Next Recipe", () => {
+test("the visible mobile label shortens to Load Next (dropping the desktop icon along with the full label), but the accessible name stays Load Next Recipe", () => {
   assert.match(app, /loadNextButton\.setAttribute\("aria-label", "Load Next Recipe"\);/);
   const editor = recipeEditor();
+  // Mobile's plain textContent reassignment replaces the whole icon+label
+  // innerHTML wholesale, which is exactly why mobile never shows the icon -
+  // see the .splitsMobilePrimaryRow .recipeActionIcon{display:none} belt-
+  // and-braces rule below too, covering Scan Recipe's icon (its content
+  // isn't reassigned on mobile the way loadNextButton's is).
   assert.match(editor, /loadNextButton\.textContent = "Load Next";/);
-  // Desktop's own textContent assignment (unconditional, earlier in the
+  // Desktop's own icon+label assignment (unconditional, earlier in the
   // function) is untouched - only the mobile branch shortens it.
-  assert.match(editor, /loadNextButton\.textContent = "Load Next Recipe";/);
+  assert.match(editor, /loadNextButton\.innerHTML = `<svg class="recipeActionIcon"[\s\S]*?Load Next Recipe`;/);
 });
 
 test("primary-row items share equal width and never wrap - however many of them there are (3 on Next, 3 or 4 on Current)", () => {
