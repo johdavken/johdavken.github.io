@@ -4274,7 +4274,10 @@ input.resinLookupDensity.copied[readonly]{
   margin-inline: auto;
 }
 .helpTopic{
-  overflow: hidden;
+  /* `clip`, not `hidden`: both clip to the rounded corners, but `hidden` makes
+     this a scrollport, and a sticky summary would then resolve against this
+     box instead of the Help panel's scroller - i.e. never stick at all. */
+  overflow: clip;
   min-width: 0;
   border: 1px solid transparent;
   border-radius: var(--radius-row);
@@ -4299,6 +4302,33 @@ input.resinLookupDensity.copied[readonly]{
 }
 .helpTopic[open] > summary::after{ content: "−"; }
 .helpTopic[open] > summary{ border-bottom: 1px solid var(--row-border); }
+/* Pin the open section's own header while you read it, so the section you are
+   in - and the control that closes it - never scroll away. Desktop only: the
+   scroller this sticks to is `#helpBlock > .blockBody{overflow:auto}` from
+   desktop.css, and at <=900px the mobile Help panel hides these summaries
+   entirely and uses .mobileHelpHeader for the same job. top:0 needs no offset
+   because the Help panel's own title is the <details> summary *outside* this
+   scroll box. */
+@media (min-width: 901px){
+  /* The panel's top padding belongs to the scrollport, so content scrolls
+     through it and would show as a live strip above the pinned header. Move
+     that same 14px onto the content: the header then pins flush with the
+     scrollport edge, where anything above it is clipped instead of visible. */
+  #helpBlock > .blockBody{ padding-top: 0; }
+  #helpBlock > .blockBody > .helpTopics{ margin-top: 14px; }
+  .helpTopic[open] > summary{
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    /* --row-bg is a ~5% tint, not a colour: used alone the pinned header would
+       be see-through and the section would scroll straight through it. Layer
+       that same tint over the panel's opaque base so it matches the card
+       exactly while actually hiding what passes beneath. */
+    background: linear-gradient(var(--row-bg), var(--row-bg)), var(--panel);
+    border-top-left-radius: var(--radius-row);
+    border-top-right-radius: var(--radius-row);
+  }
+}
 .helpTopic > summary span{
   color: var(--title);
   font-size: calc(var(--title-size) * 1.06);
@@ -4317,6 +4347,70 @@ input.resinLookupDensity.copied[readonly]{
   padding: 16px 18px 20px;
   color: var(--text);
   line-height: 1.55;
+}
+
+/* ---- Nested subtopics -----------------------------------------------------
+   One level only, inside the longer sections. Deliberately quieter than a
+   top-level section: no card background, a hairline rule instead of a border
+   box, and a lighter title, so the section list stays the dominant structure.
+   Any number may be open at once - only the top level is single-open. */
+.helpSubtopic{
+  min-width: 0;
+  border-top: 1px solid var(--row-border);
+}
+.helpSubtopic > summary{
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 2px 12px;
+  /* Past the 44px touch target once line-height is counted. */
+  padding: 11px 34px 11px 0;
+}
+.helpSubtopic > summary::after{
+  content: "+";
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  color: var(--muted);
+  font-size: 16px;
+  font-weight: 500;
+  transform: translateY(-50%);
+}
+.helpSubtopic[open] > summary::after{ content: "−"; }
+.helpSubtopic > summary span{
+  /* Subordinate to the section title above it: same family, less weight, and
+     the body colour rather than the section heading's blue. */
+  color: var(--text);
+  font-size: var(--font-small);
+  font-weight: 800;
+  letter-spacing: .01em;
+}
+.helpSubtopic > summary small{
+  overflow: hidden;
+  color: var(--muted);
+  font-size: calc(var(--font-small) * .9);
+  letter-spacing: .05em;
+  text-align: right;
+  text-transform: uppercase;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.helpSubtopic > summary:hover span{ color: var(--title); }
+.helpSubtopic > summary:focus-visible{
+  outline: 2px solid var(--focus-border);
+  outline-offset: -2px;
+  border-radius: var(--radius-input);
+}
+.helpSubtopicBody{ padding: 2px 0 16px; }
+/* The lede introduces the whole section, so the first subtopic rule directly
+   under it would read as a stray line. */
+.helpLede + .helpSubtopic{ border-top: 0; }
+@media (max-width: 900px){
+  /* Spacing, not indentation - horizontal room is scarce on a phone. The
+     min-height guarantees the 44px touch target that padding alone leaves a
+     pixel short at this font size. */
+  .helpSubtopic > summary{ padding: 12px 32px 12px 0; min-height: 44px; align-content: center; }
 }
 .helpTopicBody ol,
 .helpTopicBody ul{ margin: 0; padding-left: 22px; }

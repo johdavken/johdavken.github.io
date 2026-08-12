@@ -6176,6 +6176,61 @@
       document.body.dataset.mobileHelp = "home";
       requestAnimationFrame(()=>mobileHelpReturnTile?.focus());
     });
+
+    /* ============================
+     * Help: one open section at a time
+     * ============================
+     * The guide is a list of native <details>, and several long ones open at
+     * once turned Help into one enormous page. Opening a section now closes
+     * the others, and the open section's own summary is pinned to the top of
+     * the Help scroller by CSS, so it doubles as "you are here" and "close
+     * this". Nested subtopics inside a section are deliberately left alone:
+     * they are ordinary <details> and any number may stay open.
+     *
+     * Mobile already shows exactly one topic (mobileHelpTile above sets
+     * .mobile-help-active and hides the rest), so this only reinforces what
+     * that flow does - but the scrolling below is desktop-only, because the
+     * summaries it measures are display:none in the mobile panel. */
+    const helpTopics = [...document.querySelectorAll("#helpBlock .helpTopics > .helpTopic")];
+    const helpScroller = document.querySelector("#helpBlock > .blockBody");
+
+    // Aligns a topic's header to the top of the Help scroller. Used both when
+    // opening (the section starts at the top, under the pinned header) and
+    // when closing (the row you just collapsed stays under the pointer instead
+    // of leaving you stranded far down a now-empty page).
+    function alignHelpTopic(topic, { smooth = true } = {}){
+      if (!helpScroller || !topic.querySelector("summary")?.offsetParent) return;
+      // Target the scroller's *content* edge, not its border box: a sticky
+      // top:0 pins to the content edge, so aligning to the border box would
+      // leave the header 14px adrift from its card the instant it sticks.
+      const padding = parseFloat(getComputedStyle(helpScroller).paddingTop) || 0;
+      const offset = topic.getBoundingClientRect().top - helpScroller.getBoundingClientRect().top - padding;
+      if (Math.abs(offset) < 2) return;
+      const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+      helpScroller.scrollBy({ top: offset, behavior: smooth && !reduceMotion ? "smooth" : "auto" });
+    }
+
+    // Closing a sibling fires that sibling's own toggle. Without this guard it
+    // would scroll to the section being closed, fighting the scroll to the one
+    // just opened - the two animations cancel and the panel lands nowhere.
+    let helpSwitching = false;
+
+    helpTopics.forEach(topic=>{
+      // `toggle` covers every route into the open state - pointer, keyboard,
+      // and the in-body help links above - without wrapping <summary> in a
+      // custom control, so native disclosure semantics stay intact.
+      topic.addEventListener("toggle",()=>{
+        if (helpSwitching) return;
+        if (!topic.open){
+          alignHelpTopic(topic);
+          return;
+        }
+        helpSwitching = true;
+        helpTopics.forEach(other=>{ if (other !== topic) other.open = false; });
+        helpSwitching = false;
+        alignHelpTopic(topic);
+      });
+    });
     toolTabs.forEach((tab, index)=>{
       tab.addEventListener("click", ()=>{
         selectToolPanel(tab.dataset.toolTarget);
