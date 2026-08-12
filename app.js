@@ -826,6 +826,9 @@
   let lockedLayerCount = null;
 
   function syncLineTypeUI(){
+    // Every layer-count transition and every RT Sync lock pass routes through
+    // here, so the Overview stays current without a second set of hooks.
+    renderLineOverview();
     const group = $("lineTypeToggle");
     if (!group) return;
     const locked = lockedLayerCount !== null;
@@ -905,25 +908,83 @@
     return required === undefined ? null : required;
   }
 
+  function derivedLineConfiguration(syncState = lineSync?.getState?.()){
+    return window.PolynLineIdentity?.getLineConfigurationForSync(syncState) || null;
+  }
+
+  /* ============================
+   * Line Setup - Overview
+   * ============================
+   * A read-only restatement of what the connected line already dictates, so
+   * the operator can confirm at a glance which end Layer A is on rather than
+   * being asked during a scan. Reads the same PolynLineIdentity configuration
+   * the scanners do; the layer count shown is the app's live one, so a manual
+   * selection on an unmapped line still reads correctly. */
+
+  function positionLabel(position){
+    return position === "outside" ? "Outside" : position === "inside" ? "Inside" : "";
+  }
+
+  function renderLineOverview(syncState = lineSync?.getState?.()){
+    const lineValue = $("lineOverviewLine");
+    if (!lineValue) return;
+    const configuration = derivedLineConfiguration(syncState);
+    const layerCount = LINE_TYPES.includes(Number(state.lineType)) ? Number(state.lineType) : 3;
+
+    lineValue.textContent = configuration ? String(configuration.lineNumber) : "—";
+    lineValue.classList.toggle("lineOverviewUnknown", !configuration);
+    const layersValue = $("lineOverviewLayers");
+    if (layersValue) layersValue.textContent = String(layerCount);
+
+    // The configuration's own layer count can disagree with the live one only
+    // on an unmapped line, where the operator still picks manually. Trust the
+    // live count for what to display, and only claim an orientation when the
+    // line the rules came from actually has that many layers.
+    const orderRows = configuration && configuration.layerCount === layerCount
+      ? configuration.layerOrder
+      : null;
+
+    const order = $("lineOverviewOrder");
+    const rows = $("lineOverviewOrderRows");
+    const note = $("lineOverviewNote");
+    if (order) order.hidden = !orderRows;
+    if (rows){
+      rows.replaceChildren();
+      (orderRows || []).forEach(row => {
+        const term = document.createElement("dt");
+        term.textContent = row.layer;
+        const detail = document.createElement("dd");
+        detail.textContent = positionLabel(row.position);
+        rows.append(term, detail);
+      });
+    }
+    if (note){
+      // A single-layer line has no inside/outside to report - saying so is
+      // clearer than an empty section. An unresolved multilayer line says
+      // nothing at all rather than implying an orientation it doesn't know.
+      const single = layerCount === 1;
+      note.hidden = !single;
+      note.textContent = single ? "Single layer" : "";
+    }
+  }
+
   let unmappedWorkspaceNotice = "";
 
-  // Hides the manual tiles while a line dictates the configuration, and
-  // reports the derived value read-only in their place.
+  // Hides the manual layer selector while a line dictates the configuration.
+  // Nothing is shown in its place: Overview already reports the connected
+  // line and its layer count, so a readout here would only repeat them.
   function applyLayerCountLock(syncState){
     const identity = window.PolynLineIdentity;
     const required = derivedRequiredLayerCount(syncState);
-    const lineNumber = identity?.linkedLineNumber(syncState) ?? null;
     lockedLayerCount = required;
 
     const group = $("lineTypeToggle");
     if (group) group.hidden = required !== null;
-    const derived = $("setupLayerCountDerived");
-    if (derived){
-      derived.hidden = required === null;
-      derived.textContent = required === null
-        ? ""
-        : `${required} ${required === 1 ? "layer" : "layers"} · Set by Line ${lineNumber}`;
-    }
+    // The heading goes with the control it labels - a stray "Layers" caption
+    // over nothing is worse than no caption. Both come back the moment the
+    // lock clears, which is the only state where manual selection applies.
+    const layerCountGroup = $("setupLayerCountGroup");
+    if (layerCountGroup) layerCountGroup.hidden = required !== null;
     syncLineTypeUI();
 
     // Development diagnostic only, once per workspace: a linked workspace we
@@ -5636,6 +5697,11 @@
       getAccessToken: () => lineSync?.getAccessToken?.() || Promise.resolve(null),
       getLineType: () => state.lineType,
       getHopperNamingMode: () => derivedHopperNamingMode(),
+      // Physical facts about the connected line - currently the layer
+      // orientation the Job Traveler and Heat Sheet scanners need. Same
+      // resolver the Line Setup Overview renders from, so there is no second
+      // copy of the layer-order rules anywhere in the scan path.
+      getLineConfiguration: () => derivedLineConfiguration(),
       hasNonEmptyRecipe,
       applyPayload: applyScannedRecipePayload
     };
