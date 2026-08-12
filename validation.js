@@ -191,6 +191,11 @@
       if (payload.hopperNamingLine9 != null && !["standard", "main"].includes(payload.hopperNamingLine9)) {
         errors.push("Hopper naming mode must be standard or main.");
       }
+      // resinLots/nextRecipeLots are not structurally checked here, matching
+      // nextRecipe just above (and unlike it, not even referenced in this
+      // function): both are sanitized defensively on actual restore, via
+      // rekeyLotMap in app.js, which silently discards anything malformed
+      // rather than rejecting the whole active job over it.
       if (JSON.stringify(payload).length > 131072) {
         errors.push("Active job is too large to synchronize.");
       }

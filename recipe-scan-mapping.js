@@ -13,6 +13,51 @@
 
   const HOPPERS_PER_LAYER = 6;
 
+  // For keying a resin-code -> lot map only. Independent of app.js's own
+  // keyName()/normName() (which this module has no access to) - the caller
+  // re-keys through that exact function before ever writing a lot into
+  // state, so this only needs to be internally consistent with itself while
+  // deriving the map, not byte-for-byte identical to app.js's version.
+  function normalizeResinCode(value) {
+    return String(value || "").trim().replace(/\s+/g, " ").toUpperCase();
+  }
+
+  // One lot number per resin code for the job (see the business rule this
+  // exists for): the same resin can appear in several hoppers or layers, but
+  // should carry one lot. Built from the raw scan - independent of hopper-
+  // slot filling and orientation, since which lot a resin carries has
+  // nothing to do with which physical hopper it lands in or which end of the
+  // film layer A is on.
+  //
+  // Only Heat Sheet components ever carry lot_number (see schema.ts) - a Job
+  // Traveler scan's components simply never have the field, so this always
+  // returns {} for one, which is exactly the "invisible unless a heat sheet
+  // was scanned" behavior the feature needs, with no source-type branching
+  // required here at all.
+  function deriveLotsByResin(scanRecipe) {
+    const lots = new Map(); // normalized resin code -> { value, confidence }
+    (scanRecipe && scanRecipe.layers || []).forEach(layer => {
+      (layer.components || []).forEach(component => {
+        const code = normalizeResinCode(component.resin_code);
+        const lot = typeof component.lot_number === "string" ? component.lot_number.trim() : "";
+        if (!code || !lot) return;
+        const confidence = typeof component.lot_number_confidence === "number" ? component.lot_number_confidence : -1;
+        const existing = lots.get(code);
+        if (!existing) { lots.set(code, { value: lot, confidence }); return; }
+        if (existing.value === lot) return; // the same lot read twice is not a conflict
+        // A genuine conflict: two different lot readings for the same resin
+        // in this scan. Never combine or invent a merged value - prefer
+        // whichever reading the scanner itself was more confident about, and
+        // when confidence doesn't distinguish them, keep the first one seen
+        // rather than building a second confidence system for this alone.
+        if (confidence > existing.confidence) lots.set(code, { value: lot, confidence });
+      });
+    });
+    const out = {};
+    lots.forEach((entry, code) => { out[code] = entry.value; });
+    return out;
+  }
+
   // Left-to-right printed order, inside->outside. The Edge Function derives
   // each scanned layer's position from column order (not header text), so
   // scanRecipe.layers is already in this order - orientation only decides
@@ -131,7 +176,13 @@
         line_type: lineType,
         hopper_naming_mode: (options && options.hopperNamingMode) === "main" ? "main" : "standard",
         layers
-      }
+      },
+      // Kept as a sibling of `payload`, never inside it: `payload` stays
+      // exactly the recipe-definition shape Saved Recipes and Next Recipe
+      // already use, so lot data can never end up saved as part of a
+      // reusable recipe. {} for Job Traveler, since its components never
+      // carry lot_number at all.
+      lotByResin: deriveLotsByResin(scanRecipe)
     };
   }
 
@@ -188,5 +239,5 @@
     };
   }
 
-  return { expectedPositionsForLetters, buildRecipePayloadFromScan, buildDosingScreenRecipePayloadFromScan };
+  return { expectedPositionsForLetters, buildRecipePayloadFromScan, buildDosingScreenRecipePayloadFromScan, deriveLotsByResin };
 });

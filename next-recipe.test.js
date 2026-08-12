@@ -281,7 +281,7 @@ test("sharing the plan stays additive - no active-job version bump", () => {
 });
 
 test("a plan arriving from another device is not overwritten by this one's working copy", () => {
-  assert.match(app, /state\.nextRecipe = window\.PolynNextRecipe\?\.normalize\(payload\.nextRecipe\) \?\? null;[\s\S]{0,320}?nextRecipeWorking = null;/);
+  assert.match(app, /state\.nextRecipe = window\.PolynNextRecipe\?\.normalize\(payload\.nextRecipe\) \?\? null;[\s\S]{0,900}?nextRecipeWorking = null;/);
 });
 
 test("the module loads before app.js so restore can normalize the stored plan", () => {

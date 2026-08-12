@@ -24,7 +24,8 @@ test("applyScannedRecipePayload applies whatever payload it's given via applyRec
 
   // Routed through the one destination-aware entry point, which is what keeps
   // "a scan lands on the page you are viewing" implemented in a single place.
-  assert.match(body, /applyRecipeToActivePage\(payload, \{ kind:"apply-recipe-scan" \}\)/);
+  // lotByResin threads through too - present only for a Heat Sheet scan.
+  assert.match(body, /applyRecipeToActivePage\(payload, \{ kind:"apply-recipe-scan", lotByResin \}\)/);
   // Deliberately payload-in: no reference to PolynRecipeScanMapping, so a
   // review-screen edit to the payload is submitted as-is, not recomputed
   // from the raw scan and silently discarded.

@@ -87,6 +87,7 @@
   let pendingOrientation = null; // "inside" | "outside" | null. Resolved from the connected line in startScan; stays null for a 1-layer line or dosing_screen, neither of which needs it.
   let pendingScan = null;        // sanitized recipe-scan result (.recipe), as returned by the Edge Function
   let pendingPayload = null;     // built via PolynRecipeScanMapping's mapping functions, for review + apply
+  let pendingLotByResin = null;  // resin code -> scanned lot number (Heat Sheet only; {} for every other source)
   let scanInFlight = false;      // guards against a second submission while one request is already in flight
 
   function setStatus(id, text, isError){
@@ -106,6 +107,7 @@
     pendingOrientation = null;
     pendingScan = null;
     pendingPayload = null;
+    pendingLotByResin = null;
     scanInFlight = false;
   }
 
@@ -324,6 +326,7 @@
 
     pendingScan = body.result.recipe;
     pendingPayload = built.payload;
+    pendingLotByResin = built.lotByResin || null;
     scanInFlight = false;
     closeCaptureDialog();
     openReviewDialog();
@@ -543,7 +546,7 @@
 
   function applyReview(){
     if (!pendingPayload){ closeReviewDialog(); return; }
-    const result = serviceApi.applyPayload(pendingPayload);
+    const result = serviceApi.applyPayload(pendingPayload, pendingLotByResin);
     if (!result?.ok){
       setStatus("recipeScanReviewStatus", result?.message || "This scan could not be applied.", true);
       return;
@@ -556,6 +559,7 @@
     closeReviewDialog();
     pendingScan = null;
     pendingPayload = null;
+    pendingLotByResin = null;
     openCaptureDialog();
   }
 

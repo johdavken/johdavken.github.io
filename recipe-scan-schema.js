@@ -19,6 +19,7 @@
   const MAX_LAYERS = 5;
   const MAX_COMPONENTS_PER_LAYER = 6;
   const MAX_NAME_LENGTH = 100;
+  const MAX_LOT_LENGTH = 40;
   const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
   const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
   const HOPPER_DESIGNATIONS = ["H1", "H2", "H3", "H4", "H5", "H6"];
@@ -279,7 +280,42 @@
   // hopper_designation, an unused hopper simply omitted rather than padded.
   // Adds an optional layer_letter cross-check, same field/reasoning as
   // Dosing Screen's, since operators sometimes label a block when filling
-  // one out with this tool.
+  // one out with this tool. Its component also adds lot_number - the only
+  // source with a physical LOT NUMBERS column - so it gets its own component
+  // sanitizer rather than growing an always-null field onto sanitizeComponent.
+
+  function sanitizeHeatSheetComponent(raw, errors, path) {
+    if (!isPlainObject(raw)) { errors.push(`${path}: component must be an object`); return null; }
+    const resinCode = sanitizeString(raw.resin_code, MAX_NAME_LENGTH);
+    if (!resinCode.ok) errors.push(`${path}.resin_code: must be a string of at most ${MAX_NAME_LENGTH} characters, or null`);
+    const resinCodeConfidence = sanitizeConfidence(raw.resin_code_confidence);
+    if (!resinCodeConfidence.ok) errors.push(`${path}.resin_code_confidence: must be 0-1, or null`);
+    const percentage = sanitizePercentage(raw.percentage);
+    if (!percentage.ok) errors.push(`${path}.percentage: must be 0-100, or null`);
+    const percentageConfidence = sanitizeConfidence(raw.percentage_confidence);
+    if (!percentageConfidence.ok) errors.push(`${path}.percentage_confidence: must be 0-1, or null`);
+    const hopperDesignation = sanitizeHopperDesignation(raw.hopper_designation);
+    if (!hopperDesignation.ok) errors.push(`${path}.hopper_designation: must be one of H1-H6, or null`);
+    const hopperDesignationConfidence = sanitizeConfidence(raw.hopper_designation_confidence);
+    if (!hopperDesignationConfidence.ok) errors.push(`${path}.hopper_designation_confidence: must be 0-1, or null`);
+    // Handwritten, in the row aligned with this SILO/resin - preserved as
+    // literally as reasonably possible, never corrected or inferred.
+    const lotNumber = sanitizeString(raw.lot_number, MAX_LOT_LENGTH);
+    if (!lotNumber.ok) errors.push(`${path}.lot_number: must be a string of at most ${MAX_LOT_LENGTH} characters, or null`);
+    const lotNumberConfidence = sanitizeConfidence(raw.lot_number_confidence);
+    if (!lotNumberConfidence.ok) errors.push(`${path}.lot_number_confidence: must be 0-1, or null`);
+
+    return {
+      resin_code: resinCode.value,
+      resin_code_confidence: resinCodeConfidence.value,
+      percentage: percentage.value,
+      percentage_confidence: percentageConfidence.value,
+      hopper_designation: hopperDesignation.value,
+      hopper_designation_confidence: hopperDesignationConfidence.value,
+      lot_number: lotNumber.value,
+      lot_number_confidence: lotNumberConfidence.value
+    };
+  }
 
   function sanitizeHeatSheetLayer(raw, expectedPositions, errors, index) {
     const path = `recipe.layers[${index}]`;
@@ -310,7 +346,7 @@
 
     const components = (rawComponents || [])
       .slice(0, 20)
-      .map((component, componentIndex) => sanitizeComponent(component, errors, `${path}.components[${componentIndex}]`))
+      .map((component, componentIndex) => sanitizeHeatSheetComponent(component, errors, `${path}.components[${componentIndex}]`))
       .filter(component => component !== null);
 
     return {
@@ -395,6 +431,7 @@
     MAX_LAYERS,
     MAX_COMPONENTS_PER_LAYER,
     MAX_NAME_LENGTH,
+    MAX_LOT_LENGTH,
     MAX_IMAGE_BYTES,
     ALLOWED_IMAGE_TYPES,
     HOPPER_DESIGNATIONS,

@@ -3637,11 +3637,53 @@ body[data-recipe-page="next"] .splitsInfo{ display: none; }
 .productionSummaryStatus i{padding:0 2px;color:var(--muted);font-style:normal}
 .productionSummaryMaterialsIntro{display:grid;gap:1px;margin:1px 0 0;color:var(--muted);font-size:var(--font-small);line-height:1.25}
 .productionSummaryMaterialsIntro strong{color:var(--title);font-size:var(--font-small);font-weight:900}
-.productionSummaryMaterialRow{min-height:38px;padding:7px 10px;border-radius:var(--control-radius)}
+/* width+min-width:0 pins the row to its grid track instead of letting it
+   grow to its content's max-content width. Without this, .calcTable's
+   implicit auto grid track sizes itself from the widest row - normally
+   invisible because names/weights are short, but an unusually long scanned
+   lot number (the one new source of long text in this row) makes the row
+   wider than the panel, silently clipped off-screen by an ancestor's
+   overflow-x:hidden rather than ellipsizing as .calcLot itself intends. */
+.productionSummaryMaterialRow{min-height:38px;padding:7px 10px;border-radius:var(--control-radius);width:100%;min-width:0}
 .productionSummaryMaterialRow .calcValue{flex:0 0 auto;white-space:nowrap}
+/* Resin code and weight are primary and must not lose a single pixel to an
+   unusually long lot number. calcLeft keeps its ordinary ability to shrink
+   (so a genuinely long resin NAME still ellipsizes exactly as it always
+   has, independent of this feature) - what changes is .calcLot's flex-basis
+   below, which excludes the lot's own content length from the row's space
+   calculation entirely, rather than merely discouraging it from winning a
+   shrink contest it could still nudge by a fraction of a pixel. */
+.productionSummaryMaterialRow .calcLeft{flex:0 1 auto}
+/* Scanned lot number - Heat Sheet only, so it exists in the row exactly
+   when there's a lot to show (no placeholder element otherwise). Sits
+   between the resin code and the weight; flex:1 absorbs the row's
+   remaining width so it reads as centered without disturbing either
+   anchor, and shrinks/truncates first when the row gets tight. Text only:
+   existing muted/secondary styling, no new card, chip, or border. */
+.calcLot{
+  /* flex-basis:0% is what actually protects the resin code and weight: the
+     row's available space is first divided among calcLeft/calcValue at
+     their own natural (auto-basis) sizes, and only the space actually left
+     over is what calcLot's flex-grow ever claims - its own long content
+     never factors into how much room the other two get, unlike a basis of
+     auto, which would still make it compete (if only by a fraction of a
+     pixel) for space genuinely needed elsewhere. Ellipsis then truncates
+     whatever doesn't fit in the space it was actually given. */
+  flex:1 1 0%;
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  text-align:center;
+  color:var(--muted);
+  font-size:var(--font-small);
+}
 @media (max-width:600px){
   .productionSummaryStatus{padding:8px 10px}
   .productionSummaryMaterialRow{min-height:36px;padding:6px 9px}
+  /* Noticeably smaller than the resin code/weight it sits between, and
+     smaller than its own desktop size - the row height doesn't grow. */
+  .calcLot{font-size:var(--font-tiny)}
 }
 
 /* Inline layer % in the splits summary */

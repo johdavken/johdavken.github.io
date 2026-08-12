@@ -148,13 +148,14 @@ test("no duplicated per-page action implementations were introduced", () => {
  * ============================================================ */
 
 test("one destination-aware entry point serves both Saved Recipes and Scan", () => {
-  assert.match(app, /function applyRecipeToActivePage\(payload,\{kind\}=\{\}\)\{/);
-  // Saved Recipes routes recipes through it...
+  assert.match(app, /function applyRecipeToActivePage\(payload,\{kind,lotByResin\}=\{\}\)\{/);
+  // Saved Recipes routes recipes through it (with no lot data of its own)...
   const saved = app.slice(app.indexOf("function applyWorkspaceConfiguration("), app.indexOf("function applyRecipeToActivePage("));
   assert.match(saved, /applyRecipeToActivePage\(item\.payload,\{kind:"load-workspace-configuration"\}\)/);
-  // ...and so does Scan.
+  // ...and so does Scan, threading through whatever a Heat Sheet scan read.
   const scan = app.slice(app.indexOf("function applyScannedRecipePayload("), app.indexOf("function openWorkspaceConfigurationDialog("));
-  assert.match(scan, /applyRecipeToActivePage\(payload, \{ kind:"apply-recipe-scan" \}\)/);
+  assert.match(scan, /function applyScannedRecipePayload\(payload, lotByResin\)\{/);
+  assert.match(scan, /applyRecipeToActivePage\(payload, \{ kind:"apply-recipe-scan", lotByResin \}\)/);
 });
 
 test("writing a plan never publishes an active job or re-runs readiness", () => {

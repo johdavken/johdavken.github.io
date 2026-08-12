@@ -54,6 +54,20 @@
       // tracking, pump-off, receiver weight or hopper dimensions, so the
       // planned recipe cannot accumulate operational state of its own.
       nextRecipe: null,
+      // Resin code -> scanned lot number, for whichever recipe the code
+      // belongs to. Job/scan-specific, not a recipe-definition field: it is
+      // never read by createRecipePayload/applyRecipePayload, so it can never
+      // be saved into a reusable Saved Recipe and never rides along inside
+      // state.nextRecipe's own payload. Set only when a recipe scan or Saved
+      // Recipe is applied (see applyRecipeToActivePage) - a fresh apply fully
+      // replaces it, exactly as it fully replaces the recipe itself.
+      resinLots: {},
+      // Same idea, for the Next page. Kept as its own sibling field rather
+      // than inside state.nextRecipe, because commitNextRecipeWorking()
+      // rebuilds state.nextRecipe from scratch via createRecipePayload on
+      // every save - anything stored inside that payload would not survive
+      // the operator's next keystroke.
+      nextRecipeLots: {},
       prodResinLb: 0,
       scrapResinLb: 0,
       density: "comfort",
@@ -546,11 +560,18 @@
    * render / validate / save / notify. Next writes the plan instead, and
    * deliberately does not validate or notify - a plan is not the running job,
    * and publishing it would mean an active-job write for something the line is
-   * not running. */
-  function applyRecipeToActivePage(payload,{kind}={}){
+   * not running.
+   *
+   * lotByResin (optional) is a resin-code -> scanned lot number map - present
+   * only when a Heat Sheet scan produced one, absent (undefined) for Saved
+   * Recipes and every other source type. It is re-keyed and stored as a full
+   * replacement, on the same page the recipe itself lands on, matching the
+   * recipe: whatever is now on this page is what its lot map describes. */
+  function applyRecipeToActivePage(payload,{kind,lotByResin}={}){
     if(!isNextRecipePage()){
       const result=window.PolynWorkspaceConfigurationPayloads?.applyRecipePayload(state,payload);
       if(!result?.ok) return { ok:false, message:result?.errors?.[0] };
+      state.resinLots=rekeyLotMap(lotByResin);
       syncLineTypeUI();
       renderWeightsArea(); renderSplitsArea(); validateAndCompute(); saveSession();
       notifyActiveJobMutation({immediate:true,kind:kind||"apply-recipe"});
@@ -559,6 +580,7 @@
     const stored=window.PolynNextRecipe?.normalize(payload);
     if(!stored) return { ok:false, message:"That recipe could not be read." };
     state.nextRecipe=stored;
+    state.nextRecipeLots=rekeyLotMap(lotByResin);
     // Rebuild the working copy from the plan we just stored rather than the
     // one on screen, or the grid would keep showing the recipe it replaced.
     nextRecipeWorking=null;
@@ -582,10 +604,10 @@
   // recipe. Deliberately payload-in, not scan-in - this function doesn't
   // know or care where the payload came from, so review-screen edits are
   // submitted as-is rather than being silently recomputed from the raw scan.
-  function applyScannedRecipePayload(payload){
+  function applyScannedRecipePayload(payload, lotByResin){
     // Destination-neutral until here: the parser and review screen never know
     // which page they are feeding, only that the operator confirmed it.
-    const result = applyRecipeToActivePage(payload, { kind:"apply-recipe-scan" });
+    const result = applyRecipeToActivePage(payload, { kind:"apply-recipe-scan", lotByResin });
     return result.ok ? { ok:true } : { ok:false, message: result.message || "This scan could not be applied." };
   }
   function openWorkspaceConfigurationDialog(mode,item=null){
@@ -1145,6 +1167,22 @@
     }
     function normName(s){ return String(s || "").trim().replace(/\\s+/g, " "); }
     function keyName(s){ return normName(s).toUpperCase(); }
+    // Re-keys a resin-code -> lot map through keyName(), the exact function
+    // Production Summary's own resin totals are bucketed by, so a lot stored
+    // here is guaranteed findable later regardless of how the code was
+    // spaced/capitalized when it was scanned or restored. Used both when a
+    // scan/Saved Recipe apply sets a fresh map, and defensively when
+    // restoring one from a session or RT Sync payload.
+    function rekeyLotMap(raw){
+      const out = {};
+      if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
+      Object.keys(raw).forEach(code=>{
+        const key = keyName(code);
+        const value = raw[code];
+        if (key && typeof value === "string" && value.trim()) out[key] = value.trim();
+      });
+      return out;
+    }
     function sum(arr){ return arr.reduce((a,b)=>a+b,0); }
     function fmtNum(n, d=2){ return Number.isFinite(n) ? n.toFixed(d) : "—"; }
     // Production Summary pounds are entered and tracked without decimals -
@@ -1279,6 +1317,8 @@
         offsets: state.offsets,
         layers: state.layers,
         nextRecipe: state.nextRecipe,
+        resinLots: state.resinLots,
+        nextRecipeLots: state.nextRecipeLots,
         prodResinLb: state.prodResinLb,
         scrapResinLb: state.scrapResinLb,
         density: state.density,
@@ -1631,6 +1671,12 @@
       // discarded rather than half-restored - either way this lands on null,
       // which is the same as "nothing planned". No migration step needed.
       state.nextRecipe = window.PolynNextRecipe?.normalize(payload.nextRecipe) ?? null;
+      // Same reasoning as nextRecipe just above: a session/payload written
+      // before this field existed simply has none, and rekeyLotMap already
+      // discards anything malformed - both land on {}, meaning "no scanned
+      // lots", with no migration step needed.
+      state.resinLots = rekeyLotMap(payload.resinLots);
+      state.nextRecipeLots = rekeyLotMap(payload.nextRecipeLots);
       // Drop the in-memory working copy so the grid rebuilds from the plan we
       // just took on. Without this, a plan arriving from another device would
       // be silently overwritten by this device's stale working array the next
@@ -3047,6 +3093,11 @@
       if (!plan) return { ok:false };
       const result = window.PolynWorkspaceConfigurationPayloads?.applyRecipePayload(state, plan);
       if (!result?.ok) return { ok:false, message: result?.errors?.[0] };
+      // Scanned lots travel with the plan they belong to, same as the recipe
+      // fields themselves. state.nextRecipeLots is untouched by this (nothing
+      // here reads or clears it), so it stays right alongside the Next plan
+      // that produced it - only Current's copy is replaced.
+      state.resinLots = { ...(state.nextRecipeLots || {}) };
       // state.nextRecipe is untouched by applyRecipePayload - the plan stays.
       syncLineTypeUI();
       renderWeightsArea(); renderSplitsArea(); validateAndCompute(); saveSession();
@@ -4171,6 +4222,10 @@
             hopper.pumpOff = false;
           });
         });
+        // Wipes every resin assignment on this page, so any scanned lots for
+        // it are equally stale - cleared on the same page Reset all just
+        // cleared, never the other one.
+        if (isNextRecipePage()) state.nextRecipeLots = {}; else state.resinLots = {};
         selected.clear();
         bulkNameInput.value = "";
         bulkPctInput.value = "";
@@ -4342,13 +4397,20 @@
       rows.forEach(r=>{
         const row = document.createElement("div");
         row.className = "calcRow productionSummaryMaterialRow";
+        // Current only - Production Summary always describes the job
+        // actually running, never the plan. Absent entirely (no placeholder
+        // element) unless this resin actually has a scanned lot: invisible
+        // to anyone who never scanned a heat sheet.
+        const lot = state.resinLots?.[keyName(r.displayName)] || "";
         row.innerHTML = `
           <div class="calcLeft">
             <div class="calcName mono" data-resin-name></div>
           </div>
+          ${lot ? `<div class="calcLot mono" data-resin-lot></div>` : ""}
           <div class="mono calcValue">${fmtLb(r.lbs)} lb</div>
         `;
         row.querySelector("[data-resin-name]").textContent = r.displayName;
+        if (lot) row.querySelector("[data-resin-lot]").textContent = lot;
         out.appendChild(row);
       });
     }
@@ -4713,6 +4775,10 @@
       syncToggleUI("showPumpOffToggle", false);
       state.prodResinLb = 0;
       state.scrapResinLb = 0;
+      // Scoped to Current, same as everything else this function resets -
+      // Next and its own lot map are untouched, exactly like state.nextRecipe
+      // already is.
+      state.resinLots = {};
 
       ensureLayers();
       state.layers.forEach(L=>{
@@ -5892,6 +5958,11 @@
         hopper.pumpOff = false;
       });
     });
+    // Cleared alongside the recipe it described. payload.nextRecipe (and so
+    // nextRecipeLots) is deliberately left as-is here, same established
+    // choice - an operator may have prepped Next for this very job before
+    // starting it.
+    payload.resinLots = {};
     return payload;
   }
 
