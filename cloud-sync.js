@@ -87,6 +87,43 @@
     // top of every retry() cycle - see retry()'s own comment for why.
     let lastActiveFlushDenied = false;
 
+    /* ------------------------------------------------------------------
+     *   Active-job conflict circuit breaker
+     * ------------------------------------------------------------------
+     * A conflict is normally rare and operator-paced: two people edit the
+     * same line, one is asked which version wins, and it is over. Anything
+     * arriving faster than a person can click is not that - it is a loop
+     * between this module and whatever is regenerating the mutation, and
+     * every turn of it costs a failed write against the database.
+     *
+     * This is deliberately a rate breaker rather than a consecutive-failure
+     * counter. A loop can "resolve" each conflict successfully and still be
+     * a loop, which would keep resetting a streak counter forever; what
+     * actually identifies the condition is the rate, whatever shape the
+     * cycle has. Past the budget, synchronization pauses exactly as an
+     * unresolved conflict already does - local work stays safe on the
+     * device, and the operator gets the existing Retry path back.
+     *
+     * The floor of one hard cap plus growing backoff is on purpose: even
+     * below the budget, conflicts never retry instantly. */
+    const CONFLICT_BURST_LIMIT = 12;
+    const CONFLICT_BURST_WINDOW_MS = 10000;
+    const CONFLICT_RETRY_BASE_MS = 400;
+    const CONFLICT_RETRY_MAX_MS = 8000;
+    let recentConflictTimes = [];
+
+    function recordConflict(){
+      const now = Date.now();
+      recentConflictTimes = recentConflictTimes.filter(at=>now - at < CONFLICT_BURST_WINDOW_MS);
+      recentConflictTimes.push(now);
+      return recentConflictTimes.length;
+    }
+    function conflictRetryDelay(){
+      const step = Math.max(1, recentConflictTimes.length);
+      return Math.min(CONFLICT_RETRY_BASE_MS * Math.pow(2, step - 1), CONFLICT_RETRY_MAX_MS);
+    }
+    function clearConflictBudget(){ recentConflictTimes = []; }
+
     // Raw kind/action strings only - which internal mutation "kind" values
     // mean what is a UI presentation concern, not this module's.
     function buildPendingSummary(){
@@ -310,6 +347,25 @@
     }
 
     async function resolveActiveConflict(pending, remoteRow){
+      // Trip the breaker before doing any work, so a runaway cycle cannot
+      // keep resolving-and-regenerating conflicts faster than an operator
+      // could ever produce them. Counted here rather than at the failed
+      // write because every conflict path in this module - flushActiveJob,
+      // reconcileSelected and handleRealtimeActive - funnels through here.
+      if (recordConflict() >= CONFLICT_BURST_LIMIT){
+        activeConflictPaused = true;
+        clearConflictBudget();
+        setStatus("Conflict", "Synchronization paused: this line kept conflicting faster than it could settle. Local work is safe on this device - use Retry once the other device has finished.");
+        return;
+      }
+      // A remote row can be missing entirely (the workspace has no active job
+      // yet), in which case there is nothing to compare, back up or offer a
+      // choice between. Treat it as a plain failed upload and leave the item
+      // queued for the next retry rather than dereferencing a null row.
+      if (!remoteRow){
+        setStatus("Pending", "The shared active job could not be read. Changes are safe on this device and will retry.");
+        return;
+      }
       // A queued item can survive a page refresh from before the client-side
       // no-op guard ran. If it is semantically identical to the current
       // remote row, this is a stale-revision no-op, not a real operator
@@ -342,7 +398,10 @@
           operationId: uuid(),
           createdAt: new Date().toISOString()
         });
-        setTimeout(flushActiveJob, 0);
+        // Never immediate. If this re-upload conflicts again the same code
+        // path runs again, so a zero-delay retry here is what turns two
+        // devices disagreeing into a write storm.
+        setTimeout(flushActiveJob, conflictRetryDelay());
         return;
       }
       activeConflictPaused = true;
@@ -380,6 +439,10 @@
           }
           throw response.error;
         }
+        // A write that lands is the definition of settled, so the burst
+        // budget starts fresh - an ordinary conflict earlier in the session
+        // must never count toward a much later, unrelated one.
+        clearConflictBudget();
         const row = response.data?.[0];
         if (row){
           state.activeRevision = Number(row.revision);
@@ -938,7 +1001,12 @@
 
     async function retry(){
       if (!enabled) return;
+      // Retry is the operator saying "go again" - deliberate, and the one
+      // route out of a tripped breaker. Both the pause and the budget that
+      // caused it clear together, or the very next conflict would re-trip
+      // it immediately on a stale count.
       activeConflictPaused = false;
+      clearConflictBudget();
       lastActiveFlushDenied = false;
       if (!state.available) await initialize();
       else {
@@ -957,6 +1025,7 @@
     async function refreshSelected(){
       if (!enabled) return;
       activeConflictPaused = false;
+      clearConflictBudget();
       if (!state.available) await initialize();
       if (!selectedId()) return;
       const current = ensureDeviceSettings();

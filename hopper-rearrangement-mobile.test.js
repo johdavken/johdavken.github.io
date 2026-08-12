@@ -37,8 +37,11 @@ test("the reordered bars also drop their sticky-to-top positioning, so they can'
   assert.match(styles, /\.rearrangeModeBar\{position:sticky;/);
 });
 
-test("the layer-total summary stacks above the button row, both flush to the same left edge - not spread apart edge-to-edge, not inline with each other", () => {
-  assert.match(styles, /\.splitsMatrixActions\{display:flex;flex-direction:column;align-items:flex-start;gap:8px;border-top:1px solid var\(--row-border\);padding-top:12px\}/);
+test("the button row is flush to the panel's own left edge, stacked rather than spread edge-to-edge", () => {
+  const actionsRule = styles.slice(styles.indexOf(".splitsMatrixActions{"), styles.indexOf("}", styles.indexOf(".splitsMatrixActions{")) + 1);
+  assert.match(actionsRule, /flex-direction: column;/);
+  assert.match(actionsRule, /align-items: flex-start;/);
+  assert.doesNotMatch(actionsRule, /justify-content: space-between/);
 });
 
 test("the action row is pinned to the panel's own left edge, not centered under the table - the table's width (and centered position) changes with layer count, so centering against it would move the buttons around", () => {
@@ -49,14 +52,20 @@ test("the action row is pinned to the panel's own left edge, not centered under 
 
 test("a divider (border-top) separates the button row from the table above it, since the row is reordered to render right after it", () => {
   const actionsRule = styles.slice(styles.indexOf(".splitsMatrixActions{"), styles.indexOf("}", styles.indexOf(".splitsMatrixActions{")) + 1);
-  assert.match(actionsRule, /border-top:1px solid var\(--row-border\)/);
+  assert.match(actionsRule, /border-top: 1px solid var\(--row-border\);/);
+  // The toolbar hangs from that divider rather than sitting in padding below
+  // it, mirroring the Current/Next strip on the section's top divider.
+  assert.match(actionsRule, /padding-top: 0;/);
+  assert.match(styles, /\.splitsMatrixActions > \.splitsBulkModeBar\{ margin-top: -1px; \}/);
 });
 
 // --- info icon lives at the right end of the button row, opens upward -----
 
-test("the info icon (ⓘ) is appended into modeBar, not actionInfo - it now sits after Print Recipe, not next to the summary text", () => {
-  assert.match(splitsArea, /actionInfo\.append\(summary\);/);
-  assert.doesNotMatch(splitsArea, /actionInfo\.append\(summary, recipeInfo\)/);
+test("the info icon (ⓘ) is appended into modeBar - it sits after Print Recipe, at the right end of the toolbar", () => {
+  // The action row is the toolbar and nothing else; the layer-total summary
+  // that used to share it with the buttons now reports through the bell.
+  assert.match(splitsArea, /actionRow\.append\(modeBar\);/);
+  assert.doesNotMatch(splitsArea, /actionInfo/);
   const modeBarAppend = splitsArea.indexOf("modeBar.appendChild(recipeInfo);");
   assert.notEqual(modeBarAppend, -1);
   // Appended after the button-creation calls, so it lands last in modeBar's
@@ -209,7 +218,7 @@ test("setBulkMode's per-cell disable pass keeps rearrange-mode disabling in plac
 });
 
 test("setBulkMode runs unconditionally at the end of every render (reapplying the resolved bulkMode, not hardcoded false, so a render triggered by switching panels can seed bulk edit open) - this per-cell disable pass is exactly why the clobbering bug existed", () => {
-  const endOfRenderStart = splitsArea.lastIndexOf("updateSplitTotals();");
+  const endOfRenderStart = splitsArea.lastIndexOf("// Reapply (not force-close) the resolved state");
   const endOfRender = splitsArea.slice(endOfRenderStart, splitsArea.indexOf("renderSplitsSavedRecipes", endOfRenderStart));
   assert.match(endOfRender, /setBulkMode\(bulkMode\);/);
   assert.doesNotMatch(endOfRender, /setBulkMode\(false\);/);

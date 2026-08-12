@@ -812,3 +812,123 @@ test("the automatic retry triggers (online/visibilitychange) are debounced with 
   assert.match(source, /window\.addEventListener\("online", autoRetry\);/);
   assert.match(source, /document\.addEventListener\("visibilitychange", \(\)=>\{ if \(!document\.hidden\) autoRetry\(\); \}\);/);
 });
+
+/* ----------------------------------------------------------------------
+ *   Active-job conflict circuit breaker
+ *
+ *   Regression cover for the 2026-08-12 write storm: one device produced
+ *   ~40,000 failed update_active_job calls per minute for the best part of
+ *   an hour, because every path out of a conflict retried immediately and
+ *   nothing anywhere counted how often it was happening.
+ * -------------------------------------------------------------------- */
+
+// A workspace whose stored revision can never match what the client expects,
+// which is what every one of those 2.2M attempts actually hit.
+function permanentlyConflictingSync(choice = "remote"){
+  const rows = workspaceFixtures({ id: "ws-a", name: "Line A" });
+  const harness = fakeRealtimeClient(rows);
+  const storage = memoryStorage();
+  let resolveCalls = 0;
+  const sync = require("./cloud-sync.js").create({
+    config: { enabled: true, url: "https://example.supabase.co", publishableKey: "key" },
+    syncStorage: require("./sync-storage.js"),
+    storage,
+    supabaseLibrary: { createClient: ()=>harness.client },
+    adapter: {
+      ...fakeAdapter(()=>activeJobPayload({ lineRate: 500 })),
+      // The storm's shape: the conflict is "resolved" instantly, every time,
+      // with no human in the loop.
+      resolveActiveConflict: async ()=>{ resolveCalls += 1; return choice; }
+    },
+    activeJob: require("./active-job.js")
+  });
+  // Advance the row out from under the client so its expected revision is
+  // permanently stale.
+  const bumpRevision = ()=>{ rows.active_jobs[0].revision += 1; };
+  return { sync, rows, bumpRevision, resolveCalls: ()=>resolveCalls, ...harness };
+}
+
+test("a runaway conflict cycle trips the breaker instead of writing forever", async () => {
+  // Each notify carries a different payload, so the existing no-op guard
+  // cannot be what stops it - only the breaker can.
+  let rate = 500;
+  const rows = workspaceFixtures({ id: "ws-a", name: "Line A" });
+  const harness = fakeRealtimeClient(rows);
+  const sync = require("./cloud-sync.js").create({
+    config: { enabled: true, url: "https://example.supabase.co", publishableKey: "key" },
+    syncStorage: require("./sync-storage.js"),
+    storage: memoryStorage(),
+    supabaseLibrary: { createClient: ()=>harness.client },
+    adapter: {
+      ...fakeAdapter(()=>activeJobPayload({ lineRate: rate })),
+      resolveActiveConflict: async ()=>"remote"
+    },
+    activeJob: require("./active-job.js")
+  });
+  await sync.initialize();
+
+  // The real incident's defining condition: the client's expected revision
+  // never converges on the row's. Moving the row on every attempt reproduces
+  // that without needing to know which exact edge caused it in production.
+  const innerRpc = harness.client.rpc.bind(harness.client);
+  harness.client.rpc = async (name, args)=>{
+    if (name === "update_active_job") rows.active_jobs[0].revision += 7;
+    return innerRpc(name, args);
+  };
+
+  for (let i = 0; i < 200; i++){
+    rate += 1;
+    sync.notifyActiveJobMutation({ immediate: true, kind: "edit" });
+    await new Promise(resolve=>setTimeout(resolve, 0));
+  }
+
+  const writes = harness.rpcCalls.filter(call=>call.name === "update_active_job").length;
+  assert.ok(writes <= 20, `expected the breaker to bound writes, saw ${writes}`);
+  assert.equal(sync.getState().status, "Conflict");
+  assert.match(sync.getState().message, /paused/i);
+});
+
+test("the breaker's budget is a rate, not a streak - a loop that 'resolves' each conflict still trips it", () => {
+  // A consecutive-failure counter would be reset by each successful
+  // resolution and never fire, which is exactly how the storm sustained
+  // itself. The window is what identifies the condition.
+  const source = fs.readFileSync("cloud-sync.js", "utf8");
+  assert.match(source, /const CONFLICT_BURST_LIMIT = 12;/);
+  assert.match(source, /const CONFLICT_BURST_WINDOW_MS = 10000;/);
+  assert.match(source, /recentConflictTimes = recentConflictTimes\.filter\(at=>now - at < CONFLICT_BURST_WINDOW_MS\);/);
+  // Counted at the single funnel every conflict path reaches.
+  const resolver = source.slice(source.indexOf("async function resolveActiveConflict("));
+  assert.match(resolver.slice(0, 600), /if \(recordConflict\(\) >= CONFLICT_BURST_LIMIT\)\{/);
+});
+
+test("no conflict path retries instantly any more", () => {
+  const source = fs.readFileSync("cloud-sync.js", "utf8");
+  const resolver = source.slice(
+    source.indexOf("async function resolveActiveConflict("),
+    source.indexOf("async function fetchActiveRow(")
+  );
+  assert.doesNotMatch(resolver, /setTimeout\(flushActiveJob, 0\)/);
+  assert.match(resolver, /setTimeout\(flushActiveJob, conflictRetryDelay\(\)\)/);
+  assert.match(source, /const CONFLICT_RETRY_BASE_MS = 400;/);
+  assert.match(source, /Math\.min\(CONFLICT_RETRY_BASE_MS \* Math\.pow\(2, step - 1\), CONFLICT_RETRY_MAX_MS\)/);
+});
+
+test("a missing remote row is a failed upload, not a crash", async () => {
+  // fetchActiveRow uses maybeSingle(), so a workspace with no active_jobs row
+  // hands resolveActiveConflict a null - which used to be dereferenced for
+  // the conflict backup and throw.
+  const { sync, rows } = permanentlyConflictingSync();
+  await sync.initialize();
+  rows.active_jobs.length = 0;
+  sync.notifyActiveJobMutation({ immediate: true, kind: "edit" });
+  await new Promise(resolve=>setTimeout(resolve, 20));
+  assert.ok(["Pending", "Offline"].includes(sync.getState().status), sync.getState().status);
+});
+
+test("a successful write clears the budget, so unrelated conflicts never accumulate across a session", () => {
+  const source = fs.readFileSync("cloud-sync.js", "utf8");
+  const flush = source.slice(source.indexOf("async function flushActiveJob("));
+  assert.match(flush.slice(0, 1400), /clearConflictBudget\(\);/);
+  // Retry is the operator's way out: pause and budget clear together.
+  assert.match(source, /activeConflictPaused = false;\s*\n\s*clearConflictBudget\(\);\s*\n\s*lastActiveFlushDenied = false;/);
+});

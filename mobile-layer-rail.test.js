@@ -146,7 +146,7 @@ test("bulk edit still needs the letter - it's the tap target for selecting an en
 
 // --- Layer % + Copy: mockup option 10, "minimal ghost, no chip borders" ---
 
-test("the layer header becomes a grid pairing the percentage and Copy side by side (percentage auto-width, Copy taking the rest), with the (rare) hopper-total warning spanning full width beneath both", () => {
+test("the layer header becomes a grid pairing the percentage and Copy side by side (percentage auto-width, Copy taking the rest)", () => {
   const mobileStart = styles.indexOf("@media (max-width: 700px){");
   assert.notEqual(mobileStart, -1);
   const mobileBlock = styles.slice(mobileStart, styles.indexOf("\n}\n", mobileStart));
@@ -155,8 +155,10 @@ test("the layer header becomes a grid pairing the percentage and Copy side by si
   const rule = mobileBlock.slice(ruleStart, mobileBlock.indexOf("}", ruleStart) + 1);
   assert.match(rule, /display: grid;/);
   assert.match(rule, /grid-template-columns: auto 1fr;/);
-  assert.match(rule, /grid-template-areas: "pct copy" "total total";/);
-  assert.match(mobileBlock, /\.splitColumnTotal\{ grid-area: total; \}/);
+  assert.match(rule, /grid-template-areas: "pct copy";/);
+  // No third area: percentage totals are reported through the notification
+  // bell now, so the header has no total row to reserve space for.
+  assert.doesNotMatch(mobileBlock, /splitColumnTotal/);
 });
 
 test("the grid display is scoped specifically enough to beat .splitsMatrix [data-layer-column].mobile-layer-active (shared with <td> body cells) - otherwise this silently stays display:table-cell", () => {
@@ -173,7 +175,7 @@ test("a layer with no copy source (e.g. Layer B at 3 layers) collapses to a sing
   assert.notEqual(ruleStart, -1);
   const rule = mobileBlock.slice(ruleStart, mobileBlock.indexOf("}", ruleStart) + 1);
   assert.match(rule, /grid-template-columns: 1fr;/);
-  assert.match(rule, /grid-template-areas: "pct" "total";/);
+  assert.match(rule, /grid-template-areas: "pct";/);
 });
 
 test("neither the percentage nor Copy has a chip background/border any more - the percentage reads as an inline-edit field via its own focus-colored underline, Copy is plain link-style text, and a single light divider sits under the whole row instead", () => {

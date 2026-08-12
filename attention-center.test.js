@@ -9,6 +9,7 @@ function facts(overrides = {}){
   return {
     setup: { lineRateSet: true, hopperWeightsUnset: false, missingTrackedWeightCount: 0, ...(overrides.setup || {}) },
     recipe: { layerTotalPct: 100, layerTotalValid: true, invalidLayerNames: [], ...(overrides.recipe || {}) },
+    nextRecipe: { planned: false, layerTotalPct: 100, layerTotalValid: true, invalidLayers: [], ...(overrides.nextRecipe || {}) },
     timeline: { trackedCount: 2, ...(overrides.timeline || {}) },
     sync: { enabled: true, connected: true, status: "Synced", pendingCount: 0, message: "", oldestPendingAt: "", ...(overrides.sync || {}) },
     storage: overrides.storage || []
@@ -172,6 +173,75 @@ test("invalid hopper percentages name their layers, then clear when corrected", 
   assert.equal(invalid.items[0].title, "Hopper percentages are off in layers A, C");
   assert.equal(derive({ recipe: { invalidLayerNames: ["B"] } }).items[0].title, "Hopper percentages are off in layer B");
   assert.equal(derive({ recipe: { invalidLayerNames: [] } }).count, 0);
+});
+
+test("hopper totals are reported with their real value, since the grid no longer prints one", () => {
+  const invalid = derive({ recipe: { invalidLayers: [{ name: "B", totalPct: 92 }] } });
+  assert.equal(invalid.items[0].title, "Hopper percentages are off in layer B");
+  assert.equal(invalid.items[0].message, "Layer B totals 92%. Each layer's hoppers are expected to total 100%.");
+  const two = derive({ recipe: { invalidLayers: [{ name: "A", totalPct: 80 }, { name: "C", totalPct: 104.5 }] } });
+  assert.equal(two.items[0].title, "Hopper percentages are off in layers A, C");
+  assert.equal(two.items[0].message, "Layer A totals 80% · Layer C totals 104.5%. Each layer's hoppers are expected to total 100%.");
+});
+
+test("a changed total updates the same entry rather than adding a second one", () => {
+  const first = derive({ recipe: { layerTotalValid: false, layerTotalPct: 80, invalidLayers: [{ name: "A", totalPct: 80 }] } });
+  const second = derive({ recipe: { layerTotalValid: false, layerTotalPct: 90, invalidLayers: [{ name: "A", totalPct: 90 }] } });
+  assert.deepEqual(ids(first), ids(second));
+  assert.equal(first.count, second.count);
+  assert.notEqual(first.items[0].title, second.items[0].title);
+});
+
+/* ----------------------------------------------------------------------
+ *   The planned recipe - a planning note, never a fault on the running job
+ * -------------------------------------------------------------------- */
+
+test("a plan nobody has started raises nothing, however incomplete it looks", () => {
+  // A blank plan structurally totals 0%, which must never be reported: it is
+  // the resting state of a page most operators never open.
+  const summary = derive({ nextRecipe: { planned: false, layerTotalValid: false, layerTotalPct: 0, invalidLayers: [{ name: "A", totalPct: 0 }] } });
+  assert.equal(summary.count, 0);
+});
+
+test("an unfinished plan is reported in its own section, as planning rather than as a fault", () => {
+  const summary = derive({ nextRecipe: { planned: true, layerTotalValid: false, layerTotalPct: 87 } });
+  assert.deepEqual(ids(summary), ["next-recipe.layer-total"]);
+  const item = summary.items[0];
+  assert.equal(item.title, "Next Recipe layer percentages total 87%");
+  assert.equal(item.section, "Next Recipe");
+  assert.equal(item.severity, "warning");
+  assert.deepEqual(item.action, { id: "open-next-recipe", label: "Open Next Recipe" });
+  assert.match(item.message, /not finished/);
+});
+
+test("the plan's hopper totals are separate entries from the running recipe's", () => {
+  const summary = derive({
+    recipe: { invalidLayers: [{ name: "A", totalPct: 80 }] },
+    nextRecipe: { planned: true, invalidLayers: [{ name: "A", totalPct: 92 }] }
+  });
+  assert.deepEqual(ids(summary), ["recipe.hopper-totals", "next-recipe.hopper-totals"]);
+  assert.equal(summary.items[0].section, "Recipe");
+  assert.equal(summary.items[1].section, "Next Recipe");
+  assert.equal(summary.count, 2);
+});
+
+test("finishing the plan clears its entries and leaves the running recipe's alone", () => {
+  const before = derive({
+    recipe: { layerTotalValid: false, layerTotalPct: 80 },
+    nextRecipe: { planned: true, layerTotalValid: false, layerTotalPct: 60 }
+  });
+  assert.deepEqual(ids(before), ["recipe.layer-total", "next-recipe.layer-total"]);
+  const after = derive({
+    recipe: { layerTotalValid: false, layerTotalPct: 80 },
+    nextRecipe: { planned: true, layerTotalValid: true, layerTotalPct: 100 }
+  });
+  assert.deepEqual(ids(after), ["recipe.layer-total"]);
+});
+
+test("an unfinished plan never escalates the bell's severity past attention", () => {
+  const summary = derive({ nextRecipe: { planned: true, layerTotalValid: false, layerTotalPct: 40, invalidLayers: [{ name: "A", totalPct: 40 }] } });
+  assert.equal(summary.errorCount, 0);
+  assert.equal(summary.severity, "warning");
 });
 
 test("missing receiver weights report once, then clear when entered", () => {

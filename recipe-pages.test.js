@@ -91,9 +91,51 @@ test("the tabs are part of the Recipe panel, directly above the grid", () => {
   const tabsAt = panel.indexOf('class="recipePageTabs"');
   const gridAt = panel.indexOf('id="splitsArea"');
   assert.ok(tabsAt > -1 && gridAt > tabsAt, "the tab strip should sit immediately above the grid");
-  // Flush against the grid rather than floating above it.
+  // Sitting on the section's top divider rather than floating above it.
   assert.match(styles, /\.recipePageTabs\{[\s\S]*?margin: 0 0 -1px;/);
-  assert.match(styles, /\.recipePageTab\.active\{[\s\S]*?border-bottom: 1px solid var\(--panel\);/);
+  assert.match(styles, /\.recipePageTabs\{[\s\S]*?border-bottom: 1px solid var\(--row-border\);/);
+});
+
+test("the tabs keep their own height whatever the grid does - 1, 3 or 5 layers", () => {
+  // .blockBody is a grid; its default align-content:stretch shared spare panel
+  // height between the tab row and the grid row, so the strip grew and shrank
+  // with the recipe beside it. Both guards are kept: the rows pack to the top,
+  // and the strip declines to stretch inside its own row.
+  assert.match(styles, /#splitsBlock \.blockBody\{ align-content: start; \}/);
+  assert.match(styles, /\.recipePageTabs\{[\s\S]*?align-self: start;/);
+  // Nothing about the strip is expressed in terms of the grid's size.
+  const strip = styles.slice(styles.indexOf(".recipePageTabs{"), styles.indexOf("}", styles.indexOf(".recipePageTabs{")));
+  assert.doesNotMatch(strip, /width|height/);
+});
+
+test("both pages read as buttons, and the selected one is unmistakable", () => {
+  const inactive = styles.slice(styles.indexOf(".recipePageTab{"), styles.indexOf("}", styles.indexOf(".recipePageTab{")));
+  // Quieter, but still a button: its own border and surface, never bare text.
+  assert.match(inactive, /border: 1px solid color-mix\(in srgb, var\(--btn-secondary-border\) 55%, transparent\);/);
+  assert.match(inactive, /background: var\(--btn-secondary-bg\);/);
+  // Compact: the control is a page selector inside Recipe, not app navigation.
+  assert.match(inactive, /min-height: 28px;/);
+  // The selected page reuses the treatment a selected page inside a panel
+  // already has (.toolsIndexButton.active), so it holds up in every theme
+  // rather than only the default one - verified live in industrial-slate,
+  // industrial-slate-dark and gruvbox-dark.
+  const active = styles.slice(styles.indexOf(".recipePageTab.active{"), styles.indexOf("}", styles.indexOf(".recipePageTab.active{")));
+  const toolsActive = styles.slice(styles.indexOf(".toolsIndexButton.active{"), styles.indexOf("}", styles.indexOf(".toolsIndexButton.active{")));
+  assert.match(active, /border-color: var\(--focus-border\);/);
+  assert.match(toolsActive, /border-color: var\(--focus-border\);/);
+  assert.match(active, /background: var\(--btn-primary-a\);/);
+  assert.match(toolsActive, /background: var\(--btn-primary-a\);/);
+  assert.match(active, /color: var\(--text\);/);
+  assert.match(active, /font-weight: 900;/);
+  // Restrained: no glow or animation was introduced.
+  assert.doesNotMatch(active.replace(/\/\*[\s\S]*?\*\//g, ""), /box-shadow|animation|transform/);
+});
+
+test("a thumb still gets a full-size target, even though the desktop control shrank", () => {
+  const mobile = styles.slice(styles.indexOf(".recipePageTabs{ gap: 6px; }"));
+  const rule = mobile.slice(mobile.indexOf(".recipePageTab{"), mobile.indexOf("}", mobile.indexOf(".recipePageTab{")));
+  assert.match(rule, /min-height: 44px/);
+  assert.match(rule, /flex: 1 1 0/);
 });
 
 test("the tabs use real tab semantics and are keyboard navigable", () => {
@@ -188,10 +230,51 @@ test("Print prints the page on screen and says which one it is", () => {
   assert.doesNotMatch(print, /splitTrackControl|splitCellSelector|recipePageTab/);
 });
 
-test("planning totals are muted, and the warning voice is reserved for the running recipe", () => {
-  assert.match(app, /const planning = isNextRecipePage\(\);/);
-  assert.match(app, /const shortfall = planning \? "of 100% planned" : "— expected 100%";/);
-  assert.match(styles, /\.splitColumnTotal\.planning,\s*\n\.splitsMatrixSummary\.planning\{ color: var\(--muted\)/);
+test("planning issues keep their own voice, and never speak for the running recipe", () => {
+  // Neither page prints its totals in the grid any more. The distinction moved
+  // with them into the bell, where the plan has its own section, its own entry
+  // ids and its own wording.
+  const attention = fs.readFileSync("attention-center.js", "utf8");
+  assert.match(attention, /nextRecipe: "Next Recipe"/);
+  assert.match(attention, /"next-recipe\.layer-total"/);
+  assert.match(attention, /"next-recipe\.hopper-totals"/);
+  assert.match(attention, /The planned recipe is not finished/);
+  // An unfinished plan is never an error, only ever an attention item.
+  const planning = attention.slice(attention.indexOf("function nextRecipeEntries("), attention.indexOf("function timelineEntries("));
+  assert.doesNotMatch(planning, /SEVERITY\.error/);
+});
+
+test("the plan's facts are read from the working copy, so the bell keeps up with live editing", () => {
+  const hook = app.slice(app.indexOf("readNextRecipeFacts = function(){"), app.indexOf("/* ---- Load Next Recipe"));
+  // The working copy first: state.nextRecipe is only rebuilt on save, so
+  // reading it alone would report the previous keystroke's plan.
+  assert.match(hook, /const layers = nextRecipeWorking\s*\n\s*\|\| \(window\.PolynNextRecipe\?\.normalize\(state\.nextRecipe\)/);
+  // The same tolerance and the same comparison the running recipe uses.
+  assert.match(hook, /Math\.abs\(layerTotal - 100\) <= 0\.0001/);
+  assert.match(hook, /Math\.abs\(L\.totalPct - 100\) > 0\.0001/);
+});
+
+test("the plan is reported without the Next page ever having been opened", () => {
+  // A plan restored from a session or arriving over RT Sync has no working
+  // copy yet, so the durable payload is the fallback rather than a blank.
+  const hook = app.slice(app.indexOf("readNextRecipeFacts = function(){"), app.indexOf("/* ---- Load Next Recipe"));
+  assert.match(hook, /normalize\(state\.nextRecipe\)\?\.layers \|\| \[\]/);
+});
+
+test("a plan nobody has started is silent - the bell does not nag about an empty Next page", () => {
+  const attention = fs.readFileSync("attention-center.js", "utf8");
+  assert.match(attention, /if \(next\.planned !== true\) return \[\];/);
+  // `planned` is the existing isMeaningful rule, not a second definition of
+  // what counts as a plan.
+  assert.match(app, /if \(!window\.PolynNextRecipe\?\.isMeaningful\(payload\)\)\{/);
+});
+
+test("the plan's readiness never touches the running recipe's readiness", () => {
+  // The Recipe pill and the sidebar status are computed from state.layers in
+  // updateCollapsedSummaries; nothing there reads the plan.
+  const summaries = app.slice(app.indexOf('const splitsStatus = $("splitsSummaryStatus");'), app.indexOf('const timelineStatus = $("timelineSummaryStatus");'));
+  assert.doesNotMatch(summaries, /nextRecipe|isNextRecipePage|recipeLayers/);
+  assert.match(summaries, /const ready = errorCount === 0 && state\.layers\.length > 0;/);
 });
 
 test("Bulk Edit needed no per-page code - it already edits the selected page", () => {
@@ -261,4 +344,52 @@ test("the confirmation summarizes the scale of the change rather than diffing ev
   assert.match(wiring, /percentage change\$\{summary\.percentageChanges === 1 \? "" : "s"\}/);
   // An identical plan says so instead of showing an empty summary.
   assert.match(wiring, /The planned recipe matches the current one/);
+});
+
+/* ============================================================
+ *   Layer-count lock vs. an incoming recipe
+ *
+ *   Regression cover for the 2026-08-12 RT Sync write storm. A scanned
+ *   heat sheet reaches applyRecipePayload, which assigns state.lineType
+ *   straight from the payload - so a sheet from the wrong line could put a
+ *   device permanently out of step with the layer count RT Sync derives for
+ *   it, and renderLineSync's enforcement then fought the recipe forever.
+ * ============================================================ */
+
+function currentPageBranch(){
+  const router = app.slice(app.indexOf("function applyRecipeToActivePage("), app.indexOf("function recipePageLabel("));
+  return router.slice(0, router.indexOf("const stored=window.PolynNextRecipe"));
+}
+
+test("a recipe whose layer count disagrees with the locked line is refused, and changes nothing", () => {
+  const branch = currentPageBranch();
+  const guardAt = branch.indexOf("const required=derivedRequiredLayerCount();");
+  const applyAt = branch.indexOf("applyRecipePayload(state,payload)");
+  assert.ok(guardAt > -1, "expected the layer-count guard");
+  assert.ok(guardAt < applyAt, "the guard must run before anything is applied");
+  assert.match(branch, /if\(required!==null && Number\(payload\?\.line_type\)!==required\)\{\s*\n\s*return \{ ok:false, message:/);
+});
+
+test("the refusal says which layer counts disagree, rather than failing silently", () => {
+  const branch = currentPageBranch();
+  assert.match(branch, /This recipe is set up for \$\{payload\?\.line_type\} layers, but this line runs \$\{required\}\. Nothing was changed\./);
+  // Scan surfaces the router's message rather than a generic one.
+  const scan = app.slice(app.indexOf("function applyScannedRecipePayload("), app.indexOf("function openWorkspaceConfigurationDialog("));
+  assert.match(scan, /result\.ok \? \{ ok:true \} : \{ ok:false, message: result\.message \|\| /);
+});
+
+test("an unlocked line still accepts any layer count - the guard is the RT Sync lock, not a new rule", () => {
+  const branch = currentPageBranch();
+  // required === null is precisely "no recognized line linked", the same
+  // condition applyLayerCountLock uses to leave manual selection available.
+  assert.match(branch, /required!==null &&/);
+  assert.match(app, /function derivedRequiredLayerCount\(syncState = lineSync\?\.getState\?\.\(\)\)\{/);
+});
+
+test("the plan is unaffected - Next already conforms to the line's own structure", () => {
+  const router = app.slice(app.indexOf("function applyRecipeToActivePage("), app.indexOf("function recipePageLabel("));
+  const nextBranch = router.slice(router.indexOf("const stored=window.PolynNextRecipe"));
+  assert.doesNotMatch(nextBranch, /derivedRequiredLayerCount/);
+  // Next never writes state.lineType, so it cannot create the disagreement.
+  assert.doesNotMatch(nextBranch, /state\.lineType\s*=/);
 });
