@@ -39,3 +39,22 @@ test("selecting an article updates its semantic heading and Back to Help restore
   assert.match(backBody, /document\.body\.dataset\.mobileHelp = "home"/);
   assert.match(backBody, /mobileHelpReturnTile\?\.focus\(\)/);
 });
+
+test("Quick Start links to the relevant section for every step, and each target actually exists", () => {
+  const start = html.indexOf('id="helpQuickStart"');
+  const quickStart = html.slice(start, html.indexOf("</details>", start));
+  const links = [...quickStart.matchAll(/<a class="helpTopicLink" href="#(help\w+)">/g)].map(m => m[1]);
+  assert.deepEqual(links, ["helpCloudSync", "helpSetup", "helpHopperPercentages", "helpHopperPercentages", "helpTimeline", "helpTools"]);
+  for (const id of new Set(links)){
+    assert.match(html, new RegExp(`id="${id}"`), `#${id} should exist as a help topic`);
+  }
+});
+
+test("in-body help links open their target topic on mobile the same way a tile does", () => {
+  const linkHandlerStart = app.indexOf('#helpBlock .helpTopicBody a.helpTopicLink');
+  assert.ok(linkHandlerStart > -1, "expected a click handler wiring up in-body help links");
+  const linkHandlerBody = app.slice(linkHandlerStart, app.indexOf('$("mobileHelpBack")?.addEventListener', linkHandlerStart));
+  assert.match(linkHandlerBody, /topic\.open = true/);
+  assert.match(linkHandlerBody, /document\.body\.dataset\.mobileHelp = "panel"/);
+  assert.match(linkHandlerBody, /mobileHelpReturnTile = matchingTile/);
+});

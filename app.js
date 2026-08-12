@@ -6093,6 +6093,19 @@
         document.body.dataset.mobileHelp = "panel";
       });
     });
+    document.querySelectorAll("#helpBlock .helpTopicBody a.helpTopicLink[href^=\"#help\"]").forEach(link=>{
+      link.addEventListener("click",()=>{
+        const targetId = link.getAttribute("href").slice(1);
+        const topic = document.getElementById(targetId);
+        if (!topic) return;
+        document.querySelectorAll("#helpBlock .helpTopic").forEach(item=>item.classList.toggle("mobile-help-active", item === topic));
+        topic.open = true;
+        const matchingTile = document.querySelector(`.mobileHelpTile[data-mobile-help-target="${targetId}"]`);
+        if (mobileHelpHeaderLabel) mobileHelpHeaderLabel.textContent = matchingTile?.querySelector("span")?.textContent || topic.querySelector("summary span")?.textContent || "Help";
+        if (matchingTile) mobileHelpReturnTile = matchingTile;
+        document.body.dataset.mobileHelp = "panel";
+      });
+    });
     $("mobileHelpBack")?.addEventListener("click",()=>{
       document.body.dataset.mobileHelp = "home";
       requestAnimationFrame(()=>mobileHelpReturnTile?.focus());
