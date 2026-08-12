@@ -13,6 +13,19 @@
     "changeoverTime",
     "offsets",
     "layers",
+    // The planned recipe for the coming changeover. Listed here, and only
+    // here, is what makes it share safely: canonicalActiveJob iterates this
+    // list, so the existing no-op guard compares the plan too - an edit to it
+    // produces exactly one debounced upload, and re-saving an unchanged plan
+    // produces none. No new channel, subscription or write path is involved.
+    //
+    // Deliberately left at active-job version 0.17: this is an additive,
+    // optional field, so a client running older code still accepts the
+    // payload. Such a client does not understand the plan and would drop it
+    // when it next writes - the plan is lost, but the running recipe is never
+    // corrupted. Bumping the version instead would make older clients reject
+    // the whole payload, which is strictly worse.
+    "nextRecipe",
     "prodResinLb",
     "scrapResinLb",
     "hopperNamingLine9",
@@ -32,6 +45,7 @@
       changeoverTime: state.changeoverTime,
       offsets: state.offsets,
       layers: state.layers,
+      nextRecipe: state.nextRecipe ?? null,
       prodResinLb: state.prodResinLb,
       scrapResinLb: state.scrapResinLb,
       hopperNamingLine9: state.hopperNamingLine9,

@@ -1631,6 +1631,11 @@
       // discarded rather than half-restored - either way this lands on null,
       // which is the same as "nothing planned". No migration step needed.
       state.nextRecipe = window.PolynNextRecipe?.normalize(payload.nextRecipe) ?? null;
+      // Drop the in-memory working copy so the grid rebuilds from the plan we
+      // just took on. Without this, a plan arriving from another device would
+      // be silently overwritten by this device's stale working array the next
+      // time anything triggered a save.
+      nextRecipeWorking = null;
       state.prodResinLb = clampNum(payload.prodResinLb);
       state.scrapResinLb = clampNum(payload.scrapResinLb);
 

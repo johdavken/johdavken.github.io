@@ -247,11 +247,41 @@ test("the planned recipe is persisted and restored with the session", () => {
   assert.match(app, /state\.nextRecipe = window\.PolynNextRecipe\?\.normalize\(payload\.nextRecipe\) \?\? null;/);
 });
 
-test("the plan is kept out of the shared active job for now", () => {
-  // RT Sync ships state.layers wholesale; adding a second recipe to every
-  // active-job write needs its own no-op/idempotency analysis first.
-  const activeJob = fs.readFileSync("active-job.js", "utf8");
-  assert.doesNotMatch(activeJob, /nextRecipe/, "the plan is local-only in this pass");
+test("the plan travels with the shared job, and the no-op guard covers it", () => {
+  const activeJob = require("./active-job.js");
+  // Listed as a synchronized field, so canonicalActiveJob - and therefore the
+  // existing no-op guard - compares it like any other.
+  assert.ok(activeJob.ACTIVE_JOB_FIELDS.includes("nextRecipe"));
+  assert.ok(activeJob.ACTIVE_JOB_FIELDS.includes("layers"));
+
+  const base = { lineRate: 100, lineType: 3, gauge: 0, changeoverTime: "", offsets: {}, layers: [], prodResinLb: 0, scrapResinLb: 0, hopperNamingLine9: "standard", hopperCircumference: 0 };
+  const withoutPlan = activeJob.snapshotActiveJob({ ...base, nextRecipe: null }, "0.17");
+  const plan = nextRecipe.fromCurrent(liveState({ assignments: { A2: { resinName: "MS0440", pct: 15 } } }));
+  const withPlan = activeJob.snapshotActiveJob({ ...base, nextRecipe: plan }, "0.17");
+
+  // Re-saving the same plan is a no-op: no write is queued.
+  assert.equal(activeJob.activeJobsEqual(withPlan, activeJob.snapshotActiveJob({ ...base, nextRecipe: JSON.parse(JSON.stringify(plan)) }, "0.17")), true);
+  // Changing the plan is a real change: exactly one write.
+  assert.equal(activeJob.activeJobsEqual(withPlan, withoutPlan), false);
+});
+
+test("an absent plan synchronizes as null rather than a missing field", () => {
+  const activeJob = require("./active-job.js");
+  const snapshot = activeJob.snapshotActiveJob({ layers: [], nextRecipe: undefined }, "0.17");
+  assert.equal(snapshot.nextRecipe, null, "an absent plan must be an explicit null, or clearing it would never sync");
+});
+
+test("sharing the plan stays additive - no active-job version bump", () => {
+  // Bumping the version would make clients running older code reject the whole
+  // payload. An optional field they ignore is strictly safer.
+  const validation = fs.readFileSync("validation.js", "utf8");
+  assert.match(validation, /SUPPORTED_ACTIVE_JOB_VERSIONS = Object\.freeze\(\["0\.17"\]\)/);
+  const activeJobSource = fs.readFileSync("active-job.js", "utf8");
+  assert.match(activeJobSource, /Deliberately left at active-job version 0\.17/);
+});
+
+test("a plan arriving from another device is not overwritten by this one's working copy", () => {
+  assert.match(app, /state\.nextRecipe = window\.PolynNextRecipe\?\.normalize\(payload\.nextRecipe\) \?\? null;[\s\S]{0,320}?nextRecipeWorking = null;/);
 });
 
 test("the module loads before app.js so restore can normalize the stored plan", () => {
