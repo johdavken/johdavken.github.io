@@ -27,7 +27,10 @@ test("build-www produces www/ from an explicit allowlist, not a blocklist over t
   assert.ok(fs.existsSync(OUT));
   const files = allFiles(OUT).map(f => path.relative(OUT, f));
   assert.ok(files.length > 0);
-  assert.ok(files.length < 60, `expected a small, explicit runtime set, got ${files.length} files`);
+  // A sanity ceiling, not an exact contract: the repo tracks ~370 files, so
+  // this catches "the whole repo got copied" while leaving room for the
+  // runtime set to grow normally (62 at the time of writing).
+  assert.ok(files.length < 90, `expected a small, explicit runtime set, got ${files.length} files`);
 });
 
 test("www/ never contains tests, migrations, the Cloudflare worker, git/dev metadata, or build tooling", () => {

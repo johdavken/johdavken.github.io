@@ -41,9 +41,39 @@ function localRuntimeReferences(html) {
   return [...refs];
 }
 
+// The web app manifest is the one referenced file that itself references more
+// files: its icons live in JSON, not in an index.html src=/href=, so the parser
+// above cannot see them and www/ would ship a manifest pointing at icons that
+// were never copied. Follow exactly this one level - manifest icon `src`s - so
+// the allowlist stays derived from what the app actually declares rather than
+// from a hand-kept list. Root-absolute srcs ("/icons/...") are the correct form
+// for the resin.tools deployment and are resolved back to repo-relative paths.
+function manifestIconReferences(manifestRelativePath) {
+  const manifestPath = path.join(ROOT, manifestRelativePath);
+  if (!fs.existsSync(manifestPath)) return [];
+  let manifest;
+  try {
+    manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  } catch (error) {
+    throw new Error(`build-www: ${manifestRelativePath} is not valid JSON (${error.message}).`);
+  }
+  const refs = new Set();
+  for (const icon of manifest.icons || []) {
+    const raw = typeof icon?.src === "string" ? icon.src : "";
+    if (!raw || /^[a-z][a-z0-9+.-]*:/i.test(raw) || raw.startsWith("//")) continue;
+    const withoutQuery = raw.split("?")[0].split("#")[0].replace(/^\//, "");
+    if (withoutQuery) refs.add(withoutQuery);
+  }
+  return [...refs];
+}
+
 function buildWww() {
   const html = fs.readFileSync(path.join(ROOT, INDEX_HTML_RELATIVE), "utf8");
-  const files = [INDEX_HTML_RELATIVE, ...localRuntimeReferences(html)];
+  const htmlRefs = localRuntimeReferences(html);
+  const manifestRefs = htmlRefs
+    .filter(ref => ref.endsWith(".webmanifest"))
+    .flatMap(manifestIconReferences);
+  const files = [...new Set([INDEX_HTML_RELATIVE, ...htmlRefs, ...manifestRefs])];
 
   fs.rmSync(OUT, { recursive: true, force: true });
 

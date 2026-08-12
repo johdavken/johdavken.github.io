@@ -598,6 +598,14 @@ main{
 .pumpOffAlarmBanner strong{ color:var(--warn); }
 .pumpOffAlarmBanner span{ grid-column:1; color:var(--muted); font-size:var(--font-small); }
 .pumpOffAlarmBanner button{ grid-column:2; grid-row:1 / 3; align-self:center; }
+/* iOS Home Screen hint. Same shape and placement as .pumpOffAlarmBanner above
+   so there is one bottom-notice pattern, but in the quiet border colour - this
+   is guidance, not an alarm. Only ever rendered on iOS in a browser tab; see
+   install-hint.js. */
+.installHint{ position:fixed; right:12px; bottom:12px; left:12px; z-index:100; display:grid; grid-template-columns:1fr auto; gap:3px 12px; padding:14px; border:1px solid var(--border2); border-radius:var(--radius-row); background:var(--panelOpen); color:var(--text); box-shadow:var(--shadow2); }
+.installHint strong{ color:var(--title); }
+.installHint span{ grid-column:1; color:var(--muted); font-size:var(--font-small); }
+.installHint button{ grid-column:2; grid-row:1 / 3; align-self:center; }
 .adminDialog{ width: min(94vw, 560px); border: 1px solid var(--border2); border-radius: var(--radius-card); background: var(--panel); color: var(--text); padding: 0; }
 .adminDialog::backdrop{ background: rgba(0,0,0,.58); }
 .adminForm{ display: grid; gap: 13px; padding: 20px; }
@@ -5780,7 +5788,7 @@ body[data-surface-style="divided"] .helpTopic{
   .timelineAlarmSetting{margin:12px 0 0}
   .mobileRecipeActionTray{bottom:calc(var(--app-dock-height) + env(safe-area-inset-bottom) + 6px)!important}
   .mobileRearrangeToast{bottom:calc(var(--app-dock-height) + env(safe-area-inset-bottom) + 8px)!important}
-  .pumpOffAlarmBanner{bottom:calc(var(--app-dock-height) + env(safe-area-inset-bottom) + 10px)}
+  .pumpOffAlarmBanner,.installHint{bottom:calc(var(--app-dock-height) + env(safe-area-inset-bottom) + 10px)}
 }
 
 @media (width <= 340px){
