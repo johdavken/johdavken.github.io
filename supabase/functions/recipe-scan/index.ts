@@ -221,6 +221,31 @@ function dosingScreenResponseJsonSchema() {
   };
 }
 
+// Only Heat Sheet's component carries lot_number - the physical LOT NUMBERS
+// column exists on that printed form and nowhere else. A dedicated schema,
+// not the shared componentJsonSchema(), keeps that boundary explicit rather
+// than growing an always-null field onto Job Traveler's response shape.
+function heatSheetComponentJsonSchema() {
+  return {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      resin_code: { type: ["string", "null"] },
+      resin_code_confidence: { type: ["number", "null"] },
+      percentage: { type: ["number", "null"] },
+      percentage_confidence: { type: ["number", "null"] },
+      hopper_designation: { type: ["string", "null"], enum: [...HOPPER_DESIGNATIONS, null] },
+      hopper_designation_confidence: { type: ["number", "null"] },
+      lot_number: { type: ["string", "null"] },
+      lot_number_confidence: { type: ["number", "null"] }
+    },
+    required: [
+      "resin_code", "resin_code_confidence", "percentage", "percentage_confidence",
+      "hopper_designation", "hopper_designation_confidence", "lot_number", "lot_number_confidence"
+    ]
+  };
+}
+
 function heatSheetLayerJsonSchema() {
   return {
     type: "object",
@@ -232,7 +257,7 @@ function heatSheetLayerJsonSchema() {
       layer_letter_confidence: { type: ["number", "null"] },
       layer_percentage: { type: ["number", "null"] },
       layer_percentage_confidence: { type: ["number", "null"] },
-      components: { type: "array", maxItems: MAX_COMPONENTS_PER_LAYER, items: componentJsonSchema() }
+      components: { type: "array", maxItems: MAX_COMPONENTS_PER_LAYER, items: heatSheetComponentJsonSchema() }
     },
     required: [
       "position", "position_confidence", "layer_letter", "layer_letter_confidence",
@@ -381,7 +406,20 @@ const HEAT_SHEET_PROMPT = [
   "Each block's SILO column lists one row per resin actually used in that layer. Unlike a fixed-slot form,",
   "an unused hopper is not printed at all - there is no padding row, no '0' resin code, nothing to skip.",
   "Only include a component for a SILO row that is actually written. The LBS column is normally blank on",
-  "this form and can be ignored. The LOT NUMBERS column can always be ignored - never extract it.",
+  "this form and can be ignored.",
+  "",
+  "The LOT NUMBERS column holds a handwritten lot number for each SILO row, aligned horizontally with that",
+  "row: the same row that carries a resin code and a % also carries that resin's lot number, one row down",
+  "in the same horizontal position as the SILO and % entries for that material. Read it into lot_number on",
+  "that same component. This is handwritten and frequently imperfect - transcribe the characters as",
+  "literally as you can (letters, digits, spaces and hyphens are all normal) rather than editing them into",
+  "a shape that looks more correct. Never invent a missing character, never infer a lot number from the",
+  "resin code or from another row's lot number, and never 'correct' what is actually written. If a cell is",
+  "blank, illegible, or you are not genuinely confident in the reading, return null - a partially legible",
+  "value (e.g. only the first several characters are clear) is preferable to inventing the rest, but a pure",
+  "guess is not preferable to null. Set lot_number_confidence to reflect how sure you actually are, same as",
+  "any other confidence field - it is a review hint, not a claim of correctness, so a low-confidence partial",
+  "reading is still worth returning rather than discarding.",
   "",
   "Each SILO row's resin code may occasionally have a longer description appended after a dash - extract",
   "only the short code itself, dropping everything from the dash onward, same as any other resin code.",

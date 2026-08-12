@@ -1,6 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const {
+  ACTIVE_JOB_FIELDS,
   snapshotActiveJob,
   canonicalActiveJob,
   activeJobsEqual,
@@ -92,6 +93,57 @@ test("active-job snapshots carry the shared workspace hopper circumference", () 
 test("meaningful active-job detection recognizes production state", () => {
   assert.equal(hasMeaningfulActiveJob(snapshotActiveJob(stateFixture(), "0.17")), true);
   assert.equal(hasMeaningfulActiveJob({ lineRate: 0, gauge: 0, changeoverTime: "", layers: [] }), false);
+});
+
+// --- Scanned lot numbers: same synchronization path as layers/nextRecipe,
+// no dedicated channel or write path of their own. ---
+
+test("resinLots and nextRecipeLots are both synchronized fields", () => {
+  assert.ok(ACTIVE_JOB_FIELDS.includes("resinLots"));
+  assert.ok(ACTIVE_JOB_FIELDS.includes("nextRecipeLots"));
+});
+
+test("a snapshot carries both lot maps, detached from mutable state", () => {
+  const state = stateFixture();
+  state.resinLots = { MS0440: "ABC-123" };
+  state.nextRecipeLots = { MS1307: "XYZ-999" };
+  const snapshot = snapshotActiveJob(state, "0.17");
+  assert.deepEqual(snapshot.resinLots, { MS0440: "ABC-123" });
+  assert.deepEqual(snapshot.nextRecipeLots, { MS1307: "XYZ-999" });
+  state.resinLots.MS0440 = "CHANGED";
+  assert.equal(snapshot.resinLots.MS0440, "ABC-123");
+});
+
+test("a legacy state object with no lot maps snapshots to empty objects, not undefined or a crash", () => {
+  const state = stateFixture();
+  delete state.resinLots;
+  delete state.nextRecipeLots;
+  const snapshot = snapshotActiveJob(state, "0.17");
+  assert.deepEqual(snapshot.resinLots, {});
+  assert.deepEqual(snapshot.nextRecipeLots, {});
+});
+
+test("changing a scanned lot is a real difference; re-saving the same one is not", () => {
+  const first = snapshotActiveJob({ ...stateFixture(), resinLots: { MS0440: "ABC-123" } }, "0.17");
+  const same = snapshotActiveJob({ ...stateFixture(), resinLots: { MS0440: "ABC-123" } }, "0.17");
+  const changed = snapshotActiveJob({ ...stateFixture(), resinLots: { MS0440: "DEF-456" } }, "0.17");
+  assert.equal(activeJobsEqual(first, same), true, "an unchanged lot must not produce a write");
+  assert.equal(activeJobsEqual(first, changed), false, "a changed lot must produce exactly one write");
+});
+
+test("lot map key order does not defeat equality, same as every other nested object here", () => {
+  const first = snapshotActiveJob({ ...stateFixture(), resinLots: { MS0440: "A", MS1307: "B" } }, "0.17");
+  const second = snapshotActiveJob({ ...stateFixture(), resinLots: { MS1307: "B", MS0440: "A" } }, "0.17");
+  assert.equal(activeJobsEqual(first, second), true);
+});
+
+test("Current's and Next's lot maps are independent in the synchronized payload - changing one is not equal to changing the other", () => {
+  const baseline = snapshotActiveJob(stateFixture(), "0.17");
+  const currentChanged = snapshotActiveJob({ ...stateFixture(), resinLots: { MS0440: "ABC" } }, "0.17");
+  const nextChanged = snapshotActiveJob({ ...stateFixture(), nextRecipeLots: { MS0440: "ABC" } }, "0.17");
+  assert.equal(activeJobsEqual(currentChanged, nextChanged), false);
+  assert.equal(activeJobsEqual(baseline, currentChanged), false);
+  assert.equal(activeJobsEqual(baseline, nextChanged), false);
 });
 
 test("meaningful active-job detection also recognizes Smart Hoppers geometry (usable height / circumference) on an otherwise-empty hopper", () => {

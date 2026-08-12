@@ -132,7 +132,9 @@ test("applyReview submits pendingPayload directly via the bridge's applyPayload 
   const fnStart = ui.indexOf("function applyReview(");
   const fnEnd = ui.indexOf("\n  }", fnStart);
   const body = ui.slice(fnStart, fnEnd);
-  assert.match(body, /serviceApi\.applyPayload\(pendingPayload\)/);
+  // pendingLotByResin rides alongside, whatever a Heat Sheet scan read (or
+  // null, for every other source).
+  assert.match(body, /serviceApi\.applyPayload\(pendingPayload, pendingLotByResin\)/);
 });
 
 test("submitFile passes the bridge's current hopper naming mode into the mapping call, so the applied payload matches this line's naming convention", () => {

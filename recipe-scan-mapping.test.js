@@ -519,3 +519,94 @@ test("dosing screen: a fully-read scan is accepted by applyRecipePayload end to 
   assert.equal(applied.layers[0].hoppers[0].resinName, "MS0440");
   assert.equal(applied.layers[0].hoppers[1].resinName, "MS1307");
 });
+
+// --- deriveLotsByResin / lotByResin on buildRecipePayloadFromScan ---------
+//
+// Only Heat Sheet components ever carry lot_number (see schema.ts) - Job
+// Traveler's never do, so buildRecipePayloadFromScan (shared by both source
+// types) needs no branching of its own to stay "invisible" for Job Traveler:
+// deriveLotsByResin simply never finds a lot_number field to read.
+
+const { deriveLotsByResin } = require("./recipe-scan-mapping.js");
+
+test("lotByResin is empty for a Job Traveler-shaped scan - its components never carry lot_number", () => {
+  const result = buildRecipePayloadFromScan(threeLayerScan(), { lineType: 3, orientation: "inside" });
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.lotByResin, {});
+});
+
+test("lotByResin is populated from a Heat Sheet-shaped scan, kept separate from payload", () => {
+  const scan = threeLayerScan({
+    layers: [
+      layer({ position: "inside", layer_percentage: 20, components: [
+        component({ resin_code: "MS0440", percentage: 79, lot_number: "ECUX2760-1015A" }),
+        component({ resin_code: "MS1307", percentage: 21, lot_number: "SMHX1810-GA1810" })
+      ] }),
+      layer({ position: "core", layer_percentage: 60 }),
+      layer({ position: "outside", layer_percentage: 20 })
+    ]
+  });
+  const result = buildRecipePayloadFromScan(scan, { lineType: 3, orientation: "inside" });
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.lotByResin, { MS0440: "ECUX2760-1015A", MS1307: "SMHX1810-GA1810" });
+  // Never inside payload itself - payload stays exactly the recipe-definition
+  // shape Saved Recipes and Next Recipe already use.
+  assert.equal(JSON.stringify(result.payload).includes("ECUX2760"), false);
+});
+
+test("lot numbers stay associated with the right resin code across layers, independent of orientation", () => {
+  const scan = threeLayerScan({
+    layers: [
+      layer({ position: "inside", layer_percentage: 20, components: [component({ resin_code: "AAA", percentage: 100, lot_number: "LOT-INSIDE" })] }),
+      layer({ position: "core", layer_percentage: 60, components: [component({ resin_code: "BBB", percentage: 100, lot_number: "LOT-CORE" })] }),
+      layer({ position: "outside", layer_percentage: 20, components: [component({ resin_code: "CCC", percentage: 100, lot_number: "LOT-OUTSIDE" })] })
+    ]
+  });
+  // Orientation mirrors which printed column maps to which physical layer,
+  // but a resin's lot is a property of the resin, not of that mapping.
+  const inside = buildRecipePayloadFromScan(scan, { lineType: 3, orientation: "inside" });
+  const outside = buildRecipePayloadFromScan(scan, { lineType: 3, orientation: "outside" });
+  assert.deepEqual(inside.lotByResin, { AAA: "LOT-INSIDE", BBB: "LOT-CORE", CCC: "LOT-OUTSIDE" });
+  assert.deepEqual(outside.lotByResin, { AAA: "LOT-INSIDE", BBB: "LOT-CORE", CCC: "LOT-OUTSIDE" });
+});
+
+test("the same resin code repeated across layers with the same lot collapses to one entry, not a conflict", () => {
+  const scan = threeLayerScan({
+    layers: [
+      layer({ position: "inside", layer_percentage: 20, components: [component({ resin_code: "MS0440", percentage: 100, lot_number: "SAME-LOT" })] }),
+      layer({ position: "core", layer_percentage: 60, components: [component({ resin_code: "MS0440", percentage: 100, lot_number: "SAME-LOT" })] }),
+      layer({ position: "outside", layer_percentage: 20, components: [component({ resin_code: "MS1307", percentage: 100 })] })
+    ]
+  });
+  const result = buildRecipePayloadFromScan(scan, { lineType: 3, orientation: "inside" });
+  assert.deepEqual(result.lotByResin, { MS0440: "SAME-LOT" });
+});
+
+test("a genuine conflict (same resin, different lots) prefers the higher-confidence reading, never a synthesized merge", () => {
+  const scan = threeLayerScan({
+    layers: [
+      layer({ position: "inside", layer_percentage: 20, components: [component({ resin_code: "MS0440", percentage: 100, lot_number: "LOW-CONF", lot_number_confidence: 0.3 })] }),
+      layer({ position: "core", layer_percentage: 60, components: [component({ resin_code: "MS0440", percentage: 100, lot_number: "HIGH-CONF", lot_number_confidence: 0.9 })] }),
+      layer({ position: "outside", layer_percentage: 20, components: [component({ resin_code: "MS1307", percentage: 100 })] })
+    ]
+  });
+  const result = buildRecipePayloadFromScan(scan, { lineType: 3, orientation: "inside" });
+  assert.deepEqual(result.lotByResin, { MS0440: "HIGH-CONF" });
+  // Never a combined/invented string.
+  assert.ok(!Object.values(result.lotByResin).some(v => v.includes("LOW-CONF") && v.includes("HIGH-CONF")));
+});
+
+test("deriveLotsByResin is a pure function of the scan - safe to call directly, e.g. for a review-screen preview", () => {
+  const scan = { layer_count: 1, layers: [{ layer_percentage: 100, components: [
+    { resin_code: "MS0440", percentage: 100, lot_number: "ABC-123", lot_number_confidence: 0.8 }
+  ] }] };
+  assert.deepEqual(deriveLotsByResin(scan), { MS0440: "ABC-123" });
+  assert.deepEqual(deriveLotsByResin(null), {});
+  assert.deepEqual(deriveLotsByResin({ layers: [] }), {});
+});
+
+test("dosing screen builder is untouched - no lotByResin concept, since that source never has a lot to read", () => {
+  const result = buildDosingScreenRecipePayloadFromScan(threeLayerDosingScan(), { lineType: 3 });
+  assert.equal(result.ok, true);
+  assert.equal("lotByResin" in result, false);
+});

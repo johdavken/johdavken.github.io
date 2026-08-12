@@ -13,6 +13,12 @@
     "changeoverTime",
     "offsets",
     "layers",
+    // Resin code -> scanned lot number, for Current. Job-specific, never
+    // part of a recipe definition (see next-recipe.js/workspace-
+    // configuration-payloads.js, neither of which knows this field exists),
+    // so it travels through the active job the same way layers does, rather
+    // than needing a synchronization path of its own.
+    "resinLots",
     // The planned recipe for the coming changeover. Listed here, and only
     // here, is what makes it share safely: canonicalActiveJob iterates this
     // list, so the existing no-op guard compares the plan too - an edit to it
@@ -26,6 +32,8 @@
     // corrupted. Bumping the version instead would make older clients reject
     // the whole payload, which is strictly worse.
     "nextRecipe",
+    // Same idea as resinLots above, for the Next page's own scanned lots.
+    "nextRecipeLots",
     "prodResinLb",
     "scrapResinLb",
     "hopperNamingLine9",
@@ -45,7 +53,9 @@
       changeoverTime: state.changeoverTime,
       offsets: state.offsets,
       layers: state.layers,
+      resinLots: state.resinLots ?? {},
       nextRecipe: state.nextRecipe ?? null,
+      nextRecipeLots: state.nextRecipeLots ?? {},
       prodResinLb: state.prodResinLb,
       scrapResinLb: state.scrapResinLb,
       hopperNamingLine9: state.hopperNamingLine9,

@@ -20,6 +20,11 @@ export const VALID_LAYER_COUNTS = [1, 3, 5] as const;
 export const MAX_LAYERS = 5;
 export const MAX_COMPONENTS_PER_LAYER = 6; // matches hopper capacity (H1-H6)
 export const MAX_NAME_LENGTH = 100;
+// Generous headroom over the plausible examples this feature was designed
+// against (typically 10-20 characters) - a defensive cap only, never a
+// format constraint. See sanitizeHeatSheetComponent for why this exists at
+// all: lot numbers are handwritten and read imperfectly on purpose.
+export const MAX_LOT_LENGTH = 40;
 export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 export const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 
@@ -352,6 +357,52 @@ export function sanitizeDosingScreenScanResult(raw: unknown): SanitizeResult {
 //    letter (A-E) when filling it out with this tool - carried through as
 //    an informational cross-check only, same reasoning and same field as
 //    Dosing Screen's layer_letter. Block position remains authoritative.
+//  - Only this form's component ever carries lot_number: the physical LOT
+//    NUMBERS column exists on the printed heat sheet and nowhere else, so
+//    Job Traveler's sanitizeComponent (shared with the general recipe scan)
+//    is deliberately left untouched. A dedicated component sanitizer, not a
+//    shared one, keeps that boundary explicit rather than growing an unused
+//    field onto every other source type's response.
+
+function sanitizeHeatSheetComponent(raw: unknown, errors: string[], path: string) {
+  if (!isPlainObject(raw)) {
+    errors.push(`${path}: component must be an object`);
+    return null;
+  }
+  const resinCode = sanitizeString(raw.resin_code, MAX_NAME_LENGTH);
+  if (!resinCode.ok) errors.push(`${path}.resin_code: must be a string of at most ${MAX_NAME_LENGTH} characters, or null`);
+  const resinCodeConfidence = sanitizeConfidence(raw.resin_code_confidence);
+  if (!resinCodeConfidence.ok) errors.push(`${path}.resin_code_confidence: must be 0-1, or null`);
+  const percentage = sanitizePercentage(raw.percentage);
+  if (!percentage.ok) errors.push(`${path}.percentage: must be 0-100, or null`);
+  const percentageConfidence = sanitizeConfidence(raw.percentage_confidence);
+  if (!percentageConfidence.ok) errors.push(`${path}.percentage_confidence: must be 0-1, or null`);
+  const hopperDesignation = sanitizeHopperDesignation(raw.hopper_designation);
+  if (!hopperDesignation.ok) errors.push(`${path}.hopper_designation: must be one of H1-H6, or null`);
+  const hopperDesignationConfidence = sanitizeConfidence(raw.hopper_designation_confidence);
+  if (!hopperDesignationConfidence.ok) errors.push(`${path}.hopper_designation_confidence: must be 0-1, or null`);
+  // Handwritten, in the row aligned with this SILO/resin. Preserved as
+  // literally as reasonably possible - never corrected, never inferred from
+  // the resin code, never invented when illegible. A partial, honestly
+  // uncertain read is preferable to null only when the model is not simply
+  // guessing; when it's guessing, null is what it should return, exactly the
+  // same convention every other field here already follows.
+  const lotNumber = sanitizeString(raw.lot_number, MAX_LOT_LENGTH);
+  if (!lotNumber.ok) errors.push(`${path}.lot_number: must be a string of at most ${MAX_LOT_LENGTH} characters, or null`);
+  const lotNumberConfidence = sanitizeConfidence(raw.lot_number_confidence);
+  if (!lotNumberConfidence.ok) errors.push(`${path}.lot_number_confidence: must be 0-1, or null`);
+
+  return {
+    resin_code: resinCode.value,
+    resin_code_confidence: resinCodeConfidence.value,
+    percentage: percentage.value,
+    percentage_confidence: percentageConfidence.value,
+    hopper_designation: hopperDesignation.value,
+    hopper_designation_confidence: hopperDesignationConfidence.value,
+    lot_number: lotNumber.value,
+    lot_number_confidence: lotNumberConfidence.value
+  };
+}
 
 function sanitizeHeatSheetLayer(raw: unknown, expectedPositions: readonly string[], errors: string[], index: number) {
   const path = `recipe.layers[${index}]`;
@@ -386,7 +437,7 @@ function sanitizeHeatSheetLayer(raw: unknown, expectedPositions: readonly string
   }
   const components = (rawComponents || [])
     .slice(0, 20) // defensive cap only; the count check above is the real gate
-    .map((component, componentIndex) => sanitizeComponent(component, errors, `${path}.components[${componentIndex}]`))
+    .map((component, componentIndex) => sanitizeHeatSheetComponent(component, errors, `${path}.components[${componentIndex}]`))
     .filter((component): component is NonNullable<typeof component> => component !== null);
 
   return {

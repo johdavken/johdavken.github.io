@@ -156,10 +156,21 @@ test("the heat sheet prompt says an unused hopper is never printed at all - no p
   assert.match(prompt, /no padding row, no '0' resin code/);
 });
 
-test("the heat sheet prompt ignores the LOT NUMBERS column and the normally-blank LBS column", () => {
+test("the heat sheet prompt reads the LOT NUMBERS column and ignores the normally-blank LBS column", () => {
   const prompt = heatSheetPromptBody();
-  assert.match(prompt, /LOT NUMBERS column can always be ignored/);
   assert.match(prompt, /LBS column is normally blank on/);
+  // The horizontal row-alignment rule: same row as the resin/% carries that
+  // resin's lot number.
+  assert.match(prompt, /aligned horizontally with that/);
+  assert.match(prompt, /Read it into lot_number on/);
+  // Preserve-literally, never invent/correct/infer.
+  assert.match(prompt, /transcribe the characters as/);
+  assert.match(prompt, /Never invent a missing character, never infer a lot number from the/);
+  assert.match(prompt, /never 'correct' what is actually written/);
+  // Partial-but-genuine beats null; a guess does not.
+  assert.match(prompt, /a partially legible/);
+  assert.match(prompt, /guess is not preferable to null/);
+  assert.match(prompt, /Set lot_number_confidence to reflect how sure you actually are/);
 });
 
 test("the heat sheet prompt covers both places the layer's own percentage can appear, with a count-based rule to tell them apart", () => {
@@ -193,7 +204,25 @@ test("heatSheetLayerJsonSchema requires layer_letter alongside position, both op
   const fnEnd = source.indexOf("\n}", fnStart);
   const body = source.slice(fnStart, fnEnd);
   assert.match(body, /layer_letter: \{ type: \["string", "null"\], enum: \[\.\.\.LAYER_LETTERS, null\] \}/);
-  assert.match(body, /components: \{ type: "array", maxItems: MAX_COMPONENTS_PER_LAYER, items: componentJsonSchema\(\) \}/);
+  // Its own component schema, not the shared one - see the next test.
+  assert.match(body, /components: \{ type: "array", maxItems: MAX_COMPONENTS_PER_LAYER, items: heatSheetComponentJsonSchema\(\) \}/);
+});
+
+test("heatSheetComponentJsonSchema is Job Traveler's shared component schema plus lot_number - not the shared one itself", () => {
+  const fnStart = source.indexOf("function heatSheetComponentJsonSchema()");
+  const fnEnd = source.indexOf("\nfunction heatSheetLayerJsonSchema()", fnStart);
+  assert.notEqual(fnStart, -1, "expected a dedicated heatSheetComponentJsonSchema");
+  const body = source.slice(fnStart, fnEnd);
+  assert.match(body, /resin_code: \{ type: \["string", "null"\] \}/);
+  assert.match(body, /lot_number: \{ type: \["string", "null"\] \}/);
+  assert.match(body, /lot_number_confidence: \{ type: \["number", "null"\] \}/);
+  assert.match(body, /"lot_number", "lot_number_confidence"/);
+  // The shared component schema (Job Traveler's) must be untouched by this -
+  // it has no lot_number field and never will.
+  const sharedStart = source.indexOf("function componentJsonSchema()");
+  const sharedEnd = source.indexOf("\nfunction layerJsonSchema()", sharedStart);
+  const shared = source.slice(sharedStart, sharedEnd);
+  assert.doesNotMatch(shared, /lot_number/);
 });
 
 // --- ALLOWED_ORIGINS: the Android app was hitting CORS failures on every

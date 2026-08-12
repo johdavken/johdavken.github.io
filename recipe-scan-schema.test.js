@@ -2,7 +2,7 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { sanitizeRecipeScanResult, sanitizeDosingScreenScanResult, sanitizeHeatSheetScanResult, validateImage, totalStatus, DOSING_SCREEN_COMPONENTS_PER_LAYER } = require("./recipe-scan-schema.js");
+const { sanitizeRecipeScanResult, sanitizeDosingScreenScanResult, sanitizeHeatSheetScanResult, validateImage, totalStatus, DOSING_SCREEN_COMPONENTS_PER_LAYER, MAX_LOT_LENGTH } = require("./recipe-scan-schema.js");
 
 function validComponent(overrides = {}) {
   return {
@@ -488,6 +488,101 @@ test("heat sheet: strips unknown properties instead of failing the whole request
   assert.equal(result.ok, true);
   assert.equal("unexpected_envelope_field" in result.value, false);
   assert.equal("some_extra_field" in result.value.recipe.layers[0], false);
+});
+
+// --- Heat Sheet: lot_number - only this source ever has one, since the
+// physical LOT NUMBERS column exists only on the printed heat sheet.
+
+function heatSheetComponent(overrides = {}) {
+  return {
+    resin_code: "MS0440", resin_code_confidence: 0.9,
+    percentage: 79, percentage_confidence: 0.9,
+    hopper_designation: null, hopper_designation_confidence: null,
+    lot_number: "ECUX2760-1015A", lot_number_confidence: 0.7,
+    ...overrides
+  };
+}
+
+test("heat sheet: accepts a well-formed lot number and its confidence", () => {
+  const result = sanitizeHeatSheetScanResult({
+    recipe: { name: null, layers: [
+      heatSheetLayer("inside", { components: [heatSheetComponent()] }),
+      heatSheetLayer("core"), heatSheetLayer("outside")
+    ] }
+  });
+  assert.equal(result.ok, true);
+  const component = result.value.recipe.layers[0].components[0];
+  assert.equal(component.lot_number, "ECUX2760-1015A");
+  assert.equal(component.lot_number_confidence, 0.7);
+});
+
+test("heat sheet: accepts a missing or explicitly null lot number - most components will have none read", () => {
+  for (const overrides of [
+    { lot_number: undefined, lot_number_confidence: undefined },
+    { lot_number: null, lot_number_confidence: null }
+  ]) {
+    const result = sanitizeHeatSheetScanResult({
+      recipe: { name: null, layers: [
+        heatSheetLayer("inside", { components: [heatSheetComponent(overrides)] }),
+        heatSheetLayer("core"), heatSheetLayer("outside")
+      ] }
+    });
+    assert.equal(result.ok, true);
+    assert.equal(result.value.recipe.layers[0].components[0].lot_number, null);
+  }
+});
+
+test("heat sheet: a partially-legible lot number is accepted as-is, exactly as read - never padded, never rejected for looking incomplete", () => {
+  const result = sanitizeHeatSheetScanResult({
+    recipe: { name: null, layers: [
+      heatSheetLayer("inside", { components: [heatSheetComponent({ lot_number: "ECUX27", lot_number_confidence: 0.3 })] }),
+      heatSheetLayer("core"), heatSheetLayer("outside")
+    ] }
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.value.recipe.layers[0].components[0].lot_number, "ECUX27");
+});
+
+test("heat sheet: rejects a lot number over the defensive length cap and an out-of-range confidence", () => {
+  const tooLong = sanitizeHeatSheetScanResult({
+    recipe: { name: null, layers: [
+      heatSheetLayer("inside", { components: [heatSheetComponent({ lot_number: "X".repeat(MAX_LOT_LENGTH + 1) })] }),
+      heatSheetLayer("core"), heatSheetLayer("outside")
+    ] }
+  });
+  assert.equal(tooLong.ok, false);
+
+  const badConfidence = sanitizeHeatSheetScanResult({
+    recipe: { name: null, layers: [
+      heatSheetLayer("inside", { components: [heatSheetComponent({ lot_number_confidence: 1.5 })] }),
+      heatSheetLayer("core"), heatSheetLayer("outside")
+    ] }
+  });
+  assert.equal(badConfidence.ok, false);
+});
+
+test("heat sheet: lot numbers stay associated with the resin code on their own row, not any other row in the layer", () => {
+  const result = sanitizeHeatSheetScanResult({
+    recipe: { name: null, layers: [
+      heatSheetLayer("inside", { components: [
+        heatSheetComponent({ resin_code: "MS0440", percentage: 60, lot_number: "LOT-A" }),
+        heatSheetComponent({ resin_code: "MS1307", percentage: 40, lot_number: "LOT-B" })
+      ] }),
+      heatSheetLayer("core"), heatSheetLayer("outside")
+    ] }
+  });
+  assert.equal(result.ok, true);
+  const [first, second] = result.value.recipe.layers[0].components;
+  assert.equal(first.resin_code, "MS0440");
+  assert.equal(first.lot_number, "LOT-A");
+  assert.equal(second.resin_code, "MS1307");
+  assert.equal(second.lot_number, "LOT-B");
+});
+
+test("Job Traveler's shared sanitizeRecipeScanResult never gains a lot_number field - only Heat Sheet has one", () => {
+  const result = sanitizeRecipeScanResult(threeLayerRecipe());
+  assert.equal(result.ok, true);
+  assert.equal("lot_number" in result.value.recipe.layers[0].components[0], false);
 });
 
 test("heat sheet: rejects a non-object response and a missing/non-array layers field", () => {
