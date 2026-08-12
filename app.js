@@ -1636,6 +1636,11 @@
       // be silently overwritten by this device's stale working array the next
       // time anything triggered a save.
       nextRecipeWorking = null;
+      // A plan arriving from another device has to announce itself. The marker
+      // is otherwise only refreshed when this device commits or switches pages,
+      // so a receiving device would show no sign a plan had appeared until the
+      // operator happened to touch Recipe.
+      syncPlannedRecipeIndicator();
       state.prodResinLb = clampNum(payload.prodResinLb);
       state.scrapResinLb = clampNum(payload.scrapResinLb);
 
