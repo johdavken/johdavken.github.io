@@ -86,7 +86,9 @@ test("a shared active job never overrides this device's Smart Hoppers preference
 });
 
 test("changing line type still warns before discarding a removed layer's configured Smart Hopper geometry, not just weight/resin/track/pumpOff", () => {
-  const start = app.indexOf("function hookLineTypeChoice(");
+  // Lives in applyLineTypeChange since the automatic RT Sync layer
+  // enforcement started sharing the same transition.
+  const start = app.indexOf("function applyLineTypeChange(");
   const body = app.slice(start, app.indexOf("\n  }", start));
   assert.match(body, /clampNum\(hopper\.usableHeight\) > 0 \|\| clampNum\(hopper\.circumference\) > 0/);
 });

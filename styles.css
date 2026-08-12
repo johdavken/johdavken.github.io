@@ -1197,6 +1197,24 @@ input[readonly]:focus{
   outline: 2px solid var(--focus-border);
   outline-offset: 2px;
 }
+/* Shown in place of the tiles when the linked RT Sync line dictates the
+   physical layer count. Deliberately a plain readout, not a pill or panel:
+   the operator has nothing to act on here. Identical on desktop and mobile,
+   because the tiles it replaces are the same control on both. */
+.setupLayerCountDerived{
+  margin: 0;
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 750;
+}
+.setupLayerCountDerived[hidden]{ display: none; }
+/* Id-qualified so it outranks the mobile `#lineSetupBlock .layerCountTiles`
+   display override further down this file - a plain `[hidden]` rule loses
+   that specificity contest and leaves the tiles visible on mobile. */
+#lineSetupBlock .layerCountTiles[hidden]{ display: none; }
 
 /* Changeover deadline / Line rate: big centered dashboard-style readouts -
    icon, bold value, small caption - instead of a labeled underline field.

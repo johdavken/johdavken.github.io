@@ -153,12 +153,17 @@ test("syncLineTypeUI toggles .active/aria-checked/tabIndex on the selected tile"
 });
 
 test("hookLineTypeChoice preserves the original <select> change handler's exact confirm-before-removing-configured-layers behavior", () => {
-  const body = functionBody("hookLineTypeChoice");
+  // The transition itself now lives in applyLineTypeChange, shared with the
+  // automatic RT Sync layer enforcement. The behavior is unchanged; only its
+  // home moved, and the manual path still routes through it and still prompts.
+  const body = functionBody("applyLineTypeChange");
   assert.match(body, /getLayerNamesForType\(nextType\)/);
   assert.match(body, /will remove configured data for/);
   assert.match(body, /state\.lineType = nextType;/);
   assert.match(body, /ensureLayers\(\);/);
   assert.match(body, /notifyActiveJobMutation\(\{ immediate: true, kind: "line-type" \}\);/);
+  assert.match(body, /if \(confirmDataLoss && configuredRemovedLayers\.length && !confirm\(/);
+  assert.match(functionBody("hookLineTypeChoice"), /applyLineTypeChange\(value\);/);
 });
 
 test("hookLineTypeChoice is wired from hookCustomToggles", () => {

@@ -819,16 +819,52 @@
 
   const LINE_TYPES = [1, 3, 5];
 
+  // null while the operator may choose freely; the required layer count while
+  // linked to a recognized RT Sync line. The authoritative guard against
+  // manual selection - hidden/disabled tiles are the visual and assistive
+  // layer over it, not the rule.
+  let lockedLayerCount = null;
+
   function syncLineTypeUI(){
     const group = $("lineTypeToggle");
     if (!group) return;
+    const locked = lockedLayerCount !== null;
     const current = LINE_TYPES.includes(Number(state.lineType)) ? Number(state.lineType) : 3;
     group.querySelectorAll("[data-line-type]").forEach(button=>{
       const selected = Number(button.dataset.lineType) === current;
       button.classList.toggle("active", selected);
       button.setAttribute("aria-checked", String(selected));
-      button.tabIndex = selected ? 0 : -1;
+      button.disabled = locked;
+      button.tabIndex = selected && !locked ? 0 : -1;
     });
+  }
+
+  // The single layer-count transition. Both the manual tiles and the
+  // automatic RT Sync enforcement go through here, so recalculation,
+  // rendering, recipe/percentage handling and the active-job mutation stay
+  // identical either way. Returns whether the layer count actually changed.
+  function applyLineTypeChange(value, { confirmDataLoss = true } = {}){
+    const nextType = LINE_TYPES.includes(Number(value)) ? Number(value) : 3;
+    if (nextType === state.lineType) return false;
+    const nextLayerNames = new Set(getLayerNamesForType(nextType));
+    const configuredRemovedLayers = state.layers.filter(layer=>!nextLayerNames.has(layer.name)).filter(layer=>
+      clampNum(layer.layerPct) > 0 ||
+      layer.hoppers.some((hopper,index)=>
+        (index === 0 ? Math.abs(clampNum(hopper.pct) - 100) > 0.0001 : clampNum(hopper.pct) > 0) ||
+        clampNum(hopper.weight) > 0 || !!hopper.resinName || !!hopper.track || !!hopper.pumpOff ||
+        clampNum(hopper.usableHeight) > 0 || clampNum(hopper.circumference) > 0
+      )
+    );
+    if (confirmDataLoss && configuredRemovedLayers.length && !confirm(`Changing to ${nextType} ${nextType === 1 ? "layer" : "layers"} will remove configured data for ${configuredRemovedLayers.map(layer=>layer.name).join(", ")}. Continue?`)){
+      return false;
+    }
+    state.lineType = nextType;
+    ensureLayers();
+    syncLineTypeUI();
+    rebuildUIFromState();
+    saveSession();
+    notifyActiveJobMutation({ immediate: true, kind: "line-type" });
+    return true;
   }
 
   function hookLineTypeChoice(){
@@ -836,26 +872,8 @@
     if (!group || group._wired) return;
     group._wired = true;
     const choose = value=>{
-      const nextType = LINE_TYPES.includes(Number(value)) ? Number(value) : 3;
-      if (nextType === state.lineType) return;
-      const nextLayerNames = new Set(getLayerNamesForType(nextType));
-      const configuredRemovedLayers = state.layers.filter(layer=>!nextLayerNames.has(layer.name)).filter(layer=>
-        clampNum(layer.layerPct) > 0 ||
-        layer.hoppers.some((hopper,index)=>
-          (index === 0 ? Math.abs(clampNum(hopper.pct) - 100) > 0.0001 : clampNum(hopper.pct) > 0) ||
-          clampNum(hopper.weight) > 0 || !!hopper.resinName || !!hopper.track || !!hopper.pumpOff ||
-          clampNum(hopper.usableHeight) > 0 || clampNum(hopper.circumference) > 0
-        )
-      );
-      if (configuredRemovedLayers.length && !confirm(`Changing to ${nextType} ${nextType === 1 ? "layer" : "layers"} will remove configured data for ${configuredRemovedLayers.map(layer=>layer.name).join(", ")}. Continue?`)){
-        return;
-      }
-      state.lineType = nextType;
-      ensureLayers();
-      syncLineTypeUI();
-      rebuildUIFromState();
-      saveSession();
-      notifyActiveJobMutation({ immediate: true, kind: "line-type" });
+      if (lockedLayerCount !== null) return;
+      applyLineTypeChange(value);
     };
     group.addEventListener("click",event=>{
       const button = event.target.closest("[data-line-type]");
@@ -863,6 +881,7 @@
     });
     group.addEventListener("keydown",event=>{
       if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+      if (lockedLayerCount !== null) return;
       event.preventDefault();
       const idx = LINE_TYPES.indexOf(LINE_TYPES.includes(Number(state.lineType)) ? Number(state.lineType) : 3);
       const nextIdx = event.key === "ArrowLeft" ? Math.max(0, idx - 1) : Math.min(LINE_TYPES.length - 1, idx + 1);
@@ -870,6 +889,91 @@
       group.querySelector(`[data-line-type="${LINE_TYPES[nextIdx]}"]`)?.focus();
     });
     syncLineTypeUI();
+  }
+
+  /* ============================
+   * Derived layer count (RT Sync line identity)
+   * ============================
+   * Mirrors syncDerivedHopperNaming: the workspace identity decides, the
+   * operator does not, and the same PolynLineIdentity module answers both
+   * questions. Enforcement runs off the sync state only - never on a render
+   * or Timeline tick - and is a no-op whenever the layer count already
+   * matches, so no repeat mutation is ever published. */
+
+  function derivedRequiredLayerCount(syncState = lineSync?.getState?.()){
+    const required = window.PolynLineIdentity?.requiredLayerCountForSync(syncState);
+    return required === undefined ? null : required;
+  }
+
+  let unmappedWorkspaceNotice = "";
+
+  // Hides the manual tiles while a line dictates the configuration, and
+  // reports the derived value read-only in their place.
+  function applyLayerCountLock(syncState){
+    const identity = window.PolynLineIdentity;
+    const required = derivedRequiredLayerCount(syncState);
+    const lineNumber = identity?.linkedLineNumber(syncState) ?? null;
+    lockedLayerCount = required;
+
+    const group = $("lineTypeToggle");
+    if (group) group.hidden = required !== null;
+    const derived = $("setupLayerCountDerived");
+    if (derived){
+      derived.hidden = required === null;
+      derived.textContent = required === null
+        ? ""
+        : `${required} ${required === 1 ? "layer" : "layers"} · Set by Line ${lineNumber}`;
+    }
+    syncLineTypeUI();
+
+    // Development diagnostic only, once per workspace: a linked workspace we
+    // cannot map is not an operator error, it just keeps manual selection.
+    const workspace = identity?.linkedWorkspace(syncState) || null;
+    if (workspace && required === null){
+      if (unmappedWorkspaceNotice !== workspace.id){
+        unmappedWorkspaceNotice = workspace.id;
+        console.info(`RT Sync: workspace "${workspace.name || workspace.id}" is not a recognized Line 1-15; manual layer selection stays available.`);
+      }
+    }else if (!workspace){
+      unmappedWorkspaceNotice = "";
+    }
+    return required;
+  }
+
+  let layerEnforcementScheduled = false;
+
+  // Deferred out of the RT Sync render pass on purpose: applying a layer
+  // change re-renders the whole workspace and emits an active-job mutation,
+  // which would otherwise re-enter renderLineSync mid-render.
+  function scheduleLayerCountEnforcement(){
+    if (layerEnforcementScheduled) return;
+    layerEnforcementScheduled = true;
+    setTimeout(()=>{
+      layerEnforcementScheduled = false;
+      enforceDerivedLayerCount();
+    }, 0);
+  }
+
+  function enforceDerivedLayerCount(){
+    const syncState = lineSync?.getState?.();
+    const required = derivedRequiredLayerCount(syncState);
+    if (required === null || Number(state.lineType) === required) return false;
+    // While a remote payload is being applied, notifyActiveJobMutation
+    // deliberately suppresses outgoing writes, so normalizing here would
+    // change this device without ever telling the others. applyRemoteActive
+    // always emits again once it settles, and that pass re-schedules this.
+    if (syncState?.isApplyingRemote) return false;
+    return applyLineTypeChange(required, { confirmDataLoss:false });
+  }
+
+  // Called from renderLineSync. Only schedules work when the linked line and
+  // the current layer count actually disagree, so ordinary refreshes,
+  // reconnects and pending-count updates cost nothing.
+  function syncDerivedLayerCount(syncState){
+    const required = applyLayerCountLock(syncState);
+    if (required === null || Number(state.lineType) === required) return false;
+    scheduleLayerCountEnforcement();
+    return true;
   }
 
   function hookToggle(id, getOn, setOn){
@@ -1685,6 +1789,8 @@
     function computedWeightId(layerName, hi){ return `cw_${layerName}_${hi}`; }
     function mobileSummaryWeightId(layerName, hi){ return `msw_${layerName}_${hi}`; }
     function desktopSummaryWeightId(layerName, hi){ return `dsw_${layerName}_${hi}`; }
+    function mobileSummaryHeightId(layerName, hi){ return `msh_${layerName}_${hi}`; }
+    function desktopSummaryHeightId(layerName, hi){ return `dsh_${layerName}_${hi}`; }
     function smartBadgeId(layerName, hi){ return `sm_${layerName}_${hi}`; }
     function hopperNameId(layerName, hi){ return `hn_${layerName}_${hi}`; }
     function hopperPositionLabel(hi){
@@ -1788,7 +1894,7 @@
           const visualReadout = document.createElement("div");
           visualReadout.className = "mobileWeightVisualReadout";
           visualReadout.innerHTML = `
-            <span class="mobileWeightVisualValues"><b id="${mobileSummaryWeightId(L.name, hi)}" class="mobileWeightSummaryWeight"><span>${clampNum(hopper.weight)}</span><small>lb</small></b><b><span>${clampNum(hopper.usableHeight)}</span><small>in</small></b></span>`;
+            <span class="mobileWeightVisualValues"><b id="${mobileSummaryWeightId(L.name, hi)}" class="mobileWeightSummaryWeight"><span>${clampNum(hopper.weight)}</span><small>lb</small></b><b id="${mobileSummaryHeightId(L.name, hi)}"><span>${clampNum(hopper.usableHeight)}</span><small>in</small></b></span>`;
           const summaryWeight = visualReadout.querySelector(".mobileWeightSummaryWeight");
           const makeValueField = (shortLabel, value, ariaLabel, onValue)=>{
             const wrap = document.createElement("label");
@@ -1819,7 +1925,11 @@
           });
           let heightInput = null;
           if (state.smartHoppersEnabled){
-            heightInput = makeValueField("H", hopper.usableHeight, `${hopperBadgeLabel(L.name, hi)} usable height in inches`, value=>{ hopper.usableHeight = value; visualReadout.querySelectorAll("b")[1].querySelector("span").textContent = value; });
+            // Summary height is kept live by refreshSmartHopperState (called
+            // from validateAndCompute right after this), reading the same
+            // canonical hopper.usableHeight this sets - not a second,
+            // positionally-addressed update here.
+            heightInput = makeValueField("H", hopper.usableHeight, `${hopperBadgeLabel(L.name, hi)} usable height in inches`, value=>{ hopper.usableHeight = value; });
           }
           cell.appendChild(valueFields);
           cell.appendChild(visualReadout);
@@ -2161,7 +2271,7 @@
             <span class="desktopWeightVisualValues">
               <span class="desktopWeightSummaryValues">
                 <b id="${desktopSummaryWeightId(L.name, hi)}" class="desktopWeightSummaryWeight${initialSmartWeight ? " smart" : ""}" aria-label="${hopperBadgeLabel(L.name, hi)} ${initialSmartWeight ? "Smart-calculated" : "manual"} weight, ${initialSummaryWeight} pounds"><span>${initialSummaryWeight}</span><small>lb</small></b>
-                <b><span>${clampNum(L.hoppers[hi].usableHeight)}</span><small>in</small></b>
+                <b id="${desktopSummaryHeightId(L.name, hi)}"><span>${clampNum(L.hoppers[hi].usableHeight)}</span><small>in</small></b>
               </span>
               <span class="desktopWeightEditFields">
                 <label><input class="desktopVisualWeight" type="text" inputmode="decimal" value="${clampNum(L.hoppers[hi].weight)}" aria-label="${hopperBadgeLabel(L.name, hi)} manual weight in pounds"/><small>Weight (lb)</small></label>
@@ -2287,10 +2397,12 @@
             validateAndCompute({ sync:true }); saveSession();
           });
           visualHeightInput?.addEventListener("input", event=>{
+            // Summary height is kept live by refreshSmartHopperState (called
+            // from validateAndCompute right after this), reading the same
+            // canonical hopper.usableHeight this sets - not a second,
+            // positionally-addressed update here.
             const accepted = acceptNumericInput(event.target, { min:0, label:`${hopperBadgeLabel(L.name, hi)} usable height` }, value=>{
               L.hoppers[hi].usableHeight = value;
-              const summaryHeight = visualReadout.querySelector(".desktopWeightSummaryValues b:nth-child(2) > span");
-              if (summaryHeight) summaryHeight.textContent = String(value);
             });
             if (!accepted) return;
             validateAndCompute({ sync:true }); saveSession();
@@ -2528,6 +2640,17 @@
             if(smart) desktopSummaryWeight.title=`Smart-calculated from ${hopperBadgeLabel(L.name, hi)} geometry and ${smart.resin.resin_code} bulk density.`;
             else desktopSummaryWeight.removeAttribute("title");
           }
+
+          // Usable height has one canonical value (hopper.usableHeight) and
+          // no Smart/manual distinction of its own - unlike weight above,
+          // it is never computed, only entered. Same targeted-by-id refresh
+          // as the weight spans above, so every write path (individual edit,
+          // wrench popover, bulk apply) converges on this one place instead
+          // of each maintaining its own positional DOM update.
+          const mobileSummaryHeight=document.getElementById(mobileSummaryHeightId(L.name, hi));
+          if(mobileSummaryHeight) mobileSummaryHeight.querySelector("span").textContent=String(clampNum(hopper.usableHeight));
+          const desktopSummaryHeight=document.getElementById(desktopSummaryHeightId(L.name, hi));
+          if(desktopSummaryHeight) desktopSummaryHeight.querySelector("span").textContent=String(clampNum(hopper.usableHeight));
 
           const computedEl = document.getElementById(computedWeightId(L.name, hi));
           if (computedEl){
@@ -5285,6 +5408,10 @@
 
     const selected = syncState.selectedWorkspace;
     syncDerivedHopperNaming(syncState);
+    // Same workspace identity, same lifecycle: connection established,
+    // startup from persisted membership, workspace switch, restored session,
+    // or metadata that only arrives after the first render all reach this.
+    syncDerivedLayerCount(syncState);
     const role = selected?.membership?.role || "";
     const owner = role === "owner";
     const connected = !!syncState.connected;
