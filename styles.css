@@ -2078,6 +2078,23 @@ body[data-recipe-page="next"] .splitsInfo{ display: none; }
 .splitColumnTotal.planning,
 .splitsMatrixSummary.planning{ color: var(--muted); font-weight: 650; }
 
+/* Load Next Recipe confirmation: a compact scale-of-change summary, not a
+   full diff. The grid itself is where the detail belongs. */
+.loadNextSummary{ display: grid; gap: 4px; }
+.loadNextSummary:empty{ display: none; }
+.loadNextSummaryRow{
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 10px;
+  border-radius: var(--radius-row);
+  background: var(--row-bg-2);
+  font-size: var(--font-small);
+}
+.loadNextSummaryRow strong{ color: var(--title); }
+.loadNextSummaryRow span{ color: var(--text); font-variant-numeric: tabular-nums; }
+.loadNextSummary p{ margin: 4px 0 0; }
+
 @media (max-width: 900px){
   /* Full-width halves keep both tabs comfortably tappable on a phone. */
   .recipePageTabs{ gap: 6px; padding: 0; }

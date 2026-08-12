@@ -200,3 +200,64 @@ test("Bulk Edit needed no per-page code - it already edits the selected page", (
   assert.ok(editor.includes("recipeLayers()"));
   assert.doesNotMatch(app, /bulkEditTarget|bulkApplyTo\(/);
 });
+
+/* ============================================================
+ *   Phase 4: Load Next Recipe
+ * ============================================================ */
+
+function loadNextWiring(){
+  const start = app.indexOf("function renderLoadNextRecipeSummary(");
+  assert.notEqual(start, -1, "expected the Load Next Recipe wiring");
+  return app.slice(start, app.indexOf("function syncRecipePageUI(", start));
+}
+
+test("Load Next Recipe is offered on Current only, and never on the plan itself", () => {
+  const editor = recipeEditor();
+  assert.match(editor, /if \(!isNextRecipePage\(\)\)\{[\s\S]*?loadNextRecipeBtn/);
+});
+
+test("the action is hidden with no plan and disabled until the plan is complete", () => {
+  const editor = recipeEditor();
+  assert.match(editor, /loadNextButton\.hidden = !planned;/);
+  assert.match(editor, /loadNextButton\.disabled = !promotable;/);
+  assert.match(editor, /const promotable = !!window\.PolynNextRecipe\?\.isPromotable\(state\.nextRecipe\);/);
+  // Disabled rather than hidden, with a reason - the button explains itself.
+  assert.match(editor, /percentages need to total 100%/);
+});
+
+test("promotion cannot be reached without confirmation", () => {
+  const wiring = loadNextWiring();
+  assert.match(wiring, /dialog\.showModal\(\)/);
+  assert.match(wiring, /if \(dialog\.returnValue === "load"\) loadNextRecipeIntoCurrent\(\);/);
+  // Guarded again at the dialog, not only by the button's disabled state.
+  assert.match(wiring, /if \(!window\.PolynNextRecipe\?\.isPromotable\(state\.nextRecipe\)\) return;/);
+  assert.match(html, /<dialog id="loadNextRecipeDialog"/);
+  assert.match(html, /This replaces the current recipe with the planned Next Recipe\./);
+  assert.match(html, /Line setup, receiver hopper weights, tracking, and pump-off state are not changed\./);
+});
+
+test("promotion reuses the saved-recipe apply, inheriting its documented semantics", () => {
+  const wiring = loadNextWiring();
+  // Not a bespoke copy loop: the same guarded call Saved Recipes makes, which
+  // carries weight / track / pumpOff / Smart Hopper dimensions forward and
+  // recalculates H1.
+  assert.match(wiring, /window\.PolynWorkspaceConfigurationPayloads\?\.applyRecipePayload\(state, plan\)/);
+  assert.doesNotMatch(wiring, /hopper\.weight\s*=|hopper\.track\s*=|hopper\.pumpOff\s*=/);
+  assert.match(wiring, /notifyActiveJobMutation\(\{ immediate:true, kind:"load-next-recipe" \}\)/);
+  assert.match(app, /"load-next-recipe": "Next Recipe loaded"/);
+});
+
+test("the plan survives promotion", () => {
+  const wiring = loadNextWiring();
+  assert.doesNotMatch(wiring, /state\.nextRecipe\s*=\s*null/, "loading must not destroy the plan");
+  assert.match(wiring, /state\.nextRecipe is untouched by applyRecipePayload/);
+});
+
+test("the confirmation summarizes the scale of the change rather than diffing everything", () => {
+  const wiring = loadNextWiring();
+  assert.match(wiring, /summarizeChange\(\s*\n?\s*window\.PolynNextRecipe\.fromCurrent\(state\),\s*\n?\s*state\.nextRecipe/);
+  assert.match(wiring, /resin change\$\{summary\.resinChanges === 1 \? "" : "s"\}/);
+  assert.match(wiring, /percentage change\$\{summary\.percentageChanges === 1 \? "" : "s"\}/);
+  // An identical plan says so instead of showing an empty summary.
+  assert.match(wiring, /The planned recipe matches the current one/);
+});
