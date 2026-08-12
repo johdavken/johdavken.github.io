@@ -234,9 +234,12 @@ test("contextual validation surfaces are all retained", () => {
   // Invalid-field outlines and accessible error relationships.
   assert.match(app, /el\.setAttribute\("aria-invalid", String\(!result\.valid\)\)/);
   assert.match(app, /el\.setCustomValidity\(result\.valid \? "" : result\.message\)/);
-  // Per-layer and per-column totals beside the fields.
-  assert.match(app, /summary\.className = `splitsMatrixSummary \$\{layerOkay \? "ok" : "warn"\}`/);
-  assert.match(app, /el\.className = `splitColumnTotal \$\{okay \? "ok" : "warn"\}`/);
+  // Per-layer and per-column totals beside the fields. `tone` is "warn" on the
+  // running recipe and a muted "planning" on the Next page, where an unfinished
+  // total is expected rather than a fault.
+  assert.match(app, /summary\.className = `splitsMatrixSummary \$\{layerOkay \? "ok" : tone\}`/);
+  assert.match(app, /el\.className = `splitColumnTotal \$\{okay \? "ok" : tone\}`/);
+  assert.match(app, /const tone = planning \? "planning" : "warn";/);
   // Section-level markers in the sidebar and section pills.
   assert.match(app, /navButton\?\.setAttribute\("data-status", navState\)/);
   assert.match(app, /splitsStatus\.classList\.toggle\("badge-warn", !ready\)/);

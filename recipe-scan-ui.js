@@ -467,8 +467,16 @@
     if (!content || !pendingPayload) return;
     content.replaceChildren();
 
+    // The scan is destination-neutral right up to this screen; the review is
+    // where the operator is told which recipe page it will land on.
+    const destination = serviceApi.getRecipePageLabel?.() || "Current Recipe";
+    const applyButton = $("recipeScanReviewApplyBtn");
+    if (applyButton) applyButton.textContent = `Apply to ${destination}`;
+    const title = $("recipeScanReviewTitle");
+    if (title) title.textContent = `Review Scanned Recipe — ${destination}`;
+
     const messages = [];
-    if (serviceApi.hasNonEmptyRecipe?.()) messages.push("This will overwrite your current recipe assignments in Recipe Setup.");
+    if (serviceApi.hasNonEmptyRecipe?.()) messages.push(`This will overwrite the ${destination.toLowerCase()} assignments.`);
     if (pendingScan?.layer_percentage_total_status && pendingScan.layer_percentage_total_status !== "ok"){
       messages.push("The scanned layer percentages don't total 100% — review carefully before applying.");
     }

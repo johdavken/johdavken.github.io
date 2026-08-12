@@ -185,7 +185,17 @@ test("the review screen warns before overwriting an existing non-empty recipe", 
   const fnEnd = ui.indexOf("\n  }", fnStart);
   const body = ui.slice(fnStart, fnEnd);
   assert.match(body, /serviceApi\.hasNonEmptyRecipe\?\.\(\)/);
-  assert.match(body, /This will overwrite your current recipe assignments/);
+  // The warning names the page being overwritten, since a scan lands on
+  // whichever recipe page is selected.
+  assert.match(body, /This will overwrite the \$\{destination\.toLowerCase\(\)\} assignments\./);
+});
+
+test("the review screen states which recipe page the scan will be applied to", () => {
+  const fnStart = ui.indexOf("function renderReview(");
+  const body = ui.slice(fnStart, ui.indexOf("\n  }", fnStart));
+  assert.match(body, /const destination = serviceApi\.getRecipePageLabel\?\.\(\) \|\| "Current Recipe";/);
+  assert.match(body, /applyButton\.textContent = `Apply to \$\{destination\}`/);
+  assert.match(body, /title\.textContent = `Review Scanned Recipe — \$\{destination\}`/);
 });
 
 test("Retake reopens the capture dialog without discarding the chosen orientation", () => {
