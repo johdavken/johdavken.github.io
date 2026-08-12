@@ -19,7 +19,7 @@ test("Print Recipe remains desktop-only, even though Rearrange itself no longer 
   const modeBar = app.slice(modeBarStart, app.indexOf("const toolbar = document.createElement", modeBarStart));
   assert.match(modeBar, /rearrangeButton\.className="secondary"/);
   assert.doesNotMatch(modeBar, /rearrangeButton\.className="secondary rearrangeDesktopOnly"/);
-  assert.match(modeBar, /printButton\.className="secondary rearrangeDesktopOnly"/);
+  assert.match(modeBar, /printButton\.className="secondary rearrangeDesktopOnly recipeActionTertiary"/);
   // Rearrange is no longer appended into modeBar at all (it moved into the
   // desktop-only .recipeUtilityTabs strip alongside Saved recipes/Bulk
   // edit) - Scan Recipe sits between Rearrange's old spot and Print Recipe
