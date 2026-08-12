@@ -3243,19 +3243,37 @@
       // (see renderSplitsSavedRecipes) - Load is the action operators reach
       // for most from here, so it leads the row rather than sitting after
       // the editing tools.
+      // Saved recipes / Bulk edit / Rearrange are appended below - into the
+      // new desktop-only .recipeUtilityTabs strip on desktop, into
+      // mobilePrimaryRow on mobile - never into modeBar itself any more.
+      // modeBar now holds only the four immediate actions (Scan/Print/Load
+      // Next/Info), which is why its aria-expanded-based disclosure pattern
+      // stays intact below unchanged - only these three's presentation is
+      // becoming tab-like.
       const savedRecipesButton = document.createElement("button");
       savedRecipesButton.type = "button";
       savedRecipesButton.className = "secondary";
       savedRecipesButton.textContent = "Saved Recipes";
       savedRecipesButton.setAttribute("aria-expanded", "false");
-      modeBar.appendChild(savedRecipesButton);
       const modeButton = document.createElement("button");
       modeButton.type = "button";
       modeButton.className = "secondary";
       modeButton.textContent = "Bulk edit";
       modeButton.setAttribute("aria-expanded", "false");
-      modeBar.appendChild(modeButton);
-      const rearrangeButton=document.createElement("button"); rearrangeButton.type="button"; rearrangeButton.className="secondary"; rearrangeButton.textContent=hopperRearrangement?.active?"Done Rearranging":"Rearrange"; rearrangeButton.setAttribute("aria-expanded", String(!!hopperRearrangement?.active)); rearrangeButton.disabled=!recipeLayers().some(L=>L.hoppers.some(h=>normName(h.resinName)||clampNum(h.pct)>0)); modeBar.appendChild(rearrangeButton);
+      const rearrangeButton=document.createElement("button"); rearrangeButton.type="button"; rearrangeButton.className="secondary"; rearrangeButton.textContent=hopperRearrangement?.active?"Done Rearranging":"Rearrange"; rearrangeButton.disabled=!recipeLayers().some(L=>L.hoppers.some(h=>normName(h.resinName)||clampNum(h.pct)>0));
+      if (compactMobileRecipe){
+        rearrangeButton.setAttribute("aria-expanded", String(!!hopperRearrangement?.active));
+      }else{
+        // Desktop-only: presented as a tab, not a disclosure button - see
+        // the .recipeUtilityTab assembly below for savedRecipesButton and
+        // modeButton's matching treatment (theirs also needs setSavedRecipesOpen/
+        // setBulkMode's re-applied state, so it happens there instead of here).
+        rearrangeButton.classList.remove("secondary");
+        rearrangeButton.classList.add("recipeUtilityTab");
+        rearrangeButton.classList.toggle("active", !!hopperRearrangement?.active);
+        rearrangeButton.setAttribute("role", "tab");
+        rearrangeButton.setAttribute("aria-selected", String(!!hopperRearrangement?.active));
+      }
       function finishRearrangement(cancelled=false){
         if(!hopperRearrangement?.active) return;
         if(cancelled) window.PolynHopperRearrangement.apply(recipeLayers(),hopperRearrangement.baseline);
@@ -3331,12 +3349,18 @@
       // the Next page you are looking at the plan, so there is nothing to
       // promote into. Disabled - rather than hidden - while the plan is
       // incomplete, so the button explains itself instead of disappearing.
+      // Declared outside the block (rather than only existing on Current) so
+      // the mobile primary-row assembly below can reference it either way.
+      let loadNextButton = null;
       if (!isNextRecipePage()){
-        const loadNextButton = document.createElement("button");
+        loadNextButton = document.createElement("button");
         loadNextButton.type = "button";
         loadNextButton.id = "loadNextRecipeBtn";
         loadNextButton.className = "secondary";
         loadNextButton.textContent = "Load Next Recipe";
+        // Visible mobile label is shorter; the accessible name stays the
+        // full "Load Next Recipe" regardless of which text is on screen.
+        loadNextButton.setAttribute("aria-label", "Load Next Recipe");
         const planned = hasPlannedRecipe();
         const promotable = !!window.PolynNextRecipe?.isPromotable(state.nextRecipe);
         loadNextButton.hidden = !planned;
@@ -3348,14 +3372,19 @@
         modeBar.appendChild(loadNextButton);
       }
 
+      // On Next, Scan Recipe is promoted to a primary mobile action (see the
+      // two-tier assembly below) with its own 3-source popup, so the same 3
+      // sources here would just be a redundant second way to reach it -
+      // pruned rather than duplicated.
       const mobileMoreButton=document.createElement("details");
       mobileMoreButton.className="mobileRecipeMore";
       mobileMoreButton.innerHTML=`
         <summary aria-label="More recipe actions"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></summary>
         <div class="mobileRecipeMoreMenu">
+          ${isNextRecipePage() ? "" : `
           <button type="button" data-mobile-recipe-scan="job_traveler">Scan job traveler</button>
           <button type="button" data-mobile-recipe-scan="dosing_screen">Scan dosing screen</button>
-          <button type="button" data-mobile-recipe-scan="heat_sheet">Scan heat sheet</button>
+          <button type="button" data-mobile-recipe-scan="heat_sheet">Scan heat sheet</button>`}
           <button type="button" data-mobile-recipe-print>Print recipe</button>
         </div>`;
       mobileMoreButton.querySelectorAll("[data-mobile-recipe-scan]").forEach(button=>button.addEventListener("click",()=>{
@@ -3368,6 +3397,7 @@
       modeBar.appendChild(mobileMoreButton);
 
       const toolbar = document.createElement("div");
+      toolbar.id = "splitsBulkBar";
       toolbar.className = "splitsBulkBar hide";
       toolbar.innerHTML = `
         <div class="splitsBulkSteps" aria-label="Bulk editing steps">
@@ -3431,6 +3461,7 @@
       // Load/Update/Rename/Duplicate/Favorite/Delete actions, just a
       // closer-to-the-work entry point.
       const savedRecipesPanel = document.createElement("div");
+      savedRecipesPanel.id = "splitsSavedRecipesPanel";
       savedRecipesPanel.className = "splitsSavedRecipesPanel hide";
       savedRecipesPanel.innerHTML = `
         <div class="workspaceConfigurationSectionTitle">
@@ -3534,7 +3565,8 @@
         }
         savedRecipesPanel.classList.toggle("hide", !open);
         savedRecipesButton.textContent = open ? "Close recipes" : "Saved recipes";
-        savedRecipesButton.setAttribute("aria-expanded", String(open));
+        savedRecipesButton.setAttribute("aria-selected", String(open));
+        savedRecipesButton.classList.toggle("active", open);
         splitsSavedRecipesOpen = !!open;
       }
       savedRecipesButton.addEventListener("click", ()=>{
@@ -3566,17 +3598,99 @@
       // so appending it last here puts it after Print Recipe regardless of
       // which of the three buttons are present/disabled.
       modeBar.appendChild(recipeInfo);
+
+      // Two intentional mobile tiers, built by moving the same real buttons
+      // (not rebuilding them) out of modeBar - their click handlers stay
+      // exactly as wired above. This replaces the old single fixed 4-column
+      // grid, which had no room for Current's extra Load Next button and
+      // silently clipped it. Primary keeps the handful of actions worth a
+      // direct tap; everything else already has a home in mobileMoreButton's
+      // menu, which is where Recipe Setup information also moves to here -
+      // it has no separate icon of its own on mobile any more.
+      let mobilePrimaryRow = null;
+      let mobileSecondaryRow = null;
+      let recipeUtilityTabs = null;
+      if (compactMobileRecipe){
+        mobilePrimaryRow = document.createElement("div");
+        mobilePrimaryRow.className = "splitsMobilePrimaryRow";
+        mobilePrimaryRow.append(savedRecipesButton, modeButton, rearrangeButton);
+        if (!isNextRecipePage()){
+          if (loadNextButton){
+            loadNextButton.textContent = "Load Next";
+            mobilePrimaryRow.append(loadNextButton);
+          }
+        }else{
+          // Scan Recipe is desktop-only (.rearrangeDesktopOnly) everywhere
+          // else; here specifically it becomes a real primary mobile action.
+          scanRecipeButton.classList.remove("rearrangeDesktopOnly");
+          mobilePrimaryRow.append(scanRecipeButton);
+        }
+
+        mobileSecondaryRow = document.createElement("div");
+        mobileSecondaryRow.className = "splitsMobileSecondaryRow";
+        // Recipe Setup information is Current-only - it already is on
+        // desktop (body[data-recipe-page="next"] .splitsInfo{display:none}),
+        // since it describes tracking/Timeline behaviour that has no meaning
+        // on the plan. Offering a menu entry that opens a hidden panel on
+        // Next would be a dead control, so it is omitted there instead.
+        if (!isNextRecipePage()){
+          const infoMenuButton = document.createElement("button");
+          infoMenuButton.type = "button";
+          infoMenuButton.textContent = "Recipe info";
+          infoMenuButton.addEventListener("click", ()=>{
+            mobileMoreButton.open = false;
+            recipeInfo.open = true;
+          });
+          mobileMoreButton.querySelector(".mobileRecipeMoreMenu").appendChild(infoMenuButton);
+          mobileSecondaryRow.append(mobileMoreButton, recipeInfo);
+        }else{
+          mobileSecondaryRow.append(mobileMoreButton);
+        }
+      }else{
+        // Desktop only: Saved recipes / Bulk edit / Rearrange become a
+        // second, visually subordinate tab strip beneath the grid, echoing
+        // .recipePageTabs above it. Exactly one of their three panels is
+        // ever open - that mutual exclusion already lives in each button's
+        // own click handler above (savedRecipesButton clears bulk/rearrange,
+        // rearrangeButton clears bulk/saved-recipes, modeButton clears
+        // saved-recipes) and in each one's own "click again to close"
+        // toggle - nothing about when panels open/close changes here, only
+        // how the choice between them looks.
+        recipeUtilityTabs = document.createElement("div");
+        recipeUtilityTabs.className = "recipeUtilityTabs";
+        recipeUtilityTabs.setAttribute("role", "tablist");
+        recipeUtilityTabs.setAttribute("aria-label", "Recipe utilities");
+        savedRecipesButton.classList.remove("secondary");
+        savedRecipesButton.classList.add("recipeUtilityTab");
+        savedRecipesButton.setAttribute("role", "tab");
+        savedRecipesButton.setAttribute("aria-controls", savedRecipesPanel.id);
+        modeButton.classList.remove("secondary");
+        modeButton.classList.add("recipeUtilityTab");
+        modeButton.setAttribute("role", "tab");
+        modeButton.setAttribute("aria-controls", toolbar.id);
+        recipeUtilityTabs.append(savedRecipesButton, modeButton, rearrangeButton);
+      }
+
       // Percentage problems are not printed here. They are conditions of the
       // recipe, not of this render, so they belong in the notification bell
       // (see attentionFacts.recipe / attentionFacts.nextRecipe) where they
       // resolve on their own - an inline message that appears and disappears
       // moves the whole working surface underneath the operator's hands.
-      const actionRow = document.createElement("div");
-      actionRow.className = "splitsMatrixActions";
-      actionRow.append(modeBar);
-      area.append(actionRow);
-      if(!compactMobileRecipe) area.append(toolbar);
+      if (!compactMobileRecipe){
+        area.append(recipeUtilityTabs);
+        area.append(toolbar);
+      }
       area.append(savedRecipesPanel);
+      // Scan Recipe / Print Recipe / Load Next Recipe / Info: immediate
+      // actions, not panel-opening tabs, so they get their own compact row
+      // below the utility tabs/panel instead of living inside
+      // .recipeUtilityTabs. modeBar keeps its original flat divided-segment
+      // look (.splitsBulkModeBar) - it now just holds four items instead of
+      // seven. order:2 (see styles.css) keeps it last regardless of the
+      // rearrange bar below being appended after it in the DOM.
+      if (!compactMobileRecipe){
+        area.append(modeBar);
+      }
 
       if(hopperRearrangement?.active&&!compactMobileRecipe){
         const bar=document.createElement("div");
@@ -3690,6 +3804,17 @@
           th.appendChild(copyButton);
         }
 
+        // Always-present running total for this layer's hoppers - live
+        // working data, not a validation message. It never appears/
+        // disappears (that was the old layout-shift bug); only its colour
+        // changes on Current when the total is off. The verbose "why" -
+        // which layer, expected 100%, Current vs Next - lives in the
+        // notification bell (see attentionFacts.recipe/nextRecipe), not here.
+        const hopperTotal = document.createElement("div");
+        hopperTotal.id = `hopperTotal_${L.name}`;
+        hopperTotal.className = "splitColumnTotal";
+        th.appendChild(hopperTotal);
+
         pctInput.addEventListener("input",(e)=>{
           const accepted = acceptNumericInput(
             e.target,
@@ -3698,6 +3823,7 @@
           );
           if (!accepted) return;
           updateLayerMetaDisplays();
+          updateHopperTotals();
           validateAndCompute({ sync: true });
           saveSession();
         });
@@ -3994,6 +4120,7 @@
             cellRefs.get(`${L.name}:0`)?.refreshCellState();
             const h1Input = table.querySelector(`#p_${L.name}_0`);
             if (h1Input) h1Input.value = String(clampNum(L.hoppers[0].pct));
+            updateHopperTotals();
             validateAndCompute({ sync: true });
             saveSession();
           });
@@ -4021,6 +4148,7 @@
               pctInput.value = String(clampNum(hopper.pct));
             }
             refreshCellState();
+            updateHopperTotals();
             validateAndCompute({ sync: true, immediate: true, kind: "recipe-clear" });
             saveSession();
           });
@@ -4042,7 +4170,7 @@
         // surface while modes expand directly below it.
         const actionTray = document.createElement("div");
         actionTray.className = "mobileRecipeActionTray mobileMatrixActionBar";
-        actionTray.append(modeBar, mobileBulkContext, mobileRearrangeContext);
+        actionTray.append(mobilePrimaryRow, mobileSecondaryRow, mobileBulkContext, mobileRearrangeContext);
         area.append(actionTray);
         if(hopperRearrangement?.active&&hopperRearrangement.undo?.length&&hopperRearrangement.undoVisibleUntil>Date.now()){
           const toast=document.createElement("div");
@@ -4163,13 +4291,16 @@
         area.classList.toggle("bulk-editing", bulkMode);
         toolbar.classList.toggle("hide", !bulkMode);
         modeButton.textContent = bulkMode ? "Done bulk editing" : "Bulk edit";
-        modeButton.setAttribute("aria-expanded", String(bulkMode));
         if(compactMobileRecipe){
+          modeButton.setAttribute("aria-expanded", String(bulkMode));
           modeBar.hidden=bulkMode||!!hopperRearrangement?.active;
           mobileBulkContext.hidden=!bulkMode;
           mobileRearrangeContext.hidden=!hopperRearrangement?.active;
           updateMobileRearrangePrompt();
           if(!bulkMode&&mobileBulkEditSheet?.open) mobileBulkEditSheet.close("cancel");
+        }else{
+          modeButton.setAttribute("aria-selected", String(bulkMode));
+          modeButton.classList.toggle("active", bulkMode);
         }
         table.querySelectorAll(".splitLayerTitle, .splitRowSelect").forEach(button=>{
           button.tabIndex = bulkMode ? 0 : -1;
@@ -4335,6 +4466,7 @@
 
         cellRefs.forEach(ref=>ref.refreshCellState());
 
+        updateHopperTotals();
         validateAndCompute({ sync: true });
         saveSession();
 
@@ -4347,6 +4479,26 @@
           setBulkMode(false);
         }
       });
+
+      // Compact, always-rendered per-layer feedback ("Total 100%"), never
+      // hidden - only its colour changes when Current is off. This is the
+      // same 0.0001 tolerance and comparison attentionFacts.recipe already
+      // uses; it is not a second validation rule, just a second place the
+      // same result is shown. An incomplete Next total is never coloured as
+      // a fault - a half-finished plan is expected, not an error, matching
+      // the notification bell's own tone for it (see nextRecipeEntries).
+      function updateHopperTotals(){
+        const planning = isNextRecipePage();
+        recipeLayers().forEach(L=>{
+          const hopperTotal = sum(L.hoppers.map(h=>clampNum(h.pct)));
+          const okay = Math.abs(hopperTotal - 100) <= 0.0001;
+          const el = table.querySelector(`#hopperTotal_${L.name}`);
+          if (!el) return;
+          el.classList.toggle("warn", !okay && !planning);
+          el.textContent = `Total ${fmtTrim(hopperTotal, 2)}%`;
+        });
+      }
+      updateHopperTotals();
 
       // Reapply (not force-close) the resolved state to this render's
       // freshly-created elements - both default to closed, but a render

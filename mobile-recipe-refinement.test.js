@@ -23,7 +23,10 @@ test("mobile toolbar uses Recipes and an icon-only More control with an accessib
   assert.match(app,/savedRecipesButton\.textContent="Recipes";/);
   assert.match(app,/<summary aria-label="More recipe actions"><svg[^>]*>[\s\S]*?<\/svg><\/summary>/);
   assert.doesNotMatch(app,/<\/svg><span>More<\/span><\/summary>/);
-  assert.match(styles,/\.mobileRecipeActionTray \.splitsBulkModeBar button\.secondary\{[\s\S]*?height:42px;[\s\S]*?white-space:nowrap;/);
+  // Primary-row buttons live in .splitsMobilePrimaryRow now (the old fixed
+  // 4-column .splitsBulkModeBar grid was replaced by a two-tier layout -
+  // see recipe-mobile-toolbar.test.js), same compact/nowrap treatment.
+  assert.match(styles,/\.splitsMobilePrimaryRow button\.secondary,[\s\S]*?\.splitsMobilePrimaryRow \.splitsScanShortcut > summary\{[\s\S]*?height:42px;[\s\S]*?white-space:nowrap;/);
   assert.match(styles,/\.mobileRecipeMore > summary\{[\s\S]*?height:42px;/);
 });
 

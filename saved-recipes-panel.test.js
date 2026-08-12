@@ -116,17 +116,16 @@ test("setBulkMode and setSavedRecipesOpen both write their resolved value back t
   assert.match(setSavedRecipesOpenBody, /splitsSavedRecipesOpen = !!open;/);
 });
 
-test("the Saved Recipes button leads the button row (Load is the primary action here), and toggles its panel open/closed with an accessible expanded state", () => {
-  const modeBarStart = app.indexOf('modeBar.className = "splitsBulkModeBar"');
-  const modeBar = app.slice(modeBarStart, app.indexOf("const toolbar = document.createElement", modeBarStart));
-  assert.match(modeBar, /savedRecipesButton\.textContent = "Saved Recipes"/);
-  assert.ok(
-    modeBar.indexOf("modeBar.appendChild(savedRecipesButton)") < modeBar.indexOf("modeBar.appendChild(modeButton)"),
-    "Saved Recipes must be appended before Bulk edit, leading the row"
-  );
+test("the Saved Recipes button leads the utility tab strip/mobile primary row (Load is the primary action here), and toggles its panel open/closed with an accessible expanded/selected state", () => {
+  assert.match(app, /savedRecipesButton\.textContent = "Saved Recipes"/);
+  // No longer appended into modeBar at all - it leads the desktop
+  // .recipeUtilityTabs strip and the mobile primary row instead (both
+  // built from the same three buttons, see the compact/desktop branches).
+  assert.match(app, /mobilePrimaryRow\.append\(savedRecipesButton, modeButton, rearrangeButton\);/);
+  assert.match(app, /recipeUtilityTabs\.append\(savedRecipesButton, modeButton, rearrangeButton\);/);
   assert.match(app, /function setSavedRecipesOpen\(open\)\{/);
   assert.match(app, /savedRecipesPanel\.classList\.toggle\("hide", !open\)/);
-  assert.match(app, /savedRecipesButton\.setAttribute\("aria-expanded", String\(open\)\)/);
+  assert.match(app, /savedRecipesButton\.setAttribute\("aria-selected", String\(open\)\)/);
 });
 
 test("Recipes and receiver profiles use centered sheets without opening the search keyboard",()=>{
@@ -154,7 +153,10 @@ test("the panel reuses the established workspaceConfigurationList/Row/Section ma
 });
 
 test("the button row wraps on narrow viewports instead of overflowing now that a fourth toggle button was added", () => {
-  const ruleStart = styles.indexOf(".splitsBulkModeBar{");
+  // Not the #splitsArea > .splitsBulkModeBar ordering override further up
+  // the file (which also contains the substring ".splitsBulkModeBar{") -
+  // this is modeBar's own base rule.
+  const ruleStart = styles.indexOf("\n.splitsBulkModeBar{");
   const rule = styles.slice(ruleStart, styles.indexOf("}", ruleStart) + 1);
   assert.match(rule, /flex-wrap:\s*wrap/);
 });

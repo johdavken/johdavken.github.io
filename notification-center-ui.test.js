@@ -245,20 +245,34 @@ test("contextual validation surfaces are all retained", () => {
   assert.match(app, /splitsStatus\.classList\.toggle\("badge-warn", !ready\)/);
 });
 
-test("percentage totals are not printed inline in the Recipe panel any more - they move the working surface when they appear and disappear", () => {
-  // Neither the layer-total line under the grid nor the per-column hopper
-  // total inside it is rendered; both conditions live in the bell instead.
+test("the global layer-total summary line is not printed inline - that verbose sentence still lives only in the notification bell", () => {
+  // "Layer total: 80.00% — expected 100%" and its standalone element are
+  // gone for good. This is distinct from the per-layer hopper total (see the
+  // next test), which is compact, always-rendered working data, not a
+  // validation sentence, and was deliberately brought back.
   assert.doesNotMatch(app, /splitsMatrixSummary/);
-  assert.doesNotMatch(app, /splitColumnTotal/);
-  assert.doesNotMatch(app, /hopperTotal_/);
   assert.doesNotMatch(app, /Layer total: /);
-  assert.doesNotMatch(app, /function updateSplitTotals\(\)/);
   const styles = fs.readFileSync("styles.css", "utf8");
-  assert.doesNotMatch(styles, /\.splitsMatrixSummary|\.splitColumnTotal|\.splitsMatrixActionInfo/);
+  assert.doesNotMatch(styles, /\.splitsMatrixSummary|\.splitsMatrixActionInfo/);
 });
 
-test("the rule the inline totals used is unchanged - only where it is reported moved", () => {
-  // Same 0.0001 tolerance, same comparison, still computed in the app.
+test("the per-layer running total is always rendered, never a hidden-until-invalid validation row", () => {
+  const fnStart = app.indexOf("function updateHopperTotals(){");
+  const body = app.slice(fnStart, app.indexOf("updateHopperTotals();\n", fnStart));
+  // No `.hidden =` toggle anywhere in it - text and colour only.
+  assert.doesNotMatch(body, /\.hidden\s*=/);
+  assert.match(body, /el\.textContent = `Total \$\{fmtTrim\(hopperTotal, 2\)\}%`;/);
+  // Only Current's own invalid case gets the warn colour; an incomplete Next
+  // total stays in the default (muted) tone, same "expected, not a fault"
+  // rule the notification bell uses for planning issues.
+  assert.match(body, /el\.classList\.toggle\("warn", !okay && !planning\);/);
+  assert.doesNotMatch(app, /Hoppers total: |— expected 100%/);
+});
+
+test("the rule the running total uses is unchanged - only the presentation (always-shown vs hidden) changed", () => {
+  // Same 0.0001 tolerance, same comparison, still computed in the app -
+  // both here and in attentionFacts.recipe/nextRecipe for the bell.
+  assert.match(app, /Math\.abs\(hopperTotal - 100\) <= 0\.0001;/);
   assert.match(app, /Math\.abs\(L\.totalPct - 100\) > 0\.0001/);
   assert.match(app, /const layerTotalValid = !state\.layers\.length \|\| Math\.abs\(layerSum - 1\) <= 0\.0001;/);
 });

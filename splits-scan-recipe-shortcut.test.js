@@ -25,14 +25,14 @@ test("Rearrange Hoppers was renamed to just Rearrange", () => {
   assert.doesNotMatch(app, /"Rearrange Hoppers"/);
 });
 
-test("the Scan Recipe button sits between Rearrange and Print Recipe in modeBar's append order", () => {
+test("the Scan Recipe button leads modeBar's own append order, ahead of Print Recipe - Rearrange moved out into .recipeUtilityTabs and is no longer appended into modeBar at all", () => {
   const modeBarStart = app.indexOf('modeBar.className = "splitsBulkModeBar"');
   const modeBar = app.slice(modeBarStart, app.indexOf("const toolbar = document.createElement", modeBarStart));
-  const rearrangeAppend = modeBar.indexOf("modeBar.appendChild(rearrangeButton)");
+  assert.doesNotMatch(modeBar, /modeBar\.appendChild\(rearrangeButton\)/);
   const scanAppend = modeBar.indexOf("modeBar.appendChild(scanRecipeButton)");
   const printAppend = modeBar.indexOf("modeBar.appendChild(printButton)");
-  assert.ok(rearrangeAppend > -1 && scanAppend > rearrangeAppend && printAppend > scanAppend,
-    "expected append order: rearrangeButton, then scanRecipeButton, then printButton");
+  assert.ok(scanAppend > -1 && printAppend > scanAppend,
+    "expected append order: scanRecipeButton, then printButton");
 });
 
 test("Scan Recipe is desktop-only, same as Print Recipe right next to it - mobile already has its own status-bar scan shortcut", () => {

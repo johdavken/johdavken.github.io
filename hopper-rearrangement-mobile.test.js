@@ -19,15 +19,15 @@ const splitsArea = functionBody("renderSplitsArea");
 // --- Bulk edit/Rearrange/Print Recipe live at the bottom of the panel,
 // on both mobile and desktop -----------------------------------------------
 
-test("the action row, bulk-edit toolbar, saved-recipes panel, and active-rearrange mode bar all reorder below the table, unscoped to any viewport width", () => {
-  assert.match(styles, /#splitsArea > \.splitsMatrixActions,\s*#splitsArea > \.splitsBulkBar,\s*#splitsArea > \.splitsSavedRecipesPanel,\s*#splitsArea > \.rearrangeModeBar\{ order:1; position:static; \}/);
+test("the utility tabs, bulk-edit toolbar, saved-recipes panel, and active-rearrange mode bar all reorder below the table, unscoped to any viewport width", () => {
+  assert.match(styles, /#splitsArea > \.recipeUtilityTabs,\s*#splitsArea > \.splitsBulkBar,\s*#splitsArea > \.splitsSavedRecipesPanel,\s*#splitsArea > \.rearrangeModeBar\{ order:1; position:static; \}/);
   // Not gated behind a mobile-only media query anymore - desktop gets the
   // same bottom placement now, not just mobile.
-  assert.doesNotMatch(styles, /@media\(max-width:900px\)\{\s*#splitsArea > \.splitsMatrixActions/);
+  assert.doesNotMatch(styles, /@media\(max-width:900px\)\{\s*#splitsArea > \.recipeUtilityTabs/);
 });
 
 test("the reordered bars also drop their sticky-to-top positioning, so they can't jump/force-scroll once moved after the table", () => {
-  const reorderRuleStart = styles.indexOf("#splitsArea > .splitsMatrixActions,");
+  const reorderRuleStart = styles.indexOf("#splitsArea > .recipeUtilityTabs,");
   const reorderRule = styles.slice(reorderRuleStart, styles.indexOf("}", reorderRuleStart) + 1);
   assert.match(reorderRule, /position:static/);
   // Both elements' base rules define position:sticky elsewhere in the
@@ -37,34 +37,24 @@ test("the reordered bars also drop their sticky-to-top positioning, so they can'
   assert.match(styles, /\.rearrangeModeBar\{position:sticky;/);
 });
 
-test("the button row is flush to the panel's own left edge, stacked rather than spread edge-to-edge", () => {
-  const actionsRule = styles.slice(styles.indexOf(".splitsMatrixActions{"), styles.indexOf("}", styles.indexOf(".splitsMatrixActions{")) + 1);
-  assert.match(actionsRule, /flex-direction: column;/);
-  assert.match(actionsRule, /align-items: flex-start;/);
-  assert.doesNotMatch(actionsRule, /justify-content: space-between/);
-});
-
-test("the action row is pinned to the panel's own left edge, not centered under the table - the table's width (and centered position) changes with layer count, so centering against it would move the buttons around", () => {
-  const actionsRule = styles.slice(styles.indexOf(".splitsMatrixActions{"), styles.indexOf("}", styles.indexOf(".splitsMatrixActions{")) + 1);
-  assert.doesNotMatch(actionsRule, /width:max-content/);
-  assert.doesNotMatch(actionsRule, /margin-inline:auto/);
-});
-
-test("a divider (border-top) separates the button row from the table above it, since the row is reordered to render right after it", () => {
-  const actionsRule = styles.slice(styles.indexOf(".splitsMatrixActions{"), styles.indexOf("}", styles.indexOf(".splitsMatrixActions{")) + 1);
-  assert.match(actionsRule, /border-top: 1px solid var\(--row-border\);/);
-  // The toolbar hangs from that divider rather than sitting in padding below
-  // it, mirroring the Current/Next strip on the section's top divider.
-  assert.match(actionsRule, /padding-top: 0;/);
-  assert.match(styles, /\.splitsMatrixActions > \.splitsBulkModeBar\{ margin-top: -1px; \}/);
+test("the action button row (Scan/Print/Load Next/Info) is flush to the panel's own left edge, compact rather than stretched full-width", () => {
+  // #splitsArea is a CSS grid - a plain item stretches to the full grid
+  // track width by default, so this needs its own justify-self:start
+  // (there is no wrapper div doing it indirectly any more, unlike the old
+  // .splitsMatrixActions flex-column wrapper).
+  const ruleStart = styles.indexOf("#splitsArea > .splitsBulkModeBar{");
+  const rule = styles.slice(ruleStart, styles.indexOf("}", ruleStart) + 1);
+  assert.match(rule, /order:2/);
+  assert.match(rule, /justify-self: start/);
 });
 
 // --- info icon lives at the right end of the button row, opens upward -----
 
 test("the info icon (ⓘ) is appended into modeBar - it sits after Print Recipe, at the right end of the toolbar", () => {
-  // The action row is the toolbar and nothing else; the layer-total summary
-  // that used to share it with the buttons now reports through the bell.
-  assert.match(splitsArea, /actionRow\.append\(modeBar\);/);
+  // modeBar (the action row) is appended straight to #splitsArea now - no
+  // actionRow wrapper any more, since Saved recipes/Bulk edit/Rearrange
+  // moved out into their own .recipeUtilityTabs strip.
+  assert.match(splitsArea, /if \(!compactMobileRecipe\)\{\s*\n\s*area\.append\(modeBar\);\s*\n\s*\}/);
   assert.doesNotMatch(splitsArea, /actionInfo/);
   const modeBarAppend = splitsArea.indexOf("modeBar.appendChild(recipeInfo);");
   assert.notEqual(modeBarAppend, -1);
@@ -88,11 +78,17 @@ test("on narrow mobile, where the button row wraps and the icon lands too close 
   assert.match(rule, /transform:translateX\(-50%\)/);
 });
 
-test("the action row and saved-recipes panel remain direct children while the bulk toolbar stays direct on desktop and moves into its mobile dialog", () => {
-  assert.match(splitsArea, /actionRow\.className = "splitsMatrixActions"/);
+test("the utility tabs, saved-recipes panel and action row remain direct children while the bulk toolbar stays direct on desktop and moves into its mobile dialog", () => {
+  assert.match(splitsArea, /recipeUtilityTabs\.className = "recipeUtilityTabs"/);
   assert.match(splitsArea, /toolbar\.className = "splitsBulkBar hide"/);
   assert.match(splitsArea, /savedRecipesPanel\.className = "splitsSavedRecipesPanel hide"/);
-  assert.match(splitsArea, /area\.append\(actionRow\);\s*if\(!compactMobileRecipe\) area\.append\(toolbar\);\s*area\.append\(savedRecipesPanel\);/);
+  // Desktop's tab strip, bulk toolbar and action row only exist in the DOM
+  // at all when not on the compact mobile layout - the two mobile tiers
+  // (built separately, see the next test) replace them there rather than
+  // modeBar being emptied into a mobile-only grid.
+  assert.match(splitsArea, /if \(!compactMobileRecipe\)\{\s*\n\s*area\.append\(recipeUtilityTabs\);\s*\n\s*area\.append\(toolbar\);\s*\n\s*\}/);
+  assert.match(splitsArea, /area\.append\(savedRecipesPanel\);/);
+  assert.match(splitsArea, /if \(!compactMobileRecipe\)\{\s*\n\s*area\.append\(modeBar\);\s*\n\s*\}/);
   assert.match(splitsArea, /mobileBulkEditSheet\.querySelector\("\.mobileBulkEditBody"\)\.appendChild\(toolbar\);/);
 });
 

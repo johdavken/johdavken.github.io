@@ -108,27 +108,28 @@ test("the tabs keep their own height whatever the grid does - 1, 3 or 5 layers",
   assert.doesNotMatch(strip, /width|height/);
 });
 
-test("both pages read as buttons, and the selected one is unmistakable", () => {
+test("Current and Next read as document tabs sitting on the section divider, not filled buttons", () => {
   const inactive = styles.slice(styles.indexOf(".recipePageTab{"), styles.indexOf("}", styles.indexOf(".recipePageTab{")));
-  // Quieter, but still a button: its own border and surface, never bare text.
-  assert.match(inactive, /border: 1px solid color-mix\(in srgb, var\(--btn-secondary-border\) 55%, transparent\);/);
-  assert.match(inactive, /background: var\(--btn-secondary-bg\);/);
+  // Quiet at rest - a clickable label on the divider, not a bordered/filled
+  // button. Rounded top corners only, so even the shape reads as a tab.
+  assert.match(inactive, /border: 1px solid transparent;/);
+  assert.match(inactive, /background: transparent;/);
+  assert.match(inactive, /border-radius: var\(--control-radius\) var\(--control-radius\) 0 0;/);
   // Compact: the control is a page selector inside Recipe, not app navigation.
-  assert.match(inactive, /min-height: 28px;/);
-  // The selected page reuses the treatment a selected page inside a panel
-  // already has (.toolsIndexButton.active), so it holds up in every theme
-  // rather than only the default one - verified live in industrial-slate,
-  // industrial-slate-dark and gruvbox-dark.
+  assert.match(inactive, /min-height: 30px;/);
   const active = styles.slice(styles.indexOf(".recipePageTab.active{"), styles.indexOf("}", styles.indexOf(".recipePageTab.active{")));
-  const toolsActive = styles.slice(styles.indexOf(".toolsIndexButton.active{"), styles.indexOf("}", styles.indexOf(".toolsIndexButton.active{")));
-  assert.match(active, /border-color: var\(--focus-border\);/);
-  assert.match(toolsActive, /border-color: var\(--focus-border\);/);
-  assert.match(active, /background: var\(--btn-primary-a\);/);
-  assert.match(toolsActive, /background: var\(--btn-primary-a\);/);
-  assert.match(active, /color: var\(--text\);/);
+  // "Grows out of the divider": real border in the panel's own border
+  // colour, background matching the workspace content - not the filled
+  // --btn-primary treatment app buttons use, so it never competes with them.
+  assert.match(active, /border-color: var\(--row-border\);/);
+  assert.match(active, /background: var\(--panel\);/);
+  assert.match(active, /color: var\(--title\);/);
   assert.match(active, /font-weight: 900;/);
+  // The seam that visually erases the divider under the active tab - exactly
+  // the divider's own 1px width, painted in the content colour.
+  assert.match(active, /box-shadow: 0 1px 0 0 var\(--panel\);/);
   // Restrained: no glow or animation was introduced.
-  assert.doesNotMatch(active.replace(/\/\*[\s\S]*?\*\//g, ""), /box-shadow|animation|transform/);
+  assert.doesNotMatch(active.replace(/\/\*[\s\S]*?\*\//g, ""), /animation|transform/);
 });
 
 test("a thumb still gets a full-size target, even though the desktop control shrank", () => {
@@ -392,4 +393,36 @@ test("the plan is unaffected - Next already conforms to the line's own structure
   assert.doesNotMatch(nextBranch, /derivedRequiredLayerCount/);
   // Next never writes state.lineType, so it cannot create the disagreement.
   assert.doesNotMatch(nextBranch, /state\.lineType\s*=/);
+});
+
+/* ============================================================
+ *   Per-layer hopper running totals - restored, always rendered
+ * ============================================================ */
+
+test("the running total is created once per layer header, and updated at every mutation point that can change a hopper's percentage", () => {
+  const editor = recipeEditor();
+  assert.match(editor, /const hopperTotal = document\.createElement\("div"\);\s*\n\s*hopperTotal\.id = `hopperTotal_\$\{L\.name\}`;\s*\n\s*hopperTotal\.className = "splitColumnTotal";\s*\n\s*th\.appendChild\(hopperTotal\);/);
+  // Layer % edit, hopper % edit, hopper Clear, and Bulk Edit Apply all call
+  // it - the same four points the removed inline total used to update at.
+  const callSites = editor.match(/updateHopperTotals\(\);/g) || [];
+  assert.ok(callSites.length >= 5, `expected the initial render call plus 4 edit-path calls, saw ${callSites.length}`);
+});
+
+test("the initial render seeds real totals immediately - a freshly built table is never blank until the first edit", () => {
+  const editor = recipeEditor();
+  const fnStart = editor.indexOf("function updateHopperTotals(){");
+  const setBulkModeAt = editor.indexOf("setBulkMode(bulkMode);");
+  assert.ok(fnStart > -1 && setBulkModeAt > fnStart, "expected the function definition before the render's reapply step");
+  const between = editor.slice(fnStart, setBulkModeAt);
+  // The definition's closing brace is immediately followed by a bare,
+  // unconditional call - the first render call, not just an edit-path one.
+  assert.match(between, /\n\s*\}\n\s*updateHopperTotals\(\);\n/);
+});
+
+test("the total reads recipeLayers(), not state.layers directly - Current and Next each see their own totals", () => {
+  const editor = recipeEditor();
+  const fnStart = editor.indexOf("function updateHopperTotals(){");
+  const fnBody = editor.slice(fnStart, editor.indexOf("updateHopperTotals();\n", fnStart));
+  assert.match(fnBody, /recipeLayers\(\)\.forEach\(L=>\{/);
+  assert.doesNotMatch(fnBody, /state\.layers/);
 });
