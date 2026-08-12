@@ -74,7 +74,9 @@ test("the compact mobile matrix keeps all layer columns in the table and omits t
 });
 
 test("compact mobile recipe actions sit immediately after the matrix while bulk values open in a dedicated sheet", () => {
-  assert.match(app, /actionTray\.append\(modeBar, mobileBulkContext, mobileRearrangeContext\);/);
+  // The two-tier primary/secondary rows (built earlier, see the toolbar
+  // tests) replace modeBar here - modeBar itself is desktop-only now.
+  assert.match(app, /actionTray\.append\(mobilePrimaryRow, mobileSecondaryRow, mobileBulkContext, mobileRearrangeContext\);/);
   assert.match(app, /area\.append\(actionTray\);/);
   assert.doesNotMatch(app, /mobileLayerLayout\.append\(actionTray\);/);
   assert.match(app, /mobileBulkEditSheet\.querySelector\("\.mobileBulkEditBody"\)\.appendChild\(toolbar\);/);
@@ -146,7 +148,7 @@ test("bulk edit still needs the letter - it's the tap target for selecting an en
 
 // --- Layer % + Copy: mockup option 10, "minimal ghost, no chip borders" ---
 
-test("the layer header becomes a grid pairing the percentage and Copy side by side (percentage auto-width, Copy taking the rest)", () => {
+test("the layer header becomes a grid pairing the percentage and Copy side by side, with the always-present running total spanning full width beneath both", () => {
   const mobileStart = styles.indexOf("@media (max-width: 700px){");
   assert.notEqual(mobileStart, -1);
   const mobileBlock = styles.slice(mobileStart, styles.indexOf("\n}\n", mobileStart));
@@ -155,10 +157,12 @@ test("the layer header becomes a grid pairing the percentage and Copy side by si
   const rule = mobileBlock.slice(ruleStart, mobileBlock.indexOf("}", ruleStart) + 1);
   assert.match(rule, /display: grid;/);
   assert.match(rule, /grid-template-columns: auto 1fr;/);
-  assert.match(rule, /grid-template-areas: "pct copy";/);
-  // No third area: percentage totals are reported through the notification
-  // bell now, so the header has no total row to reserve space for.
-  assert.doesNotMatch(mobileBlock, /splitColumnTotal/);
+  assert.match(rule, /grid-template-areas: "pct copy" "total total";/);
+  // The running total is live working data (a compact "Total 100%"), not a
+  // validation message - it always renders, so it gets a permanent grid
+  // area rather than the old hidden-when-valid row. The verbose explanation
+  // of an off total still lives only in the notification bell.
+  assert.match(mobileBlock, /\.splitColumnTotal\{ grid-area: total; margin-top: 0; \}/);
 });
 
 test("the grid display is scoped specifically enough to beat .splitsMatrix [data-layer-column].mobile-layer-active (shared with <td> body cells) - otherwise this silently stays display:table-cell", () => {
@@ -175,7 +179,7 @@ test("a layer with no copy source (e.g. Layer B at 3 layers) collapses to a sing
   assert.notEqual(ruleStart, -1);
   const rule = mobileBlock.slice(ruleStart, mobileBlock.indexOf("}", ruleStart) + 1);
   assert.match(rule, /grid-template-columns: 1fr;/);
-  assert.match(rule, /grid-template-areas: "pct";/);
+  assert.match(rule, /grid-template-areas: "pct" "total";/);
 });
 
 test("neither the percentage nor Copy has a chip background/border any more - the percentage reads as an inline-edit field via its own focus-colored underline, Copy is plain link-style text, and a single light divider sits under the whole row instead", () => {

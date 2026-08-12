@@ -793,10 +793,21 @@ main{
    positioning here - sticky plus being reordered after the table meant
    they'd suddenly jump to the top of the viewport once their normal
    flow position scrolled past it, forcing an unwanted scroll. */
-#splitsArea > .splitsMatrixActions,
+#splitsArea > .recipeUtilityTabs,
 #splitsArea > .splitsBulkBar,
 #splitsArea > .splitsSavedRecipesPanel,
 #splitsArea > .rearrangeModeBar{ order:1; position:static; }
+/* Scan Recipe / Print Recipe / Load Next Recipe / Info: immediate actions,
+   always last regardless of which utility panel (if any) is open above
+   them - a fixed order number, rather than relying on DOM append position,
+   since the rearrange bar above is only ever appended to the DOM when
+   rearrange mode is actually active. justify-self:start keeps the strip a
+   compact, content-sized row flush to the panel's left edge instead of
+   stretching to #splitsArea's full grid-track width (a plain grid item
+   stretches by default) - the same left-edge-anchored, not-spread-full-
+   width shape .recipeUtilityTabs' own buttons already have by virtue of
+   being a flex row. */
+#splitsArea > .splitsBulkModeBar{ order:2; justify-self: start; }
 .rearrangeModeBar{position:sticky;top:54px;z-index:7;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px;border:1px solid var(--row-border);border-radius:var(--radius-row);background:var(--readonly-bg)}.rearrangeModeMessage{display:flex;align-items:baseline;gap:7px;min-width:0}.rearrangeModeMessage strong{color:var(--title);white-space:nowrap}.rearrangeModeMessage span{color:var(--muted);font-size:var(--font-small)}.rearrangeModeActions{display:flex;align-items:center;gap:6px;flex:0 0 auto}@media(max-width:700px){.rearrangeModeBar{top:38px;align-items:stretch;flex-direction:column}.rearrangeModeMessage{align-items:flex-start;flex-direction:column;gap:2px}.rearrangeModeActions{display:grid;grid-template-columns:1fr 1fr 1fr}.rearrangeModeActions button{min-width:0;padding-inline:6px}}
 .mobileSyncLabel,
 .mobileSyncOnly{ display: none; }
@@ -1688,27 +1699,68 @@ details[open] > summary .chevSatellite{
 }
 .splitsSelectionStatus.ok{ color: var(--ok); }
 .splitsSelectionStatus.warn{ color: var(--warn); }
-/* The Recipe section's bottom divider, with the action toolbar hung from
-   it - the mirror of .recipePageTabs sitting on the top divider.
-   .splitsBulkModeBar pulls itself up by its own border width so its top
-   edge and the divider are the same line, exactly as the active tab shares
-   an edge with the strip above the grid.
-
-   Flush to the panel's own left edge, deliberately NOT centered under
-   .splitsMatrixFrame (the table): the table's width, and therefore its
-   centered position, changes with layer count, while the divider spans the
-   panel at every layer count. Anchoring to the divider is what keeps the
-   toolbar in one fixed spot across a 1/3/5-layer line, an empty recipe and
-   a full one. */
-.splitsMatrixActions{
+/* Saved recipes / Bulk edit / Rearrange: a second, visually subordinate
+   tab strip beneath the grid, echoing .recipePageTabs above it without
+   competing with it - smaller, quieter, and flush to the panel's own left
+   edge rather than centered under .splitsMatrixFrame (the table's width,
+   and therefore its centered position, changes with layer count, while
+   the divider spans the panel at every layer count - anchoring to the
+   divider is what keeps this strip in one fixed spot across a 1/3/5-layer
+   line). Exactly one of the three buttons' panels is ever open; the click
+   handlers that already enforce that mutual exclusion (see
+   setSavedRecipesOpen/setBulkMode/the rearrange handlers in app.js) are
+   unchanged here - only how the choice between them looks is new. */
+.recipeUtilityTabs{
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-  border-top: 1px solid var(--row-border);
-  padding-top: 0;
+  align-items: flex-end;
+  gap: 3px;
+  margin: 10px 0 0;
+  padding: 0 2px;
+  border-bottom: 1px solid var(--row-border);
 }
-.splitsMatrixActions > .splitsBulkModeBar{ margin-top: -1px; }
+.recipeUtilityTab{
+  position: relative;
+  min-height: 26px;
+  padding: 5px 12px 4px;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  /* Rounded top corners only - a tab shape, matching .recipePageTab. */
+  border-radius: var(--control-radius) var(--control-radius) 0 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--font-tiny);
+  font-weight: 700;
+  letter-spacing: .01em;
+  line-height: 1.2;
+  cursor: pointer;
+}
+.recipeUtilityTab:hover{
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+  color: var(--title);
+}
+.recipeUtilityTab.active{
+  /* Grows out of the divider exactly like .recipePageTab.active does,
+     just in the panel's own readonly-bg tone (matching .splitsBulkBar/
+     .splitsSavedRecipesPanel below) instead of the main content colour -
+     that shared colour, plus the box-shadow seam, is what makes whichever
+     panel is open read as this tab's own surface. */
+  z-index: 1;
+  border-color: var(--row-border);
+  background: var(--readonly-bg);
+  color: var(--title);
+  font-weight: 800;
+  box-shadow: 0 1px 0 0 var(--readonly-bg);
+}
+.recipeUtilityTab:focus-visible{ outline: 2px solid var(--focus-border); outline-offset: 2px; }
+.recipeUtilityTab:disabled{ opacity: .45; cursor: not-allowed; }
+/* The active tab's panel - .splitsBulkBar or .splitsSavedRecipesPanel,
+   exactly one visible at a time (the other stays .hide). Pulled up to sit
+   flush against .recipeUtilityTabs' own divider - closing #splitsArea's
+   6px grid row-gap the same way .recipeUtilityTab.active's box-shadow
+   closes the divider itself - so the open panel reads as a continuation
+   of its tab rather than a separate floating card. */
+.splitsBulkBar,
+.splitsSavedRecipesPanel{ margin-top: -7px; }
 .splitsInfo{position:relative}
 /* Right end of .splitsBulkModeBar's own toolbar strip (see the reorder
    comment above), so it's a flat divided segment matching that row, not
@@ -1825,6 +1877,20 @@ details[open] > summary .chevSatellite{
   font-size: var(--font-small);
 }
 .splitLayerMeta{ margin-top: 5px; text-align: center; }
+/* Always rendered - fixing a percentage must never move the grid. Muted at
+   rest (matches a complete Current total and any Next total alike, since an
+   unfinished plan is expected rather than a fault); only Current's own
+   invalid case switches to the warn colour. The verbose "why" lives in the
+   notification bell, not here. */
+.splitColumnTotal{
+  margin-top: 5px;
+  min-height: 1.2em;
+  color: var(--muted);
+  font-size: var(--font-tiny);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.splitColumnTotal.warn{ color: var(--warn); }
 .splitCopyBtn{
   width:auto;
   min-height:0;
@@ -2037,24 +2103,27 @@ details[open] > summary .chevSatellite{
    action bar keep their natural height, and the spare space falls below the
    section instead of being pushed into its controls. */
 #splitsBlock .blockBody{ align-content: start; }
+/* margin's -1px is exactly the divider's own thickness, so the active tab's
+   matching box-shadow seam (below) can sit precisely on top of it - the
+   standard document-tab "grows out of the divider" technique. */
 .recipePageTabs{
   display: flex;
   align-self: start;
-  gap: 6px;
+  align-items: flex-end;
+  gap: 4px;
   margin: 0 0 -1px;
-  padding: 0 0 5px;
+  padding: 0 2px;
   border-bottom: 1px solid var(--row-border);
 }
 .recipePageTab{
   position: relative;
-  min-height: 28px;
-  padding: 4px 15px;
-  /* Quieter than the selected page, but still a real button: its own edge and
-     surface, softened so the selected one is unmistakably the stronger of the
-     two in every theme. */
-  border: 1px solid color-mix(in srgb, var(--btn-secondary-border) 55%, transparent);
-  border-radius: var(--control-radius);
-  background: var(--btn-secondary-bg);
+  min-height: 30px;
+  padding: 6px 14px 5px;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  /* Rounded top corners only - a tab shape, not a pill or a rectangle. */
+  border-radius: var(--control-radius) var(--control-radius) 0 0;
+  background: transparent;
   color: var(--muted);
   font-size: var(--font-small);
   font-weight: 800;
@@ -2062,20 +2131,29 @@ details[open] > summary .chevSatellite{
   line-height: 1.2;
   cursor: pointer;
 }
+/* Quiet at rest - closer to a clickable label sitting on the divider than a
+   button - so it never competes with the active tab's document-tab shape.
+   Hover is where "still obviously selectable" comes from. */
 .recipePageTab:hover{
-  border-color: var(--border2);
-  color: var(--text);
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+  color: var(--title);
 }
 .recipePageTab.active{
-  /* The selected page reads as pressed: filled surface, focus-coloured edge,
-     heavier text. Deliberately the same language .toolsIndexButton.active
-     already uses for a selected page inside a panel, so the treatment holds
-     up in every theme rather than only the default one. Restrained on
-     purpose - no glow, no animation. */
-  border-color: var(--focus-border);
-  background: var(--btn-primary-a);
-  color: var(--text);
+  /* Grows out of the divider: a real top+side border in the panel's own
+     border colour, and a background matching the Recipe workspace content
+     below - so the divider line appears to break exactly where this tab
+     sits, and the grid reads as a continuation of the tab rather than a
+     separate surface. Restrained on purpose - no glow, no animation. */
+  z-index: 1;
+  border-color: var(--row-border);
+  background: var(--panel);
+  color: var(--title);
   font-weight: 900;
+  /* The 1px seam that actually erases the divider under this tab: same
+     width as .recipePageTabs' own border-bottom, painted in the content
+     colour instead of the divider colour. box-shadow (not a real border)
+     so it doesn't add height and unbalance the two tabs. */
+  box-shadow: 0 1px 0 0 var(--panel);
 }
 .recipePageTab:focus-visible{ outline: 2px solid var(--focus-border); outline-offset: 2px; }
 /* "A recipe is planned." Quiet by design - it is information, not an alert. */
@@ -2344,15 +2422,16 @@ body[data-recipe-page="next"] .splitsInfo{ display: none; }
   .splitsMatrix th.splitLayerHeader.mobile-layer-active{
     display: grid;
     grid-template-columns: auto 1fr;
-    grid-template-areas: "pct copy";
+    grid-template-areas: "pct copy" "total total";
     align-items: center;
     gap: 8px;
     padding-bottom: 8px;
     border-bottom: 1px solid var(--border);
   }
+  .splitColumnTotal{ grid-area: total; margin-top: 0; }
   .splitsMatrix th.splitLayerHeader.noCopy.mobile-layer-active{
     grid-template-columns: 1fr;
-    grid-template-areas: "pct";
+    grid-template-areas: "pct" "total";
   }
   .splitLayerMain{
     grid-area: pct;
@@ -2547,6 +2626,7 @@ body[data-recipe-page="next"] .splitsInfo{ display: none; }
     line-height:14px;
   }
   .splitsMatrix.compactMobileRecipe .splitLayerPct span{ font-size:10px; }
+  .splitsMatrix.compactMobileRecipe .splitColumnTotal{ margin-top:2px; min-height:1.1em; font-size:9px; }
   .splitsMatrix.compactMobileRecipe .splitCopyBtn{
     display:grid;
     place-items:center;
@@ -2632,8 +2712,17 @@ body[data-recipe-page="next"] .splitsInfo{ display: none; }
     .splitsMatrix.compactMobileRecipe .splitTrackButton.active{ animation:none; }
   }
 
-  /* Bottom action tray: one stable mobile pattern for the major recipe
-     actions, visually separate from the dense matrix it controls. */
+  /* Bottom action tray: one deliberate two-tier mobile pattern for the major
+     recipe actions, visually separate from the dense matrix it controls.
+     Primary and secondary are two stacked elements sharing one outline
+     (primary's own bottom border is suppressed; secondary's top border is
+     the only line at the seam) so they read as one joined surface, not two
+     floating bars - the old design forced a variable number of buttons
+     (3 on Next, 4 on Current once a plan existed) into one fixed 4-column
+     grid, and the extra one silently clipped. Splitting into "the handful
+     of actions worth a direct tap" (primary) and "everything else, already
+     living in the existing More menu" (secondary) removes the mismatch
+     instead of shrinking text to paper over it. */
   .mobileRecipeActionTray{
     position:static;
     bottom:auto!important;
@@ -2644,17 +2733,31 @@ body[data-recipe-page="next"] .splitsInfo{ display: none; }
     border:0;
     background:transparent;
   }
-  .mobileRecipeActionTray .splitsBulkModeBar{
-    display:grid;
-    grid-template-columns:repeat(4,minmax(0,1fr));
-    gap:0;
-    overflow:visible;
+  .splitsMobilePrimaryRow{
+    display:flex;
     border:1px solid var(--row-border-2);
-    border-radius:var(--control-radius);
+    border-bottom:0;
+    border-radius:var(--control-radius) var(--control-radius) 0 0;
     background:var(--row-bg-2);
+    /* No overflow:hidden here - Scan Recipe's popup (Next only) is a
+       position:absolute descendant that needs to escape this row's bounds
+       to open above it. Safe without it: every button inside is
+       border-radius:0 and background:transparent, so the row's own rounded
+       background already reads as the sole visible edge. */
   }
-  .mobileRecipeActionTray .splitsBulkModeBar[hidden]{display:none!important}
-  .mobileRecipeActionTray .splitsBulkModeBar button.secondary{
+  .splitsMobilePrimaryRow > *{ flex:1 1 0; min-width:0; }
+  /* button.secondary's own display:flex below is an author rule, which - per
+     the cascade, regardless of specificity - always beats the UA
+     stylesheet's [hidden]{display:none}. Without this, loadNextButton.hidden
+     (set when no plan exists) would silently stop working here and an empty
+     "Load Next" would occupy a primary-row slot with nothing to promote. */
+  .splitsMobilePrimaryRow [hidden]{ display:none!important; }
+  .splitsMobilePrimaryRow button.secondary,
+  .splitsMobilePrimaryRow .splitsScanShortcut > summary{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:100%;
     height:42px;
     min-height:42px;
     padding:7px 5px;
@@ -2669,22 +2772,71 @@ body[data-recipe-page="next"] .splitsInfo{ display: none; }
     letter-spacing:.01em;
     box-shadow:none;
     white-space:nowrap;
+    text-align:center;
+    cursor:pointer;
+    list-style:none;
   }
-  .mobileRecipeActionTray .splitsBulkModeBar button.secondary:hover,
-  .mobileRecipeActionTray .splitsBulkModeBar button.secondary:focus-visible{
-    border-color:var(--row-border-2);
+  .splitsMobilePrimaryRow .splitsScanShortcut > summary::-webkit-details-marker{display:none}
+  .splitsMobilePrimaryRow > *:last-child button.secondary,
+  .splitsMobilePrimaryRow > *:last-child .splitsScanShortcut > summary{ border-right:0; }
+  /* On Next, Scan Recipe (with its 3-source popup) sits as the rightmost
+     primary action - the popup's own default left:0 anchors it to that
+     trigger's left edge, which is itself near the panel's right edge, and
+     the fixed-width popup then overflows off the right of the viewport.
+     Right-align it to the trigger instead, matching every other right-edge
+     popup in this tray (.mobileRecipeMoreMenu, .splitsInfoPanel). */
+  .splitsMobilePrimaryRow .splitsScanShortcut .statusScanShortcutPanel{ left:auto; right:0; }
+  .splitsMobilePrimaryRow button.secondary:hover,
+  .splitsMobilePrimaryRow button.secondary:focus-visible,
+  .splitsMobilePrimaryRow .splitsScanShortcut > summary:hover,
+  .splitsMobilePrimaryRow .splitsScanShortcut[open] > summary,
+  .splitsMobilePrimaryRow .splitsScanShortcut > summary:focus-visible{
     background:var(--focus-ring);
     color:var(--title);
     box-shadow:inset 0 0 0 2px var(--focus-border);
   }
-  .mobileRecipeActionTray .splitsBulkModeBar button.secondary[aria-expanded="true"]{
-    border-color:var(--row-border-2);
+  .splitsMobilePrimaryRow button.secondary[aria-expanded="true"]{
     color:var(--title);
     background:var(--focus-ring);
     box-shadow:inset 0 0 0 2px var(--focus-border);
   }
-  .mobileRecipeActionTray .splitsBulkModeBar > button.secondary:last-of-type{border-right:0}
-  .mobileRecipeActionTray .splitsBulkModeBar > .splitsInfo{ display:none!important; }
+  /* Second tier: a full-width home for the existing "More" menu, joined
+     directly beneath the primary row (no gap, shared border) so it reads as
+     one surface rather than an accidental extra row. */
+  .splitsMobileSecondaryRow{
+    position:relative;
+    display:flex;
+    border:1px solid var(--row-border-2);
+    border-radius:0 0 var(--control-radius) var(--control-radius);
+    background:var(--row-bg-2);
+    /* No overflow:hidden - the More menu and the relocated Recipe info
+       trigger are both position:absolute descendants that need to open
+       above/beside this row, same reasoning as the primary row above. */
+  }
+  .splitsMobileSecondaryRow .mobileRecipeMore{ flex:1 1 auto; min-width:0; }
+  .splitsMobileSecondaryRow .mobileRecipeMore > summary{ width:100%; border-left:0; }
+  /* Recipe info has no separate icon on mobile any more - it is triggered
+     from the More menu's own "Recipe info" entry instead. Reduced to a
+     zero-size anchor point (position:absolute takes it out of the row's
+     flow entirely) so it costs no layout space; its existing popup panel
+     still opens normally from wherever this anchor sits, since .splitsInfo
+     keeps its own position:relative for the panel to measure against. */
+  .splitsMobileSecondaryRow .splitsInfo{
+    position:absolute;
+    right:0;
+    bottom:100%;
+    width:0;
+    height:0;
+    overflow:visible;
+  }
+  .splitsMobileSecondaryRow .splitsInfo > summary{ display:none; }
+  /* .splitsInfoPanel's own mobile rule centers itself (left:50%;
+     transform:translateX(-50%)) on its positioned ancestor - correct when
+     that ancestor is a normal-width element, but this anchor is
+     deliberately zero-width (see above), so centering on it hangs the
+     panel half off both edges. Right-align to the anchor instead, same as
+     the Scan Recipe popup fix above. */
+  .splitsMobileSecondaryRow .splitsInfoPanel{ left:auto; right:0; transform:none; }
   .mobileBulkContext{
     display:grid;
     grid-template-columns:auto minmax(0,1fr) auto;
@@ -2850,6 +3002,7 @@ body[data-recipe-page="next"] .splitsInfo{ display: none; }
     display:grid;
     grid-template-columns:1fr;
     gap:12px;
+    margin-top:0;
     padding:2px 0 0;
     border:0;
     border-radius:0;
@@ -4112,15 +4265,15 @@ button.compactAction{
    actions while retaining the same visual grammar. */
 @media (max-width:700px){
   .mobileMatrixActionBar{width:100%;max-width:100%;min-width:0;margin-top:8px}
-  .mobileWeightsActionToolbar.mobileMatrixActionBar,
-  .mobileRecipeActionTray.mobileMatrixActionBar .splitsBulkModeBar{
+  .mobileWeightsActionToolbar.mobileMatrixActionBar{
     min-height:42px;
     border:1px solid var(--row-border-2);
     border-radius:var(--control-radius);
     background:var(--row-bg-2);
   }
   .mobileWeightsActionToolbar.mobileMatrixActionBar button,
-  .mobileRecipeActionTray.mobileMatrixActionBar .splitsBulkModeBar button.secondary,
+  .mobileRecipeActionTray.mobileMatrixActionBar .splitsMobilePrimaryRow button.secondary,
+  .mobileRecipeActionTray.mobileMatrixActionBar .splitsMobilePrimaryRow .splitsScanShortcut > summary,
   .mobileRecipeActionTray.mobileMatrixActionBar .mobileRecipeMore > summary{
     min-height:42px;
     color:var(--text);
