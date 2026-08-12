@@ -4489,7 +4489,7 @@ body[data-surface-style="divided"] .helpTopic{
     min-height:52px;
     padding:3px 12px;
   }
-  .resinToolsLogo{ width:min(100%,122px); }
+  .resinToolsLogo{ width:min(100%,152.5px); }
   .workspaceNav{
     display:grid;
     grid-template-columns:repeat(2,minmax(0,1fr));
