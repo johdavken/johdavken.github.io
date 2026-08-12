@@ -9,7 +9,8 @@ const html = fs.readFileSync("index.html", "utf8");
 const styles = fs.readFileSync("styles.css", "utf8");
 
 // Two independent changes: (1) the default theme moved from Everforest to
-// Industrial Slate ("mse") everywhere a default is asserted, and (2) the
+// Industrial Slate ("industrial-slate", formerly the legacy "mse" id)
+// everywhere a default is asserted, and (2) the
 // Header style picker - added specifically so the operator could preview
 // several font treatments (Monospace, Condensed, System Sans, Bold Slab,
 // Editorial Serif, Rounded Grotesk, Wide Display) - served its purpose:
@@ -18,26 +19,27 @@ const styles = fs.readFileSync("styles.css", "utf8");
 // .layerTitle/.workspaceNavButton span/.setupSectionTitle/.toolsIndexButton
 // styling, with no body[data-header-style] switch left to key off of.
 
-test("Light reuses Industrial Slate (mse) as the default implementation", () => {
-  assert.match(html, /<html lang="en" data-theme="mse">/);
-  assert.match(html, /<body[^>]*data-theme="mse"/);
-  const optStart = html.indexOf('value="mse"');
+test("Industrial Slate is the default implementation", () => {
+  assert.match(html, /<html lang="en" data-theme="industrial-slate">/);
+  assert.match(html, /<body[^>]*data-theme="industrial-slate"/);
+  const optStart = html.indexOf('value="industrial-slate"');
   const opt = html.slice(optStart, html.indexOf("</option>", optStart));
   assert.match(opt, /selected/);
-  assert.match(opt, />Light/);
+  assert.match(opt, />Industrial Slate/);
   assert.doesNotMatch(html, /value="everforest"/);
 });
 
-test("theme migration has a deterministic mse fallback", () => {
+test("theme migration has a deterministic industrial-slate fallback, including from the legacy mse id", () => {
   assert.doesNotMatch(app, /: String\(t\) : "everforest"/);
   assert.doesNotMatch(app, /payload\.theme \|\| "everforest"/);
   assert.doesNotMatch(app, /applyTheme\("everforest"\)/);
   assert.doesNotMatch(app, /state\.theme \|\| "everforest"/);
-  assert.match(app, /theme: "mse",/);
-  assert.match(app, /const theme = migrations\.get\(saved\) \|\| "mse";/);
-  assert.match(app, /applyTheme\(payload\.theme \|\| "mse"\);/);
-  assert.match(app, /applyTheme\("mse"\);/);
-  assert.match(app, /applyTheme\(state\.theme \|\| "mse"\);/);
+  assert.match(app, /theme: "industrial-slate",/);
+  assert.match(app, /\["mse", "industrial-slate"\]/);
+  assert.match(app, /const theme = migrations\.get\(saved\) \|\| "industrial-slate";/);
+  assert.match(app, /applyTheme\(payload\.theme \|\| "industrial-slate"\);/);
+  assert.match(app, /applyTheme\("industrial-slate"\);/);
+  assert.match(app, /applyTheme\(state\.theme \|\| "industrial-slate"\);/);
 });
 
 test("the Header style picker is gone from Settings, and so is the body attribute it used to drive", () => {

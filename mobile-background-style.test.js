@@ -13,7 +13,7 @@ test("background selection UI is retired and old stored values resolve to theme-
 });
 
 test("the three retained themes receive restrained native backgrounds",()=>{
-  for (const theme of ["mse","industrial-slate-dark","gruvbox-dark"]){
+  for (const theme of ["industrial-slate","industrial-slate-dark","gruvbox-dark"]){
     assert.match(styles,new RegExp(`body\\[data-theme="${theme}"\\]\\[data-mobile-background-style="theme-native"\\]`));
   }
 });

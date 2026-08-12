@@ -36,9 +36,10 @@ test("desktop Setup is a two-region workspace with a compact five-column receive
 
 test("desktop canvas and receiver typography use the shared theme and desktop tokens", () => {
   const theme = fs.readFileSync("theme.css", "utf8");
-  const mse = theme.slice(theme.indexOf(':where(html, body)[data-theme="mse"]{'), theme.indexOf('/* ----------------------------------------------------------------------- * Industrial Slate Dark'));
-  assert.match(mse, /--desktop-canvas-bg: #e3eaf0;/);
+  const industrialSlate = theme.slice(theme.indexOf(':where(html, body)[data-theme="industrial-slate"]{'), theme.indexOf('/* ----------------------------------------------------------------------- * Industrial Slate Dark'));
+  assert.match(industrialSlate, /--desktop-canvas-bg: #9dafbf;/);
   assert.match(desktop, /body\{overflow:hidden;background:var\(--desktop-canvas-bg\)\}/);
+  assert.match(desktop, /body\[data-theme="industrial-slate"\]\{background:linear-gradient\(135deg,var\(--desktop-canvas-bg\),color-mix\(in srgb,var\(--desktop-canvas-bg\) 55%,white\)\)\}/);
   assert.match(desktop, /\.desktopWeightSummaryValues b\{[\s\S]*?font-size:18px;font-weight:850/);
   assert.match(desktop, /\.desktopWeightSummaryValues b \+ b\{color:var\(--muted\);font-size:13px/);
   assert.match(desktop, /\.desktopWeightEditFields input\{[\s\S]*?font-size:14px;font-weight:800/);
