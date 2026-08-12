@@ -3,6 +3,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const path = require("node:path");
 
 const html = fs.readFileSync("index.html", "utf8");
 const styles = fs.readFileSync("styles.css", "utf8");
@@ -17,20 +18,45 @@ const TOPIC_IDS = [
   "helpRecipeScan"
 ];
 
+/**
+ * A topic's full markup. Sections now nest <details> subtopics, so slicing to
+ * the first </details> would stop at the first subtopic and hide most of the
+ * section from every assertion below - the tag depth has to be tracked.
+ */
 function topic(id){
   const start = html.indexOf(`<details class="helpTopic" id="${id}"`);
   assert.notEqual(start, -1, `expected a ${id} topic`);
-  return html.slice(start, html.indexOf("</details>", start));
+  const tags = /<details\b|<\/details>/g;
+  tags.lastIndex = start;
+  let depth = 0;
+  let match;
+  while ((match = tags.exec(html))){
+    depth += match[0] === "</details>" ? -1 : 1;
+    if (depth === 0) return html.slice(start, match.index);
+  }
+  throw new Error(`${id} has an unbalanced <details>`);
 }
 
-/** Width from a PNG's IHDR chunk - avoids pulling in an image dependency. */
-function pngWidth(file){
-  const head = Buffer.alloc(24);
-  const fd = fs.openSync(file, "r");
-  fs.readSync(fd, head, 0, 24, 0);
-  fs.closeSync(fd);
-  assert.equal(head.toString("ascii", 12, 16), "IHDR", `${file} is not a PNG`);
-  return head.readUInt32BE(16);
+/**
+ * Declared width from the file itself - no image dependency. Screenshots are
+ * PNG (IHDR); photographed source documents are JPEG, where PNG would be many
+ * times the size for no gain, so both are read here.
+ */
+function imageWidth(file){
+  const bytes = fs.readFileSync(file);
+  if (bytes.toString("ascii", 12, 16) === "IHDR") return bytes.readUInt32BE(16);
+  assert.equal(bytes.readUInt16BE(0), 0xffd8, `${file} is neither a PNG nor a JPEG`);
+  // Walk the JPEG segment chain to a start-of-frame marker; width is the
+  // 16-bit big-endian field 7 bytes into that segment.
+  let offset = 2;
+  while (offset < bytes.length - 9){
+    assert.equal(bytes[offset], 0xff, `${file} has a malformed JPEG segment chain`);
+    const marker = bytes[offset + 1];
+    const isStartOfFrame = marker >= 0xc0 && marker <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(marker);
+    if (isStartOfFrame) return bytes.readUInt16BE(offset + 7);
+    offset += 2 + bytes.readUInt16BE(offset + 2);
+  }
+  throw new Error(`${file}: no JPEG start-of-frame marker found`);
 }
 
 test("every guide topic opens with a lede rather than dropping straight into steps", () => {
@@ -63,13 +89,24 @@ test("every screenshot exists, is described, and declares its real pixel width",
     assert.ok(alt.length > 25, `${src} needs descriptive alt text`);
     // The no-upscale rule: --shot-w must be the asset's true width, so the
     // shot can only ever scale down.
-    assert.equal(Number(declared), pngWidth(src), `--shot-w for ${src} must equal its natural width`);
+    assert.equal(Number(declared), imageWidth(src), `--shot-w for ${src} must equal its natural width`);
+  }
+});
+
+test("photographed source documents ship stripped of camera metadata", () => {
+  // These are phone photos of paper, not app screenshots: the originals carry
+  // device model, capture timestamps and potentially location, and the guide
+  // is published on a public site.
+  for (const file of fs.readdirSync("branding/help").filter(f => f.endsWith(".jpg"))){
+    const bytes = fs.readFileSync(path.join("branding/help", file));
+    assert.equal(bytes.includes(Buffer.from("Exif")), false, `${file} still carries an EXIF block`);
+    assert.equal(bytes.includes(Buffer.from("samsung")), false, `${file} still names the capture device`);
   }
 });
 
 test("no orphaned screenshots are left behind in branding/help", () => {
-  const referenced = new Set([...html.matchAll(/branding\/help\/([\w.-]+\.png)/g)].map(m => m[1]));
-  const onDisk = fs.readdirSync("branding/help").filter(f => f.endsWith(".png"));
+  const referenced = new Set([...html.matchAll(/branding\/help\/([\w.-]+\.(?:png|jpg))/g)].map(m => m[1]));
+  const onDisk = fs.readdirSync("branding/help").filter(f => /\.(png|jpg)$/.test(f));
   const orphans = onDisk.filter(f => !referenced.has(f));
   assert.deepEqual(orphans, [], `unused help assets: ${orphans.join(", ")}`);
 });
