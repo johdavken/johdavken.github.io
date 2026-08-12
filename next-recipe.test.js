@@ -290,3 +290,9 @@ test("the module loads before app.js so restore can normalize the stored plan", 
   assert.ok(moduleAt > -1 && moduleAt < appAt, "next-recipe.js must be loaded before app.js");
   assert.ok(html.indexOf('src="workspace-configuration-payloads.js') < moduleAt, "its payload dependency must load first");
 });
+
+test("a plan arriving from another device announces itself", () => {
+  // The marker is otherwise only refreshed on local commit or a page switch,
+  // so a receiving device would show no sign a plan had appeared.
+  assert.match(app, /nextRecipeWorking = null;[\s\S]{0,320}?syncPlannedRecipeIndicator\(\);/);
+});
