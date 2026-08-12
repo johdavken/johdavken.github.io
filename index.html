@@ -7,7 +7,30 @@
   <!-- Favicons -->
   <link rel="icon" type="image/svg+xml" sizes="any" href="branding/resin-tools/rt6-02-layer-stack-icon.svg?v=2">
 
-  <link rel="stylesheet" href="styles.css?v=0.55.46">
+  <!-- Home Screen / installable web app. iOS installs from the apple-touch-icon
+       and the apple-mobile-web-app-* tags below, not from the manifest, so an
+       iPhone can still install this even where the manifest is unavailable.
+       The manifest is what makes desktop/Android Chrome treat it as installable.
+       Icons are the same brand asset the native Android launcher icon is built
+       from (resources/icon.png), so all platforms show one icon. -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="theme-color" content="#f5f4f3">
+  <!-- Both spellings on purpose: Chrome deprecated the apple- prefixed one and
+       warns without the standard name, while older iOS only understands the
+       apple- one. -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Resin.Tools">
+  <!-- Deliberately "default", not "black-translucent". black-translucent draws
+       the page underneath the status bar, which needs an env(safe-area-inset-top)
+       offset this app has never had (it only compensates bottom/right), and the
+       default theme is light, where white status-bar glyphs would be unreadable.
+       "default" keeps the standalone window starting below the status bar, so no
+       layout change is required to install cleanly. -->
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+  <link rel="stylesheet" href="styles.css?v=0.55.47">
   <link rel="stylesheet" href="theme.css?v=0.17.4">
   <link rel="stylesheet" href="desktop.css?v=0.1.3">
 <script src="validation.js?v=0.18" defer></script>
@@ -29,6 +52,7 @@
      exactly what this file must NOT rely on for native detection. See
      android-back-button.js for the isNativePlatform() gate. -->
 <script src="android-back-button.js?v=0.2.0" defer></script>
+<script src="install-hint.js?v=0.1.0" defer></script>
 <script src="supabase-config.js?v=0.18" defer></script>
 <script src="sync-storage.js?v=0.18" defer></script>
 <script src="cloud-sync.js?v=0.18.17" defer></script>
