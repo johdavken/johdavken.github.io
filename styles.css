@@ -2022,6 +2022,67 @@ details[open] > summary .chevSatellite{
   background: color-mix(in srgb, var(--focus-ring) 55%, transparent);
 }
 .bulk-editing .splitCopyBtn,.bulk-editing .splitTrackControl,.bulk-editing .splitClearButton,.bulk-editing .splitsInfo{display:none}
+
+/* ---- Recipe pages: Current / Next -----------------------------------------
+   Two pages of one Recipe workspace. The strip is anchored to the top of the
+   grid - flush, sharing its bottom border - so it reads as part of the panel
+   rather than a toolbar hovering above it. */
+.recipePageTabs{
+  display: flex;
+  gap: 4px;
+  margin: 0 0 -1px;
+  padding: 0 2px;
+  border-bottom: 1px solid var(--row-border);
+}
+.recipePageTab{
+  position: relative;
+  min-height: 38px;
+  padding: 8px 16px;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: var(--radius-input) var(--radius-input) 0 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--font-small);
+  font-weight: 800;
+  letter-spacing: .02em;
+  cursor: pointer;
+}
+.recipePageTab:hover{ color: var(--title); }
+.recipePageTab.active{
+  /* Joined to the grid: the panel colour continues through the shared edge. */
+  border-color: var(--row-border);
+  border-bottom: 1px solid var(--panel);
+  background: var(--panel);
+  color: var(--title);
+}
+.recipePageTab:focus-visible{ outline: 2px solid var(--focus-border); outline-offset: -2px; }
+/* "A recipe is planned." Quiet by design - it is information, not an alert. */
+.recipePageTabDot{
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: 7px;
+  border-radius: 50%;
+  background: var(--title);
+  vertical-align: middle;
+}
+.recipePageTabDot[hidden]{ display: none; }
+
+/* The plan is a recipe definition only: it has no tracking, no pump-off and
+   no receiver weights, so the controls for those are not offered on it. */
+body[data-recipe-page="next"] .splitTrackControl,
+body[data-recipe-page="next"] .splitsInfo{ display: none; }
+/* A half-finished plan is expected, not a fault. Same totals, muted voice -
+   the warning colour is reserved for the recipe the line is actually running. */
+.splitColumnTotal.planning,
+.splitsMatrixSummary.planning{ color: var(--muted); font-weight: 650; }
+
+@media (max-width: 900px){
+  /* Full-width halves keep both tabs comfortably tappable on a phone. */
+  .recipePageTabs{ gap: 6px; padding: 0; }
+  .recipePageTab{ flex: 1 1 0; min-height: 44px; text-align: center; }
+}
 .bulk-editing .splitMatrixCell .resinNameInput:disabled,.bulk-editing .splitMatrixCell .splitInput:disabled{opacity:.52;color:var(--muted);cursor:default}
 .splitMatrixCell .resinNameInput{
   height:22px;

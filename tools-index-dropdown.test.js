@@ -121,7 +121,12 @@ test("selectToolPanel keeps the dropdown's summary label in sync with whichever 
 });
 
 test("clicking a tab closes the dropdown, but arrow-key navigation between tabs does not - closing after the first arrow press would prevent browsing the other options", () => {
-  const clickStart = app.indexOf('tab.addEventListener("click"');
+  // Anchored to the Tools tab wiring: other tab strips (the Recipe
+  // Current/Next pages) use the same addEventListener idiom earlier in the
+  // file, and an unanchored search would find whichever comes first.
+  const toolTabs = app.indexOf("toolTabs.forEach((tab, index)=>{");
+  assert.notEqual(toolTabs, -1, "expected the Tools tab wiring");
+  const clickStart = app.indexOf('tab.addEventListener("click"', toolTabs);
   const keydownStart = app.indexOf('tab.addEventListener("keydown"', clickStart);
   const clickHandler = app.slice(clickStart, keydownStart);
   const keydownHandler = app.slice(keydownStart, app.indexOf("});", keydownStart) + 3);

@@ -37,7 +37,9 @@ test("printing is a pure read/output action: no confirmation, no state mutation,
 
 test("the print sheet is built from state and reflects only recipe fields, not weights/tracking/runtime state", () => {
   const body = functionBody("printRecipeSheet");
-  assert.match(body, /state\.layers\.forEach/);
+  // Prints the page being viewed, so a planned sheet can be carried to the
+  // line without printing the recipe that is currently running.
+  assert.match(body, /recipeLayers\(\)\.forEach/);
   assert.match(body, /L\.hoppers\.forEach\(h=>\{/);
   assert.match(body, /normName\(h\.resinName\)/);
   assert.match(body, /clampNum\(h\.pct\)/);

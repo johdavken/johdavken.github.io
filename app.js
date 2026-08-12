@@ -48,6 +48,12 @@
       changeoverSetAt: null, // epoch ms the changeover field was last edited; used to flag a stale/forgotten deadline
       offsets: {},
       layers: [],
+      // The planned recipe for the upcoming changeover, held as an ordinary
+      // recipe payload (see next-recipe.js) or null when nothing is planned.
+      // Deliberately not a second `layers` array: a recipe payload carries no
+      // tracking, pump-off, receiver weight or hopper dimensions, so the
+      // planned recipe cannot accumulate operational state of its own.
+      nextRecipe: null,
       prodResinLb: 0,
       scrapResinLb: 0,
       density: "comfort",
@@ -506,18 +512,67 @@
     const dialog=$("workspaceConfigurationLoadDialog"), details=$("workspaceConfigurationLoadDetails"), confirm=$("workspaceConfigurationConfirmLoad"); if(!dialog?.showModal) return;
     const recipe=item.type==="recipe";
     const lineChange=recipe && Number(item.payload.line_type)!==Number(state.lineType)?` This recipe changes the line type from ${state.lineType} to ${item.payload.line_type}.`:"";
-    details.textContent=recipe ? `${item.name}. This will change line type, hopper naming mode, layer percentages, hopper resin assignments, and hopper blend percentages.${lineChange} It will not change receiver hopper weights, tracking selections, pump-off state, offsets, timeline/runtime state, workspace, RT Sync identity, or appearance preferences.` : `${item.name}. This will change receiver hopper weights only. It will not change line type, layer percentages, resin assignments, hopper blend percentages, tracking, pump-off state, timeline/runtime state, workspace, or RT Sync state.`;
-    confirm.textContent=recipe?"Load Recipe":"Load Weights";
+    // The destination is never implied - a recipe loads into the page being
+    // viewed, so the dialog names it before anything is replaced.
+    const intoNext=recipe && isNextRecipePage();
+    const nextLineNote=intoNext && Number(item.payload.line_type)!==Number(state.lineType)
+      ? ` The planned recipe follows this line's ${state.lineType}-layer structure, so any layer beyond that is not carried over.`
+      : "";
+    details.textContent=recipe
+      ? (intoNext
+        ? `${item.name}. This will replace the planned Next Recipe — layer percentages, hopper resin assignments, and hopper blend percentages.${nextLineNote} The current recipe being run is not changed, and neither are receiver hopper weights, tracking, pump-off state, or timeline state.`
+        : `${item.name}. This will change line type, hopper naming mode, layer percentages, hopper resin assignments, and hopper blend percentages.${lineChange} It will not change receiver hopper weights, tracking selections, pump-off state, offsets, timeline/runtime state, workspace, RT Sync identity, or appearance preferences.`)
+      : `${item.name}. This will change receiver hopper weights only. It will not change line type, layer percentages, resin assignments, hopper blend percentages, tracking, pump-off state, timeline/runtime state, workspace, or RT Sync state.`;
+    confirm.textContent=recipe?(intoNext?"Load into Next":"Load Recipe"):"Load Weights";
     dialog.addEventListener("close",()=>{ if(dialog.returnValue==="load") applyWorkspaceConfiguration(item); },{once:true}); dialog.showModal();
   }
   function applyWorkspaceConfiguration(item){
-    const helper=item.type==="recipe"?window.PolynWorkspaceConfigurationPayloads?.applyRecipePayload:window.PolynWorkspaceConfigurationPayloads?.applyReceiverWeightProfile;
-    const result=helper?.(state,item.payload); if(!result?.ok){ workspaceConfigurationStatus(result?.errors?.[0] || "This shared configuration could not be loaded."); return; }
-    if(item.type==="recipe") syncLineTypeUI();
+    if(item.type==="recipe"){
+      const result=applyRecipeToActivePage(item.payload,{kind:"load-workspace-configuration"});
+      workspaceConfigurationStatus(result.ok ? `Recipe loaded into ${recipePageLabel()}.` : (result.message || "This shared configuration could not be loaded."));
+      return;
+    }
+    const result=window.PolynWorkspaceConfigurationPayloads?.applyReceiverWeightProfile(state,item.payload);
+    if(!result?.ok){ workspaceConfigurationStatus(result?.errors?.[0] || "This shared configuration could not be loaded."); return; }
     renderWeightsArea(); renderSplitsArea(); validateAndCompute(); saveSession(); notifyActiveJobMutation({immediate:true,kind:"load-workspace-configuration"});
-    workspaceConfigurationStatus(`${item.type==="recipe"?"Recipe":"Receiver Weight Profile"} loaded successfully.`);
+    workspaceConfigurationStatus("Receiver Weight Profile loaded successfully.");
   }
+
+  /* One destination-aware entry point for every recipe-definition apply -
+   * Saved Recipes and Scan Recipe both land here, so "it goes to the page you
+   * are looking at" is implemented once rather than per action.
+   *
+   * Current keeps the established behaviour exactly: applyRecipePayload, then
+   * render / validate / save / notify. Next writes the plan instead, and
+   * deliberately does not validate or notify - a plan is not the running job,
+   * and publishing it would mean an active-job write for something the line is
+   * not running. */
+  function applyRecipeToActivePage(payload,{kind}={}){
+    if(!isNextRecipePage()){
+      const result=window.PolynWorkspaceConfigurationPayloads?.applyRecipePayload(state,payload);
+      if(!result?.ok) return { ok:false, message:result?.errors?.[0] };
+      syncLineTypeUI();
+      renderWeightsArea(); renderSplitsArea(); validateAndCompute(); saveSession();
+      notifyActiveJobMutation({immediate:true,kind:kind||"apply-recipe"});
+      return { ok:true };
+    }
+    const stored=window.PolynNextRecipe?.normalize(payload);
+    if(!stored) return { ok:false, message:"That recipe could not be read." };
+    state.nextRecipe=stored;
+    // Rebuild the working copy from the plan we just stored rather than the
+    // one on screen, or the grid would keep showing the recipe it replaced.
+    nextRecipeWorking=null;
+    ensureNextRecipeWorking();
+    renderSplitsArea();
+    saveSession();
+    return { ok:true };
+  }
+
+  function recipePageLabel(){ return isNextRecipePage() ? "Next Recipe" : "Current Recipe"; }
+  // "Would applying a scan overwrite something?" - asked of whichever page the
+  // scan is about to land on, not always the live recipe.
   function hasNonEmptyRecipe(){
+    if(isNextRecipePage()) return !!window.PolynNextRecipe?.isMeaningful(state.nextRecipe);
     return state.layers.some(layer=>layer.hoppers.some(hopper=>hopper.resinName && hopper.resinName.trim()));
   }
   // Applies an already-built recipe payload (see recipe-scan-mapping.js,
@@ -528,11 +583,10 @@
   // know or care where the payload came from, so review-screen edits are
   // submitted as-is rather than being silently recomputed from the raw scan.
   function applyScannedRecipePayload(payload){
-    const result = window.PolynWorkspaceConfigurationPayloads?.applyRecipePayload(state, payload);
-    if (!result?.ok) return { ok:false, message: result?.errors?.[0] || "This scan could not be applied." };
-    renderWeightsArea(); renderSplitsArea(); validateAndCompute(); saveSession();
-    notifyActiveJobMutation({immediate:true,kind:"apply-recipe-scan"});
-    return { ok:true };
+    // Destination-neutral until here: the parser and review screen never know
+    // which page they are feeding, only that the operator confirmed it.
+    const result = applyRecipeToActivePage(payload, { kind:"apply-recipe-scan" });
+    return result.ok ? { ok:true } : { ok:false, message: result.message || "This scan could not be applied." };
   }
   function openWorkspaceConfigurationDialog(mode,item=null){
     const dialog=$("workspaceConfigurationSaveDialog"), title=$("workspaceConfigurationSaveTitle"), detail=$("workspaceConfigurationSaveDetails"), name=$("workspaceConfigurationName"), confirm=$("workspaceConfigurationSaveConfirm"); if(!dialog?.showModal) return;
@@ -1207,6 +1261,9 @@
     }
 
     function snapshotPayload(){
+      // One place to serialize the plan, so every existing saveSession() call
+      // in the recipe edit handlers persists it without being touched.
+      commitNextRecipeWorking();
       const blocksOpen = {};
       DETAILS_IDS.forEach(id=>{
         const el = document.getElementById(id);
@@ -1221,6 +1278,7 @@
         changeoverSetAt: state.changeoverSetAt,
         offsets: state.offsets,
         layers: state.layers,
+        nextRecipe: state.nextRecipe,
         prodResinLb: state.prodResinLb,
         scrapResinLb: state.scrapResinLb,
         density: state.density,
@@ -1568,6 +1626,11 @@
         ? (Number.isFinite(payload.changeoverSetAt) ? payload.changeoverSetAt : Date.now())
         : null;
       state.offsets = {};
+      // Sessions written before the planned recipe existed simply have no
+      // nextRecipe field, and anything that fails recipe validation is
+      // discarded rather than half-restored - either way this lands on null,
+      // which is the same as "nothing planned". No migration step needed.
+      state.nextRecipe = window.PolynNextRecipe?.normalize(payload.nextRecipe) ?? null;
       state.prodResinLb = clampNum(payload.prodResinLb);
       state.scrapResinLb = clampNum(payload.scrapResinLb);
 
@@ -2748,7 +2811,9 @@
       const header = document.createElement("div");
       header.className = "printSheetHeader";
       const title = document.createElement("h1");
-      title.textContent = "Recipe Setup";
+      // Names the page it came from, so a sheet carried to the line is never
+      // mistaken for the recipe that is actually running.
+      title.textContent = recipePageLabel();
       const meta = document.createElement("div");
       meta.className = "printSheetMeta";
       const workspaceName = lineSync?.getState?.().selectedWorkspace?.name || "Local";
@@ -2786,7 +2851,7 @@
       thead.appendChild(headRow);
 
       const tbody = document.createElement("tbody");
-      state.layers.forEach(L=>{
+      recipeLayers().forEach(L=>{
         const row = document.createElement("tr");
         const layerLabel = document.createElement("th");
         layerLabel.className = "printSheetLayerLabel";
@@ -2818,6 +2883,135 @@
       window.print();
     }
 
+    /* ============================
+     * Recipe pages: Current and Next
+     * ============================
+     * Two pages of one Recipe workspace. Current is state.layers, the
+     * operational recipe that drives the Timeline. Next is a plan for the
+     * upcoming changeover, held durably as a recipe payload in
+     * state.nextRecipe (see next-recipe.js) and edited through a working
+     * layers-shaped array, because Bulk Edit and Rearrange mutate layer
+     * objects in place and need the same shape the grid already renders.
+     *
+     * The grid, Bulk Edit and Rearrange all iterate recipeLayers() instead of
+     * state.layers, and their handlers close over the layer/hopper objects
+     * they were given - so they operate on whichever page is showing without
+     * any of them knowing that two pages exist. Everything operational
+     * (Timeline, readiness, run-down, production) keeps reading state.layers
+     * directly and is unaffected by the selected page. */
+
+    let activeRecipePage = "current";           // "current" | "next"; not persisted - Recipe always opens on Current
+    let nextRecipeWorking = null;               // layers-shaped working copy of state.nextRecipe
+
+    function isNextRecipePage(){ return activeRecipePage === "next"; }
+
+    // The plan follows the line's own layer structure rather than carrying a
+    // structure of its own: layer count is a property of the line, and a plan
+    // whose shape disagreed with the line could never be promoted cleanly.
+    function ensureNextRecipeWorking(){
+      const names = getLayerNamesForType(state.lineType);
+      const stored = window.PolynNextRecipe?.normalize(state.nextRecipe) || null;
+      const byName = new Map((stored?.layers || []).map(layer=>[layer.name, layer]));
+      const previous = new Map((nextRecipeWorking || []).map(layer=>[layer.name, layer]));
+
+      nextRecipeWorking = names.map(name=>{
+        const source = previous.get(name) || null;
+        const savedLayer = byName.get(name);
+        const hoppers = Array.from({length:HOPPERS_PER_LAYER}, (_, index)=>{
+          if (source) return source.hoppers[index];
+          const savedHopper = savedLayer?.hoppers?.[index];
+          return {
+            pct: clampNum(savedHopper?.pct),
+            resinName: normName(savedHopper?.resin_name || ""),
+            // A plan holds no operational or physical state. These exist only
+            // because the grid and the rearrangement module expect the shape;
+            // they are never read for the plan and never written back.
+            weight: 0, track: false, pumpOff: false, usableHeight: 0, circumference: 0
+          };
+        });
+        return source || { name, layerPct: clampNum(savedLayer?.layer_pct), hoppers };
+      });
+      return nextRecipeWorking;
+    }
+
+    // Serializes the working plan back to the durable payload. Called from
+    // snapshotPayload so every existing saveSession() in the edit handlers
+    // persists the plan without any of them being changed.
+    function commitNextRecipeWorking(){
+      if (!nextRecipeWorking) return;
+      const payload = window.PolynNextRecipe?.fromCurrent({
+        lineType: state.lineType,
+        hopperNamingLine9: state.hopperNamingLine9,
+        layers: nextRecipeWorking
+      });
+      state.nextRecipe = window.PolynNextRecipe?.normalize(payload) || null;
+      // The plan is committed on every save, which is also the moment the
+      // "a recipe is planned" marker can start or stop being true.
+      syncPlannedRecipeIndicator();
+    }
+
+    function hasPlannedRecipe(){
+      return !!window.PolynNextRecipe?.isMeaningful(state.nextRecipe);
+    }
+
+    function syncPlannedRecipeIndicator(){
+      const dot = $("recipePageTabNextDot");
+      if (!dot) return;
+      const planned = hasPlannedRecipe();
+      dot.hidden = !planned;
+      $("recipePageTabNext")?.setAttribute("aria-label", planned ? "Next — a recipe is planned" : "Next");
+    }
+
+    /** The layers the Recipe editor should read and write right now. */
+    function recipeLayers(){
+      return isNextRecipePage() ? ensureNextRecipeWorking() : state.layers;
+    }
+
+    function syncRecipePageUI(){
+      document.body.dataset.recipePage = activeRecipePage;
+      document.querySelectorAll(".recipePageTab").forEach(tab=>{
+        const selected = tab.dataset.recipePage === activeRecipePage;
+        tab.classList.toggle("active", selected);
+        tab.setAttribute("aria-selected", String(selected));
+        // Roving tabindex: the strip is one stop, arrows move within it.
+        tab.tabIndex = selected ? 0 : -1;
+      });
+      const panel = $("splitsArea");
+      if (panel) panel.setAttribute("aria-labelledby", isNextRecipePage() ? "recipePageTabNext" : "recipePageTabCurrent");
+      syncPlannedRecipeIndicator();
+    }
+
+    function setRecipePage(page){
+      const next = page === "next" ? "next" : "current";
+      if (next === activeRecipePage) return;
+      // Leaving Next: fold the working plan back into durable state before the
+      // grid stops pointing at it.
+      if (isNextRecipePage()) commitNextRecipeWorking();
+      activeRecipePage = next;
+      syncRecipePageUI();
+      renderSplitsArea();
+      // Readiness and the Timeline always describe the operational recipe, so
+      // this deliberately does not re-run validation against the plan.
+      saveSession();
+    }
+
+    function hookRecipePageTabs(){
+      const tabs = [...document.querySelectorAll(".recipePageTab")];
+      if (!tabs.length) return;
+      tabs.forEach((tab, index)=>{
+        tab.addEventListener("click",()=>setRecipePage(tab.dataset.recipePage));
+        tab.addEventListener("keydown",event=>{
+          const step = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+          if (!step) return;
+          event.preventDefault();
+          const target = tabs[(index + step + tabs.length) % tabs.length];
+          setRecipePage(target.dataset.recipePage);
+          target.focus();
+        });
+      });
+      syncRecipePageUI();
+    }
+
     function renderSplitsArea(){
       const area = $("splitsArea");
       if (!area) return;
@@ -2839,8 +3033,8 @@
       }
 
       function copyLayer(fromName, toName){
-        const from = state.layers.find(L=>L.name===fromName);
-        const to = state.layers.find(L=>L.name===toName);
+        const from = recipeLayers().find(L=>L.name===fromName);
+        const to = recipeLayers().find(L=>L.name===toName);
         if (!from || !to) return;
         for (let i=0;i<HOPPERS_PER_LAYER;i++){
           to.hoppers[i].pct = clampNum(from.hoppers[i].pct);
@@ -2866,10 +3060,10 @@
       modeButton.textContent = "Bulk edit";
       modeButton.setAttribute("aria-expanded", "false");
       modeBar.appendChild(modeButton);
-      const rearrangeButton=document.createElement("button"); rearrangeButton.type="button"; rearrangeButton.className="secondary"; rearrangeButton.textContent=hopperRearrangement?.active?"Done Rearranging":"Rearrange"; rearrangeButton.setAttribute("aria-expanded", String(!!hopperRearrangement?.active)); rearrangeButton.disabled=!state.layers.some(L=>L.hoppers.some(h=>normName(h.resinName)||clampNum(h.pct)>0)); modeBar.appendChild(rearrangeButton);
+      const rearrangeButton=document.createElement("button"); rearrangeButton.type="button"; rearrangeButton.className="secondary"; rearrangeButton.textContent=hopperRearrangement?.active?"Done Rearranging":"Rearrange"; rearrangeButton.setAttribute("aria-expanded", String(!!hopperRearrangement?.active)); rearrangeButton.disabled=!recipeLayers().some(L=>L.hoppers.some(h=>normName(h.resinName)||clampNum(h.pct)>0)); modeBar.appendChild(rearrangeButton);
       function finishRearrangement(cancelled=false){
         if(!hopperRearrangement?.active) return;
-        if(cancelled) window.PolynHopperRearrangement.apply(state.layers,hopperRearrangement.baseline);
+        if(cancelled) window.PolynHopperRearrangement.apply(recipeLayers(),hopperRearrangement.baseline);
         hopperRearrangement=null;
         renderSplitsArea();
         validateAndCompute();
@@ -2879,7 +3073,7 @@
       exitRearrangeModeFn = () => finishRearrangement(true);
       function undoRearrangement(){
         const shot=hopperRearrangement?.undo?.pop();
-        if(shot) window.PolynHopperRearrangement.apply(state.layers,shot);
+        if(shot) window.PolynHopperRearrangement.apply(recipeLayers(),shot);
         if(hopperRearrangement){
           hopperRearrangement.tapSource=null;
           hopperRearrangement.undoVisibleUntil=0;
@@ -2894,7 +3088,7 @@
         }
         splitsBulkModeActive = false;
         splitsSavedRecipesOpen = false;
-        hopperRearrangement={active:true,baseline:window.PolynHopperRearrangement.snapshot(state.layers),undo:[],tapSource:null};
+        hopperRearrangement={active:true,baseline:window.PolynHopperRearrangement.snapshot(recipeLayers()),undo:[],tapSource:null};
         renderSplitsArea();
       });
 
@@ -2935,7 +3129,7 @@
       modeBar.appendChild(scanRecipeButton);
       splitsScanShortcut = scanRecipeButton;
 
-      const printButton=document.createElement("button"); printButton.type="button"; printButton.className="secondary rearrangeDesktopOnly"; printButton.textContent="Print Recipe"; printButton.disabled=!state.layers.some(L=>L.hoppers.some(h=>normName(h.resinName)||clampNum(h.pct)>0)); modeBar.appendChild(printButton);
+      const printButton=document.createElement("button"); printButton.type="button"; printButton.className="secondary rearrangeDesktopOnly"; printButton.textContent="Print Recipe"; printButton.disabled=!recipeLayers().some(L=>L.hoppers.some(h=>normName(h.resinName)||clampNum(h.pct)>0)); modeBar.appendChild(printButton);
       printButton.addEventListener("click", printRecipeSheet);
 
       const mobileMoreButton=document.createElement("details");
@@ -3195,11 +3389,11 @@
       mobileLayerNav.className = "splitsMobileLayerRail";
       mobileLayerNav.setAttribute("role", "group");
       mobileLayerNav.setAttribute("aria-label", "Choose layer");
-      const layerNames = state.layers.map(L=>L.name);
+      const layerNames = recipeLayers().map(L=>L.name);
       let activeMobileLayer = layerNames.includes(lastActiveMobileLayer) ? lastActiveMobileLayer : (layerNames[0] || "");
 
       const mobileLayerButtonEls = new Map();
-      state.layers.forEach(L=>{
+      recipeLayers().forEach(L=>{
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = "splitsMobileLayerRailBtn";
@@ -3226,7 +3420,7 @@
       corner.textContent = "Select row";
       headerRow.appendChild(corner);
 
-      state.layers.forEach(L=>{
+      recipeLayers().forEach(L=>{
         const th = document.createElement("th");
         th.scope = "col";
         th.className = "splitLayerHeader";
@@ -3321,13 +3515,13 @@
         rowSelect.setAttribute("aria-pressed", "false");
         rowSelect.addEventListener("click",()=>{
           if (!bulkMode) return;
-          toggleSelection(state.layers.map(L=>`${L.name}:${hi}`));
+          toggleSelection(recipeLayers().map(L=>`${L.name}:${hi}`));
         });
         rowSelectors.set(hi, rowSelect);
         rowHeader.appendChild(rowSelect);
         tr.appendChild(rowHeader);
 
-        state.layers.forEach(L=>{
+        recipeLayers().forEach(L=>{
           const hopper = L.hoppers[hi];
           const key = `${L.name}:${hi}`;
           const td = document.createElement("td");
@@ -3370,7 +3564,7 @@
                 updateMobileRearrangePrompt();
                 return;
               }
-              completeMove(current,window.PolynHopperRearrangement.move(state.layers,current,destination));
+              completeMove(current,window.PolynHopperRearrangement.move(recipeLayers(),current,destination));
             }
             td.draggable=!compactMobileRecipe;
             td.tabIndex=0;
@@ -3398,7 +3592,7 @@
               event.preventDefault();
               td.classList.remove("rearrangeOver");
               const source=hopperRearrangement.drag;
-              if(source) completeMove(source,window.PolynHopperRearrangement.move(state.layers,source,destination));
+              if(source) completeMove(source,window.PolynHopperRearrangement.move(recipeLayers(),source,destination));
             });
             td.addEventListener("click",event=>{
               if(event.target.closest("button,a")) return;
@@ -3692,7 +3886,7 @@
         const dy = touch ? touch.clientY - touchStartY : 0;
         touchStartX = null;
         if (!touch || Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return;
-        const names = state.layers.map(L=>L.name);
+        const names = recipeLayers().map(L=>L.name);
         const index = names.indexOf(activeMobileLayer);
         if (index === -1) return;
         const nextIndex = dx < 0 ? index + 1 : index - 1;
@@ -3732,7 +3926,7 @@
           button.setAttribute("aria-pressed", count === keys.length ? "true" : (count ? "mixed" : "false"));
         });
         rowSelectors.forEach((button, hi)=>{
-          const keys = state.layers.map(L=>`${L.name}:${hi}`);
+          const keys = recipeLayers().map(L=>`${L.name}:${hi}`);
           const count = keys.filter(key=>selected.has(key)).length;
           button.classList.toggle("selected", count === keys.length);
           button.classList.toggle("partiallySelected", count > 0 && count < keys.length);
@@ -3861,7 +4055,7 @@
         const ok = confirm("Reset every hopper resin, percentage, and Track setting?");
         if (!ok) return;
 
-        state.layers.forEach(L=>{
+        recipeLayers().forEach(L=>{
           L.hoppers.forEach(hopper=>{
             hopper.resinName = "";
             hopper.pct = 0;
@@ -3893,7 +4087,7 @@
         }
 
         if (applyPct){
-          for (const L of state.layers){
+          for (const L of recipeLayers()){
             const projected = L.hoppers.slice(1).map((hopper,index)=>{
               const key = `${L.name}:${index + 1}`;
               return selected.has(key) ? percentage : hopper.pct;
@@ -3923,7 +4117,7 @@
         });
 
         if (applyPct){
-          state.layers.forEach(L=>{
+          recipeLayers().forEach(L=>{
             recomputeAutoH1(L);
             const h1Input = table.querySelector(`#p_${L.name}_0`);
             if (h1Input) h1Input.value = String(clampNum(L.hoppers[0].pct));
@@ -3947,20 +4141,28 @@
       });
 
       function updateSplitTotals(){
-        const layerTotal = sum(state.layers.map(L=>clampNum(L.layerPct)));
+        // The same arithmetic on both pages, but a different voice. On Current
+        // an incomplete total is a problem with the running job. On Next it is
+        // just a plan that isn't finished yet, so it reads as a note rather
+        // than a warning - and never as a current-job fault.
+        const planning = isNextRecipePage();
+        const tone = planning ? "planning" : "warn";
+        const shortfall = planning ? "of 100% planned" : "— expected 100%";
+
+        const layerTotal = sum(recipeLayers().map(L=>clampNum(L.layerPct)));
         const layerOkay = Math.abs(layerTotal - 100) <= 0.0001;
-        summary.className = `splitsMatrixSummary ${layerOkay ? "ok" : "warn"}`;
-        summary.textContent = `Layer total: ${fmtNum(layerTotal,2)}% ${layerOkay ? "✓" : "— expected 100%"}`;
+        summary.className = `splitsMatrixSummary ${layerOkay ? "ok" : tone}`;
+        summary.textContent = `Layer total: ${fmtNum(layerTotal,2)}% ${layerOkay ? "✓" : shortfall}`;
         summary.hidden = layerOkay;
 
-        state.layers.forEach(L=>{
+        recipeLayers().forEach(L=>{
           const hopperTotal = sum(L.hoppers.map(h=>clampNum(h.pct)));
           const okay = Math.abs(hopperTotal - 100) <= 0.0001;
           const el = table.querySelector(`#hopperTotal_${L.name}`);
           if (!el) return;
           el.hidden = okay;
-          el.className = `splitColumnTotal ${okay ? "ok" : "warn"}`;
-          el.textContent = okay ? "" : `Hoppers total: ${fmtNum(hopperTotal,2)}% — expected 100%`;
+          el.className = `splitColumnTotal ${okay ? "ok" : tone}`;
+          el.textContent = okay ? "" : `Hoppers total: ${fmtNum(hopperTotal,2)}% ${shortfall}`;
         });
       }
 
@@ -5702,6 +5904,9 @@
       // resolver the Line Setup Overview renders from, so there is no second
       // copy of the layer-order rules anywhere in the scan path.
       getLineConfiguration: () => derivedLineConfiguration(),
+      // Which recipe page the review screen is about to write to. The scan
+      // itself stays destination-neutral; only the confirmation names a target.
+      getRecipePageLabel: () => recipePageLabel(),
       hasNonEmptyRecipe,
       applyPayload: applyScannedRecipePayload
     };
@@ -6316,6 +6521,7 @@
       hookDetailsPersistence();
       hookMobileAccordion();
       hookCustomToggles();
+      hookRecipePageTabs();
       // Sync toggle UI after restore
       syncToggleUI("showPumpOffToggle", !!state.showPumpOffTracked);
 

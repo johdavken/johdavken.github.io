@@ -20,7 +20,7 @@ test("lastActiveMobileLayer is declared at module scope, alongside hopperRearran
 });
 
 test("activeMobileLayer is seeded from lastActiveMobileLayer when it's still a valid layer name, not hardcoded back to layer A", () => {
-  assert.match(app, /const layerNames = state\.layers\.map\(L=>L\.name\);\s*\n\s*let activeMobileLayer = layerNames\.includes\(lastActiveMobileLayer\) \? lastActiveMobileLayer : \(layerNames\[0\] \|\| ""\);/);
+  assert.match(app, /const layerNames = recipeLayers\(\)\.map\(L=>L\.name\);\s*\n\s*let activeMobileLayer = layerNames\.includes\(lastActiveMobileLayer\) \? lastActiveMobileLayer : \(layerNames\[0\] \|\| ""\);/);
 });
 
 test("showMobileLayer writes through to lastActiveMobileLayer so the choice survives the next re-render", () => {

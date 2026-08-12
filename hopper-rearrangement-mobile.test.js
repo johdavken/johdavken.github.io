@@ -102,7 +102,7 @@ test("entering rearrange mode no longer bails out at mobile widths", () => {
   const blockEnd = app.indexOf("function clearTapSourceHighlight", buttonStart);
   const block = app.slice(buttonStart, blockEnd);
   assert.doesNotMatch(block, /matchMedia\("\(max-width: 900px\)"\)/);
-  assert.match(block, /hopperRearrangement=\{active:true,baseline:window\.PolynHopperRearrangement\.snapshot\(state\.layers\),undo:\[\],tapSource:null\}/);
+  assert.match(block, /hopperRearrangement=\{active:true,baseline:window\.PolynHopperRearrangement\.snapshot\(recipeLayers\(\)\),undo:\[\],tapSource:null\}/);
 });
 
 // --- Tap-to-select-then-tap-to-move, alongside (not replacing) drag -------
@@ -128,8 +128,8 @@ test("tapping an empty hopper as a source is a no-op, matching drag's guard agai
 });
 
 test("tapping a second, different cell calls the exact same move() used by drop, with the same undo/failure handling", () => {
-  assert.match(splitsArea, /completeMove\(current,window\.PolynHopperRearrangement\.move\(state\.layers,current,destination\)\);/);
-  assert.match(splitsArea, /completeMove\(source,window\.PolynHopperRearrangement\.move\(state\.layers,source,destination\)\);/);
+  assert.match(splitsArea, /completeMove\(current,window\.PolynHopperRearrangement\.move\(recipeLayers\(\),current,destination\)\);/);
+  assert.match(splitsArea, /completeMove\(source,window\.PolynHopperRearrangement\.move\(recipeLayers\(\),source,destination\)\);/);
   assert.match(splitsArea, /hopperRearrangement\.undo\.push\(result\.before\);/);
   assert.match(splitsArea, /hopperRearrangement\.undoVisibleUntil=Date\.now\(\)\+5000;/);
 });

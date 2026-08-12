@@ -32,7 +32,10 @@ test("the shared card title (mobile accordion / desktop in-panel header) reads j
   assert.match(summary, /Set recipe percentages and choose which hoppers appear in the timeline/);
 });
 
-test("the printed recipe sheet's own heading keeps its full descriptive name - a different context (a physical document), not this on-screen title", () => {
+test("the printed recipe sheet's own heading keeps a full descriptive name - a different context (a physical document), not this on-screen title", () => {
   const app = fs.readFileSync("app.js", "utf8");
-  assert.match(app, /title\.textContent = "Recipe Setup";/);
+  // Now names the page the sheet came from, so a plan carried to the line is
+  // never mistaken for the recipe being run.
+  assert.match(app, /title\.textContent = recipePageLabel\(\);/);
+  assert.match(app, /function recipePageLabel\(\)\{ return isNextRecipePage\(\) \? "Next Recipe" : "Current Recipe"; \}/);
 });
