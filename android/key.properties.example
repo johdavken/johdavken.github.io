@@ -1,0 +1,10 @@
+# Copy this file to key.properties (gitignored) in this same directory and
+# fill in real values to enable signed release builds (bundleRelease /
+# assembleRelease). Without key.properties present, release builds fall
+# back to being unsigned and debug/lint/etc. are unaffected.
+#
+# storeFile is resolved relative to android/app/.
+storePassword=
+keyPassword=
+keyAlias=
+storeFile=
