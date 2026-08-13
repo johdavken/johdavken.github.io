@@ -24,9 +24,9 @@
       "weightsBlock",
       "splitsBlock",
       "resultsBlock",
+      "productionSummaryBlock",
       "toolsBlock",
       "helpBlock",
-      "bulkDensityMeasurementBlock",
       "helpQuickStart",
       "helpSetup",
       "helpHopperPercentages",
@@ -1189,7 +1189,7 @@
     function normName(s){ return String(s || "").trim().replace(/\\s+/g, " "); }
     function keyName(s){ return normName(s).toUpperCase(); }
     // Re-keys a resin-code -> lot map through keyName(), the exact function
-    // Production Summary's own resin totals are bucketed by, so a lot stored
+    // Resin Totals buckets its own totals by, so a lot stored
     // here is guaranteed findable later regardless of how the code was
     // spaced/capitalized when it was scanned or restored. Used both when a
     // scan/Saved Recipe apply sets a fresh map, and defensively when
@@ -1206,7 +1206,7 @@
     }
     function sum(arr){ return arr.reduce((a,b)=>a+b,0); }
     function fmtNum(n, d=2){ return Number.isFinite(n) ? n.toFixed(d) : "—"; }
-    // Production Summary pounds are entered and tracked without decimals -
+    // Resin Totals pounds are entered and tracked without decimals -
     // truncate (not round-to-nearest) so e.g. 534.6 reads as 534, matching
     // the whole-pound units the operator already works in.
     function fmtLb(n){ return Number.isFinite(n) ? String(Math.floor(n)) : "—"; }
@@ -3331,7 +3331,14 @@
       // scaled-down version on Next's mobile row - it's the same <summary>
       // content either way, only the surrounding CSS differs.
       const scanRecipeButton = document.createElement("details");
-      scanRecipeButton.className = "splitsScanShortcut rearrangeDesktopOnly";
+      // recipeScanHideDesktop hides Scan Recipe specifically on real desktop
+      // widths (Scan Recipe is a mobile-capture workflow - see
+      // recipe-scan-native-capture.test.js); rearrangeDesktopOnly still
+      // covers the narrower 701-900px band where this row renders but the
+      // rest of the desktop action row is already hidden. Both are stripped
+      // together below when Next's mobile view promotes this same element
+      // into a primary mobile action.
+      scanRecipeButton.className = "splitsScanShortcut rearrangeDesktopOnly recipeScanHideDesktop";
       scanRecipeButton.innerHTML = `
         <summary aria-label="Scan a recipe source" title="Scan a recipe source"><svg class="recipeActionIcon" viewBox="0 0 32 32" aria-hidden="true"><path d="M8 4H6a2 2 0 0 0-2 2v2"/><path d="M24 4h2a2 2 0 0 1 2 2v2"/><path d="M8 28H6a2 2 0 0 1-2-2v-2"/><path d="M24 28h2a2 2 0 0 0 2-2v-2"/><path d="M5 16h22"/></svg>Scan Recipe</summary>
         <div class="statusScanShortcutPanel">
@@ -3645,9 +3652,10 @@
             mobilePrimaryRow.append(loadNextButton);
           }
         }else{
-          // Scan Recipe is desktop-only (.rearrangeDesktopOnly) everywhere
-          // else; here specifically it becomes a real primary mobile action.
-          scanRecipeButton.classList.remove("rearrangeDesktopOnly");
+          // Scan Recipe is hidden in the desktop action row
+          // (.rearrangeDesktopOnly/.recipeScanHideDesktop) everywhere else;
+          // here specifically it becomes a real primary mobile action.
+          scanRecipeButton.classList.remove("rearrangeDesktopOnly", "recipeScanHideDesktop");
           mobilePrimaryRow.append(scanRecipeButton);
         }
 
@@ -4592,7 +4600,7 @@
       rows.forEach(r=>{
         const row = document.createElement("div");
         row.className = "calcRow productionSummaryMaterialRow";
-        // Current only - Production Summary always describes the job
+        // Current only - Resin Totals always describes the job
         // actually running, never the plan. Absent entirely (no placeholder
         // element) unless this resin actually has a scanned lot: invisible
         // to anyone who never scanned a heat sheet.
@@ -5111,7 +5119,6 @@
         document.body.dataset.mobileWorkspace = "panel";
         $("appFooterMain")?.removeAttribute("aria-current");
         if (id === "toolsBlock") document.body.dataset.mobileTools = "home";
-        if (id === "helpBlock") document.body.dataset.mobileHelp = "home";
         if (!target.open) target.open = true;
       }
       if (persist) saveWorkspacePreference(id);
@@ -5131,18 +5138,17 @@
       });
     }
 
-    function setMobileQuickActionsOpen(open){
-      setFooterSheetOpen("shortcuts", open, $("appFooterShortcuts"));
-    }
-
     // Android hardware/gesture Back. The only entry point android-back-
     // button.js calls - everything it needs to decide "was this handled"
     // lives here, reading this module's own real state and calling its own
     // real close/exit functions, never guessing from arbitrary DOM
     // structure. Order matches the requested priority: topmost
     // dialog/sheet, then Bulk Edit, then Rearrange, then Tool->Tools,
-    // Help article->Help, section->Main. Returns false only when there is
-    // truly nothing for Back to do here (caller then minimizes the app).
+    // section->Main. Returns false only when there is truly nothing for
+    // Back to do here (caller then minimizes the app). Help has no nested
+    // panel state of its own any more - like every other section, an open
+    // topic is just an in-place <details>, so Back from Help always goes
+    // straight to Main via the section->Main branch below.
     //
     // Deliberately NOT covered here: the small contextual <details>
     // popovers (the Smart Hoppers wrench, Tools index dropdown, Workspace
@@ -5168,10 +5174,6 @@
           $("mobileToolsBack")?.click();
           return true;
         }
-        if (activeWorkspaceId === "helpBlock" && document.body.dataset.mobileHelp === "panel"){
-          $("mobileHelpBack")?.click();
-          return true;
-        }
         showMobileWorkspaceHome();
         return true;
       }
@@ -5186,12 +5188,13 @@
     function footerSheetPairs(){
       return {
         display: [$("appFooterDisplay"), $("displaySheet")],
-        shortcuts: [$("appFooterShortcuts"), $("footerShortcutsMenu")],
         account: [$("appFooterAccount"), $("footerAccountMenu")],
-        // Desktop-only. Registered here so opening it closes Display or
-        // Account (and vice versa) through the one existing mutual-exclusion
-        // path, rather than a second overlay system that could leave a stale
-        // backdrop or inert workspace behind.
+        // Two real triggers share this one sheet - the desktop bell
+        // (nonmodal popover, see isDesktopNotificationsPopover) and the
+        // mobile footer bell (modal sheet, same as Display/Account there).
+        // Each trigger's own click handler passes itself as the requested
+        // trigger (see openDisplaySheet for the established pattern), so
+        // only one needs to be the registered default here.
         notifications: [$("desktopNotificationsToggle"), $("footerNotificationsMenu")]
       };
     }
@@ -6431,21 +6434,6 @@
       tile.addEventListener("click",()=>selectToolPanel(tile.dataset.mobileToolTarget));
     });
     $("mobileToolsBack")?.addEventListener("click",()=>{ document.body.dataset.mobileTools = "home"; });
-    $("appFooterShortcuts")?.addEventListener("click",event=>{
-      event.stopPropagation();
-      setFooterSheetOpen("shortcuts", true, event.currentTarget);
-    });
-    $("quickScanDosingScreenBtn")?.addEventListener("click",()=>{
-      setMobileQuickActionsOpen(false);
-      setWorkspacePanel("toolsBlock", { reveal: true });
-      selectToolPanel("recipeScanTool");
-      window.PolynRecipeScanUI?.startScan("dosing_screen");
-    });
-    $("quickProductionSummaryBtn")?.addEventListener("click",()=>{
-      setMobileQuickActionsOpen(false);
-      setWorkspacePanel("toolsBlock", { reveal: true });
-      selectToolPanel("productionSummaryTool");
-    });
     $("appFooterMain")?.addEventListener("click",showMobileWorkspaceHome);
     $("appFooterDisplay")?.addEventListener("click",openDisplaySheet);
     const desktopUtilityMedia = window.matchMedia("(min-width: 901px)");
@@ -6486,6 +6474,12 @@
     function setupAttentionCenter(){
       const toggle = $("desktopNotificationsToggle");
       const badge = $("desktopNotificationsBadge");
+      // The mobile footer bell - same dialog/list/data source as the
+      // desktop toggle above (see the shared "notifications" footer sheet),
+      // just a second real trigger element that needs its own
+      // severity/badge/label kept in sync.
+      const mobileToggle = $("appFooterNotifications");
+      const mobileBadge = $("mobileNotificationsBadge");
       const announcer = $("desktopNotificationsAnnouncer");
       const list = $("desktopNotificationsList");
       const summaryLine = $("desktopNotificationsSummary");
@@ -6657,6 +6651,18 @@
           badge.textContent = summary.count ? String(summary.count) : "";
           badge.dataset.severity = summary.severity;
         }
+        // Mobile footer bell mirrors the desktop toggle exactly - same
+        // severity/label/badge, driven by the same summary, so the two
+        // never drift into showing different counts.
+        if (mobileToggle){
+          mobileToggle.dataset.severity = summary.severity;
+          mobileToggle.setAttribute("aria-label", label);
+        }
+        if (mobileBadge){
+          mobileBadge.hidden = summary.count === 0;
+          mobileBadge.textContent = summary.count ? String(summary.count) : "";
+          mobileBadge.dataset.severity = summary.severity;
+        }
         if (summaryLine) summaryLine.textContent = summaryText(summary);
         renderList(summary);
 
@@ -6671,6 +6677,10 @@
           clearTimeout(emphasisTimer);
           toggle.dataset.attentionNew = "true";
           emphasisTimer = setTimeout(()=>{ delete toggle.dataset.attentionNew; }, 1400);
+          if (mobileToggle){
+            mobileToggle.dataset.attentionNew = "true";
+            setTimeout(()=>{ delete mobileToggle.dataset.attentionNew; }, 1400);
+          }
         }
         // Announce only when the set of conditions changes, so a polite live
         // region never repeats itself on every render.
@@ -6682,6 +6692,10 @@
       };
 
       toggle.addEventListener("click",event=>{
+        event.stopPropagation();
+        setFooterSheetOpen("notifications", true, event.currentTarget);
+      });
+      mobileToggle?.addEventListener("click",event=>{
         event.stopPropagation();
         setFooterSheetOpen("notifications", true, event.currentTarget);
       });
@@ -6740,35 +6754,19 @@
         else if (!event.shiftKey && document.activeElement === last){ event.preventDefault(); first.focus(); }
       }
     });
-    const mobileHelpHeaderLabel = $("mobileHelpHeaderLabel");
-    let mobileHelpReturnTile = null;
-    document.querySelectorAll(".mobileHelpTile").forEach(tile=>{
-      tile.addEventListener("click",()=>{
-        const topic = document.getElementById(tile.dataset.mobileHelpTarget);
-        if (!topic) return;
-        document.querySelectorAll("#helpBlock .helpTopic").forEach(item=>item.classList.toggle("mobile-help-active", item === topic));
-        topic.open = true;
-        if (mobileHelpHeaderLabel) mobileHelpHeaderLabel.textContent = tile.querySelector("span")?.textContent || "Help";
-        mobileHelpReturnTile = tile;
-        document.body.dataset.mobileHelp = "panel";
-      });
-    });
+    // In-body "see also" links (e.g. Quick Start pointing at RT Sync) just
+    // open the target <details> - same on every viewport now that mobile
+    // shows the identical accordion list as desktop. The accordion's own
+    // "toggle" listener below (helpTopics.forEach) reacts to this the same
+    // way it reacts to a direct tap: closes sibling topics and scrolls the
+    // opened one into view.
     document.querySelectorAll("#helpBlock .helpTopicBody a.helpTopicLink[href^=\"#help\"]").forEach(link=>{
       link.addEventListener("click",()=>{
         const targetId = link.getAttribute("href").slice(1);
         const topic = document.getElementById(targetId);
         if (!topic) return;
-        document.querySelectorAll("#helpBlock .helpTopic").forEach(item=>item.classList.toggle("mobile-help-active", item === topic));
         topic.open = true;
-        const matchingTile = document.querySelector(`.mobileHelpTile[data-mobile-help-target="${targetId}"]`);
-        if (mobileHelpHeaderLabel) mobileHelpHeaderLabel.textContent = matchingTile?.querySelector("span")?.textContent || topic.querySelector("summary span")?.textContent || "Help";
-        if (matchingTile) mobileHelpReturnTile = matchingTile;
-        document.body.dataset.mobileHelp = "panel";
       });
-    });
-    $("mobileHelpBack")?.addEventListener("click",()=>{
-      document.body.dataset.mobileHelp = "home";
-      requestAnimationFrame(()=>mobileHelpReturnTile?.focus());
     });
 
     /* ============================
@@ -6781,10 +6779,13 @@
      * this". Nested subtopics inside a section are deliberately left alone:
      * they are ordinary <details> and any number may stay open.
      *
-     * Mobile already shows exactly one topic (mobileHelpTile above sets
-     * .mobile-help-active and hides the rest), so this only reinforces what
-     * that flow does - but the scrolling below is desktop-only, because the
-     * summaries it measures are display:none in the mobile panel. */
+     * Mobile shows the identical accordion list as desktop (no separate
+     * tile/panel navigation any more), so this same one-open-at-a-time
+     * behavior applies on every viewport. The scrollBy alignment below is a
+     * no-op on mobile - #helpBlock > .blockBody only becomes its own
+     * overflow:auto scrollport at >=901px (desktop.css); at <=900px the
+     * page itself scrolls, and native <details> already reveals the opened
+     * content in place without needing that. */
     const helpTopics = [...document.querySelectorAll("#helpBlock .helpTopics > .helpTopic")];
     const helpScroller = document.querySelector("#helpBlock > .blockBody");
 

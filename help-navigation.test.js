@@ -132,11 +132,13 @@ test("opening, switching and collapsing all reposition through one helper", () =
   assert.match(body, /prefers-reduced-motion: reduce/);
 });
 
-test("the scroll helper does nothing where the summaries are hidden", () => {
-  // On mobile the section summaries are display:none and the Help panel uses
-  // its own tile/panel flow, so measuring them would be meaningless.
+test("the scroll helper guards against measuring a summary that isn't actually rendered", () => {
+  // Mobile no longer hides summaries at all (same accordion list as
+  // desktop) - #helpBlock > .blockBody simply isn't an overflow:auto
+  // scrollport below 901px (desktop.css), so scrollBy there is a harmless
+  // no-op rather than something this guard needs to prevent specifically.
   assert.match(accordion(), /!topic\.querySelector\("summary"\)\?\.offsetParent/);
-  assert.match(styles, /body\[data-mobile-help="panel"\] #helpBlock \.helpTopic\.mobile-help-active > summary\{ display:none; \}/);
+  assert.doesNotMatch(styles, /mobile-help-active/);
 });
 
 /* ============================================================

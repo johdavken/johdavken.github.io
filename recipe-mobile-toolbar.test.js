@@ -55,7 +55,7 @@ test("Next's primary row is Recipes, Bulk edit, Rearrange, Scan Recipe - promote
   const editor = recipeEditor();
   const block = mobileVsDesktopBlock(editor);
   const nextBranch = block.slice(block.indexOf("}else{"), block.indexOf("mobileSecondaryRow = document.createElement"));
-  assert.match(nextBranch, /scanRecipeButton\.classList\.remove\("rearrangeDesktopOnly"\);/);
+  assert.match(nextBranch, /scanRecipeButton\.classList\.remove\("rearrangeDesktopOnly", "recipeScanHideDesktop"\);/);
   assert.match(nextBranch, /mobilePrimaryRow\.append\(scanRecipeButton\);/);
 });
 

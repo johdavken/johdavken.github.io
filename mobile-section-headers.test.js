@@ -39,7 +39,7 @@ test("mobile top-level headers suppress the obsolete disclosure/grid affordance 
   assert.doesNotMatch(app, /\$\("mobileWorkspaceHome"\)/);
 });
 
-test("nested Tools and Help views hide their parent top-level header", () => {
+test("Tools' nested tool view hides its parent top-level header - Help has no nested view any more, so it keeps its own header inline like every other section", () => {
   assert.match(styles, /body\[data-mobile-tools="panel"\] #toolsBlock > summary\{ display:none; \}/);
-  assert.match(styles, /body\[data-mobile-help="panel"\] #helpBlock > summary\{ display:none; \}/);
+  assert.doesNotMatch(styles, /data-mobile-help/);
 });

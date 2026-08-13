@@ -3,7 +3,8 @@
   const $ = id => document.getElementById(id);
   const admin = root.PolynResinAdminInstance;
   const measurement = root.PolynBulkDensityMeasurement;
-  if (!admin || !measurement) return;
+  const catalog = root.PolynResinCatalog;
+  if (!admin || !measurement || !catalog) return;
 
   let resins = [];
   let selectedResin = null;
@@ -130,19 +131,22 @@
     else hint.textContent = `Ready to update ${selectedResin.resin_code}.`;
   }
 
-  async function loadResins({ preserveSelection = true } = {}){
-    if (!admin.getState().isAdmin) return;
-    setStatus("Loading active resin records…");
+  // Reads from the shared operator-facing resin catalog (same source Recipe
+  // autocomplete and Resin Lookup use), not the admin-only resin listing -
+  // searching and measuring here is available to every operator, not only
+  // admins, so it can't depend on an admin-only listing RPC. getResins()
+  // resolves synchronously from cache/fallback and kicks off its own
+  // background refresh; catalog.subscribe below re-runs this when that
+  // refresh lands.
+  function loadResins({ preserveSelection = true } = {}){
     const selectedId = preserveSelection ? selectedResin?.id : "";
-    const result = await admin.listResins();
-    if (!result.ok){ setStatus(result.message, "bad"); return; }
-    resins = result.resins.filter(resin => resin.is_active === true);
+    resins = catalog.getResins();
     if (selectedId){
       const refreshed = resins.find(resin => resin.id === selectedId);
       if (refreshed) selectResin(refreshed);
       else clearSelectedResin();
     }
-    setStatus(`${resins.length} active resin records available.`);
+    setStatus(resins.length ? `${resins.length} active resin records available.` : "No active resin records available.");
   }
 
   function openSaveConfirmation(){
@@ -175,42 +179,22 @@
     setStatus(`${resinCode} bulk density saved as ${Number(result.resin.bulk_density_lb_ft3).toFixed(1)} lb/ft³.${result.catalogRefreshed ? "" : " Catalog refresh will retry when online."}`, "ok");
   }
 
-  function resetTool(){
-    selectedResin = null;
-    resins = [];
-    searchMatches = [];
-    $("bulkDensityResinSearch").value = "";
-    $("bulkDensityPolymerDensity").value = "";
-    $("bulkDensityResinWeight").value = "";
-    renderSelectedResin();
-    closeSuggestions();
-    updateMeasurement();
-    setStatus("");
-  }
-
+  // The calculator itself has no admin gate - it's an ordinary Tools entry,
+  // open to every operator. Only the Save-to-Resin-Database action (see
+  // openSaveConfirmation/confirmSave, both already checking `authorized`)
+  // is admin-only, mirroring the real server-side enforcement in
+  // resin-admin.js/RLS - signing in/out only changes whether Save is
+  // enabled, never whether the tool is visible or usable.
   function renderAccess(state){
     const initializing = !state?.ready;
     authorized = !initializing && !!state?.isAdmin;
-    const destination = $("bulkDensityMeasurementButton");
-    if (destination) destination.hidden = initializing || !authorized;
-    if (!authorized){
-      const panel = $("bulkDensityMeasurementBlock");
-      if (panel?.classList.contains("desktop-active") || panel?.classList.contains("mobile-active")){
-        document.querySelector('[data-workspace-target="resultsBlock"]')?.click();
-      }
-      panel?.classList.remove("desktop-active", "mobile-active");
-      if (panel) panel.open = false;
-      resetTool();
-    }else updateMeasurement();
+    updateMeasurement();
   }
 
   admin.subscribe(renderAccess);
   renderAccess(admin.getState());
-  $("bulkDensityMeasurementButton")?.addEventListener("click", () => {
-    if (!admin.getState().isAdmin) return;
-    $("bulkDensityMeasurementBlock").open = true;
-    void loadResins();
-  });
+  catalog.subscribe(() => loadResins());
+  loadResins();
   $("bulkDensityResinSearch")?.addEventListener("focus", renderSuggestions);
   $("bulkDensityResinSearch")?.addEventListener("input", event => {
     if (selectedResin && event.target.value.trim().toLocaleLowerCase() !== selectedResin.resin_code.toLocaleLowerCase()) clearSelectedResin();

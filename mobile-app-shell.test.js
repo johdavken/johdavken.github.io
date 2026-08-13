@@ -8,7 +8,7 @@ const styles = fs.readFileSync("styles.css","utf8");
 
 test("the mobile dock exposes five stable, accessible controls",()=>{
   const footer = html.slice(html.indexOf('<footer class="footerBar"'),html.indexOf('</footer>'));
-  for (const id of ["appFooterMain","appFooterDisplay","appFooterShortcuts","appFooterAccount","cloudSyncFooterStatus"]){
+  for (const id of ["appFooterMain","appFooterDisplay","appFooterNotifications","appFooterAccount","cloudSyncFooterStatus"]){
     assert.match(footer,new RegExp(`id="${id}"`));
   }
   assert.match(footer,/id="appFooterMain"[^>]*aria-label="Main menu"/);
@@ -18,7 +18,7 @@ test("the mobile dock exposes five stable, accessible controls",()=>{
   assert.match(styles,/body\{height:auto;min-height:100vh;min-height:100dvh;overflow-x:hidden;overflow-y:auto\}/);
   assert.match(styles,/main\{height:auto;min-height:100vh;min-height:100dvh;padding-bottom:calc\(var\(--app-dock-height\) \+ env\(safe-area-inset-bottom\) \+ 22px\)!important\}/);
   assert.match(styles,/\.footerBar\{[\s\S]*?z-index:71;[\s\S]*?display:grid/);
-  const order = ["appFooterDisplay","appFooterShortcuts","appFooterMain","appFooterAccount","cloudSyncFooterStatus"].map(id=>footer.indexOf(`id="${id}"`));
+  const order = ["appFooterDisplay","appFooterNotifications","appFooterMain","appFooterAccount","cloudSyncFooterStatus"].map(id=>footer.indexOf(`id="${id}"`));
   assert.deepEqual(order,[...order].sort((a,b)=>a-b));
   assert.match(styles,/\.appDockMain\{[\s\S]*?top:-5px;[\s\S]*?min-height:68px;/);
 });
@@ -32,8 +32,8 @@ test("footer active states use accent-only styling with accessible focus and pre
   assert.match(refinement,/\.appDockControl:active:not\(\.cloudSyncFooterStatus\)[\s\S]*?background:color-mix/);
 });
 
-test("Display, Shortcuts, and Account use one centered footer-sheet geometry",()=>{
-  for (const id of ["displaySheet","footerShortcutsMenu","footerAccountMenu"]){
+test("Display and Account use one centered footer-sheet geometry",()=>{
+  for (const id of ["displaySheet","footerAccountMenu"]){
     assert.match(html,new RegExp(`id="${id}" class="footerSheet`));
   }
   assert.match(styles,/\.footerSheet\{[\s\S]*?left:50%;[\s\S]*?width:min\(410px,calc\(100vw - 20px\)\);[\s\S]*?transform:translateX\(-50%\);/);

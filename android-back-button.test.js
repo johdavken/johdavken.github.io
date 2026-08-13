@@ -78,16 +78,20 @@ test("exits Recipe Setup Bulk Edit through the real setBulkMode, and Rearrange t
   assert.match(app, /exitRearrangeModeFn = \(\) => finishRearrangement\(true\);/);
 });
 
-test("Tool->Tools and Help->Help reuse the existing mobileToolsBack/mobileHelpBack buttons via a real click, not duplicated navigation logic", () => {
+test("Tool->Tools reuses the existing mobileToolsBack button via a real click, not duplicated navigation logic", () => {
   const body = functionBody("handleAndroidBack");
   assert.match(body, /activeWorkspaceId === "toolsBlock" && document\.body\.dataset\.mobileTools === "panel"/);
   assert.match(body, /\$\("mobileToolsBack"\)\?\.click\(\);/);
-  assert.match(body, /activeWorkspaceId === "helpBlock" && document\.body\.dataset\.mobileHelp === "panel"/);
-  assert.match(body, /\$\("mobileHelpBack"\)\?\.click\(\);/);
-  // Both real buttons must actually exist and already have their own
-  // handlers - handleAndroidBack must not be their only wiring.
+  // The real button must actually exist and already have its own handler -
+  // handleAndroidBack must not be its only wiring.
   assert.match(app, /\$\("mobileToolsBack"\)\?\.addEventListener\("click"/);
-  assert.match(app, /\$\("mobileHelpBack"\)\?\.addEventListener\("click"/);
+});
+
+test("Help has no nested home/panel state of its own any more - no Help-specific branch exists, so Back from an open topic falls through to section->Main", () => {
+  const body = functionBody("handleAndroidBack");
+  assert.doesNotMatch(body, /activeWorkspaceId === "helpBlock"/);
+  assert.doesNotMatch(body, /mobileHelpBack/);
+  assert.doesNotMatch(app, /dataset\.mobileHelp/);
 });
 
 test("section->Main falls back to the existing showMobileWorkspaceHome(), and only when a section is actually open", () => {

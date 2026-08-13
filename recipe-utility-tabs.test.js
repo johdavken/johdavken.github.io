@@ -79,6 +79,20 @@ test("the action row (Scan/Print/Load Next/Info) always renders last, below whic
   assert.match(panelOrderRule, /order:1; position:static;/);
 });
 
+test("the utility tab strip's left inset is nudged to 6px (matching #splitsArea's own row gap) instead of .recipePageTabs' 2px, so its left edge sits closer to the open panel below", () => {
+  const tabsRule = rule(".recipeUtilityTabs{");
+  assert.match(tabsRule, /padding: 0 2px 0 6px;/);
+});
+
+test("Saved Recipes/Bulk Edit/Rearrange share a min-height so switching between them doesn't jump the rest of the Recipe panel by a different amount each time", () => {
+  const selector = "#splitsArea > .splitsBulkBar,\n#splitsArea > .splitsSavedRecipesPanel,\n#splitsArea > .rearrangeModeBar{";
+  const firstStart = styles.indexOf(selector);
+  const secondStart = styles.indexOf(selector, firstStart + 1);
+  assert.notEqual(secondStart, -1, "expected a second, distinct rule sharing this selector list (the order:1 rule is the first)");
+  const minHeightRule = styles.slice(secondStart, styles.indexOf("}", secondStart) + 1);
+  assert.match(minHeightRule, /min-height: 216px;/);
+});
+
 /* ============================================================
  *   JS: role=tab/aria-selected wiring is desktop-only - mobile keeps its
  *   existing aria-expanded disclosure-button semantics untouched, since

@@ -35,8 +35,17 @@ test("the Scan Recipe button leads modeBar's own append order, ahead of Print Re
     "expected append order: scanRecipeButton, then printButton");
 });
 
-test("Scan Recipe is desktop-only, same as Print Recipe right next to it - mobile already has its own status-bar scan shortcut", () => {
-  assert.match(app, /scanRecipeButton\.className = "splitsScanShortcut rearrangeDesktopOnly";/);
+test("Scan Recipe carries rearrangeDesktopOnly like Print Recipe (hidden in the 701-900px band) plus its own recipeScanHideDesktop class", () => {
+  assert.match(app, /scanRecipeButton\.className = "splitsScanShortcut rearrangeDesktopOnly recipeScanHideDesktop";/);
+});
+
+test("Scan Recipe is hidden specifically on real desktop widths - it's a mobile-capture workflow, unlike Print Recipe right next to it which stays visible on desktop", () => {
+  const ruleStart = styles.indexOf("@media(min-width:901px){.recipeScanHideDesktop{display:none!important}}");
+  assert.notEqual(ruleStart, -1, "expected a desktop-width media query hiding .recipeScanHideDesktop");
+});
+
+test("Next's mobile promotion strips both hiding classes, not just rearrangeDesktopOnly, so the promoted button isn't left hidden on desktop-width devices", () => {
+  assert.match(app, /scanRecipeButton\.classList\.remove\("rearrangeDesktopOnly", "recipeScanHideDesktop"\);/);
 });
 
 test("Scan Recipe is a <details> popup, not one of the three mutually-exclusive expandable panels - it isn't added to splitsBulkModeActive/splitsSavedRecipesOpen/hopperRearrangement's coordination", () => {

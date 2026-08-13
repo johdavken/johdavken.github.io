@@ -779,6 +779,12 @@ main{
 .workspaceConfigurationRow{cursor:pointer}.workspaceConfigurationRow.selected strong{font-weight:750;color:var(--text)}.workspaceConfigurationRow:focus-visible{outline:2px solid var(--focus-border);outline-offset:2px}.workspaceConfigurationFavorite{color:var(--warn);font-size:13px}
 .workspaceConfigurationRow strong{font-size:var(--font-small);font-weight:600;color:var(--muted);letter-spacing:.01em}
 .rearrangeTarget{cursor:grab;user-select:none}.rearrangeSource{opacity:.5;outline:2px dashed var(--focus-border)}.rearrangeOver{outline:2px solid var(--ok);background:color-mix(in srgb,var(--ok) 12%,var(--panel2))}@media(max-width:900px){.rearrangeDesktopOnly{display:none!important}}
+/* Scan Recipe is a mobile-capture workflow (camera/photo scan) - the
+   desktop Recipe Actions row keeps Load Next/Print, but hides Scan Recipe
+   itself on real desktop widths. Mobile keeps every existing entry point
+   (status-bar shortcut, Next-page primary action, Tools tab) unaffected -
+   those don't carry this class. */
+@media(min-width:901px){.recipeScanHideDesktop{display:none!important}}
 /* Disabled form controls don't reliably dispatch/bubble click events (some
    browsers suppress them entirely) - without this, a tap that lands on the
    resin name/percentage field inside a rearranging cell can silently do
@@ -797,6 +803,18 @@ main{
 #splitsArea > .splitsBulkBar,
 #splitsArea > .splitsSavedRecipesPanel,
 #splitsArea > .rearrangeModeBar{ order:1; position:static; }
+/* Desktop only (these three are the only ones ever direct children of
+   #splitsArea - mobile relocates Bulk Edit/Saved Recipes into their own
+   sheets, and Rearrange has no mobile .rearrangeModeBar at all): a shared
+   min-height so switching Saved Recipes/Bulk Edit/Rearrange doesn't jump
+   the rest of the Recipe panel up and down by a different amount each
+   time. Sized to Bulk Edit's own natural height (the tallest of the three
+   in the common case) so Bulk Edit itself never needs to shrink or
+   scroll - Saved Recipes with many rows can still grow past this via its
+   own already-scrollable list (see .workspaceConfigurationList). */
+#splitsArea > .splitsBulkBar,
+#splitsArea > .splitsSavedRecipesPanel,
+#splitsArea > .rearrangeModeBar{ min-height: 216px; }
 /* Scan Recipe / Print Recipe / Load Next Recipe / Info: immediate actions,
    always last regardless of which utility panel (if any) is open above
    them - a fixed order number, rather than relying on DOM append position,
@@ -1758,7 +1776,12 @@ details[open] > summary .chevSatellite{
   align-items: flex-end;
   gap: 3px;
   margin: 10px 0 0;
-  padding: 0 2px;
+  /* Left inset matches #splitsArea's own row gap (see the #splitsArea gap
+     rule below) instead of .recipePageTabs' 2px, so the strip's left edge
+     sits closer to the open panel's own left edge (.splitsBulkBar/
+     .splitsSavedRecipesPanel, both flush at 0) rather than crowding the
+     divider's own start. */
+  padding: 0 2px 0 6px;
   border-bottom: 1px solid var(--row-border);
 }
 .recipeUtilityTab{
@@ -2165,6 +2188,19 @@ details[open] > summary .chevSatellite{
    action bar keep their natural height, and the spare space falls below the
    section instead of being pushed into its controls. */
 #splitsBlock .blockBody{ align-content: start; }
+/* Same fix as #splitsBlock above: without this, .blockBody's default
+   align-content:stretch shares this panel's full available height equally
+   between its 3 rows (inputs / summary / results), leaving large gaps
+   between a few short controls instead of sizing to their own content.
+   width/max-width cap the same three rows (inputs, totals, by-material
+   list) to one shared right edge on very wide monitors - desktop's <main>
+   is intentionally max-width:none (desktop.css) so the sidebar+content
+   layout can use the full viewport, but that let this panel's own content
+   stretch edge to edge. No margin:auto, so it stays left-aligned at the
+   panel's existing left edge rather than centering; width:100% (not a
+   fixed width) is what keeps this a no-op on narrower desktop/tablet
+   widths, where the track is already under 800px anyway. */
+#productionSummaryBlock .blockBody{ align-content: start; width: 100%; max-width: 800px; }
 /* margin's -1px is exactly the divider's own thickness, so the active tab's
    matching box-shadow seam (below) can sit precisely on top of it - the
    standard document-tab "grows out of the divider" technique. */
@@ -4260,20 +4296,9 @@ button.compactAction{
 .toolsWorkspaceContent{ min-width: 0; }
 .toolWorkspacePanel[hidden]{ display: none !important; }
 .toolsWorkspaceContent .toolPanel + .toolPanel{ margin-top: 0; }
-.mobileToolsHome,.mobileToolsBack,.mobileToolHeader,.mobileHelpHome,.mobileHelpBack,.mobileHelpHeader{ display:none; }
+.mobileToolsHome,.mobileToolsBack,.mobileToolHeader{ display:none; }
 .mobileSectionHeaderIcon{ display:none; }
 @media (width <= 900px){
-  #helpBlock .mobileHelpHome{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
-  #helpBlock .mobileHelpTile{ display:grid; align-content:center; gap:5px; min-height:88px; padding:12px; border:1px solid var(--border); border-radius:var(--control-radius); background:var(--row-bg); color:var(--text); text-align:left; }
-  #helpBlock .mobileHelpTile span{ color:var(--focus-border); font-size:13px; font-weight:750; }
-  #helpBlock .mobileHelpTile small{ color:var(--muted); font-size:11px; }
-  #helpBlock .helpTopics{ display:none; }
-  body[data-mobile-help="panel"] #helpBlock .mobileHelpHome{ display:none; }
-  body[data-mobile-help="panel"] #helpBlock .helpTopics{ display:block; }
-  body[data-mobile-help="panel"] #helpBlock .helpTopic{ display:none!important; }
-  body[data-mobile-help="panel"] #helpBlock .helpTopic.mobile-help-active{ display:block!important; }
-  body[data-mobile-help="panel"] #helpBlock > summary{ display:none; }
-  body[data-mobile-help="panel"] #helpBlock .helpTopic.mobile-help-active > summary{ display:none; }
   #toolsBlock .mobileToolsHome{
     display:grid;
     grid-template-columns:repeat(2,minmax(0,1fr));
@@ -4300,12 +4325,9 @@ button.compactAction{
   body[data-mobile-tools="panel"] #toolsBlock .toolsWorkspace{ display:grid; }
   body[data-mobile-tools="panel"] #toolsBlock > summary{ display:none; }
   #toolsBlock .toolsIndexDropdown,#toolsBlock .toolsIndex{ display:none!important; }
-  #toolsBlock .mobileToolHeader,
-  body[data-mobile-help="panel"] #helpBlock .mobileHelpHeader{ display:flex; align-items:center; gap:8px; margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid var(--border); }
-  #toolsBlock .mobileToolHeader h1,
-  body[data-mobile-help="panel"] #helpBlock .mobileHelpHeader h1{ min-width:0; margin:0; color:var(--title); font:inherit; font-size:calc(var(--title-size) * 1.05); font-weight:800; letter-spacing:.035em; line-height:1.15; overflow-wrap:anywhere; }
-  #toolsBlock .mobileToolsBack,
-  body[data-mobile-help="panel"] #helpBlock .mobileHelpBack{
+  #toolsBlock .mobileToolHeader{ display:flex; align-items:center; gap:8px; margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+  #toolsBlock .mobileToolHeader h1{ min-width:0; margin:0; color:var(--title); font:inherit; font-size:calc(var(--title-size) * 1.05); font-weight:800; letter-spacing:.035em; line-height:1.15; overflow-wrap:anywhere; }
+  #toolsBlock .mobileToolsBack{
     display:inline-flex;
     align-items:center;
     justify-content:center;
@@ -4321,10 +4343,8 @@ button.compactAction{
     font-size:11px;
     font-weight:850;
   }
-  #toolsBlock .mobileToolsBack svg,
-  body[data-mobile-help="panel"] #helpBlock .mobileHelpBack svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-  #toolsBlock .mobileToolsBack:focus-visible,
-  body[data-mobile-help="panel"] #helpBlock .mobileHelpBack:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
+  #toolsBlock .mobileToolsBack svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  #toolsBlock .mobileToolsBack:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
 }
 
 /* Matrix action bars share one compact surface. The Recipe bar has four
@@ -4663,9 +4683,10 @@ input.resinLookupDensity.copied[readonly]{
 /* Pin the open section's own header while you read it, so the section you are
    in - and the control that closes it - never scroll away. Desktop only: the
    scroller this sticks to is `#helpBlock > .blockBody{overflow:auto}` from
-   desktop.css, and at <=900px the mobile Help panel hides these summaries
-   entirely and uses .mobileHelpHeader for the same job. top:0 needs no offset
-   because the Help panel's own title is the <details> summary *outside* this
+   desktop.css, which only applies at >=901px - at <=900px the page itself
+   scrolls (no internal scrollport to stick within), so this stays an
+   unpinned, ordinary <details> summary there. top:0 needs no offset because
+   the Help panel's own title is the <details> summary *outside* this
    scroll box. */
 @media (min-width: 901px){
   /* The panel's top padding belongs to the scrollport, so content scrolls
@@ -6047,12 +6068,14 @@ body[data-surface-style="divided"] .helpTopic{
 .displaySheetHead small{display:block;margin-top:2px;color:var(--muted);font-size:11px}
 .visuallyHidden{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
 .appOverlayRoot{position:fixed;inset:0;z-index:70;pointer-events:none}
-/* The notification center is a desktop-only surface: its bell is inside the
-   desktop production strip and its styling lives in desktop.css. This is the
-   safety net that keeps it from ever presenting as an unstyled dialog if a
-   viewport change catches it open. */
+/* The notification center's bell/popover chrome (.desktopNotificationsToggle,
+   the nonmodal anchored positioning) is desktop-only and styled in
+   desktop.css. On mobile the same dialog opens as an ordinary modal
+   .footerSheet bottom sheet instead (see #appFooterNotifications) - its
+   content styling (.desktopNotificationsHead/List/Item/etc.) is provided
+   for both widths below. This is the safety net that keeps the dialog from
+   ever presenting unstyled if a viewport change catches it open. */
 .desktopNotificationsMenu:not([open]){display:none!important}
-@media (width <= 900px){ .desktopNotificationsMenu{display:none!important} }
 .footerSheet{z-index:72}
 .footerSheetBackdrop{position:fixed;inset:0;z-index:60;padding:0;border:0;background:rgba(0,0,0,.42);backdrop-filter:blur(1.5px)}
 .footerSheetBackdrop[hidden]{display:none!important}
@@ -6116,7 +6139,11 @@ body[data-surface-style="divided"] .helpTopic{
   .workspaceNavButton:hover{background:color-mix(in srgb,var(--tile-accent) 6%,transparent);border-bottom-color:var(--tile-accent);transform:none}
   .workspaceNavButton:active{background:color-mix(in srgb,var(--tile-accent) 11%,transparent);transform:translateY(1px)}
   .workspaceNavButton:focus-visible{outline:2px solid var(--focus-border);outline-offset:-2px;background:var(--focus-ring)}
-  .workspaceNavButton > span{min-width:0;gap:8px;font-size:14px;font-weight:850;white-space:nowrap}
+  /* white-space:normal (not nowrap) so a longer destination name like
+     "Production Summary" wraps to a second line within the tile's own
+     minmax(92px,auto) row instead of overflowing - every other label here
+     is short enough to still render on one line either way. */
+  .workspaceNavButton > span{min-width:0;gap:8px;font-size:14px;font-weight:850;white-space:normal}
   .workspaceNavButton .workspaceTileIcon,
   body[data-mobile-tile-style] .workspaceNavButton .workspaceTileIcon,
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"])[data-mobile-tile-style] .workspaceTileIcon{
@@ -6232,6 +6259,61 @@ body[data-surface-style="divided"] .helpTopic{
   .footerAccountDetails[hidden]{display:none}
   .footerAccountDetails strong{color:var(--title);font-size:13px}
   .footerAccountDetails small{overflow:hidden;color:var(--muted);font-size:11px;text-overflow:ellipsis;white-space:nowrap}
+
+  /* Mobile footer notification bell - same .appDockControl treatment as
+     Display/Main/Account, plus a corner badge. Severity color and the
+     badge's count/hidden state are kept in sync with the desktop toggle by
+     renderAttentionCenter in app.js (one summary, two real buttons). */
+  .mobileNotificationsToggle{position:relative}
+  .mobileNotificationsToggle[data-severity="warning"]{color:var(--warn)}
+  .mobileNotificationsToggle[data-severity="error"]{color:var(--bad)}
+  .mobileNotificationsBadge{
+    position:absolute;
+    top:3px;
+    right:10px;
+    display:grid;
+    place-items:center;
+    min-width:15px;
+    height:15px;
+    padding:0 3px;
+    border:1.5px solid var(--panelOpen);
+    border-radius:5px;
+    background:var(--warn);
+    color:#12161c;
+    font-size:9px;
+    font-weight:900;
+    font-variant-numeric:tabular-nums;
+    line-height:1;
+  }
+  .mobileNotificationsBadge[data-severity="error"]{border-radius:50%;background:var(--bad);color:#fff}
+  .mobileNotificationsBadge[hidden]{display:none!important}
+
+  /* Notification center content - the mobile footer bell and the desktop
+     status-bar bell open the exact same #footerNotificationsMenu dialog and
+     these same classes (.desktopNotification*), just presented as a modal
+     .footerSheet bottom sheet here instead of desktop's anchored popover
+     (see desktop.css for that presentation and the shared severity/icon
+     rules). One data source, one set of markup, two responsive treatments. */
+  .desktopNotificationsHead{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:12px 13px 10px;border-bottom:1px solid var(--border)}
+  .desktopNotificationsHead strong{color:var(--title);font-size:14px;font-weight:850}
+  .desktopNotificationsHead small{color:var(--muted);font-size:11px;font-weight:700}
+  .desktopNotificationsList{display:grid;gap:0;max-height:calc(100dvh - var(--app-dock-height) - 90px);overflow:auto}
+  .desktopNotificationsEmpty{margin:0;padding:20px 14px;color:var(--muted);font-size:13px;text-align:center}
+  .desktopNotificationItem{display:grid;grid-template-columns:20px minmax(0,1fr);align-items:start;gap:10px;padding:12px 14px}
+  .desktopNotificationItem + .desktopNotificationItem{border-top:1px solid var(--border)}
+  .desktopNotificationIcon{width:18px;height:18px;margin-top:1px;fill:none;stroke:var(--warn);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .desktopNotificationItem[data-severity="error"] .desktopNotificationIcon{stroke:var(--bad)}
+  .desktopNotificationBody{display:grid;gap:4px;min-width:0}
+  .desktopNotificationHeadRow{display:flex;align-items:baseline;justify-content:space-between;gap:8px;min-width:0}
+  .desktopNotificationHeadRow strong{min-width:0;color:var(--text);font-size:13px;font-weight:750;line-height:1.3}
+  .desktopNotificationSeverityTag{flex:0 0 auto;color:var(--warn);font-size:10px;font-weight:850;letter-spacing:.06em;text-transform:uppercase}
+  .desktopNotificationItem[data-severity="error"] .desktopNotificationSeverityTag{color:var(--bad)}
+  .desktopNotificationMessage{margin:0;color:var(--muted);font-size:12px;line-height:1.4}
+  .desktopNotificationFoot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:3px}
+  .desktopNotificationSection{color:var(--muted);font-size:10px;font-weight:700;letter-spacing:.03em;text-transform:uppercase}
+  .desktopNotificationAction{min-height:32px;padding:5px 11px;border:1px solid var(--border2);border-radius:var(--control-radius);background:var(--row-bg);color:var(--focus-border);font:inherit;font-size:12px;font-weight:750;box-shadow:none}
+  .desktopNotificationAction:hover,.desktopNotificationAction:active{background:var(--focus-ring);color:var(--title)}
+  .desktopNotificationAction:focus-visible{outline:2px solid var(--focus-border);outline-offset:1px}
 
   .displaySheet{max-height:calc(100dvh - var(--app-dock-height) - 32px)}
   .displaySheetPanel{padding:16px}

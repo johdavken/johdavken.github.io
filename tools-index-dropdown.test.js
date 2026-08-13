@@ -49,13 +49,14 @@ test(".toolsIndexDropdown and .toolsIndex are siblings in the DOM, not nested - 
   assert.match(afterDetails, /<nav class="toolsIndex" role="tablist" aria-label="Production tools">/, "the real nav follows immediately as a sibling");
 });
 
-test("all 5 tool tabs are still present and unchanged (same ids, data-tool-target, aria wiring) inside the sibling nav", () => {
+test("all 4 remaining tool tabs are still present and unchanged (same ids, data-tool-target, aria wiring) inside the sibling nav - Production Summary moved out to its own top-level section", () => {
   const navStart = html.indexOf('<nav class="toolsIndex"');
   const navEnd = html.indexOf("</nav>", navStart);
   const nav = html.slice(navStart, navEnd);
-  for (const id of ["productionSummaryToolTab", "shortFootageToolTab", "hopperWeightToolTab", "resinLookupToolTab", "recipeScanToolTab"]){
+  for (const id of ["shortFootageToolTab", "hopperWeightToolTab", "resinLookupToolTab", "recipeScanToolTab"]){
     assert.match(nav, new RegExp(`id="${id}"`));
   }
+  assert.doesNotMatch(nav, /productionSummaryToolTab/);
 });
 
 test("on mobile, .toolsIndex is hidden by default and only shown via the adjacent-sibling combinator when the details is [open] - not nested content-visibility tricks", () => {

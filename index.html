@@ -303,6 +303,10 @@
       <span><svg class="workspaceTileIcon" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="11"/><path d="M16 9v7l5 3M5 16h3M24 16h3"/></svg>Timeline</span>
       <small id="workspaceTimelineStatus">0 resins tracked</small>
     </button>
+    <button class="workspaceNavButton" type="button" data-workspace-target="productionSummaryBlock">
+      <span><svg class="workspaceTileIcon" viewBox="0 0 32 32" aria-hidden="true"><path d="M6 25V15M16 25V7M26 25V11"/><path d="M3 25h26"/></svg>Resin Totals</span>
+      <small>Material totals</small>
+    </button>
     <button class="workspaceNavButton" type="button" data-workspace-target="lineSyncBlock">
       <span><svg class="workspaceTileIcon" viewBox="0 0 32 32" aria-hidden="true"><circle cx="8" cy="16" r="3"/><circle cx="24" cy="9" r="3"/><circle cx="24" cy="23" r="3"/><path d="m10.7 14.7 10.6-4.4M10.7 17.3l10.6 4.4"/></svg>RT Sync</span>
       <small id="workspaceCloudSyncStatus">Local only</small>
@@ -614,6 +618,36 @@
     </div>
   </details>
 
+  <!-- 3b) PRODUCTION SUMMARY -->
+  <details class="block card workspacePanel" id="productionSummaryBlock">
+    <summary>
+      <div class="sumLeft">
+        <div class="chev"><span class="chevRing"></span><span class="chevSatellite"></span><span class="chevCore"></span></div>
+        <svg class="mobileSectionHeaderIcon" viewBox="0 0 32 32" aria-hidden="true"><path d="M6 25V15M16 25V7M26 25V11"/><path d="M3 25h26"/></svg>
+        <div class="summaryText">
+          <div class="layerTitle" role="heading" aria-level="1">Resin Totals</div>
+          <div class="layerMeta">Material totals for production and inventory issuance</div>
+        </div>
+      </div>
+    </summary>
+
+    <div class="blockBody">
+      <div class="grid2 mt10">
+        <div>
+          <label for="prodResinLb">Production Resin (lb)</label>
+          <input id="prodResinLb" type="text" inputmode="decimal" placeholder="0" />
+        </div>
+        <div>
+          <label for="scrapResinLb">Scrap Resin (lb)</label>
+          <input id="scrapResinLb" type="text" inputmode="decimal" placeholder="0" />
+        </div>
+      </div>
+
+      <div id="resinCalcSummary" class="mt10"></div>
+      <div id="resinCalcResults" class="calcTable"></div>
+    </div>
+  </details>
+
   <!-- 4) RT SYNC -->
   <details class="block card workspacePanel lineSyncBlock" id="lineSyncBlock">
     <summary>
@@ -716,49 +750,30 @@
 
     <div class="blockBody">
       <div class="mobileToolsHome" aria-label="Production tools">
-        <button class="mobileToolTile" type="button" data-mobile-tool-target="productionSummaryTool"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 25V15M16 25V7M26 25V11"/><path d="M3 25h26"/></svg><span>Production Summary</span><small>Material totals</small></button>
         <button class="mobileToolTile" type="button" data-mobile-tool-target="shortFootageTool"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 24 12 17l5 3 10-12"/><path d="M21 8h6v6"/></svg><span>Short Footage</span><small>Footage calculator</small></button>
         <button class="mobileToolTile" type="button" data-mobile-tool-target="hopperWeightTool"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M9 6h14l3 20H6L9 6Z"/><path d="M8 14h16M11 10h10"/></svg><span>Hopper Weight</span><small>Capacity estimate</small></button>
         <button class="mobileToolTile" type="button" data-mobile-tool-target="resinLookupTool"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="14" cy="14" r="8"/><path d="m20 20 7 7M11 14h6M14 11v6"/></svg><span>Resin Reference</span><small>Codes, density and material information</small></button>
         <button class="mobileToolTile" type="button" data-mobile-tool-target="recipeScanTool"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 10V6h4M22 6h4v4M26 22v4h-4M10 26H6v-4"/><path d="M10 16h12M10 12h8M10 20h9"/></svg><span>Scan Recipe</span><small>Import from photo</small></button>
+        <button class="mobileToolTile" type="button" data-mobile-tool-target="bulkDensityMeasurementTool"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M13 4h6M14 4v6l-7 15a2 2 0 0 0 2 3h14a2 2 0 0 0 2-3l-7-15V4"/><path d="M10 20h12"/></svg><span>Bulk Density Measurement</span><small>Measure and save resin-specific bulk density</small></button>
       </div>
       <div class="toolsWorkspace">
         <details class="toolsIndexDropdown">
-          <summary><span class="toolsIndexDropdownLabel">Production Summary</span></summary>
+          <summary><span class="toolsIndexDropdownLabel">Short Footage</span></summary>
         </details>
         <nav class="toolsIndex" role="tablist" aria-label="Production tools">
-          <button id="productionSummaryToolTab" class="toolsIndexButton active" type="button" role="tab" aria-selected="true" aria-controls="productionSummaryTool" data-tool-target="productionSummaryTool">Production Summary</button>
-          <button id="shortFootageToolTab" class="toolsIndexButton" type="button" role="tab" aria-selected="false" aria-controls="shortFootageTool" data-tool-target="shortFootageTool" tabindex="-1">Short Footage</button>
+          <button id="shortFootageToolTab" class="toolsIndexButton active" type="button" role="tab" aria-selected="true" aria-controls="shortFootageTool" data-tool-target="shortFootageTool">Short Footage</button>
           <button id="hopperWeightToolTab" class="toolsIndexButton" type="button" role="tab" aria-selected="false" aria-controls="hopperWeightTool" data-tool-target="hopperWeightTool" tabindex="-1">Hopper Weight</button>
           <button id="resinLookupToolTab" class="toolsIndexButton" type="button" role="tab" aria-selected="false" aria-controls="resinLookupTool" data-tool-target="resinLookupTool" tabindex="-1">Resin Reference</button>
           <button id="recipeScanToolTab" class="toolsIndexButton" type="button" role="tab" aria-selected="false" aria-controls="recipeScanTool" data-tool-target="recipeScanTool" tabindex="-1">Scan Recipe</button>
+          <button id="bulkDensityMeasurementToolTab" class="toolsIndexButton" type="button" role="tab" aria-selected="false" aria-controls="bulkDensityMeasurementTool" data-tool-target="bulkDensityMeasurementTool" tabindex="-1">Bulk Density Measurement</button>
         </nav>
 
         <div class="toolsWorkspaceContent">
       <div class="mobileToolHeader">
         <button id="mobileToolsBack" class="mobileToolsBack" type="button" aria-label="Back to Tools" title="Back to Tools"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5-7 7 7 7"/></svg><span>Tools</span></button>
-        <h1 id="mobileToolHeaderLabel">Production Summary</h1>
+        <h1 id="mobileToolHeaderLabel">Short Footage</h1>
       </div>
-      <section id="productionSummaryTool" class="toolPanel toolWorkspacePanel" role="tabpanel" aria-labelledby="productionSummaryToolTab productionSummaryTitle">
-        <div id="productionSummaryTitle" class="layerTitle">Production Summary</div>
-        <div class="muted">Material totals for production and inventory issuance.</div>
-
-        <div class="grid2 mt10">
-          <div>
-            <label for="prodResinLb">Production Resin (lb)</label>
-            <input id="prodResinLb" type="text" inputmode="decimal" placeholder="0" />
-          </div>
-          <div>
-            <label for="scrapResinLb">Scrap Resin (lb)</label>
-            <input id="scrapResinLb" type="text" inputmode="decimal" placeholder="0" />
-          </div>
-        </div>
-
-        <div id="resinCalcSummary" class="mt10"></div>
-        <div id="resinCalcResults" class="calcTable"></div>
-      </section>
-
-      <section id="shortFootageTool" class="toolPanel toolWorkspacePanel" role="tabpanel" aria-labelledby="shortFootageToolTab shortFootageTitle" hidden>
+      <section id="shortFootageTool" class="toolPanel toolWorkspacePanel" role="tabpanel" aria-labelledby="shortFootageToolTab shortFootageTitle">
         <div id="shortFootageTitle" class="layerTitle">Short Footage</div>
         <div class="muted">Actual Weight × Target Footage ÷ Last Good Weight</div>
 
@@ -925,6 +940,58 @@
           </div>
         </div>
       </section>
+
+      <section id="bulkDensityMeasurementTool" class="toolPanel toolWorkspacePanel" role="tabpanel" aria-labelledby="bulkDensityMeasurementToolTab bulkDensityMeasurementTitle" hidden>
+        <div id="bulkDensityMeasurementTitle" class="layerTitle">Bulk Density Measurement</div>
+        <div class="muted">Measure and save resin-specific bulk density</div>
+
+        <div class="bulkDensityMeasurementWorkspace mt10">
+          <div class="bulkDensityMeasurementIntro">
+            <div><span class="setupControlLabel">Water calibration</span><strong class="mono">32.0 lb net</strong></div>
+            <p>Fill the same dry container to the same level used for the water calibration. Enter resin weight after subtracting the bucket.</p>
+          </div>
+
+          <div class="bulkDensityMeasurementForm">
+            <section class="bulkDensityMeasureSection" aria-labelledby="bulkDensityResinHeading">
+              <div class="bulkDensitySectionHead"><span class="setupControlLabel">Resin</span><strong id="bulkDensityResinHeading">Select an existing record to enable saving</strong></div>
+              <div class="bulkDensityResinSearch">
+                <label for="bulkDensityResinSearch">Search active resins</label>
+                <input id="bulkDensityResinSearch" type="search" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="bulkDensityResinSuggestions" placeholder="Code or description">
+                <div id="bulkDensityResinSuggestions" class="bulkDensityResinSuggestions" role="listbox" hidden></div>
+              </div>
+              <div id="bulkDensitySelectedResin" class="bulkDensitySelectedResin" hidden>
+                <div><strong id="bulkDensitySelectedCode"></strong><span id="bulkDensitySelectedDescription"></span></div>
+                <div><small>Current bulk density</small><strong id="bulkDensityCurrentValue" class="mono">Not set</strong></div>
+              </div>
+            </section>
+
+            <section class="bulkDensityMeasureSection" aria-labelledby="bulkDensityMeasurementHeading">
+              <div class="bulkDensitySectionHead"><span class="setupControlLabel">Measurement</span><strong id="bulkDensityMeasurementHeading">Same calibrated container and fill level</strong></div>
+              <div class="bulkDensityInputGrid">
+                <label for="bulkDensityPolymerDensity">Polymer density<span class="bulkDensityInputWithUnit"><input id="bulkDensityPolymerDensity" type="text" inputmode="decimal" placeholder="Optional"><span>g/cm³</span></span></label>
+                <label for="bulkDensityResinWeight">Measured resin weight<span class="bulkDensityInputWithUnit"><input id="bulkDensityResinWeight" type="text" inputmode="decimal" placeholder="Net weight" aria-describedby="bulkDensityWeightHint"><span>lb net</span></span></label>
+              </div>
+              <p id="bulkDensityWeightHint" class="tiny muted">Measured resin weight must exclude the bucket. Polymer density is used only to calculate packing factor.</p>
+            </section>
+
+            <section class="bulkDensityResultSurface" aria-labelledby="bulkDensityResultsHeading" aria-live="polite">
+              <div class="bulkDensitySectionHead"><span class="setupControlLabel">Result</span><strong id="bulkDensityResultsHeading">Direct measurement from the water/resin weight ratio</strong></div>
+              <div class="bulkDensityPrimaryResult"><strong id="bulkDensityResultLbFt3" class="mono">—</strong><span>lb/ft³</span></div>
+              <div class="bulkDensitySecondaryResults">
+                <div><span>Bulk density</span><strong id="bulkDensityResultGCm3" class="mono">— g/cm³</strong></div>
+                <div><span>Packing factor</span><strong id="bulkDensityPackingFactor" class="mono">—</strong></div>
+              </div>
+              <div id="bulkDensityWarnings" class="bulkDensityWarnings" role="status"></div>
+            </section>
+          </div>
+
+          <div class="bulkDensitySaveBar">
+            <div><strong>Database update</strong><span id="bulkDensitySaveHint">Administrator access is required.</span></div>
+            <button id="bulkDensitySaveButton" type="button" class="primary" disabled>Save to Resin Database</button>
+          </div>
+          <div id="bulkDensityStatus" class="tiny" role="status" aria-live="polite"></div>
+        </div>
+      </section>
         </div>
       </div>
     </div>
@@ -945,20 +1012,6 @@
     </summary>
 
     <div class="blockBody helpGuide">
-      <div class="mobileHelpHome" aria-label="Help topics">
-        <button class="mobileHelpTile" type="button" data-mobile-help-target="helpQuickStart"><span>Quick Start</span><small>Quick start guide</small></button>
-        <button class="mobileHelpTile" type="button" data-mobile-help-target="helpSetup"><span>Setup</span><small>Line configuration</small></button>
-        <button class="mobileHelpTile" type="button" data-mobile-help-target="helpHopperPercentages"><span>Recipe</span><small>Layers and hoppers</small></button>
-        <button class="mobileHelpTile" type="button" data-mobile-help-target="helpTimeline"><span>Timeline</span><small>Changeover timing</small></button>
-        <button class="mobileHelpTile" type="button" data-mobile-help-target="helpCloudSync"><span>RT Sync</span><small>Shared workspaces</small></button>
-        <button class="mobileHelpTile" type="button" data-mobile-help-target="helpTools"><span>Tools</span><small>Calculators and reference</small></button>
-        <button class="mobileHelpTile" type="button" data-mobile-help-target="helpRecipeScan"><span>Scan Recipe</span><small>Import from photo</small></button>
-        <button class="mobileHelpTile" type="button" data-mobile-help-target="helpChangelog"><span>Changelog</span><small>Recent changes</small></button>
-      </div>
-      <div class="mobileHelpHeader">
-        <button id="mobileHelpBack" class="mobileHelpBack" type="button" aria-label="Back to Help" title="Back to Help"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5-7 7 7 7"/></svg><span>Help</span></button>
-        <h1 id="mobileHelpHeaderLabel">Quick Start</h1>
-      </div>
       <div class="helpTopics">
         <details class="helpTopic" id="helpQuickStart" open>
           <summary><span>Quick Start</span><small>Set up Resin.Tools in just a few minutes</small></summary>
@@ -976,7 +1029,7 @@
                 <li>Build the layer recipe in <a class="helpTopicLink" href="#helpHopperPercentages">Recipe</a>.</li>
                 <li>Turn on <a class="helpTopicLink" href="#helpHopperPercentages">tracking</a> for the hoppers involved in the changeover.</li>
                 <li>Open the <a class="helpTopicLink" href="#helpTimeline">Timeline</a> to see when each hopper should begin running down.</li>
-                <li>Use <a class="helpTopicLink" href="#helpTools">Production Summary</a> at the end of the run to total material usage for inventory.</li>
+                <li>Use <a class="helpTopicLink" href="#helpTools">Resin Totals</a> at the end of the run to total material usage for inventory.</li>
               </ol>
             </div>
 
@@ -1291,7 +1344,7 @@
                 <figcaption>Pick from the index; the panel swaps beside it.</figcaption>
               </figure>
               <div class="helpGrid" style="margin:0">
-                <div class="helpCard"><strong>Production Summary</strong><span>Material totals by resin for reporting and inventory issuance.</span></div>
+                <div class="helpCard"><strong>Resin Totals</strong><span>Material totals by resin for reporting and inventory issuance.</span></div>
                 <div class="helpCard"><strong>Short Footage</strong><span>Adjusted short footage from actual weight, target footage, and last good weight.</span></div>
                 <div class="helpCard"><strong>Hopper Weight</strong><span>Capacity from circumference and usable height, with bulk density entered or estimated.</span></div>
                 <div class="helpCard"><strong>Resin Reference</strong><span>Search by code or description for density, material information, and typical uses.</span></div>
@@ -1300,7 +1353,7 @@
 
             <hr class="helpRule">
             <p class="helpEyebrow">End of run</p>
-            <h3>Production Summary</h3>
+            <h3>Resin Totals</h3>
             <p>Build the recipe first, then enter production and scrap pounds. Totals are split by material using the current recipe percentages.</p>
             <figure class="helpShot helpWide" style="--shot-w:920px">
               <img src="branding/help/tools-summary.png" alt="Production Summary results: a totals band reading Production 1624 lb, Scrap 534 lb, Total 2158 lb, followed by a by-material list with LLDPE 1001 at 1079 lb, Color Concentrate Blue at 582 lb, MSO 440 at 366 lb and Purge Compound at 64 lb." loading="lazy">
@@ -1504,57 +1557,6 @@
     </div>
   </details>
 
-  <details class="block card workspacePanel adminResinPanel bulkDensityMeasurementPanel" id="bulkDensityMeasurementBlock">
-    <summary>
-      <div class="sumLeft"><div class="chev"><span class="chevRing"></span><span class="chevSatellite"></span><span class="chevCore"></span></div><div class="summaryText"><div class="layerTitle">Bulk Density Measurement</div><div class="layerMeta">Measure and save resin-specific bulk density</div></div></div>
-    </summary>
-    <div class="blockBody bulkDensityMeasurementWorkspace">
-      <div class="bulkDensityMeasurementIntro">
-        <div><span class="setupControlLabel">Water calibration</span><strong class="mono">32.0 lb net</strong></div>
-        <p>Fill the same dry container to the same level used for the water calibration. Enter resin weight after subtracting the bucket.</p>
-      </div>
-
-      <div class="bulkDensityMeasurementForm">
-        <section class="bulkDensityMeasureSection" aria-labelledby="bulkDensityResinHeading">
-          <div class="bulkDensitySectionHead"><span class="setupControlLabel">Resin</span><strong id="bulkDensityResinHeading">Select an existing record to enable saving</strong></div>
-          <div class="bulkDensityResinSearch">
-            <label for="bulkDensityResinSearch">Search active resins</label>
-            <input id="bulkDensityResinSearch" type="search" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="bulkDensityResinSuggestions" placeholder="Code or description">
-            <div id="bulkDensityResinSuggestions" class="bulkDensityResinSuggestions" role="listbox" hidden></div>
-          </div>
-          <div id="bulkDensitySelectedResin" class="bulkDensitySelectedResin" hidden>
-            <div><strong id="bulkDensitySelectedCode"></strong><span id="bulkDensitySelectedDescription"></span></div>
-            <div><small>Current bulk density</small><strong id="bulkDensityCurrentValue" class="mono">Not set</strong></div>
-          </div>
-        </section>
-
-        <section class="bulkDensityMeasureSection" aria-labelledby="bulkDensityMeasurementHeading">
-          <div class="bulkDensitySectionHead"><span class="setupControlLabel">Measurement</span><strong id="bulkDensityMeasurementHeading">Same calibrated container and fill level</strong></div>
-          <div class="bulkDensityInputGrid">
-            <label for="bulkDensityPolymerDensity">Polymer density<span class="bulkDensityInputWithUnit"><input id="bulkDensityPolymerDensity" type="text" inputmode="decimal" placeholder="Optional"><span>g/cm³</span></span></label>
-            <label for="bulkDensityResinWeight">Measured resin weight<span class="bulkDensityInputWithUnit"><input id="bulkDensityResinWeight" type="text" inputmode="decimal" placeholder="Net weight" aria-describedby="bulkDensityWeightHint"><span>lb net</span></span></label>
-          </div>
-          <p id="bulkDensityWeightHint" class="tiny muted">Measured resin weight must exclude the bucket. Polymer density is used only to calculate packing factor.</p>
-        </section>
-
-        <section class="bulkDensityResultSurface" aria-labelledby="bulkDensityResultsHeading" aria-live="polite">
-          <div class="bulkDensitySectionHead"><span class="setupControlLabel">Result</span><strong id="bulkDensityResultsHeading">Direct measurement from the water/resin weight ratio</strong></div>
-          <div class="bulkDensityPrimaryResult"><strong id="bulkDensityResultLbFt3" class="mono">—</strong><span>lb/ft³</span></div>
-          <div class="bulkDensitySecondaryResults">
-            <div><span>Bulk density</span><strong id="bulkDensityResultGCm3" class="mono">— g/cm³</strong></div>
-            <div><span>Packing factor</span><strong id="bulkDensityPackingFactor" class="mono">—</strong></div>
-          </div>
-          <div id="bulkDensityWarnings" class="bulkDensityWarnings" role="status"></div>
-        </section>
-      </div>
-
-      <div class="bulkDensitySaveBar">
-        <div><strong>Database update</strong><span id="bulkDensitySaveHint">Select a resin and enter a valid measurement.</span></div>
-        <button id="bulkDensitySaveButton" type="button" class="primary" disabled>Save to Resin Database</button>
-      </div>
-      <div id="bulkDensityStatus" class="tiny" role="status" aria-live="polite"></div>
-    </div>
-  </details>
   </div>
 
 </main>
@@ -1700,16 +1702,11 @@
   <button type="button" id="appFooterDisplay" class="appDockControl" aria-expanded="false" aria-controls="displaySheet" aria-label="Display settings">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9c0-1-.8-1.8-1.8-1.8h-2.1a2 2 0 0 1-2-2V6.8C15.1 4.7 13.9 3 12 3Z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="8.5" cy="16" r="1"/></svg><span>Display</span>
   </button>
-  <div class="appDockMenuHost">
-    <button type="button" id="appFooterShortcuts" class="appDockControl" aria-expanded="false" aria-controls="footerShortcutsMenu" aria-label="Shortcuts">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m13 2-8 12h7l-1 8 8-12h-7l1-8Z"/></svg><span>Shortcuts</span>
-    </button>
-    <dialog id="footerShortcutsMenu" class="footerSheet footerDockMenu" aria-labelledby="footerShortcutsTitle" aria-modal="true" tabindex="-1">
-      <div class="footerSheetHead"><strong id="footerShortcutsTitle">Shortcuts</strong></div>
-      <button id="quickProductionSummaryBtn" type="button" role="menuitem"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 25V15M16 25V7M26 25V11"/><path d="M3 25h26"/></svg><span>Production Summary</span></button>
-      <button id="quickScanDosingScreenBtn" type="button" role="menuitem"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 10V6h4M22 6h4v4M26 22v4h-4M10 26H6v-4"/><path d="M10 16h12M10 12h8M10 20h9"/></svg><span>Scan Dosing Screen</span></button>
-    </dialog>
-  </div>
+  <button type="button" id="appFooterNotifications" class="appDockControl mobileNotificationsToggle" data-severity="none" aria-expanded="false" aria-controls="footerNotificationsMenu" aria-haspopup="dialog" aria-label="Notifications, no items">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9.2a6 6 0 1 0-12 0c0 4.6-2 5.8-2 5.8h16s-2-1.2-2-5.8Z"/><path d="M13.7 19a2 2 0 0 1-3.4 0"/></svg>
+    <span id="mobileNotificationsBadge" class="mobileNotificationsBadge" aria-hidden="true" hidden></span>
+    <span>Notifications</span>
+  </button>
   <button type="button" id="appFooterMain" class="appDockControl appDockMain" aria-label="Main menu" aria-current="page">
     <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span>Main</span>
   </button>
@@ -1723,7 +1720,6 @@
       <button id="adminLoginButton" type="button" role="menuitem" hidden><span>Admin Login</span></button>
       <button id="resinDatabaseButton" class="footerAdminDestination" type="button" role="menuitem" data-admin-only="true" data-workspace-target="resinAdminBlock" hidden><span>Resin Database</span></button>
       <button id="workspaceManagementButton" class="footerAdminDestination" type="button" role="menuitem" data-admin-only="true" data-workspace-target="workspaceManagementBlock" hidden><span>Workspace Management</span></button>
-      <button id="bulkDensityMeasurementButton" class="footerAdminDestination" type="button" role="menuitem" data-admin-only="true" data-workspace-target="bulkDensityMeasurementBlock" hidden><span>Bulk Density Measurement</span></button>
       <button id="adminSignOutButton" type="button" role="menuitem" hidden><span>Sign out</span></button>
     </dialog>
   </div>
@@ -1732,11 +1728,15 @@
   </button>
 </footer>
 <div id="appOverlayRoot" class="appOverlayRoot">
-  <!-- Desktop notification center. Lives in the overlay root permanently
-       (never inside the inert workspace) so it needs no runtime reparenting,
-       and it is nonmodal so the status bar behind it stays operable. The
-       bell that controls it is desktop-only, so this never opens on mobile. -->
-  <dialog id="footerNotificationsMenu" class="desktopNotificationsMenu" aria-labelledby="desktopNotificationsTitle" tabindex="-1">
+  <!-- Notification center. Lives in the overlay root permanently (never
+       inside the inert workspace) so it needs no runtime reparenting. Two
+       triggers share this one dialog/content/data source: the desktop bell
+       (#desktopNotificationsToggle, nonmodal popover, anchored to itself)
+       and the mobile footer bell (#appFooterNotifications, modal bottom
+       sheet via the shared .footerSheet system) - see
+       isDesktopNotificationsPopover in app.js for which presentation a
+       given open uses. -->
+  <dialog id="footerNotificationsMenu" class="desktopNotificationsMenu footerSheet" aria-labelledby="desktopNotificationsTitle" tabindex="-1">
     <div class="desktopNotificationsHead">
       <strong id="desktopNotificationsTitle">Notifications</strong>
       <small id="desktopNotificationsSummary">Nothing needs attention</small>
