@@ -11,7 +11,6 @@ const html = fs.readFileSync("index.html", "utf8");
 const styles = fs.readFileSync("styles.css", "utf8");
 const theme = fs.readFileSync("theme.css", "utf8");
 const cloudSync = fs.readFileSync("cloud-sync.js", "utf8");
-const manifest = fs.readFileSync("android/app/src/main/AndroidManifest.xml", "utf8");
 
 /* -----------------------------------------------------------------------
  *   The document itself
@@ -80,17 +79,47 @@ test("the Scan Recipe section says the image is sent for processing and names bo
 // is undeclared ("if it is not defined in the manifest then we don't need to
 // prompt", CameraPlugin.kt), and adding one would silently make this
 // paragraph false. This test is the tripwire.
-test("the Camera and photos section matches the permissions the Android app actually declares", () => {
-  const declared = [...manifest.matchAll(/<uses-permission android:name="([^"]+)"/g)].map(match => match[1]);
-  assert.deepEqual(declared, ["android.permission.INTERNET"], "the app's declared permissions changed - re-check the Camera and photos wording");
+// What ships in the APK is the *merged* manifest: the app's own
+// AndroidManifest.xml plus whatever every installed Capacitor plugin
+// contributes via its own <uses-permission> entries. A first version of this
+// test checked only the app manifest and only the camera plugin, and missed
+// that @capacitor/local-notifications merges three permissions of its own
+// (confirmed against the actual assembleRelease output) - so the published
+// policy claimed one declared permission when the shipped APK carried four.
+// This scans every plugin actually present under node_modules, the same set
+// `npx cap sync` wires into the build, so a future plugin addition or
+// version bump that changes what gets merged fails this test instead of
+// silently drifting from the built APK.
+test("the Camera and photos section matches every permission merged into the Android app, app manifest plus every plugin", () => {
+  const glob = require("node:fs").readdirSync("node_modules/@capacitor", { withFileTypes: true })
+    .filter(entry => entry.isDirectory())
+    .map(entry => `node_modules/@capacitor/${entry.name}/android/src/main/AndroidManifest.xml`)
+    .filter(path => fs.existsSync(path));
+  assert.ok(glob.length >= 3, "expected at least the app, camera and local-notifications plugin manifests");
 
-  const pluginManifest = "node_modules/@capacitor/camera/android/src/main/AndroidManifest.xml";
-  if (fs.existsSync(pluginManifest)){
-    assert.doesNotMatch(fs.readFileSync(pluginManifest, "utf8"), /<uses-permission/, "the Camera plugin now merges a permission of its own - re-check the wording");
+  const declared = new Set();
+  for (const path of [...glob, "android/app/src/main/AndroidManifest.xml"]){
+    const source = fs.readFileSync(path, "utf8");
+    for (const match of source.matchAll(/<uses-permission android:name="([^"]+)"/g)) declared.add(match[1]);
   }
 
+  const expected = new Set([
+    "android.permission.INTERNET",
+    "android.permission.RECEIVE_BOOT_COMPLETED",
+    "android.permission.WAKE_LOCK",
+    "android.permission.POST_NOTIFICATIONS"
+  ]);
+  assert.deepEqual([...declared].sort(), [...expected].sort(), "the merged permission set changed - re-check the Camera and photos wording");
+  assert.ok(!declared.has("android.permission.CAMERA"), "a camera permission appeared - the policy says none is requested");
+  assert.ok(
+    ![...declared].some(name => /STORAGE|MEDIA_IMAGES|MEDIA_VIDEO/.test(name)),
+    "a photo-library permission appeared - the policy says none is requested"
+  );
+
   const section = sectionBody("Camera and photos");
+  assert.match(section, /declares four permissions/i);
   assert.match(section, /requests no camera permission and no photo-library permission/i);
+  assert.doesNotMatch(section, /declares one permission/i);
   assert.doesNotMatch(section, /asks for camera access|access to your photos/i);
 });
 
