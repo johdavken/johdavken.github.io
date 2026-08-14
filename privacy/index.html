@@ -1,38 +1,69 @@
 <!doctype html>
-<html lang="en" data-theme="industrial-slate">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>Privacy Policy — Resin.Tools</title>
   <meta name="description" content="How Resin.Tools handles data: what stays on your device, what RT Sync stores, and what happens to photos submitted through Scan Recipe.">
-  <link rel="icon" type="image/svg+xml" sizes="any" href="../branding/resin-tools/rt6-02-layer-stack-icon.svg?v=2">
+  <meta name="color-scheme" content="light dark">
 
-  <!-- Palettes only. This page deliberately does not load the app's styles.css:
-       it is a plain document, not part of the app shell, so it takes the theme
-       tokens (--bg, --text, --title, --muted, --border...) and defines its own
-       typography below. -->
-  <link rel="stylesheet" href="../theme.css?v=0.17.4">
+  <!-- This page is deliberately standalone: every other path on resin.tools
+       sits behind Cloudflare authentication, and a privacy policy has to be
+       readable by anyone (Google Play's reviewers included) with no account
+       and no shared assets to fetch. So there is no stylesheet link, no
+       script, no font request, and no image request - the palette below is
+       lifted from theme.css's Industrial Slate pair, and the mark is inline
+       SVG. The only file the browser loads is this one.
 
-  <script>
-    // Match whatever theme the operator picked in the app. The app persists it
-    // inside its session payload under this key (app.js snapshotPayload), and
-    // this page shares an origin with it, so the same localStorage is visible.
-    // Only the three themes applyTheme() can actually produce are honoured;
-    // anything else (including older, removed theme values) falls back to the
-    // same Industrial Slate default the app falls back to.
-    (function () {
-      "use strict";
-      var ALLOWED = ["industrial-slate", "industrial-slate-dark", "gruvbox-dark"];
-      try {
-        var raw = localStorage.getItem("resinTimer.session.v0.09");
-        if (!raw) return;
-        var theme = JSON.parse(raw).theme;
-        if (ALLOWED.indexOf(theme) > -1) document.documentElement.setAttribute("data-theme", theme);
-      } catch (error) { /* no stored preference, or storage unavailable - keep the default */ }
-    })();
-  </script>
+       Keeping it in step with the app is therefore a manual job: if the
+       Industrial Slate palettes change in theme.css, the tokens here do not
+       follow, and nothing will break to tell you. privacy-policy.test.js
+       pins the values against theme.css so that drift is caught. -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='14 10 62 80'><path d='m14 24 31-14 31 14-31 14Z' fill='%23dc2626'/><path d='m14 37 31-14 31 14-31 14Z' fill='%23718ba5'/><path d='m14 50 31-14 31 14-31 14Z' fill='%23d97706'/><path d='m14 63 31-14 31 14-31 14Z' fill='%2316a34a'/><path d='m14 76 31-14 31 14-31 14Z' fill='%23607d9b'/></svg>">
 
   <style>
+    /* Industrial Slate, the app's default theme (theme.css). Only the tokens
+       this page actually uses are carried over. */
+    :root{
+      --bg: #f5f4f3;
+      --text: #29282b;
+      --title: #4f6d8b;
+      --muted: #666269;
+      --border: rgba(74,73,72,.17);
+      --row-bg: rgba(74,73,72,.055);
+      --row-border: rgba(96,125,155,.14);
+      --focus-border: rgba(96,125,155,.86);
+      --bg-glow-a: rgba(96,125,155,.07);
+      --bg-glow-b: rgba(96,125,155,.08);
+      --bad: #dc2626;
+      --orange: #718ba5;
+      --warn: #d97706;
+      --ok: #16a34a;
+      --radius-row: 16px;
+    }
+
+    /* Industrial Slate Dark. The app switches theme from a stored preference,
+       which needs JavaScript and this page has none, so it follows the
+       reader's own system setting instead. */
+    @media (prefers-color-scheme: dark){
+      :root{
+        --bg: #161b20;
+        --text: #dce4ea;
+        --title: #8aa8c2;
+        --muted: #a4b1bc;
+        --border: rgba(164,177,188,.18);
+        --row-bg: rgba(138,168,194,.055);
+        --row-border: rgba(138,168,194,.18);
+        --focus-border: rgba(138,168,194,.90);
+        --bg-glow-a: rgba(138,168,194,.09);
+        --bg-glow-b: rgba(104,124,142,.06);
+        --bad: #d66f72;
+        --orange: #9bb1c4;
+        --warn: #d6a85f;
+        --ok: #7eaf94;
+      }
+    }
+
     *{ box-sizing: border-box; }
 
     body{
@@ -57,7 +88,7 @@
 
     .docNav{
       display: flex;
-      align-items: baseline;
+      align-items: center;
       justify-content: space-between;
       gap: 12px;
       flex-wrap: wrap;
@@ -65,11 +96,18 @@
       margin-bottom: 22px;
       border-bottom: 1px solid var(--border);
     }
-    .docBrand{
-      color: var(--title);
-      font-size: 15px;
-      font-weight: 800;
-      letter-spacing: .2px;
+    /* The app's mark, drawn here rather than fetched. It animates in the app;
+       on a document that would only be a distraction, so it sits still. */
+    .docLogo{ display: block; width: 104px; height: auto; }
+    .docLogo .rtLayerRed{ fill: var(--bad); }
+    .docLogo .rtLayerOrange{ fill: var(--orange); }
+    .docLogo .rtLayerYellow{ fill: var(--warn); }
+    .docLogo .rtLayerGreen{ fill: var(--ok); }
+    .docLogo .rtLayerBlue{ fill: var(--focus-border); }
+    .docLogo .rtWord{
+      fill: var(--text);
+      font: 900 66px/1 ui-monospace, "Cascadia Mono", "Liberation Mono", monospace;
+      letter-spacing: -4px;
     }
     .docBack{ color: var(--muted); font-size: 13px; }
 
@@ -109,7 +147,7 @@
       margin: 0 0 12px;
       padding: 12px 14px;
       border: 1px solid var(--row-border);
-      border-radius: var(--radius-row, 16px);
+      border-radius: var(--radius-row);
       background: var(--row-bg);
     }
     .docNote p:last-child{ margin-bottom: 0; }
@@ -132,13 +170,23 @@
       main{ padding: 16px 14px 48px; }
       h1{ font-size: 23px; }
       h2{ font-size: 16px; }
+      .docLogo{ width: 92px; }
     }
   </style>
 </head>
 <body>
   <main>
     <nav class="docNav">
-      <span class="docBrand">Resin.Tools</span>
+      <svg class="docLogo" viewBox="0 0 196 104" role="img" aria-label="Resin.Tools">
+        <g transform="translate(5 6)">
+          <path class="rtLayerRed" d="m14 24 31-14 31 14-31 14Z"/>
+          <path class="rtLayerOrange" d="m14 37 31-14 31 14-31 14Z"/>
+          <path class="rtLayerYellow" d="m14 50 31-14 31 14-31 14Z"/>
+          <path class="rtLayerGreen" d="m14 63 31-14 31 14-31 14Z"/>
+          <path class="rtLayerBlue" d="m14 76 31-14 31 14-31 14Z"/>
+        </g>
+        <text class="rtWord" x="89" y="83" font-size="66">RT</text>
+      </svg>
       <a class="docBack" href="/">Back to the app</a>
     </nav>
 
@@ -147,7 +195,7 @@
 
     <p class="docLede">Resin.Tools is a production-floor tool for blown film operators. It plans hopper run-downs, holds recipe and line setup, and can share that job state between the devices working one line. This policy covers the Resin.Tools website at resin.tools and the Resin Tools Android app.</p>
 
-    <p>Using Resin.Tools does not require an account. Everything below that leaves your device happens only in the specific features described.</p>
+    <p>Using Resin.Tools does not require an account. Where your data leaves the device, it is because a feature described below sends it.</p>
 
     <h2>What stays on your device</h2>
 
@@ -163,17 +211,17 @@
       <li>A cached copy of the resin catalog, so the app works with a poor connection</li>
     </ul>
 
-    <p>This data is held by your browser and is not sent anywhere unless you use RT Sync or Scan Recipe. Clearing site data for resin.tools in your browser — or clearing storage for Resin Tools in Android settings — removes it from that device.</p>
+    <p>This data is held by your browser. None of it is uploaded unless you use a feature that specifically syncs or processes it — RT Sync, or Scan Recipe. The app does read the shared resin catalog from its backend, which sends nothing about your job. Clearing site data for resin.tools in your browser — or clearing storage for Resin Tools in Android settings — removes it from that device.</p>
 
     <h2>RT Sync and shared workspaces</h2>
 
-    <p>RT Sync is off until you create or join a workspace. When you connect, the app signs your browser in to an <strong>anonymous</strong> account with Supabase, the hosted backend Resin.Tools runs on. Anonymous means what it says: no email address, no name, no password, and nothing to sign up for. The identity exists only so the server can tell devices apart, and it is stored only in that browser.</p>
+    <p>RT Sync is off until you create or join a workspace. When you connect, the app signs your browser in to <a href="https://supabase.com/privacy" target="_blank" rel="noopener">Supabase</a>, the hosted backend Resin.Tools runs on, using <strong>anonymous sign-in</strong>: no name, no email address, no password, and nothing to sign up for. A session credential is stored on your device, and a corresponding anonymous authentication record is created in Supabase. That record's identifier is <strong>pseudonymous</strong> rather than truly anonymous — it persists, and the workspace data below is linked to it. Clearing your browser storage discards the device's credential; the record in Supabase remains.</p>
 
     <p>While a workspace is connected, this is stored on Supabase servers:</p>
     <ul>
       <li>The workspace name and the line it represents</li>
       <li>A device ID generated by the app, and a device label — it defaults to "Operator Phone" or "Resin.Tools Desktop" and you can rename it</li>
-      <li>Membership records: which anonymous identity belongs to which workspace, when it joined, and when it was last active</li>
+      <li>Membership records: which identity belongs to which workspace, when it joined, and when it was last active</li>
       <li>The shared active job — the same recipe, setup, tracking and timeline values listed in the previous section</li>
       <li>Shared configurations you explicitly save: recipes and receiver weight profiles, and the names you give them</li>
     </ul>
@@ -188,20 +236,20 @@
 
     <p>Scan Recipe — Scan Job Traveler, Scan Dosing Screen, and Scan Heat Sheet — runs only when you choose it, and only while you are connected to a workspace. When you take or select a photo:</p>
     <ol>
-      <li>The image is sent to a Resin.Tools server function, hosted on Supabase, together with your workspace ID. The function verifies that your anonymous identity is a member of that workspace before doing anything else.</li>
+      <li>The image is sent to a Resin.Tools server function, hosted on Supabase, together with your workspace ID. The function verifies that your signed-in identity is a member of that workspace before doing anything else.</li>
       <li>The function sends the image to OpenAI's API, which reads it and returns the values it can make out: layer positions and percentages, resin codes, hopper blend percentages, hopper designations, and lot numbers where the form carries them.</li>
       <li>Those values come back to your device as a draft for you to review. Nothing is written to your recipe until you confirm it.</li>
     </ol>
 
     <p>The scan function does not save the image or the extracted result to the Resin.Tools database. For up to a minute after a scan, the result is held in that function's memory so that retrying the same request does not reprocess the photo. The function's own server logs record extracted values, such as resin codes and layer percentages, for troubleshooting; they do not record the image.</p>
 
-    <p>Photos are processed by Supabase and OpenAI as part of providing this feature, under their own policies: <a href="https://supabase.com/privacy" target="_blank" rel="noopener">Supabase</a>, <a href="https://openai.com/policies/privacy-policy/" target="_blank" rel="noopener">OpenAI</a>.</p>
+    <p>Photos are processed by <a href="https://supabase.com/privacy" target="_blank" rel="noopener">Supabase</a> and <a href="https://openai.com/policies/privacy-policy/" target="_blank" rel="noopener">OpenAI</a> as part of providing this feature, under their own privacy policies.</p>
 
     <p>Whatever is in the frame is part of the photo and is sent for processing, so frame the document you are scanning.</p>
 
     <h2>Camera and photos</h2>
 
-    <p>On Android, Resin.Tools asks for camera access when you choose to take a photo for a scan, and for access to your photos when you choose an existing one. Both are requested at the moment you use them. The app does not take photos in the background and does not browse your photo library on its own.</p>
+    <p>On Android, the app declares one permission: internet access. It requests no camera permission and no photo-library permission. Taking a photo for a scan hands off to the device's camera app, and choosing an existing photo goes through the system picker, which hands back only the single image you select. The app does not take photos in the background and has no access to your photo library.</p>
 
     <h2>Notifications</h2>
 
@@ -209,7 +257,7 @@
 
     <h2>Administrator sign-in</h2>
 
-    <p>Editing the shared resin database is restricted to administrators, who sign in with an email address and password held by Supabase Auth. Administrator permission is checked on the server for every such action, not merely hidden in the interface. Ordinary use of Resin.Tools never involves signing in.</p>
+    <p>Editing the shared resin database is restricted to administrators, who sign in with an email address and password held by Supabase Auth. Administrator permission is checked on the server for every such action, not merely hidden in the interface. Ordinary use of Resin.Tools never requires you to create an account.</p>
 
     <h2>Advertising and sale of data</h2>
 
@@ -233,7 +281,7 @@
 
     <h2>Contact</h2>
 
-    <p>Questions about this policy, or a request about data held for your line:</p>
+    <p>Questions about this policy, and requests to delete workspace or job data held for your line, go to:</p>
     <p class="docContact"><a href="mailto:johdavken@protonmail.com">johdavken@protonmail.com</a></p>
 
     <footer>Resin.Tools — Privacy Policy</footer>

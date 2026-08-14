@@ -8,7 +8,9 @@ const { localRuntimeReferences } = require("./scripts/build-www.js");
 const policy = fs.readFileSync("privacy/index.html", "utf8");
 const html = fs.readFileSync("index.html", "utf8");
 const styles = fs.readFileSync("styles.css", "utf8");
-const app = fs.readFileSync("app.js", "utf8");
+const theme = fs.readFileSync("theme.css", "utf8");
+const cloudSync = fs.readFileSync("cloud-sync.js", "utf8");
+const manifest = fs.readFileSync("android/app/src/main/AndroidManifest.xml", "utf8");
 
 /* -----------------------------------------------------------------------
  *   The document itself
@@ -29,7 +31,7 @@ test("every data flow that leaves the device has its own section - local storage
   assert.ok(headings.some(h => /Contact/i.test(h)), `expected a contact section, got ${headings}`);
 });
 
-test("the RT Sync section names what actually reaches Supabase, including that the identity is anonymous", () => {
+test("the RT Sync section names what actually reaches Supabase", () => {
   const section = sectionBody("RT Sync and shared workspaces");
   assert.match(section, /anonymous/i);
   assert.match(section, /Supabase/);
@@ -40,6 +42,30 @@ test("the RT Sync section names what actually reaches Supabase, including that t
   assert.match(section, /member of a workspace can read and change/i);
 });
 
+// Supabase anonymous sign-in creates a durable auth.users row and every
+// membership, active job and configuration write is attributed to its id.
+// That is pseudonymous, not anonymous, and the section has to say so rather
+// than implying the identity is untraceable or purely local.
+test("the RT Sync section calls the identity pseudonymous and does not claim it lives only on the device", () => {
+  const section = sectionBody("RT Sync and shared workspaces");
+  assert.match(section, /pseudonymous/i);
+  assert.match(section, /record is created in Supabase/i);
+  assert.doesNotMatch(section, /stored only in that browser/i);
+  // signInAnonymously is the mechanism, so the word still belongs - but as
+  // the name of the sign-in, not as a claim about what can be linked.
+  assert.match(cloudSync, /signInAnonymously/, "the policy describes anonymous sign-in; cloud-sync.js should still use it");
+});
+
+// The blanket "nothing leaves your device unless you use RT Sync or Scan
+// Recipe" was too strong: the app also reads the shared resin catalog from
+// Supabase. The claim is scoped to the job data the section actually lists.
+test("the local-data section scopes its claim to uploads of job data, not to all network activity", () => {
+  const section = sectionBody("What stays on your device");
+  assert.doesNotMatch(section, /is not sent anywhere/i);
+  assert.match(section, /None of it is uploaded unless/i);
+  assert.match(section, /resin catalog/i);
+});
+
 test("the Scan Recipe section says the image is sent for processing and names both processors", () => {
   const section = sectionBody("Scan Recipe");
   assert.match(section, /Supabase/);
@@ -47,13 +73,35 @@ test("the Scan Recipe section says the image is sent for processing and names bo
   assert.match(section, /image is sent/i);
 });
 
+// The policy states the app requests no camera or photo-library permission.
+// That is only true while the merged Android manifest stays as it is: the
+// Capacitor Camera plugin skips its runtime prompt precisely because CAMERA
+// is undeclared ("if it is not defined in the manifest then we don't need to
+// prompt", CameraPlugin.kt), and adding one would silently make this
+// paragraph false. This test is the tripwire.
+test("the Camera and photos section matches the permissions the Android app actually declares", () => {
+  const declared = [...manifest.matchAll(/<uses-permission android:name="([^"]+)"/g)].map(match => match[1]);
+  assert.deepEqual(declared, ["android.permission.INTERNET"], "the app's declared permissions changed - re-check the Camera and photos wording");
+
+  const pluginManifest = "node_modules/@capacitor/camera/android/src/main/AndroidManifest.xml";
+  if (fs.existsSync(pluginManifest)){
+    assert.doesNotMatch(fs.readFileSync(pluginManifest, "utf8"), /<uses-permission/, "the Camera plugin now merges a permission of its own - re-check the wording");
+  }
+
+  const section = sectionBody("Camera and photos");
+  assert.match(section, /requests no camera permission and no photo-library permission/i);
+  assert.doesNotMatch(section, /asks for camera access|access to your photos/i);
+});
+
 test("Google Play's required statements are present and unambiguous", () => {
   assert.match(policy, /does not serve ads/i);
   assert.match(policy, /does not sell personal data/i);
 });
 
-test("the contact section is reachable, not just named", () => {
+test("the contact section is reachable and is named as the route for deletion requests", () => {
   assert.match(policy, /<a href="mailto:[^"]+@[^"]+">/);
+  const section = sectionBody("Contact");
+  assert.match(section, /delete workspace or job data/i);
 });
 
 /* -----------------------------------------------------------------------
@@ -84,35 +132,78 @@ test("the policy does not characterize what the third-party processors do with d
  *   Typography and theme
  * --------------------------------------------------------------------- */
 
-test("the policy takes the app's theme palettes but stays a standalone document - no app shell, no app script", () => {
-  assert.match(policy, /<link rel="stylesheet" href="\.\.\/theme\.css/);
-  assert.doesNotMatch(policy, /href="\.\.\/styles\.css/);
-  assert.doesNotMatch(policy, /src="\.\.\/app\.js/);
-  // Same base family as the app's body rule, so the two read as one site.
-  assert.match(policy, /font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;/);
+// Every other path on resin.tools is behind Cloudflare authentication. A
+// privacy policy has to render for someone with no account and no access to
+// the rest of the site - a Play reviewer, most obviously - so this page may
+// not depend on anything it does not carry itself.
+test("the page fetches nothing: no stylesheet, script, font, image or other asset outside /privacy/", () => {
+  assert.doesNotMatch(policy, /<script/i, "the page must work with no JavaScript at all");
+  assert.doesNotMatch(policy, /<img/i);
+  assert.doesNotMatch(policy, /@import/i);
+  assert.doesNotMatch(policy, /url\(/i, "no CSS may reference a file - background images and font files included");
+  assert.doesNotMatch(policy, /\.\.\//, "nothing may reach up out of /privacy/");
+  assert.doesNotMatch(policy, /<link rel="stylesheet"/i);
+  assert.match(policy, /<style>/, "the CSS has to be inline");
+
+  // Anything that would make the browser issue a request. Fragment and
+  // mailto targets never do; a data: URI carries its own payload. What is
+  // left has to be either a link in the policy's own prose or the link back
+  // to the app - navigation the reader chooses, not a load this page needs.
+  const allowed = new Set(["/", "https://supabase.com/privacy", "https://openai.com/policies/privacy-policy/"]);
+  const fetchable = [...policy.matchAll(/\b(?:src|srcset|poster|data|action|href)\s*=\s*"([^"]*)"/g)]
+    .map(match => match[1])
+    .filter(value => value && !/^(?:#|mailto:|data:)/.test(value));
+  for (const value of fetchable){
+    assert.ok(allowed.has(value), `${value} is a new outbound reference - only the app link and the two processors' privacy policies belong here`);
+  }
 });
 
-test("the policy reads the operator's saved theme from the same key the app writes, and honours exactly the themes applyTheme can produce", () => {
-  const sessionKey = app.match(/const LS_SESSION_KEY = "([^"]+)"/);
-  assert.ok(sessionKey, "expected app.js to define LS_SESSION_KEY");
-  assert.ok(
-    policy.includes(`localStorage.getItem("${sessionKey[1]}")`),
-    `the policy page should read ${sessionKey[1]}, the key app.js persists the theme under`
-  );
+test("the mark is drawn inline from the app's own path data, not fetched as an SVG file", () => {
+  assert.match(policy, /<svg class="docLogo" viewBox="0 0 196 104"/);
+  // Search from the logo, not the top of the file - the favicon's data: URI
+  // is itself an SVG, and closes before this one opens.
+  const logoStart = policy.indexOf('<svg class="docLogo"');
+  const logo = policy.slice(logoStart, policy.indexOf("</svg>", logoStart));
+  // The same five rhombus paths the app's header draws, so the two marks are
+  // the same shape rather than a hand-redrawn approximation.
+  for (const path of html.match(/<path class="rtLayer\w+" d="[^"]+"\/>/g).slice(0, 5)){
+    assert.ok(logo.includes(path), `expected the app's own ${path.match(/rtLayer\w+/)[0]} path`);
+  }
+});
 
-  // applyTheme() migrates every stored value onto one of these three; a theme
-  // this page accepts but the app can never produce would be a page that
-  // renders in a palette the operator has no way to see in the app itself.
-  const applyTheme = app.slice(app.indexOf("function applyTheme("), app.indexOf("function applyDensity("));
-  const appThemes = new Set([...applyTheme.matchAll(/\["[a-z-]+", "([a-z-]+)"\]/g)].map(match => match[1]));
-  const allowed = policy.match(/var ALLOWED = \[([^\]]+)\]/);
-  assert.ok(allowed, "expected the theme allowlist on the policy page");
-  const pageThemes = new Set([...allowed[1].matchAll(/"([a-z-]+)"/g)].map(match => match[1]));
-  assert.deepEqual([...pageThemes].sort(), [...appThemes].sort());
+test("typography stays the app's: system fonts only, same families the app sets", () => {
+  // Same base family as the app's body rule, so the two read as one site.
+  assert.match(policy, /font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;/);
+  assert.match(styles, /font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;/);
+  // No webfont of any kind - nothing to fetch, nothing to fall back from.
+  assert.doesNotMatch(policy, /@font-face|fonts\.googleapis|fonts\.gstatic/i);
+});
 
-  // Industrial Slate is applyTheme()'s fallback, so it is the markup default
-  // here too - the page must never render unstyled while the script runs.
-  assert.match(policy, /<html lang="en" data-theme="industrial-slate">/);
+// The palette is copied out of theme.css rather than linked, which means
+// nothing makes it follow along when a theme is retuned. This is the guard:
+// it re-reads theme.css and fails if any token here has drifted from the
+// Industrial Slate pair it was taken from.
+test("the inlined palette still matches Industrial Slate in theme.css", () => {
+  const light = pageTokens(policy.slice(0, policy.indexOf("@media (prefers-color-scheme: dark)")));
+  const dark = pageTokens(policy.slice(policy.indexOf("@media (prefers-color-scheme: dark)")));
+  assert.ok(Object.keys(light).length > 8, "expected the light palette inline on the page");
+  assert.ok(Object.keys(dark).length > 8, "expected a dark palette inline on the page");
+
+  assertMatchesTheme(light, "industrial-slate");
+  assertMatchesTheme(dark, "industrial-slate-dark");
+
+  // Every token the dark block overrides has to exist in the light block
+  // too, or that token falls back to a light value on a dark background.
+  for (const token of Object.keys(dark)){
+    assert.ok(token in light, `${token} is set for dark but never defined for light`);
+  }
+});
+
+test("light and dark follow the reader's own system setting, since there is no script to read a stored preference", () => {
+  assert.match(policy, /@media \(prefers-color-scheme: dark\)/);
+  assert.match(policy, /<meta name="color-scheme" content="light dark">/);
+  // No data-theme attribute to go stale against theme.css's selectors.
+  assert.match(policy, /<html lang="en">/);
 });
 
 /* -----------------------------------------------------------------------
@@ -154,6 +245,36 @@ test("the Help link's absolute URL keeps it out of build-www's allowlist, so the
 /* -----------------------------------------------------------------------
  *   Helpers
  * --------------------------------------------------------------------- */
+
+// Custom properties declared in a chunk of the policy page's inline CSS.
+function pageTokens(chunk){
+  const start = chunk.indexOf(":root{");
+  if (start === -1) return {};
+  const block = chunk.slice(start, chunk.indexOf("}", start));
+  return declarations(block);
+}
+
+// ...and in one of theme.css's palette blocks.
+function themeTokens(name){
+  const start = theme.indexOf(`[data-theme="${name}"]{`);
+  assert.notEqual(start, -1, `expected theme.css to still define ${name}`);
+  return declarations(theme.slice(start, theme.indexOf("}", start)));
+}
+
+function declarations(block){
+  const out = {};
+  for (const match of block.matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+);/g)) out[match[1]] = match[2].trim();
+  return out;
+}
+
+function assertMatchesTheme(tokens, name){
+  const source = themeTokens(name);
+  for (const [token, value] of Object.entries(tokens)){
+    // --radius-row comes from styles.css's density scale, not the palette.
+    if (!(token in source)) continue;
+    assert.equal(value, source[token], `${token} has drifted from ${name} in theme.css`);
+  }
+}
 
 function sectionBody(heading){
   const start = policy.indexOf(`<h2>${heading}</h2>`);
