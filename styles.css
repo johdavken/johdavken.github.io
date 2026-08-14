@@ -31,6 +31,13 @@
   --bad: #ff5c5c;
   --ok: #5dff9f;
 
+  /* Resin Totals has no dedicated --tile-accent elsewhere (it silently falls
+     back to the same focus-border blue as Timeline/Help) - this is only
+     consumed by the numbered-workflow step marker on the Main tile grid.
+     Derived from --ok (darkened, not reused as-is) so it tracks every theme
+     automatically and stays visually distinct from plain --ok green. */
+  --workflow-resin-totals: color-mix(in srgb, var(--ok) 75%, black 25%);
+
   --shadow2: 0 8px 20px rgba(0,0,0,.25);
   --radius2: 18px;
 
@@ -5373,6 +5380,7 @@ body[data-surface-style="divided"] .helpTopic{
   .workspaceNavButton[data-workspace-target="lineSetupBlock"]{ --tile-accent:var(--orange); }
   .workspaceNavButton[data-workspace-target="splitsBlock"]{ --tile-accent:var(--title); }
   .workspaceNavButton[data-workspace-target="resultsBlock"]{ --tile-accent:var(--focus-border); }
+  .workspaceNavButton[data-workspace-target="productionSummaryBlock"]{ --tile-accent:var(--workflow-resin-totals); }
   .workspaceNavButton[data-workspace-target="lineSyncBlock"]{ --tile-accent:var(--ok); }
   .workspaceNavButton[data-workspace-target="toolsBlock"]{ --tile-accent:var(--warn); }
   .workspaceNavButton[data-workspace-target="helpBlock"]{ --tile-accent:var(--focus-border); }
@@ -5940,6 +5948,7 @@ body[data-surface-style="divided"] .helpTopic{
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNavButton[data-workspace-target="lineSetupBlock"]{ --tile-accent:var(--gruv-orange); }
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNavButton[data-workspace-target="splitsBlock"]{ --tile-accent:var(--gruv-yellow); }
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNavButton[data-workspace-target="resultsBlock"]{ --tile-accent:var(--gruv-blue); }
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNavButton[data-workspace-target="productionSummaryBlock"]{ --tile-accent:var(--gruv-green); }
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNavButton[data-workspace-target="lineSyncBlock"]{ --tile-accent:var(--gruv-aqua); }
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNavButton[data-workspace-target="toolsBlock"]{ --tile-accent:var(--gruv-purple); }
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNavButton[data-workspace-target="helpBlock"]{ --tile-accent:var(--gruv-blue); }
@@ -6183,6 +6192,76 @@ body[data-surface-style="divided"] .helpTopic{
     color:var(--tile-accent);
   }
   .workspaceNavButton small{max-width:100%;font-size:10.5px}
+
+  /* Numbered-workflow step markers - Line Setup/Recipe/Timeline/Resin Totals
+     tiles only (the four carrying data-step in index.html). RT Sync/Tools/
+     Help keep the plain border-bottom divider above, untouched.
+
+     ONE horizontal rule per tile: the tile's own border-bottom is switched
+     off and re-drawn by ::after inset at the circle's vertical center, since
+     a border-bottom can only ever sit on the border-box edge and so cannot
+     be raised to meet the circle without pushing the circle out of the tile
+     and into the next grid row.
+
+     Two things this has to get right, both of which are load-bearing:
+       - The `body` + .workspaceNav prefix is deliberate. applyMobileTileStyle
+         in app.js always sets body[data-mobile-tile-style], so the
+         `body[data-mobile-tile-style] .workspaceNavButton` rule further up
+         (and its gruvbox :is() variant) outranks a bare
+         .workspaceNavButton[...] selector and would put the original divider
+         back, leaving two stacked lines.
+       - ::before is given z-index so the solid circle paints OVER ::after.
+         Without it the later-painted ::after draws its line straight across
+         the circle's face. The line starts at the circle's horizontal center
+         so the masked half leaves it emerging cleanly from the right edge,
+         with no seam and no gap.
+
+     Decorative only - no hover/focus/pressed styling of its own, and the
+     tile's click target is unchanged since the button still handles nav. */
+  body .workspaceNav .workspaceNavButton[data-step]{
+    position:relative;
+    border-bottom:0;
+    padding-bottom:32px;
+  }
+  body .workspaceNav .workspaceNavButton[data-step]::after{
+    content:"";
+    position:absolute;
+    left:13px;
+    right:0;
+    bottom:13px;
+    border-top:1px solid color-mix(in srgb,var(--tile-accent) 42%,var(--border));
+  }
+  body .workspaceNav .workspaceNavButton[data-step]::before{
+    content:attr(data-step);
+    position:absolute;
+    z-index:1;
+    left:0;
+    bottom:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:26px;
+    height:26px;
+    border-radius:50%;
+    background:var(--tile-accent);
+    color:#fff;
+    font-family:"Arial Narrow","Roboto Condensed",Impact,sans-serif;
+    font-size:15px;
+    font-weight:800;
+    line-height:1;
+    font-variant-numeric:tabular-nums;
+  }
+  /* Gruvbox only: knock the numeral out in the app background tone instead of
+     white, so the marker reads as part of the palette rather than sitting on
+     top of it. --bg is the canonical background token from theme.css (not
+     --gruv-mobile-bg, which carries the same value but only exists inside a
+     mobile media block). Circle fill, size, divider, and spacing are
+     untouched, and Industrial Slate light/dark keep the white numeral above.
+     Specificity here is (0,4,2) vs (0,3,2) for that rule, so this wins on
+     weight rather than on source order. */
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNav .workspaceNavButton[data-step]::before{
+    color:var(--bg);
+  }
 
   .footerBar{
     position:fixed;
