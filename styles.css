@@ -4674,6 +4674,28 @@ input.resinLookupDensity.copied[readonly]{
   .helpPlayBanner strong{ color: var(--title); font-size: var(--font-small); font-weight: 800; }
   .helpPlayBanner small{ color: var(--muted); font-size: var(--font-tiny); }
 }
+/* Sits under the topic list at every width, on the same measure as the guide
+   itself so it lines up with the topics above rather than with the panel
+   edge. Deliberately quiet - it is a reference link, not an operator
+   action. */
+.helpPrivacy{
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  width: 100%;
+  max-width: var(--help-page);
+  margin: 2px auto 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.helpPrivacyLink{
+  color: var(--focus-border);
+  font-size: var(--font-small);
+  font-weight: 700;
+}
+.helpPrivacyLink:focus-visible{ outline: 2px solid var(--focus-border); outline-offset: 2px; }
+.helpPrivacy small{ color: var(--muted); font-size: var(--font-tiny); }
 .helpTopics{
   display: grid;
   gap: 10px;

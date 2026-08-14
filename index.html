@@ -1496,6 +1496,16 @@
           </div>
         </details>
       </div>
+      <!-- Absolute URL on purpose, and the same target="_blank" treatment the
+           Play banner above uses: the bundled Android app has no /privacy/
+           page of its own, so this has to reach the published policy on
+           resin.tools and open outside the app shell rather than navigating
+           the WebView away from the app. It is also why build-www.js skips
+           it - its allowlist parser ignores anything with a scheme. -->
+      <div class="helpPrivacy">
+        <a class="helpPrivacyLink" href="https://resin.tools/privacy" target="_blank" rel="noopener">Privacy Policy</a>
+        <small>How Resin.Tools handles your data</small>
+      </div>
     </div>
   </details>
 
