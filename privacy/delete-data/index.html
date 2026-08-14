@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Request Data Deletion — Resin.Tools</title>
+  <meta name="description" content="How to remove Resin.Tools data: clearing local device data, deleting shared recipes and receiver weight profiles, leaving RT Sync, and requesting deletion of a workspace.">
+  <meta name="color-scheme" content="light dark">
+
+  <!-- Standalone for the same reason /privacy/ is: every other path on
+       resin.tools sits behind Cloudflare authentication, and a deletion
+       route has to be reachable by anyone with no account and nothing
+       shared to fetch. No stylesheet link, no script, no font or image
+       request - the palette is theme.css's Industrial Slate pair, inlined,
+       and the mark is inline SVG. The only file the browser loads is this
+       one. privacy-policy.test.js holds both pages to that. -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='14 10 62 80'><path d='m14 24 31-14 31 14-31 14Z' fill='%23dc2626'/><path d='m14 37 31-14 31 14-31 14Z' fill='%23718ba5'/><path d='m14 50 31-14 31 14-31 14Z' fill='%23d97706'/><path d='m14 63 31-14 31 14-31 14Z' fill='%2316a34a'/><path d='m14 76 31-14 31 14-31 14Z' fill='%23607d9b'/></svg>">
+
+  <style>
+    /* Industrial Slate, the app's default theme (theme.css). Only the tokens
+       this page actually uses are carried over. */
+    :root{
+      --bg: #f5f4f3;
+      --text: #29282b;
+      --title: #4f6d8b;
+      --muted: #666269;
+      --border: rgba(74,73,72,.17);
+      --row-bg: rgba(74,73,72,.055);
+      --row-border: rgba(96,125,155,.14);
+      --focus-border: rgba(96,125,155,.86);
+      --bg-glow-a: rgba(96,125,155,.07);
+      --bg-glow-b: rgba(96,125,155,.08);
+      --bad: #dc2626;
+      --orange: #718ba5;
+      --warn: #d97706;
+      --ok: #16a34a;
+      --radius-row: 16px;
+    }
+
+    /* Industrial Slate Dark. There is no script here to read the operator's
+       stored theme, so this follows the reader's own system setting. */
+    @media (prefers-color-scheme: dark){
+      :root{
+        --bg: #161b20;
+        --text: #dce4ea;
+        --title: #8aa8c2;
+        --muted: #a4b1bc;
+        --border: rgba(164,177,188,.18);
+        --row-bg: rgba(138,168,194,.055);
+        --row-border: rgba(138,168,194,.18);
+        --focus-border: rgba(138,168,194,.90);
+        --bg-glow-a: rgba(138,168,194,.09);
+        --bg-glow-b: rgba(104,124,142,.06);
+        --bad: #d66f72;
+        --orange: #9bb1c4;
+        --warn: #d6a85f;
+        --ok: #7eaf94;
+      }
+    }
+
+    *{ box-sizing: border-box; }
+
+    body{
+      min-height: 100vh;
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background:
+        radial-gradient(1200px 600px at 20% -10%, var(--bg-glow-a), transparent 60%),
+        radial-gradient(800px 500px at 90% 0%, var(--bg-glow-b), transparent 55%),
+        var(--bg);
+      color: var(--text);
+      font-size: 15px;
+      line-height: 1.6;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    main{
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 20px 18px 64px;
+    }
+
+    .docNav{
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding-bottom: 14px;
+      margin-bottom: 22px;
+      border-bottom: 1px solid var(--border);
+    }
+    /* The app's mark, drawn here rather than fetched. */
+    .docLogo{ display: block; width: 104px; height: auto; }
+    .docLogo .rtLayerRed{ fill: var(--bad); }
+    .docLogo .rtLayerOrange{ fill: var(--orange); }
+    .docLogo .rtLayerYellow{ fill: var(--warn); }
+    .docLogo .rtLayerGreen{ fill: var(--ok); }
+    .docLogo .rtLayerBlue{ fill: var(--focus-border); }
+    .docLogo .rtWord{
+      fill: var(--text);
+      font: 900 66px/1 ui-monospace, "Cascadia Mono", "Liberation Mono", monospace;
+      letter-spacing: -4px;
+    }
+    .docBack{ color: var(--muted); font-size: 13px; }
+
+    h1{
+      margin: 0 0 6px;
+      color: var(--title);
+      font-size: 26px;
+      font-weight: 800;
+      line-height: 1.25;
+    }
+    .docLede{ margin: 0 0 4px; }
+
+    h2{
+      margin: 34px 0 8px;
+      color: var(--title);
+      font-size: 17px;
+      font-weight: 800;
+      line-height: 1.3;
+    }
+
+    p{ margin: 0 0 12px; }
+    ul, ol{ margin: 0 0 12px; padding-left: 22px; }
+    li{ margin-bottom: 6px; }
+    li:last-child{ margin-bottom: 0; }
+    strong{ font-weight: 700; }
+
+    a{ color: var(--focus-border); text-underline-offset: 2px; }
+    a:hover{ color: var(--title); }
+    a:focus-visible{ outline: 2px solid var(--focus-border); outline-offset: 2px; border-radius: 3px; }
+
+    .docNote{
+      margin: 0 0 12px;
+      padding: 12px 14px;
+      border: 1px solid var(--row-border);
+      border-radius: var(--radius-row);
+      background: var(--row-bg);
+    }
+    .docNote p:last-child{ margin-bottom: 0; }
+
+    /* The contact route is the point of this page, so it is a block near the
+       top rather than a line at the bottom. */
+    .docContactCard{
+      margin: 18px 0 8px;
+      padding: 16px 18px;
+      border: 1px solid var(--row-border);
+      border-radius: var(--radius-row);
+      background: var(--row-bg);
+    }
+    .docContactLabel{
+      margin: 0 0 4px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .3px;
+      text-transform: uppercase;
+    }
+    .docContactAddress{
+      margin: 0;
+      font-size: 19px;
+      font-weight: 700;
+      overflow-wrap: anywhere;
+    }
+
+    footer{
+      margin-top: 40px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 600px){
+      main{ padding: 16px 14px 48px; }
+      h1{ font-size: 23px; }
+      h2{ font-size: 16px; }
+      .docLogo{ width: 92px; }
+      .docContactAddress{ font-size: 17px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <nav class="docNav">
+      <svg class="docLogo" viewBox="0 0 196 104" role="img" aria-label="Resin.Tools">
+        <g transform="translate(5 6)">
+          <path class="rtLayerRed" d="m14 24 31-14 31 14-31 14Z"/>
+          <path class="rtLayerOrange" d="m14 37 31-14 31 14-31 14Z"/>
+          <path class="rtLayerYellow" d="m14 50 31-14 31 14-31 14Z"/>
+          <path class="rtLayerGreen" d="m14 63 31-14 31 14-31 14Z"/>
+          <path class="rtLayerBlue" d="m14 76 31-14 31 14-31 14Z"/>
+        </g>
+        <text class="rtWord" x="89" y="83" font-size="66">RT</text>
+      </svg>
+      <a class="docBack" href="/privacy/">Privacy Policy</a>
+    </nav>
+
+    <h1>Request Data Deletion</h1>
+
+    <p class="docLede">Most Resin.Tools data can be removed by you, from the device or from inside the app. Workspace data shared across a line has to be removed by us, because deleting a whole workspace is an administrator action.</p>
+
+    <div class="docContactCard">
+      <p class="docContactLabel">Deletion requests</p>
+      <p class="docContactAddress"><a href="mailto:johdavken@protonmail.com">johdavken@protonmail.com</a></p>
+    </div>
+
+    <h2>What you can remove yourself</h2>
+
+    <p><strong>Data on your device.</strong> Clear site data for resin.tools in your browser, or clear storage for Resin Tools in Android settings. That removes the locally held job and setup data — line rate, recipes, receiver hopper weights, production values, tracking state, display preferences, locally saved configurations, and the cached resin catalog — from that device.</p>
+
+    <p><strong>Shared recipes and receiver weight profiles.</strong> Select the saved recipe or receiver weight profile in Resin.Tools, open its <strong>⋯</strong> menu, and choose <strong>Delete</strong>. It is removed from the shared workspace for every member, not just from your device.</p>
+
+    <p><strong>RT Sync membership.</strong> The <strong>Leave RT Sync</strong> control removes this device's membership of the workspace. Your local Resin.Tools data is preserved, and the workspace itself is not deleted — it stays with the members who remain.</p>
+
+    <h2>What to ask us to remove</h2>
+
+    <p><strong>A workspace and its shared job data.</strong> Email the address above. Deleting a workspace removes the data owned by that workspace, including its shared active job, saved setups, shared recipes and receiver weight profiles, and the membership records for every device that joined it.</p>
+
+    <p>So the right workspace can be identified, include what you know of:</p>
+    <ul>
+      <li>The workspace name</li>
+      <li>The line it represents</li>
+      <li>The device label shown for your device, if you know it</li>
+    </ul>
+
+    <div class="docNote">
+      <p>That is all that is needed. Please do not send personal details, account credentials, or production documents — none of them help identify a workspace.</p>
+    </div>
+
+    <h2>Scan Recipe images</h2>
+
+    <p>There is nothing to delete. A photo submitted through Scan Recipe is processed for that scan and returned to your device as a draft; the scan function does not save the image or the extracted result to the Resin.Tools database. This is described in full under Scan Recipe in the <a href="/privacy/">Privacy Policy</a>.</p>
+
+    <h2>What clearing your device does not remove</h2>
+
+    <p>Clearing browser or app storage discards that device's RT Sync session credential. It does not remove the anonymous authentication record held in Supabase, and it does not remove anything already stored in a shared workspace — that data belongs to the workspace, not to your device. Use the sections above for either of those.</p>
+
+    <footer>Resin.Tools — <a href="/privacy/">Privacy Policy</a></footer>
+  </main>
+</body>
+</html>

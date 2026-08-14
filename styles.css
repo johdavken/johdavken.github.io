@@ -4695,6 +4695,7 @@ input.resinLookupDensity.copied[readonly]{
   font-weight: 700;
 }
 .helpPrivacyLink:focus-visible{ outline: 2px solid var(--focus-border); outline-offset: 2px; }
+.helpPrivacySep{ color: var(--muted); font-size: var(--font-small); }
 .helpPrivacy small{ color: var(--muted); font-size: var(--font-tiny); }
 .helpTopics{
   display: grid;

@@ -6,6 +6,7 @@ const fs = require("node:fs");
 const { localRuntimeReferences } = require("./scripts/build-www.js");
 
 const policy = fs.readFileSync("privacy/index.html", "utf8");
+const deletion = fs.readFileSync("privacy/delete-data/index.html", "utf8");
 const html = fs.readFileSync("index.html", "utf8");
 const styles = fs.readFileSync("styles.css", "utf8");
 const theme = fs.readFileSync("theme.css", "utf8");
@@ -136,27 +137,47 @@ test("the policy does not characterize what the third-party processors do with d
 // privacy policy has to render for someone with no account and no access to
 // the rest of the site - a Play reviewer, most obviously - so this page may
 // not depend on anything it does not carry itself.
-test("the page fetches nothing: no stylesheet, script, font, image or other asset outside /privacy/", () => {
-  assert.doesNotMatch(policy, /<script/i, "the page must work with no JavaScript at all");
-  assert.doesNotMatch(policy, /<img/i);
-  assert.doesNotMatch(policy, /@import/i);
-  assert.doesNotMatch(policy, /url\(/i, "no CSS may reference a file - background images and font files included");
-  assert.doesNotMatch(policy, /\.\.\//, "nothing may reach up out of /privacy/");
-  assert.doesNotMatch(policy, /<link rel="stylesheet"/i);
-  assert.match(policy, /<style>/, "the CSS has to be inline");
-
-  // Anything that would make the browser issue a request. Fragment and
-  // mailto targets never do; a data: URI carries its own payload. What is
-  // left has to be either a link in the policy's own prose or the link back
-  // to the app - navigation the reader chooses, not a load this page needs.
-  const allowed = new Set(["/", "https://supabase.com/privacy", "https://openai.com/policies/privacy-policy/"]);
-  const fetchable = [...policy.matchAll(/\b(?:src|srcset|poster|data|action|href)\s*=\s*"([^"]*)"/g)]
-    .map(match => match[1])
-    .filter(value => value && !/^(?:#|mailto:|data:)/.test(value));
-  for (const value of fetchable){
-    assert.ok(allowed.has(value), `${value} is a new outbound reference - only the app link and the two processors' privacy policies belong here`);
+const PUBLIC_PAGES = [
+  {
+    label: "/privacy/",
+    source: policy,
+    // Anything that would make the browser issue a request. Fragment and
+    // mailto targets never do; a data: URI carries its own payload. What is
+    // left has to be navigation the reader chooses - the app, the deletion
+    // page, or the two processors' own policies - not a load this page needs.
+    allowed: ["/", "/privacy/delete-data/", "https://supabase.com/privacy", "https://openai.com/policies/privacy-policy/"]
+  },
+  {
+    label: "/privacy/delete-data/",
+    source: deletion,
+    allowed: ["/privacy/"]
   }
-});
+];
+
+for (const page of PUBLIC_PAGES){
+  test(`${page.label} fetches nothing: no stylesheet, script, font, image or other asset`, () => {
+    assert.doesNotMatch(page.source, /<script/i, "the page must work with no JavaScript at all");
+    assert.doesNotMatch(page.source, /<img/i);
+    assert.doesNotMatch(page.source, /@import/i);
+    assert.doesNotMatch(page.source, /url\(/i, "no CSS may reference a file - background images and font files included");
+    assert.doesNotMatch(page.source, /\.\.\//, "nothing may reach up out of /privacy/");
+    assert.doesNotMatch(page.source, /<link rel="stylesheet"/i);
+    assert.match(page.source, /<style>/, "the CSS has to be inline");
+
+    const allowed = new Set(page.allowed);
+    const fetchable = [...page.source.matchAll(/\b(?:src|srcset|poster|data|action|href)\s*=\s*"([^"]*)"/g)]
+      .map(match => match[1])
+      .filter(value => value && !/^(?:#|mailto:|data:)/.test(value));
+    for (const value of fetchable){
+      assert.ok(allowed.has(value), `${value} is a new outbound reference on ${page.label}`);
+    }
+  });
+
+  test(`${page.label} makes no encryption, retention or deletion-timing promise`, () => {
+    assert.doesNotMatch(page.source, /encrypt/i);
+    assert.doesNotMatch(page.source, /\b(guarantee|permanently delet|retention period|retained for|deleted within|deleted after|within \d+ (hours|days))/i);
+  });
+}
 
 test("the mark is drawn inline from the app's own path data, not fetched as an SVG file", () => {
   assert.match(policy, /<svg class="docLogo" viewBox="0 0 196 104"/);
@@ -207,6 +228,68 @@ test("light and dark follow the reader's own system setting, since there is no s
 });
 
 /* -----------------------------------------------------------------------
+ *   The deletion page
+ * --------------------------------------------------------------------- */
+
+test("the deletion page is served at /privacy/delete-data/ and leads with the request heading", () => {
+  assert.ok(fs.existsSync("privacy/delete-data/index.html"), "expected privacy/delete-data/index.html");
+  assert.match(deletion, /<title>Request Data Deletion[^<]*<\/title>/);
+  assert.match(deletion, /<h1>Request Data Deletion<\/h1>/);
+});
+
+test("the deletion page covers every removal route, and only routes that exist", () => {
+  // Self-service, in the order the page presents them.
+  assert.match(deletion, /Clear site data for resin\.tools/i);
+  assert.match(deletion, /Select the saved recipe or receiver weight profile[\s\S]{0,160}Delete<\/strong>/i);
+  assert.match(deletion, /Leave RT Sync<\/strong> control removes this device's membership/i);
+  // Deleting a whole workspace is admin-only - admin_delete_line_workspace is
+  // revoked from ordinary members - so the page must route it through contact
+  // rather than implying an in-app control.
+  assert.match(deletion, /Email the address above/i);
+  assert.match(deletion, /administrator action/i);
+});
+
+test("the deletion page's contact address is the one the Privacy Policy already publishes", () => {
+  const address = policy.match(/<a href="mailto:([^"]+)">/);
+  assert.ok(address, "expected a contact address on the Privacy Policy");
+  assert.match(deletion, new RegExp(`<a href="mailto:${address[1].replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}">`));
+});
+
+test("the deletion page asks only for what identifies a workspace, not for personal details", () => {
+  assert.match(deletion, /workspace name/i);
+  assert.match(deletion, /device label/i);
+  assert.match(deletion, /do not send personal details/i);
+});
+
+test("the deletion page repeats the Scan Recipe position without contradicting the policy", () => {
+  assert.match(deletion, /does not save the image or the extracted result to the Resin\.Tools database/);
+  assert.ok(
+    policy.includes("does not save the image or the extracted result to the Resin.Tools database"),
+    "the two pages must state the Scan Recipe position in the same words"
+  );
+});
+
+test("the deletion page is honest about what clearing a device does not reach", () => {
+  assert.match(deletion, /does not remove the anonymous authentication record/i);
+  assert.match(deletion, /does not remove anything already stored in a shared workspace/i);
+});
+
+test("the two public pages link to each other", () => {
+  assert.match(deletion, /href="\/privacy\/"/, "the deletion page must link back to the policy");
+  const removing = sectionBody("Removing data");
+  assert.match(removing, /href="\/privacy\/delete-data\/"/, "Removing data must link to the deletion page");
+});
+
+test("the deletion page carries the same inlined Industrial Slate palette as the policy", () => {
+  const light = pageTokens(deletion.slice(0, deletion.indexOf("@media (prefers-color-scheme: dark)")));
+  const dark = pageTokens(deletion.slice(deletion.indexOf("@media (prefers-color-scheme: dark)")));
+  assertMatchesTheme(light, "industrial-slate");
+  assertMatchesTheme(dark, "industrial-slate-dark");
+  assert.match(deletion, /font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;/);
+  assert.match(deletion, /<svg class="docLogo" viewBox="0 0 196 104"/);
+});
+
+/* -----------------------------------------------------------------------
  *   Reaching it from the app
  * --------------------------------------------------------------------- */
 
@@ -224,11 +307,17 @@ test("Help carries a Privacy Policy link, inside the guide body rather than buri
   const block = guide.slice(start, guide.indexOf("</div>", start));
   assert.match(block, /href="https:\/\/resin\.tools\/privacy"/);
   assert.match(block, />Privacy Policy</);
+  // The deletion route sits beside it as a second plain link, not a button
+  // and not a section of its own.
+  assert.match(block, /href="https:\/\/resin\.tools\/privacy\/delete-data\/"/);
+  assert.match(block, />Delete Data</);
+  assert.equal((block.match(/class="helpPrivacyLink"/g) || []).length, 2);
+  assert.doesNotMatch(block, /<button/);
   // Same treatment as the Play banner above it: the bundled Android app has
-  // no local copy of this page, so it must open outside the app shell rather
-  // than navigating the WebView off the app.
-  assert.match(block, /target="_blank"/);
-  assert.match(block, /rel="noopener"/);
+  // no local copy of these pages, so they must open outside the app shell
+  // rather than navigating the WebView off the app.
+  assert.equal((block.match(/target="_blank"/g) || []).length, 2);
+  assert.equal((block.match(/rel="noopener"/g) || []).length, 2);
 });
 
 test("the Help link renders at every width - it is not gated behind a mobile-only or desktop-only rule", () => {
