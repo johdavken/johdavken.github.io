@@ -317,7 +317,7 @@
   #lineSetupBlock .weightsSmartHow{position:relative;flex:0 0 auto}
   #lineSetupBlock .weightsSmartHow > summary{padding:3px 5px;color:var(--focus-border);font-size:var(--desktop-type-label);font-weight:750;white-space:nowrap}
   #lineSetupBlock .weightsSmartHow > p{position:absolute;top:calc(100% + 5px);right:0;z-index:30;width:min(360px,50vw);margin:0;padding:9px 10px;border:1px solid var(--border2);border-radius:var(--control-radius);background:var(--panelOpen);box-shadow:var(--shadow2)}
-  #weightsArea{display:grid;grid-template-rows:auto minmax(0,1fr) auto auto;gap:6px;width:min(100%,1100px);height:100%;max-height:100%;min-height:0;margin-top:0!important;overflow:hidden}
+  #weightsArea{display:grid;grid-template-rows:auto minmax(0,1fr) auto auto;gap:6px;width:min(100%,1100px);height:100%;max-height:100%;min-height:0;margin-top:0!important;overflow:hidden;container-type:inline-size}
   .desktopWeightsControls{display:grid;grid-template-columns:minmax(170px,1fr) minmax(145px,190px) auto;align-items:center;gap:8px;min-width:0}
   .desktopWeightsSmartControl{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;padding:6px 8px;border:1px solid var(--row-border-2);border-radius:var(--control-radius);background:var(--row-bg-2)}
   .desktopWeightsSmartControl strong{display:block;color:var(--text);font-size:var(--desktop-type-control)}
@@ -346,11 +346,27 @@
   .desktopWeightsViewToggle{justify-content:flex-end;white-space:nowrap}
   .desktopWeightsViewToggle button{border-radius:var(--control-radius)}
 
+  /* The Setup card can become much narrower than the viewport when its
+     configuration rail is visible. Before the Smart Hoppers control's
+     state/toggle can intrude on the shared-circumference field, move the
+     view selector to a second row. */
+  @container (max-width: 760px){
+    .desktopWeightsControls{grid-template-columns:minmax(0,1fr) minmax(145px,190px)}
+    .desktopWeightsViewToggle{grid-column:1 / -1}
+  }
+  @container (max-width: 500px){
+    .desktopWeightsControls{grid-template-columns:minmax(0,1fr)}
+    .desktopWeightsViewToggle{justify-content:flex-start}
+  }
+
   .weightsMatrixScroll{height:100%;min-width:0;min-height:0;overflow:auto}
   .weightsMatrixFrame{width:100%;height:100%;max-width:100%;margin:0;overflow:auto;border-radius:var(--control-radius)}
-  #weightsArea:not([data-desktop-bulk-mode="true"]){grid-template-rows:auto auto auto 0;align-content:start}
-  #weightsArea:not([data-desktop-bulk-mode="true"]) .weightsMatrixScroll,
-  #weightsArea:not([data-desktop-bulk-mode="true"]) .weightsMatrixFrame{height:auto}
+  /* Bulk editing adds its context panel after the action toolbar. Keep the
+     matrix content-height in both modes so enabling it cannot consume the
+     entire available panel height and strand that context panel below it. */
+  #weightsArea{grid-template-rows:auto auto auto auto;align-content:start}
+  #weightsArea .weightsMatrixScroll,
+  #weightsArea .weightsMatrixFrame{height:auto}
   .weightsMatrix{width:100%;min-width:620px;table-layout:fixed}
   .weightsMatrix th,.weightsMatrix td{padding:3px 5px}
   .weightsMatrix th:first-child{width:48px;min-width:48px}
@@ -392,9 +408,9 @@
     --gruv-rail-recipe:#fabd2f;
     --gruv-rail-timeline:#ebdbb2;
     --gruv-rail-totals:#b8bb26;
-    --gruv-rail-sync:#8ec07c;
+    --gruv-rail-sync:#ebdbb2;
     --gruv-rail-tools:#d3869b;
-    --gruv-rail-help:#83a598;
+    --gruv-rail-help:#ebdbb2;
     display:grid;
     position:sticky;
     align-content:start;
@@ -413,9 +429,9 @@
     --gruv-rail-recipe:#b57614;
     --gruv-rail-timeline:#3c3836;
     --gruv-rail-totals:#79740e;
-    --gruv-rail-sync:#427b58;
+    --gruv-rail-sync:#fbf1c7;
     --gruv-rail-tools:#8f3f71;
-    --gruv-rail-help:#076678;
+    --gruv-rail-help:#fbf1c7;
     background:#ebdbb2;
     box-shadow:none;
   }
@@ -475,6 +491,18 @@
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .resinToolsSidebarIcon .rtLayerYellow{color:var(--gruv-rail-recipe);stroke:var(--gruv-rail-recipe)}
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .resinToolsSidebarIcon .rtLayerGreen{color:var(--gruv-rail-totals);stroke:var(--gruv-rail-totals)}
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .resinToolsSidebarIcon .rtLayerBlue{color:var(--gruv-rail-help);stroke:var(--gruv-rail-help)}
+  /* The sidebar uses its own rail tokens, but the brand mark itself always
+     retains Gruvbox's complete five-color animation. */
+  body[data-theme="gruvbox-dark"] .resinToolsSidebarIcon .rtLayerRed{color:#fb4934;stroke:#fb4934}
+  body[data-theme="gruvbox-dark"] .resinToolsSidebarIcon .rtLayerOrange{color:#fe8019;stroke:#fe8019}
+  body[data-theme="gruvbox-dark"] .resinToolsSidebarIcon .rtLayerYellow{color:#fabd2f;stroke:#fabd2f}
+  body[data-theme="gruvbox-dark"] .resinToolsSidebarIcon .rtLayerGreen{color:#b8bb26;stroke:#b8bb26}
+  body[data-theme="gruvbox-dark"] .resinToolsSidebarIcon .rtLayerBlue{color:#83a598;stroke:#83a598}
+  body[data-theme="industrial-slate"] .resinToolsSidebarIcon .rtLayerRed{color:#dc2626;stroke:#dc2626}
+  body[data-theme="industrial-slate"] .resinToolsSidebarIcon .rtLayerOrange{color:#d97706;stroke:#d97706}
+  body[data-theme="industrial-slate"] .resinToolsSidebarIcon .rtLayerYellow{color:#d6a85f;stroke:#d6a85f}
+  body[data-theme="industrial-slate"] .resinToolsSidebarIcon .rtLayerGreen{color:#16a34a;stroke:#16a34a}
+  body[data-theme="industrial-slate"] .resinToolsSidebarIcon .rtLayerBlue{color:#607d9b;stroke:#607d9b}
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .resinToolsSidebarIcon .rtWord{fill:var(--gruv-rail-paper)}
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .workspaceNavButton{
     min-height:55px;
@@ -543,13 +571,24 @@
   .desktopWeightsActionToolbar button svg{width:17px;height:17px;fill:none;stroke:var(--focus-border);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
   .desktopWeightsActionToolbar button:hover,.desktopWeightsActionToolbar button:focus-visible,.desktopWeightsActionToolbar button.active{background:var(--focus-ring);outline:0}
   .desktopWeightsActionToolbar button:focus-visible{box-shadow:inset 0 0 0 2px var(--focus-border)}
-  .desktopWeightsBulkContext{grid-template-columns:minmax(120px,1fr) minmax(120px,1fr) minmax(155px,auto);gap:8px;padding:7px 9px;border-radius:var(--control-radius)}
+  /* Line Setup uses Recipe Setup's utility-tab and attached-panel pattern
+     for Weight Profiles and Bulk edit. */
+  .desktopWeightsActionToolbar.recipeUtilityTabs{display:flex;align-items:flex-end;gap:3px;margin:10px 0 0;padding:0 2px 0 6px;border:0;border-bottom:1px solid var(--row-border);border-radius:0;background:transparent;overflow:visible}
+  .desktopWeightsActionToolbar.recipeUtilityTabs .recipeUtilityTab{display:inline-flex;align-items:center;gap:7px;min-height:26px;padding:5px 12px 4px;border:1px solid transparent;border-bottom:0;border-radius:var(--control-radius) var(--control-radius) 0 0;background:transparent;color:var(--muted);font-size:var(--font-tiny);font-weight:700;line-height:1.2}
+  .desktopWeightsActionToolbar.recipeUtilityTabs .recipeUtilityTab:hover{background:color-mix(in srgb,var(--text) 5%,transparent);color:var(--title)}
+  .desktopWeightsActionToolbar.recipeUtilityTabs .recipeUtilityTab.active{z-index:1;border-color:var(--row-border);background:var(--readonly-bg);color:var(--title);font-weight:800;box-shadow:0 1px 0 0 var(--readonly-bg)}
+  #lineSetupBlock #weightsArea #setupWeightProfilesBlock{display:block!important;margin-top:-7px;padding:10px;border:1px solid var(--row-border);border-radius:var(--radius-row);background:var(--readonly-bg)}
+  #lineSetupBlock #weightsArea #setupWeightProfilesBlock[hidden]{display:none!important}
+  #lineSetupBlock #weightsArea #setupWeightProfilesBlock > summary{display:none}
+  #lineSetupBlock #weightsArea #setupWeightProfilesBlock > .blockBody{display:block!important;padding:0}
+  .desktopWeightsBulkContext{grid-template-columns:minmax(120px,1fr) minmax(120px,1fr) minmax(155px,auto);gap:8px;margin-top:-7px;padding:10px;border-radius:var(--radius-row)}
   .desktopWeightsBulkContext[hidden]{display:none!important}
   .desktopWeightsBulkContext .weightsBulkActions{grid-column:1/-1;padding-top:3px}
   .desktopWeightsBulkContext #doneBulkWeights{margin-left:auto;color:var(--focus-border);font-weight:850}
   .desktopWeightsBulkContext .weightsBulkApply{grid-template-columns:minmax(0,1fr) auto;align-items:end}
   .desktopWeightsBulkContext .weightsBulkApply button{width:auto;min-height:30px;padding:4px 9px}
   .desktopWeightsBulkContext .weightsInputWithUnit input{font-size:14px;font-weight:800}
+  .desktopWeightsBulkContext .weightsBulkSteps{gap:18px;padding-bottom:8px;border-bottom:1px solid var(--row-border)}
 
   /* Profiles use the same bounded overlay on desktop, with a centered
      surface and an internally scrolling list. */

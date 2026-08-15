@@ -85,6 +85,14 @@
 
 }
 
+/* The regular Light theme's brand mark is intentionally a full spectrum,
+   rather than inheriting the red/neutral UI accents used by its controls. */
+:where(html, body)[data-theme="light"] :is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerRed{color:#dc2626;stroke:#dc2626}
+:where(html, body)[data-theme="light"] :is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerOrange{color:#f97316;stroke:#f97316}
+:where(html, body)[data-theme="light"] :is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerYellow{color:#eab308;stroke:#eab308}
+:where(html, body)[data-theme="light"] :is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerGreen{color:#16a34a;stroke:#16a34a}
+:where(html, body)[data-theme="light"] :is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerBlue{color:#5f7f9e;stroke:#5f7f9e}
+
 /* ----------------------------------------------------------------------- * Industrial Slate * ----------------------------------------------------------------------- */
 :where(html, body)[data-theme="industrial-slate"]{
   color-scheme: light;
@@ -137,6 +145,15 @@
   --footer-bg: rgba(238,242,245,.96);
   --footer-border: rgba(74,73,72,.17);
 }
+
+/* Industrial Slate's UI intentionally reuses slate accents, but its RT
+   mark must retain distinct process-layer colors rather than collapsing
+   yellow and green into the rail's blue token. */
+:where(html, body)[data-theme="industrial-slate"] .resinToolsLogo .rtLayerRed{color:#dc2626;stroke:#dc2626}
+:where(html, body)[data-theme="industrial-slate"] .resinToolsLogo .rtLayerOrange{color:#d97706;stroke:#d97706}
+:where(html, body)[data-theme="industrial-slate"] .resinToolsLogo .rtLayerYellow{color:#d6a85f;stroke:#d6a85f}
+:where(html, body)[data-theme="industrial-slate"] .resinToolsLogo .rtLayerGreen{color:#16a34a;stroke:#16a34a}
+:where(html, body)[data-theme="industrial-slate"] .resinToolsLogo .rtLayerBlue{color:#607d9b;stroke:#607d9b}
 
 /* ----------------------------------------------------------------------- * Industrial Slate Dark * ----------------------------------------------------------------------- */
 :where(html, body)[data-theme="industrial-slate-dark"]{
@@ -201,8 +218,8 @@
   --text: #ebdbb2;
   --title: #fb4934;
   --subtitle: #689d6a;
-  --muted: #83a598;
-  --fg: #83a598;
+  --muted: #ebdbb2;
+  --fg: #ebdbb2;
   --yellow: #fb4934;
   --orange: #689d6a;
   --logo-i: #689d6a;
@@ -216,8 +233,8 @@
   --bad: #cc241d;
   --ok: #689d6a;
   --shadow2: 0 9px 24px rgba(0,0,0,.42);
-  --focus-border: rgba(131,165,152,.88);
-  --focus-ring: rgba(131,165,152,.18);
+  --focus-border: rgba(235,219,178,.88);
+  --focus-ring: rgba(235,219,178,.18);
   --row-bg: rgba(189,174,147,.045);
   --row-border: rgba(102,92,84,.38);
   --row-bg-2: rgba(29,32,33,.34);
@@ -226,26 +243,52 @@
   --readonly-border: rgba(80,73,69,.62);
   --f-var1: #689d6a;
   --f-var2: #d79921;
-  --f-var3: #83a598;
+  --f-var3: #ebdbb2;
   --f-const: #bdae93;
   --btn-text: var(--text);
   --btn-border: rgba(102,92,84,.72);
-  --btn-primary-a: rgba(69,133,136,.30);
-  --btn-primary-b: rgba(69,133,136,.14);
+  --btn-primary-a: rgba(235,219,178,.30);
+  --btn-primary-b: rgba(235,219,178,.14);
   --btn-secondary-bg: rgba(104,157,106,.15);
   --btn-secondary-border: rgba(104,157,106,.36);
   --btn-danger-bg: rgba(204,36,29,.14);
   --btn-danger-border: rgba(204,36,29,.34);
-  --bg-glow-a: rgba(69,133,136,.08);
+  --bg-glow-a: rgba(235,219,178,.08);
   --bg-glow-b: rgba(215,153,33,.055);
-  --card-glow-a: rgba(69,133,136,.08);
+  --card-glow-a: rgba(235,219,178,.08);
   --card-glow-b: rgba(184,187,38,.05);
-  --toggle-on-bg: rgba(69,133,136,.28);
-  --toggle-on-border: rgba(131,165,152,.52);
+  --toggle-on-bg: rgba(235,219,178,.28);
+  --toggle-on-border: rgba(235,219,178,.52);
   --footer-bg: rgba(29,32,33,.96);
   --footer-border: rgba(80,73,69,.72);
 
 }
+
+/* Recipe matrix: paper-white controls replace Gruvbox's blue/aqua accent;
+   hopper designations use the palette's unmistakable orange. */
+:where(html, body)[data-theme="gruvbox-dark"] #splitsBlock :is(
+  .splitCopyBtn,
+  .splitCopyBtn:hover,
+  .splitCopyBtn:focus-visible,
+  .splitTrackButton:hover,
+  .splitTrackButton.active,
+  .resinNameInput,
+  .splitPctControl input,
+  .splitPctControl > span,
+  .splitLayerPct input,
+  .splitLayerPct span,
+  .splitColumnTotal
+){ color: #ebdbb2; }
+:where(html, body)[data-theme="gruvbox-dark"] #splitsBlock .splitCellHopperName,
+:where(html, body)[data-theme="gruvbox-dark"] #splitsBlock .splitCellHopperName.smart{ color: #fe8019; }
+
+/* Gruvbox's animated mark keeps the complete terminal palette even where
+   shared interface accents have been remapped for contrast. */
+:where(html, body)[data-theme="gruvbox-dark"] .resinToolsLogo .rtLayerRed{color:#fb4934;stroke:#fb4934}
+:where(html, body)[data-theme="gruvbox-dark"] .resinToolsLogo .rtLayerOrange{color:#fe8019;stroke:#fe8019}
+:where(html, body)[data-theme="gruvbox-dark"] .resinToolsLogo .rtLayerYellow{color:#fabd2f;stroke:#fabd2f}
+:where(html, body)[data-theme="gruvbox-dark"] .resinToolsLogo .rtLayerGreen{color:#b8bb26;stroke:#b8bb26}
+:where(html, body)[data-theme="gruvbox-dark"] .resinToolsLogo .rtLayerBlue{color:#83a598;stroke:#83a598}
 
 /* ----------------------------------------------------------------------- * Gruvbox Light (primary = blue, secondary = orange) * ----------------------------------------------------------------------- */
 :where(html, body)[data-theme="gruvbox-light"]{
@@ -260,7 +303,7 @@
 
 /* bg2 */
   --text: #665c54;
-  --title: #2f6f72;
+  --title: #fbf1c7;
 
 /* blue */
   --subtitle: #a34400;
@@ -289,14 +332,14 @@
   --readonly-border: rgba(102,92,84,.25);
   --f-var1: #98971a;
   --f-var2: #d79921;
-  --f-var3: #458588;
+  --f-var3: #fbf1c7;
   --f-const: #928374;
   --btn-text: var(--text);
   --btn-border: rgba(102,92,84,.28);
-  --btn-primary-a: rgba(69,133,136,.22);
+  --btn-primary-a: rgba(251,241,199,.22);
 
 /* blue */
-  --btn-primary-b: rgba(69,133,136,.10);
+  --btn-primary-b: rgba(251,241,199,.10);
   --btn-secondary-bg: rgba(214,93,14,.16);
 
 /* orange */
@@ -313,6 +356,22 @@
   --footer-border: rgba(102,92,84,.28);
 
 }
+
+:where(html, body)[data-theme="gruvbox-light"] #splitsBlock :is(
+  .splitCopyBtn,
+  .splitCopyBtn:hover,
+  .splitCopyBtn:focus-visible,
+  .splitTrackButton:hover,
+  .splitTrackButton.active,
+  .resinNameInput,
+  .splitPctControl input,
+  .splitPctControl > span,
+  .splitLayerPct input,
+  .splitLayerPct span,
+  .splitColumnTotal
+){ color: #fbf1c7; }
+:where(html, body)[data-theme="gruvbox-light"] #splitsBlock .splitCellHopperName,
+:where(html, body)[data-theme="gruvbox-light"] #splitsBlock .splitCellHopperName.smart{ color: #af3a03; }
 
 /* ----------------------------------------------------------------------- * Nord * ----------------------------------------------------------------------- */
 :where(html, body)[data-theme="nord"]{

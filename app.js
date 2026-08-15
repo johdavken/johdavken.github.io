@@ -370,7 +370,7 @@
     sheet.tabIndex=-1;
     sheet.innerHTML=`
       <button type="button" class="mobileSavedRecipesGrabber" aria-label="Close receiver weight profiles"></button>
-      <header class="mobileSavedRecipesHeader"><div><strong id="mobileWeightProfilesTitle">Receiver weight profiles</strong><small>Shared with this RT Sync workspace</small></div></header>
+      <header class="mobileSavedRecipesHeader"><div><strong id="mobileWeightProfilesTitle">Weight profiles</strong><small>Shared with this RT Sync workspace</small></div></header>
       <div class="mobileSavedRecipesTools"><label><span class="srOnly">Search receiver weight profiles</span><input id="mobileWeightProfilesSearch" type="search" placeholder="Search profiles" autocomplete="off" /></label><button id="mobileWeightProfilesSave" type="button">Save current weights</button></div>
       <div id="mobileWeightProfilesStatus" class="mobileSavedRecipesStatus" role="status" hidden></div>
       <div id="mobileWeightProfilesList" class="mobileSavedRecipesList"></div>`;
@@ -2213,7 +2213,7 @@
       profilesAction.className = "mobileWeightsProfilesAction";
       profilesAction.setAttribute("aria-expanded", "false");
       profilesAction.setAttribute("aria-label", "Open receiver weight profiles");
-      profilesAction.innerHTML = '<span>Profiles</span><svg viewBox="0 0 28 28" aria-hidden="true"><path d="M7 4h14l3 5v14l-4 3H8l-4-3V9z"/><path d="M9 12h10M9 16h10M9 20h6"/></svg>';
+      profilesAction.innerHTML = '<span>Weight Profiles</span><svg viewBox="0 0 28 28" aria-hidden="true"><path d="M7 4h14l3 5v14l-4 3H8l-4-3V9z"/><path d="M9 12h10M9 16h10M9 20h6"/></svg>';
       const bulkToggleRow = document.createElement("button");
       bulkToggleRow.type = "button";
       bulkToggleRow.id = "mobileWeightsBulkToggle";
@@ -2365,6 +2365,13 @@
     function renderWeightsArea(){
       const area = $("weightsArea");
       if (!area) return;
+      // Desktop temporarily places the shared Weight Profiles element inside
+      // this area so it can behave like Recipe's attached utility panels.
+      // Preserve that real DOM node before rebuilding the weights grid; an
+      // innerHTML clear would otherwise detach it permanently on the next
+      // reactive render and leave its tab with no panel to reveal.
+      const existingProfilesPanel = $("setupWeightProfilesBlock");
+      if (existingProfilesPanel?.parentElement === area) $("weightsBlock")?.after(existingProfilesPanel);
       area.innerHTML = "";
       if (!isDesktopLayout()){
         renderMobileWeightsArea(area);
@@ -2382,6 +2389,7 @@
       const columnSelectors = new Map();
       const rowSelectors = new Map();
       let desktopBulkMode = false;
+      let desktopProfilesOpen = false;
       let desktopWeightView = "summary";
 
       function toggleSelection(keys){
@@ -2391,9 +2399,15 @@
       }
 
       const toolbar = document.createElement("div");
+      toolbar.id = "desktopWeightsBulkContext";
       toolbar.className = "weightsBulkBar desktopWeightsBulkContext";
       toolbar.hidden = true;
       toolbar.innerHTML = `
+        <div class="weightsBulkSteps" aria-label="Bulk editing steps">
+          <span><b>1</b> Select hoppers</span>
+          <span><b>2</b> Enter changes</span>
+          <span><b>3</b> Apply</span>
+        </div>
         <label class="weightsBulkField" for="bulkWeight">
           <span>Receiver weight</span>
           <span class="weightsInputWithUnit">
@@ -2411,6 +2425,7 @@
           <button id="clearWeightSelection" type="button" class="bulkTextAction">Clear selection</button>
           <button id="doneBulkWeights" type="button" class="bulkTextAction">Done</button>
         </div>
+        <div class="weightsBulkNote tiny">Blank fields leave existing values unchanged.</div>
       `;
 
       const desktopControls = document.createElement("div");
@@ -2662,16 +2677,24 @@
       frame.appendChild(table);
       scroll.appendChild(frame);
       const actionToolbar = document.createElement("div");
-      actionToolbar.className = "desktopWeightsActionToolbar mobileMatrixActionBar";
+      actionToolbar.className = "desktopWeightsActionToolbar recipeUtilityTabs";
       const profilesAction = document.createElement("button");
       profilesAction.type = "button";
       profilesAction.id = "desktopWeightProfilesButton";
+      profilesAction.className = "recipeUtilityTab recipeActionTab";
+      profilesAction.setAttribute("role", "tab");
+      profilesAction.setAttribute("aria-controls", "setupWeightProfilesBlock");
+      profilesAction.setAttribute("aria-selected", "false");
       profilesAction.setAttribute("aria-expanded", "false");
       profilesAction.setAttribute("aria-label", "Open receiver weight profiles");
-      profilesAction.innerHTML = '<span>Profiles</span><svg viewBox="0 0 28 28" aria-hidden="true"><path d="M7 4h14l3 5v14l-4 3H8l-4-3V9z"/><path d="M9 12h10M9 16h10M9 20h6"/></svg>';
+      profilesAction.innerHTML = '<span>Weight Profiles</span><svg viewBox="0 0 28 28" aria-hidden="true"><path d="M7 4h14l3 5v14l-4 3H8l-4-3V9z"/><path d="M9 12h10M9 16h10M9 20h6"/></svg>';
       const bulkModeButton = document.createElement("button");
       bulkModeButton.type = "button";
       bulkModeButton.id = "desktopWeightsBulkToggle";
+      bulkModeButton.className = "recipeUtilityTab recipeActionTab";
+      bulkModeButton.setAttribute("role", "tab");
+      bulkModeButton.setAttribute("aria-controls", "desktopWeightsBulkContext");
+      bulkModeButton.setAttribute("aria-selected", "false");
       bulkModeButton.setAttribute("aria-pressed", "false");
       bulkModeButton.innerHTML = '<span>Bulk edit</span><svg viewBox="0 0 28 28" aria-hidden="true"><rect x="4" y="4" width="8" height="8" rx="1"/><rect x="16" y="4" width="8" height="8" rx="1"/><rect x="4" y="16" width="8" height="8" rx="1"/><path d="M17 20l2 2 5-6"/></svg>';
       actionToolbar.append(profilesAction, bulkModeButton);
@@ -2679,6 +2702,12 @@
       area.appendChild(desktopControls);
       area.appendChild(scroll);
       area.appendChild(actionToolbar);
+      const profilesPanel = $("setupWeightProfilesBlock");
+      if (profilesPanel){
+        profilesPanel.open = true;
+        profilesPanel.hidden = true;
+        area.appendChild(profilesPanel);
+      }
       area.appendChild(toolbar);
 
       const bulkInput = toolbar.querySelector("#bulkWeight");
@@ -2737,15 +2766,32 @@
       });
       function setDesktopBulkMode(enabled){
         desktopBulkMode = !!enabled;
+        if (desktopBulkMode) setDesktopProfilesOpen(false);
         weightsBulkModeActive = desktopBulkMode;
         area.dataset.desktopBulkMode = String(desktopBulkMode);
         toolbar.hidden = !desktopBulkMode;
         actionToolbar.classList.toggle("bulkActive", desktopBulkMode);
         bulkModeButton.classList.toggle("active", desktopBulkMode);
         bulkModeButton.setAttribute("aria-pressed", String(desktopBulkMode));
+        bulkModeButton.setAttribute("aria-selected", String(desktopBulkMode));
         bulkModeButton.querySelector("span").textContent = desktopBulkMode ? "Done" : "Bulk edit";
         if (!desktopBulkMode) selected.clear();
         updateSelectionUI();
+      }
+      function setDesktopProfilesOpen(open){
+        desktopProfilesOpen = !!open;
+        if (desktopProfilesOpen){
+          setDesktopBulkMode(false);
+          if (profilesPanel){
+            profilesPanel.open = true;
+            profilesPanel.hidden = false;
+          }
+        } else if (profilesPanel) {
+          profilesPanel.hidden = true;
+        }
+        profilesAction.classList.toggle("active", desktopProfilesOpen);
+        profilesAction.setAttribute("aria-expanded", String(desktopProfilesOpen));
+        profilesAction.setAttribute("aria-selected", String(desktopProfilesOpen));
       }
       exitWeightsBulkModeFn = () => setDesktopBulkMode(false);
       function setDesktopWeightView(mode){
@@ -2764,18 +2810,7 @@
         if (button) setDesktopWeightView(button.dataset.weightView);
       });
       [bulkInput, bulkHeightInput].filter(Boolean).forEach(field=>field.addEventListener("input", ()=>updateSelectionUI()));
-      const profilesSheet = ensureMobileWeightProfilesSheet(profilesAction);
-      profilesAction.addEventListener("click", ()=>{
-        const opening = !profilesSheet.open;
-        if (opening){
-          document.querySelectorAll(".mobileSavedRecipesSheet[open]").forEach(sheet=>{ if (sheet !== profilesSheet) sheet.close("replace"); });
-          profilesSheet.showModal();
-          mobileWeightProfilesOpen = true;
-          profilesAction.setAttribute("aria-expanded", "true");
-          renderSetupWeightProfiles(lineSync?.getState?.() || {});
-          profilesSheet.focus({ preventScroll:true });
-        } else profilesSheet.close("close");
-      });
+      profilesAction.addEventListener("click", ()=>setDesktopProfilesOpen(!desktopProfilesOpen));
       applyButton.addEventListener("click", ()=>{
         const optionalValue = (field, label)=>{
           if (!field || !field.value.trim()) return { valid:true, value:null };
