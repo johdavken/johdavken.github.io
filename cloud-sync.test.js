@@ -349,6 +349,87 @@ test("disconnectLocal clears tracked channel state so reconnecting creates a fre
   assert.equal(channelCalls.length, 2, "reconnecting after disconnect must create a fresh channel, proving no stale tracked state remained");
 });
 
+// --- leaveWorkspace() -----------------------------------------------------
+
+// The fake client's default rpc() mock only special-cases update_active_job
+// - leave_workspace needs to actually remove the row from the fixture data
+// so the membership refresh leaveWorkspace() runs afterward reflects reality,
+// same as the real leave_workspace RPC deleting the row server-side.
+function withLeaveWorkspaceRpc(rows, client){
+  const originalRpc = client.rpc.bind(client);
+  client.rpc = async (name, args) => {
+    if (name === "leave_workspace"){
+      rows.line_workspace_members = rows.line_workspace_members
+        .filter(row => !(row.workspace_id === args.p_workspace_id && row.user_id === "user-1"));
+      return { data: null, error: null };
+    }
+    return originalRpc(name, args);
+  };
+}
+
+test("leaving the only workspace reports Local only, with no selected workspace, right away", async () => {
+  const rows = workspaceFixtures({ id: "ws-a", name: "Line A" });
+  rows.line_workspace_members[0].role = "member";
+  const { sync, channels, client } = createSync(rows);
+  withLeaveWorkspaceRpc(rows, client);
+  await sync.initialize();
+  channels[0].emit("SUBSCRIBED");
+  assert.equal(sync.getState().selectedWorkspace?.id, "ws-a", "sanity check: connected before leaving");
+
+  await sync.leaveWorkspace();
+
+  const state = sync.getState();
+  assert.equal(state.status, "Local only");
+  assert.equal(state.selectedWorkspace, null);
+  assert.equal(state.connected, false);
+});
+
+test("a dropped connection on the follow-up membership refresh does not mask a successful leave - status stays Local only, not stuck on the old Synced state", async () => {
+  const rows = workspaceFixtures({ id: "ws-a", name: "Line A" });
+  rows.line_workspace_members[0].role = "member";
+  const { sync, client } = createSync(rows);
+  withLeaveWorkspaceRpc(rows, client);
+  await sync.initialize();
+  assert.equal(sync.getState().status, "Synced");
+
+  // leave_workspace itself succeeds (server-side membership is already
+  // gone), but the very next network call - the membership refresh
+  // leaveWorkspace() runs afterward to pick up any other workspace - fails,
+  // simulating a dropped connection right after leaving on a poor signal.
+  const originalFrom = client.from;
+  client.from = table => {
+    if (table === "line_workspace_members") throw new Error("network drop");
+    return originalFrom(table);
+  };
+
+  await sync.leaveWorkspace();
+
+  const state = sync.getState();
+  assert.equal(state.status, "Local only", "the confirmed-successful leave must not stay masked by the earlier Synced status");
+  assert.equal(state.selectedWorkspace, null);
+  assert.equal(state.connected, false);
+});
+
+test("a stale SUBSCRIBED event for the just-left workspace's torn-down channel cannot resurrect a connected status", async () => {
+  const rows = workspaceFixtures({ id: "ws-a", name: "Line A" });
+  rows.line_workspace_members[0].role = "member";
+  const { sync, channels, client } = createSync(rows);
+  withLeaveWorkspaceRpc(rows, client);
+  await sync.initialize();
+
+  await sync.leaveWorkspace();
+  assert.equal(sync.getState().status, "Local only");
+
+  // The old channel's join handshake completing late, after teardown, must
+  // be ignored rather than re-asserting a "connected" status for a
+  // workspace this device already left.
+  channels[0].emit("SUBSCRIBED");
+
+  const state = sync.getState();
+  assert.equal(state.status, "Local only", "a stale realtime event must not overwrite the post-leave status");
+  assert.equal(state.selectedWorkspace, null);
+});
+
 // --- Active-job no-op guard (notifyActiveJobMutation) --------------------
 
 function writeCalls(rpcCalls){ return rpcCalls.filter(c => c.name === "update_active_job"); }

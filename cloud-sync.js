@@ -756,6 +756,12 @@
       channel = client.channel(`line-sync-${targetId}`)
         .on("postgres_changes", { event: "UPDATE", schema: "public", table: "active_jobs" }, handleRealtimeActive)
         .subscribe(status=>{
+          // This callback is a closure over `targetId`, but the channel it
+          // belongs to can be torn down (leaveWorkspace, workspace switch)
+          // while a join/error event for it is still in flight. Guard
+          // against the stale event landing after teardown and re-asserting
+          // a "connected" status for a workspace this device has left.
+          if (channelWorkspaceId !== targetId) return;
           channelStatus = status;
           if (status === "SUBSCRIBED") setSyncedStatus("RT Sync is connected.", "RT Sync is connected, but local changes are still waiting to sync.");
           else if (["CHANNEL_ERROR","TIMED_OUT"].includes(status)) setStatus("Pending", "Realtime connection will retry.");
@@ -954,16 +960,32 @@
       const workspaceId = selectedId();
       const response = await rpc("leave_workspace", { p_workspace_id: workspaceId });
       if (response.error) throw response.error;
+
+      // The RPC above already succeeded server-side - this device is
+      // definitely no longer a member. Reflect that locally and emit right
+      // away, before the network-dependent refresh below, so a dropped
+      // connection on this next call (common on the shop floor) can never
+      // leave the UI stuck showing the old workspace as still "Synced" with
+      // no way to join a different one.
       const current = ensureDeviceSettings();
       current.disconnectedWorkspaceIds = current.disconnectedWorkspaceIds.filter(id=>id !== workspaceId);
       current.selectedWorkspaceId = "";
+      current.workspaceCache = (current.workspaceCache || []).filter(item=>item.id !== workspaceId);
       saveSettings(current);
-      await loadWorkspaces();
-      if (selectedId()) await reconcileSelected({ forceRemote: true });
-      else {
-        await teardownChannel();
-        setStatus("Local only", "This device left RT Sync. Local Resin.Tools data was preserved.");
-      }
+      state.workspaces = state.workspaces.filter(item=>item.id !== workspaceId);
+      state.selectedWorkspaceId = "";
+      state.selectedWorkspace = null;
+      await teardownChannel();
+      setStatus("Local only", "This device left RT Sync. Local Resin.Tools data was preserved.");
+
+      // Best-effort refresh: picks up another workspace this device still
+      // belongs to, if any. A failure here (offline, flaky signal) leaves
+      // the correct "Local only" state above in place rather than masking
+      // it, instead of throwing back out to the caller's generic error path.
+      try{
+        await loadWorkspaces();
+        if (selectedId()) await reconcileSelected({ forceRemote: true });
+      }catch(error){ /* local state already reflects the successful leave */ }
     }
 
     async function transferOwnership(userId){
