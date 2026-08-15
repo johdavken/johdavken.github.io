@@ -382,6 +382,161 @@
   #weightsArea[data-desktop-weight-view="edit"] .desktopWeightSummaryValues{display:none}
   #weightsArea[data-desktop-weight-view="edit"] .desktopWeightEditFields{display:grid}
 
+  /* Experimental Gruvbox desktop rail. This deliberately lives only in the
+     fine-pointer desktop layer: the mobile Gruvbox tile home keeps its
+     existing layout and controls. */
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .workspaceNav{
+    --gruv-rail-edge:#665c54;
+    --gruv-rail-paper:#ebdbb2;
+    --gruv-rail-line:#fe8019;
+    --gruv-rail-recipe:#fabd2f;
+    --gruv-rail-timeline:#ebdbb2;
+    --gruv-rail-totals:#b8bb26;
+    --gruv-rail-sync:#8ec07c;
+    --gruv-rail-tools:#d3869b;
+    --gruv-rail-help:#83a598;
+    display:grid;
+    position:sticky;
+    align-content:start;
+    gap:5px;
+    padding:14px 12px 16px;
+    border-color:transparent;
+    border-radius:12px;
+    background:#282828;
+    box-shadow:none;
+    isolation:isolate;
+  }
+  body[data-theme="gruvbox-light"] .workspaceNav{
+    --gruv-rail-edge:#a89984;
+    --gruv-rail-paper:#3c3836;
+    --gruv-rail-line:#d65d0e;
+    --gruv-rail-recipe:#b57614;
+    --gruv-rail-timeline:#3c3836;
+    --gruv-rail-totals:#79740e;
+    --gruv-rail-sync:#427b58;
+    --gruv-rail-tools:#8f3f71;
+    --gruv-rail-help:#076678;
+    background:#ebdbb2;
+    box-shadow:none;
+  }
+  body[data-theme="industrial-slate-dark"] .workspaceNav{
+    --gruv-rail-edge:#314153;
+    --gruv-rail-paper:#eaf2ff;
+    --gruv-rail-line:var(--bad);
+    --gruv-rail-recipe:var(--warn);
+    --gruv-rail-timeline:var(--focus-border);
+    --gruv-rail-totals:var(--ok);
+    --gruv-rail-sync:var(--ok);
+    --gruv-rail-tools:#c486a9;
+    --gruv-rail-help:var(--muted);
+    background:var(--panel);
+  }
+  body[data-theme="industrial-slate"] .workspaceNav{
+    --gruv-rail-edge:#9dafbf;
+    --gruv-rail-paper:#29282b;
+    --gruv-rail-line:var(--yellow);
+    --gruv-rail-recipe:var(--yellow);
+    --gruv-rail-timeline:var(--yellow);
+    --gruv-rail-totals:var(--yellow);
+    --gruv-rail-sync:var(--ok);
+    --gruv-rail-tools:var(--warn);
+    --gruv-rail-help:var(--focus-border);
+    background:var(--panel);
+  }
+  /* A quiet theme watermark anchors the lower rail without adding another
+     control or extending the rail's scrollable bounds. */
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNav::after{
+    content:"GRUVBOX";
+    position:absolute;
+    z-index:0;
+    right:15px;
+    bottom:16px;
+    pointer-events:none;
+    color:var(--gruv-rail-paper);
+    font-family:ui-monospace,"Cascadia Mono","Liberation Mono",monospace;
+    font-size:44px;
+    font-weight:800;
+    letter-spacing:.1em;
+    line-height:.82;
+    opacity:.08;
+    text-orientation:mixed;
+    writing-mode:vertical-rl;
+  }
+  body[data-theme="industrial-slate-dark"] .workspaceNav::after{content:none}
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .workspaceNav > *{position:relative;z-index:1}
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .workspaceBrand{
+    justify-content:center;
+    padding:10px 8px 12px;
+    border-color:color-mix(in srgb,var(--gruv-rail-edge) 70%,transparent);
+  }
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .workspaceBrand .resinToolsSidebarIcon{display:block}
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .resinToolsSidebarIcon .rtLayerRed{color:var(--bad);stroke:var(--bad)}
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .resinToolsSidebarIcon .rtLayerOrange{color:var(--gruv-rail-line);stroke:var(--gruv-rail-line)}
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .resinToolsSidebarIcon .rtLayerYellow{color:var(--gruv-rail-recipe);stroke:var(--gruv-rail-recipe)}
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .resinToolsSidebarIcon .rtLayerGreen{color:var(--gruv-rail-totals);stroke:var(--gruv-rail-totals)}
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .resinToolsSidebarIcon .rtLayerBlue{color:var(--gruv-rail-help);stroke:var(--gruv-rail-help)}
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .resinToolsSidebarIcon .rtWord{fill:var(--gruv-rail-paper)}
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .workspaceNavButton{
+    min-height:55px;
+    padding:9px 12px 9px 15px;
+    border:0;
+    border-radius:0;
+    background:transparent;
+    color:var(--gruv-rail-paper);
+    box-shadow:inset 0 0 0 0 transparent;
+  }
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .workspaceNavButton > span{
+    gap:13px;
+    color:inherit;
+    font-size:13px;
+    font-weight:800;
+    letter-spacing:.1em;
+    line-height:1;
+  }
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .workspaceNavButton > span::before{display:none}
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .workspaceNavButton small{
+    display:block;
+    margin:-2px 0 0 40px;
+    padding:0;
+    border:0;
+    border-radius:0;
+    color:color-mix(in srgb,var(--gruv-rail-paper) 57%,var(--gruv-rail-edge));
+    font-size:10px;
+    font-weight:650;
+    letter-spacing:.01em;
+    line-height:1.15;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .workspaceNavButton .workspaceTileIcon{
+    width:27px;
+    height:27px;
+    color:var(--gruv-rail-paper);
+    stroke-width:1.85;
+  }
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .workspaceNavButton[data-workspace-target="lineSetupBlock"] .workspaceTileIcon{color:var(--gruv-rail-line)}
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .workspaceNavButton[data-workspace-target="splitsBlock"] .workspaceTileIcon{color:var(--gruv-rail-recipe)}
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .workspaceNavButton[data-workspace-target="resultsBlock"] .workspaceTileIcon{color:var(--gruv-rail-timeline)}
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .workspaceNavButton[data-workspace-target="productionSummaryBlock"] .workspaceTileIcon{color:var(--gruv-rail-totals)}
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .workspaceNavButton[data-workspace-target="lineSyncBlock"] .workspaceTileIcon{color:var(--gruv-rail-sync)}
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .workspaceNavButton[data-workspace-target="toolsBlock"] .workspaceTileIcon{color:var(--gruv-rail-tools)}
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .workspaceNavButton[data-workspace-target="helpBlock"] .workspaceTileIcon{color:var(--gruv-rail-help)}
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .workspaceNavButton:hover{
+    border:0;
+    background:color-mix(in srgb,var(--gruv-rail-paper) 7%,transparent);
+    transform:none;
+  }
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .workspaceNavButton.active{
+    border:0;
+    border-left:3px solid var(--gruv-rail-recipe);
+    padding-left:12px;
+    background:color-mix(in srgb,var(--gruv-rail-paper) 12%,transparent);
+    color:var(--gruv-rail-paper);
+  }
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .workspaceNavButton.active .workspaceTileIcon{color:var(--gruv-rail-paper)}
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .workspaceNavButton:focus-visible{outline:2px solid var(--gruv-rail-recipe);outline-offset:-2px}
+
   .desktopWeightsActionToolbar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;overflow:hidden;border:1px solid var(--row-border-2);border-radius:var(--control-radius);background:var(--row-bg-2)}
   .desktopWeightsActionToolbar button{display:flex;align-items:center;justify-content:center;gap:7px;min-height:34px;padding:5px 8px;border:0;border-radius:0;background:transparent;color:var(--text);font:inherit;font-size:var(--desktop-type-control);font-weight:750;box-shadow:none}
   .desktopWeightsActionToolbar button + button{border-left:1px solid var(--row-border-2)}
