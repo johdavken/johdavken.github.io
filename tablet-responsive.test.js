@@ -194,13 +194,122 @@ test("Line Setup uses the extra width instead of stretching the phone layout, an
   assert.doesNotMatch(block, /overflow-x:\s*(auto|scroll)/);
 });
 
-test("Recipe keeps its matrix and only the resin name grows, tied to the density scale with a readable floor", () => {
-  const block = styles.slice(styles.indexOf(`@media ${WIDE_TOUCH_QUERY}`));
-  assert.match(block, /\.splitMatrixCell \.resinNameInput\{/);
-  assert.match(block, /font-size:clamp\(16px, calc\(var\(--font-base\) \+ 2px\), 20px\);/);
-  // The matrix structure, controls and tracking are deliberately untouched.
-  assert.doesNotMatch(block, /\.splitsMatrix\b[^{]*\{[^}]*grid-template/);
-  assert.doesNotMatch(block, /splitTrack|trackControl|splitPctControl/);
+test("the wide-touch presentation block no longer claims the Recipe matrix already fits - resin-name sizing moved out to the dedicated overflow-fix block", () => {
+  const start = styles.indexOf(`@media ${WIDE_TOUCH_QUERY}`);
+  const block = styles.slice(start, styles.indexOf("\n}", start) + 2);
+  assert.doesNotMatch(block, /\.splitMatrixCell \.resinNameInput\{/);
+  assert.doesNotMatch(block, /already works well here/);
+});
+
+/* -----------------------------------------------------------------------
+ *   Recipe matrix overflow fix: five columns, no clipping, no scrolling
+ * --------------------------------------------------------------------- */
+
+// Reproduced against a real unfolded-Fold screenshot: the base (desktop)
+// rules give every layer column a fixed 180px, on both the header and the
+// body cell independently, and the existing phone-width fix (max-width:
+// 700px) that resets this never extended past 700px - so five untouched
+// 180px columns (~950px+) overflowed an ~884-890px Fold, clipping column E
+// and its percentages with no scrollbar to reveal it.
+const OVERFLOW_FIX_QUERY = "(min-width: 701px) and (max-width: 900px), (min-width: 901px) and (pointer: coarse)";
+
+function overflowFixBlock(){
+  const start = styles.indexOf(`@media ${OVERFLOW_FIX_QUERY}`);
+  assert.notEqual(start, -1, "expected the Recipe matrix overflow-fix block");
+  return styles.slice(start, styles.indexOf("\n}", start) + 2);
+}
+
+test("the overflow fix covers the whole touch/mobile shell above phone width, not only where the pointer is coarse", () => {
+  // Floored at 701 so the existing phone-width fix (max-width: 700px)
+  // keeps sole ownership of anything narrower. Uncapped above 900px as
+  // long as the pointer stays coarse, matching the shell's own boundary -
+  // a desktop window resized to 701-900px (any pointer) sits in the same
+  // shell and would hit the identical bug with a mouse.
+  const block = overflowFixBlock();
+  // The query is two comma-OR'd alternatives; queryMatches only evaluates
+  // a single AND-conjunction, so each alternative is checked on its own
+  // and the two are combined with a plain ||, mirroring what a comma
+  // actually means in a CSS media query list.
+  const [narrowAlt, wideAlt] = OVERFLOW_FIX_QUERY.split(", ");
+  const matches = (width, pointer) => queryMatches(narrowAlt, { width, pointer }) || queryMatches(wideAlt, { width, pointer });
+  assert.ok(matches(701, "fine"), "701px with a mouse must be covered - same shell, same bug");
+  assert.ok(matches(884, "coarse"));
+  assert.ok(matches(1104, "coarse"));
+  assert.ok(!matches(700, "coarse"), "700px must stay owned by the phone-width fix");
+  assert.ok(!matches(1104, "fine"), "a wide desktop window must not be affected");
+  assert.ok(block.length > 100);
+});
+
+test("no horizontal scrolling is introduced, and no whole-panel scale() is used", () => {
+  const block = overflowFixBlock();
+  assert.doesNotMatch(block, /overflow-x:\s*(auto|scroll)/);
+  assert.match(block, /\.splitsMatrixScroll\{[^}]*overflow-x:hidden/);
+  assert.doesNotMatch(styles, /#splitsArea[^{]*\{[^}]*transform:\s*scale/);
+  assert.doesNotMatch(styles, /\.splitsMatrix[^{]*\{[^}]*transform:\s*scale/);
+});
+
+test("the table and its frame/scroll wrapper are width:100%/max-width:100%/min-width:0/box-sizing:border-box, not fixed pixels", () => {
+  const block = overflowFixBlock();
+  for (const selector of [".splitsMatrixScroll", ".splitsMatrixFrame", ".splitsMatrix"]){
+    const ruleStart = block.indexOf(`${selector}{`);
+    assert.notEqual(ruleStart, -1, `expected a rule for ${selector}`);
+    const rule = block.slice(ruleStart, block.indexOf("}", ruleStart));
+    assert.match(rule, /width:100%/);
+    assert.match(rule, /max-width:100%/);
+    assert.match(rule, /min-width:0/);
+  }
+  assert.match(block, /\.splitsMatrix\{[^}]*table-layout:fixed/);
+});
+
+test("no layer column claims a fixed or minimum width - the five divide the available width evenly, conceptually repeat(5, minmax(0,1fr))", () => {
+  const block = overflowFixBlock();
+  // Both independent sources of the old fixed 180px are reset: the header
+  // cell and the body cell.
+  assert.match(block, /\.splitsMatrix thead th\{ min-width:0; width:auto; max-width:none; \}/);
+  assert.match(block, /\.splitMatrixCell\{ min-width:0; width:auto; max-width:100%; \}/);
+  // The hopper-number corner is the deliberate exception - it stays a
+  // small fixed column, same value the phone layout already uses.
+  assert.match(block, /\.splitsMatrix th:first-child\{ min-width:52px; width:52px; max-width:52px; \}/);
+});
+
+test("children inside each column can also shrink - inputs, resin names, percentages, hopper labels and tracking controls carry no larger intrinsic minimum", () => {
+  const block = overflowFixBlock();
+  const shrinkRuleStart = block.indexOf(".splitCellHeader,");
+  assert.notEqual(shrinkRuleStart, -1);
+  const shrinkRule = block.slice(shrinkRuleStart, block.indexOf("{", shrinkRuleStart));
+  for (const selector of [".splitCellHeader", ".splitCellEditor", ".splitCellTop", ".splitCellControls", ".splitPctControl", ".splitTrackControl", ".resinNameInput", ".splitPctControl input"]){
+    assert.ok(shrinkRule.includes(selector), `expected ${selector} in the shrinkable-children rule`);
+  }
+  const shrinkBody = block.slice(block.indexOf("{", shrinkRuleStart), block.indexOf("}", shrinkRuleStart));
+  assert.match(shrinkBody, /min-width:0/);
+  assert.match(shrinkBody, /max-width:100%/);
+  // The old 78px floor on the resin-name/percent split is gone - at this
+  // width that floor alone could reintroduce overflow inside the cell.
+  assert.match(block, /\.splitCellEditor\{ grid-template-columns:minmax\(0,1fr\) auto; \}/);
+});
+
+test("resin-name and percentage typography use a viewport-relative clamp so they shrink toward the tight end of the range and grow back once there is room, instead of a fixed floor", () => {
+  const block = overflowFixBlock();
+  const resinRuleStart = block.indexOf(".splitMatrixCell .resinNameInput{");
+  assert.notEqual(resinRuleStart, -1);
+  const resinRule = block.slice(resinRuleStart, block.indexOf("}", resinRuleStart));
+  assert.match(resinRule, /font-size:clamp\(/, "expected a clamp(), not a fixed font-size");
+  assert.match(resinRule, /vw/, "expected a viewport-relative term, not a fixed value between two constants");
+  const pctRuleStart = block.indexOf(".splitPctControl input,");
+  assert.notEqual(pctRuleStart, -1);
+  const pctRule = block.slice(pctRuleStart, block.indexOf("}", pctRuleStart));
+  assert.match(pctRule, /font-size:clamp\(/);
+  assert.match(pctRule, /vw/);
+});
+
+test("the matrix structure, controls and tracking behavior are untouched - only width floors are removed or made responsive", () => {
+  const block = overflowFixBlock();
+  // No column-visibility toggling, no grid-based restructuring of the
+  // table itself, no rewritten tracking/control markup selectors beyond
+  // the shrink-safety pass above.
+  assert.doesNotMatch(block, /display:\s*grid/);
+  assert.doesNotMatch(block, /\[data-layer-column\]/);
+  assert.doesNotMatch(block, /mobile-layer-active/);
 });
 
 test("phone stays untouched, and every existing desktop rule still exists - only gated with the added pointer condition, never rewritten", () => {

@@ -6841,18 +6841,108 @@ body[data-surface-style="divided"] .helpTopic{
   #weightsBlock .blockBody{ max-width:none; }
   .mobileWeightsLayer{ gap:5px; }
 
-  /* --- Recipe --------------------------------------------------------
-     The Recipe matrix itself is deliberately left exactly as it is - it
-     already works well here. The only complaint is that resin names read
-     small on a screen this size, so lift just that text (and the row
-     height it needs to sit in) without touching the matrix structure,
-     controls, tracking, or density. clamp keeps it tied to the density
-     scale while guaranteeing a readable floor and a sane ceiling. */
+  /* Recipe: the matrix's structure, controls, tracking and density are
+     left exactly as they are here - see the dedicated overflow-fix block
+     below for why resin-name sizing now lives there instead of here (it
+     turned out the matrix did NOT already fit five columns at this width;
+     this rule used to just enlarge text inside a table that was silently
+     overflowing past the visible viewport). */
+}
+
+/* =======================================================================
+ *   Recipe matrix: fit all five layer columns without overflow
+ *
+ *   The base (desktop) rules give every layer column a fixed 180px, on
+ *   both the header (.splitsMatrix thead th) and the body cell
+ *   (.splitMatrixCell) independently. The phone-width fix above
+ *   (max-width: 700px) already resets this - table-layout:fixed on a
+ *   100%-wide table, no column claiming an explicit width - but that
+ *   reset stopped at 700px. Above it, on an unfolded Fold (~884-890px),
+ *   five untouched 180px columns plus the 52-64px hopper-number corner
+ *   demand ~950px+: wider than the viewport, so the table silently
+ *   overflows its container. There is no scrollbar to reveal this -
+ *   nothing here scrolls - so the rightmost column (E) and its
+ *   percentages simply render past the visible edge and get clipped,
+ *   exactly as photographed on a real Fold.
+ *
+ *   Fix: extend the same proven table-layout:fixed + width:100%
+ *   mechanism to the rest of the touch/mobile shell's width range - not
+ *   only where the pointer is coarse. A desktop browser window resized
+ *   to this same width sits in the identical shell (see the shell's own
+ *   boundary throughout this file) and would hit the identical bug with
+ *   a mouse, so the query mirrors that shell's own compound form,
+ *   floored at 701px so the phone-width block above keeps sole
+ *   ownership of anything narrower. With no column left an explicit
+ *   width, a fixed-layout table divides its own 100% width evenly across
+ *   whichever columns remain unset - conceptually
+ *   `grid-template-columns: repeat(5, minmax(0,1fr))`, achieved with the
+ *   table this matrix already is rather than restructuring it into a
+ *   CSS grid.
+ *
+ *   Every rule below only removes a width floor or lets something
+ *   shrink - the matrix's structure, its controls, and tracking behavior
+ *   are all unchanged; nothing here changes what renders. */
+@media (min-width: 701px) and (max-width: 900px), (min-width: 901px) and (pointer: coarse){
+  .splitsMatrixScroll{ width:100%; max-width:100%; min-width:0; overflow-x:hidden; box-sizing:border-box; }
+  .splitsMatrixFrame{ width:100%; max-width:100%; min-width:0; margin-inline:0; box-sizing:border-box; }
+  .splitsMatrix{
+    table-layout:fixed;
+    width:100%;
+    max-width:100%;
+    min-width:0;
+    box-sizing:border-box;
+  }
+  .splitsMatrix th,
+  .splitsMatrix td{ box-sizing:border-box; }
+  /* No layer column claims a fixed or minimum share - table-layout:fixed
+     then divides the table's own 100% width evenly across the five that
+     are left unset, after the corner column below takes its own small
+     fixed share. */
+  .splitsMatrix thead th{ min-width:0; width:auto; max-width:none; }
+  .splitMatrixCell{ min-width:0; width:auto; max-width:100%; }
+  /* The hopper-number corner is the one column that should NOT flex - it
+     holds a short fixed label ("1"-"6") and taking width from it would
+     not meaningfully help the other five. Same value the phone layout
+     already uses, for the same reason. */
+  .splitsMatrix th:first-child{ min-width:52px; width:52px; max-width:52px; }
+
+  /* Every child inside a column must be able to shrink with it, not just
+     the column itself - a fixed intrinsic width on any of these would
+     reintroduce the same overflow one level down, inside the cell. */
+  .splitCellHeader,
+  .splitCellEditor,
+  .splitCellTop,
+  .splitCellControls,
+  .splitPctControl,
+  .splitTrackControl,
+  .resinNameInput,
+  .splitPctControl input{
+    min-width:0;
+    max-width:100%;
+  }
+  /* 78px was a safe floor when this matrix's columns were always a fixed
+     180px. Now that columns are free to be much narrower on a folded-
+     width device, that same floor could reintroduce overflow one level
+     down, inside the cell - let the grid negotiate the space instead. */
+  .splitCellEditor{ grid-template-columns:minmax(0,1fr) auto; }
+
+  /* Resin names keep the fuller, larger treatment this same block used
+     before (desktop's own two-row cell layout, not the compact single-
+     row phone one) - but tied to how much room five columns actually
+     leave, via clamp's viewport-relative middle term, rather than a
+     fixed floor. That only gives size back when the device genuinely
+     needs it to keep all five columns on screen (the tight end of this
+     range, ~701px), and reaches the same ceiling as before once there is
+     room (~900px and up, including the Fold rotated to landscape). */
   .splitMatrixCell .resinNameInput{
     height:32px;
     min-height:32px;
     max-height:32px;
-    font-size:clamp(16px, calc(var(--font-base) + 2px), 20px);
+    font-size:clamp(14px, 2vw + 1px, calc(var(--font-base) + 4px));
     line-height:31px;
+  }
+  .splitPctControl input,
+  .splitPctControl > span{
+    font-size:clamp(11px, 1.3vw + 1px, var(--font-base));
   }
 }
