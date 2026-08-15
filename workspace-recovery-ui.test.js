@@ -137,6 +137,32 @@ test("incident controls can disconnect every linked device and delete a workspac
   assert.doesNotMatch(app, /lineSyncDeleteBtn/);
 });
 
+test("each non-owner member row offers Make Owner, reusing the same admin RPC and confirmation dialog as the recovery-flow reassignment button", () => {
+  assert.match(ui, /makeOwnerBtn\.textContent = "Make Owner"/);
+  assert.match(ui, /member\.member_role === "member"/);
+  const renderMembersBody = ui.slice(ui.indexOf("function renderMembers()"), ui.indexOf("function renderDetail()"));
+  assert.match(renderMembersBody, /makeOwnerBtn\.addEventListener\("click", \(\) => confirmMakeOwner\(member, makeOwnerBtn\)\)/);
+  assert.match(ui, /function confirmMakeOwner\(member, makeOwnerBtn\)/);
+  assert.match(ui, /async function makeOwner\(member, makeOwnerBtn\)/);
+  // Both entry points share one dialog-building helper, so the same warning
+  // and "not deleted" language apply regardless of which button was used.
+  assert.match(ui, /function ownershipConfirmLines\(newOwnerLabel\)/);
+  assert.match(ui, /showOwnershipConfirmDialog\(descriptor\.deviceLabel \|\| "This device", transferOwnership\)/);
+  assert.match(ui, /showOwnershipConfirmDialog\(label, \(\) => makeOwner\(member, makeOwnerBtn\)\)/);
+});
+
+test("Make Owner is withheld for a row that is already the owner - only the dedicated recovery button reassigns to this device", () => {
+  const renderMembersBody = ui.slice(ui.indexOf("function renderMembers()"), ui.indexOf("function renderDetail()"));
+  assert.match(renderMembersBody, /if \(member\.member_role === "member"\)\{/);
+});
+
+test("a failed Make Owner re-enables that row's own button and never reconnects or mutates local state", () => {
+  const body = ui.slice(ui.indexOf("async function makeOwner("), ui.indexOf("async function removeMember"));
+  assert.match(body, /if \(!result\.ok\)\{ setMessage\(result\.message, "bad"\); if \(makeOwnerBtn\) makeOwnerBtn\.disabled = false; return; \}/);
+  const beforeReturn = body.slice(0, body.indexOf("if (!result.ok)"));
+  assert.doesNotMatch(beforeReturn, /loadWorkspaces|selectWorkspace/);
+});
+
 test("workspace merge presents an explicit target, preserves target data, and deletes only the selected source", () => {
   assert.match(index, /id="workspaceRecoveryMergeTarget"/);
   assert.match(index, /id="workspaceRecoveryMergeBtn"[^>]*>Merge &amp; Delete This Workspace/);

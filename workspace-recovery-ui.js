@@ -99,12 +99,23 @@
       info.className = "tiny mono";
       info.textContent = `${member.member_device_label || "Unnamed device"} · ${member.member_role} · ${shortId(member.member_user_id)} · Last seen ${fmtDate(member.member_last_seen_at)}${isCurrent ? " · this device" : ""}`;
       row.append(info);
+      const actions = document.createElement("div");
+      actions.className = "workspaceRecoveryMemberActions";
+      if (member.member_role === "member"){
+        const makeOwnerBtn = document.createElement("button");
+        makeOwnerBtn.type = "button";
+        makeOwnerBtn.className = "secondary";
+        makeOwnerBtn.textContent = "Make Owner";
+        makeOwnerBtn.addEventListener("click", () => confirmMakeOwner(member, makeOwnerBtn));
+        actions.append(makeOwnerBtn);
+      }
       const removeBtn = document.createElement("button");
       removeBtn.type = "button";
       removeBtn.className = "secondary";
       removeBtn.textContent = "Disconnect";
       removeBtn.addEventListener("click", () => removeMember(member, isCurrent));
-      row.append(removeBtn);
+      actions.append(removeBtn);
+      row.append(actions);
       host.appendChild(row);
     });
   }
@@ -236,20 +247,18 @@
     await selectWorkspace(workspaceId);
   }
 
-  function confirmTransferOwnership(){
-    if (!selectedWorkspaceRow) return;
-    const descriptor = bridge()?.getRecoveryDescriptor?.();
-    if (!descriptor?.ready) return;
-    const dialog = $("workspaceRecoveryOwnershipConfirmDialog");
-    const details = $("workspaceRecoveryOwnershipConfirmDetails");
-    if (!dialog?.showModal) return;
-    details.innerHTML = "";
-    const lines = [
+  // Shared by both ownership-reassignment entry points: the dedicated
+  // "Reassign Ownership to This Device" button (recovery flow, always
+  // targets this browser's own identity) and each member row's "Make
+  // Owner" button (targets that specific already-listed member). Same
+  // underlying admin RPC, same warning, same confirmation dialog.
+  function ownershipConfirmLines(newOwnerLabel){
+    return [
       `Workspace: ${selectedWorkspaceRow.workspace_name}`,
-      `New owner: ${descriptor.deviceLabel || "This device"}`,
+      `New owner: ${newOwnerLabel}`,
       "",
       "This will:",
-      "• make this device the owner of " + selectedWorkspaceRow.workspace_name + ";",
+      "• make " + newOwnerLabel + " the owner of " + selectedWorkspaceRow.workspace_name + ";",
       "• demote the previous owner's membership row to an ordinary member (it is not deleted).",
       "",
       "This will not:",
@@ -258,15 +267,29 @@
       "",
       "Only do this if the previous owner's device is genuinely gone — Resin.Tools cannot verify that from here. If the previous owner is actually still active elsewhere, it will be demoted to an ordinary member."
     ];
-    lines.forEach(line => {
+  }
+
+  function showOwnershipConfirmDialog(newOwnerLabel, onConfirm){
+    const dialog = $("workspaceRecoveryOwnershipConfirmDialog");
+    const details = $("workspaceRecoveryOwnershipConfirmDetails");
+    if (!dialog?.showModal) return;
+    details.innerHTML = "";
+    ownershipConfirmLines(newOwnerLabel).forEach(line => {
       const p = document.createElement("div");
       p.textContent = line;
       details.append(p);
     });
     dialog.addEventListener("close", () => {
-      if (dialog.returnValue === "confirm") void transferOwnership();
+      if (dialog.returnValue === "confirm") void onConfirm();
     }, { once: true });
     dialog.showModal();
+  }
+
+  function confirmTransferOwnership(){
+    if (!selectedWorkspaceRow) return;
+    const descriptor = bridge()?.getRecoveryDescriptor?.();
+    if (!descriptor?.ready) return;
+    showOwnershipConfirmDialog(descriptor.deviceLabel || "This device", transferOwnership);
   }
 
   async function transferOwnership(){
@@ -282,6 +305,27 @@
     const result = await service.transferOwnership({ workspaceId, newOwnerUserId: descriptor.userId });
     if (!result.ok){ setMessage(result.message, "bad"); if (transferBtn) transferBtn.disabled = false; return; }
     setMessage(`This device is now the owner of ${workspaceName}.`, "ok");
+    await loadWorkspaces();
+    await selectWorkspace(workspaceId);
+  }
+
+  function confirmMakeOwner(member, makeOwnerBtn){
+    if (!selectedWorkspaceRow) return;
+    const label = member.member_device_label || "this device";
+    showOwnershipConfirmDialog(label, () => makeOwner(member, makeOwnerBtn));
+  }
+
+  async function makeOwner(member, makeOwnerBtn){
+    const service = ensureRecovery();
+    if (!service || !selectedWorkspaceRow) return;
+    if (makeOwnerBtn) makeOwnerBtn.disabled = true;
+    setMessage("Reassigning ownership…");
+    const workspaceName = selectedWorkspaceRow.workspace_name;
+    const workspaceId = selectedWorkspaceRow.workspace_id;
+    const label = member.member_device_label || "this device";
+    const result = await service.transferOwnership({ workspaceId, newOwnerUserId: member.member_user_id });
+    if (!result.ok){ setMessage(result.message, "bad"); if (makeOwnerBtn) makeOwnerBtn.disabled = false; return; }
+    setMessage(`${label} is now the owner of ${workspaceName}.`, "ok");
     await loadWorkspaces();
     await selectWorkspace(workspaceId);
   }

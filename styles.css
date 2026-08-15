@@ -691,6 +691,7 @@ main{
   .bulkDensitySaveBar button{width:100%}
 }
 .workspaceRecoveryMemberRow{ display: flex; align-items: center; justify-content: space-between; gap: 10px; border: 1px solid var(--border); border-radius: var(--radius-row); padding: 6px 10px; }
+.workspaceRecoveryMemberActions{ display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .workspaceRecoveryMerge{ display: grid; grid-template-columns: minmax(0,1fr) minmax(150px, .55fr) auto; align-items: end; gap: 10px; border: 1px solid var(--border); border-radius: var(--radius-row); padding: 10px; }
 .workspaceRecoveryMerge label{ display: grid; gap: 4px; }
 .mobileSetupEntryArt{ display:none; }
