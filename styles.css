@@ -1599,15 +1599,12 @@ details[open] > summary .chevSatellite{
   .hopperRow .trackLabel{ display: none; }
 }
 
-/* Recipe Actions: Scan Recipe, Load Next Recipe and Print Recipe as three
-   individually-shaped buttons at descending visual weight - primary,
-   secondary, tertiary - instead of one flat divided strip where all three
-   (plus the info icon) read as equally-weighted footer controls. Recipe
-   Setup information is a separate small icon button pushed to the row's
-   far right (see .splitsBulkModeBar > .splitsInfo below), not a fourth
-   segment ending the strip. No border/background of its own any more -
-   each button now carries its own chrome, so the row reads as part of the
-   Recipe section's normal rhythm rather than a boxed-off footer widget. */
+/* Recipe Actions: Scan Recipe on desktop (Load Next Recipe/Print Recipe
+   live in .recipeUtilityTabs instead - see renderSplitsArea in app.js), or
+   Scan Recipe/Load Next on mobile's primary row. No border/background of
+   its own any more - the button carries its own chrome, so the row reads
+   as part of the Recipe section's normal rhythm rather than a boxed-off
+   footer widget. */
 .splitsBulkModeBar{
   display: flex;
   flex-wrap: wrap;
@@ -1827,6 +1824,18 @@ details[open] > summary .chevSatellite{
 }
 .recipeUtilityTab:focus-visible{ outline: 2px solid var(--focus-border); outline-offset: 2px; }
 .recipeUtilityTab:disabled{ opacity: .45; cursor: not-allowed; }
+/* Load Next Recipe / Print Recipe carry both .recipeUtilityTab (the same
+   shape/color/hover as Saved recipes/Bulk edit/Rearrange - they sit in the
+   same .recipeUtilityTabs strip, on the same divider) and this modifier,
+   which adds only the icon+label flex layout .recipeUtilityTab doesn't
+   otherwise need (its three other tabs are plain text). They still run an
+   action immediately rather than opening a panel, so they carry no
+   role="tab"/aria-selected/aria-controls - see renderSplitsArea in app.js. */
+.recipeActionTab{
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
 /* The active tab's panel - .splitsBulkBar or .splitsSavedRecipesPanel,
    exactly one visible at a time (the other stays .hide). Pulled up to sit
    flush against .recipeUtilityTabs' own divider - closing #splitsArea's
@@ -1835,36 +1844,6 @@ details[open] > summary .chevSatellite{
    of its tab rather than a separate floating card. */
 .splitsBulkBar,
 .splitsSavedRecipesPanel{ margin-top: -7px; }
-.splitsInfo{position:relative}
-/* Shared fallback for the summary icon - the desktop Recipe Actions row
-   overrides this below; .splitsMobileSecondaryRow's own rule hides the
-   summary outright on mobile (Recipe info opens from the More menu
-   there instead), so this base rule never actually renders on its own. */
-.splitsInfo > summary{display:grid;place-items:center;height:100%;padding:0 12px;border-left:1px solid var(--btn-secondary-border);border-radius:0;background:transparent;color:var(--muted);font-size:16px;line-height:1;cursor:pointer;list-style:none}
-.splitsInfo > summary::-webkit-details-marker{display:none}
-.splitsInfo > summary:hover,.splitsInfo[open] > summary{color:var(--title);background:color-mix(in srgb, var(--text) 6%, transparent)}
-.splitsInfo > summary:focus-visible{outline:2px solid var(--focus-border);outline-offset:-2px}
-/* Recipe Setup information, in the desktop Recipe Actions row: pushed to
-   the row's far right (margin-left:auto - the row's flex-wrap:wrap still
-   lets it drop to its own line first if the row is ever too narrow) and
-   reduced to a small round icon-only control, separated from Scan/Load
-   Next/Print rather than ending the row as a fourth equal action. */
-.splitsBulkModeBar > .splitsInfo{ margin-left: auto; }
-.splitsBulkModeBar > .splitsInfo > summary{
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border: 1px solid transparent;
-  border-radius: 50%;
-  background: transparent;
-}
-.splitsBulkModeBar > .splitsInfo > summary:hover,
-.splitsBulkModeBar > .splitsInfo[open] > summary{
-  border-color: var(--btn-secondary-border);
-  background: var(--btn-secondary-bg);
-}
-.splitsInfoPanel{position:absolute;bottom:calc(100% + 6px);right:0;z-index:20;width:min(390px,calc(100vw - 48px));padding:10px 12px;border:1px solid var(--border2);border-radius:var(--control-radius);background:var(--panelOpen);color:var(--muted);font-size:var(--font-small);box-shadow:var(--shadow2)}
-.splitsInfoPanel p{margin:0}.splitsInfoPanel p+p{margin-top:7px}.splitsInfoPanel strong{color:var(--text)}
 #splitsArea{gap:6px}
 
 .splitsMobileLayerRail{ display: none; }
@@ -2028,8 +2007,11 @@ details[open] > summary .chevSatellite{
   background: transparent;
   transition: background .12s ease, box-shadow .12s ease;
 }
-.splitsMatrix tbody tr:nth-child(even) .splitMatrixCell{background:color-mix(in srgb,var(--row-bg-2) 55%,transparent)}
-.splitsMatrix tbody tr:hover .splitMatrixCell:not(.selected){background:color-mix(in srgb,var(--focus-ring) 34%,var(--row-bg-2))}
+/* Shading alternates by column (layer), not by row - td:nth-child stays
+   aligned to the same layer in every row since each row has the same fixed
+   column order (row-header th, then one td per layer in recipeLayers()
+   order), regardless of which columns are hidden/visible. */
+.splitsMatrix tbody td.splitMatrixCell:nth-child(even){background:color-mix(in srgb,var(--row-bg-2) 55%,transparent)}
 .splitsMatrix tbody .splitMatrixCell.tracked:not(.selected){
   background:color-mix(in srgb,var(--focus-ring) 52%,transparent);
   box-shadow:inset 3px 0 0 color-mix(in srgb,var(--title) 78%,var(--focus-border));
@@ -2171,7 +2153,7 @@ details[open] > summary .chevSatellite{
   border-color: color-mix(in srgb, var(--focus-border) 55%, var(--border));
   background: color-mix(in srgb, var(--focus-ring) 55%, transparent);
 }
-.bulk-editing .splitCopyBtn,.bulk-editing .splitTrackControl,.bulk-editing .splitClearButton,.bulk-editing .splitsInfo{display:none}
+.bulk-editing .splitCopyBtn,.bulk-editing .splitTrackControl,.bulk-editing .splitClearButton{display:none}
 
 /* ---- Recipe pages: Current / Next -----------------------------------------
    Two pages of one Recipe workspace, as a compact pair of page selectors
@@ -2276,8 +2258,7 @@ details[open] > summary .chevSatellite{
 
 /* The plan is a recipe definition only: it has no tracking, no pump-off and
    no receiver weights, so the controls for those are not offered on it. */
-body[data-recipe-page="next"] .splitTrackControl,
-body[data-recipe-page="next"] .splitsInfo{ display: none; }
+body[data-recipe-page="next"] .splitTrackControl{ display: none; }
 /* A half-finished plan is expected, not a fault. Neither page prints its
    percentage totals inline any more - both report through the notification
    bell instead, where the plan keeps its own section and its own wording
@@ -2427,18 +2408,102 @@ body[data-recipe-page="next"] .splitsInfo{ display: none; }
   white-space: nowrap;
 }
 .splitSmartBadge[hidden]{ display: none; }
+
+@media (min-width: 901px) and (pointer: fine){
+  /* Left-align instead of centering under the panel: .splitsMatrixFrame's
+     base rule (margin-inline:auto) centers it whenever the table is
+     narrower than the available width - true for any 1- or 2-layer recipe
+     on a wide monitor, which then floats in the middle of the screen
+     instead of sitting with the rest of the panel's rows. Mobile already
+     avoids this (width:100% forces the frame edge-to-edge instead), this
+     just gives desktop the equivalent flush-left result at its own,
+     narrower table width. */
+  .splitsMatrixFrame{ margin-inline: 0; }
+
+  /* 10% larger Recipe matrix on desktop only - font size, the Track
+     toggle's clock icon, the hopper-designation badge, and the column/cell
+     size itself - for easier reading on large monitors. The surrounding
+     toolbars (Saved recipes/Bulk edit/Rearrange, Load Next Recipe/Print
+     Recipe) are siblings of .splitsMatrixFrame, not descendants, and stay
+     their normal size on purpose - only the grid itself grows. Scoped to
+     .splitsMatrixFrame so it composes with whatever text-density preference
+     is active instead of hardcoding font sizes: --font-base/--font-small/
+     --font-tiny cascade to every var()-based rule in the matrix
+     automatically. The remaining, genuinely hardcoded pixel values (column
+     width, track icon, hopper badge, layer letter) get their own explicit
+     1.1x overrides below. */
+  #splitsArea .splitsMatrixFrame{
+    --font-base: calc(var(--font-base) * 1.1);
+    --font-small: calc(var(--font-small) * 1.1);
+    --font-tiny: calc(var(--font-tiny) * 1.1);
+  }
+  #splitsArea .splitsMatrix thead th,
+  #splitsArea .splitMatrixCell{ min-width: 198px; width: 198px; max-width: 198px; }
+  #splitsArea .splitsMatrix th:first-child{ min-width: 70px; width: 70px; }
+  #splitsArea .splitsMatrix th,
+  #splitsArea .splitsMatrix td{ padding: 9px; }
+  #splitsArea .splitsMatrix td.splitMatrixCell{ padding: 4px 7px; }
+  #splitsArea .splitLayerMain{ min-height: 64px; }
+  #splitsArea .splitLayerTitle{ width: 70px; height: 64px; min-height: 64px; font-size: 70px; }
+  #splitsArea .splitLayerPct{ margin-top: 28px; }
+  #splitsArea .splitLayerPct input{ width: 40px; font-size: 16.5px; }
+  /* Hopper-designation badge - "the label". */
+  #splitsArea .splitCellHopperName{ min-width: 29px; height: 24px; padding: 0 6px; border-radius: 7px; font-size: 13.75px; }
+  /* Track toggle - "the clock". */
+  #splitsArea .splitTrackButton{ width: 25px; height: 25px; min-height: 25px; }
+  #splitsArea .splitTrackButton svg{ width: 21px; height: 21px; }
+  #splitsArea .splitClearButton{ width: 19px; height: 19px; min-height: 19px; font-size: 15px; }
+  #splitsArea .splitSmartBadge{ font-size: 10px; }
+  #splitsArea .splitMatrixCell .resinNameInput{ height: 24px; min-height: 24px; max-height: 24px; line-height: 23px; }
+  #splitsArea .splitPctControl input{ width: 44px; height: 24px; min-height: 24px; max-height: 24px; line-height: 23px; }
+  #splitsArea .splitCellEditor{ grid-template-columns: minmax(86px,1fr) auto; gap: 8px; }
+
+  /* Saved Recipes / Bulk edit / Rearrange panel content, 15% smaller - the
+     tab strip that opens them (.recipeUtilityTabs/.recipeUtilityTab) is a
+     sibling, not a descendant, and keeps its normal size; only the content
+     shown once a tab is open shrinks. Same technique as the matrix's own
+     10% increase above: locally scale every density token these panels'
+     shared reusable components (buttons, inputs, .workspaceConfigurationList
+     rows) already read from, rather than hunting down each one's hardcoded
+     pixel values. */
+  .splitsBulkBar,
+  .splitsSavedRecipesPanel,
+  .rearrangeModeBar{
+    --font-base: calc(var(--font-base) * .85);
+    --font-small: calc(var(--font-small) * .85);
+    --font-tiny: calc(var(--font-tiny) * .85);
+    --pad-input-y: calc(var(--pad-input-y) * .85);
+    --pad-input-x: calc(var(--pad-input-x) * .85);
+    --pad-card: calc(var(--pad-card) * .85);
+    --gap: calc(var(--gap) * .85);
+    --row-pad: calc(var(--row-pad) * .85);
+    --radius-input: calc(var(--radius-input) * .85);
+    --radius-row: calc(var(--radius-row) * .85);
+    --radius2: calc(var(--radius2) * .85);
+    --toggle-w: calc(var(--toggle-w) * .85);
+    --toggle-h: calc(var(--toggle-h) * .85);
+    --toggle-knob: calc(var(--toggle-knob) * .85);
+    --badge-font: calc(var(--badge-font) * .85);
+    --btn-pad-y: calc(var(--btn-pad-y) * .85);
+    --btn-pad-x: calc(var(--btn-pad-x) * .85);
+    --btn-radius: calc(var(--btn-radius) * .85);
+    --control-height: calc(var(--control-height) * .85);
+    --control-radius: calc(var(--control-radius) * .85);
+    --title-size: calc(var(--title-size) * .85);
+    --summary-pad: calc(var(--summary-pad) * .85);
+    --body-pad: calc(var(--body-pad) * .85);
+    --tool-pad: calc(var(--tool-pad) * .85);
+    --page-pad: calc(var(--page-pad) * .85);
+    --page-gap: calc(var(--page-gap) * .85);
+  }
+}
+
 @media (hover:hover){
   .splitMatrixCell.empty .splitTrackButton:not(.active){opacity:0}
   .splitMatrixCell.empty:hover .splitTrackButton,.splitMatrixCell.empty:focus-within .splitTrackButton{opacity:1}
 }
 @media (max-width: 700px){
   .workspaceRecoveryMerge{ grid-template-columns: 1fr; align-items: stretch; }
-  /* Anchoring to either edge (like desktop's right:0) clips on a narrow
-     phone screen - the button row wraps here, and the icon ends up too
-     close to center for either hard edge to leave 390px of room on its
-     own side. Centered on the icon instead, capped narrower so it always
-     clears both edges regardless of exactly where the row wraps. */
-  .splitsInfoPanel{ left:50%; right:auto; transform:translateX(-50%); width:min(320px, calc(100vw - 32px)); }
   /* Saved Recipes header actions ("icon-first compact bar", chosen from the
      mockup round): Save/Load/Update collapse to small round icon buttons
      and the row stops wrapping under the title. Each button's real text
@@ -2894,8 +2959,8 @@ body[data-recipe-page="next"] .splitsInfo{ display: none; }
      primary action - the popup's own default left:0 anchors it to that
      trigger's left edge, which is itself near the panel's right edge, and
      the fixed-width popup then overflows off the right of the viewport.
-     Right-align it to the trigger instead, matching every other right-edge
-     popup in this tray (.mobileRecipeMoreMenu, .splitsInfoPanel). */
+     Right-align it to the trigger instead, matching the More menu's own
+     right-edge popup in this tray. */
   .splitsMobilePrimaryRow .splitsScanShortcut .statusScanShortcutPanel{ left:auto; right:0; }
   .splitsMobilePrimaryRow button.secondary:hover,
   .splitsMobilePrimaryRow button.secondary:focus-visible,
@@ -2920,34 +2985,12 @@ body[data-recipe-page="next"] .splitsInfo{ display: none; }
     border:1px solid var(--row-border-2);
     border-radius:0 0 var(--control-radius) var(--control-radius);
     background:var(--row-bg-2);
-    /* No overflow:hidden - the More menu and the relocated Recipe info
-       trigger are both position:absolute descendants that need to open
-       above/beside this row, same reasoning as the primary row above. */
+    /* No overflow:hidden - the More menu is a position:absolute descendant
+       that needs to open above/beside this row, same reasoning as the
+       primary row above. */
   }
   .splitsMobileSecondaryRow .mobileRecipeMore{ flex:1 1 auto; min-width:0; }
   .splitsMobileSecondaryRow .mobileRecipeMore > summary{ width:100%; border-left:0; }
-  /* Recipe info has no separate icon on mobile any more - it is triggered
-     from the More menu's own "Recipe info" entry instead. Reduced to a
-     zero-size anchor point (position:absolute takes it out of the row's
-     flow entirely) so it costs no layout space; its existing popup panel
-     still opens normally from wherever this anchor sits, since .splitsInfo
-     keeps its own position:relative for the panel to measure against. */
-  .splitsMobileSecondaryRow .splitsInfo{
-    position:absolute;
-    right:0;
-    bottom:100%;
-    width:0;
-    height:0;
-    overflow:visible;
-  }
-  .splitsMobileSecondaryRow .splitsInfo > summary{ display:none; }
-  /* .splitsInfoPanel's own mobile rule centers itself (left:50%;
-     transform:translateX(-50%)) on its positioned ancestor - correct when
-     that ancestor is a normal-width element, but this anchor is
-     deliberately zero-width (see above), so centering on it hangs the
-     panel half off both edges. Right-align to the anchor instead, same as
-     the Scan Recipe popup fix above. */
-  .splitsMobileSecondaryRow .splitsInfoPanel{ left:auto; right:0; transform:none; }
   .mobileBulkContext{
     display:grid;
     grid-template-columns:auto minmax(0,1fr) auto;
@@ -3535,8 +3578,8 @@ body[data-recipe-page="next"] .splitsInfo{ display: none; }
 /* Smart Hoppers: per-hopper geometry (usable height + circumference) used
    to compute weight from resin density when known - see the wrench trigger
    below. A <details> popover, not nested content-visibility tricks; same
-   established pattern as .recipeScanInfo/.splitsInfo. Only rendered at all
-   when Smart Hoppers is enabled (see renderWeightsArea). */
+   established pattern as .splitsScanShortcut's own popover. Only rendered
+   at all when Smart Hoppers is enabled (see renderWeightsArea). */
 .hopperGeometryPopover{ position: relative; flex: 0 0 auto; }
 .hopperGeometryTrigger{
   display: grid;

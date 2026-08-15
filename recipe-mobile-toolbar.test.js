@@ -94,7 +94,7 @@ test("primary-row items share equal width and never wrap - however many of them 
   assert.match(styles, /\.splitsMobilePrimaryRow > \*\{ flex:1 1 0; min-width:0; \}/);
 });
 
-test("no overflow:hidden on either mobile row - it would clip the Scan Recipe and Recipe info popups, which must escape the row's own bounds", () => {
+test("no overflow:hidden on either mobile row - it would clip the Scan Recipe and More menu popups, which must escape the row's own bounds", () => {
   const strip = block => block.replace(/\/\*[\s\S]*?\*\//g, "");
   const primary = strip(styles.slice(styles.indexOf(".splitsMobilePrimaryRow{"), styles.indexOf(".splitsMobilePrimaryRow > *{")));
   const secondary = strip(styles.slice(styles.indexOf(".splitsMobileSecondaryRow{"), styles.indexOf(".splitsMobileSecondaryRow .mobileRecipeMore{")));
@@ -115,7 +115,7 @@ test("the two rows are one joined surface - primary suppresses its own bottom bo
  *   Secondary tier: the existing More menu, page-aware contents
  * ============================================================ */
 
-test("Current's More menu keeps its existing 3 scan sources plus Print, and gains Recipe info", () => {
+test("Current's More menu keeps its existing 3 scan sources plus Print", () => {
   const editor = recipeEditor();
   const menuStart = editor.indexOf("mobileMoreButton.innerHTML=`");
   const menuHtml = editor.slice(menuStart, editor.indexOf("`;", menuStart));
@@ -124,29 +124,13 @@ test("Current's More menu keeps its existing 3 scan sources plus Print, and gain
   assert.match(menuHtml, /data-mobile-recipe-scan="dosing_screen"/);
   assert.match(menuHtml, /data-mobile-recipe-scan="heat_sheet"/);
   assert.match(menuHtml, /data-mobile-recipe-print/);
-  const block = editor.slice(editor.indexOf("if (compactMobileRecipe){"), editor.indexOf("// Percentage problems are not printed here"));
-  assert.match(block, /if \(!isNextRecipePage\(\)\)\{\s*\n\s*const infoMenuButton = document\.createElement\("button"\);/);
 });
 
-test("Next's More menu drops the 3 scan sources (redundant with the promoted primary Scan Recipe) and never offers Recipe info", () => {
-  // Recipe info is deliberately Current-only, matching the existing desktop
-  // rule (body[data-recipe-page="next"] .splitsInfo{display:none}) - an
-  // unconditional menu entry here would open a panel that is hidden anyway.
-  assert.match(styles, /body\[data-recipe-page="next"\] \.splitsInfo\{ display: none; \}/);
+test("Next's More menu drops the 3 scan sources, redundant with the promoted primary Scan Recipe", () => {
   const editor = recipeEditor();
   const block = editor.slice(editor.indexOf("if (compactMobileRecipe){"), editor.indexOf("// Percentage problems are not printed here"));
   const secondaryBlock = block.slice(block.indexOf("mobileSecondaryRow = document.createElement"));
-  assert.match(secondaryBlock, /\}else\{\s*\n\s*mobileSecondaryRow\.append\(mobileMoreButton\);\s*\n\s*\}/);
-});
-
-test("Recipe info has no separate icon on mobile - it is triggered from the More menu and costs no layout space of its own", () => {
-  const editor = recipeEditor();
-  assert.match(editor, /infoMenuButton\.addEventListener\("click", \(\)=>\{\s*\n\s*mobileMoreButton\.open = false;\s*\n\s*recipeInfo\.open = true;\s*\n\s*\}\);/);
-  const rule = styles.slice(styles.indexOf(".splitsMobileSecondaryRow .splitsInfo{"), styles.indexOf("}", styles.indexOf(".splitsMobileSecondaryRow .splitsInfo{")) + 1);
-  assert.match(rule, /position:absolute;/);
-  assert.match(rule, /width:0;/);
-  assert.match(rule, /height:0;/);
-  assert.match(styles, /\.splitsMobileSecondaryRow \.splitsInfo > summary\{ display:none; \}/);
+  assert.match(secondaryBlock, /mobileSecondaryRow\.append\(mobileMoreButton\);/);
 });
 
 /* ============================================================
@@ -160,15 +144,6 @@ test("Scan Recipe's popup is right-aligned to its trigger in the mobile primary 
   // primary item on Next - left:0 there pushes a fixed-width popup off the
   // right of a narrow viewport.
   assert.match(styles, /\.splitsMobilePrimaryRow \.splitsScanShortcut \.statusScanShortcutPanel\{ left:auto; right:0; \}/);
-});
-
-test("Recipe info's popup is right-aligned to its (zero-width) anchor, not centered on it", () => {
-  // .splitsInfoPanel's own mobile rule centers itself on its positioned
-  // ancestor (left:50%; transform:translateX(-50%)), which is correct for a
-  // normal-width ancestor but hangs the panel half off both edges when the
-  // ancestor has been reduced to a zero-width anchor point (see the info
-  // relocation above).
-  assert.match(styles, /\.splitsMobileSecondaryRow \.splitsInfoPanel\{ left:auto; right:0; transform:none; \}/);
 });
 
 /* ============================================================

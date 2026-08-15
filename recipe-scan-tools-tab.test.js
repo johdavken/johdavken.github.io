@@ -64,10 +64,8 @@ test("all three options use the native <details>/<summary> disclosure pattern, o
   assert.equal((html.match(summaryPattern) || []).length, 3);
 });
 
-test("the info icon reuses Recipe Setup's existing disclosure convention (app.js's splitsInfo) rather than inventing a new one", () => {
-  const app = fs.readFileSync("app.js", "utf8");
-  assert.match(app, /<summary aria-label="Recipe Setup information" title="Recipe Setup information">/, "Recipe Setup's own icon, rendered by app.js, is the pattern this reuses");
-  assert.match(styles, /\.recipeScanInfo > summary\{[^}]*border-radius:50%/, "must reuse the round-icon-button treatment, not a plain link/button");
+test("the info icon uses the app's established round-icon-button disclosure treatment, not a plain link/button", () => {
+  assert.match(styles, /\.recipeScanInfo > summary\{[^}]*border-radius:50%/);
 });
 
 // --- mobile status-bar scan shortcut -------------------------------------

@@ -3397,9 +3397,12 @@
         modeBar.appendChild(loadNextButton);
       }
       // Print Recipe is appended last (after Load Next Recipe, which may or
-      // may not exist depending on Current/Next), so the desktop row always
-      // reads Scan -> Load Next -> Print, left to right in descending
-      // priority - Load Next simply drops out of the row on the Next page.
+      // may not exist depending on Current/Next). This is the baseline
+      // placement - mobile keeps it here (Print Recipe is desktop-only via
+      // rearrangeDesktopOnly, so it just never renders there); desktop
+      // relocates both into .recipeUtilityTabs below, alongside Saved
+      // recipes/Bulk edit/Rearrange, leaving only Scan Recipe + the info
+      // icon in modeBar.
       modeBar.appendChild(printButton);
 
       // On Next, Scan Recipe is promoted to a primary mobile action (see the
@@ -3615,30 +3618,13 @@
         setSavedRecipesOpen(turningOn);
       });
 
-      const recipeInfo = document.createElement("details");
-      recipeInfo.className = "splitsInfo";
-      recipeInfo.innerHTML = `
-        <summary aria-label="Recipe Setup information" title="Recipe Setup information"><svg class="recipeActionIcon" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="11"/><path d="M16 14v8"/><circle cx="16" cy="10.5" r="1" fill="currentColor" stroke="none"/></svg></summary>
-        <div class="splitsInfoPanel">
-          <p>Resin names are optional. If B and D, or A and E layers are the same, you can copy from one to the other.</p>
-          <p><strong>Colored clock</strong> = tracked in the Timeline.</p>
-        </div>
-      `;
-      // Lives at the far right of the action row, separated from Scan/Load
-      // Next/Print by margin-left:auto (see .splitsBulkModeBar > .splitsInfo
-      // in styles.css) rather than ending the row as a fourth equal action -
-      // appending it last here just keeps it after them in DOM/tab order,
-      // which is what the auto-margin needs to push it rightward correctly.
-      modeBar.appendChild(recipeInfo);
-
       // Two intentional mobile tiers, built by moving the same real buttons
       // (not rebuilding them) out of modeBar - their click handlers stay
       // exactly as wired above. This replaces the old single fixed 4-column
       // grid, which had no room for Current's extra Load Next button and
       // silently clipped it. Primary keeps the handful of actions worth a
       // direct tap; everything else already has a home in mobileMoreButton's
-      // menu, which is where Recipe Setup information also moves to here -
-      // it has no separate icon of its own on mobile any more.
+      // menu.
       let mobilePrimaryRow = null;
       let mobileSecondaryRow = null;
       let recipeUtilityTabs = null;
@@ -3661,24 +3647,7 @@
 
         mobileSecondaryRow = document.createElement("div");
         mobileSecondaryRow.className = "splitsMobileSecondaryRow";
-        // Recipe Setup information is Current-only - it already is on
-        // desktop (body[data-recipe-page="next"] .splitsInfo{display:none}),
-        // since it describes tracking/Timeline behaviour that has no meaning
-        // on the plan. Offering a menu entry that opens a hidden panel on
-        // Next would be a dead control, so it is omitted there instead.
-        if (!isNextRecipePage()){
-          const infoMenuButton = document.createElement("button");
-          infoMenuButton.type = "button";
-          infoMenuButton.textContent = "Recipe info";
-          infoMenuButton.addEventListener("click", ()=>{
-            mobileMoreButton.open = false;
-            recipeInfo.open = true;
-          });
-          mobileMoreButton.querySelector(".mobileRecipeMoreMenu").appendChild(infoMenuButton);
-          mobileSecondaryRow.append(mobileMoreButton, recipeInfo);
-        }else{
-          mobileSecondaryRow.append(mobileMoreButton);
-        }
+        mobileSecondaryRow.append(mobileMoreButton);
       }else{
         // Desktop only: Saved recipes / Bulk edit / Rearrange become a
         // second, visually subordinate tab strip beneath the grid, echoing
@@ -3702,6 +3671,22 @@
         modeButton.setAttribute("role", "tab");
         modeButton.setAttribute("aria-controls", toolbar.id);
         recipeUtilityTabs.append(savedRecipesButton, modeButton, rearrangeButton);
+
+        // Load Next Recipe / Print Recipe attach to the panel the same way
+        // Saved recipes/Bulk edit/Rearrange do - same strip, same divider,
+        // same tab shape (.recipeUtilityTab, plus .recipeActionTab only for
+        // the icon+label layout the plain-text tabs don't need) - they just
+        // run an action immediately instead of opening a panel, so they get
+        // no role="tab"/aria-selected/aria-controls and stay outside the
+        // tab-switching mutual exclusion above. .append() below moves each
+        // node here from modeBar (its original parent), rather than
+        // requiring modeBar's own appendChild calls above to change.
+        loadNextButton?.classList.remove("secondary");
+        loadNextButton?.classList.add("recipeUtilityTab", "recipeActionTab");
+        printButton.classList.remove("secondary", "recipeActionTertiary");
+        printButton.classList.add("recipeUtilityTab", "recipeActionTab");
+        if (loadNextButton) recipeUtilityTabs.append(loadNextButton);
+        recipeUtilityTabs.append(printButton);
       }
 
       // Percentage problems are not printed here. They are conditions of the

@@ -48,36 +48,6 @@ test("the action button row (Scan/Print/Load Next/Info) is flush to the panel's 
   assert.match(rule, /justify-self: start/);
 });
 
-// --- info icon lives at the right end of the button row, opens upward -----
-
-test("the info icon (ⓘ) is appended into modeBar - it sits after Print Recipe, at the right end of the toolbar", () => {
-  // modeBar (the action row) is appended straight to #splitsArea now - no
-  // actionRow wrapper any more, since Saved recipes/Bulk edit/Rearrange
-  // moved out into their own .recipeUtilityTabs strip.
-  assert.match(splitsArea, /if \(!compactMobileRecipe\)\{\s*\n\s*area\.append\(modeBar\);\s*\n\s*\}/);
-  assert.doesNotMatch(splitsArea, /actionInfo/);
-  const modeBarAppend = splitsArea.indexOf("modeBar.appendChild(recipeInfo);");
-  assert.notEqual(modeBarAppend, -1);
-  // Appended after the button-creation calls, so it lands last in modeBar's
-  // flex order regardless of which buttons are enabled/disabled.
-  assert.ok(modeBarAppend > splitsArea.indexOf('modeBar.appendChild(printButton)'));
-});
-
-test("the info panel opens upward and to the left, since the icon sits at the right end of the row where opening downward or rightward clips against the panel/viewport edge (verified live: right:0 stays clear of the viewport at both 1080px and 1280px; left:0 overflows the right edge at both)", () => {
-  assert.match(styles, /\.splitsInfoPanel\{position:absolute;bottom:calc\(100% \+ 6px\);right:0;/);
-  assert.doesNotMatch(styles, /\.splitsInfoPanel\{position:absolute;top:calc\(100% \+ 6px\);left:0;/);
-  assert.doesNotMatch(styles, /\.splitsInfoPanel\{position:absolute;bottom:calc\(100% \+ 6px\);left:0;/);
-});
-
-test("on narrow mobile, where the button row wraps and the icon lands too close to center for either hard edge to clear a 390px screen, the panel centers on the icon instead (verified live at 390px: edge-anchored clipped on whichever side it opened toward; centered did not)", () => {
-  const narrowBlock = styles.slice(styles.indexOf("@media (max-width: 700px){"));
-  const ruleStart = narrowBlock.indexOf(".splitsInfoPanel{");
-  const rule = narrowBlock.slice(ruleStart, narrowBlock.indexOf("}", ruleStart) + 1);
-  assert.match(rule, /left:50%/);
-  assert.match(rule, /right:auto/);
-  assert.match(rule, /transform:translateX\(-50%\)/);
-});
-
 test("the utility tabs, saved-recipes panel and action row remain direct children while the bulk toolbar stays direct on desktop and moves into its mobile dialog", () => {
   assert.match(splitsArea, /recipeUtilityTabs\.className = "recipeUtilityTabs"/);
   assert.match(splitsArea, /toolbar\.className = "splitsBulkBar hide"/);

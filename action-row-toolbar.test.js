@@ -12,8 +12,7 @@ const styles = fs.readFileSync("styles.css", "utf8");
 // descending visual weight - replacing the old "option A" unified bordered
 // strip with flat divided segments, which read as generic, equally-
 // weighted footer controls rather than an intentional recipe workflow
-// toolbar. Recipe Setup information is a separate small icon-only control
-// pushed to the row's far right, not a fourth equal segment.
+// toolbar.
 
 function functionBodyLikeRule(selector){
   const start = styles.indexOf(`\n${selector}{`);
@@ -71,15 +70,6 @@ test("the row's append order puts Scan Recipe first, Load Next Recipe second (wh
   const printAppend = modeBar.indexOf("modeBar.appendChild(printButton)");
   assert.ok(scanAppend > -1 && loadNextAppend > scanAppend && printAppend > loadNextAppend,
     "expected append order: scanRecipeButton, then loadNextButton, then printButton");
-});
-
-test("Recipe Setup information sits at the row's far right, separated by margin-left:auto and reduced to a small round icon-only control - not a fourth equal segment ending the strip", () => {
-  const marginRule = functionBodyLikeRule(".splitsBulkModeBar > .splitsInfo");
-  assert.match(marginRule, /margin-left: auto;/);
-  const summaryRule = functionBodyLikeRule(".splitsBulkModeBar > .splitsInfo > summary");
-  assert.match(summaryRule, /border-radius: 50%;/);
-  assert.match(summaryRule, /width: 32px;/);
-  assert.match(summaryRule, /height: 32px;/);
 });
 
 test("the container does NOT use overflow:hidden to clip corners - that would also clip Scan Recipe's popup, which intentionally escapes this row via position:absolute to open upward", () => {

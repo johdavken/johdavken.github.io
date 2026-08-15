@@ -170,7 +170,7 @@ test("a planned recipe is marked quietly, and the marker tracks edits", () => {
 
 test("operational controls are not offered on a plan", () => {
   // A plan has no tracking or pump-off to control, by construction.
-  assert.match(styles, /body\[data-recipe-page="next"\] \.splitTrackControl,\s*\nbody\[data-recipe-page="next"\] \.splitsInfo\{ display: none; \}/);
+  assert.match(styles, /body\[data-recipe-page="next"\] \.splitTrackControl\{ display: none; \}/);
   assert.match(app, /document\.body\.dataset\.recipePage = activeRecipePage;/);
 });
 
