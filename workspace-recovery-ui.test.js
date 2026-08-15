@@ -97,6 +97,12 @@ test("Workspace Management is a main-panel workspacePanel, not an oversized moda
   assert.match(index, /Reconnect a line computer after a browser reset/);
 });
 
+test("desktop Workspace Management reserves two lines inside every workspace row", () => {
+  const desktop = fs.readFileSync("desktop.css", "utf8");
+  assert.match(desktop, /\.workspaceRecoveryRow\{grid-template-rows:auto auto;align-content:center;min-height:58px;line-height:1\.25\}/);
+  assert.match(desktop, /\.workspaceRecoveryRow strong,\.workspaceRecoveryRow small\{display:block\}/);
+});
+
 test("ownership reassignment is a distinct, explicit action separate from Add This Device", () => {
   assert.match(index, /id="workspaceRecoveryTransferOwnershipBtn"[^>]*disabled/);
   assert.match(index, /id="workspaceRecoveryOwnershipConfirmDialog"/);

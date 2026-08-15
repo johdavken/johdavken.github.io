@@ -335,6 +335,11 @@
   /* Match mobile Saved Recipes' selected-row affordance: the focus surface,
      outline, and inset rail stay clear on light desktop themes. */
   .workspaceConfigurationRow.selected{border:1px solid var(--focus-border);background:var(--focus-ring);box-shadow:inset 3px 0 0 var(--focus-border)}
+  /* Workspace Management rows contain a title and detail line. Reserve both
+     tracks explicitly so dense desktop layouts never let the detail escape
+     the row surface; mobile retains its natural flowing layout. */
+  .workspaceRecoveryRow{grid-template-rows:auto auto;align-content:center;min-height:58px;line-height:1.25}
+  .workspaceRecoveryRow strong,.workspaceRecoveryRow small{display:block}
   .desktopSharedCircumference{display:grid;grid-template-columns:1fr minmax(54px,70px);align-items:end;gap:6px;margin:0;padding:5px 8px;border:1px solid var(--row-border-2);border-radius:var(--control-radius);background:var(--row-bg-2);color:var(--muted);font-size:var(--desktop-type-label);font-weight:750}
   .desktopSharedCircumference .weightsInputWithUnit{grid-template-columns:minmax(36px,1fr) auto;gap:3px}
   .desktopSharedCircumference input{min-height:27px;padding:2px;text-align:right}

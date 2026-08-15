@@ -1500,6 +1500,7 @@
       const vibrateToggle = $("pumpOffAlarmVibrateToggle");
       if (vibrateToggle) vibrateToggle.checked = state.pumpOffAlarmVibrate;
       const nativeAvailable = !!nativePumpOffAlarm();
+      document.body.classList.toggle("native-pump-off-alarm", nativeAvailable);
       const soundRow = $("pumpOffAlarmSoundRow");
       const vibrateRow = $("pumpOffAlarmVibrateRow");
       if (soundRow) soundRow.hidden = !nativeAvailable;

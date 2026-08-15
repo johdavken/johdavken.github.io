@@ -232,6 +232,15 @@ test("applyPumpOffAlarmSound stores the choice, refreshes the displayed name/tog
   assert.match(body, /vibrateRow\.hidden = !nativeAvailable;/);
 });
 
+test("the Capacitor-only compact alarm panel is activated from native alarm availability, leaving browser mobile rows unchanged", () => {
+  assert.match(app, /document\.body\.classList\.toggle\("native-pump-off-alarm", nativeAvailable\);/);
+  assert.match(styles, /body\.native-pump-off-alarm \.timelineAlarmSetting\{/);
+  assert.match(styles, /grid-template-columns:auto auto minmax\(0,1fr\) auto;/);
+  assert.match(styles, /body\.native-pump-off-alarm \.pumpOffAlarmSoundRow\{display:contents\}/);
+  assert.ok(html.indexOf('id="pumpOffAlarmVibrateRow"') < html.indexOf('id="pumpOffAlarmSoundRow"'), "Vibrate must precede the sound controls so the compact native strip follows the intended reading order");
+  assert.match(styles, /\.pumpOffAlarmVibrateChoice\{grid-column:2;grid-row:1\}/);
+});
+
 test("Change opens the native ringtone picker and, unless cancelled, applies the result and immediately resyncs any already-scheduled alarms", () => {
   const start = app.indexOf('$("pumpOffAlarmSoundChangeBtn")?.addEventListener("click"');
   assert.notEqual(start, -1);

@@ -5869,6 +5869,45 @@ body[data-surface-style="divided"] .helpTopic{
      .splitsMobilePrimaryRow for the same reason. */
   .pumpOffAlarmSoundRow[hidden],.pumpOffAlarmVibrateChoice[hidden]{display:none!important}
 
+  /* APK only: native sound/vibration controls are available together, so
+     condense them into the Timeline alarm panel rather than three cards.
+     Browser/mobile keeps the fuller rows above because it never receives
+     .native-pump-off-alarm. */
+  body.native-pump-off-alarm .timelineAlarmSetting{
+    display:grid;
+    grid-template-columns:auto auto minmax(0,1fr) auto;
+    align-items:center;
+    gap:6px 8px;
+    padding:8px;
+    border:1px solid var(--border);
+    border-radius:var(--control-radius);
+    background:var(--row-bg);
+  }
+  body.native-pump-off-alarm .timelineAlarmSetting legend{padding:0 4px;color:var(--title);font-size:11px;font-weight:800}
+  body.native-pump-off-alarm .mobileTimelineAlarmChoice,
+  body.native-pump-off-alarm .pumpOffAlarmVibrateChoice{
+    min-height:30px;
+    margin:0;
+    padding:3px 0;
+    border:0;
+    border-radius:0;
+    background:transparent;
+  }
+  body.native-pump-off-alarm .mobileTimelineAlarmChoice{grid-column:1}
+  body.native-pump-off-alarm .pumpOffAlarmVibrateChoice{grid-column:2;grid-row:1}
+  body.native-pump-off-alarm .mobileTimelineAlarmChoice input,
+  body.native-pump-off-alarm .pumpOffAlarmVibrateChoice input{width:18px;height:18px}
+  body.native-pump-off-alarm .mobileTimelineAlarmChoice strong{font-size:0}
+  body.native-pump-off-alarm .mobileTimelineAlarmChoice strong::before{content:"Alarm";font-size:11px}
+  body.native-pump-off-alarm .mobileTimelineAlarmChoice small{display:none}
+  body.native-pump-off-alarm .pumpOffAlarmVibrateChoice span{font-size:11px}
+  body.native-pump-off-alarm .pumpOffAlarmSoundRow{display:contents}
+  body.native-pump-off-alarm .pumpOffAlarmSoundInfo{grid-column:3;grid-row:1;min-width:0}
+  body.native-pump-off-alarm .pumpOffAlarmSoundInfo strong{display:none}
+  body.native-pump-off-alarm .pumpOffAlarmSoundInfo small{font-size:11px}
+  body.native-pump-off-alarm .pumpOffAlarmSoundActions{grid-column:4;grid-row:1;display:flex;gap:4px}
+  body.native-pump-off-alarm .pumpOffAlarmSoundRow .copyBtn{padding:5px 7px;font-size:10px}
+
   body[data-mobile-background-style="layer-glow"]{
     background:
       radial-gradient(circle at 8% 22%,color-mix(in srgb,var(--bad) 12%,transparent),transparent 30%),

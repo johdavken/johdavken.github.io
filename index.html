@@ -612,15 +612,14 @@
           <input id="mobileTimelineAlarmToggle" type="checkbox">
           <span><strong>Alarm when pump-off is due</strong><small id="mobileTimelineAlarmStatus">Sound and vibration while Resin.Tools is open.</small></span>
         </label>
-        <div class="pumpOffAlarmSoundRow" id="pumpOffAlarmSoundRow" hidden>
-          <span class="pumpOffAlarmSoundInfo"><strong>Alarm sound</strong><small id="pumpOffAlarmSoundName">Default alarm sound</small></span>
-          <button id="pumpOffAlarmSoundChangeBtn" type="button" class="copyBtn">Change</button>
-          <button id="pumpOffAlarmPreviewBtn" type="button" class="copyBtn">Preview</button>
-        </div>
         <label class="pumpOffAlarmVibrateChoice" id="pumpOffAlarmVibrateRow" for="pumpOffAlarmVibrateToggle" hidden>
           <input id="pumpOffAlarmVibrateToggle" type="checkbox" checked>
           <span>Vibrate</span>
         </label>
+        <div class="pumpOffAlarmSoundRow" id="pumpOffAlarmSoundRow" hidden>
+          <span class="pumpOffAlarmSoundInfo"><strong>Alarm sound</strong><small id="pumpOffAlarmSoundName">Default alarm sound</small></span>
+          <span class="pumpOffAlarmSoundActions"><button id="pumpOffAlarmSoundChangeBtn" type="button" class="copyBtn">Change</button><button id="pumpOffAlarmPreviewBtn" type="button" class="copyBtn">Preview</button></span>
+        </div>
       </fieldset>
       <div id="resultsArea" class="resultGrid mt10"></div>
 
