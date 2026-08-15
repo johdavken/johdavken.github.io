@@ -19,7 +19,7 @@ test("desktop Account is portalled outside the inert desktop workspace", () => {
 // desktop notification bell, so these assertions track the generalized
 // helpers. Account must still be part of that set - asserted explicitly.
 test("desktop Account uses a nonmodal popover while mobile retains the sheet", () => {
-  assert.match(app, /function isDesktopAccountPopover\(name = activeFooterSheetName\)\{\s*\n\s*return name === "account" && window\.matchMedia\("\(min-width: 901px\)"\)\.matches;/);
+  assert.match(app, /function isDesktopAccountPopover\(name = activeFooterSheetName\)\{\s*\n\s*return name === "account" && isDesktopLayout\(\);/);
   assert.match(app, /return isDesktopAccountPopover\(name\) \|\| isDesktopNotificationsPopover\(name\);/);
   assert.match(app, /const nonmodalPopover = isDesktopAccountPopover\(name\) \|\| isDesktopNotificationsPopover\(name\);/);
   assert.match(app, /sheet\.setAttribute\("aria-modal", String\(!nonmodalPopover\)\)/);

@@ -32,7 +32,7 @@ test("footer sheets share backdrop, toggle, Escape, and focus-return behavior",(
 test("Layered Flat is the standard surface and Display no longer exposes a desktop surface selector",()=>{
   assert.doesNotMatch(html,/desktopDisplaySettings|surfaceStyleSel|Surface style/);
   assert.match(app,/function defaultSurfaceStyle\(\)\{\s*return "layered-flat";/);
-  assert.match(app,/window\.matchMedia\("\(min-width: 901px\)"\)\.matches\s*\? "layered-flat"\s*:\s*storedSurfaceStyle/);
+  assert.match(app,/isDesktopLayout\(\)\s*\? "layered-flat"\s*:\s*storedSurfaceStyle/);
   assert.match(app,/state\.surfaceStyle = storedSurfaceStyle/);
   assert.doesNotMatch(app,/\$\("surfaceStyleSel"\)/);
 });

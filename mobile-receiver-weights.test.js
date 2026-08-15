@@ -17,7 +17,7 @@ function functionBody(name){
 
 test("Receiver Hopper Weights switches to an all-layer mobile matrix without changing desktop rendering",()=>{
   const render = functionBody("renderWeightsArea");
-  assert.match(render,/window\.matchMedia\("\(max-width: 900px\)"\)\.matches/);
+  assert.match(render,/!isDesktopLayout\(\)/);
   assert.match(render,/renderMobileWeightsArea\(area\);/);
 
   const mobile = functionBody("renderMobileWeightsArea");

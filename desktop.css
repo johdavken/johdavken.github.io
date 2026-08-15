@@ -2,7 +2,7 @@
 /* =======================================================================
  *   Desktop viewport workspace
  *   ======================================================================= */
-@media (min-width:901px){
+@media (min-width:901px) and (pointer: fine){
   :root{
     --desktop-type-body:14px;
     --desktop-type-secondary:12px;
@@ -443,7 +443,7 @@
   #resinAdminBlock > .blockBody,#workspaceManagementBlock > .blockBody{overflow:auto}
 }
 
-@media (min-width:901px) and (max-width:1180px){
+@media (min-width:901px) and (max-width:1180px) and (pointer: fine){
   main{grid-template-columns:190px minmax(0,1fr)}
   #lineSetupBlock > .blockBody{grid-template-columns:minmax(255px,300px) minmax(560px,1fr);gap:10px 14px}
   .workspaceStatusBar{gap:7px}

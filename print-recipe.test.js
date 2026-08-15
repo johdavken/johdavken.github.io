@@ -26,7 +26,7 @@ test("Print Recipe remains desktop-only, even though Rearrange itself no longer 
   // in modeBar's own append order instead.
   assert.match(modeBar, /modeBar\.appendChild\(scanRecipeButton\)[\s\S]*modeBar\.appendChild\(printButton\)/);
   assert.match(modeBar, /printButton\.addEventListener\("click", printRecipeSheet\)/);
-  assert.match(styles, /@media\(max-width:900px\)\{\.rearrangeDesktopOnly\{display:none!important\}\}/);
+  assert.match(styles, /@media\(max-width:900px\), \(min-width: 901px\) and \(pointer: coarse\)\{\.rearrangeDesktopOnly\{display:none!important\}\}/);
 });
 
 test("printing is a pure read/output action: no confirmation, no state mutation, no sync notification", () => {

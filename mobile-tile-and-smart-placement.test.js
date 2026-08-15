@@ -33,7 +33,7 @@ test("mobile RT Sync explains joining only, while desktop retains its create-or-
 });
 
 test("on mobile Recipe Setup, the Smart badge follows the resin input rather than the hopper number", () => {
-  assert.match(app, /if \(window\.matchMedia\("\(max-width: 900px\)"\)\.matches\) \{\s*cellTop\.appendChild\(smartBadge\);/);
+  assert.match(app, /if \(!isDesktopLayout\(\)\) \{\s*cellTop\.appendChild\(smartBadge\);/);
   assert.match(styles, /\.splitCellTop \.splitSmartBadge\{ flex:0 0 auto; \}/);
 });
 

@@ -20,7 +20,7 @@ test("the desktop sidebar icon is untouched", () => {
 });
 
 test(".resinToolsLogo lives inside .mobileBrand, which is hidden on desktop - confirms this change is mobile-only by construction, not by a separate media query on the logo itself", () => {
-  const desktopMediaStart = styles.indexOf("@media (min-width: 901px){");
+  const desktopMediaStart = styles.indexOf("@media (min-width: 901px)");
   assert.notEqual(desktopMediaStart, -1);
   const desktopMediaBody = styles.slice(desktopMediaStart, styles.indexOf("\n}\n", desktopMediaStart));
   assert.match(desktopMediaBody, /\.mobileBrand\{ display: none; \}/);

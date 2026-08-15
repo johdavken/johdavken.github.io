@@ -230,9 +230,11 @@ test("mobile keeps the same heads-up banner from the same unchanged code path", 
   assert.match(app, /function setStatus\(html\)\{\s*\n\s*const el = \$\("statusBox"\);/);
   assert.match(app, /setStatus\(statusMessage\(msgs\)\);/);
   assert.match(html, /<div id="statusBox"><\/div>/);
-  // #statusBox is only hidden inside desktop.css's min-width:901px block.
+  // #statusBox is only hidden inside desktop.css's desktop-shell block
+  // (min-width:901px, and pointer:fine so a wide touch device does not
+  // get treated as desktop).
   assert.doesNotMatch(styles, /#statusBox\{[^}]*display:none/);
-  const desktopOnly = desktop.slice(desktop.indexOf("@media (min-width:901px){"));
+  const desktopOnly = desktop.slice(desktop.indexOf("@media (min-width:901px) and (pointer: fine){"));
   assert.ok(desktopOnly.includes("#lineSetupBlock #statusBox{display:none}"));
 });
 
