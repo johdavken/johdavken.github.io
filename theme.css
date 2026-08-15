@@ -10,6 +10,9 @@
   --yellow:#b02323; --orange:#e06c00; --border:rgba(255,255,255,.10); --border2:rgba(255,255,255,.14);
   --field-bg:rgba(0,0,0,.20); --panelOpen:rgba(18,26,35,.96); --chev:rgba(255,255,255,.45);
   --warn:#ffb020; --bad:#ff5c5c; --ok:#5dff9f; --shadow2:0 8px 20px rgba(0,0,0,.25);
+  /* Main-screen Recipe workflow accent: matches Industrial Slate Dark's
+     restrained yellow without changing the shared warning token. */
+  --workflow-recipe: #d6a85f;
   --row-bg:rgba(255,255,255,.04); --row-border:rgba(255,255,255,.07);
   --row-bg-2:rgba(255,255,255,.03); --row-border-2:rgba(255,255,255,.07);
   --readonly-bg:rgba(255,255,255,.06); --readonly-border:rgba(255,255,255,.10);
@@ -156,6 +159,8 @@
   --warn: #d6a85f;
   --bad: #d66f72;
   --ok: #7eaf94;
+  /* Main-screen Timeline workflow accent. */
+  --workflow-timeline: #7c9cd6;
   --shadow2: 0 8px 24px rgba(0,0,0,.28);
   --row-bg: rgba(138,168,194,.055);
   --row-border: rgba(138,168,194,.18);

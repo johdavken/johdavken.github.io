@@ -107,7 +107,10 @@ test("the Camera and photos section matches every permission merged into the And
     "android.permission.INTERNET",
     "android.permission.RECEIVE_BOOT_COMPLETED",
     "android.permission.WAKE_LOCK",
-    "android.permission.POST_NOTIFICATIONS"
+    "android.permission.POST_NOTIFICATIONS",
+    "android.permission.VIBRATE",
+    "android.permission.SCHEDULE_EXACT_ALARM",
+    "android.permission.USE_FULL_SCREEN_INTENT"
   ]);
   assert.deepEqual([...declared].sort(), [...expected].sort(), "the merged permission set changed - re-check the Camera and photos wording");
   assert.ok(!declared.has("android.permission.CAMERA"), "a camera permission appeared - the policy says none is requested");
@@ -117,7 +120,7 @@ test("the Camera and photos section matches every permission merged into the And
   );
 
   const section = sectionBody("Camera and photos");
-  assert.match(section, /declares four permissions/i);
+  assert.match(section, /declares seven permissions/i);
   assert.match(section, /requests no camera permission and no photo-library permission/i);
   assert.doesNotMatch(section, /declares one permission/i);
   assert.doesNotMatch(section, /asks for camera access|access to your photos/i);

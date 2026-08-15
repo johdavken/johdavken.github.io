@@ -33,6 +33,8 @@ test("the dock is icon-only, with every icon the same enlarged size and Main sit
   assert.match(styles,/\.appDockControl > span:not\(\.mobileNotificationsBadge\),\.cloudSyncFooterStatus > strong\{display:none\}/);
   const badgeRule = styles.slice(styles.indexOf(".mobileNotificationsBadge{"),styles.indexOf("}",styles.indexOf(".mobileNotificationsBadge{")));
   assert.doesNotMatch(badgeRule,/display:none/);
+  assert.match(badgeRule,/left:calc\(50% \+ 7px\);/);
+  assert.match(badgeRule,/right:auto;/);
   // Main no longer floats above the row (top:-5px) or claims a taller touch
   // target (min-height:68px) than its siblings - all five now sit level.
   const mainRule = styles.slice(styles.indexOf(".appDockMain{"),styles.indexOf("}",styles.indexOf(".appDockMain{")));

@@ -308,6 +308,10 @@ main{
   stroke-linejoin:round;
   color:var(--muted);
 }
+/* Gruvbox gets a small set of squared construction marks inspired by classic
+   terminal icon themes. The base glyph is retained for every other theme. */
+.gruvboxIconDetail{display:none}
+body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .gruvboxIconDetail{display:block}
 :is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerRed{color:var(--bad);stroke:var(--bad)}
 :is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerOrange{color:var(--orange);stroke:var(--orange)}
 :is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerYellow{color:var(--warn);stroke:var(--warn)}
@@ -5849,6 +5853,21 @@ body[data-surface-style="divided"] .helpTopic{
   .mobileTimelineAlarmChoice span{display:grid;min-width:0;gap:1px}
   .mobileTimelineAlarmChoice strong{color:var(--text);font-size:11px}
   .mobileTimelineAlarmChoice small{color:var(--muted);font-size:10px;line-height:1.25}
+  .pumpOffAlarmSoundRow{display:flex;align-items:center;gap:8px;min-height:44px;margin-top:5px;padding:6px 8px;border:1px solid var(--border);border-radius:var(--control-radius);background:var(--row-bg)}
+  .pumpOffAlarmSoundInfo{display:grid;min-width:0;gap:1px;flex:1 1 auto}
+  .pumpOffAlarmSoundInfo strong{color:var(--text);font-size:11px}
+  .pumpOffAlarmSoundInfo small{color:var(--muted);font-size:10px;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pumpOffAlarmSoundRow .copyBtn{flex:0 0 auto;padding:6px 10px;font-size:10px}
+  .pumpOffAlarmVibrateChoice{display:flex;align-items:center;gap:8px;min-height:36px;margin-top:5px;padding:6px 8px;border:1px solid var(--border);border-radius:var(--control-radius);background:var(--row-bg)}
+  .pumpOffAlarmVibrateChoice input{width:20px;height:20px;flex:0 0 auto;margin:0;accent-color:var(--focus-border)}
+  .pumpOffAlarmVibrateChoice span{color:var(--text);font-size:11px}
+  /* An author rule's display:flex always beats the UA stylesheet's own
+     [hidden]{display:none}, regardless of specificity - without this, the
+     rows above would render even while carrying the hidden attribute (set
+     whenever the native PumpOffAlarm plugin isn't present, i.e. every
+     browser - see applyPumpOffAlarmSound). Same fix already applied to
+     .splitsMobilePrimaryRow for the same reason. */
+  .pumpOffAlarmSoundRow[hidden],.pumpOffAlarmVibrateChoice[hidden]{display:none!important}
 
   body[data-mobile-background-style="layer-glow"]{
     background:
@@ -6025,6 +6044,28 @@ body[data-surface-style="divided"] .helpTopic{
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) #lineSyncBlock .mobileSectionHeaderIcon{color:var(--gruv-aqua)}
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) #toolsBlock .mobileSectionHeaderIcon{color:var(--gruv-purple)}
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) #helpBlock .mobileSectionHeaderIcon{color:var(--gruv-blue)}
+  /* Main-screen numbered workflow only. Gruvbox keeps its established
+     palette above; no Gruvbox selectors are changed here. */
+  body[data-theme="dark"] .workspaceNavButton[data-workspace-target="lineSetupBlock"]{ --tile-accent:var(--title); }
+  body[data-theme="dark"] .workspaceNavButton[data-workspace-target="splitsBlock"]{ --tile-accent:var(--workflow-recipe); }
+  body[data-theme="dark"] #lineSetupBlock .mobileSectionHeaderIcon{color:var(--title)}
+  body[data-theme="dark"] #splitsBlock .mobileSectionHeaderIcon{color:var(--workflow-recipe)}
+  body[data-theme="dark"] #resultsBlock .mobileSectionHeaderIcon{color:var(--focus-border)}
+  body[data-theme="dark"] #productionSummaryBlock .mobileSectionHeaderIcon{color:var(--workflow-resin-totals)}
+
+  body[data-theme="industrial-slate"] .workspaceNavButton[data-step]{ --tile-accent:var(--yellow); }
+  body[data-theme="industrial-slate"] #lineSetupBlock .mobileSectionHeaderIcon,
+  body[data-theme="industrial-slate"] #splitsBlock .mobileSectionHeaderIcon,
+  body[data-theme="industrial-slate"] #resultsBlock .mobileSectionHeaderIcon,
+  body[data-theme="industrial-slate"] #productionSummaryBlock .mobileSectionHeaderIcon{color:var(--yellow)}
+
+  body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-target="lineSetupBlock"]{ --tile-accent:var(--bad); }
+  body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-target="splitsBlock"]{ --tile-accent:var(--warn); }
+  body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-target="resultsBlock"]{ --tile-accent:var(--workflow-timeline); }
+  body[data-theme="industrial-slate-dark"] #lineSetupBlock .mobileSectionHeaderIcon{color:var(--bad)}
+  body[data-theme="industrial-slate-dark"] #splitsBlock .mobileSectionHeaderIcon{color:var(--warn)}
+  body[data-theme="industrial-slate-dark"] #resultsBlock .mobileSectionHeaderIcon{color:var(--workflow-timeline)}
+  body[data-theme="industrial-slate-dark"] #productionSummaryBlock .mobileSectionHeaderIcon{color:var(--workflow-resin-totals)}
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .appearanceNavTile{ --tile-accent:var(--gruv-red); }
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNavButton span{ color:var(--gruv-mobile-ink); }
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceTileIcon{
@@ -6498,7 +6539,10 @@ body[data-surface-style="divided"] .helpTopic{
   .mobileNotificationsBadge{
     position:absolute;
     top:3px;
-    right:10px;
+    /* The bell is centered within its fluid dock tile. Anchor the badge to
+       that same center so widening the tile never pulls the count away. */
+    left:calc(50% + 7px);
+    right:auto;
     display:grid;
     place-items:center;
     min-width:15px;

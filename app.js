@@ -77,6 +77,9 @@
       mobileTileStyle: "minimal",
       mobileBackgroundStyle: "theme-native",
       mobileTimelineAlarm: false,
+      pumpOffAlarmSoundUri: null,
+      pumpOffAlarmSoundName: "Default alarm sound",
+      pumpOffAlarmVibrate: true,
       gauge: 0,
       // Legacy compatibility only. Current labels are derived from the
       // selected RT Sync workspace and never from this stored preference.
@@ -1349,6 +1352,9 @@
         mobileTileStyle: state.mobileTileStyle,
         mobileBackgroundStyle: state.mobileBackgroundStyle,
         mobileTimelineAlarm: !!state.mobileTimelineAlarm,
+        pumpOffAlarmSoundUri: state.pumpOffAlarmSoundUri || null,
+        pumpOffAlarmSoundName: state.pumpOffAlarmSoundName || "Default alarm sound",
+        pumpOffAlarmVibrate: state.pumpOffAlarmVibrate !== false,
         gauge: state.gauge,
         hopperNamingLine9: state.hopperNamingLine9,
         showPumpOffTracked: !!state.showPumpOffTracked,
@@ -1369,6 +1375,9 @@
         mobileTileStyle: state.mobileTileStyle,
         mobileBackgroundStyle: state.mobileBackgroundStyle,
         mobileTimelineAlarm: state.mobileTimelineAlarm,
+        pumpOffAlarmSoundUri: state.pumpOffAlarmSoundUri,
+        pumpOffAlarmSoundName: state.pumpOffAlarmSoundName,
+        pumpOffAlarmVibrate: state.pumpOffAlarmVibrate,
         showPumpOffTracked: state.showPumpOffTracked,
         mobileTimelineOnly: state.mobileTimelineOnly,
         mobileRecipeOnly: state.mobileRecipeOnly,
@@ -1479,6 +1488,24 @@
       }
     }
 
+    // Sound/vibrate are only meaningful for the native full-screen alarm
+    // (see syncNativeTimelineAlarms below) - the web-only in-page beep has no
+    // sound choice, so the Change/Preview/Vibrate controls stay hidden there.
+    function applyPumpOffAlarmSound(uri, name, vibrate){
+      state.pumpOffAlarmSoundUri = uri || null;
+      state.pumpOffAlarmSoundName = name || "Default alarm sound";
+      state.pumpOffAlarmVibrate = vibrate !== false;
+      const nameEl = $("pumpOffAlarmSoundName");
+      if (nameEl) nameEl.textContent = state.pumpOffAlarmSoundName;
+      const vibrateToggle = $("pumpOffAlarmVibrateToggle");
+      if (vibrateToggle) vibrateToggle.checked = state.pumpOffAlarmVibrate;
+      const nativeAvailable = !!nativePumpOffAlarm();
+      const soundRow = $("pumpOffAlarmSoundRow");
+      const vibrateRow = $("pumpOffAlarmVibrateRow");
+      if (soundRow) soundRow.hidden = !nativeAvailable;
+      if (vibrateRow) vibrateRow.hidden = !nativeAvailable;
+    }
+
     function playPumpOffAlarm(){
       try{
         const AudioContextClass = window.AudioContext || window.webkitAudioContext;
@@ -1551,12 +1578,18 @@
     // The web alarm above (setTimeout + Web Audio + navigator.vibrate) only
     // fires while this page's JS is actually running - Android suspends a
     // backgrounded/screen-off WebView's timers, so it silently never fires
-    // there. This is the native replacement: real OS-scheduled notifications
-    // via AlarmManager, which keep working regardless of whether the app or
-    // screen is active. No Capacitor script is loaded anywhere in this app
-    // (see android-back-button.js) - native already injects
-    // Plugins.LocalNotifications on its own, same as Plugins.App/Camera.
+    // there. This is the native replacement: a real OS-scheduled, full-
+    // screen alarm-clock-style alert via AlarmManager (PumpOffAlarmPlugin,
+    // a small custom native plugin - see android/app/src/main/java/tools/
+    // resin/app/PumpOffAlarm*.java), which wakes the screen and shows over
+    // the lock screen even while the app or screen is closed. No Capacitor
+    // script is loaded anywhere in this app (see android-back-button.js) -
+    // native already injects Plugins.PumpOffAlarm/LocalNotifications on its
+    // own, same as Plugins.App/Camera. LocalNotifications is still used
+    // only for its POST_NOTIFICATIONS permission request below - the actual
+    // alarm scheduling and channel are entirely PumpOffAlarm's own.
     function nativeLocalNotifications(){ return window.Capacitor?.Plugins?.LocalNotifications || null; }
+    function nativePumpOffAlarm(){ return window.Capacitor?.Plugins?.PumpOffAlarm || null; }
 
     // A stable 1..2147483647 int (Android notification ids are 32-bit) from
     // workspace+layer+hopper identity only - deliberately NOT from anything
@@ -1573,8 +1606,6 @@
       return ((hash >>> 0) % 2147483647) + 1;
     }
 
-    const TIMELINE_ALARM_CHANNEL_ID = "timeline-alarms";
-
     // Resyncs native alarms to exactly what the web timers above just
     // computed - reuses the same flat/changeoverDate schedulePumpOffAlerts
     // was just given, rather than a second pass over state. Called from
@@ -1582,10 +1613,10 @@
     // trigger this needs to react to (data edits, track/untrack, pump-off,
     // deadline changes, RT Sync apply, the alarm toggle itself) already
     // flows through - see the call site above. A no-op on web/desktop:
-    // nativeLocalNotifications() is null there.
+    // nativePumpOffAlarm() is null there.
     async function syncNativeTimelineAlarms(flat, changeoverDate){
-      const LocalNotifications = nativeLocalNotifications();
-      if (!LocalNotifications) return;
+      const PumpOffAlarm = nativePumpOffAlarm();
+      if (!PumpOffAlarm) return;
 
       const workspaceId = lineSync?.getState?.().selectedWorkspaceId || "local";
       const desired = new Map();
@@ -1599,66 +1630,78 @@
             id,
             title: `Pump off ${item.hopperLabel}`,
             body: item.resinName ? `${item.resinName} is due now.` : "Hopper pump-off is due now.",
-            channelId: TIMELINE_ALARM_CHANNEL_ID,
-            schedule: { at: new Date(due), allowWhileIdle: true },
-            extra: { openTimeline: true }
+            at: due,
+            sound: state.pumpOffAlarmSoundUri || null,
+            vibrate: state.pumpOffAlarmVibrate !== false
           });
         });
       }
 
       const toCancel = [...scheduledTimelineNotificationIds].filter(id=>!desired.has(id));
       try{
-        if (toCancel.length) await LocalNotifications.cancel({ notifications: toCancel.map(id=>({ id })) });
-        if (desired.size) await LocalNotifications.schedule({ notifications: [...desired.values()] });
+        if (toCancel.length) await PumpOffAlarm.cancel({ notifications: toCancel.map(id=>({ id })) });
+        if (desired.size) await PumpOffAlarm.schedule({ notifications: [...desired.values()] });
       }catch(error){
-        console.error("Timeline alarms: failed to sync native notifications.", error);
+        console.error("Timeline alarms: failed to sync native alarms.", error);
       }
       scheduledTimelineNotificationIds = new Set(desired.keys());
     }
 
-    // Called once at init (native only, see setup below): creates the
-    // Android notification channel and wires a tap on a Timeline alarm to
-    // open Timeline, reusing the existing setWorkspacePanel navigation
-    // rather than a new API. Requesting notification permission is
-    // deliberately NOT done here - only when the operator actually turns
-    // the alarm toggle on, at $("mobileTimelineAlarmToggle")'s own change
-    // handler.
-    async function registerNativeTimelineAlarmSupport(){
-      const LocalNotifications = nativeLocalNotifications();
-      if (!LocalNotifications) return;
+    // Called once at init and again on every foreground resume (native
+    // only, see setup below): picks up "Open Resin.Tools" being tapped on
+    // the full-screen alarm screen and navigates to Timeline, reusing the
+    // existing setWorkspacePanel navigation rather than a new API. A no-op
+    // the vast majority of the time - PumpOffAlarmPlugin.consumeLaunchIntent
+    // only returns true once, immediately after that specific tap.
+    async function checkNativePumpOffAlarmLaunch(){
+      const PumpOffAlarm = nativePumpOffAlarm();
+      if (!PumpOffAlarm) return;
       try{
-        await LocalNotifications.createChannel({
-          id: TIMELINE_ALARM_CHANNEL_ID,
-          name: "Timeline Alarms",
-          description: "Pump-off reminders from Resin Tools' Timeline",
-          importance: 4,
-          visibility: 1
-        });
+        const { openTimeline } = await PumpOffAlarm.consumeLaunchIntent();
+        if (openTimeline) setWorkspacePanel("resultsBlock", { reveal: true });
       }catch(error){
-        console.error("Timeline alarms: failed to create the notification channel.", error);
+        console.error("Timeline alarms: failed to check the native launch intent.", error);
       }
-      LocalNotifications.addListener?.("localNotificationActionPerformed", (action)=>{
-        if (action?.notification?.extra?.openTimeline) setWorkspacePanel("resultsBlock", { reveal: true });
-      });
     }
 
     // Called only from the alarm toggle's own change handler (operator just
     // turned it on) - never at launch or from session/payload restore.
+    // Three independent Android gates, checked in order: the ordinary
+    // per-app notification permission (still requested through
+    // LocalNotifications - POST_NOTIFICATIONS is one permission regardless
+    // of which plugin posts the notification), then the two full-screen-
+    // alarm-specific ones PumpOffAlarm itself needs. A denial of the later
+    // gates still leaves a working, just less-unmissable, alarm - each
+    // failure message says exactly what degrades rather than blocking the
+    // toggle.
     async function requestNativeTimelineAlarmPermission(){
       const LocalNotifications = nativeLocalNotifications();
+      const PumpOffAlarm = nativePumpOffAlarm();
       const status = $("mobileTimelineAlarmStatus");
-      if (!LocalNotifications) return;
+      if (!LocalNotifications || !PumpOffAlarm) return;
       try{
         let permission = await LocalNotifications.checkPermissions();
         if (permission.display !== "granted") permission = await LocalNotifications.requestPermissions();
-        if (permission.display === "granted"){
-          if (status) status.textContent = "Sound, vibration, and notifications enabled - alarms will fire even while the app is closed or the screen is off.";
-          validateAndCompute({ sync: false });
-        } else if (status) {
-          status.textContent = "Notifications are turned off for Resin Tools, so alarms won't fire while the app is closed or the screen is off - sound and vibration still work while it's open. Turn this off and on to ask again, or enable notifications for Resin Tools in Android Settings.";
+        if (permission.display !== "granted"){
+          if (status) status.textContent = "Notifications are turned off for Resin Tools, so alarms won't fire while the app is closed or the screen is off - sound and vibration still work while it's open. Turn this off and on to ask again, or enable notifications for Resin Tools in Android Settings.";
+          return;
         }
+
+        const exactAlarm = await PumpOffAlarm.checkExactAlarmPermission();
+        if (!exactAlarm.granted) await PumpOffAlarm.requestExactAlarmPermission();
+
+        const fullScreenIntent = await PumpOffAlarm.checkFullScreenIntentPermission();
+        if (!fullScreenIntent.granted){
+          await PumpOffAlarm.requestFullScreenIntentPermission();
+          if (status) status.textContent = "Alarms are on, but Android is blocking the full-screen alarm screen for Resin Tools - it'll still notify, just without waking the screen. Enable \"Full screen notifications\" for Resin Tools in Android Settings to fix this.";
+          validateAndCompute({ sync: false });
+          return;
+        }
+
+        if (status) status.textContent = "Full-screen alarm, sound, vibration, and notifications enabled - alarms will fire even while the app is closed or the screen is off.";
+        validateAndCompute({ sync: false });
       }catch(error){
-        console.error("Timeline alarms: failed to request notification permission.", error);
+        console.error("Timeline alarms: failed to request alarm permissions.", error);
       }
     }
 
@@ -1718,6 +1761,7 @@
         applyMobileTileStyle("minimal");
         applyMobileBackgroundStyle("theme-native");
       applyMobileTimelineAlarm(!!payload.mobileTimelineAlarm);
+      applyPumpOffAlarmSound(payload.pumpOffAlarmSoundUri || null, payload.pumpOffAlarmSoundName || "Default alarm sound", payload.pumpOffAlarmVibrate !== false);
       $("lineRate").value = String(state.lineRate);
       // Custom toggles
       state.hopperNamingLine9 = (payload.hopperNamingLine9 === "main") ? "main" : "standard";
@@ -6427,6 +6471,36 @@
       if (enabled) await requestNativeTimelineAlarmPermission();
     });
 
+    $("pumpOffAlarmSoundChangeBtn")?.addEventListener("click",async()=>{
+      const PumpOffAlarm = nativePumpOffAlarm();
+      if (!PumpOffAlarm) return;
+      try{
+        const result = await PumpOffAlarm.pickAlarmSound({ uri: state.pumpOffAlarmSoundUri || null });
+        if (result?.cancelled) return;
+        applyPumpOffAlarmSound(result.uri, result.name, state.pumpOffAlarmVibrate);
+        saveSession();
+        if (lastTimelineFlat) syncNativeTimelineAlarms(lastTimelineFlat, lastTimelineChangeoverDate);
+      }catch(error){
+        console.error("Pump-off alarm: failed to open the sound picker.", error);
+      }
+    });
+
+    $("pumpOffAlarmPreviewBtn")?.addEventListener("click",async()=>{
+      const PumpOffAlarm = nativePumpOffAlarm();
+      if (!PumpOffAlarm) return;
+      try{
+        await PumpOffAlarm.previewAlarmSound({ uri: state.pumpOffAlarmSoundUri || null, vibrate: state.pumpOffAlarmVibrate !== false });
+      }catch(error){
+        console.error("Pump-off alarm: failed to preview the alarm sound.", error);
+      }
+    });
+
+    $("pumpOffAlarmVibrateToggle")?.addEventListener("change",event=>{
+      applyPumpOffAlarmSound(state.pumpOffAlarmSoundUri, state.pumpOffAlarmSoundName, !!event.target.checked);
+      saveSession();
+      if (lastTimelineFlat) syncNativeTimelineAlarms(lastTimelineFlat, lastTimelineChangeoverDate);
+    });
+
     $("prodResinLb")?.addEventListener("input",(e)=>{
       if (!acceptNumericInput(e.target, { min: 0, label: "Production resin" }, value => { state.prodResinLb = value; })) return;
       renderResinCalculator();
@@ -7013,6 +7087,7 @@
       applyMobileTileStyle("minimal");
       applyMobileBackgroundStyle("theme-native");
       applyMobileTimelineAlarm(!!state.mobileTimelineAlarm);
+      applyPumpOffAlarmSound(state.pumpOffAlarmSoundUri, state.pumpOffAlarmSoundName, state.pumpOffAlarmVibrate);
       saveSession();
       setupLineSync();
 
@@ -7022,7 +7097,7 @@
       // once here, not per Timeline visit, so navigating in and out of
       // Timeline can never stack up duplicate intervals.
       startTimelineTicker();
-      registerNativeTimelineAlarmSupport();
+      checkNativePumpOffAlarmLaunch();
 
       // Foreground/resume: force one immediate, correct refresh rather than
       // waiting for the next tick, and reconcile native alarms (covers a
@@ -7031,6 +7106,7 @@
       window.Capacitor?.Plugins?.App?.addListener?.("appStateChange", ({ isActive })=>{
         if (!isActive) return;
         refreshTimelinePresentation();
+        checkNativePumpOffAlarmLaunch();
         if (lastTimelineFlat) syncNativeTimelineAlarms(lastTimelineFlat, lastTimelineChangeoverDate);
       });
       // Ordinary browser tabs get suspended/throttled the same way, without
