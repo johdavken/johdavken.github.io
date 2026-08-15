@@ -5317,25 +5317,37 @@
     /* ============================
      * Responsive layout mode
      *
+     * Exactly two structural shells exist: desktop (a fine pointer on a
+     * wide viewport) and the touch/mobile shell (everything else - a phone,
+     * a tablet, an unfolded foldable at any width, or a narrow desktop
+     * browser window). There is no third "tablet" shell and no
+     * intermediate structural mode: a coarse-pointer device of any size
+     * gets exactly the same DOM as a phone. Width alone only ever adjusts
+     * *presentation* within that one touch shell (see the wide-touch CSS
+     * tier in styles.css, keyed directly off (min-width: 701px) and
+     * (pointer: coarse) with no JS involvement) - never which structural
+     * branch a renderer takes.
+     *
      * renderWeightsArea() and renderSplitsArea() do not merely restyle at a
-     * breakpoint - they build structurally different DOM on each side of it
-     * (renderMobileWeightsArea vs the desktop matrix; compactMobileRecipe
-     * vs the full recipe grid). Nothing re-ran them when the viewport
-     * crossed a boundary, so after a resize the markup still belonged to
-     * the previous mode. That is the whole reason Receiver Weights broke on
-     * repeated resizes and why reloading "fixed" it: the reload simply
-     * re-ran the renderers under the new breakpoint. On a foldable there is
-     * no reload, so the stale layout was permanent.
+     * breakpoint - they build structurally different DOM on each side of
+     * the desktop/touch boundary (renderMobileWeightsArea vs the desktop
+     * matrix; compactMobileRecipe vs the full recipe grid). Nothing re-ran
+     * them when the viewport crossed that boundary, so after a resize the
+     * markup still belonged to the previous shell. That is the whole
+     * reason Receiver Weights broke on repeated resizes and why reloading
+     * "fixed" it: the reload simply re-ran the renderers under the new
+     * breakpoint. On a foldable there is no reload, so the stale layout
+     * was permanent.
      *
      * These matchMedia lists are the single source of truth, created once
      * and listened to once (no duplicate listeners can accumulate, and no
      * per-pixel resize handler is involved). Re-rendering happens only when
-     * a mode boundary is actually crossed, so ordinary resizes - and typing
-     * - are never interrupted.
+     * the desktop/touch boundary is actually crossed, so ordinary resizes -
+     * and typing - are never interrupted.
      * ============================ */
     const layoutModeQueries = Object.freeze({
       // Kept identical to the width breakpoints the stylesheet already
-      // uses, so CSS and JS can never disagree about which mode is active.
+      // uses, so CSS and JS can never disagree about which shell is active.
       // "and (pointer: fine)" is what actually fixes the >900px foldable
       // case: width alone used to be sufficient for desktop, which is
       // exactly why an unfolded/rotated Fold - wide, but touch, and so
@@ -5343,49 +5355,33 @@
       // A mouse always reports "fine", so an ordinary desktop is completely
       // unaffected by this condition.
       desktop: window.matchMedia("(min-width: 901px) and (pointer: fine)"),
-      compactRecipe: window.matchMedia("(max-width: 700px)"),
-      // Tablet/large-touch: >700px with a coarse primary pointer, and
-      // deliberately no upper width bound - an unfolded foldable rotated to
-      // its wider orientation must stay tablet rather than falling through
-      // to desktop just because it crossed 900px. A laptop touchscreen
-      // still reports "fine" for its primary pointer, so this cannot
-      // misfire on desktop either. The string is kept identical to the
-      // stylesheet's tablet tier so CSS and JS cannot drift apart.
-      tablet: window.matchMedia("(min-width: 701px) and (pointer: coarse)")
+      compactRecipe: window.matchMedia("(max-width: 700px)")
     });
 
-    function currentLayoutMode(){
-      if (layoutModeQueries.desktop.matches) return "desktop";
-      return layoutModeQueries.tablet.matches ? "tablet" : "phone";
-    }
-
-    // Single source of truth for the desktop/touch-shell split that most of
-    // the app's layout branches only ever needed as a binary choice (which
-    // is also exactly what the stylesheet's own desktop-shell media query
-    // now tests). Every one of those branches used to re-derive the
+    // Single source of truth for the desktop/touch-shell split that every
+    // structural layout branch in the app needs, as a plain binary choice
+    // (which is also exactly what the stylesheet's own desktop-shell media
+    // query tests). Every one of those branches used to re-derive the
     // boundary itself via its own fresh call to the width-only desktop
-    // media query, with no pointer condition - stale as of the tablet fix,
-    // and each one a place CSS and JS could silently disagree about
+    // media query, with no pointer condition - stale as of the foldable
+    // fix, and each one a place CSS and JS could silently disagree about
     // whether a wide, coarse-pointer foldable was "desktop". They now all
     // read this one function instead, which reads the one query object
-    // every other mode decision in the app already reads.
+    // every other layout decision in the app already reads.
     function isDesktopLayout(){
       return layoutModeQueries.desktop.matches;
     }
 
     // What the DOM was last *built* for, as opposed to what the viewport
     // currently is. Only a difference between the two forces a re-render.
-    let renderedLayoutMode = null;
+    let renderedIsDesktop = null;
     let renderedCompactRecipe = null;
 
     function syncLayoutMode({ rerender = true } = {}){
-      const mode = currentLayoutMode();
+      const desktop = isDesktopLayout();
       const compactRecipe = layoutModeQueries.compactRecipe.matches;
-      // Exposed for CSS so tablet rules can key off one attribute rather
-      // than repeating the pointer test, and so the mode is inspectable.
-      document.body.dataset.layoutMode = mode;
-      const changed = mode !== renderedLayoutMode || compactRecipe !== renderedCompactRecipe;
-      renderedLayoutMode = mode;
+      const changed = desktop !== renderedIsDesktop || compactRecipe !== renderedCompactRecipe;
+      renderedIsDesktop = desktop;
       renderedCompactRecipe = compactRecipe;
       if (!changed || !rerender) return changed;
       // Rebuild exactly the surfaces whose markup depends on the boundary

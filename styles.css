@@ -6784,25 +6784,27 @@ body[data-surface-style="divided"] .helpTopic{
 }
 
 /* =======================================================================
- *   Tablet / large-touch tier
+ *   Wide-touch presentation refinements
  *
- *   Sits between phone and desktop: unfolded foldables (a Z Fold's inner
- *   display lands around 830-890 CSS px) and tablets. Deliberately scoped
- *   by *capability*, never by device or user-agent - a coarse PRIMARY
- *   pointer is what distinguishes a touch slab from a desktop that merely
- *   happens to be narrow, and a touchscreen laptop still reports "fine"
- *   for its primary pointer, so none of this can leak onto desktop.
+ *   There is no separate tablet shell, in CSS or in app.js: a coarse-
+ *   pointer device gets exactly the existing phone/touch shell at every
+ *   width, unfolded foldables (a Z Fold's inner display lands around
+ *   830-890 CSS px) and tablets included. This block changes nothing
+ *   structural - no different DOM, no JS-recognized mode, nothing beyond
+ *   plain CSS gated on this one media query. It only stops that same touch
+ *   shell being stretched thin once there is more room than a phone has,
+ *   e.g. widening Line Setup's layout and enlarging Recipe's resin-name
+ *   text. Deliberately scoped by *capability*, never by device or user-
+ *   agent - a coarse PRIMARY pointer is what distinguishes a touch slab
+ *   from a desktop that merely happens to be narrow, and a touchscreen
+ *   laptop still reports "fine" for its primary pointer, so none of this
+ *   can leak onto desktop.
  *
- *   Bounded at 900px to stay inside the existing touch shell (the desktop
- *   sidebar takes over at 901px), and floored at 701px so the compact
- *   phone Recipe treatment below 700px is untouched. Both bounds reuse
- *   breakpoints the stylesheet already had rather than inventing new ones,
- *   and the query string is duplicated verbatim in app.js's layoutModeQueries
- *   so CSS and JS can never disagree about what "tablet" means.
- *
- *   Everything here is presentation-only: no structural rewrite of the
- *   phone layout, which already works - this just stops that layout being
- *   stretched thin across a much wider screen.
+ *   Floored at 701px so the compact phone Recipe treatment below 700px is
+ *   untouched, reusing a breakpoint the stylesheet already had rather than
+ *   inventing a new one. Deliberately uncapped above - a rotated foldable
+ *   must keep this presentation no matter how wide it gets, as long as it
+ *   stays coarse-pointer.
  *   ======================================================================= */
 @media (min-width: 701px) and (pointer: coarse){
   /* --- Line Setup ---------------------------------------------------

@@ -8,16 +8,15 @@ const app = fs.readFileSync("app.js", "utf8");
 const styles = fs.readFileSync("styles.css", "utf8");
 const desktopCss = fs.readFileSync("desktop.css", "utf8");
 
-// The tablet tier is expressed identically in CSS and JS on purpose - if the
-// two ever drift, data-layout-mode would claim one thing while the
-// stylesheet did another. Every test below reads these two constants.
-// No upper width bound: an unfolded/rotated foldable must stay tablet no
-// matter how wide it gets, as long as its primary pointer stays coarse.
-const TABLET_QUERY = "(min-width: 701px) and (pointer: coarse)";
-// A mouse always reports "fine", so requiring it here cannot regress an
-// ordinary desktop - it only stops a wide *coarse* pointer being swept into
-// the desktop shell, which is the actual >900px foldable bug.
+// Exactly two structural shells: desktop (fine pointer, wide) and the
+// touch/mobile shell (everything else, any width). There is no third
+// "tablet" mode anywhere in app.js - a coarse-pointer device gets the same
+// DOM as a phone regardless of size. WIDE_TOUCH_QUERY is CSS-only: it
+// widens presentation (spacing, sizing) within that one touch shell, and
+// has no JS counterpart to stay in sync with, unlike DESKTOP_QUERY, which
+// is duplicated verbatim between the stylesheet and app.js on purpose.
 const DESKTOP_QUERY = "(min-width: 901px) and (pointer: fine)";
+const WIDE_TOUCH_QUERY = "(min-width: 701px) and (pointer: coarse)";
 
 // A tiny evaluator for the plain min-width/max-width/pointer conjunctions
 // used throughout this file, so the acceptance scenarios below check real
@@ -32,55 +31,52 @@ function queryMatches(query, { width, pointer }){
   return true;
 }
 
-function expectedMode(width, pointer){
-  if (queryMatches(DESKTOP_QUERY, { width, pointer })) return "desktop";
-  return queryMatches(TABLET_QUERY, { width, pointer }) ? "tablet" : "phone";
-}
-
 /* -----------------------------------------------------------------------
- *   Layout mode: live, not captured once
+ *   Layout mode: binary, live, not captured once
  * --------------------------------------------------------------------- */
 
-test("layout mode is derived from matchMedia lists created once, covering desktop, tablet and the compact-recipe boundary", () => {
-  const block = app.slice(app.indexOf("const layoutModeQueries"), app.indexOf("function currentLayoutMode"));
+test("layout classification is exactly two-way: a desktop query requiring a fine pointer, and the compact-recipe width boundary - nothing else", () => {
+  const block = app.slice(app.indexOf("const layoutModeQueries"), app.indexOf("function isDesktopLayout"));
   assert.ok(block.includes(`desktop: window.matchMedia("${DESKTOP_QUERY}")`), "the JS desktop query must require a fine pointer, matching the stylesheet's desktop shell");
   assert.match(block, /compactRecipe: window\.matchMedia\("\(max-width: 700px\)"\)/);
-  assert.ok(block.includes(`tablet: window.matchMedia("${TABLET_QUERY}")`), "the JS tablet query must match the stylesheet's tablet tier verbatim, with no upper width bound");
+  // No third query. A coarse-pointer device of any width must fall through
+  // to the same touch shell as a phone, not a JS-recognized "tablet" mode.
+  assert.doesNotMatch(block, /tablet/i);
   // Frozen so nothing can swap a query out at runtime and desynchronise the
-  // listeners registered against them.
+  // listener registered against it.
   assert.match(block, /Object\.freeze\(/);
 });
 
-test("tablet is decided by pointer capability, never by device, model or user-agent, and has no upper width limit", () => {
+test("there is no tablet concept anywhere in app.js - no mode enum, no body attribute, no third matchMedia query", () => {
+  assert.doesNotMatch(app, /currentLayoutMode/);
+  assert.doesNotMatch(app, /dataset\.layoutMode/);
+  assert.doesNotMatch(app, /layoutModeQueries\.tablet/);
+  assert.doesNotMatch(app, /tablet: window\.matchMedia/);
+});
+
+test("desktop requires a fine pointer, never by device, model or user-agent, so an ordinary desktop is unaffected while a wide coarse-pointer device is not swept in", () => {
   const block = app.slice(app.indexOf("const layoutModeQueries"), app.indexOf("function syncWorkspaceForViewport"));
-  assert.match(block, /pointer: coarse/);
-  assert.doesNotMatch(block, /max-width: 900px\)\s*and\s*\(pointer: coarse/, "tablet must not be capped at 900px - a rotated foldable has to stay tablet past that width");
+  assert.match(block, /pointer: fine/);
   assert.doesNotMatch(app, /userAgent[^\n]*(Fold|Samsung|SM-F|Tablet|iPad)/i);
   // A touchscreen laptop reports a fine PRIMARY pointer, so `pointer` (not
   // `any-pointer`) is what keeps this off desktop.
   assert.doesNotMatch(styles, /any-pointer/);
 });
 
-test("desktop wins over tablet, and phone is the fallback - the three modes are mutually exclusive", () => {
-  const fn = app.slice(app.indexOf("function currentLayoutMode()"), app.indexOf("// What the DOM was last"));
-  assert.match(fn, /if \(layoutModeQueries\.desktop\.matches\) return "desktop";/);
-  assert.match(fn, /return layoutModeQueries\.tablet\.matches \? "tablet" : "phone";/);
-});
-
-// The exact scenarios called out for this follow-up: a rotated/unfolded
-// foldable must stay tablet arbitrarily wide, and an ordinary desktop
-// (fine pointer) must be completely unaffected at the same widths.
-test("390px coarse -> phone, 750/884/1104px coarse -> tablet, 1104/1440px fine -> desktop", () => {
+// The exact scenarios that matter: a rotated/unfolded foldable must stay in
+// the touch shell arbitrarily wide, and an ordinary desktop (fine pointer)
+// must be completely unaffected at the same widths.
+test("390/750/884/1104px coarse -> touch shell (isDesktopLayout false), 1104/1440px fine -> desktop shell (isDesktopLayout true)", () => {
   const cases = [
-    [390, "coarse", "phone"],
-    [750, "coarse", "tablet"],
-    [884, "coarse", "tablet"],
-    [1104, "coarse", "tablet"],
-    [1104, "fine", "desktop"],
-    [1440, "fine", "desktop"]
+    [390, "coarse", false],
+    [750, "coarse", false],
+    [884, "coarse", false],
+    [1104, "coarse", false],
+    [1104, "fine", true],
+    [1440, "fine", true]
   ];
-  for (const [width, pointer, expected] of cases){
-    assert.equal(expectedMode(width, pointer), expected, `${width}px ${pointer} should resolve to ${expected}`);
+  for (const [width, pointer, expectDesktop] of cases){
+    assert.equal(queryMatches(DESKTOP_QUERY, { width, pointer }), expectDesktop, `${width}px ${pointer}: isDesktopLayout() should be ${expectDesktop}`);
   }
 });
 
@@ -90,17 +86,15 @@ test("390px coarse -> phone, 750/884/1104px coarse -> tablet, 1104/1440px fine -
 
 // Every layout branch that used to re-derive "is this desktop" via its own
 // fresh window.matchMedia("(min-width: 901px)") call - stale the moment the
-// tablet fix needed a pointer condition too, and each one a place CSS and
+// foldable fix needed a pointer condition too, and each one a place CSS and
 // JS could disagree - now reads the one shared predicate instead.
 test("isDesktopLayout() is the single predicate every structural renderer consults, not a fresh matchMedia call", () => {
   assert.match(app, /function isDesktopLayout\(\)\{\s*\n\s*return layoutModeQueries\.desktop\.matches;/);
-  // None left outside the three canonical query definitions and the one
-  // explanatory comment that quotes the old pattern as prose.
+  // None left outside the two canonical query definitions.
   const rawCalls = app.match(/window\.matchMedia\("[^"]+"\)/g) || [];
   assert.deepEqual(rawCalls.sort(), [
     `window.matchMedia("${DESKTOP_QUERY}")`,
-    `window.matchMedia("(max-width: 700px)")`,
-    `window.matchMedia("${TABLET_QUERY}")`
+    `window.matchMedia("(max-width: 700px)")`
   ].sort());
 });
 
@@ -128,21 +122,25 @@ test("the desktop/mobile popover split and the account-utility placement listene
  * --------------------------------------------------------------------- */
 
 // renderWeightsArea() and renderSplitsArea() build structurally different DOM
-// on each side of a breakpoint. Nothing re-ran them when the viewport crossed
-// one, so the markup kept belonging to the previous mode - which is why
-// Receiver Weights broke on resize and why only a reload restored it.
-test("crossing a breakpoint rebuilds the surfaces whose markup depends on it", () => {
+// on each side of the desktop/touch boundary. Nothing re-ran them when the
+// viewport crossed it, so the markup kept belonging to the previous shell -
+// which is why Receiver Weights broke on resize and why only a reload
+// restored it.
+test("crossing the desktop/touch boundary rebuilds the surfaces whose markup depends on it", () => {
   const fn = app.slice(app.indexOf("function syncLayoutMode("), app.indexOf("function watchLayoutMode()"));
   assert.match(fn, /renderWeightsArea\(\);/);
   assert.match(fn, /renderSplitsArea\(\);/);
   assert.match(fn, /applySurfaceStyle\(state\.surfaceStyle\);/);
-  assert.match(fn, /document\.body\.dataset\.layoutMode = mode;/);
+  // No dataset attribute is published - nothing in the CSS consumes one, so
+  // there is nothing here for a "tablet" selector to ever key off.
+  assert.doesNotMatch(fn, /dataset\.layoutMode/);
 });
 
-test("re-rendering happens only when a boundary is actually crossed, so ordinary resizes never interrupt typing", () => {
+test("re-rendering happens only when the boundary is actually crossed, so ordinary resizes never interrupt typing", () => {
   const fn = app.slice(app.indexOf("function syncLayoutMode("), app.indexOf("function watchLayoutMode()"));
-  // Compares the mode the DOM was built for against the current one.
-  assert.match(fn, /const changed = mode !== renderedLayoutMode \|\| compactRecipe !== renderedCompactRecipe;/);
+  // Compares what the DOM was last built for against the current binary
+  // desktop/touch state, not a three-way mode.
+  assert.match(fn, /const changed = desktop !== renderedIsDesktop \|\| compactRecipe !== renderedCompactRecipe;/);
   assert.match(fn, /if \(!changed \|\| !rerender\) return changed;/);
 });
 
@@ -170,37 +168,39 @@ test("the structural rebuild is not driven by a per-pixel resize handler, and no
 });
 
 /* -----------------------------------------------------------------------
- *   The tablet stylesheet tier
+ *   Wide-touch presentation - CSS-only, no structural shell
  * --------------------------------------------------------------------- */
 
-test("the tablet tier exists, sits inside the existing touch shell, and has no upper width bound", () => {
-  assert.ok(styles.includes(`@media ${TABLET_QUERY}`), "expected a tablet tier keyed to the shared query");
+test("the wide-touch presentation block is pure CSS with no JS counterpart - not a shell, not a mode", () => {
+  assert.ok(styles.includes(`@media ${WIDE_TOUCH_QUERY}`), "expected a wide-touch presentation block keyed to this query");
+  // No selector anywhere depends on a JS-computed attribute for this.
+  assert.doesNotMatch(styles, /\[data-layout-mode/);
   // Floored at 701 so the compact phone Recipe treatment (<=700px) is
-  // untouched. Deliberately uncapped above - a rotated foldable must stay
-  // tablet arbitrarily wide, as long as it stays coarse-pointer.
-  const tier = styles.slice(styles.indexOf(`@media ${TABLET_QUERY}`));
-  assert.match(tier, /#lineSetupBlock \.setupLineConfiguration\{/);
+  // untouched. Deliberately uncapped above - a rotated foldable keeps this
+  // presentation arbitrarily wide, as long as it stays coarse-pointer.
+  const block = styles.slice(styles.indexOf(`@media ${WIDE_TOUCH_QUERY}`));
+  assert.match(block, /#lineSetupBlock \.setupLineConfiguration\{/);
 });
 
 test("Line Setup uses the extra width instead of stretching the phone layout, and Receiver Weights keeps the full width below", () => {
-  const tier = styles.slice(styles.indexOf(`@media ${TABLET_QUERY}`));
+  const block = styles.slice(styles.indexOf(`@media ${WIDE_TOUCH_QUERY}`));
   // Gauges and the read-only Overview side by side...
-  assert.match(tier, /grid-template-columns:minmax\(0,1\.35fr\) minmax\(0,1fr\);/);
-  assert.match(tier, /#lineSetupBlock \.setupTopRow\{ grid-column:1 \/ -1; \}/);
+  assert.match(block, /grid-template-columns:minmax\(0,1\.35fr\) minmax\(0,1fr\);/);
+  assert.match(block, /#lineSetupBlock \.setupTopRow\{ grid-column:1 \/ -1; \}/);
   // ...with the phone cap/centering undone rather than fought against.
-  assert.match(tier, /max-width:none;/);
+  assert.match(block, /max-width:none;/);
   // Receiver Weights is never pushed into a narrow side column.
-  assert.match(tier, /#weightsBlock \.blockBody\{ max-width:none; \}/);
-  assert.doesNotMatch(tier, /overflow-x:\s*(auto|scroll)/);
+  assert.match(block, /#weightsBlock \.blockBody\{ max-width:none; \}/);
+  assert.doesNotMatch(block, /overflow-x:\s*(auto|scroll)/);
 });
 
 test("Recipe keeps its matrix and only the resin name grows, tied to the density scale with a readable floor", () => {
-  const tier = styles.slice(styles.indexOf(`@media ${TABLET_QUERY}`));
-  assert.match(tier, /\.splitMatrixCell \.resinNameInput\{/);
-  assert.match(tier, /font-size:clamp\(16px, calc\(var\(--font-base\) \+ 2px\), 20px\);/);
+  const block = styles.slice(styles.indexOf(`@media ${WIDE_TOUCH_QUERY}`));
+  assert.match(block, /\.splitMatrixCell \.resinNameInput\{/);
+  assert.match(block, /font-size:clamp\(16px, calc\(var\(--font-base\) \+ 2px\), 20px\);/);
   // The matrix structure, controls and tracking are deliberately untouched.
-  assert.doesNotMatch(tier, /\.splitsMatrix\b[^{]*\{[^}]*grid-template/);
-  assert.doesNotMatch(tier, /splitTrack|trackControl|splitPctControl/);
+  assert.doesNotMatch(block, /\.splitsMatrix\b[^{]*\{[^}]*grid-template/);
+  assert.doesNotMatch(block, /splitTrack|trackControl|splitPctControl/);
 });
 
 test("phone stays untouched, and every existing desktop rule still exists - only gated with the added pointer condition, never rewritten", () => {
@@ -210,8 +210,8 @@ test("phone stays untouched, and every existing desktop rule still exists - only
   // Desktop's own breakpoint content (the actual rules inside it) is
   // unchanged - only the query gained "and (pointer: fine)", uniformly,
   // everywhere it appears. A bare (min-width: 901px) with no pointer
-  // condition would mean this specific rule is still misclassifying a
-  // wide, coarse-pointer foldable as desktop.
+  // condition would mean this specific rule still misclassifies a wide,
+  // coarse-pointer foldable as desktop.
   const desktopBlocks = styles.match(/@media \(min-width:\s?901px\)[^{]*\{/g) || [];
   assert.ok(desktopBlocks.length >= 5, `expected multiple desktop-shell blocks, found ${desktopBlocks.length}`);
   for (const block of desktopBlocks){
@@ -228,7 +228,8 @@ test("every widened touch-shell query is a strict OR-extension of its old narrow
   // (max-width: 900px) OR (wide AND coarse). The comma is a real OR in CSS
   // media query lists, so every viewport that used to match the plain
   // max-width form still does, unconditionally - this can only ever add
-  // the new wide+coarse case, never remove an existing narrow one.
+  // the new wide+coarse case (folding it into the SAME touch shell, not a
+  // separate one), never remove an existing narrow one.
   const widened = styles.match(/@media \(m[^{]*900px\)(?:, \([^{]*coarse\))?\{/g) || [];
   const stillNarrowOnly = widened.filter(q => !q.includes("coarse"));
   assert.equal(stillNarrowOnly.length, 0, `found a 900px-capped query never widened: ${stillNarrowOnly.join(", ")}`);
