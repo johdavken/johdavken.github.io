@@ -127,7 +127,7 @@ test("the shot frame gives every screenshot a definite width, not just a cap", (
 });
 
 test("every split variant collapses to one column on small screens", () => {
-  const mobile = styles.slice(styles.indexOf("@media (max-width: 900px){", styles.indexOf(".helpShot{")));
+  const mobile = styles.slice(styles.indexOf("@media (max-width: 900px)", styles.indexOf(".helpShot{")));
   const block = mobile.slice(0, mobile.indexOf("}\n\n"));
   for (const variant of ["is-narrowMedia", "is-wideMedia", "is-autoMedia"]){
     assert.match(block, new RegExp(`\\.helpSplit\\.${variant}`), `.${variant} must be collapsed on mobile or its shot overflows`);

@@ -99,7 +99,7 @@ test("Changeover deadline and Line rate are gauge tiles with the input and a lab
 });
 
 test("on desktop the two gauge tiles sit in a tight flex row instead of the far-apart two-column grid, same gap as .setupTopRow above them", () => {
-  const desktopStart = styles.indexOf("@media (min-width: 901px){\n  .setupPrimaryFields{");
+  const desktopStart = styles.indexOf("@media (min-width: 901px) and (pointer: fine){\n  .setupPrimaryFields{");
   assert.notEqual(desktopStart, -1, "expected a desktop-only override for .setupPrimaryFields");
   const block = styles.slice(desktopStart, styles.indexOf("}\n}", desktopStart) + 3);
   assert.match(block, /display: flex;/);

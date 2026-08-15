@@ -39,7 +39,7 @@ test("joining is disabled until a four-character code is valid and duplicate syn
 });
 
 test("mobile styling is scoped so desktop RT Sync keeps its fuller interface", () => {
-  assert.match(styles, /@media \(max-width: 900px\)\{[\s\S]*\.lineSyncPanel \.mobileLineSyncStatus/s);
+  assert.match(styles, /@media \(max-width: 900px\), \(min-width: 901px\) and \(pointer: coarse\)\{[\s\S]*\.lineSyncPanel \.mobileLineSyncStatus/s);
   assert.match(styles, /\.lineSyncPanel:not\(\.mobileConnected\) #lineSyncDisconnectBtn\{display:none\}/);
   assert.match(styles, /\.lineSyncPanel #lineSyncLeaveBtn\{color:var\(--bad\)\}/);
   assert.match(styles, /\.mobileLineSyncStatus\[data-state="synced"\]/);

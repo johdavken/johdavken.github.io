@@ -33,7 +33,7 @@ test("it only reacts when the toggled panel just opened, never when it closed - 
 });
 
 test("it is gated to mobile width only - desktop's single-panel-at-a-time view comes from a different mechanism and must not be double-driven by this", () => {
-  assert.match(hookMobileAccordion, /if \(!window\.matchMedia\("\(max-width: 900px\)"\)\.matches\) return;/);
+  assert.match(hookMobileAccordion, /if \(isDesktopLayout\(\)\) return;/);
 });
 
 test("it closes every other currently-open panel, never the one that was just opened", () => {

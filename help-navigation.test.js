@@ -81,7 +81,7 @@ test("the accordion extends native <details> rather than replacing the control",
  * ============================================================ */
 
 test("the open section's own header is what sticks - no extra floating control", () => {
-  const desktop = styles.slice(styles.indexOf("@media (min-width: 901px){", styles.indexOf(".helpTopic[open] > summary{ border-bottom")));
+  const desktop = styles.slice(styles.indexOf("@media (min-width: 901px)", styles.indexOf(".helpTopic[open] > summary{ border-bottom")));
   assert.match(desktop, /\.helpTopic\[open\] > summary\{[\s\S]*?position: sticky;[\s\S]*?top: 0;/);
   // Reuses the existing summary, so the title, description and +/- ride along.
   assert.match(styles, /\.helpTopic\[open\] > summary::after\{ content: "−"; \}/);
@@ -111,7 +111,7 @@ test("the Help panel's top padding is moved off the scrollport", () => {
 });
 
 test("the pinned header sits above the content it covers", () => {
-  const desktop = styles.slice(styles.indexOf("@media (min-width: 901px){", styles.indexOf(".helpTopic[open] > summary{ border-bottom")));
+  const desktop = styles.slice(styles.indexOf("@media (min-width: 901px)", styles.indexOf(".helpTopic[open] > summary{ border-bottom")));
   const zIndex = /z-index: (\d+);/.exec(desktop);
   assert.ok(zIndex && Number(zIndex[1]) >= 2, "the sticky header needs a stacking order above body content");
 });
@@ -225,7 +225,7 @@ test("subtopics read as secondary to the section headers", () => {
 });
 
 test("subtopics use spacing rather than indentation on phones", () => {
-  const mobile = styles.slice(styles.indexOf("@media (max-width: 900px){", styles.indexOf("\n.helpSubtopicBody{")));
+  const mobile = styles.slice(styles.indexOf("@media (max-width: 900px)", styles.indexOf("\n.helpSubtopicBody{")));
   const block = mobile.slice(0, mobile.indexOf("\n}"));
   assert.match(block, /\.helpSubtopic > summary\{ padding: 12px 32px 12px 0; min-height: 44px;/);
   // No left indent at any width - horizontal room is scarce on a phone.

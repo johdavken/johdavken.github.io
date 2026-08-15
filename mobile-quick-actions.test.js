@@ -57,7 +57,7 @@ test("the mobile bell opens the exact same #footerNotificationsMenu dialog throu
 });
 
 test("desktop keeps its anchored nonmodal popover presentation; mobile gets the ordinary modal footerSheet bottom sheet - same dialog, viewport-driven presentation", () => {
-  assert.match(app, /function isDesktopNotificationsPopover\(name = activeFooterSheetName\)\{\s*\n\s*return name === "notifications" && window\.matchMedia\("\(min-width: 901px\)"\)\.matches;/);
+  assert.match(app, /function isDesktopNotificationsPopover\(name = activeFooterSheetName\)\{\s*\n\s*return name === "notifications" && isDesktopLayout\(\);/);
   assert.doesNotMatch(styles, /@media \(width <= 900px\)\{ \.desktopNotificationsMenu\{display:none!important\} \}/);
 });
 

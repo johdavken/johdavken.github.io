@@ -40,7 +40,7 @@ test("Scan Recipe carries rearrangeDesktopOnly like Print Recipe (hidden in the 
 });
 
 test("Scan Recipe is hidden specifically on real desktop widths - it's a mobile-capture workflow, unlike Print Recipe right next to it which stays visible on desktop", () => {
-  const ruleStart = styles.indexOf("@media(min-width:901px){.recipeScanHideDesktop{display:none!important}}");
+  const ruleStart = styles.indexOf("@media(min-width:901px) and (pointer: fine){.recipeScanHideDesktop{display:none!important}}");
   assert.notEqual(ruleStart, -1, "expected a desktop-width media query hiding .recipeScanHideDesktop");
 });
 

@@ -56,10 +56,12 @@ test("the dock has no drop shadow or border outline, is 10% shorter without shri
   // 1px top border, and simply not re-declaring it here lets that bleed
   // back through on mobile.
   assert.match(dockRule,/border-top:0;/);
-  // The main box itself stays sharp on top (0) - a plain border-radius here
+  // The box is square on all four corners. Top: a plain border-radius here
   // would always be convex ("pill" corner), which is explicitly not this
-  // shape. Bottom keeps its separate, unrelated 16px round.
-  assert.match(dockRule,/border-radius:0 0 16px 16px;/);
+  // shape - the top's silhouette comes from the pseudo-elements below.
+  // Bottom: it sits hard against the screen edge, and any rounding there
+  // would let the page background show through in the bottom corners.
+  assert.match(dockRule,/border-radius:0;/);
   // Mirrored raised-end pseudo-elements: each is a 24x20 block of the bar's
   // own material (not the page background - it must read as the footer
   // rising, not a cutout) sitting above the bar's sharp top corner.

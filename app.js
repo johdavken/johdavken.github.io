@@ -1436,7 +1436,7 @@
       // Desktop surface selection was retired in favor of Layered Flat. Keep
       // the stored value solely so the existing mobile presentation does not
       // change as a side effect of this desktop-only decision.
-      const renderedSurfaceStyle = window.matchMedia("(min-width: 901px)").matches
+      const renderedSurfaceStyle = isDesktopLayout()
         ? "layered-flat"
         : storedSurfaceStyle;
       state.surfaceStyle = storedSurfaceStyle;
@@ -2311,7 +2311,7 @@
       const profilesBlock = $("setupWeightProfilesBlock");
       const setupSection = weightsBlock?.closest(".setupSection");
       if (!weightsBlock || !profilesBlock || !setupSection) return;
-      if (window.matchMedia("(max-width: 900px)").matches){
+      if (!isDesktopLayout()){
         return;
       }
       if (profilesBlock.parentElement !== setupSection) weightsBlock.after(profilesBlock);
@@ -2321,7 +2321,7 @@
       const area = $("weightsArea");
       if (!area) return;
       area.innerHTML = "";
-      if (window.matchMedia("(max-width: 900px)").matches){
+      if (!isDesktopLayout()){
         renderMobileWeightsArea(area);
         placeSetupWeightProfiles();
         return;
@@ -3217,7 +3217,7 @@
       const columnSelectors = new Map();
       const rowSelectors = new Map();
       let bulkMode = splitsBulkModeActive;
-      const compactMobileRecipe = window.matchMedia("(max-width: 700px)").matches;
+      const compactMobileRecipe = layoutModeQueries.compactRecipe.matches;
       $("mobileSavedRecipesSheet")?.remove();
       $("mobileBulkEditSheet")?.remove();
 
@@ -4067,7 +4067,7 @@
           // On phone-width Recipe Setup, Smart describes the resin-derived
           // value, so it belongs immediately after the resin name. Desktop
           // keeps the compact control-strip placement above the editor.
-          if (window.matchMedia("(max-width: 900px)").matches) {
+          if (!isDesktopLayout()) {
             cellTop.appendChild(smartBadge);
             cellHeader.append(trackControl, clearButton);
           }else{
@@ -5053,7 +5053,7 @@
         syncToggleUI("mobileRecipeToggle", false);
       }
       document.body.setAttribute("data-mobile-timeline-only", String(state.mobileTimelineOnly));
-      if (state.mobileTimelineOnly && window.matchMedia("(max-width: 900px)").matches){
+      if (state.mobileTimelineOnly && !isDesktopLayout()){
         const results = $("resultsBlock");
         if (results) results.open = true;
       }
@@ -5068,7 +5068,7 @@
         syncToggleUI("mobileTimelineToggle", false);
       }
       document.body.setAttribute("data-mobile-recipe-only", String(state.mobileRecipeOnly));
-      if (state.mobileRecipeOnly && window.matchMedia("(max-width: 900px)").matches){
+      if (state.mobileRecipeOnly && !isDesktopLayout()){
         const splits = $("splitsBlock");
         if (splits) splits.open = true;
       }
@@ -5110,11 +5110,11 @@
         if (active) button.setAttribute("aria-current", "page");
         else button.removeAttribute("aria-current");
       });
-      if (window.matchMedia("(min-width: 901px)").matches){
+      if (isDesktopLayout()){
         target.open = true;
         if (id === "lineSetupBlock") $("weightsBlock")?.setAttribute("open", "");
       }
-      if (window.matchMedia("(max-width: 900px)").matches){
+      if (!isDesktopLayout()){
         closeFooterMenus();
         document.body.dataset.mobileWorkspace = "panel";
         $("appFooterMain")?.removeAttribute("aria-current");
@@ -5122,13 +5122,13 @@
         if (!target.open) target.open = true;
       }
       if (persist) saveWorkspacePreference(id);
-      if (reveal && window.matchMedia("(max-width: 900px)").matches){
+      if (reveal && !isDesktopLayout()){
         requestAnimationFrame(()=>target.scrollIntoView({ behavior:"smooth", block:"start" }));
       }
     }
 
     function showMobileWorkspaceHome(){
-      if (!window.matchMedia("(max-width: 900px)").matches) return;
+      if (isDesktopLayout()) return;
       document.body.dataset.mobileWorkspace = "home";
       closeFooterMenus();
       $("appFooterMain")?.setAttribute("aria-current", "page");
@@ -5169,7 +5169,7 @@
 
       if (hopperRearrangement?.active){ exitRearrangeModeFn?.(); return true; }
 
-      if (window.matchMedia("(max-width: 900px)").matches && document.body.dataset.mobileWorkspace === "panel"){
+      if (!isDesktopLayout() && document.body.dataset.mobileWorkspace === "panel"){
         if (activeWorkspaceId === "toolsBlock" && document.body.dataset.mobileTools === "panel"){
           $("mobileToolsBack")?.click();
           return true;
@@ -5205,11 +5205,11 @@
     }
 
     function isDesktopAccountPopover(name = activeFooterSheetName){
-      return name === "account" && window.matchMedia("(min-width: 901px)").matches;
+      return name === "account" && isDesktopLayout();
     }
 
     function isDesktopNotificationsPopover(name = activeFooterSheetName){
-      return name === "notifications" && window.matchMedia("(min-width: 901px)").matches;
+      return name === "notifications" && isDesktopLayout();
     }
 
     // Status-bar popovers: anchored to their trigger, nonmodal, no backdrop,
@@ -5314,8 +5314,102 @@
 
     window.PolynFooterSheetUI = { close:()=>closeFooterSheets({ returnFocus:false }) };
 
+    /* ============================
+     * Responsive layout mode
+     *
+     * renderWeightsArea() and renderSplitsArea() do not merely restyle at a
+     * breakpoint - they build structurally different DOM on each side of it
+     * (renderMobileWeightsArea vs the desktop matrix; compactMobileRecipe
+     * vs the full recipe grid). Nothing re-ran them when the viewport
+     * crossed a boundary, so after a resize the markup still belonged to
+     * the previous mode. That is the whole reason Receiver Weights broke on
+     * repeated resizes and why reloading "fixed" it: the reload simply
+     * re-ran the renderers under the new breakpoint. On a foldable there is
+     * no reload, so the stale layout was permanent.
+     *
+     * These matchMedia lists are the single source of truth, created once
+     * and listened to once (no duplicate listeners can accumulate, and no
+     * per-pixel resize handler is involved). Re-rendering happens only when
+     * a mode boundary is actually crossed, so ordinary resizes - and typing
+     * - are never interrupted.
+     * ============================ */
+    const layoutModeQueries = Object.freeze({
+      // Kept identical to the width breakpoints the stylesheet already
+      // uses, so CSS and JS can never disagree about which mode is active.
+      // "and (pointer: fine)" is what actually fixes the >900px foldable
+      // case: width alone used to be sufficient for desktop, which is
+      // exactly why an unfolded/rotated Fold - wide, but touch, and so
+      // reporting a coarse primary pointer - was misclassified as desktop.
+      // A mouse always reports "fine", so an ordinary desktop is completely
+      // unaffected by this condition.
+      desktop: window.matchMedia("(min-width: 901px) and (pointer: fine)"),
+      compactRecipe: window.matchMedia("(max-width: 700px)"),
+      // Tablet/large-touch: >700px with a coarse primary pointer, and
+      // deliberately no upper width bound - an unfolded foldable rotated to
+      // its wider orientation must stay tablet rather than falling through
+      // to desktop just because it crossed 900px. A laptop touchscreen
+      // still reports "fine" for its primary pointer, so this cannot
+      // misfire on desktop either. The string is kept identical to the
+      // stylesheet's tablet tier so CSS and JS cannot drift apart.
+      tablet: window.matchMedia("(min-width: 701px) and (pointer: coarse)")
+    });
+
+    function currentLayoutMode(){
+      if (layoutModeQueries.desktop.matches) return "desktop";
+      return layoutModeQueries.tablet.matches ? "tablet" : "phone";
+    }
+
+    // Single source of truth for the desktop/touch-shell split that most of
+    // the app's layout branches only ever needed as a binary choice (which
+    // is also exactly what the stylesheet's own desktop-shell media query
+    // now tests). Every one of those branches used to re-derive the
+    // boundary itself via its own fresh call to the width-only desktop
+    // media query, with no pointer condition - stale as of the tablet fix,
+    // and each one a place CSS and JS could silently disagree about
+    // whether a wide, coarse-pointer foldable was "desktop". They now all
+    // read this one function instead, which reads the one query object
+    // every other mode decision in the app already reads.
+    function isDesktopLayout(){
+      return layoutModeQueries.desktop.matches;
+    }
+
+    // What the DOM was last *built* for, as opposed to what the viewport
+    // currently is. Only a difference between the two forces a re-render.
+    let renderedLayoutMode = null;
+    let renderedCompactRecipe = null;
+
+    function syncLayoutMode({ rerender = true } = {}){
+      const mode = currentLayoutMode();
+      const compactRecipe = layoutModeQueries.compactRecipe.matches;
+      // Exposed for CSS so tablet rules can key off one attribute rather
+      // than repeating the pointer test, and so the mode is inspectable.
+      document.body.dataset.layoutMode = mode;
+      const changed = mode !== renderedLayoutMode || compactRecipe !== renderedCompactRecipe;
+      renderedLayoutMode = mode;
+      renderedCompactRecipe = compactRecipe;
+      if (!changed || !rerender) return changed;
+      // Rebuild exactly the surfaces whose markup depends on the boundary
+      // that just moved. Both renderers read live state, so this restores
+      // the correct structure without touching any stored values.
+      applySurfaceStyle(state.surfaceStyle);
+      renderWeightsArea();
+      renderSplitsArea();
+      validateAndCompute();
+      return changed;
+    }
+
+    function watchLayoutMode(){
+      const onChange = ()=> syncLayoutMode();
+      Object.values(layoutModeQueries).forEach(query=>{
+        // addEventListener is the modern form; addListener is the fallback
+        // for older WebViews. Registered once per query, at wire-up time.
+        if (typeof query.addEventListener === "function") query.addEventListener("change", onChange);
+        else if (typeof query.addListener === "function") query.addListener(onChange);
+      });
+    }
+
     function syncWorkspaceForViewport(){
-      const desktop = window.matchMedia("(min-width: 901px)").matches;
+      const desktop = layoutModeQueries.desktop.matches;
       const headerSvg = document.querySelector(".site-header svg");
       if (headerSvg){
         headerSvg.setAttribute("viewBox", desktop ? "0 125 1280 105" : "0 0 1280 240");
@@ -5377,7 +5471,7 @@
       panels.forEach(panel=>{
         panel.addEventListener("toggle", ()=>{
           if (!panel.open) return;
-          if (!window.matchMedia("(max-width: 900px)").matches) return;
+          if (isDesktopLayout()) return;
           // Restoring an open <details> from saved session state can emit a
           // toggle during startup. The tile home is authoritative until an
           // explicit tile click changes the mobile workspace to "panel".
@@ -6428,7 +6522,7 @@
       document.querySelectorAll(".toolWorkspacePanel").forEach(panel=>{
         panel.hidden = panel.id !== targetId;
       });
-      if (window.matchMedia("(max-width: 900px)").matches) document.body.dataset.mobileTools = "panel";
+      if (!isDesktopLayout()) document.body.dataset.mobileTools = "panel";
     }
     document.querySelectorAll(".mobileToolTile").forEach(tile=>{
       tile.addEventListener("click",()=>selectToolPanel(tile.dataset.mobileToolTarget));
@@ -6436,7 +6530,7 @@
     $("mobileToolsBack")?.addEventListener("click",()=>{ document.body.dataset.mobileTools = "home"; });
     $("appFooterMain")?.addEventListener("click",showMobileWorkspaceHome);
     $("appFooterDisplay")?.addEventListener("click",openDisplaySheet);
-    const desktopUtilityMedia = window.matchMedia("(min-width: 901px)");
+    const desktopUtilityMedia = layoutModeQueries.desktop;
     const placeAccountUtility = ()=>{
       const accountHost = document.querySelector(".footerAccountHost");
       const accountMenu = $("footerAccountMenu");
@@ -6848,16 +6942,20 @@
     });
     document.querySelectorAll(".workspaceContent > .workspacePanel > summary").forEach(summary=>{
       summary.addEventListener("click",event=>{
-        const timelineLockedOpen = state.mobileTimelineOnly && summary.closest("#resultsBlock") && window.matchMedia("(max-width: 900px)").matches;
+        const timelineLockedOpen = state.mobileTimelineOnly && summary.closest("#resultsBlock") && !isDesktopLayout();
         const mobilePanel = summary.closest(".workspacePanel");
-        if (mobilePanel && window.matchMedia("(max-width: 900px)").matches && document.body.dataset.mobileWorkspace === "panel"){
+        if (mobilePanel && !isDesktopLayout() && document.body.dataset.mobileWorkspace === "panel"){
           event.preventDefault();
           return;
         }
-        if (window.matchMedia("(min-width: 901px)").matches || timelineLockedOpen) event.preventDefault();
+        if (isDesktopLayout() || timelineLockedOpen) event.preventDefault();
       });
     });
     window.addEventListener("resize", syncWorkspaceForViewport);
+    // Structural re-render is driven by the breakpoint lists themselves, not
+    // by this resize handler - see syncLayoutMode. Wiring it here keeps all
+    // responsive handling in one place instead of adding a second system.
+    watchLayoutMode();
     setInterval(updateChangeoverCountdown, 30000);
     document.addEventListener("click",event=>{
       if (toolsIndexDropdown?.open && !toolsIndexDropdown.contains(event.target)) toolsIndexDropdown.open = false;
@@ -6905,8 +7003,12 @@
       activeWorkspaceId = loadWorkspacePreference();
       // A phone always starts at the tile home. Desktop keeps restoring the
       // most recently used workspace through activeWorkspaceId.
-      if (window.matchMedia("(max-width: 900px)").matches) showMobileWorkspaceHome();
+      if (!isDesktopLayout()) showMobileWorkspaceHome();
       applyMobileTimelineMode(state.mobileTimelineOnly);
+      // Record the mode the initial render already produced, and publish it
+      // for CSS. rerender:false because the DOM was just built correctly by
+      // the boot path - only later boundary crossings need a rebuild.
+      syncLayoutMode({ rerender:false });
       syncWorkspaceForViewport();
       hookDetailsPersistence();
       hookMobileAccordion();

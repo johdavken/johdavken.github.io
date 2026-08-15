@@ -175,7 +175,7 @@ test("operational controls are not offered on a plan", () => {
 });
 
 test("both tabs stay tappable on a phone", () => {
-  const mobile = styles.slice(styles.indexOf("@media (max-width: 900px){", styles.indexOf(".recipePageTabDot[hidden]")));
+  const mobile = styles.slice(styles.indexOf("@media (max-width: 900px)", styles.indexOf(".recipePageTabDot[hidden]")));
   const block = mobile.slice(0, mobile.indexOf("\n}"));
   assert.match(block, /\.recipePageTab\{ flex: 1 1 0; min-height: 44px;/);
 });
