@@ -6140,7 +6140,10 @@ body[data-surface-style="divided"] .helpTopic{
 .footerSheetBackdrop[hidden]{display:none!important}
 
 @media (width <= 900px){
-  :root{--app-dock-height:72px}
+  /* 72px reduced 10% - everything anchored off this one variable (the dock
+     itself, main's bottom padding, sheet/tray/banner offsets) shrinks with
+     it, so nothing needs a separate adjustment. */
+  :root{--app-dock-height:64.8px}
 
   /* Mobile is a document-scrolling shell. Keep the viewport fill dynamic so
      browser chrome changes do not become an extra content-sized block, while
@@ -6299,17 +6302,67 @@ body[data-surface-style="divided"] .helpTopic{
     height:calc(var(--app-dock-height) + env(safe-area-inset-bottom));
     min-height:0;
     padding:4px max(4px,env(safe-area-inset-right)) env(safe-area-inset-bottom) max(4px,env(safe-area-inset-left));
-    border-top:1px solid var(--border2);
+    /* The unscoped legacy .footerBar rule (the old "Next Pump Off" footer,
+       further up this file) still sets a 1px top border - explicitly zero
+       it here rather than just omitting a declaration, or it bleeds back
+       through on mobile. */
+    border-top:0;
+    /* Top stays sharp on the main box - the two raised ends below are
+       pseudo-elements, not a radius on this rect. Bottom keeps its existing
+       plain round, unrelated to this treatment. */
+    border-radius:0 0 16px 16px;
     background:color-mix(in srgb,var(--panelOpen) 94%,transparent);
-    box-shadow:0 -8px 26px color-mix(in srgb,#000 12%,transparent);
     text-align:center;
     backdrop-filter:blur(14px);
+  }
+  /* Inverted (concave) top corners, mirrored on both ends: the footer's own
+     material rises 20px above the flat top at each outer edge, 24px wide,
+     and the join back down to the flat top is a true concave curve - as if
+     the panel above were settling down into the footer.
+
+     border-radius cannot do this. A radius always keeps material INSIDE its
+     corner ellipse, which bulges convex (the "pill" corner, already
+     rejected); this shape needs material kept OUTSIDE an ellipse, so the
+     arc sags toward the corner instead. Hence a mask.
+
+     Each pseudo-element is a 24x20 block of the bar's own material sitting
+     directly above the bar's sharp top corner, with an ellipse the full
+     size of that block masked out of its INNER-TOP corner (the corner
+     diagonally opposite the outer screen edge). What survives is a solid
+     full-height column against the screen edge - the raised end - and a
+     solid strip along the bottom where it meets the bar's flat top, joined
+     by the ellipse's arc, which sags toward the outer-bottom corner. That
+     sag is the concave transition. Filled with the bar's own material and
+     blur, never the page background, so it reads as the footer rising
+     rather than as a cutout - and the mask clips the backdrop-filter too,
+     so no blurred rectangle shows through the removed quadrant. */
+  .footerBar::before,.footerBar::after{
+    content:"";
+    position:absolute;
+    top:-20px;
+    width:24px;
+    height:20px;
+    background:color-mix(in srgb,var(--panelOpen) 94%,transparent);
+    backdrop-filter:blur(14px);
+    pointer-events:none;
+  }
+  .footerBar::before{
+    left:0;
+    -webkit-mask:radial-gradient(24px 20px at 100% 0,transparent 99%,#000 100%);
+    mask:radial-gradient(24px 20px at 100% 0,transparent 99%,#000 100%);
+  }
+  .footerBar::after{
+    right:0;
+    -webkit-mask:radial-gradient(24px 20px at 0 0,transparent 99%,#000 100%);
+    mask:radial-gradient(24px 20px at 0 0,transparent 99%,#000 100%);
   }
   .appDockMenuHost{position:relative;display:grid;min-width:0}
   .appDockControl,.cloudSyncFooterStatus{
     display:flex;
     min-width:0;
-    min-height:64px;
+    /* 64px reduced 10%, matching --app-dock-height above - icon size (set
+       further down) is untouched. */
+    min-height:57.6px;
     margin:0;
     padding:5px 2px;
     border:0;
@@ -6323,22 +6376,23 @@ body[data-surface-style="divided"] .helpTopic{
     font:inherit;
     text-align:center;
   }
-  .appDockControl svg,.cloudSyncFooterStatus svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
-  .appDockControl > span,.cloudSyncFooterStatus > span{overflow:hidden;max-width:100%;color:inherit;font-size:9px;font-weight:800;line-height:1.05;text-overflow:ellipsis;white-space:nowrap}
+  /* Icon-only dock: labels are visually hidden below (aria-label already
+     carries the accessible name for every control, so removing the visible
+     text loses nothing for assistive tech). 27.5px is 22px + 25%, and is now
+     the one size every dock icon uses - Main no longer gets a larger icon of
+     its own. */
+  .appDockControl svg,.cloudSyncFooterStatus svg{width:27.5px;height:27.5px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .appDockControl > span:not(.mobileNotificationsBadge),.cloudSyncFooterStatus > strong{display:none}
   .appDockControl:hover,.appDockControl:focus-visible,.cloudSyncFooterStatus:hover,.cloudSyncFooterStatus:focus-visible{background:var(--row-bg);color:var(--title)}
   .appDockControl:focus-visible,.cloudSyncFooterStatus:focus-visible{outline:2px solid var(--focus-border);outline-offset:-2px}
   .appDockControl[aria-current="page"],.appDockControl[aria-expanded="true"]{color:var(--title);background:var(--focus-ring)}
   .appDockMain{
-    position:relative;
-    top:-5px;
     justify-self:center;
     width:calc(100% - 8px);
-    min-height:68px;
     border:1px solid color-mix(in srgb,var(--focus-border) 24%,var(--border));
     border-radius:13px;
     background:color-mix(in srgb,var(--focus-ring) 72%,var(--panelOpen));
   }
-  .appDockMain svg{width:25px;height:25px}
   .appDockMain[aria-current="page"]{border-color:color-mix(in srgb,var(--focus-border) 48%,var(--border));background:color-mix(in srgb,var(--focus-ring) 94%,var(--panelOpen));color:var(--title)}
   .appDockMain:not([aria-current="page"]){color:var(--muted);background:color-mix(in srgb,var(--row-bg) 82%,var(--panelOpen))}
   .appDockControl:disabled{opacity:.58}
@@ -6519,7 +6573,6 @@ body[data-surface-style="divided"] .helpTopic{
     color:var(--title);
     transform:translateY(1px);
   }
-  .appDockMain:active:not(.cloudSyncFooterStatus){transform:translateY(-4px)}
 }
 
 @media (min-width:901px){

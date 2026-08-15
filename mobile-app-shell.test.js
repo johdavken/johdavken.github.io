@@ -20,7 +20,82 @@ test("the mobile dock exposes five stable, accessible controls",()=>{
   assert.match(styles,/\.footerBar\{[\s\S]*?z-index:71;[\s\S]*?display:grid/);
   const order = ["appFooterDisplay","appFooterNotifications","appFooterMain","appFooterAccount","cloudSyncFooterStatus"].map(id=>footer.indexOf(`id="${id}"`));
   assert.deepEqual(order,[...order].sort((a,b)=>a-b));
-  assert.match(styles,/\.appDockMain\{[\s\S]*?top:-5px;[\s\S]*?min-height:68px;/);
+});
+
+test("the dock is icon-only, with every icon the same enlarged size and Main sitting level with the rest",()=>{
+  // 22px, the pre-existing icon size, increased by 25% - and the one size
+  // every control uses now (Main's own 25px override is gone).
+  assert.match(styles,/\.appDockControl svg,\.cloudSyncFooterStatus svg\{width:27\.5px;height:27\.5px;/);
+  assert.doesNotMatch(styles,/\.appDockMain svg\{/);
+  // Text labels are hidden - aria-label on each control still carries the
+  // accessible name - but the unread-count badge is explicitly excluded, so
+  // it keeps working exactly as before.
+  assert.match(styles,/\.appDockControl > span:not\(\.mobileNotificationsBadge\),\.cloudSyncFooterStatus > strong\{display:none\}/);
+  const badgeRule = styles.slice(styles.indexOf(".mobileNotificationsBadge{"),styles.indexOf("}",styles.indexOf(".mobileNotificationsBadge{")));
+  assert.doesNotMatch(badgeRule,/display:none/);
+  // Main no longer floats above the row (top:-5px) or claims a taller touch
+  // target (min-height:68px) than its siblings - all five now sit level.
+  const mainRule = styles.slice(styles.indexOf(".appDockMain{"),styles.indexOf("}",styles.indexOf(".appDockMain{")));
+  assert.doesNotMatch(mainRule,/position:relative|top:-5px|min-height:/);
+  // Main's press feedback now falls through to the same translateY(1px) rule
+  // every other control uses, instead of its old standalone lift-up.
+  assert.doesNotMatch(styles,/\.appDockMain:active/);
+});
+
+test("the dock has no drop shadow or border outline, is 10% shorter without shrinking the icons, and has mirrored raised ends at both top corners with a true concave join",()=>{
+  // 72px -> 64.8px (10% shorter). Everything that positions itself off the
+  // dock - sheets, trays, banners, main's own bottom padding - reads this
+  // same variable, so a single change keeps them all in sync.
+  assert.match(styles,/:root\{--app-dock-height:64\.8px\}/);
+  assert.doesNotMatch(styles,/--app-dock-height:72px/);
+  const dockRuleStart = styles.indexOf(".footerBar{",styles.indexOf(":root{--app-dock-height:64.8px}"));
+  const dockRule = styles.slice(dockRuleStart,styles.indexOf("}",dockRuleStart));
+  assert.doesNotMatch(dockRule,/box-shadow/);
+  // Explicitly zeroed, not just omitted - an older, unscoped .footerBar rule
+  // elsewhere in this file (the legacy "Next Pump Off" footer) still sets a
+  // 1px top border, and simply not re-declaring it here lets that bleed
+  // back through on mobile.
+  assert.match(dockRule,/border-top:0;/);
+  // The main box itself stays sharp on top (0) - a plain border-radius here
+  // would always be convex ("pill" corner), which is explicitly not this
+  // shape. Bottom keeps its separate, unrelated 16px round.
+  assert.match(dockRule,/border-radius:0 0 16px 16px;/);
+  // Mirrored raised-end pseudo-elements: each is a 24x20 block of the bar's
+  // own material (not the page background - it must read as the footer
+  // rising, not a cutout) sitting above the bar's sharp top corner.
+  const wingRule = styles.slice(styles.indexOf(".footerBar::before,.footerBar::after{"),styles.indexOf("}",styles.indexOf(".footerBar::before,.footerBar::after{")));
+  assert.match(wingRule,/top:-20px;/);
+  assert.match(wingRule,/width:24px;/);
+  assert.match(wingRule,/height:20px;/);
+  assert.match(wingRule,/background:color-mix\(in srgb,var\(--panelOpen\) 94%,transparent\);/);
+  assert.match(wingRule,/pointer-events:none;/);
+  // The concave join specifically requires a MASK, not border-radius: a
+  // radius keeps material inside its corner ellipse (convex - the rejected
+  // pill corner), while this needs material kept outside one, so the arc
+  // sags toward the corner. Masking also clips the backdrop-filter, which a
+  // transparent-background gradient would not.
+  assert.doesNotMatch(wingRule,/border-radius/);
+  // Anchored past the combined ".footerBar::before,.footerBar::after" rule
+  // above, so these find the standalone per-side rules.
+  const beforeStart = styles.indexOf("\n  .footerBar::before{");
+  const afterStart = styles.indexOf("\n  .footerBar::after{");
+  assert.ok(beforeStart > -1 && afterStart > -1,"expected standalone per-side wing rules");
+  const beforeRule = styles.slice(beforeStart,styles.indexOf("}",beforeStart));
+  const afterRule = styles.slice(afterStart,styles.indexOf("}",afterStart));
+  assert.match(beforeRule,/left:0;/);
+  assert.match(afterRule,/right:0;/);
+  // True mirrors: identical ellipse dimensions, anchored to opposite inner
+  // corners. Both prefixed and unprefixed, since Safari still needs -webkit-.
+  assert.match(beforeRule,/-webkit-mask:radial-gradient\(24px 20px at 100% 0,transparent 99%,#000 100%\);/);
+  assert.match(beforeRule,/[^-]mask:radial-gradient\(24px 20px at 100% 0,transparent 99%,#000 100%\);/);
+  assert.match(afterRule,/-webkit-mask:radial-gradient\(24px 20px at 0 0,transparent 99%,#000 100%\);/);
+  assert.match(afterRule,/[^-]mask:radial-gradient\(24px 20px at 0 0,transparent 99%,#000 100%\);/);
+  // The touch target shrinks by the same 10%, in step with the bar - but the
+  // icon rule (already asserted above) keeps its own fixed 27.5px, untouched
+  // by this resize.
+  const controlRule = styles.slice(styles.indexOf(".appDockControl,.cloudSyncFooterStatus{"),styles.indexOf("}",styles.indexOf(".appDockControl,.cloudSyncFooterStatus{")));
+  assert.match(controlRule,/min-height:57\.6px;/);
+  assert.doesNotMatch(controlRule,/min-height:64px/);
 });
 
 test("footer active states use accent-only styling with accessible focus and press feedback",()=>{
