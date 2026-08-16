@@ -6,3 +6,8 @@
 # is a second copy of the app and neither should be committed.
 node_modules/
 www/
+
+# Generated visual test captures and exploratory RT7 branding previews.
+# Keep established branding source assets trackable.
+artifacts/
+branding/resin-tools/rt7-*
