@@ -60,7 +60,6 @@
 <script src="line-identity.js?v=0.4.0" defer></script>
 <script src="workspace-configurations-service.js?v=0.21.0" defer></script>
 <script src="resin-data.js?v=0.16.2" defer></script>
-<script src="resin-description-info.js?v=0.16.1" defer></script>
 <script src="resin-catalog-service.js?v=0.19.1" defer></script>
 <script src="resin-lookup.js?v=0.18.2" defer></script>
 <script src="resin-admin.js?v=0.20.3" defer></script>
@@ -486,10 +485,10 @@
 
         <div class="blockBody">
           <div class="weightsIntroduction muted">
-            <span>Enter a conservative usable weight, or use Smart Hoppers to calculate capacity from hopper dimensions and resin density.</span>
+            <span>Enter a conservative usable weight, or use Smart Hoppers to calculate resin-specific hopper capacity from hopper size and bulk density.</span>
             <details class="weightsSmartHow">
               <summary>How Smart Hoppers work</summary>
-              <p>Smart Hoppers uses the shared hopper circumference, each hopper’s usable height, its assigned recipe resin, and that resin’s measured bulk density. Manual weights remain available at all times.</p>
+              <p>Smart Hoppers automatically uses cylindrical dimensions (shared hopper circumference and each hopper’s usable height) or known usable volume, whichever method the connected line uses, together with the assigned recipe resin’s measured bulk density. Manual weights remain available at all times. Smart Hoppers requires a connected workspace with an identified line.</p>
             </details>
           </div>
           <div id="weightsArea" class="weightsGrid mt10"></div>
@@ -759,7 +758,8 @@
     <div class="blockBody">
       <div class="mobileToolsHome" aria-label="Production tools">
         <button class="mobileToolTile" type="button" data-mobile-tool-target="shortFootageTool"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 24 12 17l5 3 10-12"/><path d="M21 8h6v6"/></svg><span>Short Footage</span><small>Footage calculator</small></button>
-        <button class="mobileToolTile" type="button" data-mobile-tool-target="hopperWeightTool"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M9 6h14l3 20H6L9 6Z"/><path d="M8 14h16M11 10h10"/></svg><span>Hopper Weight</span><small>Capacity estimate</small></button>
+        <button class="mobileToolTile" type="button" data-mobile-tool-target="hopperWeightTool"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M9 6h14l3 20H6L9 6Z"/><path d="M8 14h16M11 10h10"/></svg><span>Hopper Weight</span><small>For cylindrical hoppers</small></button>
+        <button class="mobileToolTile" type="button" data-mobile-tool-target="hopperVolumeWeightTool"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M9 6h14l3 20H6L9 6Z"/><path d="M8 14h16M11 10h10"/></svg><span>Hopper Volume Weight</span><small>For non-cylindrical hoppers</small></button>
         <button class="mobileToolTile" type="button" data-mobile-tool-target="resinLookupTool"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="14" cy="14" r="8"/><path d="m20 20 7 7M11 14h6M14 11v6"/></svg><span>Resin Reference</span><small>Codes, density and material information</small></button>
         <button class="mobileToolTile" type="button" data-mobile-tool-target="recipeScanTool"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 10V6h4M22 6h4v4M26 22v4h-4M10 26H6v-4"/><path d="M10 16h12M10 12h8M10 20h9"/></svg><span>Scan Recipe</span><small>Import from photo</small></button>
         <button class="mobileToolTile" type="button" data-mobile-tool-target="bulkDensityMeasurementTool"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M13 4h6M14 4v6l-7 15a2 2 0 0 0 2 3h14a2 2 0 0 0 2-3l-7-15V4"/><path d="M10 20h12"/></svg><span>Bulk Density Measurement</span><small>Measure and save resin-specific bulk density</small></button>
@@ -771,6 +771,7 @@
         <nav class="toolsIndex" role="tablist" aria-label="Production tools">
           <button id="shortFootageToolTab" class="toolsIndexButton active" type="button" role="tab" aria-selected="true" aria-controls="shortFootageTool" data-tool-target="shortFootageTool">Short Footage</button>
           <button id="hopperWeightToolTab" class="toolsIndexButton" type="button" role="tab" aria-selected="false" aria-controls="hopperWeightTool" data-tool-target="hopperWeightTool" tabindex="-1">Hopper Weight</button>
+          <button id="hopperVolumeWeightToolTab" class="toolsIndexButton" type="button" role="tab" aria-selected="false" aria-controls="hopperVolumeWeightTool" data-tool-target="hopperVolumeWeightTool" tabindex="-1">Hopper Volume Weight</button>
           <button id="resinLookupToolTab" class="toolsIndexButton" type="button" role="tab" aria-selected="false" aria-controls="resinLookupTool" data-tool-target="resinLookupTool" tabindex="-1">Resin Reference</button>
           <button id="recipeScanToolTab" class="toolsIndexButton" type="button" role="tab" aria-selected="false" aria-controls="recipeScanTool" data-tool-target="recipeScanTool" tabindex="-1">Scan Recipe</button>
           <button id="bulkDensityMeasurementToolTab" class="toolsIndexButton" type="button" role="tab" aria-selected="false" aria-controls="bulkDensityMeasurementTool" data-tool-target="bulkDensityMeasurementTool" tabindex="-1">Bulk Density Measurement</button>
@@ -846,9 +847,44 @@
         </div>
       </section>
 
+      <section id="hopperVolumeWeightTool" class="toolPanel toolWorkspacePanel" role="tabpanel" aria-labelledby="hopperVolumeWeightToolTab hopperVolumeWeightCalculatorTitle" hidden>
+        <div id="hopperVolumeWeightCalculatorTitle" class="layerTitle">Hopper Volume Weight</div>
+        <div class="muted">Estimates usable resin weight from known hopper volume.</div>
+
+        <div class="grid3 mt10">
+          <div>
+            <label for="hopperVolumeGallons">Hopper volume (gal)</label>
+            <input id="hopperVolumeGallons" type="text" inputmode="decimal" placeholder="0" />
+          </div>
+          <div>
+            <label for="hopperVolumeBulkDensity">Resin bulk density (lb/ft³)</label>
+            <input id="hopperVolumeBulkDensity" type="text" inputmode="decimal" placeholder="Optional" />
+          </div>
+          <div>
+            <label for="hopperVolumePolymerDensity">Polymer density (g/cm³)</label>
+            <input id="hopperVolumePolymerDensity" type="text" inputmode="decimal" placeholder="Use when bulk density is unknown" />
+          </div>
+        </div>
+
+        <div class="grid2 mt10">
+          <div>
+            <label for="hopperVolumePackingFactor">Packing factor</label>
+            <input id="hopperVolumePackingFactor" type="text" inputmode="decimal" value="0.63" />
+            <div class="tiny">Adjustable from 0.58 to 0.68 for different pellet shapes.</div>
+          </div>
+        </div>
+
+        <div class="tiny">A directly entered bulk density takes priority over the polymer-density estimate.</div>
+        <div class="toolResult mt10" aria-live="polite">
+          <span>Hopper volume weight</span>
+          <strong id="hopperVolumeWeightResult" class="mono">—</strong>
+          <span id="hopperVolumeWeightMessage" class="muted">Enter hopper volume and either density value.</span>
+        </div>
+      </section>
+
       <section id="resinLookupTool" class="toolPanel toolWorkspacePanel" role="tabpanel" aria-labelledby="resinLookupToolTab resinLookupTitle" hidden>
         <div id="resinLookupTitle" class="layerTitle">Resin Reference</div>
-        <div class="muted">Find a resin by code or description.</div>
+        <div class="muted">Find a resin by code.</div>
 
         <div class="grid3 mt10 resinLookupGrid">
           <div class="resinLookupSearch">
@@ -856,7 +892,7 @@
             <input
               id="resinLookupInput"
               type="search"
-              placeholder="Code or description"
+              placeholder="Resin code"
               autocomplete="off"
               role="combobox"
               aria-autocomplete="list"
@@ -870,10 +906,6 @@
               aria-label="Matching resins"
               hidden
             ></div>
-          </div>
-          <div>
-            <label for="resinLookupDescription">Description</label>
-            <input id="resinLookupDescription" class="resinLookupValue" type="text" value="Unknown" readonly aria-live="polite" />
           </div>
           <div>
             <label for="resinLookupDensity">Density</label>
@@ -892,14 +924,21 @@
           </div>
           <div>
             <label for="resinLookupBulkDensity">Bulk density</label>
-            <input id="resinLookupBulkDensity" class="resinLookupValue mono" type="text" value="Unknown" readonly aria-live="polite" />
+            <div class="resinLookupDensityField">
+              <input
+                id="resinLookupBulkDensity"
+                class="resinLookupValue mono"
+                type="text"
+                value="Unknown"
+                readonly
+                aria-live="polite"
+                aria-describedby="resinLookupCopyStatus"
+              />
+              <button id="copyResinBulkDensity" class="resinLookupCopyButton secondary" type="button" disabled>Copy</button>
+            </div>
           </div>
         </div>
         <div id="resinLookupCopyStatus" class="tiny resinLookupCopyStatus" role="status" aria-live="polite"></div>
-        <div class="resinLookupInformation mt10">
-          <label for="resinLookupInformation">Material information</label>
-          <textarea id="resinLookupInformation" readonly>No additional material information is currently available.</textarea>
-        </div>
       </section>
 
       <section id="recipeScanTool" class="toolPanel toolWorkspacePanel" role="tabpanel" aria-labelledby="recipeScanToolTab recipeScanTitle" hidden>
@@ -964,11 +1003,11 @@
               <div class="bulkDensitySectionHead"><span class="setupControlLabel">Resin</span><strong id="bulkDensityResinHeading">Select an existing record to enable saving</strong></div>
               <div class="bulkDensityResinSearch">
                 <label for="bulkDensityResinSearch">Search active resins</label>
-                <input id="bulkDensityResinSearch" type="search" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="bulkDensityResinSuggestions" placeholder="Code or description">
+                <input id="bulkDensityResinSearch" type="search" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="bulkDensityResinSuggestions" placeholder="Resin code">
                 <div id="bulkDensityResinSuggestions" class="bulkDensityResinSuggestions" role="listbox" hidden></div>
               </div>
               <div id="bulkDensitySelectedResin" class="bulkDensitySelectedResin" hidden>
-                <div><strong id="bulkDensitySelectedCode"></strong><span id="bulkDensitySelectedDescription"></span></div>
+                <div><strong id="bulkDensitySelectedCode"></strong></div>
                 <div><small>Current bulk density</small><strong id="bulkDensityCurrentValue" class="mono">Not set</strong></div>
               </div>
             </section>
@@ -1098,7 +1137,7 @@
               </figure>
               <div>
                 <strong class="helpCalloutTitle">Smart Hoppers</strong>
-                <p>Calculates capacity from hopper dimensions and resin density instead of a typed weight. Add each hopper's usable height and circumference with its wrench icon.</p>
+                <p>Calculates resin-specific hopper capacity from hopper size and bulk density instead of a typed weight. Resin.Tools automatically uses cylindrical dimensions or known usable volume, whichever method the connected line uses — set each hopper's geometry with its wrench icon. Smart Hoppers is only available once a workspace with an identified line is connected.</p>
                 <p class="helpCaption">A computed weight (green checkmark) appears only once that resin has a measured bulk density on file. When it appears, it drives the run-down instead of the typed value.</p>
               </div>
             </div>
@@ -1524,7 +1563,7 @@
       <div class="sumLeft"><div class="chev"><span class="chevRing"></span><span class="chevSatellite"></span><span class="chevCore"></span></div><div class="summaryText"><div class="layerTitle">Resin Database</div><div class="layerMeta">Manage active and inactive catalog records</div></div></div>
     </summary>
     <div class="blockBody adminResinWorkspace">
-      <div class="adminToolbar"><input id="adminResinSearch" type="search" placeholder="Search code or description"><button id="addResinButton" type="button">Add resin</button></div>
+      <div class="adminToolbar"><input id="adminResinSearch" type="search" placeholder="Search resin code"><button id="addResinButton" type="button">Add resin</button></div>
       <div id="adminResinMessage" class="tiny" role="status"></div>
       <div class="adminResinColumns">
         <div class="adminResinListPane"><div id="adminResinList" class="adminResinList" aria-live="polite"></div></div>
@@ -1535,10 +1574,8 @@
             <label>Resin code<input id="adminResinCode" required maxlength="100"></label>
             <label>Density (g/cm³)<input id="adminResinDensity" inputmode="decimal" placeholder="Blank if unknown"></label>
             <label>Bulk density (lb/ft³)<input id="adminResinBulkDensity" inputmode="decimal" placeholder="Blank if unknown"></label>
-            <label>Display description<input id="adminResinDescription" maxlength="500"></label>
             <label class="adminActiveField">Status<select id="adminResinActive"><option value="true" selected>Active</option><option value="false">Inactive</option></select></label>
           </div>
-          <label>Information description<textarea id="adminResinInformation" maxlength="10000"></textarea></label>
           <div id="adminResinFormMessage" class="tiny" role="status"></div>
           <div class="buttonRow"><button id="adminResinSave" type="submit">Save resin</button><button id="adminResinCancel" class="secondary" type="button">Cancel</button><button id="adminResinDelete" class="danger" type="button" hidden>Delete resin</button></div>
         </form>

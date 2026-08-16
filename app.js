@@ -955,7 +955,7 @@
       layer.hoppers.some((hopper,index)=>
         (index === 0 ? Math.abs(clampNum(hopper.pct) - 100) > 0.0001 : clampNum(hopper.pct) > 0) ||
         clampNum(hopper.weight) > 0 || !!hopper.resinName || !!hopper.track || !!hopper.pumpOff ||
-        clampNum(hopper.usableHeight) > 0 || clampNum(hopper.circumference) > 0
+        clampNum(hopper.usableHeight) > 0 || clampNum(hopper.circumference) > 0 || clampNum(hopper.usableGallons) > 0
       )
     );
     if (confirmDataLoss && configuredRemovedLayers.length && !confirm(`Changing to ${nextType} ${nextType === 1 ? "layer" : "layers"} will remove configured data for ${configuredRemovedLayers.map(layer=>layer.name).join(", ")}. Continue?`)){
@@ -1297,7 +1297,8 @@
                 track: !!h.track,
                 pumpOff: !!h.pumpOff,
                 usableHeight: clampNum(h.usableHeight),
-                circumference: clampNum(h.circumference)
+                circumference: clampNum(h.circumference),
+                usableGallons: clampNum(h.usableGallons)
               };
             })
           };
@@ -1312,7 +1313,8 @@
             track: false,
             pumpOff: false,
             usableHeight: 0,
-            circumference: 0
+            circumference: 0,
+            usableGallons: 0
           }))
         };
       });
@@ -1793,7 +1795,8 @@
             track: !!fh.track,
             pumpOff: !!fh.pumpOff,
             usableHeight: clampNum(fh.usableHeight),
-            circumference: clampNum(fh.circumference)
+            circumference: clampNum(fh.circumference),
+            usableGallons: clampNum(fh.usableGallons)
           };
         });
         return { name, layerPct, hoppers };
@@ -2045,6 +2048,14 @@
       return window.PolynLineIdentity?.hopperPositionLabel(hi, lineSync?.getState?.()) || String(hi + 1);
     }
 
+    // The one place Smart Hoppers geometry mode is resolved from the
+    // connected line - rendering, editing, and calculation all call this
+    // rather than checking a line number themselves, so they can never
+    // disagree about which geometry method applies.
+    function currentSmartHopperGeometryMode(){
+      return window.PolynLineIdentity?.getSmartHopperGeometryModeForSync(lineSync?.getState?.()) ?? null;
+    }
+
     function setWorkspaceHopperCircumference(value){
       state.hopperCircumference = clampNum(value);
       // Keep legacy per-hopper fields aligned for profiles/session payloads
@@ -2063,6 +2074,7 @@
       const cellRefs = new Map();
       let bulkMode = false;
       let visualMode = true;
+      const geometryMode = currentSmartHopperGeometryMode();
 
       const controls = document.createElement("div");
       controls.className = "mobileWeightsControls";
@@ -2072,20 +2084,33 @@
 
       const smartControl = document.createElement("div");
       smartControl.className = "mobileWeightsSmartControl";
-      const smartCopy = document.createElement("div");
-      smartCopy.innerHTML = '<strong>Smart Hoppers</strong><small>Calculate capacity · <span class="smartHopperState" data-toggle-state-for="smartHoppersToggle" aria-live="polite">Disabled</span></small>';
-      const smartToggle = document.createElement("div");
-      smartToggle.id = "smartHoppersToggle";
-      smartToggle.className = "toggle";
-      smartToggle.setAttribute("role", "switch");
-      smartToggle.setAttribute("tabindex", "0");
-      smartToggle.setAttribute("aria-label", "Enable Smart Hoppers");
-      smartToggle.title = "Smart Hoppers: compute weight from shared circumference, hopper height, and resin density when known";
-      smartToggle.innerHTML = '<svg viewBox="0 0 28 28" aria-hidden="true"><path d="M7 4h14l3 5v13l-4 3H8l-4-3V9z"/><path d="M8 16h12v6H8z"/></svg>';
-      smartControl.append(smartCopy, smartToggle);
+      if (geometryMode === null){
+        // No identified line - Smart Hoppers can't be presented as usable
+        // (it has no geometry method to compute from), so this shows a
+        // neutral informational state instead of a working toggle. Manual
+        // Receiver Hopper Weights keep working normally either way.
+        smartControl.classList.add("unavailable");
+        const smartCopy = document.createElement("div");
+        smartCopy.innerHTML = '<strong>Smart Hoppers</strong><small>Join a workspace to enable Smart Hoppers.</small>';
+        smartControl.appendChild(smartCopy);
+      } else {
+        const smartCopy = document.createElement("div");
+        smartCopy.innerHTML = '<strong>Smart Hoppers</strong><small>Calculate capacity · <span class="smartHopperState" data-toggle-state-for="smartHoppersToggle" aria-live="polite">Disabled</span></small>';
+        const smartToggle = document.createElement("div");
+        smartToggle.id = "smartHoppersToggle";
+        smartToggle.className = "toggle";
+        smartToggle.setAttribute("role", "switch");
+        smartToggle.setAttribute("tabindex", "0");
+        smartToggle.setAttribute("aria-label", "Enable Smart Hoppers");
+        smartToggle.title = geometryMode === "volume"
+          ? "Smart Hoppers: compute weight from hopper usable volume and resin density when known"
+          : "Smart Hoppers: compute weight from shared circumference, hopper height, and resin density when known";
+        smartToggle.innerHTML = '<svg viewBox="0 0 28 28" aria-hidden="true"><path d="M7 4h14l3 5v13l-4 3H8l-4-3V9z"/><path d="M8 16h12v6H8z"/></svg>';
+        smartControl.append(smartCopy, smartToggle);
+      }
       controlRail.appendChild(smartControl);
 
-      if (state.smartHoppersEnabled){
+      if (state.smartHoppersEnabled && geometryMode === "cylindrical"){
         const circumferenceLabel = document.createElement("label");
         circumferenceLabel.className = "mobileSharedCircumference";
         circumferenceLabel.innerHTML = "<span>Circumference</span><small>in</small>";
@@ -2141,8 +2166,13 @@
           valueFields.className = "mobileWeightValueFields";
           const visualReadout = document.createElement("div");
           visualReadout.className = "mobileWeightVisualReadout";
+          const geometrySummaryMarkup = geometryMode === "volume"
+            ? `<b id="${mobileSummaryHeightId(L.name, hi)}"><span>${clampNum(hopper.usableGallons)}</span><small>gal</small></b>`
+            : geometryMode === "cylindrical"
+              ? `<b id="${mobileSummaryHeightId(L.name, hi)}"><span>${clampNum(hopper.usableHeight)}</span><small>in</small></b>`
+              : "";
           visualReadout.innerHTML = `
-            <span class="mobileWeightVisualValues"><b id="${mobileSummaryWeightId(L.name, hi)}" class="mobileWeightSummaryWeight"><span>${clampNum(hopper.weight)}</span><small>lb</small></b><b id="${mobileSummaryHeightId(L.name, hi)}"><span>${clampNum(hopper.usableHeight)}</span><small>in</small></b></span>`;
+            <span class="mobileWeightVisualValues"><b id="${mobileSummaryWeightId(L.name, hi)}" class="mobileWeightSummaryWeight"><span>${clampNum(hopper.weight)}</span><small>lb</small></b>${geometrySummaryMarkup}</span>`;
           const summaryWeight = visualReadout.querySelector(".mobileWeightSummaryWeight");
           const makeValueField = (shortLabel, value, ariaLabel, onValue)=>{
             const wrap = document.createElement("label");
@@ -2172,7 +2202,13 @@
             summaryWeight.removeAttribute("title");
           });
           let heightInput = null;
-          if (state.smartHoppersEnabled){
+          if (state.smartHoppersEnabled && geometryMode === "volume"){
+            // Summary readout is kept live by refreshSmartHopperState
+            // (called from validateAndCompute right after this), reading
+            // the same canonical hopper.usableGallons this sets - not a
+            // second, positionally-addressed update here.
+            heightInput = makeValueField("G", hopper.usableGallons, `${hopperBadgeLabel(L.name, hi)} usable volume in gallons`, value=>{ hopper.usableGallons = value; });
+          } else if (state.smartHoppersEnabled && geometryMode === "cylindrical"){
             // Summary height is kept live by refreshSmartHopperState (called
             // from validateAndCompute right after this), reading the same
             // canonical hopper.usableHeight this sets - not a second,
@@ -2230,7 +2266,8 @@
       bulkBar.hidden = true;
       bulkBar.innerHTML = `
         <label><span>Weight</span><input id="mobileBulkWeight" type="text" inputmode="decimal" placeholder="No change" /></label>
-        ${state.smartHoppersEnabled ? '<label><span>Height</span><input id="mobileBulkHeight" type="text" inputmode="decimal" placeholder="No change" /></label>' : ""}
+        ${state.smartHoppersEnabled && geometryMode === "volume" ? '<label><span>Volume</span><input id="mobileBulkHeight" type="text" inputmode="decimal" placeholder="No change" /></label>' : ""}
+        ${state.smartHoppersEnabled && geometryMode === "cylindrical" ? '<label><span>Height</span><input id="mobileBulkHeight" type="text" inputmode="decimal" placeholder="No change" /></label>' : ""}
         <div class="mobileWeightsBulkActions"><small id="mobileWeightSelectionStatus" role="status">No hoppers selected</small><button id="applyMobileBulkWeights" type="button" disabled>Apply</button></div>
         <div class="mobileWeightsBulkTextActions"><button id="selectAllMobileWeights" type="button">Select all</button><button id="clearMobileWeightSelection" type="button">Clear</button></div>
       `;
@@ -2332,7 +2369,8 @@
             ref.weightInput.value = String(weightResult.value);
           }
           if (heightResult.value !== null && ref.heightInput){
-            ref.hopper.usableHeight = heightResult.value;
+            if (geometryMode === "volume") ref.hopper.usableGallons = heightResult.value;
+            else ref.hopper.usableHeight = heightResult.value;
             ref.heightInput.value = String(heightResult.value);
           }
         });
@@ -2391,6 +2429,7 @@
       let desktopBulkMode = false;
       let desktopProfilesOpen = false;
       let desktopWeightView = "summary";
+      const geometryMode = currentSmartHopperGeometryMode();
 
       function toggleSelection(keys){
         const select = keys.some(key=>!selected.has(key));
@@ -2415,7 +2454,8 @@
             <span>lb</span>
           </span>
         </label>
-        ${state.smartHoppersEnabled ? '<label class="weightsBulkField" for="bulkHeight"><span>Usable height</span><span class="weightsInputWithUnit"><input id="bulkHeight" type="text" inputmode="decimal" placeholder="No change" /><span>in</span></span></label>' : ""}
+        ${state.smartHoppersEnabled && geometryMode === "volume" ? '<label class="weightsBulkField" for="bulkHeight"><span>Usable volume</span><span class="weightsInputWithUnit"><input id="bulkHeight" type="text" inputmode="decimal" placeholder="No change" /><span>gal</span></span></label>' : ""}
+        ${state.smartHoppersEnabled && geometryMode === "cylindrical" ? '<label class="weightsBulkField" for="bulkHeight"><span>Usable height</span><span class="weightsInputWithUnit"><input id="bulkHeight" type="text" inputmode="decimal" placeholder="No change" /><span>in</span></span></label>' : ""}
         <div class="weightsBulkApply">
           <div id="weightSelectionStatus" class="tiny weightsSelectionStatus" role="status" aria-live="polite">No hoppers selected</div>
           <button id="applyBulkWeight" type="button" disabled>Apply to selected</button>
@@ -2430,13 +2470,23 @@
 
       const desktopControls = document.createElement("div");
       desktopControls.className = "desktopWeightsControls";
+      const desktopSmartControlMarkup = geometryMode === null
+        // No identified line - Smart Hoppers can't be presented as usable
+        // (it has no geometry method to compute from), so this shows a
+        // neutral informational state instead of a working toggle. Manual
+        // Receiver Hopper Weights keep working normally either way.
+        ? '<div class="desktopWeightsSmartControl unavailable"><div><strong>Smart Hoppers</strong><small>Join a workspace to enable Smart Hoppers.</small></div></div>'
+        : `<div class="desktopWeightsSmartControl"><div><strong>Smart Hoppers</strong><small>Resin-specific calculated capacity</small></div><span class="desktopSmartHopperState" data-toggle-state-for="smartHoppersToggle" aria-live="polite">Disabled</span><div id="smartHoppersToggle" class="toggle" role="switch" tabindex="0" title="Smart Hoppers: compute weight from ${geometryMode === "volume" ? "hopper usable volume" : "hopper geometry"} and resin density when known"></div></div>`;
+      const desktopCircumferenceMarkup = geometryMode === "cylindrical"
+        ? `<label class="desktopSharedCircumference"><span>Circumference</span><span class="weightsInputWithUnit"><input id="desktopSharedCircumference" type="text" inputmode="decimal" placeholder="0" value="${clampNum(state.hopperCircumference)}" /><span>in</span></span></label>`
+        : "";
       desktopControls.innerHTML = `
-        <div class="desktopWeightsSmartControl"><div><strong>Smart Hoppers</strong><small>Resin-specific calculated capacity</small></div><span class="desktopSmartHopperState" data-toggle-state-for="smartHoppersToggle" aria-live="polite">Disabled</span><div id="smartHoppersToggle" class="toggle" role="switch" tabindex="0" title="Smart Hoppers: compute weight from hopper geometry and resin density when known"></div></div>
-        <label class="desktopSharedCircumference"><span>Circumference</span><span class="weightsInputWithUnit"><input id="desktopSharedCircumference" type="text" inputmode="decimal" placeholder="0" value="${clampNum(state.hopperCircumference)}" /><span>in</span></span></label>
+        ${desktopSmartControlMarkup}
+        ${desktopCircumferenceMarkup}
         <div class="desktopWeightsViewToggle" role="group" aria-label="Receiver hopper weight view"><span>View</span><button class="active" type="button" data-weight-view="summary">Summary</button><button type="button" data-weight-view="edit">Edit</button></div>
       `;
       const circumferenceInput = desktopControls.querySelector("#desktopSharedCircumference");
-      circumferenceInput.addEventListener("input", event=>{
+      circumferenceInput?.addEventListener("input", event=>{
         const accepted = acceptNumericInput(event.target, { min: 0, label: "Shared hopper circumference" }, setWorkspaceHopperCircumference);
         if (!accepted) return;
         validateAndCompute({ sync: true });
@@ -2529,16 +2579,26 @@
           visualReadout.className = "desktopWeightVisualReadout";
           const initialSmartWeight = smartHopperComputation(L.hoppers[hi]);
           const initialSummaryWeight = initialSmartWeight ? Math.round(initialSmartWeight.value) : clampNum(L.hoppers[hi].weight);
+          const desktopGeometrySummaryMarkup = geometryMode === "volume"
+            ? `<b id="${desktopSummaryHeightId(L.name, hi)}"><span>${clampNum(L.hoppers[hi].usableGallons)}</span><small>gal</small></b>`
+            : geometryMode === "cylindrical"
+              ? `<b id="${desktopSummaryHeightId(L.name, hi)}"><span>${clampNum(L.hoppers[hi].usableHeight)}</span><small>in</small></b>`
+              : "";
+          const desktopGeometryEditMarkup = state.smartHoppersEnabled && geometryMode === "volume"
+            ? `<label><input class="desktopVisualHeight" type="text" inputmode="decimal" value="${clampNum(L.hoppers[hi].usableGallons)}" aria-label="${hopperBadgeLabel(L.name, hi)} usable volume in gallons"/><small>Volume (gal)</small></label>`
+            : state.smartHoppersEnabled && geometryMode === "cylindrical"
+              ? `<label><input class="desktopVisualHeight" type="text" inputmode="decimal" value="${clampNum(L.hoppers[hi].usableHeight)}" aria-label="${hopperBadgeLabel(L.name, hi)} usable height in inches"/><small>Height (in)</small></label>`
+              : "";
           visualReadout.innerHTML = `
             <span class="desktopWeightVisualId">${hopperBadgeLabel(L.name, hi)}</span>
             <span class="desktopWeightVisualValues">
               <span class="desktopWeightSummaryValues">
                 <b id="${desktopSummaryWeightId(L.name, hi)}" class="desktopWeightSummaryWeight${initialSmartWeight ? " smart" : ""}" aria-label="${hopperBadgeLabel(L.name, hi)} ${initialSmartWeight ? "Smart-calculated" : "manual"} weight, ${initialSummaryWeight} pounds"><span>${initialSummaryWeight}</span><small>lb</small></b>
-                <b id="${desktopSummaryHeightId(L.name, hi)}"><span>${clampNum(L.hoppers[hi].usableHeight)}</span><small>in</small></b>
+                ${desktopGeometrySummaryMarkup}
               </span>
               <span class="desktopWeightEditFields">
                 <label><input class="desktopVisualWeight" type="text" inputmode="decimal" value="${clampNum(L.hoppers[hi].weight)}" aria-label="${hopperBadgeLabel(L.name, hi)} manual weight in pounds"/><small>Weight (lb)</small></label>
-                ${state.smartHoppersEnabled ? `<label><input class="desktopVisualHeight" type="text" inputmode="decimal" value="${clampNum(L.hoppers[hi].usableHeight)}" aria-label="${hopperBadgeLabel(L.name, hi)} usable height in inches"/><small>Height (in)</small></label>` : ""}
+                ${desktopGeometryEditMarkup}
               </span>
             </span>`;
           const visualWeightInput = visualReadout.querySelector(".desktopVisualWeight");
@@ -2546,13 +2606,14 @@
 
           let geometryPopover = null;
           let computedWeight = null;
-          if (state.smartHoppersEnabled){
+          if (state.smartHoppersEnabled && geometryMode !== null){
+            const isVolume = geometryMode === "volume";
             geometryPopover = document.createElement("details");
             geometryPopover.className = "hopperGeometryPopover";
             geometryPopover.setAttribute("name", "hopperGeometry");
             const trigger = document.createElement("summary");
             trigger.className = "hopperGeometryTrigger";
-            const geometryLabel = `Set ${hopperBadgeLabel(L.name, hi)} usable height`;
+            const geometryLabel = `Set ${hopperBadgeLabel(L.name, hi)} usable ${isVolume ? "volume" : "height"}`;
             trigger.setAttribute("aria-label", geometryLabel);
             trigger.title = geometryLabel;
             trigger.textContent = "🔧";
@@ -2561,19 +2622,19 @@
 
             const heightLabel = document.createElement("label");
             const heightCaption = document.createElement("span");
-            heightCaption.textContent = "Usable height (in)";
+            heightCaption.textContent = isVolume ? "Usable volume (gal)" : "Usable height (in)";
             const heightInput = document.createElement("input");
             heightInput.id = `gh_${L.name}_${hi}`;
             heightInput.type = "text";
             heightInput.inputMode = "decimal";
             heightInput.placeholder = "0";
-            heightInput.value = String(clampNum(L.hoppers[hi].usableHeight));
-            heightInput.setAttribute("aria-label", `${hopperBadgeLabel(L.name, hi)} usable height in inches`);
+            heightInput.value = String(clampNum(isVolume ? L.hoppers[hi].usableGallons : L.hoppers[hi].usableHeight));
+            heightInput.setAttribute("aria-label", `${hopperBadgeLabel(L.name, hi)} usable ${isVolume ? "volume in gallons" : "height in inches"}`);
             heightLabel.append(heightCaption, heightInput);
 
             // Circumference is a workspace-wide physical setting above the
-            // matrix. The wrench deliberately contains only this hopper's
-            // unique usable-height value.
+            // matrix (cylindrical mode only). The wrench deliberately
+            // contains only this hopper's unique geometry value.
             panel.append(heightLabel);
             geometryPopover.append(trigger, panel);
             cellRow.appendChild(geometryPopover);
@@ -2601,8 +2662,12 @@
             heightInput.addEventListener("input",(e)=>{
               const accepted = acceptNumericInput(
                 e.target,
-                { min: 0, label: `${hopperBadgeLabel(L.name, hi)} usable height` },
-                value => { L.hoppers[hi].usableHeight = value; if (visualHeightInput) visualHeightInput.value = value; }
+                { min: 0, label: `${hopperBadgeLabel(L.name, hi)} usable ${isVolume ? "volume" : "height"}` },
+                value => {
+                  if (isVolume) L.hoppers[hi].usableGallons = value;
+                  else L.hoppers[hi].usableHeight = value;
+                  if (visualHeightInput) visualHeightInput.value = value;
+                }
               );
               if (!accepted) return;
               validateAndCompute({ sync: true });
@@ -2660,12 +2725,13 @@
             validateAndCompute({ sync:true }); saveSession();
           });
           visualHeightInput?.addEventListener("input", event=>{
-            // Summary height is kept live by refreshSmartHopperState (called
-            // from validateAndCompute right after this), reading the same
-            // canonical hopper.usableHeight this sets - not a second,
+            // Summary readout is kept live by refreshSmartHopperState
+            // (called from validateAndCompute right after this), reading
+            // the same canonical field this sets - not a second,
             // positionally-addressed update here.
-            const accepted = acceptNumericInput(event.target, { min:0, label:`${hopperBadgeLabel(L.name, hi)} usable height` }, value=>{
-              L.hoppers[hi].usableHeight = value;
+            const accepted = acceptNumericInput(event.target, { min:0, label:`${hopperBadgeLabel(L.name, hi)} usable ${geometryMode === "volume" ? "volume" : "height"}` }, value=>{
+              if (geometryMode === "volume") L.hoppers[hi].usableGallons = value;
+              else L.hoppers[hi].usableHeight = value;
             });
             if (!accepted) return;
             validateAndCompute({ sync:true }); saveSession();
@@ -2829,7 +2895,11 @@
           const ref = cellRefs.get(key);
           if (!ref) return;
           if (result.value !== null){ ref.layer.hoppers[ref.hi].weight = result.value; ref.input.value = String(result.value); ref.visualWeightInput.value = String(result.value); }
-          if (heightResult.value !== null){ ref.layer.hoppers[ref.hi].usableHeight = heightResult.value; if (ref.visualHeightInput) ref.visualHeightInput.value = String(heightResult.value); }
+          if (heightResult.value !== null){
+            if (geometryMode === "volume") ref.layer.hoppers[ref.hi].usableGallons = heightResult.value;
+            else ref.layer.hoppers[ref.hi].usableHeight = heightResult.value;
+            if (ref.visualHeightInput) ref.visualHeightInput.value = String(heightResult.value);
+          }
         });
         validateAndCompute({ sync: true });
         saveSession();
@@ -2861,17 +2931,36 @@
     // factor, since packing factor varies too much per resin to guess at
     // safely. A hopper without a measured bulk density on its resin simply
     // isn't computable; the operator's own entered weight is used instead.
+    // Geometry mode (cylindrical vs. volume) is resolved once from the
+    // connected line via currentSmartHopperGeometryMode() - never asked of
+    // the operator - and gates which fields are required and which
+    // calculators.js formula runs. A hopper on a line with no resolvable
+    // geometry mode (geometryMode === null) is never computable.
     function smartHopperComputation(hopper){
       if (!state.smartHoppersEnabled) return null;
-      const heightVal = clampNum(hopper.usableHeight);
-      const circVal = clampNum(state.hopperCircumference);
-      if (!(heightVal > 0 && circVal > 0 && hopper.resinName)) return null;
-      const resin = resinLookup?.findExactResin?.(hopper.resinName, resinCatalogRecords);
-      const bulkDensity = resin?.bulk_density_lb_ft3;
-      if (!bulkDensity) return null;
-      const value = calculators.calculateHopperWeight(circVal, heightVal, bulkDensity);
-      if (!Number.isFinite(value) || value <= 0) return null;
-      return { value, resin, bulkDensity };
+      const geometryMode = currentSmartHopperGeometryMode();
+      if (geometryMode === "volume"){
+        const gallonsVal = clampNum(hopper.usableGallons);
+        if (!(gallonsVal > 0 && hopper.resinName)) return null;
+        const resin = resinLookup?.findExactResin?.(hopper.resinName, resinCatalogRecords);
+        const bulkDensity = resin?.bulk_density_lb_ft3;
+        if (!bulkDensity) return null;
+        const value = calculators.calculateHopperVolumeWeight(gallonsVal, bulkDensity);
+        if (!Number.isFinite(value) || value <= 0) return null;
+        return { value, resin, bulkDensity };
+      }
+      if (geometryMode === "cylindrical"){
+        const heightVal = clampNum(hopper.usableHeight);
+        const circVal = clampNum(state.hopperCircumference);
+        if (!(heightVal > 0 && circVal > 0 && hopper.resinName)) return null;
+        const resin = resinLookup?.findExactResin?.(hopper.resinName, resinCatalogRecords);
+        const bulkDensity = resin?.bulk_density_lb_ft3;
+        if (!bulkDensity) return null;
+        const value = calculators.calculateHopperWeight(circVal, heightVal, bulkDensity);
+        if (!Number.isFinite(value) || value <= 0) return null;
+        return { value, resin, bulkDensity };
+      }
+      return null;
     }
 
     // The weight the run-down formula (and anything else that needs "how
@@ -2896,6 +2985,7 @@
     // Weights), and the small "SMART" badge next to the tracking clock
     // (Recipe Setup).
     function refreshSmartHopperState(){
+      const geometryMode = currentSmartHopperGeometryMode();
       state.layers.forEach(L=>{
         L.hoppers.forEach((hopper, hi)=>{
           const smart = smartHopperComputation(hopper);
@@ -2924,16 +3014,19 @@
             else desktopSummaryWeight.removeAttribute("title");
           }
 
-          // Usable height has one canonical value (hopper.usableHeight) and
-          // no Smart/manual distinction of its own - unlike weight above,
-          // it is never computed, only entered. Same targeted-by-id refresh
+          // Usable geometry has one canonical value per mode
+          // (hopper.usableHeight or hopper.usableGallons) and no
+          // Smart/manual distinction of its own - unlike weight above, it
+          // is never computed, only entered. Same targeted-by-id refresh
           // as the weight spans above, so every write path (individual edit,
           // wrench popover, bulk apply) converges on this one place instead
-          // of each maintaining its own positional DOM update.
+          // of each maintaining its own positional DOM update. The element
+          // simply doesn't exist when geometryMode is null.
+          const geometryVal = geometryMode === "volume" ? clampNum(hopper.usableGallons) : clampNum(hopper.usableHeight);
           const mobileSummaryHeight=document.getElementById(mobileSummaryHeightId(L.name, hi));
-          if(mobileSummaryHeight) mobileSummaryHeight.querySelector("span").textContent=String(clampNum(hopper.usableHeight));
+          if(mobileSummaryHeight) mobileSummaryHeight.querySelector("span").textContent=String(geometryVal);
           const desktopSummaryHeight=document.getElementById(desktopSummaryHeightId(L.name, hi));
-          if(desktopSummaryHeight) desktopSummaryHeight.querySelector("span").textContent=String(clampNum(hopper.usableHeight));
+          if(desktopSummaryHeight) desktopSummaryHeight.querySelector("span").textContent=String(geometryVal);
 
           const computedEl = document.getElementById(computedWeightId(L.name, hi));
           if (computedEl){
@@ -3083,7 +3176,7 @@
             // A plan holds no operational or physical state. These exist only
             // because the grid and the rearrangement module expect the shape;
             // they are never read for the plan and never written back.
-            weight: 0, track: false, pumpOff: false, usableHeight: 0, circumference: 0
+            weight: 0, track: false, pumpOff: false, usableHeight: 0, circumference: 0, usableGallons: 0
           };
         });
         return source || { name, layerPct: clampNum(savedLayer?.layer_pct), hoppers };
@@ -5825,6 +5918,108 @@
     messageEl.textContent = densityMessage;
   }
 
+  function updateHopperVolumeWeightCalculator(){
+    const volumeInput = $("hopperVolumeGallons");
+    const bulkInput = $("hopperVolumeBulkDensity");
+    const polymerInput = $("hopperVolumePolymerDensity");
+    const packingInput = $("hopperVolumePackingFactor");
+    const resultEl = $("hopperVolumeWeightResult");
+    const messageEl = $("hopperVolumeWeightMessage");
+    if (
+      !volumeInput || !bulkInput || !polymerInput ||
+      !packingInput || !resultEl || !messageEl
+    ) return;
+
+    const clearValidity = input=>{
+      input.setCustomValidity("");
+      input.setAttribute("aria-invalid", "false");
+      input.title = "";
+    };
+    [volumeInput, bulkInput, polymerInput, packingInput].forEach(clearValidity);
+
+    if (volumeInput.value.trim() === ""){
+      resultEl.textContent = "—";
+      messageEl.textContent = "Enter hopper volume and either density value.";
+      return;
+    }
+
+    const volumeResult = validation.validateNumber(volumeInput.value, { min: 0, label: "Hopper volume" });
+    if (!volumeResult.valid){
+      volumeInput.setCustomValidity(volumeResult.message);
+      volumeInput.setAttribute("aria-invalid", "true");
+      volumeInput.title = volumeResult.message;
+      resultEl.textContent = "—";
+      messageEl.textContent = volumeResult.message;
+      return;
+    }
+    if (volumeResult.value === 0){
+      const message = "Hopper volume must be greater than 0.";
+      volumeInput.setCustomValidity(message);
+      volumeInput.setAttribute("aria-invalid", "true");
+      volumeInput.title = message;
+      resultEl.textContent = "—";
+      messageEl.textContent = message;
+      return;
+    }
+
+    const useDirectBulkDensity = bulkInput.value.trim() !== "";
+    let bulkDensity;
+    let densityMessage;
+    if (useDirectBulkDensity){
+      const result = validation.validateNumber(bulkInput.value, { min: 0, label: "Resin bulk density" });
+      if (!result.valid || result.value === 0){
+        const message = result.valid ? "Resin bulk density must be greater than 0." : result.message;
+        bulkInput.setCustomValidity(message);
+        bulkInput.setAttribute("aria-invalid", "true");
+        bulkInput.title = message;
+        resultEl.textContent = "—";
+        messageEl.textContent = message;
+        return;
+      }
+      bulkDensity = result.value;
+      densityMessage = `Using entered bulk density: ${bulkDensity.toLocaleString([], { maximumFractionDigits: 2 })} lb/ft³.`;
+    } else {
+      if (polymerInput.value.trim() === ""){
+        resultEl.textContent = "—";
+        messageEl.textContent = "Enter resin bulk density or polymer density.";
+        return;
+      }
+      const polymerResult = validation.validateNumber(
+        polymerInput.value,
+        { min: 0, label: "Polymer density" }
+      );
+      const packingResult = validation.validateNumber(
+        packingInput.value,
+        { min: 0.58, max: 0.68, label: "Packing factor" }
+      );
+      for (const [input,result] of [[polymerInput,polymerResult], [packingInput,packingResult]]){
+        if (!result.valid){
+          input.setCustomValidity(result.message);
+          input.setAttribute("aria-invalid", "true");
+          input.title = result.message;
+          resultEl.textContent = "—";
+          messageEl.textContent = result.message;
+          return;
+        }
+      }
+      if (polymerResult.value === 0){
+        const message = "Polymer density must be greater than 0.";
+        polymerInput.setCustomValidity(message);
+        polymerInput.setAttribute("aria-invalid", "true");
+        polymerInput.title = message;
+        resultEl.textContent = "—";
+        messageEl.textContent = message;
+        return;
+      }
+      bulkDensity = calculators.estimateBulkDensity(polymerResult.value, packingResult.value, 62.428);
+      densityMessage = `Estimated bulk density: ${bulkDensity.toLocaleString([], { maximumFractionDigits: 2 })} lb/ft³.`;
+    }
+
+    const hopperVolumeWeight = calculators.calculateHopperVolumeWeight(volumeResult.value, bulkDensity);
+    resultEl.textContent = `${Math.round(hopperVolumeWeight).toLocaleString()} lb`;
+    messageEl.textContent = densityMessage;
+  }
+
   let resinLookupMatches = [];
   let resinLookupActiveIndex = -1;
 
@@ -5868,22 +6063,18 @@
   }
 
   function renderResinLookupResult(resin){
-    const descriptionEl = $("resinLookupDescription");
     const densityEl = $("resinLookupDensity");
     const bulkDensityEl = $("resinLookupBulkDensity");
-    const informationEl = $("resinLookupInformation");
-    if (!descriptionEl || !densityEl || !bulkDensityEl || !informationEl || !resinLookup) return;
+    if (!densityEl || !bulkDensityEl || !resinLookup) return;
     const result = resinLookup.formatResinResult(resin);
-    descriptionEl.value = result.description;
     densityEl.value = result.density;
     bulkDensityEl.value = result.bulkDensity;
-    const details = resinLookup.getResinDetails(resin);
-    informationEl.value = details.typicalUses
-      ? `${details.information}\n\nTypical uses:\n${details.typicalUses}`
-      : details.information;
     densityEl.classList.remove("copied");
+    bulkDensityEl.classList.remove("copied");
     const copyButton = $("copyResinDensity");
     if (copyButton) copyButton.disabled = result.density === "Unknown";
+    const copyBulkButton = $("copyResinBulkDensity");
+    if (copyBulkButton) copyBulkButton.disabled = result.bulkDensity === "Unknown";
     const copyStatus = $("resinLookupCopyStatus");
     if (copyStatus) copyStatus.textContent = "";
   }
@@ -5904,6 +6095,24 @@
       : "Could not copy the density to the clipboard.";
     densityEl.classList.toggle("copied", copied);
     if (copied) setTimeout(()=>densityEl.classList.remove("copied"), 1200);
+  }
+
+  async function copyResinLookupBulkDensity(){
+    const bulkDensityEl = $("resinLookupBulkDensity");
+    const copyStatus = $("resinLookupCopyStatus");
+    if (!bulkDensityEl || !copyStatus) return;
+    if (bulkDensityEl.value === "Unknown"){
+      copyStatus.textContent = "No bulk density is available to copy.";
+      return;
+    }
+
+    const numericBulkDensity = bulkDensityEl.value.replace(/\s*lb\/ft³$/, "");
+    const copied = await copyTextToClipboard(numericBulkDensity);
+    copyStatus.textContent = copied
+      ? `Copied ${numericBulkDensity} to the clipboard.`
+      : "Could not copy the bulk density to the clipboard.";
+    bulkDensityEl.classList.toggle("copied", copied);
+    if (copied) setTimeout(()=>bulkDensityEl.classList.remove("copied"), 1200);
   }
 
   function selectResinLookupMatch(resin){
@@ -5958,10 +6167,7 @@
       const code = document.createElement("span");
       code.className = "resinLookupOptionCode";
       code.textContent = resin.resin_code;
-      const description = document.createElement("span");
-      description.className = "resinLookupOptionDescription";
-      description.textContent = resin.display_description || "Unknown description";
-      option.append(code, description);
+      option.append(code);
       option.addEventListener("pointerdown", event=>event.preventDefault());
       option.addEventListener("click", ()=>selectResinLookupMatch(resin));
       suggestions.appendChild(option);
@@ -6559,6 +6765,12 @@
       "hopperPolymerDensity",
       "hopperPackingFactor"
     ].forEach(id=>$(id)?.addEventListener("input", updateHopperWeightCalculator));
+    [
+      "hopperVolumeGallons",
+      "hopperVolumeBulkDensity",
+      "hopperVolumePolymerDensity",
+      "hopperVolumePackingFactor"
+    ].forEach(id=>$(id)?.addEventListener("input", updateHopperVolumeWeightCalculator));
     $("resinLookupInput")?.addEventListener("input", updateResinLookup);
     $("resinLookupInput")?.addEventListener("keydown", event=>{
       if (event.key === "ArrowDown" && resinLookupMatches.length){
@@ -6576,6 +6788,7 @@
     });
     $("resinLookupInput")?.addEventListener("focus", updateResinLookup);
     $("copyResinDensity")?.addEventListener("click", copyResinLookupDensity);
+    $("copyResinBulkDensity")?.addEventListener("click", copyResinLookupBulkDensity);
     document.addEventListener("pointerdown", event=>{
       if (!event.target.closest?.(".resinLookupSearch, .resinLookupSuggestions")) hideResinLookupSuggestions();
     });
