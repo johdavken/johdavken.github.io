@@ -12,8 +12,8 @@ function createStorage(initial = {}) {
 }
 
 const fallback = Object.freeze([
-  { code: "FALLBACK-A", description: "Fallback", density: 0.918 },
-  { code: "FALLBACK-B", description: null, density: null }
+  { code: "FALLBACK-A", density: 0.918 },
+  { code: "FALLBACK-B", density: null }
 ]);
 
 function cachedEnvelope(resins, version = service.CACHE_SCHEMA_VERSION) {
@@ -23,10 +23,8 @@ function cachedEnvelope(resins, version = service.CACHE_SCHEMA_VERSION) {
 const cachedResin = {
   id: "cached-id",
   resin_code: "CACHED-A",
-  display_description: null,
   density_g_cm3: 0.925,
   bulk_density_lb_ft3: null,
-  information_description: null,
   is_active: true,
   updated_at: null
 };
@@ -73,8 +71,8 @@ test("refreshes active Supabase rows, normalizes them, and updates the cache", a
   const storage = createStorage();
   const events = [];
   const remote = [
-    { id: "2", resin_code: "z-code", display_description: null, density_g_cm3: null, information_description: null, is_active: true, updated_at: null },
-    { id: "1", resin_code: "A-code", display_description: "Remote", density_g_cm3: 0.912, information_description: "Details", is_active: true, updated_at: "2026-08-02T00:00:00Z" }
+    { id: "2", resin_code: "z-code", density_g_cm3: null, is_active: true, updated_at: null },
+    { id: "1", resin_code: "A-code", density_g_cm3: 0.912, is_active: true, updated_at: "2026-08-02T00:00:00Z" }
   ];
   const catalog = service.create({ storage, fallbackCatalog: fallback, config: { enabled: true }, client: remoteClient({ data: remote, onQuery: (...event) => events.push(event) }) });
   let notification;
@@ -83,7 +81,7 @@ test("refreshes active Supabase rows, normalizes them, and updates the cache", a
   const result = await catalog.refreshResins();
   assert.equal(result.loaded, true);
   assert.deepEqual(result.resins.map(resin => resin.resin_code), ["A-code", "z-code"]);
-  assert.equal(catalog.getCachedResins()[0].information_description, "Details");
+  assert.equal(catalog.getCachedResins()[0].resin_code, "A-code");
   assert.equal(notification.result.loaded, true);
   assert.deepEqual(events, [
     ["select", service.REMOTE_FIELDS],
@@ -137,14 +135,12 @@ test("a server-confirmed admin update refreshes cache subscribers immediately", 
   assert.equal(notification.resins[0].bulk_density_lb_ft3, 48.8);
 });
 
-test("normalization retains unknown values as null", () => {
+test("normalization retains unknown values as null - display_description/information_description are no longer part of the shape", () => {
   assert.deepEqual(service.normalizeResin({ resin_code: "UNKNOWN", density_g_cm3: 0, bulk_density_lb_ft3: 0, is_active: "yes" }), {
     id: null,
     resin_code: "UNKNOWN",
-    display_description: null,
     density_g_cm3: null,
     bulk_density_lb_ft3: null,
-    information_description: null,
     is_active: null,
     updated_at: null
   });
@@ -155,11 +151,6 @@ test("bulk density normalizes like density - positive numbers pass through, zero
   assert.equal(service.normalizeResin({ resin_code: "X", bulk_density_lb_ft3: 0 }).bulk_density_lb_ft3, null);
   assert.equal(service.normalizeResin({ resin_code: "X", bulk_density_lb_ft3: -5 }).bulk_density_lb_ft3, null);
   assert.equal(service.normalizeResin({ code: "X", bulk_density: 40 }, { fallback: true }).bulk_density_lb_ft3, 40);
-});
-
-test("the fallback retains existing rule-derived material information", () => {
-  const catalog = service.create({ storage: null, config: { enabled: false } });
-  assert.match(catalog.getResinByCode("MS0440").information_description, /hexene as the comonomer/i);
 });
 
 test("works with unavailable Supabase and localStorage", async () => {

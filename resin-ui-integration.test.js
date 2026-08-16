@@ -19,7 +19,6 @@ test("Resin Lookup passes the shared normalized catalog to its existing search h
   assert.match(app, /findExactResin\(input\.value, resinCatalogRecords\)/);
   assert.match(app, /findResinSuggestions\(input\.value, 20, resinCatalogRecords\)/);
   assert.match(app, /resin\.resin_code/);
-  assert.match(app, /resin\.display_description/);
   assert.match(lookup, /require\("\.\/resin-catalog-service\.js"\)/);
   assert.doesNotMatch(lookup, /require\("\.\/resin-data\.js"\)/);
 });
@@ -29,7 +28,6 @@ test("the lookup helper keeps the shared service fallback available offline", ()
   const resin = findExactResin("  ms0440 ");
   assert.equal(resin.resin_code, "MS0440");
   assert.deepEqual(formatResinResult(resin), {
-    description: "Med. Density Hexene",
     density: "0.926 g/cm³",
     bulkDensity: "Unknown"
   });

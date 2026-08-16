@@ -660,13 +660,12 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .gruvboxIconDe
 .bulkDensityResinSearch > label,.bulkDensityInputGrid > label{display:grid;gap:5px;color:var(--muted);font-size:11px;font-weight:800}
 .bulkDensityResinSuggestions{position:absolute;top:100%;right:0;left:0;z-index:12;display:grid;gap:3px;max-height:230px;margin-top:4px;padding:5px;overflow:auto;border:1px solid var(--border2);border-radius:var(--control-radius);background:var(--panelOpen);box-shadow:var(--shadow2)}
 .bulkDensityResinSuggestions[hidden]{display:none!important}
-.bulkDensityResinOption{display:grid;grid-template-columns:minmax(90px,auto) minmax(0,1fr);gap:8px;width:100%;min-height:40px;padding:7px 9px;border:0;border-radius:calc(var(--control-radius) - 2px);background:transparent;color:var(--text);text-align:left;box-shadow:none}
+.bulkDensityResinOption{display:grid;width:100%;min-height:40px;padding:7px 9px;border:0;border-radius:calc(var(--control-radius) - 2px);background:transparent;color:var(--text);text-align:left;box-shadow:none}
 .bulkDensityResinOption:hover,.bulkDensityResinOption:focus-visible{background:var(--focus-ring);outline:2px solid var(--focus-border);outline-offset:-2px}
-.bulkDensityResinOption span{overflow:hidden;color:var(--muted);text-overflow:ellipsis;white-space:nowrap}
 .bulkDensitySelectedResin{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:10px;padding:9px 10px;border-left:3px solid var(--focus-border);background:var(--readonly-bg)}
 .bulkDensitySelectedResin[hidden]{display:none!important}
 .bulkDensitySelectedResin > div{display:grid;gap:2px;min-width:0}
-.bulkDensitySelectedResin span,.bulkDensitySelectedResin small{overflow:hidden;color:var(--muted);font-size:10px;text-overflow:ellipsis;white-space:nowrap}
+.bulkDensitySelectedResin small{overflow:hidden;color:var(--muted);font-size:10px;text-overflow:ellipsis;white-space:nowrap}
 .bulkDensityInputGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
 .bulkDensityInputWithUnit{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:7px}
 .bulkDensityInputWithUnit > span{color:var(--muted);font-size:10px;font-weight:850;white-space:nowrap}
@@ -4371,10 +4370,9 @@ button.compactAction{
 }
 .toolsIndexButton.active{
   border-color: var(--focus-border);
-  background: var(--btn-primary-a);
-  color: var(--text);
+  background: linear-gradient(180deg, var(--btn-primary-a), var(--btn-primary-b));
+  color: var(--title);
   font-weight: 850;
-  box-shadow: inset 3px 0 0 var(--title);
 }
 .toolsWorkspaceContent{ min-width: 0; }
 .toolWorkspacePanel[hidden]{ display: none !important; }
@@ -4621,8 +4619,6 @@ button.compactAction{
 }
 .resinLookupOption{
   display: grid;
-  grid-template-columns: minmax(0, auto) minmax(0, 1fr);
-  gap: 9px;
   width: 100%;
   padding: 8px 10px;
   border: 0;
@@ -4640,12 +4636,6 @@ button.compactAction{
   overflow: hidden;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   font-weight: 850;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.resinLookupOptionDescription{
-  overflow: hidden;
-  color: var(--muted);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -4669,25 +4659,11 @@ input.resinLookupValue[readonly]{
   border-radius:var(--control-radius);
   box-shadow: none;
 }
-input.resinLookupDensity.copied[readonly]{
+input.resinLookupValue.copied[readonly]{
   border-color: var(--ok);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 18%, transparent);
 }
 .resinLookupCopyStatus:not(:empty){ min-height: 1.35em; }
-.resinLookupInformation textarea{
-  min-height: 148px;
-  border-color: var(--readonly-border);
-  background: var(--readonly-bg);
-  line-height: 1.5;
-  resize: none;
-  opacity: 1;
-  cursor: default;
-  box-shadow: none;
-}
-.resinLookupInformation textarea:focus{
-  border-color: var(--readonly-border);
-  box-shadow: none;
-}
 @media (max-width: 600px){
   .toolResult{ grid-template-columns: 1fr auto; }
   .toolResult .muted{
@@ -4698,7 +4674,6 @@ input.resinLookupDensity.copied[readonly]{
     min-height: 44px;
     font-size: 16px;
   }
-  .resinLookupOption{ grid-template-columns: 1fr; gap: 2px; }
 }
 
 /* =======================================================================

@@ -5,9 +5,9 @@ const adminApi = require("./resin-admin.js");
 test("validates required codes, nullable fields, and density bounds", () => {
   assert.equal(adminApi.validateResin({ resin_code: " ", is_active: true }).valid, false);
   assert.equal(adminApi.validateResin({ resin_code: "A", density_g_cm3: "11", is_active: true }).valid, false);
-  assert.deepEqual(adminApi.validateResin({ resin_code: " A ", display_description: " ", density_g_cm3: "", information_description: " ", is_active: true }), {
+  assert.deepEqual(adminApi.validateResin({ resin_code: " A ", density_g_cm3: "", is_active: true }), {
     valid: true,
-    value: { resin_code: "A", display_description: null, density_g_cm3: null, bulk_density_lb_ft3: null, information_description: null, is_active: true }
+    value: { resin_code: "A", density_g_cm3: null, bulk_density_lb_ft3: null, is_active: true }
   });
 });
 

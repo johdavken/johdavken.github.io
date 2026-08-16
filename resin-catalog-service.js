@@ -2,18 +2,15 @@
   const fallbackCatalog = typeof module === "object" && module.exports
     ? require("./resin-data.js")
     : root.RESIN_LOOKUP_DATA;
-  const descriptionInformation = typeof module === "object" && module.exports
-    ? require("./resin-description-info.js")
-    : root.RESIN_DESCRIPTION_INFORMATION;
-  const api = factory(fallbackCatalog || [], descriptionInformation || {});
+  const api = factory(fallbackCatalog || []);
   if (typeof module === "object" && module.exports) module.exports = api;
   if (root) root.PolynResinCatalog = api;
-})(typeof globalThis !== "undefined" ? globalThis : this, function (fallbackCatalog, descriptionInformation) {
+})(typeof globalThis !== "undefined" ? globalThis : this, function (fallbackCatalog) {
   "use strict";
 
   const CACHE_KEY = "polyn.resinCatalog.v1";
   const CACHE_SCHEMA_VERSION = 1;
-  const REMOTE_FIELDS = "id,resin_code,display_description,density_g_cm3,bulk_density_lb_ft3,information_description,is_active,updated_at";
+  const REMOTE_FIELDS = "id,resin_code,density_g_cm3,bulk_density_lb_ft3,is_active,updated_at";
 
   function normalizeCode(value) {
     return typeof value === "string" ? value.trim() : "";
@@ -40,32 +37,14 @@
     return Number.isFinite(bulkDensity) && bulkDensity > 0 ? bulkDensity : null;
   }
 
-  function fallbackInformation(description, code) {
-    const normalizedDescription = normalizeCode(description).toLocaleUpperCase();
-    const normalizedCode = normalizeCode(code).toLocaleUpperCase();
-    const entries = Object.values(descriptionInformation || {});
-    const exact = entries.find(entry => entry?.exact?.some(label =>
-      normalizeCode(label).toLocaleUpperCase() === normalizedDescription
-    ));
-    const match = exact || entries.find(entry => entry?.keywords?.some(keyword => {
-      const normalizedKeyword = normalizeCode(keyword).toLocaleUpperCase();
-      return normalizedDescription.includes(normalizedKeyword) || normalizedCode.includes(normalizedKeyword);
-    }));
-    return nullableText(match?.information);
-  }
-
   function normalizeResin(row, { fallback = false } = {}) {
     const resinCode = normalizeCode(fallback ? row?.code : row?.resin_code);
     if (!resinCode) return null;
     return {
       id: fallback ? null : nullableText(row?.id),
       resin_code: resinCode,
-      display_description: nullableText(fallback ? row?.description : row?.display_description),
       density_g_cm3: nullableDensity(fallback ? row?.density : row?.density_g_cm3),
       bulk_density_lb_ft3: nullableBulkDensity(fallback ? row?.bulk_density : row?.bulk_density_lb_ft3),
-      information_description: fallback
-        ? fallbackInformation(row?.description, row?.code)
-        : nullableText(row?.information_description),
       is_active: fallback ? true : (typeof row?.is_active === "boolean" ? row.is_active : null),
       updated_at: fallback ? null : nullableText(row?.updated_at)
     };

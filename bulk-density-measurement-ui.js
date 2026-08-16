@@ -36,7 +36,6 @@
     card.hidden = !selectedResin;
     if (!selectedResin) return;
     $("bulkDensitySelectedCode").textContent = selectedResin.resin_code;
-    $("bulkDensitySelectedDescription").textContent = selectedResin.display_description || "No description";
     $("bulkDensityCurrentValue").textContent = formatBulkDensity(selectedResin.bulk_density_lb_ft3);
   }
 
@@ -62,17 +61,15 @@
     if (!input || !list) return;
     const query = input.value.trim().toLocaleLowerCase();
     searchMatches = resins.filter(resin => !query
-      || resin.resin_code.toLocaleLowerCase().includes(query)
-      || String(resin.display_description || "").toLocaleLowerCase().includes(query)).slice(0, 30);
+      || resin.resin_code.toLocaleLowerCase().includes(query)).slice(0, 30);
     list.replaceChildren();
     searchMatches.forEach(resin => {
       const option = document.createElement("button");
       option.type = "button";
       option.role = "option";
       option.className = "bulkDensityResinOption";
-      option.innerHTML = `<strong></strong><span></span>`;
+      option.innerHTML = `<strong></strong>`;
       option.querySelector("strong").textContent = resin.resin_code;
-      option.querySelector("span").textContent = resin.display_description || "No description";
       option.addEventListener("click", () => selectResin(resin));
       list.appendChild(option);
     });

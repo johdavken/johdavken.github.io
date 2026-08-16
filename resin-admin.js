@@ -6,7 +6,7 @@
   "use strict";
 
   const AUTH_STORAGE_KEY = "polyn.resinAdmin.auth.v1";
-  const RESIN_FIELDS = "id,resin_code,display_description,density_g_cm3,bulk_density_lb_ft3,information_description,is_active,updated_at";
+  const RESIN_FIELDS = "id,resin_code,density_g_cm3,bulk_density_lb_ft3,is_active,updated_at";
 
   function nullableText(value){
     const text = typeof value === "string" ? value.trim() : "";
@@ -15,8 +15,6 @@
 
   function validateResin(values){
     const resin_code = nullableText(values?.resin_code);
-    const display_description = nullableText(values?.display_description);
-    const information_description = nullableText(values?.information_description);
     const densityText = String(values?.density_g_cm3 ?? "").trim();
     const density_g_cm3 = densityText === "" ? null : Number(densityText);
     const bulkDensityText = String(values?.bulk_density_lb_ft3 ?? "").trim();
@@ -28,7 +26,7 @@
     if (bulk_density_lb_ft3 !== null && (!Number.isFinite(bulk_density_lb_ft3) || bulk_density_lb_ft3 < 1 || bulk_density_lb_ft3 > 100)) {
       return { valid: false, message: "Bulk density must be blank or between 1 and 100 lb/ft³." };
     }
-    return { valid: true, value: { resin_code, display_description, density_g_cm3, bulk_density_lb_ft3, information_description, is_active: !!values?.is_active } };
+    return { valid: true, value: { resin_code, density_g_cm3, bulk_density_lb_ft3, is_active: !!values?.is_active } };
   }
 
   function validateBulkDensity(value){

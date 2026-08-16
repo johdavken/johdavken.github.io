@@ -37,6 +37,24 @@ test("admin form includes bulk density (lb/ft³), populated on edit and submitte
   assert.match(ui, /bulk_density_lb_ft3: \$\("adminResinBulkDensity"\)\.value,/);
 });
 
+test("Resin Database no longer stores, edits, or searches by display description or information description - only code, both densities, and status remain", () => {
+  assert.doesNotMatch(index, /id="adminResinDescription"/);
+  assert.doesNotMatch(index, /id="adminResinInformation"/);
+  assert.doesNotMatch(ui, /display_description|information_description/);
+  assert.match(index, /id="adminResinCode"/);
+  assert.match(index, /id="adminResinDensity"/);
+  assert.match(index, /id="adminResinBulkDensity"/);
+  assert.match(index, /id="adminResinActive"/);
+});
+
+test("the record list and search are code-only now that description is not stored", () => {
+  const filteredStart = ui.indexOf("function filteredResins(");
+  const filteredBody = ui.slice(filteredStart, ui.indexOf("\n  }", filteredStart));
+  assert.doesNotMatch(filteredBody, /description/);
+  assert.match(filteredBody, /resin\.resin_code\.toLocaleLowerCase\(\)\.includes\(query\)/);
+  assert.match(ui, /row\.textContent = `\$\{resin\.resin_code\}\$\{resin\.is_active \? "" : " \(inactive\)"\}`;/);
+});
+
 test("Resin Database is an in-app workspace panel with a two-column responsive editor", () => {
   assert.match(index, /id="resinDatabaseButton"[^>]*data-workspace-target="resinAdminBlock"/);
   assert.match(index, /<details class="block card workspacePanel adminResinPanel" id="resinAdminBlock">/);

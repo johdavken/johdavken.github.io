@@ -54,8 +54,7 @@
   }
   function filteredResins(){
     const query = $("adminResinSearch")?.value.trim().toLocaleLowerCase() || "";
-    return resins.filter(resin => !query || resin.resin_code.toLocaleLowerCase().includes(query)
-      || String(resin.display_description || "").toLocaleLowerCase().includes(query));
+    return resins.filter(resin => !query || resin.resin_code.toLocaleLowerCase().includes(query));
   }
   function renderList(){
     const list = $("adminResinList");
@@ -65,7 +64,7 @@
       const row = document.createElement("button");
       row.type = "button";
       row.className = `adminResinRow${resin.is_active ? "" : " inactive"}${resin.id === selectedResinId ? " selected" : ""}`;
-      row.textContent = `${resin.resin_code} — ${resin.display_description || "Unknown description"}${resin.is_active ? "" : " (inactive)"}`;
+      row.textContent = `${resin.resin_code}${resin.is_active ? "" : " (inactive)"}`;
       row.addEventListener("click", ()=>showForm(resin));
       list.appendChild(row);
     });
@@ -78,10 +77,8 @@
     $("adminResinFormTitle").textContent = resin ? "Edit resin" : "Add resin";
     $("adminResinId").value = resin?.id || "";
     $("adminResinCode").value = resin?.resin_code || "";
-    $("adminResinDescription").value = resin?.display_description || "";
     $("adminResinDensity").value = resin?.density_g_cm3 ?? "";
     $("adminResinBulkDensity").value = resin?.bulk_density_lb_ft3 ?? "";
-    $("adminResinInformation").value = resin?.information_description || "";
     $("adminResinActive").value = String(resin?.is_active ?? true);
     $("adminResinDelete").hidden = !resin?.id;
     setMessage("adminResinFormMessage", "");
@@ -141,10 +138,8 @@
     const id = $("adminResinId").value;
     const values = {
       resin_code: $("adminResinCode").value,
-      display_description: $("adminResinDescription").value,
       density_g_cm3: $("adminResinDensity").value,
       bulk_density_lb_ft3: $("adminResinBulkDensity").value,
-      information_description: $("adminResinInformation").value,
       is_active: $("adminResinActive").value === "true"
     };
     if (duplicateCode(values.resin_code, id)){ setMessage("adminResinFormMessage", "That resin code already exists.", "bad"); return; }
