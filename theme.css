@@ -216,11 +216,23 @@
   --panel: rgba(40,40,40,.97);
   --panel2: rgba(50,48,47,.94);
   --text: #ebdbb2;
-  --title: #fb4934;
-  --subtitle: #689d6a;
+  /* --title is this palette's general emphasis accent: it colours ~140 call
+     sites (stat values, active tabs, card labels), and it was the only
+     source of red text anywhere in the theme. Orange now, so nothing reads
+     red except genuine error states (--bad, deliberately left alone).
+     Section headings are the one exception - they were the most prominent
+     red in the app - and take newspaper white via --section-title, the same
+     #ebdbb2 the desktop rail labels use. */
+  --title: #fe8019;
+  --section-title: #ebdbb2;
+  /* Was #689d6a, a muted sage that read as a different family from the icon
+     set. Matched to the green the Resin Totals glyph uses. */
+  --subtitle: #b8bb26;
   --muted: #ebdbb2;
   --fg: #ebdbb2;
-  --yellow: #fb4934;
+  /* Consumed only by industrial-slate rules, never by gruvbox - kept off red
+     regardless so a future call site cannot reintroduce it here. */
+  --yellow: #fe8019;
   --orange: #689d6a;
   --logo-i: #689d6a;
   --logo-q: #fb4934;

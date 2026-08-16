@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="en" data-theme="gruvbox-dark" data-palette="current">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Gruvbox Icon Set Study — Resin.Tools</title>
+<style>
+  /* ====================================================================
+     Gruvbox icon set study.
+
+     The reference gruvbox icon themes (classic terminal/desktop icon
+     packs) are built from SOLID FILLED glyphs - chunky, geometric,
+     high-contrast - either as bare cream silhouettes on dark, or knocked
+     out of a saturated rounded tile. Resin.Tools' icons today are 1.7px
+     stroked line art, which reads correctly but has none of that
+     character.
+
+     This page redraws all 13 app icons as solid glyphs and shows them in
+     six treatments, so the tile/glyph/color split can be judged
+     separately from the drawings themselves. Nothing here is wired into
+     the app - it is a study only.
+     ==================================================================== */
+
+  /* Palette values are copied verbatim from styles.css's
+     body[data-theme="gruvbox-dark"] / [data-theme="gruvbox-light"]
+     blocks, so what renders here is what the app would render. */
+  :root[data-theme="gruvbox-dark"]{
+    color-scheme:dark;
+    --bg:#1d2021; --surface:#282828; --surface-2:#32302f;
+    --ink:#ebdbb2; --edge:#665c54; --shadow:rgba(0,0,0,.38);
+    --muted:#a89984;
+    --red:#fb4934; --orange:#fe8019; --yellow:#fabd2f;
+    --green:#b8bb26; --aqua:#ebdbb2; --blue:#ebdbb2; --purple:#d3869b;
+    --paper:#282828;      /* what a glyph knocked out of an accent tile shows */
+    --tile-ink:#1d2021;   /* glyph color when sitting on a saturated tile */
+  }
+  :root[data-theme="gruvbox-light"]{
+    color-scheme:light;
+    --bg:#ece7d8; --surface:#f9f5e9; --surface-2:#f1ebda;
+    --ink:#383329; --edge:#d4c9b1; --shadow:rgba(56,51,41,.14);
+    --muted:#756a52;
+    --red:#cc241d; --orange:#d65d0e; --yellow:#716243;
+    --green:#417849; --aqua:#427b58; --blue:#076678; --purple:#8f3f71;
+    --paper:#f9f5e9;
+    --tile-ink:#f9f5e9;
+  }
+  /* In the shipped dark palette --aqua and --blue are both #ebdbb2, so
+     Timeline / RT Sync / Help currently render as plain cream. The
+     reference icon sets are far more colorful; "full" restores true
+     gruvbox aqua/blue so that difference can be judged directly. */
+  :root[data-theme="gruvbox-dark"][data-palette="full"]{
+    --aqua:#8ec07c; --blue:#83a598;
+  }
+
+  *{box-sizing:border-box}
+  html{ -webkit-text-size-adjust:100%; }
+  body{
+    margin:0; padding:0 0 72px;
+    background:var(--bg); color:var(--ink);
+    font:14px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  }
+  .wrap{ max-width:1180px; margin:0 auto; padding:0 20px; }
+
+  header{
+    position:sticky; top:0; z-index:20;
+    background:color-mix(in srgb,var(--bg) 92%,transparent);
+    backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--edge);
+    padding:16px 0 14px; margin-bottom:26px;
+  }
+  .headRow{ display:flex; flex-wrap:wrap; gap:16px; align-items:flex-end; justify-content:space-between; }
+  h1{
+    margin:0; font-size:17px; font-weight:300;
+    text-transform:uppercase; letter-spacing:.22em;
+  }
+  .sub{ margin:5px 0 0; color:var(--muted); font-size:12.5px; max-width:62ch; }
+  .toggles{ display:flex; gap:18px; flex-wrap:wrap; }
+  .toggleGroup{ display:grid; gap:5px; }
+  .toggleGroup > span{
+    color:var(--muted); font-size:10px; font-weight:800;
+    text-transform:uppercase; letter-spacing:.14em;
+  }
+  .seg{ display:flex; border:1px solid var(--edge); border-radius:6px; overflow:hidden; }
+  .seg button{
+    appearance:none; border:0; background:transparent; color:var(--muted);
+    font:inherit; font-size:12px; font-weight:700;
+    padding:6px 13px; cursor:pointer; white-space:nowrap;
+  }
+  .seg button + button{ border-left:1px solid var(--edge); }
+  .seg button[aria-pressed="true"]{ background:var(--surface-2); color:var(--ink); }
+  .seg button:hover{ color:var(--ink); }
+
+  h2{
+    margin:38px 0 4px; font-size:12px; font-weight:800;
+    text-transform:uppercase; letter-spacing:.16em; color:var(--muted);
+  }
+  .note{ margin:0 0 18px; color:var(--muted); font-size:12.5px; max-width:74ch; }
+
+  /* ---- variation card ------------------------------------------------ */
+  .variant{
+    border:1px solid var(--edge); border-radius:10px;
+    background:var(--surface); margin-bottom:16px; overflow:hidden;
+    scroll-margin-top:132px; /* clear the sticky header when scrolled to */
+  }
+  .variantHead{
+    display:flex; flex-wrap:wrap; gap:10px 16px; align-items:baseline;
+    padding:13px 16px; border-bottom:1px solid var(--edge);
+    background:var(--surface-2);
+  }
+  .variantName{ font-size:14px; font-weight:800; letter-spacing:.02em; }
+  .variantTag{
+    font-size:10px; font-weight:800; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--bg); background:var(--muted);
+    padding:3px 7px; border-radius:4px;
+  }
+  .variantWhy{ color:var(--muted); font-size:12.5px; flex:1 1 340px; min-width:0; }
+
+  .iconRow{
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(96px,1fr));
+    gap:6px; padding:20px 12px;
+  }
+  .iconCell{ display:grid; gap:9px; justify-items:center; text-align:center; }
+  .iconCell figcaption{
+    font-size:10.5px; color:var(--muted); font-weight:650;
+    line-height:1.25; max-width:11ch;
+  }
+
+  /* ---- the icon frame itself ----------------------------------------- */
+  .ico{
+    width:46px; height:46px; display:grid; place-items:center;
+    flex:0 0 auto;
+  }
+  .ico svg{ width:100%; height:100%; display:block; }
+  /* Inherited fill/stroke pass through <use> into the symbol, so one
+     symbol set serves every treatment. */
+  .glyphSolid{ fill:currentColor; stroke:none; }
+  .glyphStroke{
+    fill:none; stroke:currentColor; stroke-width:1.7;
+    stroke-linecap:round; stroke-linejoin:round;
+  }
+
+  /* V0 · Current - today's shipped treatment, for comparison */
+  .v-current .ico{
+    padding:7px; border:1px solid color-mix(in srgb,var(--accent) 56%,var(--edge));
+    border-radius:8px;
+    background:color-mix(in srgb,var(--accent) 13%,var(--surface));
+    color:var(--accent);
+  }
+  /* V1 · Terminal - bare monochrome silhouette (reference image 2) */
+  .v-terminal .ico{ padding:5px; color:var(--ink); }
+  /* V2 · Phosphor - bare silhouette, accent colored */
+  .v-phosphor .ico{ padding:5px; color:var(--accent); }
+  /* V3 · Paper Tile - saturated tile, glyph knocked out (reference image 1a) */
+  .v-paper .ico{
+    padding:8px; border-radius:11px;
+    background:var(--accent); color:var(--tile-ink);
+  }
+  /* V4 · Inked Tile - deep accent-tinted tile, accent glyph (reference
+     image 1b). Derived from --bg rather than --ink: in the shipped dark
+     palette --aqua/--blue are literally --ink, so an ink-derived tile
+     would render the glyph invisible against its own background. */
+  .v-inked .ico{
+    padding:8px; border-radius:11px;
+    background:color-mix(in srgb,var(--bg) 78%,var(--accent));
+    border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);
+    color:var(--accent);
+  }
+  /* V5 · Pressed - saturated tile + hard offset shadow, matching the
+     tactile 3px-offset language already used by gruvbox mobile tiles */
+  .v-pressed .ico{
+    padding:8px; border-radius:9px;
+    background:var(--accent); color:var(--tile-ink);
+    box-shadow:3px 3px 0 var(--shadow);
+  }
+
+  /* accent assignment - mirrors the app's per-section --tile-accent */
+  [data-accent="orange"]{ --accent:var(--orange); }
+  [data-accent="yellow"]{ --accent:var(--yellow); }
+  [data-accent="blue"]  { --accent:var(--blue); }
+  [data-accent="green"] { --accent:var(--green); }
+  [data-accent="aqua"]  { --accent:var(--aqua); }
+  [data-accent="purple"]{ --accent:var(--purple); }
+  [data-accent="red"]   { --accent:var(--red); }
+
+  /* ---- in-context mock ------------------------------------------------ */
+  .ctxGrid{
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+    gap:16px; margin-bottom:20px;
+  }
+  .ctxCard{ border:1px solid var(--edge); border-radius:10px; background:var(--surface); overflow:hidden; }
+  .ctxCard > h3{
+    margin:0; padding:11px 14px; border-bottom:1px solid var(--edge);
+    background:var(--surface-2);
+    font-size:11px; font-weight:800; letter-spacing:.14em; text-transform:uppercase;
+  }
+  .navMock{ display:grid; gap:8px; padding:14px; }
+  .navBtn{
+    display:grid; grid-template-columns:auto 1fr; align-items:center;
+    gap:11px; padding:9px 11px;
+    border:1px solid color-mix(in srgb,var(--accent) 38%,var(--edge));
+    border-radius:8px;
+    background:linear-gradient(145deg,color-mix(in srgb,var(--accent) 12%,var(--surface)),var(--surface) 68%);
+    box-shadow:inset 0 3px 0 var(--accent),3px 3px 0 var(--shadow);
+    text-align:left;
+  }
+  .navBtn .ico{ width:34px; height:34px; }
+  .navLabel{ display:grid; gap:1px; min-width:0; }
+  .navLabel b{ font-size:13px; font-weight:750; }
+  .navLabel small{ font-size:10.5px; color:var(--muted); }
+
+  .legend{
+    display:flex; flex-wrap:wrap; gap:8px 18px;
+    padding:14px 16px; margin-bottom:22px;
+    border:1px dashed var(--edge); border-radius:8px;
+    color:var(--muted); font-size:12px;
+  }
+  .swatchRow{ display:flex; align-items:center; gap:7px; }
+  .swatch{ width:14px; height:14px; border-radius:3px; background:var(--accent); border:1px solid var(--edge); }
+
+  footer{ color:var(--muted); font-size:12px; border-top:1px solid var(--edge); padding-top:16px; margin-top:34px; }
+  @media (max-width:640px){
+    .iconRow{ grid-template-columns:repeat(auto-fit,minmax(78px,1fr)); }
+    .ico{ width:40px; height:40px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===================================================================
+     Symbol sprite. Two sets:
+       *-s  solid filled glyphs, newly drawn for this study
+       *-k  the app's current stroked line art, verbatim from index.html
+     =================================================================== -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+
+  <!-- ---------- SOLID SET ---------- -->
+  <!-- Rails + carriages. The blocks clear the rails by ~1u instead of
+       overlapping them: at icon size a same-colour overlap fuses into an
+       unreadable blob, which is exactly what the first draft did. -->
+  <symbol id="setup-s" viewBox="0 0 32 32">
+    <path d="M2 10h28v3.6H2zM2 18.4h28V22H2z"/>
+    <path d="M6 2.6h7.4V9H6zM18.6 23h7.4v6.4h-7.4z"/>
+  </symbol>
+  <symbol id="recipe-s" viewBox="0 0 32 32">
+    <path d="m16 2.5 13.5 6.75L16 16 2.5 9.25z"/>
+    <path d="M2.5 13.2 16 19.95l13.5-6.75v3.6L16 23.55 2.5 16.8z"/>
+    <path d="M2.5 20.2 16 26.95l13.5-6.75v3.6L16 30.55 2.5 23.8z"/>
+  </symbol>
+  <symbol id="timeline-s" viewBox="0 0 32 32">
+    <path fill-rule="evenodd" d="M16 2a14 14 0 1 0 0 28 14 14 0 0 0 0-28zm0 4.2a9.8 9.8 0 1 1 0 19.6 9.8 9.8 0 0 1 0-19.6z"/>
+    <path d="M14.3 8.4h3.4V17h-3.4z"/>
+    <path d="M15.6 13.8h6.9v3.4h-6.9z"/>
+  </symbol>
+  <symbol id="totals-s" viewBox="0 0 32 32">
+    <path d="M2 26.5h28V30H2z"/>
+    <path d="M4.5 14h6.2v11.5H4.5zM12.9 5h6.2v20.5h-6.2zM21.3 9.5h6.2v16h-6.2z"/>
+  </symbol>
+  <symbol id="sync-s" viewBox="0 0 32 32">
+    <path d="m9.2 14.4 14-5.6 1.2 3.1-14 5.6zM10.4 17.9l14 5.6-1.2 3.1-14-5.6z"/>
+    <path d="M2 12.4h7.6V20H2zM22.4 3H30v7.6h-7.6zM22.4 21.8H30v7.6h-7.6z"/>
+  </symbol>
+  <symbol id="tools-s" viewBox="0 0 32 32">
+    <path d="M21.8 2a8.2 8.2 0 0 0-7.6 11.3L3.4 24.1a3.4 3.4 0 0 0 4.8 4.8l10.8-10.8A8.2 8.2 0 0 0 30 10.3l-4.6 4.6-3.9-1-1-3.9 4.6-4.6A8.2 8.2 0 0 0 21.8 2z"/>
+  </symbol>
+  <symbol id="help-s" viewBox="0 0 32 32">
+    <path d="M2.5 5.5c4.3-1.8 9.2-1.4 13 1.6v19.4c-3.8-3-8.7-3.4-13-1.6z"/>
+    <path d="M29.5 5.5c-4.3-1.8-9.2-1.4-13 1.6v19.4c3.8-3 8.7-3.4 13-1.6z"/>
+  </symbol>
+  <symbol id="footage-s" viewBox="0 0 32 32">
+    <path d="m4.4 22.6 7.4-7.4 4.9 2.9 9.1-10.9 2.6 2.2-10.8 12.9-5.1-3-5.5 5.5z"/>
+    <path d="M20.5 6.4h8.1v3.2h-8.1z"/><path d="M25.4 6.4h3.2v8.1h-3.2z"/>
+  </symbol>
+  <symbol id="hopper-s" viewBox="0 0 32 32">
+    <path fill-rule="evenodd" d="M7.6 4h16.8l3.4 24H4.2zm3.1 4.2-.5 3.4h11.6l-.5-3.4zm-1 7.2-.6 4.2h13l-.6-4.2z"/>
+  </symbol>
+  <symbol id="volume-s" viewBox="0 0 32 32">
+    <path fill-rule="evenodd" d="M7.6 4h16.8l3.4 24H4.2zm3.3 4.4-1.3 9.1h13.8l-1.3-9.1z"/>
+  </symbol>
+  <symbol id="resin-s" viewBox="0 0 32 32">
+    <path fill-rule="evenodd" d="M13.6 1.6a12 12 0 1 0 0 24 12 12 0 0 0 0-24zm0 4a8 8 0 1 1 0 16 8 8 0 0 1 0-16z"/>
+    <path d="m21.5 24.3 2.8-2.8 6.3 6.3-2.8 2.8z"/>
+    <path d="M11.9 9.2h3.4V18h-3.4z"/><path d="M9.2 11.9H18v3.4H9.2z"/>
+  </symbol>
+  <symbol id="scan-s" viewBox="0 0 32 32">
+    <path d="M3 3h10v3.2H6.2V13H3zM29 3v10h-3.2V6.2H19V3zM29 29H19v-3.2h6.8V19H29zM3 29V19h3.2v6.8H13V29z"/>
+    <path d="M9 11h14v2.6H9zM9 15.7h14v2.6H9zM9 20.4h10v2.6H9z"/>
+  </symbol>
+  <symbol id="density-s" viewBox="0 0 32 32">
+    <path d="M12.4 2.6h7.2v3.2h-7.2z"/>
+    <path fill-rule="evenodd" d="M13.4 5.8h5.2v5.8l7.1 14a2.8 2.8 0 0 1-2.5 4.1H8.8a2.8 2.8 0 0 1-2.5-4.1l7.1-14zm-3.1 14.6-1.4 2.8h13.2l-1.4-2.8z"/>
+  </symbol>
+
+  <!-- ---------- CURRENT STROKED SET (verbatim from index.html) ---------- -->
+  <symbol id="setup-k" viewBox="0 0 32 32">
+    <path d="M5 9h22M5 23h22M10 6v6M22 20v6"/><circle cx="10" cy="9" r="3"/><circle cx="22" cy="23" r="3"/>
+    <rect x="7.5" y="6.5" width="5" height="5"/><rect x="19.5" y="20.5" width="5" height="5"/>
+  </symbol>
+  <symbol id="recipe-k" viewBox="0 0 32 32">
+    <path d="m16 4 11 5.5L16 15 5 9.5 16 4Z"/><path d="m5 15 11 5.5L27 15M5 20.5 16 26l11-5.5"/><path d="M16 4v6"/>
+  </symbol>
+  <symbol id="timeline-k" viewBox="0 0 32 32">
+    <circle cx="16" cy="16" r="11"/><path d="M16 9v7l5 3M5 16h3M24 16h3"/><path d="M16 5v2M16 25v2"/>
+  </symbol>
+  <symbol id="totals-k" viewBox="0 0 32 32">
+    <path d="M6 25V15M16 25V7M26 25V11"/><path d="M3 25h26"/><path d="M5 12h2M15 4h2M25 8h2"/>
+  </symbol>
+  <symbol id="sync-k" viewBox="0 0 32 32">
+    <circle cx="8" cy="16" r="3"/><circle cx="24" cy="9" r="3"/><circle cx="24" cy="23" r="3"/>
+    <path d="m10.7 14.7 10.6-4.4M10.7 17.3l10.6 4.4"/>
+    <rect x="5" y="13" width="6" height="6"/><rect x="21" y="6" width="6" height="6"/><rect x="21" y="20" width="6" height="6"/>
+  </symbol>
+  <symbol id="tools-k" viewBox="0 0 32 32">
+    <path d="m19 6 7 7-4 4-4-1-8 8-4-4 8-8-1-4 4-4 2 4Z"/><path d="m7 25 2 2"/><path d="m19 6 3 3"/>
+  </symbol>
+  <symbol id="help-k" viewBox="0 0 32 32">
+    <path d="M16 9c-3-2.5-6.5-2.7-10-1.5v16c3.5-1.2 7-1 10 1.5 3-2.5 6.5-2.7 10-1.5v-16C22.5 6.3 19 6.5 16 9Z"/>
+    <path d="M16 9v16"/><path d="M8 12h4M20 12h4"/>
+  </symbol>
+  <symbol id="footage-k" viewBox="0 0 32 32"><path d="M5 24 12 17l5 3 10-12"/><path d="M21 8h6v6"/></symbol>
+  <symbol id="hopper-k" viewBox="0 0 32 32"><path d="M9 6h14l3 20H6L9 6Z"/><path d="M8 14h16M11 10h10"/></symbol>
+  <symbol id="volume-k" viewBox="0 0 32 32"><path d="M9 6h14l3 20H6L9 6Z"/><path d="M8 14h16M11 10h10"/></symbol>
+  <symbol id="resin-k" viewBox="0 0 32 32"><circle cx="14" cy="14" r="8"/><path d="m20 20 7 7M11 14h6M14 11v6"/></symbol>
+  <symbol id="scan-k" viewBox="0 0 32 32"><path d="M6 10V6h4M22 6h4v4M26 22v4h-4M10 26H6v-4"/><path d="M10 16h12M10 12h8M10 20h9"/></symbol>
+  <symbol id="density-k" viewBox="0 0 32 32"><path d="M13 4h6M14 4v6l-7 15a2 2 0 0 0 2 3h14a2 2 0 0 0 2-3l-7-15V4"/><path d="M10 20h12"/></symbol>
+  </defs>
+</svg>
+
+<header>
+  <div class="wrap headRow">
+    <div>
+      <h1>Gruvbox Icon Set Study</h1>
+      <p class="sub">All 13 app icons redrawn as solid glyphs, shown in six treatments. The reference gruvbox icon packs are built from filled silhouettes — bare cream on dark, or knocked out of a saturated tile — not the 1.7px line art shipping today.</p>
+    </div>
+    <div class="toggles">
+      <div class="toggleGroup">
+        <span>Theme</span>
+        <div class="seg" id="themeSeg">
+          <button type="button" data-theme-set="gruvbox-dark" aria-pressed="true">Gruvbox Dark</button>
+          <button type="button" data-theme-set="gruvbox-light" aria-pressed="false">Gruvbox Light</button>
+        </div>
+      </div>
+      <div class="toggleGroup">
+        <span>Palette</span>
+        <div class="seg" id="paletteSeg">
+          <button type="button" data-palette-set="current" aria-pressed="true">As shipped</button>
+          <button type="button" data-palette-set="full" aria-pressed="false">Full spectrum</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <div class="legend">
+    <strong style="color:var(--ink)">Section accents</strong>
+    <span class="swatchRow" data-accent="orange"><i class="swatch"></i>Line Setup</span>
+    <span class="swatchRow" data-accent="yellow"><i class="swatch"></i>Recipe</span>
+    <span class="swatchRow" data-accent="blue"><i class="swatch"></i>Timeline / Help</span>
+    <span class="swatchRow" data-accent="green"><i class="swatch"></i>Resin Totals</span>
+    <span class="swatchRow" data-accent="aqua"><i class="swatch"></i>RT Sync</span>
+    <span class="swatchRow" data-accent="purple"><i class="swatch"></i>Tools</span>
+  </div>
+
+  <h2>Main sections</h2>
+  <p class="note">The seven workspace destinations. These appear as <code>.workspaceTileIcon</code> on the mobile home grid and desktop rail, and as <code>.mobileSectionHeaderIcon</code> in each panel header.</p>
+
+  <div id="sectionVariants"></div>
+
+  <h2>Tools</h2>
+  <p class="note">The six tool tiles. Hopper Weight and Hopper Volume Weight deliberately share a silhouette today; the solid set gives the volume variant a filled body so the pair stays related but distinguishable.</p>
+
+  <div id="toolVariants"></div>
+
+  <h2>In context — mobile home</h2>
+  <p class="note">The three strongest candidates rendered as real nav tiles, at true size, on the gruvbox tactile tile treatment the app already ships.</p>
+
+  <div class="ctxGrid" id="contextGrid"></div>
+
+  <footer>
+    Study only — nothing on this page is wired into the app. Palette values are copied from <code>styles.css</code>'s gruvbox theme blocks.
+  </footer>
+</main>
+
+<script>
+  const SECTIONS = [
+    { id:"setup",    label:"Line Setup",   accent:"orange" },
+    { id:"recipe",   label:"Recipe",       accent:"yellow" },
+    { id:"timeline", label:"Timeline",     accent:"blue"   },
+    { id:"totals",   label:"Resin Totals", accent:"green"  },
+    { id:"sync",     label:"RT Sync",      accent:"aqua"   },
+    { id:"tools",    label:"Tools",        accent:"purple" },
+    { id:"help",     label:"Help",         accent:"blue"   }
+  ];
+  const TOOLS = [
+    { id:"footage", label:"Short Footage",  accent:"green"  },
+    { id:"hopper",  label:"Hopper Weight",  accent:"orange" },
+    { id:"volume",  label:"Hopper Volume",  accent:"yellow" },
+    { id:"resin",   label:"Resin Reference",accent:"blue"   },
+    { id:"scan",    label:"Scan Recipe",    accent:"purple" },
+    { id:"density", label:"Bulk Density",   accent:"aqua"   }
+  ];
+  const VARIANTS = [
+    { cls:"v-current",  tag:"V0", name:"Current",      set:"k",
+      why:"What ships today — 1.7px stroked line art in a tinted, bordered box. Baseline for comparison." },
+    { cls:"v-terminal", tag:"V1", name:"Terminal",     set:"s",
+      why:"Bare solid silhouette in a single ink color, no container. The closest match to the monochrome reference sheet." },
+    { cls:"v-phosphor", tag:"V2", name:"Phosphor",     set:"s",
+      why:"Same bare silhouette, but carrying the section accent. Keeps colour-coded wayfinding without a tile." },
+    { cls:"v-paper",    tag:"V3", name:"Paper Tile",   set:"s",
+      why:"Saturated accent tile with the glyph knocked out to the background tone. The classic gruvbox app-icon look." },
+    { cls:"v-inked",    tag:"V4", name:"Inked Tile",   set:"s",
+      why:"Inverted — a near-black tile with an accent glyph. Calmer on a busy home grid, still fully colour-coded." },
+    { cls:"v-pressed",  tag:"V5", name:"Pressed",      set:"s",
+      why:"Accent tile plus the hard 3px offset shadow the gruvbox mobile tiles already use. Most physical, most retro." }
+  ];
+
+  function iconHTML(item, variant){
+    const glyphClass = variant.set === "s" ? "glyphSolid" : "glyphStroke";
+    return `<span class="ico" data-accent="${item.accent}">
+      <svg class="${glyphClass}" viewBox="0 0 32 32" aria-hidden="true"><use href="#${item.id}-${variant.set}"></use></svg>
+    </span>`;
+  }
+
+  function renderVariants(host, items){
+    host.innerHTML = VARIANTS.map(v => `
+      <section class="variant ${v.cls}">
+        <div class="variantHead">
+          <span class="variantTag">${v.tag}</span>
+          <span class="variantName">${v.name}</span>
+          <span class="variantWhy">${v.why}</span>
+        </div>
+        <div class="iconRow">
+          ${items.map(item => `
+            <figure class="iconCell" data-accent="${item.accent}" style="margin:0">
+              ${iconHTML(item, v)}
+              <figcaption>${item.label}</figcaption>
+            </figure>`).join("")}
+        </div>
+      </section>`).join("");
+  }
+
+  function renderContext(){
+    const picks = VARIANTS.filter(v => ["v-phosphor","v-paper","v-pressed"].includes(v.cls));
+    document.getElementById("contextGrid").innerHTML = picks.map(v => `
+      <div class="ctxCard ${v.cls}">
+        <h3>${v.tag} · ${v.name}</h3>
+        <div class="navMock">
+          ${SECTIONS.slice(0,5).map(s => `
+            <div class="navBtn" data-accent="${s.accent}">
+              ${iconHTML(s, v)}
+              <span class="navLabel"><b>${s.label}</b><small>${
+                {"Line Setup":"Needs setup","Recipe":"Check percentages","Timeline":"0 resins tracked",
+                 "Resin Totals":"Material totals","RT Sync":"Local only"}[s.label]
+              }</small></span>
+            </div>`).join("")}
+        </div>
+      </div>`).join("");
+  }
+
+  renderVariants(document.getElementById("sectionVariants"), SECTIONS);
+  renderVariants(document.getElementById("toolVariants"), TOOLS);
+  renderContext();
+
+  document.getElementById("themeSeg").addEventListener("click", e => {
+    const btn = e.target.closest("[data-theme-set]"); if (!btn) return;
+    document.documentElement.dataset.theme = btn.dataset.themeSet;
+    btn.parentElement.querySelectorAll("button").forEach(b =>
+      b.setAttribute("aria-pressed", String(b === btn)));
+  });
+  document.getElementById("paletteSeg").addEventListener("click", e => {
+    const btn = e.target.closest("[data-palette-set]"); if (!btn) return;
+    document.documentElement.dataset.palette = btn.dataset.paletteSet;
+    btn.parentElement.querySelectorAll("button").forEach(b =>
+      b.setAttribute("aria-pressed", String(b === btn)));
+  });
+</script>
+</body>
+</html>
