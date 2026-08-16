@@ -6,6 +6,10 @@ If the initial migration was applied before the link-code qualification fix, als
 
 If `join_workspace` reports an ambiguous `workspace_id`, apply [`migrations/202607310003_fix_join_workspace.sql`](migrations/202607310003_fix_join_workspace.sql).
 
+## RT Sync revision-conflict protection
+
+Apply [`migrations/202608040001_active_job_noop_guard.sql`](migrations/202608040001_active_job_noop_guard.sql), [`migrations/202608050001_regrant_update_active_job.sql`](migrations/202608050001_regrant_update_active_job.sql), and [`migrations/202608150001_active_job_stale_noop_guard.sql`](migrations/202608150001_active_job_stale_noop_guard.sql) in that order after the initial line-sync migration. The last migration makes an upload that already equals the shared active job a read-only success even when its cached revision is stale; differing payloads retain normal optimistic-concurrency conflicts.
+
 ## Workspace Configurations (Phase 2 database contract)
 
 After the line-sync migration and its two fixes above, run [`migrations/202608020003_workspace_configurations.sql`](migrations/202608020003_workspace_configurations.sql) once. This additive migration creates the long-term `public.workspace_configurations` store; it does not modify the legacy `saved_setups` table or its RPCs.
@@ -29,7 +33,7 @@ Configurations are intentionally not added to the Realtime publication and have 
 
 Run [`migrations/202608020001_create_resins.sql`](migrations/202608020001_create_resins.sql) first, then run [`seeds/202608020001_resins.sql`](seeds/202608020001_resins.sql). The migration creates `public.resins`; the seed adds the 135 resin records currently baked into the application. Run each file once in the Supabase SQL Editor, in that order.
 
-`resins` has a UUID primary key; `resin_code`; nullable `display_description`, `density_g_cm3`, and `information_description`; `is_active`; and `created_at`/`updated_at` timestamps. Resin codes are uniquely indexed after case and edge-whitespace normalization, density must be positive when present, and active code lookups have a partial index. An update trigger maintains `updated_at`.
+`resins` has a UUID primary key; `resin_code`; nullable `density_g_cm3` and `bulk_density_lb_ft3`; `is_active`; and `created_at`/`updated_at` timestamps. Resin codes are uniquely indexed after case and edge-whitespace normalization, density must be positive when present, and active code lookups have a partial index. An update trigger maintains `updated_at`.
 
 RLS is enabled. Both `anon` and `authenticated` roles can select only records where `is_active` is true. No client insert, update, or delete policy exists, so anonymous and authenticated clients cannot mutate the catalog.
 

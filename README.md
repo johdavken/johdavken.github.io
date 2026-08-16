@@ -5,7 +5,7 @@ Resin.Tools is a static, browser-based production utility. Browser `localStorage
 ## Optional RT Sync setup
 
 1. Create a Supabase project and enable anonymous sign-ins under Authentication.
-2. Run [`supabase/migrations/202607310001_line_sync.sql`](supabase/migrations/202607310001_line_sync.sql) in the Supabase SQL editor or through the Supabase CLI.
+2. Run [`supabase/migrations/202607310001_line_sync.sql`](supabase/migrations/202607310001_line_sync.sql) and each later applicable migration in [`supabase/migrations`](supabase/migrations) in filename order, in the Supabase SQL editor or through the Supabase CLI. In particular, RT Sync deployments need [`202608040001_active_job_noop_guard.sql`](supabase/migrations/202608040001_active_job_noop_guard.sql), [`202608050001_regrant_update_active_job.sql`](supabase/migrations/202608050001_regrant_update_active_job.sql), and [`202608150001_active_job_stale_noop_guard.sql`](supabase/migrations/202608150001_active_job_stale_noop_guard.sql).
 3. Set the public project URL and publishable key in [`supabase-config.js`](supabase-config.js). These values are intentionally public client configuration. Never place a service-role or secret key in this repository.
 4. Deploy the static files normally. If Supabase, authentication, or the network is unavailable, Polyn continues in local-only mode.
 
