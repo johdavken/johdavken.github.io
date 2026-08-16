@@ -129,13 +129,14 @@ test("Timeline tile status is set inside the existing next-action renderer",()=>
   assert.match(body,/Tracked data unavailable/);
 });
 
-test("theme choices are exactly Industrial Slate, Dark, and Gruvbox with legacy migration",()=>{
+test("theme choices include Gruvbox Light and retain legacy migration",()=>{
   const select = html.slice(html.indexOf('<select id="themeSel">'),html.indexOf('</select>',html.indexOf('<select id="themeSel">')));
-  assert.equal((select.match(/<option/g) || []).length,3);
+  assert.equal((select.match(/<option/g) || []).length,4);
   assert.match(app,/\["light", "industrial-slate"\]/);
   assert.match(app,/\["mse", "industrial-slate"\]/);
   assert.match(app,/\["dark", "industrial-slate-dark"\]/);
   assert.match(app,/\["gruvbox-dark", "gruvbox-dark"\]/);
+  assert.match(app,/\["gruvbox-light", "gruvbox-light"\]/);
   assert.match(app,/migrations\.get\(saved\) \|\| "industrial-slate"/);
 });
 

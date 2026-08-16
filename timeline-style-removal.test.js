@@ -10,8 +10,8 @@ const styles = fs.readFileSync("styles.css", "utf8");
 
 // The Timeline once had 6 selectable card styles (Soft Cards, Vertical Event
 // Rail, Precision Data Strips, Time-First Priority Lane, Borderless Divided
-// List, Compact Command). The operator only ever wanted Compact Command, so
-// the picker and the other 5 styles' CSS are gone - Compact Command's own
+// List, Compact Command). The operator instead selected Schedule Ribbon, so
+// the picker and the other styles' CSS are gone. Schedule Ribbon's own
 // rules are now just the base .resultRow/.resultHopper/etc. rules,
 // unconditional, with no body[data-timeline-style="..."] switch left to key
 // off of.
@@ -36,39 +36,51 @@ test("styles.css has no leftover body[data-timeline-style=...] rules for any of 
   }
 });
 
-test("Timeline cards retain their colored status rail while using compact responsive-grid styling", () => {
+test("Timeline uses the compact Schedule Ribbon: a shared spine, status nodes, and one-to-two-line rows", () => {
+  const gridStart = styles.indexOf(".resultGrid{");
+  const gridRule = styles.slice(gridStart, styles.indexOf("}", gridStart) + 1);
+  assert.match(gridRule, /position:relative;/);
+  assert.match(gridRule, /padding:10px 12px 10px 26px;/);
+  assert.match(gridRule, /border-radius:11px;/);
+  assert.match(gridRule, /background:var\(--panel\);/);
+  assert.match(gridRule, /width:620px;/);
+  assert.match(gridRule, /max-width:100%;/);
+  assert.match(styles, /\.resultGrid::before\{[\s\S]*?width:1px;[\s\S]*?background:var\(--row-border-2\);/);
+
   const start = styles.indexOf(".resultRow{");
   const rule = styles.slice(start, styles.indexOf("}", start) + 1);
   assert.match(rule, /position:relative;/);
-  assert.doesNotMatch(rule, /min-height:/);
-  assert.match(rule, /padding:5px 10px 5px 17px;/);
-  assert.match(rule, /border-radius:7px;/);
-  assert.match(rule, /background:var\(--panel\);/);
+  assert.match(rule, /grid-template-columns:43px minmax\(0,1fr\) auto;/);
+  assert.match(rule, /min-height:36px;/);
 
   const beforeStart = styles.indexOf(".resultRow::before{");
   const beforeRule = styles.slice(beforeStart, styles.indexOf("}", beforeStart) + 1);
-  assert.match(beforeRule, /background:var\(--focus-border\);/, "the colored left accent bar");
+  assert.match(beforeRule, /border-radius:50%;/);
+  assert.match(beforeRule, /background:var\(--focus-border\);/, "the colored schedule node");
   assert.match(styles, /\.resultRow\.done::before\{ background:var\(--row-border\); \}/);
   assert.match(styles, /\.resultRow\.late::before\{ background:var\(--warn\); \}/);
 
-  assert.match(styles, /\.resultHopper\{font-size:calc\(var\(--font-base\) \+ 1px\);font-weight:950\}/);
+  assert.match(styles, /\.resultHopper\{display:inline-flex;flex:0 0 auto;align-items:center;min-height:22px;/);
+  assert.match(styles, /body\[data-theme="gruvbox-light"\] \.resultHopper\{color:#076678\}/);
+  assert.match(styles, /body:is\(\[data-theme="industrial-slate-dark"\],\[data-theme="gruvbox-dark"\]\) \.resultHopper\{color:#d65d0e\}/);
 });
 
-test("the Start-by/Soonest time value is dark grey, not near-black - it was inheriting --text with no color rule of its own before this fix", () => {
+test("the Start-by/Soonest time value is a compact, strong visual anchor", () => {
   const start = styles.indexOf(".resultTimingValue{");
   const rule = styles.slice(start, styles.indexOf("}", start) + 1);
-  assert.match(rule, /color:var\(--muted\);/);
+  assert.match(rule, /color:var\(--text\);/);
   // A late hopper still overrides to the warning color - untouched by this fix.
   assert.match(styles, /\.resultRow\.late \.resultTimingValue\{color:var\(--warn\)\}/);
 });
 
-test("Timeline uses a constrained single-column grid and compact timing regions", () => {
+test("Timeline uses a constrained single-column grid and compact schedule regions", () => {
   const gridStart = styles.indexOf(".resultGrid{");
   const gridRule = styles.slice(gridStart, styles.indexOf("}", gridStart) + 1);
   assert.match(gridRule, /grid-template-columns:minmax\(0,1fr\)/);
-  assert.match(gridRule, /width:min\(100%,760px\)/);
+  assert.match(gridRule, /width:620px;/);
+  assert.match(gridRule, /max-width:100%;/);
   assert.match(gridRule, /align-items:start;/);
-  assert.match(styles, /\.resultTiming\{display:grid;grid-template-columns:minmax\(0,1fr\) auto;/);
+  assert.match(styles, /\.resultSchedule\{min-width:0;font-size:9px;text-align:right\}/);
   assert.match(styles, /\.resultStatusChip\{display:inline-flex;align-items:center;min-height:22px/);
 });
 
@@ -80,4 +92,7 @@ test("Timeline display rounds only presentation values and uses concise missing-
   assert.match(body, /h\.resinName \|\| "No resin"/);
   assert.match(body, /"Not feeding"/);
   assert.match(body, /"Start unavailable"/);
+  assert.match(body, /const timingValue = hasStart \? h\.startByText : "Unavailable";/);
+  assert.match(body, /class="mono resultHopper"/);
+  assert.doesNotMatch(body, /class="pill mono resultHopper"/);
 });
