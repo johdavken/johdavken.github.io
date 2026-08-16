@@ -565,6 +565,54 @@
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .workspaceNavButton.active .workspaceTileIcon{color:var(--gruv-rail-paper)}
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .workspaceNavButton:focus-visible{outline:2px solid var(--gruv-rail-recipe);outline-offset:-2px}
 
+  /* Tools sub-nav (.toolsIndexButton) matches the main section selector
+     (.workspaceNavButton) in this theme: a flat, borderless row rather than
+     a bordered card, with the same left accent bar + tinted background for
+     the active item. Reuses --gruv-rail-recipe as the active indicator -
+     that color is the fixed "this one is selected" signal across every
+     .workspaceNavButton regardless of which section it is, not a per-section
+     accent, so the tools list picks up the identical cue. --gruv-rail-paper/
+     --gruv-rail-recipe are otherwise scoped to .workspaceNav (a different
+     part of the page from .toolsIndex), so they're redeclared here with the
+     exact same per-theme values rather than relied on to inherit. */
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .toolsIndex{
+    --gruv-rail-paper:#ebdbb2;
+    --gruv-rail-recipe:#fabd2f;
+  }
+  body[data-theme="gruvbox-light"] .toolsIndex{
+    --gruv-rail-paper:#3c3836;
+    --gruv-rail-recipe:#b57614;
+  }
+  body[data-theme="industrial-slate-dark"] .toolsIndex{
+    --gruv-rail-paper:#eaf2ff;
+    --gruv-rail-recipe:var(--warn);
+  }
+  body[data-theme="industrial-slate"] .toolsIndex{
+    --gruv-rail-paper:#29282b;
+    --gruv-rail-recipe:var(--yellow);
+  }
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .toolsIndexButton{
+    padding:9px 12px 9px 15px;
+    border:0;
+    border-radius:0;
+    background:transparent;
+    color:var(--gruv-rail-paper);
+    box-shadow:none;
+  }
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .toolsIndexButton:hover{
+    border:0;
+    background:color-mix(in srgb,var(--gruv-rail-paper) 7%,transparent);
+    color:var(--gruv-rail-paper);
+  }
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .toolsIndexButton.active{
+    border:0;
+    border-left:3px solid var(--gruv-rail-recipe);
+    padding-left:12px;
+    background:color-mix(in srgb,var(--gruv-rail-paper) 12%,transparent);
+    color:var(--gruv-rail-paper);
+  }
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .toolsIndexButton:focus-visible{outline:2px solid var(--gruv-rail-recipe);outline-offset:-2px}
+
   .desktopWeightsActionToolbar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;overflow:hidden;border:1px solid var(--row-border-2);border-radius:var(--control-radius);background:var(--row-bg-2)}
   .desktopWeightsActionToolbar button{display:flex;align-items:center;justify-content:center;gap:7px;min-height:34px;padding:5px 8px;border:0;border-radius:0;background:transparent;color:var(--text);font:inherit;font-size:var(--desktop-type-control);font-weight:750;box-shadow:none}
   .desktopWeightsActionToolbar button + button{border-left:1px solid var(--row-border-2)}
