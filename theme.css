@@ -290,88 +290,68 @@
 :where(html, body)[data-theme="gruvbox-dark"] .resinToolsLogo .rtLayerGreen{color:#b8bb26;stroke:#b8bb26}
 :where(html, body)[data-theme="gruvbox-dark"] .resinToolsLogo .rtLayerBlue{color:#83a598;stroke:#83a598}
 
-/* ----------------------------------------------------------------------- * Gruvbox Light (primary = blue, secondary = orange) * ----------------------------------------------------------------------- */
+/* ----------------------------------------------------------------------- * Gruvbox Light * ----------------------------------------------------------------------- */
 :where(html, body)[data-theme="gruvbox-light"]{
   color-scheme: light;
-  --bg: #fbf1c7;
+  --bg: #ece7d8;
+  --desktop-canvas-bg: #ece7d8;
 
 /* bg0 */
-  --panel: rgba(235,219,178,.92);
+  --panel: rgba(249,245,233,.94);
 
 /* bg1 */
-  --panel2: rgba(213,196,161,.86);
+  --panel2: rgba(241,235,218,.90);
 
 /* bg2 */
-  --text: #665c54;
-  --title: #fbf1c7;
-
-/* blue */
-  --subtitle: #a34400;
-
-/* orange */
-  --muted: #665c54;
-  --fg: #3d3d3d;
-  --yellow: #b57614;
-  --orange: #af3a03;
-  --border: rgba(102,92,84,.35);
-  --border2: rgba(124,111,100,.35);
-  --field-bg: rgba(235,219,178,.70);
-  --panelOpen: rgba(235,219,178,.96);
-  --chev: rgba(60,56,54,.55);
-  --warn: #d79921;
+  --text: #383329;
+  --title: #383329;
+  --subtitle: #a44f32;
+  --muted: #756a52;
+  --fg: #383329;
+  --yellow: #716243;
+  --orange: #a44f32;
+  --border: rgba(212,201,177,.92);
+  --border2: rgba(190,179,154,.74);
+  --field-bg: rgba(249,245,233,.78);
+  --panelOpen: rgba(249,245,233,.98);
+  --chev: rgba(56,51,41,.55);
+  --warn: #a44f32;
   --bad: #cc241d;
-  --ok: #98971a;
+  --ok: #417849;
   --shadow2: 0 6px 18px rgba(0,0,0,.14);
-  --focus-border: rgba(215,153,33,.80);
-  --focus-ring: rgba(215,153,33,.18);
-  --row-bg: rgba(60,56,54,.04);
-  --row-border: rgba(102,92,84,.22);
-  --row-bg-2: rgba(60,56,54,.03);
-  --row-border-2: rgba(102,92,84,.22);
-  --readonly-bg: rgba(60,56,54,.06);
-  --readonly-border: rgba(102,92,84,.25);
-  --f-var1: #98971a;
-  --f-var2: #d79921;
-  --f-var3: #fbf1c7;
-  --f-const: #928374;
+  --focus-border: rgba(113,98,67,.88);
+  --focus-ring: rgba(113,98,67,.18);
+  --row-bg: rgba(56,51,41,.04);
+  --row-border: rgba(212,201,177,.85);
+  --row-bg-2: rgba(56,51,41,.03);
+  --row-border-2: rgba(212,201,177,.92);
+  --readonly-bg: rgba(56,51,41,.06);
+  --readonly-border: rgba(117,106,82,.28);
+  --f-var1: #417849;
+  --f-var2: #716243;
+  --f-var3: #a44f32;
+  --f-const: #8b8068;
   --btn-text: var(--text);
-  --btn-border: rgba(102,92,84,.28);
-  --btn-primary-a: rgba(251,241,199,.22);
-
-/* blue */
-  --btn-primary-b: rgba(251,241,199,.10);
-  --btn-secondary-bg: rgba(214,93,14,.16);
-
-/* orange */
-  --btn-secondary-border: rgba(214,93,14,.38);
+  --btn-border: rgba(117,106,82,.30);
+  --btn-primary-a: rgba(113,98,67,.22);
+  --btn-primary-b: rgba(113,98,67,.10);
+  --btn-secondary-bg: rgba(164,79,50,.11);
+  --btn-secondary-border: rgba(164,79,50,.34);
   --btn-danger-bg: rgba(204,36,29,.14);
   --btn-danger-border: rgba(204,36,29,.28);
-  --bg-glow-a: rgba(214,93,14,.10);
-  --bg-glow-b: rgba(152,151,26,.08);
-  --card-glow-a: rgba(214,93,14,.10);
-  --card-glow-b: rgba(152,151,26,.08);
-  --toggle-on-bg: rgba(215,153,33,.18);
-  --toggle-on-border: rgba(215,153,33,.38);
-  --footer-bg: rgba(251,241,199,.92);
-  --footer-border: rgba(102,92,84,.28);
+  --bg-glow-a: rgba(164,79,50,.08);
+  --bg-glow-b: rgba(65,120,73,.06);
+  --card-glow-a: rgba(164,79,50,.08);
+  --card-glow-b: rgba(65,120,73,.06);
+  --toggle-on-bg: rgba(113,98,67,.16);
+  --toggle-on-border: rgba(113,98,67,.38);
+  --footer-bg: rgba(249,245,233,.94);
+  --footer-border: rgba(117,106,82,.28);
 
 }
 
-:where(html, body)[data-theme="gruvbox-light"] #splitsBlock :is(
-  .splitCopyBtn,
-  .splitCopyBtn:hover,
-  .splitCopyBtn:focus-visible,
-  .splitTrackButton:hover,
-  .splitTrackButton.active,
-  .resinNameInput,
-  .splitPctControl input,
-  .splitPctControl > span,
-  .splitLayerPct input,
-  .splitLayerPct span,
-  .splitColumnTotal
-){ color: #fbf1c7; }
 :where(html, body)[data-theme="gruvbox-light"] #splitsBlock .splitCellHopperName,
-:where(html, body)[data-theme="gruvbox-light"] #splitsBlock .splitCellHopperName.smart{ color: #af3a03; }
+:where(html, body)[data-theme="gruvbox-light"] #splitsBlock .splitCellHopperName.smart{ color: #a44f32; }
 
 /* ----------------------------------------------------------------------- * Nord * ----------------------------------------------------------------------- */
 :where(html, body)[data-theme="nord"]{

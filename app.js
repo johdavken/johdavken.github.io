@@ -161,20 +161,24 @@
   // so a resync can cancel exactly the ones that no longer apply (untracked,
   // pumped off, removed) instead of cancelling-and-rescheduling everything.
   let scheduledTimelineNotificationIds = new Set();
-  // Recipe Setup's own Scan Recipe shortcut - a small popup, not one of the
-  // three mutually-exclusive panels above. Rebuilt fresh on every
-  // renderSplitsArea() call like everything else in that panel, so the
-  // outside-click/Escape handlers below are registered once, at module
-  // scope, and always check whichever instance this variable currently
-  // points to rather than being re-registered (and stacking) every render.
+  // Recipe Setup's Scan and More popups are rebuilt on every
+  // renderSplitsArea() call. Their outside-click/Escape handlers live once
+  // at module scope, so they always act on the current instance without
+  // stacking listeners across renders.
   let splitsScanShortcut = null;
+  let mobileRecipeMore = null;
   document.addEventListener("click", event=>{
     if (splitsScanShortcut?.open && !splitsScanShortcut.contains(event.target)) splitsScanShortcut.open = false;
+    if (mobileRecipeMore?.open && !mobileRecipeMore.contains(event.target)) mobileRecipeMore.open = false;
   });
   document.addEventListener("keydown", event=>{
     if (event.key === "Escape" && splitsScanShortcut?.open){
       splitsScanShortcut.open = false;
       splitsScanShortcut.querySelector(":scope > summary")?.focus();
+    }
+    if (event.key === "Escape" && mobileRecipeMore?.open){
+      mobileRecipeMore.open = false;
+      mobileRecipeMore.querySelector(":scope > summary")?.focus();
     }
   });
 
@@ -1402,7 +1406,8 @@
         ["industrial-slate", "industrial-slate"],
         ["dark", "industrial-slate-dark"],
         ["industrial-slate-dark", "industrial-slate-dark"],
-        ["gruvbox-dark", "gruvbox-dark"]
+        ["gruvbox-dark", "gruvbox-dark"],
+        ["gruvbox-light", "gruvbox-light"]
       ]);
       // Removed themes have a deterministic Industrial Slate fallback. This
       // also safely migrates old locally stored and imported preferences
@@ -3601,6 +3606,7 @@
       mobilePrintButton.disabled=printButton.disabled;
       mobilePrintButton.addEventListener("click",()=>{mobileMoreButton.open=false;printRecipeSheet();});
       modeBar.appendChild(mobileMoreButton);
+      mobileRecipeMore = mobileMoreButton;
 
       const toolbar = document.createElement("div");
       toolbar.id = "splitsBulkBar";
@@ -5057,43 +5063,41 @@
       viewFlat.forEach((h)=>{
         const hasRate = h.rate > 0 && h.weight > 0;
         const notFeeding = h.rate <= 0 && h.weight > 0;
-        const weightChip = h.weight > 0
+        const weightDetail = h.weight > 0
           ? `<span class="mono resultWeight">${fmtNum(h.weight,1)} lb</span>`
           : `<span class="resultStatusChip badge-warn">Missing weight</span>`;
         const splitWarn = (h.rate <= 0 && h.weight > 0) ? `<span class="resultStatusChip badge-warn">Split?</span>` : "";
         const runSummary = hasRate
-          ? `<span><b class="mono">${fmtNum(h.rate,1)} lb/hr</b></span><span><b>Empty in ${h.timeText}</b></span>`
-          : `<span class="resultNotFeeding">${notFeeding ? "Not feeding" : "Awaiting data"}</span>`;
+          ? `<span>Empty in ${h.timeText} · <span class="mono">${fmtNum(h.rate,1)} lb/hr</span> · ${weightDetail}</span>`
+          : `<span class="resultNotFeeding">${notFeeding ? "Not feeding" : "Awaiting data"} · ${weightDetail}</span>`;
         const hasStart = !!(changeoverDate && h.startByDate);
         const timingLabel = hasStart ? "Start" : "Start unavailable";
-        const timingValue = hasStart ? h.startByText : "";
+        const timingValue = hasStart ? h.startByText : "Unavailable";
 
         const row = document.createElement("div");
         row.className = "resultRow" + (h.pumpOff ? " done" : "") + (h.isLate && !h.pumpOff ? " late" : "");
         row.innerHTML = `
-          <div class="resultMain">
+          <div class="resultSchedule" title="${timingLabel}">
+            <span class="mono resultTimingValue">${timingValue}</span>
+          </div>
+
+          <div class="resultRibbonMain">
             <div class="resultIdentity">
-              <span class="pill mono resultHopper">${h.hopperLabel}</span>
+              <span class="mono resultHopper">${h.hopperLabel}</span>
               <span data-resin-chip></span>
-              ${weightChip}
               ${splitWarn}
             </div>
+            <div class="resultRun">${runSummary}</div>
           </div>
 
-          <div class="resultRun">${runSummary}</div>
-
-          <div class="resultTiming">
-            <span class="resultStart"><span class="muted resultTimingLabel">${timingLabel}</span>${timingValue ? `<span class="mono resultTimingValue">${timingValue}</span>` : ""}</span>
-
-            <label class="checkWrap" title="Check when the hopper pump is turned off">
-              <input type="checkbox" ${h.pumpOff ? "checked" : ""}>
-              Pump off
-            </label>
-          </div>
+          <label class="checkWrap" title="Check when the hopper pump is turned off">
+            <input type="checkbox" ${h.pumpOff ? "checked" : ""}>
+            Pump off
+          </label>
         `;
 
         const resinChip = row.querySelector("[data-resin-chip]");
-        resinChip.className = h.resinName ? "pill mono resultResin" : "resultStatusChip badge-warn";
+        resinChip.className = h.resinName ? "mono resultResin" : "resultStatusChip badge-warn";
         resinChip.textContent = h.resinName || "No resin";
 
         row.querySelector('input[type="checkbox"]').addEventListener("change",(e)=>{

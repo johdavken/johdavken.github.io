@@ -423,16 +423,16 @@
     isolation:isolate;
   }
   body[data-theme="gruvbox-light"] .workspaceNav{
-    --gruv-rail-edge:#a89984;
-    --gruv-rail-paper:#3c3836;
+    --gruv-rail-edge:#d4c9b1;
+    --gruv-rail-paper:#383329;
     --gruv-rail-line:#d65d0e;
-    --gruv-rail-recipe:#b57614;
-    --gruv-rail-timeline:#3c3836;
-    --gruv-rail-totals:#79740e;
-    --gruv-rail-sync:#fbf1c7;
+    --gruv-rail-recipe:#716243;
+    --gruv-rail-timeline:#076678;
+    --gruv-rail-totals:#417849;
+    --gruv-rail-sync:#417849;
     --gruv-rail-tools:#8f3f71;
-    --gruv-rail-help:#fbf1c7;
-    background:#ebdbb2;
+    --gruv-rail-help:#076678;
+    background:#f1ebda;
     box-shadow:none;
   }
   body[data-theme="industrial-slate-dark"] .workspaceNav{
