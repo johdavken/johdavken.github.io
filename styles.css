@@ -312,6 +312,18 @@ main{
    terminal icon themes. The base glyph is retained for every other theme. */
 .gruvboxIconDetail{display:none}
 body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .gruvboxIconDetail{display:block}
+/* Gruvbox goes a step further and swaps the stroked line art itself for a
+   solid filled glyph set - the defining trait of the classic terminal icon
+   themes those construction marks were borrowed from. Both surfaces paint
+   that glyph bare, with no tile of its own: the desktop rail and the mobile
+   home already render a flat, transparent icon slot, so the swap is purely
+   stroke -> fill and each section keeps its existing accent colour. Every
+   other theme, industrial-slate included, keeps the stroked base glyph and
+   never paints the solid twin. Both sets ship in the markup so the swap
+   stays a pure CSS concern. */
+.gruvboxSolidGlyph{display:none;fill:currentColor;stroke:none}
+body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .gruvboxSolidGlyph{display:block}
+body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .baseGlyph{display:none}
 :is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerRed{color:var(--bad);stroke:var(--bad)}
 :is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerOrange{color:var(--orange);stroke:var(--orange)}
 :is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerYellow{color:var(--warn);stroke:var(--warn)}
@@ -997,7 +1009,10 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .gruvboxIconDe
 .layerTitle{
   font-size: var(--title-size);
   white-space: nowrap;
-  color: var(--title, var(--text));
+  /* Section headings can be tinted independently of the palette's general
+     emphasis accent via --section-title. Only Gruvbox Dark sets it; every
+     other theme falls through to --title exactly as before. */
+  color: var(--section-title, var(--title, var(--text)));
 }
 
 /* Wide Display was chosen (out of several previewed options) as the
@@ -5607,7 +5622,7 @@ body[data-surface-style="divided"] .helpTopic{
   .workspaceRecoveryDetail strong,
   .mobileTileStyleSection legend,
   .mobileBackgroundStyleSection legend{ font-weight:800; font-synthesis:none; }
-  .workspaceContent > .workspacePanel[open] > summary .layerTitle{ color: var(--title); }
+  .workspaceContent > .workspacePanel[open] > summary .layerTitle{ color: var(--section-title, var(--title)); }
   .workspaceContent > .workspacePanel > summary .layerMeta{ display: none; }
   .workspaceContent > .workspacePanel > summary .pill.summaryStatus{ display: none !important; }
   /* These two Setup entries keep their familiar desktop summary markup, but

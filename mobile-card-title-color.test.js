@@ -13,6 +13,14 @@ const styles = fs.readFileSync("styles.css", "utf8");
 // every theme - theme-agnostic on purpose, since --muted/--title are
 // already theme-aware tokens, so every data-theme value picks up correct
 // colors automatically without enumerating each one here.
+//
+// The open-card colour is now var(--section-title, var(--title)). That is
+// still the same token by default - only a palette that deliberately tints
+// its headings apart from its general emphasis accent sets --section-title,
+// and Gruvbox Dark is currently the only one. It does so precisely to match
+// desktop, whose gruvbox rail already paints the .active label newspaper
+// white via --gruv-rail-paper rather than --title, so honouring the override
+// keeps the two surfaces agreeing rather than splitting them.
 
 function mobileBlock(){
   const start = styles.lastIndexOf("@media (max-width:900px)");
@@ -28,7 +36,7 @@ test("desktop's nav button uses --muted normally and --title once .active - mobi
   assert.match(activeBody, /color: var\(--title\);/);
   const mobile = mobileBlock();
   assert.match(mobile, /\.workspaceContent > \.workspacePanel > summary \.layerTitle\{[\s\S]{0,80}color: var\(--muted\);/);
-  assert.match(mobile, /\.workspaceContent > \.workspacePanel\[open\] > summary \.layerTitle\{ color: var\(--title\); \}/);
+  assert.match(mobile, /\.workspaceContent > \.workspacePanel\[open\] > summary \.layerTitle\{ color: var\(--section-title, var\(--title\)\); \}/);
 });
 
 test("theme-agnostic, not scoped to specific data-theme values - every theme picks this up automatically since --muted/--title are already theme-aware", () => {
