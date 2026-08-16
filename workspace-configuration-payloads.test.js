@@ -55,6 +55,65 @@ test("Receiver Weight Profiles include Smart Hoppers geometry (usable height, ci
   assert.equal(profile.layers[0].packing_factors, undefined);
 });
 
+test("Receiver Weight Profiles include usable_gallons alongside the cylindrical geometry arrays - volume-based (non-cylindrical) hoppers' capacity, same optional-on-read treatment", () => {
+  const state = stateFixture();
+  state.layers[0].hoppers[0].usableGallons = 15;
+  const profile = payloads.createReceiverWeightProfile(state);
+  assert.equal(profile.layers[0].usable_gallons[0], 15);
+  assert.equal(profile.layers[0].usable_gallons[1], 0);
+});
+
+test("Receiver Weight Profile validation still accepts profiles with no usable_gallons at all (predates volume-mode Smart Hoppers)", () => {
+  const profile = payloads.createReceiverWeightProfile(stateFixture());
+  delete profile.layers[0].usable_gallons;
+  assert.equal(payloads.validateReceiverWeightProfile(profile).valid, true);
+});
+
+test("Receiver Weight Profile validation rejects malformed usable_gallons when present", () => {
+  const shortArray = payloads.createReceiverWeightProfile(stateFixture());
+  shortArray.layers[0].usable_gallons.pop();
+  let result = payloads.validateReceiverWeightProfile(shortArray);
+  assert.equal(result.valid, false);
+  assert.match(result.errors.join(" "), /usable gallons must contain exactly 6/i);
+
+  const negativeGallons = payloads.createReceiverWeightProfile(stateFixture());
+  negativeGallons.layers[0].usable_gallons[0] = -3;
+  result = payloads.validateReceiverWeightProfile(negativeGallons);
+  assert.equal(result.valid, false);
+  assert.match(result.errors.join(" "), /usable gallons must be a finite value of 0 or greater/i);
+});
+
+test("applying a Receiver Weight Profile with usable_gallons writes it onto the matching hoppers", () => {
+  const state = stateFixture();
+  const profile = payloads.createReceiverWeightProfile(stateFixture());
+  profile.layers[0].usable_gallons[0] = 12;
+  assert.equal(payloads.applyReceiverWeightProfile(state, profile).ok, true);
+  assert.equal(state.layers[0].hoppers[0].usableGallons, 12);
+});
+
+test("applying an old Receiver Weight Profile (no usable_gallons) leaves this device's already-configured volume geometry untouched, rather than resetting it to 0 - same guarantee proven for height/circumference, and it holds regardless of which geometry mode the connected line currently uses", () => {
+  const state = stateFixture();
+  state.layers[0].hoppers[0].usableGallons = 18;
+  const oldProfile = payloads.createReceiverWeightProfile(stateFixture());
+  delete oldProfile.layers[0].usable_gallons;
+  oldProfile.layers[0].receiver_weights_lb[0] = 500;
+  assert.equal(payloads.applyReceiverWeightProfile(state, oldProfile).ok, true);
+  assert.equal(state.layers[0].hoppers[0].weight, 500, "the weight itself still applies");
+  assert.equal(state.layers[0].hoppers[0].usableGallons, 18, "volume geometry untouched, not reset to 0");
+});
+
+test("switching between line/geometry types does not destroy inactive geometry data - a profile can carry both cylindrical and volume geometry, and applying it preserves both regardless of which is currently active", () => {
+  const state = stateFixture();
+  const profile = payloads.createReceiverWeightProfile(stateFixture());
+  profile.layers[0].usable_heights_in[0] = 30;
+  profile.layers[0].circumferences_in[0] = 45;
+  profile.layers[0].usable_gallons[0] = 20;
+  assert.equal(payloads.applyReceiverWeightProfile(state, profile).ok, true);
+  assert.equal(state.layers[0].hoppers[0].usableHeight, 30);
+  assert.equal(state.layers[0].hoppers[0].circumference, 45);
+  assert.equal(state.layers[0].hoppers[0].usableGallons, 20);
+});
+
 test("Receiver Weight Profiles carry one shared hopper circumference and apply it to every physical hopper", () => {
   const state = stateFixture();
   state.hopperCircumference = 44;
@@ -180,10 +239,11 @@ test("applying a Recipe changes only recipe fields and preserves physical/runtim
   assert.equal(state.theme, before.theme);
 });
 
-test("applying a Recipe preserves this hopper's Smart Hoppers geometry (usableHeight/circumference) - a recipe never carries physical-equipment values, same as it already preserves weight/track/pumpOff", () => {
+test("applying a Recipe preserves this hopper's Smart Hoppers geometry (usableHeight/circumference/usableGallons) - a recipe never carries physical-equipment values, same as it already preserves weight/track/pumpOff", () => {
   const state = stateFixture();
   state.layers[0].hoppers[0].usableHeight = 26;
   state.layers[0].hoppers[0].circumference = 42;
+  state.layers[0].hoppers[0].usableGallons = 19;
   const recipe = payloads.createRecipePayload(stateFixture());
   recipe.layers[0].hoppers[0] = { resin_name: "NEW-RESIN", pct: 80 };
   const result = payloads.applyRecipePayload(state, recipe);
@@ -191,6 +251,7 @@ test("applying a Recipe preserves this hopper's Smart Hoppers geometry (usableHe
   assert.equal(state.layers[0].hoppers[0].resinName, "NEW-RESIN");
   assert.equal(state.layers[0].hoppers[0].usableHeight, 26);
   assert.equal(state.layers[0].hoppers[0].circumference, 42);
+  assert.equal(state.layers[0].hoppers[0].usableGallons, 19);
 });
 
 test("a Recipe can change line type while preserving matching physical hoppers", () => {

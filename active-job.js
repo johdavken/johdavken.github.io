@@ -101,7 +101,7 @@
       Number(layer?.layerPct) > 0 || (Array.isArray(layer?.hoppers) && layer.hoppers.some(hopper =>
         Number(hopper?.weight) > 0 || Number(hopper?.pct) > 0 && hopper?.resinName ||
         String(hopper?.resinName || "").trim() || hopper?.track || hopper?.pumpOff ||
-        Number(hopper?.usableHeight) > 0 || Number(hopper?.circumference) > 0
+        Number(hopper?.usableHeight) > 0 || Number(hopper?.circumference) > 0 || Number(hopper?.usableGallons) > 0
       ))
     );
   }

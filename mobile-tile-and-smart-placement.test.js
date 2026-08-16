@@ -23,7 +23,7 @@ test("main menu is a stable seven-destination grid with no cosmetic or admin til
 });
 
 test("the shared receiver-weight guidance explains conservative usable weight and Smart Hopper inputs", () => {
-  assert.match(html, /Enter a conservative usable weight, or use Smart Hoppers to calculate capacity from hopper dimensions and resin density\./);
+  assert.match(html, /Enter a conservative usable weight, or use Smart Hoppers to calculate resin-specific hopper capacity from hopper size and bulk density\./);
   assert.match(html, /How Smart Hoppers work/);
   assert.match(html, /shared hopper circumference/);
 });

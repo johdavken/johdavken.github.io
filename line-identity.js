@@ -82,6 +82,31 @@
   }
 
   /* --------------------------------------------------------------------
+   *   Physical line identity -> Smart Hopper geometry mode
+   * ------------------------------------------------------------------ */
+
+  // Lines 1, 2, 3, 4, 7, and 8 have irregular, non-cylindrical receiver
+  // hoppers rated only in usable gallons. Every other identified line has
+  // uniform cylindrical hoppers (shared circumference + per-hopper usable
+  // height). This is the one place that decision is written down - Smart
+  // Hoppers rendering, editing, validation, and calculation in app.js all
+  // resolve from here so they can never disagree with each other.
+  const VOLUME_GEOMETRY_LINES = Object.freeze({ 1:true, 2:true, 3:true, 4:true, 7:true, 8:true });
+
+  // null means the same thing it does for requiredLayerCount: an unmapped
+  // line number, or no line number at all - never guessed at.
+  function getSmartHopperGeometryMode(lineNumber){
+    const number = Number(lineNumber);
+    if (!Number.isInteger(number) || number <= 0) return null;
+    if (!Object.prototype.hasOwnProperty.call(LAYER_COUNT_BY_LINE, number)) return null;
+    return Object.prototype.hasOwnProperty.call(VOLUME_GEOMETRY_LINES, number) ? "volume" : "cylindrical";
+  }
+
+  function getSmartHopperGeometryModeForSync(syncState){
+    return getSmartHopperGeometryMode(linkedLineNumber(syncState));
+  }
+
+  /* --------------------------------------------------------------------
    *   Physical line identity -> layer orientation
    * ------------------------------------------------------------------ */
 
@@ -199,6 +224,7 @@
     hopperNamingMode, hopperPositionLabel, hopperBadgeLabel,
     LAYER_COUNT_BY_LINE, workspaceLineNumber, requiredLayerCount,
     linkedWorkspace, linkedLineNumber, requiredLayerCountForSync,
-    LAYER_A_POSITION_BY_LINE, layerAPosition, getLineConfiguration, getLineConfigurationForSync
+    LAYER_A_POSITION_BY_LINE, layerAPosition, getLineConfiguration, getLineConfigurationForSync,
+    VOLUME_GEOMETRY_LINES, getSmartHopperGeometryMode, getSmartHopperGeometryModeForSync
   };
 });

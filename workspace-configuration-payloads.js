@@ -58,7 +58,11 @@
           // same way. Optional on read (see validate/apply below) so
           // profiles saved before this existed keep loading unchanged.
           usable_heights_in: Array.from({ length: HOPPERS_PER_LAYER }, (_, index)=>layer?.hoppers?.[index]?.usableHeight ?? 0),
-          circumferences_in: Array.from({ length: HOPPERS_PER_LAYER }, (_, index)=>layer?.hoppers?.[index]?.circumference ?? 0)
+          circumferences_in: Array.from({ length: HOPPERS_PER_LAYER }, (_, index)=>layer?.hoppers?.[index]?.circumference ?? 0),
+          // Volume-based (non-cylindrical) hoppers' usable capacity, in
+          // gallons. Same optional-on-read treatment as the two arrays
+          // above - a profile predating this mode simply won't have it.
+          usable_gallons: Array.from({ length: HOPPERS_PER_LAYER }, (_, index)=>layer?.hoppers?.[index]?.usableGallons ?? 0)
         };
       })
     };
@@ -102,6 +106,15 @@
           });
         }
       }
+      if (layer?.usable_gallons !== undefined){
+        if (!Array.isArray(layer.usable_gallons) || layer.usable_gallons.length !== HOPPERS_PER_LAYER){
+          errors.push(`Layer ${layer.name} usable gallons must contain exactly ${HOPPERS_PER_LAYER} values.`);
+        } else {
+          layer.usable_gallons.forEach((value, index)=>{
+            if (!finiteInRange(value, 0)) errors.push(`Layer ${layer.name} hopper ${index + 1} usable gallons must be a finite value of 0 or greater.`);
+          });
+        }
+      }
     });
     return validationResult(errors);
   }
@@ -127,6 +140,9 @@
       }
       if (Array.isArray(profileLayer.circumferences_in)){
         profileLayer.circumferences_in.forEach((value, hopperIndex)=>{ state.layers[layerIndex].hoppers[hopperIndex].circumference = value; });
+      }
+      if (Array.isArray(profileLayer.usable_gallons)){
+        profileLayer.usable_gallons.forEach((value, hopperIndex)=>{ state.layers[layerIndex].hoppers[hopperIndex].usableGallons = value; });
       }
     });
     const legacyCircumference = payload.layers.flatMap(layer=>layer?.circumferences_in || [])
@@ -221,7 +237,8 @@
             track: !!physical?.track,
             pumpOff: !!physical?.pumpOff,
             usableHeight: physical?.usableHeight ?? 0,
-            circumference: physical?.circumference ?? 0
+            circumference: physical?.circumference ?? 0,
+            usableGallons: physical?.usableGallons ?? 0
           };
         })
       };

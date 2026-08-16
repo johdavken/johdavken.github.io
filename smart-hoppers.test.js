@@ -55,18 +55,20 @@ test("state defaults smartHoppersEnabled to false, as a local display preference
   assert.match(stateBody, /smartHoppersEnabled: false/);
 });
 
-test("ensureLayers gives every hopper usableHeight/circumference fields, preserving existing values and defaulting new ones to 0", () => {
+test("ensureLayers gives every hopper usableHeight/circumference/usableGallons fields, preserving existing values and defaulting new ones to 0", () => {
   const body = functionBody("ensureLayers");
   assert.match(body, /usableHeight: clampNum\(h\.usableHeight\)/);
   assert.match(body, /circumference: clampNum\(h\.circumference\)/);
-  assert.match(body, /usableHeight: 0,\s*\n\s*circumference: 0/);
+  assert.match(body, /usableGallons: clampNum\(h\.usableGallons\)/);
+  assert.match(body, /usableHeight: 0,\s*\n\s*circumference: 0,\s*\n\s*usableGallons: 0/);
 });
 
-test("applyPayload's hopper reconstruction (local session load) also carries usableHeight/circumference through", () => {
+test("applyPayload's hopper reconstruction (local session load) also carries usableHeight/circumference/usableGallons through", () => {
   const start = app.indexOf("function applyPayload(");
   const body = app.slice(start, app.indexOf("\n    function ", start + 1));
   assert.match(body, /usableHeight: clampNum\(fh\.usableHeight\)/);
   assert.match(body, /circumference: clampNum\(fh\.circumference\)/);
+  assert.match(body, /usableGallons: clampNum\(fh\.usableGallons\)/);
 });
 
 test("snapshotPayload persists smartHoppersEnabled locally, and applyPayload reads it back", () => {
@@ -90,14 +92,14 @@ test("changing line type still warns before discarding a removed layer's configu
   // enforcement started sharing the same transition.
   const start = app.indexOf("function applyLineTypeChange(");
   const body = app.slice(start, app.indexOf("\n  }", start));
-  assert.match(body, /clampNum\(hopper\.usableHeight\) > 0 \|\| clampNum\(hopper\.circumference\) > 0/);
+  assert.match(body, /clampNum\(hopper\.usableHeight\) > 0 \|\| clampNum\(hopper\.circumference\) > 0 \|\| clampNum\(hopper\.usableGallons\) > 0/);
 });
 
-test("hasMeaningfulActiveJob (active-job.js) also treats usableHeight/circumference as meaningful data", () => {
+test("hasMeaningfulActiveJob (active-job.js) also treats usableHeight/circumference/usableGallons as meaningful data", () => {
   const activeJob = fs.readFileSync("active-job.js", "utf8");
   const start = activeJob.indexOf("function hasMeaningfulActiveJob(");
   const body = activeJob.slice(start, activeJob.indexOf("\n  }", start));
-  assert.match(body, /Number\(hopper\?\.usableHeight\) > 0 \|\| Number\(hopper\?\.circumference\) > 0/);
+  assert.match(body, /Number\(hopper\?\.usableHeight\) > 0 \|\| Number\(hopper\?\.circumference\) > 0 \|\| Number\(hopper\?\.usableGallons\) > 0/);
 });
 
 test("hopper rearrangement only ever moves resinName/pct - height/circumference (like weight/track/pumpOff) are never part of the moved assignment and stay attached to the physical hopper", () => {
@@ -124,24 +126,24 @@ test("the toggle is wired through the shared hookToggle helper (same as the othe
   assert.match(body, /hookToggle\(\s*\n\s*"smartHoppersToggle",\s*\n\s*\(\)=> !!state\.smartHoppersEnabled,\s*\n\s*\(v\)=>\{ state\.smartHoppersEnabled = !!v; renderWeightsArea\(\); \}\s*\n\s*\);/);
 });
 
-test("the wrench popover is only built when Smart Hoppers is enabled - no dead markup left in the DOM when it's off", () => {
+test("the wrench popover is only built when Smart Hoppers is enabled AND a geometry mode is identified - no dead markup left in the DOM when it's off or when no line is identified", () => {
   const start = app.indexOf("function renderWeightsArea(");
   const body = app.slice(start, app.indexOf("\n    function printRecipeSheet", start));
-  assert.match(body, /if \(state\.smartHoppersEnabled\)\{\s*\n\s*geometryPopover = document\.createElement\("details"\);/);
+  assert.match(body, /if \(state\.smartHoppersEnabled && geometryMode !== null\)\{\s*\n\s*const isVolume = geometryMode === "volume";\s*\n\s*geometryPopover = document\.createElement\("details"\);/);
 });
 
 test("each wrench popover is a <details> using the same exclusive name so only one is open at a time, with an aria-labeled trigger naming the specific hopper", () => {
   const start = app.indexOf("function renderWeightsArea(");
   const body = app.slice(start, app.indexOf("\n    function printRecipeSheet", start));
   assert.match(body, /geometryPopover\.setAttribute\("name", "hopperGeometry"\);/);
-  assert.match(body, /const geometryLabel = `Set \$\{hopperBadgeLabel\(L\.name, hi\)\} usable height`;/);
+  assert.match(body, /const geometryLabel = `Set \$\{hopperBadgeLabel\(L\.name, hi\)\} usable \$\{isVolume \? "volume" : "height"\}`;/);
 });
 
-test("the wrench panel has one per-hopper usable-height field; circumference is a shared workspace setting", () => {
+test("the wrench panel has one per-hopper geometry field (usable height, or usable volume on volume-mode lines); circumference is a shared workspace setting used only in cylindrical mode", () => {
   const start = app.indexOf("function renderWeightsArea(");
   const body = app.slice(start, app.indexOf("\n    function printRecipeSheet", start));
   assert.match(body, /heightInput\.id = `gh_\$\{L\.name\}_\$\{hi\}`;/);
-  assert.match(body, /value => \{ L\.hoppers\[hi\]\.usableHeight = value;/);
+  assert.match(body, /if \(isVolume\) L\.hoppers\[hi\]\.usableGallons = value;\s*\n\s*else L\.hoppers\[hi\]\.usableHeight = value;/);
   assert.match(body, /id="desktopSharedCircumference"/);
   assert.match(body, /setWorkspaceHopperCircumference/);
   const heightBlock = body.slice(body.indexOf("heightInput.addEventListener"), body.indexOf("computedWeight = document.createElement"));
@@ -246,7 +248,7 @@ test("the computed-weight element is appended after .weightsCellRow, not before 
 test("the computed-weight element starts hidden and is only ever built when Smart Hoppers is enabled, same gating as the wrench", () => {
   const start = app.indexOf("function renderWeightsArea(");
   const body = app.slice(start, app.indexOf("\n    function printRecipeSheet", start));
-  const ifStart = body.indexOf("if (state.smartHoppersEnabled){");
+  const ifStart = body.indexOf("if (state.smartHoppersEnabled && geometryMode !== null){");
   const ifEnd = body.indexOf("\n          }", ifStart);
   const ifBlock = body.slice(ifStart, ifEnd);
   assert.match(ifBlock, /computedWeight = document\.createElement\("div"\);/);
@@ -314,6 +316,48 @@ test("smartHopperComputation is the one place that decides whether a hopper is s
   assert.match(body, /if \(!bulkDensity\) return null;/);
   assert.match(body, /if \(!Number\.isFinite\(value\) \|\| value <= 0\) return null;/);
   assert.match(body, /return \{ value, resin, bulkDensity \};/);
+});
+
+// --- Line-aware geometry mode: cylindrical vs. volume, resolved from the
+// connected line via currentSmartHopperGeometryMode() (line-identity.js's
+// getSmartHopperGeometryModeForSync) - never asked of the operator. See
+// smart-hopper-geometry-mode.test.js for the line -> mode mapping itself.
+
+test("currentSmartHopperGeometryMode is the one call site smartHopperComputation and refreshSmartHopperState both use to resolve geometry mode", () => {
+  const helperBody = functionBody("currentSmartHopperGeometryMode");
+  assert.match(helperBody, /window\.PolynLineIdentity\?\.getSmartHopperGeometryModeForSync\(lineSync\?\.getState\?\.\(\)\) \?\? null/);
+
+  const smartBody = functionBody("smartHopperComputation");
+  assert.match(smartBody, /const geometryMode = currentSmartHopperGeometryMode\(\);/);
+
+  const refreshBody = functionBody("refreshSmartHopperState");
+  assert.match(refreshBody, /const geometryMode = currentSmartHopperGeometryMode\(\);/);
+});
+
+test("smartHopperComputation's volume branch requires usable gallons and a resin bulk density, and calls calculators.calculateHopperVolumeWeight - never circumference/usable height", () => {
+  const body = functionBody("smartHopperComputation");
+  const volumeBranch = body.slice(body.indexOf('geometryMode === "volume"'), body.indexOf('geometryMode === "cylindrical"'));
+  assert.match(volumeBranch, /const gallonsVal = clampNum\(hopper\.usableGallons\);/);
+  assert.match(volumeBranch, /if \(!\(gallonsVal > 0 && hopper\.resinName\)\) return null;/);
+  assert.match(volumeBranch, /if \(!bulkDensity\) return null;/);
+  assert.match(volumeBranch, /calculators\.calculateHopperVolumeWeight\(gallonsVal, bulkDensity\)/);
+  assert.match(volumeBranch, /if \(!Number\.isFinite\(value\) \|\| value <= 0\) return null;/);
+  assert.doesNotMatch(volumeBranch, /circVal|usableHeight/);
+});
+
+test("smartHopperComputation's cylindrical branch is byte-for-byte the same formula as before this feature - only reached when geometryMode === \"cylindrical\"", () => {
+  const body = functionBody("smartHopperComputation");
+  const cylindricalBranch = body.slice(body.indexOf('geometryMode === "cylindrical"'));
+  assert.match(cylindricalBranch, /const heightVal = clampNum\(hopper\.usableHeight\);/);
+  assert.match(cylindricalBranch, /const circVal = clampNum\(state\.hopperCircumference\);/);
+  assert.match(cylindricalBranch, /if \(!\(heightVal > 0 && circVal > 0 && hopper\.resinName\)\) return null;/);
+  assert.match(cylindricalBranch, /calculators\.calculateHopperWeight\(circVal, heightVal, bulkDensity\)/);
+});
+
+test("smartHopperComputation returns null (not a fallback value) when Smart Hoppers is off, or when geometryMode is null (no identified line)", () => {
+  const body = functionBody("smartHopperComputation");
+  assert.match(body, /if \(!state\.smartHoppersEnabled\) return null;/);
+  assert.match(body, /return null;\s*\n\s*\}/, "the function falls through to a final `return null;` when geometryMode matches neither branch");
 });
 
 test("refreshSmartHopperState and effectiveHopperWeight both read from smartHopperComputation - no second copy of the resin-lookup/formula logic", () => {

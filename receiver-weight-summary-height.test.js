@@ -55,12 +55,12 @@ test("both Summary height <b> elements are rendered with those ids", () => {
  *   1. Smart enabled + Summary view + bulk height change
  * -------------------------------------------------------------------- */
 
-test("bulk apply writes usable height to canonical state on both platforms", () => {
+test("bulk apply writes usable height to canonical state on both platforms (or usable gallons in volume mode)", () => {
   const desktop = functionBody("renderWeightsArea");
-  assert.match(desktop, /if \(heightResult\.value !== null\)\{ ref\.layer\.hoppers\[ref\.hi\]\.usableHeight = heightResult\.value;/);
+  assert.match(desktop, /if \(heightResult\.value !== null\)\{\s*\n\s*if \(geometryMode === "volume"\) ref\.layer\.hoppers\[ref\.hi\]\.usableGallons = heightResult\.value;\s*\n\s*else ref\.layer\.hoppers\[ref\.hi\]\.usableHeight = heightResult\.value;/);
 
   const mobile = functionBody("renderMobileWeightsArea");
-  assert.match(mobile, /if \(heightResult\.value !== null && ref\.heightInput\)\{\s*\n\s*ref\.hopper\.usableHeight = heightResult\.value;/);
+  assert.match(mobile, /if \(heightResult\.value !== null && ref\.heightInput\)\{\s*\n\s*if \(geometryMode === "volume"\) ref\.hopper\.usableGallons = heightResult\.value;\s*\n\s*else ref\.hopper\.usableHeight = heightResult\.value;/);
 });
 
 test("bulk apply calls validateAndCompute, which refreshes the Summary height display by id from canonical state", () => {
@@ -77,8 +77,9 @@ test("bulk apply calls validateAndCompute, which refreshes the Summary height di
   assert.match(mobileApply, /validateAndCompute\(\{ sync:true \}\);/);
 
   const refresh = functionBody("refreshSmartHopperState");
-  assert.match(refresh, /const desktopSummaryHeight=document\.getElementById\(desktopSummaryHeightId\(L\.name, hi\)\);\s*\n\s*if\(desktopSummaryHeight\) desktopSummaryHeight\.querySelector\("span"\)\.textContent=String\(clampNum\(hopper\.usableHeight\)\);/);
-  assert.match(refresh, /const mobileSummaryHeight=document\.getElementById\(mobileSummaryHeightId\(L\.name, hi\)\);\s*\n\s*if\(mobileSummaryHeight\) mobileSummaryHeight\.querySelector\("span"\)\.textContent=String\(clampNum\(hopper\.usableHeight\)\);/);
+  assert.match(refresh, /const geometryVal = geometryMode === "volume" \? clampNum\(hopper\.usableGallons\) : clampNum\(hopper\.usableHeight\);/);
+  assert.match(refresh, /const mobileSummaryHeight=document\.getElementById\(mobileSummaryHeightId\(L\.name, hi\)\);\s*\n\s*if\(mobileSummaryHeight\) mobileSummaryHeight\.querySelector\("span"\)\.textContent=String\(geometryVal\);/);
+  assert.match(refresh, /const desktopSummaryHeight=document\.getElementById\(desktopSummaryHeightId\(L\.name, hi\)\);\s*\n\s*if\(desktopSummaryHeight\) desktopSummaryHeight\.querySelector\("span"\)\.textContent=String\(geometryVal\);/);
 
   const validateAndCompute = functionBody("validateAndCompute");
   assert.match(validateAndCompute, /refreshSmartHopperState\(\);/);
@@ -143,7 +144,7 @@ test("the individual mobile Edit height field no longer pokes a fragile position
 test("the desktop wrench-popover height field also converges on the shared refresh (previously stale in Summary too)", () => {
   const desktop = functionBody("renderWeightsArea");
   const wrench = desktop.slice(desktop.indexOf('heightInput.id = `gh_'), desktop.indexOf("heightInput.addEventListener") + 600);
-  assert.match(wrench, /value => \{ L\.hoppers\[hi\]\.usableHeight = value; if \(visualHeightInput\) visualHeightInput\.value = value; \}/);
+  assert.match(wrench, /if \(isVolume\) L\.hoppers\[hi\]\.usableGallons = value;\s*\n\s*else L\.hoppers\[hi\]\.usableHeight = value;\s*\n\s*if \(visualHeightInput\) visualHeightInput\.value = value;/);
   assert.match(wrench, /validateAndCompute\(\{ sync: true \}\);/);
 });
 
@@ -182,8 +183,9 @@ test("min:0 validation on the bulk height field is unchanged, so zero remains a 
 
 test("the height refresh formats with the same clampNum(...) rounding the render template already used - no new rounding scheme introduced", () => {
   const refresh = functionBody("refreshSmartHopperState");
-  assert.match(refresh, /String\(clampNum\(hopper\.usableHeight\)\)/);
-  // Not Math.round or any other formatter - height was never rounded like
+  assert.match(refresh, /const geometryVal = geometryMode === "volume" \? clampNum\(hopper\.usableGallons\) : clampNum\(hopper\.usableHeight\);/);
+  assert.match(refresh, /String\(geometryVal\)/);
+  // Not Math.round or any other formatter - geometry was never rounded like
   // Smart-computed weight is, and that stays true after the fix.
   assert.doesNotMatch(refresh.slice(refresh.indexOf("mobileSummaryHeight"), refresh.indexOf("computedEl")), /Math\.round/);
 });
