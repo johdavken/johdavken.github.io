@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Resin.Tools — Compact Timeline Study</title>
+  <style>
+    :root{color-scheme:dark;--canvas:#1f201f;--panel:#292a28;--surface:#242523;--text:#eadfb9;--muted:#b9ad87;--line:#45433c;--accent:#d4c49b;--good:#82b982;--warn:#df9c6e;--ink:#181916}
+    html[data-theme="light"]{color-scheme:light;--canvas:#ece7d8;--panel:#f9f5e9;--surface:#f1ebda;--text:#383329;--muted:#756a52;--line:#d4c9b1;--accent:#716243;--good:#417849;--warn:#a44f32;--ink:#fffdf8}
+    *{box-sizing:border-box}body{margin:0;background:var(--canvas);color:var(--text);font:14px/1.35 Inter,ui-sans-serif,system-ui,sans-serif}button,input{font:inherit}
+    header{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:18px clamp(18px,4vw,50px);border-bottom:1px solid var(--line);background:var(--surface)}h1{margin:0;font-size:clamp(20px,2.5vw,29px);letter-spacing:.02em}header p{margin:3px 0 0;color:var(--muted);font-size:12px}.theme{padding:7px 10px;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--text);cursor:pointer}
+    main{width:min(1560px,100%);margin:auto;padding:22px clamp(14px,3vw,40px) 48px}.intro{margin:0 0 18px;color:var(--muted);font-size:12px}.grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}.study{overflow:hidden;border:1px solid var(--line);border-radius:11px;background:var(--panel);box-shadow:0 1px 0 color-mix(in srgb,var(--ink) 30%,transparent)}.study.selected{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 25%,transparent)}.head{display:flex;gap:8px;padding:11px 12px 10px;border-bottom:1px solid var(--line)}.head input{width:16px;height:16px;margin:1px 0 0;accent-color:var(--accent)}.head label{display:flex;gap:8px;cursor:pointer}.head strong{display:block;font-size:12px}.head small{display:block;margin-top:2px;color:var(--muted);font-size:10px;line-height:1.3}.tag{margin-left:auto;align-self:flex-start;padding:3px 5px;border:1px solid color-mix(in srgb,var(--accent) 45%,var(--line));border-radius:999px;color:var(--accent);font-size:8px;font-weight:850;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+    .preview{display:grid;gap:5px;padding:10px;background:var(--surface)}.timelineTitle{display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;color:var(--muted);font-size:9px}.timelineTitle strong{color:var(--accent);font-size:10px;letter-spacing:.09em;text-transform:uppercase}.row{position:relative;min-width:0}.hopper{font-weight:900}.resin,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.resin{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.time{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:900;white-space:nowrap}.meta{overflow:hidden;color:var(--muted);font-size:9px;text-overflow:ellipsis;white-space:nowrap}.pump{display:inline-flex;align-items:center;gap:4px;color:var(--muted);font-size:8px;white-space:nowrap}.pump input{width:13px;height:13px;margin:0;accent-color:var(--accent)}.late .time{color:var(--warn)}.done{opacity:.45;filter:grayscale(1)}
+    /* 1. Single-line command: fastest scan; action appears only at wider widths. */
+    .command .row{display:grid;grid-template-columns:4px 28px minmax(0,1fr) auto;align-items:center;gap:6px;min-height:34px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--panel)}.command .signal{align-self:stretch;border-radius:3px;background:var(--accent)}.command .late .signal{background:var(--warn)}.command .done .signal{background:var(--good)}.command .name{display:flex;gap:5px;min-width:0;align-items:baseline}.command .details{display:none}.command .pump{display:none}
+    /* 2. Time-first: start time stays fixed at the left; two compact lines. */
+    .timeFirst .row{display:grid;grid-template-columns:46px minmax(0,1fr) auto;gap:7px;align-items:center;min-height:39px;padding:4px 6px;border-bottom:1px solid var(--line)}.timeFirst .row:last-child{border-bottom:0}.timeFirst .when{display:grid;gap:0;text-align:center}.timeFirst .when small{color:var(--muted);font-size:7px;letter-spacing:.06em}.timeFirst .identity{display:flex;gap:5px;min-width:0;align-items:baseline}.timeFirst .pump{font-size:0}.timeFirst .pump input{width:14px;height:14px}
+    /* 3. Segmented metric: one stable identity column and one metric band. */
+    .metric .row{display:grid;grid-template-columns:35px minmax(0,1fr) auto;gap:7px;align-items:center;min-height:38px;padding:4px 7px;border:1px solid var(--line);border-radius:6px;background:var(--panel)}.metric .hopper{display:grid;place-items:center;align-self:stretch;border-radius:4px;background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--accent)}.metric .main{min-width:0}.metric .top{display:flex;gap:5px;align-items:baseline;min-width:0}.metric .time{color:var(--text)}.metric .pump{font-size:0}.metric .pump input{width:14px;height:14px}
+    /* 4. Schedule ribbon: an accent bar turns the time list into a sequence. */
+    .ribbon{padding-left:14px}.ribbon::before{content:"";position:absolute;top:26px;bottom:20px;left:16px;width:1px;background:var(--line)}.ribbon .row{display:grid;grid-template-columns:43px minmax(0,1fr) auto;gap:7px;align-items:center;min-height:36px;padding:3px 0}.ribbon .row::before{content:"";position:absolute;left:-11px;width:7px;height:7px;border:2px solid var(--surface);border-radius:50%;background:var(--accent)}.ribbon .late::before{background:var(--warn)}.ribbon .when{font-size:9px;text-align:right}.ribbon .identity{display:flex;gap:5px;align-items:baseline;min-width:0}.ribbon .pump{font-size:0}.ribbon .pump input{width:14px;height:14px}
+    /* 5. Minimal ledger: no container chrome, only hierarchy and dividers. */
+    .ledger .row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;min-height:37px;padding:4px 1px;border-bottom:1px solid var(--line)}.ledger .row:last-child{border-bottom:0}.ledger .identity{display:flex;gap:6px;align-items:baseline;min-width:0}.ledger .right{display:flex;gap:7px;align-items:center}.ledger .pump{font-size:0}.ledger .pump input{width:14px;height:14px}.ledger .meta{margin-top:1px}
+    @media(max-width:1250px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:760px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:480px){header{align-items:flex-start}.grid{grid-template-columns:1fr}.command .pump{display:inline-flex}.command .action{display:flex;gap:6px;align-items:center}.command .details{display:block}.timeFirst .pump,.metric .pump,.ribbon .pump,.ledger .pump{font-size:8px}.timeFirst .pump input,.metric .pump input,.ribbon .pump input,.ledger .pump input{width:13px;height:13px}}
+  </style>
+</head>
+<body>
+  <header><div><h1>Timeline density study</h1><p>Five app-native alternatives. Each production row is one or two lines tall.</p></div><button class="theme" id="theme" type="button">Preview light</button></header>
+  <main><p class="intro">All treatments preserve hopper, resin, time-to-empty/start-by priority, feed rate, remaining weight, late state, and the Pump off control. Select a favorite to compare the hierarchy.</p><section class="grid" id="grid"></section></main>
+  <script>
+    const rows=[
+      {hopper:"C3",resin:"MS5001",weight:"95.0 lb",rate:"76.9 lb/hr",empty:"Empty 1h 14m",start:"1:40 AM",cls:""},
+      {hopper:"A1",resin:"MS1200",weight:"95.0 lb",rate:"130.8 lb/hr",empty:"Empty 44m",start:"2:11 AM",cls:""},
+      {hopper:"B2",resin:"MS0200",weight:"95.0 lb",rate:"188.8 lb/hr",empty:"Empty 30m",start:"2:24 AM",cls:"late"}
+    ];
+    const choices=[
+      {id:"command",name:"Command line",note:"One-line scan; status rail carries urgency.",tag:"Densest"},
+      {id:"timeFirst",name:"Time first",note:"Start-by time forms a clear, fixed rhythm."},
+      {id:"metric",name:"Segmented metric",note:"Hopper tile anchors an efficient two-line read."},
+      {id:"ribbon",name:"Schedule ribbon",note:"A subtle spine reinforces chronological order.",tag:"Recommended"},
+      {id:"ledger",name:"Minimal ledger",note:"Quiet dividers remove nearly all card chrome."}
+    ];
+    const pump=r=>`<label class="pump"><input type="checkbox" ${r.cls==="done"?"checked":""}>Pump off</label>`;
+    function row(r,kind){
+      if(kind==="command")return `<div class="row ${r.cls}"><span class="signal"></span><b class="hopper">${r.hopper}</b><div class="name"><span class="resin">${r.resin}</span><span class="meta">${r.rate} · ${r.weight}</span></div><div class="action"><span class="time">${r.empty}</span>${pump(r)}</div><span class="details meta">Start ${r.start}</span></div>`;
+      if(kind==="timeFirst")return `<div class="row ${r.cls}"><div class="when"><small>START</small><span class="time">${r.start}</span></div><div><div class="identity"><b class="hopper">${r.hopper}</b><span class="resin">${r.resin}</span></div><div class="meta">${r.empty} · ${r.rate} · ${r.weight}</div></div>${pump(r)}</div>`;
+      if(kind==="metric")return `<div class="row ${r.cls}"><b class="hopper">${r.hopper}</b><div class="main"><div class="top"><span class="resin">${r.resin}</span><span class="time">${r.empty}</span></div><div class="meta">Start ${r.start} · ${r.rate} · ${r.weight}</div></div>${pump(r)}</div>`;
+      if(kind==="ribbon")return `<div class="row ${r.cls}"><span class="when time">${r.start}</span><div><div class="identity"><b class="hopper">${r.hopper}</b><span class="resin">${r.resin}</span></div><div class="meta">${r.empty} · ${r.rate} · ${r.weight}</div></div>${pump(r)}</div>`;
+      return `<div class="row ${r.cls}"><div><div class="identity"><b class="hopper">${r.hopper}</b><span class="resin">${r.resin}</span></div><div class="meta">${r.rate} · ${r.weight} · Start ${r.start}</div></div><div class="right"><span class="time">${r.empty}</span>${pump(r)}</div></div>`;
+    }
+    const grid=document.getElementById("grid");choices.forEach((item,index)=>{const el=document.createElement("article");el.className=`study ${item.id}${item.tag?" selected":""}`;el.dataset.id=item.id;el.innerHTML=`<div class="head"><label><input type="radio" name="choice" ${item.tag?"checked":""}><span><strong>${index+1}. ${item.name}</strong><small>${item.note}</small></span></label>${item.tag?`<span class="tag">${item.tag}</span>`:""}</div><div class="preview ${item.id}"><div class="timelineTitle"><strong>Timeline</strong><span>Next pump-off</span></div>${rows.map(r=>row(r,item.id)).join("")}</div>`;grid.append(el)});
+    grid.addEventListener("change",event=>{if(event.target.matches(".pump input"))event.target.closest(".row").classList.toggle("done",event.target.checked);if(event.target.matches('input[name="choice"]'))document.querySelectorAll(".study").forEach(card=>card.classList.toggle("selected",card.contains(event.target)))});
+    document.getElementById("theme").addEventListener("click",event=>{const light=document.documentElement.dataset.theme!=="light";document.documentElement.dataset.theme=light?"light":"dark";event.currentTarget.textContent=light?"Preview dark":"Preview light"});
+  </script>
+</body>
+</html>
