@@ -91,7 +91,14 @@ Deno.serve(async req => {
     const metrics = extractDatabaseHealth(payload, previousCpu);
     if (!metrics) return error(502, "metrics_response_malformed", origin);
     const snapshot = cpuSnapshot(payload);
-    const cpuCursor = snapshot ? await createCpuCursor(snapshot, projectRef, metricsSecret) : null;
+    // A manual refresh can land before Supabase publishes its next roughly
+    // one-minute sample. Keep the verified prior cursor when counters have not
+    // advanced, otherwise repeated clicks would continually reset the CPU
+    // comparison window and postpone the next usable percentage.
+    const unchangedCpu = !!(snapshot && previousCpu && snapshot.total <= previousCpu.total);
+    const cpuCursor = unchangedCpu && typeof requestedCursor === "string"
+      ? requestedCursor
+      : snapshot ? await createCpuCursor(snapshot, projectRef, metricsSecret) : null;
     return new Response(JSON.stringify({ ok: true, cpuPercent: metrics.cpuPercent, connections: metrics.connections, memoryPercent: metrics.memoryPercent, sampledAt: new Date().toISOString(), cpuCursor }), { headers: cors(origin) });
   } catch (caught) {
     return error(502, caught instanceof DOMException && caught.name === "AbortError" ? "metrics_timeout" : "metrics_network_error", origin);

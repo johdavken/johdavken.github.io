@@ -64,8 +64,15 @@ test("CPU continuity uses a short-lived signed cursor instead of Edge memory or 
   assert.match(functionSource, /crypto\.subtle\.verify\("HMAC"/);
   assert.match(functionSource, /CPU_CURSOR_MAX_AGE_MS = 5 \* 60_000/);
   assert.match(functionSource, /readCpuCursor\(requestedCursor, projectRef, metricsSecret\)/);
-  assert.match(functionSource, /cpuCursor = snapshot \? await createCpuCursor/);
+  assert.match(functionSource, /snapshot \? await createCpuCursor\(snapshot, projectRef, metricsSecret\) : null/);
   assert.doesNotMatch(functionSource, /lastCpuByProject|\.from\("database_health/);
+});
+
+test("manual refresh keeps the CPU baseline and last reading when the upstream counter has not advanced", () => {
+  assert.match(functionSource, /snapshot\.total <= previousCpu\.total/);
+  assert.match(functionSource, /unchangedCpu && typeof requestedCursor === "string"/);
+  assert.match(ui, /samples\.at\(-1\)/);
+  assert.match(ui, /api\.status\(displayedCpu\)/);
 });
 
 test("upstream failures expose fixed diagnostics without logging credentials", () => {

@@ -11,8 +11,9 @@
   function render({ result, samples, lastSuccess }){
     const current = result?.ok ? result : lastSuccess;
     if (current){
-      $("databaseHealthCpu").textContent = Number.isFinite(current.cpuPercent) ? `${current.cpuPercent.toFixed(1)}%` : "Unavailable";
-      $("databaseHealthStatus").textContent = `Resin.Tools UI threshold: ${api.status(current.cpuPercent)}`;
+      const displayedCpu = Number.isFinite(current.cpuPercent) ? current.cpuPercent : samples.at(-1);
+      $("databaseHealthCpu").textContent = Number.isFinite(displayedCpu) ? `${displayedCpu.toFixed(1)}%` : "Unavailable";
+      $("databaseHealthStatus").textContent = `Resin.Tools UI threshold: ${api.status(displayedCpu)}`;
       $("databaseHealthConnections").textContent = current.connections ?? "Unavailable";
       $("databaseHealthMemory").textContent = Number.isFinite(current.memoryPercent) ? `${current.memoryPercent.toFixed(1)}%` : "Unavailable";
       $("databaseHealthUpdated").textContent = `Updated ${age(current.sampledAt)}`;
