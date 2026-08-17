@@ -649,6 +649,11 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .baseGlyph{dis
 @media (max-width: 760px){ .adminFieldGrid,.adminToolbar,.adminResinColumns{ grid-template-columns: 1fr; }.adminResinList{ max-height: 42vh; }.adminResinForm{ position:static; }.adminDialog{ width: 96vw; } }
 
 .workspaceRecoveryPanel{ display: grid; gap: 14px; }
+.databaseHealthPanel{ display:grid; gap:14px; max-width:620px; }
+.databaseHealthMetrics{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.databaseHealthMetrics > div{ display:grid; gap:4px; padding:10px 12px; border:1px solid var(--border); border-radius:var(--radius-row); background:var(--row-bg); }
+.databaseHealthMetrics span{ font-size:18px; color:var(--title); }
+.databaseHealthSparkline{ min-height:24px; letter-spacing:2px; color:var(--accent); font-size:20px; }
 .workspaceRecoveryDeviceCard{ display: grid; gap: 5px; border: 1px solid var(--border); border-radius: var(--radius-row); padding: 10px 12px; }
 .workspaceRecoveryDiagnostic summary{ cursor: pointer; }
 .workspaceRecoveryList{ display: grid; gap: 6px; max-height: min(50vh, 520px); overflow: auto; }
@@ -4828,16 +4833,18 @@ input.resinLookupValue.copied[readonly]{
    edge. Deliberately quiet - it is a reference link, not an operator
    action. */
 .helpPrivacy{
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
   align-items: baseline;
-  gap: 8px;
-  flex-wrap: wrap;
+  column-gap: 10px;
+  row-gap: 3px;
   width: 100%;
   max-width: var(--help-page);
   margin: 2px auto 0;
   padding-top: 10px;
   border-top: 1px solid var(--border);
 }
+.helpPrivacyLinks{ display: flex; align-items: baseline; gap: 8px; min-width: 0; flex-wrap: wrap; }
 .helpPrivacyLink{
   color: var(--focus-border);
   font-size: var(--font-small);
@@ -4845,7 +4852,15 @@ input.resinLookupValue.copied[readonly]{
 }
 .helpPrivacyLink:focus-visible{ outline: 2px solid var(--focus-border); outline-offset: 2px; }
 .helpPrivacySep{ color: var(--muted); font-size: var(--font-small); }
-.helpPrivacy small{ color: var(--muted); font-size: var(--font-tiny); }
+.helpAppVersion{
+  justify-self: end;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--font-tiny);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.helpPrivacyNote{ grid-column: 1 / -1; color: var(--muted); font-size: var(--font-tiny); }
 .helpTopics{
   display: grid;
   gap: 10px;

@@ -63,10 +63,12 @@
 <script src="resin-catalog-service.js?v=0.19.1" defer></script>
 <script src="resin-lookup.js?v=0.18.2" defer></script>
 <script src="resin-admin.js?v=0.20.3" defer></script>
+<script src="database-health.js?v=0.1.0" defer></script>
 <script src="bulk-density-measurement.js?v=0.1.0" defer></script>
 <script src="workspace-recovery.js?v=0.1.2" defer></script>
 <script src="app.js?v=0.18.153" defer></script>
 <script src="resin-admin-ui.js?v=0.20.3" defer></script>
+<script src="database-health-ui.js?v=0.1.1" defer></script>
 <script src="bulk-density-measurement-ui.js?v=0.1.0" defer></script>
 <script src="workspace-recovery-ui.js?v=0.1.2" defer></script>
 <script src="recipe-scan-ui.js?v=0.4.1" defer></script>
@@ -1549,10 +1551,13 @@
            the WebView away from the app. It is also why build-www.js skips
            it - its allowlist parser ignores anything with a scheme. -->
       <div class="helpPrivacy">
-        <a class="helpPrivacyLink" href="https://resin.tools/privacy" target="_blank" rel="noopener">Privacy Policy</a>
-        <span class="helpPrivacySep" aria-hidden="true">·</span>
-        <a class="helpPrivacyLink" href="https://resin.tools/privacy/delete-data/" target="_blank" rel="noopener">Delete Data</a>
-        <small>How Resin.Tools handles your data</small>
+        <div class="helpPrivacyLinks">
+          <a class="helpPrivacyLink" href="https://resin.tools/privacy" target="_blank" rel="noopener">Privacy Policy</a>
+          <span class="helpPrivacySep" aria-hidden="true">·</span>
+          <a class="helpPrivacyLink" href="https://resin.tools/privacy/delete-data/" target="_blank" rel="noopener">Delete Data</a>
+        </div>
+        <span class="helpAppVersion" aria-label="App version">v1.0.8</span>
+        <small class="helpPrivacyNote">How Resin.Tools handles your data</small>
       </div>
     </div>
   </details>
@@ -1617,6 +1622,22 @@
         </div>
         <details class="workspaceRecoveryDiagnostic mt10"><summary>Linked devices</summary><div class="tiny muted mt10">Disconnect immediately revokes this browser identity's RT Sync access. It takes effect when the device next reads or writes.</div><div id="workspaceRecoveryMembersList" class="workspaceRecoveryMembersList"></div></details>
       </div>
+    </div>
+  </details>
+
+  <details class="block card workspacePanel adminResinPanel" id="databaseHealthBlock">
+    <summary>
+      <div class="sumLeft"><div class="chev"><span class="chevRing"></span><span class="chevSatellite"></span><span class="chevCore"></span></div><div class="summaryText"><div class="layerTitle">Database Health</div><div class="layerMeta">Current Supabase database activity</div></div></div>
+    </summary>
+    <div class="blockBody databaseHealthPanel">
+      <div class="adminToolbar"><div><div class="layerTitle">CPU <span id="databaseHealthCpu">—</span></div><div id="databaseHealthStatus" class="tiny muted">Loading when opened</div></div><button id="databaseHealthRefresh" type="button" class="secondary">Refresh</button></div>
+      <div class="databaseHealthMetrics">
+        <div><strong>Connections</strong><span id="databaseHealthConnections">—</span></div>
+        <div><strong>Memory</strong><span id="databaseHealthMemory">—</span></div>
+      </div>
+      <div id="databaseHealthSparkline" class="databaseHealthSparkline" aria-label="Recent CPU samples" role="img"></div>
+      <div id="databaseHealthUpdated" class="tiny muted" role="status">No successful update yet.</div>
+      <p class="tiny muted">Resin.Tools UI thresholds: Normal, Elevated, and High. High database activity can indicate excessive sync/retry traffic. Check sync diagnostics or Supabase logs if CPU rises unexpectedly.</p>
     </div>
   </details>
 
@@ -1784,6 +1805,7 @@
       <button id="adminLoginButton" type="button" role="menuitem" hidden><span>Admin Login</span></button>
       <button id="resinDatabaseButton" class="footerAdminDestination" type="button" role="menuitem" data-admin-only="true" data-workspace-target="resinAdminBlock" hidden><span>Resin Database</span></button>
       <button id="workspaceManagementButton" class="footerAdminDestination" type="button" role="menuitem" data-admin-only="true" data-workspace-target="workspaceManagementBlock" hidden><span>Workspace Management</span></button>
+      <button id="databaseHealthButton" class="footerAdminDestination" type="button" role="menuitem" data-admin-only="true" data-workspace-target="databaseHealthBlock" hidden><span>Database Health</span></button>
       <button id="adminSignOutButton" type="button" role="menuitem" hidden><span>Sign out</span></button>
     </dialog>
   </div>
