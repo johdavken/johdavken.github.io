@@ -52,11 +52,20 @@ test("client polling starts only for a visible panel, is limited to 60 seconds, 
 });
 
 test("UI invokes only through the existing authenticated admin client and stops when access is removed", () => {
-  assert.match(ui, /admin\.getClient\(\)\.functions\.invoke\("database-health"\)/);
+  assert.match(ui, /functions\.invoke\("database-health", \{ body:\{ cpuCursor \} \}\)/);
   assert.match(ui, /if \(!admin\?\.getState\(\)\.isAdmin\) return/);
   assert.match(ui, /health\.stop\(\)/);
   assert.match(ui, /Database metrics unavailable/);
   assert.match(ui, /response\.error\.context\?\.clone\?\.\(\)\.json\(\)/);
+});
+
+test("CPU continuity uses a short-lived signed cursor instead of Edge memory or database persistence", () => {
+  assert.match(functionSource, /crypto\.subtle\.sign\("HMAC"/);
+  assert.match(functionSource, /crypto\.subtle\.verify\("HMAC"/);
+  assert.match(functionSource, /CPU_CURSOR_MAX_AGE_MS = 5 \* 60_000/);
+  assert.match(functionSource, /readCpuCursor\(requestedCursor, projectRef, metricsSecret\)/);
+  assert.match(functionSource, /cpuCursor = snapshot \? await createCpuCursor/);
+  assert.doesNotMatch(functionSource, /lastCpuByProject|\.from\("database_health/);
 });
 
 test("upstream failures expose fixed diagnostics without logging credentials", () => {
