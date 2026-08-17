@@ -30,7 +30,7 @@
        layout change is required to install cleanly. -->
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
-  <link rel="stylesheet" href="styles.css?v=0.61.1">
+  <link rel="stylesheet" href="styles.css?v=0.61.3">
   <link rel="stylesheet" href="theme.css?v=0.18.0">
   <link rel="stylesheet" href="desktop.css?v=0.1.3">
 <script src="validation.js?v=0.19" defer></script>
@@ -994,12 +994,12 @@
 
         <div class="bulkDensityMeasurementWorkspace mt10">
           <div class="bulkDensityMeasurementIntro">
-            <div><span class="setupControlLabel">Water calibration</span><strong class="mono">32.0 lb net</strong></div>
-            <p>Fill the same dry container to the same level used for the water calibration. Enter resin weight after subtracting the bucket.</p>
+            <label for="bulkDensityWaterCalibration">Water calibration (lb net)<span class="bulkDensityInputWithUnit"><input id="bulkDensityWaterCalibration" type="text" inputmode="decimal" autocomplete="off" aria-describedby="bulkDensityCalibrationHint"><span>lb net</span></span></label>
+            <div><p>Enter the net water weight for your calibration mark, then fill the same dry container to that mark with resin.</p><small id="bulkDensityCalibrationHint">Use the same dry container and fill level for water and resin.</small></div>
           </div>
 
           <div class="bulkDensityMeasurementForm">
-            <section class="bulkDensityMeasureSection" aria-labelledby="bulkDensityResinHeading">
+            <section class="bulkDensityMeasureSection bulkDensityResinSection" aria-labelledby="bulkDensityResinHeading">
               <div class="bulkDensitySectionHead"><span class="setupControlLabel">Resin</span><strong id="bulkDensityResinHeading">Select an existing record to enable saving</strong></div>
               <div class="bulkDensityResinSearch">
                 <label for="bulkDensityResinSearch">Search active resins</label>
@@ -1008,7 +1008,7 @@
               </div>
               <div id="bulkDensitySelectedResin" class="bulkDensitySelectedResin" hidden>
                 <div><strong id="bulkDensitySelectedCode"></strong></div>
-                <div><small>Current bulk density</small><strong id="bulkDensityCurrentValue" class="mono">Not set</strong></div>
+                <small>Selected resin record</small>
               </div>
             </section>
 
@@ -1016,16 +1016,15 @@
               <div class="bulkDensitySectionHead"><span class="setupControlLabel">Measurement</span><strong id="bulkDensityMeasurementHeading">Same calibrated container and fill level</strong></div>
               <div class="bulkDensityInputGrid">
                 <label for="bulkDensityPolymerDensity">Polymer density<span class="bulkDensityInputWithUnit"><input id="bulkDensityPolymerDensity" type="text" inputmode="decimal" placeholder="Optional"><span>g/cm³</span></span></label>
-                <label for="bulkDensityResinWeight">Measured resin weight<span class="bulkDensityInputWithUnit"><input id="bulkDensityResinWeight" type="text" inputmode="decimal" placeholder="Net weight" aria-describedby="bulkDensityWeightHint"><span>lb net</span></span></label>
+                <label for="bulkDensityResinWeight">Resin net weight<span class="bulkDensityInputWithUnit"><input id="bulkDensityResinWeight" type="text" inputmode="decimal" placeholder="Net weight" aria-describedby="bulkDensityWeightHint"><span>lb net</span></span></label>
               </div>
-              <p id="bulkDensityWeightHint" class="tiny muted">Measured resin weight must exclude the bucket. Polymer density is used only to calculate packing factor.</p>
+              <p id="bulkDensityWeightHint" class="tiny muted">Enter resin weight after subtracting the container. Polymer density is only used to calculate packing factor.</p>
             </section>
 
             <section class="bulkDensityResultSurface" aria-labelledby="bulkDensityResultsHeading" aria-live="polite">
-              <div class="bulkDensitySectionHead"><span class="setupControlLabel">Result</span><strong id="bulkDensityResultsHeading">Direct measurement from the water/resin weight ratio</strong></div>
+              <div class="bulkDensitySectionHead"><span class="setupControlLabel">Result</span><strong id="bulkDensityResultsHeading">Bulk density</strong></div>
               <div class="bulkDensityPrimaryResult"><strong id="bulkDensityResultLbFt3" class="mono">—</strong><span>lb/ft³</span></div>
               <div class="bulkDensitySecondaryResults">
-                <div><span>Bulk density</span><strong id="bulkDensityResultGCm3" class="mono">— g/cm³</strong></div>
                 <div><span>Packing factor</span><strong id="bulkDensityPackingFactor" class="mono">—</strong></div>
               </div>
               <div id="bulkDensityWarnings" class="bulkDensityWarnings" role="status"></div>

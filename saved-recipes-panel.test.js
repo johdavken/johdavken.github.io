@@ -271,3 +271,10 @@ test("the action bar has its own CSS - a wrapping flex row, not the default bloc
   assert.match(rule, /display:\s*flex/);
   assert.match(rule, /flex-wrap:\s*wrap/);
 });
+
+test("the compact Saved Recipes header actions retain concrete left padding, so Load's short label clears its accent rail", () => {
+  const ruleStart = styles.indexOf(".splitsSavedRecipesPanel .workspaceConfigurationSectionTitle > .splitsSavedRecipesActions > :is(button.secondary,button.primary){");
+  assert.notEqual(ruleStart, -1, "expected a Saved Recipes header-action padding override");
+  const rule = styles.slice(ruleStart, styles.indexOf("}", ruleStart) + 1);
+  assert.match(rule, /padding:4px 9px;/);
+});

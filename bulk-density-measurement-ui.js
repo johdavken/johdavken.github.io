@@ -36,7 +36,6 @@
     card.hidden = !selectedResin;
     if (!selectedResin) return;
     $("bulkDensitySelectedCode").textContent = selectedResin.resin_code;
-    $("bulkDensityCurrentValue").textContent = formatBulkDensity(selectedResin.bulk_density_lb_ft3);
   }
 
   function clearSelectedResin(){
@@ -78,33 +77,53 @@
   }
 
   function updateMeasurement(){
+    const calibrationInput = $("bulkDensityWaterCalibration");
     const weightInput = $("bulkDensityResinWeight");
     const polymerInput = $("bulkDensityPolymerDensity");
     const primary = $("bulkDensityResultLbFt3");
-    const secondary = $("bulkDensityResultGCm3");
     const packing = $("bulkDensityPackingFactor");
     const warnings = $("bulkDensityWarnings");
     const save = $("bulkDensitySaveButton");
     const hint = $("bulkDensitySaveHint");
-    if (!weightInput || !polymerInput || !primary || !secondary || !packing || !warnings || !save || !hint) return;
+    if (!calibrationInput || !weightInput || !polymerInput || !primary || !packing || !warnings || !save || !hint) return;
 
+    calibrationInput.setCustomValidity("");
     weightInput.setCustomValidity("");
     polymerInput.setCustomValidity("");
+    calibrationInput.setAttribute("aria-invalid", "false");
     weightInput.setAttribute("aria-invalid", "false");
     polymerInput.setAttribute("aria-invalid", "false");
+
+    const calibrationMissing = !calibrationInput.value.trim();
+    const weightMissing = !weightInput.value.trim();
+    if (calibrationMissing || weightMissing){
+      currentMeasurement = null;
+      primary.textContent = "—";
+      packing.textContent = "—";
+      warnings.textContent = "";
+      save.disabled = true;
+      if (!authorized) hint.textContent = "Administrator access is required.";
+      else if (!selectedResin) hint.textContent = "Select an existing record to enable saving.";
+      else hint.textContent = "Enter water calibration and resin net weight to calculate bulk density.";
+      return;
+    }
+
     currentMeasurement = measurement.calculate({
+      waterCalibrationLb:calibrationInput.value,
       resinWeightLb:weightInput.value,
       polymerDensityGCm3:polymerInput.value
     });
 
     if (!currentMeasurement.valid){
       primary.textContent = "—";
-      secondary.textContent = "— g/cm³";
       packing.textContent = "—";
       const message = currentMeasurement.errors[0] || "Enter a valid measurement.";
-      const hasInput = !!(weightInput.value.trim() || polymerInput.value.trim());
+      const hasInput = !!(calibrationInput.value.trim() || weightInput.value.trim() || polymerInput.value.trim());
       warnings.textContent = hasInput ? message : "";
-      if (hasInput && /resin weight/i.test(message)){
+      if (hasInput && /water calibration/i.test(message)){
+        calibrationInput.setCustomValidity(message);
+        calibrationInput.setAttribute("aria-invalid", "true");
+      }else if (hasInput && /resin net weight/i.test(message)){
         weightInput.setCustomValidity(message);
         weightInput.setAttribute("aria-invalid", "true");
       }else if (hasInput){
@@ -113,8 +132,7 @@
       }
     }else{
       primary.textContent = currentMeasurement.bulkDensityLbFt3.toFixed(1);
-      secondary.textContent = `${currentMeasurement.bulkDensityGCm3.toFixed(3)} g/cm³`;
-      packing.textContent = currentMeasurement.packingFactor === null ? "Not available" : currentMeasurement.packingFactor.toFixed(3);
+      packing.textContent = currentMeasurement.packingFactor === null ? "Unknown" : currentMeasurement.packingFactor.toFixed(3);
       warnings.textContent = currentMeasurement.warnings.join(" ");
     }
 
@@ -122,8 +140,8 @@
       && currentMeasurement.valid && currentMeasurement.databaseAllowed;
     save.disabled = !savable;
     if (!authorized) hint.textContent = "Administrator access is required.";
-    else if (!selectedResin) hint.textContent = "Select an active resin to enable saving.";
-    else if (!currentMeasurement.valid) hint.textContent = "Enter a valid net resin weight.";
+    else if (!selectedResin) hint.textContent = "Select an existing record to enable saving.";
+    else if (!currentMeasurement.valid) hint.textContent = "Enter valid water calibration and resin net weight.";
     else if (!currentMeasurement.databaseAllowed) hint.textContent = "This result is outside the database’s allowed range.";
     else hint.textContent = `Ready to update ${selectedResin.resin_code}.`;
   }
@@ -192,6 +210,8 @@
   renderAccess(admin.getState());
   catalog.subscribe(() => loadResins());
   loadResins();
+  const waterCalibrationInput = $("bulkDensityWaterCalibration");
+  if (waterCalibrationInput) waterCalibrationInput.value = measurement.readStoredWaterCalibration(root.localStorage);
   $("bulkDensityResinSearch")?.addEventListener("focus", renderSuggestions);
   $("bulkDensityResinSearch")?.addEventListener("input", event => {
     if (selectedResin && event.target.value.trim().toLocaleLowerCase() !== selectedResin.resin_code.toLocaleLowerCase()) clearSelectedResin();
@@ -209,6 +229,10 @@
   });
   $("bulkDensityPolymerDensity")?.addEventListener("input", updateMeasurement);
   $("bulkDensityResinWeight")?.addEventListener("input", updateMeasurement);
+  $("bulkDensityWaterCalibration")?.addEventListener("input", event => {
+    measurement.persistWaterCalibration(event.target.value, root.localStorage);
+    updateMeasurement();
+  });
   $("bulkDensitySaveButton")?.addEventListener("click", openSaveConfirmation);
   $("bulkDensityConfirmSave")?.addEventListener("click", () => void confirmSave());
 })(typeof globalThis !== "undefined" ? globalThis : this);

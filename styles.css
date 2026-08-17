@@ -660,10 +660,13 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .baseGlyph{dis
 
 .bulkDensityMeasurementWorkspace{display:grid;gap:12px;max-width:960px}
 .bulkDensityMeasurementIntro{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--control-radius);background:var(--readonly-bg)}
-.bulkDensityMeasurementIntro > div{display:grid;gap:2px;min-width:148px}
+.bulkDensityMeasurementIntro > label{display:grid;gap:5px;min-width:176px;color:var(--muted);font-size:11px;font-weight:800}
+.bulkDensityMeasurementIntro > div{display:grid;gap:3px;min-width:0}
 .bulkDensityMeasurementIntro p{margin:0;color:var(--muted);line-height:1.4}
+.bulkDensityMeasurementIntro small{color:var(--muted);font-size:10px;line-height:1.35}
 .bulkDensityMeasurementForm{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .bulkDensityMeasureSection,.bulkDensityResultSurface{display:grid;align-content:start;gap:10px;min-width:0;padding:12px;border:1px solid var(--border);border-radius:var(--control-radius);background:var(--row-bg)}
+.bulkDensityResinSection{gap:8px;padding-block:10px}
 .bulkDensityResultSurface{grid-column:1 / -1;grid-template-columns:minmax(0,1fr) auto;align-items:center;background:var(--readonly-bg)}
 .bulkDensityResultSurface .bulkDensitySectionHead{grid-column:1 / -1}
 .bulkDensitySectionHead{display:grid;gap:2px;min-width:0}
@@ -674,9 +677,9 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .baseGlyph{dis
 .bulkDensityResinSuggestions[hidden]{display:none!important}
 .bulkDensityResinOption{display:grid;width:100%;min-height:40px;padding:7px 9px;border:0;border-radius:calc(var(--control-radius) - 2px);background:transparent;color:var(--text);text-align:left;box-shadow:none}
 .bulkDensityResinOption:hover,.bulkDensityResinOption:focus-visible{background:var(--focus-ring);outline:2px solid var(--focus-border);outline-offset:-2px}
-.bulkDensitySelectedResin{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:10px;padding:9px 10px;border-left:3px solid var(--focus-border);background:var(--readonly-bg)}
+.bulkDensitySelectedResin{display:flex;align-items:baseline;gap:8px;padding:7px 10px;border-left:3px solid var(--focus-border);background:var(--readonly-bg)}
 .bulkDensitySelectedResin[hidden]{display:none!important}
-.bulkDensitySelectedResin > div{display:grid;gap:2px;min-width:0}
+.bulkDensitySelectedResin > div{min-width:0}
 .bulkDensitySelectedResin small{overflow:hidden;color:var(--muted);font-size:10px;text-overflow:ellipsis;white-space:nowrap}
 .bulkDensityInputGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
 .bulkDensityInputWithUnit{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:7px}
@@ -684,7 +687,7 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .baseGlyph{dis
 .bulkDensityPrimaryResult{display:flex;align-items:baseline;gap:6px;color:var(--title)}
 .bulkDensityPrimaryResult strong{font-size:clamp(28px,4vw,42px);line-height:1}
 .bulkDensityPrimaryResult span{color:var(--muted);font-size:12px;font-weight:850}
-.bulkDensitySecondaryResults{display:grid;grid-template-columns:repeat(2,minmax(130px,1fr));gap:8px}
+.bulkDensitySecondaryResults{display:grid;min-width:138px;gap:8px}
 .bulkDensitySecondaryResults > div{display:grid;gap:2px;padding:7px 9px;border-left:1px solid var(--border)}
 .bulkDensitySecondaryResults span{color:var(--muted);font-size:10px}
 .bulkDensityWarnings{grid-column:1 / -1;min-height:0;color:var(--warn);font-size:11px;font-weight:750;line-height:1.4}
@@ -698,10 +701,10 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .baseGlyph{dis
 @media (max-width:760px){
   .bulkDensityMeasurementWorkspace{gap:10px}
   .bulkDensityMeasurementIntro,.bulkDensityMeasurementForm,.bulkDensityResultSurface,.bulkDensitySaveBar{grid-template-columns:1fr}
-  .bulkDensityMeasurementIntro > div{min-width:0}
+  .bulkDensityMeasurementIntro > label{min-width:0}
   .bulkDensityResultSurface{align-items:start}
   .bulkDensityInputGrid{grid-template-columns:1fr}
-  .bulkDensitySecondaryResults{grid-template-columns:repeat(2,minmax(0,1fr));width:100%}
+  .bulkDensitySecondaryResults{width:100%}
   .bulkDensitySecondaryResults > div{padding-left:0;border-left:0;border-top:1px solid var(--border);padding-top:7px}
   .bulkDensitySaveBar button{width:100%}
 }
@@ -2519,7 +2522,11 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
   /* The Recipe utility panels are intentionally denser than Line Setup,
      but long secondary labels such as “Save Current Recipe” need a little
      more room than the global compact treatment provides. */
-  .splitsSavedRecipesPanel :is(button.secondary,button.primary){
+  /* The panel scales its shared density tokens locally. The global compact
+     primary rule is declared later, so pin these header actions to concrete
+     padding rather than letting an unresolved local token collapse Load's
+     short label underneath its left accent rail. */
+  .splitsSavedRecipesPanel .workspaceConfigurationSectionTitle > .splitsSavedRecipesActions > :is(button.secondary,button.primary){
     min-height:30px;
     padding:4px 9px;
   }

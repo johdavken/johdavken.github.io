@@ -24,15 +24,22 @@ test("the calculator itself carries no admin gate - it's wired up unconditionall
   assert.match(ui, /^\s*loadResins\(\);/m);
 });
 
-test("measurement UI provides calibration, searchable active resins, compact inputs, and explicit results", () => {
-  assert.match(html, /Water calibration[\s\S]+32\.0 lb net/);
+test("measurement UI provides persisted calibration, searchable active resins, compact inputs, and explicit results", () => {
+  assert.match(html, /Water calibration \(lb net\)[\s\S]+id="bulkDensityWaterCalibration"/);
+  assert.match(html, /Use the same dry container and fill level for water and resin\./);
+  assert.match(html, /Enter the net water weight for your calibration mark/);
   assert.match(html, /id="bulkDensityResinSearch"[^>]+role="combobox"/);
   assert.match(html, /id="bulkDensityPolymerDensity"/);
   assert.match(html, /id="bulkDensityResinWeight"/);
+  assert.match(html, /Resin net weight/);
   assert.match(html, /id="bulkDensityResultLbFt3"/);
-  assert.match(html, /id="bulkDensityResultGCm3"/);
   assert.match(html, /id="bulkDensityPackingFactor"/);
+  assert.doesNotMatch(html, /id="bulkDensityResultGCm3"/);
   assert.match(css, /\.bulkDensityMeasurementForm\{display:grid/);
+  assert.match(css, /\.bulkDensityInputGrid\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(css, /@media \(max-width:760px\)[\s\S]+\.bulkDensityInputGrid\{grid-template-columns:1fr\}/);
+  assert.match(ui, /measurement\.readStoredWaterCalibration\(root\.localStorage\)/);
+  assert.match(ui, /measurement\.persistWaterCalibration\(event\.target\.value, root\.localStorage\)/);
 });
 
 test("resin search reads the shared operator-facing resin catalog service, not the admin-only listing RPC", () => {
@@ -49,6 +56,23 @@ test("selection autofills without writing and save requires a valid selected act
   assert.doesNotMatch(selectBody, /updateBulkDensity|saveResin/);
   assert.match(ui, /authorized && !!selectedResin\?\.id && selectedResin\.is_active === true/);
   assert.match(ui, /currentMeasurement\.valid && currentMeasurement\.databaseAllowed/);
+});
+
+test("save remains disabled until a selected resin has a valid calibration and net-weight result", () => {
+  const updateStart = ui.indexOf("function updateMeasurement()");
+  const updateBody = ui.slice(updateStart, ui.indexOf("function loadResins", updateStart));
+  assert.match(updateBody, /const calibrationMissing = !calibrationInput\.value\.trim\(\)/);
+  assert.match(updateBody, /const weightMissing = !weightInput\.value\.trim\(\)/);
+  assert.match(updateBody, /if \(calibrationMissing \|\| weightMissing\)[\s\S]+save\.disabled = true;/);
+  assert.match(updateBody, /const savable = authorized && !!selectedResin\?\.id && selectedResin\.is_active === true[\s\S]+currentMeasurement\.valid && currentMeasurement\.databaseAllowed;/);
+  assert.match(updateBody, /Select an existing record to enable saving\./);
+});
+
+test("a missing required weight remains a neutral result state and polymer density is optional", () => {
+  const updateStart = ui.indexOf("function updateMeasurement()");
+  const updateBody = ui.slice(updateStart, ui.indexOf("function loadResins", updateStart));
+  assert.match(updateBody, /if \(calibrationMissing \|\| weightMissing\)[\s\S]+primary\.textContent = "—";[\s\S]+warnings\.textContent = "";/);
+  assert.match(updateBody, /currentMeasurement\.packingFactor === null \? "Unknown"/);
 });
 
 test("save confirmation is field-scoped and concurrency protected", () => {
