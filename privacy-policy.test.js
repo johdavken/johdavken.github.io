@@ -11,6 +11,7 @@ const html = fs.readFileSync("index.html", "utf8");
 const styles = fs.readFileSync("styles.css", "utf8");
 const theme = fs.readFileSync("theme.css", "utf8");
 const cloudSync = fs.readFileSync("cloud-sync.js", "utf8");
+const androidBuild = fs.readFileSync("android/app/build.gradle", "utf8");
 
 /* -----------------------------------------------------------------------
  *   The document itself
@@ -336,7 +337,7 @@ test("Help carries a Privacy Policy link, inside the guide body rather than buri
   const guide = html.slice(guideStart, guideEnd);
   const start = guide.indexOf('<div class="helpPrivacy">');
   assert.notEqual(start, -1, "expected a helpPrivacy block in the Help guide body");
-  const block = guide.slice(start, guide.indexOf("</div>", start));
+  const block = guide.slice(start, guide.indexOf("\n      </div>", start));
   assert.match(block, /href="https:\/\/resin\.tools\/privacy"/);
   assert.match(block, />Privacy Policy</);
   // The deletion route sits beside it as a second plain link, not a button
@@ -350,6 +351,11 @@ test("Help carries a Privacy Policy link, inside the guide body rather than buri
   // rather than navigating the WebView off the app.
   assert.equal((block.match(/target="_blank"/g) || []).length, 2);
   assert.equal((block.match(/rel="noopener"/g) || []).length, 2);
+  const version = androidBuild.match(/versionName "([^"]+)"/);
+  assert.ok(version, "expected Android's release versionName");
+  assert.match(block, new RegExp(`class="helpAppVersion"[^>]*>v${version[1]}<`));
+  assert.match(styles, /\.helpPrivacy\{[\s\S]*?grid-template-columns: minmax\(0,1fr\) auto/);
+  assert.match(styles, /\.helpAppVersion\{[\s\S]*?justify-self: end/);
 });
 
 test("the Help link renders at every width - it is not gated behind a mobile-only or desktop-only rule", () => {

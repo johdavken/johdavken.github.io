@@ -5,6 +5,7 @@ const health = require("./database-health.js");
 const functionSource = fs.readFileSync("supabase/functions/database-health/index.ts", "utf8");
 const parserSource = fs.readFileSync("supabase/functions/database-health/metrics.ts", "utf8");
 const ui = fs.readFileSync("database-health-ui.js", "utf8");
+const desktop = fs.readFileSync("desktop.css", "utf8");
 
 test("health endpoint retains JWT authentication and checks the existing admin_users source of truth", () => {
   assert.match(functionSource, /auth\.getUser\(\)/);
@@ -73,6 +74,15 @@ test("manual refresh keeps the CPU baseline and last reading when the upstream c
   assert.match(functionSource, /unchangedCpu && typeof requestedCursor === "string"/);
   assert.match(ui, /samples\.at\(-1\)/);
   assert.match(ui, /api\.status\(displayedCpu\)/);
+});
+
+test("desktop health readout stays compact while mobile retains the shared card layout", () => {
+  assert.match(desktop, /#databaseHealthBlock > \.databaseHealthPanel\{/);
+  assert.match(desktop, /width:min\(100%,720px\)/);
+  assert.match(desktop, /height:auto/);
+  assert.match(desktop, /align-content:start/);
+  assert.match(fs.readFileSync("index.html", "utf8"), /styles\.css\?v=0\.61\.4/);
+  assert.match(fs.readFileSync("index.html", "utf8"), /desktop\.css\?v=0\.1\.4/);
 });
 
 test("upstream failures expose fixed diagnostics without logging credentials", () => {

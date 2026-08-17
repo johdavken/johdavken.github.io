@@ -691,6 +691,17 @@
   #resinCalcResults{min-height:0;overflow:auto}
   #helpBlock > .blockBody{overflow:auto}
   #resinAdminBlock > .blockBody,#workspaceManagementBlock > .blockBody{overflow:auto}
+  /* Admin health is a compact readout, not a full-height workspace canvas.
+     Pin its grid tracks to content so the generic desktop block-body height
+     cannot distribute five small rows across the viewport. */
+  #databaseHealthBlock > .databaseHealthPanel{
+    flex:0 0 auto;
+    width:min(100%,720px);
+    height:auto;
+    align-content:start;
+    grid-auto-rows:max-content;
+    overflow:visible;
+  }
 }
 
 @media (min-width:901px) and (max-width:1180px) and (pointer: fine){
