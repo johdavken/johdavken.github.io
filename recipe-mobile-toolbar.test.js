@@ -16,8 +16,8 @@ function recipeEditor(){
 }
 
 /* ============================================================
- *   Two intentional mobile tiers, replacing the old fixed 4-column
- *   grid that clipped Load Next Recipe once a plan existed.
+ *   One deliberate mobile action bar, replacing the old fixed 4-column
+ *   grid and a separate More row.
  * ============================================================ */
 
 test("desktop's own tab strip and action row only exist when not on the compact mobile layout", () => {
@@ -26,7 +26,7 @@ test("desktop's own tab strip and action row only exist when not on the compact 
   assert.match(editor, /if \(!compactMobileRecipe\)\{\s*\n\s*area\.append\(modeBar\);\s*\n\s*\}/);
 });
 
-test("the two mobile rows are built by moving the same real buttons, not rebuilding them - handlers stay exactly as wired", () => {
+test("the mobile action row is built by moving the same real buttons, not rebuilding them - handlers stay exactly as wired", () => {
   const editor = recipeEditor();
   assert.match(editor, /mobilePrimaryRow\.append\(savedRecipesButton, modeButton, rearrangeButton\);/);
   assert.doesNotMatch(editor, /document\.createElement\("button"\)[\s\S]{0,80}"Bulk edit"[\s\S]{0,80}mobilePrimaryRow/);
@@ -54,7 +54,7 @@ test("Current's primary row is Recipes, Bulk edit, Rearrange, Load Next - only w
 test("Next's primary row is Recipes, Bulk edit, Rearrange, Scan Recipe - promoted out of desktop-only", () => {
   const editor = recipeEditor();
   const block = mobileVsDesktopBlock(editor);
-  const nextBranch = block.slice(block.indexOf("}else{"), block.indexOf("mobileSecondaryRow = document.createElement"));
+  const nextBranch = block.slice(block.indexOf("}else{"), block.indexOf("mobilePrimaryRow.append(mobileMoreButton)"));
   assert.match(nextBranch, /scanRecipeButton\.classList\.remove\("rearrangeDesktopOnly", "recipeScanHideDesktop"\);/);
   assert.match(nextBranch, /mobilePrimaryRow\.append\(scanRecipeButton\);/);
 });
@@ -62,7 +62,7 @@ test("Next's primary row is Recipes, Bulk edit, Rearrange, Scan Recipe - promote
 test("desktop's own branch turns Saved recipes/Bulk edit/Rearrange into a role=tablist of role=tab buttons, controlled by aria-controls pointing at their real panel ids", () => {
   const editor = recipeEditor();
   const block = mobileVsDesktopBlock(editor);
-  const desktopBranch = block.slice(block.indexOf("}else{", block.indexOf("mobileSecondaryRow = document.createElement")));
+  const desktopBranch = block.slice(block.indexOf("}else{", block.indexOf("mobilePrimaryRow.append(mobileMoreButton)")));
   assert.match(desktopBranch, /recipeUtilityTabs\.setAttribute\("role", "tablist"\);/);
   assert.match(desktopBranch, /savedRecipesButton\.setAttribute\("role", "tab"\);/);
   assert.match(desktopBranch, /savedRecipesButton\.setAttribute\("aria-controls", savedRecipesPanel\.id\);/);
@@ -94,21 +94,17 @@ test("primary-row items share equal width and never wrap - however many of them 
   assert.match(styles, /\.splitsMobilePrimaryRow > \*\{ flex:1 1 0; min-width:0; \}/);
 });
 
-test("no overflow:hidden on either mobile row - it would clip the Scan Recipe and More menu popups, which must escape the row's own bounds", () => {
+test("no overflow:hidden on the mobile action row - it would clip the Scan Recipe and More menu popups, which must escape the row's own bounds", () => {
   const strip = block => block.replace(/\/\*[\s\S]*?\*\//g, "");
   const primary = strip(styles.slice(styles.indexOf(".splitsMobilePrimaryRow{"), styles.indexOf(".splitsMobilePrimaryRow > *{")));
-  const secondary = strip(styles.slice(styles.indexOf(".splitsMobileSecondaryRow{"), styles.indexOf(".splitsMobileSecondaryRow .mobileRecipeMore{")));
   assert.doesNotMatch(primary, /overflow:hidden/);
-  assert.doesNotMatch(secondary, /overflow:hidden/);
 });
 
-test("the two rows are one joined surface - primary suppresses its own bottom border, secondary provides the single seam line", () => {
+test("More joins the primary action row, which remains one compact outlined surface", () => {
   const primary = styles.slice(styles.indexOf(".splitsMobilePrimaryRow{"), styles.indexOf("}", styles.indexOf(".splitsMobilePrimaryRow{")));
-  assert.match(primary, /border-bottom:0;/);
-  assert.match(primary, /border-radius:var\(--control-radius\) var\(--control-radius\) 0 0;/);
-  const secondary = styles.slice(styles.indexOf(".splitsMobileSecondaryRow{"), styles.indexOf("}", styles.indexOf(".splitsMobileSecondaryRow{")));
-  assert.doesNotMatch(secondary, /border-top:0/);
-  assert.match(secondary, /border-radius:0 0 var\(--control-radius\) var\(--control-radius\);/);
+  assert.match(primary, /border:1px solid var\(--row-border-2\);/);
+  assert.match(primary, /border-radius:var\(--control-radius\);/);
+  assert.match(app, /mobilePrimaryRow\.append\(mobileMoreButton\);/);
 });
 
 /* ============================================================
@@ -129,8 +125,7 @@ test("Current's More menu keeps its existing 3 scan sources plus Print", () => {
 test("Next's More menu drops the 3 scan sources, redundant with the promoted primary Scan Recipe", () => {
   const editor = recipeEditor();
   const block = editor.slice(editor.indexOf("if (compactMobileRecipe){"), editor.indexOf("// Percentage problems are not printed here"));
-  const secondaryBlock = block.slice(block.indexOf("mobileSecondaryRow = document.createElement"));
-  assert.match(secondaryBlock, /mobileSecondaryRow\.append\(mobileMoreButton\);/);
+  assert.match(block, /mobilePrimaryRow\.append\(mobileMoreButton\);/);
 });
 
 /* ============================================================

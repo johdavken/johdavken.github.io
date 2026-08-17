@@ -74,9 +74,9 @@ test("the compact mobile matrix keeps all layer columns in the table and omits t
 });
 
 test("compact mobile recipe actions sit immediately after the matrix while bulk values open in a dedicated sheet", () => {
-  // The two-tier primary/secondary rows (built earlier, see the toolbar
-  // tests) replace modeBar here - modeBar itself is desktop-only now.
-  assert.match(app, /actionTray\.append\(mobilePrimaryRow, mobileSecondaryRow, mobileBulkContext, mobileRearrangeContext\);/);
+  // The single mobile action row (built earlier, see the toolbar tests)
+  // replaces modeBar here - modeBar itself is desktop-only now.
+  assert.match(app, /actionTray\.append\(mobilePrimaryRow, mobileBulkContext, mobileRearrangeContext\);/);
   assert.match(app, /area\.append\(actionTray\);/);
   assert.doesNotMatch(app, /mobileLayerLayout\.append\(actionTray\);/);
   assert.match(app, /mobileBulkEditSheet\.querySelector\("\.mobileBulkEditBody"\)\.appendChild\(toolbar\);/);

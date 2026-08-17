@@ -132,10 +132,10 @@ test("Current and Next read as document tabs sitting on the section divider, not
   assert.doesNotMatch(active.replace(/\/\*[\s\S]*?\*\//g, ""), /animation|transform/);
 });
 
-test("a thumb still gets a full-size target, even though the desktop control shrank", () => {
-  const mobile = styles.slice(styles.indexOf(".recipePageTabs{ gap: 6px; }"));
+test("the paired recipe tabs stay comfortably tappable while using a modestly shorter mobile height", () => {
+  const mobile = styles.slice(styles.indexOf(".recipePageTabs{ gap: 0; padding-inline: 0; }"));
   const rule = mobile.slice(mobile.indexOf(".recipePageTab{"), mobile.indexOf("}", mobile.indexOf(".recipePageTab{")));
-  assert.match(rule, /min-height: 44px/);
+  assert.match(rule, /min-height: 40px/);
   assert.match(rule, /flex: 1 1 0/);
 });
 
@@ -177,7 +177,7 @@ test("operational controls are not offered on a plan", () => {
 test("both tabs stay tappable on a phone", () => {
   const mobile = styles.slice(styles.indexOf("@media (max-width: 900px)", styles.indexOf(".recipePageTabDot[hidden]")));
   const block = mobile.slice(0, mobile.indexOf("\n}"));
-  assert.match(block, /\.recipePageTab\{ flex: 1 1 0; min-height: 44px;/);
+  assert.match(block, /\.recipePageTab\{ flex: 1 1 0; min-height: 40px;/);
 });
 
 test("no duplicated per-page action implementations were introduced", () => {

@@ -100,3 +100,14 @@ test("confirmed saves refresh catalog subscribers and re-run Smart/Reference pre
   assert.match(html, /id="resinLookupBulkDensity"/);
   assert.match(ui, /bulk density saved as/);
 });
+
+test("Save to Resin Database uses the shared emphasized action treatment", () => {
+  assert.match(
+    html,
+    /id="bulkDensitySaveButton" type="button" class="primary actionRail" disabled>Save to Resin Database<\/button>/
+  );
+  assert.match(
+    css,
+    /button\.primary\.actionRail\{[\s\S]*?box-shadow:inset 4px 0 0 var\(--title\);/
+  );
+});

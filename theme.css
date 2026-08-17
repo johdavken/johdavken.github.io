@@ -93,6 +93,16 @@
 :where(html, body)[data-theme="light"] :is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerGreen{color:#16a34a;stroke:#16a34a}
 :where(html, body)[data-theme="light"] :is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerBlue{color:#5f7f9e;stroke:#5f7f9e}
 
+/* Compact Recipe: raise only the supporting contrast on paper-white
+   surfaces. Resin and percentage remain the strongest cell values. */
+@media (max-width:700px){
+  :where(html, body)[data-theme="light"] #splitsBlock .splitsMatrix.compactMobileRecipe td.splitMatrixCell{border-color:rgba(74,73,72,.19)}
+  :where(html, body)[data-theme="light"] #splitsBlock .splitsMatrix.compactMobileRecipe .splitCellHopperName:not(.smart){color:#504d53}
+  :where(html, body)[data-theme="light"] #splitsBlock .splitsMatrix.compactMobileRecipe .splitMatrixCell.tracked .splitCellHopperName{color:#397fae}
+  :where(html, body)[data-theme="light"] #splitsBlock .splitsMatrix.compactMobileRecipe .splitTrackButton:not(.active){color:#504d53;opacity:.8}
+  :where(html, body)[data-theme="light"] #splitsBlock .splitsMatrix.compactMobileRecipe .splitCopyBtn{color:#8b4043}
+}
+
 /* ----------------------------------------------------------------------- * Industrial Slate * ----------------------------------------------------------------------- */
 :where(html, body)[data-theme="industrial-slate"]{
   color-scheme: light;
@@ -154,6 +164,14 @@
 :where(html, body)[data-theme="industrial-slate"] .resinToolsLogo .rtLayerYellow{color:#d6a85f;stroke:#d6a85f}
 :where(html, body)[data-theme="industrial-slate"] .resinToolsLogo .rtLayerGreen{color:#16a34a;stroke:#16a34a}
 :where(html, body)[data-theme="industrial-slate"] .resinToolsLogo .rtLayerBlue{color:#607d9b;stroke:#607d9b}
+
+@media (max-width:700px){
+  :where(html, body)[data-theme="industrial-slate"] #splitsBlock .splitsMatrix.compactMobileRecipe td.splitMatrixCell{border-color:rgba(96,125,155,.22)}
+  :where(html, body)[data-theme="industrial-slate"] #splitsBlock .splitsMatrix.compactMobileRecipe .splitCellHopperName:not(.smart){color:#526b82}
+  :where(html, body)[data-theme="industrial-slate"] #splitsBlock .splitsMatrix.compactMobileRecipe .splitMatrixCell.tracked .splitCellHopperName{color:#397fae}
+  :where(html, body)[data-theme="industrial-slate"] #splitsBlock .splitsMatrix.compactMobileRecipe .splitTrackButton:not(.active){color:#526b82;opacity:.8}
+  :where(html, body)[data-theme="industrial-slate"] #splitsBlock .splitsMatrix.compactMobileRecipe .splitCopyBtn{color:#4f6d8b}
+}
 
 /* ----------------------------------------------------------------------- * Industrial Slate Dark * ----------------------------------------------------------------------- */
 :where(html, body)[data-theme="industrial-slate-dark"]{
@@ -364,6 +382,14 @@
 
 :where(html, body)[data-theme="gruvbox-light"] #splitsBlock .splitCellHopperName,
 :where(html, body)[data-theme="gruvbox-light"] #splitsBlock .splitCellHopperName.smart{ color: #a44f32; }
+
+@media (max-width:700px){
+  :where(html, body)[data-theme="gruvbox-light"] #splitsBlock .splitsMatrix.compactMobileRecipe td.splitMatrixCell{border-color:rgba(117,106,82,.38)}
+  :where(html, body)[data-theme="gruvbox-light"] #splitsBlock .splitsMatrix.compactMobileRecipe .splitCellHopperName:not(.smart){color:#8f4d35}
+  :where(html, body)[data-theme="gruvbox-light"] #splitsBlock .splitsMatrix.compactMobileRecipe .splitMatrixCell.tracked .splitCellHopperName{color:#076678}
+  :where(html, body)[data-theme="gruvbox-light"] #splitsBlock .splitsMatrix.compactMobileRecipe .splitTrackButton:not(.active){color:#756a52;opacity:.82}
+  :where(html, body)[data-theme="gruvbox-light"] #splitsBlock .splitsMatrix.compactMobileRecipe .splitCopyBtn{color:#8f4d35}
+}
 
 /* ----------------------------------------------------------------------- * Nord * ----------------------------------------------------------------------- */
 :where(html, body)[data-theme="nord"]{

@@ -97,6 +97,12 @@ test("Workspace Management is a main-panel workspacePanel, not an oversized moda
   assert.match(index, /Reconnect a line computer after a browser reset/);
 });
 
+test("Workspace recovery uses the shared action treatments for refresh and adding this device", () => {
+  assert.match(index, /id="workspaceRecoveryRefreshBtn" type="button" class="secondary">Refresh workspaces<\/button>/);
+  assert.match(index, /id="workspaceRecoveryAddDeviceBtn" type="button" class="primary actionRail">Add This Device<\/button>/);
+  assert.match(styles, /button\.primary\.actionRail\{[\s\S]*?box-shadow:inset 4px 0 0 var\(--title\);/);
+});
+
 test("desktop Workspace Management reserves two lines inside every workspace row", () => {
   const desktop = fs.readFileSync("desktop.css", "utf8");
   assert.match(desktop, /\.workspaceRecoveryRow\{grid-template-rows:auto auto;align-content:center;min-height:58px;line-height:1\.25\}/);

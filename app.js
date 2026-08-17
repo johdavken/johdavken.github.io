@@ -3580,7 +3580,7 @@
       const mobileMoreButton=document.createElement("details");
       mobileMoreButton.className="mobileRecipeMore";
       mobileMoreButton.innerHTML=`
-        <summary aria-label="More recipe actions"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></summary>
+        <summary aria-label="More recipe actions"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg><span>More</span></summary>
         <div class="mobileRecipeMoreMenu">
           ${isNextRecipePage() ? "" : `
           <button type="button" data-mobile-recipe-scan="job_traveler">Scan job traveler</button>
@@ -3787,15 +3787,11 @@
         setSavedRecipesOpen(turningOn);
       });
 
-      // Two intentional mobile tiers, built by moving the same real buttons
-      // (not rebuilding them) out of modeBar - their click handlers stay
-      // exactly as wired above. This replaces the old single fixed 4-column
-      // grid, which had no room for Current's extra Load Next button and
-      // silently clipped it. Primary keeps the handful of actions worth a
-      // direct tap; everything else already has a home in mobileMoreButton's
-      // menu.
+      // The mobile action bar moves the same real buttons (rather than
+      // rebuilding them), so every existing handler remains intact. More is
+      // deliberately part of that same row: it reads as additional actions,
+      // not as an isolated second toolbar that takes another 42px of screen.
       let mobilePrimaryRow = null;
-      let mobileSecondaryRow = null;
       let recipeUtilityTabs = null;
       if (compactMobileRecipe){
         mobilePrimaryRow = document.createElement("div");
@@ -3813,10 +3809,7 @@
           scanRecipeButton.classList.remove("rearrangeDesktopOnly", "recipeScanHideDesktop");
           mobilePrimaryRow.append(scanRecipeButton);
         }
-
-        mobileSecondaryRow = document.createElement("div");
-        mobileSecondaryRow.className = "splitsMobileSecondaryRow";
-        mobileSecondaryRow.append(mobileMoreButton);
+        mobilePrimaryRow.append(mobileMoreButton);
       }else{
         // Desktop only: Saved recipes / Bulk edit / Rearrange become a
         // second, visually subordinate tab strip beneath the grid, echoing
@@ -4312,11 +4305,25 @@
             saveSession();
           });
 
-          trackButton.addEventListener("click",()=>{
+          function toggleTracking(){
             hopper.track = !hopper.track;
             refreshCellState();
             validateAndCompute({ sync: true, immediate: true, kind: "tracking" });
             saveSession();
+          }
+          trackButton.addEventListener("click", event=>{
+            // The compact mobile cell itself also toggles tracking. Keep the
+            // explicit clock button from bubbling into that broader target.
+            event.stopPropagation();
+            toggleTracking();
+          });
+          td.addEventListener("click", event=>{
+            if (!compactMobileRecipe || isNextRecipePage() || bulkMode || hopperRearrangement?.active) return;
+            // Editing remains precise and unchanged: only the open cell
+            // surface, hopper label, and status area act as the large Track
+            // target. Inputs and action buttons retain their own behavior.
+            if (event.target.closest("input,button,label,a,select,textarea")) return;
+            toggleTracking();
           });
           clearButton.addEventListener("click",()=>{
             hopper.resinName = "";
@@ -4357,7 +4364,7 @@
         // surface while modes expand directly below it.
         const actionTray = document.createElement("div");
         actionTray.className = "mobileRecipeActionTray mobileMatrixActionBar";
-        actionTray.append(mobilePrimaryRow, mobileSecondaryRow, mobileBulkContext, mobileRearrangeContext);
+        actionTray.append(mobilePrimaryRow, mobileBulkContext, mobileRearrangeContext);
         area.append(actionTray);
         if(hopperRearrangement?.active&&hopperRearrangement.undo?.length&&hopperRearrangement.undoVisibleUntil>Date.now()){
           const toast=document.createElement("div");
