@@ -374,8 +374,8 @@
     sheet.tabIndex=-1;
     sheet.innerHTML=`
       <button type="button" class="mobileSavedRecipesGrabber" aria-label="Close receiver weight profiles"></button>
-      <header class="mobileSavedRecipesHeader"><div><strong id="mobileWeightProfilesTitle">Weight profiles</strong><small>Shared with this RT Sync workspace</small></div></header>
-      <div class="mobileSavedRecipesTools"><label><span class="srOnly">Search receiver weight profiles</span><input id="mobileWeightProfilesSearch" type="search" placeholder="Search profiles" autocomplete="off" /></label><button id="mobileWeightProfilesSave" type="button">Save current weights</button></div>
+      <header class="mobileSavedRecipesHeader"><div><strong id="mobileWeightProfilesTitle">Receiver weight profiles</strong><small>Shared with this RT Sync workspace</small></div></header>
+      <div class="mobileSavedRecipesTools"><label><span class="srOnly">Search receiver weight profiles</span><input id="mobileWeightProfilesSearch" type="search" placeholder="Search profiles" autocomplete="off" /></label><button id="mobileWeightProfilesSave" class="secondary" type="button">Save current weights</button></div>
       <div id="mobileWeightProfilesStatus" class="mobileSavedRecipesStatus" role="status" hidden></div>
       <div id="mobileWeightProfilesList" class="mobileSavedRecipesList"></div>`;
     document.body.appendChild(sheet);
@@ -1254,16 +1254,6 @@
       const el = $("statusBox");
       if (el) el.innerHTML = html || "";
     }
-    function statusMessage(messages){
-      if (!messages.length) return "";
-      const hasBad = messages.some(m=>m.type==="bad");
-      const hasWarn = messages.some(m=>m.type==="warn");
-      const cls = hasBad ? "status bad" : (hasWarn ? "status" : "status ok");
-      const title = hasBad ? "Fix before trusting results:" : (hasWarn ? "Heads up:" : "Looks good:");
-      const items = messages.map(m=>`<li>${m.text}</li>`).join("");
-      return `<div class="${cls}"><div class="statusTitle">${title}</div><ul>${items}</ul></div>`;
-    }
-
     function getLayerNamesForType(lineType){
       if (lineType === 1) return ["A"];
       if (lineType === 5) return ["A","B","C","D","E"];
@@ -2463,7 +2453,7 @@
         ${state.smartHoppersEnabled && geometryMode === "cylindrical" ? '<label class="weightsBulkField" for="bulkHeight"><span>Usable height</span><span class="weightsInputWithUnit"><input id="bulkHeight" type="text" inputmode="decimal" placeholder="No change" /><span>in</span></span></label>' : ""}
         <div class="weightsBulkApply">
           <div id="weightSelectionStatus" class="tiny weightsSelectionStatus" role="status" aria-live="polite">No hoppers selected</div>
-          <button id="applyBulkWeight" type="button" disabled>Apply to selected</button>
+          <button id="applyBulkWeight" class="secondary" type="button" disabled>Apply to selected</button>
         </div>
         <div class="weightsBulkActions">
           <button id="selectAllWeights" type="button" class="bulkTextAction">Select all</button>
@@ -4873,23 +4863,18 @@
   }
 
   function validateAndCompute({ sync = false, immediate = false, kind = "edit" } = {}){
-      const msgs = [];
       const div = 100;
 
-      if (state.lineRate <= 0) msgs.push({type:"warn", text:"Line rate is 0 — rates/times will be 0."});
       attentionFacts.setup.lineRateSet = state.lineRate > 0;
 
       const layerFracs = state.layers.map(L => clampNum(L.layerPct)/div);
       const layerSum = sum(layerFracs);
       const layerTotalValid = !state.layers.length || Math.abs(layerSum - 1) <= 0.0001;
-      if (!layerTotalValid){
-        msgs.push({type:"warn", text:`Layer split sums to ${fmtNum(layerSum*100,2)}% (expected 100%).`});
-      }
       attentionFacts.recipe.layerTotalValid = layerTotalValid;
       attentionFacts.recipe.layerTotalPct = layerSum * 100;
       // Planning facts only. They are read here so every existing edit path
-      // republishes them, but they are deliberately kept out of msgs, out of
-      // the Recipe pill and out of readiness: an unfinished plan never makes
+      // republishes them, but they stay out of the Recipe pill and readiness:
+      // an unfinished plan never makes
       // the running job unready.
       attentionFacts.nextRecipe = readNextRecipeFacts?.()
         || { planned: false, layerTotalPct: 100, layerTotalValid: true, invalidLayers: [] };
@@ -4897,32 +4882,20 @@
       const allWeightsUnset = state.layers.length > 0 && state.layers.every(L=>
         L.hoppers.every(h=>effectiveHopperWeight(h) === 0)
       );
-      if (allWeightsUnset){
-        msgs.push({
-          type:"warn",
-          text:"Receiver hopper weights have not been set. Enter them for accurate run-down timing."
-        });
-      }
-
       attentionFacts.setup.hopperWeightsUnset = allWeightsUnset;
 
       const tracked = [];
       state.layers.forEach(L=>L.hoppers.forEach((h,hi)=>{ if (h.track) tracked.push({L,h,hi}); }));
       attentionFacts.timeline.trackedCount = tracked.length;
       attentionFacts.setup.missingTrackedWeightCount = 0;
-      if (tracked.length === 0){
-        msgs.push({type:"warn", text:"No hoppers are tracked. Turn on Track for the hopper(s) you want in Results."});
-      } else {
+      if (tracked.length > 0){
         const missingW = tracked.filter(x=>effectiveHopperWeight(x.h) <= 0).length;
         attentionFacts.setup.missingTrackedWeightCount = allWeightsUnset ? 0 : missingW;
-        if (missingW > 0 && !allWeightsUnset){
-          msgs.push({type:"warn", text:`${missingW} tracked hopper(s) are missing weight. Open “Hopper weights” to enter them.`});
-        }
       }
 
-      // Mobile keeps the in-panel heads-up list; desktop hides #statusBox and
-      // reads the same conditions through the notification bell instead.
-      setStatus(statusMessage(msgs));
+      // Validation notices live in the notification bell. Keep the host clear
+      // so mobile no longer duplicates them as a shifting inline panel.
+      setStatus("");
 
       const changeoverDate = parseChangeoverDate(state.changeoverTime);
       const flat = [];
@@ -5072,12 +5045,17 @@
           : `<span class="resultNotFeeding">${notFeeding ? "Not feeding" : "Awaiting data"} · ${weightDetail}</span>`;
         const hasStart = !!(changeoverDate && h.startByDate);
         const timingLabel = hasStart ? "Start" : "Start unavailable";
-        const timingValue = hasStart ? h.startByText : "Unavailable";
+        // The chronological ribbon has a deliberately narrow time column.
+        // Late/day-relative wording is already communicated by the red node
+        // and time color, so keep only the clock portion here and retain the
+        // complete wording in the tooltip.
+        const timingValue = hasStart ? h.startByText.split(" · ", 1)[0] : "Unavailable";
+        const timingTitle = hasStart ? `${timingLabel}: ${h.startByText}` : timingLabel;
 
         const row = document.createElement("div");
         row.className = "resultRow" + (h.pumpOff ? " done" : "") + (h.isLate && !h.pumpOff ? " late" : "");
         row.innerHTML = `
-          <div class="resultSchedule" title="${timingLabel}">
+          <div class="resultSchedule" title="${timingTitle}">
             <span class="mono resultTimingValue">${timingValue}</span>
           </div>
 
@@ -6920,6 +6898,36 @@
           || find("input:not([type=checkbox]):not([type=radio]), select");
       }
 
+      // On mobile, reassert the Recipe panel after its page has rendered.
+      // Native WebViews can defer a <details> toggle while a footer dialog is
+      // closing; setting this state again guarantees the destination is the
+      // visible mobile workspace before moving focus into it.
+      function openRecipeFromAttention(preferred){
+        // Timeline-only mode deliberately hides every panel but Timeline.
+        // An attention action that asks the operator to correct a recipe
+        // cannot leave that isolation enabled, or Recipe is selected but
+        // remains hidden by its higher-specificity mobile rule.
+        if (!isDesktopLayout() && state.mobileTimelineOnly){
+          applyMobileTimelineMode(false);
+          saveSession();
+        }
+        setWorkspacePanel("splitsBlock", { reveal:false });
+        setRecipePage("current");
+        const panel = $("splitsBlock");
+        const focusRecipeControl = ()=>focusSoon(()=>responsibleControl("splitsArea", preferred));
+        if (!isDesktopLayout() && panel){
+          document.body.dataset.mobileWorkspace = "panel";
+          panel.classList.add("mobile-active");
+          panel.open = true;
+          requestAnimationFrame(()=>{
+            panel.scrollIntoView({ behavior:"smooth", block:"start" });
+            focusRecipeControl();
+          });
+          return;
+        }
+        focusRecipeControl();
+      }
+
       const ATTENTION_ACTIONS = {
         "review-setup": ()=>{
           setWorkspacePanel("lineSetupBlock", { reveal:true });
@@ -6933,9 +6941,12 @@
           focusSoon(()=>responsibleControl("weightsArea", '[data-weight-view="edit"]'));
         },
         "open-recipe": ()=>{
-          setWorkspacePanel("splitsBlock", { reveal:true });
-          setRecipePage("current");
-          focusSoon(()=>responsibleControl("splitsArea", 'input[id^="lp_"], input.splitInput'));
+          openRecipeFromAttention('input[id^="lp_"], input.splitInput');
+        },
+        // Timeline tracking is edited in Recipe Setup. It needs the Track
+        // button, not a resin/percentage field, as its focused correction.
+        "track-hoppers": ()=>{
+          openRecipeFromAttention(".splitTrackButton");
         },
         // Reuses the tab strip's own page switch, so arriving from the bell
         // leaves the editor in exactly the state clicking "Next" would.
@@ -7021,7 +7032,9 @@
             action.textContent = item.action.label;
             action.addEventListener("click",()=>{
               closeFooterSheets({ returnFocus:false });
-              handler();
+              // A mobile dialog leaves the document in its closing state for
+              // this event. Let that settle before changing workspace panels.
+              requestAnimationFrame(handler);
             });
             foot.append(action);
           }

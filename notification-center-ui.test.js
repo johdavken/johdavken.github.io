@@ -186,7 +186,11 @@ test("transient storage failures get a real lifecycle instead of living forever"
 test("each action opens the right section and reveals the responsible control", () => {
   assert.match(app, /"review-setup": \(\)=>\{\s*\n\s*setWorkspacePanel\("lineSetupBlock", \{ reveal:true \}\);\s*\n\s*focusSoon\(\(\)=>\$\("lineRate"\)\);/);
   assert.match(app, /"open-weights": \(\)=>\{\s*\n\s*setWorkspacePanel\("lineSetupBlock", \{ reveal:true \}\);\s*\n\s*focusSoon\(\(\)=>responsibleControl\("weightsArea", '\[data-weight-view="edit"\]'\)\);/);
-  assert.match(app, /"open-recipe": \(\)=>\{\s*\n\s*setWorkspacePanel\("splitsBlock", \{ reveal:true \}\);\s*\n\s*setRecipePage\("current"\);\s*\n\s*focusSoon\(\(\)=>responsibleControl\("splitsArea", 'input\[id\^="lp_"\], input\.splitInput'\)\);/);
+  assert.match(app, /function openRecipeFromAttention\(preferred\)\{[\s\S]*?setWorkspacePanel\("splitsBlock", \{ reveal:false \}\);[\s\S]*?setRecipePage\("current"\);/);
+  assert.match(app, /if \(!isDesktopLayout\(\) && state\.mobileTimelineOnly\)\{\s*\n\s*applyMobileTimelineMode\(false\);\s*\n\s*saveSession\(\);/);
+  assert.match(app, /document\.body\.dataset\.mobileWorkspace = "panel";[\s\S]*?panel\.classList\.add\("mobile-active"\);[\s\S]*?panel\.open = true;/);
+  assert.match(app, /"open-recipe": \(\)=>\{\s*\n\s*openRecipeFromAttention\('input\[id\^="lp_"\], input\.splitInput'\);/);
+  assert.match(app, /"track-hoppers": \(\)=>\{[\s\S]*?openRecipeFromAttention\("\.splitTrackButton"\);/);
   // A planning issue belongs to the Next page, so its action lands there -
   // through the tab strip's own switch, not a second page-switching path.
   assert.match(app, /"open-next-recipe": \(\)=>\{\s*\n\s*setWorkspacePanel\("splitsBlock", \{ reveal:true \}\);\s*\n\s*setRecipePage\("next"\);\s*\n\s*focusSoon\(\(\)=>responsibleControl\("splitsArea", 'input\[id\^="lp_"\], input\.splitInput'\)\);/);
@@ -212,30 +216,20 @@ test("the responsible field is located through the existing aria-invalid marker"
   assert.match(app, /find\('\[aria-invalid="true"\]'\)/);
 });
 
-test("choosing an action closes the popover without bouncing focus back to the bell", () => {
-  assert.match(app, /action\.addEventListener\("click",\(\)=>\{\s*\n\s*closeFooterSheets\(\{ returnFocus:false \}\);\s*\n\s*handler\(\);/);
+test("choosing an action closes the popover before switching workspace panels", () => {
+  assert.match(app, /action\.addEventListener\("click",\(\)=>\{\s*\n\s*closeFooterSheets\(\{ returnFocus:false \}\);[\s\S]*?requestAnimationFrame\(handler\);/);
 });
 
 /* ----------------------------------------------------------------------
  *   Global banner replaced; contextual validation retained
  * -------------------------------------------------------------------- */
 
-test("the large global heads-up banner is not shown on desktop", () => {
-  assert.match(desktop, /#lineSetupBlock #statusBox\{display:none\}/);
-  // The old desktop grid slot for the banner is gone.
-  assert.doesNotMatch(desktop, /#lineSetupBlock #statusBox\{grid-column/);
-});
-
-test("mobile keeps the same heads-up banner from the same unchanged code path", () => {
+test("derived validation notices are not duplicated as an inline heads-up panel", () => {
   assert.match(app, /function setStatus\(html\)\{\s*\n\s*const el = \$\("statusBox"\);/);
-  assert.match(app, /setStatus\(statusMessage\(msgs\)\);/);
+  assert.match(app, /Validation notices live in the notification bell\.[\s\S]*?setStatus\(""\);/);
+  assert.doesNotMatch(app, /function statusMessage\(/);
   assert.match(html, /<div id="statusBox"><\/div>/);
-  // #statusBox is only hidden inside desktop.css's desktop-shell block
-  // (min-width:901px, and pointer:fine so a wide touch device does not
-  // get treated as desktop).
-  assert.doesNotMatch(styles, /#statusBox\{[^}]*display:none/);
-  const desktopOnly = desktop.slice(desktop.indexOf("@media (min-width:901px) and (pointer: fine){"));
-  assert.ok(desktopOnly.includes("#lineSetupBlock #statusBox{display:none}"));
+  assert.doesNotMatch(app, /Heads up:/);
 });
 
 test("contextual validation surfaces are all retained", () => {

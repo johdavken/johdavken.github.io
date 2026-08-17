@@ -4191,6 +4191,18 @@ button.compactAction{
   color:var(--bad);
 }
 .segmentedActionRow button:hover{ background-color:var(--row-bg); }
+/* A few high-value sync controls intentionally break out of the connected
+   segmented toolbar: they use the same compact, left-accented treatment as
+   Save/Load/Update so their actions remain distinct at a glance. */
+.segmentedActionRow button.actionRail{
+  border:1px solid var(--btn-secondary-border);
+  border-radius:2px;
+  background:var(--btn-secondary-bg);
+  color:var(--btn-text);
+  box-shadow:inset 4px 0 0 var(--title);
+}
+.segmentedActionRow button.actionRail:last-child{border-right:1px solid var(--btn-secondary-border)}
+.segmentedActionRow #lineSyncLeaveBtn.actionRail{color:var(--bad)}
 .segmentedActionDivider{
   width:min(100%, 520px);
   height:1px;
@@ -6298,6 +6310,17 @@ body[data-surface-style="divided"] .helpTopic{
 .displaySheetHead small{display:block;margin-top:2px;color:var(--muted);font-size:11px}
 .visuallyHidden{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
 .appOverlayRoot{position:fixed;inset:0;z-index:70;pointer-events:none}
+/* The root spans the viewport and is click-through on purpose, so it never
+   blocks the page beneath it - but anything actually hosted inside it has to
+   take clicks back, or it inherits pointer-events:none and every click within
+   it falls straight through to whatever sits below. On mobile that is
+   .footerSheetBackdrop, which only closes the sheet, so the notification
+   center's action buttons ("Open Recipe", "Review Setup", ...) silently did
+   nothing. Desktop happened to work by accident: desktop.css re-enables
+   .desktopNotificationsMenu itself, and that file is behind a desktop-only
+   media query. Restoring it here covers every width and every current or
+   future overlay child, rather than per-element at one breakpoint. */
+.appOverlayRoot > *{pointer-events:auto}
 /* The notification center's bell/popover chrome (.desktopNotificationsToggle,
    the nonmodal anchored positioning) is desktop-only and styled in
    desktop.css. On mobile the same dialog opens as an ordinary modal

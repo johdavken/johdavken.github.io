@@ -199,7 +199,7 @@
     return [entry("timeline.no-tracked", SEVERITY.warning, "No hoppers are tracked", {
       message: "Turn on Track for the hoppers that should appear in the timeline.",
       section: SECTION.timeline,
-      action: "open-recipe",
+      action: "track-hoppers",
       actionLabel: "Open Recipe"
     })];
   }

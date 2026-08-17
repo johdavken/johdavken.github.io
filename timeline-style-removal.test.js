@@ -71,6 +71,10 @@ test("the Start-by/Soonest time value is a compact, strong visual anchor", () =>
   assert.match(rule, /color:var\(--text\);/);
   // A late hopper still overrides to the warning color - untouched by this fix.
   assert.match(styles, /\.resultRow\.late \.resultTimingValue\{color:var\(--warn\)\}/);
+  const timelineStart = app.indexOf("function renderResultsFlat");
+  const timeline = app.slice(timelineStart, app.indexOf("function resetTracking", timelineStart));
+  assert.match(timeline, /const timingValue = hasStart \? h\.startByText\.split\(" · ", 1\)\[0\] : "Unavailable";/);
+  assert.match(timeline, /const timingTitle = hasStart \? `\$\{timingLabel\}: \$\{h\.startByText\}` : timingLabel;/);
 });
 
 test("Timeline uses a constrained single-column grid and compact schedule regions", () => {
@@ -92,7 +96,7 @@ test("Timeline display rounds only presentation values and uses concise missing-
   assert.match(body, /h\.resinName \|\| "No resin"/);
   assert.match(body, /"Not feeding"/);
   assert.match(body, /"Start unavailable"/);
-  assert.match(body, /const timingValue = hasStart \? h\.startByText : "Unavailable";/);
+  assert.match(body, /const timingValue = hasStart \? h\.startByText\.split\(" · ", 1\)\[0\] : "Unavailable";/);
   assert.match(body, /class="mono resultHopper"/);
   assert.doesNotMatch(body, /class="pill mono resultHopper"/);
 });

@@ -30,7 +30,7 @@
        layout change is required to install cleanly. -->
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
-  <link rel="stylesheet" href="styles.css?v=0.61.0">
+  <link rel="stylesheet" href="styles.css?v=0.61.1">
   <link rel="stylesheet" href="theme.css?v=0.18.0">
   <link rel="stylesheet" href="desktop.css?v=0.1.3">
 <script src="validation.js?v=0.19" defer></script>
@@ -598,7 +598,7 @@
 
   <button
     id="resetTrackingBtn"
-    class="copyBtn"
+    class="copyBtn secondary"
     type="button"
     title="Untrack every hopper"
   >
@@ -711,14 +711,14 @@
         <div class="segmentedActionRow">
           <button id="lineSyncCreateBtn" class="primary desktopSyncOnly" type="button">Create line</button>
           <button id="lineSyncRenameBtn" class="secondary desktopSyncOnly" type="button">Rename line</button>
-          <button id="lineSyncRetryBtn" class="secondary" type="button" aria-label="Refresh RT Sync now"><span id="lineSyncRetryDesktopLabel" class="desktopSyncLabel">Connect / retry</span><span class="mobileSyncRefreshLabel mobileSyncLabel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7a8 8 0 0 1 13 1l2 3M19 17a8 8 0 0 1-13-1l-2-3"/><path d="M20 5v6h-6M4 19v-6h6"/></svg><span id="lineSyncRetryMobileLabel">Refresh now</span></span></button>
+          <button id="lineSyncRetryBtn" class="secondary actionRail" type="button" aria-label="Refresh RT Sync now"><span id="lineSyncRetryDesktopLabel" class="desktopSyncLabel">Connect / retry</span><span class="mobileSyncRefreshLabel mobileSyncLabel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7a8 8 0 0 1 13 1l2 3M19 17a8 8 0 0 1-13-1l-2-3"/><path d="M20 5v6h-6M4 19v-6h6"/></svg><span id="lineSyncRetryMobileLabel">Refresh now</span></span></button>
           <button id="lineSyncNewJobBtn" class="secondary desktopSyncOnly" type="button">New job</button>
         </div>
         <div class="segmentedActionDivider" role="separator"></div>
         <div class="segmentedActionRow">
           <button id="lineSyncGenerateCodeBtn" class="secondary desktopSyncOnly" type="button">Generate Link Code</button>
           <button id="lineSyncDisconnectBtn" class="secondary" type="button"><span class="desktopSyncLabel">Disconnect on this device</span><span class="mobileSyncLabel">Disconnect this device</span></button>
-          <button id="lineSyncLeaveBtn" class="secondary" type="button">Leave RT Sync</button>
+          <button id="lineSyncLeaveBtn" class="secondary actionRail" type="button">Leave RT Sync</button>
         </div>
       </div>
 
@@ -1679,14 +1679,14 @@
   <div id="recipeScanCaptureDescription" class="muted mt10">Take a photo of the job traveler's product blend table, or choose an existing photo.</div>
   <!-- Web (and any platform without a native camera): a single "Scan" button
        opens the plain file input below, unchanged from before. -->
-  <div class="buttonRow mt10" id="recipeScanCaptureWebRow"><button id="recipeScanCaptureBtn" type="button">Scan</button></div>
+  <div class="buttonRow mt10" id="recipeScanCaptureWebRow"><button id="recipeScanCaptureBtn" class="secondary" type="button">Scan</button></div>
   <!-- Native Android only (shown/hidden by recipe-scan-ui.js based on
        Capacitor.isNativePlatform() - never both at once): the file input's
        photo picker has no camera option on Android, so native gets an
        explicit choice instead. Both feed the same submitFile() the web
        input already uses - see recipe-scan-ui.js. -->
   <div class="buttonRow mt10" id="recipeScanCaptureNativeRow" hidden>
-    <button id="recipeScanTakePhotoBtn" type="button">Take Photo</button>
+    <button id="recipeScanTakePhotoBtn" class="secondary" type="button">Take Photo</button>
     <button id="recipeScanChoosePhotoBtn" type="button" class="secondary">Choose Photo</button>
   </div>
   <div id="recipeScanCaptureStatus" class="tiny mt10" role="status"></div>

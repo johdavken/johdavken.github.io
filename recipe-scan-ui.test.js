@@ -247,8 +247,8 @@ test("heat_sheet has its own CAPTURE_COPY entry while sharing Job Traveler's ori
 
 // --- index.html: capture dialog structure --------------
 
-test("the capture dialog has a single Scan button and file input - clicking either Take Photo or Choose from Gallery on Android already opens the same OS chooser, so two buttons were redundant", () => {
-  assert.match(index, /<button id="recipeScanCaptureBtn" type="button">Scan<\/button>/);
+test("the capture dialog has a single rail-styled Scan button and file input - clicking either Take Photo or Choose from Gallery on Android already opens the same OS chooser, so two buttons were redundant", () => {
+  assert.match(index, /<button id="recipeScanCaptureBtn" class="secondary" type="button">Scan<\/button>/);
   assert.match(index, /<input id="recipeScanCaptureInput" type="file" accept="image\/\*" hidden \/>/);
   assert.doesNotMatch(index, /recipeScanCameraInput|recipeScanGalleryInput/);
 });

@@ -262,6 +262,7 @@ test("no tracked hoppers is a Timeline condition that clears when one is tracked
   const none = derive({ timeline: { trackedCount: 0 } });
   assert.deepEqual(ids(none), ["timeline.no-tracked"]);
   assert.equal(none.items[0].section, "Timeline");
+  assert.deepEqual(none.items[0].action, { id: "track-hoppers", label: "Open Recipe" });
   assert.equal(derive({ timeline: { trackedCount: 1 } }).count, 0);
 });
 
@@ -359,7 +360,7 @@ test("every entry carries a stable id, severity, title, section and known action
     storage: [{ message: "Session could not be saved.", at: NOW }]
   });
   const sections = new Set(Object.values(attention.SECTION));
-  const actions = new Set(["review-setup", "open-weights", "open-recipe", "retry-sync"]);
+  const actions = new Set(["review-setup", "open-weights", "open-recipe", "track-hoppers", "retry-sync"]);
   assert.ok(summary.count >= 6);
   summary.items.forEach(item => {
     assert.ok(item.id, "id must be present");

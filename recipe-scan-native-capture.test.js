@@ -36,9 +36,9 @@ test("the capture dialog has separate web and native button rows, native hidden 
   const dialogStart = index.indexOf('id="recipeScanCaptureDialog"');
   const dialogEnd = index.indexOf("</dialog>", dialogStart);
   const body = index.slice(dialogStart, dialogEnd);
-  assert.match(body, /id="recipeScanCaptureWebRow"><button id="recipeScanCaptureBtn" type="button">Scan<\/button>/);
+  assert.match(body, /id="recipeScanCaptureWebRow"><button id="recipeScanCaptureBtn" class="secondary" type="button">Scan<\/button>/);
   assert.match(body, /id="recipeScanCaptureNativeRow" hidden>/);
-  assert.match(body, /id="recipeScanTakePhotoBtn" type="button">Take Photo<\/button>/);
+  assert.match(body, /id="recipeScanTakePhotoBtn" class="secondary" type="button">Take Photo<\/button>/);
   assert.match(body, /id="recipeScanChoosePhotoBtn" type="button" class="secondary">Choose Photo<\/button>/);
 });
 
