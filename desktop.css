@@ -633,14 +633,19 @@
      Hoppers/View row, above the table. Two rows at most: fields+Apply,
      then selection status+Select all/Clear. No numbered steps or a Done
      button - Summary is the exit. */
-  .desktopWeightsBulkContext{display:flex;flex-direction:column;gap:8px;margin:0 0 8px;padding:10px;border-radius:var(--radius-row)}
+  .desktopWeightsBulkContext{display:flex;align-items:center;gap:8px;margin:0 0 8px;padding:10px;border-radius:var(--radius-row)}
   .desktopWeightsBulkContext[hidden]{display:none!important}
-  .desktopWeightsBulkContext .weightsBulkFieldsRow{display:flex;flex-wrap:wrap;align-items:end;gap:10px}
-  .desktopWeightsBulkContext .weightsBulkFieldsRow .weightsBulkField{flex:1 1 160px;min-width:140px}
-  .desktopWeightsBulkContext .weightsBulkFieldsRow > button{flex:0 0 auto;width:auto;min-height:30px;padding:4px 12px}
+  .desktopWeightsBulkContext .weightsBulkFieldsRow{display:flex;flex-wrap:wrap;align-items:center;gap:10px;width:100%}
+  /* Weight/height fields become compact single-line pills - label and
+     input side by side, matching the Circumference control above the
+     table - instead of a stacked caption-then-input block. */
+  .desktopWeightsBulkContext .weightsBulkField{display:grid;grid-template-columns:auto minmax(90px,140px);align-items:center;gap:8px;flex:0 0 auto;margin:0;padding:5px 8px;border:1px solid var(--row-border-2);border-radius:var(--control-radius);background:var(--row-bg-2);color:var(--muted);font-size:var(--desktop-type-label);font-weight:750}
+  .desktopWeightsBulkContext .weightsBulkField > span:first-child{margin-bottom:0}
+  .desktopWeightsBulkContext .weightsBulkField .weightsInputWithUnit{grid-template-columns:minmax(50px,1fr) auto;gap:4px}
   .desktopWeightsBulkContext .weightsInputWithUnit input{font-size:14px;font-weight:800}
-  .desktopWeightsBulkContext .weightsBulkActions{padding-top:6px}
-  .desktopWeightsBulkContext .weightsSelectionStatus{flex:1 1 auto;margin:0}
+  .desktopWeightsBulkContext .weightsBulkFieldsRow > button{flex:0 0 auto;width:auto;min-height:30px;padding:4px 12px}
+  .desktopWeightsBulkContext .weightsBulkActions{grid-column:unset;flex:0 0 auto;padding-top:0;border-top:0;margin-left:auto}
+  .desktopWeightsBulkContext .weightsSelectionStatus{margin:0;white-space:nowrap}
 
   /* Profiles use the same bounded overlay on desktop, with a centered
      surface and an internally scrolling list. */
