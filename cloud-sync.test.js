@@ -977,9 +977,12 @@ test("the breaker's budget is a rate, not a streak - a loop that 'resolves' each
   assert.match(source, /const CONFLICT_BURST_LIMIT = 12;/);
   assert.match(source, /const CONFLICT_BURST_WINDOW_MS = 10000;/);
   assert.match(source, /recentConflictTimes = recentConflictTimes\.filter\(at=>now - at < CONFLICT_BURST_WINDOW_MS\);/);
-  // Counted at the single funnel every conflict path reaches.
+  // Counted at the single funnel every conflict path reaches - past the
+  // resolvingActiveConflict/activeConflictPaused re-entrancy guard (see the
+  // RT Sync conflict-storm fix), so the window is generous enough to cover
+  // that guard's own explanatory comment without asserting exact placement.
   const resolver = source.slice(source.indexOf("async function resolveActiveConflict("));
-  assert.match(resolver.slice(0, 600), /if \(recordConflict\(\) >= CONFLICT_BURST_LIMIT\)\{/);
+  assert.match(resolver.slice(0, 1600), /if \(recordConflict\(\) >= CONFLICT_BURST_LIMIT\)\{/);
 });
 
 test("no conflict path retries instantly any more", () => {
@@ -1012,4 +1015,198 @@ test("a successful write clears the budget, so unrelated conflicts never accumul
   assert.match(flush.slice(0, 1400), /clearConflictBudget\(\);/);
   // Retry is the operator's way out: pause and budget clear together.
   assert.match(source, /activeConflictPaused = false;\s*\n\s*clearConflictBudget\(\);\s*\n\s*lastActiveFlushDenied = false;/);
+});
+
+/* -----------------------------------------------------------------------
+ *   Regression cover for the 2026-08-19 conflict burst: ~25 conflicts
+ *   within 22ms, all one device/workspace pair. Unlike Aug 12, the breaker
+ *   above did engage (the burst stayed bounded) - the gap was that
+ *   flushActiveJob, reconcileSelected and handleRealtimeActive could each
+ *   independently enter resolveActiveConflict at the same time, so a
+ *   Realtime push arriving mid-resolution (very possible on a workspace
+ *   with real concurrent activity) started a second, fully independent
+ *   resolution instead of waiting for the first one to finish.
+ * -------------------------------------------------------------------- */
+
+test("a Realtime push arriving while a conflict is still being resolved does not start a second, independent resolution", async () => {
+  const rows = workspaceFixtures({ id: "ws-a", name: "Line A" });
+  const harness = fakeRealtimeClient(rows);
+  let resolveCalls = 0;
+  let releaseFirstResolution;
+  const firstResolutionGate = new Promise(resolve => { releaseFirstResolution = resolve; });
+  const sync = require("./cloud-sync.js").create({
+    config: { enabled: true, url: "https://example.supabase.co", publishableKey: "key" },
+    syncStorage: require("./sync-storage.js"),
+    storage: memoryStorage(),
+    supabaseLibrary: { createClient: ()=>harness.client },
+    adapter: {
+      ...fakeAdapter(()=>activeJobPayload({ lineRate: 999 })),
+      // Simulates a human looking at the conflict dialog - it never
+      // resolves on its own, exactly like dialog.showModal() awaiting a
+      // click.
+      resolveActiveConflict: async ()=>{
+        resolveCalls += 1;
+        await firstResolutionGate;
+        return "remote";
+      }
+    },
+    activeJob: require("./active-job.js")
+  });
+  await sync.initialize();
+
+  // Move the stored row out from under the client's expected revision, then
+  // queue a genuinely different local edit so this is a real conflict, not
+  // the equal-payload no-op path.
+  rows.active_jobs[0].revision += 1;
+  sync.notifyActiveJobMutation({ immediate: true, kind: "edit" });
+  await new Promise(resolve=>setTimeout(resolve, 0));
+  await new Promise(resolve=>setTimeout(resolve, 0));
+  assert.equal(resolveCalls, 1, "the flush-triggered resolution should have reached the adapter once");
+
+  // A second device's write, delivered over Realtime, while the first
+  // resolution is still awaiting a decision - the exact shape of the burst.
+  rows.active_jobs[0].revision += 1;
+  harness.channels[0].fireActiveJobUpdate({
+    workspace_id: "ws-a", revision: rows.active_jobs[0].revision,
+    last_operation_id: "other-device-op", payload: activeJobPayload({ lineRate: 777 })
+  });
+  await new Promise(resolve=>setTimeout(resolve, 0));
+  await new Promise(resolve=>setTimeout(resolve, 0));
+  assert.equal(resolveCalls, 1, "a conflict arriving mid-resolution must not open a second, concurrent resolution");
+
+  releaseFirstResolution();
+  await new Promise(resolve=>setTimeout(resolve, 0));
+});
+
+test("flushActiveJob refuses to start a new upload while a conflict resolution (from any entry point) is in progress", async () => {
+  const rows = workspaceFixtures({ id: "ws-a", name: "Line A" });
+  const harness = fakeRealtimeClient(rows);
+  let releaseResolution;
+  const resolutionGate = new Promise(resolve => { releaseResolution = resolve; });
+  const sync = require("./cloud-sync.js").create({
+    config: { enabled: true, url: "https://example.supabase.co", publishableKey: "key" },
+    syncStorage: require("./sync-storage.js"),
+    storage: memoryStorage(),
+    supabaseLibrary: { createClient: ()=>harness.client },
+    adapter: {
+      ...fakeAdapter(()=>activeJobPayload({ lineRate: 999 })),
+      resolveActiveConflict: async ()=>{ await resolutionGate; return "remote"; }
+    },
+    activeJob: require("./active-job.js")
+  });
+  await sync.initialize();
+
+  rows.active_jobs[0].revision += 1;
+  sync.notifyActiveJobMutation({ immediate: true, kind: "edit" });
+  await new Promise(resolve=>setTimeout(resolve, 0));
+  await new Promise(resolve=>setTimeout(resolve, 0));
+
+  const writesWhileResolving = writeCalls(harness.rpcCalls).length;
+  // A further local edit while the conflict from the first one is still
+  // unresolved - must not fire another upload attempt on top of it.
+  sync.notifyActiveJobMutation({ immediate: true, kind: "edit" });
+  await new Promise(resolve=>setTimeout(resolve, 0));
+  assert.equal(writeCalls(harness.rpcCalls).length, writesWhileResolving,
+    "no new update_active_job call while a resolution is already in progress");
+
+  releaseResolution();
+  await new Promise(resolve=>setTimeout(resolve, 0));
+});
+
+/* -----------------------------------------------------------------------
+ *   Regression cover for "RT Sync shows connected but silently stops
+ *   syncing until the page is reloaded" - a stale session (expired access
+ *   token, a wedged background refresh) used to be indistinguishable from
+ *   an ordinary network hiccup, so retry() just re-ran the same upload
+ *   against the same dead session instead of re-checking it first.
+ * -------------------------------------------------------------------- */
+
+test("isAuthError recognizes an expired/invalid session distinctly from an ordinary network or conflict failure", () => {
+  const { isAuthError } = require("./cloud-sync.js");
+  assert.equal(isAuthError({ name: "AuthApiError", message: "JWT expired", status: 401 }), true);
+  assert.equal(isAuthError({ message: "Auth session missing", name: "AuthSessionMissingError" }), true);
+  assert.equal(isAuthError({ code: "session_not_found" }), true);
+  assert.equal(isAuthError({ message: "Failed to fetch" }), false, "a plain network failure is not an auth failure");
+  assert.equal(isAuthError({ code: "40001", message: "revision_conflict" }), false);
+  assert.equal(isAuthError({ code: "42501", message: "workspace_access_denied" }), false);
+});
+
+test("an auth-shaped upload failure makes the next retry() re-establish the session before re-uploading", async () => {
+  const rows = workspaceFixtures({ id: "ws-a", name: "Line A" });
+  const harness = fakeRealtimeClient(rows);
+  const sync = require("./cloud-sync.js").create({
+    config: { enabled: true, url: "https://example.supabase.co", publishableKey: "key" },
+    syncStorage: require("./sync-storage.js"),
+    storage: memoryStorage(),
+    supabaseLibrary: { createClient: ()=>harness.client },
+    adapter: fakeAdapter(()=>activeJobPayload({ lineRate: 42 })),
+    activeJob: require("./active-job.js")
+  });
+  await sync.initialize();
+
+  // The real signature an expired access token comes back with.
+  const innerRpc = harness.client.rpc.bind(harness.client);
+  let failOnce = true;
+  harness.client.rpc = async (name, args)=>{
+    if (name === "update_active_job" && failOnce){
+      failOnce = false;
+      return { data: null, error: { name: "AuthApiError", message: "JWT expired", status: 401 } };
+    }
+    return innerRpc(name, args);
+  };
+
+  sync.notifyActiveJobMutation({ immediate: true, kind: "edit" });
+  await new Promise(resolve=>setTimeout(resolve, 0));
+  assert.equal(sync.getState().status, "Pending");
+  assert.match(sync.getState().message, /connection needs to be refreshed/i);
+
+  let signInCalls = 0;
+  const innerSignIn = harness.client.auth.signInAnonymously.bind(harness.client.auth);
+  harness.client.auth.signInAnonymously = async (...args)=>{ signInCalls += 1; return innerSignIn(...args); };
+  // A forced sign-out is deliberately not part of this recovery (see
+  // reestablishSession's own comment - it would risk minting a new,
+  // unrelated identity even when the existing session was fine). Simulating
+  // a fully-lost session here is only to prove retry() re-checks it via
+  // ensureAnonymousSession() at all, not that this exact scenario is common.
+  harness.setSession(null);
+
+  await sync.retry();
+  assert.equal(signInCalls, 1, "retry() should re-establish the session once after an auth-shaped failure");
+  assert.equal(sync.getState().status, "Synced");
+});
+
+test("a plain (non-auth) upload failure does not trigger the session-reestablishment path", async () => {
+  const rows = workspaceFixtures({ id: "ws-a", name: "Line A" });
+  const harness = fakeRealtimeClient(rows);
+  const sync = require("./cloud-sync.js").create({
+    config: { enabled: true, url: "https://example.supabase.co", publishableKey: "key" },
+    syncStorage: require("./sync-storage.js"),
+    storage: memoryStorage(),
+    supabaseLibrary: { createClient: ()=>harness.client },
+    adapter: fakeAdapter(()=>activeJobPayload({ lineRate: 42 })),
+    activeJob: require("./active-job.js")
+  });
+  await sync.initialize();
+
+  const innerRpc = harness.client.rpc.bind(harness.client);
+  let failOnce = true;
+  harness.client.rpc = async (name, args)=>{
+    if (name === "update_active_job" && failOnce){
+      failOnce = false;
+      return { data: null, error: { message: "Failed to fetch" } };
+    }
+    return innerRpc(name, args);
+  };
+  sync.notifyActiveJobMutation({ immediate: true, kind: "edit" });
+  await new Promise(resolve=>setTimeout(resolve, 0));
+  assert.equal(sync.getState().status, "Pending");
+  assert.doesNotMatch(sync.getState().message, /connection needs to be refreshed/i);
+
+  let signInCalls = 0;
+  const innerSignIn = harness.client.auth.signInAnonymously.bind(harness.client.auth);
+  harness.client.auth.signInAnonymously = async (...args)=>{ signInCalls += 1; return innerSignIn(...args); };
+
+  await sync.retry();
+  assert.equal(signInCalls, 0, "an ordinary network failure must not force a fresh sign-in");
+  assert.equal(sync.getState().status, "Synced");
 });
