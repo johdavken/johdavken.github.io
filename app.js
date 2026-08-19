@@ -2442,35 +2442,36 @@
         updateSelectionUI();
       }
 
+      // Edit view's own toolbar: select hoppers (click cells, or Select
+      // all/a row/column header) then either type a single cell's field
+      // directly or set many at once here. One consolidated "Edit" mode
+      // replaces the old separate View:Edit / Bulk edit split - Summary is
+      // the read-only glance, Edit is the whole change workflow, whichever
+      // scale it's used at. No numbered steps or a "Done" button: Select
+      // all/Clear selection cover the workflow, and switching View back to
+      // Summary is the exit.
       const toolbar = document.createElement("div");
       toolbar.id = "desktopWeightsBulkContext";
       toolbar.className = "weightsBulkBar desktopWeightsBulkContext";
       toolbar.hidden = true;
       toolbar.innerHTML = `
-        <div class="weightsBulkSteps" aria-label="Bulk editing steps">
-          <span><b>1</b> Select hoppers</span>
-          <span><b>2</b> Enter changes</span>
-          <span><b>3</b> Apply</span>
-        </div>
-        <label class="weightsBulkField" for="bulkWeight">
-          <span>Receiver weight</span>
-          <span class="weightsInputWithUnit">
-            <input id="bulkWeight" type="text" inputmode="decimal" placeholder="No change" />
-            <span>lb</span>
-          </span>
-        </label>
-        ${state.smartHoppersEnabled && geometryMode === "volume" ? '<label class="weightsBulkField" for="bulkHeight"><span>Usable volume</span><span class="weightsInputWithUnit"><input id="bulkHeight" type="text" inputmode="decimal" placeholder="No change" /><span>gal</span></span></label>' : ""}
-        ${state.smartHoppersEnabled && geometryMode === "cylindrical" ? '<label class="weightsBulkField" for="bulkHeight"><span>Usable height</span><span class="weightsInputWithUnit"><input id="bulkHeight" type="text" inputmode="decimal" placeholder="No change" /><span>in</span></span></label>' : ""}
-        <div class="weightsBulkApply">
-          <div id="weightSelectionStatus" class="tiny weightsSelectionStatus" role="status" aria-live="polite">No hoppers selected</div>
+        <div class="weightsBulkFieldsRow">
+          <label class="weightsBulkField" for="bulkWeight">
+            <span>Receiver weight</span>
+            <span class="weightsInputWithUnit">
+              <input id="bulkWeight" type="text" inputmode="decimal" placeholder="No change" />
+              <span>lb</span>
+            </span>
+          </label>
+          ${state.smartHoppersEnabled && geometryMode === "volume" ? '<label class="weightsBulkField" for="bulkHeight"><span>Usable volume</span><span class="weightsInputWithUnit"><input id="bulkHeight" type="text" inputmode="decimal" placeholder="No change" /><span>gal</span></span></label>' : ""}
+          ${state.smartHoppersEnabled && geometryMode === "cylindrical" ? '<label class="weightsBulkField" for="bulkHeight"><span>Usable height</span><span class="weightsInputWithUnit"><input id="bulkHeight" type="text" inputmode="decimal" placeholder="No change" /><span>in</span></span></label>' : ""}
           <button id="applyBulkWeight" class="secondary" type="button" disabled>Apply to selected</button>
         </div>
         <div class="weightsBulkActions">
+          <div id="weightSelectionStatus" class="tiny weightsSelectionStatus" role="status" aria-live="polite">Click hoppers to select, or type directly into one</div>
           <button id="selectAllWeights" type="button" class="bulkTextAction">Select all</button>
           <button id="clearWeightSelection" type="button" class="bulkTextAction">Clear selection</button>
-          <button id="doneBulkWeights" type="button" class="bulkTextAction">Done</button>
         </div>
-        <div class="weightsBulkNote tiny">Blank fields leave existing values unchanged.</div>
       `;
 
       const desktopControls = document.createElement("div");
@@ -2747,30 +2748,23 @@
       table.appendChild(tbody);
       frame.appendChild(table);
       scroll.appendChild(frame);
+      // Bulk edit is no longer a separate mode alongside Weight Profiles -
+      // it's folded into View: Edit (see the toolbar built above). Weight
+      // Profiles is the only thing left here, so it stands alone rather
+      // than sharing a tab strip with a sibling that no longer exists.
       const actionToolbar = document.createElement("div");
       actionToolbar.className = "desktopWeightsActionToolbar recipeUtilityTabs";
       const profilesAction = document.createElement("button");
       profilesAction.type = "button";
       profilesAction.id = "desktopWeightProfilesButton";
       profilesAction.className = "recipeUtilityTab recipeActionTab";
-      profilesAction.setAttribute("role", "tab");
-      profilesAction.setAttribute("aria-controls", "setupWeightProfilesBlock");
-      profilesAction.setAttribute("aria-selected", "false");
       profilesAction.setAttribute("aria-expanded", "false");
       profilesAction.setAttribute("aria-label", "Open receiver weight profiles");
       profilesAction.innerHTML = '<span>Weight Profiles</span><svg viewBox="0 0 28 28" aria-hidden="true"><path d="M7 4h14l3 5v14l-4 3H8l-4-3V9z"/><path d="M9 12h10M9 16h10M9 20h6"/></svg>';
-      const bulkModeButton = document.createElement("button");
-      bulkModeButton.type = "button";
-      bulkModeButton.id = "desktopWeightsBulkToggle";
-      bulkModeButton.className = "recipeUtilityTab recipeActionTab";
-      bulkModeButton.setAttribute("role", "tab");
-      bulkModeButton.setAttribute("aria-controls", "desktopWeightsBulkContext");
-      bulkModeButton.setAttribute("aria-selected", "false");
-      bulkModeButton.setAttribute("aria-pressed", "false");
-      bulkModeButton.innerHTML = '<span>Bulk edit</span><svg viewBox="0 0 28 28" aria-hidden="true"><rect x="4" y="4" width="8" height="8" rx="1"/><rect x="16" y="4" width="8" height="8" rx="1"/><rect x="4" y="16" width="8" height="8" rx="1"/><path d="M17 20l2 2 5-6"/></svg>';
-      actionToolbar.append(profilesAction, bulkModeButton);
+      actionToolbar.append(profilesAction);
 
       area.appendChild(desktopControls);
+      area.appendChild(toolbar);
       area.appendChild(scroll);
       area.appendChild(actionToolbar);
       const profilesPanel = $("setupWeightProfilesBlock");
@@ -2779,7 +2773,6 @@
         profilesPanel.hidden = true;
         area.appendChild(profilesPanel);
       }
-      area.appendChild(toolbar);
 
       const bulkInput = toolbar.querySelector("#bulkWeight");
       const bulkHeightInput = toolbar.querySelector("#bulkHeight");
@@ -2835,24 +2828,16 @@
         selected.clear();
         updateSelectionUI();
       });
-      function setDesktopBulkMode(enabled){
-        desktopBulkMode = !!enabled;
-        if (desktopBulkMode) setDesktopProfilesOpen(false);
-        weightsBulkModeActive = desktopBulkMode;
-        area.dataset.desktopBulkMode = String(desktopBulkMode);
-        toolbar.hidden = !desktopBulkMode;
-        actionToolbar.classList.toggle("bulkActive", desktopBulkMode);
-        bulkModeButton.classList.toggle("active", desktopBulkMode);
-        bulkModeButton.setAttribute("aria-pressed", String(desktopBulkMode));
-        bulkModeButton.setAttribute("aria-selected", String(desktopBulkMode));
-        bulkModeButton.querySelector("span").textContent = desktopBulkMode ? "Done" : "Bulk edit";
-        if (!desktopBulkMode) selected.clear();
-        updateSelectionUI();
-      }
+      // Edit is the one place selection/bulk-apply lives now - there's no
+      // standalone "Bulk edit" mode to toggle independently of View
+      // anymore. Switching View to Edit turns on cell selection (a click
+      // on a cell that isn't its input/wrench toggles selection, same as
+      // the old bulk mode did) and reveals the toolbar built above;
+      // switching back to Summary clears any selection and hides it.
       function setDesktopProfilesOpen(open){
         desktopProfilesOpen = !!open;
         if (desktopProfilesOpen){
-          setDesktopBulkMode(false);
+          setDesktopWeightView("summary");
           if (profilesPanel){
             profilesPanel.open = true;
             profilesPanel.hidden = false;
@@ -2862,20 +2847,24 @@
         }
         profilesAction.classList.toggle("active", desktopProfilesOpen);
         profilesAction.setAttribute("aria-expanded", String(desktopProfilesOpen));
-        profilesAction.setAttribute("aria-selected", String(desktopProfilesOpen));
       }
-      exitWeightsBulkModeFn = () => setDesktopBulkMode(false);
+      exitWeightsBulkModeFn = () => setDesktopWeightView("summary");
       function setDesktopWeightView(mode){
         desktopWeightView = mode === "edit" ? "edit" : "summary";
+        desktopBulkMode = desktopWeightView === "edit";
+        if (desktopBulkMode) setDesktopProfilesOpen(false);
+        weightsBulkModeActive = desktopBulkMode;
         area.dataset.desktopWeightView = desktopWeightView;
+        area.dataset.desktopBulkMode = String(desktopBulkMode);
+        toolbar.hidden = !desktopBulkMode;
+        if (!desktopBulkMode) selected.clear();
         desktopControls.querySelectorAll("[data-weight-view]").forEach(button=>{
           const active = button.dataset.weightView === desktopWeightView;
           button.classList.toggle("active", active);
           button.setAttribute("aria-pressed", String(active));
         });
+        updateSelectionUI();
       }
-      bulkModeButton.addEventListener("click", ()=>setDesktopBulkMode(!desktopBulkMode));
-      toolbar.querySelector("#doneBulkWeights").addEventListener("click", ()=>setDesktopBulkMode(false));
       desktopControls.querySelector(".desktopWeightsViewToggle").addEventListener("click", event=>{
         const button = event.target.closest("button[data-weight-view]");
         if (button) setDesktopWeightView(button.dataset.weightView);

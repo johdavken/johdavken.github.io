@@ -62,10 +62,9 @@ test("desktop refinements keep Smart Hoppers obvious and utility/sidebar chrome 
   assert.match(desktop, /\.desktopDisplayToggle\{[\s\S]*?border-color:transparent;[\s\S]*?background:transparent/);
 });
 
-test("Receiver Profiles and Bulk Edit live in the desktop matrix action area", () => {
-  assert.match(app, /desktopWeightsActionToolbar mobileMatrixActionBar/);
-  assert.match(app, /profilesAction\.innerHTML = '<span>Profiles<\/span>/);
-  assert.match(app, /bulkModeButton\.innerHTML = '<span>Bulk edit<\/span>/);
+test("Weight Profiles stands alone in the desktop matrix action area - Bulk Edit was folded into View:Edit, not kept as a sibling tab", () => {
+  assert.match(app, /profilesAction\.innerHTML = '<span>Weight Profiles<\/span>/);
+  assert.doesNotMatch(app, /bulkModeButton|desktopWeightsBulkToggle/);
   assert.match(app, /desktopWeightsBulkContext/);
   assert.match(desktop, /desktopWeightsBulkContext\[hidden\]\{display:none!important\}/);
 });

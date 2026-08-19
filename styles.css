@@ -3491,9 +3491,6 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
   border-radius: var(--radius-row);
   background: var(--readonly-bg);
 }
-.weightsBulkSteps{grid-column:1/-1;display:flex;align-items:center;gap:18px;padding-bottom:8px;border-bottom:1px solid var(--row-border)}
-.weightsBulkSteps span{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:var(--font-small)}
-.weightsBulkSteps b{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:999px;background:var(--btn-primary-a);color:var(--title);font-size:var(--font-tiny)}
 .weightsBulkField{ margin: 0; }
 .weightsBulkField > span:first-child{display:block;margin-bottom:6px}
 .weightsBulkField .weightsInputWithUnit input{color:var(--muted)}
@@ -3507,10 +3504,7 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
   color: var(--muted);
   font-size: var(--font-small);
 }
-.weightsBulkApply{display:grid;align-content:end;gap:6px}
-.weightsBulkApply button{width:100%}
 .weightsBulkActions{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding-top:4px;border-top:1px solid var(--row-border)}
-.weightsBulkNote{grid-column:1/-1;color:var(--muted)}
 .weightsSelectionStatus{min-height:1.2em}
 
 .weightsMatrixScroll{
@@ -3755,7 +3749,6 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
 }
 @media (max-width: 600px){
   .weightsBulkBar{ grid-template-columns: 1fr; align-items: stretch; }
-  .weightsBulkSteps{align-items:flex-start;flex-direction:column;gap:5px}
   .weightsBulkActions{display:flex}
 }
 
