@@ -75,9 +75,10 @@ test("renderSplitsArea calls renderSplitsSavedRecipes at the end of every render
 test("splitsBulkModeActive and splitsSavedRecipesOpen persist at module scope (like hopperRearrangement already does), so a render triggered by switching panels can seed the one the operator meant to open", () => {
   assert.match(app, /let splitsBulkModeActive = false;/);
   assert.match(app, /let splitsSavedRecipesOpen = false;/);
-  // Desktop resolves selection from the Summary/Edit view itself (Edit *is*
-  // bulk edit), so only compact mobile still seeds from the persisted flag.
-  assert.match(app, /let bulkMode = compactMobileRecipe \? splitsBulkModeActive : viewMode === "edit";/);
+  // Selection is resolved from the Summary/Edit view on every surface now
+  // (Edit *is* bulk edit), so nothing seeds from the persisted flag - it
+  // survives only as the value setBulkMode writes back for Android Back.
+  assert.match(app, /let bulkMode = viewMode === "edit";/);
 });
 
 test("opening Rearrange closes Bulk edit and Saved Recipes", () => {
@@ -126,7 +127,7 @@ test("the Saved Recipes button leads the utility tab strip/mobile primary row (L
   // No longer appended into modeBar at all - it leads the desktop
   // .recipeUtilityTabs strip and the mobile primary row instead (both
   // built from the same three buttons, see the compact/desktop branches).
-  assert.match(app, /mobilePrimaryRow\.append\(savedRecipesButton, modeButton, rearrangeButton\);/);
+  assert.match(app, /mobilePrimaryRow\.append\(savedRecipesButton, rearrangeButton\);/);
   // Desktop's strip is now Saved recipes / Load Next / Print: Bulk edit is
   // gone as a concept (Edit view replaced it) and Rearrange moved into the
   // Edit panel, so Saved Recipes is the only panel-opening tab left.

@@ -2527,30 +2527,63 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
 #splitsArea.recipeTrackingView .splitMatrixCell{ cursor: pointer; }
 #splitsArea.recipeTrackingView .splitMatrixCell:hover{ background: color-mix(in srgb, var(--focus-ring) 40%, transparent); }
 
-@media (min-width: 701px){
-  /* Tracking is a Summary-view action and bulk selection is an Edit-view
-     one, so the per-cell clock and clear x have no role in either - both
-     were replaced by clicking the cell and by the Edit panel's own
-     Clear cell contents. */
-  #splitsArea[data-recipe-view] .splitTrackControl,
-  #splitsArea[data-recipe-view] .splitClearButton{ display: none; }
-  #splitsArea[data-recipe-view="summary"] .splitCellSelector{ display: none; }
-  /* Selection reads as a highlighted cell rather than a checkbox, but the
-     checkbox stays in the accessibility tree and keyboard tab order - it is
-     the only way to select a cell without a pointer. */
-  #splitsArea[data-recipe-view="edit"] .splitCellSelector{
-    display: block;
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    padding: 0;
-    overflow: hidden;
-    clip: rect(0,0,0,0);
-    white-space: nowrap;
-    border: 0;
-  }
+/* Tracking is a Summary-view action and bulk selection is an Edit-view one,
+   so the per-cell clock and clear x have no role in either, on any surface -
+   both were replaced by clicking the cell and by the panel's own Clear cell
+   contents. On phones this is also what buys the space back: dropping the
+   clock from a ~59px cell is most of the room the resin name needed. */
+#splitsArea[data-recipe-view] .splitTrackControl,
+#splitsArea[data-recipe-view] .splitClearButton{ display: none; }
+#splitsArea[data-recipe-view="summary"] .splitCellSelector{ display: none; }
+/* Selection reads as a highlighted cell rather than a checkbox, but the
+   checkbox stays in the accessibility tree and keyboard tab order - it is
+   the only way to select a cell without a pointer. */
+#splitsArea[data-recipe-view="edit"] .splitCellSelector{
+  display: block;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+  border: 0;
+}
+/* The resin mirror: text on touch surfaces, the real field on pointer ones.
+   Exactly one of the two is ever visible, so they can never be mistaken for
+   two separate values. */
+.splitCellResinText{ display: none; }
+#splitsArea[data-recipe-cells="static"] .splitCellResinText{
+  display: block;
+  min-width: 0;
+  color: var(--title);
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+#splitsArea[data-recipe-cells="static"] .splitMatrixCell .resinNameInput{ display: none; }
 
+/* Cells that cannot be typed into (every touch surface) render their fields
+   as plain text: no borders, no field chrome, and no pointer target of their
+   own, so the whole cell is one reliable tap target for select/track. */
+#splitsArea[data-recipe-cells="static"] .splitMatrixCell input{
+  pointer-events: none;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+#splitsArea[data-recipe-cells="static"] .splitMatrixCell input:disabled{
+  opacity: 1;
+  color: var(--text);
+  -webkit-text-fill-color: var(--text);
+}
+#splitsArea[data-recipe-cells="static"] .splitMatrixCell .resinNameInput:disabled{
+  color: var(--title);
+  -webkit-text-fill-color: var(--title);
+  font-weight: 800;
+}
+
+@media (min-width: 701px){
   /* Row and column select targets. The base layer letter is an inert
      watermark (opacity .14, pointer-events:none) and the row header is a
      plain label; the .bulk-editing rules that used to promote both into
@@ -2864,6 +2897,7 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     background: var(--btn-primary-a);
     color: var(--title);
   }
+
 
   /* The rail already shows which layer is active, so the big ghosted
      column-header letter is redundant here - drop it. Bulk edit still
@@ -3240,6 +3274,68 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
   .splitsMatrix.compactMobileRecipe .splitPctControl > span{ color:var(--muted); font-size:10px; font-weight:800; }
   .splitsMatrix.compactMobileRecipe .splitMatrixCell.empty .resinNameInput,
   .splitsMatrix.compactMobileRecipe .splitMatrixCell.empty .splitPctControl{ opacity:.42; }
+
+  /* ---------------------------------------------------------------
+     Phones, static cells: the whole 5-layer grid stays (stepping one
+     layer at a time reads as tedious navigation), so the room has to
+     come from inside each cell instead. Dropping the clock and the
+     input chrome frees roughly a third of a ~59px cell, and all of it
+     goes into the two values operators actually read across the line.
+     --------------------------------------------------------------- */
+  #splitsArea[data-recipe-cells="static"] .splitsMatrix.compactMobileRecipe td.splitMatrixCell{
+    padding:5px 3px;
+  }
+  #splitsArea[data-recipe-cells="static"] .splitsMatrix.compactMobileRecipe .splitCellResinText{
+    font-size:11px;
+    line-height:13px;
+    /* Two lines is enough for the long codes and keeps rows even; anything
+       past that would push the grid taller than it is worth. */
+    display:-webkit-box;
+    -webkit-line-clamp:2;
+    -webkit-box-orient:vertical;
+    overflow:hidden;
+  }
+  /* The number and its unit read as one value, so the % stays tucked
+     against the digits instead of drifting to the cell's right edge.
+     Width is fixed rather than content-sized: an input's intrinsic width
+     comes from its size attribute, not its value, and the newer CSS
+     property that would size it to its content is not safe to rely on in
+     the Android WebView this also ships in. 30px holds "100", the widest a
+     percentage gets. */
+  #splitsArea[data-recipe-cells="static"] .splitsMatrix.compactMobileRecipe .splitCellControls,
+  #splitsArea[data-recipe-cells="static"] .splitsMatrix.compactMobileRecipe .splitPctControl{
+    justify-content:flex-start;
+    gap:2px;
+  }
+  #splitsArea[data-recipe-cells="static"] .splitsMatrix.compactMobileRecipe .splitPctControl input{
+    width:30px;
+    min-width:0;
+    flex:0 0 auto;
+    height:auto;
+    min-height:0;
+    max-height:none;
+    padding:0;
+    font-size:16px;
+    line-height:18px;
+    /* Right-aligned inside its fixed box so the digits always end flush
+       against the %, whether the value is "5", "20" or "100". */
+    text-align:right;
+  }
+  #splitsArea[data-recipe-cells="static"] .splitsMatrix.compactMobileRecipe .splitCellHeader{
+    min-height:0;
+    margin:0 0 2px;
+  }
+  #splitsArea[data-recipe-cells="static"] .splitsMatrix.compactMobileRecipe .splitCellHopperName{
+    font-size:10px;
+    font-weight:800;
+  }
+  /* Tapping is now the only way to select or track, so the target needs to
+     read as one - and stay well clear of the 44px guidance even at five
+     layers across. */
+  #splitsArea[data-recipe-cells="static"] .splitsMatrix.compactMobileRecipe .splitMatrixCell{
+    min-height:52px;
+    cursor:pointer;
+  }
   @keyframes compactRecipeTrackPulse{
     0%,100%{ transform:scale(1); box-shadow:0 0 0 1px color-mix(in srgb,#b9e2ff 70%,transparent); }
     50%{ transform:scale(1.06); box-shadow:0 0 0 3px color-mix(in srgb,#72b9e8 24%,transparent); }
@@ -4126,9 +4222,13 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
   .mobileWeightVisualReadout{display:none}
   /* Five columns are deliberately kept visible. The visual cell reserves its
      limited width for the two readings; the hopper becomes a compact cue. */
-  #weightsArea[data-mobile-weight-view="visual"] .mobileWeightCell{height:100px;min-height:100px;padding:5px 3px}
-  #weightsArea[data-mobile-weight-view="visual"] .mobileWeightValueFields{display:none}
-  #weightsArea[data-mobile-weight-view="visual"] .mobileWeightVisualReadout{display:grid;grid-template-columns:18px minmax(0,1fr);align-items:center;justify-content:stretch;gap:2px;margin-top:9px}
+  /* Touch cells are static in both views: the per-hopper fields never
+     present themselves (they stay in the DOM only as the value carrier bulk
+     apply writes through), and the read-only readout is what shows. Edit
+     view adds selection and the bulk bar, not per-cell typing. */
+  #weightsArea[data-mobile-weight-view] .mobileWeightCell{height:100px;min-height:100px;padding:5px 3px}
+  #weightsArea[data-mobile-weight-view] .mobileWeightValueFields{display:none}
+  #weightsArea[data-mobile-weight-view] .mobileWeightVisualReadout{display:grid;grid-template-columns:18px minmax(0,1fr);align-items:center;justify-content:stretch;gap:2px;margin-top:9px}
   .mobileWeightVisualReadout svg{width:18px;height:31px;color:var(--focus-border);fill:none;stroke:currentColor;stroke-width:1.5}
   .mobileWeightVisualReadout .mobileHopperFill{fill:color-mix(in srgb,var(--focus-border) 30%,transparent);stroke:none}
   .mobileWeightVisualValues{display:grid;gap:3px;min-width:0;text-align:right}
@@ -4136,7 +4236,7 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
   .mobileWeightVisualValues small{display:block;margin-top:1px;color:var(--muted);font-size:0;font-weight:700;text-transform:uppercase;letter-spacing:.03em}
   .mobileWeightVisualValues b:first-child small::after{content:"lb";font-size:7px}
   .mobileWeightVisualValues b:nth-child(2) small::after{content:"in";font-size:7px}
-  #weightsArea[data-mobile-weight-view="visual"] .mobileWeightsComputedWeight{position:absolute;right:3px;bottom:4px;left:3px;min-height:11px;padding-top:0}
+  #weightsArea[data-mobile-weight-view] .mobileWeightsComputedWeight{position:absolute;right:3px;bottom:4px;left:3px;min-height:11px;padding-top:0}
   #weightsArea[data-mobile-bulk-mode="true"] .mobileWeightCell{ cursor:pointer; }
   #weightsArea[data-mobile-bulk-mode="true"] .mobileWeightCellSelector{ display:block; }
   .mobileWeightsBulkBar{
@@ -7208,28 +7308,25 @@ body[data-surface-style="divided"] .helpTopic{
   .mobileWeightsViewToggle button{border-radius:var(--control-radius)}
   .mobileWeightsViewToggle button.active{background:transparent;box-shadow:inset 0 -2px 0 var(--focus-border)}
 
-  #weightsArea[data-mobile-weight-view="visual"] .mobileWeightCell{height:70px;min-height:68px;padding:5px}
-  #weightsArea[data-mobile-weight-view="visual"] .mobileWeightVisualReadout{display:block;margin-top:17px}
+  /* Static cells in both views - see the tablet block above. */
+  #weightsArea[data-mobile-weight-view] .mobileWeightCell{height:70px;min-height:68px;padding:5px}
+  #weightsArea[data-mobile-weight-view] .mobileWeightVisualReadout{display:block;margin-top:17px}
   .mobileWeightVisualValues{display:grid;gap:3px;min-width:0;text-align:left}
   .mobileWeightVisualValues b{display:flex;align-items:baseline;justify-content:flex-end;gap:2px;min-width:0;font-size:13px;line-height:1}
   .mobileWeightVisualValues small{display:inline;margin:0;color:var(--muted);font-size:7px!important}
   .mobileWeightVisualValues b:first-child small::after,.mobileWeightVisualValues b:nth-child(2) small::after{content:none}
-  #weightsArea[data-mobile-weight-view="edit"] .mobileWeightCell{min-height:78px}
   .mobileWeightsBulkActions small{font-weight:800}
   .mobileWeightsBulkActions button{font-weight:850}
 
   /* Profiles and bulk editing belong with the bottom of the matrix. The
      toolbar uses the same compact, equal actions as the Recipe panel. */
-  .mobileWeightsActionToolbar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;margin-top:8px;border:1px solid var(--row-border-2);border-radius:var(--control-radius);overflow:hidden;background:var(--row-bg-2)}
+  /* Weight Profiles is the only action left here - Bulk edit became Edit view. */
+  .mobileWeightsActionToolbar{display:grid;grid-template-columns:1fr;gap:0;margin-top:8px;border:1px solid var(--row-border-2);border-radius:var(--control-radius);overflow:hidden;background:var(--row-bg-2)}
   .mobileWeightsActionToolbar button{display:flex;align-items:center;justify-content:center;gap:7px;min-height:42px;padding:7px 8px;border:0;border-radius:0;background:transparent;color:var(--text);font:inherit;font-size:12px;font-weight:850;box-shadow:none}
   .mobileWeightsActionToolbar button + button{border-left:1px solid var(--row-border-2)}
   .mobileWeightsActionToolbar button svg{width:18px;height:18px;fill:none;stroke:var(--focus-border);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
   .mobileWeightsActionToolbar button:hover,.mobileWeightsActionToolbar button:focus-visible{background:var(--row-bg);outline:0}
   .mobileWeightsActionToolbar button:focus-visible{box-shadow:inset 0 0 0 2px var(--focus-border)}
-  .mobileWeightsActionToolbar .mobileWeightsBulkToggleRow.on{color:var(--title);background:var(--focus-ring)}
-  .mobileWeightsActionToolbar.bulkActive{grid-template-columns:1fr}
-  .mobileWeightsActionToolbar.bulkActive .mobileWeightsProfilesAction{display:none}
-  .mobileWeightsActionToolbar.bulkActive .mobileWeightsBulkToggleRow{border-left:0}
   .mobileWeightsActionToolbar .mobileWeightsProfilesAction[aria-expanded="true"]{color:var(--title);background:var(--focus-ring)}
 
   .mobileSavedRecipesSheet{bottom:calc(var(--app-dock-height) + env(safe-area-inset-bottom) + 8px);width:min(410px,calc(100vw - 20px));max-width:calc(100vw - 20px);max-height:min(74dvh,620px);margin:0;padding:0 12px 12px;border:1px solid var(--border2);border-radius:16px;background:var(--panelOpen);box-shadow:0 12px 32px color-mix(in srgb,#000 30%,transparent)}
@@ -7262,9 +7359,11 @@ body[data-surface-style="divided"] .helpTopic{
   }
   .mobileWeightCellSelector{display:none!important}
 
-  /* In Summary, Smart capacity replaces the manual display in place. */
+  /* Smart capacity replaces the manual display in place, so the separate
+     computed-weight line would just repeat it. Cells are static in both
+     views now, so this applies to both rather than Summary alone. */
   .mobileWeightSummaryWeight.smart{color:var(--ok)}
-  #weightsArea[data-mobile-weight-view="visual"] .mobileWeightsComputedWeight{display:none!important}
+  #weightsArea[data-mobile-weight-view] .mobileWeightsComputedWeight{display:none!important}
 
   /* Recipes and receiver profiles share Display's centered mobile sheet
      geometry instead of relying on dialog's edge-to-edge default margins. */

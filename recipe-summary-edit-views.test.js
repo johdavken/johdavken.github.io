@@ -70,11 +70,32 @@ test("leaving Edit cancels an in-progress rearrangement rather than stranding it
  *   View resolution, and mobile staying out of it
  * -------------------------------------------------------------------- */
 
-test("desktop resolves selection from the view (Edit *is* bulk edit); compact mobile keeps its own independent bulk toggle", () => {
-  assert.match(splitsArea, /const viewMode = compactMobileRecipe \? "edit" : splitsViewMode;/);
-  assert.match(splitsArea, /const summaryView = !compactMobileRecipe && viewMode === "summary";/);
-  assert.match(splitsArea, /let bulkMode = compactMobileRecipe \? splitsBulkModeActive : viewMode === "edit";/);
+test("Summary/Edit is the single mode axis on every surface - Edit *is* bulk edit, so there is no second mode anywhere", () => {
+  assert.match(splitsArea, /const viewMode = splitsViewMode;/);
+  assert.match(splitsArea, /const summaryView = viewMode === "summary";/);
+  assert.match(splitsArea, /let bulkMode = viewMode === "edit";/);
   assert.match(splitsArea, /area\.dataset\.recipeView = viewMode;/);
+});
+
+test("typing in a cell is a pointer-device capability, not a width one - every touch surface edits through the panel", () => {
+  assert.match(splitsArea, /const cellsTypeable = isDesktopLayout\(\);/);
+  assert.match(splitsArea, /area\.dataset\.recipeCells = cellsTypeable \? "typeable" : "static";/);
+  // Static cells swap the resin field for real text, so long codes
+  // ("EXXON LD105.30", "00328 nexxstar") wrap instead of being ellipsised
+  // away at phone column widths.
+  assert.match(styles, /#splitsArea\[data-recipe-cells="static"\] \.splitCellResinText\{/);
+  assert.match(styles, /#splitsArea\[data-recipe-cells="static"\] \.splitMatrixCell \.resinNameInput\{ display: none; \}/);
+});
+
+test("the resin mirror is kept in sync from refreshCellState - the one funnel every write path already ends in", () => {
+  assert.match(splitsArea, /resinText\.textContent = hopper\.resinName \|\| "";/);
+  const refreshStart = splitsArea.indexOf("function refreshCellState(){");
+  assert.notEqual(refreshStart, -1);
+  const body = splitsArea.slice(refreshStart, splitsArea.indexOf("\n          }", refreshStart));
+  assert.match(body, /resinText\.textContent/);
+  // Exactly one of field/text is ever visible, so they cannot read as two
+  // separate values.
+  assert.match(styles, /\.splitCellResinText\{ display: none; \}/);
 });
 
 test("the compact mobile grid keeps .bulk-editing to itself, so desktop presentation is driven only by data-recipe-view", () => {
@@ -89,7 +110,8 @@ test("the compact mobile grid keeps .bulk-editing to itself, so desktop presenta
 test("tracking view requires Summary and the Current page - the plan cannot carry tracking at all", () => {
   assert.match(splitsArea, /const trackingView = summaryView && !isNextRecipePage\(\);/);
   assert.match(splitsArea, /area\.classList\.toggle\("recipeTrackingView", trackingView\);/);
-  assert.match(splitsArea, /const trackable = compactMobileRecipe \? !isNextRecipePage\(\) : trackingView;/);
+  // One condition, every surface - no per-platform special case left.
+  assert.match(splitsArea, /if \(!trackingView \|\| bulkMode \|\| hopperRearrangement\?\.active\) return;/);
 });
 
 test("Summary's inert fields still let a click reach the cell, so the whole cell is the tracking target", () => {
@@ -112,7 +134,7 @@ test("Summary and Edit mark cells differently - a filled bar for tracked, an out
 
 test("Summary locks the cell fields and the layer percentage, and hides the Match copy buttons", () => {
   const setBulkModeBody = functionBody("setBulkMode");
-  assert.match(setBulkModeBody, /const readOnly = compactMobileRecipe\s*\n\s*\? \(bulkMode \|\| rearranging\)\s*\n\s*: \(summaryView \|\| rearranging\);/);
+  assert.match(setBulkModeBody, /const readOnly = !cellsTypeable \|\| summaryView \|\| rearranging;/);
   assert.match(splitsArea, /if\(hopperRearrangement\?\.active \|\| summaryView\) pctInput\.disabled=true;/);
   assert.match(styles, /#splitsArea\[data-recipe-view="summary"\] \.splitCopyBtn\{ display: none; \}/);
 });

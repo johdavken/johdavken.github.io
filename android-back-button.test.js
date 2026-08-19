@@ -63,10 +63,12 @@ test("closes a footer sheet/menu through the existing PolynFooterSheetUI.close()
   assert.match(app, /window\.PolynFooterSheetUI = \{ close:/);
 });
 
-test("exits Receiver Weights Edit view (mobile Bulk Edit / desktop View:Edit) through the real setMobileWeightBulkMode/setDesktopWeightView, not a duplicate implementation", () => {
+test("exits Receiver Weights Edit view through the real setMobileWeightView/setDesktopWeightView, not a duplicate implementation", () => {
   const body = functionBody("handleAndroidBack");
   assert.match(body, /if \(weightsBulkModeActive\)\{ exitWeightsBulkModeFn\?\.\(\); return true; \}/);
-  assert.match(app, /exitWeightsBulkModeFn = \(\) => setMobileWeightBulkMode\(false\);/);
+  // Both paths now leave Edit by switching the view, not by cancelling a
+  // separate bulk mode that no longer exists.
+  assert.match(app, /exitWeightsBulkModeFn = \(\) => setMobileWeightView\("visual"\);/);
   assert.match(app, /exitWeightsBulkModeFn = \(\) => setDesktopWeightView\("summary"\);/);
 });
 

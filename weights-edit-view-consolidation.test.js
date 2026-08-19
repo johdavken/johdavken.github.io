@@ -41,7 +41,7 @@ test("there is no standalone Bulk edit button/tab left in the desktop weights ac
 
 test("cell selection is gated on View being Edit, not a separate mode flag - desktopBulkMode is derived from setDesktopWeightView", () => {
   const body = functionBody("renderWeightsArea");
-  assert.match(body, /function setDesktopWeightView\(mode\)\{\s*\n\s*desktopWeightView = mode === "edit" \? "edit" : "summary";\s*\n\s*desktopBulkMode = desktopWeightView === "edit";/);
+  assert.match(body, /function setDesktopWeightView\(mode\)\{\s*\n\s*desktopWeightView = mode === "edit" \? "edit" : "summary";\s*\n\s*weightsViewMode = desktopWeightView;\s*\n\s*desktopBulkMode = desktopWeightView === "edit";/);
   // The per-cell click/keydown handlers and header select buttons still
   // gate on the same desktopBulkMode variable - just no longer settable by
   // its own independent toggle.
