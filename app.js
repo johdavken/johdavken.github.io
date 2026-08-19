@@ -902,6 +902,14 @@
   }
 
   let renderedHopperNamingMode = "";
+  // Smart Hoppers availability (geometryMode) can flip - a workspace
+  // connecting/disconnecting, or resolving to a different identified line -
+  // without ever changing hopper naming mode, which is a Line-9-only
+  // special case. Tracked alongside it so that transition still re-renders
+  // the weights area instead of leaving it stuck on whatever it showed the
+  // last time naming mode happened to change (e.g. "Join a workspace to
+  // enable Smart Hoppers" persisting after the workspace connects).
+  let renderedSmartHopperGeometryMode = null;
 
   function derivedHopperNamingMode(syncState = lineSync?.getState?.()){
     return window.PolynLineIdentity?.hopperNamingMode(syncState) || "standard";
@@ -909,8 +917,10 @@
 
   function syncDerivedHopperNaming(syncState, { rerender = true } = {}){
     const next = derivedHopperNamingMode(syncState);
-    const changed = renderedHopperNamingMode !== next;
+    const nextGeometryMode = window.PolynLineIdentity?.getSmartHopperGeometryModeForSync(syncState) ?? null;
+    const changed = renderedHopperNamingMode !== next || renderedSmartHopperGeometryMode !== nextGeometryMode;
     renderedHopperNamingMode = next;
+    renderedSmartHopperGeometryMode = nextGeometryMode;
     document.body.dataset.hopperNaming = next;
     if (changed && rerender && state.layers.length && $("weightsArea") && $("splitsArea")){
       renderWeightsArea();

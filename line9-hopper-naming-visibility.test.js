@@ -64,6 +64,23 @@ test("label transitions preserve recipe and receiver values by stable indexes", 
   }
 });
 
+test("syncDerivedHopperNaming also tracks Smart Hoppers geometry mode, so connecting to an identified line re-renders the weights area even when hopper naming mode itself is unchanged", () => {
+  // Regression: LINE 11 / LAYERS 5 correctly refreshed on connect (its
+  // Overview render is re-run on every sync pass via syncLineTypeUI), but
+  // the Smart Hoppers panel kept showing "Join a workspace to enable Smart
+  // Hoppers" after connecting, because renderWeightsArea only re-ran here
+  // when hopperNamingMode changed - a Line-9-only special case that a
+  // standard-naming line like 11 never trips. Geometry mode must be tracked
+  // as its own condition, independent of naming mode.
+  assert.match(app, /let renderedSmartHopperGeometryMode = null;/);
+  const start = app.indexOf("function syncDerivedHopperNaming(");
+  assert.notEqual(start, -1);
+  const body = app.slice(start, app.indexOf("\n  }", start) + 4);
+  assert.match(body, /const nextGeometryMode = window\.PolynLineIdentity\?\.getSmartHopperGeometryModeForSync\(syncState\) \?\? null;/);
+  assert.match(body, /const changed = renderedHopperNamingMode !== next \|\| renderedSmartHopperGeometryMode !== nextGeometryMode;/);
+  assert.match(body, /renderedSmartHopperGeometryMode = nextGeometryMode;/);
+});
+
 test("the app derives labels from sync state without exposing or persisting a selector action", () => {
   assert.match(app, /function derivedHopperNamingMode\(syncState = lineSync\?\.getState\?\.\(\)\)/);
   assert.match(app, /syncDerivedHopperNaming\(syncState\);/);
