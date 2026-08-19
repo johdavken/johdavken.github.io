@@ -77,7 +77,10 @@ test("exiting Edit view (Android Back, or switching to Summary) clears any in-pr
   assert.match(app, /exitWeightsBulkModeFn = \(\) => setDesktopWeightView\("summary"\);/);
 });
 
-test("the Edit toolbar renders as a compact card directly under the controls row, not the old below-the-table bulk panel", () => {
-  assert.match(desktop, /\.desktopWeightsBulkContext\{display:flex;flex-direction:column;/);
+test("the Edit toolbar renders as a single compact row directly under the controls row, not the old below-the-table bulk panel", () => {
+  assert.match(desktop, /\.desktopWeightsBulkContext\{display:flex;align-items:center;/);
   assert.match(desktop, /\.desktopWeightsBulkContext \.weightsBulkFieldsRow\{/);
+  // Fields/Apply on the left, selection status/Select all/Clear pushed to
+  // the right via margin-left:auto - one row, not two stacked.
+  assert.match(desktop, /\.desktopWeightsBulkContext \.weightsBulkActions\{[^}]*margin-left:auto/);
 });

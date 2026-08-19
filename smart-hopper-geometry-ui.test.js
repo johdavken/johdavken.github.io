@@ -93,10 +93,10 @@ test("desktop: the wrench relabels to 'Usable volume (gal)' and writes usableGal
   assert.match(body, /heightInput\.value = String\(clampNum\(isVolume \? L\.hoppers\[hi\]\.usableGallons : L\.hoppers\[hi\]\.usableHeight\)\);/);
 });
 
-test("desktop: the bulk-edit toolbar shows 'Usable volume' (unit gal) in volume mode and 'Usable height' (unit in) in cylindrical mode, never both", () => {
+test("desktop: the Edit toolbar shows 'Volume' (unit gal) in volume mode and 'Height' (unit in) in cylindrical mode, never both - matching mobile's existing short labels", () => {
   const body = functionBody("renderWeightsArea");
-  assert.match(body, /geometryMode === "volume" \? '<label class="weightsBulkField" for="bulkHeight"><span>Usable volume<\/span>[\s\S]*?<span>gal<\/span>/);
-  assert.match(body, /geometryMode === "cylindrical" \? '<label class="weightsBulkField" for="bulkHeight"><span>Usable height<\/span>[\s\S]*?<span>in<\/span>/);
+  assert.match(body, /geometryMode === "volume" \? '<label class="weightsBulkField" for="bulkHeight"><span>Volume<\/span>[\s\S]*?<span>gal<\/span>/);
+  assert.match(body, /geometryMode === "cylindrical" \? '<label class="weightsBulkField" for="bulkHeight"><span>Height<\/span>[\s\S]*?<span>in<\/span>/);
 });
 
 test("mobile: the bulk-edit bar shows 'Volume' in volume mode and 'Height' in cylindrical mode, never both", () => {

@@ -2457,20 +2457,20 @@
       toolbar.innerHTML = `
         <div class="weightsBulkFieldsRow">
           <label class="weightsBulkField" for="bulkWeight">
-            <span>Receiver weight</span>
+            <span>Weight</span>
             <span class="weightsInputWithUnit">
               <input id="bulkWeight" type="text" inputmode="decimal" placeholder="No change" />
               <span>lb</span>
             </span>
           </label>
-          ${state.smartHoppersEnabled && geometryMode === "volume" ? '<label class="weightsBulkField" for="bulkHeight"><span>Usable volume</span><span class="weightsInputWithUnit"><input id="bulkHeight" type="text" inputmode="decimal" placeholder="No change" /><span>gal</span></span></label>' : ""}
-          ${state.smartHoppersEnabled && geometryMode === "cylindrical" ? '<label class="weightsBulkField" for="bulkHeight"><span>Usable height</span><span class="weightsInputWithUnit"><input id="bulkHeight" type="text" inputmode="decimal" placeholder="No change" /><span>in</span></span></label>' : ""}
+          ${state.smartHoppersEnabled && geometryMode === "volume" ? '<label class="weightsBulkField" for="bulkHeight"><span>Volume</span><span class="weightsInputWithUnit"><input id="bulkHeight" type="text" inputmode="decimal" placeholder="No change" /><span>gal</span></span></label>' : ""}
+          ${state.smartHoppersEnabled && geometryMode === "cylindrical" ? '<label class="weightsBulkField" for="bulkHeight"><span>Height</span><span class="weightsInputWithUnit"><input id="bulkHeight" type="text" inputmode="decimal" placeholder="No change" /><span>in</span></span></label>' : ""}
           <button id="applyBulkWeight" class="secondary" type="button" disabled>Apply to selected</button>
-        </div>
-        <div class="weightsBulkActions">
-          <div id="weightSelectionStatus" class="tiny weightsSelectionStatus" role="status" aria-live="polite">Click hoppers to select, or type directly into one</div>
-          <button id="selectAllWeights" type="button" class="bulkTextAction">Select all</button>
-          <button id="clearWeightSelection" type="button" class="bulkTextAction">Clear selection</button>
+          <div class="weightsBulkActions">
+            <div id="weightSelectionStatus" class="tiny weightsSelectionStatus" role="status" aria-live="polite">No hoppers selected</div>
+            <button id="selectAllWeights" type="button" class="bulkTextAction">Select all</button>
+            <button id="clearWeightSelection" type="button" class="bulkTextAction">Clear selection</button>
+          </div>
         </div>
       `;
 
