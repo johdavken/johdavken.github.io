@@ -60,7 +60,9 @@ test("bulk apply writes usable height to canonical state on both platforms (or u
   assert.match(desktop, /if \(heightResult\.value !== null\)\{\s*\n\s*if \(geometryMode === "volume"\) ref\.layer\.hoppers\[ref\.hi\]\.usableGallons = heightResult\.value;\s*\n\s*else ref\.layer\.hoppers\[ref\.hi\]\.usableHeight = heightResult\.value;/);
 
   const mobile = functionBody("renderMobileWeightsArea");
-  assert.match(mobile, /if \(heightResult\.value !== null && ref\.heightInput\)\{\s*\n\s*if \(geometryMode === "volume"\) ref\.hopper\.usableGallons = heightResult\.value;\s*\n\s*else ref\.hopper\.usableHeight = heightResult\.value;/);
+  // Gated on the geometry mode rather than the per-cell input, which is
+  // now an always-present hidden value carrier on the touch path.
+  assert.match(mobile, /if \(heightResult\.value !== null && geometryMode !== null\)\{\s*\n\s*if \(geometryMode === "volume"\) ref\.hopper\.usableGallons = heightResult\.value;\s*\n\s*else ref\.hopper\.usableHeight = heightResult\.value;/);
 });
 
 test("bulk apply calls validateAndCompute, which refreshes the Summary height display by id from canonical state", () => {
@@ -118,7 +120,7 @@ test("refreshSmartHopperState iterates every hopper unconditionally, so any numb
 
 test("view switching only toggles a CSS-driven view attribute - it never re-renders or re-reads stale markup", () => {
   const desktop = functionBody("renderWeightsArea");
-  assert.match(desktop, /function setDesktopWeightView\(mode\)\{\s*\n\s*desktopWeightView = mode === "edit" \? "edit" : "summary";/);
+  assert.match(desktop, /function setDesktopWeightView\(mode\)\{\s*\n\s*desktopWeightView = mode === "edit" \? "edit" : "summary";\s*\n\s*weightsViewMode = desktopWeightView;/);
   const setDesktopWeightViewBody = desktop.slice(
     desktop.indexOf("function setDesktopWeightView"),
     desktop.indexOf("\n      }", desktop.indexOf("function setDesktopWeightView"))
@@ -127,7 +129,7 @@ test("view switching only toggles a CSS-driven view attribute - it never re-rend
   assert.doesNotMatch(setDesktopWeightViewBody, /innerHTML|renderWeightsArea\(\)/);
 
   const mobile = functionBody("renderMobileWeightsArea");
-  assert.match(mobile, /function setMobileWeightView\(mode\)\{\s*\n\s*visualMode = mode === "visual";\s*\n\s*area\.dataset\.mobileWeightView = visualMode \? "visual" : "edit";/);
+  assert.match(mobile, /function setMobileWeightView\(mode\)\{\s*\n\s*visualMode = mode === "visual";\s*\n\s*weightsViewMode = visualMode \? "summary" : "edit";\s*\n\s*area\.dataset\.mobileWeightView = visualMode \? "visual" : "edit";/);
 });
 
 /* ----------------------------------------------------------------------

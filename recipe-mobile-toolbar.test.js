@@ -28,7 +28,9 @@ test("desktop's own tab strip and action row only exist when not on the compact 
 
 test("the mobile action row is built by moving the same real buttons, not rebuilding them - handlers stay exactly as wired", () => {
   const editor = recipeEditor();
-  assert.match(editor, /mobilePrimaryRow\.append\(savedRecipesButton, modeButton, rearrangeButton\);/);
+  // Bulk edit is gone from the mobile row too - Edit view replaced it -
+  // which buys back a slot in a row that was already full at four items.
+  assert.match(editor, /mobilePrimaryRow\.append\(savedRecipesButton, rearrangeButton\);/);
   assert.doesNotMatch(editor, /document\.createElement\("button"\)[\s\S]{0,80}"Bulk edit"[\s\S]{0,80}mobilePrimaryRow/);
 });
 

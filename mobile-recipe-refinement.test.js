@@ -20,14 +20,16 @@ test("the active clock is a filled blue circular badge while the inactive contro
   assert.match(styles,/\.splitsMatrix\.compactMobileRecipe \.splitCellHopperName\.smart\{ color:color-mix\(in srgb,#2f9e62 78%,var\(--text\)\); \}/);
 });
 
-test("compact mobile cells use their non-editing surface as the practical tracking target",()=>{
+test("the whole cell is the tracking target on every surface, gated on Summary view",()=>{
   assert.match(app,/function toggleTracking\(\)\{/);
-  // Compact mobile's condition is unchanged in substance - whole-cell
-  // tracking, never on Next, never while selecting or rearranging - it just
-  // shares the handler with desktop's Summary view now.
-  assert.match(app,/td\.addEventListener\("click", event=>\{[\s\S]*?const trackable = compactMobileRecipe \? !isNextRecipePage\(\) : trackingView;[\s\S]*?if \(!trackable \|\| bulkMode \|\| hopperRearrangement\?\.active\) return;[\s\S]*?event\.target\.closest\("input,button,label,a,select,textarea"\)[\s\S]*?toggleTracking\(\);/);
-  assert.match(app,/event\.stopPropagation\(\);\s*toggleTracking\(\);/);
-  assert.match(styles,/\.splitsMatrix\.compactMobileRecipe \.splitTrackButton::before\{[\s\S]*?width:44px;[\s\S]*?height:44px;/);
+  // One condition now, shared by every surface: tracking is what Summary
+  // view is for, and never applies on Next, while selecting, or mid-
+  // rearrange. Mobile reaches it the same way desktop does.
+  assert.match(app,/td\.addEventListener\("click", event=>\{[\s\S]*?if \(!trackingView \|\| bulkMode \|\| hopperRearrangement\?\.active\) return;[\s\S]*?event\.target\.closest\("input,button,label,a,select,textarea"\)[\s\S]*?toggleTracking\(\);/);
+  // The per-cell clock is gone from every surface - on a phone it was a
+  // third of a ~59px cell, and dropping it is most of the room the resin
+  // name needed to stop truncating.
+  assert.match(styles,/#splitsArea\[data-recipe-view\] \.splitTrackControl,\s*\n#splitsArea\[data-recipe-view\] \.splitClearButton\{ display: none; \}/);
 });
 
 test("compact headers retain the layer letter but give the percentage the dominant treatment",()=>{

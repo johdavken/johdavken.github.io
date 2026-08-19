@@ -138,6 +138,13 @@
   // Never consulted on the compact mobile recipe, which keeps its existing
   // always-editable layout and its own separate bulk-mode toggle.
   let splitsViewMode = "summary";
+  // Receiver Hopper Weights' own Summary/Edit mode, on the same footing.
+  // Module level so it survives the re-renders that toggling Smart Hoppers,
+  // loading a profile or changing layer count all trigger - resetting an
+  // operator back to Summary mid-edit each time was its own small annoyance.
+  // Shared by both render paths; renderWeightsArea splits on isDesktopLayout(),
+  // so "desktop" and "mobile" here already mean pointer vs touch.
+  let weightsViewMode = "summary";
   let mobileWeightProfilesOpen = false;
   let mobileWeightProfilesSearch = "";
   // Persists across renderSplitsArea() re-renders (e.g. after a rearrange
@@ -763,10 +770,43 @@
     });
     resinAutocompleteIndex = -1;
 
+    // A dialog opened with showModal() sits in the browser's top layer,
+    // which paints above everything in the ordinary DOM - so a popup
+    // parented to <body> renders *underneath* the sheet and is invisible
+    // and untappable, even though it positioned itself correctly. Hosting
+    // it inside the open dialog puts it in the same top-layer subtree.
+    const host = input.closest("dialog[open]") || document.body;
+    if (popup.parentElement !== host) host.appendChild(popup);
+
     const rect = input.getBoundingClientRect();
     const width = Math.max(rect.width, 150);
-    popup.style.left = `${Math.min(rect.left, window.innerWidth - width - 8)}px`;
-    popup.style.top = `${rect.bottom + 4}px`;
+    popup.style.maxHeight = "";
+
+    if (host === document.body){
+      popup.style.position = "fixed";
+      popup.style.left = `${Math.min(rect.left, window.innerWidth - width - 8)}px`;
+      popup.style.top = `${rect.bottom + 4}px`;
+    }else{
+      // Inside a dialog: absolute, relative to the dialog's own box. The
+      // dialog is position:fixed and therefore a positioned ancestor, so
+      // this resolves against it whether or not it carries a transform
+      // (which would otherwise change what "fixed" is relative to).
+      // The sheet is also overflow:hidden, so the popup has to stay inside
+      // it - flip above the field when there isn't room below, and cap the
+      // height to whatever space that leaves.
+      const hostRect = host.getBoundingClientRect();
+      const gap = 4;
+      const spaceBelow = hostRect.bottom - rect.bottom - gap;
+      const spaceAbove = rect.top - hostRect.top - gap;
+      const flip = spaceBelow < 120 && spaceAbove > spaceBelow;
+      const available = Math.max(72, Math.floor(flip ? spaceAbove : spaceBelow));
+      popup.style.position = "absolute";
+      popup.style.maxHeight = `${Math.min(220, available)}px`;
+      popup.style.left = `${Math.max(0, Math.min(rect.left - hostRect.left, hostRect.width - width - 8))}px`;
+      popup.style.top = flip
+        ? `${Math.max(0, rect.top - hostRect.top - gap - Math.min(220, available))}px`
+        : `${rect.bottom - hostRect.top + gap}px`;
+    }
     popup.style.width = `${width}px`;
     popup.hidden = false;
     input.setAttribute("aria-expanded", "true");
@@ -2198,6 +2238,14 @@
             input.placeholder = "0";
             input.value = String(clampNum(value));
             input.setAttribute("aria-label", ariaLabel);
+            // This render path only runs on touch (renderWeightsArea splits
+            // on isDesktopLayout()), where typing into a hopper-sized cell
+            // never felt right. The field stays in the DOM as the value
+            // carrier bulk apply writes through, but it is never presented
+            // or focusable - the read-only readout below is what shows, and
+            // all editing happens in the bulk bar.
+            input.disabled = true;
+            input.tabIndex = -1;
             wrap.append(caption, input);
             input.addEventListener("input", event=>{
               const accepted = acceptNumericInput(event.target, { min: 0, label: ariaLabel }, onValue);
@@ -2263,14 +2311,10 @@
       profilesAction.setAttribute("aria-expanded", "false");
       profilesAction.setAttribute("aria-label", "Open receiver weight profiles");
       profilesAction.innerHTML = '<span>Weight Profiles</span><svg viewBox="0 0 28 28" aria-hidden="true"><path d="M7 4h14l3 5v14l-4 3H8l-4-3V9z"/><path d="M9 12h10M9 16h10M9 20h6"/></svg>';
-      const bulkToggleRow = document.createElement("button");
-      bulkToggleRow.type = "button";
-      bulkToggleRow.id = "mobileWeightsBulkToggle";
-      bulkToggleRow.className = "mobileWeightsBulkToggleRow";
-      bulkToggleRow.setAttribute("aria-pressed", "false");
-      bulkToggleRow.setAttribute("aria-label", "Start receiver hopper bulk edit");
-      bulkToggleRow.innerHTML = '<span>Bulk edit</span><svg viewBox="0 0 28 28" aria-hidden="true"><rect x="4" y="4" width="8" height="8" rx="1"/><rect x="16" y="4" width="8" height="8" rx="1"/><rect x="4" y="16" width="8" height="8" rx="1"/><path d="M17 20l2 2 5-6"/></svg>';
-      actionToolbar.append(profilesAction, bulkToggleRow);
+      // Bulk edit is gone as a separate mode here, exactly as it is on the
+      // desktop weights grid and in Recipe: Edit view *is* bulk edit, so
+      // Weight Profiles is all that is left in this row.
+      actionToolbar.append(profilesAction);
       area.appendChild(actionToolbar);
 
       const bulkBar = document.createElement("div");
@@ -2303,17 +2347,12 @@
         const valuesAreValid = optionalInputs.every(input=>!input.value.trim() || validation.validateNumber(input.value, { min:0 }).valid);
         applyButton.disabled = selected.size === 0 || !hasValue || !valuesAreValid;
         selectionStatus.textContent = message || (selected.size ? `${selected.size} selected` : "No hoppers selected");
-        bulkToggleRow.querySelector("span").textContent = bulkMode ? "Done" : "Bulk edit";
-        bulkToggleRow.setAttribute("aria-label", bulkMode ? "Done editing receiver hopper bulk selection" : "Start receiver hopper bulk edit");
       }
 
       function setMobileWeightBulkMode(enabled){
         bulkMode = !!enabled;
         weightsBulkModeActive = bulkMode;
         area.dataset.mobileBulkMode = String(bulkMode);
-        bulkToggleRow.classList.toggle("on", bulkMode);
-        bulkToggleRow.setAttribute("aria-pressed", String(bulkMode));
-        actionToolbar.classList.toggle("bulkActive", bulkMode);
         bulkBar.hidden = !bulkMode;
         cellRefs.forEach(ref=>{ ref.cell.tabIndex=bulkMode ? 0 : -1; });
         if (!bulkMode){
@@ -2321,16 +2360,19 @@
           updateSelectionUI();
         }
       }
-      exitWeightsBulkModeFn = () => setMobileWeightBulkMode(false);
+      // Leaving Edit is the way out, matching Recipe and the desktop grid.
+      exitWeightsBulkModeFn = () => setMobileWeightView("visual");
 
       function setMobileWeightView(mode){
         visualMode = mode === "visual";
+        weightsViewMode = visualMode ? "summary" : "edit";
         area.dataset.mobileWeightView = visualMode ? "visual" : "edit";
+        // Edit *is* bulk edit: selection and the bulk bar come with the view
+        // rather than from a second toggle of their own.
+        setMobileWeightBulkMode(!visualMode);
         viewToggle.querySelectorAll("button").forEach(button=>button.classList.toggle("active", button.dataset.weightView === (visualMode ? "visual" : "edit")));
       }
 
-      const flipBulkMode = ()=>setMobileWeightBulkMode(!bulkMode);
-      bulkToggleRow.addEventListener("click", flipBulkMode);
       viewToggle.addEventListener("click", event=>{
         const button = event.target.closest("button[data-weight-view]");
         if (button) setMobileWeightView(button.dataset.weightView);
@@ -2381,10 +2423,14 @@
             ref.hopper.weight = weightResult.value;
             ref.weightInput.value = String(weightResult.value);
           }
-          if (heightResult.value !== null && ref.heightInput){
+          // The bulk height field only exists when Smart Hoppers is on with a
+          // resolved geometry mode, so a non-null value already implies it
+          // applies - gate on the mode itself rather than on the per-cell
+          // input, which is now an always-present hidden value carrier.
+          if (heightResult.value !== null && geometryMode !== null){
             if (geometryMode === "volume") ref.hopper.usableGallons = heightResult.value;
             else ref.hopper.usableHeight = heightResult.value;
-            ref.heightInput.value = String(heightResult.value);
+            if (ref.heightInput) ref.heightInput.value = String(heightResult.value);
           }
         });
         validateAndCompute({ sync:true });
@@ -2392,8 +2438,10 @@
         updateSelectionUI("Bulk values applied");
       });
 
-      setMobileWeightBulkMode(false);
-      setMobileWeightView("visual");
+      // Reapply the persisted view (not a hardcoded Summary) so a render
+      // triggered by Smart Hoppers, a profile load or a layer change keeps
+      // the operator where they were.
+      setMobileWeightView(weightsViewMode === "edit" ? "edit" : "visual");
       hookToggle(
         "smartHoppersToggle",
         ()=> !!state.smartHoppersEnabled,
@@ -2859,6 +2907,7 @@
       exitWeightsBulkModeFn = () => setDesktopWeightView("summary");
       function setDesktopWeightView(mode){
         desktopWeightView = mode === "edit" ? "edit" : "summary";
+        weightsViewMode = desktopWeightView;
         desktopBulkMode = desktopWeightView === "edit";
         if (desktopBulkMode) setDesktopProfilesOpen(false);
         weightsBulkModeActive = desktopBulkMode;
@@ -2909,7 +2958,10 @@
       });
 
       updateSelectionUI();
-      setDesktopWeightView("summary");
+      // Reapply the persisted view rather than forcing Summary, so toggling
+      // Smart Hoppers (which re-renders) doesn't drop the operator out of
+      // Edit mid-change.
+      setDesktopWeightView(weightsViewMode);
 
       hookToggle(
         "smartHoppersToggle",
@@ -3432,17 +3484,22 @@
       const columnSelectors = new Map();
       const rowSelectors = new Map();
       const compactMobileRecipe = layoutModeQueries.compactRecipe.matches;
-      // Desktop resolves selection from the view itself: Edit *is* bulk
-      // edit, so there is no second mode to be in. Compact mobile keeps its
-      // own independent bulk-mode toggle and always-editable cells.
-      const viewMode = compactMobileRecipe ? "edit" : splitsViewMode;
-      const summaryView = !compactMobileRecipe && viewMode === "summary";
+      // Summary/Edit is now the single mode axis on every surface: Edit *is*
+      // bulk edit, so there is no second mode to be in anywhere.
+      const viewMode = splitsViewMode;
+      const summaryView = viewMode === "summary";
       // Summary's one interaction. Tracking is runtime state that the
       // planned recipe structurally cannot hold (see next-recipe.js), so
       // Next's Summary is a read-only preview with nothing to toggle.
       const trackingView = summaryView && !isNextRecipePage();
-      let bulkMode = compactMobileRecipe ? splitsBulkModeActive : viewMode === "edit";
+      let bulkMode = viewMode === "edit";
+      // Typing directly into a cell needs a precise pointer. On touch it
+      // never felt right at hopper-cell size, so every touch surface -
+      // phones and the wide-but-touch tablet band alike - edits through the
+      // panel instead, and only a real pointer device keeps the hybrid.
+      const cellsTypeable = isDesktopLayout();
       area.dataset.recipeView = viewMode;
+      area.dataset.recipeCells = cellsTypeable ? "typeable" : "static";
       area.classList.toggle("recipeTrackingView", trackingView);
       $("mobileSavedRecipesSheet")?.remove();
       $("mobileBulkEditSheet")?.remove();
@@ -3666,11 +3723,6 @@
       toolbar.id = "splitsBulkBar";
       toolbar.className = "splitsBulkBar hide";
       toolbar.innerHTML = compactMobileRecipe ? `
-        <div class="splitsBulkSteps" aria-label="Bulk editing steps">
-          <span><b>1</b> Select hoppers</span>
-          <span><b>2</b> Enter changes</span>
-          <span><b>3</b> Apply</span>
-        </div>
         <div class="splitsBulkField">
           <div class="mobileBulkFieldHeading">
             <label for="bulkResinName">Resin name</label>
@@ -3695,7 +3747,8 @@
         <div class="splitsBulkActions">
           <button id="selectAllSplits" type="button" class="bulkTextAction">Select all</button>
           <button id="clearSplitSelection" type="button" class="bulkTextAction">Clear selection</button>
-          <button id="resetAllSplits" type="button" class="danger">Reset all</button>
+          <button id="clearSelectedCells" type="button" class="bulkTextAction" disabled>Clear cell contents</button>
+          <button id="resetAllSplits" type="button" class="danger">Reset Recipe</button>
         </div>
         <div class="splitsBulkNote tiny">Blank fields leave existing values unchanged.</div>
       ` : `
@@ -3727,8 +3780,12 @@
       const mobileBulkContext = document.createElement("div");
       mobileBulkContext.className = "mobileBulkContext";
       mobileBulkContext.hidden = true;
+      // Slim persistent bar while Edit view is on. "Cancel" is gone - the
+      // way out of editing is the Summary/Edit toggle itself now, not a
+      // button buried in a context bar - and Select all takes the freed
+      // slot, since selecting is what this bar is for.
       mobileBulkContext.innerHTML = `
-        <button type="button" class="mobileBulkCancel">Cancel</button>
+        <button type="button" class="mobileBulkCancel">Select all</button>
         <strong class="mobileBulkCount" role="status" aria-live="polite">0 selected</strong>
         <button type="button" class="mobileBulkEditSelected" disabled>Edit selected</button>
       `;
@@ -3889,7 +3946,10 @@
       if (compactMobileRecipe){
         mobilePrimaryRow = document.createElement("div");
         mobilePrimaryRow.className = "splitsMobilePrimaryRow";
-        mobilePrimaryRow.append(savedRecipesButton, modeButton, rearrangeButton);
+        // Bulk edit is gone here too - Edit view replaced it - which buys
+        // back a slot in a row that was already full at four items.
+        // Rearrange stays: it is a mode of its own, not a selection action.
+        mobilePrimaryRow.append(savedRecipesButton, rearrangeButton);
         if (!isNextRecipePage()){
           if (loadNextButton){
             loadNextButton.textContent = "Load Next";
@@ -4254,7 +4314,16 @@
           resinInput.value = hopper.resinName || "";
           resinInput.setAttribute("aria-label", `${hopperBadgeLabel(L.name, hi)} resin name`);
           attachResinAutocomplete(resinInput);
-          cellTop.append(selector, resinInput);
+          // Touch surfaces never type in a cell, so they render the resin as
+          // real text instead of a single-line field. Resin codes run to 14+
+          // characters ("EXXON LD105.30", "00328 nexxstar") and an <input>
+          // can only ellipsis them away at phone column widths; a span wraps
+          // and stays readable. Kept in sync from refreshCellState(), the
+          // one funnel every write path already goes through.
+          const resinText = document.createElement("span");
+          resinText.className = "splitCellResinText";
+          resinText.setAttribute("aria-hidden", "true");
+          cellTop.append(selector, resinInput, resinText);
 
           const controls = document.createElement("div");
           controls.className = "splitCellControls";
@@ -4337,6 +4406,11 @@
           tr.appendChild(td);
 
           function refreshCellState(){
+            // Mirrors the field for the static (touch) cell presentation.
+            // Every path that changes a resin - typing, bulk apply, clear
+            // cell contents, the per-cell x - already ends here, so this is
+            // the only place the two can be kept from drifting apart.
+            resinText.textContent = hopper.resinName || "";
             const hasResin = !!normName(hopper.resinName);
             const hasPercentage = clampNum(hopper.pct) > 0;
             const complete = hasResin && hasPercentage;
@@ -4436,12 +4510,10 @@
             toggleTracking();
           });
           td.addEventListener("click", event=>{
-            // Compact mobile keeps its existing whole-cell track target on
-            // an always-editable grid. Desktop only tracks from Summary
-            // view - that view's entire purpose - and never on Next, whose
-            // plan structurally cannot carry tracking (see next-recipe.js).
-            const trackable = compactMobileRecipe ? !isNextRecipePage() : trackingView;
-            if (!trackable || bulkMode || hopperRearrangement?.active) return;
+            // Tracking is Summary view's whole purpose, on every surface,
+            // and never applies on Next, whose plan structurally cannot
+            // carry tracking (see next-recipe.js).
+            if (!trackingView || bulkMode || hopperRearrangement?.active) return;
             // Editing remains precise and unchanged: only the open cell
             // surface, hopper label, and status area act as the large Track
             // target. Inputs and action buttons retain their own behavior.
@@ -4505,6 +4577,10 @@
       function showMobileLayer(layerName){
         activeMobileLayer = layerName;
         lastActiveMobileLayer = layerName;
+        // Phones deliberately keep the whole cross-layer grid: stepping
+        // between single layers was tried and read as tedious navigation.
+        // The room comes from the cells instead - static text, no field
+        // chrome, no clock - not from hiding layers.
         table.querySelectorAll("[data-layer-column]").forEach(cell=>{
           cell.classList.toggle("mobile-layer-active", compactMobileRecipe || cell.dataset.layerColumn === activeMobileLayer);
         });
@@ -4641,13 +4717,11 @@
           // mutually exclusive by construction, so a rearrange-disabled
           // input is never accidentally re-enabled.
           const rearranging = !!hopperRearrangement?.active;
-          // Desktop Edit deliberately keeps cells typeable alongside
-          // multi-select (the same hybrid Receiver Hopper Weights uses), so
-          // only Summary locks them there. Compact mobile is unchanged: its
-          // bulk mode still takes the fields out of service.
-          const readOnly = compactMobileRecipe
-            ? (bulkMode || rearranging)
-            : (summaryView || rearranging);
+          // Pointer devices keep the hybrid: Edit leaves cells typeable
+          // alongside multi-select, and only Summary locks them. Touch
+          // surfaces never type in a cell at all, so their fields are
+          // permanently inert and editing goes through the panel/sheet.
+          const readOnly = !cellsTypeable || summaryView || rearranging;
           ref.resinInput.disabled = readOnly;
           ref.pctInput.disabled = readOnly;
           const trackButton = ref.td.querySelector(".splitTrackButton");
@@ -4674,7 +4748,10 @@
         setBulkMode(turningOn);
       });
 
-      mobileBulkContext.querySelector(".mobileBulkCancel").addEventListener("click",()=>setBulkMode(false));
+      mobileBulkContext.querySelector(".mobileBulkCancel").addEventListener("click",()=>{
+        cellRefs.forEach((_,key)=>selected.add(key));
+        updateSelectionUI();
+      });
       mobileBulkEditSelected.addEventListener("click",()=>{
         if(!bulkMode||selected.size===0||!mobileBulkEditSheet) return;
         mobileBulkEditSheet.showModal();
@@ -4841,8 +4918,14 @@
         if (applyPct) changes.push(`${fmtTrim(percentage,3)}% to ${percentageCount} editable hopper${percentageCount === 1 ? "" : "s"}`);
         updateSelectionUI(`Applied ${changes.join(" and ")}.`, "ok");
         if(compactMobileRecipe){
+          // Close the sheet and drop the selection, but stay in Edit view.
+          // Bulk edit used to be a transient mode worth exiting after an
+          // apply; Edit is a persistent view now, and kicking the operator
+          // back out of it would both contradict the toggle still reading
+          // "Edit" and undo the next edit before it started.
           mobileBulkEditSheet?.close("applied");
-          setBulkMode(false);
+          selected.clear();
+          updateSelectionUI();
         }
       });
 

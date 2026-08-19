@@ -39,10 +39,13 @@ test("mobile Smart Hoppers uses a workspace circumference plus a height in every
   assert.match(mobile,/smartToggle\.id = "smartHoppersToggle"/);
 });
 
-test("mobile bulk entry is an explicit selector mode and can apply weight and height",()=>{
+test("mobile bulk entry comes with Edit view and can apply weight and height",()=>{
   const mobile = functionBody("renderMobileWeightsArea");
-  assert.match(mobile,/bulkToggleRow\.id = "mobileWeightsBulkToggle"/);
-  assert.match(mobile,/actionToolbar\.append\(profilesAction, bulkToggleRow\)/);
+  // Bulk edit is no longer a mode of its own here: Edit view *is* bulk
+  // edit, so Weight Profiles is all that remains in the action row.
+  assert.doesNotMatch(mobile,/bulkToggleRow|mobileWeightsBulkToggle/);
+  assert.match(mobile,/actionToolbar\.append\(profilesAction\)/);
+  assert.match(mobile,/setMobileWeightBulkMode\(!visualMode\);/);
   assert.match(mobile,/area\.appendChild\(actionToolbar\)/);
   assert.doesNotMatch(mobile,/selector\.type = "checkbox"/);
   assert.match(mobile,/cell\.setAttribute\("aria-selected", "false"\)/);
@@ -72,8 +75,33 @@ test("mobile receiver Summary cells are compact text readouts with no repeated h
   const mobile = functionBody("renderMobileWeightsArea");
   const summary = mobile.slice(mobile.indexOf('visualReadout.innerHTML'), mobile.indexOf('const summaryWeight'));
   assert.doesNotMatch(summary,/<svg/);
-  assert.match(styles,/#weightsArea\[data-mobile-weight-view="visual"\] \.mobileWeightCell\{height:70px;min-height:68px/);
-  assert.match(styles,/\.mobileWeightsActionToolbar\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  // Cells are static in both views now, so the readout sizing is keyed on
+  // the attribute's presence rather than on Summary specifically.
+  assert.match(styles,/#weightsArea\[data-mobile-weight-view\] \.mobileWeightCell\{height:70px;min-height:68px/);
+  // One action left in the row, so it is a single column.
+  assert.match(styles,/\.mobileWeightsActionToolbar\{display:grid;grid-template-columns:1fr/);
+});
+
+test("the Summary/Edit mode persists at module scope, shared by both weights render paths",()=>{
+  // renderWeightsArea splits on isDesktopLayout(), so "desktop" and "mobile"
+  // here already mean pointer vs touch - one flag serves both.
+  assert.match(app,/let weightsViewMode = "summary";/);
+  assert.match(app,/weightsViewMode = visualMode \? "summary" : "edit";/);
+  assert.match(app,/weightsViewMode = desktopWeightView;/);
+  // Re-renders (Smart Hoppers, profile load, layer change) reapply the
+  // persisted view instead of dropping the operator back into Summary.
+  assert.match(app,/setMobileWeightView\(weightsViewMode === "edit" \? "edit" : "visual"\);/);
+  assert.match(app,/setDesktopWeightView\(weightsViewMode\);/);
+});
+
+test("touch cells never present an editable field - the per-hopper inputs survive only as the value carrier bulk apply writes through",()=>{
+  const mobile = functionBody("renderMobileWeightsArea");
+  assert.match(mobile,/input\.disabled = true;\s*\n\s*input\.tabIndex = -1;/);
+  assert.match(styles,/#weightsArea\[data-mobile-weight-view\] \.mobileWeightValueFields\{display:none\}/);
+  assert.match(styles,/#weightsArea\[data-mobile-weight-view\] \.mobileWeightVisualReadout\{display:grid/);
+  // Height still applies on a bulk apply even though the per-cell input is
+  // no longer the thing that decides whether it can.
+  assert.match(mobile,/if \(heightResult\.value !== null && geometryMode !== null\)\{/);
 });
 
 test("mobile receiver profiles use the same bottom-sheet row pattern as Recipes",()=>{

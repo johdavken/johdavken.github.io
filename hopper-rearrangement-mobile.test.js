@@ -178,12 +178,11 @@ test("setBulkMode's per-cell disable pass keeps rearrange-mode disabling in plac
   const setBulkModeStart = app.indexOf("function setBulkMode(enabled){");
   const setBulkModeBody = app.slice(setBulkModeStart, app.indexOf("\n      }", setBulkModeStart));
   assert.match(setBulkModeBody, /const rearranging = !!hopperRearrangement\?\.active;/);
-  // Rearranging still takes the fields out of service on both platforms.
-  // What changed is the other half of the condition: desktop Edit view
-  // keeps cells typeable (the hybrid model Receiver Hopper Weights uses),
-  // so only Summary locks them there, while compact mobile's own bulk mode
-  // still does.
-  assert.match(setBulkModeBody, /const readOnly = compactMobileRecipe\s*\n\s*\? \(bulkMode \|\| rearranging\)\s*\n\s*: \(summaryView \|\| rearranging\);/);
+  // Rearranging still takes the fields out of service everywhere. The other
+  // half of the condition is now the device, not the width: pointer devices
+  // keep the hybrid (typeable in Edit, locked in Summary), and every touch
+  // surface leaves cells permanently inert and edits through the panel.
+  assert.match(setBulkModeBody, /const readOnly = !cellsTypeable \|\| summaryView \|\| rearranging;/);
   assert.match(setBulkModeBody, /ref\.resinInput\.disabled = readOnly;/);
   assert.match(setBulkModeBody, /ref\.pctInput\.disabled = readOnly;/);
   assert.match(setBulkModeBody, /trackButton\.disabled = bulkMode \|\| rearranging;/);
