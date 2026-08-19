@@ -30,7 +30,7 @@
        layout change is required to install cleanly. -->
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
-  <link rel="stylesheet" href="styles.css?v=0.61.5">
+  <link rel="stylesheet" href="styles.css?v=0.61.6">
   <link rel="stylesheet" href="theme.css?v=0.18.0">
   <link rel="stylesheet" href="desktop.css?v=0.1.5">
 <script src="validation.js?v=0.19" defer></script>
@@ -66,7 +66,7 @@
 <script src="database-health.js?v=0.1.0" defer></script>
 <script src="bulk-density-measurement.js?v=0.1.0" defer></script>
 <script src="workspace-recovery.js?v=0.1.2" defer></script>
-<script src="app.js?v=0.18.155" defer></script>
+<script src="app.js?v=0.18.156" defer></script>
 <script src="resin-admin-ui.js?v=0.20.3" defer></script>
 <script src="database-health-ui.js?v=0.1.3" defer></script>
 <script src="bulk-density-measurement-ui.js?v=0.1.0" defer></script>
@@ -562,9 +562,21 @@
     <div class="blockBody">
       <!-- Two pages of one Recipe workspace, not two tools. The tab strip sits
            directly on top of the grid so it reads as part of the panel. -->
-      <div class="recipePageTabs" role="tablist" aria-label="Recipe page">
-        <button type="button" class="recipePageTab active" id="recipePageTabCurrent" role="tab" aria-selected="true" aria-controls="splitsArea" data-recipe-page="current">Current</button>
-        <button type="button" class="recipePageTab" id="recipePageTabNext" role="tab" aria-selected="false" aria-controls="splitsArea" data-recipe-page="next">Next<span class="recipePageTabDot" id="recipePageTabNextDot" hidden aria-hidden="true"></span></button>
+      <!-- Current/Next (which recipe) on the left, Summary/Edit (how it is
+           presented) on the right - two independent axes, one row. The view
+           toggle mirrors Receiver Hopper Weights' own Summary/Edit control
+           and is desktop-only; the compact mobile recipe keeps its existing
+           always-editable layout. -->
+      <div class="recipeHeaderRow">
+        <div class="recipePageTabs" role="tablist" aria-label="Recipe page">
+          <button type="button" class="recipePageTab active" id="recipePageTabCurrent" role="tab" aria-selected="true" aria-controls="splitsArea" data-recipe-page="current">Current</button>
+          <button type="button" class="recipePageTab" id="recipePageTabNext" role="tab" aria-selected="false" aria-controls="splitsArea" data-recipe-page="next">Next<span class="recipePageTabDot" id="recipePageTabNextDot" hidden aria-hidden="true"></span></button>
+        </div>
+        <div class="recipeViewToggle" id="recipeViewToggle" role="group" aria-label="Recipe view">
+          <span>View</span>
+          <button type="button" class="active" data-recipe-view="summary" aria-pressed="true">Summary</button>
+          <button type="button" data-recipe-view="edit" aria-pressed="false">Edit</button>
+        </div>
       </div>
       <div id="splitsArea" class="gap10" role="tabpanel" aria-labelledby="recipePageTabCurrent"></div>
     </div>

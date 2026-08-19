@@ -65,7 +65,7 @@ test("Load Next Recipe and Print Recipe physically relocate into .recipeUtilityT
   // This must live inside the desktop-only (!compactMobileRecipe) branch,
   // right after the real tabs are assembled - not applied unconditionally,
   // since loadNextButton is reused as-is (still in modeBar) on mobile.
-  const elseBranchStart = app.indexOf('recipeUtilityTabs.append(savedRecipesButton, modeButton, rearrangeButton);');
+  const elseBranchStart = app.indexOf('recipeUtilityTabs.append(savedRecipesButton);');
   const elseBranchEnd = app.indexOf("\n      }\n\n      // Percentage problems", elseBranchStart);
   assert.notEqual(elseBranchEnd, -1);
   const elseBranch = app.slice(elseBranchStart, elseBranchEnd);

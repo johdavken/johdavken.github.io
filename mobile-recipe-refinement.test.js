@@ -22,7 +22,10 @@ test("the active clock is a filled blue circular badge while the inactive contro
 
 test("compact mobile cells use their non-editing surface as the practical tracking target",()=>{
   assert.match(app,/function toggleTracking\(\)\{/);
-  assert.match(app,/td\.addEventListener\("click", event=>\{[\s\S]*?!compactMobileRecipe \|\| isNextRecipePage\(\) \|\| bulkMode \|\| hopperRearrangement\?\.active[\s\S]*?event\.target\.closest\("input,button,label,a,select,textarea"\)[\s\S]*?toggleTracking\(\);/);
+  // Compact mobile's condition is unchanged in substance - whole-cell
+  // tracking, never on Next, never while selecting or rearranging - it just
+  // shares the handler with desktop's Summary view now.
+  assert.match(app,/td\.addEventListener\("click", event=>\{[\s\S]*?const trackable = compactMobileRecipe \? !isNextRecipePage\(\) : trackingView;[\s\S]*?if \(!trackable \|\| bulkMode \|\| hopperRearrangement\?\.active\) return;[\s\S]*?event\.target\.closest\("input,button,label,a,select,textarea"\)[\s\S]*?toggleTracking\(\);/);
   assert.match(app,/event\.stopPropagation\(\);\s*toggleTracking\(\);/);
   assert.match(styles,/\.splitsMatrix\.compactMobileRecipe \.splitTrackButton::before\{[\s\S]*?width:44px;[\s\S]*?height:44px;/);
 });

@@ -75,7 +75,9 @@ test("renderSplitsArea calls renderSplitsSavedRecipes at the end of every render
 test("splitsBulkModeActive and splitsSavedRecipesOpen persist at module scope (like hopperRearrangement already does), so a render triggered by switching panels can seed the one the operator meant to open", () => {
   assert.match(app, /let splitsBulkModeActive = false;/);
   assert.match(app, /let splitsSavedRecipesOpen = false;/);
-  assert.match(app, /let bulkMode = splitsBulkModeActive;/);
+  // Desktop resolves selection from the Summary/Edit view itself (Edit *is*
+  // bulk edit), so only compact mobile still seeds from the persisted flag.
+  assert.match(app, /let bulkMode = compactMobileRecipe \? splitsBulkModeActive : viewMode === "edit";/);
 });
 
 test("opening Rearrange closes Bulk edit and Saved Recipes", () => {
@@ -105,7 +107,10 @@ test("opening Saved Recipes closes Bulk edit outright, and exits Rearrange (with
   assert.match(savedRecipesClickBody, /hopperRearrangement = null;/);
   assert.match(savedRecipesClickBody, /splitsSavedRecipesOpen = true;/);
   assert.match(savedRecipesClickBody, /splitsBulkModeActive = false;/);
-  assert.match(savedRecipesClickBody, /if \(turningOn\) setBulkMode\(false\);/);
+  // Desktop no longer needs the two to exclude each other - the Edit panel
+  // sits above the grid and Saved Recipes below it - so this narrowed to
+  // compact mobile, which still swaps one sheet for the other.
+  assert.match(savedRecipesClickBody, /if \(turningOn && compactMobileRecipe\) setBulkMode\(false\);/);
 });
 
 test("setBulkMode and setSavedRecipesOpen both write their resolved value back to the module-level flag, keeping it in sync for the next render", () => {
@@ -122,7 +127,10 @@ test("the Saved Recipes button leads the utility tab strip/mobile primary row (L
   // .recipeUtilityTabs strip and the mobile primary row instead (both
   // built from the same three buttons, see the compact/desktop branches).
   assert.match(app, /mobilePrimaryRow\.append\(savedRecipesButton, modeButton, rearrangeButton\);/);
-  assert.match(app, /recipeUtilityTabs\.append\(savedRecipesButton, modeButton, rearrangeButton\);/);
+  // Desktop's strip is now Saved recipes / Load Next / Print: Bulk edit is
+  // gone as a concept (Edit view replaced it) and Rearrange moved into the
+  // Edit panel, so Saved Recipes is the only panel-opening tab left.
+  assert.match(app, /recipeUtilityTabs\.append\(savedRecipesButton\);/);
   assert.match(app, /function setSavedRecipesOpen\(open\)\{/);
   assert.match(app, /savedRecipesPanel\.classList\.toggle\("hide", !open\)/);
   assert.match(app, /savedRecipesButton\.setAttribute\("aria-selected", String\(open\)\)/);
