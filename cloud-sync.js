@@ -38,6 +38,19 @@
     const text = `${error?.code || ""} ${error?.message || ""} ${error?.details || ""}`.toLowerCase();
     return text.includes("42501") || text.includes("workspace_access_denied");
   }
+  // This device's session went stale (expired access token, a wedged
+  // background refresh) rather than a plain network hiccup. Distinct from
+  // both of the above: retrying the same upload against the same dead
+  // session would just fail the same way again, so retry() uses this to
+  // decide whether to re-establish the session first. False positives are
+  // cheap (re-checking an already-good session is a harmless no-op), so
+  // this is intentionally broad rather than tied to one exact message.
+  function isAuthError(error){
+    if (error?.status === 401 || error?.statusCode === 401) return true;
+    const text = `${error?.name || ""} ${error?.code || ""} ${error?.message || ""} ${error?.details || ""}`.toLowerCase();
+    return text.includes("authapierror") || text.includes("authsessionmissingerror")
+      || text.includes("session_not_found") || text.includes("jwt");
+  }
 
   function create(options){
     const config = options.config || {};
@@ -86,6 +99,19 @@
     // Set by flushActiveJob's workspace_access_denied branch, reset at the
     // top of every retry() cycle - see retry()'s own comment for why.
     let lastActiveFlushDenied = false;
+    // True for the duration of a single resolveActiveConflict() call, from
+    // any of its three entry points (flushActiveJob, reconcileSelected,
+    // handleRealtimeActive). Only flushActiveJob's own re-entrancy used to
+    // be guarded (flushingActive) - a Realtime push arriving mid-resolution
+    // could start a second, fully independent one: a second dialog.showModal()
+    // on top of one already open (which throws), or a second overlapping
+    // write. See resolveActiveConflict's own comment for the full story.
+    let resolvingActiveConflict = false;
+    // Set by flushActiveJob/flushSetupOperations on an auth-shaped failure
+    // (isAuthError), consumed once by the next retry() - see retry()'s own
+    // comment for why re-authenticating belongs there and not in the
+    // catch blocks that notice it.
+    let lastActiveFlushAuthError = false;
 
     /* ------------------------------------------------------------------
      *   Active-job conflict circuit breaker
@@ -245,6 +271,29 @@
       setRealtimeAuth(current?.data?.session?.access_token);
     }
 
+    // Called by retry() after an upload noticed an auth-shaped failure
+    // (isAuthError/lastActiveFlushAuthError). Deliberately reuses
+    // ensureAnonymousSession() exactly as initialize() calls it, rather than
+    // forcing a sign-out first: this device's anonymous identity is its
+    // workspace membership, so a forced fresh sign-in would mint a new,
+    // unrelated identity and silently orphan the device even if the
+    // existing session was still perfectly recoverable. If the session
+    // really is gone, ensureAnonymousSession() mints a fresh one exactly as
+    // it would on a cold load, and a fresh identity that turns out not to
+    // be a workspace member surfaces through the existing
+    // isAccessDeniedError path, same as it always has - this function
+    // does not need its own error handling for that case.
+    async function reestablishSession(){
+      try{
+        await ensureAnonymousSession();
+        await applyCurrentRealtimeAuth();
+      }catch(error){
+        // No network, or the auth server itself is unreachable - the
+        // ordinary retry logic right after this call will hit the same
+        // failure and report it normally.
+      }
+    }
+
     // Registered once per client instance (guarded so a second initialize()
     // call - which already creates a new client, an existing, unrelated
     // behavior this fix doesn't change - can't stack a second listener on
@@ -347,65 +396,83 @@
     }
 
     async function resolveActiveConflict(pending, remoteRow){
-      // Trip the breaker before doing any work, so a runaway cycle cannot
-      // keep resolving-and-regenerating conflicts faster than an operator
-      // could ever produce them. Counted here rather than at the failed
-      // write because every conflict path in this module - flushActiveJob,
-      // reconcileSelected and handleRealtimeActive - funnels through here.
-      if (recordConflict() >= CONFLICT_BURST_LIMIT){
-        activeConflictPaused = true;
-        clearConflictBudget();
-        setStatus("Conflict", "Synchronization paused: this line kept conflicting faster than it could settle. Local work is safe on this device - use Retry once the other device has finished.");
-        return;
-      }
-      // A remote row can be missing entirely (the workspace has no active job
-      // yet), in which case there is nothing to compare, back up or offer a
-      // choice between. Treat it as a plain failed upload and leave the item
-      // queued for the next retry rather than dereferencing a null row.
-      if (!remoteRow){
-        setStatus("Pending", "The shared active job could not be read. Changes are safe on this device and will retry.");
-        return;
-      }
-      // A queued item can survive a page refresh from before the client-side
-      // no-op guard ran. If it is semantically identical to the current
-      // remote row, this is a stale-revision no-op, not a real operator
-      // conflict. Discard it instead of prompting/re-queueing and feeding a
-      // retry storm.
-      if (activeJobLib?.activeJobsEqual?.(pending.payload, remoteRow?.payload)){
-        activeConflictPaused = false;
-        store.clearActiveJob(selectedId(), pending.operationId);
-        await applyRemoteActive(remoteRow, "conflict-noop");
-        return;
-      }
-      backup("active-job-conflict", pending.payload, remoteRow.payload);
-      const choice = await adapter.resolveActiveConflict?.({
-        local: pending.payload,
-        remote: remoteRow.payload,
-        localRevision: pending.expectedRevision,
-        remoteRevision: remoteRow.revision
-      });
-      if (choice === "remote"){
-        activeConflictPaused = false;
-        store.clearActiveJob(selectedId());
-        await applyRemoteActive(remoteRow, "conflict-remote");
-        return;
-      }
-      if (choice === "local"){
-        activeConflictPaused = false;
-        store.queueActiveJob(selectedId(), {
-          ...pending,
-          expectedRevision: Number(remoteRow.revision),
-          operationId: uuid(),
-          createdAt: new Date().toISOString()
+      // flushActiveJob, reconcileSelected and handleRealtimeActive all funnel
+      // through here, but until now only flushActiveJob's own re-entrancy was
+      // ever guarded (flushingActive). A Realtime push arriving while a
+      // resolution from one of the other two paths was still in progress -
+      // very possible on a workspace with real concurrent activity - started
+      // a second, fully independent resolution: a second dialog.showModal()
+      // on top of one already open (which throws), or a second overlapping
+      // write attempt. That is what actually produced a burst of ~25
+      // conflicts within 22ms in production, not the runaway retry loop the
+      // Aug 12 breaker below already guards against - this is a different gap
+      // in the same area. activeConflictPaused is checked here too: once
+      // tripped, nothing should attempt another resolution until the
+      // operator hits Retry, but before this only flushActiveJob's entry
+      // point respected that.
+      if (resolvingActiveConflict || activeConflictPaused) return;
+      resolvingActiveConflict = true;
+      try{
+        // Trip the breaker before doing any other work, so a runaway cycle
+        // cannot keep resolving-and-regenerating conflicts faster than an
+        // operator could ever produce them.
+        if (recordConflict() >= CONFLICT_BURST_LIMIT){
+          activeConflictPaused = true;
+          clearConflictBudget();
+          setStatus("Conflict", "Synchronization paused: this line kept conflicting faster than it could settle. Local work is safe on this device - use Retry once the other device has finished.");
+          return;
+        }
+        // A remote row can be missing entirely (the workspace has no active job
+        // yet), in which case there is nothing to compare, back up or offer a
+        // choice between. Treat it as a plain failed upload and leave the item
+        // queued for the next retry rather than dereferencing a null row.
+        if (!remoteRow){
+          setStatus("Pending", "The shared active job could not be read. Changes are safe on this device and will retry.");
+          return;
+        }
+        // A queued item can survive a page refresh from before the client-side
+        // no-op guard ran. If it is semantically identical to the current
+        // remote row, this is a stale-revision no-op, not a real operator
+        // conflict. Discard it instead of prompting/re-queueing and feeding a
+        // retry storm.
+        if (activeJobLib?.activeJobsEqual?.(pending.payload, remoteRow?.payload)){
+          activeConflictPaused = false;
+          store.clearActiveJob(selectedId(), pending.operationId);
+          await applyRemoteActive(remoteRow, "conflict-noop");
+          return;
+        }
+        backup("active-job-conflict", pending.payload, remoteRow.payload);
+        const choice = await adapter.resolveActiveConflict?.({
+          local: pending.payload,
+          remote: remoteRow.payload,
+          localRevision: pending.expectedRevision,
+          remoteRevision: remoteRow.revision
         });
-        // Never immediate. If this re-upload conflicts again the same code
-        // path runs again, so a zero-delay retry here is what turns two
-        // devices disagreeing into a write storm.
-        setTimeout(flushActiveJob, conflictRetryDelay());
-        return;
+        if (choice === "remote"){
+          activeConflictPaused = false;
+          store.clearActiveJob(selectedId());
+          await applyRemoteActive(remoteRow, "conflict-remote");
+          return;
+        }
+        if (choice === "local"){
+          activeConflictPaused = false;
+          store.queueActiveJob(selectedId(), {
+            ...pending,
+            expectedRevision: Number(remoteRow.revision),
+            operationId: uuid(),
+            createdAt: new Date().toISOString()
+          });
+          // Never immediate. If this re-upload conflicts again the same code
+          // path runs again, so a zero-delay retry here is what turns two
+          // devices disagreeing into a write storm.
+          setTimeout(flushActiveJob, conflictRetryDelay());
+          return;
+        }
+        activeConflictPaused = true;
+        setStatus("Conflict", "Shared and local jobs differ. Synchronization is paused until resolved.");
+      }finally{
+        resolvingActiveConflict = false;
       }
-      activeConflictPaused = true;
-      setStatus("Conflict", "Shared and local jobs differ. Synchronization is paused until resolved.");
     }
 
     async function fetchActiveRow(){
@@ -417,7 +484,7 @@
     }
 
     async function flushActiveJob(){
-      if (!state.available || !isConnected() || flushingActive || activeConflictPaused) return;
+      if (!state.available || !isConnected() || flushingActive || activeConflictPaused || resolvingActiveConflict) return;
       const pending = store.getOutbox().activeJobs[selectedId()];
       if (!pending) return;
       flushingActive = true;
@@ -466,6 +533,14 @@
           discardPendingItem({ type: "active-job", workspaceId: selectedId(), operationId: pending.operationId });
           setStatus("Error", "This device no longer has access to this line. The unsynced change was discarded - reconnect via RT Sync to resume.");
           lastActiveFlushDenied = true;
+          return;
+        }
+        if (isAuthError(error)){
+          // Retrying the same upload against the same stale session would
+          // just fail the same way again - flag it so the next retry()
+          // re-establishes the session first instead of repeating this.
+          lastActiveFlushAuthError = true;
+          setStatus("Pending", "This device's connection needs to be refreshed. Changes are safe on this device - Retry will reconnect.");
           return;
         }
         const offline = typeof navigator !== "undefined" && navigator.onLine === false;
@@ -570,6 +645,12 @@
             .filter(item=>item.workspaceId === selectedId())
             .forEach(item=>discardPendingItem({ type: "saved-setup", workspaceId: item.workspaceId, operationId: item.operationId }));
           setStatus("Error", "This device no longer has access to this line. Unsynced saved-setting changes were discarded - reconnect via RT Sync to resume.");
+        } else if (isAuthError(error)){
+          // Same flag flushActiveJob's catch sets - either flush can be the
+          // first to notice a stale session, and retry() consumes it once
+          // regardless of which one did.
+          lastActiveFlushAuthError = true;
+          setStatus("Pending", "This device's connection needs to be refreshed. Changes are safe on this device - Retry will reconnect.");
         } else {
           setStatus(navigator.onLine === false ? "Offline" : "Pending", "Saved-setting changes will retry.");
         }
@@ -1032,6 +1113,16 @@
       lastActiveFlushDenied = false;
       if (!state.available) await initialize();
       else {
+        // Consumed once per cycle: initialize() (the branch above) already
+        // re-authenticates from scratch, so this only runs when the client
+        // itself is fine and a previous upload was the one that noticed the
+        // session had gone stale. See reestablishSession's own comment for
+        // why this re-checks the existing session rather than forcing a new
+        // one.
+        if (lastActiveFlushAuthError){
+          lastActiveFlushAuthError = false;
+          await reestablishSession();
+        }
         await reconcileSelected();
         await flushActiveJob();
         // Skip the trailing flush if this cycle's active-job flush (whether
@@ -1141,5 +1232,5 @@
     };
   }
 
-  return { create, normalizeName, normalizedKey, isConflictError, isAccessDeniedError, ownMembershipsByWorkspace };
+  return { create, normalizeName, normalizedKey, isConflictError, isAccessDeniedError, isAuthError, ownMembershipsByWorkspace };
 });
