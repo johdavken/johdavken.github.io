@@ -130,6 +130,14 @@
   let splitsBulkModeActive = false;
   let splitsSavedRecipesOpen = false;
   let splitsSavedRecipesSearch = "";
+  // Desktop Recipe Setup's presentation mode, mirroring Receiver Hopper
+  // Weights' own Summary/Edit split. "summary" is a read-only glance whose
+  // only interaction is toggling tracking; "edit" carries the whole change
+  // workflow (per-cell entry, multi-select bulk apply, rearrange). Module
+  // level so it survives the re-renders that rearrange/apply trigger.
+  // Never consulted on the compact mobile recipe, which keeps its existing
+  // always-editable layout and its own separate bulk-mode toggle.
+  let splitsViewMode = "summary";
   let mobileWeightProfilesOpen = false;
   let mobileWeightProfilesSearch = "";
   // Persists across renderSplitsArea() re-renders (e.g. after a rearrange
@@ -3374,6 +3382,46 @@
       syncRecipePageUI();
     }
 
+    // Summary <-> Edit. Leaving Edit abandons any in-progress rearrangement
+    // rather than stranding it behind a view the operator can no longer see
+    // its controls in - the same reasoning the existing panel switches use
+    // when they clear each other. Cancelled (not committed): a half-finished
+    // rearrangement is not an intention.
+    function setRecipeViewMode(mode){
+      const next = mode === "edit" ? "edit" : "summary";
+      if (next === splitsViewMode) return;
+      splitsViewMode = next;
+      if (next === "summary"){
+        splitsBulkModeActive = false;
+        if (hopperRearrangement?.active){
+          window.PolynHopperRearrangement.apply(recipeLayers(), hopperRearrangement.baseline);
+          hopperRearrangement = null;
+        }
+      }
+      syncRecipeViewUI();
+      renderSplitsArea();
+      validateAndCompute();
+      saveSession();
+    }
+
+    function syncRecipeViewUI(){
+      document.querySelectorAll("#recipeViewToggle [data-recipe-view]").forEach(button=>{
+        const active = button.dataset.recipeView === splitsViewMode;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-pressed", String(active));
+      });
+    }
+
+    function hookRecipeViewToggle(){
+      const toggle = $("recipeViewToggle");
+      if (!toggle) return;
+      toggle.addEventListener("click", event=>{
+        const button = event.target.closest("button[data-recipe-view]");
+        if (button) setRecipeViewMode(button.dataset.recipeView);
+      });
+      syncRecipeViewUI();
+    }
+
     function renderSplitsArea(){
       const area = $("splitsArea");
       if (!area) return;
@@ -3383,8 +3431,19 @@
       const cellRefs = new Map();
       const columnSelectors = new Map();
       const rowSelectors = new Map();
-      let bulkMode = splitsBulkModeActive;
       const compactMobileRecipe = layoutModeQueries.compactRecipe.matches;
+      // Desktop resolves selection from the view itself: Edit *is* bulk
+      // edit, so there is no second mode to be in. Compact mobile keeps its
+      // own independent bulk-mode toggle and always-editable cells.
+      const viewMode = compactMobileRecipe ? "edit" : splitsViewMode;
+      const summaryView = !compactMobileRecipe && viewMode === "summary";
+      // Summary's one interaction. Tracking is runtime state that the
+      // planned recipe structurally cannot hold (see next-recipe.js), so
+      // Next's Summary is a read-only preview with nothing to toggle.
+      const trackingView = summaryView && !isNextRecipePage();
+      let bulkMode = compactMobileRecipe ? splitsBulkModeActive : viewMode === "edit";
+      area.dataset.recipeView = viewMode;
+      area.classList.toggle("recipeTrackingView", trackingView);
       $("mobileSavedRecipesSheet")?.remove();
       $("mobileBulkEditSheet")?.remove();
 
@@ -3597,10 +3656,16 @@
       modeBar.appendChild(mobileMoreButton);
       mobileRecipeMore = mobileMoreButton;
 
+      // Two layouts, one set of element ids - every handler below binds by id
+      // and so is shared verbatim. The compact mobile template is unchanged
+      // from before the Summary/Edit split (it still renders inside the
+      // mobile bulk-edit dialog sheet); desktop gets the flatter two-row
+      // panel that sits above the grid, with no numbered step captions and
+      // no "Done" button, since leaving Edit view is the exit.
       const toolbar = document.createElement("div");
       toolbar.id = "splitsBulkBar";
       toolbar.className = "splitsBulkBar hide";
-      toolbar.innerHTML = `
+      toolbar.innerHTML = compactMobileRecipe ? `
         <div class="splitsBulkSteps" aria-label="Bulk editing steps">
           <span><b>1</b> Select hoppers</span>
           <span><b>2</b> Enter changes</span>
@@ -3633,6 +3698,30 @@
           <button id="resetAllSplits" type="button" class="danger">Reset all</button>
         </div>
         <div class="splitsBulkNote tiny">Blank fields leave existing values unchanged.</div>
+      ` : `
+        <div class="splitsEditRow splitsEditRowPrimary">
+          <label class="splitsBulkField" for="bulkResinName">
+            <span>Resin name</span>
+            <input id="bulkResinName" type="text" placeholder="No change" />
+          </label>
+          <label class="splitsBulkField splitsBulkFieldPct" for="bulkResinPct">
+            <span>Percentage</span>
+            <span class="splitsBulkPctInput">
+              <input id="bulkResinPct" type="text" inputmode="decimal" placeholder="No change" />
+              <span>%</span>
+            </span>
+          </label>
+          <button id="applyBulkSplit" type="button" class="secondary" disabled>Apply to selected</button>
+          <div class="splitsBulkActions">
+            <div id="splitSelectionStatus" class="tiny splitsSelectionStatus" role="status" aria-live="polite">No hoppers selected</div>
+            <button id="selectAllSplits" type="button" class="bulkTextAction">Select all</button>
+            <button id="clearSplitSelection" type="button" class="bulkTextAction">Clear selection</button>
+          </div>
+        </div>
+        <div class="splitsEditRow splitsEditRowSecondary">
+          <button id="clearSelectedCells" type="button" class="bulkTextAction" disabled>Clear cell contents</button>
+          <button id="resetAllSplits" type="button" class="danger">Reset Recipe</button>
+        </div>
       `;
 
       const mobileBulkContext = document.createElement("div");
@@ -3782,7 +3871,12 @@
           notifyActiveJobMutation({immediate:true,kind:"rearrange-hoppers"});
           return;
         }
-        if (turningOn) setBulkMode(false);
+        // Desktop: the Edit panel sits above the grid and Saved Recipes
+        // below it, so they no longer occupy the same space and no longer
+        // have to exclude each other - only an in-progress rearrangement
+        // does, handled above. Compact mobile still swaps one sheet for the
+        // other and keeps the original behavior.
+        if (turningOn && compactMobileRecipe) setBulkMode(false);
         setSavedRecipesOpen(turningOn);
       });
 
@@ -3810,15 +3904,14 @@
         }
         mobilePrimaryRow.append(mobileMoreButton);
       }else{
-        // Desktop only: Saved recipes / Bulk edit / Rearrange become a
-        // second, visually subordinate tab strip beneath the grid, echoing
-        // .recipePageTabs above it. Exactly one of their three panels is
-        // ever open - that mutual exclusion already lives in each button's
-        // own click handler above (savedRecipesButton clears bulk/rearrange,
-        // rearrangeButton clears bulk/saved-recipes, modeButton clears
-        // saved-recipes) and in each one's own "click again to close"
-        // toggle - nothing about when panels open/close changes here, only
-        // how the choice between them looks.
+        // Desktop only: the bottom strip is now Saved recipes / Load Next /
+        // Print - the three things that act on the recipe as a whole. Bulk
+        // edit is gone as a concept (Edit view *is* bulk edit) and Rearrange
+        // moved into the Edit panel above the grid, beside the other
+        // selection-driven actions it belongs with. Saved recipes is the
+        // only remaining panel-opening tab, so the mutual exclusion that
+        // used to span three tabs now only has to hold between it and Edit
+        // view (see setSavedRecipesOpen / setRecipeViewMode).
         recipeUtilityTabs = document.createElement("div");
         recipeUtilityTabs.className = "recipeUtilityTabs";
         recipeUtilityTabs.setAttribute("role", "tablist");
@@ -3827,18 +3920,23 @@
         savedRecipesButton.classList.add("recipeUtilityTab");
         savedRecipesButton.setAttribute("role", "tab");
         savedRecipesButton.setAttribute("aria-controls", savedRecipesPanel.id);
-        modeButton.classList.remove("secondary");
-        modeButton.classList.add("recipeUtilityTab");
-        modeButton.setAttribute("role", "tab");
-        modeButton.setAttribute("aria-controls", toolbar.id);
-        recipeUtilityTabs.append(savedRecipesButton, modeButton, rearrangeButton);
+        recipeUtilityTabs.append(savedRecipesButton);
+
+        // Rearrange keeps its real element (and therefore every handler
+        // wired to it above); only its home changes - into the Edit panel's
+        // secondary row, next to Clear cell contents / Reset Recipe.
+        rearrangeButton.classList.remove("recipeUtilityTab", "secondary");
+        rearrangeButton.classList.add("bulkTextAction", "splitsRearrangeAction");
+        rearrangeButton.removeAttribute("role");
+        rearrangeButton.removeAttribute("aria-selected");
+        toolbar.querySelector(".splitsEditRowSecondary")?.append(rearrangeButton);
 
         // Load Next Recipe / Print Recipe attach to the panel the same way
-        // Saved recipes/Bulk edit/Rearrange do - same strip, same divider,
-        // same tab shape (.recipeUtilityTab, plus .recipeActionTab only for
-        // the icon+label layout the plain-text tabs don't need) - they just
-        // run an action immediately instead of opening a panel, so they get
-        // no role="tab"/aria-selected/aria-controls and stay outside the
+        // Saved recipes does - same strip, same divider, same tab shape
+        // (.recipeUtilityTab, plus .recipeActionTab only for the icon+label
+        // layout the plain-text tab doesn't need) - they just run an action
+        // immediately instead of opening a panel, so they get no
+        // role="tab"/aria-selected/aria-controls and stay outside the
         // tab-switching mutual exclusion above. .append() below moves each
         // node here from modeBar (its original parent), rather than
         // requiring modeBar's own appendChild calls above to change.
@@ -3943,6 +4041,17 @@
           toggleSelection(Array.from({length:HOPPERS_PER_LAYER}, (_,hi)=>`${L.name}:${hi}`));
         });
         columnSelectors.set(L.name, title);
+        // The layer letter is a 64px watermark that the percentage field
+        // sits on top of, so on its own it is a partly-occluded target.
+        // In Edit view the whole header cell selects the column instead;
+        // the letter's own handler above still runs for a direct hit (the
+        // closest("button") guard here stops it counting twice), and the
+        // percentage field and Match button keep their own behavior.
+        th.addEventListener("click", event=>{
+          if (!bulkMode || hopperRearrangement?.active) return;
+          if (event.target.closest("input,button,label,a,select,textarea")) return;
+          toggleSelection(Array.from({length:HOPPERS_PER_LAYER}, (_,hi)=>`${L.name}:${hi}`));
+        });
 
         const pctWrap = document.createElement("label");
         pctWrap.className = "splitLayerPct";
@@ -3953,7 +4062,10 @@
         pctInput.placeholder = "0";
         pctInput.value = String(clampNum(L.layerPct));
         pctInput.setAttribute("aria-label", `Layer ${L.name} percentage`);
-        if(hopperRearrangement?.active) pctInput.disabled=true;
+        // Summary is strictly read-only: the layer percentage and the
+        // "Match X" copy button below are recipe edits like any other, so
+        // neither is reachable until Edit view is on.
+        if(hopperRearrangement?.active || summaryView) pctInput.disabled=true;
         const pctUnit = document.createElement("span");
         pctUnit.textContent = "%";
         pctWrap.append(pctInput, pctUnit);
@@ -4258,8 +4370,15 @@
             selector.checked ? selected.add(key) : selected.delete(key);
             updateSelectionUI();
           });
+          // Cell-body click toggles selection for bulk apply. Inputs,
+          // buttons and labels keep their own behavior, so per-cell typing
+          // in desktop Edit view is unaffected - clicking the field types,
+          // clicking anywhere else in the cell selects. Desktop reaches this
+          // whenever Edit view is on; compact mobile only inside its own
+          // separate bulk mode.
           td.addEventListener("click",event=>{
-            if(!compactMobileRecipe||!bulkMode||event.target.closest("input,button,label,a,select,textarea")) return;
+            if(!bulkMode||hopperRearrangement?.active) return;
+            if(event.target.closest("input,button,label,a,select,textarea")) return;
             selected.has(key) ? selected.delete(key) : selected.add(key);
             updateSelectionUI();
           });
@@ -4317,10 +4436,17 @@
             toggleTracking();
           });
           td.addEventListener("click", event=>{
-            if (!compactMobileRecipe || isNextRecipePage() || bulkMode || hopperRearrangement?.active) return;
+            // Compact mobile keeps its existing whole-cell track target on
+            // an always-editable grid. Desktop only tracks from Summary
+            // view - that view's entire purpose - and never on Next, whose
+            // plan structurally cannot carry tracking (see next-recipe.js).
+            const trackable = compactMobileRecipe ? !isNextRecipePage() : trackingView;
+            if (!trackable || bulkMode || hopperRearrangement?.active) return;
             // Editing remains precise and unchanged: only the open cell
             // surface, hopper label, and status area act as the large Track
             // target. Inputs and action buttons retain their own behavior.
+            // (In Summary the fields are pointer-events:none, so a click
+            // anywhere on the cell - fields included - lands on the cell.)
             if (event.target.closest("input,button,label,a,select,textarea")) return;
             toggleTracking();
           });
@@ -4424,6 +4550,9 @@
       const bulkPctInput = toolbar.querySelector("#bulkResinPct");
       const applyButton = toolbar.querySelector("#applyBulkSplit");
       const selectionStatus = toolbar.querySelector("#splitSelectionStatus");
+      // Desktop Edit panel only - compact mobile clears a cell from the
+      // cell's own × button, which it still has.
+      const clearCellsButton = toolbar.querySelector("#clearSelectedCells");
       const mobileChangeResin = toolbar.querySelector("#mobileBulkChangeResin");
       const mobileChangePct = toolbar.querySelector("#mobileBulkChangePct");
       const mobileBulkCount = mobileBulkContext.querySelector(".mobileBulkCount");
@@ -4462,6 +4591,7 @@
         applyButton.textContent = selected.size
           ? `Apply to ${selected.size} hopper${selected.size === 1 ? "" : "s"}`
           : "Apply to selected";
+        if (clearCellsButton) clearCellsButton.disabled = selected.size === 0;
         selectionStatus.className = `tiny splitsSelectionStatus${type ? ` ${type}` : ""}`;
         selectionStatus.textContent = message || (
           selected.size === 0
@@ -4481,7 +4611,11 @@
       function setBulkMode(enabled){
         bulkMode = !!enabled;
         splitsBulkModeActive = bulkMode;
-        area.classList.toggle("bulk-editing", bulkMode);
+        // .bulk-editing is the compact mobile grid's own presentation hook
+        // (checkbox column, hidden per-cell chrome, dimmed disabled fields).
+        // Desktop presentation is driven entirely by data-recipe-view
+        // instead, so the two never fight over the same cells.
+        area.classList.toggle("bulk-editing", bulkMode && compactMobileRecipe);
         toolbar.classList.toggle("hide", !bulkMode);
         modeButton.textContent = bulkMode ? "Done bulk editing" : "Bulk edit";
         if(compactMobileRecipe){
@@ -4507,8 +4641,15 @@
           // mutually exclusive by construction, so a rearrange-disabled
           // input is never accidentally re-enabled.
           const rearranging = !!hopperRearrangement?.active;
-          ref.resinInput.disabled = bulkMode || rearranging;
-          ref.pctInput.disabled = bulkMode || rearranging;
+          // Desktop Edit deliberately keeps cells typeable alongside
+          // multi-select (the same hybrid Receiver Hopper Weights uses), so
+          // only Summary locks them there. Compact mobile is unchanged: its
+          // bulk mode still takes the fields out of service.
+          const readOnly = compactMobileRecipe
+            ? (bulkMode || rearranging)
+            : (summaryView || rearranging);
+          ref.resinInput.disabled = readOnly;
+          ref.pctInput.disabled = readOnly;
           const trackButton = ref.td.querySelector(".splitTrackButton");
           if (trackButton) trackButton.disabled = bulkMode || rearranging;
         });
@@ -4579,6 +4720,38 @@
       toolbar.querySelector("#clearSplitSelection").addEventListener("click",()=>{
         selected.clear();
         updateSelectionUI();
+      });
+      // Empties the selected hoppers' recipe assignment (and their tracking,
+      // matching what the per-cell × has always done). Deliberately does not
+      // touch scanned lots - only Reset Recipe, which wipes the whole page,
+      // goes that far.
+      clearCellsButton?.addEventListener("click",()=>{
+        if (!selected.size) return;
+        const touchedLayers = new Set();
+        selected.forEach(key=>{
+          const ref = cellRefs.get(key);
+          if (!ref) return;
+          ref.hopper.resinName = "";
+          ref.hopper.track = false;
+          ref.resinInput.value = "";
+          if (ref.hi > 0){
+            ref.hopper.pct = 0;
+            ref.pctInput.value = "";
+          }
+          touchedLayers.add(ref.layer);
+        });
+        // H1 is derived from H2-H6, so every layer that just lost a hopper
+        // percentage needs recomputing and its read-only H1 field repainted.
+        touchedLayers.forEach(L=>{
+          recomputeAutoH1(L);
+          const h1Ref = cellRefs.get(`${L.name}:0`);
+          if (h1Ref) h1Ref.pctInput.value = String(clampNum(L.hoppers[0].pct));
+        });
+        cellRefs.forEach(ref=>ref.refreshCellState());
+        updateHopperTotals();
+        validateAndCompute({ sync: true, immediate: true, kind: "recipe-clear" });
+        saveSession();
+        updateSelectionUI("Cleared selected hoppers.", "ok");
       });
       toolbar.querySelector("#resetAllSplits").addEventListener("click",()=>{
         const ok = confirm("Reset every hopper resin, percentage, and Track setting?");
@@ -7341,6 +7514,7 @@
       hookMobileAccordion();
       hookCustomToggles();
       hookRecipePageTabs();
+      hookRecipeViewToggle();
       // Sync toggle UI after restore
       syncToggleUI("showPumpOffToggle", !!state.showPumpOffTracked);
 

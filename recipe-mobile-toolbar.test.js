@@ -59,16 +59,20 @@ test("Next's primary row is Recipes, Bulk edit, Rearrange, Scan Recipe - promote
   assert.match(nextBranch, /mobilePrimaryRow\.append\(scanRecipeButton\);/);
 });
 
-test("desktop's own branch turns Saved recipes/Bulk edit/Rearrange into a role=tablist of role=tab buttons, controlled by aria-controls pointing at their real panel ids", () => {
+test("desktop's own branch keeps Saved recipes as a role=tab in a role=tablist, controlled by aria-controls pointing at its real panel id, and relocates Rearrange into the Edit panel", () => {
   const editor = recipeEditor();
   const block = mobileVsDesktopBlock(editor);
   const desktopBranch = block.slice(block.indexOf("}else{", block.indexOf("mobilePrimaryRow.append(mobileMoreButton)")));
   assert.match(desktopBranch, /recipeUtilityTabs\.setAttribute\("role", "tablist"\);/);
   assert.match(desktopBranch, /savedRecipesButton\.setAttribute\("role", "tab"\);/);
   assert.match(desktopBranch, /savedRecipesButton\.setAttribute\("aria-controls", savedRecipesPanel\.id\);/);
-  assert.match(desktopBranch, /modeButton\.setAttribute\("role", "tab"\);/);
-  assert.match(desktopBranch, /modeButton\.setAttribute\("aria-controls", toolbar\.id\);/);
-  assert.match(desktopBranch, /recipeUtilityTabs\.append\(savedRecipesButton, modeButton, rearrangeButton\);/);
+  assert.match(desktopBranch, /recipeUtilityTabs\.append\(savedRecipesButton\);/);
+  // Bulk edit no longer exists as a desktop tab - Edit view replaced it -
+  // so modeButton is never given tab semantics or appended here.
+  assert.doesNotMatch(desktopBranch, /modeButton/);
+  // Rearrange keeps its real element (and every handler already wired to
+  // it); only its home moves, into the Edit panel's secondary row.
+  assert.match(desktopBranch, /toolbar\.querySelector\("\.splitsEditRowSecondary"\)\?\.append\(rearrangeButton\);/);
   assert.match(app, /savedRecipesPanel\.id = "splitsSavedRecipesPanel";/);
   assert.match(app, /toolbar\.id = "splitsBulkBar";/);
 });

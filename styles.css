@@ -2222,6 +2222,51 @@ details[open] > summary .chevSatellite{
 /* margin's -1px is exactly the divider's own thickness, so the active tab's
    matching box-shadow seam (below) can sit precisely on top of it - the
    standard document-tab "grows out of the divider" technique. */
+/* Which recipe (Current/Next) on the left, how it is presented
+   (Summary/Edit) on the right. The divider under the page tabs runs the
+   full row width so the grid below still reads as continuing from the
+   active tab. */
+.recipeHeaderRow{
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.recipeHeaderRow > .recipePageTabs{ align-self: end; flex: 0 0 auto; }
+.recipeViewToggle{
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 5px;
+  flex: 0 0 auto;
+}
+.recipeViewToggle > span{
+  color: var(--muted);
+  font-size: var(--font-tiny);
+  font-weight: 750;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.recipeViewToggle button{
+  min-height: 28px;
+  padding: 4px 12px;
+  border: 1px solid var(--btn-secondary-border);
+  border-radius: var(--control-radius);
+  background: var(--btn-secondary-bg);
+  color: var(--btn-text);
+  font-size: var(--font-small);
+  font-weight: 750;
+  box-shadow: none;
+}
+.recipeViewToggle button:hover{ color: var(--title); background: color-mix(in srgb, var(--title) 10%, var(--btn-secondary-bg)); }
+.recipeViewToggle button.active{
+  border-color: var(--focus-border);
+  background: var(--focus-ring);
+  color: var(--title);
+  font-weight: 850;
+}
+.recipeViewToggle button:focus-visible{ outline: 2px solid var(--focus-border); outline-offset: 2px; }
 .recipePageTabs{
   display: flex;
   align-self: start;
@@ -2441,6 +2486,208 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
   white-space: nowrap;
 }
 .splitSmartBadge[hidden]{ display: none; }
+
+/* =======================================================================
+ *   Recipe Summary / Edit views (desktop + tablet, not compact mobile)
+ *   ---------------------------------------------------------------------
+ *   data-recipe-view is only ever "summary" outside the compact mobile
+ *   recipe (JS pins it to "edit" there), so summary-keyed rules are
+ *   inherently desktop-scoped and need no media guard. Rules keyed on
+ *   "edit" alone would also match the mobile grid, so those live in the
+ *   width-guarded block further down.
+ *
+ *   Summary is a read-only glance whose one interaction is tracking:
+ *   fields are inert (pointer-events:none so a click anywhere in the cell
+ *   reaches the cell itself), and every editing affordance - the clock,
+ *   the clear x, the Match buttons, the layer percentage - is gone.
+ * ===================================================================== */
+#splitsArea[data-recipe-view="summary"] .splitMatrixCell input,
+#splitsArea[data-recipe-view="summary"] .splitLayerPct input{
+  pointer-events: none;
+}
+/* Disabled here means "not editable", not "unavailable" - so these keep
+   full-strength text rather than the usual dimmed disabled treatment. */
+#splitsArea[data-recipe-view="summary"] .splitMatrixCell input:disabled,
+#splitsArea[data-recipe-view="summary"] .splitLayerPct input:disabled{
+  opacity: 1;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text);
+  -webkit-text-fill-color: var(--text);
+}
+#splitsArea[data-recipe-view="summary"] .splitMatrixCell .resinNameInput:disabled{
+  color: var(--title);
+  -webkit-text-fill-color: var(--title);
+  font-weight: 800;
+}
+#splitsArea[data-recipe-view="summary"] .splitLayerPct input:disabled{ color: var(--muted); -webkit-text-fill-color: var(--muted); }
+#splitsArea[data-recipe-view="summary"] .splitCopyBtn{ display: none; }
+/* The whole cell is the tracking target, so it advertises itself as one. */
+#splitsArea.recipeTrackingView .splitMatrixCell{ cursor: pointer; }
+#splitsArea.recipeTrackingView .splitMatrixCell:hover{ background: color-mix(in srgb, var(--focus-ring) 40%, transparent); }
+
+@media (min-width: 701px){
+  /* Tracking is a Summary-view action and bulk selection is an Edit-view
+     one, so the per-cell clock and clear x have no role in either - both
+     were replaced by clicking the cell and by the Edit panel's own
+     Clear cell contents. */
+  #splitsArea[data-recipe-view] .splitTrackControl,
+  #splitsArea[data-recipe-view] .splitClearButton{ display: none; }
+  #splitsArea[data-recipe-view="summary"] .splitCellSelector{ display: none; }
+  /* Selection reads as a highlighted cell rather than a checkbox, but the
+     checkbox stays in the accessibility tree and keyboard tab order - it is
+     the only way to select a cell without a pointer. */
+  #splitsArea[data-recipe-view="edit"] .splitCellSelector{
+    display: block;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0,0,0,0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* Row and column select targets. The base layer letter is an inert
+     watermark (opacity .14, pointer-events:none) and the row header is a
+     plain label; the .bulk-editing rules that used to promote both into
+     real controls are compact-mobile-only now, so Edit view restores them. */
+  #splitsArea[data-recipe-view="edit"] .splitLayerTitle{
+    pointer-events: auto;
+    cursor: pointer;
+    opacity: .24;
+  }
+  #splitsArea[data-recipe-view="edit"] .splitLayerTitle:hover,
+  #splitsArea[data-recipe-view="edit"] .splitLayerTitle.selected,
+  #splitsArea[data-recipe-view="edit"] .splitLayerTitle.partiallySelected{ color: var(--title); }
+  #splitsArea[data-recipe-view="edit"] .splitLayerTitle.selected{ opacity: .52; }
+  #splitsArea[data-recipe-view="edit"] .splitLayerTitle.partiallySelected{ opacity: .34; }
+  #splitsArea[data-recipe-view="edit"] .splitRowSelect{
+    cursor: pointer;
+    border-radius: var(--control-radius);
+    color: var(--muted);
+    font-weight: 800;
+  }
+  #splitsArea[data-recipe-view="edit"] .splitRowSelect:hover{ background: var(--row-bg-2); color: var(--title); }
+  #splitsArea[data-recipe-view="edit"] .splitRowSelect.selected{
+    background: var(--focus-border);
+    color: #fff;
+  }
+  #splitsArea[data-recipe-view="edit"] .splitRowSelect.partiallySelected{
+    background: color-mix(in srgb, var(--focus-ring) 70%, transparent);
+    color: var(--title);
+  }
+  #splitsArea[data-recipe-view="edit"] .splitLayerHeader{ cursor: pointer; }
+  #splitsArea[data-recipe-view="edit"] .splitLayerHeader :is(input,button,label){ cursor: auto; }
+  #splitsArea[data-recipe-view="edit"] .splitLayerHeader :is(button){ cursor: pointer; }
+  #splitsArea[data-recipe-view="edit"] .splitRowCorner{
+    color: var(--muted);
+    font-size: var(--font-tiny);
+    font-weight: 750;
+  }
+
+  /* Selected (Edit) and tracked (Summary) are deliberately different
+     marks: selection is an outlined working state you are about to act
+     on, tracking is a filled, settled property of the recipe. They never
+     appear in the same view, but they must never be mistaken for each
+     other across a view switch either. */
+  #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.selected{
+    background: color-mix(in srgb, var(--focus-ring) 72%, transparent);
+    box-shadow: inset 0 0 0 2px var(--focus-border);
+  }
+  #splitsArea[data-recipe-view="summary"] .splitsMatrix tbody .splitMatrixCell.tracked{
+    background: color-mix(in srgb, var(--ok) 20%, transparent);
+    box-shadow: inset 3px 0 0 0 var(--ok);
+  }
+  /* Tracking stays legible while editing (you should know what the
+     timeline is watching) without competing with selection. */
+  #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.tracked:not(.selected){
+    box-shadow: inset 3px 0 0 0 color-mix(in srgb, var(--ok) 62%, transparent);
+  }
+
+  /* "Large percentage number" - the value operators read across the line.
+     Same element in both views; Summary simply renders it inert. */
+  #splitsArea[data-recipe-view] .splitPctControl input{
+    height: 30px;
+    min-height: 30px;
+    max-height: 30px;
+    font-size: 19px;
+    font-weight: 850;
+    line-height: 29px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* The Edit panel: two rows above the grid, mirroring Receiver Hopper
+     Weights' own Edit toolbar. Row 1 is the per-selection edit; row 2 is
+     the destructive/structural actions. */
+  /* Overrides the base three-column grid: this layout is two stacked rows
+     that each manage their own flex flow. */
+  #splitsArea > .splitsBulkBar{ order: -1; display: block; min-height: 0; margin: 0 0 2px; }
+  /* Row/column select headers are how a whole hopper row or layer column
+     gets selected, so the header column comes back in Edit. The base rule
+     hides it whenever .bulk-editing is absent, which desktop no longer
+     sets (that class is now compact-mobile-only). */
+  #splitsArea[data-recipe-view="edit"] .splitsMatrix tr > :first-child{ display: table-cell; }
+  .splitsEditRow{ display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+  .splitsEditRowSecondary{
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--row-border);
+  }
+  .splitsEditRowPrimary > .splitsBulkField{
+    display: grid;
+    /* Half the original entry width - a resin code and a percentage are
+       both short values, so the wide fields only added dead space. */
+    grid-template-columns: auto minmax(52px, 85px);
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+    margin: 0;
+    padding: 5px 8px;
+    border: 1px solid var(--row-border-2);
+    border-radius: var(--control-radius);
+    background: var(--row-bg-2);
+    color: var(--muted);
+    font-size: var(--font-tiny);
+    font-weight: 750;
+  }
+  .splitsEditRowPrimary > .splitsBulkField input{ min-height: 28px; font-size: 14px; font-weight: 800; }
+  /* The percentage field nests its own input+unit grid, whose base rule
+     reserves minmax(90px,1fr) for the input alone - wider than the halved
+     85px track above it, which pushed the % symbol out past the field's
+     right edge and onto the Apply button. minmax(0,1fr) lets it shrink to
+     the track instead of overflowing it. */
+  .splitsEditRowPrimary .splitsBulkPctInput{
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 4px;
+  }
+  /* ...and the field itself gets that suffix's width back, so the entry box
+     ends up the same size as the resin one beside it instead of clipping
+     its own "No change" placeholder. */
+  .splitsEditRowPrimary > .splitsBulkFieldPct{ grid-template-columns: auto minmax(72px, 105px); }
+  /* #splitsArea qualifies this past button.secondary, which is otherwise an
+     equal-specificity rule appearing later in the sheet and so was winning
+     the padding outright. */
+  #splitsArea .splitsEditRowPrimary > button{
+    flex: 0 0 auto;
+    min-height: 30px;
+    padding: 5px 14px;
+  }
+  .splitsEditRowPrimary > .splitsBulkActions{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 0 0 auto;
+    margin-left: auto;
+    padding-top: 0;
+    border-top: 0;
+  }
+  .splitsEditRowPrimary .splitsSelectionStatus{ margin: 0; white-space: nowrap; }
+  .splitsEditRowSecondary .splitsRearrangeAction{ margin-left: auto; }
+}
 
 @media (min-width: 901px) and (pointer: fine){
   /* Left-align instead of centering under the panel: .splitsMatrixFrame's

@@ -15,7 +15,9 @@ const app = fs.readFileSync("app.js", "utf8");
 test("lastActiveMobileLayer is declared at module scope, alongside hopperRearrangement, not inside renderSplitsArea", () => {
   const hoisted = app.indexOf("let hopperRearrangement = null;");
   assert.notEqual(hoisted, -1);
-  const nearby = app.slice(hoisted, hoisted + 1300);
+  // Window covers the whole module-scope recipe-state cluster; it grew when
+  // splitsViewMode (desktop Summary/Edit) joined the same block.
+  const nearby = app.slice(hoisted, hoisted + 2200);
   assert.match(nearby, /let lastActiveMobileLayer = "";/);
 });
 
