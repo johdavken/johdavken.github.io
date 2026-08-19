@@ -81,8 +81,8 @@ test("desktop health readout stays compact while mobile retains the shared card 
   assert.match(desktop, /width:min\(100%,720px\)/);
   assert.match(desktop, /height:auto/);
   assert.match(desktop, /align-content:start/);
-  assert.match(fs.readFileSync("index.html", "utf8"), /styles\.css\?v=0\.61\.6/);
-  assert.match(fs.readFileSync("index.html", "utf8"), /desktop\.css\?v=0\.1\.5/);
+  assert.match(fs.readFileSync("index.html", "utf8"), /styles\.css\?v=0\.61\.7/);
+  assert.match(fs.readFileSync("index.html", "utf8"), /desktop\.css\?v=0\.1\.6/);
 });
 
 test("upstream failures expose fixed diagnostics without logging credentials", () => {
