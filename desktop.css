@@ -629,14 +629,18 @@
   #lineSetupBlock #weightsArea #setupWeightProfilesBlock[hidden]{display:none!important}
   #lineSetupBlock #weightsArea #setupWeightProfilesBlock > summary{display:none}
   #lineSetupBlock #weightsArea #setupWeightProfilesBlock > .blockBody{display:block!important;padding:0}
-  .desktopWeightsBulkContext{grid-template-columns:minmax(120px,1fr) minmax(120px,1fr) minmax(155px,auto);gap:8px;margin-top:-7px;padding:10px;border-radius:var(--radius-row)}
+  /* Edit view's toolbar - a single compact card directly under the Smart
+     Hoppers/View row, above the table. Two rows at most: fields+Apply,
+     then selection status+Select all/Clear. No numbered steps or a Done
+     button - Summary is the exit. */
+  .desktopWeightsBulkContext{display:flex;flex-direction:column;gap:8px;margin:0 0 8px;padding:10px;border-radius:var(--radius-row)}
   .desktopWeightsBulkContext[hidden]{display:none!important}
-  .desktopWeightsBulkContext .weightsBulkActions{grid-column:1/-1;padding-top:3px}
-  .desktopWeightsBulkContext #doneBulkWeights{margin-left:auto;color:var(--focus-border);font-weight:850}
-  .desktopWeightsBulkContext .weightsBulkApply{grid-template-columns:minmax(0,1fr) auto;align-items:end}
-  .desktopWeightsBulkContext .weightsBulkApply button{width:auto;min-height:30px;padding:4px 9px}
+  .desktopWeightsBulkContext .weightsBulkFieldsRow{display:flex;flex-wrap:wrap;align-items:end;gap:10px}
+  .desktopWeightsBulkContext .weightsBulkFieldsRow .weightsBulkField{flex:1 1 160px;min-width:140px}
+  .desktopWeightsBulkContext .weightsBulkFieldsRow > button{flex:0 0 auto;width:auto;min-height:30px;padding:4px 12px}
   .desktopWeightsBulkContext .weightsInputWithUnit input{font-size:14px;font-weight:800}
-  .desktopWeightsBulkContext .weightsBulkSteps{gap:18px;padding-bottom:8px;border-bottom:1px solid var(--row-border)}
+  .desktopWeightsBulkContext .weightsBulkActions{padding-top:6px}
+  .desktopWeightsBulkContext .weightsSelectionStatus{flex:1 1 auto;margin:0}
 
   /* Profiles use the same bounded overlay on desktop, with a centered
      surface and an internally scrolling list. */

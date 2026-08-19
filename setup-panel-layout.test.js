@@ -202,13 +202,18 @@ test("workspace-derived naming has no user click handler", () => {
   assert.match(app, /document\.body\.dataset\.hopperNaming = next/);
 });
 
-// --- Receiver hopper weights: bulk toolbar moved below the table ----------
+// --- Receiver hopper weights: Edit's toolbar sits above the table ---------
+// (moved here from below the table so it reads as "drop a row under Smart
+// Hoppers/View, above the grid" - selection/bulk-apply is now part of Edit
+// view itself rather than a separate mode reached from below the table.)
 
-test("the weights bulk toolbar is appended after the table, not before it", () => {
+test("the Edit-view toolbar is appended right after the Smart Hoppers/View controls, before the table", () => {
   const body = functionBody("renderWeightsArea");
-  const scrollAppend = body.indexOf("area.appendChild(scroll);");
+  const controlsAppend = body.indexOf("area.appendChild(desktopControls);");
   const toolbarAppend = body.indexOf("area.appendChild(toolbar);");
-  assert.ok(scrollAppend > -1 && toolbarAppend > scrollAppend, "expected area.appendChild(scroll) before area.appendChild(toolbar)");
+  const scrollAppend = body.indexOf("area.appendChild(scroll);");
+  assert.ok(controlsAppend > -1 && toolbarAppend > controlsAppend && scrollAppend > toolbarAppend,
+    "expected desktopControls, then toolbar, then scroll(the table), in that order");
 });
 
 // --- Receiver Weight Profiles panel added under Setup ----------------------
