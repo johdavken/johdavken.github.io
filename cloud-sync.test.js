@@ -977,12 +977,12 @@ test("the breaker's budget is a rate, not a streak - a loop that 'resolves' each
   assert.match(source, /const CONFLICT_BURST_LIMIT = 12;/);
   assert.match(source, /const CONFLICT_BURST_WINDOW_MS = 10000;/);
   assert.match(source, /recentConflictTimes = recentConflictTimes\.filter\(at=>now - at < CONFLICT_BURST_WINDOW_MS\);/);
-  // Counted at the single funnel every conflict path reaches - past the
-  // resolvingActiveConflict/activeConflictPaused re-entrancy guard (see the
-  // RT Sync conflict-storm fix), so the window is generous enough to cover
-  // that guard's own explanatory comment without asserting exact placement.
+  // Counting moved to the rejected write itself (see the Aug 20 test below)
+  // and now lives in one helper both conflict paths share, so the budget is
+  // spent once per real conflict no matter which path notices it.
+  assert.match(source, /function tripIfConflictBursting\(\)\{\s*\n\s*if \(recordConflict\(\) < CONFLICT_BURST_LIMIT\) return false;/);
   const resolver = source.slice(source.indexOf("async function resolveActiveConflict("));
-  assert.match(resolver.slice(0, 1600), /if \(recordConflict\(\) >= CONFLICT_BURST_LIMIT\)\{/);
+  assert.match(resolver.slice(0, 1800), /if \(!alreadyCounted && tripIfConflictBursting\(\)\) return;/);
 });
 
 test("no conflict path retries instantly any more", () => {
@@ -1009,11 +1009,24 @@ test("a missing remote row is a failed upload, not a crash", async () => {
   assert.ok(["Pending", "Offline"].includes(sync.getState().status), sync.getState().status);
 });
 
-test("a successful write clears the budget, so unrelated conflicts never accumulate across a session", () => {
+test("a successful write must NOT clear the budget - that is what let the storm run unbounded", () => {
+  // Measured live on 2026-08-20: 184,885 conflicts in 35 minutes, ~88/sec,
+  // against a 12-per-10s budget that never tripped. update_active_job has
+  // two idempotent success branches (matching last_operation_id, matching
+  // payload), so a runaway cycle emits a steady mix of conflicts and cheap
+  // successes - and clearing on success wiped every conflict before it,
+  // which is precisely the streak-counter weakness a *rate* breaker exists
+  // to avoid.
   const source = fs.readFileSync("cloud-sync.js", "utf8");
-  const flush = source.slice(source.indexOf("async function flushActiveJob("));
-  assert.match(flush.slice(0, 1400), /clearConflictBudget\(\);/);
-  // Retry is the operator's way out: pause and budget clear together.
+  const flush = source.slice(
+    source.indexOf("async function flushActiveJob("),
+    source.indexOf("function notifyActiveJobMutation(")
+  );
+  assert.doesNotMatch(flush, /clearConflictBudget\(\);/);
+  // The sliding window is what keeps stale conflicts from counting toward a
+  // later unrelated one, so nothing is needed in its place.
+  assert.match(source, /recentConflictTimes = recentConflictTimes\.filter\(at=>now - at < CONFLICT_BURST_WINDOW_MS\);/);
+  // Retry stays the operator's deliberate way out: pause and budget clear together.
   assert.match(source, /activeConflictPaused = false;\s*\n\s*clearConflictBudget\(\);\s*\n\s*lastActiveFlushDenied = false;/);
 });
 
@@ -1209,4 +1222,204 @@ test("a plain (non-auth) upload failure does not trigger the session-reestablish
   await sync.retry();
   assert.equal(signInCalls, 0, "an ordinary network failure must not force a fresh sign-in");
   assert.equal(sync.getState().status, "Synced");
+});
+
+/* -----------------------------------------------------------------------
+ *   Hardening after the 2026-08-20 burst: 36 rejected update_active_job
+ *   calls within 39ms, one device/workspace pair - past a nominal
+ *   12-per-10s budget, and past both the Aug 12 breaker and the Aug 19
+ *   re-entrancy mutex.
+ *
+ *   The budget counted completed resolutions. Every early return in
+ *   resolveActiveConflict - the mutex, the already-paused check - happens
+ *   after a real write has already been sent and refused, so those writes
+ *   were spent without ever reaching the counter. Counting now happens
+ *   against the rejected write itself, which is the thing that costs the
+ *   database. In a single serialized client every conflict does reach the
+ *   resolver, so the two placements only diverge under a race (a Realtime
+ *   push landing inside flushActiveJob's own fetchActiveRow await); the
+ *   structural test below is what pins the placement.
+ * -------------------------------------------------------------------- */
+
+test("the rejected-write bound is the budget itself - at most CONFLICT_BURST_LIMIT before the pause", async () => {
+  // Tightened from the original "<= 20": with counting at the write there
+  // is no longer any slack between writes spent and budget consumed.
+  let rate = 500;
+  const rows = workspaceFixtures({ id: "ws-a", name: "Line A" });
+  const harness = fakeRealtimeClient(rows);
+  const sync = require("./cloud-sync.js").create({
+    config: { enabled: true, url: "https://example.supabase.co", publishableKey: "key" },
+    syncStorage: require("./sync-storage.js"),
+    storage: memoryStorage(),
+    supabaseLibrary: { createClient: ()=>harness.client },
+    adapter: {
+      ...fakeAdapter(()=>activeJobPayload({ lineRate: rate })),
+      resolveActiveConflict: async ()=>"remote"
+    },
+    activeJob: require("./active-job.js")
+  });
+  await sync.initialize();
+
+  const innerRpc = harness.client.rpc.bind(harness.client);
+  harness.client.rpc = async (name, args)=>{
+    if (name === "update_active_job") rows.active_jobs[0].revision += 7;
+    return innerRpc(name, args);
+  };
+
+  const before = writeCalls(harness.rpcCalls).length;
+  for (let i = 0; i < 200; i++){
+    rate += 1;
+    sync.notifyActiveJobMutation({ immediate: true, kind: "edit" });
+    await new Promise(resolve=>setTimeout(resolve, 0));
+  }
+  const rejected = writeCalls(harness.rpcCalls).length - before;
+  assert.ok(rejected <= 12, `expected at most CONFLICT_BURST_LIMIT rejected writes, saw ${rejected}`);
+  assert.equal(sync.getState().status, "Conflict");
+});
+
+test("the budget is spent at the rejected write, ahead of every early return that could swallow it", () => {
+  const source = fs.readFileSync("cloud-sync.js", "utf8");
+  const flush = source.slice(
+    source.indexOf("async function flushActiveJob("),
+    source.indexOf("function notifyActiveJobMutation(")
+  );
+  // Ordering is the whole point: counted on the conflict branch itself,
+  // before fetchActiveRow and before resolveActiveConflict gets a chance to
+  // return early out of its mutex.
+  const conflictBranch = flush.slice(flush.indexOf("if (isConflictError(response.error)){"));
+  const trip = conflictBranch.indexOf("if (tripIfConflictBursting()) return;");
+  const fetch = conflictBranch.indexOf("await fetchActiveRow()");
+  const resolve = conflictBranch.indexOf("await resolveActiveConflict(");
+  assert.ok(trip > -1 && fetch > trip && resolve > trip,
+    "the conflict must be counted before the row fetch and the resolution attempt");
+  // ...and not counted a second time once it gets there.
+  assert.match(conflictBranch, /resolveActiveConflict\(pending, remote, \{ alreadyCounted: true \}\)/);
+});
+
+test("a conflict still being resolved never drops the queued change - the device keeps its own work", async () => {
+  const rows = workspaceFixtures({ id: "ws-a", name: "Line A" });
+  const harness = fakeRealtimeClient(rows);
+  let releaseResolution;
+  const resolutionGate = new Promise(resolve => { releaseResolution = resolve; });
+  const sync = require("./cloud-sync.js").create({
+    config: { enabled: true, url: "https://example.supabase.co", publishableKey: "key" },
+    syncStorage: require("./sync-storage.js"),
+    storage: memoryStorage(),
+    supabaseLibrary: { createClient: ()=>harness.client },
+    adapter: {
+      ...fakeAdapter(()=>activeJobPayload({ lineRate: 999 })),
+      resolveActiveConflict: async ()=>{ await resolutionGate; return "remote"; }
+    },
+    activeJob: require("./active-job.js")
+  });
+  await sync.initialize();
+
+  rows.active_jobs[0].revision += 1;
+  sync.notifyActiveJobMutation({ immediate: true, kind: "edit" });
+  await new Promise(resolve=>setTimeout(resolve, 0));
+  await new Promise(resolve=>setTimeout(resolve, 0));
+
+  assert.equal(sync.getState().pendingCount, 1);
+  releaseResolution();
+  await new Promise(resolve=>setTimeout(resolve, 0));
+});
+
+test("a loop that alternates conflicts with cheap idempotent successes still trips the breaker", async () => {
+  // The shape measured in production on 2026-08-20. update_active_job
+  // returns success without writing when last_operation_id or the payload
+  // already match, so a runaway cycle is never a clean run of conflicts -
+  // it is conflicts interleaved with no-op successes. While a success reset
+  // the budget, those successes kept the counter pinned near zero and the
+  // rate breaker never fired, for 35 minutes and 184,885 conflicts.
+  let rate = 500;
+  const rows = workspaceFixtures({ id: "ws-a", name: "Line A" });
+  const harness = fakeRealtimeClient(rows);
+  const sync = require("./cloud-sync.js").create({
+    config: { enabled: true, url: "https://example.supabase.co", publishableKey: "key" },
+    syncStorage: require("./sync-storage.js"),
+    storage: memoryStorage(),
+    supabaseLibrary: { createClient: ()=>harness.client },
+    adapter: {
+      ...fakeAdapter(()=>activeJobPayload({ lineRate: rate })),
+      resolveActiveConflict: async ()=>"remote"
+    },
+    activeJob: require("./active-job.js")
+  });
+  await sync.initialize();
+
+  let attempts = 0;
+  const innerRpc = harness.client.rpc.bind(harness.client);
+  harness.client.rpc = async (name, args)=>{
+    if (name !== "update_active_job") return innerRpc(name, args);
+    attempts += 1;
+    if (attempts % 2 === 1) return { data: null, error: { code: "40001", message: "revision_conflict" } };
+    return innerRpc(name, args);
+  };
+
+  for (let i = 0; i < 200; i++){
+    rate += 1;
+    sync.notifyActiveJobMutation({ immediate: true, kind: "edit" });
+    await new Promise(resolve=>setTimeout(resolve, 0));
+  }
+
+  assert.equal(sync.getState().status, "Conflict", "the breaker must trip despite the interleaved successes");
+  assert.ok(attempts <= 30, `expected the breaker to bound write attempts, saw ${attempts}`);
+});
+
+/* -----------------------------------------------------------------------
+ *   The seed every storm grew from: a change queued on connect that was
+ *   born with a stale expected revision and could never land.
+ * -------------------------------------------------------------------- */
+
+test("createWorkspace establishes the created row's revision before selecting the workspace", () => {
+  // Captured live on 2026-08-20: the first write after creating a line went
+  // out with p_expected_revision 0 against a row create_workspace had
+  // already put at revision 1. selectWorkspace -> reconcileSelected reads
+  // the stored baseline, and anything queued while it runs (in practice the
+  // automatic layer-count normalization) stamps expectedRevision from
+  // state.activeRevision - so both had to be set first, not after.
+  const source = fs.readFileSync("cloud-sync.js", "utf8");
+  const create = source.slice(
+    source.indexOf("async function createWorkspace("),
+    source.indexOf("async function joinWorkspace(")
+  );
+  const setsRevision = create.indexOf("state.activeRevision = Number(row.active_job_revision);");
+  const savesMetadata = create.indexOf("saveWorkspaceMetadata(row.workspace_id,");
+  const selects = create.indexOf("await selectWorkspace(row.workspace_id");
+  assert.ok(setsRevision > -1 && savesMetadata > -1 && selects > -1, "expected all three steps in createWorkspace");
+  assert.ok(setsRevision < selects, "the revision must be established before selectWorkspace runs");
+  assert.ok(savesMetadata < selects, "the stored baseline must be written before selectWorkspace reads it");
+});
+
+/* -----------------------------------------------------------------------
+ *   No request may hang forever. Observed live on 2026-08-20: one
+ *   update_active_job POST that never returned, pinning flushingActive
+ *   true for the life of the page - sync silently dead, RT Sync panel
+ *   controls dead with it, no way back short of a reload.
+ * -------------------------------------------------------------------- */
+
+test("the active-job write and the conflict read both go through the request timeout", () => {
+  const source = fs.readFileSync("cloud-sync.js", "utf8");
+  assert.match(source, /const REQUEST_TIMEOUT_MS = 20000;/);
+  assert.match(source, /function rpc\(name, args\)\{ return withRequestTimeout\(client\.rpc\(name, args\)\); \}/);
+  const fetchRow = source.slice(source.indexOf("async function fetchActiveRow("), source.indexOf("async function flushActiveJob("));
+  assert.match(fetchRow, /withRequestTimeout\(client\.from\("active_jobs"\)/);
+  // The timer must be released on the settled path too, or every request
+  // leaves a pending timeout behind for its full duration.
+  assert.match(source, /\.finally\(\(\)=>clearTimeout\(timer\)\)/);
+});
+
+test("a timed-out request is an ordinary retryable failure, not a conflict, a lost membership or a dead session", () => {
+  // Misclassifying it would be worse than the hang: access-denied discards
+  // the operator's queued change outright.
+  const { isConflictError, isAccessDeniedError, isAuthError } = require("./cloud-sync.js");
+  const aborted = { message: "AbortError: The operation was aborted." };
+  assert.equal(isConflictError(aborted), false);
+  assert.equal(isAccessDeniedError(aborted), false);
+  assert.equal(isAuthError(aborted), false);
+});
+
+test("the timeout degrades safely where AbortController or the builder cannot support it", () => {
+  const source = fs.readFileSync("cloud-sync.js", "utf8");
+  assert.match(source, /typeof AbortController === "undefined" \|\| typeof builder\?\.abortSignal !== "function"/);
 });

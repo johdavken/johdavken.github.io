@@ -6442,6 +6442,31 @@
     if (join) join.disabled = lineSyncActionInFlight || !syncState.available || !/^[A-Z0-9]{4}$/.test(code.trim());
   }
 
+  // Which RT Sync actions are available right now, in one place both the
+  // panel render and setLineSyncActionBusy call.
+  //
+  // These five buttons used to be assigned only during the panel render,
+  // which reads lineSyncActionInFlight but is driven by sync state changes,
+  // not by the flag itself. An action that started and finished without any
+  // intervening state change - Generate Link Code on a line that is already
+  // up to date is the everyday case - flipped the flag true, got rendered
+  // once while it was true, then cleared the flag with no render left to
+  // undo the disable. The panel sat there reading "Synced" with its own
+  // controls dead until something unrelated happened to re-render it.
+  // Refresh/Join escaped this only because setLineSyncActionBusy happened to
+  // re-enable those two directly.
+  function applyLineSyncActionAvailability(syncState = lineSync?.getState?.() || {}){
+    const selected = syncState.selectedWorkspace;
+    const owner = (selected?.membership?.role || "") === "owner";
+    const connected = !!syncState.connected;
+    ["lineSyncRenameBtn", "lineSyncGenerateCodeBtn", "lineSyncNewJobBtn", "lineSyncDisconnectBtn"].forEach(id=>{
+      if ($(id)) $(id).disabled = lineSyncActionInFlight || !selected || !connected;
+    });
+    if ($("lineSyncLeaveBtn")) $("lineSyncLeaveBtn").disabled = lineSyncActionInFlight || !selected || !syncState.available || owner;
+    if ($("lineSyncRetryBtn")) $("lineSyncRetryBtn").disabled = lineSyncActionInFlight;
+    updateLineSyncJoinAvailability(syncState);
+  }
+
   function setLineSyncActionBusy(busy, action = ""){
     lineSyncActionInFlight = busy;
     lineSyncBusyAction = busy ? action : "";
@@ -6452,9 +6477,7 @@
     if (refreshLabel) refreshLabel.textContent = busy && action === "refresh" ? "Refreshing…" : "Refresh now";
     const join = $("lineSyncJoinBtn");
     if (join) join.textContent = busy && action === "join" ? "Joining…" : "Join RT Sync";
-    const refresh = $("lineSyncRetryBtn");
-    if (refresh) refresh.disabled = busy;
-    updateLineSyncJoinAvailability();
+    applyLineSyncActionAvailability();
   }
 
   function formatLineSyncTimestamp(value){
@@ -6664,11 +6687,7 @@
     const role = selected?.membership?.role || "";
     const owner = role === "owner";
     const connected = !!syncState.connected;
-    ["lineSyncRenameBtn", "lineSyncGenerateCodeBtn", "lineSyncNewJobBtn", "lineSyncDisconnectBtn"].forEach(id=>{
-      if ($(id)) $(id).disabled = lineSyncActionInFlight || !selected || !connected;
-    });
-    if ($("lineSyncLeaveBtn")) $("lineSyncLeaveBtn").disabled = lineSyncActionInFlight || !selected || !syncState.available || owner;
-    if ($("lineSyncRetryBtn")) $("lineSyncRetryBtn").disabled = lineSyncActionInFlight;
+    applyLineSyncActionAvailability(syncState);
     if ($("lineSyncRetryDesktopLabel")) $("lineSyncRetryDesktopLabel").textContent = selected && !connected ? "Reconnect" : "Connect / retry";
     const joinPanel = document.querySelector(".lineSyncJoin");
     if (joinPanel) joinPanel.classList.toggle("mobileJoinVisible", !selected);
@@ -6678,8 +6697,6 @@
       syncPanel.classList.toggle("mobileHasWorkspaces", syncState.workspaces.length > 0);
       syncPanel.classList.toggle("mobileConnected", connected);
     }
-    updateLineSyncJoinAvailability(syncState);
-
     const memberSection = $("lineSyncMembersSection");
     const memberHost = $("lineSyncMembers");
     if (memberSection) memberSection.hidden = !owner || !syncState.members.length;
@@ -6735,13 +6752,33 @@
 
   function resolveLineSyncConflict(conflict){
     const dialog = $("lineSyncConflictDialog");
-    if (!dialog?.showModal) return Promise.resolve("remote");
+    // Nothing to ask with. "cancel" pauses synchronization and leaves the
+    // queued change on the device; answering "remote" here instead would
+    // discard the operator's work without anyone being shown the choice,
+    // and - because a discard is not a pause - leave the same conflict free
+    // to regenerate immediately.
+    if (!dialog?.showModal) return Promise.resolve("cancel");
+    // showModal() throws InvalidStateError when the dialog is already open.
+    // Thrown inside the Promise executor below that becomes a rejection,
+    // which surfaces in flushActiveJob's catch as an ordinary upload
+    // failure - so the change stays queued and retries straight back into
+    // the conflict it could not display. Pause instead.
+    if (dialog.open) return Promise.resolve("cancel");
     const detail = $("lineSyncConflictDetails");
     if (detail) detail.textContent = `This device started from revision ${conflict.localRevision}; the shared line is now revision ${conflict.remoteRevision}.`;
+    // A returnValue left over from a previous conflict outlives its dialog.
+    // Without this, dismissing the next one with Escape (which sets no
+    // returnValue) would silently repeat the earlier answer.
+    dialog.returnValue = "";
     return new Promise(resolve=>{
       const finish = ()=>resolve(dialog.returnValue === "local" || dialog.returnValue === "remote" ? dialog.returnValue : "cancel");
       dialog.addEventListener("close", finish, { once: true });
-      dialog.showModal();
+      try{
+        dialog.showModal();
+      }catch{
+        dialog.removeEventListener("close", finish);
+        resolve("cancel");
+      }
     });
   }
 
