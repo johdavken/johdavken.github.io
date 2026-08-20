@@ -1,5 +1,26 @@
 # RT Sync database interface
 
+## Applying migrations
+
+The project database tracks applied migrations in
+`supabase_migrations.schema_migrations`, so `supabase db push` is the way to
+apply anything new: it reads that ledger, applies only the files missing from
+it, and records what it ran.
+
+The ledger was baselined on 2026-08-20 against the versions in
+`migrations/`. Every file up to and including `202608160001` is recorded as
+applied. The one deliberate exception is
+[`migrations/202608150004_receiver_weight_profile_gallons.sql`](migrations/202608150004_receiver_weight_profile_gallons.sql),
+which is optional server-side hardening and is left unrecorded on purpose -
+see its own header. `db push` will apply it, which is fine whenever that is
+wanted.
+
+Before the baseline there was no ledger at all and migrations were applied by
+hand in the SQL Editor, which is how `202608150003` went unapplied for five
+days while the repository and its tests implied otherwise. The per-section
+notes below still describe what each migration does and the order it belongs
+in; they are no longer a manual checklist to work through.
+
 The authoritative schema is [`migrations/202607310001_line_sync.sql`](migrations/202607310001_line_sync.sql).
 
 If the initial migration was applied before the link-code qualification fix, also apply [`migrations/202607310002_fix_link_code_generation.sql`](migrations/202607310002_fix_link_code_generation.sql).
