@@ -149,6 +149,17 @@
       return Math.min(CONFLICT_RETRY_BASE_MS * Math.pow(2, step - 1), CONFLICT_RETRY_MAX_MS);
     }
     function clearConflictBudget(){ recentConflictTimes = []; }
+    // Records one conflict against the budget and reports whether that was
+    // the one that trips the breaker. Callers that get true must stop -
+    // synchronization is now paused and the queued change stays on the
+    // device for the operator's Retry.
+    function tripIfConflictBursting(){
+      if (recordConflict() < CONFLICT_BURST_LIMIT) return false;
+      activeConflictPaused = true;
+      clearConflictBudget();
+      setStatus("Conflict", "Synchronization paused: this line kept conflicting faster than it could settle. Local work is safe on this device - use Retry once the other device has finished.");
+      return true;
+    }
 
     // Raw kind/action strings only - which internal mutation "kind" values
     // mean what is a UI presentation concern, not this module's.
@@ -253,7 +264,28 @@
       const current = settings();
       return !!selectedId() && !current.disconnectedWorkspaceIds.includes(selectedId());
     }
-    function rpc(name, args){ return client.rpc(name, args); }
+    // No request here is allowed to hang forever. A single stuck connection
+    // used to pin flushingActive (and, through runLineSyncAction,
+    // lineSyncActionInFlight) true for the life of the page: synchronization
+    // silently dead, the RT Sync panel's own controls dead with it, and no
+    // way back short of a reload. Observed live on 2026-08-20 - one
+    // update_active_job POST that never returned, while the identical call
+    // from the same page answered in 214ms.
+    //
+    // An abort surfaces as an ordinary response error, so it is classified
+    // as neither a conflict nor access-denied nor an auth failure: the
+    // queued change stays on the device and retries, which is exactly how
+    // any other transient network failure already behaves.
+    const REQUEST_TIMEOUT_MS = 20000;
+    function withRequestTimeout(builder){
+      if (typeof AbortController === "undefined" || typeof builder?.abortSignal !== "function"){
+        return Promise.resolve(builder);
+      }
+      const controller = new AbortController();
+      const timer = setTimeout(()=>controller.abort(), REQUEST_TIMEOUT_MS);
+      return Promise.resolve(builder.abortSignal(controller.signal)).finally(()=>clearTimeout(timer));
+    }
+    function rpc(name, args){ return withRequestTimeout(client.rpc(name, args)); }
 
     // Passes the token straight through to the existing client's Realtime
     // transport - never stored, logged, or read back from anywhere else.
@@ -395,7 +427,7 @@
       setSyncedStatus("Shared active job is up to date.", "Shared active job is up to date, but other changes are still waiting to sync.");
     }
 
-    async function resolveActiveConflict(pending, remoteRow){
+    async function resolveActiveConflict(pending, remoteRow, { alreadyCounted = false } = {}){
       // flushActiveJob, reconcileSelected and handleRealtimeActive all funnel
       // through here, but until now only flushActiveJob's own re-entrancy was
       // ever guarded (flushingActive). A Realtime push arriving while a
@@ -415,13 +447,11 @@
       try{
         // Trip the breaker before doing any other work, so a runaway cycle
         // cannot keep resolving-and-regenerating conflicts faster than an
-        // operator could ever produce them.
-        if (recordConflict() >= CONFLICT_BURST_LIMIT){
-          activeConflictPaused = true;
-          clearConflictBudget();
-          setStatus("Conflict", "Synchronization paused: this line kept conflicting faster than it could settle. Local work is safe on this device - use Retry once the other device has finished.");
-          return;
-        }
+        // operator could ever produce them. alreadyCounted means the caller
+        // is flushActiveJob, which counted its own rejected write before
+        // calling in - counting again here would spend two budget slots on
+        // one conflict.
+        if (!alreadyCounted && tripIfConflictBursting()) return;
         // A remote row can be missing entirely (the workspace has no active job
         // yet), in which case there is nothing to compare, back up or offer a
         // choice between. Treat it as a plain failed upload and leave the item
@@ -476,9 +506,9 @@
     }
 
     async function fetchActiveRow(){
-      const response = await client.from("active_jobs")
+      const response = await withRequestTimeout(client.from("active_jobs")
         .select("workspace_id,payload,revision,last_operation_id,updated_at,updated_by")
-        .eq("workspace_id", selectedId()).maybeSingle();
+        .eq("workspace_id", selectedId()).maybeSingle());
       if (response.error) throw response.error;
       return response.data;
     }
@@ -500,16 +530,39 @@
         });
         if (response.error){
           if (isConflictError(response.error)){
+            // Counted here, against the rejected write itself, and not only
+            // inside resolveActiveConflict. Every early return in there -
+            // the re-entrancy mutex, the already-paused check - happens
+            // after a real update_active_job call has already been made and
+            // refused, so a budget that only counted completed resolutions
+            // never saw those writes. Production bursts kept overrunning a
+            // nominal 12-per-10s budget for exactly that reason: 25 rejected
+            // writes in 22ms on Aug 19, 36 in 39ms on Aug 20. The write is
+            // what costs the database, so the write is what gets counted.
+            if (tripIfConflictBursting()) return;
             const remote = await fetchActiveRow();
-            await resolveActiveConflict(pending, remote);
+            await resolveActiveConflict(pending, remote, { alreadyCounted: true });
             return;
           }
           throw response.error;
         }
-        // A write that lands is the definition of settled, so the burst
-        // budget starts fresh - an ordinary conflict earlier in the session
-        // must never count toward a much later, unrelated one.
-        clearConflictBudget();
+        // Deliberately does NOT clear the burst budget.
+        //
+        // It used to, on the reasoning that a write which lands means the
+        // line has settled. It does not: update_active_job has two
+        // idempotent success branches (matching last_operation_id, matching
+        // payload), so a runaway cycle produces a steady mix of conflicts
+        // and cheap successes - and each success wiped the evidence of every
+        // conflict before it. That reintroduced exactly the streak-counter
+        // weakness the rate breaker was built to avoid. Measured live on
+        // 2026-08-20: 184,885 conflicts in 35 minutes, ~88/sec sustained,
+        // against a nominal budget of 12 per 10s that never once tripped.
+        //
+        // Nothing is needed in its place. recentConflictTimes is a sliding
+        // window, so an ordinary conflict earlier in the session ages out of
+        // it after CONFLICT_BURST_WINDOW_MS on its own and still cannot
+        // count toward a much later, unrelated one. Retry/refreshSelected
+        // remain the deliberate way to clear a tripped breaker outright.
         const row = response.data?.[0];
         if (row){
           state.activeRevision = Number(row.revision);
@@ -961,9 +1014,18 @@
       }
       await loadWorkspaces();
       const row = response.data[0];
-      await selectWorkspace(row.workspace_id, { uploadLocalMissing: true });
+      // Both of these must land before selectWorkspace, not after it.
+      // selectWorkspace -> reconcileSelected reads this workspace's stored
+      // baseline, and anything queued while that runs stamps its
+      // expectedRevision from state.activeRevision. Setting them afterwards
+      // left both at 0 while create_workspace had already put the row at
+      // revision 1, so the first change queued on connect - in practice the
+      // automatic layer-count normalization - was born stale and could
+      // never land. It then sat in the outbox conflicting forever, which is
+      // the seed every observed conflict storm grew from.
       state.activeRevision = Number(row.active_job_revision);
       saveWorkspaceMetadata(row.workspace_id, { activeRevision: state.activeRevision, workspaceRevision: Number(row.workspace_revision) });
+      await selectWorkspace(row.workspace_id, { uploadLocalMissing: true });
       return row;
     }
 
