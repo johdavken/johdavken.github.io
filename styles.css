@@ -282,6 +282,12 @@ main{
   gap: var(--page-gap);
 }
 
+/* The foldaway group (RT Sync / Tools / Help) and the control that reveals
+   it. Both default to the un-folded state here, and only the desktop side
+   rail below opts into collapsing: the mobile tile home shows all seven
+   tiles at once, where there is no rail to shorten and no divider to draw. */
+.workspaceNavDivider{ display: none; }
+
 .workspaceNav,
 .workspaceStatusBar{ display: none; }
 .mobileQuickActions{ display:none; }
@@ -583,6 +589,75 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .baseGlyph{dis
 
      Decorative only. The button still handles nav; nothing here adds a
      hover, focus or pressed state of its own. */
+  /* Line Setup / Recipe / Timeline / Resin Totals are the job; RT Sync,
+     Tools and Help are the toolbox. The rule makes that split structural
+     rather than implied, and doubles as the control that folds the toolbox
+     away - seven rows is a lot to meet on first open.
+
+     The label pill sits ON the rule rather than beside it: the rule is
+     drawn by ::before across the full width and the pill paints over its
+     middle with the panel's own background, so one line reads as one
+     divider with a handle, not as a button with decoration either side.
+
+     The active section is never hidden. A rail that folds away the row you
+     are currently looking at leaves you with no "you are here" at all, so
+     the collapse rule exempts .active - fold the group while sitting in
+     Tools and Tools stays, alone, under the divider. */
+  .workspaceNavDivider{
+    position: relative;
+    display: flex;
+    justify-content: center;
+    margin: 9px 4px 4px;
+  }
+  .workspaceNavDivider::before{
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    border-top: 1px solid var(--border);
+  }
+  .workspaceNavMore{
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: auto;
+    padding: 3px 11px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--panel);
+    color: var(--muted);
+    font: inherit;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .workspaceNavMore:hover{
+    border-color: var(--border2);
+    background: var(--row-bg);
+    color: var(--title);
+  }
+  .workspaceNavMore:focus-visible{
+    outline: 2px solid var(--focus-border);
+    outline-offset: 2px;
+  }
+  .workspaceNavMoreChev{
+    width: 14px;
+    height: 14px;
+    flex: 0 0 auto;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: transform .18s ease;
+  }
+  .workspaceNav.navExpanded .workspaceNavMoreChev{ transform: rotate(180deg); }
+  .workspaceNav:not(.navExpanded) .workspaceNavExtra:not(.active){ display: none; }
+
   .workspaceNavButton[data-step]{
     grid-template-columns: minmax(0,1fr) auto;
     column-gap: 9px;
@@ -5594,6 +5669,7 @@ body:is([data-theme="industrial-slate-dark"],[data-theme="gruvbox-dark"],[data-t
 }
 @media (prefers-reduced-motion: reduce){
   .helpShot img{ transition: none; }
+  .workspaceNavMoreChev{ transition: none; }
 }
 
 /* Standalone caption used when a shot sits inside another layout block. */

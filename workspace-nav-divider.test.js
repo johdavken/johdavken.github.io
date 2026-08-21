@@ -1,0 +1,158 @@
+"use strict";
+
+// The desktop side rail folds RT Sync / Tools / Help away behind a labelled
+// divider under Resin Totals, so first contact with the app is four numbered
+// sections rather than seven rows.
+//
+// Two properties carry the whole design and are what this file guards:
+//
+//   Desktop only. The mobile tile home is a 2-column grid of all seven
+//   tiles - there is no rail to shorten and no divider to draw - so the
+//   collapse lives entirely inside the desktop media query and the divider
+//   is display:none at top level.
+//
+//   The active section is never hidden. A rail that folds away the row you
+//   are standing on leaves no "you are here", so the collapse rule exempts
+//   .active. That exemption is also why no JS force-expands on navigation:
+//   doing so would silently undo a collapse the operator asked for.
+
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+
+const app = fs.readFileSync("app.js", "utf8");
+const html = fs.readFileSync("index.html", "utf8");
+const styles = fs.readFileSync("styles.css", "utf8");
+
+const DESKTOP_QUERY = "@media (min-width: 901px) and (pointer: fine){";
+const FOLDED = [
+  ["lineSyncBlock", "workspaceNavLineSync"],
+  ["toolsBlock", "workspaceNavTools"],
+  ["helpBlock", "workspaceNavHelp"]
+];
+const PINNED = ["lineSetupBlock", "splitsBlock", "resultsBlock", "productionSummaryBlock"];
+
+function enclosingAtRule(needle){
+  const at = styles.indexOf(needle);
+  assert.notEqual(at, -1, `Expected to find ${needle}`);
+  let depth = 0;
+  for (let i = at; i > 0; i--){
+    const ch = styles[i - 1];
+    if (ch === "}") depth++;
+    else if (ch === "{"){
+      if (depth === 0){
+        const start = styles.lastIndexOf("\n", i - 1);
+        return styles.slice(start + 1, i).trim();
+      }
+      depth--;
+    }
+  }
+  return null;
+}
+
+function ruleBody(selector){
+  const at = styles.indexOf(selector);
+  assert.notEqual(at, -1, `Expected rule ${selector}`);
+  return styles.slice(at, styles.indexOf("}", at) + 1);
+}
+
+/* ----------------------------------------------------------------------
+ *   Markup
+ * -------------------------------------------------------------------- */
+
+test("the divider sits between Resin Totals and the first folded section", () => {
+  const resin = html.indexOf('data-workspace-target="productionSummaryBlock"');
+  const divider = html.indexOf('<div class="workspaceNavDivider">');
+  const sync = html.indexOf('data-workspace-target="lineSyncBlock"');
+  assert.ok(resin < divider && divider < sync, "divider must fall between Resin Totals and RT Sync");
+});
+
+test("it is a real disclosure button, naming the sections it controls", () => {
+  const block = html.slice(html.indexOf('<div class="workspaceNavDivider">'),
+                           html.indexOf('data-workspace-target="lineSyncBlock"'));
+  assert.match(block, /id="workspaceNavMore"/);
+  assert.match(block, /aria-expanded="false"/);
+  // An IDREF list, not a wrapper: the three buttons stay direct children of
+  // the nav grid, which is what lets the .active exemption below reveal one
+  // of them on its own.
+  assert.match(block, /aria-controls="workspaceNavLineSync workspaceNavTools workspaceNavHelp"/);
+  assert.match(block, /id="workspaceNavMoreLabel">More</);
+  assert.match(block, /aria-hidden="true"/);
+});
+
+test("exactly the last three sections are marked foldaway, and the numbered four are not", () => {
+  FOLDED.forEach(([target, id]) => {
+    const re = new RegExp(`<button class="workspaceNavButton workspaceNavExtra" id="${id}" type="button" data-workspace-target="${target}">`);
+    assert.match(html, re, `${target} should be foldaway`);
+  });
+  PINNED.forEach(target => {
+    const button = html.slice(html.indexOf(`data-workspace-target="${target}"`));
+    assert.doesNotMatch(button.slice(0, button.indexOf(">")), /workspaceNavExtra/);
+  });
+});
+
+/* ----------------------------------------------------------------------
+ *   Scope: desktop rail only
+ * -------------------------------------------------------------------- */
+
+test("the divider is invisible outside the desktop rail, so the tile home still shows all seven", () => {
+  assert.equal(enclosingAtRule(".workspaceNavDivider{ display: none; }"), null);
+  assert.equal(enclosingAtRule("  .workspaceNavDivider{\n    position: relative;"), DESKTOP_QUERY);
+});
+
+test("the collapse itself is desktop-only and exempts the active section", () => {
+  const rule = ".workspaceNav:not(.navExpanded) .workspaceNavExtra:not(.active){ display: none; }";
+  assert.match(styles, new RegExp(rule.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  assert.equal(enclosingAtRule(rule), DESKTOP_QUERY);
+});
+
+test("the label pill paints over the rule rather than sitting beside it", () => {
+  assert.match(ruleBody("  .workspaceNavDivider::before{"), /border-top: 1px solid var\(--border\);/);
+  const pill = ruleBody("  .workspaceNavMore{");
+  assert.match(pill, /border-radius: 999px;/);
+  assert.match(pill, /background: var\(--panel\);/);
+  assert.match(pill, /position: relative;/);
+});
+
+test("the control is keyboard-reachable and respects reduced motion", () => {
+  assert.match(styles, /\.workspaceNavMore:focus-visible\{\s*\n\s*outline: 2px solid var\(--focus-border\);/);
+  assert.match(styles, /@media \(prefers-reduced-motion: reduce\)\{[\s\S]*?\.workspaceNavMoreChev\{ transition: none; \}/);
+});
+
+/* ----------------------------------------------------------------------
+ *   State
+ * -------------------------------------------------------------------- */
+
+test("the open/shut choice survives a reload under its own versioned key", () => {
+  assert.match(app, /const LS_NAV_EXPANDED_KEY = "resinTimer\.navExpanded\.v0\.01";/);
+  assert.match(app, /localStorage\.setItem\(LS_NAV_EXPANDED_KEY, expanded \? "1" : "0"\);/);
+  assert.match(app, /return localStorage\.getItem\(LS_NAV_EXPANDED_KEY\) === "1";/);
+  // Default shut: an unset key is the collapsed rail, which is the point.
+  assert.match(app, /function loadNavExpandedPreference\(\)\{[\s\S]*?catch\(e\)\{\s*\n\s*return false;/);
+});
+
+test("a failed write stays quiet - it costs one click, not an operator warning", () => {
+  const fn = app.slice(app.indexOf("function saveNavExpandedPreference("));
+  const body = fn.slice(0, fn.indexOf("\n    }") + 6);
+  assert.doesNotMatch(body, /showStorageWarning/);
+});
+
+test("toggling drives the class, the label and the accessible state together", () => {
+  const fn = app.slice(app.indexOf("function setWorkspaceNavExpanded("));
+  const body = fn.slice(0, fn.indexOf("\n    }") + 6);
+  assert.match(body, /classList\.toggle\("navExpanded", workspaceNavExpanded\)/);
+  assert.match(body, /setAttribute\("aria-expanded", String\(workspaceNavExpanded\)\)/);
+  assert.match(body, /label\.textContent = workspaceNavExpanded \? "Less" : "More"/);
+  assert.match(body, /if \(persist\) saveNavExpandedPreference\(workspaceNavExpanded\);/);
+});
+
+test("the stored state is applied on load without being written straight back", () => {
+  assert.match(app, /setWorkspaceNavExpanded\(loadNavExpandedPreference\(\), \{ persist: false \}\);/);
+  assert.match(app, /\n    hookWorkspaceNavMore\(\);/);
+});
+
+test("navigation never force-expands, which would undo a deliberate collapse", () => {
+  const fn = app.slice(app.indexOf("function setWorkspacePanel("));
+  const body = fn.slice(0, fn.indexOf("\n    }") + 6);
+  assert.doesNotMatch(body, /setWorkspaceNavExpanded/);
+});

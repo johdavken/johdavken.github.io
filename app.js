@@ -17,6 +17,7 @@
     const LS_SESSION_KEY = "resinTimer.session.v0.09";
     const LS_CONFIGS_KEY  = "resinTimer.configs.v0.09";
     const LS_WORKSPACE_KEY = "resinTimer.workspace.v0.16";
+    const LS_NAV_EXPANDED_KEY = "resinTimer.navExpanded.v0.01";
 
     const DETAILS_IDS = [
       "lineSetupBlock",
@@ -5577,6 +5578,55 @@
       }
     }
 
+    // RT Sync / Tools / Help fold away behind the rail's divider. Desktop
+    // only: the mobile tile home shows all seven at once (see styles.css).
+    //
+    // Nothing here needs to force the group open when one of those three is
+    // the active section: the collapse rule exempts .active, so whichever
+    // one you are in stays on the rail by itself. Auto-expanding would only
+    // undo a collapse the operator asked for.
+    let workspaceNavExpanded = false;
+
+    function saveNavExpandedPreference(expanded){
+      try{
+        localStorage.setItem(LS_NAV_EXPANDED_KEY, expanded ? "1" : "0");
+      }catch(e){
+        // Deliberately quiet, unlike the other preference writes. Losing this
+        // costs the operator one click on the next load; a warning banner for
+        // that would be louder than the thing it is reporting.
+      }
+    }
+
+    function loadNavExpandedPreference(){
+      try{
+        return localStorage.getItem(LS_NAV_EXPANDED_KEY) === "1";
+      }catch(e){
+        return false;
+      }
+    }
+
+    function setWorkspaceNavExpanded(expanded, { persist = true } = {}){
+      workspaceNavExpanded = !!expanded;
+      document.querySelector(".workspaceNav")?.classList.toggle("navExpanded", workspaceNavExpanded);
+      const button = $("workspaceNavMore");
+      if (button){
+        button.setAttribute("aria-expanded", String(workspaceNavExpanded));
+        button.title = workspaceNavExpanded
+          ? "Hide RT Sync, Tools and Help"
+          : "Show RT Sync, Tools and Help";
+      }
+      const label = $("workspaceNavMoreLabel");
+      if (label) label.textContent = workspaceNavExpanded ? "Less" : "More";
+      if (persist) saveNavExpandedPreference(workspaceNavExpanded);
+    }
+
+    function hookWorkspaceNavMore(){
+      const button = $("workspaceNavMore");
+      if (!button) return;
+      button.addEventListener("click", ()=>setWorkspaceNavExpanded(!workspaceNavExpanded));
+      setWorkspaceNavExpanded(loadNavExpandedPreference(), { persist: false });
+    }
+
     function setWorkspacePanel(id, { persist = true, reveal = false } = {}){
       const target = document.getElementById(id);
       if (!target?.classList.contains("workspacePanel")) return;
@@ -7639,6 +7689,7 @@
     document.querySelectorAll(".workspaceNavButton").forEach(button=>{
       button.addEventListener("click",()=>setWorkspacePanel(button.dataset.workspaceTarget, { reveal: true }));
     });
+    hookWorkspaceNavMore();
     document.querySelectorAll(".workspaceContent > .workspacePanel > summary").forEach(summary=>{
       summary.addEventListener("click",event=>{
         const timelineLockedOpen = state.mobileTimelineOnly && summary.closest("#resultsBlock") && !isDesktopLayout();
