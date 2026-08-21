@@ -552,6 +552,81 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .baseGlyph{dis
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  /* Numbered-workflow step markers, the side rail's counterpart to the
+     mobile tile home's own (see the [data-step] block in the mobile media
+     query). Same four sections - Line Setup/Recipe/Timeline/Resin Totals,
+     the ones carrying data-step in index.html - same --tile-accent fill and
+     same knocked-out numeral, so a section is the same colour and the same
+     number on both surfaces. RT Sync/Tools/Help have no data-step and are
+     untouched.
+
+     The marker has to originate on the button, not on the label span:
+     attr() reads the attribute off the pseudo-element's own originating
+     element, and data-step lives on the button. ::before, matching the
+     mobile marker's own choice - there the circle is ::before and ::after
+     is spent on the divider rule the rail has no need for. (The rail's
+     status dot is span::before, a different element.)
+
+     It is a real grid item, in a column of its own, NOT absolutely
+     positioned. That distinction is the whole point: the sidebar column is
+     a fixed 220px (see `main` above) and the labels are uppercase with
+     .22em tracking, so "RESIN TOTALS" already fills the row. An absolutely
+     positioned circle plus padding-right only *reserves* space - the label
+     is a flex line that cannot shrink below its longest word, so it
+     overflowed the padding and ran under the circle. As a grid item the
+     circle takes its width out of the row before the label is measured,
+     so the label wraps in what is left and the two can never collide at
+     any width.
+
+     Spanning both rows and centred, so it sits against the label/status
+     pair as a unit rather than aligning to either line on its own.
+
+     Decorative only. The button still handles nav; nothing here adds a
+     hover, focus or pressed state of its own. */
+  .workspaceNavButton[data-step]{
+    grid-template-columns: minmax(0,1fr) auto;
+    column-gap: 9px;
+  }
+  .workspaceNavButton[data-step] > span,
+  .workspaceNavButton[data-step] > small{
+    grid-column: 1;
+    min-width: 0;
+  }
+  /* Last resort, and only ever reached below the 220px the sidebar column
+     is actually fixed at (a zoomed-in browser gets there). A label wraps at
+     its spaces first; this only matters for a single word with nowhere to
+     break - "TIMELINE" - which would otherwise overflow its column and run
+     back under the circle, since a flex line cannot shrink below its
+     longest word. A broken word is worse-looking than a whole one and far
+     better than a collision. */
+  .workspaceNavButton[data-step] > span{
+    overflow-wrap: anywhere;
+  }
+  .workspaceNavButton[data-step]::before{
+    content: attr(data-step);
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--tile-accent);
+    color: #fff;
+    font-family: "Arial Narrow","Roboto Condensed",Impact,sans-serif;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  /* Gruvbox knocks the numeral out in the app background tone instead of
+     white, exactly as the mobile marker does - same reasoning, same token.
+     Specificity (0,4,1) beats the (0,2,1) rule above on weight. */
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNavButton[data-step]::before{
+    color: var(--bg);
+  }
   .workspaceNavButton[data-status="info"] small{ color: var(--focus-border); }
   .workspaceNavButton[data-status="ok"] small{ color: var(--ok); }
   .workspaceNavButton[data-status="warn"] small{ color: var(--warn); }
@@ -5937,6 +6012,81 @@ body[data-surface-style="divided"] .helpTopic{
 .chipToggle svg{ width:16px; height:16px; flex:0 0 auto; }
 .chipToggle:hover{ color:var(--title); background:var(--field-bg); }
 .chipToggle.on{ color:var(--title); }
+/* Gruvbox's seven palette hues. These are plain colours, not surface
+   treatments, and both surfaces now need them: the mobile tile home paints
+   its tiles with them, and the desktop side rail's numbered step markers
+   read them through --tile-accent (see the workflow accents below). They
+   sit at top level for that reason - the --gruv-mobile-* surface tokens
+   they used to share a block with stay inside the mobile media query,
+   where they belong. Values are unchanged, and nothing inside the mobile
+   block redeclares them, so the tile home renders exactly as before. */
+body[data-theme="gruvbox-dark"]{
+  --gruv-red:#fb4934;
+  --gruv-orange:#fe8019;
+  --gruv-yellow:#fabd2f;
+  --gruv-green:#b8bb26;
+  --gruv-aqua:#ebdbb2;
+  --gruv-blue:#ebdbb2;
+  --gruv-purple:#d3869b;
+}
+body[data-theme="gruvbox-light"]{
+  --gruv-red:#cc241d;
+  --gruv-orange:#d65d0e;
+  --gruv-yellow:#716243;
+  --gruv-green:#417849;
+  --gruv-aqua:#427b58;
+  --gruv-blue:#076678;
+  --gruv-purple:#8f3f71;
+}
+
+/* =======================================================================
+ *   --tile-accent: the per-section workflow colour
+ *   ---------------------------------------------------------------------
+ *   Both surfaces read these: the mobile tile home paints the whole tile
+ *   with them (border, gradient, icon, numbered step marker), and the
+ *   desktop side rail uses them for its own numbered step marker. They
+ *   live at top level rather than inside either surface's media block so
+ *   the two can never drift into showing a different colour for the same
+ *   section.
+ *
+ *   Order and specificity are unchanged from when these sat inside the
+ *   mobile block: the base per-target rules are (0,2,0) and every
+ *   theme-specific override below is (0,3,1), so a theme always wins on
+ *   weight regardless of where these are read. The themed groups target
+ *   mutually exclusive [data-theme] values and so never race each other.
+ * ===================================================================== */
+.workspaceNavButton[data-workspace-target="lineSetupBlock"]{ --tile-accent:var(--orange); }
+.workspaceNavButton[data-workspace-target="splitsBlock"]{ --tile-accent:var(--title); }
+.workspaceNavButton[data-workspace-target="resultsBlock"]{ --tile-accent:var(--focus-border); }
+.workspaceNavButton[data-workspace-target="productionSummaryBlock"]{ --tile-accent:var(--workflow-resin-totals); }
+.workspaceNavButton[data-workspace-target="lineSyncBlock"]{ --tile-accent:var(--ok); }
+.workspaceNavButton[data-workspace-target="toolsBlock"]{ --tile-accent:var(--warn); }
+.workspaceNavButton[data-workspace-target="helpBlock"]{ --tile-accent:var(--focus-border); }
+.workspaceNavButton[data-workspace-target="resinAdminBlock"]{ --tile-accent:var(--ok); }
+.workspaceNavButton[data-workspace-target="workspaceManagementBlock"]{ --tile-accent:var(--focus-border); }
+
+/* Gruvbox's own rainbow: each section keeps a distinct palette hue. */
+body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNavButton[data-workspace-target="lineSetupBlock"]{ --tile-accent:var(--gruv-orange); }
+body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNavButton[data-workspace-target="splitsBlock"]{ --tile-accent:var(--gruv-yellow); }
+body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNavButton[data-workspace-target="resultsBlock"]{ --tile-accent:var(--gruv-blue); }
+body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNavButton[data-workspace-target="productionSummaryBlock"]{ --tile-accent:var(--gruv-green); }
+body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNavButton[data-workspace-target="lineSyncBlock"]{ --tile-accent:var(--gruv-aqua); }
+body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNavButton[data-workspace-target="toolsBlock"]{ --tile-accent:var(--gruv-purple); }
+body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNavButton[data-workspace-target="helpBlock"]{ --tile-accent:var(--gruv-blue); }
+
+/* Main-screen numbered workflow only. Gruvbox keeps its established
+   palette above; no Gruvbox selectors are changed here. */
+body[data-theme="dark"] .workspaceNavButton[data-workspace-target="lineSetupBlock"]{ --tile-accent:var(--title); }
+body[data-theme="dark"] .workspaceNavButton[data-workspace-target="splitsBlock"]{ --tile-accent:var(--workflow-recipe); }
+
+/* Industrial Slate Light gives all four numbered sections one accent. */
+body[data-theme="industrial-slate"] .workspaceNavButton[data-step]{ --tile-accent:var(--yellow); }
+
+body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-target="lineSetupBlock"]{ --tile-accent:var(--bad); }
+body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-target="splitsBlock"]{ --tile-accent:var(--warn); }
+body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-target="resultsBlock"]{ --tile-accent:var(--workflow-timeline); }
+
+
 @media (max-width:900px), (min-width: 901px) and (pointer: coarse){
   /* Mobile workspace navigation is a tile home. Each tile reuses the live
      state from the desktop sidebar, then opens one focused work area. */
@@ -5972,15 +6122,6 @@ body[data-surface-style="divided"] .helpTopic{
     box-shadow:inset 0 2px 0 color-mix(in srgb,var(--tile-accent) 60%,transparent);
     transition:border-color .16s ease,background .16s ease,transform .16s ease;
   }
-  .workspaceNavButton[data-workspace-target="lineSetupBlock"]{ --tile-accent:var(--orange); }
-  .workspaceNavButton[data-workspace-target="splitsBlock"]{ --tile-accent:var(--title); }
-  .workspaceNavButton[data-workspace-target="resultsBlock"]{ --tile-accent:var(--focus-border); }
-  .workspaceNavButton[data-workspace-target="productionSummaryBlock"]{ --tile-accent:var(--workflow-resin-totals); }
-  .workspaceNavButton[data-workspace-target="lineSyncBlock"]{ --tile-accent:var(--ok); }
-  .workspaceNavButton[data-workspace-target="toolsBlock"]{ --tile-accent:var(--warn); }
-  .workspaceNavButton[data-workspace-target="helpBlock"]{ --tile-accent:var(--focus-border); }
-  .workspaceNavButton[data-workspace-target="resinAdminBlock"]{ --tile-accent:var(--ok); }
-  .workspaceNavButton[data-workspace-target="workspaceManagementBlock"]{ --tile-accent:var(--focus-border); }
   .appearanceNavTile{ --tile-accent:var(--title); }
   .workspaceNavButton span{
     display:flex;
@@ -6547,13 +6688,6 @@ body[data-surface-style="divided"] .helpTopic{
     --gruv-mobile-ink:#ebdbb2;
     --gruv-mobile-edge:#665c54;
     --gruv-mobile-shadow:rgba(0,0,0,.38);
-    --gruv-red:#fb4934;
-    --gruv-orange:#fe8019;
-    --gruv-yellow:#fabd2f;
-    --gruv-green:#b8bb26;
-    --gruv-aqua:#ebdbb2;
-    --gruv-blue:#ebdbb2;
-    --gruv-purple:#d3869b;
   }
   body[data-theme="gruvbox-light"]{
     --gruv-mobile-bg:#ece7d8;
@@ -6562,13 +6696,6 @@ body[data-surface-style="divided"] .helpTopic{
     --gruv-mobile-ink:#383329;
     --gruv-mobile-edge:#d4c9b1;
     --gruv-mobile-shadow:rgba(56,51,41,.14);
-    --gruv-red:#cc241d;
-    --gruv-orange:#d65d0e;
-    --gruv-yellow:#716243;
-    --gruv-green:#417849;
-    --gruv-aqua:#427b58;
-    --gruv-blue:#076678;
-    --gruv-purple:#8f3f71;
   }
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]):not([data-mobile-background-style]){
     background:
@@ -6598,13 +6725,6 @@ body[data-surface-style="divided"] .helpTopic{
     border-color:color-mix(in srgb,var(--gruv-mobile-edge) 76%,transparent);
     background:color-mix(in srgb,var(--gruv-mobile-surface) 88%,transparent);
   }
-  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNavButton[data-workspace-target="lineSetupBlock"]{ --tile-accent:var(--gruv-orange); }
-  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNavButton[data-workspace-target="splitsBlock"]{ --tile-accent:var(--gruv-yellow); }
-  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNavButton[data-workspace-target="resultsBlock"]{ --tile-accent:var(--gruv-blue); }
-  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNavButton[data-workspace-target="productionSummaryBlock"]{ --tile-accent:var(--gruv-green); }
-  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNavButton[data-workspace-target="lineSyncBlock"]{ --tile-accent:var(--gruv-aqua); }
-  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNavButton[data-workspace-target="toolsBlock"]{ --tile-accent:var(--gruv-purple); }
-  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNavButton[data-workspace-target="helpBlock"]{ --tile-accent:var(--gruv-blue); }
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) #lineSetupBlock .mobileSectionHeaderIcon{color:var(--gruv-orange)}
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) #splitsBlock .mobileSectionHeaderIcon{color:var(--gruv-yellow)}
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) #resultsBlock .mobileSectionHeaderIcon{color:var(--gruv-blue)}
@@ -6613,22 +6733,16 @@ body[data-surface-style="divided"] .helpTopic{
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) #helpBlock .mobileSectionHeaderIcon{color:var(--gruv-blue)}
   /* Main-screen numbered workflow only. Gruvbox keeps its established
      palette above; no Gruvbox selectors are changed here. */
-  body[data-theme="dark"] .workspaceNavButton[data-workspace-target="lineSetupBlock"]{ --tile-accent:var(--title); }
-  body[data-theme="dark"] .workspaceNavButton[data-workspace-target="splitsBlock"]{ --tile-accent:var(--workflow-recipe); }
   body[data-theme="dark"] #lineSetupBlock .mobileSectionHeaderIcon{color:var(--title)}
   body[data-theme="dark"] #splitsBlock .mobileSectionHeaderIcon{color:var(--workflow-recipe)}
   body[data-theme="dark"] #resultsBlock .mobileSectionHeaderIcon{color:var(--focus-border)}
   body[data-theme="dark"] #productionSummaryBlock .mobileSectionHeaderIcon{color:var(--workflow-resin-totals)}
 
-  body[data-theme="industrial-slate"] .workspaceNavButton[data-step]{ --tile-accent:var(--yellow); }
   body[data-theme="industrial-slate"] #lineSetupBlock .mobileSectionHeaderIcon,
   body[data-theme="industrial-slate"] #splitsBlock .mobileSectionHeaderIcon,
   body[data-theme="industrial-slate"] #resultsBlock .mobileSectionHeaderIcon,
   body[data-theme="industrial-slate"] #productionSummaryBlock .mobileSectionHeaderIcon{color:var(--yellow)}
 
-  body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-target="lineSetupBlock"]{ --tile-accent:var(--bad); }
-  body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-target="splitsBlock"]{ --tile-accent:var(--warn); }
-  body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-target="resultsBlock"]{ --tile-accent:var(--workflow-timeline); }
   body[data-theme="industrial-slate-dark"] #lineSetupBlock .mobileSectionHeaderIcon{color:var(--bad)}
   body[data-theme="industrial-slate-dark"] #splitsBlock .mobileSectionHeaderIcon{color:var(--warn)}
   body[data-theme="industrial-slate-dark"] #resultsBlock .mobileSectionHeaderIcon{color:var(--workflow-timeline)}
