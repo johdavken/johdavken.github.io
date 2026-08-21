@@ -308,15 +308,27 @@
       <span><svg class="workspaceTileIcon" viewBox="0 0 32 32" aria-hidden="true"><g class="baseGlyph"><path d="M6 25V15M16 25V7M26 25V11"/><path d="M3 25h26"/><g class="gruvboxIconDetail"><path d="M5 12h2M15 4h2M25 8h2"/></g></g><g class="gruvboxSolidGlyph"><path d="M2 26.5h28V30H2z"/><path d="M4.5 14h6.2v11.5H4.5zM12.9 5h6.2v20.5h-6.2zM21.3 9.5h6.2v16h-6.2z"/></g></svg>Resin Totals</span>
       <small>Material totals</small>
     </button>
-    <button class="workspaceNavButton" type="button" data-workspace-target="lineSyncBlock">
+    <div class="workspaceNavDivider">
+      <button
+        class="workspaceNavMore"
+        type="button"
+        id="workspaceNavMore"
+        aria-expanded="false"
+        aria-controls="workspaceNavLineSync workspaceNavTools workspaceNavHelp"
+      >
+        <span id="workspaceNavMoreLabel">More</span>
+        <svg class="workspaceNavMoreChev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+      </button>
+    </div>
+    <button class="workspaceNavButton workspaceNavExtra" id="workspaceNavLineSync" type="button" data-workspace-target="lineSyncBlock">
       <span><svg class="workspaceTileIcon" viewBox="0 0 32 32" aria-hidden="true"><g class="baseGlyph"><circle cx="8" cy="16" r="3"/><circle cx="24" cy="9" r="3"/><circle cx="24" cy="23" r="3"/><path d="m10.7 14.7 10.6-4.4M10.7 17.3l10.6 4.4"/><g class="gruvboxIconDetail"><rect x="5" y="13" width="6" height="6"/><rect x="21" y="6" width="6" height="6"/><rect x="21" y="20" width="6" height="6"/></g></g><g class="gruvboxSolidGlyph"><path d="m9.2 14.4 14-5.6 1.2 3.1-14 5.6zM10.4 17.9l14 5.6-1.2 3.1-14-5.6z"/><path d="M2 12.4h7.6V20H2zM22.4 3H30v7.6h-7.6zM22.4 21.8H30v7.6h-7.6z"/></g></svg>RT Sync</span>
       <small id="workspaceCloudSyncStatus">Local only</small>
     </button>
-    <button class="workspaceNavButton" type="button" data-workspace-target="toolsBlock">
+    <button class="workspaceNavButton workspaceNavExtra" id="workspaceNavTools" type="button" data-workspace-target="toolsBlock">
       <span><svg class="workspaceTileIcon" viewBox="0 0 32 32" aria-hidden="true"><g class="baseGlyph"><path d="m19 6 7 7-4 4-4-1-8 8-4-4 8-8-1-4 4-4 2 4Z"/><path d="m7 25 2 2"/><g class="gruvboxIconDetail"><path d="m19 6 3 3"/></g></g><g class="gruvboxSolidGlyph"><path d="M21.8 2a8.2 8.2 0 0 0-7.6 11.3L3.4 24.1a3.4 3.4 0 0 0 4.8 4.8l10.8-10.8A8.2 8.2 0 0 0 30 10.3l-4.6 4.6-3.9-1-1-3.9 4.6-4.6A8.2 8.2 0 0 0 21.8 2z"/></g></svg>Tools</span>
       <small>Production utilities</small>
     </button>
-    <button class="workspaceNavButton" type="button" data-workspace-target="helpBlock">
+    <button class="workspaceNavButton workspaceNavExtra" id="workspaceNavHelp" type="button" data-workspace-target="helpBlock">
       <span><svg class="workspaceTileIcon" viewBox="0 0 32 32" aria-hidden="true"><g class="baseGlyph"><path d="M16 9c-3-2.5-6.5-2.7-10-1.5v16c3.5-1.2 7-1 10 1.5 3-2.5 6.5-2.7 10-1.5v-16C22.5 6.3 19 6.5 16 9Z"/><path d="M16 9v16"/><g class="gruvboxIconDetail"><path d="M8 12h4M20 12h4"/></g></g><g class="gruvboxSolidGlyph"><path d="M2.5 5.5c4.3-1.8 9.2-1.4 13 1.6v19.4c-3.8-3-8.7-3.4-13-1.6z"/><path d="M29.5 5.5c-4.3-1.8-9.2-1.4-13 1.6v19.4c3.8-3 8.7-3.4 13-1.6z"/></g></svg>Help</span>
       <small>Operator guide</small>
     </button>
