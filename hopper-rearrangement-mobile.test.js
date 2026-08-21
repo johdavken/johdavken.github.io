@@ -56,7 +56,9 @@ test("the utility tabs, saved-recipes panel and action row remain direct childre
   // at all when not on the compact mobile layout - the two mobile tiers
   // (built separately, see the next test) replace them there rather than
   // modeBar being emptied into a mobile-only grid.
-  assert.match(splitsArea, /if \(!compactMobileRecipe\)\{\s*\n\s*area\.append\(recipeUtilityTabs\);\s*\n\s*area\.append\(toolbar\);\s*\n\s*\}/);
+  // Summary's own tracking bar shares that slot with the Edit toolbar -
+  // exactly one of the two is ever appended (see recipe-clear-selection).
+  assert.match(splitsArea, /if \(!compactMobileRecipe\)\{\s*\n\s*area\.append\(recipeUtilityTabs\);\s*\n(?:\s*\/\/[^\n]*\n)*\s*if \(trackingView\) area\.append\(trackingBar\);\s*\n\s*area\.append\(toolbar\);\s*\n\s*\}/);
   assert.match(splitsArea, /area\.append\(savedRecipesPanel\);/);
   assert.match(splitsArea, /if \(!compactMobileRecipe\)\{\s*\n\s*area\.append\(modeBar\);\s*\n\s*\}/);
   assert.match(splitsArea, /mobileBulkEditSheet\.querySelector\("\.mobileBulkEditBody"\)\.appendChild\(toolbar\);/);

@@ -25,7 +25,10 @@ test("the whole cell is the tracking target on every surface, gated on Summary v
   // One condition now, shared by every surface: tracking is what Summary
   // view is for, and never applies on Next, while selecting, or mid-
   // rearrange. Mobile reaches it the same way desktop does.
-  assert.match(app,/td\.addEventListener\("click", event=>\{[\s\S]*?if \(!trackingView \|\| bulkMode \|\| hopperRearrangement\?\.active\) return;[\s\S]*?event\.target\.closest\("input,button,label,a,select,textarea"\)[\s\S]*?toggleTracking\(\);/);
+  // isOwnCellInteraction, not a bare closest() - a phone's percentage is
+  // wrapped in a <label> whose field is inert, so the tag alone would make
+  // the bottom half of every cell dead to tracking.
+  assert.match(app,/td\.addEventListener\("click", event=>\{[\s\S]*?if \(!trackingView \|\| bulkMode \|\| hopperRearrangement\?\.active\) return;[\s\S]*?if \(isOwnCellInteraction\(event\.target\)\) return;[\s\S]*?toggleTracking\(\);/);
   // The per-cell clock is gone from every surface - on a phone it was a
   // third of a ~59px cell, and dropping it is most of the room the resin
   // name needed to stop truncating.

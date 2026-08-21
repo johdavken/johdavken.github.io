@@ -1697,6 +1697,40 @@ details[open] > summary .chevSatellite{
   border-radius: var(--radius-row);
   background: var(--readonly-bg);
 }
+/* Summary's counterpart to the Edit panel: how many hoppers are tracked
+   and the one action that applies to them all. It sits above the grid in
+   the same slot .splitsBulkBar takes in Edit (it is appended before the
+   matrix and both default to order 0), and the two are never rendered
+   together - Summary and Edit are one axis. */
+.splitsTrackingBar{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--row-border);
+  border-radius: var(--radius-row);
+  background: var(--readonly-bg);
+}
+.splitsTrackingBar[hidden]{ display: none; }
+.splitsTrackingBar .splitsSelectionStatus{ margin: 0; }
+.splitsTrackingBar .bulkTextAction{
+  margin-left: auto;
+  width: auto;
+  min-height: 28px;
+  padding: 4px 9px;
+  border: 1px solid var(--btn-secondary-border);
+  border-radius: 2px;
+  background: var(--btn-secondary-bg);
+  color: var(--btn-text);
+  font-weight: 700;
+  box-shadow: inset 4px 0 0 var(--title);
+}
+.splitsTrackingBar .bulkTextAction:hover:not(:disabled){
+  color: var(--title);
+  background: color-mix(in srgb,var(--title) 12%,var(--btn-secondary-bg));
+  text-decoration: none;
+}
+.splitsTrackingBar .bulkTextAction:disabled{ opacity: .48; box-shadow: inset 4px 0 0 var(--muted); }
 /* Save Current / Load / Update / (rename, duplicate, favorite, delete) -
    a single consolidated bar acting on whichever recipe is selected below,
    instead of each row carrying its own Load/Update/overflow buttons. */
@@ -3430,7 +3464,8 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
   }
   .mobileBulkContext{
     display:grid;
-    grid-template-columns:auto minmax(0,1fr) auto;
+    /* Select all / Clear / count / Edit selected. */
+    grid-template-columns:auto auto minmax(0,1fr) auto;
     align-items:center;
     gap:8px;
   }
@@ -3452,7 +3487,40 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     color:var(--title);
   }
   .mobileBulkContext .mobileBulkEditSelected:disabled{border-color:var(--row-border-2);background:var(--row-bg-2);color:var(--muted);opacity:.48}
-  .mobileBulkCount{min-width:0;color:var(--title);font-size:11px;text-align:center}
+  .mobileBulkContext .mobileBulkClear{padding:7px 8px}
+  .mobileBulkContext .mobileBulkClear:disabled{opacity:.48}
+  /* Four items in one phone-width row: the buttons keep their labels intact
+     and the count - the one flexible column - is what gives, wrapping to a
+     second line on the narrowest handsets rather than squeezing an action. */
+  .mobileBulkContext button{white-space:nowrap}
+  .mobileBulkCount{min-width:0;color:var(--title);font-size:11px;line-height:1.2;text-align:center}
+  /* Summary's tracking bar takes the same tray slot the bulk/rearrange
+     context bars use, so it drops the desktop panel chrome and adopts
+     their flat two-up shape: count, then the one action. */
+  .splitsTrackingBar.mobileTrackContext{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    align-items:center;
+    gap:8px;
+    padding:0;
+    border:0;
+    background:none;
+  }
+  .splitsTrackingBar.mobileTrackContext[hidden]{display:none}
+  .splitsTrackingBar.mobileTrackContext .splitsSelectionStatus{min-width:0;color:var(--title);font-size:11px;text-align:center}
+  .splitsTrackingBar.mobileTrackContext .bulkTextAction{
+    margin-left:0;
+    min-height:42px;
+    padding:7px 12px;
+    border:1px solid var(--row-border-2);
+    border-radius:10px;
+    background:var(--row-bg-2);
+    color:var(--muted);
+    font-size:10px;
+    font-weight:850;
+    box-shadow:none;
+  }
+  .splitsTrackingBar.mobileTrackContext .bulkTextAction:disabled{opacity:.48}
   .mobileRearrangeContext{
     display:grid;
     grid-template-columns:auto minmax(0,1fr) auto;

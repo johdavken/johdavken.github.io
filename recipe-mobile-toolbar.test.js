@@ -22,7 +22,7 @@ function recipeEditor(){
 
 test("desktop's own tab strip and action row only exist when not on the compact mobile layout", () => {
   const editor = recipeEditor();
-  assert.match(editor, /if \(!compactMobileRecipe\)\{\s*\n\s*area\.append\(recipeUtilityTabs\);\s*\n\s*area\.append\(toolbar\);\s*\n\s*\}/);
+  assert.match(editor, /if \(!compactMobileRecipe\)\{\s*\n\s*area\.append\(recipeUtilityTabs\);\s*\n(?:\s*\/\/[^\n]*\n)*\s*if \(trackingView\) area\.append\(trackingBar\);\s*\n\s*area\.append\(toolbar\);\s*\n\s*\}/);
   assert.match(editor, /if \(!compactMobileRecipe\)\{\s*\n\s*area\.append\(modeBar\);\s*\n\s*\}/);
 });
 

@@ -148,7 +148,23 @@ test("the per-cell clock and clear x are gone from both desktop views - replaced
  * -------------------------------------------------------------------- */
 
 test("Edit keeps cells directly typeable while a cell-body click selects - inputs and buttons retain their own behavior", () => {
-  assert.match(splitsArea, /td\.addEventListener\("click",event=>\{\s*\n\s*if\(!bulkMode\|\|hopperRearrangement\?\.active\) return;\s*\n\s*if\(event\.target\.closest\("input,button,label,a,select,textarea"\)\) return;/);
+  assert.match(splitsArea, /td\.addEventListener\("click",event=>\{\s*\n\s*if\(!bulkMode\|\|hopperRearrangement\?\.active\) return;\s*\n\s*if\(isOwnCellInteraction\(event\.target\)\) return;/);
+});
+
+// The percentage sits inside a <label> (it carries the "%" suffix), and the
+// fields are pointer-events:none wherever a cell cannot be typed into - so a
+// tap on the number lands on that label. Treating every <label> as its own
+// interaction meant the top half of a cell selected/tracked and the
+// percentage half did nothing, on every touch surface and in Summary.
+test("a cell's percentage area is cell surface unless its field is genuinely typeable", () => {
+  assert.match(splitsArea, /const cellFieldsTypeable = cellsTypeable && !summaryView;/);
+  const guard = splitsArea.slice(splitsArea.indexOf("function isOwnCellInteraction("));
+  const body = guard.slice(0, guard.indexOf("\n      }") + 8);
+  assert.match(body, /const control = target\.closest\("input,button,label,a,select,textarea"\);/);
+  assert.match(body, /if \(!control\) return false;/);
+  // Only the label is conditional: real fields and buttons always win.
+  assert.match(body, /if \(control\.tagName === "LABEL"\) return cellFieldsTypeable;/);
+  assert.match(body, /return true;/);
 });
 
 test("the whole layer header selects its column, since the layer letter is a watermark the percentage field sits on top of", () => {

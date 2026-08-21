@@ -3504,6 +3504,24 @@
       $("mobileSavedRecipesSheet")?.remove();
       $("mobileBulkEditSheet")?.remove();
 
+      // Which parts of a cell keep an interaction of their own, and which
+      // are just cell surface. Everything editable lives inside a field or
+      // a button, so those always win - except the percentage, which is
+      // wrapped in a <label> for its "%" suffix. A <label> is only a real
+      // target where its field can actually be typed into (desktop Edit):
+      // everywhere else the field is pointer-events:none, so a tap on the
+      // number lands on the label and would otherwise be discarded - the
+      // top half of the cell tracked/selected and the percentage half did
+      // nothing. Judge the label by whether typing is possible, not by its
+      // tag name.
+      const cellFieldsTypeable = cellsTypeable && !summaryView;
+      function isOwnCellInteraction(target){
+        const control = target.closest("input,button,label,a,select,textarea");
+        if (!control) return false;
+        if (control.tagName === "LABEL") return cellFieldsTypeable;
+        return true;
+      }
+
       function toggleSelection(keys){
         const select = keys.some(key=>!selected.has(key));
         keys.forEach(key=>select ? selected.add(key) : selected.delete(key));
@@ -3777,15 +3795,59 @@
         </div>
       `;
 
+      // Summary's counterpart to the Edit panel: tracking is the only thing
+      // Summary selects, so the only bulk action it needs is a way to drop
+      // that selection again. Cleared here rather than only from Timeline's
+      // Reset tracking, which is a long way from the cells being tapped.
+      const trackingBar = document.createElement("div");
+      trackingBar.id = "splitsTrackingBar";
+      trackingBar.className = "splitsTrackingBar";
+      trackingBar.innerHTML = `
+        <div id="splitsTrackingStatus" class="tiny splitsSelectionStatus" role="status" aria-live="polite">No hoppers tracked</div>
+        <button id="clearSplitTracking" type="button" class="bulkTextAction" disabled>Clear tracking</button>
+      `;
+      const trackingStatus = trackingBar.querySelector("#splitsTrackingStatus");
+      const clearTrackingButton = trackingBar.querySelector("#clearSplitTracking");
+      function trackedHopperCount(){
+        return recipeLayers().reduce((total,L)=>total + L.hoppers.filter(h=>h.track).length, 0);
+      }
+      function updateTrackingUI(){
+        const count = trackedHopperCount();
+        trackingStatus.textContent = count === 0
+          ? "No hoppers tracked"
+          : `${count} hopper${count === 1 ? "" : "s"} tracked`;
+        clearTrackingButton.disabled = count === 0;
+      }
+      // Pump-off rides along, exactly as Timeline's Reset tracking does: an
+      // untracked hopper that stayed "pumped off" is runtime state with
+      // nothing left to describe.
+      clearTrackingButton.addEventListener("click",()=>{
+        if (!trackedHopperCount()) return;
+        if (!confirm("Untrack every hopper and clear their Pump off status?")) return;
+        recipeLayers().forEach(L=>L.hoppers.forEach(hopper=>{
+          hopper.track = false;
+          hopper.pumpOff = false;
+        }));
+        cellRefs.forEach(ref=>ref.refreshCellState());
+        updateTrackingUI();
+        validateAndCompute({ sync: true, immediate: true, kind: "tracking" });
+        saveSession();
+      });
+
       const mobileBulkContext = document.createElement("div");
       mobileBulkContext.className = "mobileBulkContext";
       mobileBulkContext.hidden = true;
       // Slim persistent bar while Edit view is on. "Cancel" is gone - the
       // way out of editing is the Summary/Edit toggle itself now, not a
-      // button buried in a context bar - and Select all takes the freed
-      // slot, since selecting is what this bar is for.
+      // button buried in a context bar - and Select all took the freed
+      // slot, since selecting is what this bar is for. Clear sits beside
+      // it rather than replacing its label on a full selection, so a
+      // partial selection can be dropped without selecting everything
+      // first; it is the same action as the sheet's own Clear selection,
+      // reachable without opening the sheet.
       mobileBulkContext.innerHTML = `
         <button type="button" class="mobileBulkCancel">Select all</button>
+        <button type="button" class="mobileBulkClear" disabled>Clear</button>
         <strong class="mobileBulkCount" role="status" aria-live="polite">0 selected</strong>
         <button type="button" class="mobileBulkEditSelected" disabled>Edit selected</button>
       `;
@@ -4015,6 +4077,9 @@
       // moves the whole working surface underneath the operator's hands.
       if (!compactMobileRecipe){
         area.append(recipeUtilityTabs);
+        // Summary and Edit each get one panel in this slot, never both -
+        // trackingView and bulkMode are mutually exclusive by construction.
+        if (trackingView) area.append(trackingBar);
         area.append(toolbar);
       }
       area.append(savedRecipesPanel);
@@ -4452,7 +4517,7 @@
           // separate bulk mode.
           td.addEventListener("click",event=>{
             if(!bulkMode||hopperRearrangement?.active) return;
-            if(event.target.closest("input,button,label,a,select,textarea")) return;
+            if(isOwnCellInteraction(event.target)) return;
             selected.has(key) ? selected.delete(key) : selected.add(key);
             updateSelectionUI();
           });
@@ -4500,6 +4565,7 @@
           function toggleTracking(){
             hopper.track = !hopper.track;
             refreshCellState();
+            updateTrackingUI();
             validateAndCompute({ sync: true, immediate: true, kind: "tracking" });
             saveSession();
           }
@@ -4514,12 +4580,12 @@
             // and never applies on Next, whose plan structurally cannot
             // carry tracking (see next-recipe.js).
             if (!trackingView || bulkMode || hopperRearrangement?.active) return;
-            // Editing remains precise and unchanged: only the open cell
-            // surface, hopper label, and status area act as the large Track
-            // target. Inputs and action buttons retain their own behavior.
-            // (In Summary the fields are pointer-events:none, so a click
-            // anywhere on the cell - fields included - lands on the cell.)
-            if (event.target.closest("input,button,label,a,select,textarea")) return;
+            // Editing remains precise and unchanged: inputs and action
+            // buttons retain their own behavior. In Summary the fields are
+            // pointer-events:none and nothing in the cell is typeable, so a
+            // click anywhere on it - the resin, the percentage and its "%"
+            // label included - lands on the cell itself.
+            if (isOwnCellInteraction(event.target)) return;
             toggleTracking();
           });
           clearButton.addEventListener("click",()=>{
@@ -4561,7 +4627,9 @@
         // surface while modes expand directly below it.
         const actionTray = document.createElement("div");
         actionTray.className = "mobileRecipeActionTray mobileMatrixActionBar";
+        trackingBar.classList.add("mobileTrackContext");
         actionTray.append(mobilePrimaryRow, mobileBulkContext, mobileRearrangeContext);
+        if (trackingView) actionTray.append(trackingBar);
         area.append(actionTray);
         if(hopperRearrangement?.active&&hopperRearrangement.undo?.length&&hopperRearrangement.undoVisibleUntil>Date.now()){
           const toast=document.createElement("div");
@@ -4632,6 +4700,7 @@
       const mobileChangeResin = toolbar.querySelector("#mobileBulkChangeResin");
       const mobileChangePct = toolbar.querySelector("#mobileBulkChangePct");
       const mobileBulkCount = mobileBulkContext.querySelector(".mobileBulkCount");
+      const mobileBulkClear = mobileBulkContext.querySelector(".mobileBulkClear");
       const mobileBulkEditSelected = mobileBulkContext.querySelector(".mobileBulkEditSelected");
       attachResinAutocomplete(bulkNameInput);
 
@@ -4677,6 +4746,7 @@
         if(compactMobileRecipe){
           const selectedLabel=`${selected.size} selected`;
           mobileBulkCount.textContent=selectedLabel;
+          mobileBulkClear.disabled=selected.size===0;
           mobileBulkEditSelected.disabled=selected.size===0;
           if(mobileBulkEditSheet){
             mobileBulkEditSheet.querySelector("#mobileBulkEditSubtitle").textContent=`${selectedLabel} · Choose what should change`;
@@ -4699,6 +4769,10 @@
           modeBar.hidden=bulkMode||!!hopperRearrangement?.active;
           mobileBulkContext.hidden=!bulkMode;
           mobileRearrangeContext.hidden=!hopperRearrangement?.active;
+          // Rearranging is reachable straight from Summary on phones (its
+          // button lives in the primary row), so tracking's bar has to
+          // stand down for the rearrange prompt the same way modeBar does.
+          trackingBar.hidden=!trackingView||!!hopperRearrangement?.active;
           updateMobileRearrangePrompt();
           if(!bulkMode&&mobileBulkEditSheet?.open) mobileBulkEditSheet.close("cancel");
         }else{
@@ -4750,6 +4824,10 @@
 
       mobileBulkContext.querySelector(".mobileBulkCancel").addEventListener("click",()=>{
         cellRefs.forEach((_,key)=>selected.add(key));
+        updateSelectionUI();
+      });
+      mobileBulkClear.addEventListener("click",()=>{
+        selected.clear();
         updateSelectionUI();
       });
       mobileBulkEditSelected.addEventListener("click",()=>{
@@ -4948,6 +5026,7 @@
         });
       }
       updateHopperTotals();
+      updateTrackingUI();
 
       // Reapply (not force-close) the resolved state to this render's
       // freshly-created elements - both default to closed, but a render
