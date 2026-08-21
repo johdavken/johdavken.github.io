@@ -18,6 +18,19 @@ const desktopCss = fs.readFileSync("desktop.css", "utf8");
 const DESKTOP_QUERY = "(min-width: 901px) and (pointer: fine)";
 const WIDE_TOUCH_QUERY = "(min-width: 701px) and (pointer: coarse)";
 
+// Slice one function's own body, bounded by the next declaration at the
+// same indentation, rather than by a fixed character count. A fixed window
+// silently stops covering the line it was written to check the moment a
+// comment is added above it - which is exactly how the renderWeightsArea
+// assertion below rotted into a false failure while the code it guards was
+// still correct.
+function functionBody(name){
+  const start = app.indexOf(`    function ${name}(`);
+  assert.notEqual(start, -1, `Expected function ${name} in app.js`);
+  const end = app.indexOf("\n    function ", start + 1);
+  return app.slice(start, end === -1 ? undefined : end);
+}
+
 // A tiny evaluator for the plain min-width/max-width/pointer conjunctions
 // used throughout this file, so the acceptance scenarios below check real
 // query semantics rather than hoping a substring is present somewhere.
@@ -99,11 +112,9 @@ test("isDesktopLayout() is the single predicate every structural renderer consul
 });
 
 test("renderWeightsArea, renderSplitsArea's compact threshold, and applySurfaceStyle all consume the shared predicate", () => {
-  const weightsFn = app.slice(app.indexOf("function renderWeightsArea()"), app.indexOf("function renderWeightsArea()") + 300);
-  assert.match(weightsFn, /if \(!isDesktopLayout\(\)\)\{/);
+  assert.match(functionBody("renderWeightsArea"), /if \(!isDesktopLayout\(\)\)\{/);
   assert.match(app, /const compactMobileRecipe = layoutModeQueries\.compactRecipe\.matches;/);
-  const surfaceFn = app.slice(app.indexOf("function applySurfaceStyle("), app.indexOf("function applyMobileTileStyle("));
-  assert.match(surfaceFn, /const renderedSurfaceStyle = isDesktopLayout\(\)/);
+  assert.match(functionBody("applySurfaceStyle"), /const renderedSurfaceStyle = isDesktopLayout\(\)/);
 });
 
 test("the desktop/mobile popover split and the account-utility placement listener read the same shared query object, not a second independent one", () => {
