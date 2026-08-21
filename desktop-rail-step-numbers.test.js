@@ -55,7 +55,7 @@ function ruleBody(selector){
 
 test("the rail marker is desktop-only, so it never doubles up with the mobile tile marker", () => {
   assert.equal(enclosingAtRule(".workspaceNavButton[data-step]::before{"), DESKTOP_QUERY);
-  assert.equal(enclosingAtRule("  .workspaceNavButton[data-step]{\n    position: relative;"), DESKTOP_QUERY);
+  assert.equal(enclosingAtRule("  .workspaceNavButton[data-step]{\n    grid-template-columns:"), DESKTOP_QUERY);
 });
 
 test("it originates on the button, not the label span - attr() reads the element it belongs to", () => {
@@ -92,11 +92,41 @@ test("Gruvbox knocks the numeral out in the app background tone, exactly as mobi
   assert.match(styles, /body:is\(\[data-theme="gruvbox-dark"\],\[data-theme="gruvbox-light"\]\) \.workspaceNav \.workspaceNavButton\[data-step\]::before\{\s*\n\s*color:var\(--bg\);/);
 });
 
-test("the label is padded clear of the circle, and only on the numbered buttons", () => {
-  const body = ruleBody("  .workspaceNavButton[data-step]{\n    position: relative;");
-  assert.match(body, /padding-right: 36px;/);
-  // Unnumbered buttons keep their full width - no dead gutter down the rail.
-  assert.doesNotMatch(ruleBody("  .workspaceNavButton{\n    display: grid;"), /padding-right/);
+// The bug this replaced: the circle was absolutely positioned with
+// padding-right reserving its space. Reserving is not the same as
+// occupying. The sidebar column is a fixed 220px and the labels are
+// uppercase at .22em tracking, so "RESIN TOTALS" already fills the row -
+// and a flex line cannot shrink below its longest word, so the label
+// overflowed the padding and ran under the circle.
+test("the circle occupies a grid column rather than being positioned over the row", () => {
+  const button = ruleBody("  .workspaceNavButton[data-step]{\n    grid-template-columns:");
+  assert.match(button, /grid-template-columns: minmax\(0,1fr\) auto;/);
+  assert.doesNotMatch(button, /position: relative/);
+  assert.doesNotMatch(button, /padding-right/);
+
+  const marker = ruleBody(".workspaceNavButton[data-step]::before{");
+  assert.match(marker, /grid-column: 2;/);
+  // Spanning both rows keeps it centred against the label/status pair
+  // rather than aligning to either line on its own.
+  assert.match(marker, /grid-row: 1 \/ span 2;/);
+  assert.doesNotMatch(marker, /position: absolute/);
+  assert.doesNotMatch(marker, /right:/);
+  assert.doesNotMatch(marker, /transform:/);
+});
+
+test("the label is confined to column 1 and can always give way to the circle", () => {
+  const label = ruleBody("  .workspaceNavButton[data-step] > span,");
+  assert.match(label, /grid-column: 1;/);
+  assert.match(label, /min-width: 0;/);
+  // Backstop for a single word with nowhere to break ("TIMELINE"), which
+  // only bites below the 220px the column is fixed at.
+  assert.match(ruleBody("  .workspaceNavButton[data-step] > span{"), /overflow-wrap: anywhere;/);
+});
+
+test("the unnumbered buttons are untouched - no dead gutter down the rest of the rail", () => {
+  const base = ruleBody("  .workspaceNavButton{\n    display: grid;");
+  assert.doesNotMatch(base, /padding-right/);
+  assert.doesNotMatch(base, /grid-template-columns/);
 });
 
 /* ----------------------------------------------------------------------

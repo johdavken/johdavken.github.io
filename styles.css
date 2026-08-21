@@ -562,37 +562,51 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .baseGlyph{dis
 
      The marker has to originate on the button, not on the label span:
      attr() reads the attribute off the pseudo-element's own originating
-     element, and data-step lives on the button. So it is positioned
-     against the button rather than laid out inside the label's flex row.
-     ::before, matching the mobile marker's own choice - there the circle is
-     ::before and ::after is spent on the divider rule the rail has no need
-     for. (The rail's status dot is span::before, a different element.)
+     element, and data-step lives on the button. ::before, matching the
+     mobile marker's own choice - there the circle is ::before and ::after
+     is spent on the divider rule the rail has no need for. (The rail's
+     status dot is span::before, a different element.)
 
-     Right edge, vertically centred on the whole button: the label row
-     already opens with the status dot and the section icon, and a third
-     thing at that edge would bury both. Centring on the button (not on the
-     label line) keeps it steady whether or not the status pill below is
-     showing, and lines the numerals up in a column of their own down the
-     rail. padding-right on the numbered buttons alone keeps a long label
-     from running under the circle - the three unnumbered buttons keep the
-     full width they have now, so no dead space appears anywhere.
+     It is a real grid item, in a column of its own, NOT absolutely
+     positioned. That distinction is the whole point: the sidebar column is
+     a fixed 220px (see `main` above) and the labels are uppercase with
+     .22em tracking, so "RESIN TOTALS" already fills the row. An absolutely
+     positioned circle plus padding-right only *reserves* space - the label
+     is a flex line that cannot shrink below its longest word, so it
+     overflowed the padding and ran under the circle. As a grid item the
+     circle takes its width out of the row before the label is measured,
+     so the label wraps in what is left and the two can never collide at
+     any width.
 
-     Sized down from the tile's 26px - this is a 13px label in a compact
-     rail, not a 78px tile - but the type treatment is deliberately
-     identical: condensed face, tabular figures, so the numerals read as
-     the same marker at a different scale.
+     Spanning both rows and centred, so it sits against the label/status
+     pair as a unit rather than aligning to either line on its own.
 
      Decorative only. The button still handles nav; nothing here adds a
      hover, focus or pressed state of its own. */
   .workspaceNavButton[data-step]{
-    position: relative;
-    padding-right: 36px;
+    grid-template-columns: minmax(0,1fr) auto;
+    column-gap: 9px;
+  }
+  .workspaceNavButton[data-step] > span,
+  .workspaceNavButton[data-step] > small{
+    grid-column: 1;
+    min-width: 0;
+  }
+  /* Last resort, and only ever reached below the 220px the sidebar column
+     is actually fixed at (a zoomed-in browser gets there). A label wraps at
+     its spaces first; this only matters for a single word with nowhere to
+     break - "TIMELINE" - which would otherwise overflow its column and run
+     back under the circle, since a flex line cannot shrink below its
+     longest word. A broken word is worse-looking than a whole one and far
+     better than a collision. */
+  .workspaceNavButton[data-step] > span{
+    overflow-wrap: anywhere;
   }
   .workspaceNavButton[data-step]::before{
     content: attr(data-step);
-    position: absolute;
-    top: 50%;
-    right: 11px;
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: center;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -606,7 +620,6 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .baseGlyph{dis
     font-weight: 800;
     line-height: 1;
     font-variant-numeric: tabular-nums;
-    transform: translateY(-50%);
   }
   /* Gruvbox knocks the numeral out in the app background tone instead of
      white, exactly as the mobile marker does - same reasoning, same token.
