@@ -19,6 +19,10 @@ import androidx.core.app.NotificationCompat;
  */
 public class PumpOffAlarmReceiver extends BroadcastReceiver {
     static final String CHANNEL_ID = "pump-off-alarms";
+    /** Sent by the notification's Stop alarm action. */
+    static final String ACTION_STOP = "tools.resin.app.STOP_PUMP_OFF_ALARM";
+    /** Rebroadcast of the above, which PumpOffAlarmActivity listens for. */
+    static final String ACTION_STOP_BROADCAST = "tools.resin.app.STOP_PUMP_OFF_ALARM_BROADCAST";
     static final String EXTRA_ID = "id";
     static final String EXTRA_TITLE = "title";
     static final String EXTRA_BODY = "body";
@@ -28,6 +32,20 @@ public class PumpOffAlarmReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         int id = intent.getIntExtra(EXTRA_ID, 1);
+
+        // Stop alarm, from the ongoing notification. Take the notification
+        // down first so the operator gets feedback even in the case where no
+        // alarm screen is alive to hear the rebroadcast.
+        if (ACTION_STOP.equals(intent.getAction())) {
+            NotificationManager stopManager = context.getSystemService(NotificationManager.class);
+            if (stopManager != null) stopManager.cancel(id);
+            Intent stop = new Intent(ACTION_STOP_BROADCAST);
+            stop.putExtra(EXTRA_ID, id);
+            stop.setPackage(context.getPackageName());
+            context.sendBroadcast(stop);
+            return;
+        }
+
         String title = intent.getStringExtra(EXTRA_TITLE);
         String body = intent.getStringExtra(EXTRA_BODY);
         String sound = intent.getStringExtra(EXTRA_SOUND);
@@ -55,13 +73,88 @@ public class PumpOffAlarmReceiver extends BroadcastReceiver {
             .setContentText(body)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
-            .setAutoCancel(true)
-            .setOngoing(false)
+            .setAutoCancel(false)
+            .setOngoing(true)
+            .addAction(0, "Stop alarm", stopPendingIntent(context, id))
             .setFullScreenIntent(fullScreenPendingIntent, true)
             .setContentIntent(fullScreenPendingIntent);
 
         NotificationManager manager = context.getSystemService(NotificationManager.class);
         if (manager != null) manager.notify(id, builder.build());
+    }
+
+    /**
+     * The notification shown while the alarm screen is up. Ongoing, so it
+     * cannot be swiped away by accident; tapping it returns to the alarm
+     * screen and its action ends the alarm outright. This is the escape hatch
+     * that used to be missing - the launching notification was cancelled the
+     * moment the screen appeared, which left nothing on screen to act on.
+     */
+    static void showRingingNotification(Context context, int id, String title, String body,
+                                        String sound, boolean vibrate) {
+        ensureChannel(context);
+        Intent screenIntent = new Intent(context, PumpOffAlarmActivity.class);
+        screenIntent.putExtra(EXTRA_ID, id);
+        if (title != null) screenIntent.putExtra(EXTRA_TITLE, title);
+        if (body != null) screenIntent.putExtra(EXTRA_BODY, body);
+        // Carried through so re-entering from the notification keeps the
+        // operator's chosen alarm sound instead of silently reverting to the
+        // device default.
+        if (sound != null) screenIntent.putExtra(EXTRA_SOUND, sound);
+        screenIntent.putExtra(EXTRA_VIBRATE, vibrate);
+        screenIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(context.getApplicationInfo().icon)
+            .setContentTitle(title != null ? title : "Pump off due")
+            .setContentText(body != null ? body : "Hopper pump-off is due now.")
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setAutoCancel(false)
+            .setOngoing(true)
+            .addAction(0, "Stop alarm", stopPendingIntent(context, id))
+            .setContentIntent(activityPendingIntent(context, id, screenIntent));
+
+        NotificationManager manager = context.getSystemService(NotificationManager.class);
+        if (manager != null) manager.notify(id, builder.build());
+    }
+
+    /**
+     * Replaces the ongoing notification once the alarm has timed out. Plain and
+     * dismissible: the pump-off still happened and nobody acknowledged it, which
+     * is worth finding later, but it is no longer demanding attention.
+     */
+    static void showMissedNotification(Context context, int id, String title, String body) {
+        ensureChannel(context);
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(context.getApplicationInfo().icon)
+            .setContentTitle(title != null ? title : "Pump off due")
+            .setContentText(body != null ? body : "Hopper pump-off is due now.")
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setAutoCancel(true)
+            .setOngoing(false)
+            .setSilent(true);
+
+        NotificationManager manager = context.getSystemService(NotificationManager.class);
+        if (manager != null) manager.notify(id, builder.build());
+    }
+
+    private static PendingIntent stopPendingIntent(Context context, int id) {
+        Intent stop = new Intent(context, PumpOffAlarmReceiver.class);
+        stop.setAction(ACTION_STOP);
+        stop.putExtra(EXTRA_ID, id);
+        int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) flags |= PendingIntent.FLAG_IMMUTABLE;
+        // A request code distinct from the alarm's own, so the two PendingIntents
+        // for one id cannot collide and overwrite each other.
+        return PendingIntent.getBroadcast(context, ~id, stop, flags);
+    }
+
+    private static PendingIntent activityPendingIntent(Context context, int id, Intent intent) {
+        int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) flags |= PendingIntent.FLAG_IMMUTABLE;
+        return PendingIntent.getActivity(context, id, intent, flags);
     }
 
     static void ensureChannel(Context context) {

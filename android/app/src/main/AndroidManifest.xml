@@ -33,6 +33,22 @@
         <receiver
             android:name=".PumpOffAlarmReceiver"
             android:exported="false" />
+        <!-- AlarmManager drops every alarm on reboot (and on app update), so
+             armed pump-off alarms have to be put back from the app's own
+             record. exported is true because the sender is the system; the
+             actions below are protected broadcasts, so no other app can
+             forge them. -->
+        <receiver
+            android:name=".PumpOffBootReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
         <activity
             android:name=".PumpOffAlarmActivity"
             android:exported="false"
@@ -45,6 +61,7 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
 </manifest>

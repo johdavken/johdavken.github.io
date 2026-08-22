@@ -18,6 +18,11 @@
     const LS_CONFIGS_KEY  = "resinTimer.configs.v0.09";
     const LS_WORKSPACE_KEY = "resinTimer.workspace.v0.16";
     const LS_NAV_EXPANDED_KEY = "resinTimer.navExpanded.v0.01";
+    // Which native alarm ids this device has handed to Android's AlarmManager.
+    // Persisted because AlarmManager outlives the page: alarms scheduled by a
+    // previous run are still armed in the OS, and only a record of their ids
+    // lets a fresh run cancel the ones that no longer apply.
+    const LS_SCHEDULED_ALARMS_KEY = "resinTimer.scheduledAlarms.v0.01";
 
     const DETAILS_IDS = [
       "lineSetupBlock",
@@ -86,6 +91,10 @@
       // selected RT Sync workspace and never from this stored preference.
       hopperNamingLine9: "standard",
       showPumpOffTracked: false, // show pump-off items in Timeline
+      // Enhanced tracking: show each tracked hopper's incoming resin from the
+      // planned Next Recipe on its Timeline row. A per-device display
+      // preference, like showPumpOffTracked - see applySharedActiveJob.
+      timelineNextResin: false,
       mobileTimelineOnly: false,
       mobileRecipeOnly: false,
       smartHoppersEnabled: false, // local display preference
@@ -176,6 +185,14 @@
   // Which native Timeline alarm notification ids are currently scheduled,
   // so a resync can cancel exactly the ones that no longer apply (untracked,
   // pumped off, removed) instead of cancelling-and-rescheduling everything.
+  //
+  // Rehydrated from localStorage at startup, and that is not an optimization -
+  // it is the difference between a stale alarm being cancelled and it firing.
+  // AlarmManager alarms survive the page that scheduled them, so with an
+  // in-memory-only set a cold start believed it had scheduled nothing and
+  // cancelled nothing: pump off a hopper on the line PC while the phone's app
+  // is closed, reopen the phone, and the orphaned alarm was never in the
+  // cancel list and went off anyway.
   let scheduledTimelineNotificationIds = new Set();
   // Recipe Setup's Scan and More popups are rebuilt on every
   // renderSplitsArea() call. Their outside-click/Escape handlers live once
@@ -1231,6 +1248,12 @@
     );
 
     hookToggle(
+      "timelineNextResinToggle",
+      ()=> !!state.timelineNextResin,
+      (v)=> { state.timelineNextResin = !!v; }
+    );
+
+    hookToggle(
       "mobileTimelineToggle",
       ()=> !!state.mobileTimelineOnly,
       (v)=> applyMobileTimelineMode(!!v)
@@ -1413,6 +1436,7 @@
         gauge: state.gauge,
         hopperNamingLine9: state.hopperNamingLine9,
         showPumpOffTracked: !!state.showPumpOffTracked,
+        timelineNextResin: !!state.timelineNextResin,
         mobileTimelineOnly: !!state.mobileTimelineOnly,
         mobileRecipeOnly: !!state.mobileRecipeOnly,
         smartHoppersEnabled: !!state.smartHoppersEnabled,
@@ -1434,6 +1458,7 @@
         pumpOffAlarmSoundName: state.pumpOffAlarmSoundName,
         pumpOffAlarmVibrate: state.pumpOffAlarmVibrate,
         showPumpOffTracked: state.showPumpOffTracked,
+        timelineNextResin: state.timelineNextResin,
         mobileTimelineOnly: state.mobileTimelineOnly,
         mobileRecipeOnly: state.mobileRecipeOnly,
         smartHoppersEnabled: state.smartHoppersEnabled,
@@ -1671,6 +1696,25 @@
     // deadline changes, RT Sync apply, the alarm toggle itself) already
     // flows through - see the call site above. A no-op on web/desktop:
     // nativePumpOffAlarm() is null there.
+    function readScheduledAlarmIds(){
+      try{
+        const raw = localStorage.getItem(LS_SCHEDULED_ALARMS_KEY);
+        if (!raw) return new Set();
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return new Set();
+        return new Set(parsed.filter(id=>Number.isInteger(id) && id > 0));
+      }catch(_error){ return new Set(); }
+    }
+
+    function writeScheduledAlarmIds(ids){
+      try{
+        localStorage.setItem(LS_SCHEDULED_ALARMS_KEY, JSON.stringify([...ids]));
+      }catch(_error){
+        // Losing the record only costs the stale-cancel guarantee on the next
+        // cold start; alarms themselves are already with the OS.
+      }
+    }
+
     async function syncNativeTimelineAlarms(flat, changeoverDate){
       const PumpOffAlarm = nativePumpOffAlarm();
       if (!PumpOffAlarm) return;
@@ -1694,14 +1738,22 @@
         });
       }
 
-      const toCancel = [...scheduledTimelineNotificationIds].filter(id=>!desired.has(id));
+      // Union of this run's record and the previous run's, so an alarm armed
+      // before the app was last closed is still a cancel candidate now.
+      const known = new Set([...scheduledTimelineNotificationIds, ...readScheduledAlarmIds()]);
+      const toCancel = [...known].filter(id=>!desired.has(id));
       try{
         if (toCancel.length) await PumpOffAlarm.cancel({ notifications: toCancel.map(id=>({ id })) });
         if (desired.size) await PumpOffAlarm.schedule({ notifications: [...desired.values()] });
       }catch(error){
+        // The record is deliberately left alone on failure. Claiming an alarm
+        // was cancelled when the call threw would drop it out of every future
+        // cancel list and strand it in the OS permanently.
         console.error("Timeline alarms: failed to sync native alarms.", error);
+        return;
       }
       scheduledTimelineNotificationIds = new Set(desired.keys());
+      writeScheduledAlarmIds(scheduledTimelineNotificationIds);
     }
 
     // Called once at init and again on every foreground resume (native
@@ -1823,6 +1875,7 @@
       // Custom toggles
       state.hopperNamingLine9 = (payload.hopperNamingLine9 === "main") ? "main" : "standard";
       state.showPumpOffTracked = !!payload.showPumpOffTracked;
+      state.timelineNextResin = !!payload.timelineNextResin;
       state.mobileTimelineOnly = !!payload.mobileTimelineOnly;
       applyMobileTimelineMode(state.mobileTimelineOnly);
       state.mobileRecipeOnly = !!payload.mobileRecipeOnly;
@@ -5398,6 +5451,9 @@
 
           flat.push({
             layer: L.name,
+            // Enhanced tracking matches the plan by physical position, not by
+            // label - hopper naming mode changes the label but not the slot.
+            hopperIndex: hi,
             hopperLabel: hopperBadgeLabel(L.name, hi),
                     resinName: normName(h.resinName),
             weight,
@@ -5467,12 +5523,118 @@
       setInterval(refreshTimelinePresentation, 20000);
     }
 
+    /* Enhanced tracking: what the planned Next Recipe puts in each physical
+     * hopper position, as a Map of "layer:index" -> resin name ("" when the
+     * plan leaves the position empty). Null whenever the plan cannot be shown
+     * against the current line at all, which is the single gate the Timeline
+     * checks.
+     *
+     * Three conditions have to hold, and each rules out a genuinely different
+     * kind of wrong answer:
+     *
+     *   isPromotable  - the plan passes full recipe validation (layers total
+     *                   100%, hoppers total 100%, no errors). A half-entered
+     *                   plan would otherwise show an operator an incoming
+     *                   resin for a changeover that cannot actually be run.
+     *   line_type     - a plan built for a different line has different layer
+     *                   names, so its positions do not mean the same thing.
+     *                   Without this the lookups would silently miss, or
+     *                   worse, land on a same-named layer of another line.
+     *   layer names   - the plan's own layer set must still exist on this
+     *                   line, so a renamed/re-derived layer cannot map a
+     *                   resin onto the wrong row.
+     */
+    /* The plan as it stands right now.
+     *
+     * Reads the working copy whenever one exists rather than state.nextRecipe,
+     * for the same reason readNextRecipeFacts does: the durable payload is
+     * only rebuilt by commitNextRecipeWorking() inside snapshotPayload(),
+     * which runs during saveSession() - and saveSession() runs *after*
+     * renderResultsFlat() in validateAndCompute. Reading the stored payload
+     * therefore leaves the Timeline showing the plan as it was one edit ago,
+     * which is worse than showing nothing: it is confidently wrong.
+     *
+     * ensureNextRecipeWorking() rebuilds the working copy against the current
+     * line's layer names, so it is always at least as fresh as the payload and
+     * never describes a different line. */
+    function plannedRecipePayload(){
+      const payload = nextRecipeWorking
+        ? window.PolynNextRecipe?.fromCurrent({
+          lineType: state.lineType,
+          hopperNamingLine9: state.hopperNamingLine9,
+          layers: nextRecipeWorking
+        })
+        : state.nextRecipe;
+      return window.PolynNextRecipe?.normalize(payload) || null;
+    }
+
+    function nextResinByPosition(){
+      if (!state.timelineNextResin) return null;
+      const plan = plannedRecipePayload();
+      if (!plan) return null;
+      if (!window.PolynNextRecipe?.isPromotable(plan)) return null;
+      if (Number(plan.line_type) !== Number(state.lineType)) return null;
+      const liveLayers = new Set(state.layers.map(layer=>layer.name));
+      if (!plan.layers.every(layer=>liveLayers.has(layer.name))) return null;
+
+      const byPosition = new Map();
+      plan.layers.forEach(layer=>{
+        layer.hoppers.forEach((hopper, index)=>{
+          byPosition.set(`${layer.name}:${index}`, normName(hopper.resin_name || ""));
+        });
+      });
+      return byPosition;
+    }
+
+    /* Why enhanced tracking has nothing to show, in the operator's terms.
+     *
+     * The toggle stays operable in every one of these states rather than
+     * being disabled: switching it on before the plan is finished is a
+     * reasonable thing to do, and it then lights up on its own the moment the
+     * plan validates. What is not reasonable is a switch that is on and shows
+     * nothing with no explanation, which is what this exists to prevent. */
+    function enhancedTrackingUnavailableReason(){
+      // Same source as the badges themselves, so the reason and what is drawn
+      // can never disagree.
+      const plan = plannedRecipePayload();
+      if (!plan || !window.PolynNextRecipe?.isMeaningful(plan)){
+        return "No Next Recipe is planned yet.";
+      }
+      if (Number(plan.line_type) !== Number(state.lineType)){
+        return "The planned Next Recipe is for a different line type.";
+      }
+      if (!window.PolynNextRecipe?.isPromotable(plan)){
+        return "The planned Next Recipe isn't complete yet — its percentages need to total 100%.";
+      }
+      return null;
+    }
+
+    function syncEnhancedTrackingAvailability(){
+      const toggle = $("timelineNextResinToggle");
+      if (!toggle) return;
+      const reason = enhancedTrackingUnavailableReason();
+      toggle.classList.toggle("toggleUnavailable", !!reason);
+      toggle.title = reason
+        ? `Enhanced tracking: ${reason}`
+        : "Show each tracked hopper's incoming resin from the Next Recipe";
+      const note = $("timelineNextResinNote");
+      if (note){
+        // Only worth saying out loud when the operator has actually asked for
+        // it and is getting nothing back.
+        const explain = state.timelineNextResin && reason;
+        note.textContent = explain ? reason : "";
+        note.hidden = !explain;
+      }
+    }
+
     function renderResultsFlat(flat, changeoverDate){
+      syncEnhancedTrackingAvailability();
       const area = $("resultsArea");
       if (!area) return;
       area.innerHTML = "";
 
       const viewFlat = state.showPumpOffTracked ? flat : flat.filter(x=>!x.pumpOff);
+      const nextResins = nextResinByPosition();
 
       if (viewFlat.length === 0){
         area.innerHTML = `<div class="muted">No visible tracked hoppers. (Pump-off hoppers are hidden.) Toggle “Show pump-off hoppers” to view them.</div>`;
@@ -5523,6 +5685,7 @@
             <div class="resultIdentity">
               <span class="mono resultHopper">${h.hopperLabel}</span>
               <span data-resin-chip></span>
+              <span data-next-resin></span>
               ${splitWarn}
             </div>
             <div class="resultRun">${runSummary}</div>
@@ -5537,6 +5700,34 @@
         const resinChip = row.querySelector("[data-resin-chip]");
         resinChip.className = h.resinName ? "mono resultResin" : "resultStatusChip badge-warn";
         resinChip.textContent = h.resinName || "No resin";
+
+        // Only positions the plan actually changes are marked. An unchanged
+        // hopper is left alone on purpose: the rows carrying an arrow are
+        // then exactly the rows the changeover needs work on, which is the
+        // question this answers.
+        const nextChip = row.querySelector("[data-next-resin]");
+        const incoming = nextResins?.get(`${h.layer}:${h.hopperIndex}`);
+        if (incoming !== undefined && incoming !== h.resinName){
+          nextChip.className = "resultNextResin" + (incoming ? "" : " resultNextResinEmpty");
+          // Built as nodes rather than markup. A resin name is operator- and
+          // catalog-supplied and arrives over RT Sync and from scans, so it is
+          // never interpolated into HTML - same rule the current-resin chip
+          // above follows with .textContent (see security.test.js).
+          const arrow = document.createElement("span");
+          arrow.setAttribute("aria-hidden", "true");
+          arrow.textContent = "\u2192";
+          const name = document.createElement("span");
+          name.className = incoming ? "mono" : "";
+          name.textContent = incoming || "Empty";
+          nextChip.replaceChildren(arrow, name);
+          // The arrow is decorative, so the accessible name says what the pair
+          // means instead of leaving a screen reader to announce a glyph.
+          const label = incoming
+            ? `Next Recipe: ${h.hopperLabel} changes to `
+            : `Next Recipe: ${h.hopperLabel} is emptied`;
+          nextChip.title = incoming ? label + incoming : label;
+          nextChip.setAttribute("aria-label", nextChip.title);
+        }
 
         row.querySelector('input[type="checkbox"]').addEventListener("change",(e)=>{
           h._ref.h.pumpOff = !!e.target.checked;
@@ -5582,6 +5773,8 @@
       state.hopperNamingLine9 = "standard";
       state.showPumpOffTracked = false;
       syncToggleUI("showPumpOffToggle", false);
+      state.timelineNextResin = false;
+      syncToggleUI("timelineNextResinToggle", false);
       state.prodResinLb = 0;
       state.scrapResinLb = 0;
       // Scoped to Current, same as everything else this function resets -
@@ -7893,6 +8086,7 @@
       hookRecipeViewToggle();
       // Sync toggle UI after restore
       syncToggleUI("showPumpOffToggle", !!state.showPumpOffTracked);
+      syncToggleUI("timelineNextResinToggle", !!state.timelineNextResin);
 
       refreshConfigDropdown();
 

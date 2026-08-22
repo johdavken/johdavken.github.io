@@ -4026,6 +4026,14 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
 }
 .trackLabel{ font-size: var(--font-small); color: var(--muted); white-space: nowrap; }
 .resultsToggleControls{ justify-content:flex-start; flex-wrap:wrap; }
+/* A toggle whose feature has nothing to act on yet. Deliberately still
+   operable (see syncEnhancedTrackingAvailability) - dimmed to say "on, but
+   waiting", not "you cannot touch this". */
+.toggle.toggleUnavailable{ opacity:.5; }
+/* The reason, on its own line under the controls, and only while the operator
+   has the toggle on and is getting nothing back. */
+.timelineNextResinNote{ flex:1 0 100%; margin-top:2px; }
+.timelineNextResinNote[hidden]{ display:none; }
 
 .toggle{
   position: relative;
@@ -4560,6 +4568,20 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
 body[data-theme="gruvbox-light"] .resultHopper{color:#076678}
 body:is([data-theme="industrial-slate-dark"],[data-theme="gruvbox-dark"]) .resultHopper{color:#d65d0e}
 .resultResin{min-width:0;overflow:hidden;font-size:16px;text-overflow:ellipsis;white-space:nowrap}
+/* Enhanced tracking: the incoming resin from the planned Next Recipe, drawn
+   only on positions the plan actually changes - so its presence is the signal
+   and an unmarked row means "no changeover work here". It holds its width
+   while the current resin beside it ellipsizes, because it is the half of the
+   pair the operator does not already know. */
+.resultNextResin{display:inline-flex;flex:0 0 auto;align-items:baseline;gap:3px;min-width:0;color:var(--focus-border);font-size:15px;font-weight:800;white-space:nowrap}
+.resultNextResin .mono{overflow:hidden;text-overflow:ellipsis}
+.resultNextResin > [aria-hidden]{color:var(--muted);font-weight:900}
+/* A hopper the plan empties is an absence, not a new material - muted so it
+   never reads as a resin code. */
+.resultNextResinEmpty{color:var(--muted);font-style:italic}
+/* .done already greys the whole row; let it win rather than keeping an accent
+   colour burning through a pumped-off row. */
+.resultRow.done .resultNextResin{color:inherit}
 .resultWeight{color:var(--muted);font-size:var(--font-small);white-space:nowrap}
 .resultStatusChip{display:inline-flex;align-items:center;min-height:22px;max-width:100%;padding:2px 6px;border-radius:999px;font-size:10px;font-weight:800;line-height:1.15;white-space:normal;overflow-wrap:anywhere}
 .resultRun{overflow:hidden;color:var(--muted);font-size:11px;line-height:1.2;text-overflow:ellipsis;white-space:nowrap}
