@@ -27,6 +27,8 @@
     const adminAccess = !initializing && !!state?.isAdmin;
     $("adminLoginButton").hidden = initializing || adminAccess;
     $("resinDatabaseButton").hidden = !adminAccess;
+    const betaApplicantsButton = $("betaApplicantsButton");
+    if (betaApplicantsButton) betaApplicantsButton.hidden = !adminAccess;
     $("adminSignOutButton").hidden = !adminAccess;
     const accountButton = $("appFooterAccount");
     const accountLabel = $("footerAccountStatus");

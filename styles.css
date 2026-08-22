@@ -3981,6 +3981,14 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     font-size:9px;
     line-height:1.3;
   }
+  /* Beta Applicants rows stack on a phone: who asked first, then their
+     state, then the controls. The checkbox keeps its full-width tap target
+     rather than being squeezed into a column beside the email. */
+  .betaApplicantRow{ grid-template-columns: minmax(0, 1fr) auto; row-gap: 8px; }
+  .betaApplicantInfo{ order: 1; }
+  .betaApplicantStatus{ order: 2; }
+  .betaApplicantCheck{ order: 3; }
+  .betaApplicantRemove{ order: 4; justify-self: end; }
 }
 
 .hopperBadge{
@@ -5366,7 +5374,15 @@ input.resinLookupValue.copied[readonly]{
    other mobile-only surface's pattern in this file (base rule hides, the
    narrow-viewport media query is the only place that re-enables it). */
 .helpPlayBanner{ display: none; }
+/* Exactly one of the three banner states is ever shown, chosen by
+   data-beta-state on the host. "loading" shows none of them, so the Help
+   guide never flashes a request button at an operator who has already been
+   approved while the anonymous session is still coming up. */
+.helpPlayBannerHost > [data-beta-when]{ display: none; }
 @media (max-width: 900px), (min-width: 901px) and (pointer: coarse){
+  .helpPlayBannerHost[data-beta-state="none"] > [data-beta-when="none"],
+  .helpPlayBannerHost[data-beta-state="pending"] > [data-beta-when="pending"],
+  .helpPlayBannerHost[data-beta-state="invited"] > [data-beta-when="invited"]{ display: flex; }
   .helpPlayBanner{
     display: flex;
     align-items: center;
@@ -5385,7 +5401,76 @@ input.resinLookupValue.copied[readonly]{
   .helpPlayBanner span{ display: grid; gap: 1px; min-width: 0; }
   .helpPlayBanner strong{ color: var(--title); font-size: var(--font-small); font-weight: 800; }
   .helpPlayBanner small{ color: var(--muted); font-size: var(--font-tiny); }
+  /* The request state is a button, not a link, so it needs the anchor's
+     appearance reset back onto it. */
+  .helpPlayBannerAction{ width: 100%; text-align: left; font: inherit; cursor: pointer; }
+  /* Waiting is a status, not an action: no accent, no hover lift. Only the
+     small "Change" control inside it is interactive. */
+  .helpPlayBannerPending{ opacity: .82; }
+  .helpPlayBannerPending:hover{ border-color: var(--row-border); background: var(--row-bg); }
+  .helpPlayBannerPending .helpPlayBannerIcon{ fill: var(--muted); }
+  .helpPlayBannerEdit{
+    flex: 0 0 auto;
+    margin-left: auto;
+    min-height: 0;
+    padding: 4px 9px;
+    border: 1px solid var(--btn-secondary-border);
+    border-radius: 999px;
+    background: var(--btn-secondary-bg);
+    color: var(--btn-text);
+    font-size: var(--font-tiny);
+    font-weight: 700;
+  }
+  .helpPlayBannerEdit:hover{ color: var(--title); border-color: var(--focus-border); }
 }
+/* Beta Applicants (admin). One row per request: the checkbox that records
+   "added to internal testing on Play Console", who asked, and where they
+   are. Ticking the box is what reveals the download link in that person's
+   Help section, which is why it reads as the row's primary control rather
+   than a trailing detail. */
+.betaApplicantsList{ display: grid; gap: 8px; }
+.betaApplicantRow{
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--row-border);
+  border-radius: var(--radius-row);
+  background: var(--row-bg);
+}
+.betaApplicantRow[data-status="pending"]{ border-color: color-mix(in srgb, var(--warn) 38%, var(--row-border)); }
+.betaApplicantCheck{
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  font-size: var(--font-tiny);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.betaApplicantCheck input{ width: 17px; height: 17px; accent-color: var(--ok); cursor: pointer; }
+.betaApplicantInfo{ display: grid; gap: 1px; min-width: 0; }
+.betaApplicantInfo strong{ color: var(--title); font-size: var(--font-small); }
+.betaApplicantEmail{ color: var(--text); font-size: var(--font-small); overflow-wrap: anywhere; }
+.betaApplicantInfo small{ color: var(--muted); font-size: var(--font-tiny); }
+.betaApplicantStatus{ font-size: var(--font-tiny); font-weight: 800; white-space: nowrap; }
+.betaApplicantStatus.pending{ color: var(--warn); }
+.betaApplicantStatus.invited{ color: var(--ok); }
+.betaApplicantRemove{
+  min-height: 0;
+  padding: 2px 9px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+}
+.betaApplicantRemove:hover{ color: var(--bad); }
 /* Sits under the topic list at every width, on the same measure as the guide
    itself so it lines up with the topics above rather than with the panel
    edge. Deliberately quiet - it is a reference link, not an operator
