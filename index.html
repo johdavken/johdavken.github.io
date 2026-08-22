@@ -1549,6 +1549,9 @@
               <li>Fixed hopper cells only being selectable from their top half: <strong>tapping anywhere in a cell</strong> now tracks it in Summary, or selects it in Edit. Tapping the percentage used to do nothing.</li>
               <li>Both Recipe views gained a way to undo a selection in bulk - <strong>Clear tracking</strong> in Summary and <strong>Clear selection</strong> in Edit - without leaving the grid.</li>
               <li>The desktop side rail now shows <strong>numbered markers</strong> on the first four sections, matching mobile, and folds RT Sync, Tools and Help behind a labelled <strong>More</strong> divider so the rail opens shorter.</li>
+              <li>Added <strong>Enhanced tracking</strong> to the Timeline, beside Reset tracking. With a complete Next Recipe planned, each tracked hopper whose resin is changing shows what is coming in — <strong>B2 A0301 → A1901</strong> — and hoppers the plan empties are marked too. Hoppers that are not changing stay unmarked, so the changeover reads off the Timeline at a glance.</li>
+              <li>Fixed the pump-off alarm on Android being impossible to silence. Leaving the alarm screen without dismissing it used to leave the sound looping with no way back to it. The alarm now carries a <strong>Stop alarm</strong> notification, only sounds while its screen is showing, and stops itself after five minutes, leaving a quiet reminder that a pump-off was missed.</li>
+              <li>Pump-off alarms now <strong>survive a phone restart</strong>, and stale alarms are cancelled properly — an alarm for a hopper that was pumped off or untracked while the app was closed no longer goes off anyway.</li>
               <li>The Android app download link in Help is now offered through a <strong>beta access request</strong>: submit a name and email, and the link appears once you have been added to the tester list.</li>
             </ul>
 
@@ -1669,7 +1672,7 @@
           <span class="helpPrivacySep" aria-hidden="true">·</span>
           <a class="helpPrivacyLink" href="https://resin.tools/privacy/delete-data/" target="_blank" rel="noopener">Delete Data</a>
         </div>
-        <span class="helpAppVersion" aria-label="App version">v1.1.8</span>
+        <span class="helpAppVersion" aria-label="App version">v1.1.9</span>
         <small class="helpPrivacyNote">How Resin.Tools handles your data</small>
       </div>
     </div>
