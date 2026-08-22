@@ -30,7 +30,7 @@
        layout change is required to install cleanly. -->
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
-  <link rel="stylesheet" href="styles.css?v=0.62.1">
+  <link rel="stylesheet" href="styles.css?v=0.62.2">
   <link rel="stylesheet" href="theme.css?v=0.18.0">
   <link rel="stylesheet" href="desktop.css?v=0.1.6">
 <script src="validation.js?v=0.19" defer></script>
@@ -67,7 +67,7 @@
 <script src="bulk-density-measurement.js?v=0.1.0" defer></script>
 <script src="workspace-recovery.js?v=0.1.2" defer></script>
 <script src="beta-access.js?v=0.1.0" defer></script>
-<script src="app.js?v=0.18.160" defer></script>
+<script src="app.js?v=0.18.161" defer></script>
 <script src="resin-admin-ui.js?v=0.20.4" defer></script>
 <script src="database-health-ui.js?v=0.1.3" defer></script>
 <script src="bulk-density-measurement-ui.js?v=0.1.0" defer></script>
@@ -624,6 +624,22 @@
     title="Toggle showing pump-off hoppers in the timeline"
   ></div>
 
+  <!-- Enhanced tracking: marks tracked hoppers whose resin the planned Next
+       Recipe changes. Inert until a plan exists and passes full recipe
+       validation - syncEnhancedTrackingAvailability() below explains which of
+       those it is waiting on rather than leaving a dead switch. -->
+  <span class="trackLabel" id="timelineNextResinLabel">Enhanced tracking</span>
+
+  <div
+    id="timelineNextResinToggle"
+    class="toggle"
+    role="switch"
+    aria-checked="false"
+    aria-labelledby="timelineNextResinLabel"
+    tabindex="0"
+    title="Show each tracked hopper's incoming resin from the Next Recipe"
+  ></div>
+
   <button
     id="resetTrackingBtn"
     class="copyBtn secondary"
@@ -632,6 +648,8 @@
   >
     Reset tracking
   </button>
+
+  <small class="tiny muted timelineNextResinNote" id="timelineNextResinNote" role="status" hidden></small>
 </div>
       <fieldset class="mobileTimelineAlarmSection timelineAlarmSetting">
         <legend>Timeline alarm</legend>
@@ -1531,6 +1549,9 @@
               <li>Fixed hopper cells only being selectable from their top half: <strong>tapping anywhere in a cell</strong> now tracks it in Summary, or selects it in Edit. Tapping the percentage used to do nothing.</li>
               <li>Both Recipe views gained a way to undo a selection in bulk - <strong>Clear tracking</strong> in Summary and <strong>Clear selection</strong> in Edit - without leaving the grid.</li>
               <li>The desktop side rail now shows <strong>numbered markers</strong> on the first four sections, matching mobile, and folds RT Sync, Tools and Help behind a labelled <strong>More</strong> divider so the rail opens shorter.</li>
+              <li>Added <strong>Enhanced tracking</strong> to the Timeline, beside Reset tracking. With a complete Next Recipe planned, each tracked hopper whose resin is changing shows what is coming in — <strong>B2 A0301 → A1901</strong> — and hoppers the plan empties are marked too. Hoppers that are not changing stay unmarked, so the changeover reads off the Timeline at a glance.</li>
+              <li>Fixed the pump-off alarm on Android being impossible to silence. Leaving the alarm screen without dismissing it used to leave the sound looping with no way back to it. The alarm now carries a <strong>Stop alarm</strong> notification, only sounds while its screen is showing, and stops itself after five minutes, leaving a quiet reminder that a pump-off was missed.</li>
+              <li>Pump-off alarms now <strong>survive a phone restart</strong>, and stale alarms are cancelled properly — an alarm for a hopper that was pumped off or untracked while the app was closed no longer goes off anyway.</li>
               <li>The Android app download link in Help is now offered through a <strong>beta access request</strong>: submit a name and email, and the link appears once you have been added to the tester list.</li>
             </ul>
 
@@ -1651,7 +1672,7 @@
           <span class="helpPrivacySep" aria-hidden="true">·</span>
           <a class="helpPrivacyLink" href="https://resin.tools/privacy/delete-data/" target="_blank" rel="noopener">Delete Data</a>
         </div>
-        <span class="helpAppVersion" aria-label="App version">v1.1.8</span>
+        <span class="helpAppVersion" aria-label="App version">v1.1.9</span>
         <small class="helpPrivacyNote">How Resin.Tools handles your data</small>
       </div>
     </div>

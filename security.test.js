@@ -22,7 +22,12 @@ test("resin names are assigned through safe DOM properties", () => {
   assert.match(source, /resinInput\.value = hopper\.resinName/);
   assert.match(source, /querySelector\("\[data-resin-name\]"\)\.textContent = r\.displayName/);
   assert.match(source, /resinChip\.textContent = h\.resinName/);
-  assert.doesNotMatch(source, /\$\{(?:h\.resinName|r\.displayName)[^}]*\}/);
+  // Enhanced tracking's incoming-resin chip is a third place a resin name
+  // reaches the Timeline - from the planned recipe, so equally operator- and
+  // RT Sync-supplied. Built as nodes, never as markup.
+  assert.match(source, /name\.textContent = incoming \|\| "Empty"/);
+  assert.match(source, /nextChip\.replaceChildren\(arrow, name\)/);
+  assert.doesNotMatch(source, /\$\{(?:h\.resinName|r\.displayName|incoming)[^}]*\}/);
 });
 
 test("representative injection payloads are not embedded in HTML templates", () => {

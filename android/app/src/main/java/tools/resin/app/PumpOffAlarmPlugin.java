@@ -2,7 +2,6 @@ package tools.resin.app;
 
 import android.app.AlarmManager;
 import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.content.Intent;
 import android.media.AudioAttributes;
 import android.media.MediaPlayer;
@@ -47,23 +46,13 @@ public class PumpOffAlarmPlugin extends Plugin {
         try {
             for (int i = 0; i < notifications.length(); i++) {
                 JSONObject entry = notifications.getJSONObject(i);
-                int id = entry.getInt("id");
-                String title = entry.optString("title", "Pump off due");
-                String body = entry.optString("body", "Hopper pump-off is due now.");
-                long at = entry.getLong("at");
-                String sound = entry.isNull("sound") ? null : entry.optString("sound", null);
-                boolean vibrate = entry.optBoolean("vibrate", true);
-
-                PendingIntent pendingIntent = alarmPendingIntent(id, title, body, sound, vibrate);
-                boolean canScheduleExact = Build.VERSION.SDK_INT < Build.VERSION_CODES.S
-                    || alarmManager.canScheduleExactAlarms();
-                if (canScheduleExact) {
-                    alarmManager.setAlarmClock(new AlarmManager.AlarmClockInfo(at, pendingIntent), pendingIntent);
-                } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pendingIntent);
-                } else {
-                    alarmManager.set(AlarmManager.RTC_WAKEUP, at, pendingIntent);
-                }
+                // Requiring these here keeps a malformed entry out of the
+                // persisted store, which a reboot would otherwise replay.
+                entry.getInt("id");
+                entry.getLong("at");
+                // Records as well as arms, so a reboot can put it back - see
+                // PumpOffBootReceiver.
+                PumpOffAlarmScheduler.schedule(getContext(), entry);
             }
             call.resolve();
         } catch (JSONException e) {
@@ -75,12 +64,13 @@ public class PumpOffAlarmPlugin extends Plugin {
     public void cancel(PluginCall call) {
         JSArray notifications = call.getArray("notifications");
         if (notifications == null) { call.reject("notifications is required"); return; }
-        AlarmManager alarmManager = (AlarmManager) getContext().getSystemService(android.content.Context.ALARM_SERVICE);
         NotificationManager notificationManager = (NotificationManager) getContext().getSystemService(android.content.Context.NOTIFICATION_SERVICE);
         try {
             for (int i = 0; i < notifications.length(); i++) {
                 int id = notifications.getJSONObject(i).getInt("id");
-                if (alarmManager != null) alarmManager.cancel(alarmPendingIntent(id, null, null, null, true));
+                // Drops the persisted record along with the alarm; leaving it
+                // behind would have a reboot resurrect a cancelled alarm.
+                PumpOffAlarmScheduler.cancel(getContext(), id);
                 if (notificationManager != null) notificationManager.cancel(id);
             }
             call.resolve();
@@ -165,18 +155,6 @@ public class PumpOffAlarmPlugin extends Plugin {
         result.put("openTimeline", openTimeline);
         if (openTimeline) getActivity().getIntent().removeExtra(MainActivity.EXTRA_OPEN_TIMELINE);
         call.resolve(result);
-    }
-
-    private PendingIntent alarmPendingIntent(int id, String title, String body, String sound, boolean vibrate) {
-        Intent intent = new Intent(getContext(), PumpOffAlarmReceiver.class);
-        intent.putExtra(PumpOffAlarmReceiver.EXTRA_ID, id);
-        if (title != null) intent.putExtra(PumpOffAlarmReceiver.EXTRA_TITLE, title);
-        if (body != null) intent.putExtra(PumpOffAlarmReceiver.EXTRA_BODY, body);
-        if (sound != null) intent.putExtra(PumpOffAlarmReceiver.EXTRA_SOUND, sound);
-        intent.putExtra(PumpOffAlarmReceiver.EXTRA_VIBRATE, vibrate);
-        int flags = PendingIntent.FLAG_UPDATE_CURRENT;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) flags |= PendingIntent.FLAG_IMMUTABLE;
-        return PendingIntent.getBroadcast(getContext(), id, intent, flags);
     }
 
     /**

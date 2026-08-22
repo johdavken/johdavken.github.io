@@ -10,6 +10,7 @@ const styles = fs.readFileSync("styles.css", "utf8");
 const manifest = fs.readFileSync("android/app/src/main/AndroidManifest.xml", "utf8");
 const capacitorConfig = JSON.parse(fs.readFileSync("capacitor.config.json", "utf8"));
 const pluginJava = fs.readFileSync("android/app/src/main/java/tools/resin/app/PumpOffAlarmPlugin.java", "utf8");
+const schedulerJava = fs.readFileSync("android/app/src/main/java/tools/resin/app/PumpOffAlarmScheduler.java", "utf8");
 const receiverJava = fs.readFileSync("android/app/src/main/java/tools/resin/app/PumpOffAlarmReceiver.java", "utf8");
 const activityJava = fs.readFileSync("android/app/src/main/java/tools/resin/app/PumpOffAlarmActivity.java", "utf8");
 
@@ -99,7 +100,7 @@ test("stableNotificationId is a deterministic 32-bit-safe hash of identity only,
   // Executed directly (pure function, no external deps) rather than only
   // pattern-matched, to actually prove determinism and range - not just that
   // the code looks right.
-  const fn = new Function(`${body}; return stableNotificationId;`)();
+  const fn = new Function(`${body}\n; return stableNotificationId;`)();
 
   const a1 = fn("workspace-1:A:H1");
   const a2 = fn("workspace-1:A:H1");
@@ -126,7 +127,11 @@ test("syncNativeTimelineAlarms builds the desired set only from trackable, not-y
 
 test("syncNativeTimelineAlarms diffs against what's currently scheduled - cancels exactly what's no longer desired, schedules the rest, then updates the tracked set", () => {
   const body = functionBody("syncNativeTimelineAlarms");
-  assert.match(body, /const toCancel = \[\.\.\.scheduledTimelineNotificationIds\]\.filter\(id=>!desired\.has\(id\)\);/);
+  // The cancel candidates are the union of this run's record and the one the
+  // previous run persisted - see recipe/alarm notes in
+  // timeline-alarm-recovery.test.js for why the in-memory half is not enough.
+  assert.match(body, /const known = new Set\(\[\.\.\.scheduledTimelineNotificationIds, \.\.\.readScheduledAlarmIds\(\)\]\);/);
+  assert.match(body, /const toCancel = \[\.\.\.known\]\.filter\(id=>!desired\.has\(id\)\);/);
   assert.match(body, /if \(toCancel\.length\) await PumpOffAlarm\.cancel\(\{ notifications: toCancel\.map\(id=>\(\{ id \}\)\) \}\);/);
   assert.match(body, /if \(desired\.size\) await PumpOffAlarm\.schedule\(\{ notifications: \[\.\.\.desired\.values\(\)\] \}\);/);
   assert.match(body, /scheduledTimelineNotificationIds = new Set\(desired\.keys\(\)\);/);
@@ -280,18 +285,25 @@ test("syncNativeTimelineAlarms threads the current sound/vibrate choice into eve
 });
 
 test("the native plugin reads sound/vibrate per schedule entry and threads them through the alarm PendingIntent, receiver, and alarm-screen Activity", () => {
-  assert.match(pluginJava, /String sound = entry\.isNull\("sound"\) \? null : entry\.optString\("sound", null\);/);
-  assert.match(pluginJava, /boolean vibrate = entry\.optBoolean\("vibrate", true\);/);
-  assert.match(pluginJava, /alarmPendingIntent\(id, title, body, sound, vibrate\)/);
+  // Reading and threading moved into PumpOffAlarmScheduler when the boot
+  // receiver started needing the identical PendingIntent - see
+  // timeline-alarm-recovery.test.js.
+  assert.match(schedulerJava, /entry\.isNull\(PumpOffAlarmStore\.FIELD_SOUND\) \? null : entry\.optString\(PumpOffAlarmStore\.FIELD_SOUND, null\)/);
+  assert.match(schedulerJava, /entry\.optBoolean\(PumpOffAlarmStore\.FIELD_VIBRATE, true\)/);
+  assert.match(schedulerJava, /arm\(context, id, at,/);
 
   assert.match(receiverJava, /static final String EXTRA_SOUND = "sound";/);
   assert.match(receiverJava, /static final String EXTRA_VIBRATE = "vibrate";/);
   assert.match(receiverJava, /if \(sound != null\) fullScreenIntent\.putExtra\(EXTRA_SOUND, sound\);/);
 
-  assert.match(activityJava, /String sound = intent\.getStringExtra\(PumpOffAlarmReceiver\.EXTRA_SOUND\);/);
-  assert.match(activityJava, /boolean vibrate = intent\.getBooleanExtra\(PumpOffAlarmReceiver\.EXTRA_VIBRATE, true\);/);
+  // Held as fields rather than onCreate locals, because the alarm now starts
+  // and stops across the activity's visible lifetime instead of once.
+  assert.match(activityJava, /soundUri = intent\.getStringExtra\(PumpOffAlarmReceiver\.EXTRA_SOUND\);/);
+  assert.match(activityJava, /vibrateEnabled = intent\.getBooleanExtra\(PumpOffAlarmReceiver\.EXTRA_VIBRATE, true\);/);
   assert.match(activityJava, /if \(soundUri != null\) \{\s*\n\s*alarmSound = Uri\.parse\(soundUri\);/);
-  assert.match(activityJava, /if \(!vibrate\) return;/, "picking no vibration must skip the vibrate call entirely, not just zero out the pattern");
+  assert.match(activityJava, /if \(vibrateEnabled\) startVibration\(\);/, "picking no vibration must skip the vibrate call entirely, not just zero out the pattern");
+  // And carried onward, so returning through the notification keeps the sound.
+  assert.match(receiverJava, /if \(sound != null\) screenIntent\.putExtra\(EXTRA_SOUND, sound\);/);
 });
 
 test("the ringtone picker excludes silent as an option - operators can change the sound, but can't accidentally pick no sound for an unmissable alarm", () => {
@@ -310,7 +322,21 @@ test("capacitor.config.json configures a real default notification icon/color, n
   assert.ok(fs.existsSync("android/app/src/main/res/drawable-xxxhdpi/ic_stat_timeline.png"));
 });
 
-test("the boot receiver, wake lock, and POST_NOTIFICATIONS permissions still come from Capacitor's own plugin manifest merge at build/sync time, not from hand-editing this file - only VIBRATE/SCHEDULE_EXACT_ALARM/USE_FULL_SCREEN_INTENT were hand-added, for the new native PumpOffAlarm plugin", () => {
-  assert.doesNotMatch(manifest, /RECEIVE_BOOT_COMPLETED|WAKE_LOCK|POST_NOTIFICATIONS/, "these are supplied by the plugin's own manifest at build/sync time, not hand-declared here");
+test("wake lock and POST_NOTIFICATIONS still come from Capacitor's own plugin manifest merge, not from hand-editing this file", () => {
+  assert.doesNotMatch(manifest, /WAKE_LOCK|POST_NOTIFICATIONS/, "these are supplied by the plugin's own manifest at build/sync time, not hand-declared here");
   assert.match(manifest, /<uses-permission android:name="android\.permission\.VIBRATE" \/>/);
+  assert.match(manifest, /<uses-permission android:name="android\.permission\.SCHEDULE_EXACT_ALARM" \/>/);
+  assert.match(manifest, /<uses-permission android:name="android\.permission\.USE_FULL_SCREEN_INTENT" \/>/);
+});
+
+// RECEIVE_BOOT_COMPLETED moved out of that set when the app gained a boot
+// receiver of its own (PumpOffBootReceiver). @capacitor/local-notifications
+// happens to declare the same permission, so the merged manifest would carry
+// it either way - but inheriting it would make our alarm re-arming depend on a
+// dependency we keep only for its POST_NOTIFICATIONS request. Dropping that
+// dependency would silently stop alarms surviving a reboot, which is the exact
+// class of quiet failure the boot receiver exists to end.
+test("RECEIVE_BOOT_COMPLETED is declared by this app, not inherited from a plugin it could stop using", () => {
+  assert.match(manifest, /<uses-permission android:name="android\.permission\.RECEIVE_BOOT_COMPLETED" \/>/);
+  assert.match(manifest, /android:name="\.PumpOffBootReceiver"/, "the permission is only justified by our own receiver");
 });
