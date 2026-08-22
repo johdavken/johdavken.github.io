@@ -31,6 +31,16 @@ If `join_workspace` reports an ambiguous `workspace_id`, apply [`migrations/2026
 
 Apply [`migrations/202608040001_active_job_noop_guard.sql`](migrations/202608040001_active_job_noop_guard.sql), [`migrations/202608050001_regrant_update_active_job.sql`](migrations/202608050001_regrant_update_active_job.sql), and [`migrations/202608150001_active_job_stale_noop_guard.sql`](migrations/202608150001_active_job_stale_noop_guard.sql) in that order after the initial line-sync migration. The last migration makes an upload that already equals the shared active job a read-only success even when its cached revision is stale; differing payloads retain normal optimistic-concurrency conflicts.
 
+## Android beta access requests
+
+Run [`migrations/202608220001_beta_applicants.sql`](migrations/202608220001_beta_applicants.sql) to create `public.beta_applicants`, which backs the "Request beta access" banner in Help and the Beta Applicants admin panel. It is postdated the 2026-08-20 ledger baseline, so `db push` applies it.
+
+A request is keyed to the browser's anonymous RT Sync identity, not to the address typed in: `submit_beta_application` derives `user_id` from `auth.uid()` and the client cannot pass it. That is what makes the read safe — a device selects its own row under RLS, so there is no endpoint accepting an email and reporting whether it is approved, which would be an enumeration oracle over operators' addresses.
+
+Re-submitting an address that already exists re-binds that row to the caller's current identity rather than failing on the unique constraint. Clearing browser storage destroys the anonymous identity permanently, so without this an approved tester who cleared their browser would lose the download link with no way back. The trade is that someone who guesses an approved address can claim the row; that buys nothing, because Google Play still refuses the install to any account not on the tester list. Status is preserved across a re-bind and no client-reachable path can set it to `invited` — only `admin_set_beta_applicant_invited`, behind `private.assert_admin()`, can.
+
+The table holds the first personal data the project stores for non-admin users. `delete_beta_application` takes no argument for self-service withdrawal and an id for admin removal; `privacy/index.html` documents both.
+
 ## Workspace Configurations (Phase 2 database contract)
 
 After the line-sync migration and its two fixes above, run [`migrations/202608020003_workspace_configurations.sql`](migrations/202608020003_workspace_configurations.sql) once. This additive migration creates the long-term `public.workspace_configurations` store; it does not modify the legacy `saved_setups` table or its RPCs.

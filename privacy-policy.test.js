@@ -178,7 +178,15 @@ const PUBLIC_PAGES = [
     // mailto targets never do; a data: URI carries its own payload. What is
     // left has to be navigation the reader chooses - the app, the deletion
     // page, or the two processors' own policies - not a load this page needs.
-    allowed: ["/", "/privacy/delete-data/", "https://supabase.com/privacy", "https://openai.com/policies/privacy-policy/"]
+    allowed: [
+      "/",
+      "/privacy/delete-data/",
+      "https://supabase.com/privacy",
+      "https://openai.com/policies/privacy-policy/",
+      // Beta access requests put the applicant's address on Google Play's
+      // tester list, so Google becomes a processor for it.
+      "https://policies.google.com/privacy"
+    ]
   },
   {
     label: "/privacy/delete-data/",

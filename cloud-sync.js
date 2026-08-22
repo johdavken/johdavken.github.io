@@ -1219,6 +1219,23 @@
       });
     }
 
+    // Narrow accessor for the Android beta-access banner in Help, shaped
+    // like getWorkspaceConfigurationTransport above: the two operations one
+    // feature needs on one table, never the client itself.
+    //
+    // It has to be this client specifically. A beta request is keyed to the
+    // browser's anonymous RT Sync identity, and resin-admin.js runs an
+    // entirely separate Supabase client under its own storage key - reading
+    // "my row" through that one would ask about the administrator's
+    // identity, not the operator's.
+    function getBetaAccessTransport(){
+      if (!client || !state.available || !state.userId) return null;
+      return Object.freeze({
+        selectOwn: (fields) => client.from("beta_applicants").select(fields).maybeSingle(),
+        rpc: (name, args) => client.rpc(name, args)
+      });
+    }
+
     // Narrow accessor for calling the recipe-scan Edge Function directly
     // (not through PostgREST/RPC, so it can't go through the transport
     // above) - returns just the current access token string, or null if
@@ -1269,6 +1286,7 @@
       initialize,
       getState: ()=>JSON.parse(JSON.stringify(state)),
       getWorkspaceConfigurationTransport,
+      getBetaAccessTransport,
       getRecoveryDescriptor,
       getAccessToken,
       loadWorkspaces,

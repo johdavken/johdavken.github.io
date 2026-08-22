@@ -215,7 +215,7 @@
 
     <h2>RT Sync and shared workspaces</h2>
 
-    <p>RT Sync is off until you create or join a workspace. When you connect, the app signs your browser in to <a href="https://supabase.com/privacy" target="_blank" rel="noopener">Supabase</a>, the hosted backend Resin.Tools runs on, using <strong>anonymous sign-in</strong>: no name, no email address, no password, and nothing to sign up for. A session credential is stored on your device, and a corresponding anonymous authentication record is created in Supabase. That record's identifier is <strong>pseudonymous</strong> rather than truly anonymous — it persists, and the workspace data below is linked to it. Clearing your browser storage discards the device's credential; the record in Supabase remains.</p>
+    <p>RT Sync is off until you create or join a workspace. When you connect, the app signs your browser in to <a href="https://supabase.com/privacy" target="_blank" rel="noopener">Supabase</a>, the hosted backend Resin.Tools runs on, using <strong>anonymous sign-in</strong>: no name, no email address, no password, and nothing to sign up for. (Requesting Android beta access is separate and optional, and is the one place the app asks for a name and email &mdash; see below.) A session credential is stored on your device, and a corresponding anonymous authentication record is created in Supabase. That record's identifier is <strong>pseudonymous</strong> rather than truly anonymous — it persists, and the workspace data below is linked to it. Clearing your browser storage discards the device's credential; the record in Supabase remains.</p>
 
     <p>While a workspace is connected, this is stored on Supabase servers:</p>
     <ul>
@@ -255,6 +255,14 @@
 
     <p>Timeline alerts are scheduled on the device itself and, when enabled, can show as a full-screen alert over the lock screen so a pump-off deadline is hard to miss — the same mechanism a clock alarm uses. They are not push notifications — no notification service is involved, and no data leaves your device to deliver one.</p>
 
+    <h2>Android beta access requests</h2>
+
+    <p>The Android app is distributed through Google Play internal testing, which can only invite a specific Google account. If you ask for access from the Help section, the app stores the <strong>name and email address you type</strong> on Supabase servers, together with the pseudonymous identifier for the browser that submitted it. This is the only place Resin.Tools asks an ordinary user for personal details, and it is entirely optional &mdash; the web app is fully usable without it.</p>
+
+    <p>The administrator can see that name and email in order to add the address to the tester list in Google Play Console, and to mark the request as invited. It is not used for anything else: no mailing list, no marketing, and it is never shared beyond Google Play&rsquo;s own tester management. Adding the address to Play means it is also handled by <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google</a> under their terms.</p>
+
+    <p>You can withdraw a request from the same place you made it, which deletes the stored name and email immediately. Requests are otherwise kept until testing ends or you ask for removal.</p>
+
     <h2>Administrator sign-in</h2>
 
     <p>Editing the shared resin database is restricted to administrators, who sign in with an email address and password held by Supabase Auth. Administrator permission is checked on the server for every such action, not merely hidden in the interface. Ordinary use of Resin.Tools never requires you to create an account.</p>
@@ -273,6 +281,7 @@
       <li><strong>On your device</strong> — clear site data for resin.tools in your browser, or clear storage for Resin Tools in Android settings.</li>
       <li><strong>A shared recipe or receiver weight profile</strong> — delete it from within the app. It is removed from the workspace for every member.</li>
       <li><strong>A workspace</strong> — Leave RT Sync removes this device's membership. To have a workspace or its stored job data removed, get in touch using the contact below.</li>
+      <li><strong>A beta access request</strong> &mdash; open the request from the Help section and choose Withdraw. Your name and email are deleted straight away.</li>
       <li><strong>Data deletion requests</strong> — see the <a href="/privacy/delete-data/">Data Deletion</a> page for how to request removal of stored workspace data.</li>
     </ul>
 

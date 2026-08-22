@@ -7044,6 +7044,13 @@
       }
     };
 
+    // Narrow bridge consumed only by beta-access-ui.js, so the Help
+    // banner can ask "may this browser see the Play link?" without ever
+    // touching the RT Sync client directly.
+    window.PolynBetaAccessBridge = {
+      getTransport: () => lineSync?.getBetaAccessTransport?.() || null
+    };
+
     // Narrow bridge consumed only by recipe-scan-ui.js: enough to call the
     // recipe-scan Edge Function (workspace id, a fresh access token) and to
     // apply a validated result through the existing guarded recipe-apply
