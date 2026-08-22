@@ -3613,9 +3613,8 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     box-shadow:inset 0 0 0 2px var(--focus-border);
   }
   .mobileBulkContext{
-    display:grid;
-    /* Select all / Clear / count / Edit selected. */
-    grid-template-columns:auto auto minmax(0,1fr) auto;
+    display:flex;
+    flex-wrap:wrap;
     align-items:center;
     gap:8px;
   }
@@ -3637,13 +3636,24 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     color:var(--title);
   }
   .mobileBulkContext .mobileBulkEditSelected:disabled{border-color:var(--row-border-2);background:var(--row-bg-2);color:var(--muted);opacity:.48}
-  .mobileBulkContext .mobileBulkClear{padding:7px 8px}
-  .mobileBulkContext .mobileBulkClear:disabled{opacity:.48}
-  /* Four items in one phone-width row: the buttons keep their labels intact
-     and the count - the one flexible column - is what gives, wrapping to a
-     second line on the narrowest handsets rather than squeezing an action. */
+  .mobileBulkContext .mobileBulkClear,
+  .mobileBulkContext .mobileBulkEmpty{padding:7px 8px}
+  .mobileBulkContext .mobileBulkClear:disabled,
+  .mobileBulkContext .mobileBulkEmpty:disabled{opacity:.48}
+  /* Clear drops a selection; Empty erases hoppers. They are one slot apart,
+     so the destructive one is tinted rather than left to be told apart by
+     its label alone. */
+  .mobileBulkContext .mobileBulkEmpty:not(:disabled){color:var(--bad)}
+  /* Four actions no longer fit across a phone beside the count. As a grid
+     the count was the only flexible track, so it collapsed to zero width and
+     vanished at 360px rather than giving way gracefully. It leads the bar on
+     a line of its own instead, and the actions wrap beneath it at any width
+     rather than depending on a measurement that only held on one handset. */
   .mobileBulkContext button{white-space:nowrap}
-  .mobileBulkCount{min-width:0;color:var(--title);font-size:11px;line-height:1.2;text-align:center}
+  .mobileBulkCount{flex:1 0 100%;min-width:0;color:var(--title);font-size:11px;line-height:1.2;text-align:center}
+  /* The primary action stays pinned to the right edge, where it was before
+     the count moved out of the row. */
+  .mobileBulkContext .mobileBulkEditSelected{margin-left:auto}
   /* Summary's tracking bar takes the same tray slot the bulk/rearrange
      context bars use, so it drops the desktop panel chrome and adopts
      their flat two-up shape: count, then the one action. */

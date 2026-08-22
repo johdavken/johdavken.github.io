@@ -3390,6 +3390,54 @@
       return { ok:true };
     }
 
+    /* ---- Load Current Recipe ----------------------------------------------
+     * The mirror of Load Next Recipe, and how most changeovers actually get
+     * planned: the next run is usually the current one with two or three
+     * hoppers different, so starting from a blank grid means retyping a
+     * recipe that is already on screen.
+     *
+     * Only a recipe payload crosses over. createRecipePayload structurally
+     * cannot carry receiver weights, tracking, pump-off or Smart Hopper
+     * dimensions (see next-recipe.js), so copying Current into Next cannot
+     * smuggle operational state into the plan - and nothing here writes to
+     * state.layers, so the running recipe is not touched at all. */
+
+    function openLoadCurrentRecipeDialog(){
+      const dialog = $("loadCurrentRecipeDialog");
+      if (!dialog?.showModal) return;
+      const current = window.PolynNextRecipe?.fromCurrent(state);
+      if (!window.PolynNextRecipe?.isMeaningful(current)) return;
+      // Summarized in the direction the copy runs: from whatever is planned
+      // now, to the current recipe about to replace it. Same renderer as Load
+      // Next Recipe - it describes a before/after pair, not a fixed page.
+      const summary = window.PolynNextRecipe.summarizeChange(state.nextRecipe, current);
+      renderLoadNextRecipeSummary($("loadCurrentRecipeSummary"), summary);
+      dialog.addEventListener("close",()=>{
+        if (dialog.returnValue === "load") loadCurrentRecipeIntoNext();
+      }, { once:true });
+      dialog.showModal();
+    }
+
+    function loadCurrentRecipeIntoNext(){
+      const plan = window.PolynNextRecipe?.normalize(window.PolynNextRecipe?.fromCurrent(state));
+      if (!plan) return { ok:false };
+      state.nextRecipe = plan;
+      // Drop the working copy so the grid rebuilds from the payload just
+      // written: ensureNextRecipeWorking() prefers an existing working copy
+      // over stored state, and would otherwise keep showing the old plan.
+      nextRecipeWorking = null;
+      // Scanned lots follow the resins they belong to, mirroring the way
+      // promotion carries state.nextRecipeLots across into state.resinLots.
+      state.nextRecipeLots = { ...(state.resinLots || {}) };
+      renderSplitsArea();
+      // The operational recipe did not change; this only refreshes the bell's
+      // view of the plan (attentionFacts.nextRecipe).
+      validateAndCompute();
+      saveSession();
+      notifyActiveJobMutation({ immediate:true, kind:"load-current-recipe" });
+      return { ok:true };
+    }
+
     function syncRecipePageUI(){
       document.body.dataset.recipePage = activeRecipePage;
       document.querySelectorAll(".recipePageTab").forEach(tab=>{
@@ -3698,6 +3746,30 @@
         loadNextButton.addEventListener("click", openLoadNextRecipeDialog);
         modeBar.appendChild(loadNextButton);
       }
+
+      // The mirror, on the Next page only: seed the plan from what is
+      // running, then edit the two or three hoppers that differ. Declared
+      // outside the block for the same reason loadNextButton is - the
+      // assemblies below reference it either way.
+      let loadCurrentButton = null;
+      if (isNextRecipePage()){
+        loadCurrentButton = document.createElement("button");
+        loadCurrentButton.type = "button";
+        loadCurrentButton.id = "loadCurrentRecipeBtn";
+        loadCurrentButton.className = "secondary";
+        // Same arrow as Load Next Recipe, reversed: there it descends into
+        // the line, here it lifts off it.
+        loadCurrentButton.innerHTML = `<svg class="recipeActionIcon" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 27V11"/><path d="M10 17l6-6 6 6"/><path d="M6 6h20"/></svg>Load Current Recipe`;
+        loadCurrentButton.setAttribute("aria-label", "Load Current Recipe");
+        // Hidden rather than disabled when there is nothing to copy. Unlike
+        // Load Next Recipe there is no "not complete enough yet" state to
+        // explain: a plan does not have to be valid, so anything worth
+        // copying can be copied.
+        loadCurrentButton.hidden = !window.PolynNextRecipe?.isMeaningful(window.PolynNextRecipe?.fromCurrent(state));
+        loadCurrentButton.title = "Replace the planned Next Recipe with a copy of the current one";
+        loadCurrentButton.addEventListener("click", openLoadCurrentRecipeDialog);
+        modeBar.appendChild(loadCurrentButton);
+      }
       // Print Recipe is appended last (after Load Next Recipe, which may or
       // may not exist depending on Current/Next). This is the baseline
       // placement - mobile keeps it here (Print Recipe is desktop-only via
@@ -3720,12 +3792,21 @@
           <button type="button" data-mobile-recipe-scan="job_traveler">Scan job traveler</button>
           <button type="button" data-mobile-recipe-scan="dosing_screen">Scan dosing screen</button>
           <button type="button" data-mobile-recipe-scan="heat_sheet">Scan heat sheet</button>`}
+          ${isNextRecipePage() ? `<button type="button" data-mobile-recipe-load-current>Load current recipe</button>` : ""}
           <button type="button" data-mobile-recipe-print>Print recipe</button>
         </div>`;
       mobileMoreButton.querySelectorAll("[data-mobile-recipe-scan]").forEach(button=>button.addEventListener("click",()=>{
         mobileMoreButton.open=false;
         window.PolynRecipeScanUI?.startScan(button.dataset.mobileRecipeScan);
       }));
+      // Next's mobile primary row is already full at four items (Recipes,
+      // Rearrange, Scan, More), and seeding the plan is a once-per-changeover
+      // action - so it goes in the overflow, the same way Print Recipe does.
+      const mobileLoadCurrentButton=mobileMoreButton.querySelector("[data-mobile-recipe-load-current]");
+      if(mobileLoadCurrentButton){
+        mobileLoadCurrentButton.disabled=!!loadCurrentButton?.hidden;
+        mobileLoadCurrentButton.addEventListener("click",()=>{mobileMoreButton.open=false;openLoadCurrentRecipeDialog();});
+      }
       const mobilePrintButton=mobileMoreButton.querySelector("[data-mobile-recipe-print]");
       mobilePrintButton.disabled=printButton.disabled;
       mobilePrintButton.addEventListener("click",()=>{mobileMoreButton.open=false;printRecipeSheet();});
@@ -3766,7 +3847,7 @@
         <div class="splitsBulkActions">
           <button id="selectAllSplits" type="button" class="bulkTextAction">Select all</button>
           <button id="clearSplitSelection" type="button" class="bulkTextAction">Clear selection</button>
-          <button id="clearSelectedCells" type="button" class="bulkTextAction" disabled>Clear cell contents</button>
+          <button id="clearSelectedCells" type="button" class="bulkTextAction" disabled>Empty cells</button>
           <button id="resetAllSplits" type="button" class="danger">Reset Recipe</button>
         </div>
         <div class="splitsBulkNote tiny">Blank fields leave existing values unchanged.</div>
@@ -3791,7 +3872,7 @@
           </div>
         </div>
         <div class="splitsEditRow splitsEditRowSecondary">
-          <button id="clearSelectedCells" type="button" class="bulkTextAction" disabled>Clear cell contents</button>
+          <button id="clearSelectedCells" type="button" class="bulkTextAction" disabled>Empty cells</button>
           <button id="resetAllSplits" type="button" class="danger">Reset Recipe</button>
         </div>
       `;
@@ -3847,9 +3928,10 @@
       // first; it is the same action as the sheet's own Clear selection,
       // reachable without opening the sheet.
       mobileBulkContext.innerHTML = `
+        <strong class="mobileBulkCount" role="status" aria-live="polite">0 selected</strong>
         <button type="button" class="mobileBulkCancel">Select all</button>
         <button type="button" class="mobileBulkClear" disabled>Clear</button>
-        <strong class="mobileBulkCount" role="status" aria-live="polite">0 selected</strong>
+        <button type="button" class="mobileBulkEmpty" disabled>Empty</button>
         <button type="button" class="mobileBulkEditSelected" disabled>Edit selected</button>
       `;
       const mobileRearrangeContext=document.createElement("div");
@@ -4047,7 +4129,7 @@
 
         // Rearrange keeps its real element (and therefore every handler
         // wired to it above); only its home changes - into the Edit panel's
-        // secondary row, next to Clear cell contents / Reset Recipe.
+        // secondary row, next to Empty cells / Reset Recipe.
         rearrangeButton.classList.remove("recipeUtilityTab", "secondary");
         rearrangeButton.classList.add("bulkTextAction", "splitsRearrangeAction");
         rearrangeButton.removeAttribute("role");
@@ -4065,9 +4147,14 @@
         // requiring modeBar's own appendChild calls above to change.
         loadNextButton?.classList.remove("secondary");
         loadNextButton?.classList.add("recipeUtilityTab", "recipeActionTab");
+        // Load Current Recipe takes the same slot on the Next page that Load
+        // Next Recipe takes on Current - the two never coexist.
+        loadCurrentButton?.classList.remove("secondary");
+        loadCurrentButton?.classList.add("recipeUtilityTab", "recipeActionTab");
         printButton.classList.remove("secondary", "recipeActionTertiary");
         printButton.classList.add("recipeUtilityTab", "recipeActionTab");
         if (loadNextButton) recipeUtilityTabs.append(loadNextButton);
+        if (loadCurrentButton) recipeUtilityTabs.append(loadCurrentButton);
         recipeUtilityTabs.append(printButton);
       }
 
@@ -4695,13 +4782,16 @@
       const bulkPctInput = toolbar.querySelector("#bulkResinPct");
       const applyButton = toolbar.querySelector("#applyBulkSplit");
       const selectionStatus = toolbar.querySelector("#splitSelectionStatus");
-      // Desktop Edit panel only - compact mobile clears a cell from the
-      // cell's own × button, which it still has.
+      // The Edit panel's own copy. On compact mobile that panel lives inside
+      // the bulk-edit sheet, where .splitsBulkActions is display:none - so
+      // this button is unreachable on a phone, which is why the context bar
+      // carries its own Empty. Both drive the same handler.
       const clearCellsButton = toolbar.querySelector("#clearSelectedCells");
       const mobileChangeResin = toolbar.querySelector("#mobileBulkChangeResin");
       const mobileChangePct = toolbar.querySelector("#mobileBulkChangePct");
       const mobileBulkCount = mobileBulkContext.querySelector(".mobileBulkCount");
       const mobileBulkClear = mobileBulkContext.querySelector(".mobileBulkClear");
+      const mobileBulkEmpty = mobileBulkContext.querySelector(".mobileBulkEmpty");
       const mobileBulkEditSelected = mobileBulkContext.querySelector(".mobileBulkEditSelected");
       attachResinAutocomplete(bulkNameInput);
 
@@ -4737,7 +4827,11 @@
         applyButton.textContent = selected.size
           ? `Apply to ${selected.size} hopper${selected.size === 1 ? "" : "s"}`
           : "Apply to selected";
-        if (clearCellsButton) clearCellsButton.disabled = selected.size === 0;
+        // Emptying is offered only when the selection actually holds
+        // something. Selecting six blank hoppers used to light the button up
+        // for an action that would do nothing.
+        const emptyable = emptyableHopperCount();
+        if (clearCellsButton) clearCellsButton.disabled = emptyable === 0;
         selectionStatus.className = `tiny splitsSelectionStatus${type ? ` ${type}` : ""}`;
         selectionStatus.textContent = message || (
           selected.size === 0
@@ -4748,6 +4842,7 @@
           const selectedLabel=`${selected.size} selected`;
           mobileBulkCount.textContent=selectedLabel;
           mobileBulkClear.disabled=selected.size===0;
+          mobileBulkEmpty.disabled=emptyable===0;
           mobileBulkEditSelected.disabled=selected.size===0;
           if(mobileBulkEditSheet){
             mobileBulkEditSheet.querySelector("#mobileBulkEditSubtitle").textContent=`${selectedLabel} · Choose what should change`;
@@ -4877,12 +4972,33 @@
         selected.clear();
         updateSelectionUI();
       });
+      // How many of the selected hoppers actually hold something. The same
+      // condition refreshCellState() uses to decide a cell is clearable, so
+      // the buttons and the cells agree on what "empty" means.
+      function emptyableHopperCount(){
+        let count = 0;
+        selected.forEach(key=>{
+          const ref = cellRefs.get(key);
+          if (!ref) return;
+          const hasContent = !!normName(ref.hopper.resinName)
+            || (ref.hi > 0 && clampNum(ref.hopper.pct) > 0)
+            || !!ref.hopper.track;
+          if (hasContent) count += 1;
+        });
+        return count;
+      }
+
       // Empties the selected hoppers' recipe assignment (and their tracking,
-      // matching what the per-cell × has always done). Deliberately does not
+      // matching what the per-cell × used to do). Deliberately does not
       // touch scanned lots - only Reset Recipe, which wipes the whole page,
       // goes that far.
-      clearCellsButton?.addEventListener("click",()=>{
-        if (!selected.size) return;
+      function emptySelectedCells(){
+        const emptyable = emptyableHopperCount();
+        if (!emptyable) return;
+        // One hopper goes immediately, exactly as the per-cell × did. More
+        // than one is worth a question: on a phone this sits one tap away
+        // from a full selection, and there is no undo.
+        if (emptyable > 1 && !confirm(`Empty ${emptyable} hoppers? Their resin, percentage, and Track setting are cleared.`)) return;
         const touchedLayers = new Set();
         selected.forEach(key=>{
           const ref = cellRefs.get(key);
@@ -4907,8 +5023,10 @@
         updateHopperTotals();
         validateAndCompute({ sync: true, immediate: true, kind: "recipe-clear" });
         saveSession();
-        updateSelectionUI("Cleared selected hoppers.", "ok");
-      });
+        updateSelectionUI("Emptied the selected hoppers.", "ok");
+      }
+      clearCellsButton?.addEventListener("click", emptySelectedCells);
+      mobileBulkEmpty.addEventListener("click", emptySelectedCells);
       toolbar.querySelector("#resetAllSplits").addEventListener("click",()=>{
         const ok = confirm("Reset every hopper resin, percentage, and Track setting?");
         if (!ok) return;
@@ -6702,6 +6820,7 @@
   const ACTIVE_JOB_PENDING_LABELS = {
     edit: "Production changes",
     "apply-recipe-scan": "Recipe scan applied",
+    "load-current-recipe": "Current Recipe copied to Next",
     "load-next-recipe": "Next Recipe loaded",
     "hopper-naming": "Hopper naming changed",
     "line-type": "Line type changed",

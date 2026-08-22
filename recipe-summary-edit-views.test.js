@@ -191,7 +191,7 @@ test("selection stays keyboard-reachable: the checkbox is visually hidden, not r
 test("the Edit panel is two rows above the grid: entry + selection, then the destructive/structural actions", () => {
   assert.match(splitsArea, /<div class="splitsEditRow splitsEditRowPrimary">/);
   assert.match(splitsArea, /<div class="splitsEditRow splitsEditRowSecondary">/);
-  assert.match(splitsArea, /<button id="clearSelectedCells" type="button" class="bulkTextAction" disabled>Clear cell contents<\/button>/);
+  assert.match(splitsArea, /<button id="clearSelectedCells" type="button" class="bulkTextAction" disabled>Empty cells<\/button>/);
   assert.match(splitsArea, /<button id="resetAllSplits" type="button" class="danger">Reset Recipe<\/button>/);
   // Above the grid, not below it (the grid is order 0).
   assert.match(styles, /#splitsArea > \.splitsBulkBar\{ order: -1;/);
@@ -200,13 +200,15 @@ test("the Edit panel is two rows above the grid: entry + selection, then the des
   assert.doesNotMatch(desktopTemplate, /splitsBulkSteps/);
 });
 
-test("Clear cell contents empties only the selected hoppers and recomputes each affected layer's derived H1", () => {
-  assert.match(splitsArea, /clearCellsButton\?\.addEventListener\("click",\(\)=>\{/);
+test("Empty cells empties only the selected hoppers and recomputes each affected layer's derived H1", () => {
+  assert.match(splitsArea, /clearCellsButton\?\.addEventListener\("click", emptySelectedCells\);/);
   assert.match(splitsArea, /ref\.hopper\.resinName = "";\s*\n\s*ref\.hopper\.track = false;/);
   // H1's percentage is derived, never cleared directly.
   assert.match(splitsArea, /if \(ref\.hi > 0\)\{\s*\n\s*ref\.hopper\.pct = 0;/);
   assert.match(splitsArea, /touchedLayers\.forEach\(L=>\{\s*\n\s*recomputeAutoH1\(L\);/);
-  assert.match(splitsArea, /if \(clearCellsButton\) clearCellsButton\.disabled = selected\.size === 0;/);
+  // Disabled state moved from "nothing selected" to "nothing to empty" -
+  // see recipe-empty-cells.test.js.
+  assert.match(splitsArea, /if \(clearCellsButton\) clearCellsButton\.disabled = emptyable === 0;/);
 });
 
 /* ----------------------------------------------------------------------

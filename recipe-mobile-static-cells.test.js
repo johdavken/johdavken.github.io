@@ -71,7 +71,7 @@ test("the percentage keeps its unit tucked against the digits, sized without rel
  *   Mobile edit flow
  * -------------------------------------------------------------------- */
 
-test("the mobile sheet drops the numbered steps and gains Clear cell contents, matching the desktop panel", () => {
+test("the mobile sheet drops the numbered steps and gains Empty cells, matching the desktop panel", () => {
   const mobileTemplate = splitsArea.slice(
     splitsArea.indexOf("toolbar.innerHTML = compactMobileRecipe ? `"),
     splitsArea.indexOf("} : `")
