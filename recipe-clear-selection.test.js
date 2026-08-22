@@ -80,10 +80,12 @@ test("the bar belongs to Summary alone, and stands down for the mobile rearrange
  *   Edit: mobile's missing Clear selection
  * -------------------------------------------------------------------- */
 
-test("the mobile bulk context bar gains Clear beside Select all, in a fourth grid slot", () => {
+test("the mobile bulk context bar gains Clear beside Select all", () => {
   assert.match(splitsArea, /<button type="button" class="mobileBulkCancel">Select all<\/button>\s*\n\s*<button type="button" class="mobileBulkClear" disabled>Clear<\/button>/);
-  assert.match(styles, /\.mobileBulkContext\{[\s\S]*?grid-template-columns:auto auto minmax\(0,1fr\) auto;/);
-  assert.match(styles, /\.mobileBulkContext \.mobileBulkClear:disabled\{opacity:\.48\}/);
+  // The bar became a wrapping flex row when Empty joined it - four actions no
+  // longer fit across a phone beside the count (see recipe-empty-cells.test.js).
+  assert.match(styles, /\.mobileBulkContext\{[\s\S]*?flex-wrap:wrap;/);
+  assert.match(styles, /\.mobileBulkContext \.mobileBulkClear:disabled,\s*\n\s*\.mobileBulkContext \.mobileBulkEmpty:disabled\{opacity:\.48\}/);
 });
 
 test("Clear drops the selection without touching a single hopper, and is inert while nothing is selected", () => {

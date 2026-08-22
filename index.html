@@ -30,7 +30,7 @@
        layout change is required to install cleanly. -->
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
-  <link rel="stylesheet" href="styles.css?v=0.62.0">
+  <link rel="stylesheet" href="styles.css?v=0.62.1">
   <link rel="stylesheet" href="theme.css?v=0.18.0">
   <link rel="stylesheet" href="desktop.css?v=0.1.6">
 <script src="validation.js?v=0.19" defer></script>
@@ -67,7 +67,7 @@
 <script src="bulk-density-measurement.js?v=0.1.0" defer></script>
 <script src="workspace-recovery.js?v=0.1.2" defer></script>
 <script src="beta-access.js?v=0.1.0" defer></script>
-<script src="app.js?v=0.18.159" defer></script>
+<script src="app.js?v=0.18.160" defer></script>
 <script src="resin-admin-ui.js?v=0.20.4" defer></script>
 <script src="database-health-ui.js?v=0.1.3" defer></script>
 <script src="bulk-density-measurement-ui.js?v=0.1.0" defer></script>
@@ -1524,6 +1524,52 @@
         <details class="helpTopic" id="helpChangelog">
           <summary><span>Changelog</span><small>A running history of what's been added, most recent first</small></summary>
           <div class="helpTopicBody">
+            <h3>Changeover planning &amp; Recipe cell actions - August 21-22, 2026</h3>
+            <ul>
+              <li>Recipe Setup can now copy in <strong>both directions</strong>. <strong>Load Current Recipe</strong> on the Next page seeds a plan from what is already running, so a changeover can be planned by editing the two or three hoppers that differ instead of retyping the whole recipe. Load Next Recipe on the Current page is unchanged. Both confirm first and show what will change.</li>
+              <li>Added <strong>Empty</strong> to Edit view, replacing the per-cell × that was too small to hit on a phone. It clears the selected hoppers' resin, percentage, and Track setting - one hopper goes immediately, more than one asks first. Previously there was no way at all to empty a hopper on mobile.</li>
+              <li>Fixed hopper cells only being selectable from their top half: <strong>tapping anywhere in a cell</strong> now tracks it in Summary, or selects it in Edit. Tapping the percentage used to do nothing.</li>
+              <li>Both Recipe views gained a way to undo a selection in bulk - <strong>Clear tracking</strong> in Summary and <strong>Clear selection</strong> in Edit - without leaving the grid.</li>
+              <li>The desktop side rail now shows <strong>numbered markers</strong> on the first four sections, matching mobile, and folds RT Sync, Tools and Help behind a labelled <strong>More</strong> divider so the rail opens shorter.</li>
+              <li>The Android app download link in Help is now offered through a <strong>beta access request</strong>: submit a name and email, and the link appears once you have been added to the tester list.</li>
+            </ul>
+
+            <h3>Summary/Edit views &amp; RT Sync reliability - August 19-20, 2026</h3>
+            <ul>
+              <li>Recipe Setup and Receiver Hopper Weights now share one <strong>Summary / Edit</strong> mode axis on every device. Edit <em>is</em> bulk edit, so there is no longer a separate Bulk edit mode to be in, and the Weights Edit toolbar fits on a single row.</li>
+              <li>On touch devices, hopper cells are no longer typed into directly - editing goes through the panel, which never worked well at cell size on a phone.</li>
+              <li>Fixed the <strong>RT Sync conflict storms</strong> seen on August 19-20, where two devices could push competing versions of the same job back and forth, and a panel could disable itself and stay stuck.</li>
+              <li>Fixed the <strong>Smart Hoppers</strong> panel not refreshing when a line connects.</li>
+            </ul>
+
+            <h3>Database health, hopper geometry &amp; tools - August 16-17, 2026</h3>
+            <ul>
+              <li>Added the admin-only <strong>Database Health</strong> monitor for the Supabase backend, including CPU readings that survive a cold start.</li>
+              <li>Added the <strong>Hopper Volume Weight</strong> tool and a matching <strong>Smart Hoppers volume geometry mode</strong>, for lines whose hoppers are not simple cylinders.</li>
+              <li>Refined the Bulk Density Measurement workflow, and simplified resin records by dropping the unused display/description fields.</li>
+              <li>Gruvbox Light and Dark received a solid icon set, rebalanced dark text, and a matching schedule ribbon on the Timeline.</li>
+              <li>Fixed the Android launcher icon being cropped, and fixed mobile notification actions.</li>
+            </ul>
+
+            <h3>Privacy pages, tablets &amp; workspace polish - August 14-15, 2026</h3>
+            <ul>
+              <li>Published a public <strong>Privacy Policy</strong> and <strong>Data Deletion</strong> page, both linked from the bottom of this guide.</li>
+              <li>Tablets and other large touch screens now stay in the <strong>touch layout</strong> rather than getting a shell of their own, which fixes the Recipe matrix overflowing on wide touch devices such as an unfolded Fold, and a Receiver Weights resize bug.</li>
+              <li>Added <strong>native alarms</strong> on Android for Timeline pump-off alerts.</li>
+              <li>Workspace Management gained <strong>Make Owner</strong>, and RT Sync no longer gets stuck showing "Synced" with no way to rejoin after leaving a workspace.</li>
+              <li>Restyled the mobile footer dock to be shorter and icon-only, added numbered workflow markers to the first four mobile tiles, and gave the desktop Recipe panel a larger, left-aligned matrix.</li>
+            </ul>
+
+            <h3>Current / Next recipes, Line Setup Overview &amp; Help redesign - August 11-12, 2026</h3>
+            <ul>
+              <li>Recipe Setup split into <strong>Current</strong> and <strong>Next</strong> pages. Next holds the plan for the upcoming changeover; <strong>Load Next Recipe</strong> promotes it in one confirmed step, carrying receiver weights, tracking and pump-off forward. The plan is shared over RT Sync, and a dot marks a plan that arrived from another device.</li>
+              <li>Scanned <strong>lot numbers</strong> now carry through from a Heat Sheet scan into the Production Summary.</li>
+              <li>Help was rebuilt as a <strong>visual guide</strong> on a fixed page measure, with restructured navigation and a heat sheet scan example.</li>
+              <li>Added the <strong>Line Setup Overview</strong>, and layer orientation is now derived from the line itself instead of being asked for.</li>
+              <li>Added the <strong>Android app shell</strong> with native camera scanning and Timeline alarms, and <strong>iPhone Home Screen</strong> (PWA) install support.</li>
+              <li>Desktop heads-up banners were replaced by a single <strong>notification center</strong>, and the default theme was renamed <strong>Industrial Slate</strong>.</li>
+            </ul>
+
             <h3>Smart Hopper, RT Sync &amp; admin refinements - August 11, 2026</h3>
             <ul>
               <li><strong>Line 9</strong> now automatically uses <strong>Main + 1–5</strong> hopper naming while linked, including when temporarily offline. Other lines, local-only workspaces, and disconnected devices use <strong>1–6</strong>; changing the label convention never changes saved hopper assignments.</li>
@@ -1736,6 +1782,20 @@
       <div class="segmentedActionRow">
         <button value="cancel" class="secondary" type="submit">Cancel</button>
         <button id="loadNextRecipeConfirm" value="load" class="primary" type="submit">Load Recipe</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="loadCurrentRecipeDialog" class="lineSyncConflictDialog" aria-labelledby="loadCurrentRecipeTitle">
+  <form method="dialog">
+    <div id="loadCurrentRecipeTitle" class="layerTitle">Load Current Recipe into Next?</div>
+    <div class="muted mt10">This replaces the planned Next Recipe with a copy of the current one, so a changeover can be planned by editing what is already running. Nothing on the line changes — the current recipe, receiver hopper weights, tracking, and pump-off state are untouched.</div>
+    <div id="loadCurrentRecipeSummary" class="loadNextSummary mt10"></div>
+    <div class="segmentedActionToolbar mt10">
+      <div class="segmentedActionRow">
+        <button value="cancel" class="secondary" type="submit">Cancel</button>
+        <button id="loadCurrentRecipeConfirm" value="load" class="primary" type="submit">Load Recipe</button>
       </div>
     </div>
   </form>
