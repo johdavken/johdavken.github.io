@@ -5890,7 +5890,8 @@
     }
 
     // RT Sync / Tools / Help fold away behind the rail's divider. Desktop
-    // only: the mobile tile home shows all seven at once (see styles.css).
+    // only: mobile keeps all seven destinations visible, but presents RT
+    // Sync as a connection card and Tools / Help as compact support actions.
     //
     // Nothing here needs to force the group open when one of those three is
     // the active section: the collapse rule exempts .active, so whichever
