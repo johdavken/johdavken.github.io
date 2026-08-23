@@ -31,8 +31,9 @@ test("the footer button's click handler is wrapped in runLineSyncAction, matchin
   assert.match(body, /runLineSyncAction\(/);
 });
 
-test("sync is integrated into the five-control dock with distinct status colors", () => {
-  assert.match(styles,/grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/);
+test("sync is integrated as the fifth text-only status cell with distinct status colors", () => {
+  assert.match(styles,/grid-template-columns:repeat\(4,minmax\(0,1fr\)\) minmax\(68px,\.9fr\)/);
+  assert.match(index,/<span>Refresh<\/span><strong id="lineSyncMobileStatus">Local only<\/strong>/);
   assert.match(styles,/\.cloudSyncFooterStatus\[data-state="synced"\]\{color:var\(--ok\)\}/);
   assert.match(styles,/\.cloudSyncFooterStatus\[data-state="error"\]\{color:var\(--bad\)\}/);
 });

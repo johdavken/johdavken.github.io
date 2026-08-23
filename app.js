@@ -1481,12 +1481,17 @@
         ["dark", "industrial-slate-dark"],
         ["industrial-slate-dark", "industrial-slate-dark"],
         ["gruvbox-dark", "gruvbox-dark"],
-        ["gruvbox-light", "gruvbox-light"]
+        ["gruvbox-light", "gruvbox-light"],
+        ["rose-pine-dawn", "rose-pine-dawn"],
+        ["rose-pine-light", "rose-pine-dawn"],
+        ["everforest", "everforest"],
+        ["evergreen", "everforest"],
+        ["everforest-light", "everforest-light"],
+        ["evergreen-light", "everforest-light"]
       ]);
-      // Removed themes have a deterministic Industrial Slate fallback. This
-      // also safely migrates old locally stored and imported preferences
-      // (including the legacy "light"/"mse" values) without leaving a theme
-      // value that the simplified selector cannot display.
+      // Unknown themes have a deterministic Industrial Slate fallback. Legacy
+      // aliases remain accepted so stored/imported preferences survive theme
+      // naming changes without leaving a value the selector cannot display.
       const theme = migrations.get(saved) || "industrial-slate";
 
       document.documentElement.setAttribute("data-theme", theme);
@@ -3918,13 +3923,13 @@
             </span>
           </label>
           <button id="applyBulkSplit" type="button" class="secondary" disabled>Apply to selected</button>
+        </div>
+        <div class="splitsEditRow splitsEditRowSecondary">
           <div class="splitsBulkActions">
             <div id="splitSelectionStatus" class="tiny splitsSelectionStatus" role="status" aria-live="polite">No hoppers selected</div>
             <button id="selectAllSplits" type="button" class="bulkTextAction">Select all</button>
             <button id="clearSplitSelection" type="button" class="bulkTextAction">Clear selection</button>
           </div>
-        </div>
-        <div class="splitsEditRow splitsEditRowSecondary">
           <button id="clearSelectedCells" type="button" class="bulkTextAction" disabled>Empty cells</button>
           <button id="resetAllSplits" type="button" class="danger">Reset Recipe</button>
         </div>
@@ -5935,8 +5940,8 @@
     function hookWorkspaceNavMore(){
       const button = $("workspaceNavMore");
       if (!button) return;
-      button.addEventListener("click", ()=>setWorkspaceNavExpanded(!workspaceNavExpanded));
-      setWorkspaceNavExpanded(loadNavExpandedPreference(), { persist: false });
+      button.addEventListener("click", ()=>setWorkspaceNavExpanded(!workspaceNavExpanded, { persist: isDesktopLayout() }));
+      setWorkspaceNavExpanded(isDesktopLayout() ? loadNavExpandedPreference() : false, { persist: false });
     }
 
     function setWorkspacePanel(id, { persist = true, reveal = false } = {}){
@@ -5972,6 +5977,7 @@
 
     function showMobileWorkspaceHome(){
       if (isDesktopLayout()) return;
+      setWorkspaceNavExpanded(false, { persist: false });
       document.body.dataset.mobileWorkspace = "home";
       closeFooterMenus();
       $("appFooterMain")?.setAttribute("aria-current", "page");
@@ -6006,7 +6012,6 @@
       if (dialog){ dialog.close(); return true; }
 
       if (activeFooterSheetName){ window.PolynFooterSheetUI.close(); return true; }
-
       if (weightsBulkModeActive){ exitWeightsBulkModeFn?.(); return true; }
       if (splitsBulkModeActive){ exitSplitsBulkModeFn?.(); return true; }
 
@@ -7067,7 +7072,10 @@
     if (top){ top.textContent = syncState.pendingCount ? `${status} (${syncState.pendingCount})` : status; top.dataset.state = stateName; }
     const mobileStatus = $("lineSyncMobileStatus");
     const mobileStatusHost = $("cloudSyncFooterStatus");
-    if (mobileStatus) mobileStatus.textContent = syncState.pendingCount ? `${status} (${syncState.pendingCount})` : status;
+    if (mobileStatus){
+      const footerStatus = status === "Local only" ? "Local" : status;
+      mobileStatus.textContent = syncState.pendingCount ? `${footerStatus} (${syncState.pendingCount})` : footerStatus;
+    }
     if (mobileStatusHost) mobileStatusHost.dataset.state = stateName;
     if (summary){ summary.textContent = status; summary.className = `pill ${status === "Synced" ? "badge-ok" : status === "Error" ? "badge-bad" : ""}`; }
     if ($("lineSyncMessage")) $("lineSyncMessage").textContent = syncState.message || "Local data remains available.";
@@ -7096,6 +7104,17 @@
       const navButton = navStatus.closest(".workspaceNavButton");
       const navState = status === "Synced" ? "ok" : ["Pending", "Offline", "Conflict"].includes(status) ? "warn" : status === "Error" ? "bad" : "neutral";
       navButton?.setAttribute("data-status", navState);
+    }
+    const mobileNavStatus = $("mobileWorkspaceSyncStatusText");
+    if (mobileNavStatus){
+      const mobileStatus = syncState.pendingCount ? `${status} · ${syncState.pendingCount} pending` : status;
+      mobileNavStatus.textContent = `RT Sync is ${mobileStatus.toLowerCase()}`;
+    }
+    const mobileWorkflowWorkspace = $("mobileWorkflowWorkspace");
+    if (mobileWorkflowWorkspace){
+      mobileWorkflowWorkspace.textContent = syncState.connected && syncState.selectedWorkspace?.name
+        ? syncState.selectedWorkspace.name
+        : "LOCAL";
     }
 
     const selector = $("lineSyncWorkspaceSelect");

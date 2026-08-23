@@ -188,9 +188,14 @@ test("selection stays keyboard-reachable: the checkbox is visually hidden, not r
   assert.doesNotMatch(block, /display: none/);
 });
 
-test("the Edit panel is two rows above the grid: entry + selection, then the destructive/structural actions", () => {
+test("the Edit panel is two rows above the grid: values/apply, then selection and structural actions", () => {
   assert.match(splitsArea, /<div class="splitsEditRow splitsEditRowPrimary">/);
   assert.match(splitsArea, /<div class="splitsEditRow splitsEditRowSecondary">/);
+  const primary = splitsArea.slice(splitsArea.indexOf('<div class="splitsEditRow splitsEditRowPrimary">'), splitsArea.indexOf('<div class="splitsEditRow splitsEditRowSecondary">'));
+  const secondary = splitsArea.slice(splitsArea.indexOf('<div class="splitsEditRow splitsEditRowSecondary">'));
+  assert.doesNotMatch(primary, /id="splitSelectionStatus"/);
+  assert.match(secondary, /id="splitSelectionStatus"/);
+  assert.match(secondary, /id="selectAllSplits"/);
   assert.match(splitsArea, /<button id="clearSelectedCells" type="button" class="bulkTextAction" disabled>Empty cells<\/button>/);
   assert.match(splitsArea, /<button id="resetAllSplits" type="button" class="danger">Reset Recipe<\/button>/);
   // Above the grid, not below it (the grid is order 0).
