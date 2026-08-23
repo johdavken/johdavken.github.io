@@ -8121,11 +8121,11 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
  *   ======================================================================= */
 @media (min-width: 701px) and (pointer: coarse){
   /* --- Recipe ------------------------------------------------------
-     Keep the matrix itself at its established reading/touch density and
-     recover height from the chrome around it. On a tablet, Edit now uses
-     two deliberate toolbar bands (values/apply, then selection/actions)
-     instead of allowing the selection controls to wrap into an accidental
-     third band. */
+     Keep hopper cells at their established reading/touch density and
+     recover height from the chrome and oversized layer headers around
+     them. On a tablet, Edit uses two deliberate toolbar bands
+     (values/apply, then selection/actions) instead of allowing selection
+     controls to wrap into an accidental third band. */
   body[data-mobile-workspace="panel"] #splitsBlock.mobile-active > summary{
     min-height:36px;
     padding:3px 2px 6px;
@@ -8200,7 +8200,144 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
     min-height:28px;
     padding:3px 9px;
   }
+}
 
+/* Recipe state styling also follows the tablet-width viewport when the
+   layout is previewed in a desktop browser. Real touch tablets wider than
+   that band retain the treatment through the coarse-pointer alternative. */
+@media (min-width: 701px) and (max-width: 1200px), (min-width: 701px) and (pointer: coarse){
+  /* The phone matrix established a clearer distinction between persistent
+     tracking and temporary Edit selection. Carry that same language onto
+     tablets: tracking changes only the hopper badge, while Edit keeps a
+     restrained one-pixel outline plus the tiny corner label. The cell fill
+     remains its ordinary alternating-column fill in both states. */
+  #splitsArea .splitsMatrix tbody .splitMatrixCell{
+    --tablet-recipe-cell-bg:transparent;
+    position:relative;
+    overflow:hidden;
+  }
+  #splitsArea .splitsMatrix tbody td.splitMatrixCell:nth-child(even){
+    --tablet-recipe-cell-bg:color-mix(in srgb,var(--row-bg-2) 55%,transparent);
+  }
+  #splitsArea[data-recipe-view="summary"] .splitsMatrix tbody .splitMatrixCell.tracked,
+  #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.tracked:not(.selected){
+    background:var(--tablet-recipe-cell-bg);
+    border-color:var(--row-border-2);
+    box-shadow:none;
+  }
+  #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.selected{
+    background:var(--tablet-recipe-cell-bg);
+    border-color:color-mix(in srgb,var(--focus-border) 65%,var(--row-border-2));
+    box-shadow:inset 0 0 0 1px var(--focus-border);
+  }
+  #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.selected::after{
+    content:"EDIT";
+    position:absolute;
+    top:3px;
+    right:4px;
+    z-index:3;
+    color:var(--focus-border);
+    font-size:6px;
+    font-weight:950;
+    line-height:1;
+    letter-spacing:.1em;
+    pointer-events:none;
+  }
+  #splitsArea .splitsMatrix .splitMatrixCell.tracked .splitCellHopperName{
+    position:relative;
+    min-width:30px;
+    height:18px;
+    padding:0 8px 0 5px;
+    border-radius:4px 9px 9px 4px;
+    background:color-mix(in srgb,#72b9e8 22%,var(--tablet-recipe-cell-bg));
+    color:#397fae;
+    box-shadow:inset 0 0 0 1px color-mix(in srgb,#4d9bd0 55%,transparent);
+  }
+  #splitsArea .splitsMatrix .splitMatrixCell.tracked .splitCellHopperName::after{
+    content:"";
+    position:absolute;
+    right:3px;
+    width:4px;
+    height:4px;
+    border-radius:50%;
+    background:currentColor;
+    box-shadow:0 0 0 2px color-mix(in srgb,#72b9e8 16%,transparent);
+  }
+
+  /* Tablet headers now use the phone matrix's compact inline hierarchy:
+     small layer letter, dominant percentage, quiet total and Match action.
+     This replaces the desktop 64px faded watermark without reducing any
+     information or changing the hopper rows below it. */
+  #splitsArea .splitsMatrix thead th{
+    padding:4px 2px;
+  }
+  #splitsArea .splitsMatrix .splitLayerHeader{
+    border-bottom:1px solid color-mix(in srgb,var(--focus-border) 38%,var(--border));
+  }
+  #splitsArea .splitsMatrix .splitLayerMain{
+    display:flex;
+    align-items:baseline;
+    justify-content:center;
+    gap:2px;
+    min-height:26px;
+    padding:0;
+  }
+  #splitsArea .splitsMatrix .splitLayerTitle,
+  #splitsArea[data-recipe-view="edit"] .splitsMatrix .splitLayerTitle{
+    display:inline-flex;
+    position:static;
+    width:auto;
+    height:auto;
+    min-height:0;
+    padding:0;
+    transform:none;
+    color:var(--title);
+    font-size:10px;
+    line-height:1;
+    opacity:.72;
+  }
+  #splitsArea .splitsMatrix .splitLayerPct{
+    margin-top:0;
+    padding:0;
+    border:0;
+  }
+  #splitsArea .splitsMatrix .splitLayerPct input:not([type="checkbox"]):not([type="radio"]){
+    width:31px;
+    min-width:31px;
+    min-height:0;
+    height:auto;
+    padding:0;
+    color:var(--title);
+    font-size:16px;
+    font-weight:900;
+    line-height:18px;
+  }
+  #splitsArea .splitsMatrix .splitLayerPct span{
+    color:var(--muted);
+    font-size:9px;
+  }
+  #splitsArea .splitsMatrix .splitColumnTotal{
+    margin-top:1px;
+    min-height:1.1em;
+    font-size:8px;
+    line-height:1.1;
+  }
+  #splitsArea .splitsMatrix .splitCopyBtn{
+    display:grid;
+    place-items:center;
+    width:100%;
+    min-height:18px;
+    margin:1px auto 0;
+    padding:0;
+    border:0;
+    border-radius:5px;
+    background:transparent;
+    color:var(--focus-border);
+    font-size:8px;
+  }
+}
+
+@media (min-width: 701px) and (pointer: coarse){
   /* --- Line Setup ---------------------------------------------------
      The phone layout stacks Changeover/Output above Overview and caps the
      pair at 540px centered, which on an unfolded Fold leaves a wide empty
@@ -8235,12 +8372,9 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
   #weightsBlock .blockBody{ max-width:none; }
   .mobileWeightsLayer{ gap:5px; }
 
-  /* Recipe: the matrix's structure, controls, tracking and density are
-     left exactly as they are here - see the dedicated overflow-fix block
-     below for why resin-name sizing now lives there instead of here (it
-     turned out the matrix did NOT already fit five columns at this width;
-     this rule used to just enlarge text inside a table that was silently
-     overflowing past the visible viewport). */
+  /* Recipe state and layer-header refinements live above. Hopper-row and
+     resin-detail sizing remain unchanged; the overflow rules below only
+     make the five existing columns share the available tablet width. */
 }
 
 /* =======================================================================

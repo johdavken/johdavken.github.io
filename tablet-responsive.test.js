@@ -17,6 +17,7 @@ const desktopCss = fs.readFileSync("desktop.css", "utf8");
 // is duplicated verbatim between the stylesheet and app.js on purpose.
 const DESKTOP_QUERY = "(min-width: 901px) and (pointer: fine)";
 const WIDE_TOUCH_QUERY = "(min-width: 701px) and (pointer: coarse)";
+const TABLET_RECIPE_QUERY = "(min-width: 701px) and (max-width: 1200px), (min-width: 701px) and (pointer: coarse)";
 
 // Slice one function's own body, bounded by the next declaration at the
 // same indentation, rather than by a fixed character count. A fixed window
@@ -212,7 +213,7 @@ test("the wide-touch presentation block no longer claims the Recipe matrix alrea
   assert.doesNotMatch(block, /already works well here/);
 });
 
-test("wide touch reclaims Recipe height from chrome and controls without changing matrix cells", () => {
+test("wide touch reclaims Recipe height from chrome and controls without shrinking hopper rows", () => {
   const start = styles.indexOf(`@media ${WIDE_TOUCH_QUERY}`);
   const block = styles.slice(start, styles.indexOf("\n}", start) + 2);
   assert.match(block, /#splitsBlock\.mobile-active > summary\{\s*\n\s*min-height:36px;/);
@@ -220,8 +221,28 @@ test("wide touch reclaims Recipe height from chrome and controls without changin
   assert.match(block, /#splitsArea \.splitsEditRowPrimary\{[\s\S]*?grid-template-columns:minmax\(0,1fr\) minmax\(0,1fr\) auto;/);
   assert.match(block, /#splitsArea \.splitsEditRowSecondary\{[\s\S]*?flex-wrap:nowrap;/);
   assert.match(block, /#splitsArea \.splitsEditRowSecondary :is\(\.bulkTextAction,button\.danger\)\{[\s\S]*?min-height:28px;/);
-  assert.doesNotMatch(block, /\.splitMatrixCell\s*\{/);
-  assert.doesNotMatch(block, /\.splitLayerMain\s*\{/);
+  assert.doesNotMatch(block, /\.splitMatrixCell\{[^}]*?(?:height|min-height|max-height):/);
+  assert.doesNotMatch(block, /\.splitCellResinText\{[^}]*?font-size:/);
+});
+
+test("tablet-width and wide-touch tracking and Edit selection use the mobile notched badge and corner tag", () => {
+  const start = styles.indexOf(`@media ${TABLET_RECIPE_QUERY}`);
+  const block = styles.slice(start, styles.indexOf("\n}", start) + 2);
+  assert.match(block, /\.splitMatrixCell\.tracked,[\s\S]*?\.splitMatrixCell\.tracked:not\(\.selected\)\{[\s\S]*?background:var\(--tablet-recipe-cell-bg\);[\s\S]*?box-shadow:none;/);
+  assert.match(block, /\.splitMatrixCell\.selected\{[\s\S]*?background:var\(--tablet-recipe-cell-bg\);[\s\S]*?box-shadow:inset 0 0 0 1px var\(--focus-border\);/);
+  assert.match(block, /\.splitMatrixCell\.selected::after\{[\s\S]*?content:"EDIT";[\s\S]*?font-size:6px;/);
+  assert.match(block, /\.splitMatrixCell\.tracked \.splitCellHopperName\{[\s\S]*?border-radius:4px 9px 9px 4px;[\s\S]*?color:#397fae;/);
+  assert.match(block, /\.splitMatrixCell\.tracked \.splitCellHopperName::after\{[\s\S]*?right:3px;[\s\S]*?width:4px;[\s\S]*?border-radius:50%;/);
+});
+
+test("tablet-width and wide-touch layer headers use the compact mobile hierarchy instead of desktop watermarks", () => {
+  const start = styles.indexOf(`@media ${TABLET_RECIPE_QUERY}`);
+  const block = styles.slice(start, styles.indexOf("\n}", start) + 2);
+  assert.match(block, /\.splitLayerMain\{[\s\S]*?align-items:baseline;[\s\S]*?min-height:26px;/);
+  assert.match(block, /\.splitLayerTitle,[\s\S]*?\.splitLayerTitle\{[\s\S]*?position:static;[\s\S]*?font-size:10px;[\s\S]*?opacity:\.72;/);
+  assert.match(block, /\.splitLayerPct input:not\(\[type="checkbox"\]\):not\(\[type="radio"\]\)\{[\s\S]*?font-size:16px;/);
+  assert.match(block, /\.splitColumnTotal\{[\s\S]*?font-size:8px;/);
+  assert.doesNotMatch(block, /\.splitLayerTitle\{[^}]*font-size:64px/);
 });
 
 /* -----------------------------------------------------------------------
