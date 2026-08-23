@@ -6,10 +6,9 @@
 //
 // Two properties carry the whole design and are what this file guards:
 //
-//   Desktop only. The mobile tile home is a 2-column grid of all seven
-//   tiles - there is no rail to shorten and no divider to draw - so the
-//   collapse lives entirely inside the desktop media query and the divider
-//   is display:none at top level.
+//   Desktop uses the divider as a compact More pill. Mobile deliberately
+//   reuses the same disclosure state as its full-width Workspace & support
+//   row beneath the connected four-step production rail.
 //
 //   The active section is never hidden. A rail that folds away the row you
 //   are standing on leaves no "you are here", so the collapse rule exempts
@@ -95,12 +94,13 @@ test("exactly the last three sections are marked foldaway, and the numbered four
  *   Scope: desktop rail only
  * -------------------------------------------------------------------- */
 
-test("the divider is invisible outside the desktop rail, so the tile home still shows all seven", () => {
+test("the divider defaults hidden, then desktop and mobile opt into their own presentations", () => {
   assert.equal(enclosingAtRule(".workspaceNavDivider{ display: none; }"), null);
   assert.equal(enclosingAtRule("  .workspaceNavDivider{\n    position: relative;"), DESKTOP_QUERY);
+  assert.match(styles, /body\[data-mobile-workspace="home"\] \.workspaceNavDivider\{[\s\S]*?display:grid;/);
 });
 
-test("the collapse itself is desktop-only and exempts the active section", () => {
+test("the desktop collapse rule remains scoped to the rail and exempts the active section", () => {
   const rule = ".workspaceNav:not(.navExpanded) .workspaceNavExtra:not(.active){ display: none; }";
   assert.match(styles, new RegExp(rule.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   assert.equal(enclosingAtRule(rule), DESKTOP_QUERY);
@@ -146,9 +146,14 @@ test("toggling drives the class, the label and the accessible state together", (
   assert.match(body, /if \(persist\) saveNavExpandedPreference\(workspaceNavExpanded\);/);
 });
 
-test("the stored state is applied on load without being written straight back", () => {
-  assert.match(app, /setWorkspaceNavExpanded\(loadNavExpandedPreference\(\), \{ persist: false \}\);/);
+test("desktop restores stored state while mobile starts with its disclosure collapsed", () => {
+  assert.match(app, /setWorkspaceNavExpanded\(isDesktopLayout\(\) \? loadNavExpandedPreference\(\) : false, \{ persist: false \}\);/);
   assert.match(app, /\n    hookWorkspaceNavMore\(\);/);
+});
+
+test("mobile disclosure state is transient and collapses again on return Home", () => {
+  assert.match(app, /setWorkspaceNavExpanded\(!workspaceNavExpanded, \{ persist: isDesktopLayout\(\) \}\)/);
+  assert.match(app, /function showMobileWorkspaceHome\(\)\{[\s\S]*?setWorkspaceNavExpanded\(false, \{ persist: false \}\);/);
 });
 
 test("navigation never force-expands, which would undo a deliberate collapse", () => {

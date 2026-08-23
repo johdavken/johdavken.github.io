@@ -362,8 +362,10 @@ test("Help carries a Privacy Policy link, inside the guide body rather than buri
   const version = androidBuild.match(/versionName "([^"]+)"/);
   assert.ok(version, "expected Android's release versionName");
   assert.match(block, new RegExp(`class="helpAppVersion"[^>]*>v${version[1]}<`));
+  assert.match(html, new RegExp(`class="mobileFooterVersion"[^>]*>v${version[1]}<`));
   assert.match(styles, /\.helpPrivacy\{[\s\S]*?grid-template-columns: minmax\(0,1fr\) auto/);
   assert.match(styles, /\.helpAppVersion\{[\s\S]*?justify-self: end/);
+  assert.match(styles, /\.mobileFooterVersion\{[\s\S]*?bottom:calc\(var\(--app-dock-height\) \+ env\(safe-area-inset-bottom\) \+ 2px\);[\s\S]*?text-align:center/);
 });
 
 test("the Help link renders at every width - it is not gated behind a mobile-only or desktop-only rule", () => {

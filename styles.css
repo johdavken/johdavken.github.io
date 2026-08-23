@@ -287,7 +287,10 @@ main{
    rail below opts into collapsing: the mobile tile home shows all seven
    tiles at once, where there is no rail to shorten and no divider to draw. */
 .workspaceNavDivider{ display: none; }
-.mobileNavHint{ display:none!important; }
+.mobileWorkflowLabel,
+.mobileRailChev,
+.mobileWorkspaceNavMore,
+.mobileWorkspaceSyncStatus{ display:none; }
 
 .workspaceNav,
 .workspaceStatusBar{ display: none; }
@@ -2894,16 +2897,16 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     min-height: 30px;
     padding: 5px 14px;
   }
-  .splitsEditRowPrimary > .splitsBulkActions{
+  .splitsEditRowSecondary > .splitsBulkActions{
     display: flex;
     align-items: center;
     gap: 10px;
     flex: 0 0 auto;
-    margin-left: auto;
+    margin: 0;
     padding-top: 0;
     border-top: 0;
   }
-  .splitsEditRowPrimary .splitsSelectionStatus{ margin: 0; white-space: nowrap; }
+  .splitsEditRowSecondary .splitsSelectionStatus{ margin: 0; white-space: nowrap; }
   .splitsEditRowSecondary .splitsRearrangeAction{ margin-left: auto; }
 }
 
@@ -3353,9 +3356,22 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     --compact-recipe-row-bg:color-mix(in srgb,var(--row-bg-2) 76%,var(--panel2));
   }
   .splitsMatrix.compactMobileRecipe .splitMatrixCell.tracked:not(.selected){
-    background:color-mix(in srgb,#72b9e8 18%,var(--compact-recipe-row-bg));
-    border-color:color-mix(in srgb,#4d9bd0 72%,var(--row-border-2));
-    box-shadow:inset 0 0 0 2px #4d9bd0;
+    background:var(--compact-recipe-row-bg);
+    border-color:var(--row-border-2);
+    box-shadow:none;
+  }
+  #splitsArea[data-recipe-view="edit"] .splitsMatrix.compactMobileRecipe .splitMatrixCell.selected::after{
+    content:"EDIT";
+    position:absolute;
+    top:2px;
+    right:3px;
+    z-index:3;
+    color:var(--focus-border);
+    font-size:5px;
+    font-weight:950;
+    line-height:1;
+    letter-spacing:.1em;
+    pointer-events:none;
   }
   .splitsMatrix.compactMobileRecipe tbody tr:hover > .splitMatrixCell:not(.selected){
     background:var(--compact-recipe-row-bg);
@@ -3378,15 +3394,25 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     line-height:1;
   }
   .splitsMatrix.compactMobileRecipe .splitMatrixCell.tracked .splitCellHopperName{
+    position:relative;
+    min-width:30px;
+    height:18px;
+    padding:0 8px 0 5px;
+    border-radius:4px 9px 9px 4px;
+    background:color-mix(in srgb,#72b9e8 22%,var(--compact-recipe-row-bg));
     color:#397fae;
+    box-shadow:inset 0 0 0 1px color-mix(in srgb,#4d9bd0 55%,transparent);
   }
   .splitsMatrix.compactMobileRecipe .splitMatrixCell.tracked .splitCellHopperName::after{
     content:"";
+    position:absolute;
+    right:3px;
     width:4px;
     height:4px;
-    margin-left:3px;
+    margin:0;
     border-radius:50%;
     background:currentColor;
+    box-shadow:0 0 0 2px color-mix(in srgb,#72b9e8 16%,transparent);
   }
   .splitsMatrix.compactMobileRecipe .splitCellHopperName.smart{ color:color-mix(in srgb,#2f9e62 78%,var(--text)); }
   .splitsMatrix.compactMobileRecipe .splitClearButton{ display:none; }
@@ -6372,6 +6398,7 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
   .workspaceNavButton:hover{ border-color:color-mix(in srgb,var(--tile-accent) 64%,var(--border)); transform:translateY(-1px); }
   .workspaceNavButton:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
   body[data-mobile-workspace="panel"] .workspaceNav{ display:none; }
+  body:not([data-mobile-workspace="home"]) .mobileBrand{ display:none; }
   body[data-mobile-workspace="home"] .workspaceContent > .workspacePanel{ display:none!important; }
   body[data-mobile-workspace="panel"] .workspaceContent > .workspacePanel:not(.mobile-active){ display:none!important; }
   body[data-mobile-workspace="panel"] .workspaceContent > .workspacePanel.mobile-active > summary{
@@ -7087,6 +7114,7 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
 .displaySheetHead small{display:block;margin-top:2px;color:var(--muted);font-size:11px}
 .visuallyHidden{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
 .appOverlayRoot{position:fixed;inset:0;z-index:70;pointer-events:none}
+.mobileFooterVersion{display:none}
 /* The root spans the viewport and is click-through on purpose, so it never
    blocks the page beneath it - but anything actually hosted inside it has to
    take clicks back, or it inherits pointer-events:none and every click within
@@ -7111,10 +7139,8 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
 .footerSheetBackdrop[hidden]{display:none!important}
 
 @media (width <= 900px), (min-width: 901px) and (pointer: coarse){
-  /* 72px reduced 10% - everything anchored off this one variable (the dock
-     itself, main's bottom padding, sheet/tray/banner offsets) shrinks with
-     it, so nothing needs a separate adjustment. */
-  :root{--app-dock-height:64.8px}
+  /* Text-only status rail: one 32px row, shared by navigation and RT Sync. */
+  :root{--app-dock-height:32px}
 
   /* Mobile is a document-scrolling shell. Keep the viewport fill dynamic so
      browser chrome changes do not become an extra content-sized block, while
@@ -7260,93 +7286,226 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
     color:var(--bg);
   }
 
-  /* Home concept 2: keep the four numbered destinations as one production
-     workflow, then give connection and support actions a separate visual
-     hierarchy. The DOM order and click targets are unchanged, so this is a
-     mobile presentation layer over the same seven navigation destinations. */
-  body[data-mobile-workspace="home"] #workspaceNavLineSync{
-    position:relative;
-    grid-column:1 / -1;
-    display:grid;
-    grid-template-columns:minmax(0,1fr) auto;
-    align-content:center;
-    min-height:128px;
-    padding:31px 82px 14px 14px;
-    border:1px solid color-mix(in srgb,var(--tile-accent) 56%,var(--border));
-    border-radius:14px;
-    background:linear-gradient(135deg,color-mix(in srgb,var(--tile-accent) 15%,var(--row-bg)),var(--row-bg) 76%);
-    box-shadow:inset 0 1px 0 color-mix(in srgb,var(--tile-accent) 28%,transparent);
+  /* Connected production rail: four primary steps form one vertical sequence.
+     The existing More disclosure becomes the single mobile entry to the
+     secondary RT Sync / Tools / Help group, while desktop keeps its pill. */
+  body[data-mobile-workspace="home"] .workspaceNav{
+    grid-template-columns:minmax(0,1fr);
+    grid-auto-rows:auto;
+    gap:0;
+    padding:10px 17px 18px;
   }
-  body[data-mobile-workspace="home"] #workspaceNavLineSync::before{
-    content:"LINE CONNECTION";
-    position:absolute;
-    top:10px;
-    left:14px;
-    color:color-mix(in srgb,var(--tile-accent) 78%,var(--muted));
+  body[data-mobile-workspace="home"] .mobileWorkflowLabel{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin:0 0 4px;
+    color:var(--muted);
     font-size:10px;
     font-weight:850;
-    letter-spacing:.1em;
+    letter-spacing:.11em;
+    text-transform:uppercase;
   }
-  body[data-mobile-workspace="home"] #workspaceNavLineSync::after{
-    content:"Open";
-    position:absolute;
-    right:14px;
-    bottom:14px;
-    min-width:52px;
-    padding:7px 9px;
-    border:1px solid color-mix(in srgb,var(--tile-accent) 66%,var(--border));
-    border-radius:8px;
-    background:color-mix(in srgb,var(--tile-accent) 14%,var(--panel));
+  body[data-mobile-workspace="home"] .mobileWorkflowLabel::after{
+    content:"";
+    order:2;
+    height:1px;
+    flex:1;
+    background:var(--border2);
+  }
+  body[data-mobile-workspace="home"] .mobileWorkflowLabel > span{order:1}
+  body[data-mobile-workspace="home"] .mobileWorkflowLabel > strong{
+    order:3;
+    max-width:42%;
+    overflow:hidden;
     color:var(--title);
-    font-size:11px;
-    font-weight:800;
-    text-align:center;
+    font-size:10px;
+    font-weight:850;
+    text-align:right;
+    text-overflow:ellipsis;
+    white-space:nowrap;
   }
-  body[data-mobile-workspace="home"] #workspaceNavLineSync > span:first-child{
-    grid-column:1 / -1;
-    font-size:15px;
-  }
-  body[data-mobile-workspace="home"] #workspaceNavLineSync > small{
-    grid-column:1;
-    margin-top:1px;
-  }
-  body[data-mobile-workspace="home"] #workspaceNavLineSync .mobileNavHint{
-    display:block!important;
-    grid-column:1;
-    margin-top:4px;
-    color:var(--muted);
-    font-size:10.5px;
-    font-weight:500;
-    line-height:1.3;
-    letter-spacing:0;
-    text-transform:none;
-  }
-  body[data-mobile-workspace="home"] :is(#workspaceNavTools,#workspaceNavHelp){
-    align-content:start;
-    gap:6px;
-    min-height:110px;
-    padding:14px 13px 12px;
-    border:1px solid var(--border2);
-    border-radius:12px;
-    background:color-mix(in srgb,var(--panel) 82%,transparent);
+  body[data-mobile-workspace="home"] .workspaceNavButton[data-step],
+  body[data-mobile-tile-style] .workspaceNav .workspaceNavButton[data-step]{
+    position:relative;
+    display:grid;
+    grid-template-columns:minmax(0,1fr);
+    align-content:center;
+    gap:2px;
+    min-height:82px;
+    padding:11px 30px 11px 54px;
+    border:0;
+    border-bottom:1px solid var(--border2);
+    border-radius:0;
+    background:transparent;
     box-shadow:none;
   }
-  body[data-mobile-workspace="home"] :is(#workspaceNavTools,#workspaceNavHelp) .workspaceTileIcon{
+  body[data-mobile-workspace="home"] .workspaceNavButton[data-step] > span:first-child{
+    grid-column:1;
+    gap:9px;
+    font-size:15px;
+  }
+  body[data-mobile-workspace="home"] .workspaceNavButton[data-step] > small{
+    grid-column:1;
+    margin-left:37px;
+    font-size:10.5px;
+  }
+  body[data-mobile-workspace="home"] .workspaceNavButton[data-step] > small::before{
+    display:none;
+  }
+  body[data-mobile-workspace="home"] .workspaceNavButton[data-step] .workspaceTileIcon{
     width:28px;
     height:28px;
   }
-  body[data-mobile-workspace="home"] :is(#workspaceNavTools,#workspaceNavHelp) > span{
-    align-items:flex-start;
-    flex-direction:column;
-    gap:7px;
-    font-size:15px;
+  body[data-mobile-workspace="home"] .workspaceNavButton[data-step]::before{
+    content:attr(data-step);
+    position:absolute;
+    z-index:2;
+    top:50%;
+    bottom:auto;
+    left:12px;
+    width:27px;
+    height:27px;
+    transform:translateY(-50%);
+    border-radius:50%;
+    background:var(--tile-accent);
+    color:#fff;
+    font-family:"Arial Narrow","Roboto Condensed",Impact,sans-serif;
+    font-size:14px;
+    font-weight:800;
   }
-  body[data-mobile-workspace="home"] :is(#workspaceNavTools,#workspaceNavHelp) > small{
-    margin-top:0;
-    font-size:11.5px;
+  body[data-mobile-workspace="home"] .workspaceNavButton:is([data-step="1"],[data-step="2"],[data-step="3"])::after{
+    content:"";
+    position:absolute;
+    z-index:1;
+    top:calc(50% + 13px);
+    bottom:auto;
+    left:25px;
+    width:1px;
+    height:calc(100% - 26px);
+    border:0;
+    background:var(--border2);
   }
-  body[data-mobile-workspace="home"] :is(#workspaceNavTools,#workspaceNavHelp) > small::before{
-    display:none;
+  body[data-mobile-workspace="home"] .workspaceNavButton[data-step="4"]::after{display:none}
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"])[data-mobile-workspace="home"] .workspaceNav .workspaceNavButton[data-step]::before{
+    color:var(--bg);
+  }
+  body[data-mobile-workspace="home"] .mobileRailChev{
+    position:absolute;
+    top:50%;
+    right:8px;
+    display:block;
+    transform:translateY(-50%);
+    color:var(--muted);
+    font-size:22px;
+    font-weight:400;
+  }
+  body[data-mobile-workspace="home"] .workspaceNavDivider{
+    position:relative;
+    display:grid;
+    grid-column:1;
+    gap:8px;
+    margin:14px 0 0;
+    padding-top:5px;
+    border-top:1px solid var(--border2);
+  }
+  body[data-mobile-workspace="home"] .workspaceNavMore{
+    display:flex;
+    align-items:center;
+    width:100%;
+    min-height:68px;
+    padding:10px 12px;
+    border:1px solid color-mix(in srgb,var(--ok) 54%,var(--border2));
+    border-radius:12px;
+    background:color-mix(in srgb,var(--ok) 5%,var(--panel));
+    color:var(--text);
+    text-align:left;
+  }
+  body[data-mobile-workspace="home"] #workspaceNavMoreLabel{display:none}
+  body[data-mobile-workspace="home"] .mobileWorkspaceNavMore{
+    display:flex;
+    align-items:center;
+    gap:11px;
+    min-width:0;
+  }
+  body[data-mobile-workspace="home"] .mobileWorkspaceNavMore > span:last-child{min-width:0}
+  body[data-mobile-workspace="home"] .mobileWorkspaceNavMore strong{
+    display:block;
+    color:var(--title);
+    font-size:13px;
+    letter-spacing:0;
+    text-transform:none;
+  }
+  body[data-mobile-workspace="home"] .mobileWorkspaceNavMore small{
+    display:block;
+    margin-top:2px;
+    color:var(--muted);
+    font-size:9px;
+    font-weight:500;
+    letter-spacing:0;
+    text-transform:none;
+  }
+  body[data-mobile-workspace="home"] .mobileWorkspaceNavMoreIcons{display:flex}
+  body[data-mobile-workspace="home"] .mobileWorkspaceNavMoreIcons i{
+    display:grid;
+    place-items:center;
+    width:26px;
+    height:26px;
+    margin-left:-5px;
+    border:2px solid var(--panel);
+    border-radius:50%;
+    background:var(--row-bg);
+    color:var(--focus-border);
+    font-size:10px;
+    font-style:normal;
+  }
+  body[data-mobile-workspace="home"] .mobileWorkspaceNavMoreIcons i:first-child{
+    margin-left:0;
+    color:var(--ok);
+  }
+  body[data-mobile-workspace="home"] .workspaceNavMoreChev{
+    width:18px;
+    height:18px;
+    margin-left:auto;
+    color:var(--muted);
+    transition:transform .18s ease;
+  }
+  body[data-mobile-workspace="home"] .workspaceNav.navExpanded .workspaceNavMoreChev{transform:rotate(180deg)}
+  body[data-mobile-workspace="home"] .mobileWorkspaceSyncStatus{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    color:var(--muted);
+    font-size:9px;
+    font-weight:500;
+  }
+  body[data-mobile-workspace="home"] .mobileWorkspaceSyncStatus i{
+    width:6px;
+    height:6px;
+    border-radius:50%;
+    background:currentColor;
+  }
+  body[data-mobile-workspace="home"] .workspaceNav.navExpanded .mobileWorkspaceSyncStatus{display:none}
+  body[data-mobile-workspace="home"] .workspaceNav:not(.navExpanded) .workspaceNavExtra:not(.active){display:none}
+  body[data-mobile-workspace="home"] .workspaceNav.navExpanded .workspaceNavExtra{
+    grid-column:1;
+    min-height:58px;
+    padding:10px 12px;
+    border:0;
+    border-bottom:1px solid var(--border2);
+    border-radius:0;
+    background:transparent;
+    box-shadow:none;
+  }
+  body[data-mobile-workspace="home"] .workspaceNav.navExpanded .workspaceNavExtra > span{
+    font-size:13px;
+  }
+  body[data-mobile-workspace="home"] .workspaceNav.navExpanded .workspaceNavExtra .workspaceTileIcon{
+    width:28px;
+    height:28px;
+  }
+  body[data-mobile-workspace="home"] .workspaceNav.navExpanded .workspaceNavExtra > small{
+    font-size:10px;
   }
 
   .footerBar{
@@ -7637,6 +7796,98 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
     color:var(--title);
     transform:translateY(1px);
   }
+
+  /* Text-only footer menu. The icons remain in the DOM because Account is
+     reparented into the desktop utility cluster, but mobile paints words
+     only. Refresh doubles as the live RT Sync status cell. */
+  .footerBar{
+    grid-template-columns:repeat(4,minmax(0,1fr)) minmax(68px,.9fr);
+    height:calc(var(--app-dock-height) + env(safe-area-inset-bottom));
+    padding:0 max(0px,env(safe-area-inset-right)) env(safe-area-inset-bottom) max(0px,env(safe-area-inset-left));
+    border-top:1px solid var(--border2);
+    background:color-mix(in srgb,var(--panelOpen) 96%,transparent);
+    backdrop-filter:blur(12px);
+  }
+  .footerBar::before,.footerBar::after{display:none}
+  .appDockControl,.cloudSyncFooterStatus{
+    min-height:32px;
+    padding:0 3px;
+    border-radius:0;
+    flex-direction:row;
+    gap:3px;
+    box-shadow:none;
+  }
+  .appDockControl svg,.cloudSyncFooterStatus svg{display:none}
+  .appDockControl > span:not(.mobileNotificationsBadge),
+  .cloudSyncFooterStatus > span,
+  .cloudSyncFooterStatus > strong{
+    position:static;
+    display:block;
+    width:auto;
+    height:auto;
+    overflow:hidden;
+    clip:auto;
+    color:inherit;
+    font-size:9px;
+    font-weight:800;
+    line-height:1;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .appDockControl[aria-current="page"]{color:var(--title)}
+  .appDockMain,
+  .appDockMain[aria-current="page"],
+  .appDockMain:not([aria-current="page"]){
+    width:100%;
+    border:0;
+    border-radius:0;
+    background:transparent;
+  }
+  .mobileNotificationsToggle{justify-content:center;color:var(--warn)}
+  .mobileNotificationsToggle > span:last-child{order:1}
+  .mobileNotificationsBadge{
+    position:static;
+    order:2;
+    display:grid;
+    min-width:12px;
+    height:12px;
+    padding:0 3px;
+    border:0;
+    border-radius:4px;
+    background:var(--warn);
+    color:#171a1c;
+    font-size:7px;
+    line-height:1;
+  }
+  .mobileNotificationsBadge[data-severity="error"]{border-radius:50%;background:var(--bad);color:#fff}
+  .cloudSyncFooterStatus{
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    gap:1px;
+    border:0;
+    border-left:1px solid var(--border2);
+    background:color-mix(in srgb,var(--ok) 7%,transparent);
+    color:var(--ok);
+  }
+  .cloudSyncFooterStatus > span{font-size:9px}
+  .cloudSyncFooterStatus > strong{max-width:100%;font-size:7px;font-weight:850;text-transform:uppercase}
+  .mobileFooterVersion{
+    position:fixed;
+    right:0;
+    bottom:calc(var(--app-dock-height) + env(safe-area-inset-bottom) + 2px);
+    left:0;
+    z-index:59;
+    display:block;
+    color:var(--muted);
+    font-size:7px;
+    font-weight:700;
+    line-height:1;
+    letter-spacing:.06em;
+    text-align:center;
+    pointer-events:none;
+  }
+
 }
 
 @media (min-width:901px) and (pointer: fine){
@@ -7869,6 +8120,87 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
  *   stays coarse-pointer.
  *   ======================================================================= */
 @media (min-width: 701px) and (pointer: coarse){
+  /* --- Recipe ------------------------------------------------------
+     Keep the matrix itself at its established reading/touch density and
+     recover height from the chrome around it. On a tablet, Edit now uses
+     two deliberate toolbar bands (values/apply, then selection/actions)
+     instead of allowing the selection controls to wrap into an accidental
+     third band. */
+  body[data-mobile-workspace="panel"] #splitsBlock.mobile-active > summary{
+    min-height:36px;
+    padding:3px 2px 6px;
+  }
+  body[data-mobile-workspace="panel"] #splitsBlock.mobile-active > summary .mobileSectionHeaderIcon{
+    width:22px;
+    height:22px;
+  }
+  body[data-mobile-workspace="panel"] #splitsBlock.mobile-active > .blockBody{
+    padding-top:5px;
+  }
+  #splitsBlock .recipeHeaderRow{ gap:8px; }
+  #splitsBlock .recipePageTab{
+    min-height:32px;
+    padding:4px 12px 3px;
+  }
+  #splitsBlock .recipeViewToggle{ gap:5px; margin-bottom:2px; }
+  #splitsBlock .recipeViewToggle button{
+    min-height:26px;
+    padding:3px 10px;
+  }
+  #splitsArea > .splitsBulkBar{
+    margin-bottom:0;
+    padding:6px 8px;
+  }
+  #splitsArea .splitsEditRow{ gap:6px 8px; }
+  #splitsArea .splitsEditRowPrimary{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;
+  }
+  #splitsArea .splitsEditRowPrimary > .splitsBulkField{
+    grid-template-columns:auto minmax(48px,1fr);
+    padding:3px 6px;
+  }
+  #splitsArea .splitsEditRowPrimary > .splitsBulkFieldPct{
+    grid-template-columns:auto minmax(68px,1fr);
+  }
+  #splitsArea .splitsEditRowPrimary > .splitsBulkField input{
+    min-height:26px;
+    height:26px;
+    padding-block:2px;
+  }
+  #splitsArea .splitsEditRowPrimary > button{
+    min-height:28px;
+    padding:3px 10px;
+  }
+  #splitsArea .splitsEditRowSecondary{
+    flex-wrap:nowrap;
+    gap:6px;
+    margin-top:5px;
+    padding-top:5px;
+  }
+  #splitsArea .splitsEditRowSecondary > .splitsBulkActions{
+    min-width:0;
+    gap:6px;
+  }
+  #splitsArea .splitsEditRowSecondary :is(.bulkTextAction,button.danger){
+    min-height:28px;
+    padding:3px 8px;
+    white-space:nowrap;
+  }
+  #splitsArea .splitsTrackingBar{
+    padding:4px 8px;
+  }
+  #splitsArea .recipeUtilityTabs{ margin-top:5px; }
+  #splitsArea .recipeUtilityTab{
+    min-height:24px;
+    padding:3px 10px;
+  }
+  #splitsArea .splitsBulkModeBar :is(button.secondary,.recipeActionTertiary),
+  #splitsArea .splitsBulkModeBar .splitsScanShortcut > summary{
+    min-height:28px;
+    padding:3px 9px;
+  }
+
   /* --- Line Setup ---------------------------------------------------
      The phone layout stacks Changeover/Output above Overview and caps the
      pair at 540px centered, which on an unfolded Fold leaves a wide empty

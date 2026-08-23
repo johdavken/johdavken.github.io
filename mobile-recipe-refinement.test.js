@@ -7,10 +7,17 @@ const app=fs.readFileSync("app.js","utf8");
 const styles=fs.readFileSync("styles.css","utf8");
 const theme=fs.readFileSync("theme.css","utf8");
 
-test("compact tracked cells have an animation-independent blue tint and two-pixel inset outline",()=>{
-  assert.match(styles,/\.splitsMatrix\.compactMobileRecipe \.splitMatrixCell\.tracked:not\(\.selected\)\{[\s\S]*?background:color-mix\(in srgb,#72b9e8 18%,var\(--compact-recipe-row-bg\)\);[\s\S]*?box-shadow:inset 0 0 0 2px #4d9bd0;/);
+test("compact tracking leaves cell highlighting to Edit and marks the notched hopper badge instead",()=>{
+  assert.match(styles,/\.splitsMatrix\.compactMobileRecipe \.splitMatrixCell\.tracked:not\(\.selected\)\{[\s\S]*?background:var\(--compact-recipe-row-bg\);[\s\S]*?border-color:var\(--row-border-2\);[\s\S]*?box-shadow:none;/);
+  assert.match(styles,/\.splitsMatrix\.compactMobileRecipe \.splitMatrixCell\.tracked \.splitCellHopperName\{[\s\S]*?min-width:30px;[\s\S]*?border-radius:4px 9px 9px 4px;[\s\S]*?background:color-mix\(in srgb,#72b9e8 22%,var\(--compact-recipe-row-bg\)\);/);
+  assert.match(styles,/\.splitMatrixCell\.tracked \.splitCellHopperName::after\{[\s\S]*?position:absolute;[\s\S]*?right:3px;[\s\S]*?box-shadow:0 0 0 2px color-mix\(in srgb,#72b9e8 16%,transparent\);/);
   assert.doesNotMatch(styles,/compactRecipeTrackTracer|compact-recipe-trace-angle/);
   assert.doesNotMatch(styles,/\.splitMatrixCell\.tracked:not\(\.selected\)::after/);
+});
+
+test("compact Edit selection carries a small top-right EDIT tag in the outline color",()=>{
+  assert.match(styles,/#splitsArea\[data-recipe-view="edit"\] \.splitsMatrix\.compactMobileRecipe \.splitMatrixCell\.selected::after\{[\s\S]*?content:"EDIT";[\s\S]*?top:2px;[\s\S]*?right:3px;[\s\S]*?color:var\(--focus-border\);[\s\S]*?font-size:5px;/);
+  assert.doesNotMatch(styles,/#splitsArea\[data-recipe-view="summary"\][^{]*\.splitMatrixCell\.selected::after/);
 });
 
 test("the active clock is a filled blue circular badge while the inactive control stays visible but subdued",()=>{

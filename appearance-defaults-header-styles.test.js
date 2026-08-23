@@ -10,7 +10,8 @@ const styles = fs.readFileSync("styles.css", "utf8");
 
 // Two independent changes: (1) the default theme moved from Everforest to
 // Industrial Slate ("industrial-slate", formerly the legacy "mse" id)
-// everywhere a default is asserted, and (2) the
+// everywhere a default is asserted. Everforest may still be offered as an
+// explicit choice; it just must not regain default status. (2) The
 // Header style picker - added specifically so the operator could preview
 // several font treatments (Monospace, Condensed, System Sans, Bold Slab,
 // Editorial Serif, Rounded Grotesk, Wide Display) - served its purpose:
@@ -26,7 +27,10 @@ test("Industrial Slate is the default implementation", () => {
   const opt = html.slice(optStart, html.indexOf("</option>", optStart));
   assert.match(opt, /selected/);
   assert.match(opt, />Industrial Slate/);
-  assert.doesNotMatch(html, /value="everforest"/);
+  const evergreenStart = html.indexOf('value="everforest"');
+  assert.notEqual(evergreenStart, -1);
+  const evergreenOpt = html.slice(evergreenStart, html.indexOf("</option>", evergreenStart));
+  assert.doesNotMatch(evergreenOpt, /selected/);
 });
 
 test("theme migration has a deterministic industrial-slate fallback, including from the legacy mse id", () => {

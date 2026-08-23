@@ -25,3 +25,7 @@ test(".resinToolsLogo lives inside .mobileBrand, which is hidden on desktop - co
   const desktopMediaBody = styles.slice(desktopMediaStart, styles.indexOf("\n}\n", desktopMediaStart));
   assert.match(desktopMediaBody, /\.mobileBrand\{ display: none; \}/);
 });
+
+test("the mobile RT logo is exclusive to the Main screen", () => {
+  assert.match(styles, /body:not\(\[data-mobile-workspace="home"\]\) \.mobileBrand\{ display:none; \}/);
+});

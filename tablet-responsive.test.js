@@ -212,6 +212,18 @@ test("the wide-touch presentation block no longer claims the Recipe matrix alrea
   assert.doesNotMatch(block, /already works well here/);
 });
 
+test("wide touch reclaims Recipe height from chrome and controls without changing matrix cells", () => {
+  const start = styles.indexOf(`@media ${WIDE_TOUCH_QUERY}`);
+  const block = styles.slice(start, styles.indexOf("\n}", start) + 2);
+  assert.match(block, /#splitsBlock\.mobile-active > summary\{\s*\n\s*min-height:36px;/);
+  assert.match(block, /#splitsBlock \.recipePageTab\{[\s\S]*?min-height:32px;/);
+  assert.match(block, /#splitsArea \.splitsEditRowPrimary\{[\s\S]*?grid-template-columns:minmax\(0,1fr\) minmax\(0,1fr\) auto;/);
+  assert.match(block, /#splitsArea \.splitsEditRowSecondary\{[\s\S]*?flex-wrap:nowrap;/);
+  assert.match(block, /#splitsArea \.splitsEditRowSecondary :is\(\.bulkTextAction,button\.danger\)\{[\s\S]*?min-height:28px;/);
+  assert.doesNotMatch(block, /\.splitMatrixCell\s*\{/);
+  assert.doesNotMatch(block, /\.splitLayerMain\s*\{/);
+});
+
 /* -----------------------------------------------------------------------
  *   Recipe matrix overflow fix: five columns, no clipping, no scrolling
  * --------------------------------------------------------------------- */
@@ -364,20 +376,16 @@ test("every widened touch-shell query is a strict OR-extension of its old narrow
 // replaced it also dropped the icons below the 3:1 contrast floor, which had
 // needed a compensating colour override. Both are gone - every theme keeps
 // the original panel tint, and no theme-scoped dock colour exists at all.
-test("the dock keeps one panel-tint background for every theme, with no theme-scoped colour override", () => {
-  const dockRuleStart = styles.indexOf(".footerBar{", styles.indexOf(":root{--app-dock-height:64.8px}"));
-  const dockRule = styles.slice(dockRuleStart, styles.indexOf("}", dockRuleStart));
-  assert.match(dockRule, /background:color-mix\(in srgb,var\(--panelOpen\) 94%,transparent\);/);
+test("the text rail keeps one panel-tint background for every theme, with no theme-scoped colour override", () => {
+  const refinement = styles.slice(styles.lastIndexOf("/* Footer state refinement"));
+  assert.match(refinement, /background:color-mix\(in srgb,var\(--panelOpen\) 96%,transparent\);/);
   assert.doesNotMatch(styles, /body\[data-theme="[^"]+"\] \.footerBar/);
   assert.doesNotMatch(styles, /\.appDockControl[\s\S]{0,40}color:var\(--fg\)/);
 });
 
-test("the dock's bottom corners are square so no page background shows beside them, while the top keeps its raised ends", () => {
-  const dockRuleStart = styles.indexOf(".footerBar{", styles.indexOf(":root{--app-dock-height:64.8px}"));
-  const dockRule = styles.slice(dockRuleStart, styles.indexOf("}", dockRuleStart));
-  assert.match(dockRule, /border-radius:0;/);
-  assert.doesNotMatch(dockRule, /border-radius:0 0 \d+px/);
-  // The top silhouette is untouched - still the masked raised ends.
-  assert.match(styles, /\.footerBar::before\{\s*left:0;\s*-webkit-mask:radial-gradient\(24px 20px at 100% 0/);
-  assert.match(styles, /\.footerBar::after\{\s*right:0;\s*-webkit-mask:radial-gradient\(24px 20px at 0 0/);
+test("the text rail is 32px tall and drops the old raised-end silhouette", () => {
+  assert.match(styles, /:root\{--app-dock-height:32px\}/);
+  assert.match(styles, /\.footerBar::before,\.footerBar::after\{display:none\}/);
+  const refinement = styles.slice(styles.lastIndexOf("/* Footer state refinement"));
+  assert.match(refinement, /\.appDockControl,\.cloudSyncFooterStatus\{[\s\S]*?min-height:32px;/);
 });
