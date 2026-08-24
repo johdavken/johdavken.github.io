@@ -30,9 +30,9 @@
        layout change is required to install cleanly. -->
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
-  <link rel="stylesheet" href="styles.css?v=0.62.4">
-  <link rel="stylesheet" href="theme.css?v=0.18.0">
-  <link rel="stylesheet" href="desktop.css?v=0.1.6">
+  <link rel="stylesheet" href="styles.css?v=0.62.6">
+  <link rel="stylesheet" href="theme.css?v=0.18.1">
+  <link rel="stylesheet" href="desktop.css?v=0.1.8">
 <script src="validation.js?v=0.19" defer></script>
 <script src="scheduling.js?v=0.18.4" defer></script>
 <script src="storage.js?v=0.18" defer></script>
@@ -67,7 +67,7 @@
 <script src="bulk-density-measurement.js?v=0.1.0" defer></script>
 <script src="workspace-recovery.js?v=0.1.2" defer></script>
 <script src="beta-access.js?v=0.1.0" defer></script>
-<script src="app.js?v=0.18.162" defer></script>
+<script src="app.js?v=0.18.164" defer></script>
 <script src="resin-admin-ui.js?v=0.20.4" defer></script>
 <script src="database-health-ui.js?v=0.1.3" defer></script>
 <script src="bulk-density-measurement-ui.js?v=0.1.0" defer></script>
@@ -298,21 +298,56 @@
     <button class="workspaceNavButton" type="button" data-workspace-target="lineSetupBlock" data-status="neutral" data-step="1">
       <span><svg class="workspaceTileIcon" viewBox="0 0 32 32" aria-hidden="true"><g class="baseGlyph"><path d="M5 9h22M5 23h22M10 6v6M22 20v6"/><circle cx="10" cy="9" r="3"/><circle cx="22" cy="23" r="3"/><g class="gruvboxIconDetail"><rect x="7.5" y="6.5" width="5" height="5"/><rect x="19.5" y="20.5" width="5" height="5"/></g></g><g class="gruvboxSolidGlyph"><path d="M2 10h28v3.6H2zM2 18.4h28V22H2z"/><path d="M6 2.6h7.4V9H6zM18.6 23h7.4v6.4h-7.4z"/></g></svg>Line Setup</span>
       <small id="workspaceSetupStatus">Needs setup</small>
+      <span class="desktopRailMetric"><strong id="desktopRailSetupMetric">—</strong><em>lb/hr</em></span>
       <span class="mobileRailChev" aria-hidden="true">›</span>
     </button>
     <button class="workspaceNavButton" type="button" data-workspace-target="splitsBlock" data-status="warn" data-step="2">
       <span><svg class="workspaceTileIcon" viewBox="0 0 32 32" aria-hidden="true"><g class="baseGlyph"><path d="m16 4 11 5.5L16 15 5 9.5 16 4Z"/><path d="m5 15 11 5.5L27 15M5 20.5 16 26l11-5.5"/><g class="gruvboxIconDetail"><path d="M16 4v6"/></g></g><g class="gruvboxSolidGlyph"><path d="m16 2.5 13.5 6.75L16 16 2.5 9.25z"/><path d="M2.5 13.2 16 19.95l13.5-6.75v3.6L16 23.55 2.5 16.8z"/><path d="M2.5 20.2 16 26.95l13.5-6.75v3.6L16 30.55 2.5 23.8z"/></g></svg>Recipe</span>
       <small id="workspaceSplitsStatus">Check percentages</small>
+      <span class="desktopRailMetric"><strong id="desktopRailRecipeMetric">0</strong><em>tracked</em></span>
       <span class="mobileRailChev" aria-hidden="true">›</span>
     </button>
     <button class="workspaceNavButton active" type="button" data-workspace-target="resultsBlock" data-status="neutral" data-step="3">
       <span><svg class="workspaceTileIcon" viewBox="0 0 32 32" aria-hidden="true"><g class="baseGlyph"><circle cx="16" cy="16" r="11"/><path d="M16 9v7l5 3M5 16h3M24 16h3"/><g class="gruvboxIconDetail"><path d="M16 5v2M16 25v2"/></g></g><g class="gruvboxSolidGlyph"><path fill-rule="evenodd" d="M16 2a14 14 0 1 0 0 28 14 14 0 0 0 0-28zm0 4.2a9.8 9.8 0 1 1 0 19.6 9.8 9.8 0 0 1 0-19.6z"/><path d="M14.3 8.4h3.4V17h-3.4z"/><path d="M15.6 13.8h6.9v3.4h-6.9z"/></g></svg>Timeline</span>
       <small id="workspaceTimelineStatus">0 resins tracked</small>
+      <span class="desktopRailMetric"><strong id="desktopRailTimelineMetric">—</strong><em id="desktopRailTimelineMetricLabel">next</em></span>
       <span class="mobileRailChev" aria-hidden="true">›</span>
     </button>
+    <section class="desktopRailStageExpansion" id="desktopRailStageExpansion" data-stage="resultsBlock" aria-label="Active workflow stage details">
+      <div class="desktopRailExpansionPanel" data-rail-stage="lineSetupBlock" hidden>
+        <strong id="desktopRailSetupHeadline">Needs setup</strong>
+        <small id="desktopRailSetupDetail">Complete the line configuration and receiver hopper weights.</small>
+        <div class="desktopRailExpansionMetrics">
+          <span><em>Output</em><b id="desktopRailSetupOutput">Not set</b></span>
+          <span><em>Changeover</em><b id="desktopRailSetupChangeover">Not set</b></span>
+        </div>
+      </div>
+      <div class="desktopRailExpansionPanel" data-rail-stage="splitsBlock" hidden>
+        <strong>Current recipe</strong>
+        <small id="desktopRailRecipeDetail">Check layer and hopper percentages.</small>
+        <div class="desktopRailExpansionMetrics">
+          <span><em>Tracked</em><b id="desktopRailRecipeTracked">0 hoppers</b></span>
+          <span><em>Next</em><b id="desktopRailRecipeNext">Not planned</b></span>
+        </div>
+      </div>
+      <div class="desktopRailExpansionPanel" data-rail-stage="resultsBlock">
+        <strong class="desktopRailTimelineTime"><span id="desktopRailTimelineTime">—</span><em id="desktopRailTimelinePeriod"></em></strong>
+        <small id="desktopRailTimelineDetail">Track a resin to see the next action.</small>
+        <div class="desktopRailExpansionMetrics">
+          <span><em>Tracking</em><b id="desktopRailTimelineTracked">0 hoppers</b></span>
+          <span><em>Alarm</em><b id="desktopRailTimelineAlarm">Off</b></span>
+        </div>
+      </div>
+      <div class="desktopRailExpansionPanel" data-rail-stage="productionSummaryBlock" hidden>
+        <strong id="desktopRailTotalsHeadline">0 lb total</strong>
+        <small id="desktopRailTotalsDetail">Enter production and scrap resin to calculate material totals.</small>
+        <div class="desktopRailMaterialPreview" id="desktopRailMaterialPreview"></div>
+      </div>
+    </section>
     <button class="workspaceNavButton" type="button" data-workspace-target="productionSummaryBlock" data-step="4">
       <span><svg class="workspaceTileIcon" viewBox="0 0 32 32" aria-hidden="true"><g class="baseGlyph"><path d="M6 25V15M16 25V7M26 25V11"/><path d="M3 25h26"/><g class="gruvboxIconDetail"><path d="M5 12h2M15 4h2M25 8h2"/></g></g><g class="gruvboxSolidGlyph"><path d="M2 26.5h28V30H2z"/><path d="M4.5 14h6.2v11.5H4.5zM12.9 5h6.2v20.5h-6.2zM21.3 9.5h6.2v16h-6.2z"/></g></svg>Resin Totals</span>
-      <small>Material totals</small>
+      <small id="workspaceResinTotalsStatus">No material total</small>
+      <span class="desktopRailMetric"><strong id="desktopRailTotalsMetric">0</strong><em>resins</em></span>
       <span class="mobileRailChev" aria-hidden="true">›</span>
     </button>
     <div class="workspaceNavDivider">
@@ -456,7 +491,7 @@
             <div class="gaugeTile">
               <input id="changeoverTime" type="time" />
               <span class="gaugeTimeValue" aria-hidden="true"><span id="changeoverTimeDisplay">Set time</span><svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="7.5"/><path d="M10 5.6v4.8l3.2 1.9"/></svg></span>
-              <label for="changeoverTime">Changeover</label>
+              <label for="changeoverTime">Changeover time</label>
             </div>
           </div>
           <div>
@@ -1330,7 +1365,7 @@
               <div>
                 <p>One layer at a time — switch with the <strong>A / B / C tabs</strong> down the right edge.</p>
                 <p>Saved Recipes, Bulk Edit, and Rearrange stay on the toolbar. Scan Recipe's three sources and Print Recipe move into the <strong>•••</strong> menu.</p>
-                <p class="helpCaption">Bulk Edit opens as a bottom sheet here rather than an inline panel.</p>
+                <p class="helpCaption">Edit keeps the resin and percentage controls above the matrix, so selected hoppers stay visible while you make changes.</p>
               </div>
             </div>
               </div>
@@ -1696,7 +1731,7 @@
           <span class="helpPrivacySep" aria-hidden="true">·</span>
           <a class="helpPrivacyLink" href="https://resin.tools/privacy/delete-data/" target="_blank" rel="noopener">Delete Data</a>
         </div>
-        <span class="helpAppVersion" aria-label="App version">v1.1.14</span>
+        <span class="helpAppVersion" aria-label="App version">v1.1.15</span>
         <small class="helpPrivacyNote">How Resin.Tools handles your data</small>
       </div>
     </div>
@@ -1960,10 +1995,13 @@
     </div>
     <label for="themeSel">Theme
       <select id="themeSel">
+        <option value="system">System / Auto</option>
         <option value="industrial-slate" selected>Industrial Slate</option>
         <option value="industrial-slate-dark">Dark</option>
+        <option value="oled-black">OLED Black</option>
         <option value="gruvbox-dark">Gruvbox</option>
         <option value="gruvbox-light">Gruvbox Light</option>
+        <option value="nord">Nord</option>
         <option value="rose-pine-dawn">Rosé Pine Light</option>
         <option value="everforest">Evergreen</option>
         <option value="everforest-light">Evergreen Light</option>
@@ -1975,7 +2013,7 @@
   </form>
 </dialog>
 
-<small class="mobileFooterVersion" aria-label="App version">v1.1.14</small>
+<small class="mobileFooterVersion" aria-label="App version">v1.1.15</small>
 <footer class="footerBar" aria-label="App navigation">
   <button type="button" id="appFooterDisplay" class="appDockControl" aria-expanded="false" aria-controls="displaySheet" aria-label="Display settings">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9c0-1-.8-1.8-1.8-1.8h-2.1a2 2 0 0 1-2-2V6.8C15.1 4.7 13.9 3 12 3Z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="8.5" cy="16" r="1"/><g class="gruvboxIconDetail"><path d="M12 2v2"/></g></svg><span>Display</span>

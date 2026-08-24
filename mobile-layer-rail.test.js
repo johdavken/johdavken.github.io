@@ -73,17 +73,15 @@ test("the compact mobile matrix keeps all layer columns in the table and omits t
   assert.match(body, /area\.appendChild\(mobileLayerLayout\);/);
 });
 
-test("compact mobile recipe actions sit immediately after the matrix while bulk values open in a dedicated sheet", () => {
-  // The single mobile action row (built earlier, see the toolbar tests)
-  // replaces modeBar here - modeBar itself is desktop-only now.
-  assert.match(app, /actionTray\.append\(mobilePrimaryRow, mobileBulkContext, mobileRearrangeContext\);/);
+test("compact mobile recipe actions follow the matrix while Edit values stay in the inline toolbar", () => {
+  assert.match(app, /actionTray\.append\(mobilePrimaryRow, mobileRearrangeContext\);/);
   assert.match(app, /area\.append\(actionTray\);/);
   assert.doesNotMatch(app, /mobileLayerLayout\.append\(actionTray\);/);
-  assert.match(app, /mobileBulkEditSheet\.querySelector\("\.mobileBulkEditBody"\)\.appendChild\(toolbar\);/);
-  assert.match(app, /mobileBulkEditSheet\.showModal\(\);/);
+  assert.match(app, /area\.append\(toolbar\);/);
+  assert.doesNotMatch(app, /mobileBulkEditSheet/);
   assert.match(app, /mobileSavedRecipesSheet\?\.showModal\(\);/);
   assert.match(app, /toast\.className="mobileRearrangeToast";/);
-  assert.match(styles, /\.mobileBulkEditSheet \.splitsBulkBar/);
+  assert.match(styles, /#splitsArea > \.splitsBulkBar\{[\s\S]*?position:static;[\s\S]*?order:-1;/);
 });
 
 test(".splitsMobileLayerRail is hidden by default (desktop) - same pattern the old .splitsMobileLayerNav used", () => {

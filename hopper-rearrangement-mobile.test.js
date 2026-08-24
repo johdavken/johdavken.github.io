@@ -48,20 +48,16 @@ test("the action button row (Scan/Print/Load Next/Info) is flush to the panel's 
   assert.match(rule, /justify-self: start/);
 });
 
-test("the utility tabs, saved-recipes panel and action row remain direct children while the bulk toolbar stays direct on desktop and moves into its mobile dialog", () => {
+test("the utility tabs, saved-recipes panel, action row, and shared bulk toolbar remain direct children", () => {
   assert.match(splitsArea, /recipeUtilityTabs\.className = "recipeUtilityTabs"/);
   assert.match(splitsArea, /toolbar\.className = "splitsBulkBar hide"/);
   assert.match(splitsArea, /savedRecipesPanel\.className = "splitsSavedRecipesPanel hide"/);
-  // Desktop's tab strip, bulk toolbar and action row only exist in the DOM
-  // at all when not on the compact mobile layout - the two mobile tiers
-  // (built separately, see the next test) replace them there rather than
-  // modeBar being emptied into a mobile-only grid.
-  // Summary's own tracking bar shares that slot with the Edit toolbar -
-  // exactly one of the two is ever appended (see recipe-clear-selection).
-  assert.match(splitsArea, /if \(!compactMobileRecipe\)\{\s*\n\s*area\.append\(recipeUtilityTabs\);\s*\n(?:\s*\/\/[^\n]*\n)*\s*if \(trackingView\) area\.append\(trackingBar\);\s*\n\s*area\.append\(toolbar\);\s*\n\s*\}/);
+  assert.match(splitsArea, /if \(!compactMobileRecipe\)\{\s*\n\s*area\.append\(recipeUtilityTabs\);/);
+  assert.match(splitsArea, /if \(trackingView\) area\.append\(trackingBar\);/);
+  assert.match(splitsArea, /area\.append\(toolbar\);/);
   assert.match(splitsArea, /area\.append\(savedRecipesPanel\);/);
   assert.match(splitsArea, /if \(!compactMobileRecipe\)\{\s*\n\s*area\.append\(modeBar\);\s*\n\s*\}/);
-  assert.match(splitsArea, /mobileBulkEditSheet\.querySelector\("\.mobileBulkEditBody"\)\.appendChild\(toolbar\);/);
+  assert.doesNotMatch(splitsArea, /mobileBulkEditSheet/);
 });
 
 // --- Rearrange is now reachable and active on mobile --------------

@@ -75,6 +75,15 @@ test("the Start-by/Soonest time value is a compact, strong visual anchor", () =>
   const timeline = app.slice(timelineStart, app.indexOf("function resetTracking", timelineStart));
   assert.match(timeline, /const timingValue = hasStart \? h\.startByText\.split\(" · ", 1\)\[0\] : "Unavailable";/);
   assert.match(timeline, /const timingTitle = hasStart \? `\$\{timingLabel\}: \$\{h\.startByText\}` : timingLabel;/);
+  assert.match(timeline, /const timingParts = hasStart \? \/\^\(\\d\{1,2\}:\\d\{2\}\)\(\?:\\s\+\(\[AP\]M\)\)\?\$\//);
+  assert.match(timeline, /class="resultTimingClock" data-timing-clock/);
+  assert.match(timeline, /class="resultTimingPeriod" data-timing-period/);
+  assert.match(timeline, /timingPeriodNode\.hidden = !timingPeriod;/);
+});
+
+test("Timeline time emphasis responds independently on tablet and phone", () => {
+  assert.match(styles, /@media \(min-width:701px\) and \(max-width:1200px\), \(min-width:701px\) and \(pointer:coarse\)\{[\s\S]*?#resultsArea\.resultGrid\{ width:min\(760px,100%\); \}[\s\S]*?grid-template-columns:82px minmax\(0,1fr\) auto;[\s\S]*?\.resultTimingClock\{ font-size:18px; \}/);
+  assert.match(styles, /@media \(max-width:600px\)\{[\s\S]*?\.resultTimingValue\{display:grid;justify-items:end;gap:1px;line-height:1\}[\s\S]*?\.resultTimingClock\{font-size:14px\}[\s\S]*?\.resultTimingPeriod\{font-size:7px\}/);
 });
 
 test("Timeline uses a constrained single-column grid and compact schedule regions", () => {

@@ -291,6 +291,8 @@ main{
 .mobileRailChev,
 .mobileWorkspaceNavMore,
 .mobileWorkspaceSyncStatus{ display:none; }
+.desktopRailMetric,
+.desktopRailStageExpansion{ display:none!important; }
 
 .workspaceNav,
 .workspaceStatusBar{ display: none; }
@@ -1948,11 +1950,6 @@ details[open] > summary .chevSatellite{
 .splitsBulkSteps span{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:var(--font-small)}
 .splitsBulkSteps b{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:999px;background:var(--btn-primary-a);color:var(--title);font-size:var(--font-tiny)}
 .splitsBulkField{ margin: 0; }
-.mobileBulkFieldHeading > label:first-child{
-  display:block;
-  margin-bottom:6px;
-}
-.mobileBulkChange{display:none}
 .splitsBulkField > span:first-child{
   display: block;
   margin-bottom: 6px;
@@ -3639,48 +3636,6 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     background:var(--focus-ring);
     box-shadow:inset 0 0 0 2px var(--focus-border);
   }
-  .mobileBulkContext{
-    display:flex;
-    flex-wrap:wrap;
-    align-items:center;
-    gap:8px;
-  }
-  .mobileBulkContext[hidden]{display:none}
-  .mobileBulkContext button{
-    min-height:42px;
-    padding:7px 10px;
-    border:1px solid var(--row-border-2);
-    border-radius:10px;
-    background:var(--row-bg-2);
-    color:var(--muted);
-    font-size:10px;
-    font-weight:850;
-    box-shadow:none;
-  }
-  .mobileBulkContext .mobileBulkEditSelected{
-    border-color:var(--focus-border);
-    background:var(--btn-primary-a);
-    color:var(--title);
-  }
-  .mobileBulkContext .mobileBulkEditSelected:disabled{border-color:var(--row-border-2);background:var(--row-bg-2);color:var(--muted);opacity:.48}
-  .mobileBulkContext .mobileBulkClear,
-  .mobileBulkContext .mobileBulkEmpty{padding:7px 8px}
-  .mobileBulkContext .mobileBulkClear:disabled,
-  .mobileBulkContext .mobileBulkEmpty:disabled{opacity:.48}
-  /* Clear drops a selection; Empty erases hoppers. They are one slot apart,
-     so the destructive one is tinted rather than left to be told apart by
-     its label alone. */
-  .mobileBulkContext .mobileBulkEmpty:not(:disabled){color:var(--bad)}
-  /* Four actions no longer fit across a phone beside the count. As a grid
-     the count was the only flexible track, so it collapsed to zero width and
-     vanished at 360px rather than giving way gracefully. It leads the bar on
-     a line of its own instead, and the actions wrap beneath it at any width
-     rather than depending on a measurement that only held on one handset. */
-  .mobileBulkContext button{white-space:nowrap}
-  .mobileBulkCount{flex:1 0 100%;min-width:0;color:var(--title);font-size:11px;line-height:1.2;text-align:center}
-  /* The primary action stays pinned to the right edge, where it was before
-     the count moved out of the row. */
-  .mobileBulkContext .mobileBulkEditSelected{margin-left:auto}
   /* Summary's tracking bar takes the same tray slot the bulk/rearrange
      context bars use, so it drops the desktop panel chrome and adopts
      their flat two-up shape: count, then the one action. */
@@ -3844,53 +3799,6 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
   .mobileSavedRecipeMenu button{min-height:32px;padding:5px 8px;border:0;border-radius:6px;background:transparent;color:var(--text);font-size:10px;text-align:left;box-shadow:none}
   .mobileSavedRecipeMenu button:hover,.mobileSavedRecipeMenu button:focus-visible{background:var(--focus-ring)}
   .mobileSavedRecipeMenu button.danger{color:var(--bad)}
-  .mobileBulkEditSheet{max-height:min(76dvh,620px)}
-  .mobileBulkEditSheet[open]{display:grid;grid-template-rows:auto auto minmax(0,1fr)}
-  .mobileBulkEditBody{min-height:0;overflow-y:auto;padding-bottom:2px}
-  .mobileBulkEditSheet .splitsBulkBar{
-    position:static;
-    display:grid;
-    grid-template-columns:1fr;
-    gap:12px;
-    margin-top:0;
-    padding:2px 0 0;
-    border:0;
-    border-radius:0;
-    background:transparent;
-  }
-  .mobileBulkEditSheet .splitsBulkSteps,
-  .mobileBulkEditSheet .splitsBulkActions,
-  .mobileBulkEditSheet .splitsBulkNote{display:none}
-  .mobileBulkEditSheet .splitsBulkField{
-    display:grid;
-    gap:7px;
-    padding:11px;
-    border:1px solid var(--row-border-2);
-    border-radius:11px;
-    background:var(--row-bg-2);
-  }
-  .mobileBulkFieldHeading{display:flex;align-items:center;justify-content:space-between;gap:10px}
-  .mobileBulkFieldHeading > label:first-child{margin:0;color:var(--title);font-size:12px;font-weight:850}
-  .mobileBulkChange{display:inline-flex;align-items:center;gap:5px;margin:0;color:var(--muted);font-size:9px;font-weight:800;cursor:pointer}
-  .mobileBulkChange input{
-    appearance:none;
-    width:16px;
-    height:16px;
-    min-height:16px;
-    margin:0;
-    border:1px solid var(--row-border-2);
-    border-radius:5px;
-    background:var(--field-bg);
-  }
-  .mobileBulkChange input:checked{border-color:var(--focus-border);background:var(--focus-border)}
-  .mobileBulkChange input:checked::before{content:"✓";display:grid;place-items:center;height:100%;color:var(--panel);font-size:11px;font-weight:950;line-height:1}
-  .mobileBulkEditSheet .splitsBulkField > input,
-  .mobileBulkEditSheet .splitsBulkPctInput input{height:40px;min-height:40px;border-radius:9px;font-size:13px}
-  .mobileBulkEditSheet .splitsBulkField input:disabled{opacity:.46;cursor:not-allowed}
-  .mobileBulkEditSheet .splitsBulkApply{gap:8px}
-  .mobileBulkEditSheet .splitsBulkApply button{min-height:42px;border-radius:10px;font-size:11px;font-weight:850}
-  .mobileBulkEditSheet .splitsSelectionStatus{font-size:10px;text-align:center}
-
   .bulk-editing .splitsMatrix.compactMobileRecipe .splitMatrixCell{cursor:pointer}
   .bulk-editing .splitsMatrix.compactMobileRecipe .splitTrackControl{visibility:hidden}
   .bulk-editing .splitsMatrix.compactMobileRecipe .splitCellTop{display:block}
@@ -4616,7 +4524,11 @@ body:is([data-theme="industrial-slate-dark"],[data-theme="gruvbox-dark"]) .resul
 .resultRun b{color:inherit;font-weight:inherit}
 .resultNotFeeding{color:var(--muted);font-weight:800}
 .resultSchedule{min-width:0;font-size:9px;text-align:right}
-.resultTimingValue{color:var(--text);font-weight:900;white-space:nowrap}
+.resultTimingValue{display:inline-flex;align-items:baseline;justify-content:flex-end;gap:2px;color:var(--text);font-weight:900;white-space:nowrap}
+.resultTimingClock{line-height:1}
+.resultTimingPeriod{font-size:.72em;line-height:1;letter-spacing:.04em}
+.resultTimingPeriod[hidden]{display:none!important}
+.resultTimingUnavailable{font-size:9px}
 .resultRow.late .resultTimingValue{color:var(--warn)}
 .resultRow.done{ opacity: 0.42; filter: grayscale(1); }
 
@@ -4634,6 +4546,21 @@ body:is([data-theme="industrial-slate-dark"],[data-theme="gruvbox-dark"]) .resul
 }
 .checkWrap input{ width:16px; height:16px; padding:0; margin:0; border-radius:3px; }
 
+/* Tablet has ample unused width beside the 620px ribbon. Spend it on the
+   most time-sensitive value: a larger, dedicated schedule column, while
+   also giving long resin/run details more room before they ellipsize. The
+   compound query covers both real touch tablets and width-based previews. */
+@media (min-width:701px) and (max-width:1200px), (min-width:701px) and (pointer:coarse){
+  #resultsArea.resultGrid{ width:min(760px,100%); }
+  #resultsArea .resultRow{
+    grid-template-columns:82px minmax(0,1fr) auto;
+    gap:9px;
+  }
+  #resultsArea .resultTimingClock{ font-size:18px; }
+  #resultsArea .resultTimingPeriod{ font-size:9px; }
+  #resultsArea .resultTimingUnavailable{ font-size:10px; }
+}
+
 @media (max-width:600px){
   .resultGrid{padding:8px 8px 8px 23px}
   .resultGrid::before{left:14px}
@@ -4642,6 +4569,12 @@ body:is([data-theme="industrial-slate-dark"],[data-theme="gruvbox-dark"]) .resul
   .resultStatusChip{font-size:9px}
   .resultHopper{min-height:21px;font-size:15px}
   .resultResin{font-size:15px}
+  /* The clock grows by more than 50% without widening the 43px schedule
+     column: AM/PM moves below it instead of competing with the hopper row. */
+  .resultTimingValue{display:grid;justify-items:end;gap:1px;line-height:1}
+  .resultTimingClock{font-size:14px}
+  .resultTimingPeriod{font-size:7px}
+  .resultTimingUnavailable{font-size:8px}
   .checkWrap input{width:14px;height:14px}
 }
 @media (max-width:480px){
@@ -5178,6 +5111,171 @@ button.compactAction{
   }
   .mobileWeightsActionToolbar.mobileMatrixActionBar button svg,
   .mobileRecipeActionTray.mobileMatrixActionBar .mobileRecipeMore > summary svg{width:18px;height:18px}
+
+  /* Phone Recipe uses the tablet's inline Edit model: inputs and selection
+     actions stay directly above the matrix, with no modal sheet and no
+     duplicate context row below it. Two compact bands preserve the cell
+     dimensions while keeping the complete editing workflow in one view. */
+  #splitsArea > .splitsBulkBar{
+    position:static;
+    order:-1;
+    display:block;
+    flex:0 0 auto;
+    min-height:0;
+    margin:0;
+    padding:4px 5px;
+    border-radius:var(--control-radius);
+  }
+  #splitsArea > .splitsBulkBar.hide{display:none}
+  #splitsArea .splitsEditRow{gap:3px}
+  #splitsArea .splitsEditRowPrimary{
+    display:grid;
+    grid-template-columns:minmax(0,1.15fr) minmax(0,.9fr) auto;
+    align-items:stretch;
+  }
+  #splitsArea .splitsEditRowPrimary > .splitsBulkField,
+  #splitsArea .splitsEditRowPrimary > .splitsBulkFieldPct{
+    display:grid;
+    grid-template-columns:minmax(0,1fr);
+    grid-template-rows:auto 22px;
+    gap:1px;
+    min-width:0;
+    padding:2px 4px;
+    border:1px solid var(--row-border-2);
+    border-radius:5px;
+    background:var(--row-bg-2);
+    font-size:8px;
+    line-height:1;
+  }
+  #splitsArea .splitsEditRowPrimary > .splitsBulkField > span:first-child{margin:0}
+  #splitsArea .splitsEditRowPrimary > .splitsBulkField input{
+    width:100%;
+    min-width:0;
+    height:22px;
+    min-height:22px;
+    padding:1px 2px;
+    font-size:10px;
+    line-height:20px;
+  }
+  #splitsArea .splitsEditRowPrimary .splitsBulkPctInput{
+    grid-template-columns:minmax(0,1fr) auto;
+    gap:2px;
+  }
+  #splitsArea .splitsEditRowPrimary .splitsBulkPctInput > span{font-size:9px}
+  #splitsArea .splitsEditRowPrimary > button{
+    align-self:stretch;
+    min-width:48px;
+    min-height:0;
+    padding:2px 5px;
+    border-radius:5px;
+    font-size:8px;
+    line-height:1.1;
+    white-space:nowrap;
+  }
+  #splitsArea .splitsEditRowSecondary{
+    display:flex;
+    flex-wrap:nowrap;
+    gap:3px;
+    min-width:0;
+    margin-top:3px;
+    padding-top:3px;
+  }
+  #splitsArea .splitsEditRowSecondary > .splitsBulkActions{
+    display:flex;
+    flex:1 1 auto;
+    min-width:0;
+    gap:3px;
+    margin:0;
+    padding:0;
+    border:0;
+  }
+  #splitsArea .splitsEditRowSecondary .splitsSelectionStatus{
+    flex:1 1 auto;
+    min-width:54px;
+    margin:0;
+    overflow:hidden;
+    font-size:8px;
+    line-height:22px;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  #splitsArea .splitsEditRowSecondary :is(.bulkTextAction,button.danger){
+    flex:0 0 auto;
+    width:auto;
+    min-height:22px;
+    padding:2px 4px;
+    border:1px solid var(--row-border-2);
+    border-radius:4px;
+    background:var(--btn-secondary-bg);
+    color:var(--btn-text);
+    font-size:8px;
+    font-weight:750;
+    line-height:1;
+    box-shadow:none;
+    white-space:nowrap;
+  }
+  #splitsArea .splitsEditRowSecondary button.danger{
+    margin-left:0;
+    color:var(--bad);
+  }
+
+  /* Recipe is a viewport workspace on phones. The app dock remains fixed;
+     the header, editor, matrix, and action rail share the remaining height.
+     If a very short viewport cannot hold the established cell size, only
+     the matrix scrolls—never the whole page or the controls around it. */
+  body[data-mobile-workspace="panel"]:has(#splitsBlock.mobile-active){
+    height:100dvh;
+    min-height:0;
+    overflow:hidden;
+  }
+  body[data-mobile-workspace="panel"]:has(#splitsBlock.mobile-active) main{
+    grid-template-rows:minmax(0,1fr);
+    height:100dvh;
+    min-height:0;
+    overflow:hidden;
+    padding-bottom:calc(var(--app-dock-height) + env(safe-area-inset-bottom) + var(--page-pad))!important;
+  }
+  body[data-mobile-workspace="panel"] #splitsBlock.mobile-active{
+    display:flex!important;
+    flex-direction:column;
+    min-height:0;
+    overflow:hidden;
+  }
+  body[data-mobile-workspace="panel"] #splitsBlock.mobile-active > summary{
+    flex:0 0 auto;
+  }
+  body[data-mobile-workspace="panel"] #splitsBlock.mobile-active > .blockBody{
+    display:flex;
+    flex:1 1 0;
+    flex-direction:column;
+    height:calc(100dvh - var(--app-dock-height) - env(safe-area-inset-bottom) - 100px);
+    min-height:0;
+    overflow:hidden;
+  }
+  #splitsBlock.mobile-active .recipeHeaderRow{flex:0 0 auto}
+  #splitsBlock.mobile-active #splitsArea{
+    display:flex;
+    flex:1 1 0;
+    flex-direction:column;
+    gap:4px;
+    min-height:0;
+    overflow:hidden;
+  }
+  #splitsBlock.mobile-active #splitsArea > .splitsMobileLayerLayout{
+    flex:0 1 auto;
+    min-height:0;
+    overflow:hidden;
+  }
+  #splitsBlock.mobile-active .splitsMobileLayerLayout .splitsMatrixScroll{
+    height:100%;
+    min-height:0;
+    overflow-y:auto;
+    overscroll-behavior:contain;
+  }
+  #splitsBlock.mobile-active #splitsArea > .mobileRecipeActionTray{
+    flex:0 0 auto;
+    margin-top:0;
+  }
 }
 @media (max-width: 720px){
   .toolsWorkspace{ grid-template-columns: 1fr; }
@@ -8334,6 +8432,125 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
     background:transparent;
     color:var(--focus-border);
     font-size:8px;
+  }
+
+  /* Four-character percentages such as 61.5 need a few more pixels than
+     the desktop field allowed. Take those pixels from the editor's empty
+     inter-column gap, keeping the cell's overall horizontal footprint
+     unchanged. */
+  #splitsArea .splitsMatrix .splitCellEditor{ gap:3px; }
+  #splitsArea .splitsMatrix .splitPctControl input{
+    width:44px;
+    padding-inline:0;
+  }
+}
+
+/* A Fold's unfolded landscape viewport is tablet-wide but only about
+   670 CSS pixels tall. Preserve every label and its current font size,
+   while reclaiming the remaining vertical overflow from chrome, padding,
+   and the Smart label's otherwise separate line. */
+@media (min-width: 701px) and (max-height: 800px){
+  main{
+    padding-bottom:calc(var(--app-dock-height) + env(safe-area-inset-bottom) + 12px)!important;
+  }
+  body[data-mobile-workspace="panel"] #splitsBlock.mobile-active{
+    padding-bottom:2px;
+  }
+  body[data-mobile-workspace="panel"] #splitsBlock.mobile-active > summary{
+    min-height:30px;
+    padding:1px 2px 3px;
+  }
+  body[data-mobile-workspace="panel"] #splitsBlock.mobile-active > summary .mobileSectionHeaderIcon{
+    width:20px;
+    height:20px;
+  }
+  body[data-mobile-workspace="panel"] #splitsBlock.mobile-active > .blockBody{
+    padding-top:2px;
+    padding-bottom:0;
+  }
+  #splitsBlock .recipeHeaderRow{ gap:2px; }
+  #splitsBlock .recipePageTab{
+    min-height:28px;
+    padding:2px 10px 1px;
+  }
+  #splitsBlock .recipeViewToggle{ gap:4px; margin-bottom:1px; }
+  #splitsBlock .recipeViewToggle button{
+    min-height:24px;
+    padding:2px 9px;
+  }
+  #splitsArea{ gap:2px; }
+  #splitsArea > .splitsBulkBar{
+    margin-bottom:0;
+    padding:3px 6px;
+  }
+  #splitsArea .splitsEditRow{ gap:3px 6px; }
+  #splitsArea .splitsEditRowPrimary > .splitsBulkField{
+    padding:1px 5px;
+  }
+  #splitsArea .splitsEditRowPrimary > .splitsBulkField input{
+    min-height:22px;
+    height:22px;
+    padding-block:0;
+  }
+  #splitsArea .splitsEditRowPrimary > button{
+    min-height:24px;
+    padding:2px 8px;
+  }
+  #splitsArea .splitsEditRowSecondary{
+    gap:4px;
+    margin-top:2px;
+    padding-top:2px;
+  }
+  #splitsArea .splitsEditRowSecondary > .splitsBulkActions{ gap:4px; }
+  #splitsArea .splitsEditRowSecondary :is(.bulkTextAction,button.danger){
+    min-height:24px;
+    padding:2px 7px;
+  }
+  #splitsArea .splitsTrackingBar{ padding:2px 6px; }
+
+  #splitsArea .splitsMatrix thead th{ padding:2px; }
+  #splitsArea .splitsMatrix .splitLayerMain{ min-height:22px; }
+  #splitsArea .splitsMatrix .splitCopyBtn{
+    display:inline-grid;
+    width:auto;
+    min-height:14px;
+    margin:0 3px 0 0;
+    padding:0 2px;
+  }
+  #splitsArea .splitsMatrix .splitColumnTotal{
+    display:inline-block;
+    margin:0;
+    min-height:0;
+    line-height:14px;
+    vertical-align:middle;
+  }
+
+  #splitsArea .splitsMatrix td.splitMatrixCell{ padding:2px 6px; }
+  #splitsArea .splitsMatrix .splitCellHeader{
+    min-height:18px;
+    margin-bottom:0;
+  }
+  #splitsArea .splitsMatrix .splitSmartBadge{
+    position:absolute;
+    top:7px;
+    left:44px;
+    line-height:1;
+  }
+  #splitsArea .splitsMatrix .splitCellTop{ gap:0; }
+  #splitsArea[data-recipe-view] .splitsMatrix .splitPctControl input{
+    height:26px;
+    min-height:26px;
+    max-height:26px;
+    line-height:25px;
+  }
+
+  #splitsArea .recipeUtilityTabs{
+    margin-top:1px;
+    padding-left:3px;
+  }
+  #splitsArea .recipeUtilityTab{
+    min-height:20px;
+    padding:2px 8px 1px;
   }
 }
 

@@ -20,7 +20,7 @@
     min-height:0;
     margin:0;
     padding:12px;
-    grid-template-columns:220px minmax(0,1fr);
+    grid-template-columns:240px minmax(0,1fr);
     grid-template-rows:minmax(0,1fr);
     gap:12px;
     align-items:stretch;
@@ -263,13 +263,16 @@
   .displaySheet[open]{position:fixed;inset:50% auto auto 50%;margin:0;transform:translate(-50%,-50%);overflow:auto}
   .adminDialog{max-height:calc(100dvh - 48px);overflow:auto}
 
-  /* The formatted readout is the single visible Changeover value. The
-     native time input remains full-size, focusable, and picker-capable as
-     its transparent interaction layer, avoiding the duplicated native
-     value/oversized picker indicator that caused the regression. */
-  #lineSetupBlock .gaugeTile{position:relative;width:152px;max-width:152px;min-height:78px;padding:9px 10px 8px}
-  #lineSetupBlock .gaugeTile input[type="time"]{position:absolute;inset:0;z-index:2;width:100%;height:100%;opacity:0;cursor:pointer}
-  #lineSetupBlock .gaugeTimeValue{display:flex;align-items:center;justify-content:center;gap:6px;color:var(--text);font-size:20px;font-weight:850;line-height:1;white-space:nowrap;font-variant-numeric:tabular-nums}
+  /* Desktop exposes the actual time field instead of placing an invisible
+     native input over a formatted imitation. The visible field makes both
+     keyboard entry and the browser picker discoverable; mobile retains the
+     larger formatted gauge readout from the shared responsive styles. */
+  #lineSetupBlock .gaugeTile{position:relative;width:180px;max-width:180px;min-height:78px;padding:9px 10px 8px}
+  #lineSetupBlock .gaugeTile input[type="time"]{position:static;min-width:0;width:100%;height:32px;opacity:1;cursor:text;color:var(--text);font-size:18px!important;line-height:normal;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+  #lineSetupBlock .gaugeTile input[type="time"]::-webkit-datetime-edit{min-width:0;padding:0}
+  #lineSetupBlock .gaugeTile input[type="time"]::-webkit-datetime-edit-fields-wrapper{padding:0}
+  #lineSetupBlock .gaugeTile input[type="time"]::-webkit-calendar-picker-indicator{width:17px;height:17px;margin:0 0 0 4px;padding:0}
+  #lineSetupBlock .gaugeTimeValue{display:none}
   #lineSetupBlock .gaugeTimeValue svg{width:18px;height:18px;flex:0 0 auto;fill:none;stroke:var(--title);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
   #lineSetupBlock .gaugeTile .gaugeIcon{width:17px;height:17px;margin-bottom:2px}
   #lineSetupBlock .gaugeTile input:not([type="checkbox"]):not([type="radio"]){font-size:20px;line-height:1}
@@ -306,7 +309,7 @@
   #lineSetupBlock .setupTopRow{display:grid;grid-template-columns:1fr;justify-items:start;gap:12px}
   #lineSetupBlock .setupControlGroup{display:grid;gap:5px}
   #lineSetupBlock .setupControlLabel{color:var(--muted);font-size:var(--desktop-type-label);font-weight:700;letter-spacing:.04em;text-transform:uppercase}
-  #lineSetupBlock .setupPrimaryFields{display:grid;grid-template-columns:152px;justify-items:start;gap:10px;margin-top:14px!important}
+  #lineSetupBlock .setupPrimaryFields{display:grid;grid-template-columns:180px;justify-items:start;gap:10px;margin-top:14px!important}
   #lineSetupBlock .setupPrimaryFields > div{min-width:0}
   #lineSetupBlock #weightsBlock{display:grid;grid-template-rows:minmax(0,1fr);height:100%;max-height:100%;min-height:0;margin:0;padding:0;border:0;background:transparent;box-shadow:none;overflow:hidden}
   #lineSetupBlock #weightsBlock > summary{display:none}
@@ -675,6 +678,131 @@
   .mobileWeightProfilesSheet .mobileSavedRecipesTools{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:10px;padding:11px 0}
   .mobileWeightProfilesSheet .mobileSavedRecipesTools label{margin:0}
   .mobileWeightProfilesSheet .mobileSavedRecipesStatus{padding:0 0 8px;color:var(--muted);font-size:12px}
+
+  /* Desktop workflow rail experiment: inactive stages expose one useful
+     operational metric, while the selected stage owns a sibling expansion
+     panel. The panel is not nested inside the navigation button, so all of
+     its actions remain valid, independently focusable controls. */
+  body .workspaceNav .mobileRailChev{display:none!important}
+  body .workspaceNav .workspaceNavButton[data-step]{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    grid-template-rows:auto auto;
+    column-gap:10px;
+    min-height:84px;
+    padding:14px 12px 13px 15px;
+    border:0;
+    border-bottom:1px solid color-mix(in srgb,var(--tile-accent) 20%,var(--border));
+    border-radius:0;
+    background:transparent;
+    box-shadow:none;
+    transform:none;
+  }
+  body .workspaceNav .workspaceNavButton[data-step] > span:first-child{
+    grid-column:1;
+    grid-row:1;
+    min-width:0;
+  }
+  body .workspaceNav .workspaceNavButton[data-step] > small{
+    grid-column:1;
+    grid-row:2;
+    align-self:start;
+    min-width:0;
+    margin:3px 0 0 40px;
+    overflow:hidden;
+    color:var(--muted);
+    font-size:10px;
+    line-height:1.2;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  body .workspaceNav .workspaceNavButton[data-step] > small::before{display:none!important}
+  body .workspaceNav .workspaceNavButton[data-step]::before{
+    grid-column:2;
+    grid-row:1;
+    align-self:center;
+  }
+  body .workspaceNav .workspaceNavButton[data-step] > .desktopRailMetric{
+    display:grid!important;
+    grid-column:2;
+    grid-row:2;
+    align-self:start;
+    justify-items:end;
+    gap:1px;
+    min-width:44px;
+    margin:1px 0 0;
+    color:var(--tile-accent);
+    line-height:1;
+  }
+  body .workspaceNav .workspaceNavButton[data-step] > .desktopRailMetric::before{display:none!important}
+  .desktopRailMetric strong{
+    color:inherit;
+    font-family:ui-monospace,"Cascadia Mono","Liberation Mono",monospace;
+    font-size:13px;
+    font-weight:900;
+    letter-spacing:0;
+    white-space:nowrap;
+  }
+  .desktopRailMetric em{
+    color:var(--muted);
+    font-size:7px;
+    font-style:normal;
+    font-weight:900;
+    letter-spacing:.09em;
+    text-transform:uppercase;
+    white-space:nowrap;
+  }
+  body .workspaceNav .workspaceNavButton[data-step]:hover{
+    border-bottom-color:color-mix(in srgb,var(--tile-accent) 62%,var(--border));
+    background:color-mix(in srgb,var(--tile-accent) 6%,transparent);
+    transform:none;
+  }
+  body .workspaceNav .workspaceNavButton[data-step].active{
+    min-height:58px;
+    padding:12px 12px 9px 14px;
+    border:1px solid color-mix(in srgb,var(--tile-accent) 58%,var(--border));
+    border-bottom:0;
+    border-left:3px solid var(--tile-accent);
+    border-radius:12px 12px 0 0;
+    background:color-mix(in srgb,var(--tile-accent) 9%,var(--panel));
+    color:var(--tile-accent);
+  }
+  body .workspaceNav .workspaceNavButton[data-step].active > .desktopRailMetric{display:none!important}
+  body .workspaceNav .workspaceNavButton[data-step].active .workspaceTileIcon{color:var(--tile-accent)}
+
+  .desktopRailStageExpansion{
+    --rail-stage-accent:var(--focus-border);
+    display:block!important;
+    margin:-5px 0 5px;
+    padding:0;
+    border:1px solid color-mix(in srgb,var(--rail-stage-accent) 58%,var(--border));
+    border-top:0;
+    border-left:3px solid var(--rail-stage-accent);
+    border-radius:0 0 12px 12px;
+    background:linear-gradient(145deg,color-mix(in srgb,var(--rail-stage-accent) 9%,var(--panel)),var(--panel));
+    color:var(--text);
+    box-shadow:none;
+  }
+  .desktopRailStageExpansion[hidden]{display:none!important}
+  .desktopRailStageExpansion[data-stage="lineSetupBlock"]{--rail-stage-accent:var(--orange)}
+  .desktopRailStageExpansion[data-stage="splitsBlock"]{--rail-stage-accent:var(--title)}
+  .desktopRailStageExpansion[data-stage="resultsBlock"]{--rail-stage-accent:var(--focus-border)}
+  .desktopRailStageExpansion[data-stage="productionSummaryBlock"]{--rail-stage-accent:var(--workflow-resin-totals)}
+  .desktopRailExpansionPanel{display:grid;gap:9px;padding:10px 12px 11px}
+  .desktopRailExpansionPanel[hidden]{display:none!important}
+  .desktopRailExpansionPanel > strong{display:block;color:var(--text);font-size:15px;line-height:1.08}
+  .desktopRailExpansionPanel > small{display:block;color:var(--muted);font-size:9px;line-height:1.35}
+  .desktopRailTimelineTime{display:flex!important;align-items:baseline;gap:5px;color:var(--rail-stage-accent)!important}
+  .desktopRailTimelineTime > span{font-family:ui-monospace,"Cascadia Mono","Liberation Mono",monospace;font-size:23px;font-weight:900}
+  .desktopRailTimelineTime > em{color:var(--muted);font-size:8px;font-style:normal;font-weight:900;letter-spacing:.08em}
+  .desktopRailExpansionMetrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  .desktopRailExpansionMetrics > span{display:grid;gap:3px;min-width:0;padding:7px;border:1px solid color-mix(in srgb,var(--rail-stage-accent) 23%,var(--border));border-radius:7px;background:color-mix(in srgb,var(--rail-stage-accent) 4%,transparent)}
+  .desktopRailExpansionMetrics em{color:var(--muted);font-size:7px;font-style:normal;font-weight:900;letter-spacing:.09em;text-transform:uppercase}
+  .desktopRailExpansionMetrics b{overflow:hidden;color:var(--text);font-size:10px;text-overflow:ellipsis;white-space:nowrap}
+  .desktopRailMaterialPreview{display:grid;gap:6px}
+  .desktopRailMaterialRow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 8px;color:var(--muted);font-size:7px;font-weight:800}
+  .desktopRailMaterialRow::after{content:"";grid-column:1/-1;height:3px;border-radius:999px;background:linear-gradient(90deg,var(--rail-stage-accent) var(--rail-share),color-mix(in srgb,var(--rail-stage-accent) 13%,transparent) var(--rail-share))}
+
 
   /* Variable-length sections receive the remaining workspace height and
      scroll internally without changing chronological or keyboard order. */

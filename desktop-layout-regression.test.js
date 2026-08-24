@@ -17,16 +17,18 @@ test("desktop layout rules are isolated in a stylesheet loaded after the shared 
   assert.match(desktop, /workspacePanel\.desktop-active::details-content\{flex:1 1 0;min-height:0;overflow:hidden\}/);
 });
 
-test("desktop Changeover exposes one formatted value while retaining the native picker interaction layer", () => {
-  assert.match(desktop, /#lineSetupBlock \.gaugeTile input\[type="time"\]\{position:absolute;inset:0;z-index:2;width:100%;height:100%;opacity:0;cursor:pointer\}/);
-  assert.match(desktop, /#lineSetupBlock \.gaugeTimeValue\{display:flex;/);
+test("desktop Changeover exposes the native time field without clipping its period or picker", () => {
+  assert.match(desktop, /#lineSetupBlock \.gaugeTile input\[type="time"\]\{position:static;min-width:0;width:100%;height:32px;opacity:1;cursor:text;/);
+  assert.match(desktop, /font-size:18px!important;line-height:normal/);
+  assert.match(desktop, /::-webkit-calendar-picker-indicator\{width:17px;height:17px;margin:0 0 0 4px;padding:0\}/);
+  assert.match(desktop, /#lineSetupBlock \.gaugeTimeValue\{display:none\}/);
   assert.match(html, /<input id="changeoverTime" type="time" \/>\s*<span class="gaugeTimeValue"/);
 });
 
 test("desktop Setup is a two-region workspace with a compact five-column receiver matrix", () => {
   assert.match(desktop, /#lineSetupBlock > \.blockBody\{[\s\S]*?grid-template-columns:minmax\(214px,220px\) minmax\(0,1fr\)/);
-  assert.match(desktop, /#lineSetupBlock \.setupPrimaryFields\{display:grid;grid-template-columns:152px;justify-items:start;gap:10px/);
-  assert.match(desktop, /#lineSetupBlock \.gaugeTile\{position:relative;width:152px;max-width:152px/);
+  assert.match(desktop, /#lineSetupBlock \.setupPrimaryFields\{display:grid;grid-template-columns:180px;justify-items:start;gap:10px/);
+  assert.match(desktop, /#lineSetupBlock \.gaugeTile\{position:relative;width:180px;max-width:180px/);
   assert.match(desktop, /\.weightsMatrix\{width:100%;min-width:620px;table-layout:fixed\}/);
   assert.match(desktop, /\.weightsMatrixCell\{height:54px;/);
   assert.doesNotMatch(app, /desktopWeightVisualReadout[\s\S]{0,300}<svg/);

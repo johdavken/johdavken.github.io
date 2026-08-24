@@ -40,7 +40,7 @@ test("theme migration has a deterministic industrial-slate fallback, including f
   assert.doesNotMatch(app, /state\.theme \|\| "everforest"/);
   assert.match(app, /theme: "industrial-slate",/);
   assert.match(app, /\["mse", "industrial-slate"\]/);
-  assert.match(app, /const theme = migrations\.get\(saved\) \|\| "industrial-slate";/);
+  assert.match(app, /const preference = migrations\.get\(saved\) \|\| "industrial-slate";/);
   assert.match(app, /applyTheme\(payload\.theme \|\| "industrial-slate"\);/);
   assert.match(app, /applyTheme\("industrial-slate"\);/);
   assert.match(app, /applyTheme\(state\.theme \|\| "industrial-slate"\);/);
