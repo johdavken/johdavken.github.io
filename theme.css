@@ -227,6 +227,59 @@
   --footer-border: rgba(164,177,188,.18);
 }
 
+/* ----------------------------------------------------------------------- * OLED Black * ----------------------------------------------------------------------- */
+:where(html, body)[data-theme="oled-black"]{
+  color-scheme: dark;
+  --bg: #000000;
+  --panel: #000000;
+  --panel2: #07090d;
+  --text: #f3f6fa;
+  --subtitle: #b7c4d0;
+  --title: #8dc7f0;
+  --muted: #aab5c0;
+  --fg: #d4dce4;
+  --yellow: #f2c66d;
+  --orange: #f0a35e;
+  --border: rgba(255,255,255,.17);
+  --border2: rgba(141,199,240,.30);
+  --field-bg: #090d12;
+  --panelOpen: #05070a;
+  --chev: rgba(243,246,250,.64);
+  --warn: #f2c66d;
+  --bad: #ff7b82;
+  --ok: #7ed7a5;
+  --workflow-timeline: #8db7ff;
+  --shadow2: none;
+  --row-bg: rgba(141,199,240,.075);
+  --row-border: rgba(141,199,240,.20);
+  --row-bg-2: rgba(255,255,255,.035);
+  --row-border-2: rgba(255,255,255,.13);
+  --readonly-bg: #080b0f;
+  --readonly-border: rgba(255,255,255,.17);
+  --focus-border: rgba(141,199,240,.94);
+  --focus-ring: rgba(141,199,240,.22);
+  --f-var1: #7ed7a5;
+  --f-var2: #f2c66d;
+  --f-var3: #8dc7f0;
+  --f-const: #aab5c0;
+  --btn-text: var(--text);
+  --btn-border: var(--border2);
+  --btn-primary-a: rgba(141,199,240,.25);
+  --btn-primary-b: rgba(141,199,240,.11);
+  --btn-secondary-bg: rgba(255,255,255,.07);
+  --btn-secondary-border: rgba(255,255,255,.18);
+  --btn-danger-bg: rgba(255,123,130,.14);
+  --btn-danger-border: rgba(255,123,130,.34);
+  --bg-glow-a: transparent;
+  --bg-glow-b: transparent;
+  --card-glow-a: transparent;
+  --card-glow-b: transparent;
+  --toggle-on-bg: rgba(141,199,240,.25);
+  --toggle-on-border: rgba(141,199,240,.52);
+  --footer-bg: #000000;
+  --footer-border: rgba(255,255,255,.18);
+}
+
 /* ----------------------------------------------------------------------- * Gruvbox Dark * ----------------------------------------------------------------------- */
 :where(html, body)[data-theme="gruvbox-dark"]{
   color-scheme: dark;

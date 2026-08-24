@@ -18,6 +18,7 @@ const desktopCss = fs.readFileSync("desktop.css", "utf8");
 const DESKTOP_QUERY = "(min-width: 901px) and (pointer: fine)";
 const WIDE_TOUCH_QUERY = "(min-width: 701px) and (pointer: coarse)";
 const TABLET_RECIPE_QUERY = "(min-width: 701px) and (max-width: 1200px), (min-width: 701px) and (pointer: coarse)";
+const SHORT_TABLET_QUERY = "(min-width: 701px) and (max-height: 800px)";
 
 // Slice one function's own body, bounded by the next declaration at the
 // same indentation, rather than by a fixed character count. A fixed window
@@ -243,6 +244,28 @@ test("tablet-width and wide-touch layer headers use the compact mobile hierarchy
   assert.match(block, /\.splitLayerPct input:not\(\[type="checkbox"\]\):not\(\[type="radio"\]\)\{[\s\S]*?font-size:16px;/);
   assert.match(block, /\.splitColumnTotal\{[\s\S]*?font-size:8px;/);
   assert.doesNotMatch(block, /\.splitLayerTitle\{[^}]*font-size:64px/);
+});
+
+test("tablet percentage fields fit decimals without increasing the editor footprint", () => {
+  const start = styles.indexOf(`@media ${TABLET_RECIPE_QUERY}`);
+  const block = styles.slice(start, styles.indexOf("\n}", start) + 2);
+  assert.match(block, /\.splitCellEditor\{ gap:3px; \}/);
+  assert.match(block, /\.splitPctControl input\{[\s\S]*?width:44px;[\s\S]*?padding-inline:0;/);
+});
+
+test("short tablet view reclaims a hopper row of whitespace without shrinking cell text", () => {
+  const start = styles.indexOf(`@media ${SHORT_TABLET_QUERY}`);
+  const block = styles.slice(start, styles.indexOf("\n}", start) + 2);
+  assert.match(block, /#splitsBlock\.mobile-active > summary\{[\s\S]*?min-height:30px;/);
+  assert.match(block, /\.splitsEditRowPrimary > \.splitsBulkField input\{[\s\S]*?height:22px;/);
+  assert.match(block, /\.splitsEditRowSecondary :is\(\.bulkTextAction,button\.danger\)\{[\s\S]*?min-height:24px;/);
+  assert.match(block, /\.splitCopyBtn\{[\s\S]*?display:inline-grid;[\s\S]*?min-height:14px;/);
+  assert.match(block, /\.splitColumnTotal\{[\s\S]*?display:inline-block;[\s\S]*?line-height:14px;/);
+  assert.match(block, /td\.splitMatrixCell\{ padding:2px 6px; \}/);
+  assert.match(block, /\.splitSmartBadge\{[\s\S]*?position:absolute;[\s\S]*?left:44px;/);
+  assert.match(block, /\.splitPctControl input\{[\s\S]*?height:26px;[\s\S]*?line-height:25px;/);
+  assert.match(block, /\.recipeUtilityTab\{[\s\S]*?min-height:20px;/);
+  assert.doesNotMatch(block, /(?:splitCellResinText|splitSmartBadge|splitPctControl input)\{[^}]*font-size:/);
 });
 
 /* -----------------------------------------------------------------------

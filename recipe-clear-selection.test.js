@@ -7,10 +7,8 @@
 //             Timeline's own Reset tracking, a panel away from the cells
 //             being tapped. Summary now carries its own bar: a live count
 //             of tracked hoppers and one Clear tracking action.
-//   Edit    - selecting means bulk selection. Desktop's Edit panel already
-//             had Clear selection; compact mobile's persistent context bar
-//             had Select all but no counterpart, so the only way to clear
-//             was through the bulk-edit sheet.
+//   Edit    - selecting means bulk selection. Phone and tablet now share
+//             the same inline panel and the same Clear selection action.
 //
 // Both clear paths only touch what the view they belong to selects: Clear
 // tracking never edits a recipe assignment, and Clear selection never
@@ -80,20 +78,17 @@ test("the bar belongs to Summary alone, and stands down for the mobile rearrange
  *   Edit: mobile's missing Clear selection
  * -------------------------------------------------------------------- */
 
-test("the mobile bulk context bar gains Clear beside Select all", () => {
-  assert.match(splitsArea, /<button type="button" class="mobileBulkCancel">Select all<\/button>\s*\n\s*<button type="button" class="mobileBulkClear" disabled>Clear<\/button>/);
-  // The bar became a wrapping flex row when Empty joined it - four actions no
-  // longer fit across a phone beside the count (see recipe-empty-cells.test.js).
-  assert.match(styles, /\.mobileBulkContext\{[\s\S]*?flex-wrap:wrap;/);
-  assert.match(styles, /\.mobileBulkContext \.mobileBulkClear:disabled,\s*\n\s*\.mobileBulkContext \.mobileBulkEmpty:disabled\{opacity:\.48\}/);
+test("the shared inline editor exposes Select all and Clear selection on mobile", () => {
+  assert.match(splitsArea, /<button id="selectAllSplits" type="button" class="bulkTextAction">Select all<\/button>/);
+  assert.match(splitsArea, /<button id="clearSplitSelection" type="button" class="bulkTextAction">Clear selection<\/button>/);
+  assert.match(styles, /#splitsArea \.splitsEditRowSecondary > \.splitsBulkActions/);
 });
 
-test("Clear drops the selection without touching a single hopper, and is inert while nothing is selected", () => {
-  const handler = splitsArea.slice(splitsArea.indexOf('mobileBulkClear.addEventListener("click"'));
+test("Clear drops the selection without touching a single hopper", () => {
+  const handler = splitsArea.slice(splitsArea.indexOf('toolbar.querySelector("#clearSplitSelection").addEventListener'));
   const body = handler.slice(0, handler.indexOf("\n      });") + 9);
   assert.match(body, /selected\.clear\(\);\s*\n\s*updateSelectionUI\(\);/);
   assert.doesNotMatch(body, /hopper|resinName|pct|track/);
-  assert.match(splitsArea, /mobileBulkClear\.disabled=selected\.size===0;/);
 });
 
 test("it is the same action the Edit panel's own Clear selection performs", () => {

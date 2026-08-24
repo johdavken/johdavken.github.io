@@ -90,7 +90,7 @@ test("Changeover deadline and Line rate are gauge tiles with the input and a lab
   // and stays, checked separately below.
   assert.doesNotMatch(changeoverTile, /class="gaugeIcon"/);
   assert.match(changeoverTile, /<input id="changeoverTime" type="time" \/>/);
-  assert.match(changeoverTile, /<label for="changeoverTime">Changeover<\/label>/);
+  assert.match(changeoverTile, /<label for="changeoverTime">Changeover time<\/label>/);
   const lineRateStart = body.indexOf('class="gaugeTile"', changeoverStart + 1);
   const lineRateTile = body.slice(lineRateStart, body.indexOf("</div>", body.indexOf("</div>", lineRateStart) + 1));
   assert.match(lineRateTile, /class="gaugeIcon"/);

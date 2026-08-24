@@ -1472,16 +1472,23 @@
   /* ============================
    * Theme
    * ============================ */
+  const systemColorScheme = globalThis.matchMedia?.("(prefers-color-scheme: dark)") || null;
+
   function applyTheme(t){
       const saved = String(t || "");
       const migrations = new Map([
+        ["system", "system"],
+        ["auto", "system"],
         ["light", "industrial-slate"],
         ["mse", "industrial-slate"],
         ["industrial-slate", "industrial-slate"],
         ["dark", "industrial-slate-dark"],
         ["industrial-slate-dark", "industrial-slate-dark"],
+        ["oled-black", "oled-black"],
+        ["amoled", "oled-black"],
         ["gruvbox-dark", "gruvbox-dark"],
         ["gruvbox-light", "gruvbox-light"],
+        ["nord", "nord"],
         ["rose-pine-dawn", "rose-pine-dawn"],
         ["rose-pine-light", "rose-pine-dawn"],
         ["everforest", "everforest"],
@@ -1492,16 +1499,28 @@
       // Unknown themes have a deterministic Industrial Slate fallback. Legacy
       // aliases remain accepted so stored/imported preferences survive theme
       // naming changes without leaving a value the selector cannot display.
-      const theme = migrations.get(saved) || "industrial-slate";
+      const preference = migrations.get(saved) || "industrial-slate";
+      const theme = preference === "system"
+        ? (systemColorScheme?.matches ? "industrial-slate-dark" : "industrial-slate")
+        : preference;
 
       document.documentElement.setAttribute("data-theme", theme);
       document.body.setAttribute("data-theme", theme);
 
       const sel = $("themeSel");
-      if (sel) sel.value = theme;
+      if (sel) sel.value = preference;
 
-      state.theme = theme;
+      state.theme = preference;
 
+  }
+
+  function handleSystemColorSchemeChange(){
+      if (state.theme === "system") applyTheme("system");
+  }
+  if (systemColorScheme?.addEventListener){
+      systemColorScheme.addEventListener("change", handleSystemColorSchemeChange);
+  } else {
+      systemColorScheme?.addListener?.(handleSystemColorSchemeChange);
   }
 
     function applyDensity(d){
@@ -3609,7 +3628,6 @@
       area.dataset.recipeCells = cellsTypeable ? "typeable" : "static";
       area.classList.toggle("recipeTrackingView", trackingView);
       $("mobileSavedRecipesSheet")?.remove();
-      $("mobileBulkEditSheet")?.remove();
 
       // Which parts of a cell keep an interaction of their own, and which
       // are just cell surface. Everything editable lives inside a field or
@@ -3871,45 +3889,15 @@
       modeBar.appendChild(mobileMoreButton);
       mobileRecipeMore = mobileMoreButton;
 
-      // Two layouts, one set of element ids - every handler below binds by id
-      // and so is shared verbatim. The compact mobile template is unchanged
-      // from before the Summary/Edit split (it still renders inside the
-      // mobile bulk-edit dialog sheet); desktop gets the flatter two-row
-      // panel that sits above the grid, with no numbered step captions and
-      // no "Done" button, since leaving Edit view is the exit.
+      // One inline editing surface on every screen size. Mobile previously
+      // moved these controls into a modal bottom sheet, which hid the recipe
+      // while values were being changed and duplicated the selection tools.
+      // Keeping the tablet/desktop panel in the recipe flow lets operators
+      // select, edit, and verify the cells in one view.
       const toolbar = document.createElement("div");
       toolbar.id = "splitsBulkBar";
       toolbar.className = "splitsBulkBar hide";
-      toolbar.innerHTML = compactMobileRecipe ? `
-        <div class="splitsBulkField">
-          <div class="mobileBulkFieldHeading">
-            <label for="bulkResinName">Resin name</label>
-            <label class="mobileBulkChange"><input id="mobileBulkChangeResin" type="checkbox" /><span>No change</span></label>
-          </div>
-          <input id="bulkResinName" type="text" placeholder="No change" />
-        </div>
-        <div class="splitsBulkField">
-          <div class="mobileBulkFieldHeading">
-            <label for="bulkResinPct">Percentage</label>
-            <label class="mobileBulkChange"><input id="mobileBulkChangePct" type="checkbox" /><span>No change</span></label>
-          </div>
-          <span class="splitsBulkPctInput">
-            <input id="bulkResinPct" type="text" inputmode="decimal" placeholder="No change" />
-            <span>%</span>
-          </span>
-        </div>
-        <div class="splitsBulkApply">
-          <div id="splitSelectionStatus" class="tiny splitsSelectionStatus" role="status" aria-live="polite">No hoppers selected</div>
-          <button id="applyBulkSplit" type="button" disabled>Apply to selected</button>
-        </div>
-        <div class="splitsBulkActions">
-          <button id="selectAllSplits" type="button" class="bulkTextAction">Select all</button>
-          <button id="clearSplitSelection" type="button" class="bulkTextAction">Clear selection</button>
-          <button id="clearSelectedCells" type="button" class="bulkTextAction" disabled>Empty cells</button>
-          <button id="resetAllSplits" type="button" class="danger">Reset Recipe</button>
-        </div>
-        <div class="splitsBulkNote tiny">Blank fields leave existing values unchanged.</div>
-      ` : `
+      toolbar.innerHTML = `
         <div class="splitsEditRow splitsEditRowPrimary">
           <label class="splitsBulkField" for="bulkResinName">
             <span>Resin name</span>
@@ -3974,24 +3962,6 @@
         saveSession();
       });
 
-      const mobileBulkContext = document.createElement("div");
-      mobileBulkContext.className = "mobileBulkContext";
-      mobileBulkContext.hidden = true;
-      // Slim persistent bar while Edit view is on. "Cancel" is gone - the
-      // way out of editing is the Summary/Edit toggle itself now, not a
-      // button buried in a context bar - and Select all took the freed
-      // slot, since selecting is what this bar is for. Clear sits beside
-      // it rather than replacing its label on a full selection, so a
-      // partial selection can be dropped without selecting everything
-      // first; it is the same action as the sheet's own Clear selection,
-      // reachable without opening the sheet.
-      mobileBulkContext.innerHTML = `
-        <strong class="mobileBulkCount" role="status" aria-live="polite">0 selected</strong>
-        <button type="button" class="mobileBulkCancel">Select all</button>
-        <button type="button" class="mobileBulkClear" disabled>Clear</button>
-        <button type="button" class="mobileBulkEmpty" disabled>Empty</button>
-        <button type="button" class="mobileBulkEditSelected" disabled>Edit selected</button>
-      `;
       const mobileRearrangeContext=document.createElement("div");
       mobileRearrangeContext.className="mobileRearrangeContext";
       mobileRearrangeContext.hidden=true;
@@ -4039,7 +4009,6 @@
       `;
       savedRecipesPanel.querySelector("#splitsSaveRecipe").addEventListener("click", ()=>openWorkspaceConfigurationDialog("save-recipe"));
       let mobileSavedRecipesSheet=null;
-      let mobileBulkEditSheet=null;
       if(compactMobileRecipe){
         mobileSavedRecipesSheet=document.createElement("dialog");
         mobileSavedRecipesSheet.id="mobileSavedRecipesSheet";
@@ -4078,24 +4047,6 @@
           splitsSavedRecipesOpen=false;
           savedRecipesButton.setAttribute("aria-expanded","false");
           if(mobileSavedRecipesSheet.returnValue!=="new"&&mobileSavedRecipesSheet.returnValue!=="load"&&savedRecipesButton.isConnected) savedRecipesButton.focus();
-        });
-
-        mobileBulkEditSheet=document.createElement("dialog");
-        mobileBulkEditSheet.id="mobileBulkEditSheet";
-        mobileBulkEditSheet.className="mobileBulkEditSheet mobileSavedRecipesSheet";
-        mobileBulkEditSheet.setAttribute("aria-labelledby","mobileBulkEditTitle");
-        mobileBulkEditSheet.innerHTML=`
-          <div class="mobileSavedRecipesGrabber" aria-hidden="true"></div>
-          <header class="mobileSavedRecipesHeader">
-            <div><strong id="mobileBulkEditTitle">Edit selected hoppers</strong><small id="mobileBulkEditSubtitle">Choose what should change</small></div>
-            <button type="button" class="mobileBulkEditClose mobileSavedRecipesClose" aria-label="Close bulk editor">×</button>
-          </header>
-          <div class="mobileBulkEditBody"></div>`;
-        mobileBulkEditSheet.querySelector(".mobileBulkEditBody").appendChild(toolbar);
-        document.body.appendChild(mobileBulkEditSheet);
-        mobileBulkEditSheet.querySelector(".mobileBulkEditClose").addEventListener("click",()=>mobileBulkEditSheet.close("close"));
-        mobileBulkEditSheet.addEventListener("close",()=>{
-          if(bulkMode&&mobileBulkContext.isConnected) mobileBulkContext.querySelector(".mobileBulkEditSelected")?.focus();
         });
       }
       function setSavedRecipesOpen(open){
@@ -4226,8 +4177,11 @@
         // Summary and Edit each get one panel in this slot, never both -
         // trackingView and bulkMode are mutually exclusive by construction.
         if (trackingView) area.append(trackingBar);
-        area.append(toolbar);
       }
+      // Edit stays in the recipe workspace on phones too. In Summary this
+      // element is hidden, so it costs no space until the operator asks for
+      // editing controls.
+      area.append(toolbar);
       area.append(savedRecipesPanel);
       // Scan Recipe / Print Recipe / Load Next Recipe / Info: immediate
       // actions, not panel-opening tabs, so they get their own compact row
@@ -4774,7 +4728,7 @@
         const actionTray = document.createElement("div");
         actionTray.className = "mobileRecipeActionTray mobileMatrixActionBar";
         trackingBar.classList.add("mobileTrackContext");
-        actionTray.append(mobilePrimaryRow, mobileBulkContext, mobileRearrangeContext);
+        actionTray.append(mobilePrimaryRow, mobileRearrangeContext);
         if (trackingView) actionTray.append(trackingBar);
         area.append(actionTray);
         if(hopperRearrangement?.active&&hopperRearrangement.undo?.length&&hopperRearrangement.undoVisibleUntil>Date.now()){
@@ -4840,24 +4794,10 @@
       const bulkPctInput = toolbar.querySelector("#bulkResinPct");
       const applyButton = toolbar.querySelector("#applyBulkSplit");
       const selectionStatus = toolbar.querySelector("#splitSelectionStatus");
-      // The Edit panel's own copy. On compact mobile that panel lives inside
-      // the bulk-edit sheet, where .splitsBulkActions is display:none - so
-      // this button is unreachable on a phone, which is why the context bar
-      // carries its own Empty. Both drive the same handler.
       const clearCellsButton = toolbar.querySelector("#clearSelectedCells");
-      const mobileChangeResin = toolbar.querySelector("#mobileBulkChangeResin");
-      const mobileChangePct = toolbar.querySelector("#mobileBulkChangePct");
-      const mobileBulkCount = mobileBulkContext.querySelector(".mobileBulkCount");
-      const mobileBulkClear = mobileBulkContext.querySelector(".mobileBulkClear");
-      const mobileBulkEmpty = mobileBulkContext.querySelector(".mobileBulkEmpty");
-      const mobileBulkEditSelected = mobileBulkContext.querySelector(".mobileBulkEditSelected");
       attachResinAutocomplete(bulkNameInput);
 
       function hasBulkValue(){
-        if(compactMobileRecipe){
-          return (mobileChangeResin.checked && bulkNameInput.value.trim() !== "")
-            || (mobileChangePct.checked && bulkPctInput.value.trim() !== "");
-        }
         return bulkNameInput.value.trim() !== "" || bulkPctInput.value.trim() !== "";
       }
 
@@ -4882,9 +4822,11 @@
           button.setAttribute("aria-pressed", count === keys.length ? "true" : (count ? "mixed" : "false"));
         });
         applyButton.disabled = selected.size === 0 || !hasBulkValue();
-        applyButton.textContent = selected.size
-          ? `Apply to ${selected.size} hopper${selected.size === 1 ? "" : "s"}`
-          : "Apply to selected";
+        applyButton.textContent = compactMobileRecipe
+          ? (selected.size ? `Apply · ${selected.size}` : "Apply")
+          : (selected.size
+            ? `Apply to ${selected.size} hopper${selected.size === 1 ? "" : "s"}`
+            : "Apply to selected");
         // Emptying is offered only when the selection actually holds
         // something. Selecting six blank hoppers used to light the button up
         // for an action that would do nothing.
@@ -4896,16 +4838,6 @@
             ? "No hoppers selected"
             : `${selected.size} hopper${selected.size === 1 ? "" : "s"} selected`
         );
-        if(compactMobileRecipe){
-          const selectedLabel=`${selected.size} selected`;
-          mobileBulkCount.textContent=selectedLabel;
-          mobileBulkClear.disabled=selected.size===0;
-          mobileBulkEmpty.disabled=emptyable===0;
-          mobileBulkEditSelected.disabled=selected.size===0;
-          if(mobileBulkEditSheet){
-            mobileBulkEditSheet.querySelector("#mobileBulkEditSubtitle").textContent=`${selectedLabel} · Choose what should change`;
-          }
-        }
       }
 
       function setBulkMode(enabled){
@@ -4921,14 +4853,12 @@
         if(compactMobileRecipe){
           modeButton.setAttribute("aria-expanded", String(bulkMode));
           modeBar.hidden=bulkMode||!!hopperRearrangement?.active;
-          mobileBulkContext.hidden=!bulkMode;
           mobileRearrangeContext.hidden=!hopperRearrangement?.active;
           // Rearranging is reachable straight from Summary on phones (its
           // button lives in the primary row), so tracking's bar has to
           // stand down for the rearrange prompt the same way modeBar does.
           trackingBar.hidden=!trackingView||!!hopperRearrangement?.active;
           updateMobileRearrangePrompt();
-          if(!bulkMode&&mobileBulkEditSheet?.open) mobileBulkEditSheet.close("cancel");
         }else{
           modeButton.setAttribute("aria-selected", String(bulkMode));
           modeButton.classList.toggle("active", bulkMode);
@@ -4976,42 +4906,8 @@
         setBulkMode(turningOn);
       });
 
-      mobileBulkContext.querySelector(".mobileBulkCancel").addEventListener("click",()=>{
-        cellRefs.forEach((_,key)=>selected.add(key));
-        updateSelectionUI();
-      });
-      mobileBulkClear.addEventListener("click",()=>{
-        selected.clear();
-        updateSelectionUI();
-      });
-      mobileBulkEditSelected.addEventListener("click",()=>{
-        if(!bulkMode||selected.size===0||!mobileBulkEditSheet) return;
-        mobileBulkEditSheet.showModal();
-        requestAnimationFrame(()=>mobileChangeResin.focus());
-      });
       mobileRearrangeContext.querySelector(".mobileRearrangeCancel").addEventListener("click",()=>finishRearrangement(true));
       mobileRearrangeContext.querySelector(".mobileRearrangeDone").addEventListener("click",()=>finishRearrangement(false));
-
-      if(compactMobileRecipe){
-        [
-          [mobileChangeResin,bulkNameInput],
-          [mobileChangePct,bulkPctInput]
-        ].forEach(([toggle,input])=>{
-          input.disabled=!toggle.checked;
-          toggle.addEventListener("change",()=>{
-            input.disabled=!toggle.checked;
-            if(!toggle.checked){
-              input.value="";
-              input.setCustomValidity("");
-              input.setAttribute("aria-invalid","false");
-            }else{
-              requestAnimationFrame(()=>input.focus());
-            }
-            toggle.nextElementSibling.textContent=toggle.checked?"Change":"No change";
-            updateSelectionUI();
-          });
-        });
-      }
 
       [bulkNameInput, bulkPctInput].forEach(input=>{
         input.addEventListener("input",()=>{
@@ -5084,7 +4980,6 @@
         updateSelectionUI("Emptied the selected hoppers.", "ok");
       }
       clearCellsButton?.addEventListener("click", emptySelectedCells);
-      mobileBulkEmpty.addEventListener("click", emptySelectedCells);
       toolbar.querySelector("#resetAllSplits").addEventListener("click",()=>{
         const ok = confirm("Reset every hopper resin, percentage, and Track setting?");
         if (!ok) return;
@@ -5110,8 +5005,8 @@
       });
 
       applyButton.addEventListener("click",()=>{
-        const applyName = bulkNameInput.value.trim() !== "" && (!compactMobileRecipe || mobileChangeResin.checked);
-        const applyPct = bulkPctInput.value.trim() !== "" && (!compactMobileRecipe || mobileChangePct.checked);
+        const applyName = bulkNameInput.value.trim() !== "";
+        const applyPct = bulkPctInput.value.trim() !== "";
         const resinName = normName(bulkNameInput.value);
         let percentage = null;
 
@@ -5172,16 +5067,6 @@
         if (applyName) changes.push(`resin “${resinName}”`);
         if (applyPct) changes.push(`${fmtTrim(percentage,3)}% to ${percentageCount} editable hopper${percentageCount === 1 ? "" : "s"}`);
         updateSelectionUI(`Applied ${changes.join(" and ")}.`, "ok");
-        if(compactMobileRecipe){
-          // Close the sheet and drop the selection, but stay in Edit view.
-          // Bulk edit used to be a transient mode worth exiting after an
-          // apply; Edit is a persistent view now, and kicking the operator
-          // back out of it would both contradict the toggle still reading
-          // "Edit" and undo the next edit before it started.
-          mobileBulkEditSheet?.close("applied");
-          selected.clear();
-          updateSelectionUI();
-        }
       });
 
       // Compact, always-rendered per-layer feedback ("Total 100%"), never
@@ -5212,6 +5097,38 @@
       setBulkMode(bulkMode);
       setSavedRecipesOpen(splitsSavedRecipesOpen);
       renderSplitsSavedRecipes(lineSync?.getState?.());
+    }
+
+    function renderDesktopRailTotals(summary){
+      const { prod, scrap, total, rows } = summary;
+      const count = rows.length;
+      const metric = $("desktopRailTotalsMetric");
+      if (metric) metric.textContent = String(count);
+      const status = $("workspaceResinTotalsStatus");
+      if (status) status.textContent = total > 0
+        ? `${count} ${count === 1 ? "material" : "materials"}`
+        : "No material total";
+      const headline = $("desktopRailTotalsHeadline");
+      if (headline) headline.textContent = `${fmtLb(total)} lb total`;
+      const detail = $("desktopRailTotalsDetail");
+      if (detail) detail.textContent = total > 0
+        ? `${fmtLb(prod)} lb production · ${fmtLb(scrap)} lb scrap`
+        : "Enter production and scrap resin to calculate material totals.";
+
+      const preview = $("desktopRailMaterialPreview");
+      if (!preview) return;
+      preview.replaceChildren();
+      rows.slice(0, 3).forEach(material=>{
+        const row = document.createElement("span");
+        row.className = "desktopRailMaterialRow";
+        row.style.setProperty("--rail-share", `${total > 0 ? Math.min(100, material.lbs / total * 100) : 0}%`);
+        const name = document.createElement("span");
+        name.textContent = material.displayName;
+        const pounds = document.createElement("b");
+        pounds.textContent = `${fmtLb(material.lbs)} lb`;
+        row.append(name, pounds);
+        preview.append(row);
+      });
     }
 
     function renderResinCalculator(){
@@ -5246,6 +5163,9 @@
         });
       });
 
+      const rows = Array.from(totals.values()).sort((a,b)=>b.lbs - a.lbs);
+      renderDesktopRailTotals({ prod, scrap, total, rows });
+
       const sumEl = $("resinCalcSummary");
       if (sumEl){
         sumEl.innerHTML = `
@@ -5263,11 +5183,10 @@
         out.innerHTML = `<div class="muted"></div>`;
         return;
       }
-      if (totals.size === 0){
+      if (rows.length === 0){
         out.innerHTML = `<div class="muted">Add resin names and recipe percentages to see totals here.</div>`;
         return;
       }
-      const rows = Array.from(totals.values()).sort((a,b)=>b.lbs - a.lbs);
       out.innerHTML = `<div class="productionSummaryMaterialsIntro"><strong>By material</strong><span>Calculated from the current recipe percentages.</span></div>`;
       rows.forEach(r=>{
         const row = document.createElement("div");
@@ -5331,17 +5250,36 @@
     if (workspaceStatus){
       const hasOutput = state.lineRate > 0;
       const hasChangeover = !!changeoverDate;
-      workspaceStatus.textContent = !hopperWeightsComplete
+      const setupLabel = !hopperWeightsComplete
         ? "Needs hopper weights"
         : (hasOutput && hasChangeover
           ? "Ready"
           : (hasOutput || hasChangeover ? "In progress" : "Needs setup"));
+      workspaceStatus.textContent = setupLabel;
       workspaceStatus.closest(".workspaceNavButton")?.setAttribute(
         "data-status",
         !hopperWeightsComplete
           ? "warn"
           : (hasOutput && hasChangeover ? "ok" : (hasOutput || hasChangeover ? "info" : "neutral"))
       );
+      const railMetric = $("desktopRailSetupMetric");
+      if (railMetric) railMetric.textContent = hasOutput
+        ? state.lineRate.toLocaleString([], { maximumFractionDigits: 2 })
+        : "—";
+      const railHeadline = $("desktopRailSetupHeadline");
+      if (railHeadline) railHeadline.textContent = setupLabel;
+      const railDetail = $("desktopRailSetupDetail");
+      if (railDetail) railDetail.textContent = !hopperWeightsComplete
+        ? `${configuredWeightCount} of ${hopperWeightValues.length} hopper weights configured.`
+        : (hasOutput && hasChangeover
+          ? "Line configuration is ready for production."
+          : "Add the remaining line setting to complete setup.");
+      const railOutput = $("desktopRailSetupOutput");
+      if (railOutput) railOutput.textContent = hasOutput
+        ? `${state.lineRate.toLocaleString([], { maximumFractionDigits: 2 })} lb/hr`
+        : "Not set";
+      const railChangeover = $("desktopRailSetupChangeover");
+      if (railChangeover) railChangeover.textContent = hasChangeover ? fmtTime(changeoverDate) : "Not set";
     }
 
     const splitsStatus = $("splitsSummaryStatus");
@@ -5369,6 +5307,17 @@
         workspaceStatus.hidden = false;
         workspaceStatus.closest(".workspaceNavButton")?.setAttribute("data-status", ready ? "ok" : "warn");
       }
+      const trackedCount = sum(state.layers.map(L=>L.hoppers.filter(h=>h.track).length));
+      const railMetric = $("desktopRailRecipeMetric");
+      if (railMetric) railMetric.textContent = String(trackedCount);
+      const railTracked = $("desktopRailRecipeTracked");
+      if (railTracked) railTracked.textContent = `${trackedCount} ${trackedCount === 1 ? "hopper" : "hoppers"}`;
+      const railNext = $("desktopRailRecipeNext");
+      if (railNext) railNext.textContent = hasPlannedRecipe() ? "Planned" : "Not planned";
+      const railDetail = $("desktopRailRecipeDetail");
+      if (railDetail) railDetail.textContent = ready
+        ? "Layer and hopper percentages are ready."
+        : splitsStatus.textContent;
     }
 
     const timelineStatus = $("timelineSummaryStatus");
@@ -5377,6 +5326,10 @@
         timelineStatus.textContent = `${trackedCount} ${trackedCount === 1 ? "resin" : "resins"} tracked`;
         const trackedStatus = $("workspaceTrackedStatus");
         if (trackedStatus) trackedStatus.textContent = String(trackedCount);
+        const railTracked = $("desktopRailTimelineTracked");
+        if (railTracked) railTracked.textContent = `${trackedCount} ${trackedCount === 1 ? "hopper" : "hoppers"}`;
+        const railAlarm = $("desktopRailTimelineAlarm");
+        if (railAlarm) railAlarm.textContent = state.mobileTimelineAlarm ? "On" : "Off";
     }
   }
 
@@ -5678,12 +5631,22 @@
         // complete wording in the tooltip.
         const timingValue = hasStart ? h.startByText.split(" · ", 1)[0] : "Unavailable";
         const timingTitle = hasStart ? `${timingLabel}: ${h.startByText}` : timingLabel;
+        // Keep the clock prominent without making a 12-hour suffix consume
+        // the phone's narrow schedule column. CSS places the suffix beneath
+        // the clock on phones and beside it on tablets. The 24-hour format
+        // simply has no suffix node to display.
+        const timingParts = hasStart ? /^(\d{1,2}:\d{2})(?:\s+([AP]M))?$/.exec(timingValue) : null;
+        const timingClock = timingParts?.[1] || timingValue;
+        const timingPeriod = timingParts?.[2] || "";
 
         const row = document.createElement("div");
         row.className = "resultRow" + (h.pumpOff ? " done" : "") + (h.isLate && !h.pumpOff ? " late" : "");
         row.innerHTML = `
           <div class="resultSchedule" title="${timingTitle}">
-            <span class="mono resultTimingValue">${timingValue}</span>
+            <span class="mono resultTimingValue${hasStart ? "" : " resultTimingUnavailable"}">
+              <span class="resultTimingClock" data-timing-clock></span>
+              <span class="resultTimingPeriod" data-timing-period></span>
+            </span>
           </div>
 
           <div class="resultRibbonMain">
@@ -5701,6 +5664,14 @@
             Pump off
           </label>
         `;
+
+        // Use textContent even though these values originate in the local
+        // formatter: keeping generated timing text out of HTML interpolation
+        // preserves the same safe rendering boundary as resin names below.
+        row.querySelector("[data-timing-clock]").textContent = timingClock;
+        const timingPeriodNode = row.querySelector("[data-timing-period]");
+        timingPeriodNode.textContent = timingPeriod;
+        timingPeriodNode.hidden = !timingPeriod;
 
         const resinChip = row.querySelector("[data-resin-chip]");
         resinChip.className = h.resinName ? "mono resultResin" : "resultStatusChip badge-warn";
@@ -5944,6 +5915,26 @@
       setWorkspaceNavExpanded(isDesktopLayout() ? loadNavExpandedPreference() : false, { persist: false });
     }
 
+    const desktopRailPrimaryStages = new Set([
+      "lineSetupBlock",
+      "splitsBlock",
+      "resultsBlock",
+      "productionSummaryBlock"
+    ]);
+
+    function syncDesktopRailExpansion(id){
+      const expansion = $("desktopRailStageExpansion");
+      if (!expansion) return;
+      const primary = desktopRailPrimaryStages.has(id);
+      expansion.hidden = !primary;
+      if (!primary) return;
+      expansion.dataset.stage = id;
+      document.querySelector(`.workspaceNavButton[data-workspace-target="${id}"]`)?.after(expansion);
+      expansion.querySelectorAll("[data-rail-stage]").forEach(panel=>{
+        panel.hidden = panel.dataset.railStage !== id;
+      });
+    }
+
     function setWorkspacePanel(id, { persist = true, reveal = false } = {}){
       const target = document.getElementById(id);
       if (!target?.classList.contains("workspacePanel")) return;
@@ -5958,6 +5949,7 @@
         if (active) button.setAttribute("aria-current", "page");
         else button.removeAttribute("aria-current");
       });
+      syncDesktopRailExpansion(id);
       if (isDesktopLayout()){
         target.open = true;
         if (id === "lineSetupBlock") $("weightsBlock")?.setAttribute("open", "");
@@ -6368,7 +6360,23 @@
     const desktopSubEl = document.getElementById("workspaceNextDetail");
     const tileEl = document.getElementById("workspaceTimelineStatus");
 
-    const setNextStatus = (message, detail, { stale=false, tile=message, tileState="info" } = {})=>{
+    const setDesktopRailTimeline = (message, timeText = "")=>{
+      const match = String(timeText).match(/^(\d{1,2}:\d{2})(?:\s+([AP]M))?$/);
+      const clock = match?.[1] || "—";
+      const period = match?.[2] || "";
+      const metric = $("desktopRailTimelineMetric");
+      if (metric) metric.textContent = clock;
+      const metricLabel = $("desktopRailTimelineMetricLabel");
+      if (metricLabel) metricLabel.textContent = period || "next";
+      const expandedClock = $("desktopRailTimelineTime");
+      if (expandedClock) expandedClock.textContent = clock;
+      const expandedPeriod = $("desktopRailTimelinePeriod");
+      if (expandedPeriod) expandedPeriod.textContent = period;
+      const expandedDetail = $("desktopRailTimelineDetail");
+      if (expandedDetail) expandedDetail.textContent = message;
+    };
+
+    const setNextStatus = (message, detail, { stale=false, tile=message, tileState="info", railTime="" } = {})=>{
       if (msgEl) msgEl.textContent = message;
       if (subEl) subEl.textContent = detail;
       if (desktopMsgEl) desktopMsgEl.textContent = message;
@@ -6379,6 +6387,7 @@
       }
       if (msgEl) msgEl.classList.toggle("stale", stale);
       if (desktopMsgEl) desktopMsgEl.classList.toggle("stale", stale);
+      setDesktopRailTimeline(message, railTime);
     };
 
     if (!flat || flat.length === 0){
@@ -6415,7 +6424,7 @@
         setNextStatus(
           `Next pump off: ${next.hopperLabel}${next.resinName ? ` • ${next.resinName}` : ""}`,
           `${next.startByText} • Changeover ${fmtTime(changeoverDate)}`,
-          { tile, tileState:minutesUntil <= 0 ? "warn" : "info" }
+          { tile, tileState:minutesUntil <= 0 ? "warn" : "info", railTime:fmtTime(next.startByDate) }
         );
         return;
       }
@@ -6433,7 +6442,10 @@
       setNextStatus(
         `Soonest empty: ${next.hopperLabel}${next.resinName ? ` • ${next.resinName}` : ""}`,
         next.timeText,
-        { tile:minutes < 60 ? `Next: ${next.hopperLabel} in ${minutes} min` : `Next: ${next.hopperLabel} in ${Math.ceil(minutes / 60)} hr` }
+        {
+          tile:minutes < 60 ? `Next: ${next.hopperLabel} in ${minutes} min` : `Next: ${next.hopperLabel} in ${Math.ceil(minutes / 60)} hr`,
+          railTime:fmtTime(new Date(Date.now() + minutes * 60000))
+        }
       );
     } else {
       setNextStatus(

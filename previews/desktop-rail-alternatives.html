@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Desktop rail alternatives</title>
+  <style>
+    :root{
+      color-scheme:light;
+      --canvas:#e8e1d5;--paper:#fbf7ee;--panel:#fffaf1;--ink:#3e3a36;--muted:#77717f;
+      --line:#d8cebe;--focus:#69a9b5;--focus-wash:#e8f2f2;--rose:#bb627d;
+      --one:#d97979;--two:#c89545;--three:#70a6b2;--four:#477d7d;--ok:#4b9480;
+      --shadow:0 18px 38px rgba(61,52,43,.12);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(145deg,#eee7dc,#ded5c7);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+    main{width:1800px;min-height:980px;padding:34px 34px 28px}
+    header{display:flex;align-items:end;justify-content:space-between;margin:0 4px 24px}
+    h1{margin:0;font-size:28px;letter-spacing:.01em}
+    header p{max-width:720px;margin:0;color:#756f6a;font-size:15px;line-height:1.45;text-align:right}
+    .grid{display:grid;grid-template-columns:repeat(5,1fr);gap:18px}
+    .concept{display:grid;grid-template-rows:auto 1fr;gap:10px;min-width:0}
+    .conceptHead{min-height:70px;padding:0 5px}
+    .conceptHead h2{display:flex;align-items:center;gap:8px;margin:0 0 4px;font-size:17px}
+    .conceptHead h2 b{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:#383a3d;color:#fff;font-size:12px}
+    .conceptHead p{margin:0;color:#746e69;font-size:12.5px;line-height:1.35}
+    .rail{position:relative;display:flex;flex-direction:column;height:800px;overflow:hidden;border:1px solid rgba(92,78,64,.12);border-radius:15px;background:var(--paper);box-shadow:var(--shadow)}
+    .brand{display:flex;align-items:center;justify-content:center;gap:9px;height:124px;border-bottom:1px solid var(--line)}
+    .stack{position:relative;width:52px;height:46px}
+    .stack i{position:absolute;left:7px;width:38px;height:19px;border:3px solid currentColor;transform:skewY(-25deg) rotate(30deg);opacity:.84}
+    .stack i:nth-child(1){top:0;color:var(--one)}.stack i:nth-child(2){top:9px;color:var(--two)}.stack i:nth-child(3){top:18px;color:var(--focus)}
+    .brand strong{color:#504c70;font-size:43px;line-height:1}
+    .nav{display:flex;flex-direction:column;min-height:0;padding:15px 10px}
+    button{font:inherit}
+    .item{--accent:var(--muted);position:relative;border:0;background:transparent;color:var(--muted);text-align:left}
+    .item.s1{--accent:var(--one)}.item.s2{--accent:var(--rose)}.item.s3{--accent:var(--three)}.item.s4{--accent:var(--four)}
+    .item.active{color:var(--rose)}
+    .icon{display:grid;place-items:center;width:22px;height:22px;color:var(--accent);font-size:21px;font-weight:500}
+    .name{font-size:13px;font-weight:850;letter-spacing:.085em;text-transform:uppercase}
+    .status{color:var(--muted);font-size:11px;font-weight:650}
+    .active .status{color:var(--focus)}
+    .num{display:grid;place-items:center;width:23px;height:23px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;font-weight:900}
+    .tinyDot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 13%,transparent)}
+    .footerLabel{margin-top:auto;padding:13px 14px;color:#888079;font-size:9px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+
+    /* 1. Dense live rows */
+    .dense .nav{display:grid;grid-template-rows:repeat(4,minmax(0,1fr));flex:1;gap:3px}
+    .dense .item{display:grid;grid-template-columns:24px 1fr auto;grid-template-rows:auto auto auto;column-gap:10px;min-height:0;padding:22px 12px;border-radius:11px}
+    .dense .item.active{background:linear-gradient(90deg,color-mix(in srgb,var(--rose) 12%,transparent),transparent);box-shadow:inset 3px 0 0 var(--rose)}
+    .dense .icon{grid-row:1/3}.dense .name{align-self:end}.dense .status{align-self:start;margin-top:4px}.dense .num{grid-column:3;grid-row:1/3;align-self:center}
+    .dense .pulse{grid-column:2/4;height:2px;margin-top:10px;border-radius:4px;background:color-mix(in srgb,var(--accent) 18%,transparent);overflow:hidden}
+    .dense .pulse::before{content:"";display:block;width:var(--fill,80%);height:100%;background:var(--accent)}
+
+    /* 2. Connected rail */
+    .connected .nav{position:relative;display:grid;grid-template-rows:repeat(4,minmax(0,1fr));flex:1;gap:0;padding:18px 13px}
+    .connected .nav::before{content:"";position:absolute;left:32px;top:53px;bottom:78px;width:2px;background:linear-gradient(var(--one),var(--rose),var(--three),var(--four));opacity:.62}
+    .connected .item{display:grid;grid-template-columns:38px 1fr auto;grid-template-rows:auto auto;column-gap:10px;min-height:0;padding:18px 9px}
+    .connected .item+.item{border-top:1px solid var(--line)}
+    .connected .item.active{margin:2px 0;border:1px solid color-mix(in srgb,var(--rose) 48%,var(--line));border-radius:12px;background:color-mix(in srgb,var(--rose) 8%,transparent)}
+    .connected .step{z-index:1;display:grid;place-items:center;grid-row:1/3;width:28px;height:28px;margin-top:1px;border:4px solid var(--paper);border-radius:50%;background:var(--accent);color:#fff;font-size:11px;font-weight:900}
+    .connected .active .step{border-color:#f7eceb}
+    .connected .name{align-self:end}.connected .status{align-self:start;margin-top:4px}.connected .edge{grid-column:3;grid-row:1/3;align-self:center;color:var(--accent);font-size:20px}
+
+    /* 3. Metrics */
+    .metrics .nav{display:grid;grid-template-rows:repeat(4,minmax(0,1fr));flex:1;gap:7px}
+    .metrics .item{display:grid;grid-template-columns:24px 1fr auto;grid-template-rows:auto auto;column-gap:9px;min-height:0;padding:15px 12px;border:1px solid transparent;border-bottom-color:var(--line);border-radius:10px}
+    .metrics .item.active{border-color:color-mix(in srgb,var(--rose) 45%,var(--line));background:color-mix(in srgb,var(--rose) 7%,transparent)}
+    .metrics .icon{grid-row:1/3}.metrics .name{align-self:end}.metrics .status{align-self:start;margin-top:3px}
+    .metrics .metric{grid-column:3;grid-row:1/3;align-self:center;text-align:right}.metrics .metric strong{display:block;color:var(--accent);font-size:15px}.metrics .metric small{display:block;margin-top:2px;color:var(--muted);font-size:8px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+
+    /* 4. Active expands */
+    .expand .nav{display:grid;grid-template-rows:82px minmax(230px,1fr) 82px 82px;flex:1;gap:5px}
+    .expand .item{display:grid;grid-template-columns:23px 1fr auto;grid-template-rows:auto auto;column-gap:10px;min-height:0;padding:13px 12px;border-bottom:1px solid var(--line)}
+    .expand .icon{grid-row:1/3}.expand .name{align-self:end}.expand .status{align-self:start;margin-top:2px}.expand .num{grid-row:1/3;grid-column:3;align-self:center}
+    .expand .item.active{display:block;min-height:0;padding:17px 15px;border:1px solid color-mix(in srgb,var(--rose) 55%,var(--line));border-radius:13px;background:linear-gradient(145deg,color-mix(in srgb,var(--rose) 12%,var(--panel)),var(--panel))}
+    .expandTop{display:grid;grid-template-columns:23px 1fr auto;gap:10px;align-items:center}.expandTop .num{grid-column:auto;grid-row:auto}
+    .expandMain{margin:18px 0 12px;padding:12px;border-top:1px solid color-mix(in srgb,var(--rose) 28%,var(--line));border-bottom:1px solid color-mix(in srgb,var(--rose) 28%,var(--line))}.expandMain b{display:block;color:var(--ink);font-size:17px}.expandMain small{display:block;margin-top:4px;color:var(--muted);font-size:10px}
+    .quick{display:grid;grid-template-columns:1fr 1fr;gap:6px}.quick span{padding:8px;border:1px solid color-mix(in srgb,var(--rose) 42%,var(--line));border-radius:7px;color:var(--rose);font-size:10px;font-weight:850;text-align:center}
+
+    /* 5. Now card */
+    .now .nav{gap:1px}
+    .now .item{display:grid;grid-template-columns:19px 1fr auto;grid-template-rows:auto auto;column-gap:9px;min-height:74px;padding:12px 13px;border-bottom:1px solid var(--line)}
+    .now .tinyDot{grid-row:1/3;align-self:center}.now .name{align-self:end}.now .status{align-self:start;margin-top:2px}.now .num{grid-row:1/3;grid-column:3;align-self:center}
+    .now .item.active{background:color-mix(in srgb,var(--rose) 8%,transparent);box-shadow:inset 3px 0 0 var(--rose)}
+    .nowCard{margin:auto 12px 12px;padding:14px;border:1px solid color-mix(in srgb,var(--focus) 43%,var(--line));border-radius:12px;background:linear-gradient(150deg,color-mix(in srgb,var(--focus) 10%,var(--panel)),var(--panel))}
+    .nowCard label{display:block;color:var(--focus);font-size:9px;font-weight:900;letter-spacing:.14em;text-transform:uppercase}.nowCard strong{display:block;margin:7px 0 2px;font-size:17px}.nowCard p{margin:0;color:var(--muted);font-size:11px}.sync{display:flex;align-items:center;justify-content:space-between;margin-top:13px;padding-top:10px;border-top:1px solid var(--line);color:var(--muted);font-size:9px;font-weight:800;text-transform:uppercase}.sync b{display:flex;align-items:center;gap:5px;color:var(--ok);font-size:9px}.sync b::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--ok)}
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Desktop rail — five directions</h1>
+    <p>Every option removes the accidental second dot-and-chevron row. The difference is what earns that space instead.</p>
+  </header>
+  <section class="grid">
+    <article class="concept"><div class="conceptHead"><h2><b>1</b> Dense live rows</h2><p>Balanced rows with a restrained state line and micro progress indicator.</p></div><div class="rail dense"><div class="brand"><span class="stack"><i></i><i></i><i></i></span><strong>RT</strong></div><nav class="nav">
+      <button class="item s1"><span class="icon">≋</span><span class="name">Line Setup</span><span class="status">Ready · 110 lb/hr</span><span class="num">1</span><i class="pulse" style="--fill:100%"></i></button>
+      <button class="item s2 active"><span class="icon">◇</span><span class="name">Recipe</span><span class="status">5 hoppers tracked</span><span class="num">2</span><i class="pulse" style="--fill:83%"></i></button>
+      <button class="item s3"><span class="icon">◷</span><span class="name">Timeline</span><span class="status">Next: D2 at 8:47 PM</span><span class="num">3</span><i class="pulse" style="--fill:63%"></i></button>
+      <button class="item s4"><span class="icon">▥</span><span class="name">Resin Totals</span><span class="status">5 materials</span><span class="num">4</span><i class="pulse" style="--fill:72%"></i></button>
+    </nav><span class="footerLabel">Compact · data-forward</span></div></article>
+
+    <article class="concept"><div class="conceptHead"><h2><b>2</b> Connected workflow</h2><p>A continuous stage rail makes the four sections read as one production sequence.</p></div><div class="rail connected"><div class="brand"><span class="stack"><i></i><i></i><i></i></span><strong>RT</strong></div><nav class="nav">
+      <button class="item s1"><span class="step">1</span><span class="name">Line Setup</span><span class="status">Ready</span><span class="edge">›</span></button>
+      <button class="item s2 active"><span class="step">2</span><span class="name">Recipe</span><span class="status">5 hoppers tracked</span><span class="edge">›</span></button>
+      <button class="item s3"><span class="step">3</span><span class="name">Timeline</span><span class="status">Next D2 · 8:47 PM</span><span class="edge">›</span></button>
+      <button class="item s4"><span class="step">4</span><span class="name">Resin Totals</span><span class="status">Material totals</span><span class="edge">›</span></button>
+    </nav><span class="footerLabel">Sequential · familiar</span></div></article>
+
+    <article class="concept"><div class="conceptHead"><h2><b>3</b> Operational metrics</h2><p>The lower line becomes a glanceable value instead of a generic navigation cue.</p></div><div class="rail metrics"><div class="brand"><span class="stack"><i></i><i></i><i></i></span><strong>RT</strong></div><nav class="nav">
+      <button class="item s1"><span class="icon">≋</span><span class="name">Line Setup</span><span class="status">Ready</span><span class="metric"><strong>110</strong><small>lb/hr</small></span></button>
+      <button class="item s2 active"><span class="icon">◇</span><span class="name">Recipe</span><span class="status">Current recipe</span><span class="metric"><strong>5</strong><small>tracked</small></span></button>
+      <button class="item s3"><span class="icon">◷</span><span class="name">Timeline</span><span class="status">Next pump off</span><span class="metric"><strong>8:47</strong><small>PM · D2</small></span></button>
+      <button class="item s4"><span class="icon">▥</span><span class="name">Resin Totals</span><span class="status">Current job</span><span class="metric"><strong>5</strong><small>resins</small></span></button>
+    </nav><span class="footerLabel">Scannable · operational</span></div></article>
+
+    <article class="concept"><div class="conceptHead"><h2><b>4</b> Active stage expands</h2><p>Inactive stages collapse; the selected one gains context and two local actions.</p></div><div class="rail expand"><div class="brand"><span class="stack"><i></i><i></i><i></i></span><strong>RT</strong></div><nav class="nav">
+      <button class="item s1"><span class="icon">≋</span><span class="name">Line Setup</span><span class="status">Ready</span><span class="num">1</span></button>
+      <button class="item s2 active"><div class="expandTop"><span class="icon">◇</span><span class="name">Recipe</span><span class="num">2</span></div><div class="expandMain"><b>Current recipe</b><small>5 hoppers tracked · percentages valid</small></div><div class="quick"><span>Summary</span><span>Edit</span></div></button>
+      <button class="item s3"><span class="icon">◷</span><span class="name">Timeline</span><span class="status">Next D2 · 8:47 PM</span><span class="num">3</span></button>
+      <button class="item s4"><span class="icon">▥</span><span class="name">Resin Totals</span><span class="status">Material totals</span><span class="num">4</span></button>
+    </nav><span class="footerLabel">Contextual · action-ready</span></div></article>
+
+    <article class="concept"><div class="conceptHead"><h2><b>5</b> Navigator + Now</h2><p>Shorter stage rows reserve the rail’s lower space for the next operational event.</p></div><div class="rail now"><div class="brand"><span class="stack"><i></i><i></i><i></i></span><strong>RT</strong></div><nav class="nav">
+      <button class="item s1"><span class="tinyDot"></span><span class="name">Line Setup</span><span class="status">Ready</span><span class="num">1</span></button>
+      <button class="item s2 active"><span class="tinyDot"></span><span class="name">Recipe</span><span class="status">5 hoppers tracked</span><span class="num">2</span></button>
+      <button class="item s3"><span class="tinyDot"></span><span class="name">Timeline</span><span class="status">8 tracked</span><span class="num">3</span></button>
+      <button class="item s4"><span class="tinyDot"></span><span class="name">Resin Totals</span><span class="status">5 materials</span><span class="num">4</span></button>
+    </nav><aside class="nowCard"><label>Next action</label><strong>D2 · A0301</strong><p>Pump off at 8:47 PM</p><div class="sync"><span>RT Sync</span><b>Synced</b></div></aside></div></article>
+  </section>
+</main>
+</body>
+</html>

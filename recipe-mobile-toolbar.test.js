@@ -20,9 +20,12 @@ function recipeEditor(){
  *   grid and a separate More row.
  * ============================================================ */
 
-test("desktop's own tab strip and action row only exist when not on the compact mobile layout", () => {
+test("desktop's tab strip and action row stay desktop-only while the shared Edit toolbar is inline everywhere", () => {
   const editor = recipeEditor();
-  assert.match(editor, /if \(!compactMobileRecipe\)\{\s*\n\s*area\.append\(recipeUtilityTabs\);\s*\n(?:\s*\/\/[^\n]*\n)*\s*if \(trackingView\) area\.append\(trackingBar\);\s*\n\s*area\.append\(toolbar\);\s*\n\s*\}/);
+  assert.match(editor, /if \(!compactMobileRecipe\)\{\s*\n\s*area\.append\(recipeUtilityTabs\);/);
+  assert.match(editor, /if \(trackingView\) area\.append\(trackingBar\);/);
+  assert.match(editor, /area\.append\(toolbar\);/);
+  assert.doesNotMatch(editor, /mobileBulkEditSheet/);
   assert.match(editor, /if \(!compactMobileRecipe\)\{\s*\n\s*area\.append\(modeBar\);\s*\n\s*\}/);
 });
 

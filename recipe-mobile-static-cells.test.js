@@ -6,7 +6,7 @@
 // pointer-device capability, not a screen-width one. At hopper-cell size on
 // touch it never felt right, so every touch surface - phones and the
 // wide-but-touch tablet band alike - leaves cells inert and edits through
-// the panel/sheet, while a real pointer keeps the desktop hybrid.
+// the inline panel, while a real pointer keeps the desktop hybrid.
 //
 // The whole 5-layer grid deliberately stays on phones. Stepping through one
 // layer at a time was tried and reads as tedious navigation, so the room
@@ -71,21 +71,18 @@ test("the percentage keeps its unit tucked against the digits, sized without rel
  *   Mobile edit flow
  * -------------------------------------------------------------------- */
 
-test("the mobile sheet drops the numbered steps and gains Empty cells, matching the desktop panel", () => {
-  const mobileTemplate = splitsArea.slice(
-    splitsArea.indexOf("toolbar.innerHTML = compactMobileRecipe ? `"),
-    splitsArea.indexOf("} : `")
-  );
-  assert.doesNotMatch(mobileTemplate, /splitsBulkSteps/);
-  assert.match(mobileTemplate, /id="clearSelectedCells"/);
-  assert.match(mobileTemplate, /Reset Recipe/);
+test("mobile and tablet share one inline editor with the same selection actions", () => {
+  assert.match(splitsArea, /toolbar\.innerHTML = `/);
+  assert.doesNotMatch(splitsArea, /toolbar\.innerHTML = compactMobileRecipe/);
+  assert.match(splitsArea, /id="clearSelectedCells"/);
+  assert.match(splitsArea, /Reset Recipe/);
+  assert.match(splitsArea, /area\.append\(toolbar\);/);
 });
 
-test("the slim context bar leads with Select all - leaving Edit is the toggle's job, not a buried Cancel", () => {
-  assert.match(splitsArea, /<button type="button" class="mobileBulkCancel">Select all<\/button>/);
-  const start = splitsArea.indexOf('mobileBulkContext.querySelector(".mobileBulkCancel").addEventListener');
-  const body = splitsArea.slice(start, splitsArea.indexOf("});", start));
-  assert.match(body, /cellRefs\.forEach\(\(_,key\)=>selected\.add\(key\)\);/);
+test("Select all and Clear selection are wired in the shared inline editor", () => {
+  assert.match(splitsArea, /toolbar\.querySelector\("#selectAllSplits"\)\.addEventListener/);
+  assert.match(splitsArea, /cellRefs\.forEach\(\(_,key\)=>selected\.add\(key\)\);/);
+  assert.match(splitsArea, /toolbar\.querySelector\("#clearSplitSelection"\)\.addEventListener/);
 });
 
 /* ----------------------------------------------------------------------
@@ -115,11 +112,10 @@ test("popup positioning switches coordinate space with its host, and stays insid
   assert.match(show, /popup\.style\.maxHeight = `\$\{Math\.min\(220, available\)\}px`;/);
 });
 
-test("applying on mobile clears the selection but stays in Edit view", () => {
-  const start = splitsArea.indexOf('mobileBulkEditSheet?.close("applied");');
-  const body = splitsArea.slice(start, splitsArea.indexOf("});", start));
-  assert.match(body, /selected\.clear\(\);/);
-  // Edit is a persistent view now; kicking the operator out of it after
-  // every apply would contradict the toggle still reading "Edit".
+test("applying on mobile stays inline and retains the selection for a follow-up change", () => {
+  assert.doesNotMatch(splitsArea, /mobileBulkEditSheet/);
+  const start = splitsArea.indexOf('applyButton.addEventListener("click"');
+  const body = splitsArea.slice(start, splitsArea.indexOf("// Compact, always-rendered", start));
+  assert.doesNotMatch(body, /selected\.clear\(\)/);
   assert.doesNotMatch(body, /setBulkMode\(false\)/);
 });

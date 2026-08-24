@@ -64,11 +64,8 @@ test("keyboard accessible: a visible focus outline distinct from the active/hove
 test("the open panel is pulled flush against the tab strip's own divider (closing #splitsArea's grid gap), not left floating with a visible gap beneath the tabs", () => {
   const mergeRule = rule(".splitsBulkBar,\n.splitsSavedRecipesPanel{");
   assert.match(mergeRule, /margin-top: -7px;/);
-  // Neutralized inside the mobile bulk-edit sheet, where .splitsBulkBar is
-  // physically relocated and must not inherit a desktop-grid-specific
-  // offset that has nothing to sit flush against there.
-  const mobileSheetRule = rule(".mobileBulkEditSheet .splitsBulkBar{");
-  assert.match(mobileSheetRule, /margin-top:0;/);
+  // Phones keep the same panel inline and neutralize the desktop tab seam.
+  assert.match(styles, /#splitsArea > \.splitsBulkBar\{\s*\n\s*position:static;[\s\S]*?\n\s*margin:0;/);
 });
 
 test("the action row (Scan/Print/Load Next/Info) always renders last, below whichever utility panel is open, regardless of DOM append order", () => {
