@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Desktop Recipe cell states · Resin Tools</title>
+  <style>
+    :root{
+      color-scheme:dark;
+      --page:#171918;
+      --panel:#202322;
+      --cell:#252826;
+      --cell-alt:#222523;
+      --line:#3c403c;
+      --line-strong:#545950;
+      --ink:#eee2bd;
+      --muted:#aaa187;
+      --orange:#ff8100;
+      --tracking:#67c4c6;
+      --tracking-dark:#102c2d;
+      --edit:#ff9b32;
+      --edit-dark:#321d08;
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{
+      margin:0;
+      background:
+        radial-gradient(circle at 15% -5%,rgba(103,196,198,.08),transparent 32rem),
+        var(--page);
+      color:var(--ink);
+      font:16px/1.45 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+    }
+    header,main{width:min(1420px,calc(100% - 48px));margin-inline:auto}
+    header{padding:42px 0 24px}
+    h1{margin:0;font-size:clamp(30px,4vw,50px);line-height:1.05;letter-spacing:-.025em}
+    .intro{max-width:940px;margin:12px 0 22px;color:var(--muted);font-size:17px}
+    .rule{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      width:max-content;
+      max-width:100%;
+      padding:9px 13px;
+      border:1px solid color-mix(in srgb,var(--tracking) 45%,var(--line));
+      border-radius:9px;
+      background:color-mix(in srgb,var(--tracking) 6%,var(--panel));
+      color:var(--tracking);
+      font-size:13px;
+      font-weight:800;
+    }
+    .rule::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--tracking)}
+    nav{position:sticky;top:0;z-index:20;display:flex;gap:7px;padding:12px 0;background:color-mix(in srgb,var(--page) 92%,transparent);backdrop-filter:blur(12px)}
+    nav a{display:grid;place-items:center;width:34px;height:34px;border:1px solid var(--line);border-radius:7px;background:var(--panel);color:var(--muted);font-size:13px;font-weight:900;text-decoration:none}
+    nav a:hover,nav a:focus-visible{border-color:var(--tracking);color:var(--tracking);outline:0}
+    main{display:grid;gap:28px;padding:10px 0 70px}
+    .concept{scroll-margin-top:70px;padding:22px;border:1px solid var(--line);border-radius:15px;background:linear-gradient(145deg,#202322,#1c1f1e)}
+    .concept-head{display:flex;align-items:start;justify-content:space-between;gap:24px;margin-bottom:17px}
+    .concept-title{display:flex;align-items:center;gap:12px}
+    .number{display:grid;place-items:center;flex:0 0 auto;width:34px;height:34px;border:1px solid var(--line-strong);border-radius:50%;color:var(--tracking);font-size:15px;font-weight:900}
+    h2{margin:0;font-size:23px;line-height:1.2}
+    .concept-head p{max-width:650px;margin:2px 0 0;color:var(--muted);font-size:14px;text-align:right}
+    .matrix-wrap{overflow-x:auto;border:1px solid var(--line-strong);border-radius:11px;background:#191c1b}
+    .state-head,.cells{display:grid;grid-template-columns:repeat(5,minmax(190px,1fr));min-width:1000px}
+    .state-head{border-bottom:1px solid var(--line-strong)}
+    .state-head span{padding:10px 15px;color:var(--muted);font-size:11px;font-weight:850;letter-spacing:.1em;text-transform:uppercase}
+    .state-head span+span{border-left:1px solid var(--line)}
+    .cell{position:relative;min-width:0;height:154px;padding:15px;background:var(--cell);overflow:hidden}
+    .cell:nth-child(even){background:var(--cell-alt)}
+    .cell+.cell{border-left:1px solid var(--line)}
+    .cell.editing{z-index:2;box-shadow:inset 0 0 0 2px var(--edit)}
+    .hopper-row{position:relative;z-index:3;display:flex;align-items:center;min-height:31px}
+    .hopper-badge{display:inline-flex;align-items:center;min-width:36px;height:27px;padding:0 8px;border-radius:7px;background:#1d201f;color:var(--orange);font:850 16px/1 ui-monospace,SFMono-Regular,Consolas,monospace}
+    .resin{position:relative;z-index:2;display:block;margin-top:17px;color:var(--orange);font-size:21px;font-weight:800;line-height:1.1;white-space:nowrap}
+    .pct{position:absolute;right:14px;bottom:12px;z-index:3;color:var(--ink);font-size:22px;font-weight:850;font-variant-numeric:tabular-nums}
+    .pct small{font-size:13px}
+    .track-word,.edit-word,.state-footer,.edge-word,.flag{display:none}
+
+    /* 1. Direct words in the free top-right corner. */
+    .c1 .track-word,.c1 .edit-word{position:absolute;top:12px;right:12px;z-index:4;font-size:11px;font-weight:950;letter-spacing:.1em}
+    .c1 .tracked .track-word{display:block;color:var(--tracking)}
+    .c1 .editing .edit-word{display:block;color:var(--edit)}
+    .c1 .both .track-word{top:11px}.c1 .both .edit-word{top:29px}
+
+    /* 2. Words become narrow edge furniture, not a cell fill. */
+    .c2 .cell{padding-right:35px}
+    .c2 .edge-word{position:absolute;top:0;right:0;bottom:0;z-index:4;align-items:center;justify-content:center;width:27px;border-left:1px solid currentColor;font-size:10px;font-weight:950;letter-spacing:.14em;writing-mode:vertical-rl;transform:rotate(180deg)}
+    .c2 .tracked .edge-track{display:flex;color:var(--tracking)}
+    .c2 .editing .edge-edit{display:flex;color:var(--edit)}
+    .c2 .both{padding-right:57px}
+    .c2 .both .edge-track{right:27px}.c2 .both .edge-edit{right:0}
+
+    /* 3. Tracking changes the hopper badge itself; Edit still owns the cell. */
+    .c3 .tracked .hopper-badge{gap:7px;width:auto;border:1px solid color-mix(in srgb,var(--tracking) 72%,transparent);border-radius:7px 16px 16px 7px;background:color-mix(in srgb,var(--tracking) 10%,#1d201f);color:var(--tracking)}
+    .c3 .tracked .hopper-badge::after{content:"";width:7px;height:7px;border-radius:50%;background:var(--tracking);box-shadow:0 0 0 3px color-mix(in srgb,var(--tracking) 14%,transparent)}
+    .c3 .tracked .hopper-row::after{content:"TRACKING";margin-left:9px;color:var(--tracking);font-size:10px;font-weight:950;letter-spacing:.1em}
+    .c3 .editing .edit-word{display:block;position:absolute;top:13px;right:13px;z-index:4;color:var(--edit);font-size:11px;font-weight:950;letter-spacing:.1em}
+
+    /* 4. A thin information footer leaves the recipe content untouched. */
+    .c4 .cell{padding-bottom:36px}
+    .c4 .state-footer{position:absolute;right:0;bottom:0;left:0;z-index:4;align-items:center;gap:12px;height:27px;padding:0 13px;border-top:1px solid var(--line);background:#1c1f1e;font-size:10px;font-weight:950;letter-spacing:.11em}
+    .c4 .tracked .state-footer,.c4 .editing .state-footer{display:flex}
+    .c4 .footer-track{color:var(--tracking)}.c4 .footer-edit{color:var(--edit)}
+    .c4 .cell:not(.tracked) .footer-track,.c4 .cell:not(.editing) .footer-edit{display:none}
+    .c4 .pct{bottom:40px}
+
+    /* 5. Compact side caption plus asymmetric edit brackets. */
+    .c5 .tracked .hopper-row::after{content:"TRACKING";margin-left:10px;color:var(--tracking);font-size:10px;font-weight:950;letter-spacing:.1em}
+    .c5 .tracked .hopper-badge::after{content:"";width:7px;height:7px;margin-left:6px;border-radius:50%;background:var(--tracking)}
+    .c5 .editing::before,.c5 .editing::after{content:"";position:absolute;z-index:5;width:35px;height:35px;pointer-events:none}
+    .c5 .editing::before{top:0;right:0;border-top:3px solid var(--edit);border-right:3px solid var(--edit)}
+    .c5 .editing::after{bottom:0;left:0;border-bottom:3px solid var(--edit);border-left:3px solid var(--edit)}
+    .c5 .editing .edit-word{display:block;position:absolute;top:13px;right:13px;z-index:4;color:var(--edit);font-size:11px;font-weight:950;letter-spacing:.1em}
+
+    /* 6. Small folded flags create a distinct silhouette at a glance. */
+    .c6 .cell{padding-top:38px}
+    .c6 .flag{position:absolute;top:0;right:0;z-index:5;align-items:center;height:27px;padding:0 12px 0 18px;clip-path:polygon(9px 0,100% 0,100% 100%,9px 100%,0 50%);font-size:10px;font-weight:950;letter-spacing:.09em}
+    .c6 .tracked .flag-track{display:flex;background:var(--tracking);color:var(--tracking-dark)}
+    .c6 .editing .flag-edit{display:flex;background:var(--edit);color:var(--edit-dark)}
+    .c6 .both .flag-track{right:63px}.c6 .both .flag-edit{right:0}
+    .c6 .resin{margin-top:10px}
+
+    .recommendation{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+    .recommendation b{color:var(--ink)}
+    @media(max-width:800px){
+      header,main{width:min(100% - 24px,1420px)}
+      header{padding-top:26px}
+      .concept{padding:15px}
+      .concept-head{display:block}.concept-head p{margin:7px 0 0;text-align:left}
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Desktop Recipe cells: tracking + edit</h1>
+    <p class="intro">Six full-size treatments using desktop’s extra room. Tracking never changes the cell surface, tint, or outline; Edit remains the stronger state and may outline the cell.</p>
+    <div class="rule">Tracking is communicated by visible cell furniture—not highlighting.</div>
+  </header>
+  <nav aria-label="Jump to a concept">
+    <a href="#option-1">1</a><a href="#option-2">2</a><a href="#option-3">3</a>
+    <a href="#option-4">4</a><a href="#option-5">5</a><a href="#option-6">6</a>
+  </nav>
+  <main id="gallery"></main>
+  <script>
+    const concepts=[
+      ["Corner status words","Uses the open corner for explicit words. Fastest to read and the lightest structural change.","Most direct"],
+      ["Vertical edge labels","Turns the right edge into a dedicated state rail while leaving recipe information undisturbed.","Most architectural"],
+      ["Altered hopper badge","Tracking visibly changes the hopper badge and reinforces it with a nearby word; Edit remains independent.","Best continuity with mobile"],
+      ["Status footer strip","A compact information strip provides room for both states without competing with hopper data.","Best for combined states"],
+      ["Badge + side caption","Keeps the familiar tracked dot, adds the word, and uses corner brackets instead of a full Edit outline.","Most restrained"],
+      ["Corner flags","High-contrast labeled flags produce the clearest silhouette when scanning a large matrix.","Most noticeable"]
+    ];
+    const cells=[
+      ["A1","MS0440","66","normal"],
+      ["A2","A0600","2","tracked"],
+      ["A3","MS0200","21","editing"],
+      ["A4","MS1307","21","tracked editing both"],
+      ["A5","A0450","5","normal"]
+    ];
+    const stateNames=["Normal","Tracking","Edit","Tracking + Edit","Normal"];
+    const gallery=document.querySelector("#gallery");
+    concepts.forEach(([title,description,note],index)=>{
+      const section=document.createElement("section");
+      section.className=`concept c${index+1}`;
+      section.id=`option-${index+1}`;
+      section.innerHTML=`
+        <div class="concept-head">
+          <div class="concept-title"><span class="number">${index+1}</span><h2>${title}</h2></div>
+          <p>${description}</p>
+        </div>
+        <div class="matrix-wrap">
+          <div class="state-head">${stateNames.map(name=>`<span>${name}</span>`).join("")}</div>
+          <div class="cells"></div>
+        </div>
+        <div class="recommendation"><b>${note}.</b> A4 demonstrates what happens when a tracked hopper is also selected during Edit.</div>`;
+      const host=section.querySelector(".cells");
+      cells.forEach(([hopper,resin,pct,state])=>{
+        const cell=document.createElement("div");
+        cell.className=`cell ${state}`;
+        cell.innerHTML=`
+          <div class="hopper-row"><span class="hopper-badge">${hopper}</span></div>
+          <span class="track-word">TRACKING</span><span class="edit-word">EDIT</span>
+          <span class="edge-word edge-track">TRACKING</span><span class="edge-word edge-edit">EDIT</span>
+          <span class="flag flag-track">TRACKING</span><span class="flag flag-edit">EDIT</span>
+          <strong class="resin">${resin}</strong><span class="pct">${pct}<small>%</small></span>
+          <span class="state-footer"><b class="footer-track">TRACKING</b><b class="footer-edit">EDIT</b></span>`;
+        host.append(cell);
+      });
+      gallery.append(section);
+    });
+  </script>
+</body>
+</html>

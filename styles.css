@@ -2908,6 +2908,99 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
 }
 
 @media (min-width: 901px) and (pointer: fine){
+  /* Keep Recipe's top controls attached to the working grid instead of the
+     full-width desktop canvas. The width is the matrix's 70px row-selector
+     track plus five 198px layer tracks and its two outer border pixels.
+     Recipes with fewer layers deliberately retain this five-layer rail, so
+     View and tracking controls never jump horizontally between recipes. */
+  #splitsBlock{
+    --recipe-five-layer-rail: 1062px;
+  }
+  #splitsBlock .recipeHeaderRow,
+  #splitsArea > .splitsBulkBar{
+    width: min(100%, var(--recipe-five-layer-rail));
+  }
+  /* Timeline already owns the destructive Reset tracking action. Desktop
+     Summary therefore needs no tracking status/action panel at all and can
+     open directly onto the matrix, matching the read-only Next tab. Touch
+     layouts retain their closer in-context control. */
+  #splitsArea > .splitsTrackingBar{
+    display: none;
+  }
+
+  /* Edit exposes the 70px row-selector track. Summary keeps the same track
+     as an inert spacer rather than removing it, which holds every layer
+     column at the exact same x-position between views. */
+  #splitsArea[data-recipe-view="summary"] .splitsMatrix tr > :first-child{
+    display: table-cell;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  /* Desktop cell states - option 3 from the comparison. Tracking is a
+     persistent property, so it changes the hopper badge and spells out the
+     state without tinting or outlining the entire cell. Edit remains the
+     stronger working state: its ordinary cell surface gets a two-pixel
+     outline and an explicit corner label. A tracked cell selected in Edit
+     therefore shows both marks without either becoming ambiguous. */
+  #splitsArea .splitsMatrix tbody .splitMatrixCell{
+    --desktop-recipe-cell-bg: transparent;
+    position: relative;
+    overflow: hidden;
+  }
+  #splitsArea .splitsMatrix tbody td.splitMatrixCell:nth-child(even){
+    --desktop-recipe-cell-bg: color-mix(in srgb,var(--row-bg-2) 55%,transparent);
+  }
+  #splitsArea[data-recipe-view="summary"] .splitsMatrix tbody .splitMatrixCell.tracked,
+  #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.tracked:not(.selected){
+    background: var(--desktop-recipe-cell-bg);
+    box-shadow: none;
+  }
+  #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.selected{
+    background: var(--desktop-recipe-cell-bg);
+    box-shadow: inset 0 0 0 2px var(--focus-border);
+  }
+  #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.selected::after{
+    content: "EDIT";
+    position: absolute;
+    top: 4px;
+    right: 6px;
+    z-index: 3;
+    color: var(--focus-border);
+    font-size: 8px;
+    font-weight: 950;
+    line-height: 1;
+    letter-spacing: .11em;
+    pointer-events: none;
+  }
+  #splitsArea .splitsMatrix .splitMatrixCell.tracked .splitCellHopperName{
+    position: relative;
+    min-width: 36px;
+    padding: 0 13px 0 7px;
+    border-radius: 7px 14px 14px 7px;
+    background: color-mix(in srgb,var(--focus-border) 13%,var(--field-bg));
+    color: var(--focus-border);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb,var(--focus-border) 65%,transparent);
+  }
+  #splitsArea .splitsMatrix .splitMatrixCell.tracked .splitCellHopperName::after{
+    content: "";
+    position: absolute;
+    right: 5px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 0 2px color-mix(in srgb,var(--focus-border) 16%,transparent);
+  }
+  #splitsArea .splitsMatrix .splitMatrixCell.tracked .splitCellHeader::after{
+    content: "TRACKING";
+    color: var(--focus-border);
+    font-size: 8px;
+    font-weight: 950;
+    line-height: 1;
+    letter-spacing: .1em;
+  }
+
   /* Left-align instead of centering under the panel: .splitsMatrixFrame's
      base rule (margin-inline:auto) centers it whenever the table is
      narrower than the available width - true for any 1- or 2-layer recipe
@@ -2916,7 +3009,10 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
      avoids this (width:100% forces the frame edge-to-edge instead), this
      just gives desktop the equivalent flush-left result at its own,
      narrower table width. */
-  .splitsMatrixFrame{ margin-inline: 0; }
+  .splitsMatrixFrame{
+    width: var(--recipe-five-layer-rail);
+    margin-inline: 0;
+  }
 
   /* 10% larger Recipe matrix on desktop only - font size, the Track
      toggle's clock icon, the hopper-designation badge, and the column/cell

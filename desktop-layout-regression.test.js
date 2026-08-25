@@ -7,6 +7,7 @@ const fs = require("node:fs");
 const html = fs.readFileSync("index.html", "utf8");
 const app = fs.readFileSync("app.js", "utf8");
 const desktop = fs.readFileSync("desktop.css", "utf8");
+const styles = fs.readFileSync("styles.css", "utf8");
 
 test("desktop layout rules are isolated in a stylesheet loaded after the shared theme", () => {
   const theme = html.indexOf('href="theme.css');
@@ -81,4 +82,11 @@ test("variable length desktop sections use bounded internal scrolling", () => {
   assert.match(desktop, /#resultsArea\{min-height:0;overflow:auto;/);
   assert.match(desktop, /#resinCalcResults\{min-height:0;overflow:auto\}/);
   assert.match(desktop, /#helpBlock > \.blockBody\{overflow:auto\}/);
+});
+
+test("desktop Recipe controls use the five-layer rail and Summary omits the redundant tracking panel", () => {
+  assert.match(styles, /#splitsBlock\{\s*--recipe-five-layer-rail: 1062px;/);
+  assert.match(styles, /#splitsBlock \.recipeHeaderRow,\s*#splitsArea > \.splitsBulkBar\{\s*width: min\(100%, var\(--recipe-five-layer-rail\)\);/);
+  assert.match(styles, /#splitsArea > \.splitsTrackingBar\{\s*display: none;/);
+  assert.doesNotMatch(styles, /--recipe-view-stage-height/);
 });
