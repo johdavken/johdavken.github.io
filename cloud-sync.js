@@ -564,6 +564,18 @@
         // count toward a much later, unrelated one. Retry/refreshSelected
         // remain the deliberate way to clear a tripped breaker outright.
         const row = response.data?.[0];
+        // The server returns the authoritative row instead of throwing for a
+        // stale, non-identical update. That lets old clients settle their
+        // stale outbox item without producing an unbounded error stream,
+        // while current clients still preserve local work and use the normal
+        // conflict-resolution dialog. A matching operation id is our write;
+        // a matching payload is the existing idempotent no-op. Only the
+        // remaining shape is a genuine remote winner.
+        if (row && row.operation_id !== pending.operationId && !activeJobLib?.activeJobsEqual?.(pending.payload, row.payload)){
+          if (tripIfConflictBursting()) return;
+          await resolveActiveConflict(pending, row, { alreadyCounted: true });
+          return;
+        }
         if (row){
           state.activeRevision = Number(row.revision);
           saveWorkspaceMetadata(selectedId(), { activeRevision: state.activeRevision, activePayload: row.payload });

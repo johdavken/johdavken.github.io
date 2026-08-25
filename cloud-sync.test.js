@@ -929,6 +929,43 @@ function permanentlyConflictingSync(choice = "remote"){
   return { sync, rows, bumpRevision, resolveCalls: ()=>resolveCalls, ...harness };
 }
 
+test("an authoritative conflict reply still preserves local work and opens conflict resolution", async () => {
+  const rows = workspaceFixtures({ id: "ws-a", name: "Line A" });
+  const harness = fakeRealtimeClient(rows);
+  let resolutions = 0;
+  const sync = require("./cloud-sync.js").create({
+    config: { enabled: true, url: "https://example.supabase.co", publishableKey: "key" },
+    syncStorage: require("./sync-storage.js"),
+    storage: memoryStorage(),
+    supabaseLibrary: { createClient: ()=>harness.client },
+    adapter: {
+      ...fakeAdapter(()=>activeJobPayload({ lineRate: 500 })),
+      resolveActiveConflict: async ()=>{ resolutions += 1; return "remote"; }
+    },
+    activeJob: require("./active-job.js")
+  });
+  await sync.initialize();
+
+  // Mirror the server's new stale-write reply: the remote row is returned
+  // without an exception and has neither our operation id nor our payload.
+  harness.client.rpc = async (name, args)=>{
+    if (name !== "update_active_job") return { data: null, error: null };
+    const row = rows.active_jobs[0];
+    return {
+      data: [{ workspace_id: row.workspace_id, payload: row.payload, revision: row.revision,
+        operation_id: row.last_operation_id, updated_at: row.updated_at, updated_by: row.updated_by }],
+      error: null
+    };
+  };
+
+  sync.notifyActiveJobMutation({ immediate: true, kind: "edit" });
+  await new Promise(resolve=>setTimeout(resolve, 0));
+  await new Promise(resolve=>setTimeout(resolve, 0));
+
+  assert.equal(resolutions, 1);
+  assert.equal(sync.getState().pendingCount, 0, "accepting the remote winner settles the stale outbox item");
+});
+
 test("a runaway conflict cycle trips the breaker instead of writing forever", async () => {
   // Each notify carries a different payload, so the existing no-op guard
   // cannot be what stops it - only the breaker can.
