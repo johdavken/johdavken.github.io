@@ -3354,6 +3354,88 @@
       return isNextRecipePage() ? ensureNextRecipeWorking() : state.layers;
     }
 
+    // Recipe edits are deliberately reversible within the open session. Keep
+    // Current and Next separate: they are two different working documents,
+    // and moving between their tabs must never make an Undo alter the other.
+    const RECIPE_HISTORY_LIMIT = 40;
+    const recipeEditHistory = { current:{undo:[],redo:[]}, next:{undo:[],redo:[]} };
+    let recipeEditInputSnapshot = null;
+    let recipeRearrangementHistoryBefore = null;
+
+    function cloneRecipeLayers(layers){
+      return (layers || []).map(layer=>({
+        name:layer.name,
+        layerPct:clampNum(layer.layerPct),
+        hoppers:(layer.hoppers || []).map(hopper=>({
+          pct:clampNum(hopper.pct),
+          weight:clampNum(hopper.weight),
+          resinName:normName(hopper.resinName || ""),
+          track:!!hopper.track,
+          pumpOff:!!hopper.pumpOff,
+          usableHeight:clampNum(hopper.usableHeight),
+          circumference:clampNum(hopper.circumference),
+          usableGallons:clampNum(hopper.usableGallons)
+        }))
+      }));
+    }
+    function recipeEditHistoryKey(){ return isNextRecipePage() ? "next" : "current"; }
+    function snapshotRecipeEdit(){
+      const next = isNextRecipePage();
+      return {
+        layers:cloneRecipeLayers(recipeLayers()),
+        lots:{...(next ? state.nextRecipeLots : state.resinLots || {})}
+      };
+    }
+    function recordRecipeEdit(before){
+      if (!before || JSON.stringify(before) === JSON.stringify(snapshotRecipeEdit())) return;
+      const history = recipeEditHistory[recipeEditHistoryKey()];
+      history.undo.push(before);
+      if (history.undo.length > RECIPE_HISTORY_LIMIT) history.undo.shift();
+      history.redo.length = 0;
+      syncRecipeEditHistoryControls();
+    }
+    function beginRecipeEditInput(){
+      if (!recipeEditInputSnapshot) recipeEditInputSnapshot={page:recipeEditHistoryKey(),state:snapshotRecipeEdit()};
+    }
+    function finishRecipeEditInput(){
+      const pending=recipeEditInputSnapshot;
+      recipeEditInputSnapshot=null;
+      if (pending?.page === recipeEditHistoryKey()) recordRecipeEdit(pending.state);
+    }
+    function applyRecipeEditSnapshot(snapshot){
+      if (!snapshot) return;
+      if (isNextRecipePage()){
+        nextRecipeWorking=cloneRecipeLayers(snapshot.layers);
+        state.nextRecipeLots={...(snapshot.lots || {})};
+      }else{
+        state.layers=cloneRecipeLayers(snapshot.layers);
+        state.resinLots={...(snapshot.lots || {})};
+      }
+      recipeEditInputSnapshot=null;
+      renderSplitsArea();
+      validateAndCompute({sync:true,immediate:true,kind:"edit"});
+      saveSession();
+    }
+    function undoRecipeEdit(){
+      const history=recipeEditHistory[recipeEditHistoryKey()];
+      const previous=history.undo.pop();
+      if (!previous) return;
+      history.redo.push(snapshotRecipeEdit());
+      applyRecipeEditSnapshot(previous);
+    }
+    function redoRecipeEdit(){
+      const history=recipeEditHistory[recipeEditHistoryKey()];
+      const next=history.redo.pop();
+      if (!next) return;
+      history.undo.push(snapshotRecipeEdit());
+      applyRecipeEditSnapshot(next);
+    }
+    function syncRecipeEditHistoryControls(){
+      const history=recipeEditHistory[recipeEditHistoryKey()];
+      document.querySelectorAll("#recipeUndo").forEach(button=>{ button.disabled=history.undo.length===0; });
+      document.querySelectorAll("#recipeRedo").forEach(button=>{ button.disabled=history.redo.length===0; });
+    }
+
     /* The plan's own percentage totals, for the notification bell only (see
      * readNextRecipeFacts). The same two rules the current recipe is measured
      * by, applied to the plan - not a second set of validation rules.
@@ -3685,10 +3767,12 @@
         const from = recipeLayers().find(L=>L.name===fromName);
         const to = recipeLayers().find(L=>L.name===toName);
         if (!from || !to) return;
+        const historyBefore=snapshotRecipeEdit();
         for (let i=0;i<HOPPERS_PER_LAYER;i++){
           to.hoppers[i].pct = clampNum(from.hoppers[i].pct);
           to.hoppers[i].resinName = normName(from.hoppers[i].resinName);
         }
+        recordRecipeEdit(historyBefore);
       }
 
       const modeBar = document.createElement("div");
@@ -3719,8 +3803,11 @@
       }
       function finishRearrangement(cancelled=false){
         if(!hopperRearrangement?.active) return;
+        const historyBefore=recipeRearrangementHistoryBefore;
         if(cancelled) window.PolynHopperRearrangement.apply(recipeLayers(),hopperRearrangement.baseline);
         hopperRearrangement=null;
+        recipeRearrangementHistoryBefore=null;
+        if (!cancelled) recordRecipeEdit(historyBefore);
         renderSplitsArea();
         validateAndCompute();
         saveSession();
@@ -3744,6 +3831,7 @@
         }
         splitsBulkModeActive = false;
         splitsSavedRecipesOpen = false;
+        recipeRearrangementHistoryBefore=snapshotRecipeEdit();
         hopperRearrangement={active:true,baseline:window.PolynHopperRearrangement.snapshot(recipeLayers()),undo:[],tapSource:null};
         renderSplitsArea();
       });
@@ -3925,8 +4013,12 @@
           <button id="applyBulkSplit" type="button" class="secondary" disabled>Apply to selected</button>
         </div>
         <div class="splitsEditRow splitsEditRowSecondary">
+          <div class="recipeEditHistory" role="group" aria-label="Recipe edit history">
+            <button id="recipeUndo" type="button" class="recipeHistoryAction" aria-label="Undo recipe change" title="Undo" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4 12l5 5M4 12h9a6 6 0 1 1 0 12"/></svg></button>
+            <button id="recipeRedo" type="button" class="recipeHistoryAction" aria-label="Redo recipe change" title="Redo" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 7 5 5-5 5m5-5h-9a6 6 0 1 0 0 12"/></svg></button>
+          </div>
           <div class="splitsBulkActions">
-            <div id="splitSelectionStatus" class="tiny splitsSelectionStatus" role="status" aria-live="polite">No hoppers selected</div>
+            <div id="splitSelectionStatus" class="srOnly tiny splitsSelectionStatus" role="status" aria-live="polite">No hoppers selected</div>
             <button id="selectAllSplits" type="button" class="bulkTextAction">Select all</button>
             <button id="clearSplitSelection" type="button" class="bulkTextAction">Clear selection</button>
           </div>
@@ -4305,6 +4397,7 @@
         th.appendChild(hopperTotal);
 
         pctInput.addEventListener("input",(e)=>{
+          beginRecipeEditInput();
           const accepted = acceptNumericInput(
             e.target,
             { min: 0, max: 100, label: `Layer ${L.name} percentage` },
@@ -4316,6 +4409,8 @@
           validateAndCompute({ sync: true });
           saveSession();
         });
+        pctInput.addEventListener("change",finishRecipeEditInput);
+        pctInput.addEventListener("blur",finishRecipeEditInput);
 
         headerRow.appendChild(th);
       });
@@ -4596,11 +4691,14 @@
           });
 
           resinInput.addEventListener("input",(e)=>{
+            beginRecipeEditInput();
             hopper.resinName = normName(e.target.value);
             refreshCellState();
             validateAndCompute({ sync: true });
             saveSession();
           });
+          resinInput.addEventListener("change",finishRecipeEditInput);
+          resinInput.addEventListener("blur",finishRecipeEditInput);
 
           pctInput.addEventListener("input",(e)=>{
             if (hi === 0) return;
@@ -4624,6 +4722,7 @@
             e.target.title = totalResult.valid ? "" : totalResult.message;
             if (!totalResult.valid) return;
 
+            beginRecipeEditInput();
             hopper.pct = candidate.value;
             recomputeAutoH1(L);
             refreshCellState();
@@ -4634,6 +4733,8 @@
             validateAndCompute({ sync: true });
             saveSession();
           });
+          pctInput.addEventListener("change",finishRecipeEditInput);
+          pctInput.addEventListener("blur",finishRecipeEditInput);
 
           function toggleTracking(){
             hopper.track = !hopper.track;
@@ -4662,6 +4763,7 @@
             toggleTracking();
           });
           clearButton.addEventListener("click",()=>{
+            const historyBefore=snapshotRecipeEdit();
             hopper.resinName = "";
             if (hi > 0) hopper.pct = 0;
             hopper.track = false;
@@ -4681,6 +4783,8 @@
             updateHopperTotals();
             validateAndCompute({ sync: true, immediate: true, kind: "recipe-clear" });
             saveSession();
+            recordRecipeEdit(historyBefore);
+            updateRecipeHistoryControls();
           });
           refreshCellState();
         });
@@ -4768,7 +4872,15 @@
       const applyButton = toolbar.querySelector("#applyBulkSplit");
       const selectionStatus = toolbar.querySelector("#splitSelectionStatus");
       const clearCellsButton = toolbar.querySelector("#clearSelectedCells");
+      const undoButton = toolbar.querySelector("#recipeUndo");
+      const redoButton = toolbar.querySelector("#recipeRedo");
       attachResinAutocomplete(bulkNameInput);
+
+      function updateRecipeHistoryControls(){
+        syncRecipeEditHistoryControls();
+      }
+      undoButton?.addEventListener("click",undoRecipeEdit);
+      redoButton?.addEventListener("click",redoRecipeEdit);
 
       function hasBulkValue(){
         return bulkNameInput.value.trim() !== "" || bulkPctInput.value.trim() !== "";
@@ -4805,7 +4917,8 @@
         // for an action that would do nothing.
         const emptyable = emptyableHopperCount();
         if (clearCellsButton) clearCellsButton.disabled = emptyable === 0;
-        selectionStatus.className = `tiny splitsSelectionStatus${type ? ` ${type}` : ""}`;
+        updateRecipeHistoryControls();
+        selectionStatus.className = `srOnly tiny splitsSelectionStatus${type ? ` ${type}` : ""}`;
         selectionStatus.textContent = message || (
           selected.size === 0
             ? "No hoppers selected"
@@ -4926,6 +5039,7 @@
         // than one is worth a question: on a phone this sits one tap away
         // from a full selection, and there is no undo.
         if (emptyable > 1 && !confirm(`Empty ${emptyable} hoppers? Their resin, percentage, and Track setting are cleared.`)) return;
+        const historyBefore=snapshotRecipeEdit();
         const touchedLayers = new Set();
         selected.forEach(key=>{
           const ref = cellRefs.get(key);
@@ -4950,12 +5064,14 @@
         updateHopperTotals();
         validateAndCompute({ sync: true, immediate: true, kind: "recipe-clear" });
         saveSession();
+        recordRecipeEdit(historyBefore);
         updateSelectionUI("Emptied the selected hoppers.", "ok");
       }
       clearCellsButton?.addEventListener("click", emptySelectedCells);
       toolbar.querySelector("#resetAllSplits").addEventListener("click",()=>{
         const ok = confirm("Reset every hopper resin, percentage, and Track setting?");
         if (!ok) return;
+        const historyBefore=snapshotRecipeEdit();
 
         recipeLayers().forEach(L=>{
           L.hoppers.forEach(hopper=>{
@@ -4972,6 +5088,7 @@
         selected.clear();
         bulkNameInput.value = "";
         bulkPctInput.value = "";
+        recordRecipeEdit(historyBefore);
         renderSplitsArea();
         validateAndCompute({ sync: true });
         saveSession();
@@ -5006,6 +5123,7 @@
           }
         }
 
+        const historyBefore=snapshotRecipeEdit();
         let percentageCount = 0;
         selected.forEach(key=>{
           const ref = cellRefs.get(key);
@@ -5035,6 +5153,7 @@
         updateHopperTotals();
         validateAndCompute({ sync: true });
         saveSession();
+        recordRecipeEdit(historyBefore);
 
         const changes = [];
         if (applyName) changes.push(`resin “${resinName}”`);

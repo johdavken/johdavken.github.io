@@ -1968,14 +1968,55 @@ details[open] > summary .chevSatellite{
 .splitsBulkApply button{width:100%}
 .splitsBulkActions{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding-top:4px;border-top:1px solid var(--row-border)}
 .splitsBulkActions .bulkTextAction,
-.weightsBulkActions .bulkTextAction{width:auto;min-height:28px;padding:4px 9px;border:1px solid var(--btn-secondary-border);border-radius:2px;background:var(--btn-secondary-bg);color:var(--btn-text);font-weight:700;box-shadow:inset 4px 0 0 var(--title)}
+.weightsBulkActions .bulkTextAction,
+/* Empty cells and Rearrange are direct children of the tablet Edit row,
+   not members of .splitsBulkActions. Keep them in the exact same action
+   family at every non-phone layout rather than depending on a viewport
+   refinement that can be superseded by the active shell. */
+.splitsEditRowSecondary > .bulkTextAction{width:auto;min-height:28px;padding:4px 9px;border:1px solid var(--btn-secondary-border);border-radius:2px;background:var(--btn-secondary-bg);color:var(--btn-text);font-weight:700;box-shadow:inset 4px 0 0 var(--title)}
 .splitsBulkActions .bulkTextAction:hover,
-.weightsBulkActions .bulkTextAction:hover{color:var(--title);background:color-mix(in srgb,var(--title) 12%,var(--btn-secondary-bg));text-decoration:none}
+.weightsBulkActions .bulkTextAction:hover,
+.splitsEditRowSecondary > .bulkTextAction:hover:not(:disabled){color:var(--title);background:color-mix(in srgb,var(--title) 12%,var(--btn-secondary-bg));text-decoration:none}
+.splitsEditRowSecondary > .bulkTextAction:disabled{box-shadow:inset 4px 0 0 var(--muted)}
 .splitsBulkActions .danger{margin-left:auto}
 .splitsBulkNote{grid-column:1/-1;color:var(--muted)}
 .splitsSelectionStatus{
   min-height: 1.2em;
 }
+.recipeEditHistory{
+  display:inline-flex;
+  align-items:center;
+  gap:2px;
+  flex:0 0 auto;
+}
+.recipeHistoryAction{
+  display:grid;
+  place-items:center;
+  width:26px;
+  min-width:26px;
+  min-height:26px;
+  padding:0;
+  border:0;
+  border-radius:50%;
+  background:transparent;
+  color:var(--muted);
+  box-shadow:none;
+}
+.recipeHistoryAction svg{
+  width:18px;
+  height:18px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:2;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.recipeHistoryAction:hover:not(:disabled){
+  background:color-mix(in srgb,var(--title) 10%,transparent);
+  color:var(--title);
+  filter:none;
+}
+.recipeHistoryAction:disabled{ opacity:.32; }
 .splitsSelectionStatus.ok{ color: var(--ok); }
 .splitsSelectionStatus.warn{ color: var(--warn); }
 /* Saved recipes / Bulk edit / Rearrange: a second, visually subordinate
