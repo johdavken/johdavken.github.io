@@ -159,9 +159,9 @@ test("Gruvbox's palette hues are top-level too - the accents above are useless w
   // These used to sit beside the --gruv-mobile-* surface tokens inside the
   // mobile block. Left there, --tile-accent would resolve to an undefined
   // variable on desktop and the circle would lose its fill entirely.
-  assert.equal(enclosingAtRule('body[data-theme="gruvbox-dark"]{\n  --gruv-red:#fb4934;'), null);
+  assert.equal(enclosingAtRule('body[data-theme="gruvbox-dark"]{\n  --gruv-red:#c87968;'), null);
   assert.equal(enclosingAtRule('body[data-theme="gruvbox-light"]{\n  --gruv-red:#cc241d;'), null);
-  assert.match(styles, /body\[data-theme="gruvbox-dark"\]\{\s*\n\s*--gruv-red:#fb4934;[\s\S]*?--gruv-purple:#d3869b;\s*\n\}/);
+  assert.match(styles, /body\[data-theme="gruvbox-dark"\]\{\s*\n\s*--gruv-red:#c87968;[\s\S]*?--gruv-purple:#ae8d80;\s*\n\}/);
   // The surface tokens stay mobile-only: they describe the tile home, not a colour.
   assert.notEqual(enclosingAtRule("--gruv-mobile-bg:#1d2021;"), null);
 });

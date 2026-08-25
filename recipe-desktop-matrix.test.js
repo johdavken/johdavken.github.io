@@ -22,6 +22,21 @@ test("the Recipe matrix left-aligns instead of centering, desktop only", () => {
   assert.match(styles, /\.splitsMatrixFrame\{\s*\n\s*width:max-content;\s*\n\s*margin-inline:auto;/);
 });
 
+test("desktop marks the active layer count and textures only the unused one- and three-layer rail space", () => {
+  const app = fs.readFileSync("app.js", "utf8");
+  const body = desktopBlock();
+  assert.match(app, /frame\.dataset\.layerCount = String\(layerNames\.length\);/);
+  assert.match(body, /\.splitsMatrixFrame\[data-layer-count="1"\],\s*\n\s*#splitsArea \.splitsMatrixFrame\[data-layer-count="3"\]/);
+  const latticeStart = body.indexOf('#splitsArea .splitsMatrixFrame[data-layer-count="1"],');
+  const latticeBlock = body.slice(latticeStart, body.indexOf('}', latticeStart) + 1);
+  assert.doesNotMatch(latticeBlock, /background:/, "the live cells stay on their existing transparent matrix surface");
+  assert.match(body, /\.splitsMatrixFrame\[data-layer-count="1"\]\{ --recipe-active-rail: 268px; \}/);
+  assert.match(body, /\.splitsMatrixFrame\[data-layer-count="3"\]\{ --recipe-active-rail: 664px; \}/);
+  assert.match(body, /background-size: 42px 72px;/);
+  assert.match(body, /pointer-events: none;/);
+  assert.match(body, /\[data-theme="gruvbox-dark"\],[\s\S]*?\[data-theme="everforest"\],[\s\S]*?\.splitsMatrixFrame:is\(\[data-layer-count="1"\],\[data-layer-count="3"\]\)::after\{[\s\S]*?background-color: color-mix\(in srgb, var\(--bg\) 76%, #000\);/);
+});
+
 test("Summary preserves Edit's selector track so the matrix never shifts between views", () => {
   const body = desktopBlock();
   assert.match(body, /#splitsArea\[data-recipe-view="summary"\] \.splitsMatrix tr > :first-child\{[\s\S]*?display: table-cell;[\s\S]*?visibility: hidden;[\s\S]*?pointer-events: none;/);

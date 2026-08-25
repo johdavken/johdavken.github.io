@@ -283,72 +283,62 @@
 /* ----------------------------------------------------------------------- * Gruvbox Dark * ----------------------------------------------------------------------- */
 :where(html, body)[data-theme="gruvbox-dark"]{
   color-scheme: dark;
-  --bg: #1d2021;
-  --panel: rgba(40,40,40,.97);
-  --panel2: rgba(50,48,47,.94);
-  --text: #ebdbb2;
-  /* --title is this palette's general emphasis accent: it colours ~140 call
-     sites (stat values, active tabs, card labels), and it was the only
-     source of red text anywhere in the theme. Orange now, so nothing reads
-     red except genuine error states (--bad, deliberately left alone).
-     Section headings are the one exception - they were the most prominent
-     red in the app - and take newspaper white via --section-title, the same
-     #ebdbb2 the desktop rail labels use. */
-  --title: #fe8019;
-  --section-title: #ebdbb2;
-  /* Was #689d6a, a muted sage that read as a different family from the icon
-     set. Matched to the green the Resin Totals glyph uses. */
-  --subtitle: #b8bb26;
-  --muted: #ebdbb2;
-  --fg: #ebdbb2;
-  /* Consumed only by industrial-slate rules, never by gruvbox - kept off red
-     regardless so a future call site cannot reintroduce it here. */
-  --yellow: #fe8019;
-  --orange: #689d6a;
-  --logo-i: #689d6a;
-  --logo-q: #fb4934;
-  --border: rgba(80,73,69,.82);
-  --border2: rgba(102,92,84,.72);
-  --field-bg: rgba(29,32,33,.78);
-  --panelOpen: rgba(40,40,40,.99);
-  --chev: rgba(189,174,147,.68);
-  --warn: #d79921;
-  --bad: #cc241d;
-  --ok: #689d6a;
+  /* Muted Terminal: Gruvbox's warm color family, lowered in saturation
+     and anchored in olive-charcoal surfaces for long production sessions. */
+  --bg: #20211d;
+  --panel: rgba(44,45,37,.97);
+  --panel2: rgba(54,55,45,.94);
+  --text: #d8d1a8;
+  --title: #c9b46b;
+  --subtitle: #9f9a7f;
+  --muted: #9f9a7f;
+  --fg: #d8d1a8;
+  --yellow: #c9b46b;
+  --orange: #c99554;
+  --logo-i: #7b9e9a;
+  --logo-q: #c87968;
+  --border: rgba(87,87,71,.82);
+  --border2: rgba(87,87,71,.72);
+  --field-bg: rgba(27,28,24,.78);
+  --panelOpen: rgba(54,55,45,.99);
+  --chev: rgba(159,154,127,.68);
+  --warn: #c99554;
+  --bad: #c87968;
+  --ok: #89a86b;
   --shadow2: 0 9px 24px rgba(0,0,0,.42);
-  --focus-border: rgba(235,219,178,.88);
-  --focus-ring: rgba(235,219,178,.18);
-  --row-bg: rgba(189,174,147,.045);
-  --row-border: rgba(102,92,84,.38);
-  --row-bg-2: rgba(29,32,33,.34);
-  --row-border-2: rgba(80,73,69,.48);
-  --readonly-bg: rgba(29,32,33,.58);
-  --readonly-border: rgba(80,73,69,.62);
-  --f-var1: #689d6a;
-  --f-var2: #d79921;
-  --f-var3: #ebdbb2;
-  --f-const: #bdae93;
+  --focus-border: rgba(201,180,107,.88);
+  --focus-ring: rgba(201,180,107,.18);
+  --row-bg: rgba(216,209,168,.045);
+  --row-border: rgba(87,87,71,.38);
+  --row-bg-2: rgba(27,28,24,.34);
+  --row-border-2: rgba(87,87,71,.48);
+  --readonly-bg: rgba(27,28,24,.58);
+  --readonly-border: rgba(87,87,71,.62);
+  --f-var1: #89a86b;
+  --f-var2: #c9b46b;
+  --f-var3: #7b9e9a;
+  --f-const: #9f9a7f;
   --btn-text: var(--text);
-  --btn-border: rgba(102,92,84,.72);
-  --btn-primary-a: rgba(235,219,178,.30);
-  --btn-primary-b: rgba(235,219,178,.14);
-  --btn-secondary-bg: rgba(104,157,106,.15);
-  --btn-secondary-border: rgba(104,157,106,.36);
-  --btn-danger-bg: rgba(204,36,29,.14);
-  --btn-danger-border: rgba(204,36,29,.34);
-  --bg-glow-a: rgba(235,219,178,.08);
-  --bg-glow-b: rgba(215,153,33,.055);
-  --card-glow-a: rgba(235,219,178,.08);
-  --card-glow-b: rgba(184,187,38,.05);
-  --toggle-on-bg: rgba(235,219,178,.28);
-  --toggle-on-border: rgba(235,219,178,.52);
-  --footer-bg: rgba(29,32,33,.96);
-  --footer-border: rgba(80,73,69,.72);
+  --btn-border: rgba(87,87,71,.72);
+  --btn-primary-a: rgba(201,180,107,.28);
+  --btn-primary-b: rgba(201,180,107,.14);
+  --btn-secondary-bg: rgba(137,168,107,.15);
+  --btn-secondary-border: rgba(137,168,107,.36);
+  --btn-danger-bg: rgba(200,121,104,.14);
+  --btn-danger-border: rgba(200,121,104,.34);
+  --bg-glow-a: rgba(123,158,154,.08);
+  --bg-glow-b: rgba(201,180,107,.055);
+  --card-glow-a: rgba(123,158,154,.08);
+  --card-glow-b: rgba(137,168,107,.05);
+  --toggle-on-bg: rgba(137,168,107,.28);
+  --toggle-on-border: rgba(137,168,107,.52);
+  --footer-bg: rgba(32,33,29,.96);
+  --footer-border: rgba(87,87,71,.72);
 
 }
 
-/* Recipe matrix: paper-white controls replace Gruvbox's blue/aqua accent;
-   hopper designations use the palette's unmistakable orange. */
+/* Recipe controls retain the terminal's high-contrast paper ink; hopper
+   designations use its dusty orange accent. */
 :where(html, body)[data-theme="gruvbox-dark"] #splitsBlock :is(
   .splitCopyBtn,
   .splitCopyBtn:hover,
@@ -361,17 +351,16 @@
   .splitLayerPct input,
   .splitLayerPct span,
   .splitColumnTotal
-){ color: #ebdbb2; }
+){ color: #d8d1a8; }
 :where(html, body)[data-theme="gruvbox-dark"] #splitsBlock .splitCellHopperName,
-:where(html, body)[data-theme="gruvbox-dark"] #splitsBlock .splitCellHopperName.smart{ color: #fe8019; }
+:where(html, body)[data-theme="gruvbox-dark"] #splitsBlock .splitCellHopperName.smart{ color: #c99554; }
 
-/* Gruvbox's animated mark keeps the complete terminal palette even where
-   shared interface accents have been remapped for contrast. */
-:where(html, body)[data-theme="gruvbox-dark"] .resinToolsLogo .rtLayerRed{color:#fb4934;stroke:#fb4934}
-:where(html, body)[data-theme="gruvbox-dark"] .resinToolsLogo .rtLayerOrange{color:#fe8019;stroke:#fe8019}
-:where(html, body)[data-theme="gruvbox-dark"] .resinToolsLogo .rtLayerYellow{color:#fabd2f;stroke:#fabd2f}
-:where(html, body)[data-theme="gruvbox-dark"] .resinToolsLogo .rtLayerGreen{color:#b8bb26;stroke:#b8bb26}
-:where(html, body)[data-theme="gruvbox-dark"] .resinToolsLogo .rtLayerBlue{color:#83a598;stroke:#83a598}
+/* The animated mark follows the same restrained terminal palette. */
+:where(html, body)[data-theme="gruvbox-dark"] .resinToolsLogo .rtLayerRed{color:#c87968;stroke:#c87968}
+:where(html, body)[data-theme="gruvbox-dark"] .resinToolsLogo .rtLayerOrange{color:#c99554;stroke:#c99554}
+:where(html, body)[data-theme="gruvbox-dark"] .resinToolsLogo .rtLayerYellow{color:#c9b46b;stroke:#c9b46b}
+:where(html, body)[data-theme="gruvbox-dark"] .resinToolsLogo .rtLayerGreen{color:#89a86b;stroke:#89a86b}
+:where(html, body)[data-theme="gruvbox-dark"] .resinToolsLogo .rtLayerBlue{color:#7b9e9a;stroke:#7b9e9a}
 
 /* ----------------------------------------------------------------------- * Gruvbox Light * ----------------------------------------------------------------------- */
 :where(html, body)[data-theme="gruvbox-light"]{

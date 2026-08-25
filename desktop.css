@@ -425,6 +425,19 @@
     box-shadow:none;
     isolation:isolate;
   }
+  body[data-theme="gruvbox-dark"] .workspaceNav{
+    --gruv-rail-edge:#575747;
+    --gruv-rail-paper:#d8d1a8;
+    --gruv-rail-line:#c99554;
+    --gruv-rail-recipe:#c9b46b;
+    --gruv-rail-timeline:#7b9e9a;
+    --gruv-rail-totals:#89a86b;
+    --gruv-rail-sync:#82a78b;
+    --gruv-rail-tools:#ae8d80;
+    --gruv-rail-help:#7b9e9a;
+    background:#272821;
+    box-shadow:none;
+  }
   body[data-theme="gruvbox-light"] .workspaceNav{
     --gruv-rail-edge:#d4c9b1;
     --gruv-rail-paper:#383329;
@@ -496,11 +509,11 @@
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .resinToolsSidebarIcon .rtLayerBlue{color:var(--gruv-rail-help);stroke:var(--gruv-rail-help)}
   /* The sidebar uses its own rail tokens, but the brand mark itself always
      retains Gruvbox's complete five-color animation. */
-  body[data-theme="gruvbox-dark"] .resinToolsSidebarIcon .rtLayerRed{color:#fb4934;stroke:#fb4934}
-  body[data-theme="gruvbox-dark"] .resinToolsSidebarIcon .rtLayerOrange{color:#fe8019;stroke:#fe8019}
-  body[data-theme="gruvbox-dark"] .resinToolsSidebarIcon .rtLayerYellow{color:#fabd2f;stroke:#fabd2f}
-  body[data-theme="gruvbox-dark"] .resinToolsSidebarIcon .rtLayerGreen{color:#b8bb26;stroke:#b8bb26}
-  body[data-theme="gruvbox-dark"] .resinToolsSidebarIcon .rtLayerBlue{color:#83a598;stroke:#83a598}
+  body[data-theme="gruvbox-dark"] .resinToolsSidebarIcon .rtLayerRed{color:#c87968;stroke:#c87968}
+  body[data-theme="gruvbox-dark"] .resinToolsSidebarIcon .rtLayerOrange{color:#c99554;stroke:#c99554}
+  body[data-theme="gruvbox-dark"] .resinToolsSidebarIcon .rtLayerYellow{color:#c9b46b;stroke:#c9b46b}
+  body[data-theme="gruvbox-dark"] .resinToolsSidebarIcon .rtLayerGreen{color:#89a86b;stroke:#89a86b}
+  body[data-theme="gruvbox-dark"] .resinToolsSidebarIcon .rtLayerBlue{color:#7b9e9a;stroke:#7b9e9a}
   body[data-theme="industrial-slate"] .resinToolsSidebarIcon .rtLayerRed{color:#dc2626;stroke:#dc2626}
   body[data-theme="industrial-slate"] .resinToolsSidebarIcon .rtLayerOrange{color:#d97706;stroke:#d97706}
   body[data-theme="industrial-slate"] .resinToolsSidebarIcon .rtLayerYellow{color:#d6a85f;stroke:#d6a85f}

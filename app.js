@@ -4302,6 +4302,11 @@
       scroll.className = "splitsMatrixScroll";
       const frame = document.createElement("div");
       frame.className = "splitsMatrixFrame";
+      // Desktop keeps a five-layer-wide frame even for a one- or three-layer
+      // recipe. Expose the active count so CSS can treat only the genuinely
+      // unused portion as a quiet background surface; the table itself and
+      // all touch layouts remain unchanged.
+      frame.dataset.layerCount = String(layerNames.length);
       const table = document.createElement("table");
       table.className = "splitsMatrix";
       table.classList.toggle("compactMobileRecipe", compactMobileRecipe);

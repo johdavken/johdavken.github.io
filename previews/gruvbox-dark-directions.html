@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Gruvbox Dark directions · Resin Tools</title>
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;background:#151817;color:#ebdbb2;font:14px/1.35 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+    header,main{width:min(1480px,calc(100% - 42px));margin-inline:auto}
+    header{padding:34px 0 21px}
+    h1{margin:0;font-size:clamp(28px,4vw,46px);line-height:1;letter-spacing:-.045em}
+    header p{max-width:850px;margin:11px 0 0;color:#a89984;font-size:16px}
+    .note{display:flex;align-items:flex-start;gap:9px;margin-top:16px;padding:11px 13px;border:1px solid #504945;border-radius:9px;background:#1d2021;color:#bdae93;font-size:13px}
+    .note::before{content:"";width:8px;height:8px;flex:0 0 auto;margin-top:5px;border-radius:50%;background:#fabd2f}
+    nav{position:sticky;top:0;z-index:20;display:flex;gap:6px;padding:12px 0;background:color-mix(in srgb,#151817 94%,transparent);backdrop-filter:blur(10px)}
+    nav a{display:grid;place-items:center;width:34px;height:34px;border:1px solid #504945;border-radius:8px;background:#282828;color:#bdae93;font-weight:900;text-decoration:none}
+    nav a:hover,nav a:focus-visible{border-color:#fabd2f;color:#fabd2f;outline:0}
+    main{display:grid;gap:22px;padding:8px 0 64px}
+    .direction{scroll-margin-top:65px;overflow:hidden;border:1px solid #504945;border-radius:15px;background:#1d2021}
+    .direction-head{display:flex;align-items:start;justify-content:space-between;gap:22px;padding:16px 18px;border-bottom:1px solid #504945;background:#202322}
+    .direction-title{display:flex;align-items:center;gap:11px}
+    .number{display:grid;place-items:center;width:31px;height:31px;border:1px solid var(--yellow);border-radius:50%;color:var(--yellow);font-weight:900}
+    h2{margin:0;font-size:20px;line-height:1.15}
+    .direction-head p{max-width:650px;margin:3px 0 0;color:#a89984;font-size:13px;text-align:right}
+    .screen{min-height:438px;color:var(--fg);background:var(--bg);display:grid;grid-template-columns:227px minmax(0,1fr)}
+    .rail{position:relative;padding:18px 14px;background:var(--rail);border-right:1px solid var(--line);overflow:hidden}
+    .brand{display:flex;align-items:center;gap:9px;padding:5px 8px 19px;border-bottom:1px solid var(--line)}
+    .mark{display:grid;gap:3px;width:38px}.mark i{display:block;height:5px;transform:skewY(-24deg);border-radius:1px}.mark i:nth-child(1){background:var(--red)}.mark i:nth-child(2){background:var(--orange)}.mark i:nth-child(3){background:var(--yellow)}.mark i:nth-child(4){background:var(--green)}.mark i:nth-child(5){background:var(--blue)}
+    .brand b{font:900 30px/.8 ui-monospace,monospace;letter-spacing:-.08em;color:var(--fg)}
+    .steps{display:grid;gap:6px;margin-top:16px}
+    .step{position:relative;display:grid;grid-template-columns:27px minmax(0,1fr) auto;gap:8px;align-items:center;min-height:54px;padding:7px 8px;border:1px solid transparent;color:var(--muted)}
+    .step.active{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--fg)}
+    .step-icon{display:grid;place-items:center;width:23px;height:23px;color:var(--accent);font-size:19px;font-weight:900}
+    .step b{display:block;font-size:13px;letter-spacing:.09em}.step small{display:block;margin-top:3px;color:var(--muted);font-size:10px;font-weight:750}
+    .step em{display:grid;place-items:center;width:21px;height:21px;border-radius:50%;background:var(--accent);color:var(--bg);font-size:11px;font-style:normal;font-weight:900}
+    .step:nth-child(1){--accent:var(--orange)}.step:nth-child(2){--accent:var(--yellow)}.step:nth-child(3){--accent:var(--blue)}.step:nth-child(4){--accent:var(--green)}
+    .rail-foot{position:absolute;right:14px;bottom:16px;left:14px;padding-top:13px;border-top:1px solid var(--line);color:var(--muted);font-size:11px;font-weight:750}.rail-foot b{color:var(--aqua)}
+    .work{min-width:0;padding:16px 18px 18px}.top-status{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:17px;color:var(--muted);font-size:11px;font-weight:750}.sync{color:var(--green)}
+    .recipe-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding-bottom:15px;border-bottom:1px solid var(--line)}
+    .section-title{display:flex;align-items:center;gap:9px;color:var(--yellow)}.section-title .layers{font-size:25px;line-height:.7}.section-title strong{font-size:18px;letter-spacing:.16em;font-weight:500}.section-title small{display:block;margin-top:6px;color:var(--muted);font-size:12px;letter-spacing:0}
+    .error{padding:5px 10px;border:1px solid color-mix(in srgb,var(--orange) 52%,var(--line));border-radius:999px;background:color-mix(in srgb,var(--orange) 12%,transparent);color:var(--orange);font-size:11px;font-weight:850;white-space:nowrap}
+    .tabs{display:flex;align-items:center;gap:4px;margin-top:12px}.tab{padding:8px 12px;border:1px solid transparent;color:var(--muted);font-size:12px;font-weight:850}.tab.active{border-color:var(--line);border-bottom-color:var(--bg);border-radius:8px 8px 0 0;color:var(--accent);background:var(--panel)}.tab.dot::after{content:"";display:inline-block;width:6px;height:6px;margin:0 0 1px 6px;border-radius:50%;background:var(--orange)}.views{margin-left:auto;display:flex;align-items:center;gap:6px}.views span{color:var(--muted);font-size:10px;font-weight:900;letter-spacing:.09em}.btn{padding:6px 10px;border:1px solid var(--line);border-radius:7px;background:var(--panel2);color:var(--fg);font-size:11px;font-weight:850}.btn.active{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 13%,var(--panel));color:var(--accent)}
+    .matrix{display:grid;grid-template-columns:66px repeat(3,minmax(146px,1fr));margin-top:0;overflow:hidden;border:1px solid var(--line);border-radius:0 10px 10px 10px;background:var(--panel)}
+    .corner,.layer-head,.row,.cell{min-height:48px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)}.matrix > :nth-last-child(-n+4){border-bottom:0}.matrix > :nth-child(4n){border-right:0}
+    .corner{display:grid;place-items:center;color:var(--muted);font-size:10px;font-weight:850;text-align:center}.layer-head{position:relative;height:102px;padding:13px;text-align:center;background:color-mix(in srgb,var(--panel2) 62%,transparent)}.layer-head b{display:block;color:color-mix(in srgb,var(--fg) 30%,transparent);font:900 61px/.66 Impact,"Arial Narrow",sans-serif}.layer-head span{position:relative;color:var(--fg);font-size:14px;font-weight:900}.layer-head small{display:block;margin-top:20px;color:var(--fg);font-size:11px;font-weight:800}
+    .row{display:grid;place-items:center;color:var(--muted);font-size:12px;font-weight:900}.cell{position:relative;padding:7px 9px;background:color-mix(in srgb,var(--panel) 88%,transparent)}.cell:nth-of-type(odd){background:color-mix(in srgb,var(--panel2) 22%,var(--panel))}.badge{display:inline-block;padding:2px 5px;border-radius:5px;background:var(--badge);color:var(--orange);font:800 11px/1 ui-monospace,monospace}.resin{display:block;margin-top:5px;color:var(--fg);font-size:12px;font-weight:850}.pct{position:absolute;right:9px;bottom:7px;color:var(--fg);font-size:16px;font-weight:900}.empty .pct{color:var(--muted)}
+    .direction-note{margin:0;padding:11px 18px 13px;background:var(--panel);border-top:1px solid var(--line);color:var(--muted);font-size:12px}.direction-note b{color:var(--fg)}
+
+    /* The six directions all remain rooted in Gruvbox's familiar family. */
+    .classic{--bg:#1d2021;--rail:#282828;--panel:#282828;--panel2:#3c3836;--line:#504945;--fg:#ebdbb2;--muted:#a89984;--badge:#1d2021;--red:#fb4934;--orange:#fe8019;--yellow:#fabd2f;--green:#b8bb26;--blue:#83a598;--aqua:#8ec07c;--accent:#fabd2f}
+    .copper{--bg:#201e1b;--rail:#2b2924;--panel:#302d27;--panel2:#3b372f;--line:#5d5547;--fg:#f2e5bc;--muted:#b8a98b;--badge:#25231e;--red:#fb6a5b;--orange:#f28b30;--yellow:#f2c94c;--green:#a9b665;--blue:#89b4c7;--aqua:#8dbf9a;--accent:#f2c94c}
+    .blueprint{--bg:#171e22;--rail:#1e282d;--panel:#202b30;--panel2:#2a373d;--line:#3f525a;--fg:#e4e5c6;--muted:#9eaaa2;--badge:#172126;--red:#e56b6f;--orange:#e58a55;--yellow:#e5c07b;--green:#9abf88;--blue:#75a7c8;--aqua:#78b8a5;--accent:#75a7c8}
+    .moss{--bg:#1a211b;--rail:#222b23;--panel:#263027;--panel2:#344034;--line:#52604e;--fg:#e5e3c5;--muted:#a7ad91;--badge:#192019;--red:#dd7c6a;--orange:#d79b55;--yellow:#d5bd70;--green:#9dbd73;--blue:#81a9a2;--aqua:#8fbe99;--accent:#9dbd73}
+    .nocturne{--bg:#111312;--rail:#181b18;--panel:#1b1f1c;--panel2:#292e29;--line:#424942;--fg:#f0e7c7;--muted:#a7a38d;--badge:#101210;--red:#ff5c57;--orange:#ff9640;--yellow:#ffd166;--green:#9fca6a;--blue:#78b5d0;--aqua:#91d3b3;--accent:#ffd166}
+    .terminal{--bg:#20211d;--rail:#272821;--panel:#2c2d25;--panel2:#36372d;--line:#575747;--fg:#d8d1a8;--muted:#9f9a7f;--badge:#1b1c18;--red:#c87968;--orange:#c99554;--yellow:#c9b46b;--green:#89a86b;--blue:#7b9e9a;--aqua:#82a78b;--accent:#c9b46b}
+    @media(max-width:840px){header,main{width:min(100% - 24px,1480px)}header{padding-top:24px}.direction-head{display:block}.direction-head p{margin-top:8px;text-align:left}.screen{grid-template-columns:1fr}.rail{display:none}.work{padding:13px}.matrix{grid-template-columns:43px repeat(3,minmax(94px,1fr))}.layer-head{height:88px;padding:10px}.layer-head b{font-size:52px}.layer-head small{margin-top:16px}.cell{padding:6px}.pct{right:6px}.views .btn{padding:5px 7px}}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Gruvbox Dark: six desktop directions</h1>
+    <p>Each option rethinks the side rail and Recipe panel as one visual system. They retain Gruvbox’s warm base and color language, but shift the balance between paper warmth, industrial contrast, and colored workflow cues.</p>
+    <div class="note">These are previews only. No app theme tokens or layouts have been changed.</div>
+  </header>
+  <nav aria-label="Jump to a theme direction"><a href="#one">1</a><a href="#two">2</a><a href="#three">3</a><a href="#four">4</a><a href="#five">5</a><a href="#six">6</a></nav>
+  <main id="gallery"></main>
+  <script>
+    const concepts=[
+      ["classic","Classic restoration","A crisp canonical Gruvbox Dark treatment: hard bg0 canvas, bg1 rail/panel, fg1 text, and the original bright accent set.","Most faithful to standard Gruvbox."],
+      ["copper","Copper workbench","Warmer, material-forward surfaces make the workspace feel like a deliberately lit bench. Gold carries Recipe; blue is reserved for navigation and time.","Warmest and most tactile."],
+      ["blueprint","Midnight blueprint","Blue-gray surfaces pull the interface toward instrumentation while preserving Gruvbox’s warm paper text and orange error language.","Best if data clarity is the priority."],
+      ["moss","Moss workcell","A green-leaning Gruvbox direction that makes active production feel stable and calm. Amber stays available for actions and attention.","Most production-floor oriented."],
+      ["nocturne","Nocturne contrast","Near-black foundations with brighter, more isolated accents. The rail and Recipe grid have strong depth for large monitors or dim rooms.","Highest contrast without going monochrome."],
+      ["terminal","Muted terminal","Dusty, lower-saturation colors and almost flat surfaces reference an older industrial terminal while retaining the modern grid.","Quietest and least decorative."]
+    ];
+    const rows=[
+      [["A1","MS0400","60%"],["B1","MS0400","100%"],["C1","MS0400","60%"]],
+      [["A2","A0301","3%"],["B2","","—"],["C2","A0301","3%"]],
+      [["A3","","—"],["B3","","—"],["C3","","—"]],
+      [["A4","MS0100","35%"],["B4","","—"],["C4","MS0100","35%"]],
+      [["A5","A0711","2%"],["B5","","—"],["C5","A0711","2%"]],
+      [["A6","A0450","0%"],["B6","","—"],["C6","A0450","0%"]]
+    ];
+    function rail(){return `<aside class="rail"><div class="brand"><span class="mark"><i></i><i></i><i></i><i></i><i></i></span><b>RT</b></div><div class="steps"><div class="step"><span class="step-icon">≋</span><span><b>LINE SETUP</b><small>Ready · 1,000 lb/hr</small></span><em>1</em></div><div class="step active"><span class="step-icon">▱</span><span><b>RECIPE</b><small>Ready · 0 tracked</small></span><em>2</em></div><div class="step"><span class="step-icon">◷</span><span><b>TIMELINE</b><small>Next action at 8:47 PM</small></span><em>3</em></div><div class="step"><span class="step-icon">▥</span><span><b>RESIN TOTALS</b><small>8 materials</small></span><em>4</em></div></div><div class="rail-foot">RT Sync · <b>Synced</b></div></aside>`}
+    function recipe(){const headers=["A","B","C"];let cells="";rows.forEach((row,rowIndex)=>{cells+=`<div class="row">${rowIndex+1}</div>`;row.forEach(([id,resin,pct])=>{cells+=`<div class="cell ${resin?"":"empty"}"><span class="badge">${id}</span>${resin?`<span class="resin">${resin}</span>`:""}<span class="pct">${pct}</span></div>`})});return `<section class="work"><div class="top-status"><span>Output&nbsp; <b>1,000 lb/hr</b>&nbsp;&nbsp; Changeover&nbsp; <b>6:15 AM</b></span><span class="sync">RT Sync · Synced</span></div><div class="recipe-head"><div class="section-title"><span class="layers">▱</span><span><strong>RECIPE</strong><small>Set recipe percentages and choose which hoppers appear in the timeline</small></span></div><span class="error">1 percentage error</span></div><div class="tabs"><span class="tab active">Current</span><span class="tab dot">Next</span><span class="tab">Recipe Book</span><span class="views"><span>VIEW</span><button class="btn active">Summary</button><button class="btn">Edit</button></span></div><div class="matrix"><div class="corner">Select<br>row</div>${headers.map(letter=>`<div class="layer-head"><b>${letter}</b><span>20%</span><small>Total 100%</small></div>`).join("")}${cells}</div></section>`}
+    document.querySelector("#gallery").innerHTML=concepts.map(([klass,title,copy,note],index)=>`<article class="direction ${klass}" id="${["one","two","three","four","five","six"][index]}"><div class="direction-head"><div class="direction-title"><span class="number">${index+1}</span><h2>${title}</h2></div><p>${copy}</p></div><div class="screen">${rail()}${recipe()}</div><p class="direction-note"><b>${note}</b> Existing section hierarchy, side-rail stages, Recipe sizing, and cell interaction language are retained.</p></article>`).join("");
+  </script>
+</body>
+</html>

@@ -30,9 +30,9 @@
        layout change is required to install cleanly. -->
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
-  <link rel="stylesheet" href="styles.css?v=0.62.6">
-  <link rel="stylesheet" href="theme.css?v=0.18.1">
-  <link rel="stylesheet" href="desktop.css?v=0.1.8">
+  <link rel="stylesheet" href="styles.css?v=0.62.11">
+  <link rel="stylesheet" href="theme.css?v=0.18.3">
+  <link rel="stylesheet" href="desktop.css?v=0.1.10">
 <script src="validation.js?v=0.19" defer></script>
 <script src="scheduling.js?v=0.18.4" defer></script>
 <script src="storage.js?v=0.18" defer></script>
@@ -1595,6 +1595,17 @@
         <details class="helpTopic" id="helpChangelog">
           <summary><span>Changelog</span><small>A running history of what's been added, most recent first</small></summary>
           <div class="helpTopicBody">
+            <h3>Recipe workflow, workspace navigation &amp; RT Sync hardening - August 24-25, 2026</h3>
+            <ul>
+              <li><strong>Recipe</strong> now keeps its grid, header, and footer stable across desktop, tablet, and mobile. Mobile and tablet edit in place instead of opening a sheet, with compact controls, <strong>Undo</strong>/<strong>Redo</strong>, clearer tracked and Edit states, and percentages that no longer clip.</li>
+              <li>Added <strong>Recipe Book</strong> beside Current and Next. Recipes can now load directly into either page, including <strong>Load Current Recipe</strong> and <strong>Save Next Recipe</strong>; recipe actions and saved-recipe controls are aligned consistently on desktop and tablet.</li>
+              <li>Refined desktop Recipe and the side rail: Summary and Edit keep the panel from shifting, tracking is labeled in the hopper badge instead of relying on a cell highlight, and the rail’s expanded stages are shorter and less redundant.</li>
+              <li>Redesigned <strong>Resin Totals</strong> on desktop and tablet with fixed material, lot, and pounds columns, a clear Total issued row, and matching Production / Scrap resin fields. Scanned lot numbers now stay aligned as totals change.</li>
+              <li>Simplified touch navigation to <strong>Display</strong>, <strong>Main</strong>, and <strong>Alerts</strong>: Main uses the layer-stack icon, Alerts is a bell, and refresh no longer occupies the footer. <strong>Workspace &amp; support</strong> now contains <strong>Sudo access</strong> for administrator tools.</li>
+              <li>Added <strong>System / Auto</strong> and <strong>OLED Black</strong> appearance options, and restored the <strong>Nord</strong> theme.</li>
+              <li>Hardened <strong>RT Sync</strong> against stale-client revision storms. The server now returns the authoritative shared job for a stale write, while current clients retain the normal conflict-resolution choice; durable conflict tracking slows callers that ignore that response.</li>
+            </ul>
+
             <h3>Mobile workspace, Recipe editing &amp; display - August 23, 2026</h3>
             <ul>
               <li>Redesigned the mobile Home screen as a compact connected workflow rail, with the active RT Sync workspace shown beside its heading and support tools grouped behind one disclosure.</li>
