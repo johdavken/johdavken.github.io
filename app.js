@@ -5998,8 +5998,8 @@
       if (button){
         button.setAttribute("aria-expanded", String(workspaceNavExpanded));
         button.title = workspaceNavExpanded
-          ? "Hide RT Sync, Tools and Help"
-          : "Show RT Sync, Tools and Help";
+          ? "Hide Workspace & Support"
+          : "Show Workspace & Support";
       }
       const label = $("workspaceNavMoreLabel");
       if (label) label.textContent = workspaceNavExpanded ? "Less" : "More";
@@ -6126,7 +6126,6 @@
     function footerSheetPairs(){
       return {
         display: [$("appFooterDisplay"), $("displaySheet")],
-        account: [$("appFooterAccount"), $("footerAccountMenu")],
         // Two real triggers share this one sheet - the desktop bell
         // (nonmodal popover, see isDesktopNotificationsPopover) and the
         // mobile footer bell (modal sheet, same as Display/Account there).
@@ -6142,18 +6141,14 @@
         .filter(element=>!element.closest("[hidden]") && element.getClientRects().length > 0);
     }
 
-    function isDesktopAccountPopover(name = activeFooterSheetName){
-      return name === "account" && isDesktopLayout();
-    }
-
     function isDesktopNotificationsPopover(name = activeFooterSheetName){
       return name === "notifications" && isDesktopLayout();
     }
 
-    // Status-bar popovers: anchored to their trigger, nonmodal, no backdrop,
-    // workspace left interactive. Both Account and Notifications qualify.
+    // The notification center is the sole status-bar popover: anchored to
+    // its trigger, nonmodal, with the workspace left interactive.
     function isDesktopPopover(name = activeFooterSheetName){
-      return isDesktopAccountPopover(name) || isDesktopNotificationsPopover(name);
+      return isDesktopNotificationsPopover(name);
     }
 
     function desktopPopoverWidth(sheet){
@@ -6218,7 +6213,7 @@
         toggle?.setAttribute("aria-expanded", String(key === name));
       });
       trigger?.setAttribute("aria-expanded", "true");
-      const nonmodalPopover = isDesktopAccountPopover(name) || isDesktopNotificationsPopover(name);
+      const nonmodalPopover = isDesktopNotificationsPopover(name);
       if (sheet){
         sheet.setAttribute("aria-modal", String(!nonmodalPopover));
         if (nonmodalPopover) sheet.dataset.presentation = "popover";
@@ -7187,13 +7182,6 @@
     const status = syncState.status || "Local only";
     const stateName = status.toLowerCase().replace(/\s+/g, "-");
     if (top){ top.textContent = syncState.pendingCount ? `${status} (${syncState.pendingCount})` : status; top.dataset.state = stateName; }
-    const mobileStatus = $("lineSyncMobileStatus");
-    const mobileStatusHost = $("cloudSyncFooterStatus");
-    if (mobileStatus){
-      const footerStatus = status === "Local only" ? "Local" : status;
-      mobileStatus.textContent = syncState.pendingCount ? `${footerStatus} (${syncState.pendingCount})` : footerStatus;
-    }
-    if (mobileStatusHost) mobileStatusHost.dataset.state = stateName;
     if (summary){ summary.textContent = status; summary.className = `pill ${status === "Synced" ? "badge-ok" : status === "Error" ? "badge-bad" : ""}`; }
     if ($("lineSyncMessage")) $("lineSyncMessage").textContent = syncState.message || "Local data remains available.";
     if ($("lineSyncLastSync")) $("lineSyncLastSync").textContent = syncState.lastSyncAt ? new Date(syncState.lastSyncAt).toLocaleString() : "Never";
@@ -7458,15 +7446,6 @@
         ? lineSync.refreshSelected()
         : lineSync.retry()
     , "refresh"));
-    // Same reconnect/refresh action as lineSyncRetryBtn above, reachable
-    // from the mobile footer without opening the RT Sync panel - tapping it
-    // reconciles the selected line (flushing any unsynced change) or
-    // retries the connection if nothing is selected yet.
-    $("cloudSyncFooterStatus")?.addEventListener("click",()=>runLineSyncAction(()=>
-      lineSync.getState().selectedWorkspaceId
-        ? lineSync.refreshSelected()
-        : lineSync.retry()
-    , "refresh"));
     $("lineSyncDisconnectBtn")?.addEventListener("click",()=>runLineSyncAction(()=>lineSync.disconnectLocal()));
     $("lineSyncLeaveBtn")?.addEventListener("click",()=>{
       if (confirm("Leave RT Sync on this browser identity? Local Resin.Tools data will remain.")) runLineSyncAction(()=>lineSync.leaveWorkspace());
@@ -7700,31 +7679,6 @@
     $("mobileToolsBack")?.addEventListener("click",()=>{ document.body.dataset.mobileTools = "home"; });
     $("appFooterMain")?.addEventListener("click",showMobileWorkspaceHome);
     $("appFooterDisplay")?.addEventListener("click",openDisplaySheet);
-    const desktopUtilityMedia = layoutModeQueries.desktop;
-    const placeAccountUtility = ()=>{
-      const accountHost = document.querySelector(".footerAccountHost");
-      const accountMenu = $("footerAccountMenu");
-      const overlayRoot = $("appOverlayRoot");
-      const desktopCluster = $("desktopUtilityCluster");
-      const footer = document.querySelector(".footerBar");
-      const syncControl = $("cloudSyncFooterStatus");
-      if (!accountHost || !desktopCluster || !footer) return;
-      if (desktopUtilityMedia.matches){
-        if (accountHost.parentElement !== desktopCluster) desktopCluster.append(accountHost);
-        if (accountMenu && overlayRoot && accountMenu.parentElement !== overlayRoot) overlayRoot.append(accountMenu);
-      }else if (accountHost.parentElement !== footer){
-        footer.insertBefore(accountHost, syncControl || null);
-        if (accountMenu && accountMenu.parentElement !== accountHost) accountHost.append(accountMenu);
-      }else if (accountMenu && accountMenu.parentElement !== accountHost){
-        accountHost.append(accountMenu);
-      }
-    };
-    placeAccountUtility();
-    desktopUtilityMedia.addEventListener?.("change",()=>{
-      closeFooterSheets({ returnFocus:false });
-      placeAccountUtility();
-      applySurfaceStyle(state.surfaceStyle);
-    });
     $("desktopDisplayToggle")?.addEventListener("click",openDisplaySheet);
 
     /* ------------------------------------------------------------------
@@ -8003,16 +7957,6 @@
     }
     setupAttentionCenter();
 
-    $("appFooterAccount")?.addEventListener("click",event=>{
-      event.stopPropagation();
-      const login = $("adminLoginButton");
-      if (login && !login.hidden){
-        closeFooterSheets({ returnFocus:false });
-        login.click();
-        return;
-      }
-      setFooterSheetOpen("account", true, event.currentTarget);
-    });
     $("footerSheetBackdrop")?.addEventListener("click",()=>closeFooterSheets());
     document.addEventListener("pointerdown",event=>{
       if (!isDesktopPopover()) return;
@@ -8027,11 +7971,9 @@
     window.addEventListener("resize",()=>{
       if (isDesktopPopover()) positionDesktopPopover();
     });
-    $("adminSignOutButton")?.addEventListener("click",()=>closeFooterSheets({ returnFocus:false }));
     document.querySelectorAll(".footerAdminDestination").forEach(button=>{
       button.addEventListener("click",()=>{
         if (button.dataset.adminOnly === "true" && (button.hidden || button.disabled)) return;
-        closeFooterMenus();
         setWorkspacePanel(button.dataset.workspaceTarget, { reveal:true });
       });
     });

@@ -842,7 +842,10 @@
 }
 
 @media (min-width:901px) and (max-width:1180px) and (pointer: fine){
-  main{grid-template-columns:190px minmax(0,1fr)}
+  /* Keep the rail at its normal readable width until the interface truly
+     changes to the touch shell. Shrinking it here made the desktop-only
+     intermediate range wrap the workflow labels into fragments. */
+  main{grid-template-columns:240px minmax(0,1fr)}
   #lineSetupBlock > .blockBody{grid-template-columns:minmax(255px,300px) minmax(560px,1fr);gap:10px 14px}
   .workspaceStatusBar{gap:7px}
   .workspaceStatusItem span{font-size:9px}

@@ -108,7 +108,7 @@ test("the banner is primed from cache first, then reconciled", () => {
 
 test("Beta Applicants is an admin workspace panel, revealed only to admins", () => {
   assert.match(html, /<details class="block card workspacePanel adminResinPanel" id="betaApplicantsBlock">/);
-  assert.match(html, /<button id="betaApplicantsButton" class="footerAdminDestination" type="button" role="menuitem" data-admin-only="true" data-workspace-target="betaApplicantsBlock" hidden>/);
+  assert.match(html, /<button id="betaApplicantsButton" class="footerAdminDestination sudoAccessAction" type="button" data-admin-only="true" data-workspace-target="betaApplicantsBlock" hidden>/);
   assert.match(adminUi, /betaApplicantsButton\.hidden = !adminAccess;/);
 });
 

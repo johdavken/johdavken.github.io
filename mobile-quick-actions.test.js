@@ -25,7 +25,7 @@ test("Shortcuts is fully removed - no footer button, no sheet, no quick-action h
 test("the mobile footer's notification bell sits in Shortcuts' old slot, between Display and Main", () => {
   const footer = html.slice(html.indexOf('<footer class="footerBar"'), html.indexOf("</footer>"));
   assert.match(footer, /id="appFooterNotifications" class="appDockControl mobileNotificationsToggle"/);
-  const order = ["appFooterDisplay", "appFooterNotifications", "appFooterMain", "appFooterAccount", "cloudSyncFooterStatus"]
+  const order = ["appFooterDisplay", "appFooterMain", "appFooterNotifications"]
     .map(id => footer.indexOf(`id="${id}"`));
   assert.ok(order.every(index => index > -1));
   assert.deepEqual(order, [...order].sort((a, b) => a - b));

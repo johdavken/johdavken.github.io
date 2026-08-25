@@ -14,10 +14,11 @@ test("mobile tile icons are 25% larger in both normal and minimal tile treatment
   assert.match(styles, /mobile-tile-style="minimal"\] \.workspaceTileIcon\{ width:calc\(30px \* 1\.25\); height:calc\(30px \* 1\.25\);/);
 });
 
-test("main menu is a stable seven-destination grid with no cosmetic or admin tiles", () => {
+test("main menu keeps its primary grid while Sudo access lives under Workspace & Support", () => {
   const nav = html.slice(html.indexOf('<nav class="workspaceNav"'),html.indexOf('</nav>',html.indexOf('<nav class="workspaceNav"')));
-  assert.equal((nav.match(/class="workspaceNavButton/g) || []).length,7);
+  assert.equal((nav.match(/class="workspaceNavButton/g) || []).length,8);
   assert.match(nav,/data-workspace-target="productionSummaryBlock"/, "Production Summary is a first-class section, between Timeline and RT Sync");
+  assert.match(nav,/id="workspaceNavSudo"[^>]*data-workspace-target="sudoAccessBlock"/);
   assert.doesNotMatch(nav,/Appearance|Admin Login|Resin Database|Workspace Management/);
   assert.match(styles,/grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
 });

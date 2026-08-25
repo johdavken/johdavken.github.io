@@ -78,6 +78,11 @@ test("desktop utility dialogs remain bounded and closed account menus cannot pai
   assert.match(desktop, /displaySheet\[open\]\{position:fixed;inset:50% auto auto 50%/);
 });
 
+test("the intermediate desktop range keeps the full readable side-rail width", () => {
+  assert.match(desktop, /@media \(min-width:901px\) and \(max-width:1180px\) and \(pointer: fine\)\{[\s\S]*?main\{grid-template-columns:240px minmax\(0,1fr\)\}/);
+  assert.doesNotMatch(desktop, /main\{grid-template-columns:190px minmax\(0,1fr\)\}/);
+});
+
 test("variable length desktop sections use bounded internal scrolling", () => {
   assert.match(desktop, /#resultsArea\{min-height:0;overflow:auto;/);
   assert.match(desktop, /#resinCalcResults\{min-height:0;overflow:auto\}/);

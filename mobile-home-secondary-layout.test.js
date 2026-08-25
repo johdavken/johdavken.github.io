@@ -21,8 +21,8 @@ test("the workflow divider names the connected workspace and falls back to LOCAL
   assert.match(styles, /\.mobileWorkflowLabel > strong\{[\s\S]*?max-width:42%;[\s\S]*?text-overflow:ellipsis;/);
 });
 
-test("mobile Workspace and support is one disclosure for the three secondary destinations", () => {
-  assert.match(html, /class="mobileWorkspaceNavMore"[\s\S]*?<strong>Workspace &amp; support<\/strong><small>RT Sync · Tools · Help<\/small>/);
+test("mobile Workspace and support is one disclosure for the secondary destinations", () => {
+  assert.match(html, /class="mobileWorkspaceNavMore"[\s\S]*?<strong>Workspace &amp; support<\/strong><small>RT Sync · Tools · Help · Sudo access<\/small>/);
   assert.match(html, /id="mobileWorkspaceSyncStatusText">RT Sync is local only<\/span>/);
   assert.match(styles, /\.workspaceNav:not\(\.navExpanded\) \.workspaceNavExtra:not\(\.active\)\{display:none\}/);
   assert.match(styles, /\.workspaceNav\.navExpanded \.workspaceNavExtra\{[\s\S]*?min-height:58px;/);

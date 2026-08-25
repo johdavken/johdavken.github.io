@@ -76,7 +76,7 @@ test("the bell joins the one mutually exclusive status-bar menu registry", () =>
 
 test("the popover is nonmodal: no backdrop, no inert workspace, no overlay left behind", () => {
   assert.match(app, /function isDesktopNotificationsPopover\(name = activeFooterSheetName\)\{\s*\n\s*return name === "notifications"/);
-  assert.match(app, /const nonmodalPopover = isDesktopAccountPopover\(name\) \|\| isDesktopNotificationsPopover\(name\);/);
+  assert.match(app, /const nonmodalPopover = isDesktopNotificationsPopover\(name\);/);
   assert.match(app, /backdrop\.hidden = nonmodalPopover/);
   assert.match(app, /main\.inert = !nonmodalPopover/);
   // closeFooterSheets clears presentation state and anchoring for every pair.
@@ -273,10 +273,11 @@ test("the rule the running total uses is unchanged - only the presentation (alwa
   assert.match(app, /const layerTotalValid = !state\.layers\.length \|\| Math\.abs\(layerSum - 1\) <= 0\.0001;/);
 });
 
-test("the RT Sync status control and its tap-to-refresh behavior are preserved", () => {
-  assert.match(html, /id="cloudSyncFooterStatus"[^>]*aria-label="RT Sync status - tap to refresh/);
+test("RT Sync remains available from Workspace & Support, without a footer refresh control", () => {
+  assert.match(html, /id="workspaceNavLineSync"[^>]*data-workspace-target="lineSyncBlock"/);
   assert.match(html, /<strong id="lineSyncTopStatus">/);
-  assert.match(app, /\$\("cloudSyncFooterStatus"\)\?\.addEventListener\("click",\(\)=>runLineSyncAction/);
+  assert.match(app, /\$\("lineSyncRetryBtn"\)\?\.addEventListener\("click",\(\)=>runLineSyncAction/);
+  assert.doesNotMatch(app, /cloudSyncFooterStatus/);
 });
 
 test("no desktop document scrolling is introduced", () => {

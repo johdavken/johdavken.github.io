@@ -8,11 +8,23 @@ test("admin navigation is explicitly hidden during initialization and rendered f
   assert.match(index, /id="resinDatabaseButton"[^>]*hidden/);
   assert.match(ui, /const initializing = !state\?\.ready/);
   assert.match(ui, /adminLoginButton"\)\.hidden = initializing \|\| adminAccess/);
-  assert.match(index, /id="appFooterAccount"[\s\S]*?id="adminLoginButton"[\s\S]*?Admin Login/);
+  assert.match(index, /id="sudoAccessBlock"[\s\S]*?id="adminLoginButton"[\s\S]*?Admin Login/);
   assert.match(ui, /resinDatabaseButton"\)\.hidden = !adminAccess/);
   assert.match(ui, /renderAccess\(admin\.getState\(\)\)/);
-  assert.match(ui,/accountButton\.disabled = initializing/);
-  assert.match(fs.readFileSync("styles.css", "utf8"), /\.footerDockMenu \[hidden\]\{display:none!important\}/);
+  assert.match(ui,/const sudoStatus = \$\("sudoAccessStatus"\);/);
+  assert.match(ui,/sudoStatus\) sudoStatus\.textContent = initializing/);
+  assert.match(fs.readFileSync("styles.css", "utf8"), /\.sudoAccessActions \[hidden\]\{display:none!important\}/);
+});
+
+test("Sudo access presents administrator destinations as icon-led action rows", () => {
+  assert.match(index, /id="sudoAccessBlock"[\s\S]*?class="mobileSectionHeaderIcon"/);
+  assert.match(index, /id="resinDatabaseButton" class="footerAdminDestination sudoAccessAction"[\s\S]*?<strong>Resin database<\/strong>/);
+  assert.match(index, /id="workspaceManagementButton" class="footerAdminDestination sudoAccessAction"[\s\S]*?<strong>Workspace management<\/strong>/);
+  assert.match(index, /id="betaApplicantsButton" class="footerAdminDestination sudoAccessAction"[\s\S]*?<strong>Beta applicants<\/strong>/);
+  assert.match(index, /id="databaseHealthButton" class="footerAdminDestination sudoAccessAction"[\s\S]*?<strong>Database health<\/strong>/);
+  const styles = fs.readFileSync("styles.css", "utf8");
+  assert.match(styles, /\.sudoAccessAction\{[\s\S]*?grid-template-columns:30px minmax\(0,1fr\) auto;/);
+  assert.match(styles, /\.sudoAccessBody\{display:grid;align-content:start;gap:12px\}/);
 });
 
 test("admin UI includes login, editing, active state, deletion, and catalog refresh flow", () => {

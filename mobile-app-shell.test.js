@@ -6,39 +6,39 @@ const app = fs.readFileSync("app.js","utf8");
 const html = fs.readFileSync("index.html","utf8");
 const styles = fs.readFileSync("styles.css","utf8");
 
-test("the mobile dock exposes five stable, accessible controls",()=>{
+test("the mobile dock exposes three stable, accessible controls",()=>{
   const footer = html.slice(html.indexOf('<footer class="footerBar"'),html.indexOf('</footer>'));
-  for (const id of ["appFooterMain","appFooterDisplay","appFooterNotifications","appFooterAccount","cloudSyncFooterStatus"]){
+  for (const id of ["appFooterMain","appFooterDisplay","appFooterNotifications"]){
     assert.match(footer,new RegExp(`id="${id}"`));
   }
   assert.match(footer,/id="appFooterMain"[^>]*aria-label="Main menu"/);
-  assert.match(footer,/id="appFooterAccount"[^>]*aria-label="Account"/);
+  assert.doesNotMatch(footer,/appFooterAccount|cloudSyncFooterStatus/);
   assert.match(styles,/height:calc\(var\(--app-dock-height\) \+ env\(safe-area-inset-bottom\)\)/);
   assert.match(styles,/html\{min-height:100%;height:auto\}/);
   assert.match(styles,/body\{height:auto;min-height:100vh;min-height:100dvh;overflow-x:hidden;overflow-y:auto\}/);
   assert.match(styles,/main\{height:auto;min-height:100vh;min-height:100dvh;padding-bottom:calc\(var\(--app-dock-height\) \+ env\(safe-area-inset-bottom\) \+ 22px\)!important\}/);
   assert.match(styles,/\.footerBar\{[\s\S]*?z-index:71;[\s\S]*?display:grid/);
-  const order = ["appFooterDisplay","appFooterNotifications","appFooterMain","appFooterAccount","cloudSyncFooterStatus"].map(id=>footer.indexOf(`id="${id}"`));
+  const order = ["appFooterDisplay","appFooterMain","appFooterNotifications"].map(id=>footer.indexOf(`id="${id}"`));
   assert.deepEqual(order,[...order].sort((a,b)=>a-b));
 });
 
-test("the dock is a text-only 32px rail with an inline Alerts badge",()=>{
+test("the dock is a 32px rail with centered Layer stack and icon-only Display/Alerts",()=>{
   assert.match(styles,/:root\{--app-dock-height:32px\}/);
-  assert.match(styles,/\.appDockControl svg,\.cloudSyncFooterStatus svg\{display:none\}/);
-  assert.match(styles,/\.appDockControl > span:not\(\.mobileNotificationsBadge\),[\s\S]*?display:block;/);
-  assert.match(styles,/\.mobileNotificationsToggle > span:last-child\{order:1\}/);
+  assert.match(styles,/#appFooterDisplay svg,#appFooterMain svg,#appFooterNotifications svg\{[\s\S]*?display:block;[\s\S]*?width:19px;/);
+  assert.match(styles,/#appFooterDisplay > span,[\s\S]*?#appFooterMain > span,[\s\S]*?#appFooterNotifications > span:last-child\{[\s\S]*?clip-path:inset\(50%\)/);
   const refinement = styles.slice(styles.lastIndexOf("/* Footer state refinement"));
-  assert.match(refinement,/\.mobileNotificationsBadge\{[\s\S]*?position:static;[\s\S]*?order:2;[\s\S]*?min-width:12px;[\s\S]*?height:12px;/);
+  assert.match(refinement,/\.mobileNotificationsBadge\{[\s\S]*?position:absolute;[\s\S]*?left:calc\(50% \+ 5px\);[\s\S]*?min-width:12px;[\s\S]*?height:12px;/);
   assert.match(html,/id="appFooterNotifications"[\s\S]*?<span>Alerts<\/span>/);
+  assert.match(html,/id="appFooterMain"[\s\S]*?<span>Main<\/span>/);
+  assert.match(html,/id="appFooterMain"[\s\S]*?<path d="m12 3 9 5-9 5-9-5Z"\/>[\s\S]*?<path d="m3 16 9 5 9-5"\/>/);
 });
 
-test("Refresh is the fifth status cell and preserves live RT Sync state without a second row",()=>{
+test("the footer stays three equal cells after Refresh is removed",()=>{
   const footer = html.slice(html.indexOf('<footer class="footerBar"'),html.indexOf('</footer>'));
-  assert.match(footer,/id="cloudSyncFooterStatus"[\s\S]*?<span>Refresh<\/span><strong id="lineSyncMobileStatus">Local only<\/strong>/);
+  assert.doesNotMatch(footer,/cloudSyncFooterStatus|lineSyncMobileStatus|Refresh/);
   const refinement = styles.slice(styles.lastIndexOf("/* Footer state refinement"));
-  assert.match(refinement,/grid-template-columns:repeat\(4,minmax\(0,1fr\)\) minmax\(68px,\.9fr\)/);
-  assert.match(refinement,/\.cloudSyncFooterStatus\{[\s\S]*?flex-direction:column;[\s\S]*?border-left:1px solid var\(--border2\)/);
-  assert.match(app,/const footerStatus = status === "Local only" \? "Local" : status;/);
+  assert.match(refinement,/grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+  assert.doesNotMatch(app,/lineSyncMobileStatus|cloudSyncFooterStatus/);
 });
 
 test("footer active states use accent-only styling with accessible focus and press feedback",()=>{
@@ -50,10 +50,9 @@ test("footer active states use accent-only styling with accessible focus and pre
   assert.match(refinement,/\.appDockControl:active:not\(\.cloudSyncFooterStatus\)[\s\S]*?background:color-mix/);
 });
 
-test("Display and Account use one centered footer-sheet geometry",()=>{
-  for (const id of ["displaySheet","footerAccountMenu"]){
-    assert.match(html,new RegExp(`id="${id}" class="footerSheet`));
-  }
+test("Display keeps the centered footer-sheet geometry",()=>{
+  assert.match(html,/id="displaySheet" class="footerSheet/);
+  assert.doesNotMatch(html,/footerAccountMenu/);
   assert.match(styles,/\.footerSheet\{[\s\S]*?left:50%;[\s\S]*?width:min\(410px,calc\(100vw - 20px\)\);[\s\S]*?transform:translateX\(-50%\);/);
   assert.match(styles,/\.footerSheetBackdrop\{bottom:calc\(var\(--app-dock-height\) \+ env\(safe-area-inset-bottom\)\);z-index:69\}/);
 });

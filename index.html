@@ -356,12 +356,12 @@
         type="button"
         id="workspaceNavMore"
         aria-expanded="false"
-        aria-controls="workspaceNavLineSync workspaceNavTools workspaceNavHelp"
+        aria-controls="workspaceNavLineSync workspaceNavTools workspaceNavHelp workspaceNavSudo"
       >
         <span id="workspaceNavMoreLabel">More</span>
         <span class="mobileWorkspaceNavMore">
           <span class="mobileWorkspaceNavMoreIcons" aria-hidden="true"><i>⌘</i><i>⚒</i><i>?</i></span>
-          <span><strong>Workspace &amp; support</strong><small>RT Sync · Tools · Help</small></span>
+          <span><strong>Workspace &amp; support</strong><small>RT Sync · Tools · Help · Sudo access</small></span>
         </span>
         <svg class="workspaceNavMoreChev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
       </button>
@@ -378,6 +378,10 @@
     <button class="workspaceNavButton workspaceNavExtra" id="workspaceNavHelp" type="button" data-workspace-target="helpBlock">
       <span><svg class="workspaceTileIcon" viewBox="0 0 32 32" aria-hidden="true"><g class="baseGlyph"><path d="M16 9c-3-2.5-6.5-2.7-10-1.5v16c3.5-1.2 7-1 10 1.5 3-2.5 6.5-2.7 10-1.5v-16C22.5 6.3 19 6.5 16 9Z"/><path d="M16 9v16"/><g class="gruvboxIconDetail"><path d="M8 12h4M20 12h4"/></g></g><g class="gruvboxSolidGlyph"><path d="M2.5 5.5c4.3-1.8 9.2-1.4 13 1.6v19.4c-3.8-3-8.7-3.4-13-1.6z"/><path d="M29.5 5.5c-4.3-1.8-9.2-1.4-13 1.6v19.4c3.8-3 8.7-3.4 13-1.6z"/></g></svg>Help</span>
       <small>Operator guide</small>
+    </button>
+    <button class="workspaceNavButton workspaceNavExtra" id="workspaceNavSudo" type="button" data-workspace-target="sudoAccessBlock">
+      <span><svg class="workspaceTileIcon" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3 27 8v7c0 7-4.5 11.5-11 14-6.5-2.5-11-7-11-14V8l11-5Z"/><path d="M16 12v8M12 16h8"/></svg>Sudo access</span>
+      <small id="sudoAccessStatus">Administrator tools</small>
     </button>
   </nav>
 
@@ -1741,6 +1745,24 @@
     </div>
   </details>
 
+  <details class="block card workspacePanel sudoAccessPanel" id="sudoAccessBlock">
+    <summary>
+      <div class="sumLeft"><div class="chev"><span class="chevRing"></span><span class="chevSatellite"></span><span class="chevCore"></span></div><svg class="mobileSectionHeaderIcon" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3 27 8v7c0 7-4.5 11.5-11 14-6.5-2.5-11-7-11-14V8l11-5Z"/><path d="M16 12v8M12 16h8"/></svg><div class="summaryText"><div class="layerTitle">Sudo access</div><div class="layerMeta">Administrator access and workspace recovery</div></div></div>
+    </summary>
+    <div class="blockBody sudoAccessBody">
+      <div id="sudoAccessDetails" class="sudoAccessDetails" hidden><strong>Administrator access</strong><small id="sudoAccessEmail">Administrator</small></div>
+      <p id="sudoAccessHint" class="muted">Sign in to access resin administration, workspace recovery, beta applicants, and database health.</p>
+      <div class="sudoAccessActions" role="group" aria-label="Sudo access actions">
+        <button id="adminLoginButton" type="button" class="sudoAccessAction" hidden><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="5" y="13" width="22" height="15" rx="2"/><path d="M10 13V9a6 6 0 0 1 12 0v4M16 19v4"/></svg><span><strong>Admin login</strong><small>Verify administrator access</small></span><svg class="sudoAccessChev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></button>
+        <button id="resinDatabaseButton" class="footerAdminDestination sudoAccessAction" type="button" data-admin-only="true" data-workspace-target="resinAdminBlock" hidden><svg viewBox="0 0 32 32" aria-hidden="true"><ellipse cx="16" cy="7" rx="10" ry="4"/><path d="M6 7v9c0 2.2 4.5 4 10 4s10-1.8 10-4V7M6 16v9c0 2.2 4.5 4 10 4s10-1.8 10-4v-9"/></svg><span><strong>Resin database</strong><small>Catalog, density, and active status</small></span><svg class="sudoAccessChev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></button>
+        <button id="workspaceManagementButton" class="footerAdminDestination sudoAccessAction" type="button" data-admin-only="true" data-workspace-target="workspaceManagementBlock" hidden><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="9" cy="9" r="3"/><circle cx="23" cy="9" r="3"/><circle cx="16" cy="23" r="3"/><path d="m11.5 11 3 8M20.5 11l-3 8M12 9h8"/></svg><span><strong>Workspace management</strong><small>Recovery and workspace controls</small></span><svg class="sudoAccessChev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></button>
+        <button id="betaApplicantsButton" class="footerAdminDestination sudoAccessAction" type="button" data-admin-only="true" data-workspace-target="betaApplicantsBlock" hidden><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="12" cy="11" r="4"/><circle cx="23" cy="13" r="3"/><path d="M4 27c0-5 3.6-8 8-8s8 3 8 8M19 27c.2-3.2 2-5.5 5-6.2 2.5.6 4 2.5 4 6.2"/></svg><span><strong>Beta applicants</strong><small>Review and invite operators</small></span><svg class="sudoAccessChev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></button>
+        <button id="databaseHealthButton" class="footerAdminDestination sudoAccessAction" type="button" data-admin-only="true" data-workspace-target="databaseHealthBlock" hidden><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 17h6l3-7 5 14 3-7h7"/><path d="M5 6h22v20H5z"/></svg><span><strong>Database health</strong><small>Service checks and diagnostics</small></span><svg class="sudoAccessChev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></button>
+        <button id="adminSignOutButton" class="sudoAccessAction sudoAccessSignOut" type="button" hidden><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M14 5H7v22h7M18 11l6 5-6 5M12 16h12"/></svg><span><strong>Sign out</strong><small>End administrator access on this device</small></span></button>
+      </div>
+    </div>
+  </details>
+
   <details class="block card workspacePanel adminResinPanel" id="resinAdminBlock">
     <summary>
       <div class="sumLeft"><div class="chev"><span class="chevRing"></span><span class="chevSatellite"></span><span class="chevCore"></span></div><div class="summaryText"><div class="layerTitle">Resin Database</div><div class="layerMeta">Manage active and inactive catalog records</div></div></div>
@@ -2022,31 +2044,13 @@
   <button type="button" id="appFooterDisplay" class="appDockControl" aria-expanded="false" aria-controls="displaySheet" aria-label="Display settings">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9c0-1-.8-1.8-1.8-1.8h-2.1a2 2 0 0 1-2-2V6.8C15.1 4.7 13.9 3 12 3Z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="8.5" cy="16" r="1"/><g class="gruvboxIconDetail"><path d="M12 2v2"/></g></svg><span>Display</span>
   </button>
+  <button type="button" id="appFooterMain" class="appDockControl appDockMain" aria-label="Main menu" aria-current="page">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5Z"/><path d="m3 12 9 5 9-5"/><path d="m3 16 9 5 9-5"/></svg><span>Main</span>
+  </button>
   <button type="button" id="appFooterNotifications" class="appDockControl mobileNotificationsToggle" data-severity="none" aria-expanded="false" aria-controls="footerNotificationsMenu" aria-haspopup="dialog" aria-label="Notifications, no items">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9.2a6 6 0 1 0-12 0c0 4.6-2 5.8-2 5.8h16s-2-1.2-2-5.8Z"/><path d="M13.7 19a2 2 0 0 1-3.4 0"/><g class="gruvboxIconDetail"><path d="M12 3v2"/></g></svg>
     <span id="mobileNotificationsBadge" class="mobileNotificationsBadge" aria-hidden="true" hidden></span>
     <span>Alerts</span>
-  </button>
-  <button type="button" id="appFooterMain" class="appDockControl appDockMain" aria-label="Main menu" aria-current="page">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><g class="gruvboxIconDetail"><path d="M11 6h2M11 18h2"/></g></svg><span>Main</span>
-  </button>
-  <div class="appDockMenuHost footerAccountHost">
-    <button type="button" id="appFooterAccount" class="appDockControl" aria-expanded="false" aria-controls="footerAccountMenu" aria-haspopup="dialog" aria-label="Account" disabled>
-      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c.8-5 3.5-7 8-7s7.2 2 8 7"/><g class="gruvboxIconDetail"><path d="M12 2v2"/></g></svg><span id="footerAccountStatus">Account</span>
-    </button>
-    <dialog id="footerAccountMenu" class="footerSheet footerDockMenu footerAccountMenu" aria-labelledby="footerAccountTitle" aria-modal="true" tabindex="-1">
-      <div id="footerAccountDetails" class="footerAccountDetails" hidden><strong>Admin account</strong><small id="footerAccountEmail">Administrator</small></div>
-      <strong id="footerAccountTitle" class="visuallyHidden">Admin account</strong>
-      <button id="adminLoginButton" type="button" role="menuitem" hidden><span>Admin Login</span></button>
-      <button id="resinDatabaseButton" class="footerAdminDestination" type="button" role="menuitem" data-admin-only="true" data-workspace-target="resinAdminBlock" hidden><span>Resin Database</span></button>
-      <button id="workspaceManagementButton" class="footerAdminDestination" type="button" role="menuitem" data-admin-only="true" data-workspace-target="workspaceManagementBlock" hidden><span>Workspace Management</span></button>
-      <button id="betaApplicantsButton" class="footerAdminDestination" type="button" role="menuitem" data-admin-only="true" data-workspace-target="betaApplicantsBlock" hidden><span>Beta Applicants</span></button>
-      <button id="databaseHealthButton" class="footerAdminDestination" type="button" role="menuitem" data-admin-only="true" data-workspace-target="databaseHealthBlock" hidden><span>Database Health</span></button>
-      <button id="adminSignOutButton" type="button" role="menuitem" hidden><span>Sign out</span></button>
-    </dialog>
-  </div>
-  <button type="button" id="cloudSyncFooterStatus" class="appDockControl cloudSyncFooterStatus" data-state="local-only" aria-live="polite" aria-label="RT Sync status - tap to refresh and apply any unsynced changes">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7a8 8 0 0 1 13 1l2 3M19 17a8 8 0 0 1-13-1l-2-3"/><path d="M20 5v6h-6M4 19v-6h6"/><g class="gruvboxIconDetail"><path d="M5 5h2M17 19h2"/></g></svg><span>Refresh</span><strong id="lineSyncMobileStatus">Local only</strong>
   </button>
 </footer>
 <div id="appOverlayRoot" class="appOverlayRoot">

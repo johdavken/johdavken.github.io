@@ -2747,6 +2747,13 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
   white-space: nowrap;
 }
 .splitSmartBadge[hidden]{ display: none; }
+/* Smart capacity remains functional everywhere, but the explicit SMART text
+   is unnecessary once the tablet/desktop matrix has room for the computed
+   weight and Smart Hopper controls themselves. Reserve that visual cue for
+   narrow phone layouts only. */
+@media (min-width:701px){
+  #splitsArea .splitSmartBadge{display:none!important}
+}
 
 /* =======================================================================
  *   Recipe Summary / Edit views (desktop + tablet, not compact mobile)
@@ -6679,6 +6686,43 @@ body[data-theme="gruvbox-light"]{
 .workspaceNavButton[data-workspace-target="helpBlock"]{ --tile-accent:var(--focus-border); }
 .workspaceNavButton[data-workspace-target="resinAdminBlock"]{ --tile-accent:var(--ok); }
 .workspaceNavButton[data-workspace-target="workspaceManagementBlock"]{ --tile-accent:var(--focus-border); }
+.workspaceNavButton[data-workspace-target="sudoAccessBlock"]{ --tile-accent:var(--warn); }
+
+.sudoAccessBody{display:grid;align-content:start;gap:12px}
+.sudoAccessDetails{display:grid;gap:2px;padding:10px 11px;border:1px solid var(--border);border-radius:var(--control-radius);background:var(--row-bg)}
+.sudoAccessDetails strong{color:var(--title);font-size:13px}.sudoAccessDetails small{color:var(--muted);font-size:11px}
+.sudoAccessBody > .muted{margin:0}
+.sudoAccessPanel .mobileSectionHeaderIcon{color:var(--warn)}
+.sudoAccessActions{display:grid;gap:0;border-top:1px solid var(--border)}
+.sudoAccessAction{
+  display:grid;
+  grid-template-columns:30px minmax(0,1fr) auto;
+  align-items:center;
+  gap:11px;
+  width:100%;
+  min-height:58px;
+  margin:0;
+  padding:9px 4px;
+  border:0;
+  border-bottom:1px solid var(--border);
+  border-radius:0;
+  background:transparent;
+  color:var(--text);
+  font:inherit;
+  text-align:left;
+  box-shadow:none;
+}
+.sudoAccessAction:hover,.sudoAccessAction:focus-visible{background:var(--row-bg);outline:0}
+.sudoAccessAction:focus-visible{box-shadow:inset 3px 0 0 var(--focus-border)}
+.sudoAccessAction > svg:first-child{width:24px;height:24px;fill:none;stroke:var(--focus-border);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.sudoAccessAction > span{display:grid;gap:2px;min-width:0}
+.sudoAccessAction strong{color:var(--title);font-size:13px;font-weight:800}
+.sudoAccessAction small{overflow:hidden;color:var(--muted);font-size:11px;font-weight:500;text-overflow:ellipsis;white-space:nowrap}
+.sudoAccessChev{width:17px;height:17px;fill:none;stroke:var(--muted);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.sudoAccessSignOut{grid-template-columns:30px minmax(0,1fr);color:var(--bad)}
+.sudoAccessSignOut > svg:first-child{stroke:var(--bad)}
+.sudoAccessSignOut strong{color:var(--bad)}
+.sudoAccessActions [hidden]{display:none!important}
 
 /* Gruvbox's own rainbow: each section keeps a distinct palette hue. */
 body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNavButton[data-workspace-target="lineSetupBlock"]{ --tile-accent:var(--gruv-orange); }
@@ -8192,11 +8236,10 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
     transform:translateY(1px);
   }
 
-  /* Text-only footer menu. The icons remain in the DOM because Account is
-     reparented into the desktop utility cluster, but mobile paints words
-     only. Refresh doubles as the live RT Sync status cell. */
+  /* Compact footer: Main remains a centered text destination; Display and
+     Alerts use their familiar palette and bell symbols at either side. */
   .footerBar{
-    grid-template-columns:repeat(4,minmax(0,1fr)) minmax(68px,.9fr);
+    grid-template-columns:repeat(3,minmax(0,1fr));
     height:calc(var(--app-dock-height) + env(safe-area-inset-bottom));
     padding:0 max(0px,env(safe-area-inset-right)) env(safe-area-inset-bottom) max(0px,env(safe-area-inset-left));
     border-top:1px solid var(--border2);
@@ -8213,6 +8256,12 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
     box-shadow:none;
   }
   .appDockControl svg,.cloudSyncFooterStatus svg{display:none}
+  #appFooterDisplay svg,#appFooterMain svg,#appFooterNotifications svg{
+    display:block;
+    width:19px;
+    height:19px;
+    stroke-width:1.9;
+  }
   .appDockControl > span:not(.mobileNotificationsBadge),
   .cloudSyncFooterStatus > span,
   .cloudSyncFooterStatus > strong{
@@ -8230,6 +8279,16 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
     white-space:nowrap;
   }
   .appDockControl[aria-current="page"]{color:var(--title)}
+  #appFooterDisplay > span,
+  #appFooterMain > span,
+  #appFooterNotifications > span:last-child{
+    position:absolute;
+    width:1px;
+    height:1px;
+    overflow:hidden;
+    clip-path:inset(50%);
+    white-space:nowrap;
+  }
   .appDockMain,
   .appDockMain[aria-current="page"],
   .appDockMain:not([aria-current="page"]){
@@ -8238,11 +8297,11 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
     border-radius:0;
     background:transparent;
   }
-  .mobileNotificationsToggle{justify-content:center;color:var(--warn)}
-  .mobileNotificationsToggle > span:last-child{order:1}
+  .mobileNotificationsToggle{position:relative;justify-content:center;color:var(--warn)}
   .mobileNotificationsBadge{
-    position:static;
-    order:2;
+    position:absolute;
+    top:3px;
+    left:calc(50% + 5px);
     display:grid;
     min-width:12px;
     height:12px;

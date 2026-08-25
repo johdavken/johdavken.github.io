@@ -1,6 +1,6 @@
 "use strict";
 
-// The desktop side rail folds RT Sync / Tools / Help away behind a labelled
+// The desktop side rail folds RT Sync / Tools / Help / Sudo access away behind a labelled
 // divider under Resin Totals, so first contact with the app is four numbered
 // sections rather than seven rows.
 //
@@ -27,7 +27,8 @@ const DESKTOP_QUERY = "@media (min-width: 901px) and (pointer: fine){";
 const FOLDED = [
   ["lineSyncBlock", "workspaceNavLineSync"],
   ["toolsBlock", "workspaceNavTools"],
-  ["helpBlock", "workspaceNavHelp"]
+  ["helpBlock", "workspaceNavHelp"],
+  ["sudoAccessBlock", "workspaceNavSudo"]
 ];
 const PINNED = ["lineSetupBlock", "splitsBlock", "resultsBlock", "productionSummaryBlock"];
 
@@ -71,15 +72,15 @@ test("it is a real disclosure button, naming the sections it controls", () => {
                            html.indexOf('data-workspace-target="lineSyncBlock"'));
   assert.match(block, /id="workspaceNavMore"/);
   assert.match(block, /aria-expanded="false"/);
-  // An IDREF list, not a wrapper: the three buttons stay direct children of
+  // An IDREF list, not a wrapper: the four buttons stay direct children of
   // the nav grid, which is what lets the .active exemption below reveal one
   // of them on its own.
-  assert.match(block, /aria-controls="workspaceNavLineSync workspaceNavTools workspaceNavHelp"/);
+  assert.match(block, /aria-controls="workspaceNavLineSync workspaceNavTools workspaceNavHelp workspaceNavSudo"/);
   assert.match(block, /id="workspaceNavMoreLabel">More</);
   assert.match(block, /aria-hidden="true"/);
 });
 
-test("exactly the last three sections are marked foldaway, and the numbered four are not", () => {
+test("exactly the last four sections are marked foldaway, and the numbered four are not", () => {
   FOLDED.forEach(([target, id]) => {
     const re = new RegExp(`<button class="workspaceNavButton workspaceNavExtra" id="${id}" type="button" data-workspace-target="${target}">`);
     assert.match(html, re, `${target} should be foldaway`);

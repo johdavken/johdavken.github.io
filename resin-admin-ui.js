@@ -20,7 +20,7 @@
     const dialog = $("adminLoginDialog");
     if (dialog?.open) dialog.close();
     if (reset) $("adminLoginForm")?.reset();
-    if (returnFocus) requestAnimationFrame(() => $("appFooterAccount")?.focus());
+    if (returnFocus) requestAnimationFrame(() => $("workspaceNavSudo")?.focus());
   }
   function renderAccess(state){
     const initializing = !state?.ready;
@@ -30,22 +30,15 @@
     const betaApplicantsButton = $("betaApplicantsButton");
     if (betaApplicantsButton) betaApplicantsButton.hidden = !adminAccess;
     $("adminSignOutButton").hidden = !adminAccess;
-    const accountButton = $("appFooterAccount");
-    const accountLabel = $("footerAccountStatus");
-    const accountDetails = $("footerAccountDetails");
-    const accountEmail = $("footerAccountEmail");
-    if (accountButton){
-      accountButton.disabled = initializing;
-      accountButton.dataset.state = initializing ? "loading" : (adminAccess ? "admin" : "signed-out");
-      accountButton.setAttribute("aria-label", initializing ? "Account loading" : (adminAccess ? "Admin account" : "Admin Login"));
-    }
-    if (accountLabel) accountLabel.textContent = initializing ? "Account" : (adminAccess ? "Admin" : "Account");
-    if (accountDetails) accountDetails.hidden = !adminAccess;
-    if (accountEmail) accountEmail.textContent = state?.email || "Administrator";
+    const sudoDetails = $("sudoAccessDetails");
+    const sudoEmail = $("sudoAccessEmail");
+    const sudoStatus = $("sudoAccessStatus");
+    const sudoHint = $("sudoAccessHint");
+    if (sudoDetails) sudoDetails.hidden = !adminAccess;
+    if (sudoEmail) sudoEmail.textContent = state?.email || "Administrator";
+    if (sudoStatus) sudoStatus.textContent = initializing ? "Checking access" : (adminAccess ? "Administrator tools" : "Administrator sign-in");
+    if (sudoHint) sudoHint.hidden = adminAccess;
     if (!adminAccess){
-      const accountMenu = $("footerAccountMenu");
-      if (accountMenu?.open) root.PolynFooterSheetUI?.close?.();
-      accountButton?.setAttribute("aria-expanded", "false");
       const panel = $("resinAdminBlock");
       if (panel?.classList.contains("desktop-active") || panel?.open) document.querySelector('[data-workspace-target="resultsBlock"]')?.click();
       panel?.classList.remove("desktop-active");

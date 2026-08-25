@@ -119,15 +119,10 @@ test("renderWeightsArea, renderSplitsArea's compact threshold, and applySurfaceS
   assert.match(functionBody("applySurfaceStyle"), /const renderedSurfaceStyle = isDesktopLayout\(\)/);
 });
 
-test("the desktop/mobile popover split and the account-utility placement listener read the same shared query object, not a second independent one", () => {
-  assert.match(app, /function isDesktopAccountPopover\(name = activeFooterSheetName\)\{\s*\n\s*return name === "account" && isDesktopLayout\(\);/);
+test("the desktop/mobile notification popover split reads the shared query object", () => {
   assert.match(app, /function isDesktopNotificationsPopover\(name = activeFooterSheetName\)\{\s*\n\s*return name === "notifications" && isDesktopLayout\(\);/);
-  // This used to be its own fresh window.matchMedia("(min-width: 901px)")
-  // with its own "change" listener - a second, independently-drifting
-  // responsive system next to watchLayoutMode(). It now reuses the exact
-  // same MediaQueryList object instead of re-deriving the boundary.
-  assert.match(app, /const desktopUtilityMedia = layoutModeQueries\.desktop;/);
-  assert.doesNotMatch(app, /desktopUtilityMedia = window\.matchMedia/);
+  assert.match(app, /return name === "notifications" && isDesktopLayout\(\);/);
+  assert.doesNotMatch(app, /isDesktopAccountPopover|desktopUtilityMedia/);
 });
 
 /* -----------------------------------------------------------------------

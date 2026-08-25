@@ -307,6 +307,12 @@ test("the SMART badge is small, green, and reuses the semantic --ok token rather
   assert.match(rule, /font-size: 9px;/);
 });
 
+test("the SMART badge is suppressed on tablet and desktop without changing Smart Hopper computation", () => {
+  assert.match(styles, /@media \(min-width:701px\)\{\s*#splitsArea \.splitSmartBadge\{display:none!important\}/);
+  const refresh = functionBody("refreshSmartHopperState");
+  assert.match(refresh, /if \(badgeEl\) badgeEl\.hidden = !smart;/);
+});
+
 // --- Stage 3: the computed weight actually drives the run-down formula ---
 
 test("smartHopperComputation is the one place that decides whether a hopper is smart-computable and what the value is - returns null (never a fallback number) when Smart Hoppers is off, geometry is incomplete, or the resin's bulk density is unknown", () => {
