@@ -62,7 +62,9 @@ test("the percentage keeps its unit tucked against the digits, sized without rel
   // An input's intrinsic width comes from its size attribute, not its
   // value, and field-sizing:content is not safe in the Android WebView this
   // also ships in - so the box is fixed and the digits right-align into it.
-  assert.match(block, /width:30px;/);
+  // Four-character values such as 61.5 must remain fully visible; the
+  // additional width comes from otherwise unused space in the same cell.
+  assert.match(block, /width:44px;/);
   assert.match(block, /text-align:right;/);
   assert.doesNotMatch(styles, /field-sizing/);
 });

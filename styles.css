@@ -3508,15 +3508,15 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
      Width is fixed rather than content-sized: an input's intrinsic width
      comes from its size attribute, not its value, and the newer CSS
      property that would size it to its content is not safe to rely on in
-     the Android WebView this also ships in. 30px holds "100", the widest a
-     percentage gets. */
+     the Android WebView this also ships in. 44px holds a decimal such as
+     "61.5" while remaining inside the cell's existing unused row width. */
   #splitsArea[data-recipe-cells="static"] .splitsMatrix.compactMobileRecipe .splitCellControls,
   #splitsArea[data-recipe-cells="static"] .splitsMatrix.compactMobileRecipe .splitPctControl{
     justify-content:flex-start;
     gap:2px;
   }
   #splitsArea[data-recipe-cells="static"] .splitsMatrix.compactMobileRecipe .splitPctControl input{
-    width:30px;
+    width:44px;
     min-width:0;
     flex:0 0 auto;
     height:auto;
