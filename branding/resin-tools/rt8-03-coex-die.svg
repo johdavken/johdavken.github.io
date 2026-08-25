@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" role="img" aria-label="Resin.Tools Coex Die launcher icon">
+  <rect width="108" height="108" fill="#1d2021"/>
+  <g id="fg">
+    <circle cx="54" cy="54" r="31" fill="none" stroke="#458588" stroke-width="8"/>
+    <circle cx="54" cy="54" r="18" fill="none" stroke="#d79921" stroke-width="8"/>
+    <circle cx="54" cy="54" r="8" fill="#cc241d"/>
+  </g>
+</svg>
