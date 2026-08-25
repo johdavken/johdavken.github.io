@@ -184,8 +184,8 @@ test("transient storage failures get a real lifecycle instead of living forever"
  * -------------------------------------------------------------------- */
 
 test("each action opens the right section and reveals the responsible control", () => {
-  assert.match(app, /"review-setup": \(\)=>\{\s*\n\s*setWorkspacePanel\("lineSetupBlock", \{ reveal:true \}\);\s*\n\s*focusSoon\(\(\)=>\$\("lineRate"\)\);/);
-  assert.match(app, /"open-weights": \(\)=>\{\s*\n\s*setWorkspacePanel\("lineSetupBlock", \{ reveal:true \}\);\s*\n\s*focusSoon\(\(\)=>responsibleControl\("weightsArea", '\[data-weight-view="edit"\]'\)\);/);
+  assert.match(app, /"review-setup": \(\)=>\{\s*\n\s*setWorkspacePanel\("splitsBlock", \{ reveal:true \}\);\s*\n\s*setRecipePage\("current"\);\s*\n\s*if \(isDesktopLayout\(\)\) focusSoon\(\(\)=>\$\("lineRate"\)\);/);
+  assert.match(app, /"open-weights": \(\)=>\{\s*\n\s*setWorkspacePanel\("splitsBlock", \{ reveal:true \}\);\s*\n\s*setRecipePage\("weights"\);\s*\n\s*focusSoon\(\(\)=>responsibleControl\("weightsArea", '\[data-weight-view="edit"\]'\)\);/);
   assert.match(app, /function openRecipeFromAttention\(preferred\)\{[\s\S]*?setWorkspacePanel\("splitsBlock", \{ reveal:false \}\);[\s\S]*?setRecipePage\("current"\);/);
   assert.match(app, /if \(!isDesktopLayout\(\) && state\.mobileTimelineOnly\)\{\s*\n\s*applyMobileTimelineMode\(false\);\s*\n\s*saveSession\(\);/);
   assert.match(app, /document\.body\.dataset\.mobileWorkspace = "panel";[\s\S]*?panel\.classList\.add\("mobile-active"\);[\s\S]*?panel\.open = true;/);

@@ -56,8 +56,8 @@ test("immediate actions never gain tab semantics", () => {
 });
 
 test("header view and recipe actions use the app's primary/secondary button families with a divider", () => {
-  assert.match(html, /class="primary actionRail active" data-recipe-view="summary"/);
-  assert.match(html, /class="secondary" data-recipe-view="edit"/);
+  assert.match(html, /class="primary actionRail active"[^>]*data-recipe-view="summary"/);
+  assert.match(html, /class="secondary"[^>]*data-recipe-view="edit"/);
   assert.match(app, /button\.classList\.toggle\("primary", active\);/);
   assert.match(app, /printButton\.classList\.add\("secondary", "recipeHeaderAction"\);/);
   assert.match(styles, /\.recipeHeaderActions\{[\s\S]*?border-left: 1px solid var\(--row-border-2\);/);

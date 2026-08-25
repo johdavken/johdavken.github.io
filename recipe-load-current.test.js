@@ -64,7 +64,7 @@ test("desktop puts it in the header where Load Next Recipe sits on the other pag
 test("mobile puts it in the overflow rather than a sixth slot in a four-slot row", () => {
   const editor = recipeEditor();
   // Next's primary row is already Recipes / Rearrange / Scan / More.
-  assert.match(editor, /\$\{isNextRecipePage\(\) \? `<button type="button" data-mobile-recipe-load-current>Load current recipe<\/button>` : ""\}/);
+  assert.match(editor, /\$\{isNextRecipePage\(\) \? `<button type="button"[^>]*data-mobile-recipe-load-current>Load current recipe<\/button>` : ""\}/);
   assert.match(editor, /mobileLoadCurrentButton\.addEventListener\("click",\(\)=>\{mobileMoreButton\.open=false;openLoadCurrentRecipeDialog\(\);\}\);/);
   // The overflow entry inherits the button's own availability rather than
   // deciding it a second time and drifting.

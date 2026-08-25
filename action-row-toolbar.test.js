@@ -22,9 +22,9 @@ test("a divider separates view selection from recipe actions", () => {
   assert.match(styles, /\.recipeHeaderActions\{[\s\S]*?padding-left: 10px;[\s\S]*?border-left: 1px solid var\(--row-border-2\);/);
 });
 
-test("Summary and Edit switch between the app's primary and secondary button families", () => {
-  assert.match(html, /class="primary actionRail active" data-recipe-view="summary"/);
-  assert.match(html, /class="secondary" data-recipe-view="edit"/);
+test("Summary and Edit retain compatibility classes while declaring toggle semantics", () => {
+  assert.match(html, /class="primary actionRail active" data-button-kind="toggle" data-button-size="small" data-recipe-view="summary"/);
+  assert.match(html, /class="secondary" data-button-kind="toggle" data-button-size="small" data-recipe-view="edit"/);
   assert.match(app, /button\.classList\.toggle\("primary", active\);/);
   assert.match(app, /button\.classList\.toggle\("actionRail", active\);/);
   assert.match(app, /button\.classList\.toggle\("secondary", !active\);/);

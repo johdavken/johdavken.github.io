@@ -197,6 +197,34 @@
   document.addEventListener("click", event=>{
     if (splitsScanShortcut?.open && !splitsScanShortcut.contains(event.target)) splitsScanShortcut.open = false;
     if (mobileRecipeMore?.open && !mobileRecipeMore.contains(event.target)) mobileRecipeMore.open = false;
+    const summary = event.target.closest?.(".mobileWeightProfilesSheet .workspaceConfigurationOverflow > summary");
+    if (summary){
+      const menu = summary.parentElement;
+      const popup = menu?._profileOverflowPopup || menu.querySelector(":scope > .workspaceConfigurationOverflowMenu");
+      if (menu && popup){
+        menu._profileOverflowPopup = popup;
+        window.setTimeout(()=>{
+          if (menu.open){
+            document.body.append(popup);
+            const anchor = summary.getBoundingClientRect();
+            const popupRect = popup.getBoundingClientRect();
+            const margin = 8;
+            const top = Math.max(margin, anchor.top - popupRect.height - 4);
+            const left = Math.min(Math.max(margin, anchor.right - popupRect.width), window.innerWidth - popupRect.width - margin);
+            popup.style.position = "fixed";
+            popup.style.top = `${top}px`;
+            popup.style.left = `${left}px`;
+            popup.style.right = "auto";
+          }else{
+            menu.append(popup);
+            popup.style.position = "";
+            popup.style.top = "";
+            popup.style.left = "";
+            popup.style.right = "";
+          }
+        }, 0);
+      }
+    }
   });
   document.addEventListener("keydown", event=>{
     if (event.key === "Escape" && splitsScanShortcut?.open){
@@ -240,7 +268,7 @@
   function renderConfigurationList(host,items,kind,syncState,{ showRowActions = true } = {}){
     host.replaceChildren();
     if(!items.length){ const empty=document.createElement("div"); empty.className="muted"; empty.textContent=kind==="recipe"?"No shared recipes saved for this workspace.":"No shared weight profiles saved for this workspace."; host.append(empty); return; }
-    items.forEach(item=>{ const row=document.createElement("div"); row.className="workspaceConfigurationRow"; row.tabIndex=0; row.setAttribute("role","group"); row.setAttribute("aria-label",`${item.name} configuration`); const select=()=>{selectedWorkspaceConfigurationId=item.id; renderWorkspaceConfigurations(syncState);}; const selected=selectedWorkspaceConfigurationId===item.id; row.classList.toggle("selected",selected); row.addEventListener("click",event=>{if(!event.target.closest("button,summary,details")) select();}); row.addEventListener("keydown",event=>{if((event.key==="Enter"||event.key===" ")&&!event.target.closest("button,summary")){event.preventDefault();select();}}); const info=document.createElement("div"); info.className="workspaceConfigurationInfo"; info.addEventListener("click",event=>{event.stopPropagation();select();}); const title=document.createElement("strong"); if(item.favorite){const star=document.createElement("span");star.className="workspaceConfigurationFavorite";star.setAttribute("aria-label","Favorite recipe");star.textContent="★";title.append(star," ");} title.append(item.name); const meta=document.createElement("small"); const count=kind==="recipe"&&Array.isArray(item.payload?.layers)?item.payload.layers.reduce((n,layer)=>n+(Array.isArray(layer?.hoppers)?layer.hoppers.filter(h=>typeof h?.resin_name==="string"&&h.resin_name.trim()).length:0),0):kind!=="recipe"&&Array.isArray(item.payload?.layers)?item.payload.layers.reduce((n,layer)=>n+(Array.isArray(layer?.receiver_weights_lb)&&layer.receiver_weights_lb.length===6?6:0),0):null; meta.textContent=`${item.payload.line_type} Layer${count===null?"":` · ${count} ${kind==="recipe"?"assigned hoppers":"receiver weights"}`} · Updated ${item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : "unknown"}`; info.append(title,meta); row.append(info); if(selected&&showRowActions){const actions=document.createElement("div"); actions.className="workspaceConfigurationActions"; const action=(label,fn,cls="secondary")=>{const b=document.createElement("button");b.type="button";b.className=cls;b.textContent=label;b.addEventListener("click",event=>{event.stopPropagation();fn();});return b;}; actions.append(action("Load",()=>previewWorkspaceConfiguration(item),"primary"),action("Update",()=>openWorkspaceConfigurationDialog("update",item))); const menu=document.createElement("details"); menu.className="workspaceConfigurationOverflow"; menu.addEventListener("click",event=>event.stopPropagation()); const summary=document.createElement("summary"); summary.setAttribute("aria-label",`More actions for ${item.name}`); summary.textContent="⋯"; const menuActions=document.createElement("div"); menuActions.className="workspaceConfigurationOverflowMenu"; const menuAction=(label,fn,cls="secondary")=>{const button=action(label,()=>{menu.open=false;fn();},cls);menuActions.append(button);}; menuAction("Rename",()=>openWorkspaceConfigurationDialog("rename",item)); menuAction("Duplicate",()=>openWorkspaceConfigurationDialog("duplicate",item)); if(kind==="recipe") menuAction(item.favorite?"Unfavorite":"Favorite",()=>mutateWorkspaceConfiguration("favorite",item,!item.favorite)); menuAction("Delete",()=>{if(confirm(`Delete shared configuration “${item.name}”?`)) mutateWorkspaceConfiguration("delete",item);},"danger"); menu.append(summary,menuActions); actions.append(menu); row.append(actions);} host.append(row); });
+    items.forEach(item=>{ const row=document.createElement("div"); row.className="workspaceConfigurationRow"; row.tabIndex=0; row.setAttribute("role","group"); row.setAttribute("aria-label",`${item.name} configuration`); const select=()=>{selectedWorkspaceConfigurationId=item.id; renderWorkspaceConfigurations(syncState);}; const selected=selectedWorkspaceConfigurationId===item.id; row.classList.toggle("selected",selected); row.addEventListener("click",event=>{if(!event.target.closest("button,summary,details")) select();}); row.addEventListener("keydown",event=>{if((event.key==="Enter"||event.key===" ")&&!event.target.closest("button,summary")){event.preventDefault();select();}}); const info=document.createElement("div"); info.className="workspaceConfigurationInfo"; info.addEventListener("click",event=>{event.stopPropagation();select();}); const title=document.createElement("strong"); if(item.favorite){const star=document.createElement("span");star.className="workspaceConfigurationFavorite";star.setAttribute("aria-label","Favorite recipe");star.textContent="★";title.append(star," ");} title.append(item.name); const meta=document.createElement("small"); const count=kind==="recipe"&&Array.isArray(item.payload?.layers)?item.payload.layers.reduce((n,layer)=>n+(Array.isArray(layer?.hoppers)?layer.hoppers.filter(h=>typeof h?.resin_name==="string"&&h.resin_name.trim()).length:0),0):kind!=="recipe"&&Array.isArray(item.payload?.layers)?item.payload.layers.reduce((n,layer)=>n+(Array.isArray(layer?.receiver_weights_lb)&&layer.receiver_weights_lb.length===6?6:0),0):null; meta.textContent=`${item.payload.line_type} Layer${count===null?"":` · ${count} ${kind==="recipe"?"assigned hoppers":"receiver weights"}`} · Updated ${item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : "unknown"}`; info.append(title,meta); row.append(info); if(selected&&showRowActions){const actions=document.createElement("div"); actions.className="workspaceConfigurationActions"; const action=(label,fn,cls="secondary")=>{const b=document.createElement("button");b.type="button";b.className=cls;b.textContent=label;b.addEventListener("click",event=>{event.stopPropagation();fn();});return b;}; actions.append(action("Load",()=>previewWorkspaceConfiguration(item),"primary"),action("Update",()=>openWorkspaceConfigurationDialog("update",item))); const menu=document.createElement("details"); menu.className="workspaceConfigurationOverflow"; menu.addEventListener("click",event=>event.stopPropagation()); menu.addEventListener("toggle",()=>{const sheet=menu.closest(".mobileWeightProfilesSheet"); if(sheet) sheet.classList.toggle("profileMenuOpen",menu.open); if(menu.open){ window.requestAnimationFrame(()=>{const anchor=summary.getBoundingClientRect(); const popup=menuActions.getBoundingClientRect(); const margin=8; const top=Math.max(margin,anchor.top-popup.height-4); const left=Math.min(Math.max(margin,anchor.right-popup.width),window.innerWidth-popup.width-margin); menuActions.style.position="fixed"; menuActions.style.top=`${top}px`; menuActions.style.left=`${left}px`; menuActions.style.right="auto";});}else{menuActions.style.position="";menuActions.style.top="";menuActions.style.left="";menuActions.style.right="";}}); const summary=document.createElement("summary"); summary.setAttribute("aria-label",`More actions for ${item.name}`); summary.textContent="⋯"; const menuActions=document.createElement("div"); menuActions.className="workspaceConfigurationOverflowMenu"; const menuAction=(label,fn,cls="secondary")=>{const button=action(label,()=>{menu.open=false;fn();},cls);menuActions.append(button);}; menuAction("Rename",()=>openWorkspaceConfigurationDialog("rename",item)); menuAction("Duplicate",()=>openWorkspaceConfigurationDialog("duplicate",item)); if(kind==="recipe") menuAction(item.favorite?"Unfavorite":"Favorite",()=>mutateWorkspaceConfiguration("favorite",item)); menuAction("Delete",()=>{if(confirm(`Delete shared configuration “${item.name}”?`)) mutateWorkspaceConfiguration("delete",item);},"danger"); menu.append(summary,menuActions); actions.append(menu); row.append(actions);} host.append(row); });
   }
   function renderMobileSavedRecipeRows(items,syncState){
     const sheet=$("mobileSavedRecipesSheet"), host=$("mobileSavedRecipesList"), search=$("mobileSavedRecipesSearch");
@@ -369,6 +397,7 @@
       });
       const overflow=document.createElement("details");
       overflow.className="mobileSavedRecipeOverflow";
+      overflow.addEventListener("toggle",()=>sheet.classList.toggle("profileMenuOpen",overflow.open));
       const overflowSummary=document.createElement("summary");
       overflowSummary.setAttribute("aria-label",`More actions for ${item.name}`);
       overflowSummary.textContent="⋯";
@@ -1851,6 +1880,14 @@
       display.textContent=`${hours % 12 || 12}:${String(minutes).padStart(2,"0")} ${suffix}`;
     }
 
+    function syncMobileLineRateReadout(){
+      const readout = $("mobileLineRateReadout");
+      if (!readout) return;
+      readout.textContent = state.lineRate > 0
+        ? `${state.lineRate.toLocaleString([], { maximumFractionDigits:2 })} lb/hr`
+        : "Not set";
+    }
+
     function applyPayload(payload, {rebuildUI=true} = {}){
       if (!payload || typeof payload !== "object") return;
 
@@ -2269,7 +2306,7 @@
 
       const viewToggle = document.createElement("div");
       viewToggle.className = "mobileWeightsViewToggle";
-      viewToggle.innerHTML = '<span>View</span><button type="button" data-weight-view="visual" class="active">Summary</button><button type="button" data-weight-view="edit">Edit</button>';
+      viewToggle.innerHTML = '<span>View</span><button type="button" data-button-kind="toggle" data-button-size="small" data-weight-view="visual" class="active">Summary</button><button type="button" data-button-kind="toggle" data-button-size="small" data-weight-view="edit">Edit</button>';
       controls.appendChild(viewToggle);
       area.appendChild(controls);
 
@@ -2447,12 +2484,24 @@
         // Edit *is* bulk edit: selection and the bulk bar come with the view
         // rather than from a second toggle of their own.
         setMobileWeightBulkMode(!visualMode);
-        viewToggle.querySelectorAll("button").forEach(button=>button.classList.toggle("active", button.dataset.weightView === (visualMode ? "visual" : "edit")));
+        viewToggle.querySelectorAll("button").forEach(button=>{
+          const active = button.dataset.weightView === (visualMode ? "visual" : "edit");
+          button.classList.toggle("active", active);
+          button.classList.toggle("primary", active);
+          button.classList.toggle("actionRail", active);
+          button.classList.toggle("secondary", !active);
+          button.setAttribute("aria-pressed", String(active));
+        });
+        const touchToggle = viewToggle.querySelector('[data-weight-view="edit"]');
+        if (touchToggle){
+          touchToggle.textContent = visualMode ? "Edit" : "Done";
+          touchToggle.setAttribute("aria-label", visualMode ? "Edit hopper weights" : "Done editing hopper weights");
+        }
       }
 
       viewToggle.addEventListener("click", event=>{
         const button = event.target.closest("button[data-weight-view]");
-        if (button) setMobileWeightView(button.dataset.weightView);
+        if (button) setMobileWeightView(visualMode ? "edit" : "visual");
       });
       bulkBar.querySelector("#selectAllMobileWeights").addEventListener("click", ()=>{
         cellRefs.forEach((_,key)=>selected.add(key));
@@ -2624,6 +2673,7 @@
         ${desktopCircumferenceMarkup}
         <div class="desktopWeightsViewToggle" role="group" aria-label="Receiver hopper weight view"><span>View</span><button class="active" type="button" data-weight-view="summary">Summary</button><button type="button" data-weight-view="edit">Edit</button></div>
       `;
+      const desktopViewToggle = desktopControls.querySelector(".desktopWeightsViewToggle");
       const circumferenceInput = desktopControls.querySelector("#desktopSharedCircumference");
       circumferenceInput?.addEventListener("input", event=>{
         const accepted = acceptNumericInput(event.target, { min: 0, label: "Shared hopper circumference" }, setWorkspaceHopperCircumference);
@@ -2992,16 +3042,28 @@
         area.dataset.desktopBulkMode = String(desktopBulkMode);
         toolbar.hidden = !desktopBulkMode;
         if (!desktopBulkMode) selected.clear();
-        desktopControls.querySelectorAll("[data-weight-view]").forEach(button=>{
+        desktopViewToggle.querySelectorAll("[data-weight-view]").forEach(button=>{
           const active = button.dataset.weightView === desktopWeightView;
           button.classList.toggle("active", active);
+          button.classList.toggle("primary", active);
+          button.classList.toggle("actionRail", active);
+          button.classList.toggle("secondary", !active);
           button.setAttribute("aria-pressed", String(active));
         });
+        // Summary is CSS-hidden here too now (see .desktopWeightsViewToggle
+        // in styles.css) - same collapse as Recipe's own view toggle, so the
+        // one visible button always carries the Edit/Done label.
+        const editToggle = desktopViewToggle.querySelector('[data-weight-view="edit"]');
+        if (editToggle){
+          editToggle.textContent = desktopBulkMode ? "Done" : "Edit";
+          editToggle.setAttribute("aria-label", desktopBulkMode ? "Done editing hopper weights" : "Edit hopper weights");
+        }
         updateSelectionUI();
       }
-      desktopControls.querySelector(".desktopWeightsViewToggle").addEventListener("click", event=>{
+      desktopViewToggle.addEventListener("click", event=>{
         const button = event.target.closest("button[data-weight-view]");
-        if (button) setDesktopWeightView(button.dataset.weightView);
+        if (!button) return;
+        setDesktopWeightView(desktopWeightView === "edit" ? "summary" : "edit");
       });
       [bulkInput, bulkHeightInput].filter(Boolean).forEach(field=>field.addEventListener("input", ()=>updateSelectionUI()));
       profilesAction.addEventListener("click", ()=>setDesktopProfilesOpen(!desktopProfilesOpen));
@@ -3281,11 +3343,12 @@
      * (Timeline, readiness, run-down, production) keeps reading state.layers
      * directly and is unaffected by the selected page. */
 
-    let activeRecipePage = "current";           // "current" | "next" | "saved"; not persisted - Recipe always opens on Current
+    let activeRecipePage = "current";           // "current" | "next" | "weights" | "saved"; not persisted - Recipe always opens on Current
     let nextRecipeWorking = null;               // layers-shaped working copy of state.nextRecipe
 
     function isSavedRecipesPage(){ return activeRecipePage === "saved"; }
     function isNextRecipePage(){ return activeRecipePage === "next"; }
+    function isWeightsPage(){ return activeRecipePage === "weights"; }
 
     // The plan follows the line's own layer structure rather than carrying a
     // structure of its own: layer count is a property of the line, and a plan
@@ -3613,22 +3676,26 @@
       const panel = $("splitsArea");
       const labelledBy = isSavedRecipesPage()
         ? "recipePageTabSaved"
-        : (isNextRecipePage() ? "recipePageTabNext" : "recipePageTabCurrent");
+        : isWeightsPage()
+          ? "recipePageTabWeights"
+          : (isNextRecipePage() ? "recipePageTabNext" : "recipePageTabCurrent");
       if (panel) panel.setAttribute("aria-labelledby", labelledBy);
       const viewToggle = $("recipeViewToggle");
-      if (viewToggle) viewToggle.hidden = isSavedRecipesPage();
+      if (viewToggle) viewToggle.hidden = isSavedRecipesPage() || isWeightsPage();
       const headerControls = $("recipeHeaderControls");
       if (headerControls) headerControls.hidden = isSavedRecipesPage();
+      const headerActions = $("recipeHeaderActions");
+      if (headerActions) headerActions.hidden = isSavedRecipesPage() || isWeightsPage();
       syncPlannedRecipeIndicator();
     }
 
     function setRecipePage(page){
-      const next = page === "next" ? "next" : page === "saved" ? "saved" : "current";
+      const next = page === "next" ? "next" : page === "weights" ? "weights" : page === "saved" ? "saved" : "current";
       if (next === activeRecipePage) return;
       // Leaving Next: fold the working plan back into durable state before the
       // grid stops pointing at it.
       if (activeRecipePage === "next") commitNextRecipeWorking();
-      if (next === "saved"){
+      if (next === "saved" || next === "weights"){
         splitsBulkModeActive = false;
         if (hopperRearrangement?.active){
           window.PolynHopperRearrangement.apply(recipeLayers(), hopperRearrangement.baseline);
@@ -3696,14 +3763,25 @@
         button.classList.toggle("secondary", !active);
         button.setAttribute("aria-pressed", String(active));
       });
+      // Recipe's Summary button is CSS-hidden on every device now (not just
+      // touch, see #recipeViewToggle in styles.css), so the one remaining
+      // button always carries the Edit/Done label regardless of layout.
+      const touchToggle = $("recipeViewToggle")?.querySelector('[data-recipe-view="edit"]');
+      if (touchToggle){
+        touchToggle.textContent = splitsViewMode === "edit" ? "Done" : "Edit";
+        touchToggle.setAttribute("aria-label", splitsViewMode === "edit" ? "Done editing recipe" : "Edit recipe");
+      }
     }
 
     function hookRecipeViewToggle(){
       const toggle = $("recipeViewToggle");
       if (!toggle) return;
+      // Summary is never clickable (hidden everywhere) - the visible button
+      // just flips edit/summary, on desktop the same as touch.
       toggle.addEventListener("click", event=>{
         const button = event.target.closest("button[data-recipe-view]");
-        if (button) setRecipeViewMode(button.dataset.recipeView);
+        if (!button) return;
+        setRecipeViewMode(splitsViewMode === "edit" ? "summary" : "edit");
       });
       syncRecipeViewUI();
     }
@@ -3711,7 +3789,39 @@
     function renderSplitsArea(){
       const area = $("splitsArea");
       if (!area) return;
+      // Weight renderers own the behavior of their Summary/Edit control, but
+      // Recipe owns where page-level view controls are presented. Remove the
+      // previous rendered control before rebuilding; the active weights
+      // renderer will place its newly wired control back in this same slot.
+      $("recipeHeaderControls")?.querySelector(".weightsHeaderViewToggle")?.remove();
+      // Hopper Weights is a page of this workspace, but it remains the same
+      // live editor used by Line Setup. Move that one real node instead of
+      // cloning the UI so calculations, profiles, input IDs and event
+      // handlers continue to have a single owner. Before another page clears
+      // this panel, restore both movable nodes to their stable setup homes.
+      const weightsArea = $("weightsArea");
+      const weightsBlock = $("weightsBlock");
+      const profilesBlock = $("setupWeightProfilesBlock");
+      if (!isWeightsPage()){
+        if (profilesBlock?.parentElement === weightsArea) weightsBlock?.after(profilesBlock);
+        if (weightsArea && weightsBlock && weightsArea.parentElement !== weightsBlock.querySelector(":scope > .blockBody")){
+          weightsBlock.querySelector(":scope > .blockBody")?.append(weightsArea);
+        }
+      }
       area.innerHTML = "";
+      if (isWeightsPage()){
+        area.className = "gap10 recipeWeightsPage";
+        if (weightsArea) area.append(weightsArea);
+        $("recipeHeaderActions")?.replaceChildren();
+        renderWeightsArea();
+        const weightsViewToggle = weightsArea?.querySelector(".desktopWeightsViewToggle, .mobileWeightsViewToggle");
+        if (weightsViewToggle){
+          weightsViewToggle.classList.add("weightsHeaderViewToggle", "recipeViewToggle");
+          $("recipeHeaderControls")?.prepend(weightsViewToggle);
+        }
+        return;
+      }
+      area.className = "gap10";
       const copyRules = getLayerCopyRules(state.lineType);
       const selected = new Set();
       const cellRefs = new Map();
@@ -3720,6 +3830,7 @@
       const compactMobileRecipe = layoutModeQueries.compactRecipe.matches;
       const headerActions = $("recipeHeaderActions");
       headerActions?.replaceChildren();
+      if (headerActions) headerActions.hidden = false;
       // Summary/Edit is now the single mode axis on every surface: Edit *is*
       // bulk edit, so there is no second mode to be in anywhere.
       const viewMode = splitsViewMode;
@@ -3962,14 +4073,14 @@
       const mobileMoreButton=document.createElement("details");
       mobileMoreButton.className="mobileRecipeMore";
       mobileMoreButton.innerHTML=`
-        <summary aria-label="More recipe actions"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg><span>More</span></summary>
+        <summary data-button-kind="menu" data-button-size="small" aria-label="More recipe actions"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg><span>More</span></summary>
         <div class="mobileRecipeMoreMenu">
           ${isNextRecipePage() ? "" : `
-          <button type="button" data-mobile-recipe-scan="job_traveler">Scan job traveler</button>
-          <button type="button" data-mobile-recipe-scan="dosing_screen">Scan dosing screen</button>
-          <button type="button" data-mobile-recipe-scan="heat_sheet">Scan heat sheet</button>`}
-          ${isNextRecipePage() ? `<button type="button" data-mobile-recipe-load-current>Load current recipe</button>` : ""}
-          <button type="button" data-mobile-recipe-print>Print recipe</button>
+          <button type="button" data-button-kind="menu" data-button-variant="quiet" data-button-size="small" data-mobile-recipe-scan="job_traveler">Scan job traveler</button>
+          <button type="button" data-button-kind="menu" data-button-variant="quiet" data-button-size="small" data-mobile-recipe-scan="dosing_screen">Scan dosing screen</button>
+          <button type="button" data-button-kind="menu" data-button-variant="quiet" data-button-size="small" data-mobile-recipe-scan="heat_sheet">Scan heat sheet</button>`}
+          ${isNextRecipePage() ? `<button type="button" data-button-kind="menu" data-button-variant="quiet" data-button-size="small" data-mobile-recipe-load-current>Load current recipe</button>` : ""}
+          <button type="button" data-button-kind="menu" data-button-variant="quiet" data-button-size="small" data-mobile-recipe-print>Print recipe</button>
         </div>`;
       mobileMoreButton.querySelectorAll("[data-mobile-recipe-scan]").forEach(button=>button.addEventListener("click",()=>{
         mobileMoreButton.open=false;
@@ -4010,20 +4121,20 @@
               <span>%</span>
             </span>
           </label>
-          <button id="applyBulkSplit" type="button" class="secondary" disabled>Apply to selected</button>
+          <button id="applyBulkSplit" type="button" class="secondary" data-button-kind="action" data-button-variant="primary" data-button-size="small" disabled>Apply to selected</button>
         </div>
         <div class="splitsEditRow splitsEditRowSecondary">
           <div class="recipeEditHistory" role="group" aria-label="Recipe edit history">
-            <button id="recipeUndo" type="button" class="recipeHistoryAction" aria-label="Undo recipe change" title="Undo" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4 12l5 5M4 12h9a6 6 0 1 1 0 12"/></svg></button>
-            <button id="recipeRedo" type="button" class="recipeHistoryAction" aria-label="Redo recipe change" title="Redo" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 7 5 5-5 5m5-5h-9a6 6 0 1 0 0 12"/></svg></button>
+            <button id="recipeUndo" type="button" class="recipeHistoryAction" data-button-kind="icon" data-button-size="small" aria-label="Undo recipe change" title="Undo" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4 12l5 5M4 12h9a6 6 0 1 1 0 12"/></svg></button>
+            <button id="recipeRedo" type="button" class="recipeHistoryAction" data-button-kind="icon" data-button-size="small" aria-label="Redo recipe change" title="Redo" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 7 5 5-5 5m5-5h-9a6 6 0 1 0 0 12"/></svg></button>
           </div>
           <div class="splitsBulkActions">
             <div id="splitSelectionStatus" class="srOnly tiny splitsSelectionStatus" role="status" aria-live="polite">No hoppers selected</div>
-            <button id="selectAllSplits" type="button" class="bulkTextAction">Select all</button>
-            <button id="clearSplitSelection" type="button" class="bulkTextAction">Clear selection</button>
+            <button id="selectAllSplits" type="button" class="bulkTextAction" data-button-kind="action" data-button-variant="quiet" data-button-size="small">Select all</button>
+            <button id="clearSplitSelection" type="button" class="bulkTextAction" data-button-kind="action" data-button-variant="quiet" data-button-size="small">Clear selection</button>
           </div>
-          <button id="clearSelectedCells" type="button" class="bulkTextAction" disabled>Empty cells</button>
-          <button id="resetAllSplits" type="button" class="danger">Reset Recipe</button>
+          <button id="clearSelectedCells" type="button" class="bulkTextAction" data-button-kind="action" data-button-variant="quiet" data-button-size="small" disabled>Empty cells</button>
+          <button id="resetAllSplits" type="button" class="danger" data-button-kind="action" data-button-variant="danger" data-button-size="small">Reset Recipe</button>
         </div>
       `;
 
@@ -5326,6 +5437,7 @@
    * Validation + compute + render
    * ============================ */
   function updateCollapsedSummaries(){
+    syncMobileLineRateReadout();
     const hopperWeightValues = state.layers.flatMap(layer=>layer.hoppers.map(hopper=>clampNum(hopper.weight)));
     const configuredWeightCount = hopperWeightValues.filter(weight=>weight > 0).length;
     const hopperWeightsUnset = hopperWeightValues.length > 0 && configuredWeightCount === 0;
@@ -6038,6 +6150,21 @@
       });
     }
 
+    // Line Setup no longer owns a workspace page. Its live controls keep
+    // their original IDs and handlers, but desktop presents them in Recipe's
+    // rail expansion. Touch layouts intentionally have no replacement setup
+    // panel because their active-line context already lives on the home view.
+    function placeProductionControlsForLayout(){
+      const desktopHost = $("desktopRailRecipeSetupControls");
+      const mobileHost = $("mobileProductionControls");
+      const layerCount = $("setupLayerCountGroup");
+      const production = $("lineRate")?.closest(".setupPrimaryFields");
+      if (!desktopHost || !mobileHost || !layerCount || !production) return;
+      if (layerCount.parentElement !== desktopHost) desktopHost.prepend(layerCount);
+      const productionHost = isDesktopLayout() ? desktopHost : mobileHost;
+      if (production.parentElement !== productionHost) productionHost.append(production);
+    }
+
     function setWorkspacePanel(id, { persist = true, reveal = false } = {}){
       const target = document.getElementById(id);
       if (!target?.classList.contains("workspacePanel")) return;
@@ -6321,6 +6448,7 @@
       const changed = desktop !== renderedIsDesktop || compactRecipe !== renderedCompactRecipe;
       renderedIsDesktop = desktop;
       renderedCompactRecipe = compactRecipe;
+      placeProductionControlsForLayout();
       if (!changed || !rerender) return changed;
       // Recipe Book is a full-matrix page. Crossing into the compact phone
       // recipe returns to Current; tablet and desktop keep the page open.
@@ -7226,6 +7354,12 @@
         ? syncState.selectedWorkspace.name
         : "LOCAL";
     }
+    const mobileStatusWorkspace = $("mobileStatusWorkspaceName");
+    if (mobileStatusWorkspace){
+      mobileStatusWorkspace.textContent = syncState.connected && syncState.selectedWorkspace?.name
+        ? syncState.selectedWorkspace.name
+        : "Local";
+    }
 
     const selector = $("lineSyncWorkspaceSelect");
     if (selector){
@@ -7519,6 +7653,22 @@
       validateAndCompute({ sync: true });
       saveSession();
     });
+    const mobileLineRateReadout = $("mobileLineRateReadout");
+    const lineRateInput = $("lineRate");
+    const outputGauge = lineRateInput?.closest(".gaugeTile");
+    mobileLineRateReadout?.addEventListener("click",event=>{
+      event.stopPropagation();
+      outputGauge?.classList.add("mobileOutputEditing");
+      lineRateInput?.focus();
+      lineRateInput?.select();
+    });
+    lineRateInput?.addEventListener("blur",()=>{
+      outputGauge?.classList.remove("mobileOutputEditing");
+      syncMobileLineRateReadout();
+    });
+    lineRateInput?.addEventListener("keydown",event=>{
+      if (event.key === "Enter") event.currentTarget.blur();
+    });
     $("changeoverTime")?.addEventListener("input",(e)=>{
       state.changeoverTime = e.target.value || "";
       state.changeoverSetAt = state.changeoverTime ? Date.now() : null;
@@ -7773,14 +7923,16 @@
 
       const ATTENTION_ACTIONS = {
         "review-setup": ()=>{
-          setWorkspacePanel("lineSetupBlock", { reveal:true });
-          focusSoon(()=>$("lineRate"));
+          setWorkspacePanel("splitsBlock", { reveal:true });
+          setRecipePage("current");
+          if (isDesktopLayout()) focusSoon(()=>$("lineRate"));
         },
         // On desktop the weight fields are only rendered in the matrix's Edit
         // view, so when they are hidden the responsible control is the Edit
         // toggle that reveals them.
         "open-weights": ()=>{
-          setWorkspacePanel("lineSetupBlock", { reveal:true });
+          setWorkspacePanel("splitsBlock", { reveal:true });
+          setRecipePage("weights");
           focusSoon(()=>responsibleControl("weightsArea", '[data-weight-view="edit"]'));
         },
         "open-recipe": ()=>{
@@ -8092,6 +8244,9 @@
     document.querySelectorAll(".workspaceNavButton").forEach(button=>{
       button.addEventListener("click",()=>setWorkspacePanel(button.dataset.workspaceTarget, { reveal: true }));
     });
+    $("mobileProductionSyncShortcut")?.addEventListener("click",()=>{
+      setWorkspacePanel("lineSyncBlock", { reveal:true });
+    });
     hookWorkspaceNavMore();
     document.querySelectorAll(".workspaceContent > .workspacePanel > summary").forEach(summary=>{
       summary.addEventListener("click",event=>{
@@ -8143,6 +8298,7 @@
     (function init(){
 
       ensureLayers();
+      placeProductionControlsForLayout();
 
       const restored = loadSession();
       if (!restored){
@@ -8154,6 +8310,7 @@
       }
 
       activeWorkspaceId = loadWorkspacePreference();
+      if (activeWorkspaceId === "lineSetupBlock") activeWorkspaceId = "splitsBlock";
       // A phone always starts at the tile home. Desktop keeps restoring the
       // most recently used workspace through activeWorkspaceId.
       if (!isDesktopLayout()) showMobileWorkspaceHome();

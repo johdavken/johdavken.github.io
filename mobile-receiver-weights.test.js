@@ -114,6 +114,14 @@ test("mobile receiver profiles use the same bottom-sheet row pattern as Recipes"
   assert.match(app,/sheet\.close\("load"\)/);
 });
 
+test("receiver profile overflow opens upward inside a sheet tall enough for its actions",()=>{
+  const profiles = functionBody("renderMobileWeightProfileRows");
+  assert.match(profiles,/overflow\.addEventListener\("toggle",\(\)=>sheet\.classList\.toggle\("profileMenuOpen",overflow\.open\)\)/);
+  assert.match(styles,/\.mobileWeightProfilesSheet\{min-height:min\(360px,calc\(100dvh/);
+  assert.match(styles,/\.mobileWeightProfilesSheet\.profileMenuOpen \.mobileSavedRecipesList\{overflow:visible\}/);
+  assert.match(styles,/\.mobileWeightProfilesSheet \.mobileSavedRecipeOverflow\[open\] \.mobileSavedRecipeMenu\{top:auto;bottom:calc\(100% \+ 4px\)\}/);
+});
+
 test("Smart Hopper help is a width-constrained wrapping block on mobile",()=>{
   assert.match(styles,/\.weightsSmartHow\{display:block;min-width:0;width:100%;max-width:100%;box-sizing:border-box/);
   assert.match(styles,/\.weightsSmartHow summary\{min-width:0;max-width:100%;[\s\S]*?white-space:normal;overflow-wrap:anywhere/);

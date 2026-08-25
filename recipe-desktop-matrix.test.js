@@ -44,8 +44,18 @@ test("Summary preserves Edit's selector track so the matrix never shifts between
 
 test("the 10% size increase is scoped to .splitsMatrixFrame, not #splitsArea - the surrounding toolbars must stay their normal size", () => {
   const body = desktopBlock();
-  assert.match(body, /#splitsArea \.splitsMatrixFrame\{\s*\n\s*--font-base: calc\(var\(--font-base\) \* 1\.1\);/);
-  assert.doesNotMatch(body, /#splitsArea\{\s*\n\s*--font-base/, "the font scaling must not be declared directly on #splitsArea - that would also grow .recipeUtilityTabs/.splitsBulkModeBar");
+  // A custom property that reads its own name back out is a cycle (even
+  // through calc()) and Chromium resolves it to nothing, so the actual
+  // scaling can't live in a --font-base: calc(var(--font-base) * 1.1)
+  // declared on .splitsMatrixFrame itself. #splitsArea precomputes the
+  // scaled value under a different name (--font-base-x11) and
+  // .splitsMatrixFrame just reassigns the real token from that - #splitsArea
+  // itself must never assign --font-base directly (only the "-x11" alias),
+  // or every descendant, including the toolbars, would inherit the scaled
+  // value instead of just the matrix.
+  assert.match(body, /#splitsArea\{\s*\n\s*--font-base-x11: calc\(var\(--font-base\) \* 1\.1\);/);
+  assert.match(body, /#splitsArea \.splitsMatrixFrame\{\s*\n\s*--font-base: var\(--font-base-x11\);/);
+  assert.doesNotMatch(body, /#splitsArea\{\s*\n\s*--font-base:/, "the font scaling must not be declared directly on #splitsArea - that would also grow .recipeUtilityTabs/.splitsBulkModeBar");
 });
 
 test("column width, the hopper-designation badge, and the Track toggle clock icon are each ~10% larger on desktop", () => {
@@ -77,12 +87,19 @@ test("the static row/column shading alternates by column (layer), not by row", (
 
 test("Saved recipes/Bulk edit/Rearrange panel content is 15% smaller on desktop, but the tab strip that opens them is untouched", () => {
   const body = desktopBlock();
-  assert.match(body, /\.splitsBulkBar,\s*\n\s*\.splitsSavedRecipesPanel,\s*\n\s*\.rearrangeModeBar\{/);
-  assert.match(body, /--font-base: calc\(var\(--font-base\) \* \.85\);/);
-  assert.match(body, /--control-height: calc\(var\(--control-height\) \* \.85\);/);
+  // Same self-reference cycle as the matrix's 1.1x block above, at 25
+  // properties instead of 3 - #splitsBlock (not #splitsArea, so the same
+  // "-x85" tokens also reach .recipeHeaderControls) precomputes the scaled
+  // values under "-x85" names and the real tokens are reassigned from those.
+  assert.match(body, /#splitsBlock\{\s*\n\s*--font-base-x85: calc\(var\(--font-base\) \* \.85\);/);
+  assert.match(body, /--control-height-x85: calc\(var\(--control-height\) \* \.85\);/);
+  assert.match(body, /\.splitsBulkBar,\s*\n\s*\.splitsSavedRecipesPanel,\s*\n\s*\.rearrangeModeBar,\s*\n\s*\.recipeHeaderControls\{/);
+  assert.match(body, /--font-base: var\(--font-base-x85\);/);
+  assert.match(body, /--control-height: var\(--control-height-x85\);/);
   // .recipeUtilityTabs/.recipeUtilityTab must never appear as a selector
   // inside this 0.85x block - the tab strip itself stays full size.
-  const shrinkBlockStart = body.indexOf(".splitsBulkBar,\n  .splitsSavedRecipesPanel,\n  .rearrangeModeBar{");
+  const shrinkBlockStart = body.indexOf(".splitsBulkBar,\n  .splitsSavedRecipesPanel,\n  .rearrangeModeBar,\n  .recipeHeaderControls{");
+  assert.notEqual(shrinkBlockStart, -1);
   const shrinkBlock = body.slice(shrinkBlockStart);
   assert.doesNotMatch(shrinkBlock, /recipeUtilityTab/);
 });

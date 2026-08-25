@@ -57,7 +57,7 @@ test("light-theme support contrast is scoped per palette, not painted into Dark 
 
 test("mobile toolbar uses Recipes and a clearly labeled More control with an accessible name",()=>{
   assert.match(app,/savedRecipesButton\.textContent="Recipes";/);
-  assert.match(app,/<summary aria-label="More recipe actions"><svg[^>]*>[\s\S]*?<\/svg><span>More<\/span><\/summary>/);
+  assert.match(app,/<summary data-button-kind="menu" data-button-size="small" aria-label="More recipe actions"><svg[^>]*>[\s\S]*?<\/svg><span>More<\/span><\/summary>/);
   // Primary-row buttons live in .splitsMobilePrimaryRow, including More, so
   // the extra actions affordance does not consume a dedicated second row.
   assert.match(styles,/\.splitsMobilePrimaryRow button\.secondary,[\s\S]*?\.splitsMobilePrimaryRow \.splitsScanShortcut > summary\{[\s\S]*?height:42px;[\s\S]*?white-space:nowrap;/);

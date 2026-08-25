@@ -153,11 +153,12 @@ test("the tabs use real tab semantics and are keyboard navigable", () => {
   assert.match(styles, /\.recipePageTab:focus-visible\{[\s\S]*?outline: 2px solid var\(--focus-border\);/);
 });
 
-test("aria-selected, the panel label, and the view control follow all three pages", () => {
+test("aria-selected, the panel label, and the view control follow every workspace page", () => {
   const body = app.slice(app.indexOf("function syncRecipePageUI("), app.indexOf("function setRecipePage("));
   assert.match(body, /tab\.setAttribute\("aria-selected", String\(selected\)\)/);
-  assert.match(body, /const labelledBy = isSavedRecipesPage\(\)[\s\S]*?"recipePageTabSaved"[\s\S]*?"recipePageTabNext" : "recipePageTabCurrent"/);
-  assert.match(body, /viewToggle\.hidden = isSavedRecipesPage\(\);/);
+  assert.match(body, /const labelledBy = isSavedRecipesPage\(\)[\s\S]*?"recipePageTabSaved"[\s\S]*?isWeightsPage\(\)[\s\S]*?"recipePageTabWeights"[\s\S]*?"recipePageTabNext" : "recipePageTabCurrent"/);
+  assert.match(body, /viewToggle\.hidden = isSavedRecipesPage\(\) \|\| isWeightsPage\(\);/);
+  assert.match(body, /headerControls\.hidden = isSavedRecipesPage\(\);/);
 });
 
 test("Recipe Book is available on tablet and desktop; only compact phones return to Current", () => {

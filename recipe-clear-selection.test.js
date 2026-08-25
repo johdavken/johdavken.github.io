@@ -79,8 +79,8 @@ test("the bar belongs to Summary alone, and stands down for the mobile rearrange
  * -------------------------------------------------------------------- */
 
 test("the shared inline editor exposes Select all and Clear selection on mobile", () => {
-  assert.match(splitsArea, /<button id="selectAllSplits" type="button" class="bulkTextAction">Select all<\/button>/);
-  assert.match(splitsArea, /<button id="clearSplitSelection" type="button" class="bulkTextAction">Clear selection<\/button>/);
+  assert.match(splitsArea, /<button id="selectAllSplits"[^>]*data-button-variant="quiet"[^>]*>Select all<\/button>/);
+  assert.match(splitsArea, /<button id="clearSplitSelection"[^>]*data-button-variant="quiet"[^>]*>Clear selection<\/button>/);
   assert.match(styles, /#splitsArea \.splitsEditRowSecondary > \.splitsBulkActions/);
 });
 

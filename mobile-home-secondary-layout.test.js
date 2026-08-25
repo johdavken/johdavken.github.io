@@ -7,12 +7,13 @@ const fs = require("node:fs");
 const html = fs.readFileSync("index.html", "utf8");
 const styles = fs.readFileSync("styles.css", "utf8");
 
-test("mobile home renders the four primary destinations as one connected rail", () => {
+test("mobile home renders the three visible workflow destinations as one connected rail", () => {
   assert.match(html, /class="mobileWorkflowLabel"><span>Production workflow<\/span><strong id="mobileWorkflowWorkspace">LOCAL<\/strong>/);
   assert.equal((html.match(/class="mobileRailChev"/g) || []).length, 4);
   assert.match(styles, /body\[data-mobile-workspace="home"\] \.workspaceNav\{[\s\S]*?grid-template-columns:minmax\(0,1fr\);/);
   assert.match(styles, /\.workspaceNavButton\[data-step\][\s\S]*?min-height:82px;/);
-  assert.match(styles, /\.workspaceNavButton:is\(\[data-step="1"\],\[data-step="2"\],\[data-step="3"\]\)::after\{[\s\S]*?height:calc\(100% - 26px\);/);
+  assert.match(styles, /\.workspaceNavButton:is\(\[data-step="1"\],\[data-step="2"\]\)::after\{[\s\S]*?height:calc\(100% - 26px\);/);
+  assert.match(styles, /\.workspaceNavButton\[data-step="3"\]::after\{display:none\}/);
 });
 
 test("the workflow divider names the connected workspace and falls back to LOCAL", () => {
