@@ -108,6 +108,6 @@ test("Save to Resin Database uses the shared emphasized action treatment", () =>
   );
   assert.match(
     css,
-    /button\.primary\.actionRail\{[\s\S]*?box-shadow:inset 4px 0 0 var\(--title\);/
+    /button\.primary\.actionRail\{[\s\S]*?border-radius:2px;\s*\n\}/
   );
 });

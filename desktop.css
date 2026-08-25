@@ -641,10 +641,10 @@
   .desktopWeightsActionToolbar.recipeUtilityTabs .recipeUtilityTab{display:inline-flex;align-items:center;gap:7px;min-height:26px;padding:5px 12px 4px;border:1px solid transparent;border-bottom:0;border-radius:var(--control-radius) var(--control-radius) 0 0;background:transparent;color:var(--muted);font-size:var(--font-tiny);font-weight:700;line-height:1.2}
   .desktopWeightsActionToolbar.recipeUtilityTabs .recipeUtilityTab:hover{background:color-mix(in srgb,var(--text) 5%,transparent);color:var(--title)}
   .desktopWeightsActionToolbar.recipeUtilityTabs .recipeUtilityTab.active{z-index:1;border-color:var(--row-border);background:var(--readonly-bg);color:var(--title);font-weight:800;box-shadow:0 1px 0 0 var(--readonly-bg)}
-  #lineSetupBlock #weightsArea #setupWeightProfilesBlock{display:block!important;margin-top:-7px;padding:10px;border:1px solid var(--row-border);border-radius:var(--radius-row);background:var(--readonly-bg)}
-  #lineSetupBlock #weightsArea #setupWeightProfilesBlock[hidden]{display:none!important}
-  #lineSetupBlock #weightsArea #setupWeightProfilesBlock > summary{display:none}
-  #lineSetupBlock #weightsArea #setupWeightProfilesBlock > .blockBody{display:block!important;padding:0}
+  :is(#lineSetupBlock,#splitsBlock) #weightsArea #setupWeightProfilesBlock{display:block!important;margin-top:-7px;padding:10px;border:1px solid var(--row-border);border-radius:var(--radius-row);background:var(--readonly-bg)}
+  :is(#lineSetupBlock,#splitsBlock) #weightsArea #setupWeightProfilesBlock[hidden]{display:none!important}
+  :is(#lineSetupBlock,#splitsBlock) #weightsArea #setupWeightProfilesBlock > summary{display:none}
+  :is(#lineSetupBlock,#splitsBlock) #weightsArea #setupWeightProfilesBlock > .blockBody{display:block!important;padding:0}
   /* Edit view's toolbar - a single compact card directly under the Smart
      Hoppers/View row, above the table. Two rows at most: fields+Apply,
      then selection status+Select all/Clear. No numbered steps or a Done
@@ -805,6 +805,20 @@
   .desktopRailExpansionPanel[hidden]{display:none!important}
   .desktopRailExpansionPanel > strong{display:block;color:var(--text);font-size:15px;line-height:1.08}
   .desktopRailExpansionPanel > small{display:block;color:var(--muted);font-size:9px;line-height:1.35}
+  .desktopRailRecipeSetupControls{display:grid;gap:7px;padding-top:1px}
+  .desktopRailRecipeSetupControls .setupControlGroup{display:grid;gap:4px;min-width:0}
+  .desktopRailRecipeSetupControls .setupControlGroup[hidden],.desktopRailRecipeSetupControls .layerCountTiles[hidden]{display:none!important}
+  .desktopRailRecipeSetupControls .setupControlLabel{color:var(--muted);font-size:7px;font-weight:900;letter-spacing:.09em;text-transform:uppercase}
+  .desktopRailRecipeSetupControls .layerCountTiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;width:100%}
+  .desktopRailRecipeSetupControls .layerCountTile{min-width:0;min-height:30px;padding:3px 4px}
+  .desktopRailRecipeSetupControls .layerCountTile svg{width:22px;height:16px}
+  .desktopRailRecipeSetupControls .setupPrimaryFields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:0!important}
+  .desktopRailRecipeSetupControls .gaugeTile{position:relative;display:grid;place-items:center;min-width:0;min-height:54px;padding:5px;border:1px solid color-mix(in srgb,var(--rail-stage-accent) 23%,var(--border));border-radius:7px;background:color-mix(in srgb,var(--rail-stage-accent) 4%,transparent);overflow:hidden}
+  .desktopRailRecipeSetupControls .gaugeTile input{width:100%;min-width:0;min-height:24px;padding:2px 3px;text-align:center;font-size:11px}
+  .desktopRailRecipeSetupControls .gaugeTile input[type="time"]{position:absolute;inset:0;z-index:2;width:100%;height:100%;opacity:0;cursor:pointer}
+  .desktopRailRecipeSetupControls .gaugeTimeValue{display:flex;align-items:center;justify-content:center;gap:3px;font-size:11px;font-weight:850}
+  .desktopRailRecipeSetupControls .gaugeTimeValue svg,.desktopRailRecipeSetupControls .gaugeIcon{width:13px;height:13px;fill:none;stroke:currentColor}
+  .desktopRailRecipeSetupControls .gaugeTile label{margin-top:3px;color:var(--muted);font-size:7px;font-weight:850;letter-spacing:.04em;text-align:center;text-transform:uppercase}
   .desktopRailTimelineTime{display:flex!important;align-items:baseline;gap:5px;color:var(--rail-stage-accent)!important}
   .desktopRailTimelineTime > span{font-family:ui-monospace,"Cascadia Mono","Liberation Mono",monospace;font-size:23px;font-weight:900}
   .desktopRailTimelineTime > em{color:var(--muted);font-size:8px;font-style:normal;font-weight:900;letter-spacing:.08em}

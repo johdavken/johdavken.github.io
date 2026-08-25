@@ -217,8 +217,8 @@ test("wide touch reclaims Recipe height from chrome and controls without shrinki
   assert.match(block, /#splitsArea \.splitsEditRowPrimary\{[\s\S]*?grid-template-columns:minmax\(0,1fr\) minmax\(0,1fr\) auto;/);
   assert.match(block, /#splitsArea \.splitsEditRowSecondary\{[\s\S]*?flex-wrap:nowrap;/);
   assert.match(block, /#splitsArea \.splitsEditRowSecondary :is\(\.bulkTextAction,button\.danger\)\{[\s\S]*?min-height:28px;/);
-  assert.match(styles, /\.splitsEditRowSecondary > \.bulkTextAction\{[^}]*?border:1px solid var\(--btn-secondary-border\);[^}]*?background:var\(--btn-secondary-bg\);[^}]*?box-shadow:inset 4px 0 0 var\(--title\)/);
-  assert.match(styles, /\.splitsEditRowSecondary > \.bulkTextAction:disabled\{[^}]*?box-shadow:inset 4px 0 0 var\(--muted\)/);
+  assert.match(styles, /\.splitsEditRowSecondary > \.bulkTextAction\{[^}]*?border:1\.5px solid var\(--btn-secondary-border\);[^}]*?background:transparent;[^}]*?box-shadow:none/);
+  assert.match(styles, /\.splitsEditRowSecondary > \.bulkTextAction:disabled\{opacity:\.48\}/);
   assert.doesNotMatch(block, /\.splitMatrixCell\{[^}]*?(?:height|min-height|max-height):/);
   assert.doesNotMatch(block, /\.splitCellResinText\{[^}]*?font-size:/);
 });

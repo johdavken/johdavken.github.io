@@ -118,6 +118,15 @@
   --btn-danger-bg: rgba(255,92,92,.12);
   --btn-danger-border: rgba(255,92,92,.28);
 
+  /* Canonical button controls. These aliases keep every theme and density
+     working while the legacy button classes are migrated to semantic kinds. */
+  --button-height: var(--control-height);
+  --button-radius: var(--control-radius);
+  --button-padding-y: var(--btn-pad-y);
+  --button-padding-x: var(--btn-pad-x);
+  --button-font-size: var(--font-small);
+  --button-font-weight: 700;
+
   /* -------------------------------------------------------------------
    *     Cross-theme accent tokens (theme.css may override these)
    *     ------------------------------------------------------------------- */
@@ -288,14 +297,22 @@ main{
    tiles at once, where there is no rail to shorten and no divider to draw. */
 .workspaceNavDivider{ display: none; }
 .mobileWorkflowLabel,
+.mobileProductionControls,
 .mobileRailChev,
 .mobileWorkspaceNavMore,
 .mobileWorkspaceSyncStatus{ display:none; }
 .desktopRailMetric,
 .desktopRailStageExpansion{ display:none!important; }
+.mobileWorkspaceStatus{ display:none; }
+.mobileLineRateReadout{display:none}
 
 .workspaceNav,
 .workspaceStatusBar{ display: none; }
+
+/* Line Setup has been folded into Recipe. The legacy panel remains only as
+   a stable DOM host before its live controls mount into the desktop rail. */
+.workspaceNavButton[data-workspace-target="lineSetupBlock"],
+#lineSetupBlock{ display:none!important; }
 .mobileQuickActions{ display:none; }
 .mobileAppearancePanelHeader{ display:none; }
 .workspaceContent{ display: contents; }
@@ -963,6 +980,8 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .baseGlyph{dis
 .lineSyncConflictDialog::backdrop{ background:rgba(0,0,0,.48); }
 .workspaceConfigurationSectionTitle,.workspaceConfigurationRow{display:flex;gap:10px;justify-content:space-between;align-items:center}.workspaceConfigurationSectionTitle small{display:block;color:var(--muted);margin-top:2px}.workspaceConfigurationList{display:grid;gap:5px;max-height:330px;margin-top:7px;overflow-y:auto;padding-right:2px}.workspaceConfigurationRow{min-height:52px;padding:7px 9px;border-radius:var(--control-radius);background:color-mix(in srgb,var(--panel) 70%,transparent)}.workspaceConfigurationRow small{display:block;color:var(--muted);margin-top:1px}@media(max-width:600px){.workspaceConfigurationRow{align-items:stretch;flex-direction:column}.workspaceConfigurationRow button{width:100%}}
 .workspaceConfigurationActions{display:flex;gap:5px;align-items:center;justify-content:flex-end}.workspaceConfigurationActions button{font-size:12px;padding:5px 8px}.workspaceConfigurationOverflow{position:relative}.workspaceConfigurationOverflow summary{cursor:pointer;list-style:none;border:1px solid var(--border);border-radius:var(--control-radius);padding:4px 9px;font-size:18px;line-height:1}.workspaceConfigurationOverflow summary::-webkit-details-marker{display:none}.workspaceConfigurationOverflowMenu{position:absolute;right:0;top:calc(100% + 4px);z-index:30;display:grid;gap:4px;min-width:130px;padding:6px;border:1px solid var(--border2);border-radius:var(--control-radius);background:var(--panelOpen);box-shadow:var(--shadow2)}.workspaceConfigurationOverflowMenu button{text-align:left;white-space:nowrap}
+.mobileWeightProfilesSheet.profileMenuOpen .mobileSavedRecipesList{overflow:visible}
+.mobileWeightProfilesSheet.profileMenuOpen .workspaceConfigurationOverflowMenu{top:auto;bottom:calc(100% + 4px)}
 .workspaceConfigurationRow{cursor:pointer}.workspaceConfigurationRow.selected strong{font-weight:750;color:var(--text)}.workspaceConfigurationRow:focus-visible{outline:2px solid var(--focus-border);outline-offset:2px}.workspaceConfigurationFavorite{color:var(--warn);font-size:13px}
 .workspaceConfigurationRow strong{font-size:var(--font-small);font-weight:600;color:var(--muted);letter-spacing:.01em}
 .rearrangeTarget{cursor:grab;user-select:none}.rearrangeSource{opacity:.5;outline:2px dashed var(--focus-border)}.rearrangeOver{outline:2px solid var(--ok);background:color-mix(in srgb,var(--ok) 12%,var(--panel2))}@media(max-width:900px), (min-width: 901px) and (pointer: coarse){.rearrangeDesktopOnly{display:none!important}}
@@ -1648,6 +1667,12 @@ details.block[open]{ background: var(--panelOpen); }
 /* Receiver Hopper Weights and Receiver Weight Profiles otherwise sit flush
    against each other with no spacing of their own. */
 #weightsBlock + #setupWeightProfilesBlock{ margin-top: var(--gap); }
+/* The legacy containers remain stable DOM homes for the single weights and
+   profile editors between Recipe-page renders. They are no longer separate
+   Line Setup destinations; when a child is moved into Recipe, this selector
+   no longer applies to that child. */
+.setupSection > #weightsBlock[hidden],
+.setupSection > #setupWeightProfilesBlock[hidden]{ display:none!important; }
 
 /* Make nested blocks inside a card always span full width */
 .blockBody > details.block{
@@ -1810,16 +1835,9 @@ details[open] > summary .chevSatellite{
   align-items: center;
   gap: 7px;
   min-height: var(--control-height);
-  border: 1px solid var(--btn-secondary-border);
-  border-radius: var(--control-radius);
-  background: var(--btn-secondary-bg);
   padding: var(--btn-pad-y) var(--btn-pad-x);
   font-size: var(--font-small);
   font-weight: 700;
-}
-.splitsBulkModeBar button.secondary:hover:not(:disabled){
-  background: color-mix(in srgb, var(--text) 6%, var(--btn-secondary-bg));
-  filter: none;
 }
 /* Tertiary: Print Recipe. Quieter than Load Next - no border/fill of its
    own until hovered, so it reads as the lowest-priority action here. */
@@ -1874,19 +1892,22 @@ details[open] > summary .chevSatellite{
   width: auto;
   min-height: 28px;
   padding: 4px 9px;
-  border: 1px solid var(--btn-secondary-border);
+  border: 1.5px solid var(--btn-secondary-border);
   border-radius: 2px;
-  background: var(--btn-secondary-bg);
+  background: transparent;
   color: var(--btn-text);
   font-weight: 700;
-  box-shadow: inset 4px 0 0 var(--title);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  box-shadow: none;
 }
 .splitsTrackingBar .bulkTextAction:hover:not(:disabled){
   color: var(--title);
-  background: color-mix(in srgb,var(--title) 12%,var(--btn-secondary-bg));
+  border-color: var(--title);
+  background: transparent;
   text-decoration: none;
 }
-.splitsTrackingBar .bulkTextAction:disabled{ opacity: .48; box-shadow: inset 4px 0 0 var(--muted); }
+.splitsTrackingBar .bulkTextAction:disabled{ opacity: .48; }
 /* Save Current / Load / Update / (rename, duplicate, favorite, delete) -
    a single consolidated bar acting on whichever recipe is selected below,
    instead of each row carrying its own Load/Update/overflow buttons. */
@@ -1973,11 +1994,11 @@ details[open] > summary .chevSatellite{
    not members of .splitsBulkActions. Keep them in the exact same action
    family at every non-phone layout rather than depending on a viewport
    refinement that can be superseded by the active shell. */
-.splitsEditRowSecondary > .bulkTextAction{width:auto;min-height:28px;padding:4px 9px;border:1px solid var(--btn-secondary-border);border-radius:2px;background:var(--btn-secondary-bg);color:var(--btn-text);font-weight:700;box-shadow:inset 4px 0 0 var(--title)}
+.splitsEditRowSecondary > .bulkTextAction{width:auto;min-height:28px;padding:4px 9px;border:1.5px solid var(--btn-secondary-border);border-radius:2px;background:transparent;color:var(--btn-text);font-weight:700;text-transform:uppercase;letter-spacing:.04em;box-shadow:none}
 .splitsBulkActions .bulkTextAction:hover,
 .weightsBulkActions .bulkTextAction:hover,
-.splitsEditRowSecondary > .bulkTextAction:hover:not(:disabled){color:var(--title);background:color-mix(in srgb,var(--title) 12%,var(--btn-secondary-bg));text-decoration:none}
-.splitsEditRowSecondary > .bulkTextAction:disabled{box-shadow:inset 4px 0 0 var(--muted)}
+.splitsEditRowSecondary > .bulkTextAction:hover:not(:disabled){color:var(--title);border-color:var(--title);background:transparent;text-decoration:none}
+.splitsEditRowSecondary > .bulkTextAction:disabled{opacity:.48}
 .splitsBulkActions .danger{margin-left:auto}
 .splitsBulkNote{grid-column:1/-1;color:var(--muted)}
 .splitsSelectionStatus{
@@ -2474,6 +2495,19 @@ details[open] > summary .chevSatellite{
   margin: 0;
   flex: 0 0 auto;
 }
+/* Recipe's and Hopper Weights' own Summary/Edit controls each collapse to
+   one stateful Done/Edit button on every device now, not just touch - both
+   click handlers (hookRecipeViewToggle/setDesktopWeightView's toggle in
+   app.js) flip between edit/summary regardless of which button was
+   clicked, so hiding Summary here is safe on both.
+   #recipeHeaderControls-prefixed so this outranks the existing (0,2,1)
+   ".recipeHeaderControls > .weightsHeaderViewToggle button{display:...}"
+   base rule below regardless of source order - a bare class selector here
+   would tie it and lose to source order. */
+#recipeViewToggle > span,
+#recipeViewToggle [data-recipe-view="summary"],
+#recipeHeaderControls .desktopWeightsViewToggle > span,
+#recipeHeaderControls .desktopWeightsViewToggle [data-weight-view="summary"]{ display: none; }
 .recipeViewToggle > span{
   color: var(--muted);
   font-size: var(--font-tiny);
@@ -2570,6 +2604,39 @@ details[open] > summary .chevSatellite{
 }
 .recipePageTabDot[hidden]{ display: none; }
 .recipePageTab[hidden],.recipeViewToggle[hidden],.recipeHeaderControls[hidden]{ display:none!important; }
+.recipeWeightsTabCompact{ display:none; }
+.recipeWeightsPage{ width:100%; min-width:0; }
+.recipeWeightsPage > #weightsArea{ width:100%; }
+.recipeHeaderControls > .weightsHeaderViewToggle{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  margin:0;
+  padding:0;
+  color:inherit;
+  font-size:inherit;
+}
+.recipeHeaderControls > .weightsHeaderViewToggle > span{
+  margin:0;
+  color:var(--muted);
+  font-size:var(--font-tiny);
+  font-weight:750;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.recipeHeaderControls > .weightsHeaderViewToggle button{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:28px;
+  padding:var(--button-pad-y) var(--button-pad-x);
+  border-radius:var(--control-radius);
+  font-size:var(--font-small);
+  line-height:1.2;
+}
+.recipeHeaderControls > .weightsHeaderViewToggle button.active{
+  font-weight:850;
+}
 
 /* Recipe Book replaces the matrix on every full recipe workspace: desktop
    and tablet. Phones (<=700px) retain their existing Recipes sheet. */
@@ -2620,10 +2687,53 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
      thumb does, so the 40px target stays comfortably tappable. */
   .recipePageTabs{ gap: 0; padding-inline: 0; }
   .recipePageTab{ flex: 1 1 0; min-height: 40px; text-align: center; }
+  .recipeWeightsTabFull{ display:none; }
+  .recipeWeightsTabCompact{ display:inline; }
   .recipePageTab.active{
     border-color: var(--focus-border);
     background: color-mix(in srgb, var(--focus-ring) 62%, var(--panel));
     box-shadow: 0 1px 0 0 var(--panel), inset 0 3px 0 var(--focus-border);
+  }
+  /* Touch uses one stateful Edit/Done action instead of a segmented
+     Summary/Edit control. It stays beside the tabs without wrapping and is
+     identical for Recipe and Hopper Weights. */
+  .recipeHeaderRow{flex-wrap:nowrap;align-items:flex-end}
+  .recipeHeaderRow > .recipePageTabs{min-width:0;flex:1 1 auto}
+  .recipeHeaderControls{flex:0 0 auto;margin-bottom:4px}
+  .recipeViewToggle > span,
+  .recipeViewToggle [data-recipe-view="summary"],
+  .weightsHeaderViewToggle [data-weight-view="visual"]{display:none!important}
+  .recipeHeaderControls > .recipeViewToggle,
+  .recipeHeaderControls > .weightsHeaderViewToggle{display:block;margin:0;padding:0}
+  .recipeHeaderControls > .recipeViewToggle button,
+  .recipeHeaderControls > .weightsHeaderViewToggle button{
+    min-width:58px;
+    min-height:32px;
+    padding:4px 11px;
+    border-radius:var(--control-radius);
+    font-size:var(--font-small);
+    font-weight:850;
+  }
+  /* Stateful header controls use one toggle treatment. Legacy primary /
+     secondary classes remain attached during migration, but no longer turn
+     Edit/Done into an action-rail button - this never got the Outlined
+     Technical pass the rest of the button system did, so it kept the old
+     filled-chip look (tinted fill, inset accent line) instead of the
+     border-only, uppercase treatment everything around it now uses. */
+  .recipeHeaderControls button[data-button-kind="toggle"]{
+    border:1.5px solid var(--btn-secondary-border);
+    border-radius:2px;
+    background:transparent;
+    color:var(--btn-text);
+    text-transform:uppercase;
+    letter-spacing:.04em;
+    box-shadow:none;
+  }
+  .recipeHeaderControls button[data-button-kind="toggle"][aria-pressed="true"]{
+    border-color:var(--title);
+    background:transparent;
+    color:var(--title);
+    box-shadow:none;
   }
 }
 
@@ -2987,7 +3097,13 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     border-top: 0;
   }
   .splitsEditRowSecondary .splitsSelectionStatus{ margin: 0; white-space: nowrap; }
-  .splitsEditRowSecondary .splitsRearrangeAction{ margin-left: auto; }
+  /* Rearrange is the one button in this row without data-button-size="small"
+     (it's a shared element re-homed from the mobile tray, not built fresh
+     here), so it falls through to the base button{} rule's frozen
+     --button-font-size alias instead of the locally-scaled --font-tiny its
+     siblings use - referencing --font-tiny directly picks up the same
+     15%-smaller scaling as Select all/Clear selection/Empty cells. */
+  .splitsEditRowSecondary .splitsRearrangeAction{ margin-left: auto; font-size: var(--font-tiny); }
 }
 
 @media (min-width: 901px) and (pointer: fine){
@@ -3167,11 +3283,24 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
      --font-tiny cascade to every var()-based rule in the matrix
      automatically. The remaining, genuinely hardcoded pixel values (column
      width, track icon, hopper badge, layer letter) get their own explicit
-     1.1x overrides below. */
+     1.1x overrides below.
+     A custom property that reads its own name back out (even through
+     calc()) is a cycle per spec - Chromium resolves the whole declaration
+     to nothing, not to the inherited value the comment above assumed. That
+     silently dropped every "* 1.1"/"* .85" override in this file (this one
+     and the panel block below), so #splitsArea precomputes the scaled
+     values under different names first and the real tokens are just
+     reassigned from those - no property ever appears on both sides of its
+     own declaration. */
+  #splitsArea{
+    --font-base-x11: calc(var(--font-base) * 1.1);
+    --font-small-x11: calc(var(--font-small) * 1.1);
+    --font-tiny-x11: calc(var(--font-tiny) * 1.1);
+  }
   #splitsArea .splitsMatrixFrame{
-    --font-base: calc(var(--font-base) * 1.1);
-    --font-small: calc(var(--font-small) * 1.1);
-    --font-tiny: calc(var(--font-tiny) * 1.1);
+    --font-base: var(--font-base-x11);
+    --font-small: var(--font-small-x11);
+    --font-tiny: var(--font-tiny-x11);
   }
   #splitsArea .splitsMatrix thead th,
   #splitsArea .splitMatrixCell{ min-width: 198px; width: 198px; max-width: 198px; }
@@ -3201,36 +3330,76 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
      10% increase above: locally scale every density token these panels'
      shared reusable components (buttons, inputs, .workspaceConfigurationList
      rows) already read from, rather than hunting down each one's hardcoded
-     pixel values. */
+     pixel values.
+     Same self-reference cycle as the matrix block above, at 25 properties
+     instead of 3 - every one of these silently computed to nothing, so
+     Select all/Clear selection/Empty cells/Reset Recipe/Apply to selected/
+     Rearrange (and the rest of this panel's controls) rendered at their
+     un-scaled, full desktop size instead of 15% smaller. Precomputed on
+     #splitsBlock (not #splitsArea) so the same "-x85" tokens also reach
+     .recipeHeaderControls below - Load Next Recipe/Print Recipe/the
+     Summary-Edit toggle sit in the header row beside #splitsArea, not
+     inside it, but were visually part of the same oversized toolbar. The
+     real tokens are reassigned from the "-x85" names so nothing here reads
+     its own name back out. */
+  #splitsBlock{
+    --font-base-x85: calc(var(--font-base) * .85);
+    --font-small-x85: calc(var(--font-small) * .85);
+    --font-tiny-x85: calc(var(--font-tiny) * .85);
+    --pad-input-y-x85: calc(var(--pad-input-y) * .85);
+    --pad-input-x-x85: calc(var(--pad-input-x) * .85);
+    --pad-card-x85: calc(var(--pad-card) * .85);
+    --gap-x85: calc(var(--gap) * .85);
+    --row-pad-x85: calc(var(--row-pad) * .85);
+    --radius-input-x85: calc(var(--radius-input) * .85);
+    --radius-row-x85: calc(var(--radius-row) * .85);
+    --radius2-x85: calc(var(--radius2) * .85);
+    --toggle-w-x85: calc(var(--toggle-w) * .85);
+    --toggle-h-x85: calc(var(--toggle-h) * .85);
+    --toggle-knob-x85: calc(var(--toggle-knob) * .85);
+    --badge-font-x85: calc(var(--badge-font) * .85);
+    --btn-pad-y-x85: calc(var(--btn-pad-y) * .85);
+    --btn-pad-x-x85: calc(var(--btn-pad-x) * .85);
+    --btn-radius-x85: calc(var(--btn-radius) * .85);
+    --control-height-x85: calc(var(--control-height) * .85);
+    --control-radius-x85: calc(var(--control-radius) * .85);
+    --title-size-x85: calc(var(--title-size) * .85);
+    --summary-pad-x85: calc(var(--summary-pad) * .85);
+    --body-pad-x85: calc(var(--body-pad) * .85);
+    --tool-pad-x85: calc(var(--tool-pad) * .85);
+    --page-pad-x85: calc(var(--page-pad) * .85);
+    --page-gap-x85: calc(var(--page-gap) * .85);
+  }
   .splitsBulkBar,
   .splitsSavedRecipesPanel,
-  .rearrangeModeBar{
-    --font-base: calc(var(--font-base) * .85);
-    --font-small: calc(var(--font-small) * .85);
-    --font-tiny: calc(var(--font-tiny) * .85);
-    --pad-input-y: calc(var(--pad-input-y) * .85);
-    --pad-input-x: calc(var(--pad-input-x) * .85);
-    --pad-card: calc(var(--pad-card) * .85);
-    --gap: calc(var(--gap) * .85);
-    --row-pad: calc(var(--row-pad) * .85);
-    --radius-input: calc(var(--radius-input) * .85);
-    --radius-row: calc(var(--radius-row) * .85);
-    --radius2: calc(var(--radius2) * .85);
-    --toggle-w: calc(var(--toggle-w) * .85);
-    --toggle-h: calc(var(--toggle-h) * .85);
-    --toggle-knob: calc(var(--toggle-knob) * .85);
-    --badge-font: calc(var(--badge-font) * .85);
-    --btn-pad-y: calc(var(--btn-pad-y) * .85);
-    --btn-pad-x: calc(var(--btn-pad-x) * .85);
-    --btn-radius: calc(var(--btn-radius) * .85);
-    --control-height: calc(var(--control-height) * .85);
-    --control-radius: calc(var(--control-radius) * .85);
-    --title-size: calc(var(--title-size) * .85);
-    --summary-pad: calc(var(--summary-pad) * .85);
-    --body-pad: calc(var(--body-pad) * .85);
-    --tool-pad: calc(var(--tool-pad) * .85);
-    --page-pad: calc(var(--page-pad) * .85);
-    --page-gap: calc(var(--page-gap) * .85);
+  .rearrangeModeBar,
+  .recipeHeaderControls{
+    --font-base: var(--font-base-x85);
+    --font-small: var(--font-small-x85);
+    --font-tiny: var(--font-tiny-x85);
+    --pad-input-y: var(--pad-input-y-x85);
+    --pad-input-x: var(--pad-input-x-x85);
+    --pad-card: var(--pad-card-x85);
+    --gap: var(--gap-x85);
+    --row-pad: var(--row-pad-x85);
+    --radius-input: var(--radius-input-x85);
+    --radius-row: var(--radius-row-x85);
+    --radius2: var(--radius2-x85);
+    --toggle-w: var(--toggle-w-x85);
+    --toggle-h: var(--toggle-h-x85);
+    --toggle-knob: var(--toggle-knob-x85);
+    --badge-font: var(--badge-font-x85);
+    --btn-pad-y: var(--btn-pad-y-x85);
+    --btn-pad-x: var(--btn-pad-x-x85);
+    --btn-radius: var(--btn-radius-x85);
+    --control-height: var(--control-height-x85);
+    --control-radius: var(--control-radius-x85);
+    --title-size: var(--title-size-x85);
+    --summary-pad: var(--summary-pad-x85);
+    --body-pad: var(--body-pad-x85);
+    --tool-pad: var(--tool-pad-x85);
+    --page-pad: var(--page-pad-x85);
+    --page-gap: var(--page-gap-x85);
   }
   /* The Recipe utility panels are intentionally denser than Line Setup,
      but long secondary labels such as “Save Current Recipe” need a little
@@ -3843,6 +4012,7 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     font-size:10px;
     font-weight:800;
     line-height:1.1;
+    text-transform:none;
     letter-spacing:.01em;
     box-shadow:none;
     white-space:nowrap;
@@ -3893,12 +4063,14 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     margin-left:0;
     min-height:42px;
     padding:7px 12px;
-    border:1px solid var(--row-border-2);
-    border-radius:10px;
-    background:var(--row-bg-2);
-    color:var(--muted);
+    border:1.5px solid var(--btn-secondary-border);
+    border-radius:2px;
+    background:transparent;
+    color:var(--btn-text);
     font-size:10px;
     font-weight:850;
+    text-transform:uppercase;
+    letter-spacing:.04em;
     box-shadow:none;
   }
   .splitsTrackingBar.mobileTrackContext .bulkTextAction:disabled{opacity:.48}
@@ -4485,8 +4657,19 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
 .desktopSmartHopperInfo input{text-align:right}
 .desktopWeightsViewToggle{display:flex;align-items:center;gap:4px}
 .desktopWeightsViewToggle span{margin-right:4px;color:var(--muted);font-size:var(--font-tiny);font-weight:800;text-transform:uppercase;letter-spacing:.06em}
-.desktopWeightsViewToggle button{min-height:28px;padding:3px 10px;border:1px solid var(--row-border-2);border-radius:999px;background:transparent;color:var(--muted);font-size:var(--font-tiny);box-shadow:none}
-.desktopWeightsViewToggle button.active{border-color:var(--focus-border);background:var(--focus-ring);color:var(--title)}
+/* Never got the Outlined Technical pass - this predates Recipe's own
+   toggle collapsing to one button, and kept its own bespoke rounded pill
+   (999px radius, faded 1px border, filled active state) instead of the
+   sharp border-only treatment every other button, including Recipe's own
+   Edit/Done toggle right next to it in this same header row, now uses.
+   #recipeHeaderControls-prefixed (the toggle always lives there once
+   relocated - see renderSplitsArea in app.js) so this outranks both the
+   (0,2,1) ".recipeHeaderControls > .weightsHeaderViewToggle button"
+   border-radius rule further up this file and desktop.css's own
+   ".desktopWeightsViewToggle button{border-radius:var(--control-radius)}",
+   which is loaded after this file and would otherwise win a tie. */
+#recipeHeaderControls .desktopWeightsViewToggle button{min-height:28px;padding:3px 10px;border:1.5px solid var(--btn-secondary-border);border-radius:2px;background:transparent;color:var(--btn-text);font-size:var(--font-tiny);text-transform:uppercase;letter-spacing:.04em;box-shadow:none}
+#recipeHeaderControls .desktopWeightsViewToggle button.active{border-color:var(--title);background:transparent;color:var(--title)}
 .desktopWeightVisualReadout{display:none}
 #weightsArea[data-desktop-weight-view="visual"] .weightsCellRow{display:none}
 #weightsArea[data-desktop-weight-view="visual"] .weightsMatrixCell{height:98px;padding:5px 6px;vertical-align:top;box-shadow:inset 0 0 0 1px var(--row-border-2)}
@@ -4530,10 +4713,10 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     border-radius:var(--control-radius);
     background:var(--row-bg-2);
   }
-  .mobileWeightsViewToggle{display:flex;align-items:center;gap:4px;padding:2px 0;color:var(--muted);font-size:10px}
-  .mobileWeightsViewToggle span{margin-right:auto;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
-  .mobileWeightsViewToggle button{min-height:26px;padding:3px 9px;border:1px solid var(--row-border-2);border-radius:999px;background:transparent;color:var(--muted);font-size:10px;box-shadow:none}
-  .mobileWeightsViewToggle button.active{border-color:var(--focus-border);background:var(--focus-ring);color:var(--title)}
+  .mobileWeightsViewToggle:not(.weightsHeaderViewToggle){display:flex;align-items:center;gap:4px;padding:2px 0;color:var(--muted);font-size:10px}
+  .mobileWeightsViewToggle:not(.weightsHeaderViewToggle) span{margin-right:auto;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+  .mobileWeightsViewToggle:not(.weightsHeaderViewToggle) button{min-height:26px;padding:3px 9px;border:1px solid var(--row-border-2);border-radius:999px;background:transparent;color:var(--muted);font-size:10px;box-shadow:none}
+  .mobileWeightsViewToggle:not(.weightsHeaderViewToggle) button.active{border-color:var(--focus-border);background:var(--focus-ring);color:var(--title)}
   .mobileWeightsSmartControl strong,.mobileWeightsBulkToggleRow strong{ display:block; color:var(--text); font-size:11px; }
   .mobileWeightsSmartControl small,.mobileWeightsBulkToggleRow small{ display:block; margin-top:1px; color:var(--muted); font-size:8px; line-height:1.2; }
   .mobileWeightsSmartControl .toggle,.mobileWeightsBulkToggleRow .toggle{display:grid;place-items:center;width:34px;height:34px;min-width:34px;border:1px solid var(--border-strong);border-radius:9px;background:linear-gradient(145deg,var(--panel2),var(--row-bg-2));cursor:pointer;box-shadow:inset 0 1px 0 color-mix(in srgb,#fff 10%,transparent)}
@@ -4799,6 +4982,25 @@ body:is([data-theme="industrial-slate-dark"],[data-theme="gruvbox-dark"]) .resul
   #resultsArea .resultTimingPeriod{ font-size:9px; }
   #resultsArea .resultTimingUnavailable{ font-size:10px; }
 }
+/* True desktop never got the tablet block's clock enlargement above (it
+   stops at max-width:1200px/pointer:coarse), so the schedule column fell
+   back to the tiny 9px base .resultSchedule font-size while tablet showed
+   18px - the same value, same ribbon, looking like two different features.
+   Desktop's own .resultGrid width (620px, from the un-widened base rule)
+   is left alone here on purpose - only the time column gets tablet's
+   treatment, not the ribbon width or its row layout. The time column still
+   needs the wider 82px (from 43px) to fit 18px text without clipping; the
+   middle column is minmax(0,1fr) so this doesn't change the ribbon's own
+   overall width. */
+@media (min-width:1201px) and (pointer:fine){
+  #resultsArea .resultRow{
+    grid-template-columns:82px minmax(0,1fr) auto;
+    gap:9px;
+  }
+  #resultsArea .resultTimingClock{ font-size:18px; }
+  #resultsArea .resultTimingPeriod{ font-size:9px; }
+  #resultsArea .resultTimingUnavailable{ font-size:10px; }
+}
 
 @media (max-width:600px){
   .resultGrid{padding:8px 8px 8px 23px}
@@ -5052,13 +5254,14 @@ body:is([data-theme="industrial-slate-dark"],[data-theme="gruvbox-dark"]) .resul
  *   ======================================================================= */
 
 button{
-  min-height:var(--control-height);
-  border-radius:var(--control-radius);
-  padding:var(--btn-pad-y) var(--btn-pad-x);
+  min-height:var(--button-height);
+  border-radius:var(--button-radius);
+  padding:var(--button-padding-y) var(--button-padding-x);
   border: 1px solid var(--btn-border);
   background: linear-gradient(180deg, var(--btn-primary-a), var(--btn-primary-b));
   color: var(--btn-text);
-  font-weight: 700;
+  font-size:var(--button-font-size);
+  font-weight:var(--button-font-weight);
   cursor: pointer;
   box-shadow: none;
   transition: filter .12s ease, transform .06s ease;
@@ -5077,47 +5280,91 @@ button:disabled{
   transform: none;
 }
 
-button.secondary{
-  /* Secondary actions share the rail's compact, left-accent treatment:
-     square enough to read as utilities, with the current theme's primary
-     accent marking the leading edge. */
+button.secondary,
+button[data-button-variant="secondary"]{
+  /* Outlined Technical: borders and geometry carry the emphasis instead of
+     fill or a left accent bar. Secondary is the plain, un-filled default -
+     visible border, no background, uppercase label. */
   padding:max(3px, calc(var(--btn-pad-y) - 4px)) max(7px, calc(var(--btn-pad-x) - 4px));
-  border-color: var(--btn-secondary-border);
+  border:1.5px solid var(--btn-secondary-border);
   border-radius:2px;
-  background: var(--btn-secondary-bg);
-  box-shadow:inset 4px 0 0 var(--title);
+  background:transparent;
+  box-shadow:none;
+  text-transform:uppercase;
+  letter-spacing:.04em;
 }
-button.primary{
+button.secondary:hover:not(:disabled),
+button[data-button-variant="secondary"]:hover:not(:disabled){
+  border-color:var(--title);
+  color:var(--title);
+  filter:none;
+}
+button.primary,
+button[data-button-variant="primary"]{
   background:linear-gradient(180deg, var(--btn-primary-a), var(--btn-primary-b));
-  border-color:var(--btn-border);
+  border:1.5px solid var(--title);
+  border-radius:2px;
   color:var(--text);
+  text-transform:uppercase;
+  letter-spacing:.04em;
+  box-shadow:none;
 }
-/* Committing an operational change stays primary, but shares the clear
-   left-edge cue used by the app's Save/Load actions. */
+/* Committing an operational change stays primary; the compact rail-height
+   sizing some panels want lives here, no longer a left accent bar. */
 button.primary.actionRail{
   padding:max(3px, calc(var(--btn-pad-y) - 4px)) max(7px, calc(var(--btn-pad-x) - 4px));
   border-radius:2px;
-  box-shadow:inset 4px 0 0 var(--title);
 }
 /* Configuration-panel Load actions are primary semantically, but belong to
-   the same compact, rail-accented action family as Save and Update. */
+   the same compact sizing as Save and Update. */
 .workspaceConfigurationSectionTitle button.primary{
   padding:max(3px, calc(var(--btn-pad-y) - 4px)) max(7px, calc(var(--btn-pad-x) - 4px));
   border-radius:2px;
-  box-shadow:inset 4px 0 0 var(--title);
 }
-button.danger{
+button.danger,
+button[data-button-variant="danger"]{
   padding:max(3px, calc(var(--btn-pad-y) - 4px)) max(7px, calc(var(--btn-pad-x) - 4px));
   border-radius:2px;
-  background: var(--btn-danger-bg);
-  border-color: var(--btn-danger-border);
-  box-shadow:inset 4px 0 0 var(--bad);
+  background:transparent;
+  border:1.5px solid var(--bad);
+  color:var(--bad);
+  text-transform:uppercase;
+  letter-spacing:.04em;
+  box-shadow:none;
+}
+button.danger:hover:not(:disabled),
+button[data-button-variant="danger"]:hover:not(:disabled){
+  background:color-mix(in srgb, var(--bad) 10%, transparent);
+  filter:none;
+}
+button[data-button-variant="quiet"]{
+  border:1.5px solid transparent;
+  background:transparent;
+  color:var(--muted);
+  box-shadow:none;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+}
+button[data-button-variant="quiet"]:hover:not(:disabled),
+button[data-button-variant="quiet"]:focus-visible{
+  border-color:var(--btn-secondary-border);
+  color:var(--btn-text);
+  filter:none;
+}
+button[data-button-size="small"]{
+  min-height:calc(var(--button-height) - 6px);
+  padding:max(2px, calc(var(--button-padding-y) - 3px)) max(6px, calc(var(--button-padding-x) - 3px));
+  font-size:var(--font-tiny);
+}
+button[data-button-size="large"]{
+  min-height:calc(var(--button-height) + 8px);
+  padding:calc(var(--button-padding-y) + 2px) calc(var(--button-padding-x) + 4px);
 }
 button.compactAction{
   width:auto;
   min-height:var(--control-height);
   padding:max(3px, calc(var(--btn-pad-y) - 3px)) var(--btn-pad-x);
-  border-radius:var(--control-radius);
+  border-radius:2px;
   font-size:var(--font-small);
 }
 
@@ -5160,16 +5407,22 @@ button.compactAction{
 }
 .segmentedActionRow button:hover{ background-color:var(--row-bg); }
 /* A few high-value sync controls intentionally break out of the connected
-   segmented toolbar: they use the same compact, left-accented treatment as
-   Save/Load/Update so their actions remain distinct at a glance. */
+   segmented toolbar: they use the same outlined treatment as Save/Load/
+   Update so their actions remain distinct at a glance. */
 .segmentedActionRow button.actionRail{
-  border:1px solid var(--btn-secondary-border);
+  border:1.5px solid var(--btn-secondary-border);
   border-radius:2px;
-  background:var(--btn-secondary-bg);
+  background:transparent;
   color:var(--btn-text);
-  box-shadow:inset 4px 0 0 var(--title);
+  text-transform:uppercase;
+  letter-spacing:.04em;
+  box-shadow:none;
 }
-.segmentedActionRow button.actionRail:last-child{border-right:1px solid var(--btn-secondary-border)}
+.segmentedActionRow button.actionRail:hover:not(:disabled){
+  border-color:var(--title);
+  color:var(--title);
+}
+.segmentedActionRow button.actionRail:last-child{border-right:1.5px solid var(--btn-secondary-border)}
 .segmentedActionRow #lineSyncLeaveBtn.actionRail{color:var(--bad)}
 .segmentedActionDivider{
   width:min(100%, 520px);
@@ -5526,11 +5779,15 @@ button.compactAction{
   }
   #splitsArea .splitsEditRowPrimary .splitsBulkPctInput > span{font-size:9px}
   #splitsArea .splitsEditRowPrimary > button{
+    /* No border-radius here (unlike the 5px input fields above) - Apply to
+       selected is a real button.primary and should keep the shared 2px
+       sharp corner everywhere else uses, not the fields' rounded look. This
+       rule used to set border-radius:5px, rounding Apply into a pill that
+       stood out against every other sharp-cornered button on the phone. */
     align-self:stretch;
     min-width:48px;
     min-height:0;
     padding:2px 5px;
-    border-radius:5px;
     font-size:8px;
     line-height:1.1;
     white-space:nowrap;
@@ -5563,22 +5820,31 @@ button.compactAction{
     white-space:nowrap;
   }
   #splitsArea .splitsEditRowSecondary :is(.bulkTextAction,button.danger){
+    /* This row is already at its width limit at 8px type - .splitsBulkActions
+       shrinks below its children's natural width by design (min-width:0),
+       so uppercase+letter-spacing here would push labels wide enough to
+       overlap the next sibling (verified live: "Clear selection" overlapped
+       "Empty cells"). Case and spacing stay off; every other breakpoint has
+       the room for them. */
     flex:0 0 auto;
     width:auto;
     min-height:22px;
     padding:2px 4px;
-    border:1px solid var(--row-border-2);
-    border-radius:4px;
-    background:var(--btn-secondary-bg);
+    border:1.5px solid var(--btn-secondary-border);
+    border-radius:2px;
+    background:transparent;
     color:var(--btn-text);
     font-size:8px;
     font-weight:750;
     line-height:1;
+    text-transform:none;
+    letter-spacing:normal;
     box-shadow:none;
     white-space:nowrap;
   }
   #splitsArea .splitsEditRowSecondary button.danger{
     margin-left:0;
+    border-color:var(--bad);
     color:var(--bad);
   }
 
@@ -5638,6 +5904,31 @@ button.compactAction{
   #splitsBlock.mobile-active #splitsArea > .mobileRecipeActionTray{
     flex:0 0 auto;
     margin-top:0;
+  }
+
+  /* Semantic-button migration: Recipe's edit controls. One primary commit,
+     quiet reversible utilities, and one clearly destructive action. Context
+     controls layout only - the shared button[data-button-variant] rules own
+     appearance, so phone matches tablet and desktop instead of forking. */
+  #splitsArea .recipeHistoryAction[data-button-kind="icon"]{
+    border:1px solid transparent;
+    border-radius:6px;
+  }
+  #splitsArea .recipeHistoryAction[data-button-kind="icon"]:not(:disabled):hover,
+  #splitsArea .recipeHistoryAction[data-button-kind="icon"]:focus-visible{
+    border-color:var(--row-border-2);
+    background:var(--row-bg-2);
+  }
+  #splitsArea .splitsMobilePrimaryRow button[data-button-kind="action"],
+  #splitsArea .mobileRecipeMore > summary[data-button-kind="menu"]{
+    color:var(--muted);
+    box-shadow:none;
+  }
+  #splitsArea .mobileRecipeMoreMenu button[data-button-kind="menu"]{
+    border:1px solid transparent;
+    background:transparent;
+    color:var(--text);
+    box-shadow:none;
   }
 }
 @media (max-width: 720px){
@@ -7065,6 +7356,16 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
   .statusPreferences{position:absolute;right:var(--page-pad);margin-left:0}
   .statusPreferencesPanel{position:fixed;top:auto;right:var(--page-pad);bottom:46px}
   .workspaceStatusBar .workspaceStatusItem{ display:none; }
+  .workspaceStatusBar .workspaceStatusItem.mobileWorkspaceStatus{
+    display:flex;
+    min-width:0;
+    max-width:min(42vw,190px);
+  }
+  .mobileWorkspaceStatus strong{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
   .statusScanShortcut{ display:inline-block; }
   .statusTimelineToggle{ display:inline-flex; }
   .statusRecipeToggle{ display:inline-flex; }
@@ -7714,8 +8015,8 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
   }
   .workspaceNavButton small{max-width:100%;font-size:10.5px}
 
-  /* Numbered-workflow step markers - Line Setup/Recipe/Timeline/Resin Totals
-     tiles only (the four carrying data-step in index.html). RT Sync/Tools/
+  /* Numbered-workflow step markers - Recipe/Timeline/Resin Totals tiles only
+     (the three carrying data-step in index.html). RT Sync/Tools/
      Help keep the plain border-bottom divider above, untouched.
 
      ONE horizontal rule per tile: the tile's own border-bottom is switched
@@ -7823,6 +8124,98 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
     text-overflow:ellipsis;
     white-space:nowrap;
   }
+  body[data-mobile-workspace="home"] .mobileProductionControls{
+    display:grid;
+    grid-template-columns:38px repeat(2,minmax(0,1fr));
+    align-items:end;
+    gap:9px;
+    margin:8px 8px 12px;
+    padding:11px 12px;
+    border:1px solid color-mix(in srgb,var(--focus-border) 34%,var(--border));
+    border-radius:12px;
+    background:color-mix(in srgb,var(--focus-ring) 18%,transparent);
+  }
+  .mobileProductionControls .setupPrimaryFields{
+    display:contents;
+    margin:0!important;
+  }
+  .mobileProductionControls .setupPrimaryFields > div{min-width:0}
+  .mobileProductionControls .mobileProductionSyncShortcut{order:1}
+  .mobileProductionControls .setupPrimaryFields > div:first-child{order:2}
+  .mobileProductionControls .setupPrimaryFields > div:last-child{order:3}
+  .mobileProductionSyncShortcut{
+    display:grid;
+    place-items:center;
+    width:38px;
+    height:38px;
+    min-height:38px;
+    margin:0;
+    padding:0;
+    border:1px solid color-mix(in srgb,var(--focus-border) 48%,var(--row-border-2));
+    border-radius:var(--control-radius);
+    background:color-mix(in srgb,var(--focus-ring) 42%,var(--panel));
+    color:var(--focus-border);
+    box-shadow:none;
+  }
+  .mobileProductionSyncShortcut svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .mobileProductionSyncShortcut .gruvboxSolidGlyph{display:none}
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .mobileProductionSyncShortcut .baseGlyph{display:none}
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .mobileProductionSyncShortcut .gruvboxSolidGlyph{display:block;fill:currentColor;stroke:none}
+  .mobileProductionSyncShortcut:focus-visible{outline:2px solid var(--focus-border);outline-offset:2px}
+  .mobileProductionControls .gaugeTile{
+    position:relative;
+    display:grid;
+    grid-template-rows:auto auto;
+    gap:5px;
+    min-width:0;
+    margin:0;
+    padding:0;
+    border:0;
+    background:transparent;
+    box-shadow:none;
+  }
+  .mobileProductionControls .gaugeTile label{
+    grid-row:1;
+    margin:0;
+    color:var(--muted);
+    font-size:9px;
+    font-weight:850;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+  }
+  .mobileProductionControls .gaugeTimeValue,
+  .mobileProductionControls .mobileLineRateReadout{
+    grid-row:2;
+    width:100%;
+    min-width:0;
+    min-height:38px;
+    padding:7px 2px;
+    border:0;
+    border-radius:0;
+    background:transparent;
+    color:var(--text);
+    font-size:13px;
+    font-weight:850;
+    box-sizing:border-box;
+    box-shadow:none;
+  }
+  .mobileProductionControls .mobileLineRateReadout{display:flex;align-items:center;justify-content:flex-start;text-align:left}
+  .mobileProductionControls .gaugeTile input:not([type="time"]){display:none;grid-row:2;min-height:38px;padding:7px 8px;font-size:13px;font-weight:850;text-align:left}
+  .mobileProductionControls .gaugeTile.mobileOutputEditing .mobileLineRateReadout{display:none}
+  .mobileProductionControls .gaugeTile.mobileOutputEditing input:not([type="time"]){display:block}
+  .mobileProductionControls .gaugeTimeValue{display:flex;align-items:center;justify-content:space-between;gap:6px}
+  .mobileProductionControls .gaugeTimeValue svg{width:16px;height:16px;fill:none;stroke:var(--focus-border)}
+  .mobileProductionControls .gaugeIcon{display:none}
+  .mobileProductionControls .gaugeTile input[type="time"]{
+    position:absolute;
+    z-index:2;
+    right:0;
+    bottom:0;
+    width:100%;
+    height:38px;
+    opacity:0;
+    cursor:pointer;
+  }
   body[data-mobile-workspace="home"] .workspaceNavButton[data-step],
   body[data-mobile-tile-style] .workspaceNav .workspaceNavButton[data-step]{
     position:relative;
@@ -7872,7 +8265,7 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
     font-size:14px;
     font-weight:800;
   }
-  body[data-mobile-workspace="home"] .workspaceNavButton:is([data-step="1"],[data-step="2"],[data-step="3"])::after{
+  body[data-mobile-workspace="home"] .workspaceNavButton:is([data-step="1"],[data-step="2"])::after{
     content:"";
     position:absolute;
     z-index:1;
@@ -7884,7 +8277,7 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
     border:0;
     background:var(--border2);
   }
-  body[data-mobile-workspace="home"] .workspaceNavButton[data-step="4"]::after{display:none}
+  body[data-mobile-workspace="home"] .workspaceNavButton[data-step="3"]::after{display:none}
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"])[data-mobile-workspace="home"] .workspaceNav .workspaceNavButton[data-step]::before{
     color:var(--bg);
   }
@@ -8533,9 +8926,9 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
   .mobileSharedCircumference > span{align-self:end;color:var(--text);font-size:10px;font-weight:800;white-space:nowrap}
   .mobileSharedCircumference small{grid-column:1;text-align:left}
   .mobileSharedCircumference input{grid-column:2;grid-row:1 / span 2;width:48px;height:32px;font-size:16px}
-  .mobileWeightsViewToggle{padding-top:2px}
-  .mobileWeightsViewToggle button{border-radius:var(--control-radius)}
-  .mobileWeightsViewToggle button.active{background:transparent;box-shadow:inset 0 -2px 0 var(--focus-border)}
+  .mobileWeightsViewToggle:not(.weightsHeaderViewToggle){padding-top:2px}
+  .mobileWeightsViewToggle:not(.weightsHeaderViewToggle) button{border-radius:var(--control-radius)}
+  .mobileWeightsViewToggle:not(.weightsHeaderViewToggle) button.active{background:transparent;box-shadow:inset 0 -2px 0 var(--focus-border)}
 
   /* Static cells in both views - see the tablet block above. */
   #weightsArea[data-mobile-weight-view] .mobileWeightCell{height:70px;min-height:68px;padding:5px}
@@ -8565,6 +8958,13 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
   .mobileSavedRecipesGrabber:focus-visible{outline:2px solid var(--focus-border);outline-offset:3px}
   .mobileSavedRecipesHeader{padding:5px 0 10px}
   .mobileSavedRecipesTools button{font-size:10px}
+  /* Receiver profiles can expose four row actions. Reserve enough vertical
+     space for that menu, then open it back into the sheet rather than into
+     the clipped list below the row. */
+  .mobileWeightProfilesSheet{min-height:min(360px,calc(100dvh - var(--app-dock-height) - env(safe-area-inset-bottom) - 20px))}
+  .mobileWeightProfilesSheet.profileMenuOpen{overflow:visible}
+  .mobileWeightProfilesSheet.profileMenuOpen .mobileSavedRecipesList{overflow:visible}
+  .mobileWeightProfilesSheet .mobileSavedRecipeOverflow[open] .mobileSavedRecipeMenu{top:auto;bottom:calc(100% + 4px)}
 
   /* Receiver bulk selection: cells themselves are the controls. A corner
      marker, inset outline, and tint keep selection clear without a second

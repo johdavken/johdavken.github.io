@@ -36,8 +36,8 @@ function iconSvgs(){
 
 test("every 32x32 app icon ships both glyph sets - the stroked base and its solid gruvbox twin", () => {
   const svgs = iconSvgs().filter(svg => svg.includes("baseGlyph") || svg.includes("gruvboxSolidGlyph"));
-  assert.equal(svgs.length, 20,
-    "expected 7 workspace tile icons + 7 mobile section header icons + 6 mobile tool tiles");
+  assert.equal(svgs.length, 21,
+    "expected 7 workspace tile icons + the mobile RT Sync shortcut + 7 mobile section header icons + 6 mobile tool tiles");
   for (const svg of svgs){
     assert.match(svg, /<g class="baseGlyph">/, `missing baseGlyph: ${svg.slice(0, 90)}`);
     assert.match(svg, /<g class="gruvboxSolidGlyph">/, `missing gruvboxSolidGlyph: ${svg.slice(0, 90)}`);

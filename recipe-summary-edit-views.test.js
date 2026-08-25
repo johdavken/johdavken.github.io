@@ -44,8 +44,8 @@ const splitsArea = functionBody("renderSplitsArea");
 test("the view toggle sits in a header row beside the Current/Next/Recipe Book tabs, matching the Weights control", () => {
   assert.match(html, /<div class="recipeHeaderRow">/);
   assert.match(html, /<div class="recipeViewToggle" id="recipeViewToggle" role="group" aria-label="Recipe view">/);
-  assert.match(html, /<button type="button" class="primary actionRail active" data-recipe-view="summary" aria-pressed="true">Summary<\/button>/);
-  assert.match(html, /<button type="button" class="secondary" data-recipe-view="edit" aria-pressed="false">Edit<\/button>/);
+  assert.match(html, /<button type="button" class="primary actionRail active" data-button-kind="toggle" data-button-size="small" data-recipe-view="summary" aria-pressed="true">Summary<\/button>/);
+  assert.match(html, /<button type="button" class="secondary" data-button-kind="toggle" data-button-size="small" data-recipe-view="edit" aria-pressed="false">Edit<\/button>/);
   // Page tabs stay inside the same row so the two axes read as one header.
   const row = html.slice(html.indexOf('<div class="recipeHeaderRow">'), html.indexOf('id="splitsArea"'));
   assert.match(row, /class="recipePageTabs"/);
@@ -196,8 +196,8 @@ test("the Edit panel is two rows above the grid: values/apply, then selection an
   assert.doesNotMatch(primary, /id="splitSelectionStatus"/);
   assert.match(secondary, /id="splitSelectionStatus"/);
   assert.match(secondary, /id="selectAllSplits"/);
-  assert.match(splitsArea, /<button id="clearSelectedCells" type="button" class="bulkTextAction" disabled>Empty cells<\/button>/);
-  assert.match(splitsArea, /<button id="resetAllSplits" type="button" class="danger">Reset Recipe<\/button>/);
+  assert.match(splitsArea, /<button id="clearSelectedCells"[^>]*data-button-variant="quiet"[^>]*disabled>Empty cells<\/button>/);
+  assert.match(splitsArea, /<button id="resetAllSplits"[^>]*data-button-variant="danger"[^>]*>Reset Recipe<\/button>/);
   // Above the grid, not below it (the grid is order 0).
   assert.match(styles, /#splitsArea > \.splitsBulkBar\{ order: -1;/);
   // No numbered step captions on desktop - they remain in the mobile sheet.
@@ -233,8 +233,8 @@ test("Load Current/Next and Print move beside the view buttons; Recipe Book rema
 
 test("Recipe Book is a page replacement, so Edit controls and the matrix cannot remain visible behind it", () => {
   const setter = functionBody("setRecipePage");
-  assert.match(setter, /if \(next === "saved"\)\{\s*splitsBulkModeActive = false;/);
+  assert.match(setter, /if \(next === "saved" \|\| next === "weights"\)\{\s*splitsBulkModeActive = false;/);
   assert.match(styles, /body\[data-recipe-page="saved"\] #splitsArea > :not\(\.splitsSavedRecipesPanel\)\{\s*display: none!important;/);
   const sync = functionBody("syncRecipePageUI");
-  assert.match(sync, /viewToggle\.hidden = isSavedRecipesPage\(\);/);
+  assert.match(sync, /viewToggle\.hidden = isSavedRecipesPage\(\) \|\| isWeightsPage\(\);/);
 });

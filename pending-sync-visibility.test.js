@@ -37,7 +37,7 @@ test("renderPendingList shows which workspace a stuck item belongs to, with a cl
 
 test("the active-job kind label map covers every kind string used elsewhere in app.js's notifyActiveJobMutation calls", () => {
   const usedKinds = new Set();
-  for (const match of app.matchAll(/kind:\s*"([a-z-]+)"/g)) usedKinds.add(match[1]);
+  for (const match of app.matchAll(/notifyActiveJobMutation\(\{[^}]*kind:\s*"([a-z-]+)"/g)) usedKinds.add(match[1]);
   const mapStart = app.indexOf("const ACTIVE_JOB_PENDING_LABELS = {");
   const mapEnd = app.indexOf("};", mapStart);
   const mapBody = app.slice(mapStart, mapEnd);

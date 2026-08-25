@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" role="img" aria-label="Resin.Tools Layer Section launcher icon">
+  <rect width="108" height="108" fill="#1d2021"/>
+  <g id="fg">
+    <rect x="38" y="19" width="32" height="9" rx="3" fill="#cc241d"/>
+    <rect x="32" y="33" width="44" height="7" rx="3" fill="#d65d0e"/>
+    <rect x="26" y="45" width="56" height="18" rx="4" fill="#d79921"/>
+    <rect x="32" y="68" width="44" height="7" rx="3" fill="#689d6a"/>
+    <rect x="38" y="80" width="32" height="9" rx="3" fill="#458588"/>
+  </g>
+</svg>

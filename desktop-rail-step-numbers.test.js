@@ -170,14 +170,13 @@ test("Gruvbox's palette hues are top-level too - the accents above are useless w
  *   Scope
  * -------------------------------------------------------------------- */
 
-test("exactly the top four sections are numbered, and they are the same four as mobile", () => {
+test("the three remaining workflow sections are numbered 1 through 3", () => {
   const steps = [...html.matchAll(/data-workspace-target="(\w+)"[^>]*data-step="(\d)"/g)]
     .map(m => [m[2], m[1]]);
   assert.deepEqual(steps, [
-    ["1", "lineSetupBlock"],
-    ["2", "splitsBlock"],
-    ["3", "resultsBlock"],
-    ["4", "productionSummaryBlock"]
+    ["1", "splitsBlock"],
+    ["2", "resultsBlock"],
+    ["3", "productionSummaryBlock"]
   ]);
   // RT Sync / Tools / Help carry no number on either surface.
   ["lineSyncBlock", "toolsBlock", "helpBlock"].forEach(target => {

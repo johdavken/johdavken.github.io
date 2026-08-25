@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" role="img" aria-label="Resin.Tools Split Diamond launcher icon">
+  <rect width="108" height="108" fill="#1d2021"/>
+  <!-- Foreground art is drawn to Android's 66-unit adaptive-icon safe circle:
+       every vertex below is within 33 units of the 54,54 centre. Absolute
+       coordinates only, so android-adaptive-icon.test.js can verify that. -->
+  <g id="fg">
+    <path d="M54 21 L74 41 L34 41 Z" fill="#cc241d"/>
+    <path d="M31 44 L77 44 L87 54 L77 64 L31 64 L21 54 Z" fill="#d79921"/>
+    <path d="M34 67 L74 67 L54 87 Z" fill="#689d6a"/>
+  </g>
+</svg>
