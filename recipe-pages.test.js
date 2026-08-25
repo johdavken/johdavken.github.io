@@ -17,7 +17,7 @@ function recipeEditor(){
 }
 
 /* ============================================================
- *   One editor, two pages
+ *   One editor, two recipe data pages plus the Saved Recipes library
  * ============================================================ */
 
 test("the editor reads the selected page, never state.layers directly", () => {
@@ -59,7 +59,7 @@ test("Recipe always opens on Current", () => {
 
 test("switching pages folds the plan into durable state before the grid moves", () => {
   const body = app.slice(app.indexOf("function setRecipePage("), app.indexOf("function hookRecipePageTabs("));
-  assert.match(body, /if \(isNextRecipePage\(\)\) commitNextRecipeWorking\(\);/);
+  assert.match(body, /if \(activeRecipePage === "next"\) commitNextRecipeWorking\(\);/);
   assert.match(body, /activeRecipePage = next;/);
   assert.match(body, /renderSplitsArea\(\);/);
   // Switching a page must not re-run validation against the plan.
@@ -108,7 +108,7 @@ test("the tabs keep their own height whatever the grid does - 1, 3 or 5 layers",
   assert.doesNotMatch(strip, /width|height/);
 });
 
-test("Current and Next read as document tabs sitting on the section divider, not filled buttons", () => {
+test("Current, Next, and Recipe Book read as document tabs sitting on the section divider, not filled buttons", () => {
   const inactive = styles.slice(styles.indexOf(".recipePageTab{"), styles.indexOf("}", styles.indexOf(".recipePageTab{")));
   // Quiet at rest - a clickable label on the divider, not a bordered/filled
   // button. Rounded top corners only, so even the shape reads as a tab.
@@ -143,6 +143,7 @@ test("the tabs use real tab semantics and are keyboard navigable", () => {
   assert.match(html, /class="recipePageTabs" role="tablist"/);
   assert.match(html, /id="recipePageTabCurrent" role="tab" aria-selected="true" aria-controls="splitsArea"/);
   assert.match(html, /id="recipePageTabNext" role="tab" aria-selected="false" aria-controls="splitsArea"/);
+  assert.match(html, /id="recipePageTabSaved" role="tab" aria-selected="false" aria-controls="splitsArea" data-recipe-page="saved" hidden>Recipe Book<\/button>/);
   assert.match(html, /id="splitsArea"[^>]*role="tabpanel"/);
   const hook = app.slice(app.indexOf("function hookRecipePageTabs("));
   assert.match(hook, /ArrowRight/);
@@ -152,10 +153,29 @@ test("the tabs use real tab semantics and are keyboard navigable", () => {
   assert.match(styles, /\.recipePageTab:focus-visible\{[\s\S]*?outline: 2px solid var\(--focus-border\);/);
 });
 
-test("aria-selected and the panel's label follow the selected page", () => {
+test("aria-selected, the panel label, and the view control follow all three pages", () => {
   const body = app.slice(app.indexOf("function syncRecipePageUI("), app.indexOf("function setRecipePage("));
   assert.match(body, /tab\.setAttribute\("aria-selected", String\(selected\)\)/);
-  assert.match(body, /aria-labelledby", isNextRecipePage\(\) \? "recipePageTabNext" : "recipePageTabCurrent"/);
+  assert.match(body, /const labelledBy = isSavedRecipesPage\(\)[\s\S]*?"recipePageTabSaved"[\s\S]*?"recipePageTabNext" : "recipePageTabCurrent"/);
+  assert.match(body, /viewToggle\.hidden = isSavedRecipesPage\(\);/);
+});
+
+test("Recipe Book is available on tablet and desktop; only compact phones return to Current", () => {
+  const sync = app.slice(app.indexOf("function syncRecipePageUI("), app.indexOf("function setRecipePage("));
+  assert.match(sync, /savedTab\.hidden = layoutModeQueries\.compactRecipe\.matches;/);
+  const layout = app.slice(app.indexOf("function syncLayoutMode("), app.indexOf("function watchLayoutMode("));
+  assert.match(layout, /if \(compactRecipe && isSavedRecipesPage\(\)\)\{\s*activeRecipePage = "current";\s*splitsSavedRecipesOpen = false;/);
+  assert.match(styles, /\.recipePageTab\[hidden\],\.recipeViewToggle\[hidden\],\.recipeHeaderControls\[hidden\]\{ display:none!important; \}/);
+  assert.match(styles, /@media \(min-width: 701px\)\{[\s\S]*?body\[data-recipe-page="saved"\] #splitsArea/);
+});
+
+test("Recipe Book replaces the desktop matrix without masquerading as Current or Next", () => {
+  assert.doesNotMatch(app, /lastRecipeDataPage/);
+  assert.match(app, /function isNextRecipePage\(\)\{ return activeRecipePage === "next"; \}/);
+  const setter = app.slice(app.indexOf("function setRecipePage("), app.indexOf("function hookRecipePageTabs("));
+  assert.match(setter, /splitsSavedRecipesOpen = next === "saved";/);
+  assert.match(styles, /body\[data-recipe-page="saved"\] #splitsArea > :not\(\.splitsSavedRecipesPanel\)\{\s*display: none!important;/);
+  assert.match(styles, /body\[data-recipe-page="saved"\] #splitsArea > \.splitsSavedRecipesPanel\{[\s\S]*?display: block;[\s\S]*?order: 0;/);
 });
 
 test("a planned recipe is marked quietly, and the marker tracks edits", () => {
@@ -190,11 +210,11 @@ test("no duplicated per-page action implementations were introduced", () => {
  *   Phase 3: actions follow the selected page
  * ============================================================ */
 
-test("one destination-aware entry point serves both Saved Recipes and Scan", () => {
-  assert.match(app, /function applyRecipeToActivePage\(payload,\{kind,lotByResin\}=\{\}\)\{/);
+test("one destination-aware entry point serves both Recipe Book and Scan", () => {
+  assert.match(app, /function applyRecipeToActivePage\(payload,\{kind,lotByResin,destination\}=\{\}\)\{/);
   // Saved Recipes routes recipes through it (with no lot data of its own)...
   const saved = app.slice(app.indexOf("function applyWorkspaceConfiguration("), app.indexOf("function applyRecipeToActivePage("));
-  assert.match(saved, /applyRecipeToActivePage\(item\.payload,\{kind:"load-workspace-configuration"\}\)/);
+  assert.match(saved, /applyRecipeToActivePage\(item\.payload,\{kind:"load-workspace-configuration",destination\}\)/);
   // ...and so does Scan, threading through whatever a Heat Sheet scan read.
   const scan = app.slice(app.indexOf("function applyScannedRecipePayload("), app.indexOf("function openWorkspaceConfigurationDialog("));
   assert.match(scan, /function applyScannedRecipePayload\(payload, lotByResin\)\{/);
@@ -210,12 +230,16 @@ test("writing a plan never publishes an active job or re-runs readiness", () => 
   assert.match(planBranch, /nextRecipeWorking=null;\s*\n\s*ensureNextRecipeWorking\(\);/);
 });
 
-test("loading a saved recipe names its destination before replacing anything", () => {
+test("loading from Recipe Book offers explicit Current and Next destinations", () => {
   const preview = app.slice(app.indexOf("function previewWorkspaceConfiguration("), app.indexOf("function applyWorkspaceConfiguration("));
-  assert.match(preview, /const intoNext=recipe && isNextRecipePage\(\);/);
-  assert.match(preview, /This will replace the planned Next Recipe/);
-  assert.match(preview, /The current recipe being run is not changed/);
-  assert.match(preview, /confirm\.textContent=recipe\?\(intoNext\?"Load into Next":"Load Recipe"\)/);
+  assert.match(html, /id="workspaceConfigurationLoadCurrent" value="load-current"[^>]*hidden>Load into Current<\/button>/);
+  assert.match(html, /id="workspaceConfigurationConfirmLoad" value="load-next"[^>]*>Load into Next<\/button>/);
+  assert.match(preview, /loadCurrent\.hidden=!recipe;/);
+  assert.match(preview, /dialog\.returnValue==="load-current"\) applyWorkspaceConfiguration\(item,"current"\)/);
+  assert.match(preview, /dialog\.returnValue==="load-next"\) applyWorkspaceConfiguration\(item,"next"\)/);
+  assert.doesNotMatch(preview, /isNextRecipePage/);
+  const router = app.slice(app.indexOf("function applyRecipeToActivePage("), app.indexOf("function recipePageLabel("));
+  assert.match(router, /const intoNext=destination \? destination==="next" : isNextRecipePage\(\);/);
 });
 
 test("a saved recipe for a different layer count is called out when planning", () => {

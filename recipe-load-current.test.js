@@ -53,11 +53,11 @@ test("it is hidden when the current recipe holds nothing worth copying, and neve
   assert.doesNotMatch(block.slice(0, block.indexOf("modeBar.appendChild(loadCurrentButton)")), /isPromotable/);
 });
 
-test("desktop puts it in the utility strip where Load Next Recipe sits on the other page", () => {
+test("desktop puts it in the header where Load Next Recipe sits on the other page", () => {
   const editor = recipeEditor();
-  assert.match(editor, /loadCurrentButton\?\.classList\.add\("recipeUtilityTab", "recipeActionTab"\);/);
-  assert.match(editor, /if \(loadCurrentButton\) recipeUtilityTabs\.append\(loadCurrentButton\);/);
-  // An immediate action, not a panel-opening tab - same as Load Next/Print.
+  assert.match(editor, /loadCurrentButton\?\.classList\.add\("recipeHeaderAction"\);/);
+  assert.match(editor, /if \(loadCurrentButton\) headerActions\?\.append\(loadCurrentButton\);/);
+  // An immediate action, not a page tab - same as Load Next/Print.
   assert.doesNotMatch(editor, /loadCurrentButton\?\.setAttribute\("role", "tab"\)/);
 });
 

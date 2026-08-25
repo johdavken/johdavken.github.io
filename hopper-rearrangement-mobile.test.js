@@ -48,15 +48,15 @@ test("the action button row (Scan/Print/Load Next/Info) is flush to the panel's 
   assert.match(rule, /justify-self: start/);
 });
 
-test("the utility tabs, saved-recipes panel, action row, and shared bulk toolbar remain direct children", () => {
-  assert.match(splitsArea, /recipeUtilityTabs\.className = "recipeUtilityTabs"/);
+test("Recipe Book and the shared bulk toolbar remain direct children while desktop actions move to the header", () => {
+  assert.match(splitsArea, /const headerActions = \$\("recipeHeaderActions"\)/);
   assert.match(splitsArea, /toolbar\.className = "splitsBulkBar hide"/);
   assert.match(splitsArea, /savedRecipesPanel\.className = "splitsSavedRecipesPanel hide"/);
-  assert.match(splitsArea, /if \(!compactMobileRecipe\)\{\s*\n\s*area\.append\(recipeUtilityTabs\);/);
+  assert.doesNotMatch(splitsArea, /area\.append\(recipeUtilityTabs\)/);
   assert.match(splitsArea, /if \(trackingView\) area\.append\(trackingBar\);/);
   assert.match(splitsArea, /area\.append\(toolbar\);/);
   assert.match(splitsArea, /area\.append\(savedRecipesPanel\);/);
-  assert.match(splitsArea, /if \(!compactMobileRecipe\)\{\s*\n\s*area\.append\(modeBar\);\s*\n\s*\}/);
+  assert.doesNotMatch(splitsArea, /area\.append\(modeBar\)/);
   assert.doesNotMatch(splitsArea, /mobileBulkEditSheet/);
 });
 

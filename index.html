@@ -630,11 +630,15 @@
         <div class="recipePageTabs" role="tablist" aria-label="Recipe page">
           <button type="button" class="recipePageTab active" id="recipePageTabCurrent" role="tab" aria-selected="true" aria-controls="splitsArea" data-recipe-page="current">Current</button>
           <button type="button" class="recipePageTab" id="recipePageTabNext" role="tab" aria-selected="false" aria-controls="splitsArea" data-recipe-page="next">Next<span class="recipePageTabDot" id="recipePageTabNextDot" hidden aria-hidden="true"></span></button>
+          <button type="button" class="recipePageTab recipePageTabSaved" id="recipePageTabSaved" role="tab" aria-selected="false" aria-controls="splitsArea" data-recipe-page="saved" hidden>Recipe Book</button>
         </div>
-        <div class="recipeViewToggle" id="recipeViewToggle" role="group" aria-label="Recipe view">
-          <span>View</span>
-          <button type="button" class="active" data-recipe-view="summary" aria-pressed="true">Summary</button>
-          <button type="button" data-recipe-view="edit" aria-pressed="false">Edit</button>
+        <div class="recipeHeaderControls" id="recipeHeaderControls">
+          <div class="recipeViewToggle" id="recipeViewToggle" role="group" aria-label="Recipe view">
+            <span>View</span>
+            <button type="button" class="primary actionRail active" data-recipe-view="summary" aria-pressed="true">Summary</button>
+            <button type="button" class="secondary" data-recipe-view="edit" aria-pressed="false">Edit</button>
+          </div>
+          <div class="recipeHeaderActions" id="recipeHeaderActions" role="group" aria-label="Recipe actions"></div>
         </div>
       </div>
       <div id="splitsArea" class="gap10" role="tabpanel" aria-labelledby="recipePageTabCurrent"></div>
@@ -731,12 +735,12 @@
 
     <div class="blockBody">
       <div class="grid2 mt10">
-        <div>
-          <label for="prodResinLb">Production Resin (lb)</label>
+        <div class="productionSummaryInputField">
+          <label for="prodResinLb">Production Resin <span class="productionSummaryLabelUnit">(lb)</span></label>
           <input id="prodResinLb" type="text" inputmode="decimal" placeholder="0" />
         </div>
-        <div>
-          <label for="scrapResinLb">Scrap Resin (lb)</label>
+        <div class="productionSummaryInputField">
+          <label for="scrapResinLb">Scrap Resin <span class="productionSummaryLabelUnit">(lb)</span></label>
           <input id="scrapResinLb" type="text" inputmode="decimal" placeholder="0" />
         </div>
       </div>
@@ -1309,13 +1313,13 @@
             </figure>
 
             <div class="helpGrid">
-              <div class="helpCard"><strong>Saved Recipes</strong><span>Load, save, rename, duplicate, favorite, or delete a recipe shared with your RT Sync workspace.</span></div>
+              <div class="helpCard"><strong>Recipe Book</strong><span>Load into Current or Next; save either Current or Next; rename, duplicate, favorite, or delete recipes shared with your RT Sync workspace.</span></div>
               <div class="helpCard"><strong>Bulk Edit</strong><span>Apply one resin or percentage to many hoppers at once.</span></div>
               <div class="helpCard"><strong>Rearrange</strong><span>Move or swap assignments between hoppers, including across layers.</span></div>
               <div class="helpCard"><strong>Scan Recipe</strong><span>Fill the grid from a photo. See <a class="helpTopicLink" href="#helpRecipeScan">Scan Recipe</a>.</span></div>
             </div>
 
-            <p class="helpTip"><strong>Loading a recipe</strong> replaces layer percentages, resin names, and hopper percentages only. Receiver hopper weights and tracking are never touched.</p>
+            <p class="helpTip"><strong>Loading a recipe</strong> asks whether to replace Current or Next. It changes recipe data only; receiver hopper weights and tracking are never touched.</p>
               </div>
             </details>
 
@@ -1847,7 +1851,7 @@
   </form>
 </dialog>
 <dialog id="workspaceConfigurationLoadDialog" class="lineSyncConflictDialog" aria-labelledby="workspaceConfigurationLoadTitle">
-  <form method="dialog"><div id="workspaceConfigurationLoadTitle" class="layerTitle">Load configuration</div><div id="workspaceConfigurationLoadDetails" class="muted mt10"></div><div class="segmentedActionToolbar mt10"><div class="segmentedActionRow"><button value="cancel" class="secondary" type="submit">Cancel</button><button id="workspaceConfigurationConfirmLoad" value="load" class="primary" type="submit">Load</button></div></div></form>
+  <form method="dialog"><div id="workspaceConfigurationLoadTitle" class="layerTitle">Load configuration</div><div id="workspaceConfigurationLoadDetails" class="muted mt10"></div><div class="segmentedActionToolbar mt10"><div class="segmentedActionRow"><button value="cancel" class="secondary" type="submit">Cancel</button><button id="workspaceConfigurationLoadCurrent" value="load-current" class="secondary" type="submit" hidden>Load into Current</button><button id="workspaceConfigurationConfirmLoad" value="load-next" class="primary" type="submit">Load into Next</button></div></div></form>
 </dialog>
 <dialog id="workspaceConfigurationSaveDialog" class="lineSyncConflictDialog" aria-labelledby="workspaceConfigurationSaveTitle"><form method="dialog"><div id="workspaceConfigurationSaveTitle" class="layerTitle">Save configuration</div><div id="workspaceConfigurationSaveDetails" class="muted mt10"></div><label class="mt10" for="workspaceConfigurationName">Name</label><input id="workspaceConfigurationName" maxlength="100" type="text" /><div class="segmentedActionToolbar mt10"><div class="segmentedActionRow"><button value="cancel" class="secondary" type="submit">Cancel</button><button id="workspaceConfigurationSaveConfirm" value="save" class="primary" type="submit">Save</button></div></div></form></dialog>
 <dialog id="workspaceConfigurationDuplicateDialog" class="lineSyncConflictDialog" aria-labelledby="workspaceConfigurationDuplicateTitle"><form method="dialog"><div id="workspaceConfigurationDuplicateTitle" class="layerTitle">Configuration name already exists</div><div class="muted mt10">A configuration with this name already exists.</div><div class="segmentedActionToolbar mt10"><div class="segmentedActionRow"><button value="cancel" class="secondary" type="submit">Cancel</button><button value="choose" class="secondary" type="submit">Choose Another Name</button><button value="update" class="primary" type="submit">Update Existing</button></div></div></form></dialog>

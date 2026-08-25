@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Desktop Resin Totals alternatives · Resin Tools</title>
+  <style>
+    :root{
+      color-scheme:dark;
+      --page:#171918;
+      --panel:#222523;
+      --panel-2:#1d201f;
+      --field:#262a27;
+      --row:#282b29;
+      --row-alt:#242725;
+      --line:#3b403b;
+      --line-strong:#555b53;
+      --ink:#eee2bd;
+      --title:#f4e8c7;
+      --muted:#a69e89;
+      --quiet:#7e796a;
+      --accent:#77a78d;
+      --accent-soft:#273a31;
+      --orange:#ff8100;
+      --warning:#d7a74c;
+      --radius:14px;
+      --control:7px;
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{
+      margin:0;
+      background:
+        radial-gradient(circle at 7% -4%,rgba(119,167,141,.11),transparent 33rem),
+        var(--page);
+      color:var(--ink);
+      font:15px/1.42 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+    }
+    .pageHead,main{width:min(1680px,calc(100% - 48px));margin-inline:auto}
+    .pageHead{padding:38px 0 22px}
+    h1{margin:0;color:var(--title);font-size:clamp(30px,4vw,48px);line-height:1.06;letter-spacing:-.025em}
+    .lede{max-width:930px;margin:12px 0 18px;color:var(--muted);font-size:17px}
+    .dataKey{display:flex;flex-wrap:wrap;gap:8px}
+    .dataKey span{padding:7px 10px;border:1px solid var(--line);border-radius:999px;background:var(--panel-2);color:var(--muted);font-size:11px;font-weight:800}
+    .dataKey .lot{border-color:color-mix(in srgb,var(--accent) 60%,var(--line));color:var(--accent)}
+    nav{position:sticky;top:0;z-index:20;display:flex;gap:7px;padding:10px 0;background:color-mix(in srgb,var(--page) 91%,transparent);backdrop-filter:blur(12px)}
+    nav a{display:grid;place-items:center;width:34px;height:34px;border:1px solid var(--line);border-radius:7px;background:var(--panel);color:var(--muted);font-size:12px;font-weight:950;text-decoration:none}
+    nav a:hover,nav a:focus-visible{border-color:var(--accent);color:var(--accent);outline:0}
+    main{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;padding:8px 0 70px}
+    .concept{scroll-margin-top:66px;min-width:0;padding:19px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(145deg,#202321,#1b1e1c)}
+    .conceptHead{display:grid;grid-template-columns:auto 1fr;gap:11px 12px;align-items:start;margin-bottom:15px}
+    .number{display:grid;place-items:center;grid-row:1/3;width:31px;height:31px;border:1px solid color-mix(in srgb,var(--accent) 60%,var(--line));border-radius:50%;color:var(--accent);font-weight:950}
+    h2{margin:2px 0 0;color:var(--title);font-size:20px;line-height:1.2}
+    .conceptHead p{margin:0;color:var(--muted);font-size:12.5px}
+    .screen{overflow:hidden;border:1px solid var(--line-strong);border-radius:var(--radius);background:var(--panel);box-shadow:0 16px 30px rgba(0,0,0,.16)}
+    .screenTitle{display:flex;align-items:center;gap:10px;padding:15px 17px;border-bottom:1px solid var(--line);color:var(--title);font-size:15px;font-weight:900;letter-spacing:.13em;text-transform:uppercase}
+    .bars{display:grid;grid-template-columns:repeat(3,4px);align-items:end;gap:3px;height:19px}
+    .bars i{display:block;border-radius:2px 2px 0 0;background:var(--accent)}
+    .bars i:nth-child(1){height:9px}.bars i:nth-child(2){height:18px}.bars i:nth-child(3){height:13px}
+    .screenBody{padding:16px}
+    .inputs{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .field{display:grid;grid-template-columns:1fr auto;gap:3px 10px;padding:9px 11px;border:1px solid var(--line);border-radius:var(--control);background:var(--field)}
+    .field span{grid-column:1/3;color:var(--muted);font-size:10px;font-weight:850;letter-spacing:.08em;text-transform:uppercase}
+    .field strong{color:var(--title);font:900 19px/1 ui-monospace,SFMono-Regular,Consolas,monospace}
+    .field em{align-self:end;color:var(--muted);font-size:11px;font-style:normal}
+    .totalStrip{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:10px 0;padding:9px 11px;border:1px solid var(--line);border-radius:var(--control);background:var(--panel-2)}
+    .totalStrip span{color:var(--muted);font-size:11px}.totalStrip b{color:var(--title);font:950 16px/1 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:nowrap}
+    .sectionLabel{display:flex;align-items:center;justify-content:space-between;margin:14px 2px 7px;color:var(--muted);font-size:10px;font-weight:900;letter-spacing:.1em;text-transform:uppercase}
+    .sectionLabel span:last-child{color:var(--quiet);letter-spacing:0;text-transform:none}
+    .mono{font-family:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace}
+    .weight{color:var(--title);font-weight:950;white-space:nowrap;font-variant-numeric:tabular-nums}
+    .lotText{min-width:0;overflow:hidden;color:var(--muted);font-size:11px;text-overflow:ellipsis;white-space:nowrap}
+    .lotText::before{content:"LOT ";color:var(--quiet);font-size:9px;font-weight:900;letter-spacing:.08em}
+    .noLot{color:var(--quiet);font-size:11px}
+    .footnote{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:13px;padding-top:12px;border-top:1px solid var(--line);color:var(--muted);font-size:11px}
+    .footnote b{color:var(--accent)}
+
+    /* 1. Precision ledger */
+    .ledger{border:1px solid var(--line);border-radius:10px;overflow:hidden}
+    .ledgerHead,.ledgerRow{display:grid;grid-template-columns:minmax(120px,.9fr) minmax(160px,1.35fr) 88px;align-items:center;gap:12px}
+    .ledgerHead{padding:7px 11px;border-bottom:1px solid var(--line);background:var(--panel-2);color:var(--quiet);font-size:9px;font-weight:900;letter-spacing:.09em;text-transform:uppercase}
+    .ledgerHead span:last-child{text-align:right}
+    .ledgerRow{min-height:42px;padding:8px 11px;background:var(--row)}
+    .ledgerRow:nth-child(odd){background:var(--row-alt)}
+    .ledgerRow+.ledgerRow{border-top:1px solid var(--line)}
+    .ledgerRow .name{color:var(--title);font-weight:900;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .ledgerRow .weight{text-align:right}
+
+    /* 2. Lot lane */
+    .lotLane{display:grid;gap:6px}
+    .laneRow{display:grid;grid-template-columns:minmax(105px,.75fr) minmax(0,1.5fr) 86px;align-items:center;min-height:44px;border:1px solid var(--line);border-radius:9px;background:var(--row)}
+    .laneName,.laneWeight{padding:9px 11px}.laneName{color:var(--title);font-weight:900}.laneWeight{text-align:right}
+    .laneLot{align-self:stretch;display:flex;align-items:center;min-width:0;padding:7px 12px;border-inline:1px solid var(--line);background:color-mix(in srgb,var(--accent) 5%,var(--panel-2))}
+    .laneLot .lotText{color:var(--accent)}
+    .laneLot.empty{background:transparent}.laneLot.empty::after{content:"No scanned lot";color:var(--quiet);font-size:10px;font-style:italic}
+
+    /* 3. Source caption */
+    .sourceRows{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .sourceRow{position:relative;min-height:74px;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:linear-gradient(145deg,var(--row),var(--row-alt))}
+    .sourceRow .name{display:block;padding-right:78px;color:var(--title);font-size:16px;font-weight:950;white-space:nowrap}
+    .sourceRow .weight{position:absolute;top:11px;right:12px}
+    .sourceRow .lotText,.sourceRow .noLot{display:block;margin-top:15px}
+    .sourceRow .noLot{visibility:hidden}
+
+    /* 4. Distribution rows */
+    .distribution{display:grid;gap:7px}
+    .distRow{display:grid;grid-template-columns:106px minmax(0,1fr) 84px;grid-template-rows:auto 4px;gap:6px 13px;align-items:center;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--row)}
+    .distRow .name{color:var(--title);font-weight:900}.distRow .weight{text-align:right}
+    .distTrack{grid-column:1/4;height:4px;border-radius:4px;background:color-mix(in srgb,var(--accent) 13%,var(--panel-2));overflow:hidden}
+    .distTrack i{display:block;width:var(--share);height:100%;border-radius:inherit;background:var(--accent)}
+    .distRow .lotText{text-align:center}
+
+    /* 5. Inventory tickets */
+    .ticketGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .ticket{display:grid;grid-template-columns:1fr auto;gap:10px;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:var(--row)}
+    .ticket .name{color:var(--title);font-size:15px;font-weight:950}.ticket .weight{font-size:15px;text-align:right}
+    .ticket .lotText,.ticket .noLot{grid-column:1/3;margin-top:2px;padding-top:7px;border-top:1px solid var(--line)}
+    .ticket .lotText::before{display:inline-grid;place-items:center;height:17px;margin-right:6px;padding:0 5px;border-radius:4px;background:var(--accent-soft);color:var(--accent)}
+    .ticket .noLot{visibility:hidden}
+
+    /* 6. Report table */
+    .report{overflow:hidden;border:1px solid var(--line);border-radius:10px}
+    .reportHead,.reportRow{display:grid;grid-template-columns:minmax(105px,1fr) minmax(150px,1.45fr) 62px 84px;align-items:center;gap:10px}
+    .reportHead{padding:7px 10px;border-bottom:1px solid var(--line-strong);background:var(--panel-2);color:var(--quiet);font-size:9px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+    .reportHead span:nth-child(n+3){text-align:right}
+    .reportRow{min-height:41px;padding:8px 10px;background:var(--row)}
+    .reportRow:nth-child(odd){background:var(--row-alt)}.reportRow+.reportRow{border-top:1px solid var(--line)}
+    .reportRow .name{color:var(--title);font-weight:900}.reportRow .share{text-align:right;color:var(--muted);font-size:11px;font-weight:850}.reportRow .weight{text-align:right}
+    .reportTotal{display:grid;grid-template-columns:1fr auto;gap:10px;padding:9px 10px;border-top:1px solid var(--line-strong);background:var(--accent-soft);font-weight:900}.reportTotal span:last-child{color:var(--title)}
+
+    @media(max-width:1100px){
+      main{grid-template-columns:1fr}
+      .pageHead,main{width:min(900px,calc(100% - 30px))}
+    }
+    @media(max-width:620px){
+      .pageHead,main{width:min(100% - 20px,900px)}.pageHead{padding-top:25px}.concept{padding:12px}.screenBody{padding:11px}
+      .inputs{grid-template-columns:1fr}.ledgerHead,.ledgerRow{grid-template-columns:95px minmax(0,1fr) 74px}.sourceRows,.ticketGrid{grid-template-columns:1fr}
+      .reportHead,.reportRow{grid-template-columns:90px minmax(90px,1fr) 45px 68px}.distRow{grid-template-columns:85px minmax(0,1fr) 70px}
+    }
+  </style>
+</head>
+<body>
+  <header class="pageHead">
+    <h1>Desktop Resin Totals — 6 directions</h1>
+    <p class="lede">Each preview uses the same job totals. The center of every material row is tested with scanned lot data, no lot data, and one intentionally long lot number; the resin code and pounds remain the visual anchors.</p>
+    <div class="dataKey"><span>Production 1,180 lb</span><span>Scrap 60 lb</span><span>Total 1,240 lb</span><span class="lot">2 scanned lots + 1 long-lot stress test</span></div>
+  </header>
+  <nav class="pageHead" aria-label="Jump to a concept"><a href="#option-1">1</a><a href="#option-2">2</a><a href="#option-3">3</a><a href="#option-4">4</a><a href="#option-5">5</a><a href="#option-6">6</a></nav>
+  <main id="gallery"></main>
+  <script>
+    const materials=[
+      {name:"MS0400",lot:"HS-24-0825-A17",lb:732,share:59},
+      {name:"MS0100",lot:"LOT-6K38-2026",lb:434,share:35},
+      {name:"A0711",lot:"",lb:49,share:4},
+      {name:"A0450",lot:"HEAT-SHEET-2026-08-25-LINE-04-SHIFT-B",lb:25,share:2}
+    ];
+    const concepts=[
+      {title:"Precision ledger",desc:"A true three-column reading order: material, optional lot, pounds. Quiet, exact, and closest to the current row model.",note:"Best neutral default",kind:"ledger"},
+      {title:"Dedicated lot lane",desc:"The center becomes a lightly tinted source lane. Missing lots are acknowledged instead of leaving unexplained empty space.",note:"Clearest lot visibility",kind:"lane"},
+      {title:"Source-caption cards",desc:"Uses desktop width for two columns. Lot data reads as secondary provenance beneath each material, while pounds remain top-right.",note:"Most compact vertically",kind:"source"},
+      {title:"Distribution + source",desc:"Adds a proportional usage bar to each row. The lot sits centered above the bar without affecting either anchor.",note:"Best visual overview",kind:"distribution"},
+      {title:"Inventory tickets",desc:"Each material becomes a small issuance ticket. Lot numbers get a labeled band; rows without lots simply omit that band visually.",note:"Strongest inventory feel",kind:"tickets"},
+      {title:"Production report",desc:"A denser report table adds share alongside pounds. It is optimized for scanning, printing, and later inventory reconciliation.",note:"Most information-dense",kind:"report"}
+    ];
+    const lot=(m,emptyLabel=false)=>m.lot?`<span class="lotText mono" title="${m.lot}">${m.lot}</span>`:(emptyLabel?`<span class="noLot">No scanned lot</span>`:`<span class="noLot" aria-hidden="true">No lot</span>`);
+    const commonTop=()=>`
+      <div class="screenTitle"><span class="bars"><i></i><i></i><i></i></span>Resin Totals</div>
+      <div class="screenBody">
+        <div class="inputs"><div class="field"><span>Production Resin</span><strong>1180</strong><em>lb</em></div><div class="field"><span>Scrap Resin</span><strong>60</strong><em>lb</em></div></div>
+        <div class="totalStrip"><span>4 materials calculated from the current recipe</span><b>1,240 lb total</b></div>`;
+    function rows(kind){
+      if(kind==="ledger") return `<div class="ledger"><div class="ledgerHead"><span>Material</span><span>Scanned lot</span><span>Pounds</span></div>${materials.map(m=>`<div class="ledgerRow"><span class="name mono">${m.name}</span>${lot(m)}<span class="weight mono">${m.lb} lb</span></div>`).join("")}</div>`;
+      if(kind==="lane") return `<div class="lotLane">${materials.map(m=>`<div class="laneRow"><span class="laneName mono">${m.name}</span><span class="laneLot ${m.lot?"":"empty"}">${m.lot?lot(m):""}</span><span class="laneWeight weight mono">${m.lb} lb</span></div>`).join("")}</div>`;
+      if(kind==="source") return `<div class="sourceRows">${materials.map(m=>`<div class="sourceRow"><span class="name mono">${m.name}</span><span class="weight mono">${m.lb} lb</span>${lot(m)}</div>`).join("")}</div>`;
+      if(kind==="distribution") return `<div class="distribution">${materials.map(m=>`<div class="distRow"><span class="name mono">${m.name}</span>${lot(m)}<span class="weight mono">${m.lb} lb</span><span class="distTrack"><i style="--share:${m.share}%"></i></span></div>`).join("")}</div>`;
+      if(kind==="tickets") return `<div class="ticketGrid">${materials.map(m=>`<div class="ticket"><span class="name mono">${m.name}</span><span class="weight mono">${m.lb} lb</span>${lot(m)}</div>`).join("")}</div>`;
+      return `<div class="report"><div class="reportHead"><span>Material</span><span>Lot</span><span>Share</span><span>Pounds</span></div>${materials.map(m=>`<div class="reportRow"><span class="name mono">${m.name}</span>${lot(m)}<span class="share mono">${m.share}%</span><span class="weight mono">${m.lb} lb</span></div>`).join("")}<div class="reportTotal"><span>Total issued</span><span class="mono">1,240 lb</span></div></div>`;
+    }
+    document.querySelector("#gallery").innerHTML=concepts.map((c,i)=>`
+      <section class="concept" id="option-${i+1}">
+        <div class="conceptHead"><span class="number">${i+1}</span><h2>${c.title}</h2><p>${c.desc}</p></div>
+        <div class="screen">${commonTop()}<div class="sectionLabel"><span>By material</span><span>${c.kind==="report"?"Share included":"Current recipe allocation"}</span></div>${rows(c.kind)}</div></div>
+        <div class="footnote"><span>${c.note}</span><b>Lot-safe layout</b></div>
+      </section>`).join("");
+  </script>
+</body>
+</html>

@@ -5,6 +5,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 
 const app = fs.readFileSync("app.js", "utf8");
+const html = fs.readFileSync("index.html", "utf8");
 const styles = fs.readFileSync("styles.css", "utf8");
 
 /** The recipe editor's own body - everything the Current/Next pages share. */
@@ -20,13 +21,15 @@ function recipeEditor(){
  *   grid and a separate More row.
  * ============================================================ */
 
-test("desktop's tab strip and action row stay desktop-only while the shared Edit toolbar is inline everywhere", () => {
+test("desktop's header actions stay out of the matrix while the shared Edit toolbar is inline everywhere", () => {
   const editor = recipeEditor();
-  assert.match(editor, /if \(!compactMobileRecipe\)\{\s*\n\s*area\.append\(recipeUtilityTabs\);/);
+  assert.match(editor, /const headerActions = \$\("recipeHeaderActions"\);\s*\n\s*headerActions\?\.replaceChildren\(\);/);
+  assert.match(editor, /headerActions\?\.append\(printButton\);/);
+  assert.doesNotMatch(editor, /area\.append\(recipeUtilityTabs\)/);
   assert.match(editor, /if \(trackingView\) area\.append\(trackingBar\);/);
   assert.match(editor, /area\.append\(toolbar\);/);
   assert.doesNotMatch(editor, /mobileBulkEditSheet/);
-  assert.match(editor, /if \(!compactMobileRecipe\)\{\s*\n\s*area\.append\(modeBar\);\s*\n\s*\}/);
+  assert.doesNotMatch(editor, /area\.append\(modeBar\)/);
 });
 
 test("the mobile action row is built by moving the same real buttons, not rebuilding them - handlers stay exactly as wired", () => {
@@ -64,14 +67,15 @@ test("Next's primary row is Recipes, Bulk edit, Rearrange, Scan Recipe - promote
   assert.match(nextBranch, /mobilePrimaryRow\.append\(scanRecipeButton\);/);
 });
 
-test("desktop's own branch keeps Saved recipes as a role=tab in a role=tablist, controlled by aria-controls pointing at its real panel id, and relocates Rearrange into the Edit panel", () => {
+test("desktop uses Recipe Book as a page tab, moves recipe actions into the header, and relocates Rearrange into Edit", () => {
   const editor = recipeEditor();
   const block = mobileVsDesktopBlock(editor);
   const desktopBranch = block.slice(block.indexOf("}else{", block.indexOf("mobilePrimaryRow.append(mobileMoreButton)")));
-  assert.match(desktopBranch, /recipeUtilityTabs\.setAttribute\("role", "tablist"\);/);
-  assert.match(desktopBranch, /savedRecipesButton\.setAttribute\("role", "tab"\);/);
-  assert.match(desktopBranch, /savedRecipesButton\.setAttribute\("aria-controls", savedRecipesPanel\.id\);/);
-  assert.match(desktopBranch, /recipeUtilityTabs\.append\(savedRecipesButton\);/);
+  assert.match(html, /id="recipePageTabSaved" role="tab" aria-selected="false" aria-controls="splitsArea" data-recipe-page="saved" hidden>Recipe Book<\/button>/);
+  assert.match(html, /id="recipeHeaderActions" role="group" aria-label="Recipe actions"/);
+  assert.match(desktopBranch, /headerActions\?\.append\(printButton\);/);
+  assert.doesNotMatch(desktopBranch, /recipeUtilityTabs/);
+  assert.doesNotMatch(desktopBranch, /savedRecipesButton/);
   // Bulk edit no longer exists as a desktop tab - Edit view replaced it -
   // so modeButton is never given tab semantics or appended here.
   assert.doesNotMatch(desktopBranch, /modeButton/);

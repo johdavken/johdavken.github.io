@@ -5,6 +5,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 
 const app = fs.readFileSync("app.js", "utf8");
+const html = fs.readFileSync("index.html", "utf8");
 const styles = fs.readFileSync("styles.css", "utf8");
 
 function functionBody(name){
@@ -101,16 +102,14 @@ test("opening Bulk edit closes Saved Recipes outright, and exits Rearrange (with
   assert.match(modeButtonBody, /if \(turningOn\) setSavedRecipesOpen\(false\);/);
 });
 
-test("opening Saved Recipes closes Bulk edit outright, and exits Rearrange (with the same cleanup Done Rearranging itself uses) if it was active", () => {
+test("the mobile Recipes disclosure keeps its existing exclusion and rearrangement cleanup", () => {
   const savedRecipesClickStart = app.indexOf("savedRecipesButton.addEventListener(\"click\", ()=>{");
   const savedRecipesClickBody = app.slice(savedRecipesClickStart, app.indexOf("      });", savedRecipesClickStart) + 8);
   assert.match(savedRecipesClickBody, /if \(turningOn && hopperRearrangement\?\.active\)\{/);
   assert.match(savedRecipesClickBody, /hopperRearrangement = null;/);
   assert.match(savedRecipesClickBody, /splitsSavedRecipesOpen = true;/);
   assert.match(savedRecipesClickBody, /splitsBulkModeActive = false;/);
-  // Desktop no longer needs the two to exclude each other - the Edit panel
-  // sits above the grid and Saved Recipes below it - so this narrowed to
-  // compact mobile, which still swaps one sheet for the other.
+  // This dynamic button is mounted only on compact mobile.
   assert.match(savedRecipesClickBody, /if \(turningOn && compactMobileRecipe\) setBulkMode\(false\);/);
 });
 
@@ -122,19 +121,16 @@ test("setBulkMode and setSavedRecipesOpen both write their resolved value back t
   assert.match(setSavedRecipesOpenBody, /splitsSavedRecipesOpen = !!open;/);
 });
 
-test("the Saved Recipes button leads the utility tab strip/mobile primary row (Load is the primary action here), and toggles its panel open/closed with an accessible expanded/selected state", () => {
+test("Recipe Book is a desktop page tab while mobile keeps the existing Recipes disclosure button", () => {
+  assert.match(html, /id="recipePageTabSaved" role="tab" aria-selected="false" aria-controls="splitsArea" data-recipe-page="saved" hidden>Recipe Book<\/button>/);
+  assert.match(app, /<strong>Recipe Book<\/strong>/);
   assert.match(app, /savedRecipesButton\.textContent = "Saved Recipes"/);
-  // No longer appended into modeBar at all - it leads the desktop
-  // .recipeUtilityTabs strip and the mobile primary row instead (both
-  // built from the same three buttons, see the compact/desktop branches).
   assert.match(app, /mobilePrimaryRow\.append\(savedRecipesButton, rearrangeButton\);/);
-  // Desktop's strip is now Saved recipes / Load Next / Print: Bulk edit is
-  // gone as a concept (Edit view replaced it) and Rearrange moved into the
-  // Edit panel, so Saved Recipes is the only panel-opening tab left.
-  assert.match(app, /recipeUtilityTabs\.append\(savedRecipesButton\);/);
+  assert.doesNotMatch(app, /recipeUtilityTabs\.append\(savedRecipesButton\);/);
   assert.match(app, /function setSavedRecipesOpen\(open\)\{/);
   assert.match(app, /savedRecipesPanel\.classList\.toggle\("hide", !open\)/);
-  assert.match(app, /savedRecipesButton\.setAttribute\("aria-selected", String\(open\)\)/);
+  assert.match(app, /savedRecipesButton\.setAttribute\("aria-expanded",String\(open\)\)/);
+  assert.match(app, /splitsSavedRecipesOpen = next === "saved";/);
 });
 
 test("Recipes and receiver profiles use centered sheets without opening the search keyboard",()=>{
@@ -147,6 +143,26 @@ test("Recipes and receiver profiles use centered sheets without opening the sear
 
 test("the panel's own Save Current Recipe button reuses the exact same dialog flow as Line Configurations', not a parallel save path", () => {
   assert.match(app, /savedRecipesPanel\.querySelector\("#splitsSaveRecipe"\)\.addEventListener\("click", \(\)=>openWorkspaceConfigurationDialog\("save-recipe"\)\)/);
+});
+
+test("Recipe Book can save the planned Next Recipe through the shared save flow", () => {
+  assert.match(app, /id="splitsSaveNextRecipe"[^>]*>Save Next Recipe<\/button>/);
+  assert.match(app, /saveNextRecipeButton\.disabled=!window\.PolynNextRecipe\?\.isMeaningful\(state\.nextRecipe\);/);
+  assert.match(app, /saveNextRecipeButton\.addEventListener\("click", \(\)=>openWorkspaceConfigurationDialog\("save-next-recipe"\)\)/);
+  const dialog = functionBody("openWorkspaceConfigurationDialog");
+  assert.match(dialog, /const savingNext=mode==="save-next-recipe";/);
+  assert.match(dialog, /savingNext\?"Save Next Recipe"/);
+  const submit = functionBody("submitWorkspaceConfigurationDialog");
+  assert.match(submit, /pending\.mode==="save-next-recipe"\?window\.PolynNextRecipe\?\.fromState\(state\)/);
+  assert.match(submit, /if\(!payload\)\{ workspaceConfigurationStatus\("There is no Next Recipe to save\."\); return; \}/);
+});
+
+test("choosing another name after a duplicate keeps Save Next as the source", () => {
+  const submit = functionBody("submitWorkspaceConfigurationDialog");
+  assert.match(submit, /resolveWorkspaceConfigurationDuplicate\(pending\.type,name,payload,pending\.mode\)/);
+  const duplicate = functionBody("resolveWorkspaceConfigurationDuplicate");
+  assert.match(duplicate, /saveMode=type==="recipe"\?"save-recipe":"save-profile"/);
+  assert.match(duplicate, /dialog\.returnValue==="choose"\) openWorkspaceConfigurationDialog\(saveMode\)/);
 });
 
 test("the panel starts hidden and is included in the bottom-of-panel reorder group alongside the other expandable bars", () => {
@@ -191,15 +207,16 @@ test("the per-row actions div is gated on showRowActions as well as selection, n
   assert.match(body, /if\(selected&&showRowActions\)\{const actions=document\.createElement\("div"\);/);
 });
 
-test("the panel's top bar has Save Current Recipe, Load, Update, then the (...) overflow, in that order", () => {
+test("the panel's top bar has Save Current, Save Next, Load, Update, then the (...) overflow", () => {
   const start = app.indexOf('savedRecipesPanel.innerHTML = `');
   const body = app.slice(start, app.indexOf("`;", start));
   const saveIndex = body.indexOf('id="splitsSaveRecipe"');
+  const saveNextIndex = body.indexOf('id="splitsSaveNextRecipe"');
   const loadIndex = body.indexOf('id="splitsLoadRecipe"');
   const updateIndex = body.indexOf('id="splitsUpdateRecipe"');
   const overflowIndex = body.indexOf('id="splitsRecipeOverflow"');
-  assert.ok(saveIndex > -1 && loadIndex > saveIndex && updateIndex > loadIndex && overflowIndex > updateIndex,
-    "expected Save Current Recipe, then Load, then Update, then the overflow menu, in that order");
+  assert.ok(saveIndex > -1 && saveNextIndex > saveIndex && loadIndex > saveNextIndex && updateIndex > loadIndex && overflowIndex > updateIndex,
+    "expected Save Current, Save Next, Load, Update, then the overflow menu");
 });
 
 test("the overflow menu holds Rename, Duplicate, Favorite, and Delete - the same four actions that used to live per-row", () => {

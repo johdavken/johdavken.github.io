@@ -37,5 +37,5 @@ test("the printed recipe sheet's own heading keeps a full descriptive name - a d
   // Now names the page the sheet came from, so a plan carried to the line is
   // never mistaken for the recipe being run.
   assert.match(app, /title\.textContent = recipePageLabel\(\);/);
-  assert.match(app, /function recipePageLabel\(\)\{ return isNextRecipePage\(\) \? "Next Recipe" : "Current Recipe"; \}/);
+  assert.match(app, /function recipePageLabel\(destination=null\)\{ return \(destination \? destination==="next" : isNextRecipePage\(\)\) \? "Next Recipe" : "Current Recipe"; \}/);
 });

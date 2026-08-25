@@ -129,14 +129,8 @@
   let hopperRearrangement = null;
   const pumpOffAlertTimers = new Map();
   let pumpOffAudioContext = null;
-  // Recipe Setup's three expandable panels (Bulk edit, Rearrange Hoppers,
-  // Saved Recipes) are mutually exclusive - opening one closes the other
-  // two. hopperRearrangement above already persists across re-renders and
-  // carries real session data (baseline/undo/tapSource); these two are
-  // plain open/closed flags, but need the same module-level persistence so
-  // a render triggered by exiting rearrange (see the click handlers below)
-  // can correctly seed the panel operators actually meant to open next,
-  // instead of resetting every panel to closed.
+  // These flags persist the touch Edit/Recipes disclosures across re-renders.
+  // On desktop, splitsSavedRecipesOpen mirrors the Recipe Book page instead.
   let splitsBulkModeActive = false;
   let splitsSavedRecipesOpen = false;
   let splitsSavedRecipesSearch = "";
@@ -563,27 +557,29 @@
     if(!result.ok) workspaceConfigurationStatus(result.cache?.cachedAt ? "Refresh failed; showing cached shared configurations." : "Shared configurations are unavailable right now.");
   }
   function previewWorkspaceConfiguration(item){
-    const dialog=$("workspaceConfigurationLoadDialog"), details=$("workspaceConfigurationLoadDetails"), confirm=$("workspaceConfigurationConfirmLoad"); if(!dialog?.showModal) return;
+    const dialog=$("workspaceConfigurationLoadDialog"), details=$("workspaceConfigurationLoadDetails"), loadCurrent=$("workspaceConfigurationLoadCurrent"), confirm=$("workspaceConfigurationConfirmLoad"); if(!dialog?.showModal) return;
     const recipe=item.type==="recipe";
     const lineChange=recipe && Number(item.payload.line_type)!==Number(state.lineType)?` This recipe changes the line type from ${state.lineType} to ${item.payload.line_type}.`:"";
-    // The destination is never implied - a recipe loads into the page being
-    // viewed, so the dialog names it before anything is replaced.
-    const intoNext=recipe && isNextRecipePage();
-    const nextLineNote=intoNext && Number(item.payload.line_type)!==Number(state.lineType)
+    const nextLineNote=recipe && Number(item.payload.line_type)!==Number(state.lineType)
       ? ` The planned recipe follows this line's ${state.lineType}-layer structure, so any layer beyond that is not carried over.`
       : "";
     details.textContent=recipe
-      ? (intoNext
-        ? `${item.name}. This will replace the planned Next Recipe — layer percentages, hopper resin assignments, and hopper blend percentages.${nextLineNote} The current recipe being run is not changed, and neither are receiver hopper weights, tracking, pump-off state, or timeline state.`
-        : `${item.name}. This will change line type, hopper naming mode, layer percentages, hopper resin assignments, and hopper blend percentages.${lineChange} It will not change receiver hopper weights, tracking selections, pump-off state, offsets, timeline/runtime state, workspace, RT Sync identity, or appearance preferences.`)
+      ? `${item.name}. Choose where to load this recipe. Load into Current: This will change line type, hopper naming mode, percentages, and resin assignments.${lineChange} Load into Next replaces only the planned Next Recipe.${nextLineNote} Receiver weights, tracking, pump-off state, timeline/runtime state, workspace, RT Sync identity, and appearance preferences are not changed.`
       : `${item.name}. This will change receiver hopper weights only. It will not change line type, layer percentages, resin assignments, hopper blend percentages, tracking, pump-off state, timeline/runtime state, workspace, or RT Sync state.`;
-    confirm.textContent=recipe?(intoNext?"Load into Next":"Load Recipe"):"Load Weights";
-    dialog.addEventListener("close",()=>{ if(dialog.returnValue==="load") applyWorkspaceConfiguration(item); },{once:true}); dialog.showModal();
+    loadCurrent.hidden=!recipe;
+    confirm.textContent=recipe?"Load into Next":"Load Weights";
+    confirm.value=recipe?"load-next":"load";
+    dialog.addEventListener("close",()=>{
+      if(recipe && dialog.returnValue==="load-current") applyWorkspaceConfiguration(item,"current");
+      else if(recipe && dialog.returnValue==="load-next") applyWorkspaceConfiguration(item,"next");
+      else if(!recipe && dialog.returnValue==="load") applyWorkspaceConfiguration(item);
+    },{once:true});
+    dialog.showModal();
   }
-  function applyWorkspaceConfiguration(item){
+  function applyWorkspaceConfiguration(item,destination=null){
     if(item.type==="recipe"){
-      const result=applyRecipeToActivePage(item.payload,{kind:"load-workspace-configuration"});
-      workspaceConfigurationStatus(result.ok ? `Recipe loaded into ${recipePageLabel()}.` : (result.message || "This shared configuration could not be loaded."));
+      const result=applyRecipeToActivePage(item.payload,{kind:"load-workspace-configuration",destination});
+      workspaceConfigurationStatus(result.ok ? `Recipe loaded into ${recipePageLabel(destination)}.` : (result.message || "This shared configuration could not be loaded."));
       return;
     }
     const result=window.PolynWorkspaceConfigurationPayloads?.applyReceiverWeightProfile(state,item.payload);
@@ -592,9 +588,9 @@
     workspaceConfigurationStatus("Receiver Weight Profile loaded successfully.");
   }
 
-  /* One destination-aware entry point for every recipe-definition apply -
-   * Saved Recipes and Scan Recipe both land here, so "it goes to the page you
-   * are looking at" is implemented once rather than per action.
+  /* One destination-aware entry point for every recipe-definition apply.
+   * Recipe Book passes an explicit Current/Next choice; Scan Recipe omits it
+   * and continues to target the Current or Next page being viewed.
    *
    * Current keeps the established behaviour exactly: applyRecipePayload, then
    * render / validate / save / notify. Next writes the plan instead, and
@@ -604,11 +600,12 @@
    *
    * lotByResin (optional) is a resin-code -> scanned lot number map - present
    * only when a Heat Sheet scan produced one, absent (undefined) for Saved
-   * Recipes and every other source type. It is re-keyed and stored as a full
+   * Recipe Book and every other source type. It is re-keyed and stored as a full
    * replacement, on the same page the recipe itself lands on, matching the
    * recipe: whatever is now on this page is what its lot map describes. */
-  function applyRecipeToActivePage(payload,{kind,lotByResin}={}){
-    if(!isNextRecipePage()){
+  function applyRecipeToActivePage(payload,{kind,lotByResin,destination}={}){
+    const intoNext=destination ? destination==="next" : isNextRecipePage();
+    if(!intoNext){
       // applyRecipePayload writes state.lineType straight from the payload,
       // which would silently override the layer count this line is locked to
       // (see applyLayerCountLock). A scanned sheet is the likeliest source of
@@ -642,7 +639,7 @@
     return { ok:true };
   }
 
-  function recipePageLabel(){ return isNextRecipePage() ? "Next Recipe" : "Current Recipe"; }
+  function recipePageLabel(destination=null){ return (destination ? destination==="next" : isNextRecipePage()) ? "Next Recipe" : "Current Recipe"; }
   // "Would applying a scan overwrite something?" - asked of whichever page the
   // scan is about to land on, not always the live recipe.
   function hasNonEmptyRecipe(){
@@ -665,9 +662,10 @@
   function openWorkspaceConfigurationDialog(mode,item=null){
     const dialog=$("workspaceConfigurationSaveDialog"), title=$("workspaceConfigurationSaveTitle"), detail=$("workspaceConfigurationSaveDetails"), name=$("workspaceConfigurationName"), confirm=$("workspaceConfigurationSaveConfirm"); if(!dialog?.showModal) return;
     const type=item?.type || (mode==="save-profile" ? "receiver_weight_profile" : "recipe");
+    const savingNext=mode==="save-next-recipe";
     workspaceConfigurationPending={mode,item,type};
-    title.textContent=mode==="rename"?"Rename shared configuration":mode==="duplicate"?"Duplicate shared configuration":mode==="update"?"Update shared configuration":type==="recipe"?"Save Current Recipe":"Save Current Weights";
-    detail.textContent=type==="recipe"?"This will save line type, layer percentages, resin assignments, and hopper percentages. It will not save receiver weights, tracking, pump-off, timeline, or runtime state.":"This will save receiver hopper weights. It will not save recipe assignments, percentages, or runtime state.";
+    title.textContent=mode==="rename"?"Rename shared configuration":mode==="duplicate"?"Duplicate shared configuration":mode==="update"?"Update shared configuration":savingNext?"Save Next Recipe":type==="recipe"?"Save Current Recipe":"Save Current Weights";
+    detail.textContent=type==="recipe"?(savingNext?"This will save the planned Next Recipe — line type, layer percentages, resin assignments, and hopper percentages. It will not save receiver weights, tracking, pump-off, timeline, or runtime state.":"This will save line type, layer percentages, resin assignments, and hopper percentages. It will not save receiver weights, tracking, pump-off, timeline, or runtime state."):"This will save receiver hopper weights. It will not save recipe assignments, percentages, or runtime state.";
     name.value=item?.name || ""; confirm.textContent=mode==="rename"?"Rename":mode==="duplicate"?"Duplicate":mode==="update"?"Update":"Save";
     dialog.addEventListener("close",()=>{if(dialog.returnValue==="save") void submitWorkspaceConfigurationDialog();},{once:true}); dialog.showModal(); name.focus();
   }
@@ -676,13 +674,14 @@
     if(pending.mode==="rename") return mutateWorkspaceConfiguration("rename",pending.item,name);
     if(pending.mode==="duplicate") return mutateWorkspaceConfiguration("duplicate",pending.item,name);
     if(pending.mode==="update") return mutateWorkspaceConfiguration("update",pending.item);
-    const payload=pending.type==="recipe"?window.PolynWorkspaceConfigurationPayloads?.createRecipePayload(state):window.PolynWorkspaceConfigurationPayloads?.createReceiverWeightProfile(state);
+    const payload=pending.mode==="save-next-recipe"?window.PolynNextRecipe?.fromState(state):pending.type==="recipe"?window.PolynWorkspaceConfigurationPayloads?.createRecipePayload(state):window.PolynWorkspaceConfigurationPayloads?.createReceiverWeightProfile(state);
+    if(!payload){ workspaceConfigurationStatus("There is no Next Recipe to save."); return; }
     const result=await workspaceConfigurations?.create(workspaceConfigurationWorkspaceId,pending.type,name,payload);
-    if(result?.code==="duplicate_name") return resolveWorkspaceConfigurationDuplicate(pending.type,name,payload);
+    if(result?.code==="duplicate_name") return resolveWorkspaceConfigurationDuplicate(pending.type,name,payload,pending.mode);
     finishWorkspaceConfigurationMutation(result,"Configuration saved successfully.");
   }
-  function resolveWorkspaceConfigurationDuplicate(type,name,payload){
-    const dialog=$("workspaceConfigurationDuplicateDialog"); if(!dialog?.showModal) return; dialog.addEventListener("close",async()=>{if(dialog.returnValue==="choose") openWorkspaceConfigurationDialog(type==="recipe"?"save-recipe":"save-profile"); if(dialog.returnValue==="update"){const list=type==="recipe"?workspaceConfigurations.listRecipes(workspaceConfigurationWorkspaceId).items:workspaceConfigurations.listReceiverWeightProfiles(workspaceConfigurationWorkspaceId).items; const existing=list.find(item=>item.normalizedName===name.toLocaleLowerCase().replace(/\s+/g," ")); if(existing) finishWorkspaceConfigurationMutation(await workspaceConfigurations.update(workspaceConfigurationWorkspaceId,existing.id,payload),"Configuration updated successfully.");}},{once:true}); dialog.showModal();
+  function resolveWorkspaceConfigurationDuplicate(type,name,payload,saveMode=type==="recipe"?"save-recipe":"save-profile"){
+    const dialog=$("workspaceConfigurationDuplicateDialog"); if(!dialog?.showModal) return; dialog.addEventListener("close",async()=>{if(dialog.returnValue==="choose") openWorkspaceConfigurationDialog(saveMode); if(dialog.returnValue==="update"){const list=type==="recipe"?workspaceConfigurations.listRecipes(workspaceConfigurationWorkspaceId).items:workspaceConfigurations.listReceiverWeightProfiles(workspaceConfigurationWorkspaceId).items; const existing=list.find(item=>item.normalizedName===name.toLocaleLowerCase().replace(/\s+/g," ")); if(existing) finishWorkspaceConfigurationMutation(await workspaceConfigurations.update(workspaceConfigurationWorkspaceId,existing.id,payload),"Configuration updated successfully.");}},{once:true}); dialog.showModal();
   }
   async function mutateWorkspaceConfiguration(action,item,value){
     const service=workspaceConfigurations; if(!service) return;
@@ -3282,9 +3281,10 @@
      * (Timeline, readiness, run-down, production) keeps reading state.layers
      * directly and is unaffected by the selected page. */
 
-    let activeRecipePage = "current";           // "current" | "next"; not persisted - Recipe always opens on Current
+    let activeRecipePage = "current";           // "current" | "next" | "saved"; not persisted - Recipe always opens on Current
     let nextRecipeWorking = null;               // layers-shaped working copy of state.nextRecipe
 
+    function isSavedRecipesPage(){ return activeRecipePage === "saved"; }
     function isNextRecipePage(){ return activeRecipePage === "next"; }
 
     // The plan follows the line's own layer structure rather than carrying a
@@ -3517,6 +3517,10 @@
 
     function syncRecipePageUI(){
       document.body.dataset.recipePage = activeRecipePage;
+      const savedTab = $("recipePageTabSaved");
+      // Recipe Book belongs to the full matrix workspace used by tablets and
+      // desktops. Phones keep the compact Recipes action/sheet instead.
+      if (savedTab) savedTab.hidden = layoutModeQueries.compactRecipe.matches;
       document.querySelectorAll(".recipePageTab").forEach(tab=>{
         const selected = tab.dataset.recipePage === activeRecipePage;
         tab.classList.toggle("active", selected);
@@ -3525,17 +3529,34 @@
         tab.tabIndex = selected ? 0 : -1;
       });
       const panel = $("splitsArea");
-      if (panel) panel.setAttribute("aria-labelledby", isNextRecipePage() ? "recipePageTabNext" : "recipePageTabCurrent");
+      const labelledBy = isSavedRecipesPage()
+        ? "recipePageTabSaved"
+        : (isNextRecipePage() ? "recipePageTabNext" : "recipePageTabCurrent");
+      if (panel) panel.setAttribute("aria-labelledby", labelledBy);
+      const viewToggle = $("recipeViewToggle");
+      if (viewToggle) viewToggle.hidden = isSavedRecipesPage();
+      const headerControls = $("recipeHeaderControls");
+      if (headerControls) headerControls.hidden = isSavedRecipesPage();
       syncPlannedRecipeIndicator();
     }
 
     function setRecipePage(page){
-      const next = page === "next" ? "next" : "current";
+      const next = page === "next" ? "next" : page === "saved" ? "saved" : "current";
       if (next === activeRecipePage) return;
       // Leaving Next: fold the working plan back into durable state before the
       // grid stops pointing at it.
-      if (isNextRecipePage()) commitNextRecipeWorking();
+      if (activeRecipePage === "next") commitNextRecipeWorking();
+      if (next === "saved"){
+        splitsBulkModeActive = false;
+        if (hopperRearrangement?.active){
+          window.PolynHopperRearrangement.apply(recipeLayers(), hopperRearrangement.baseline);
+          hopperRearrangement = null;
+        }
+      }
       activeRecipePage = next;
+      // On desktop this opens the page-replacement panel. On Current/Next it
+      // guarantees the old below-grid disclosure cannot reappear.
+      splitsSavedRecipesOpen = next === "saved";
       syncRecipePageUI();
       renderSplitsArea();
       // Readiness and the Timeline always describe the operational recipe, so
@@ -3552,7 +3573,9 @@
           const step = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
           if (!step) return;
           event.preventDefault();
-          const target = tabs[(index + step + tabs.length) % tabs.length];
+          const availableTabs = tabs.filter(candidate=>!candidate.hidden);
+          const visibleIndex = availableTabs.indexOf(tab);
+          const target = availableTabs[(visibleIndex + step + availableTabs.length) % availableTabs.length];
           setRecipePage(target.dataset.recipePage);
           target.focus();
         });
@@ -3586,6 +3609,9 @@
       document.querySelectorAll("#recipeViewToggle [data-recipe-view]").forEach(button=>{
         const active = button.dataset.recipeView === splitsViewMode;
         button.classList.toggle("active", active);
+        button.classList.toggle("primary", active);
+        button.classList.toggle("actionRail", active);
+        button.classList.toggle("secondary", !active);
         button.setAttribute("aria-pressed", String(active));
       });
     }
@@ -3610,6 +3636,8 @@
       const columnSelectors = new Map();
       const rowSelectors = new Map();
       const compactMobileRecipe = layoutModeQueries.compactRecipe.matches;
+      const headerActions = $("recipeHeaderActions");
+      headerActions?.replaceChildren();
       // Summary/Edit is now the single mode axis on every surface: Edit *is*
       // bulk edit, so there is no second mode to be in anywhere.
       const viewMode = splitsViewMode;
@@ -3665,17 +3693,9 @@
 
       const modeBar = document.createElement("div");
       modeBar.className = "splitsBulkModeBar";
-      // Recipe Setup's own entry point into the shared-recipe list
-      // (see renderSplitsSavedRecipes) - Load is the action operators reach
-      // for most from here, so it leads the row rather than sitting after
-      // the editing tools.
-      // Saved recipes / Bulk edit / Rearrange are appended below - into the
-      // new desktop-only .recipeUtilityTabs strip on desktop, into
-      // mobilePrimaryRow on mobile - never into modeBar itself any more.
-      // modeBar now holds only the four immediate actions (Scan/Print/Load
-      // Next/Info), which is why its aria-expanded-based disclosure pattern
-      // stays intact below unchanged - only these three's presentation is
-      // becoming tab-like.
+      // Mobile keeps its existing Recipes disclosure entry point. Desktop
+      // uses the static Saved Recipes page tab beside Current and Next; this
+      // real button is therefore only mounted into the compact action row.
       const savedRecipesButton = document.createElement("button");
       savedRecipesButton.type = "button";
       savedRecipesButton.className = "secondary";
@@ -3690,10 +3710,7 @@
       if (compactMobileRecipe){
         rearrangeButton.setAttribute("aria-expanded", String(!!hopperRearrangement?.active));
       }else{
-        // Desktop-only: presented as a tab, not a disclosure button - see
-        // the .recipeUtilityTab assembly below for savedRecipesButton and
-        // modeButton's matching treatment (theirs also needs setSavedRecipesOpen/
-        // setBulkMode's re-applied state, so it happens there instead of here).
+        // Desktop presents Rearrange as a compact action inside Edit.
         rearrangeButton.classList.remove("secondary");
         rearrangeButton.classList.add("recipeUtilityTab");
         rearrangeButton.classList.toggle("active", !!hopperRearrangement?.active);
@@ -3846,13 +3863,8 @@
         loadCurrentButton.addEventListener("click", openLoadCurrentRecipeDialog);
         modeBar.appendChild(loadCurrentButton);
       }
-      // Print Recipe is appended last (after Load Next Recipe, which may or
-      // may not exist depending on Current/Next). This is the baseline
-      // placement - mobile keeps it here (Print Recipe is desktop-only via
-      // rearrangeDesktopOnly, so it just never renders there); desktop
-      // relocates both into .recipeUtilityTabs below, alongside Saved
-      // recipes/Bulk edit/Rearrange, leaving only Scan Recipe + the info
-      // icon in modeBar.
+      // Print Recipe is appended last in the mobile source row. Desktop
+      // moves it into the header action group beside Summary/Edit below.
       modeBar.appendChild(printButton);
 
       // On Next, Scan Recipe is promoted to a primary mobile action (see the
@@ -3986,11 +3998,12 @@
       savedRecipesPanel.innerHTML = `
         <div class="workspaceConfigurationSectionTitle">
           <div>
-            <strong>Saved Recipes</strong>
+            <strong>Recipe Book</strong>
             <small>Shared recipes for this RT Sync workspace.</small>
           </div>
           <div class="splitsSavedRecipesActions">
             <button id="splitsSaveRecipe" class="secondary" type="button">Save Current Recipe</button>
+            <button id="splitsSaveNextRecipe" class="secondary" type="button">Save Next Recipe</button>
             <button id="splitsLoadRecipe" class="primary" type="button" disabled>Load</button>
             <button id="splitsUpdateRecipe" class="secondary" type="button" disabled>Update</button>
             <details class="workspaceConfigurationOverflow overflow-disabled" id="splitsRecipeOverflow">
@@ -4008,6 +4021,10 @@
         <div id="splitsSavedRecipesList" class="workspaceConfigurationList"></div>
       `;
       savedRecipesPanel.querySelector("#splitsSaveRecipe").addEventListener("click", ()=>openWorkspaceConfigurationDialog("save-recipe"));
+      const saveNextRecipeButton=savedRecipesPanel.querySelector("#splitsSaveNextRecipe");
+      saveNextRecipeButton.disabled=!window.PolynNextRecipe?.isMeaningful(state.nextRecipe);
+      saveNextRecipeButton.title=saveNextRecipeButton.disabled?"Create a Next Recipe before saving it":"Save the planned Next Recipe to this workspace";
+      saveNextRecipeButton.addEventListener("click", ()=>openWorkspaceConfigurationDialog("save-next-recipe"));
       let mobileSavedRecipesSheet=null;
       if(compactMobileRecipe){
         mobileSavedRecipesSheet=document.createElement("dialog");
@@ -4065,9 +4082,6 @@
           return;
         }
         savedRecipesPanel.classList.toggle("hide", !open);
-        savedRecipesButton.textContent = open ? "Close recipes" : "Saved recipes";
-        savedRecipesButton.setAttribute("aria-selected", String(open));
-        savedRecipesButton.classList.toggle("active", open);
         splitsSavedRecipesOpen = !!open;
       }
       savedRecipesButton.addEventListener("click", ()=>{
@@ -4082,11 +4096,8 @@
           notifyActiveJobMutation({immediate:true,kind:"rearrange-hoppers"});
           return;
         }
-        // Desktop: the Edit panel sits above the grid and Saved Recipes
-        // below it, so they no longer occupy the same space and no longer
-        // have to exclude each other - only an in-progress rearrangement
-        // does, handled above. Compact mobile still swaps one sheet for the
-        // other and keeps the original behavior.
+        // This button is mounted only on compact mobile. Keep its original
+        // mutual exclusion with the inline Edit controls.
         if (turningOn && compactMobileRecipe) setBulkMode(false);
         setSavedRecipesOpen(turningOn);
       });
@@ -4096,7 +4107,6 @@
       // deliberately part of that same row: it reads as additional actions,
       // not as an isolated second toolbar that takes another 42px of screen.
       let mobilePrimaryRow = null;
-      let recipeUtilityTabs = null;
       if (compactMobileRecipe){
         mobilePrimaryRow = document.createElement("div");
         mobilePrimaryRow.className = "splitsMobilePrimaryRow";
@@ -4118,24 +4128,6 @@
         }
         mobilePrimaryRow.append(mobileMoreButton);
       }else{
-        // Desktop only: the bottom strip is now Saved recipes / Load Next /
-        // Print - the three things that act on the recipe as a whole. Bulk
-        // edit is gone as a concept (Edit view *is* bulk edit) and Rearrange
-        // moved into the Edit panel above the grid, beside the other
-        // selection-driven actions it belongs with. Saved recipes is the
-        // only remaining panel-opening tab, so the mutual exclusion that
-        // used to span three tabs now only has to hold between it and Edit
-        // view (see setSavedRecipesOpen / setRecipeViewMode).
-        recipeUtilityTabs = document.createElement("div");
-        recipeUtilityTabs.className = "recipeUtilityTabs";
-        recipeUtilityTabs.setAttribute("role", "tablist");
-        recipeUtilityTabs.setAttribute("aria-label", "Recipe utilities");
-        savedRecipesButton.classList.remove("secondary");
-        savedRecipesButton.classList.add("recipeUtilityTab");
-        savedRecipesButton.setAttribute("role", "tab");
-        savedRecipesButton.setAttribute("aria-controls", savedRecipesPanel.id);
-        recipeUtilityTabs.append(savedRecipesButton);
-
         // Rearrange keeps its real element (and therefore every handler
         // wired to it above); only its home changes - into the Edit panel's
         // secondary row, next to Empty cells / Reset Recipe.
@@ -4145,26 +4137,16 @@
         rearrangeButton.removeAttribute("aria-selected");
         toolbar.querySelector(".splitsEditRowSecondary")?.append(rearrangeButton);
 
-        // Load Next Recipe / Print Recipe attach to the panel the same way
-        // Saved recipes does - same strip, same divider, same tab shape
-        // (.recipeUtilityTab, plus .recipeActionTab only for the icon+label
-        // layout the plain-text tab doesn't need) - they just run an action
-        // immediately instead of opening a panel, so they get no
-        // role="tab"/aria-selected/aria-controls and stay outside the
-        // tab-switching mutual exclusion above. .append() below moves each
-        // node here from modeBar (its original parent), rather than
-        // requiring modeBar's own appendChild calls above to change.
-        loadNextButton?.classList.remove("secondary");
-        loadNextButton?.classList.add("recipeUtilityTab", "recipeActionTab");
-        // Load Current Recipe takes the same slot on the Next page that Load
-        // Next Recipe takes on Current - the two never coexist.
-        loadCurrentButton?.classList.remove("secondary");
-        loadCurrentButton?.classList.add("recipeUtilityTab", "recipeActionTab");
-        printButton.classList.remove("secondary", "recipeActionTertiary");
-        printButton.classList.add("recipeUtilityTab", "recipeActionTab");
-        if (loadNextButton) recipeUtilityTabs.append(loadNextButton);
-        if (loadCurrentButton) recipeUtilityTabs.append(loadCurrentButton);
-        recipeUtilityTabs.append(printButton);
+        // Current/Next and Print are ordinary app buttons in the header.
+        // The left border on recipeHeaderActions separates page actions from
+        // the Summary/Edit view choice without creating another toolbar row.
+        loadNextButton?.classList.add("recipeHeaderAction");
+        loadCurrentButton?.classList.add("recipeHeaderAction");
+        printButton.classList.remove("recipeActionTertiary");
+        printButton.classList.add("secondary", "recipeHeaderAction");
+        if (loadNextButton) headerActions?.append(loadNextButton);
+        if (loadCurrentButton) headerActions?.append(loadCurrentButton);
+        headerActions?.append(printButton);
       }
 
       // Percentage problems are not printed here. They are conditions of the
@@ -4173,7 +4155,6 @@
       // resolve on their own - an inline message that appears and disappears
       // moves the whole working surface underneath the operator's hands.
       if (!compactMobileRecipe){
-        area.append(recipeUtilityTabs);
         // Summary and Edit each get one panel in this slot, never both -
         // trackingView and bulkMode are mutually exclusive by construction.
         if (trackingView) area.append(trackingBar);
@@ -4183,16 +4164,8 @@
       // editing controls.
       area.append(toolbar);
       area.append(savedRecipesPanel);
-      // Scan Recipe / Print Recipe / Load Next Recipe / Info: immediate
-      // actions, not panel-opening tabs, so they get their own compact row
-      // below the utility tabs/panel instead of living inside
-      // .recipeUtilityTabs. modeBar keeps its original flat divided-segment
-      // look (.splitsBulkModeBar) - it now just holds four items instead of
-      // seven. order:2 (see styles.css) keeps it last regardless of the
-      // rearrange bar below being appended after it in the DOM.
-      if (!compactMobileRecipe){
-        area.append(modeBar);
-      }
+      // Desktop has no lower recipe-action row: Load and Print moved to the
+      // header, and Scan remains a mobile capture workflow.
 
       if(hopperRearrangement?.active&&!compactMobileRecipe){
         const bar=document.createElement("div");
@@ -5200,13 +5173,19 @@
           <div class="calcLeft">
             <div class="calcName mono" data-resin-name></div>
           </div>
-          ${lot ? `<div class="calcLot mono" data-resin-lot></div>` : ""}
+          <div class="productionSummaryLotLane${lot ? " hasLot" : ""}">
+            ${lot ? `<div class="calcLot mono" data-resin-lot></div>` : `<span class="productionSummaryLotEmpty">No scanned lot</span>`}
+          </div>
           <div class="mono calcValue">${fmtLb(r.lbs)} lb</div>
         `;
         row.querySelector("[data-resin-name]").textContent = r.displayName;
         if (lot) row.querySelector("[data-resin-lot]").textContent = lot;
         out.appendChild(row);
       });
+      const issuedTotal = document.createElement("div");
+      issuedTotal.className = "productionSummaryIssuedTotal";
+      issuedTotal.innerHTML = `<strong>Total issued</strong><span class="mono">${fmtLb(total)} lb</span>`;
+      out.appendChild(issuedTotal);
     }
 
     function updateLayerMetaDisplays(){
@@ -6224,6 +6203,13 @@
       renderedIsDesktop = desktop;
       renderedCompactRecipe = compactRecipe;
       if (!changed || !rerender) return changed;
+      // Recipe Book is a full-matrix page. Crossing into the compact phone
+      // recipe returns to Current; tablet and desktop keep the page open.
+      if (compactRecipe && isSavedRecipesPage()){
+        activeRecipePage = "current";
+        splitsSavedRecipesOpen = false;
+      }
+      syncRecipePageUI();
       // Rebuild exactly the surfaces whose markup depends on the boundary
       // that just moved. Both renderers read live state, so this restores
       // the correct structure without touching any stored values.

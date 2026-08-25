@@ -5,94 +5,54 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 
 const app = fs.readFileSync("app.js", "utf8");
+const html = fs.readFileSync("index.html", "utf8");
 const styles = fs.readFileSync("styles.css", "utf8");
 
-// Recipe Actions: Scan Recipe (primary), Load Next Recipe (secondary) and
-// Print Recipe (tertiary) as three individually-shaped buttons at
-// descending visual weight - replacing the old "option A" unified bordered
-// strip with flat divided segments, which read as generic, equally-
-// weighted footer controls rather than an intentional recipe workflow
-// toolbar.
-
-function functionBodyLikeRule(selector){
-  const start = styles.indexOf(`\n${selector}{`);
-  assert.notEqual(start, -1, `expected a rule for ${selector}`);
-  return styles.slice(start, styles.indexOf("}", start) + 1);
-}
-
-test(".splitsBulkModeBar is no longer a single bordered/backed container - each button now carries its own chrome, so the row reads as part of the section's normal rhythm instead of a boxed-off footer widget", () => {
-  const rule = functionBodyLikeRule(".splitsBulkModeBar");
-  assert.doesNotMatch(rule, /border:/);
-  assert.doesNotMatch(rule, /background:/);
-  assert.match(rule, /display: flex;/);
-  assert.match(rule, /flex-wrap: wrap;/);
-  assert.match(rule, /gap: 8px;/);
+test("desktop recipe actions share the header with Summary and Edit", () => {
+  const row = html.slice(html.indexOf('<div class="recipeHeaderRow">'), html.indexOf('id="splitsArea"'));
+  assert.match(row, /id="recipeViewToggle"[\s\S]*id="recipeHeaderActions" role="group" aria-label="Recipe actions"/);
+  assert.match(app, /if \(loadNextButton\) headerActions\?\.append\(loadNextButton\);/);
+  assert.match(app, /if \(loadCurrentButton\) headerActions\?\.append\(loadCurrentButton\);/);
+  assert.match(app, /headerActions\?\.append\(printButton\);/);
+  assert.doesNotMatch(app, /area\.append\(recipeUtilityTabs\)/);
+  assert.doesNotMatch(app, /area\.append\(modeBar\)/);
 });
 
-test("Scan Recipe (primary) reuses the app's existing button.primary gradient tokens, not a bespoke one-off treatment", () => {
-  const ruleStart = styles.indexOf(".splitsBulkModeBar .splitsScanShortcut > summary{");
-  assert.notEqual(ruleStart, -1);
-  const rule = styles.slice(ruleStart, styles.indexOf("}", ruleStart) + 1);
-  assert.match(rule, /background: linear-gradient\(180deg, var\(--btn-primary-a\), var\(--btn-primary-b\)\);/);
-  assert.match(rule, /border: 1px solid var\(--btn-border\);/);
-  assert.match(rule, /font-weight: 800;/);
+test("a divider separates view selection from recipe actions", () => {
+  assert.match(styles, /\.recipeHeaderActions\{[\s\S]*?padding-left: 10px;[\s\S]*?border-left: 1px solid var\(--row-border-2\);/);
 });
 
-test("Load Next Recipe (secondary) is the app's ordinary secondary button - bordered, filled, one step down from Scan Recipe", () => {
-  const rule = functionBodyLikeRule(".splitsBulkModeBar button.secondary");
-  assert.match(rule, /border: 1px solid var\(--btn-secondary-border\);/);
-  assert.match(rule, /border-radius: var\(--control-radius\);/);
-  assert.match(rule, /background: var\(--btn-secondary-bg\);/);
-  assert.doesNotMatch(rule, /border-right:/, "no divider-segment styling left over from the old unified strip");
+test("Summary and Edit switch between the app's primary and secondary button families", () => {
+  assert.match(html, /class="primary actionRail active" data-recipe-view="summary"/);
+  assert.match(html, /class="secondary" data-recipe-view="edit"/);
+  assert.match(app, /button\.classList\.toggle\("primary", active\);/);
+  assert.match(app, /button\.classList\.toggle\("actionRail", active\);/);
+  assert.match(app, /button\.classList\.toggle\("secondary", !active\);/);
 });
 
-test("Print Recipe (tertiary) is a quiet ghost button - transparent and muted until hovered, one step down from Load Next Recipe", () => {
-  const rule = functionBodyLikeRule(".splitsBulkModeBar button.recipeActionTertiary");
-  assert.match(rule, /border-color: transparent;/);
-  assert.match(rule, /background: transparent;/);
-  assert.match(rule, /color: var\(--muted\);/);
-  const hoverRule = functionBodyLikeRule(".splitsBulkModeBar button.recipeActionTertiary:hover:not(:disabled)");
-  assert.match(hoverRule, /border-color: var\(--btn-secondary-border\);/);
-  assert.match(hoverRule, /background: var\(--btn-secondary-bg\);/);
+test("Load Current, Load Next, and Print use ordinary secondary button styling", () => {
+  assert.match(app, /loadNextButton\.className = "secondary";/);
+  assert.match(app, /loadCurrentButton\.className = "secondary";/);
+  assert.match(app, /printButton\.classList\.add\("secondary", "recipeHeaderAction"\);/);
+  assert.doesNotMatch(app, /loadNextButton\?\.classList\.add\("recipeUtilityTab"/);
+  assert.doesNotMatch(app, /loadCurrentButton\?\.classList\.add\("recipeUtilityTab"/);
 });
 
-test("printButton actually carries the tertiary class, alongside its existing secondary/rearrangeDesktopOnly classes - loadNextButton and scanRecipeButton do not, keeping the three-tier hierarchy distinct", () => {
-  assert.match(app, /printButton\.className="secondary rearrangeDesktopOnly recipeActionTertiary";/);
-  assert.doesNotMatch(app, /loadNextButton\.className = "secondary recipeActionTertiary"/);
-  assert.doesNotMatch(app, /scanRecipeButton\.className = "splitsScanShortcut rearrangeDesktopOnly recipeActionTertiary"/);
-});
-
-test("the row's append order puts Scan Recipe first, Load Next Recipe second (when it exists), Print Recipe last - left to right in descending priority", () => {
-  const modeBarStart = app.indexOf('modeBar.className = "splitsBulkModeBar"');
-  const modeBar = app.slice(modeBarStart, app.indexOf("const toolbar = document.createElement", modeBarStart));
-  const scanAppend = modeBar.indexOf("modeBar.appendChild(scanRecipeButton)");
-  const loadNextAppend = modeBar.indexOf("modeBar.appendChild(loadNextButton)");
-  const printAppend = modeBar.indexOf("modeBar.appendChild(printButton)");
-  assert.ok(scanAppend > -1 && loadNextAppend > scanAppend && printAppend > loadNextAppend,
-    "expected append order: scanRecipeButton, then loadNextButton, then printButton");
-});
-
-test("the container does NOT use overflow:hidden to clip corners - that would also clip Scan Recipe's popup, which intentionally escapes this row via position:absolute to open upward", () => {
-  const rule = functionBodyLikeRule(".splitsBulkModeBar");
-  assert.doesNotMatch(rule, /overflow:\s*hidden/);
-});
-
-test("icons (Scan/Print/Load Next/Info) reuse the app's existing stroke-line icon convention - fill:none, stroke:currentColor - rather than a filled/colored one-off style", () => {
-  const rule = functionBodyLikeRule(".recipeActionIcon");
+test("header actions retain the app's stroke-line icons", () => {
+  const start = styles.indexOf(".recipeActionIcon{");
+  const rule = styles.slice(start, styles.indexOf("}", start) + 1);
   assert.match(rule, /fill: none;/);
   assert.match(rule, /stroke: currentColor;/);
   assert.match(rule, /stroke-linecap: round;/);
   assert.match(rule, /stroke-linejoin: round;/);
 });
 
-test("this styling is unconditional (not gated behind a desktop-only media query) - it's simply never rendered on mobile, since modeBar/.splitsBulkModeBar only gets appended to the DOM when !compactMobileRecipe", () => {
-  const ruleStart = styles.indexOf("\n.splitsBulkModeBar{");
-  const mediaStart = styles.indexOf("@media (max-width: 700px){");
-  assert.ok(ruleStart > -1 && (mediaStart === -1 || ruleStart < mediaStart), "the toolbar rule must be a base rule, not inside the mobile media query");
-  assert.match(app, /if \(!compactMobileRecipe\)\{\s*\n\s*area\.append\(modeBar\);\s*\n\s*\}/);
-});
-
-test("the icons don't fit the mobile primary row's narrower slots (verified live: Scan Recipe's label clipped once the icon took part of a ~65px-wide slot), so they're hidden there rather than shrunk", () => {
-  const narrowBlock = styles.slice(styles.indexOf("@media (max-width: 700px){"));
-  assert.match(narrowBlock, /\.splitsMobilePrimaryRow \.recipeActionIcon\{ display:none; \}/);
+test("phones retain their compact toolbar while tablets receive the full header actions", () => {
+  assert.match(styles, /@media \(max-width: 700px\)\{\s*\.recipeHeaderActions\{ display: none; \}/);
+  const touchLayoutStart = styles.indexOf("@media (max-width: 900px), (min-width: 901px) and (pointer: coarse){", styles.indexOf(".recipeHeaderActions{"));
+  const phoneLayoutStart = styles.indexOf("@media (max-width: 700px){", touchLayoutStart);
+  assert.ok(touchLayoutStart > -1 && phoneLayoutStart > touchLayoutStart);
+  assert.doesNotMatch(styles.slice(touchLayoutStart, phoneLayoutStart), /\.recipeHeaderActions\{ display: none; \}/);
+  assert.match(app, /mobilePrimaryRow\.append\(savedRecipesButton, rearrangeButton\);/);
+  assert.match(app, /mobilePrimaryRow\.append\(mobileMoreButton\);/);
 });

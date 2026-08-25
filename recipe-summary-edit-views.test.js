@@ -41,11 +41,11 @@ const splitsArea = functionBody("renderSplitsArea");
  *   The toggle itself
  * -------------------------------------------------------------------- */
 
-test("the view toggle sits in a header row beside the Current/Next page tabs, matching the Weights control", () => {
+test("the view toggle sits in a header row beside the Current/Next/Recipe Book tabs, matching the Weights control", () => {
   assert.match(html, /<div class="recipeHeaderRow">/);
   assert.match(html, /<div class="recipeViewToggle" id="recipeViewToggle" role="group" aria-label="Recipe view">/);
-  assert.match(html, /<button type="button" class="active" data-recipe-view="summary" aria-pressed="true">Summary<\/button>/);
-  assert.match(html, /<button type="button" data-recipe-view="edit" aria-pressed="false">Edit<\/button>/);
+  assert.match(html, /<button type="button" class="primary actionRail active" data-recipe-view="summary" aria-pressed="true">Summary<\/button>/);
+  assert.match(html, /<button type="button" class="secondary" data-recipe-view="edit" aria-pressed="false">Edit<\/button>/);
   // Page tabs stay inside the same row so the two axes read as one header.
   const row = html.slice(html.indexOf('<div class="recipeHeaderRow">'), html.indexOf('id="splitsArea"'));
   assert.match(row, /class="recipePageTabs"/);
@@ -220,15 +220,21 @@ test("Empty cells empties only the selected hoppers and recomputes each affected
  *   The bottom strip
  * -------------------------------------------------------------------- */
 
-test("the bottom strip keeps Saved recipes / Load Next / Print, with Bulk edit gone and Rearrange relocated into the Edit panel", () => {
-  assert.match(splitsArea, /recipeUtilityTabs\.append\(savedRecipesButton\);/);
+test("Load Current/Next and Print move beside the view buttons; Recipe Book remains beside Next", () => {
+  assert.match(html, /data-recipe-page="next">Next[\s\S]*?data-recipe-page="saved" hidden>Recipe Book<\/button>/);
+  assert.doesNotMatch(splitsArea, /recipeUtilityTabs\.append\(savedRecipesButton\);/);
   assert.match(splitsArea, /toolbar\.querySelector\("\.splitsEditRowSecondary"\)\?\.append\(rearrangeButton\);/);
-  assert.match(splitsArea, /if \(loadNextButton\) recipeUtilityTabs\.append\(loadNextButton\);/);
-  assert.match(splitsArea, /recipeUtilityTabs\.append\(printButton\);/);
+  assert.match(html, /class="recipeHeaderActions" id="recipeHeaderActions" role="group" aria-label="Recipe actions"/);
+  assert.match(splitsArea, /if \(loadNextButton\) headerActions\?\.append\(loadNextButton\);/);
+  assert.match(splitsArea, /if \(loadCurrentButton\) headerActions\?\.append\(loadCurrentButton\);/);
+  assert.match(splitsArea, /headerActions\?\.append\(printButton\);/);
+  assert.doesNotMatch(splitsArea, /area\.append\(recipeUtilityTabs\)/);
 });
 
-test("Edit view and Saved Recipes no longer exclude each other on desktop - they occupy different halves of the panel", () => {
-  const start = splitsArea.indexOf('savedRecipesButton.addEventListener("click", ()=>{');
-  const body = splitsArea.slice(start, splitsArea.indexOf("      });", start));
-  assert.match(body, /if \(turningOn && compactMobileRecipe\) setBulkMode\(false\);/);
+test("Recipe Book is a page replacement, so Edit controls and the matrix cannot remain visible behind it", () => {
+  const setter = functionBody("setRecipePage");
+  assert.match(setter, /if \(next === "saved"\)\{\s*splitsBulkModeActive = false;/);
+  assert.match(styles, /body\[data-recipe-page="saved"\] #splitsArea > :not\(\.splitsSavedRecipesPanel\)\{\s*display: none!important;/);
+  const sync = functionBody("syncRecipePageUI");
+  assert.match(sync, /viewToggle\.hidden = isSavedRecipesPage\(\);/);
 });

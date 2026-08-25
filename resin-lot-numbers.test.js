@@ -131,15 +131,14 @@ test("restoring a payload re-normalizes both maps through rekeyLotMap - a sessio
  *   Production Summary
  * ============================================================ */
 
-test("a scanned lot renders in the row; a resin without one renders with no lot element at all - no placeholder", () => {
+test("a scanned lot renders in the dedicated lane; a resin without one gets the desktop-only empty-lane label", () => {
   const body = functionBody("renderResinCalculator");
   assert.match(body, /const lot = state\.resinLots\?\.\[keyName\(r\.displayName\)\] \|\| "";/);
-  assert.match(body, /\$\{lot \? `<div class="calcLot mono" data-resin-lot><\/div>` : ""\}/);
+  assert.match(body, /productionSummaryLotLane\$\{lot \? " hasLot" : ""\}/);
+  assert.match(body, /\$\{lot \? `<div class="calcLot mono" data-resin-lot><\/div>` : `<span class="productionSummaryLotEmpty">No scanned lot<\/span>`\}/);
   assert.match(body, /if \(lot\) row\.querySelector\("\[data-resin-lot\]"\)\.textContent = lot;/);
-  // No placeholder text anywhere in this function.
-  for (const placeholder of ["Lot: —", "Unknown", "N/A", "Not scanned"]) {
-    assert.doesNotMatch(body, new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
-  }
+  assert.match(styles, /\.productionSummaryLotEmpty,\s*\.productionSummaryIssuedTotal\{display:none\}/);
+  assert.match(styles, /@media \(min-width:701px\)\{[\s\S]*?\.productionSummaryLotEmpty\{[\s\S]*?display:block;/);
 });
 
 test("Production Summary always describes Current, never Next - the aggregation loop itself is untouched", () => {

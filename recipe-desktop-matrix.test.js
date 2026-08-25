@@ -72,23 +72,26 @@ test("Saved recipes/Bulk edit/Rearrange panel content is 15% smaller on desktop,
   assert.doesNotMatch(shrinkBlock, /recipeUtilityTab/);
 });
 
-test("Load Next Recipe and Print Recipe physically relocate into .recipeUtilityTabs, desktop only, attaching to the panel the same way Saved recipes/Bulk edit/Rearrange do", () => {
+test("Load Current/Next and Print physically relocate into the desktop header without gaining tab semantics", () => {
   const appJsPath = require.resolve("./app.js");
   const app = fs.readFileSync(appJsPath, "utf8");
-  assert.match(app, /loadNextButton\?\.classList\.remove\("secondary"\);\s*\n\s*loadNextButton\?\.classList\.add\("recipeUtilityTab", "recipeActionTab"\);/);
-  assert.match(app, /printButton\.classList\.remove\("secondary", "recipeActionTertiary"\);\s*\n\s*printButton\.classList\.add\("recipeUtilityTab", "recipeActionTab"\);/);
+  assert.match(app, /loadNextButton\?\.classList\.add\("recipeHeaderAction"\);/);
+  assert.match(app, /printButton\.classList\.remove\("recipeActionTertiary"\);\s*\n\s*printButton\.classList\.add\("secondary", "recipeHeaderAction"\);/);
   // This must live inside the desktop-only (!compactMobileRecipe) branch,
-  // right after the real tabs are assembled - not applied unconditionally,
+  // not be applied unconditionally,
   // since loadNextButton is reused as-is (still in modeBar) on mobile.
-  const elseBranchStart = app.indexOf('recipeUtilityTabs.append(savedRecipesButton);');
+  const elseBranchStart = app.indexOf('// Current/Next and Print are ordinary app buttons in the header.');
   const elseBranchEnd = app.indexOf("\n      }\n\n      // Percentage problems", elseBranchStart);
+  assert.notEqual(elseBranchStart, -1);
   assert.notEqual(elseBranchEnd, -1);
   const elseBranch = app.slice(elseBranchStart, elseBranchEnd);
   // .append() moves each node here from modeBar (its original parent) -
   // no separate removal call needed.
-  assert.match(elseBranch, /if \(loadNextButton\) recipeUtilityTabs\.append\(loadNextButton\);/);
-  assert.match(elseBranch, /recipeUtilityTabs\.append\(printButton\);/);
-  assert.doesNotMatch(elseBranch, /setAttribute\("role", "tab"\)/, "Load Next/Print must not gain tab semantics - only savedRecipesButton/modeButton (above this addition) do");
+  assert.match(elseBranch, /if \(loadNextButton\) headerActions\?\.append\(loadNextButton\);/);
+  assert.match(elseBranch, /if \(loadCurrentButton\) headerActions\?\.append\(loadCurrentButton\);/);
+  assert.match(elseBranch, /headerActions\?\.append\(printButton\);/);
+  assert.doesNotMatch(elseBranch, /savedRecipesButton/);
+  assert.doesNotMatch(elseBranch, /setAttribute\("role", "tab"\)/, "the lower strip contains actions, not page tabs");
 });
 
 test(".recipeActionTab is a lean modifier (icon+label flex layout only) combined with .recipeUtilityTab, which supplies the actual tab shape - not a standalone duplicate of it", () => {

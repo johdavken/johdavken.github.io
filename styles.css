@@ -2419,11 +2419,18 @@ details[open] > summary .chevSatellite{
   flex-wrap: wrap;
 }
 .recipeHeaderRow > .recipePageTabs{ align-self: end; flex: 0 0 auto; }
+.recipeHeaderControls{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 5px;
+  flex: 0 0 auto;
+}
 .recipeViewToggle{
   display: flex;
   align-items: center;
   gap: 6px;
-  margin: 0 0 5px;
+  margin: 0;
   flex: 0 0 auto;
 }
 .recipeViewToggle > span{
@@ -2434,24 +2441,32 @@ details[open] > summary .chevSatellite{
   text-transform: uppercase;
 }
 .recipeViewToggle button{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-height: 28px;
-  padding: 4px 12px;
-  border: 1px solid var(--btn-secondary-border);
-  border-radius: var(--control-radius);
-  background: var(--btn-secondary-bg);
-  color: var(--btn-text);
   font-size: var(--font-small);
-  font-weight: 750;
-  box-shadow: none;
+  line-height: 1.2;
 }
-.recipeViewToggle button:hover{ color: var(--title); background: color-mix(in srgb, var(--title) 10%, var(--btn-secondary-bg)); }
 .recipeViewToggle button.active{
-  border-color: var(--focus-border);
-  background: var(--focus-ring);
-  color: var(--title);
   font-weight: 850;
 }
 .recipeViewToggle button:focus-visible{ outline: 2px solid var(--focus-border); outline-offset: 2px; }
+.recipeHeaderActions{
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-left: 10px;
+  border-left: 1px solid var(--row-border-2);
+}
+.recipeHeaderAction{
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 28px;
+  font-size: var(--font-small);
+  line-height: 1.2;
+}
 .recipePageTabs{
   display: flex;
   align-self: start;
@@ -2513,6 +2528,25 @@ details[open] > summary .chevSatellite{
   vertical-align: middle;
 }
 .recipePageTabDot[hidden]{ display: none; }
+.recipePageTab[hidden],.recipeViewToggle[hidden],.recipeHeaderControls[hidden]{ display:none!important; }
+
+/* Recipe Book replaces the matrix on every full recipe workspace: desktop
+   and tablet. Phones (<=700px) retain their existing Recipes sheet. */
+@media (min-width: 701px){
+  body[data-recipe-page="saved"] #splitsArea > :not(.splitsSavedRecipesPanel){
+    display: none!important;
+  }
+  body[data-recipe-page="saved"] #splitsArea > .splitsSavedRecipesPanel{
+    display: block;
+    order: 0;
+    width: min(100%, var(--recipe-five-layer-rail, 1062px));
+    min-height: 540px;
+    margin: 0;
+  }
+  body[data-recipe-page="saved"] #splitsArea > .splitsSavedRecipesPanel .workspaceConfigurationList{
+    max-height: 430px;
+  }
+}
 
 /* The plan is a recipe definition only: it has no tracking, no pump-off and
    no receiver weights, so the controls for those are not offered on it. */
@@ -2551,6 +2585,7 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     box-shadow: 0 1px 0 0 var(--panel), inset 0 3px 0 var(--focus-border);
   }
 }
+
 .bulk-editing .splitMatrixCell .resinNameInput:disabled,.bulk-editing .splitMatrixCell .splitInput:disabled{opacity:.52;color:var(--muted);cursor:default}
 .splitMatrixCell .resinNameInput{
   height:22px;
@@ -3113,6 +3148,7 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
   .splitMatrixCell.empty:hover .splitTrackButton,.splitMatrixCell.empty:focus-within .splitTrackButton{opacity:1}
 }
 @media (max-width: 700px){
+  .recipeHeaderActions{ display: none; }
   .workspaceRecoveryMerge{ grid-template-columns: 1fr; align-items: stretch; }
   /* Saved Recipes header actions ("icon-first compact bar", chosen from the
      mockup round): Save/Load/Update collapse to small round icon buttons
@@ -4755,6 +4791,130 @@ body:is([data-theme="industrial-slate-dark"],[data-theme="gruvbox-dark"]) .resul
   text-align:center;
   color:var(--muted);
   font-size:var(--font-small);
+}
+.productionSummaryLotLane{display:contents}
+.productionSummaryLotEmpty,
+.productionSummaryIssuedTotal{display:none}
+/* Tablet and desktop give scanned lot provenance a dedicated center lane.
+   Resin and pounds remain fixed reading anchors, unusually long lots
+   truncate inside the lane, and rows without a Heat Sheet explicitly
+   identify that state. Phones retain the compact material-row geometry. */
+@media (min-width:701px){
+  #productionSummaryBlock .grid2{gap:10px}
+  .productionSummaryInputField{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    grid-template-rows:auto auto;
+    gap:3px 10px;
+    min-width:0;
+    padding:9px 11px;
+    border:1px solid var(--row-border-2);
+    border-radius:var(--control-radius);
+    background:var(--row-bg-2);
+    transition:border-color .12s ease,box-shadow .12s ease;
+  }
+  .productionSummaryInputField:focus-within{
+    border-color:var(--focus-border);
+    box-shadow:0 0 0 3px var(--focus-ring);
+  }
+  .productionSummaryInputField label{
+    grid-column:1 / -1;
+    grid-row:1;
+    margin:0;
+    color:var(--muted);
+    font-size:var(--font-tiny);
+    font-weight:900;
+    letter-spacing:.08em;
+    line-height:1.15;
+    text-transform:uppercase;
+  }
+  .productionSummaryInputField .productionSummaryLabelUnit{display:none}
+  .productionSummaryInputField::after{
+    content:"lb";
+    grid-column:2;
+    grid-row:2;
+    align-self:end;
+    color:var(--muted);
+    font-size:var(--font-small);
+    line-height:1.15;
+  }
+  .productionSummaryInputField input:not([type="checkbox"]):not([type="radio"]){
+    grid-column:1;
+    grid-row:2;
+    width:100%;
+    min-width:0;
+    min-height:0;
+    padding:0;
+    border:0;
+    border-radius:0;
+    background:transparent;
+    color:var(--title);
+    font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+    font-size:19px;
+    font-weight:950;
+    line-height:1.15;
+    box-shadow:none;
+  }
+  .productionSummaryInputField input:not([type="checkbox"]):not([type="radio"]):focus{
+    border:0;
+    box-shadow:none;
+  }
+  .productionSummaryMaterialRow{
+    display:grid;
+    /* Every material is its own grid, so max-content here made each row's
+       pound value choose a different third-column width. A fixed terminal
+       column keeps both lot-lane dividers vertically aligned. */
+    grid-template-columns:minmax(110px,.75fr) minmax(0,1.45fr) 128px;
+    align-items:stretch;
+    min-height:44px;
+    padding:0;
+    overflow:hidden;
+  }
+  .productionSummaryMaterialRow .calcLeft{grid-column:1;align-self:center;padding:9px 11px}
+  .productionSummaryLotLane{
+    grid-column:2;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-width:0;
+    padding:7px 12px;
+    border-inline:1px solid var(--row-border-2);
+    background:transparent;
+  }
+  .productionSummaryLotLane.hasLot{
+    background:color-mix(in srgb,var(--workflow-resin-totals) 6%,var(--row-bg));
+  }
+  .productionSummaryMaterialRow .calcLot{width:100%;text-align:center}
+  .productionSummaryMaterialRow .calcLot::before{
+    content:"LOT ";
+    color:color-mix(in srgb,var(--muted) 72%,transparent);
+    font-size:.78em;
+    font-weight:900;
+    letter-spacing:.08em;
+  }
+  .productionSummaryLotEmpty{
+    display:block;
+    overflow:hidden;
+    color:color-mix(in srgb,var(--muted) 72%,transparent);
+    font-size:var(--font-small);
+    font-style:italic;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .productionSummaryMaterialRow .calcValue{grid-column:3;align-self:center;padding:9px 11px;text-align:right}
+  .productionSummaryIssuedTotal{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    min-height:38px;
+    padding:8px 11px;
+    border:1px solid color-mix(in srgb,var(--workflow-resin-totals) 36%,var(--row-border-2));
+    border-radius:var(--control-radius);
+    background:color-mix(in srgb,var(--workflow-resin-totals) 12%,var(--row-bg));
+  }
+  .productionSummaryIssuedTotal strong{color:var(--title);font-weight:900}
+  .productionSummaryIssuedTotal span{color:var(--text);font-weight:950;white-space:nowrap}
 }
 @media (max-width:600px){
   .productionSummaryStatus{padding:8px 10px}
@@ -8336,7 +8496,8 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
     min-height:32px;
     padding:4px 12px 3px;
   }
-  #splitsBlock .recipeViewToggle{ gap:5px; margin-bottom:2px; }
+  #splitsBlock .recipeHeaderControls{ margin-bottom:2px; }
+  #splitsBlock .recipeViewToggle{ gap:5px; margin-bottom:0; }
   #splitsBlock .recipeViewToggle button{
     min-height:26px;
     padding:3px 10px;
@@ -8438,24 +8599,30 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
     pointer-events:none;
   }
   #splitsArea .splitsMatrix .splitMatrixCell.tracked .splitCellHopperName{
+    /* Mixing the theme's focus and text colours darkens this state on light
+       palettes and brightens it on dark palettes. A fixed blue was muted in
+       several themes and made tracking easy to miss at tablet distance. */
+    --tablet-track-accent:color-mix(in srgb,var(--focus-border) 58%,var(--text) 42%);
     position:relative;
     min-width:30px;
     height:18px;
     padding:0 8px 0 5px;
     border-radius:4px 9px 9px 4px;
-    background:color-mix(in srgb,#72b9e8 22%,var(--tablet-recipe-cell-bg));
-    color:#397fae;
-    box-shadow:inset 0 0 0 1px color-mix(in srgb,#4d9bd0 55%,transparent);
+    background:color-mix(in srgb,var(--tablet-track-accent) 18%,var(--tablet-recipe-cell-bg));
+    color:var(--tablet-track-accent);
+    box-shadow:
+      inset 0 0 0 1px color-mix(in srgb,var(--tablet-track-accent) 82%,transparent),
+      0 0 0 1px color-mix(in srgb,var(--tablet-track-accent) 18%,transparent);
   }
   #splitsArea .splitsMatrix .splitMatrixCell.tracked .splitCellHopperName::after{
     content:"";
     position:absolute;
     right:3px;
-    width:4px;
-    height:4px;
+    width:5px;
+    height:5px;
     border-radius:50%;
     background:currentColor;
-    box-shadow:0 0 0 2px color-mix(in srgb,#72b9e8 16%,transparent);
+    box-shadow:0 0 0 1px color-mix(in srgb,var(--tablet-track-accent) 32%,transparent);
   }
 
   /* Tablet headers now use the phone matrix's compact inline hierarchy:
@@ -8569,7 +8736,8 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
     min-height:28px;
     padding:2px 10px 1px;
   }
-  #splitsBlock .recipeViewToggle{ gap:4px; margin-bottom:1px; }
+  #splitsBlock .recipeHeaderControls{ margin-bottom:1px; }
+  #splitsBlock .recipeViewToggle{ gap:4px; margin-bottom:0; }
   #splitsBlock .recipeViewToggle button{
     min-height:24px;
     padding:2px 9px;
