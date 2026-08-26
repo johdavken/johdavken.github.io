@@ -9106,6 +9106,66 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
   }
 }
 
+/* Percentage-forward layer header (previews/recipe-layer-header-compact-
+   alternatives.html, concept 4) - genuine wide desktop only. Narrower
+   desktop/tablet keeps the compact header two blocks up untouched. The
+   percentage is the only thing worth reading twice, so it becomes the
+   largest element; the layer letter shrinks to a corner tag instead of a
+   64px watermark, and the total becomes a thin colour-coded bar - still
+   labelled with its number, since a bar with no number would be a step
+   back from today's text-only total. Reuses the existing .warn toggle
+   from updateHopperTotals() - no JS or markup changes needed. */
+@media (min-width: 1201px) and (pointer: fine){
+  #splitsArea .splitLayerMain{
+    min-height: 0;
+    padding-top: 4px;
+  }
+  #splitsArea .splitLayerTitle{
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform: none;
+    width: auto;
+    height: auto;
+    min-height: 0;
+    padding: 0;
+    font-size: 9px;
+    font-weight: 800;
+    opacity: .6;
+  }
+  #splitsArea .splitLayerPct{
+    margin-top: 0;
+    justify-content: center;
+  }
+  #splitsArea .splitLayerPct input{
+    width: 54px;
+    min-width: 0;
+    padding: 0;
+    font-size: 22px;
+    font-weight: 900;
+    line-height: 1;
+    text-align: center;
+  }
+  #splitsArea .splitLayerPct span{ font-size: 11px; }
+  #splitsArea .splitColumnTotal{
+    position: relative;
+    margin-top: 4px;
+    padding-top: 5px;
+    font-size: 9px;
+  }
+  #splitsArea .splitColumnTotal::before{
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--ok);
+  }
+  #splitsArea .splitColumnTotal.warn::before{ background: var(--warn); }
+}
+
 /* A Fold's unfolded landscape viewport is tablet-wide but only about
    670 CSS pixels tall. Preserve every label and its current font size,
    while reclaiming the remaining vertical overflow from chrome, padding,
