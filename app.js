@@ -32,13 +32,7 @@
       "resultsBlock",
       "productionSummaryBlock",
       "toolsBlock",
-      "helpBlock",
-      "helpQuickStart",
-      "helpSetup",
-      "helpHopperPercentages",
-      "helpTimeline",
-      "helpCloudSync",
-      "helpTools"
+      "changelogBlock"
     ];
 
     const HOPPERS_PER_LAYER = 6;
@@ -5308,35 +5302,15 @@
     }
 
     function renderDesktopRailTotals(summary){
-      const { prod, scrap, total, rows } = summary;
+      const { total, rows } = summary;
       const count = rows.length;
       const metric = $("desktopRailTotalsMetric");
       if (metric) metric.textContent = String(count);
+      // The metric badge already carries the material count - this line
+      // reports total weight instead so the two readouts say something
+      // different rather than the same count twice.
       const status = $("workspaceResinTotalsStatus");
-      if (status) status.textContent = total > 0
-        ? `${count} ${count === 1 ? "material" : "materials"}`
-        : "No material total";
-      const headline = $("desktopRailTotalsHeadline");
-      if (headline) headline.textContent = `${fmtLb(total)} lb total`;
-      const detail = $("desktopRailTotalsDetail");
-      if (detail) detail.textContent = total > 0
-        ? `${fmtLb(prod)} lb production · ${fmtLb(scrap)} lb scrap`
-        : "Enter production and scrap resin to calculate material totals.";
-
-      const preview = $("desktopRailMaterialPreview");
-      if (!preview) return;
-      preview.replaceChildren();
-      rows.slice(0, 3).forEach(material=>{
-        const row = document.createElement("span");
-        row.className = "desktopRailMaterialRow";
-        row.style.setProperty("--rail-share", `${total > 0 ? Math.min(100, material.lbs / total * 100) : 0}%`);
-        const name = document.createElement("span");
-        name.textContent = material.displayName;
-        const pounds = document.createElement("b");
-        pounds.textContent = `${fmtLb(material.lbs)} lb`;
-        row.append(name, pounds);
-        preview.append(row);
-      });
+      if (status) status.textContent = total > 0 ? `${fmtLb(total)} lb total` : "No material total";
     }
 
     function renderResinCalculator(){
@@ -5481,20 +5455,6 @@
       if (railMetric) railMetric.textContent = hasOutput
         ? state.lineRate.toLocaleString([], { maximumFractionDigits: 2 })
         : "—";
-      const railHeadline = $("desktopRailSetupHeadline");
-      if (railHeadline) railHeadline.textContent = setupLabel;
-      const railDetail = $("desktopRailSetupDetail");
-      if (railDetail) railDetail.textContent = !hopperWeightsComplete
-        ? `${configuredWeightCount} of ${hopperWeightValues.length} hopper weights configured.`
-        : (hasOutput && hasChangeover
-          ? "Line configuration is ready for production."
-          : "Add the remaining line setting to complete setup.");
-      const railOutput = $("desktopRailSetupOutput");
-      if (railOutput) railOutput.textContent = hasOutput
-        ? `${state.lineRate.toLocaleString([], { maximumFractionDigits: 2 })} lb/hr`
-        : "Not set";
-      const railChangeover = $("desktopRailSetupChangeover");
-      if (railChangeover) railChangeover.textContent = hasChangeover ? fmtTime(changeoverDate) : "Not set";
     }
 
     const splitsStatus = $("splitsSummaryStatus");
@@ -5525,14 +5485,6 @@
       const trackedCount = sum(state.layers.map(L=>L.hoppers.filter(h=>h.track).length));
       const railMetric = $("desktopRailRecipeMetric");
       if (railMetric) railMetric.textContent = String(trackedCount);
-      const railTracked = $("desktopRailRecipeTracked");
-      if (railTracked) railTracked.textContent = `${trackedCount} ${trackedCount === 1 ? "hopper" : "hoppers"}`;
-      const railNext = $("desktopRailRecipeNext");
-      if (railNext) railNext.textContent = hasPlannedRecipe() ? "Planned" : "Not planned";
-      const railDetail = $("desktopRailRecipeDetail");
-      if (railDetail) railDetail.textContent = ready
-        ? "Layer and hopper percentages are ready."
-        : splitsStatus.textContent;
     }
 
     const timelineStatus = $("timelineSummaryStatus");
@@ -5541,10 +5493,6 @@
         timelineStatus.textContent = `${trackedCount} ${trackedCount === 1 ? "resin" : "resins"} tracked`;
         const trackedStatus = $("workspaceTrackedStatus");
         if (trackedStatus) trackedStatus.textContent = String(trackedCount);
-        const railTracked = $("desktopRailTimelineTracked");
-        if (railTracked) railTracked.textContent = `${trackedCount} ${trackedCount === 1 ? "hopper" : "hoppers"}`;
-        const railAlarm = $("desktopRailTimelineAlarm");
-        if (railAlarm) railAlarm.textContent = state.mobileTimelineAlarm ? "On" : "Off";
     }
   }
 
@@ -6130,38 +6078,21 @@
       setWorkspaceNavExpanded(isDesktopLayout() ? loadNavExpandedPreference() : false, { persist: false });
     }
 
-    const desktopRailPrimaryStages = new Set([
-      "lineSetupBlock",
-      "splitsBlock",
-      "resultsBlock",
-      "productionSummaryBlock"
-    ]);
-
-    function syncDesktopRailExpansion(id){
-      const expansion = $("desktopRailStageExpansion");
-      if (!expansion) return;
-      const primary = desktopRailPrimaryStages.has(id);
-      expansion.hidden = !primary;
-      if (!primary) return;
-      expansion.dataset.stage = id;
-      document.querySelector(`.workspaceNavButton[data-workspace-target="${id}"]`)?.after(expansion);
-      expansion.querySelectorAll("[data-rail-stage]").forEach(panel=>{
-        panel.hidden = panel.dataset.railStage !== id;
-      });
-    }
-
-    // Line Setup no longer owns a workspace page. Its live controls keep
-    // their original IDs and handlers, but desktop presents them in Recipe's
-    // rail expansion. Touch layouts intentionally have no replacement setup
-    // panel because their active-line context already lives on the home view.
+    // Line Setup no longer owns a workspace page. The layer-count picker
+    // moved permanently into Recipe's own header (desktop-only, next to the
+    // Summary/Edit view toggle) since Output/Changeover editing now lives in
+    // the always-visible status bar instead of a rail expansion panel.
+    // Touch layouts intentionally have no replacement setup panel because
+    // their active-line context already lives on the home view.
     function placeProductionControlsForLayout(){
-      const desktopHost = $("desktopRailRecipeSetupControls");
+      const layerHost = $("recipeLayerCountHost");
+      const desktopProductionHost = $("lineSetupBlock")?.querySelector(".setupLineConfiguration");
       const mobileHost = $("mobileProductionControls");
       const layerCount = $("setupLayerCountGroup");
       const production = $("lineRate")?.closest(".setupPrimaryFields");
-      if (!desktopHost || !mobileHost || !layerCount || !production) return;
-      if (layerCount.parentElement !== desktopHost) desktopHost.prepend(layerCount);
-      const productionHost = isDesktopLayout() ? desktopHost : mobileHost;
+      if (!layerHost || !desktopProductionHost || !mobileHost || !layerCount || !production) return;
+      if (layerCount.parentElement !== layerHost) layerHost.append(layerCount);
+      const productionHost = isDesktopLayout() ? desktopProductionHost : mobileHost;
       if (production.parentElement !== productionHost) productionHost.append(production);
     }
 
@@ -6179,7 +6110,6 @@
         if (active) button.setAttribute("aria-current", "page");
         else button.removeAttribute("aria-current");
       });
-      syncDesktopRailExpansion(id);
       if (isDesktopLayout()){
         target.open = true;
         if (id === "lineSetupBlock") $("weightsBlock")?.setAttribute("open", "");
@@ -6589,11 +6519,9 @@
   function updateFooterNext(flat, changeoverDate){
     const msgEl = document.getElementById("footerMsg");
     const subEl = document.getElementById("footerSub");
-    const desktopMsgEl = document.getElementById("workspaceNextStatus");
-    const desktopSubEl = document.getElementById("workspaceNextDetail");
     const tileEl = document.getElementById("workspaceTimelineStatus");
 
-    const setDesktopRailTimeline = (message, timeText = "")=>{
+    const setDesktopRailTimeline = (timeText = "")=>{
       const match = String(timeText).match(/^(\d{1,2}:\d{2})(?:\s+([AP]M))?$/);
       const clock = match?.[1] || "—";
       const period = match?.[2] || "";
@@ -6601,26 +6529,17 @@
       if (metric) metric.textContent = clock;
       const metricLabel = $("desktopRailTimelineMetricLabel");
       if (metricLabel) metricLabel.textContent = period || "next";
-      const expandedClock = $("desktopRailTimelineTime");
-      if (expandedClock) expandedClock.textContent = clock;
-      const expandedPeriod = $("desktopRailTimelinePeriod");
-      if (expandedPeriod) expandedPeriod.textContent = period;
-      const expandedDetail = $("desktopRailTimelineDetail");
-      if (expandedDetail) expandedDetail.textContent = message;
     };
 
     const setNextStatus = (message, detail, { stale=false, tile=message, tileState="info", railTime="" } = {})=>{
       if (msgEl) msgEl.textContent = message;
       if (subEl) subEl.textContent = detail;
-      if (desktopMsgEl) desktopMsgEl.textContent = message;
-      if (desktopSubEl) desktopSubEl.textContent = detail;
       if (tileEl){
         tileEl.textContent = tile;
         tileEl.closest(".workspaceNavButton")?.setAttribute("data-status", tileState);
       }
       if (msgEl) msgEl.classList.toggle("stale", stale);
-      if (desktopMsgEl) desktopMsgEl.classList.toggle("stale", stale);
-      setDesktopRailTimeline(message, railTime);
+      setDesktopRailTimeline(railTime);
     };
 
     if (!flat || flat.length === 0){
@@ -7348,17 +7267,11 @@
       const mobileStatus = syncState.pendingCount ? `${status} · ${syncState.pendingCount} pending` : status;
       mobileNavStatus.textContent = `RT Sync is ${mobileStatus.toLowerCase()}`;
     }
-    const mobileWorkflowWorkspace = $("mobileWorkflowWorkspace");
-    if (mobileWorkflowWorkspace){
-      mobileWorkflowWorkspace.textContent = syncState.connected && syncState.selectedWorkspace?.name
+    const workspaceIdentityName = $("workspaceIdentityName");
+    if (workspaceIdentityName){
+      workspaceIdentityName.textContent = syncState.connected && syncState.selectedWorkspace?.name
         ? syncState.selectedWorkspace.name
-        : "LOCAL";
-    }
-    const mobileStatusWorkspace = $("mobileStatusWorkspaceName");
-    if (mobileStatusWorkspace){
-      mobileStatusWorkspace.textContent = syncState.connected && syncState.selectedWorkspace?.name
-        ? syncState.selectedWorkspace.name
-        : "Local";
+        : "Connect";
     }
 
     const selector = $("lineSyncWorkspaceSelect");
@@ -7672,6 +7585,71 @@
     $("changeoverTime")?.addEventListener("input",(e)=>{
       state.changeoverTime = e.target.value || "";
       state.changeoverSetAt = state.changeoverTime ? Date.now() : null;
+      syncChangeoverTimeDisplay();
+      validateAndCompute({ sync: true });
+      saveSession();
+    });
+    // The input covers the whole tile so every click lands on it, but a
+    // native time input only opens its picker when the click lands on its
+    // own tiny built-in calendar-icon indicator - everywhere else just
+    // places a text caret, invisible under this control's opacity:0. That
+    // made "click anywhere" effectively "click one small spot". showPicker()
+    // opens the picker explicitly regardless of where in the tile was
+    // clicked; unsupported browsers just keep today's click-to-focus.
+    $("changeoverTime")?.addEventListener("click",(e)=>{
+      if (typeof e.currentTarget.showPicker !== "function") return;
+      try { e.currentTarget.showPicker(); } catch {}
+    });
+
+    // Status bar Output/Changeover: same readout-becomes-input pattern as
+    // the Recipe gauge tiles, but always visible instead of living behind
+    // the expandable rail stage. Both read/write state.lineRate and
+    // state.changeoverTime directly, and mirror the committed value back
+    // onto the gauge tiles' own #lineRate/#changeoverTime inputs so the two
+    // locations never show different values.
+    const workspaceOutputItem = $("workspaceOutputStatus")?.closest(".statusEditableItem");
+    const workspaceOutputInput = $("workspaceOutputInput");
+    $("workspaceOutputStatus")?.addEventListener("click",()=>{
+      if (!workspaceOutputItem || !workspaceOutputInput) return;
+      workspaceOutputInput.value = state.lineRate > 0 ? state.lineRate : "";
+      workspaceOutputItem.classList.add("editing");
+      workspaceOutputInput.focus();
+      workspaceOutputInput.select();
+    });
+    workspaceOutputInput?.addEventListener("blur",()=>{
+      workspaceOutputItem?.classList.remove("editing");
+    });
+    workspaceOutputInput?.addEventListener("keydown",event=>{
+      if (event.key === "Enter") event.currentTarget.blur();
+    });
+    workspaceOutputInput?.addEventListener("input",(e)=>{
+      if (!acceptNumericInput(e.target, { min: 0, label: "Output" }, value => { state.lineRate = value; })) return;
+      const lineRateEl = $("lineRate");
+      if (lineRateEl) lineRateEl.value = String(state.lineRate);
+      syncMobileLineRateReadout();
+      validateAndCompute({ sync: true });
+      saveSession();
+    });
+
+    const workspaceChangeoverItem = $("workspaceChangeoverStatus")?.closest(".statusEditableItem");
+    const workspaceChangeoverInput = $("workspaceChangeoverInput");
+    $("workspaceChangeoverStatus")?.addEventListener("click",()=>{
+      if (!workspaceChangeoverItem || !workspaceChangeoverInput) return;
+      workspaceChangeoverInput.value = state.changeoverTime || "";
+      workspaceChangeoverItem.classList.add("editing");
+      workspaceChangeoverInput.focus();
+      if (typeof workspaceChangeoverInput.showPicker === "function"){
+        try { workspaceChangeoverInput.showPicker(); } catch {}
+      }
+    });
+    workspaceChangeoverInput?.addEventListener("blur",()=>{
+      workspaceChangeoverItem?.classList.remove("editing");
+    });
+    workspaceChangeoverInput?.addEventListener("input",(e)=>{
+      state.changeoverTime = e.target.value || "";
+      state.changeoverSetAt = state.changeoverTime ? Date.now() : null;
+      const changeoverEl = $("changeoverTime");
+      if (changeoverEl) changeoverEl.value = state.changeoverTime;
       syncChangeoverTimeDisplay();
       validateAndCompute({ sync: true });
       saveSession();
@@ -8152,78 +8130,6 @@
         else if (!event.shiftKey && document.activeElement === last){ event.preventDefault(); first.focus(); }
       }
     });
-    // In-body "see also" links (e.g. Quick Start pointing at RT Sync) just
-    // open the target <details> - same on every viewport now that mobile
-    // shows the identical accordion list as desktop. The accordion's own
-    // "toggle" listener below (helpTopics.forEach) reacts to this the same
-    // way it reacts to a direct tap: closes sibling topics and scrolls the
-    // opened one into view.
-    document.querySelectorAll("#helpBlock .helpTopicBody a.helpTopicLink[href^=\"#help\"]").forEach(link=>{
-      link.addEventListener("click",()=>{
-        const targetId = link.getAttribute("href").slice(1);
-        const topic = document.getElementById(targetId);
-        if (!topic) return;
-        topic.open = true;
-      });
-    });
-
-    /* ============================
-     * Help: one open section at a time
-     * ============================
-     * The guide is a list of native <details>, and several long ones open at
-     * once turned Help into one enormous page. Opening a section now closes
-     * the others, and the open section's own summary is pinned to the top of
-     * the Help scroller by CSS, so it doubles as "you are here" and "close
-     * this". Nested subtopics inside a section are deliberately left alone:
-     * they are ordinary <details> and any number may stay open.
-     *
-     * Mobile shows the identical accordion list as desktop (no separate
-     * tile/panel navigation any more), so this same one-open-at-a-time
-     * behavior applies on every viewport. The scrollBy alignment below is a
-     * no-op on mobile - #helpBlock > .blockBody only becomes its own
-     * overflow:auto scrollport at >=901px (desktop.css); at <=900px the
-     * page itself scrolls, and native <details> already reveals the opened
-     * content in place without needing that. */
-    const helpTopics = [...document.querySelectorAll("#helpBlock .helpTopics > .helpTopic")];
-    const helpScroller = document.querySelector("#helpBlock > .blockBody");
-
-    // Aligns a topic's header to the top of the Help scroller. Used both when
-    // opening (the section starts at the top, under the pinned header) and
-    // when closing (the row you just collapsed stays under the pointer instead
-    // of leaving you stranded far down a now-empty page).
-    function alignHelpTopic(topic, { smooth = true } = {}){
-      if (!helpScroller || !topic.querySelector("summary")?.offsetParent) return;
-      // Target the scroller's *content* edge, not its border box: a sticky
-      // top:0 pins to the content edge, so aligning to the border box would
-      // leave the header 14px adrift from its card the instant it sticks.
-      const padding = parseFloat(getComputedStyle(helpScroller).paddingTop) || 0;
-      const offset = topic.getBoundingClientRect().top - helpScroller.getBoundingClientRect().top - padding;
-      if (Math.abs(offset) < 2) return;
-      const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
-      helpScroller.scrollBy({ top: offset, behavior: smooth && !reduceMotion ? "smooth" : "auto" });
-    }
-
-    // Closing a sibling fires that sibling's own toggle. Without this guard it
-    // would scroll to the section being closed, fighting the scroll to the one
-    // just opened - the two animations cancel and the panel lands nowhere.
-    let helpSwitching = false;
-
-    helpTopics.forEach(topic=>{
-      // `toggle` covers every route into the open state - pointer, keyboard,
-      // and the in-body help links above - without wrapping <summary> in a
-      // custom control, so native disclosure semantics stay intact.
-      topic.addEventListener("toggle",()=>{
-        if (helpSwitching) return;
-        if (!topic.open){
-          alignHelpTopic(topic);
-          return;
-        }
-        helpSwitching = true;
-        helpTopics.forEach(other=>{ if (other !== topic) other.open = false; });
-        helpSwitching = false;
-        alignHelpTopic(topic);
-      });
-    });
     toolTabs.forEach((tab, index)=>{
       tab.addEventListener("click", ()=>{
         selectToolPanel(tab.dataset.toolTarget);
@@ -8245,6 +8151,9 @@
       button.addEventListener("click",()=>setWorkspacePanel(button.dataset.workspaceTarget, { reveal: true }));
     });
     $("mobileProductionSyncShortcut")?.addEventListener("click",()=>{
+      setWorkspacePanel("lineSyncBlock", { reveal:true });
+    });
+    $("workspaceIdentityButton")?.addEventListener("click",()=>{
       setWorkspacePanel("lineSyncBlock", { reveal:true });
     });
     hookWorkspaceNavMore();

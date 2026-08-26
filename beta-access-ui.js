@@ -259,11 +259,10 @@
     });
 
     // RT Sync signs in asynchronously, so the first read usually has no
-    // transport yet. Re-read whenever Help is opened, which is the only
-    // moment the banner is actually on screen.
-    document.querySelectorAll('[data-workspace-target="helpBlock"]').forEach(button=>{
-      button.addEventListener("click", ()=>{ void refreshStatus(); });
-    });
+    // transport yet. Re-read whenever "Workspace & support" is opened - the
+    // banner lives in that foldaway extras list (in Help's old nav slot),
+    // so that toggle is the only moment it's actually on screen.
+    $("workspaceNavMore")?.addEventListener("click", ()=>{ void refreshStatus(); });
 
     $("betaApplicantsRefreshBtn")?.addEventListener("click", ()=>{ void loadApplicants(); });
     $("betaApplicantsButton")?.addEventListener("click", ()=>{ void loadApplicants(); });

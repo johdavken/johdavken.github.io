@@ -294,7 +294,7 @@
         <text class="rtWord" x="89" y="83" font-size="66">RT</text>
       </svg>
     </div>
-    <div class="mobileWorkflowLabel"><span>Production workflow</span><strong id="mobileWorkflowWorkspace">LOCAL</strong></div>
+    <button class="workspaceIdentityBar" id="workspaceIdentityButton" type="button" aria-label="Open RT Sync workspace connection"><strong id="workspaceIdentityName">LOCAL</strong></button>
     <section class="mobileProductionControls" id="mobileProductionControls" aria-label="Production controls">
       <button class="mobileProductionSyncShortcut" id="mobileProductionSyncShortcut" type="button" aria-label="Open RT Sync" title="RT Sync">
         <svg viewBox="0 0 32 32" aria-hidden="true"><g class="baseGlyph"><circle cx="8" cy="16" r="3"/><circle cx="24" cy="9" r="3"/><circle cx="24" cy="23" r="3"/><path d="m10.7 14.7 10.6-4.4M10.7 17.3l10.6 4.4"/></g><g class="gruvboxSolidGlyph"><path d="m9.2 14.4 14-5.6 1.2 3.1-14 5.6zM10.4 17.9l14 5.6-1.2 3.1-14-5.6z"/><path d="M2 12.4h7.6V20H2zM22.4 3H30v7.6h-7.6zM22.4 21.8H30v7.6h-7.6z"/></g></svg>
@@ -318,38 +318,6 @@
       <span class="desktopRailMetric"><strong id="desktopRailTimelineMetric">—</strong><em id="desktopRailTimelineMetricLabel">next</em></span>
       <span class="mobileRailChev" aria-hidden="true">›</span>
     </button>
-    <section class="desktopRailStageExpansion" id="desktopRailStageExpansion" data-stage="resultsBlock" aria-label="Active workflow stage details">
-      <div class="desktopRailExpansionPanel" data-rail-stage="lineSetupBlock" hidden>
-        <strong id="desktopRailSetupHeadline">Needs setup</strong>
-        <small id="desktopRailSetupDetail">Complete the line configuration and receiver hopper weights.</small>
-        <div class="desktopRailExpansionMetrics">
-          <span><em>Output</em><b id="desktopRailSetupOutput">Not set</b></span>
-          <span><em>Changeover</em><b id="desktopRailSetupChangeover">Not set</b></span>
-        </div>
-      </div>
-      <div class="desktopRailExpansionPanel" data-rail-stage="splitsBlock" hidden>
-        <strong>Current recipe</strong>
-        <small id="desktopRailRecipeDetail">Check layer and hopper percentages.</small>
-        <div class="desktopRailRecipeSetupControls" id="desktopRailRecipeSetupControls" aria-label="Recipe production settings"></div>
-        <div class="desktopRailExpansionMetrics">
-          <span><em>Tracked</em><b id="desktopRailRecipeTracked">0 hoppers</b></span>
-          <span><em>Next</em><b id="desktopRailRecipeNext">Not planned</b></span>
-        </div>
-      </div>
-      <div class="desktopRailExpansionPanel" data-rail-stage="resultsBlock">
-        <strong class="desktopRailTimelineTime"><span id="desktopRailTimelineTime">—</span><em id="desktopRailTimelinePeriod"></em></strong>
-        <small id="desktopRailTimelineDetail">Track a resin to see the next action.</small>
-        <div class="desktopRailExpansionMetrics">
-          <span><em>Tracking</em><b id="desktopRailTimelineTracked">0 hoppers</b></span>
-          <span><em>Alarm</em><b id="desktopRailTimelineAlarm">Off</b></span>
-        </div>
-      </div>
-      <div class="desktopRailExpansionPanel" data-rail-stage="productionSummaryBlock" hidden>
-        <strong id="desktopRailTotalsHeadline">0 lb total</strong>
-        <small id="desktopRailTotalsDetail">Enter production and scrap resin to calculate material totals.</small>
-        <div class="desktopRailMaterialPreview" id="desktopRailMaterialPreview"></div>
-      </div>
-    </section>
     <button class="workspaceNavButton" type="button" data-workspace-target="productionSummaryBlock" data-step="3">
       <span><svg class="workspaceTileIcon" viewBox="0 0 32 32" aria-hidden="true"><g class="baseGlyph"><path d="M6 25V15M16 25V7M26 25V11"/><path d="M3 25h26"/><g class="gruvboxIconDetail"><path d="M5 12h2M15 4h2M25 8h2"/></g></g><g class="gruvboxSolidGlyph"><path d="M2 26.5h28V30H2z"/><path d="M4.5 14h6.2v11.5H4.5zM12.9 5h6.2v20.5h-6.2zM21.3 9.5h6.2v16h-6.2z"/></g></svg>Resin Totals</span>
       <small id="workspaceResinTotalsStatus">No material total</small>
@@ -362,12 +330,12 @@
         type="button"
         id="workspaceNavMore"
         aria-expanded="false"
-        aria-controls="workspaceNavLineSync workspaceNavTools workspaceNavHelp workspaceNavSudo"
+        aria-controls="workspaceNavLineSync workspaceNavTools helpBetaAccess workspaceNavChangelog workspaceNavSudo"
       >
         <span id="workspaceNavMoreLabel">More</span>
         <span class="mobileWorkspaceNavMore">
           <span class="mobileWorkspaceNavMoreIcons" aria-hidden="true"><i>⌘</i><i>⚒</i><i>?</i></span>
-          <span><strong>Workspace &amp; support</strong><small>RT Sync · Tools · Help · Sudo access</small></span>
+          <span><strong>Workspace &amp; support</strong><small>RT Sync · Tools · Get the app · Changelog · Sudo access</small></span>
         </span>
         <svg class="workspaceNavMoreChev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
       </button>
@@ -381,25 +349,57 @@
       <span><svg class="workspaceTileIcon" viewBox="0 0 32 32" aria-hidden="true"><g class="baseGlyph"><path d="m19 6 7 7-4 4-4-1-8 8-4-4 8-8-1-4 4-4 2 4Z"/><path d="m7 25 2 2"/><g class="gruvboxIconDetail"><path d="m19 6 3 3"/></g></g><g class="gruvboxSolidGlyph"><path d="M21.8 2a8.2 8.2 0 0 0-7.6 11.3L3.4 24.1a3.4 3.4 0 0 0 4.8 4.8l10.8-10.8A8.2 8.2 0 0 0 30 10.3l-4.6 4.6-3.9-1-1-3.9 4.6-4.6A8.2 8.2 0 0 0 21.8 2z"/></g></svg>Tools</span>
       <small>Production utilities</small>
     </button>
-    <button class="workspaceNavButton workspaceNavExtra" id="workspaceNavHelp" type="button" data-workspace-target="helpBlock">
-      <span><svg class="workspaceTileIcon" viewBox="0 0 32 32" aria-hidden="true"><g class="baseGlyph"><path d="M16 9c-3-2.5-6.5-2.7-10-1.5v16c3.5-1.2 7-1 10 1.5 3-2.5 6.5-2.7 10-1.5v-16C22.5 6.3 19 6.5 16 9Z"/><path d="M16 9v16"/><g class="gruvboxIconDetail"><path d="M8 12h4M20 12h4"/></g></g><g class="gruvboxSolidGlyph"><path d="M2.5 5.5c4.3-1.8 9.2-1.4 13 1.6v19.4c-3.8-3-8.7-3.4-13-1.6z"/><path d="M29.5 5.5c-4.3-1.8-9.2-1.4-13 1.6v19.4c3.8-3 8.7-3.4 13-1.6z"/></g></svg>Help</span>
-      <small>Operator guide</small>
+    <!-- Replaces the old Help nav entry: Help itself has nothing essential
+         on desktop, but this banner's three states (request / pending /
+         invited) stay mobile+tablet-only, same as before - see the
+         data-beta-when rules in styles.css. On desktop that leaves this slot
+         empty, which is fine since nothing here was essential there either. -->
+    <div class="helpPlayBannerHost workspaceNavExtra" id="helpBetaAccess" data-beta-state="loading">
+      <button class="helpPlayBanner helpPlayBannerAction" id="helpBetaRequestBtn" type="button" data-beta-when="none">
+        <svg class="helpPlayBannerIcon" viewBox="0 0 32 32" aria-hidden="true"><g class="baseGlyph"><circle cx="16" cy="16" r="11"/><path d="M13 11.5 21 16 13 20.5V11.5Z"/><g class="gruvboxIconDetail"><path d="M16 5v2M16 25v2"/></g></g><g class="gruvboxSolidGlyph"><path fill-rule="evenodd" d="M16 2a14 14 0 1 0 0 28 14 14 0 0 0 0-28zm0 4.2a9.8 9.8 0 1 1 0 19.6 9.8 9.8 0 0 1 0-19.6z"/><path d="M13 10.8 22 16 13 21.2V10.8Z"/></g></svg>
+        <span>
+          <strong>Request beta access</strong>
+          <small>Try the Android app before release</small>
+        </span>
+      </button>
+      <div class="helpPlayBanner helpPlayBannerPending" data-beta-when="pending" role="status">
+        <svg class="helpPlayBannerIcon" viewBox="0 0 32 32" aria-hidden="true"><g class="baseGlyph"><circle cx="16" cy="16" r="11"/><path d="M13 11.5 21 16 13 20.5V11.5Z"/><g class="gruvboxIconDetail"><path d="M16 5v2M16 25v2"/></g></g><g class="gruvboxSolidGlyph"><path fill-rule="evenodd" d="M16 2a14 14 0 1 0 0 28 14 14 0 0 0 0-28zm0 4.2a9.8 9.8 0 1 1 0 19.6 9.8 9.8 0 0 1 0-19.6z"/><path d="M13 10.8 22 16 13 21.2V10.8Z"/></g></svg>
+        <span>
+          <strong>Request received</strong>
+          <small id="helpBetaPendingNote">You&rsquo;ll see the download link here once you&rsquo;re added to the tester list.</small>
+        </span>
+        <button class="helpPlayBannerEdit" id="helpBetaEditBtn" type="button">Change</button>
+      </div>
+      <a class="helpPlayBanner" data-beta-when="invited" href="https://play.google.com/apps/internaltest/4699396162063044468" target="_blank" rel="noopener">
+        <svg class="helpPlayBannerIcon" viewBox="0 0 32 32" aria-hidden="true"><g class="baseGlyph"><circle cx="16" cy="16" r="11"/><path d="M13 11.5 21 16 13 20.5V11.5Z"/><g class="gruvboxIconDetail"><path d="M16 5v2M16 25v2"/></g></g><g class="gruvboxSolidGlyph"><path fill-rule="evenodd" d="M16 2a14 14 0 1 0 0 28 14 14 0 0 0 0-28zm0 4.2a9.8 9.8 0 1 1 0 19.6 9.8 9.8 0 0 1 0-19.6z"/><path d="M13 10.8 22 16 13 21.2V10.8Z"/></g></svg>
+        <span>
+          <strong>Get the Android app</strong>
+          <small>Join internal testing on Google Play</small>
+        </span>
+      </a>
+    </div>
+    <button class="workspaceNavButton workspaceNavExtra" id="workspaceNavChangelog" type="button" data-workspace-target="changelogBlock">
+      <span><svg class="workspaceTileIcon" viewBox="0 0 32 32" aria-hidden="true"><g class="baseGlyph"><circle cx="7" cy="9" r="2.4"/><circle cx="7" cy="16" r="2.4"/><circle cx="7" cy="23" r="2.4"/><path d="M13 9h13M13 16h13M13 23h9"/><g class="gruvboxIconDetail"><rect x="4.6" y="6.6" width="4.8" height="4.8"/><rect x="4.6" y="13.6" width="4.8" height="4.8"/><rect x="4.6" y="20.6" width="4.8" height="4.8"/></g></g><g class="gruvboxSolidGlyph"><circle cx="7" cy="9" r="3.2"/><circle cx="7" cy="16" r="3.2"/><circle cx="7" cy="23" r="3.2"/><path d="M13 7.2h13v3.6H13zM13 14.2h13v3.6H13zM13 21.2h9v3.6H13z"/></g></svg>Changelog</span>
+      <small>What&rsquo;s new</small>
     </button>
     <button class="workspaceNavButton workspaceNavExtra" id="workspaceNavSudo" type="button" data-workspace-target="sudoAccessBlock">
       <span><svg class="workspaceTileIcon" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3 27 8v7c0 7-4.5 11.5-11 14-6.5-2.5-11-7-11-14V8l11-5Z"/><path d="M16 12v8M12 16h8"/></svg>Sudo access</span>
       <small id="sudoAccessStatus">Administrator tools</small>
     </button>
+    <small class="desktopRailVersion" aria-label="App version">v1.1.17</small>
   </nav>
 
   <div class="workspaceContent">
   <div class="workspaceStatusBar" aria-label="Current production status">
-    <div class="workspaceStatusItem">
+    <div class="workspaceStatusItem statusEditableItem">
       <span>Output</span>
-      <strong id="workspaceOutputStatus" class="mono">Not set</strong>
+      <button type="button" id="workspaceOutputStatus" class="mono statusReadout" aria-label="Edit output">Not set</button>
+      <input type="number" id="workspaceOutputInput" class="statusEditInput" min="0" step="any" inputmode="decimal" aria-label="Output, pounds per hour" hidden>
     </div>
-    <div class="workspaceStatusItem">
+    <div class="workspaceStatusItem statusEditableItem">
       <span>Changeover</span>
-      <strong id="workspaceChangeoverStatus" class="mono">Not set</strong>
+      <button type="button" id="workspaceChangeoverStatus" class="mono statusReadout" aria-label="Edit changeover time">Not set</button>
+      <input type="time" id="workspaceChangeoverInput" class="statusEditInput" aria-label="Changeover time" hidden>
     </div>
     <div class="workspaceStatusItem">
       <span>Tracked</span>
@@ -408,10 +408,6 @@
     <div class="workspaceStatusItem lineSyncStatusItem">
       <span>RT Sync</span>
       <strong id="lineSyncTopStatus">Local only</strong>
-    </div>
-    <div class="workspaceStatusItem mobileWorkspaceStatus">
-      <span>Workspace</span>
-      <strong id="mobileStatusWorkspaceName">Local</strong>
     </div>
     <details class="statusScanShortcut" id="statusScanShortcut">
       <summary aria-label="Scan a recipe source" title="Scan a recipe source">
@@ -435,11 +431,6 @@
     <div class="workspaceStatusItem statusChangeoverCountdown">
       <span>Changeover</span>
       <strong id="workspaceChangeoverCountdownStatus" class="mono">Not set</strong>
-    </div>
-    <div class="workspaceStatusItem workspaceNextAction">
-      <span>Next action</span>
-      <strong id="workspaceNextStatus">No tracked hoppers</strong>
-      <small id="workspaceNextDetail">Track a resin to see the next action</small>
     </div>
     <div id="desktopUtilityCluster" class="desktopUtilityCluster">
       <button id="desktopNotificationsToggle" class="desktopNotificationsToggle" type="button" data-severity="none" aria-expanded="false" aria-controls="footerNotificationsMenu" aria-haspopup="dialog" aria-label="Notifications, no items" title="Notifications">
@@ -649,6 +640,7 @@
           <button type="button" class="recipePageTab recipePageTabSaved" id="recipePageTabSaved" role="tab" aria-selected="false" aria-controls="splitsArea" data-recipe-page="saved" hidden>Recipe Book</button>
         </div>
         <div class="recipeHeaderControls" id="recipeHeaderControls">
+          <div class="recipeLayerCountHost" id="recipeLayerCountHost" aria-label="Line layer count"></div>
           <div class="recipeViewToggle" id="recipeViewToggle" role="group" aria-label="Recipe view">
             <span>View</span>
             <button type="button" class="primary actionRail active" data-button-kind="toggle" data-button-size="small" data-recipe-view="summary" aria-pressed="true">Summary</button>
@@ -1154,616 +1146,177 @@
     </div>
   </details>
 
-  <!-- 7) HELP -->
-  <details class="block card workspacePanel" id="helpBlock">
+  <!-- 7) CHANGELOG -->
+  <details class="block card workspacePanel" id="changelogBlock">
     <summary>
       <div class="sumLeft">
         <div class="chev"><span class="chevRing"></span><span class="chevSatellite"></span><span class="chevCore"></span></div>
-        <svg class="mobileSectionHeaderIcon" viewBox="0 0 32 32" aria-hidden="true"><g class="baseGlyph"><path d="M16 9c-3-2.5-6.5-2.7-10-1.5v16c3.5-1.2 7-1 10 1.5 3-2.5 6.5-2.7 10-1.5v-16C22.5 6.3 19 6.5 16 9Z"/><path d="M16 9v16"/></g><g class="gruvboxSolidGlyph"><path d="M2.5 5.5c4.3-1.8 9.2-1.4 13 1.6v19.4c-3.8-3-8.7-3.4-13-1.6z"/><path d="M29.5 5.5c-4.3-1.8-9.2-1.4-13 1.6v19.4c3.8-3 8.7-3.4 13-1.6z"/></g></svg>
+        <svg class="mobileSectionHeaderIcon" viewBox="0 0 32 32" aria-hidden="true"><g class="baseGlyph"><circle cx="7" cy="9" r="2.4"/><circle cx="7" cy="16" r="2.4"/><circle cx="7" cy="23" r="2.4"/><path d="M13 9h13M13 16h13M13 23h9"/><g class="gruvboxIconDetail"><rect x="4.6" y="6.6" width="4.8" height="4.8"/><rect x="4.6" y="13.6" width="4.8" height="4.8"/><rect x="4.6" y="20.6" width="4.8" height="4.8"/></g></g><g class="gruvboxSolidGlyph"><circle cx="7" cy="9" r="3.2"/><circle cx="7" cy="16" r="3.2"/><circle cx="7" cy="23" r="3.2"/><path d="M13 7.2h13v3.6H13zM13 14.2h13v3.6H13zM13 21.2h9v3.6H13z"/></g></svg>
         <div class="summaryText">
-          <div class="layerTitle" role="heading" aria-level="1">Help</div>
-          <div class="layerMeta">Operator guide for every section</div>
+          <div class="layerTitle" role="heading" aria-level="1">Changelog</div>
+          <div class="layerMeta">A running history of what&rsquo;s been added, most recent first</div>
         </div>
       </div>
-      <span class="pill summaryStatus">Guide</span>
     </summary>
 
-    <div class="blockBody helpGuide">
-      <!-- Three states, exactly one shown: request / waiting / approved. The
-           approved state is the same link this banner has always been; the
-           other two are what a browser sees before an administrator has
-           confirmed the Play Console tester list. Every state stays
-           mobile-only, as the original link was - there is no install path
-           at desktop widths. -->
-      <div class="helpPlayBannerHost" id="helpBetaAccess" data-beta-state="loading">
-        <button class="helpPlayBanner helpPlayBannerAction" id="helpBetaRequestBtn" type="button" data-beta-when="none">
-          <svg class="helpPlayBannerIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.609 1.814 13.792 12 3.61 22.186a.996.996 0 0 1-.61-.92V2.734a1 1 0 0 1 .609-.92Zm10.89 10.893 2.302 2.302-10.937 6.333 8.635-8.635Zm3.199-3.198 2.807 1.626a1 1 0 0 1 0 1.73l-2.808 1.626L17.415 12l2.283-2.291ZM4.609 3.229l10.937 6.333-2.302 2.302-8.635-8.635Z"/></svg>
-          <span>
-            <strong>Request beta access</strong>
-            <small>Try the Android app before release</small>
-          </span>
-        </button>
-        <div class="helpPlayBanner helpPlayBannerPending" data-beta-when="pending" role="status">
-          <svg class="helpPlayBannerIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.609 1.814 13.792 12 3.61 22.186a.996.996 0 0 1-.61-.92V2.734a1 1 0 0 1 .609-.92Zm10.89 10.893 2.302 2.302-10.937 6.333 8.635-8.635Zm3.199-3.198 2.807 1.626a1 1 0 0 1 0 1.73l-2.808 1.626L17.415 12l2.283-2.291ZM4.609 3.229l10.937 6.333-2.302 2.302-8.635-8.635Z"/></svg>
-          <span>
-            <strong>Request received</strong>
-            <small id="helpBetaPendingNote">You&rsquo;ll see the download link here once you&rsquo;re added to the tester list.</small>
-          </span>
-          <button class="helpPlayBannerEdit" id="helpBetaEditBtn" type="button">Change</button>
+    <div class="blockBody">
+      <div class="changelogBody">
+        <h3>Recipe workflow, workspace navigation &amp; RT Sync hardening - August 24-25, 2026</h3>
+        <ul>
+          <li><strong>Recipe</strong> now keeps its grid, header, and footer stable across desktop, tablet, and mobile. Mobile and tablet edit in place instead of opening a sheet, with compact controls, <strong>Undo</strong>/<strong>Redo</strong>, clearer tracked and Edit states, and percentages that no longer clip.</li>
+          <li>Added <strong>Recipe Book</strong> beside Current and Next. Recipes can now load directly into either page, including <strong>Load Current Recipe</strong> and <strong>Save Next Recipe</strong>; recipe actions and saved-recipe controls are aligned consistently on desktop and tablet.</li>
+          <li>Refined desktop Recipe and the side rail: Summary and Edit keep the panel from shifting, tracking is labeled in the hopper badge instead of relying on a cell highlight, and the rail’s expanded stages are shorter and less redundant.</li>
+          <li>Redesigned <strong>Resin Totals</strong> on desktop and tablet with fixed material, lot, and pounds columns, a clear Total issued row, and matching Production / Scrap resin fields. Scanned lot numbers now stay aligned as totals change.</li>
+          <li>Simplified touch navigation to <strong>Display</strong>, <strong>Main</strong>, and <strong>Alerts</strong>: Main uses the layer-stack icon, Alerts is a bell, and refresh no longer occupies the footer. <strong>Workspace &amp; support</strong> now contains <strong>Sudo access</strong> for administrator tools.</li>
+          <li>Added <strong>System / Auto</strong> and <strong>OLED Black</strong> appearance options, and restored the <strong>Nord</strong> theme.</li>
+          <li>Hardened <strong>RT Sync</strong> against stale-client revision storms. The server now returns the authoritative shared job for a stale write, while current clients retain the normal conflict-resolution choice; durable conflict tracking slows callers that ignore that response.</li>
+        </ul>
+
+        <h3>Mobile workspace, Recipe editing &amp; display - August 23, 2026</h3>
+        <ul>
+          <li>Redesigned the mobile Home screen as a compact connected workflow rail, with the active RT Sync workspace shown beside its heading and support tools grouped behind one disclosure.</li>
+          <li>Reduced the mobile footer to a slim text-only command bar with an inline Alerts badge, live Refresh status, and the current app version.</li>
+          <li>Made Recipe tracking and editing visually distinct: tracked hoppers use a notched hopper badge, while selected cells carry a small <strong>Edit</strong> tag.</li>
+          <li>Compressed the tablet Recipe header and Edit controls into two stable rows so the resin and percentage fields fit alongside the full hopper panel without shrinking cell content.</li>
+          <li>Restored <strong>Rosé Pine Light</strong>, <strong>Evergreen</strong>, and <strong>Evergreen Light</strong> display themes.</li>
+        </ul>
+
+        <h3>Mobile Home navigation - August 22, 2026</h3>
+        <ul>
+          <li>Reorganized the mobile Home screen as a connected, numbered production rail. <strong>RT Sync</strong>, <strong>Tools</strong>, and <strong>Help</strong> now sit behind one compact <strong>Workspace &amp; support</strong> disclosure.</li>
+        </ul>
+
+        <h3>Changeover planning &amp; Recipe cell actions - August 21-22, 2026</h3>
+        <ul>
+          <li>Recipe Setup can now copy in <strong>both directions</strong>. <strong>Load Current Recipe</strong> on the Next page seeds a plan from what is already running, so a changeover can be planned by editing the two or three hoppers that differ instead of retyping the whole recipe. Load Next Recipe on the Current page is unchanged. Both confirm first and show what will change.</li>
+          <li>Added <strong>Empty</strong> to Edit view, replacing the per-cell × that was too small to hit on a phone. It clears the selected hoppers' resin, percentage, and Track setting - one hopper goes immediately, more than one asks first. Previously there was no way at all to empty a hopper on mobile.</li>
+          <li>Fixed hopper cells only being selectable from their top half: <strong>tapping anywhere in a cell</strong> now tracks it in Summary, or selects it in Edit. Tapping the percentage used to do nothing.</li>
+          <li>Both Recipe views gained a way to undo a selection in bulk - <strong>Clear tracking</strong> in Summary and <strong>Clear selection</strong> in Edit - without leaving the grid.</li>
+          <li>The desktop side rail now shows <strong>numbered markers</strong> on the first four sections, matching mobile, and folds RT Sync, Tools and Help behind a labelled <strong>More</strong> divider so the rail opens shorter.</li>
+          <li>Added <strong>Enhanced tracking</strong> to the Timeline, beside Reset tracking. With a complete Next Recipe planned, each tracked hopper whose resin is changing shows what is coming in — <strong>B2 A0301 → A1901</strong> — and hoppers the plan empties are marked too. Hoppers that are not changing stay unmarked, so the changeover reads off the Timeline at a glance.</li>
+          <li>Fixed the pump-off alarm on Android being impossible to silence. Leaving the alarm screen without dismissing it used to leave the sound looping with no way back to it. The alarm now carries a <strong>Stop alarm</strong> notification, only sounds while its screen is showing, and stops itself after five minutes, leaving a quiet reminder that a pump-off was missed.</li>
+          <li>Pump-off alarms now <strong>survive a phone restart</strong>, and stale alarms are cancelled properly — an alarm for a hopper that was pumped off or untracked while the app was closed no longer goes off anyway.</li>
+          <li>The Android app download link in Help is now offered through a <strong>beta access request</strong>: submit a name and email, and the link appears once you have been added to the tester list.</li>
+        </ul>
+
+        <h3>Summary/Edit views &amp; RT Sync reliability - August 19-20, 2026</h3>
+        <ul>
+          <li>Recipe Setup and Receiver Hopper Weights now share one <strong>Summary / Edit</strong> mode axis on every device. Edit <em>is</em> bulk edit, so there is no longer a separate Bulk edit mode to be in, and the Weights Edit toolbar fits on a single row.</li>
+          <li>On touch devices, hopper cells are no longer typed into directly - editing goes through the panel, which never worked well at cell size on a phone.</li>
+          <li>Fixed the <strong>RT Sync conflict storms</strong> seen on August 19-20, where two devices could push competing versions of the same job back and forth, and a panel could disable itself and stay stuck.</li>
+          <li>Fixed the <strong>Smart Hoppers</strong> panel not refreshing when a line connects.</li>
+        </ul>
+
+        <h3>Database health, hopper geometry &amp; tools - August 16-17, 2026</h3>
+        <ul>
+          <li>Added the admin-only <strong>Database Health</strong> monitor for the Supabase backend, including CPU readings that survive a cold start.</li>
+          <li>Added the <strong>Hopper Volume Weight</strong> tool and a matching <strong>Smart Hoppers volume geometry mode</strong>, for lines whose hoppers are not simple cylinders.</li>
+          <li>Refined the Bulk Density Measurement workflow, and simplified resin records by dropping the unused display/description fields.</li>
+          <li>Gruvbox Light and Dark received a solid icon set, rebalanced dark text, and a matching schedule ribbon on the Timeline.</li>
+          <li>Fixed the Android launcher icon being cropped, and fixed mobile notification actions.</li>
+        </ul>
+
+        <h3>Privacy pages, tablets &amp; workspace polish - August 14-15, 2026</h3>
+        <ul>
+          <li>Published a public <strong>Privacy Policy</strong> and <strong>Data Deletion</strong> page, both linked from the bottom of this guide.</li>
+          <li>Tablets and other large touch screens now stay in the <strong>touch layout</strong> rather than getting a shell of their own, which fixes the Recipe matrix overflowing on wide touch devices such as an unfolded Fold, and a Receiver Weights resize bug.</li>
+          <li>Added <strong>native alarms</strong> on Android for Timeline pump-off alerts.</li>
+          <li>Workspace Management gained <strong>Make Owner</strong>, and RT Sync no longer gets stuck showing "Synced" with no way to rejoin after leaving a workspace.</li>
+          <li>Restyled the mobile footer dock to be shorter and icon-only, added numbered workflow markers to the first four mobile tiles, and gave the desktop Recipe panel a larger, left-aligned matrix.</li>
+        </ul>
+
+        <h3>Current / Next recipes, Line Setup Overview &amp; Help redesign - August 11-12, 2026</h3>
+        <ul>
+          <li>Recipe Setup split into <strong>Current</strong> and <strong>Next</strong> pages. Next holds the plan for the upcoming changeover; <strong>Load Next Recipe</strong> promotes it in one confirmed step, carrying receiver weights, tracking and pump-off forward. The plan is shared over RT Sync, and a dot marks a plan that arrived from another device.</li>
+          <li>Scanned <strong>lot numbers</strong> now carry through from a Heat Sheet scan into the Production Summary.</li>
+          <li>Help was rebuilt as a <strong>visual guide</strong> on a fixed page measure, with restructured navigation and a heat sheet scan example.</li>
+          <li>Added the <strong>Line Setup Overview</strong>, and layer orientation is now derived from the line itself instead of being asked for.</li>
+          <li>Added the <strong>Android app shell</strong> with native camera scanning and Timeline alarms, and <strong>iPhone Home Screen</strong> (PWA) install support.</li>
+          <li>Desktop heads-up banners were replaced by a single <strong>notification center</strong>, and the default theme was renamed <strong>Industrial Slate</strong>.</li>
+        </ul>
+
+        <h3>Smart Hopper, RT Sync &amp; admin refinements - August 11, 2026</h3>
+        <ul>
+          <li><strong>Line 9</strong> now automatically uses <strong>Main + 1–5</strong> hopper naming while linked, including when temporarily offline. Other lines, local-only workspaces, and disconnected devices use <strong>1–6</strong>; changing the label convention never changes saved hopper assignments.</li>
+          <li>Added the admin-only <strong>Bulk Density Measurement</strong> tool. It calculates measured bulk density and packing factor from the calibrated container, can update only the selected resin's bulk-density value after confirmation, and immediately refreshes Resin Reference and Smart Hopper calculations.</li>
+          <li>Refined Receiver Hopper Weights and Recipe Setup with denser, more readable mobile matrices, clearer Smart Hopper states, and consistent action bars for profiles, recipes, bulk editing, and rearranging.</li>
+          <li>Polished the compact Timeline, RT Sync connection states, top-level section headers, and desktop workspace shell. The signed-in Account/Admin menu now remains sharp, clickable, and correctly anchored after login.</li>
+        </ul>
+
+        <h3>Mobile workspace redesign &amp; quick actions - August 9, 2026</h3>
+        <ul>
+          <li>Mobile now opens to a focused <strong>tile home</strong> instead of a long card list. Each section opens on its own, with a consistent return-to-tiles control; Tools and Help also have their own tile indexes.</li>
+          <li>Added a mobile <strong>Appearance</strong> tile with five tile treatments and two background options. <strong>Minimal</strong> is now the default tile treatment, and both Gruvbox Light and Gruvbox Dark receive matching warm, textured backgrounds and retro-styled tiles.</li>
+          <li>Added a timeline option to alert when a tracked hopper reaches <strong>Pump off</strong>, with sound, vibration, an in-app alert, and notifications where the browser permits them.</li>
+          <li>Added the animated <strong>Quick Actions</strong> button on the mobile tile home, providing one-tap access to <strong>Scan Dosing Screen</strong> and <strong>Production Summary</strong>.</li>
+          <li>Improved mobile navigation and polish throughout: section and tool headings are clearer, Scan Recipe controls are easier to use, and every main tile - including Admin Login - has a matching SVG icon.</li>
+        </ul>
+
+        <h3>Recipe Setup polish, Timeline cleanup &amp; readability - August 7, 2026</h3>
+        <ul>
+          <li>Recipe Setup on mobile: redesigned the layer percentage and hopper cells with squared chips, a bolder hopper-designation badge, and easier-to-tap track buttons; the hopper-designation badge and a refined percentage/copy layout were also carried over to desktop.</li>
+          <li>Recipe Setup's action buttons (Saved Recipes, Bulk edit, Rearrange, Scan Recipe, Print Recipe) are now one unified toolbar strip instead of separate floating buttons, on both desktop and mobile. Fixed a bug where this caused the Scan Recipe popup to get clipped/hidden.</li>
+          <li>Fixed black-looking text in light themes across the Recipe chart and Line Setup - resin names, hopper percentages, row headers, warning pills, and more now use a proper dark grey.</li>
+          <li>The RT Sync join-code field now forces uppercase as you type, matching how link codes are printed/shared.</li>
+          <li>Timeline: removed the Timeline style picker and kept the single "Compact Command" card look. Fixed the "Start by" time reading as near-black text, and a mobile layout bug where the time/Pump off row could slide off the left edge of the card.</li>
+          <li>Changed the default theme to <strong>Industrial Slate</strong>. Also tried out several Header style options (Bold Slab, Editorial Serif, Rounded Grotesk, Wide Display) via a temporary picker, then removed the picker and kept <strong>Wide Display</strong> as the permanent header typography.</li>
+        </ul>
+
+        <h3>Recipe Scanner &amp; mobile polish - August 5-6, 2026</h3>
+        <ul>
+          <li>Added <strong>Scan Recipe</strong>: reads a photo of a Job Traveler, a Dosing Screen, or a Heat Sheet and fills Recipe Setup automatically, with a review screen before anything is applied. A camera-icon shortcut in the mobile status bar jumps straight to it.</li>
+          <li>RT Sync now shows exactly which changes haven't synced yet, with a way to discard one that's stuck against an unreachable line. Tapping the mobile footer status refreshes and retries.</li>
+          <li>Recipe Setup on mobile: cards open one at a time instead of stacking up, collapsed card titles are bigger with the subtitle hidden until opened, swipe left/right to switch layers, hopper rows now fit on a single line, and Layers A/B can copy from E/D (in addition to C/D/E copying from A/B).</li>
+          <li>Fixed Production Summary showing a stale, hidden number after reloading the page.</li>
+        </ul>
+
+        <h3>Reliability &amp; appearance - August 3-4, 2026</h3>
+        <ul>
+          <li>Added admin-assisted <strong>Workspace Recovery</strong>, for reconnecting a line computer after its browser data is reset.</li>
+          <li>Added a desktop <strong>Print Recipe</strong> button.</li>
+          <li>Added a warning when the changeover time looks stale instead of silently rolling it forward to the next day.</li>
+          <li>Five more color themes (Rosé Pine, Rosé Pine Dawn, Everforest, Everforest Light, One Dark) and a Header style preference.</li>
+          <li>Reworked mobile's Bulk Edit and Rearrange Hoppers to support tap-to-move, not just drag.</li>
+          <li>Ongoing RT Sync reliability work to cut unnecessary syncing and keep multiple devices in sync smoothly.</li>
+        </ul>
+
+        <h3>Resin catalog &amp; shared configurations - August 1-2, 2026</h3>
+        <ul>
+          <li>Added the Supabase-backed <strong>resin catalog</strong> with an admin-only editor (add, edit, activate/deactivate resins).</li>
+          <li>Added <strong>shared cloud recipes and receiver-weight profiles</strong> for an RT Sync workspace - save, load, rename, duplicate, delete, and favorite recipes.</li>
+          <li>Added desktop <strong>hopper rearrangement</strong> (drag-and-drop, with Undo/Cancel/Done).</li>
+          <li>Added customizable view density and surface style, and the current Layer Stack logo/RT branding.</li>
+        </ul>
+
+        <h3>RT Sync &amp; rebrand - late July 2026</h3>
+        <ul>
+          <li>Added <strong>RT Sync</strong>: share a live production line across devices.</li>
+          <li>Redesigned receiver hopper weight entry as a selectable matrix, and reworked hopper percentage editing.</li>
+          <li>Added built-in resin autocomplete, a starter resin catalog, and resin material information (density, typical uses, handling notes).</li>
+          <li>Added the Production Summary, Short Footage, and Hopper Weight calculators.</li>
+          <li>Added this Help guide, and settled on the app's name: <strong>Resin.Tools</strong>.</li>
+        </ul>
+
+        <h3>Initial build - December 2025 to January 2026</h3>
+        <ul>
+          <li>The original hopper run-down calculator: weight and percentage entry, run-down formulas, and the first responsive layout.</li>
+        </ul>
+        <!-- Absolute URL on purpose, and the same target="_blank" treatment
+             the old Play banner used: the bundled Android app has no
+             /privacy/ page of its own, so this has to reach the published
+             policy on resin.tools and open outside the app shell rather
+             than navigating the WebView away from the app. It is also why
+             build-www.js skips it - its allowlist parser ignores anything
+             with a scheme. -->
+        <div class="changelogPrivacy">
+          <div class="changelogPrivacyLinks">
+            <a class="changelogPrivacyLink" href="https://resin.tools/privacy" target="_blank" rel="noopener">Privacy Policy</a>
+            <span class="changelogPrivacySep" aria-hidden="true">·</span>
+            <a class="changelogPrivacyLink" href="https://resin.tools/privacy/delete-data/" target="_blank" rel="noopener">Delete Data</a>
+          </div>
+          <span class="changelogAppVersion" aria-label="App version">v1.1.17</span>
+          <small class="changelogPrivacyNote">How Resin.Tools handles your data</small>
         </div>
-        <a class="helpPlayBanner" data-beta-when="invited" href="https://play.google.com/apps/internaltest/4699396162063044468" target="_blank" rel="noopener">
-          <svg class="helpPlayBannerIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.609 1.814 13.792 12 3.61 22.186a.996.996 0 0 1-.61-.92V2.734a1 1 0 0 1 .609-.92Zm10.89 10.893 2.302 2.302-10.937 6.333 8.635-8.635Zm3.199-3.198 2.807 1.626a1 1 0 0 1 0 1.73l-2.808 1.626L17.415 12l2.283-2.291ZM4.609 3.229l10.937 6.333-2.302 2.302-8.635-8.635Z"/></svg>
-          <span>
-            <strong>Get the Android app</strong>
-            <small>Join internal testing on Google Play</small>
-          </span>
-        </a>
-      </div>
-      <div class="helpTopics">
-        <details class="helpTopic" id="helpQuickStart" open>
-          <summary><span>Quick Start</span><small>Set up Resin.Tools in just a few minutes</small></summary>
-          <div class="helpTopicBody">
-            <p class="helpLede">Six steps from a cold start to a tracked changeover. Everything after that is refinement.</p>
-
-            <div class="helpAsideRow">
-              <figure class="helpShot helpAside" style="--shot-w:220px">
-                <img src="branding/help/ui-nav.png" alt="Two navigation entries: Line Setup with an orange status reading Needs hopper weights, and Recipe, selected, with a green status reading Ready." loading="lazy">
-                <figcaption>Each section reports its own state. Work down the list until nothing is asking for attention.</figcaption>
-              </figure>
-              <ol class="helpSteps">
-                <li>Connect to your line with <a class="helpTopicLink" href="#helpCloudSync">RT Sync</a>. The line setup, including layer count, loads automatically.</li>
-                <li>Set the changeover deadline, enter the line rate, and verify the <a class="helpTopicLink" href="#helpSetup">receiver hopper weights</a>.</li>
-                <li>Build the layer recipe in <a class="helpTopicLink" href="#helpHopperPercentages">Recipe</a>.</li>
-                <li>Turn on <a class="helpTopicLink" href="#helpHopperPercentages">tracking</a> for the hoppers involved in the changeover.</li>
-                <li>Open the <a class="helpTopicLink" href="#helpTimeline">Timeline</a> to see when each hopper should begin running down.</li>
-                <li>Use <a class="helpTopicLink" href="#helpTools">Resin Totals</a> at the end of the run to total material usage for inventory.</li>
-              </ol>
-            </div>
-
-            <hr class="helpRule">
-            <p class="helpEyebrow">Always visible</p>
-            <h3>The status bar</h3>
-            <figure class="helpShot helpWide" style="--shot-w:920px">
-              <img src="branding/help/ui-statusbar.png" alt="Status bar reading Output 1,150 lb/hr, Changeover 6:41 PM, Tracked 5, RT Sync Local only, and Next action: Next pump off A2, Purge Compound." loading="lazy">
-              <figcaption>Output, changeover, tracked count, sync state, and the single next thing to do — on every screen.</figcaption>
-            </figure>
-          </div>
-        </details>
-
-        <details class="helpTopic" id="helpSetup">
-          <summary><span>Setup</span><small>Prepare the line and timing inputs</small></summary>
-          <div class="helpTopicBody">
-            <p class="helpLede">Two things drive every run-down time: <strong>how fast the line runs</strong> and <strong>how much each hopper holds</strong>. Get those right and the Timeline takes care of itself.</p>
-
-            <details class="helpSubtopic" open>
-              <summary><span>Line configuration</span><small>Left column</small></summary>
-              <div class="helpSubtopicBody">
-            <div class="helpSplit is-autoMedia">
-              <figure class="helpShot" style="--shot-w:214px">
-                <img src="branding/help/setup-config.png" alt="Line configuration panel with a 1, 3, 5 layer selector set to 3, a changeover tile reading 6:41 PM, and an output tile reading 1150 pounds per hour." loading="lazy">
-              </figure>
-              <div>
-                <p>Pick the <strong>layer count</strong>, set the <strong>changeover deadline</strong>, and enter the current <strong>output</strong> in lb/hr.</p>
-                <p class="helpCaption">Connected to RT Sync? Layer count arrives with the line — you won't set it here.</p>
-              </div>
-            </div>
-              </div>
-            </details>
-
-            <details class="helpSubtopic">
-              <summary><span>Receiver hopper weights</span><small>Right column</small></summary>
-              <div class="helpSubtopicBody">
-            <p>Enter the <strong>usable pounds</strong> each hopper holds — conservative beats optimistic. Without these, run-down times can't be calculated.</p>
-            <figure class="helpShot helpWide" style="--shot-w:909px">
-              <img src="branding/help/setup-matrix.png" alt="Receiver hopper weight matrix, six numbered hopper rows against layer columns A, B and C, with weights such as 1450 lb, 1850 lb and 980 lb entered in the first two rows." loading="lazy">
-              <figcaption>Click a hopper number to select that row, a layer letter to select the column, or cells individually — then apply one weight to everything selected via <strong>Bulk edit</strong>.</figcaption>
-            </figure>
-              </div>
-            </details>
-
-            <details class="helpSubtopic">
-              <summary><span>Smart Hoppers</span><small>Calculated capacity</small></summary>
-              <div class="helpSubtopicBody">
-            <div class="helpCallout is-stacked">
-              <figure class="helpShot" style="--shot-w:548px">
-                <img src="branding/help/setup-smart.png" alt="Smart Hoppers control row, labelled Resin-specific calculated capacity, with its toggle switched to Disabled." loading="lazy">
-              </figure>
-              <div>
-                <strong class="helpCalloutTitle">Smart Hoppers</strong>
-                <p>Calculates resin-specific hopper capacity from hopper size and bulk density instead of a typed weight. Resin.Tools automatically uses cylindrical dimensions or known usable volume, whichever method the connected line uses — set each hopper's geometry with its wrench icon. Smart Hoppers is only available once a workspace with an identified line is connected.</p>
-                <p class="helpCaption">A computed weight (green checkmark) appears only once that resin has a measured bulk density on file. When it appears, it drives the run-down instead of the typed value.</p>
-              </div>
-            </div>
-              </div>
-            </details>
-
-            <p class="helpTip"><strong>Heads up:</strong> Changes save to this browser immediately. Setup warnings call out missing weights and anything else that reduces timing accuracy.</p>
-          </div>
-        </details>
-
-        <details class="helpTopic" id="helpHopperPercentages">
-          <summary><span>Recipe</span><small>Build the layer and resin recipe</small></summary>
-          <div class="helpTopicBody">
-            <p class="helpLede">Layer percentages, resin names, and hopper blend percentages for the current job. One toolbar at the bottom holds every recipe action.</p>
-
-            <details class="helpSubtopic" open>
-              <summary><span>Layers across, hoppers down</span><small>Read the grid</small></summary>
-              <div class="helpSubtopicBody">
-            <div class="helpSplit is-autoMedia">
-              <figure class="helpShot" style="--shot-w:541px">
-                <img src="branding/help/recipe-grid.png" alt="Recipe hopper grid for layers A, B and C. Layer percentages read 20, 50 and 30 percent. Hoppers A1, A2, B1, C1 and C2 hold resin names and blend percentages; the rest are empty." loading="lazy">
-              </figure>
-              <div>
-                <p>Each column is a layer with its share of total output. Each row is a hopper position feeding that layer.</p>
-                <p class="helpCaption">Layer percentages should total 100%. A problem message appears under a layer only when its hoppers need attention.</p>
-              </div>
-            </div>
-
-            <div class="helpCallout">
-              <figure class="helpShot" style="--shot-w:181px">
-                <img src="branding/help/recipe-cell.png" alt="A single hopper cell labelled A1 with a highlighted clock icon, a clear button, the resin MSO 440, and 85 percent." loading="lazy">
-              </figure>
-              <div>
-                <strong class="helpCalloutTitle">One hopper, four controls</strong>
-                <p>The <strong>badge</strong> names the position. The <strong>clock</strong> adds it to the Timeline — colored means tracked. The <strong>×</strong> clears it. Then the resin name and its blend percentage.</p>
-              </div>
-            </div>
-
-            <ol class="helpSteps">
-              <li>Enter each layer's percentage of total output, above the grid.</li>
-              <li>Type or pick a resin name. Optional — a hopper can carry a percentage without one.</li>
-              <li>Fill hoppers 2–6. <strong>Hopper 1 is calculated for you</strong> as the remainder, so every layer lands on 100%.</li>
-              <li>Click the clock on each hopper involved in the changeover.</li>
-            </ol>
-
-            <p class="helpTip">Where a layer offers <span class="helpKey">Match</span> — B and D, or A and E — it copies that layer's resins and hopper percentages across. It leaves the destination layer's own percentage alone.</p>
-              </div>
-            </details>
-
-            <details class="helpSubtopic">
-              <summary><span>The toolbar</span><small>Bottom of the panel</small></summary>
-              <div class="helpSubtopicBody">
-            <figure class="helpShot helpWide" style="--shot-w:509px">
-              <img src="branding/help/recipe-toolbar.png" alt="Recipe toolbar with buttons for Saved recipes, Bulk edit, Rearrange, Scan Recipe, Print Recipe, and an information icon." loading="lazy">
-              <figcaption>The ⓘ is a reminder that resin names are optional and a colored clock means tracked.</figcaption>
-            </figure>
-
-            <div class="helpGrid">
-              <div class="helpCard"><strong>Recipe Book</strong><span>Load into Current or Next; save either Current or Next; rename, duplicate, favorite, or delete recipes shared with your RT Sync workspace.</span></div>
-              <div class="helpCard"><strong>Bulk Edit</strong><span>Apply one resin or percentage to many hoppers at once.</span></div>
-              <div class="helpCard"><strong>Rearrange</strong><span>Move or swap assignments between hoppers, including across layers.</span></div>
-              <div class="helpCard"><strong>Scan Recipe</strong><span>Fill the grid from a photo. See <a class="helpTopicLink" href="#helpRecipeScan">Scan Recipe</a>.</span></div>
-            </div>
-
-            <p class="helpTip"><strong>Loading a recipe</strong> asks whether to replace Current or Next. It changes recipe data only; receiver hopper weights and tracking are never touched.</p>
-              </div>
-            </details>
-
-            <details class="helpSubtopic">
-              <summary><span>Bulk Edit</span><small>Many hoppers at once</small></summary>
-              <div class="helpSubtopicBody">
-            <div class="helpSplit is-autoMedia">
-              <figure class="helpShot" style="--shot-w:605px">
-                <img src="branding/help/recipe-bulk-grid.png" alt="Recipe grid in Bulk Edit mode. A Select row column of numbers 1 to 6 runs down the left, layer letters head each column, and every hopper cell carries a checkbox." loading="lazy">
-              </figure>
-              <div>
-                <p>The grid gains a <strong>Select row</strong> column and clickable layer headings. Pick a whole hopper position across every layer, a whole layer, or cell by cell.</p>
-              </div>
-            </div>
-            <figure class="helpShot helpWide" style="--shot-w:920px">
-              <img src="branding/help/recipe-bulk-panel.png" alt="Bulk edit panel showing three numbered stages — Select hoppers, Enter changes, Apply — above Resin name and Percentage fields, an Apply to selected button, Select all and Clear selection links, and a Reset all button." loading="lazy">
-              <figcaption>The panel walks the same three stages every time.</figcaption>
-            </figure>
-            <ol class="helpSteps">
-              <li>Select the hoppers — individually, a numbered row, a layer heading, or <span class="helpKey">Select all</span>.</li>
-              <li>Enter a resin name, a percentage, or both. Blank fields leave existing values alone.</li>
-              <li><span class="helpKey">Apply to selected</span>. Percentages are rejected where they would push a layer past 100%.</li>
-            </ol>
-            <p class="helpTip"><span class="helpKey">Reset all</span> empties every resin field and clears percentages, tracking, and pump-off states — a clean slate before building a new recipe.</p>
-              </div>
-            </details>
-
-            <details class="helpSubtopic">
-              <summary><span>Rearrange</span><small>Move or swap assignments</small></summary>
-              <div class="helpSubtopicBody">
-            <figure class="helpShot helpWide" style="--shot-w:920px">
-              <img src="branding/help/recipe-rearrange-bar.png" alt="Rearrange mode bar reading: drag, or tap a hopper then tap another, to move assignments. Hopper 1 is recalculated after each move. Undo Last Move and Cancel buttons sit at the right." loading="lazy">
-            </figure>
-            <p>Drag one hopper onto another on desktop, or tap a source then a destination on a touch screen. Dropping onto an empty hopper moves the assignment; onto a filled one, they swap — including across layers.</p>
-            <p class="helpTip">Only the resin and its percentage move. <strong>Receiver weight, tracking, and pump-off stay with the physical hopper.</strong></p>
-            <p class="helpTip">Hopper 1 recalculates after every move, and a move that would make a layer invalid is refused. <span class="helpKey">Undo Last Move</span> steps back, <span class="helpKey">Cancel</span> restores the recipe as it was, <span class="helpKey">Done Rearranging</span> keeps it.</p>
-              </div>
-            </details>
-
-            <details class="helpSubtopic">
-              <summary><span>On mobile</span><small>Phone layout</small></summary>
-              <div class="helpSubtopicBody">
-            <div class="helpSplit is-autoMedia">
-              <figure class="helpShot is-device" style="--shot-w:390px">
-                <img src="branding/help/recipe-mobile-overflow.png" alt="Mobile Recipe view showing one layer at a time with layer tabs A, B and C on the right, and the toolbar overflow menu open showing Scan job traveler, Scan dosing screen, Scan heat sheet, and Print recipe." loading="lazy">
-              </figure>
-              <div>
-                <p>One layer at a time — switch with the <strong>A / B / C tabs</strong> down the right edge.</p>
-                <p>Saved Recipes, Bulk Edit, and Rearrange stay on the toolbar. Scan Recipe's three sources and Print Recipe move into the <strong>•••</strong> menu.</p>
-                <p class="helpCaption">Edit keeps the resin and percentage controls above the matrix, so selected hoppers stay visible while you make changes.</p>
-              </div>
-            </div>
-              </div>
-            </details>
-          </div>
-        </details>
-
-        <details class="helpTopic" id="helpTimeline">
-          <summary><span>Timeline</span><small>Follow hopper changeover timing</small></summary>
-          <div class="helpTopicBody">
-            <p class="helpLede">The running order for the changeover: which hopper to pump off next, and when.</p>
-
-            <details class="helpSubtopic" open>
-              <summary><span>Reading the timeline</span><small>The list</small></summary>
-              <div class="helpSubtopicBody">
-            <figure class="helpShot helpWide" style="--shot-w:760px">
-              <img src="branding/help/timeline-list.png" alt="Timeline list of five tracked hoppers: A2 Purge Compound, C2 Regrind Blend, A1 MSO 440, B1 LLDPE 1001 and C1 Color Concentrate Blue. Each row shows a feed rate, an empty-in duration, a start time, and a Pump off checkbox." loading="lazy">
-              <figcaption>Only tracked hoppers appear here, ordered by what needs attention first.</figcaption>
-            </figure>
-
-            <div class="helpCallout">
-              <figure class="helpShot" style="--shot-w:470px">
-                <img src="branding/help/timeline-entry.png" alt="The data half of one timeline row: hopper A2, resin Purge Compound, 620 pounds, 34.5 pounds per hour, empty in 17 hours 58 minutes, start 12:42 AM." loading="lazy">
-              </figure>
-              <div>
-                <strong class="helpCalloutTitle">Reading a row</strong>
-                <p>Hopper and resin, how much it holds, how fast it's drawing, and how long until it runs dry. <strong>Start</strong> is the clock time to begin running it down.</p>
-                <p class="helpCaption">With a changeover deadline set, rows sort by start time. Without one, they sort by time to empty.</p>
-              </div>
-            </div>
-
-              </div>
-            </details>
-
-            <details class="helpSubtopic">
-              <summary><span>Pump off and reset tracking</span><small>Controls</small></summary>
-              <div class="helpSubtopicBody">
-            <div class="helpSplit is-autoMedia">
-              <figure class="helpShot" style="--shot-w:227px">
-                <img src="branding/help/timeline-controls.png" alt="Timeline controls: a Show all toggle, switched off, beside a Reset tracking button." loading="lazy">
-              </figure>
-              <div>
-                <p>Tick <span class="helpKey">Pump off</span> once you've physically shut a pump down. That row then hides itself unless <span class="helpKey">Show all</span> is on.</p>
-                <p><span class="helpKey">Reset tracking</span> untracks every hopper and clears pump-off states, ready for the next job.</p>
-              </div>
-            </div>
-              </div>
-            </details>
-
-            <details class="helpSubtopic">
-              <summary><span>On mobile</span><small>Phone layout</small></summary>
-              <div class="helpSubtopicBody">
-            <div class="helpSplit is-narrowMedia is-reverse">
-              <figure class="helpShot is-device" style="--shot-w:366px">
-                <img src="branding/help/mobile-timeline.png" alt="Mobile Timeline showing the Show all toggle, Reset tracking, a Timeline alarm option, and the list of tracked hopper rows, above the persistent app dock." loading="lazy">
-              </figure>
-              <div>
-                <p>The phone layout is the same list, sized for a glance across the floor.</p>
-                <p>Turn on <strong>Alarm when pump-off is due</strong> for sound and vibration while Resin.Tools is open.</p>
-                <figure class="helpShot" style="--shot-w:366px">
-                  <img src="branding/help/mobile-footer.png" alt="Mobile app dock with Display, Shortcuts, Main, Account, and an RT Sync status button reading Local only." loading="lazy">
-                  <figcaption>The dock carries the next tracked hopper and live RT Sync status on every screen.</figcaption>
-                </figure>
-              </div>
-            </div>
-              </div>
-            </details>
-          </div>
-        </details>
-
-        <details class="helpTopic" id="helpCloudSync">
-          <summary><span>RT Sync</span><small>Share a production line across devices</small></summary>
-          <div class="helpTopicBody">
-            <p class="helpLede">One shared job state across every device on the line. Resin.Tools works fully offline — connect only when a line should be shared.</p>
-
-            <details class="helpSubtopic" open>
-              <summary><span>Create the line</span><small>First device</small></summary>
-              <div class="helpSubtopicBody">
-            <ol class="helpSteps">
-              <li>Create one permanent workspace for the line and give this device a recognizable label.</li>
-              <li>Generate a four-character link code.</li>
-            </ol>
-              </div>
-            </details>
-
-            <details class="helpSubtopic">
-              <summary><span>Join it</span><small>Every other device</small></summary>
-              <div class="helpSubtopicBody">
-            <div class="helpSplit is-autoMedia">
-              <figure class="helpShot" style="--shot-w:500px">
-                <img src="branding/help/sync-join.png" alt="Link code field containing AB23, beside a Join RT Sync button." loading="lazy">
-              </figure>
-              <div>
-                <p>Open RT Sync, type the code, and select <span class="helpKey">Join RT Sync</span>.</p>
-                <p class="helpCaption">Codes are single-use and expire after 30 minutes.</p>
-              </div>
-            </div>
-              </div>
-            </details>
-
-            <details class="helpSubtopic">
-              <summary><span>Knowing where you stand</span><small>Day to day</small></summary>
-              <div class="helpSubtopicBody">
-            <div class="helpSplit is-autoMedia">
-              <figure class="helpShot" style="--shot-w:255px">
-                <img src="branding/help/sync-metrics.png" alt="Two status pills reading Last sync Never and Unsynced changes 0." loading="lazy">
-              </figure>
-              <div>
-                <p>Local changes always save first, then upload. Other devices update without a refresh.</p>
-                <p>When something is pending, a list appears naming exactly what hasn't synced — with a Discard option for anything stuck against an unreachable workspace.</p>
-              </div>
-            </div>
-              </div>
-            </details>
-
-            <details class="helpSubtopic">
-              <summary><span>Line actions</span><small>Managing the workspace</small></summary>
-              <div class="helpSubtopicBody">
-            <figure class="helpShot helpWide" style="--shot-w:432px">
-              <img src="branding/help/sync-actions.png" alt="RT Sync action toolbar with Create line, Rename line, Connect / retry and New job on the first row, and Generate Link Code, Disconnect on this device and Leave RT Sync on the second." loading="lazy">
-            </figure>
-            <div class="helpGrid">
-              <div class="helpCard"><strong>New job</strong><span>Clears job inputs and tracking. Keeps the workspace, linked devices, saved settings, and hopper weights.</span></div>
-              <div class="helpCard"><strong>Disconnect on this device</strong><span>Pauses syncing here but keeps membership.</span></div>
-              <div class="helpCard"><strong>Leave RT Sync</strong><span>Removes this device's membership entirely.</span></div>
-            </div>
-
-            <p class="helpTip">Only the owner can remove another device or delete the shared line, and must transfer ownership before leaving.</p>
-            <p class="helpTip">Phones show a simplified panel — current line, device label, sync details, Refresh, Disconnect, Leave. Creating and naming lines, link codes, and device administration stay on desktop. Tap the dock's RT Sync status to refresh immediately.</p>
-              </div>
-            </details>
-          </div>
-        </details>
-
-        <details class="helpTopic" id="helpTools">
-          <summary><span>Tools</span><small>Production calculators and resin reference</small></summary>
-          <div class="helpTopicBody">
-            <p class="helpLede">Five utilities, one at a time, so the workspace stays focused.</p>
-
-            <div class="helpSplit is-autoMedia">
-              <figure class="helpShot" style="--shot-w:170px">
-                <img src="branding/help/tools-index.png" alt="Tool index listing Production Summary, Short Footage, Hopper Weight, Resin Reference, and Scan Recipe, with Production Summary selected." loading="lazy">
-                <figcaption>Pick from the index; the panel swaps beside it.</figcaption>
-              </figure>
-              <div class="helpGrid" style="margin:0">
-                <div class="helpCard"><strong>Resin Totals</strong><span>Material totals by resin for reporting and inventory issuance.</span></div>
-                <div class="helpCard"><strong>Short Footage</strong><span>Adjusted short footage from actual weight, target footage, and last good weight.</span></div>
-                <div class="helpCard"><strong>Hopper Weight</strong><span>Capacity from circumference and usable height, with bulk density entered or estimated.</span></div>
-                <div class="helpCard"><strong>Resin Reference</strong><span>Search by code or description for density, material information, and typical uses.</span></div>
-              </div>
-            </div>
-
-            <hr class="helpRule">
-            <p class="helpEyebrow">End of run</p>
-            <h3>Resin Totals</h3>
-            <p>Build the recipe first, then enter production and scrap pounds. Totals are split by material using the current recipe percentages.</p>
-            <figure class="helpShot helpWide" style="--shot-w:920px">
-              <img src="branding/help/tools-summary.png" alt="Production Summary results: a totals band reading Production 1624 lb, Scrap 534 lb, Total 2158 lb, followed by a by-material list with LLDPE 1001 at 1079 lb, Color Concentrate Blue at 582 lb, MSO 440 at 366 lb and Purge Compound at 64 lb." loading="lazy">
-              <figcaption>Pounds per resin, ready to hand to inventory.</figcaption>
-            </figure>
-          </div>
-        </details>
-
-        <details class="helpTopic" id="helpRecipeScan">
-          <summary><span>Scan Recipe</span><small>Fill Recipe from a photo</small></summary>
-          <div class="helpTopicBody">
-            <p class="helpLede">Photograph a paper or screen source and Resin.Tools drafts the recipe for you. <strong>Nothing is written until you select Apply.</strong></p>
-
-            <div class="helpSplit is-autoMedia">
-              <figure class="helpShot" style="--shot-w:232px">
-                <img src="branding/help/scan-menu.png" alt="Scan Recipe menu open on the Recipe toolbar, offering Scan Job Traveler, Scan Dosing Screen, and Scan Heat Sheet." loading="lazy">
-              </figure>
-              <div>
-                <p>Three sources, from the Recipe toolbar or the Tools index. Each reads a different document, so pick the one in your hand.</p>
-              </div>
-            </div>
-
-            <p class="helpTip">Layer order is taken from the line you're connected to, so no source asks which end layer A is on.</p>
-
-            <details class="helpSubtopic">
-              <summary><span>Job Traveler</span><small>Source</small></summary>
-              <div class="helpSubtopicBody">
-            <ol class="helpSteps">
-              <li>Photograph the product blend table. Hand-written hopper numbers beside a resin are read automatically when legible.</li>
-            </ol>
-              </div>
-            </details>
-
-            <details class="helpSubtopic">
-              <summary><span>Dosing Screen</span><small>Source</small></summary>
-              <div class="helpSubtopicBody">
-            <ol class="helpSteps">
-              <li>Photograph the dosing controller's material overview screen, or a printout. Validated for lines 9–11.</li>
-              <li>Component position maps straight to hopper number.</li>
-              <li>Enter layer percentages on the review screen; this source never prints them.</li>
-            </ol>
-              </div>
-            </details>
-
-            <details class="helpSubtopic">
-              <summary><span>Heat Sheet</span><small>Source</small></summary>
-              <div class="helpSubtopicBody">
-            <ol class="helpSteps">
-              <li>Photograph the blender / layer settings sheet. Unused hoppers are simply absent, not zero rows.</li>
-              <li>Legible handwriting matters most here. Writing in layer percentages and hopper designations helps it import cleanly.</li>
-            </ol>
-
-            <figure class="helpShot helpWide" style="--shot-w:920px">
-              <img src="branding/help/heat-sheet-example.jpg" alt="Photographed blender / layer settings heat sheet showing three layer blocks. Each block lists hopper designations H1, H2, H4 and H5 against full resin codes such as MS0120, MS0400, A0700 and MS1201, with the layer percentage 20, 60 or 20 in the centre column and hopper percentages 37, 60, 3 in the right-hand percent column." loading="lazy">
-              <figcaption>A sheet that scans cleanly: every row carries a hopper designation and a full resin code, the layer percentage sits in its own column, and hopper percentages line up against the block they belong to.</figcaption>
-            </figure>
-              </div>
-            </details>
-
-            <p class="helpTip is-warn"><strong>Always review before applying.</strong> A scan can misread handwriting or a poor photo. Check every layer, hopper, and percentage on the review screen, and watch its warnings about totals that miss 100%.</p>
-          </div>
-        </details>
-
-        <details class="helpTopic" id="helpChangelog">
-          <summary><span>Changelog</span><small>A running history of what's been added, most recent first</small></summary>
-          <div class="helpTopicBody">
-            <h3>Recipe workflow, workspace navigation &amp; RT Sync hardening - August 24-25, 2026</h3>
-            <ul>
-              <li><strong>Recipe</strong> now keeps its grid, header, and footer stable across desktop, tablet, and mobile. Mobile and tablet edit in place instead of opening a sheet, with compact controls, <strong>Undo</strong>/<strong>Redo</strong>, clearer tracked and Edit states, and percentages that no longer clip.</li>
-              <li>Added <strong>Recipe Book</strong> beside Current and Next. Recipes can now load directly into either page, including <strong>Load Current Recipe</strong> and <strong>Save Next Recipe</strong>; recipe actions and saved-recipe controls are aligned consistently on desktop and tablet.</li>
-              <li>Refined desktop Recipe and the side rail: Summary and Edit keep the panel from shifting, tracking is labeled in the hopper badge instead of relying on a cell highlight, and the rail’s expanded stages are shorter and less redundant.</li>
-              <li>Redesigned <strong>Resin Totals</strong> on desktop and tablet with fixed material, lot, and pounds columns, a clear Total issued row, and matching Production / Scrap resin fields. Scanned lot numbers now stay aligned as totals change.</li>
-              <li>Simplified touch navigation to <strong>Display</strong>, <strong>Main</strong>, and <strong>Alerts</strong>: Main uses the layer-stack icon, Alerts is a bell, and refresh no longer occupies the footer. <strong>Workspace &amp; support</strong> now contains <strong>Sudo access</strong> for administrator tools.</li>
-              <li>Added <strong>System / Auto</strong> and <strong>OLED Black</strong> appearance options, and restored the <strong>Nord</strong> theme.</li>
-              <li>Hardened <strong>RT Sync</strong> against stale-client revision storms. The server now returns the authoritative shared job for a stale write, while current clients retain the normal conflict-resolution choice; durable conflict tracking slows callers that ignore that response.</li>
-            </ul>
-
-            <h3>Mobile workspace, Recipe editing &amp; display - August 23, 2026</h3>
-            <ul>
-              <li>Redesigned the mobile Home screen as a compact connected workflow rail, with the active RT Sync workspace shown beside its heading and support tools grouped behind one disclosure.</li>
-              <li>Reduced the mobile footer to a slim text-only command bar with an inline Alerts badge, live Refresh status, and the current app version.</li>
-              <li>Made Recipe tracking and editing visually distinct: tracked hoppers use a notched hopper badge, while selected cells carry a small <strong>Edit</strong> tag.</li>
-              <li>Compressed the tablet Recipe header and Edit controls into two stable rows so the resin and percentage fields fit alongside the full hopper panel without shrinking cell content.</li>
-              <li>Restored <strong>Rosé Pine Light</strong>, <strong>Evergreen</strong>, and <strong>Evergreen Light</strong> display themes.</li>
-            </ul>
-
-            <h3>Mobile Home navigation - August 22, 2026</h3>
-            <ul>
-              <li>Reorganized the mobile Home screen as a connected, numbered production rail. <strong>RT Sync</strong>, <strong>Tools</strong>, and <strong>Help</strong> now sit behind one compact <strong>Workspace &amp; support</strong> disclosure.</li>
-            </ul>
-
-            <h3>Changeover planning &amp; Recipe cell actions - August 21-22, 2026</h3>
-            <ul>
-              <li>Recipe Setup can now copy in <strong>both directions</strong>. <strong>Load Current Recipe</strong> on the Next page seeds a plan from what is already running, so a changeover can be planned by editing the two or three hoppers that differ instead of retyping the whole recipe. Load Next Recipe on the Current page is unchanged. Both confirm first and show what will change.</li>
-              <li>Added <strong>Empty</strong> to Edit view, replacing the per-cell × that was too small to hit on a phone. It clears the selected hoppers' resin, percentage, and Track setting - one hopper goes immediately, more than one asks first. Previously there was no way at all to empty a hopper on mobile.</li>
-              <li>Fixed hopper cells only being selectable from their top half: <strong>tapping anywhere in a cell</strong> now tracks it in Summary, or selects it in Edit. Tapping the percentage used to do nothing.</li>
-              <li>Both Recipe views gained a way to undo a selection in bulk - <strong>Clear tracking</strong> in Summary and <strong>Clear selection</strong> in Edit - without leaving the grid.</li>
-              <li>The desktop side rail now shows <strong>numbered markers</strong> on the first four sections, matching mobile, and folds RT Sync, Tools and Help behind a labelled <strong>More</strong> divider so the rail opens shorter.</li>
-              <li>Added <strong>Enhanced tracking</strong> to the Timeline, beside Reset tracking. With a complete Next Recipe planned, each tracked hopper whose resin is changing shows what is coming in — <strong>B2 A0301 → A1901</strong> — and hoppers the plan empties are marked too. Hoppers that are not changing stay unmarked, so the changeover reads off the Timeline at a glance.</li>
-              <li>Fixed the pump-off alarm on Android being impossible to silence. Leaving the alarm screen without dismissing it used to leave the sound looping with no way back to it. The alarm now carries a <strong>Stop alarm</strong> notification, only sounds while its screen is showing, and stops itself after five minutes, leaving a quiet reminder that a pump-off was missed.</li>
-              <li>Pump-off alarms now <strong>survive a phone restart</strong>, and stale alarms are cancelled properly — an alarm for a hopper that was pumped off or untracked while the app was closed no longer goes off anyway.</li>
-              <li>The Android app download link in Help is now offered through a <strong>beta access request</strong>: submit a name and email, and the link appears once you have been added to the tester list.</li>
-            </ul>
-
-            <h3>Summary/Edit views &amp; RT Sync reliability - August 19-20, 2026</h3>
-            <ul>
-              <li>Recipe Setup and Receiver Hopper Weights now share one <strong>Summary / Edit</strong> mode axis on every device. Edit <em>is</em> bulk edit, so there is no longer a separate Bulk edit mode to be in, and the Weights Edit toolbar fits on a single row.</li>
-              <li>On touch devices, hopper cells are no longer typed into directly - editing goes through the panel, which never worked well at cell size on a phone.</li>
-              <li>Fixed the <strong>RT Sync conflict storms</strong> seen on August 19-20, where two devices could push competing versions of the same job back and forth, and a panel could disable itself and stay stuck.</li>
-              <li>Fixed the <strong>Smart Hoppers</strong> panel not refreshing when a line connects.</li>
-            </ul>
-
-            <h3>Database health, hopper geometry &amp; tools - August 16-17, 2026</h3>
-            <ul>
-              <li>Added the admin-only <strong>Database Health</strong> monitor for the Supabase backend, including CPU readings that survive a cold start.</li>
-              <li>Added the <strong>Hopper Volume Weight</strong> tool and a matching <strong>Smart Hoppers volume geometry mode</strong>, for lines whose hoppers are not simple cylinders.</li>
-              <li>Refined the Bulk Density Measurement workflow, and simplified resin records by dropping the unused display/description fields.</li>
-              <li>Gruvbox Light and Dark received a solid icon set, rebalanced dark text, and a matching schedule ribbon on the Timeline.</li>
-              <li>Fixed the Android launcher icon being cropped, and fixed mobile notification actions.</li>
-            </ul>
-
-            <h3>Privacy pages, tablets &amp; workspace polish - August 14-15, 2026</h3>
-            <ul>
-              <li>Published a public <strong>Privacy Policy</strong> and <strong>Data Deletion</strong> page, both linked from the bottom of this guide.</li>
-              <li>Tablets and other large touch screens now stay in the <strong>touch layout</strong> rather than getting a shell of their own, which fixes the Recipe matrix overflowing on wide touch devices such as an unfolded Fold, and a Receiver Weights resize bug.</li>
-              <li>Added <strong>native alarms</strong> on Android for Timeline pump-off alerts.</li>
-              <li>Workspace Management gained <strong>Make Owner</strong>, and RT Sync no longer gets stuck showing "Synced" with no way to rejoin after leaving a workspace.</li>
-              <li>Restyled the mobile footer dock to be shorter and icon-only, added numbered workflow markers to the first four mobile tiles, and gave the desktop Recipe panel a larger, left-aligned matrix.</li>
-            </ul>
-
-            <h3>Current / Next recipes, Line Setup Overview &amp; Help redesign - August 11-12, 2026</h3>
-            <ul>
-              <li>Recipe Setup split into <strong>Current</strong> and <strong>Next</strong> pages. Next holds the plan for the upcoming changeover; <strong>Load Next Recipe</strong> promotes it in one confirmed step, carrying receiver weights, tracking and pump-off forward. The plan is shared over RT Sync, and a dot marks a plan that arrived from another device.</li>
-              <li>Scanned <strong>lot numbers</strong> now carry through from a Heat Sheet scan into the Production Summary.</li>
-              <li>Help was rebuilt as a <strong>visual guide</strong> on a fixed page measure, with restructured navigation and a heat sheet scan example.</li>
-              <li>Added the <strong>Line Setup Overview</strong>, and layer orientation is now derived from the line itself instead of being asked for.</li>
-              <li>Added the <strong>Android app shell</strong> with native camera scanning and Timeline alarms, and <strong>iPhone Home Screen</strong> (PWA) install support.</li>
-              <li>Desktop heads-up banners were replaced by a single <strong>notification center</strong>, and the default theme was renamed <strong>Industrial Slate</strong>.</li>
-            </ul>
-
-            <h3>Smart Hopper, RT Sync &amp; admin refinements - August 11, 2026</h3>
-            <ul>
-              <li><strong>Line 9</strong> now automatically uses <strong>Main + 1–5</strong> hopper naming while linked, including when temporarily offline. Other lines, local-only workspaces, and disconnected devices use <strong>1–6</strong>; changing the label convention never changes saved hopper assignments.</li>
-              <li>Added the admin-only <strong>Bulk Density Measurement</strong> tool. It calculates measured bulk density and packing factor from the calibrated container, can update only the selected resin's bulk-density value after confirmation, and immediately refreshes Resin Reference and Smart Hopper calculations.</li>
-              <li>Refined Receiver Hopper Weights and Recipe Setup with denser, more readable mobile matrices, clearer Smart Hopper states, and consistent action bars for profiles, recipes, bulk editing, and rearranging.</li>
-              <li>Polished the compact Timeline, RT Sync connection states, top-level section headers, and desktop workspace shell. The signed-in Account/Admin menu now remains sharp, clickable, and correctly anchored after login.</li>
-            </ul>
-
-            <h3>Mobile workspace redesign &amp; quick actions - August 9, 2026</h3>
-            <ul>
-              <li>Mobile now opens to a focused <strong>tile home</strong> instead of a long card list. Each section opens on its own, with a consistent return-to-tiles control; Tools and Help also have their own tile indexes.</li>
-              <li>Added a mobile <strong>Appearance</strong> tile with five tile treatments and two background options. <strong>Minimal</strong> is now the default tile treatment, and both Gruvbox Light and Gruvbox Dark receive matching warm, textured backgrounds and retro-styled tiles.</li>
-              <li>Added a timeline option to alert when a tracked hopper reaches <strong>Pump off</strong>, with sound, vibration, an in-app alert, and notifications where the browser permits them.</li>
-              <li>Added the animated <strong>Quick Actions</strong> button on the mobile tile home, providing one-tap access to <strong>Scan Dosing Screen</strong> and <strong>Production Summary</strong>.</li>
-              <li>Improved mobile navigation and polish throughout: section and tool headings are clearer, Scan Recipe controls are easier to use, and every main tile - including Admin Login - has a matching SVG icon.</li>
-            </ul>
-
-            <h3>Recipe Setup polish, Timeline cleanup &amp; readability - August 7, 2026</h3>
-            <ul>
-              <li>Recipe Setup on mobile: redesigned the layer percentage and hopper cells with squared chips, a bolder hopper-designation badge, and easier-to-tap track buttons; the hopper-designation badge and a refined percentage/copy layout were also carried over to desktop.</li>
-              <li>Recipe Setup's action buttons (Saved Recipes, Bulk edit, Rearrange, Scan Recipe, Print Recipe) are now one unified toolbar strip instead of separate floating buttons, on both desktop and mobile. Fixed a bug where this caused the Scan Recipe popup to get clipped/hidden.</li>
-              <li>Fixed black-looking text in light themes across the Recipe chart and Line Setup - resin names, hopper percentages, row headers, warning pills, and more now use a proper dark grey.</li>
-              <li>The RT Sync join-code field now forces uppercase as you type, matching how link codes are printed/shared.</li>
-              <li>Timeline: removed the Timeline style picker and kept the single "Compact Command" card look. Fixed the "Start by" time reading as near-black text, and a mobile layout bug where the time/Pump off row could slide off the left edge of the card.</li>
-              <li>Changed the default theme to <strong>Industrial Slate</strong>. Also tried out several Header style options (Bold Slab, Editorial Serif, Rounded Grotesk, Wide Display) via a temporary picker, then removed the picker and kept <strong>Wide Display</strong> as the permanent header typography.</li>
-            </ul>
-
-            <h3>Recipe Scanner &amp; mobile polish - August 5-6, 2026</h3>
-            <ul>
-              <li>Added <strong>Scan Recipe</strong>: reads a photo of a Job Traveler, a Dosing Screen, or a Heat Sheet and fills Recipe Setup automatically, with a review screen before anything is applied. A camera-icon shortcut in the mobile status bar jumps straight to it.</li>
-              <li>RT Sync now shows exactly which changes haven't synced yet, with a way to discard one that's stuck against an unreachable line. Tapping the mobile footer status refreshes and retries.</li>
-              <li>Recipe Setup on mobile: cards open one at a time instead of stacking up, collapsed card titles are bigger with the subtitle hidden until opened, swipe left/right to switch layers, hopper rows now fit on a single line, and Layers A/B can copy from E/D (in addition to C/D/E copying from A/B).</li>
-              <li>Fixed Production Summary showing a stale, hidden number after reloading the page.</li>
-            </ul>
-
-            <h3>Reliability &amp; appearance - August 3-4, 2026</h3>
-            <ul>
-              <li>Added admin-assisted <strong>Workspace Recovery</strong>, for reconnecting a line computer after its browser data is reset.</li>
-              <li>Added a desktop <strong>Print Recipe</strong> button.</li>
-              <li>Added a warning when the changeover time looks stale instead of silently rolling it forward to the next day.</li>
-              <li>Five more color themes (Rosé Pine, Rosé Pine Dawn, Everforest, Everforest Light, One Dark) and a Header style preference.</li>
-              <li>Reworked mobile's Bulk Edit and Rearrange Hoppers to support tap-to-move, not just drag.</li>
-              <li>Ongoing RT Sync reliability work to cut unnecessary syncing and keep multiple devices in sync smoothly.</li>
-            </ul>
-
-            <h3>Resin catalog &amp; shared configurations - August 1-2, 2026</h3>
-            <ul>
-              <li>Added the Supabase-backed <strong>resin catalog</strong> with an admin-only editor (add, edit, activate/deactivate resins).</li>
-              <li>Added <strong>shared cloud recipes and receiver-weight profiles</strong> for an RT Sync workspace - save, load, rename, duplicate, delete, and favorite recipes.</li>
-              <li>Added desktop <strong>hopper rearrangement</strong> (drag-and-drop, with Undo/Cancel/Done).</li>
-              <li>Added customizable view density and surface style, and the current Layer Stack logo/RT branding.</li>
-            </ul>
-
-            <h3>RT Sync &amp; rebrand - late July 2026</h3>
-            <ul>
-              <li>Added <strong>RT Sync</strong>: share a live production line across devices.</li>
-              <li>Redesigned receiver hopper weight entry as a selectable matrix, and reworked hopper percentage editing.</li>
-              <li>Added built-in resin autocomplete, a starter resin catalog, and resin material information (density, typical uses, handling notes).</li>
-              <li>Added the Production Summary, Short Footage, and Hopper Weight calculators.</li>
-              <li>Added this Help guide, and settled on the app's name: <strong>Resin.Tools</strong>.</li>
-            </ul>
-
-            <h3>Initial build - December 2025 to January 2026</h3>
-            <ul>
-              <li>The original hopper run-down calculator: weight and percentage entry, run-down formulas, and the first responsive layout.</li>
-            </ul>
-          </div>
-        </details>
-      </div>
-      <!-- Absolute URL on purpose, and the same target="_blank" treatment the
-           Play banner above uses: the bundled Android app has no /privacy/
-           page of its own, so this has to reach the published policy on
-           resin.tools and open outside the app shell rather than navigating
-           the WebView away from the app. It is also why build-www.js skips
-           it - its allowlist parser ignores anything with a scheme. -->
-      <div class="helpPrivacy">
-        <div class="helpPrivacyLinks">
-          <a class="helpPrivacyLink" href="https://resin.tools/privacy" target="_blank" rel="noopener">Privacy Policy</a>
-          <span class="helpPrivacySep" aria-hidden="true">·</span>
-          <a class="helpPrivacyLink" href="https://resin.tools/privacy/delete-data/" target="_blank" rel="noopener">Delete Data</a>
-        </div>
-        <span class="helpAppVersion" aria-label="App version">v1.1.17</span>
-        <small class="helpPrivacyNote">How Resin.Tools handles your data</small>
       </div>
     </div>
   </details>
@@ -1816,7 +1369,7 @@
       <div class="sumLeft"><div class="chev"><span class="chevRing"></span><span class="chevSatellite"></span><span class="chevCore"></span></div><div class="summaryText"><div class="layerTitle">Beta Applicants</div><div class="layerMeta">Android testers waiting for a Play Console invitation</div></div></div>
     </summary>
     <div class="blockBody betaApplicantsPanel">
-      <p class="muted">Tick a name once you have added their email to internal testing on Google Play. Ticking it is what reveals the download link in their Help section &mdash; it does not send anything to Google.</p>
+      <p class="muted">Tick a name once you have added their email to internal testing on Google Play. Ticking it is what reveals the download link in their Workspace &amp; support list &mdash; it does not send anything to Google.</p>
       <div class="adminToolbar">
         <div id="betaApplicantsMessage" class="tiny" role="status"></div>
         <button id="betaApplicantsRefreshBtn" type="button" class="secondary">Refresh</button>

@@ -6,33 +6,30 @@ const fs = require("node:fs");
 
 const html = fs.readFileSync("index.html", "utf8");
 
-function helpTopicsSection(){
-  const start = html.indexOf('<div class="helpTopics">');
-  assert.notEqual(start, -1, "expected the Help section's topic list");
-  const end = html.indexOf('</div>\n    </div>\n  </details>', start);
-  assert.notEqual(end, -1, "expected the closing of the Help section");
+function changelogBody(){
+  const start = html.indexOf('<details class="block card workspacePanel" id="changelogBlock">');
+  assert.notEqual(start, -1, "expected the Changelog panel");
+  const end = html.indexOf("</details>", start);
+  assert.notEqual(end, -1, "expected the closing of the Changelog panel");
   return html.slice(start, end);
 }
 
-test("Changelog is a real helpTopic, using the same <details>/<summary> structure as every other Help entry", () => {
-  const section = helpTopicsSection();
-  const start = section.indexOf('<details class="helpTopic" id="helpChangelog">');
-  assert.notEqual(start, -1, "expected a helpChangelog topic using the standard helpTopic class");
-  const end = section.indexOf("</details>", start);
-  const body = section.slice(start, end);
-  assert.match(body, /<summary><span>Changelog<\/span><small>[^<]+<\/small><\/summary>/);
-  assert.match(body, /<div class="helpTopicBody">/);
+test("Changelog is its own top-level workspace panel, not a topic nested inside Help", () => {
+  const body = changelogBody();
+  assert.match(body, /<div class="layerTitle" role="heading" aria-level="1">Changelog<\/div>/);
+  assert.match(body, /<div class="changelogBody">/);
+  assert.doesNotMatch(html, /id="helpBlock"/, "Help itself should be gone, not just its nav entry");
 });
 
-test("Changelog is the last topic in the list - sits at the bottom of the Help section, after Scan Recipe", () => {
-  const section = helpTopicsSection();
-  const scanRecipeIndex = section.indexOf('id="helpRecipeScan"');
-  const changelogIndex = section.indexOf('id="helpChangelog"');
-  assert.ok(scanRecipeIndex > -1 && changelogIndex > scanRecipeIndex, "Changelog must come after Scan Recipe, not before it");
-  // Nothing else should follow it inside the topics list.
-  const changelogEnd = section.indexOf("</details>", changelogIndex);
-  const afterChangelog = section.slice(changelogEnd);
-  assert.equal((afterChangelog.match(/class="helpTopic"/g) || []).length, 0, "Changelog must be the final helpTopic - nothing else should follow it");
+test("Privacy Policy and Delete Data sit at the bottom of the changelog content", () => {
+  const body = changelogBody();
+  const privacyStart = body.indexOf('<div class="changelogPrivacy">');
+  assert.notEqual(privacyStart, -1, "expected the changelogPrivacy block");
+  // Nothing else should follow it inside the panel.
+  const after = body.slice(privacyStart);
+  assert.equal((after.match(/<h3>/g) || []).length, 0, "no changelog period should follow the privacy links");
+  assert.match(body, /<a class="changelogPrivacyLink" href="https:\/\/resin\.tools\/privacy" target="_blank" rel="noopener">Privacy Policy<\/a>/);
+  assert.match(body, /<a class="changelogPrivacyLink" href="https:\/\/resin\.tools\/privacy\/delete-data\/" target="_blank" rel="noopener">Delete Data<\/a>/);
 });
 
 const MONTHS = ["january","february","march","april","may","june","july",
@@ -69,10 +66,7 @@ function periodKey(heading){
 // heading. A pinned date fails when a new entry is correctly added and passes
 // when one is forgotten, which is backwards for a guard.
 test("the changelog is organized into dated periods with h3 headings, newest first", () => {
-  const section = helpTopicsSection();
-  const start = section.indexOf('id="helpChangelog"');
-  const end = section.indexOf("</details>", start);
-  const body = section.slice(start, end);
+  const body = changelogBody();
   const headings = [...body.matchAll(/<h3>([^<]+)<\/h3>/g)].map(m => m[1]);
   assert.ok(headings.length >= 6, `expected at least 6 dated periods, found ${headings.length}`);
 
@@ -89,10 +83,7 @@ test("the changelog is organized into dated periods with h3 headings, newest fir
 });
 
 test("references the app's actual major milestones - RT Sync, Scan Recipe, and the resin catalog - not placeholder text", () => {
-  const section = helpTopicsSection();
-  const start = section.indexOf('id="helpChangelog"');
-  const end = section.indexOf("</details>", start);
-  const body = section.slice(start, end);
+  const body = changelogBody();
   assert.match(body, /Scan Recipe/);
   assert.match(body, /RT Sync/);
   assert.match(body, /resin catalog/);
@@ -100,10 +91,7 @@ test("references the app's actual major milestones - RT Sync, Scan Recipe, and t
 });
 
 test("the August 11 entry documents the Line 9, bulk density, and Smart Hopper refinements", () => {
-  const section = helpTopicsSection();
-  const start = section.indexOf('id="helpChangelog"');
-  const end = section.indexOf("</details>", start);
-  const body = section.slice(start, end);
+  const body = changelogBody();
   // Scoped to its own period rather than "everything above the next one
   // down", so newer entries landing on top cannot satisfy it by accident.
   const entry = body.slice(
@@ -118,10 +106,7 @@ test("the August 11 entry documents the Line 9, bulk density, and Smart Hopper r
 });
 
 test("each period after the first release documents something, rather than sitting empty under its heading", () => {
-  const section = helpTopicsSection();
-  const start = section.indexOf('id="helpChangelog"');
-  const end = section.indexOf("</details>", start);
-  const body = section.slice(start, end);
+  const body = changelogBody();
   const periods = body.split(/<h3>[^<]+<\/h3>/).slice(1);
   periods.forEach((period, index) => {
     const items = (period.match(/<li>/g) || []).length;

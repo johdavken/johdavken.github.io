@@ -296,15 +296,63 @@ main{
    rail below opts into collapsing: the mobile tile home shows all seven
    tiles at once, where there is no rail to shorten and no divider to draw. */
 .workspaceNavDivider{ display: none; }
-.mobileWorkflowLabel,
+.workspaceIdentityBar,
 .mobileProductionControls,
 .mobileRailChev,
 .mobileWorkspaceNavMore,
 .mobileWorkspaceSyncStatus{ display:none; }
-.desktopRailMetric,
-.desktopRailStageExpansion{ display:none!important; }
-.mobileWorkspaceStatus{ display:none; }
+.desktopRailMetric{ display:none!important; }
 .mobileLineRateReadout{display:none}
+/* The layer-count picker's permanent home once it moved out of the retired
+   Line Setup page - Recipe's own header, desktop-only (the compact mobile
+   recipe has no equivalent control). */
+.recipeLayerCountHost{ display:none; }
+
+/* Shared everywhere the rail itself renders (mobile home tile grid and the
+   desktop sidebar alike) - each context only toggles display and the
+   surrounding margin below. A labeled divider: two flex-filled hairlines
+   flanking the connected workspace name (or "Connect" when there is none),
+   doubling as the button that opens RT Sync. */
+.workspaceIdentityBar{
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+.workspaceIdentityBar::before,
+.workspaceIdentityBar::after{
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border2);
+}
+.workspaceIdentityBar strong{
+  flex: 0 1 auto;
+  overflow: hidden;
+  max-width: 60%;
+  color: var(--title);
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.workspaceIdentityBar:hover,
+.workspaceIdentityBar:hover strong{ color: var(--focus-border); }
+.workspaceIdentityBar:focus-visible{
+  outline: 2px solid var(--focus-border);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
 
 .workspaceNav,
 .workspaceStatusBar{ display: none; }
@@ -503,24 +551,52 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .baseGlyph{dis
     line-height:1;
   }
   .workspaceStatusItem strong.stale{ color: var(--warn); }
-  .workspaceNextAction{
-    min-width: 0;
-    margin-left: auto;
+  /* Output/Changeover are readouts that turn into their own input in place,
+     on click - the same reveal pattern the Recipe gauge tiles use, applied
+     to the always-visible status bar instead so editing them never depends
+     on expanding the Recipe rail stage. Both write straight to
+     state.lineRate/state.changeoverTime, the same fields the gauge tiles
+     read and write, so the two stay in sync without duplicated state. */
+  .workspaceStatusItem .statusReadout{
+    min-height:0;
+    padding:0;
+    border:0;
+    border-radius:3px;
+    background:transparent;
+    color:var(--text);
+    font:inherit;
+    font-family:inherit;
+    line-height:1;
+    cursor:pointer;
   }
-  .workspaceNextAction strong{
-    overflow: hidden;
-    max-width: 270px;
-    text-overflow: ellipsis;
+  .workspaceStatusItem .statusReadout:hover,
+  .workspaceStatusItem .statusReadout:focus-visible{
+    color:var(--focus-border);
   }
-  .workspaceNextAction small{
-    display: none;
+  .statusEditableItem.editing .statusReadout{ display:none; }
+  .statusEditInput{ display:none; }
+  .statusEditableItem.editing .statusEditInput{
+    display:block;
+    min-height:0;
+    padding:1px 4px;
+    border:1px solid var(--focus-border);
+    border-radius:3px;
+    background:var(--panel);
+    color:var(--text);
+    font:inherit;
+    font-size:var(--font-small);
+    line-height:1.2;
   }
+  #workspaceOutputInput{ width:64px; }
+  #workspaceChangeoverInput{ width:98px; }
+  /* No border-bottom here - .workspaceIdentityBar sits directly below and
+     draws its own pair of divider hairlines flanking the workspace name,
+     so a second line here would just double it up. */
   .workspaceBrand{
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 10px 8px 12px;
-    border-bottom: 1px solid var(--border);
     user-select: none;
   }
   .workspaceNavButton{
@@ -680,6 +756,12 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .baseGlyph{dis
   }
   .workspaceNav.navExpanded .workspaceNavMoreChev{ transform: rotate(180deg); }
   .workspaceNav:not(.navExpanded) .workspaceNavExtra:not(.active){ display: none; }
+  /* The Google Play banner (in Help's old nav slot) has nothing to offer a
+     fine-pointer desktop - the app is already being used on desktop, and
+     every one of its three states (.helpPlayBanner, further down) stays
+     hidden at this width anyway. Collapse the empty host itself so it takes
+     up no row/gap in the More list, rather than leaving a blank one. */
+  #helpBetaAccess{ display: none; }
 
   .workspaceNavButton[data-step]{
     grid-template-columns: minmax(0,1fr) auto;
@@ -770,13 +852,13 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .baseGlyph{dis
   #resultsBlock .mobileSectionHeaderIcon{color:var(--focus-border)}
   #lineSyncBlock .mobileSectionHeaderIcon{color:var(--ok)}
   #toolsBlock .mobileSectionHeaderIcon{color:var(--warn)}
-  #helpBlock .mobileSectionHeaderIcon{color:var(--focus-border)}
+  #changelogBlock .mobileSectionHeaderIcon{color:var(--focus-border)}
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) #lineSetupBlock .mobileSectionHeaderIcon{color:var(--gruv-orange)}
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) #splitsBlock .mobileSectionHeaderIcon{color:var(--gruv-yellow)}
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) #resultsBlock .mobileSectionHeaderIcon{color:var(--gruv-blue)}
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) #lineSyncBlock .mobileSectionHeaderIcon{color:var(--gruv-aqua)}
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) #toolsBlock .mobileSectionHeaderIcon{color:var(--gruv-purple)}
-  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) #helpBlock .mobileSectionHeaderIcon{color:var(--gruv-blue)}
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) #changelogBlock .mobileSectionHeaderIcon{color:var(--gruv-blue)}
   .workspaceContent > .workspacePanel > summary .layerTitle{ font-size: 18px; }
   .workspaceContent > .workspacePanel > summary .layerMeta{
     margin-top: 3px;
@@ -6156,38 +6238,19 @@ input.resinLookupValue.copied[readonly]{
   }
 }
 
-/* =======================================================================
- *   Help guide
- *
- *   The guide is laid out as an illustrated manual rather than a stack of
- *   prose. Every topic body is built from the same small set of layout
- *   primitives defined further down (.helpLede, .helpSplit, .helpWide,
- *   .helpAside, .helpCallout, .helpSteps, .helpGrid), so the sections vary
- *   in rhythm while staying one visual system.
- *
- *   Screenshots are captured from the real app at 1x. They must never be
- *   displayed larger than their pixel width or they go soft, so every
- *   .helpShot carries a --shot-w equal to the asset's natural width and
- *   caps itself at that. Scale down freely, never up.
- *   ======================================================================= */
-.helpGuide{
-  gap: 14px;
-  /* The guide is set on a fixed measure, like a printed page, so the layout
-     is identical on a 1440px laptop and a 2560px monitor instead of
-     restretching at every width. Two states only: this page on desktop, and
-     a single column on mobile. */
-  --help-page: 960px;
-}
-/* Android internal-testing entry point - mobile only, since the desktop
-   Help guide has no install path of its own to promote and this app is
-   already installed wherever this page is being read on desktop. Hidden by
-   default; the >=901px override does not exist on purpose, matching every
-   other mobile-only surface's pattern in this file (base rule hides, the
-   narrow-viewport media query is the only place that re-enables it). */
+/* Android internal-testing entry point - lives in the "Workspace & support"
+   nav list, in Help's old slot, and stays mobile+tablet only: the desktop
+   rail has no install path of its own to promote and this app is already
+   installed wherever this page is being read on desktop (see #helpBetaAccess
+   in the desktop nav rule further up, which hides the whole host there).
+   Hidden by default; the >=901px override does not exist on purpose,
+   matching every other mobile-only surface's pattern in this file (base rule
+   hides, the narrow-viewport media query is the only place that re-enables
+   it). */
 .helpPlayBanner{ display: none; }
 /* Exactly one of the three banner states is ever shown, chosen by
-   data-beta-state on the host. "loading" shows none of them, so the Help
-   guide never flashes a request button at an operator who has already been
+   data-beta-state on the host. "loading" shows none of them, so the nav row
+   never flashes a request button at an operator who has already been
    approved while the anonymous session is still coming up. */
 .helpPlayBannerHost > [data-beta-when]{ display: none; }
 @media (max-width: 900px), (min-width: 901px) and (pointer: coarse){
@@ -6205,21 +6268,68 @@ input.resinLookupValue.copied[readonly]{
     color: inherit;
     text-decoration: none;
   }
+  /* #helpBetaAccess is itself a .workspaceNavExtra now, so its own row
+     already draws the border/background/padding that make it look like
+     RT Sync/Tools/Sudo access's rows - .helpPlayBanner's own box would just
+     double that up. Fill the row instead of boxing again inside it. */
+  #helpBetaAccess .helpPlayBanner{
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
   .helpPlayBanner:hover,
   .helpPlayBanner:focus-visible{ border-color: var(--focus-border); background: var(--focus-ring); }
   .helpPlayBanner:focus-visible{ outline: 2px solid var(--focus-border); outline-offset: 2px; }
-  .helpPlayBannerIcon{ width: 30px; height: 30px; flex: 0 0 auto; fill: var(--focus-border); }
+  /* Same stroke/fill convention as .workspaceTileIcon (fill:none, stroke
+     draws the base glyph, .gruvboxSolidGlyph swaps to a filled twin under
+     gruvbox) - it no longer carries its own permanent fill. */
+  .helpPlayBannerIcon{
+    width: 30px;
+    height: 30px;
+    flex: 0 0 auto;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    color: var(--tile-accent);
+  }
   .helpPlayBanner span{ display: grid; gap: 1px; min-width: 0; }
-  .helpPlayBanner strong{ color: var(--title); font-size: var(--font-small); font-weight: 800; }
-  .helpPlayBanner small{ color: var(--muted); font-size: var(--font-tiny); }
+  /* Same title treatment as RT Sync/Tools/Changelog/Sudo access
+     (.workspaceNavButton span in the navExpanded list), so this row reads
+     as one of the set rather than a differently-styled banner. */
+  .helpPlayBanner strong{ color: var(--text); font-size: 13px; font-weight: 850; }
+  .helpPlayBanner small{
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--muted);
+    font-size: var(--font-tiny);
+  }
+  /* Same status dot every other nav row's subtitle carries - muted while
+     there is nothing to report, then warn/ok once a request is pending or
+     answered, echoing RT Sync's own status dot. */
+  .helpPlayBanner small::before{
+    content: "";
+    width: 6px;
+    height: 6px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    background: var(--muted);
+  }
+  [data-beta-when="pending"] small::before{ background: var(--warn); }
+  [data-beta-when="invited"] small::before{ background: var(--ok); }
   /* The request state is a button, not a link, so it needs the anchor's
      appearance reset back onto it. */
   .helpPlayBannerAction{ width: 100%; text-align: left; font: inherit; cursor: pointer; }
-  /* Waiting is a status, not an action: no accent, no hover lift. Only the
-     small "Change" control inside it is interactive. */
+  /* Waiting is a status, not an action: no hover lift. Only the small
+     "Change" control inside it is interactive. The icon keeps its usual
+     accent colour - the dot above is what marks the state as pending. */
   .helpPlayBannerPending{ opacity: .82; }
   .helpPlayBannerPending:hover{ border-color: var(--row-border); background: var(--row-bg); }
-  .helpPlayBannerPending .helpPlayBannerIcon{ fill: var(--muted); }
   .helpPlayBannerEdit{
     flex: 0 0 auto;
     margin-left: auto;
@@ -6237,8 +6347,8 @@ input.resinLookupValue.copied[readonly]{
 /* Beta Applicants (admin). One row per request: the checkbox that records
    "added to internal testing on Play Console", who asked, and where they
    are. Ticking the box is what reveals the download link in that person's
-   Help section, which is why it reads as the row's primary control rather
-   than a trailing detail. */
+   own Workspace & support list, which is why it reads as the row's primary
+   control rather than a trailing detail. */
 .betaApplicantsList{ display: grid; gap: 8px; }
 .betaApplicantRow{
   display: grid;
@@ -6282,31 +6392,41 @@ input.resinLookupValue.copied[readonly]{
   cursor: pointer;
 }
 .betaApplicantRemove:hover{ color: var(--bad); }
-/* Sits under the topic list at every width, on the same measure as the guide
-   itself so it lines up with the topics above rather than with the panel
-   edge. Deliberately quiet - it is a reference link, not an operator
-   action. */
-.helpPrivacy{
+/* =======================================================================
+ *   Changelog
+ *   ======================================================================= */
+.changelogBody{ color: var(--text); line-height: 1.55; }
+.changelogBody ol,
+.changelogBody ul{ margin: 0; padding-left: 22px; }
+.changelogBody li + li{ margin-top: 7px; }
+.changelogBody h3{
+  margin: 16px 0 8px;
+  color: var(--title);
+  font-size: 14px;
+}
+.changelogBody > h3:first-child{ margin-top: 0; }
+/* Sits under the entry list at every width - a reference link, not an
+   operator action. */
+.changelogPrivacy{
   display: grid;
   grid-template-columns: minmax(0,1fr) auto;
   align-items: baseline;
   column-gap: 10px;
   row-gap: 3px;
   width: 100%;
-  max-width: var(--help-page);
-  margin: 2px auto 0;
+  margin: 2px 0 0;
   padding-top: 10px;
   border-top: 1px solid var(--border);
 }
-.helpPrivacyLinks{ display: flex; align-items: baseline; gap: 8px; min-width: 0; flex-wrap: wrap; }
-.helpPrivacyLink{
+.changelogPrivacyLinks{ display: flex; align-items: baseline; gap: 8px; min-width: 0; flex-wrap: wrap; }
+.changelogPrivacyLink{
   color: var(--focus-border);
   font-size: var(--font-small);
   font-weight: 700;
 }
-.helpPrivacyLink:focus-visible{ outline: 2px solid var(--focus-border); outline-offset: 2px; }
-.helpPrivacySep{ color: var(--muted); font-size: var(--font-small); }
-.helpAppVersion{
+.changelogPrivacyLink:focus-visible{ outline: 2px solid var(--focus-border); outline-offset: 2px; }
+.changelogPrivacySep{ color: var(--muted); font-size: var(--font-small); }
+.changelogAppVersion{
   justify-self: end;
   color: var(--muted);
   font-family: var(--font-mono);
@@ -6314,428 +6434,10 @@ input.resinLookupValue.copied[readonly]{
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.helpPrivacyNote{ grid-column: 1 / -1; color: var(--muted); font-size: var(--font-tiny); }
-.helpTopics{
-  display: grid;
-  gap: 10px;
-  /* Shots carry a definite width, so without an explicit 100% this column
-     sizes itself from its widest content and overflows a narrow parent.
-     Pin it to the space available, then cap it at the page measure. */
-  width: 100%;
-  min-width: 0;
-  max-width: var(--help-page);
-  margin-inline: auto;
-}
-.helpTopic{
-  /* `clip`, not `hidden`: both clip to the rounded corners, but `hidden` makes
-     this a scrollport, and a sticky summary would then resolve against this
-     box instead of the Help panel's scroller - i.e. never stick at all. */
-  overflow: clip;
-  min-width: 0;
-  border: 1px solid transparent;
-  border-radius: var(--radius-row);
-  background: var(--row-bg);
-}
-.helpTopic > summary{
-  position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 3px 12px;
-  padding: 12px 42px 12px 14px;
-}
-.helpTopic > summary::after{
-  content: "+";
-  position: absolute;
-  top: 50%;
-  right: 15px;
-  color: var(--muted);
-  font-size: 20px;
-  font-weight: 500;
-  transform: translateY(-50%);
-}
-.helpTopic[open] > summary::after{ content: "−"; }
-.helpTopic[open] > summary{ border-bottom: 1px solid var(--row-border); }
-/* Pin the open section's own header while you read it, so the section you are
-   in - and the control that closes it - never scroll away. Desktop only: the
-   scroller this sticks to is `#helpBlock > .blockBody{overflow:auto}` from
-   desktop.css, which only applies at >=901px - at <=900px the page itself
-   scrolls (no internal scrollport to stick within), so this stays an
-   unpinned, ordinary <details> summary there. top:0 needs no offset because
-   the Help panel's own title is the <details> summary *outside* this
-   scroll box. */
-@media (min-width: 901px) and (pointer: fine){
-  /* The panel's top padding belongs to the scrollport, so content scrolls
-     through it and would show as a live strip above the pinned header. Move
-     that same 14px onto the content: the header then pins flush with the
-     scrollport edge, where anything above it is clipped instead of visible. */
-  #helpBlock > .blockBody{ padding-top: 0; }
-  #helpBlock > .blockBody > .helpTopics{ margin-top: 14px; }
-  .helpTopic[open] > summary{
-    position: sticky;
-    top: 0;
-    z-index: 3;
-    /* --row-bg is a ~5% tint, not a colour: used alone the pinned header would
-       be see-through and the section would scroll straight through it. Layer
-       that same tint over the panel's opaque base so it matches the card
-       exactly while actually hiding what passes beneath. */
-    background: linear-gradient(var(--row-bg), var(--row-bg)), var(--panel);
-    border-top-left-radius: var(--radius-row);
-    border-top-right-radius: var(--radius-row);
-  }
-}
-.helpTopic > summary span{
-  color: var(--title);
-  font-size: calc(var(--title-size) * 1.06);
-  font-weight: 900;
-  letter-spacing: .01em;
-}
-.helpTopic > summary small{
-  overflow: hidden;
-  color: var(--muted);
-  font-size: var(--font-small);
-  text-align: right;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.helpTopicBody{
-  padding: 16px 18px 20px;
-  color: var(--text);
-  line-height: 1.55;
-}
-
-/* ---- Nested subtopics -----------------------------------------------------
-   One level only, inside the longer sections. Deliberately quieter than a
-   top-level section: no card background, a hairline rule instead of a border
-   box, and a lighter title, so the section list stays the dominant structure.
-   Any number may be open at once - only the top level is single-open. */
-.helpSubtopic{
-  min-width: 0;
-  border-top: 1px solid var(--row-border);
-}
-.helpSubtopic > summary{
-  position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: baseline;
-  gap: 2px 12px;
-  /* Past the 44px touch target once line-height is counted. */
-  padding: 11px 34px 11px 0;
-}
-.helpSubtopic > summary::after{
-  content: "+";
-  position: absolute;
-  top: 50%;
-  right: 6px;
-  color: var(--muted);
-  font-size: 16px;
-  font-weight: 500;
-  transform: translateY(-50%);
-}
-.helpSubtopic[open] > summary::after{ content: "−"; }
-.helpSubtopic > summary span{
-  /* Subordinate to the section title above it: same family, less weight, and
-     the body colour rather than the section heading's blue. */
-  color: var(--text);
-  font-size: var(--font-small);
-  font-weight: 800;
-  letter-spacing: .01em;
-}
-.helpSubtopic > summary small{
-  overflow: hidden;
-  color: var(--muted);
-  font-size: calc(var(--font-small) * .9);
-  letter-spacing: .05em;
-  text-align: right;
-  text-transform: uppercase;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.helpSubtopic > summary:hover span{ color: var(--title); }
-.helpSubtopic > summary:focus-visible{
-  outline: 2px solid var(--focus-border);
-  outline-offset: -2px;
-  border-radius: var(--radius-input);
-}
-.helpSubtopicBody{ padding: 2px 0 16px; }
-/* The lede introduces the whole section, so the first subtopic rule directly
-   under it would read as a stray line. */
-.helpLede + .helpSubtopic{ border-top: 0; }
-@media (max-width: 900px), (min-width: 901px) and (pointer: coarse){
-  /* Spacing, not indentation - horizontal room is scarce on a phone. The
-     min-height guarantees the 44px touch target that padding alone leaves a
-     pixel short at this font size. */
-  .helpSubtopic > summary{ padding: 12px 32px 12px 0; min-height: 44px; align-content: center; }
-}
-.helpTopicBody ol,
-.helpTopicBody ul{ margin: 0; padding-left: 22px; }
-.helpTopicBody li + li{ margin-top: 7px; }
-.helpTopicBody h3{
-  margin: 16px 0 8px;
-  color: var(--title);
-  font-size: 14px;
-}
-.helpTip{
-  margin: 14px 0 0;
-  padding: 10px 13px;
-  border-left: 3px solid var(--border2);
-  border-radius: 0 var(--radius-input) var(--radius-input) 0;
-  background: var(--readonly-bg);
-  color: var(--muted);
-  font-size: var(--font-small);
-  line-height: 1.5;
-}
-.helpTip strong{ color: var(--text); }
-/* A caution, not an aside: same shape, warning accent. */
-.helpTip.is-warn{ border-left-color: var(--warn); }
-.helpTip.is-warn strong{ color: var(--warn); }
-
-/* --- Editorial primitives ------------------------------------------------ */
-
-/* Deck paragraph: the one-sentence orientation under an article title. */
-.helpLede{
-  margin: 0 0 16px;
-  color: var(--text);
-  font-size: calc(var(--font-base) * 1.02);
-  line-height: 1.5;
-}
-.helpLede strong{ color: var(--title); }
-
-/* Kicker above a movement heading. Pairs with h3. */
-.helpEyebrow{
-  margin: 26px 0 4px;
-  color: var(--focus-border);
-  font-size: var(--font-tiny);
-  font-weight: 800;
-  letter-spacing: .13em;
-  text-transform: uppercase;
-}
-.helpEyebrow + h3{ margin-top: 0; }
-.helpTopicBody > h3:first-child,
-.helpTopicBody > .helpEyebrow:first-child{ margin-top: 0; }
-
-/* Inline chip for a literal UI label, so "select Bulk edit" reads as a
-   control and not as emphasis. */
-.helpKey{
-  padding: 1px 6px;
-  border: 1px solid var(--border2);
-  border-radius: 5px;
-  background: var(--readonly-bg);
-  color: var(--text);
-  font-size: .92em;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-/* Screenshot frame. --shot-w is the asset's natural pixel width. */
-.helpShot{
-  /* A definite width (not just a cap) so `auto` grid tracks and floats size
-     to the displayed box rather than the image's intrinsic pixel width.
-     The +2px covers this frame's 1px borders under border-box sizing, so the
-     image itself lands on exactly --shot-w and renders pixel-for-pixel. */
-  width: calc(var(--shot-w, 100%) + 2px);
-  max-width: 100%;
-  margin: 0;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-input);
-  background: var(--field-bg);
-}
-.helpShot img{ display: block; width: 100%; height: auto; }
-.helpShot figcaption{
-  padding: 7px 11px;
-  border-top: 1px solid var(--border);
-  background: var(--readonly-bg);
-  color: var(--muted);
-  font-size: var(--font-small);
-  line-height: 1.4;
-}
-/* Device shots already read as a screen; drop the extra chrome. */
-.helpShot.is-device{ border-color: var(--border2); background: var(--panel2); }
-/* Screenshots are captured from the light theme, so on a dark one they read
-   as glaring white slabs. Damp them down to sit in the page, and restore
-   full fidelity on hover or keyboard focus for anyone reading detail.
-   Only the selectable dark themes need this. */
-body:is([data-theme="industrial-slate-dark"],[data-theme="gruvbox-dark"],[data-theme="dark"]) .helpShot img{
-  filter: brightness(.82) contrast(1.04);
-  transition: filter .15s ease;
-}
-body:is([data-theme="industrial-slate-dark"],[data-theme="gruvbox-dark"],[data-theme="dark"]) .helpShot:hover img,
-body:is([data-theme="industrial-slate-dark"],[data-theme="gruvbox-dark"],[data-theme="dark"]) .helpShot:focus-within img{
-  filter: none;
-}
+.changelogPrivacyNote{ grid-column: 1 / -1; color: var(--muted); font-size: var(--font-tiny); }
 @media (prefers-reduced-motion: reduce){
-  .helpShot img{ transition: none; }
   .workspaceNavMoreChev{ transition: none; }
 }
-
-/* Standalone caption used when a shot sits inside another layout block. */
-.helpCaption{
-  margin: 8px 0 0;
-  color: var(--muted);
-  font-size: var(--font-small);
-  line-height: 1.45;
-}
-
-/* Media beside text. .is-reverse puts the media on the right. */
-.helpSplit{
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 18px;
-  /* Top-aligned: text should start level with the top of its screenshot,
-     not float in the middle of a tall one. */
-  align-items: start;
-  margin: 16px 0;
-}
-.helpSplit.is-centered{ align-items: center; }
-.helpSplit.is-reverse > :first-child{ order: 2; }
-.helpSplit.is-narrowMedia{ grid-template-columns: minmax(0, 0.72fr) minmax(0, 1fr); }
-.helpSplit.is-wideMedia{ grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); }
-/* Media column shrinks to the shot's own width - no dead space around a
-   small isolated control. */
-.helpSplit.is-autoMedia{ grid-template-columns: auto minmax(0, 1fr); align-items: start; }
-.helpSplit > div > :first-child{ margin-top: 0; }
-.helpSplit > div > :last-child{ margin-bottom: 0; }
-.helpSplit p{ margin: 0 0 9px; }
-
-/* Full-width shot carrying its own caption. */
-.helpWide{ margin: 16px 0; }
-
-/* Small reference image tucked beside running text. */
-.helpAside{
-  float: right;
-  width: min(46%, calc(var(--shot-w, 240px) + 2px));
-  margin: 2px 0 12px 18px;
-}
-.helpAsideRow{ overflow: hidden; }
-
-/* One isolated control, enlarged, with its explanation alongside.
-   Flex rather than grid so the copy drops beneath the shot on its own once
-   there isn't room for both - a squeezed column of text beside a control is
-   worse than stacking. */
-.helpCallout{
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  align-items: center;
-  margin: 14px 0;
-  padding: 14px 16px;
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--focus-border);
-  border-radius: var(--radius-input);
-  background: var(--row-bg-2);
-}
-.helpCallout > .helpShot{ flex: 0 1 auto; }
-.helpCallout > div{ flex: 1 1 300px; min-width: 0; }
-/* A wide, short control band reads better with its explanation underneath:
-   set beside it, a full column of copy towers over a 48px-tall strip.
-   Stacking flips the main axis, so the children's flex basis has to be
-   released or it becomes a minimum *height*. */
-.helpCallout.is-stacked{ flex-direction: column; align-items: stretch; }
-.helpCallout.is-stacked > .helpShot,
-.helpCallout.is-stacked > div{ flex: 0 0 auto; }
-.helpCallout p{ margin: 0; }
-.helpCallout p + p{ margin-top: 7px; }
-.helpCalloutTitle{
-  display: block;
-  margin-bottom: 3px;
-  color: var(--title);
-  font-size: var(--title-size);
-  font-weight: 850;
-}
-
-/* Numbered walkthrough with display numerals. */
-.helpSteps{
-  counter-reset: helpStep;
-  margin: 14px 0;
-  padding: 0;
-  list-style: none;
-}
-.helpSteps > li{
-  position: relative;
-  min-height: 26px;
-  margin: 0 0 13px;
-  padding-left: 40px;
-}
-.helpSteps > li:last-child{ margin-bottom: 0; }
-.helpSteps > li::before{
-  counter-increment: helpStep;
-  content: counter(helpStep);
-  position: absolute;
-  top: -3px;
-  left: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 27px;
-  height: 27px;
-  border-radius: 999px;
-  background: var(--btn-primary-a);
-  color: var(--title);
-  font-size: var(--font-small);
-  font-weight: 850;
-  font-variant-numeric: tabular-nums;
-}
-.helpSteps .helpShot{ margin-top: 9px; }
-
-/* Reference cards, e.g. the tool index. */
-.helpGrid{
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 10px;
-  margin: 14px 0;
-}
-.helpCard{
-  padding: 12px 13px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-input);
-  background: var(--row-bg-2);
-}
-.helpCard strong{
-  display: block;
-  margin-bottom: 3px;
-  color: var(--title);
-  font-size: var(--title-size);
-}
-.helpCard span{ color: var(--muted); font-size: var(--font-small); line-height: 1.45; }
-
-/* Hairline between movements of a long article. */
-.helpRule{
-  height: 1px;
-  margin: 24px 0 0;
-  border: 0;
-  background: var(--border);
-}
-
-.helpTopicLink{
-  color: var(--focus-border);
-  font-weight: 800;
-  text-decoration: none;
-}
-.helpTopicLink:hover,
-.helpTopicLink:focus-visible{ text-decoration: underline; }
-.helpTopicLink:focus-visible{ outline: 2px solid var(--focus-border); outline-offset: 2px; }
-
-@media (max-width: 900px), (min-width: 901px) and (pointer: coarse){
-  .helpSplit,
-  .helpSplit.is-narrowMedia,
-  .helpSplit.is-wideMedia,
-  .helpSplit.is-autoMedia{ grid-template-columns: minmax(0, 1fr); gap: 12px; }
-  .helpSplit.is-reverse > :first-child{ order: 0; }
-  .helpAside{ float: none; width: min(100%, calc(var(--shot-w, 240px) + 2px)); margin: 12px 0; }
-  .helpCallout{ flex-direction: column; align-items: stretch; gap: 12px; }
-  .helpCallout > .helpShot,
-  .helpCallout > div{ flex: 0 0 auto; }
-  .helpShot{ max-width: min(100%, var(--shot-w, 100%)); }
-}
-
-@media (max-width: 600px){
-  .helpTopic > summary{ grid-template-columns: 1fr; }
-  .helpTopic > summary small{ text-align: left; }
-  .helpTopicBody{ padding-inline: 13px; }
-  .helpSteps > li{ padding-left: 34px; }
-  .helpSteps > li::before{ width: 24px; height: 24px; }
-}
-
 /* =======================================================================
  *   Surface styles
  *   Layered Flat is the base treatment; these selectors provide alternatives.
@@ -6782,8 +6484,7 @@ body[data-surface-style="flat"] .card,
 body[data-surface-style="flat"] details.block,
 body[data-surface-style="flat"] .workspaceNav,
 body[data-surface-style="flat"] .workspaceStatusBar,
-body[data-surface-style="flat"] .toolPanel,
-body[data-surface-style="flat"] .helpTopic{
+body[data-surface-style="flat"] .toolPanel{
   border-color: var(--border);
   box-shadow: none;
 }
@@ -6803,8 +6504,7 @@ body[data-surface-style="accent-frame"] .workspaceStatusBar{
   border-color: color-mix(in srgb, var(--focus-border) 52%, transparent);
 }
 body[data-surface-style="accent-frame"] .blockBody > details.block,
-body[data-surface-style="accent-frame"] .toolPanel,
-body[data-surface-style="accent-frame"] .helpTopic{
+body[data-surface-style="accent-frame"] .toolPanel{
   border-left: 3px solid color-mix(in srgb, var(--focus-border) 72%, transparent);
 }
 
@@ -6815,8 +6515,7 @@ body[data-surface-style="divided"] .workspaceContent > .workspacePanel.card[open
   background: transparent;
 }
 body[data-surface-style="divided"] .blockBody > details.block,
-body[data-surface-style="divided"] .toolPanel,
-body[data-surface-style="divided"] .helpTopic{
+body[data-surface-style="divided"] .toolPanel{
   border: 0;
   border-top: 1px solid var(--border);
   border-radius: 0;
@@ -6832,8 +6531,7 @@ body[data-surface-style="low-elevation"] .card,
 body[data-surface-style="low-elevation"] details.block,
 body[data-surface-style="low-elevation"] .workspaceNav,
 body[data-surface-style="low-elevation"] .workspaceStatusBar,
-body[data-surface-style="low-elevation"] .toolPanel,
-body[data-surface-style="low-elevation"] .helpTopic{
+body[data-surface-style="low-elevation"] .toolPanel{
   border-color: color-mix(in srgb, var(--focus-border) 18%, var(--border));
   box-shadow: 0 1px 2px rgba(0,0,0,.14);
 }
@@ -6915,8 +6613,7 @@ body[data-surface-style] .workspaceContent > .workspacePanel.card[open]{
 }
 body[data-surface-style] .blockBody > details.block,
 body[data-surface-style] .blockBody > details.block[open],
-body[data-surface-style] .toolPanel,
-body[data-surface-style] .helpTopic{
+body[data-surface-style] .toolPanel{
   border-color:var(--surface-inner-border);
   border-radius:var(--surface-inner-radius);
   background:var(--surface-inner-bg);
@@ -6936,14 +6633,12 @@ body[data-surface-style="accent-frame"] .workspaceContent > .workspacePanel.card
 }
 body[data-surface-style="accent-frame"] .blockBody > details.block,
 body[data-surface-style="accent-frame"] .blockBody > details.block[open],
-body[data-surface-style="accent-frame"] .toolPanel,
-body[data-surface-style="accent-frame"] .helpTopic{
+body[data-surface-style="accent-frame"] .toolPanel{
   border-left:var(--surface-accent-width) solid var(--focus-border);
 }
 body[data-surface-style="divided"] .blockBody > details.block,
 body[data-surface-style="divided"] .blockBody > details.block[open],
-body[data-surface-style="divided"] .toolPanel,
-body[data-surface-style="divided"] .helpTopic{
+body[data-surface-style="divided"] .toolPanel{
   border:0;
   border-top:1px solid var(--surface-inner-border);
 }
@@ -7033,10 +6728,13 @@ body[data-theme="gruvbox-light"]{
 .workspaceNavButton[data-workspace-target="productionSummaryBlock"]{ --tile-accent:var(--workflow-resin-totals); }
 .workspaceNavButton[data-workspace-target="lineSyncBlock"]{ --tile-accent:var(--ok); }
 .workspaceNavButton[data-workspace-target="toolsBlock"]{ --tile-accent:var(--warn); }
-.workspaceNavButton[data-workspace-target="helpBlock"]{ --tile-accent:var(--focus-border); }
+.workspaceNavButton[data-workspace-target="changelogBlock"]{ --tile-accent:var(--focus-border); }
 .workspaceNavButton[data-workspace-target="resinAdminBlock"]{ --tile-accent:var(--ok); }
 .workspaceNavButton[data-workspace-target="workspaceManagementBlock"]{ --tile-accent:var(--focus-border); }
 .workspaceNavButton[data-workspace-target="sudoAccessBlock"]{ --tile-accent:var(--warn); }
+/* Not a workspace-target button (it opens a modal, not a panel), so it
+   keys off its own id instead of the attribute selector above. */
+#helpBetaAccess{ --tile-accent:var(--ok); }
 
 .sudoAccessBody{display:grid;align-content:start;gap:12px}
 .sudoAccessDetails{display:grid;gap:2px;padding:10px 11px;border:1px solid var(--border);border-radius:var(--control-radius);background:var(--row-bg)}
@@ -7081,7 +6779,7 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNavB
 body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNavButton[data-workspace-target="productionSummaryBlock"]{ --tile-accent:var(--gruv-green); }
 body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNavButton[data-workspace-target="lineSyncBlock"]{ --tile-accent:var(--gruv-aqua); }
 body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNavButton[data-workspace-target="toolsBlock"]{ --tile-accent:var(--gruv-purple); }
-body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNavButton[data-workspace-target="helpBlock"]{ --tile-accent:var(--gruv-blue); }
+body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNavButton[data-workspace-target="changelogBlock"]{ --tile-accent:var(--gruv-blue); }
 
 /* Main-screen numbered workflow only. Gruvbox keeps its established
    palette above; no Gruvbox selectors are changed here. */
@@ -7217,7 +6915,7 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
   #resultsBlock .mobileSectionHeaderIcon{color:var(--focus-border)}
   #lineSyncBlock .mobileSectionHeaderIcon{color:var(--ok)}
   #toolsBlock .mobileSectionHeaderIcon{color:var(--warn)}
-  #helpBlock .mobileSectionHeaderIcon{color:var(--focus-border)}
+  #changelogBlock .mobileSectionHeaderIcon{color:var(--focus-border)}
   body[data-mobile-workspace="panel"] .workspaceContent > .workspacePanel.mobile-active > summary .layerMeta{ display:none; }
   body[data-mobile-workspace="panel"] .workspaceContent > .workspacePanel.mobile-active > .blockBody{ padding-top:10px; }
   /* Recipe ends with its action bar; it needs only a short breathing edge,
@@ -7356,16 +7054,6 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
   .statusPreferences{position:absolute;right:var(--page-pad);margin-left:0}
   .statusPreferencesPanel{position:fixed;top:auto;right:var(--page-pad);bottom:46px}
   .workspaceStatusBar .workspaceStatusItem{ display:none; }
-  .workspaceStatusBar .workspaceStatusItem.mobileWorkspaceStatus{
-    display:flex;
-    min-width:0;
-    max-width:min(42vw,190px);
-  }
-  .mobileWorkspaceStatus strong{
-    overflow:hidden;
-    text-overflow:ellipsis;
-    white-space:nowrap;
-  }
   .statusScanShortcut{ display:inline-block; }
   .statusTimelineToggle{ display:inline-flex; }
   .statusRecipeToggle{ display:inline-flex; }
@@ -7750,7 +7438,7 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) #resultsBlock .mobileSectionHeaderIcon{color:var(--gruv-blue)}
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) #lineSyncBlock .mobileSectionHeaderIcon{color:var(--gruv-aqua)}
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) #toolsBlock .mobileSectionHeaderIcon{color:var(--gruv-purple)}
-  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) #helpBlock .mobileSectionHeaderIcon{color:var(--gruv-blue)}
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) #changelogBlock .mobileSectionHeaderIcon{color:var(--gruv-blue)}
   /* Main-screen numbered workflow only. Gruvbox keeps its established
      palette above; no Gruvbox selectors are changed here. */
   body[data-theme="dark"] #lineSetupBlock .mobileSectionHeaderIcon{color:var(--title)}
@@ -7914,6 +7602,7 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
 .visuallyHidden{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
 .appOverlayRoot{position:fixed;inset:0;z-index:70;pointer-events:none}
 .mobileFooterVersion{display:none}
+.desktopRailVersion{display:none}
 /* The root spans the viewport and is click-through on purpose, so it never
    blocks the page beneath it - but anything actually hosted inside it has to
    take clicks back, or it inherits pointer-events:none and every click within
@@ -8094,35 +7783,9 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
     gap:0;
     padding:10px 17px 18px;
   }
-  body[data-mobile-workspace="home"] .mobileWorkflowLabel{
+  body[data-mobile-workspace="home"] .workspaceIdentityBar{
     display:flex;
-    align-items:center;
-    gap:10px;
     margin:0 0 4px;
-    color:var(--muted);
-    font-size:10px;
-    font-weight:850;
-    letter-spacing:.11em;
-    text-transform:uppercase;
-  }
-  body[data-mobile-workspace="home"] .mobileWorkflowLabel::after{
-    content:"";
-    order:2;
-    height:1px;
-    flex:1;
-    background:var(--border2);
-  }
-  body[data-mobile-workspace="home"] .mobileWorkflowLabel > span{order:1}
-  body[data-mobile-workspace="home"] .mobileWorkflowLabel > strong{
-    order:3;
-    max-width:42%;
-    overflow:hidden;
-    color:var(--title);
-    font-size:10px;
-    font-weight:850;
-    text-align:right;
-    text-overflow:ellipsis;
-    white-space:nowrap;
   }
   body[data-mobile-workspace="home"] .mobileProductionControls{
     display:grid;
@@ -8388,15 +8051,42 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
     background:transparent;
     box-shadow:none;
   }
-  body[data-mobile-workspace="home"] .workspaceNav.navExpanded .workspaceNavExtra > span{
+  /* RT Sync / Tools / Changelog / Sudo access, matching Request beta
+     access's own row: icon to the left spanning both lines, title and
+     subtitle stacked directly beneath each other to its right, instead of
+     title-then-full-width-subtitle. display:contents unwraps the icon+
+     title span so the icon and the (inherited-styled) title text become
+     independent grid items the row can place - the span itself never
+     painted a box, so removing it changes nothing else. #helpBetaAccess
+     itself is a plain div, not a .workspaceNavButton, so this never
+     touches its own three-state layout. */
+  body[data-mobile-workspace="home"] .workspaceNav.navExpanded .workspaceNavButton.workspaceNavExtra{
+    display:grid;
+    grid-template-columns:auto 1fr;
+    column-gap:12px;
+    row-gap:1px;
+    align-items:center;
+  }
+  body[data-mobile-workspace="home"] .workspaceNav.navExpanded .workspaceNavButton.workspaceNavExtra > span{
+    display:contents;
     font-size:13px;
   }
   body[data-mobile-workspace="home"] .workspaceNav.navExpanded .workspaceNavExtra .workspaceTileIcon{
     width:28px;
     height:28px;
   }
+  body[data-mobile-workspace="home"] .workspaceNav.navExpanded .workspaceNavButton.workspaceNavExtra .workspaceTileIcon{
+    grid-row:1 / 3;
+    grid-column:1;
+    border:0;
+    background:transparent;
+    padding:0;
+  }
   body[data-mobile-workspace="home"] .workspaceNav.navExpanded .workspaceNavExtra > small{
     font-size:10px;
+  }
+  body[data-mobile-workspace="home"] .workspaceNav.navExpanded .workspaceNavButton.workspaceNavExtra > small{
+    grid-column:2;
   }
 
   .footerBar{

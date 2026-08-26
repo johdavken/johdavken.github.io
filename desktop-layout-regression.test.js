@@ -65,6 +65,21 @@ test("desktop refinements keep Smart Hoppers obvious and utility/sidebar chrome 
   assert.match(desktop, /\.desktopDisplayToggle\{[\s\S]*?border-color:transparent;[\s\S]*?background:transparent/);
 });
 
+test("the gruvbox/industrial-slate rail caption reserves its own line height, so it can't be starved to a sliver by overflow:hidden", () => {
+  // A grid item with overflow other than visible has its automatic minimum
+  // size treated as 0 for track sizing (CSS Grid  2.7) - without an
+  // explicit min-height here, .workspaceNavButton's auto row for this
+  // single-line, ellipsis-truncated caption was free to shrink to whatever
+  // space was left over in the button's fixed min-height instead of
+  // growing to fit one line, clipping every RT Sync/Tools/Help/Sudo access
+  // caption's descenders under the overflow:hidden a few lines below.
+  const start = desktop.indexOf('body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .workspaceNavButton small{');
+  assert.notEqual(start, -1);
+  const rule = desktop.slice(start, desktop.indexOf("}", start) + 1);
+  assert.match(rule, /min-height:1\.15em;/);
+  assert.match(rule, /overflow:hidden;/);
+});
+
 test("Weight Profiles stands alone in the desktop matrix action area - Bulk Edit was folded into View:Edit, not kept as a sibling tab", () => {
   assert.match(app, /profilesAction\.innerHTML = '<span>Weight Profiles<\/span>/);
   assert.doesNotMatch(app, /bulkModeButton|desktopWeightsBulkToggle/);
@@ -86,7 +101,7 @@ test("the intermediate desktop range keeps the full readable side-rail width", (
 test("variable length desktop sections use bounded internal scrolling", () => {
   assert.match(desktop, /#resultsArea\{min-height:0;overflow:auto;/);
   assert.match(desktop, /#resinCalcResults\{min-height:0;overflow:auto\}/);
-  assert.match(desktop, /#helpBlock > \.blockBody\{overflow:auto\}/);
+  assert.match(desktop, /#changelogBlock > \.blockBody\{overflow:auto\}/);
 });
 
 test("desktop Recipe controls use the five-layer rail and Summary omits the redundant tracking panel", () => {

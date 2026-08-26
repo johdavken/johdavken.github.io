@@ -16,6 +16,10 @@ test("mobile tile icons are 25% larger in both normal and minimal tile treatment
 
 test("main menu keeps its primary grid while Sudo access lives under Workspace & Support", () => {
   const nav = html.slice(html.indexOf('<nav class="workspaceNav"'),html.indexOf('</nav>',html.indexOf('<nav class="workspaceNav"')));
+  // 8, not 9: the Play Store banner (Help's old slot) isn't a workspaceNavButton -
+  // it's three mutually exclusive states, so it only carries workspaceNavExtra.
+  // Changelog is a normal button, so it counts (RT Sync, Tools, Changelog,
+  // Sudo access + the 4 pinned sections).
   assert.equal((nav.match(/class="workspaceNavButton/g) || []).length,8);
   assert.match(nav,/data-workspace-target="productionSummaryBlock"/, "Production Summary is a first-class section, between Timeline and RT Sync");
   assert.match(nav,/id="workspaceNavSudo"[^>]*data-workspace-target="sudoAccessBlock"/);

@@ -17,41 +17,42 @@ test("the four production stages expose compact inactive metrics", () => {
     "desktopRailTotalsMetric"
   ]) assert.match(html, new RegExp(`id="${id}"`));
   assert.match(desktop, /> \.desktopRailMetric\{[\s\S]*?display:grid!important/);
-  assert.match(styles, /\.desktopRailMetric,\s*\n\.desktopRailStageExpansion\{ display:none!important; \}/);
+  assert.match(styles, /\.desktopRailMetric\{ display:none!important; \}/);
 });
 
-test("one valid sibling expansion follows the active stage instead of nesting buttons", () => {
-  assert.equal((html.match(/id="desktopRailStageExpansion"/g) || []).length, 1);
-  assert.match(app, /querySelector\(`\.workspaceNavButton\[data-workspace-target="\$\{id\}"\]`\)\?\.after\(expansion\)/);
-  assert.match(app, /panel\.hidden = panel\.dataset\.railStage !== id/);
-  assert.match(app, /expansion\.hidden = !primary/);
-  assert.match(desktop, /\.desktopRailStageExpansion\{[\s\S]*?border-top:0;[\s\S]*?border-radius:0 0 12px 12px/);
-  assert.match(desktop, /\.desktopRailStageExpansion\[hidden\]\{display:none!important\}/);
+// Output/Changeover moved to the always-visible status bar and the Layers
+// picker moved into Recipe's own header (see recipe-rail-line-controls.test.js
+// for both), which removed the only content that made a sibling expansion
+// panel worth having - every stage is now a plain nav row that opens its
+// real content in the main panel, nothing else.
+test("no stage owns a sibling expansion panel any more", () => {
+  assert.doesNotMatch(html, /desktopRailStageExpansion|desktopRailExpansionPanel|desktopRailRecipeSetupControls/);
+  assert.doesNotMatch(desktop, /desktopRailStageExpansion|desktopRailExpansionPanel|desktopRailRecipeSetupControls|desktopRailExpansionMetrics|desktopRailMaterialPreview|desktopRailMaterialRow|desktopRailTimelineTime/);
+  assert.doesNotMatch(app, /syncDesktopRailExpansion|desktopRailPrimaryStages|desktopRailRecipeDetail|desktopRailSetupHeadline|desktopRailSetupDetail|desktopRailSetupOutput|desktopRailSetupChangeover|desktopRailTimelineTracked|desktopRailTimelineAlarm|desktopRailTotalsHeadline|desktopRailTotalsDetail|desktopRailMaterialPreview/);
 });
 
-test("every primary stage has distinct live expansion content without duplicate controls", () => {
-  for (const stage of ["lineSetupBlock", "splitsBlock", "resultsBlock", "productionSummaryBlock"]){
-    assert.match(html, new RegExp(`data-rail-stage="${stage}"`));
-    assert.match(app, new RegExp(`"${stage}"`));
-  }
-  assert.doesNotMatch(html, /desktopRailExpansionActions|data-desktop-rail-action/);
-  assert.doesNotMatch(app, /hookDesktopRailActions|focusDesktopRailTarget/);
+test("the active nav row is a plain highlight, not a shape that blends into a panel below it", () => {
+  assert.match(desktop, /body \.workspaceNav \.workspaceNavButton\[data-step\]\.active\{\s*\n\s*border:1px solid color-mix\(in srgb,var\(--tile-accent\) 58%,var\(--border\)\);\s*\n\s*border-left:3px solid var\(--tile-accent\);\s*\n\s*border-radius:12px;/);
+  // No half-open corner or dropped bottom border left over from blending
+  // into an expansion panel that no longer exists.
+  assert.doesNotMatch(desktop, /border-radius:12px 12px 0 0/);
+  assert.doesNotMatch(desktop, /\.active > \.desktopRailMetric\{display:none!important\}/);
 });
 
 test("rail readouts reuse current setup, recipe, timeline, and totals render paths", () => {
   assert.match(app, /desktopRailSetupMetric/);
-  assert.match(app, /desktopRailRecipeTracked/);
-  assert.match(app, /desktopRailTimelineTime/);
-  assert.match(app, /renderDesktopRailTotals\(\{ prod, scrap, total, rows \}\)/);
-  assert.match(app, /hasPlannedRecipe\(\) \? "Planned" : "Not planned"/);
-  assert.match(app, /state\.mobileTimelineAlarm \? "On" : "Off"/);
+  assert.match(app, /desktopRailRecipeMetric/);
+  assert.match(app, /function renderDesktopRailTotals\(summary\)\{\s*\n\s*const \{ total, rows \} = summary;/);
 });
 
-test("material names enter the rail through textContent, never HTML interpolation", () => {
+test("Resin Totals' two readouts report different things, not the same count twice", () => {
   const start = app.indexOf("function renderDesktopRailTotals(summary)");
   const body = app.slice(start, app.indexOf("function renderResinCalculator()", start));
-  assert.match(body, /name\.textContent = material\.displayName/);
-  assert.doesNotMatch(body, /innerHTML/);
+  // The metric badge is the material count; the status line used to repeat
+  // that exact count as "N materials" - now it reports total weight instead.
+  assert.match(body, /metric\.textContent = String\(count\)/);
+  assert.match(body, /status\.textContent = total > 0 \? `\$\{fmtLb\(total\)\} lb total` : "No material total"/);
+  assert.doesNotMatch(body, /\$\{count\} \$\{count === 1 \? "material" : "materials"\}/);
 });
 
 test("the redundant desktop dot-chevron is removed while mobile markup remains intact", () => {
