@@ -33,7 +33,7 @@ test("mobile Workspace and support is one disclosure for the secondary destinati
   assert.match(html, /class="mobileWorkspaceNavMore"[\s\S]*?<strong>Workspace &amp; support<\/strong><small>RT Sync · Tools · Get the app · Changelog · Sudo access<\/small>/);
   assert.match(html, /id="mobileWorkspaceSyncStatusText">RT Sync is local only<\/span>/);
   assert.match(styles, /\.workspaceNav:not\(\.navExpanded\) \.workspaceNavExtra:not\(\.active\)\{display:none\}/);
-  assert.match(styles, /\.workspaceNav\.navExpanded \.workspaceNavExtra\{[\s\S]*?min-height:58px;/);
+  assert.match(styles, /\.workspaceNav\.navExpanded \.workspaceNavExtra\{[\s\S]*?padding:0;/);
 });
 
 test("the connected rail hierarchy stays scoped to the mobile home", () => {

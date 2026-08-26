@@ -295,11 +295,7 @@
       </svg>
     </div>
     <button class="workspaceIdentityBar" id="workspaceIdentityButton" type="button" aria-label="Open RT Sync workspace connection"><strong id="workspaceIdentityName">LOCAL</strong></button>
-    <section class="mobileProductionControls" id="mobileProductionControls" aria-label="Production controls">
-      <button class="mobileProductionSyncShortcut" id="mobileProductionSyncShortcut" type="button" aria-label="Open RT Sync" title="RT Sync">
-        <svg viewBox="0 0 32 32" aria-hidden="true"><g class="baseGlyph"><circle cx="8" cy="16" r="3"/><circle cx="24" cy="9" r="3"/><circle cx="24" cy="23" r="3"/><path d="m10.7 14.7 10.6-4.4M10.7 17.3l10.6 4.4"/></g><g class="gruvboxSolidGlyph"><path d="m9.2 14.4 14-5.6 1.2 3.1-14 5.6zM10.4 17.9l14 5.6-1.2 3.1-14-5.6z"/><path d="M2 12.4h7.6V20H2zM22.4 3H30v7.6h-7.6zM22.4 21.8H30v7.6h-7.6z"/></g></svg>
-      </button>
-    </section>
+    <section class="mobileProductionControls" id="mobileProductionControls" aria-label="Production controls"></section>
     <button class="workspaceNavButton" type="button" data-workspace-target="lineSetupBlock" data-status="neutral">
       <span><svg class="workspaceTileIcon" viewBox="0 0 32 32" aria-hidden="true"><g class="baseGlyph"><path d="M5 9h22M5 23h22M10 6v6M22 20v6"/><circle cx="10" cy="9" r="3"/><circle cx="22" cy="23" r="3"/><g class="gruvboxIconDetail"><rect x="7.5" y="6.5" width="5" height="5"/><rect x="19.5" y="20.5" width="5" height="5"/></g></g><g class="gruvboxSolidGlyph"><path d="M2 10h28v3.6H2zM2 18.4h28V22H2z"/><path d="M6 2.6h7.4V9H6zM18.6 23h7.4v6.4h-7.4z"/></g></svg>Line Setup</span>
       <small id="workspaceSetupStatus">Needs setup</small>
@@ -334,7 +330,13 @@
       >
         <span id="workspaceNavMoreLabel">More</span>
         <span class="mobileWorkspaceNavMore">
-          <span class="mobileWorkspaceNavMoreIcons" aria-hidden="true"><i>⌘</i><i>⚒</i><i>?</i></span>
+          <span class="mobileWorkspaceNavMoreIcons" aria-hidden="true">
+            <i class="moreIconSudo"><svg viewBox="0 0 32 32"><path d="M16 3 27 8v7c0 7-4.5 11.5-11 14-6.5-2.5-11-7-11-14V8l11-5Z"/><path d="M16 12v8M12 16h8"/></svg></i>
+            <i class="moreIconChangelog"><svg viewBox="0 0 32 32"><circle cx="7" cy="9" r="2.4"/><circle cx="7" cy="16" r="2.4"/><circle cx="7" cy="23" r="2.4"/><path d="M13 9h13M13 16h13M13 23h9"/></svg></i>
+            <i class="moreIconBeta"><svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="11"/><path d="M13 11.5 21 16 13 20.5V11.5Z"/></svg></i>
+            <i class="moreIconTools"><svg viewBox="0 0 32 32"><path d="m19 6 7 7-4 4-4-1-8 8-4-4 8-8-1-4 4-4 2 4Z"/><path d="m7 25 2 2"/></svg></i>
+            <i class="moreIconRt"><svg viewBox="0 0 32 32"><circle cx="8" cy="16" r="3"/><circle cx="24" cy="9" r="3"/><circle cx="24" cy="23" r="3"/><path d="m10.7 14.7 10.6-4.4M10.7 17.3l10.6 4.4"/></svg></i>
+          </span>
           <span><strong>Workspace &amp; support</strong><small>RT Sync · Tools · Get the app · Changelog · Sudo access</small></span>
         </span>
         <svg class="workspaceNavMoreChev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>

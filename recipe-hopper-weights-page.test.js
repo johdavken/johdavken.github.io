@@ -30,12 +30,27 @@ test("Weight Profiles keeps its attached desktop presentation in the new parent"
   assert.match(desktop, /:is\(#lineSetupBlock,#splitsBlock\) #weightsArea #setupWeightProfilesBlock/);
 });
 
-test("weights uses Recipe's header slot for its existing Summary/Edit control", () => {
-  const start = app.indexOf("function renderSplitsArea()");
-  const render = app.slice(start, app.indexOf("const copyRules", start));
-  assert.match(render, /querySelector\("\.desktopWeightsViewToggle, \.mobileWeightsViewToggle"\)/);
-  assert.match(render, /weightsViewToggle\.classList\.add\("weightsHeaderViewToggle", "recipeViewToggle"\)/);
-  assert.match(render, /\$\("recipeHeaderControls"\)\?\.prepend\(weightsViewToggle\)/);
+test("weights uses Recipe's header slot for its existing Summary/Edit control, relocated on every rebuild of the grid - not just on page navigation", () => {
+  // Smart Hoppers, the shared circumference field, and a handful of other
+  // inputs all call renderWeightsArea() directly rather than routing
+  // through renderSplitsArea()'s page-switch logic. renderWeightsArea()
+  // rebuilds a brand new Summary/Edit toggle element on every call, so the
+  // relocation into #recipeHeaderControls has to live inside it (and run on
+  // both the mobile and desktop branches) - otherwise one of those direct
+  // callers leaves a freshly built, unrelocated toggle sitting above the
+  // grid while a stale, no-longer-wired one stays parked in the header.
+  const helperStart = app.indexOf("function placeWeightsViewToggleForPage()");
+  const renderStart = app.indexOf("function renderWeightsArea()");
+  assert.ok(helperStart > -1 && helperStart < renderStart);
+  const helper = app.slice(helperStart, renderStart);
+  assert.match(helper, /querySelector\("\.desktopWeightsViewToggle, \.mobileWeightsViewToggle"\)/);
+  assert.match(helper, /toggle\.classList\.add\("weightsHeaderViewToggle", "recipeViewToggle"\)/);
+  assert.match(helper, /\$\("recipeHeaderControls"\)\?\.prepend\(toggle\)/);
+
+  const renderEnd = app.indexOf("function smartHopperComputation", renderStart);
+  const render = app.slice(renderStart, renderEnd);
+  assert.equal((render.match(/placeWeightsViewToggleForPage\(\);/g) || []).length, 2,
+    "expected one call on the mobile (touch) branch and one on the desktop branch");
 });
 
 test("the weights view control adopts Recipe's button classes", () => {

@@ -2581,6 +2581,26 @@
       if (profilesBlock.parentElement !== setupSection) weightsBlock.after(profilesBlock);
     }
 
+    // Weight renderers own the behavior of their Summary/Edit control, but
+    // Recipe owns where page-level view controls are presented: on the
+    // Weights page that control belongs in #recipeHeaderControls instead of
+    // floating above the grid. renderWeightsArea() rebuilds a brand new
+    // toggle element every time it runs (Smart Hoppers, circumference, and a
+    // handful of other inputs all call it directly, not just Recipe's own
+    // page-switch path), so the relocation has to happen on every rebuild
+    // here rather than once in the caller - otherwise a direct rebuild
+    // leaves the freshly created toggle sitting in #weightsArea while a
+    // stale, no-longer-wired one is still parked in the header, silently
+    // dead to clicks.
+    function placeWeightsViewToggleForPage(){
+      $("recipeHeaderControls")?.querySelector(".weightsHeaderViewToggle")?.remove();
+      if (!isWeightsPage()) return;
+      const toggle = $("weightsArea")?.querySelector(".desktopWeightsViewToggle, .mobileWeightsViewToggle");
+      if (!toggle) return;
+      toggle.classList.add("weightsHeaderViewToggle", "recipeViewToggle");
+      $("recipeHeaderControls")?.prepend(toggle);
+    }
+
     function renderWeightsArea(){
       const area = $("weightsArea");
       if (!area) return;
@@ -2595,6 +2615,7 @@
       if (!isDesktopLayout()){
         renderMobileWeightsArea(area);
         placeSetupWeightProfiles();
+        placeWeightsViewToggleForPage();
         return;
       }
       const previousProfilesSheet = $("mobileWeightProfilesSheet");
@@ -3102,6 +3123,7 @@
         (v)=>{ state.smartHoppersEnabled = !!v; renderWeightsArea(); }
       );
 
+      placeWeightsViewToggleForPage();
       refreshSmartHopperState();
     }
 
@@ -3784,10 +3806,11 @@
       const area = $("splitsArea");
       if (!area) return;
       // Weight renderers own the behavior of their Summary/Edit control, but
-      // Recipe owns where page-level view controls are presented. Remove the
-      // previous rendered control before rebuilding; the active weights
-      // renderer will place its newly wired control back in this same slot.
-      $("recipeHeaderControls")?.querySelector(".weightsHeaderViewToggle")?.remove();
+      // Recipe owns where page-level view controls are presented. When
+      // leaving the Weights page, drop the stale control now - renderWeightsArea()
+      // itself (via placeWeightsViewToggleForPage()) puts a freshly wired one
+      // back in this same slot whenever the Weights page is the active one.
+      if (!isWeightsPage()) $("recipeHeaderControls")?.querySelector(".weightsHeaderViewToggle")?.remove();
       // Hopper Weights is a page of this workspace, but it remains the same
       // live editor used by Line Setup. Move that one real node instead of
       // cloning the UI so calculations, profiles, input IDs and event
@@ -3808,11 +3831,6 @@
         if (weightsArea) area.append(weightsArea);
         $("recipeHeaderActions")?.replaceChildren();
         renderWeightsArea();
-        const weightsViewToggle = weightsArea?.querySelector(".desktopWeightsViewToggle, .mobileWeightsViewToggle");
-        if (weightsViewToggle){
-          weightsViewToggle.classList.add("weightsHeaderViewToggle", "recipeViewToggle");
-          $("recipeHeaderControls")?.prepend(weightsViewToggle);
-        }
         return;
       }
       area.className = "gap10";
@@ -8149,9 +8167,6 @@
     $("resetTrackingBtn")?.addEventListener("click", resetTracking);
     document.querySelectorAll(".workspaceNavButton").forEach(button=>{
       button.addEventListener("click",()=>setWorkspacePanel(button.dataset.workspaceTarget, { reveal: true }));
-    });
-    $("mobileProductionSyncShortcut")?.addEventListener("click",()=>{
-      setWorkspacePanel("lineSyncBlock", { reveal:true });
     });
     $("workspaceIdentityButton")?.addEventListener("click",()=>{
       setWorkspacePanel("lineSyncBlock", { reveal:true });

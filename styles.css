@@ -6258,38 +6258,49 @@ input.resinLookupValue.copied[readonly]{
   .helpPlayBannerHost[data-beta-state="pending"] > [data-beta-when="pending"],
   .helpPlayBannerHost[data-beta-state="invited"] > [data-beta-when="invited"]{ display: flex; }
   .helpPlayBanner{
+    position: relative;
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 12px 14px;
-    border: 1px solid var(--row-border);
-    border-radius: var(--radius-row);
-    background: var(--row-bg);
-    color: inherit;
-    text-decoration: none;
-  }
-  /* #helpBetaAccess is itself a .workspaceNavExtra now, so its own row
-     already draws the border/background/padding that make it look like
-     RT Sync/Tools/Sudo access's rows - .helpPlayBanner's own box would just
-     double that up. Fill the row instead of boxing again inside it. */
-  #helpBetaAccess .helpPlayBanner{
-    width: 100%;
-    height: 100%;
-    padding: 0;
+    padding: 11px 12px;
     border: 0;
     border-radius: 0;
     background: transparent;
+    color: inherit;
+    text-decoration: none;
+  }
+  /* RT Sync/Tools/Changelog/Sudo access and this banner all read as one
+     continuous thread once the list is open: a single vertical line runs
+     behind every row and each icon sits on it as a ringed node - see the
+     matching rule on .workspaceNavButton.workspaceNavExtra. This row is
+     never a middle-of-nowhere segment (it always has a real row above and
+     below it), so it always draws the full-height line, no first/last
+     trimming needed. */
+  .helpPlayBanner::before{
+    content: "";
+    position: absolute;
+    left: 26px;
+    top: -1px;
+    width: 1px;
+    height: calc(100% + 1px);
+    background: var(--border2);
   }
   .helpPlayBanner:hover,
-  .helpPlayBanner:focus-visible{ border-color: var(--focus-border); background: var(--focus-ring); }
+  .helpPlayBanner:focus-visible{ background: var(--focus-ring); }
   .helpPlayBanner:focus-visible{ outline: 2px solid var(--focus-border); outline-offset: 2px; }
-  /* Same stroke/fill convention as .workspaceTileIcon (fill:none, stroke
-     draws the base glyph, .gruvboxSolidGlyph swaps to a filled twin under
-     gruvbox) - it no longer carries its own permanent fill. */
+  /* The node ring every row's icon now sits in, matching
+     .workspaceTileIcon in the opened list. */
   .helpPlayBannerIcon{
-    width: 30px;
-    height: 30px;
+    position: relative;
+    z-index: 1;
+    width: 28px;
+    height: 28px;
     flex: 0 0 auto;
+    padding: 6px;
+    box-sizing: border-box;
+    border: 2px solid var(--tile-accent);
+    border-radius: 50%;
+    background: var(--panel);
     fill: none;
     stroke: currentColor;
     stroke-width: 1.7;
@@ -6329,7 +6340,7 @@ input.resinLookupValue.copied[readonly]{
      "Change" control inside it is interactive. The icon keeps its usual
      accent colour - the dot above is what marks the state as pending. */
   .helpPlayBannerPending{ opacity: .82; }
-  .helpPlayBannerPending:hover{ border-color: var(--row-border); background: var(--row-bg); }
+  .helpPlayBannerPending:hover{ background: transparent; }
   .helpPlayBannerEdit{
     flex: 0 0 auto;
     margin-left: auto;
@@ -6736,6 +6747,22 @@ body[data-theme="gruvbox-light"]{
    keys off its own id instead of the attribute selector above. */
 #helpBetaAccess{ --tile-accent:var(--ok); }
 
+/* The overlapping icon cluster on the collapsed "Workspace & support" bar
+   previews these same five sections, but lives outside the buttons it
+   previews - CSS custom properties don't reach across unrelated subtrees,
+   so each --tint here is kept in sync by hand with the --tile-accent
+   assignments above (and the gruvbox overrides just below). */
+/* body[data-mobile-workspace="home"] .mobileWorkspaceNavMoreIcons i{--tint:
+   var(--muted)} outranks a bare two-class selector on specificity (its
+   attribute selector plus two type selectors add up to more than two
+   classes alone), so these repeat that exact prefix to win outright
+   rather than relying on source order. */
+body[data-mobile-workspace="home"] .mobileWorkspaceNavMoreIcons .moreIconSudo{ --tint:var(--warn); }
+body[data-mobile-workspace="home"] .mobileWorkspaceNavMoreIcons .moreIconChangelog{ --tint:var(--focus-border); }
+body[data-mobile-workspace="home"] .mobileWorkspaceNavMoreIcons .moreIconBeta{ --tint:var(--ok); }
+body[data-mobile-workspace="home"] .mobileWorkspaceNavMoreIcons .moreIconTools{ --tint:var(--warn); }
+body[data-mobile-workspace="home"] .mobileWorkspaceNavMoreIcons .moreIconRt{ --tint:var(--ok); }
+
 .sudoAccessBody{display:grid;align-content:start;gap:12px}
 .sudoAccessDetails{display:grid;gap:2px;padding:10px 11px;border:1px solid var(--border);border-radius:var(--control-radius);background:var(--row-bg)}
 .sudoAccessDetails strong{color:var(--title);font-size:13px}.sudoAccessDetails small{color:var(--muted);font-size:11px}
@@ -6780,6 +6807,9 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNavB
 body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNavButton[data-workspace-target="lineSyncBlock"]{ --tile-accent:var(--gruv-aqua); }
 body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNavButton[data-workspace-target="toolsBlock"]{ --tile-accent:var(--gruv-purple); }
 body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNavButton[data-workspace-target="changelogBlock"]{ --tile-accent:var(--gruv-blue); }
+body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"])[data-mobile-workspace="home"] .mobileWorkspaceNavMoreIcons .moreIconTools{ --tint:var(--gruv-purple); }
+body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"])[data-mobile-workspace="home"] .mobileWorkspaceNavMoreIcons .moreIconChangelog{ --tint:var(--gruv-blue); }
+body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"])[data-mobile-workspace="home"] .mobileWorkspaceNavMoreIcons .moreIconRt{ --tint:var(--gruv-aqua); }
 
 /* Main-screen numbered workflow only. Gruvbox keeps its established
    palette above; no Gruvbox selectors are changed here. */
@@ -7787,49 +7817,34 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
     display:flex;
     margin:0 0 4px;
   }
+  /* RT Sync used to get its own shortcut icon in here, but that duplicated
+     the workspace identity bar directly above (same click target, same
+     setWorkspacePanel("lineSyncBlock") action) - removed, leaving just the
+     two live production readouts sitting directly on the page, no card. A
+     max-width keeps them from drifting far apart on wider tablets;
+     margin:auto centers that capped row within whatever gutter the
+     surrounding nav padding leaves on narrower phones. */
   body[data-mobile-workspace="home"] .mobileProductionControls{
-    display:grid;
-    grid-template-columns:38px repeat(2,minmax(0,1fr));
-    align-items:end;
-    gap:9px;
-    margin:8px 8px 12px;
-    padding:11px 12px;
-    border:1px solid color-mix(in srgb,var(--focus-border) 34%,var(--border));
-    border-radius:12px;
-    background:color-mix(in srgb,var(--focus-ring) 18%,transparent);
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap:16px;
+    width:100%;
+    max-width:440px;
+    margin:10px auto 16px;
+    box-sizing:border-box;
   }
   .mobileProductionControls .setupPrimaryFields{
     display:contents;
     margin:0!important;
   }
   .mobileProductionControls .setupPrimaryFields > div{min-width:0}
-  .mobileProductionControls .mobileProductionSyncShortcut{order:1}
-  .mobileProductionControls .setupPrimaryFields > div:first-child{order:2}
-  .mobileProductionControls .setupPrimaryFields > div:last-child{order:3}
-  .mobileProductionSyncShortcut{
-    display:grid;
-    place-items:center;
-    width:38px;
-    height:38px;
-    min-height:38px;
-    margin:0;
-    padding:0;
-    border:1px solid color-mix(in srgb,var(--focus-border) 48%,var(--row-border-2));
-    border-radius:var(--control-radius);
-    background:color-mix(in srgb,var(--focus-ring) 42%,var(--panel));
-    color:var(--focus-border);
-    box-shadow:none;
-  }
-  .mobileProductionSyncShortcut svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-  .mobileProductionSyncShortcut .gruvboxSolidGlyph{display:none}
-  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .mobileProductionSyncShortcut .baseGlyph{display:none}
-  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .mobileProductionSyncShortcut .gruvboxSolidGlyph{display:block;fill:currentColor;stroke:none}
-  .mobileProductionSyncShortcut:focus-visible{outline:2px solid var(--focus-border);outline-offset:2px}
+  .mobileProductionControls .setupPrimaryFields > div:last-child{text-align:right}
   .mobileProductionControls .gaugeTile{
     position:relative;
     display:grid;
     grid-template-rows:auto auto;
-    gap:5px;
+    gap:6px;
     min-width:0;
     margin:0;
     padding:0;
@@ -7841,7 +7856,7 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
     grid-row:1;
     margin:0;
     color:var(--muted);
-    font-size:9px;
+    font-size:10px;
     font-weight:850;
     letter-spacing:.08em;
     text-transform:uppercase;
@@ -7851,31 +7866,34 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
     grid-row:2;
     width:100%;
     min-width:0;
-    min-height:38px;
-    padding:7px 2px;
+    min-height:44px;
+    padding:0;
     border:0;
     border-radius:0;
     background:transparent;
     color:var(--text);
-    font-size:13px;
+    font-size:clamp(24px,7.5vw,32px);
     font-weight:850;
+    font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;
     box-sizing:border-box;
     box-shadow:none;
   }
-  .mobileProductionControls .mobileLineRateReadout{display:flex;align-items:center;justify-content:flex-start;text-align:left}
-  .mobileProductionControls .gaugeTile input:not([type="time"]){display:none;grid-row:2;min-height:38px;padding:7px 8px;font-size:13px;font-weight:850;text-align:left}
+  .mobileProductionControls .mobileLineRateReadout{display:flex;align-items:center;justify-content:flex-end;text-align:right}
+  .mobileProductionControls .gaugeTile input:not([type="time"]){display:none;grid-row:2;min-height:44px;padding:6px 8px;font-size:clamp(20px,6vw,26px);font-weight:850;text-align:right}
   .mobileProductionControls .gaugeTile.mobileOutputEditing .mobileLineRateReadout{display:none}
   .mobileProductionControls .gaugeTile.mobileOutputEditing input:not([type="time"]){display:block}
-  .mobileProductionControls .gaugeTimeValue{display:flex;align-items:center;justify-content:space-between;gap:6px}
-  .mobileProductionControls .gaugeTimeValue svg{width:16px;height:16px;fill:none;stroke:var(--focus-border)}
+  .mobileProductionControls .gaugeTimeValue{display:flex;align-items:center;justify-content:flex-start;gap:8px}
+  .mobileProductionControls .gaugeTimeValue svg{width:20px;height:20px;flex:0 0 auto;fill:none;stroke:var(--focus-border)}
   .mobileProductionControls .gaugeIcon{display:none}
   .mobileProductionControls .gaugeTile input[type="time"]{
     position:absolute;
     z-index:2;
+    left:0;
     right:0;
     bottom:0;
     width:100%;
-    height:38px;
+    height:44px;
     opacity:0;
     cursor:pointer;
   }
@@ -7961,19 +7979,23 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
     gap:8px;
     margin:14px 0 0;
     padding-top:5px;
-    border-top:1px solid var(--border2);
   }
   body[data-mobile-workspace="home"] .workspaceNavMore{
     display:flex;
     align-items:center;
     width:100%;
-    min-height:68px;
-    padding:10px 12px;
-    border:1px solid color-mix(in srgb,var(--ok) 54%,var(--border2));
-    border-radius:12px;
-    background:color-mix(in srgb,var(--ok) 5%,var(--panel));
+    min-height:0;
+    padding:11px 12px;
+    border:0;
+    border-radius:0;
+    background:transparent;
     color:var(--text);
     text-align:left;
+  }
+  body[data-mobile-workspace="home"] .workspaceNavMore:focus-visible{
+    outline:2px solid var(--focus-border);
+    outline-offset:-2px;
+    background:var(--focus-ring);
   }
   body[data-mobile-workspace="home"] #workspaceNavMoreLabel{display:none}
   body[data-mobile-workspace="home"] .mobileWorkspaceNavMore{
@@ -8000,22 +8022,33 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
     text-transform:none;
   }
   body[data-mobile-workspace="home"] .mobileWorkspaceNavMoreIcons{display:flex}
+  /* The five real section icons, overlapping like a group of avatars,
+     instead of three generic hint glyphs that never matched what the row
+     actually expands into. Later siblings paint over earlier ones, so RT
+     Sync (last in the DOM) sits fully visible on top - --tint per icon
+     mirrors the --tile-accent each section's own button already carries,
+     so the cluster and the opened list below never disagree on colour. */
   body[data-mobile-workspace="home"] .mobileWorkspaceNavMoreIcons i{
+    --tint:var(--muted);
     display:grid;
     place-items:center;
     width:26px;
     height:26px;
-    margin-left:-5px;
+    margin-left:-9px;
     border:2px solid var(--panel);
     border-radius:50%;
-    background:var(--row-bg);
-    color:var(--focus-border);
-    font-size:10px;
-    font-style:normal;
+    background:var(--tint);
+    color:var(--panel);
   }
-  body[data-mobile-workspace="home"] .mobileWorkspaceNavMoreIcons i:first-child{
-    margin-left:0;
-    color:var(--ok);
+  body[data-mobile-workspace="home"] .mobileWorkspaceNavMoreIcons i:first-child{ margin-left:0; }
+  body[data-mobile-workspace="home"] .mobileWorkspaceNavMoreIcons i svg{
+    width:12px;
+    height:12px;
+    fill:none;
+    stroke:currentColor;
+    stroke-width:2;
+    stroke-linecap:round;
+    stroke-linejoin:round;
   }
   body[data-mobile-workspace="home"] .workspaceNavMoreChev{
     width:18px;
@@ -8043,50 +8076,88 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
   body[data-mobile-workspace="home"] .workspaceNav:not(.navExpanded) .workspaceNavExtra:not(.active){display:none}
   body[data-mobile-workspace="home"] .workspaceNav.navExpanded .workspaceNavExtra{
     grid-column:1;
-    min-height:58px;
-    padding:10px 12px;
+    padding:0;
     border:0;
-    border-bottom:1px solid var(--border2);
     border-radius:0;
     background:transparent;
     box-shadow:none;
   }
-  /* RT Sync / Tools / Changelog / Sudo access, matching Request beta
-     access's own row: icon to the left spanning both lines, title and
-     subtitle stacked directly beneath each other to its right, instead of
-     title-then-full-width-subtitle. display:contents unwraps the icon+
-     title span so the icon and the (inherited-styled) title text become
-     independent grid items the row can place - the span itself never
-     painted a box, so removing it changes nothing else. #helpBetaAccess
-     itself is a plain div, not a .workspaceNavButton, so this never
-     touches its own three-state layout. */
+  /* RT Sync / Tools / Request beta access / Changelog / Sudo access read as
+     one continuous thread once expanded: a single vertical line runs
+     behind every row and each icon becomes a ringed node sitting on it,
+     the same visual language the numbered Recipe/Timeline/Resin Totals
+     rail above already uses for a sequence, borrowed here for a list. The
+     line is each row's own ::before segment (icon position is identical
+     everywhere, so the segments line up into one continuous rule); only
+     the first (RT Sync) and last (Sudo access) rows trim their own half.
+     display:contents unwraps the icon+title span so the icon and the
+     (inherited-styled) title text become independent grid items the row
+     can place - the span itself never painted a box, so removing it
+     changes nothing else. #helpBetaAccess itself is a plain div, not a
+     .workspaceNavButton, so this never touches its own three-state layout
+     (see .helpPlayBanner further up for its matching thread segment). */
   body[data-mobile-workspace="home"] .workspaceNav.navExpanded .workspaceNavButton.workspaceNavExtra{
+    position:relative;
     display:grid;
     grid-template-columns:auto 1fr;
     column-gap:12px;
     row-gap:1px;
     align-items:center;
+    min-height:0;
+    padding:11px 12px;
   }
+  body[data-mobile-workspace="home"] .workspaceNav.navExpanded .workspaceNavButton.workspaceNavExtra::before{
+    content:"";
+    position:absolute;
+    left:26px;
+    top:-1px;
+    width:1px;
+    height:calc(100% + 1px);
+    background:var(--border2);
+  }
+  #workspaceNavLineSync::before{ top:50%; }
+  #workspaceNavSudo::before{ height:50%; }
   body[data-mobile-workspace="home"] .workspaceNav.navExpanded .workspaceNavButton.workspaceNavExtra > span{
     display:contents;
     font-size:13px;
   }
   body[data-mobile-workspace="home"] .workspaceNav.navExpanded .workspaceNavExtra .workspaceTileIcon{
+    position:relative;
+    z-index:1;
     width:28px;
     height:28px;
+    padding:6px;
+    box-sizing:border-box;
+    border:2px solid var(--tile-accent);
+    border-radius:50%;
+    background:var(--panel);
+    color:var(--tile-accent);
   }
   body[data-mobile-workspace="home"] .workspaceNav.navExpanded .workspaceNavButton.workspaceNavExtra .workspaceTileIcon{
     grid-row:1 / 3;
     grid-column:1;
-    border:0;
-    background:transparent;
-    padding:0;
   }
   body[data-mobile-workspace="home"] .workspaceNav.navExpanded .workspaceNavExtra > small{
     font-size:10px;
   }
   body[data-mobile-workspace="home"] .workspaceNav.navExpanded .workspaceNavButton.workspaceNavExtra > small{
     grid-column:2;
+  }
+  /* The currently open panel's node fills solid instead of just
+     outlined, and its title picks up the same accent - overrides the
+     generic .workspaceNavButton.active treatment (a background tint and
+     var(--title) icon colour) so an open row reads through the node/title
+     alone, not a highlighted box breaking the thread. */
+  body[data-mobile-workspace="home"] .workspaceNav.navExpanded .workspaceNavButton.workspaceNavExtra.active{
+    border-color:transparent;
+    background:transparent;
+  }
+  body[data-mobile-workspace="home"] .workspaceNav.navExpanded .workspaceNavButton.workspaceNavExtra.active .workspaceTileIcon{
+    background:var(--tile-accent);
+    color:var(--panel);
+  }
+  body[data-mobile-workspace="home"] .workspaceNav.navExpanded .workspaceNavButton.workspaceNavExtra.active > span{
+    color:var(--tile-accent);
   }
 
   .footerBar{
