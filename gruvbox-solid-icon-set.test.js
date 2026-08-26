@@ -36,18 +36,22 @@ function iconSvgs(){
 
 test("every 32x32 app icon ships both glyph sets - the stroked base and its solid gruvbox twin", () => {
   const svgs = iconSvgs().filter(svg => svg.includes("baseGlyph") || svg.includes("gruvboxSolidGlyph"));
-  assert.equal(svgs.length, 21,
-    "expected 7 workspace tile icons + the mobile RT Sync shortcut + 7 mobile section header icons + 6 mobile tool tiles");
+  assert.equal(svgs.length, 24,
+    "expected 7 workspace tile icons (Help's nav icon is gone, replaced by Changelog) + the mobile RT Sync shortcut + 7 mobile section header icons + 6 mobile tool tiles + 3 Play Store banner icon copies (one per state, now converted to the same 32x32 dual-glyph style)");
   for (const svg of svgs){
     assert.match(svg, /<g class="baseGlyph">/, `missing baseGlyph: ${svg.slice(0, 90)}`);
     assert.match(svg, /<g class="gruvboxSolidGlyph">/, `missing gruvboxSolidGlyph: ${svg.slice(0, 90)}`);
   }
 });
 
-test("all three icon families were converted, not just the workspace tiles", () => {
+test("all four icon families were converted, not just the workspace tiles", () => {
   const family = cls => (html.match(new RegExp(`<svg class="${cls}"[^>]*><g class="baseGlyph">`, "g")) || []).length;
   assert.equal(family("workspaceTileIcon"), 7);
   assert.equal(family("mobileSectionHeaderIcon"), 7);
+  // One per Play Store banner state (request / pending / invited) - all
+  // three copies converted from the old 24x24 solid-fill triangle to the
+  // same 32x32 stroke/solid-twin style as everything else.
+  assert.equal(family("helpPlayBannerIcon"), 3);
   const toolTiles = [...html.matchAll(/<button class="mobileToolTile"[\s\S]*?<\/button>/g)];
   assert.equal(toolTiles.length, 6);
   for (const [tile] of toolTiles){

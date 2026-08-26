@@ -12,6 +12,7 @@ const styles = fs.readFileSync("styles.css", "utf8");
 const theme = fs.readFileSync("theme.css", "utf8");
 const cloudSync = fs.readFileSync("cloud-sync.js", "utf8");
 const androidBuild = fs.readFileSync("android/app/build.gradle", "utf8");
+const desktop = fs.readFileSync("desktop.css", "utf8");
 
 /* -----------------------------------------------------------------------
  *   The document itself
@@ -334,47 +335,60 @@ test("the deletion page carries the same inlined Industrial Slate palette as the
  *   Reaching it from the app
  * --------------------------------------------------------------------- */
 
-test("Help carries a Privacy Policy link, inside the guide body rather than buried in a topic", () => {
-  const guideStart = html.indexOf('<div class="blockBody helpGuide">');
-  assert.notEqual(guideStart, -1, "expected the Help guide body");
-  // Same end marker the other Help tests use: the guide body's own close,
-  // followed by the Help panel's. The link sits after the topic list, so the
-  // slice has to run to the end of the panel rather than to the last topic.
-  const guideEnd = html.indexOf("</div>\n    </div>\n  </details>", guideStart);
-  assert.notEqual(guideEnd, -1, "expected the Help guide body to close before the next panel");
-  const guide = html.slice(guideStart, guideEnd);
-  const start = guide.indexOf('<div class="helpPrivacy">');
-  assert.notEqual(start, -1, "expected a helpPrivacy block in the Help guide body");
-  const block = guide.slice(start, guide.indexOf("\n      </div>", start));
+test("the Changelog panel carries a Privacy Policy link, at the bottom of its own body rather than buried in a Help topic", () => {
+  const panelStart = html.indexOf('<details class="block card workspacePanel" id="changelogBlock">');
+  assert.notEqual(panelStart, -1, "expected the Changelog panel");
+  const panelEnd = html.indexOf("</details>", panelStart);
+  assert.notEqual(panelEnd, -1, "expected the Changelog panel to close");
+  const panel = html.slice(panelStart, panelEnd);
+  const start = panel.indexOf('<div class="changelogPrivacy">');
+  assert.notEqual(start, -1, "expected a changelogPrivacy block in the Changelog panel body");
+  const block = panel.slice(start, panel.indexOf("\n      </div>", start));
   assert.match(block, /href="https:\/\/resin\.tools\/privacy"/);
   assert.match(block, />Privacy Policy</);
   // The deletion route sits beside it as a second plain link, not a button
   // and not a section of its own.
   assert.match(block, /href="https:\/\/resin\.tools\/privacy\/delete-data\/"/);
   assert.match(block, />Delete Data</);
-  assert.equal((block.match(/class="helpPrivacyLink"/g) || []).length, 2);
+  assert.equal((block.match(/class="changelogPrivacyLink"/g) || []).length, 2);
   assert.doesNotMatch(block, /<button/);
-  // Same treatment as the Play banner above it: the bundled Android app has
+  // Same treatment the old Play banner used: the bundled Android app has
   // no local copy of these pages, so they must open outside the app shell
   // rather than navigating the WebView off the app.
   assert.equal((block.match(/target="_blank"/g) || []).length, 2);
   assert.equal((block.match(/rel="noopener"/g) || []).length, 2);
   const version = androidBuild.match(/versionName "([^"]+)"/);
   assert.ok(version, "expected Android's release versionName");
-  assert.match(block, new RegExp(`class="helpAppVersion"[^>]*>v${version[1]}<`));
+  assert.match(block, new RegExp(`class="changelogAppVersion"[^>]*>v${version[1]}<`));
   assert.match(html, new RegExp(`class="mobileFooterVersion"[^>]*>v${version[1]}<`));
-  assert.match(styles, /\.helpPrivacy\{[\s\S]*?grid-template-columns: minmax\(0,1fr\) auto/);
-  assert.match(styles, /\.helpAppVersion\{[\s\S]*?justify-self: end/);
+  assert.match(styles, /\.changelogPrivacy\{[\s\S]*?grid-template-columns: minmax\(0,1fr\) auto/);
+  assert.match(styles, /\.changelogAppVersion\{[\s\S]*?justify-self: end/);
   assert.match(styles, /\.mobileFooterVersion\{[\s\S]*?bottom:calc\(var\(--app-dock-height\) \+ env\(safe-area-inset-bottom\) \+ 2px\);[\s\S]*?text-align:center/);
 });
 
-test("the Help link renders at every width - it is not gated behind a mobile-only or desktop-only rule", () => {
-  assert.match(styles, /\.helpPrivacy\{/);
-  const rule = styles.slice(styles.indexOf(".helpPrivacy{"), styles.indexOf("}", styles.indexOf(".helpPrivacy{")) + 1);
+test("the desktop side rail carries the same Android release version, as a normal flow item after Sudo access", () => {
+  const version = androidBuild.match(/versionName "([^"]+)"/);
+  assert.ok(version, "expected Android's release versionName");
+  assert.match(html, new RegExp(`class="desktopRailVersion"[^>]*>v${version[1]}<`));
+  // Hidden by default (styles.css) so it doesn't leak into mobile/touch
+  // layouts, then shown only inside the desktop rail.
+  assert.match(styles, /\.desktopRailVersion\{display:none\}/);
+  assert.match(desktop, /\.desktopRailVersion\{[\s\S]*?display:block;/);
+  // Must NOT be pinned to a fixed spot in the scrollport - that anchors it
+  // to the scrollport's own box rather than the scrolled content, so once
+  // the More/extras are expanded and the rail actually scrolls, whatever
+  // content scrolls into that same on-screen spot renders underneath it
+  // and looks cut off (the exact bug this replaced).
+  assert.doesNotMatch(desktop, /\.desktopRailVersion\{[^}]*position:absolute/);
+});
+
+test("the Changelog panel's privacy link renders at every width - it is not gated behind a mobile-only or desktop-only rule", () => {
+  assert.match(styles, /\.changelogPrivacy\{/);
+  const rule = styles.slice(styles.indexOf(".changelogPrivacy{"), styles.indexOf("}", styles.indexOf(".changelogPrivacy{")) + 1);
   assert.doesNotMatch(rule, /display:\s*none/);
 });
 
-test("the Help link's absolute URL keeps it out of build-www's allowlist, so the Android build does not try to copy a page that isn't a file", () => {
+test("the privacy link's absolute URL keeps it out of build-www's allowlist, so the Android build does not try to copy a page that isn't a file", () => {
   const refs = localRuntimeReferences(html);
   assert.ok(!refs.some(ref => /privacy/i.test(ref)), `build-www should not treat the policy URL as a local file: ${refs.filter(r => /privacy/i.test(r))}`);
 });

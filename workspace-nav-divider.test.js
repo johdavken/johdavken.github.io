@@ -1,8 +1,8 @@
 "use strict";
 
-// The desktop side rail folds RT Sync / Tools / Help / Sudo access away behind a labelled
-// divider under Resin Totals, so first contact with the app is four numbered
-// sections rather than seven rows.
+// The desktop side rail folds RT Sync / Tools / the Play Store banner / Sudo
+// access away behind a labelled divider under Resin Totals, so first contact
+// with the app is four numbered sections rather than seven rows.
 //
 // Two properties carry the whole design and are what this file guards:
 //
@@ -27,7 +27,7 @@ const DESKTOP_QUERY = "@media (min-width: 901px) and (pointer: fine){";
 const FOLDED = [
   ["lineSyncBlock", "workspaceNavLineSync"],
   ["toolsBlock", "workspaceNavTools"],
-  ["helpBlock", "workspaceNavHelp"],
+  ["changelogBlock", "workspaceNavChangelog"],
   ["sudoAccessBlock", "workspaceNavSudo"]
 ];
 const PINNED = ["lineSetupBlock", "splitsBlock", "resultsBlock", "productionSummaryBlock"];
@@ -75,7 +75,7 @@ test("it is a real disclosure button, naming the sections it controls", () => {
   // An IDREF list, not a wrapper: the four buttons stay direct children of
   // the nav grid, which is what lets the .active exemption below reveal one
   // of them on its own.
-  assert.match(block, /aria-controls="workspaceNavLineSync workspaceNavTools workspaceNavHelp workspaceNavSudo"/);
+  assert.match(block, /aria-controls="workspaceNavLineSync workspaceNavTools helpBetaAccess workspaceNavChangelog workspaceNavSudo"/);
   assert.match(block, /id="workspaceNavMoreLabel">More</);
   assert.match(block, /aria-hidden="true"/);
 });
@@ -89,6 +89,20 @@ test("exactly the last four sections are marked foldaway, and the numbered four 
     const button = html.slice(html.indexOf(`data-workspace-target="${target}"`));
     assert.doesNotMatch(button.slice(0, button.indexOf(">")), /workspaceNavExtra/);
   });
+});
+
+// The Google Play banner took Help's old nav slot, but it isn't a plain
+// single-target nav button - it's three mutually exclusive states (request /
+// pending / invited), so it only shares the workspaceNavExtra class (for the
+// same fold/active-exemption behavior) rather than the full button pattern
+// above.
+test("the Play Store banner host sits beside (not instead of) the Changelog button, and Help itself is gone", () => {
+  assert.match(html, /<div class="helpPlayBannerHost workspaceNavExtra" id="helpBetaAccess" data-beta-state="loading">/);
+  assert.doesNotMatch(html, /id="workspaceNavHelp"/);
+  assert.doesNotMatch(html, /id="helpBlock"/);
+  // Both the banner and Changelog now sit where Help's single nav button
+  // used to be - Changelog is the only one that targets changelogBlock.
+  assert.equal((html.match(/data-workspace-target="changelogBlock"/g) || []).length, 1);
 });
 
 /* ----------------------------------------------------------------------

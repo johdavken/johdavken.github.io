@@ -21,8 +21,8 @@ test("top-level mobile section headers pair their decorative main-menu SVG with 
     ["splitsBlock", "resultsBlock", "Recipe"],
     ["resultsBlock", "lineSyncBlock", "Timeline"],
     ["lineSyncBlock", "toolsBlock", "RT Sync"],
-    ["toolsBlock", "helpBlock", "Tools"],
-    ["helpBlock", "resinAdminBlock", "Help"]
+    ["toolsBlock", "changelogBlock", "Tools"],
+    ["changelogBlock", "sudoAccessBlock", "Changelog"]
   ];
   for (const [id, nextId, title] of expected){
     const source = panel(id, nextId);

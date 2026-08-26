@@ -19,7 +19,7 @@ const adminUi = fs.readFileSync("resin-admin-ui.js", "utf8");
 const privacy = fs.readFileSync("privacy/index.html", "utf8");
 
 function bannerHost(){
-  const start = html.indexOf('<div class="helpPlayBannerHost"');
+  const start = html.indexOf('<div class="helpPlayBannerHost workspaceNavExtra"');
   assert.notEqual(start, -1, "expected the beta banner host");
   return html.slice(start, html.indexOf("</div>", html.indexOf('data-beta-when="invited"')));
 }
@@ -98,8 +98,9 @@ test("a failed status read leaves the previous answer standing", () => {
 test("the banner is primed from cache first, then reconciled", () => {
   assert.match(ui, /function primeFromCache\(\)\{[\s\S]*?service\.cached\(\)/);
   assert.match(ui, /function hook\(\)\{\s*\n\s*primeFromCache\(\);/);
-  // Re-read when Help is opened, which is the only time the banner is on screen.
-  assert.match(ui, /\[data-workspace-target="helpBlock"\][\s\S]*?refreshStatus\(\)/);
+  // Re-read when "Workspace & support" is opened, the only time the banner
+  // (now in Help's old nav slot) is actually on screen.
+  assert.match(ui, /\$\("workspaceNavMore"\)\?\.addEventListener\("click", \(\)=>\{ void refreshStatus\(\); \}\);/);
 });
 
 /* ----------------------------------------------------------------------

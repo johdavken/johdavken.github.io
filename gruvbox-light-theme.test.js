@@ -25,7 +25,6 @@ test("Gruvbox Light uses warm paper surfaces and dark, readable ink app-wide", (
   assert.doesNotMatch(palette, /#splitsBlock[\s\S]*?\)\{ color: #fbf1c7; \}/);
 });
 
-test("Gruvbox Light retains the Gruvbox side-rail watermark", () => {
-  assert.match(desktop, /body:is\(\[data-theme="gruvbox-dark"\],\[data-theme="gruvbox-light"\]\) \.workspaceNav::after/);
-  assert.match(desktop, /content:"GRUVBOX";/);
+test("Gruvbox themes no longer render the side-rail GRUVBOX watermark", () => {
+  assert.doesNotMatch(desktop, /content:"GRUVBOX";/);
 });

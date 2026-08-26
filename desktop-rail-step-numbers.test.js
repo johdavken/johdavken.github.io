@@ -178,8 +178,8 @@ test("the three remaining workflow sections are numbered 1 through 3", () => {
     ["2", "resultsBlock"],
     ["3", "productionSummaryBlock"]
   ]);
-  // RT Sync / Tools / Help carry no number on either surface.
-  ["lineSyncBlock", "toolsBlock", "helpBlock"].forEach(target => {
+  // RT Sync / Tools / Changelog carry no number on either surface.
+  ["lineSyncBlock", "toolsBlock", "changelogBlock"].forEach(target => {
     const button = html.slice(html.indexOf(`data-workspace-target="${target}"`));
     assert.doesNotMatch(button.slice(0, button.indexOf(">")), /data-step/);
   });
