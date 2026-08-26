@@ -65,8 +65,8 @@ test("Recipe Book and the shared bulk toolbar remain direct children while deskt
 test("Rearrange is no longer desktop-only, while Print Recipe still is", () => {
   const modeBarStart = app.indexOf('modeBar.className = "splitsBulkModeBar"');
   const modeBar = app.slice(modeBarStart, app.indexOf("const toolbar = document.createElement", modeBarStart));
-  assert.match(modeBar, /rearrangeButton\.className="secondary"/);
-  assert.doesNotMatch(modeBar, /rearrangeButton\.className="secondary rearrangeDesktopOnly"/);
+  assert.match(modeBar, /rearrangeButton\.className="bulkTextAction splitsRearrangeAction"/);
+  assert.doesNotMatch(modeBar, /rearrangeButton\.className[^;]*rearrangeDesktopOnly/);
   assert.match(modeBar, /printButton\.className="secondary rearrangeDesktopOnly recipeActionTertiary"/);
 });
 
@@ -154,7 +154,7 @@ test("the bulk-edit steps legend is a single right-aligned row on narrow mobile,
   assert.doesNotMatch(stepsRule, /flex-direction:column/);
 });
 
-test("Reset all matches the compact text-style treatment already used by Select all / Clear selection", () => {
+test("Reset all matches the compact text-style treatment already used by Clear selection", () => {
   const narrowBlock = styles.slice(styles.indexOf("@media (max-width: 700px){"));
   const dangerStart = narrowBlock.indexOf(".splitsBulkActions .danger{");
   const dangerRule = narrowBlock.slice(dangerStart, narrowBlock.indexOf("}", dangerStart) + 1);

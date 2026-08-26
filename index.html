@@ -1156,66 +1156,56 @@
         <svg class="mobileSectionHeaderIcon" viewBox="0 0 32 32" aria-hidden="true"><g class="baseGlyph"><circle cx="7" cy="9" r="2.4"/><circle cx="7" cy="16" r="2.4"/><circle cx="7" cy="23" r="2.4"/><path d="M13 9h13M13 16h13M13 23h9"/><g class="gruvboxIconDetail"><rect x="4.6" y="6.6" width="4.8" height="4.8"/><rect x="4.6" y="13.6" width="4.8" height="4.8"/><rect x="4.6" y="20.6" width="4.8" height="4.8"/></g></g><g class="gruvboxSolidGlyph"><circle cx="7" cy="9" r="3.2"/><circle cx="7" cy="16" r="3.2"/><circle cx="7" cy="23" r="3.2"/><path d="M13 7.2h13v3.6H13zM13 14.2h13v3.6H13zM13 21.2h9v3.6H13z"/></g></svg>
         <div class="summaryText">
           <div class="layerTitle" role="heading" aria-level="1">Changelog</div>
-          <div class="layerMeta">A running history of what&rsquo;s been added, most recent first</div>
+          <div class="layerMeta">What&rsquo;s new, most recent first &mdash; the Privacy Policy and how we handle your data are also linked here</div>
         </div>
       </div>
     </summary>
 
     <div class="blockBody">
       <div class="changelogBody">
-        <h3>Recipe workflow, workspace navigation &amp; RT Sync hardening - August 24-25, 2026</h3>
+        <h3>(v1.1.16) (August 24-25, 2026) - Recipe workflow, workspace navigation &amp; RT Sync hardening</h3>
         <ul>
-          <li><strong>Recipe</strong> now keeps its grid, header, and footer stable across desktop, tablet, and mobile. Mobile and tablet edit in place instead of opening a sheet, with compact controls, <strong>Undo</strong>/<strong>Redo</strong>, clearer tracked and Edit states, and percentages that no longer clip.</li>
-          <li>Added <strong>Recipe Book</strong> beside Current and Next. Recipes can now load directly into either page, including <strong>Load Current Recipe</strong> and <strong>Save Next Recipe</strong>; recipe actions and saved-recipe controls are aligned consistently on desktop and tablet.</li>
-          <li>Refined desktop Recipe and the side rail: Summary and Edit keep the panel from shifting, tracking is labeled in the hopper badge instead of relying on a cell highlight, and the rail’s expanded stages are shorter and less redundant.</li>
-          <li>Redesigned <strong>Resin Totals</strong> on desktop and tablet with fixed material, lot, and pounds columns, a clear Total issued row, and matching Production / Scrap resin fields. Scanned lot numbers now stay aligned as totals change.</li>
-          <li>Simplified touch navigation to <strong>Display</strong>, <strong>Main</strong>, and <strong>Alerts</strong>: Main uses the layer-stack icon, Alerts is a bell, and refresh no longer occupies the footer. <strong>Workspace &amp; support</strong> now contains <strong>Sudo access</strong> for administrator tools.</li>
-          <li>Added <strong>System / Auto</strong> and <strong>OLED Black</strong> appearance options, and restored the <strong>Nord</strong> theme.</li>
-          <li>Hardened <strong>RT Sync</strong> against stale-client revision storms. The server now returns the authoritative shared job for a stale write, while current clients retain the normal conflict-resolution choice; durable conflict tracking slows callers that ignore that response.</li>
+          <li><strong>Recipe</strong> now keeps a stable grid, header, and footer across desktop, tablet, and mobile, with in-place mobile/tablet editing, <strong>Undo</strong>/<strong>Redo</strong>, and percentages that no longer clip.</li>
+          <li>Added <strong>Recipe Book</strong> alongside Current and Next, with <strong>Load Current Recipe</strong> and <strong>Save Next Recipe</strong> available from either page.</li>
+          <li>Redesigned <strong>Resin Totals</strong> on desktop and tablet with fixed material/lot/pounds columns and a clear Total issued row.</li>
+          <li>Simplified mobile navigation to <strong>Display</strong>, <strong>Main</strong>, and <strong>Alerts</strong>, with <strong>Sudo access</strong> moved into Workspace &amp; support; added <strong>System / Auto</strong> and <strong>OLED Black</strong> themes and restored <strong>Nord</strong>.</li>
+          <li>Hardened <strong>RT Sync</strong> against stale-client revision storms that could keep retrying against out-of-date state.</li>
         </ul>
 
-        <h3>Mobile workspace, Recipe editing &amp; display - August 23, 2026</h3>
+        <h3>(v1.1.14) (August 23, 2026) - Mobile workspace, Recipe editing &amp; display</h3>
         <ul>
-          <li>Redesigned the mobile Home screen as a compact connected workflow rail, with the active RT Sync workspace shown beside its heading and support tools grouped behind one disclosure.</li>
-          <li>Reduced the mobile footer to a slim text-only command bar with an inline Alerts badge, live Refresh status, and the current app version.</li>
-          <li>Made Recipe tracking and editing visually distinct: tracked hoppers use a notched hopper badge, while selected cells carry a small <strong>Edit</strong> tag.</li>
-          <li>Compressed the tablet Recipe header and Edit controls into two stable rows so the resin and percentage fields fit alongside the full hopper panel without shrinking cell content.</li>
+          <li>Redesigned the mobile Home screen as a compact connected workflow rail, with a slim text-only footer command bar.</li>
+          <li>Made Recipe tracking and editing visually distinct: a notched hopper badge for tracked cells, a small <strong>Edit</strong> tag for selection.</li>
+          <li>Compressed the tablet Recipe header and Edit controls into two stable rows.</li>
           <li>Restored <strong>Rosé Pine Light</strong>, <strong>Evergreen</strong>, and <strong>Evergreen Light</strong> display themes.</li>
         </ul>
 
-        <h3>Mobile Home navigation - August 22, 2026</h3>
+        <h3>(v1.1.10) (August 22, 2026) - Mobile Home navigation</h3>
         <ul>
           <li>Reorganized the mobile Home screen as a connected, numbered production rail. <strong>RT Sync</strong>, <strong>Tools</strong>, and <strong>Help</strong> now sit behind one compact <strong>Workspace &amp; support</strong> disclosure.</li>
         </ul>
 
-        <h3>Changeover planning &amp; Recipe cell actions - August 21-22, 2026</h3>
+        <h3>(v1.1.9) (August 21-22, 2026) - Changeover planning &amp; Recipe cell actions</h3>
         <ul>
-          <li>Recipe Setup can now copy in <strong>both directions</strong>. <strong>Load Current Recipe</strong> on the Next page seeds a plan from what is already running, so a changeover can be planned by editing the two or three hoppers that differ instead of retyping the whole recipe. Load Next Recipe on the Current page is unchanged. Both confirm first and show what will change.</li>
-          <li>Added <strong>Empty</strong> to Edit view, replacing the per-cell × that was too small to hit on a phone. It clears the selected hoppers' resin, percentage, and Track setting - one hopper goes immediately, more than one asks first. Previously there was no way at all to empty a hopper on mobile.</li>
-          <li>Fixed hopper cells only being selectable from their top half: <strong>tapping anywhere in a cell</strong> now tracks it in Summary, or selects it in Edit. Tapping the percentage used to do nothing.</li>
-          <li>Both Recipe views gained a way to undo a selection in bulk - <strong>Clear tracking</strong> in Summary and <strong>Clear selection</strong> in Edit - without leaving the grid.</li>
-          <li>The desktop side rail now shows <strong>numbered markers</strong> on the first four sections, matching mobile, and folds RT Sync, Tools and Help behind a labelled <strong>More</strong> divider so the rail opens shorter.</li>
-          <li>Added <strong>Enhanced tracking</strong> to the Timeline, beside Reset tracking. With a complete Next Recipe planned, each tracked hopper whose resin is changing shows what is coming in — <strong>B2 A0301 → A1901</strong> — and hoppers the plan empties are marked too. Hoppers that are not changing stay unmarked, so the changeover reads off the Timeline at a glance.</li>
-          <li>Fixed the pump-off alarm on Android being impossible to silence. Leaving the alarm screen without dismissing it used to leave the sound looping with no way back to it. The alarm now carries a <strong>Stop alarm</strong> notification, only sounds while its screen is showing, and stops itself after five minutes, leaving a quiet reminder that a pump-off was missed.</li>
-          <li>Pump-off alarms now <strong>survive a phone restart</strong>, and stale alarms are cancelled properly — an alarm for a hopper that was pumped off or untracked while the app was closed no longer goes off anyway.</li>
-          <li>The Android app download link in Help is now offered through a <strong>beta access request</strong>: submit a name and email, and the link appears once you have been added to the tester list.</li>
+          <li>Recipe Setup can now copy in <strong>both directions</strong>: <strong>Load Current Recipe</strong> on the Next page seeds a changeover plan from what is already running.</li>
+          <li>Added <strong>Empty</strong> to Edit view, clearing a hopper's resin, percentage, and Track setting in one action &mdash; previously impossible on mobile.</li>
+          <li>Fixed hopper cells only being selectable from their top half, and added bulk <strong>Clear tracking</strong> / <strong>Clear selection</strong> controls.</li>
+          <li>Added <strong>Enhanced tracking</strong> to the Timeline, showing each tracked hopper's incoming resin change ahead of a changeover.</li>
+          <li>Fixed the Android pump-off alarm being impossible to silence and not surviving a phone restart; Android downloads now go through a <strong>beta access request</strong>.</li>
         </ul>
 
-        <h3>Summary/Edit views &amp; RT Sync reliability - August 19-20, 2026</h3>
+        <h3>(v1.1.6) (August 19-20, 2026) - Summary/Edit views &amp; RT Sync reliability</h3>
         <ul>
-          <li>Recipe Setup and Receiver Hopper Weights now share one <strong>Summary / Edit</strong> mode axis on every device. Edit <em>is</em> bulk edit, so there is no longer a separate Bulk edit mode to be in, and the Weights Edit toolbar fits on a single row.</li>
-          <li>On touch devices, hopper cells are no longer typed into directly - editing goes through the panel, which never worked well at cell size on a phone.</li>
-          <li>Fixed the <strong>RT Sync conflict storms</strong> seen on August 19-20, where two devices could push competing versions of the same job back and forth, and a panel could disable itself and stay stuck.</li>
+          <li>Recipe Setup and Receiver Hopper Weights now share one <strong>Summary / Edit</strong> mode on every device, with touch editing routed through the panel instead of direct cell typing.</li>
+          <li>Fixed <strong>RT Sync conflict storms</strong> where two devices pushed competing job versions back and forth and could leave a panel stuck disabled.</li>
           <li>Fixed the <strong>Smart Hoppers</strong> panel not refreshing when a line connects.</li>
         </ul>
 
-        <h3>Database health, hopper geometry &amp; tools - August 16-17, 2026</h3>
+        <h3>(v1.1.1) (August 16-17, 2026) - Database health, hopper geometry &amp; tools</h3>
         <ul>
-          <li>Added the admin-only <strong>Database Health</strong> monitor for the Supabase backend, including CPU readings that survive a cold start.</li>
-          <li>Added the <strong>Hopper Volume Weight</strong> tool and a matching <strong>Smart Hoppers volume geometry mode</strong>, for lines whose hoppers are not simple cylinders.</li>
-          <li>Refined the Bulk Density Measurement workflow, and simplified resin records by dropping the unused display/description fields.</li>
-          <li>Gruvbox Light and Dark received a solid icon set, rebalanced dark text, and a matching schedule ribbon on the Timeline.</li>
-          <li>Fixed the Android launcher icon being cropped, and fixed mobile notification actions.</li>
+          <li>Added the admin-only <strong>Database Health</strong> monitor for the Supabase backend.</li>
+          <li>Added the <strong>Hopper Volume Weight</strong> tool and a matching <strong>Smart Hoppers volume geometry mode</strong> for lines whose hoppers are not simple cylinders.</li>
+          <li>Refined Bulk Density Measurement and Gruvbox theme styling; fixed the Android launcher icon and mobile notification actions.</li>
         </ul>
 
         <h3>Privacy pages, tablets &amp; workspace polish - August 14-15, 2026</h3>

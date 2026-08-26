@@ -25,6 +25,10 @@ test("Rearrange Hoppers was renamed to just Rearrange", () => {
   assert.doesNotMatch(app, /"Rearrange Hoppers"/);
 });
 
+test("Rearrange carries one label on every width now that it lives in the Edit toolbar's wrapping pill row rather than a rigid four-item primary row - no compactMobileRecipe split needed to avoid the overflow that forced one", () => {
+  assert.doesNotMatch(app, /compactMobileRecipe\?"Done":"Done Rearranging"/);
+});
+
 test("the Scan Recipe button leads modeBar's own append order, ahead of Print Recipe - Rearrange moved out into .recipeUtilityTabs and is no longer appended into modeBar at all", () => {
   const modeBarStart = app.indexOf('modeBar.className = "splitsBulkModeBar"');
   const modeBar = app.slice(modeBarStart, app.indexOf("const toolbar = document.createElement", modeBarStart));

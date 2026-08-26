@@ -81,9 +81,7 @@ test("mobile and tablet share one inline editor with the same selection actions"
   assert.match(splitsArea, /area\.append\(toolbar\);/);
 });
 
-test("Select all and Clear selection are wired in the shared inline editor", () => {
-  assert.match(splitsArea, /toolbar\.querySelector\("#selectAllSplits"\)\.addEventListener/);
-  assert.match(splitsArea, /cellRefs\.forEach\(\(_,key\)=>selected\.add\(key\)\);/);
+test("Clear selection is wired in the shared inline editor", () => {
   assert.match(splitsArea, /toolbar\.querySelector\("#clearSplitSelection"\)\.addEventListener/);
 });
 

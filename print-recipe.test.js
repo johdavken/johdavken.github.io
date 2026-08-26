@@ -17,13 +17,13 @@ function functionBody(name){
 test("Print Recipe remains desktop-only, even though Rearrange itself no longer is", () => {
   const modeBarStart = app.indexOf('modeBar.className = "splitsBulkModeBar"');
   const modeBar = app.slice(modeBarStart, app.indexOf("const toolbar = document.createElement", modeBarStart));
-  assert.match(modeBar, /rearrangeButton\.className="secondary"/);
-  assert.doesNotMatch(modeBar, /rearrangeButton\.className="secondary rearrangeDesktopOnly"/);
+  assert.match(modeBar, /rearrangeButton\.className="bulkTextAction splitsRearrangeAction"/);
+  assert.doesNotMatch(modeBar, /rearrangeButton\.className[^;]*rearrangeDesktopOnly/);
   assert.match(modeBar, /printButton\.className="secondary rearrangeDesktopOnly recipeActionTertiary"/);
-  // Rearrange is no longer appended into modeBar at all (it moved into the
-  // desktop-only .recipeUtilityTabs strip alongside Saved recipes/Bulk
-  // edit) - Scan Recipe sits between Rearrange's old spot and Print Recipe
-  // in modeBar's own append order instead.
+  // Rearrange is no longer appended into modeBar at all (it lives in the
+  // Edit toolbar's .splitsEditRowSecondary on every width now) - Scan
+  // Recipe sits directly ahead of Print Recipe in modeBar's own append
+  // order instead.
   assert.match(modeBar, /modeBar\.appendChild\(scanRecipeButton\)[\s\S]*modeBar\.appendChild\(printButton\)/);
   assert.match(modeBar, /printButton\.addEventListener\("click", printRecipeSheet\)/);
   assert.match(styles, /@media\(max-width:900px\), \(min-width: 901px\) and \(pointer: coarse\)\{\.rearrangeDesktopOnly\{display:none!important\}\}/);
