@@ -16,7 +16,7 @@ function rule(selector, from = styles){
 
 function desktopAssembly(){
   const start = app.indexOf('// Current/Next and Print are ordinary app buttons in the header.');
-  const end = app.indexOf("\n      }\n\n      // Percentage problems", start);
+  const end = app.indexOf("// Percentage problems", start);
   assert.ok(start > -1 && end > start, "expected desktop recipe action assembly");
   return app.slice(start, end);
 }
@@ -68,7 +68,7 @@ test("mobile keeps the same disclosure button and never receives desktop tab sty
   const end = app.indexOf("}else{", start);
   assert.ok(start > -1 && end > start);
   const mobile = app.slice(start, end);
-  assert.match(mobile, /mobilePrimaryRow\.append\(savedRecipesButton, rearrangeButton\);/);
+  assert.match(mobile, /mobilePrimaryRow\.append\(savedRecipesButton\);/);
   assert.doesNotMatch(mobile, /recipeUtilityTab/);
   assert.doesNotMatch(mobile, /role", "tab/);
 });

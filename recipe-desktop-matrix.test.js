@@ -37,9 +37,9 @@ test("desktop marks the active layer count and textures only the unused one- and
   assert.match(body, /\[data-theme="gruvbox-dark"\],[\s\S]*?\[data-theme="everforest"\],[\s\S]*?\.splitsMatrixFrame:is\(\[data-layer-count="1"\],\[data-layer-count="3"\]\)::after\{[\s\S]*?background-color: color-mix\(in srgb, var\(--bg\) 76%, #000\);/);
 });
 
-test("Summary preserves Edit's selector track so the matrix never shifts between views", () => {
+test("Summary collapses Edit's selector track instead of reserving it as dead space", () => {
   const body = desktopBlock();
-  assert.match(body, /#splitsArea\[data-recipe-view="summary"\] \.splitsMatrix tr > :first-child\{[\s\S]*?display: table-cell;[\s\S]*?visibility: hidden;[\s\S]*?pointer-events: none;/);
+  assert.match(body, /#splitsArea\[data-recipe-view="summary"\] \.splitsMatrix tr > :first-child\{\s*\n\s*display: none;/);
 });
 
 test("the 10% size increase is scoped to .splitsMatrixFrame, not #splitsArea - the surrounding toolbars must stay their normal size", () => {
@@ -113,7 +113,7 @@ test("Load Current/Next and Print physically relocate into the desktop header wi
   // not be applied unconditionally,
   // since loadNextButton is reused as-is (still in modeBar) on mobile.
   const elseBranchStart = app.indexOf('// Current/Next and Print are ordinary app buttons in the header.');
-  const elseBranchEnd = app.indexOf("\n      }\n\n      // Percentage problems", elseBranchStart);
+  const elseBranchEnd = app.indexOf("// Percentage problems", elseBranchStart);
   assert.notEqual(elseBranchStart, -1);
   assert.notEqual(elseBranchEnd, -1);
   const elseBranch = app.slice(elseBranchStart, elseBranchEnd);

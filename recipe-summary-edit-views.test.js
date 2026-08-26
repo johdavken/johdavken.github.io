@@ -195,7 +195,11 @@ test("the Edit panel is two rows above the grid: values/apply, then selection an
   const secondary = splitsArea.slice(splitsArea.indexOf('<div class="splitsEditRow splitsEditRowSecondary">'));
   assert.doesNotMatch(primary, /id="splitSelectionStatus"/);
   assert.match(secondary, /id="splitSelectionStatus"/);
-  assert.match(secondary, /id="selectAllSplits"/);
+  // Select all was removed - there's no real case for selecting every
+  // cell in the matrix at once, and Reset Recipe already covers "start
+  // over" - so Clear selection took its slot instead.
+  assert.doesNotMatch(secondary, /id="selectAllSplits"/);
+  assert.match(secondary, /id="clearSplitSelection"/);
   assert.match(splitsArea, /<button id="clearSelectedCells"[^>]*data-button-variant="quiet"[^>]*disabled>Empty cells<\/button>/);
   assert.match(splitsArea, /<button id="resetAllSplits"[^>]*data-button-variant="danger"[^>]*>Reset Recipe<\/button>/);
   // Above the grid, not below it (the grid is order 0).

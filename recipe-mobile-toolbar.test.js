@@ -34,9 +34,13 @@ test("desktop's header actions stay out of the matrix while the shared Edit tool
 
 test("the mobile action row is built by moving the same real buttons, not rebuilding them - handlers stay exactly as wired", () => {
   const editor = recipeEditor();
-  // Bulk edit is gone from the mobile row too - Edit view replaced it -
-  // which buys back a slot in a row that was already full at four items.
-  assert.match(editor, /mobilePrimaryRow\.append\(savedRecipesButton, rearrangeButton\);/);
+  // Bulk edit is gone from the mobile row too - Edit view replaced it.
+  // Rearrange is gone from it as well now - it lives in the Edit
+  // toolbar's secondary row on every width (see the standalone
+  // rearrangeButton append further down renderSplitsArea) - which
+  // between the two leaves a row that only ever needed one guaranteed slot.
+  assert.match(editor, /mobilePrimaryRow\.append\(savedRecipesButton\);/);
+  assert.doesNotMatch(editor, /mobilePrimaryRow\.append\(savedRecipesButton, rearrangeButton\)/);
   assert.doesNotMatch(editor, /document\.createElement\("button"\)[\s\S]{0,80}"Bulk edit"[\s\S]{0,80}mobilePrimaryRow/);
 });
 
@@ -52,14 +56,14 @@ function mobileVsDesktopBlock(editor){
   return editor.slice(start, end);
 }
 
-test("Current's primary row is Recipes, Bulk edit, Rearrange, Load Next - only when a plan exists", () => {
+test("Current's primary row is Recipes, Load Next - only when a plan exists", () => {
   const editor = recipeEditor();
   const block = mobileVsDesktopBlock(editor);
   const currentBranch = block.slice(block.indexOf("if (!isNextRecipePage()){"), block.indexOf("}else{"));
   assert.match(currentBranch, /if \(loadNextButton\)\{\s*\n\s*loadNextButton\.textContent = "Load Next";\s*\n\s*mobilePrimaryRow\.append\(loadNextButton\);\s*\n\s*\}/);
 });
 
-test("Next's primary row is Recipes, Bulk edit, Rearrange, Scan Recipe - promoted out of desktop-only", () => {
+test("Next's primary row is Recipes, Scan Recipe - promoted out of desktop-only", () => {
   const editor = recipeEditor();
   const block = mobileVsDesktopBlock(editor);
   const nextBranch = block.slice(block.indexOf("}else{"), block.indexOf("mobilePrimaryRow.append(mobileMoreButton)"));
@@ -67,7 +71,7 @@ test("Next's primary row is Recipes, Bulk edit, Rearrange, Scan Recipe - promote
   assert.match(nextBranch, /mobilePrimaryRow\.append\(scanRecipeButton\);/);
 });
 
-test("desktop uses Recipe Book as a page tab, moves recipe actions into the header, and relocates Rearrange into Edit", () => {
+test("desktop uses Recipe Book as a page tab and moves recipe actions into the header", () => {
   const editor = recipeEditor();
   const block = mobileVsDesktopBlock(editor);
   const desktopBranch = block.slice(block.indexOf("}else{", block.indexOf("mobilePrimaryRow.append(mobileMoreButton)")));
@@ -79,11 +83,21 @@ test("desktop uses Recipe Book as a page tab, moves recipe actions into the head
   // Bulk edit no longer exists as a desktop tab - Edit view replaced it -
   // so modeButton is never given tab semantics or appended here.
   assert.doesNotMatch(desktopBranch, /modeButton/);
-  // Rearrange keeps its real element (and every handler already wired to
-  // it); only its home moves, into the Edit panel's secondary row.
-  assert.match(desktopBranch, /toolbar\.querySelector\("\.splitsEditRowSecondary"\)\?\.append\(rearrangeButton\);/);
   assert.match(app, /savedRecipesPanel\.id = "splitsSavedRecipesPanel";/);
   assert.match(app, /toolbar\.id = "splitsBulkBar";/);
+});
+
+test("Rearrange keeps its real element (and every handler already wired to it), appended into the Edit panel's secondary row unconditionally - no compactMobileRecipe split, since it's the same home on every width now", () => {
+  const editor = recipeEditor();
+  const block = mobileVsDesktopBlock(editor);
+  assert.match(block, /toolbar\.querySelector\("\.splitsEditRowSecondary"\)\?\.append\(rearrangeButton\);/);
+  // Not nested inside either the mobile or desktop half of the branch -
+  // it must run regardless of which one executed.
+  const ifDesktopSplit = block.indexOf("}else{", block.indexOf("mobilePrimaryRow.append(mobileMoreButton)"));
+  const closingBrace = block.indexOf("\n      }\n", ifDesktopSplit);
+  assert.ok(closingBrace > ifDesktopSplit);
+  const appendIndex = block.indexOf('toolbar.querySelector(".splitsEditRowSecondary")?.append(rearrangeButton);');
+  assert.ok(appendIndex > closingBrace, "the rearrangeButton append must sit after the if/else block closes, not inside either branch");
 });
 
 test("the visible mobile label shortens to Load Next (dropping the desktop icon along with the full label), but the accessible name stays Load Next Recipe", () => {
@@ -100,7 +114,7 @@ test("the visible mobile label shortens to Load Next (dropping the desktop icon 
   assert.match(editor, /loadNextButton\.innerHTML = `<svg class="recipeActionIcon"[\s\S]*?Load Next Recipe`;/);
 });
 
-test("primary-row items share equal width and never wrap - however many of them there are (3 on Next, 3 or 4 on Current)", () => {
+test("primary-row items share equal width and never wrap - however many of them there are (3 on Next, 2 or 3 on Current)", () => {
   const rule = styles.slice(styles.indexOf(".splitsMobilePrimaryRow{"), styles.indexOf("}", styles.indexOf(".splitsMobilePrimaryRow{")));
   assert.match(rule, /display:flex;/);
   const childRule = styles.slice(styles.indexOf(".splitsMobilePrimaryRow > \\*{"), styles.indexOf("}", styles.indexOf(".splitsMobilePrimaryRow > *{")) + 1);

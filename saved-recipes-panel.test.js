@@ -125,7 +125,7 @@ test("Recipe Book is a desktop page tab while mobile keeps the existing Recipes 
   assert.match(html, /id="recipePageTabSaved" role="tab" aria-selected="false" aria-controls="splitsArea" data-recipe-page="saved" hidden>Recipe Book<\/button>/);
   assert.match(app, /<strong>Recipe Book<\/strong>/);
   assert.match(app, /savedRecipesButton\.textContent = "Saved Recipes"/);
-  assert.match(app, /mobilePrimaryRow\.append\(savedRecipesButton, rearrangeButton\);/);
+  assert.match(app, /mobilePrimaryRow\.append\(savedRecipesButton\);/);
   assert.doesNotMatch(app, /recipeUtilityTabs\.append\(savedRecipesButton\);/);
   assert.match(app, /function setSavedRecipesOpen\(open\)\{/);
   assert.match(app, /savedRecipesPanel\.classList\.toggle\("hide", !open\)/);

@@ -53,7 +53,10 @@ test("the Edit-view toolbar has no numbered step captions and no separate Done b
   const body = functionBody("renderWeightsArea");
   assert.doesNotMatch(body, /Select hoppers<\/span>|Enter changes<\/span>|weightsBulkSteps/);
   assert.doesNotMatch(body, /doneBulkWeights|>Done</);
-  assert.match(body, /id="selectAllWeights"/);
+  // Select all was removed - a receiver-weight matrix never has a real
+  // use case for selecting every hopper at once, so it just cost the row
+  // a slot for nothing.
+  assert.doesNotMatch(body, /id="selectAllWeights"/);
   assert.match(body, /id="clearWeightSelection"/);
 });
 
@@ -80,7 +83,7 @@ test("exiting Edit view (Android Back, or switching to Summary) clears any in-pr
 test("the Edit toolbar renders as a single compact row directly under the controls row, not the old below-the-table bulk panel", () => {
   assert.match(desktop, /\.desktopWeightsBulkContext\{display:flex;align-items:center;/);
   assert.match(desktop, /\.desktopWeightsBulkContext \.weightsBulkFieldsRow\{/);
-  // Fields/Apply on the left, selection status/Select all/Clear pushed to
-  // the right via margin-left:auto - one row, not two stacked.
+  // Fields/Apply on the left, selection status/Clear pushed to the right
+  // via margin-left:auto - one row, not two stacked.
   assert.match(desktop, /\.desktopWeightsBulkContext \.weightsBulkActions\{[^}]*margin-left:auto/);
 });

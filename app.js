@@ -2434,7 +2434,7 @@
         ${state.smartHoppersEnabled && geometryMode === "volume" ? '<label><span>Volume</span><input id="mobileBulkHeight" type="text" inputmode="decimal" placeholder="No change" /></label>' : ""}
         ${state.smartHoppersEnabled && geometryMode === "cylindrical" ? '<label><span>Height</span><input id="mobileBulkHeight" type="text" inputmode="decimal" placeholder="No change" /></label>' : ""}
         <div class="mobileWeightsBulkActions"><small id="mobileWeightSelectionStatus" role="status">No hoppers selected</small><button id="applyMobileBulkWeights" type="button" disabled>Apply</button></div>
-        <div class="mobileWeightsBulkTextActions"><button id="selectAllMobileWeights" type="button">Select all</button><button id="clearMobileWeightSelection" type="button">Clear</button></div>
+        <div class="mobileWeightsBulkTextActions"><button id="clearMobileWeightSelection" type="button">Clear</button></div>
       `;
       area.appendChild(bulkBar);
 
@@ -2496,10 +2496,6 @@
       viewToggle.addEventListener("click", event=>{
         const button = event.target.closest("button[data-weight-view]");
         if (button) setMobileWeightView(visualMode ? "edit" : "visual");
-      });
-      bulkBar.querySelector("#selectAllMobileWeights").addEventListener("click", ()=>{
-        cellRefs.forEach((_,key)=>selected.add(key));
-        updateSelectionUI();
       });
       bulkBar.querySelector("#clearMobileWeightSelection").addEventListener("click", ()=>{
         selected.clear();
@@ -2665,7 +2661,6 @@
           <button id="applyBulkWeight" class="secondary" type="button" disabled>Apply to selected</button>
           <div class="weightsBulkActions">
             <div id="weightSelectionStatus" class="tiny weightsSelectionStatus" role="status" aria-live="polite">No hoppers selected</div>
-            <button id="selectAllWeights" type="button" class="bulkTextAction">Select all</button>
             <button id="clearWeightSelection" type="button" class="bulkTextAction">Clear selection</button>
           </div>
         </div>
@@ -3018,10 +3013,6 @@
         );
       }
 
-      toolbar.querySelector("#selectAllWeights").addEventListener("click", ()=>{
-        cellRefs.forEach((_,key)=>selected.add(key));
-        updateSelectionUI();
-      });
       toolbar.querySelector("#clearWeightSelection").addEventListener("click", ()=>{
         selected.clear();
         updateSelectionUI();
@@ -3913,17 +3904,18 @@
       modeButton.className = "secondary";
       modeButton.textContent = "Bulk edit";
       modeButton.setAttribute("aria-expanded", "false");
-      const rearrangeButton=document.createElement("button"); rearrangeButton.type="button"; rearrangeButton.className="secondary"; rearrangeButton.textContent=hopperRearrangement?.active?"Done Rearranging":"Rearrange"; rearrangeButton.disabled=!recipeLayers().some(L=>L.hoppers.some(h=>normName(h.resinName)||clampNum(h.pct)>0));
-      if (compactMobileRecipe){
-        rearrangeButton.setAttribute("aria-expanded", String(!!hopperRearrangement?.active));
-      }else{
-        // Desktop presents Rearrange as a compact action inside Edit.
-        rearrangeButton.classList.remove("secondary");
-        rearrangeButton.classList.add("recipeUtilityTab");
-        rearrangeButton.classList.toggle("active", !!hopperRearrangement?.active);
-        rearrangeButton.setAttribute("role", "tab");
-        rearrangeButton.setAttribute("aria-selected", String(!!hopperRearrangement?.active));
-      }
+      const rearrangeButton=document.createElement("button"); rearrangeButton.type="button";
+      // Rearrange is a structural Edit action, not primary navigation - it
+      // lives in the Edit toolbar's secondary row on every width now,
+      // alongside Clear selection/Empty cells/Reset Recipe, the same
+      // bulkTextAction pill treatment they use (see the .append() near
+      // splitsEditRowSecondary below). It used to split between a compact
+      // mobile primary-row slot and a separate desktop-only tab strip;
+      // both collapsed into this one shared placement and style.
+      rearrangeButton.className="bulkTextAction splitsRearrangeAction";
+      rearrangeButton.textContent=hopperRearrangement?.active?"Done Rearranging":"Rearrange";
+      rearrangeButton.disabled=!recipeLayers().some(L=>L.hoppers.some(h=>normName(h.resinName)||clampNum(h.pct)>0));
+      rearrangeButton.setAttribute("aria-expanded", String(!!hopperRearrangement?.active));
       function finishRearrangement(cancelled=false){
         if(!hopperRearrangement?.active) return;
         const historyBefore=recipeRearrangementHistoryBefore;
@@ -4142,7 +4134,6 @@
           </div>
           <div class="splitsBulkActions">
             <div id="splitSelectionStatus" class="srOnly tiny splitsSelectionStatus" role="status" aria-live="polite">No hoppers selected</div>
-            <button id="selectAllSplits" type="button" class="bulkTextAction" data-button-kind="action" data-button-variant="quiet" data-button-size="small">Select all</button>
             <button id="clearSplitSelection" type="button" class="bulkTextAction" data-button-kind="action" data-button-variant="quiet" data-button-size="small">Clear selection</button>
           </div>
           <button id="clearSelectedCells" type="button" class="bulkTextAction" data-button-kind="action" data-button-variant="quiet" data-button-size="small" disabled>Empty cells</button>
@@ -4325,14 +4316,24 @@
       if (compactMobileRecipe){
         mobilePrimaryRow = document.createElement("div");
         mobilePrimaryRow.className = "splitsMobilePrimaryRow";
-        // Bulk edit is gone here too - Edit view replaced it - which buys
-        // back a slot in a row that was already full at four items.
-        // Rearrange stays: it is a mode of its own, not a selection action.
-        mobilePrimaryRow.append(savedRecipesButton, rearrangeButton);
+        // Rearrange no longer takes a slot here - it lives in the Edit
+        // toolbar now (see the rearrangeButton append below), which is
+        // also why this row has room to keep its remaining labels as
+        // plain text instead of needing icons.
+        mobilePrimaryRow.append(savedRecipesButton);
         if (!isNextRecipePage()){
           if (loadNextButton){
             loadNextButton.textContent = "Load Next";
             mobilePrimaryRow.append(loadNextButton);
+          }
+          // Tracking's own bar used to carry both the count and this
+          // button; the count is redundant screen real estate on a phone
+          // (see .splitsTrackingBar.mobileTrackContext), but the action
+          // still needs a home, so it moves the real button - same
+          // handler - into the row that already has room for it.
+          if (trackingView){
+            clearTrackingButton.className = "secondary";
+            mobilePrimaryRow.append(clearTrackingButton);
           }
         }else{
           // Scan Recipe is hidden in the desktop action row
@@ -4343,15 +4344,6 @@
         }
         mobilePrimaryRow.append(mobileMoreButton);
       }else{
-        // Rearrange keeps its real element (and therefore every handler
-        // wired to it above); only its home changes - into the Edit panel's
-        // secondary row, next to Empty cells / Reset Recipe.
-        rearrangeButton.classList.remove("recipeUtilityTab", "secondary");
-        rearrangeButton.classList.add("bulkTextAction", "splitsRearrangeAction");
-        rearrangeButton.removeAttribute("role");
-        rearrangeButton.removeAttribute("aria-selected");
-        toolbar.querySelector(".splitsEditRowSecondary")?.append(rearrangeButton);
-
         // Current/Next and Print are ordinary app buttons in the header.
         // The left border on recipeHeaderActions separates page actions from
         // the Summary/Edit view choice without creating another toolbar row.
@@ -4363,6 +4355,10 @@
         if (loadCurrentButton) headerActions?.append(loadCurrentButton);
         headerActions?.append(printButton);
       }
+      // Rearrange keeps its real element (and therefore every handler
+      // wired to it above) - only appended once it has a home, next to
+      // Empty cells / Reset Recipe, on every width.
+      toolbar.querySelector(".splitsEditRowSecondary")?.append(rearrangeButton);
 
       // Percentage problems are not printed here. They are conditions of the
       // recipe, not of this render, so they belong in the notification bell
@@ -5132,10 +5128,6 @@
         });
       });
 
-      toolbar.querySelector("#selectAllSplits").addEventListener("click",()=>{
-        cellRefs.forEach((_,key)=>selected.add(key));
-        updateSelectionUI();
-      });
       toolbar.querySelector("#clearSplitSelection").addEventListener("click",()=>{
         selected.clear();
         updateSelectionUI();

@@ -77,7 +77,7 @@ test("mobile receiver Summary cells are compact text readouts with no repeated h
   assert.doesNotMatch(summary,/<svg/);
   // Cells are static in both views now, so the readout sizing is keyed on
   // the attribute's presence rather than on Summary specifically.
-  assert.match(styles,/#weightsArea\[data-mobile-weight-view\] \.mobileWeightCell\{height:70px;min-height:68px/);
+  assert.match(styles,/#weightsArea\[data-mobile-weight-view\] \.mobileWeightCell\{height:auto;min-height:40px/);
   // One action left in the row, so it is a single column.
   assert.match(styles,/\.mobileWeightsActionToolbar\{display:grid;grid-template-columns:1fr/);
 });
