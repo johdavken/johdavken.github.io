@@ -909,6 +909,36 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .baseGlyph{dis
 .databaseHealthMetrics > div{ display:grid; gap:4px; padding:10px 12px; border:1px solid var(--border); border-radius:var(--radius-row); background:var(--row-bg); }
 .databaseHealthMetrics span{ font-size:18px; color:var(--title); }
 .databaseHealthSparkline{ min-height:24px; letter-spacing:2px; color:var(--accent); font-size:20px; }
+.conflictStormSection{ display:grid; gap:6px; padding-top:4px; border-top:1px solid var(--border); }
+.conflictStormList{ display:grid; gap:6px; }
+.conflictStormRow{ display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:10px; padding:8px 10px; border:1px solid var(--border); border-radius:var(--radius-row); background:var(--row-bg); }
+.conflictStormRow.active{ border-color:var(--bad); background:color-mix(in srgb, var(--bad) 10%, var(--row-bg)); }
+.conflictStormMain{ display:grid; gap:2px; min-width:0; }
+.conflictStormMain strong{ color:var(--title); font-size:13px; }
+.conflictStormRow.active .conflictStormMain strong{ color:var(--bad); }
+/* Anchors the nav badge to the button's own text block rather than the
+   whole three-column .sudoAccessAction grid, so adding it never disturbs
+   the icon/chevron layout every other admin nav row already relies on. */
+.conflictStormBadgeHost{ position:relative; }
+.conflictStormBadge{
+  position:absolute;
+  top:-4px;
+  right:-8px;
+  display:grid;
+  place-items:center;
+  min-width:16px;
+  height:16px;
+  padding:0 4px;
+  border:1.5px solid var(--panel);
+  border-radius:50%;
+  background:var(--bad);
+  color:#fff;
+  font-size:10px;
+  font-weight:900;
+  font-variant-numeric:tabular-nums;
+  line-height:1;
+}
+.conflictStormBadge[hidden]{ display:none!important; }
 .workspaceRecoveryDeviceCard{ display: grid; gap: 5px; border: 1px solid var(--border); border-radius: var(--radius-row); padding: 10px 12px; }
 .workspaceRecoveryDiagnostic summary{ cursor: pointer; }
 .workspaceRecoveryList{ display: grid; gap: 6px; max-height: min(50vh, 520px); overflow: auto; }

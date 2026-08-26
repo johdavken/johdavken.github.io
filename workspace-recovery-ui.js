@@ -426,6 +426,19 @@
     renderDeviceCard();
     await loadWorkspaces();
   });
+
+  // Public entry point for other admin panels (see conflict storm alerts in
+  // database-health-ui.js) that need to land an admin directly on a specific
+  // workspace's Workspace Management detail, instead of the operator having
+  // to find it in the list themselves.
+  async function openWorkspace(workspaceId){
+    if (!admin()?.getState().isAdmin || !workspaceId) return;
+    $("workspaceManagementBlock").open = true;
+    renderDeviceCard();
+    await loadWorkspaces();
+    await selectWorkspace(workspaceId);
+  }
+  root.PolynWorkspaceRecoveryUI = { openWorkspace };
   $("workspaceRecoveryRefreshBtn")?.addEventListener("click", () => void loadWorkspaces());
   $("workspaceRecoveryDetailRefreshBtn")?.addEventListener("click", () => { if (selectedWorkspaceId) void selectWorkspace(selectedWorkspaceId); });
   $("workspaceRecoveryAddDeviceBtn")?.addEventListener("click", confirmAddDevice);

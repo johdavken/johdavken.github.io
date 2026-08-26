@@ -64,6 +64,7 @@
 <script src="resin-lookup.js?v=0.18.2" defer></script>
 <script src="resin-admin.js?v=0.20.3" defer></script>
 <script src="database-health.js?v=0.1.0" defer></script>
+<script src="conflict-storm-alerts.js?v=0.1.0" defer></script>
 <script src="bulk-density-measurement.js?v=0.1.0" defer></script>
 <script src="workspace-recovery.js?v=0.1.2" defer></script>
 <script src="beta-access.js?v=0.1.0" defer></script>
@@ -1334,7 +1335,7 @@
         <button id="resinDatabaseButton" class="footerAdminDestination sudoAccessAction" type="button" data-admin-only="true" data-workspace-target="resinAdminBlock" hidden><svg viewBox="0 0 32 32" aria-hidden="true"><ellipse cx="16" cy="7" rx="10" ry="4"/><path d="M6 7v9c0 2.2 4.5 4 10 4s10-1.8 10-4V7M6 16v9c0 2.2 4.5 4 10 4s10-1.8 10-4v-9"/></svg><span><strong>Resin database</strong><small>Catalog, density, and active status</small></span><svg class="sudoAccessChev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></button>
         <button id="workspaceManagementButton" class="footerAdminDestination sudoAccessAction" type="button" data-admin-only="true" data-workspace-target="workspaceManagementBlock" hidden><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="9" cy="9" r="3"/><circle cx="23" cy="9" r="3"/><circle cx="16" cy="23" r="3"/><path d="m11.5 11 3 8M20.5 11l-3 8M12 9h8"/></svg><span><strong>Workspace management</strong><small>Recovery and workspace controls</small></span><svg class="sudoAccessChev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></button>
         <button id="betaApplicantsButton" class="footerAdminDestination sudoAccessAction" type="button" data-admin-only="true" data-workspace-target="betaApplicantsBlock" hidden><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="12" cy="11" r="4"/><circle cx="23" cy="13" r="3"/><path d="M4 27c0-5 3.6-8 8-8s8 3 8 8M19 27c.2-3.2 2-5.5 5-6.2 2.5.6 4 2.5 4 6.2"/></svg><span><strong>Beta applicants</strong><small>Review and invite operators</small></span><svg class="sudoAccessChev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></button>
-        <button id="databaseHealthButton" class="footerAdminDestination sudoAccessAction" type="button" data-admin-only="true" data-workspace-target="databaseHealthBlock" hidden><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 17h6l3-7 5 14 3-7h7"/><path d="M5 6h22v20H5z"/></svg><span><strong>Database health</strong><small>Service checks and diagnostics</small></span><svg class="sudoAccessChev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></button>
+        <button id="databaseHealthButton" class="footerAdminDestination sudoAccessAction" type="button" data-admin-only="true" data-workspace-target="databaseHealthBlock" hidden><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 17h6l3-7 5 14 3-7h7"/><path d="M5 6h22v20H5z"/></svg><span class="conflictStormBadgeHost"><strong>Database health</strong><small>Service checks and diagnostics</small><span id="conflictStormBadge" class="conflictStormBadge" aria-label="Active conflict storms" hidden></span></span><svg class="sudoAccessChev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></button>
         <button id="adminSignOutButton" class="sudoAccessAction sudoAccessSignOut" type="button" hidden><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M14 5H7v22h7M18 11l6 5-6 5M12 16h12"/></svg><span><strong>Sign out</strong><small>End administrator access on this device</small></span></button>
       </div>
     </div>
@@ -1430,6 +1431,11 @@
       <div id="databaseHealthSparkline" class="databaseHealthSparkline" aria-label="Recent CPU samples" role="img"></div>
       <div id="databaseHealthUpdated" class="tiny muted" role="status">No successful update yet.</div>
       <p class="tiny muted">Resin.Tools UI thresholds: Normal, Elevated, and High. High database activity can indicate excessive sync/retry traffic. Check sync diagnostics or Supabase logs if CPU rises unexpectedly.</p>
+      <div class="conflictStormSection">
+        <div class="layerTitle">Conflict storms</div>
+        <div class="tiny muted">A client that trips RT Sync's conflict circuit breaker - repeatedly retrying a stale write - appears here so it can be disconnected, not just throttled.</div>
+        <div id="conflictStormList" class="conflictStormList" role="status">No conflict storms in the last hour.</div>
+      </div>
     </div>
   </details>
 
