@@ -27,8 +27,7 @@ test("Option A places the same live production fields in a two-cell mobile home 
   assert.match(html, /class="mobileProductionControls" id="mobileProductionControls" aria-label="Production controls"/);
   assert.match(app, /const productionHost = isDesktopLayout\(\) \? desktopProductionHost : mobileHost;/);
   assert.match(app, /productionHost\.append\(production\)/);
-  assert.match(styles, /body\[data-mobile-workspace="home"\] \.mobileProductionControls\{[\s\S]*?display:block;/);
-  assert.match(styles, /body\[data-mobile-workspace="home"\] \.mobileProductionControls\{[\s\S]*?grid-template-columns:38px repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(styles, /body\[data-mobile-workspace="home"\] \.mobileProductionControls\{[\s\S]*?display:flex;/);
 });
 
 test("mobile production values are readouts that reveal native inputs on demand", () => {
@@ -38,10 +37,18 @@ test("mobile production values are readouts that reveal native inputs on demand"
   assert.match(styles, /\.gaugeTile\.mobileOutputEditing input:not\(\[type="time"\]\)\{display:block\}/);
 });
 
-test("the production band exposes RT Sync between Output and Changeover", () => {
-  assert.match(html, /id="mobileProductionSyncShortcut" type="button" aria-label="Open RT Sync"/);
-  assert.match(app, /\$\("mobileProductionSyncShortcut"\)\?\.addEventListener\("click",\(\)=>\{\s*setWorkspacePanel\("lineSyncBlock", \{ reveal:true \}\);/);
-  assert.match(styles, /\.mobileProductionSyncShortcut\{order:1\}[\s\S]*?\.setupPrimaryFields > div:first-child\{order:2\}[\s\S]*?\.setupPrimaryFields > div:last-child\{order:3\}/);
+test("the production band has no RT Sync shortcut of its own - that action already lives on the workspace identity bar directly above it", () => {
+  assert.doesNotMatch(html, /mobileProductionSyncShortcut/);
+  assert.doesNotMatch(app, /mobileProductionSyncShortcut/);
+  assert.doesNotMatch(styles, /mobileProductionSyncShortcut/);
+  assert.match(app, /\$\("workspaceIdentityButton"\)\?\.addEventListener\("click",\(\)=>\{\s*setWorkspacePanel\("lineSyncBlock", \{ reveal:true \}\);/);
+});
+
+test("Changeover and Output are large, left/right-aligned readouts in a centered, width-capped band on mobile/tablet", () => {
+  assert.match(styles, /body\[data-mobile-workspace="home"\] \.mobileProductionControls\{[\s\S]*?justify-content:space-between;[\s\S]*?max-width:440px;[\s\S]*?margin:10px auto 16px;/);
+  assert.match(styles, /\.mobileProductionControls \.setupPrimaryFields > div:last-child\{text-align:right\}/);
+  assert.match(styles, /\.mobileProductionControls \.mobileLineRateReadout\{display:flex;align-items:center;justify-content:flex-end;text-align:right\}/);
+  assert.match(styles, /\.mobileProductionControls \.gaugeTimeValue,\n  \.mobileProductionControls \.mobileLineRateReadout\{[\s\S]*?font-size:clamp\(24px,7\.5vw,32px\);/);
 });
 
 test("Line Setup is retired as a visible workspace destination", () => {
