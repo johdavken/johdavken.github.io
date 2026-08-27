@@ -23,11 +23,14 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Resin.Tools">
   <!-- Deliberately "default", not "black-translucent". black-translucent draws
-       the page underneath the status bar, which needs an env(safe-area-inset-top)
-       offset this app has never had (it only compensates bottom/right), and the
-       default theme is light, where white status-bar glyphs would be unreadable.
-       "default" keeps the standalone window starting below the status bar, so no
-       layout change is required to install cleanly. -->
+       the page underneath the status bar, and the default theme is light, where
+       white status-bar glyphs would be unreadable. "default" keeps the
+       standalone window starting below the status bar, so no layout change is
+       required to install cleanly - env(safe-area-inset-top) resolves to 0 in
+       this mode on iOS, so it stays a no-op there. styles.css does now read
+       env(safe-area-inset-top) (see main{}), added for the Android/Capacitor
+       shell, which is edge-to-edge by default at its targetSdk and has no
+       equivalent "keep content below the status bar" mode to opt into. -->
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
   <link rel="stylesheet" href="styles.css?v=0.62.13">
@@ -644,12 +647,14 @@
         </div>
         <div class="recipeHeaderControls" id="recipeHeaderControls">
           <div class="recipeLayerCountHost" id="recipeLayerCountHost" aria-label="Line layer count"></div>
-          <div class="recipeViewToggle" id="recipeViewToggle" role="group" aria-label="Recipe view">
-            <span>View</span>
-            <button type="button" class="primary actionRail active" data-button-kind="toggle" data-button-size="small" data-recipe-view="summary" aria-pressed="true">Summary</button>
-            <button type="button" class="secondary" data-button-kind="toggle" data-button-size="small" data-recipe-view="edit" aria-pressed="false">Edit</button>
+          <div class="recipeHeaderActionPill" id="recipeHeaderActionPill">
+            <div class="recipeViewToggle" id="recipeViewToggle" role="group" aria-label="Recipe view">
+              <span>View</span>
+              <button type="button" class="primary actionRail active" data-button-kind="toggle" data-button-size="small" data-recipe-view="summary" aria-pressed="true">Summary</button>
+              <button type="button" class="secondary" data-button-kind="toggle" data-button-size="small" data-recipe-view="edit" aria-pressed="false">Edit</button>
+            </div>
+            <div class="recipeHeaderActions" id="recipeHeaderActions" role="group" aria-label="Recipe actions"></div>
           </div>
-          <div class="recipeHeaderActions" id="recipeHeaderActions" role="group" aria-label="Recipe actions"></div>
         </div>
       </div>
       <div id="splitsArea" class="gap10" role="tabpanel" aria-labelledby="recipePageTabCurrent"></div>
@@ -1618,6 +1623,14 @@
     </label>
     <label for="timeFormatSel">Time format
       <select id="timeFormatSel"><option value="12" selected>12-hour</option><option value="24">24-hour</option></select>
+    </label>
+    <label for="defaultScanActionSel" class="recipeScanHideDesktop">Default Scan Action
+      <select id="defaultScanActionSel">
+        <option value="ask" selected>Ask each time</option>
+        <option value="heat_sheet">Heat Sheet</option>
+        <option value="job_traveler">Job Traveler</option>
+        <option value="dosing_screen">Dosing Screen</option>
+      </select>
     </label>
   </form>
 </dialog>

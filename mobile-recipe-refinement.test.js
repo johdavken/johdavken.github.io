@@ -7,12 +7,16 @@ const app=fs.readFileSync("app.js","utf8");
 const styles=fs.readFileSync("styles.css","utf8");
 const theme=fs.readFileSync("theme.css","utf8");
 
-test("compact tracking leaves cell highlighting to Edit and marks the notched hopper badge instead",()=>{
+test("compact tracking leaves cell highlighting to Edit and marks the notched hopper badge instead, tinted with the theme's own accent",()=>{
   assert.match(styles,/\.splitsMatrix\.compactMobileRecipe \.splitMatrixCell\.tracked:not\(\.selected\)\{[\s\S]*?background:var\(--compact-recipe-row-bg\);[\s\S]*?border-color:var\(--row-border-2\);[\s\S]*?box-shadow:none;/);
-  assert.match(styles,/\.splitsMatrix\.compactMobileRecipe \.splitMatrixCell\.tracked \.splitCellHopperName\{[\s\S]*?min-width:30px;[\s\S]*?border-radius:4px 9px 9px 4px;[\s\S]*?background:color-mix\(in srgb,#72b9e8 22%,var\(--compact-recipe-row-bg\)\);/);
-  assert.match(styles,/\.splitMatrixCell\.tracked \.splitCellHopperName::after\{[\s\S]*?position:absolute;[\s\S]*?right:3px;[\s\S]*?box-shadow:0 0 0 2px color-mix\(in srgb,#72b9e8 16%,transparent\);/);
+  assert.match(styles,/\.splitsMatrix\.compactMobileRecipe \.splitMatrixCell\.tracked \.splitCellHopperName\{[\s\S]*?min-width:30px;[\s\S]*?border-radius:4px 9px 9px 4px;[\s\S]*?background:color-mix\(in srgb,var\(--focus-border\) 22%,var\(--compact-recipe-row-bg\)\);/);
+  assert.match(styles,/\.splitMatrixCell\.tracked \.splitCellHopperName::after\{[\s\S]*?position:absolute;[\s\S]*?right:3px;[\s\S]*?box-shadow:0 0 0 2px color-mix\(in srgb,var\(--focus-border\) 16%,transparent\);/);
   assert.doesNotMatch(styles,/compactRecipeTrackTracer|compact-recipe-trace-angle/);
   assert.doesNotMatch(styles,/\.splitMatrixCell\.tracked:not\(\.selected\)::after/);
+  // Regression guard: this badge used to be hardcoded blue (#72b9e8/#397fae/
+  // #4d9bd0) on every theme instead of following var(--focus-border) - see
+  // recipe-tracking-badge-theme-colors.test.js for the full fix.
+  assert.doesNotMatch(styles,/#72b9e8|#4d9bd0/);
 });
 
 test("compact Edit selection carries a small top-right EDIT tag in the outline color",()=>{
@@ -20,9 +24,9 @@ test("compact Edit selection carries a small top-right EDIT tag in the outline c
   assert.doesNotMatch(styles,/#splitsArea\[data-recipe-view="summary"\][^{]*\.splitMatrixCell\.selected::after/);
 });
 
-test("the active clock is a filled blue circular badge while the inactive control stays visible but subdued",()=>{
+test("the active clock is a filled circular badge, tinted with the theme's own accent, while the inactive control stays visible but subdued",()=>{
   assert.match(styles,/\.splitsMatrix\.compactMobileRecipe \.splitTrackButton\{[\s\S]*?color:var\(--muted\);[\s\S]*?opacity:\.58;/);
-  assert.match(styles,/\.splitsMatrix\.compactMobileRecipe \.splitTrackButton\.active\{[\s\S]*?border-radius:50%;[\s\S]*?background:#397fae;[\s\S]*?color:#f6fbff;/);
+  assert.match(styles,/\.splitsMatrix\.compactMobileRecipe \.splitTrackButton\.active\{[\s\S]*?border-radius:50%;[\s\S]*?background:var\(--focus-border\);[\s\S]*?color:#f6fbff;/);
   assert.match(styles,/@media \(prefers-reduced-motion:reduce\)\{\s*\.splitsMatrix\.compactMobileRecipe \.splitTrackButton\.active\{ animation:none; \}/);
   assert.match(styles,/\.splitsMatrix\.compactMobileRecipe \.splitCellHopperName\.smart\{ color:color-mix\(in srgb,#2f9e62 78%,var\(--text\)\); \}/);
 });
@@ -55,14 +59,14 @@ test("light-theme support contrast is scoped per palette, not painted into Dark 
   assert.match(theme,/@media \(max-width:700px\)\{[\s\S]*?\[data-theme="gruvbox-light"\][\s\S]*?splitCellHopperName/);
 });
 
-test("mobile toolbar uses Recipes and a clearly labeled More control with an accessible name",()=>{
-  assert.match(app,/savedRecipesButton\.textContent="Recipes";/);
-  assert.match(app,/<summary data-button-kind="menu" data-button-size="small" aria-label="More recipe actions"><svg[^>]*>[\s\S]*?<\/svg><span>More<\/span><\/summary>/);
-  // Primary-row buttons live in .splitsMobilePrimaryRow, including More, so
-  // the extra actions affordance does not consume a dedicated second row.
+test("the mobile toolbar has no overflow control left - Scan, Load Next-or-Current and Print all fit as primary slots",()=>{
+  // The More control (and its accessible name) is gone along with it -
+  // Clear Tracking moved to Timeline's own Reset tracking control, and
+  // that was the last thing keeping an overflow menu necessary here.
+  assert.doesNotMatch(app,/aria-label="More recipe actions"/);
+  assert.doesNotMatch(styles,/mobileRecipeMore/);
+  // Primary-row buttons still live in one row, .splitsMobilePrimaryRow.
   assert.match(styles,/\.splitsMobilePrimaryRow button\.secondary,[\s\S]*?\.splitsMobilePrimaryRow \.splitsScanShortcut > summary\{[\s\S]*?height:42px;[\s\S]*?white-space:nowrap;/);
-  assert.match(styles,/\.mobileRecipeMore > summary\{[\s\S]*?height:42px;/);
-  assert.match(styles,/\.splitsMobilePrimaryRow \.mobileRecipeMore\{flex:1 1 0\}/);
 });
 
 test("layer controls describe matching rather than copying without changing the copyLayer operation",()=>{

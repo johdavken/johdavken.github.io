@@ -79,7 +79,6 @@ test("compact mobile recipe actions follow the matrix while Edit values stay in 
   assert.doesNotMatch(app, /mobileLayerLayout\.append\(actionTray\);/);
   assert.match(app, /area\.append\(toolbar\);/);
   assert.doesNotMatch(app, /mobileBulkEditSheet/);
-  assert.match(app, /mobileSavedRecipesSheet\?\.showModal\(\);/);
   assert.match(app, /toast\.className="mobileRearrangeToast";/);
   assert.match(styles, /#splitsArea > \.splitsBulkBar\{[\s\S]*?position:static;[\s\S]*?order:-1;/);
 });

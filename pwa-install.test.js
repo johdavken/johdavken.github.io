@@ -91,12 +91,15 @@ test("the head declares the manifest and Apple standalone metadata once each", (
   assert.match(head, /<meta name="apple-mobile-web-app-title" content="Resin\.Tools">/);
 });
 
-test("the status bar style stays 'default' while no top safe-area inset exists", () => {
-  // black-translucent draws the page under the status bar, which needs a top
-  // inset this app does not implement. If someone adds safe-area-inset-top
-  // handling, this test is the place to revisit the choice.
+test("the status bar style stays 'default' regardless of the app's own top safe-area handling", () => {
+  // black-translucent draws the page under the status bar and would need an
+  // explicit top inset offset for iOS specifically. styles.css does read
+  // env(safe-area-inset-top) now (for Android/Capacitor's edge-to-edge
+  // WebView, which has no "default"-style opt-out), but "default" already
+  // keeps iOS's own inset at 0, so that addition changes nothing there and
+  // is not by itself a reason to switch iOS to black-translucent.
   assert.match(head, /name="apple-mobile-web-app-status-bar-style" content="default"/);
-  assert.doesNotMatch(styles, /safe-area-inset-top/, "a top inset now exists - reconsider black-translucent");
+  assert.match(styles, /env\(safe-area-inset-top/, "expected main{} to compensate for Android's edge-to-edge status bar");
 });
 
 test("the existing viewport keeps viewport-fit=cover and its other settings", () => {

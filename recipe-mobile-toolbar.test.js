@@ -37,10 +37,14 @@ test("the mobile action row is built by moving the same real buttons, not rebuil
   // Bulk edit is gone from the mobile row too - Edit view replaced it.
   // Rearrange is gone from it as well now - it lives in the Edit
   // toolbar's secondary row on every width (see the standalone
-  // rearrangeButton append further down renderSplitsArea) - which
-  // between the two leaves a row that only ever needed one guaranteed slot.
-  assert.match(editor, /mobilePrimaryRow\.append\(savedRecipesButton\);/);
-  assert.doesNotMatch(editor, /mobilePrimaryRow\.append\(savedRecipesButton, rearrangeButton\)/);
+  // rearrangeButton append further down renderSplitsArea). Recipe Book
+  // moved out entirely, into the shared tab row (see the desktop-tab
+  // test below) - there is no separate savedRecipesButton any more, and
+  // Clear Tracking/More are both gone too (see recipe-clear-selection.test.js
+  // and recipe-mobile-scan-action.test.js).
+  assert.doesNotMatch(editor, /savedRecipesButton/);
+  assert.match(editor, /mobilePrimaryRow\.append\(printButton\);/);
+  assert.doesNotMatch(editor, /mobileMoreButton|mobileRecipeMore/);
   assert.doesNotMatch(editor, /document\.createElement\("button"\)[\s\S]{0,80}"Bulk edit"[\s\S]{0,80}mobilePrimaryRow/);
 });
 
@@ -56,25 +60,33 @@ function mobileVsDesktopBlock(editor){
   return editor.slice(start, end);
 }
 
-test("Current's primary row is Recipes, Load Next - only when a plan exists", () => {
+test("Scan is promoted and appended once, shared by both pages, before either page's own Load slot", () => {
   const editor = recipeEditor();
   const block = mobileVsDesktopBlock(editor);
-  const currentBranch = block.slice(block.indexOf("if (!isNextRecipePage()){"), block.indexOf("}else{"));
-  assert.match(currentBranch, /if \(loadNextButton\)\{\s*\n\s*loadNextButton\.textContent = "Load Next";\s*\n\s*mobilePrimaryRow\.append\(loadNextButton\);\s*\n\s*\}/);
+  const compactBlock = block.slice(block.indexOf("if (compactMobileRecipe){"), block.indexOf("}else{", block.indexOf("mobilePrimaryRow.append(printButton)")));
+  assert.match(compactBlock, /scanRecipeButton\.classList\.remove\("rearrangeDesktopOnly", "recipeScanHideDesktop"\);/);
+  assert.match(compactBlock, /scanRecipeButton\.classList\.add\("mobileScanIconAction"\);/);
+  assert.match(compactBlock, /mobilePrimaryRow\.append\(scanRecipeButton\);/);
+  // Appended once, ahead of the if(!isNextRecipePage()) split below it -
+  // not duplicated per page.
+  const scanIndex = compactBlock.indexOf("mobilePrimaryRow.append(scanRecipeButton);");
+  const splitIndex = compactBlock.indexOf("if (!isNextRecipePage()){");
+  assert.ok(scanIndex > -1 && splitIndex > scanIndex);
 });
 
-test("Next's primary row is Recipes, Scan Recipe - promoted out of desktop-only", () => {
+test("Current's primary row includes Load Next - only when a plan exists; Next's includes Load Current instead", () => {
   const editor = recipeEditor();
   const block = mobileVsDesktopBlock(editor);
-  const nextBranch = block.slice(block.indexOf("}else{"), block.indexOf("mobilePrimaryRow.append(mobileMoreButton)"));
-  assert.match(nextBranch, /scanRecipeButton\.classList\.remove\("rearrangeDesktopOnly", "recipeScanHideDesktop"\);/);
-  assert.match(nextBranch, /mobilePrimaryRow\.append\(scanRecipeButton\);/);
+  const currentBranch = block.slice(block.indexOf("if (!isNextRecipePage()){"), block.indexOf("}else if (loadCurrentButton){"));
+  assert.match(currentBranch, /if \(loadNextButton\)\{\s*\n\s*loadNextButton\.textContent = "Load Next";\s*\n\s*mobilePrimaryRow\.append\(loadNextButton\);\s*\n\s*\}/);
+  const nextBranch = block.slice(block.indexOf("}else if (loadCurrentButton){"), block.indexOf("printButton.classList.remove(\"rearrangeDesktopOnly\", \"recipeActionTertiary\");"));
+  assert.match(nextBranch, /loadCurrentButton\.textContent = "Load Current";\s*\n\s*mobilePrimaryRow\.append\(loadCurrentButton\);/);
 });
 
 test("desktop uses Recipe Book as a page tab and moves recipe actions into the header", () => {
   const editor = recipeEditor();
   const block = mobileVsDesktopBlock(editor);
-  const desktopBranch = block.slice(block.indexOf("}else{", block.indexOf("mobilePrimaryRow.append(mobileMoreButton)")));
+  const desktopBranch = block.slice(block.indexOf("}else{", block.indexOf("mobilePrimaryRow.append(printButton)")));
   assert.match(html, /id="recipePageTabSaved" role="tab" aria-selected="false" aria-controls="splitsArea" data-recipe-page="saved" hidden>Recipe Book<\/button>/);
   assert.match(html, /id="recipeHeaderActions" role="group" aria-label="Recipe actions"/);
   assert.match(desktopBranch, /headerActions\?\.append\(printButton\);/);
@@ -93,7 +105,7 @@ test("Rearrange keeps its real element (and every handler already wired to it), 
   assert.match(block, /toolbar\.querySelector\("\.splitsEditRowSecondary"\)\?\.append\(rearrangeButton\);/);
   // Not nested inside either the mobile or desktop half of the branch -
   // it must run regardless of which one executed.
-  const ifDesktopSplit = block.indexOf("}else{", block.indexOf("mobilePrimaryRow.append(mobileMoreButton)"));
+  const ifDesktopSplit = block.indexOf("}else{", block.indexOf("mobilePrimaryRow.append(printButton)"));
   const closingBrace = block.indexOf("\n      }\n", ifDesktopSplit);
   assert.ok(closingBrace > ifDesktopSplit);
   const appendIndex = block.indexOf('toolbar.querySelector(".splitsEditRowSecondary")?.append(rearrangeButton);');
@@ -114,58 +126,26 @@ test("the visible mobile label shortens to Load Next (dropping the desktop icon 
   assert.match(editor, /loadNextButton\.innerHTML = `<svg class="recipeActionIcon"[\s\S]*?Load Next Recipe`;/);
 });
 
-test("primary-row items share equal width and never wrap - however many of them there are (3 on Next, 2 or 3 on Current)", () => {
+test("primary-row items share equal width by default and never wrap - however many of them there are (up to 3, on both Current and Next now)", () => {
   const rule = styles.slice(styles.indexOf(".splitsMobilePrimaryRow{"), styles.indexOf("}", styles.indexOf(".splitsMobilePrimaryRow{")));
   assert.match(rule, /display:flex;/);
   const childRule = styles.slice(styles.indexOf(".splitsMobilePrimaryRow > \\*{"), styles.indexOf("}", styles.indexOf(".splitsMobilePrimaryRow > *{")) + 1);
   assert.match(styles, /\.splitsMobilePrimaryRow > \*\{ flex:1 1 0; min-width:0; \}/);
+  // Scan/Print's icon slots opt out of that equal split with their own
+  // fixed-width override - see recipe-mobile-scan-action.test.js.
+  assert.match(styles, /\.splitsMobilePrimaryRow > \.mobileScanIconAction,\s*\n\s*\.splitsMobilePrimaryRow > \.mobilePrintIconAction\{\s*\n\s*flex:0 0 42px;/);
 });
 
-test("no overflow:hidden on the mobile action row - it would clip the Scan Recipe and More menu popups, which must escape the row's own bounds", () => {
+test("no overflow:hidden on the mobile action row - it would clip Scan Recipe's popup, which must escape the row's own bounds", () => {
   const strip = block => block.replace(/\/\*[\s\S]*?\*\//g, "");
   const primary = strip(styles.slice(styles.indexOf(".splitsMobilePrimaryRow{"), styles.indexOf(".splitsMobilePrimaryRow > *{")));
   assert.doesNotMatch(primary, /overflow:hidden/);
 });
 
-test("More joins the primary action row, which remains one compact outlined surface", () => {
+test("the row is one compact outlined surface regardless of how many items it holds", () => {
   const primary = styles.slice(styles.indexOf(".splitsMobilePrimaryRow{"), styles.indexOf("}", styles.indexOf(".splitsMobilePrimaryRow{")));
   assert.match(primary, /border:1px solid var\(--row-border-2\);/);
   assert.match(primary, /border-radius:var\(--control-radius\);/);
-  assert.match(app, /mobilePrimaryRow\.append\(mobileMoreButton\);/);
-});
-
-/* ============================================================
- *   Secondary tier: the existing More menu, page-aware contents
- * ============================================================ */
-
-test("Current's More menu keeps its existing 3 scan sources plus Print", () => {
-  const editor = recipeEditor();
-  const menuStart = editor.indexOf("mobileMoreButton.innerHTML=`");
-  const menuHtml = editor.slice(menuStart, editor.indexOf("`;", menuStart));
-  assert.match(menuHtml, /isNextRecipePage\(\) \? "" : `/);
-  assert.match(menuHtml, /data-mobile-recipe-scan="job_traveler"/);
-  assert.match(menuHtml, /data-mobile-recipe-scan="dosing_screen"/);
-  assert.match(menuHtml, /data-mobile-recipe-scan="heat_sheet"/);
-  assert.match(menuHtml, /data-mobile-recipe-print/);
-});
-
-test("Next's More menu drops the 3 scan sources, redundant with the promoted primary Scan Recipe", () => {
-  const editor = recipeEditor();
-  const block = editor.slice(editor.indexOf("if (compactMobileRecipe){"), editor.indexOf("// Percentage problems are not printed here"));
-  assert.match(block, /mobilePrimaryRow\.append\(mobileMoreButton\);/);
-});
-
-/* ============================================================
- *   Popup positioning: both popups must stay inside the viewport
- *   regardless of where their trigger sits in the row
- * ============================================================ */
-
-test("Scan Recipe's popup is right-aligned to its trigger in the mobile primary row, not left-aligned off the edge", () => {
-  // The shared .statusScanShortcutPanel default (left:0) is correct when
-  // the trigger is near the left edge, but Scan Recipe is the rightmost
-  // primary item on Next - left:0 there pushes a fixed-width popup off the
-  // right of a narrow viewport.
-  assert.match(styles, /\.splitsMobilePrimaryRow \.splitsScanShortcut \.statusScanShortcutPanel\{ left:auto; right:0; \}/);
 });
 
 /* ============================================================

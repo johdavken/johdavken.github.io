@@ -27,10 +27,19 @@ test("Recipe history keeps Current and Next independent, bounded, and restores a
 
 test("Edit replaces the selected-hopper count with compact, accessible undo and redo icons",()=>{
   const body=editor();
-  const row=body.slice(body.indexOf('<div class="splitsEditRow splitsEditRowSecondary">'),body.indexOf('</div>\n      `;',body.indexOf('<div class="splitsEditRow splitsEditRowSecondary">')));
-  assert.match(row,/class="recipeEditHistory" role="group" aria-label="Recipe edit history"/);
-  assert.match(row,/id="recipeUndo"[\s\S]*?aria-label="Undo recipe change"[\s\S]*?<svg/);
-  assert.match(row,/id="recipeRedo"[\s\S]*?aria-label="Redo recipe change"[\s\S]*?<svg/);
+  // .recipeEditHistory sits between the values/Apply row and the pill row
+  // now (a sibling of both, not nested inside the pill row) - Undo/Redo
+  // moved out of the pill so they read as plain icon buttons, not a
+  // filled segment.
+  const historyStart=body.indexOf('<div class="recipeEditHistory" role="group" aria-label="Recipe edit history">');
+  const primaryStart=body.indexOf('<div class="splitsEditRow splitsEditRowPrimary">');
+  const secondaryStart=body.indexOf('<div class="splitsEditRow splitsEditRowSecondary">');
+  assert.ok(primaryStart>-1&&historyStart>primaryStart&&secondaryStart>historyStart,"expected values/Apply, then .recipeEditHistory, then the pill row, in that order");
+  const history=body.slice(historyStart,secondaryStart);
+  assert.match(history,/id="recipeUndo"[\s\S]*?aria-label="Undo recipe change"[\s\S]*?<svg/);
+  assert.match(history,/id="recipeRedo"[\s\S]*?aria-label="Redo recipe change"[\s\S]*?<svg/);
+  const row=body.slice(secondaryStart,body.indexOf('</div>\n      `;',secondaryStart));
+  assert.doesNotMatch(row,/recipeEditHistory/);
   assert.match(row,/id="splitSelectionStatus" class="srOnly tiny splitsSelectionStatus"/);
   assert.match(body,/undoButton\?\.addEventListener\("click",undoRecipeEdit\);/);
   assert.match(body,/redoButton\?\.addEventListener\("click",redoRecipeEdit\);/);

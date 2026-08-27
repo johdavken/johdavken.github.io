@@ -66,21 +66,22 @@ test("the bar belongs to Summary alone, and stands down for the mobile rearrange
   assert.match(splitsArea, /if \(trackingView\) area\.append\(trackingBar\);/);
   assert.match(splitsArea, /if \(trackingView\) actionTray\.append\(trackingBar\);/);
   assert.match(splitsArea, /trackingBar\.hidden=!trackingView\|\|!!hopperRearrangement\?\.active;/);
-  // Desktop panel chrome; on the compact mobile tray, Clear tracking moves
-  // into .splitsMobilePrimaryRow (see the next test) and this bar keeps
-  // only the tracked count, visually hidden but still aria-live.
+  // Desktop panel chrome; on the compact mobile tray, Clear tracking is
+  // hidden entirely (see the next test) and this bar keeps only the
+  // tracked count, visually hidden but still aria-live.
   assert.match(styles, /\.splitsTrackingBar\{[\s\S]*?background: var\(--readonly-bg\);/);
   assert.match(styles, /\.splitsTrackingBar\[hidden\]\{ display: none; \}/);
   assert.match(styles, /\.splitsTrackingBar\.mobileTrackContext\{[\s\S]*?clip:rect\(0,0,0,0\);/);
   assert.match(styles, /\.splitsTrackingBar\.mobileTrackContext\[hidden\]\{display:none\}/);
 });
 
-test("on the compact phone tray, Clear tracking moves into the primary row instead of a dedicated bar", () => {
-  // The tracked count next to it wasn't worth its own row on a phone -
-  // Recipes/Load Next/More already has room (see the "Done Rearranging"
-  // containment comment on the same row).
-  const primaryRow = splitsArea.slice(splitsArea.indexOf("let mobilePrimaryRow = null;"), splitsArea.indexOf("mobilePrimaryRow.append(mobileMoreButton);"));
-  assert.match(primaryRow, /if \(trackingView\)\{\s*\n\s*clearTrackingButton\.className = "secondary";\s*\n\s*mobilePrimaryRow\.append\(clearTrackingButton\);/);
+test("on the compact phone tray, Clear tracking is hidden entirely rather than finding a home in the primary row", () => {
+  // Timeline's own Reset tracking control already covers this - the
+  // primary row stays Scan / Load Next-or-Current / Print on every page,
+  // and Clear tracking never appears there at all.
+  assert.match(splitsArea, /clearTrackingButton\.hidden = compactMobileRecipe;/);
+  const primaryRow = splitsArea.slice(splitsArea.indexOf("let mobilePrimaryRow = null;"), splitsArea.indexOf("}else{", splitsArea.indexOf("let mobilePrimaryRow = null;")));
+  assert.doesNotMatch(primaryRow, /clearTrackingButton/);
 });
 
 /* ----------------------------------------------------------------------

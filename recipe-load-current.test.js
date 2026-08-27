@@ -61,14 +61,12 @@ test("desktop puts it in the header where Load Next Recipe sits on the other pag
   assert.doesNotMatch(editor, /loadCurrentButton\?\.setAttribute\("role", "tab"\)/);
 });
 
-test("mobile puts it in the overflow rather than a sixth slot in a four-slot row", () => {
+test("mobile puts the real button in the primary row, next to Scan and Print - the same shape Load Next Recipe gets on Current", () => {
   const editor = recipeEditor();
-  // Next's primary row is already Recipes / Rearrange / Scan / More.
-  assert.match(editor, /\$\{isNextRecipePage\(\) \? `<button type="button"[^>]*data-mobile-recipe-load-current>Load current recipe<\/button>` : ""\}/);
-  assert.match(editor, /mobileLoadCurrentButton\.addEventListener\("click",\(\)=>\{mobileMoreButton\.open=false;openLoadCurrentRecipeDialog\(\);\}\);/);
-  // The overflow entry inherits the button's own availability rather than
-  // deciding it a second time and drifting.
-  assert.match(editor, /mobileLoadCurrentButton\.disabled=!!loadCurrentButton\?\.hidden;/);
+  const block = editor.slice(editor.indexOf("let mobilePrimaryRow = null;"), editor.indexOf("}else{", editor.indexOf("let mobilePrimaryRow = null;")));
+  assert.match(block, /\}else if \(loadCurrentButton\)\{\s*\n\s*loadCurrentButton\.textContent = "Load Current";\s*\n\s*mobilePrimaryRow\.append\(loadCurrentButton\);/);
+  // The real element and its real click handler move - nothing is rebuilt.
+  assert.match(editor, /loadCurrentButton\.addEventListener\("click", openLoadCurrentRecipeDialog\);/);
 });
 
 /* ----------------------------------------------------------------------

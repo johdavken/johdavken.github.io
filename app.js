@@ -73,6 +73,12 @@
       density: "comfort",
       theme: "industrial-slate",
       timeFormat: "12",
+      // Which scan source a tap on the mobile Scan action goes straight to.
+      // "ask" preserves the original 3-source popup unchanged; picking a
+      // specific source skips that popup entirely. Mobile/touch-only
+      // preference (see .recipeScanHideDesktop on its own displaySheet
+      // field) since scanning itself has no desktop entry point.
+      defaultScanAction: "ask",
       surfaceStyle: "divided",
       mobileTileStyle: "minimal",
       mobileBackgroundStyle: "theme-native",
@@ -182,15 +188,13 @@
   // is closed, reopen the phone, and the orphaned alarm was never in the
   // cancel list and went off anyway.
   let scheduledTimelineNotificationIds = new Set();
-  // Recipe Setup's Scan and More popups are rebuilt on every
-  // renderSplitsArea() call. Their outside-click/Escape handlers live once
-  // at module scope, so they always act on the current instance without
-  // stacking listeners across renders.
+  // Recipe Setup's Scan popup is rebuilt on every renderSplitsArea() call.
+  // Its outside-click/Escape handlers live once at module scope, so they
+  // always act on the current instance without stacking listeners across
+  // renders.
   let splitsScanShortcut = null;
-  let mobileRecipeMore = null;
   document.addEventListener("click", event=>{
     if (splitsScanShortcut?.open && !splitsScanShortcut.contains(event.target)) splitsScanShortcut.open = false;
-    if (mobileRecipeMore?.open && !mobileRecipeMore.contains(event.target)) mobileRecipeMore.open = false;
     const summary = event.target.closest?.(".mobileWeightProfilesSheet .workspaceConfigurationOverflow > summary");
     if (summary){
       const menu = summary.parentElement;
@@ -224,10 +228,6 @@
     if (event.key === "Escape" && splitsScanShortcut?.open){
       splitsScanShortcut.open = false;
       splitsScanShortcut.querySelector(":scope > summary")?.focus();
-    }
-    if (event.key === "Escape" && mobileRecipeMore?.open){
-      mobileRecipeMore.open = false;
-      mobileRecipeMore.querySelector(":scope > summary")?.focus();
     }
   });
 
@@ -265,9 +265,9 @@
     items.forEach(item=>{ const row=document.createElement("div"); row.className="workspaceConfigurationRow"; row.tabIndex=0; row.setAttribute("role","group"); row.setAttribute("aria-label",`${item.name} configuration`); const select=()=>{selectedWorkspaceConfigurationId=item.id; renderWorkspaceConfigurations(syncState);}; const selected=selectedWorkspaceConfigurationId===item.id; row.classList.toggle("selected",selected); row.addEventListener("click",event=>{if(!event.target.closest("button,summary,details")) select();}); row.addEventListener("keydown",event=>{if((event.key==="Enter"||event.key===" ")&&!event.target.closest("button,summary")){event.preventDefault();select();}}); const info=document.createElement("div"); info.className="workspaceConfigurationInfo"; info.addEventListener("click",event=>{event.stopPropagation();select();}); const title=document.createElement("strong"); if(item.favorite){const star=document.createElement("span");star.className="workspaceConfigurationFavorite";star.setAttribute("aria-label","Favorite recipe");star.textContent="★";title.append(star," ");} title.append(item.name); const meta=document.createElement("small"); const count=kind==="recipe"&&Array.isArray(item.payload?.layers)?item.payload.layers.reduce((n,layer)=>n+(Array.isArray(layer?.hoppers)?layer.hoppers.filter(h=>typeof h?.resin_name==="string"&&h.resin_name.trim()).length:0),0):kind!=="recipe"&&Array.isArray(item.payload?.layers)?item.payload.layers.reduce((n,layer)=>n+(Array.isArray(layer?.receiver_weights_lb)&&layer.receiver_weights_lb.length===6?6:0),0):null; meta.textContent=`${item.payload.line_type} Layer${count===null?"":` · ${count} ${kind==="recipe"?"assigned hoppers":"receiver weights"}`} · Updated ${item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : "unknown"}`; info.append(title,meta); row.append(info); if(selected&&showRowActions){const actions=document.createElement("div"); actions.className="workspaceConfigurationActions"; const action=(label,fn,cls="secondary")=>{const b=document.createElement("button");b.type="button";b.className=cls;b.textContent=label;b.addEventListener("click",event=>{event.stopPropagation();fn();});return b;}; actions.append(action("Load",()=>previewWorkspaceConfiguration(item),"primary"),action("Update",()=>openWorkspaceConfigurationDialog("update",item))); const menu=document.createElement("details"); menu.className="workspaceConfigurationOverflow"; menu.addEventListener("click",event=>event.stopPropagation()); menu.addEventListener("toggle",()=>{const sheet=menu.closest(".mobileWeightProfilesSheet"); if(sheet) sheet.classList.toggle("profileMenuOpen",menu.open); if(menu.open){ window.requestAnimationFrame(()=>{const anchor=summary.getBoundingClientRect(); const popup=menuActions.getBoundingClientRect(); const margin=8; const top=Math.max(margin,anchor.top-popup.height-4); const left=Math.min(Math.max(margin,anchor.right-popup.width),window.innerWidth-popup.width-margin); menuActions.style.position="fixed"; menuActions.style.top=`${top}px`; menuActions.style.left=`${left}px`; menuActions.style.right="auto";});}else{menuActions.style.position="";menuActions.style.top="";menuActions.style.left="";menuActions.style.right="";}}); const summary=document.createElement("summary"); summary.setAttribute("aria-label",`More actions for ${item.name}`); summary.textContent="⋯"; const menuActions=document.createElement("div"); menuActions.className="workspaceConfigurationOverflowMenu"; const menuAction=(label,fn,cls="secondary")=>{const button=action(label,()=>{menu.open=false;fn();},cls);menuActions.append(button);}; menuAction("Rename",()=>openWorkspaceConfigurationDialog("rename",item)); menuAction("Duplicate",()=>openWorkspaceConfigurationDialog("duplicate",item)); if(kind==="recipe") menuAction(item.favorite?"Unfavorite":"Favorite",()=>mutateWorkspaceConfiguration("favorite",item)); menuAction("Delete",()=>{if(confirm(`Delete shared configuration “${item.name}”?`)) mutateWorkspaceConfiguration("delete",item);},"danger"); menu.append(summary,menuActions); actions.append(menu); row.append(actions);} host.append(row); });
   }
   function renderMobileSavedRecipeRows(items,syncState){
-    const sheet=$("mobileSavedRecipesSheet"), host=$("mobileSavedRecipesList"), search=$("mobileSavedRecipesSearch");
-    if(!sheet || !host) return;
-    sheet.setAttribute("aria-busy",String(!!workspaceConfigurationRefreshInFlight));
+    const panel=$("splitsSavedRecipesPanel"), host=$("mobileSavedRecipesList"), search=$("mobileSavedRecipesSearch");
+    if(!panel || !host) return;
+    panel.setAttribute("aria-busy",String(!!workspaceConfigurationRefreshInFlight));
     const query=(search?.value ?? splitsSavedRecipesSearch).trim().toLocaleLowerCase();
     splitsSavedRecipesSearch=query;
     const filtered=items
@@ -311,9 +311,6 @@
         selectedWorkspaceConfigurationId=item.id;
         row.classList.add("loading");
         row.setAttribute("aria-busy","true");
-        const dialog=$("mobileSavedRecipesSheet");
-        if(dialog?.open) dialog.close("load");
-        splitsSavedRecipesOpen=false;
         previewWorkspaceConfiguration(item);
       });
 
@@ -1448,6 +1445,7 @@
         density: state.density,
         theme: state.theme,
         timeFormat: state.timeFormat,
+        defaultScanAction: state.defaultScanAction,
         surfaceStyle: state.surfaceStyle,
         mobileTileStyle: state.mobileTileStyle,
         mobileBackgroundStyle: state.mobileBackgroundStyle,
@@ -1472,6 +1470,7 @@
         density: state.density,
         theme: state.theme,
         timeFormat: state.timeFormat,
+        defaultScanAction: state.defaultScanAction,
         surfaceStyle: state.surfaceStyle,
         mobileTileStyle: state.mobileTileStyle,
         mobileBackgroundStyle: state.mobileBackgroundStyle,
@@ -1560,6 +1559,14 @@
       const sel = $("timeFormatSel");
       if (sel) sel.value = timeFormat;
       syncChangeoverTimeDisplay();
+    }
+
+    function applyDefaultScanAction(value){
+      const allowed = new Set(["ask", "heat_sheet", "job_traveler", "dosing_screen"]);
+      const defaultScanAction = allowed.has(String(value)) ? String(value) : "ask";
+      state.defaultScanAction = defaultScanAction;
+      const sel = $("defaultScanActionSel");
+      if (sel) sel.value = defaultScanAction;
     }
 
     function defaultSurfaceStyle(){
@@ -1920,6 +1927,7 @@
       applyTheme(payload.theme || "industrial-slate");
       applyDensity(payload.density || "comfort");
       applyTimeFormat(payload.timeFormat || "12");
+      applyDefaultScanAction(payload.defaultScanAction || "ask");
       applySurfaceStyle(payload.surfaceStyle || defaultSurfaceStyle());
         applyMobileTileStyle("minimal");
         applyMobileBackgroundStyle("theme-native");
@@ -3670,9 +3678,9 @@
     function syncRecipePageUI(){
       document.body.dataset.recipePage = activeRecipePage;
       const savedTab = $("recipePageTabSaved");
-      // Recipe Book belongs to the full matrix workspace used by tablets and
-      // desktops. Phones keep the compact Recipes action/sheet instead.
-      if (savedTab) savedTab.hidden = layoutModeQueries.compactRecipe.matches;
+      // Recipe Book is a real tab everywhere now - phones and tablets swap
+      // the matrix for the panel in place, same as desktop.
+      if (savedTab) savedTab.hidden = false;
       document.querySelectorAll(".recipePageTab").forEach(tab=>{
         const selected = tab.dataset.recipePage === activeRecipePage;
         tab.classList.toggle("active", selected);
@@ -3851,7 +3859,6 @@
       area.dataset.recipeView = viewMode;
       area.dataset.recipeCells = cellsTypeable ? "typeable" : "static";
       area.classList.toggle("recipeTrackingView", trackingView);
-      $("mobileSavedRecipesSheet")?.remove();
 
       // Which parts of a cell keep an interaction of their own, and which
       // are just cell surface. Everything editable lives inside a field or
@@ -3891,14 +3898,6 @@
 
       const modeBar = document.createElement("div");
       modeBar.className = "splitsBulkModeBar";
-      // Mobile keeps its existing Recipes disclosure entry point. Desktop
-      // uses the static Saved Recipes page tab beside Current and Next; this
-      // real button is therefore only mounted into the compact action row.
-      const savedRecipesButton = document.createElement("button");
-      savedRecipesButton.type = "button";
-      savedRecipesButton.className = "secondary";
-      savedRecipesButton.textContent = "Saved Recipes";
-      savedRecipesButton.setAttribute("aria-expanded", "false");
       const modeButton = document.createElement("button");
       modeButton.type = "button";
       modeButton.className = "secondary";
@@ -3999,6 +3998,18 @@
           window.PolynRecipeScanUI?.startScan(button.dataset.scanSource);
         });
       });
+      // Default Scan Action (Display settings, mobile/touch only): with a
+      // specific source chosen, a tap goes straight to that scan instead of
+      // opening the 3-source popup - preventDefault on the summary's own
+      // click stops <details> from toggling open. "ask" (the default)
+      // leaves the popup exactly as it always worked.
+      scanRecipeButton.querySelector("summary")?.addEventListener("click", event=>{
+        const defaultSource = state.defaultScanAction;
+        if (defaultSource && defaultSource !== "ask"){
+          event.preventDefault();
+          window.PolynRecipeScanUI?.startScan(defaultSource);
+        }
+      });
       modeBar.appendChild(scanRecipeButton);
       splitsScanShortcut = scanRecipeButton;
 
@@ -4070,40 +4081,6 @@
       // moves it into the header action group beside Summary/Edit below.
       modeBar.appendChild(printButton);
 
-      // On Next, Scan Recipe is promoted to a primary mobile action (see the
-      // two-tier assembly below) with its own 3-source popup, so the same 3
-      // sources here would just be a redundant second way to reach it -
-      // pruned rather than duplicated.
-      const mobileMoreButton=document.createElement("details");
-      mobileMoreButton.className="mobileRecipeMore";
-      mobileMoreButton.innerHTML=`
-        <summary data-button-kind="menu" data-button-size="small" aria-label="More recipe actions"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg><span>More</span></summary>
-        <div class="mobileRecipeMoreMenu">
-          ${isNextRecipePage() ? "" : `
-          <button type="button" data-button-kind="menu" data-button-variant="quiet" data-button-size="small" data-mobile-recipe-scan="job_traveler">Scan job traveler</button>
-          <button type="button" data-button-kind="menu" data-button-variant="quiet" data-button-size="small" data-mobile-recipe-scan="dosing_screen">Scan dosing screen</button>
-          <button type="button" data-button-kind="menu" data-button-variant="quiet" data-button-size="small" data-mobile-recipe-scan="heat_sheet">Scan heat sheet</button>`}
-          ${isNextRecipePage() ? `<button type="button" data-button-kind="menu" data-button-variant="quiet" data-button-size="small" data-mobile-recipe-load-current>Load current recipe</button>` : ""}
-          <button type="button" data-button-kind="menu" data-button-variant="quiet" data-button-size="small" data-mobile-recipe-print>Print recipe</button>
-        </div>`;
-      mobileMoreButton.querySelectorAll("[data-mobile-recipe-scan]").forEach(button=>button.addEventListener("click",()=>{
-        mobileMoreButton.open=false;
-        window.PolynRecipeScanUI?.startScan(button.dataset.mobileRecipeScan);
-      }));
-      // Next's mobile primary row is already full at four items (Recipes,
-      // Rearrange, Scan, More), and seeding the plan is a once-per-changeover
-      // action - so it goes in the overflow, the same way Print Recipe does.
-      const mobileLoadCurrentButton=mobileMoreButton.querySelector("[data-mobile-recipe-load-current]");
-      if(mobileLoadCurrentButton){
-        mobileLoadCurrentButton.disabled=!!loadCurrentButton?.hidden;
-        mobileLoadCurrentButton.addEventListener("click",()=>{mobileMoreButton.open=false;openLoadCurrentRecipeDialog();});
-      }
-      const mobilePrintButton=mobileMoreButton.querySelector("[data-mobile-recipe-print]");
-      mobilePrintButton.disabled=printButton.disabled;
-      mobilePrintButton.addEventListener("click",()=>{mobileMoreButton.open=false;printRecipeSheet();});
-      modeBar.appendChild(mobileMoreButton);
-      mobileRecipeMore = mobileMoreButton;
-
       // One inline editing surface on every screen size. Mobile previously
       // moved these controls into a modal bottom sheet, which hid the recipe
       // while values were being changed and duplicated the selection tools.
@@ -4125,13 +4102,13 @@
               <span>%</span>
             </span>
           </label>
-          <button id="applyBulkSplit" type="button" class="secondary" data-button-kind="action" data-button-variant="primary" data-button-size="small" disabled>Apply to selected</button>
+          <button id="applyBulkSplit" type="button" class="secondary" data-button-kind="action" data-button-variant="primary" data-button-size="small" disabled>Apply</button>
+        </div>
+        <div class="recipeEditHistory" role="group" aria-label="Recipe edit history">
+          <button id="recipeUndo" type="button" class="recipeHistoryAction" data-button-kind="icon" data-button-size="small" aria-label="Undo recipe change" title="Undo" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4 12l5 5M4 12h9a6 6 0 1 1 0 12"/></svg></button>
+          <button id="recipeRedo" type="button" class="recipeHistoryAction" data-button-kind="icon" data-button-size="small" aria-label="Redo recipe change" title="Redo" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 7 5 5-5 5m5-5h-9a6 6 0 1 0 0 12"/></svg></button>
         </div>
         <div class="splitsEditRow splitsEditRowSecondary">
-          <div class="recipeEditHistory" role="group" aria-label="Recipe edit history">
-            <button id="recipeUndo" type="button" class="recipeHistoryAction" data-button-kind="icon" data-button-size="small" aria-label="Undo recipe change" title="Undo" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4 12l5 5M4 12h9a6 6 0 1 1 0 12"/></svg></button>
-            <button id="recipeRedo" type="button" class="recipeHistoryAction" data-button-kind="icon" data-button-size="small" aria-label="Redo recipe change" title="Redo" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 7 5 5-5 5m5-5h-9a6 6 0 1 0 0 12"/></svg></button>
-          </div>
           <div class="splitsBulkActions">
             <div id="splitSelectionStatus" class="srOnly tiny splitsSelectionStatus" role="status" aria-live="polite">No hoppers selected</div>
             <button id="clearSplitSelection" type="button" class="bulkTextAction" data-button-kind="action" data-button-variant="quiet" data-button-size="small">Clear selection</button>
@@ -4154,6 +4131,11 @@
       `;
       const trackingStatus = trackingBar.querySelector("#splitsTrackingStatus");
       const clearTrackingButton = trackingBar.querySelector("#clearSplitTracking");
+      // Timeline's own Reset tracking control already covers this - mobile
+      // drops the duplicate action entirely rather than finding it a home
+      // in the primary row, and keeps only the aria-live tracked count
+      // (see .splitsTrackingBar.mobileTrackContext below).
+      clearTrackingButton.hidden = compactMobileRecipe;
       function trackedHopperCount(){
         return recipeLayers().reduce((total,L)=>total + L.hoppers.filter(h=>h.track).length, 0);
       }
@@ -4194,10 +4176,15 @@
         );
       }
 
-      // Recipe Setup's own copy of the shared recipe list
-      // (see renderSplitsSavedRecipes) - same service/cache, same
-      // Load/Update/Rename/Duplicate/Favorite/Delete actions, just a
-      // closer-to-the-work entry point.
+      // Recipe Setup's own copy of the shared recipe list (see
+      // renderSplitsSavedRecipes) - same service/cache, same Load/Update/
+      // Rename/Duplicate/Favorite/Delete actions, just a closer-to-the-work
+      // entry point. One panel serves every width now, reached through the
+      // Recipe Book tab like Current/Next/Weights: touch keeps its own
+      // search box and per-row Load/⋯ (rendered by renderMobileSavedRecipeRows
+      // into #mobileSavedRecipesList) while desktop keeps its
+      // select-a-row-then-act top bar (#splitsSavedRecipesList) - CSS shows
+      // only the one that matches the current width.
       const savedRecipesPanel = document.createElement("div");
       savedRecipesPanel.id = "splitsSavedRecipesPanel";
       savedRecipesPanel.className = "splitsSavedRecipesPanel hide";
@@ -4222,127 +4209,58 @@
               </div>
             </details>
           </div>
+          <label class="mobileSavedRecipesSearch"><span class="srOnly">Search saved recipes</span><input id="mobileSavedRecipesSearch" type="search" placeholder="Search recipes" autocomplete="off" /></label>
         </div>
         <div id="splitsSavedRecipesStatus" class="muted" role="status" hidden></div>
+        <div id="mobileSavedRecipesStatus" class="mobileSavedRecipesStatus" role="status" hidden></div>
         <div id="splitsSavedRecipesList" class="workspaceConfigurationList"></div>
+        <div id="mobileSavedRecipesList" class="mobileSavedRecipesList"></div>
       `;
       savedRecipesPanel.querySelector("#splitsSaveRecipe").addEventListener("click", ()=>openWorkspaceConfigurationDialog("save-recipe"));
       const saveNextRecipeButton=savedRecipesPanel.querySelector("#splitsSaveNextRecipe");
       saveNextRecipeButton.disabled=!window.PolynNextRecipe?.isMeaningful(state.nextRecipe);
       saveNextRecipeButton.title=saveNextRecipeButton.disabled?"Create a Next Recipe before saving it":"Save the planned Next Recipe to this workspace";
       saveNextRecipeButton.addEventListener("click", ()=>openWorkspaceConfigurationDialog("save-next-recipe"));
-      let mobileSavedRecipesSheet=null;
-      if(compactMobileRecipe){
-        mobileSavedRecipesSheet=document.createElement("dialog");
-        mobileSavedRecipesSheet.id="mobileSavedRecipesSheet";
-        mobileSavedRecipesSheet.className="mobileSavedRecipesSheet";
-        mobileSavedRecipesSheet.setAttribute("aria-labelledby","mobileSavedRecipesTitle");
-        mobileSavedRecipesSheet.tabIndex=-1;
-        mobileSavedRecipesSheet.innerHTML=`
-          <button type="button" class="mobileSavedRecipesGrabber" aria-label="Close recipes"></button>
-          <header class="mobileSavedRecipesHeader">
-            <div><strong id="mobileSavedRecipesTitle">Recipes</strong><small>Shared with this RT Sync workspace</small></div>
-          </header>
-          <div class="mobileSavedRecipesTools">
-            <label><span class="srOnly">Search saved recipes</span><input id="mobileSavedRecipesSearch" type="search" placeholder="Search recipes" autocomplete="off" /></label>
-            <button id="mobileSavedRecipesNew" type="button">New recipe</button>
-          </div>
-          <div id="mobileSavedRecipesStatus" class="mobileSavedRecipesStatus" role="status" hidden></div>
-          <div id="mobileSavedRecipesList" class="mobileSavedRecipesList"></div>`;
-        document.body.appendChild(mobileSavedRecipesSheet);
-        mobileSavedRecipesSheet.querySelector("#mobileSavedRecipesSearch").value=splitsSavedRecipesSearch;
-        mobileSavedRecipesSheet.querySelector(".mobileSavedRecipesGrabber").addEventListener("click",()=>mobileSavedRecipesSheet.close("close"));
-        mobileSavedRecipesSheet.addEventListener("click",event=>{
-          if(event.target!==mobileSavedRecipesSheet) return;
-          const rect=mobileSavedRecipesSheet.getBoundingClientRect();
-          if(event.clientY<rect.top || event.clientX<rect.left || event.clientX>rect.right) mobileSavedRecipesSheet.close("close");
-        });
-        mobileSavedRecipesSheet.querySelector("#mobileSavedRecipesNew").addEventListener("click",()=>{
-          splitsSavedRecipesOpen=false;
-          mobileSavedRecipesSheet.close("new");
-          openWorkspaceConfigurationDialog("save-recipe");
-        });
-        mobileSavedRecipesSheet.querySelector("#mobileSavedRecipesSearch").addEventListener("input",event=>{
-          splitsSavedRecipesSearch=event.target.value;
-          renderSplitsSavedRecipes(lineSync?.getState?.()||{});
-        });
-        mobileSavedRecipesSheet.addEventListener("close",()=>{
-          splitsSavedRecipesOpen=false;
-          savedRecipesButton.setAttribute("aria-expanded","false");
-          if(mobileSavedRecipesSheet.returnValue!=="new"&&mobileSavedRecipesSheet.returnValue!=="load"&&savedRecipesButton.isConnected) savedRecipesButton.focus();
-        });
-      }
+      const mobileSavedRecipesSearchInput=savedRecipesPanel.querySelector("#mobileSavedRecipesSearch");
+      mobileSavedRecipesSearchInput.value=splitsSavedRecipesSearch;
+      mobileSavedRecipesSearchInput.addEventListener("input",event=>{
+        splitsSavedRecipesSearch=event.target.value;
+        renderSplitsSavedRecipes(lineSync?.getState?.()||{});
+      });
       function setSavedRecipesOpen(open){
-        if(compactMobileRecipe){
-          savedRecipesPanel.classList.add("hide");
-          savedRecipesButton.textContent="Recipes";
-          savedRecipesButton.setAttribute("aria-expanded",String(open));
-          splitsSavedRecipesOpen=!!open;
-          if(open&&!mobileSavedRecipesSheet?.open){
-            document.querySelectorAll(".mobileSavedRecipesSheet[open]").forEach(sheet=>{ if(sheet!==mobileSavedRecipesSheet) sheet.close("replace"); });
-            mobileSavedRecipesSheet?.showModal();
-            mobileSavedRecipesSheet?.focus({preventScroll:true});
-          }else if(!open&&mobileSavedRecipesSheet?.open){
-            mobileSavedRecipesSheet.close("close");
-          }
-          return;
-        }
         savedRecipesPanel.classList.toggle("hide", !open);
         splitsSavedRecipesOpen = !!open;
       }
-      savedRecipesButton.addEventListener("click", ()=>{
-        const turningOn = savedRecipesPanel.classList.contains("hide");
-        if (turningOn && hopperRearrangement?.active){
-          hopperRearrangement = null;
-          splitsSavedRecipesOpen = true;
-          splitsBulkModeActive = false;
-          renderSplitsArea();
-          validateAndCompute();
-          saveSession();
-          notifyActiveJobMutation({immediate:true,kind:"rearrange-hoppers"});
-          return;
-        }
-        // This button is mounted only on compact mobile. Keep its original
-        // mutual exclusion with the inline Edit controls.
-        if (turningOn && compactMobileRecipe) setBulkMode(false);
-        setSavedRecipesOpen(turningOn);
-      });
 
       // The mobile action bar moves the same real buttons (rather than
-      // rebuilding them), so every existing handler remains intact. More is
-      // deliberately part of that same row: it reads as additional actions,
-      // not as an isolated second toolbar that takes another 42px of screen.
+      // rebuilding them), so every existing handler remains intact. Scan
+      // and Print are icon-only, fixed-width slots (see
+      // .mobileScanIconAction/.mobilePrintIconAction in styles.css) around
+      // one text slot for the page's own Load action - the same three-slot
+      // shape on Current and Next now that Clear Tracking has moved to
+      // Timeline's own Reset tracking control and Recipe Book has its own
+      // tab, leaving nothing that needs a fourth, overflow slot here.
       let mobilePrimaryRow = null;
       if (compactMobileRecipe){
         mobilePrimaryRow = document.createElement("div");
         mobilePrimaryRow.className = "splitsMobilePrimaryRow";
         // Rearrange no longer takes a slot here - it lives in the Edit
-        // toolbar now (see the rearrangeButton append below), which is
-        // also why this row has room to keep its remaining labels as
-        // plain text instead of needing icons.
-        mobilePrimaryRow.append(savedRecipesButton);
+        // toolbar now (see the rearrangeButton append below).
+        scanRecipeButton.classList.remove("rearrangeDesktopOnly", "recipeScanHideDesktop");
+        scanRecipeButton.classList.add("mobileScanIconAction");
+        mobilePrimaryRow.append(scanRecipeButton);
         if (!isNextRecipePage()){
           if (loadNextButton){
             loadNextButton.textContent = "Load Next";
             mobilePrimaryRow.append(loadNextButton);
           }
-          // Tracking's own bar used to carry both the count and this
-          // button; the count is redundant screen real estate on a phone
-          // (see .splitsTrackingBar.mobileTrackContext), but the action
-          // still needs a home, so it moves the real button - same
-          // handler - into the row that already has room for it.
-          if (trackingView){
-            clearTrackingButton.className = "secondary";
-            mobilePrimaryRow.append(clearTrackingButton);
-          }
-        }else{
-          // Scan Recipe is hidden in the desktop action row
-          // (.rearrangeDesktopOnly/.recipeScanHideDesktop) everywhere else;
-          // here specifically it becomes a real primary mobile action.
-          scanRecipeButton.classList.remove("rearrangeDesktopOnly", "recipeScanHideDesktop");
-          mobilePrimaryRow.append(scanRecipeButton);
+        }else if (loadCurrentButton){
+          loadCurrentButton.textContent = "Load Current";
+          mobilePrimaryRow.append(loadCurrentButton);
         }
-        mobilePrimaryRow.append(mobileMoreButton);
+        printButton.classList.remove("rearrangeDesktopOnly", "recipeActionTertiary");
+        printButton.classList.add("mobilePrintIconAction");
+        mobilePrimaryRow.append(printButton);
       }else{
         // Current/Next and Print are ordinary app buttons in the header.
         // The left border on recipeHeaderActions separates page actions from
@@ -4996,6 +4914,19 @@
       const applyButton = toolbar.querySelector("#applyBulkSplit");
       const selectionStatus = toolbar.querySelector("#splitSelectionStatus");
       const clearCellsButton = toolbar.querySelector("#clearSelectedCells");
+      const resetButton = toolbar.querySelector("#resetAllSplits");
+      const clearSelectionButton = toolbar.querySelector("#clearSplitSelection");
+      // Tablet/desktop read the whole toolbar as one row now, not just
+      // Reset - every label here shortens to fit it without wrapping or
+      // overflowing; mobile keeps every label in full since it never
+      // joined this merged row.
+      if (resetButton) resetButton.textContent = compactMobileRecipe ? "Reset Recipe" : "Reset";
+      if (clearSelectionButton) clearSelectionButton.textContent = compactMobileRecipe ? "Clear selection" : "Clear";
+      if (clearCellsButton) clearCellsButton.textContent = compactMobileRecipe ? "Empty cells" : "Empty";
+      const resinNameLabel = toolbar.querySelector('label[for="bulkResinName"] span');
+      if (resinNameLabel) resinNameLabel.textContent = compactMobileRecipe ? "Resin name" : "Resin";
+      const percentageLabel = toolbar.querySelector('label[for="bulkResinPct"] > span:first-child');
+      if (percentageLabel) percentageLabel.textContent = compactMobileRecipe ? "Percentage" : "%";
       const undoButton = toolbar.querySelector("#recipeUndo");
       const redoButton = toolbar.querySelector("#recipeRedo");
       attachResinAutocomplete(bulkNameInput);
@@ -5031,11 +4962,11 @@
           button.setAttribute("aria-pressed", count === keys.length ? "true" : (count ? "mixed" : "false"));
         });
         applyButton.disabled = selected.size === 0 || !hasBulkValue();
-        applyButton.textContent = compactMobileRecipe
-          ? (selected.size ? `Apply · ${selected.size}` : "Apply")
-          : (selected.size
-            ? `Apply to ${selected.size} hopper${selected.size === 1 ? "" : "s"}`
-            : "Apply to selected");
+        // Label stays a fixed "Apply" regardless of selection count - this
+        // row now has a deliberate, fixed-width toolbar layout (Apply is
+        // sized to ~70px), and a growing "Apply to N hoppers" label used to
+        // push the whole row past its available width. Selection count is
+        // still announced via #splitSelectionStatus for anyone who needs it.
         // Emptying is offered only when the selection actually holds
         // something. Selecting six blank hoppers used to light the button up
         // for an action that would do nothing.
@@ -6390,12 +6321,6 @@
       renderedCompactRecipe = compactRecipe;
       placeProductionControlsForLayout();
       if (!changed || !rerender) return changed;
-      // Recipe Book is a full-matrix page. Crossing into the compact phone
-      // recipe returns to Current; tablet and desktop keep the page open.
-      if (compactRecipe && isSavedRecipesPage()){
-        activeRecipePage = "current";
-        splitsSavedRecipesOpen = false;
-      }
       syncRecipePageUI();
       // Rebuild exactly the surfaces whose markup depends on the boundary
       // that just moved. Both renderers read live state, so this restores
@@ -7676,6 +7601,11 @@
       saveSession();
     });
 
+    $("defaultScanActionSel")?.addEventListener("change",(e)=>{
+      applyDefaultScanAction(e.target.value);
+      saveSession();
+    });
+
     $("mobileTimelineAlarmToggle")?.addEventListener("change",async event=>{
       const enabled = !!event.target.checked;
       if (enabled){
@@ -8221,6 +8151,7 @@
         applyDensity("comfort");
         applyTheme("industrial-slate");
         applyTimeFormat("12");
+        applyDefaultScanAction("ask");
         applySurfaceStyle(defaultSurfaceStyle());
         rebuildUIFromState();
       }
@@ -8256,6 +8187,7 @@
       // Ensure theme/logo applied even after restore
       applyTheme(state.theme || "industrial-slate");
       applyTimeFormat(state.timeFormat || "12");
+      applyDefaultScanAction(state.defaultScanAction || "ask");
       applySurfaceStyle(state.surfaceStyle || defaultSurfaceStyle());
       applyMobileTileStyle("minimal");
       applyMobileBackgroundStyle("theme-native");

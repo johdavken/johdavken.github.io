@@ -53,6 +53,5 @@ test("phones retain their compact toolbar while tablets receive the full header 
   const phoneLayoutStart = styles.indexOf("@media (max-width: 700px){", touchLayoutStart);
   assert.ok(touchLayoutStart > -1 && phoneLayoutStart > touchLayoutStart);
   assert.doesNotMatch(styles.slice(touchLayoutStart, phoneLayoutStart), /\.recipeHeaderActions\{ display: none; \}/);
-  assert.match(app, /mobilePrimaryRow\.append\(savedRecipesButton\);/);
-  assert.match(app, /mobilePrimaryRow\.append\(mobileMoreButton\);/);
+  assert.match(app, /mobilePrimaryRow\.append\(printButton\);/);
 });

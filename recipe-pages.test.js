@@ -132,11 +132,16 @@ test("Current, Next, and Recipe Book read as document tabs sitting on the sectio
   assert.doesNotMatch(active.replace(/\/\*[\s\S]*?\*\//g, ""), /animation|transform/);
 });
 
-test("the paired recipe tabs stay comfortably tappable while using a modestly shorter mobile height", () => {
-  const mobile = styles.slice(styles.indexOf(".recipePageTabs{ gap: 0; padding-inline: 0; }"));
-  const rule = mobile.slice(mobile.indexOf(".recipePageTab{"), mobile.indexOf("}", mobile.indexOf(".recipePageTab{")));
-  assert.match(rule, /min-height: 40px/);
-  assert.match(rule, /flex: 1 1 0/);
+test("mobile/tablet tabs share desktop's compact document-tab styling, not a separate boxed full-width treatment", () => {
+  const anchor = styles.indexOf(".recipeWeightsTabFull{ display:none; }");
+  const start = styles.lastIndexOf("@media", anchor);
+  const block = styles.slice(start, styles.indexOf("\n}\n", anchor));
+  assert.doesNotMatch(block, /\.recipePageTab\{[^}]*flex/);
+  assert.doesNotMatch(block, /\.recipePageTab\.active\{/);
+  // The label-shortening swap ("Hopper Weights" -> "Weights") is the only
+  // thing this breakpoint still changes about the tabs.
+  assert.match(block, /\.recipeWeightsTabFull\{ display:none; \}/);
+  assert.match(block, /\.recipeWeightsTabCompact\{ display:inline; \}/);
 });
 
 test("the tabs use real tab semantics and are keyboard navigable", () => {
@@ -161,13 +166,16 @@ test("aria-selected, the panel label, and the view control follow every workspac
   assert.match(body, /headerControls\.hidden = isSavedRecipesPage\(\);/);
 });
 
-test("Recipe Book is available on tablet and desktop; only compact phones return to Current", () => {
+test("Recipe Book is a real tab at every width, and crossing the phone/tablet boundary no longer bounces it back to Current", () => {
   const sync = app.slice(app.indexOf("function syncRecipePageUI("), app.indexOf("function setRecipePage("));
-  assert.match(sync, /savedTab\.hidden = layoutModeQueries\.compactRecipe\.matches;/);
+  assert.match(sync, /if \(savedTab\) savedTab\.hidden = false;/);
   const layout = app.slice(app.indexOf("function syncLayoutMode("), app.indexOf("function watchLayoutMode("));
-  assert.match(layout, /if \(compactRecipe && isSavedRecipesPage\(\)\)\{\s*activeRecipePage = "current";\s*splitsSavedRecipesOpen = false;/);
+  assert.doesNotMatch(layout, /activeRecipePage = "current";\s*\n\s*splitsSavedRecipesOpen = false;/);
   assert.match(styles, /\.recipePageTab\[hidden\],\.recipeViewToggle\[hidden\],\.recipeHeaderControls\[hidden\]\{ display:none!important; \}/);
-  assert.match(styles, /@media \(min-width: 701px\)\{[\s\S]*?body\[data-recipe-page="saved"\] #splitsArea/);
+  // The matrix-hiding swap is unconditional now; only the panel's own
+  // sizing still forks by width.
+  assert.match(styles, /body\[data-recipe-page="saved"\] #splitsArea > :not\(\.splitsSavedRecipesPanel\)\{\s*display: none!important;\s*\}/);
+  assert.match(styles, /@media \(min-width: 701px\)\{[\s\S]*?body\[data-recipe-page="saved"\] #splitsArea > \.splitsSavedRecipesPanel\{[\s\S]*?width: min\(100%, var\(--recipe-five-layer-rail, 1062px\)\);/);
 });
 
 test("Recipe Book replaces the desktop matrix without masquerading as Current or Next", () => {
@@ -195,10 +203,8 @@ test("operational controls are not offered on a plan", () => {
   assert.match(app, /document\.body\.dataset\.recipePage = activeRecipePage;/);
 });
 
-test("both tabs stay tappable on a phone", () => {
-  const mobile = styles.slice(styles.indexOf("@media (max-width: 900px)", styles.indexOf(".recipePageTabDot[hidden]")));
-  const block = mobile.slice(0, mobile.indexOf("\n}"));
-  assert.match(block, /\.recipePageTab\{ flex: 1 1 0; min-height: 40px;/);
+test("no width/height rule anywhere reintroduces the old boxed, equal-width phone tab", () => {
+  assert.doesNotMatch(styles, /flex: 1 1 0; min-height: 40px/);
 });
 
 test("no duplicated per-page action implementations were introduced", () => {
