@@ -60,12 +60,14 @@ test("the rail marker is desktop-only, so it never doubles up with the mobile ti
 
 test("it originates on the button, not the label span - attr() reads the element it belongs to", () => {
   // data-step lives on the button; span::before would resolve attr() against
-  // the span and render an empty circle. The span's own ::before is already
-  // the status dot, so the two never collide.
+  // the span and render an empty circle instead. (The span's own ::before
+  // used to be a separate status dot here too - removed, see
+  // desktop-rail-status-dot.test.js - so there is nothing left to collide
+  // with either way, but the badge still has to originate on the right
+  // element regardless.)
   const body = ruleBody(".workspaceNavButton[data-step]::before{");
   assert.match(body, /content: attr\(data-step\);/);
   assert.doesNotMatch(styles, /\.workspaceNavButton\[data-step\] > span::(before|after)\{/);
-  assert.match(styles, /\.workspaceNavButton > span::before\{/);
 });
 
 test("a circle, filled with the section's own workflow accent and a knocked-out numeral", () => {
