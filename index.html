@@ -468,10 +468,14 @@
         <div class="setupTopRow">
           <!-- Manual fallback only. Hidden as a whole - heading included -
                while a linked RT Sync line dictates the layer count, since
-               Overview below already reports the line and the count. -->
+               Overview below already reports the line and the count.
+               Physically relocated by placeProductionControlsForLayout()
+               (app.js) into Display settings (#displaySheetLayerHost) - this
+               is only its source position in the document, not where it
+               renders. -->
           <div class="setupControlGroup setupLayerCountGroup" id="setupLayerCountGroup">
-            <span class="setupControlLabel">Layers</span>
-            <div class="layerCountTiles" id="lineTypeToggle" role="radiogroup" aria-label="Layers">
+            <span class="setupControlLabel">Layer Configuration</span>
+            <div class="layerCountTiles" id="lineTypeToggle" role="radiogroup" aria-label="Layer Configuration">
               <button type="button" class="layerCountTile" role="radio" aria-checked="false" aria-label="1 layer" title="1 layer" data-line-type="1">
               <svg viewBox="0 0 26 18" aria-hidden="true"><path d="M13 4 L23 9 L13 14 L3 9 Z" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
               <span>1</span>
@@ -646,7 +650,6 @@
           <button type="button" class="recipePageTab recipePageTabSaved" id="recipePageTabSaved" role="tab" aria-selected="false" aria-controls="splitsArea" data-recipe-page="saved" hidden>Recipe Book</button>
         </div>
         <div class="recipeHeaderControls" id="recipeHeaderControls">
-          <div class="recipeLayerCountHost" id="recipeLayerCountHost" aria-label="Line layer count"></div>
           <div class="recipeHeaderActionPill" id="recipeHeaderActionPill">
             <div class="recipeViewToggle" id="recipeViewToggle" role="group" aria-label="Recipe view">
               <span>View</span>
@@ -1632,6 +1635,12 @@
         <option value="dosing_screen">Dosing Screen</option>
       </select>
     </label>
+    <!-- Manual layer-count fallback (see setupLayerCountGroup in Line Setup's
+         source markup, relocated here by placeProductionControlsForLayout()
+         in app.js). Only ever populated/visible while no linked RT Sync line
+         dictates the layer count - connected lines report and control their
+         own count instead, so this stays out of the way otherwise. -->
+    <div class="displaySheetLayerHost" id="displaySheetLayerHost" aria-label="Layer configuration"></div>
   </form>
 </dialog>
 

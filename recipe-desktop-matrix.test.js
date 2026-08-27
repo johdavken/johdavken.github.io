@@ -45,9 +45,10 @@ test("desktop marks the active layer count and textures only the unused one- and
   assert.match(body, /\[data-theme="gruvbox-dark"\],[\s\S]*?\[data-theme="everforest"\],[\s\S]*?\.splitsMatrixFrame:is\(\[data-layer-count="1"\],\[data-layer-count="3"\]\)::after\{[\s\S]*?background-color: color-mix\(in srgb, var\(--bg\) 76%, #000\);/);
 });
 
-test("Summary collapses Edit's selector track instead of reserving it as dead space", () => {
+test("Summary no longer collapses the row gutter - it's a permanent column now, so toggling Edit never shifts Columns A-E. Same fix as the header-row/Edit-toolbar rail alignment work: the gutter is reserved everywhere, only its content (Select row label, interactive styling) changes with view", () => {
   const body = desktopBlock();
-  assert.match(body, /#splitsArea\[data-recipe-view="summary"\] \.splitsMatrix tr > :first-child\{\s*\n\s*display: none;/);
+  assert.doesNotMatch(body, /#splitsArea\[data-recipe-view="summary"\] \.splitsMatrix tr > :first-child\{\s*\n\s*display: none;/);
+  assert.match(styles, /#splitsBlock #splitsArea \.splitsMatrix tr > :first-child\{\s*\n\s*display: table-cell;\s*\n\s*min-width: 70px;\s*\n\s*width: 70px;\s*\n\s*max-width: 70px;\s*\n\s*\}/);
 });
 
 test("the 10% size increase is scoped to .splitsMatrixFrame, not #splitsArea - the surrounding toolbars must stay their normal size", () => {

@@ -174,10 +174,14 @@ test("the whole layer header selects its column, since the layer letter is a wat
   assert.match(styles, /#splitsArea\[data-recipe-view="edit"\] \.splitLayerTitle\{[\s\S]*?pointer-events: auto;/);
 });
 
-test("Edit restores the row/column select affordances that .bulk-editing used to supply, and brings back the header column", () => {
-  assert.match(styles, /#splitsArea\[data-recipe-view="edit"\] \.splitsMatrix tr > :first-child\{ display: table-cell; \}/);
+test("Edit restores the row/column select affordances that .bulk-editing used to supply - the header column itself is permanent now (both views), only the interactive styling/label toggle with view", () => {
+  assert.match(styles, /#splitsBlock #splitsArea \.splitsMatrix tr > :first-child\{\s*\n\s*display: table-cell;/);
   assert.match(styles, /#splitsArea\[data-recipe-view="edit"\] \.splitRowSelect\.selected\{/);
   assert.match(styles, /#splitsArea\[data-recipe-view="edit"\] \.splitLayerTitle\.partiallySelected\{/);
+});
+
+test("the row gutter's corner label is conditional on view, not the column's existence - Select row only in Edit, quiet/blank in Summary so a control that doesn't exist there isn't named", () => {
+  assert.match(app, /corner\.textContent = summaryView \? "" : "Select row";/);
 });
 
 test("selection stays keyboard-reachable: the checkbox is visually hidden, not removed", () => {

@@ -134,6 +134,27 @@ test("the control is keyboard-reachable and respects reduced motion", () => {
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)\{[\s\S]*?\.workspaceNavMoreChev\{ transition: none; \}/);
 });
 
+test("mobile's Workspace & support chevron is theme-aware, not a hardcoded black arrowhead", () => {
+  // Desktop's own .workspaceNavMoreChev (901+pointer:fine) declares
+  // fill:none/stroke:currentColor so the bare <path d="m6 9 6 6 6-6"/> (no
+  // fill/stroke attributes of its own in index.html) draws as a themed
+  // outline chevron. The mobile override under body[data-mobile-workspace=
+  // "home"] used to only set size/color/transition and never redeclared
+  // fill/stroke - with neither set anywhere, the SVG spec default
+  // (fill:black, no stroke) applied uncontested, so it rendered solid black
+  // on every theme, looking like a filled arrowhead rather than the line-
+  // drawn chevrons beside it.
+  const start = styles.indexOf('body[data-mobile-workspace="home"] .workspaceNavMoreChev{');
+  assert.notEqual(start, -1, "expected the mobile chevron rule");
+  const rule = styles.slice(start, styles.indexOf("}", start) + 1);
+  assert.match(rule, /fill:none;/);
+  assert.match(rule, /stroke:currentColor;/);
+  assert.match(rule, /stroke-linecap:round;/);
+  assert.match(rule, /stroke-linejoin:round;/);
+  // color:var(--muted) still drives currentColor per-theme.
+  assert.match(rule, /color:var\(--muted\);/);
+});
+
 /* ----------------------------------------------------------------------
  *   State
  * -------------------------------------------------------------------- */

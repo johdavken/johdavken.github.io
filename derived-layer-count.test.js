@@ -284,7 +284,7 @@ test("nothing is shown in place of the tiles - Overview already reports the line
 test("the Layers heading is hidden with its control while a line dictates the count", () => {
   // The heading lives on the group, not the tiles, so hiding only the tiles
   // would strand a "Layers" caption above empty space.
-  assert.match(html, /<div class="setupControlGroup setupLayerCountGroup" id="setupLayerCountGroup">\s*\n\s*<span class="setupControlLabel">Layers<\/span>/);
+  assert.match(html, /<div class="setupControlGroup setupLayerCountGroup" id="setupLayerCountGroup">\s*\n\s*<span class="setupControlLabel">Layer Configuration<\/span>/);
   assert.match(app, /const layerCountGroup = \$\("setupLayerCountGroup"\);\s*\n\s*if \(layerCountGroup\) layerCountGroup\.hidden = required !== null;/);
   // `[hidden]` alone loses to `#lineSetupBlock .setupControlGroup{display:grid}`.
   assert.match(styles, /#lineSetupBlock \.setupLayerCountGroup\[hidden\]\{ display: none; \}/);
@@ -296,13 +296,13 @@ test("the Layers heading is hidden with its control while a line dictates the co
 test("the manual fallback selector survives intact for the disconnected state", () => {
   // Markup: heading, radiogroup, and all three tiles still present and
   // visible by default - the group is only hidden when the lock is applied.
-  assert.match(html, /<span class="setupControlLabel">Layers<\/span>/);
+  assert.match(html, /<span class="setupControlLabel">Layer Configuration<\/span>/);
   assert.doesNotMatch(html, /id="setupLayerCountGroup"[^>]*\shidden/, "the group must not start hidden");
   assert.doesNotMatch(html, /id="lineTypeToggle"[^>]*\shidden/, "the tiles must not start hidden");
   for (const count of [1, 3, 5]){
     assert.match(html, new RegExp(`data-line-type="${count}"`), `the ${count}-layer tile must remain`);
   }
-  assert.match(html, /id="lineTypeToggle" role="radiogroup" aria-label="Layers"/);
+  assert.match(html, /id="lineTypeToggle" role="radiogroup" aria-label="Layer Configuration"/);
 
   // Behavior: handlers, state application and keyboard support all intact.
   assert.match(app, /function hookLineTypeChoice\(\)/);

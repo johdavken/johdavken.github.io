@@ -241,14 +241,43 @@ test("tablet-width and wide-touch tracking use a theme-aware notched badge with 
   assert.doesNotMatch(styles, /tabletRecipeTrackingDotPulse/);
 });
 
-test("tablet-width and wide-touch layer headers use the compact mobile hierarchy instead of desktop watermarks", () => {
-  const start = styles.indexOf(`@media ${TABLET_RECIPE_QUERY}`);
+test("wide-touch layer headers use the compact mobile hierarchy instead of desktop watermarks - pointer:coarse only now, not shared with narrow real desktop", () => {
+  // Used to live in the TABLET_RECIPE_QUERY block (also matched by a real
+  // desktop/mouse window between 701-1200px), which meant simply resizing a
+  // real browser window across 1200px silently swapped this header design
+  // for the percentage-forward one below. Moved to its own WIDE_TOUCH_QUERY
+  // (pointer:coarse-only) block so a real desktop never sees it.
+  // WIDE_TOUCH_QUERY's exact media string repeats for unrelated blocks
+  // elsewhere in the file - anchor on this block's own first rule.
+  const start = styles.indexOf(`@media ${WIDE_TOUCH_QUERY}{\n  #splitsArea .splitsMatrix thead th{`);
+  assert.notEqual(start, -1, "expected the header block to open with the thead th padding rule");
   const block = styles.slice(start, styles.indexOf("\n}", start) + 2);
   assert.match(block, /\.splitLayerMain\{[\s\S]*?align-items:baseline;[\s\S]*?min-height:26px;/);
   assert.match(block, /\.splitLayerTitle,[\s\S]*?\.splitLayerTitle\{[\s\S]*?position:static;[\s\S]*?font-size:10px;[\s\S]*?opacity:\.72;/);
   assert.match(block, /\.splitLayerPct input:not\(\[type="checkbox"\]\):not\(\[type="radio"\]\)\{[\s\S]*?font-size:16px;/);
   assert.match(block, /\.splitColumnTotal\{[\s\S]*?font-size:8px;/);
   assert.doesNotMatch(block, /\.splitLayerTitle\{[^}]*font-size:64px/);
+  // The old shared block (still governs cell tracking/percentage-editor
+  // sizing, untouched) must no longer carry any of the header rules above -
+  // otherwise a real desktop window in 701-1200px would get both.
+  const sharedBlock = (()=>{
+    const s = styles.indexOf(`@media ${TABLET_RECIPE_QUERY}`);
+    return styles.slice(s, styles.indexOf("\n}", s) + 2);
+  })();
+  assert.doesNotMatch(sharedBlock, /\.splitLayerMain\{/);
+  assert.doesNotMatch(sharedBlock, /\.splitLayerTitle[,{]/);
+  assert.doesNotMatch(sharedBlock, /\.splitColumnTotal\{/);
+  assert.doesNotMatch(sharedBlock, /\.splitCopyBtn\{/);
+});
+
+test("the percentage-forward wide-desktop header now starts at 701px (pointer:fine), not 1201px, so a real desktop window keeps one header design across its whole width instead of flipping to the compact one below 1201px", () => {
+  const start = styles.indexOf("@media (min-width: 701px) and (pointer: fine){\n  #splitsArea .splitLayerMain{");
+  assert.notEqual(start, -1, "expected the percentage-forward header block to open at 701px, not 1201px");
+  assert.doesNotMatch(styles, /@media \(min-width: 1201px\) and \(pointer: fine\)\{\s*\n\s*#splitsArea \.splitLayerMain\{/);
+  const block = styles.slice(start, styles.indexOf("\n}\n", start) + 2);
+  assert.match(block, /#splitsArea \.splitLayerTitle\{[\s\S]*?font-size: 9px;/);
+  assert.match(block, /#splitsArea \.splitLayerPct input\{[\s\S]*?font-size: 22px;/);
+  assert.match(block, /#splitsArea \.splitColumnTotal::before\{[\s\S]*?background: var\(--ok\);/);
 });
 
 test("tablet percentage fields fit decimals without increasing the editor footprint", () => {
@@ -264,12 +293,34 @@ test("short tablet view reclaims a hopper row of whitespace without shrinking ce
   assert.match(block, /#splitsBlock\.mobile-active > summary\{[\s\S]*?min-height:30px;/);
   assert.match(block, /\.splitsEditRowPrimary > \.splitsBulkField input\{[\s\S]*?height:22px;/);
   assert.match(block, /\.splitsEditRowSecondary :is\(\.bulkTextAction,button\.danger\)\{[\s\S]*?min-height:24px;/);
+  assert.match(block, /\.recipeUtilityTab\{[\s\S]*?min-height:20px;/);
+  // The recipe-matrix-specific compaction below moved to its own
+  // pointer:coarse-scoped block (see the next test) - a real desktop window
+  // resized short must not pick any of it up.
+  assert.doesNotMatch(block, /\.splitCopyBtn\{/);
+  assert.doesNotMatch(block, /\.splitColumnTotal\{/);
+  assert.doesNotMatch(block, /td\.splitMatrixCell\{/);
+  assert.doesNotMatch(block, /\.splitSmartBadge\{/);
+  assert.doesNotMatch(block, /\.splitPctControl input\{/);
+});
+
+test("the short-tablet recipe matrix compaction (Match button, column total, cell padding) is pointer:coarse-only, so a real desktop/mouse window resized shorter than 800px keeps the exact same header it has at any other height", () => {
+  // Used to live unscoped in SHORT_TABLET_QUERY (any pointer, any shell),
+  // which meant a real desktop window simply resized short picked up
+  // .splitCopyBtn{display:inline-grid} - equal specificity to, and later in
+  // source order than, #splitsArea[data-recipe-view="summary"]
+  // .splitCopyBtn{display:none} - so Summary's Match button reappeared from
+  // height alone, and .splitLayerMain{min-height:22px} visibly compressed
+  // the percentage-forward header. A genuine Fold is a touchscreen, so
+  // gating on pointer:coarse costs it nothing.
+  const start = styles.indexOf("@media (min-width: 701px) and (max-height: 800px) and (pointer: coarse){");
+  assert.notEqual(start, -1, "expected the pointer:coarse short-tablet matrix block");
+  const block = styles.slice(start, styles.indexOf("\n}", start) + 2);
   assert.match(block, /\.splitCopyBtn\{[\s\S]*?display:inline-grid;[\s\S]*?min-height:14px;/);
   assert.match(block, /\.splitColumnTotal\{[\s\S]*?display:inline-block;[\s\S]*?line-height:14px;/);
   assert.match(block, /td\.splitMatrixCell\{ padding:2px 6px; \}/);
   assert.match(block, /\.splitSmartBadge\{[\s\S]*?position:absolute;[\s\S]*?left:44px;/);
   assert.match(block, /\.splitPctControl input\{[\s\S]*?height:26px;[\s\S]*?line-height:25px;/);
-  assert.match(block, /\.recipeUtilityTab\{[\s\S]*?min-height:20px;/);
   assert.doesNotMatch(block, /(?:splitCellResinText|splitSmartBadge|splitPctControl input)\{[^}]*font-size:/);
 });
 

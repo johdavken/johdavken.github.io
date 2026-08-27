@@ -7,11 +7,34 @@ const app = fs.readFileSync("app.js", "utf8");
 const styles = fs.readFileSync("styles.css", "utf8");
 const desktop = fs.readFileSync("desktop.css", "utf8");
 
-test("the Layers (1/3/5) picker moved out of the retired Line Setup page into Recipe's own header, desktop-only", () => {
-  assert.match(html, /<div class="recipeLayerCountHost" id="recipeLayerCountHost" aria-label="Line layer count"><\/div>/);
-  assert.match(app, /function placeProductionControlsForLayout\(\)[\s\S]*?const layerHost = \$\("recipeLayerCountHost"\);[\s\S]*?layerHost\.append\(layerCount\)/);
-  assert.match(styles, /\.recipeLayerCountHost\{ display:none; \}/);
-  assert.match(desktop, /#recipeHeaderControls \.recipeLayerCountHost\{display:flex;/);
+test("the Layers (1/3/5) picker moved out of Recipe's header (it sat there \"in the way\" on every visit) into Display settings, shared by desktop and mobile - the same #displaySheet both platforms already open", () => {
+  assert.match(html, /<div class="displaySheetLayerHost" id="displaySheetLayerHost" aria-label="Layer configuration"><\/div>/);
+  // Inside #displaySheet's own form, not the Recipe header - no
+  // #recipeLayerCountHost/#recipeHeaderControls host survives anywhere.
+  const sheetStart = html.indexOf('<dialog id="displaySheet"');
+  assert.notEqual(sheetStart, -1);
+  const sheetEnd = html.indexOf("</dialog>", sheetStart);
+  const sheetHtml = html.slice(sheetStart, sheetEnd);
+  assert.match(sheetHtml, /id="displaySheetLayerHost"/);
+  assert.doesNotMatch(html, /recipeLayerCountHost/);
+  assert.match(app, /function placeProductionControlsForLayout\(\)[\s\S]*?const layerHost = \$\("displaySheetLayerHost"\);[\s\S]*?layerHost\.append\(layerCount\)/);
+  // Not gated by isDesktopLayout() like the production fields just below it
+  // in the same function - #displaySheet is one shared dialog with two open
+  // triggers (desktop's #desktopDisplayToggle, mobile's #appFooterDisplay),
+  // so the same relocated node reaches both without a platform branch.
+  const fnStart = app.indexOf("function placeProductionControlsForLayout(){");
+  const fnBody = app.slice(fnStart, app.indexOf("\n    }", fnStart));
+  assert.doesNotMatch(fnBody, /isDesktopLayout\(\) \? layerHost/);
+  assert.doesNotMatch(styles, /\.recipeLayerCountHost/);
+  assert.doesNotMatch(desktop, /recipeLayerCountHost/);
+  // The label text now reads as a settings-sheet heading, not the old
+  // header-caption "Layers".
+  assert.match(html, /<span class="setupControlLabel">Layer Configuration<\/span>/);
+});
+
+test("applyLayerCountLock's existing hide-while-RT-Sync-dictates-the-count behavior still works once relocated - nothing in this file redeclares display for .setupControlGroup/.setupLayerCountGroup outside #lineSetupBlock to fight the native [hidden] default", () => {
+  assert.doesNotMatch(styles, /^\.setupControlGroup\{|^\.setupLayerCountGroup\{/m);
+  assert.match(app, /const layerCountGroup = \$\("setupLayerCountGroup"\);\s*\n\s*if \(layerCountGroup\) layerCountGroup\.hidden = required !== null;/);
 });
 
 test("Output/Changeover's canonical #lineRate/#changeoverTime inputs park back in their original (hidden) Line Setup home on desktop, not a visible rail panel", () => {

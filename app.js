@@ -4353,7 +4353,12 @@
       const corner = document.createElement("th");
       corner.scope = "col";
       corner.className = "splitRowCorner";
-      corner.textContent = "Select row";
+      // The gutter column itself is now permanent (styles.css) at every
+      // width that ever showed it, so its column width never depends on
+      // this text - only the label does. Row selection is an Edit-only
+      // feature, so Summary leaves this quiet rather than naming a control
+      // that isn't there; the row numbers below stay put either way.
+      corner.textContent = summaryView ? "" : "Select row";
       headerRow.appendChild(corner);
 
       recipeLayers().forEach(L=>{
@@ -6019,14 +6024,20 @@
       setWorkspaceNavExpanded(isDesktopLayout() ? loadNavExpandedPreference() : false, { persist: false });
     }
 
-    // Line Setup no longer owns a workspace page. The layer-count picker
-    // moved permanently into Recipe's own header (desktop-only, next to the
-    // Summary/Edit view toggle) since Output/Changeover editing now lives in
-    // the always-visible status bar instead of a rail expansion panel.
-    // Touch layouts intentionally have no replacement setup panel because
-    // their active-line context already lives on the home view.
+    // Line Setup no longer owns a workspace page. Output/Changeover editing
+    // now lives in the always-visible status bar (desktop) or the mobile
+    // production band, instead of a rail expansion panel - see
+    // desktopProductionHost/mobileHost below. The layer-count picker moved
+    // into Display settings (#displaySheetLayerHost, shared by desktop and
+    // mobile - same dialog, two open triggers), not a Recipe-header-only
+    // spot: it used to sit inline in Recipe's header next to the Summary/
+    // Edit toggle, "in the way" of that row on every visit even though it's
+    // an occasional, mostly-set-once control, and mobile had nowhere to
+    // reach it at all. Relocating one shared node this way (not duplicating
+    // markup) keeps applyLayerCountLock's existing hide-while-RT-Sync-
+    // dictates-the-count behavior working unchanged regardless of platform.
     function placeProductionControlsForLayout(){
-      const layerHost = $("recipeLayerCountHost");
+      const layerHost = $("displaySheetLayerHost");
       const desktopProductionHost = $("lineSetupBlock")?.querySelector(".setupLineConfiguration");
       const mobileHost = $("mobileProductionControls");
       const layerCount = $("setupLayerCountGroup");

@@ -119,7 +119,7 @@ test("the Layers segmented control keeps three named 1/3/5 options with their SV
   assert.match(tiles, /aria-label="1 layer"/);
   assert.match(tiles, /aria-label="3 layers"/);
   assert.match(tiles, /aria-label="5 layers"/);
-  assert.match(tiles, /role="radiogroup" aria-label="Layers"/);
+  assert.match(tiles, /role="radiogroup" aria-label="Layer Configuration"/);
   const svgCount = (tiles.match(/<svg/g) || []).length;
   assert.equal(svgCount, 3, "expected one svg glyph per tile");
   ["1","3","5"].forEach(n=>assert.match(tiles,new RegExp(`<span>${n}</span>`)));

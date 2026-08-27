@@ -26,12 +26,22 @@ test("the pill targets both Recipe's and Weights' visible Edit button, never the
   assert.doesNotMatch(rule, /data-recipe-view="summary"|data-weight-view="summary"/);
 });
 
-test("solid gradient fill in the theme accent, pill-rounded, white text - not the app's generic outlined button.secondary/button.primary", () => {
+test("tinted-surface fill in the theme accent, pill-rounded, normal foreground text - not the app's generic outlined button.secondary/button.primary", () => {
   const rule = pillRule();
   assert.match(rule, /border-radius: 999px;/);
-  assert.match(rule, /background: linear-gradient\(180deg, color-mix\(in srgb, var\(--focus-border\) 88%, white\), color-mix\(in srgb, var\(--focus-border\) 78%, black 6%\)\);/);
-  assert.match(rule, /color: #fff;/);
+  // Three fills were tried here: a gradient read as a glossy skin that
+  // didn't hold up across every theme's palette; a flat 100%-strength
+  // var(--recipe-pill-accent) fill with white text was an improvement but
+  // still read as too bright/saturated on several themes (worst on dark
+  // ones); adding a ~45%-strength matching border to the tint after that
+  // didn't sit cleanly on this fully round (border-radius:999px) pill, so
+  // it was dropped again. color-mix(var(--recipe-pill-accent) 28%,
+  // var(--panel2)) + var(--text), no border, is what's left.
   assert.match(rule, /border: 0;/);
+  assert.match(rule, /background: color-mix\(in srgb, var\(--recipe-pill-accent\) 28%, var\(--panel2\)\);/);
+  assert.doesNotMatch(rule, /linear-gradient/);
+  assert.match(rule, /color: var\(--text\);/);
+  assert.doesNotMatch(rule, /color: #fff;/);
 });
 
 test("carries a pencil icon via a masked ::before (recolors with currentColor) rather than requiring every call site to add an <svg>", () => {

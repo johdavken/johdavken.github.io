@@ -160,3 +160,118 @@ test("Load Next's hidden attribute isn't silently defeated by the row's own disp
   // Load Next Recipe would render as an empty, always-visible 4th slot.
   assert.match(styles, /\.splitsMobilePrimaryRow \[hidden\]\{ display:none!important; \}/);
 });
+
+/* ============================================================
+ *   Regression: Undo stranded alone between the fields row and the
+ *   toolbar row once .recipeEditHistory moved out from inside
+ *   .splitsEditRowSecondary (for the desktop pill merge)
+ * ============================================================ */
+
+test("on phone, Undo and the Clear selection/Empty cells/Reset Recipe/Rearrange toolbar share one flex-wrapped row instead of Undo sitting alone on its own line", () => {
+  // #splitsBulkBar's three children (in DOM order: .splitsEditRowPrimary,
+  // .recipeEditHistory, .splitsEditRowSecondary) are siblings, not nested -
+  // .recipeEditHistory stopped being a descendant of .splitsEditRowSecondary
+  // when Undo/Redo were pulled out for the desktop pill merge. A `display:
+  // block` parent stacks every child on its own line regardless of that
+  // history, which is exactly what stranded Undo alone between the fields
+  // row and the toolbar row. display:flex + flex-wrap here, with Primary
+  // forced to its own full-width line (flex:1 1 100%), lets Undo
+  // (.recipeEditHistory's own flex:0 0 auto, styles.css base rule) and the
+  // toolbar (flex:1 1 auto) flow onto the shared row after it.
+  const start = styles.indexOf("@media (max-width:700px){");
+  assert.notEqual(start, -1);
+  const barStart = styles.indexOf("#splitsArea > .splitsBulkBar{", start);
+  const barRule = styles.slice(barStart, styles.indexOf("}", barStart) + 1);
+  assert.match(barRule, /display:flex;/);
+  assert.match(barRule, /flex-wrap:wrap;/);
+  assert.doesNotMatch(barRule, /display:block;/);
+
+  const primaryStart = styles.indexOf("#splitsArea .splitsEditRowPrimary{", start);
+  const primaryRule = styles.slice(primaryStart, styles.indexOf("}", primaryStart) + 1);
+  assert.match(primaryRule, /flex:1 1 100%;/, "expected Primary to force its own full-width line, pushing Undo and the toolbar onto the next one together");
+
+  const secondaryStart = styles.indexOf("#splitsArea .splitsEditRowSecondary{", start);
+  const secondaryRule = styles.slice(secondaryStart, styles.indexOf("}", secondaryStart) + 1);
+  assert.match(secondaryRule, /flex:1 1 auto;/);
+  // The old margin-top/padding-top divider assumed this row always started
+  // below Undo on its own line - no longer true once they can share one.
+  assert.doesNotMatch(secondaryRule, /margin-top:8px|padding-top:8px/);
+});
+
+/* ============================================================
+ *   Mobile Recipe toolbar cleanup: no enclosing panel, no
+ *   shrink-driven overlap, lighter Clear/Empty/Rearrange
+ * ============================================================ */
+
+test("phone drops the enclosing bordered/filled panel the tablet/desktop toolbar keeps - the base card rule (border/background/radius) is explicitly zeroed, not just left unaddressed", () => {
+  const start = styles.indexOf("@media (max-width:700px){");
+  assert.notEqual(start, -1);
+  const barStart = styles.indexOf("#splitsArea > .splitsBulkBar{", start);
+  const barRule = styles.slice(barStart, styles.indexOf("}", barStart) + 1);
+  assert.match(barRule, /border:0;/);
+  assert.match(barRule, /border-radius:0;/);
+  assert.match(barRule, /background:none;/);
+  // The base (mobile-inclusive) card rule stays intact - tablet/desktop
+  // still wants it, per recipe-edit-toolbar-pill.test.js.
+  assert.match(styles, /\.splitsBulkBar\{[\s\S]*?border:1px solid var\(--row-border\);[\s\S]*?border-radius: var\(--radius-row\);[\s\S]*?background: var\(--readonly-bg\);/);
+});
+
+test("phone never fixes a height to solve the overlap - no max-height/height on #splitsBulkBar, just a flex-shrink floor", () => {
+  const start = styles.indexOf("@media (max-width:700px){");
+  const barStart = styles.indexOf("#splitsArea > .splitsBulkBar{", start);
+  const barRule = styles.slice(barStart, styles.indexOf("}", barStart) + 1);
+  assert.match(barRule, /flex-shrink:0;/, "expected a flex-shrink floor, not a fixed height, to stop this row from compressing");
+  assert.doesNotMatch(barRule, /(?:^|[^-])height:|max-height:/, "no fixed/max height - the row should size to its own content");
+});
+
+test("only .splitsMobileLayerLayout (the matrix, which has its own internal scroll) is left shrinkable in the phone column - the toolbar and action tray both opt out", () => {
+  const start = styles.indexOf("@media (max-width:700px){");
+  const columnStart = styles.indexOf("#splitsBlock.mobile-active #splitsArea{", start);
+  assert.notEqual(columnStart, -1);
+  const columnRule = styles.slice(columnStart, styles.indexOf("}", columnStart) + 1);
+  assert.match(columnRule, /flex-direction:column;/);
+  const matrixStart = styles.indexOf("#splitsBlock.mobile-active #splitsArea > .splitsMobileLayerLayout{", start);
+  const matrixRule = styles.slice(matrixStart, styles.indexOf("}", matrixStart) + 1);
+  assert.match(matrixRule, /flex:0 1 auto;/, "expected the matrix to remain the one shrinkable child");
+  const trayStart = styles.indexOf("#splitsBlock.mobile-active #splitsArea > .mobileRecipeActionTray{", start);
+  const trayRule = styles.slice(trayStart, styles.indexOf("}", trayStart) + 1);
+  assert.match(trayRule, /flex:0 0 auto;/);
+});
+
+test("Clear selection/Empty cells/Rearrange get a faint theme-tinted border and a whisper of background on phone, not desktop/tablet's stronger tinted-surface fill", () => {
+  const start = styles.indexOf("@media (max-width:700px){");
+  const sharedStart = styles.indexOf('#splitsArea .splitsEditRowSecondary :is(.bulkTextAction,button.danger){', start);
+  const sharedRule = styles.slice(sharedStart, styles.indexOf("}", sharedStart) + 1);
+  // Sizing/typography only now - no color left in the combined selector.
+  assert.doesNotMatch(sharedRule, /border:|background:|color:/);
+  const quietStart = styles.indexOf("#splitsArea .splitsEditRowSecondary .bulkTextAction{", start);
+  const quietRule = styles.slice(quietStart, styles.indexOf("}", quietStart) + 1);
+  assert.match(quietRule, /border:1px solid color-mix\(in srgb, var\(--recipe-pill-accent\) 25%, var\(--border\)\);/);
+  assert.match(quietRule, /background:color-mix\(in srgb, var\(--recipe-pill-accent\) 10%, transparent\);/);
+  // Lighter than desktop/tablet's 28%-strength fill (recipe-edit-toolbar-pill.test.js).
+  assert.doesNotMatch(quietRule, /28%|45%/);
+});
+
+test("Reset Recipe keeps its own stronger red border/text on phone, unchanged in strength - it must still read as the row's one destructive action next to the three quieter buttons", () => {
+  const start = styles.indexOf("@media (max-width:700px){");
+  const dangerStart = styles.indexOf("#splitsArea .splitsEditRowSecondary button.danger{", start);
+  const dangerRule = styles.slice(dangerStart, styles.indexOf("}", dangerStart) + 1);
+  assert.match(dangerRule, /border:1\.5px solid color-mix\(in srgb, var\(--bad\) 55%, var\(--btn-secondary-border\)\);/);
+  assert.match(dangerRule, /background:transparent;/);
+  assert.match(dangerRule, /color:var\(--bad\);/);
+});
+
+test("Empty cells still dims via the shared :disabled rule when unavailable - untouched by the border/background split above", () => {
+  assert.match(styles, /\.splitsEditRowSecondary \.bulkTextAction:disabled\{\s*\n\s*opacity: \.5;\s*\n\s*\}/);
+});
+
+test("Done keeps its filled primary treatment on phone - only Clear/Empty/Rearrange were asked to get quieter, not the view toggle", () => {
+  assert.doesNotMatch(styles, /@media \(max-width:700px\)\{[\s\S]*?\.recipeViewToggle button\[data-recipe-view="edit"\]\{[^}]*background:\s*(?:none|transparent)/);
+});
+
+test("desktop/tablet toolbar sizing, positioning and colors are untouched by the phone-only changes above", () => {
+  // The >=701px merged-row layout (margin-left:auto pill, flex:1 1 auto
+  // secondary row, tinted-surface fill) still exists verbatim.
+  assert.match(styles, /#splitsArea #splitsBulkBar \.splitsEditRowSecondary \.bulkTextAction,\s*\n\s*#splitsArea #splitsBulkBar \.splitsEditRowSecondary \.splitsRearrangeAction,\s*\n\s*\.splitsEditRowSecondary #resetAllSplits\.danger\{\s*\n\s*min-height: 40px;\s*\n\s*\}/);
+  assert.match(styles, /\.splitsEditRowSecondary \.bulkTextAction,\s*\n\s*\.splitsEditRowSecondary \.splitsRearrangeAction\{[\s\S]*?border: 0;\s*\n\s*background: color-mix\(in srgb, var\(--recipe-pill-accent\) 28%, var\(--panel2\)\);\s*\n\s*color: var\(--text\);/);
+});

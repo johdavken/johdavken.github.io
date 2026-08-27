@@ -794,15 +794,6 @@
   }
   body .workspaceNav .workspaceNavButton[data-step].active .workspaceTileIcon{color:var(--tile-accent)}
 
-  /* Layers (1/3/5) picker: moved out of the retired Line Setup page and the
-     rail expansion alike, into Recipe's own header next to the Summary/Edit
-     view toggle - always visible whenever Recipe is open, no expand needed. */
-  #recipeHeaderControls .recipeLayerCountHost{display:flex;align-items:center;gap:6px}
-  #recipeLayerCountHost .setupControlLabel{color:var(--muted);font-size:var(--font-tiny);font-weight:750;letter-spacing:.08em;text-transform:uppercase}
-  #recipeLayerCountHost .layerCountTiles{display:flex;gap:4px}
-  #recipeLayerCountHost .layerCountTile{width:auto;min-width:0;height:28px;padding:3px 9px}
-  #recipeLayerCountHost .layerCountTile svg{width:20px;height:14px}
-
   /* .recipeHeaderRow's own base rule (styles.css) only forces nowrap +
      shrinkable tabs inside "(max-width:900px), (min-width:901px) and
      (pointer:coarse)" - touch tablets and narrow/mobile widths, covered

@@ -45,10 +45,18 @@ test("mobile gets zero visual footprint from the wrapper - no decorative propert
   assert.doesNotMatch(bare, /border-radius:\s*999px/);
 });
 
-test("Load Next-or-Current and Print adopt the Edit pill's gradient/white-text look, icons recolor for free via currentColor", () => {
+test("Load Next-or-Current and Print adopt the Edit pill's tinted-surface look, icons recolor for free via currentColor", () => {
   const start = styles.indexOf("@media (min-width: 701px){\n  #recipeHeaderActionPill");
   const block = styles.slice(start, styles.indexOf("\n}\n", start) + 2);
-  assert.match(block, /#recipeHeaderActionPill\.recipeHeaderActionPill \.recipeHeaderAction\{\s*\n\s*border: 0;\s*\n\s*background: linear-gradient\(180deg, color-mix\(in srgb, var\(--focus-border\) 88%, white\), color-mix\(in srgb, var\(--focus-border\) 78%, black 6%\)\);\s*\n\s*color: #fff;/);
+  assert.match(block, /#recipeHeaderActionPill\.recipeHeaderActionPill \.recipeHeaderAction\{\s*\n[\s\S]*?border: 0;\s*\n\s*background: color-mix\(in srgb, var\(--recipe-pill-accent\) 28%, var\(--panel2\)\);\s*\n\s*color: var\(--text\);/);
+  // A gradient, then a flat 100%-strength fill with white text, then that
+  // same tint with a matching border added, were all tried and dropped here
+  // in turn - the flat fill read too bright/saturated on several themes
+  // (worst on dark ones), and the border didn't sit cleanly on the fully
+  // round Edit/Done pill this segment matches. --recipe-pill-accent
+  // (styles.css :root, retuned per-theme) now feeds a quiet tinted-surface
+  // fill with no border - see recipe-pill-theme-colors.test.js.
+  assert.doesNotMatch(block, /#recipeHeaderActionPill\.recipeHeaderActionPill \.recipeHeaderAction\{[\s\S]*?linear-gradient/);
   // .recipeActionIcon already uses stroke:currentColor (styles.css), so no
   // icon markup change is needed for the recolor - just documenting the
   // dependency so it isn't accidentally broken.

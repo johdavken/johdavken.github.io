@@ -145,7 +145,7 @@ test("bulk edit still needs the letter - it's the tap target for selecting an en
 
 // --- Layer % + Copy: mockup option 10, "minimal ghost, no chip borders" ---
 
-test("the layer header becomes a grid pairing the percentage and Copy side by side, with the always-present running total spanning full width beneath both", () => {
+test("the layer header becomes a grid pairing the percentage and Copy side by side - the running total row is dropped on mobile entirely", () => {
   const mobileStart = styles.indexOf("@media (max-width: 700px){");
   assert.notEqual(mobileStart, -1);
   const mobileBlock = styles.slice(mobileStart, styles.indexOf("\n}\n", mobileStart));
@@ -154,12 +154,18 @@ test("the layer header becomes a grid pairing the percentage and Copy side by si
   const rule = mobileBlock.slice(ruleStart, mobileBlock.indexOf("}", ruleStart) + 1);
   assert.match(rule, /display: grid;/);
   assert.match(rule, /grid-template-columns: auto 1fr;/);
-  assert.match(rule, /grid-template-areas: "pct copy" "total total";/);
-  // The running total is live working data (a compact "Total 100%"), not a
-  // validation message - it always renders, so it gets a permanent grid
-  // area rather than the old hidden-when-valid row. The verbose explanation
-  // of an off total still lives only in the notification bell.
-  assert.match(mobileBlock, /\.splitColumnTotal\{ grid-area: total; margin-top: 0; \}/);
+  assert.match(rule, /grid-template-areas: "pct copy";/);
+  assert.doesNotMatch(rule, /total/);
+  // Hopper 1 is auto-derived from Hoppers 2-6 (recomputeAutoH1, app.js), so
+  // this readout almost always just repeats "100%" back at the operator -
+  // the one time it wouldn't (H2-H6 over-allocated) is already surfaced by
+  // the Recipe panel's Ready/N-error status pill and the notification
+  // bell's invalidLayers list, both real validation surfaces this element
+  // itself never was (app.js's own comment on it: "live working data, not
+  // a validation message"). Tablet/desktop keep it (styles.css, the base
+  // non-mobile .splitColumnTotal rule) - only mobile drops it, to reclaim
+  // the row it used to occupy.
+  assert.match(mobileBlock, /\.splitColumnTotal\{ display: none; \}/);
 });
 
 test("the grid display is scoped specifically enough to beat .splitsMatrix [data-layer-column].mobile-layer-active (shared with <td> body cells) - otherwise this silently stays display:table-cell", () => {
@@ -176,7 +182,23 @@ test("a layer with no copy source (e.g. Layer B at 3 layers) collapses to a sing
   assert.notEqual(ruleStart, -1);
   const rule = mobileBlock.slice(ruleStart, mobileBlock.indexOf("}", ruleStart) + 1);
   assert.match(rule, /grid-template-columns: 1fr;/);
-  assert.match(rule, /grid-template-areas: "pct" "total";/);
+  assert.match(rule, /grid-template-areas: "pct";/);
+});
+
+test("tablet and desktop keep the per-layer hopper Total exactly as before - only the mobile block above touches .splitColumnTotal", () => {
+  // The base (theme-agnostic) rule, outside any media query, is what
+  // tablet/desktop actually render - untouched by the mobile removal.
+  assert.match(styles, /^\.splitColumnTotal\{/m);
+  const baseStart = styles.search(/^\.splitColumnTotal\{/m);
+  const baseRule = styles.slice(baseStart, styles.indexOf("}", baseStart) + 1);
+  assert.doesNotMatch(baseRule, /display:\s*none/);
+  assert.match(styles, /^\.splitColumnTotal\.warn\{ color: var\(--warn\); \}/m);
+  // The three >=701px-scoped .splitColumnTotal rules (touch tablet, wide
+  // desktop, short-tablet) are unaffected - none sits inside max-width:700px.
+  const mobileStart = styles.indexOf("@media (max-width: 700px){");
+  const mobileBlock = styles.slice(mobileStart, styles.indexOf("\n}\n", mobileStart));
+  const touchCount = (mobileBlock.match(/#splitsArea \.splitsMatrix \.splitColumnTotal\{/g) || []).length;
+  assert.equal(touchCount, 0, "the tablet/desktop-scoped selector must not appear inside the phone block");
 });
 
 test("neither the percentage nor Copy has a chip background/border any more - the percentage reads as an inline-edit field via its own focus-colored underline, Copy is plain link-style text, and a single light divider sits under the whole row instead", () => {

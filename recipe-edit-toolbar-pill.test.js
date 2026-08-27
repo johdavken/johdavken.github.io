@@ -145,24 +145,29 @@ test("the mobile Redo-hiding rule is repointed to a bare #recipeRedo, since .rec
   assert.doesNotMatch(styles, /#splitsArea \.splitsEditRowSecondary #recipeRedo/);
 });
 
-test("every non-danger pill segment (Clear selection/Empty cells/Rearrange) shares the identical gradient the header pill uses, matching Print Recipe's font treatment", () => {
-  assert.match(styles, /\.splitsEditRowSecondary \.bulkTextAction,\s*\n\s*\.splitsEditRowSecondary \.splitsRearrangeAction\{[\s\S]*?background: linear-gradient\(180deg, color-mix\(in srgb, var\(--focus-border\) 88%, white\), color-mix\(in srgb, var\(--focus-border\) 78%, black 6%\)\);\s*\n\s*color: #fff;[\s\S]*?font-size: var\(--font-small\);\s*\n\s*text-transform: none;\s*\n\s*letter-spacing: normal;/);
+test("every non-danger pill segment (Clear selection/Empty cells/Rearrange) shares the identical tinted-surface fill the header pill uses, matching Print Recipe's font treatment", () => {
+  assert.match(styles, /\.splitsEditRowSecondary \.bulkTextAction,\s*\n\s*\.splitsEditRowSecondary \.splitsRearrangeAction\{[\s\S]*?border: 0;\s*\n\s*background: color-mix\(in srgb, var\(--recipe-pill-accent\) 28%, var\(--panel2\)\);\s*\n\s*color: var\(--text\);[\s\S]*?font-size: var\(--font-small\);\s*\n\s*text-transform: none;\s*\n\s*letter-spacing: normal;/);
 });
 
-test("the gradient/color/radius rule reaches #clearSplitSelection via a descendant combinator, not a direct-child one that would skip it - it's now the pill's leftmost segment", () => {
+test("the fill/color/radius rule reaches #clearSplitSelection via a descendant combinator, not a direct-child one that would skip it - it's now the pill's leftmost segment", () => {
   assert.doesNotMatch(styles, /\.splitsEditRowSecondary > \.bulkTextAction\{\s*\n\s*border-radius: var\(--control-radius\);/);
 });
 
-test("Reset Recipe keeps a red fill - same gradient formula, var(--bad) swapped in for var(--focus-border) - not the shared blue", () => {
+test("Reset Recipe keeps a red-tinted fill - same var(--recipe-pill-danger) token, not the shared blue var(--recipe-pill-accent)", () => {
   // .splitsEditRowSecondary #resetAllSplits.danger{ also appears earlier as
   // one of several selectors in the plain min-height:40px sizing rule -
   // anchor on the fill rule's own border-radius declaration to land on the
   // right occurrence.
   const landmark = styles.indexOf(".splitsEditRowSecondary #resetAllSplits.danger{\n    border-radius: var(--control-radius);");
   assert.notEqual(landmark, -1, "expected the danger fill rule");
-  const resetRule = styles.slice(landmark, styles.indexOf("background: linear-gradient(180deg, color-mix(in srgb, var(--bad)", landmark) + 200);
-  assert.match(resetRule, /background: linear-gradient\(180deg, color-mix\(in srgb, var\(--bad\) 88%, white\), color-mix\(in srgb, var\(--bad\) 78%, black 6%\)\);\s*\n\s*color: #fff;/);
-  assert.doesNotMatch(resetRule, /var\(--focus-border\)/);
+  const resetRule = styles.slice(landmark, styles.indexOf("background: color-mix(in srgb, var(--recipe-pill-danger)", landmark) + 250);
+  assert.match(resetRule, /border: 0;\s*\n\s*background: color-mix\(in srgb, var\(--recipe-pill-danger\) 28%, var\(--panel2\)\);\s*\n\s*color: var\(--text\);/);
+  assert.doesNotMatch(resetRule, /var\(--recipe-pill-accent\)|var\(--focus-border\)/);
+});
+
+test("neither pill segment fill is a gradient anymore - a vertical gradient looked good in some themes but read as a mismatched glossy skin in others; a tinted color-mix(var(--recipe-pill-accent)/var(--recipe-pill-danger), var(--panel2)) fill (styles.css :root, retuned per-theme) replaced both - see recipe-pill-theme-colors.test.js", () => {
+  const block = pillBlock();
+  assert.doesNotMatch(block, /linear-gradient/);
 });
 
 test("disabled segments dim to the shared .5 opacity", () => {
@@ -172,7 +177,7 @@ test("disabled segments dim to the shared .5 opacity", () => {
 test("Clear/Empty/Rearrange keep their fill on hover, double-id guaranteed against an old unscoped hover rule (still needed for Weights' own separate bulk-actions row) that sets background:transparent - that rule only tied our old hover rule's specificity for `color`, and since our old rule never redeclared `background` at all, the leftover rule's transparent background applied uncontested on hover, silently dropping the fill for every segment except Reset (safe only because its own selector happens to include an id)", () => {
   assert.match(styles, /\.splitsBulkActions \.bulkTextAction:hover,\s*\n\.weightsBulkActions \.bulkTextAction:hover,\s*\n\.splitsEditRowSecondary > \.bulkTextAction:hover:not\(:disabled\)\{color:var\(--title\);border-color:var\(--title\);background:transparent;text-decoration:none\}/, "expected the old leftover rule to still exist - it's shared with Weights, not deletable");
   const block = pillBlock();
-  assert.match(block, /#splitsArea #splitsBulkBar \.splitsEditRowSecondary \.bulkTextAction:hover:not\(:disabled\),\s*\n\s*#splitsArea #splitsBulkBar \.splitsEditRowSecondary \.splitsRearrangeAction:hover:not\(:disabled\)\{\s*\n\s*background: linear-gradient\(180deg, color-mix\(in srgb, var\(--focus-border\) 88%, white\), color-mix\(in srgb, var\(--focus-border\) 78%, black 6%\)\);\s*\n\s*color: #fff;\s*\n\s*filter: brightness\(1\.08\);\s*\n\s*\}/, "expected the double-id hover rule to explicitly reassert the fill, not just color/filter");
+  assert.match(block, /#splitsArea #splitsBulkBar \.splitsEditRowSecondary \.bulkTextAction:hover:not\(:disabled\),\s*\n\s*#splitsArea #splitsBulkBar \.splitsEditRowSecondary \.splitsRearrangeAction:hover:not\(:disabled\)\{\s*\n\s*background: color-mix\(in srgb, var\(--recipe-pill-accent\) 28%, var\(--panel2\)\);\s*\n\s*color: var\(--text\);\s*\n\s*filter: brightness\(1\.08\);\s*\n\s*\}/, "expected the double-id hover rule to explicitly reassert the fill, not just color/filter");
 });
 
 test("segments are separated by a real 2px gap, not a border-right divider - a divider line needs contrast tuning per theme/state and still read as too faint once tried in both white and black; a gap is always visible since it's just page background showing through, and needs no per-theme tuning at all", () => {

@@ -66,6 +66,14 @@
   --focus-border: rgba(74,163,255,.80);
   --focus-ring: rgba(74,163,255,.16);
 
+  /* Recipe pill segments (header Edit/Done + Load Next/Print, and the Edit
+     toolbar's Clear/Empty/Reset/Rearrange row) fill from these two tokens
+     rather than reading --focus-border/--bad directly, so a theme can retune
+     just these buttons without touching its global accent/error colors used
+     everywhere else. Default = the same tokens they always used. */
+  --recipe-pill-accent: var(--focus-border);
+  --recipe-pill-danger: var(--bad);
+
   /* -------------------------------------------------------------------
    *     Density tokens (default = Comfort)
    *     ------------------------------------------------------------------- */
@@ -309,10 +317,6 @@ main{
 .mobileWorkspaceSyncStatus{ display:none; }
 .desktopRailMetric{ display:none!important; }
 .mobileLineRateReadout{display:none}
-/* The layer-count picker's permanent home once it moved out of the retired
-   Line Setup page - Recipe's own header, desktop-only (the compact mobile
-   recipe has no equivalent control). */
-.recipeLayerCountHost{ display:none; }
 
 /* Shared everywhere the rail itself renders (mobile home tile grid and the
    desktop sidebar alike) - each context only toggles display and the
@@ -2700,10 +2704,23 @@ details[open] > summary .chevSatellite{
 #recipeHeaderControls .recipeViewToggle button[data-weight-view="edit"]{
   gap: 6px;
   padding: 6px 14px 6px 11px;
+  /* A solid var(--recipe-pill-accent) fill + white text read fine on some
+     themes but far too saturated/bright on others (worst on dark themes,
+     where a full-strength accent fill glows against the dark surface) -
+     Rose Pine Light was the one theme this always looked right on, purely
+     because its own accent happens to sit at a similar strength to this
+     formula already. Tinted-surface fill + normal foreground text is the
+     theme-agnostic version of that same look: quiet everywhere instead of
+     accidentally-quiet on one theme. A matching ~45%-strength border was
+     tried alongside the tint but didn't sit cleanly on this fully round
+     (border-radius:999px) pill - a 1px solid border doesn't trace a tight
+     radius as cleanly as it does the toolbar's own var(--control-radius)
+     corners, so it's dropped here; the tint alone still reads as a
+     distinct, quiet fill without it. */
   border: 0;
   border-radius: 999px;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--focus-border) 88%, white), color-mix(in srgb, var(--focus-border) 78%, black 6%));
-  color: #fff;
+  background: color-mix(in srgb, var(--recipe-pill-accent) 28%, var(--panel2));
+  color: var(--text);
   font-weight: 850;
   letter-spacing: .03em;
   box-shadow: none;
@@ -2740,10 +2757,23 @@ details[open] > summary .chevSatellite{
    visible since it's just page background showing through.
    Quick reference for future edits to this group:
    - To add/remove a segment: nothing here needs to change. Every segment
-     keeps painting its OWN copy of the identical gradient (this is
-     deliberate - a vertical 2-stop gradient looks seamless across
-     horizontally adjacent segments no matter which ones are hidden or
-     disabled, so segments never need to coordinate a shared background).
+     keeps painting its OWN copy of the identical tinted-surface fill (this
+     is deliberate - a shared background looks seamless across horizontally
+     adjacent segments no matter which ones are hidden or disabled, so
+     segments never need to coordinate a shared background). Two earlier
+     fill treatments were tried and dropped: a vertical gradient read as a
+     glossy button-skin effect that didn't survive contact with every
+     theme's palette, and a flat 100%-strength var(--recipe-pill-accent)
+     fill (color:#fff) was better but still glowed far too bright on dark
+     themes, with Rose Pine Light the one theme it happened to look right
+     on. color-mix(var(--recipe-pill-accent) 28%, var(--panel2)) + var(--text)
+     (not white) is quiet on every theme by construction, not by
+     coincidence - --recipe-pill-accent/--recipe-pill-danger (styles.css
+     :root, retuned per-theme in theme.css/gruvbox blocks) still do the
+     per-theme work underneath it. A matching tinted border was tried
+     alongside the fill but didn't sit cleanly on the fully round
+     (border-radius:999px) Edit/Done pill it shares a look with - dropped
+     everywhere here too rather than mismatch pill vs. segment borders.
    - Each segment carries its own border-radius (var(--control-radius), the
      app's standard button corner) now that they're not touching edge to
      edge - see .recipeViewToggle/.recipeHeaderAction below.
@@ -2755,9 +2785,8 @@ details[open] > summary .chevSatellite{
      which is declared first.
    - Mobile (<=700px) must stay pixel-identical to the solo Edit pill - see
      the bare #recipeHeaderActionPill rule just below, and everything
-     decorative (rounding, gradient fill, gap, inset focus ring) is scoped
-     inside min-width:701px. Do not move any of that outside the media
-     query.
+     decorative (rounding, fill, gap, inset focus ring) is scoped inside
+     min-width:701px. Do not move any of that outside the media query.
    - A visually-empty .recipeHeaderActions (no planned Next AND Print
      force-hidden by .rearrangeDesktopOnly, tablet-only) no longer needs a
      special-case guard: the old divider was a border+padding that still
@@ -2797,15 +2826,17 @@ details[open] > summary .chevSatellite{
     border-radius: var(--control-radius);
   }
   #recipeHeaderActionPill.recipeHeaderActionPill .recipeHeaderAction{
+    /* Tinted-surface fill, not a solid accent fill - see the matching
+       comment on the Edit/Done pill above for why. A matching tinted border
+       was tried and dropped (see that same comment). */
     border: 0;
-    background: linear-gradient(180deg, color-mix(in srgb, var(--focus-border) 88%, white), color-mix(in srgb, var(--focus-border) 78%, black 6%));
-    color: #fff;
+    background: color-mix(in srgb, var(--recipe-pill-accent) 28%, var(--panel2));
+    color: var(--text);
     text-transform: none;
     letter-spacing: normal;
   }
   #recipeHeaderActionPill.recipeHeaderActionPill .recipeHeaderAction:hover:not(:disabled){
-    border-color: transparent;
-    color: #fff;
+    color: var(--text);
     filter: brightness(1.08);
   }
   #recipeHeaderActionPill.recipeHeaderActionPill .recipeHeaderAction:disabled{
@@ -3333,11 +3364,32 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
   /* Overrides the base three-column grid: this layout is two stacked rows
      that each manage their own flex flow. */
   #splitsArea > .splitsBulkBar{ order: -1; display: block; min-height: 0; margin: 0 0 2px; }
-  /* Row/column select headers are how a whole hopper row or layer column
-     gets selected, so the header column comes back in Edit. The base rule
-     hides it whenever .bulk-editing is absent, which desktop no longer
-     sets (that class is now compact-mobile-only). */
-  #splitsArea[data-recipe-view="edit"] .splitsMatrix tr > :first-child{ display: table-cell; }
+  /* The row gutter (Select row / per-row numbers) is a PERMANENT structural
+     column at every width that reaches this block, not just in Edit - the
+     base rule hides it whenever .bulk-editing is absent, which desktop/
+     tablet never set (that class is compact-mobile-only), so without this
+     override the column disappeared outside Edit and Columns A-E shifted
+     left to fill the gap. Unconditional now (was [data-recipe-view="edit"]
+     only) so Summary keeps the exact same column, just with the "Select
+     row" label and interactive styling withheld (see corner/.splitRowSelect
+     rules and app.js) rather than the column itself removed. Explicit width
+     (not left to size from its own content) because "Select row" and a
+     blank Summary label are different widths, and the five-layer-rail's own
+     1062px is literally this 70px gutter + five 198px layer tracks + 2
+     border px (styles.css, --recipe-five-layer-rail) - the desktop rail was
+     always sized assuming this column exists, so hiding it in Summary was
+     what created the dead space on the right, not the other way around.
+     #splitsBlock #splitsArea-prefixed (double-id): the base hiding rule is
+     "#splitsArea:not(.bulk-editing) .splitsMatrix tr > :first-child" - the
+     :not() adds a class-level specificity point, so a single #splitsArea
+     prefix here only ties it (and loses on source order, since the base
+     rule comes later in the file) rather than beating it outright. */
+  #splitsBlock #splitsArea .splitsMatrix tr > :first-child{
+    display: table-cell;
+    min-width: 70px;
+    width: 70px;
+    max-width: 70px;
+  }
   .splitsEditRow{ display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
   .splitsEditRowSecondary{
     margin-top: 8px;
@@ -3565,13 +3617,23 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
        (this row AND .splitsBulkActions), or the shorter segments' painted
        background floats centered with gaps and the outline turns jagged -
        the exact bug already fixed once on the header pill.
-     - every segment paints the identical gradient (color-mix, not a fixed
-       hex) already used by the header pill, except Reset Recipe which
-       swaps in var(--bad) for var(--focus-border) - same formula, red
-       instead of blue, so it stays visually a filled segment (not a
-       transparent hole in the pill) while still reading as the row's one
-       destructive action, and remains theme-appropriate since it reads
-       the theme's own token rather than a hardcoded color.
+     - every segment paints the identical tinted-surface fill already used
+       by the header pill (color-mix(var(--recipe-pill-accent) 28%,
+       var(--panel2)), var(--text) for the label - not white, no border),
+       except Reset Recipe which reads var(--recipe-pill-danger) instead -
+       same formula, red instead of blue, so it stays visually a filled
+       segment (not a transparent hole in the pill) while still reading as
+       the row's one destructive action. Both tokens default to
+       --focus-border/--bad (styles.css :root) but a theme can retune just
+       these two buttons without touching its global accent/error colors -
+       see the industrial-slate/gruvbox overrides. Three earlier fill
+       treatments were tried and dropped here first: a vertical gradient; a
+       100%-strength flat fill with white text, which read too bright/
+       saturated on several themes (dark themes worst of all); and this
+       same tint with a matching ~45%-strength border added, which didn't
+       sit cleanly on the header's fully round (border-radius:999px)
+       Edit/Done pill - dropped from every segment here too rather than
+       mismatch pill vs. segment borders.
      - nothing in this row is ever [hidden] (only ever :disabled), so
        dividers are plain :not(:last-child) - no :has() empty-group guard
        needed like the header pill required for its hideable segments.
@@ -3642,9 +3704,13 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
        app's standard button corner, so these read as a cohesive row of
        chips rather than plain rectangles. */
     border-radius: var(--control-radius);
+    /* Tinted-surface fill, not a solid accent fill - see the matching
+       comment on the header Edit/Done pill (styles.css, near
+       --recipe-pill-accent's :root declaration) for why. A matching tinted
+       border was tried and dropped (see that same comment). */
     border: 0;
-    background: linear-gradient(180deg, color-mix(in srgb, var(--focus-border) 88%, white), color-mix(in srgb, var(--focus-border) 78%, black 6%));
-    color: #fff;
+    background: color-mix(in srgb, var(--recipe-pill-accent) 28%, var(--panel2));
+    color: var(--text);
     /* Matching Print Recipe's own treatment (the header pill's .recipeHeaderAction,
        which never adopted the app's uppercase/letter-spaced button-text
        convention) rather than the "quiet" outlined buttons' uppercase
@@ -3662,8 +3728,8 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
   .splitsEditRowSecondary #resetAllSplits.danger{
     border-radius: var(--control-radius);
     border: 0;
-    background: linear-gradient(180deg, color-mix(in srgb, var(--bad) 88%, white), color-mix(in srgb, var(--bad) 78%, black 6%));
-    color: #fff;
+    background: color-mix(in srgb, var(--recipe-pill-danger) 28%, var(--panel2));
+    color: var(--text);
     font-size: var(--font-small);
     text-transform: none;
     letter-spacing: normal;
@@ -3686,12 +3752,12 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
      background reasserts the fill outright rather than tying again. */
   #splitsArea #splitsBulkBar .splitsEditRowSecondary .bulkTextAction:hover:not(:disabled),
   #splitsArea #splitsBulkBar .splitsEditRowSecondary .splitsRearrangeAction:hover:not(:disabled){
-    background: linear-gradient(180deg, color-mix(in srgb, var(--focus-border) 88%, white), color-mix(in srgb, var(--focus-border) 78%, black 6%));
-    color: #fff;
+    background: color-mix(in srgb, var(--recipe-pill-accent) 28%, var(--panel2));
+    color: var(--text);
     filter: brightness(1.08);
   }
   .splitsEditRowSecondary #resetAllSplits.danger:hover:not(:disabled){
-    color: #fff;
+    color: var(--text);
     filter: brightness(1.08);
   }
   .splitsEditRowSecondary .bulkTextAction:disabled{
@@ -3730,15 +3796,14 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     display: none;
   }
 
-  /* Edit exposes the row-selector track (Select row + per-row numbers).
-     Summary has nothing to put there - row selection only exists in Edit -
-     so the column collapses instead of sitting empty. Layer columns shift
-     left by the track's width when toggling views; matching the touch
-     layout below, which never reserves this column at all, matters more
-     than holding the x-position steady across an infrequent view switch. */
-  #splitsArea[data-recipe-view="summary"] .splitsMatrix tr > :first-child{
-    display: none;
-  }
+  /* The row gutter used to collapse entirely in Summary here (deliberately,
+     per the removed comment that lived on this rule) because "row selection
+     only exists in Edit." That traded a stable x-position for saving the
+     gutter's width whenever Summary was showing - Columns A-E shifted left
+     by the track's width on every view toggle. The shared >=701px rule
+     above now reserves this column permanently in both views (Select row
+     appears/disappears, the column doesn't), so nothing desktop-specific is
+     needed here any more. */
 
   /* Desktop cell states - option 3 from the comparison. Tracking is a
      persistent property, so it changes the hopper badge and spells out the
@@ -4152,16 +4217,27 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
   .splitsMatrix th.splitLayerHeader.mobile-layer-active{
     display: grid;
     grid-template-columns: auto 1fr;
-    grid-template-areas: "pct copy" "total total";
+    grid-template-areas: "pct copy";
     align-items: center;
     gap: 8px;
     padding-bottom: 8px;
     border-bottom: 1px solid var(--border);
   }
-  .splitColumnTotal{ grid-area: total; margin-top: 0; }
+  /* Mobile never shows the per-layer hopper Total that tablet/desktop keep
+     (styles.css - the base, non-mobile .splitColumnTotal rule is untouched)
+     - Hopper 1 is auto-derived from Hoppers 2-6 (recomputeAutoH1, app.js),
+     so this readout almost always just repeats "100%" back at the
+     operator. The one time it would matter - H2-H6 over-allocated, forcing
+     H1 to clamp to 0 - is already surfaced by the Recipe panel's own
+     Ready/N-error status pill and the notification bell's invalidLayers
+     list, both real validation surfaces. app.js's own comment on this
+     element already calls it "live working data, not a validation
+     message" - the row it used to occupy is worth more on a phone than a
+     third copy of that number. */
+  .splitColumnTotal{ display: none; }
   .splitsMatrix th.splitLayerHeader.noCopy.mobile-layer-active{
     grid-template-columns: 1fr;
-    grid-template-areas: "pct" "total";
+    grid-template-areas: "pct";
   }
   .splitLayerMain{
     grid-area: pct;
@@ -4359,14 +4435,9 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     line-height:18px;
   }
   .splitsMatrix.compactMobileRecipe .splitLayerPct span{ color:var(--muted); font-size:9px; }
-  .splitsMatrix.compactMobileRecipe .splitColumnTotal{
-    margin-top:1px;
-    min-height:1.1em;
-    color:color-mix(in srgb,var(--muted) 68%,transparent);
-    font-size:8px;
-    line-height:1.1;
-  }
-  .splitsMatrix.compactMobileRecipe .splitColumnTotal.warn{ color:var(--warn); font-weight:900; opacity:1; }
+  /* No .splitColumnTotal sizing/colour here - the element is display:none
+     on mobile (see .splitColumnTotal above), so nothing would ever read
+     these. */
   .splitsMatrix.compactMobileRecipe .splitCopyBtn{
     display:grid;
     place-items:center;
@@ -6401,16 +6472,47 @@ button.compactAction{
   #splitsArea > .splitsBulkBar{
     position:static;
     order:-1;
-    display:block;
-    flex:0 0 auto;
+    /* flex, not block: .recipeEditHistory (Undo) and .splitsEditRowSecondary
+       (Clear selection/Empty cells/Reset Recipe/Rearrange) are DOM siblings
+       here, not nested - see the #recipeRedo comment below, left from when
+       Undo/Redo moved out of .splitsEditRowSecondary for the desktop pill
+       merge. A block parent stacked every child (Primary, Undo, the toolbar)
+       on its own line regardless, stranding Undo alone between two rows -
+       flex-wrap lets Primary force its own full-width row (flex:1 1 100%
+       below) while Undo and the toolbar flow onto the shared row after it,
+       which is what "one row of Undo + wrapping toolbar buttons" actually
+       requires. */
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    /* #splitsArea is itself a flex column on phones (see #splitsBlock.
+       mobile-active #splitsArea below), sized to whatever's left of the
+       viewport after the header/tabs. Without an explicit flex-shrink:0
+       here this row was still shrinkable (the flex default), so on a short
+       phone the column would compress it below its own wrapped content's
+       real height instead of shrinking .splitsMobileLayerLayout (the
+       matrix, which already has its own internal scroll to absorb exactly
+       that) - the toolbar's own buttons would then paint past its shrunk
+       box, overlapping the matrix below it. flex-shrink:0 makes this row's
+       natural content height a hard floor; the matrix is the only part of
+       this column still expected to give up space. */
+    flex-shrink:0;
     min-height:0;
     margin:0;
     padding:4px 5px;
-    border-radius:var(--control-radius);
+    /* No outer panel look on phones - unlike the tablet/desktop toolbar,
+       which keeps the card border+fill (base .splitsBulkBar rule) it sits
+       inside of a roomier layout. Border-radius has nothing left to round
+       once border/background are gone, so it's dropped here rather than
+       left as dead styling. */
+    border:0;
+    border-radius:0;
+    background:none;
   }
   #splitsArea > .splitsBulkBar.hide{display:none}
   #splitsArea .splitsEditRow{gap:3px}
   #splitsArea .splitsEditRowPrimary{
+    flex:1 1 100%;
     display:grid;
     grid-template-columns:minmax(0,1.15fr) minmax(0,.9fr) auto;
     align-items:stretch;
@@ -6458,24 +6560,27 @@ button.compactAction{
     line-height:1.1;
     white-space:nowrap;
   }
-  /* Undo/Redo, the selection status, Select all/Clear selection/Empty
-     cells, and Reset Recipe used to be forced onto one non-wrapping row at
-     this width, which crushed every label down to 8px type in 22px
-     buttons - well under the 28px+ touch target every other bulkTextAction
-     pill in the app gets (see .splitsTrackingBar/.mobileWeightsBulkBar).
-     Wrapping instead keeps the same controls at a readable, consistently
-     sized touch target, matching the pill treatment used everywhere else
-     bulk selection actions appear. Reset Recipe - the one destructive
-     action here - gets its own full-width row below a divider so it never
-     sits pressed up against Empty cells/Clear selection at pill spacing. */
+  /* Undo, the selection status, Clear selection/Empty cells, and Reset
+     Recipe all flow onto one shared row (wrapping as needed) rather than a
+     non-wrapping single line, which would crush every label down to 8px
+     type in 22px buttons - well under the 28px+ touch target every other
+     bulkTextAction pill in the app gets (see .splitsTrackingBar/
+     .mobileWeightsBulkBar). flex:1 1 auto lets this row claim whatever
+     width Undo (flex:0 0 auto, .recipeEditHistory's own base rule) doesn't
+     need on their shared line, with its own contents still free to wrap
+     beneath that if they don't all fit - see .splitsBulkBar's own
+     flex-wrap above. No more margin-top/padding-top divider: that spacing
+     assumed this row always started below Undo on its own line, which is
+     no longer guaranteed once they can share one. */
   #splitsArea .splitsEditRowSecondary{
+    flex:1 1 auto;
     display:flex;
     flex-wrap:wrap;
     align-items:center;
     gap:6px 4px;
     min-width:0;
-    margin-top:8px;
-    padding-top:8px;
+    margin-top:0;
+    padding-top:0;
   }
   /* Redo is dropped on phones - not desktop - purely to buy width. Undo,
      Clear selection, Empty cells, and Rearrange are what an operator
@@ -6512,10 +6617,7 @@ button.compactAction{
     width:auto;
     min-height:28px;
     padding:4px 9px;
-    border:1.5px solid var(--btn-secondary-border);
     border-radius:2px;
-    background:transparent;
-    color:var(--btn-text);
     font-size:var(--font-tiny);
     font-weight:750;
     line-height:1.1;
@@ -6523,6 +6625,18 @@ button.compactAction{
     letter-spacing:.03em;
     box-shadow:none;
     white-space:nowrap;
+  }
+  /* Clear selection/Empty cells/Rearrange: a faint theme-tinted border and
+     a whisper of background, not desktop/tablet's stronger tinted-surface
+     fill (styles.css, --recipe-pill-accent's :root declaration) - mobile
+     stays visually lighter throughout, these three just need to read as
+     tappable, not as filled buttons. Reset Recipe (button.danger, below)
+     keeps its own separate, stronger red border/text so it still reads as
+     the row's one destructive action next to these quieter three. */
+  #splitsArea .splitsEditRowSecondary .bulkTextAction{
+    border:1px solid color-mix(in srgb, var(--recipe-pill-accent) 25%, var(--border));
+    background:color-mix(in srgb, var(--recipe-pill-accent) 10%, transparent);
+    color:var(--btn-text);
   }
   /* Clear selection's label is the long pole - tightened just enough
      (alongside Empty cells/Rearrange) that all three still clear a 320px
@@ -6546,7 +6660,14 @@ button.compactAction{
      100px chrome estimate below. Still reads as the one destructive action
      via its red border/text, just without the dedicated row. */
   #splitsArea .splitsEditRowSecondary button.danger{
-    border-color:color-mix(in srgb, var(--bad) 55%, var(--btn-secondary-border));
+    /* Its own full border/background now that the shared .bulkTextAction
+       rule above no longer carries either - kept at the same strength Reset
+       always had here (1.5px, transparent fill), deliberately a shade
+       stronger than Clear/Empty/Rearrange's new faint tint so it still
+       reads as the row's one destructive action, not just another quiet
+       button that happens to be red. */
+    border:1.5px solid color-mix(in srgb, var(--bad) 55%, var(--btn-secondary-border));
+    background:transparent;
     color:var(--bad);
   }
 
@@ -7359,6 +7480,12 @@ body[data-theme="gruvbox-dark"]{
   --gruv-aqua:#82a78b;
   --gruv-blue:#7b9e9a;
   --gruv-purple:#ae8d80;
+  /* The Recipe pill's non-danger segments fill from --focus-border, which
+     resolves to this theme's yellow (theme.css) - too close to the app's
+     shared --warn/caution color to read as a neutral action. Swap in the
+     theme's own desaturated green instead, already used elsewhere here
+     (rtLayerGreen, the Production Totals tile accent). */
+  --recipe-pill-accent: var(--gruv-green);
 }
 body[data-theme="gruvbox-light"]{
   --gruv-red:#cc241d;
@@ -7368,6 +7495,7 @@ body[data-theme="gruvbox-light"]{
   --gruv-aqua:#427b58;
   --gruv-blue:#076678;
   --gruv-purple:#8f3f71;
+  --recipe-pill-accent: var(--gruv-green);
 }
 
 /* =======================================================================
@@ -8279,6 +8407,25 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
 .displaySheetPanel{display:grid;gap:15px;padding:18px}
 .displaySheetPanel > label{display:grid;gap:6px;margin:0;color:var(--muted);font-size:12px;font-weight:750}
 .displaySheetPanel select{width:100%;min-height:44px}
+/* The manual layer-count fallback (#setupLayerCountGroup, relocated here by
+   placeProductionControlsForLayout() in app.js). Empty and collapses to
+   nothing whenever a linked RT Sync line dictates the layer count -
+   .setupLayerCountGroup's own [hidden] attribute (set by applyLayerCountLock)
+   already does that with no CSS needed here, since nothing in this file
+   redeclares display for .setupControlGroup/.setupLayerCountGroup outside
+   #lineSetupBlock to fight the native [hidden] default. Only the label/tile
+   look needs restating for this context - .setupControlLabel and
+   .layerCountTiles/.layerCountTile are otherwise only styled scoped to
+   #lineSetupBlock (their original home) or the now-removed Recipe-header
+   host. */
+.displaySheetLayerHost .setupControlLabel{
+  display:block;
+  margin-bottom:6px;
+  color:var(--muted);
+  font-size:12px;
+  font-weight:750;
+}
+.displaySheetLayerHost .layerCountTiles{ gap:8px; }
 .displaySheetHead{display:flex;align-items:center;justify-content:flex-start;gap:12px;padding-bottom:11px;border-bottom:1px solid var(--border)}
 .displaySheetHead strong{display:block;color:var(--title);font-size:18px}
 .displaySheetHead small{display:block;margin-top:2px;color:var(--muted);font-size:11px}
@@ -8708,6 +8855,17 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
     height:18px;
     margin-left:auto;
     color:var(--muted);
+    /* This chevron never picked up the desktop version's own fill:none/
+       stroke:currentColor (styles.css, .workspaceNavMoreChev inside the
+       901+pointer:fine block) - with neither declared, the bare <path>
+       fell back to the SVG spec default (fill:black, no stroke), so it
+       rendered as a solid black arrowhead on every theme instead of a
+       themed outline chevron matching the icons beside it. */
+    fill:none;
+    stroke:currentColor;
+    stroke-width:2;
+    stroke-linecap:round;
+    stroke-linejoin:round;
     transition:transform .18s ease;
   }
   body[data-mobile-workspace="home"] .workspaceNav.navExpanded .workspaceNavMoreChev{transform:rotate(180deg)}
@@ -9605,10 +9763,30 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
     box-shadow:0 0 0 1px color-mix(in srgb,var(--tablet-track-accent) 32%,transparent);
   }
 
-  /* Tablet headers now use the phone matrix's compact inline hierarchy:
-     small layer letter, dominant percentage, quiet total and Match action.
-     This replaces the desktop 64px faded watermark without reducing any
-     information or changing the hopper rows below it. */
+  /* Four-character percentages such as 61.5 need a few more pixels than
+     the desktop field allowed. Take those pixels from the editor's empty
+     inter-column gap, keeping the cell's overall horizontal footprint
+     unchanged. */
+  #splitsArea .splitsMatrix .splitCellEditor{ gap:3px; }
+  #splitsArea .splitsMatrix .splitPctControl input{
+    width:44px;
+    padding-inline:0;
+  }
+}
+
+/* The layer header's compact inline hierarchy (small layer letter, dominant
+   percentage, quiet total and Match action) - touch tablets only. This used
+   to also cover any real desktop/mouse window between 701-1200px (this
+   block's own selector used to read "(min-width:701px) and (max-width:1200px),
+   (min-width:701px) and (pointer:coarse)"), which meant simply resizing a
+   real desktop browser window across 1200px silently swapped this header
+   design for the percentage-forward one below - the two were never meant to
+   coexist within pointer:fine. pointer:coarse-only, matching the cell-
+   tracking block above, gives a real desktop one consistent header design
+   across its entire width range (this component - see the percentage-
+   forward block below for the fine-pointer counterpart), while touch
+   tablets keep exactly this look regardless of how wide they are. */
+@media (min-width: 701px) and (pointer: coarse){
   #splitsArea .splitsMatrix thead th{
     padding:4px 2px;
   }
@@ -9676,28 +9854,22 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
     color:var(--focus-border);
     font-size:8px;
   }
-
-  /* Four-character percentages such as 61.5 need a few more pixels than
-     the desktop field allowed. Take those pixels from the editor's empty
-     inter-column gap, keeping the cell's overall horizontal footprint
-     unchanged. */
-  #splitsArea .splitsMatrix .splitCellEditor{ gap:3px; }
-  #splitsArea .splitsMatrix .splitPctControl input{
-    width:44px;
-    padding-inline:0;
-  }
 }
 
 /* Percentage-forward layer header (previews/recipe-layer-header-compact-
-   alternatives.html, concept 4) - genuine wide desktop only. Narrower
-   desktop/tablet keeps the compact header two blocks up untouched. The
-   percentage is the only thing worth reading twice, so it becomes the
-   largest element; the layer letter shrinks to a corner tag instead of a
-   64px watermark, and the total becomes a thin colour-coded bar - still
-   labelled with its number, since a bar with no number would be a step
-   back from today's text-only total. Reuses the existing .warn toggle
-   from updateHopperTotals() - no JS or markup changes needed. */
-@media (min-width: 1201px) and (pointer: fine){
+   alternatives.html, concept 4) - the real desktop/mouse header, now for
+   its entire width range (701px+), not just >=1201px. It used to start at
+   1201px, leaving 701-1200px real-desktop windows on the touch-tablet
+   header above by accident (see that block's comment) - widening this one
+   down to 701px closes that gap so a mouse-driven window never sees the
+   header design change while resizing, only the touch/pointer-coarse block
+   above does. The percentage is the only thing worth reading twice, so it
+   becomes the largest element; the layer letter shrinks to a corner tag
+   instead of a 64px watermark, and the total becomes a thin colour-coded
+   bar - still labelled with its number, since a bar with no number would be
+   a step back from today's text-only total. Reuses the existing .warn
+   toggle from updateHopperTotals() - no JS or markup changes needed. */
+@media (min-width: 701px) and (pointer: fine){
   #splitsArea .splitLayerMain{
     min-height: 0;
     padding-top: 4px;
@@ -9812,6 +9984,32 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
   }
   #splitsArea .splitsTrackingBar{ padding:2px 6px; }
 
+  #splitsArea .recipeUtilityTabs{
+    margin-top:1px;
+    padding-left:3px;
+  }
+  #splitsArea .recipeUtilityTab{
+    min-height:20px;
+    padding:2px 8px 1px;
+  }
+}
+
+/* The recipe matrix's own short-height compaction - split out from the Fold
+   block above and given its own (pointer: coarse) condition, matching the
+   fix to the width-driven version of this same collision (see the
+   WIDE_TOUCH_QUERY layer-header block below). None of these selectors were
+   gated by shell (body[data-mobile-workspace="panel"]) or pointer, only by
+   height, so a real desktop/mouse window simply resized shorter than 800px
+   picked up "Fold" compaction it was never meant to see: .splitCopyBtn's
+   display:inline-grid outranked (equal specificity, later source order)
+   #splitsArea[data-recipe-view="summary"] .splitCopyBtn{display:none}, so
+   Summary's Match button reappeared purely from a short window, never
+   Edit/view-state; and .splitLayerMain's min-height:22px fought the
+   percentage-forward header's own sizing, visibly compressing it. A real
+   Fold is a touchscreen, so pointer:coarse loses nothing there while a
+   real desktop keeps one fixed-height-independent header, mirroring the
+   width fix's "if the width is fixed, the height should be too". */
+@media (min-width: 701px) and (max-height: 800px) and (pointer: coarse){
   #splitsArea .splitsMatrix thead th{ padding:2px; }
   #splitsArea .splitsMatrix .splitLayerMain{ min-height:22px; }
   #splitsArea .splitsMatrix .splitCopyBtn{
@@ -9846,15 +10044,6 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
     min-height:26px;
     max-height:26px;
     line-height:25px;
-  }
-
-  #splitsArea .recipeUtilityTabs{
-    margin-top:1px;
-    padding-left:3px;
-  }
-  #splitsArea .recipeUtilityTab{
-    min-height:20px;
-    padding:2px 8px 1px;
   }
 }
 

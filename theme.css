@@ -125,6 +125,13 @@
   --warn: #d97706;
   --bad: #dc2626;
   --ok: #16a34a;
+  /* --bad itself stays a saturated red (form validation, error states use it
+     everywhere) - this only retunes the Recipe pill's Reset segment, which
+     sat noticeably more saturated than the pill's slate-blue segments next
+     to it. Derived the same way Industrial Slate Dark's already-approved
+     --bad (#d66f72) relates to its own --focus-border (rgba(138,168,194)):
+     scaled down to sit alongside this theme's darker slate blue instead. */
+  --recipe-pill-danger: #a05355;
   --shadow2: 0 7px 22px rgba(24,35,44,.10);
   --row-bg: rgba(74,73,72,.055);
   --row-border: rgba(96,125,155,.14);

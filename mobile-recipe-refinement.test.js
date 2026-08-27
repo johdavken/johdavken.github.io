@@ -49,8 +49,12 @@ test("the whole cell is the tracking target on every surface, gated on Summary v
 test("compact headers retain the layer letter but give the percentage the dominant treatment",()=>{
   assert.match(styles,/\.splitsMatrix\.compactMobileRecipe \.splitLayerTitle\{[\s\S]*?display:inline-flex;[\s\S]*?font-size:10px;/);
   assert.match(styles,/\.splitsMatrix\.compactMobileRecipe \.splitLayerPct input:not\(\[type="checkbox"\]\):not\(\[type="radio"\]\)\{[\s\S]*?font-size:16px;/);
-  assert.match(styles,/\.splitsMatrix\.compactMobileRecipe \.splitColumnTotal\{[\s\S]*?font-size:8px;/);
-  assert.match(styles,/\.splitsMatrix\.compactMobileRecipe \.splitColumnTotal\.warn\{ color:var\(--warn\); font-weight:900;/);
+  // The per-layer hopper Total is dropped on mobile entirely (see
+  // .splitColumnTotal{display:none} in the same max-width:700px block) -
+  // no compactMobileRecipe-scoped sizing/colour for it survives, since
+  // nothing would ever read it.
+  assert.doesNotMatch(styles,/\.splitsMatrix\.compactMobileRecipe \.splitColumnTotal\{/);
+  assert.doesNotMatch(styles,/\.splitsMatrix\.compactMobileRecipe \.splitColumnTotal\.warn\{/);
 });
 
 test("light-theme support contrast is scoped per palette, not painted into Dark or Gruvbox globally",()=>{
