@@ -1884,8 +1884,10 @@
     function syncMobileLineRateReadout(){
       const readout = $("mobileLineRateReadout");
       if (!readout) return;
+      // No " lb/hr" suffix here - the gauge tile's own label ("Output
+      // (lb/hr)") already carries the unit, right above this value.
       readout.textContent = state.lineRate > 0
-        ? `${state.lineRate.toLocaleString([], { maximumFractionDigits:2 })} lb/hr`
+        ? state.lineRate.toLocaleString([], { maximumFractionDigits:2 })
         : "Not set";
     }
 

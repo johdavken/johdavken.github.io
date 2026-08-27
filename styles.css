@@ -8664,6 +8664,13 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
     border-radius:0;
     background:transparent;
     color:var(--text);
+    /* .mobileLineRateReadout is a <button>, which - unlike the plain <span>
+       .gaugeTimeValue wraps - carries its own UA-default font-family (a
+       plain, thinner Arial here) that this rule never reset. Both still
+       declared the identical font-weight:850, but that weight renders
+       markedly thinner in Arial than in the app's own system-ui stack, so
+       Output read visibly less bold than Changeover time right next to it. */
+    font-family:inherit;
     font-size:clamp(24px,7.5vw,32px);
     font-weight:850;
     font-variant-numeric:tabular-nums;

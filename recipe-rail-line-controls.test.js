@@ -60,6 +60,15 @@ test("mobile production values are readouts that reveal native inputs on demand"
   assert.match(styles, /\.gaugeTile\.mobileOutputEditing input:not\(\[type="time"\]\)\{display:block\}/);
 });
 
+test("the mobile Output readout shows the bare number, not a repeated unit - its own label ('Output (lb/hr)') already carries it", () => {
+  const body = app.slice(app.indexOf("function syncMobileLineRateReadout(){"), app.indexOf("function syncMobileLineRateReadout(){") + 400);
+  assert.match(body, /readout\.textContent = state\.lineRate > 0\s*\n\s*\? state\.lineRate\.toLocaleString\(\[\], \{ maximumFractionDigits:2 \}\)\s*\n\s*: "Not set";/);
+  assert.doesNotMatch(body, /`\$\{state\.lineRate[^`]*lb\/hr/);
+  // The gauge tile's caption is untouched - it is the only place the unit
+  // still appears on this surface.
+  assert.match(html, /<label for="lineRate">Output \(lb\/hr\)<\/label>/);
+});
+
 test("the production band has no RT Sync shortcut of its own - that action already lives on the workspace identity bar directly above it", () => {
   assert.doesNotMatch(html, /mobileProductionSyncShortcut/);
   assert.doesNotMatch(app, /mobileProductionSyncShortcut/);
@@ -72,6 +81,15 @@ test("Changeover and Output are large, left/right-aligned readouts in a centered
   assert.match(styles, /\.mobileProductionControls \.setupPrimaryFields > div:last-child\{text-align:right\}/);
   assert.match(styles, /\.mobileProductionControls \.mobileLineRateReadout\{display:flex;align-items:center;justify-content:flex-end;text-align:right\}/);
   assert.match(styles, /\.mobileProductionControls \.gaugeTimeValue,\n  \.mobileProductionControls \.mobileLineRateReadout\{[\s\S]*?font-size:clamp\(24px,7\.5vw,32px\);/);
+});
+
+test("Output (a <button>) matches Changeover time (a <span>) in weight, not just declared font-size/font-weight - a <button>'s own UA-default font-family renders the identical font-weight thinner than the app's font stack does", () => {
+  const block = styles.slice(
+    styles.indexOf(".mobileProductionControls .gaugeTimeValue,\n  .mobileProductionControls .mobileLineRateReadout{"),
+    styles.indexOf("\n  }", styles.indexOf(".mobileProductionControls .gaugeTimeValue,\n  .mobileProductionControls .mobileLineRateReadout{"))
+  );
+  assert.match(block, /font-family:inherit;/);
+  assert.match(block, /font-weight:850;/);
 });
 
 test("Line Setup is retired as a visible workspace destination", () => {
