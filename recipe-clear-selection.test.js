@@ -84,6 +84,26 @@ test("on the compact phone tray, Clear tracking is hidden entirely rather than f
   assert.doesNotMatch(primaryRow, /clearTrackingButton/);
 });
 
+test("Clear tracking drops its border on every surface where the bar can actually be visible, including a narrow real-desktop mouse window - not just touch tablets", () => {
+  // True desktop (min-width:901px + pointer:fine) hides the whole bar
+  // outright (#splitsArea > .splitsTrackingBar{display:none}, the block
+  // immediately following), so scoping the border removal to the broader
+  // min-width:701px block it sits in - rather than to pointer:coarse alone -
+  // also reaches a mouse-driven desktop window narrower than 901px, which
+  // a pointer:coarse-only rule missed.
+  const start = styles.indexOf("@media (min-width: 701px){");
+  assert.notEqual(start, -1);
+  const nextBlock = "\n\n@media (min-width: 901px) and (pointer: fine){\n  /* Keep Recipe's top controls attached";
+  const end = styles.indexOf(nextBlock, start);
+  assert.notEqual(end, -1);
+  const block = styles.slice(start, end);
+  assert.match(block, /#splitsArea \.splitsTrackingBar \.bulkTextAction\{\s*\n\s*border: 0;\s*\n\s*\}/);
+  assert.match(
+    styles.slice(end, end + nextBlock.length + 1000),
+    /#splitsArea > \.splitsTrackingBar\{\s*\n\s*display: none;/
+  );
+});
+
 /* ----------------------------------------------------------------------
  *   Edit: mobile's missing Clear selection
  * -------------------------------------------------------------------- */

@@ -178,6 +178,22 @@
   :where(html, body)[data-theme="industrial-slate"] #splitsBlock .splitsMatrix.compactMobileRecipe .splitMatrixCell.tracked .splitCellHopperName{color:#397fae}
   :where(html, body)[data-theme="industrial-slate"] #splitsBlock .splitsMatrix.compactMobileRecipe .splitTrackButton:not(.active){color:#526b82;opacity:.8}
   :where(html, body)[data-theme="industrial-slate"] #splitsBlock .splitsMatrix.compactMobileRecipe .splitCopyBtn{color:#4f6d8b}
+  /* The mobile home screen's live Changeover time/Output values
+     (styles.css: .mobileProductionControls .gaugeTimeValue/
+     .mobileLineRateReadout, color:var(--text)) and the un-selected
+     workflow tiles' titles (.workspaceNavButton span, color:var(--text) -
+     a later, equal-specificity rule than the button's own color:inherit,
+     so it's what actually wins) both read as near-black against this
+     theme's pale slate background - var(--text) here is #29282b, far
+     darker than the blue everything else on this screen (the step-number
+     circles) uses. Retuned to the same slate blue. :not(.active) leaves
+     the selected tile's own color:var(--title) alone rather than tying
+     with it on specificity; the span-level selector is needed to outrank
+     .workspaceNavButton span's own color:var(--text), which a button-level
+     override can't reach since the span never inherits it. */
+  :where(html, body)[data-theme="industrial-slate"] .mobileProductionControls .gaugeTimeValue,
+  :where(html, body)[data-theme="industrial-slate"] .mobileProductionControls .mobileLineRateReadout{color:#4f6d8b}
+  :where(html, body)[data-theme="industrial-slate"] .workspaceNavButton:not(.active) span{color:#607d9b}
 }
 
 /* ----------------------------------------------------------------------- * Industrial Slate Dark * ----------------------------------------------------------------------- */
