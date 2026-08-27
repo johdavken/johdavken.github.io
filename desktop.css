@@ -31,6 +31,17 @@
     height:calc(100dvh - 24px);
     min-height:0;
     overflow:auto;
+    /* Without this, grid's default align-content (normal, which behaves as
+       stretch here) distributes the sidebar's leftover height across every
+       auto-sized row - most visibly the More/divider row, which has almost
+       no natural content and so ballooned from ~33px up past 75px to help
+       fill the column. Pin rows to their own size and let the extra space
+       sit as plain empty space below "More" instead. The four gruv-rail-
+       grouped themes below used to carry their own duplicate of this same
+       declaration (removed - this one already reaches them, same
+       .workspaceNav element, and a higher-specificity rule redeclaring an
+       identical value was dead weight, not a real override). */
+    align-content:start;
   }
   /* Desktop never had this bar before (it was mobile home tile grid only) -
      .workspaceIdentityBar's shared styles.css rule already covers the
@@ -441,7 +452,6 @@
     --gruv-rail-help:#ebdbb2;
     display:grid;
     position:sticky;
-    align-content:start;
     gap:5px;
     padding:14px 12px 16px;
     border-color:transparent;
@@ -541,7 +551,6 @@
     letter-spacing:.1em;
     line-height:1;
   }
-  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .workspaceNavButton > span::before{display:none}
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .workspaceNavButton small{
     display:block;
     margin:-2px 0 0 40px;
