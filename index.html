@@ -392,7 +392,7 @@
       <span><svg class="workspaceTileIcon" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3 27 8v7c0 7-4.5 11.5-11 14-6.5-2.5-11-7-11-14V8l11-5Z"/><path d="M16 12v8M12 16h8"/></svg>Sudo access</span>
       <small id="sudoAccessStatus">Administrator tools</small>
     </button>
-    <small class="desktopRailVersion" aria-label="App version">v1.1.18</small>
+    <small class="desktopRailVersion" aria-label="App version">v1.1.19</small>
   </nav>
 
   <div class="workspaceContent">
@@ -1172,6 +1172,15 @@
 
     <div class="blockBody">
       <div class="changelogBody">
+        <h3>(v1.1.19) (August 27, 2026) - Recipe toolbar redesign, theme-aware pill colors &amp; admin conflict-storm visibility</h3>
+        <ul>
+          <li>Recipe's header pill and Edit toolbar merge into single right-anchored, segmented-pill rows on tablet/desktop, fixing several width/wrap bugs only visible on real touch tablets and narrow desktop windows.</li>
+          <li>Recipe pill buttons (Edit/Done, Load Next/Print, Clear/Empty/Reset/Rearrange) switch to a theme-aware tinted fill instead of a flat accent, so they no longer overpower dark or bright themes.</li>
+          <li>Mobile Recipe's Edit toolbar is lighter and no longer overlaps on short screens; the redundant per-layer <strong>Total 100%</strong> readout is dropped on mobile (kept on tablet/desktop).</li>
+          <li>Fixed <strong>Clear tracking</strong>'s border staying visible on tablet and narrow desktop windows, and Industrial Slate's mobile home screen text reading too dark against its own pale theme.</li>
+          <li>Admin <strong>Database Health</strong> now surfaces RT Sync conflict storms directly, with a badge, a list, and a one-click jump to the affected workspace in Workspace Management.</li>
+        </ul>
+
         <h3>(v1.1.17) (August 25-26, 2026) - Compact mobile/desktop Recipe &amp; Weights, workspace nav polish</h3>
         <ul>
           <li>Status bar <strong>Output</strong>/<strong>Changeover</strong> are now click-to-edit directly, instead of buried in the Recipe nav button; <strong>Changelog</strong> is promoted to its own top-level panel and <strong>Help</strong> is removed, its essential links folded into Workspace &amp; support.</li>
@@ -1324,7 +1333,7 @@
             <span class="changelogPrivacySep" aria-hidden="true">·</span>
             <a class="changelogPrivacyLink" href="https://resin.tools/privacy/delete-data/" target="_blank" rel="noopener">Delete Data</a>
           </div>
-          <span class="changelogAppVersion" aria-label="App version">v1.1.18</span>
+          <span class="changelogAppVersion" aria-label="App version">v1.1.19</span>
           <small class="changelogPrivacyNote">How Resin.Tools handles your data</small>
         </div>
       </div>
@@ -1644,7 +1653,7 @@
   </form>
 </dialog>
 
-<small class="mobileFooterVersion" aria-label="App version">v1.1.18</small>
+<small class="mobileFooterVersion" aria-label="App version">v1.1.19</small>
 <footer class="footerBar" aria-label="App navigation">
   <button type="button" id="appFooterDisplay" class="appDockControl" aria-expanded="false" aria-controls="displaySheet" aria-label="Display settings">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9c0-1-.8-1.8-1.8-1.8h-2.1a2 2 0 0 1-2-2V6.8C15.1 4.7 13.9 3 12 3Z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="8.5" cy="16" r="1"/><g class="gruvboxIconDetail"><path d="M12 2v2"/></g></svg><span>Display</span>
