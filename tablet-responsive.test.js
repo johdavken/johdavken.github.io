@@ -214,7 +214,13 @@ test("wide touch reclaims Recipe height from chrome and controls without shrinki
   const block = styles.slice(start, styles.indexOf("\n}", start) + 2);
   assert.match(block, /#splitsBlock\.mobile-active > summary\{\s*\n\s*min-height:36px;/);
   assert.match(block, /#splitsBlock \.recipePageTab\{[\s\S]*?min-height:32px;/);
-  assert.match(block, /#splitsArea \.splitsEditRowPrimary\{[\s\S]*?grid-template-columns:minmax\(0,1fr\) minmax\(0,1fr\) auto;/);
+  // .splitsEditRowPrimary's own layout (Resin/%/Apply) moved to the shared
+  // >=701px block and switched from a shrinking grid to a fixed-width flex
+  // row with deliberate per-control min-widths - a narrow *desktop* window
+  // (pointer:fine) needed the same fit-on-one-row behavior this
+  // pointer:coarse-gated block never reached, and the redesigned toolbar
+  // no longer wants controls to compress to fit anyway. See
+  // recipe-edit-toolbar-pill.test.js for that rule's current coverage.
   assert.match(block, /#splitsArea \.splitsEditRowSecondary\{[\s\S]*?flex-wrap:nowrap;/);
   assert.match(block, /#splitsArea \.splitsEditRowSecondary :is\(\.bulkTextAction,button\.danger\)\{[\s\S]*?min-height:28px;/);
   assert.match(styles, /\.splitsEditRowSecondary > \.bulkTextAction\{[^}]*?border:1\.5px solid var\(--btn-secondary-border\);[^}]*?background:transparent;[^}]*?box-shadow:none/);

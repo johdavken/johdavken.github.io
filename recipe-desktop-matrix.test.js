@@ -16,10 +16,18 @@ function desktopBlock(){
 
 test("the Recipe matrix left-aligns instead of centering, desktop only", () => {
   const body = desktopBlock();
-  assert.match(body, /\.splitsMatrixFrame\{[\s\S]*?width: var\(--recipe-five-layer-rail\);[\s\S]*?margin-inline: 0;/);
+  assert.match(body, /\.splitsMatrixFrame\{[\s\S]*?width: min\(100%, var\(--recipe-five-layer-rail\)\);[\s\S]*?margin-inline: 0;/);
   // The base (mobile-inclusive) rule must remain centered - only desktop
   // overrides it, so mobile's own width:100% override elsewhere is untouched.
   assert.match(styles, /\.splitsMatrixFrame\{\s*\n\s*width:max-content;\s*\n\s*margin-inline:auto;/);
+});
+
+test("the matrix frame is capped at min(100%, rail) rather than a bare rail width, and #splitsArea's grid column is pinned to the container - a fixed 1062px frame sized #splitsArea's auto/max-content column to 1062px even when the panel only had ~726px, so every sibling in that column resolved percentages against 1062px. That is what made opening Edit appear to widen the panel: #splitsBulkBar's own width:min(100%, rail) saw 100% = 1062px and painted past the rail, detaching the header from the grid's right edge", () => {
+  const body = desktopBlock();
+  assert.match(body, /#splitsArea\{\s*\n\s*grid-template-columns: minmax\(0, 1fr\);\s*\n\s*\}/);
+  // The header row and the Edit toolbar already used this same capped rail -
+  // the frame disagreeing with them is what split the layout into two rails.
+  assert.match(styles, /#splitsBlock \.recipeHeaderRow,\s*\n\s*#splitsArea > \.splitsBulkBar\{\s*\n\s*width: min\(100%, var\(--recipe-five-layer-rail\)\);/);
 });
 
 test("desktop marks the active layer count and textures only the unused one- and three-layer rail space", () => {

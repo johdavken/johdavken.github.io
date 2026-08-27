@@ -102,15 +102,19 @@ test("opening Bulk edit closes Saved Recipes outright, and exits Rearrange (with
   assert.match(modeButtonBody, /if \(turningOn\) setSavedRecipesOpen\(false\);/);
 });
 
-test("the mobile Recipes disclosure keeps its existing exclusion and rearrangement cleanup", () => {
-  const savedRecipesClickStart = app.indexOf("savedRecipesButton.addEventListener(\"click\", ()=>{");
-  const savedRecipesClickBody = app.slice(savedRecipesClickStart, app.indexOf("      });", savedRecipesClickStart) + 8);
-  assert.match(savedRecipesClickBody, /if \(turningOn && hopperRearrangement\?\.active\)\{/);
-  assert.match(savedRecipesClickBody, /hopperRearrangement = null;/);
-  assert.match(savedRecipesClickBody, /splitsSavedRecipesOpen = true;/);
-  assert.match(savedRecipesClickBody, /splitsBulkModeActive = false;/);
-  // This dynamic button is mounted only on compact mobile.
-  assert.match(savedRecipesClickBody, /if \(turningOn && compactMobileRecipe\) setBulkMode\(false\);/);
+test("switching to Recipe Book through the shared tab row still cleans up an active rearrangement, on every width", () => {
+  // There is no more dedicated mobile disclosure button/handler - Recipe
+  // Book is reached the same way Weights already is, through
+  // setRecipePage, which applies (not discards) any in-progress
+  // rearrangement before leaving the matrix.
+  assert.doesNotMatch(app, /savedRecipesButton/);
+  const setRecipePageBody = functionBody("setRecipePage");
+  assert.match(setRecipePageBody, /if \(next === "saved" \|\| next === "weights"\)\{/);
+  assert.match(setRecipePageBody, /splitsBulkModeActive = false;/);
+  assert.match(setRecipePageBody, /if \(hopperRearrangement\?\.active\)\{/);
+  assert.match(setRecipePageBody, /window\.PolynHopperRearrangement\.apply\(recipeLayers\(\), hopperRearrangement\.baseline\);/);
+  assert.match(setRecipePageBody, /hopperRearrangement = null;/);
+  assert.match(setRecipePageBody, /splitsSavedRecipesOpen = next === "saved";/);
 });
 
 test("setBulkMode and setSavedRecipesOpen both write their resolved value back to the module-level flag, keeping it in sync for the next render", () => {
@@ -121,24 +125,28 @@ test("setBulkMode and setSavedRecipesOpen both write their resolved value back t
   assert.match(setSavedRecipesOpenBody, /splitsSavedRecipesOpen = !!open;/);
 });
 
-test("Recipe Book is a desktop page tab while mobile keeps the existing Recipes disclosure button", () => {
+test("Recipe Book is a page tab at every width - there is no separate mobile disclosure button any more", () => {
   assert.match(html, /id="recipePageTabSaved" role="tab" aria-selected="false" aria-controls="splitsArea" data-recipe-page="saved" hidden>Recipe Book<\/button>/);
   assert.match(app, /<strong>Recipe Book<\/strong>/);
-  assert.match(app, /savedRecipesButton\.textContent = "Saved Recipes"/);
-  assert.match(app, /mobilePrimaryRow\.append\(savedRecipesButton\);/);
-  assert.doesNotMatch(app, /recipeUtilityTabs\.append\(savedRecipesButton\);/);
+  assert.doesNotMatch(app, /savedRecipesButton/);
+  assert.match(app, /if \(savedTab\) savedTab\.hidden = false;/);
   assert.match(app, /function setSavedRecipesOpen\(open\)\{/);
   assert.match(app, /savedRecipesPanel\.classList\.toggle\("hide", !open\)/);
-  assert.match(app, /savedRecipesButton\.setAttribute\("aria-expanded",String\(open\)\)/);
   assert.match(app, /splitsSavedRecipesOpen = next === "saved";/);
 });
 
-test("Recipes and receiver profiles use centered sheets without opening the search keyboard",()=>{
+test("receiver profiles keep their centered sheet without opening the search keyboard - Recipe Book has no sheet left to open", () => {
+  // Weight Profiles is untouched: still its own dialog, sharing the
+  // .mobileSavedRecipesSheet chrome class with (previously) Recipes.
   assert.match(styles,/\.mobileSavedRecipesSheet\{[\s\S]*?left:50%;[\s\S]*?transform:translateX\(-50%\);[\s\S]*?width:min\(410px,calc\(100vw - 20px\)\);/);
-  assert.match(app,/mobileSavedRecipesSheet\?\.focus\(\{preventScroll:true\}\)/);
   assert.match(app,/profilesSheet\.focus\(\{preventScroll:true\}\)/);
-  assert.doesNotMatch(app,/mobileSavedRecipesSearch"\)\?\.focus\(\)/);
   assert.doesNotMatch(app,/mobileWeightProfilesSearch"\)\?\.focus\(\)/);
+  // Recipe Book's own search field doesn't grab focus either, now that it
+  // lives in the panel rather than a dialog. The dialog itself (and its
+  // id) is gone; only the shared .mobileSavedRecipesSheet chrome class
+  // Weight Profiles still uses survives.
+  assert.doesNotMatch(app,/mobileSavedRecipesSearch"\)\?\.focus\(\)/);
+  assert.doesNotMatch(app,/\$\("mobileSavedRecipesSheet"\)/);
 });
 
 test("the panel's own Save Current Recipe button reuses the exact same dialog flow as Line Configurations', not a parallel save path", () => {

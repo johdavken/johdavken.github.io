@@ -63,22 +63,24 @@ test("header view and recipe actions use the app's primary/secondary button fami
   assert.match(styles, /\.recipeHeaderActions\{[\s\S]*?border-left: 1px solid var\(--row-border-2\);/);
 });
 
-test("mobile keeps the same disclosure button and never receives desktop tab styling", () => {
+test("mobile's primary row never receives desktop tab styling, and Recipe Book is reached through the shared tab row instead of a row button", () => {
   const start = app.indexOf("if (compactMobileRecipe){\n        mobilePrimaryRow = document.createElement");
   const end = app.indexOf("}else{", start);
   assert.ok(start > -1 && end > start);
   const mobile = app.slice(start, end);
-  assert.match(mobile, /mobilePrimaryRow\.append\(savedRecipesButton\);/);
+  assert.doesNotMatch(mobile, /savedRecipesButton/);
   assert.doesNotMatch(mobile, /recipeUtilityTab/);
   assert.doesNotMatch(mobile, /role", "tab/);
 });
 
-test("the Recipe Book panel occupies the matrix slot on tablet and desktop", () => {
+test("the Recipe Book panel occupies the matrix slot at every width, sized for desktop/tablet from 701px up", () => {
   assert.match(styles, /body\[data-recipe-page="saved"\] #splitsArea > :not\(\.splitsSavedRecipesPanel\)\{\s*display: none!important;/);
   const panel = styles.slice(styles.indexOf('body[data-recipe-page="saved"] #splitsArea > .splitsSavedRecipesPanel{'));
   const panelRule = panel.slice(0, panel.indexOf("}") + 1);
   assert.match(panelRule, /display: block;/);
   assert.match(panelRule, /order: 0;/);
-  assert.match(panelRule, /width: min\(100%, var\(--recipe-five-layer-rail, 1062px\)\);/);
-  assert.match(panelRule, /min-height: 540px;/);
+  const widePanel = styles.slice(styles.indexOf('@media (min-width: 701px){\n  body[data-recipe-page="saved"] #splitsArea > .splitsSavedRecipesPanel{'));
+  const widePanelRule = widePanel.slice(0, widePanel.indexOf("}") + 1);
+  assert.match(widePanelRule, /width: min\(100%, var\(--recipe-five-layer-rail, 1062px\)\);/);
+  assert.match(widePanelRule, /min-height: 540px;/);
 });
