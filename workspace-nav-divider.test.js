@@ -75,7 +75,7 @@ test("it is a real disclosure button, naming the sections it controls", () => {
   // An IDREF list, not a wrapper: the four buttons stay direct children of
   // the nav grid, which is what lets the .active exemption below reveal one
   // of them on its own.
-  assert.match(block, /aria-controls="workspaceNavLineSync workspaceNavTools helpBetaAccess workspaceNavChangelog workspaceNavSudo"/);
+  assert.match(block, /aria-controls="workspaceNavLineSync workspaceNavNotes workspaceNavTools helpBetaAccess workspaceNavChangelog workspaceNavSudo"/);
   assert.match(block, /id="workspaceNavMoreLabel">More</);
   assert.match(block, /aria-hidden="true"/);
 });

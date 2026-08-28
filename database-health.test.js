@@ -81,7 +81,7 @@ test("desktop health readout stays compact while mobile retains the shared card 
   assert.match(desktop, /width:min\(100%,720px\)/);
   assert.match(desktop, /height:auto/);
   assert.match(desktop, /align-content:start/);
-  assert.match(fs.readFileSync("index.html", "utf8"), /styles\.css\?v=0\.62\.13/);
+  assert.match(fs.readFileSync("index.html", "utf8"), /styles\.css\?v=0\.62\.14/);
   assert.match(fs.readFileSync("index.html", "utf8"), /desktop\.css\?v=0\.1\.10/);
 });
 

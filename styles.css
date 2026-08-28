@@ -817,6 +817,10 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .baseGlyph{dis
     min-width: 0;
   }
   .workspaceContent > .workspacePanel:not(.desktop-active){ display: none !important; }
+  /* Notes is a mobile-only section - no desktop nav entry, and the panel
+     itself is never rendered on desktop even if reached some other way. */
+  #workspaceNavNotes,
+  #notesBlock{ display: none !important; }
   .workspaceContent > .workspacePanel.card,
   .workspaceContent > .workspacePanel.card[open]{
     border: 1px solid transparent;
@@ -6635,6 +6639,184 @@ button.compactAction{
   #toolsBlock .mobileToolsBack:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
 }
 
+/* =======================================================================
+ *   Notes (mobile-only)
+ *
+ *   A lightweight notebook built into the section navigation, not a
+ *   separate app. Reuses the existing type scale, spacing, control chrome
+ *   and theme tokens. The list/editor swap mirrors the Tools home/panel
+ *   pattern exactly (body[data-mobile-notes="editor"]).
+ *   ===================================================================== */
+.notesEditorView{ display:none; }
+#notesBlock .notesListView{ display:flex; flex-direction:column; gap:10px; }
+
+.notesListBar{ display:flex; align-items:center; gap:8px; }
+.notesNewBtn{ flex:0 0 auto; }
+.notesBackupMenu{ margin-left:auto; }
+.notesBackupMenu > summary{
+  display:inline-flex; align-items:center; gap:5px;
+  min-height:var(--control-height);
+  padding:4px 10px;
+  border:1px solid var(--btn-border);
+  border-radius:var(--control-radius);
+  background:var(--btn-secondary-bg);
+  color:var(--btn-text);
+  font-size:var(--font-small); font-weight:800;
+  list-style:none; cursor:pointer;
+}
+.notesBackupMenu > summary::-webkit-details-marker{ display:none; }
+.notesBackupMenu > summary:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
+.notesBackupPanel{
+  display:flex; flex-direction:column; gap:8px;
+  margin-top:8px; padding:10px;
+  border:1px solid var(--border); border-radius:var(--control-radius);
+  background:var(--row-bg);
+}
+.notesBackupIntro,
+.notesBackupStatus{ margin:0; color:var(--muted); font-size:11px; line-height:1.35; }
+.notesBackupStatus[data-tone="ok"]{ color:var(--ok); }
+.notesBackupStatus[data-tone="error"]{ color:var(--bad); }
+.notesBackupStatus:empty{ display:none; }
+.notesBackupGroup{ display:flex; align-items:center; flex-wrap:wrap; gap:6px; }
+.notesImportFileLabel{ color:var(--muted); font-size:11px; font-weight:700; }
+.notesBackupText{
+  width:100%; min-height:64px;
+  padding:8px; border:1px solid var(--border2); border-radius:var(--control-radius);
+  background:var(--panel); color:var(--text);
+  font-family:var(--font-mono); font-size:11px; line-height:1.4;
+  resize:vertical;
+}
+
+.notesDeviceHint{
+  margin:0; color:var(--muted);
+  font-size:11px; line-height:1.35;
+}
+.notesUnavailable{ margin:0; color:var(--muted); font-size:12px; }
+
+.notesList{ display:flex; flex-direction:column; gap:8px; }
+.notesItem{
+  display:flex; flex-direction:column; gap:3px;
+  width:100%; min-height:44px;
+  padding:10px 12px;
+  border:1px solid var(--row-border); border-radius:var(--control-radius);
+  background:var(--row-bg); color:var(--text);
+  text-align:left; cursor:pointer;
+}
+.notesItem:hover{ border-color:var(--border2); }
+.notesItem:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
+.notesItem.pinned{ border-color:color-mix(in srgb,var(--focus-border) 45%,var(--row-border)); }
+.notesItemHead{ display:flex; align-items:center; gap:6px; min-width:0; }
+.notesItemTitle{
+  min-width:0; flex:1 1 auto;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  color:var(--title); font-size:14px; font-weight:800;
+}
+.notesItemPin{ flex:0 0 auto; font-size:11px; line-height:1; }
+.notesItemPreview{
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  color:var(--muted); font-size:12px;
+}
+.notesItemMeta{ color:var(--muted); font-size:10.5px; }
+.notesListEmpty{ margin:0; padding:16px 4px; color:var(--muted); font-size:12px; text-align:center; }
+
+/* Editor. The header carries class="mobileToolHeader" for shared chrome but
+   that class is display:none by default (Tools re-shows its own), so the
+   Notes header opts back in explicitly - inside the shell media query below. */
+.notesEditorHeader .notesSaveState{
+  min-width:0; flex:1 1 auto;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  color:var(--muted); font-size:10.5px; font-weight:600;
+}
+.notesPinBtn,
+.notesEditorMenu > summary{
+  display:inline-grid; place-items:center; flex:0 0 auto;
+  width:34px; height:34px; min-height:34px;
+  padding:0; border:1px solid transparent; border-radius:var(--control-radius);
+  background:transparent; color:var(--muted);
+  list-style:none; cursor:pointer;
+}
+.notesEditorMenu > summary::-webkit-details-marker{ display:none; }
+.notesPinBtn svg,
+.notesEditorMenu > summary svg{ width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.notesPinBtn.active{ color:var(--focus-border); }
+.notesPinBtn.active svg{ fill:color-mix(in srgb,var(--focus-border) 22%,transparent); }
+.notesPinBtn:focus-visible,
+.notesEditorMenu > summary:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
+.notesEditorMenu{ position:relative; flex:0 0 auto; }
+.notesEditorMenuPanel{
+  position:absolute; right:0; top:calc(100% + 4px); z-index:5;
+  min-width:160px; padding:6px;
+  border:1px solid var(--border2); border-radius:var(--control-radius);
+  background:var(--panelOpen); box-shadow:var(--shadow2);
+}
+.notesDeleteBtn{
+  width:100%; padding:8px 10px;
+  border:0; border-radius:calc(var(--control-radius) - 2px);
+  background:transparent; color:var(--bad);
+  font-size:12px; font-weight:800; text-align:left; cursor:pointer;
+}
+.notesDeleteBtn:hover{ background:color-mix(in srgb,var(--bad) 12%,transparent); }
+
+.notesTitleInput{
+  width:100%; margin-top:10px; padding:8px 2px;
+  border:0; border-bottom:1px solid var(--border2);
+  background:transparent; color:var(--title);
+  font-size:17px; font-weight:800;
+}
+.notesTitleInput:focus{ outline:none; border-bottom-color:var(--focus-border); }
+
+.notesToolbar{
+  display:flex; align-items:center; gap:4px;
+  margin-top:8px; padding:4px 0;
+  overflow-x:auto; -webkit-overflow-scrolling:touch;
+}
+.notesToolbar button{
+  flex:0 0 auto;
+  min-width:34px; height:34px; min-height:34px;
+  padding:0 8px;
+  border:1px solid var(--border2); border-radius:var(--control-radius);
+  background:var(--row-bg); color:var(--text);
+  font-size:13px; font-weight:800; line-height:1; cursor:pointer;
+}
+.notesToolbar button:hover{ border-color:var(--muted); color:var(--title); }
+.notesToolbar button:active{ background:color-mix(in srgb,var(--text) 10%,transparent); }
+.notesToolbar button:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
+.notesToolbarSep{ flex:0 0 auto; width:1px; height:20px; margin:0 3px; background:var(--border2); }
+
+.notesBodyInput{
+  width:100%; min-height:220px; margin-top:8px; padding:10px 2px;
+  border:0; background:transparent; color:var(--text);
+  font:inherit; font-size:14px; line-height:1.5;
+  resize:vertical;
+}
+.notesBodyInput:focus{ outline:none; }
+
+@media (width <= 900px), (min-width: 901px) and (pointer: coarse){
+  body[data-mobile-notes="editor"] #notesBlock .notesListView{ display:none; }
+  body[data-mobile-notes="editor"] #notesBlock .notesEditorView{ display:flex; flex-direction:column; }
+  body[data-mobile-notes="editor"] #notesBlock > summary{ display:none; }
+  #notesBlock .notesEditorHeader{
+    display:flex; align-items:center; gap:6px;
+    margin-bottom:8px; padding-bottom:8px;
+    border-bottom:1px solid var(--border);
+  }
+  #notesBlock .notesEditorHeader .mobileToolsBack{
+    display:inline-flex; align-items:center; justify-content:center; gap:4px;
+    flex:0 0 auto; min-width:44px; min-height:44px; padding:0 6px;
+    border:0; border-radius:var(--control-radius);
+    background:transparent; color:var(--focus-border);
+    font-size:11px; font-weight:850;
+  }
+  #notesBlock .notesEditorHeader .mobileToolsBack svg{ width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  #notesBlock .notesEditorHeader .mobileToolsBack:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
+  /* Comfortable phone touch targets without growing the header. */
+  #notesBlock .notesItem{ min-height:56px; }
+  #notesBlock .notesPinBtn,
+  #notesBlock .notesEditorMenu > summary{ width:38px; height:38px; min-height:38px; }
+  #notesBlock .notesToolbar button{ min-width:38px; height:38px; min-height:38px; }
+  #notesBlock .notesBodyInput{ min-height:46vh; }
+}
+
 /* Matrix action bars share one compact surface. The Recipe bar has four
    segments and Receiver Weights has two; each distributes only its own
    actions while retaining the same visual grammar. */
@@ -7755,6 +7937,7 @@ body[data-mobile-workspace="home"] .mobileWorkspaceNavMoreIcons .moreIconSudo{ -
 body[data-mobile-workspace="home"] .mobileWorkspaceNavMoreIcons .moreIconChangelog{ --tint:var(--focus-border); }
 body[data-mobile-workspace="home"] .mobileWorkspaceNavMoreIcons .moreIconBeta{ --tint:var(--ok); }
 body[data-mobile-workspace="home"] .mobileWorkspaceNavMoreIcons .moreIconTools{ --tint:var(--warn); }
+body[data-mobile-workspace="home"] .mobileWorkspaceNavMoreIcons .moreIconNotes{ --tint:var(--muted); }
 body[data-mobile-workspace="home"] .mobileWorkspaceNavMoreIcons .moreIconRt{ --tint:var(--ok); }
 
 .sudoAccessBody{display:grid;align-content:start;gap:12px}

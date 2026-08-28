@@ -6403,6 +6403,9 @@
         document.body.dataset.mobileWorkspace = "panel";
         $("appFooterMain")?.removeAttribute("aria-current");
         if (id === "toolsBlock") document.body.dataset.mobileTools = "home";
+        // Notes (mobile-only, see notes-ui.js) always opens on its list, the
+        // same way Tools always opens on its home grid.
+        if (id === "notesBlock") document.body.dataset.mobileNotes = "list";
         if (!target.open) target.open = true;
       }
       if (persist) saveWorkspacePreference(id);
@@ -6456,6 +6459,12 @@
       if (!isDesktopLayout() && document.body.dataset.mobileWorkspace === "panel"){
         if (activeWorkspaceId === "toolsBlock" && document.body.dataset.mobileTools === "panel"){
           $("mobileToolsBack")?.click();
+          return true;
+        }
+        // Notes editor -> Notes list, reusing the same Back button the header
+        // shows, before the section -> Main fallback below.
+        if (activeWorkspaceId === "notesBlock" && document.body.dataset.mobileNotes === "editor"){
+          $("notesBackBtn")?.click();
           return true;
         }
         showMobileWorkspaceHome();
@@ -6759,7 +6768,7 @@
           // explicit tile click changes the mobile workspace to "panel".
           if (document.body.dataset.mobileWorkspace !== "panel") return;
           panels.forEach(other=>{ if (other !== panel && other.open) other.open = false; });
-          setWorkspacePanel(panel.id, { reveal: false });
+          setWorkspacePanel(panel.id, { reveal: false, persist: panel.id !== "notesBlock" });
         });
       });
     }
@@ -8436,7 +8445,11 @@
     });
     $("resetTrackingBtn")?.addEventListener("click", resetTracking);
     document.querySelectorAll(".workspaceNavButton").forEach(button=>{
-      button.addEventListener("click",()=>setWorkspacePanel(button.dataset.workspaceTarget, { reveal: true }));
+      // Notes is a mobile-only side section, not a primary workspace: don't
+      // let it become the restored-on-reload panel (loadWorkspacePreference
+      // would reject the id anyway, but this avoids the churn).
+      const persist = button.id !== "workspaceNavNotes";
+      button.addEventListener("click",()=>setWorkspacePanel(button.dataset.workspaceTarget, { reveal: true, persist }));
     });
     $("workspaceIdentityButton")?.addEventListener("click",()=>{
       setWorkspacePanel("lineSyncBlock", { reveal:true });
