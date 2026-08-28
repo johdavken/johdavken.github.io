@@ -890,7 +890,7 @@
      (#timelinePane / #timelineHookupsArea), so the blockBody is just
      tabs + active view, and #timelinePane holds the old row layout. */
   #resultsBlock > .blockBody{display:grid;grid-template-rows:auto minmax(0,1fr);align-content:start;overflow:hidden}
-  #timelinePane{display:grid;grid-template-rows:auto auto auto minmax(0,1fr);align-content:start;min-height:0;overflow:hidden}
+  #timelinePane{display:grid;grid-template-rows:auto auto minmax(0,1fr);align-content:start;min-height:0;overflow:hidden}
   #timelineHookupsArea{min-height:0;overflow:auto;overscroll-behavior:contain;padding-right:4px}
   #resultsArea{min-height:0;overflow:auto;overscroll-behavior:contain;padding-right:4px}
   #lineSyncBlock > .blockBody{overflow:auto}

@@ -51,7 +51,9 @@ test("switching tabs swaps the two areas and never both show at once", () => {
 
 test("the desktop panel grid is just tabs + active view, with the old row layout moved into #timelinePane", () => {
   assert.match(desktop, /#resultsBlock > \.blockBody\{display:grid;grid-template-rows:auto minmax\(0,1fr\);/);
-  assert.match(desktop, /#timelinePane\{display:grid;grid-template-rows:auto auto auto minmax\(0,1fr\);/);
+  // Three children now (the "sorted by upcoming time" caption was folded into
+  // the control bar's own context): control bar, mobile alarm fieldset, list.
+  assert.match(desktop, /#timelinePane\{display:grid;grid-template-rows:auto auto minmax\(0,1fr\);/);
   assert.match(desktop, /#timelineHookupsArea\{min-height:0;overflow:auto;/);
 });
 

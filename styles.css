@@ -5012,6 +5012,53 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
 }
 .trackLabel{ font-size: var(--font-small); color: var(--muted); white-space: nowrap; }
 .resultsToggleControls{ justify-content:flex-start; flex-wrap:wrap; }
+
+/* One cohesive Timeline control bar: the "Show all" group keeps the prominent
+   left slot, "Reset tracking" and the settings gear are quiet trailing
+   actions. One row at every width - the mobile steps below tighten gaps and
+   drop "tracking" from the Reset label before any control is shrunk. */
+.timelineControlBar{
+  flex-wrap:nowrap;
+  gap:8px;
+  min-height:36px;
+  padding:2px 0 8px;
+  border-bottom:1px solid var(--row-border);
+}
+.timelineControlBarShowAll{
+  display:inline-flex;
+  align-items:center;
+  gap:10px;
+  flex:0 0 auto;
+}
+.timelineControlBar > #resetTrackingBtn{ margin-left:auto; }
+.timelineControlAction{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  flex:0 0 auto;
+  min-height:32px;
+  padding:4px 8px;
+  border:1px solid transparent;
+  border-radius:var(--control-radius);
+  background:transparent;
+  color:var(--muted);
+  font-size:var(--font-small);
+  font-weight:800;
+  line-height:1;
+  white-space:nowrap;
+  cursor:pointer;
+}
+.timelineControlAction svg{
+  width:15px; height:15px;
+  flex:0 0 auto;
+  fill:none; stroke:currentColor; stroke-width:1.9;
+  stroke-linecap:round; stroke-linejoin:round;
+}
+.timelineControlAction:hover{ background:color-mix(in srgb,var(--text) 6%,transparent); color:var(--title); }
+.timelineControlAction:active{ background:color-mix(in srgb,var(--text) 12%,transparent); }
+.timelineControlAction:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
+.timelineControlActionShort{ display:none; }
+
 /* A toggle whose feature has nothing to act on yet. Deliberately still
    operable (see syncEnhancedTrackingAvailability) - dimmed to say "on, but
    waiting", not "you cannot touch this". */
@@ -5755,14 +5802,15 @@ body:is([data-theme="industrial-slate-dark"],[data-theme="gruvbox-dark"]) .resul
 #timelinePane,#timelineHookupsArea{ border-top:1px solid var(--row-border); padding-top:12px; }
 #timelinePane[hidden],#timelineHookupsArea[hidden]{ display:none; }
 
-/* The Timeline Display gear sits at the right end of the existing controls
-   row; "Show all" keeps its place on the left. */
+/* The settings gear closes the Timeline control bar on the right, just past
+   Reset tracking (which carries the margin-left:auto). A cog, not the radial
+   sun used by the global display control, so it reads as Timeline settings. */
 .timelineDisplayToggle{
   display:inline-grid;
   place-items:center;
   width:32px;
   height:32px;
-  margin-left:auto;
+  flex:0 0 auto;
   padding:0;
   border:1px solid transparent;
   border-radius:var(--control-radius);
@@ -5774,6 +5822,21 @@ body:is([data-theme="industrial-slate-dark"],[data-theme="gruvbox-dark"]) .resul
 .timelineDisplayToggle:hover{ background:color-mix(in srgb,var(--text) 6%,transparent); color:var(--title); }
 .timelineDisplayToggle:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
 .timelineDisplayToggle[aria-expanded="true"]{ background:var(--focus-ring); color:var(--title); }
+
+/* Mobile: tighten the bar's gaps and shorten the Reset label to "Reset"
+   before touching control sizes; keep comfortable touch targets. */
+@media (max-width:600px){
+  .timelineControlBar{ gap:6px; min-height:40px; }
+  .timelineControlBarShowAll{ gap:8px; }
+  .timelineControlActionFull{ display:none; }
+  .timelineControlActionShort{ display:inline; }
+  .timelineControlAction{ min-height:36px; padding:6px; }
+  .timelineDisplayToggle{ width:36px; height:36px; }
+}
+@media (max-width:360px){
+  .timelineControlBar{ gap:4px; }
+  .timelineControlBarShowAll{ gap:6px; }
+}
 
 /* Hookup source label on a Timeline row: sits right after its resin. A small,
    quiet, neutral-tinted pill - deliberately less prominent than the teal

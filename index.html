@@ -690,32 +690,36 @@
       </div>
 
       <div id="timelinePane">
-        <div class="muted">Sorted by upcoming time (Start by if changeover is set; otherwise Time to empty).</div>
-        <div class="trackWrap resultsToggleControls" id="timelineControlsRow">
-          <span class="trackLabel">Show all</span>
-
-          <div
-            id="showPumpOffToggle"
-            class="toggle"
-            role="switch"
-            aria-checked="false"
-            tabindex="0"
-            title="Toggle showing pump-off hoppers in the timeline"
-          ></div>
+        <!-- One compact Timeline control bar. "Show all" keeps the prominent
+             left slot; "Reset tracking" is a quiet icon-text action; the gear
+             opens Timeline settings (#timelineDisplaySheet) through the shared
+             footer-sheet system (setFooterSheetOpen in app.js - tap-off,
+             Escape and backdrop). Stays a single row at every width; gaps
+             tighten before any control shrinks. -->
+        <div class="trackWrap resultsToggleControls timelineControlBar" id="timelineControlsRow">
+          <span class="timelineControlBarShowAll">
+            <span class="trackLabel">Show all</span>
+            <div
+              id="showPumpOffToggle"
+              class="toggle"
+              role="switch"
+              aria-checked="false"
+              tabindex="0"
+              title="Toggle showing pump-off hoppers in the timeline"
+            ></div>
+          </span>
 
           <button
             id="resetTrackingBtn"
-            class="copyBtn secondary"
+            class="timelineControlAction"
             type="button"
             title="Untrack every hopper"
           >
-            Reset tracking
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 12a8.5 8.5 0 1 0 2.4-5.9"/><path d="M3 4.5V10h5.5"/></svg>
+            <span class="timelineControlActionFull">Reset tracking</span>
+            <span class="timelineControlActionShort">Reset</span>
           </button>
 
-          <!-- Timeline Display settings. Opens the compact #timelineDisplaySheet
-               popover/sheet through the shared footer-sheet system (see
-               setFooterSheetOpen in app.js), which handles tap-off, Escape and
-               the backdrop. -->
           <button
             id="timelineDisplayToggle"
             class="timelineDisplayToggle"
@@ -723,10 +727,10 @@
             aria-expanded="false"
             aria-haspopup="dialog"
             aria-controls="timelineDisplaySheet"
-            aria-label="Timeline display settings"
-            title="Timeline display settings"
+            aria-label="Timeline settings"
+            title="Timeline settings"
           >
-            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 3.5v3M12 17.5v3M4.7 7.5l2.1 1.2M17.2 15.3l2.1 1.2M4.7 16.5l2.1-1.2M17.2 8.7l2.1-1.2"/></svg>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1.08 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
           </button>
         </div>
         <fieldset class="mobileTimelineAlarmSection timelineAlarmSetting">
