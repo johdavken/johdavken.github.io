@@ -34,6 +34,13 @@
     "nextRecipe",
     // Same idea as resinLots above, for the Next page's own scanned lots.
     "nextRecipeLots",
+    // Hookup source labels for Current and Next recipe positions (see
+    // hookup-sources.js). Operational job state, not a recipe definition -
+    // it rides the active job exactly as resinLots and nextRecipe do.
+    // Additive and optional, so active-job version stays 0.17: an older
+    // client keeps the payload, ignores the field, and drops it on its next
+    // write - the labels are lost but the running recipe is never corrupted.
+    "hookupSources",
     "prodResinLb",
     "scrapResinLb",
     "hopperNamingLine9",
@@ -56,6 +63,7 @@
       resinLots: state.resinLots ?? {},
       nextRecipe: state.nextRecipe ?? null,
       nextRecipeLots: state.nextRecipeLots ?? {},
+      hookupSources: state.hookupSources ?? { current: {}, next: {} },
       prodResinLb: state.prodResinLb,
       scrapResinLb: state.scrapResinLb,
       hopperNamingLine9: state.hopperNamingLine9,

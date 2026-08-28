@@ -236,6 +236,27 @@
   }
   .desktopNotificationsMenu:not([open]){display:none!important}
   .desktopNotificationsMenu:focus-visible{outline:2px solid var(--focus-border);outline-offset:-2px}
+
+  /* Timeline Display gear popover - anchored non-modal, like the notification
+     centre. The gear scrolls with the panel content, so app.js positions this
+     live under it (hookTimelineDisplaySheet); inset:auto is just the pre-JS
+     resting state. */
+  .timelineDisplaySheet{
+    position:fixed;
+    inset:auto;
+    z-index:72;
+    width:min(300px,calc(100vw - 28px));
+    margin:0;
+    padding:0;
+    border:1px solid var(--border2);
+    border-radius:12px;
+    background:var(--panelOpen);
+    color:var(--text);
+    box-shadow:var(--shadow2);
+    pointer-events:auto;
+  }
+  .timelineDisplaySheet:not([open]){display:none!important}
+  .timelineDisplaySheet:focus-visible{outline:2px solid var(--focus-border);outline-offset:-2px}
   .desktopNotificationsHead{
     display:flex;
     align-items:baseline;
@@ -864,8 +885,13 @@
 
 
   /* Variable-length sections receive the remaining workspace height and
-     scroll internally without changing chronological or keyboard order. */
-  #resultsBlock > .blockBody{display:grid;grid-template-rows:auto auto auto minmax(0,1fr);align-content:start;overflow:hidden}
+     scroll internally without changing chronological or keyboard order. The
+     Timeline panel now carries a tab strip above one of two swapped views
+     (#timelinePane / #timelineHookupsArea), so the blockBody is just
+     tabs + active view, and #timelinePane holds the old row layout. */
+  #resultsBlock > .blockBody{display:grid;grid-template-rows:auto minmax(0,1fr);align-content:start;overflow:hidden}
+  #timelinePane{display:grid;grid-template-rows:auto auto auto minmax(0,1fr);align-content:start;min-height:0;overflow:hidden}
+  #timelineHookupsArea{min-height:0;overflow:auto;overscroll-behavior:contain;padding-right:4px}
   #resultsArea{min-height:0;overflow:auto;overscroll-behavior:contain;padding-right:4px}
   #lineSyncBlock > .blockBody{overflow:auto}
   #lineSyncBlock .lineSyncConnectionFields{grid-template-columns:minmax(180px,1fr) minmax(180px,1fr) minmax(180px,1fr)}

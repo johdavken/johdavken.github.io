@@ -85,13 +85,19 @@ test("the arrow is decorative and the accessible name says what the pair means",
  *   The control
  * -------------------------------------------------------------------- */
 
-test("the toggle sits with Reset tracking and is labelled for assistive tech", () => {
-  const controls = html.slice(html.indexOf('class="trackWrap resultsToggleControls"'), html.indexOf('id="resetTrackingBtn"'));
-  assert.match(controls, /id="timelineNextResinToggle"/);
-  assert.match(controls, /role="switch"/);
-  assert.match(controls, /aria-labelledby="timelineNextResinLabel"/);
-  assert.match(html, /<span class="trackLabel" id="timelineNextResinLabel">Enhanced tracking<\/span>/);
-  assert.match(app, /hookToggle\(\s*\n\s*"timelineNextResinToggle",/);
+test("the Next resin control lives in the Timeline Display sheet, not as its own switch in the controls row", () => {
+  // The standalone "Enhanced tracking" toggle is gone from the row next to
+  // Reset tracking; its behaviour is now the "Next resin" Show/Hide choice in
+  // #timelineDisplaySheet, still backed by state.timelineNextResin.
+  const controls = html.slice(html.indexOf('id="timelineControlsRow"'), html.indexOf('id="resultsArea"'));
+  assert.doesNotMatch(controls, /timelineNextResinToggle|Enhanced tracking/);
+  assert.match(html, /id="timelineDisplayToggle"/);
+  const sheet = html.slice(html.indexOf('id="timelineDisplaySheet"'), html.indexOf("</dialog>", html.indexOf('id="timelineDisplaySheet"')));
+  assert.match(sheet, /id="timelineNextResinChoice"[^>]*role="radiogroup"/);
+  assert.match(sheet, /data-timeline-next-resin="show"/);
+  assert.match(sheet, /data-timeline-next-resin="hide"/);
+  assert.match(sheet, /id="timelineNextResinNote"/);
+  assert.match(app, /state\.timelineNextResin = btn\.dataset\.timelineNextResin === "show";/);
 });
 
 test("it stays operable while unavailable, and says which condition it is waiting on", () => {

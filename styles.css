@@ -5620,19 +5620,46 @@ body:is([data-theme="industrial-slate-dark"],[data-theme="gruvbox-dark"]) .resul
 .resultRow.late .resultTimingValue{color:var(--warn)}
 .resultRow.done{ opacity: 0.42; filter: grayscale(1); }
 
-.checkWrap{
-  display:flex;
-  align-items:center;
+/* Compact I / O pump-off toggle at the far right of every Timeline row - one
+   implementation for mobile, tablet and desktop (replaced the old checkbox +
+   "Pump off" label). I = pump running (subdued), O = pump off (active).
+   Neutral theme tokens only, so it never competes with the row's urgency or
+   status colours. Fixed box, so it never changes row height; an invisible
+   ::after keeps a full touch target on phones. */
+.pumpToggle{
+  position:relative;
+  display:grid;
+  place-items:center;
   flex:0 0 auto;
-  gap:0;
-  min-height:20px;
-  margin:0;
+  width:26px;
+  height:26px;
+  /* Beats the base button{min-height:var(--button-height)} so the control
+     stays a fixed compact square and never grows the row. */
+  min-height:26px;
+  padding:0;
+  border:1px solid var(--border2);
+  border-radius:6px;
+  background:transparent;
   color:var(--muted);
-  font-size:0;
+  font-size:12px;
+  font-weight:800;
+  line-height:1;
+  font-variant-numeric:tabular-nums;
   user-select:none;
-  white-space:nowrap;
+  cursor:pointer;
+  transition:background .1s ease, border-color .1s ease, color .1s ease;
 }
-.checkWrap input{ width:16px; height:16px; padding:0; margin:0; border-radius:3px; }
+/* Invisible hit-area expansion for touch - up, down and left only. Never to
+   the right: the control sits flush at the row edge and any right overhang
+   would push a horizontal scrollbar onto #resultsArea. */
+.pumpToggle::after{ content:""; position:absolute; inset:-10px 0 -10px -12px; }
+.pumpToggle:hover{ border-color:var(--muted); color:var(--title); }
+.pumpToggle:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
+.pumpToggle[aria-pressed="true"]{
+  border-color:var(--muted);
+  background:color-mix(in srgb,var(--text) 16%,transparent);
+  color:var(--title);
+}
 
 /* Tablet has ample unused width beside the 620px ribbon. Spend it on the
    most time-sensitive value: a larger, dedicated schedule column, while
@@ -5682,11 +5709,185 @@ body:is([data-theme="industrial-slate-dark"],[data-theme="gruvbox-dark"]) .resul
   .resultTimingClock{font-size:14px}
   .resultTimingPeriod{font-size:7px}
   .resultTimingUnavailable{font-size:8px}
-  .checkWrap input{width:14px;height:14px}
+  .pumpToggle{width:26px;height:26px;min-height:26px;font-size:11px}
+  .pumpToggle::after{ inset:-11px 0 -11px -14px; }
 }
-@media (max-width:480px){
-  .checkWrap{gap:4px;font-size:10px}
+
+/* =======================================================================
+ *   Timeline / Hookups views
+ *   ======================================================================= */
+
+/* Two views of one Timeline panel. Same tab language as the Recipe panel's
+   Current/Next strip so they read as attached views, not separate buttons. */
+.timelineViewTabs{
+  display:flex;
+  align-items:flex-end;
+  gap:4px;
+  margin:0 0 -1px;
+  padding:0 2px;
+  border-bottom:1px solid var(--row-border);
 }
+.timelineViewTab{
+  position:relative;
+  min-height:30px;
+  padding:6px 16px 5px;
+  border:1px solid transparent;
+  border-bottom:0;
+  border-radius:var(--control-radius) var(--control-radius) 0 0;
+  background:transparent;
+  color:var(--muted);
+  font-size:var(--font-small);
+  font-weight:800;
+  letter-spacing:.02em;
+  line-height:1.2;
+  cursor:pointer;
+}
+.timelineViewTab:hover{ background:color-mix(in srgb,var(--text) 5%,transparent); color:var(--title); }
+.timelineViewTab.active{
+  z-index:1;
+  border-color:var(--row-border);
+  background:var(--panel);
+  color:var(--title);
+  font-weight:900;
+  box-shadow:0 1px 0 0 var(--panel);
+}
+.timelineViewTab:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
+#timelinePane,#timelineHookupsArea{ border-top:1px solid var(--row-border); padding-top:12px; }
+#timelinePane[hidden],#timelineHookupsArea[hidden]{ display:none; }
+
+/* The Timeline Display gear sits at the right end of the existing controls
+   row; "Show all" keeps its place on the left. */
+.timelineDisplayToggle{
+  display:inline-grid;
+  place-items:center;
+  width:32px;
+  height:32px;
+  margin-left:auto;
+  padding:0;
+  border:1px solid transparent;
+  border-radius:var(--control-radius);
+  background:transparent;
+  color:var(--muted);
+  cursor:pointer;
+}
+.timelineDisplayToggle svg{ width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.timelineDisplayToggle:hover{ background:color-mix(in srgb,var(--text) 6%,transparent); color:var(--title); }
+.timelineDisplayToggle:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
+.timelineDisplayToggle[aria-expanded="true"]{ background:var(--focus-ring); color:var(--title); }
+
+/* Hookup source label on a Timeline row: sits right after its resin. A small,
+   quiet, neutral-tinted pill - deliberately less prominent than the teal
+   hopper badge and clear of the urgency colours. Omitted entirely when no
+   source is entered. */
+.resultSourceBadge{
+  display:inline-flex;
+  flex:0 1 auto;
+  align-items:center;
+  max-width:8ch;
+  overflow:hidden;
+  padding:0 4px;
+  border:1px solid color-mix(in srgb,var(--text) 20%,transparent);
+  border-radius:4px;
+  background:color-mix(in srgb,var(--text) 7%,transparent);
+  color:var(--muted);
+  font-size:9px;
+  font-weight:800;
+  line-height:1.6;
+  letter-spacing:.02em;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+}
+.resultNextResin .resultSourceBadge{ margin-left:1px; }
+.resultRow.done .resultSourceBadge{ color:inherit; border-color:currentColor; background:transparent; }
+
+/* Hookups view: two columns on tablet/desktop, stacked and glove-friendly on
+   phones (mobile-first here - the two-column grid is the enhancement). */
+.timelineHookups{ min-width:0; }
+.timelineHookupsBoard{
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  gap:18px;
+  align-items:start;
+}
+.timelineHookupsColumn{ display:grid; gap:8px; align-content:start; min-width:0; }
+.timelineHookupsColumnTitle{
+  margin:0;
+  color:var(--muted);
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:.14em;
+}
+.timelineHookupsRow{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  min-height:44px;
+}
+.timelineHookupsResin{
+  flex:1 1 auto;
+  min-width:0;
+  overflow:hidden;
+  color:var(--title);
+  font-size:15px;
+  font-weight:800;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+/* An underline field, matching every other text input in the app - just
+   wider text and forced uppercase. Higher specificity than the global
+   input:not([type=...]) rule so width/alignment land. */
+.timelineHookupsRow > input.timelineHookupsInput{
+  flex:0 0 auto;
+  width:8ch;
+  min-height:40px;
+  padding:4px 2px;
+  color:var(--text);
+  font-size:15px;
+  font-weight:800;
+  letter-spacing:.06em;
+  text-align:center;
+  text-transform:uppercase;
+}
+.timelineHookupsRow > input.timelineHookupsInputMixed{ border-bottom-color:var(--warn); }
+.timelineHookupsInput::placeholder{ color:var(--warn); font-weight:700; text-transform:none; letter-spacing:0; opacity:.92; }
+.timelineHookupsEmpty{ margin:0; font-size:12px; }
+
+@media (min-width:701px){
+  .timelineHookupsBoard{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px 24px; max-width:640px; }
+  .timelineHookupsColumn{ gap:6px; }
+  .timelineHookupsRow{ min-height:34px; gap:10px; }
+  .timelineHookupsResin{ font-size:14px; }
+  .timelineHookupsRow > input.timelineHookupsInput{ width:7ch; min-height:30px; font-size:13px; }
+}
+
+/* Timeline Display sheet content - shared by the desktop popover and the
+   mobile bottom sheet, same as the notification centre. */
+.timelineDisplaySheetPanel{ display:grid; gap:16px; padding:15px 16px 18px; max-height:min(72vh,520px); overflow:auto; }
+.timelineDisplayField{ display:grid; gap:7px; }
+.timelineDisplayFieldLabel{ color:var(--muted); font-size:12px; font-weight:800; letter-spacing:.02em; }
+.timelineDisplayChoice{ display:flex; flex-wrap:wrap; gap:6px; }
+.timelineDisplayChoice button{
+  flex:1 1 auto;
+  min-height:40px;
+  padding:8px 12px;
+  border:1px solid var(--border2);
+  border-radius:8px;
+  background:var(--field-bg);
+  color:var(--muted);
+  font-size:12px;
+  font-weight:800;
+  cursor:pointer;
+}
+.timelineDisplayChoice button:hover{ color:var(--title); }
+.timelineDisplayChoice button.active{
+  border-color:var(--focus-border);
+  background:color-mix(in srgb,var(--focus-border) 16%,var(--field-bg));
+  color:var(--title);
+}
+.timelineDisplayChoice button:disabled{ opacity:.4; cursor:not-allowed; }
+.timelineDisplayChoice button:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
+.timelineChoiceUnavailable button{ opacity:.6; }
+.timelineSourceLabelsNote[hidden]{ display:none; }
 
 /* =======================================================================
  *   Resin totals

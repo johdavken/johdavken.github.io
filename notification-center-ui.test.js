@@ -76,7 +76,9 @@ test("the bell joins the one mutually exclusive status-bar menu registry", () =>
 
 test("the popover is nonmodal: no backdrop, no inert workspace, no overlay left behind", () => {
   assert.match(app, /function isDesktopNotificationsPopover\(name = activeFooterSheetName\)\{\s*\n\s*return name === "notifications"/);
-  assert.match(app, /const nonmodalPopover = isDesktopNotificationsPopover\(name\);/);
+  // isDesktopPopover covers notifications and the Timeline Display gear; both
+  // present non-modally on desktop.
+  assert.match(app, /const nonmodalPopover = isDesktopPopover\(name\);/);
   assert.match(app, /backdrop\.hidden = nonmodalPopover/);
   assert.match(app, /main\.inert = !nonmodalPopover/);
   // closeFooterSheets clears presentation state and anchoring for every pair.

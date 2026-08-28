@@ -91,10 +91,20 @@
       // selected RT Sync workspace and never from this stored preference.
       hopperNamingLine9: "standard",
       showPumpOffTracked: false, // show pump-off items in Timeline
-      // Enhanced tracking: show each tracked hopper's incoming resin from the
-      // planned Next Recipe on its Timeline row. A per-device display
-      // preference, like showPumpOffTracked - see applySharedActiveJob.
+      // Next resin ("Enhanced tracking"): show each tracked hopper's incoming
+      // resin from the planned Next Recipe on its Timeline row. A per-device
+      // display preference, like showPumpOffTracked - see applySharedActiveJob.
+      // Surfaced only in the Timeline Display sheet now, not as its own switch.
       timelineNextResin: false,
+      // Whether hookup source labels appear inline on Timeline rows, and for
+      // which side: "hide" | "current" | "current-next". Per-device display
+      // preference. "current-next" only draws a Next source when the Next
+      // resin is also shown (timelineNextResin).
+      timelineSourceLabels: "hide",
+      // Hookup source labels for Current and Next recipe positions, keyed by
+      // physical hopper slot "<layer>:<index>" (see hookup-sources.js).
+      // Operational job state - travels with the active job like resinLots.
+      hookupSources: { current: {}, next: {} },
       mobileTimelineOnly: false,
       mobileRecipeOnly: false,
       smartHoppersEnabled: false, // local display preference
@@ -1266,11 +1276,7 @@
       (v)=> { state.showPumpOffTracked = !!v; }
     );
 
-    hookToggle(
-      "timelineNextResinToggle",
-      ()=> !!state.timelineNextResin,
-      (v)=> { state.timelineNextResin = !!v; }
-    );
+    hookTimelineDisplayChoices();
 
     hookToggle(
       "mobileTimelineToggle",
@@ -1283,6 +1289,80 @@
       ()=> !!state.mobileRecipeOnly,
       (v)=> applyMobileRecipeMode(!!v)
     );
+  }
+
+  const SOURCE_LABEL_MODES = ["hide", "current", "current-next"];
+  function normalizeSourceLabelsPref(value){
+    return SOURCE_LABEL_MODES.includes(value) ? value : "hide";
+  }
+
+  // The Timeline Display sheet holds two radiogroups: Next resin (Show/Hide,
+  // backed by state.timelineNextResin - the old "Enhanced tracking" switch)
+  // and Source labels (Hide / Current / Current + Next). Wired once; the UI is
+  // kept in sync by applyTimelineDisplayPrefs().
+  function hookTimelineDisplayChoices(){
+    const nextGroup = $("timelineNextResinChoice");
+    if (nextGroup && !nextGroup._wired){
+      nextGroup._wired = true;
+      nextGroup.querySelectorAll("[data-timeline-next-resin]").forEach(btn=>{
+        btn.addEventListener("click",()=>{
+          state.timelineNextResin = btn.dataset.timelineNextResin === "show";
+          applyTimelineDisplayPrefs();
+          saveSession();
+          validateAndCompute({ sync: false });
+        });
+      });
+    }
+    const sourceGroup = $("timelineSourceLabelsChoice");
+    if (sourceGroup && !sourceGroup._wired){
+      sourceGroup._wired = true;
+      sourceGroup.querySelectorAll("[data-timeline-source-labels]").forEach(btn=>{
+        btn.addEventListener("click",()=>{
+          state.timelineSourceLabels = normalizeSourceLabelsPref(btn.dataset.timelineSourceLabels);
+          applyTimelineDisplayPrefs();
+          saveSession();
+          validateAndCompute({ sync: false });
+        });
+      });
+    }
+    applyTimelineDisplayPrefs();
+  }
+
+  // Reflect state onto the two radiogroups and enforce the one interlock:
+  // a Next source is meaningless when the Next resin is hidden, so
+  // "Current + Next" falls back to Current-only behaviour and says why.
+  function applyTimelineDisplayPrefs(){
+    state.timelineSourceLabels = normalizeSourceLabelsPref(state.timelineSourceLabels);
+    const nextShown = !!state.timelineNextResin;
+
+    document.querySelectorAll("#timelineNextResinChoice [data-timeline-next-resin]").forEach(btn=>{
+      const on = (btn.dataset.timelineNextResin === "show") === nextShown;
+      btn.classList.toggle("active", on);
+      btn.setAttribute("aria-checked", String(on));
+    });
+    document.querySelectorAll("#timelineSourceLabelsChoice [data-timeline-source-labels]").forEach(btn=>{
+      const on = btn.dataset.timelineSourceLabels === state.timelineSourceLabels;
+      btn.classList.toggle("active", on);
+      btn.setAttribute("aria-checked", String(on));
+      const isNextOption = btn.dataset.timelineSourceLabels === "current-next";
+      btn.disabled = isNextOption && !nextShown;
+    });
+
+    const note = $("timelineSourceLabelsNote");
+    if (note){
+      const explain = state.timelineSourceLabels === "current-next" && !nextShown;
+      note.hidden = !explain;
+    }
+    syncEnhancedTrackingAvailability();
+  }
+
+  // The effective source-label mode for rendering: "current-next" degrades to
+  // "current" whenever the Next resin is hidden, so a hidden Next resin never
+  // carries a Next source.
+  function effectiveSourceLabelMode(){
+    const mode = normalizeSourceLabelsPref(state.timelineSourceLabels);
+    if (mode === "current-next" && !state.timelineNextResin) return "current";
+    return mode;
   }
 
 
@@ -1457,6 +1537,8 @@
         hopperNamingLine9: state.hopperNamingLine9,
         showPumpOffTracked: !!state.showPumpOffTracked,
         timelineNextResin: !!state.timelineNextResin,
+        timelineSourceLabels: normalizeSourceLabelsPref(state.timelineSourceLabels),
+        hookupSources: window.PolynHookupSources?.normalizeStore(state.hookupSources) || { current: {}, next: {} },
         mobileTimelineOnly: !!state.mobileTimelineOnly,
         mobileRecipeOnly: !!state.mobileRecipeOnly,
         smartHoppersEnabled: !!state.smartHoppersEnabled,
@@ -1480,6 +1562,9 @@
         pumpOffAlarmVibrate: state.pumpOffAlarmVibrate,
         showPumpOffTracked: state.showPumpOffTracked,
         timelineNextResin: state.timelineNextResin,
+        // Display preference only - the hookup labels themselves (hookupSources)
+        // are operational job state and come in from the shared payload.
+        timelineSourceLabels: state.timelineSourceLabels,
         mobileTimelineOnly: state.mobileTimelineOnly,
         mobileRecipeOnly: state.mobileRecipeOnly,
         smartHoppersEnabled: state.smartHoppersEnabled,
@@ -1940,6 +2025,12 @@
       state.hopperNamingLine9 = (payload.hopperNamingLine9 === "main") ? "main" : "standard";
       state.showPumpOffTracked = !!payload.showPumpOffTracked;
       state.timelineNextResin = !!payload.timelineNextResin;
+      state.timelineSourceLabels = normalizeSourceLabelsPref(payload.timelineSourceLabels);
+      // Sanitized defensively here, then pruned against the recipes once
+      // state.layers is rebuilt below (reconcileHookupSources in
+      // validateAndCompute). A payload written before this field existed has
+      // none, which lands on an empty store - no migration step.
+      state.hookupSources = window.PolynHookupSources?.normalizeStore(payload.hookupSources) || { current: {}, next: {} };
       state.mobileTimelineOnly = !!payload.mobileTimelineOnly;
       applyMobileTimelineMode(state.mobileTimelineOnly);
       state.mobileRecipeOnly = !!payload.mobileRecipeOnly;
@@ -5541,7 +5632,12 @@
         });
       });
 
+      // Prune hookup labels whose recipe position changed or vanished before
+      // anything reads them. Local persistence rides the saveSession() below;
+      // a stale-only change syncs on the next real mutation.
+      reconcileHookupSources();
       renderResultsFlat(flat, changeoverDate);
+      renderTimelineHookups();
       schedulePumpOffAlerts(flat, changeoverDate);
       syncNativeTimelineAlarms(flat, changeoverDate);
       updateFooterNext(flat, changeoverDate);
@@ -5679,13 +5775,15 @@
     }
 
     function syncEnhancedTrackingAvailability(){
-      const toggle = $("timelineNextResinToggle");
-      if (!toggle) return;
+      const group = $("timelineNextResinChoice");
       const reason = enhancedTrackingUnavailableReason();
-      toggle.classList.toggle("toggleUnavailable", !!reason);
-      toggle.title = reason
-        ? `Enhanced tracking: ${reason}`
-        : "Show each tracked hopper's incoming resin from the Next Recipe";
+      if (group){
+        group.classList.toggle("timelineChoiceUnavailable", !!reason);
+        const showBtn = group.querySelector('[data-timeline-next-resin="show"]');
+        if (showBtn){
+          showBtn.title = reason || "Show each tracked hopper's incoming resin from the Next Recipe";
+        }
+      }
       const note = $("timelineNextResinNote");
       if (note){
         // Only worth saying out loud when the operator has actually asked for
@@ -5696,6 +5794,104 @@
       }
     }
 
+    /* ============================
+     * Timeline / Hookups views
+     * ============================
+     * Two views of the one Timeline panel. #timelinePane (the schedule) and
+     * #timelineHookupsArea are swapped in place - no stacked panel. The tab
+     * is not persisted: the Timeline always opens on the schedule.
+     */
+    let activeTimelineView = "timeline"; // "timeline" | "hookups"
+
+    function hookTimelineViewTabs(){
+      document.querySelectorAll(".timelineViewTab").forEach(tab=>{
+        if (tab._wired) return;
+        tab._wired = true;
+        tab.addEventListener("click",()=>setTimelineView(tab.dataset.timelineView));
+      });
+      setTimelineView(activeTimelineView);
+    }
+
+    function setTimelineView(view){
+      activeTimelineView = view === "hookups" ? "hookups" : "timeline";
+      const pane = $("timelinePane");
+      const hookups = $("timelineHookupsArea");
+      if (pane) pane.hidden = activeTimelineView !== "timeline";
+      if (hookups) hookups.hidden = activeTimelineView !== "hookups";
+      document.querySelectorAll(".timelineViewTab").forEach(tab=>{
+        const on = tab.dataset.timelineView === activeTimelineView;
+        tab.classList.toggle("active", on);
+        tab.setAttribute("aria-selected", String(on));
+      });
+      if (activeTimelineView === "hookups") renderTimelineHookups({ force: true });
+    }
+
+    function hookTimelineDisplaySheet(){
+      const toggle = $("timelineDisplayToggle");
+      const sheet = $("timelineDisplaySheet");
+      if (!toggle || toggle._wired) return;
+      toggle._wired = true;
+
+      // Desktop: anchor the popover under the gear and keep it in the
+      // viewport. The gear lives in scrolling panel content (not the fixed
+      // status bar the notification centre anchors to), so it needs a live
+      // position. closeFooterSheets clears these inline styles on dismiss.
+      const place = ()=>{
+        if (!sheet || !sheet.open || sheet.dataset.presentation !== "popover") return;
+        const anchor = toggle.getBoundingClientRect();
+        const box = sheet.getBoundingClientRect();
+        const margin = 12;
+        const left = Math.max(margin, Math.min(anchor.right - box.width, window.innerWidth - box.width - margin));
+        const below = anchor.bottom + 6;
+        const top = below + box.height <= window.innerHeight - margin
+          ? below
+          : Math.max(margin, anchor.top - box.height - 6);
+        sheet.style.left = `${Math.round(left)}px`;
+        sheet.style.top = `${Math.round(top)}px`;
+        sheet.style.right = "auto";
+        sheet.style.bottom = "auto";
+      };
+      toggle.addEventListener("click",(event)=>{
+        event.stopPropagation();
+        const wasOpen = sheet?.open && sheet.dataset.presentation === "popover";
+        setFooterSheetOpen("timelineDisplay", true, event.currentTarget);
+        if (!wasOpen){
+          // The dialog is only laid out after show(); position once it has a
+          // measurable box, then again next frame in case focus shifted scroll.
+          requestAnimationFrame(place);
+          requestAnimationFrame(()=>requestAnimationFrame(place));
+          setTimeout(place, 0);
+        }
+      });
+      window.addEventListener("resize", place);
+      window.addEventListener("scroll", place, true);
+    }
+
+    // The active positions of the Current and Next recipes, in the shape
+    // hookup-sources.js works with. Next is read from the planned recipe as it
+    // stands (not gated on promotability - the operator is still entering it).
+    function hookupRecipePositions(){
+      const H = window.PolynHookupSources;
+      if (!H) return { current: [], next: [] };
+      const plan = plannedRecipePayload();
+      return {
+        current: H.positionsFromLayers(state.layers),
+        next: plan ? H.positionsFromLayers(plan.layers) : []
+      };
+    }
+
+    // Prune stale hookup labels against the recipes as they stand. Called from
+    // validateAndCompute, so a changed/cleared recipe position drops its label
+    // on the next recompute. Persists locally; a sync rides the triggering
+    // mutation when there is one.
+    function reconcileHookupSources(){
+      const H = window.PolynHookupSources;
+      if (!H) return false;
+      const { store, changed } = H.reconcile(state.hookupSources, hookupRecipePositions());
+      state.hookupSources = store;
+      return changed;
+    }
+
     function renderResultsFlat(flat, changeoverDate){
       syncEnhancedTrackingAvailability();
       const area = $("resultsArea");
@@ -5704,6 +5900,10 @@
 
       const viewFlat = state.showPumpOffTracked ? flat : flat.filter(x=>!x.pumpOff);
       const nextResins = nextResinByPosition();
+      const sourceMode = effectiveSourceLabelMode();
+      const HS = window.PolynHookupSources;
+      const currentSources = state.hookupSources?.current || {};
+      const nextSources = state.hookupSources?.next || {};
 
       if (viewFlat.length === 0){
         area.innerHTML = `<div class="muted">No visible tracked hoppers. (Pump-off hoppers are hidden.) Toggle “Show pump-off hoppers” to view them.</div>`;
@@ -5764,16 +5964,14 @@
             <div class="resultIdentity">
               <span class="mono resultHopper">${h.hopperLabel}</span>
               <span data-resin-chip></span>
+              <span data-source-chip></span>
               <span data-next-resin></span>
               ${splitWarn}
             </div>
             <div class="resultRun">${runSummary}</div>
           </div>
 
-          <label class="checkWrap" title="Check when the hopper pump is turned off">
-            <input type="checkbox" ${h.pumpOff ? "checked" : ""}>
-            Pump off
-          </label>
+          <button type="button" class="pumpToggle" data-pump-toggle aria-pressed="${h.pumpOff ? "true" : "false"}" aria-label="${h.pumpOff ? "Pump off" : "Pump running"}" title="${h.pumpOff ? "Pump off" : "Pump running"}"><span aria-hidden="true">${h.pumpOff ? "O" : "I"}</span></button>
         `;
 
         // Use textContent even though these values originate in the local
@@ -5787,6 +5985,23 @@
         const resinChip = row.querySelector("[data-resin-chip]");
         resinChip.className = h.resinName ? "mono resultResin" : "resultStatusChip badge-warn";
         resinChip.textContent = h.resinName || "No resin";
+
+        // Hookup source label for the current resin: a very small quiet pill
+        // right after its resin. Omitted entirely when nothing is entered - no
+        // placeholder. Resin-guarded, so a changed resin never shows a stale
+        // label. Built with textContent (operator-supplied text).
+        const posKey = `${h.layer}:${h.hopperIndex}`;
+        const sourceChip = row.querySelector("[data-source-chip]");
+        const currentSource = (sourceMode !== "hide" && h.resinName && HS)
+          ? HS.sourceForPosition(currentSources, posKey, h.resinName)
+          : "";
+        if (currentSource){
+          sourceChip.className = "resultSourceBadge";
+          sourceChip.textContent = currentSource;
+          // Concatenated, not interpolated: resin names are never placed in a
+          // template literal anywhere they touch the DOM (see security.test.js).
+          sourceChip.title = "Hookup source for " + h.resinName + ": " + currentSource;
+        }
 
         // Only positions the plan actually changes are marked. An unchanged
         // hopper is left alone on purpose: the rows carrying an arrow are
@@ -5807,17 +6022,33 @@
           name.className = incoming ? "mono" : "";
           name.textContent = incoming || "Empty";
           nextChip.replaceChildren(arrow, name);
+          // A hookup source for the incoming resin rides just after it, only
+          // when Source labels is set to "Current + Next" (sourceMode already
+          // degrades to "current" whenever the Next resin is hidden).
+          const nextSource = (sourceMode === "current-next" && incoming && HS)
+            ? HS.sourceForPosition(nextSources, `${h.layer}:${h.hopperIndex}`, incoming)
+            : "";
+          if (nextSource){
+            const nextBadge = document.createElement("span");
+            nextBadge.className = "resultSourceBadge";
+            nextBadge.textContent = nextSource;
+            nextChip.append(nextBadge);
+          }
           // The arrow is decorative, so the accessible name says what the pair
           // means instead of leaving a screen reader to announce a glyph.
           const label = incoming
             ? `Next Recipe: ${h.hopperLabel} changes to `
             : `Next Recipe: ${h.hopperLabel} is emptied`;
-          nextChip.title = incoming ? label + incoming : label;
+          const spoken = incoming ? label + incoming : label;
+          nextChip.title = nextSource ? `${spoken} (hookup ${nextSource})` : spoken;
           nextChip.setAttribute("aria-label", nextChip.title);
         }
 
-        row.querySelector('input[type="checkbox"]').addEventListener("change",(e)=>{
-          h._ref.h.pumpOff = !!e.target.checked;
+        // Same underlying state and side effects as the checkbox this replaced -
+        // flip the live hopper's pumpOff, persist, recompute (which re-renders
+        // this row with the new I/O state and syncs).
+        row.querySelector("[data-pump-toggle]").addEventListener("click",()=>{
+          h._ref.h.pumpOff = !h._ref.h.pumpOff;
           saveSession();
           validateAndCompute({ sync: true, immediate: true, kind: "pump-off" });
         });
@@ -5825,6 +6056,102 @@
         area.appendChild(row);
       });
     }
+
+    /* The Hookups view: derived entirely from the Current and Next recipes,
+     * grouped by visible resin code, with one compact source-label input per
+     * group. No add/remove - the rows are the recipe. Saved automatically. */
+    function renderTimelineHookups({ force = false } = {}){
+      const area = $("timelineHookupsArea");
+      const H = window.PolynHookupSources;
+      if (!area || !H) return;
+      // Never rebuild the inputs out from under an operator mid-type. The
+      // input handler keeps state fresh; a full rebuild follows on change.
+      if (!force && area.contains(document.activeElement)) return;
+
+      const positions = hookupRecipePositions();
+      const groups = {
+        current: H.groupByResin(positions.current, state.hookupSources?.current || {}),
+        next: H.groupByResin(positions.next, state.hookupSources?.next || {})
+      };
+
+      const board = document.createElement("div");
+      board.className = "timelineHookupsBoard";
+
+      [["current", "CURRENT"], ["next", "NEXT"]].forEach(([recipeKey, heading])=>{
+        const column = document.createElement("section");
+        column.className = "timelineHookupsColumn";
+
+        const title = document.createElement("h4");
+        title.className = "timelineHookupsColumnTitle";
+        title.textContent = heading;
+        column.append(title);
+
+        const rows = groups[recipeKey];
+        if (rows.length === 0){
+          const empty = document.createElement("p");
+          empty.className = "muted timelineHookupsEmpty";
+          empty.textContent = recipeKey === "next"
+            ? "No Next Recipe planned."
+            : "No resins in the Current Recipe yet.";
+          column.append(empty);
+        } else {
+          rows.forEach(group=>{
+            const row = document.createElement("div");
+            row.className = "timelineHookupsRow";
+
+            const code = document.createElement("span");
+            code.className = "mono timelineHookupsResin";
+            code.textContent = group.resin;
+
+            const input = document.createElement("input");
+            input.type = "text";
+            input.className = "timelineHookupsInput";
+            input.value = group.value;
+            input.size = 6;
+            input.maxLength = H.MAX_SOURCE_LENGTH;
+            input.autocomplete = "off";
+            input.spellcheck = false;
+            input.setAttribute("autocapitalize", "characters");
+            input.setAttribute("inputmode", "text");
+            // Resin code concatenated, not interpolated (see security.test.js).
+            input.setAttribute("aria-label", "Hookup source for " + group.resin + (recipeKey === "next" ? " in the Next Recipe" : ""));
+            if (group.mixed){
+              const distinct = [...new Set(group.sources.filter(Boolean))];
+              input.placeholder = "Mixed";
+              input.classList.add("timelineHookupsInputMixed");
+              input.title = "Different sources entered (" + distinct.join(", ") + "). Typing here sets all " + group.keys.length + " hoppers.";
+            }
+
+            const persist = ()=>{
+              state.hookupSources = H.applyGroup(
+                state.hookupSources, recipeKey, group.keys, group.resin, H.normalizeSource(input.value)
+              );
+              saveSession();
+            };
+            // Per keystroke: persist locally and refresh the Timeline row
+            // badges directly (no recompute, no sync churn).
+            input.addEventListener("input", ()=>{
+              persist();
+              if (lastTimelineFlat) renderResultsFlat(lastTimelineFlat, lastTimelineChangeoverDate);
+            });
+            // On commit: one debounced RT Sync mutation, then normalize the
+            // grouped display (mixed collapses once every hopper agrees).
+            input.addEventListener("change", ()=>{
+              persist();
+              validateAndCompute({ sync: true, kind: "hookup-edit" });
+              renderTimelineHookups({ force: true });
+            });
+
+            row.append(code, input);
+            column.append(row);
+          });
+        }
+        board.append(column);
+      });
+
+      area.replaceChildren(board);
+    }
+
     function resetTracking(){
       const hasTracked = state.layers.some(L =>
       L.hoppers.some(h => h.track || h.pumpOff)
@@ -5861,13 +6188,16 @@
       state.showPumpOffTracked = false;
       syncToggleUI("showPumpOffToggle", false);
       state.timelineNextResin = false;
-      syncToggleUI("timelineNextResinToggle", false);
+      state.timelineSourceLabels = "hide";
+      applyTimelineDisplayPrefs();
       state.prodResinLb = 0;
       state.scrapResinLb = 0;
       // Scoped to Current, same as everything else this function resets -
       // Next and its own lot map are untouched, exactly like state.nextRecipe
-      // already is.
+      // already is. Current hookup labels go with the Current recipe being
+      // cleared here; the Next side is left alone.
       state.resinLots = {};
+      state.hookupSources = { current: {}, next: window.PolynHookupSources?.normalizeStore(state.hookupSources).next || {} };
 
       ensureLayers();
       state.layers.forEach(L=>{
@@ -6148,7 +6478,10 @@
         // Each trigger's own click handler passes itself as the requested
         // trigger (see openDisplaySheet for the established pattern), so
         // only one needs to be the registered default here.
-        notifications: [$("desktopNotificationsToggle"), $("footerNotificationsMenu")]
+        notifications: [$("desktopNotificationsToggle"), $("footerNotificationsMenu")],
+        // Timeline Display gear. Anchored non-modal popover on desktop, modal
+        // bottom sheet on touch - the same split as notifications.
+        timelineDisplay: [$("timelineDisplayToggle"), $("timelineDisplaySheet")]
       };
     }
 
@@ -6161,10 +6494,11 @@
       return name === "notifications" && isDesktopLayout();
     }
 
-    // The notification center is the sole status-bar popover: anchored to
-    // its trigger, nonmodal, with the workspace left interactive.
+    // Sheets that present as an anchored, non-modal popover on desktop (with
+    // the workspace left interactive) rather than a modal bottom sheet: the
+    // notification center and the Timeline Display gear.
     function isDesktopPopover(name = activeFooterSheetName){
-      return isDesktopNotificationsPopover(name);
+      return isDesktopLayout() && (name === "notifications" || name === "timelineDisplay");
     }
 
     function desktopPopoverWidth(sheet){
@@ -6229,7 +6563,7 @@
         toggle?.setAttribute("aria-expanded", String(key === name));
       });
       trigger?.setAttribute("aria-expanded", "true");
-      const nonmodalPopover = isDesktopNotificationsPopover(name);
+      const nonmodalPopover = isDesktopPopover(name);
       if (sheet){
         sheet.setAttribute("aria-modal", String(!nonmodalPopover));
         if (nonmodalPopover) sheet.dataset.presentation = "popover";
@@ -6386,6 +6720,7 @@
       renderSplitsArea();
       renderResinCalculator();
       updateLayerMetaDisplays();
+      applyTimelineDisplayPrefs();
 
       if (payloadMaybe && typeof payloadMaybe === "object"){
         const o = payloadMaybe.blocksOpen;
@@ -8185,9 +8520,11 @@
       hookCustomToggles();
       hookRecipePageTabs();
       hookRecipeViewToggle();
+      hookTimelineViewTabs();
+      hookTimelineDisplaySheet();
       // Sync toggle UI after restore
       syncToggleUI("showPumpOffToggle", !!state.showPumpOffTracked);
-      syncToggleUI("timelineNextResinToggle", !!state.timelineNextResin);
+      applyTimelineDisplayPrefs();
 
       refreshConfigDropdown();
 

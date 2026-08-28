@@ -14,9 +14,9 @@ test("Sudo access is a Workspace & Support destination, not a footer account men
   assert.doesNotMatch(html, /id="appFooterAccount"|id="footerAccountMenu"/);
 });
 
-test("only notifications retain the desktop nonmodal popover behavior", () => {
+test("desktop nonmodal popover behavior is limited to notifications and the Timeline Display gear - never the removed account menu", () => {
   assert.match(app, /function isDesktopNotificationsPopover\(name = activeFooterSheetName\)\{\s*\n\s*return name === "notifications" && isDesktopLayout\(\);/);
-  assert.match(app, /function isDesktopPopover\(name = activeFooterSheetName\)\{\s*\n\s*return isDesktopNotificationsPopover\(name\);/);
+  assert.match(app, /function isDesktopPopover\(name = activeFooterSheetName\)\{\s*\n\s*return isDesktopLayout\(\) && \(name === "notifications" \|\| name === "timelineDisplay"\);/);
   assert.doesNotMatch(app, /isDesktopAccountPopover|footerAccountMenu|appFooterAccount/);
 });
 

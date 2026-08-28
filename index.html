@@ -43,6 +43,7 @@
 <script src="active-job.js?v=0.20.0" defer></script>
 <script src="workspace-configuration-payloads.js?v=0.20.1" defer></script>
 <script src="next-recipe.js?v=0.2.0" defer></script>
+<script src="hookup-sources.js?v=0.1.0" defer></script>
 <script src="recipe-scan-schema.js?v=0.4.0" defer></script>
 <script src="recipe-scan-mapping.js?v=0.3.0" defer></script>
 <script src="hopper-rearrangement.js?v=0.22.0" defer></script>
@@ -679,62 +680,74 @@
     </summary>
 
     <div class="blockBody">
-      <div class="muted">Sorted by upcoming time (Start by if changeover is set; otherwise Time to empty).</div>
-       <div class="trackWrap resultsToggleControls">
-  <span class="trackLabel">Show all</span>
+      <!-- Two views of one Timeline panel, not two tools. The tab strip echoes
+           the Recipe panel's Current/Next tabs so they read as attached
+           views. Switching swaps #timelinePane for #timelineHookupsArea in
+           place - no extra stacked panel, no page-height shift. -->
+      <div class="timelineViewTabs" role="tablist" aria-label="Timeline view">
+        <button type="button" class="timelineViewTab active" id="timelineViewTabTimeline" role="tab" aria-selected="true" aria-controls="resultsArea" data-timeline-view="timeline">Timeline</button>
+        <button type="button" class="timelineViewTab" id="timelineViewTabHookups" role="tab" aria-selected="false" aria-controls="timelineHookupsArea" data-timeline-view="hookups">Hookups</button>
+      </div>
 
-  <div
-    id="showPumpOffToggle"
-    class="toggle"
-    role="switch"
-    aria-checked="false"
-    tabindex="0"
-    title="Toggle showing pump-off hoppers in the timeline"
-  ></div>
+      <div id="timelinePane">
+        <div class="muted">Sorted by upcoming time (Start by if changeover is set; otherwise Time to empty).</div>
+        <div class="trackWrap resultsToggleControls" id="timelineControlsRow">
+          <span class="trackLabel">Show all</span>
 
-  <!-- Enhanced tracking: marks tracked hoppers whose resin the planned Next
-       Recipe changes. Inert until a plan exists and passes full recipe
-       validation - syncEnhancedTrackingAvailability() below explains which of
-       those it is waiting on rather than leaving a dead switch. -->
-  <span class="trackLabel" id="timelineNextResinLabel">Enhanced tracking</span>
+          <div
+            id="showPumpOffToggle"
+            class="toggle"
+            role="switch"
+            aria-checked="false"
+            tabindex="0"
+            title="Toggle showing pump-off hoppers in the timeline"
+          ></div>
 
-  <div
-    id="timelineNextResinToggle"
-    class="toggle"
-    role="switch"
-    aria-checked="false"
-    aria-labelledby="timelineNextResinLabel"
-    tabindex="0"
-    title="Show each tracked hopper's incoming resin from the Next Recipe"
-  ></div>
+          <button
+            id="resetTrackingBtn"
+            class="copyBtn secondary"
+            type="button"
+            title="Untrack every hopper"
+          >
+            Reset tracking
+          </button>
 
-  <button
-    id="resetTrackingBtn"
-    class="copyBtn secondary"
-    type="button"
-    title="Untrack every hopper"
-  >
-    Reset tracking
-  </button>
-
-  <small class="tiny muted timelineNextResinNote" id="timelineNextResinNote" role="status" hidden></small>
-</div>
-      <fieldset class="mobileTimelineAlarmSection timelineAlarmSetting">
-        <legend>Timeline alarm</legend>
-        <label class="mobileTimelineAlarmChoice" for="mobileTimelineAlarmToggle">
-          <input id="mobileTimelineAlarmToggle" type="checkbox">
-          <span><strong>Alarm when pump-off is due</strong><small id="mobileTimelineAlarmStatus">Sound and vibration while Resin.Tools is open.</small></span>
-        </label>
-        <label class="pumpOffAlarmVibrateChoice" id="pumpOffAlarmVibrateRow" for="pumpOffAlarmVibrateToggle" hidden>
-          <input id="pumpOffAlarmVibrateToggle" type="checkbox" checked>
-          <span>Vibrate</span>
-        </label>
-        <div class="pumpOffAlarmSoundRow" id="pumpOffAlarmSoundRow" hidden>
-          <span class="pumpOffAlarmSoundInfo"><strong>Alarm sound</strong><small id="pumpOffAlarmSoundName">Default alarm sound</small></span>
-          <span class="pumpOffAlarmSoundActions"><button id="pumpOffAlarmSoundChangeBtn" type="button" class="copyBtn">Change</button><button id="pumpOffAlarmPreviewBtn" type="button" class="copyBtn">Preview</button></span>
+          <!-- Timeline Display settings. Opens the compact #timelineDisplaySheet
+               popover/sheet through the shared footer-sheet system (see
+               setFooterSheetOpen in app.js), which handles tap-off, Escape and
+               the backdrop. -->
+          <button
+            id="timelineDisplayToggle"
+            class="timelineDisplayToggle"
+            type="button"
+            aria-expanded="false"
+            aria-haspopup="dialog"
+            aria-controls="timelineDisplaySheet"
+            aria-label="Timeline display settings"
+            title="Timeline display settings"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 3.5v3M12 17.5v3M4.7 7.5l2.1 1.2M17.2 15.3l2.1 1.2M4.7 16.5l2.1-1.2M17.2 8.7l2.1-1.2"/></svg>
+          </button>
         </div>
-      </fieldset>
-      <div id="resultsArea" class="resultGrid mt10"></div>
+        <fieldset class="mobileTimelineAlarmSection timelineAlarmSetting">
+          <legend>Timeline alarm</legend>
+          <label class="mobileTimelineAlarmChoice" for="mobileTimelineAlarmToggle">
+            <input id="mobileTimelineAlarmToggle" type="checkbox">
+            <span><strong>Alarm when pump-off is due</strong><small id="mobileTimelineAlarmStatus">Sound and vibration while Resin.Tools is open.</small></span>
+          </label>
+          <label class="pumpOffAlarmVibrateChoice" id="pumpOffAlarmVibrateRow" for="pumpOffAlarmVibrateToggle" hidden>
+            <input id="pumpOffAlarmVibrateToggle" type="checkbox" checked>
+            <span>Vibrate</span>
+          </label>
+          <div class="pumpOffAlarmSoundRow" id="pumpOffAlarmSoundRow" hidden>
+            <span class="pumpOffAlarmSoundInfo"><strong>Alarm sound</strong><small id="pumpOffAlarmSoundName">Default alarm sound</small></span>
+            <span class="pumpOffAlarmSoundActions"><button id="pumpOffAlarmSoundChangeBtn" type="button" class="copyBtn">Change</button><button id="pumpOffAlarmPreviewBtn" type="button" class="copyBtn">Preview</button></span>
+          </div>
+        </fieldset>
+        <div id="resultsArea" class="resultGrid mt10" role="tabpanel" aria-labelledby="timelineViewTabTimeline"></div>
+      </div>
+
+      <div id="timelineHookupsArea" class="timelineHookups" role="tabpanel" aria-labelledby="timelineViewTabHookups" hidden></div>
 
     </div>
   </details>
@@ -1172,6 +1185,12 @@
 
     <div class="blockBody">
       <div class="changelogBody">
+        <h3>(v1.1.20) (August 28, 2026) - Timeline Hookup planning</h3>
+        <ul>
+          <li>The Timeline gains a <strong>Hookups</strong> tab: record the silo/box-line source for each resin in the Current and Next recipe, and those short labels appear inline on Timeline rows (<strong>A0700 [A] &rarr; A0711 [C]</strong>). Assignments are grouped by resin, saved automatically, and shared over RT Sync.</li>
+          <li>A gear beside <strong>Show all</strong> opens <strong>Timeline Display</strong> - one place to show or hide the Next resin and to choose whether source labels appear for Current or Current + Next. The old standalone <strong>Enhanced tracking</strong> switch is folded in as <strong>Next resin</strong>.</li>
+        </ul>
+
         <h3>(v1.1.19) (August 27, 2026) - Recipe toolbar redesign, theme-aware pill colors &amp; admin conflict-storm visibility</h3>
         <ul>
           <li>Recipe's header pill and Edit toolbar merge into single right-anchored, segmented-pill rows on tablet/desktop, fixing several width/wrap bugs only visible on real touch tablets and narrow desktop windows.</li>
@@ -1650,6 +1669,33 @@
          dictates the layer count - connected lines report and control their
          own count instead, so this stays out of the way otherwise. -->
     <div class="displaySheetLayerHost" id="displaySheetLayerHost" aria-label="Layer configuration"></div>
+  </form>
+</dialog>
+
+<dialog id="timelineDisplaySheet" class="footerSheet timelineDisplaySheet" aria-labelledby="timelineDisplaySheetTitle" tabindex="-1">
+  <form method="dialog" class="timelineDisplaySheetPanel">
+    <div class="displaySheetHead">
+      <div><strong id="timelineDisplaySheetTitle">Timeline Display</strong><small>Saved on this device</small></div>
+    </div>
+
+    <div class="timelineDisplayField">
+      <span class="timelineDisplayFieldLabel" id="timelineNextResinChoiceLabel">Next resin</span>
+      <div class="timelineDisplayChoice" id="timelineNextResinChoice" role="radiogroup" aria-labelledby="timelineNextResinChoiceLabel">
+        <button type="button" role="radio" aria-checked="false" data-timeline-next-resin="show">Show</button>
+        <button type="button" role="radio" aria-checked="true" data-timeline-next-resin="hide">Hide</button>
+      </div>
+      <small class="tiny muted timelineNextResinNote" id="timelineNextResinNote" role="status" hidden></small>
+    </div>
+
+    <div class="timelineDisplayField">
+      <span class="timelineDisplayFieldLabel" id="timelineSourceLabelsChoiceLabel">Source labels</span>
+      <div class="timelineDisplayChoice" id="timelineSourceLabelsChoice" role="radiogroup" aria-labelledby="timelineSourceLabelsChoiceLabel">
+        <button type="button" role="radio" aria-checked="true" data-timeline-source-labels="hide">Hide</button>
+        <button type="button" role="radio" aria-checked="false" data-timeline-source-labels="current">Current</button>
+        <button type="button" role="radio" aria-checked="false" data-timeline-source-labels="current-next">Current + Next</button>
+      </div>
+      <small class="tiny muted timelineSourceLabelsNote" id="timelineSourceLabelsNote" role="status" hidden>Next source needs Next resin shown.</small>
+    </div>
   </form>
 </dialog>
 
