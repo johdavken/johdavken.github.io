@@ -75,14 +75,17 @@ test("column width, the hopper-designation badge, and the Track toggle clock ico
   assert.match(body, /#splitsArea \.splitTrackButton svg\{ width: 21px; height: 21px; \}/);
 });
 
-test("desktop tracked cells use an altered labeled badge while Edit owns the cell outline", () => {
+test("desktop tracked cells read as a theme-appropriate background wash while Edit owns the cell outline", () => {
   const body = desktopBlock();
-  assert.match(body, /\.splitMatrixCell\.tracked,\s*\n\s*#splitsArea\[data-recipe-view="edit"\][^{]*\.splitMatrixCell\.tracked:not\(\.selected\)\{[\s\S]*?background: var\(--desktop-recipe-cell-bg\);[\s\S]*?box-shadow: none;/);
+  // Tracked (Summary or Edit) = a --ok wash over the cell's own fill, no shadow.
+  assert.match(body, /\.splitMatrixCell\.tracked,\s*\n\s*#splitsArea\[data-recipe-view="edit"\][^{]*\.splitMatrixCell\.tracked\{[\s\S]*?background: color-mix\(in srgb,var\(--ok\) 22%,var\(--desktop-recipe-cell-bg\)\);[\s\S]*?box-shadow: none;/);
   assert.match(body, /\.splitMatrixCell\.selected\{[\s\S]*?background: var\(--desktop-recipe-cell-bg\);[\s\S]*?box-shadow: inset 0 0 0 2px var\(--focus-border\);/);
+  // A tracked cell selected in Edit keeps the wash under the selection outline.
+  assert.match(body, /\.splitMatrixCell\.tracked\.selected\{[\s\S]*?background: color-mix\(in srgb,var\(--ok\) 22%,var\(--desktop-recipe-cell-bg\)\);/);
   assert.match(body, /\.splitMatrixCell\.selected::after\{[\s\S]*?content: "EDIT";[\s\S]*?font-size: 8px;/);
-  assert.match(body, /\.splitMatrixCell\.tracked \.splitCellHopperName\{[\s\S]*?border-radius: 7px 14px 14px 7px;[\s\S]*?color: var\(--focus-border\);/);
-  assert.match(body, /\.splitMatrixCell\.tracked \.splitCellHopperName::after\{[\s\S]*?width: 6px;[\s\S]*?border-radius: 50%;/);
-  assert.match(body, /\.splitMatrixCell\.tracked \.splitCellHeader::after\{[\s\S]*?content: "TRACKING";/);
+  // No hopper-badge restyle, no dot, no spelled-out "TRACKING" label any more.
+  assert.doesNotMatch(body, /\.splitMatrixCell\.tracked \.splitCellHopperName/);
+  assert.doesNotMatch(body, /content: "TRACKING"/);
 });
 
 test("hovering a cell no longer highlights its whole row", () => {

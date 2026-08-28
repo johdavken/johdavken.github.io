@@ -121,11 +121,11 @@ test("Summary's inert fields still let a click reach the cell, so the whole cell
   assert.match(styles, /#splitsArea\.recipeTrackingView \.splitMatrixCell\{ cursor: pointer; \}/);
 });
 
-test("Summary and Edit mark cells differently - a filled bar for tracked, an outline for selected - so the two never read as the same state", () => {
+test("Summary and Edit mark cells differently - a background wash for tracked, an outline for selected - so the two never read as the same state", () => {
   assert.match(styles, /#splitsArea\[data-recipe-view="edit"\] \.splitsMatrix tbody \.splitMatrixCell\.selected\{[\s\S]*?box-shadow: inset 0 0 0 2px var\(--focus-border\);/);
-  assert.match(styles, /#splitsArea\[data-recipe-view="summary"\] \.splitsMatrix tbody \.splitMatrixCell\.tracked\{[\s\S]*?box-shadow: inset 3px 0 0 0 var\(--ok\);/);
-  // Tracking stays legible while editing, without competing with selection.
-  assert.match(styles, /#splitsArea\[data-recipe-view="edit"\] \.splitsMatrix tbody \.splitMatrixCell\.tracked:not\(\.selected\)\{/);
+  // Tracked = a plain --ok background wash in both views, no bar or outline.
+  assert.match(styles, /#splitsArea\[data-recipe-view="summary"\] \.splitsMatrix tbody \.splitMatrixCell\.tracked,\s*\n\s*#splitsArea\[data-recipe-view="edit"\] \.splitsMatrix tbody \.splitMatrixCell\.tracked:not\(\.selected\)\{\s*\n\s*background: color-mix\(in srgb, var\(--ok\) 22%, transparent\);\s*\n\s*\}/);
+  assert.doesNotMatch(styles, /\.splitMatrixCell\.tracked[^{]*\{[^}]*inset 3px 0 0/);
 });
 
 /* ----------------------------------------------------------------------

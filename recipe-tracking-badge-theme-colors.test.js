@@ -26,14 +26,15 @@ test("none of the old hardcoded blues remain anywhere in the compact mobile matr
   assert.doesNotMatch(block, /#72b9e8|#397fae|#4d9bd0|#b9e2ff/);
 });
 
-test("the tracked hopper name badge tints its background and text from var(--focus-border), not a fixed hue", () => {
+test("the tracked hopper-name badge restyle is gone - tracking is a plain --ok cell wash", () => {
   const block = compactMobileRecipeBlock();
-  assert.match(block, /\.splitsMatrix\.compactMobileRecipe \.splitMatrixCell\.tracked \.splitCellHopperName\{[\s\S]*?background:color-mix\(in srgb,var\(--focus-border\) 22%,var\(--compact-recipe-row-bg\)\);[\s\S]*?color:var\(--focus-border\);[\s\S]*?box-shadow:inset 0 0 0 1px color-mix\(in srgb,var\(--focus-border\) 55%,transparent\);/);
+  assert.doesNotMatch(block, /\.splitMatrixCell\.tracked \.splitCellHopperName/);
+  assert.match(block, /\.splitsMatrix\.compactMobileRecipe \.splitMatrixCell\.tracked:not\(\.selected\)\{[\s\S]*?background:color-mix\(in srgb,var\(--ok\) 22%,var\(--compact-recipe-row-bg\)\);/);
 });
 
-test("the badge's dot indicator rings itself with the same theme accent (currentColor still carries the fill through)", () => {
-  const block = compactMobileRecipeBlock();
-  assert.match(block, /\.splitsMatrix\.compactMobileRecipe \.splitMatrixCell\.tracked \.splitCellHopperName::after\{[\s\S]*?background:currentColor;[\s\S]*?box-shadow:0 0 0 2px color-mix\(in srgb,var\(--focus-border\) 16%,transparent\);/);
+test("no per-theme override recolors a tracked hopper name any more", () => {
+  const theme = fs.readFileSync("theme.css", "utf8");
+  assert.doesNotMatch(theme, /\.splitMatrixCell\.tracked \.splitCellHopperName/);
 });
 
 test("the active track button's solid fill is var(--focus-border), matching the same solid-fill-plus-fixed-icon pairing already used by Weights' selected-header checkmark", () => {

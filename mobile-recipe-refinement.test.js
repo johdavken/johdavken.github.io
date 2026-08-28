@@ -7,16 +7,17 @@ const app=fs.readFileSync("app.js","utf8");
 const styles=fs.readFileSync("styles.css","utf8");
 const theme=fs.readFileSync("theme.css","utf8");
 
-test("compact tracking leaves cell highlighting to Edit and marks the notched hopper badge instead, tinted with the theme's own accent",()=>{
-  assert.match(styles,/\.splitsMatrix\.compactMobileRecipe \.splitMatrixCell\.tracked:not\(\.selected\)\{[\s\S]*?background:var\(--compact-recipe-row-bg\);[\s\S]*?border-color:var\(--row-border-2\);[\s\S]*?box-shadow:none;/);
-  assert.match(styles,/\.splitsMatrix\.compactMobileRecipe \.splitMatrixCell\.tracked \.splitCellHopperName\{[\s\S]*?min-width:30px;[\s\S]*?border-radius:4px 9px 9px 4px;[\s\S]*?background:color-mix\(in srgb,var\(--focus-border\) 22%,var\(--compact-recipe-row-bg\)\);/);
-  assert.match(styles,/\.splitMatrixCell\.tracked \.splitCellHopperName::after\{[\s\S]*?position:absolute;[\s\S]*?right:3px;[\s\S]*?box-shadow:0 0 0 2px color-mix\(in srgb,var\(--focus-border\) 16%,transparent\);/);
+test("compact tracking is a plain theme-appropriate cell wash, not a restyled hopper badge",()=>{
+  // Tracked cells read as a --ok wash over their own row fill. No badge
+  // restyle, no dot, no left bar - the hopper name stays its ordinary badge.
+  assert.match(styles,/\.splitsMatrix\.compactMobileRecipe \.splitMatrixCell\.tracked:not\(\.selected\)\{[\s\S]*?background:color-mix\(in srgb,var\(--ok\) 22%,var\(--compact-recipe-row-bg\)\);[\s\S]*?border-color:var\(--row-border-2\);[\s\S]*?box-shadow:none;/);
+  // A tracked cell selected in Edit keeps the wash under the selection outline.
+  assert.match(styles,/\.bulk-editing \.splitsMatrix\.compactMobileRecipe \.splitMatrixCell\.tracked\.selected\{[\s\S]*?background:color-mix\(in srgb,var\(--ok\) 22%,var\(--compact-recipe-row-bg\)\);/);
   assert.doesNotMatch(styles,/compactRecipeTrackTracer|compact-recipe-trace-angle/);
   assert.doesNotMatch(styles,/\.splitMatrixCell\.tracked:not\(\.selected\)::after/);
-  // Regression guard: this badge used to be hardcoded blue (#72b9e8/#397fae/
-  // #4d9bd0) on every theme instead of following var(--focus-border) - see
-  // recipe-tracking-badge-theme-colors.test.js for the full fix.
-  assert.doesNotMatch(styles,/#72b9e8|#4d9bd0/);
+  // The tracked hopper-name pill and its dot are gone on every surface.
+  assert.doesNotMatch(styles,/\.splitMatrixCell\.tracked \.splitCellHopperName(::after)?\s*\{/);
+  assert.doesNotMatch(theme,/\.splitMatrixCell\.tracked \.splitCellHopperName\{/);
 });
 
 test("compact Edit selection carries a small top-right EDIT tag in the outline color",()=>{

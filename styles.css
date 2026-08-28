@@ -2430,9 +2430,12 @@ details[open] > summary .chevSatellite{
    column order (row-header th, then one td per layer in recipeLayers()
    order), regardless of which columns are hidden/visible. */
 .splitsMatrix tbody td.splitMatrixCell:nth-child(even){background:color-mix(in srgb,var(--row-bg-2) 55%,transparent)}
+/* Tracked cells read as a plain theme-appropriate background wash - no
+   border, outline or left bar, and no restyle of the hopper-name badge.
+   --ok is the same hue Summary already uses for tracking and stays clear
+   of the focus-coloured selection state. */
 .splitsMatrix tbody .splitMatrixCell.tracked:not(.selected){
-  background:color-mix(in srgb,var(--focus-ring) 52%,transparent);
-  box-shadow:inset 3px 0 0 color-mix(in srgb,var(--title) 78%,var(--focus-border));
+  background:color-mix(in srgb,var(--ok) 22%,transparent);
 }
 .splitsMatrix td.splitMatrixCell{padding:4px 6px}
 .splitCellHeader{
@@ -3319,14 +3322,9 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     background: color-mix(in srgb, var(--focus-ring) 72%, transparent);
     box-shadow: inset 0 0 0 2px var(--focus-border);
   }
-  #splitsArea[data-recipe-view="summary"] .splitsMatrix tbody .splitMatrixCell.tracked{
-    background: color-mix(in srgb, var(--ok) 20%, transparent);
-    box-shadow: inset 3px 0 0 0 var(--ok);
-  }
-  /* Tracking stays legible while editing (you should know what the
-     timeline is watching) without competing with selection. */
+  #splitsArea[data-recipe-view="summary"] .splitsMatrix tbody .splitMatrixCell.tracked,
   #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.tracked:not(.selected){
-    box-shadow: inset 3px 0 0 0 color-mix(in srgb, var(--ok) 62%, transparent);
+    background: color-mix(in srgb, var(--ok) 22%, transparent);
   }
 
   /* "Large percentage number" - the value operators read across the line.
@@ -3797,12 +3795,13 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
      appears/disappears, the column doesn't), so nothing desktop-specific is
      needed here any more. */
 
-  /* Desktop cell states - option 3 from the comparison. Tracking is a
-     persistent property, so it changes the hopper badge and spells out the
-     state without tinting or outlining the entire cell. Edit remains the
-     stronger working state: its ordinary cell surface gets a two-pixel
-     outline and an explicit corner label. A tracked cell selected in Edit
-     therefore shows both marks without either becoming ambiguous. */
+  /* Desktop cell states. Tracking is a persistent property and now reads
+     purely as a theme-appropriate background wash on the whole cell - no
+     hopper-badge restyle, no dot, no spelled-out label, no left bar. Edit
+     remains the stronger working state: its ordinary cell surface gets a
+     two-pixel outline and an explicit corner label. A tracked cell
+     selected in Edit keeps the wash under that outline, so both marks
+     stay legible without either becoming ambiguous. */
   #splitsArea .splitsMatrix tbody .splitMatrixCell{
     --desktop-recipe-cell-bg: transparent;
     position: relative;
@@ -3812,13 +3811,16 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     --desktop-recipe-cell-bg: color-mix(in srgb,var(--row-bg-2) 55%,transparent);
   }
   #splitsArea[data-recipe-view="summary"] .splitsMatrix tbody .splitMatrixCell.tracked,
-  #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.tracked:not(.selected){
-    background: var(--desktop-recipe-cell-bg);
+  #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.tracked{
+    background: color-mix(in srgb,var(--ok) 22%,var(--desktop-recipe-cell-bg));
     box-shadow: none;
   }
   #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.selected{
     background: var(--desktop-recipe-cell-bg);
     box-shadow: inset 0 0 0 2px var(--focus-border);
+  }
+  #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.tracked.selected{
+    background: color-mix(in srgb,var(--ok) 22%,var(--desktop-recipe-cell-bg));
   }
   #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.selected::after{
     content: "EDIT";
@@ -3832,33 +3834,6 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     line-height: 1;
     letter-spacing: .11em;
     pointer-events: none;
-  }
-  #splitsArea .splitsMatrix .splitMatrixCell.tracked .splitCellHopperName{
-    position: relative;
-    min-width: 36px;
-    padding: 0 13px 0 7px;
-    border-radius: 7px 14px 14px 7px;
-    background: color-mix(in srgb,var(--focus-border) 13%,var(--field-bg));
-    color: var(--focus-border);
-    box-shadow: inset 0 0 0 1px color-mix(in srgb,var(--focus-border) 65%,transparent);
-  }
-  #splitsArea .splitsMatrix .splitMatrixCell.tracked .splitCellHopperName::after{
-    content: "";
-    position: absolute;
-    right: 5px;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: currentColor;
-    box-shadow: 0 0 0 2px color-mix(in srgb,var(--focus-border) 16%,transparent);
-  }
-  #splitsArea .splitsMatrix .splitMatrixCell.tracked .splitCellHeader::after{
-    content: "TRACKING";
-    color: var(--focus-border);
-    font-size: 8px;
-    font-weight: 950;
-    line-height: 1;
-    letter-spacing: .1em;
   }
 
   /* Left-align instead of centering under the panel: .splitsMatrixFrame's
@@ -4460,7 +4435,7 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     --compact-recipe-row-bg:color-mix(in srgb,var(--row-bg-2) 76%,var(--panel2));
   }
   .splitsMatrix.compactMobileRecipe .splitMatrixCell.tracked:not(.selected){
-    background:var(--compact-recipe-row-bg);
+    background:color-mix(in srgb,var(--ok) 22%,var(--compact-recipe-row-bg));
     border-color:var(--row-border-2);
     box-shadow:none;
   }
@@ -4477,7 +4452,7 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     letter-spacing:.1em;
     pointer-events:none;
   }
-  .splitsMatrix.compactMobileRecipe tbody tr:hover > .splitMatrixCell:not(.selected){
+  .splitsMatrix.compactMobileRecipe tbody tr:hover > .splitMatrixCell:not(.selected):not(.tracked){
     background:var(--compact-recipe-row-bg);
   }
   .splitsMatrix.compactMobileRecipe .splitCellHeader{
@@ -4496,27 +4471,6 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     color:var(--muted);
     font-size:9px;
     line-height:1;
-  }
-  .splitsMatrix.compactMobileRecipe .splitMatrixCell.tracked .splitCellHopperName{
-    position:relative;
-    min-width:30px;
-    height:18px;
-    padding:0 8px 0 5px;
-    border-radius:4px 9px 9px 4px;
-    background:color-mix(in srgb,var(--focus-border) 22%,var(--compact-recipe-row-bg));
-    color:var(--focus-border);
-    box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--focus-border) 55%,transparent);
-  }
-  .splitsMatrix.compactMobileRecipe .splitMatrixCell.tracked .splitCellHopperName::after{
-    content:"";
-    position:absolute;
-    right:3px;
-    width:4px;
-    height:4px;
-    margin:0;
-    border-radius:50%;
-    background:currentColor;
-    box-shadow:0 0 0 2px color-mix(in srgb,var(--focus-border) 16%,transparent);
   }
   .splitsMatrix.compactMobileRecipe .splitCellHopperName.smart{ color:color-mix(in srgb,#2f9e62 78%,var(--text)); }
   .splitsMatrix.compactMobileRecipe .splitClearButton{ display:none; }
@@ -4919,6 +4873,9 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     background:var(--compact-recipe-row-bg);
     border-color:color-mix(in srgb,var(--focus-border) 65%,var(--row-border-2));
     box-shadow:inset 0 0 0 1px var(--focus-border);
+  }
+  .bulk-editing .splitsMatrix.compactMobileRecipe .splitMatrixCell.tracked.selected{
+    background:color-mix(in srgb,var(--ok) 22%,var(--compact-recipe-row-bg));
   }
   .bulk-editing .splitsMatrix.compactMobileRecipe .splitMatrixCell :is(input,button):disabled{pointer-events:none}
   .splitsMatrix.compactMobileRecipe .rearrangeTarget{cursor:pointer;outline:0;user-select:none}
@@ -9700,9 +9657,10 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
 @media (min-width: 701px) and (max-width: 1200px), (min-width: 701px) and (pointer: coarse){
   /* The phone matrix established a clearer distinction between persistent
      tracking and temporary Edit selection. Carry that same language onto
-     tablets: tracking changes only the hopper badge, while Edit keeps a
-     restrained one-pixel outline plus the tiny corner label. The cell fill
-     remains its ordinary alternating-column fill in both states. */
+     tablets: tracking reads as a theme-appropriate background wash on the
+     whole cell, while Edit keeps a restrained one-pixel outline plus the
+     tiny corner label. A tracked cell selected in Edit keeps the wash
+     under that outline. */
   #splitsArea .splitsMatrix tbody .splitMatrixCell{
     --tablet-recipe-cell-bg:transparent;
     position:relative;
@@ -9712,8 +9670,8 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
     --tablet-recipe-cell-bg:color-mix(in srgb,var(--row-bg-2) 55%,transparent);
   }
   #splitsArea[data-recipe-view="summary"] .splitsMatrix tbody .splitMatrixCell.tracked,
-  #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.tracked:not(.selected){
-    background:var(--tablet-recipe-cell-bg);
+  #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.tracked{
+    background:color-mix(in srgb,var(--ok) 22%,var(--tablet-recipe-cell-bg));
     border-color:var(--row-border-2);
     box-shadow:none;
   }
@@ -9721,6 +9679,9 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
     background:var(--tablet-recipe-cell-bg);
     border-color:color-mix(in srgb,var(--focus-border) 65%,var(--row-border-2));
     box-shadow:inset 0 0 0 1px var(--focus-border);
+  }
+  #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.tracked.selected{
+    background:color-mix(in srgb,var(--ok) 22%,var(--tablet-recipe-cell-bg));
   }
   #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.selected::after{
     content:"EDIT";
@@ -9734,32 +9695,6 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
     line-height:1;
     letter-spacing:.1em;
     pointer-events:none;
-  }
-  #splitsArea .splitsMatrix .splitMatrixCell.tracked .splitCellHopperName{
-    /* Mixing the theme's focus and text colours darkens this state on light
-       palettes and brightens it on dark palettes. A fixed blue was muted in
-       several themes and made tracking easy to miss at tablet distance. */
-    --tablet-track-accent:color-mix(in srgb,var(--focus-border) 58%,var(--text) 42%);
-    position:relative;
-    min-width:30px;
-    height:18px;
-    padding:0 8px 0 5px;
-    border-radius:4px 9px 9px 4px;
-    background:color-mix(in srgb,var(--tablet-track-accent) 18%,var(--tablet-recipe-cell-bg));
-    color:var(--tablet-track-accent);
-    box-shadow:
-      inset 0 0 0 1px color-mix(in srgb,var(--tablet-track-accent) 82%,transparent),
-      0 0 0 1px color-mix(in srgb,var(--tablet-track-accent) 18%,transparent);
-  }
-  #splitsArea .splitsMatrix .splitMatrixCell.tracked .splitCellHopperName::after{
-    content:"";
-    position:absolute;
-    right:3px;
-    width:5px;
-    height:5px;
-    border-radius:50%;
-    background:currentColor;
-    box-shadow:0 0 0 1px color-mix(in srgb,var(--tablet-track-accent) 32%,transparent);
   }
 
   /* Four-character percentages such as 61.5 need a few more pixels than

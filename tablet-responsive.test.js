@@ -229,15 +229,18 @@ test("wide touch reclaims Recipe height from chrome and controls without shrinki
   assert.doesNotMatch(block, /\.splitCellResinText\{[^}]*?font-size:/);
 });
 
-test("tablet-width and wide-touch tracking use a theme-aware notched badge with a strong static dot", () => {
+test("tablet-width and wide-touch tracking read as a plain theme-appropriate cell wash, not a notched badge", () => {
   const start = styles.indexOf(`@media ${TABLET_RECIPE_QUERY}`);
   const block = styles.slice(start, styles.indexOf("\n}", start) + 2);
-  assert.match(block, /\.splitMatrixCell\.tracked,[\s\S]*?\.splitMatrixCell\.tracked:not\(\.selected\)\{[\s\S]*?background:var\(--tablet-recipe-cell-bg\);[\s\S]*?box-shadow:none;/);
+  // Tracked (Summary or Edit) = a --ok wash over the cell's own fill.
+  assert.match(block, /\.splitMatrixCell\.tracked,[\s\S]*?\.splitMatrixCell\.tracked\{[\s\S]*?background:color-mix\(in srgb,var\(--ok\) 22%,var\(--tablet-recipe-cell-bg\)\);[\s\S]*?box-shadow:none;/);
   assert.match(block, /\.splitMatrixCell\.selected\{[\s\S]*?background:var\(--tablet-recipe-cell-bg\);[\s\S]*?box-shadow:inset 0 0 0 1px var\(--focus-border\);/);
+  // A tracked cell selected in Edit keeps the wash under the selection outline.
+  assert.match(block, /\.splitMatrixCell\.tracked\.selected\{[\s\S]*?background:color-mix\(in srgb,var\(--ok\) 22%,var\(--tablet-recipe-cell-bg\)\);/);
   assert.match(block, /\.splitMatrixCell\.selected::after\{[\s\S]*?content:"EDIT";[\s\S]*?font-size:6px;/);
-  assert.match(block, /\.splitMatrixCell\.tracked \.splitCellHopperName\{[\s\S]*?--tablet-track-accent:color-mix\(in srgb,var\(--focus-border\) 58%,var\(--text\) 42%\);[\s\S]*?border-radius:4px 9px 9px 4px;[\s\S]*?color:var\(--tablet-track-accent\);/);
-  assert.doesNotMatch(block, /color:#397fae|#72b9e8|#4d9bd0/);
-  assert.match(block, /\.splitMatrixCell\.tracked \.splitCellHopperName::after\{[\s\S]*?right:3px;[\s\S]*?width:5px;[\s\S]*?border-radius:50%;/);
+  // No hopper-badge restyle, no dot, no --tablet-track-accent any more.
+  assert.doesNotMatch(block, /\.splitMatrixCell\.tracked \.splitCellHopperName/);
+  assert.doesNotMatch(block, /--tablet-track-accent/);
   assert.doesNotMatch(styles, /tabletRecipeTrackingDotPulse/);
 });
 

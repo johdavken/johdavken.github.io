@@ -98,7 +98,6 @@
 @media (max-width:700px){
   :where(html, body)[data-theme="light"] #splitsBlock .splitsMatrix.compactMobileRecipe td.splitMatrixCell{border-color:rgba(74,73,72,.19)}
   :where(html, body)[data-theme="light"] #splitsBlock .splitsMatrix.compactMobileRecipe .splitCellHopperName:not(.smart){color:#504d53}
-  :where(html, body)[data-theme="light"] #splitsBlock .splitsMatrix.compactMobileRecipe .splitMatrixCell.tracked .splitCellHopperName{color:#397fae}
   :where(html, body)[data-theme="light"] #splitsBlock .splitsMatrix.compactMobileRecipe .splitTrackButton:not(.active){color:#504d53;opacity:.8}
   :where(html, body)[data-theme="light"] #splitsBlock .splitsMatrix.compactMobileRecipe .splitCopyBtn{color:#8b4043}
 }
@@ -175,7 +174,6 @@
 @media (max-width:700px){
   :where(html, body)[data-theme="industrial-slate"] #splitsBlock .splitsMatrix.compactMobileRecipe td.splitMatrixCell{border-color:rgba(96,125,155,.22)}
   :where(html, body)[data-theme="industrial-slate"] #splitsBlock .splitsMatrix.compactMobileRecipe .splitCellHopperName:not(.smart){color:#526b82}
-  :where(html, body)[data-theme="industrial-slate"] #splitsBlock .splitsMatrix.compactMobileRecipe .splitMatrixCell.tracked .splitCellHopperName{color:#397fae}
   :where(html, body)[data-theme="industrial-slate"] #splitsBlock .splitsMatrix.compactMobileRecipe .splitTrackButton:not(.active){color:#526b82;opacity:.8}
   :where(html, body)[data-theme="industrial-slate"] #splitsBlock .splitsMatrix.compactMobileRecipe .splitCopyBtn{color:#4f6d8b}
   /* The mobile home screen's live Changeover time/Output values
@@ -451,7 +449,6 @@
 @media (max-width:700px){
   :where(html, body)[data-theme="gruvbox-light"] #splitsBlock .splitsMatrix.compactMobileRecipe td.splitMatrixCell{border-color:rgba(117,106,82,.38)}
   :where(html, body)[data-theme="gruvbox-light"] #splitsBlock .splitsMatrix.compactMobileRecipe .splitCellHopperName:not(.smart){color:#8f4d35}
-  :where(html, body)[data-theme="gruvbox-light"] #splitsBlock .splitsMatrix.compactMobileRecipe .splitMatrixCell.tracked .splitCellHopperName{color:#076678}
   :where(html, body)[data-theme="gruvbox-light"] #splitsBlock .splitsMatrix.compactMobileRecipe .splitTrackButton:not(.active){color:#756a52;opacity:.82}
   :where(html, body)[data-theme="gruvbox-light"] #splitsBlock .splitsMatrix.compactMobileRecipe .splitCopyBtn{color:#8f4d35}
 }
