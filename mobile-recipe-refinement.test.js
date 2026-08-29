@@ -101,14 +101,17 @@ test("Industrial Slate retunes its near-black Changeover/Output values and workf
   assert.doesNotMatch(theme, /#lineSetupBlock \.gaugeTimeValue/);
 });
 
-test("the mobile toolbar has no overflow control left - Scan, Load Next-or-Current and Print all fit as primary slots",()=>{
-  // The More control (and its accessible name) is gone along with it -
-  // Clear Tracking moved to Timeline's own Reset tracking control, and
-  // that was the last thing keeping an overflow menu necessary here.
+test("the mobile toolbar has no overflow control left - Scan and Load fold into the tab-row icon cluster, no bar below the matrix",()=>{
+  // The More control (and its accessible name) is gone - Clear Tracking
+  // moved to Timeline's own Reset tracking control, and that was the last
+  // thing keeping an overflow menu necessary here.
   assert.doesNotMatch(app,/aria-label="More recipe actions"/);
   assert.doesNotMatch(styles,/mobileRecipeMore/);
-  // Primary-row buttons still live in one row, .splitsMobilePrimaryRow.
-  assert.match(styles,/\.splitsMobilePrimaryRow button\.secondary,[\s\S]*?\.splitsMobilePrimaryRow \.splitsScanShortcut > summary\{[\s\S]*?height:42px;[\s\S]*?white-space:nowrap;/);
+  // No lower action bar any more - Scan / Load are icon buttons in
+  // #recipeHeaderActions beside the icon tabs.
+  assert.doesNotMatch(styles,/splitsMobilePrimaryRow/);
+  assert.doesNotMatch(app,/mobilePrimaryRow/);
+  assert.match(styles,/#splitsBlock \.recipeHeaderActions > \.mobileScanIconAction > summary,\s*\n\s*#splitsBlock \.recipeHeaderActions > \.recipeHeaderMobileAction\{/);
 });
 
 test("layer controls describe matching rather than copying without changing the copyLayer operation",()=>{

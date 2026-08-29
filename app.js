@@ -2523,23 +2523,27 @@
       });
       area.appendChild(matrix);
 
-      // Actions live after the full matrix, alongside their resulting bulk
-      // controls. This keeps calculation/presentation controls above the
-      // grid and prevents a top-of-panel action from opening inputs far away.
-      const actionToolbar = document.createElement("div");
-      actionToolbar.className = "mobileWeightsActionToolbar mobileMatrixActionBar";
+      // Receiver weight profiles is now a single icon-only trigger in the
+      // tab-row header cluster (#recipeHeaderActions), beside the
+      // Summary/Edit pencil - not a full-width bar below the matrix. It
+      // opens the same modal sheet as before. Bulk edit is gone as a
+      // separate mode (Edit view *is* bulk edit, as on desktop and Recipe),
+      // so nothing else needs a home down here.
       const profilesAction = document.createElement("button");
       profilesAction.type = "button";
       profilesAction.id = "mobileWeightProfilesButton";
-      profilesAction.className = "mobileWeightsProfilesAction";
+      profilesAction.className = "recipeHeaderMobileAction mobileWeightsProfilesAction";
       profilesAction.setAttribute("aria-expanded", "false");
       profilesAction.setAttribute("aria-label", "Open receiver weight profiles");
-      profilesAction.innerHTML = '<span>Weight Profiles</span><svg viewBox="0 0 28 28" aria-hidden="true"><path d="M7 4h14l3 5v14l-4 3H8l-4-3V9z"/><path d="M9 12h10M9 16h10M9 20h6"/></svg>';
-      // Bulk edit is gone as a separate mode here, exactly as it is on the
-      // desktop weights grid and in Recipe: Edit view *is* bulk edit, so
-      // Weight Profiles is all that is left in this row.
-      actionToolbar.append(profilesAction);
-      area.appendChild(actionToolbar);
+      profilesAction.innerHTML = '<svg class="recipeActionIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5H6.5A1.5 1.5 0 0 0 5 6.5v13A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5v-13A1.5 1.5 0 0 0 17.5 5H16"/><rect x="8" y="3" width="8" height="4" rx="1.2"/><path d="M8.5 11.5h7M8.5 15.5h5"/></svg>';
+      const weightsHeaderActions = $("recipeHeaderActions");
+      if (weightsHeaderActions){
+        // Sole owner of this slot on the Weights page - Scan/Load are
+        // Recipe-only. replaceChildren covers both a page switch (already
+        // cleared by renderSplitsArea) and a direct rebuild (Smart Hoppers).
+        weightsHeaderActions.replaceChildren(profilesAction);
+        weightsHeaderActions.hidden = false;
+      }
 
       const bulkBar = document.createElement("div");
       bulkBar.id = "mobileWeightsBulkBar";
@@ -3808,7 +3812,11 @@
       const headerControls = $("recipeHeaderControls");
       if (headerControls) headerControls.hidden = isSavedRecipesPage();
       const headerActions = $("recipeHeaderActions");
-      if (headerActions) headerActions.hidden = isSavedRecipesPage() || isWeightsPage();
+      // The Weights page uses this slot for its compact profiles icon on
+      // phones (renderMobileWeightsArea fills it); desktop Weights still
+      // keeps its inline Weight Profiles panel, so the slot stays hidden
+      // there. Recipe Book never has header actions.
+      if (headerActions) headerActions.hidden = isSavedRecipesPage() || (isWeightsPage() && isDesktopLayout());
       syncPlannedRecipeIndicator();
     }
 
@@ -4080,9 +4088,9 @@
       // gets .recipeUtilityTab's primary sibling treatment here: the same
       // gradient button.primary uses everywhere else, plus an icon (see
       // .splitsBulkModeBar .splitsScanShortcut > summary in styles.css).
-      // The icon carries over unchanged into .splitsMobilePrimaryRow's own
-      // scaled-down version on Next's mobile row - it's the same <summary>
-      // content either way, only the surrounding CSS differs.
+      // The same <summary> element is reused on mobile as an icon-only
+      // control in the tab-row cluster (see #recipeHeaderActions in the
+      // <=700px block of styles.css) - only the surrounding CSS differs.
       const scanRecipeButton = document.createElement("details");
       // recipeScanHideDesktop hides Scan Recipe specifically on real desktop
       // widths (Scan Recipe is a mobile-capture workflow - see
@@ -4341,35 +4349,31 @@
         splitsSavedRecipesOpen = !!open;
       }
 
-      // The mobile action bar moves the same real buttons (rather than
-      // rebuilding them), so every existing handler remains intact. Scan
-      // and Print are icon-only, fixed-width slots (see
-      // .mobileScanIconAction/.mobilePrintIconAction in styles.css) around
-      // one text slot for the page's own Load action - the same three-slot
-      // shape on Current and Next now that Clear Tracking has moved to
-      // Timeline's own Reset tracking control and Recipe Book has its own
-      // tab, leaving nothing that needs a fourth, overflow slot here.
-      let mobilePrimaryRow = null;
+      // Mobile folds the page actions up into the tab row itself (see
+      // #recipeHeaderActions in the <=700px block of styles.css) rather than
+      // spending a whole row on a bar below the matrix: Scan and the page's
+      // own Load action become icon-only buttons sitting beside the icon
+      // tabs, next to the Edit/Done pencil. The same real button elements
+      // are moved (not rebuilt), so every existing handler stays intact.
+      // Print is dropped entirely on mobile - a phone can't print - and
+      // stays a desktop-only header action below.
       if (compactMobileRecipe){
-        mobilePrimaryRow = document.createElement("div");
-        mobilePrimaryRow.className = "splitsMobilePrimaryRow";
-        // Rearrange no longer takes a slot here - it lives in the Edit
-        // toolbar now (see the rearrangeButton append below).
         scanRecipeButton.classList.remove("rearrangeDesktopOnly", "recipeScanHideDesktop");
         scanRecipeButton.classList.add("mobileScanIconAction");
-        mobilePrimaryRow.append(scanRecipeButton);
+        headerActions?.append(scanRecipeButton);
+        // Keep each Load button's icon markup (unlike the old text-only
+        // primary row) - the header slot is icon-only and the full
+        // "Load Next Recipe" / "Load Current Recipe" aria-label set above
+        // remains the accessible name.
         if (!isNextRecipePage()){
           if (loadNextButton){
-            loadNextButton.textContent = "Load Next";
-            mobilePrimaryRow.append(loadNextButton);
+            loadNextButton.classList.add("recipeHeaderMobileAction");
+            headerActions?.append(loadNextButton);
           }
         }else if (loadCurrentButton){
-          loadCurrentButton.textContent = "Load Current";
-          mobilePrimaryRow.append(loadCurrentButton);
+          loadCurrentButton.classList.add("recipeHeaderMobileAction");
+          headerActions?.append(loadCurrentButton);
         }
-        printButton.classList.remove("rearrangeDesktopOnly", "recipeActionTertiary");
-        printButton.classList.add("mobilePrintIconAction");
-        mobilePrimaryRow.append(printButton);
       }else{
         // Current/Next and Print are ordinary app buttons in the header.
         // The left border on recipeHeaderActions separates page actions from
@@ -4955,13 +4959,14 @@
       if (!compactMobileRecipe) mobileLayerLayout.append(mobileLayerNav);
       area.appendChild(mobileLayerLayout);
       if (compactMobileRecipe){
-        // Keep recipe actions immediately after the matrix, but outside its
-        // visual frame. The dense grid stays a single relationship-focused
-        // surface while modes expand directly below it.
+        // Keep the rearrange / tracking context rows immediately after the
+        // matrix, but outside its visual frame. The page's Scan and Load
+        // actions no longer live here - they moved up into the tab row (see
+        // the headerActions append above).
         const actionTray = document.createElement("div");
         actionTray.className = "mobileRecipeActionTray mobileMatrixActionBar";
         trackingBar.classList.add("mobileTrackContext");
-        actionTray.append(mobilePrimaryRow, mobileRearrangeContext);
+        actionTray.append(mobileRearrangeContext);
         if (trackingView) actionTray.append(trackingBar);
         area.append(actionTray);
         if(hopperRearrangement?.active&&hopperRearrangement.undo?.length&&hopperRearrangement.undoVisibleUntil>Date.now()){

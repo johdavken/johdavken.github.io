@@ -8,7 +8,7 @@ const desktop = fs.readFileSync("desktop.css", "utf8");
 const styles = fs.readFileSync("styles.css", "utf8");
 
 test("Hopper Weights is an accessible Recipe workspace page", () => {
-  assert.match(html, /id="recipePageTabWeights" role="tab" aria-selected="false" aria-controls="splitsArea" data-recipe-page="weights"><span class="recipeWeightsTabFull">Hopper Weights<\/span><span class="recipeWeightsTabCompact" aria-hidden="true">Weights<\/span><\/button>/);
+  assert.match(html, /id="recipePageTabWeights" role="tab" aria-selected="false" aria-controls="splitsArea" data-recipe-page="weights"><span class="recipeTabLabel"><span class="recipeWeightsTabFull">Hopper Weights<\/span><span class="recipeWeightsTabCompact" aria-hidden="true">Weights<\/span><\/span><span class="recipeTabIcon" aria-hidden="true">/);
   assert.match(app, /function isWeightsPage\(\)\{ return activeRecipePage === "weights"; \}/);
   assert.match(app, /page === "weights" \? "weights"/);
 });

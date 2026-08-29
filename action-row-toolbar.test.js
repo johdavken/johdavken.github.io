@@ -47,11 +47,12 @@ test("header actions retain the app's stroke-line icons", () => {
   assert.match(rule, /stroke-linejoin: round;/);
 });
 
-test("phones retain their compact toolbar while tablets receive the full header actions", () => {
-  assert.match(styles, /@media \(max-width: 700px\)\{\s*\.recipeHeaderActions\{ display: none; \}/);
-  const touchLayoutStart = styles.indexOf("@media (max-width: 900px), (min-width: 901px) and (pointer: coarse){", styles.indexOf(".recipeHeaderActions{"));
-  const phoneLayoutStart = styles.indexOf("@media (max-width: 700px){", touchLayoutStart);
-  assert.ok(touchLayoutStart > -1 && phoneLayoutStart > touchLayoutStart);
-  assert.doesNotMatch(styles.slice(touchLayoutStart, phoneLayoutStart), /\.recipeHeaderActions\{ display: none; \}/);
-  assert.match(app, /mobilePrimaryRow\.append\(printButton\);/);
+test("on phones .recipeHeaderActions becomes the tab-row icon cluster (Scan + Load), not a hidden/empty group", () => {
+  // It used to be force-hidden here; now it holds the icon-only Scan / Load
+  // buttons beside the icon tabs.
+  assert.doesNotMatch(styles, /@media \(max-width: 700px\)\{\s*\.recipeHeaderActions\{ display: none; \}/);
+  assert.match(styles, /#splitsBlock \.recipeHeaderRow \.recipeHeaderActions\{\s*\n\s*display:flex;\s*\n\s*order:-1;/);
+  // The lower action bar and its Print slot are gone on mobile.
+  assert.doesNotMatch(app, /mobilePrimaryRow|splitsMobilePrimaryRow/);
+  assert.match(app, /headerActions\?\.append\(scanRecipeButton\);/);
 });

@@ -244,7 +244,7 @@ test("every recipe view ends with a quiet, layout-aware hopper-action reminder",
  * -------------------------------------------------------------------- */
 
 test("Load Current/Next and Print move beside the view buttons; Recipe Book remains beside Next", () => {
-  assert.match(html, /data-recipe-page="next">Next[\s\S]*?data-recipe-page="saved" hidden>Recipe Book<\/button>/);
+  assert.match(html, /data-recipe-page="next">[\s\S]*?data-recipe-page="saved" hidden><span class="recipeTabLabel">Recipe Book<\/span>/);
   assert.doesNotMatch(splitsArea, /recipeUtilityTabs\.append\(savedRecipesButton\);/);
   assert.match(splitsArea, /toolbar\.querySelector\("\.splitsEditRowSecondary"\)\?\.append\(rearrangeButton\);/);
   assert.match(html, /class="recipeHeaderActions" id="recipeHeaderActions" role="group" aria-label="Recipe actions"/);

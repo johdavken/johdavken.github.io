@@ -1,14 +1,12 @@
 "use strict";
 
-// Current and Next now share one three-slot mobile primary row: Scan /
-// Load Next-or-Current / Print. Scan and Print are fixed-width icon-only
-// actions; the middle slot keeps a readable text label since it's the one
-// button whose meaning changes with the page. Clear Tracking - previously
-// a 4th slot on Current only - is gone from this row entirely: Timeline's
-// own Reset tracking control already covered the same action, so mobile
-// just hides the duplicate (see clearTrackingButton.hidden). With that and
-// Recipe Book's own tab, neither page needs an overflow "More" menu any
-// more, so it was deleted rather than left with nothing to hold.
+// On phones the page actions fold up into the tab row itself: Scan and the
+// page's own Load action become icon-only square buttons in
+// #recipeHeaderActions, beside the icon tabs and the Edit/Done pencil.
+// There is no bar below the matrix any more, and Print is desktop-only.
+// Clear Tracking is gone from mobile entirely - Timeline's own Reset
+// tracking control already covers it - and neither page needs an overflow
+// "More" menu.
 //
 // A companion Display setting (mobile/touch only - scanning has no desktop
 // entry point) lets an operator skip the 3-source popup on a Scan tap and
@@ -30,7 +28,7 @@ function recipeEditor(){
 }
 
 function mainMobileBlock(){
-  const landmark = styles.indexOf(".splitsMobilePrimaryRow > .mobileScanIconAction,");
+  const landmark = styles.indexOf("#splitsBlock .recipeHeaderActions > .mobileScanIconAction > summary,");
   assert.notEqual(landmark, -1);
   const start = styles.lastIndexOf("@media (max-width: 700px){", landmark);
   assert.notEqual(start, -1);
@@ -38,47 +36,37 @@ function mainMobileBlock(){
 }
 
 /* ============================================================
- *   Current's row: Scan and Print as icon-only primary actions
+ *   Scan and Load as icon-only buttons in the tab-row cluster
  * ============================================================ */
 
-test("Scan and Print are promoted out of the row's equal-width columns into fixed 42px icon slots, on both pages", () => {
+test("Scan and Load are square icon-only controls in #recipeHeaderActions - text label hidden (font-size:0), SVG icon shown", () => {
   const block = mainMobileBlock();
-  assert.match(block, /\.splitsMobilePrimaryRow > \.mobileScanIconAction,\s*\n\s*\.splitsMobilePrimaryRow > \.mobilePrintIconAction\{\s*\n\s*flex:0 0 42px;/);
+  assert.match(block, /#splitsBlock \.recipeHeaderActions > \.mobileScanIconAction > summary,\s*\n\s*#splitsBlock \.recipeHeaderActions > \.recipeHeaderMobileAction\{[\s\S]*?font-size:0;/);
+  assert.match(block, /#splitsBlock \.recipeHeaderActions \.recipeActionIcon\{\s*\n\s*display:block;\s*\n\s*width:16px;\s*\n\s*height:16px;/);
 });
 
-test("both icon slots hide their real text label (font-size:0) and show their existing SVG icon instead - the opposite of every other primary-row button", () => {
-  const block = mainMobileBlock();
-  assert.match(block, /\.splitsMobilePrimaryRow \.mobileScanIconAction > summary,\s*\n\s*\.splitsMobilePrimaryRow button\.mobilePrintIconAction\{\s*\n\s*font-size:0;/);
-  assert.match(block, /\.splitsMobilePrimaryRow \.mobileScanIconAction \.recipeActionIcon,\s*\n\s*\.splitsMobilePrimaryRow \.mobilePrintIconAction \.recipeActionIcon\{\s*\n\s*display:block!important;\s*\n\s*width:18px;\s*\n\s*height:18px;/);
+test("the cluster carries no Print - a phone can't print", () => {
+  assert.doesNotMatch(styles, /mobilePrintIconAction/);
+  const editor = recipeEditor();
+  const branch = editor.slice(editor.indexOf("if (compactMobileRecipe){"), editor.indexOf("}else{", editor.indexOf("if (compactMobileRecipe){")));
+  assert.doesNotMatch(branch, /printButton/);
 });
 
-test("Scan's popup uses the shared left:0 default - it sits leftmost in the row on both pages now, so there's no right edge left to align against", () => {
+test("Scan's popup opens downward and right-aligned from the header - it sits near the panel top now", () => {
   const block = mainMobileBlock();
-  assert.match(block, /\.splitsMobilePrimaryRow > \.mobileScanIconAction,\s*\n\s*\.splitsMobilePrimaryRow > \.mobilePrintIconAction\{/);
-  // The old Next-only right-aligned popup rule is gone - nothing places
-  // Scan at the row's right edge any more.
-  assert.doesNotMatch(styles, /\.splitsMobilePrimaryRow \.splitsScanShortcut \.statusScanShortcutPanel\{ left:auto; right:0; \}/);
-  assert.doesNotMatch(styles, /\.mobileScanIconAction \.statusScanShortcutPanel/);
+  assert.match(block, /#splitsBlock \.recipeHeaderActions \.splitsScanShortcut \.statusScanShortcutPanel\{\s*\n\s*top:calc\(100% \+ 6px\);\s*\n\s*bottom:auto;\s*\n\s*left:auto;\s*\n\s*right:0;/);
 });
 
-test("Print keeps its own border-right:0 as the row's true last item - the generic :last-child selectors only reach a nested summary, not a bare button", () => {
-  const block = mainMobileBlock();
-  assert.match(block, /\.splitsMobilePrimaryRow > button\.mobilePrintIconAction\{ border-right:0; \}/);
-});
-
-test("one shared branch builds Scan / Load Next-or-Current / Print for both pages - no more separate Current/Next assembly, no mobileMoreButton", () => {
+test("one shared branch routes Scan + the page's Load button into headerActions for both pages - no separate row, no mobileMoreButton", () => {
   const editor = recipeEditor();
   const branchStart = editor.indexOf("if (compactMobileRecipe){");
   assert.notEqual(branchStart, -1);
   const branch = editor.slice(branchStart, editor.indexOf("}else{", branchStart));
   assert.match(branch, /scanRecipeButton\.classList\.remove\("rearrangeDesktopOnly", "recipeScanHideDesktop"\);/);
   assert.match(branch, /scanRecipeButton\.classList\.add\("mobileScanIconAction"\);/);
-  assert.match(branch, /mobilePrimaryRow\.append\(scanRecipeButton\);/);
-  assert.match(branch, /if \(!isNextRecipePage\(\)\)\{\s*\n\s*if \(loadNextButton\)\{\s*\n\s*loadNextButton\.textContent = "Load Next";\s*\n\s*mobilePrimaryRow\.append\(loadNextButton\);/);
-  assert.match(branch, /\}else if \(loadCurrentButton\)\{\s*\n\s*loadCurrentButton\.textContent = "Load Current";\s*\n\s*mobilePrimaryRow\.append\(loadCurrentButton\);/);
-  assert.match(branch, /printButton\.classList\.remove\("rearrangeDesktopOnly", "recipeActionTertiary"\);/);
-  assert.match(branch, /printButton\.classList\.add\("mobilePrintIconAction"\);/);
-  assert.match(branch, /mobilePrimaryRow\.append\(printButton\);/);
+  assert.match(branch, /headerActions\?\.append\(scanRecipeButton\);/);
+  assert.match(branch, /if \(!isNextRecipePage\(\)\)\{\s*\n\s*if \(loadNextButton\)\{\s*\n\s*loadNextButton\.classList\.add\("recipeHeaderMobileAction"\);\s*\n\s*headerActions\?\.append\(loadNextButton\);/);
+  assert.match(branch, /\}else if \(loadCurrentButton\)\{\s*\n\s*loadCurrentButton\.classList\.add\("recipeHeaderMobileAction"\);\s*\n\s*headerActions\?\.append\(loadCurrentButton\);/);
   assert.doesNotMatch(branch, /clearTrackingButton|mobileMoreButton/);
   assert.doesNotMatch(app, /mobileMoreButton|mobileRecipeMore/);
 });

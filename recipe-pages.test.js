@@ -148,7 +148,7 @@ test("the tabs use real tab semantics and are keyboard navigable", () => {
   assert.match(html, /class="recipePageTabs" role="tablist"/);
   assert.match(html, /id="recipePageTabCurrent" role="tab" aria-selected="true" aria-controls="splitsArea"/);
   assert.match(html, /id="recipePageTabNext" role="tab" aria-selected="false" aria-controls="splitsArea"/);
-  assert.match(html, /id="recipePageTabSaved" role="tab" aria-selected="false" aria-controls="splitsArea" data-recipe-page="saved" hidden>Recipe Book<\/button>/);
+  assert.match(html, /id="recipePageTabSaved" role="tab" aria-selected="false" aria-controls="splitsArea" data-recipe-page="saved" hidden><span class="recipeTabLabel">Recipe Book<\/span>/);
   assert.match(html, /id="splitsArea"[^>]*role="tabpanel"/);
   const hook = app.slice(app.indexOf("function hookRecipePageTabs("));
   assert.match(hook, /ArrowRight/);

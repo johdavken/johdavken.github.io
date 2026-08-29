@@ -23,7 +23,7 @@ function desktopAssembly(){
 
 test("Recipe Book is a primary Recipe page beside Current and Next", () => {
   const tabs = html.slice(html.indexOf('class="recipePageTabs"'), html.indexOf('</div>', html.indexOf('class="recipePageTabs"')));
-  assert.match(tabs, /data-recipe-page="current">Current<\/button>[\s\S]*data-recipe-page="next">Next[\s\S]*data-recipe-page="saved" hidden>Recipe Book<\/button>/);
+  assert.match(tabs, /data-recipe-page="current">[\s\S]*data-recipe-page="next">[\s\S]*data-recipe-page="saved" hidden><span class="recipeTabLabel">Recipe Book<\/span>/);
   assert.match(tabs, /id="recipePageTabSaved" role="tab" aria-selected="false" aria-controls="splitsArea"/);
 });
 
@@ -63,14 +63,15 @@ test("header view and recipe actions use the app's primary/secondary button fami
   assert.match(styles, /\.recipeHeaderActions\{[\s\S]*?border-left: 1px solid var\(--row-border-2\);/);
 });
 
-test("mobile's primary row never receives desktop tab styling, and Recipe Book is reached through the shared tab row instead of a row button", () => {
-  const start = app.indexOf("if (compactMobileRecipe){\n        mobilePrimaryRow = document.createElement");
+test("mobile's action cluster never receives desktop tab styling, and Recipe Book is reached through the shared tab row instead of a row button", () => {
+  const start = app.indexOf("if (compactMobileRecipe){");
   const end = app.indexOf("}else{", start);
   assert.ok(start > -1 && end > start);
   const mobile = app.slice(start, end);
   assert.doesNotMatch(mobile, /savedRecipesButton/);
   assert.doesNotMatch(mobile, /recipeUtilityTab/);
   assert.doesNotMatch(mobile, /role", "tab/);
+  assert.doesNotMatch(mobile, /mobilePrimaryRow/);
 });
 
 test("the Recipe Book panel occupies the matrix slot at every width, sized for desktop/tablet from 701px up", () => {

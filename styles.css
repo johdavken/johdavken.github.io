@@ -2098,11 +2098,11 @@ details[open] > summary .chevSatellite{
 
 /* Scan Recipe: a <details> popup styled like a real button (this base rule
    is a shared fallback - both real contexts override it: the desktop
-   Recipe Actions row below, and .splitsMobilePrimaryRow's own mobile
-   sizing). Reuses .statusScanShortcutPanel (the mobile status-bar
-   shortcut's own dropdown) for the panel itself, but flipped to open
-   upward - this row sits at the bottom of the panel, so opening downward
-   clips against the viewport, same reasoning as the info panel nearby. */
+   Recipe Actions row below, and the phone tab-row icon cluster's own
+   sizing, see #recipeHeaderActions in the <=700px block). Reuses
+   .statusScanShortcutPanel (the mobile status-bar shortcut's own dropdown)
+   for the panel itself, flipped to open upward here as a default; the
+   phone cluster flips it back downward since it sits near the panel top. */
 .splitsScanShortcut{ position: relative; }
 .splitsScanShortcut > summary{
   display: inline-flex;
@@ -2988,6 +2988,11 @@ details[open] > summary .chevSatellite{
 .recipePageTabDot[hidden]{ display: none; }
 .recipePageTab[hidden],.recipeViewToggle[hidden],.recipeHeaderControls[hidden]{ display:none!important; }
 .recipeWeightsTabCompact{ display:none; }
+/* Recipe tabs carry both a text label and an icon; only one shows at a
+   time. Desktop/tablet: text label, icon hidden (see .recipeTabIcon here).
+   Phone (<=700px): the label is clipped to the a11y tree and the icon
+   shows instead - see the late <=700px block near the end of this file. */
+.recipeTabIcon{ display:none; }
 .recipeWeightsPage{ width:100%; min-width:0; }
 .recipeWeightsPage > #weightsArea{ width:100%; }
 .recipeHeaderControls > .weightsHeaderViewToggle{
@@ -4143,7 +4148,151 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
   .splitMatrixCell.empty:hover .splitTrackButton,.splitMatrixCell.empty:focus-within .splitTrackButton{opacity:1}
 }
 @media (max-width: 700px){
-  .recipeHeaderActions{ display: none; }
+  /* Phone Recipe panel: the Current / Next / Weights / Recipe Book tabs
+     show an icon instead of their text label, and the page's Scan / Load
+     actions (plus the Edit/Done pencil) sit beside them as an icon cluster
+     in the same tab row - folding away the action bar that used to sit
+     below the matrix. */
+  #splitsBlock .recipePageTab .recipeTabLabel{
+    position:absolute;
+    width:1px;
+    height:1px;
+    padding:0;
+    margin:-1px;
+    overflow:hidden;
+    clip:rect(0 0 0 0);
+    clip-path:inset(50%);
+    white-space:nowrap;
+    border:0;
+  }
+  #splitsBlock .recipePageTab .recipeTabIcon{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+  }
+  #splitsBlock .recipePageTab .recipeTabIcon svg{
+    width:17px;
+    height:17px;
+    fill:none;
+    stroke:currentColor;
+    stroke-width:1.8;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+  }
+  #splitsBlock .recipePageTab.active .recipeTabIcon svg{ stroke-width:2; }
+
+  /* The icon cluster: Scan (a <details> summary) and the page's Load button
+     become square icon-only controls; order:-1 pulls them left of the
+     Edit/Done pencil so the row reads [tabs] (scan)(load)(pencil).
+     .recipeHeaderActions was previously force-hidden here; it now holds
+     this cluster (still hidden by its own [hidden] attr on Weights /
+     Recipe Book, where syncRecipePageUI sets it). */
+  #splitsBlock .recipeHeaderRow #recipeHeaderActionPill{ gap:3px; }
+  /* Weights page: tighten the gap between its Summary/Edit pencil and the
+     profiles icon, and push the pencil to the right so the row reads
+     [profiles-icon][pencil] - the same "pencil last" order as the Recipe
+     pages' (scan)(load)(pencil). */
+  #splitsBlock .recipeHeaderRow .recipeHeaderControls{ gap:4px; }
+  #splitsBlock .recipeHeaderControls > .weightsHeaderViewToggle{ order:1; }
+  #splitsBlock .recipeHeaderRow .recipeHeaderActions{
+    display:flex;
+    order:-1;
+    align-items:center;
+    gap:3px;
+    padding-left:0;
+    border-left:0;
+  }
+  #splitsBlock .recipeHeaderRow .recipeHeaderActions:empty{ display:none; }
+  #splitsBlock .recipeHeaderRow .recipeHeaderActions[hidden]{ display:none!important; }
+  #splitsBlock .recipeHeaderRow .recipeHeaderActions [hidden]{ display:none!important; }
+  #splitsBlock .recipeHeaderActions > .mobileScanIconAction > summary,
+  #splitsBlock .recipeHeaderActions > .recipeHeaderMobileAction{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:30px;
+    min-width:30px;
+    height:26px;
+    min-height:26px;
+    padding:0;
+    border:1px solid var(--row-border-2);
+    border-radius:var(--control-radius);
+    background:var(--row-bg-2);
+    color:var(--text);
+    font-size:0;
+    font-weight:800;
+    letter-spacing:0;
+    box-shadow:none;
+    cursor:pointer;
+    list-style:none;
+  }
+  #splitsBlock .recipeHeaderActions .mobileScanIconAction > summary::-webkit-details-marker{ display:none; }
+  #splitsBlock .recipeHeaderActions .recipeActionIcon{
+    display:block;
+    width:16px;
+    height:16px;
+  }
+  #splitsBlock .recipeHeaderActions .mobileScanIconAction[open] > summary,
+  #splitsBlock .recipeHeaderActions .mobileScanIconAction > summary:hover,
+  #splitsBlock .recipeHeaderActions .mobileScanIconAction > summary:focus-visible,
+  #splitsBlock .recipeHeaderActions .recipeHeaderMobileAction:hover:not(:disabled),
+  #splitsBlock .recipeHeaderActions .recipeHeaderMobileAction:focus-visible,
+  #splitsBlock .recipeHeaderActions .recipeHeaderMobileAction[aria-expanded="true"]{
+    border-color:var(--focus-border);
+    color:var(--title);
+  }
+  #splitsBlock .recipeHeaderActions .recipeHeaderMobileAction[aria-expanded="true"]{
+    background:var(--focus-ring);
+  }
+  #splitsBlock .recipeHeaderActions .recipeHeaderMobileAction:disabled{ opacity:.5; cursor:default; }
+  /* This scan sits near the top of the panel, so its popup opens downward
+     (over the matrix, within .blockBody's bounds) and hugs the right edge
+     so a 220px panel never runs off-screen. */
+  #splitsBlock .recipeHeaderActions .splitsScanShortcut .statusScanShortcutPanel{
+    top:calc(100% + 6px);
+    bottom:auto;
+    left:auto;
+    right:0;
+  }
+
+  /* Edit/Done collapses to just its pencil ::before glyph, on both the
+     Recipe pages' toggle ([data-recipe-view="edit"]) and the Hopper
+     Weights page's own Summary/Edit toggle ([data-weight-view="edit"]),
+     so the header reads the same on every tab. The button keeps its
+     "Edit" / "Done" text (font-size:0 hides it) as the accessible name,
+     kept current by syncRecipeViewUI() / the weights renderer. The
+     .mobile-active selector is specificity (2,3,1) so it outranks the
+     (2,2,1) mobile-active sizing rule in the later <=700px block; the
+     plain #splitsBlock selector covers the phone panel when .mobile-active
+     isn't set (that later rule then doesn't match at all). */
+  #splitsBlock.mobile-active #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
+  #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
+  #splitsBlock.mobile-active #recipeHeaderControls .weightsHeaderViewToggle button[data-weight-view="edit"],
+  #splitsBlock #recipeHeaderControls .weightsHeaderViewToggle button[data-weight-view="edit"]{
+    min-width:30px;
+    width:30px;
+    min-height:26px;
+    padding:0;
+    gap:0;
+    font-size:0;
+  }
+  #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"]::before,
+  #splitsBlock #recipeHeaderControls .weightsHeaderViewToggle button[data-weight-view="edit"]::before{
+    width:15px;
+    height:15px;
+  }
+  #splitsBlock.mobile-active #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"].active,
+  #splitsBlock.mobile-active #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"][aria-pressed="true"],
+  #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"].active,
+  #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"][aria-pressed="true"],
+  #splitsBlock.mobile-active #recipeHeaderControls .weightsHeaderViewToggle button[data-weight-view="edit"].active,
+  #splitsBlock.mobile-active #recipeHeaderControls .weightsHeaderViewToggle button[data-weight-view="edit"][aria-pressed="true"],
+  #splitsBlock #recipeHeaderControls .weightsHeaderViewToggle button[data-weight-view="edit"].active,
+  #splitsBlock #recipeHeaderControls .weightsHeaderViewToggle button[data-weight-view="edit"][aria-pressed="true"]{
+    background:color-mix(in srgb, var(--recipe-pill-accent) 55%, var(--panel2));
+    color:var(--title);
+  }
+
   .workspaceRecoveryMerge{ grid-template-columns: 1fr; align-items: stretch; }
   /* Saved Recipes header actions ("icon-first compact bar", chosen from the
      mockup round): Save/Load/Update collapse to small round icon buttons
@@ -4699,105 +4848,10 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     border:0;
     background:transparent;
   }
-  .splitsMobilePrimaryRow{
-    display:flex;
-    border:1px solid var(--row-border-2);
-    border-radius:var(--control-radius);
-    background:var(--row-bg-2);
-    /* No overflow:hidden here - Scan Recipe's popup (Next only) is a
-       position:absolute descendant that needs to escape this row's bounds
-       to open above it. Safe without it: every button inside is
-       border-radius:0 and background:transparent, so the row's own rounded
-       background already reads as the sole visible edge. */
-  }
-  .splitsMobilePrimaryRow > *{ flex:1 1 0; min-width:0; }
-  /* button.secondary's own display:flex below is an author rule, which - per
-     the cascade, regardless of specificity - always beats the UA
-     stylesheet's [hidden]{display:none}. Without this, loadNextButton.hidden
-     (set when no plan exists) would silently stop working here and an empty
-     "Load Next" would occupy a primary-row slot with nothing to promote. */
-  .splitsMobilePrimaryRow [hidden]{ display:none!important; }
-  /* The desktop Recipe Actions icons (see .recipeActionIcon) don't fit
-     these four equal-width slots without clipping the label - verified
-     live: "Scan Recipe" overflowed its own slot once the icon took part
-     of the width. Mobile keeps the pre-existing icon-free text label. */
-  .splitsMobilePrimaryRow .recipeActionIcon{ display:none; }
-  .splitsMobilePrimaryRow button.secondary,
-  .splitsMobilePrimaryRow .splitsScanShortcut > summary{
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    width:100%;
-    height:42px;
-    min-height:42px;
-    padding:7px 5px;
-    border:0;
-    border-right:1px solid var(--row-border-2);
-    border-radius:0;
-    background:transparent;
-    color:var(--muted);
-    font-size:10px;
-    font-weight:800;
-    line-height:1.1;
-    text-transform:none;
-    letter-spacing:.01em;
-    box-shadow:none;
-    white-space:nowrap;
-    /* Rearrange's own label swaps to "Done Rearranging" while active - the
-       longest label this row ever shows. Without containment it overflowed
-       past its own flex-basis:0 slot and overlapped Scan Recipe/More
-       (verified live on Next, where the row is at its fullest four items). */
-    overflow:hidden;
-    text-overflow:ellipsis;
-    text-align:center;
-    cursor:pointer;
-    list-style:none;
-  }
-  .splitsMobilePrimaryRow .splitsScanShortcut > summary::-webkit-details-marker{display:none}
-  .splitsMobilePrimaryRow > *:last-child button.secondary,
-  .splitsMobilePrimaryRow > *:last-child .splitsScanShortcut > summary{ border-right:0; }
-  .splitsMobilePrimaryRow button.secondary:hover,
-  .splitsMobilePrimaryRow button.secondary:focus-visible,
-  .splitsMobilePrimaryRow .splitsScanShortcut > summary:hover,
-  .splitsMobilePrimaryRow .splitsScanShortcut[open] > summary,
-  .splitsMobilePrimaryRow .splitsScanShortcut > summary:focus-visible{
-    background:var(--focus-ring);
-    color:var(--title);
-    box-shadow:inset 0 0 0 2px var(--focus-border);
-  }
-  .splitsMobilePrimaryRow button.secondary[aria-expanded="true"]{
-    color:var(--title);
-    background:var(--focus-ring);
-    box-shadow:inset 0 0 0 2px var(--focus-border);
-  }
-  /* Scan and Print are fixed-width icon-only slots instead of sharing the
-     row's equal flex-basis:0 columns (see .splitsMobilePrimaryRow > *),
-     which leaves the page's own Load Next/Load Current room to keep a
-     readable text label. Their real accessible name (e.g. "Print Recipe")
-     stays in the DOM via font-size:0, same technique as the Saved Recipes
-     header's round icon buttons - only the visual label is swapped for
-     the icon each already carries. Scan sits leftmost on both Current and
-     Next now, so its popup just needs the shared .statusScanShortcutPanel
-     default (left:0) - no row-specific override to fight here any more. */
-  .splitsMobilePrimaryRow > .mobileScanIconAction,
-  .splitsMobilePrimaryRow > .mobilePrintIconAction{
-    flex:0 0 42px;
-  }
-  .splitsMobilePrimaryRow .mobileScanIconAction > summary,
-  .splitsMobilePrimaryRow button.mobilePrintIconAction{
-    font-size:0;
-  }
-  .splitsMobilePrimaryRow .mobileScanIconAction .recipeActionIcon,
-  .splitsMobilePrimaryRow .mobilePrintIconAction .recipeActionIcon{
-    display:block!important;
-    width:18px;
-    height:18px;
-  }
-  /* Print is always this row's actual last item (a bare button, not a
-     nested summary), which the ":last-child button.secondary" rule above
-     doesn't reach - that matches a last-child's descendant, not the
-     last-child element itself. */
-  .splitsMobilePrimaryRow > button.mobilePrintIconAction{ border-right:0; }
+  /* The Scan / Load / Print row that used to sit here is gone: Scan and the
+     page's Load action moved up into the tab row as icon buttons (see the
+     late <=700px block for #recipeHeaderActions), and Print is desktop-only.
+     Only the rearrange / tracking context rows remain in this tray. */
   /* Clear Tracking no longer has a home on mobile at all - Timeline's own
      Reset tracking control already covers it (see clearTrackingButton.hidden
      in renderSplitsArea). This bar still exists purely so its aria-live
@@ -7186,48 +7240,8 @@ button.compactAction{
   #notesBlock .notesBodyEditor .notesProse{ min-height:46vh; }
 }
 
-/* Matrix action bars share one compact surface. The Recipe bar has four
-   segments and Receiver Weights has two; each distributes only its own
-   actions while retaining the same visual grammar. */
 @media (max-width:700px){
   .mobileMatrixActionBar{width:100%;max-width:100%;min-width:0;margin-top:8px}
-  .mobileWeightsActionToolbar.mobileMatrixActionBar{
-    min-height:42px;
-    border:1px solid var(--row-border-2);
-    border-radius:var(--control-radius);
-    background:var(--row-bg-2);
-  }
-  .mobileWeightsActionToolbar.mobileMatrixActionBar button,
-  .mobileRecipeActionTray.mobileMatrixActionBar .splitsMobilePrimaryRow button.secondary,
-  .mobileRecipeActionTray.mobileMatrixActionBar .splitsMobilePrimaryRow .splitsScanShortcut > summary{
-    min-height:42px;
-    color:var(--text);
-    font-size:11px;
-    font-weight:850;
-  }
-  .mobileWeightsActionToolbar.mobileMatrixActionBar button svg{width:18px;height:18px}
-
-  /* Scan / Load Next-or-Current / Print (see renderSplitsArea's
-     mobilePrimaryRow) share this same compact bar instead of costing
-     their own row below the matrix - tighter than the 11px/18px Weights'
-     single-button toolbar (untouched above) ever has to be. */
-  .mobileRecipeActionTray.mobileMatrixActionBar .splitsMobilePrimaryRow button.secondary,
-  .mobileRecipeActionTray.mobileMatrixActionBar .splitsMobilePrimaryRow .splitsScanShortcut > summary{
-    min-height:34px;
-    padding:5px 0;
-    font-size:8.5px;
-    letter-spacing:0;
-    gap:2px;
-  }
-  /* Scan and Print are icon-only in this same row (see
-     .mobileScanIconAction/.mobilePrintIconAction above) - this block's own
-     8.5px text sizing above matches this same ancestor context and
-     specificity, so it would otherwise win over that earlier, more
-     general rule and leave their text label visible after all. */
-  .mobileRecipeActionTray.mobileMatrixActionBar .splitsMobilePrimaryRow .mobileScanIconAction > summary,
-  .mobileRecipeActionTray.mobileMatrixActionBar .splitsMobilePrimaryRow button.mobilePrintIconAction{
-    font-size:0;
-  }
 
   /* Phone Recipe uses the tablet's inline Edit model: inputs and selection
      actions stay directly above the matrix, with no modal sheet and no
@@ -7567,11 +7581,8 @@ button.compactAction{
     border-color:var(--row-border-2);
     background:var(--row-bg-2);
   }
-  #splitsArea .splitsMobilePrimaryRow button[data-button-kind="action"]{
-    color:var(--muted);
-    box-shadow:none;
-  }
 }
+
 @media (max-width: 720px){
   .toolsWorkspace{ grid-template-columns: 1fr; }
   .toolsIndexDropdown{ display: block; }
@@ -8839,8 +8850,8 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
      [hidden]{display:none}, regardless of specificity - without this, the
      rows above would render even while carrying the hidden attribute (set
      whenever the native PumpOffAlarm plugin isn't present, i.e. every
-     browser - see applyPumpOffAlarmSound). Same fix already applied to
-     .splitsMobilePrimaryRow for the same reason. */
+     browser - see applyPumpOffAlarmSound). Same fix applied to
+     .recipeHeaderActions on phones for the same reason. */
   .pumpOffAlarmSoundRow[hidden],.pumpOffAlarmVibrateChoice[hidden]{display:none!important}
 
   /* APK only: native sound/vibration controls are available together, so
@@ -10328,16 +10339,9 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
   .mobileWeightsBulkActions small{font-weight:800}
   .mobileWeightsBulkActions button{font-weight:850}
 
-  /* Profiles and bulk editing belong with the bottom of the matrix. The
-     toolbar uses the same compact, equal actions as the Recipe panel. */
-  /* Weight Profiles is the only action left here - Bulk edit became Edit view. */
-  .mobileWeightsActionToolbar{display:grid;grid-template-columns:1fr;gap:0;margin-top:8px;border:1px solid var(--row-border-2);border-radius:var(--control-radius);overflow:hidden;background:var(--row-bg-2)}
-  .mobileWeightsActionToolbar button{display:flex;align-items:center;justify-content:center;gap:7px;min-height:42px;padding:7px 8px;border:0;border-radius:0;background:transparent;color:var(--text);font:inherit;font-size:12px;font-weight:850;box-shadow:none}
-  .mobileWeightsActionToolbar button + button{border-left:1px solid var(--row-border-2)}
-  .mobileWeightsActionToolbar button svg{width:18px;height:18px;fill:none;stroke:var(--focus-border);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
-  .mobileWeightsActionToolbar button:hover,.mobileWeightsActionToolbar button:focus-visible{background:var(--row-bg);outline:0}
-  .mobileWeightsActionToolbar button:focus-visible{box-shadow:inset 0 0 0 2px var(--focus-border)}
-  .mobileWeightsActionToolbar .mobileWeightsProfilesAction[aria-expanded="true"]{color:var(--title);background:var(--focus-ring)}
+  /* Receiver weight profiles moved out of a bottom bar into the tab-row
+     header cluster as an icon button - see #recipeHeaderActions
+     .recipeHeaderMobileAction in the earlier <=700px block. */
 
   .mobileSavedRecipesSheet{bottom:calc(var(--app-dock-height) + env(safe-area-inset-bottom) + 8px);width:min(410px,calc(100vw - 20px));max-width:calc(100vw - 20px);max-height:min(74dvh,620px);margin:0;padding:0 12px 12px;border:1px solid var(--border2);border-radius:16px;background:var(--panelOpen);box-shadow:0 12px 32px color-mix(in srgb,#000 30%,transparent)}
   .mobileSavedRecipesSheet[open]{display:grid;grid-template-rows:auto auto auto minmax(0,1fr)}

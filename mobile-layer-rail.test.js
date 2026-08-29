@@ -74,7 +74,7 @@ test("the compact mobile matrix keeps all layer columns in the table and omits t
 });
 
 test("compact mobile recipe actions follow the matrix while Edit values stay in the inline toolbar", () => {
-  assert.match(app, /actionTray\.append\(mobilePrimaryRow, mobileRearrangeContext\);/);
+  assert.match(app, /actionTray\.append\(mobileRearrangeContext\);/);
   assert.match(app, /area\.append\(actionTray\);/);
   assert.doesNotMatch(app, /mobileLayerLayout\.append\(actionTray\);/);
   assert.match(app, /area\.append\(toolbar\);/);

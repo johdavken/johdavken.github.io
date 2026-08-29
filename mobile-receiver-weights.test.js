@@ -44,9 +44,11 @@ test("mobile bulk entry comes with Edit view and can apply weight and height",()
   // Bulk edit is no longer a mode of its own here: Edit view *is* bulk
   // edit, so Weight Profiles is all that remains in the action row.
   assert.doesNotMatch(mobile,/bulkToggleRow|mobileWeightsBulkToggle/);
-  assert.match(mobile,/actionToolbar\.append\(profilesAction\)/);
+  // Weight Profiles is a single icon button in the tab-row header cluster
+  // now - no bottom action bar of its own.
+  assert.match(mobile,/weightsHeaderActions\.replaceChildren\(profilesAction\)/);
+  assert.doesNotMatch(mobile,/mobileWeightsActionToolbar/);
   assert.match(mobile,/setMobileWeightBulkMode\(!visualMode\);/);
-  assert.match(mobile,/area\.appendChild\(actionToolbar\)/);
   assert.doesNotMatch(mobile,/selector\.type = "checkbox"/);
   assert.match(mobile,/cell\.setAttribute\("aria-selected", "false"\)/);
   assert.match(mobile,/cell\.addEventListener\("keydown"/);
@@ -78,8 +80,8 @@ test("mobile receiver Summary cells are compact text readouts with no repeated h
   // Cells are static in both views now, so the readout sizing is keyed on
   // the attribute's presence rather than on Summary specifically.
   assert.match(styles,/#weightsArea\[data-mobile-weight-view\] \.mobileWeightCell\{height:auto;min-height:40px/);
-  // One action left in the row, so it is a single column.
-  assert.match(styles,/\.mobileWeightsActionToolbar\{display:grid;grid-template-columns:1fr/);
+  // The old bottom Weight Profiles bar is gone entirely.
+  assert.doesNotMatch(styles,/mobileWeightsActionToolbar/);
 });
 
 test("the Summary/Edit mode persists at module scope, shared by both weights render paths",()=>{

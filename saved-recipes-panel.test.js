@@ -126,7 +126,7 @@ test("setBulkMode and setSavedRecipesOpen both write their resolved value back t
 });
 
 test("Recipe Book is a page tab at every width - there is no separate mobile disclosure button any more", () => {
-  assert.match(html, /id="recipePageTabSaved" role="tab" aria-selected="false" aria-controls="splitsArea" data-recipe-page="saved" hidden>Recipe Book<\/button>/);
+  assert.match(html, /id="recipePageTabSaved" role="tab" aria-selected="false" aria-controls="splitsArea" data-recipe-page="saved" hidden><span class="recipeTabLabel">Recipe Book<\/span>/);
   assert.match(app, /<strong>Recipe Book<\/strong>/);
   assert.doesNotMatch(app, /savedRecipesButton/);
   assert.match(app, /if \(savedTab\) savedTab\.hidden = false;/);
