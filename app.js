@@ -23,6 +23,7 @@
     // previous run are still armed in the OS, and only a record of their ids
     // lets a fresh run cancel the ones that no longer apply.
     const LS_SCHEDULED_ALARMS_KEY = "resinTimer.scheduledAlarms.v0.01";
+    const LS_CHANGEOVER_WIZARD_KEY = "resinTimer.changeoverWizard.v0.01";
 
     const DETAILS_IDS = [
       "lineSetupBlock",
@@ -7893,6 +7894,117 @@
       applyPayload: applyScannedRecipePayload
     };
   }
+
+    // Guided changeover estimate shared by the mobile gauge and desktop
+    // status-bar triggers. Answers are a local device
+    // convenience, while accepting the result deliberately goes through the
+    // existing #changeoverTime input event (the single update/sync path).
+    const changeoverWizardDefaults = { lineSpeed:"", footagePerRoll:"", numberUp:1, bothWinders:true, hours:0, minutes:0, rollsLeft:"" };
+    let changeoverWizardAnswers = {...changeoverWizardDefaults};
+    let changeoverWizardStep = 0;
+    try {
+      const saved = JSON.parse(localStorage.getItem(LS_CHANGEOVER_WIZARD_KEY) || "null");
+      if (saved && typeof saved === "object") changeoverWizardAnswers = {...changeoverWizardDefaults, ...saved};
+    } catch {}
+
+    function saveChangeoverWizardAnswers(){
+      try { localStorage.setItem(LS_CHANGEOVER_WIZARD_KEY, JSON.stringify(changeoverWizardAnswers)); } catch {}
+    }
+
+    function changeoverWizardEstimate(){
+      const lineSpeed = Number(changeoverWizardAnswers.lineSpeed);
+      const footagePerRoll = Number(changeoverWizardAnswers.footagePerRoll);
+      const numberUp = Number(changeoverWizardAnswers.numberUp);
+      const rollsLeft = Number(changeoverWizardAnswers.rollsLeft);
+      const currentSetMinutesRemaining = Number(changeoverWizardAnswers.hours) * 60 + Number(changeoverWizardAnswers.minutes);
+      const winderCount = changeoverWizardAnswers.bothWinders ? 2 : 1;
+      if (![lineSpeed,footagePerRoll,numberUp,rollsLeft,currentSetMinutesRemaining].every(Number.isFinite) || lineSpeed <= 0 || footagePerRoll <= 0 || numberUp < 1 || rollsLeft < 0 || currentSetMinutesRemaining < 0) return null;
+      const rollsPerSet = numberUp * winderCount;
+      const fullSetMinutes = footagePerRoll / lineSpeed;
+      const rollsAfterCurrentSet = Math.max(0, rollsLeft - rollsPerSet);
+      const futureSets = Math.ceil(rollsAfterCurrentSet / rollsPerSet);
+      const remainingMinutes = currentSetMinutesRemaining + futureSets * fullSetMinutes;
+      const estimatedDate = new Date(Date.now() + remainingMinutes * 60000);
+      if (!Number.isFinite(remainingMinutes) || Number.isNaN(estimatedDate.getTime())) return null;
+      return {rollsPerSet,futureSets,remainingMinutes,estimatedDate};
+    }
+
+    function changeoverWizardTimeValue(date){
+      return `${String(date.getHours()).padStart(2,"0")}:${String(date.getMinutes()).padStart(2,"0")}`;
+    }
+
+    function renderChangeoverWizard(){
+      const body = $("changeoverWizardBody"), progress = $("changeoverWizardProgress");
+      if (!body || !progress) return;
+      progress.textContent = changeoverWizardStep < 6 ? `${changeoverWizardStep + 1} of 6` : "Estimate";
+      const back = changeoverWizardStep > 0 ? `<button type="button" class="secondary" data-wizard-back>Back</button>` : "";
+      const nextActions = `<div class="changeoverWizardActions ${changeoverWizardStep === 0 ? "one" : ""}">${back}<button type="submit" class="primary">Next</button></div>`;
+      if (changeoverWizardStep === 0 || changeoverWizardStep === 1 || changeoverWizardStep === 5){
+        const data = changeoverWizardStep === 0
+          ? ["What’s the line speed?","lineSpeed","ft/min"]
+          : changeoverWizardStep === 1
+            ? ["What’s the footage per roll?","footagePerRoll","ft"]
+            : ["How many rolls are left on the order?","rollsLeft","rolls, including the current set"];
+        body.innerHTML = `<h2 class="changeoverWizardQuestion">${data[0]}</h2><label class="changeoverWizardField"><input name="${data[1]}" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" value="${String(changeoverWizardAnswers[data[1]]).replace(/&/g,"&amp;").replace(/\"/g,"&quot;")}" aria-describedby="changeoverWizardUnit"><small id="changeoverWizardUnit">${data[2]}</small></label><p class="changeoverWizardError" role="alert"></p>${nextActions}`;
+        window.requestAnimationFrame(()=>body.querySelector("input")?.focus());
+      } else if (changeoverWizardStep === 2){
+        body.innerHTML = `<h2 class="changeoverWizardQuestion">How many up?</h2><div class="changeoverWizardChoices" role="radiogroup" aria-label="Rolls per winder">${Array.from({length:10},(_,i)=>`<button type="button" class="secondary ${changeoverWizardAnswers.numberUp===i+1?"selected":""}" data-number-up="${i+1}" role="radio" aria-checked="${changeoverWizardAnswers.numberUp===i+1}">${i+1}</button>`).join("")}</div><div class="changeoverWizardActions one">${back}</div>`;
+      } else if (changeoverWizardStep === 3){
+        body.innerHTML = `<h2 class="changeoverWizardQuestion">Using both winders?</h2><div class="changeoverWizardChoices binary" role="radiogroup">${[["Yes",true],["No",false]].map(([label,value])=>`<button type="button" class="secondary ${changeoverWizardAnswers.bothWinders===value?"selected":""}" data-both-winders="${value}" role="radio" aria-checked="${changeoverWizardAnswers.bothWinders===value}">${label}</button>`).join("")}</div><div class="changeoverWizardActions one">${back}</div>`;
+      } else if (changeoverWizardStep === 4){
+        const options = (count, selected) => Array.from({length:count},(_,i)=>`<option value="${i}" ${Number(selected)===i?"selected":""}>${i}</option>`).join("");
+        body.innerHTML = `<h2 class="changeoverWizardQuestion">How long is left on the current set?</h2><div class="changeoverWizardTime"><label>Hours<select name="hours">${options(25,changeoverWizardAnswers.hours)}</select></label><label>Minutes<select name="minutes">${options(60,changeoverWizardAnswers.minutes)}</select></label></div>${nextActions}`;
+      } else {
+        const estimate = changeoverWizardEstimate();
+        if (!estimate){ changeoverWizardStep = 0; renderChangeoverWizard(); return; }
+        const rounded = Math.max(0,Math.round(estimate.remainingMinutes));
+        const duration = `${Math.floor(rounded/60) ? `${Math.floor(rounded/60)} hr ` : ""}${rounded%60} min remaining`;
+        const clock = fmtTime(estimate.estimatedDate);
+        body.innerHTML = `<h2 class="changeoverWizardQuestion">Estimated Changeover</h2><div class="changeoverWizardResultTime">${clock}</div><div class="changeoverWizardRemaining">${duration}</div><div class="changeoverWizardSummary">${changeoverWizardAnswers.rollsLeft} rolls • ${estimate.rollsPerSet} rolls/set • ${estimate.futureSets} future sets</div><div class="changeoverWizardActions"><button type="button" class="secondary" data-wizard-adjust>Adjust Answers</button><button type="button" class="primary" data-wizard-use>Use ${clock}</button></div>`;
+      }
+    }
+
+    function advanceChangeoverWizard(){
+      saveChangeoverWizardAnswers();
+      changeoverWizardStep = Math.min(6, changeoverWizardStep + 1);
+      document.activeElement?.blur();
+      renderChangeoverWizard();
+    }
+
+    document.querySelectorAll("[data-changeover-wizard-trigger]").forEach(trigger=>trigger.addEventListener("click",event=>{
+        event.stopPropagation();
+        changeoverWizardStep = 0;
+        renderChangeoverWizard();
+        $("changeoverWizardDialog")?.showModal();
+      }));
+    document.querySelectorAll("[data-changeover-close]").forEach(button=>button.addEventListener("click",()=>$("changeoverWizardDialog")?.close()));
+    $("changeoverWizardDialog")?.addEventListener("click",event=>{ if (event.target === event.currentTarget) event.currentTarget.close(); });
+    $("changeoverWizardForm")?.addEventListener("submit",event=>{
+      event.preventDefault();
+      const body = $("changeoverWizardBody");
+      if (changeoverWizardStep === 0 || changeoverWizardStep === 1 || changeoverWizardStep === 5){
+        const input = body?.querySelector("input"), value = Number(input?.value);
+        const valid = Number.isFinite(value) && (changeoverWizardStep === 5 ? value >= 0 : value > 0);
+        if (!valid){ body.querySelector(".changeoverWizardError").textContent = changeoverWizardStep === 5 ? "Enter zero or more rolls." : "Enter a value greater than zero."; input?.focus(); return; }
+        changeoverWizardAnswers[input.name] = input.value;
+      } else if (changeoverWizardStep === 4){
+        changeoverWizardAnswers.hours = Number(body?.querySelector('[name="hours"]')?.value);
+        changeoverWizardAnswers.minutes = Number(body?.querySelector('[name="minutes"]')?.value);
+      }
+      advanceChangeoverWizard();
+    });
+    $("changeoverWizardBody")?.addEventListener("click",event=>{
+      const button = event.target.closest("button"); if (!button) return;
+      if (button.hasAttribute("data-wizard-back")){ changeoverWizardStep = Math.max(0,changeoverWizardStep-1); renderChangeoverWizard(); }
+      if (button.hasAttribute("data-number-up")){ changeoverWizardAnswers.numberUp=Number(button.dataset.numberUp); advanceChangeoverWizard(); }
+      if (button.hasAttribute("data-both-winders")){ changeoverWizardAnswers.bothWinders=button.dataset.bothWinders==="true"; advanceChangeoverWizard(); }
+      if (button.hasAttribute("data-wizard-adjust")){ changeoverWizardStep=0; renderChangeoverWizard(); }
+      if (button.hasAttribute("data-wizard-use")){
+        const estimate=changeoverWizardEstimate(); if (!estimate) return;
+        const input=$("changeoverTime"); input.value=changeoverWizardTimeValue(estimate.estimatedDate); input.dispatchEvent(new Event("input",{bubbles:true}));
+        $("changeoverWizardDialog")?.close("use");
+      }
+    });
 
     // Wire inputs
     document.querySelectorAll(".gaugeTile").forEach(tile=>{

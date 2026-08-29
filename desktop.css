@@ -93,6 +93,10 @@
   .workspaceStatusItem{min-width:0}
   .workspaceStatusItem span{font-size:var(--desktop-type-label);font-weight:650;letter-spacing:.01em}
   .workspaceStatusItem strong{font-size:var(--desktop-type-secondary);font-weight:750}
+  .desktopChangeoverWizardTrigger{display:grid;place-items:center;flex:0 0 auto;width:34px;height:34px;min-height:34px;padding:7px;border:0;border-radius:var(--control-radius);background:transparent;color:var(--focus-border);box-shadow:none}
+  .desktopChangeoverWizardTrigger:hover{background:var(--row-bg)}
+  .desktopChangeoverWizardTrigger:focus-visible{outline:2px solid var(--focus-border);outline-offset:1px}
+  .desktopChangeoverWizardTrigger svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
   .workspaceNavButton{gap:5px}
   .workspaceNavButton span{font-size:14px;font-weight:650;letter-spacing:.06em;text-transform:uppercase}
   .workspaceNavButton small{font-size:var(--desktop-type-secondary);font-weight:600;color:color-mix(in srgb,var(--muted) 88%,var(--text));letter-spacing:0}

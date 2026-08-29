@@ -366,6 +366,7 @@ main{
 
 .workspaceNav,
 .workspaceStatusBar{ display: none; }
+.desktopChangeoverWizardTrigger{display:none}
 
 /* Line Setup has been folded into Recipe. The legacy panel remains only as
    a stable DOM host before its live controls mount into the desktop rail. */
@@ -10256,6 +10257,8 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
   #lineSetupBlock .gaugeTimeValue{display:flex;align-items:center;justify-content:center;gap:7px;min-width:0;color:var(--text);font-size:clamp(19px,6vw,25px);font-weight:850;line-height:1.05;font-variant-numeric:tabular-nums;letter-spacing:-.03em;white-space:nowrap}
   #lineSetupBlock .gaugeTimeValue svg{width:22px;height:22px;flex:0 0 auto;fill:none;stroke:var(--title);stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
   #lineSetupBlock .gaugeTile label{margin-top:6px;color:var(--muted);font-size:9px;letter-spacing:.08em}
+  .mobileProductionControls .changeoverWizardTrigger{position:absolute;right:calc(50% + 54px);top:-16px;z-index:3;display:grid;width:44px;height:44px;min-height:44px;margin:0;padding:11px;border:0;background:transparent;color:var(--focus-border);box-shadow:none}
+  .changeoverWizardTrigger svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
   #lineSetupBlock .gaugeTile .gaugeIcon{width:17px;height:17px;margin-bottom:3px}
 
   #lineSetupBlock #weightsBlock{border:0;border-radius:0;background:transparent;box-shadow:none}
@@ -10380,6 +10383,48 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
     max-width:calc(100vw - 20px);
     margin:0;
   }
+}
+
+.changeoverWizardTrigger{display:none}
+.changeoverWizardDialog{width:min(410px,calc(100vw - 20px));max-width:calc(100vw - 20px);margin:auto;padding:0;border:1px solid var(--border2);border-radius:16px;background:var(--panelOpen);color:var(--text);box-shadow:var(--shadow2)}
+.changeoverWizardDialog::backdrop{background:color-mix(in srgb,#000 52%,transparent);backdrop-filter:blur(1.5px)}
+.changeoverWizardPanel{display:grid;grid-template-rows:auto auto minmax(0,1fr);min-height:min(500px,calc(100dvh - var(--app-dock-height) - env(safe-area-inset-bottom) - 30px));max-height:calc(100dvh - var(--app-dock-height) - env(safe-area-inset-bottom) - 30px);padding:0 16px 18px;overflow:auto}
+.changeoverWizardGrabber{display:block;width:42px;height:5px;min-height:5px;margin:8px auto 8px;padding:0;border:0;border-radius:999px;background:color-mix(in srgb,var(--muted) 45%,transparent);box-shadow:none}
+.changeoverWizardHeader{display:flex;align-items:start;justify-content:space-between;gap:12px;padding:3px 0 12px;border-bottom:1px solid var(--border)}
+.changeoverWizardHeader > div{display:grid;gap:3px}
+.changeoverWizardHeader strong{color:var(--title);font-size:16px}
+.changeoverWizardHeader small{color:var(--muted);font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.changeoverWizardClose{width:44px;height:44px;min-height:44px;padding:0;border-color:transparent!important;background:transparent;font-size:23px;line-height:1}
+.changeoverWizardClose:hover{border-color:var(--btn-secondary-border)!important;background:var(--row-bg)!important}
+.changeoverWizardBody{display:flex;min-width:0;flex-direction:column;align-items:stretch;justify-content:center;gap:22px;padding:22px 2px 4px;text-align:center}
+.changeoverWizardQuestion{margin:0;color:var(--title);font-size:clamp(20px,6vw,26px);line-height:1.2}
+.changeoverWizardField{display:grid;gap:7px;width:min(100%,300px);margin-inline:auto;text-align:left}
+.changeoverWizardField input{width:100%;min-height:58px;padding:8px 12px;text-align:center;font-size:28px;font-weight:850;font-variant-numeric:tabular-nums}
+.changeoverWizardField small{color:var(--muted);text-align:center}
+.changeoverWizardActions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;margin-top:auto;overflow:hidden;border:1px solid var(--btn-secondary-border);border-radius:var(--control-radius);background:var(--btn-secondary-bg)}
+.changeoverWizardActions.one{grid-template-columns:1fr}
+.changeoverWizardActions button,.changeoverWizardChoices button{min-height:48px}
+.changeoverWizardActions button{border:0;border-right:1px solid var(--btn-secondary-border);border-radius:0;font-size:var(--font-small);font-weight:800;box-shadow:none}
+.changeoverWizardActions button:last-child{border-right:0}
+.changeoverWizardActions button.secondary{background:transparent;color:var(--muted)}
+.changeoverWizardActions button.primary{background:linear-gradient(180deg,var(--btn-primary-a),var(--btn-primary-b));color:var(--text)}
+.changeoverWizardActions button:hover{background-color:var(--row-bg)}
+.changeoverWizardChoices{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px}
+.changeoverWizardChoices.binary{grid-template-columns:repeat(2,minmax(0,1fr))}
+.changeoverWizardChoices button{padding:8px 2px;border:1px solid var(--row-border-2);border-radius:var(--control-radius);background:var(--row-bg-2);color:var(--muted);font-size:17px;font-weight:850;box-shadow:none}
+.changeoverWizardChoices button:hover{border-color:var(--focus-border);background:var(--row-bg);color:var(--title)}
+.changeoverWizardChoices button.selected{border-color:color-mix(in srgb,var(--focus-border) 66%,var(--row-border-2));background:transparent;color:var(--title);box-shadow:inset 0 -2px 0 var(--focus-border)}
+.changeoverWizardTime{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;width:min(100%,330px);margin-inline:auto;text-align:left}
+.changeoverWizardTime label{display:grid;gap:6px;color:var(--muted);font-size:11px;font-weight:800;text-transform:uppercase}
+.changeoverWizardTime select{width:100%;min-height:52px;font-size:20px;font-weight:800}
+.changeoverWizardError{min-height:18px;margin:0;color:var(--danger,#c94b4b);font-size:12px}
+.changeoverWizardResultTime{color:var(--title);font-size:clamp(38px,12vw,54px);font-weight:900;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.changeoverWizardRemaining{margin-top:-15px;color:var(--text);font-size:16px;font-weight:750}
+.changeoverWizardSummary{margin-top:-12px;color:var(--muted);font-size:12px}
+
+@media (width <= 700px), (min-width:701px) and (pointer:coarse){
+  .changeoverWizardTrigger{display:grid}
+  .changeoverWizardDialog{position:fixed;inset:auto auto calc(var(--app-dock-height) + env(safe-area-inset-bottom) + 10px) 50%;transform:translateX(-50%);margin:0}
 }
 
 /* =======================================================================

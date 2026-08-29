@@ -30,7 +30,7 @@ test("the dock is a 32px rail with centered Layer stack and icon-only Display/Al
   assert.match(refinement,/\.mobileNotificationsBadge\{[\s\S]*?position:absolute;[\s\S]*?left:calc\(50% \+ 5px\);[\s\S]*?min-width:12px;[\s\S]*?height:12px;/);
   assert.match(html,/id="appFooterNotifications"[\s\S]*?<span>Alerts<\/span>/);
   assert.match(html,/id="appFooterMain"[\s\S]*?<span>Main<\/span>/);
-  assert.match(html,/id="appFooterMain"[\s\S]*?<path d="m12 3 9 5-9 5-9-5Z"\/>[\s\S]*?<path d="m3 16 9 5 9-5"\/>/);
+  assert.match(html,/id="appFooterMain"[\s\S]*?<path d="M2\.9 10\.5 11\.2 3[^"]*" style="fill:currentColor;stroke:none"\/>/);
 });
 
 test("the footer stays three equal cells after Refresh is removed",()=>{
