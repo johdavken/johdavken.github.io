@@ -75,13 +75,13 @@ test("column width, the hopper-designation badge, and the Track toggle clock ico
   assert.match(body, /#splitsArea \.splitTrackButton svg\{ width: 21px; height: 21px; \}/);
 });
 
-test("desktop tracked cells read as a theme-appropriate background wash while Edit owns the cell outline", () => {
+test("desktop tracked cells retain their normal surface while the universal corner marks tracking", () => {
   const body = desktopBlock();
   // Tracked (Summary or Edit) = a --ok wash over the cell's own fill, no shadow.
-  assert.match(body, /\.splitMatrixCell\.tracked,\s*\n\s*#splitsArea\[data-recipe-view="edit"\][^{]*\.splitMatrixCell\.tracked\{[\s\S]*?background: color-mix\(in srgb,var\(--ok\) 22%,var\(--desktop-recipe-cell-bg\)\);[\s\S]*?box-shadow: none;/);
+  assert.match(body, /\.splitMatrixCell\.tracked,\s*\n\s*#splitsArea\[data-recipe-view="edit"\][^{]*\.splitMatrixCell\.tracked\{[\s\S]*?background:var\(--desktop-recipe-cell-bg\);[\s\S]*?box-shadow: none;/);
   assert.match(body, /\.splitMatrixCell\.selected\{[\s\S]*?background: var\(--desktop-recipe-cell-bg\);[\s\S]*?box-shadow: inset 0 0 0 2px var\(--focus-border\);/);
-  // A tracked cell selected in Edit keeps the wash under the selection outline.
-  assert.match(body, /\.splitMatrixCell\.tracked\.selected\{[\s\S]*?background: color-mix\(in srgb,var\(--ok\) 22%,var\(--desktop-recipe-cell-bg\)\);/);
+  // A tracked cell selected in Edit keeps the ordinary cell surface under the selection outline.
+  assert.match(body, /\.splitMatrixCell\.tracked\.selected\{[\s\S]*?background:var\(--desktop-recipe-cell-bg\);/);
   assert.match(body, /\.splitMatrixCell\.selected::after\{[\s\S]*?content: "EDIT";[\s\S]*?font-size: 8px;/);
   // No hopper-badge restyle, no dot, no spelled-out "TRACKING" label any more.
   assert.doesNotMatch(body, /\.splitMatrixCell\.tracked \.splitCellHopperName/);

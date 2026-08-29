@@ -229,14 +229,14 @@ test("wide touch reclaims Recipe height from chrome and controls without shrinki
   assert.doesNotMatch(block, /\.splitCellResinText\{[^}]*?font-size:/);
 });
 
-test("tablet-width and wide-touch tracking read as a plain theme-appropriate cell wash, not a notched badge", () => {
+test("tablet-width and wide-touch tracking retain the cell surface for the universal corner overlay", () => {
   const start = styles.indexOf(`@media ${TABLET_RECIPE_QUERY}`);
   const block = styles.slice(start, styles.indexOf("\n}", start) + 2);
   // Tracked (Summary or Edit) = a --ok wash over the cell's own fill.
-  assert.match(block, /\.splitMatrixCell\.tracked,[\s\S]*?\.splitMatrixCell\.tracked\{[\s\S]*?background:color-mix\(in srgb,var\(--ok\) 22%,var\(--tablet-recipe-cell-bg\)\);[\s\S]*?box-shadow:none;/);
+  assert.match(block, /\.splitMatrixCell\.tracked,[\s\S]*?\.splitMatrixCell\.tracked\{[\s\S]*?background:var\(--tablet-recipe-cell-bg\);[\s\S]*?box-shadow:none;/);
   assert.match(block, /\.splitMatrixCell\.selected\{[\s\S]*?background:var\(--tablet-recipe-cell-bg\);[\s\S]*?box-shadow:inset 0 0 0 1px var\(--focus-border\);/);
-  // A tracked cell selected in Edit keeps the wash under the selection outline.
-  assert.match(block, /\.splitMatrixCell\.tracked\.selected\{[\s\S]*?background:color-mix\(in srgb,var\(--ok\) 22%,var\(--tablet-recipe-cell-bg\)\);/);
+  // A tracked cell selected in Edit keeps its ordinary surface under the outline.
+  assert.match(block, /\.splitMatrixCell\.tracked\.selected\{[\s\S]*?background:var\(--tablet-recipe-cell-bg\);/);
   assert.match(block, /\.splitMatrixCell\.selected::after\{[\s\S]*?content:"EDIT";[\s\S]*?font-size:6px;/);
   // No hopper-badge restyle, no dot, no --tablet-track-accent any more.
   assert.doesNotMatch(block, /\.splitMatrixCell\.tracked \.splitCellHopperName/);

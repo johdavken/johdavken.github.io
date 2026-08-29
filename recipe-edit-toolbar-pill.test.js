@@ -149,6 +149,10 @@ test("every non-danger pill segment (Clear selection/Empty cells/Rearrange) shar
   assert.match(styles, /\.splitsEditRowSecondary \.bulkTextAction,\s*\n\s*\.splitsEditRowSecondary \.splitsRearrangeAction\{[\s\S]*?border: 0;\s*\n\s*background: color-mix\(in srgb, var\(--recipe-pill-accent\) 28%, var\(--panel2\)\);\s*\n\s*color: var\(--text\);[\s\S]*?font-size: var\(--font-small\);\s*\n\s*text-transform: none;\s*\n\s*letter-spacing: normal;/);
 });
 
+test("desktop/tablet Apply uses the same filled non-destructive action styling as Empty, while mobile retains its compact secondary treatment", () => {
+  assert.match(styles, /#splitsArea #splitsBulkBar #applyBulkSplit\{\s*\n\s*border:0;\s*\n\s*border-radius:var\(--control-radius\);\s*\n\s*background:color-mix\(in srgb,var\(--recipe-pill-accent\) 28%,var\(--panel2\)\);\s*\n\s*color:var\(--text\);\s*\n\s*font-size:var\(--font-small\);\s*\n\s*text-transform:none;\s*\n\s*letter-spacing:normal;\s*\n\s*\}/);
+});
+
 test("the fill/color/radius rule reaches #clearSplitSelection via a descendant combinator, not a direct-child one that would skip it - it's now the pill's leftmost segment", () => {
   assert.doesNotMatch(styles, /\.splitsEditRowSecondary > \.bulkTextAction\{\s*\n\s*border-radius: var\(--control-radius\);/);
 });

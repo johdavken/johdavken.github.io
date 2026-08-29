@@ -124,7 +124,7 @@ test("Summary's inert fields still let a click reach the cell, so the whole cell
 test("Summary and Edit mark cells differently - a background wash for tracked, an outline for selected - so the two never read as the same state", () => {
   assert.match(styles, /#splitsArea\[data-recipe-view="edit"\] \.splitsMatrix tbody \.splitMatrixCell\.selected\{[\s\S]*?box-shadow: inset 0 0 0 2px var\(--focus-border\);/);
   // Tracked = a plain --ok background wash in both views, no bar or outline.
-  assert.match(styles, /#splitsArea\[data-recipe-view="summary"\] \.splitsMatrix tbody \.splitMatrixCell\.tracked,\s*\n\s*#splitsArea\[data-recipe-view="edit"\] \.splitsMatrix tbody \.splitMatrixCell\.tracked:not\(\.selected\)\{\s*\n\s*background: color-mix\(in srgb, var\(--ok\) 22%, transparent\);\s*\n\s*\}/);
+  assert.match(styles, /#splitsArea\[data-recipe-view="summary"\] \.splitsMatrix tbody \.splitMatrixCell\.tracked,\s*\n\s*#splitsArea\[data-recipe-view="edit"\] \.splitsMatrix tbody \.splitMatrixCell\.tracked:not\(\.selected\)\{ background:transparent; \}/);
   assert.doesNotMatch(styles, /\.splitMatrixCell\.tracked[^{]*\{[^}]*inset 3px 0 0/);
 });
 
@@ -222,6 +222,21 @@ test("Empty cells empties only the selected hoppers and recomputes each affected
   // Disabled state moved from "nothing selected" to "nothing to empty" -
   // see recipe-empty-cells.test.js.
   assert.match(splitsArea, /if \(clearCellsButton\) clearCellsButton\.disabled = emptyable === 0;/);
+});
+
+test("every recipe view ends with a quiet, layout-aware hopper-action reminder", () => {
+  assert.match(splitsArea, /interactionHint\.className = "recipeInteractionHint";/);
+  assert.match(splitsArea, /const interactionVerb = isDesktopLayout\(\) \? "CLICK" : "TAP";/);
+  assert.match(splitsArea, /const interactionAction = viewMode === "edit"\s*\? "edit"\s*:\s*\(trackingView \? "track" : "view"\);/);
+  assert.match(splitsArea, /interactionCommand\.className = "recipeInteractionHintCommand";/);
+  assert.match(splitsArea, /interactionCommand\.textContent = interactionVerb;/);
+  assert.match(splitsArea, /document\.createTextNode\(` a hopper to \$\{interactionAction\}`\),/);
+  assert.match(splitsArea, /interactionCount\.textContent = ` - \$\{count\} selected`;/);
+  assert.match(splitsArea, /viewMode === "edit"\s*\? selected\.size\s*:\ \(trackingView \? trackedHopperCount\(\) : 0\);/);
+  assert.match(splitsArea, /updateInteractionHint\(\);/);
+  assert.match(splitsArea, /area\.append\(interactionHint\);/);
+  assert.match(styles, /\.recipeInteractionHint\{[\s\S]*?color:var\(--muted\);[\s\S]*?font-size:calc\(var\(--font-tiny\) \* \.75\);[\s\S]*?text-align:center;/);
+  assert.match(styles, /\.recipeInteractionHintCommand\{\s*color:var\(--recipe-pill-accent\);/);
 });
 
 /* ----------------------------------------------------------------------

@@ -107,7 +107,7 @@ test("variable length desktop sections use bounded internal scrolling", () => {
 test("desktop Recipe controls use the five-layer rail and Summary omits the redundant tracking panel", () => {
   assert.match(styles, /#splitsBlock\{\s*--recipe-five-layer-rail: 1062px;/);
   assert.match(styles, /#splitsBlock \.recipeHeaderRow,\s*#splitsArea > \.splitsBulkBar\{\s*width: min\(100%, var\(--recipe-five-layer-rail\)\);/);
-  assert.match(styles, /#splitsArea > \.splitsTrackingBar\{\s*display: none;/);
+  assert.match(styles, /#splitsArea > \.splitsTrackingBar\{ display:none; \}/);
   assert.doesNotMatch(styles, /--recipe-view-stage-height/);
 });
 

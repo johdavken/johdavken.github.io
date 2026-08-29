@@ -4241,6 +4241,7 @@
           ? "No hoppers tracked"
           : `${count} hopper${count === 1 ? "" : "s"} tracked`;
         clearTrackingButton.disabled = count === 0;
+        updateInteractionHint?.();
       }
       // Pump-off rides along, exactly as Timeline's Reset tracking does: an
       // untracked hopper that stayed "pumped off" is runtime state with
@@ -4962,6 +4963,33 @@
         }
       }
 
+      // Keep the one available cell action discoverable without adding more
+      // button chrome. Next Recipe's Summary is intentionally read-only, so
+      // its wording stays accurate while Current offers tracking.
+      const interactionHint = document.createElement("p");
+      interactionHint.className = "recipeInteractionHint";
+      const interactionVerb = isDesktopLayout() ? "CLICK" : "TAP";
+      const interactionAction = viewMode === "edit"
+        ? "edit"
+        : (trackingView ? "track" : "view");
+      const interactionCommand = document.createElement("strong");
+      interactionCommand.className = "recipeInteractionHintCommand";
+      interactionCommand.textContent = interactionVerb;
+      const interactionCount = document.createElement("span");
+      interactionHint.append(
+        interactionCommand,
+        document.createTextNode(` a hopper to ${interactionAction}`),
+        interactionCount
+      );
+      function updateInteractionHint(){
+        const count = viewMode === "edit"
+          ? selected.size
+          : (trackingView ? trackedHopperCount() : 0);
+        interactionCount.textContent = ` - ${count} selected`;
+      }
+      updateInteractionHint();
+      area.append(interactionHint);
+
       function showMobileLayer(layerName){
         activeMobileLayer = layerName;
         lastActiveMobileLayer = layerName;
@@ -5080,6 +5108,7 @@
             ? "No hoppers selected"
             : `${selected.size} hopper${selected.size === 1 ? "" : "s"} selected`
         );
+        updateInteractionHint();
       }
 
       function setBulkMode(enabled){

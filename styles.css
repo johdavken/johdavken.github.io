@@ -2017,6 +2017,22 @@ details[open] > summary .chevSatellite{
   text-decoration: none;
 }
 .splitsTrackingBar .bulkTextAction:disabled{ opacity: .48; }
+/* A small, stable reminder of the cell action sits under the matrix on every
+   Recipe view. It has no box or reserved control height, so it doesn't add
+   competing chrome to the working panel. */
+.recipeInteractionHint{
+  margin:0;
+  color:var(--muted);
+  font-size:calc(var(--font-tiny) * .75);
+  font-weight:750;
+  letter-spacing:.04em;
+  line-height:1.25;
+  text-align:center;
+}
+.recipeInteractionHintCommand{
+  color:var(--recipe-pill-accent);
+  font-weight:900;
+}
 /* Save Current / Load / Update / (rename, duplicate, favorite, delete) -
    a single consolidated bar acting on whichever recipe is selected below,
    instead of each row carrying its own Load/Update/overflow buttons. */
@@ -2434,12 +2450,38 @@ details[open] > summary .chevSatellite{
    column order (row-header th, then one td per layer in recipeLayers()
    order), regardless of which columns are hidden/visible. */
 .splitsMatrix tbody td.splitMatrixCell:nth-child(even){background:color-mix(in srgb,var(--row-bg-2) 55%,transparent)}
-/* Tracked cells read as a plain theme-appropriate background wash - no
-   border, outline or left bar, and no restyle of the hopper-name badge.
-   --ok is the same hue Summary already uses for tracking and stays clear
-   of the focus-coloured selection state. */
+/* Tracking is a fixed folded-corner check instead of a cell highlight.
+   Both colors follow the active palette: --ok supplies the fold, while the
+   page surface token supplies an automatically light/dark contrasting check.
+   The mark is an overlay, so it never changes cell measurements or moves
+   the hopper name, resin, percentage, or Edit's separate ::after label. */
 .splitsMatrix tbody .splitMatrixCell.tracked:not(.selected){
-  background:color-mix(in srgb,var(--ok) 22%,transparent);
+  background:transparent;
+}
+.splitsMatrix tbody .splitMatrixCell.tracked::before{
+  content:"✓";
+  position:absolute;
+  top:0;
+  right:0;
+  z-index:4;
+  display:flex;
+  justify-content:flex-end;
+  align-items:flex-start;
+  width:24px;
+  height:24px;
+  padding:2px 3px 0 0;
+  background:linear-gradient(225deg,var(--ok) 0 50%,transparent 51%);
+  color:var(--bg);
+  font-size:8px;
+  font-weight:950;
+  line-height:1;
+  pointer-events:none;
+}
+/* Edit is a temporary working view with its own top-right status label.
+   Keep tracking state intact, but reveal its folded corner only in Summary
+   so the two indicators never overlap or compete inside a dense cell. */
+#splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.tracked::before{
+  content:none;
 }
 .splitsMatrix td.splitMatrixCell{padding:4px 6px}
 .splitCellHeader{
@@ -3317,19 +3359,14 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     font-weight: 750;
   }
 
-  /* Selected (Edit) and tracked (Summary) are deliberately different
-     marks: selection is an outlined working state you are about to act
-     on, tracking is a filled, settled property of the recipe. They never
-     appear in the same view, but they must never be mistaken for each
-     other across a view switch either. */
+  /* Selected (Edit) and tracked (Summary) are deliberately different:
+     selection is an outlined working state; tracking is the folded corner. */
   #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.selected{
     background: color-mix(in srgb, var(--focus-ring) 72%, transparent);
     box-shadow: inset 0 0 0 2px var(--focus-border);
   }
   #splitsArea[data-recipe-view="summary"] .splitsMatrix tbody .splitMatrixCell.tracked,
-  #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.tracked:not(.selected){
-    background: color-mix(in srgb, var(--ok) 22%, transparent);
-  }
+  #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.tracked:not(.selected){ background:transparent; }
 
   /* "Large percentage number" - the value operators read across the line.
      Same element in both views; Summary simply renders it inert. */
@@ -3719,6 +3756,23 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     text-transform: none;
     letter-spacing: normal;
   }
+  /* Apply belongs to the same desktop/tablet action row as Empty and Reset.
+     Give it the shared non-destructive filled treatment rather than the
+     generic outlined-secondary style it uses on compact mobile. */
+  #splitsArea #splitsBulkBar #applyBulkSplit{
+    border:0;
+    border-radius:var(--control-radius);
+    background:color-mix(in srgb,var(--recipe-pill-accent) 28%,var(--panel2));
+    color:var(--text);
+    font-size:var(--font-small);
+    text-transform:none;
+    letter-spacing:normal;
+  }
+  #splitsArea #splitsBulkBar #applyBulkSplit:hover:not(:disabled){
+    background:color-mix(in srgb,var(--recipe-pill-accent) 28%,var(--panel2));
+    color:var(--text);
+    filter:brightness(1.08);
+  }
   /* #splitsArea #splitsBulkBar-prefixed (double-id) on the first two
      selectors specifically because an old, unscoped "quiet outlined"
      hover rule (styles.css: ".splitsBulkActions .bulkTextAction:hover,
@@ -3758,15 +3812,10 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
      .recipeEditHistory below), they revert to their own original circular/
      transparent look (styles.css:2164/2175) with no extra CSS needed here -
      "no pill body" is just the absence of the rules above, not new ones. */
-  /* Summary's Clear tracking: this shared min-width:701px block covers
-     every width/pointer combo where the bar can actually be visible - the
-     min-width:901px+pointer:fine block below hides it outright on real
-     desktop, so scoping the border removal here (rather than to
-     pointer:coarse alone) also reaches a mouse-driven desktop window
-     narrower than 901px, which a pointer:coarse-only rule missed. */
-  #splitsArea .splitsTrackingBar .bulkTextAction{
-    border: 0;
-  }
+  /* Timeline owns the bulk Reset tracking action on wider layouts. The
+     compact phone tray keeps its visually-hidden live status, but tablet
+     and desktop no longer spend vertical space on this duplicate bar. */
+  #splitsArea > .splitsTrackingBar{ display:none; }
 }
 
 @media (min-width: 901px) and (pointer: fine){
@@ -3782,14 +3831,6 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
   #splitsArea > .splitsBulkBar{
     width: min(100%, var(--recipe-five-layer-rail));
   }
-  /* Timeline already owns the destructive Reset tracking action. Desktop
-     Summary therefore needs no tracking status/action panel at all and can
-     open directly onto the matrix, matching the read-only Next tab. Touch
-     layouts retain their closer in-context control. */
-  #splitsArea > .splitsTrackingBar{
-    display: none;
-  }
-
   /* The row gutter used to collapse entirely in Summary here (deliberately,
      per the removed comment that lived on this rule) because "row selection
      only exists in Edit." That traded a stable x-position for saving the
@@ -3799,13 +3840,8 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
      appears/disappears, the column doesn't), so nothing desktop-specific is
      needed here any more. */
 
-  /* Desktop cell states. Tracking is a persistent property and now reads
-     purely as a theme-appropriate background wash on the whole cell - no
-     hopper-badge restyle, no dot, no spelled-out label, no left bar. Edit
-     remains the stronger working state: its ordinary cell surface gets a
-     two-pixel outline and an explicit corner label. A tracked cell
-     selected in Edit keeps the wash under that outline, so both marks
-     stay legible without either becoming ambiguous. */
+  /* Desktop cell states. The folded check is inherited from the universal
+     rule; Edit retains its stronger outline and explicit EDIT label. */
   #splitsArea .splitsMatrix tbody .splitMatrixCell{
     --desktop-recipe-cell-bg: transparent;
     position: relative;
@@ -3816,7 +3852,7 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
   }
   #splitsArea[data-recipe-view="summary"] .splitsMatrix tbody .splitMatrixCell.tracked,
   #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.tracked{
-    background: color-mix(in srgb,var(--ok) 22%,var(--desktop-recipe-cell-bg));
+    background:var(--desktop-recipe-cell-bg);
     box-shadow: none;
   }
   #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.selected{
@@ -3824,7 +3860,7 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     box-shadow: inset 0 0 0 2px var(--focus-border);
   }
   #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.tracked.selected{
-    background: color-mix(in srgb,var(--ok) 22%,var(--desktop-recipe-cell-bg));
+    background:var(--desktop-recipe-cell-bg);
   }
   #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.selected::after{
     content: "EDIT";
@@ -4439,9 +4475,15 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     --compact-recipe-row-bg:color-mix(in srgb,var(--row-bg-2) 76%,var(--panel2));
   }
   .splitsMatrix.compactMobileRecipe .splitMatrixCell.tracked:not(.selected){
-    background:color-mix(in srgb,var(--ok) 22%,var(--compact-recipe-row-bg));
+    background:var(--compact-recipe-row-bg);
     border-color:var(--row-border-2);
     box-shadow:none;
+  }
+  .splitsMatrix.compactMobileRecipe .splitMatrixCell.tracked::before{
+    width:18px;
+    height:18px;
+    padding:1px 2px 0 0;
+    font-size:6px;
   }
   #splitsArea[data-recipe-view="edit"] .splitsMatrix.compactMobileRecipe .splitMatrixCell.selected::after{
     content:"EDIT";
@@ -4879,7 +4921,7 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     box-shadow:inset 0 0 0 1px var(--focus-border);
   }
   .bulk-editing .splitsMatrix.compactMobileRecipe .splitMatrixCell.tracked.selected{
-    background:color-mix(in srgb,var(--ok) 22%,var(--compact-recipe-row-bg));
+    background:var(--compact-recipe-row-bg);
   }
   .bulk-editing .splitsMatrix.compactMobileRecipe .splitMatrixCell :is(input,button):disabled{pointer-events:none}
   .splitsMatrix.compactMobileRecipe .rearrangeTarget{cursor:pointer;outline:0;user-select:none}
@@ -10200,12 +10242,8 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
    layout is previewed in a desktop browser. Real touch tablets wider than
    that band retain the treatment through the coarse-pointer alternative. */
 @media (min-width: 701px) and (max-width: 1200px), (min-width: 701px) and (pointer: coarse){
-  /* The phone matrix established a clearer distinction between persistent
-     tracking and temporary Edit selection. Carry that same language onto
-     tablets: tracking reads as a theme-appropriate background wash on the
-     whole cell, while Edit keeps a restrained one-pixel outline plus the
-     tiny corner label. A tracked cell selected in Edit keeps the wash
-     under that outline. */
+  /* Tablet keeps the same universal folded check and restrained Edit
+     outline used at the other view sizes. */
   #splitsArea .splitsMatrix tbody .splitMatrixCell{
     --tablet-recipe-cell-bg:transparent;
     position:relative;
@@ -10216,7 +10254,7 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
   }
   #splitsArea[data-recipe-view="summary"] .splitsMatrix tbody .splitMatrixCell.tracked,
   #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.tracked{
-    background:color-mix(in srgb,var(--ok) 22%,var(--tablet-recipe-cell-bg));
+    background:var(--tablet-recipe-cell-bg);
     border-color:var(--row-border-2);
     box-shadow:none;
   }
@@ -10226,7 +10264,7 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
     box-shadow:inset 0 0 0 1px var(--focus-border);
   }
   #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.tracked.selected{
-    background:color-mix(in srgb,var(--ok) 22%,var(--tablet-recipe-cell-bg));
+    background:var(--tablet-recipe-cell-bg);
   }
   #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.selected::after{
     content:"EDIT";

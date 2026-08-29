@@ -10,9 +10,10 @@ const theme=fs.readFileSync("theme.css","utf8");
 test("compact tracking is a plain theme-appropriate cell wash, not a restyled hopper badge",()=>{
   // Tracked cells read as a --ok wash over their own row fill. No badge
   // restyle, no dot, no left bar - the hopper name stays its ordinary badge.
-  assert.match(styles,/\.splitsMatrix\.compactMobileRecipe \.splitMatrixCell\.tracked:not\(\.selected\)\{[\s\S]*?background:color-mix\(in srgb,var\(--ok\) 22%,var\(--compact-recipe-row-bg\)\);[\s\S]*?border-color:var\(--row-border-2\);[\s\S]*?box-shadow:none;/);
-  // A tracked cell selected in Edit keeps the wash under the selection outline.
-  assert.match(styles,/\.bulk-editing \.splitsMatrix\.compactMobileRecipe \.splitMatrixCell\.tracked\.selected\{[\s\S]*?background:color-mix\(in srgb,var\(--ok\) 22%,var\(--compact-recipe-row-bg\)\);/);
+  assert.match(styles,/\.splitsMatrix\.compactMobileRecipe \.splitMatrixCell\.tracked:not\(\.selected\)\{[\s\S]*?background:var\(--compact-recipe-row-bg\);[\s\S]*?border-color:var\(--row-border-2\);[\s\S]*?box-shadow:none;/);
+  assert.match(styles,/\.splitsMatrix\.compactMobileRecipe \.splitMatrixCell\.tracked::before\{[\s\S]*?width:18px;[\s\S]*?height:18px;[\s\S]*?font-size:6px;/);
+  // A tracked cell selected in Edit keeps its ordinary surface under the selection outline.
+  assert.match(styles,/\.bulk-editing \.splitsMatrix\.compactMobileRecipe \.splitMatrixCell\.tracked\.selected\{[\s\S]*?background:var\(--compact-recipe-row-bg\);/);
   assert.doesNotMatch(styles,/compactRecipeTrackTracer|compact-recipe-trace-angle/);
   assert.doesNotMatch(styles,/\.splitMatrixCell\.tracked:not\(\.selected\)::after/);
   // The tracked hopper-name pill and its dot are gone on every surface.

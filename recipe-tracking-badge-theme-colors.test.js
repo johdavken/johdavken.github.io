@@ -26,10 +26,18 @@ test("none of the old hardcoded blues remain anywhere in the compact mobile matr
   assert.doesNotMatch(block, /#72b9e8|#397fae|#4d9bd0|#b9e2ff/);
 });
 
-test("the tracked hopper-name badge restyle is gone - tracking is a plain --ok cell wash", () => {
+test("the tracked hopper-name badge restyle is gone - tracking uses the universal corner overlay", () => {
   const block = compactMobileRecipeBlock();
   assert.doesNotMatch(block, /\.splitMatrixCell\.tracked \.splitCellHopperName/);
-  assert.match(block, /\.splitsMatrix\.compactMobileRecipe \.splitMatrixCell\.tracked:not\(\.selected\)\{[\s\S]*?background:color-mix\(in srgb,var\(--ok\) 22%,var\(--compact-recipe-row-bg\)\);/);
+  assert.match(block, /\.splitsMatrix\.compactMobileRecipe \.splitMatrixCell\.tracked::before\{[\s\S]*?width:18px;[\s\S]*?height:18px;/);
+});
+
+test("the folded corner and check derive from active theme tokens", () => {
+  assert.match(styles, /\.splitsMatrix tbody \.splitMatrixCell\.tracked::before\{[\s\S]*?content:"✓";[\s\S]*?background:linear-gradient\(225deg,var\(--ok\) 0 50%,transparent 51%\);[\s\S]*?color:var\(--bg\);/);
+});
+
+test("Edit view hides the tracking corner so its EDIT label owns the corner", () => {
+  assert.match(styles, /#splitsArea\[data-recipe-view="edit"\] \.splitsMatrix tbody \.splitMatrixCell\.tracked::before\{\s*content:none;\s*\}/);
 });
 
 test("no per-theme override recolors a tracked hopper name any more", () => {
