@@ -131,7 +131,9 @@ test("device hint keeps the OFF wording while off, and the ON wording never says
 });
 
 test("changelog documents RT Cloud as recovery, not sync", () => {
-  assert.match(html, /<h3>\(v1\.1\.22\)[^<]*- RT Cloud<\/h3>/);
+  // The v1.1.22 heading may fold in other features shipped the same release;
+  // it just has to name RT Cloud.
+  assert.match(html, /<h3>\(v1\.1\.22\)[^<]*RT Cloud[^<]*<\/h3>/);
   assert.match(html, /New <strong>RT Cloud<\/strong> option/);
   assert.match(html, /This is recovery, not sync\./);
 });

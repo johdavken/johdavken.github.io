@@ -417,7 +417,7 @@
       <span><svg class="workspaceTileIcon" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3 27 8v7c0 7-4.5 11.5-11 14-6.5-2.5-11-7-11-14V8l11-5Z"/><path d="M16 12v8M12 16h8"/></svg>Sudo access</span>
       <small id="sudoAccessStatus">Administrator sign-in</small>
     </button>
-    <small class="desktopRailVersion" aria-label="App version">v1.1.19</small>
+    <small class="desktopRailVersion" aria-label="App version">v1.1.22</small>
   </nav>
 
   <div class="workspaceContent">
@@ -1217,10 +1217,13 @@
 
     <div class="blockBody">
       <div class="changelogBody">
-        <h3>(v1.1.22) (August 28, 2026) - RT Cloud</h3>
+        <h3>(v1.1.22) (August 28-29, 2026) - RT Cloud, Line Configuration &amp; changeover planning</h3>
         <ul>
           <li>New <strong>RT Cloud</strong> option in <strong>RT Notes &rarr; Backup</strong>: an optional, private, end-to-end encrypted recovery backup of your whole notebook. Enable it once and you get an <strong>RT Cloud Recovery Code</strong>; edits back themselves up in the background. If the app is reinstalled or its data cleared, <strong>Restore from RT Cloud</strong> with that code brings everything back.</li>
           <li>This is recovery, not sync. Your notes never appear on another device on their own, RT Cloud is never linked to a workspace or an RT Sync device, and the backup is encrypted on your device - RT Cloud cannot read note text, titles, or folder names. Turn it off (keeping the backup) or delete the cloud backup entirely at any time.</li>
+          <li>Added an administrator-only <strong>Line Configuration</strong> manager under <strong>Sudo Access</strong>. Lines 1-15 are preloaded with their existing layer count, Layer A orientation, Smart Hopper geometry, and hopper naming behavior; administrators can add aliases, update those settings, deactivate definitions, or add future lines without another hard-coded app release.</li>
+          <li>Line behavior now resolves from one shared definition, preferring a workspace&rsquo;s structured line number, then configured names and aliases, while preserving exact legacy <strong>Line N</strong> matching. Definitions are cached locally and retain built-in defaults, so known lines keep working during a network outage. Unsupported future layouts, such as a configured seven-layer line, are recognized without being silently downgraded.</li>
+          <li>Added <strong>Determine Changeover Time</strong> on mobile and desktop: enter line speed, footage per roll, number-up, active winders, time left on the current set, and rolls remaining to estimate the changeover. Review or adjust the answers, then apply the estimated time through the existing synced Changeover field.</li>
         </ul>
 
         <h3>(v1.1.21) (August 28, 2026) - RT Notes</h3>
@@ -1396,7 +1399,7 @@
             <span class="changelogPrivacySep" aria-hidden="true">·</span>
             <a class="changelogPrivacyLink" href="https://resin.tools/privacy/delete-data/" target="_blank" rel="noopener">Delete Data</a>
           </div>
-          <span class="changelogAppVersion" aria-label="App version">v1.1.19</span>
+          <span class="changelogAppVersion" aria-label="App version">v1.1.22</span>
           <small class="changelogPrivacyNote">How Resin.Tools handles your data</small>
         </div>
       </div>
@@ -2058,7 +2061,7 @@
   </form>
 </dialog>
 
-<small class="mobileFooterVersion" aria-label="App version">v1.1.19</small>
+<small class="mobileFooterVersion" aria-label="App version">v1.1.22</small>
 <footer class="footerBar" aria-label="App navigation">
   <button type="button" id="appFooterDisplay" class="appDockControl" aria-expanded="false" aria-controls="displaySheet" aria-label="Display settings">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9c0-1-.8-1.8-1.8-1.8h-2.1a2 2 0 0 1-2-2V6.8C15.1 4.7 13.9 3 12 3Z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="8.5" cy="16" r="1"/><g class="gruvboxIconDetail"><path d="M12 2v2"/></g></svg><span>Display</span>
