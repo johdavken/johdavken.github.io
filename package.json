@@ -7,7 +7,8 @@
     "build:android": "node scripts/build-www.js",
     "sync:android": "npm run build:android && npx cap sync android",
     "open:android": "npx cap open android",
-    "build:notes-editor": "esbuild notes-editor-vendor.src.js --bundle --minify --format=iife --global-name=RTNotesEditor --target=es2019 --legal-comments=none --outfile=vendor/tiptap-notes.min.js"
+    "build:notes-editor": "esbuild notes-editor-vendor.src.js --bundle --minify --format=iife --global-name=RTNotesEditor --target=es2019 --legal-comments=none --outfile=vendor/tiptap-notes.min.js",
+    "build:qrcode": "esbuild node_modules/qrcode/lib/browser.js --bundle --minify --format=iife --global-name=QRCode --target=es2019 --outfile=vendor/qrcode.min.js"
   },
   "dependencies": {
     "@capacitor/android": "8.5.0",
@@ -15,7 +16,8 @@
     "@capacitor/camera": "8.2.2",
     "@capacitor/cli": "8.5.0",
     "@capacitor/core": "8.5.0",
-    "@capacitor/local-notifications": "8.2.1"
+    "@capacitor/local-notifications": "8.2.1",
+    "qrcode": "^1.5.4"
   },
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",

@@ -278,7 +278,7 @@ test("the rule the running total uses is unchanged - only the presentation (alwa
 test("RT Sync remains available from Workspace & Support, without a footer refresh control", () => {
   assert.match(html, /id="workspaceNavLineSync"[^>]*data-workspace-target="lineSyncBlock"/);
   assert.match(html, /<strong id="lineSyncTopStatus">/);
-  assert.match(app, /\$\("lineSyncRetryBtn"\)\?\.addEventListener\("click",\(\)=>runLineSyncAction/);
+  assert.match(app, /\$\("lineSyncRetryBtn"\)\?\.addEventListener\("click",reconnectRtSync\);/);
   assert.doesNotMatch(app, /cloudSyncFooterStatus/);
 });
 

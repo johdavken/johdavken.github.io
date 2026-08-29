@@ -898,17 +898,19 @@
   #timelineHookupsArea{min-height:0;overflow:auto;overscroll-behavior:contain;padding-right:4px}
   #resultsArea{min-height:0;overflow:auto;overscroll-behavior:contain;padding-right:4px}
   #lineSyncBlock > .blockBody{overflow:auto}
-  #lineSyncBlock .lineSyncConnectionFields{grid-template-columns:minmax(180px,1fr) minmax(180px,1fr) minmax(180px,1fr)}
-  #lineSyncBlock .lineSyncPanel{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(300px,.9fr);align-content:start;gap:10px 18px}
-  #lineSyncBlock .lineSyncPanel > :is(#lineSyncMessage,.lineSyncMetrics,.lineSyncPendingList,.lineSyncConnectionFields){grid-column:1/-1}
-  #lineSyncBlock #lineSyncMessage{grid-row:1}
-  #lineSyncBlock .lineSyncMetrics{grid-row:2}
-  #lineSyncBlock .lineSyncPendingList{grid-row:3}
-  #lineSyncBlock .lineSyncConnectionFields{grid-row:4;margin-top:0}
-  #lineSyncBlock .lineSyncActionBar{grid-column:1;grid-row:5;margin-top:0}
-  #lineSyncBlock .lineSyncJoin{grid-column:1;grid-row:6;margin-top:0}
-  #lineSyncBlock .lineSyncMembers{grid-column:2;grid-row:5 / span 3;margin-top:0;min-height:0;max-height:360px;overflow:auto}
-  #lineSyncBlock .lineSyncPanel > .tiny.desktopSyncOnly{grid-column:1;grid-row:7;margin-top:0}
+  /* RT Sync owns its desktop composition now. The old panel-level grid
+     placed the retired Current line / This device controls next to the
+     content and left the new two-column layout with an enormous empty rail. */
+  #lineSyncBlock .lineSyncPanel{display:block}
+  #lineSyncBlock .desktopLineSyncMain{display:grid;grid-template-columns:minmax(320px,1.1fr) minmax(280px,.9fr);gap:20px;max-width:920px}
+  #lineSyncBlock .desktopLineSyncOverview,
+  #lineSyncBlock .desktopLineSyncMetrics,
+  #lineSyncBlock .desktopLineSyncReconnect,
+  #lineSyncBlock .desktopLineSyncSetup{max-width:920px}
+  /* A disconnected desktop is a recovery screen, not a degraded version of
+     the normal dashboard. The message belongs to the connected summary and
+     is deliberately absent until a production line is restored. */
+  #lineSyncBlock .lineSyncPanel.desktopDisconnected > #lineSyncMessage{display:none}
   #toolsBlock > .blockBody{overflow:hidden}
   #toolsBlock .toolsWorkspace{height:100%;min-height:0;align-items:stretch}
   #toolsBlock .toolsIndex{position:static;max-height:100%;overflow:auto}

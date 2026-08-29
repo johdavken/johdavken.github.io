@@ -132,6 +132,8 @@
   let lineSync = null;
   let lineSyncActionInFlight = false;
   let lineSyncBusyAction = "";
+  let lastRenderedLinkCodeQr = "";
+  let pendingQrJoinCode = "";
   let workspaceConfigurations = null;
   let workspaceConfigurationWorkspaceId = "";
   let workspaceConfigurationRefreshInFlight = false;
@@ -7568,13 +7570,13 @@
   // re-enable those two directly.
   function applyLineSyncActionAvailability(syncState = lineSync?.getState?.() || {}){
     const selected = syncState.selectedWorkspace;
-    const owner = (selected?.membership?.role || "") === "owner";
     const connected = !!syncState.connected;
-    ["lineSyncRenameBtn", "lineSyncGenerateCodeBtn", "lineSyncNewJobBtn", "lineSyncDisconnectBtn"].forEach(id=>{
+    ["lineSyncGenerateCodeBtn", "lineSyncGenerateNewCodeBtn", "lineSyncCopyCodeBtn"].forEach(id=>{
       if ($(id)) $(id).disabled = lineSyncActionInFlight || !selected || !connected;
     });
-    if ($("lineSyncLeaveBtn")) $("lineSyncLeaveBtn").disabled = lineSyncActionInFlight || !selected || !syncState.available || owner;
-    if ($("lineSyncRetryBtn")) $("lineSyncRetryBtn").disabled = lineSyncActionInFlight;
+    ["lineSyncRetryBtn", "lineSyncRetryMobileBtn"].forEach(id=>{
+      if ($(id)) $(id).disabled = lineSyncActionInFlight;
+    });
     updateLineSyncJoinAvailability(syncState);
   }
 
@@ -7601,6 +7603,45 @@
       ? { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }
       : { hour: "numeric", minute: "2-digit", hour12: true });
     return sameDate ? time : `${date.toLocaleDateString([], { month:"short", day:"numeric" })}, ${time}`;
+  }
+
+  function normalizedRtSyncLinkCode(value){
+    const code = String(value || "").trim().toUpperCase();
+    return /^[A-Z0-9]{4}$/.test(code) ? code : "";
+  }
+
+  function rtSyncLinkUrl(code){
+    code = normalizedRtSyncLinkCode(code);
+    if (!code) return "";
+    const url = new URL(window.location.href);
+    url.search = "";
+    url.hash = "";
+    url.searchParams.set("rtSyncCode", code);
+    return url.toString();
+  }
+
+  function clearRtSyncLinkCodeFromUrl(){
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has("rtSyncCode")) return;
+    url.searchParams.delete("rtSyncCode");
+    window.history.replaceState(window.history.state, document.title, `${url.pathname}${url.search}${url.hash}`);
+  }
+
+  async function renderLinkCodeQr(code){
+    const host = $("lineSyncQrCode");
+    if (!host || !code || code === lastRenderedLinkCodeQr) return;
+    lastRenderedLinkCodeQr = code;
+    try{
+      const svg = await window.QRCode?.toString?.(rtSyncLinkUrl(code), {
+        type: "svg", errorCorrectionLevel: "M", margin: 4,
+        color: { dark: "#111111", light: "#ffffff" }
+      });
+      if (code === lastRenderedLinkCodeQr && svg) host.innerHTML = svg;
+    }catch{
+      lastRenderedLinkCodeQr = "";
+      host.replaceChildren();
+    }
   }
 
   function renderMobileLineSyncStatus(syncState, override = null){
@@ -7669,13 +7710,14 @@
   async function runLineSyncAction(action, actionName = ""){
     if (lineSyncActionInFlight) return;
     setLineSyncActionBusy(true, actionName);
-    try{ await action(); }
+    try{ await action(); return true; }
     catch(error){
       const message = lineSyncErrorMessage(error);
       const target = $("lineSyncMessage");
       if (target) target.textContent = message;
       renderMobileLineSyncStatus(lineSync?.getState?.() || {}, { status:"Error", message });
       showStorageWarning(`RT Sync: ${message}`);
+      return false;
     } finally {
       setLineSyncActionBusy(false);
     }
@@ -7729,6 +7771,82 @@
     });
   }
 
+  function renderDesktopLineSyncDevices(syncState){
+    const host = $("desktopLineSyncDevicesList");
+    if (!host) return;
+    host.replaceChildren();
+    const members = Array.isArray(syncState.members) ? syncState.members : [];
+    if (!members.length){
+      const empty = document.createElement("p");
+      empty.className = "muted lineSyncDevicesEmpty";
+      empty.textContent = "No connected device details are available yet.";
+      host.append(empty);
+      return;
+    }
+    members.forEach(member=>{
+      const row = document.createElement("div");
+      row.className = "lineSyncDevice";
+      const name = document.createElement("strong");
+      name.textContent = member.device_label || "Unnamed device";
+      const details = document.createElement("span");
+      details.className = "muted";
+      const facts = [];
+      if (member.device_id && member.device_id === syncState.deviceId) facts.push("This device");
+      if (member.last_seen_at){
+        const lastSeen = formatLineSyncTimestamp(member.last_seen_at);
+        if (lastSeen) facts.push(`Last seen ${lastSeen}`);
+      }
+      details.textContent = facts.join(" · ") || "Connected device";
+      row.append(name, details);
+      host.append(row);
+    });
+  }
+
+  function renderDesktopLineSyncSetup(syncState, status){
+    const selected = syncState.selectedWorkspace;
+    const setup = $("desktopLineSyncSetup");
+    const selection = $("desktopLineSyncSetupSelection");
+    const select = $("desktopLineSyncWorkspaceSelect");
+    const detail = $("desktopLineSyncSetupDetail");
+    const button = $("desktopLineSyncSetupBtn");
+    const adminRequired = status === "Error" && /access|revoked|deleted|no longer/i.test(syncState.message || "");
+    if (!setup || !selection || !select || !detail || !button) return;
+    const previous = select.value;
+    select.replaceChildren();
+    if (syncState.workspaces.length){
+      syncState.workspaces.forEach(workspace=>select.add(new Option(workspace.name, workspace.id)));
+    } else {
+      select.add(new Option("No production lines available", ""));
+    }
+    select.value = syncState.selectedWorkspaceId || (syncState.workspaces.some(item=>item.id === previous) ? previous : "");
+    // A cached selected line is enough to offer a targeted reconnect, but it
+    // is not enough to show the connected dashboard. That dashboard appears
+    // only once this desktop is actively connected again.
+    setup.hidden = !!selected && !!syncState.connected && !adminRequired;
+    if (setup.hidden) return;
+    if (adminRequired){
+      detail.textContent = "This line is no longer available to this desktop. Ask an administrator to restore access.";
+      selection.hidden = true;
+      button.hidden = true;
+      return;
+    }
+    button.hidden = false;
+    if (selected){
+      detail.textContent = `Reconnect this desktop to ${selected.name}?`;
+      selection.hidden = true;
+      button.textContent = `Reconnect to ${selected.name}`;
+    } else {
+      detail.textContent = "Connect this computer to its production line to restore shared line data.";
+      button.textContent = selection.hidden ? "Connect This Desktop" : "Connect to Selected Line";
+      if (!syncState.workspaces.length){
+        detail.textContent = "Connect this computer to its production line to restore shared line data.";
+        button.disabled = !selection.hidden;
+      } else {
+        button.disabled = false;
+      }
+    }
+  }
+
   function renderLineSync(syncState){
     const top = $("lineSyncTopStatus");
     const summary = $("lineSyncSummaryStatus");
@@ -7739,8 +7857,37 @@
     if ($("lineSyncMessage")) $("lineSyncMessage").textContent = syncState.message || "Local data remains available.";
     if ($("lineSyncLastSync")) $("lineSyncLastSync").textContent = syncState.lastSyncAt ? new Date(syncState.lastSyncAt).toLocaleString() : "Never";
     if ($("lineSyncPendingCount")) $("lineSyncPendingCount").textContent = String(syncState.pendingCount || 0);
+    const selected = syncState.selectedWorkspace;
+    const connected = !!syncState.connected;
+    const desktopName = $("desktopLineSyncName");
+    const desktopState = $("desktopLineSyncState");
+    if (desktopName) desktopName.textContent = selected?.name ? selected.name.toUpperCase() : "NO CONNECTED LINE";
+    if (desktopState){
+      desktopState.dataset.state = stateName;
+      desktopState.textContent = `● ${status}`;
+    }
+    const adminRequired = status === "Error" && /access|revoked|deleted|no longer/i.test(syncState.message || "");
+    // A desktop is connected only after the selected physical line has an
+    // active RT Sync connection. Keeping a cached line name alone must never
+    // reveal the connected dashboard underneath the recovery flow.
+    const desktopConnected = !!selected && connected && !adminRequired;
+    renderDesktopLineSyncSetup(syncState, status);
+    const overview = $("desktopLineSyncOverview");
+    if (overview) overview.hidden = !desktopConnected;
+    const metrics = $("desktopLineSyncMetrics");
+    if (metrics) metrics.hidden = !desktopConnected;
+    const pendingList = $("lineSyncPendingList");
+    if (pendingList && !desktopConnected) pendingList.hidden = true;
+    const main = $("desktopLineSyncMain");
+    if (main) main.hidden = !desktopConnected;
+    const reconnect = $("desktopLineSyncReconnect");
+    // The recovery card owns reconnection while the desktop is disconnected.
+    // A connected line only gets this extra control for a real sync failure.
+    if (reconnect) reconnect.hidden = !desktopConnected || !["Error", "Offline", "Conflict"].includes(status);
+    renderDesktopLineSyncDevices(syncState);
     renderMobileLineSyncStatus(syncState);
     renderPendingList(syncState.pendingSummary);
+    if (!desktopConnected) $("lineSyncPendingList")?.setAttribute("hidden", "");
     // cloud-sync already decides what condition it is in; the attention
     // center only reads that decision. oldestPendingAt lets it separate an
     // ordinary brief "Pending" upload from one that has visibly stalled.
@@ -7770,7 +7917,7 @@
     }
     const workspaceIdentityName = $("workspaceIdentityName");
     if (workspaceIdentityName){
-      workspaceIdentityName.textContent = syncState.connected && syncState.selectedWorkspace?.name
+      workspaceIdentityName.textContent = syncState.selectedWorkspace?.name
         ? syncState.selectedWorkspace.name
         : "Connect";
     }
@@ -7787,8 +7934,6 @@
       }
       selector.value = syncState.selectedWorkspaceId || (syncState.workspaces.some(item=>item.id === previous) ? previous : "");
     }
-    const nameInput = $("lineSyncWorkspaceName");
-    if (nameInput && document.activeElement !== nameInput) nameInput.value = syncState.selectedWorkspace?.name || "";
     const labelInput = $("lineSyncDeviceLabel");
     if (labelInput && document.activeElement !== labelInput) labelInput.value = syncState.deviceLabel || "";
     const code = $("lineSyncGeneratedCode");
@@ -7796,18 +7941,20 @@
       code.textContent = syncState.generatedCode || "";
       code.title = syncState.generatedCodeExpiresAt ? `Expires ${new Date(syncState.generatedCodeExpiresAt).toLocaleTimeString()}` : "";
     }
+    const codePanel = $("lineSyncGeneratedCodePanel");
+    if (codePanel) codePanel.hidden = !syncState.generatedCode;
+    if (syncState.generatedCode) void renderLinkCodeQr(syncState.generatedCode);
+    else {
+      lastRenderedLinkCodeQr = "";
+      $("lineSyncQrCode")?.replaceChildren();
+    }
 
-    const selected = syncState.selectedWorkspace;
     syncDerivedHopperNaming(syncState);
     // Same workspace identity, same lifecycle: connection established,
     // startup from persisted membership, workspace switch, restored session,
     // or metadata that only arrives after the first render all reach this.
     syncDerivedLayerCount(syncState);
-    const role = selected?.membership?.role || "";
-    const owner = role === "owner";
-    const connected = !!syncState.connected;
     applyLineSyncActionAvailability(syncState);
-    if ($("lineSyncRetryDesktopLabel")) $("lineSyncRetryDesktopLabel").textContent = selected && !connected ? "Reconnect" : "Connect / retry";
     const joinPanel = document.querySelector(".lineSyncJoin");
     if (joinPanel) joinPanel.classList.toggle("mobileJoinVisible", !selected);
     const syncPanel = document.querySelector(".lineSyncPanel");
@@ -7815,43 +7962,7 @@
       syncPanel.classList.toggle("mobileHasLine", !!selected);
       syncPanel.classList.toggle("mobileHasWorkspaces", syncState.workspaces.length > 0);
       syncPanel.classList.toggle("mobileConnected", connected);
-    }
-    const memberSection = $("lineSyncMembersSection");
-    const memberHost = $("lineSyncMembers");
-    if (memberSection) memberSection.hidden = !owner || !syncState.members.length;
-    if (memberHost){
-      memberHost.replaceChildren();
-      syncState.members.forEach(member=>{
-        const row = document.createElement("div");
-        row.className = "lineSyncMember";
-        const details = document.createElement("div");
-        const label = document.createElement("strong");
-        label.textContent = member.device_label || "Linked device";
-        const meta = document.createElement("div");
-        meta.className = "tiny";
-        meta.textContent = member.user_id === syncState.userId ? `${member.role} · this browser identity` : member.role;
-        details.append(label, meta);
-        const seen = document.createElement("span");
-        seen.className = "tiny";
-        seen.textContent = member.last_seen_at ? `Seen ${new Date(member.last_seen_at).toLocaleString()}` : "";
-        const actions = document.createElement("div");
-        actions.className = "lineSyncMemberActions";
-        if (owner && member.user_id !== syncState.userId){
-          const transfer = document.createElement("button");
-          transfer.type = "button"; transfer.className = "secondary"; transfer.textContent = "Make owner";
-          transfer.addEventListener("click",()=>{
-            if (confirm(`Transfer line ownership to ${member.device_label}?`)) runLineSyncAction(()=>lineSync.transferOwnership(member.user_id));
-          });
-          const remove = document.createElement("button");
-          remove.type = "button"; remove.className = "danger"; remove.textContent = "Remove device";
-          remove.addEventListener("click",()=>{
-            if (confirm(`Remove ${member.device_label} from this line?`)) runLineSyncAction(()=>lineSync.removeMember(member.user_id));
-          });
-          actions.append(transfer, remove);
-        }
-        row.append(details, seen, actions);
-        memberHost.appendChild(row);
-      });
+      syncPanel.classList.toggle("desktopDisconnected", !desktopConnected);
     }
     const workspaceChanged = workspaceConfigurationWorkspaceId !== (syncState.selectedWorkspaceId || "");
     renderWorkspaceConfigurations(syncState);
@@ -7867,6 +7978,50 @@
     if ((workspaceChanged || connectedChanged) && lastTimelineFlat){
       syncNativeTimelineAlarms(lastTimelineFlat, lastTimelineChangeoverDate);
     }
+  }
+
+  function openRtSyncJoinFromUrl(){
+    if (typeof window === "undefined") return;
+    const code = normalizedRtSyncLinkCode(new URL(window.location.href).searchParams.get("rtSyncCode"));
+    if (!code){
+      if (new URL(window.location.href).searchParams.has("rtSyncCode")){
+        clearRtSyncLinkCodeFromUrl();
+        if ($("lineSyncMessage")) $("lineSyncMessage").textContent = "That RT Sync link code is not valid. Enter a new code to join.";
+      }
+      return;
+    }
+    pendingQrJoinCode = code;
+    const dialog = $("lineSyncQrJoinDialog");
+    if (!dialog?.showModal){
+      const input = $("lineSyncJoinCode");
+      if (input) input.value = code;
+      updateLineSyncJoinAvailability();
+      return;
+    }
+    const details = $("lineSyncQrJoinDetails");
+    const message = $("lineSyncQrJoinMessage");
+    if (details) details.textContent = "Connect this device using this temporary link code?";
+    if (message) message.textContent = "";
+    dialog.returnValue = "";
+    dialog.addEventListener("close", async ()=>{
+      const joiningCode = pendingQrJoinCode;
+      pendingQrJoinCode = "";
+      if (dialog.returnValue !== "connect"){
+        clearRtSyncLinkCodeFromUrl();
+        return;
+      }
+      const joined = await runLineSyncAction(()=>lineSync.joinWorkspace(
+        joiningCode, $("lineSyncDeviceLabel")?.value
+      ), "join");
+      clearRtSyncLinkCodeFromUrl();
+      if (!joined){
+        const input = $("lineSyncJoinCode");
+        if (input) input.value = joiningCode;
+        updateLineSyncJoinAvailability();
+      }
+    }, { once:true });
+    try{ dialog.showModal(); }
+    catch{ clearRtSyncLinkCodeFromUrl(); }
   }
 
   function resolveLineSyncConflict(conflict){
@@ -7904,31 +8059,6 @@
   function replaceSavedConfigsFromSync(configs){
     if (!writeConfigs(configs)) showStorageWarning("Synced Line Settings could not be saved locally.");
     refreshConfigDropdown();
-  }
-
-  function newJobPayload(){
-    const payload = snapshotSharedActiveJob();
-    payload.lineRate = 0;
-    payload.gauge = 0;
-    payload.changeoverTime = "";
-    payload.changeoverSetAt = null;
-    payload.prodResinLb = 0;
-    payload.scrapResinLb = 0;
-    payload.layers.forEach(layer=>{
-      layer.layerPct = 0;
-      layer.hoppers.forEach((hopper,index)=>{
-        hopper.pct = index === 0 ? 100 : 0;
-        hopper.resinName = "";
-        hopper.track = false;
-        hopper.pumpOff = false;
-      });
-    });
-    // Cleared alongside the recipe it described. payload.nextRecipe (and so
-    // nextRecipeLots) is deliberately left as-is here, same established
-    // choice - an operator may have prepped Next for this very job before
-    // starting it.
-    payload.resinLots = {};
-    return payload;
   }
 
   function setupLineSync(){
@@ -7972,10 +8102,20 @@
     $("lineSyncWorkspaceSelect")?.addEventListener("change",event=>{
       if (event.target.value) runLineSyncAction(()=>lineSync.selectWorkspace(event.target.value));
     });
+    $("desktopLineSyncSetupBtn")?.addEventListener("click",()=>{
+      const syncState = lineSync.getState();
+      const selection = $("desktopLineSyncSetupSelection");
+      const selectedId = syncState.selectedWorkspaceId || $("desktopLineSyncWorkspaceSelect")?.value;
+      if (syncState.selectedWorkspaceId){
+        void runLineSyncAction(()=>lineSync.refreshSelected(), "refresh");
+      } else if (selection?.hidden){
+        selection.hidden = false;
+        renderDesktopLineSyncSetup(lineSync.getState(), lineSync.getState().status || "Local only");
+      } else if (selectedId){
+        void runLineSyncAction(()=>lineSync.selectWorkspace(selectedId), "connect");
+      }
+    });
     $("lineSyncDeviceLabel")?.addEventListener("change",event=>runLineSyncAction(()=>lineSync.updateDeviceLabel(event.target.value)));
-    $("lineSyncCreateBtn")?.addEventListener("click",()=>runLineSyncAction(()=>lineSync.createWorkspace(
-      $("lineSyncWorkspaceName")?.value, $("lineSyncDeviceLabel")?.value
-    )));
     $("lineSyncJoinBtn")?.addEventListener("click",()=>runLineSyncAction(()=>lineSync.joinWorkspace(
       $("lineSyncJoinCode")?.value, $("lineSyncDeviceLabel")?.value
     ), "join"));
@@ -7989,9 +8129,19 @@
       if (event.target.value !== upper) event.target.value = upper;
       updateLineSyncJoinAvailability();
     });
-    $("lineSyncGenerateCodeBtn")?.addEventListener("click",()=>runLineSyncAction(()=>lineSync.generateLinkCode()));
-    $("lineSyncRenameBtn")?.addEventListener("click",()=>runLineSyncAction(()=>lineSync.renameWorkspace($("lineSyncWorkspaceName")?.value)));
-    $("lineSyncRetryBtn")?.addEventListener("click",()=>runLineSyncAction(()=>
+    const generateLinkCode = ()=>runLineSyncAction(()=>lineSync.generateLinkCode(), "generate-code");
+    $("lineSyncGenerateCodeBtn")?.addEventListener("click",generateLinkCode);
+    $("lineSyncGenerateNewCodeBtn")?.addEventListener("click",generateLinkCode);
+    $("lineSyncCopyCodeBtn")?.addEventListener("click",async()=>{
+      const code = lineSync.getState().generatedCode || "";
+      if (!code) return;
+      const button = $("lineSyncCopyCodeBtn");
+      if (await copyTextToClipboard(code) && button){
+        button.textContent = "Copied";
+        window.setTimeout(()=>{ if (button) button.textContent = "Copy Code"; }, 1600);
+      }
+    });
+    const reconnectRtSync = ()=>runLineSyncAction(()=>
       // refreshSelected() clears the locally-disconnected flag before
       // reconciling, which retry() deliberately doesn't (retry() also runs
       // automatically on tab visibility change, where silently reconnecting
@@ -8003,17 +8153,10 @@
       lineSync.getState().selectedWorkspaceId
         ? lineSync.refreshSelected()
         : lineSync.retry()
-    , "refresh"));
-    $("lineSyncDisconnectBtn")?.addEventListener("click",()=>runLineSyncAction(()=>lineSync.disconnectLocal()));
-    $("lineSyncLeaveBtn")?.addEventListener("click",()=>{
-      if (confirm("Leave RT Sync on this browser identity? Local Resin.Tools data will remain.")) runLineSyncAction(()=>lineSync.leaveWorkspace());
-    });
-    $("lineSyncNewJobBtn")?.addEventListener("click",()=>{
-      if (confirm("Start a new shared job? Hopper weights will be kept; production inputs and tracking will be cleared.")) {
-        runLineSyncAction(()=>lineSync.replaceActiveJob(newJobPayload(), "new-job"));
-      }
-    });
-    lineSync.initialize();
+    , "refresh");
+    $("lineSyncRetryBtn")?.addEventListener("click",reconnectRtSync);
+    $("lineSyncRetryMobileBtn")?.addEventListener("click",reconnectRtSync);
+    void lineSync.initialize().then(openRtSyncJoinFromUrl);
 
     // Narrow bridge consumed only by workspace-recovery-ui.js: a read-only
     // descriptor of this browser's current RT Sync identity, and a way to

@@ -1296,7 +1296,10 @@
 
     return {
       initialize,
-      getState: ()=>JSON.parse(JSON.stringify(state)),
+      // Device id is a locally-held identifier only. It lets the desktop
+      // render its own membership row without exposing a session or adding
+      // any new backend state.
+      getState: ()=>({ ...JSON.parse(JSON.stringify(state)), deviceId: settings().deviceId || "" }),
       getWorkspaceConfigurationTransport,
       getBetaAccessTransport,
       getRecoveryDescriptor,
