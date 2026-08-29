@@ -33,7 +33,7 @@
        equivalent "keep content below the status bar" mode to opt into. -->
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
-  <link rel="stylesheet" href="styles.css?v=0.62.16">
+  <link rel="stylesheet" href="styles.css?v=0.62.17">
   <link rel="stylesheet" href="theme.css?v=0.18.5">
   <link rel="stylesheet" href="desktop.css?v=0.1.10">
 <script src="validation.js?v=0.19" defer></script>
@@ -44,7 +44,7 @@
 <script src="workspace-configuration-payloads.js?v=0.20.1" defer></script>
 <script src="next-recipe.js?v=0.2.0" defer></script>
 <script src="hookup-sources.js?v=0.1.0" defer></script>
-<script src="notes-store.js?v=0.2.0" defer></script>
+<script src="notes-store.js?v=0.3.0" defer></script>
 <script src="notes-markdown.js?v=0.1.0" defer></script>
 <script src="recipe-scan-schema.js?v=0.4.0" defer></script>
 <script src="recipe-scan-mapping.js?v=0.3.0" defer></script>
@@ -84,7 +84,13 @@
      built by `npm run build:notes-editor` from notes-editor-vendor.src.js. Must
      load before notes-ui.js. Remove this line to roll the experiment back. -->
 <script src="vendor/tiptap-notes.min.js?v=0.1.0" defer></script>
-<script src="notes-ui.js?v=0.5.0" defer></script>
+<script src="notes-ui.js?v=0.6.0" defer></script>
+<!-- RT Cloud: optional encrypted recovery backup for RT Notes. crypto + service
+     load before the UI. All three are inert unless the mobile RT Notes section
+     and PolynNotesUI are present. -->
+<script src="rt-cloud-crypto.js?v=0.1.0" defer></script>
+<script src="rt-cloud.js?v=0.1.0" defer></script>
+<script src="rt-cloud-ui.js?v=0.1.0" defer></script>
 <script src="recipe-scan-ui.js?v=0.4.1" defer></script>
 
 
@@ -1203,10 +1209,16 @@
 
     <div class="blockBody">
       <div class="changelogBody">
+        <h3>(v1.1.22) (August 28, 2026) - RT Cloud</h3>
+        <ul>
+          <li>New <strong>RT Cloud</strong> option in <strong>RT Notes &rarr; Backup</strong>: an optional, private, end-to-end encrypted recovery backup of your whole notebook. Enable it once and you get an <strong>RT Cloud Recovery Code</strong>; edits back themselves up in the background. If the app is reinstalled or its data cleared, <strong>Restore from RT Cloud</strong> with that code brings everything back.</li>
+          <li>This is recovery, not sync. Your notes never appear on another device on their own, RT Cloud is never linked to a workspace or an RT Sync device, and the backup is encrypted on your device - RT Cloud cannot read note text, titles, or folder names. Turn it off (keeping the backup) or delete the cloud backup entirely at any time.</li>
+        </ul>
+
         <h3>(v1.1.21) (August 28, 2026) - RT Notes</h3>
         <ul>
           <li>New <strong>RT Notes</strong> section on mobile (under <strong>Workspace &amp; support</strong>): a private, device-local scratchpad with a formatted editor - Bold, Heading, and bullet / numbered / checklist toggles - that shows the styling as you type and highlights the toolbar for whatever the cursor is sitting in. Notes autosave; pin the important ones to the top, and use <strong>Backup</strong> to export or import them all as JSON.</li>
-          <li>RT Notes are stored only in this app on this device. They never sync with RT Sync, never touch a workspace, and never appear on another device or the shared desktop.</li>
+          <li>By default, RT Notes are stored only in this app on this device: they never sync with RT Sync, never touch a workspace, and never appear on another device or the shared desktop. (An optional encrypted <strong>RT Cloud</strong> recovery backup was added in v1.1.22.)</li>
         </ul>
 
         <h3>(v1.1.20) (August 28, 2026) - Timeline Hookup planning</h3>
@@ -1545,8 +1557,105 @@
             </div>
           </details>
           <p class="notesBackupStatus" id="notesBackupStatus" role="status" aria-live="polite"></p>
+
+          <hr class="notesBackupDivider" aria-hidden="true">
+
+          <!-- RT CLOUD - optional encrypted recovery backup. This is backup and
+               recovery, NOT sync: notes never appear on another device on their
+               own. Rendered/managed by rt-cloud-ui.js; everything below stays
+               inert if RT Cloud or its scripts are unavailable. -->
+          <section class="notesCloud" id="notesCloud" data-rt-cloud-state="off">
+            <div class="notesCloudHead">
+              <span class="notesCloudTitle">RT Cloud</span>
+              <span class="notesCloudBadge" id="notesCloudStatusBadge">Off</span>
+            </div>
+            <p class="notesCloudBlurb">Private encrypted recovery backup for RT Notes. RT Cloud can never read your note text or folder names.</p>
+            <p class="notesCloudStatusLine" id="notesCloudStatusLine" role="status" aria-live="polite" hidden></p>
+
+            <div class="notesCloudActions" data-when="off">
+              <button type="button" id="notesCloudEnableBtn" class="copyBtn">Enable RT Cloud</button>
+            </div>
+
+            <div class="notesCloudActions" data-when="on" hidden>
+              <button type="button" id="notesCloudBackupNowBtn" class="copyBtn">Back up now</button>
+              <button type="button" id="notesCloudViewCodeBtn" class="copyBtn">View recovery code</button>
+            </div>
+
+            <div class="notesCloudActions notesCloudRestoreRow">
+              <button type="button" id="notesCloudRestoreBtn" class="copyBtn">Restore from RT Cloud</button>
+            </div>
+
+            <details class="notesCloudDanger" id="notesCloudDanger" hidden>
+              <summary>Turn off or delete</summary>
+              <div class="notesCloudDangerBody">
+                <button type="button" id="notesCloudTurnOffBtn" class="copyBtn secondary">Turn off backups</button>
+                <button type="button" id="notesCloudDeleteBtn" class="notesDeleteBtn">Delete cloud backup</button>
+                <p class="notesCloudDangerNote">Turning off keeps the existing cloud backup recoverable. Deleting removes it permanently.</p>
+              </div>
+            </details>
+          </section>
+
           <div class="notesDialogActions">
-            <button type="button" class="secondary" id="notesBackupCloseBtn">Close</button>
+            <button type="button" class="copyBtn" id="notesBackupCloseBtn">Close</button>
+          </div>
+        </div>
+      </dialog>
+
+      <!-- RT Cloud sub-dialogs. Native <dialog>, so handleAndroidBack() closes
+           the topmost one first (app.js). Nothing here is written to app /
+           session / RT Sync state. -->
+      <dialog id="notesCloudCodeDialog" class="lineSyncConflictDialog notesDialog" aria-labelledby="notesCloudCodeTitle">
+        <div class="notesDialogForm">
+          <div class="layerTitle" id="notesCloudCodeTitle">Your RT Cloud Recovery Code</div>
+          <p class="notesCloudCodeWarn" id="notesCloudCodeWarn">Save this recovery code somewhere safe. You will need it to restore RT Notes if this app is uninstalled or its data is cleared. It is the only way back in and is not stored anywhere you can look up later.</p>
+          <output class="notesCloudCode" id="notesCloudCodeValue" aria-label="RT Cloud Recovery Code"></output>
+          <div class="notesDialogActions notesCloudCodeCopyRow">
+            <button type="button" class="copyBtn" id="notesCloudCodeCopyBtn">Copy recovery code</button>
+          </div>
+          <label class="notesCloudAck" id="notesCloudAckRow">
+            <input type="checkbox" id="notesCloudAckCheck">
+            <span>I have saved my RT Cloud Recovery Code somewhere safe.</span>
+          </label>
+          <p class="notesCloudCodeStatus" id="notesCloudCodeStatus" role="status" aria-live="polite"></p>
+          <div class="notesDialogActions">
+            <button type="button" class="primary" id="notesCloudCodeDoneBtn" disabled>Done</button>
+          </div>
+        </div>
+      </dialog>
+
+      <dialog id="notesCloudRestoreDialog" class="lineSyncConflictDialog notesDialog" aria-labelledby="notesCloudRestoreTitle">
+        <div class="notesDialogForm">
+          <div class="layerTitle" id="notesCloudRestoreTitle">Restore from RT Cloud</div>
+          <label class="notesDialogLabel" for="notesCloudRestoreInput">RT Cloud Recovery Code</label>
+          <input type="text" id="notesCloudRestoreInput" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX">
+          <p class="notesDialogError" id="notesCloudRestoreError" role="status" aria-live="polite"></p>
+          <div class="notesCloudRestoreSummary" id="notesCloudRestoreSummary" hidden></div>
+          <label class="notesCloudAck" id="notesCloudRestoreKeepRow" hidden>
+            <input type="checkbox" id="notesCloudRestoreKeepCheck" checked>
+            <span>Keep backing up this device to RT Cloud with this code</span>
+          </label>
+          <div class="notesDialogActions" id="notesCloudRestoreLookupActions">
+            <button type="button" class="secondary" id="notesCloudRestoreCancelBtn">Cancel</button>
+            <button type="button" class="primary" id="notesCloudRestoreFindBtn">Find backup</button>
+          </div>
+          <div class="notesDialogActions" id="notesCloudRestoreApplyActions" hidden>
+            <button type="button" class="secondary" id="notesCloudRestoreBackBtn">Back</button>
+            <button type="button" class="copyBtn secondary" id="notesCloudRestoreImportBtn">Import into existing</button>
+            <button type="button" class="danger" id="notesCloudRestoreReplaceBtn">Replace local RT Notes</button>
+          </div>
+        </div>
+      </dialog>
+
+      <dialog id="notesCloudDeleteDialog" class="lineSyncConflictDialog notesDialog" aria-labelledby="notesCloudDeleteTitle">
+        <div class="notesDialogForm">
+          <div class="layerTitle" id="notesCloudDeleteTitle">Delete cloud backup?</div>
+          <p>This permanently deletes the encrypted RT Notes backup from RT Cloud. Notes on this device are not touched. This cannot be undone, and the current recovery code will stop working.</p>
+          <label class="notesDialogLabel" for="notesCloudDeleteConfirmInput">Type DELETE to confirm</label>
+          <input type="text" id="notesCloudDeleteConfirmInput" autocomplete="off" autocapitalize="characters" spellcheck="false">
+          <p class="notesDialogError" id="notesCloudDeleteError" role="status" aria-live="polite"></p>
+          <div class="notesDialogActions">
+            <button type="button" class="secondary" id="notesCloudDeleteCancelBtn">Cancel</button>
+            <button type="button" class="danger" id="notesCloudDeleteConfirmBtn" disabled>Delete backup</button>
           </div>
         </div>
       </dialog>

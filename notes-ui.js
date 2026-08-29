@@ -114,6 +114,22 @@
   let editor = null;
   let editorMode = "rich";
 
+  // Committed-mutation listeners. RT Cloud (rt-cloud-ui.js) registers here so
+  // an encrypted backup can be scheduled after a real local change lands.
+  // Fired only AFTER a successful store write - create, autosave commit,
+  // delete, pin/unpin, move-to-folder, folder create/rename/delete. When RT
+  // Cloud is off nobody is listening and this costs nothing.
+  const changeListeners = new Set();
+  function notifyNotesChanged(kind) {
+    changeListeners.forEach((fn) => {
+      try {
+        fn(kind || "change");
+      } catch (error) {
+        /* a listener must never break Notes */
+      }
+    });
+  }
+
   if (!store) {
     // No on-device storage (private mode, locked-down WebView). The section
     // stays reachable but inert rather than throwing on open.
@@ -643,6 +659,7 @@
       .then((saved) => {
         if (saved && saved.id === currentId) currentNote = saved;
         if (!savePending) setSaveState("Saved on this device");
+        notifyNotesChanged("edit");
       })
       .catch(() => setSaveState("Not saved - storage error"));
   }
@@ -663,6 +680,7 @@
       .update(currentId, { pinned: next })
       .then((saved) => {
         if (saved) currentNote = saved;
+        notifyNotesChanged("pin");
       })
       .catch(() => reflectPin(!next));
   }
@@ -689,7 +707,10 @@
     destroyEditor();
     store
       .remove(id)
-      .then(() => showList())
+      .then(() => {
+        notifyNotesChanged("delete");
+        showList();
+      })
       .catch(() => setSaveState("Couldn't delete on this device"));
   }
 
@@ -816,6 +837,7 @@
         if (result.skipped) parts.push(`${result.skipped} skipped`);
         setBackupStatus(`${parts.join(", ")}.`, "ok");
         if (importInput) importInput.value = "";
+        notifyNotesChanged("import");
         renderList();
       })
       .catch(() => setBackupStatus("Import failed - your existing notes are unchanged.", "error"));
@@ -876,6 +898,7 @@
         }
         // Select the new (or just-renamed) folder automatically.
         if (folder && folder.id) currentView = folder.id;
+        notifyNotesChanged("folder");
         renderList();
       })
       .catch((error) => {
@@ -914,6 +937,7 @@
       .then(() => {
         // Land on Unfiled so the retained notes are visible right away.
         if (currentView === folder.id) currentView = VIEW_UNFILED;
+        notifyNotesChanged("folder");
         renderList();
       })
       .catch(() => {
@@ -977,6 +1001,7 @@
       .moveNoteToFolder(id, folderId)
       .then((saved) => {
         if (saved && saved.id === currentId) currentNote = saved;
+        notifyNotesChanged("move");
         closeMoveDialog();
         if (ctx.fromList) {
           // Refresh counts and drop the note from the current filtered folder
@@ -1028,7 +1053,10 @@
     const next = !note.pinned;
     store
       .update(note.id, { pinned: next })
-      .then(() => renderList())
+      .then(() => {
+        notifyNotesChanged("pin");
+        renderList();
+      })
       .catch(() => {});
   }
 
@@ -1041,7 +1069,10 @@
     }
     store
       .remove(note.id)
-      .then(() => renderList())
+      .then(() => {
+        notifyNotesChanged("delete");
+        renderList();
+      })
       .catch(() => {});
   }
 
@@ -1056,7 +1087,10 @@
       const seed = isFolderView() ? { folderId: currentView } : {};
       store
         .create(seed)
-        .then((note) => openNote(note.id))
+        .then((note) => {
+          notifyNotesChanged("create");
+          openNote(note.id);
+        })
         .catch(() => setSaveState("Couldn't create a note on this device"));
     });
   }
@@ -1214,6 +1248,22 @@
       renderList();
     }
   }).observe(document.body, { attributes: true, attributeFilter: ["data-mobile-notes"] });
+
+  // Narrow surface for rt-cloud-ui.js: share the one store instance, hear
+  // about committed changes, and force a list refresh after a restore. RT
+  // Cloud is the only consumer; nothing here changes when it is absent.
+  root.PolynNotesUI = {
+    getStore: () => store,
+    onChange: (fn) => {
+      if (typeof fn === "function") changeListeners.add(fn);
+      return () => changeListeners.delete(fn);
+    },
+    refresh: () => renderList(),
+    setDeviceHint: (text) => {
+      const hint = $("notesDeviceHint");
+      if (hint && typeof text === "string") hint.textContent = text;
+    }
+  };
 
   renderList();
 })(typeof globalThis !== "undefined" ? globalThis : this);

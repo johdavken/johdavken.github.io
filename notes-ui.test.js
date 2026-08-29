@@ -112,10 +112,13 @@ test("the notes database is its own IndexedDB store, not localStorage or sync-st
 test("folders are a second object store on the same private database, still fully isolated", () => {
   const store = fs.readFileSync("notes-store.js", "utf8");
   assert.match(store, /const FOLDER_STORE_NAME = "folders"/);
-  assert.match(store, /const SCHEMA_VERSION = 2/);
+  assert.match(store, /const SCHEMA_VERSION = 3/);
   // Created in its own layered upgrade block; notes are not bulk-rewritten.
   assert.match(store, /if \(from < 2\) \{[\s\S]*?createObjectStore\(FOLDER_STORE_NAME, \{ keyPath: "id" \}\)/);
-  // No new external coupling: still only IndexedDB, no sync-storage module.
+  // v3 adds only a key/value meta store (RT Cloud config); notes/folders untouched.
+  assert.match(store, /if \(from < 3\) \{[\s\S]*?createObjectStore\(META_STORE_NAME, \{ keyPath: "key" \}\)/);
+  // No new external coupling in the store itself: still only IndexedDB, no
+  // sync-storage module, no network. (RT Cloud's network layer is rt-cloud.js.)
   assert.doesNotMatch(store, /PolynSyncStorage|PolynStorage|createClient|fetch\(/);
 });
 
@@ -587,7 +590,7 @@ test("the card menu offers Pin/Unpin, Move to folder, Delete note", () => {
 });
 
 test("Pin/Unpin from the list uses the same store.update path as the editor and refreshes in place", () => {
-  assert.match(ui, /function togglePinFromCard\(note\) \{[\s\S]*?store\s*\n?\s*\.update\(note\.id, \{ pinned: next \}\)[\s\S]*?\.then\(\(\) => renderList\(\)\)/);
+  assert.match(ui, /function togglePinFromCard\(note\) \{[\s\S]*?store\s*\n?\s*\.update\(note\.id, \{ pinned: next \}\)[\s\S]*?renderList\(\);/);
   // Same shape the editor pin uses.
   assert.match(ui, /store\s*\n?\s*\.update\(currentId, \{ pinned: next \}\)/);
   // renderList re-reads store.getAll() (pinned-first) and re-renders the card,
@@ -608,7 +611,7 @@ test("Move to folder from the list reuses moveNoteToFolder and the shared picker
 });
 
 test("Delete from the list uses store.remove and refreshes, preserving the active folder", () => {
-  assert.match(ui, /function deleteNoteFromCard\(note\) \{[\s\S]*?window\.confirm\(noteDeleteMessage\(note\)\)[\s\S]*?store\s*\n?\s*\.remove\(note\.id\)[\s\S]*?\.then\(\(\) => renderList\(\)\)/);
+  assert.match(ui, /function deleteNoteFromCard\(note\) \{[\s\S]*?window\.confirm\(noteDeleteMessage\(note\)\)[\s\S]*?store\s*\n?\s*\.remove\(note\.id\)[\s\S]*?renderList\(\);/);
   // Same remove path the editor delete uses.
   assert.match(ui, /store\s*\n?\s*\.remove\(id\)/);
   // No navigation on a list delete.

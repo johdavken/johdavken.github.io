@@ -23,7 +23,13 @@
   // never serialized to Supabase / RT Sync / workspace state (see
   // notes-folders.test.js). Adding this store is why the schema goes to v2.
   const FOLDER_STORE_NAME = "folders";
-  const SCHEMA_VERSION = 2;
+  // Small key/value store for device-local Notes metadata that is NOT note
+  // content - currently only the RT Cloud backup configuration (see
+  // rt-cloud.js). Its own object store, never serialized to an export, never
+  // sent to Supabase / RT Sync / workspace state. Adding it is why the schema
+  // goes to v3; existing notes and folders are untouched by that upgrade.
+  const META_STORE_NAME = "meta";
+  const SCHEMA_VERSION = 3;
 
   // Export envelope. `format` is checked on import so an unrelated JSON file
   // is rejected rather than half-read. `version` went 1 -> 2 when folders were
@@ -482,6 +488,10 @@
           const folders = db.createObjectStore(FOLDER_STORE_NAME, { keyPath: "id" });
           folders.createIndex("sortOrder", "sortOrder", { unique: false });
         }
+        if (from < 3) {
+          // Key/value metadata only. Notes and folders are NOT touched here.
+          db.createObjectStore(META_STORE_NAME, { keyPath: "key" });
+        }
       };
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error || new Error("Could not open the notes database."));
@@ -553,6 +563,37 @@
     function rawFolderPut(record) {
       return db().then((conn) =>
         requestToPromise(objectStore(conn, "readwrite", FOLDER_STORE_NAME).put(record))
+      );
+    }
+
+    /* ----------------------------------------------------------------
+     *   Metadata key/value store (RT Cloud config lives here)
+     *
+     *   Deliberately a separate concern from note data: never included in
+     *   exportNotes() / importNotes(), never serialized to Supabase or RT
+     *   Sync. Values are stored as-is (structured-clone), read back as-is.
+     * -------------------------------------------------------------- */
+
+    function getMeta(key) {
+      return db()
+        .then((conn) => requestToPromise(objectStore(conn, "readonly", META_STORE_NAME).get(key)))
+        .then((row) => (row && "value" in row ? row.value : null))
+        .catch(() => null);
+    }
+
+    function setMeta(key, value) {
+      return serialize(() =>
+        db().then((conn) =>
+          requestToPromise(objectStore(conn, "readwrite", META_STORE_NAME).put({ key, value }))
+        )
+      ).then(() => value);
+    }
+
+    function deleteMeta(key) {
+      return serialize(() =>
+        db().then((conn) =>
+          requestToPromise(objectStore(conn, "readwrite", META_STORE_NAME).delete(key))
+        )
       );
     }
 
@@ -876,6 +917,78 @@
       );
     }
 
+    // Transactional "replace the whole notebook with this snapshot" - the
+    // Replace path of an RT Cloud restore. Validates first (parseImport never
+    // throws); a malformed snapshot leaves every existing note and folder
+    // untouched. When the snapshot is good, both stores are cleared and
+    // repopulated inside ONE readwrite transaction: if any write fails the
+    // transaction aborts and the local notebook is exactly as it was - never
+    // left half-replaced. Folder ids are kept as-is, so every note's folderId
+    // still resolves (no remap needed for a full replace).
+    function replaceAllFromExport(input) {
+      const parsed = parseImport(input);
+      if (!parsed.ok) return Promise.resolve(parsed);
+      const folders = sortFolders(parsed.folders);
+      const notes = parsed.notes;
+      return serialize(() =>
+        db().then(
+          (conn) =>
+            new Promise((resolve, reject) => {
+              let tx;
+              try {
+                tx = conn.transaction([STORE_NAME, FOLDER_STORE_NAME], "readwrite");
+              } catch (error) {
+                reject(error);
+                return;
+              }
+              let failed = false;
+              const fail = (error) => {
+                if (failed) return;
+                failed = true;
+                try {
+                  tx.abort();
+                } catch (abortError) {
+                  /* already settling */
+                }
+                reject(error || new Error("Could not replace the notebook."));
+              };
+              if (typeof tx.onabort !== "undefined") tx.onabort = () => fail(tx.error);
+              const notesStore = tx.objectStore(STORE_NAME);
+              const foldersStore = tx.objectStore(FOLDER_STORE_NAME);
+              const clearNotes = notesStore.clear();
+              clearNotes.onerror = () => fail(clearNotes.error);
+              clearNotes.onsuccess = () => {
+                const clearFolders = foldersStore.clear();
+                clearFolders.onerror = () => fail(clearFolders.error);
+                clearFolders.onsuccess = () => {
+                  let remaining = folders.length + notes.length;
+                  if (remaining === 0) {
+                    resolve({ ok: true, notes: 0, folders: 0 });
+                    return;
+                  }
+                  const step = () => {
+                    remaining -= 1;
+                    if (remaining === 0 && !failed) {
+                      resolve({ ok: true, notes: notes.length, folders: folders.length });
+                    }
+                  };
+                  folders.forEach((folder) => {
+                    const req = foldersStore.put(folder);
+                    req.onsuccess = step;
+                    req.onerror = () => fail(req.error);
+                  });
+                  notes.forEach((note) => {
+                    const req = notesStore.put(note);
+                    req.onsuccess = step;
+                    req.onerror = () => fail(req.error);
+                  });
+                };
+              };
+            })
+        )
+      );
+    }
+
     // Validates first (parseImport never throws); only touches the store
     // once the file is known-good, and only ever adds - a malformed file
     // leaves every existing note and folder exactly as it was. The whole
@@ -950,6 +1063,10 @@
       reorderFolders,
       exportNotes,
       importNotes,
+      replaceAllFromExport,
+      getMeta,
+      setMeta,
+      deleteMeta,
       close
     };
   }
@@ -958,6 +1075,7 @@
     DB_NAME,
     STORE_NAME,
     FOLDER_STORE_NAME,
+    META_STORE_NAME,
     SCHEMA_VERSION,
     EXPORT_FORMAT,
     EXPORT_VERSION,

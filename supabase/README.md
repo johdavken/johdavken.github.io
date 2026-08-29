@@ -132,3 +132,53 @@ A small `private.workspace_recovery_audit` table (workspace, admin, target ident
 **To test safely:** in a private/incognito browser profile, *create* a test workspace (so that profile is its owner), then clear that profile's site data (or just open a fresh private window) to simulate a reset device. Sign into **Admin Login** in a normal window, open **Workspace Management**, and confirm the reset profile's workspace regains access after **Add This Device** — without needing the original device or a new join code. To exercise ownership recovery too, confirm **Reassign Ownership to This Device** stays disabled until the device is a member, then use it and confirm the original (now orphaned) owner row is demoted to `member`, not deleted, and that `generate_link_code` still works immediately after — since ordinary membership, not ownership, is all that's required to hand out join codes to other devices on the line.
 
 Never place a Supabase service-role key in browser code; Workspace Management uses the same publishable-key admin client as Resin Database.
+
+## RT Cloud — encrypted RT Notes recovery backup
+
+Run [`migrations/202608280001_rt_notes_cloud_backups.sql`](migrations/202608280001_rt_notes_cloud_backups.sql). It is postdated the 2026-08-20 ledger baseline, so `supabase db push` applies it. It is strictly additive: no existing RT Sync table, policy, RPC, or Edge Function is touched. (It was applied to the project on 2026-08-28 via the Supabase MCP.)
+
+RT Cloud is an **opt-in, private, end-to-end encrypted backup of one device's whole RT Notes notebook**, for disaster recovery after the app is uninstalled or its data cleared. It is **not** sync: IndexedDB stays authoritative, one Recovery Code maps to exactly one current encrypted snapshot, there is no Realtime publication, no per-note rows, and no history. It is deliberately isolated from every RT Sync object.
+
+### Independent recovery identity
+
+The credential is the **RT Cloud Recovery Code** — 160 bits from `crypto.getRandomValues`, shown as 8 groups of 4 characters from an unambiguous 32-symbol alphabet. It is generated and stored **only on the device**, in the RT Notes IndexedDB database's new `meta` object store (schema v3), never in `localStorage`, never in `polyn.lineSync.settings.v1`, never in an RT Sync snapshot, workspace, Supabase Auth metadata, analytics, or logs.
+
+From the code the client derives, on-device only:
+
+- `backup_lookup_hash = base64url(SHA-256("rtcloud/lookup/v1\n" || recovery_code))` — a one-way value; the only identifier a backup has.
+- an `AES-GCM` 256-bit key via `PBKDF2(recovery_code, kdf_salt, 210_000, SHA-256)`. `kdf_salt` is 16 random bytes, non-secret, stored beside the ciphertext and returned on restore so any install can re-derive the key.
+
+The raw Recovery Code never reaches Supabase. RT Sync Device ID / anonymous RT User ID are sent only as nullable **diagnostic** columns (`source_device_id`, `source_rt_user_id`) and are never used for lookup, ownership, or access. A brand-new install with brand-new RT Sync identities restores using the Recovery Code alone.
+
+### Table and access
+
+`public.rt_notes_cloud_backups` holds one row per Recovery Code: `backup_lookup_hash` (unique, CHECK-constrained charset), `kdf_salt`, `encrypted_payload` (AES-GCM ciphertext of the existing `PolynNotesStore` export envelope — opaque; **note titles/bodies/`bodyFormat`/folder names are never columns**), `iv`, `encryption_version`, `payload_version`, `revision` (bumped per successful backup — status only, not conflict resolution), the two diagnostic columns, and `created_at` / `updated_at` / `last_backup_at`. `octet_length(encrypted_payload)` is capped at ~1.5 MiB by a CHECK. An `updated_at` trigger (`private.rt_cloud_touch_updated_at()`, `set search_path = ''`) is the only function added.
+
+`public.rt_notes_cloud_lookup_throttle` is a per-IP-hash counter for restore/status lookups (recovery lookup is effectively authentication; the Recovery Code's own entropy is the real defence).
+
+Both tables have **RLS enabled with no policies**, `revoke all … from public, anon, authenticated`, and `grant all … to service_role`. Neither is in the Realtime publication. The two `rls_enabled_no_policy` INFO advisories this raises are the intended design, matching `private.line_sync_secrets` and friends. The `rt-cloud` Edge Function using the service-role key is the only supported access path — the normal browser client cannot read or write either table.
+
+### Edge Function
+
+`supabase/functions/rt-cloud/index.ts` — one action-based function (`POST { action, lookup_hash, … }`, `action` ∈ `enable | backup | restore | status | delete`). Deployed **`verify_jwt = false`** on purpose (see `[functions.rt-cloud]` in `config.toml`): RT Cloud must work with no RT Sync session. Strict CORS allow-list (copied from `recipe-scan`), generic `{ ok:false, error:"<code>" }` failures only (never a DB error or hint about a guess), request-size and base64/charset validation **before** any DB access, best-effort `request_id` de-dup, per-IP throttle before the backups lookup. Uses only the auto-provided `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` — no secret is set by hand.
+
+### Deploy / redeploy
+
+```
+supabase db push                                   # applies 202608280001 (already applied on the project)
+supabase functions deploy rt-cloud --no-verify-jwt # or via the Supabase MCP deploy_edge_function
+```
+
+Verify after deploy: `supabase` advisors (security) should show only the two expected `rls_enabled_no_policy` INFO notices for the RT Cloud tables; a direct `PostgREST` select on `rt_notes_cloud_backups` as `anon` must return `42501 permission denied`.
+
+### Rollback
+
+```
+-- delete the Edge Function via the dashboard or: supabase functions delete rt-cloud
+drop table if exists public.rt_notes_cloud_backups cascade;
+drop table if exists public.rt_notes_cloud_lookup_throttle cascade;
+drop function if exists private.rt_cloud_touch_updated_at();
+-- then remove the [functions.rt-cloud] block from config.toml
+```
+
+No RT Sync object is affected by any of the above.

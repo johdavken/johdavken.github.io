@@ -6755,6 +6755,23 @@ button.compactAction{
 .notesBackupStatus:empty{ display:none; }
 .notesBackupGroup{ display:flex; align-items:center; flex-wrap:wrap; gap:6px; }
 .notesImportFileLabel{ color:var(--muted); font-size:11px; font-weight:700; }
+
+/* The native file picker's own button matches .copyBtn (Export / Back up now)
+   so the Backup dialog reads as one set of controls. Declarations are copied
+   from .copyBtn - a pseudo-element can't inherit a class. */
+#notesImportFile{ color:var(--muted); font-size:var(--font-small); max-width:100%; }
+#notesImportFile::file-selector-button{
+  margin-right:8px;
+  min-height:var(--control-height);
+  padding:max(3px, calc(var(--btn-pad-y) - 3px)) var(--btn-pad-x);
+  border-radius:var(--control-radius);
+  border:1px solid var(--btn-border);
+  background:var(--btn-secondary-bg);
+  color:var(--btn-text);
+  font-weight:900;
+  font-size:var(--font-small);
+  cursor:pointer;
+}
 .notesBackupText{
   width:100%; min-height:64px;
   padding:8px; border:1px solid var(--border2); border-radius:var(--control-radius);
@@ -6768,6 +6785,70 @@ button.compactAction{
   font-size:11px; line-height:1.35;
 }
 .notesUnavailable{ margin:0; color:var(--muted); font-size:12px; }
+
+/* RT Cloud block inside the Backup dialog. Reuses the notesBackup* / copyBtn
+   grammar; adds only its own header row, badge, and status line. */
+.notesBackupDivider{
+  border:0; border-top:1px solid var(--border2);
+  margin:4px 0 2px;
+}
+.notesCloud{ display:flex; flex-direction:column; gap:8px; }
+.notesCloudHead{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.notesCloudTitle{ font-weight:800; font-size:12px; letter-spacing:.04em; text-transform:uppercase; color:var(--title); }
+.notesCloudBadge{
+  font-size:10px; font-weight:700; line-height:1;
+  padding:3px 7px; border-radius:999px;
+  background:color-mix(in srgb,var(--muted) 18%,transparent); color:var(--muted);
+  white-space:nowrap;
+}
+.notesCloud[data-rt-cloud-state="on"] .notesCloudBadge{
+  background:color-mix(in srgb,var(--ok) 16%,transparent); color:var(--ok);
+}
+.notesCloudBlurb,
+.notesCloudStatusLine,
+.notesCloudDangerNote{ margin:0; color:var(--muted); font-size:11px; line-height:1.35; }
+.notesCloudStatusLine:empty{ display:none; }
+.notesCloudActions{ display:flex; flex-wrap:wrap; gap:6px; }
+.notesCloudActions[hidden]{ display:none; }
+.notesCloudRestoreRow{ margin-top:2px; }
+
+.notesCloudDanger > summary{
+  list-style:none; cursor:pointer;
+  font-size:11px; font-weight:700; color:var(--muted);
+  padding:4px 0;
+}
+.notesCloudDanger > summary::-webkit-details-marker{ display:none; }
+.notesCloudDanger > summary:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
+.notesCloudDangerBody{ display:none; }
+.notesCloudDanger[open] > .notesCloudDangerBody{
+  display:flex; flex-direction:column; gap:6px;
+  padding:8px; border:1px solid var(--border2); border-radius:var(--control-radius);
+}
+
+/* Recovery code presentation - monospace, grouped, selectable. */
+.notesCloudCode{
+  display:block; width:100%;
+  padding:10px; border:1px dashed var(--border2); border-radius:var(--control-radius);
+  background:var(--panel); color:var(--text);
+  font-family:var(--font-mono); font-size:15px; letter-spacing:.06em;
+  text-align:center; word-break:break-all; user-select:all;
+}
+.notesCloudCodeWarn{ margin:0; color:var(--text); font-size:12px; line-height:1.4; }
+.notesCloudCodeStatus{ margin:0; color:var(--ok); font-size:11px; min-height:14px; }
+.notesCloudCodeStatus:empty{ min-height:0; }
+.notesCloudCodeCopyRow{ justify-content:center; }
+.notesCloudAck{
+  display:flex; align-items:flex-start; gap:8px;
+  font-size:12px; color:var(--text); line-height:1.35;
+}
+.notesCloudAck[hidden]{ display:none; }
+.notesCloudAck input{ margin-top:2px; flex:none; }
+.notesCloudRestoreSummary{
+  padding:8px; border:1px solid var(--border2); border-radius:var(--control-radius);
+  background:color-mix(in srgb,var(--ok) 8%,transparent);
+  color:var(--text); font-size:12px; line-height:1.4;
+}
+.notesCloudRestoreSummary[hidden]{ display:none; }
 
 .notesList{ display:flex; flex-direction:column; gap:8px; }
 /* Each card is a row: the tappable note button + an absolutely-positioned

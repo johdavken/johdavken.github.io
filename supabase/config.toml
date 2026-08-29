@@ -385,6 +385,14 @@ deno_version = 2
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
+# RT Cloud (encrypted RT Notes recovery backup). Deliberately unauthenticated
+# at the gateway: RT Cloud must work with no RT Sync session and on a fresh
+# install. The credential is the client-derived one-way `lookup_hash` carried
+# in the request body; the function implements its own validation, generic
+# errors, and per-IP throttling. See supabase/functions/rt-cloud/index.ts.
+[functions.rt-cloud]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

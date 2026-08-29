@@ -137,14 +137,15 @@ function seedLegacyDb(notes) {
  *   Schema upgrade
  * ------------------------------------------------------------------ */
 
-test("opening at v2 creates the folders object store", async () => {
+test("opening at the current schema creates the folders and meta object stores", async () => {
   freshDb();
   const store = NotesStore.createStore();
   await store.getFolders(); // forces open()
   const entry = DATABASES.get(NotesStore.DB_NAME);
   assert.equal(entry.version, NotesStore.SCHEMA_VERSION);
-  assert.equal(entry.version, 2);
+  assert.equal(entry.version, 3);
   assert.ok(entry.stores.has("folders"), "the folders store exists after the upgrade");
+  assert.ok(entry.stores.has("meta"), "the meta store exists after the upgrade");
   assert.ok(entry.stores.has("notes"), "the notes store is still there");
 });
 

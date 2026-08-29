@@ -277,7 +277,8 @@ test("the database name is clearly namespaced to Resin.Tools", () => {
   assert.equal(NotesStore.DB_NAME, "resin.tools.notes");
   assert.equal(NotesStore.STORE_NAME, "notes");
   assert.equal(NotesStore.FOLDER_STORE_NAME, "folders");
-  assert.equal(NotesStore.SCHEMA_VERSION, 2);
+  assert.equal(NotesStore.META_STORE_NAME, "meta");
+  assert.equal(NotesStore.SCHEMA_VERSION, 3);
 });
 
 test("isSupported is false when the environment has no IndexedDB", () => {
