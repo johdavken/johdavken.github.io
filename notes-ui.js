@@ -8,6 +8,11 @@
 
   const $ = (id) => document.getElementById(id);
   const NotesStore = root.PolynNotesStore;
+  // TipTap experiment globals (see notes-editor-vendor.src.js / notes-markdown.js).
+  // Both are optional: if either is missing the editor drops to a read-only
+  // fallback rather than breaking RT Notes.
+  const RTNotesEditor = root.RTNotesEditor || null;
+  const NotesMarkdown = root.PolynNotesMarkdown || null;
 
   const panel = $("notesBlock");
   if (!panel || !NotesStore) return;
@@ -30,6 +35,7 @@
   const backBtn = $("notesBackBtn");
   const titleInput = $("notesTitleInput");
   const bodyInput = $("notesBodyInput");
+  const editorMount = $("notesEditorMount");
   const saveState = $("notesSaveState");
   const pinBtn = $("notesPinBtn");
   const editorMenu = $("notesEditorMenu");
@@ -44,6 +50,11 @@
   let currentNote = null;
   let saveTimer = 0;
   let savePending = false;
+  // TipTap experiment: the live editor instance for the open note, or null.
+  // `editorMode` is "rich" while a TipTap instance is mounted, "fallback"
+  // when we had to drop to the read-only textarea.
+  let editor = null;
+  let editorMode = "rich";
 
   if (!store) {
     // No on-device storage (private mode, locked-down WebView). The section
@@ -66,6 +77,7 @@
 
   function showList() {
     flushSave({ immediate: true });
+    destroyEditor();
     currentId = null;
     currentNote = null;
     document.body.dataset.mobileNotes = "list";
@@ -123,7 +135,7 @@
     }
     item.appendChild(head);
 
-    const preview = NotesStore.previewOf(note.body);
+    const preview = NotesStore.previewOf(note.body, undefined, note.bodyFormat);
     if (preview) {
       const previewEl = document.createElement("span");
       previewEl.className = "notesItemPreview";
@@ -156,7 +168,7 @@
       .catch(() => {
         if (listEmpty) {
           listEmpty.hidden = false;
-          listEmpty.textContent = "Notes couldn't be loaded on this device.";
+          listEmpty.textContent = "RT Notes couldn't be loaded on this device.";
         }
       });
   }
@@ -178,16 +190,157 @@
       currentId = note.id;
       currentNote = note;
       if (titleInput) titleInput.value = note.title;
-      if (bodyInput) bodyInput.value = note.body;
       reflectPin(note.pinned);
       setSaveState("Saved on this device");
       if (editorMenu) editorMenu.open = false;
       showEditor();
-      // A brand-new (empty) note lands on the title; an existing one on the
+      // Mount the editor only once the view is visible so ProseMirror can
+      // measure. Opening a legacy Markdown note converts it to HTML for
+      // display only - the stored note is not rewritten until the first edit.
+      initEditorFor(note);
+      // A brand-new (empty) note lands on the title; an existing one in the
       // body so the operator can keep writing.
-      const target = note.title || note.body ? bodyInput : titleInput;
-      if (target) requestAnimationFrame(() => target.focus());
+      const hasContent = note.title || note.body;
+      if (!hasContent && titleInput) {
+        requestAnimationFrame(() => titleInput.focus());
+      } else if (editorMode === "rich" && editor) {
+        requestAnimationFrame(() => {
+          try {
+            editor.commands.focus("end");
+          } catch (error) {
+            /* focus is best-effort */
+          }
+        });
+      } else if (bodyInput) {
+        requestAnimationFrame(() => bodyInput.focus());
+      }
     });
+  }
+
+  /* --------------------------------------------------------------------
+   *   TipTap editor lifecycle (EXPERIMENT - see notes-editor-vendor.src.js)
+   * ------------------------------------------------------------------ */
+
+  // The HTML to seed the editor with. HTML notes load as-is; legacy Markdown
+  // notes are converted for display only (lazy migration). A conversion
+  // failure degrades to escaped paragraphs rather than blocking the note.
+  function noteBodyToHtml(note) {
+    if (note && note.bodyFormat === "html") return note.body || "";
+    const md = (note && note.body) || "";
+    if (NotesMarkdown && typeof NotesMarkdown.markdownToHtml === "function") {
+      try {
+        return NotesMarkdown.markdownToHtml(md);
+      } catch (error) {
+        /* fall through */
+      }
+    }
+    const escaped = md
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\n/g, "<br>");
+    return "<p>" + escaped + "</p>";
+  }
+
+  function buildEditor(html) {
+    if (!RTNotesEditor || !RTNotesEditor.Editor || !editorMount) {
+      throw new Error("RT Notes rich editor is unavailable on this device.");
+    }
+    const Editor = RTNotesEditor.Editor;
+    const StarterKit = RTNotesEditor.StarterKit;
+    const TaskList = RTNotesEditor.TaskList;
+    const TaskItem = RTNotesEditor.TaskItem;
+    return new Editor({
+      element: editorMount,
+      extensions: [
+        StarterKit.configure({
+          heading: { levels: [1, 2, 3] },
+          // Keep the surface to exactly what the RT Notes toolbar produces.
+          blockquote: false,
+          codeBlock: false,
+          horizontalRule: false,
+          code: false
+          // history stays enabled -> normal undo/redo
+        }),
+        TaskList,
+        TaskItem.configure({ nested: false })
+      ],
+      content: html || "",
+      editorProps: {
+        attributes: {
+          class: "notesProse",
+          spellcheck: "true",
+          "aria-label": "Note body"
+        }
+      },
+      onUpdate: () => {
+        scheduleSave();
+        refreshToolbarState();
+      },
+      onSelectionUpdate: refreshToolbarState,
+      onBlur: () => flushSave({ immediate: true })
+    });
+  }
+
+  function initEditorFor(note) {
+    destroyEditor();
+    const html = noteBodyToHtml(note);
+    try {
+      editor = buildEditor(html);
+      editorMode = "rich";
+      if (editorMount) editorMount.hidden = false;
+      if (bodyInput) bodyInput.hidden = true;
+      if (toolbar) toolbar.hidden = false;
+    } catch (error) {
+      editor = null;
+      editorMode = "fallback";
+      enterFallback(note);
+    }
+    refreshToolbarState();
+  }
+
+  // Never leave a note unreadable because the editor failed: show the stored
+  // text in the plain textarea, read-only, and say so. No autosave in this
+  // mode, so the stored note is never rewritten by a failed editor.
+  function enterFallback(note) {
+    if (editorMount) {
+      editorMount.hidden = true;
+      editorMount.replaceChildren();
+    }
+    if (toolbar) toolbar.hidden = true;
+    if (bodyInput) {
+      bodyInput.hidden = false;
+      bodyInput.readOnly = true;
+      bodyInput.value = (note && note.body) || "";
+    }
+    setSaveState("Rich editor unavailable - showing saved text (read-only)");
+  }
+
+  function destroyEditor() {
+    if (editor) {
+      try {
+        editor.destroy();
+      } catch (error) {
+        /* already torn down */
+      }
+      editor = null;
+    }
+    editorMode = "rich";
+    if (editorMount) editorMount.replaceChildren();
+    if (bodyInput) {
+      bodyInput.readOnly = false;
+      bodyInput.hidden = true;
+      bodyInput.value = "";
+    }
+  }
+
+  // Read what the editor currently holds, as the pair we persist. Returns
+  // null in fallback mode (read-only - nothing to save).
+  function currentBody() {
+    if (editorMode === "rich" && editor) {
+      return { body: editor.getHTML(), bodyFormat: "html" };
+    }
+    return null;
   }
 
   function scheduleSave() {
@@ -210,10 +363,13 @@
     }
     savePending = false;
     const id = currentId;
-    const patch = {
-      title: titleInput ? titleInput.value : "",
-      body: bodyInput ? bodyInput.value : ""
-    };
+    const content = currentBody();
+    const patch = { title: titleInput ? titleInput.value : "" };
+    if (content) {
+      // First edit of a legacy Markdown note writes HTML + bodyFormat:"html".
+      patch.body = content.body;
+      patch.bodyFormat = content.bodyFormat;
+    }
     return store
       .update(id, patch)
       .then((saved) => {
@@ -252,6 +408,7 @@
       clearTimeout(saveTimer);
       saveTimer = 0;
     }
+    destroyEditor();
     store
       .remove(id)
       .then(() => showList())
@@ -259,103 +416,44 @@
   }
 
   /* --------------------------------------------------------------------
-   *   Lightweight Markdown formatting toolbar
+   *   Formatting toolbar -> TipTap commands (EXPERIMENT)
+   *
+   *   Same seven controls and markup as before; each maps to a TipTap
+   *   chained command. Inert (but harmless) in the read-only fallback.
    * ------------------------------------------------------------------ */
 
-  // Replace a range of the textarea, keeping the browser's native undo
-  // stack when the platform supports execCommand("insertText"); otherwise
-  // fall back to setRangeText + an input event so autosave still fires.
-  function replaceRange(el, start, end, text, selStart, selEnd) {
-    el.focus();
-    el.setSelectionRange(start, end);
-    let ok = false;
-    try {
-      ok = document.execCommand("insertText", false, text);
-    } catch (error) {
-      ok = false;
-    }
-    if (!ok) {
-      el.setRangeText(text, start, end, "end");
-      el.dispatchEvent(new Event("input", { bubbles: true }));
-    }
-    const s = typeof selStart === "number" ? selStart : start + text.length;
-    const e = typeof selEnd === "number" ? selEnd : s;
-    el.setSelectionRange(s, e);
-  }
-
-  function wrapSelection(el, marker) {
-    const start = el.selectionStart;
-    const end = el.selectionEnd;
-    const value = el.value;
-    const selected = value.slice(start, end);
-    const before = value.slice(Math.max(0, start - marker.length), start);
-    const after = value.slice(end, end + marker.length);
-    if (before === marker && after === marker) {
-      // Toggle off: drop the surrounding markers.
-      replaceRange(el, start - marker.length, end + marker.length, selected, start - marker.length, end - marker.length);
-      return;
-    }
-    const inner = selected || "text";
-    replaceRange(el, start, end, marker + inner + marker, start + marker.length, start + marker.length + inner.length);
-  }
-
-  function toggleLinePrefix(el, kind) {
-    const value = el.value;
-    let lineStart = value.lastIndexOf("\n", el.selectionStart - 1) + 1;
-    let lineEnd = value.indexOf("\n", el.selectionEnd);
-    if (lineEnd === -1) lineEnd = value.length;
-    const block = value.slice(lineStart, lineEnd);
-    const lines = block.split("\n");
-
-    const prefixRe = {
-      bullet: /^(\s*)[-*+] (?!\[[ xX]\] )/,
-      check: /^(\s*)[-*+] \[[ xX]\] /,
-      number: /^(\s*)\d+\. /,
-      heading: /^(\s*)#{1,6} /
-    }[kind];
-
-    const allPrefixed = lines.every((line) => line.trim() === "" || prefixRe.test(line));
-    let n = 0;
-    const next = lines
-      .map((line) => {
-        if (line.trim() === "") return line;
-        if (allPrefixed) return line.replace(prefixRe, "$1");
-        const stripped = line
-          .replace(/^(\s*)[-*+] \[[ xX]\] /, "$1")
-          .replace(/^(\s*)[-*+] /, "$1")
-          .replace(/^(\s*)\d+\. /, "$1")
-          .replace(/^(\s*)#{1,6} /, "$1");
-        const indentMatch = stripped.match(/^(\s*)/);
-        const indent = indentMatch ? indentMatch[1] : "";
-        const rest = stripped.slice(indent.length);
-        n += 1;
-        if (kind === "bullet") return `${indent}- ${rest}`;
-        if (kind === "check") return `${indent}- [ ] ${rest}`;
-        if (kind === "number") return `${indent}${n}. ${rest}`;
-        return `${indent}# ${rest}`;
-      })
-      .join("\n");
-
-    replaceRange(el, lineStart, lineEnd, next, lineStart, lineStart + next.length);
-  }
+  // data-note-format -> [command, isActive-node, isActive-attrs]. undo/redo
+  // have no active state.
+  const FORMAT_ACTIONS = {
+    bold: { run: (c) => c.toggleBold(), active: ["bold"] },
+    heading: { run: (c) => c.toggleHeading({ level: 1 }), active: ["heading", { level: 1 }] },
+    bullet: { run: (c) => c.toggleBulletList(), active: ["bulletList"] },
+    number: { run: (c) => c.toggleOrderedList(), active: ["orderedList"] },
+    check: { run: (c) => c.toggleTaskList(), active: ["taskList"] },
+    undo: { run: (c) => c.undo() },
+    redo: { run: (c) => c.redo() }
+  };
 
   function applyFormat(kind) {
-    if (!bodyInput) return;
-    if (kind === "undo" || kind === "redo") {
-      bodyInput.focus();
-      try {
-        document.execCommand(kind, false, null);
-      } catch (error) {
-        /* not supported - native Ctrl/Cmd+Z still works while typing */
-      }
-      bodyInput.dispatchEvent(new Event("input", { bubbles: true }));
-      return;
-    }
-    if (kind === "bold") {
-      wrapSelection(bodyInput, "**");
-      return;
-    }
-    toggleLinePrefix(bodyInput, kind);
+    if (editorMode !== "rich" || !editor) return;
+    const action = FORMAT_ACTIONS[kind];
+    if (!action) return;
+    action.run(editor.chain().focus()).run();
+    refreshToolbarState();
+  }
+
+  // Reflect the format under the cursor in the toolbar (e.g. Bold looks
+  // pressed inside bold text).
+  function refreshToolbarState() {
+    if (!toolbar) return;
+    const isActive = (name, attrs) => editorMode === "rich" && editor && editor.isActive(name, attrs);
+    toolbar.querySelectorAll("[data-note-format]").forEach((btn) => {
+      const action = FORMAT_ACTIONS[btn.dataset.noteFormat];
+      if (!action || !action.active) return;
+      const on = !!isActive(action.active[0], action.active[1]);
+      btn.classList.toggle("is-active", on);
+      btn.setAttribute("aria-pressed", String(on));
+    });
   }
 
   /* --------------------------------------------------------------------
@@ -403,7 +501,7 @@
   function runImport(text) {
     const payload = (text || "").trim();
     if (!payload) {
-      setBackupStatus("Paste exported notes JSON, or choose a file.", "error");
+      setBackupStatus("Paste exported RT Notes JSON, or choose a file.", "error");
       return;
     }
     store
@@ -445,11 +543,12 @@
     });
   }
 
-  if (titleInput) titleInput.addEventListener("input", scheduleSave);
-  if (bodyInput) bodyInput.addEventListener("input", scheduleSave);
-  [titleInput, bodyInput].forEach((el) => {
-    if (el) el.addEventListener("blur", () => flushSave({ immediate: true }));
-  });
+  // The title is still a plain input. The body change/blur signals come from
+  // the TipTap editor's onUpdate / onBlur (see buildEditor).
+  if (titleInput) {
+    titleInput.addEventListener("input", scheduleSave);
+    titleInput.addEventListener("blur", () => flushSave({ immediate: true }));
+  }
 
   if (toolbar) {
     toolbar.addEventListener("click", (event) => {
@@ -496,6 +595,7 @@
     if (mode === lastNotesMode) return;
     lastNotesMode = mode;
     if (mode === "list") {
+      destroyEditor();
       currentId = null;
       currentNote = null;
       renderList();

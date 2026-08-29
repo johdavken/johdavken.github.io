@@ -31,7 +31,31 @@ test("Notes sits in the Workspace & support menu, directly below RT Sync", () =>
   assert.match(html, /aria-controls="workspaceNavLineSync workspaceNavNotes workspaceNavTools/);
 });
 
-test("the collapsed Workspace & support bar previews Notes in its icon cluster and caption", () => {
+test("the feature is branded 'RT Notes' in every visible label (internal ids stay 'notes')", () => {
+  // Menu entry, section header, and editor back breadcrumb all read "RT Notes".
+  assert.match(html, /<\/svg>RT Notes<\/span>\s*<small>On this device<\/small>/);
+  assert.match(html, /<div class="layerTitle" role="heading" aria-level="1">RT Notes<\/div>/);
+  assert.match(html, /id="notesBackBtn"[^>]*aria-label="Back to RT Notes"[^>]*title="Back to RT Notes"[\s\S]*?<span>RT Notes<\/span>/);
+  // Backup / export / import carry the feature name.
+  assert.match(html, /id="notesExportBtn"[^>]*>Export RT Notes</);
+  assert.match(html, /id="notesImportBtn"[^>]*>Import RT Notes</);
+  assert.match(html, /class="notesBackupIntro">RT Notes live only in this app/);
+  assert.match(html, /id="notesDeviceHint"[^>]*>RT Notes are stored on this device only/);
+  assert.match(html, /id="notesUnavailable"[^>]*>RT Notes need on-device storage/);
+  // Changelog refers to it by the branded name.
+  assert.match(html, /<h3>\(v1\.1\.21\)[^<]*- RT Notes<\/h3>/);
+  assert.match(html, /New <strong>RT Notes<\/strong> section on mobile/);
+  // Internals are untouched: module globals, ids, db name, store name.
+  const store = fs.readFileSync("notes-store.js", "utf8");
+  assert.match(store, /root\.PolynNotesStore = api/);
+  assert.match(store, /const DB_NAME = "resin\.tools\.notes"/);
+  assert.match(store, /const STORE_NAME = "notes"/);
+  assert.match(ui, /root\.PolynNotesStore/);
+  assert.match(html, /id="notesBlock"/);
+  assert.match(html, /id="workspaceNavNotes"/);
+});
+
+test("the collapsed Workspace & support bar previews Notes in its icon cluster", () => {
   const cluster = html.slice(html.indexOf('class="mobileWorkspaceNavMoreIcons"'), html.indexOf("</span>", html.indexOf('class="mobileWorkspaceNavMoreIcons"')));
   // Cluster paint order is reverse nav order, so Notes sits between Tools and RT Sync.
   assert.ok(
@@ -39,7 +63,6 @@ test("the collapsed Workspace & support bar previews Notes in its icon cluster a
     cluster.indexOf("moreIconNotes") < cluster.indexOf("moreIconRt"),
     "Notes glyph sits between Tools and RT Sync in the cluster"
   );
-  assert.match(html, /<small>RT Sync · Notes · Tools · Get the app · Changelog · Sudo access<\/small>/);
   // Each cluster glyph carries a hand-synced tint (see the comment in styles.css).
   assert.match(styles, /\.mobileWorkspaceNavMoreIcons \.moreIconNotes\{ --tint:var\(--muted\); \}/);
 });
@@ -124,7 +147,8 @@ test("Notes navigation never persists as the restored workspace panel", () => {
 test("edits autosave on a short debounce - no Save button", () => {
   assert.match(ui, /AUTOSAVE_DELAY = 600/);
   assert.match(ui, /titleInput\.addEventListener\("input", scheduleSave\)/);
-  assert.match(ui, /bodyInput\.addEventListener\("input", scheduleSave\)/);
+  // The body change signal now comes from the TipTap editor's update event.
+  assert.match(ui, /onUpdate: \(\) => \{\s*scheduleSave\(\);/);
   assert.match(ui, /saveTimer = setTimeout\(\(\) => flushSave\(\), AUTOSAVE_DELAY\)/);
   // Subtle state feedback, both phrases from the brief.
   assert.match(ui, /setSaveState\("Saving…"\)/);
@@ -146,7 +170,7 @@ test("switching an unrelated field cannot wipe a note - saves go only through th
 });
 
 /* ----------------------------------------------------------------------
- *   Formatting - stored as Markdown, compact toolbar
+ *   Formatting - TipTap rich editor (EXPERIMENT), compact toolbar
  * -------------------------------------------------------------------- */
 
 test("the toolbar offers exactly Bold / Heading / Bullet / Number / Check / Undo / Redo", () => {
@@ -158,19 +182,68 @@ test("the toolbar offers exactly Bold / Heading / Bullet / Number / Check / Undo
   assert.doesNotMatch(toolbar, /font-family|font-size|color|align/i);
 });
 
-test("the note body is a plain textarea and is stored as Markdown text, not HTML", () => {
-  assert.match(html, /<textarea id="notesBodyInput"/);
-  assert.match(ui, /wrapSelection\(bodyInput, "\*\*"\)/);
-  assert.match(ui, /toggleLinePrefix\(bodyInput, kind\)/);
-  // Insertions try execCommand first so the textarea's native undo stack
-  // keeps working; direct value writes are the fallback.
-  assert.match(ui, /document\.execCommand\("insertText", false, text\)/);
-  assert.match(ui, /document\.execCommand\(kind, false, null\)/);
-  // The list preview and title are rendered as text, never markup.
-  assert.match(ui, /NotesStore\.previewOf\(note\.body\)/);
+test("each toolbar control maps to the expected TipTap command", () => {
+  assert.match(ui, /bold:\s*\{ run: \(c\) => c\.toggleBold\(\)/);
+  assert.match(ui, /heading:\s*\{ run: \(c\) => c\.toggleHeading\(\{ level: 1 \}\)/);
+  assert.match(ui, /bullet:\s*\{ run: \(c\) => c\.toggleBulletList\(\)/);
+  assert.match(ui, /number:\s*\{ run: \(c\) => c\.toggleOrderedList\(\)/);
+  assert.match(ui, /check:\s*\{ run: \(c\) => c\.toggleTaskList\(\)/);
+  assert.match(ui, /undo:\s*\{ run: \(c\) => c\.undo\(\)/);
+  assert.match(ui, /redo:\s*\{ run: \(c\) => c\.redo\(\)/);
+  // Commands run off a focused chain.
+  assert.match(ui, /editor\.chain\(\)\.focus\(\)/);
+});
+
+test("active formatting is reflected back onto the toolbar", () => {
+  assert.match(ui, /editor\.isActive\(/);
+  assert.match(ui, /classList\.toggle\("is-active", on\)/);
+  assert.match(ui, /onSelectionUpdate: refreshToolbarState/);
+});
+
+test("the body is a TipTap editor mount; the textarea stays only as the rollback / fallback surface", () => {
+  assert.match(html, /<div id="notesEditorMount" class="notesBodyEditor"><\/div>/);
+  assert.match(html, /<textarea id="notesBodyInput"[^>]*hidden>/);
+  assert.match(ui, /new Editor\(\{/);
+  assert.match(ui, /RTNotesEditor\.Editor/);
+  assert.match(ui, /StarterKit\.configure\(/);
+  // New rich edits persist as HTML with an explicit discriminator.
+  assert.match(ui, /return \{ body: editor\.getHTML\(\), bodyFormat: "html" \}/);
+  // The list preview / title stay text-only and format-aware.
+  assert.match(ui, /NotesStore\.previewOf\(note\.body, undefined, note\.bodyFormat\)/);
   assert.match(ui, /previewEl\.textContent = preview/);
   assert.match(ui, /title\.textContent = NotesStore\.titleFor\(note\)/);
-  assert.doesNotMatch(ui, /innerHTML/);
+  // Note content is never written through innerHTML.
+  assert.doesNotMatch(ui, /innerHTML\s*=/);
+});
+
+test("the editor is created lazily per note and always destroyed on the way out", () => {
+  assert.match(ui, /function initEditorFor\(note\)/);
+  assert.match(ui, /initEditorFor\(note\);/);
+  assert.match(ui, /function destroyEditor\(\)/);
+  assert.match(ui, /editor\.destroy\(\);/);
+  // destroyEditor runs before a fresh instance is built, and when leaving.
+  assert.match(ui, /destroyEditor\(\);\s*\n\s*const html = noteBodyToHtml\(note\)/);
+  const showList = ui.slice(ui.indexOf("function showList()"), ui.indexOf("function showEditor()"));
+  assert.match(showList, /destroyEditor\(\);/);
+});
+
+test("legacy Markdown notes migrate lazily - converted for display, rewritten only on edit", () => {
+  // Opening converts Markdown -> HTML for the editor...
+  assert.match(ui, /if \(note && note\.bodyFormat === "html"\) return note\.body \|\| "";/);
+  assert.match(ui, /NotesMarkdown\.markdownToHtml\(md\)/);
+  // ...but openNote never writes; only flushSave (a real edit) does, and only
+  // then does bodyFormat flip to "html".
+  const openNote = ui.slice(ui.indexOf("function openNote("), ui.indexOf("function noteBodyToHtml("));
+  assert.doesNotMatch(openNote, /store\s*\.\s*update/);
+  assert.match(ui, /patch\.bodyFormat = content\.bodyFormat;/);
+});
+
+test("a failed editor init never destroys data - it falls back to read-only stored text", () => {
+  assert.match(ui, /function enterFallback\(note\)/);
+  assert.match(ui, /bodyInput\.readOnly = true;/);
+  assert.match(ui, /bodyInput\.value = \(note && note\.body\) \|\| "";/);
+  // Fallback mode saves nothing (currentBody returns null unless mode is rich).
+  assert.match(ui, /if \(editorMode === "rich" && editor\) \{\s*\n\s*return \{ body: editor\.getHTML/);
 });
 
 /* ----------------------------------------------------------------------

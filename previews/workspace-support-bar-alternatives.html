@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Workspace &amp; support bar — 6 directions</title>
+<style>
+  :root{
+    --page:#141510;
+    --panel:#1d1e18;
+    --panel2:#23241d;
+    --edge:#38392f;
+    --ink:#ece4c8;
+    --muted:#a29d84;
+    --shadow:0 18px 40px rgba(0,0,0,.55);
+    --rt:#7fae86;
+    --tools:#c98a94;
+    --beta:#8fbf7f;
+    --log:#6fa3ab;
+    --sudo:#c9974b;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    background:radial-gradient(circle at 15% -10%,rgba(143,191,127,.06),transparent 34rem),var(--page);
+    color:var(--ink);
+    font:15px/1.4 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  }
+  main{max-width:2180px;margin:0 auto;padding:40px 44px 70px}
+  header{max-width:1020px;margin-bottom:32px}
+  header h1{margin:0 0 8px;font-size:28px;letter-spacing:-.01em}
+  header p{margin:0;color:var(--muted);font-size:14px;line-height:1.6}
+  header p b{color:var(--ink)}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:30px 26px}
+  @media (max-width:1500px){ .grid{grid-template-columns:repeat(2,1fr)} }
+  .concept{display:grid;grid-template-rows:auto 1fr;gap:12px;min-width:0}
+  .chead h2{display:flex;align-items:center;gap:9px;margin:0 0 5px;font-size:15px}
+  .chead h2 b{display:grid;place-items:center;flex:0 0 auto;width:20px;height:20px;border-radius:50%;background:var(--ink);color:var(--page);font-size:11px;font-weight:900}
+  .chead p{margin:0;color:var(--muted);font-size:12px;line-height:1.5}
+
+  .phone{
+    width:100%;
+    max-width:380px;
+    padding:14px 12px 16px;
+    border:1px solid var(--edge);
+    border-radius:20px;
+    background:linear-gradient(165deg,var(--panel2),var(--panel));
+    box-shadow:var(--shadow);
+  }
+  .stateLabel{margin:0 0 6px 2px;color:var(--muted);font-size:9.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+  .stateLabel.open{margin-top:14px}
+
+  svg{display:block}
+  .ic{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .chev{transition:transform .2s ease}
+  .chev.up{transform:rotate(180deg)}
+
+  /* shared bit: the connector-thread rows peeking under an opened bar */
+  .peek{position:relative;margin-top:2px;padding:2px 4px 4px}
+  .peekRow{--tint:var(--muted);position:relative;display:flex;align-items:flex-start;gap:11px;padding:9px 2px}
+  .peekRow::before{content:"";position:absolute;left:12px;top:-1px;width:1px;height:calc(100% + 1px);background:var(--edge)}
+  .peekRow:first-child::before{top:50%}
+  .peekNode{position:relative;z-index:1;display:grid;place-items:center;flex:0 0 auto;width:25px;height:25px;border-radius:50%;border:2px solid var(--tint);background:var(--panel);color:var(--tint)}
+  .peekNode svg{width:12px;height:12px}
+  .peekText{flex:1;min-width:0;padding-top:2px}
+  .peekText strong{display:block;font-size:12.5px;font-weight:750}
+  .peekText small{display:block;margin-top:1px;color:var(--muted);font-size:10px}
+  .peekMore{position:relative;padding:6px 0 2px 37px;color:var(--muted);font-size:11px;letter-spacing:.16em}
+  .peekMore::before{content:"";position:absolute;left:12px;top:0;width:1px;height:50%;background:var(--edge)}
+
+  /* ============================================================
+     Bar 1 — Icon seed row (unfolds straight into the thread)
+     ============================================================ */
+  .bar1{display:flex;align-items:center;gap:9px;padding:9px 11px;border:1px solid var(--edge);border-radius:13px;background:color-mix(in srgb,var(--ink) 5%,var(--panel))}
+  .bar1 .seedline{position:relative;display:flex;align-items:center;flex:1;min-width:0}
+  .bar1 .seedline::before{content:"";position:absolute;left:12px;right:12px;top:50%;height:1px;background:var(--edge);z-index:0}
+  .bar1 .node{position:relative;z-index:1;display:grid;place-items:center;width:25px;height:25px;border-radius:50%;border:2px solid var(--tint);background:var(--panel);color:var(--tint);margin-right:-1px}
+  .bar1 .node svg{width:12px;height:12px}
+  .bar1 .node + .node{margin-left:8px}
+
+  /* ============================================================
+     Bar 2 — Overlapping icon cluster
+     ============================================================ */
+  .bar2{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--edge);border-radius:13px;background:color-mix(in srgb,var(--ink) 5%,var(--panel))}
+  .bar2 .cluster{display:flex;flex:0 0 auto}
+  .bar2 .cluster .node{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;border:2px solid var(--panel);background:var(--tint);color:var(--panel)}
+  .bar2 .cluster .node svg{width:12px;height:12px}
+  .bar2 .cluster .node + .node{margin-left:-9px}
+  .bar2 .label{flex:1;min-width:0;font-size:13.5px;font-weight:750}
+
+  /* ============================================================
+     Bar 3 — Minimal petal badge, no individual icons
+     ============================================================ */
+  .bar3{display:flex;align-items:center;gap:11px;padding:10px 12px;border:1px solid var(--edge);border-radius:13px;background:color-mix(in srgb,var(--ink) 5%,var(--panel))}
+  .petal{position:relative;flex:0 0 auto;width:26px;height:26px}
+  .petal i{position:absolute;width:9px;height:9px;border-radius:50%;top:8.5px;left:8.5px}
+  .bar3 .label{flex:1;min-width:0}
+  .bar3 .label strong{display:block;font-size:13.5px;font-weight:750}
+  .bar3 .label small{display:block;margin-top:1px;color:var(--muted);font-size:10px}
+
+  /* ============================================================
+     Bar 4 — Live status ring row
+     ============================================================ */
+  .bar4{display:flex;align-items:center;gap:9px;padding:9px 11px;border:1px solid var(--edge);border-radius:13px;background:color-mix(in srgb,var(--ink) 5%,var(--panel))}
+  .bar4 .ringrow{display:flex;flex:1;gap:9px;min-width:0}
+  .bar4 .ring{position:relative;display:grid;place-items:center;width:25px;height:25px;border-radius:50%;color:var(--tint)}
+  .bar4 .ring::before{content:"";position:absolute;inset:0;border-radius:50%;border:2px solid color-mix(in srgb,var(--tint) 55%,transparent)}
+  .bar4 .ring.attn::before{border-color:var(--tint);box-shadow:0 0 0 3px color-mix(in srgb,var(--tint) 20%,transparent)}
+  .bar4 .ring svg{width:12px;height:12px}
+
+  /* ============================================================
+     Bar 5 — Segmented capsule tabs
+     ============================================================ */
+  .bar5wrap{padding:9px 11px 10px;border:1px solid var(--edge);border-radius:13px;background:color-mix(in srgb,var(--ink) 5%,var(--panel))}
+  .bar5top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .bar5top strong{font-size:12.5px;font-weight:750}
+  .capsule{display:flex;border:1px solid var(--edge);border-radius:999px;overflow:hidden;background:var(--page)}
+  .seg{flex:1;display:grid;place-items:center;padding:7px 0;color:var(--tint);border-right:1px solid var(--edge)}
+  .seg:last-child{border-right:0}
+  .seg svg{width:14px;height:14px}
+
+  /* ============================================================
+     Bar 6 — Equalizer ticks
+     ============================================================ */
+  .bar6{display:flex;align-items:center;gap:11px;padding:10px 12px;border:1px solid var(--edge);border-radius:13px;background:color-mix(in srgb,var(--ink) 5%,var(--panel))}
+  .eq{display:flex;align-items:flex-end;gap:3px;flex:0 0 auto;height:22px}
+  .eq i{display:block;width:4px;border-radius:2px;background:var(--tint)}
+  .bar6 .label{flex:1;min-width:0}
+  .bar6 .label strong{display:block;font-size:13.5px;font-weight:750}
+  .bar6 .label small{display:block;margin-top:1px;color:var(--muted);font-size:10px}
+
+  .chevBtn{flex:0 0 auto;display:grid;place-items:center;width:20px;height:20px;color:var(--muted)}
+  .chevBtn svg{width:14px;height:14px}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Workspace &amp; support bar — 6 directions</h1>
+    <p>Not the expanded list this time (Connector thread is locked in for that) - this is the <b>collapsed toggle bar</b> itself: today it's two lines tall and its three hint glyphs (⌘ 🛠 ?) don't even match the five real sections underneath. Every direction here drops those for the five real, tinted section icons, shows a <b>collapsed</b> and an <b>opened</b> state, and the opened state settles straight into the connector thread so the bar reads as the thread's own point of origin rather than a separate control sitting on top of it.</p>
+  </header>
+
+  <div class="grid">
+
+    <!-- ================= Bar 1 ================= -->
+    <div class="concept">
+      <div class="chead">
+        <h2><b>1</b>Icon seed row</h2>
+        <p>Your own idea, built out: the five nodes sit in a horizontal line joined by a thin connector, exactly like the vertical thread rotated flat. Opening the bar is just that line pivoting 90° down the left edge into the list.</p>
+      </div>
+      <div class="phone">
+        <div class="stateLabel">Collapsed</div>
+        <div class="bar1">
+          <div class="seedline">
+            <div class="node" style="--tint:var(--rt)"><svg class="ic" viewBox="0 0 32 32"><circle cx="8" cy="16" r="3"/><circle cx="24" cy="9" r="3"/><circle cx="24" cy="23" r="3"/><path d="m10.7 14.7 10.6-4.4M10.7 17.3l10.6 4.4"/></svg></div>
+            <div class="node" style="--tint:var(--tools)"><svg class="ic" viewBox="0 0 32 32"><path d="m19 6 7 7-4 4-4-1-8 8-4-4 8-8-1-4 4-4 2 4Z"/></svg></div>
+            <div class="node" style="--tint:var(--beta)"><svg class="ic" viewBox="0 0 32 32"><circle cx="16" cy="16" r="11"/><path d="M13 11.5 21 16 13 20.5V11.5Z" fill="currentColor" stroke="none"/></svg></div>
+            <div class="node" style="--tint:var(--log)"><svg class="ic" viewBox="0 0 32 32"><path d="M13 9h13M13 16h13M13 23h9"/><circle cx="7" cy="9" r="1.6" fill="currentColor" stroke="none"/><circle cx="7" cy="16" r="1.6" fill="currentColor" stroke="none"/><circle cx="7" cy="23" r="1.6" fill="currentColor" stroke="none"/></svg></div>
+            <div class="node" style="--tint:var(--sudo)"><svg class="ic" viewBox="0 0 32 32"><path d="M16 3 27 8v7c0 7-4.5 11.5-11 14-6.5-2.5-11-7-11-14V8l11-5Z"/></svg></div>
+          </div>
+          <div class="chevBtn"><svg class="ic chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div>
+        </div>
+        <div class="stateLabel open">Opened</div>
+        <div class="bar1">
+          <div class="seedline" style="justify-content:flex-start">
+            <div class="node" style="--tint:var(--rt)"><svg class="ic" viewBox="0 0 32 32"><circle cx="8" cy="16" r="3"/><circle cx="24" cy="9" r="3"/><circle cx="24" cy="23" r="3"/><path d="m10.7 14.7 10.6-4.4M10.7 17.3l10.6 4.4"/></svg></div>
+          </div>
+          <strong style="font-size:13px">RT Sync · Tools · Beta · Changelog · Sudo</strong>
+          <div class="chevBtn"><svg class="ic chev up" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div>
+        </div>
+        <div class="peek">
+          <div class="peekRow" style="--tint:var(--rt)">
+            <div class="peekNode"><svg viewBox="0 0 32 32" class="ic"><circle cx="8" cy="16" r="3"/><circle cx="24" cy="9" r="3"/><circle cx="24" cy="23" r="3"/><path d="m10.7 14.7 10.6-4.4M10.7 17.3l10.6 4.4"/></svg></div>
+            <div class="peekText"><strong>RT Sync</strong><small>Synced</small></div>
+          </div>
+          <div class="peekRow" style="--tint:var(--tools)">
+            <div class="peekNode"><svg viewBox="0 0 32 32" class="ic"><path d="m19 6 7 7-4 4-4-1-8 8-4-4 8-8-1-4 4-4 2 4Z"/></svg></div>
+            <div class="peekText"><strong>Tools</strong><small>Production utilities</small></div>
+          </div>
+          <div class="peekMore">···</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= Bar 2 ================= -->
+    <div class="concept">
+      <div class="chead">
+        <h2><b>2</b>Overlapping icon cluster</h2>
+        <p>The five icons huddle into one overlapping stack, like a group of avatars - reads as "five things live here" in the smallest possible footprint. Opening peels the stack apart into the thread below.</p>
+      </div>
+      <div class="phone">
+        <div class="stateLabel">Collapsed</div>
+        <div class="bar2">
+          <div class="cluster">
+            <div class="node" style="--tint:var(--sudo)"><svg class="ic" viewBox="0 0 32 32" stroke="none" fill="currentColor" style="display:none"></svg><svg class="ic" viewBox="0 0 32 32"><path d="M16 3 27 8v7c0 7-4.5 11.5-11 14-6.5-2.5-11-7-11-14V8l11-5Z"/></svg></div>
+            <div class="node" style="--tint:var(--log)"><svg class="ic" viewBox="0 0 32 32"><path d="M13 9h13M13 16h13M13 23h9"/></svg></div>
+            <div class="node" style="--tint:var(--beta)"><svg class="ic" viewBox="0 0 32 32"><path d="M13 11.5 21 16 13 20.5V11.5Z" fill="currentColor" stroke="none"/></svg></div>
+            <div class="node" style="--tint:var(--tools)"><svg class="ic" viewBox="0 0 32 32"><path d="m19 6 7 7-4 4-4-1-8 8-4-4 8-8-1-4 4-4 2 4Z"/></svg></div>
+            <div class="node" style="--tint:var(--rt)"><svg class="ic" viewBox="0 0 32 32"><circle cx="8" cy="16" r="3"/><circle cx="24" cy="9" r="3"/><circle cx="24" cy="23" r="3"/><path d="m10.7 14.7 10.6-4.4M10.7 17.3l10.6 4.4"/></svg></div>
+          </div>
+          <div class="label">Workspace &amp; support</div>
+          <div class="chevBtn"><svg class="ic chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div>
+        </div>
+        <div class="stateLabel open">Opened</div>
+        <div class="bar2">
+          <div class="cluster" style="filter:saturate(1.3)">
+            <div class="node" style="--tint:var(--rt);width:24px;height:24px"><svg class="ic" viewBox="0 0 32 32" style="width:11px;height:11px"><circle cx="8" cy="16" r="3"/><circle cx="24" cy="9" r="3"/><circle cx="24" cy="23" r="3"/><path d="m10.7 14.7 10.6-4.4M10.7 17.3l10.6 4.4"/></svg></div>
+          </div>
+          <div class="label">Workspace &amp; support</div>
+          <div class="chevBtn"><svg class="ic chev up" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div>
+        </div>
+        <div class="peek">
+          <div class="peekRow" style="--tint:var(--rt)">
+            <div class="peekNode"><svg viewBox="0 0 32 32" class="ic"><circle cx="8" cy="16" r="3"/><circle cx="24" cy="9" r="3"/><circle cx="24" cy="23" r="3"/><path d="m10.7 14.7 10.6-4.4M10.7 17.3l10.6 4.4"/></svg></div>
+            <div class="peekText"><strong>RT Sync</strong><small>Synced</small></div>
+          </div>
+          <div class="peekRow" style="--tint:var(--tools)">
+            <div class="peekNode"><svg viewBox="0 0 32 32" class="ic"><path d="m19 6 7 7-4 4-4-1-8 8-4-4 8-8-1-4 4-4 2 4Z"/></svg></div>
+            <div class="peekText"><strong>Tools</strong><small>Production utilities</small></div>
+          </div>
+          <div class="peekMore">···</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= Bar 3 ================= -->
+    <div class="concept">
+      <div class="chead">
+        <h2><b>3</b>Minimal petal badge</h2>
+        <p>No individual icons at all - a small five-point colour cluster stands in for "these five sections," and the row leans entirely on typography. The most compact and the calmest of the six.</p>
+      </div>
+      <div class="phone">
+        <div class="stateLabel">Collapsed</div>
+        <div class="bar3">
+          <div class="petal">
+            <i style="background:var(--rt);top:0;left:8.5px"></i>
+            <i style="background:var(--tools);top:5.5px;left:16.5px"></i>
+            <i style="background:var(--beta);top:14.5px;left:13px"></i>
+            <i style="background:var(--log);top:14.5px;left:2.5px"></i>
+            <i style="background:var(--sudo);top:5.5px;left:0"></i>
+          </div>
+          <div class="label"><strong>Workspace &amp; support</strong><small>5 sections</small></div>
+          <div class="chevBtn"><svg class="ic chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div>
+        </div>
+        <div class="stateLabel open">Opened</div>
+        <div class="bar3">
+          <div class="petal">
+            <i style="background:var(--rt);top:0;left:8.5px"></i>
+            <i style="background:var(--tools);top:5.5px;left:16.5px"></i>
+            <i style="background:var(--beta);top:14.5px;left:13px"></i>
+            <i style="background:var(--log);top:14.5px;left:2.5px"></i>
+            <i style="background:var(--sudo);top:5.5px;left:0"></i>
+          </div>
+          <div class="label"><strong>Workspace &amp; support</strong><small>Tap a row to open it</small></div>
+          <div class="chevBtn"><svg class="ic chev up" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div>
+        </div>
+        <div class="peek">
+          <div class="peekRow" style="--tint:var(--rt)">
+            <div class="peekNode"><svg viewBox="0 0 32 32" class="ic"><circle cx="8" cy="16" r="3"/><circle cx="24" cy="9" r="3"/><circle cx="24" cy="23" r="3"/><path d="m10.7 14.7 10.6-4.4M10.7 17.3l10.6 4.4"/></svg></div>
+            <div class="peekText"><strong>RT Sync</strong><small>Synced</small></div>
+          </div>
+          <div class="peekRow" style="--tint:var(--tools)">
+            <div class="peekNode"><svg viewBox="0 0 32 32" class="ic"><path d="m19 6 7 7-4 4-4-1-8 8-4-4 8-8-1-4 4-4 2 4Z"/></svg></div>
+            <div class="peekText"><strong>Tools</strong><small>Production utilities</small></div>
+          </div>
+          <div class="peekMore">···</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= Bar 4 ================= -->
+    <div class="concept">
+      <div class="chead">
+        <h2><b>4</b>Live status ring row</h2>
+        <p>Same horizontal icon row as concept 1, but each ring reflects real state - a thicker, glowing ring means that section wants attention. You can read "beta access is pending" without ever opening the bar.</p>
+      </div>
+      <div class="phone">
+        <div class="stateLabel">Collapsed - one item needs attention</div>
+        <div class="bar4">
+          <div class="ringrow">
+            <div class="ring" style="--tint:var(--rt)"><svg class="ic" viewBox="0 0 32 32"><circle cx="8" cy="16" r="3"/><circle cx="24" cy="9" r="3"/><circle cx="24" cy="23" r="3"/><path d="m10.7 14.7 10.6-4.4M10.7 17.3l10.6 4.4"/></svg></div>
+            <div class="ring" style="--tint:var(--tools)"><svg class="ic" viewBox="0 0 32 32"><path d="m19 6 7 7-4 4-4-1-8 8-4-4 8-8-1-4 4-4 2 4Z"/></svg></div>
+            <div class="ring attn" style="--tint:var(--beta)"><svg class="ic" viewBox="0 0 32 32"><path d="M13 11.5 21 16 13 20.5V11.5Z" fill="currentColor" stroke="none"/></svg></div>
+            <div class="ring" style="--tint:var(--log)"><svg class="ic" viewBox="0 0 32 32"><path d="M13 9h13M13 16h13M13 23h9"/></svg></div>
+            <div class="ring" style="--tint:var(--sudo)"><svg class="ic" viewBox="0 0 32 32"><path d="M16 3 27 8v7c0 7-4.5 11.5-11 14-6.5-2.5-11-7-11-14V8l11-5Z"/></svg></div>
+          </div>
+          <div class="chevBtn"><svg class="ic chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div>
+        </div>
+        <div class="stateLabel open">Opened</div>
+        <div class="bar4">
+          <div class="ringrow">
+            <div class="ring attn" style="--tint:var(--beta)"><svg class="ic" viewBox="0 0 32 32"><path d="M13 11.5 21 16 13 20.5V11.5Z" fill="currentColor" stroke="none"/></svg></div>
+          </div>
+          <strong style="font-size:12.5px;flex:1">Request beta access needs a look</strong>
+          <div class="chevBtn"><svg class="ic chev up" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div>
+        </div>
+        <div class="peek">
+          <div class="peekRow" style="--tint:var(--beta)">
+            <div class="peekNode" style="box-shadow:0 0 0 3px color-mix(in srgb,var(--beta) 20%,transparent)"><svg viewBox="0 0 32 32" class="ic"><path d="M13 11.5 21 16 13 20.5V11.5Z" fill="currentColor" stroke="none"/></svg></div>
+            <div class="peekText"><strong>Request beta access</strong><small>Try the Android app before release</small></div>
+          </div>
+          <div class="peekRow" style="--tint:var(--rt)">
+            <div class="peekNode"><svg viewBox="0 0 32 32" class="ic"><circle cx="8" cy="16" r="3"/><circle cx="24" cy="9" r="3"/><circle cx="24" cy="23" r="3"/><path d="m10.7 14.7 10.6-4.4M10.7 17.3l10.6 4.4"/></svg></div>
+            <div class="peekText"><strong>RT Sync</strong><small>Synced</small></div>
+          </div>
+          <div class="peekMore">···</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= Bar 5 ================= -->
+    <div class="concept">
+      <div class="chead">
+        <h2><b>5</b>Segmented capsule tabs</h2>
+        <p>The five icons sit as equal segments inside one rounded capsule, like a compact tab strip - a distinct, more "control-like" object than a plain row, and one clear label above keeps it self-explanatory.</p>
+      </div>
+      <div class="phone">
+        <div class="stateLabel">Collapsed</div>
+        <div class="bar5wrap">
+          <div class="bar5top"><strong>Workspace &amp; support</strong><svg class="ic chev" viewBox="0 0 24 24" style="width:14px;height:14px;color:var(--muted)"><path d="m6 9 6 6 6-6"/></svg></div>
+          <div class="capsule">
+            <div class="seg" style="color:var(--rt)"><svg class="ic" viewBox="0 0 32 32"><circle cx="8" cy="16" r="3"/><circle cx="24" cy="9" r="3"/><circle cx="24" cy="23" r="3"/><path d="m10.7 14.7 10.6-4.4M10.7 17.3l10.6 4.4"/></svg></div>
+            <div class="seg" style="color:var(--tools)"><svg class="ic" viewBox="0 0 32 32"><path d="m19 6 7 7-4 4-4-1-8 8-4-4 8-8-1-4 4-4 2 4Z"/></svg></div>
+            <div class="seg" style="color:var(--beta)"><svg class="ic" viewBox="0 0 32 32"><path d="M13 11.5 21 16 13 20.5V11.5Z" fill="currentColor" stroke="none"/></svg></div>
+            <div class="seg" style="color:var(--log)"><svg class="ic" viewBox="0 0 32 32"><path d="M13 9h13M13 16h13M13 23h9"/></svg></div>
+            <div class="seg" style="color:var(--sudo)"><svg class="ic" viewBox="0 0 32 32"><path d="M16 3 27 8v7c0 7-4.5 11.5-11 14-6.5-2.5-11-7-11-14V8l11-5Z"/></svg></div>
+          </div>
+        </div>
+        <div class="stateLabel open">Opened</div>
+        <div class="bar5wrap">
+          <div class="bar5top"><strong>Workspace &amp; support</strong><svg class="ic chev up" viewBox="0 0 24 24" style="width:14px;height:14px;color:var(--muted)"><path d="m6 9 6 6 6-6"/></svg></div>
+          <div class="capsule" style="border-color:var(--rt)">
+            <div class="seg" style="color:var(--rt);background:color-mix(in srgb,var(--rt) 16%,transparent)"><svg class="ic" viewBox="0 0 32 32"><circle cx="8" cy="16" r="3"/><circle cx="24" cy="9" r="3"/><circle cx="24" cy="23" r="3"/><path d="m10.7 14.7 10.6-4.4M10.7 17.3l10.6 4.4"/></svg></div>
+            <div class="seg" style="color:var(--tools)"><svg class="ic" viewBox="0 0 32 32"><path d="m19 6 7 7-4 4-4-1-8 8-4-4 8-8-1-4 4-4 2 4Z"/></svg></div>
+            <div class="seg" style="color:var(--beta)"><svg class="ic" viewBox="0 0 32 32"><path d="M13 11.5 21 16 13 20.5V11.5Z" fill="currentColor" stroke="none"/></svg></div>
+            <div class="seg" style="color:var(--log)"><svg class="ic" viewBox="0 0 32 32"><path d="M13 9h13M13 16h13M13 23h9"/></svg></div>
+            <div class="seg" style="color:var(--sudo)"><svg class="ic" viewBox="0 0 32 32"><path d="M16 3 27 8v7c0 7-4.5 11.5-11 14-6.5-2.5-11-7-11-14V8l11-5Z"/></svg></div>
+          </div>
+        </div>
+        <div class="peek">
+          <div class="peekRow" style="--tint:var(--rt)">
+            <div class="peekNode"><svg viewBox="0 0 32 32" class="ic"><circle cx="8" cy="16" r="3"/><circle cx="24" cy="9" r="3"/><circle cx="24" cy="23" r="3"/><path d="m10.7 14.7 10.6-4.4M10.7 17.3l10.6 4.4"/></svg></div>
+            <div class="peekText"><strong>RT Sync</strong><small>Synced</small></div>
+          </div>
+          <div class="peekRow" style="--tint:var(--tools)">
+            <div class="peekNode"><svg viewBox="0 0 32 32" class="ic"><path d="m19 6 7 7-4 4-4-1-8 8-4-4 8-8-1-4 4-4 2 4Z"/></svg></div>
+            <div class="peekText"><strong>Tools</strong><small>Production utilities</small></div>
+          </div>
+          <div class="peekMore">···</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= Bar 6 ================= -->
+    <div class="concept">
+      <div class="chead">
+        <h2><b>6</b>Equalizer ticks</h2>
+        <p>Five slim coloured bars stand in for the five sections, playful and abstract like a tiny level meter. The most compact of all six, and the most different in tone from anything else in the rail.</p>
+      </div>
+      <div class="phone">
+        <div class="stateLabel">Collapsed</div>
+        <div class="bar6">
+          <div class="eq">
+            <i style="height:60%;background:var(--rt)"></i>
+            <i style="height:100%;background:var(--tools)"></i>
+            <i style="height:45%;background:var(--beta)"></i>
+            <i style="height:80%;background:var(--log)"></i>
+            <i style="height:35%;background:var(--sudo)"></i>
+          </div>
+          <div class="label"><strong>Workspace &amp; support</strong><small>5 sections</small></div>
+          <div class="chevBtn"><svg class="ic chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div>
+        </div>
+        <div class="stateLabel open">Opened</div>
+        <div class="bar6">
+          <div class="eq">
+            <i style="height:100%;background:var(--rt)"></i>
+            <i style="height:100%;background:var(--tools)"></i>
+            <i style="height:100%;background:var(--beta)"></i>
+            <i style="height:100%;background:var(--log)"></i>
+            <i style="height:100%;background:var(--sudo)"></i>
+          </div>
+          <div class="label"><strong>Workspace &amp; support</strong><small>Tap a row to open it</small></div>
+          <div class="chevBtn"><svg class="ic chev up" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div>
+        </div>
+        <div class="peek">
+          <div class="peekRow" style="--tint:var(--rt)">
+            <div class="peekNode"><svg viewBox="0 0 32 32" class="ic"><circle cx="8" cy="16" r="3"/><circle cx="24" cy="9" r="3"/><circle cx="24" cy="23" r="3"/><path d="m10.7 14.7 10.6-4.4M10.7 17.3l10.6 4.4"/></svg></div>
+            <div class="peekText"><strong>RT Sync</strong><small>Synced</small></div>
+          </div>
+          <div class="peekRow" style="--tint:var(--tools)">
+            <div class="peekNode"><svg viewBox="0 0 32 32" class="ic"><path d="m19 6 7 7-4 4-4-1-8 8-4-4 8-8-1-4 4-4 2 4Z"/></svg></div>
+            <div class="peekText"><strong>Tools</strong><small>Production utilities</small></div>
+          </div>
+          <div class="peekMore">···</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+</body>
+</html>

@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Recipe layer header — 6 compact directions</title>
+<style>
+  :root{
+    --bg:#20211d;
+    --panel:#2c2d25;
+    --panel-edge:rgba(87,87,71,.72);
+    --ink:#d8d1a8;
+    --muted:#9f9a7f;
+    --title:#c9b46b;
+    --accent:#c9b46b;
+    --resin:#c99554;
+    --ok:#89a86b;
+    --field-bg:rgba(27,28,24,.78);
+    --row-border:rgba(87,87,71,.38);
+    --shadow:0 14px 30px rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    background:radial-gradient(circle at 18% -8%,rgba(201,180,107,.06),transparent 34rem),var(--bg);
+    color:var(--ink);
+    font:15px/1.4 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  }
+  main{max-width:1180px;margin:0 auto;padding:40px 44px 70px}
+  header{max-width:900px;margin-bottom:34px}
+  header h1{margin:0 0 10px;font-size:28px;letter-spacing:-.01em;color:var(--ink)}
+  header p{margin:0 0 8px;color:var(--muted);font-size:14px;line-height:1.6}
+  header p b{color:var(--title)}
+  header code{padding:1px 5px;border-radius:4px;background:var(--field-bg);color:var(--accent);font-size:12.5px}
+
+  .row{
+    display:grid;
+    grid-template-columns:280px minmax(0,1fr) 84px;
+    align-items:center;
+    gap:22px;
+    padding:20px 0;
+    border-top:1px solid var(--row-border);
+  }
+  .row:first-of-type{border-top:0}
+  .rlabel h2{display:flex;align-items:center;gap:9px;margin:0 0 6px;font-size:15px;color:var(--ink)}
+  .rlabel h2 b{display:grid;place-items:center;flex:0 0 auto;width:21px;height:21px;border-radius:50%;background:var(--accent);color:var(--bg);font-size:11px;font-weight:900}
+  .rlabel.today h2 b{background:transparent;border:1.5px dashed var(--muted);color:var(--muted)}
+  .rlabel p{margin:0;color:var(--muted);font-size:11.5px;line-height:1.5}
+
+  .strip{
+    display:flex;
+    gap:1px;
+    max-width:100%;
+    border:1px solid var(--panel-edge);
+    border-radius:9px;
+    background:var(--panel-edge);
+    overflow-x:auto;
+    overflow-y:hidden;
+    box-shadow:var(--shadow);
+    width:max-content;
+  }
+  .col{
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    width:118px;
+    padding:10px 8px 9px;
+    background:var(--panel);
+    overflow:hidden;
+  }
+
+  .heightTag{
+    justify-self:end;
+    padding:5px 9px;
+    border:1px solid var(--panel-edge);
+    border-radius:999px;
+    background:var(--field-bg);
+    color:var(--title);
+    font-size:11.5px;
+    font-weight:800;
+    font-variant-numeric:tabular-nums;
+    text-align:center;
+    white-space:nowrap;
+  }
+  .rlabel.today ~ .heightTag,
+  .today-tag{ color:var(--muted); border-style:dashed; }
+
+  /* ===================== Today (baseline, not a proposal) ===================== */
+  .t-col{ min-height:96px; align-items:center; }
+  .t-letter{
+    position:absolute; top:-4px; left:50%; transform:translateX(-50%);
+    font-family:"Arial Narrow","Roboto Condensed",Impact,sans-serif;
+    font-size:64px; font-weight:950; line-height:.9;
+    color:var(--accent); opacity:.14;
+  }
+  .t-pct{ position:relative; z-index:1; margin-top:26px; text-align:center; font-size:15px; font-weight:900; color:var(--muted) }
+  .t-pct span{ font-size:11px; font-weight:700; margin-left:1px }
+  .t-total{ position:relative; z-index:1; margin-top:5px; text-align:center; color:var(--muted); font-size:10.5px }
+
+  /* ===================== 1 — Adopt the existing tablet header ===================== */
+  .c1-col{ min-height:0; gap:0; }
+  .c1-row{ display:flex; align-items:baseline; justify-content:center; gap:2px }
+  .c1-letter{ font-size:10px; font-weight:800; color:var(--title); opacity:.72 }
+  .c1-pct{ font-size:16px; font-weight:900; color:var(--title) }
+  .c1-pct small{ font-size:9px; font-weight:700; color:var(--muted); margin-left:1px }
+  .c1-total{ margin-top:1px; text-align:center; color:var(--muted); font-size:8.5px }
+
+  /* ===================== 2 — Inline badge chip ===================== */
+  .c2-col{ min-height:0; gap:4px; align-items:flex-start }
+  .c2-badge{ display:inline-flex; padding:1px 6px; border:1px solid rgba(201,180,107,.4); border-radius:4px; background:rgba(201,180,107,.1); color:var(--title); font-size:9.5px; font-weight:800; letter-spacing:.02em }
+  .c2-row{ display:flex; align-items:baseline; justify-content:space-between; width:100% }
+  .c2-pct{ font-size:18px; font-weight:900; color:var(--ink) }
+  .c2-pct small{ font-size:9.5px; font-weight:700; color:var(--muted) }
+  .c2-total{ color:var(--muted); font-size:8.5px }
+
+  /* ===================== 3 — Single line ===================== */
+  .c3-col{ min-height:0; padding-top:8px; padding-bottom:8px }
+  .c3-line{ display:flex; align-items:baseline; gap:5px; white-space:nowrap }
+  .c3-letter{ color:var(--muted); font-size:10.5px; font-weight:800; text-transform:uppercase }
+  .c3-pct{ font-size:16px; font-weight:900; color:var(--ink) }
+  .c3-pct small{ font-size:9px; font-weight:700; color:var(--muted) }
+  .c3-dot{ color:var(--row-border); font-size:11px }
+  .c3-total{ color:var(--muted); font-size:8.5px }
+
+  /* ===================== 4 — Percentage-forward + total bar ===================== */
+  .c4-col{ min-height:0; align-items:center; text-align:center; gap:3px; padding-top:12px }
+  .c4-letter{ position:absolute; top:4px; left:6px; color:var(--muted); font-size:8px; font-weight:800; opacity:.8 }
+  .c4-pct{ font-size:19px; font-weight:900; color:var(--ink); line-height:1 }
+  .c4-pct small{ font-size:9.5px; font-weight:700; color:var(--muted) }
+  .c4-bar{ width:100%; height:3px; margin-top:3px; border-radius:2px; background:var(--field-bg); overflow:hidden }
+  .c4-bar i{ display:block; height:100%; background:var(--ok); border-radius:2px }
+  .c4-total{ margin-top:2px; color:var(--muted); font-size:7.5px }
+
+  /* ===================== 5 — Split pill + total underline ===================== */
+  .c5-col{ min-height:0; padding:0; overflow:visible }
+  .c5-pill{ display:flex; align-items:stretch; border:1px solid rgba(201,180,107,.32); border-radius:7px; overflow:hidden }
+  .c5-letter{ display:grid; place-items:center; flex:0 0 26px; background:rgba(201,180,107,.14); color:var(--title); font-size:11px; font-weight:900 }
+  .c5-pct{ flex:1; display:flex; align-items:baseline; justify-content:center; gap:1px; padding:5px 4px; color:var(--ink); font-size:15px; font-weight:900 }
+  .c5-pct small{ font-size:8.5px; font-weight:700; color:var(--muted) }
+  .c5-total{ margin-top:3px; text-align:center; color:var(--muted); font-size:8px }
+
+  /* ===================== 6 — Accent-bar minimal ===================== */
+  .c6-col{ min-height:0; padding:6px 0 6px 9px; border-left:2.5px solid var(--accent); background:transparent!important }
+  .c6-badge{ color:var(--muted); font-size:8.5px; font-weight:800; letter-spacing:.03em; text-transform:uppercase }
+  .c6-row{ display:flex; align-items:baseline; gap:2px; margin-top:2px }
+  .c6-pct{ font-size:16px; font-weight:900; color:var(--ink) }
+  .c6-pct small{ font-size:9px; font-weight:700; color:var(--muted) }
+  .c6-total{ margin-top:2px; color:var(--muted); font-size:8px }
+
+  footer{ margin-top:36px; padding-top:20px; border-top:1px solid var(--row-border); color:var(--muted); font-size:12px; line-height:1.6 }
+  footer b{ color:var(--ink) }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Recipe layer header — 6 more compact directions</h1>
+    <p>Wide desktop (&gt;1200px) renders each layer header as a <b>64px watermark letter</b> plus percentage plus total — about <b>93px tall</b> measured live, before a single hopper row starts. Tablet width (701–1200px) already replaced this with a small inline letter next to a dominant percentage — about <b>51px</b> — but that treatment was never carried up to wide desktop, which is what today's screenshot shows. These six explore how much further that can go, all still built from <code>.splitLayerTitle</code> / <code>.splitLayerPct</code> / <code>.splitColumnTotal</code> - same data, no hopper-row changes below.</p>
+    <p>Values mirror the screenshot: Layers A–E, MS0400 in A/B/C, running totals of 100%. Height tags are the approximate rendered height of one header cell.</p>
+  </header>
+
+  <div class="row rlabel today" style="display:contents">
+  </div>
+
+  <!-- ============ Today ============ -->
+  <div class="row">
+    <div class="rlabel today">
+      <h2><b>—</b>Today (≥1200px desktop)</h2>
+      <p>Not a proposal — the current shipped header, for scale. Nothing below reads worse than this.</p>
+    </div>
+    <div class="strip">
+      <div class="col t-col"><span class="t-letter">A</span><span class="t-pct">81.5<span>%</span></span><span class="t-total">Total 100%</span></div>
+      <div class="col t-col"><span class="t-letter">B</span><span class="t-pct">86<span>%</span></span><span class="t-total">Total 100%</span></div>
+      <div class="col t-col"><span class="t-letter">C</span><span class="t-pct">86<span>%</span></span><span class="t-total">Total 100%</span></div>
+      <div class="col t-col"><span class="t-letter">D</span><span class="t-pct">86<span>%</span></span><span class="t-total">Total 100%</span></div>
+      <div class="col t-col"><span class="t-letter">E</span><span class="t-pct">81.5<span>%</span></span><span class="t-total">Total 100%</span></div>
+    </div>
+    <div class="heightTag today-tag">≈93px</div>
+  </div>
+
+  <!-- ============ 1 ============ -->
+  <div class="row">
+    <div class="rlabel">
+      <h2><b>1</b>Adopt the tablet header</h2>
+      <p>Reuses the compact rule tablet width already ships — small letter baseline-aligned with a dominant percentage. Lowest risk: it's shipped and proven elsewhere in this app today.</p>
+    </div>
+    <div class="strip">
+      <div class="col c1-col"><div class="c1-row"><span class="c1-letter">A</span><span class="c1-pct">81.5<small>%</small></span></div><div class="c1-total">Total 100%</div></div>
+      <div class="col c1-col"><div class="c1-row"><span class="c1-letter">B</span><span class="c1-pct">86<small>%</small></span></div><div class="c1-total">Total 100%</div></div>
+      <div class="col c1-col"><div class="c1-row"><span class="c1-letter">C</span><span class="c1-pct">86<small>%</small></span></div><div class="c1-total">Total 100%</div></div>
+      <div class="col c1-col"><div class="c1-row"><span class="c1-letter">D</span><span class="c1-pct">86<small>%</small></span></div><div class="c1-total">Total 100%</div></div>
+      <div class="col c1-col"><div class="c1-row"><span class="c1-letter">E</span><span class="c1-pct">81.5<small>%</small></span></div><div class="c1-total">Total 100%</div></div>
+    </div>
+    <div class="heightTag">≈51px</div>
+  </div>
+
+  <!-- ============ 2 ============ -->
+  <div class="row">
+    <div class="rlabel">
+      <h2><b>2</b>Inline badge chip</h2>
+      <p>Borrows the hopper cells' own "A1" badge language for the layer letter, so the whole matrix reads as one family top to bottom. Percentage is the largest element in the cell.</p>
+    </div>
+    <div class="strip">
+      <div class="col c2-col"><span class="c2-badge">A</span><div class="c2-row"><span class="c2-pct">81.5<small>%</small></span></div><span class="c2-total">Total 100%</span></div>
+      <div class="col c2-col"><span class="c2-badge">B</span><div class="c2-row"><span class="c2-pct">86<small>%</small></span></div><span class="c2-total">Total 100%</span></div>
+      <div class="col c2-col"><span class="c2-badge">C</span><div class="c2-row"><span class="c2-pct">86<small>%</small></span></div><span class="c2-total">Total 100%</span></div>
+      <div class="col c2-col"><span class="c2-badge">D</span><div class="c2-row"><span class="c2-pct">86<small>%</small></span></div><span class="c2-total">Total 100%</span></div>
+      <div class="col c2-col"><span class="c2-badge">E</span><div class="c2-row"><span class="c2-pct">81.5<small>%</small></span></div><span class="c2-total">Total 100%</span></div>
+    </div>
+    <div class="heightTag">≈46px</div>
+  </div>
+
+  <!-- ============ 3 ============ -->
+  <div class="row">
+    <div class="rlabel">
+      <h2><b>3</b>Single line</h2>
+      <p>Letter, percentage, and total all share one baseline. The most compact option here - worth checking it still reads clearly at a glance from a few feet away on the floor.</p>
+    </div>
+    <div class="strip">
+      <div class="col c3-col"><div class="c3-line"><span class="c3-letter">A</span><span class="c3-pct">81.5<small>%</small></span><span class="c3-dot">·</span><span class="c3-total">100%</span></div></div>
+      <div class="col c3-col"><div class="c3-line"><span class="c3-letter">B</span><span class="c3-pct">86<small>%</small></span><span class="c3-dot">·</span><span class="c3-total">100%</span></div></div>
+      <div class="col c3-col"><div class="c3-line"><span class="c3-letter">C</span><span class="c3-pct">86<small>%</small></span><span class="c3-dot">·</span><span class="c3-total">100%</span></div></div>
+      <div class="col c3-col"><div class="c3-line"><span class="c3-letter">D</span><span class="c3-pct">86<small>%</small></span><span class="c3-dot">·</span><span class="c3-total">100%</span></div></div>
+      <div class="col c3-col"><div class="c3-line"><span class="c3-letter">E</span><span class="c3-pct">81.5<small>%</small></span><span class="c3-dot">·</span><span class="c3-total">100%</span></div></div>
+    </div>
+    <div class="heightTag">≈28px</div>
+  </div>
+
+  <!-- ============ 4 ============ -->
+  <div class="row">
+    <div class="rlabel">
+      <h2><b>4</b>Percentage-forward</h2>
+      <p>The percentage is the only thing worth reading twice, so it gets the size. The layer letter shrinks to a corner tag; total becomes a filled bar (still labelled - a bar with no number would be a step back from today).</p>
+    </div>
+    <div class="strip">
+      <div class="col c4-col"><span class="c4-letter">A</span><span class="c4-pct">81.5<small>%</small></span><span class="c4-bar"><i style="width:100%"></i></span><span class="c4-total">Total 100%</span></div>
+      <div class="col c4-col"><span class="c4-letter">B</span><span class="c4-pct">86<small>%</small></span><span class="c4-bar"><i style="width:100%"></i></span><span class="c4-total">Total 100%</span></div>
+      <div class="col c4-col"><span class="c4-letter">C</span><span class="c4-pct">86<small>%</small></span><span class="c4-bar"><i style="width:100%"></i></span><span class="c4-total">Total 100%</span></div>
+      <div class="col c4-col"><span class="c4-letter">D</span><span class="c4-pct">86<small>%</small></span><span class="c4-bar"><i style="width:100%"></i></span><span class="c4-total">Total 100%</span></div>
+      <div class="col c4-col"><span class="c4-letter">E</span><span class="c4-pct">81.5<small>%</small></span><span class="c4-bar"><i style="width:100%"></i></span><span class="c4-total">Total 100%</span></div>
+    </div>
+    <div class="heightTag">≈40px</div>
+  </div>
+
+  <!-- ============ 5 ============ -->
+  <div class="row">
+    <div class="rlabel">
+      <h2><b>5</b>Split pill</h2>
+      <p>Letter and percentage sit in one small pill, like a labelled control rather than a passive readout. Reads well even when columns are narrow (1-layer / 5-layer lines alike).</p>
+    </div>
+    <div class="strip">
+      <div class="col c5-col"><div class="c5-pill"><span class="c5-letter">A</span><span class="c5-pct">81.5<small>%</small></span></div><div class="c5-total">Total 100%</div></div>
+      <div class="col c5-col"><div class="c5-pill"><span class="c5-letter">B</span><span class="c5-pct">86<small>%</small></span></div><div class="c5-total">Total 100%</div></div>
+      <div class="col c5-col"><div class="c5-pill"><span class="c5-letter">C</span><span class="c5-pct">86<small>%</small></span></div><div class="c5-total">Total 100%</div></div>
+      <div class="col c5-col"><div class="c5-pill"><span class="c5-letter">D</span><span class="c5-pct">86<small>%</small></span></div><div class="c5-total">Total 100%</div></div>
+      <div class="col c5-col"><div class="c5-pill"><span class="c5-letter">E</span><span class="c5-pct">81.5<small>%</small></span></div><div class="c5-total">Total 100%</div></div>
+    </div>
+    <div class="heightTag">≈42px</div>
+  </div>
+
+  <!-- ============ 6 ============ -->
+  <div class="row">
+    <div class="rlabel">
+      <h2><b>6</b>Accent-bar minimal</h2>
+      <p>The same left-accent-bar language the tracked hopper cells use below it, applied one level up. No badge chrome at all - just a bar, a small caps label, and the number.</p>
+    </div>
+    <div class="strip">
+      <div class="col c6-col"><span class="c6-badge">Layer A</span><div class="c6-row"><span class="c6-pct">81.5<small>%</small></span></div><span class="c6-total">Total 100%</span></div>
+      <div class="col c6-col"><span class="c6-badge">Layer B</span><div class="c6-row"><span class="c6-pct">86<small>%</small></span></div><span class="c6-total">Total 100%</span></div>
+      <div class="col c6-col"><span class="c6-badge">Layer C</span><div class="c6-row"><span class="c6-pct">86<small>%</small></span></div><span class="c6-total">Total 100%</span></div>
+      <div class="col c6-col"><span class="c6-badge">Layer D</span><div class="c6-row"><span class="c6-pct">86<small>%</small></span></div><span class="c6-total">Total 100%</span></div>
+      <div class="col c6-col"><span class="c6-badge">Layer E</span><div class="c6-row"><span class="c6-pct">81.5<small>%</small></span></div><span class="c6-total">Total 100%</span></div>
+    </div>
+    <div class="heightTag">≈38px</div>
+  </div>
+
+  <footer>
+    None of these touch the hopper rows below, the Edit-view "Match X" button, or column selection - only <code>.splitLayerHeader</code>'s own contents at ≥1200px width. <b>Concept 1</b> is the safe default (already shipped at tablet width, just needs its media query widened/reused). <b>Concept 3</b> is the ceiling on compactness if legibility from typical viewing distance holds up in a real walkthrough. No application files were changed to produce this page.
+  </footer>
+</main>
+</body>
+</html>

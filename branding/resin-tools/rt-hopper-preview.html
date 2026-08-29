@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>RT hopper logo studies</title>
+  <style>
+    :root{
+      color-scheme:light dark;
+      --paper:#e7e4de;
+      --ink:#202224;
+      --card:#f7f5f0;
+      --line:#c9c5bc;
+      --muted:#6f716f;
+      --orange:#d97928;
+      --yellow:#d9a928;
+      --green:#5d9b62;
+      --blue:#4c88aa;
+      --red:#b94b45;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.45 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+    header{padding:36px clamp(18px,5vw,64px) 26px;border-bottom:1px solid var(--line);background:#f1eee8}
+    header div,main{width:min(1180px,100%);margin:auto}
+    h1{margin:0 0 7px;font-size:clamp(28px,4vw,44px);letter-spacing:-.035em}
+    header p{max-width:760px;margin:0;color:var(--muted)}
+    main{padding:28px 18px 54px}
+    .sectionHead{display:flex;align-items:baseline;justify-content:space-between;gap:18px;margin:0 0 13px}
+    .sectionHead:not(:first-child){margin-top:34px}
+    h2{margin:0;font-size:19px}
+    .sectionHead span{color:var(--muted);font-size:13px}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+    .card{overflow:hidden;border:1px solid var(--line);border-radius:15px;background:var(--card);box-shadow:0 7px 20px rgba(32,34,36,.06)}
+    .stage{display:grid;place-items:center;min-height:170px;padding:24px;background:#f9f8f5}
+    .stage.dark{background:#202224}
+    .logo{display:block;width:196px;height:104px;overflow:visible}
+    .meta{display:grid;grid-template-columns:1fr auto;gap:8px 16px;padding:14px 16px;border-top:1px solid var(--line)}
+    .meta strong{font-size:14px}
+    .meta p{grid-column:1/-1;margin:0;color:var(--muted);font-size:12px}
+    .mini{display:block;width:98px;height:52px;padding:5px;border-radius:6px;background:#e8e5df}
+    .mini.darkMini{background:#202224}
+    .hopper{color:currentColor}
+    #hopper path{
+      fill:var(--part-fill,currentColor);
+      stroke:var(--part-stroke,none);
+      stroke-width:var(--part-stroke-width,0);
+      stroke-linejoin:round;
+    }
+    #hopper .bin{color:var(--bin,currentColor);animation:var(--bin-animation,none);animation-delay:var(--bin-delay,0s)}
+    #hopper .feedA{color:var(--feed-a,currentColor);animation:var(--feed-animation,none);animation-delay:var(--feed-a-delay,0s)}
+    #hopper .feedB{color:var(--feed-b,currentColor);animation:var(--feed-animation,none);animation-delay:var(--feed-b-delay,0s)}
+    #hopper .receiver{color:var(--receiver,currentColor);animation:var(--receiver-animation,none);animation-delay:var(--receiver-delay,0s)}
+    .rt{fill:currentColor}
+
+    /* 01: the closest direct translation of the photographed decal. */
+    .v1{color:#f4f3ef}
+    .v1 .rt{font:900 64px/1 "Arial Narrow","Roboto Condensed",Impact,sans-serif;letter-spacing:-4px}
+
+    /* 02: warm safety color and a squared industrial slab. */
+    .v2{color:#202224}
+    .v2 .hopper{color:var(--orange)}
+    .v2 .rt{font:900 61px/1 Rockwell,"Roboto Slab","Courier New",serif;letter-spacing:-6px}
+
+    /* 03: the app's five process colors, used as functional zones. */
+    .v3{color:#202224}
+    .v3 .hopper{--bin:var(--red);--feed-a:var(--orange);--feed-b:var(--yellow);--receiver:var(--blue)}
+    .v3 .rt{font:850 62px/1 ui-monospace,"Cascadia Mono","Liberation Mono",monospace;letter-spacing:-6px}
+
+    /* 04: drafting-board outline with a precise grotesk. */
+    .v4{color:#dfe8eb}
+    .v4 .hopper{--part-fill:none;--part-stroke:currentColor;--part-stroke-width:18}
+    .v4 .rt{font:800 62px/1 Bahnschrift,"DIN Alternate","Arial Narrow",sans-serif;letter-spacing:-4px}
+
+    /* 05: hard-edged stencil treatment. */
+    .v5{color:#202224}
+    .v5 .hopper{color:var(--green)}
+    .v5 .rt{font:900 61px/1 Impact,Haettenschweiler,"Arial Narrow",sans-serif;letter-spacing:1px}
+    .v5 .cut{stroke:#f9f8f5;stroke-width:5}
+
+    /* 06: material travels through the two inlet segments. */
+    .v6{color:#f4f3ef}
+    .v6 .rt{font:900 64px/1 "Arial Narrow",Impact,sans-serif;letter-spacing:-4px}
+    .v6 .hopper{--feed-animation:feedCycle 2.4s ease-in-out infinite;--bin-animation:feedCycle 2.4s ease-in-out infinite;--feed-a-delay:.18s;--bin-delay:.36s}
+    @keyframes feedCycle{0%,18%,100%{color:#565b5e}35%,70%{color:#e49a38}}
+
+    /* 07: a blue resin level rises through the complete hopper mark. */
+    .v7{color:#dfe5e7}
+    .v7 .base{opacity:.22}
+    .v7 .fillLevel{fill:var(--blue);transform-origin:center bottom;animation:fillHopper 3.4s ease-in-out infinite}
+    .v7 .rt{font:800 62px/1 Bahnschrift,"DIN Alternate",sans-serif;letter-spacing:-4px}
+    @keyframes fillHopper{0%,12%{transform:translateY(410px)}72%,88%{transform:translateY(0)}100%{transform:translateY(410px)}}
+
+    /* 08: inspection scan passes over a technical outline. */
+    .v8{color:#e8ecec}
+    .v8 .hopper{--part-fill:none;--part-stroke:currentColor;--part-stroke-width:18}
+    .v8 .rt{font:850 62px/1 ui-monospace,"Cascadia Mono",monospace;letter-spacing:-6px}
+    .v8 .scan{fill:var(--green);filter:drop-shadow(0 0 3px var(--green));animation:scan 2.8s ease-in-out infinite}
+    @keyframes scan{0%,10%{transform:translateY(-2px);opacity:0}20%{opacity:1}80%{opacity:1}90%,100%{transform:translateY(86px);opacity:0}}
+
+    /* 09: machine pieces settle into their operating positions. */
+    .v9{color:#202224}
+    .v9 .hopper{color:var(--orange)}
+    .v9 .hopper{--bin-animation:assembleBin 3.2s cubic-bezier(.2,.8,.2,1) infinite;--receiver-animation:assembleReceiver 3.2s cubic-bezier(.2,.8,.2,1) infinite;--feed-animation:assembleFeed 3.2s cubic-bezier(.2,.8,.2,1) infinite}
+    .v9 .rt{font:900 61px/1 Rockwell,"Roboto Slab",serif;letter-spacing:-6px}
+    @keyframes assembleBin{0%,8%{transform:translateY(-70px);opacity:0}35%,88%{transform:none;opacity:1}100%{opacity:0}}
+    @keyframes assembleReceiver{0%,18%{transform:translateY(70px);opacity:0}48%,88%{transform:none;opacity:1}100%{opacity:0}}
+    @keyframes assembleFeed{0%,28%{transform:translateX(-70px);opacity:0}58%,88%{transform:none;opacity:1}100%{opacity:0}}
+
+    /* 10: quiet status pulse suitable for an always-visible app header. */
+    .v10{color:#eef1ef}
+    .v10 .hopper{color:var(--green);animation:statusPulse 3s ease-in-out infinite}
+    .v10 .rt{font:900 61px/1 Impact,"Arial Narrow",sans-serif;letter-spacing:0;animation:wordPulse 3s ease-in-out infinite}
+    @keyframes statusPulse{0%,100%{filter:none;opacity:.78}50%{filter:drop-shadow(0 0 5px #78c17e);opacity:1}}
+    @keyframes wordPulse{0%,100%{opacity:.84}50%{opacity:1}}
+
+    @media(max-width:720px){.grid{grid-template-columns:1fr}.sectionHead{align-items:flex-start;flex-direction:column;gap:2px}}
+    @media(prefers-reduced-motion:reduce){.animated *{animation-play-state:paused!important}}
+  </style>
+</head>
+<body>
+  <!-- Shared geometry keeps every comparison honest: only treatment changes. -->
+  <svg width="0" height="0" aria-hidden="true" style="position:absolute">
+    <defs>
+      <symbol id="hopper" viewBox="0 0 512 512">
+        <path class="bin" d="M131 78c-8 0-13 8-10 16l42 119c2 6 7 9 13 9h256c6 0 11-4 13-10l37-121c2-8-4-15-12-15Z"/>
+        <path class="feedA" d="m68 194 64-66 25 66-49 47Z"/>
+        <path class="feedB" d="m20 294 40-83 39 39Z"/>
+        <path class="receiver" fill-rule="evenodd" d="M171 231h273c8 0 14 6 14 14v112c0 6-3 11-8 14l-18 10-59 91c-3 5-8 8-14 8H253c-5 0-10-2-13-6l-67-84c-4-5-6-10-6-16V245c0-8 6-14 14-14Zm16 20v109h251V251Zm20 129 56 71h86l46-71Z"/>
+      </symbol>
+    </defs>
+  </svg>
+
+  <header><div>
+    <h1>RT hopper logo studies</h1>
+    <p>The photographed hopper reduced to the current logo’s 196 × 104 footprint. Each lockup also appears at 98 × 52—the practical detail check—not just presentation size.</p>
+  </div></header>
+
+  <main>
+    <div class="sectionHead"><h2>Static</h2><span>Five color and type directions</span></div>
+    <section class="grid" aria-label="Static hopper logo variations">
+      <article class="card">
+        <div class="stage dark"><svg class="logo v1" viewBox="0 0 196 104" role="img" aria-label="Monochrome condensed RT hopper logo"><use class="hopper" href="#hopper" x="2" y="6" width="88" height="88"/><text class="rt" x="94" y="79">RT</text></svg></div>
+        <div class="meta"><strong>01 — Decal mono</strong><svg class="mini darkMini v1" viewBox="0 0 196 104" aria-hidden="true"><use class="hopper" href="#hopper" x="2" y="6" width="88" height="88"/><text class="rt" x="94" y="79">RT</text></svg><p>Closest to the source: warm white, charcoal, and condensed shop-label type.</p></div>
+      </article>
+      <article class="card">
+        <div class="stage"><svg class="logo v2" viewBox="0 0 196 104" role="img" aria-label="Safety orange slab RT hopper logo"><use class="hopper" href="#hopper" x="2" y="6" width="88" height="88"/><text class="rt" x="91" y="78">RT</text></svg></div>
+        <div class="meta"><strong>02 — Safety slab</strong><svg class="mini v2" viewBox="0 0 196 104" aria-hidden="true"><use class="hopper" href="#hopper" x="2" y="6" width="88" height="88"/><text class="rt" x="91" y="78">RT</text></svg><p>Orange equipment mark with heavier, square-ended slab lettering.</p></div>
+      </article>
+      <article class="card">
+        <div class="stage"><svg class="logo v3" viewBox="0 0 196 104" role="img" aria-label="Process color monospace RT hopper logo"><use class="hopper" href="#hopper" x="2" y="6" width="88" height="88"/><text class="rt" x="91" y="78">RT</text></svg></div>
+        <div class="meta"><strong>03 — Process zones</strong><svg class="mini v3" viewBox="0 0 196 104" aria-hidden="true"><use class="hopper" href="#hopper" x="2" y="6" width="88" height="88"/><text class="rt" x="91" y="78">RT</text></svg><p>The current app palette maps onto the hopper’s physical sections.</p></div>
+      </article>
+      <article class="card">
+        <div class="stage dark"><svg class="logo v4" viewBox="0 0 196 104" role="img" aria-label="Technical outline RT hopper logo"><use class="hopper" href="#hopper" x="2" y="6" width="88" height="88"/><text class="rt" x="94" y="78">RT</text></svg></div>
+        <div class="meta"><strong>04 — Technical outline</strong><svg class="mini darkMini v4" viewBox="0 0 196 104" aria-hidden="true"><use class="hopper" href="#hopper" x="2" y="6" width="88" height="88"/><text class="rt" x="94" y="78">RT</text></svg><p>A lighter drafting treatment paired with precise DIN-like type.</p></div>
+      </article>
+      <article class="card">
+        <div class="stage"><svg class="logo v5" viewBox="0 0 196 104" role="img" aria-label="Green stencil RT hopper logo"><use class="hopper" href="#hopper" x="2" y="6" width="88" height="88"/><text class="rt" x="96" y="78">RT</text><path class="cut" d="M125 30v59M164 30v59"/></svg></div>
+        <div class="meta"><strong>05 — Floor stencil</strong><svg class="mini v5" viewBox="0 0 196 104" aria-hidden="true"><use class="hopper" href="#hopper" x="2" y="6" width="88" height="88"/><text class="rt" x="96" y="78">RT</text><path class="cut" d="M125 30v59M164 30v59"/></svg><p>Hard-edged lettering and production-floor green.</p></div>
+      </article>
+    </section>
+
+    <div class="sectionHead"><h2>Animated</h2><span>Five motion behaviors; motion pauses when reduced motion is enabled</span></div>
+    <section class="grid" aria-label="Animated hopper logo variations">
+      <article class="card animated">
+        <div class="stage dark"><svg class="logo v6" viewBox="0 0 196 104" role="img" aria-label="Animated material feed RT hopper logo"><use class="hopper" href="#hopper" x="2" y="6" width="88" height="88"/><text class="rt" x="94" y="79">RT</text></svg></div>
+        <div class="meta"><strong>06 — Material feed</strong><svg class="mini darkMini v6" viewBox="0 0 196 104" aria-hidden="true"><use class="hopper" href="#hopper" x="2" y="6" width="88" height="88"/><text class="rt" x="94" y="79">RT</text></svg><p>An amber pulse travels from inlet tip into the upper bin.</p></div>
+      </article>
+      <article class="card animated">
+        <div class="stage dark"><svg class="logo v7" viewBox="0 0 196 104" role="img" aria-label="Animated filling RT hopper logo"><defs><clipPath id="fill-clip"><use href="#hopper" x="2" y="6" width="88" height="88"/></clipPath></defs><use class="hopper base" href="#hopper" x="2" y="6" width="88" height="88"/><g clip-path="url(#fill-clip)" transform="translate(2 6) scale(.171875)"><rect class="fillLevel" x="0" y="0" width="512" height="512"/></g><text class="rt" x="94" y="78">RT</text></svg></div>
+        <div class="meta"><strong>07 — Resin level</strong><svg class="mini darkMini v7" viewBox="0 0 196 104" aria-hidden="true"><use class="hopper" href="#hopper" x="2" y="6" width="88" height="88"/><text class="rt" x="94" y="78">RT</text></svg><p>Blue material rises through the silhouette, then resets.</p></div>
+      </article>
+      <article class="card animated">
+        <div class="stage dark"><svg class="logo v8" viewBox="0 0 196 104" role="img" aria-label="Animated inspection scan RT hopper logo"><use class="hopper" href="#hopper" x="2" y="6" width="88" height="88"/><rect class="scan" x="3" y="8" width="86" height="3" rx="1.5"/><text class="rt" x="91" y="78">RT</text></svg></div>
+        <div class="meta"><strong>08 — Inspection scan</strong><svg class="mini darkMini v8" viewBox="0 0 196 104" aria-hidden="true"><use class="hopper" href="#hopper" x="2" y="6" width="88" height="88"/><text class="rt" x="91" y="78">RT</text></svg><p>A green scan bar checks the full technical outline.</p></div>
+      </article>
+      <article class="card animated">
+        <div class="stage"><svg class="logo v9" viewBox="0 0 196 104" role="img" aria-label="Animated assembling RT hopper logo"><use class="hopper" href="#hopper" x="2" y="6" width="88" height="88"/><text class="rt" x="91" y="78">RT</text></svg></div>
+        <div class="meta"><strong>09 — Machine assembly</strong><svg class="mini v9" viewBox="0 0 196 104" aria-hidden="true"><use class="hopper" href="#hopper" x="2" y="6" width="88" height="88"/><text class="rt" x="91" y="78">RT</text></svg><p>The bin, receiver, and inlet settle together in sequence.</p></div>
+      </article>
+      <article class="card animated">
+        <div class="stage dark"><svg class="logo v10" viewBox="0 0 196 104" role="img" aria-label="Animated operational status RT hopper logo"><use class="hopper" href="#hopper" x="2" y="6" width="88" height="88"/><text class="rt" x="96" y="78">RT</text></svg></div>
+        <div class="meta"><strong>10 — Running status</strong><svg class="mini darkMini v10" viewBox="0 0 196 104" aria-hidden="true"><use class="hopper" href="#hopper" x="2" y="6" width="88" height="88"/><text class="rt" x="96" y="78">RT</text></svg><p>A quiet green operational pulse for an always-visible header.</p></div>
+      </article>
+    </section>
+  </main>
+</body>
+</html>

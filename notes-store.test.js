@@ -12,11 +12,15 @@ const NotesStore = require("./notes-store.js");
  *   Note shape
  * -------------------------------------------------------------------- */
 
-test("newNote has exactly the v1 fields, with sane defaults", () => {
+test("newNote has exactly the current fields, with sane defaults", () => {
   const note = NotesStore.newNote();
-  assert.deepEqual(Object.keys(note).sort(), ["body", "createdAt", "id", "pinned", "title", "updatedAt"]);
+  assert.deepEqual(
+    Object.keys(note).sort(),
+    ["body", "bodyFormat", "createdAt", "id", "pinned", "title", "updatedAt"]
+  );
   assert.equal(note.title, "");
   assert.equal(note.body, "");
+  assert.equal(note.bodyFormat, "markdown", "notes default to Markdown until edited in the rich editor");
   assert.equal(note.pinned, false);
   assert.match(note.id, /^note_/);
   assert.equal(typeof note.createdAt, "number");
@@ -24,11 +28,17 @@ test("newNote has exactly the v1 fields, with sane defaults", () => {
 });
 
 test("newNote accepts seed fields but ignores anything unknown", () => {
-  const note = NotesStore.newNote({ title: "Line 4 startup", body: "# Steps", pinned: true, secret: "x" });
+  const note = NotesStore.newNote({ title: "Line 4 startup", body: "<h1>Steps</h1>", bodyFormat: "html", pinned: true, secret: "x" });
   assert.equal(note.title, "Line 4 startup");
-  assert.equal(note.body, "# Steps");
+  assert.equal(note.body, "<h1>Steps</h1>");
+  assert.equal(note.bodyFormat, "html");
   assert.equal(note.pinned, true);
   assert.equal(note.secret, undefined);
+});
+
+test("newNote rejects an unknown bodyFormat and falls back to Markdown", () => {
+  assert.equal(NotesStore.newNote({ bodyFormat: "xml" }).bodyFormat, "markdown");
+  assert.equal(NotesStore.newNote({ bodyFormat: 7 }).bodyFormat, "markdown");
 });
 
 test("normalizeNote coerces types, drops unknown keys, and rejects non-objects", () => {
@@ -47,6 +57,7 @@ test("normalizeNote coerces types, drops unknown keys, and rejects non-objects",
   assert.equal(n.id, "keep-me");
   assert.equal(n.title, "42");
   assert.equal(n.body, "");
+  assert.equal(n.bodyFormat, "markdown", "a record with no bodyFormat is Markdown");
   assert.equal(n.pinned, false, "only a strict true is pinned");
   assert.equal(n.createdAt, 1700000000000);
   assert.equal(n.updatedAt, 1700000000000, "a bad updatedAt falls back to createdAt");
@@ -103,6 +114,36 @@ test("previewOf truncates to the requested length with an ellipsis", () => {
   assert.equal(NotesStore.previewOf("just a line"), "just a line");
 });
 
+test("previewOf('html') strips tags and never leaks markup into the preview text", () => {
+  const html = '<h1>Startup</h1><p>check <strong>dryers</strong></p><ul data-type="taskList"><li data-checked="true"><p>bleed line</p></li></ul>';
+  const preview = NotesStore.previewOf(html, undefined, "html");
+  assert.equal(preview, "Startup check dryers bleed line");
+  assert.doesNotMatch(preview, /[<>]/);
+});
+
+test("previewOf('html') removes real tags (a <script> element never survives as one)", () => {
+  const preview = NotesStore.previewOf("<p>safe</p><script>alert(1)</script>", undefined, "html");
+  assert.equal(preview, "safe alert(1)");
+  assert.doesNotMatch(preview, /<\/?script/);
+});
+
+test("htmlToText decodes &amp; exactly once (no double-decode into a tag)", () => {
+  assert.equal(NotesStore.htmlToText("<p>a &amp;lt; b</p>").trim(), "a &lt; b");
+});
+
+test("titleFor uses the first line of an HTML body, tag-free", () => {
+  const note = { title: "", body: "<h1>Line 6 checklist</h1><p>more</p>", bodyFormat: "html" };
+  assert.equal(NotesStore.titleFor(note), "Line 6 checklist");
+});
+
+test("htmlToText turns block boundaries into newlines so first-line logic still works", () => {
+  const text = NotesStore.htmlToText("<h1>one</h1><p>two</p><ul><li>three</li></ul>");
+  assert.deepEqual(
+    text.split("\n").map((s) => s.trim()).filter(Boolean),
+    ["one", "two", "three"]
+  );
+});
+
 /* ----------------------------------------------------------------------
  *   Export
  * -------------------------------------------------------------------- */
@@ -112,6 +153,7 @@ test("buildExport carries the format tag, version, and every restorable field", 
     id: "note_1",
     title: "T",
     body: "B",
+    bodyFormat: "markdown",
     pinned: true,
     createdAt: 1700000000000,
     updatedAt: 1700000009999
@@ -121,7 +163,28 @@ test("buildExport carries the format tag, version, and every restorable field", 
   assert.equal(dump.version, 1);
   assert.equal(dump.count, 1);
   assert.match(dump.exportedAt, /^\d{4}-\d\d-\d\dT/);
+  assert.equal(dump.notes[0].bodyFormat, "markdown", "export carries the format discriminator");
   assert.deepEqual(dump.notes[0], note);
+});
+
+test("buildExport tags an HTML note as html and a field-less legacy note as markdown", () => {
+  const dump = NotesStore.buildExport([
+    { id: "a", title: "legacy", body: "# old", createdAt: 1, updatedAt: 1 },
+    { id: "b", title: "new", body: "<h1>new</h1>", bodyFormat: "html", createdAt: 2, updatedAt: 2 }
+  ]);
+  assert.equal(dump.notes[0].bodyFormat, "markdown");
+  assert.equal(dump.notes[1].bodyFormat, "html");
+});
+
+test("parseImport of a legacy export (no bodyFormat anywhere) yields markdown notes", () => {
+  const legacy = JSON.stringify({
+    format: "resin.tools/notes",
+    version: 1,
+    notes: [{ id: "x", title: "t", body: "**b**", createdAt: 1, updatedAt: 1 }]
+  });
+  const result = NotesStore.parseImport(legacy);
+  assert.equal(result.ok, true);
+  assert.equal(result.notes[0].bodyFormat, "markdown");
 });
 
 test("serializeExport round-trips through parseImport", () => {

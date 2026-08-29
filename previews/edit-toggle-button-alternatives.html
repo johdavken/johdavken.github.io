@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Edit toggle button alternatives</title>
+<style>
+  :root{
+    /* Meta-page chrome (dark, for reviewing the light mockups against). */
+    --meta-bg:#11171b; --meta-panel:#1b2226; --meta-line:#3a464d; --meta-text:#e6edf1; --meta-muted:#9fb0b9; --meta-blue:#8db8d8; --meta-green:#7abb9a;
+    /* Real app colors, copied verbatim from theme.css's Industrial Slate
+       palette (the default theme, and the one the reference screenshot
+       used) - not approximations, so these mockups read exactly like the
+       real header. */
+    --bg:#f5f4f3; --panel:#ffffff; --panel2:#faf9f8; --text:#29282b; --title:#4f6d8b; --muted:#666269;
+    --border:rgba(74,73,72,.17); --row-border:rgba(96,125,155,.14); --row-border-2:rgba(96,125,155,.13);
+    --field-bg:rgba(74,73,72,.055); --focus-border:rgba(96,125,155,.86); --focus-ring:rgba(96,125,155,.17);
+    --btn-primary-a:rgba(96,125,155,.20); --btn-primary-b:rgba(96,125,155,.09);
+    --btn-secondary-bg:rgba(74,73,72,.055); --btn-secondary-border:rgba(74,73,72,.20);
+    --control-radius:8px; --shadow2:0 7px 22px rgba(24,35,44,.10);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:32px 20px 56px;background:radial-gradient(circle at 30% 0,#20333d 0,transparent 36%),var(--meta-bg);color:var(--meta-text);font-family:Inter,ui-sans-serif,system-ui,sans-serif}
+  main{max-width:1200px;margin:auto}
+  h1{margin:0;font-size:26px;letter-spacing:-.03em}
+  h2{margin:40px 0 6px;font-size:16px;color:var(--meta-blue);letter-spacing:.03em;text-transform:uppercase}
+  p.lede{max-width:760px;margin:8px 0 4px;color:var(--meta-muted);line-height:1.55;font-size:14px}
+  p.sub{max-width:760px;margin:0 0 24px;color:var(--meta-muted);line-height:1.5;font-size:12.5px}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(430px,1fr));gap:18px}
+  .option{overflow:hidden;border:1px solid var(--meta-line);border-radius:16px;background:var(--meta-panel);box-shadow:0 10px 28px #0004}
+  .optionHead{display:flex;gap:10px;align-items:baseline;padding:13px 16px;border-bottom:1px solid var(--meta-line)}
+  .num{color:var(--meta-blue);font-size:11px;font-weight:800;letter-spacing:.1em}
+  .name{font-size:15px;font-weight:750}
+  .tag{margin-left:auto;color:var(--meta-muted);font-size:11px;text-align:right}
+  .note{padding:12px 16px 15px;color:var(--meta-muted);font-size:12.5px;line-height:1.55}
+  .note b{color:var(--meta-text)}
+
+  /* The mockup: the real card/header shape, reproduced verbatim - title
+     bar, tab strip (Weights active, matching the panel where the button
+     is genuinely alone with no sibling action), and the button sitting
+     alone on the right of the tab row, exactly like the live bug. */
+  .mock{padding:18px 16px 22px;background:linear-gradient(135deg,#1c2529,#171f23)}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px 16px 16px;box-shadow:var(--shadow2)}
+  .cardTitle{display:flex;align-items:center;gap:8px;margin:0 0 10px;color:var(--title);font-size:13px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+  .cardTitle svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8}
+  .headerRow{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;border-bottom:1px solid var(--row-border);padding-bottom:0}
+  .tabs{display:flex;align-items:flex-end;gap:3px;margin-bottom:-1px;flex:0 0 auto}
+  .tab{padding:5px 8px 6px;border-radius:8px 8px 0 0;color:var(--muted);font-size:10.5px;font-weight:800;white-space:nowrap}
+  .tab.active{color:var(--title);border:1px solid var(--row-border);border-bottom:1px solid var(--panel);background:var(--panel);position:relative;top:1px}
+  .btnSlot{padding-bottom:6px;display:flex;align-items:center;flex:0 0 auto}
+  .pencil{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+
+  /* ---- shared base for every candidate button ---- */
+  .cand{display:inline-flex;align-items:center;gap:6px;border:0;cursor:pointer;font-family:inherit;white-space:nowrap;flex:0 0 auto}
+
+  /* 01 Accent-filled pill */
+  .b1{padding:6px 14px 6px 11px;border-radius:999px;background:linear-gradient(180deg,color-mix(in srgb,var(--focus-border) 88%,white 0%),color-mix(in srgb,var(--focus-border) 78%,black 6%));color:#fff;font-size:11.5px;font-weight:850;letter-spacing:.03em;box-shadow:none}
+
+  /* 02 Icon-only circular */
+  .b2{width:30px;height:30px;border-radius:999px;justify-content:center;background:color-mix(in srgb,var(--focus-border) 16%,var(--panel));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--focus-border) 45%,transparent)}
+  .b2 .pencil{width:15px;height:15px;color:var(--focus-border)}
+
+  /* 03 Tab-family chip */
+  .b3{padding:6px 13px 7px;border-radius:8px 8px 0 0;background:color-mix(in srgb,var(--focus-border) 10%,var(--panel));color:var(--focus-border);font-size:11.5px;font-weight:850;letter-spacing:.02em;box-shadow:inset 0 -2px 0 var(--focus-border);position:relative;top:1px}
+
+  /* 04 Left-accent-bar chip */
+  .b4{padding:6px 12px 6px 10px;border-radius:7px;background:color-mix(in srgb,var(--focus-border) 8%,var(--panel));color:var(--title);font-size:11.5px;font-weight:850;letter-spacing:.02em;box-shadow:inset 3px 0 0 var(--focus-border), 0 0 0 1px var(--row-border-2)}
+
+  /* 05 Elevated floating chip */
+  .b5{padding:6px 14px;border-radius:999px;background:var(--panel);color:var(--title);font-size:11.5px;font-weight:850;letter-spacing:.02em;box-shadow:0 6px 14px rgba(24,35,44,.18),0 0 0 1px color-mix(in srgb,var(--focus-border) 40%,transparent)}
+
+  /* ---- animated candidates ---- */
+
+  /* 06 Idle glow pulse */
+  .b6{padding:6px 14px 6px 11px;border-radius:999px;background:color-mix(in srgb,var(--focus-border) 14%,var(--panel));color:var(--title);font-size:11.5px;font-weight:850;letter-spacing:.02em;box-shadow:0 0 0 0 color-mix(in srgb,var(--focus-border) 55%,transparent);animation:glowPulse 2.6s ease-in-out infinite}
+  @keyframes glowPulse{
+    0%,100%{ box-shadow:0 0 0 0 color-mix(in srgb,var(--focus-border) 45%,transparent); }
+    50%{ box-shadow:0 0 0 6px color-mix(in srgb,var(--focus-border) 0%,transparent); }
+  }
+
+  /* 07 Hover fill sweep */
+  .b7{position:relative;padding:6px 14px;border-radius:999px;background:var(--panel);color:var(--title);font-size:11.5px;font-weight:850;letter-spacing:.02em;box-shadow:inset 0 0 0 1.5px var(--focus-border);overflow:hidden;isolation:isolate;transition:color .32s ease}
+  .b7::before{content:"";position:absolute;inset:0;z-index:-1;background:var(--focus-border);transform:scaleX(0);transform-origin:left;transition:transform .32s cubic-bezier(.65,0,.35,1)}
+  .b7:hover,.b7:focus-visible{color:#fff}
+  .b7:hover::before,.b7:focus-visible::before{transform:scaleX(1)}
+
+  /* 08 Idle icon wiggle */
+  .b8{padding:6px 14px 6px 11px;border-radius:999px;background:color-mix(in srgb,var(--focus-border) 12%,var(--panel));color:var(--title);font-size:11.5px;font-weight:850;letter-spacing:.02em;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--focus-border) 38%,transparent)}
+  .b8 .pencil{animation:wiggle 3.4s ease-in-out infinite}
+  @keyframes wiggle{
+    0%,80%,100%{ transform:rotate(0); }
+    83%{ transform:rotate(-14deg); }
+    86%{ transform:rotate(10deg); }
+    89%{ transform:rotate(-6deg); }
+    92%{ transform:rotate(0); }
+  }
+
+  /* 09 Hover icon spin+scale */
+  .b9{padding:6px 14px 6px 11px;border-radius:999px;background:var(--panel);color:var(--title);font-size:11.5px;font-weight:850;letter-spacing:.02em;box-shadow:0 0 0 1.5px var(--row-border-2);transition:box-shadow .2s ease}
+  .b9:hover,.b9:focus-visible{box-shadow:0 0 0 1.5px var(--focus-border)}
+  .b9 .pencil{transition:transform .32s cubic-bezier(.34,1.56,.64,1)}
+  .b9:hover .pencil,.b9:focus-visible .pencil{transform:rotate(-25deg) scale(1.15)}
+
+  /* 10 Idle shimmer sheen */
+  .b10{position:relative;padding:6px 14px 6px 11px;border-radius:999px;background:linear-gradient(180deg,color-mix(in srgb,var(--focus-border) 85%,white 0%),color-mix(in srgb,var(--focus-border) 74%,black 6%));color:#fff;font-size:11.5px;font-weight:850;letter-spacing:.02em;overflow:hidden}
+  .b10::after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(75deg,transparent,rgba(255,255,255,.55),transparent);animation:sheen 3.2s ease-in-out infinite}
+  @keyframes sheen{
+    0%,30%{ left:-60%; }
+    70%,100%{ left:140%; }
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    .b6,.b8 .pencil,.b10::after{animation:none!important}
+  }
+
+  .hint{margin-top:6px;color:var(--meta-muted);font-size:10.5px;font-style:italic}
+
+  .final{margin-top:30px;padding:14px 16px;border-left:3px solid var(--meta-blue);background:#192329;color:var(--meta-muted);font-size:13px;line-height:1.6}
+  .final b{color:var(--meta-text)}
+  @media(max-width:500px){body{padding:22px 14px}.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+  <h1>Edit toggle button: alternatives</h1>
+  <p class="lede">On Receiver Hopper Weights (and Recipe's own header at narrower widths) the Edit/Done toggle has no sibling action next to it - it's the only thing in the header's right side, and today it's a plain outlined rectangle: transparent fill, a barely-there 20%-opacity border, small dark text. Every mockup below reproduces that exact context - the Weights panel's title, tab strip, and the button alone on the right - so each candidate is judged in the actual spot it will sit.</p>
+  <p class="sub">All ten reuse var(--focus-border), the same per-theme accent Scan/Print already draw from on mobile - so whichever direction you pick will automatically follow every theme, not just Industrial Slate shown here.</p>
+
+  <h2>Static alternatives</h2>
+  <section class="grid">
+
+    <article class="option">
+      <div class="optionHead"><span class="num">01</span><span class="name">Accent-filled pill</span><span class="tag">Reads as a real action</span></div>
+      <div class="mock"><div class="card">
+        <div class="cardTitle"><svg viewBox="0 0 32 32"><path d="m12 3 9 5-9 5-9-5Z"/><path d="m3 12 9 5 9-5"/></svg>Recipe</div>
+        <div class="headerRow">
+          <div class="tabs"><span class="tab">Current</span><span class="tab">Next</span><span class="tab active">Weights</span><span class="tab">Recipe Book</span></div>
+          <div class="btnSlot"><button class="cand b1"><svg class="pencil" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Edit</button></div>
+        </div>
+      </div></div>
+      <div class="note">Solid gradient fill in the theme accent, white text - the same visual weight as a primary action button elsewhere in the app, so it stops reading as "leftover chrome."</div>
+    </article>
+
+    <article class="option">
+      <div class="optionHead"><span class="num">02</span><span class="name">Icon-only circle</span><span class="tag">Matches Scan/Print's language</span></div>
+      <div class="mock"><div class="card">
+        <div class="cardTitle"><svg viewBox="0 0 32 32"><path d="m12 3 9 5-9 5-9-5Z"/><path d="m3 12 9 5 9-5"/></svg>Recipe</div>
+        <div class="headerRow">
+          <div class="tabs"><span class="tab">Current</span><span class="tab">Next</span><span class="tab active">Weights</span><span class="tab">Recipe Book</span></div>
+          <div class="btnSlot"><button class="cand b2" aria-label="Edit" title="Edit"><svg class="pencil" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button></div>
+        </div>
+      </div></div>
+      <div class="note">Drops the label entirely - a small tinted circle with just the pencil, the same 30px/icon-only treatment Recipe's mobile Scan and Print already use. Smallest footprint; relies on the pencil glyph being self-explanatory (it already is used this way elsewhere in the app for editing).</div>
+    </article>
+
+    <article class="option">
+      <div class="optionHead"><span class="num">03</span><span class="name">Tab-family chip</span><span class="tag">Belongs with the tab strip</span></div>
+      <div class="mock"><div class="card">
+        <div class="cardTitle"><svg viewBox="0 0 32 32"><path d="m12 3 9 5-9 5-9-5Z"/><path d="m3 12 9 5 9-5"/></svg>Recipe</div>
+        <div class="headerRow">
+          <div class="tabs"><span class="tab">Current</span><span class="tab">Next</span><span class="tab active">Weights</span><span class="tab">Recipe Book</span></div>
+          <div class="btnSlot"><button class="cand b3">Edit</button></div>
+        </div>
+      </div></div>
+      <div class="note">Same top-rounded tab shape and baseline as Current/Next/Weights, plus a colored underline - reads as "one more tab in this row" rather than a foreign rectangle, at the cost of slightly blurring "these are pages, that's an action."</div>
+    </article>
+
+    <article class="option">
+      <div class="optionHead"><span class="num">04</span><span class="name">Left-accent-bar chip</span><span class="tag">Subtle, card-style accent</span></div>
+      <div class="mock"><div class="card">
+        <div class="cardTitle"><svg viewBox="0 0 32 32"><path d="m12 3 9 5-9 5-9-5Z"/><path d="m3 12 9 5 9-5"/></svg>Recipe</div>
+        <div class="headerRow">
+          <div class="tabs"><span class="tab">Current</span><span class="tab">Next</span><span class="tab active">Weights</span><span class="tab">Recipe Book</span></div>
+          <div class="btnSlot" style="padding-bottom:8px"><button class="cand b4">Edit</button></div>
+        </div>
+      </div></div>
+      <div class="note">Keeps a rectangle (closest to today's shape) but adds a colored left edge and a faint tint - the same accent-stripe language the app already uses for notification/status rows, so it's a small, low-risk step up from the current plain box.</div>
+    </article>
+
+    <article class="option">
+      <div class="optionHead"><span class="num">05</span><span class="name">Elevated floating chip</span><span class="tag">Shadow does the work</span></div>
+      <div class="mock"><div class="card">
+        <div class="cardTitle"><svg viewBox="0 0 32 32"><path d="m12 3 9 5-9 5-9-5Z"/><path d="m3 12 9 5 9-5"/></svg>Recipe</div>
+        <div class="headerRow">
+          <div class="tabs"><span class="tab">Current</span><span class="tab">Next</span><span class="tab active">Weights</span><span class="tab">Recipe Book</span></div>
+          <div class="btnSlot"><button class="cand b5">Edit</button></div>
+        </div>
+      </div></div>
+      <div class="note">No fill at all - white pill with an accent-colored ring and a real drop shadow, so it visually lifts off the flat header row like a small floating action button. Distinctive without adding any color weight to the page.</div>
+    </article>
+
+  </section>
+
+  <h2>Animated alternatives</h2>
+  <p class="sub">6-9 loop automatically so they're visible without touching anything; 7 and 9 are hover/focus-triggered - point at them (or tab to them with the keyboard). All four looping ones respect prefers-reduced-motion and freeze in their resting state for anyone with that setting on.</p>
+  <section class="grid">
+
+    <article class="option">
+      <div class="optionHead"><span class="num">06</span><span class="name">Idle glow pulse</span><span class="tag">Loops · passive attention</span></div>
+      <div class="mock"><div class="card">
+        <div class="cardTitle"><svg viewBox="0 0 32 32"><path d="m12 3 9 5-9 5-9-5Z"/><path d="m3 12 9 5 9-5"/></svg>Recipe</div>
+        <div class="headerRow">
+          <div class="tabs"><span class="tab">Current</span><span class="tab">Next</span><span class="tab active">Weights</span><span class="tab">Recipe Book</span></div>
+          <div class="btnSlot"><button class="cand b6"><svg class="pencil" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Edit</button></div>
+        </div>
+      </div></div>
+      <div class="note">A soft ring breathes outward and fades, slowly, forever. Draws the eye without asking for a click - probably too much motion for a button an operator sees on every visit, better suited to a one-time "something's new here" moment.</div>
+    </article>
+
+    <article class="option">
+      <div class="optionHead"><span class="num">07</span><span class="name">Hover fill sweep</span><span class="tag">Hover/focus to see it</span></div>
+      <div class="mock"><div class="card">
+        <div class="cardTitle"><svg viewBox="0 0 32 32"><path d="m12 3 9 5-9 5-9-5Z"/><path d="m3 12 9 5 9-5"/></svg>Recipe</div>
+        <div class="headerRow">
+          <div class="tabs"><span class="tab">Current</span><span class="tab">Next</span><span class="tab active">Weights</span><span class="tab">Recipe Book</span></div>
+          <div class="btnSlot"><button class="cand b7">Edit</button></div>
+        </div>
+      </div></div>
+      <div class="note">Static and quiet at rest (just an outlined pill), fills solid with color on hover/focus. All the payoff lands on interaction instead of demanding attention all the time - the safer choice for a button used constantly.</div>
+    </article>
+
+    <article class="option">
+      <div class="optionHead"><span class="num">08</span><span class="name">Idle icon wiggle</span><span class="tag">Loops · occasional, not constant</span></div>
+      <div class="mock"><div class="card">
+        <div class="cardTitle"><svg viewBox="0 0 32 32"><path d="m12 3 9 5-9 5-9-5Z"/><path d="m3 12 9 5 9-5"/></svg>Recipe</div>
+        <div class="headerRow">
+          <div class="tabs"><span class="tab">Current</span><span class="tab">Next</span><span class="tab active">Weights</span><span class="tab">Recipe Book</span></div>
+          <div class="btnSlot"><button class="cand b8"><svg class="pencil" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Edit</button></div>
+        </div>
+      </div></div>
+      <div class="note">The button itself stays still; only the pencil gives a quick "I write things" wiggle every few seconds, most of the loop resting. Gentler than a pulsing glow since the motion is brief and self-contained to the icon.</div>
+    </article>
+
+    <article class="option">
+      <div class="optionHead"><span class="num">09</span><span class="name">Hover icon spin</span><span class="tag">Hover/focus to see it</span></div>
+      <div class="mock"><div class="card">
+        <div class="cardTitle"><svg viewBox="0 0 32 32"><path d="m12 3 9 5-9 5-9-5Z"/><path d="m3 12 9 5 9-5"/></svg>Recipe</div>
+        <div class="headerRow">
+          <div class="tabs"><span class="tab">Current</span><span class="tab">Next</span><span class="tab active">Weights</span><span class="tab">Recipe Book</span></div>
+          <div class="btnSlot"><button class="cand b9"><svg class="pencil" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Edit</button></div>
+        </div>
+      </div></div>
+      <div class="note">A believable "about to write" gesture - the pencil tips and grows slightly on hover, ring brightens to the accent. Cheap on continuous attention (nothing moves until you're already pointed at it) but still has personality.</div>
+    </article>
+
+    <article class="option">
+      <div class="optionHead"><span class="num">10</span><span class="name">Idle shimmer sheen</span><span class="tag">Loops · "notice me"</span></div>
+      <div class="mock"><div class="card">
+        <div class="cardTitle"><svg viewBox="0 0 32 32"><path d="m12 3 9 5-9 5-9-5Z"/><path d="m3 12 9 5 9-5"/></svg>Recipe</div>
+        <div class="headerRow">
+          <div class="tabs"><span class="tab">Current</span><span class="tab">Next</span><span class="tab active">Weights</span><span class="tab">Recipe Book</span></div>
+          <div class="btnSlot"><button class="cand b10"><svg class="pencil" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Edit</button></div>
+        </div>
+      </div></div>
+      <div class="note">A light streak sweeps across the filled pill every few seconds, the way a "premium" or "new feature" button sometimes shines. Highest-personality option here - probably reads as too promotional for a plain mode toggle an operator uses many times a shift.</div>
+    </article>
+
+  </section>
+
+  <p class="final"><b>My lean:</b> #1 (accent-filled pill) if you want it static, or #7 (hover fill sweep) if you want motion - they're the same pill at rest, #7 just adds the fill as a hover payoff instead of a permanent state. Both give the button real visual weight without asking for continuous attention. #2 (icon-only circle) is worth a look too since it directly extends the icon language Scan/Print already established for mobile actions, though it trades the explicit "Edit" label for a glyph people have to learn once. Of the two idle-looping options that keep moving forever (#6's glow, #10's shimmer), I'd skip both for a control seen dozens of times a shift - constant motion on something that routine gets tuned out or gets annoying, not noticed. #8's icon wiggle is the gentler middle ground if you want some idle personality without going that far.</p>
+</main>
+</body>
+</html>

@@ -40,3 +40,33 @@ test("gruvbox's own rainbow override is untouched", () => {
   assert.match(styles, /body:is\(\[data-theme="gruvbox-dark"\],\[data-theme="gruvbox-light"\]\) \.workspaceNavButton\[data-workspace-target="lineSetupBlock"\]\{ --tile-accent:var\(--gruv-orange\); \}/);
   assert.match(styles, /body:is\(\[data-theme="gruvbox-dark"\],\[data-theme="gruvbox-light"\]\) \.workspaceNavButton\[data-workspace-target="resultsBlock"\]\{ --tile-accent:var\(--gruv-blue\); \}/);
 });
+
+// "Request beta access" is a .helpPlayBanner, not a .workspaceNavButton, but
+// shares the expanded "Workspace & support" list with RT Sync / RT Notes /
+// Tools / Changelog / Sudo access. The two themes that retune the mobile nav
+// title colour (Gruvbox, Industrial Slate) must retune the banner's title the
+// same way or it reads as a foreign row - Industrial Slate's near-black
+// var(--text) on the pale slate ground was the visible bug.
+test("the beta-access banner title tracks the same mobile nav-title colour as the other Workspace & support rows", () => {
+  assert.match(
+    styles,
+    /body:is\(\[data-theme="gruvbox-dark"\],\[data-theme="gruvbox-light"\]\) \.helpPlayBanner strong\{ color:var\(--gruv-mobile-ink\); \}/
+  );
+  assert.match(
+    theme,
+    /:where\(html, body\)\[data-theme="industrial-slate"\] \.helpPlayBanner strong\{color:#607d9b\}/
+  );
+});
+
+test("the beta-access title fix rides the same rule as the workspaceNavButton title, not a lone new selector", () => {
+  // Kept in one selector list with .workspaceNavButton span so the two can
+  // never drift apart on a future palette change.
+  assert.match(
+    styles,
+    /body:is\(\[data-theme="gruvbox-dark"\],\[data-theme="gruvbox-light"\]\) \.workspaceNavButton span,\s*\n\s*body:is\(\[data-theme="gruvbox-dark"\],\[data-theme="gruvbox-light"\]\) \.helpPlayBanner strong\{ color:var\(--gruv-mobile-ink\); \}/
+  );
+  assert.match(
+    theme,
+    /:where\(html, body\)\[data-theme="industrial-slate"\] \.workspaceNavButton:not\(\.active\) span,\s*\n\s*:where\(html, body\)\[data-theme="industrial-slate"\] \.helpPlayBanner strong\{color:#607d9b\}/
+  );
+});

@@ -22,19 +22,54 @@ test("the standalone 'Sorted by upcoming time' caption is gone from the Timeline
   assert.doesNotMatch(pane, /Sorted by upcoming time/);
 });
 
-test("the three controls sit in one non-wrapping bar with Show all grouped and prominent", () => {
+test("the three controls sit in one non-wrapping bar with Show all in the leading slot", () => {
   assert.match(html, /<div class="[^"]*\btimelineControlBar\b[^"]*" id="timelineControlsRow">/);
-  // Label and toggle stay welded together as the Show all group.
+  // Show all is a compact toggle button in the leading group - not a sliding
+  // switch. Same underlying id, now a <button> exposing aria-pressed.
   assert.match(
     controls,
-    /<span class="timelineControlBarShowAll">\s*<span class="trackLabel">Show all<\/span>\s*<div\s+id="showPumpOffToggle"/
+    /<span class="timelineControlBarShowAll">\s*<button\s+id="showPumpOffToggle"\s+class="timelineControlToggle"\s+type="button"\s+aria-pressed="false"[\s\S]*?>Show all<\/button>/
   );
+  assert.doesNotMatch(controls, /id="showPumpOffToggle"[^>]*role="switch"/);
+  assert.doesNotMatch(controls, /id="showPumpOffToggle"[^>]*class="toggle"/);
   assert.match(styles, /\.timelineControlBar\{[\s\S]*?flex-wrap:nowrap;/);
   // Reset + gear are pushed to the trailing edge by the Reset button's margin.
   assert.match(styles, /\.timelineControlBar > #resetTrackingBtn\{ margin-left:auto; \}/);
   // The gear no longer owns the auto margin (Reset does now).
   const gear = styles.slice(styles.indexOf(".timelineDisplayToggle{"), styles.indexOf(".timelineDisplayToggle svg"));
   assert.doesNotMatch(gear, /margin-left:auto/);
+});
+
+test("Show all is a compact toggle button: subdued when off, theme-accent tint when on", () => {
+  const block = styles.slice(
+    styles.indexOf(".timelineControlToggle{"),
+    styles.indexOf("\n/* A toggle whose feature has nothing to act on yet")
+  );
+  // Understated at rest - faint outline, no fill, muted text, sized like the
+  // sibling actions.
+  assert.match(block, /\.timelineControlToggle\{[\s\S]*?border:1px solid var\(--border2\);[\s\S]*?background:transparent;[\s\S]*?color:var\(--muted\);[\s\S]*?\}/);
+  // Active state rides the theme's own accent tokens - no hard-coded colour -
+  // and stays light: a --focus-ring wash, --focus-border edge, title-weight ink.
+  assert.match(block, /\.timelineControlToggle\[aria-pressed="true"\]\{[\s\S]*?border-color:var\(--focus-border\);[\s\S]*?background:var\(--focus-ring\);[\s\S]*?color:var\(--title\);[\s\S]*?\}/);
+  assert.doesNotMatch(block, /#[0-9a-fA-F]{3,6}\b/);
+  assert.match(block, /\.timelineControlToggle:focus-visible\{ outline:2px solid var\(--focus-border\);/);
+  // Grows to a comfortable touch target on mobile, same as its siblings.
+  assert.match(styles, /@media \(max-width:600px\)\{[\s\S]*?\.timelineControlToggle\{ min-height:36px;[\s\S]*?\}/);
+});
+
+test("Show all keeps its exact toggle behaviour - same state, same generic hookToggle wiring", () => {
+  // Still routed through hookToggle against the same state flag; only the
+  // element type and ARIA attribute changed.
+  assert.match(app, /hookToggle\(\s*"showPumpOffToggle",\s*\(\)=> !!state\.showPumpOffTracked,\s*\(v\)=> \{ state\.showPumpOffTracked = !!v; \}\s*\)/);
+  // syncToggleUI now writes aria-pressed for toggle buttons, aria-checked for
+  // the remaining role="switch" controls - so rebuildUIFromState and resetAll
+  // keep re-syncing the button through the exact same call.
+  assert.match(app, /if \(el\.hasAttribute\("aria-pressed"\)\) el\.setAttribute\("aria-pressed", String\(!!on\)\);\s*\n\s*else el\.setAttribute\("aria-checked", String\(!!on\)\);/);
+  assert.match(app, /syncToggleUI\("showPumpOffToggle", !!state\.showPumpOffTracked\);/);
+  // Reset tracking (the Timeline control) clears per-hopper flags only and
+  // never touches the Show all view filter - unchanged.
+  const rt = app.slice(app.indexOf("function resetTracking(){"), app.indexOf("function resetAll(){"));
+  assert.doesNotMatch(rt, /showPumpOffTracked/);
 });
 
 test("Reset tracking is a quiet icon-text action, not a large outlined button", () => {

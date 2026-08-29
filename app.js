@@ -989,7 +989,10 @@
     const el = $(id);
     if (!el) return;
     el.classList.toggle("on", !!on);
-    el.setAttribute("aria-checked", String(!!on));
+    // Toggle buttons expose state through aria-pressed; the remaining
+    // role="switch" controls still use aria-checked.
+    if (el.hasAttribute("aria-pressed")) el.setAttribute("aria-pressed", String(!!on));
+    else el.setAttribute("aria-checked", String(!!on));
     document.querySelectorAll(`[data-toggle-state-for="${id}"]`).forEach(status=>{
       status.textContent = on ? "Enabled" : "Disabled";
       status.dataset.state = on ? "on" : "off";

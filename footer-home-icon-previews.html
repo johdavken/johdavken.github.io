@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Footer home icon alternatives · Resin.Tools</title>
+  <style>
+    :root{color-scheme:dark;--page:#0d151a;--phone:#171e22;--panel:#252d31;--panel2:#20292e;--ink:#e8edf1;--muted:#8f9da5;--line:#3d4c54;--blue:#79a7dc;--orange:#ff7d00;--amber:#f1aa00}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--page);color:var(--ink);font:14px/1.4 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    main{max-width:1260px;margin:auto;padding:36px 22px 64px}
+    h1{margin:0 0 7px;font-size:clamp(25px,3vw,38px);letter-spacing:-.025em}
+    .lead{max-width:760px;margin:0 0 30px;color:var(--muted);font-size:15px}
+    .gallery{display:grid;grid-template-columns:repeat(2,minmax(310px,1fr));gap:24px}
+    .concept{padding:18px;border:1px solid #334149;border-radius:18px;background:#131b20}
+    .concept-head{display:flex;align-items:baseline;justify-content:space-between;gap:14px;margin-bottom:12px}
+    h2{margin:0;font-size:16px}.tag{color:var(--blue);font-size:10px;font-weight:850;letter-spacing:.09em;text-transform:uppercase}
+    .phone{overflow:hidden;border:5px solid #2c3a42;border-radius:23px;background:var(--phone);box-shadow:0 14px 30px #0005}
+    .screen{display:flex;min-height:220px;flex-direction:column}
+    .content{display:flex;flex:1;flex-direction:column;padding:19px 16px 14px}
+    .eyebrow{display:flex;justify-content:space-between;color:var(--muted);font-size:9px;font-weight:850;letter-spacing:.1em;text-transform:uppercase}
+    .rail{display:grid;gap:7px;margin-top:auto}.rail span{display:block;height:7px;border-radius:9px;background:#253037}.rail span:nth-child(1){width:58%}.rail span:nth-child(2){width:82%}.rail span:nth-child(3){width:70%}
+    .footer{display:grid;grid-template-columns:repeat(3,1fr);height:58px;border-top:1px solid var(--line);background:color-mix(in srgb,var(--panel) 96%,transparent)}
+    button{display:flex;align-items:center;justify-content:center;gap:4px;padding:0;border:0;background:transparent;color:var(--muted);font:inherit;font-size:9px;font-weight:800}
+    button.active{color:var(--orange)}button.alert{color:var(--amber)}
+    svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+    .main-icon{width:22px;height:22px}.solid{fill:currentColor;stroke:none}.accent-fill{fill:color-mix(in srgb,var(--orange) 18%,transparent)}
+    .note{margin:11px 2px 0;color:var(--muted);font-size:12px}.note strong{color:var(--ink)}
+    @media(max-width:760px){main{padding:24px 14px 44px}.gallery{grid-template-columns:1fr}.concept{padding:14px}}
+  </style>
+</head>
+<body>
+<main>
+  <h1>10 footer home icon alternatives</h1>
+  <p class="lead">Each option replaces the current stacked-layers symbol in the compact mobile footer. All are drawn as inline SVG at the footer's real visual scale.</p>
+  <section class="gallery" id="gallery" aria-label="Home icon alternatives"></section>
+</main>
+<script>
+  const icons = [
+    ['Classic house','Familiar','<path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/>','The clearest universal home metaphor.'],
+    ['Soft roof','Friendly','<path d="M4 11.5 12 4l8 7.5V20H4Z"/><path d="M9.5 20v-6h5v6"/>','A compact silhouette with softer proportions.'],
+    ['Home outline','Minimal','<path d="m5 10 7-6 7 6v10H5Z"/><path d="M8 20v-7h8v7"/>','Simple geometry that stays legible at 19–22px.'],
+    ['Filled home','Bold','<path class="solid" d="M2.9 10.5 11.2 3a1.2 1.2 0 0 1 1.6 0l8.3 7.5a1 1 0 0 1-.7 1.7H19V20a1 1 0 0 1-1 1h-4v-6h-4v6H6a1 1 0 0 1-1-1v-7.8H3.6a1 1 0 0 1-.7-1.7Z"/>','Strongest selected-state presence and best low-vision contrast.'],
+    ['House + node','Workflow','<path d="m4 10 8-7 8 7v10H4Z"/><circle cx="12" cy="14" r="2.5"/><path d="M12 16.5V20"/>','Connects “home” to the app’s workflow-node language.'],
+    ['Factory home','Industrial','<path d="M3 21V10l6 3V9l6 4V5h5v16Z"/><path d="M7 17h2M13 17h2"/>','Production-specific and distinctive, with less generic app chrome.'],
+    ['Dashboard grid','Product','<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>','Says dashboard or main menu rather than literal residence.'],
+    ['Command center','Technical','<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 4v3M20 12h-3M12 20v-3M4 12h3"/>','A central hub metaphor that matches a production tool.'],
+    ['Workshop','Utility','<path d="M3 21V9l9-6 9 6v12Z"/><path d="M7 21v-7h10v7M9 10h6"/>','A home/workshop hybrid that keeps the meaning contextual.'],
+    ['Home monogram','Branded','<path d="m4 11 8-7 8 7"/><path d="M6 10v10h12V10"/><path d="M9 16h6M12 13v6"/>','House plus a small tool-like cross for a custom identity.']
+  ];
+  const palette='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9c0-1-.8-1.8-1.8-1.8h-2.1a2 2 0 0 1-2-2V6.8C15.1 4.7 13.9 3 12 3Z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="8.5" cy="16" r="1"/></svg>';
+  const bell='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9.2a6 6 0 1 0-12 0c0 4.6-2 5.8-2 5.8h16s-2-1.2-2-5.8Z"/><path d="M13.7 19a2 2 0 0 1-3.4 0"/></svg>';
+  document.querySelector('#gallery').innerHTML=icons.map((item,i)=>`<article class="concept"><div class="concept-head"><h2>${i+1}. ${item[0]}</h2><span class="tag">${item[1]}</span></div><div class="phone"><div class="screen"><div class="content"><div class="eyebrow"><span>Production workflow</span><span>Local</span></div><div class="rail"><span></span><span></span><span></span></div></div><nav class="footer" aria-label="App navigation"><button>${palette}<span>Display</span></button><button class="active" aria-current="page"><svg class="main-icon" viewBox="0 0 24 24" aria-hidden="true">${item[2]}</svg><span>Main</span></button><button class="alert">${bell}<span>Alerts</span></button></nav></div></div><p class="note"><strong>Why it works:</strong> ${item[3]}</p></article>`).join('');
+</script>
+</body>
+</html>

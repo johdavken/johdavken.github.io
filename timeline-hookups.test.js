@@ -136,7 +136,7 @@ test("resin names still never reach the DOM through a template literal", () => {
 
 test("Show all stays put; Enhanced tracking is replaced by a gear that opens a display sheet", () => {
   const controls = html.slice(html.indexOf('id="timelineControlsRow"'), html.indexOf('id="resultsArea"'));
-  assert.match(controls, /<span class="trackLabel">Show all<\/span>/);
+  assert.match(controls, /<button\s+id="showPumpOffToggle"[\s\S]*?>Show all<\/button>/);
   assert.match(controls, /id="showPumpOffToggle"/);
   assert.match(controls, /id="resetTrackingBtn"/);
   assert.match(controls, /id="timelineDisplayToggle"[\s\S]*?aria-haspopup="dialog"[\s\S]*?aria-controls="timelineDisplaySheet"/);

@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Resin.Tools hopper mark</title>
+  <desc id="desc">A simplified industrial hopper with an angled material feed tube.</desc>
+
+  <!-- The dark field preserves the high-contrast machine-label character of
+       the reference hopper. All geometry is intentionally flat so this mark
+       remains legible at launcher-icon and favicon sizes. -->
+  <rect width="512" height="512" rx="72" fill="#202224"/>
+
+  <g fill="#f4f3ef">
+    <!-- Upper material bin -->
+    <path d="M131 78c-8 0-13 8-10 16l42 119c2 6 7 9 13 9h256c6 0 11-4 13-10l37-121c2-8-4-15-12-15Z"/>
+
+    <!-- Angled feed tube, kept as two pieces like the hopper decal -->
+    <path d="m68 194 64-66 25 66-49 47Z"/>
+    <path d="m20 294 40-83 39 39Z"/>
+
+    <!-- Lower receiver: the negative window and lower taper are cut from one
+         continuous silhouette to keep the assembly recognizable when small. -->
+    <path fill-rule="evenodd" d="M171 231h273c8 0 14 6 14 14v112c0 6-3 11-8 14l-18 10-59 91c-3 5-8 8-14 8H253c-5 0-10-2-13-6l-67-84c-4-5-6-10-6-16V245c0-8 6-14 14-14Zm16 20v109h251V251Zm20 129 56 71h86l46-71Z"/>
+  </g>
+</svg>

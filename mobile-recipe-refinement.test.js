@@ -64,9 +64,15 @@ test("light-theme support contrast is scoped per palette, not painted into Dark 
   assert.match(theme,/@media \(max-width:700px\)\{[\s\S]*?\[data-theme="gruvbox-light"\][\s\S]*?splitCellHopperName/);
 });
 
-test("Industrial Slate's mobile home screen retunes its near-black text (var(--text)/var(--muted)) to the theme's own slate blue - Changeover/Output values and un-selected workflow tile titles",()=>{
-  const start = theme.lastIndexOf('@media (max-width:700px){', theme.indexOf('[data-theme="industrial-slate"] #splitsBlock'));
-  assert.notEqual(start, -1);
+test("Industrial Slate retunes its near-black Changeover/Output values and workflow tile titles to slate blue across the whole touch shell, phone and tablet",()=>{
+  // The retune lives in the same "(width <= 900px), pointer:coarse" range
+  // styles.css uses to render this mobile-style home screen - NOT the
+  // phone-only max-width:700px block - so tablets (701-900px) get it too.
+  const anchor = theme.indexOf('[data-theme="industrial-slate"] .mobileProductionControls .gaugeTimeValue');
+  assert.notEqual(anchor, -1);
+  const start = theme.lastIndexOf('@media ', anchor);
+  const mediaLine = theme.slice(start, theme.indexOf('{', start));
+  assert.match(mediaLine, /@media \(width <= 900px\), \(min-width: 901px\) and \(pointer: coarse\)/);
   const block = theme.slice(start, theme.indexOf("\n}\n", start));
   // Changeover time / Output values (.mobileProductionControls
   // .gaugeTimeValue/.mobileLineRateReadout, styles.css color:var(--text))
@@ -76,11 +82,19 @@ test("Industrial Slate's mobile home screen retunes its near-black text (var(--t
   // styles.css's .workspaceNavButton span{color:var(--text)} (inside the
   // shared max-width:900px/pointer:coarse block) is a later, equal-
   // specificity rule that wins over the button's own color:inherit - a
-  // button-level override alone would never reach the visible text.
-  assert.match(block, /:where\(html, body\)\[data-theme="industrial-slate"\] \.workspaceNavButton:not\(\.active\) span\{color:#607d9b\}/);
+  // button-level override alone would never reach the visible text. Shares
+  // one selector list with .helpPlayBanner strong (Request beta access), the
+  // one row in this list that isn't a .workspaceNavButton.
+  assert.match(block, /:where\(html, body\)\[data-theme="industrial-slate"\] \.workspaceNavButton:not\(\.active\) span,\s*\n\s*:where\(html, body\)\[data-theme="industrial-slate"\] \.helpPlayBanner strong\{color:#607d9b\}/);
   // Never touches the selected tile's own color:var(--title) treatment.
   assert.doesNotMatch(block, /industrial-slate"\] \.workspaceNavButton\.active/);
-  // And it's mobile-only - desktop's own #lineSetupBlock .gaugeTimeValue
+  // The phone-only compact-recipe retunes stay capped at max-width:700px -
+  // the home-screen readouts are no longer in that block.
+  const phoneStart = theme.lastIndexOf('@media (max-width:700px){', theme.indexOf('[data-theme="industrial-slate"] #splitsBlock'));
+  assert.notEqual(phoneStart, -1);
+  const phoneBlock = theme.slice(phoneStart, theme.indexOf("\n}\n", phoneStart));
+  assert.doesNotMatch(phoneBlock, /\.mobileProductionControls \.gaugeTimeValue/);
+  // And it's touch-only - desktop's own #lineSetupBlock .gaugeTimeValue
   // (styles.css, color:var(--text)) and the desktop sidebar rail are
   // untouched by this file entirely.
   assert.doesNotMatch(theme, /#lineSetupBlock \.gaugeTimeValue/);

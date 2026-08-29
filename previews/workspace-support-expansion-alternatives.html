@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Workspace &amp; support expansion — 6 directions</title>
+<style>
+  :root{
+    --page:#141510;
+    --panel:#1d1e18;
+    --panel2:#23241d;
+    --edge:#38392f;
+    --ink:#ece4c8;
+    --muted:#a29d84;
+    --shadow:0 18px 40px rgba(0,0,0,.55);
+    --rt:#7fae86;
+    --tools:#c98a94;
+    --beta:#8fbf7f;
+    --log:#6fa3ab;
+    --sudo:#c9974b;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    background:radial-gradient(circle at 15% -10%,rgba(143,191,127,.06),transparent 34rem),var(--page);
+    color:var(--ink);
+    font:15px/1.4 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  }
+  main{max-width:2180px;margin:0 auto;padding:40px 44px 70px}
+  header{max-width:980px;margin-bottom:32px}
+  header h1{margin:0 0 8px;font-size:28px;letter-spacing:-.01em}
+  header p{margin:0;color:var(--muted);font-size:14px;line-height:1.6}
+  header p b{color:var(--ink)}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:30px 26px}
+  @media (max-width:1500px){ .grid{grid-template-columns:repeat(2,1fr)} }
+  .concept{display:grid;grid-template-rows:auto 1fr;gap:12px;min-width:0}
+  .chead h2{display:flex;align-items:center;gap:9px;margin:0 0 5px;font-size:15px}
+  .chead h2 b{display:grid;place-items:center;flex:0 0 auto;width:20px;height:20px;border-radius:50%;background:var(--ink);color:var(--page);font-size:11px;font-weight:900}
+  .chead p{margin:0;color:var(--muted);font-size:12px;line-height:1.5}
+
+  .phone{
+    width:100%;
+    max-width:380px;
+    padding:14px 12px 18px;
+    border:1px solid var(--edge);
+    border-radius:20px;
+    background:linear-gradient(165deg,var(--panel2),var(--panel));
+    box-shadow:var(--shadow);
+  }
+
+  /* ---- shared fold header, identical across all six concepts ---- */
+  .fold{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:12px 13px;
+    margin-bottom:10px;
+    border:1px solid color-mix(in srgb,var(--ink) 22%,var(--edge));
+    border-radius:14px;
+    background:color-mix(in srgb,var(--ink) 6%,var(--panel));
+  }
+  .fold i{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:color-mix(in srgb,var(--ink) 12%,transparent);color:var(--muted);font-size:11px;font-weight:800}
+  .fold .ftext{flex:1;min-width:0}
+  .fold strong{display:block;font-size:14px}
+  .fold small{display:block;margin-top:2px;color:var(--muted);font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .fold svg{flex:0 0 auto;width:14px;height:14px;color:var(--ink);transform:rotate(180deg)}
+
+  svg{display:block}
+  .ic{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+  /* ============================================================
+     Concept 1 — Grouped inset card (settings-section feel)
+     ============================================================ */
+  .c1-card{border:1px solid var(--edge);border-radius:14px;background:color-mix(in srgb,var(--ink) 3%,var(--panel));overflow:hidden}
+  .c1-row{--tint:var(--muted);display:flex;align-items:center;gap:11px;padding:11px 13px;border-bottom:1px solid var(--edge)}
+  .c1-row:last-child{border-bottom:0}
+  .c1-badge{display:grid;place-items:center;flex:0 0 auto;width:30px;height:30px;border-radius:9px;background:color-mix(in srgb,var(--tint) 20%,transparent);color:var(--tint)}
+  .c1-text{flex:1;min-width:0}
+  .c1-text strong{display:block;font-size:13.5px;font-weight:750}
+  .c1-text small{display:flex;align-items:center;gap:5px;margin-top:2px;color:var(--muted);font-size:10.5px}
+  .c1-text small::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--tint);flex:0 0 auto}
+  .c1-chev{flex:0 0 auto;width:14px;height:14px;color:var(--muted)}
+  .c1-row.active{background:color-mix(in srgb,var(--tint) 10%,transparent)}
+  .c1-row.active .c1-text strong{color:var(--tint)}
+
+  /* ============================================================
+     Concept 2 — Two-up tile grid (home-screen feel)
+     ============================================================ */
+  .c2-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .c2-tile{--tint:var(--muted);grid-column:span 1;display:grid;gap:6px;padding:12px 11px;border:1px solid color-mix(in srgb,var(--tint) 30%,var(--edge));border-radius:12px;background:color-mix(in srgb,var(--tint) 9%,var(--panel))}
+  .c2-tile.wide{grid-column:1 / -1;grid-template-columns:auto 1fr;align-items:center}
+  .c2-tile .c2-icon{display:grid;place-items:center;width:26px;height:26px;border-radius:8px;background:color-mix(in srgb,var(--tint) 22%,transparent);color:var(--tint)}
+  .c2-tile strong{font-size:13px;font-weight:800}
+  .c2-tile small{display:flex;align-items:center;gap:5px;color:var(--muted);font-size:10px}
+  .c2-tile small::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--tint);flex:0 0 auto}
+  .c2-tile.wide .c2-textcol{display:grid;gap:3px}
+  .c2-tile.active{border-color:var(--tint);background:color-mix(in srgb,var(--tint) 16%,var(--panel))}
+
+  /* ============================================================
+     Concept 3 — Accent-bar rows (colour-coded settings list)
+     ============================================================ */
+  .c3-list{display:grid;gap:7px}
+  .c3-row{--tint:var(--muted);display:flex;align-items:center;gap:11px;padding:10px 12px 10px 11px;border:1px solid var(--edge);border-left:3px solid var(--tint);border-radius:0 10px 10px 0;background:var(--panel)}
+  .c3-badge{display:grid;place-items:center;flex:0 0 auto;width:28px;height:28px;border-radius:50%;background:color-mix(in srgb,var(--tint) 18%,transparent);color:var(--tint)}
+  .c3-text{flex:1;min-width:0}
+  .c3-text strong{display:block;font-size:13.5px;font-weight:750}
+  .c3-text small{display:flex;align-items:center;gap:5px;margin-top:2px;color:var(--muted);font-size:10.5px}
+  .c3-text small::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--tint);flex:0 0 auto}
+  .c3-chev{flex:0 0 auto;width:13px;height:13px;color:var(--muted)}
+  .c3-row.active{background:color-mix(in srgb,var(--tint) 12%,var(--panel));border-left-width:4px}
+
+  /* ============================================================
+     Concept 4 — Connector thread (continues the step-line above)
+     ============================================================ */
+  .c4-list{position:relative;display:grid;gap:0}
+  .c4-row{--tint:var(--muted);position:relative;display:flex;align-items:flex-start;gap:12px;padding:12px 4px}
+  .c4-row::before{
+    content:"";
+    position:absolute;
+    left:13px;
+    top:-1px;
+    width:1px;
+    height:calc(100% + 1px);
+    background:var(--edge);
+  }
+  .c4-row:first-child::before{top:50%}
+  .c4-row:last-child::before{height:50%}
+  .c4-node{position:relative;z-index:1;display:grid;place-items:center;flex:0 0 auto;width:27px;height:27px;border-radius:50%;border:2px solid var(--tint);background:var(--panel);color:var(--tint)}
+  .c4-node svg{width:13px;height:13px}
+  .c4-text{flex:1;min-width:0;padding-top:2px}
+  .c4-text strong{display:block;font-size:13.5px;font-weight:750}
+  .c4-text small{display:flex;align-items:center;gap:5px;margin-top:2px;color:var(--muted);font-size:10.5px}
+  .c4-text small::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--tint);flex:0 0 auto}
+  .c4-row.active .c4-node{background:var(--tint);color:var(--page)}
+  .c4-row.active .c4-text strong{color:var(--tint)}
+
+  /* ============================================================
+     Concept 5 — Minimal single line, no icons
+     ============================================================ */
+  .c5-list{display:grid}
+  .c5-row{--tint:var(--muted);display:flex;align-items:center;gap:9px;padding:12px 2px;border-bottom:1px solid var(--edge)}
+  .c5-row:last-child{border-bottom:0}
+  .c5-dot{flex:0 0 auto;width:7px;height:7px;border-radius:50%;background:var(--tint)}
+  .c5-title{flex:1;min-width:0;font-size:13.5px;font-weight:750}
+  .c5-status{flex:0 0 auto;max-width:44%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:11px;text-align:right}
+  .c5-row.active .c5-title{color:var(--tint)}
+  .c5-row.active .c5-status{color:var(--tint)}
+
+  /* ============================================================
+     Concept 6 — Compact single line with icon
+     ============================================================ */
+  .c6-list{display:grid;gap:2px}
+  .c6-row{--tint:var(--muted);display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:9px}
+  .c6-row svg{flex:0 0 auto;width:17px;height:17px;color:var(--tint)}
+  .c6-title{flex:0 0 auto;font-size:13px;font-weight:750;white-space:nowrap}
+  .c6-sep{flex:0 0 auto;color:var(--muted);font-size:11px}
+  .c6-status{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:11.5px}
+  .c6-chev{flex:0 0 auto;width:12px;height:12px;color:var(--muted)}
+  .c6-row.active{background:color-mix(in srgb,var(--tint) 12%,transparent)}
+  .c6-row.active .c6-title{color:var(--tint)}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Workspace &amp; support — expansion redesign, 6 directions</h1>
+    <p>Same five rows in every column (<b>RT Sync, Tools, Request beta access, Changelog, Sudo access</b>) with their real icons, copy and per-section accent colours. Each direction is a genuinely different structure, not a recolour of the current list. <b>Changelog</b> is shown in its open/active state in every concept so that treatment can be compared too.</p>
+  </header>
+
+  <div class="grid">
+
+    <!-- ================= Concept 1 ================= -->
+    <div class="concept">
+      <div class="chead">
+        <h2><b>1</b>Grouped inset card</h2>
+        <p>All five rows live inside one bordered card instead of loose dividers running to the screen edge - reads as a single settings section, and the enclosing edge does the separating work the full-width hairlines used to.</p>
+      </div>
+      <div class="phone">
+        <div class="fold">
+          <i>⌘</i><i>🛠</i><i>?</i>
+          <div class="ftext"><strong>Workspace &amp; support</strong><small>RT Sync · Tools · Get the app · Changelog · Sudo access</small></div>
+          <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="c1-card">
+          <div class="c1-row" style="--tint:var(--rt)">
+            <div class="c1-badge"><svg class="ic" viewBox="0 0 32 32"><circle cx="8" cy="16" r="3"/><circle cx="24" cy="9" r="3"/><circle cx="24" cy="23" r="3"/><path d="m10.7 14.7 10.6-4.4M10.7 17.3l10.6 4.4"/></svg></div>
+            <div class="c1-text"><strong>RT Sync</strong><small>Synced</small></div>
+            <svg class="c1-chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="c1-row" style="--tint:var(--tools)">
+            <div class="c1-badge"><svg class="ic" viewBox="0 0 32 32"><path d="m19 6 7 7-4 4-4-1-8 8-4-4 8-8-1-4 4-4 2 4Z"/><path d="m7 25 2 2"/></svg></div>
+            <div class="c1-text"><strong>Tools</strong><small>Production utilities</small></div>
+            <svg class="c1-chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="c1-row" style="--tint:var(--beta)">
+            <div class="c1-badge"><svg class="ic" viewBox="0 0 32 32"><circle cx="16" cy="16" r="11"/><path d="M13 11.5 21 16 13 20.5V11.5Z"/></svg></div>
+            <div class="c1-text"><strong>Request beta access</strong><small>Try the Android app before release</small></div>
+            <svg class="c1-chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="c1-row active" style="--tint:var(--log)">
+            <div class="c1-badge"><svg class="ic" viewBox="0 0 32 32"><circle cx="7" cy="9" r="2.4"/><circle cx="7" cy="16" r="2.4"/><circle cx="7" cy="23" r="2.4"/><path d="M13 9h13M13 16h13M13 23h9"/></svg></div>
+            <div class="c1-text"><strong>Changelog</strong><small>What&rsquo;s new</small></div>
+            <svg class="c1-chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="c1-row" style="--tint:var(--sudo)">
+            <div class="c1-badge"><svg class="ic" viewBox="0 0 32 32"><path d="M16 3 27 8v7c0 7-4.5 11.5-11 14-6.5-2.5-11-7-11-14V8l11-5Z"/><path d="M16 12v8M12 16h8"/></svg></div>
+            <div class="c1-text"><strong>Sudo access</strong><small>Administrator tools</small></div>
+            <svg class="c1-chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= Concept 2 ================= -->
+    <div class="concept">
+      <div class="chead">
+        <h2><b>2</b>Two-up tile grid</h2>
+        <p>Breaks the list rhythm entirely: four square tiles in a 2×2 grid, then Sudo access as a wide closing row. Reads like a small home screen for admin/support, and fits more into less vertical space than any list can.</p>
+      </div>
+      <div class="phone">
+        <div class="fold">
+          <i>⌘</i><i>🛠</i><i>?</i>
+          <div class="ftext"><strong>Workspace &amp; support</strong><small>RT Sync · Tools · Get the app · Changelog · Sudo access</small></div>
+          <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="c2-grid">
+          <div class="c2-tile" style="--tint:var(--rt)">
+            <div class="c2-icon"><svg class="ic" viewBox="0 0 32 32" style="width:16px;height:16px"><circle cx="8" cy="16" r="3"/><circle cx="24" cy="9" r="3"/><circle cx="24" cy="23" r="3"/><path d="m10.7 14.7 10.6-4.4M10.7 17.3l10.6 4.4"/></svg></div>
+            <strong>RT Sync</strong>
+            <small>Synced</small>
+          </div>
+          <div class="c2-tile" style="--tint:var(--tools)">
+            <div class="c2-icon"><svg class="ic" viewBox="0 0 32 32" style="width:16px;height:16px"><path d="m19 6 7 7-4 4-4-1-8 8-4-4 8-8-1-4 4-4 2 4Z"/><path d="m7 25 2 2"/></svg></div>
+            <strong>Tools</strong>
+            <small>Production utilities</small>
+          </div>
+          <div class="c2-tile" style="--tint:var(--beta)">
+            <div class="c2-icon"><svg class="ic" viewBox="0 0 32 32" style="width:16px;height:16px"><circle cx="16" cy="16" r="11"/><path d="M13 11.5 21 16 13 20.5V11.5Z"/></svg></div>
+            <strong>Beta access</strong>
+            <small>Try the app</small>
+          </div>
+          <div class="c2-tile active" style="--tint:var(--log)">
+            <div class="c2-icon"><svg class="ic" viewBox="0 0 32 32" style="width:16px;height:16px"><circle cx="7" cy="9" r="2.4"/><circle cx="7" cy="16" r="2.4"/><circle cx="7" cy="23" r="2.4"/><path d="M13 9h13M13 16h13M13 23h9"/></svg></div>
+            <strong>Changelog</strong>
+            <small>What&rsquo;s new</small>
+          </div>
+          <div class="c2-tile wide" style="--tint:var(--sudo)">
+            <div class="c2-icon"><svg class="ic" viewBox="0 0 32 32" style="width:16px;height:16px"><path d="M16 3 27 8v7c0 7-4.5 11.5-11 14-6.5-2.5-11-7-11-14V8l11-5Z"/><path d="M16 12v8M12 16h8"/></svg></div>
+            <div class="c2-textcol"><strong>Sudo access</strong><small>Administrator tools</small></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= Concept 3 ================= -->
+    <div class="concept">
+      <div class="chead">
+        <h2><b>3</b>Accent-bar rows</h2>
+        <p>Keeps the familiar flat list, but each row gets a coloured left edge and a circular icon badge - a standard settings-app pattern that makes each section's colour scannable at a glance without changing the row's shape.</p>
+      </div>
+      <div class="phone">
+        <div class="fold">
+          <i>⌘</i><i>🛠</i><i>?</i>
+          <div class="ftext"><strong>Workspace &amp; support</strong><small>RT Sync · Tools · Get the app · Changelog · Sudo access</small></div>
+          <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="c3-list">
+          <div class="c3-row" style="--tint:var(--rt)">
+            <div class="c3-badge"><svg class="ic" viewBox="0 0 32 32" style="width:15px;height:15px"><circle cx="8" cy="16" r="3"/><circle cx="24" cy="9" r="3"/><circle cx="24" cy="23" r="3"/><path d="m10.7 14.7 10.6-4.4M10.7 17.3l10.6 4.4"/></svg></div>
+            <div class="c3-text"><strong>RT Sync</strong><small>Synced</small></div>
+            <svg class="c3-chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="c3-row" style="--tint:var(--tools)">
+            <div class="c3-badge"><svg class="ic" viewBox="0 0 32 32" style="width:15px;height:15px"><path d="m19 6 7 7-4 4-4-1-8 8-4-4 8-8-1-4 4-4 2 4Z"/><path d="m7 25 2 2"/></svg></div>
+            <div class="c3-text"><strong>Tools</strong><small>Production utilities</small></div>
+            <svg class="c3-chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="c3-row" style="--tint:var(--beta)">
+            <div class="c3-badge"><svg class="ic" viewBox="0 0 32 32" style="width:15px;height:15px"><circle cx="16" cy="16" r="11"/><path d="M13 11.5 21 16 13 20.5V11.5Z"/></svg></div>
+            <div class="c3-text"><strong>Request beta access</strong><small>Try the Android app before release</small></div>
+            <svg class="c3-chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="c3-row active" style="--tint:var(--log)">
+            <div class="c3-badge"><svg class="ic" viewBox="0 0 32 32" style="width:15px;height:15px"><circle cx="7" cy="9" r="2.4"/><circle cx="7" cy="16" r="2.4"/><circle cx="7" cy="23" r="2.4"/><path d="M13 9h13M13 16h13M13 23h9"/></svg></div>
+            <div class="c3-text"><strong>Changelog</strong><small>What&rsquo;s new</small></div>
+            <svg class="c3-chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="c3-row" style="--tint:var(--sudo)">
+            <div class="c3-badge"><svg class="ic" viewBox="0 0 32 32" style="width:15px;height:15px"><path d="M16 3 27 8v7c0 7-4.5 11.5-11 14-6.5-2.5-11-7-11-14V8l11-5Z"/><path d="M16 12v8M12 16h8"/></svg></div>
+            <div class="c3-text"><strong>Sudo access</strong><small>Administrator tools</small></div>
+            <svg class="c3-chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= Concept 4 ================= -->
+    <div class="concept">
+      <div class="chead">
+        <h2><b>4</b>Connector thread</h2>
+        <p>Extends the numbered-step line from Recipe/Timeline/Resin Totals down through these five rows, so the whole rail reads as one continuous thread rather than a workflow followed by an unrelated list.</p>
+      </div>
+      <div class="phone">
+        <div class="fold">
+          <i>⌘</i><i>🛠</i><i>?</i>
+          <div class="ftext"><strong>Workspace &amp; support</strong><small>RT Sync · Tools · Get the app · Changelog · Sudo access</small></div>
+          <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="c4-list">
+          <div class="c4-row" style="--tint:var(--rt)">
+            <div class="c4-node"><svg viewBox="0 0 32 32"><circle cx="8" cy="16" r="3" fill="none" stroke="currentColor" stroke-width="2.6"/><circle cx="24" cy="9" r="3" fill="none" stroke="currentColor" stroke-width="2.6"/><circle cx="24" cy="23" r="3" fill="none" stroke="currentColor" stroke-width="2.6"/><path d="m10.7 14.7 10.6-4.4M10.7 17.3l10.6 4.4" fill="none" stroke="currentColor" stroke-width="2.6"/></svg></div>
+            <div class="c4-text"><strong>RT Sync</strong><small>Synced</small></div>
+          </div>
+          <div class="c4-row" style="--tint:var(--tools)">
+            <div class="c4-node"><svg viewBox="0 0 32 32"><path d="m19 6 7 7-4 4-4-1-8 8-4-4 8-8-1-4 4-4 2 4Z" fill="none" stroke="currentColor" stroke-width="2.6"/></svg></div>
+            <div class="c4-text"><strong>Tools</strong><small>Production utilities</small></div>
+          </div>
+          <div class="c4-row" style="--tint:var(--beta)">
+            <div class="c4-node"><svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="11" fill="none" stroke="currentColor" stroke-width="2.6"/><path d="M13 11.5 21 16 13 20.5V11.5Z" fill="currentColor" stroke="none"/></svg></div>
+            <div class="c4-text"><strong>Request beta access</strong><small>Try the Android app before release</small></div>
+          </div>
+          <div class="c4-row active" style="--tint:var(--log)">
+            <div class="c4-node"><svg viewBox="0 0 32 32"><circle cx="7" cy="9" r="2.4" fill="currentColor"/><circle cx="7" cy="16" r="2.4" fill="currentColor"/><circle cx="7" cy="23" r="2.4" fill="currentColor"/><path d="M13 9h13M13 16h13M13 23h9" fill="none" stroke="currentColor" stroke-width="2.6"/></svg></div>
+            <div class="c4-text"><strong>Changelog</strong><small>What&rsquo;s new</small></div>
+          </div>
+          <div class="c4-row" style="--tint:var(--sudo)">
+            <div class="c4-node"><svg viewBox="0 0 32 32"><path d="M16 3 27 8v7c0 7-4.5 11.5-11 14-6.5-2.5-11-7-11-14V8l11-5Z" fill="none" stroke="currentColor" stroke-width="2.6"/></svg></div>
+            <div class="c4-text"><strong>Sudo access</strong><small>Administrator tools</small></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= Concept 5 ================= -->
+    <div class="concept">
+      <div class="chead">
+        <h2><b>5</b>Minimal, no icons</h2>
+        <p>Drops icons entirely: a coloured dot, bold title, and right-aligned status on one line each. The most compact and the most typographic - works because these rows are already labelled clearly by their own screens once opened.</p>
+      </div>
+      <div class="phone">
+        <div class="fold">
+          <i>⌘</i><i>🛠</i><i>?</i>
+          <div class="ftext"><strong>Workspace &amp; support</strong><small>RT Sync · Tools · Get the app · Changelog · Sudo access</small></div>
+          <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="c5-list">
+          <div class="c5-row" style="--tint:var(--rt)">
+            <div class="c5-dot"></div><div class="c5-title">RT Sync</div><div class="c5-status">Synced</div>
+          </div>
+          <div class="c5-row" style="--tint:var(--tools)">
+            <div class="c5-dot"></div><div class="c5-title">Tools</div><div class="c5-status">Production utilities</div>
+          </div>
+          <div class="c5-row" style="--tint:var(--beta)">
+            <div class="c5-dot"></div><div class="c5-title">Request beta access</div><div class="c5-status">Try the app</div>
+          </div>
+          <div class="c5-row active" style="--tint:var(--log)">
+            <div class="c5-dot"></div><div class="c5-title">Changelog</div><div class="c5-status">What&rsquo;s new</div>
+          </div>
+          <div class="c5-row" style="--tint:var(--sudo)">
+            <div class="c5-dot"></div><div class="c5-title">Sudo access</div><div class="c5-status">Administrator tools</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= Concept 6 ================= -->
+    <div class="concept">
+      <div class="chead">
+        <h2><b>6</b>Compact single line, with icon</h2>
+        <p>A middle ground: keeps the small recognisable icon, but collapses title and status onto one line separated by a middot, closing the gap between today's two-line rows and concept 5's icon-less minimalism.</p>
+      </div>
+      <div class="phone">
+        <div class="fold">
+          <i>⌘</i><i>🛠</i><i>?</i>
+          <div class="ftext"><strong>Workspace &amp; support</strong><small>RT Sync · Tools · Get the app · Changelog · Sudo access</small></div>
+          <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="c6-list">
+          <div class="c6-row" style="--tint:var(--rt)">
+            <svg class="ic" viewBox="0 0 32 32"><circle cx="8" cy="16" r="3"/><circle cx="24" cy="9" r="3"/><circle cx="24" cy="23" r="3"/><path d="m10.7 14.7 10.6-4.4M10.7 17.3l10.6 4.4"/></svg>
+            <div class="c6-title">RT Sync</div><div class="c6-sep">·</div><div class="c6-status">Synced</div>
+          </div>
+          <div class="c6-row" style="--tint:var(--tools)">
+            <svg class="ic" viewBox="0 0 32 32"><path d="m19 6 7 7-4 4-4-1-8 8-4-4 8-8-1-4 4-4 2 4Z"/><path d="m7 25 2 2"/></svg>
+            <div class="c6-title">Tools</div><div class="c6-sep">·</div><div class="c6-status">Production utilities</div>
+          </div>
+          <div class="c6-row" style="--tint:var(--beta)">
+            <svg class="ic" viewBox="0 0 32 32"><circle cx="16" cy="16" r="11"/><path d="M13 11.5 21 16 13 20.5V11.5Z"/></svg>
+            <div class="c6-title">Beta access</div><div class="c6-sep">·</div><div class="c6-status">Try the Android app before release</div>
+          </div>
+          <div class="c6-row active" style="--tint:var(--log)">
+            <svg class="ic" viewBox="0 0 32 32"><circle cx="7" cy="9" r="2.4"/><circle cx="7" cy="16" r="2.4"/><circle cx="7" cy="23" r="2.4"/><path d="M13 9h13M13 16h13M13 23h9"/></svg>
+            <div class="c6-title">Changelog</div><div class="c6-sep">·</div><div class="c6-status">What&rsquo;s new</div>
+          </div>
+          <div class="c6-row" style="--tint:var(--sudo)">
+            <svg class="ic" viewBox="0 0 32 32"><path d="M16 3 27 8v7c0 7-4.5 11.5-11 14-6.5-2.5-11-7-11-14V8l11-5Z"/><path d="M16 12v8M12 16h8"/></svg>
+            <div class="c6-title">Sudo access</div><div class="c6-sep">·</div><div class="c6-status">Administrator tools</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+</body>
+</html>

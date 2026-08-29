@@ -5063,6 +5063,36 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
 .timelineControlAction:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
 .timelineControlActionShort{ display:none; }
 
+/* "Show all" is a temporary Timeline view filter, not a system preference, so
+   it reads as a compact toggle button that sits beside Reset and the gear -
+   not a sliding switch. Inactive: subdued, faint outline, no fill. Active:
+   the theme's own accent - a light --focus-ring wash plus the --focus-border
+   edge - kept deliberately understated so it never competes with the rows. */
+.timelineControlToggle{
+  display:inline-flex;
+  align-items:center;
+  flex:0 0 auto;
+  min-height:32px;
+  padding:4px 10px;
+  border:1px solid var(--border2);
+  border-radius:var(--control-radius);
+  background:transparent;
+  color:var(--muted);
+  font-size:var(--font-small);
+  font-weight:800;
+  line-height:1;
+  white-space:nowrap;
+  cursor:pointer;
+}
+.timelineControlToggle:hover{ background:color-mix(in srgb,var(--text) 6%,transparent); color:var(--title); }
+.timelineControlToggle:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
+.timelineControlToggle[aria-pressed="true"]{
+  border-color:var(--focus-border);
+  background:var(--focus-ring);
+  color:var(--title);
+}
+.timelineControlToggle[aria-pressed="true"]:hover{ background:var(--focus-ring); }
+
 /* A toggle whose feature has nothing to act on yet. Deliberately still
    operable (see syncEnhancedTrackingAvailability) - dimmed to say "on, but
    waiting", not "you cannot touch this". */
@@ -5835,6 +5865,7 @@ body:is([data-theme="industrial-slate-dark"],[data-theme="gruvbox-dark"]) .resul
   .timelineControlActionFull{ display:none; }
   .timelineControlActionShort{ display:inline; }
   .timelineControlAction{ min-height:36px; padding:6px; }
+  .timelineControlToggle{ min-height:36px; padding:6px 12px; }
   .timelineDisplayToggle{ width:36px; height:36px; }
 }
 @media (max-width:360px){
@@ -6791,6 +6822,47 @@ button.compactAction{
 }
 .notesBodyInput:focus{ outline:none; }
 
+/* TipTap experiment: the rich editable surface. Deliberately borrows the
+   textarea's metrics and the app's theme tokens so it reads as the same
+   RT Notes editor, not a pasted-in demo. .notesProse is set as the
+   ProseMirror element class in notes-ui.js (editorProps). */
+.notesBodyEditor{ margin-top:8px; }
+.notesBodyEditor .notesProse{
+  min-height:220px; padding:10px 2px;
+  color:var(--text); font-size:14px; line-height:1.5;
+  outline:none; white-space:pre-wrap; word-wrap:break-word;
+}
+.notesBodyEditor .notesProse:focus{ outline:none; }
+.notesBodyEditor .notesProse > * + *{ margin-top:8px; }
+.notesBodyEditor .notesProse h1{ margin:0; font-size:19px; font-weight:800; color:var(--title); }
+.notesBodyEditor .notesProse h2{ margin:0; font-size:16px; font-weight:800; color:var(--title); }
+.notesBodyEditor .notesProse h3{ margin:0; font-size:14px; font-weight:800; color:var(--title); }
+.notesBodyEditor .notesProse p{ margin:0; }
+.notesBodyEditor .notesProse ul,
+.notesBodyEditor .notesProse ol{ margin:0; padding-left:22px; }
+.notesBodyEditor .notesProse li{ margin:2px 0; }
+.notesBodyEditor .notesProse li > p{ margin:0; }
+.notesBodyEditor .notesProse ul[data-type="taskList"]{ list-style:none; padding-left:2px; }
+.notesBodyEditor .notesProse ul[data-type="taskList"] li{ display:flex; align-items:flex-start; gap:8px; }
+.notesBodyEditor .notesProse ul[data-type="taskList"] li > label{
+  flex:0 0 auto; margin-top:2px; user-select:none;
+}
+.notesBodyEditor .notesProse ul[data-type="taskList"] li > div{ flex:1 1 auto; min-width:0; }
+.notesBodyEditor .notesProse ul[data-type="taskList"] input[type="checkbox"]{
+  width:15px; height:15px; accent-color:var(--focus-border); cursor:pointer;
+}
+.notesBodyEditor .notesProse ul[data-type="taskList"] li[data-checked="true"] > div{
+  color:var(--muted); text-decoration:line-through;
+}
+.notesBodyEditor .notesProse ::selection{ background:color-mix(in srgb,var(--focus-border) 30%,transparent); }
+
+/* Toolbar buttons reflect the format under the cursor. */
+.notesToolbar button.is-active{
+  border-color:var(--focus-border);
+  background:color-mix(in srgb,var(--focus-border) 16%,transparent);
+  color:var(--title);
+}
+
 @media (width <= 900px), (min-width: 901px) and (pointer: coarse){
   body[data-mobile-notes="editor"] #notesBlock .notesListView{ display:none; }
   body[data-mobile-notes="editor"] #notesBlock .notesEditorView{ display:flex; flex-direction:column; }
@@ -6815,6 +6887,7 @@ button.compactAction{
   #notesBlock .notesEditorMenu > summary{ width:38px; height:38px; min-height:38px; }
   #notesBlock .notesToolbar button{ min-width:38px; height:38px; min-height:38px; }
   #notesBlock .notesBodyInput{ min-height:46vh; }
+  #notesBlock .notesBodyEditor .notesProse{ min-height:46vh; }
 }
 
 /* Matrix action bars share one compact surface. The Recipe bar has four
@@ -7162,6 +7235,27 @@ button.compactAction{
   #splitsBlock.mobile-active .splitsSavedRecipesPanel #mobileSavedRecipesList{
     flex:1 1 auto;
     min-height:0;
+  }
+
+  /* Hopper Weights page: the moved live editor (#weightsArea) is the only
+     child of #splitsArea here, and #splitsArea is a fixed-height,
+     overflow:hidden flex column (see above). Nothing inside #weightsArea
+     was a scroll boundary, so opening Edit - which reveals
+     #mobileWeightsBulkBar below the matrix - pushed that bar past the
+     clipped bottom edge with no way to reach it. Make #weightsArea itself
+     the scroller in the remaining budget: the app dock stays fixed, the
+     scroll area already ends above it (.blockBody is sized short of the
+     dock), and the matrix keeps its own size. scroll-padding-bottom keeps
+     a focused Weight/Height input clear of the dock when the mobile
+     keyboard scrolls it into view. Summary view has little content and
+     simply doesn't overflow, so this is inert until Edit is open. */
+  #splitsBlock.mobile-active #splitsArea > #weightsArea{
+    flex:1 1 0;
+    min-height:0;
+    overflow:hidden auto;
+    overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
+    scroll-padding-bottom:16px;
   }
 
   /* Semantic-button migration: Recipe's edit controls. One primary commit,
@@ -8663,7 +8757,11 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
   body[data-theme="industrial-slate-dark"] #resultsBlock .mobileSectionHeaderIcon{color:var(--workflow-timeline)}
   body[data-theme="industrial-slate-dark"] #productionSummaryBlock .mobileSectionHeaderIcon{color:var(--workflow-resin-totals)}
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .appearanceNavTile{ --tile-accent:var(--gruv-red); }
-  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNavButton span{ color:var(--gruv-mobile-ink); }
+  /* Request beta access is a .helpPlayBanner, not a .workspaceNavButton, but
+     sits in the same expanded Workspace & support list - its title needs the
+     same mobile-ink retune so it doesn't read as a differently-coloured row. */
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNavButton span,
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .helpPlayBanner strong{ color:var(--gruv-mobile-ink); }
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceTileIcon{
     border-color:color-mix(in srgb,var(--tile-accent) 56%,var(--gruv-mobile-edge));
     background:color-mix(in srgb,var(--tile-accent) 13%,var(--gruv-mobile-surface));

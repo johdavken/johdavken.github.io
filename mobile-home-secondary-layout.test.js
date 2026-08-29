@@ -30,10 +30,30 @@ test("the workspace identity bar names the connected workspace, falls back to Co
 });
 
 test("mobile Workspace and support is one disclosure for the secondary destinations", () => {
-  assert.match(html, /class="mobileWorkspaceNavMore"[\s\S]*?<strong>Workspace &amp; support<\/strong><small>RT Sync · Notes · Tools · Get the app · Changelog · Sudo access<\/small>/);
+  // Just the title now - the redundant "RT Sync · RT Notes · ..." summary line
+  // that duplicated the expanded list is gone; the icon cluster still previews.
+  assert.match(html, /class="mobileWorkspaceNavMore"[\s\S]*?<strong>Workspace &amp; support<\/strong><\/span>/);
+  assert.doesNotMatch(html, /<strong>Workspace &amp; support<\/strong><small>/);
   assert.match(html, /id="mobileWorkspaceSyncStatusText">RT Sync is local only<\/span>/);
   assert.match(styles, /\.workspaceNav:not\(\.navExpanded\) \.workspaceNavExtra:not\(\.active\)\{display:none\}/);
   assert.match(styles, /\.workspaceNav\.navExpanded \.workspaceNavExtra\{[\s\S]*?padding:0;/);
+});
+
+test("each Workspace & support item carries a concise purpose subheader", () => {
+  // The static markup value for each item's <small>. RT Sync and Sudo access
+  // are still updated at runtime with live status - this only refines their
+  // pre-JS / fallback wording.
+  assert.match(html, /id="workspaceNavLineSync"[\s\S]*?<small id="workspaceCloudSyncStatus">Connect devices<\/small>/);
+  assert.match(html, /id="workspaceNavNotes"[\s\S]*?<small>On this device<\/small>/);
+  assert.match(html, /id="workspaceNavTools"[\s\S]*?<small>Production utilities<\/small>/);
+  assert.match(html, /id="helpBetaRequestBtn"[\s\S]*?<small>Try the Android app<\/small>/);
+  assert.match(html, /id="workspaceNavChangelog"[\s\S]*?<small>What&rsquo;s new<\/small>/);
+  assert.match(html, /id="workspaceNavSudo"[\s\S]*?<small id="sudoAccessStatus">Administrator sign-in<\/small>/);
+  // The dynamic writers are untouched: resin-admin-ui.js still swaps in
+  // "Administrator tools" while signed in; app.js still writes the live sync
+  // status into #workspaceCloudSyncStatus.
+  assert.match(fs.readFileSync("resin-admin-ui.js", "utf8"), /adminAccess \? "Administrator tools" : "Administrator sign-in"/);
+  assert.match(fs.readFileSync("app.js", "utf8"), /const navStatus = \$\("workspaceCloudSyncStatus"\);/);
 });
 
 test("the connected rail hierarchy stays scoped to the mobile home", () => {

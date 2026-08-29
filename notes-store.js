@@ -48,6 +48,31 @@
     return Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
   }
 
+  // Storage format discriminator for `note.body`. The value is always a
+  // string; this only says how to interpret it. Anything that isn't an
+  // explicit "html" is Markdown - so every note written before this field
+  // existed, and every legacy export, loads as Markdown untouched.
+  function coerceBodyFormat(value) {
+    return value === "html" ? "html" : "markdown";
+  }
+
+  // Tag-strip + entity-decode for an HTML body, for the list preview and
+  // title fallback only. Pure string work so it runs in Node tests with no
+  // DOM; the result is always used via textContent, never as markup. Block
+  // ends become newlines so titleFor()'s first-line logic still works.
+  function htmlToText(html) {
+    const withBreaks = coerceString(html)
+      .replace(/<\s*(br|\/p|\/h[1-6]|\/li|\/div|\/tr)\s*\/?\s*>/gi, "\n")
+      .replace(/<[^>]*>/g, "");
+    return withBreaks
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/&#0?39;|&apos;/g, "'")
+      .replace(/&nbsp;/g, " ")
+      .replace(/&amp;/g, "&");
+  }
+
   // One stored note. Unknown keys are dropped; missing keys get safe
   // defaults, so a partial record (an old export, a hand-edited file)
   // still loads instead of poisoning the store.
@@ -60,6 +85,7 @@
       id: id || makeId(),
       title: coerceString(raw.title).slice(0, MAX_TITLE),
       body: coerceString(raw.body),
+      bodyFormat: coerceBodyFormat(raw.bodyFormat),
       pinned: raw.pinned === true,
       createdAt: created,
       updatedAt: updated
@@ -72,6 +98,7 @@
       id: makeId(),
       title: "",
       body: "",
+      bodyFormat: "markdown",
       pinned: false,
       createdAt: ts,
       updatedAt: ts
@@ -79,6 +106,7 @@
     if (fields && typeof fields === "object") {
       if (typeof fields.title === "string") note.title = fields.title.slice(0, MAX_TITLE);
       if (typeof fields.body === "string") note.body = fields.body;
+      if (fields.bodyFormat === "html" || fields.bodyFormat === "markdown") note.bodyFormat = fields.bodyFormat;
       if (fields.pinned === true) note.pinned = true;
     }
     return note;
@@ -102,28 +130,37 @@
       .map((entry) => entry.note);
   }
 
-  // A plain-text one-liner from a Markdown body for the list preview. Strips
-  // exactly the syntax the toolbar inserts. Never rendered as HTML.
-  function previewOf(body, length) {
+  // A plain-text one-liner from a note body for the list preview. Never
+  // rendered as HTML. `format` ("markdown" | "html") selects how the stored
+  // string is flattened - Markdown strips exactly the syntax the toolbar
+  // inserts; HTML is tag-stripped. Defaults to Markdown for callers (and
+  // notes) that predate the discriminator.
+  function previewOf(body, length, format) {
     const limit = typeof length === "number" ? length : PREVIEW_LENGTH;
-    const text = coerceString(body)
-      .replace(/^#{1,6}\s+/gm, "")
-      .replace(/^\s*[-*+]\s+\[[ xX]\]\s+/gm, "")
-      .replace(/^\s*[-*+]\s+/gm, "")
-      .replace(/^\s*\d+\.\s+/gm, "")
-      .replace(/[*_`>#~]/g, "")
-      .replace(/\s+/g, " ")
-      .trim();
+    const base =
+      format === "html"
+        ? htmlToText(body)
+        : coerceString(body)
+            .replace(/^#{1,6}\s+/gm, "")
+            .replace(/^\s*[-*+]\s+\[[ xX]\]\s+/gm, "")
+            .replace(/^\s*[-*+]\s+/gm, "")
+            .replace(/^\s*\d+\.\s+/gm, "")
+            .replace(/[*_`>#~]/g, "");
+    const text = base.replace(/\s+/g, " ").trim();
     if (text.length <= limit) return text;
     return `${text.slice(0, Math.max(0, limit - 1)).trimEnd()}…`;
   }
 
   // Display title: the explicit title, else the first non-empty body line
-  // with its Markdown marker stripped, else a stable placeholder.
+  // with its formatting stripped, else a stable placeholder.
   function titleFor(note) {
     const explicit = coerceString(note && note.title).trim();
     if (explicit) return explicit;
-    const firstLine = coerceString(note && note.body)
+    const rawBody =
+      note && note.bodyFormat === "html"
+        ? htmlToText(note && note.body)
+        : coerceString(note && note.body);
+    const firstLine = rawBody
       .split("\n")
       .map((line) => line.trim())
       .find(Boolean) || "";
@@ -185,6 +222,7 @@
     return (
       a.title === b.title &&
       a.body === b.body &&
+      a.bodyFormat === b.bodyFormat &&
       a.pinned === b.pinned &&
       a.createdAt === b.createdAt
     );
@@ -354,6 +392,7 @@
           if (patch && typeof patch === "object") {
             if (typeof patch.title === "string") merged.title = patch.title.slice(0, MAX_TITLE);
             if (typeof patch.body === "string") merged.body = patch.body;
+            if (patch.bodyFormat === "html" || patch.bodyFormat === "markdown") merged.bodyFormat = patch.bodyFormat;
             if (typeof patch.pinned === "boolean") merged.pinned = patch.pinned;
           }
           merged.updatedAt = now();
@@ -444,6 +483,7 @@
     sortNotes,
     previewOf,
     titleFor,
+    htmlToText,
     buildExport,
     serializeExport,
     parseImport,
