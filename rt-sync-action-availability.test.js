@@ -31,13 +31,12 @@ function slice(from, to){
  *   setLineSyncActionBusy happened to re-enable those two by hand.
  * ============================================================ */
 
-test("the five action buttons get their disabled state from one shared pass, not from the render alone", () => {
+test("the available operator actions get their disabled state from one shared pass, not from the render alone", () => {
   const helper = slice("function applyLineSyncActionAvailability(", "function setLineSyncActionBusy(");
-  ["lineSyncRenameBtn", "lineSyncGenerateCodeBtn", "lineSyncNewJobBtn", "lineSyncDisconnectBtn"].forEach(id=>{
+  ["lineSyncGenerateCodeBtn", "lineSyncGenerateNewCodeBtn", "lineSyncCopyCodeBtn"].forEach(id=>{
     assert.match(helper, new RegExp(`"${id}"`));
   });
-  assert.match(helper, /\$\("lineSyncLeaveBtn"\)\.disabled = lineSyncActionInFlight/);
-  assert.match(helper, /\$\("lineSyncRetryBtn"\)\.disabled = lineSyncActionInFlight;/);
+  assert.match(helper, /\["lineSyncRetryBtn", "lineSyncRetryMobileBtn"\]/);
   // Join's own availability has an extra condition (a well-formed code), so
   // it stays in its own function - but it belongs to the same pass.
   assert.match(helper, /updateLineSyncJoinAvailability\(syncState\);/);
@@ -54,7 +53,7 @@ test("finishing an action re-applies availability immediately - it does not wait
 });
 
 test("the panel render delegates rather than keeping its own copy of the disabled rules", () => {
-  const render = slice("const role = selected?.membership?.role", "const memberSection = $(\"lineSyncMembersSection\")");
+  const render = slice("function renderLineSync(syncState){", "function openRtSyncJoinFromUrl()");
   assert.match(render, /applyLineSyncActionAvailability\(syncState\);/);
   assert.doesNotMatch(render, /\.disabled = lineSyncActionInFlight/);
 });

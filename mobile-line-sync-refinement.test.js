@@ -39,12 +39,9 @@ test("joining is disabled until a four-character code is valid and duplicate syn
 });
 
 test("mobile styling is scoped so desktop RT Sync keeps its fuller interface", () => {
-  assert.match(html, /id="lineSyncRetryBtn" class="secondary actionRail"/);
-  assert.match(html, /id="lineSyncLeaveBtn" class="secondary actionRail"/);
+  assert.match(html, /id="lineSyncRetryMobileBtn" class="secondary actionRail"/);
+  assert.match(html, /id="desktopLineSyncMain" class="desktopSyncOnly/);
   assert.match(styles, /@media \(max-width: 900px\), \(min-width: 901px\) and \(pointer: coarse\)\{[\s\S]*\.lineSyncPanel \.mobileLineSyncStatus/s);
-  assert.match(styles, /\.lineSyncPanel:not\(\.mobileConnected\) #lineSyncDisconnectBtn\{display:none\}/);
-  assert.match(styles, /\.lineSyncPanel #lineSyncLeaveBtn\{color:var\(--bad\)\}/);
-  assert.match(styles, /\.segmentedActionRow button\.actionRail\{[\s\S]*?background:transparent;[\s\S]*?box-shadow:none;/);
-  assert.match(styles, /\.segmentedActionRow #lineSyncLeaveBtn\.actionRail\{color:var\(--bad\)\}/);
+  assert.match(styles, /\.lineSyncMobileRefresh #lineSyncRetryMobileBtn\{width:100%;/);
   assert.match(styles, /\.mobileLineSyncStatus\[data-state="synced"\]/);
 });

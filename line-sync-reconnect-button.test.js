@@ -14,12 +14,14 @@ function handlerBody(marker){
   return app.slice(start, end);
 }
 
-const retryHandler = handlerBody('$("lineSyncRetryBtn")?.addEventListener("click"');
+const retryHandler = handlerBody("const reconnectRtSync =");
 
 test("the Reconnect/Connect-retry button uses refreshSelected() whenever a line is selected, on both desktop and mobile", () => {
   assert.doesNotMatch(retryHandler, /matchMedia\("\(max-width: 900px\)"\)/,
     "the fix removes the mobile-only gate - desktop previously fell through to retry() even when a line was selected");
   assert.match(retryHandler, /lineSync\.getState\(\)\.selectedWorkspaceId\s*\?\s*lineSync\.refreshSelected\(\)\s*:\s*lineSync\.retry\(\)/);
+  assert.match(app, /\$\("lineSyncRetryBtn"\)\?\.addEventListener\("click",reconnectRtSync\);/);
+  assert.match(app, /\$\("lineSyncRetryMobileBtn"\)\?\.addEventListener\("click",reconnectRtSync\);/);
 });
 
 test("retry() is still the fallback only when nothing is selected, and is otherwise untouched", () => {

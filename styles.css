@@ -1079,6 +1079,38 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .baseGlyph{dis
   letter-spacing:.14em;
   color:var(--focus-border);
 }
+.desktopLineSyncOverview{ margin-top:10px; }
+.desktopLineSyncSetup{ margin-top:10px; padding:12px 0; }
+.desktopLineSyncSetup p{ max-width:560px; margin:4px 0 10px; }
+.desktopLineSyncSetupSelection{ max-width:320px; margin:0 0 10px; }
+.desktopLineSyncSetupSelection label{ display:block; margin-bottom:4px; }
+.desktopLineSyncIdentity{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 0; border-top:1px solid var(--row-border); border-bottom:1px solid var(--row-border); }
+.desktopLineSyncIdentity strong{ color:var(--title); font-size:16px; letter-spacing:.06em; }
+.desktopLineSyncState{ color:var(--muted); font-size:12px; font-weight:800; white-space:nowrap; }
+.desktopLineSyncState[data-state="synced"]{ color:var(--ok); }
+.desktopLineSyncState[data-state="error"],
+.desktopLineSyncState[data-state="offline"],
+.desktopLineSyncState[data-state="conflict"]{ color:var(--bad); }
+.lineSyncReconnect{ padding:10px 12px; border-left:3px solid var(--bad); background:var(--row-bg); }
+.lineSyncReconnect .layerTitle{ color:var(--bad); }
+.lineSyncReconnect p,
+.lineSyncConnect p{ margin:4px 0 10px; }
+.desktopLineSyncMain{ display:grid; grid-template-columns:minmax(300px,1.1fr) minmax(250px,.9fr); gap:20px; align-items:start; }
+.lineSyncConnect{ min-width:0; padding-top:2px; }
+.lineSyncGeneratedCodePanel{ display:grid; grid-template-columns:minmax(0,1fr) auto; gap:12px; align-items:center; padding:12px; border:1px solid var(--row-border); border-radius:var(--radius-row); background:var(--row-bg); }
+.lineSyncGeneratedCodeRow{ display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
+.lineSyncGeneratedCodeRow .lineSyncCode{ min-width:72px; padding:6px 8px; color:var(--title); font-size:22px; letter-spacing:.14em; }
+/* QR scanners need a solid light quiet zone independent of app theme. */
+.lineSyncQrCode{ display:grid; place-items:center; width:150px; height:150px; padding:10px; background:#fff; border-radius:4px; }
+.lineSyncQrCode svg{ display:block; width:100%; height:100%; }
+.lineSyncGeneratedCodePanel small{ grid-column:1 / -1; color:var(--muted); }
+.lineSyncDevices{ min-width:0; padding-left:20px; border-left:1px solid var(--row-border); }
+.lineSyncDevicesList{ display:grid; gap:0; margin-top:6px; }
+.lineSyncDevice{ display:grid; gap:2px; padding:9px 0; border-bottom:1px solid var(--row-border); }
+.lineSyncDevice strong{ color:var(--text); font-size:var(--font-small); }
+.lineSyncDevice span,.lineSyncDevicesEmpty{ font-size:var(--font-small); }
+.lineSyncDevicesEmpty{ margin:6px 0 0; }
+@media(max-width:1100px){.desktopLineSyncMain{grid-template-columns:1fr;gap:16px}.lineSyncDevices{padding:16px 0 0;border-left:0;border-top:1px solid var(--row-border)}}
 .lineSyncMembers{
   padding:12px;
   border:1px solid var(--border);
@@ -1244,6 +1276,8 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .baseGlyph{dis
   .lineSyncPanel .lineSyncActionBar .segmentedActionRow{width:100%;overflow:visible}
   .lineSyncPanel .lineSyncActionBar .segmentedActionRow button{flex:1 1 0;min-width:0;min-height:38px;padding-inline:8px}
   .lineSyncPanel .lineSyncActionBar .segmentedActionDivider{width:100%}
+  .lineSyncMobileRefresh{display:block}
+  .lineSyncMobileRefresh #lineSyncRetryMobileBtn{width:100%;min-height:38px;color:var(--focus-border);font-weight:800}
   .mobileSyncRefreshLabel{display:inline-flex!important;align-items:center;justify-content:center;gap:6px}
   .mobileSyncRefreshLabel svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
   .lineSyncPanel #lineSyncRetryBtn{color:var(--focus-border);font-weight:800}

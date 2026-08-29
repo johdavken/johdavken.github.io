@@ -101,14 +101,9 @@ test("the whole-app Reset all clears Current's lots, leaving Next's untouched - 
   assert.doesNotMatch(body, /nextRecipeLots/, "resetAll never touches Next, so it must not touch Next's lots either");
 });
 
-test("New job clears Current's lots alongside the recipe it describes, and deliberately leaves a prepared Next plan (and its lots) alone", () => {
-  const start = app.indexOf("function newJobPayload(){");
-  const end = app.indexOf("return payload;", start);
-  const body = app.slice(start, end);
-  assert.match(body, /payload\.resinLots = \{\};/);
-  // The implementation's own comment may explain the omission in prose; what
-  // matters is that no assignment actually touches nextRecipeLots.
-  assert.doesNotMatch(body, /payload\.nextRecipeLots\s*=/, "nextRecipe survives New Job already; its lots must survive the same way");
+test("RT Sync no longer exposes a New Job action", () => {
+  assert.doesNotMatch(app, /function newJobPayload\(\)/);
+  assert.doesNotMatch(fs.readFileSync("index.html", "utf8"), /id="lineSyncNewJobBtn"/);
 });
 
 /* ============================================================

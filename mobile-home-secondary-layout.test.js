@@ -19,7 +19,7 @@ test("mobile home renders the three visible workflow destinations as one connect
 test("the workspace identity bar names the connected workspace, falls back to Connect, and opens RT Sync - identically on mobile and desktop", () => {
   const app = fs.readFileSync("app.js", "utf8");
   const desktop = fs.readFileSync("desktop.css", "utf8");
-  assert.match(app, /workspaceIdentityName\.textContent = syncState\.connected && syncState\.selectedWorkspace\?\.name[\s\S]*?\? syncState\.selectedWorkspace\.name[\s\S]*?: "Connect";/);
+  assert.match(app, /workspaceIdentityName\.textContent = syncState\.selectedWorkspace\?\.name[\s\S]*?\? syncState\.selectedWorkspace\.name[\s\S]*?: "Connect";/);
   assert.match(app, /\$\("workspaceIdentityButton"\)\?\.addEventListener\("click",\(\)=>\{\s*\n\s*setWorkspacePanel\("lineSyncBlock", \{ reveal:true \}\);/);
   // One shared rule (styles.css, not gated by any width) supplies the
   // divider-line/name/button treatment; mobile and desktop each only flip
