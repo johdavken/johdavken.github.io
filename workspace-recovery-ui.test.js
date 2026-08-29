@@ -44,11 +44,11 @@ test("Add This Device reads the target identity from the existing RT Sync client
   assert.doesNotMatch(ui, /prompt\(/);
 });
 
-test("the workspace list and recovery actions go through the admin RPC service only", () => {
+test("admin recovery actions use the service while Sudo creation reuses the RT Sync creation path", () => {
   assert.match(ui, /service\.listWorkspaces/);
   assert.match(ui, /service\.getWorkspaceDetails/);
   assert.match(ui, /service\.addDeviceToWorkspace/);
-  assert.match(ui, /service\.createWorkspace/);
+  assert.match(ui, /bridge\(\)\?\.createWorkspaceFromSudo\?\.\(name\)/);
   assert.match(ui, /service\.renameWorkspace/);
   assert.match(ui, /service\.removeWorkspaceMember/);
   assert.match(ui, /service\.deleteWorkspace/);
@@ -63,8 +63,9 @@ test("Sudo Workspace Management is the only administrative home for create and r
   assert.match(index, /id="workspaceRecoveryRenameWorkspaceBtn"[^>]*>Rename Line/);
   assert.match(index, /id="workspaceRecoveryWorkspaceDialog"/);
   assert.match(ui, /function openWorkspaceDialog\(mode\)/);
-  assert.match(ui, /bridge\(\)\?\.getInitialActiveJob\?\.\(\)/);
-  assert.match(app, /getInitialActiveJob: \(\) => snapshotSharedActiveJob\(\)/);
+  assert.match(ui, /bridge\(\)\?\.createWorkspaceFromSudo\?\.\(name\)/);
+  assert.match(app, /createWorkspaceFromSudo: async \(name\) =>/);
+  assert.match(app, /lineSync\.createWorkspace\(name, lineSync\.getState\(\)\.deviceLabel\)/);
   assert.doesNotMatch(index.slice(index.indexOf('id="lineSyncBlock"'), index.indexOf('<!-- 6\) TOOLS -->')), /Create [Ll]ine|Rename [Ll]ine/);
 });
 

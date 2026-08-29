@@ -8166,6 +8166,14 @@
       getRecoveryDescriptor: () => lineSync?.getRecoveryDescriptor?.()
         || { ready: false, userId: "", deviceId: "", deviceLabel: "" },
       getInitialActiveJob: () => snapshotSharedActiveJob(),
+      // Workspace Management is the administrative home for this action, but
+      // the creation itself must keep using RT Sync's established idempotent
+      // create path (same device identity, payload validation, and immediate
+      // reconciliation as the former operator control).
+      createWorkspaceFromSudo: async (name) => {
+        if (!lineSync) throw new Error("RT Sync is not ready.");
+        return lineSync.createWorkspace(name, lineSync.getState().deviceLabel);
+      },
       reconnectAfterRecovery: async (workspaceId) => {
         if (!lineSync || !workspaceId) return;
         await lineSync.loadWorkspaces();

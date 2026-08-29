@@ -164,6 +164,14 @@
     el.className = `tiny mt10${type ? ` ${type}` : ""}`;
   }
 
+  function workspaceOperationMessage(error){
+    const raw = String(error?.message || error || "");
+    if (/invalid_workspace_name/i.test(raw)) return "Enter a line name between 1 and 80 characters.";
+    if (/invalid_(layer|hopper|offset|numeric_job)|unsupported_active_job/i.test(raw)) return "The current desktop setup is incomplete. Finish the Line Setup details, then create the line again.";
+    if (/RT Sync is not ready/i.test(raw)) return "RT Sync is still starting. Wait a moment, then try again.";
+    return "Could not create the line. No changes were applied.";
+  }
+
   function openWorkspaceDialog(mode){
     const dialog = $("workspaceRecoveryWorkspaceDialog");
     const input = $("workspaceRecoveryWorkspaceName");
@@ -199,22 +207,15 @@
     if (workspaceDialogMode === "rename"){
       result = await service.renameWorkspace({ workspaceId: selectedWorkspaceId, name });
     } else {
-      const descriptor = bridge()?.getRecoveryDescriptor?.();
-      result = await service.createWorkspace({
-        name,
-        targetUserId: descriptor?.userId,
-        deviceId: descriptor?.deviceId,
-        deviceLabel: descriptor?.deviceLabel,
-        initialActiveJob: bridge()?.getInitialActiveJob?.()
-      });
+      try{
+        const workspace = await bridge()?.createWorkspaceFromSudo?.(name);
+        result = workspace ? { ok: true, workspace } : { ok: false, message: "RT Sync is not ready." };
+      }catch(error){ result = { ok: false, message: workspaceOperationMessage(error) }; }
     }
     save.disabled = false;
     if (!result.ok){ setWorkspaceDialogMessage(result.message, "bad"); return; }
     const workspace = result.workspace;
     dialog?.close();
-    if (workspaceDialogMode === "create" && workspace?.workspace_id){
-      await bridge()?.reconnectAfterRecovery?.(workspace.workspace_id);
-    }
     await loadWorkspaces();
     const workspaceId = workspace?.workspace_id || selectedWorkspaceId;
     if (workspaceId) await selectWorkspace(workspaceId);
