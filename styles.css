@@ -2925,6 +2925,81 @@ details[open] > summary .chevSatellite{
   font-size: var(--font-small);
   line-height: 1.2;
 }
+
+/* Mobile-only icon guide in the Recipe panel's summary bar, opposite the
+   RECIPE title. Hidden entirely at desktop widths (where the tabs still
+   carry text labels); the <=700px block flips it on. Follows the
+   .recipeScanInfo <details> popover pattern, opening downward. */
+.recipeInfoLegend{ display: none; position: relative; flex: 0 0 auto; margin-left: auto; }
+.recipeInfoLegend > summary{
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  list-style: none;
+}
+.recipeInfoLegend > summary::-webkit-details-marker{ display: none; }
+.recipeInfoLegend > summary svg{
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.recipeInfoLegend > summary:hover,
+.recipeInfoLegend[open] > summary,
+.recipeInfoLegend > summary:focus-visible{ color: var(--title); background: var(--field-bg); }
+.recipeInfoLegend > summary:focus-visible{ outline: 2px solid var(--focus-border); outline-offset: 1px; }
+.recipeInfoLegendPanel{
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 60;
+  width: min(320px, calc(100vw - 28px));
+  max-height: min(62vh, 400px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 12px 14px;
+  border: 1px solid var(--border2);
+  border-radius: var(--control-radius);
+  background: var(--panelOpen);
+  box-shadow: var(--shadow2);
+  text-align: left;
+}
+.recipeInfoLegendHeading{
+  margin: 0 0 9px;
+  color: var(--title);
+  font-size: var(--font-small);
+  font-weight: 850;
+  letter-spacing: .02em;
+}
+.recipeInfoLegendList{ margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+.recipeInfoLegendList li{ display: grid; grid-template-columns: 22px 1fr; gap: 11px; align-items: start; }
+.recipeInfoLegendIcon{ display: grid; place-items: center; width: 22px; height: 22px; color: var(--title); }
+.recipeInfoLegendIcon svg{
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.recipeInfoLegendList li > span:last-child{
+  color: var(--muted);
+  font-size: var(--font-small);
+  line-height: 1.35;
+}
+.recipeInfoLegendList strong{ display: block; color: var(--text); font-weight: 800; }
+
 .recipePageTabs{
   display: flex;
   align-self: start;
@@ -4152,7 +4227,9 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
      show an icon instead of their text label, and the page's Scan / Load
      actions (plus the Edit/Done pencil) sit beside them as an icon cluster
      in the same tab row - folding away the action bar that used to sit
-     below the matrix. */
+     below the matrix. The summary bar's icon guide (opposite the title)
+     turns on here too. */
+  #splitsBlock .recipeInfoLegend{ display: block; }
   #splitsBlock .recipePageTab .recipeTabLabel{
     position:absolute;
     width:1px;

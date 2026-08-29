@@ -204,8 +204,14 @@
   // always act on the current instance without stacking listeners across
   // renders.
   let splitsScanShortcut = null;
+  // The Recipe panel's mobile icon guide (#recipeInfoLegend, static markup)
+  // and the Scan popup both close on an outside click / Escape. hookRecipeInfoLegend()
+  // stops the guide's own summary click from bubbling to the panel <summary>
+  // it is nested in, so opening the guide never toggles the panel.
   document.addEventListener("click", event=>{
     if (splitsScanShortcut?.open && !splitsScanShortcut.contains(event.target)) splitsScanShortcut.open = false;
+    const infoLegend = document.getElementById("recipeInfoLegend");
+    if (infoLegend?.open && !infoLegend.contains(event.target)) infoLegend.open = false;
     const summary = event.target.closest?.(".mobileWeightProfilesSheet .workspaceConfigurationOverflow > summary");
     if (summary){
       const menu = summary.parentElement;
@@ -239,6 +245,11 @@
     if (event.key === "Escape" && splitsScanShortcut?.open){
       splitsScanShortcut.open = false;
       splitsScanShortcut.querySelector(":scope > summary")?.focus();
+    }
+    const infoLegend = document.getElementById("recipeInfoLegend");
+    if (event.key === "Escape" && infoLegend?.open){
+      infoLegend.open = false;
+      infoLegend.querySelector(":scope > summary")?.focus();
     }
   });
 
@@ -3915,6 +3926,18 @@
         setRecipeViewMode(splitsViewMode === "edit" ? "summary" : "edit");
       });
       syncRecipeViewUI();
+    }
+
+    // The mobile icon guide is a <details> nested inside #splitsBlock's own
+    // <summary>. A click on its summary would otherwise bubble to the panel
+    // <summary> and toggle the whole Recipe panel shut, so stop it here. The
+    // guide's own open/close (native <details>) and outside-click / Escape
+    // dismissal (module-scope handlers above) are unaffected.
+    function hookRecipeInfoLegend(){
+      const legend = $("recipeInfoLegend");
+      legend?.querySelector(":scope > summary")?.addEventListener("click", event=>{
+        event.stopPropagation();
+      });
     }
 
     function renderSplitsArea(){
@@ -8818,6 +8841,7 @@
       hookCustomToggles();
       hookRecipePageTabs();
       hookRecipeViewToggle();
+      hookRecipeInfoLegend();
       hookTimelineViewTabs();
       hookTimelineDisplaySheet();
       // Sync toggle UI after restore

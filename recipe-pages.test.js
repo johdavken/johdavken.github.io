@@ -87,7 +87,9 @@ test("the working plan carries no operational or physical values", () => {
  * ============================================================ */
 
 test("the tabs are part of the Recipe panel, directly above the grid", () => {
-  const panel = html.slice(html.indexOf('id="splitsBlock"'), html.indexOf("</details>", html.indexOf('id="splitsBlock"')));
+  // Bound on the next panel, not the first </details> - the summary bar's
+  // #recipeInfoLegend is itself a nested <details> that closes before the tabs.
+  const panel = html.slice(html.indexOf('id="splitsBlock"'), html.indexOf('id="resultsBlock"'));
   const tabsAt = panel.indexOf('class="recipePageTabs"');
   const gridAt = panel.indexOf('id="splitsArea"');
   assert.ok(tabsAt > -1 && gridAt > tabsAt, "the tab strip should sit immediately above the grid");

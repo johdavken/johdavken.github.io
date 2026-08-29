@@ -664,6 +664,27 @@
         </div>
       </div>
       <span id="splitsSummaryStatus" class="pill summaryStatus">Check percentages</span>
+      <!-- Mobile-only icon guide. Sits opposite the RECIPE title; drops a
+           legend down and to the left covering every tab / action icon that
+           replaces a text label on phones. Nested <details> so it toggles
+           itself, not the panel (its summary click stops propagation). -->
+      <details class="recipeInfoLegend" id="recipeInfoLegend">
+        <summary aria-label="What the icons mean" title="What the icons mean"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11.5v4.75"/><path d="M12 7.75h.01"/></svg></summary>
+        <div class="recipeInfoLegendPanel" role="group" aria-label="Icon guide">
+          <p class="recipeInfoLegendHeading">What the icons mean</p>
+          <ul class="recipeInfoLegendList">
+            <li><span class="recipeInfoLegendIcon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5h7L18.5 8v12.5h-11z"/><path d="M14 3.5V8h4.5"/><path d="M9.5 12.5h6M9.5 16h6"/></svg></span><span><strong>Current</strong>The recipe running on the line now</span></li>
+            <li><span class="recipeInfoLegendIcon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3.5h6L19 7.5v11H9z"/><path d="M15 3.5v4h4"/><path d="M15 21.5H5V8.5"/></svg></span><span><strong>Next</strong>The planned changeover recipe</span></li>
+            <li><span class="recipeInfoLegendIcon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5v17M7 20.5h10M5 7.5l7-2 7 2"/><path d="M5 7.5 2.5 13a2.5 2.5 0 0 0 5 0z"/><path d="M19 7.5 16.5 13a2.5 2.5 0 0 0 5 0z"/></svg></span><span><strong>Weights</strong>Receiver hopper weights</span></li>
+            <li><span class="recipeInfoLegendIcon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6.5C9.8 5 6.4 4.6 4 5.2v12.4c2.4-.6 5.8-.2 8 1.3 2.2-1.5 5.6-1.9 8-1.3V5.2c-2.4-.6-5.8-.2-8 1.3z"/><path d="M12 6.5v12.4"/></svg></span><span><strong>Recipe Book</strong>Shared recipes saved to this workspace</span></li>
+            <li><span class="recipeInfoLegendIcon"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M8 4H6a2 2 0 0 0-2 2v2"/><path d="M24 4h2a2 2 0 0 1 2 2v2"/><path d="M8 28H6a2 2 0 0 1-2-2v-2"/><path d="M24 28h2a2 2 0 0 0 2-2v-2"/><path d="M5 16h22"/></svg></span><span><strong>Scan</strong>Fill the recipe from a photo of a job traveler, dosing screen or heat sheet</span></li>
+            <li><span class="recipeInfoLegendIcon"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 5v16"/><path d="M10 15l6 6 6-6"/><path d="M6 26h20"/></svg></span><span><strong>Load Next</strong>Promote the Next recipe to the line as the Current recipe</span></li>
+            <li><span class="recipeInfoLegendIcon"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 27V11"/><path d="M10 17l6-6 6 6"/><path d="M6 6h20"/></svg></span><span><strong>Load Current</strong>Copy the Current recipe into Next to plan a change from it</span></li>
+            <li><span class="recipeInfoLegendIcon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span><span><strong>Edit</strong>Switch between the read-only summary and editing values</span></li>
+            <li><span class="recipeInfoLegendIcon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5H6.5A1.5 1.5 0 0 0 5 6.5v13A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5v-13A1.5 1.5 0 0 0 17.5 5H16"/><rect x="8" y="3" width="8" height="4" rx="1.2"/><path d="M8.5 11.5h7M8.5 15.5h5"/></svg></span><span><strong>Weights profile</strong>Save or load a receiver weight profile (Weights tab)</span></li>
+          </ul>
+        </div>
+      </details>
     </summary>
 
     <div class="blockBody">
