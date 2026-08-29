@@ -1141,7 +1141,10 @@
     const lineValue = $("lineOverviewLine");
     if (!lineValue) return;
     const configuration = derivedLineConfiguration(syncState);
-    const layerCount = LINE_TYPES.includes(Number(state.lineType)) ? Number(state.lineType) : 3;
+    const configuredLayerCount = Number(configuration?.layerCount);
+    const hasConfiguredLayout = Number.isInteger(configuredLayerCount) && configuredLayerCount > 0;
+    const supportedConfiguration = !hasConfiguredLayout || LINE_TYPES.includes(configuredLayerCount);
+    const layerCount = hasConfiguredLayout && !supportedConfiguration ? configuredLayerCount : (LINE_TYPES.includes(Number(state.lineType)) ? Number(state.lineType) : 3);
 
     lineValue.textContent = configuration ? String(configuration.lineNumber) : "—";
     lineValue.classList.toggle("lineOverviewUnknown", !configuration);
@@ -1175,8 +1178,14 @@
       // clearer than an empty section. An unresolved multilayer line says
       // nothing at all rather than implying an orientation it doesn't know.
       const single = layerCount === 1;
-      note.hidden = !single;
-      note.textContent = single ? "Single layer" : "";
+      const unsupported = !!configuration && !supportedConfiguration;
+      if (unsupported){
+        note.hidden = false;
+        note.textContent = `${layerCount}-layer layout is configured but is not supported by this Recipe editor.`;
+      }else{
+        note.hidden = !single;
+        note.textContent = single ? "Single layer" : "";
+      }
     }
   }
 
@@ -1220,6 +1229,7 @@
   // which would otherwise re-enter renderLineSync mid-render.
   function scheduleLayerCountEnforcement(){
     if (layerEnforcementScheduled) return;
+    if (!LINE_TYPES.includes(Number(derivedRequiredLayerCount()))) return;
     layerEnforcementScheduled = true;
     setTimeout(()=>{
       layerEnforcementScheduled = false;
@@ -1236,6 +1246,7 @@
     // change this device without ever telling the others. applyRemoteActive
     // always emits again once it settles, and that pass re-schedules this.
     if (syncState?.isApplyingRemote) return false;
+    if (!LINE_TYPES.includes(Number(required))) return false;
     return applyLineTypeChange(required, { confirmDataLoss:false });
   }
 
@@ -7772,6 +7783,11 @@
         onStateChange: renderLineSync,
         onStorageError: showStorageWarning
       }
+    });
+    window.addEventListener("polyn:line-configurations", ()=>{
+      const syncState = lineSync?.getState?.();
+      if (!syncState) return;
+      renderLineSync(syncState);
     });
     if (window.PolynWorkspaceConfigurations){
       workspaceConfigurations = window.PolynWorkspaceConfigurations.create({
