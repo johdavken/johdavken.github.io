@@ -25,12 +25,15 @@ test("the manifest is valid JSON with the fields an install needs", () => {
   assert.equal(manifest.scope, "/");
 });
 
-test("manifest colors come from the app's own palette, not invented ones", () => {
+test("manifest colors match the Rosé Pine Light launcher palette", () => {
   const manifest = JSON.parse(manifestRaw);
   const theme = fs.readFileSync("theme.css", "utf8");
-  const industrialSlate = theme.slice(theme.indexOf('[data-theme="industrial-slate"]'));
-  const background = /--bg:\s*(#[0-9a-f]{6})/i.exec(industrialSlate)?.[1];
-  assert.ok(background, "expected the default theme to define --bg");
+  const rosePineLight = theme.slice(
+    theme.indexOf('[data-theme="rose-pine-dawn"]'),
+    theme.indexOf('[data-theme="everforest"]'),
+  );
+  const background = /--bg:\s*(#[0-9a-f]{6})/i.exec(rosePineLight)?.[1];
+  assert.ok(background, "expected Rosé Pine Light to define --bg");
   assert.equal(manifest.background_color.toLowerCase(), background.toLowerCase());
   assert.equal(manifest.theme_color.toLowerCase(), background.toLowerCase());
   // The <meta> must agree with the manifest or the two disagree at install time.
@@ -107,8 +110,10 @@ test("the existing viewport keeps viewport-fit=cover and its other settings", ()
   assert.equal((head.match(/name="viewport"/g) || []).length, 1);
 });
 
-test("the existing SVG favicon is untouched", () => {
-  assert.match(head, /<link rel="icon" type="image\/svg\+xml" sizes="any" href="branding\/resin-tools\/rt6-02-layer-stack-icon\.svg\?v=2">/);
+test("the SVG favicon uses the Rosé Pine Light Layer Stack without RT lettering", () => {
+  assert.match(head, /<link rel="icon" type="image\/svg\+xml" sizes="any" href="branding\/resin-tools\/layer-stack-rose-pine-light\.svg\?v=1">/);
+  const favicon = fs.readFileSync("branding/resin-tools/layer-stack-rose-pine-light.svg", "utf8");
+  assert.doesNotMatch(favicon, /<text\b|>\s*RT\s*</i);
 });
 
 /* ============================================================

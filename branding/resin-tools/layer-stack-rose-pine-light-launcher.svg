@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" role="img" aria-labelledby="title desc">
+  <title id="title">Resin Tools Layer Stack launcher icon — Rosé Pine Light</title>
+  <desc id="desc">The existing five-layer Resin Tools app mark, without RT lettering, fitted to the Android adaptive-icon safe circle.</desc>
+  <rect width="108" height="108" fill="#faf4ed"/>
+  <!-- The original 92-unit Layer Stack geometry is scaled uniformly around
+       its visual centre. Every foreground vertex remains inside Android's
+       guaranteed 66-unit adaptive-icon safe circle. -->
+  <g id="fg">
+    <path d="M29.2 33.2 L54 22 L78.8 33.2 L54 44.4 Z" fill="#b4637a"/>
+    <path d="M29.2 43.6 L54 32.4 L78.8 43.6 L54 54.8 Z" fill="#d7827e"/>
+    <path d="M29.2 54 L54 42.8 L78.8 54 L54 65.2 Z" fill="#ea9d34"/>
+    <path d="M29.2 64.4 L54 53.2 L78.8 64.4 L54 75.6 Z" fill="#907aa9"/>
+    <path d="M29.2 74.8 L54 63.6 L78.8 74.8 L54 86 Z" fill="#56949f"/>
+  </g>
+</svg>
