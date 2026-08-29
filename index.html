@@ -77,12 +77,12 @@
 <script src="bulk-density-measurement.js?v=0.1.0" defer></script>
 <script src="workspace-recovery.js?v=0.1.2" defer></script>
 <script src="beta-access.js?v=0.1.0" defer></script>
-<script src="app.js?v=0.18.171" defer></script>
+<script src="app.js?v=0.18.172" defer></script>
 <script src="resin-admin-ui.js?v=0.20.4" defer></script>
 <script src="line-configurations-ui.js?v=0.1.0" defer></script>
 <script src="database-health-ui.js?v=0.1.3" defer></script>
 <script src="bulk-density-measurement-ui.js?v=0.1.0" defer></script>
-<script src="workspace-recovery-ui.js?v=0.1.2" defer></script>
+<script src="workspace-recovery-ui.js?v=0.1.3" defer></script>
 <script src="beta-access-ui.js?v=0.1.0" defer></script>
 <!-- RT Notes TipTap experiment: self-contained IIFE bundle (window.RTNotesEditor),
      built by `npm run build:notes-editor` from notes-editor-vendor.src.js. Must
@@ -1771,10 +1771,10 @@
 
   <details class="block card workspacePanel adminResinPanel" id="workspaceManagementBlock">
     <summary>
-      <div class="sumLeft"><div class="chev"><span class="chevRing"></span><span class="chevSatellite"></span><span class="chevCore"></span></div><div class="summaryText"><div class="layerTitle">Workspace Management</div><div class="layerMeta">Recover access and respond to RT Sync incidents</div></div></div>
+      <div class="sumLeft"><div class="chev"><span class="chevRing"></span><span class="chevSatellite"></span><span class="chevCore"></span></div><div class="summaryText"><div class="layerTitle">Workspace Management</div><div class="layerMeta">Manage RT Sync lines, devices, and recovery actions</div></div></div>
     </summary>
     <div class="blockBody workspaceRecoveryPanel">
-      <p class="muted">Reconnect a line computer after a browser reset, remotely disconnect a linked device, or permanently remove a workspace during an incident.</p>
+      <p class="muted">Create or rename RT Sync lines, connect this desktop, review linked devices, and perform recovery or incident actions.</p>
 
       <div id="workspaceRecoveryDeviceCard" class="workspaceRecoveryDeviceCard">
         <div><strong id="workspaceRecoveryDeviceLabel">This device</strong></div>
@@ -1782,7 +1782,7 @@
         <details class="workspaceRecoveryDiagnostic"><summary>Diagnostic details</summary><div id="workspaceRecoveryDeviceIds" class="tiny mono"></div></details>
       </div>
 
-      <div class="adminToolbar"><div id="workspaceRecoveryMessage" class="tiny" role="status"></div><button id="workspaceRecoveryRefreshBtn" type="button" class="secondary">Refresh workspaces</button></div>
+      <div class="adminToolbar"><div id="workspaceRecoveryMessage" class="tiny" role="status"></div><button id="workspaceRecoveryCreateWorkspaceBtn" type="button" class="primary">Create Line</button><button id="workspaceRecoveryRefreshBtn" type="button" class="secondary">Refresh workspaces</button></div>
 
       <div id="workspaceRecoveryList" class="workspaceRecoveryList" aria-live="polite"></div>
 
@@ -1791,6 +1791,7 @@
         <div id="workspaceRecoveryDetailMeta" class="tiny muted"></div>
         <div class="buttonRow mt10">
           <button id="workspaceRecoveryAddDeviceBtn" type="button" class="primary actionRail">Add This Device</button>
+          <button id="workspaceRecoveryRenameWorkspaceBtn" type="button" class="secondary">Rename Line</button>
           <button id="workspaceRecoveryDetailRefreshBtn" type="button" class="secondary">Refresh details</button>
         </div>
         <div class="buttonRow mt10">
@@ -1844,6 +1845,7 @@
     </div>
   </form>
 </dialog>
+<dialog id="workspaceRecoveryWorkspaceDialog" class="lineSyncConflictDialog" aria-labelledby="workspaceRecoveryWorkspaceDialogTitle"><form id="workspaceRecoveryWorkspaceForm"><div id="workspaceRecoveryWorkspaceDialogTitle" class="layerTitle">Create Line</div><div class="mt10"><label for="workspaceRecoveryWorkspaceName">Line name</label><input id="workspaceRecoveryWorkspaceName" type="text" maxlength="80" required autocomplete="off" /></div><div id="workspaceRecoveryWorkspaceDialogMessage" class="tiny mt10" role="status"></div><div class="buttonRow mt10"><button value="cancel" class="secondary" type="button" data-workspace-recovery-dialog-close>Cancel</button><button id="workspaceRecoveryWorkspaceDialogSave" class="primary" type="submit">Create Line</button></div></form></dialog>
 <dialog id="lineSyncQrJoinDialog" class="lineSyncConflictDialog" aria-labelledby="lineSyncQrJoinTitle"><form method="dialog"><div id="lineSyncQrJoinTitle" class="layerTitle">Join RT Sync</div><p id="lineSyncQrJoinDetails">Connect this device using this temporary link code?</p><div id="lineSyncQrJoinMessage" class="tiny muted" role="status"></div><div class="buttonRow mt10"><button id="lineSyncQrJoinCancel" value="cancel" class="secondary" type="submit">Cancel</button><button id="lineSyncQrJoinConfirm" value="connect" class="primary" type="submit">Connect</button></div></form></dialog>
 <dialog id="workspaceConfigurationLoadDialog" class="lineSyncConflictDialog" aria-labelledby="workspaceConfigurationLoadTitle">
   <form method="dialog"><div id="workspaceConfigurationLoadTitle" class="layerTitle">Load configuration</div><div id="workspaceConfigurationLoadDetails" class="muted mt10"></div><div class="segmentedActionToolbar mt10"><div class="segmentedActionRow"><button value="cancel" class="secondary" type="submit">Cancel</button><button id="workspaceConfigurationLoadCurrent" value="load-current" class="secondary" type="submit" hidden>Load into Current</button><button id="workspaceConfigurationConfirmLoad" value="load-next" class="primary" type="submit">Load into Next</button></div></div></form>

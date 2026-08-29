@@ -10,6 +10,7 @@
   let selectedWorkspaceRow = null;
   let members = [];
   let listInFlight = false;
+  let workspaceDialogMode = "";
 
   function shortId(id){ return id ? String(id).slice(0, 8) : "—"; }
   function fmtDate(value){ return value ? new Date(value).toLocaleString() : "unknown"; }
@@ -154,6 +155,71 @@
       mergeTarget.disabled = !targets.length;
       if (mergeBtn) mergeBtn.disabled = !targets.length;
     }
+  }
+
+  function setWorkspaceDialogMessage(text, type = ""){
+    const el = $("workspaceRecoveryWorkspaceDialogMessage");
+    if (!el) return;
+    el.textContent = text || "";
+    el.className = `tiny mt10${type ? ` ${type}` : ""}`;
+  }
+
+  function openWorkspaceDialog(mode){
+    const dialog = $("workspaceRecoveryWorkspaceDialog");
+    const input = $("workspaceRecoveryWorkspaceName");
+    const title = $("workspaceRecoveryWorkspaceDialogTitle");
+    const save = $("workspaceRecoveryWorkspaceDialogSave");
+    if (!dialog?.showModal || !input || !title || !save) return;
+    if (mode === "create" && !bridge()?.getRecoveryDescriptor?.().ready){
+      setMessage("RT Sync identity not ready. Wait for RT Sync to connect, then try again.", "bad");
+      return;
+    }
+    if (mode === "rename" && !selectedWorkspaceRow) return;
+    workspaceDialogMode = mode;
+    title.textContent = mode === "rename" ? "Rename Line" : "Create Line";
+    save.textContent = mode === "rename" ? "Save Name" : "Create Line";
+    input.value = mode === "rename" ? selectedWorkspaceRow.workspace_name : "";
+    setWorkspaceDialogMessage("");
+    dialog.showModal();
+    input.focus();
+    if (mode === "rename") input.select();
+  }
+
+  async function saveWorkspaceDialog(event){
+    event.preventDefault();
+    const service = ensureRecovery();
+    const dialog = $("workspaceRecoveryWorkspaceDialog");
+    const input = $("workspaceRecoveryWorkspaceName");
+    const save = $("workspaceRecoveryWorkspaceDialogSave");
+    const name = input?.value.trim() || "";
+    if (!service || !name || !save) return;
+    save.disabled = true;
+    setWorkspaceDialogMessage(workspaceDialogMode === "rename" ? "Renaming line…" : "Creating line…");
+    let result;
+    if (workspaceDialogMode === "rename"){
+      result = await service.renameWorkspace({ workspaceId: selectedWorkspaceId, name });
+    } else {
+      const descriptor = bridge()?.getRecoveryDescriptor?.();
+      result = await service.createWorkspace({
+        name,
+        targetUserId: descriptor?.userId,
+        deviceId: descriptor?.deviceId,
+        deviceLabel: descriptor?.deviceLabel,
+        initialActiveJob: bridge()?.getInitialActiveJob?.()
+      });
+    }
+    save.disabled = false;
+    if (!result.ok){ setWorkspaceDialogMessage(result.message, "bad"); return; }
+    const workspace = result.workspace;
+    dialog?.close();
+    if (workspaceDialogMode === "create" && workspace?.workspace_id){
+      await bridge()?.reconnectAfterRecovery?.(workspace.workspace_id);
+    }
+    await loadWorkspaces();
+    const workspaceId = workspace?.workspace_id || selectedWorkspaceId;
+    if (workspaceId) await selectWorkspace(workspaceId);
+    setMessage(workspaceDialogMode === "rename" ? `Renamed line to ${name}.` : `Created ${name} and connected this desktop.`, "ok");
+    workspaceDialogMode = "";
   }
 
   async function loadWorkspaces(){
@@ -440,6 +506,13 @@
   }
   root.PolynWorkspaceRecoveryUI = { openWorkspace };
   $("workspaceRecoveryRefreshBtn")?.addEventListener("click", () => void loadWorkspaces());
+  $("workspaceRecoveryCreateWorkspaceBtn")?.addEventListener("click", () => openWorkspaceDialog("create"));
+  $("workspaceRecoveryRenameWorkspaceBtn")?.addEventListener("click", () => openWorkspaceDialog("rename"));
+  $("workspaceRecoveryWorkspaceForm")?.addEventListener("submit", event => void saveWorkspaceDialog(event));
+  $("workspaceRecoveryWorkspaceDialog")?.querySelector("[data-workspace-recovery-dialog-close]")?.addEventListener("click", () => {
+    workspaceDialogMode = "";
+    $("workspaceRecoveryWorkspaceDialog")?.close();
+  });
   $("workspaceRecoveryDetailRefreshBtn")?.addEventListener("click", () => { if (selectedWorkspaceId) void selectWorkspace(selectedWorkspaceId); });
   $("workspaceRecoveryAddDeviceBtn")?.addEventListener("click", confirmAddDevice);
   $("workspaceRecoveryTransferOwnershipBtn")?.addEventListener("click", confirmTransferOwnership);

@@ -22,9 +22,33 @@ test("with no client every call fails locally without a network attempt", async 
   assert.equal((await service.listWorkspaces("user-1")).ok, false);
   assert.equal((await service.getWorkspaceDetails("ws-1")).ok, false);
   assert.equal((await service.addDeviceToWorkspace({ workspaceId: "ws-1", targetUserId: "u", deviceId: "d" })).ok, false);
+  assert.equal((await service.createWorkspace({ name: "Line 8", targetUserId: "u", deviceId: "d", initialActiveJob: {} })).ok, false);
+  assert.equal((await service.renameWorkspace({ workspaceId: "ws-1", name: "Line 9" })).ok, false);
   assert.equal((await service.removeWorkspaceMember({ workspaceId: "ws-1", memberUserId: "u" })).ok, false);
   assert.equal((await service.deleteWorkspace({ workspaceId: "ws-1" })).ok, false);
   assert.equal((await service.mergeWorkspace({ sourceWorkspaceId: "ws-1", targetWorkspaceId: "ws-2" })).ok, false);
+});
+
+test("Sudo creates a line for the current desktop through the dedicated admin RPC", async () => {
+  const client = fakeClient({
+    admin_create_line_workspace: () => ({ data: [{ workspace_id: "ws-8", workspace_name: "Line 8", workspace_revision: 1, active_job_revision: 1 }], error: null })
+  });
+  const service = recoveryApi.create({ client });
+  const initialActiveJob = { version: "0.17" };
+  const result = await service.createWorkspace({ name: "Line 8", targetUserId: "user-8", deviceId: "device-8", deviceLabel: "Resin.Tools Desktop", initialActiveJob });
+  assert.equal(result.ok, true);
+  assert.equal(result.workspace.workspace_id, "ws-8");
+  assert.deepEqual(client.calls[0], { name: "admin_create_line_workspace", args: {
+    p_name: "Line 8", p_target_user_id: "user-8", p_device_id: "device-8", p_device_label: "Resin.Tools Desktop", p_initial_active_job: initialActiveJob
+  } });
+});
+
+test("Sudo renames a line through the dedicated admin RPC", async () => {
+  const client = fakeClient({ admin_rename_line_workspace: () => ({ data: [{ workspace_id: "ws-8", workspace_name: "Line 10" }], error: null }) });
+  const service = recoveryApi.create({ client });
+  const result = await service.renameWorkspace({ workspaceId: "ws-8", name: "Line 10" });
+  assert.equal(result.ok, true);
+  assert.deepEqual(client.calls[0], { name: "admin_rename_line_workspace", args: { p_workspace_id: "ws-8", p_name: "Line 10" } });
 });
 
 test("listWorkspaces calls the admin RPC with the current RT Sync identity and returns rows unmodified", async () => {

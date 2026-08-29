@@ -8165,6 +8165,7 @@
     window.PolynRtSyncBridge = {
       getRecoveryDescriptor: () => lineSync?.getRecoveryDescriptor?.()
         || { ready: false, userId: "", deviceId: "", deviceLabel: "" },
+      getInitialActiveJob: () => snapshotSharedActiveJob(),
       reconnectAfterRecovery: async (workspaceId) => {
         if (!lineSync || !workspaceId) return;
         await lineSync.loadWorkspaces();

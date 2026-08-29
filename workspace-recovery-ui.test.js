@@ -48,12 +48,24 @@ test("the workspace list and recovery actions go through the admin RPC service o
   assert.match(ui, /service\.listWorkspaces/);
   assert.match(ui, /service\.getWorkspaceDetails/);
   assert.match(ui, /service\.addDeviceToWorkspace/);
+  assert.match(ui, /service\.createWorkspace/);
+  assert.match(ui, /service\.renameWorkspace/);
   assert.match(ui, /service\.removeWorkspaceMember/);
   assert.match(ui, /service\.deleteWorkspace/);
   assert.match(ui, /service\.mergeWorkspace/);
   assert.doesNotMatch(ui, /\.from\("line_workspace_members"\)/);
   assert.doesNotMatch(ui, /\.from\("line_workspaces"\)/);
   assert.match(ui, /admin_list_line_workspaces|listWorkspaces/);
+});
+
+test("Sudo Workspace Management is the only administrative home for create and rename", () => {
+  assert.match(index, /id="workspaceRecoveryCreateWorkspaceBtn"[^>]*>Create Line/);
+  assert.match(index, /id="workspaceRecoveryRenameWorkspaceBtn"[^>]*>Rename Line/);
+  assert.match(index, /id="workspaceRecoveryWorkspaceDialog"/);
+  assert.match(ui, /function openWorkspaceDialog\(mode\)/);
+  assert.match(ui, /bridge\(\)\?\.getInitialActiveJob\?\.\(\)/);
+  assert.match(app, /getInitialActiveJob: \(\) => snapshotSharedActiveJob\(\)/);
+  assert.doesNotMatch(index.slice(index.indexOf('id="lineSyncBlock"'), index.indexOf('<!-- 6\) TOOLS -->')), /Create [Ll]ine|Rename [Ll]ine/);
 });
 
 test("Add This Device requires an explicit confirmation dialog before mutating membership", () => {
@@ -94,7 +106,7 @@ test("sign-out closes Workspace Management and admin/RT Sync sessions stay separ
 test("Workspace Management is a main-panel workspacePanel, not an oversized modal", () => {
   assert.match(index, /id="workspaceManagementButton"[^>]*data-workspace-target="workspaceManagementBlock"/);
   assert.match(index, /<details class="block card workspacePanel adminResinPanel" id="workspaceManagementBlock">/);
-  assert.match(index, /Reconnect a line computer after a browser reset/);
+  assert.match(index, /Create or rename RT Sync lines/);
 });
 
 test("Workspace recovery uses the shared action treatments for refresh and adding this device", () => {

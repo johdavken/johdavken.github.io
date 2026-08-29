@@ -14,6 +14,7 @@
     if (source.includes("device_already_in_use")) return "That device ID is already registered to a different member of this workspace.";
     if (source.includes("invalid_device_label")) return "Device name is too long.";
     if (source.includes("invalid_recovery_input") || source.includes("invalid_workspace_id")) return "Recovery could not be completed: missing information.";
+    if (source.includes("invalid_workspace_name")) return "Enter a line name between 1 and 80 characters.";
     if (source.includes("membership_not_found")) return "That membership no longer exists.";
     if (source.includes("new_owner_must_be_a_member")) return "Add this device to the workspace before reassigning ownership to it.";
     return "Recovery could not be completed.";
@@ -56,6 +57,29 @@
         if (response.error) throw response.error;
         const row = response.data?.[0];
         return { ok: true, alreadyMember: !!row?.already_member, role: row?.member_role || "member" };
+      }catch(error){ return { ok: false, message: friendlyError(error) }; }
+    }
+
+    async function createWorkspace({ name, targetUserId, deviceId, deviceLabel, initialActiveJob } = {}){
+      if (!client) return { ok: false, message: "Admin connection is unavailable." };
+      if (!name || !targetUserId || !deviceId || !initialActiveJob) return { ok: false, message: "A line name and this desktop's RT Sync identity are required." };
+      try{
+        const response = await client.rpc("admin_create_line_workspace", {
+          p_name: name, p_target_user_id: targetUserId, p_device_id: deviceId,
+          p_device_label: deviceLabel || null, p_initial_active_job: initialActiveJob
+        });
+        if (response.error) throw response.error;
+        return { ok: true, workspace: response.data?.[0] || null };
+      }catch(error){ return { ok: false, message: friendlyError(error) }; }
+    }
+
+    async function renameWorkspace({ workspaceId, name } = {}){
+      if (!client) return { ok: false, message: "Admin connection is unavailable." };
+      if (!workspaceId || !name) return { ok: false, message: "A workspace and line name are required." };
+      try{
+        const response = await client.rpc("admin_rename_line_workspace", { p_workspace_id: workspaceId, p_name: name });
+        if (response.error) throw response.error;
+        return { ok: true, workspace: response.data?.[0] || null };
       }catch(error){ return { ok: false, message: friendlyError(error) }; }
     }
 
@@ -110,7 +134,7 @@
       }catch(error){ return { ok: false, message: friendlyError(error) }; }
     }
 
-    return { listWorkspaces, getWorkspaceDetails, addDeviceToWorkspace, removeWorkspaceMember, transferOwnership, deleteWorkspace, mergeWorkspace };
+    return { listWorkspaces, getWorkspaceDetails, addDeviceToWorkspace, createWorkspace, renameWorkspace, removeWorkspaceMember, transferOwnership, deleteWorkspace, mergeWorkspace };
   }
 
   return { friendlyError, create };
