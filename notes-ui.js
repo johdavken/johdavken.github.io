@@ -129,8 +129,12 @@
     if (note.pinned) {
       const pin = document.createElement("span");
       pin.className = "notesItemPin";
+      pin.setAttribute("role", "img");
       pin.setAttribute("aria-label", "Pinned");
-      pin.textContent = "📌";
+      // Reuse the editor toolbar's pin glyph (cloned, never innerHTML) so the
+      // list marker is the app's line-icon, not a colour emoji.
+      const glyph = pinBtn && pinBtn.querySelector("svg");
+      if (glyph) pin.appendChild(glyph.cloneNode(true));
       head.appendChild(pin);
     }
     item.appendChild(head);

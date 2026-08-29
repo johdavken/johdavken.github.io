@@ -6784,7 +6784,8 @@ button.compactAction{
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   color:var(--title); font-size:14px; font-weight:800;
 }
-.notesItemPin{ flex:0 0 auto; font-size:11px; line-height:1; }
+.notesItemPin{ display:inline-flex; flex:0 0 auto; align-items:center; color:var(--focus-border); }
+.notesItemPin svg{ width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
 .notesItemPreview{
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   color:var(--muted); font-size:12px;
