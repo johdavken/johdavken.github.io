@@ -204,14 +204,17 @@
   // always act on the current instance without stacking listeners across
   // renders.
   let splitsScanShortcut = null;
-  // The Recipe panel's mobile icon guide (#recipeInfoLegend, static markup)
-  // and the Scan popup both close on an outside click / Escape. hookRecipeInfoLegend()
-  // stops the guide's own summary click from bubbling to the panel <summary>
-  // it is nested in, so opening the guide never toggles the panel.
+  // The Recipe panel's mobile icon guide (#recipeInfoLegend), the Timeline
+  // panel's starter guide (#timelineInfoGuide) and the Scan popup all close
+  // on an outside click / Escape. Their hook*() helpers stop each guide's
+  // own summary click from bubbling to the panel <summary> it is nested in,
+  // so opening a guide never toggles the panel.
   document.addEventListener("click", event=>{
     if (splitsScanShortcut?.open && !splitsScanShortcut.contains(event.target)) splitsScanShortcut.open = false;
     const infoLegend = document.getElementById("recipeInfoLegend");
     if (infoLegend?.open && !infoLegend.contains(event.target)) infoLegend.open = false;
+    const timelineInfoGuide = document.getElementById("timelineInfoGuide");
+    if (timelineInfoGuide?.open && !timelineInfoGuide.contains(event.target)) timelineInfoGuide.open = false;
     const summary = event.target.closest?.(".mobileWeightProfilesSheet .workspaceConfigurationOverflow > summary");
     if (summary){
       const menu = summary.parentElement;
@@ -250,6 +253,11 @@
     if (event.key === "Escape" && infoLegend?.open){
       infoLegend.open = false;
       infoLegend.querySelector(":scope > summary")?.focus();
+    }
+    const timelineInfoGuide = document.getElementById("timelineInfoGuide");
+    if (event.key === "Escape" && timelineInfoGuide?.open){
+      timelineInfoGuide.open = false;
+      timelineInfoGuide.querySelector(":scope > summary")?.focus();
     }
   });
 
@@ -3936,6 +3944,16 @@
     function hookRecipeInfoLegend(){
       const legend = $("recipeInfoLegend");
       legend?.querySelector(":scope > summary")?.addEventListener("click", event=>{
+        event.stopPropagation();
+      });
+    }
+
+    // Timeline panel's starter guide - same nested-<details> pattern as the
+    // Recipe icon guide: stop its summary click from bubbling to the panel
+    // <summary>, so opening the guide never collapses/expands the panel.
+    function hookTimelineInfoGuide(){
+      const guide = $("timelineInfoGuide");
+      guide?.querySelector(":scope > summary")?.addEventListener("click", event=>{
         event.stopPropagation();
       });
     }
@@ -8842,6 +8860,7 @@
       hookRecipePageTabs();
       hookRecipeViewToggle();
       hookRecipeInfoLegend();
+      hookTimelineInfoGuide();
       hookTimelineViewTabs();
       hookTimelineDisplaySheet();
       // Sync toggle UI after restore

@@ -3000,6 +3000,79 @@ details[open] > summary .chevSatellite{
 }
 .recipeInfoLegendList strong{ display: block; color: var(--text); font-weight: 800; }
 
+/* Starter guide in the Timeline panel's summary bar, opposite the TIMELINE
+   title. Same <details> popover pattern as the Recipe icon guide above,
+   but shown at every width - this is conceptual onboarding, not a
+   phone-only icon crib - and its body is three short prose sections
+   (Timeline / Hookups / Options) rather than an icon legend. */
+.timelineInfoGuide{ position: relative; flex: 0 0 auto; margin-left: auto; }
+.timelineInfoGuide > summary{
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  list-style: none;
+}
+.timelineInfoGuide > summary::-webkit-details-marker{ display: none; }
+.timelineInfoGuide > summary svg{
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.timelineInfoGuide > summary:hover,
+.timelineInfoGuide[open] > summary,
+.timelineInfoGuide > summary:focus-visible{ color: var(--title); background: var(--field-bg); }
+.timelineInfoGuide > summary:focus-visible{ outline: 2px solid var(--focus-border); outline-offset: 1px; }
+.timelineInfoGuidePanel{
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 60;
+  width: min(340px, calc(100vw - 28px));
+  max-height: min(66vh, 440px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 12px 14px;
+  border: 1px solid var(--border2);
+  border-radius: var(--control-radius);
+  background: var(--panelOpen);
+  box-shadow: var(--shadow2);
+  text-align: left;
+}
+.timelineInfoGuideHeading{
+  margin: 0 0 9px;
+  color: var(--title);
+  font-size: var(--font-small);
+  font-weight: 850;
+  letter-spacing: .02em;
+}
+.timelineInfoGuideSection{ margin-top: 11px; }
+.timelineInfoGuideSection:first-of-type{ margin-top: 0; }
+.timelineInfoGuideSection strong{
+  display: block;
+  margin-bottom: 3px;
+  color: var(--text);
+  font-weight: 800;
+  font-size: var(--font-small);
+}
+.timelineInfoGuideSection p{
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--font-small);
+  line-height: 1.4;
+}
+.timelineInfoGuideSection b{ color: var(--text); font-weight: 700; }
+
 .recipePageTabs{
   display: flex;
   align-self: start;
