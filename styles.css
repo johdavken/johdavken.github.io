@@ -10382,9 +10382,17 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
   .weightsSmartHow p{min-width:0;max-width:100%;margin:6px 0 0;padding:8px;box-sizing:border-box;border-left:2px solid var(--focus-border);background:color-mix(in srgb,var(--focus-ring) 34%,transparent);font-size:10px;line-height:1.35;white-space:normal;overflow-wrap:anywhere}
 
   .mobileWeightsControlRail{grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:7px}
+  /* Compact control-row treatment: these read as a small header strip above
+     the weight matrix, not as feature panels. No min-height, no flex/aspect
+     stretching - the rail's align-items:stretch keeps both cards the exact
+     same height, driven only by their real content (the 34px toggle / 32px
+     circumference field plus trimmed padding). The Circumference card is a
+     <label>, so it inherits the global label{margin-bottom:6px} - that stray
+     margin used to inflate the rail and desync the two card heights, hence
+     the explicit margin:0. */
   .mobileWeightsSmartControl{
-    min-height:52px;
-    padding:7px 8px;
+    padding:5px 8px;
+    gap:6px;
     border:1px solid var(--row-border-2);
     border-radius:var(--control-radius);
     background:var(--row-bg-2);
@@ -10393,10 +10401,13 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
   }
   .mobileWeightsSmartControl strong{font-size:11px}
   .mobileWeightsSmartControl small{font-size:8px}
-  .mobileSharedCircumference{grid-template-columns:minmax(0,1fr) auto;gap:1px 7px;min-height:52px;padding:6px 8px}
+  .mobileSharedCircumference{grid-template-columns:auto minmax(50px,58px);justify-content:space-between;gap:0 6px;margin:0;padding:4px 8px}
   .mobileSharedCircumference > span{align-self:end;color:var(--text);font-size:10px;font-weight:800;white-space:nowrap}
   .mobileSharedCircumference small{grid-column:1;text-align:left}
-  .mobileSharedCircumference input{grid-column:2;grid-row:1 / span 2;width:48px;height:32px;font-size:16px}
+  /* width comes from the base rule below (100%, min-width:0); the value
+     column above (not a fixed 48px) is what guarantees "36.25" always fits
+     inside the card. box-sizing keeps padding inside that column width. */
+  .mobileSharedCircumference input{grid-column:2;grid-row:1 / span 2;height:32px;padding:2px 3px;font-size:16px;box-sizing:border-box}
   .mobileWeightsViewToggle:not(.weightsHeaderViewToggle){padding-top:2px}
   .mobileWeightsViewToggle:not(.weightsHeaderViewToggle) button{border-radius:var(--control-radius)}
   .mobileWeightsViewToggle:not(.weightsHeaderViewToggle) button.active{background:transparent;box-shadow:inset 0 -2px 0 var(--focus-border)}
