@@ -9876,6 +9876,9 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
   .appDockMain[aria-current="page"]{border-color:color-mix(in srgb,var(--focus-border) 48%,var(--border));background:color-mix(in srgb,var(--focus-ring) 94%,var(--panelOpen));color:var(--title)}
   .appDockMain:not([aria-current="page"]){color:var(--muted);background:color-mix(in srgb,var(--row-bg) 82%,var(--panelOpen))}
   .appDockControl:disabled{opacity:.58}
+  /* Back / Forward hold their slot but read as inert until usable - a
+     firmer fade than a merely busy control, and no press feedback. */
+  .appDockNav:disabled{opacity:.34;pointer-events:none}
   .cloudSyncFooterStatus{border:0;text-align:center}
   .cloudSyncFooterStatus strong{max-width:100%;overflow:hidden;color:var(--text);font-size:8px;font-weight:850;line-height:1;text-overflow:ellipsis;white-space:nowrap}
   .cloudSyncFooterStatus[data-state="synced"]{color:var(--ok)}
@@ -10058,9 +10061,12 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
   }
 
   /* Compact footer: Main remains a centered text destination; Display and
-     Alerts use their familiar palette and bell symbols at either side. */
+     Alerts use their familiar palette and bell symbols at either side, with
+     Back / Forward flanking Main (concept 7). Forward keeps its slot at all
+     times and only lights up once Back has been used, so the row never
+     reflows. */
   .footerBar{
-    grid-template-columns:repeat(3,minmax(0,1fr));
+    grid-template-columns:repeat(5,minmax(0,1fr));
     height:calc(var(--app-dock-height) + env(safe-area-inset-bottom));
     padding:0 max(0px,env(safe-area-inset-right)) env(safe-area-inset-bottom) max(0px,env(safe-area-inset-left));
     border-top:1px solid var(--border2);
@@ -10077,12 +10083,16 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
     box-shadow:none;
   }
   .appDockControl svg,.cloudSyncFooterStatus svg{display:none}
-  #appFooterDisplay svg,#appFooterMain svg,#appFooterNotifications svg{
+  #appFooterDisplay svg,#appFooterBack svg,#appFooterMain svg,#appFooterForward svg,#appFooterNotifications svg{
     display:block;
     width:19px;
     height:19px;
     stroke-width:1.9;
   }
+  /* Reserved-slot Forward (and Back at the history root): visibly present
+     but clearly inert until there is somewhere to go. No press/hover
+     feedback and no pointer cursor while disabled. */
+  .appDockNav:disabled{opacity:.32;pointer-events:none}
   .appDockControl > span:not(.mobileNotificationsBadge),
   .cloudSyncFooterStatus > span,
   .cloudSyncFooterStatus > strong{
@@ -10101,7 +10111,9 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
   }
   .appDockControl[aria-current="page"]{color:var(--title)}
   #appFooterDisplay > span,
+  #appFooterBack > span,
   #appFooterMain > span,
+  #appFooterForward > span,
   #appFooterNotifications > span:last-child{
     position:absolute;
     width:1px;

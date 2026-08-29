@@ -18,7 +18,7 @@ test("the RT Sync panel retains its reconnect action", () => {
   assert.match(app, /\$\("lineSyncRetryBtn"\)\?\.addEventListener\("click",\(\)=>runLineSyncAction/);
 });
 
-test("the compact footer is a three-cell text rail", () => {
-  const refinement = styles.slice(styles.lastIndexOf("/* Footer state refinement"));
-  assert.match(refinement, /grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+test("the compact footer is a five-cell rail: Display / Back / Main / Forward / Alerts", () => {
+  const refinement = styles.slice(styles.lastIndexOf("/* Compact footer:"));
+  assert.match(refinement, /grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/);
 });

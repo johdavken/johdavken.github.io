@@ -6,26 +6,32 @@ const app = fs.readFileSync("app.js","utf8");
 const html = fs.readFileSync("index.html","utf8");
 const styles = fs.readFileSync("styles.css","utf8");
 
-test("the mobile dock exposes three stable, accessible controls",()=>{
+test("the mobile dock exposes five stable, accessible controls",()=>{
   const footer = html.slice(html.indexOf('<footer class="footerBar"'),html.indexOf('</footer>'));
-  for (const id of ["appFooterMain","appFooterDisplay","appFooterNotifications"]){
+  for (const id of ["appFooterDisplay","appFooterBack","appFooterMain","appFooterForward","appFooterNotifications"]){
     assert.match(footer,new RegExp(`id="${id}"`));
   }
   assert.match(footer,/id="appFooterMain"[^>]*aria-label="Main menu"/);
+  // Back / Forward start inert (concept 7 reserved slot) and carry their
+  // own accessible names since the visible labels are clipped.
+  assert.match(footer,/id="appFooterBack" class="appDockControl appDockNav" aria-label="Go back" disabled/);
+  assert.match(footer,/id="appFooterForward" class="appDockControl appDockNav" aria-label="Go forward" disabled/);
   assert.doesNotMatch(footer,/appFooterAccount|cloudSyncFooterStatus/);
   assert.match(styles,/height:calc\(var\(--app-dock-height\) \+ env\(safe-area-inset-bottom\)\)/);
   assert.match(styles,/html\{min-height:100%;height:auto\}/);
   assert.match(styles,/body\{height:auto;min-height:100vh;min-height:100dvh;overflow-x:hidden;overflow-y:auto\}/);
   assert.match(styles,/main\{height:auto;min-height:100vh;min-height:100dvh;padding-bottom:calc\(var\(--app-dock-height\) \+ env\(safe-area-inset-bottom\) \+ 22px\)!important\}/);
   assert.match(styles,/\.footerBar\{[\s\S]*?z-index:71;[\s\S]*?display:grid/);
-  const order = ["appFooterDisplay","appFooterMain","appFooterNotifications"].map(id=>footer.indexOf(`id="${id}"`));
+  const order = ["appFooterDisplay","appFooterBack","appFooterMain","appFooterForward","appFooterNotifications"].map(id=>footer.indexOf(`id="${id}"`));
   assert.deepEqual(order,[...order].sort((a,b)=>a-b));
 });
 
 test("the dock is a 32px rail with centered Layer stack and icon-only Display/Alerts",()=>{
   assert.match(styles,/:root\{--app-dock-height:32px\}/);
-  assert.match(styles,/#appFooterDisplay svg,#appFooterMain svg,#appFooterNotifications svg\{[\s\S]*?display:block;[\s\S]*?width:19px;/);
-  assert.match(styles,/#appFooterDisplay > span,[\s\S]*?#appFooterMain > span,[\s\S]*?#appFooterNotifications > span:last-child\{[\s\S]*?clip-path:inset\(50%\)/);
+  assert.match(styles,/#appFooterDisplay svg,#appFooterBack svg,#appFooterMain svg,#appFooterForward svg,#appFooterNotifications svg\{[\s\S]*?display:block;[\s\S]*?width:19px;/);
+  assert.match(styles,/#appFooterDisplay > span,[\s\S]*?#appFooterBack > span,[\s\S]*?#appFooterMain > span,[\s\S]*?#appFooterForward > span,[\s\S]*?#appFooterNotifications > span:last-child\{[\s\S]*?clip-path:inset\(50%\)/);
+  // The reserved Back / Forward slots read as inert until usable.
+  assert.match(styles,/\.appDockNav:disabled\{opacity:\.32;pointer-events:none\}/);
   const refinement = styles.slice(styles.lastIndexOf("/* Footer state refinement"));
   assert.match(refinement,/\.mobileNotificationsBadge\{[\s\S]*?position:absolute;[\s\S]*?left:calc\(50% \+ 5px\);[\s\S]*?min-width:12px;[\s\S]*?height:12px;/);
   assert.match(html,/id="appFooterNotifications"[\s\S]*?<span>Alerts<\/span>/);
@@ -33,11 +39,11 @@ test("the dock is a 32px rail with centered Layer stack and icon-only Display/Al
   assert.match(html,/id="appFooterMain"[\s\S]*?<path d="M2\.9 10\.5 11\.2 3[^"]*" style="fill:currentColor;stroke:none"\/>/);
 });
 
-test("the footer stays three equal cells after Refresh is removed",()=>{
+test("the footer is five equal cells with Refresh still gone",()=>{
   const footer = html.slice(html.indexOf('<footer class="footerBar"'),html.indexOf('</footer>'));
   assert.doesNotMatch(footer,/cloudSyncFooterStatus|lineSyncMobileStatus|Refresh/);
   const refinement = styles.slice(styles.lastIndexOf("/* Footer state refinement"));
-  assert.match(refinement,/grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+  assert.match(refinement,/grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/);
   assert.doesNotMatch(app,/lineSyncMobileStatus|cloudSyncFooterStatus/);
 });
 

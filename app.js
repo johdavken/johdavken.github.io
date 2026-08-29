@@ -6456,6 +6456,7 @@
       if (reveal && !isDesktopLayout()){
         requestAnimationFrame(()=>target.scrollIntoView({ behavior:"smooth", block:"start" }));
       }
+      if (!isDesktopLayout()) recordMobileNavState();
     }
 
     function showMobileWorkspaceHome(){
@@ -6468,6 +6469,118 @@
         button.classList.remove("active");
         button.removeAttribute("aria-current");
       });
+      recordMobileNavState();
+    }
+
+    /* ============================================================
+     *   Mobile footer Back / Forward (concept 7)
+     * ============================================================
+     * A browser-style visited-view history for the mobile shell only.
+     * The stack itself lives in the pure PolynMobileNavHistory module;
+     * everything here is the app-side integration: turn the live mobile
+     * nav state (body dataset + activeWorkspaceId) into a comparable
+     * descriptor, feed each newly-reached view in, and re-apply whatever
+     * Back / Forward hand back.
+     *
+     * A "view" is deliberately coarse: Home, or a workspace panel, plus
+     * the single drill-in sub-state that restores cleanly - Tools grid vs
+     * a specific tool. In-panel toggles (Recipe Summary/Edit etc.) are not
+     * history steps, and the Notes list/editor split is left to Notes' own
+     * header Back button: the editor cannot be re-entered from history
+     * without a re-selected note, so tracking it would only add a Back
+     * press that lands right back on the list. See "Known limitations".
+     *
+     * Re-applying a remembered view calls the same showMobileWorkspace
+     * Home / setWorkspacePanel functions a tap would, with persist:false
+     * so walking history never rewrites the saved-workspace preference or
+     * emits an RT Sync mutation. applyingMobileNav suppresses the record
+     * hooks those calls would otherwise fire; the MutationObserver's
+     * record() is additionally a no-op because the state it captures then
+     * equals the entry just applied. */
+    const mobileNavHistory = window.PolynMobileNavHistory?.createNavHistory?.({
+      equals: sameMobileNavEntry
+    }) || null;
+    let applyingMobileNav = false;
+
+    function sameMobileNavEntry(a, b){
+      return !!a && !!b
+        && a.workspace === b.workspace
+        && a.panelId === b.panelId
+        && a.tools === b.tools;
+    }
+
+    function captureMobileNavState(){
+      const workspace = document.body.dataset.mobileWorkspace === "panel" ? "panel" : "home";
+      const panelId = workspace === "panel" ? (activeWorkspaceId || "") : "";
+      return {
+        workspace,
+        panelId,
+        tools: panelId === "toolsBlock"
+          ? (document.body.dataset.mobileTools === "panel" ? "panel" : "home")
+          : ""
+      };
+    }
+
+    function refreshFooterNavButtons(){
+      const back = $("appFooterBack");
+      const forward = $("appFooterForward");
+      if (back) back.disabled = !mobileNavHistory?.canGoBack();
+      if (forward) forward.disabled = !mobileNavHistory?.canGoForward();
+    }
+
+    function recordMobileNavState(){
+      if (!mobileNavHistory || applyingMobileNav || isDesktopLayout()) return;
+      mobileNavHistory.record(captureMobileNavState());
+      refreshFooterNavButtons();
+    }
+
+    function applyMobileNavState(state){
+      if (!state || isDesktopLayout()) return;
+      applyingMobileNav = true;
+      try{
+        if (state.workspace !== "panel" || !state.panelId){
+          showMobileWorkspaceHome();
+        } else {
+          setWorkspacePanel(state.panelId, { persist: false });
+          if (state.panelId === "toolsBlock"){
+            // The last-selected tool panel is still in the DOM (only
+            // hidden), so re-revealing it is just this flag.
+            document.body.dataset.mobileTools = state.tools === "panel" ? "panel" : "home";
+          }
+        }
+      } finally {
+        applyingMobileNav = false;
+      }
+      refreshFooterNavButtons();
+    }
+
+    function goMobileNavBack(){
+      if (!mobileNavHistory?.canGoBack()) return false;
+      applyMobileNavState(mobileNavHistory.back());
+      return true;
+    }
+
+    function goMobileNavForward(){
+      if (!mobileNavHistory?.canGoForward()) return false;
+      applyMobileNavState(mobileNavHistory.forward());
+      return true;
+    }
+
+    function setupMobileNavHistory(){
+      if (!mobileNavHistory) return;
+      $("appFooterBack")?.addEventListener("click", goMobileNavBack);
+      $("appFooterForward")?.addEventListener("click", goMobileNavForward);
+      // The Tools grid -> tool drill-in is written by selectToolPanel /
+      // #mobileToolsBack, not the two functions above - observe the body
+      // flags so those transitions still become history steps. record()'s
+      // dedupe makes the overlap with the explicit hooks in
+      // showMobileWorkspaceHome / setWorkspacePanel harmless.
+      new MutationObserver(recordMobileNavState).observe(document.body, {
+        attributes: true,
+        attributeFilter: ["data-mobile-workspace", "data-mobile-tools"]
+      });
+      recordMobileNavState();
+      refreshFooterNavButtons();
     }
 
     // Android hardware/gesture Back. The only entry point android-back-
@@ -6749,10 +6862,16 @@
         headerSvg.setAttribute("viewBox", desktop ? "0 125 1280 105" : "0 0 1280 240");
       }
       if (desktop){
+        // The footer (and its Back / Forward history) is mobile-only -
+        // drop the stack so a later return to the mobile shell starts
+        // clean rather than resuming a trail from before the resize.
+        mobileNavHistory?.reset();
+        refreshFooterNavButtons();
         setWorkspacePanel(activeWorkspaceId);
       }
       if (!desktop){
         if (!document.body.dataset.mobileWorkspace) showMobileWorkspaceHome();
+        recordMobileNavState();
       }
       if (!desktop && state.mobileTimelineOnly){
         const results = $("resultsBlock");
@@ -8270,6 +8389,7 @@
     $("appFooterMain")?.addEventListener("click",showMobileWorkspaceHome);
     $("appFooterDisplay")?.addEventListener("click",openDisplaySheet);
     $("desktopDisplayToggle")?.addEventListener("click",openDisplaySheet);
+    setupMobileNavHistory();
 
     /* ------------------------------------------------------------------
      *   Desktop notification center
