@@ -4004,6 +4004,14 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     width: min(100%, var(--recipe-five-layer-rail));
     margin-inline: 0;
   }
+  /* The "CLICK a hopper to..." hint is centered text, but as a full-width
+     grid child of #splitsArea it centered on the whole panel - which drifts
+     right of the matrix once the panel is wider than the left-aligned
+     five-layer rail. Cap it to that same rail (like the header row and the
+     matrix frame) so its centered text stays under the matrix. */
+  #splitsArea > .recipeInteractionHint{
+    width: min(100%, var(--recipe-five-layer-rail));
+  }
   /* Default (auto) grid columns size to max-content, so a single wide child
      stretches the column past the grid container itself and every sibling
      inherits that over-wide containing block. minmax(0,1fr) pins the column

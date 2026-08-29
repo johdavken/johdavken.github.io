@@ -239,6 +239,18 @@ test("every recipe view ends with a quiet, layout-aware hopper-action reminder",
   assert.match(styles, /\.recipeInteractionHintCommand\{\s*color:var\(--recipe-pill-accent\);/);
 });
 
+test("on wide desktop the centered hint is capped to the five-layer rail, so it stays under the left-aligned matrix instead of centering on the whole panel", () => {
+  // Inside the desktop @media (min-width: 901px) and (pointer: fine) block,
+  // next to the same cap on .splitsMatrixFrame and .recipeHeaderRow.
+  const desktopBlock = styles.slice(styles.indexOf("@media (min-width: 901px) and (pointer: fine)"));
+  assert.match(
+    desktopBlock,
+    /#splitsArea > \.recipeInteractionHint\{\s*width: min\(100%, var\(--recipe-five-layer-rail\)\);\s*\}/
+  );
+  // The base rule keeps centering the text; only the box width is constrained.
+  assert.match(styles, /\.recipeInteractionHint\{[\s\S]*?text-align:center;[\s\S]*?\}/);
+});
+
 /* ----------------------------------------------------------------------
  *   The bottom strip
  * -------------------------------------------------------------------- */
