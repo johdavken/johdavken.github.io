@@ -85,10 +85,11 @@ test("the rich editor introduces no localStorage / sync / workspace coupling", (
   assert.doesNotMatch(ui, /localStorage\s*[.[]|PolynSyncStorage|PolynStorage/);
   assert.doesNotMatch(ui, /cloud-sync|active-job|workspace_configurations|supabase/i);
   assert.doesNotMatch(store, /localStorage\s*[.[]/);
-  // Still its own IndexedDB database, still schema v1 (a new string field
-  // needs no migration on a keyPath store).
+  // Still its own IndexedDB database. Schema is v2 now: the folders feature
+  // added a dedicated `folders` object store (the `bodyFormat` string field
+  // itself still needed no migration on the keyPath notes store).
   assert.equal(NotesStore.DB_NAME, "resin.tools.notes");
-  assert.equal(NotesStore.SCHEMA_VERSION, 1);
+  assert.equal(NotesStore.SCHEMA_VERSION, 2);
 });
 
 /* ----------------------------------------------------------------------

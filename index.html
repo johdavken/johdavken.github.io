@@ -44,7 +44,7 @@
 <script src="workspace-configuration-payloads.js?v=0.20.1" defer></script>
 <script src="next-recipe.js?v=0.2.0" defer></script>
 <script src="hookup-sources.js?v=0.1.0" defer></script>
-<script src="notes-store.js?v=0.1.0" defer></script>
+<script src="notes-store.js?v=0.2.0" defer></script>
 <script src="notes-markdown.js?v=0.1.0" defer></script>
 <script src="recipe-scan-schema.js?v=0.4.0" defer></script>
 <script src="recipe-scan-mapping.js?v=0.3.0" defer></script>
@@ -84,7 +84,7 @@
      built by `npm run build:notes-editor` from notes-editor-vendor.src.js. Must
      load before notes-ui.js. Remove this line to roll the experiment back. -->
 <script src="vendor/tiptap-notes.min.js?v=0.1.0" defer></script>
-<script src="notes-ui.js?v=0.2.0" defer></script>
+<script src="notes-ui.js?v=0.4.0" defer></script>
 <script src="recipe-scan-ui.js?v=0.4.1" defer></script>
 
 
@@ -1405,26 +1405,17 @@
       <div class="notesListView" id="notesListView">
         <div class="notesListBar">
           <button type="button" id="notesNewBtn" class="copyBtn notesNewBtn">New note</button>
-          <details class="notesBackupMenu" id="notesBackupMenu">
-            <summary class="notesBackupToggle" aria-label="Back up and restore RT Notes">Backup</summary>
-            <div class="notesBackupPanel">
-              <p class="notesBackupIntro">RT Notes live only in this app on this device. Keep a copy somewhere safe.</p>
-              <div class="notesBackupGroup">
-                <button type="button" id="notesExportBtn" class="copyBtn">Export RT Notes</button>
-                <button type="button" id="notesExportCopyBtn" class="copyBtn secondary" hidden>Copy</button>
-              </div>
-              <textarea id="notesExportOutput" class="notesBackupText" readonly rows="4" hidden aria-label="Exported RT Notes JSON"></textarea>
-              <div class="notesBackupGroup">
-                <label class="notesImportFileLabel" for="notesImportFile">Import from file</label>
-                <input type="file" id="notesImportFile" accept="application/json,.json,text/plain">
-              </div>
-              <textarea id="notesImportInput" class="notesBackupText" rows="4" placeholder="…or paste exported RT Notes JSON here" aria-label="RT Notes JSON to import"></textarea>
-              <button type="button" id="notesImportBtn" class="copyBtn secondary">Import RT Notes</button>
-              <p class="notesBackupStatus" id="notesBackupStatus" role="status" aria-live="polite"></p>
-            </div>
-          </details>
+          <!-- Backup opens a modal (see #notesBackupDialog below) rather than
+               expanding inline, so the folder bar and note list never shift. -->
+          <button type="button" id="notesBackupBtn" class="copyBtn notesBackupBtn" aria-haspopup="dialog">Backup</button>
         </div>
         <p class="notesDeviceHint" id="notesDeviceHint">RT Notes are stored on this device only. They don&rsquo;t sync with RT Sync or show up on other devices.</p>
+        <!-- Device-local folders. Chips (All Notes / Unfiled / user folders / + Folder)
+             are rendered by notes-ui.js; folder membership never leaves this device. -->
+        <div class="notesFolders" id="notesFolders">
+          <span class="notesFoldersLabel">Folders</span>
+          <div class="notesFolderBar" id="notesFolderBar" role="tablist" aria-label="Note folders"></div>
+        </div>
         <div class="notesList" id="notesList" role="list"></div>
         <p class="notesListEmpty" id="notesListEmpty" hidden>No notes yet. Tap <strong>New note</strong> to start one.</p>
         <p class="notesUnavailable" id="notesUnavailable" hidden>RT Notes need on-device storage, which isn&rsquo;t available in this browser.</p>
@@ -1439,6 +1430,7 @@
           <details class="notesEditorMenu" id="notesEditorMenu">
             <summary class="notesEditorMenuToggle" aria-label="Note actions"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg></summary>
             <div class="notesEditorMenuPanel">
+              <button type="button" id="notesMoveBtn" class="notesMenuBtn">Move to folder</button>
               <button type="button" id="notesDeleteBtn" class="notesDeleteBtn">Delete note</button>
             </div>
           </details>
@@ -1460,6 +1452,92 @@
         <div id="notesEditorMount" class="notesBodyEditor"></div>
         <textarea id="notesBodyInput" class="notesBodyInput" placeholder="Write a note&hellip;" spellcheck="true" hidden></textarea>
       </div>
+
+      <!-- Folder dialogs. Native <dialog> elements: Android Back closes an open
+           dialog first (handleAndroidBack), and nothing here is ever written to
+           app/session/RT Sync state - folders are device-local only. -->
+      <dialog id="notesFolderDialog" class="lineSyncConflictDialog notesDialog" aria-labelledby="notesFolderDialogTitle">
+        <form class="notesDialogForm" id="notesFolderForm">
+          <div class="layerTitle" id="notesFolderDialogTitle">New folder</div>
+          <label class="notesDialogLabel" for="notesFolderNameInput">Folder name</label>
+          <input type="text" id="notesFolderNameInput" maxlength="60" autocomplete="off" autocapitalize="words" enterkeyhint="done">
+          <p class="notesDialogError" id="notesFolderDialogError" role="status" aria-live="polite"></p>
+          <div class="notesDialogActions">
+            <button type="button" class="secondary" id="notesFolderCancelBtn">Cancel</button>
+            <button type="submit" class="primary" id="notesFolderSubmitBtn">Create</button>
+          </div>
+        </form>
+      </dialog>
+
+      <dialog id="notesFolderManageDialog" class="lineSyncConflictDialog notesDialog" aria-labelledby="notesFolderManageTitle">
+        <div class="notesDialogForm">
+          <div class="layerTitle" id="notesFolderManageTitle">Folder</div>
+          <p class="muted notesDialogName" id="notesFolderManageName"></p>
+          <div class="notesDialogActions">
+            <button type="button" class="secondary" id="notesFolderRenameBtn">Rename</button>
+            <button type="button" class="danger" id="notesFolderDeleteBtn">Delete</button>
+            <button type="button" class="secondary" id="notesFolderManageCancelBtn">Cancel</button>
+          </div>
+        </div>
+      </dialog>
+
+      <dialog id="notesMoveDialog" class="lineSyncConflictDialog notesDialog" aria-labelledby="notesMoveTitle">
+        <form method="dialog" class="notesDialogForm">
+          <div class="layerTitle" id="notesMoveTitle">Move to folder</div>
+          <div class="notesMoveList" id="notesMoveList"></div>
+          <div class="notesDialogActions">
+            <button value="cancel" type="submit" class="secondary">Cancel</button>
+          </div>
+        </form>
+      </dialog>
+
+      <!-- Per-note-card actions (Pin/Unpin, Move, Delete). Explicit button
+           handlers, not <form method="dialog">/`close` - the dialog `close`
+           event is unreliable in some WebViews. -->
+      <dialog id="notesCardMenu" class="lineSyncConflictDialog notesDialog" aria-labelledby="notesCardMenuTitle">
+        <div class="notesDialogForm">
+          <div class="layerTitle" id="notesCardMenuTitle">Note actions</div>
+          <p class="muted notesDialogName" id="notesCardMenuName"></p>
+          <div class="notesCardMenuList">
+            <button type="button" class="notesMenuBtn" id="notesCardPinBtn">Pin note</button>
+            <button type="button" class="notesMenuBtn" id="notesCardMoveBtn">Move to folder</button>
+            <button type="button" class="notesDeleteBtn" id="notesCardDeleteBtn">Delete note</button>
+          </div>
+          <div class="notesDialogActions">
+            <button type="button" class="secondary" id="notesCardMenuCancelBtn">Cancel</button>
+          </div>
+        </div>
+      </dialog>
+
+      <!-- Backup &amp; restore. Overlays the list; opening it never changes the
+           layout of the Notes screen underneath. Android Back / Esc / the
+           explicit Close button all dismiss it; no new nav state. -->
+      <dialog id="notesBackupDialog" class="lineSyncConflictDialog notesDialog notesBackupDialog" aria-labelledby="notesBackupTitle">
+        <div class="notesDialogForm">
+          <div class="layerTitle" id="notesBackupTitle">RT Notes Backup</div>
+          <p class="notesBackupIntro">RT Notes live only in this app on this device. Keep a copy somewhere safe.</p>
+          <div class="notesBackupGroup">
+            <button type="button" id="notesExportBtn" class="copyBtn">Export RT Notes</button>
+            <button type="button" id="notesExportCopyBtn" class="copyBtn secondary" hidden>Copy</button>
+          </div>
+          <textarea id="notesExportOutput" class="notesBackupText" readonly rows="4" hidden aria-label="Exported RT Notes JSON"></textarea>
+          <div class="notesBackupGroup">
+            <label class="notesImportFileLabel" for="notesImportFile">Import backup</label>
+            <input type="file" id="notesImportFile" accept="application/json,.json,text/plain">
+          </div>
+          <details class="notesBackupAdvanced" id="notesBackupAdvanced">
+            <summary>Advanced &mdash; paste backup JSON</summary>
+            <div class="notesBackupAdvancedBody">
+              <textarea id="notesImportInput" class="notesBackupText" rows="4" placeholder="Paste exported RT Notes JSON here" aria-label="RT Notes JSON to import"></textarea>
+              <button type="button" id="notesImportBtn" class="copyBtn secondary">Import RT Notes</button>
+            </div>
+          </details>
+          <p class="notesBackupStatus" id="notesBackupStatus" role="status" aria-live="polite"></p>
+          <div class="notesDialogActions">
+            <button type="button" class="secondary" id="notesBackupCloseBtn">Close</button>
+          </div>
+        </div>
+      </dialog>
     </div>
   </details>
 

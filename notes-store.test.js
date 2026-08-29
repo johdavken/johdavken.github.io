@@ -16,12 +16,13 @@ test("newNote has exactly the current fields, with sane defaults", () => {
   const note = NotesStore.newNote();
   assert.deepEqual(
     Object.keys(note).sort(),
-    ["body", "bodyFormat", "createdAt", "id", "pinned", "title", "updatedAt"]
+    ["body", "bodyFormat", "createdAt", "folderId", "id", "pinned", "title", "updatedAt"]
   );
   assert.equal(note.title, "");
   assert.equal(note.body, "");
   assert.equal(note.bodyFormat, "markdown", "notes default to Markdown until edited in the rich editor");
   assert.equal(note.pinned, false);
+  assert.equal(note.folderId, null, "a new note is Unfiled");
   assert.match(note.id, /^note_/);
   assert.equal(typeof note.createdAt, "number");
   assert.equal(note.updatedAt, note.createdAt);
@@ -61,7 +62,15 @@ test("normalizeNote coerces types, drops unknown keys, and rejects non-objects",
   assert.equal(n.pinned, false, "only a strict true is pinned");
   assert.equal(n.createdAt, 1700000000000);
   assert.equal(n.updatedAt, 1700000000000, "a bad updatedAt falls back to createdAt");
+  assert.equal(n.folderId, null, "a record with no folderId is Unfiled");
   assert.equal(n.junk, undefined);
+});
+
+test("normalizeNote keeps a valid folderId and drops any other shape", () => {
+  assert.equal(NotesStore.normalizeNote({ id: "a", folderId: "folder_abc" }).folderId, "folder_abc");
+  assert.equal(NotesStore.normalizeNote({ id: "b", folderId: "nope" }).folderId, null);
+  assert.equal(NotesStore.normalizeNote({ id: "c", folderId: 7 }).folderId, null);
+  assert.equal(NotesStore.normalizeNote({ id: "d", folderId: "" }).folderId, null);
 });
 
 test("normalizeNote mints an id when one is missing", () => {
@@ -155,13 +164,16 @@ test("buildExport carries the format tag, version, and every restorable field", 
     body: "B",
     bodyFormat: "markdown",
     pinned: true,
+    folderId: null,
     createdAt: 1700000000000,
     updatedAt: 1700000009999
   };
   const dump = NotesStore.buildExport([note]);
   assert.equal(dump.format, "resin.tools/notes");
-  assert.equal(dump.version, 1);
+  assert.equal(dump.version, 2, "envelope bumped to 2 when folders were added");
   assert.equal(dump.count, 1);
+  assert.equal(dump.folderCount, 0);
+  assert.deepEqual(dump.folders, []);
   assert.match(dump.exportedAt, /^\d{4}-\d\d-\d\dT/);
   assert.equal(dump.notes[0].bodyFormat, "markdown", "export carries the format discriminator");
   assert.deepEqual(dump.notes[0], note);
@@ -264,7 +276,8 @@ test("mergeImport never drops or reorders the existing notes", () => {
 test("the database name is clearly namespaced to Resin.Tools", () => {
   assert.equal(NotesStore.DB_NAME, "resin.tools.notes");
   assert.equal(NotesStore.STORE_NAME, "notes");
-  assert.equal(NotesStore.SCHEMA_VERSION, 1);
+  assert.equal(NotesStore.FOLDER_STORE_NAME, "folders");
+  assert.equal(NotesStore.SCHEMA_VERSION, 2);
 });
 
 test("isSupported is false when the environment has no IndexedDB", () => {

@@ -47,8 +47,10 @@ automatically because `index.html` references it.
 * Legacy notes stay untouched Markdown until the user **edits** one — then, and
   only then, it is saved as HTML with `bodyFormat: "html"` (lazy migration).
 * Opening a note never rewrites it.
-* IndexedDB schema stays at **v1** — a new string field on a `keyPath` store
-  needs no migration.
+* The `bodyFormat` field itself needed no schema bump — a new string on a
+  `keyPath` store. (The IndexedDB schema is now **v2**, but that bump belongs to
+  the later flat-folders feature — a separate `folders` object store — not to
+  this experiment.)
 * Export/import carry `bodyFormat`; an old export without it imports as Markdown.
 
 ## How to remove TipTap

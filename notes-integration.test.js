@@ -65,14 +65,20 @@ function makeObjectStore(records) {
 function makeConnection(name) {
   const entry = DATABASES.get(name);
   return {
-    objectStoreNames: { contains: () => entry.stores.has("notes") },
+    objectStoreNames: { contains: (store) => entry.stores.has(store) },
     createObjectStore(storeName) {
       const records = new Map();
       entry.stores.set(storeName, records);
       return makeObjectStore(records);
     },
-    transaction(storeName) {
-      return { objectStore: () => makeObjectStore(entry.stores.get(storeName)) };
+    // Real IDB takes a store name or an array of them; the returned
+    // transaction resolves each objectStore(name) call against that set.
+    transaction(storeNames) {
+      const names = Array.isArray(storeNames) ? storeNames : [storeNames];
+      return {
+        objectStore: (name) => makeObjectStore(entry.stores.get(name != null ? name : names[0])),
+        abort() {}
+      };
     },
     close() {}
   };

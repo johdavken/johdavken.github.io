@@ -6725,25 +6725,28 @@ button.compactAction{
 
 .notesListBar{ display:flex; align-items:center; gap:8px; }
 .notesNewBtn{ flex:0 0 auto; }
-.notesBackupMenu{ margin-left:auto; }
-.notesBackupMenu > summary{
-  display:inline-flex; align-items:center; gap:5px;
-  min-height:var(--control-height);
-  padding:4px 10px;
-  border:1px solid var(--btn-border);
-  border-radius:var(--control-radius);
-  background:var(--btn-secondary-bg);
-  color:var(--btn-text);
-  font-size:var(--font-small); font-weight:800;
-  list-style:none; cursor:pointer;
-}
-.notesBackupMenu > summary::-webkit-details-marker{ display:none; }
-.notesBackupMenu > summary:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
-.notesBackupPanel{
-  display:flex; flex-direction:column; gap:8px;
-  margin-top:8px; padding:10px;
-  border:1px solid var(--border); border-radius:var(--control-radius);
+.notesBackupBtn{ flex:0 0 auto; margin-left:auto; }
+
+/* Backup dialog: a touch wider than the default small notes dialog because it
+   carries the export/import controls. Opening it must not move the list. */
+.notesBackupDialog{ width:min(94vw, 420px); }
+.notesBackupAdvanced{
+  border:1px solid var(--border2); border-radius:var(--control-radius);
   background:var(--row-bg);
+}
+.notesBackupAdvanced > summary{
+  padding:8px 10px; cursor:pointer; list-style:none;
+  color:var(--muted); font-size:11px; font-weight:800;
+}
+.notesBackupAdvanced > summary::-webkit-details-marker{ display:none; }
+.notesBackupAdvanced > summary:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
+.notesBackupAdvanced[open] > summary{ color:var(--title); border-bottom:1px solid var(--border2); }
+/* Explicitly gate the body on [open] rather than trusting the native
+   <details> content-hiding (which an author display: on the child can defeat
+   in some engines). */
+.notesBackupAdvancedBody{ display:none; }
+.notesBackupAdvanced[open] > .notesBackupAdvancedBody{
+  display:flex; flex-direction:column; gap:8px; padding:10px;
 }
 .notesBackupIntro,
 .notesBackupStatus{ margin:0; color:var(--muted); font-size:11px; line-height:1.35; }
@@ -6767,10 +6770,14 @@ button.compactAction{
 .notesUnavailable{ margin:0; color:var(--muted); font-size:12px; }
 
 .notesList{ display:flex; flex-direction:column; gap:8px; }
+/* Each card is a row: the tappable note button + an absolutely-positioned
+   right-side action cluster (pin indicator + "…" overflow). The overflow
+   button is a real sibling <button>, never nested in the card button. */
+.notesItemRow{ position:relative; }
 .notesItem{
   display:flex; flex-direction:column; gap:3px;
   width:100%; min-height:44px;
-  padding:10px 12px;
+  padding:10px 44px 10px 12px;
   border:1px solid var(--row-border); border-radius:var(--control-radius);
   background:var(--row-bg); color:var(--text);
   text-align:left; cursor:pointer;
@@ -6784,14 +6791,109 @@ button.compactAction{
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   color:var(--title); font-size:14px; font-weight:800;
 }
+.notesItemActions{
+  position:absolute; top:7px; right:7px; z-index:2;
+  display:flex; align-items:center; gap:2px;
+}
 .notesItemPin{ display:inline-flex; flex:0 0 auto; align-items:center; color:var(--focus-border); }
 .notesItemPin svg{ width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.notesItemMenuBtn{
+  display:inline-grid; place-items:center; flex:0 0 auto;
+  width:28px; height:28px; min-height:28px; padding:0;
+  border:1px solid transparent; border-radius:var(--control-radius);
+  background:transparent; color:var(--muted); cursor:pointer;
+}
+.notesItemMenuBtn svg{ width:16px; height:16px; fill:currentColor; }
+.notesItemMenuBtn:hover{ color:var(--title); border-color:var(--border2); }
+.notesItemMenuBtn:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
 .notesItemPreview{
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   color:var(--muted); font-size:12px;
 }
 .notesItemMeta{ color:var(--muted); font-size:10.5px; }
 .notesListEmpty{ margin:0; padding:16px 4px; color:var(--muted); font-size:12px; text-align:center; }
+.notesCardMenuList{ display:flex; flex-direction:column; gap:2px; }
+
+/* Device-local folders. A compact horizontal chip strip - deliberately
+   secondary to the note cards, never a desktop-style file tree. */
+.notesFolders{ display:flex; flex-direction:column; gap:5px; }
+.notesFoldersLabel{
+  color:var(--muted); font-size:10px; font-weight:800;
+  text-transform:uppercase; letter-spacing:.07em;
+}
+.notesFolderBar{
+  display:flex; align-items:center; gap:6px;
+  padding:1px 0 3px; overflow-x:auto; -webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
+}
+.notesFolderBar::-webkit-scrollbar{ display:none; }
+.notesFolderChip{
+  flex:0 0 auto; display:inline-flex; align-items:center; gap:5px;
+  min-height:30px; padding:3px 10px;
+  border:1px solid var(--border2); border-radius:999px;
+  background:var(--row-bg); color:var(--muted);
+  font-size:12px; font-weight:800; line-height:1; white-space:nowrap;
+  cursor:pointer;
+}
+.notesFolderChip:hover{ border-color:var(--muted); color:var(--title); }
+.notesFolderChip:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
+.notesFolderChip.is-active{
+  border-color:var(--focus-border);
+  background:color-mix(in srgb,var(--focus-border) 16%,transparent);
+  color:var(--title);
+}
+.notesFolderCount{
+  font-size:10px; font-weight:800; color:var(--muted);
+  padding:1px 5px; border-radius:999px;
+  background:color-mix(in srgb,var(--text) 9%,transparent);
+}
+.notesFolderChip.is-active .notesFolderCount{ color:var(--title); }
+.notesFolderAdd{ color:var(--muted); font-weight:800; }
+.notesFolderManage{
+  flex:0 0 auto; display:inline-grid; place-items:center;
+  width:30px; height:30px; min-height:30px; padding:0;
+  border:1px solid var(--border2); border-radius:999px;
+  background:transparent; color:var(--muted);
+  font-size:16px; font-weight:800; line-height:1; cursor:pointer;
+}
+.notesFolderManage:hover{ border-color:var(--muted); color:var(--title); }
+.notesFolderManage:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
+
+/* Small RT Notes dialogs (folder create/rename/manage, move-to-folder).
+   Buttons reuse the app's global button.primary / .secondary / .danger. */
+.notesDialog{ width:min(92vw, 380px); padding:0; }
+.notesDialogForm{ display:flex; flex-direction:column; gap:10px; padding:16px; }
+.notesDialogLabel{ color:var(--muted); font-size:11px; font-weight:800; }
+.notesDialog input[type="text"]{
+  width:100%; padding:9px 10px;
+  border:1px solid var(--border2); border-radius:var(--control-radius);
+  background:var(--panel); color:var(--text); font:inherit; font-size:14px;
+}
+.notesDialog input[type="text"]:focus{ outline:none; border-color:var(--focus-border); }
+.notesDialogName{ margin:0; font-size:13px; font-weight:700; color:var(--text); }
+.notesDialogError{ margin:0; color:var(--bad); font-size:11px; }
+.notesDialogError:empty{ display:none; }
+.notesDialogActions{ display:flex; justify-content:flex-end; flex-wrap:wrap; gap:6px; }
+.notesMoveList{ display:flex; flex-direction:column; gap:4px; max-height:46vh; overflow-y:auto; }
+.notesMoveOption{
+  width:100%; padding:9px 10px; text-align:left;
+  border:1px solid var(--row-border); border-radius:var(--control-radius);
+  background:var(--row-bg); color:var(--text);
+  font-size:13px; font-weight:700; cursor:pointer;
+}
+.notesMoveOption:hover,
+.notesMoveOption:focus-visible{ border-color:var(--muted); outline:none; }
+.notesMoveOption.is-current{
+  border-color:var(--focus-border);
+  background:color-mix(in srgb,var(--focus-border) 14%,transparent);
+}
+.notesMenuBtn{
+  width:100%; padding:8px 10px;
+  border:0; border-radius:calc(var(--control-radius) - 2px);
+  background:transparent; color:var(--text);
+  font-size:12px; font-weight:800; text-align:left; cursor:pointer;
+}
+.notesMenuBtn:hover{ background:color-mix(in srgb,var(--text) 8%,transparent); }
 
 /* Editor. The header carries class="mobileToolHeader" for shared chrome but
    that class is display:none by default (Tools re-shows its own), so the
@@ -6925,10 +7027,12 @@ button.compactAction{
   #notesBlock .notesEditorHeader .mobileToolsBack svg{ width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
   #notesBlock .notesEditorHeader .mobileToolsBack:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
   /* Comfortable phone touch targets without growing the header. */
-  #notesBlock .notesItem{ min-height:56px; }
+  #notesBlock .notesItem{ min-height:56px; padding-right:48px; }
   #notesBlock .notesPinBtn,
   #notesBlock .notesEditorMenu > summary{ width:38px; height:38px; min-height:38px; }
   #notesBlock .notesToolbar button{ min-width:38px; height:38px; min-height:38px; }
+  #notesBlock .notesItemMenuBtn{ width:36px; height:36px; min-height:36px; }
+  #notesBlock .notesItemMenuBtn svg{ width:18px; height:18px; }
   #notesBlock .notesBodyInput{ min-height:46vh; }
   #notesBlock .notesBodyEditor .notesProse{ min-height:46vh; }
 }
