@@ -46,8 +46,12 @@
   const toolbar = panel.querySelector(".notesToolbar");
 
   // Folder UI (mobile-only, device-local). All of this is UI/query state -
-  // none of it is persisted outside PolynNotesStore's own IndexedDB.
-  const folderBar = $("notesFolderBar");
+  // none of it is persisted outside PolynNotesStore's own IndexedDB. The
+  // folder navigation is a compact vertical tree (flat data model).
+  const foldersSection = $("notesFolders");
+  const foldersToggle = $("notesFoldersToggle");
+  const folderTree = $("notesFolderTree");
+  const folderIcons = $("notesFolderIcons");
   const folderDialog = $("notesFolderDialog");
   const folderForm = $("notesFolderForm");
   const folderDialogTitle = $("notesFolderDialogTitle");
@@ -89,6 +93,10 @@
   // reset to All Notes whenever the section is (re-)opened.
   let currentView = VIEW_ALL;
   let folders = [];
+  // FOLDERS section collapse state. Session-local: a module flag, never
+  // persisted to storage / RT Sync / a snapshot. Collapsing hides the rows
+  // but does not touch currentView or filtering.
+  let foldersCollapsed = false;
   // Folder-dialog context: "create" | "rename", plus the target id on rename.
   let folderDialogMode = "create";
   let folderDialogTargetId = null;
@@ -114,6 +122,7 @@
     if (listEmpty) listEmpty.hidden = true;
     if (newBtn) newBtn.disabled = true;
     if (backupBtn) backupBtn.disabled = true;
+    if (foldersSection) foldersSection.hidden = true;
     return;
   }
 
@@ -266,73 +275,117 @@
     return folder ? `No notes in ${folder.name} yet. Tap New note to add one.` : "No notes here.";
   }
 
-  function makeChip(label, view, count) {
-    const chip = document.createElement("button");
-    chip.type = "button";
-    chip.className = "notesFolderChip";
-    chip.dataset.view = view;
-    chip.setAttribute("role", "tab");
-    const on = currentView === view;
-    chip.classList.toggle("is-active", on);
-    chip.setAttribute("aria-selected", String(on));
-    const name = document.createElement("span");
-    name.className = "notesFolderChipName";
-    name.textContent = label;
-    chip.appendChild(name);
-    if (typeof count === "number") {
-      const badge = document.createElement("span");
-      badge.className = "notesFolderCount";
-      badge.textContent = String(count);
-      chip.appendChild(badge);
-    }
-    chip.addEventListener("click", () => selectView(view));
-    return chip;
+  // Clone one of the authored row glyphs (never innerHTML). Returns null if
+  // the template block is missing - the row then renders text-only.
+  function folderIcon(name) {
+    const src = folderIcons && folderIcons.querySelector('[data-icon="' + name + '"]');
+    if (!src) return null;
+    const svg = src.cloneNode(true);
+    svg.classList.add("notesFolderRowIcon");
+    svg.setAttribute("aria-hidden", "true");
+    return svg;
   }
 
-  function renderFolderBar(notes) {
-    if (!folderBar) return;
-    folderBar.replaceChildren();
-    folderBar.appendChild(makeChip("All Notes", VIEW_ALL, notes.length));
-    folderBar.appendChild(
-      makeChip("Unfiled", VIEW_UNFILED, filterNotes(notes, VIEW_UNFILED).length)
-    );
-    folders.forEach((folder) => {
-      const chip = makeChip(folder.name, folder.id, filterNotes(notes, folder.id).length);
-      chip.classList.add("notesFolderChipUser");
-      // Rename/Delete without a control on every chip: long-press or
-      // right-click the chip, or use the manage button shown for the
-      // active folder.
-      chip.addEventListener("contextmenu", (event) => {
+  // One row in the vertical tree. `folder` is the folder record for a
+  // user folder, or null for a built-in view. Built-ins never get the
+  // manage affordance. The row is a real <button> wrapped so a sibling
+  // manage <button> is never nested inside it.
+  function makeFolderRow(iconName, label, view, count, folder) {
+    const row = document.createElement("div");
+    row.className = "notesFolderRow";
+    const on = currentView === view;
+    row.classList.toggle("is-active", on);
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "notesFolderRowBtn";
+    btn.dataset.view = view;
+    btn.setAttribute("role", "tab");
+    btn.setAttribute("aria-selected", String(on));
+
+    const icon = folderIcon(iconName);
+    if (icon) btn.appendChild(icon);
+
+    const name = document.createElement("span");
+    name.className = "notesFolderRowName";
+    name.textContent = label;
+    btn.appendChild(name);
+
+    const badge = document.createElement("span");
+    badge.className = "notesFolderCount";
+    badge.textContent = String(count);
+    btn.appendChild(badge);
+
+    btn.addEventListener("click", () => selectView(view));
+    row.appendChild(btn);
+
+    if (folder) {
+      row.classList.add("notesFolderRowUser");
+      // Unobtrusive manage entry points on every user row...
+      row.addEventListener("contextmenu", (event) => {
         event.preventDefault();
         openFolderManage(folder);
       });
-      attachLongPress(chip, () => openFolderManage(folder));
-      folderBar.appendChild(chip);
-    });
-
-    const add = document.createElement("button");
-    add.type = "button";
-    add.className = "notesFolderChip notesFolderAdd";
-    add.id = "notesFolderAddBtn";
-    add.setAttribute("aria-label", "New folder");
-    add.textContent = "+ Folder";
-    add.addEventListener("click", () => openFolderDialog("create"));
-    folderBar.appendChild(add);
-
-    if (isFolderView()) {
-      const folder = folderById(currentView);
-      if (folder) {
+      attachLongPress(row, () => openFolderManage(folder));
+      // ...plus a small visible "…" on the selected user folder only.
+      if (on) {
         const manage = document.createElement("button");
         manage.type = "button";
         manage.className = "notesFolderManage";
         manage.id = "notesFolderManageBtn";
-        manage.setAttribute("aria-label", `Manage folder ${folder.name}`);
-        manage.title = `Manage “${folder.name}”`;
-        manage.textContent = "⋯"; // horizontal ellipsis glyph
-        manage.addEventListener("click", () => openFolderManage(folder));
-        folderBar.appendChild(manage);
+        manage.setAttribute("aria-haspopup", "dialog");
+        manage.setAttribute("aria-label", "Manage folder " + folder.name);
+        manage.title = "Manage “" + folder.name + "”";
+        const glyph = editorMenu && editorMenu.querySelector("summary svg");
+        if (glyph) manage.appendChild(glyph.cloneNode(true));
+        else manage.textContent = "⋯";
+        manage.addEventListener("click", (event) => {
+          event.stopPropagation();
+          openFolderManage(folder);
+        });
+        row.appendChild(manage);
       }
     }
+    return row;
+  }
+
+  function renderFolderTree(notes) {
+    if (!folderTree) return;
+    folderTree.replaceChildren();
+    folderTree.appendChild(makeFolderRow("all", "All Notes", VIEW_ALL, notes.length));
+    folderTree.appendChild(
+      makeFolderRow("unfiled", "Unfiled", VIEW_UNFILED, filterNotes(notes, VIEW_UNFILED).length)
+    );
+    folders.forEach((folder) => {
+      folderTree.appendChild(
+        makeFolderRow("folder", folder.name, folder.id, filterNotes(notes, folder.id).length, folder)
+      );
+    });
+
+    // New folder - the same row grammar, at the bottom, outside the rail.
+    const add = document.createElement("button");
+    add.type = "button";
+    add.className = "notesFolderRowBtn notesFolderNew";
+    add.id = "notesFolderAddBtn";
+    add.setAttribute("aria-label", "New folder");
+    const icon = folderIcon("folder-plus");
+    if (icon) add.appendChild(icon);
+    const label = document.createElement("span");
+    label.className = "notesFolderRowName";
+    label.textContent = "New folder";
+    add.appendChild(label);
+    add.addEventListener("click", () => openFolderDialog("create"));
+    folderTree.appendChild(add);
+
+    folderTree.hidden = foldersCollapsed;
+  }
+
+  // Collapse/expand the FOLDERS section. Pure presentation: no currentView
+  // write, no re-filter, no renderList, no history entry.
+  function setFoldersCollapsed(collapsed) {
+    foldersCollapsed = !!collapsed;
+    if (foldersToggle) foldersToggle.setAttribute("aria-expanded", String(!foldersCollapsed));
+    if (folderTree) folderTree.hidden = foldersCollapsed;
   }
 
   // Best-effort long-press (~500ms) for touch. Purely additive - the manage
@@ -370,7 +423,7 @@
         folders = folderList || [];
         // A folder selected here but since deleted elsewhere -> fall back.
         if (isFolderView() && !folderById(currentView)) currentView = VIEW_ALL;
-        renderFolderBar(notes);
+        renderFolderTree(notes);
         const visible = filterNotes(notes, currentView);
         listEl.replaceChildren();
         visible.forEach((note) => listEl.appendChild(makeListItem(note)));
@@ -1074,6 +1127,10 @@
 
   if (backupBtn) backupBtn.addEventListener("click", openBackupDialog);
   if (backupCloseBtn) backupCloseBtn.addEventListener("click", closeBackupDialog);
+
+  if (foldersToggle) {
+    foldersToggle.addEventListener("click", () => setFoldersCollapsed(!foldersCollapsed));
+  }
 
   if (folderForm) folderForm.addEventListener("submit", submitFolderDialog);
   if (folderCancelBtn) {

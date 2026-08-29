@@ -84,7 +84,7 @@
      built by `npm run build:notes-editor` from notes-editor-vendor.src.js. Must
      load before notes-ui.js. Remove this line to roll the experiment back. -->
 <script src="vendor/tiptap-notes.min.js?v=0.1.0" defer></script>
-<script src="notes-ui.js?v=0.4.0" defer></script>
+<script src="notes-ui.js?v=0.5.0" defer></script>
 <script src="recipe-scan-ui.js?v=0.4.1" defer></script>
 
 
@@ -1410,12 +1410,24 @@
           <button type="button" id="notesBackupBtn" class="copyBtn notesBackupBtn" aria-haspopup="dialog">Backup</button>
         </div>
         <p class="notesDeviceHint" id="notesDeviceHint">RT Notes are stored on this device only. They don&rsquo;t sync with RT Sync or show up on other devices.</p>
-        <!-- Device-local folders. Chips (All Notes / Unfiled / user folders / + Folder)
-             are rendered by notes-ui.js; folder membership never leaves this device. -->
-        <div class="notesFolders" id="notesFolders">
-          <span class="notesFoldersLabel">Folders</span>
-          <div class="notesFolderBar" id="notesFolderBar" role="tablist" aria-label="Note folders"></div>
-        </div>
+        <!-- Device-local folders. Flat data model: this is a compact vertical
+             navigation list (All Notes / Unfiled / user folders / New folder),
+             rendered by notes-ui.js. The left rail is decoration, not hierarchy.
+             Folder membership never leaves this device. -->
+        <section class="notesFolders" id="notesFolders">
+          <button type="button" class="notesFoldersHeader" id="notesFoldersToggle" aria-expanded="true" aria-controls="notesFolderTree">
+            <span class="notesFoldersLabel">Folders</span>
+            <svg class="notesFoldersChevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 15 6-6 6 6"/></svg>
+          </button>
+          <div class="notesFolderTree" id="notesFolderTree" role="tablist" aria-label="Note folders"></div>
+          <!-- Row icons: authored here, cloned (never innerHTML) into each row. -->
+          <div id="notesFolderIcons" hidden aria-hidden="true">
+            <svg data-icon="all" viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4"/><path d="M9.5 12h5M9.5 16h5"/></svg>
+            <svg data-icon="unfiled" viewBox="0 0 24 24"><path d="M4 13 6.4 5h11.2L20 13"/><path d="M4 13v6h16v-6"/><path d="M4 13h4l1.3 2.2h5.4L16 13h4"/></svg>
+            <svg data-icon="folder" viewBox="0 0 24 24"><path d="M4 7a1 1 0 0 1 1-1h4l2 2h8a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/></svg>
+            <svg data-icon="folder-plus" viewBox="0 0 24 24"><path d="M4 7a1 1 0 0 1 1-1h4l2 2h8a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M12 11v5M9.5 13.5h5"/></svg>
+          </div>
+        </section>
         <div class="notesList" id="notesList" role="list"></div>
         <p class="notesListEmpty" id="notesListEmpty" hidden>No notes yet. Tap <strong>New note</strong> to start one.</p>
         <p class="notesUnavailable" id="notesUnavailable" hidden>RT Notes need on-device storage, which isn&rsquo;t available in this browser.</p>

@@ -6814,50 +6814,92 @@ button.compactAction{
 .notesListEmpty{ margin:0; padding:16px 4px; color:var(--muted); font-size:12px; text-align:center; }
 .notesCardMenuList{ display:flex; flex-direction:column; gap:2px; }
 
-/* Device-local folders. A compact horizontal chip strip - deliberately
-   secondary to the note cards, never a desktop-style file tree. */
-.notesFolders{ display:flex; flex-direction:column; gap:5px; }
+/* Device-local folders. A compact vertical navigation tree - deliberately
+   secondary to the note cards. The flat data model has no hierarchy; the
+   left rail is decoration only. Never scrolls horizontally. */
+.notesFolders{ display:flex; flex-direction:column; }
+.notesFoldersHeader{
+  display:flex; align-items:center; gap:6px;
+  width:100%; margin:0; padding:4px 2px;
+  border:0; background:transparent; cursor:pointer;
+}
+.notesFoldersHeader:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
 .notesFoldersLabel{
+  flex:1 1 auto; min-width:0; text-align:left;
   color:var(--muted); font-size:10px; font-weight:800;
   text-transform:uppercase; letter-spacing:.07em;
 }
-.notesFolderBar{
-  display:flex; align-items:center; gap:6px;
-  padding:1px 0 3px; overflow-x:auto; -webkit-overflow-scrolling:touch;
-  scrollbar-width:none;
+.notesFoldersChevron{
+  flex:0 0 auto; width:14px; height:14px;
+  fill:none; stroke:currentColor; stroke-width:2;
+  stroke-linecap:round; stroke-linejoin:round;
+  color:var(--muted); transition:transform .15s ease;
 }
-.notesFolderBar::-webkit-scrollbar{ display:none; }
-.notesFolderChip{
-  flex:0 0 auto; display:inline-flex; align-items:center; gap:5px;
-  min-height:30px; padding:3px 10px;
-  border:1px solid var(--border2); border-radius:999px;
-  background:var(--row-bg); color:var(--muted);
-  font-size:12px; font-weight:800; line-height:1; white-space:nowrap;
-  cursor:pointer;
+.notesFoldersHeader[aria-expanded="false"] .notesFoldersChevron{ transform:rotate(180deg); }
+
+.notesFolderTree{ display:flex; flex-direction:column; }
+.notesFolderTree[hidden]{ display:none; }
+
+/* Rows stack with no gap so the left-rail segments join into one line. */
+.notesFolderRow{ position:relative; display:flex; align-items:center; }
+.notesFolderRow::before{
+  content:""; position:absolute; left:14px; top:0; bottom:0;
+  width:1px; background:var(--border2);
 }
-.notesFolderChip:hover{ border-color:var(--muted); color:var(--title); }
-.notesFolderChip:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
-.notesFolderChip.is-active{
-  border-color:var(--focus-border);
-  background:color-mix(in srgb,var(--focus-border) 16%,transparent);
-  color:var(--title);
+.notesFolderRow:first-child::before{ top:50%; }
+/* Selected row: the rail segment beside it turns accent - a subtle "node"
+   that connects the row to the rail without a filled block. */
+.notesFolderRow.is-active::before{ width:2px; background:var(--focus-border); }
+.notesFolderRow.is-active{
+  background:color-mix(in srgb,var(--focus-border) 8%,transparent);
+  border-radius:var(--control-radius);
+}
+
+.notesFolderRowBtn{
+  flex:1 1 auto; display:flex; align-items:center; gap:8px;
+  min-width:0; min-height:34px; padding:5px 4px 5px 6px;
+  border:0; background:transparent; color:var(--muted);
+  font-size:12.5px; font-weight:700; text-align:left; cursor:pointer;
+}
+.notesFolderRowBtn:hover{ color:var(--title); }
+.notesFolderRowBtn:focus-visible{
+  outline:2px solid var(--focus-border); outline-offset:-2px;
+  border-radius:var(--control-radius);
+}
+.notesFolderRowIcon{
+  position:relative; z-index:1; flex:0 0 auto;
+  width:16px; height:16px;
+  fill:none; stroke:currentColor; stroke-width:1.7;
+  stroke-linecap:round; stroke-linejoin:round;
+}
+.notesFolderRowName{
+  flex:1 1 auto; min-width:0;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
 .notesFolderCount{
-  font-size:10px; font-weight:800; color:var(--muted);
-  padding:1px 5px; border-radius:999px;
-  background:color-mix(in srgb,var(--text) 9%,transparent);
+  flex:0 0 auto; margin-left:6px;
+  color:var(--muted); font-size:11px; font-weight:700;
+  font-variant-numeric:tabular-nums;
 }
-.notesFolderChip.is-active .notesFolderCount{ color:var(--title); }
-.notesFolderAdd{ color:var(--muted); font-weight:800; }
-.notesFolderManage{
+/* Restrained selected state: accent icon, stronger text, brighter count. */
+.notesFolderRow.is-active .notesFolderRowBtn{ color:var(--title); font-weight:800; }
+.notesFolderRow.is-active .notesFolderRowIcon{ color:var(--focus-border); }
+.notesFolderRow.is-active .notesFolderCount{ color:var(--title); }
+
+/* Manage "…" - only on the selected user folder row. */
+.notesFolderRow .notesFolderManage{
   flex:0 0 auto; display:inline-grid; place-items:center;
-  width:30px; height:30px; min-height:30px; padding:0;
-  border:1px solid var(--border2); border-radius:999px;
-  background:transparent; color:var(--muted);
-  font-size:16px; font-weight:800; line-height:1; cursor:pointer;
+  width:28px; height:28px; min-height:28px; margin-right:2px; padding:0;
+  border:0; border-radius:var(--control-radius);
+  background:transparent; color:var(--muted); cursor:pointer;
 }
-.notesFolderManage:hover{ border-color:var(--muted); color:var(--title); }
-.notesFolderManage:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
+.notesFolderRow .notesFolderManage svg{ width:16px; height:16px; fill:currentColor; }
+.notesFolderRow .notesFolderManage:hover{ color:var(--title); }
+.notesFolderRow .notesFolderManage:focus-visible{ outline:2px solid var(--focus-border); outline-offset:-1px; }
+
+/* New folder: same grammar, quiet, no rail through it. */
+.notesFolderNew{ color:var(--muted); }
+.notesFolderNew:hover{ color:var(--title); }
 
 /* Small RT Notes dialogs (folder create/rename/manage, move-to-folder).
    Buttons reuse the app's global button.primary / .secondary / .danger. */
@@ -7033,6 +7075,8 @@ button.compactAction{
   #notesBlock .notesToolbar button{ min-width:38px; height:38px; min-height:38px; }
   #notesBlock .notesItemMenuBtn{ width:36px; height:36px; min-height:36px; }
   #notesBlock .notesItemMenuBtn svg{ width:18px; height:18px; }
+  #notesBlock .notesFolderRowBtn{ min-height:40px; }
+  #notesBlock .notesFolderRow .notesFolderManage{ width:34px; height:34px; min-height:34px; }
   #notesBlock .notesBodyInput{ min-height:46vh; }
   #notesBlock .notesBodyEditor .notesProse{ min-height:46vh; }
 }

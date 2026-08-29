@@ -328,38 +328,98 @@ test("a graceful message when on-device storage is unavailable", () => {
 });
 
 /* ----------------------------------------------------------------------
- *   Flat folders (device-local)
+ *   Flat folders (device-local) - compact vertical navigation tree
  * -------------------------------------------------------------------- */
 
-test("the list screen has a compact folder chip bar above the note cards", () => {
-  // Bar sits after the on-device hint and before the note list.
+test("the folder navigation is a vertical tree/list, above the note cards - no horizontal chips", () => {
+  // Section sits after the on-device hint and before the note list.
   const hint = html.indexOf('id="notesDeviceHint"');
-  const bar = html.indexOf('id="notesFolderBar"');
+  const tree = html.indexOf('id="notesFolderTree"');
   const list = html.indexOf('id="notesList"');
-  assert.ok(hint !== -1 && bar !== -1 && list !== -1);
-  assert.ok(hint < bar && bar < list, "order is hint -> folders -> notes");
-  assert.match(html, /<div class="notesFolderBar" id="notesFolderBar" role="tablist"/);
-  // Horizontal, scrollable, secondary - not big folder cards / a file tree.
-  assert.match(styles, /\.notesFolderBar\{[^}]*overflow-x:auto/);
-  assert.match(styles, /\.notesFolderChip\{[^}]*border-radius:999px/);
+  assert.ok(hint !== -1 && tree !== -1 && list !== -1);
+  assert.ok(hint < tree && tree < list, "order is hint -> folders -> notes");
+  assert.match(html, /<section class="notesFolders" id="notesFolders">/);
+  assert.match(html, /<div class="notesFolderTree" id="notesFolderTree" role="tablist"/);
+  // Vertical stack.
+  assert.match(styles, /\.notesFolderTree\{[^}]*flex-direction:column/);
+  // The old horizontal chip layout is fully gone - markup, JS, and CSS.
+  assert.doesNotMatch(html, /notesFolderBar|notesFolderChip/);
+  assert.doesNotMatch(ui, /notesFolderBar|notesFolderChip|makeChip\b/);
+  assert.doesNotMatch(styles, /\.notesFolderBar\b|\.notesFolderChip\b|\.notesFolderAdd\b/);
+});
+
+test("the folder area never scrolls horizontally - long names truncate instead", () => {
+  const block = styles.slice(styles.indexOf(".notesFolders{"), styles.indexOf(".notesFolderNew"));
+  // No horizontal-scroll fallback anywhere in the folder styles.
+  assert.doesNotMatch(block, /overflow-x/);
+  // The row is a flex line; the name flexes and truncates, the count is fixed.
+  assert.match(styles, /\.notesFolderRowName\{[^}]*flex:1 1 auto/);
+  assert.match(styles, /\.notesFolderRowName\{[^}]*min-width:0/);
+  assert.match(styles, /\.notesFolderRowName\{[^}]*overflow:hidden/);
+  assert.match(styles, /\.notesFolderRowName\{[^}]*text-overflow:ellipsis/);
+  assert.match(styles, /\.notesFolderRowName\{[^}]*white-space:nowrap/);
+  assert.match(styles, /\.notesFolderCount\{[^}]*flex:0 0 auto/);
 });
 
 test("All Notes and Unfiled are built-in views, not folder records", () => {
   assert.match(ui, /const VIEW_ALL = "all";/);
   assert.match(ui, /const VIEW_UNFILED = "unfiled";/);
-  assert.match(ui, /makeChip\("All Notes", VIEW_ALL/);
-  assert.match(ui, /makeChip\("Unfiled", VIEW_UNFILED/);
+  assert.match(ui, /makeFolderRow\("all", "All Notes", VIEW_ALL/);
+  assert.match(ui, /makeFolderRow\("unfiled", "Unfiled", VIEW_UNFILED/);
   // They are never written to IndexedDB: only real folders come from the store.
   assert.match(ui, /folders = folderList \|\| \[\];/);
   assert.doesNotMatch(ui, /createFolder\("All Notes"\)|createFolder\("Unfiled"\)/);
+  // Built-ins pass no folder record -> no manage affordance path.
+  assert.match(ui, /makeFolderRow\("all", "All Notes", VIEW_ALL, notes\.length\)\)/);
+  assert.match(ui, /makeFolderRow\("unfiled", "Unfiled", VIEW_UNFILED, filterNotes\(notes, VIEW_UNFILED\)\.length\)/);
 });
 
-test("user folders render from the store, after the built-in views", () => {
-  assert.match(ui, /folders\.forEach\(\(folder\) => \{[\s\S]*?makeChip\(folder\.name, folder\.id/);
+test("row order is All Notes, then Unfiled, then user folders in their existing sort order", () => {
+  const render = ui.slice(ui.indexOf("function renderFolderTree("), ui.indexOf("function setFoldersCollapsed("));
+  const all = render.indexOf('"All Notes"');
+  const unfiled = render.indexOf('"Unfiled"');
+  const loop = render.indexOf("folders.forEach((folder) =>");
+  const newFolder = render.indexOf('"New folder"');
+  assert.ok(all !== -1 && unfiled !== -1 && loop !== -1 && newFolder !== -1);
+  assert.ok(all < unfiled && unfiled < loop && loop < newFolder, "All -> Unfiled -> user folders -> New folder");
+  // User folders keep the store's order (folders array is store.getFolders()).
+  assert.match(render, /folders\.forEach\(\(folder\) => \{[\s\S]*?makeFolderRow\("folder", folder\.name, folder\.id/);
   assert.match(ui, /store\s*\.getFolders\(\)/);
-  // "+ Folder" create affordance sits with the chips.
-  assert.match(ui, /add\.textContent = "\+ Folder";/);
-  assert.match(ui, /openFolderDialog\("create"\)/);
+});
+
+test("each row has an icon, name, and right-aligned count", () => {
+  assert.match(ui, /function folderIcon\(name\) \{/);
+  assert.match(ui, /svg\.classList\.add\("notesFolderRowIcon"\)/);
+  assert.match(ui, /name\.className = "notesFolderRowName";/);
+  assert.match(ui, /badge\.className = "notesFolderCount";/);
+  assert.match(ui, /badge\.textContent = String\(count\);/);
+  assert.match(styles, /\.notesFolderCount\{[^}]*margin-left:6px/);
+  // Icons come from authored SVG templates, cloned - never a third-party set,
+  // never emoji, never innerHTML.
+  assert.match(html, /id="notesFolderIcons" hidden[^>]*>\s*<svg data-icon="all"/);
+  assert.match(html, /<svg data-icon="folder" viewBox="0 0 24 24">/);
+  assert.match(html, /<svg data-icon="folder-plus" viewBox="0 0 24 24">/);
+  assert.doesNotMatch(ui, /innerHTML\s*=/);
+});
+
+test("New folder is the last row, and still opens the existing create dialog", () => {
+  const render = ui.slice(ui.indexOf("function renderFolderTree("), ui.indexOf("function setFoldersCollapsed("));
+  assert.match(render, /add\.className = "notesFolderRowBtn notesFolderNew";/);
+  assert.match(render, /label\.textContent = "New folder";/);
+  assert.match(render, /add\.addEventListener\("click", \(\) => openFolderDialog\("create"\)\)/);
+  // It is appended after the folder loop.
+  assert.ok(render.indexOf("folders.forEach") < render.indexOf('"notesFolderRowBtn notesFolderNew"'));
+});
+
+test("the folder tree has a subtle decorative left rail that stops before New folder", () => {
+  // A light vertical line via ::before on the rows, using a border token.
+  assert.match(styles, /\.notesFolderRow::before\{[^}]*background:var\(--border2\)/);
+  assert.match(styles, /\.notesFolderRow::before\{[^}]*width:1px/);
+  // No rail through the bare New folder button (it is not a .notesFolderRow).
+  assert.doesNotMatch(styles, /\.notesFolderNew::before/);
+  // No literal filesystem branch glyphs.
+  assert.doesNotMatch(html, /├─|└─|│/);
+  assert.doesNotMatch(ui, /├─|└─/);
 });
 
 test("tapping a folder filters the list immediately, keeping pinned-first order", () => {
@@ -396,14 +456,14 @@ test("moving a note keeps the editor open and refreshes the current note", () =>
   assert.doesNotMatch(choose, /showList\(\)/);
 });
 
-test("folder rename / delete are on the manage dialog, never on every chip", () => {
+test("folder rename / delete are on the manage dialog, reached only from a user row", () => {
   assert.match(html, /id="notesFolderManageDialog"[\s\S]*?id="notesFolderRenameBtn"[\s\S]*?id="notesFolderDeleteBtn"[\s\S]*?<\/dialog>/);
   assert.match(ui, /folderRenameBtn\.addEventListener\("click", \(\) => \{[\s\S]*?openFolderDialog\("rename", folder\)/);
   assert.match(ui, /folderDeleteBtn\.addEventListener\("click", \(\) => \{[\s\S]*?confirmDeleteFolder\(folder\)/);
-  // Manage entry points: the active-folder "⋯" button and long-press - not a
-  // control baked into each chip.
+  // Manage entry points: long-press / right-click any user row, plus a small
+  // "…" on the selected user row only - never a control on every row.
   assert.match(ui, /manage\.className = "notesFolderManage";/);
-  assert.match(ui, /attachLongPress\(chip, \(\) => openFolderManage\(folder\)\)/);
+  assert.match(ui, /attachLongPress\(row, \(\) => openFolderManage\(folder\)\)/);
 });
 
 test("deleting a folder explains the notes are kept, and lands the user on Unfiled", () => {
@@ -413,10 +473,62 @@ test("deleting a folder explains the notes are kept, and lands the user on Unfil
 });
 
 test("built-in views expose no rename/delete affordance", () => {
-  // Only user-folder chips get the context menu / long-press / manage button.
-  assert.match(ui, /if \(isFolderView\(\)\) \{\s*\n\s*const folder = folderById\(currentView\);/);
+  // The manage affordances live inside `if (folder) { ... }` in makeFolderRow,
+  // and the "…" only inside a further `if (on) { ... }` - built-ins pass no
+  // folder record, so neither branch runs for All Notes / Unfiled.
+  assert.match(ui, /if \(folder\) \{\s*\n\s*row\.classList\.add\("notesFolderRowUser"\);/);
+  assert.match(ui, /if \(folder\) \{[\s\S]*?if \(on\) \{[\s\S]*?manage\.className = "notesFolderManage";/);
   // The manage dialog's target is only ever set from a real folder object.
   assert.match(ui, /function openFolderManage\(folder\) \{\s*\n\s*if \(!folder \|\| !folderManageDialog/);
+});
+
+/* ----------------------------------------------------------------------
+ *   Collapsible FOLDERS section
+ * -------------------------------------------------------------------- */
+
+test("the FOLDERS header is a button that toggles the section via aria-expanded", () => {
+  assert.match(html, /<button type="button" class="notesFoldersHeader" id="notesFoldersToggle" aria-expanded="true" aria-controls="notesFolderTree">/);
+  assert.match(html, /<span class="notesFoldersLabel">Folders<\/span>/);
+  assert.match(html, /<svg class="notesFoldersChevron"/);
+  assert.match(ui, /foldersToggle\.addEventListener\("click", \(\) => setFoldersCollapsed\(!foldersCollapsed\)\)/);
+  // Chevron flips on collapse.
+  assert.match(styles, /\.notesFoldersHeader\[aria-expanded="false"\] \.notesFoldersChevron\{ transform:rotate\(180deg\); \}/);
+});
+
+test("collapsing the FOLDERS section only hides rows - no filter / selection / navigation change", () => {
+  const fn = ui.slice(ui.indexOf("function setFoldersCollapsed("), ui.indexOf("function setFoldersCollapsed(") + 400);
+  assert.match(fn, /foldersCollapsed = !!collapsed;/);
+  assert.match(fn, /foldersToggle\.setAttribute\("aria-expanded", String\(!foldersCollapsed\)\)/);
+  assert.match(fn, /folderTree\.hidden = foldersCollapsed;/);
+  // Never touches the current view, filtering, list re-render, or nav state.
+  assert.doesNotMatch(fn, /currentView|renderList\(|selectView\(|showList\(|showEditor\(|dataset\.|history\.|pushState/);
+  // Rows + New folder are inside #notesFolderTree, so hidden together.
+  assert.match(styles, /\.notesFolderTree\[hidden\]\{ display:none; \}/);
+});
+
+test("the FOLDERS collapse state is session-local - not persisted / synced", () => {
+  assert.match(ui, /let foldersCollapsed = false;/);
+  assert.doesNotMatch(ui, /foldersCollapsed[\s\S]{0,40}(localStorage|PolynSyncStorage|snapshot)/i);
+  assert.doesNotMatch(ui, /(localStorage|PolynSyncStorage)[\s\S]{0,40}foldersCollapsed/i);
+  // Re-expanding restores whatever currentView was (it was never changed).
+  assert.doesNotMatch(ui, /setFoldersCollapsed[\s\S]{0,80}currentView/);
+});
+
+/* ----------------------------------------------------------------------
+ *   Selected-state + accessibility
+ * -------------------------------------------------------------------- */
+
+test("the active row is marked with aria-selected and a restrained visual state", () => {
+  assert.match(ui, /const on = currentView === view;/);
+  assert.match(ui, /row\.classList\.toggle\("is-active", on\);/);
+  assert.match(ui, /btn\.setAttribute\("aria-selected", String\(on\)\);/);
+  // Restrained: accent icon + stronger text + faint tint + accent rail node.
+  // Explicitly NOT a heavy filled block or border.
+  assert.match(styles, /\.notesFolderRow\.is-active \.notesFolderRowIcon\{ color:var\(--focus-border\); \}/);
+  assert.match(styles, /\.notesFolderRow\.is-active \.notesFolderRowBtn\{ color:var\(--title\); font-weight:800; \}/);
+  assert.match(styles, /\.notesFolderRow\.is-active::before\{ width:2px; background:var\(--focus-border\); \}/);
+  assert.match(styles, /\.notesFolderRow\.is-active\{[^}]*color-mix\(in srgb,var\(--focus-border\) 8%/);
+  assert.doesNotMatch(styles, /\.notesFolderRow\.is-active\{[^}]*border:\s*\d/);
 });
 
 test("the selected folder is local UI state only - reset to All Notes on (re-)open", () => {
@@ -577,8 +689,8 @@ test("Backup dialog closes on an explicit Close button (no reliance on the dialo
 test("opening/closing Backup changes no list state - no currentView writes, no navigation, no layout element moves", () => {
   const open = ui.slice(ui.indexOf("function openBackupDialog("), ui.indexOf("function closeBackupDialog(") + 220);
   assert.doesNotMatch(open, /currentView\s*=|renderList\(|showList\(|showEditor\(|dataset\.mobileNotes/);
-  // The folder bar + note list markup are untouched by the backup change.
-  assert.match(html, /<div class="notesFolders" id="notesFolders">[\s\S]*?<div class="notesFolderBar" id="notesFolderBar"/);
+  // The folder tree + note list markup are untouched by the backup change.
+  assert.match(html, /<section class="notesFolders" id="notesFolders">[\s\S]*?<div class="notesFolderTree" id="notesFolderTree"/);
   assert.match(html, /<div class="notesList" id="notesList" role="list"><\/div>/);
 });
 
