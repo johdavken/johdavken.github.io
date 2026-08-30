@@ -215,6 +215,24 @@
   // and the Scan popup all close on an outside click / Escape. Their hook*()
   // helpers stop each guide's own summary click from bubbling to the panel
   // <summary> it is nested in, so opening a guide never toggles the panel.
+  function positionViewportOverflowMenu(summary, popup){
+    if (!summary || !popup) return;
+    const anchorRect = summary.getBoundingClientRect();
+    const popupRect = popup.getBoundingClientRect();
+    const margin = 8;
+    const canOpenBelow = window.innerHeight - anchorRect.bottom - margin >= popupRect.height + 8;
+    const openAbove = !canOpenBelow && anchorRect.top - margin >= popupRect.height + 8;
+    const top = openAbove
+      ? Math.max(margin, anchorRect.top - popupRect.height - 4)
+      : Math.min(window.innerHeight - popupRect.height - margin, anchorRect.bottom + 4);
+    const left = Math.min(Math.max(margin, anchorRect.right - popupRect.width), window.innerWidth - popupRect.width - margin);
+    popup.style.position = "fixed";
+    popup.style.top = `${top}px`;
+    popup.style.left = `${left}px`;
+    popup.style.right = "auto";
+    popup.style.zIndex = "1000";
+  }
+
   document.addEventListener("click", event=>{
     if (splitsScanShortcut?.open && !splitsScanShortcut.contains(event.target)) splitsScanShortcut.open = false;
     const infoLegend = document.getElementById("recipeInfoLegend");
@@ -223,35 +241,46 @@
     if (timelineInfoGuide?.open && !timelineInfoGuide.contains(event.target)) timelineInfoGuide.open = false;
     const lineSyncInfoGuide = document.getElementById("lineSyncInfoGuide");
     if (lineSyncInfoGuide?.open && !lineSyncInfoGuide.contains(event.target)) lineSyncInfoGuide.open = false;
-    const summary = event.target.closest?.(".mobileWeightProfilesSheet .workspaceConfigurationOverflow > summary");
+
+    const openOverflowMenus = document.querySelectorAll(".mobileSavedRecipeOverflow[open], .workspaceConfigurationOverflow[open]");
+    if (openOverflowMenus.length){
+      openOverflowMenus.forEach(details=>{
+        if (!details.contains(event.target)) details.open = false;
+      });
+    }
+
+    const summary = event.target.closest?.(".mobileSavedRecipeOverflow > summary, .mobileWeightProfilesSheet .workspaceConfigurationOverflow > summary");
     if (summary){
       const menu = summary.parentElement;
-      const popup = menu?._profileOverflowPopup || menu.querySelector(":scope > .workspaceConfigurationOverflowMenu");
+      const popup = menu?._overflowPopup || menu.querySelector(":scope > .mobileSavedRecipeMenu, :scope > .workspaceConfigurationOverflowMenu");
       if (menu && popup){
-        menu._profileOverflowPopup = popup;
+        menu._overflowPopup = popup;
         window.setTimeout(()=>{
           if (menu.open){
             document.body.append(popup);
-            const anchor = summary.getBoundingClientRect();
-            const popupRect = popup.getBoundingClientRect();
-            const margin = 8;
-            const top = Math.max(margin, anchor.top - popupRect.height - 4);
-            const left = Math.min(Math.max(margin, anchor.right - popupRect.width), window.innerWidth - popupRect.width - margin);
-            popup.style.position = "fixed";
-            popup.style.top = `${top}px`;
-            popup.style.left = `${left}px`;
-            popup.style.right = "auto";
+            positionViewportOverflowMenu(summary, popup);
           }else{
             menu.append(popup);
             popup.style.position = "";
             popup.style.top = "";
             popup.style.left = "";
             popup.style.right = "";
+            popup.style.zIndex = "";
           }
         }, 0);
       }
     }
   });
+
+  const repositionOpenOverflowMenus = ()=>{
+    document.querySelectorAll(".mobileSavedRecipeOverflow[open], .workspaceConfigurationOverflow[open]").forEach(details=>{
+      const summary = details.querySelector(":scope > summary");
+      const popup = details._overflowPopup || details.querySelector(":scope > .mobileSavedRecipeMenu, :scope > .workspaceConfigurationOverflowMenu");
+      if (summary && popup && popup.parentElement === document.body) positionViewportOverflowMenu(summary, popup);
+    });
+  };
+  window.addEventListener("scroll", repositionOpenOverflowMenus, true);
+  window.addEventListener("resize", repositionOpenOverflowMenus);
   document.addEventListener("keydown", event=>{
     if (event.key === "Escape" && splitsScanShortcut?.open){
       splitsScanShortcut.open = false;

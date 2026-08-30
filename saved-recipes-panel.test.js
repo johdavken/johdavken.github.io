@@ -194,6 +194,13 @@ test("the button row wraps on narrow viewports instead of overflowing now that a
   assert.match(rule, /flex-wrap:\s*wrap/);
 });
 
+test("the Recipe Book row overflow menus are portaled out of the scroll container and repositioned to stay in the viewport", () => {
+  assert.match(app, /document\.body\.append\(popup\);/);
+  assert.match(app, /positionViewportOverflowMenu\(summary, popup\)/);
+  assert.match(app, /window\.addEventListener\("scroll", repositionOpenOverflowMenus, true\)/);
+  assert.match(app, /openAbove = !canOpenBelow && anchorRect\.top - margin >= popupRect\.height \+ 8/);
+});
+
 // --- consolidated action bar: (Save Current)(Load)(Update)(...) ------------
 // replaces the old per-row Load/Update/overflow buttons for Recipe Setup's
 // copy specifically - Line Configurations' own lists are untouched.
