@@ -23,6 +23,7 @@ test("Digital Asset Links delegates resin.tools URLs to the Resin Tools package"
   assert.equal(assetLinks[0].target.namespace, "android_app");
   assert.equal(assetLinks[0].target.package_name, "tools.resin.app");
   assert.ok(assetLinks[0].target.sha256_cert_fingerprints.includes("A7:84:64:75:A6:D1:BD:2B:B0:6C:89:88:8A:32:68:90:38:83:52:25:16:BF:65:30:4E:D3:78:E5:77:8D:12:AD"));
+  assert.ok(assetLinks[0].target.sha256_cert_fingerprints.includes("30:64:8C:5E:B5:7B:4E:2F:AA:66:3B:06:50:E3:67:4D:76:B9:F8:AA:19:9D:D6:9D:4C:50:2C:E5:4D:36:CC:35"));
 });
 
 test("cold and warm native URLs feed the existing RT Sync join-confirmation path", () => {
