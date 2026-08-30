@@ -290,6 +290,18 @@ test("tablet percentage fields fit decimals without increasing the editor footpr
   assert.match(block, /\.splitPctControl input\{[\s\S]*?width:44px;[\s\S]*?padding-inline:0;/);
 });
 
+test("portrait narrow tablets stack resin and percentage while leaving landscape tablet and desktop unchanged", () => {
+  const start = styles.indexOf("@media (min-width: 701px) and (max-width: 900px) and (orientation: portrait) and (pointer: coarse){");
+  assert.notEqual(start, -1, "expected the portrait-narrow-tablet stack block");
+  const block = styles.slice(start, styles.indexOf("\n}", start) + 2);
+  assert.match(block, /\.splitCellEditor\{[\s\S]*?flex-direction: column;/);
+  assert.match(block, /\.splitCellTop\{[\s\S]*?flex-direction: column;/);
+  assert.match(block, /\.splitCellTop \.resinNameInput\{[\s\S]*?white-space: nowrap;/);
+  assert.match(block, /\.splitPctControl input\{[\s\S]*?text-align: left;/);
+  assert.match(block, /\.splitPctControl > span\{[\s\S]*?font-weight: 800;/);
+  assert.doesNotMatch(block, /orientation: landscape/);
+});
+
 test("short tablet view reclaims a hopper row of whitespace without shrinking cell text", () => {
   const start = styles.indexOf(`@media ${SHORT_TABLET_QUERY}`);
   const block = styles.slice(start, styles.indexOf("\n}", start) + 2);
