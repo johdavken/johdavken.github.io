@@ -178,6 +178,14 @@ test("disabled segments dim to the shared .5 opacity", () => {
   assert.match(styles, /\.splitsEditRowSecondary \.bulkTextAction:disabled\{\s*\n\s*opacity: \.5;\s*\n\s*\}/);
 });
 
+test("Rearrange latches to the same 55% accent fill Edit/Done uses, including on hover so the idle 28% hover rule cannot drop it back", () => {
+  const block = pillBlock();
+  assert.match(block, /#splitsArea #splitsBulkBar \.splitsEditRowSecondary \.splitsRearrangeAction\.active,\s*\n\s*#splitsArea #splitsBulkBar \.splitsEditRowSecondary \.splitsRearrangeAction\[aria-pressed="true"\]\{\s*\n\s*background: color-mix\(in srgb, var\(--recipe-pill-accent\) 55%, var\(--panel2\)\);\s*\n\s*color: var\(--title\);\s*\n\s*\}/);
+  assert.match(block, /#splitsArea #splitsBulkBar \.splitsEditRowSecondary \.splitsRearrangeAction\.active:hover:not\(:disabled\),\s*\n\s*#splitsArea #splitsBulkBar \.splitsEditRowSecondary \.splitsRearrangeAction\[aria-pressed="true"\]:hover:not\(:disabled\)\{\s*\n\s*background: color-mix\(in srgb, var\(--recipe-pill-accent\) 55%, var\(--panel2\)\);\s*\n\s*color: var\(--title\);\s*\n\s*filter: brightness\(1\.08\);\s*\n\s*\}/);
+  // Idle siblings stay at 28% - the latch is Rearrange-only.
+  assert.match(block, /\.splitsEditRowSecondary \.bulkTextAction,\s*\n\s*\.splitsEditRowSecondary \.splitsRearrangeAction\{[\s\S]*?background: color-mix\(in srgb, var\(--recipe-pill-accent\) 28%, var\(--panel2\)\);/);
+});
+
 test("Clear/Empty/Rearrange keep their fill on hover, double-id guaranteed against an old unscoped hover rule (still needed for Weights' own separate bulk-actions row) that sets background:transparent - that rule only tied our old hover rule's specificity for `color`, and since our old rule never redeclared `background` at all, the leftover rule's transparent background applied uncontested on hover, silently dropping the fill for every segment except Reset (safe only because its own selector happens to include an id)", () => {
   assert.match(styles, /\.splitsBulkActions \.bulkTextAction:hover,\s*\n\.weightsBulkActions \.bulkTextAction:hover,\s*\n\.splitsEditRowSecondary > \.bulkTextAction:hover:not\(:disabled\)\{color:var\(--title\);border-color:var\(--title\);background:transparent;text-decoration:none\}/, "expected the old leftover rule to still exist - it's shared with Weights, not deletable");
   const block = pillBlock();
@@ -240,13 +248,13 @@ test("Apply's label is fixed - no longer grows to \"Apply to N hoppers\" on sele
 
 test("Reset Recipe's label is set from JS based on compactMobileRecipe - \"Reset\" on tablet/desktop, \"Reset Recipe\" in full on mobile", () => {
   assert.match(app, /const resetButton = toolbar\.querySelector\("#resetAllSplits"\);/);
-  assert.match(app, /if \(resetButton\) resetButton\.textContent = compactMobileRecipe \? "Reset Recipe" : "Reset";/);
+  assert.match(app, /setToolbarActionText\(resetButton, compactMobileRecipe \? "Reset Recipe" : "Reset"\);/);
 });
 
 test("Clear selection and Empty cells shorten to \"Clear\"/\"Empty\" on tablet/desktop, full length on mobile", () => {
   assert.match(app, /const clearSelectionButton = toolbar\.querySelector\("#clearSplitSelection"\);/);
-  assert.match(app, /if \(clearSelectionButton\) clearSelectionButton\.textContent = compactMobileRecipe \? "Clear selection" : "Clear";/);
-  assert.match(app, /if \(clearCellsButton\) clearCellsButton\.textContent = compactMobileRecipe \? "Empty cells" : "Empty";/);
+  assert.match(app, /setToolbarActionText\(clearSelectionButton, compactMobileRecipe \? "Clear selection" : "Clear"\);/);
+  assert.match(app, /setToolbarActionText\(clearCellsButton, compactMobileRecipe \? "Empty cells" : "Empty"\);/);
 });
 
 test("the Resin name label shortens to \"Resin\" on tablet/desktop only", () => {

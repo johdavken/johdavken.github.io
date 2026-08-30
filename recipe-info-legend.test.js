@@ -2,10 +2,11 @@
 
 // Mobile-only icon guide in the Recipe panel: an "i" in the summary bar,
 // opposite the RECIPE title. Tapping it drops a legend (down + to the left)
-// naming every tab / action icon that replaces a text label on phones -
-// Current, Next, Weights, Recipe Book, Scan, Load Next, Load Current, Edit,
-// Weights profile. It is a <details> nested inside #splitsBlock's own
-// <summary>, so its summary click must not bubble out and toggle the panel.
+// naming every tab / action icon that replaces a text label on phones. The
+// rows are grouped by where the control appears, including the Edit toolbar's
+// Undo, Redo, Clear selection, Empty cells, Rearrange, and Reset Recipe. It
+// is a <details> nested inside #splitsBlock's own <summary>, so its summary
+// click must not bubble out and toggle the panel.
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
@@ -47,13 +48,20 @@ test("the guide is a <details id=\"recipeInfoLegend\"> in the Recipe panel's sum
  *   Legend contents: one row per icon, icon + description
  * ------------------------------------------------------------------- */
 
-test("the legend covers all nine icons, each with an SVG and a description", () => {
+test("the legend groups all mobile Recipe icons by screen section, each with an SVG and a description", () => {
   const legend = legendMarkup();
-  const items = legend.match(/<li>[\s\S]*?<\/li>/g) || [];
-  assert.equal(items.length, 9, "one row per icon");
-  for (const name of ["Current", "Next", "Weights", "Recipe Book", "Scan", "Load Next", "Load Current", "Edit", "Weights profile"]){
+  const headings = legend.match(/<li class="recipeInfoLegendSectionHeading">[^<]+<\/li>/g) || [];
+  assert.deepEqual(headings, [
+    '<li class="recipeInfoLegendSectionHeading">Recipe pages</li>',
+    '<li class="recipeInfoLegendSectionHeading">Recipe actions</li>',
+    '<li class="recipeInfoLegendSectionHeading">Edit toolbar</li>',
+    '<li class="recipeInfoLegendSectionHeading">Weights tab</li>'
+  ]);
+  const items = (legend.match(/<li>[\s\S]*?<\/li>/g) || []).filter(li=>!li.includes("recipeInfoLegendSectionHeading"));
+  assert.equal(items.length, 15, "one row per icon");
+  for (const name of ["Current", "Next", "Weights", "Recipe Book", "Scan", "Load Next", "Load Current", "Edit", "Undo", "Redo", "Clear selection", "Empty cells", "Rearrange", "Reset Recipe", "Weights profile"]){
     assert.ok(
-      items.some(li => li.includes(`<strong>${name}</strong>`) && /<span class="recipeInfoLegendIcon"><svg/.test(li) && li.replace(/<[^>]+>/g, "").trim().length > name.length + 6),
+      items.some(li => li.includes(`<strong>${name}</strong>`) && /<span class="recipeInfoLegendIcon[^"]*"><svg/.test(li) && li.replace(/<[^>]+>/g, "").trim().length > name.length + 6),
       `row for "${name}" with an icon and a description`
     );
   }
@@ -67,6 +75,9 @@ test("legend icons reuse the real tab / action icon paths", () => {
   assert.ok(legend.includes('d="M8 5H6.5A1.5 1.5 0 0 0 5 6.5v13'));
   // Edit pencil glyph (also the ::before mask)
   assert.ok(legend.includes('d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"'));
+  // Reset retains the Recipe toolbar's circular-arrow glyph and danger tone.
+  assert.ok(legend.includes('d="M20 11a8 8 0 1 0 1.2 4.2"'));
+  assert.match(styles,/\.recipeInfoLegendIcon\.recipeInfoLegendDanger\{ color:var\(--bad\); \}/);
 });
 
 /* -------------------------------------------------------------------
@@ -87,6 +98,10 @@ test("the panel drops downward and hugs the right edge (opens to the left)", () 
   assert.match(rule, /right: 0;/);
   assert.match(rule, /max-height:/);
   assert.match(rule, /overflow-y: auto;/);
+});
+
+test("section headings use the guide's existing compact list treatment", () => {
+  assert.match(styles,/\.recipeInfoLegendList li\.recipeInfoLegendSectionHeading\{[\s\S]*?text-transform:uppercase;/);
 });
 
 /* -------------------------------------------------------------------

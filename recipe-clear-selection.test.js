@@ -103,7 +103,7 @@ test("the shared inline editor exposes Clear selection on mobile", () => {
   // case for selecting every cell at once (Reset Recipe already covers
   // "start over"), so it just cost the row a slot for nothing.
   assert.doesNotMatch(splitsArea, /id="selectAllSplits"/);
-  assert.match(splitsArea, /<button id="clearSplitSelection"[^>]*data-button-variant="quiet"[^>]*>Clear selection<\/button>/);
+  assert.match(splitsArea, /<button id="clearSplitSelection"[^>]*data-button-variant="quiet"[^>]*aria-label="Clear selection"[^>]*>[\s\S]*?<span>Clear selection<\/span><\/button>/);
   assert.match(styles, /#splitsArea \.splitsEditRowSecondary > \.splitsBulkActions/);
 });
 

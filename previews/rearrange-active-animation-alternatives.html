@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rearrange active animation alternatives</title>
+<style>
+  :root{
+    --meta-bg:#11171b; --meta-panel:#1b2226; --meta-line:#3a464d; --meta-text:#e6edf1; --meta-muted:#9fb0b9; --meta-blue:#8db8d8;
+    /* Industrial Slate, copied from theme.css so the latch matches the live rail. */
+    --bg:#f5f4f3; --panel:#ffffff; --panel2:#faf9f8; --text:#29282b; --title:#4f6d8b; --muted:#666269;
+    --border:rgba(74,73,72,.17); --row-border:rgba(96,125,155,.14);
+    --focus-border:rgba(96,125,155,.86);
+    --recipe-pill-accent: var(--focus-border);
+    --bad:#b42318;
+    --control-radius:8px;
+    --shadow2:0 7px 22px rgba(24,35,44,.10);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:32px 20px 64px;background:radial-gradient(circle at 30% 0,#20333d 0,transparent 36%),var(--meta-bg);color:var(--meta-text);font-family:Inter,ui-sans-serif,system-ui,sans-serif}
+  main{max-width:1180px;margin:auto}
+  h1{margin:0;font-size:26px;letter-spacing:-.03em}
+  p.lede{max-width:780px;margin:8px 0 4px;color:var(--meta-muted);line-height:1.55;font-size:14px}
+  p.sub{max-width:780px;margin:0 0 18px;color:var(--meta-muted);line-height:1.5;font-size:12.5px}
+  .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 22px}
+  .pauseAll{
+    display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border:1px solid var(--meta-line);border-radius:999px;
+    background:#192329;color:var(--meta-text);font:650 12px/1 Inter,ui-sans-serif,system-ui,sans-serif;cursor:pointer;
+  }
+  .pauseAll[aria-pressed="true"]{border-color:var(--meta-blue);color:var(--meta-blue)}
+  .hint{color:var(--meta-muted);font-size:12px}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:18px}
+
+  .option{overflow:hidden;border:1px solid var(--meta-line);border-radius:16px;background:var(--meta-panel);box-shadow:0 10px 28px #0004}
+  .optionHead{display:flex;gap:10px;align-items:baseline;padding:13px 16px;border-bottom:1px solid var(--meta-line)}
+  .num{color:var(--meta-blue);font-size:11px;font-weight:800;letter-spacing:.1em}
+  .name{font-size:15px;font-weight:750}
+  .tag{margin-left:auto;color:var(--meta-muted);font-size:11px;text-align:right}
+  .note{padding:12px 16px 15px;color:var(--meta-muted);font-size:12.5px;line-height:1.55}
+  .note b{color:var(--meta-text)}
+
+  .mock{padding:16px 14px 14px;background:linear-gradient(135deg,#1c2529,#171f23)}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:12px 12px 14px;box-shadow:var(--shadow2)}
+  .cardTitle{display:flex;align-items:center;gap:8px;margin:0 0 10px;color:var(--title);font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+  .cardTitle svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8}
+
+  .rail{
+    display:flex;align-items:center;gap:3px;justify-content:flex-start;
+  }
+  .cell, .railBtn{
+    display:grid;place-items:center;
+    width:40px;height:40px;min-width:40px;min-height:40px;padding:0;margin:0;
+    border:1px solid transparent;border-radius:6px;
+    background:transparent;color:var(--muted);
+    box-shadow:none;cursor:default;
+  }
+  .cell svg, .railBtn svg, .chip svg, .swatchBtn svg{
+    width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;
+    stroke-linecap:round;stroke-linejoin:round;overflow:visible;
+    display:block;
+  }
+  .cell.reset{width:44px;min-width:44px;color:var(--bad);border-left-color:color-mix(in srgb,var(--bad) 42%, var(--row-border));border-radius:0 6px 6px 0}
+
+  .railBtn{
+    cursor:pointer;font:inherit;
+  }
+  .railBtn:focus-visible, .chip:focus-visible, .swatchBtn:focus-visible{
+    outline:2px solid var(--focus-border);outline-offset:2px;
+  }
+  .railBtn.active, .chip.active, .swatchBtn.active{
+    border-color:color-mix(in srgb, var(--recipe-pill-accent) 55%, var(--border));
+    background:color-mix(in srgb, var(--recipe-pill-accent) 55%, var(--panel2));
+    color:var(--title);
+  }
+
+  .chipRow{display:flex;align-items:center;gap:10px;margin-top:10px}
+  .chip{
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    min-height:40px;padding:0 12px;border:0;border-radius:var(--control-radius);
+    background:color-mix(in srgb, var(--recipe-pill-accent) 28%, var(--panel2));
+    color:var(--text);font:650 12px/1 Inter,ui-sans-serif,system-ui,sans-serif;
+    cursor:pointer;
+  }
+  .chip.active{
+    background:color-mix(in srgb, var(--recipe-pill-accent) 55%, var(--panel2));
+    color:var(--title);
+  }
+  .chipLabel{font-size:12px}
+  .chipHint{color:var(--muted);font-size:11px}
+
+  .swatch{display:flex;align-items:center;gap:14px;padding:12px 16px 0}
+  .swatchBtn{
+    display:grid;place-items:center;width:56px;height:56px;flex:0 0 auto;
+    border:1px solid transparent;border-radius:10px;background:transparent;
+    color:var(--muted);cursor:pointer;
+  }
+  .swatchBtn svg{width:26px;height:26px}
+  .swatchBtn.active{
+    border-color:color-mix(in srgb, var(--recipe-pill-accent) 55%, var(--border));
+    background:color-mix(in srgb, var(--recipe-pill-accent) 55%, var(--panel2));
+    color:var(--title);
+  }
+  .swatchNote{color:var(--muted);font-size:12px;line-height:1.45}
+  .swatchNote kbd{font:650 10.5px/1 ui-monospace,monospace;padding:1px 5px;border:1px solid var(--meta-line);border-radius:4px;background:#151c20;color:var(--meta-text)}
+
+  /* Percentages are of the 24×24 viewBox so the same loop reads at 18px
+     (rail) and 26px (swatch) instead of a fixed CSS-pixel travel. */
+  .arrow-down, .arrow-up, .head-down, .head-up, .flip{
+    transform-box:view-box;transform-origin:center;transform:translate(0);
+  }
+
+  /* 01 Opposing travel — arrows shuttle along their own shafts, out of phase. */
+  .b1.active .arrow-down{animation:travelDown 1.8s ease-in-out infinite}
+  .b1.active .arrow-up{animation:travelUp 1.8s ease-in-out infinite}
+  @keyframes travelDown{
+    0%,100%{transform:translateY(-14%)}
+    50%{transform:translateY(14%)}
+  }
+  @keyframes travelUp{
+    0%,100%{transform:translateY(14%)}
+    50%{transform:translateY(-14%)}
+  }
+
+  /* 02 Seesaw — same opposition with a brief overshoot. */
+  .b2.active .arrow-down{animation:seeDown 2s cubic-bezier(.22,1.4,.36,1) infinite}
+  .b2.active .arrow-up{animation:seeUp 2s cubic-bezier(.22,1.4,.36,1) infinite}
+  @keyframes seeDown{
+    0%,100%{transform:translateY(-16%)}
+    50%{transform:translateY(20%)}
+  }
+  @keyframes seeUp{
+    0%,100%{transform:translateY(16%)}
+    50%{transform:translateY(-20%)}
+  }
+
+  /* 03 Traveling heads — shafts stay put; chevrons run the length and fade.
+     Idle parks the heads at the real down/up pose (bottom-left, top-right). */
+  .b3.active .head-down{animation:headDown 1.7s linear infinite}
+  .b3.active .head-up{animation:headUp 1.7s linear infinite}
+  @keyframes headDown{
+    0%{transform:translateY(-46%);opacity:0}
+    12%{opacity:1}
+    88%{opacity:1}
+    100%{transform:translateY(0);opacity:0}
+  }
+  @keyframes headUp{
+    0%{transform:translateY(46%);opacity:0}
+    12%{opacity:1}
+    88%{opacity:1}
+    100%{transform:translateY(0);opacity:0}
+  }
+
+  /* 04 Half-turn swap — the pair rotates 180°, holds, then again. */
+  .b4.active .flip{animation:halfTurn 2.8s ease-in-out infinite}
+  @keyframes halfTurn{
+    0%,38%{transform:rotate(0deg)}
+    50%,88%{transform:rotate(180deg)}
+    100%{transform:rotate(360deg)}
+  }
+
+  /* 05 Staggered tick — left dips, pause, right lifts, pause. Mostly still. */
+  .b5.active .arrow-down{animation:tickDown 3.2s ease-in-out infinite}
+  .b5.active .arrow-up{animation:tickUp 3.2s ease-in-out infinite}
+  @keyframes tickDown{
+    0%,16%,100%{transform:translateY(0)}
+    8%{transform:translateY(14%)}
+  }
+  @keyframes tickUp{
+    0%,48%,64%,100%{transform:translateY(0)}
+    56%{transform:translateY(-14%)}
+  }
+
+  html.paused .active .arrow-down,
+  html.paused .active .arrow-up,
+  html.paused .active .head-down,
+  html.paused .active .head-up,
+  html.paused .active .flip{animation:none!important}
+
+  @media (prefers-reduced-motion:reduce){
+    .active .arrow-down, .active .arrow-up, .active .head-down, .active .head-up, .active .flip{animation:none!important}
+    .reduceNote{display:block}
+  }
+  .reduceNote{display:none;margin:0 0 16px;padding:8px 12px;border-left:3px solid var(--meta-blue);background:#192329;color:var(--meta-muted);font-size:12.5px}
+
+  .ref{
+    margin:0 0 22px;border:1px solid var(--meta-line);border-radius:16px;background:var(--meta-panel);overflow:hidden;
+  }
+  .ref .optionHead{padding:12px 16px}
+  .final{margin-top:28px;padding:14px 16px;border-left:3px solid var(--meta-blue);background:#192329;color:var(--meta-muted);font-size:13px;line-height:1.6}
+  .final b{color:var(--meta-text)}
+  @media(max-width:520px){body{padding:22px 14px}.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+  <h1>Rearrange: animated active states</h1>
+  <p class="lede">Five motion treatments for the latched Rearrange control. Every candidate keeps the current two-arrow glyph (left down, right up) and the 55% accent fill already on the live button — only the motion while the mode is on changes. Idle is the static muted icon; click any Rearrange control to toggle.</p>
+  <p class="sub">Mocked in the real mobile six-control rail (Undo / Redo / Clear / Empty / Rearrange / Reset) plus the labeled desktop/tablet chip, so the motion is judged at the size it will actually occupy. Animations pause under <code>prefers-reduced-motion</code>.</p>
+
+  <p class="reduceNote">This browser is asking for reduced motion, so the loops below are frozen on the latched fill. Turn that setting off to compare the animations.</p>
+
+  <div class="toolbar">
+    <button type="button" class="pauseAll" id="pauseAll" aria-pressed="false">Pause all motion</button>
+    <span class="hint">Click a Rearrange control to drop it back to idle.</span>
+  </div>
+
+  <article class="ref">
+    <div class="optionHead"><span class="num">NOW</span><span class="name">Static latch</span><span class="tag">What shipped — fill only, no motion</span></div>
+    <div class="mock"><div class="card">
+      <div class="cardTitle"><svg viewBox="0 0 24 24"><path d="M7 3.5h7L18.5 8v12.5h-11z"/><path d="M14 3.5V8h4.5"/></svg>Recipe · Edit toolbar</div>
+      <div class="rail" aria-hidden="true">
+        <span class="cell"><svg viewBox="0 0 24 24"><path d="M9 7 4 12l5 5M4 12h9a6 6 0 1 1 0 12"/></svg></span>
+        <span class="cell"><svg viewBox="0 0 24 24"><path d="m15 7 5 5-5 5m5-5h-9a6 6 0 1 0 0 12"/></svg></span>
+        <span class="cell"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="11" height="11" rx="1"/><path d="m14 14 6 6m0-6-6 6"/></svg></span>
+        <span class="cell"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4zM9 4v16m6-16v16M4 9h16m-16 6h16"/><path d="m8 8 8 8m0-8-8 8"/></svg></span>
+        <span class="cell railBtn active" style="cursor:default"><svg viewBox="0 0 24 24"><path d="M8 4v16m0 0-3-3m3 3 3-3M16 20V4m0 0-3 3m3-3 3 3"/></svg></span>
+        <span class="cell reset"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0 1.2 4.2"/><path d="M20 4v7h-7"/></svg></span>
+      </div>
+      <div class="chipRow">
+        <span class="chip active" style="cursor:default"><svg viewBox="0 0 24 24"><path d="M8 4v16m0 0-3-3m3 3 3-3M16 20V4m0 0-3 3m3-3 3 3"/></svg><span class="chipLabel">Done Rearranging</span></span>
+        <span class="chipHint">Desktop/tablet chip, same fill.</span>
+      </div>
+    </div></div>
+  </article>
+
+  <section class="grid">
+
+    <article class="option">
+      <div class="optionHead"><span class="num">01</span><span class="name">Opposing travel</span><span class="tag">Continuous shuttle</span></div>
+      <div class="mock"><div class="card">
+        <div class="cardTitle"><svg viewBox="0 0 24 24"><path d="M7 3.5h7L18.5 8v12.5h-11z"/><path d="M14 3.5V8h4.5"/></svg>Recipe · Edit toolbar</div>
+        <div class="rail">
+          <span class="cell"><svg viewBox="0 0 24 24"><path d="M9 7 4 12l5 5M4 12h9a6 6 0 1 1 0 12"/></svg></span>
+          <span class="cell"><svg viewBox="0 0 24 24"><path d="m15 7 5 5-5 5m5-5h-9a6 6 0 1 0 0 12"/></svg></span>
+          <span class="cell"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="11" height="11" rx="1"/><path d="m14 14 6 6m0-6-6 6"/></svg></span>
+          <span class="cell"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4zM9 4v16m6-16v16M4 9h16m-16 6h16"/><path d="m8 8 8 8m0-8-8 8"/></svg></span>
+          <button type="button" class="railBtn b1 active" data-group="1" aria-pressed="true" aria-label="Rearrange recipe" title="Toggle idle / active">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <g class="arrow-down"><path d="M8 4v16m0 0-3-3m3 3 3-3"/></g>
+              <g class="arrow-up"><path d="M16 20V4m0 0-3 3m3-3 3 3"/></g>
+            </svg>
+          </button>
+          <span class="cell reset"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0 1.2 4.2"/><path d="M20 4v7h-7"/></svg></span>
+        </div>
+        <div class="chipRow">
+          <button type="button" class="chip b1 active" data-group="1" aria-pressed="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <g class="arrow-down"><path d="M8 4v16m0 0-3-3m3 3 3-3"/></g>
+              <g class="arrow-up"><path d="M16 20V4m0 0-3 3m3-3 3 3"/></g>
+            </svg>
+            <span class="chipLabel">Done Rearranging</span>
+          </button>
+        </div>
+      </div></div>
+      <div class="swatch">
+        <button type="button" class="swatchBtn b1 active" data-group="1" aria-pressed="true" aria-label="Opposing travel, large">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <g class="arrow-down"><path d="M8 4v16m0 0-3-3m3 3 3-3"/></g>
+            <g class="arrow-up"><path d="M16 20V4m0 0-3 3m3-3 3 3"/></g>
+          </svg>
+        </button>
+        <div class="swatchNote">Left arrow rides down while the right rides up, then they reverse — the most literal “alternating up and down.” Always in motion, so it is hard to miss and a little busy next to static siblings.</div>
+      </div>
+      <div class="note">Best if the goal is <b>maximum “this mode is on”</b> at a glance. Risk: a production-floor loop that never rests can start to feel like a loading spinner.</div>
+    </article>
+
+    <article class="option">
+      <div class="optionHead"><span class="num">02</span><span class="name">Seesaw</span><span class="tag">Same shuttle, with overshoot</span></div>
+      <div class="mock"><div class="card">
+        <div class="cardTitle"><svg viewBox="0 0 24 24"><path d="M7 3.5h7L18.5 8v12.5h-11z"/><path d="M14 3.5V8h4.5"/></svg>Recipe · Edit toolbar</div>
+        <div class="rail">
+          <span class="cell"><svg viewBox="0 0 24 24"><path d="M9 7 4 12l5 5M4 12h9a6 6 0 1 1 0 12"/></svg></span>
+          <span class="cell"><svg viewBox="0 0 24 24"><path d="m15 7 5 5-5 5m5-5h-9a6 6 0 1 0 0 12"/></svg></span>
+          <span class="cell"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="11" height="11" rx="1"/><path d="m14 14 6 6m0-6-6 6"/></svg></span>
+          <span class="cell"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4zM9 4v16m6-16v16M4 9h16m-16 6h16"/><path d="m8 8 8 8m0-8-8 8"/></svg></span>
+          <button type="button" class="railBtn b2 active" data-group="2" aria-pressed="true" aria-label="Rearrange recipe">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <g class="arrow-down"><path d="M8 4v16m0 0-3-3m3 3 3-3"/></g>
+              <g class="arrow-up"><path d="M16 20V4m0 0-3 3m3-3 3 3"/></g>
+            </svg>
+          </button>
+          <span class="cell reset"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0 1.2 4.2"/><path d="M20 4v7h-7"/></svg></span>
+        </div>
+        <div class="chipRow">
+          <button type="button" class="chip b2 active" data-group="2" aria-pressed="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <g class="arrow-down"><path d="M8 4v16m0 0-3-3m3 3 3-3"/></g>
+              <g class="arrow-up"><path d="M16 20V4m0 0-3 3m3-3 3 3"/></g>
+            </svg>
+            <span class="chipLabel">Done Rearranging</span>
+          </button>
+        </div>
+      </div></div>
+      <div class="swatch">
+        <button type="button" class="swatchBtn b2 active" data-group="2" aria-pressed="true" aria-label="Seesaw, large">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <g class="arrow-down"><path d="M8 4v16m0 0-3-3m3 3 3-3"/></g>
+            <g class="arrow-up"><path d="M16 20V4m0 0-3 3m3-3 3 3"/></g>
+          </svg>
+        </button>
+        <div class="swatchNote">Same opposing travel as 01, but the easing overshoots at each end so the pair rocks rather than glides. Slightly more “alive,” slightly less mechanical.</div>
+      </div>
+      <div class="note">Use this if 01 reads as a <b>progress spinner</b> and you want the same idea with a bit of bounce. Still always-on motion.</div>
+    </article>
+
+    <article class="option">
+      <div class="optionHead"><span class="num">03</span><span class="name">Traveling heads</span><span class="tag">Shafts hold, chevrons run</span></div>
+      <div class="mock"><div class="card">
+        <div class="cardTitle"><svg viewBox="0 0 24 24"><path d="M7 3.5h7L18.5 8v12.5h-11z"/><path d="M14 3.5V8h4.5"/></svg>Recipe · Edit toolbar</div>
+        <div class="rail">
+          <span class="cell"><svg viewBox="0 0 24 24"><path d="M9 7 4 12l5 5M4 12h9a6 6 0 1 1 0 12"/></svg></span>
+          <span class="cell"><svg viewBox="0 0 24 24"><path d="m15 7 5 5-5 5m5-5h-9a6 6 0 1 0 0 12"/></svg></span>
+          <span class="cell"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="11" height="11" rx="1"/><path d="m14 14 6 6m0-6-6 6"/></svg></span>
+          <span class="cell"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4zM9 4v16m6-16v16M4 9h16m-16 6h16"/><path d="m8 8 8 8m0-8-8 8"/></svg></span>
+          <button type="button" class="railBtn b3 active" data-group="3" aria-pressed="true" aria-label="Rearrange recipe">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M8 5v14M16 5v14"/>
+              <g class="head-down"><path d="M5 16l3 3 3-3"/></g>
+              <g class="head-up"><path d="M13 8l3-3 3 3"/></g>
+            </svg>
+          </button>
+          <span class="cell reset"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0 1.2 4.2"/><path d="M20 4v7h-7"/></svg></span>
+        </div>
+        <div class="chipRow">
+          <button type="button" class="chip b3 active" data-group="3" aria-pressed="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M8 5v14M16 5v14"/>
+              <g class="head-down"><path d="M5 16l3 3 3-3"/></g>
+              <g class="head-up"><path d="M13 8l3-3 3 3"/></g>
+            </svg>
+            <span class="chipLabel">Done Rearranging</span>
+          </button>
+        </div>
+      </div></div>
+      <div class="swatch">
+        <button type="button" class="swatchBtn b3 active" data-group="3" aria-pressed="true" aria-label="Traveling heads, large">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M8 5v14M16 5v14"/>
+            <g class="head-down"><path d="M5 16l3 3 3-3"/></g>
+            <g class="head-up"><path d="M13 8l3-3 3 3"/></g>
+          </svg>
+        </button>
+        <div class="swatchNote">The two shafts stay planted (so the glyph doesn’t jitter in the 40px cell). Only the arrowheads run the length, out of phase, and fade at each end — more “content is moving” than “the button is bouncing.”</div>
+      </div>
+      <div class="note">Closest to a <b>conveyor / hopper-to-hopper</b> reading. Idle (click to toggle) still shows both heads parked, so the static icon remains the same two-arrow mark.</div>
+    </article>
+
+    <article class="option">
+      <div class="optionHead"><span class="num">04</span><span class="name">Half-turn swap</span><span class="tag">Directions invert, then hold</span></div>
+      <div class="mock"><div class="card">
+        <div class="cardTitle"><svg viewBox="0 0 24 24"><path d="M7 3.5h7L18.5 8v12.5h-11z"/><path d="M14 3.5V8h4.5"/></svg>Recipe · Edit toolbar</div>
+        <div class="rail">
+          <span class="cell"><svg viewBox="0 0 24 24"><path d="M9 7 4 12l5 5M4 12h9a6 6 0 1 1 0 12"/></svg></span>
+          <span class="cell"><svg viewBox="0 0 24 24"><path d="m15 7 5 5-5 5m5-5h-9a6 6 0 1 0 0 12"/></svg></span>
+          <span class="cell"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="11" height="11" rx="1"/><path d="m14 14 6 6m0-6-6 6"/></svg></span>
+          <span class="cell"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4zM9 4v16m6-16v16M4 9h16m-16 6h16"/><path d="m8 8 8 8m0-8-8 8"/></svg></span>
+          <button type="button" class="railBtn b4 active" data-group="4" aria-pressed="true" aria-label="Rearrange recipe">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <g class="flip"><path d="M8 4v16m0 0-3-3m3 3 3-3M16 20V4m0 0-3 3m3-3 3 3"/></g>
+            </svg>
+          </button>
+          <span class="cell reset"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0 1.2 4.2"/><path d="M20 4v7h-7"/></svg></span>
+        </div>
+        <div class="chipRow">
+          <button type="button" class="chip b4 active" data-group="4" aria-pressed="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <g class="flip"><path d="M8 4v16m0 0-3-3m3 3 3-3M16 20V4m0 0-3 3m3-3 3 3"/></g>
+            </svg>
+            <span class="chipLabel">Done Rearranging</span>
+          </button>
+        </div>
+      </div></div>
+      <div class="swatch">
+        <button type="button" class="swatchBtn b4 active" data-group="4" aria-pressed="true" aria-label="Half-turn swap, large">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <g class="flip"><path d="M8 4v16m0 0-3-3m3 3 3-3M16 20V4m0 0-3 3m3-3 3 3"/></g>
+          </svg>
+        </button>
+        <div class="swatchNote">The whole pair rotates 180°, rests, rotates again. Down becomes up, then back. Reads as “these two things are swapping,” which is the actual rearrange action.</div>
+      </div>
+      <div class="note">Quiet between turns, so it spends most of its time looking like the current latched icon. The flip is the cue. Watch whether the 40px cell makes the rotation feel like a <b>refresh</b> spinner — it shouldn’t, because it holds at each pole.</div>
+    </article>
+
+    <article class="option">
+      <div class="optionHead"><span class="num">05</span><span class="name">Staggered tick</span><span class="tag">Mostly still</span></div>
+      <div class="mock"><div class="card">
+        <div class="cardTitle"><svg viewBox="0 0 24 24"><path d="M7 3.5h7L18.5 8v12.5h-11z"/><path d="M14 3.5V8h4.5"/></svg>Recipe · Edit toolbar</div>
+        <div class="rail">
+          <span class="cell"><svg viewBox="0 0 24 24"><path d="M9 7 4 12l5 5M4 12h9a6 6 0 1 1 0 12"/></svg></span>
+          <span class="cell"><svg viewBox="0 0 24 24"><path d="m15 7 5 5-5 5m5-5h-9a6 6 0 1 0 0 12"/></svg></span>
+          <span class="cell"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="11" height="11" rx="1"/><path d="m14 14 6 6m0-6-6 6"/></svg></span>
+          <span class="cell"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4zM9 4v16m6-16v16M4 9h16m-16 6h16"/><path d="m8 8 8 8m0-8-8 8"/></svg></span>
+          <button type="button" class="railBtn b5 active" data-group="5" aria-pressed="true" aria-label="Rearrange recipe">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <g class="arrow-down"><path d="M8 4v16m0 0-3-3m3 3 3-3"/></g>
+              <g class="arrow-up"><path d="M16 20V4m0 0-3 3m3-3 3 3"/></g>
+            </svg>
+          </button>
+          <span class="cell reset"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0 1.2 4.2"/><path d="M20 4v7h-7"/></svg></span>
+        </div>
+        <div class="chipRow">
+          <button type="button" class="chip b5 active" data-group="5" aria-pressed="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <g class="arrow-down"><path d="M8 4v16m0 0-3-3m3 3 3-3"/></g>
+              <g class="arrow-up"><path d="M16 20V4m0 0-3 3m3-3 3 3"/></g>
+            </svg>
+            <span class="chipLabel">Done Rearranging</span>
+          </button>
+        </div>
+      </div></div>
+      <div class="swatch">
+        <button type="button" class="swatchBtn b5 active" data-group="5" aria-pressed="true" aria-label="Staggered tick, large">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <g class="arrow-down"><path d="M8 4v16m0 0-3-3m3 3 3-3"/></g>
+            <g class="arrow-up"><path d="M16 20V4m0 0-3 3m3-3 3 3"/></g>
+          </svg>
+        </button>
+        <div class="swatchNote">Left arrow takes a short dip, rests; right arrow takes a short lift, rests. A 3.2s loop that is still most of the time — a metronome, not a spinner.</div>
+      </div>
+      <div class="note">The production-floor pick if motion should <b>remind, not occupy</b>. Easy to miss on a glance; very unlikely to compete with the matrix. Closest in spirit to the current static latch, with a periodic nudge.</div>
+    </article>
+
+  </section>
+
+  <p class="final">All five keep the live latch (55% accent fill, title-colored stroke) and the existing glyph. Nothing here is wired into the app — this page is only for picking a motion. <b>Click any Rearrange control</b> to compare idle vs active; <b>Pause all motion</b> freezes every loop on the latched pose.</p>
+</main>
+<script>
+  (function(){
+    function syncGroup(id, on){
+      document.querySelectorAll('[data-group="'+id+'"]').forEach(function(el){
+        el.setAttribute("aria-pressed", String(on));
+        el.classList.toggle("active", on);
+        el.querySelectorAll(".chipLabel").forEach(function(label){
+          label.textContent = on ? "Done Rearranging" : "Rearrange";
+        });
+      });
+    }
+    document.querySelectorAll("[data-group]").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        var on = btn.getAttribute("aria-pressed") !== "true";
+        syncGroup(btn.getAttribute("data-group"), on);
+      });
+    });
+    var pause = document.getElementById("pauseAll");
+    pause.addEventListener("click", function(){
+      var on = pause.getAttribute("aria-pressed") !== "true";
+      pause.setAttribute("aria-pressed", String(on));
+      pause.textContent = on ? "Resume all motion" : "Pause all motion";
+      document.documentElement.classList.toggle("paused", on);
+    });
+  })();
+</script>
+</body>
+</html>

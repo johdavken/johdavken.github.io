@@ -1257,6 +1257,7 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .baseGlyph{dis
   .lineSyncPanel .lineSyncConnectionFields select{min-height:34px;padding:4px 0;border-width:0 0 1px;border-radius:0;background:transparent}
   .lineSyncPanel:not(.mobileHasWorkspaces) .lineSyncCurrentLineField{ display: none; }
   .lineSyncPanel:not(.mobileHasLine) .lineSyncActionBar{ display: none; }
+  .lineSyncPanel:not(.mobileHasLine) .lineSyncMobileLeave{ display:none; }
   .lineSyncPanel:not(.mobileConnected) #lineSyncDisconnectBtn{display:none}
   .lineSyncPanel:not(.mobileConnected) #lineSyncMobileActionHint{display:none}
   .lineSyncPanel .lineSyncJoin{ display: none; }
@@ -1279,6 +1280,7 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .baseGlyph{dis
   .lineSyncPanel .lineSyncActionBar .segmentedActionDivider{width:100%}
   .lineSyncMobileRefresh{display:block}
   .lineSyncMobileRefresh #lineSyncRetryMobileBtn{width:100%;min-height:38px;color:var(--focus-border);font-weight:800}
+  .lineSyncMobileLeave #lineSyncLeaveBtn{width:100%;min-height:38px;font-weight:800}
   .mobileSyncRefreshLabel{display:inline-flex!important;align-items:center;justify-content:center;gap:6px}
   .mobileSyncRefreshLabel svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
   .lineSyncPanel #lineSyncRetryBtn{color:var(--focus-border);font-weight:800}
@@ -2261,6 +2263,16 @@ details[open] > summary .chevSatellite{
   filter:none;
 }
 .recipeHistoryAction:disabled{ opacity:.32; }
+.recipeEditActionIcon{
+  display:none;
+  width:18px;
+  height:18px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.8;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
 .splitsSelectionStatus.ok{ color: var(--ok); }
 .splitsSelectionStatus.warn{ color: var(--warn); }
 /* Saved recipes / Bulk edit / Rearrange: a second, visually subordinate
@@ -3018,7 +3030,19 @@ details[open] > summary .chevSatellite{
 }
 .recipeInfoLegendList{ margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
 .recipeInfoLegendList li{ display: grid; grid-template-columns: 22px 1fr; gap: 11px; align-items: start; }
+.recipeInfoLegendList li.recipeInfoLegendSectionHeading{
+  display:block;
+  margin:4px 0 -3px;
+  color:var(--title);
+  font-size:10px;
+  font-weight:850;
+  letter-spacing:.08em;
+  line-height:1.2;
+  text-transform:uppercase;
+}
+.recipeInfoLegendList li.recipeInfoLegendSectionHeading:first-child{ margin-top:0; }
 .recipeInfoLegendIcon{ display: grid; place-items: center; width: 22px; height: 22px; color: var(--title); }
+.recipeInfoLegendIcon.recipeInfoLegendDanger{ color:var(--bad); }
 .recipeInfoLegendIcon svg{
   width: 18px;
   height: 18px;
@@ -4005,6 +4029,20 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
   #splitsArea #splitsBulkBar .splitsEditRowSecondary .splitsRearrangeAction:hover:not(:disabled){
     background: color-mix(in srgb, var(--recipe-pill-accent) 28%, var(--panel2));
     color: var(--text);
+    filter: brightness(1.08);
+  }
+  /* Rearrange is the only mode toggle in this row. Latch it the same way
+     Edit/Done latches (55% accent fill + title color) so the operator can
+     see the mode is on without relying on the rearrange bar below. */
+  #splitsArea #splitsBulkBar .splitsEditRowSecondary .splitsRearrangeAction.active,
+  #splitsArea #splitsBulkBar .splitsEditRowSecondary .splitsRearrangeAction[aria-pressed="true"]{
+    background: color-mix(in srgb, var(--recipe-pill-accent) 55%, var(--panel2));
+    color: var(--title);
+  }
+  #splitsArea #splitsBulkBar .splitsEditRowSecondary .splitsRearrangeAction.active:hover:not(:disabled),
+  #splitsArea #splitsBulkBar .splitsEditRowSecondary .splitsRearrangeAction[aria-pressed="true"]:hover:not(:disabled){
+    background: color-mix(in srgb, var(--recipe-pill-accent) 55%, var(--panel2));
+    color: var(--title);
     filter: brightness(1.08);
   }
   .splitsEditRowSecondary #resetAllSplits.danger:hover:not(:disabled){
@@ -7657,6 +7695,129 @@ button.compactAction{
     border-color:var(--row-border-2);
     background:var(--row-bg-2);
   }
+
+  /* Phone Edit uses one compact icon rail.  Flatten the history and action
+     groups into the toolbar flex row so all six controls stay together even
+     on a narrow viewport; the value fields above remain their own row. */
+  #splitsArea > #splitsBulkBar{
+    gap:3px;
+    overflow:hidden;
+  }
+  #splitsArea > #splitsBulkBar .splitsEditRowPrimary{
+    flex:1 0 100%;
+    order:0;
+  }
+  #splitsArea > #splitsBulkBar .recipeEditHistory,
+  #splitsArea > #splitsBulkBar .splitsEditRowSecondary,
+  #splitsArea > #splitsBulkBar .splitsEditRowSecondary > .splitsBulkActions{
+    display:contents;
+  }
+  #splitsArea > #splitsBulkBar :is(.recipeHistoryAction, .splitsEditRowSecondary .bulkTextAction, .splitsEditRowSecondary .splitsRearrangeAction, .splitsEditRowSecondary #resetAllSplits.danger){
+    display:grid;
+    place-items:center;
+    flex:0 0 40px;
+    box-sizing:border-box;
+    width:40px;
+    min-width:40px;
+    max-width:40px;
+    height:40px;
+    min-height:40px;
+    margin:0;
+    padding:0;
+    border:1px solid transparent;
+    border-radius:6px;
+    background:transparent;
+    box-shadow:none;
+    color:var(--muted);
+    font-size:0;
+    line-height:1;
+  }
+  #splitsArea > #splitsBulkBar .recipeEditActionIcon{ display:block; }
+  #splitsArea > #splitsBulkBar .splitsEditRowSecondary button > span{ display:none; }
+  #splitsArea > #splitsBulkBar #recipeUndo{ order:1; }
+  #splitsArea > #splitsBulkBar #recipeRedo{ order:2; }
+  #splitsArea > #splitsBulkBar #clearSplitSelection{ order:3; }
+  #splitsArea > #splitsBulkBar #clearSelectedCells{ order:4; }
+  #splitsArea > #splitsBulkBar .splitsRearrangeAction{ order:5; }
+  #splitsArea > #splitsBulkBar #resetAllSplits{
+    order:6;
+    flex-basis:44px;
+    width:44px;
+    min-width:44px;
+    max-width:44px;
+    margin-left:2px;
+    border-left-color:color-mix(in srgb,var(--bad) 42%,var(--row-border));
+    border-radius:0 6px 6px 0;
+    color:var(--bad);
+  }
+  #splitsArea > #splitsBulkBar :is(.recipeHistoryAction, .splitsEditRowSecondary button):not(:disabled):hover,
+  #splitsArea > #splitsBulkBar :is(.recipeHistoryAction, .splitsEditRowSecondary button):not(:disabled):focus-visible{
+    border-color:var(--row-border-2);
+    background:color-mix(in srgb,var(--focus-border) 10%,transparent);
+    color:var(--title);
+    filter:none;
+  }
+  /* Match the wider toolbar's selector weight so its tinted pill hover
+     cannot leak back into the phone's unboxed icon controls. */
+  #splitsArea > #splitsBulkBar .splitsEditRowSecondary .bulkTextAction:not(:disabled):hover,
+  #splitsArea > #splitsBulkBar .splitsEditRowSecondary .bulkTextAction:not(:disabled):focus-visible{
+    border-color:var(--row-border-2);
+    background:color-mix(in srgb,var(--focus-border) 10%,transparent);
+    color:var(--title);
+    filter:none;
+  }
+  #splitsArea > #splitsBulkBar #resetAllSplits:not(:disabled):hover,
+  #splitsArea > #splitsBulkBar #resetAllSplits:not(:disabled):focus-visible{
+    border-left-color:var(--bad);
+    background:color-mix(in srgb,var(--bad) 10%,transparent);
+    color:var(--bad);
+  }
+  #splitsArea > #splitsBulkBar .splitsEditRowSecondary .bulkTextAction:disabled{ opacity:.42; }
+
+  /* Rearrange is the only mode toggle in this rail. Phone uses opposing
+     travel on the two arrows as the on-cue — no filled latch, and the
+     hover/focus fills above must not paint one back on. Chained :is so
+     this beats the idle chrome rule, whose :is() includes #resetAllSplits
+     and therefore carries 3-id specificity onto every sibling. */
+  #splitsArea > #splitsBulkBar :is(.recipeHistoryAction, .splitsEditRowSecondary .bulkTextAction, .splitsEditRowSecondary .splitsRearrangeAction, .splitsEditRowSecondary #resetAllSplits.danger):is(.splitsRearrangeAction.active, .splitsRearrangeAction[aria-pressed="true"]),
+  #splitsArea > #splitsBulkBar :is(.recipeHistoryAction, .splitsEditRowSecondary .bulkTextAction, .splitsEditRowSecondary .splitsRearrangeAction, .splitsEditRowSecondary #resetAllSplits.danger):is(.splitsRearrangeAction.active, .splitsRearrangeAction[aria-pressed="true"]):not(:disabled):hover,
+  #splitsArea > #splitsBulkBar :is(.recipeHistoryAction, .splitsEditRowSecondary .bulkTextAction, .splitsEditRowSecondary .splitsRearrangeAction, .splitsEditRowSecondary #resetAllSplits.danger):is(.splitsRearrangeAction.active, .splitsRearrangeAction[aria-pressed="true"]):not(:disabled):focus-visible{
+    border-color:transparent;
+    background:transparent;
+    color:var(--muted);
+    filter:none;
+  }
+  #splitsArea > #splitsBulkBar .splitsRearrangeAction .recipeEditActionIcon{ overflow:visible; }
+  #splitsArea > #splitsBulkBar .splitsRearrangeAction :is(.rearrangeArrowDown, .rearrangeArrowUp){
+    transform-box:view-box;
+    transform-origin:center;
+  }
+  #splitsArea > #splitsBulkBar .splitsRearrangeAction.active .rearrangeArrowDown,
+  #splitsArea > #splitsBulkBar .splitsRearrangeAction[aria-pressed="true"] .rearrangeArrowDown{
+    animation:rearrangeOpposingDown 1.8s ease-in-out infinite;
+  }
+  #splitsArea > #splitsBulkBar .splitsRearrangeAction.active .rearrangeArrowUp,
+  #splitsArea > #splitsBulkBar .splitsRearrangeAction[aria-pressed="true"] .rearrangeArrowUp{
+    animation:rearrangeOpposingUp 1.8s ease-in-out infinite;
+  }
+  @keyframes rearrangeOpposingDown{
+    0%,100%{ transform:translateY(-14%); }
+    50%{ transform:translateY(14%); }
+  }
+  @keyframes rearrangeOpposingUp{
+    0%,100%{ transform:translateY(14%); }
+    50%{ transform:translateY(-14%); }
+  }
+  @media (prefers-reduced-motion:reduce){
+    #splitsArea > #splitsBulkBar .splitsRearrangeAction :is(.rearrangeArrowDown, .rearrangeArrowUp){ animation:none; }
+    /* Motion is the on-cue; without it, restore the 55% fill latch so the
+       mode still reads as on. */
+    #splitsArea > #splitsBulkBar :is(.recipeHistoryAction, .splitsEditRowSecondary .bulkTextAction, .splitsEditRowSecondary .splitsRearrangeAction, .splitsEditRowSecondary #resetAllSplits.danger):is(.splitsRearrangeAction.active, .splitsRearrangeAction[aria-pressed="true"]){
+      border-color:color-mix(in srgb, var(--recipe-pill-accent) 55%, var(--border));
+      background:color-mix(in srgb, var(--recipe-pill-accent) 55%, var(--panel2));
+      color:var(--title);
+    }
+  }
 }
 
 @media (max-width: 720px){
@@ -9568,6 +9729,7 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
   .mobileProductionControls .gaugeTile.mobileOutputEditing .mobileLineRateReadout{display:none}
   .mobileProductionControls .gaugeTile.mobileOutputEditing input:not([type="time"]){display:block}
   .mobileProductionControls .gaugeTimeValue{display:flex;align-items:center;justify-content:flex-start;gap:8px}
+  .mobileProductionControls .gaugeTimeValue > span{white-space:nowrap}
   .mobileProductionControls .gaugeTimeValue svg{width:20px;height:20px;flex:0 0 auto;fill:none;stroke:var(--focus-border)}
   .mobileProductionControls .gaugeIcon{display:none}
   .mobileProductionControls .gaugeTile input[type="time"]{

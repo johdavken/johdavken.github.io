@@ -37,8 +37,8 @@ function handlerBody(name){
  * -------------------------------------------------------------------- */
 
 test("Clear and Empty mean different things and never trade places", () => {
-  assert.match(splitsArea, /<button id="clearSplitSelection"[^>]*data-button-variant="quiet"[^>]*>Clear selection<\/button>/);
-  assert.match(splitsArea, /<button id="clearSelectedCells"[^>]*data-button-variant="quiet"[^>]*disabled>Empty cells<\/button>/);
+  assert.match(splitsArea, /<button id="clearSplitSelection"[^>]*data-button-variant="quiet"[^>]*aria-label="Clear selection"[^>]*>[\s\S]*?<span>Clear selection<\/span><\/button>/);
+  assert.match(splitsArea, /<button id="clearSelectedCells"[^>]*data-button-variant="quiet"[^>]*aria-label="Empty selected cells"[^>]*disabled>[\s\S]*?<span>Empty cells<\/span><\/button>/);
   assert.doesNotMatch(splitsArea, /Clear cell contents/);
 });
 
