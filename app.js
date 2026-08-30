@@ -24,6 +24,7 @@
     // lets a fresh run cancel the ones that no longer apply.
     const LS_SCHEDULED_ALARMS_KEY = "resinTimer.scheduledAlarms.v0.01";
     const LS_CHANGEOVER_WIZARD_KEY = "resinTimer.changeoverWizard.v0.01";
+    const LS_PRODUCTION_ESTIMATE_KEY = "resinTimer.productionEstimate.v0.01";
 
     const DETAILS_IDS = [
       "lineSetupBlock",
@@ -141,6 +142,7 @@
   let workspaceConfigurationRefreshInFlight = false;
   let workspaceConfigurationPending = null;
   let selectedWorkspaceConfigurationId = "";
+  let productionEstimateTimer = null;
   let hopperRearrangement = null;
   const pumpOffAlertTimers = new Map();
   let pumpOffAudioContext = null;
@@ -5476,6 +5478,201 @@
       if (status) status.textContent = total > 0 ? `${fmtLb(total)} lb total` : "No material total";
     }
 
+    function buildProductionEstimateFromWizardAnswers(){
+      const lineSpeed = Number(changeoverWizardAnswers.lineSpeed);
+      const footagePerRoll = Number(changeoverWizardAnswers.footagePerRoll);
+      const numberUp = Number(changeoverWizardAnswers.numberUp);
+      const rollsLeft = Number(changeoverWizardAnswers.rollsLeft);
+      const currentSetMinutesRemaining = Number(changeoverWizardAnswers.hours) * 60 + Number(changeoverWizardAnswers.minutes);
+      const bothWinders = !!changeoverWizardAnswers.bothWinders;
+      if (![lineSpeed, footagePerRoll, numberUp, rollsLeft, currentSetMinutesRemaining].every(Number.isFinite)
+          || lineSpeed <= 0 || footagePerRoll <= 0 || numberUp < 1 || rollsLeft < 0 || currentSetMinutesRemaining < 0){
+        return null;
+      }
+      const rollsPerSet = numberUp * (bothWinders ? 2 : 1);
+      const minutesPerSet = footagePerRoll / lineSpeed;
+      const futureSets = Math.ceil(Math.max(0, rollsLeft - rollsPerSet) / rollsPerSet);
+      const totalMinutesRemaining = currentSetMinutesRemaining + futureSets * minutesPerSet;
+      if (!Number.isFinite(totalMinutesRemaining) || totalMinutesRemaining <= 0) return null;
+      return {
+        startedAt: Date.now(),
+        lineSpeed,
+        footagePerRoll,
+        numberUp,
+        bothWinders,
+        rollsLeft,
+        currentSetMinutesRemaining,
+        rollsPerSet,
+        minutesPerSet,
+        totalMinutesRemaining
+      };
+    }
+
+    function clearProductionEstimate({ persist = true } = {}){
+      if (productionEstimateTimer){
+        clearInterval(productionEstimateTimer);
+        productionEstimateTimer = null;
+      }
+      if (persist){
+        try{ localStorage.removeItem(LS_PRODUCTION_ESTIMATE_KEY); }catch(_error){}
+      }
+    }
+
+    function readProductionEstimate(){
+      try{
+        const saved = JSON.parse(localStorage.getItem(LS_PRODUCTION_ESTIMATE_KEY) || "null");
+        if (!saved || typeof saved !== "object") return null;
+        const lineSpeed = Number(saved.lineSpeed);
+        const footagePerRoll = Number(saved.footagePerRoll);
+        const numberUp = Number(saved.numberUp);
+        const rollsLeft = Number(saved.rollsLeft);
+        const currentSetMinutesRemaining = Number(saved.currentSetMinutesRemaining);
+        const startedAt = Number(saved.startedAt);
+        if (![lineSpeed, footagePerRoll, numberUp, rollsLeft, currentSetMinutesRemaining, startedAt].every(Number.isFinite)
+            || lineSpeed <= 0 || footagePerRoll <= 0 || numberUp < 1 || rollsLeft < 0 || currentSetMinutesRemaining < 0 || startedAt <= 0){
+          clearProductionEstimate();
+          return null;
+        }
+        const bothWinders = !!saved.bothWinders;
+        const rollsPerSet = numberUp * (bothWinders ? 2 : 1);
+        const minutesPerSet = footagePerRoll / lineSpeed;
+        const futureSets = Math.ceil(Math.max(0, rollsLeft - rollsPerSet) / rollsPerSet);
+        const totalMinutesRemaining = currentSetMinutesRemaining + futureSets * minutesPerSet;
+        if (!Number.isFinite(totalMinutesRemaining) || totalMinutesRemaining <= 0){
+          clearProductionEstimate();
+          return null;
+        }
+        return {
+          startedAt,
+          lineSpeed,
+          footagePerRoll,
+          numberUp,
+          bothWinders,
+          rollsLeft,
+          currentSetMinutesRemaining,
+          rollsPerSet,
+          minutesPerSet,
+          totalMinutesRemaining
+        };
+      }catch(_error){
+        clearProductionEstimate();
+        return null;
+      }
+    }
+
+    function calculateCurrentProductionEstimate(estimate, now = Date.now()){
+      if (!estimate || typeof estimate !== "object") return null;
+      const elapsedMinutes = Math.max(0, (now - estimate.startedAt) / 60000);
+      const remainingMinutes = Math.max(0, estimate.totalMinutesRemaining - elapsedMinutes);
+      if (remainingMinutes <= 0) return null;
+      const remainingRolls = Math.max(0, Math.ceil((remainingMinutes / estimate.minutesPerSet) * estimate.rollsPerSet));
+      if (remainingRolls <= 0) return null;
+      const sets = Math.max(1, Math.ceil(remainingRolls / estimate.rollsPerSet));
+      return { sets, remainingRolls, remainingMinutes };
+    }
+
+    function persistProductionEstimate(estimate){
+      if (!estimate || typeof estimate !== "object") return false;
+      const payload = {
+        startedAt: Number(estimate.startedAt),
+        lineSpeed: Number(estimate.lineSpeed),
+        footagePerRoll: Number(estimate.footagePerRoll),
+        numberUp: Number(estimate.numberUp),
+        bothWinders: !!estimate.bothWinders,
+        rollsLeft: Number(estimate.rollsLeft),
+        currentSetMinutesRemaining: Number(estimate.currentSetMinutesRemaining)
+      };
+      if (![payload.startedAt, payload.lineSpeed, payload.footagePerRoll, payload.numberUp, payload.rollsLeft, payload.currentSetMinutesRemaining].every(Number.isFinite)
+          || payload.startedAt <= 0 || payload.lineSpeed <= 0 || payload.footagePerRoll <= 0 || payload.numberUp < 1 || payload.rollsLeft < 0 || payload.currentSetMinutesRemaining < 0){
+        return false;
+      }
+      try{
+        localStorage.setItem(LS_PRODUCTION_ESTIMATE_KEY, JSON.stringify(payload));
+        return true;
+      }catch(_error){
+        return false;
+      }
+    }
+
+    function renderProductionEstimate(host = $("resinCalcResults")){
+      if (!host || isDesktopLayout()){
+        host?.querySelector(".productionEstimate")?.remove();
+        if (productionEstimateTimer){
+          clearInterval(productionEstimateTimer);
+          productionEstimateTimer = null;
+        }
+        return;
+      }
+
+      let estimate = readProductionEstimate();
+      if (!estimate){
+        host.querySelector(".productionEstimate")?.remove();
+        if (productionEstimateTimer){
+          clearInterval(productionEstimateTimer);
+          productionEstimateTimer = null;
+        }
+        return;
+      }
+
+      const current = calculateCurrentProductionEstimate(estimate, Date.now());
+      if (!current){
+        clearProductionEstimate();
+        host.querySelector(".productionEstimate")?.remove();
+        return;
+      }
+
+      let row = host.querySelector(".productionEstimate");
+      if (!row){
+        row = document.createElement("div");
+        row.className = "productionEstimate";
+        host.appendChild(row);
+      }
+      row.textContent = `Est. ${current.sets} ${current.sets === 1 ? "set" : "sets"} · ${current.remainingRolls} ${current.remainingRolls === 1 ? "roll" : "rolls"} remaining`;
+
+      if (!productionEstimateTimer){
+        productionEstimateTimer = setInterval(()=>renderProductionEstimate(host), 60000);
+      }
+    }
+
+    function renderProductionEstimateHome(){
+      const host = $("workspaceProductionEstimate");
+      if (!host || isDesktopLayout() || document.body.dataset.mobileWorkspace !== "home"){
+        host && (host.hidden = true);
+        host && (host.textContent = "");
+        if (productionEstimateTimer){
+          clearInterval(productionEstimateTimer);
+          productionEstimateTimer = null;
+        }
+        return;
+      }
+
+      const estimate = readProductionEstimate();
+      if (!estimate){
+        host.hidden = true;
+        host.textContent = "";
+        if (productionEstimateTimer){
+          clearInterval(productionEstimateTimer);
+          productionEstimateTimer = null;
+        }
+        return;
+      }
+
+      const current = calculateCurrentProductionEstimate(estimate, Date.now());
+      if (!current){
+        clearProductionEstimate();
+        host.hidden = true;
+        host.textContent = "";
+        return;
+      }
+
+      host.textContent = `Est. ${current.sets} ${current.sets === 1 ? "set" : "sets"} · ${current.remainingRolls} ${current.remainingRolls === 1 ? "roll" : "rolls"} remaining`;
+      host.hidden = false;
+
+      if (!productionEstimateTimer){
+        productionEstimateTimer = setInterval(()=>renderProductionEstimateHome(), 60000);
+      }
+    }
+
     function renderResinCalculator(){
       const prod = clampNum(state.prodResinLb);
       const scrap = clampNum(state.scrapResinLb);
@@ -5526,10 +5723,12 @@
       out.innerHTML = "";
       if (total <= 0){
         out.innerHTML = `<div class="muted"></div>`;
+        renderProductionEstimateHome();
         return;
       }
       if (rows.length === 0){
         out.innerHTML = `<div class="muted">Add resin names and recipe percentages to see totals here.</div>`;
+        renderProductionEstimateHome();
         return;
       }
       out.innerHTML = `<div class="productionSummaryMaterialsIntro"><strong>By material</strong><span>Calculated from the current recipe percentages.</span></div>`;
@@ -5558,7 +5757,13 @@
       issuedTotal.className = "productionSummaryIssuedTotal";
       issuedTotal.innerHTML = `<strong>Total issued</strong><span class="mono">${fmtLb(total)} lb</span>`;
       out.appendChild(issuedTotal);
+      renderProductionEstimateHome();
     }
+
+    document.addEventListener("visibilitychange", ()=>{
+      if (document.visibilityState === "visible") renderResinCalculator();
+    });
+    window.addEventListener("pageshow", ()=>renderResinCalculator());
 
     function updateLayerMetaDisplays(){
       state.layers.forEach(L=>{
@@ -8398,7 +8603,16 @@
       if (button.hasAttribute("data-wizard-adjust")){ changeoverWizardStep=0; renderChangeoverWizard(); }
       if (button.hasAttribute("data-wizard-use")){
         const estimate=changeoverWizardEstimate(); if (!estimate) return;
-        const input=$("changeoverTime"); input.value=changeoverWizardTimeValue(estimate.estimatedDate); input.dispatchEvent(new Event("input",{bubbles:true}));
+        const input=$("changeoverTime");
+        input.value=changeoverWizardTimeValue(estimate.estimatedDate);
+        input.dispatchEvent(new Event("input",{bubbles:true}));
+        const productionEstimate = buildProductionEstimateFromWizardAnswers();
+        if (productionEstimate){
+          persistProductionEstimate(productionEstimate);
+          renderResinCalculator();
+        } else {
+          clearProductionEstimate();
+        }
         $("changeoverWizardDialog")?.close("use");
       }
     });
