@@ -1,0 +1,15 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "tools.resin.app",
+      "sha256_cert_fingerprints": [
+        "55:9F:2D:13:D4:C7:8A:92:DB:7E:CC:F2:83:BF:49:03:14:94:DB:46:20:08:BE:34:FF:93:6C:19:C3:53:C8:E0",
+        "A7:84:64:75:A6:D1:BD:2B:B0:6C:89:88:8A:32:68:90:38:83:52:25:16:BF:65:30:4E:D3:78:E5:77:8D:12:AD"
+      ]
+    }
+  }
+]

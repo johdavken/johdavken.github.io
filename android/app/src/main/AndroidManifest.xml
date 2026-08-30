@@ -18,6 +18,18 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- The RT Sync QR remains an ordinary HTTPS web URL. Android
+                 verifies resin.tools against /.well-known/assetlinks.json;
+                 when this app is absent the same URL stays in the browser. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="resin.tools"
+                    android:path="/" />
+            </intent-filter>
         </activity>
 
         <provider

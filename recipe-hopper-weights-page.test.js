@@ -30,6 +30,15 @@ test("Weight Profiles keeps its attached desktop presentation in the new parent"
   assert.match(desktop, /:is\(#lineSetupBlock,#splitsBlock\) #weightsArea #setupWeightProfilesBlock/);
 });
 
+test("desktop Hopper Weights and its Smart Hopper controls use Recipe's fixed five-layer rail", () => {
+  assert.match(styles, /#splitsBlock\{\s*--recipe-five-layer-rail: 1062px;/);
+  assert.match(desktop, /#weightsArea\{[^}]*width:min\(100%,var\(--recipe-five-layer-rail,1062px\)\)/);
+  assert.match(styles, /\.recipeWeightsPage > #weightsArea\{ width:100%; \}/);
+  assert.match(desktop, /#splitsArea\.recipeWeightsPage > #weightsArea\{width:min\(100%,var\(--recipe-five-layer-rail,1062px\)\)\}/);
+  assert.match(app, /desktopControls\.className = "desktopWeightsControls"/);
+  assert.match(app, /area\.appendChild\(desktopControls\);\s*area\.appendChild\(toolbar\);\s*area\.appendChild\(scroll\);/);
+});
+
 test("weights uses Recipe's header slot for its existing Summary/Edit control, relocated on every rebuild of the grid - not just on page navigation", () => {
   // Smart Hoppers, the shared circumference field, and a handful of other
   // inputs all call renderWeightsArea() directly rather than routing

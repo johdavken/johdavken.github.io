@@ -381,7 +381,12 @@
   #lineSetupBlock .weightsSmartHow{position:relative;flex:0 0 auto}
   #lineSetupBlock .weightsSmartHow > summary{padding:3px 5px;color:var(--focus-border);font-size:var(--desktop-type-label);font-weight:750;white-space:nowrap}
   #lineSetupBlock .weightsSmartHow > p{position:absolute;top:calc(100% + 5px);right:0;z-index:30;width:min(360px,50vw);margin:0;padding:9px 10px;border:1px solid var(--border2);border-radius:var(--control-radius);background:var(--panelOpen);box-shadow:var(--shadow2)}
-  #weightsArea{display:grid;grid-template-rows:auto minmax(0,1fr) auto auto;gap:6px;width:min(100%,1100px);height:100%;max-height:100%;min-height:0;margin-top:0!important;overflow:hidden;container-type:inline-size}
+  #weightsArea{display:grid;grid-template-rows:auto minmax(0,1fr) auto auto;gap:6px;width:min(100%,var(--recipe-five-layer-rail,1062px));height:100%;max-height:100%;min-height:0;margin-top:0!important;overflow:hidden;container-type:inline-size}
+  /* Recipe's base page rule intentionally makes the mobile/touch weights
+     editor edge-to-edge. On fine-pointer desktop this more-specific rule
+     binds the moved editor (controls and matrix together) to the same fixed
+     five-layer rail as Current and Next. */
+  #splitsArea.recipeWeightsPage > #weightsArea{width:min(100%,var(--recipe-five-layer-rail,1062px))}
   .desktopWeightsControls{display:grid;grid-template-columns:minmax(170px,1fr) minmax(145px,190px) auto;align-items:center;gap:8px;min-width:0}
   .desktopWeightsSmartControl{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;padding:6px 8px;border:1px solid var(--row-border-2);border-radius:var(--control-radius);background:var(--row-bg-2)}
   .desktopWeightsSmartControl strong{display:block;color:var(--text);font-size:var(--desktop-type-control)}

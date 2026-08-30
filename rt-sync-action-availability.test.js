@@ -53,7 +53,7 @@ test("finishing an action re-applies availability immediately - it does not wait
 });
 
 test("the panel render delegates rather than keeping its own copy of the disabled rules", () => {
-  const render = slice("function renderLineSync(syncState){", "function openRtSyncJoinFromUrl()");
+  const render = slice("function renderLineSync(syncState){", "function openRtSyncJoinFromUrl(");
   assert.match(render, /applyLineSyncActionAvailability\(syncState\);/);
   assert.doesNotMatch(render, /\.disabled = lineSyncActionInFlight/);
 });

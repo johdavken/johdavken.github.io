@@ -134,6 +134,8 @@
   let lineSyncBusyAction = "";
   let lastRenderedLinkCodeQr = "";
   let pendingQrJoinCode = "";
+  let rtSyncLinkHandlingReady = false;
+  const queuedNativeRtSyncUrls = [];
   let workspaceConfigurations = null;
   let workspaceConfigurationWorkspaceId = "";
   let workspaceConfigurationRefreshInFlight = false;
@@ -7985,18 +7987,27 @@
     }
   }
 
-  function openRtSyncJoinFromUrl(){
+  function openRtSyncJoinFromUrl(urlValue = window.location.href, requireAppLinkOrigin = false){
     if (typeof window === "undefined") return;
-    const code = normalizedRtSyncLinkCode(new URL(window.location.href).searchParams.get("rtSyncCode"));
+    let sourceUrl;
+    try{ sourceUrl = new URL(urlValue, window.location.href); }
+    catch{ return; }
+    // Native events are external input even though Android verified the host.
+    // Accept only the exact HTTPS origin/path declared in the manifest. The
+    // ordinary web path deliberately keeps its existing same-page behavior.
+    if (requireAppLinkOrigin && (sourceUrl.protocol !== "https:" || sourceUrl.hostname !== "resin.tools" || sourceUrl.pathname !== "/")) return;
+    const hasCodeParameter = sourceUrl.searchParams.has("rtSyncCode");
+    const code = normalizedRtSyncLinkCode(sourceUrl.searchParams.get("rtSyncCode"));
     if (!code){
-      if (new URL(window.location.href).searchParams.has("rtSyncCode")){
+      if (hasCodeParameter){
         clearRtSyncLinkCodeFromUrl();
         if ($("lineSyncMessage")) $("lineSyncMessage").textContent = "That RT Sync link code is not valid. Enter a new code to join.";
       }
       return;
     }
-    pendingQrJoinCode = code;
     const dialog = $("lineSyncQrJoinDialog");
+    if (pendingQrJoinCode === code && dialog?.open) return;
+    pendingQrJoinCode = code;
     if (!dialog?.showModal){
       const input = $("lineSyncJoinCode");
       if (input) input.value = code;
@@ -8027,6 +8038,25 @@
     }, { once:true });
     try{ dialog.showModal(); }
     catch{ clearRtSyncLinkCodeFromUrl(); }
+  }
+
+  function queueOrOpenNativeRtSyncUrl(url){
+    if (!url) return;
+    if (!rtSyncLinkHandlingReady){
+      queuedNativeRtSyncUrls.push(url);
+      return;
+    }
+    openRtSyncJoinFromUrl(url, true);
+  }
+
+  function installNativeRtSyncAppLinkHandling(){
+    const Capacitor = window.Capacitor;
+    if (!Capacitor?.isNativePlatform?.()) return;
+    const nativeApp = Capacitor.Plugins?.App;
+    if (!nativeApp) return;
+    nativeApp.addListener?.("appUrlOpen", event=>queueOrOpenNativeRtSyncUrl(event?.url));
+    const launchUrlRequest = nativeApp.getLaunchUrl?.();
+    if (launchUrlRequest?.then) void launchUrlRequest.then(result=>queueOrOpenNativeRtSyncUrl(result?.url));
   }
 
   function resolveLineSyncConflict(conflict){
@@ -8160,7 +8190,16 @@
     , "refresh");
     $("lineSyncRetryBtn")?.addEventListener("click",reconnectRtSync);
     $("lineSyncRetryMobileBtn")?.addEventListener("click",reconnectRtSync);
-    void lineSync.initialize().then(openRtSyncJoinFromUrl);
+    // Register before initialization so an App Link delivered to an already
+    // running activity cannot be missed. Cold- and warm-start URLs wait for
+    // RT Sync readiness, then enter the same confirmation/join function used
+    // by the existing web query parameter.
+    installNativeRtSyncAppLinkHandling();
+    void lineSync.initialize().then(()=>{
+      rtSyncLinkHandlingReady = true;
+      openRtSyncJoinFromUrl();
+      queuedNativeRtSyncUrls.splice(0).forEach(url=>openRtSyncJoinFromUrl(url, true));
+    });
 
     // Narrow bridge consumed only by workspace-recovery-ui.js: a read-only
     // descriptor of this browser's current RT Sync identity, and a way to
