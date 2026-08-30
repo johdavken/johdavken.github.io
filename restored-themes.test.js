@@ -7,6 +7,7 @@ const fs = require("node:fs");
 const theme = fs.readFileSync("theme.css", "utf8");
 
 for (const [id, scheme] of [
+  ["rose-pine", "dark"],
   ["rose-pine-dawn", "light"],
   ["everforest", "dark"],
   ["everforest-light", "light"]

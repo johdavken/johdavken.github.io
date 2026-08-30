@@ -14,7 +14,7 @@ test("mobile RT Sync has a compact status area and a distinct join prompt", () =
   assert.match(html, /id="mobileLineSyncLastSync"/);
   assert.match(html, /id="mobileLineSyncPending"/);
   assert.match(html, /JOIN RT SYNC/);
-  assert.match(html, /Enter this workspace’s four-character link code\./);
+  assert.match(html, /Enter the four-letter code of the workspace you wish to join\./);
   assert.match(html, /id="lineSyncRetryMobileLabel">Refresh now/);
   assert.match(html, /id="lineSyncLeaveBtn" class="secondary actionRail" type="button">Leave RT Sync/);
 });

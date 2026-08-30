@@ -75,10 +75,11 @@ test("Timeline tile status is set inside the existing next-action renderer",()=>
 
 test("theme choices include restored light and evergreen palettes and retain legacy migration",()=>{
   const select = html.slice(html.indexOf('<select id="themeSel">'),html.indexOf('</select>',html.indexOf('<select id="themeSel">')));
-  assert.equal((select.match(/<option/g) || []).length,10);
+  assert.equal((select.match(/<option/g) || []).length,11);
   assert.match(select,/<option value="system">System \/ Auto<\/option>/);
   assert.match(select,/<option value="oled-black">OLED Black<\/option>/);
   assert.match(select,/<option value="nord">Nord<\/option>/);
+  assert.match(select,/<option value="rose-pine">Rosé Pine Dark<\/option>/);
   assert.match(select,/<option value="rose-pine-dawn">Rosé Pine Light<\/option>/);
   assert.match(select,/<option value="everforest">Evergreen<\/option>/);
   assert.match(select,/<option value="everforest-light">Evergreen Light<\/option>/);
@@ -90,6 +91,8 @@ test("theme choices include restored light and evergreen palettes and retain leg
   assert.match(app,/\["nord", "nord"\]/);
   assert.match(app,/\["gruvbox-dark", "gruvbox-dark"\]/);
   assert.match(app,/\["gruvbox-light", "gruvbox-light"\]/);
+  assert.match(app,/\["rose-pine", "rose-pine"\]/);
+  assert.match(app,/\["rose-pine-dark", "rose-pine"\]/);
   assert.match(app,/\["rose-pine-light", "rose-pine-dawn"\]/);
   assert.match(app,/\["evergreen", "everforest"\]/);
   assert.match(app,/\["evergreen-light", "everforest-light"\]/);
