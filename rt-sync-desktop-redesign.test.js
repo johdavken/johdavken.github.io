@@ -48,6 +48,19 @@ test("QR links use only the short-lived join code and feed the existing join pat
   assert.match(html, /id="lineSyncQrJoinDialog"/);
 });
 
+test("desktop link-code generation uses one action whose label reflects whether a code exists", () => {
+  assert.match(html, /id="lineSyncGenerateCodeBtn"[^>]*>Generate Link Code/);
+  assert.doesNotMatch(html, /id="lineSyncGenerateNewCodeBtn"/);
+  const card = html.slice(html.indexOf('id="lineSyncGeneratedCodePanel"'), html.indexOf('</section><section id="desktopLineSyncDevices"'));
+  assert.match(card, /id="lineSyncGenerateCodeBtn"/);
+  assert.match(app, /generateCodeButton\.textContent = hasGeneratedCode \? "Generate New Code" : "Generate Link Code"/);
+  assert.match(app, /\$\("lineSyncQrCode"\)\.hidden = !hasGeneratedCode/);
+  const listenerStart = app.indexOf("const generateLinkCode =");
+  const listeners = app.slice(listenerStart, app.indexOf('$("lineSyncCopyCodeBtn")', listenerStart));
+  assert.match(listeners, /\$\("lineSyncGenerateCodeBtn"\)\?\.addEventListener\("click",generateLinkCode\)/);
+  assert.doesNotMatch(listeners, /GenerateNewCode/);
+});
+
 test("desktop connected devices render only membership facts already provided by RT Sync", () => {
   assert.match(html, /id="desktopLineSyncDevicesList"/);
   const render = app.slice(app.indexOf("function renderDesktopLineSyncDevices"), app.indexOf("function renderDesktopLineSyncSetup"));

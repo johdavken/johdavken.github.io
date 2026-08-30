@@ -7571,7 +7571,7 @@
   function applyLineSyncActionAvailability(syncState = lineSync?.getState?.() || {}){
     const selected = syncState.selectedWorkspace;
     const connected = !!syncState.connected;
-    ["lineSyncGenerateCodeBtn", "lineSyncGenerateNewCodeBtn", "lineSyncCopyCodeBtn"].forEach(id=>{
+    ["lineSyncGenerateCodeBtn", "lineSyncCopyCodeBtn"].forEach(id=>{
       if ($(id)) $(id).disabled = lineSyncActionInFlight || !selected || !connected;
     });
     ["lineSyncRetryBtn", "lineSyncRetryMobileBtn"].forEach(id=>{
@@ -7941,8 +7941,13 @@
       code.textContent = syncState.generatedCode || "";
       code.title = syncState.generatedCodeExpiresAt ? `Expires ${new Date(syncState.generatedCodeExpiresAt).toLocaleTimeString()}` : "";
     }
-    const codePanel = $("lineSyncGeneratedCodePanel");
-    if (codePanel) codePanel.hidden = !syncState.generatedCode;
+    const hasGeneratedCode = !!syncState.generatedCode;
+    if (code) code.hidden = !hasGeneratedCode;
+    if ($("lineSyncCopyCodeBtn")) $("lineSyncCopyCodeBtn").hidden = !hasGeneratedCode;
+    if ($("lineSyncQrCode")) $("lineSyncQrCode").hidden = !hasGeneratedCode;
+    if ($("lineSyncGeneratedCodeHint")) $("lineSyncGeneratedCodeHint").hidden = !hasGeneratedCode;
+    const generateCodeButton = $("lineSyncGenerateCodeBtn");
+    if (generateCodeButton) generateCodeButton.textContent = hasGeneratedCode ? "Generate New Code" : "Generate Link Code";
     if (syncState.generatedCode) void renderLinkCodeQr(syncState.generatedCode);
     else {
       lastRenderedLinkCodeQr = "";
@@ -8131,7 +8136,6 @@
     });
     const generateLinkCode = ()=>runLineSyncAction(()=>lineSync.generateLinkCode(), "generate-code");
     $("lineSyncGenerateCodeBtn")?.addEventListener("click",generateLinkCode);
-    $("lineSyncGenerateNewCodeBtn")?.addEventListener("click",generateLinkCode);
     $("lineSyncCopyCodeBtn")?.addEventListener("click",async()=>{
       const code = lineSync.getState().generatedCode || "";
       if (!code) return;

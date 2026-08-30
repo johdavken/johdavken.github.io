@@ -1098,6 +1098,7 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .baseGlyph{dis
 .desktopLineSyncMain{ display:grid; grid-template-columns:minmax(300px,1.1fr) minmax(250px,.9fr); gap:20px; align-items:start; }
 .lineSyncConnect{ min-width:0; padding-top:2px; }
 .lineSyncGeneratedCodePanel{ display:grid; grid-template-columns:minmax(0,1fr) auto; gap:12px; align-items:center; padding:12px; border:1px solid var(--row-border); border-radius:var(--radius-row); background:var(--row-bg); }
+.lineSyncGeneratedCodePanel [hidden]{ display:none!important; }
 .lineSyncGeneratedCodeRow{ display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
 .lineSyncGeneratedCodeRow .lineSyncCode{ min-width:72px; padding:6px 8px; color:var(--title); font-size:22px; letter-spacing:.14em; }
 /* QR scanners need a solid light quiet zone independent of app theme. */

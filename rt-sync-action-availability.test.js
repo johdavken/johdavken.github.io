@@ -33,7 +33,7 @@ function slice(from, to){
 
 test("the available operator actions get their disabled state from one shared pass, not from the render alone", () => {
   const helper = slice("function applyLineSyncActionAvailability(", "function setLineSyncActionBusy(");
-  ["lineSyncGenerateCodeBtn", "lineSyncGenerateNewCodeBtn", "lineSyncCopyCodeBtn"].forEach(id=>{
+  ["lineSyncGenerateCodeBtn", "lineSyncCopyCodeBtn"].forEach(id=>{
     assert.match(helper, new RegExp(`"${id}"`));
   });
   assert.match(helper, /\["lineSyncRetryBtn", "lineSyncRetryMobileBtn"\]/);
