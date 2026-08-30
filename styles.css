@@ -8275,36 +8275,6 @@ input.resinLookupValue.copied[readonly]{
   font-size: 10.5px;
 }
 .changelogBody > h3:first-child{ margin-top: 0; }
-/* Sits under the entry list at every width - a reference link, not an
-   operator action. */
-.changelogPrivacy{
-  display: grid;
-  grid-template-columns: minmax(0,1fr) auto;
-  align-items: baseline;
-  column-gap: 10px;
-  row-gap: 3px;
-  width: 100%;
-  margin: 2px 0 0;
-  padding-top: 10px;
-  border-top: 1px solid var(--border);
-}
-.changelogPrivacyLinks{ display: flex; align-items: baseline; gap: 8px; min-width: 0; flex-wrap: wrap; }
-.changelogPrivacyLink{
-  color: var(--focus-border);
-  font-size: var(--font-small);
-  font-weight: 700;
-}
-.changelogPrivacyLink:focus-visible{ outline: 2px solid var(--focus-border); outline-offset: 2px; }
-.changelogPrivacySep{ color: var(--muted); font-size: var(--font-small); }
-.changelogAppVersion{
-  justify-self: end;
-  color: var(--muted);
-  font-family: var(--font-mono);
-  font-size: var(--font-tiny);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-.changelogPrivacyNote{ grid-column: 1 / -1; color: var(--muted); font-size: var(--font-tiny); }
 @media (prefers-reduced-motion: reduce){
   .workspaceNavMoreChev{ transition: none; }
 }
@@ -9521,6 +9491,7 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
 .displaySheetHead small{display:block;margin-top:2px;color:var(--muted);font-size:11px}
 .visuallyHidden{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
 .appOverlayRoot{position:fixed;inset:0;z-index:70;pointer-events:none}
+.mobileFooterMeta{display:none}
 .mobileFooterVersion{display:none}
 .desktopRailVersion{display:none}
 /* The root spans the viewport and is click-through on purpose, so it never
@@ -10464,21 +10435,33 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
   }
   .cloudSyncFooterStatus > span{font-size:9px}
   .cloudSyncFooterStatus > strong{max-width:100%;font-size:7px;font-weight:850;text-transform:uppercase}
-  .mobileFooterVersion{
+  .mobileFooterMeta{
     position:fixed;
     right:0;
     bottom:calc(var(--app-dock-height) + env(safe-area-inset-bottom) + 2px);
     left:0;
     z-index:59;
-    display:block;
+    display:flex;
+    align-items:center;
+    justify-content:flex-start;
+    gap:5px;
+    min-height:10px;
+    padding:0 max(9px, env(safe-area-inset-left)) 0 max(9px, env(safe-area-inset-right));
+    pointer-events:auto;
+  }
+  .mobileFooterMetaLink,
+  .mobileFooterMetaSep,
+  .mobileFooterVersion{
     color:var(--muted);
     font-size:7px;
     font-weight:700;
     line-height:1;
     letter-spacing:.06em;
-    text-align:center;
-    pointer-events:none;
+    white-space:nowrap;
   }
+  .mobileFooterMetaLink{color:var(--focus-border);text-decoration:none}
+  .mobileFooterMetaLink:focus-visible{outline:2px solid var(--focus-border);outline-offset:2px}
+  .mobileFooterVersion{display:block;font-family:var(--font-mono);font-variant-numeric:tabular-nums}
 
 }
 

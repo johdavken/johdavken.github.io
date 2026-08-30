@@ -21,15 +21,14 @@ test("Changelog is its own top-level workspace panel, not a topic nested inside 
   assert.doesNotMatch(html, /id="helpBlock"/, "Help itself should be gone, not just its nav entry");
 });
 
-test("Privacy Policy and Delete Data sit at the bottom of the changelog content", () => {
+test("Privacy Policy and Delete Data sit in the main-screen footer, not the changelog", () => {
   const body = changelogBody();
-  const privacyStart = body.indexOf('<div class="changelogPrivacy">');
-  assert.notEqual(privacyStart, -1, "expected the changelogPrivacy block");
-  // Nothing else should follow it inside the panel.
-  const after = body.slice(privacyStart);
-  assert.equal((after.match(/<h3>/g) || []).length, 0, "no changelog period should follow the privacy links");
-  assert.match(body, /<a class="changelogPrivacyLink" href="https:\/\/resin\.tools\/privacy" target="_blank" rel="noopener">Privacy Policy<\/a>/);
-  assert.match(body, /<a class="changelogPrivacyLink" href="https:\/\/resin\.tools\/privacy\/delete-data\/" target="_blank" rel="noopener">Delete Data<\/a>/);
+  assert.doesNotMatch(body, /https:\/\/resin\.tools\/privacy/);
+  const footerStart = html.indexOf('<div class="mobileFooterMeta"');
+  assert.notEqual(footerStart, -1, "expected the main-screen footer metadata");
+  const footer = html.slice(footerStart, html.indexOf("</div>", footerStart));
+  assert.match(footer, /<a class="mobileFooterMetaLink" href="https:\/\/resin\.tools\/privacy" target="_blank" rel="noopener">Privacy Policy<\/a>/);
+  assert.match(footer, /<a class="mobileFooterMetaLink" href="https:\/\/resin\.tools\/privacy\/delete-data\/" target="_blank" rel="noopener">Delete Data<\/a>/);
 });
 
 const MONTHS = ["january","february","march","april","may","june","july",

@@ -1293,7 +1293,7 @@
         <svg class="mobileSectionHeaderIcon" viewBox="0 0 32 32" aria-hidden="true"><g class="baseGlyph"><circle cx="7" cy="9" r="2.4"/><circle cx="7" cy="16" r="2.4"/><circle cx="7" cy="23" r="2.4"/><path d="M13 9h13M13 16h13M13 23h9"/><g class="gruvboxIconDetail"><rect x="4.6" y="6.6" width="4.8" height="4.8"/><rect x="4.6" y="13.6" width="4.8" height="4.8"/><rect x="4.6" y="20.6" width="4.8" height="4.8"/></g></g><g class="gruvboxSolidGlyph"><circle cx="7" cy="9" r="3.2"/><circle cx="7" cy="16" r="3.2"/><circle cx="7" cy="23" r="3.2"/><path d="M13 7.2h13v3.6H13zM13 14.2h13v3.6H13zM13 21.2h9v3.6H13z"/></g></svg>
         <div class="summaryText">
           <div class="layerTitle" role="heading" aria-level="1">Changelog</div>
-          <div class="layerMeta">What&rsquo;s new, most recent first &mdash; the Privacy Policy and how we handle your data are also linked here</div>
+          <div class="layerMeta">What&rsquo;s new, most recent first</div>
         </div>
       </div>
     </summary>
@@ -1473,22 +1473,6 @@
         <ul>
           <li>The original hopper run-down calculator: weight and percentage entry, run-down formulas, and the first responsive layout.</li>
         </ul>
-        <!-- Absolute URL on purpose, and the same target="_blank" treatment
-             the old Play banner used: the bundled Android app has no
-             /privacy/ page of its own, so this has to reach the published
-             policy on resin.tools and open outside the app shell rather
-             than navigating the WebView away from the app. It is also why
-             build-www.js skips it - its allowlist parser ignores anything
-             with a scheme. -->
-        <div class="changelogPrivacy">
-          <div class="changelogPrivacyLinks">
-            <a class="changelogPrivacyLink" href="https://resin.tools/privacy" target="_blank" rel="noopener">Privacy Policy</a>
-            <span class="changelogPrivacySep" aria-hidden="true">·</span>
-            <a class="changelogPrivacyLink" href="https://resin.tools/privacy/delete-data/" target="_blank" rel="noopener">Delete Data</a>
-          </div>
-          <span class="changelogAppVersion" aria-label="App version">v1.1.23</span>
-          <small class="changelogPrivacyNote">How Resin.Tools handles your data</small>
-        </div>
       </div>
     </div>
   </details>
@@ -2153,7 +2137,15 @@
   </form>
 </dialog>
 
-<small class="mobileFooterVersion" aria-label="App version">v1.1.23</small>
+<!-- Absolute URLs intentionally open outside the Android app shell: the
+     bundled app has no local privacy pages. build-www.js ignores these
+     scheme-based links, so it never tries to package them as local assets. -->
+<div class="mobileFooterMeta" aria-label="App information">
+  <a class="mobileFooterMetaLink" href="https://resin.tools/privacy" target="_blank" rel="noopener">Privacy Policy</a>
+  <span class="mobileFooterMetaSep" aria-hidden="true">·</span>
+  <a class="mobileFooterMetaLink" href="https://resin.tools/privacy/delete-data/" target="_blank" rel="noopener">Delete Data</a>
+  <span class="mobileFooterVersion" aria-label="App version">v1.1.23</span>
+</div>
 <footer class="footerBar" aria-label="App navigation">
   <button type="button" id="appFooterDisplay" class="appDockControl" aria-expanded="false" aria-controls="displaySheet" aria-label="Display settings">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9c0-1-.8-1.8-1.8-1.8h-2.1a2 2 0 0 1-2-2V6.8C15.1 4.7 13.9 3 12 3Z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="8.5" cy="16" r="1"/><g class="gruvboxIconDetail"><path d="M12 2v2"/></g></svg><span>Display</span>

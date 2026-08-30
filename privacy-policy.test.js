@@ -335,22 +335,23 @@ test("the deletion page carries the same inlined Industrial Slate palette as the
  *   Reaching it from the app
  * --------------------------------------------------------------------- */
 
-test("the Changelog panel carries a Privacy Policy link, at the bottom of its own body rather than buried in a Help topic", () => {
+test("the main-screen footer carries the privacy links beside the app version", () => {
   const panelStart = html.indexOf('<details class="block card workspacePanel" id="changelogBlock">');
   assert.notEqual(panelStart, -1, "expected the Changelog panel");
   const panelEnd = html.indexOf("</details>", panelStart);
   assert.notEqual(panelEnd, -1, "expected the Changelog panel to close");
   const panel = html.slice(panelStart, panelEnd);
-  const start = panel.indexOf('<div class="changelogPrivacy">');
-  assert.notEqual(start, -1, "expected a changelogPrivacy block in the Changelog panel body");
-  const block = panel.slice(start, panel.indexOf("\n      </div>", start));
+  assert.doesNotMatch(panel, /https:\/\/resin\.tools\/privacy/);
+  const start = html.indexOf('<div class="mobileFooterMeta"');
+  assert.notEqual(start, -1, "expected the main-screen footer metadata");
+  const block = html.slice(start, html.indexOf("</div>", start));
   assert.match(block, /href="https:\/\/resin\.tools\/privacy"/);
   assert.match(block, />Privacy Policy</);
   // The deletion route sits beside it as a second plain link, not a button
   // and not a section of its own.
   assert.match(block, /href="https:\/\/resin\.tools\/privacy\/delete-data\/"/);
   assert.match(block, />Delete Data</);
-  assert.equal((block.match(/class="changelogPrivacyLink"/g) || []).length, 2);
+  assert.equal((block.match(/class="mobileFooterMetaLink"/g) || []).length, 2);
   assert.doesNotMatch(block, /<button/);
   // Same treatment the old Play banner used: the bundled Android app has
   // no local copy of these pages, so they must open outside the app shell
@@ -359,11 +360,8 @@ test("the Changelog panel carries a Privacy Policy link, at the bottom of its ow
   assert.equal((block.match(/rel="noopener"/g) || []).length, 2);
   const version = androidBuild.match(/versionName "([^"]+)"/);
   assert.ok(version, "expected Android's release versionName");
-  assert.match(block, new RegExp(`class="changelogAppVersion"[^>]*>v${version[1]}<`));
-  assert.match(html, new RegExp(`class="mobileFooterVersion"[^>]*>v${version[1]}<`));
-  assert.match(styles, /\.changelogPrivacy\{[\s\S]*?grid-template-columns: minmax\(0,1fr\) auto/);
-  assert.match(styles, /\.changelogAppVersion\{[\s\S]*?justify-self: end/);
-  assert.match(styles, /\.mobileFooterVersion\{[\s\S]*?bottom:calc\(var\(--app-dock-height\) \+ env\(safe-area-inset-bottom\) \+ 2px\);[\s\S]*?text-align:center/);
+  assert.match(block, new RegExp(`class="mobileFooterVersion"[^>]*>v${version[1]}<`));
+  assert.match(styles, /\.mobileFooterMeta\{[\s\S]*?bottom:calc\(var\(--app-dock-height\) \+ env\(safe-area-inset-bottom\) \+ 2px\);[\s\S]*?justify-content:flex-start/);
 });
 
 test("the desktop side rail carries the same Android release version, as a normal flow item after Sudo access", () => {
@@ -382,9 +380,10 @@ test("the desktop side rail carries the same Android release version, as a norma
   assert.doesNotMatch(desktop, /\.desktopRailVersion\{[^}]*position:absolute/);
 });
 
-test("the Changelog panel's privacy link renders at every width - it is not gated behind a mobile-only or desktop-only rule", () => {
-  assert.match(styles, /\.changelogPrivacy\{/);
-  const rule = styles.slice(styles.indexOf(".changelogPrivacy{"), styles.indexOf("}", styles.indexOf(".changelogPrivacy{")) + 1);
+test("the main-screen footer metadata remains visible on touch layouts", () => {
+  assert.match(styles, /\.mobileFooterMeta\{[\s\S]*?display:flex;/);
+  const start = styles.lastIndexOf(".mobileFooterMeta{");
+  const rule = styles.slice(start, styles.indexOf("}", start) + 1);
   assert.doesNotMatch(rule, /display:\s*none/);
 });
 
