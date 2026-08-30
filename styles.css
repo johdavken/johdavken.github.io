@@ -6374,6 +6374,9 @@ body:is([data-theme="industrial-slate-dark"],[data-theme="gruvbox-dark"]) .resul
 .productionSummaryStatus > span{color:var(--muted);font-size:var(--font-small);line-height:1.35}
 .productionSummaryStatus b{color:var(--text);font-weight:850}
 .productionSummaryStatus i{padding:0 2px;color:var(--muted);font-style:normal}
+.productionEstimate{margin:8px 0 0;color:var(--muted);font-size:var(--font-small);font-weight:700;line-height:1.4;letter-spacing:0.01em}
+.productionEstimateHome{display:block;margin:0 12px 4px;padding:0;color:var(--muted);font-size:var(--font-small);font-weight:700;line-height:1.4;letter-spacing:0.01em}
+.productionEstimateHome[hidden]{display:none}
 .productionSummaryMaterialsIntro{display:grid;gap:1px;margin:1px 0 0;color:var(--muted);font-size:var(--font-small);line-height:1.25}
 .productionSummaryMaterialsIntro strong{color:var(--title);font-size:var(--font-small);font-weight:900}
 /* width+min-width:0 pins the row to its grid track instead of letting it
