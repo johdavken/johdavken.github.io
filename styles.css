@@ -4245,6 +4245,7 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     [data-theme="dark"],
     [data-theme="industrial-slate-dark"],
     [data-theme="oled-black"],
+    [data-theme="vaporwave"],
     [data-theme="gruvbox-dark"],
     [data-theme="nord"],
     [data-theme="tokyo-night"],
@@ -9572,6 +9573,10 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
   }
   body[data-theme="gruvbox-dark"][data-mobile-background-style="theme-native"]{
     background:radial-gradient(circle at 18% 0,color-mix(in srgb,#fe8019 7%,transparent),transparent 42%),var(--bg);
+    background-attachment:fixed;
+  }
+  body[data-theme="vaporwave"][data-mobile-background-style="theme-native"]{
+    background:radial-gradient(circle at 16% 0,color-mix(in srgb,#ff2aa1 22%,transparent),transparent 42%),radial-gradient(circle at 86% 18%,color-mix(in srgb,#585cff 17%,transparent),transparent 45%),var(--bg);
     background-attachment:fixed;
   }
 

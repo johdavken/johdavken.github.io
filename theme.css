@@ -308,6 +308,59 @@
   --footer-border: rgba(255,255,255,.18);
 }
 
+/* ----------------------------------------------------------------------- * Vaporwave * ----------------------------------------------------------------------- */
+:where(html, body)[data-theme="vaporwave"]{
+  color-scheme: dark;
+  --bg: #150725;
+  --panel: rgba(31,12,54,.96);
+  --panel2: rgba(45,18,75,.90);
+  --text: #f6ecff;
+  --subtitle: #d4b9ff;
+  --title: #ff72c6;
+  --muted: #b7a2cf;
+  --fg: #ead9ff;
+  --yellow: #ffe66d;
+  --orange: #ff9e64;
+  --border: rgba(212,185,255,.22);
+  --border2: rgba(255,114,198,.34);
+  --field-bg: rgba(15,5,31,.48);
+  --panelOpen: rgba(29,10,50,.99);
+  --chev: rgba(246,236,255,.62);
+  --warn: #ffe66d;
+  --bad: #ff72c6;
+  --ok: #62f5d4;
+  --workflow-timeline: #70b7ff;
+  --shadow2: 0 10px 28px rgba(4,0,15,.42);
+  --row-bg: rgba(246,236,255,.045);
+  --row-border: rgba(212,185,255,.20);
+  --row-bg-2: rgba(143,78,205,.13);
+  --row-border-2: rgba(212,185,255,.22);
+  --readonly-bg: rgba(16,5,33,.48);
+  --readonly-border: rgba(212,185,255,.24);
+  --focus-border: rgba(98,245,212,.88);
+  --focus-ring: rgba(98,245,212,.18);
+  --f-var1: #62f5d4;
+  --f-var2: #ffe66d;
+  --f-var3: #ff72c6;
+  --f-const: #b7a2cf;
+  --btn-text: var(--text);
+  --btn-border: rgba(212,185,255,.30);
+  --btn-primary-a: rgba(255,114,198,.28);
+  --btn-primary-b: rgba(112,183,255,.12);
+  --btn-secondary-bg: rgba(112,183,255,.10);
+  --btn-secondary-border: rgba(112,183,255,.28);
+  --btn-danger-bg: rgba(255,114,198,.16);
+  --btn-danger-border: rgba(255,114,198,.38);
+  --bg-glow-a: rgba(255,42,161,.15);
+  --bg-glow-b: rgba(88,92,255,.13);
+  --card-glow-a: rgba(255,114,198,.14);
+  --card-glow-b: rgba(98,245,212,.08);
+  --toggle-on-bg: rgba(98,245,212,.18);
+  --toggle-on-border: rgba(98,245,212,.48);
+  --footer-bg: rgba(15,5,28,.96);
+  --footer-border: rgba(212,185,255,.22);
+}
+
 /* ----------------------------------------------------------------------- * Gruvbox Dark * ----------------------------------------------------------------------- */
 :where(html, body)[data-theme="gruvbox-dark"]{
   color-scheme: dark;

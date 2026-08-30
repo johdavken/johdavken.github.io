@@ -1628,6 +1628,21 @@
    * Theme
    * ============================ */
   const systemColorScheme = globalThis.matchMedia?.("(prefers-color-scheme: dark)") || null;
+  const touchOnlyThemePreferences = new Set(["oled-black", "vaporwave", "rose-pine"]);
+
+  // OLED Black, Vaporwave, and Rosé Pine Dark are intentionally touch-shell
+  // palettes. Disable their native <select> entries on a fine-pointer desktop
+  // rather than relying on option display styling, which WebViews implement
+  // inconsistently. A saved touch preference is retained and resumes when the
+  // same device returns to its touch layout (for example, a folded tablet).
+  function syncTouchOnlyThemeChoices(){
+      const touchLayout = !isDesktopLayout();
+      $("themeSel")?.querySelectorAll("option[data-touch-only-theme]").forEach(option=>{
+        option.hidden = !touchLayout;
+        option.disabled = !touchLayout;
+      });
+      return touchLayout;
+  }
 
   function applyTheme(t){
       const saved = String(t || "");
@@ -1641,6 +1656,7 @@
         ["industrial-slate-dark", "industrial-slate-dark"],
         ["oled-black", "oled-black"],
         ["amoled", "oled-black"],
+        ["vaporwave", "vaporwave"],
         ["gruvbox-dark", "gruvbox-dark"],
         ["gruvbox-light", "gruvbox-light"],
         ["nord", "nord"],
@@ -1658,15 +1674,21 @@
       // aliases remain accepted so stored/imported preferences survive theme
       // naming changes without leaving a value the selector cannot display.
       const preference = migrations.get(saved) || "industrial-slate";
-      const theme = preference === "system"
+      const touchLayout = syncTouchOnlyThemeChoices();
+      const resolvedTheme = preference === "system"
         ? (systemColorScheme?.matches ? "industrial-slate-dark" : "industrial-slate")
         : preference;
+      const theme = !touchLayout && touchOnlyThemePreferences.has(preference)
+        ? "industrial-slate"
+        : resolvedTheme;
 
       document.documentElement.setAttribute("data-theme", theme);
       document.body.setAttribute("data-theme", theme);
 
       const sel = $("themeSel");
-      if (sel) sel.value = preference;
+      if (sel) sel.value = theme === "industrial-slate" && touchOnlyThemePreferences.has(preference)
+        ? "industrial-slate"
+        : preference;
 
       state.theme = preference;
 
@@ -7151,6 +7173,9 @@
       const changed = desktop !== renderedIsDesktop || compactRecipe !== renderedCompactRecipe;
       renderedIsDesktop = desktop;
       renderedCompactRecipe = compactRecipe;
+      // A touch-only palette falls back while a fine-pointer desktop is in
+      // use, but its saved preference is restored when returning to touch.
+      if (changed) applyTheme(state.theme || "industrial-slate");
       placeProductionControlsForLayout();
       if (!changed || !rerender) return changed;
       syncRecipePageUI();

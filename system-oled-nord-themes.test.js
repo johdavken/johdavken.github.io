@@ -11,7 +11,7 @@ const theme = fs.readFileSync("theme.css", "utf8");
 test("System Auto remains the saved preference while resolving the live OS scheme", () => {
   assert.match(app, /globalThis\.matchMedia\?\.\("\(prefers-color-scheme: dark\)"\)/);
   assert.match(app, /preference === "system"[\s\S]*?systemColorScheme\?\.matches \? "industrial-slate-dark" : "industrial-slate"/);
-  assert.match(app, /if \(sel\) sel\.value = preference;/);
+  assert.match(app, /if \(sel\) sel\.value = theme === "industrial-slate" && touchOnlyThemePreferences\.has\(preference\)/);
   assert.match(app, /state\.theme = preference;/);
   assert.match(app, /if \(state\.theme === "system"\) applyTheme\("system"\);/);
   assert.match(app, /systemColorScheme\.addEventListener\("change", handleSystemColorSchemeChange\)/);
@@ -31,9 +31,9 @@ test("OLED Black is a complete true-black theme", () => {
   }
 });
 
-test("System Auto, OLED Black, and Nord are exposed in Display", () => {
+test("System Auto, touch-only OLED Black, and Nord are exposed in Display", () => {
   const select = html.slice(html.indexOf('<select id="themeSel">'), html.indexOf("</select>", html.indexOf('<select id="themeSel">')));
-  for (const [value, label] of [["system", "System / Auto"], ["oled-black", "OLED Black"], ["nord", "Nord"]]) {
-    assert.match(select, new RegExp(`<option value="${value}">${label.replace("/", "\\/")}<\\/option>`));
-  }
+  assert.match(select, /<option value="system">System \/ Auto<\/option>/);
+  assert.match(select, /<option value="oled-black" data-touch-only-theme>OLED Black<\/option>/);
+  assert.match(select, /<option value="nord">Nord<\/option>/);
 });
