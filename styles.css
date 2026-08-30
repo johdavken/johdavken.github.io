@@ -1203,6 +1203,7 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .baseGlyph{dis
 .mobileSyncOnly{ display: none; }
 
 @media (max-width: 900px), (min-width: 901px) and (pointer: coarse){
+  #lineSyncBlock .lineSyncInfoGuide{ display: block; }
   .lineSyncPanel .desktopSyncOnly,
   .lineSyncPanel .desktopSyncLabel{ display: none !important; }
   .lineSyncPanel .mobileSyncLabel{ display: inline; }
@@ -3131,6 +3132,44 @@ details[open] > summary .chevSatellite{
   line-height: 1.4;
 }
 .timelineInfoGuideSection b{ color: var(--text); font-weight: 700; }
+
+/* RT Sync uses the same mobile info popover as Timeline. Its copy is an
+   operator-ready sequence, so retain the existing compact prose treatment
+   and add only the small uppercase wayfinding labels. */
+.lineSyncInfoGuide{ display: none; }
+.lineSyncInfoGuide > summary{ color: var(--ok); }
+.lineSyncInfoGuide > summary:hover,
+.lineSyncInfoGuide[open] > summary,
+.lineSyncInfoGuide > summary:focus-visible{ color: var(--ok); }
+.lineSyncInfoGuideIntro{
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: var(--font-small);
+  line-height: 1.4;
+}
+.lineSyncInfoGuideSectionHeading{
+  margin: 13px 0 -1px;
+  color: var(--ok);
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: .08em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+.lineSyncInfoGuideChoices{
+  margin: 5px 0 0;
+  padding-left: 17px;
+  color: var(--muted);
+  font-size: var(--font-small);
+  line-height: 1.4;
+}
+.lineSyncInfoGuideChoices li + li{ margin-top: 3px; }
+.lineSyncInfoGuideChoices b{ color: var(--text); font-weight: 700; }
+body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .lineSyncInfoGuide > summary,
+body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .lineSyncInfoGuide > summary:hover,
+body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .lineSyncInfoGuide[open] > summary,
+body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .lineSyncInfoGuide > summary:focus-visible,
+body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .lineSyncInfoGuideSectionHeading{ color: var(--gruv-aqua); }
 
 .recipePageTabs{
   display: flex;

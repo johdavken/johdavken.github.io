@@ -211,16 +211,18 @@
   // renders.
   let splitsScanShortcut = null;
   // The Recipe panel's mobile icon guide (#recipeInfoLegend), the Timeline
-  // panel's starter guide (#timelineInfoGuide) and the Scan popup all close
-  // on an outside click / Escape. Their hook*() helpers stop each guide's
-  // own summary click from bubbling to the panel <summary> it is nested in,
-  // so opening a guide never toggles the panel.
+  // and RT Sync starter guides (#timelineInfoGuide / #lineSyncInfoGuide),
+  // and the Scan popup all close on an outside click / Escape. Their hook*()
+  // helpers stop each guide's own summary click from bubbling to the panel
+  // <summary> it is nested in, so opening a guide never toggles the panel.
   document.addEventListener("click", event=>{
     if (splitsScanShortcut?.open && !splitsScanShortcut.contains(event.target)) splitsScanShortcut.open = false;
     const infoLegend = document.getElementById("recipeInfoLegend");
     if (infoLegend?.open && !infoLegend.contains(event.target)) infoLegend.open = false;
     const timelineInfoGuide = document.getElementById("timelineInfoGuide");
     if (timelineInfoGuide?.open && !timelineInfoGuide.contains(event.target)) timelineInfoGuide.open = false;
+    const lineSyncInfoGuide = document.getElementById("lineSyncInfoGuide");
+    if (lineSyncInfoGuide?.open && !lineSyncInfoGuide.contains(event.target)) lineSyncInfoGuide.open = false;
     const summary = event.target.closest?.(".mobileWeightProfilesSheet .workspaceConfigurationOverflow > summary");
     if (summary){
       const menu = summary.parentElement;
@@ -264,6 +266,11 @@
     if (event.key === "Escape" && timelineInfoGuide?.open){
       timelineInfoGuide.open = false;
       timelineInfoGuide.querySelector(":scope > summary")?.focus();
+    }
+    const lineSyncInfoGuide = document.getElementById("lineSyncInfoGuide");
+    if (event.key === "Escape" && lineSyncInfoGuide?.open){
+      lineSyncInfoGuide.open = false;
+      lineSyncInfoGuide.querySelector(":scope > summary")?.focus();
     }
   });
 
@@ -3984,6 +3991,16 @@
     // <summary>, so opening the guide never collapses/expands the panel.
     function hookTimelineInfoGuide(){
       const guide = $("timelineInfoGuide");
+      guide?.querySelector(":scope > summary")?.addEventListener("click", event=>{
+        event.stopPropagation();
+      });
+    }
+
+    // RT Sync's mobile operator reference follows the same nested-details
+    // behavior as the Timeline guide, preventing the enclosing RT Sync
+    // summary from toggling when its info icon is tapped.
+    function hookLineSyncInfoGuide(){
+      const guide = $("lineSyncInfoGuide");
       guide?.querySelector(":scope > summary")?.addEventListener("click", event=>{
         event.stopPropagation();
       });
@@ -9310,6 +9327,7 @@
       hookRecipeViewToggle();
       hookRecipeInfoLegend();
       hookTimelineInfoGuide();
+      hookLineSyncInfoGuide();
       hookTimelineViewTabs();
       hookTimelineDisplaySheet();
       // Sync toggle UI after restore

@@ -19,6 +19,18 @@ test("mobile RT Sync has a compact status area and a distinct join prompt", () =
   assert.match(html, /id="lineSyncLeaveBtn" class="secondary actionRail" type="button">Leave RT Sync/);
 });
 
+test("mobile RT Sync has an operator connection reference using the shared info-guide behavior", () => {
+  assert.match(html, /id="lineSyncInfoGuide"/);
+  assert.match(html, /Connecting to RT Sync/);
+  assert.match(html, /AT THE LINE WORKSTATION/i);
+  assert.match(html, /GENERATE NEW CODE/);
+  assert.match(html, /Link codes are one-time codes and remain available for 30 minutes\./);
+  assert.match(styles, /#lineSyncBlock \.lineSyncInfoGuide\{ display: block; \}/);
+  assert.match(styles, /\.lineSyncInfoGuide > summary\{ color: var\(--ok\); \}/);
+  assert.match(app, /lineSyncInfoGuide\?\.open && !lineSyncInfoGuide\.contains\(event\.target\)/);
+  assert.match(app, /function hookLineSyncInfoGuide\(\)/);
+});
+
 test("mobile RT Sync status distinguishes healthy sync, pending changes, errors, and local-only devices", () => {
   const start = app.indexOf("function renderMobileLineSyncStatus");
   const body = app.slice(start, app.indexOf("async function runLineSyncAction", start));

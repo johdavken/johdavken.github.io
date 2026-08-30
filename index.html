@@ -885,6 +885,50 @@
         </div>
       </div>
       <span id="lineSyncSummaryStatus" class="pill summaryStatus">Local only</span>
+      <!-- Mobile operator reference. This reuses the Recipe/Timeline nested
+           <details> info pattern, so it opens without toggling RT Sync and
+           keeps the normal outside-tap and Escape dismissal behavior. -->
+      <details class="timelineInfoGuide lineSyncInfoGuide" id="lineSyncInfoGuide">
+        <summary aria-label="How to connect to RT Sync" title="How to connect to RT Sync"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11.5v4.75"/><path d="M12 7.75h.01"/></svg></summary>
+        <div class="timelineInfoGuidePanel lineSyncInfoGuidePanel" role="group" aria-label="RT Sync connection guide">
+          <p class="timelineInfoGuideHeading">Connecting to RT Sync</p>
+          <p class="lineSyncInfoGuideIntro">Connect this device to the workstation for the production line you are running.</p>
+
+          <p class="lineSyncInfoGuideSectionHeading">At the line workstation</p>
+          <div class="timelineInfoGuideSection">
+            <strong>1. Open RT Sync</strong>
+            <p>Open RT Sync on the desktop assigned to your production line.</p>
+          </div>
+          <div class="timelineInfoGuideSection">
+            <strong>2. Make sure the desktop is connected</strong>
+            <p>If the desktop shows “This desktop is not connected,” select <b>CONNECT THIS DESKTOP</b> and connect it to the correct line first.</p>
+          </div>
+          <div class="timelineInfoGuideSection">
+            <strong>3. Generate a link code</strong>
+            <p>Under <b>Connect Another Device</b>, select <b>GENERATE NEW CODE</b>.</p>
+            <p>The workstation will display a temporary four-character code and QR code.</p>
+          </div>
+
+          <p class="lineSyncInfoGuideSectionHeading">On this device</p>
+          <div class="timelineInfoGuideSection">
+            <strong>4. Join the line</strong>
+            <p>Either:</p>
+            <ul class="lineSyncInfoGuideChoices">
+              <li>Scan the QR code shown on the workstation with your phone camera</li>
+              <li>or enter the four-character code in <b>Link code</b> and tap <b>Join RT Sync</b></li>
+            </ul>
+          </div>
+          <div class="timelineInfoGuideSection">
+            <strong>5. Confirm the connection</strong>
+            <p>RT Sync should show <b>Synced</b> and display the production line you joined.</p>
+          </div>
+
+          <p class="lineSyncInfoGuideSectionHeading">Good to know</p>
+          <div class="timelineInfoGuideSection">
+            <p>Link codes are one-time codes and remain available for 30 minutes. Generate another code from the workstation when connecting another device.</p>
+          </div>
+        </div>
+      </details>
     </summary>
     <div class="blockBody lineSyncPanel">
       <section id="mobileLineSyncStatus" class="mobileLineSyncStatus" data-state="local-only" role="status" aria-live="polite">
