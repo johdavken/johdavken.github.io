@@ -5,6 +5,16 @@ const decoder = new TextDecoder();
 
 export default {
   async fetch(request, env) {
+    const url = new URL(request.url);
+
+    // Android verifies App Links by fetching this exact public statement.
+    // It rejects authentication redirects, so leave this one non-sensitive
+    // JSON document outside the production-workspace session gate. The RT
+    // Sync QR URL itself remains protected by the normal flow below.
+    if (request.method === "GET" && url.pathname === "/.well-known/assetlinks.json") {
+      return fetch(request);
+    }
+
     const missing = ["AUTH_USERNAME", "AUTH_PASSWORD", "SESSION_SECRET"]
       .filter(name => typeof env[name] !== "string" || env[name].length === 0);
 
@@ -14,8 +24,6 @@ export default {
         { status: 500, headers: { "Content-Type": "text/plain; charset=utf-8" } }
       );
     }
-
-    const url = new URL(request.url);
 
     if (url.pathname === "/login") {
       if (request.method === "GET") {
