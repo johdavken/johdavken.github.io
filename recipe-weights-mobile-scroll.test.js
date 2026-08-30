@@ -1,12 +1,8 @@
 "use strict";
 
-// Mobile Recipe -> Hopper Weights page: opening Edit reveals the
-// Weight/Height bulk-edit controls (#mobileWeightsBulkBar) below the
-// matrix. On phones #splitsArea is a fixed-height, overflow:hidden flex
-// column, and the moved live editor (#weightsArea) is its only child.
-// Nothing inside #weightsArea was a scroll boundary, so the expanded
-// controls were clipped past the bottom edge with no way to reach them.
-// The fix makes #weightsArea itself the scroller in that state.
+// Mobile Recipe -> Hopper Weights page: the editor and matrix must stay in
+// normal document flow. A short phone viewport must scroll the browser page,
+// not create an internal scroll boundary on the weights panel.
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
@@ -15,13 +11,15 @@ const fs = require("node:fs");
 const styles = fs.readFileSync("styles.css", "utf8");
 const app = fs.readFileSync("app.js", "utf8");
 
-function mobileWeightsScrollRule(){
+function phoneRecipeBlock(){
   const start = styles.indexOf("#splitsBlock.mobile-active #splitsArea > #weightsArea{");
-  assert.notEqual(start, -1, "expected a mobile-only scroll rule for the weights page");
-  return styles.slice(start, styles.indexOf("}", start) + 1);
+  assert.notEqual(start, -1, "expected a mobile-only document-flow rule for the weights page");
+  const media = styles.lastIndexOf("@media", start);
+  const end = styles.indexOf("\n}\n\n@media (max-width: 720px)", media);
+  return styles.slice(media, end);
 }
 
-test("the rule lives in the phone breakpoint, not tablet/desktop", () => {
+test("the document-flow rule lives in the phone breakpoint, not tablet/desktop", () => {
   const idx = styles.indexOf("#splitsBlock.mobile-active #splitsArea > #weightsArea{");
   const media = styles.lastIndexOf("@media", idx);
   const mediaLine = styles.slice(media, styles.indexOf("{", media));
@@ -29,30 +27,20 @@ test("the rule lives in the phone breakpoint, not tablet/desktop", () => {
     "weights-page scroll fix must be scoped to the <=700px phone shell");
 });
 
-test("#weightsArea becomes the vertical scroller with no horizontal scroll", () => {
-  const rule = mobileWeightsScrollRule();
-  // Fills the remaining flex budget and is allowed to shrink below content.
-  assert.match(rule, /flex:\s*1 1 0/);
-  assert.match(rule, /min-height:\s*0/);
-  // Vertical scroll only - horizontal stays clipped.
-  assert.match(rule, /overflow:\s*hidden auto/);
-  assert.doesNotMatch(rule, /overflow-x:\s*(auto|scroll)/);
-  // Keeps a focused Weight/Height input clear of the fixed app dock when
-  // the mobile keyboard scrolls it into view.
-  assert.match(rule, /scroll-padding-bottom:/);
+test("Current, Next, and Weights have no phone-only viewport budget or internal vertical scroller", () => {
+  const block = phoneRecipeBlock();
+  assert.doesNotMatch(block, /body\[data-mobile-workspace="panel"\]:has\(#splitsBlock\.mobile-active\)/);
+  assert.doesNotMatch(block, /height:\s*calc\(100dvh/);
+  assert.doesNotMatch(block, /#splitsBlock\.mobile-active \#splitsArea > #weightsArea\{[^}]*overflow:/);
+  assert.doesNotMatch(block, /\.splitsMatrixScroll\{[^}]*overflow-y:\s*auto/);
+  assert.match(block, /#splitsBlock\.mobile-active \#splitsArea > \.splitsMobileLayerLayout,\s*\n\s*#splitsBlock\.mobile-active \#splitsArea > #weightsArea\{ min-width:0; \}/);
 });
 
-test("the fix relies on the existing scroll boundary, not extra height or margin", () => {
-  const rule = mobileWeightsScrollRule();
-  assert.doesNotMatch(rule, /margin-bottom:\s*\d{2,}/);
-  assert.doesNotMatch(rule, /height:\s*calc/);
-  assert.doesNotMatch(rule, /min-height:\s*[1-9]/);
+test("the shared mobile shell keeps dock-aware document padding", () => {
+  assert.match(styles, /main\{height:auto;min-height:100vh;min-height:100dvh;padding-bottom:calc\(var\(--app-dock-height\) \+ env\(safe-area-inset-bottom\) \+ 22px\)!important\}/);
 });
 
-test("Done returns to summary view, which has no overflow to scroll", () => {
-  // exitWeightsBulkModeFn / the view toggle both route back through
-  // setMobileWeightView("visual"); the scroll rule is inert there because
-  // summary content does not exceed the budget.
+test("Done still returns to summary view without changing the layout model", () => {
   assert.match(app, /exitWeightsBulkModeFn = \(\) => setMobileWeightView\("visual"\);/);
   assert.match(app, /area\.dataset\.mobileWeightView = visualMode \? "visual" : "edit";/);
 });

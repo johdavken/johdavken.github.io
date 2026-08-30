@@ -7531,44 +7531,26 @@ button.compactAction{
     line-height:1.1;
     white-space:nowrap;
   }
-  /* Undo, the selection status, Clear selection/Empty cells, and Reset
-     Recipe all flow onto one shared row (wrapping as needed) rather than a
-     non-wrapping single line, which would crush every label down to 8px
-     type in 22px buttons - well under the 28px+ touch target every other
-     bulkTextAction pill in the app gets (see .splitsTrackingBar/
-     .mobileWeightsBulkBar). flex:1 1 auto lets this row claim whatever
-     width Undo (flex:0 0 auto, .recipeEditHistory's own base rule) doesn't
-     need on their shared line, with its own contents still free to wrap
-     beneath that if they don't all fit - see .splitsBulkBar's own
-     flex-wrap above. No more margin-top/padding-top divider: that spacing
-     assumed this row always started below Undo on its own line, which is
-     no longer guaranteed once they can share one. */
+  /* The phone editor keeps its value fields on the first row and gives the
+     four structural actions a dedicated, balanced grid below. This avoids
+     relying on incidental flex wrapping when the Recipe panel gets narrow. */
   #splitsArea .splitsEditRowSecondary{
-    flex:1 1 auto;
-    display:flex;
-    flex-wrap:wrap;
-    align-items:center;
-    gap:6px 4px;
+    flex:1 1 100%;
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    align-items:stretch;
+    gap:6px;
     min-width:0;
     margin-top:0;
     padding-top:0;
   }
-  /* Redo is dropped on phones - not desktop - purely to buy width. Undo,
-     Clear selection, Empty cells, and Rearrange are what an operator
-     actually reaches for while editing; keeping all four on one row beat
-     keeping a rarely-used Redo button. #recipeRedo alone (no ancestor
-     scoping) because .recipeEditHistory is no longer a descendant of
-     .splitsEditRowSecondary - it's a unique id, so no scoping is needed. */
-  #splitsArea #recipeRedo{
+  /* History remains available on tablet/desktop. The phone workflow keeps
+     the requested four edit actions and deliberately omits Undo/Redo. */
+  #splitsArea .recipeEditHistory{
     display:none;
   }
   #splitsArea .splitsEditRowSecondary > .splitsBulkActions{
-    display:flex;
-    flex:0 0 auto;
-    flex-wrap:wrap;
-    align-items:center;
-    min-width:0;
-    gap:6px;
+    display:contents;
     margin:0;
     padding:0;
     border:0;
@@ -7584,12 +7566,12 @@ button.compactAction{
     white-space:nowrap;
   }
   #splitsArea .splitsEditRowSecondary :is(.bulkTextAction,button.danger){
-    flex:0 0 auto;
-    width:auto;
-    min-height:28px;
-    padding:4px 9px;
+    width:100%;
+    min-width:0;
+    min-height:36px;
+    padding:5px 4px;
     border-radius:2px;
-    font-size:var(--font-tiny);
+    font-size:10px;
     font-weight:750;
     line-height:1.1;
     text-transform:uppercase;
@@ -7609,15 +7591,13 @@ button.compactAction{
     background:color-mix(in srgb, var(--recipe-pill-accent) 10%, transparent);
     color:var(--btn-text);
   }
-  /* Clear selection's label is the long pole - tightened just enough
-     (alongside Empty cells/Rearrange) that all three still clear a 320px
-     viewport on one row without dropping below a 28px touch target. */
+  /* Keep the same readable action treatment in every grid cell. */
   #splitsArea .splitsEditRowSecondary #clearSplitSelection,
   #splitsArea .splitsEditRowSecondary #clearSelectedCells,
   #splitsArea .splitsEditRowSecondary .splitsRearrangeAction.bulkTextAction,
   #splitsArea .splitsEditRowSecondary #resetAllSplits{
-    padding:3px 4px;
-    font-size:8px;
+    padding:5px 4px;
+    font-size:10px;
     letter-spacing:.01em;
   }
   #splitsArea .splitsEditRowSecondary .splitsRearrangeAction{
@@ -7642,123 +7622,26 @@ button.compactAction{
     color:var(--bad);
   }
 
-  /* Recipe is a viewport workspace on phones. The app dock remains fixed;
-     the header, editor, matrix, and action rail share the remaining height.
-     If a very short viewport cannot hold the established cell size, only
-     the matrix scrolls—never the whole page or the controls around it. */
-  body[data-mobile-workspace="panel"]:has(#splitsBlock.mobile-active){
-    height:100dvh;
-    min-height:0;
-    overflow:hidden;
-  }
-  body[data-mobile-workspace="panel"]:has(#splitsBlock.mobile-active) main{
-    grid-template-rows:minmax(0,1fr);
-    height:100dvh;
-    min-height:0;
-    overflow:hidden;
-    padding-bottom:calc(var(--app-dock-height) + env(safe-area-inset-bottom) + var(--page-pad))!important;
-  }
-  body[data-mobile-workspace="panel"] #splitsBlock.mobile-active{
-    display:flex!important;
-    flex-direction:column;
-    min-height:0;
-    overflow:hidden;
-  }
-  body[data-mobile-workspace="panel"] #splitsBlock.mobile-active > summary{
-    flex:0 0 auto;
-  }
-  body[data-mobile-workspace="panel"] #splitsBlock.mobile-active > .blockBody{
-    display:flex;
-    flex:1 1 0;
-    flex-direction:column;
-    /* The 100px is an empirical stand-in for everything above this box that
-       isn't otherwise sized by a variable - main's own top/bottom page
-       padding, the "RECIPE" summary bar, internal gaps. env(safe-area-inset-top)
-       is subtracted alongside it (mirroring the existing bottom-inset term)
-       because main's own top padding now includes that inset too - without
-       this term this box would end up sized as if the status bar still
-       overlapped it, re-losing the row height just reclaimed above. */
-    height:calc(100dvh - var(--app-dock-height) - env(safe-area-inset-bottom) - env(safe-area-inset-top, 0px) - 100px);
-    min-height:0;
-    overflow:hidden;
-  }
-  #splitsBlock.mobile-active .recipeHeaderRow{flex:0 0 auto}
-  /* The Current/Next/Weights tab strip and its Edit/Done toggle were both
-     sized for a comfortable thumb target on any phone; on a short phone
-     that fixed height budget is exactly what pushes the matrix's last row
-     out of view (see the 100px chrome estimate below). Tabs stay full-width
-     and easy to hit horizontally, just shorter - and Edit/Done is matched
-     to that same new height rather than kept at its own separate size. */
-  #splitsBlock.mobile-active .recipePageTab{
-    min-height:20px;
-    padding:3px 6px 2px;
-    font-size:10px;
-  }
-  #splitsBlock.mobile-active #recipeHeaderActionPill > .recipeViewToggle button,
-  #splitsBlock.mobile-active .recipeHeaderControls > .weightsHeaderViewToggle button{
-    min-width:44px;
-    min-height:20px;
-    padding:2px 8px;
-    font-size:10px;
-  }
-  #splitsBlock.mobile-active #splitsArea{
-    display:flex;
-    flex:1 1 0;
-    flex-direction:column;
-    gap:4px;
-    min-height:0;
-    overflow:hidden;
-  }
-  #splitsBlock.mobile-active #splitsArea > .splitsMobileLayerLayout{
-    flex:0 1 auto;
-    min-height:0;
-    overflow:hidden;
-  }
+  /* Current, Next, and Weights remain ordinary document-flow panels on
+     phones. Do not give them a viewport-height budget or a scroll boundary:
+     their matrices retain their natural height and the browser page scrolls
+     them clear of the fixed app dock. The shared mobile shell below supplies
+     dock-aware bottom padding for that final clearance. */
+  #splitsBlock.mobile-active #splitsArea{ min-width:0; }
+  #splitsBlock.mobile-active #splitsArea > .splitsMobileLayerLayout,
+  #splitsBlock.mobile-active #splitsArea > #weightsArea{ min-width:0; }
   #splitsBlock.mobile-active .splitsMobileLayerLayout .splitsMatrixScroll{
-    height:100%;
-    min-height:0;
-    overflow-y:auto;
-    overscroll-behavior:contain;
-  }
-  #splitsBlock.mobile-active #splitsArea > .mobileRecipeActionTray{
-    flex:0 0 auto;
-    margin-top:0;
-  }
-  /* Recipe Book's panel takes the same "only this scrolls" treatment as
-     the matrix (.splitsMobileLayerLayout above) instead of pushing the
-     whole page taller - the title/search/save row stays put, the list
-     scrolls in the remaining budget. */
-  #splitsBlock.mobile-active #splitsArea > .splitsSavedRecipesPanel{
-    display:flex;
-    flex:1 1 0;
-    flex-direction:column;
-    min-height:0;
-    overflow:hidden;
-  }
-  #splitsBlock.mobile-active .splitsSavedRecipesPanel #mobileSavedRecipesList{
-    flex:1 1 auto;
-    min-height:0;
+    height:auto;
+    min-height:auto;
+    /* `overflow-x:hidden` makes a paired visible y-axis compute to `auto`.
+       Reset both axes so this wrapper cannot become a vertical scrollport. */
+    overflow:visible;
   }
 
-  /* Hopper Weights page: the moved live editor (#weightsArea) is the only
-     child of #splitsArea here, and #splitsArea is a fixed-height,
-     overflow:hidden flex column (see above). Nothing inside #weightsArea
-     was a scroll boundary, so opening Edit - which reveals
-     #mobileWeightsBulkBar below the matrix - pushed that bar past the
-     clipped bottom edge with no way to reach it. Make #weightsArea itself
-     the scroller in the remaining budget: the app dock stays fixed, the
-     scroll area already ends above it (.blockBody is sized short of the
-     dock), and the matrix keeps its own size. scroll-padding-bottom keeps
-     a focused Weight/Height input clear of the dock when the mobile
-     keyboard scrolls it into view. Summary view has little content and
-     simply doesn't overflow, so this is inert until Edit is open. */
-  #splitsBlock.mobile-active #splitsArea > #weightsArea{
-    flex:1 1 0;
-    min-height:0;
-    overflow:hidden auto;
-    overscroll-behavior:contain;
-    -webkit-overflow-scrolling:touch;
-    scroll-padding-bottom:16px;
+  /* At genuinely narrow phone widths the four actions intentionally become
+     two equal columns, rather than leaving a single wrapped final button. */
+  @media (max-width:560px){
+    #splitsArea .splitsEditRowSecondary{ grid-template-columns:repeat(2,minmax(0,1fr)); }
   }
 
   /* Semantic-button migration: Recipe's edit controls. One primary commit,

@@ -140,8 +140,8 @@ test("Undo/Redo are no longer part of the pill's gradient/hover/disabled/divider
   assert.doesNotMatch(styles, /\.recipeEditHistory > \.recipeHistoryAction:not\(:last-child\)/);
 });
 
-test("the mobile Redo-hiding rule is repointed to a bare #recipeRedo, since .recipeEditHistory is no longer a descendant of .splitsEditRowSecondary", () => {
-  assert.match(styles, /#splitsArea #recipeRedo\{\s*\n\s*display:none;\s*\n\s*\}/);
+test("the mobile history group is hidden as a whole, omitting both Undo and Redo without changing desktop/tablet history", () => {
+  assert.match(styles, /#splitsArea \.recipeEditHistory\{\s*\n\s*display:none;\s*\n\s*\}/);
   assert.doesNotMatch(styles, /#splitsArea \.splitsEditRowSecondary #recipeRedo/);
 });
 

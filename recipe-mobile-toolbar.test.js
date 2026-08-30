@@ -140,40 +140,19 @@ test("the cluster is pulled left of the Edit/Done pencil with order:-1", () => {
 });
 
 /* ============================================================
- *   Regression: Undo stranded alone between the fields row and the
- *   toolbar row once .recipeEditHistory moved out from inside
- *   .splitsEditRowSecondary (for the desktop pill merge)
+ *   Mobile Recipe toolbar: history is omitted and four structural actions
+ *   use a deliberate grid rather than accidental flex wrapping.
  * ============================================================ */
 
-test("on phone, Undo and the Clear selection/Empty cells/Reset Recipe/Rearrange toolbar share one flex-wrapped row instead of Undo sitting alone on its own line", () => {
-  // #splitsBulkBar's three children (in DOM order: .splitsEditRowPrimary,
-  // .recipeEditHistory, .splitsEditRowSecondary) are siblings, not nested -
-  // .recipeEditHistory stopped being a descendant of .splitsEditRowSecondary
-  // when Undo/Redo were pulled out for the desktop pill merge. A `display:
-  // block` parent stacks every child on its own line regardless of that
-  // history, which is exactly what stranded Undo alone between the fields
-  // row and the toolbar row. display:flex + flex-wrap here, with Primary
-  // forced to its own full-width line (flex:1 1 100%), lets Undo
-  // (.recipeEditHistory's own flex:0 0 auto, styles.css base rule) and the
-  // toolbar (flex:1 1 auto) flow onto the shared row after it.
+test("on phone, Undo/Redo are omitted and Clear selection/Empty cells/Reset Recipe/Rearrange form a deliberate grid", () => {
   const start = styles.indexOf("@media (max-width:700px){");
   assert.notEqual(start, -1);
-  const barStart = styles.indexOf("#splitsArea > .splitsBulkBar{", start);
-  const barRule = styles.slice(barStart, styles.indexOf("}", barStart) + 1);
-  assert.match(barRule, /display:flex;/);
-  assert.match(barRule, /flex-wrap:wrap;/);
-  assert.doesNotMatch(barRule, /display:block;/);
-
-  const primaryStart = styles.indexOf("#splitsArea .splitsEditRowPrimary{", start);
-  const primaryRule = styles.slice(primaryStart, styles.indexOf("}", primaryStart) + 1);
-  assert.match(primaryRule, /flex:1 1 100%;/, "expected Primary to force its own full-width line, pushing Undo and the toolbar onto the next one together");
-
   const secondaryStart = styles.indexOf("#splitsArea .splitsEditRowSecondary{", start);
   const secondaryRule = styles.slice(secondaryStart, styles.indexOf("}", secondaryStart) + 1);
-  assert.match(secondaryRule, /flex:1 1 auto;/);
-  // The old margin-top/padding-top divider assumed this row always started
-  // below Undo on its own line - no longer true once they can share one.
-  assert.doesNotMatch(secondaryRule, /margin-top:8px|padding-top:8px/);
+  assert.match(secondaryRule, /grid-template-columns:repeat\(4,minmax\(0,1fr\)\);/);
+  assert.match(styles, /#splitsArea \.recipeEditHistory\{\s*\n\s*display:none;\s*\n\s*\}/);
+  assert.match(styles, /@media \(max-width:560px\)\{\s*\n\s*#splitsArea \.splitsEditRowSecondary\{ grid-template-columns:repeat\(2,minmax\(0,1fr\)\); \}/);
+  assert.match(styles, /#splitsArea \.splitsEditRowSecondary > \.splitsBulkActions\{\s*\n\s*display:contents;/);
 });
 
 /* ============================================================
@@ -202,18 +181,13 @@ test("phone never fixes a height to solve the overlap - no max-height/height on 
   assert.doesNotMatch(barRule, /(?:^|[^-])height:|max-height:/, "no fixed/max height - the row should size to its own content");
 });
 
-test("only .splitsMobileLayerLayout (the matrix, which has its own internal scroll) is left shrinkable in the phone column - the toolbar and action tray both opt out", () => {
+test("phone Recipe matrices stay in document flow instead of becoming a shrinkable internal scroll region", () => {
   const start = styles.indexOf("@media (max-width:700px){");
-  const columnStart = styles.indexOf("#splitsBlock.mobile-active #splitsArea{", start);
-  assert.notEqual(columnStart, -1);
-  const columnRule = styles.slice(columnStart, styles.indexOf("}", columnStart) + 1);
-  assert.match(columnRule, /flex-direction:column;/);
-  const matrixStart = styles.indexOf("#splitsBlock.mobile-active #splitsArea > .splitsMobileLayerLayout{", start);
-  const matrixRule = styles.slice(matrixStart, styles.indexOf("}", matrixStart) + 1);
-  assert.match(matrixRule, /flex:0 1 auto;/, "expected the matrix to remain the one shrinkable child");
-  const trayStart = styles.indexOf("#splitsBlock.mobile-active #splitsArea > .mobileRecipeActionTray{", start);
-  const trayRule = styles.slice(trayStart, styles.indexOf("}", trayStart) + 1);
-  assert.match(trayRule, /flex:0 0 auto;/);
+  const blockEnd = styles.indexOf("\n}\n\n@media (max-width: 720px)", start);
+  const block = styles.slice(start, blockEnd);
+  assert.doesNotMatch(block, /#splitsBlock\.mobile-active #splitsArea\{[^}]*flex-direction:column/);
+  assert.doesNotMatch(block, /#splitsBlock\.mobile-active \.splitsMobileLayerLayout \.splitsMatrixScroll\{[^}]*overflow-y:\s*auto/);
+  assert.match(block, /\.splitsMatrixScroll\{\s*\n\s*height:auto;\s*\n\s*min-height:auto;[\s\S]*?overflow:visible;/);
 });
 
 test("Clear selection/Empty cells/Rearrange get a faint theme-tinted border and a whisper of background on phone, not desktop/tablet's stronger tinted-surface fill", () => {
