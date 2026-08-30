@@ -62,6 +62,24 @@ test("mobile bulk entry comes with Edit view and can apply weight and height",()
   assert.match(styles,/#weightsArea\[data-mobile-bulk-mode="true"\] \.mobileWeightCell\.selected::after/);
 });
 
+test("mobile Weight editing uses Recipe's compact above-matrix pattern and keeps its selection count with the matrix",()=>{
+  const mobile = functionBody("renderMobileWeightsArea");
+  assert.match(mobile,/class="mobileWeightsBulkEditRow"/);
+  assert.match(mobile,/class="mobileWeightsBulkToolbar"/);
+  assert.match(mobile,/area\.append\(bulkBar, matrix, selectionHint\);/);
+  assert.match(mobile,/TAP a hopper to edit · 0 selected/);
+  assert.match(mobile,/selectionHint\.textContent = `TAP a hopper to edit · \$\{selected\.size\} selected`;/);
+  assert.match(styles,/\.mobileWeightsBulkEditRow\{display:grid;grid-template-columns:minmax\(0,1fr\) auto/);
+  assert.match(styles,/\.mobileWeightsBulkToolbar button\{[\s\S]*?width:40px;/);
+});
+
+test("mobile cells omit Smart Hopper geometry when Smart Hoppers is off",()=>{
+  const mobile = functionBody("renderMobileWeightsArea");
+  assert.match(mobile,/area\.dataset\.smartHoppers = String\(state\.smartHoppersEnabled\);/);
+  assert.match(mobile,/\$\{state\.smartHoppersEnabled \? geometrySummaryMarkup : ""\}/);
+  assert.match(styles,/#weightsArea\[data-smart-hoppers="false"\]\[data-mobile-weight-view\] \.mobileWeightVisualReadout/);
+});
+
 test("Smart capacity replaces only the mobile Summary weight display and rounds visually",()=>{
   const refresh = functionBody("refreshSmartHopperState");
   assert.match(refresh,/mobileSummaryWeightId\(L\.name, hi\)/);

@@ -2394,6 +2394,10 @@
       let bulkMode = false;
       let visualMode = true;
       const geometryMode = currentSmartHopperGeometryMode();
+      // Keep the compact readout honest: geometry is an editing/display
+      // affordance of Smart Hoppers, not an empty second measurement when
+      // operators are working with manual weights.
+      area.dataset.smartHoppers = String(state.smartHoppersEnabled);
 
       const controls = document.createElement("div");
       controls.className = "mobileWeightsControls";
@@ -2491,7 +2495,7 @@
               ? `<b id="${mobileSummaryHeightId(L.name, hi)}"><span>${clampNum(hopper.usableHeight)}</span><small>in</small></b>`
               : "";
           visualReadout.innerHTML = `
-            <span class="mobileWeightVisualValues"><b id="${mobileSummaryWeightId(L.name, hi)}" class="mobileWeightSummaryWeight"><span>${clampNum(hopper.weight)}</span><small>lb</small></b>${geometrySummaryMarkup}</span>`;
+            <span class="mobileWeightVisualValues"><b id="${mobileSummaryWeightId(L.name, hi)}" class="mobileWeightSummaryWeight"><span>${clampNum(hopper.weight)}</span><small>lb</small></b>${state.smartHoppersEnabled ? geometrySummaryMarkup : ""}</span>`;
           const summaryWeight = visualReadout.querySelector(".mobileWeightSummaryWeight");
           const makeValueField = (shortLabel, value, ariaLabel, onValue)=>{
             const wrap = document.createElement("label");
@@ -2563,8 +2567,6 @@
         }
         matrix.appendChild(column);
       });
-      area.appendChild(matrix);
-
       // Receiver weight profiles is now a single icon-only trigger in the
       // tab-row header cluster (#recipeHeaderActions), beside the
       // Summary/Edit pencil - not a full-width bar below the matrix. It
@@ -2589,16 +2591,27 @@
 
       const bulkBar = document.createElement("div");
       bulkBar.id = "mobileWeightsBulkBar";
-      bulkBar.className = "mobileWeightsBulkBar";
+      bulkBar.className = `mobileWeightsBulkBar${state.smartHoppersEnabled && geometryMode !== null ? " has-geometry" : ""}`;
       bulkBar.hidden = true;
       bulkBar.innerHTML = `
-        <label><span>Weight</span><input id="mobileBulkWeight" type="text" inputmode="decimal" placeholder="No change" /></label>
-        ${state.smartHoppersEnabled && geometryMode === "volume" ? '<label><span>Volume</span><input id="mobileBulkHeight" type="text" inputmode="decimal" placeholder="No change" /></label>' : ""}
-        ${state.smartHoppersEnabled && geometryMode === "cylindrical" ? '<label><span>Height</span><input id="mobileBulkHeight" type="text" inputmode="decimal" placeholder="No change" /></label>' : ""}
-        <div class="mobileWeightsBulkActions"><small id="mobileWeightSelectionStatus" role="status">No hoppers selected</small><button id="applyMobileBulkWeights" type="button" disabled>Apply</button></div>
-        <div class="mobileWeightsBulkTextActions"><button id="clearMobileWeightSelection" type="button">Clear</button></div>
+        <div class="mobileWeightsBulkEditRow">
+          <label><span>Weight</span><input id="mobileBulkWeight" type="text" inputmode="decimal" placeholder="No change" /></label>
+          ${state.smartHoppersEnabled && geometryMode === "volume" ? '<label><span>Volume</span><input id="mobileBulkHeight" type="text" inputmode="decimal" placeholder="No change" /></label>' : ""}
+          ${state.smartHoppersEnabled && geometryMode === "cylindrical" ? '<label><span>Height</span><input id="mobileBulkHeight" type="text" inputmode="decimal" placeholder="No change" /></label>' : ""}
+          <button id="applyMobileBulkWeights" type="button" data-button-kind="action" data-button-variant="primary" data-button-size="small" disabled>Apply</button>
+        </div>
+        <div class="mobileWeightsBulkToolbar" role="group" aria-label="Weight editing actions">
+          <button id="clearMobileWeightSelection" type="button" data-button-kind="icon" data-button-size="small" aria-label="Clear selection" title="Clear selection"><svg class="recipeEditActionIcon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="11" height="11" rx="1"/><path d="m14 14 6 6m0-6-6 6"/></svg></button>
+        </div>
+        <span id="mobileWeightSelectionStatus" class="srOnly" role="status">No hoppers selected</span>
       `;
-      area.appendChild(bulkBar);
+      const selectionHint = document.createElement("div");
+      selectionHint.className = "mobileWeightsSelectionHint";
+      selectionHint.setAttribute("aria-live", "polite");
+      selectionHint.textContent = "TAP a hopper to edit · 0 selected";
+      // Edit controls sit in the same above-matrix slot as Current/Next.
+      // The understated count belongs with the matrix, not in that toolbar.
+      area.append(bulkBar, matrix, selectionHint);
 
       const applyButton = bulkBar.querySelector("#applyMobileBulkWeights");
       const selectionStatus = bulkBar.querySelector("#mobileWeightSelectionStatus");
@@ -2617,6 +2630,7 @@
         const valuesAreValid = optionalInputs.every(input=>!input.value.trim() || validation.validateNumber(input.value, { min:0 }).valid);
         applyButton.disabled = selected.size === 0 || !hasValue || !valuesAreValid;
         selectionStatus.textContent = message || (selected.size ? `${selected.size} selected` : "No hoppers selected");
+        selectionHint.textContent = `TAP a hopper to edit · ${selected.size} selected`;
       }
 
       function setMobileWeightBulkMode(enabled){

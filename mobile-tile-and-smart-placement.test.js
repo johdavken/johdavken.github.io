@@ -44,7 +44,7 @@ test("on mobile Recipe Setup, the Smart badge follows the resin input rather tha
 });
 
 test("mobile weights keep the grid compact and open receiver profiles in a shared sheet", () => {
-  assert.match(app, /area\.appendChild\(matrix\);/);
+  assert.match(app, /area\.append\(bulkBar, matrix, selectionHint\);/);
   assert.match(app, /mobileWeightProfilesButton/);
   assert.match(app, /ensureMobileWeightProfilesSheet\(profilesAction\)/);
   assert.match(styles, /#lineSetupBlock #setupWeightProfilesBlock\{display:none!important\}/);
