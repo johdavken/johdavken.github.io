@@ -77,7 +77,7 @@ test("mobile cells omit Smart Hopper geometry when Smart Hoppers is off",()=>{
   const mobile = functionBody("renderMobileWeightsArea");
   assert.match(mobile,/area\.dataset\.smartHoppers = String\(state\.smartHoppersEnabled\);/);
   assert.match(mobile,/\$\{state\.smartHoppersEnabled \? geometrySummaryMarkup : ""\}/);
-  assert.match(styles,/#weightsArea\[data-smart-hoppers="false"\]\[data-mobile-weight-view\] \.mobileWeightVisualReadout/);
+  assert.match(styles,/#weightsArea\[data-smart-hoppers="false"\]\[data-mobile-weight-view\] \.mobileWeightVisualReadout\{display:grid;grid-template-columns:minmax\(0,1fr\)/);
 });
 
 test("Smart capacity replaces only the mobile Summary weight display and rounds visually",()=>{

@@ -10639,7 +10639,7 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
   /* With Smart Hoppers off a hopper has one operator-facing value. Keep that
      reading centered in the compact cell rather than leaving a blank line
      where geometry would have appeared. */
-  #weightsArea[data-smart-hoppers="false"][data-mobile-weight-view] .mobileWeightVisualReadout{display:grid;align-items:center;min-height:22px;margin-top:5px}
+  #weightsArea[data-smart-hoppers="false"][data-mobile-weight-view] .mobileWeightVisualReadout{display:grid;grid-template-columns:minmax(0,1fr);align-items:center;min-height:22px;margin-top:5px}
   #weightsArea[data-smart-hoppers="false"] .mobileWeightVisualValues b:only-child{justify-content:center}
 
   /* Receiver weight profiles moved out of a bottom bar into the tab-row
