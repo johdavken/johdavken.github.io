@@ -25,6 +25,12 @@ test("Recipe history keeps Current and Next independent, bounded, and restores a
   assert.match(app,/function redoRecipeEdit\(\)\{[\s\S]*?history\.undo\.push\(snapshotRecipeEdit\(\)\);[\s\S]*?applyRecipeEditSnapshot\(next\);/);
 });
 
+test("recipe replacement drops only the history for the document being replaced",()=>{
+  assert.match(app,/function discardRecipeEditHistory\(page=recipeEditHistoryKey\(\)\)\{[\s\S]*?history\.undo\.length=0;[\s\S]*?history\.redo\.length=0;/);
+  assert.match(app,/state\.resinLots=rekeyLotMap\(lotByResin\);\s*discardRecipeEditHistory\("current"\);/);
+  assert.match(app,/state\.nextRecipeLots=rekeyLotMap\(lotByResin\);\s*discardRecipeEditHistory\("next"\);/);
+});
+
 test("Edit replaces the selected-hopper count with compact, accessible undo and redo icons",()=>{
   const body=editor();
   // .recipeEditHistory sits between the values/Apply row and the pill row

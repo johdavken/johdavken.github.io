@@ -204,8 +204,8 @@ test("the Edit panel is two rows above the grid: values/apply, then selection an
   // over" - so Clear selection took its slot instead.
   assert.doesNotMatch(secondary, /id="selectAllSplits"/);
   assert.match(secondary, /id="clearSplitSelection"/);
-  assert.match(splitsArea, /<button id="clearSelectedCells"[^>]*data-button-variant="quiet"[^>]*disabled>Empty cells<\/button>/);
-  assert.match(splitsArea, /<button id="resetAllSplits"[^>]*data-button-variant="danger"[^>]*>Reset Recipe<\/button>/);
+  assert.match(splitsArea, /<button id="clearSelectedCells"[^>]*data-button-variant="quiet"[^>]*aria-label="Empty selected cells"[^>]*disabled>[\s\S]*?<span>Empty cells<\/span><\/button>/);
+  assert.match(splitsArea, /<button id="resetAllSplits"[^>]*data-button-variant="danger"[^>]*aria-label="Reset recipe"[^>]*>[\s\S]*?<span>Reset Recipe<\/span><\/button>/);
   // Above the grid, not below it (the grid is order 0).
   assert.match(styles, /#splitsArea > \.splitsBulkBar\{ order: -1;/);
   // No numbered step captions on desktop - they remain in the mobile sheet.

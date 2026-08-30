@@ -16,6 +16,7 @@ test("mobile RT Sync has a compact status area and a distinct join prompt", () =
   assert.match(html, /JOIN RT SYNC/);
   assert.match(html, /Enter this workspace’s four-character link code\./);
   assert.match(html, /id="lineSyncRetryMobileLabel">Refresh now/);
+  assert.match(html, /id="lineSyncLeaveBtn" class="secondary actionRail" type="button">Leave RT Sync/);
 });
 
 test("mobile RT Sync status distinguishes healthy sync, pending changes, errors, and local-only devices", () => {
@@ -40,6 +41,10 @@ test("joining is disabled until a four-character code is valid and duplicate syn
 
 test("mobile styling is scoped so desktop RT Sync keeps its fuller interface", () => {
   assert.match(html, /id="lineSyncRetryMobileBtn" class="secondary actionRail"/);
+  assert.match(styles, /\.lineSyncPanel:not\(\.mobileHasLine\) \.lineSyncMobileLeave\{ display:none; \}/);
+  assert.match(styles, /\.lineSyncMobileLeave #lineSyncLeaveBtn\{width:100%;/);
+  assert.match(app, /lineSync\.leaveWorkspace\(\), "leave"/);
+  assert.match(app, /Local Resin\.Tools data will remain\./);
   assert.match(html, /id="desktopLineSyncMain" class="desktopSyncOnly/);
   assert.match(styles, /@media \(max-width: 900px\), \(min-width: 901px\) and \(pointer: coarse\)\{[\s\S]*\.lineSyncPanel \.mobileLineSyncStatus/s);
   assert.match(styles, /\.lineSyncMobileRefresh #lineSyncRetryMobileBtn\{width:100%;/);

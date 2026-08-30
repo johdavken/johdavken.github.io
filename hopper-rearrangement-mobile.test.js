@@ -78,6 +78,28 @@ test("entering rearrange mode no longer bails out at mobile widths", () => {
   assert.match(block, /hopperRearrangement=\{active:true,baseline:window\.PolynHopperRearrangement\.snapshot\(recipeLayers\(\)\),undo:\[\],tapSource:null\}/);
 });
 
+test("the Rearrange control itself reports the mode via aria-pressed and .active, not only via the Cancel/Done row", () => {
+  const buttonStart = app.indexOf("const rearrangeButton=");
+  const block = app.slice(buttonStart, app.indexOf("function clearTapSourceHighlight", buttonStart));
+  assert.match(block, /rearrangeButton\.classList\.toggle\("active", !!hopperRearrangement\?\.active\);/);
+  assert.match(block, /rearrangeButton\.setAttribute\("aria-pressed", String\(!!hopperRearrangement\?\.active\)\);/);
+  assert.match(block, /rearrangeButton\.addEventListener\("click",\(\)=>\{\s*\n\s*if\(hopperRearrangement\?\.active\)\{\s*\n\s*finishRearrangement\(false\);/);
+});
+
+test("phone Rearrange splits the glyph into two arrows so they can travel in opposition while the mode is on", () => {
+  assert.match(app, /<g class="rearrangeArrowDown"><path d="M8 4v16m0 0-3-3m3 3 3-3"\/><\/g>/);
+  assert.match(app, /<g class="rearrangeArrowUp"><path d="M16 20V4m0 0-3 3m3-3 3 3"\/><\/g>/);
+  const start = styles.indexOf("@media (max-width:700px){");
+  const compact = styles.slice(start, styles.indexOf("\n}\n\n@media (max-width: 720px)", start));
+  assert.match(compact, /\.rearrangeArrowDown[\s\S]*?animation:rearrangeOpposingDown 1\.8s ease-in-out infinite/);
+  assert.match(compact, /\.rearrangeArrowUp[\s\S]*?animation:rearrangeOpposingUp 1\.8s ease-in-out infinite/);
+  // The opposing-travel loop is inside the phone block, not the >=701px pill
+  // (that pill still uses the 55% fill latch — see recipe-edit-toolbar-pill.test.js).
+  const pillStart = styles.indexOf("#splitsArea #splitsBulkBar .splitsEditRowSecondary{");
+  const pill = styles.slice(pillStart, styles.indexOf("\n}\n\n@media (min-width: 901px)", pillStart));
+  assert.doesNotMatch(pill, /rearrangeOpposingDown|rearrangeArrowDown/);
+});
+
 // --- Tap-to-select-then-tap-to-move, alongside (not replacing) drag -------
 
 test("each rearrange-mode cell keeps its drag handlers and also gets a tap/click handler", () => {

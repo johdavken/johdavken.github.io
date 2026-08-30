@@ -675,6 +675,7 @@
       const result=window.PolynWorkspaceConfigurationPayloads?.applyRecipePayload(state,payload);
       if(!result?.ok) return { ok:false, message:result?.errors?.[0] };
       state.resinLots=rekeyLotMap(lotByResin);
+      discardRecipeEditHistory("current");
       syncLineTypeUI();
       renderWeightsArea(); renderSplitsArea(); validateAndCompute(); saveSession();
       notifyActiveJobMutation({immediate:true,kind:kind||"apply-recipe"});
@@ -684,6 +685,7 @@
     if(!stored) return { ok:false, message:"That recipe could not be read." };
     state.nextRecipe=stored;
     state.nextRecipeLots=rekeyLotMap(lotByResin);
+    discardRecipeEditHistory("next");
     // Rebuild the working copy from the plan we just stored rather than the
     // one on screen, or the grid would keep showing the recipe it replaced.
     nextRecipeWorking=null;
@@ -2046,6 +2048,11 @@
       // so a receiving device would show no sign a plan had appeared until the
       // operator happened to touch Recipe.
       syncPlannedRecipeIndicator();
+      // A session/remote payload replaces both editable recipe documents, so
+      // its arrival starts fresh histories rather than retaining stale local
+      // snapshots that could undo into the received recipes.
+      discardRecipeEditHistory("current");
+      discardRecipeEditHistory("next");
       state.prodResinLb = clampNum(payload.prodResinLb);
       state.scrapResinLb = clampNum(payload.scrapResinLb);
 
@@ -3648,6 +3655,19 @@
       document.querySelectorAll("#recipeUndo").forEach(button=>{ button.disabled=history.undo.length===0; });
       document.querySelectorAll("#recipeRedo").forEach(button=>{ button.disabled=history.redo.length===0; });
     }
+    // A scan/load replaces a whole document rather than editing the one the
+    // operator was working in. Do not leave snapshots from the displaced
+    // recipe available to undo into it. Reset Recipe is intentionally
+    // different: it records its before-state so the confirmed destructive
+    // edit can still be undone during this session.
+    function discardRecipeEditHistory(page=recipeEditHistoryKey()){
+      const history=recipeEditHistory[page];
+      if (!history) return;
+      history.undo.length=0;
+      history.redo.length=0;
+      if (recipeEditInputSnapshot?.page===page) recipeEditInputSnapshot=null;
+      if (page===recipeEditHistoryKey()) syncRecipeEditHistoryControls();
+    }
 
     /* The plan's own percentage totals, for the notification bell only (see
      * readNextRecipeFacts). The same two rules the current recipe is measured
@@ -3756,6 +3776,7 @@
       // that produced it - only Current's copy is replaced.
       state.resinLots = { ...(state.nextRecipeLots || {}) };
       // state.nextRecipe is untouched by applyRecipePayload - the plan stays.
+      discardRecipeEditHistory("current");
       syncLineTypeUI();
       renderWeightsArea(); renderSplitsArea(); validateAndCompute(); saveSession();
       notifyActiveJobMutation({ immediate:true, kind:"load-next-recipe" });
@@ -3801,6 +3822,7 @@
       // Scanned lots follow the resins they belong to, mirroring the way
       // promotion carries state.nextRecipeLots across into state.resinLots.
       state.nextRecipeLots = { ...(state.resinLots || {}) };
+      discardRecipeEditHistory("next");
       renderSplitsArea();
       // The operational recipe did not change; this only refreshes the bell's
       // view of the plan (attentionFacts.nextRecipe).
@@ -4073,9 +4095,13 @@
       // mobile primary-row slot and a separate desktop-only tab strip;
       // both collapsed into this one shared placement and style.
       rearrangeButton.className="bulkTextAction splitsRearrangeAction";
-      rearrangeButton.textContent=hopperRearrangement?.active?"Done Rearranging":"Rearrange";
+      rearrangeButton.classList.toggle("active", !!hopperRearrangement?.active);
+      rearrangeButton.innerHTML=`<svg class="recipeEditActionIcon" viewBox="0 0 24 24" aria-hidden="true"><g class="rearrangeArrowDown"><path d="M8 4v16m0 0-3-3m3 3 3-3"/></g><g class="rearrangeArrowUp"><path d="M16 20V4m0 0-3 3m3-3 3 3"/></g></svg><span>${hopperRearrangement?.active?"Done Rearranging":"Rearrange"}</span>`;
+      rearrangeButton.setAttribute("aria-label", hopperRearrangement?.active ? "Done rearranging recipe" : "Rearrange recipe");
+      rearrangeButton.title=hopperRearrangement?.active?"Done rearranging":"Rearrange recipe";
       rearrangeButton.disabled=!recipeLayers().some(L=>L.hoppers.some(h=>normName(h.resinName)||clampNum(h.pct)>0));
       rearrangeButton.setAttribute("aria-expanded", String(!!hopperRearrangement?.active));
+      rearrangeButton.setAttribute("aria-pressed", String(!!hopperRearrangement?.active));
       function finishRearrangement(cancelled=false){
         if(!hopperRearrangement?.active) return;
         const historyBefore=recipeRearrangementHistoryBefore;
@@ -4272,10 +4298,10 @@
         <div class="splitsEditRow splitsEditRowSecondary">
           <div class="splitsBulkActions">
             <div id="splitSelectionStatus" class="srOnly tiny splitsSelectionStatus" role="status" aria-live="polite">No hoppers selected</div>
-            <button id="clearSplitSelection" type="button" class="bulkTextAction" data-button-kind="action" data-button-variant="quiet" data-button-size="small">Clear selection</button>
+            <button id="clearSplitSelection" type="button" class="bulkTextAction" data-button-kind="action" data-button-variant="quiet" data-button-size="small" aria-label="Clear selection" title="Clear selection"><svg class="recipeEditActionIcon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="11" height="11" rx="1"/><path d="m14 14 6 6m0-6-6 6"/></svg><span>Clear selection</span></button>
           </div>
-          <button id="clearSelectedCells" type="button" class="bulkTextAction" data-button-kind="action" data-button-variant="quiet" data-button-size="small" disabled>Empty cells</button>
-          <button id="resetAllSplits" type="button" class="danger" data-button-kind="action" data-button-variant="danger" data-button-size="small">Reset Recipe</button>
+          <button id="clearSelectedCells" type="button" class="bulkTextAction" data-button-kind="action" data-button-variant="quiet" data-button-size="small" aria-label="Empty selected cells" title="Empty selected cells" disabled><svg class="recipeEditActionIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4zM9 4v16m6-16v16M4 9h16m-16 6h16"/><path d="m8 8 8 8m0-8-8 8"/></svg><span>Empty cells</span></button>
+          <button id="resetAllSplits" type="button" class="danger" data-button-kind="action" data-button-variant="danger" data-button-size="small" aria-label="Reset recipe" title="Reset recipe"><svg class="recipeEditActionIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0 1.2 4.2"/><path d="M20 4v7h-7"/></svg><span>Reset Recipe</span></button>
         </div>
       `;
 
@@ -5111,9 +5137,13 @@
       // Reset - every label here shortens to fit it without wrapping or
       // overflowing; mobile keeps every label in full since it never
       // joined this merged row.
-      if (resetButton) resetButton.textContent = compactMobileRecipe ? "Reset Recipe" : "Reset";
-      if (clearSelectionButton) clearSelectionButton.textContent = compactMobileRecipe ? "Clear selection" : "Clear";
-      if (clearCellsButton) clearCellsButton.textContent = compactMobileRecipe ? "Empty cells" : "Empty";
+      function setToolbarActionText(button,text){
+        const label=button?.querySelector("span");
+        if (label) label.textContent=text;
+      }
+      setToolbarActionText(resetButton, compactMobileRecipe ? "Reset Recipe" : "Reset");
+      setToolbarActionText(clearSelectionButton, compactMobileRecipe ? "Clear selection" : "Clear");
+      setToolbarActionText(clearCellsButton, compactMobileRecipe ? "Empty cells" : "Empty");
       const resinNameLabel = toolbar.querySelector('label[for="bulkResinName"] span');
       if (resinNameLabel) resinNameLabel.textContent = compactMobileRecipe ? "Resin name" : "Resin";
       const percentageLabel = toolbar.querySelector('label[for="bulkResinPct"] > span:first-child');
@@ -7579,6 +7609,8 @@
     ["lineSyncRetryBtn", "lineSyncRetryMobileBtn"].forEach(id=>{
       if ($(id)) $(id).disabled = lineSyncActionInFlight;
     });
+    const isWorkspaceOwner = (selected?.membership?.role || "") === "owner";
+    if ($("lineSyncLeaveBtn")) $("lineSyncLeaveBtn").disabled = lineSyncActionInFlight || !selected || !syncState.available || isWorkspaceOwner;
     updateLineSyncJoinAvailability(syncState);
   }
 
@@ -8190,6 +8222,11 @@
     , "refresh");
     $("lineSyncRetryBtn")?.addEventListener("click",reconnectRtSync);
     $("lineSyncRetryMobileBtn")?.addEventListener("click",reconnectRtSync);
+    $("lineSyncLeaveBtn")?.addEventListener("click",()=>{
+      if (confirm("Leave RT Sync on this device? Local Resin.Tools data will remain.")) {
+        void runLineSyncAction(()=>lineSync.leaveWorkspace(), "leave");
+      }
+    });
     // Register before initialization so an App Link delivered to an already
     // running activity cannot be missed. Cold- and warm-start URLs wait for
     // RT Sync readiness, then enter the same confirmation/join function used

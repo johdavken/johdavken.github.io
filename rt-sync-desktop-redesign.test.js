@@ -32,7 +32,8 @@ test("desktop recovery hides the dashboard until a line is connected and can rec
 });
 
 test("reconnect refreshes the existing assignment without leaving, removing, or reassigning it", () => {
-  const reconnect = app.slice(app.indexOf("const reconnectRtSync ="), app.indexOf("void lineSync.initialize()"));
+  const reconnectStart = app.indexOf("const reconnectRtSync =");
+  const reconnect = app.slice(reconnectStart, app.indexOf('    , "refresh");', reconnectStart));
   assert.match(reconnect, /lineSync\.refreshSelected\(\)/);
   assert.doesNotMatch(reconnect, /leaveWorkspace|removeMember|selectWorkspace/);
   const refresh = cloudSync.slice(cloudSync.indexOf("async function refreshSelected(){"), cloudSync.indexOf("function getWorkspaceConfigurationTransport(){"));

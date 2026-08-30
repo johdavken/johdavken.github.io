@@ -140,19 +140,64 @@ test("the cluster is pulled left of the Edit/Done pencil with order:-1", () => {
 });
 
 /* ============================================================
- *   Mobile Recipe toolbar: history is omitted and four structural actions
- *   use a deliberate grid rather than accidental flex wrapping.
+ *   Mobile Recipe toolbar: the shared history and structural actions flatten
+ *   into one six-control icon rail. It must not wrap on narrow phones.
  * ============================================================ */
 
-test("on phone, Undo/Redo are omitted and Clear selection/Empty cells/Reset Recipe/Rearrange form a deliberate grid", () => {
+test("on phone, Undo/Redo and the four Recipe actions form one compact icon toolbar", () => {
   const start = styles.indexOf("@media (max-width:700px){");
   assert.notEqual(start, -1);
-  const secondaryStart = styles.indexOf("#splitsArea .splitsEditRowSecondary{", start);
-  const secondaryRule = styles.slice(secondaryStart, styles.indexOf("}", secondaryStart) + 1);
-  assert.match(secondaryRule, /grid-template-columns:repeat\(4,minmax\(0,1fr\)\);/);
-  assert.match(styles, /#splitsArea \.recipeEditHistory\{\s*\n\s*display:none;\s*\n\s*\}/);
-  assert.match(styles, /@media \(max-width:560px\)\{\s*\n\s*#splitsArea \.splitsEditRowSecondary\{ grid-template-columns:repeat\(2,minmax\(0,1fr\)\); \}/);
-  assert.match(styles, /#splitsArea \.splitsEditRowSecondary > \.splitsBulkActions\{\s*\n\s*display:contents;/);
+  const compact = styles.slice(start, styles.indexOf("\n}\n\n@media (max-width: 720px)", start));
+  assert.match(compact, /#splitsArea > #splitsBulkBar \.recipeEditHistory,[\s\S]*?display:contents;/);
+  assert.match(compact, /#recipeUndo\{ order:1; \}[\s\S]*?#recipeRedo\{ order:2; \}[\s\S]*?#clearSplitSelection\{ order:3; \}[\s\S]*?#clearSelectedCells\{ order:4; \}[\s\S]*?\.splitsRearrangeAction\{ order:5; \}[\s\S]*?#resetAllSplits\{[\s\S]*?order:6;/);
+  assert.match(compact, /flex:0 0 40px;[\s\S]*?width:40px;[\s\S]*?height:40px;/);
+  assert.match(compact, /#resetAllSplits\{[\s\S]*?flex-basis:44px;[\s\S]*?border-left-color:/);
+  assert.match(compact, /\.recipeEditActionIcon\{ display:block; \}/);
+  assert.match(compact, /\.splitsEditRowSecondary button > span\{ display:none; \}/);
+
+  const editor = recipeEditor();
+  for (const [id, label] of [
+    ["recipeUndo", "Undo recipe change"],
+    ["recipeRedo", "Redo recipe change"],
+    ["clearSplitSelection", "Clear selection"],
+    ["clearSelectedCells", "Empty selected cells"],
+    ["resetAllSplits", "Reset recipe"]
+  ]) assert.match(editor, new RegExp(`id="${id}"[^>]*aria-label="${label}"[^>]*`));
+  assert.match(editor, /rearrangeButton\.setAttribute\("aria-label", hopperRearrangement\?\.active \? "Done rearranging recipe" : "Rearrange recipe"\);/);
+});
+
+test("Rearrange latches on the button itself while the mode is active - the Cancel/Done row below the matrix is not the only cue", () => {
+  const editor = recipeEditor();
+  assert.match(editor, /rearrangeButton\.classList\.toggle\("active", !!hopperRearrangement\?\.active\);/);
+  assert.match(editor, /rearrangeButton\.setAttribute\("aria-pressed", String\(!!hopperRearrangement\?\.active\)\);/);
+  // Two groups so the left/right arrows can travel independently. Same
+  // paths as the previous single-path glyph.
+  assert.match(editor, /<g class="rearrangeArrowDown"><path d="M8 4v16m0 0-3-3m3 3 3-3"\/><\/g><g class="rearrangeArrowUp"><path d="M16 20V4m0 0-3 3m3-3 3 3"\/><\/g>/);
+  // The existing Done-Rearranging label stays (visible on tablet/desktop);
+  // phone hides it with font-size:0, so motion has to carry the state.
+  assert.match(editor, /hopperRearrangement\?\.active\?"Done Rearranging":"Rearrange"/);
+
+  const start = styles.indexOf("@media (max-width:700px){");
+  const compact = styles.slice(start, styles.indexOf("\n}\n\n@media (max-width: 720px)", start));
+  assert.match(compact, /animation:rearrangeOpposingDown 1\.8s ease-in-out infinite/);
+  assert.match(compact, /animation:rearrangeOpposingUp 1\.8s ease-in-out infinite/);
+  assert.match(compact, /@keyframes rearrangeOpposingDown\{[\s\S]*?translateY\(-14%\)/);
+  assert.match(compact, /@keyframes rearrangeOpposingUp\{[\s\S]*?translateY\(14%\)/);
+  // Default active state is unfilled - motion is the on-cue, not a latch.
+  const reduceStart = compact.indexOf("@media (prefers-reduced-motion:reduce)");
+  assert.notEqual(reduceStart, -1);
+  const beforeReduce = compact.slice(0, reduceStart);
+  assert.match(beforeReduce, /:is\(\.splitsRearrangeAction\.active, \.splitsRearrangeAction\[aria-pressed="true"\]\)[\s\S]*?background:transparent;/);
+  assert.doesNotMatch(beforeReduce, /splitsRearrangeAction\.active[\s\S]{0,400}55%/);
+  // Without motion, the 55% fill comes back so the mode still reads as on.
+  const reduce = compact.slice(reduceStart);
+  assert.match(reduce, /animation:none/);
+  assert.match(reduce, /background:color-mix\(in srgb, var\(--recipe-pill-accent\) 55%, var\(--panel2\)\);/);
+  // Idle Clear/Empty/Rearrange stay the quieter 10% tint.
+  const quietStart = compact.indexOf("#splitsArea .splitsEditRowSecondary .bulkTextAction{");
+  const quietRule = compact.slice(quietStart, compact.indexOf("}", quietStart) + 1);
+  assert.match(quietRule, /background:color-mix\(in srgb, var\(--recipe-pill-accent\) 10%, transparent\);/);
+  assert.doesNotMatch(quietRule, /55%/);
 });
 
 /* ============================================================

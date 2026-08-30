@@ -21,7 +21,7 @@ function functionBody(name){
 // mutually-exclusive panel group - it's a small popup, not a dropped panel.
 
 test("Rearrange Hoppers was renamed to just Rearrange", () => {
-  assert.match(app, /rearrangeButton\.textContent=hopperRearrangement\?\.active\?"Done Rearranging":"Rearrange";/);
+  assert.match(app, /rearrangeButton\.innerHTML=`<svg class="recipeEditActionIcon"[\s\S]*?<span>\$\{hopperRearrangement\?\.active\?"Done Rearranging":"Rearrange"\}<\/span>`;/);
   assert.doesNotMatch(app, /"Rearrange Hoppers"/);
 });
 

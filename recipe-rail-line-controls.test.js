@@ -83,6 +83,10 @@ test("Changeover and Output are large, left/right-aligned readouts in a centered
   assert.match(styles, /\.mobileProductionControls \.gaugeTimeValue,\n  \.mobileProductionControls \.mobileLineRateReadout\{[\s\S]*?font-size:clamp\(24px,7\.5vw,32px\);/);
 });
 
+test("the mobile changeover time keeps its AM/PM suffix on the same line", () => {
+  assert.match(styles, /\.mobileProductionControls \.gaugeTimeValue > span\{white-space:nowrap\}/);
+});
+
 test("Output (a <button>) matches Changeover time (a <span>) in weight, not just declared font-size/font-weight - a <button>'s own UA-default font-family renders the identical font-weight thinner than the app's font stack does", () => {
   const block = styles.slice(
     styles.indexOf(".mobileProductionControls .gaugeTimeValue,\n  .mobileProductionControls .mobileLineRateReadout{"),
