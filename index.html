@@ -438,14 +438,11 @@
       <button type="button" id="workspaceOutputStatus" class="mono statusReadout" aria-label="Edit output">Not set</button>
       <input type="number" id="workspaceOutputInput" class="statusEditInput" min="0" step="any" inputmode="decimal" aria-label="Output, pounds per hour" hidden>
     </div>
-    <div class="workspaceStatusItem">
-      <span>Tracked</span>
-      <strong id="workspaceTrackedStatus" class="mono">0</strong>
-    </div>
     <div class="workspaceStatusItem lineSyncStatusItem">
       <span>RT Sync</span>
       <strong id="lineSyncTopStatus">Local only</strong>
     </div>
+    <div id="workspaceProductionEstimateStatus" class="workspaceStatusItem productionEstimateStatus" aria-live="polite" hidden></div>
     <details class="statusScanShortcut" id="statusScanShortcut">
       <summary aria-label="Scan a recipe source" title="Scan a recipe source">
         <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">

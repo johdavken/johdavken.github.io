@@ -45,6 +45,15 @@ test("the estimate renders on the mobile home row above Workspace & support, not
   assert.match(html, /id="workspaceProductionEstimate"/);
 });
 
+test("desktop replaces the tracked count with the same changeover estimate immediately after RT Sync", () => {
+  assert.doesNotMatch(html, /id="workspaceTrackedStatus"/);
+  assert.match(html, /lineSyncStatusItem[\s\S]*?workspaceProductionEstimateStatus/);
+  assert.match(renderProductionEstimateHome, /const desktopHost = \$\("workspaceProductionEstimateStatus"\);/);
+  assert.match(renderProductionEstimateHome, /if \(isDesktopLayout\(\)\)\{/);
+  assert.match(renderProductionEstimateHome, /desktopHost\.textContent = `Est\. \$\{current\.sets\}/);
+  assert.match(css, /\.productionEstimateStatus\{[^}]*color:var\(--muted\)/);
+});
+
 test("reloading or returning to the foreground recalculates from the saved timestamp", () => {
   assert.match(app, /document\.addEventListener\("visibilitychange", \(\)=>\{\s*if \(document\.visibilityState === "visible"\) renderResinCalculator\(\);/);
   assert.match(app, /window\.addEventListener\("pageshow", \(\)=>renderResinCalculator\(\)\);/);

@@ -2902,7 +2902,11 @@
         // Receiver Hopper Weights keep working normally either way.
         ? '<div class="desktopWeightsSmartControl unavailable"><div><strong>Smart Hoppers</strong><small>Join a workspace to enable Smart Hoppers.</small></div></div>'
         : `<div class="desktopWeightsSmartControl"><div><strong>Smart Hoppers</strong><small>Resin-specific calculated capacity</small></div><span class="desktopSmartHopperState" data-toggle-state-for="smartHoppersToggle" aria-live="polite">Disabled</span><div id="smartHoppersToggle" class="toggle" role="switch" tabindex="0" title="Smart Hoppers: compute weight from ${geometryMode === "volume" ? "hopper usable volume" : "hopper geometry"} and resin density when known"></div></div>`;
-      const desktopCircumferenceMarkup = geometryMode === "cylindrical"
+      // Match the mobile weight panel: circumference is part of the Smart
+      // Hopper workflow, not a manual-weight field. Keeping it out of the
+      // DOM while Smart Hoppers is off also leaves the desktop controls and
+      // matrix strictly weight-only.
+      const desktopCircumferenceMarkup = state.smartHoppersEnabled && geometryMode === "cylindrical"
         ? `<label class="desktopSharedCircumference"><span>Circumference</span><span class="weightsInputWithUnit"><input id="desktopSharedCircumference" type="text" inputmode="decimal" placeholder="0" value="${clampNum(state.hopperCircumference)}" /><span>in</span></span></label>`
         : "";
       desktopControls.innerHTML = `
@@ -3005,9 +3009,9 @@
           visualReadout.className = "desktopWeightVisualReadout";
           const initialSmartWeight = smartHopperComputation(L.hoppers[hi]);
           const initialSummaryWeight = initialSmartWeight ? Math.round(initialSmartWeight.value) : clampNum(L.hoppers[hi].weight);
-          const desktopGeometrySummaryMarkup = geometryMode === "volume"
+          const desktopGeometrySummaryMarkup = state.smartHoppersEnabled && geometryMode === "volume"
             ? `<b id="${desktopSummaryHeightId(L.name, hi)}"><span>${clampNum(L.hoppers[hi].usableGallons)}</span><small>gal</small></b>`
-            : geometryMode === "cylindrical"
+            : state.smartHoppersEnabled && geometryMode === "cylindrical"
               ? `<b id="${desktopSummaryHeightId(L.name, hi)}"><span>${clampNum(L.hoppers[hi].usableHeight)}</span><small>in</small></b>`
               : "";
           const desktopGeometryEditMarkup = state.smartHoppersEnabled && geometryMode === "volume"
@@ -5721,7 +5725,36 @@
 
     function renderProductionEstimateHome(){
       const host = $("workspaceProductionEstimate");
-      if (!host || isDesktopLayout() || document.body.dataset.mobileWorkspace !== "home"){
+      const desktopHost = $("workspaceProductionEstimateStatus");
+      if (isDesktopLayout()){
+        host && (host.hidden = true);
+        host && (host.textContent = "");
+        const estimate = readProductionEstimate();
+        const current = calculateCurrentProductionEstimate(estimate, Date.now());
+        if (!current){
+          if (estimate) clearProductionEstimate();
+          if (desktopHost){
+            desktopHost.hidden = true;
+            desktopHost.textContent = "";
+          }
+          return;
+        }
+
+        if (desktopHost){
+          desktopHost.textContent = `Est. ${current.sets} ${current.sets === 1 ? "set" : "sets"} · ${current.remainingRolls} ${current.remainingRolls === 1 ? "roll" : "rolls"} remaining`;
+          desktopHost.hidden = false;
+        }
+        if (!productionEstimateTimer){
+          productionEstimateTimer = setInterval(()=>renderProductionEstimateHome(), 60000);
+        }
+        return;
+      }
+
+      if (desktopHost){
+        desktopHost.hidden = true;
+        desktopHost.textContent = "";
+      }
+      if (!host || document.body.dataset.mobileWorkspace !== "home"){
         host && (host.hidden = true);
         host && (host.textContent = "");
         if (productionEstimateTimer){
@@ -5944,9 +5977,7 @@
       if (timelineStatus){
         const trackedCount = sum(state.layers.map(L=>L.hoppers.filter(h=>h.track).length));
         timelineStatus.textContent = `${trackedCount} ${trackedCount === 1 ? "resin" : "resins"} tracked`;
-        const trackedStatus = $("workspaceTrackedStatus");
-        if (trackedStatus) trackedStatus.textContent = String(trackedCount);
-    }
+      }
   }
 
   function validateAndCompute({ sync = false, immediate = false, kind = "edit" } = {}){

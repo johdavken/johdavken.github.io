@@ -6426,6 +6426,8 @@ body:is([data-theme="industrial-slate-dark"],[data-theme="gruvbox-dark"]) .resul
 .productionEstimate{margin:8px 0 0;color:var(--muted);font-size:var(--font-small);font-weight:700;line-height:1.4;letter-spacing:0.01em}
 .productionEstimateHome{display:block;margin:0 12px 4px;padding:0;color:var(--muted);font-size:var(--font-small);font-weight:700;line-height:1.4;letter-spacing:0.01em}
 .productionEstimateHome[hidden]{display:none}
+.productionEstimateStatus{color:var(--muted);font-size:var(--font-small);font-weight:700;letter-spacing:0.01em}
+.productionEstimateStatus[hidden]{display:none}
 .productionSummaryMaterialsIntro{display:grid;gap:1px;margin:1px 0 0;color:var(--muted);font-size:var(--font-small);line-height:1.25}
 .productionSummaryMaterialsIntro strong{color:var(--title);font-size:var(--font-small);font-weight:900}
 /* width+min-width:0 pins the row to its grid track instead of letting it

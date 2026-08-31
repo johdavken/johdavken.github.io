@@ -39,9 +39,9 @@ test("mobile: with no identified line, the Smart Hoppers control shows the same 
   assert.match(body, /'<strong>Smart Hoppers<\/strong><small>Join a workspace to enable Smart Hoppers\.<\/small>'/);
 });
 
-test("desktop: circumference is omitted entirely (not just hidden) when geometryMode is not cylindrical", () => {
+test("desktop: circumference is omitted entirely unless Smart Hoppers is enabled for a cylindrical line", () => {
   const body = functionBody("renderWeightsArea");
-  assert.match(body, /const desktopCircumferenceMarkup = geometryMode === "cylindrical"/);
+  assert.match(body, /const desktopCircumferenceMarkup = state\.smartHoppersEnabled && geometryMode === "cylindrical"/);
   assert.match(body, /circumferenceInput\?\.addEventListener/, "the listener attach must be optional-chained since the input won't exist outside cylindrical mode");
 });
 
@@ -50,9 +50,9 @@ test("mobile: the circumference field is only built in cylindrical mode", () => 
   assert.match(body, /if \(state\.smartHoppersEnabled && geometryMode === "cylindrical"\)\{/);
 });
 
-test("desktop: no geometry value renders in any hopper cell when geometryMode is null - only weight in lb", () => {
+test("desktop: no geometry value renders in any hopper cell until Smart Hoppers is enabled - only weight in lb", () => {
   const body = functionBody("renderWeightsArea");
-  assert.match(body, /const desktopGeometrySummaryMarkup = geometryMode === "volume"[\s\S]*?: "";/);
+  assert.match(body, /const desktopGeometrySummaryMarkup = state\.smartHoppersEnabled && geometryMode === "volume"[\s\S]*?: "";/);
   assert.match(body, /const desktopGeometryEditMarkup = state\.smartHoppersEnabled && geometryMode === "volume"[\s\S]*?: "";/);
 });
 
