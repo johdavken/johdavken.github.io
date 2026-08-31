@@ -18,7 +18,8 @@ test("wizard is exposed only by the calculator affordance beside Changeover time
   assert.match(html, /<label for="changeoverTime">Changeover time<\/label>\s*<button[^>]+id="changeoverWizardTrigger"/);
   assert.doesNotMatch(html, /changeoverLabelRow/);
   assert.match(css, /\.changeoverWizardTrigger\{display:none\}/);
-  assert.match(css, /@media \(width <= 700px\), \(min-width:701px\) and \(pointer:coarse\)[\s\S]*?\.changeoverWizardTrigger\{display:grid\}/);
+  assert.match(css, /body\[data-shell="touch"\] \.changeoverWizardTrigger\{display:grid\}/);
+  assert.doesNotMatch(css, /@media [^{]*pointer:coarse[^}]*\{[\s\S]*?\.changeoverWizardTrigger\{display:grid\}/);
   assert.match(css, /\.mobileProductionControls \.changeoverWizardTrigger\{position:absolute;right:calc\(50% \+ 54px\);top:-16px;z-index:3;display:grid;width:44px;height:44px/);
   assert.doesNotMatch(css, /changeoverLabelRow/);
   assert.equal((html.match(/id="changeoverWizardTrigger"/g) || []).length, 1);

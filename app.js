@@ -7173,10 +7173,10 @@
      * browser window). There is no third "tablet" shell and no
      * intermediate structural mode: a coarse-pointer device of any size
      * gets exactly the same DOM as a phone. Width alone only ever adjusts
-     * *presentation* within that one touch shell (see the wide-touch CSS
-     * tier in styles.css, keyed directly off (min-width: 701px) and
-     * (pointer: coarse) with no JS involvement) - never which structural
-     * branch a renderer takes.
+     * *presentation* within that one touch shell (see the shell-scoped
+     * wide-touch CSS tier in styles.css, keyed off min-width: 701px with
+     * no pointer requirement and no JS involvement) - never which
+     * structural branch a renderer takes.
      *
      * renderWeightsArea() and renderSplitsArea() do not merely restyle at a
      * breakpoint - they build structurally different DOM on each side of
@@ -7222,6 +7222,17 @@
       return layoutModeQueries.desktop.matches;
     }
 
+    // One canonical DOM signal mirrors the structural decision above so CSS
+    // can combine the chosen shell with available width. Pointer capability
+    // decides only the structural desktop/touch boundary; once touch wins,
+    // <=700px is Compact Touch and >=701px is Wide Touch regardless of the
+    // pointer value reported by a browser preview or emulator.
+    function applyShellAttribute(desktop = isDesktopLayout()){
+      const shell = desktop ? "desktop" : "touch";
+      if (document.body.dataset.shell !== shell) document.body.dataset.shell = shell;
+      return shell;
+    }
+
     // What the DOM was last *built* for, as opposed to what the viewport
     // currently is. Only a difference between the two forces a re-render.
     let renderedIsDesktop = null;
@@ -7231,6 +7242,7 @@
       const desktop = isDesktopLayout();
       const compactRecipe = layoutModeQueries.compactRecipe.matches;
       const changed = desktop !== renderedIsDesktop || compactRecipe !== renderedCompactRecipe;
+      applyShellAttribute(desktop);
       renderedIsDesktop = desktop;
       renderedCompactRecipe = compactRecipe;
       // A touch-only palette falls back while a fine-pointer desktop is in
@@ -7260,7 +7272,7 @@
     }
 
     function syncWorkspaceForViewport(){
-      const desktop = layoutModeQueries.desktop.matches;
+      const desktop = isDesktopLayout();
       const headerSvg = document.querySelector(".site-header svg");
       if (headerSvg){
         headerSvg.setAttribute("viewBox", desktop ? "0 125 1280 105" : "0 0 1280 240");
@@ -9395,6 +9407,9 @@
     // Init
     (function init(){
 
+      // Publish the shell before any renderer chooses/builds its structural
+      // branch. syncLayoutMode keeps it current on later media-query changes.
+      applyShellAttribute();
       ensureLayers();
       placeProductionControlsForLayout();
 

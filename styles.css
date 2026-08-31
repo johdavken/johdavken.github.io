@@ -6142,22 +6142,33 @@ body:is([data-theme="industrial-slate-dark"],[data-theme="gruvbox-dark"]) .resul
   color:var(--title);
 }
 
-/* Tablet has ample unused width beside the 620px ribbon. Spend it on the
-   most time-sensitive value: a larger, dedicated schedule column, while
-   also giving long resin/run details more room before they ellipsize. The
-   compound query covers both real touch tablets and width-based previews. */
-@media (min-width:701px) and (max-width:1200px), (min-width:701px) and (pointer:coarse){
-  #resultsArea.resultGrid{ width:min(760px,100%); }
-  #resultsArea .resultRow{
+/* Wide Touch has ample unused width beside the 620px ribbon. Spend it on
+   the most time-sensitive value: a larger, dedicated schedule column,
+   while also giving long resin/run details more room before they ellipsize.
+   Shell + width owns the presentation, independent of pointer reporting. */
+@media (min-width:701px){
+  body[data-shell="touch"] #resultsArea.resultGrid{ width:min(760px,100%); }
+  body[data-shell="touch"] #resultsArea .resultRow{
     grid-template-columns:82px minmax(0,1fr) auto;
     gap:9px;
   }
-  #resultsArea .resultTimingClock{ font-size:18px; }
-  #resultsArea .resultTimingPeriod{ font-size:9px; }
-  #resultsArea .resultTimingUnavailable{ font-size:10px; }
+  body[data-shell="touch"] #resultsArea .resultTimingClock{ font-size:18px; }
+  body[data-shell="touch"] #resultsArea .resultTimingPeriod{ font-size:9px; }
+  body[data-shell="touch"] #resultsArea .resultTimingUnavailable{ font-size:10px; }
 }
-/* True desktop never got the tablet block's clock enlargement above (it
-   stops at max-width:1200px/pointer:coarse), so the schedule column fell
+/* Preserve the established compact-desktop Timeline through 1200px. */
+@media (min-width:701px) and (max-width:1200px){
+  body[data-shell="desktop"] #resultsArea.resultGrid{ width:min(760px,100%); }
+  body[data-shell="desktop"] #resultsArea .resultRow{
+    grid-template-columns:82px minmax(0,1fr) auto;
+    gap:9px;
+  }
+  body[data-shell="desktop"] #resultsArea .resultTimingClock{ font-size:18px; }
+  body[data-shell="desktop"] #resultsArea .resultTimingPeriod{ font-size:9px; }
+  body[data-shell="desktop"] #resultsArea .resultTimingUnavailable{ font-size:10px; }
+}
+/* Wide Desktop does not get the compact Timeline width above, so the
+   schedule column would otherwise fall
    back to the tiny 9px base .resultSchedule font-size while tablet showed
    18px - the same value, same ribbon, looking like two different features.
    Desktop's own .resultGrid width (620px, from the un-widened base rule)
@@ -6166,14 +6177,14 @@ body:is([data-theme="industrial-slate-dark"],[data-theme="gruvbox-dark"]) .resul
    needs the wider 82px (from 43px) to fit 18px text without clipping; the
    middle column is minmax(0,1fr) so this doesn't change the ribbon's own
    overall width. */
-@media (min-width:1201px) and (pointer:fine){
-  #resultsArea .resultRow{
+@media (min-width:1201px){
+  body[data-shell="desktop"] #resultsArea .resultRow{
     grid-template-columns:82px minmax(0,1fr) auto;
     gap:9px;
   }
-  #resultsArea .resultTimingClock{ font-size:18px; }
-  #resultsArea .resultTimingPeriod{ font-size:9px; }
-  #resultsArea .resultTimingUnavailable{ font-size:10px; }
+  body[data-shell="desktop"] #resultsArea .resultTimingClock{ font-size:18px; }
+  body[data-shell="desktop"] #resultsArea .resultTimingPeriod{ font-size:9px; }
+  body[data-shell="desktop"] #resultsArea .resultTimingUnavailable{ font-size:10px; }
 }
 
 @media (max-width:600px){
@@ -10731,167 +10742,60 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
 .changeoverWizardRemaining{margin-top:-15px;color:var(--text);font-size:16px;font-weight:750}
 .changeoverWizardSummary{margin-top:-12px;color:var(--muted);font-size:12px}
 
-@media (width <= 700px), (min-width:701px) and (pointer:coarse){
-  .changeoverWizardTrigger{display:grid}
-  .changeoverWizardDialog{position:fixed;inset:auto auto calc(var(--app-dock-height) + env(safe-area-inset-bottom) + 10px) 50%;transform:translateX(-50%);margin:0}
-}
+body[data-shell="touch"] .changeoverWizardTrigger{display:grid}
+body[data-shell="touch"] .changeoverWizardDialog{position:fixed;inset:auto auto calc(var(--app-dock-height) + env(safe-area-inset-bottom) + 10px) 50%;transform:translateX(-50%);margin:0}
 
 /* =======================================================================
- *   Wide-touch presentation refinements
+ *   Responsive model
  *
- *   There is no separate tablet shell, in CSS or in app.js: a coarse-
- *   pointer device gets exactly the existing phone/touch shell at every
- *   width, unfolded foldables (a Z Fold's inner display lands around
- *   830-890 CSS px) and tablets included. This block changes nothing
- *   structural - no different DOM, no JS-recognized mode, nothing beyond
- *   plain CSS gated on this one media query. It only stops that same touch
- *   shell being stretched thin once there is more room than a phone has,
- *   e.g. widening Line Setup's layout and enlarging Recipe's resin-name
- *   text. Deliberately scoped by *capability*, never by device or user-
- *   agent - a coarse PRIMARY pointer is what distinguishes a touch slab
- *   from a desktop that merely happens to be narrow, and a touchscreen
- *   laptop still reports "fine" for its primary pointer, so none of this
- *   can leak onto desktop.
+ *   Structural shells:
+ *     desktop = >=901px + fine primary pointer
+ *     touch   = everything else
  *
- *   Floored at 701px so the compact phone Recipe treatment below 700px is
- *   untouched, reusing a breakpoint the stylesheet already had rather than
- *   inventing a new one. Deliberately uncapped above - a rotated foldable
- *   must keep this presentation no matter how wide it gets, as long as it
- *   stays coarse-pointer.
+ *   Touch presentation:
+ *     <=700px = Compact Touch
+ *     >=701px = Wide Touch
+ *
+ *   JavaScript publishes the structural decision as body[data-shell].
+ *   Width then selects the touch presentation, so an 800px fine-pointer
+ *   emulator receives the same Wide Touch styling as an 800px tablet.
  *   ======================================================================= */
-@media (min-width: 701px) and (pointer: coarse){
+@media (min-width: 701px){
   /* --- Recipe ------------------------------------------------------
      Keep hopper cells at their established reading/touch density and
      recover height from the chrome and oversized layer headers around
      them. On a tablet, Edit uses two deliberate toolbar bands
      (values/apply, then selection/actions) instead of allowing selection
      controls to wrap into an accidental third band. */
-  body[data-mobile-workspace="panel"] #splitsBlock.mobile-active > summary{
+  body[data-shell="touch"][data-mobile-workspace="panel"] #splitsBlock.mobile-active > summary{
     min-height:36px;
     padding:3px 2px 6px;
   }
-  body[data-mobile-workspace="panel"] #splitsBlock.mobile-active > summary .mobileSectionHeaderIcon{
+  body[data-shell="touch"][data-mobile-workspace="panel"] #splitsBlock.mobile-active > summary .mobileSectionHeaderIcon{
     width:22px;
     height:22px;
   }
-  body[data-mobile-workspace="panel"] #splitsBlock.mobile-active > .blockBody{
+  body[data-shell="touch"][data-mobile-workspace="panel"] #splitsBlock.mobile-active > .blockBody{
     padding-top:5px;
   }
-  #splitsBlock .recipeHeaderRow{ gap:8px; }
-  #splitsBlock .recipePageTab{
+  body[data-shell="touch"] #splitsBlock .recipeHeaderRow{ gap:8px; }
+  body[data-shell="touch"] #splitsBlock .recipePageTab{
     min-height:32px;
     padding:4px 12px 3px;
   }
-  #splitsBlock .recipeHeaderControls{ margin-bottom:2px; }
-  #splitsBlock .recipeViewToggle{ gap:5px; margin-bottom:0; }
-  #splitsBlock .recipeViewToggle button{
+  body[data-shell="touch"] #splitsBlock .recipeHeaderControls{ margin-bottom:2px; }
+  body[data-shell="touch"] #splitsBlock .recipeViewToggle{ gap:5px; margin-bottom:0; }
+  body[data-shell="touch"] #splitsBlock .recipeViewToggle button{
     min-height:26px;
     padding:3px 10px;
   }
-  /* Touch tablets keep the phone's icon-language for page tabs and the
-     row actions without taking on the phone-only compact matrix. */
-  #splitsBlock .recipeInfoLegend{ display:block; }
-  #splitsBlock .recipePageTab .recipeTabLabel{
-    position:absolute;
-    width:1px;
-    height:1px;
-    padding:0;
-    margin:-1px;
-    overflow:hidden;
-    clip:rect(0 0 0 0);
-    clip-path:inset(50%);
-    white-space:nowrap;
-    border:0;
-  }
-  #splitsBlock .recipePageTab .recipeTabIcon{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-  }
-  #splitsBlock .recipePageTab .recipeTabIcon svg{
-    width:17px;
-    height:17px;
-    fill:none;
-    stroke:currentColor;
-    stroke-width:1.8;
-    stroke-linecap:round;
-    stroke-linejoin:round;
-  }
-  #splitsBlock .recipeHeaderRow .recipeHeaderActions{
-    display:flex;
-    order:-1;
-    align-items:center;
-    gap:3px;
-    padding-left:0;
-    border-left:0;
-  }
-  #splitsBlock .recipeHeaderActions > .mobileScanIconAction > summary,
-  #splitsBlock .recipeHeaderActions > .recipeHeaderMobileAction{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    width:30px;
-    min-width:30px;
-    height:26px;
-    min-height:26px;
-    padding:0;
-    border:1px solid var(--row-border-2);
-    border-radius:var(--control-radius);
-    background:var(--row-bg-2);
-    color:var(--text);
-    font-size:0;
-    font-weight:800;
-    letter-spacing:0;
-    box-shadow:none;
-    cursor:pointer;
-    list-style:none;
-  }
-  #splitsBlock .recipeHeaderActions .recipeActionIcon{
-    display:block;
-    width:16px;
-    height:16px;
-  }
-  #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
-  #splitsBlock #recipeHeaderControls .weightsHeaderViewToggle button[data-weight-view="edit"]{
-    min-width:30px;
-    width:30px;
-    min-height:26px;
-    padding:0;
-    gap:0;
-    font-size:0;
-  }
-  #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"]::before,
-  #splitsBlock #recipeHeaderControls .weightsHeaderViewToggle button[data-weight-view="edit"]::before{
-    width:15px;
-    height:15px;
-  }
-  #splitsArea > #splitsBulkBar :is(.recipeHistoryAction, .splitsEditRowSecondary .bulkTextAction, .splitsEditRowSecondary .splitsRearrangeAction, .splitsEditRowSecondary #resetAllSplits.danger){
-    display:grid;
-    place-items:center;
-    flex:0 0 40px;
-    box-sizing:border-box;
-    width:40px;
-    min-width:40px;
-    max-width:40px;
-    height:40px;
-    min-height:40px;
-    margin:0;
-    padding:0;
-    border:1px solid transparent;
-    border-radius:6px;
-    background:transparent;
-    box-shadow:none;
-    color:var(--muted);
-    font-size:0;
-    line-height:1;
-  }
-  #splitsArea > #splitsBulkBar .splitsEditRowSecondary button > span{ display:none; }
-  #splitsArea > #splitsBulkBar .recipeEditActionIcon{ display:block; }
-  #splitsArea > .splitsBulkBar{
+  /* Wide Touch intentionally keeps the base text tabs and action labels.
+     Icon-only Recipe controls remain owned by Compact Touch (<=700px). */
+  body[data-shell="touch"] #splitsArea > .splitsBulkBar{
     margin-bottom:0;
     padding:6px 8px;
   }
-  #splitsArea .splitsEditRow{ gap:6px 8px; }
+  body[data-shell="touch"] #splitsArea .splitsEditRow{ gap:6px 8px; }
   /* display:grid/grid-template-columns sizing for Resin/% now lives only in
      the shared >=701px block - this block used to carry its own
      grid-template-columns with an unconstrained 1fr max track, which won
@@ -10899,26 +10803,26 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
      plain two-class selector for that property, since the shared block's
      double-id rule never redeclared grid-template-columns) and let both
      fields balloon to fill the row on real touch tablets - not caught
-     during this redesign because testing only used pointer:fine desktop
-     emulation, which never matches this block. Same story for the input's
+     during this redesign because testing only used mouse-based desktop
+     emulation, which never matched this block. Same story for the input's
      height:26px, which fought the row's unified 40px field height; removed
      rather than fixed forward, since the shared block's min-height:28px on
      the input already fits comfortably inside the 40px field. */
-  #splitsArea .splitsEditRowPrimary > button{
+  body[data-shell="touch"] #splitsArea .splitsEditRowPrimary > button{
     min-height:28px;
     padding:3px 10px;
   }
-  #splitsArea .splitsEditRowSecondary{
+  body[data-shell="touch"] #splitsArea .splitsEditRowSecondary{
     flex-wrap:nowrap;
     gap:6px;
     margin-top:5px;
     padding-top:5px;
   }
-  #splitsArea .splitsEditRowSecondary > .splitsBulkActions{
+  body[data-shell="touch"] #splitsArea .splitsEditRowSecondary > .splitsBulkActions{
     min-width:0;
     gap:6px;
   }
-  #splitsArea .splitsEditRowSecondary :is(.bulkTextAction,button.danger){
+  body[data-shell="touch"] #splitsArea .splitsEditRowSecondary :is(.bulkTextAction,button.danger){
     min-height:28px;
     padding:3px 8px;
     white-space:nowrap;
@@ -10929,45 +10833,42 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
      and the base .splitsEditRowSecondary :is(...) rule above still show -
      harmless, since the double-id rule always wins the specificity fight
      regardless of source order. */
-  #splitsArea .splitsTrackingBar{
+  body[data-shell="touch"] #splitsArea .splitsTrackingBar{
     padding:4px 8px;
   }
-  #splitsArea .recipeUtilityTabs{ margin-top:5px; }
-  #splitsArea .recipeUtilityTab{
+  body[data-shell="touch"] #splitsArea .recipeUtilityTabs{ margin-top:5px; }
+  body[data-shell="touch"] #splitsArea .recipeUtilityTab{
     min-height:24px;
     padding:3px 10px;
   }
-  #splitsArea .splitsBulkModeBar :is(button.secondary,.recipeActionTertiary),
-  #splitsArea .splitsBulkModeBar .splitsScanShortcut > summary{
+  body[data-shell="touch"] #splitsArea .splitsBulkModeBar :is(button.secondary,.recipeActionTertiary),
+  body[data-shell="touch"] #splitsArea .splitsBulkModeBar .splitsScanShortcut > summary{
     min-height:28px;
     padding:3px 9px;
   }
 }
 
-/* Narrow portrait tablets keep the established landscape/tablet cell
-   structure and icon treatment, but the resin code and percentage no longer
-   have enough width to sit on one row. The hopper badge stays at the top,
-   resin gets its own line beneath it, and the % remains as its own line.
-   This is deliberately locked to the coarse-pointer, portrait, narrow-tablet
-   band so it never leaks onto desktop or landscape/tablet layouts. */
-@media (min-width: 701px) and (max-width: 900px) and (orientation: portrait) and (pointer: coarse){
-  #splitsArea .splitsMatrix tbody td.splitMatrixCell{
+/* Narrow Wide Touch cells stack by available width, not device orientation
+   or pointer reporting. This covers portrait tablets, split-screen windows,
+   Fold-sized layouts, and fine-pointer browser previews consistently. */
+@media (min-width: 701px) and (max-width: 900px){
+  body[data-shell="touch"] #splitsArea .splitsMatrix tbody td.splitMatrixCell{
     padding: 4px 6px;
   }
-  #splitsArea .splitsMatrix .splitCellEditor{
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitCellEditor{
     display: flex;
     flex-direction: column;
     align-items: flex-start;
     gap: 3px;
   }
-  #splitsArea .splitsMatrix .splitCellTop{
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitCellTop{
     display: flex;
     flex-direction: column;
     align-items: flex-start;
     gap: 2px;
     width: 100%;
   }
-  #splitsArea .splitsMatrix .splitCellTop .resinNameInput{
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitCellTop .resinNameInput{
     width: 100%;
     min-width: 0;
     height: auto;
@@ -10983,18 +10884,18 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  #splitsArea .splitsMatrix .splitCellControls{
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitCellControls{
     display: flex;
     justify-content: flex-start;
     width: 100%;
   }
-  #splitsArea .splitsMatrix .splitPctControl{
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitPctControl{
     display: flex;
     align-items: baseline;
     gap: 1px;
     min-width: 0;
   }
-  #splitsArea .splitsMatrix .splitPctControl input{
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitPctControl input{
     width: auto;
     min-width: 0;
     max-width: none;
@@ -11008,17 +10909,16 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
     font-weight: 900;
     text-align: left;
   }
-  #splitsArea .splitsMatrix .splitPctControl > span{
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitPctControl > span{
     color: var(--muted);
     font-size: clamp(10px, 1.1vw + 1px, 12px);
     font-weight: 800;
   }
 }
 
-/* Recipe state styling also follows the tablet-width viewport when the
-   layout is previewed in a desktop browser. Real touch tablets wider than
-   that band retain the treatment through the coarse-pointer alternative. */
-@media (min-width: 701px) and (max-width: 1200px), (min-width: 701px) and (pointer: coarse){
+/* Recipe state styling is shared by both shells through 1200px, preserving
+   the established narrow-desktop appearance as well as Wide Touch. */
+@media (min-width: 701px) and (max-width: 1200px){
   /* Tablet keeps the same universal folded check and restrained Edit
      outline used at the other view sizes. */
   #splitsArea .splitsMatrix tbody .splitMatrixCell{
@@ -11068,26 +10968,62 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
   }
 }
 
-/* The layer header's compact inline hierarchy (small layer letter, dominant
-   percentage, quiet total and Match action) - touch tablets only. This used
-   to also cover any real desktop/mouse window between 701-1200px (this
-   block's own selector used to read "(min-width:701px) and (max-width:1200px),
-   (min-width:701px) and (pointer:coarse)"), which meant simply resizing a
-   real desktop browser window across 1200px silently swapped this header
-   design for the percentage-forward one below - the two were never meant to
-   coexist within pointer:fine. pointer:coarse-only, matching the cell-
-   tracking block above, gives a real desktop one consistent header design
-   across its entire width range (this component - see the percentage-
-   forward block below for the fine-pointer counterpart), while touch
-   tablets keep exactly this look regardless of how wide they are. */
-@media (min-width: 701px) and (pointer: coarse){
-  #splitsArea .splitsMatrix thead th{
+/* Continue that same Recipe-state treatment on very wide touch shells.
+   Shell selection, rather than pointer CSS, owns this layout decision. */
+@media (min-width: 1201px){
+  body[data-shell="touch"] #splitsArea .splitsMatrix tbody .splitMatrixCell{
+    --tablet-recipe-cell-bg:transparent;
+    position:relative;
+    overflow:hidden;
+  }
+  body[data-shell="touch"] #splitsArea .splitsMatrix tbody td.splitMatrixCell:nth-child(even){
+    --tablet-recipe-cell-bg:color-mix(in srgb,var(--row-bg-2) 55%,transparent);
+  }
+  body[data-shell="touch"] #splitsArea[data-recipe-view="summary"] .splitsMatrix tbody .splitMatrixCell.tracked,
+  body[data-shell="touch"] #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.tracked{
+    background:var(--tablet-recipe-cell-bg);
+    border-color:var(--row-border-2);
+    box-shadow:none;
+  }
+  body[data-shell="touch"] #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.selected{
+    background:var(--tablet-recipe-cell-bg);
+    border-color:color-mix(in srgb,var(--focus-border) 65%,var(--row-border-2));
+    box-shadow:inset 0 0 0 1px var(--focus-border);
+  }
+  body[data-shell="touch"] #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.tracked.selected{
+    background:var(--tablet-recipe-cell-bg);
+  }
+  body[data-shell="touch"] #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.selected::after{
+    content:"EDIT";
+    position:absolute;
+    top:3px;
+    right:4px;
+    z-index:3;
+    color:var(--focus-border);
+    font-size:6px;
+    font-weight:950;
+    line-height:1;
+    letter-spacing:.1em;
+    pointer-events:none;
+  }
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitCellEditor{ gap:3px; }
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitPctControl input{
+    width:44px;
+    padding-inline:0;
+  }
+}
+
+/* Wide Touch layer header: compact inline hierarchy (small layer letter,
+   dominant percentage, quiet total and Match action). Shell + width owns
+   this presentation, so fine-pointer previews cannot fall into Desktop. */
+@media (min-width: 701px){
+  body[data-shell="touch"] #splitsArea .splitsMatrix thead th{
     padding:4px 2px;
   }
-  #splitsArea .splitsMatrix .splitLayerHeader{
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitLayerHeader{
     border-bottom:1px solid color-mix(in srgb,var(--focus-border) 38%,var(--border));
   }
-  #splitsArea .splitsMatrix .splitLayerMain{
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitLayerMain{
     display:flex;
     align-items:baseline;
     justify-content:center;
@@ -11095,8 +11031,8 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
     min-height:26px;
     padding:0;
   }
-  #splitsArea .splitsMatrix .splitLayerTitle,
-  #splitsArea[data-recipe-view="edit"] .splitsMatrix .splitLayerTitle{
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitLayerTitle,
+  body[data-shell="touch"] #splitsArea[data-recipe-view="edit"] .splitsMatrix .splitLayerTitle{
     display:inline-flex;
     position:static;
     width:auto;
@@ -11109,12 +11045,12 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
     line-height:1;
     opacity:.72;
   }
-  #splitsArea .splitsMatrix .splitLayerPct{
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitLayerPct{
     margin-top:0;
     padding:0;
     border:0;
   }
-  #splitsArea .splitsMatrix .splitLayerPct input:not([type="checkbox"]):not([type="radio"]){
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitLayerPct input:not([type="checkbox"]):not([type="radio"]){
     width:31px;
     min-width:31px;
     min-height:0;
@@ -11125,17 +11061,17 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
     font-weight:900;
     line-height:18px;
   }
-  #splitsArea .splitsMatrix .splitLayerPct span{
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitLayerPct span{
     color:var(--muted);
     font-size:9px;
   }
-  #splitsArea .splitsMatrix .splitColumnTotal{
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitColumnTotal{
     margin-top:1px;
     min-height:1.1em;
     font-size:8px;
     line-height:1.1;
   }
-  #splitsArea .splitsMatrix .splitCopyBtn{
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitCopyBtn{
     display:grid;
     place-items:center;
     width:100%;
@@ -11151,24 +11087,19 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
 }
 
 /* Percentage-forward layer header (previews/recipe-layer-header-compact-
-   alternatives.html, concept 4) - the real desktop/mouse header, now for
-   its entire width range (701px+), not just >=1201px. It used to start at
-   1201px, leaving 701-1200px real-desktop windows on the touch-tablet
-   header above by accident (see that block's comment) - widening this one
-   down to 701px closes that gap so a mouse-driven window never sees the
-   header design change while resizing, only the touch/pointer-coarse block
-   above does. The percentage is the only thing worth reading twice, so it
+   alternatives.html, concept 4) - Desktop only. The percentage is the only
+   thing worth reading twice, so it
    becomes the largest element; the layer letter shrinks to a corner tag
    instead of a 64px watermark, and the total becomes a thin colour-coded
    bar - still labelled with its number, since a bar with no number would be
    a step back from today's text-only total. Reuses the existing .warn
    toggle from updateHopperTotals() - no JS or markup changes needed. */
-@media (min-width: 701px) and (pointer: fine){
-  #splitsArea .splitLayerMain{
+@media (min-width: 701px){
+  body[data-shell="desktop"] #splitsArea .splitLayerMain{
     min-height: 0;
     padding-top: 4px;
   }
-  #splitsArea .splitLayerTitle{
+  body[data-shell="desktop"] #splitsArea .splitLayerTitle{
     position: absolute;
     top: 0;
     left: 0;
@@ -11181,11 +11112,11 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
     font-weight: 800;
     opacity: .6;
   }
-  #splitsArea .splitLayerPct{
+  body[data-shell="desktop"] #splitsArea .splitLayerPct{
     margin-top: 0;
     justify-content: center;
   }
-  #splitsArea .splitLayerPct input{
+  body[data-shell="desktop"] #splitsArea .splitLayerPct input{
     width: 54px;
     min-width: 0;
     padding: 0;
@@ -11194,14 +11125,14 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
     line-height: 1;
     text-align: center;
   }
-  #splitsArea .splitLayerPct span{ font-size: 11px; }
-  #splitsArea .splitColumnTotal{
+  body[data-shell="desktop"] #splitsArea .splitLayerPct span{ font-size: 11px; }
+  body[data-shell="desktop"] #splitsArea .splitColumnTotal{
     position: relative;
     margin-top: 4px;
     padding-top: 5px;
     font-size: 9px;
   }
-  #splitsArea .splitColumnTotal::before{
+  body[data-shell="desktop"] #splitsArea .splitColumnTotal::before{
     content: "";
     position: absolute;
     top: 0;
@@ -11211,7 +11142,7 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
     border-radius: 2px;
     background: var(--ok);
   }
-  #splitsArea .splitColumnTotal.warn::before{ background: var(--warn); }
+  body[data-shell="desktop"] #splitsArea .splitColumnTotal.warn::before{ background: var(--warn); }
 }
 
 /* A Fold's unfolded landscape viewport is tablet-wide but only about
@@ -11219,101 +11150,95 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
    while reclaiming the remaining vertical overflow from chrome, padding,
    and the Smart label's otherwise separate line. */
 @media (min-width: 701px) and (max-height: 800px){
-  main{
+  body[data-shell="touch"] main{
     padding-bottom:calc(var(--app-dock-height) + env(safe-area-inset-bottom) + 12px)!important;
   }
-  body[data-mobile-workspace="panel"] #splitsBlock.mobile-active{
+  body[data-shell="touch"][data-mobile-workspace="panel"] #splitsBlock.mobile-active{
     padding-bottom:2px;
   }
-  body[data-mobile-workspace="panel"] #splitsBlock.mobile-active > summary{
+  body[data-shell="touch"][data-mobile-workspace="panel"] #splitsBlock.mobile-active > summary{
     min-height:30px;
     padding:1px 2px 3px;
   }
-  body[data-mobile-workspace="panel"] #splitsBlock.mobile-active > summary .mobileSectionHeaderIcon{
+  body[data-shell="touch"][data-mobile-workspace="panel"] #splitsBlock.mobile-active > summary .mobileSectionHeaderIcon{
     width:20px;
     height:20px;
   }
-  body[data-mobile-workspace="panel"] #splitsBlock.mobile-active > .blockBody{
+  body[data-shell="touch"][data-mobile-workspace="panel"] #splitsBlock.mobile-active > .blockBody{
     padding-top:2px;
     padding-bottom:0;
   }
-  #splitsBlock .recipeHeaderRow{ gap:2px; }
-  #splitsBlock .recipePageTab{
+  body[data-shell="touch"] #splitsBlock .recipeHeaderRow{ gap:2px; }
+  body[data-shell="touch"] #splitsBlock .recipePageTab{
     min-height:28px;
     padding:2px 10px 1px;
   }
-  #splitsBlock .recipeHeaderControls{ margin-bottom:1px; }
-  #splitsBlock .recipeViewToggle{ gap:4px; margin-bottom:0; }
-  #splitsBlock .recipeViewToggle button{
+  body[data-shell="touch"] #splitsBlock .recipeHeaderControls{ margin-bottom:1px; }
+  body[data-shell="touch"] #splitsBlock .recipeViewToggle{ gap:4px; margin-bottom:0; }
+  body[data-shell="touch"] #splitsBlock .recipeViewToggle button{
     min-height:24px;
     padding:2px 9px;
   }
-  #splitsArea{ gap:2px; }
-  #splitsArea > .splitsBulkBar{
+  body[data-shell="touch"] #splitsArea{ gap:2px; }
+  body[data-shell="touch"] #splitsArea > .splitsBulkBar{
     margin-bottom:0;
     padding:3px 6px;
   }
-  #splitsArea .splitsEditRow{ gap:3px 6px; }
-  #splitsArea .splitsEditRowPrimary > .splitsBulkField{
+  body[data-shell="touch"] #splitsArea .splitsEditRow{ gap:3px 6px; }
+  body[data-shell="touch"] #splitsArea .splitsEditRowPrimary > .splitsBulkField{
     padding:1px 5px;
   }
-  #splitsArea .splitsEditRowPrimary > .splitsBulkField input{
+  body[data-shell="touch"] #splitsArea .splitsEditRowPrimary > .splitsBulkField input{
     min-height:22px;
     height:22px;
     padding-block:0;
   }
-  #splitsArea .splitsEditRowPrimary > button{
+  body[data-shell="touch"] #splitsArea .splitsEditRowPrimary > button{
     min-height:24px;
     padding:2px 8px;
   }
-  #splitsArea .splitsEditRowSecondary{
+  body[data-shell="touch"] #splitsArea .splitsEditRowSecondary{
     gap:4px;
     margin-top:2px;
     padding-top:2px;
   }
-  #splitsArea .splitsEditRowSecondary > .splitsBulkActions{ gap:4px; }
-  #splitsArea .splitsEditRowSecondary :is(.bulkTextAction,button.danger){
+  body[data-shell="touch"] #splitsArea .splitsEditRowSecondary > .splitsBulkActions{ gap:4px; }
+  body[data-shell="touch"] #splitsArea .splitsEditRowSecondary :is(.bulkTextAction,button.danger){
     min-height:24px;
     padding:2px 7px;
   }
-  #splitsArea .splitsTrackingBar{ padding:2px 6px; }
+  body[data-shell="touch"] #splitsArea .splitsTrackingBar{ padding:2px 6px; }
 
-  #splitsArea .recipeUtilityTabs{
+  body[data-shell="touch"] #splitsArea .recipeUtilityTabs{
     margin-top:1px;
     padding-left:3px;
   }
-  #splitsArea .recipeUtilityTab{
+  body[data-shell="touch"] #splitsArea .recipeUtilityTab{
     min-height:20px;
     padding:2px 8px 1px;
   }
 }
 
-/* The recipe matrix's own short-height compaction - split out from the Fold
-   block above and given its own (pointer: coarse) condition, matching the
-   fix to the width-driven version of this same collision (see the
-   WIDE_TOUCH_QUERY layer-header block below). None of these selectors were
-   gated by shell (body[data-mobile-workspace="panel"]) or pointer, only by
-   height, so a real desktop/mouse window simply resized shorter than 800px
-   picked up "Fold" compaction it was never meant to see: .splitCopyBtn's
+/* The Recipe matrix's short-height compaction belongs to Wide Touch. Shell
+   scoping prevents a short Desktop window from picking it up, while an
+   emulator using a fine pointer still matches when its structural shell is
+   touch. Previously .splitCopyBtn's
    display:inline-grid outranked (equal specificity, later source order)
    #splitsArea[data-recipe-view="summary"] .splitCopyBtn{display:none}, so
    Summary's Match button reappeared purely from a short window, never
    Edit/view-state; and .splitLayerMain's min-height:22px fought the
-   percentage-forward header's own sizing, visibly compressing it. A real
-   Fold is a touchscreen, so pointer:coarse loses nothing there while a
-   real desktop keeps one fixed-height-independent header, mirroring the
-   width fix's "if the width is fixed, the height should be too". */
-@media (min-width: 701px) and (max-height: 800px) and (pointer: coarse){
-  #splitsArea .splitsMatrix thead th{ padding:2px; }
-  #splitsArea .splitsMatrix .splitLayerMain{ min-height:22px; }
-  #splitsArea .splitsMatrix .splitCopyBtn{
+   percentage-forward header's own sizing, visibly compressing it. */
+@media (min-width: 701px) and (max-height: 800px){
+  body[data-shell="touch"] #splitsArea .splitsMatrix thead th{ padding:2px; }
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitLayerMain{ min-height:22px; }
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitCopyBtn{
     display:inline-grid;
     width:auto;
     min-height:14px;
     margin:0 3px 0 0;
     padding:0 2px;
   }
-  #splitsArea .splitsMatrix .splitColumnTotal{
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitColumnTotal{
     display:inline-block;
     margin:0;
     min-height:0;
@@ -11321,19 +11246,19 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
     vertical-align:middle;
   }
 
-  #splitsArea .splitsMatrix td.splitMatrixCell{ padding:2px 6px; }
-  #splitsArea .splitsMatrix .splitCellHeader{
+  body[data-shell="touch"] #splitsArea .splitsMatrix td.splitMatrixCell{ padding:2px 6px; }
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitCellHeader{
     min-height:18px;
     margin-bottom:0;
   }
-  #splitsArea .splitsMatrix .splitSmartBadge{
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitSmartBadge{
     position:absolute;
     top:7px;
     left:44px;
     line-height:1;
   }
-  #splitsArea .splitsMatrix .splitCellTop{ gap:0; }
-  #splitsArea[data-recipe-view] .splitsMatrix .splitPctControl input{
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitCellTop{ gap:0; }
+  body[data-shell="touch"] #splitsArea[data-recipe-view] .splitsMatrix .splitPctControl input{
     height:26px;
     min-height:26px;
     max-height:26px;
@@ -11341,7 +11266,7 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
   }
 }
 
-@media (min-width: 701px) and (pointer: coarse){
+@media (min-width: 701px){
   /* --- Line Setup ---------------------------------------------------
      The phone layout stacks Changeover/Output above Overview and caps the
      pair at 540px centered, which on an unfolded Fold leaves a wide empty
@@ -11349,32 +11274,32 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
      Overview side by side instead: same information, same hierarchy, one
      screenful, no stretching. Receiver Weights is its own .setupSection
      below and keeps the full width to itself. */
-  #lineSetupBlock .setupLineConfiguration{
+  body[data-shell="touch"] #lineSetupBlock .setupLineConfiguration{
     display:grid;
     grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);
     align-items:start;
     gap:18px 24px;
   }
-  #lineSetupBlock .setupTopRow{ grid-column:1 / -1; }
-  #lineSetupBlock .setupPrimaryFields{
+  body[data-shell="touch"] #lineSetupBlock .setupTopRow{ grid-column:1 / -1; }
+  body[data-shell="touch"] #lineSetupBlock .setupPrimaryFields{
     /* Undo the phone cap/centering - the column is already the right width. */
     width:100%;
     max-width:none;
     margin-inline:0;
     gap:16px;
   }
-  #lineSetupBlock .setupPrimaryFields > div{ justify-content:stretch; }
+  body[data-shell="touch"] #lineSetupBlock .setupPrimaryFields > div{ justify-content:stretch; }
   /* Bigger gauges: comfortable touch targets, and they no longer look
      marooned in the middle of a wide row. */
-  #lineSetupBlock .gaugeTile{ max-width:none; }
-  #lineSetupBlock .lineOverview{ margin-top:0; }
+  body[data-shell="touch"] #lineSetupBlock .gaugeTile{ max-width:none; }
+  body[data-shell="touch"] #lineSetupBlock .lineOverview{ margin-top:0; }
 
   /* --- Receiver Weights ---------------------------------------------
      Full useful width, never squeezed into a side column and never a
      horizontal scroller. The layer columns simply have more room to
      breathe at this size. */
-  #weightsBlock .blockBody{ max-width:none; }
-  .mobileWeightsLayer{ gap:5px; }
+  body[data-shell="touch"] #weightsBlock .blockBody{ max-width:none; }
+  body[data-shell="touch"] .mobileWeightsLayer{ gap:5px; }
 
   /* Recipe state and layer-header refinements live above. Hopper-row and
      resin-detail sizing remain unchanged; the overflow rules below only
@@ -11398,13 +11323,10 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
  *   exactly as photographed on a real Fold.
  *
  *   Fix: extend the same proven table-layout:fixed + width:100%
- *   mechanism to the rest of the touch/mobile shell's width range - not
- *   only where the pointer is coarse. A desktop browser window resized
- *   to this same width sits in the identical shell (see the shell's own
- *   boundary throughout this file) and would hit the identical bug with
- *   a mouse, so the query mirrors that shell's own compound form,
- *   floored at 701px so the phone-width block above keeps sole
- *   ownership of anything narrower. With no column left an explicit
+ *   mechanism to Wide Touch at every width and pointer capability. The
+ *   body[data-shell="touch"] guard follows JavaScript's structural choice;
+ *   the 701px floor leaves Compact Touch as the sole owner below it. With
+ *   no column left an explicit
  *   width, a fixed-layout table divides its own 100% width evenly across
  *   whichever columns remain unset - conceptually
  *   `grid-template-columns: repeat(5, minmax(0,1fr))`, achieved with the
@@ -11414,41 +11336,41 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
  *   Every rule below only removes a width floor or lets something
  *   shrink - the matrix's structure, its controls, and tracking behavior
  *   are all unchanged; nothing here changes what renders. */
-@media (min-width: 701px) and (max-width: 900px), (min-width: 901px) and (pointer: coarse){
-  .splitsMatrixScroll{ width:100%; max-width:100%; min-width:0; overflow-x:hidden; box-sizing:border-box; }
-  .splitsMatrixFrame{ width:100%; max-width:100%; min-width:0; margin-inline:0; box-sizing:border-box; }
-  .splitsMatrix{
+@media (min-width: 701px){
+  body[data-shell="touch"] .splitsMatrixScroll{ width:100%; max-width:100%; min-width:0; overflow-x:hidden; box-sizing:border-box; }
+  body[data-shell="touch"] .splitsMatrixFrame{ width:100%; max-width:100%; min-width:0; margin-inline:0; box-sizing:border-box; }
+  body[data-shell="touch"] .splitsMatrix{
     table-layout:fixed;
     width:100%;
     max-width:100%;
     min-width:0;
     box-sizing:border-box;
   }
-  .splitsMatrix th,
-  .splitsMatrix td{ box-sizing:border-box; }
+  body[data-shell="touch"] .splitsMatrix th,
+  body[data-shell="touch"] .splitsMatrix td{ box-sizing:border-box; }
   /* No layer column claims a fixed or minimum share - table-layout:fixed
      then divides the table's own 100% width evenly across the five that
      are left unset, after the corner column below takes its own small
      fixed share. */
-  .splitsMatrix thead th{ min-width:0; width:auto; max-width:none; }
-  .splitMatrixCell{ min-width:0; width:auto; max-width:100%; }
+  body[data-shell="touch"] .splitsMatrix thead th{ min-width:0; width:auto; max-width:none; }
+  body[data-shell="touch"] .splitMatrixCell{ min-width:0; width:auto; max-width:100%; }
   /* The hopper-number corner is the one column that should NOT flex - it
      holds a short fixed label ("1"-"6") and taking width from it would
      not meaningfully help the other five. Same value the phone layout
      already uses, for the same reason. */
-  .splitsMatrix th:first-child{ min-width:52px; width:52px; max-width:52px; }
+  body[data-shell="touch"] .splitsMatrix th:first-child{ min-width:52px; width:52px; max-width:52px; }
 
   /* Every child inside a column must be able to shrink with it, not just
      the column itself - a fixed intrinsic width on any of these would
      reintroduce the same overflow one level down, inside the cell. */
-  .splitCellHeader,
-  .splitCellEditor,
-  .splitCellTop,
-  .splitCellControls,
-  .splitPctControl,
-  .splitTrackControl,
-  .resinNameInput,
-  .splitPctControl input{
+  body[data-shell="touch"] .splitCellHeader,
+  body[data-shell="touch"] .splitCellEditor,
+  body[data-shell="touch"] .splitCellTop,
+  body[data-shell="touch"] .splitCellControls,
+  body[data-shell="touch"] .splitPctControl,
+  body[data-shell="touch"] .splitTrackControl,
+  body[data-shell="touch"] .resinNameInput,
+  body[data-shell="touch"] .splitPctControl input{
     min-width:0;
     max-width:100%;
   }
@@ -11456,7 +11378,7 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
      180px. Now that columns are free to be much narrower on a folded-
      width device, that same floor could reintroduce overflow one level
      down, inside the cell - let the grid negotiate the space instead. */
-  .splitCellEditor{ grid-template-columns:minmax(0,1fr) auto; }
+  body[data-shell="touch"] .splitCellEditor{ grid-template-columns:minmax(0,1fr) auto; }
 
   /* Resin names keep the fuller, larger treatment this same block used
      before (desktop's own two-row cell layout, not the compact single-
@@ -11466,15 +11388,15 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
      needs it to keep all five columns on screen (the tight end of this
      range, ~701px), and reaches the same ceiling as before once there is
      room (~900px and up, including the Fold rotated to landscape). */
-  .splitMatrixCell .resinNameInput{
+  body[data-shell="touch"] .splitMatrixCell .resinNameInput{
     height:32px;
     min-height:32px;
     max-height:32px;
     font-size:clamp(14px, 2vw + 1px, calc(var(--font-base) + 4px));
     line-height:31px;
   }
-  .splitPctControl input,
-  .splitPctControl > span{
+  body[data-shell="touch"] .splitPctControl input,
+  body[data-shell="touch"] .splitPctControl > span{
     font-size:clamp(11px, 1.3vw + 1px, var(--font-base));
   }
 }

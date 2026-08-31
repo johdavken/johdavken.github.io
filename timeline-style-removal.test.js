@@ -82,7 +82,8 @@ test("the Start-by/Soonest time value is a compact, strong visual anchor", () =>
 });
 
 test("Timeline time emphasis responds independently on tablet and phone", () => {
-  assert.match(styles, /@media \(min-width:701px\) and \(max-width:1200px\), \(min-width:701px\) and \(pointer:coarse\)\{[\s\S]*?#resultsArea\.resultGrid\{ width:min\(760px,100%\); \}[\s\S]*?grid-template-columns:82px minmax\(0,1fr\) auto;[\s\S]*?\.resultTimingClock\{ font-size:18px; \}/);
+  assert.match(styles, /@media \(min-width:701px\)\{[\s\S]*?body\[data-shell="touch"\] #resultsArea\.resultGrid\{ width:min\(760px,100%\); \}[\s\S]*?grid-template-columns:82px minmax\(0,1fr\) auto;[\s\S]*?body\[data-shell="touch"\] #resultsArea \.resultTimingClock\{ font-size:18px; \}/);
+  assert.doesNotMatch(styles, /@media \(min-width:701px\)[^{]*pointer:coarse[^}]*\{[\s\S]*?#resultsArea/);
   assert.match(styles, /@media \(max-width:600px\)\{[\s\S]*?\.resultTimingValue\{display:grid;justify-items:end;gap:1px;line-height:1\}[\s\S]*?\.resultTimingClock\{font-size:14px\}[\s\S]*?\.resultTimingPeriod\{font-size:7px\}/);
 });
 
