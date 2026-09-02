@@ -69,6 +69,12 @@ test("desktop page wrappers retain their layout role while their outer card pain
   assert.match(desktop, /\.workspaceNav\{[\s\S]*?height:calc\(100dvh - 24px\);/);
 });
 
+test("desktop status readouts are separated by hairline rules, including one before the utility cluster", () => {
+  // Drawn as an item ::before so no divider markup is needed and a hidden
+  // item (production estimate when unset) draws nothing.
+  assert.match(desktop, /\.workspaceStatusBar > \.workspaceStatusItem::before,\s*\n\s*\.workspaceStatusBar > \.desktopUtilityCluster::before\{[\s\S]*?width:1px;[\s\S]*?height:16px;[\s\S]*?background:var\(--border\);/);
+});
+
 test("desktop refinements keep Smart Hoppers obvious and utility/sidebar chrome restrained", () => {
   assert.match(app, /data-toggle-state-for="smartHoppersToggle" aria-live="polite">Disabled/);
   assert.match(desktop, /desktopWeightsSmartControl \.toggle\.on\{background:color-mix\(in srgb,var\(--ok\)/);
