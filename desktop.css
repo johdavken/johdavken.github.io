@@ -991,6 +991,270 @@
     grid-auto-rows:max-content;
     overflow:visible;
   }
+
+  /* =====================================================================
+   *   Dashboard - desktop-only overview mode
+   *   ---------------------------------------------------------------
+   *   Replaces the sidebar + status bar + working panel with a single
+   *   spacious, glanceable screen. It is a pure presentation toggle on
+   *   top of the same DOM (body.dashboardActive), not a second shell:
+   *   .workspaceNav/.workspaceContent are hidden, never rebuilt, so
+   *   Back to Line has nothing to restore beyond removing the class.
+   *   ===================================================================== */
+  .workspaceNavDashboardDivider{
+    height:1px;
+    margin:14px 4px 10px;
+    background:var(--border);
+  }
+  .workspaceNavDashboard{
+    color:var(--muted);
+  }
+  .workspaceNavDashboard span{
+    font-size:12px;
+    letter-spacing:.05em;
+  }
+  .workspaceNavDashboard .workspaceTileIcon{
+    width:15px;
+    height:15px;
+  }
+  .workspaceNavDashboard small{
+    color:color-mix(in srgb,var(--muted) 88%,var(--text));
+  }
+  .workspaceNavDashboard:hover{
+    border-color:var(--border2);
+    background:var(--row-bg);
+    color:var(--text);
+  }
+  .workspaceNavDashboard:focus-visible{
+    outline:2px solid var(--focus-border);
+    outline-offset:1px;
+  }
+
+  .dashboardPanel{ display:none; }
+  body.dashboardActive .workspaceNav,
+  body.dashboardActive .workspaceContent{ display:none; }
+  body.dashboardActive .dashboardPanel{
+    display:flex;
+    flex-direction:column;
+    grid-column:1 / -1;
+    grid-row:1;
+    width:100%;
+    height:calc(100dvh - 24px);
+    min-height:0;
+    padding:8px clamp(24px,6vw,96px) clamp(24px,5vh,64px);
+    overflow:auto;
+    gap:clamp(24px,4vh,48px);
+  }
+
+  .dashboardHeader{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:16px;
+    flex:0 0 auto;
+  }
+  .dashboardBackButton{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    padding:9px 14px;
+    border:1px solid var(--border);
+    border-radius:var(--control-radius);
+    background:transparent;
+    color:var(--text);
+    font-size:13px;
+    font-weight:700;
+    box-shadow:none;
+  }
+  .dashboardBackButton svg{
+    width:16px;
+    height:16px;
+    fill:none;
+    stroke:currentColor;
+    stroke-width:2;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+  }
+  .dashboardBackButton:hover{ background:var(--row-bg); border-color:var(--border2); }
+  .dashboardBackButton:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
+  .dashboardIdentity{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    text-align:right;
+    gap:2px;
+    min-width:0;
+  }
+  .dashboardIdentity strong{
+    font-size:15px;
+    font-weight:800;
+    letter-spacing:.05em;
+    color:var(--title);
+  }
+  .dashboardIdentity strong:empty{ display:none; }
+  .dashboardIdentity span{
+    font-size:13px;
+    font-weight:600;
+    color:var(--muted);
+    max-width:46vw;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .dashboardIdentity span:empty{ display:none; }
+
+  .dashboardLabel{
+    display:block;
+    font-size:12px;
+    font-weight:750;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--muted);
+  }
+
+  .dashboardChangeover{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    gap:6px;
+    flex:1 1 auto;
+  }
+  .dashboardChangeoverClock{
+    font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size:clamp(64px,10vw,128px);
+    font-weight:800;
+    line-height:1;
+    color:var(--title);
+    font-variant-numeric:tabular-nums;
+  }
+  .dashboardChangeoverClock[data-empty="true"]{
+    font-size:clamp(28px,4vw,40px);
+    color:var(--muted);
+    font-weight:700;
+  }
+  .dashboardChangeoverRemaining{
+    font-size:18px;
+    font-weight:650;
+    color:var(--muted);
+  }
+  .dashboardChangeoverRemaining[data-stale="true"]{ color:var(--warn); }
+  .dashboardChangeoverRemaining:empty{ display:none; }
+
+  .dashboardLowerGrid{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(0,1.6fr);
+    gap:clamp(24px,5vw,72px);
+    align-items:start;
+    flex:0 0 auto;
+    border-top:1px solid var(--surface-inner-border,var(--border));
+    padding-top:clamp(20px,3vh,32px);
+  }
+  .dashboardOutput{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  .dashboardOutputValue{
+    font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size:clamp(40px,5vw,64px);
+    font-weight:800;
+    line-height:1.05;
+    color:var(--title);
+    font-variant-numeric:tabular-nums;
+  }
+  .dashboardOutputValue[data-empty="true"]{
+    font-size:22px;
+    color:var(--muted);
+    font-weight:700;
+  }
+  .dashboardOutputUnit{
+    font-size:15px;
+    font-weight:700;
+    letter-spacing:.04em;
+    color:var(--muted);
+  }
+  .dashboardOutputUnit[hidden]{ display:none; }
+
+  .dashboardNextAction{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    min-width:0;
+  }
+  .dashboardNextActionBody{ display:flex; flex-direction:column; gap:10px; }
+  .dashboardNextActionTime{
+    font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size:clamp(28px,3vw,38px);
+    font-weight:800;
+    color:var(--title);
+    font-variant-numeric:tabular-nums;
+  }
+  .dashboardNextActionHoppers{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+  }
+  .dashboardNextActionHopper{
+    display:flex;
+    align-items:baseline;
+    gap:10px;
+    padding:6px 0;
+    border-top:1px solid var(--surface-inner-border,var(--border));
+    font-size:16px;
+  }
+  .dashboardNextActionHopper:first-child{ border-top:0; }
+  .dashboardNextActionHopper .dashboardHopperLabel{
+    flex:0 0 auto;
+    min-width:34px;
+    font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-weight:800;
+    color:var(--title);
+  }
+  .dashboardNextActionHopper .dashboardHopperResin{
+    color:var(--muted);
+    font-weight:600;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .dashboardNextActionEmpty{
+    font-size:16px;
+    font-weight:600;
+    color:var(--muted);
+  }
+
+  .dashboardSync{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    flex:0 0 auto;
+    padding-top:clamp(16px,2.5vh,24px);
+  }
+  .dashboardSync .dashboardLabel{ margin-right:2px; }
+  .dashboardSyncStatus{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    font-size:15px;
+    font-weight:700;
+    color:var(--text);
+  }
+  .dashboardSyncStatus i{
+    display:block;
+    width:9px;
+    height:9px;
+    border-radius:50%;
+    background:var(--muted);
+  }
+  .dashboardSyncStatus[data-state="ok"] i{ background:var(--ok); }
+  .dashboardSyncStatus[data-state="ok"]{ color:var(--ok); }
+  .dashboardSyncStatus[data-state="warn"] i{ background:var(--warn); }
+  .dashboardSyncStatus[data-state="warn"]{ color:var(--warn); }
+  .dashboardSyncStatus[data-state="bad"] i{ background:var(--bad); }
+  .dashboardSyncStatus[data-state="bad"]{ color:var(--bad); }
 }
 
 @media (min-width:901px) and (max-width:1180px) and (pointer: fine){

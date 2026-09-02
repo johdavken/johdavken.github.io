@@ -6081,6 +6081,7 @@
       refreshSmartHopperState();
       lastTimelineFlat = flat;
       lastTimelineChangeoverDate = changeoverDate;
+      renderDashboard();
       saveSession();
       if (sync) notifyActiveJobMutation({ immediate, kind });
     }
@@ -6105,6 +6106,7 @@
       });
       renderResultsFlat(refreshed, lastTimelineChangeoverDate);
       updateFooterNext(refreshed, lastTimelineChangeoverDate);
+      renderDashboard();
     }
 
     // Started once at app init (see setup below) - guarded so re-entering/
@@ -6721,6 +6723,10 @@
 
     let activeWorkspaceId = "resultsBlock";
 
+    // Dashboard is a pure presentation toggle over the same DOM/state, never
+    // persisted and never touching activeWorkspaceId - see setDashboardActive.
+    let dashboardActive = false;
+
     function saveWorkspacePreference(id){
       try{
         localStorage.setItem(LS_WORKSPACE_KEY, id);
@@ -7231,6 +7237,7 @@
       const desktop = isDesktopLayout();
       const compactRecipe = layoutModeQueries.compactRecipe.matches;
       const changed = desktop !== renderedIsDesktop || compactRecipe !== renderedCompactRecipe;
+      if (!desktop && dashboardActive) setDashboardActive(false);
       applyShellAttribute(desktop);
       renderedIsDesktop = desktop;
       renderedCompactRecipe = compactRecipe;
@@ -7363,17 +7370,19 @@
 
   function updateChangeoverCountdown(){
     const el = $("workspaceChangeoverCountdownStatus");
-    if (!el) return;
-    const changeoverDate = parseChangeoverDate(state.changeoverTime);
-    const stale = !!changeoverDate && isChangeoverStale(state.changeoverSetAt);
-    el.classList.toggle("stale", stale);
-    if (!changeoverDate){
-      el.title = "";
-      el.textContent = "Not set";
-      return;
+    if (el){
+      const changeoverDate = parseChangeoverDate(state.changeoverTime);
+      const stale = !!changeoverDate && isChangeoverStale(state.changeoverSetAt);
+      el.classList.toggle("stale", stale);
+      if (!changeoverDate){
+        el.title = "";
+        el.textContent = "Not set";
+      } else {
+        el.textContent = stale ? "Needs update" : fmtRelFromNow(changeoverDate);
+        el.title = stale ? `Changeover time was last set ${fmtAgo(state.changeoverSetAt)} — confirm or update it.` : "";
+      }
     }
-    el.textContent = stale ? "Needs update" : fmtRelFromNow(changeoverDate);
-    el.title = stale ? `Changeover time was last set ${fmtAgo(state.changeoverSetAt)} — confirm or update it.` : "";
+    renderDashboard();
   }
 
   function updateFooterNext(flat, changeoverDate){
@@ -7465,6 +7474,164 @@
         "All tracked hoppers are checked off or missing data",
         { tile:"Tracked data unavailable", tileState:"warn" }
       );
+    }
+  }
+
+  // Synced/Pending/Offline/Conflict/Error/Local only/Connecting -> the same
+  // three-way severity every status readout in the app keys its color off
+  // of (see renderLineSync's workspaceCloudSyncStatus tile). One place so
+  // Dashboard's RT Sync indicator can never disagree with the sidebar's.
+  function syncStatusSeverity(status){
+    if (status === "Synced") return "ok";
+    if (["Pending", "Offline", "Conflict"].includes(status)) return "warn";
+    if (status === "Error") return "bad";
+    return "neutral";
+  }
+
+  // Dashboard is a read-only projection of state the rest of the app already
+  // maintains - no independent fetches, no parallel timers, no duplicated
+  // changeover/output/timeline math. It only re-paints when dashboardActive,
+  // and every caller below already runs on a real state-change or the
+  // existing 30s changeover tick, so no new polling loop is introduced.
+  function renderDashboard(){
+    if (!dashboardActive) return;
+    const syncState = lineSync?.getState?.() || {};
+    renderDashboardIdentity(syncState);
+    renderDashboardChangeover();
+    renderDashboardOutput();
+    renderDashboardNextAction();
+    renderDashboardSync(syncState);
+  }
+
+  function renderDashboardIdentity(syncState){
+    const lineEl = $("dashboardLineNumber");
+    const nameEl = $("dashboardWorkspaceName");
+    const workspace = syncState.selectedWorkspace || null;
+    const lineNumber = window.PolynLineIdentity?.getLineConfigurationForSync(syncState)?.lineNumber ?? null;
+    if (lineEl){
+      lineEl.textContent = lineNumber ? `LINE ${lineNumber}` : (workspace?.name || "No connected line");
+    }
+    if (nameEl){
+      nameEl.textContent = lineNumber ? (workspace?.name || "") : "";
+    }
+  }
+
+  function renderDashboardChangeover(){
+    const clockEl = $("dashboardChangeoverClock");
+    const remainingEl = $("dashboardChangeoverRemaining");
+    if (!clockEl || !remainingEl) return;
+    const changeoverDate = parseChangeoverDate(state.changeoverTime);
+    if (!changeoverDate){
+      clockEl.textContent = "Not set";
+      clockEl.dataset.empty = "true";
+      remainingEl.textContent = "";
+      remainingEl.dataset.stale = "false";
+      return;
+    }
+    clockEl.textContent = fmtTime(changeoverDate);
+    clockEl.dataset.empty = "false";
+    const stale = isChangeoverStale(state.changeoverSetAt);
+    remainingEl.dataset.stale = String(stale);
+    if (stale){
+      remainingEl.textContent = "Needs update";
+      return;
+    }
+    const rel = fmtRelFromNow(changeoverDate);
+    remainingEl.textContent = rel === "now" ? "Due now" : `${rel.replace(/^in\s+/, "")} remaining`;
+  }
+
+  function renderDashboardOutput(){
+    const valueEl = $("dashboardOutputValue");
+    const unitEl = $("dashboardOutputUnit");
+    if (!valueEl || !unitEl) return;
+    if (state.lineRate > 0){
+      valueEl.textContent = state.lineRate.toLocaleString([], { maximumFractionDigits: 2 });
+      valueEl.dataset.empty = "false";
+      unitEl.hidden = false;
+    } else {
+      valueEl.textContent = "Not set";
+      valueEl.dataset.empty = "true";
+      unitEl.hidden = true;
+    }
+  }
+
+  // Groups every hopper whose calculated action lands at the exact same
+  // instant as the soonest one - the same startByDate/minutesToEmpty values
+  // and the same tiering (pump-off-by preferred, soonest-empty fallback)
+  // updateFooterNext already uses, so Dashboard and Timeline never disagree.
+  // Exact millisecond/whole-minute equality only - no invented tolerance.
+  function nextDashboardActionGroup(flat, changeoverDate){
+    if (!flat || !flat.length) return null;
+    if (changeoverDate && isChangeoverStale(state.changeoverSetAt)) return null;
+    if (changeoverDate){
+      const candidates = flat.filter(x => x.startByDate && Number.isFinite(x.totalMinutes) && !x.pumpOff);
+      if (candidates.length){
+        candidates.sort((a, b) => a.startByDate.getTime() - b.startByDate.getTime());
+        const soonest = candidates[0].startByDate.getTime();
+        return {
+          time: candidates[0].startByDate,
+          hoppers: candidates.filter(x => x.startByDate.getTime() === soonest)
+        };
+      }
+    }
+    const fallback = flat.filter(x => Number.isFinite(x.minutesToEmpty) && x.minutesToEmpty >= 0 && !x.pumpOff);
+    if (!fallback.length) return null;
+    fallback.sort((a, b) => a.minutesToEmpty - b.minutesToEmpty);
+    const soonestMinutes = fallback[0].minutesToEmpty;
+    return {
+      time: new Date(Date.now() + soonestMinutes * 60000),
+      hoppers: fallback.filter(x => x.minutesToEmpty === soonestMinutes)
+    };
+  }
+
+  function renderDashboardNextAction(){
+    const timeEl = $("dashboardNextActionTime");
+    const hoppersEl = $("dashboardNextActionHoppers");
+    const bodyEl = $("dashboardNextActionBody");
+    const emptyEl = $("dashboardNextActionEmpty");
+    if (!timeEl || !hoppersEl || !bodyEl || !emptyEl) return;
+    const group = nextDashboardActionGroup(lastTimelineFlat, lastTimelineChangeoverDate);
+    if (!group){
+      bodyEl.hidden = true;
+      emptyEl.hidden = false;
+      return;
+    }
+    bodyEl.hidden = false;
+    emptyEl.hidden = true;
+    timeEl.textContent = fmtTime(group.time);
+    hoppersEl.replaceChildren(...group.hoppers.map(hopper=>{
+      const row = document.createElement("div");
+      row.className = "dashboardNextActionHopper";
+      const label = document.createElement("span");
+      label.className = "dashboardHopperLabel";
+      label.textContent = hopper.hopperLabel;
+      const resin = document.createElement("span");
+      resin.className = "dashboardHopperResin";
+      resin.textContent = hopper.resinName || "—";
+      row.append(label, resin);
+      return row;
+    }));
+  }
+
+  function renderDashboardSync(syncState){
+    const statusEl = $("dashboardSyncStatus");
+    const textEl = $("dashboardSyncStatusText");
+    if (!statusEl || !textEl) return;
+    const status = syncState.status || "Local only";
+    statusEl.dataset.state = syncStatusSeverity(status);
+    textEl.textContent = status;
+  }
+
+  function setDashboardActive(active){
+    const next = !!active && isDesktopLayout();
+    if (next === dashboardActive) return;
+    dashboardActive = next;
+    document.body.classList.toggle("dashboardActive", dashboardActive);
+    if (dashboardActive){
+      renderDashboard();
+      requestAnimationFrame(()=>$("dashboardBackButton")?.focus());
+    } else {
+      document.querySelector(`.workspaceNavButton[data-workspace-target="${activeWorkspaceId}"]`)?.focus();
     }
   }
 
@@ -8342,6 +8509,7 @@
     if ((workspaceChanged || connectedChanged) && lastTimelineFlat){
       syncNativeTimelineAlarms(lastTimelineFlat, lastTimelineChangeoverDate);
     }
+    renderDashboard();
   }
 
   function openRtSyncJoinFromUrl(urlValue = window.location.href, requireAppLinkOrigin = false){
@@ -9346,6 +9514,8 @@
     $("workspaceIdentityButton")?.addEventListener("click",()=>{
       setWorkspacePanel("lineSyncBlock", { reveal:true });
     });
+    $("workspaceNavDashboard")?.addEventListener("click",()=>setDashboardActive(true));
+    $("dashboardBackButton")?.addEventListener("click",()=>setDashboardActive(false));
     hookWorkspaceNavMore();
     document.querySelectorAll(".workspaceContent > .workspacePanel > summary").forEach(summary=>{
       summary.addEventListener("click",event=>{
