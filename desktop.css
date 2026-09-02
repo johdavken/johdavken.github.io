@@ -923,7 +923,8 @@
   #toolsBlock .toolWorkspacePanel{height:100%;min-height:0;overflow:auto}
   #resinCalcResults{min-height:0;overflow:auto}
   #changelogBlock > .blockBody{overflow:auto}
-  #resinAdminBlock > .blockBody,#workspaceManagementBlock > .blockBody{overflow:auto}
+  #resinAdminBlock > .blockBody{overflow:auto}
+  #workspaceManagementBlock > .blockBody{overflow:hidden}
   /* Admin health is a compact readout, not a full-height workspace canvas.
      Pin its grid tracks to content so the generic desktop block-body height
      cannot distribute five small rows across the viewport. */

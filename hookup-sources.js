@@ -168,10 +168,10 @@
 
   /**
    * Group active positions by visible resin code for the Hookups view.
-   * Duplicate codes collapse to one row. `value` is the shared label when
-   * every matching position agrees (or only one is set); `mixed` is true when
-   * positions hold two or more different non-empty labels, which the UI must
-   * surface rather than silently collapse.
+   * Duplicate codes collapse to one row. `value` is the shared label only
+   * when every matching position agrees; `mixed` is true when labels differ
+   * or are missing at some matching positions, which the UI must surface
+   * rather than silently collapse.
    */
   function groupByResin(positions, map) {
     const safeMap = isPlainObject(map) ? map : {};
@@ -186,18 +186,26 @@
       }
       const group = groups.get(code);
       group.keys.push(position.key);
-      const entry = safeMap[position.key];
-      group.sources.push(entry && typeof entry.source === "string" ? entry.source : "");
+      // Use the same resin-guarded lookup as Timeline. A source entered for
+      // one occurrence of a resin must not make this grouped row look fully
+      // assigned when another occurrence is blank (or belongs to a prior
+      // resin at that physical position).
+      group.sources.push(sourceForPosition(safeMap, position.key, code));
     });
     return order.map(code => {
       const group = groups.get(code);
       const distinct = [...new Set(group.sources.filter(Boolean))];
+      const allAgree = group.sources.length > 0
+        && group.sources.every(source => source === group.sources[0]);
       return {
         resin: code,
         keys: group.keys.slice(),
         sources: group.sources.slice(),
-        value: distinct.length === 1 ? distinct[0] : "",
-        mixed: distinct.length > 1
+        // A blank is meaningful: that matching resin has no source at this
+        // physical hopper. Show a shared value only when every position
+        // agrees, otherwise let one edit apply a source to all of them.
+        value: allAgree ? group.sources[0] : "",
+        mixed: !allAgree && distinct.length > 0
       };
     });
   }

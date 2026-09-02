@@ -969,6 +969,79 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .baseGlyph{dis
 @media (max-width:760px){.lineConfigurationRow{align-items:start}.lineConfigurationRowInfo small{line-height:1.4}.lineConfigurationDialog{width:96vw}.lineConfigurationFieldset{padding:10px}.compactChoice button{flex:1 1 auto}.lineConfigurationEdit span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}}
 .workspaceRecoveryMembersList{ display: grid; gap: 6px; margin-top: 8px; }
 
+/* Workspace Management is a browser plus inspector: the workspace list
+   remains in place while selection changes only the adjacent detail pane. */
+.workspaceRecoveryPanel{display:grid;gap:12px;min-width:0}
+.workspaceRecoveryDeviceCard{gap:7px;padding:10px 12px;background:var(--row-bg)}
+.workspaceRecoveryEyebrow{color:var(--muted);font-size:10px;font-weight:850;letter-spacing:.1em;text-transform:uppercase}
+.workspaceRecoveryDeviceSummary{display:flex;align-items:center;justify-content:space-between;gap:14px;min-width:0}
+.workspaceRecoveryDeviceSummary > div{display:grid;gap:2px;min-width:0}
+.workspaceRecoveryDeviceSummary strong{color:var(--title);font-size:14px}
+.workspaceRecoveryDeviceStatus{color:var(--muted)}
+.workspaceRecoveryDiagnostic{min-width:0}
+.workspaceRecoveryDiagnostic summary{color:var(--focus-border);font-size:11px;font-weight:750;white-space:nowrap}
+.workspaceRecoveryDiagnostic > div{margin-top:7px;color:var(--muted);overflow-wrap:anywhere}
+.workspaceRecoveryMessage{min-height:1.2em;margin:0;color:var(--muted)}
+.workspaceRecoveryMessage:empty{display:none}
+.workspaceRecoveryWorkspaceGrid{display:grid;gap:12px;min-width:0}
+.workspaceRecoveryMaster,.workspaceRecoveryDetail{min-width:0;border:1px solid var(--border);border-radius:var(--radius-card);background:var(--row-bg)}
+.workspaceRecoveryMaster{display:grid;grid-template-rows:auto minmax(0,1fr);gap:8px;padding:10px}
+.workspaceRecoveryPaneHead,.workspaceRecoveryDetailHead,.workspaceRecoverySectionHead{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;min-width:0}
+.workspaceRecoveryPaneHead > div:first-child,.workspaceRecoveryDetailHead > div:first-child,.workspaceRecoverySectionHead > div:first-child{display:grid;gap:3px;min-width:0}
+.workspaceRecoveryPaneActions,.workspaceRecoveryCommonActions,.workspaceRecoveryMemberActions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.workspaceRecoveryCompactAction{min-height:32px;padding:5px 9px;font-size:11px}
+.workspaceRecoveryIconAction{display:grid;place-items:center;width:32px;height:32px;min-height:32px;padding:0;border-color:transparent;background:transparent;box-shadow:none}
+.workspaceRecoveryIconAction:hover:not(:disabled),.workspaceRecoveryIconAction:focus-visible{border-color:var(--focus-border);background:var(--focus-ring);color:var(--title)}
+.workspaceRecoveryIconAction svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.workspaceRecoveryList{display:grid;align-content:start;gap:4px;max-height:min(42vh,480px);padding-right:2px}
+.workspaceRecoveryRow{position:relative;gap:3px;min-height:0;padding:8px 9px;border-radius:var(--control-radius);background:transparent}
+.workspaceRecoveryRow:hover{background:var(--row-bg-2);border-color:transparent}
+.workspaceRecoveryRow.selected{border-color:transparent;background:var(--focus-ring);box-shadow:inset 3px 0 0 var(--focus-border)}
+.workspaceRecoveryRow strong{color:var(--title);font-size:13px}
+.workspaceRecoveryRow small{color:var(--muted);font-size:10px;line-height:1.35}
+.workspaceRecoveryDetail{display:grid;align-content:start;gap:14px;padding:13px;background:var(--panel)}
+.workspaceRecoveryDetail[hidden]{display:none}
+.workspaceRecoveryDetailHead .layerTitle{margin-top:1px;color:var(--title);font-size:16px}
+.workspaceRecoveryCommonActions{padding-bottom:12px;border-bottom:1px solid var(--border)}
+.workspaceRecoveryMembers{display:grid;gap:4px;min-width:0}
+.workspaceRecoverySectionHead{align-items:center}
+.workspaceRecoveryCount{display:grid;place-items:center;min-width:24px;height:24px;padding:0 7px;border:1px solid var(--border);border-radius:999px;background:var(--row-bg-2);color:var(--title);font-size:11px;font-weight:850;font-variant-numeric:tabular-nums}
+.workspaceRecoveryMembersList{margin-top:4px}
+.workspaceRecoveryMemberRow{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;padding:8px 9px;border-radius:var(--control-radius);background:var(--row-bg-2)}
+.workspaceRecoveryMemberInfo{display:grid;gap:2px;min-width:0}
+.workspaceRecoveryMemberInfo strong{overflow:hidden;color:var(--text);font-size:12px;text-overflow:ellipsis;white-space:nowrap}
+.workspaceRecoveryMemberInfo small{overflow:hidden;color:var(--muted);font-size:10px;text-overflow:ellipsis;white-space:nowrap}
+.workspaceRecoveryMemberActions{justify-content:flex-end;flex-wrap:nowrap}
+.workspaceRecoveryMemberActions button{min-height:28px;padding:4px 8px;font-size:10px;white-space:nowrap}
+.workspaceRecoveryMaintenance{display:grid;gap:5px;padding-top:12px;border-top:1px solid var(--border)}
+.workspaceRecoveryMaintenanceItem{border:1px solid var(--border);border-radius:var(--control-radius);background:var(--row-bg-2)}
+.workspaceRecoveryMaintenanceItem > summary{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;padding:8px 10px;cursor:pointer;list-style:none}
+.workspaceRecoveryMaintenanceItem > summary::-webkit-details-marker{display:none}
+.workspaceRecoveryMaintenanceItem > summary::after{align-self:center;content:"›";color:var(--muted);font-size:18px;line-height:1;transition:transform .14s ease}
+.workspaceRecoveryMaintenanceItem[open] > summary::after{transform:rotate(90deg)}
+.workspaceRecoveryMaintenanceItem summary span{color:var(--text);font-size:12px;font-weight:800}
+.workspaceRecoveryMaintenanceItem summary small{grid-column:1;color:var(--muted);font-size:10px;line-height:1.35}
+.workspaceRecoveryMaintenanceDanger summary span{color:var(--bad)}
+.workspaceRecoveryMaintenanceBody{display:grid;gap:9px;padding:0 10px 10px}
+.workspaceRecoveryMaintenanceBody p{margin:0;line-height:1.4}
+.workspaceRecoveryMaintenanceBody button{justify-self:start;min-height:30px;padding:5px 9px;font-size:11px}
+.workspaceRecoveryMerge{grid-template-columns:1fr;align-items:stretch;gap:9px;border:0;border-radius:0;padding:0;background:transparent}
+.workspaceRecoveryMerge label{display:grid;gap:4px;color:var(--muted)}
+
+@media (min-width:901px) and (pointer: fine){
+  #workspaceManagementBlock > .workspaceRecoveryPanel{grid-template-rows:auto auto minmax(0,1fr);height:100%;min-height:0;overflow:hidden}
+  #workspaceManagementBlock .workspaceRecoveryWorkspaceGrid{grid-template-columns:minmax(280px,320px) minmax(0,1fr);min-height:0;overflow:hidden}
+  #workspaceManagementBlock .workspaceRecoveryMaster,#workspaceManagementBlock .workspaceRecoveryDetail{min-height:0;overflow:hidden}
+  #workspaceManagementBlock .workspaceRecoveryList{max-height:none;min-height:0;overflow:auto;overscroll-behavior:contain;padding-right:4px}
+  #workspaceManagementBlock .workspaceRecoveryDetail{overflow:auto;overscroll-behavior:contain;padding-right:12px}
+}
+
+@media (max-width: 700px){
+  .workspaceRecoveryDeviceSummary{align-items:flex-start;flex-direction:column;gap:6px}
+  .workspaceRecoveryMemberRow{align-items:start;grid-template-columns:1fr}
+  .workspaceRecoveryMemberActions{justify-content:flex-start}
+}
+
 .bulkDensityMeasurementWorkspace{display:grid;gap:12px;max-width:960px}
 .bulkDensityMeasurementIntro{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--control-radius);background:var(--readonly-bg)}
 .bulkDensityMeasurementIntro > label{display:grid;gap:5px;min-width:176px;color:var(--muted);font-size:11px;font-weight:800}
@@ -1019,10 +1092,6 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .baseGlyph{dis
   .bulkDensitySecondaryResults > div{padding-left:0;border-left:0;border-top:1px solid var(--border);padding-top:7px}
   .bulkDensitySaveBar button{width:100%}
 }
-.workspaceRecoveryMemberRow{ display: flex; align-items: center; justify-content: space-between; gap: 10px; border: 1px solid var(--border); border-radius: var(--radius-row); padding: 6px 10px; }
-.workspaceRecoveryMemberActions{ display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-.workspaceRecoveryMerge{ display: grid; grid-template-columns: minmax(0,1fr) minmax(150px, .55fr) auto; align-items: end; gap: 10px; border: 1px solid var(--border); border-radius: var(--radius-row); padding: 10px; }
-.workspaceRecoveryMerge label{ display: grid; gap: 4px; }
 .mobileSetupEntryArt{ display:none; }
 
 .lineSyncStatusItem strong[data-state="synced"]{ color: var(--ok); }

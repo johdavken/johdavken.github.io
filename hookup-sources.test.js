@@ -195,6 +195,27 @@ test("groupByResin flags mixed when duplicate positions disagree, without losing
   assert.deepEqual(group.sources, ["B3", "S4"]);
 });
 
+test("groupByResin flags mixed when only some duplicate resin positions have a source", () => {
+  const positions = [
+    { key: "A:0", resin: "MS0440", pct: 30 },
+    { key: "B:1", resin: "MS0440", pct: 70 }
+  ];
+  const map = { "A:0": { resin: "MS0440", source: "24" } };
+  const [group] = H.groupByResin(positions, map);
+  assert.equal(group.value, "");
+  assert.equal(group.mixed, true);
+  assert.deepEqual(group.sources, ["24", ""]);
+});
+
+test("groupByResin does not present a stale resin-mismatched source as assigned", () => {
+  const positions = [{ key: "B:1", resin: "MS0440", pct: 100 }];
+  const map = { "B:1": { resin: "OLD", source: "24" } };
+  const [group] = H.groupByResin(positions, map);
+  assert.equal(group.value, "");
+  assert.equal(group.mixed, false);
+  assert.deepEqual(group.sources, [""]);
+});
+
 test("groupByResin ignores positions with no resin code (resin code is the visible identity)", () => {
   const groups = H.groupByResin([{ key: "A:2", resin: "", pct: 12 }], {});
   assert.deepEqual(groups, []);
