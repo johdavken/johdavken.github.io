@@ -15,20 +15,29 @@ const html = fs.readFileSync("index.html", "utf8");
 const app = fs.readFileSync("app.js", "utf8");
 const desktop = fs.readFileSync("desktop.css", "utf8");
 
-test("sidebar carries an understated Dashboard entry, visually separated near the bottom", () => {
+test("sidebar carries an understated Dashboard entry, centered at the very bottom below a divider", () => {
   const nav = html.slice(html.indexOf('<nav class="workspaceNav"'), html.indexOf('</nav>', html.indexOf('<nav class="workspaceNav"')));
+  const footerIndex = nav.indexOf('class="workspaceNavFooter"');
+  const versionIndex = nav.indexOf('class="desktopRailVersion"');
   const dividerIndex = nav.indexOf('class="workspaceNavDashboardDivider"');
   const buttonIndex = nav.indexOf('id="workspaceNavDashboard"');
-  const versionIndex = nav.indexOf('class="desktopRailVersion"');
-  assert.ok(dividerIndex > -1 && buttonIndex > -1 && versionIndex > -1);
-  // Sits after every production/support destination, right above the
-  // version string - the rail's one pocket of otherwise-unused space.
-  assert.ok(dividerIndex < buttonIndex);
-  assert.ok(buttonIndex < versionIndex);
+  assert.ok(footerIndex > -1 && versionIndex > -1 && dividerIndex > -1 && buttonIndex > -1);
+  // The footer block sits after every production/support destination, floated
+  // to the rail foot by margin-top:auto. Inside it the order reads
+  // top-to-bottom: version, then the divider, then Dashboard - the version is
+  // informational and must not look attached to the Dashboard switch.
+  assert.ok(footerIndex > nav.indexOf('id="workspaceNavSudo"'), "footer block follows every existing nav item");
+  assert.ok(versionIndex < dividerIndex, "version sits above the divider");
+  assert.ok(dividerIndex < buttonIndex, "divider separates normal navigation from the Dashboard switch");
   assert.match(nav, /id="workspaceNavSudo"[\s\S]*id="workspaceNavDashboard"/, "Dashboard follows every existing nav item rather than reordering them");
-  // No data-workspace-target: Dashboard is a mode switch, not another
-  // section the generic setWorkspacePanel wiring should ever drive.
-  assert.doesNotMatch(nav.slice(buttonIndex, buttonIndex + 400), /data-workspace-target/);
+  // Reduced to a centered word: no data-workspace-target (it is a mode switch,
+  // never a setWorkspacePanel destination), no tile icon, no caption.
+  const button = nav.slice(buttonIndex, nav.indexOf('</button>', buttonIndex));
+  assert.doesNotMatch(button, /data-workspace-target/);
+  assert.doesNotMatch(button, /workspaceTileIcon|<small/);
+  assert.match(button, /<span>Dashboard<\/span>/);
+  assert.match(desktop, /\.workspaceNavDashboard span\{[\s\S]*?justify-content:center;/);
+  assert.match(desktop, /\.workspaceNavFooter\{[\s\S]*?margin-top:auto;/);
 });
 
 test("Dashboard panel exists once, outside the normal workspace shell", () => {
@@ -43,13 +52,18 @@ test("Back to Line is a real labeled button, not an X or icon-only control", () 
   assert.match(html, /<button type="button" class="dashboardBackButton" id="dashboardBackButton">\s*<svg[\s\S]*?<\/svg>\s*Back to Line\s*<\/button>/);
 });
 
-test("Dashboard shows exactly the five approved facts, nothing else", () => {
+test("Dashboard shows exactly the five approved facts, plus the one allowed control", () => {
   const panel = html.slice(html.indexOf('id="dashboardPanel"'), html.indexOf('</section>', html.indexOf('id="dashboardPanel"')));
   ["dashboardLineNumber", "dashboardWorkspaceName", "dashboardChangeoverClock", "dashboardChangeoverRemaining", "dashboardOutputValue", "dashboardNextActionTime", "dashboardNextActionHoppers", "dashboardSyncStatus"].forEach(id => {
     assert.match(panel, new RegExp(`id="${id}"`));
   });
   // The forbidden additions called out explicitly in the spec.
   assert.doesNotMatch(panel, /resinTotal|recipeMatrix|productionHistory|quickAction/i);
+  // The single new action inside the Dashboard information area: a small
+  // secondary re-open of the existing changeover calculator. Nothing else.
+  const buttons = [...panel.matchAll(/<button\b/g)];
+  assert.equal(buttons.length, 2, "only Back to Line and the changeover refresh are buttons in the panel");
+  assert.match(panel, /id="dashboardChangeoverRefresh"/);
 });
 
 test("Dashboard mode is a pure presentation toggle - one flag, no reload, no second data source", () => {
@@ -174,6 +188,48 @@ test("RT Sync status reuses the same status text and severity mapping the sideba
   assert.match(fn, /textEl\.textContent = status;/);
 });
 
+test("the lower Dashboard row is a balanced Output / Next Action / RT Sync composition, RT Sync anchored right", () => {
+  const panel = html.slice(html.indexOf('id="dashboardPanel"'), html.indexOf('</section>', html.indexOf('id="dashboardPanel"')));
+  const grid = panel.slice(panel.indexOf('class="dashboardLowerGrid"'), panel.indexOf('</div>\n    </div>', panel.indexOf('class="dashboardLowerGrid"')) + 20);
+  // All three sections now live inside the one lower grid, in reading order.
+  assert.match(grid, /dashboardOutput[\s\S]*?dashboardNextAction[\s\S]*?dashboardSync/);
+  assert.equal((panel.match(/class="dashboardSync"/g) || []).length, 1);
+  // RT Sync is a grid child (indented under .dashboardLowerGrid), no longer a
+  // section-level sibling block sitting after the grid.
+  assert.match(panel, /\n {6}<div class="dashboardSync">/);
+  assert.doesNotMatch(panel, /\n\n {4}<div class="dashboardSync">/);
+  // Three-column grid; align-items:start keeps the labels on one top baseline
+  // and stops RT Sync sliding down when Next Action grows.
+  assert.match(desktop, /\.dashboardLowerGrid\{[\s\S]*?grid-template-columns:minmax\(0,1fr\) minmax\(0,1\.5fr\) minmax\(0,1fr\);[\s\S]*?align-items:start;/);
+  // Output stays left (default), Next Action is centre-anchored over its wider
+  // column, RT Sync is right-anchored - the three-part balance from the brief.
+  assert.match(desktop, /\.dashboardNextAction\{[\s\S]*?flex-direction:column;[\s\S]*?align-items:center;/);
+  assert.match(desktop, /\.dashboardNextActionBody\{[^}]*align-items:center;/);
+  assert.match(desktop, /\.dashboardSync\{[\s\S]*?flex-direction:column;[\s\S]*?align-items:flex-end;/);
+  assert.doesNotMatch(desktop, /\.dashboardSync\{[^}]*(border:|background:|box-shadow:)/);
+  // No new pixel positioning was introduced for the relocation.
+  assert.doesNotMatch(desktop, /\.dashboardSync\b[^{]*\{[^}]*position:absolute/);
+});
+
+test("RT Sync gains a moderate, state-recoloured status icon - the app's one sync glyph, not a per-state icon set", () => {
+  const panel = html.slice(html.indexOf('id="dashboardPanel"'), html.indexOf('</section>', html.indexOf('id="dashboardPanel"')));
+  // Reuses the exact circular-arrows sync path the mobile line-sync status and
+  // the changeover refresh already use.
+  assert.match(panel, /<svg class="dashboardSyncIcon"[\s\S]*?M5 7a8 8 0 0 1 13 1l2 3M19 17a8 8 0 0 1-13-1l-2-3/);
+  assert.match(panel, /dashboardSyncIcon"[^>]*aria-hidden="true"/);
+  // The old bare colour dot is gone.
+  assert.doesNotMatch(panel, /dashboardSyncStatus"[^>]*>\s*<i /);
+  // Theme-aware (currentColor) and recoloured by state, never a fixed hex.
+  assert.match(desktop, /\.dashboardSyncIcon\{[\s\S]*?stroke:currentColor;/);
+  assert.match(desktop, /\.dashboardSyncStatus\[data-state="ok"\]\{ color:var\(--ok\); \}/);
+  assert.match(desktop, /\.dashboardSyncStatus\[data-state="warn"\]\{ color:var\(--warn\); \}/);
+  assert.match(desktop, /\.dashboardSyncStatus\[data-state="bad"\]\{ color:var\(--bad\); \}/);
+  assert.doesNotMatch(desktop, /\.dashboardSync(Icon|Status)[^{]*\{[^}]*#[0-9a-fA-F]{3,}/);
+  // Present but restrained: icon ~22px, "Synced" well under the Output value's clamp(40px,5vw,64px).
+  assert.match(desktop, /\.dashboardSyncIcon\{[\s\S]*?width:22px;/);
+  assert.match(desktop, /\.dashboardSyncStatus\{[\s\S]*?font-size:clamp\(17px,1\.5vw,20px\);/);
+});
+
 test("empty/unavailable states render clean text, never fake data", () => {
   const changeoverFn = app.slice(app.indexOf("function renderDashboardChangeover"), app.indexOf("function renderDashboardOutput"));
   assert.match(changeoverFn, /clockEl\.textContent = "Not set";/);
@@ -205,4 +261,86 @@ test("Dashboard back button and sidebar entry are keyboard-focusable with visibl
   // Real <button> elements, not divs with a click handler.
   assert.match(html, /<button type="button" class="dashboardBackButton"/);
   assert.match(html, /<button class="workspaceNavButton workspaceNavDashboard" id="workspaceNavDashboard" type="button"/);
+});
+
+test("the changeover refresh is another entry into the existing wizard, not a second calculator", () => {
+  const panel = html.slice(html.indexOf('id="dashboardPanel"'), html.indexOf('</section>', html.indexOf('id="dashboardPanel"')));
+  const btn = panel.slice(panel.indexOf('id="dashboardChangeoverRefresh"') - 40, panel.indexOf('</button>', panel.indexOf('id="dashboardChangeoverRefresh"')) + 9);
+  // Wired purely by the app's single existing wizard-trigger listener -
+  // data-changeover-wizard-trigger - so there is no Dashboard-only handler,
+  // no duplicated formula, no independent changeover-time write.
+  assert.match(btn, /data-changeover-wizard-trigger/);
+  assert.match(btn, /aria-controls="changeoverWizardDialog"/);
+  assert.match(btn, /aria-label="Update changeover estimate"/);
+  assert.match(btn, /title="Update changeover estimate"/);
+  // Sits beside the CHANGEOVER label, not near the hero clock.
+  assert.match(panel, /dashboardChangeoverHead[\s\S]*?dashboardLabel[\s\S]*?dashboardChangeoverRefresh[\s\S]*?dashboardChangeoverClock/);
+  // Reuses the app's established circular-arrows refresh glyph (same path
+  // data the RT Sync refresh control uses), not a new icon.
+  assert.match(btn, /M5 7a8 8 0 0 1 13 1l2 3M19 17a8 8 0 0 1-13-1l-2-3/);
+  // No new click handler bound to it in app.js.
+  assert.doesNotMatch(app, /dashboardChangeoverRefresh/);
+  // Theme-aware, visually secondary, still an easy target, clear on hover/focus.
+  assert.match(desktop, /\.dashboardChangeoverRefresh\{[\s\S]*?color:var\(--muted\);/);
+  assert.match(desktop, /\.dashboardChangeoverRefresh\{[\s\S]*?width:32px;[\s\S]*?height:32px;/);
+  assert.match(desktop, /\.dashboardChangeoverRefresh:hover\{/);
+  assert.match(desktop, /\.dashboardChangeoverRefresh:focus-visible\{/);
+});
+
+test("the sidebar RT logo opens Dashboard through the same setDashboardActive path", () => {
+  assert.match(html, /<div class="workspaceBrand" id="workspaceBrandDashboard" role="button" tabindex="0" aria-label="Open Dashboard" title="Open Dashboard">/);
+  const fn = app.slice(app.indexOf('const brandDashboard = $("workspaceBrandDashboard");'), app.indexOf('$("dashboardBackButton")?.addEventListener'));
+  // One navigation path: the exact same call the bottom link uses, plus
+  // Enter/Space for the role="button" markup - never a parallel transition.
+  assert.match(fn, /brandDashboard\.addEventListener\("click",\(\)=>setDashboardActive\(true\)\)/);
+  assert.match(fn, /event\.key === "Enter" \|\| event\.key === " "/);
+  assert.match(fn, /setDashboardActive\(true\)/);
+  assert.doesNotMatch(fn, /dashboardActive\s*=\s*true|classList\.(add|toggle)\("dashboardActive"/);
+  // Pointer + visible focus, logo mark itself unchanged.
+  assert.match(desktop, /#workspaceBrandDashboard\{[\s\S]*?cursor:pointer;/);
+  assert.match(desktop, /#workspaceBrandDashboard:focus-visible\{/);
+});
+
+test("desktop-only RT logo entry point does not disturb the mobile brand mark", () => {
+  // The mobile logo is a separate .mobileBrand element; only the sidebar
+  // .workspaceBrand (display:none at mobile widths) gained the role/handler.
+  assert.doesNotMatch(html, /<div class="mobileBrand"[^>]*role="button"/);
+  assert.match(html, /<div class="mobileBrand" aria-label="Resin\.Tools">/);
+});
+
+test("duplicate line/workspace identity collapses to one row; a distinct name still shows both", () => {
+  const fn = app.slice(app.indexOf("function renderDashboardIdentity"), app.indexOf("function renderDashboardChangeover"));
+  // Structured comparison via PolynLineIdentity's own normalizer against the
+  // "line <n>" identity form - not a parse of the rendered "LINE n" string.
+  assert.match(fn, /window\.PolynLineIdentity\?\.normalizeLineName/);
+  assert.match(fn, /normalizeLineName\(workspaceName\) === `line \$\{lineNumber\}`/);
+  assert.match(fn, /\(lineNumber && !duplicatesLineIdentity\) \? workspaceName : ""/);
+  // Display suppression only - the stored workspace name is never rewritten.
+  assert.doesNotMatch(fn, /\.name\s*=|selectedWorkspace\.name\s*=/);
+
+  // Independent re-implementation of the rule so app.js and the test cannot
+  // drift silently.
+  const normalize = v => String(v || "").trim().replace(/\s+/g, " ").toLowerCase();
+  const secondRow = (lineNumber, workspaceName) => {
+    const dup = !!lineNumber && normalize(workspaceName) === `line ${lineNumber}`;
+    return (lineNumber && !dup) ? workspaceName : "";
+  };
+  assert.equal(secondRow(20, "Line 20"), "", "\"Line 20\" for line 20 is hidden");
+  assert.equal(secondRow(20, "  line   20 "), "", "whitespace/case variants still collapse");
+  assert.equal(secondRow(20, "LINE 20"), "");
+  assert.equal(secondRow(20, "Extrusion West"), "Extrusion West", "a distinct name still shows");
+  assert.equal(secondRow(null, "Some Workspace"), "", "no mapped line means no second row, unchanged");
+});
+
+test("the rail's version/divider/Dashboard block is bottom-anchored by flex, never absolute positioning", () => {
+  const navRule = desktop.slice(desktop.indexOf(".workspaceNav{"), desktop.indexOf("}", desktop.indexOf(".workspaceNav{")) + 1);
+  assert.match(navRule, /display:flex;\s*\n\s*flex-direction:column;/);
+  // Existing scroll behavior is the graceful-degradation path on short
+  // viewports - the rule already carries overflow:auto, no new scrollbar.
+  assert.match(navRule, /overflow:auto;/);
+  const footerRule = desktop.slice(desktop.indexOf(".workspaceNavFooter{"), desktop.indexOf("}", desktop.indexOf(".workspaceNavFooter{")) + 1);
+  assert.match(footerRule, /margin-top:auto;/);
+  assert.doesNotMatch(footerRule, /position:absolute/);
+  const versionRule = desktop.slice(desktop.indexOf(".desktopRailVersion{"), desktop.indexOf("}", desktop.indexOf(".desktopRailVersion{")) + 1);
+  assert.doesNotMatch(versionRule, /position:absolute/);
 });

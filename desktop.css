@@ -32,17 +32,22 @@
     height:calc(100dvh - 24px);
     min-height:0;
     overflow:auto;
-    /* Without this, grid's default align-content (normal, which behaves as
-       stretch here) distributes the sidebar's leftover height across every
-       auto-sized row - most visibly the More/divider row, which has almost
-       no natural content and so ballooned from ~33px up past 75px to help
-       fill the column. Pin rows to their own size and let the extra space
-       sit as plain empty space below "More" instead. The four gruv-rail-
-       grouped themes below used to carry their own duplicate of this same
-       declaration (removed - this one already reaches them, same
-       .workspaceNav element, and a higher-specificity rule redeclaring an
-       identical value was dead weight, not a real override). */
-    align-content:start;
+    /* Flex column (over the shared grid rule) so .workspaceNavFooter can take
+       margin-top:auto and sit at the rail's foot: the leftover height between
+       the last working-nav item and the version/divider/Dashboard block goes
+       into that auto margin instead of stretching rows. When the rail is too
+       short for its content the auto margin collapses to 0 and the existing
+       overflow:auto scrolls - nothing overlaps, nothing is clipped. */
+    display:flex;
+    flex-direction:column;
+  }
+  .workspaceNav > *{ flex:0 0 auto; }
+  .workspaceNavFooter{
+    margin-top:auto;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    padding-top:14px;
   }
   /* Desktop never had this bar before (it was mobile home tile grid only) -
      .workspaceIdentityBar's shared styles.css rule already covers the
@@ -51,18 +56,15 @@
     display:flex;
     margin:0 0 8px;
   }
-  /* A normal flow item (the last child of .workspaceNav), not pinned to the
-     rail's box - position:absolute;bottom here previously anchored it to a
-     fixed spot in the scrollport rather than the scroll content, so once
-     the More/extras were expanded and the rail actually scrolled, whatever
-     content scrolled into that same on-screen spot (Sudo access's caption)
-     rendered underneath it and looked cut off. Being in-flow means it can
-     never overlap a sibling, at the cost of needing a scroll to the very
-     end to see it when extras are expanded - an acceptable trade for a
-     version string. */
+  /* A normal flow item inside .workspaceNavFooter (never position:absolute -
+     that previously anchored it to a fixed spot in the scrollport rather than
+     the scroll content, so an expanded/scrolled rail rendered Sudo access's
+     caption underneath it). It sits just above the Dashboard divider; the
+     footer's own margin-top:auto floats the whole block to the rail foot,
+     and when the rail must scroll it simply scrolls with everything else. */
   .desktopRailVersion{
     display:block;
-    margin-top:8px;
+    margin-top:0;
     color:var(--muted);
     font-family:var(--font-mono);
     font-size:9px;
@@ -523,7 +525,8 @@
     --gruv-rail-sync:#ebdbb2;
     --gruv-rail-tools:#d3869b;
     --gruv-rail-help:#ebdbb2;
-    display:grid;
+    /* Layout model (flex column + bottom-anchored footer) comes from the
+       shared .workspaceNav rule above; this override is surface-only. */
     position:sticky;
     gap:5px;
     padding:14px 12px 16px;
@@ -1001,31 +1004,86 @@
    *   .workspaceNav/.workspaceContent are hidden, never rebuilt, so
    *   Back to Line has nothing to restore beyond removing the class.
    *   ===================================================================== */
+  /* The divider is the message: normal working navigation above it, the
+     Dashboard / overview-mode switch below. So the entry drops the nav-row
+     card treatment entirely - no icon, no caption, just a centered word that
+     reads as a mode toggle, not another destination. */
   .workspaceNavDashboardDivider{
     height:1px;
-    margin:14px 4px 10px;
+    margin:2px 4px;
     background:var(--border);
   }
   .workspaceNavDashboard{
+    padding:8px 11px;
+    border:1px solid transparent;
+    text-align:center;
     color:var(--muted);
   }
   .workspaceNavDashboard span{
+    justify-content:center;
     font-size:12px;
-    letter-spacing:.05em;
-  }
-  .workspaceNavDashboard .workspaceTileIcon{
-    width:15px;
-    height:15px;
-  }
-  .workspaceNavDashboard small{
-    color:color-mix(in srgb,var(--muted) 88%,var(--text));
+    letter-spacing:.14em;
   }
   .workspaceNavDashboard:hover{
-    border-color:var(--border2);
     background:var(--row-bg);
     color:var(--text);
   }
   .workspaceNavDashboard:focus-visible{
+    outline:2px solid var(--focus-border);
+    outline-offset:1px;
+  }
+
+  /* The sidebar RT logo is the third way into Dashboard (bottom link, RT
+     logo, and - once open - nothing until Back to Line). Same setDashboardActive
+     path, so it only needs to look and behave clickable; the mark itself is
+     unchanged. Desktop-only: .workspaceBrand is already display:none at mobile
+     widths (styles.css), and setDashboardActive still no-ops off desktop. */
+  #workspaceBrandDashboard{
+    cursor:pointer;
+    border-radius:var(--control-radius);
+  }
+  #workspaceBrandDashboard:hover .resinToolsSidebarIcon{ opacity:.82; }
+  #workspaceBrandDashboard:focus-visible{
+    outline:2px solid var(--focus-border);
+    outline-offset:2px;
+  }
+
+  /* Small secondary re-open of the existing changeover calculator, sat beside
+     the CHANGEOVER label - never competes with the hero clock. It carries
+     data-changeover-wizard-trigger, so the app's one wizard-trigger listener
+     wires it with no Dashboard-specific calculator. */
+  .dashboardChangeoverHead{
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .dashboardChangeoverRefresh{
+    display:grid;
+    place-items:center;
+    width:32px;
+    height:32px;
+    min-height:32px;
+    padding:8px;
+    border:0;
+    border-radius:var(--control-radius);
+    background:transparent;
+    color:var(--muted);
+    box-shadow:none;
+  }
+  .dashboardChangeoverRefresh svg{
+    width:15px;
+    height:15px;
+    fill:none;
+    stroke:currentColor;
+    stroke-width:1.8;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+  }
+  .dashboardChangeoverRefresh:hover{
+    background:var(--row-bg);
+    color:var(--text);
+  }
+  .dashboardChangeoverRefresh:focus-visible{
     outline:2px solid var(--focus-border);
     outline-offset:1px;
   }
@@ -1144,8 +1202,8 @@
 
   .dashboardLowerGrid{
     display:grid;
-    grid-template-columns:minmax(0,1fr) minmax(0,1.6fr);
-    gap:clamp(24px,5vw,72px);
+    grid-template-columns:minmax(0,1fr) minmax(0,1.5fr) minmax(0,1fr);
+    gap:clamp(20px,4vw,64px);
     align-items:start;
     flex:0 0 auto;
     border-top:1px solid var(--surface-inner-border,var(--border));
@@ -1177,13 +1235,18 @@
   }
   .dashboardOutputUnit[hidden]{ display:none; }
 
+  /* Centre column: label, time and the hopper block all centre-anchored over
+     the column (Output stays left, RT Sync stays right). The hopper rows keep
+     their own left-aligned label/resin layout - they stretch to the widest
+     row so the divider hairlines stay uniform - but sit as one centred group. */
   .dashboardNextAction{
     display:flex;
     flex-direction:column;
+    align-items:center;
     gap:8px;
     min-width:0;
   }
-  .dashboardNextActionBody{ display:flex; flex-direction:column; gap:10px; }
+  .dashboardNextActionBody{ display:flex; flex-direction:column; align-items:center; gap:10px; }
   .dashboardNextActionTime{
     font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     font-size:clamp(28px,3vw,38px);
@@ -1225,35 +1288,42 @@
     color:var(--muted);
   }
 
+  /* Third column of .dashboardLowerGrid - anchored right, opposite Output,
+     label on the same top baseline as OUTPUT/NEXT ACTION (align-items:start
+     on the grid). Not a card; same column rhythm as its two siblings. */
   .dashboardSync{
     display:flex;
-    align-items:center;
-    justify-content:center;
-    gap:10px;
-    flex:0 0 auto;
-    padding-top:clamp(16px,2.5vh,24px);
+    flex-direction:column;
+    align-items:flex-end;
+    gap:6px;
+    min-width:0;
+    text-align:right;
   }
-  .dashboardSync .dashboardLabel{ margin-right:2px; }
   .dashboardSyncStatus{
     display:flex;
     align-items:center;
-    gap:7px;
-    font-size:15px;
-    font-weight:700;
+    gap:9px;
+    font-size:clamp(17px,1.5vw,20px);
+    font-weight:750;
     color:var(--text);
   }
-  .dashboardSyncStatus i{
-    display:block;
-    width:9px;
-    height:9px;
-    border-radius:50%;
-    background:var(--muted);
+  /* Reuses the app's one sync glyph (see .mobileLineSyncStatusIcon) - a
+     single icon recoloured by state via currentColor, never a per-state
+     icon set. Moderate size: present, but well below the Output/Next Action
+     values, and state is always spelled out in the adjacent word too. */
+  .dashboardSyncIcon{
+    flex:0 0 auto;
+    width:22px;
+    height:22px;
+    fill:none;
+    stroke:currentColor;
+    stroke-width:1.8;
+    stroke-linecap:round;
+    stroke-linejoin:round;
   }
-  .dashboardSyncStatus[data-state="ok"] i{ background:var(--ok); }
+  .dashboardSyncStatus[data-state="neutral"] .dashboardSyncIcon{ color:var(--muted); }
   .dashboardSyncStatus[data-state="ok"]{ color:var(--ok); }
-  .dashboardSyncStatus[data-state="warn"] i{ background:var(--warn); }
   .dashboardSyncStatus[data-state="warn"]{ color:var(--warn); }
-  .dashboardSyncStatus[data-state="bad"] i{ background:var(--bad); }
   .dashboardSyncStatus[data-state="bad"]{ color:var(--bad); }
 }
 
