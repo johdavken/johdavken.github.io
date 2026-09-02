@@ -9512,6 +9512,14 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
 .mobileFooterMeta{display:none}
 .mobileFooterVersion{display:none}
 .desktopRailVersion{display:none}
+/* Dashboard is a desktop-only overview mode (re-enabled in desktop.css behind
+   the min-width:901px + pointer:fine query). Its panel and the rail-foot entry
+   point that opens it are hidden by default so touch layouts, which have no
+   desktop media rule to catch them, don't render them inline - the bug where
+   "Dashboard", the Back to Line control, and the changeover glyph leaked onto
+   mobile/tablet and pushed the home flow apart. */
+.workspaceNavFooter{display:none}
+.dashboardPanel{display:none}
 /* The root spans the viewport and is click-through on purpose, so it never
    blocks the page beneath it - but anything actually hosted inside it has to
    take clicks back, or it inherits pointer-events:none and every click within

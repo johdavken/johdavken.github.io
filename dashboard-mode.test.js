@@ -255,6 +255,16 @@ test("Dashboard CSS hides the working shell and is scoped to the existing deskto
   assert.match(desktop, /body\.dashboardActive \.dashboardPanel\{/);
 });
 
+test("the Dashboard panel and its rail-foot entry are hidden by default so touch layouts never render them inline", () => {
+  const styles = fs.readFileSync("styles.css", "utf8");
+  // Sits with the other base (mobile-first) "hide desktop-only chrome" rules
+  // next to .desktopRailVersion; desktop.css opts them back in behind the
+  // desktop/fine-pointer query.
+  assert.match(styles, /\.desktopRailVersion\{display:none\}\n(?:\/\*[\s\S]*?\*\/\n)?\.workspaceNavFooter\{display:none\}\n\.dashboardPanel\{display:none\}/);
+  // desktop.css re-enables the footer inside the shared desktop query.
+  assert.match(desktop, /\.workspaceNavFooter\{[\s\S]*?margin-top:auto;[\s\S]*?display:flex;/);
+});
+
 test("Dashboard back button and sidebar entry are keyboard-focusable with visible focus styles", () => {
   assert.match(desktop, /\.dashboardBackButton:focus-visible\{ outline:2px solid var\(--focus-border\); outline-offset:2px; \}/);
   assert.match(desktop, /\.workspaceNavDashboard:focus-visible\{/);
