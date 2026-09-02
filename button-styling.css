@@ -107,12 +107,18 @@ body[data-button-style]{
   body[data-button-style="blueprint"] #splitsBlock #resetAllSplits::after{ border-color: var(--btnstyle-danger); }
 
   /* ---- 04 · Station console -------------------------------------- */
+  /* Each row is a contained bay. The bulk bay is .splitsEditRowSecondary
+     itself (not its .splitsBulkActions child) so this also overrides that
+     element's border-radius:999px pill-clip from styles.css. */
   body[data-button-style="console"] #splitsBlock #recipeHeaderActionPill,
-  body[data-button-style="console"] #splitsBlock .splitsBulkActions,
+  body[data-button-style="console"] #splitsArea #splitsBulkBar .splitsEditRowSecondary,
   body[data-button-style="console"] #splitsBlock .weightsBulkActions{
     padding: 6px 8px;
     border-radius: 7px;
     background: color-mix(in srgb, var(--btnstyle-surface) 55%, transparent);
+  }
+  body[data-button-style="console"] #splitsArea #splitsBulkBar .splitsEditRowSecondary > .splitsBulkActions{
+    border-radius: 7px;
   }
   body[data-button-style="console"] #splitsBlock #recipeHeaderActionPill .recipeHeaderAction,
   body[data-button-style="console"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
@@ -354,6 +360,27 @@ body[data-button-style]{
     border-color: var(--btnstyle-danger);
     box-shadow: 3px 3px 0 color-mix(in srgb, var(--btnstyle-danger) 18%, transparent);
     color: var(--btnstyle-danger);
+  }
+
+  /* ---- Shared: the bulk-row container ------------------------------
+     styles.css gives .splitsEditRowSecondary border-radius:999px +
+     overflow-x:auto, which clips its end buttons (Clear on the left,
+     Rearrange on the right) into rounded pill caps regardless of the
+     buttons' own square corners. Flatten it to the active style's corner
+     so nothing pill-shaped survives; console keeps its own rounded bay
+     (handled in its block above). overflow:visible lets the offset /
+     drop shadows of the tiles and ribbons treatments show in full. */
+  body[data-button-style="blueprint"] #splitsArea #splitsBulkBar .splitsEditRowSecondary,
+  body[data-button-style="underline"] #splitsArea #splitsBulkBar .splitsEditRowSecondary,
+  body[data-button-style="markers"] #splitsArea #splitsBulkBar .splitsEditRowSecondary,
+  body[data-button-style="dividers"] #splitsArea #splitsBulkBar .splitsEditRowSecondary,
+  body[data-button-style="ribbons"] #splitsArea #splitsBulkBar .splitsEditRowSecondary{
+    border-radius: 0;
+    overflow: visible;
+  }
+  body[data-button-style="tiles"] #splitsArea #splitsBulkBar .splitsEditRowSecondary{
+    border-radius: 7px;
+    overflow: visible;
   }
 
   /* Shared: keep the focus ring legible on every treatment. */
