@@ -59,6 +59,27 @@ test("calculation counts partial final sets and supports one/two winders, multi-
   for (let numberUp=1; numberUp<=10; numberUp++) assert.equal(estimate({lineSpeed:1,footagePerRoll:1,numberUp,bothWinders:false,hours:0,minutes:0,rollsLeft:numberUp}).futureSets,0);
 });
 
+test("every question step keeps a Back/Next progression - choice steps advance on pick AND on Next", () => {
+  const fn = app.slice(app.indexOf("function renderChangeoverWizard("), app.indexOf("function advanceChangeoverWizard("));
+  // Steps 0-5 all render the shared nextActions bar (submit Next). The two
+  // choice steps ("How many up?", "Using both winders?") used to render only
+  // a lone Back button, which left Next as the sole path forward missing.
+  assert.doesNotMatch(fn, /changeoverWizardChoices[\s\S]*?changeoverWizardActions one">\$\{back\}<\/div>/);
+  assert.match(fn, /How many up\?<\/h2>[\s\S]*?\$\{nextActions\}/);
+  assert.match(fn, /Using both winders\?<\/h2>[\s\S]*?\$\{nextActions\}/);
+  // nextActions always carries the submit Next; only step 0 collapses to one column.
+  assert.match(fn, /const nextActions = `<div class="changeoverWizardActions \$\{changeoverWizardStep === 0 \? "one" : ""\}">\$\{back\}<button type="submit" class="primary">Next<\/button>/);
+  // Picking a tile still advances immediately.
+  const clickStart = app.indexOf('$("changeoverWizardBody")?.addEventListener("click"');
+  const body = app.slice(clickStart, app.indexOf("});", clickStart));
+  assert.match(body, /data-number-up"\)\)\{ changeoverWizardAnswers\.numberUp[\s\S]*?advanceChangeoverWizard\(\)/);
+  assert.match(body, /data-both-winders"\)\)\{ changeoverWizardAnswers\.bothWinders[\s\S]*?advanceChangeoverWizard\(\)/);
+  // Submitting the form on a choice step (no input/select branch) also advances.
+  const submitStart = app.indexOf('$("changeoverWizardForm")?.addEventListener("submit"');
+  const submit = app.slice(submitStart, app.indexOf('$("changeoverWizardBody")?.addEventListener("click"'));
+  assert.match(submit, /advanceChangeoverWizard\(\);\s*\n\s*\}\);/);
+});
+
 test("answers persist locally and accepting dispatches the existing changeover input path", () => {
   assert.match(app, /LS_CHANGEOVER_WIZARD_KEY/);
   assert.match(app, /localStorage\.setItem\(LS_CHANGEOVER_WIZARD_KEY/);

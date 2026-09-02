@@ -304,7 +304,7 @@
   </div>
 
   <nav class="workspaceNav" aria-label="Resin.Tools sections">
-    <div class="workspaceBrand" aria-label="Resin.Tools">
+    <div class="workspaceBrand" id="workspaceBrandDashboard" role="button" tabindex="0" aria-label="Open Dashboard" title="Open Dashboard">
       <svg class="resinToolsSidebarIcon" viewBox="0 0 196 104" role="img" aria-label="Resin.Tools">
         <g transform="translate(5 6)">
           <path class="rtLayerRed" d="m14 24 31-14 31 14-31 14Z"/>
@@ -420,12 +420,13 @@
       <span><svg class="workspaceTileIcon" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3 27 8v7c0 7-4.5 11.5-11 14-6.5-2.5-11-7-11-14V8l11-5Z"/><path d="M16 12v8M12 16h8"/></svg>Sudo access</span>
       <small id="sudoAccessStatus">Administrator sign-in</small>
     </button>
-    <div class="workspaceNavDashboardDivider" role="separator" aria-hidden="true"></div>
-    <button class="workspaceNavButton workspaceNavDashboard" id="workspaceNavDashboard" type="button">
-      <span><svg class="workspaceTileIcon" viewBox="0 0 32 32" aria-hidden="true"><g class="baseGlyph"><rect x="4" y="4" width="24" height="24" rx="2"/><path d="M4 13h24M13 13v15"/><g class="gruvboxIconDetail"><path d="M8 8h2M8 18h2M18 18h6"/></g></g><g class="gruvboxSolidGlyph"><path d="M2 2h28v9.6H2z"/><path d="M2 14.4h9.6V30H2zM14.4 14.4H30V30H14.4z"/></g></svg>Dashboard</span>
-      <small>Overview</small>
-    </button>
-    <small class="desktopRailVersion" aria-label="App version">v1.1.23</small>
+    <div class="workspaceNavFooter">
+      <small class="desktopRailVersion" aria-label="App version">v1.1.23</small>
+      <div class="workspaceNavDashboardDivider" role="separator" aria-hidden="true"></div>
+      <button class="workspaceNavButton workspaceNavDashboard" id="workspaceNavDashboard" type="button">
+        <span>Dashboard</span>
+      </button>
+    </div>
   </nav>
 
   <div class="workspaceContent">
@@ -1921,7 +1922,12 @@
     </header>
 
     <div class="dashboardChangeover">
-      <span class="dashboardLabel">Changeover</span>
+      <span class="dashboardChangeoverHead">
+        <span class="dashboardLabel">Changeover</span>
+        <button type="button" class="dashboardChangeoverRefresh" id="dashboardChangeoverRefresh" data-changeover-wizard-trigger aria-haspopup="dialog" aria-controls="changeoverWizardDialog" aria-label="Update changeover estimate" title="Update changeover estimate">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7a8 8 0 0 1 13 1l2 3M19 17a8 8 0 0 1-13-1l-2-3"/><path d="M20 5v6h-6M4 19v-6h6"/></svg>
+        </button>
+      </span>
       <div class="dashboardChangeoverClock" id="dashboardChangeoverClock">Not set</div>
       <div class="dashboardChangeoverRemaining" id="dashboardChangeoverRemaining"></div>
     </div>
@@ -1940,12 +1946,12 @@
         </div>
         <div class="dashboardNextActionEmpty" id="dashboardNextActionEmpty" hidden>No tracked hopper actions</div>
       </div>
-    </div>
-
-    <div class="dashboardSync">
-      <span class="dashboardLabel">RT Sync</span>
-      <div class="dashboardSyncStatus" id="dashboardSyncStatus" data-state="neutral">
-        <i aria-hidden="true"></i><span id="dashboardSyncStatusText">Local only</span>
+      <div class="dashboardSync">
+        <span class="dashboardLabel">RT Sync</span>
+        <div class="dashboardSyncStatus" id="dashboardSyncStatus" data-state="neutral">
+          <svg class="dashboardSyncIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7a8 8 0 0 1 13 1l2 3M19 17a8 8 0 0 1-13-1l-2-3"/><path d="M20 5v6h-6M4 19v-6h6"/></svg>
+          <span id="dashboardSyncStatusText">Local only</span>
+        </div>
       </div>
     </div>
   </section>

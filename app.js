@@ -7512,7 +7512,18 @@
       lineEl.textContent = lineNumber ? `LINE ${lineNumber}` : (workspace?.name || "No connected line");
     }
     if (nameEl){
-      nameEl.textContent = lineNumber ? (workspace?.name || "") : "";
+      // Second row only when the workspace name adds something the "LINE n"
+      // row does not. A workspace merely named "Line 20" for line 20 reads as
+      // accidental duplication, so collapse to the single identity line;
+      // a genuinely distinct name ("Extrusion West") still shows. Compared
+      // through PolynLineIdentity's own normalizer (trim + collapse spaces +
+      // lower-case) against the "line <n>" form - never a display-string
+      // parse - and this only hides a row, never touches the stored name.
+      const normalizeLineName = window.PolynLineIdentity?.normalizeLineName;
+      const workspaceName = workspace?.name || "";
+      const duplicatesLineIdentity = !!lineNumber && !!normalizeLineName
+        && normalizeLineName(workspaceName) === `line ${lineNumber}`;
+      nameEl.textContent = (lineNumber && !duplicatesLineIdentity) ? workspaceName : "";
     }
   }
 
@@ -8838,9 +8849,13 @@
         body.innerHTML = `<h2 class="changeoverWizardQuestion">${data[0]}</h2><label class="changeoverWizardField"><input name="${data[1]}" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" value="${String(changeoverWizardAnswers[data[1]]).replace(/&/g,"&amp;").replace(/\"/g,"&quot;")}" aria-describedby="changeoverWizardUnit"><small id="changeoverWizardUnit">${data[2]}</small></label><p class="changeoverWizardError" role="alert"></p>${nextActions}`;
         window.requestAnimationFrame(()=>body.querySelector("input")?.focus());
       } else if (changeoverWizardStep === 2){
-        body.innerHTML = `<h2 class="changeoverWizardQuestion">How many up?</h2><div class="changeoverWizardChoices" role="radiogroup" aria-label="Rolls per winder">${Array.from({length:10},(_,i)=>`<button type="button" class="secondary ${changeoverWizardAnswers.numberUp===i+1?"selected":""}" data-number-up="${i+1}" role="radio" aria-checked="${changeoverWizardAnswers.numberUp===i+1}">${i+1}</button>`).join("")}</div><div class="changeoverWizardActions one">${back}</div>`;
+        // Choice steps still advance the moment a tile is picked, but Next
+        // stays available so an already-correct answer (default or one kept
+        // from a previous run) needs only a single confirming click - the
+        // same clean Back/Next progression every other step has.
+        body.innerHTML = `<h2 class="changeoverWizardQuestion">How many up?</h2><div class="changeoverWizardChoices" role="radiogroup" aria-label="Rolls per winder">${Array.from({length:10},(_,i)=>`<button type="button" class="secondary ${changeoverWizardAnswers.numberUp===i+1?"selected":""}" data-number-up="${i+1}" role="radio" aria-checked="${changeoverWizardAnswers.numberUp===i+1}">${i+1}</button>`).join("")}</div>${nextActions}`;
       } else if (changeoverWizardStep === 3){
-        body.innerHTML = `<h2 class="changeoverWizardQuestion">Using both winders?</h2><div class="changeoverWizardChoices binary" role="radiogroup">${[["Yes",true],["No",false]].map(([label,value])=>`<button type="button" class="secondary ${changeoverWizardAnswers.bothWinders===value?"selected":""}" data-both-winders="${value}" role="radio" aria-checked="${changeoverWizardAnswers.bothWinders===value}">${label}</button>`).join("")}</div><div class="changeoverWizardActions one">${back}</div>`;
+        body.innerHTML = `<h2 class="changeoverWizardQuestion">Using both winders?</h2><div class="changeoverWizardChoices binary" role="radiogroup">${[["Yes",true],["No",false]].map(([label,value])=>`<button type="button" class="secondary ${changeoverWizardAnswers.bothWinders===value?"selected":""}" data-both-winders="${value}" role="radio" aria-checked="${changeoverWizardAnswers.bothWinders===value}">${label}</button>`).join("")}</div>${nextActions}`;
       } else if (changeoverWizardStep === 4){
         const options = (count, selected) => Array.from({length:count},(_,i)=>`<option value="${i}" ${Number(selected)===i?"selected":""}>${i}</option>`).join("");
         body.innerHTML = `<h2 class="changeoverWizardQuestion">How long is left on the current set?</h2><div class="changeoverWizardTime"><label>Hours<select name="hours">${options(25,changeoverWizardAnswers.hours)}</select></label><label>Minutes<select name="minutes">${options(60,changeoverWizardAnswers.minutes)}</select></label></div>${nextActions}`;
@@ -9515,6 +9530,20 @@
       setWorkspacePanel("lineSyncBlock", { reveal:true });
     });
     $("workspaceNavDashboard")?.addEventListener("click",()=>setDashboardActive(true));
+    // The sidebar RT logo is a second entry point into the very same toggle -
+    // one navigation path, not a parallel one. role="button" + tabindex on the
+    // existing markup, so it needs Enter/Space handled here; setDashboardActive
+    // already no-ops off desktop.
+    const brandDashboard = $("workspaceBrandDashboard");
+    if (brandDashboard){
+      brandDashboard.addEventListener("click",()=>setDashboardActive(true));
+      brandDashboard.addEventListener("keydown",event=>{
+        if (event.key === "Enter" || event.key === " "){
+          event.preventDefault();
+          setDashboardActive(true);
+        }
+      });
+    }
     $("dashboardBackButton")?.addEventListener("click",()=>setDashboardActive(false));
     hookWorkspaceNavMore();
     document.querySelectorAll(".workspaceContent > .workspacePanel > summary").forEach(summary=>{
