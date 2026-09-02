@@ -28,7 +28,7 @@
     host.replaceChildren();
     lines.forEach(line=>{
       const row = document.createElement("div");
-      row.className = `lineConfigurationRow${line.is_active ? "" : " inactive"}`;
+      row.className = `lineConfigurationRow adminResinRow${line.is_active ? "" : " inactive"}`;
       const info = document.createElement("div"); info.className = "lineConfigurationRowInfo";
       const title = document.createElement("strong"); title.textContent = line.display_name;
       const detail = document.createElement("small");
