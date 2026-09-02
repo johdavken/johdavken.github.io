@@ -106,7 +106,10 @@
 :where(html, body)[data-theme="industrial-slate"]{
   color-scheme: light;
   --bg: #f5f4f3;
-  --desktop-canvas-bg: #9dafbf;
+  /* The outer desktop page surface is intentionally transparent. Keep the
+     exposed workspace cool and slate-tinted, but pale enough to sit behind
+     the white functional panels without becoming the dominant surface. */
+  --desktop-canvas-bg: #f8fafb;
   --panel: #ffffff;
   --panel2: #faf9f8;
   --text: #29282b;

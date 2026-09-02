@@ -40,7 +40,7 @@ test("desktop Setup is a two-region workspace with a compact five-column receive
 test("desktop canvas and receiver typography use the shared theme and desktop tokens", () => {
   const theme = fs.readFileSync("theme.css", "utf8");
   const industrialSlate = theme.slice(theme.indexOf(':where(html, body)[data-theme="industrial-slate"]{'), theme.indexOf('/* ----------------------------------------------------------------------- * Industrial Slate Dark'));
-  assert.match(industrialSlate, /--desktop-canvas-bg: #9dafbf;/);
+  assert.match(industrialSlate, /--desktop-canvas-bg: #f8fafb;/);
   assert.match(desktop, /body\{overflow:hidden;background:var\(--desktop-canvas-bg\)\}/);
   assert.match(desktop, /body\[data-theme="industrial-slate"\]\{background:linear-gradient\(135deg,var\(--desktop-canvas-bg\),color-mix\(in srgb,var\(--desktop-canvas-bg\) 55%,white\)\)\}/);
   assert.match(desktop, /\.desktopWeightSummaryValues b\{[\s\S]*?font-size:18px;font-weight:850/);
@@ -48,12 +48,25 @@ test("desktop canvas and receiver typography use the shared theme and desktop to
   assert.match(desktop, /\.desktopWeightEditFields input\{[\s\S]*?font-size:14px;font-weight:800/);
 });
 
-test("desktop type scale strengthens navigation and compact operational text without mobile rules", () => {
-  assert.match(desktop, /--desktop-type-body:14px;[\s\S]*?--desktop-type-secondary:12px;[\s\S]*?--desktop-type-label:11px;[\s\S]*?--desktop-type-heading:16px/);
+test("desktop type scale strengthens navigation and supporting operational text without mobile rules", () => {
+  assert.match(desktop, /--desktop-type-body:14px;[\s\S]*?--desktop-type-secondary:13px;[\s\S]*?--desktop-type-label:12px;[\s\S]*?--desktop-type-helper:12px;[\s\S]*?--desktop-type-heading:16px/);
   assert.match(desktop, /\.workspaceNavButton span\{font-size:14px;font-weight:650;letter-spacing:\.06em;text-transform:uppercase\}/);
   assert.match(desktop, /\.workspaceNavButton small\{font-size:var\(--desktop-type-secondary\);font-weight:600/);
-  assert.match(desktop, /\.workspaceStatusItem span\{font-size:var\(--desktop-type-label\);font-weight:650/);
+  assert.match(desktop, /\.workspaceStatusItem span\{color:color-mix\(in srgb,var\(--muted\) 88%,var\(--text\)\);font-size:var\(--desktop-type-label\);font-weight:650/);
   assert.match(desktop, /\.desktopWeightsActionToolbar button\{[\s\S]*?font-size:var\(--desktop-type-control\);font-weight:750/);
+  assert.match(desktop, /\.workspaceContent \.muted\{color:color-mix\(in srgb,var\(--muted\) 88%,var\(--text\)\);font-size:var\(--desktop-type-secondary\)\}/);
+  assert.match(desktop, /#resultsBlock \.resultRun\{color:color-mix\(in srgb,var\(--muted\) 88%,var\(--text\)\);font-size:var\(--desktop-type-label\)\}/);
+  assert.match(desktop, /#productionSummaryBlock :is\(\.calcLot,\.productionSummaryLotEmpty\)\{color:color-mix\(in srgb,var\(--muted\) 88%,var\(--text\)\);font-size:var\(--desktop-type-secondary\)\}/);
+});
+
+test("desktop page wrappers retain their layout role while their outer card paint is removed", () => {
+  assert.match(desktop, /\.workspaceContent > \.workspacePanel\.desktop-active\{[\s\S]*?height:100%;[\s\S]*?overflow:hidden;/);
+  const paint = desktop.slice(desktop.indexOf("/* Experimental: preserve the page wrapper"), desktop.indexOf(".workspaceContent > .workspacePanel.desktop-active::details-content"));
+  assert.match(paint, /\.workspaceContent > \.workspacePanel\.card,[\s\S]*?body\[data-surface-style\] \.workspaceContent > \.workspacePanel\.card\[open\]\{[\s\S]*?border-color:transparent;[\s\S]*?border-radius:0;[\s\S]*?background:transparent;[\s\S]*?box-shadow:none;/);
+  assert.match(paint, /body\[data-surface-style="accent-frame"\][\s\S]*?border-left-color:transparent/);
+  assert.match(desktop, /\.workspaceStatusBar\{[\s\S]*?grid-row:1;[\s\S]*?min-height:40px;/);
+  assert.match(desktop, /\.workspaceStatusBar,\s*\n\s*body\[data-surface-style\] \.workspaceStatusBar\{[\s\S]*?border:0;[\s\S]*?border-bottom:1px solid var\(--border\);[\s\S]*?border-radius:0;[\s\S]*?background:transparent;[\s\S]*?box-shadow:none;[\s\S]*?backdrop-filter:none;/);
+  assert.match(desktop, /\.workspaceNav\{[\s\S]*?height:calc\(100dvh - 24px\);/);
 });
 
 test("desktop refinements keep Smart Hoppers obvious and utility/sidebar chrome restrained", () => {
