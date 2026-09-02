@@ -89,11 +89,12 @@ test("the source input normalizes to uppercase, is compact, and persists on its 
   assert.match(styles, /\.timelineHookupsRow > input\.timelineHookupsInput\{[\s\S]*?text-transform:uppercase;/);
 });
 
-test("a grouped resin with differing stored sources is shown as Mixed, not silently collapsed", () => {
+test("a grouped resin with differing or missing stored sources is shown as Mixed, not silently collapsed", () => {
   const body = functionBody("renderTimelineHookups");
   assert.match(body, /if \(group\.mixed\)\{/);
   assert.match(body, /input\.placeholder = "Mixed"/);
   assert.match(body, /input\.classList\.add\("timelineHookupsInputMixed"\)/);
+  assert.match(body, /Sources differ or are missing across matching hoppers/);
   assert.match(styles, /\.timelineHookupsRow > input\.timelineHookupsInputMixed\{ border-bottom-color:var\(--warn\); \}/);
 });
 

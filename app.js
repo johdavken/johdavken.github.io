@@ -6564,7 +6564,7 @@
               const distinct = [...new Set(group.sources.filter(Boolean))];
               input.placeholder = "Mixed";
               input.classList.add("timelineHookupsInputMixed");
-              input.title = "Different sources entered (" + distinct.join(", ") + "). Typing here sets all " + group.keys.length + " hoppers.";
+              input.title = "Sources differ or are missing across matching hoppers" + (distinct.length ? " (entered: " + distinct.join(", ") + ")" : "") + ". Typing here sets all " + group.keys.length + " hoppers.";
             }
 
             const persist = ()=>{
