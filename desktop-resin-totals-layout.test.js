@@ -17,17 +17,16 @@ function functionBody(name){
 
 const render = functionBody("renderResinCalculator");
 
-test("tablet and desktop production/scrap inputs use the preview's boxed field structure", () => {
-  assert.match(html, /class="productionSummaryInputField">\s*<label for="prodResinLb">Production Resin <span class="productionSummaryLabelUnit">\(lb\)<\/span><\/label>/);
-  assert.match(html, /class="productionSummaryInputField">\s*<label for="scrapResinLb">Scrap Resin <span class="productionSummaryLabelUnit">\(lb\)<\/span><\/label>/);
-  const start = styles.indexOf("@media (min-width:701px){", styles.indexOf(".productionSummaryIssuedTotal{display:none}"));
-  const end = styles.indexOf("@media (max-width:600px){", start);
-  const desktop = styles.slice(start, end);
-  assert.match(desktop, /\.productionSummaryInputField\{[\s\S]*?border:1px solid var\(--row-border-2\);[\s\S]*?background:var\(--row-bg-2\);/);
-  assert.match(desktop, /\.productionSummaryInputField label\{[\s\S]*?text-transform:uppercase;/);
-  assert.match(desktop, /\.productionSummaryInputField::after\{[\s\S]*?content:"lb";/);
-  assert.match(desktop, /\.productionSummaryInputField input:not\(\[type="checkbox"\]\):not\(\[type="radio"\]\)\{[\s\S]*?font-size:19px;[\s\S]*?font-weight:950;/);
-  assert.match(desktop, /\.productionSummaryInputField \.productionSummaryLabelUnit\{display:none\}/);
+test("Production, Scrap, and Total share one compact editable summary strip", () => {
+  assert.match(html, /id="resinCalcSummary" class="productionSummaryStrip mt10"/);
+  assert.match(html, /<label for="prodResinLb">Production<\/label>/);
+  assert.match(html, /<label for="scrapResinLb">Scrap<\/label>/);
+  assert.match(html, /<output class="productionSummaryMetricValue mono"><span id="resinCalcTotal">0<\/span><span class="productionSummaryMetricUnit">lb<\/span><\/output>/);
+  assert.match(styles, /\.productionSummaryStrip\{display:grid;grid-template-columns:repeat\(3,minmax\(0,1fr\)\);[\s\S]*?border:1px solid var\(--row-border-2\);/);
+  assert.match(styles, /\.productionSummaryMetricValue\{[\s\S]*?font-size:19px;[\s\S]*?font-weight:950;/);
+  assert.match(styles, /\.productionSummaryMetricValue input:not\(\[type="checkbox"\]\):not\(\[type="radio"\]\)\{[\s\S]*?background:transparent;/);
+  assert.match(render, /const totalEl = \$\("resinCalcTotal"\);[\s\S]*?totalEl\.textContent = fmtLb\(total\);/);
+  assert.doesNotMatch(render, /Resin totals/);
 });
 
 test("each material row has a dedicated lot lane without changing its displayed whole-pound value", () => {
@@ -37,16 +36,15 @@ test("each material row has a dedicated lot lane without changing its displayed 
   assert.doesNotMatch(render, /--material-share|productionSummaryShare/);
 });
 
-test("the material list ends with Total issued using the same total and whole-pound formatter", () => {
-  assert.match(render, /issuedTotal\.className = "productionSummaryIssuedTotal";/);
-  assert.match(render, /<strong>Total issued<\/strong><span class="mono">\$\{fmtLb\(total\)\} lb<\/span>/);
-  assert.match(render, /out\.appendChild\(issuedTotal\);/);
+test("the material list has no redundant Total issued footer", () => {
+  assert.doesNotMatch(render, /productionSummaryIssuedTotal/);
+  assert.doesNotMatch(render, /Total issued/);
 });
 
-test("the lot lane is layout-neutral on phones while tablet and desktop show Total issued", () => {
+test("the lot lane is layout-neutral on phones while tablet and desktop keep its dedicated center column", () => {
   assert.match(styles, /\.productionSummaryLotLane\{display:contents\}/);
-  assert.match(styles, /\.productionSummaryLotEmpty,\s*\.productionSummaryIssuedTotal\{display:none\}/);
-  const start = styles.indexOf("@media (min-width:701px){", styles.indexOf(".productionSummaryIssuedTotal{display:none}"));
+  assert.match(styles, /\.productionSummaryLotEmpty\{display:none\}/);
+  const start = styles.indexOf("@media (min-width:701px){", styles.indexOf(".productionSummaryLotEmpty{display:none}"));
   assert.notEqual(start, -1);
   const end = styles.indexOf("@media (max-width:600px){", start);
   const desktop = styles.slice(start, end);
@@ -54,7 +52,8 @@ test("the lot lane is layout-neutral on phones while tablet and desktop show Tot
   assert.match(desktop, /grid-template-columns:minmax\(110px,\.75fr\) minmax\(0,1\.45fr\) 128px;/);
   assert.match(desktop, /\.productionSummaryLotLane\{[\s\S]*?grid-column:2;[\s\S]*?display:flex;/);
   assert.match(desktop, /\.productionSummaryLotEmpty\{[\s\S]*?display:block;/);
-  assert.match(desktop, /\.productionSummaryIssuedTotal\{[\s\S]*?display:flex;/);
+  assert.doesNotMatch(styles, /productionSummaryIssuedTotal/);
+  assert.match(styles, /@media \(max-width:600px\)\{[\s\S]*?\.productionSummaryStrip\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)\}/);
 });
 
 test("the optional lot remains in the center column and truncates before either anchor", () => {
