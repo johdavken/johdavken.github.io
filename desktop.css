@@ -5,9 +5,10 @@
 @media (min-width:901px) and (pointer: fine){
   :root{
     --desktop-type-body:14px;
-    --desktop-type-secondary:12px;
+    --desktop-type-secondary:13px;
     --desktop-type-control:12px;
-    --desktop-type-label:11px;
+    --desktop-type-label:12px;
+    --desktop-type-helper:12px;
     --desktop-type-heading:16px;
   }
   html,body{height:100%;min-height:0}
@@ -90,8 +91,20 @@
     flex-wrap:nowrap;
     overflow:visible;
   }
+  /* The desktop workspace is deliberately flat: application status remains
+     in the same grid row, but uses a quiet divider instead of another chrome
+     surface. Touch headers keep their shared card treatment. */
+  .workspaceStatusBar,
+  body[data-surface-style] .workspaceStatusBar{
+    border:0;
+    border-bottom:1px solid var(--border);
+    border-radius:0;
+    background:transparent;
+    box-shadow:none;
+    backdrop-filter:none;
+  }
   .workspaceStatusItem{min-width:0}
-  .workspaceStatusItem span{font-size:var(--desktop-type-label);font-weight:650;letter-spacing:.01em}
+  .workspaceStatusItem span{color:color-mix(in srgb,var(--muted) 88%,var(--text));font-size:var(--desktop-type-label);font-weight:650;letter-spacing:.01em}
   .workspaceStatusItem strong{font-size:var(--desktop-type-secondary);font-weight:750}
   .desktopChangeoverWizardTrigger{display:grid;place-items:center;flex:0 0 auto;width:34px;height:34px;min-height:34px;padding:7px;border:0;border-radius:var(--control-radius);background:transparent;color:var(--focus-border);box-shadow:none}
   .desktopChangeoverWizardTrigger:hover{background:var(--row-bg)}
@@ -112,6 +125,21 @@
     min-height:0;
     overflow:hidden;
   }
+  /* Experimental: preserve the page wrapper for its grid placement, header,
+     and scroll containment, but let its paint disappear into the workspace.
+     The sidebar and status bar own their separate chrome surfaces; nested
+     functional cards continue to use their existing backgrounds and borders. */
+  .workspaceContent > .workspacePanel.card,
+  .workspaceContent > .workspacePanel.card[open],
+  body[data-surface-style] .workspaceContent > .workspacePanel.card,
+  body[data-surface-style] .workspaceContent > .workspacePanel.card[open]{
+    border-color:transparent;
+    border-radius:0;
+    background:transparent;
+    box-shadow:none;
+  }
+  body[data-surface-style="accent-frame"] .workspaceContent > .workspacePanel.card,
+  body[data-surface-style="accent-frame"] .workspaceContent > .workspacePanel.card[open]{border-left-color:transparent}
   .workspaceContent > .workspacePanel.desktop-active::details-content{flex:1 1 0;min-height:0;overflow:hidden}
   .workspaceContent > .workspacePanel > summary{min-width:0}
   .workspaceContent > .workspacePanel > .blockBody{
@@ -123,6 +151,12 @@
     overscroll-behavior:contain;
     scrollbar-gutter:stable;
   }
+  /* Desktop's primary figures already carry enough weight. Improve only the
+     shared supporting tiers: metadata, captions, and helper copy become
+     immediately readable without making controls or primary values larger. */
+  .workspaceContent > .workspacePanel > summary .layerMeta{font-size:14px;line-height:1.3}
+  .workspaceContent .muted{color:color-mix(in srgb,var(--muted) 88%,var(--text));font-size:var(--desktop-type-secondary)}
+  .workspaceContent .tiny{color:color-mix(in srgb,var(--muted) 88%,var(--text));font-size:var(--desktop-type-helper)}
 
   /* Display and Account form one stable utility cluster at the right end
      of the production strip. Dialogs explicitly disappear when closed so
@@ -412,6 +446,15 @@
   .desktopSharedCircumference{display:grid;grid-template-columns:1fr minmax(54px,70px);align-items:end;gap:6px;margin:0;padding:5px 8px;border:1px solid var(--row-border-2);border-radius:var(--control-radius);background:var(--row-bg-2);color:var(--muted);font-size:var(--desktop-type-label);font-weight:750}
   .desktopSharedCircumference .weightsInputWithUnit{grid-template-columns:minmax(36px,1fr) auto;gap:3px}
   .desktopSharedCircumference input{min-height:27px;padding:2px;text-align:right}
+
+  /* Dense operational surfaces use explicit small sizes rather than the
+     shared helper classes. Bring those labels onto the same desktop scale. */
+  #splitsArea :is(.splitCellHeader,.splitRowCorner,.splitColumnTotal){color:color-mix(in srgb,var(--muted) 88%,var(--text));font-size:var(--desktop-type-helper)}
+  #resultsBlock .resultRun{color:color-mix(in srgb,var(--muted) 88%,var(--text));font-size:var(--desktop-type-label)}
+  #resultsBlock .resultWeight{color:color-mix(in srgb,var(--muted) 88%,var(--text));font-size:var(--desktop-type-secondary)}
+  #resultsBlock .resultTimingPeriod{font-size:10px}
+  #resultsBlock .resultTimingUnavailable{font-size:11px}
+  #productionSummaryBlock :is(.calcLot,.productionSummaryLotEmpty){color:color-mix(in srgb,var(--muted) 88%,var(--text));font-size:var(--desktop-type-secondary)}
   .desktopWeightsViewToggle{justify-content:flex-end;white-space:nowrap}
   .desktopWeightsViewToggle button{border-radius:var(--control-radius)}
 
