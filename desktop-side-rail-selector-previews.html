@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Desktop side-rail selector directions</title>
+  <style>
+    :root{
+      --canvas:#e9edf1;--paper:#f8fafc;--rail:#fbfcfe;--ink:#303137;--muted:#656973;
+      --blue:#627f9f;--blue-deep:#466988;--blue-wash:#edf3f8;--line:#c8d1da;--line-strong:#aebdca;
+      --shadow:0 14px 30px rgb(49 63 77 / .13);--radius:15px;
+    }
+    body[data-theme="gruvbox"]{
+      --canvas:#1d2021;--paper:#282828;--rail:#282828;--ink:#ebdbb2;--muted:#a89984;
+      --blue:#fabd2f;--blue-deep:#fabd2f;--blue-wash:#3c3836;--line:#504945;--line-strong:#665c54;
+      --shadow:0 14px 30px rgb(0 0 0 / .34);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(135deg,#f2f5f8 0%,var(--canvas) 100%);color:var(--ink);font:14px/1.4 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    button{font:inherit}
+    main{width:min(1510px,100%);margin:auto;padding:35px 28px 70px}
+    h1{margin:0;color:#24262c;font-size:clamp(27px,3vw,39px);letter-spacing:-.035em;line-height:1.05}body[data-theme="gruvbox"] h1{color:var(--ink)}
+    .intro{max-width:840px;margin:10px 0 0;color:var(--muted);font-size:15px}
+    .legend{display:flex;flex-wrap:wrap;gap:10px 19px;margin:21px 0 30px;color:#59616a;font-size:12px}
+    .legend span{display:flex;align-items:center;gap:7px}.swatch{width:12px;height:12px;border:1px solid var(--line-strong);border-radius:4px;background:var(--rail)}.swatch.active{border-color:var(--blue);background:var(--blue-wash);box-shadow:inset 3px 0 var(--blue)}.swatch.metric{border:0;border-radius:50%;background:var(--blue)}
+    .gallery{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:25px}
+    .concept{min-width:0;padding:18px;border:1px solid #d1d9e1;border-radius:19px;background:rgb(255 255 255 / .72);box-shadow:0 9px 24px rgb(59 74 88 / .06)}
+    .concept-header{display:grid;grid-template-columns:30px 1fr auto;align-items:start;gap:10px;margin:0 2px 14px}.number{display:grid;place-items:center;width:27px;height:27px;border-radius:9px;background:#e5ebf1;color:var(--blue-deep);font-size:12px;font-weight:850}.concept h2{margin:2px 0 2px;font-size:16px;line-height:1.15;letter-spacing:-.01em}.concept p{margin:0;color:var(--muted);font-size:12px}.tag{margin-top:2px;padding:3px 7px;border:1px solid #c8d8e6;border-radius:99px;color:var(--blue-deep);font-size:9px;font-weight:850;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
+    .desktop{position:relative;display:grid;grid-template-columns:206px minmax(0,1fr);min-height:366px;overflow:hidden;border:1px solid #bdc9d4;border-radius:13px;background:var(--paper);box-shadow:var(--shadow)}
+    .side{position:relative;display:flex;flex-direction:column;min-width:0;padding:15px 12px 12px;border-right:1px solid var(--line);background:var(--rail)}
+    .line-label{display:flex;align-items:center;gap:9px;margin:0 0 15px;color:var(--blue-deep);font-size:12px;font-weight:850;letter-spacing:.09em;text-transform:uppercase}.line-label::before,.line-label::after{content:"";height:2px;flex:1;background:#c5cdd5}.line-label strong{font-size:11px;white-space:nowrap}
+    .nav{display:grid;gap:5px}.stage{position:relative;display:grid;grid-template-columns:38px minmax(0,1fr) 25px;grid-template-areas:"icon title num" "icon sub metric";column-gap:8px;align-items:center;min-height:68px;padding:8px 9px;border:1px solid transparent;border-radius:11px;background:transparent;color:var(--ink);text-align:left;cursor:pointer}.stage:hover{background:#f3f6f9}.stage:focus-visible{z-index:4;outline:2px solid var(--blue);outline-offset:1px}.stage-icon{grid-area:icon;align-self:start;display:grid;place-items:center;width:32px;height:32px;margin-top:1px;color:var(--blue);}.stage-icon svg{width:29px;height:29px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}.stage-title{grid-area:title;align-self:end;font-size:14px;font-weight:850;letter-spacing:.095em;line-height:1.06;text-transform:uppercase}.stage-sub{grid-area:sub;align-self:start;overflow:hidden;color:var(--muted);font-size:11px;font-weight:600;line-height:1.25;text-overflow:ellipsis;white-space:nowrap}.step{grid-area:num;align-self:start;justify-self:end;display:grid;place-items:center;width:23px;height:23px;border-radius:50%;background:var(--blue);color:#fff;font-size:12px;font-weight:850;line-height:1}.metric{grid-area:metric;align-self:start;justify-self:end;min-width:24px;color:var(--blue);font-size:14px;font-weight:850;line-height:1;text-align:right}.metric small{display:block;margin-top:2px;color:#565b64;font-size:7px;font-weight:850;letter-spacing:.1em;text-transform:uppercase}.divider{height:1px;margin:6px 0;background:var(--line)}
+    .main-panel{padding:27px 26px}.panel-kicker{color:var(--blue-deep);font-size:10px;font-weight:850;letter-spacing:.12em;text-transform:uppercase}.main-panel h3{margin:7px 0 5px;font-size:23px;letter-spacing:-.025em}.main-panel > p{max-width:300px;margin:0;color:#6a7079;font-size:12px}.detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:24px}.detail{height:76px;padding:11px;border:1px solid #d6dee5;border-radius:9px;background:#fff}.detail i{display:block;width:28px;height:5px;border-radius:4px;background:#dae4ec}.detail b{display:block;width:78%;height:8px;margin-top:11px;border-radius:3px;background:#bac9d5}.detail small{display:block;width:56%;height:5px;margin-top:6px;border-radius:3px;background:#e2e8ed}.panel-line{height:8px;margin-top:18px;border-radius:5px;background:linear-gradient(90deg,#cbd7e1 0 73%,transparent 73%)}
+    .footnote{margin:12px 2px 1px;color:#67717b;font-size:11.5px}.footnote strong{color:#3f586f}
+    .theme-switch{display:flex;align-items:center;gap:4px;margin-left:auto;padding:3px;border:1px solid #cbd4dc;border-radius:9px;background:#f8fafc;box-shadow:0 2px 5px rgb(63 78 92 / .08)}.theme-switch button{padding:5px 8px;border:0;border-radius:6px;background:transparent;color:#606a75;font-size:10px;font-weight:850;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}.theme-switch button[aria-pressed="true"]{background:var(--blue);color:#fff}.theme-switch button:focus-visible{outline:2px solid var(--blue-deep);outline-offset:1px}
+
+    /* Gruvbox stays deliberately flat and uses the palette's warm amber as the selection signal. */
+    body[data-theme="gruvbox"] .concept{border-color:#504945;background:#282828;box-shadow:0 9px 24px rgb(0 0 0 / .2)}body[data-theme="gruvbox"] .number{background:#3c3836;color:#fabd2f}body[data-theme="gruvbox"] .concept p,body[data-theme="gruvbox"] .footnote{color:var(--muted)}body[data-theme="gruvbox"] .footnote strong{color:#ebdbb2}body[data-theme="gruvbox"] .tag{border-color:#665c54;color:#fabd2f}body[data-theme="gruvbox"] .legend{color:var(--muted)}body[data-theme="gruvbox"] .swatch{border-color:#665c54;background:#3c3836}body[data-theme="gruvbox"] .swatch.active{border-color:#fabd2f;background:#3c3836;box-shadow:inset 3px 0 #fabd2f}body[data-theme="gruvbox"] .swatch.metric{border:0;background:#fabd2f}body[data-theme="gruvbox"] .desktop{border-color:#665c54}body[data-theme="gruvbox"] .side{border-color:#504945}body[data-theme="gruvbox"] .line-label{color:#ebdbb2}body[data-theme="gruvbox"] .line-label::before,body[data-theme="gruvbox"] .line-label::after{background:#504945}body[data-theme="gruvbox"] .stage:hover{background:#3c3836}body[data-theme="gruvbox"] .stage-sub,body[data-theme="gruvbox"] .metric small{color:#a89984}body[data-theme="gruvbox"] .divider{background:#504945}body[data-theme="gruvbox"] .detail{border-color:#504945;background:#32302f}body[data-theme="gruvbox"] .detail i{background:#665c54}body[data-theme="gruvbox"] .detail b{background:#928374}body[data-theme="gruvbox"] .detail small{background:#504945}body[data-theme="gruvbox"] .panel-line{background:linear-gradient(90deg,#665c54 0 73%,transparent 73%)}body[data-theme="gruvbox"] .theme-switch{border-color:#504945;background:#32302f;box-shadow:none}body[data-theme="gruvbox"] .theme-switch button{color:#a89984}body[data-theme="gruvbox"] .theme-switch button[aria-pressed="true"]{background:#fabd2f;color:#282828}
+
+    /* 1. Present language: selected card, with a more decisive inboard rule. */
+    .left-rail .stage.active{border-color:#7590aa;border-left:3px solid var(--blue);padding-left:7px;background:var(--blue-wash)}
+    .left-rail .stage.active .stage-sub{color:#4a6680}
+
+    /* 2. One continuous process spine lets the numbers create the selection. */
+    .spine .nav{position:relative;gap:2px}.spine .nav::before{content:"";position:absolute;z-index:0;top:21px;bottom:22px;left:25px;width:2px;background:#d4dde5}.spine .stage{z-index:1;grid-template-columns:38px minmax(0,1fr) 25px;border-radius:8px}.spine .stage-icon{position:relative;border-radius:50%;background:var(--rail)}.spine .stage.active{background:linear-gradient(90deg,var(--blue-wash),transparent)}.spine .stage.active::after{content:"";position:absolute;left:25px;top:0;bottom:0;width:2px;background:var(--blue)}.spine .stage.active .step{box-shadow:0 0 0 3px #dbe7f0}.spine .stage.active .stage-icon{color:var(--blue-deep);background:#e8f0f6}
+
+    /* 3. A compact tab leaves the body as quiet navigation. */
+    .tab .side{padding-right:0}.tab .stage{border-radius:10px 0 0 10px;margin-right:-1px;padding-right:12px}.tab .stage.active{z-index:2;border-color:var(--line);border-right-color:var(--paper);background:var(--paper);box-shadow:-3px 0 0 var(--blue)}.tab .stage.active .stage-title{color:var(--blue-deep)}.tab .stage.active::after{content:"";position:absolute;right:-1px;top:9px;bottom:9px;width:2px;background:var(--paper)}
+
+    /* 4. The selected state becomes a single, calm full-width strip. */
+    .filled .stage{border-radius:7px}.filled .stage.active{background:var(--blue);color:#fff;box-shadow:0 5px 9px rgb(65 96 124 / .18)}.filled .stage.active .stage-icon,.filled .stage.active .stage-sub{color:#fff}.filled .stage.active .step{background:#fff;color:var(--blue-deep)}.filled .stage.active .metric{color:#fff}.filled .stage.active .metric small{color:#e5eef5}.filled .divider{margin:7px 0}
+
+    /* 5. A small arrow makes this rail feel like a real destination selector. */
+    .pointer .side{overflow:visible}.pointer .stage.active{border-color:#b9c9d7;background:var(--blue-wash)}.pointer .stage.active::after{content:"";position:absolute;z-index:3;top:50%;right:-13px;width:22px;height:22px;border-top:1px solid #b9c9d7;border-right:1px solid #b9c9d7;background:var(--blue-wash);transform:translateY(-50%) rotate(45deg)}.pointer .stage.active > *{z-index:4}.pointer .main-panel{position:relative;z-index:2}.pointer .stage.active .stage-title{color:var(--blue-deep)}
+
+    /* 6. Bare rows; an underline takes up the selection role. */
+    .underline .stage{min-height:63px;border-radius:0}.underline .stage+.stage{border-top:1px solid #e1e6eb}.underline .stage.active{background:linear-gradient(90deg,transparent,rgba(98,127,159,.08))}.underline .stage.active::before{content:"";position:absolute;right:0;bottom:-1px;left:10px;height:3px;border-radius:3px 0 0 3px;background:var(--blue)}.underline .stage.active .stage-title{color:var(--blue-deep)}.underline .stage.active .step{background:var(--blue-deep)}
+    body[data-theme="gruvbox"] .left-rail .stage.active{border-color:#665c54}body[data-theme="gruvbox"] .left-rail .stage.active .stage-sub{color:#d5c4a1}body[data-theme="gruvbox"] .spine .nav::before{background:#504945}body[data-theme="gruvbox"] .spine .stage-icon{background:var(--rail)}body[data-theme="gruvbox"] .spine .stage.active .stage-icon{background:#3c3836}body[data-theme="gruvbox"] .spine .stage.active .step{box-shadow:0 0 0 3px #504945}body[data-theme="gruvbox"] .tab .stage.active{border-color:#504945;border-right-color:var(--paper);background:var(--paper)}body[data-theme="gruvbox"] .tab .stage.active::after{background:var(--paper)}body[data-theme="gruvbox"] .filled .stage.active{color:#282828;box-shadow:none}body[data-theme="gruvbox"] .filled .stage.active .stage-icon,body[data-theme="gruvbox"] .filled .stage.active .stage-sub,body[data-theme="gruvbox"] .filled .stage.active .metric,body[data-theme="gruvbox"] .filled .stage.active .metric small{color:#282828}body[data-theme="gruvbox"] .filled .stage.active .step{background:#282828;color:#fabd2f}body[data-theme="gruvbox"] .pointer .stage.active{border-color:#665c54}body[data-theme="gruvbox"] .pointer .stage.active::after{border-color:#665c54;background:var(--blue-wash)}body[data-theme="gruvbox"] .underline .stage+.stage{border-color:#3c3836}body[data-theme="gruvbox"] .underline .stage.active{background:linear-gradient(90deg,transparent,rgb(250 189 47 / .09))}
+    @media(max-width:1000px){.gallery{grid-template-columns:1fr}.concept{max-width:730px;margin-inline:auto}}@media(max-width:580px){main{padding:23px 12px 44px}.concept{padding:12px}.concept-header{grid-template-columns:28px 1fr}.tag{display:none}.desktop{grid-template-columns:184px minmax(210px,1fr);min-height:337px;overflow:auto}.side{padding-left:8px;padding-right:8px}.main-panel{padding:22px 16px}.stage{grid-template-columns:34px minmax(0,1fr) 23px;padding-left:5px;padding-right:5px}.stage-title{font-size:12px}.stage-icon{width:28px}.detail-grid{gap:5px}}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Desktop side-rail selector directions</h1>
+    <p class="intro">Six alternatives for the active section state in the production rail. Each keeps the same content hierarchy, metrics, and compact desktop footprint; click a section in any preview to compare how each treatment holds up across the whole workflow.</p>
+    <div class="legend"><span><i class="swatch active"></i> selected destination</span><span><i class="swatch metric"></i> stage number / metric</span><span><i class="swatch"></i> inactive navigation</span><div class="theme-switch" aria-label="Preview theme"><button type="button" data-theme-choice="default" aria-pressed="true">Slate</button><button type="button" data-theme-choice="gruvbox" aria-pressed="false">Gruvbox</button></div></div>
+    <section class="gallery" id="gallery" aria-label="Side rail selector alternatives"></section>
+  </main>
+  <script>
+    const icons={
+      recipe:'<path d="m4 8 12-5 12 5-12 5-12-5Z"/><path d="m4 14 12 5 12-5M4 20l12 5 12-5"/>',
+      timeline:'<circle cx="16" cy="16" r="12"/><path d="M16 8v8l5 3M4 16h3M25 16h3"/>',
+      totals:'<path d="M5 27V17M16 27V8M27 27V12M3 27h26"/>'
+    };
+    const stages=[
+      {id:'recipe',title:'Recipe',sub:'Ready',metric:'3',unit:'tracked',n:'1'},
+      {id:'timeline',title:'Timeline',sub:'Next: A1 at 5:40 PM',metric:'5:40',unit:'pm',n:'2'},
+      {id:'totals',title:'Resin Totals',sub:'8249 lb total',metric:'6',unit:'resins',n:'3'}
+    ];
+    const concepts=[
+      {className:'left-rail',name:'Inboard signal rail',tag:'Balanced',description:'Keeps the familiar selected card, but anchors it with a strong left rule for rapid scanning.',note:'Good default: clear selected state without making the rail feel heavier.'},
+      {className:'spine',name:'Connected workflow spine',tag:'Process-led',description:'A continuous line joins the numbered stages; selection becomes the active point in the sequence.',note:'Best when the rail is read as a strict Setup → Recipe → Timeline flow.'},
+      {className:'tab',name:'Content-connected tab',tag:'Structural',description:'The selected row meets the content surface as a tab, creating one continuous work area.',note:'Strong desktop affordance; clearest relationship between selection and panel.'},
+      {className:'filled',name:'Solid selected strip',tag:'Highest contrast',description:'Uses a confident blue strip for the current destination while leaving other stages quiet.',note:'Most visible at a glance, though it gives the rail more visual weight.'},
+      {className:'pointer',name:'Panel pointer',tag:'Directional',description:'A subtle diamond pointer explicitly hands the selected row into the workspace panel.',note:'Useful where a direct row-to-content connection is more important than restraint.'},
+      {className:'underline',name:'Baseline marker',tag:'Quietest',description:'Removes card chrome and marks selection with a short, compact underline.',note:'The lightest treatment; best for rails that should stay visually recessive.'}
+    ];
+    const makeStage=s=>`<button class="stage" type="button" data-stage="${s.id}" aria-pressed="${s.id==='recipe'}"><span class="stage-icon"><svg viewBox="0 0 32 32" aria-hidden="true">${icons[s.id]}</svg></span><span class="stage-title">${s.title}</span><span class="step">${s.n}</span><span class="stage-sub">${s.sub}</span><span class="metric">${s.metric}<small>${s.unit}</small></span></button>`;
+    const gallery=document.querySelector('#gallery');
+    concepts.forEach((c,index)=>{
+      const card=document.createElement('article');card.className=`concept ${c.className}`;
+      card.innerHTML=`<header class="concept-header"><span class="number">${index+1}</span><div><h2>${c.name}</h2><p>${c.description}</p></div><span class="tag">${c.tag}</span></header><div class="desktop"><aside class="side"><div class="line-label"><strong>Line 20</strong></div><nav class="nav" aria-label="${c.name} preview">${makeStage(stages[0])}<div class="divider"></div>${makeStage(stages[1])}<div class="divider"></div>${makeStage(stages[2])}</nav></aside><section class="main-panel"><span class="panel-kicker">Selected section</span><h3 data-panel-title>Recipe</h3><p data-panel-copy>Layer targets, resin selection, and hopper assignments for the current run.</p><div class="detail-grid"><div class="detail"><i></i><b></b><small></small></div><div class="detail"><i></i><b></b><small></small></div></div><div class="panel-line"></div></section></div><p class="footnote"><strong>Why:</strong> ${c.note}</p>`;
+      const panelTitle=card.querySelector('[data-panel-title]'),panelCopy=card.querySelector('[data-panel-copy]');
+      card.querySelectorAll('.stage').forEach(button=>button.addEventListener('click',()=>{
+        card.querySelectorAll('.stage').forEach(x=>{x.classList.toggle('active',x===button);x.setAttribute('aria-pressed',String(x===button))});
+        const stage=stages.find(x=>x.id===button.dataset.stage);panelTitle.textContent=stage.title;panelCopy.textContent=stage.id==='recipe'?'Layer targets, resin selection, and hopper assignments for the current run.':stage.id==='timeline'?'Live production milestones and the next scheduled resin transition.':'Material totals, estimates, and the full resin summary for this run.';
+      }));
+      card.querySelector('.stage').classList.add('active');gallery.append(card);
+    });
+    document.querySelectorAll('[data-theme-choice]').forEach(button=>button.addEventListener('click',()=>{
+      const gruvbox=button.dataset.themeChoice==='gruvbox';
+      document.body.toggleAttribute('data-theme',gruvbox);
+      if(gruvbox) document.body.dataset.theme='gruvbox';
+      document.querySelectorAll('[data-theme-choice]').forEach(x=>x.setAttribute('aria-pressed',String(x===button)));
+    }));
+  </script>
+</body>
+</html>

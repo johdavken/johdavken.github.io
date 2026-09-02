@@ -134,6 +134,38 @@ test("the control is keyboard-reachable and respects reduced motion", () => {
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)\{[\s\S]*?\.workspaceNavMoreChev\{ transition: none; \}/);
 });
 
+test("the More pill previews the fold's four sections as a pulsing icon strip (concept 9b)", () => {
+  // Markup: a decorative strip of exactly the four desktop-visible foldaway
+  // sections, in fold order, inside the More button before its label.
+  const block = html.slice(html.indexOf('<div class="workspaceNavDivider">'),
+                           html.indexOf('data-workspace-target="lineSyncBlock"'));
+  assert.match(block, /<span class="desktopNavMoreIcons" aria-hidden="true">/);
+  const strip = block.slice(block.indexOf('class="desktopNavMoreIcons"'), block.indexOf("</span>", block.indexOf('class="desktopNavMoreIcons"')));
+  assert.ok(
+    strip.indexOf("dMoreIconRt") < strip.indexOf("dMoreIconTools") &&
+    strip.indexOf("dMoreIconTools") < strip.indexOf("dMoreIconChangelog") &&
+    strip.indexOf("dMoreIconChangelog") < strip.indexOf("dMoreIconSudo"),
+    "icons run RT Sync -> Tools -> Changelog -> Sudo, matching the fold order"
+  );
+  assert.equal((strip.match(/<i class="dMoreIcon/g) || []).length, 4);
+  assert.doesNotMatch(strip, /dMoreIconNotes|dMoreIconBeta/, "Notes and the beta banner are desktop-hidden and must not be previewed");
+
+  // Hidden by default; the desktop rail opts it in.
+  assert.equal(enclosingAtRule(".desktopNavMoreIcons,\n.mobileWorkspaceSyncStatus{ display:none; }"), null);
+  assert.equal(enclosingAtRule("  .desktopNavMoreIcons{\n    display: flex;"), DESKTOP_QUERY);
+
+  // 9b "pulse wave": a scale/brightness beat, staggered across the four.
+  assert.match(styles, /@keyframes navMoreIconPulse\{\s*\n\s*0%, 55%, 100%\{ transform: scale\(1\); opacity: \.7; \}\s*\n\s*18%\{ transform: scale\(1\.16\); opacity: 1; \}/);
+  assert.match(styles, /\.desktopNavMoreIcons i\{[\s\S]*?animation: navMoreIconPulse [\d.]+s ease-in-out infinite;/);
+  assert.match(styles, /\.desktopNavMoreIcons i:nth-child\(2\)\{ animation-delay: \.13s; \}/);
+  assert.match(styles, /\.desktopNavMoreIcons i:nth-child\(4\)\{ animation-delay: \.39s; \}/);
+  // Stops once expanded, and under reduced-motion. Tints are theme tokens.
+  assert.match(styles, /\.workspaceNav\.navExpanded \.desktopNavMoreIcons i\{ animation: none;/);
+  assert.match(styles, /@media \(prefers-reduced-motion: reduce\)\{[\s\S]*?\.desktopNavMoreIcons i\{ animation: none; \}/);
+  assert.match(styles, /\.desktopNavMoreIcons \.dMoreIconRt\{ --dMoreTint: var\(--ok\); \}/);
+  assert.doesNotMatch(ruleBody("  .desktopNavMoreIcons svg{"), /#[0-9a-fA-F]{3,}/);
+});
+
 test("mobile's Workspace & support chevron is theme-aware, not a hardcoded black arrowhead", () => {
   // Desktop's own .workspaceNavMoreChev (901+pointer:fine) declares
   // fill:none/stroke:currentColor so the bare <path d="m6 9 6 6 6-6"/> (no

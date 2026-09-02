@@ -314,6 +314,7 @@ main{
 .mobileProductionControls,
 .mobileRailChev,
 .mobileWorkspaceNavMore,
+.desktopNavMoreIcons,
 .mobileWorkspaceSyncStatus{ display:none; }
 .desktopRailMetric{ display:none!important; }
 .mobileLineRateReadout{display:none}
@@ -750,6 +751,44 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .baseGlyph{dis
   }
   .workspaceNav.navExpanded .workspaceNavMoreChev{ transform: rotate(180deg); }
   .workspaceNav:not(.navExpanded) .workspaceNavExtra:not(.active){ display: none; }
+  /* The four foldaway sections (RT Sync · Tools · Changelog · Sudo) preview
+     inside the More pill so the fold's contents are legible before it opens.
+     A staggered scale/brightness beat ripples across them on a loop - a quiet
+     "there is more here" cue - and stops once expanded (see the .navExpanded
+     rule below and the reduced-motion block near .workspaceNavMoreChev). */
+  .desktopNavMoreIcons{
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .desktopNavMoreIcons i{
+    display: grid;
+    place-items: center;
+    width: 12px;
+    height: 12px;
+    animation: navMoreIconPulse 2.4s ease-in-out infinite;
+  }
+  .desktopNavMoreIcons i:nth-child(2){ animation-delay: .13s; }
+  .desktopNavMoreIcons i:nth-child(3){ animation-delay: .26s; }
+  .desktopNavMoreIcons i:nth-child(4){ animation-delay: .39s; }
+  .desktopNavMoreIcons svg{
+    width: 12px;
+    height: 12px;
+    fill: none;
+    stroke: var(--dMoreTint, currentColor);
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .desktopNavMoreIcons .dMoreIconRt{ --dMoreTint: var(--ok); }
+  .desktopNavMoreIcons .dMoreIconTools{ --dMoreTint: var(--warn); }
+  .desktopNavMoreIcons .dMoreIconChangelog{ --dMoreTint: var(--focus-border); }
+  .desktopNavMoreIcons .dMoreIconSudo{ --dMoreTint: var(--warn); }
+  @keyframes navMoreIconPulse{
+    0%, 55%, 100%{ transform: scale(1); opacity: .7; }
+    18%{ transform: scale(1.16); opacity: 1; }
+  }
+  .workspaceNav.navExpanded .desktopNavMoreIcons i{ animation: none; opacity: 1; }
   /* The Google Play banner (in Help's old nav slot) has nothing to offer a
      fine-pointer desktop - the app is already being used on desktop, and
      every one of its three states (.helpPlayBanner, further down) stays
@@ -2660,13 +2699,14 @@ details[open] > summary .chevSatellite{
   letter-spacing:.02em;
 }
 .splitMatrixCell:not(.has-resin) .splitCellHopperName{opacity:.72}
-/* Next Recipe "show current resin" overlay ------------------------------- *
+/* Recipe cross-resin overlay ------------------------------------------- *
  * The eye toggle lives in the row-gutter corner (replaces "Select row" on
- * Next); each cell carries a small right-aligned "current / <code>" block
- * that CSS reveals only while data-current-overlay is on. Sized to sit in
+ * the pointer grid); each cell carries a small right-aligned
+ * "<current|next> / <code>" block - the other page's resin for that
+ * position - revealed only while data-cross-overlay is on. Sized to sit in
  * the empty top-right of the cell header, within the hopper badge's height,
  * so turning it on does not move the grid. */
-.splitCurrentOverlayToggle{
+.splitCrossOverlayToggle{
   display:grid;
   place-items:center;
   width:26px;
@@ -2679,14 +2719,14 @@ details[open] > summary .chevSatellite{
   color:var(--muted);
   box-shadow:none;
 }
-.splitCurrentOverlayToggle:hover,
-.splitCurrentOverlayToggle:focus-visible{background:var(--row-bg-2);color:var(--title)}
-.splitCurrentOverlayToggle.on{color:var(--focus-border)}
-.splitCurrentOverlayToggle svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
-.splitCurrentOverlayToggle .eyeOpen{display:none}
-.splitCurrentOverlayToggle.on .eyeOpen{display:block}
-.splitCurrentOverlayToggle.on .eyeSlash{display:none}
-.splitCellCurrentResin{
+.splitCrossOverlayToggle:hover,
+.splitCrossOverlayToggle:focus-visible{background:var(--row-bg-2);color:var(--title)}
+.splitCrossOverlayToggle.on{color:var(--focus-border)}
+.splitCrossOverlayToggle svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.splitCrossOverlayToggle .eyeOpen{display:none}
+.splitCrossOverlayToggle.on .eyeOpen{display:block}
+.splitCrossOverlayToggle.on .eyeSlash{display:none}
+.splitCellCrossResin{
   display:none;
   flex-direction:column;
   align-items:flex-end;
@@ -2698,8 +2738,8 @@ details[open] > summary .chevSatellite{
   text-align:right;
   pointer-events:none;
 }
-#splitsArea[data-current-overlay="on"] .splitCellCurrentResin{display:flex}
-.splitCellCurrentResin em{
+#splitsArea[data-cross-overlay="on"] .splitCellCrossResin{display:flex}
+.splitCellCrossResin em{
   font-style:normal;
   font-size:7.5px;
   font-weight:800;
@@ -2707,7 +2747,7 @@ details[open] > summary .chevSatellite{
   color:var(--muted);
   opacity:.7;
 }
-.splitCellCurrentResin b{
+.splitCellCrossResin b{
   max-width:100%;
   overflow:hidden;
   color:var(--muted);
@@ -2715,6 +2755,16 @@ details[open] > summary .chevSatellite{
   font-weight:800;
   white-space:nowrap;
   text-overflow:ellipsis;
+}
+/* The hopper badge takes the theme's --warn colour when this cell's resin
+   does not match the other page's for the same position - only while the
+   overlay is on. Mixed over transparent (the app's warn-tint idiom) so it
+   reads correctly on every theme and surface; an inset ring instead of a
+   border keeps the badge the same size. */
+#splitsArea[data-cross-overlay="on"] .splitMatrixCell.crossResinDiffers .splitCellHopperName{
+  background:color-mix(in srgb,var(--warn) 18%,transparent);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--warn) 45%,transparent);
+  color:var(--warn);
 }
 .splitClearButton{
   display:grid;
@@ -8351,6 +8401,7 @@ input.resinLookupValue.copied[readonly]{
 .changelogBody > h3:first-child{ margin-top: 0; }
 @media (prefers-reduced-motion: reduce){
   .workspaceNavMoreChev{ transition: none; }
+  .desktopNavMoreIcons i{ animation: none; }
 }
 /* =======================================================================
  *   Surface styles
@@ -9541,6 +9592,7 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
 .displaySheetPanel{display:grid;gap:15px;padding:18px}
 .displaySheetPanel > label{display:grid;gap:6px;margin:0;color:var(--muted);font-size:12px;font-weight:750}
 .displaySheetPanel select{width:100%;min-height:44px}
+.desktopRailStyleField > small{color:var(--muted);font-size:10px;font-weight:600}
 /* The manual layer-count fallback (#setupLayerCountGroup, relocated here by
    placeProductionControlsForLayout() in app.js). Empty and collapses to
    nothing whenever a linked RT Sync line dictates the layer count -
@@ -9614,6 +9666,7 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
      uses one persistent application dock on every primary screen. */
   .workspaceStatusBar{display:none!important}
   .desktopDisplayToggle{display:none}
+  .desktopRailStyleField{display:none!important}
   main{padding-bottom:calc(var(--app-dock-height) + env(safe-area-inset-bottom) + 22px)!important}
 
   body[data-theme="industrial-slate"][data-mobile-background-style="theme-native"]{

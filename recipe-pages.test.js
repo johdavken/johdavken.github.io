@@ -47,54 +47,73 @@ test("Rearrange is parameterized rather than duplicated per page", () => {
 });
 
 /* ============================================================
- *   Next Recipe: "show current resin" overlay
+ *   Cross-resin overlay (both pages, mirror of each other)
  * ============================================================ */
 
-test("the current-resin overlay is Next-only, pointer-only, and off by default", () => {
+test("the cross-resin overlay is on both pages, pointer-only, one shared off-by-default flag", () => {
   const editor = recipeEditor();
-  // Off by default (crossed-out eye), module level so it survives re-renders,
-  // and never persisted with the session.
-  assert.match(app, /let nextRecipeShowCurrentResinOverlay = false;/);
+  // One shared flag, module level so it survives re-renders, never persisted.
+  assert.match(app, /let recipeShowCrossResinOverlay = false;/);
   const snapshot = app.slice(app.indexOf("function snapshotPayload(){"), app.indexOf("function applySharedActiveJob("));
-  assert.doesNotMatch(snapshot, /nextRecipeShowCurrentResinOverlay/);
-  // Availability is gated on the Next page AND a typeable (pointer) grid.
-  assert.match(editor, /const currentOverlayAvailable = isNextRecipePage\(\) && cellsTypeable;/);
-  assert.match(editor, /area\.dataset\.currentOverlay = \(currentOverlayAvailable && nextRecipeShowCurrentResinOverlay\) \? "on" : "off";/);
+  assert.doesNotMatch(snapshot, /recipeShowCrossResinOverlay/);
+  // Available on any typeable (pointer) grid - Current or Next - and the
+  // label names whichever recipe is being overlaid.
+  assert.match(editor, /const crossOverlayAvailable = cellsTypeable;/);
+  assert.match(editor, /const crossOverlayLabel = isNextRecipePage\(\) \? "current" : "next";/);
+  assert.match(editor, /area\.dataset\.crossOverlay = \(crossOverlayAvailable && recipeShowCrossResinOverlay\) \? "on" : "off";/);
 });
 
-test("the overlay reads the live recipe through its own accessor, not the page array", () => {
+test("the overlay reads the OTHER page's recipe through its own accessor", () => {
   const editor = recipeEditor();
-  // currentRecipeLayers() is the one deliberate cross-reference: the plan is
-  // compared against what is loaded now. It must not reach for recipeLayers()
-  // (that is the Next working copy on this page).
-  assert.match(app, /function currentRecipeLayers\(\)\{\s*\n\s*return state\.layers;/);
-  assert.match(editor, /currentRecipeLayers\(\)\?\.\[li\]\?\.hoppers\?\.\[hi\]\?\.resinName/);
-  assert.match(editor, /currentOverlay\.className = "splitCellCurrentResin"/);
+  // otherRecipeResinAt() is the one deliberate cross-page read: live recipe
+  // while on Next, the durable plan (never the working copy) while on Current.
+  assert.match(app, /function otherRecipeResinAt\(layerIndex, hopperIndex\)\{/);
+  assert.match(app, /isNextRecipePage\(\)\s*\n\s*\? state\.layers\s*\n\s*: \(window\.PolynNextRecipe\?\.normalize\(state\.nextRecipe\)\?\.layers \|\| \[\]\)/);
+  assert.match(app, /hopper\.resinName \?\? hopper\.resin_name/);
+  assert.match(editor, /const crossResin = crossOverlayAvailable \? otherRecipeResinAt\(li, hi\) : "";/);
+  assert.match(editor, /crossOverlay\.className = "splitCellCrossResin"/);
+  assert.match(editor, /tag\.textContent = crossOverlayLabel;/);
 });
 
 test("the eye toggle flips the overlay without a re-render", () => {
   const editor = recipeEditor();
-  // The corner (row-gutter) button replaces the "Select row" caption on Next.
-  assert.match(editor, /overlayToggle\.className = "splitCurrentOverlayToggle"/);
+  assert.match(editor, /overlayToggle\.className = "splitCrossOverlayToggle"/);
   assert.match(editor, /corner\.appendChild\(overlayToggle\);/);
   assert.match(editor, /\} else \{\s*\n\s*corner\.textContent = summaryView \? "" : "Select row";/);
-  // Click only flips the flag + the data attribute + the button state -
-  // no renderSplitsArea() in the handler body, so the grid is never rebuilt.
   const clickHandler = editor.slice(
     editor.indexOf('overlayToggle.addEventListener("click"'),
     editor.indexOf("corner.appendChild(overlayToggle);")
   );
-  assert.match(clickHandler, /nextRecipeShowCurrentResinOverlay = !nextRecipeShowCurrentResinOverlay;/);
-  assert.match(clickHandler, /area\.dataset\.currentOverlay = nextRecipeShowCurrentResinOverlay \? "on" : "off";/);
+  assert.match(clickHandler, /recipeShowCrossResinOverlay = !recipeShowCrossResinOverlay;/);
+  assert.match(clickHandler, /area\.dataset\.crossOverlay = recipeShowCrossResinOverlay \? "on" : "off";/);
   assert.doesNotMatch(clickHandler, /renderSplitsArea/);
 });
 
 test("overlay CSS: hidden until the toggle is on, and the eye icon swaps with it", () => {
-  assert.match(styles, /\.splitCellCurrentResin\{[^}]*display:none;/);
-  assert.match(styles, /#splitsArea\[data-current-overlay="on"\] \.splitCellCurrentResin\{display:flex\}/);
-  assert.match(styles, /\.splitCurrentOverlayToggle \.eyeOpen\{display:none\}/);
-  assert.match(styles, /\.splitCurrentOverlayToggle\.on \.eyeOpen\{display:block\}/);
-  assert.match(styles, /\.splitCurrentOverlayToggle\.on \.eyeSlash\{display:none\}/);
+  assert.match(styles, /\.splitCellCrossResin\{[^}]*display:none;/);
+  assert.match(styles, /#splitsArea\[data-cross-overlay="on"\] \.splitCellCrossResin\{display:flex\}/);
+  assert.match(styles, /\.splitCrossOverlayToggle \.eyeOpen\{display:none\}/);
+  assert.match(styles, /\.splitCrossOverlayToggle\.on \.eyeOpen\{display:block\}/);
+  assert.match(styles, /\.splitCrossOverlayToggle\.on \.eyeSlash\{display:none\}/);
+});
+
+test("a differing cell flags its hopper badge, recomputed on live edits, in theme --warn", () => {
+  const editor = recipeEditor();
+  // Recomputed in refreshCellState() (the funnel every resin write hits), so
+  // the flag tracks typing without a full re-render.
+  const refreshStart = editor.indexOf("function refreshCellState(){");
+  const refresh = editor.slice(refreshStart, editor.indexOf("\n          }", refreshStart));
+  assert.match(refresh, /td\.classList\.toggle\("crossResinDiffers",\s*\n\s*!!crossResin && crossResin !== normName\(hopper\.resinName\)\);/);
+  // crossResin is hoisted out of the overlay-build block so refreshCellState
+  // can close over it.
+  assert.match(editor, /const crossResin = crossOverlayAvailable \? otherRecipeResinAt\(li, hi\) : "";/);
+  // Badge takes the theme's --warn, mixed over transparent (the app's warn
+  // idiom), and only while the overlay is on. No hard-coded colour.
+  const rule = styles.slice(styles.indexOf('.crossResinDiffers .splitCellHopperName{'), styles.indexOf('.crossResinDiffers .splitCellHopperName{') + 260);
+  assert.match(styles, /#splitsArea\[data-cross-overlay="on"\] \.splitMatrixCell\.crossResinDiffers \.splitCellHopperName\{/);
+  assert.match(rule, /color:var\(--warn\)/);
+  assert.match(rule, /color-mix\(in srgb,var\(--warn\) \d+%,transparent\)/);
+  assert.doesNotMatch(rule, /#[0-9a-fA-F]{3,}/);
 });
 
 /* ============================================================

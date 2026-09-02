@@ -75,6 +75,10 @@
       density: "comfort",
       theme: "industrial-slate",
       timeFormat: "12",
+      // Desktop-only presentation preference for the selected stage in the
+      // workspace side rail. It remains local when an RT Sync job arrives,
+      // like the other Display settings below.
+      desktopRailStyle: "filled",
       // Which scan source a tap on the mobile Scan action goes straight to.
       // "ask" preserves the original 3-source popup unchanged; picking a
       // specific source skips that popup entirely. Mobile/touch-only
@@ -159,12 +163,12 @@
   // Never consulted on the compact mobile recipe, which keeps its existing
   // always-editable layout and its own separate bulk-mode toggle.
   let splitsViewMode = "summary";
-  // Next Recipe only: overlay each cell with the CURRENT recipe's resin for
-  // that position, so a changeover plan can be read against what is loaded
-  // now. Off by default (crossed-out eye in the gutter corner). Module level,
-  // like splitsViewMode, so it survives renderSplitsArea() re-renders; not
-  // persisted - it resets to off each session.
-  let nextRecipeShowCurrentResinOverlay = false;
+  // Recipe grid: overlay each cell with the OTHER page's resin - current
+  // while planning Next, planned while editing Current - so the two read
+  // against each other. Off by default (crossed-out eye). One shared flag
+  // for both pages, module level like splitsViewMode so it survives
+  // renderSplitsArea() re-renders; not persisted, resets off each session.
+  let recipeShowCrossResinOverlay = false;
   // Receiver Hopper Weights' own Summary/Edit mode, on the same footing.
   // Module level so it survives the re-renders that toggling Smart Hoppers,
   // loading a profile or changing layer count all trigger - resetting an
@@ -1609,6 +1613,7 @@
         density: state.density,
         theme: state.theme,
         timeFormat: state.timeFormat,
+        desktopRailStyle: state.desktopRailStyle,
         defaultScanAction: state.defaultScanAction,
         surfaceStyle: state.surfaceStyle,
         mobileTileStyle: state.mobileTileStyle,
@@ -1636,6 +1641,7 @@
         density: state.density,
         theme: state.theme,
         timeFormat: state.timeFormat,
+        desktopRailStyle: state.desktopRailStyle,
         defaultScanAction: state.defaultScanAction,
         surfaceStyle: state.surfaceStyle,
         mobileTileStyle: state.mobileTileStyle,
@@ -1778,6 +1784,17 @@
         : storedSurfaceStyle;
       state.surfaceStyle = storedSurfaceStyle;
       document.body.setAttribute("data-surface-style", renderedSurfaceStyle);
+    }
+
+    function applyDesktopRailStyle(value){
+      const allowed = new Set(["filled", "underline"]);
+      // Values from the short-lived six-style experiment intentionally fall
+      // back to Solid selected strip once the chooser is reduced again.
+      const style = allowed.has(String(value)) ? String(value) : "filled";
+      state.desktopRailStyle = style;
+      document.body.dataset.desktopRailStyle = style;
+      const select = $("desktopRailStyleSel");
+      if (select) select.value = style;
     }
 
     function applyMobileTileStyle(value){
@@ -2130,6 +2147,7 @@
       applyTimeFormat(payload.timeFormat || "12");
       applyDefaultScanAction(payload.defaultScanAction || "ask");
       applySurfaceStyle(payload.surfaceStyle || defaultSurfaceStyle());
+      applyDesktopRailStyle(payload.desktopRailStyle || "filled");
         applyMobileTileStyle("minimal");
         applyMobileBackgroundStyle("theme-native");
       applyMobileTimelineAlarm(!!payload.mobileTimelineAlarm);
@@ -3660,12 +3678,19 @@
     function recipeLayers(){
       return isNextRecipePage() ? ensureNextRecipeWorking() : state.layers;
     }
-    // The live recipe, whichever page is on screen. Only the Next page's
-    // "show current resin" overlay needs it - to display what each hopper
-    // holds now beside the plan. Everything else in the editor must keep
-    // going through recipeLayers() so the two pages never share an array.
-    function currentRecipeLayers(){
-      return state.layers;
+    // The OTHER page's recipe, read-only, for the cross-resin overlay: the
+    // live recipe while planning Next, and the durable plan while editing
+    // Current (state.nextRecipe, never the working copy - a page switch has
+    // already committed it). The one deliberate cross-page read in the
+    // editor; everything else must keep going through recipeLayers() so the
+    // two pages never share an array. Hopper resin lives under `resinName` on
+    // the live recipe and `resin_name` on a normalized plan payload.
+    function otherRecipeResinAt(layerIndex, hopperIndex){
+      const layers = isNextRecipePage()
+        ? state.layers
+        : (window.PolynNextRecipe?.normalize(state.nextRecipe)?.layers || []);
+      const hopper = layers?.[layerIndex]?.hoppers?.[hopperIndex];
+      return normName((hopper && (hopper.resinName ?? hopper.resin_name)) || "");
     }
 
     // Recipe edits are deliberately reversible within the open session. Keep
@@ -4146,14 +4171,15 @@
       area.dataset.recipeView = viewMode;
       area.dataset.recipeCells = cellsTypeable ? "typeable" : "static";
       area.classList.toggle("recipeTrackingView", trackingView);
-      // The current-recipe overlay only exists on the typeable (pointer) Next
-      // Recipe grid: it is a planning aid for a changeover, and only there is
-      // the live recipe (via currentRecipeLayers()) something distinct from
-      // what the grid is editing. The eye toggle and per-cell spans are
-      // always built when available; nextRecipeShowCurrentResinOverlay only
-      // reveals them, so toggling never needs a re-render.
-      const currentOverlayAvailable = isNextRecipePage() && cellsTypeable;
-      area.dataset.currentOverlay = (currentOverlayAvailable && nextRecipeShowCurrentResinOverlay) ? "on" : "off";
+      // The cross-resin overlay only exists on the typeable (pointer) grid,
+      // on both pages: it shows the other page's resin per cell so Current
+      // and the plan can be read against each other. The eye toggle and
+      // per-cell spans are always built when available; recipeShowCrossResinOverlay
+      // only reveals them, so toggling never needs a re-render. The label
+      // names whichever recipe is being overlaid.
+      const crossOverlayAvailable = cellsTypeable;
+      const crossOverlayLabel = isNextRecipePage() ? "current" : "next";
+      area.dataset.crossOverlay = (crossOverlayAvailable && recipeShowCrossResinOverlay) ? "on" : "off";
 
       // Which parts of a cell keep an interaction of their own, and which
       // are just cell surface. Everything editable lives inside a field or
@@ -4655,16 +4681,16 @@
       // feature, so Summary leaves this quiet rather than naming a control
       // that isn't there; the row numbers below stay put either way.
       //
-      // On Next Recipe the corner instead holds the eye toggle for the
-      // current-recipe overlay (replacing the "Select row" caption, which is
+      // On the typeable grid the corner instead holds the eye toggle for the
+      // cross-resin overlay (replacing the "Select row" caption, which is
       // only ever a label - the numbered buttons below still select).
-      if (currentOverlayAvailable){
+      if (crossOverlayAvailable){
         const overlayToggle = document.createElement("button");
         overlayToggle.type = "button";
-        overlayToggle.className = "splitCurrentOverlayToggle";
+        overlayToggle.className = "splitCrossOverlayToggle";
         const syncOverlayToggle = ()=>{
-          const on = nextRecipeShowCurrentResinOverlay;
-          const label = on ? "Hide current recipe resin names" : "Show current recipe resin names";
+          const on = recipeShowCrossResinOverlay;
+          const label = `${on ? "Hide" : "Show"} ${crossOverlayLabel} recipe resin names`;
           overlayToggle.classList.toggle("on", on);
           overlayToggle.setAttribute("aria-pressed", String(on));
           overlayToggle.setAttribute("aria-label", label);
@@ -4675,8 +4701,8 @@
           '<svg class="eyeOpen" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
         syncOverlayToggle();
         overlayToggle.addEventListener("click", ()=>{
-          nextRecipeShowCurrentResinOverlay = !nextRecipeShowCurrentResinOverlay;
-          area.dataset.currentOverlay = nextRecipeShowCurrentResinOverlay ? "on" : "off";
+          recipeShowCrossResinOverlay = !recipeShowCrossResinOverlay;
+          area.dataset.crossOverlay = recipeShowCrossResinOverlay ? "on" : "off";
           syncOverlayToggle();
         });
         corner.appendChild(overlayToggle);
@@ -4901,25 +4927,25 @@
           hopperName.textContent = hopperBadgeLabel(L.name, hi);
           cellHeader.append(hopperName);
 
-          // Next Recipe: the current recipe's resin for this same position,
-          // as a small right-aligned "current / <code>" overlay. Built here
-          // whenever the overlay is available and there is something loaded
-          // in that position; CSS reveals it only while the eye toggle is on
-          // (#splitsArea[data-current-overlay="on"]).
-          if (currentOverlayAvailable){
-            const currentResin = normName(currentRecipeLayers()?.[li]?.hoppers?.[hi]?.resinName || "");
-            if (currentResin){
-              const currentOverlay = document.createElement("span");
-              currentOverlay.className = "splitCellCurrentResin";
-              currentOverlay.setAttribute("aria-hidden", "true");
-              const tag = document.createElement("em");
-              tag.textContent = "current";
-              const value = document.createElement("b");
-              value.textContent = currentResin;
-              currentOverlay.append(tag, value);
-              currentOverlay.title = `Currently loaded in ${hopperBadgeLabel(L.name, hi)}: ${currentResin}`;
-              cellHeader.append(currentOverlay);
-            }
+          // The other page's resin for this same position, as a small
+          // right-aligned "<current|next> / <code>" overlay. Built whenever
+          // the overlay is available and that position holds something; CSS
+          // reveals it only while the eye toggle is on
+          // (#splitsArea[data-cross-overlay="on"]). Captured here so
+          // refreshCellState() can also flag a cell whose plan no longer
+          // matches.
+          const crossResin = crossOverlayAvailable ? otherRecipeResinAt(li, hi) : "";
+          if (crossOverlayAvailable && crossResin){
+            const crossOverlay = document.createElement("span");
+            crossOverlay.className = "splitCellCrossResin";
+            crossOverlay.setAttribute("aria-hidden", "true");
+            const tag = document.createElement("em");
+            tag.textContent = crossOverlayLabel;
+            const value = document.createElement("b");
+            value.textContent = crossResin;
+            crossOverlay.append(tag, value);
+            crossOverlay.title = `${crossOverlayLabel === "current" ? "Currently loaded" : "Planned"} in ${hopperBadgeLabel(L.name, hi)}: ${crossResin}`;
+            cellHeader.append(crossOverlay);
           }
 
           const editor = document.createElement("div");
@@ -5046,6 +5072,12 @@
             td.classList.toggle("tracked", !!hopper.track);
             td.classList.toggle("complete", complete);
             td.classList.toggle("empty", empty);
+            // Cross-resin overlay: flag the hopper badge when this cell's
+            // resin does not match the other page's for the same position
+            // (blank or changed). Recomputed here so it tracks live typing;
+            // CSS only paints it while the eye toggle is on.
+            td.classList.toggle("crossResinDiffers",
+              !!crossResin && crossResin !== normName(hopper.resinName));
             clearButton.hidden = !clearable;
             trackButton.classList.toggle("active", !!hopper.track);
             trackButton.setAttribute("aria-pressed", String(!!hopper.track));
@@ -9102,6 +9134,11 @@
       saveSession();
     });
 
+    $("desktopRailStyleSel")?.addEventListener("change",(e)=>{
+      applyDesktopRailStyle(e.target.value);
+      saveSession();
+    });
+
     $("defaultScanActionSel")?.addEventListener("change",(e)=>{
       applyDefaultScanAction(e.target.value);
       saveSession();
@@ -9717,6 +9754,7 @@
       // Ensure theme/logo applied even after restore
       applyTheme(state.theme || "industrial-slate");
       applyTimeFormat(state.timeFormat || "12");
+      applyDesktopRailStyle(state.desktopRailStyle || "filled");
       applyDefaultScanAction(state.defaultScanAction || "ask");
       applySurfaceStyle(state.surfaceStyle || defaultSurfaceStyle());
       applyMobileTileStyle("minimal");

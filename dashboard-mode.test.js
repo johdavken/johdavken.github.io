@@ -273,7 +273,7 @@ test("Dashboard back button and sidebar entry are keyboard-focusable with visibl
   assert.match(html, /<button class="workspaceNavButton workspaceNavDashboard" id="workspaceNavDashboard" type="button"/);
 });
 
-test("the changeover refresh is another entry into the existing wizard, not a second calculator", () => {
+test("the changeover control is another entry into the existing wizard, with no duplicated logic", () => {
   const panel = html.slice(html.indexOf('id="dashboardPanel"'), html.indexOf('</section>', html.indexOf('id="dashboardPanel"')));
   const btn = panel.slice(panel.indexOf('id="dashboardChangeoverRefresh"') - 40, panel.indexOf('</button>', panel.indexOf('id="dashboardChangeoverRefresh"')) + 9);
   // Wired purely by the app's single existing wizard-trigger listener -
@@ -285,9 +285,10 @@ test("the changeover refresh is another entry into the existing wizard, not a se
   assert.match(btn, /title="Update changeover estimate"/);
   // Sits beside the CHANGEOVER label, not near the hero clock.
   assert.match(panel, /dashboardChangeoverHead[\s\S]*?dashboardLabel[\s\S]*?dashboardChangeoverRefresh[\s\S]*?dashboardChangeoverClock/);
-  // Reuses the app's established circular-arrows refresh glyph (same path
-  // data the RT Sync refresh control uses), not a new icon.
-  assert.match(btn, /M5 7a8 8 0 0 1 13 1l2 3M19 17a8 8 0 0 1-13-1l-2-3/);
+  // Uses the status bar's own Determine Changeover Time glyph (the
+  // calculator icon on #desktopChangeoverWizardTrigger), so both entry
+  // points into the wizard read as the same control - not a new icon.
+  assert.match(btn, /<rect x="5" y="3" width="14" height="18" rx="2"\/><path d="M8 7h8M8\.5 11h1/);
   // No new click handler bound to it in app.js.
   assert.doesNotMatch(app, /dashboardChangeoverRefresh/);
   // Theme-aware, visually secondary, still an easy target, clear on hover/focus.

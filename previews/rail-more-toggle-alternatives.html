@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rail More/Less toggle — concepts & variants</title>
+<style>
+  :root{
+    color-scheme:light;
+    --bg:#eceff1;--canvas:#e3e7ea;--panel:#ffffff;--panel2:#f6f7f8;
+    --text:#26262a;--title:#1b1c1f;--muted:#6a6670;--accent:#4f6f92;
+    --line:rgba(74,73,72,.18);--line-strong:rgba(74,73,72,.30);
+    --row-bg:rgba(74,73,72,.05);--row-bg-2:rgba(74,73,72,.035);
+    --focus:#4f6f92;--focus-ring:rgba(79,111,146,.16);
+    --ok:#2f7d4f;--warn:#a56b00;--accent-soft:rgba(79,111,146,.14);
+  }
+  :root[data-theme="dark"]{
+    color-scheme:dark;
+    --bg:#1d2021;--canvas:#161a1b;--panel:#282828;--panel2:#242625;
+    --text:#ebdbb2;--title:#fbf1c7;--muted:#bdae93;--accent:#83a598;
+    --line:rgba(235,219,178,.16);--line-strong:rgba(235,219,178,.32);
+    --row-bg:rgba(235,219,178,.05);--row-bg-2:rgba(235,219,178,.035);
+    --focus:#83a598;--focus-ring:rgba(131,165,152,.18);
+    --ok:#8fbf7f;--warn:#e0a94b;--accent-soft:rgba(131,165,152,.16);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--canvas);color:var(--text);font:14px/1.45 Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+  button{font:inherit;cursor:pointer}
+  .pageHeader{position:sticky;top:0;z-index:5;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:18px clamp(16px,4vw,46px);border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--canvas) 92%,transparent);backdrop-filter:blur(10px)}
+  .pageHeader h1{margin:0;font-size:clamp(20px,2.6vw,28px)}
+  .pageHeader p{margin:4px 0 0;color:var(--muted);max-width:66ch}
+  .themeButton{flex:0 0 auto;padding:8px 13px;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--text)}
+  main{width:min(1000px,100%);margin:auto;padding:22px clamp(12px,3vw,30px) 70px}
+  .intro{margin-bottom:20px;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--muted)}
+  .intro strong{color:var(--text)}
+  .intro code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;background:var(--row-bg);padding:1px 5px;border-radius:4px}
+
+  .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+  @media (max-width:720px){.grid{grid-template-columns:1fr}}
+  .concept{display:flex;flex-direction:column;overflow:hidden;border:2px solid transparent;border-radius:15px;background:var(--panel);box-shadow:0 5px 16px rgba(0,0,0,.08)}
+  .concept.selected{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .cHead{display:flex;align-items:flex-start;gap:9px;padding:13px 15px 10px}
+  .cHead input{width:16px;height:16px;margin-top:2px;flex:0 0 auto;accent-color:var(--accent)}
+  .cName{font-size:15px;font-weight:850}
+  .cNote{display:block;margin-top:3px;color:var(--muted);font-size:11.5px;line-height:1.45}
+  .badge{margin-left:auto;flex:0 0 auto;align-self:center;padding:3px 7px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.06em}
+  .tradeoffs{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:8px 15px 12px;color:var(--muted);font-size:11px}
+  .tradeoffs strong{display:block;color:var(--text)}
+
+  /* ---- shared mini-rail mock ---- */
+  .stage{padding:16px;background:var(--bg);border-top:1px solid var(--line)}
+  .rail{width:210px;margin:0 auto;padding:12px 10px;border:1px solid var(--line);border-radius:14px;background:var(--panel);display:flex;flex-direction:column;gap:4px}
+  .brand{font-size:11px;font-weight:800;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;text-align:center;padding:2px 0 8px;border-bottom:1px solid var(--line);margin-bottom:4px}
+  .nav{display:flex;align-items:center;gap:9px;padding:8px 9px;border:1px solid transparent;border-radius:10px;background:transparent;width:100%;text-align:left;color:var(--text)}
+  .nav:hover{background:var(--row-bg)}
+  .nav.on{border-color:color-mix(in srgb,var(--focus) 40%,transparent);background:var(--focus-ring)}
+  .nav svg{width:16px;height:16px;flex:0 0 auto;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .nav b{font-size:12.5px;font-weight:750}
+  .nav small{display:block;font-size:9.5px;color:var(--muted);font-weight:600;margin-top:1px}
+  .nav .tx{min-width:0}
+
+  .extras{display:grid;grid-template-rows:0fr;transition:grid-template-rows .26s ease}
+  .rail.exp .extras{grid-template-rows:1fr}
+  .extras > div{overflow:hidden;min-height:0;display:flex;flex-direction:column;gap:4px}
+  .extras .nav{opacity:0;transform:translateY(-4px);transition:opacity .2s ease,transform .2s ease}
+  .rail.exp .extras .nav{opacity:1;transform:none}
+
+  /* ---- toggle: shared bits ---- */
+  .divider{position:relative;display:flex;justify-content:center;align-items:center;margin:9px 2px 5px}
+  .divider::before{content:"";position:absolute;left:0;right:0;top:50%;border-top:1px solid var(--line)}
+  .chev{width:13px;height:13px;flex:0 0 auto;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s ease}
+  .rail.exp .chev{transform:rotate(180deg)}
+
+  /* 1 · Current pill */
+  .t-pill{position:relative;display:flex;align-items:center;gap:6px;padding:3px 11px;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--muted);font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
+  .t-pill:hover{border-color:var(--line-strong);background:var(--row-bg);color:var(--title)}
+
+  /* 2 · Icon-preview pill (mobile-style) */
+  .t-iconpill{position:relative;display:flex;align-items:center;gap:8px;padding:5px 11px 5px 8px;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--muted);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+  .t-iconpill:hover{border-color:var(--line-strong);background:var(--row-bg);color:var(--title)}
+  .miniIcons{display:flex}
+  .miniIcons i{display:grid;place-items:center;width:17px;height:17px;margin-left:-6px;border-radius:50%;background:var(--panel);border:1px solid var(--line)}
+  .miniIcons i:first-child{margin-left:0}
+  .miniIcons i svg{width:10px;height:10px;fill:none;stroke:var(--tint,var(--muted));stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .rail.exp .t-iconpill .miniIcons{display:none}
+
+  /* 3 · Morphing glyph — icon-only round button, animates chevrons → converge */
+  .t-glyph{display:grid;place-items:center;width:30px;height:30px;border:1px solid var(--line);border-radius:50%;background:var(--panel);color:var(--muted)}
+  .t-glyph:hover{border-color:var(--line-strong);color:var(--title);background:var(--row-bg)}
+  .t-glyph svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+  .t-glyph .a{transition:transform .28s cubic-bezier(.5,-0.4,.4,1.4)}
+  .t-glyph .a1{transform-origin:12px 9px}
+  .t-glyph .a2{transform-origin:12px 15px}
+  .rail.exp .t-glyph .a1{transform:translateY(3px) rotate(180deg)}
+  .rail.exp .t-glyph .a2{transform:translateY(-3px) rotate(180deg)}
+
+  /* 4 · Section-header divider — the whole strip is the control */
+  .t-header{display:flex;align-items:center;gap:8px;width:100%;padding:6px 8px;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--muted)}
+  .t-header:hover{background:var(--row-bg);color:var(--title)}
+  .t-header .ln{flex:1;border-top:1px solid var(--line)}
+  .t-header span{font-size:9.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap}
+
+  /* 5 · Icon-rail peek — collapsed shows a row of icon-only buttons */
+  .peekRow{display:flex;justify-content:center;gap:2px;margin:4px 0 2px}
+  .peekRow button{display:grid;place-items:center;width:30px;height:30px;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--muted)}
+  .peekRow button:hover{background:var(--row-bg);color:var(--title)}
+  .peekRow button svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .peekExpand{display:grid;place-items:center;width:22px;height:22px;border:1px solid var(--line);border-radius:50%;background:var(--panel);color:var(--muted);margin:2px auto 0}
+  .rail.exp .peekRow{display:none}
+
+  /* 6 · Animated drawer handle */
+  .t-handle{display:flex;flex-direction:column;align-items:center;gap:3px;width:100%;padding:5px 0 3px;border:0;background:transparent;color:var(--muted)}
+  .t-handle:hover{color:var(--title)}
+  .grip{width:34px;height:4px;border-radius:999px;background:currentColor;opacity:.45}
+  .t-handle:hover .grip{opacity:.8}
+  .t-handle svg{width:14px;height:9px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;animation:bob 1.8s ease-in-out infinite}
+  .rail.exp .t-handle svg{transform:rotate(180deg);animation:none}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(2px)}}
+
+  /* ===== Round 2: icon row × animated SVG (2 + 6) ===== */
+
+  /* 7 · Fanning icon pill */
+  .t-fan{position:relative;display:flex;align-items:center;gap:8px;padding:5px 11px 5px 9px;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--muted);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+  .t-fan:hover{border-color:var(--line-strong);background:var(--row-bg);color:var(--title)}
+  .t-fan .fan{display:flex}
+  .t-fan .fan i{display:grid;place-items:center;width:17px;height:17px;margin-left:-7px;border-radius:50%;background:var(--panel);border:1px solid var(--line);animation:fan 3.4s ease-in-out infinite}
+  .t-fan .fan i:first-child{margin-left:0}
+  .t-fan .fan i:nth-child(2){--sp:3px;animation-delay:.08s}
+  .t-fan .fan i:nth-child(3){--sp:6px;animation-delay:.16s}
+  .t-fan .fan i:nth-child(4){--sp:9px;animation-delay:.24s}
+  .t-fan .fan i svg{width:10px;height:10px;fill:none;stroke:var(--tint,var(--muted));stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  @keyframes fan{0%,100%{transform:translateX(0)}45%{transform:translateX(var(--sp,0))}}
+  .t-fan:hover .fan i{animation-play-state:paused}
+  .t-fan:hover .fan i:nth-child(2){transform:translateX(4px)}
+  .t-fan:hover .fan i:nth-child(3){transform:translateX(9px)}
+  .t-fan:hover .fan i:nth-child(4){transform:translateX(14px)}
+  .rail.exp .t-fan .fan{opacity:.3}
+  .rail.exp .t-fan .fan i{animation:none}
+
+  /* 8 · Icon row + bobbing grip */
+  .t-tier{display:flex;flex-direction:column;align-items:center;gap:6px;width:100%;padding:7px 0 3px;border:0;background:transparent;color:var(--muted)}
+  .t-tier:hover{color:var(--title)}
+  .t-tier .tierIcons{display:flex;gap:7px;transition:opacity .2s ease}
+  .t-tier .tierIcons i{display:grid;place-items:center;width:20px;height:20px;border-radius:6px;background:var(--row-bg-2)}
+  .t-tier .tierIcons i svg{width:12px;height:12px;fill:none;stroke:var(--tint,var(--muted));stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+  .t-tier .grip{width:30px;height:3.5px;opacity:.4}
+  .t-tier:hover .grip{opacity:.75}
+  .t-tier .dChev{width:13px;height:8px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;animation:bob 1.8s ease-in-out infinite}
+  .rail.exp .t-tier .dChev{transform:rotate(180deg);animation:none}
+  .rail.exp .t-tier .tierIcons{opacity:.3}
+
+  /* 9 · Icon strip — shared layout, swappable ambient animation (.anim-*) */
+  .t-scan{position:relative;display:flex;align-items:center;gap:8px;padding:5px 11px;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--muted);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;overflow:hidden}
+  .t-scan:hover{border-color:var(--line-strong);color:var(--title)}
+  .t-scan .scanIcons{position:relative;z-index:1;display:flex;gap:6px}
+  .t-scan .scanIcons i{display:block}
+  .t-scan .scanIcons i svg{display:block;width:12px;height:12px;fill:none;stroke:var(--tint,var(--muted));stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+  .rail.exp .t-scan .scanIcons i,
+  .rail.exp .t-scan .chev,
+  .rail.exp .t-scan{animation:none!important}
+  .rail.exp .t-scan::after,
+  .rail.exp .t-scan .scanIcons::after{animation:none;opacity:0}
+
+  /* a · light sweep (the original #9) */
+  .anim-sweep::after{content:"";position:absolute;top:0;bottom:0;left:-45%;width:38%;background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--focus) 26%,transparent),transparent);animation:sweep 2.7s linear infinite}
+  @keyframes sweep{0%{left:-45%}100%{left:108%}}
+  /* b · staggered pulse wave — each icon beats in sequence */
+  .anim-pulse .scanIcons i{animation:iPulse 2.4s ease-in-out infinite}
+  .anim-pulse .scanIcons i:nth-child(2){animation-delay:.13s}
+  .anim-pulse .scanIcons i:nth-child(3){animation-delay:.26s}
+  .anim-pulse .scanIcons i:nth-child(4){animation-delay:.39s}
+  @keyframes iPulse{0%,55%,100%{transform:scale(1);opacity:.72}18%{transform:scale(1.16);opacity:1}}
+  /* c · stroke shimmer — a fast diagonal gloss crosses just the glyphs */
+  .anim-shimmer .scanIcons{overflow:hidden;border-radius:4px}
+  .anim-shimmer .scanIcons::after{content:"";position:absolute;top:-50%;left:-30%;width:20%;height:200%;transform:rotate(18deg);background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--focus) 42%,transparent),transparent);animation:shimmer 3.6s ease-in-out infinite}
+  @keyframes shimmer{0%,72%{left:-30%}90%,100%{left:125%}}
+  /* d · traveling glow — a soft halo hops icon to icon */
+  .anim-glow .scanIcons i{animation:iGlow 3.2s ease-in-out infinite}
+  .anim-glow .scanIcons i:nth-child(2){animation-delay:.38s}
+  .anim-glow .scanIcons i:nth-child(3){animation-delay:.76s}
+  .anim-glow .scanIcons i:nth-child(4){animation-delay:1.14s}
+  @keyframes iGlow{0%,30%,100%{filter:drop-shadow(0 0 0 transparent)}12%{filter:drop-shadow(0 0 5px color-mix(in srgb,var(--focus) 75%,transparent))}}
+  /* e · chevron drip — strip stays calm, only the chevron nudges on a rhythm */
+  .anim-drip .chev{animation:drip 2.2s ease-in-out infinite}
+  @keyframes drip{0%,60%,100%{transform:translateY(0);opacity:.7}30%{transform:translateY(3px);opacity:1}}
+  /* f · pill bloom — the ring pulses; nothing inside moves */
+  .anim-bloom{animation:bloom 2.9s ease-in-out infinite}
+  @keyframes bloom{0%,100%{box-shadow:0 0 0 0 transparent}50%{box-shadow:0 0 0 3px color-mix(in srgb,var(--focus) 15%,transparent)}}
+
+  @media (prefers-reduced-motion:reduce){
+    .t-handle svg,.t-tier .dChev,.t-fan .fan i,
+    .anim-pulse .scanIcons i,.anim-glow .scanIcons i,.anim-drip .chev,.anim-bloom{animation:none}
+    .anim-sweep::after,.anim-shimmer .scanIcons::after{animation:none;opacity:0}
+    .extras,.chev,.t-glyph .a,.t-tier .tierIcons{transition:none}
+  }
+
+  .roundHead{margin:38px 0 12px;font-size:15px;font-weight:850;color:var(--title)}
+  .stateNote{margin-top:10px;text-align:center;font-size:10px;color:var(--muted)}
+  .stateNote button{margin-left:6px;padding:2px 8px;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--muted);font-size:10px}
+</style>
+</head>
+<body>
+<header class="pageHeader">
+  <div>
+    <h1>Rail More/Less toggle — concepts & variants</h1>
+    <p>The desktop side-rail control that folds <strong>RT&nbsp;Sync&nbsp;· Tools · Changelog · Sudo access</strong> away below the divider. Click any mock rail to expand / collapse it. Current behavior: a <code>MORE ⌄</code> pill that becomes <code>LESS ⌃</code>, state saved to <code>localStorage</code>.</p>
+  </div>
+  <button id="themeButton" class="themeButton" type="button">Preview dark</button>
+</header>
+<main>
+  <div class="intro"><strong>Recommendation:</strong> <strong>2 · Icon-preview pill</strong> — it keeps the familiar pill and the persisted state, but the overlapping section icons tell you what is behind the fold before you open it, mirroring the mobile <em>Workspace &amp; support</em> row. <strong>4 · Section-header divider</strong> is the pick if the goal is to make the fold read as a labelled group rather than a button.</div>
+  <div id="grid" class="grid" aria-label="Toggle concepts"></div>
+
+  <h2 class="roundHead">Round 2 — icon row × animated SVG (2 + 6)</h2>
+  <div class="intro">Three combinations of concept <strong>2</strong>&rsquo;s contents-preview icon row with concept <strong>6</strong>&rsquo;s animated-SVG affordance. Each keeps the four section icons visible while collapsed and adds motion to invite the pull-down; all three settle to a static state once expanded and honour <code>prefers-reduced-motion</code>.</div>
+  <div id="grid2" class="grid" aria-label="Combined concepts"></div>
+
+  <h2 class="roundHead">Round 3 — #9 animation alternatives</h2>
+  <div class="intro">Same strip as <strong>#9</strong> (four section icons + <code>MORE ⌄</code> in a pill) — only the ambient loop changes. All stop when expanded and respect reduced-motion. Watch each mock for a few seconds to see the loop.</div>
+  <div id="grid3" class="grid" aria-label="#9 animation alternatives"></div>
+</main>
+<script>
+"use strict";
+
+const IC = {
+  recipe:'<path d="M3 7l9-4 9 4-9 4-9-4Z"/><path d="M3 12l9 4 9-4M3 17l9 4 9-4"/>',
+  timeline:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v5l3.5 2"/>',
+  totals:'<path d="M4 20V10M12 20V4M20 20v-7M3 20h18"/>',
+  rt:'<circle cx="7" cy="12" r="2.6"/><circle cx="19" cy="6" r="2.6"/><circle cx="19" cy="18" r="2.6"/><path d="m9.4 10.8 7.2-3.4M9.4 13.2l7.2 3.4"/>',
+  tools:'<path d="m15 6 5 5-3 3-3-1-6 6-3-3 6-6-1-3 3-3 2 2Z"/>',
+  changelog:'<circle cx="6" cy="7" r="1.6"/><circle cx="6" cy="12" r="1.6"/><circle cx="6" cy="17" r="1.6"/><path d="M11 7h10M11 12h10M11 17h7"/>',
+  sudo:'<path d="M12 3 20 6v6c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V6l8-3Z"/><path d="M12 10v5M9.5 12.5h5"/>'
+};
+const svg = (p, cls='') => `<svg viewBox="0 0 24 24" class="${cls}" aria-hidden="true">${p}</svg>`;
+
+const PRIMARY = [
+  {k:'recipe',  b:'Recipe',       s:'1 percentage error', on:true},
+  {k:'timeline',b:'Timeline',     s:'No tracked hoppers'},
+  {k:'totals',  b:'Resin Totals', s:'No material total'}
+];
+const EXTRA = [
+  {k:'rt',       b:'RT Sync',     s:'Local only',  tint:'var(--ok)'},
+  {k:'tools',    b:'Tools',       s:'Utilities',   tint:'var(--warn)'},
+  {k:'changelog',b:'Changelog',   s:"What's new",  tint:'var(--focus)'},
+  {k:'sudo',     b:'Sudo access', s:'Admin',       tint:'var(--warn)'}
+];
+
+const navRow = (it, extra=false) =>
+  `<button class="nav${it.on?' on':''}" tabindex="-1">${svg(IC[it.k])}<span class="tx"><b>${it.b}</b>${it.s?`<small>${it.s}</small>`:''}</span></button>`;
+
+const CHEV = '<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+
+// #9's icon strip with a swappable ambient animation (.anim-<name>).
+const scanStrip = anim => `<div class="divider"><button class="t-scan anim-${anim}" data-toggle>
+      <span class="scanIcons">${EXTRA.map(e=>`<i style="--tint:${e.tint}">${svg(IC[e.k])}</i>`).join('')}</span>
+      <span class="lbl">More</span>${CHEV}</button></div>`;
+
+const TOGGLES = {
+  pill: `<div class="divider"><button class="t-pill" data-toggle><span class="lbl">More</span>${CHEV}</button></div>`,
+  iconpill: `<div class="divider"><button class="t-iconpill" data-toggle>
+      <span class="miniIcons">${EXTRA.map(e=>`<i style="--tint:${e.tint}">${svg(IC[e.k])}</i>`).join('')}</span>
+      <span class="lbl">More</span>${CHEV}</button></div>`,
+  glyph: `<div class="divider"><button class="t-glyph" data-toggle aria-label="More">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path class="a a1" d="m7 8 5 4 5-4"/><path class="a a2" d="m7 14 5 4 5-4"/></svg></button></div>`,
+  header: `<button class="t-header" data-toggle><span class="ln"></span><span class="lbl">Workspace &amp; support</span>${CHEV}<span class="ln"></span></button>`,
+  peek: `<div class="divider" style="margin-bottom:2px"></div>
+    <div class="peekRow">${EXTRA.map(e=>`<button tabindex="-1" aria-label="${e.b}">${svg(IC[e.k])}</button>`).join('')}</div>
+    <button class="peekExpand" data-toggle aria-label="Expand">${CHEV}</button>`,
+  handle: `<button class="t-handle" data-toggle aria-label="More">
+      <span class="grip"></span><svg viewBox="0 0 14 9" aria-hidden="true"><path d="m1 1 6 6 6-6"/></svg></button>`,
+  fan: `<div class="divider"><button class="t-fan" data-toggle>
+      <span class="fan">${EXTRA.map(e=>`<i style="--tint:${e.tint}">${svg(IC[e.k])}</i>`).join('')}</span>
+      <span class="lbl">More</span>${CHEV}</button></div>`,
+  tier: `<div class="divider" style="margin-bottom:2px"></div>
+    <button class="t-tier" data-toggle aria-label="More">
+      <span class="tierIcons">${EXTRA.map(e=>`<i style="--tint:${e.tint}">${svg(IC[e.k])}</i>`).join('')}</span>
+      <span class="grip"></span>
+      <svg class="dChev" viewBox="0 0 13 8" aria-hidden="true"><path d="m1 1 5.5 5.5L12 1"/></svg></button>`,
+  scan: scanStrip('sweep'),
+  scanSweep: scanStrip('sweep'),
+  scanPulse: scanStrip('pulse'),
+  scanShimmer: scanStrip('shimmer'),
+  scanGlow: scanStrip('glow'),
+  scanDrip: scanStrip('drip'),
+  scanBloom: scanStrip('bloom')
+};
+
+const CONCEPTS = [
+  {id:'pill', variant:'pill', name:'1 · Current pill', badge:'', recommended:false,
+   note:'The control as it ships today — an uppercase MORE / LESS pill on the divider, chevron rotates 180° on expand.',
+   strength:'Familiar; zero relearning. Clear label.', tradeoff:'Gives no hint of what is behind the fold.'},
+  {id:'iconpill', variant:'iconpill', name:'2 · Icon-preview pill', badge:'Recommended', recommended:true,
+   note:'Same pill, but leads with the four section icons overlapped like avatars — the mobile "Workspace & support" idea, ported to the rail. Icons drop away once expanded.',
+   strength:'Shows the contents before opening; consistent with mobile.', tradeoff:'Wider pill; icons are small at rail width.'},
+  {id:'glyph', variant:'glyph', name:'3 · Morphing glyph', badge:'Animated', recommended:false,
+   note:'Icon-only round button. The two stacked chevrons slide together and flip on expand (a springy path transition), no text.',
+   strength:'Most compact; the motion reads as "toggle".', tradeoff:'No words — relies on icon literacy and the tooltip.'},
+  {id:'header', variant:'header', name:'4 · Section-header divider', badge:'', recommended:false,
+   note:'Drops the pill. The divider itself becomes a full-width labelled control: — Workspace & support ⌄ —. The whole strip is the hit target.',
+   strength:'Reads as a titled group, not a button; names the section.', tradeoff:'Less obviously interactive; louder than a hairline.'},
+  {id:'peek', variant:'peek', name:'5 · Icon-rail peek', badge:'', recommended:false,
+   note:'Collapsed state still shows the four items as an icon-only row you can click straight through. A small ⌄ underneath expands them to full labelled rows.',
+   strength:'The extra sections are never more than one click away.', tradeoff:'Two ways in (icon vs expand) can confuse; adds a row even when "collapsed".'},
+  {id:'handle', variant:'handle', name:'6 · Animated drawer handle', badge:'Animated SVG', recommended:false,
+   note:'A grabber bar with a chevron that gently bobs to invite a pull-down; on expand it settles and rotates. Respects reduced-motion.',
+   strength:'Invites interaction; playful without a label.', tradeoff:'Ambient motion can distract; meaning is pure affordance.'},
+
+  {id:'fan', variant:'fan', round:2, name:'7 · Fanning icon pill', badge:'Animated SVG',
+   note:'Concept 2’s overlapped section icons, but they slowly fan open and closed on a loop — a breathing “hand of cards” that draws the eye. Hover fans them fully and pauses; expand fans them wide and fades them as the rows slide in.',
+   strength:'Contents always shown, and the motion pulls attention with no separate graphic.', tradeoff:'Continuous movement in the rail periphery; icons still small.'},
+  {id:'tier', variant:'tier', round:2, name:'8 · Icon row + bobbing grip', badge:'Animated SVG',
+   note:'Two tiers: a clean, legible row of the four section icons on top, and concept 6’s grabber bar with a bobbing chevron beneath it. On expand the chevron flips, the grip settles, and the icons fade back as their labelled rows appear.',
+   strength:'Best of both — readable contents preview plus a clear pull-down affordance.', tradeoff:'Tallest option; two visual elements where there was one.'},
+  {id:'scan', variant:'scan', round:2, name:'9 · Icon strip + ambient motion', badge:'Animated SVG',
+   note:'The four icons sit in a pill with the chevron alongside, and a subtle ambient animation signals “something live in here.” Round 3 below swaps that animation — the layout is identical, only the motion changes. The animation stops once expanded.',
+   strength:'Distinct and lively while still showing every section.', tradeoff:'Ambient motion can read as a loading state — depends which one.'},
+
+  {id:'sc-sweep', variant:'scanSweep', round:3, name:'9a · Light sweep', badge:'Original',
+   note:'The original: a soft gradient bar slides left-to-right across the whole strip on a loop.',
+   strength:'Clearly "alive"; covers the whole control.', tradeoff:'Most like a progress bar / loading shimmer.'},
+  {id:'sc-pulse', variant:'scanPulse', round:3, name:'9b · Pulse wave', badge:'Animated SVG',
+   note:'Nothing slides. Each icon does a small scale + brightness beat in sequence, so a wave ripples through the row and repeats.',
+   strength:'Motion is on the contents themselves; playful, not a bar.', tradeoff:'Four moving elements; can look like notifications.'},
+  {id:'sc-shimmer', variant:'scanShimmer', round:3, name:'9c · Stroke shimmer', badge:'Animated SVG',
+   note:'A thin diagonal gloss sweeps across just the icon cluster — fast pass, long pause — like light catching metal.',
+   strength:'Brief and premium-feeling; quiet between passes.', tradeoff:'Very subtle at rail size; easy to miss.'},
+  {id:'sc-glow', variant:'scanGlow', round:3, name:'9d · Traveling glow', badge:'Animated SVG',
+   note:'A soft coloured halo hops from one icon to the next along the row, then loops.',
+   strength:'Draws the eye across the contents in reading order.', tradeoff:'The glow colour needs to work on every theme.'},
+  {id:'sc-drip', variant:'scanDrip', round:3, name:'9e · Chevron nudge', badge:'Animated SVG',
+   note:'The strip stays completely still. Only the chevron nudges down and back on a slow rhythm — the "pull me" hint without touching the icons.',
+   strength:'Calmest option; icons stay perfectly legible.', tradeoff:'Reads as concept 6 with an icon row bolted on.'},
+  {id:'sc-bloom', variant:'scanBloom', round:3, name:'9f · Pill bloom', badge:'Animated SVG',
+   note:'The pill\'s outline gently blooms outward with a faint ring and settles, over and over. Nothing inside moves.',
+   strength:'Whole control breathes as one; no internal distraction.', tradeoff:'A pulsing outline can suggest an alert / needs-attention.'}
+];
+
+function renderConcepts(list, container){
+  list.forEach(c=>{
+    const el = document.createElement('section');
+    el.className = 'concept' + (c.recommended ? ' selected' : '');
+    el.dataset.concept = c.id;
+    el.innerHTML = `
+      <div class="cHead">
+        <input type="radio" name="fav" value="${c.id}" ${c.recommended?'checked':''}>
+        <span><span class="cName">${c.name}</span><span class="cNote">${c.note}</span></span>
+        ${c.badge?`<span class="badge">${c.badge}</span>`:''}
+      </div>
+      <div class="tradeoffs">
+        <span><strong>Strength</strong>${c.strength}</span>
+        <span><strong>Trade-off</strong>${c.tradeoff}</span>
+      </div>
+      <div class="stage">
+        <div class="rail">
+          <div class="brand">Connect</div>
+          ${PRIMARY.map(p=>navRow(p)).join('')}
+          ${TOGGLES[c.variant]}
+          <div class="extras"><div>${EXTRA.map(e=>navRow(e,true)).join('')}</div></div>
+        </div>
+        <div class="stateNote"><span class="s">Collapsed</span><button type="button" data-toggle>toggle</button></div>
+      </div>`;
+    container.appendChild(el);
+  });
+}
+renderConcepts(CONCEPTS.filter(c=>!c.round), document.getElementById('grid'));
+renderConcepts(CONCEPTS.filter(c=>c.round === 2), document.getElementById('grid2'));
+renderConcepts(CONCEPTS.filter(c=>c.round === 3), document.getElementById('grid3'));
+
+function setExpanded(rail, on){
+  rail.classList.toggle('exp', on);
+  const note = rail.closest('.stage').querySelector('.stateNote .s');
+  if (note) note.textContent = on ? 'Expanded' : 'Collapsed';
+  rail.querySelectorAll('.lbl').forEach(l=>{
+    if (l.textContent === 'More' || l.textContent === 'Less') l.textContent = on ? 'Less' : 'More';
+  });
+}
+document.querySelector('main').addEventListener('click', e=>{
+  const t = e.target.closest('[data-toggle]');
+  if (!t) return;
+  const rail = t.closest('.stage').querySelector('.rail');
+  setExpanded(rail, !rail.classList.contains('exp'));
+});
+
+document.querySelectorAll('input[name="fav"]').forEach(i=>i.addEventListener('change',()=>{
+  document.querySelectorAll('.concept').forEach(card=>card.classList.toggle('selected', card.dataset.concept === i.value));
+}));
+
+const tb = document.getElementById('themeButton');
+tb.addEventListener('click',()=>{
+  const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+  document.documentElement.setAttribute('data-theme', dark ? 'light' : 'dark');
+  tb.textContent = dark ? 'Preview dark' : 'Preview light';
+});
+</script>
+</body>
+</html>

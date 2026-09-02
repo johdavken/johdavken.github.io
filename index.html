@@ -33,7 +33,7 @@
        equivalent "keep content below the status bar" mode to opt into. -->
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
-  <link rel="stylesheet" href="styles.css?v=0.62.26">
+  <link rel="stylesheet" href="styles.css?v=0.62.29">
   <link rel="stylesheet" href="theme.css?v=0.18.9">
   <link rel="stylesheet" href="desktop.css?v=0.1.21">
 <script src="validation.js?v=0.19" defer></script>
@@ -77,7 +77,7 @@
 <script src="bulk-density-measurement.js?v=0.1.0" defer></script>
 <script src="workspace-recovery.js?v=0.1.2" defer></script>
 <script src="beta-access.js?v=0.1.0" defer></script>
-<script src="app.js?v=0.18.180" defer></script>
+<script src="app.js?v=0.18.182" defer></script>
 <script src="resin-admin-ui.js?v=0.20.4" defer></script>
 <script src="line-configurations-ui.js?v=0.1.0" defer></script>
 <script src="database-health-ui.js?v=0.1.3" defer></script>
@@ -351,6 +351,12 @@
         aria-expanded="false"
         aria-controls="workspaceNavLineSync workspaceNavNotes workspaceNavTools helpBetaAccess workspaceNavChangelog workspaceNavSudo"
       >
+        <span class="desktopNavMoreIcons" aria-hidden="true">
+          <i class="dMoreIconRt"><svg viewBox="0 0 32 32"><circle cx="8" cy="16" r="3"/><circle cx="24" cy="9" r="3"/><circle cx="24" cy="23" r="3"/><path d="m10.7 14.7 10.6-4.4M10.7 17.3l10.6 4.4"/></svg></i>
+          <i class="dMoreIconTools"><svg viewBox="0 0 32 32"><path d="m19 6 7 7-4 4-4-1-8 8-4-4 8-8-1-4 4-4 2 4Z"/><path d="m7 25 2 2"/></svg></i>
+          <i class="dMoreIconChangelog"><svg viewBox="0 0 32 32"><circle cx="7" cy="9" r="2.4"/><circle cx="7" cy="16" r="2.4"/><circle cx="7" cy="23" r="2.4"/><path d="M13 9h13M13 16h13M13 23h9"/></svg></i>
+          <i class="dMoreIconSudo"><svg viewBox="0 0 32 32"><path d="M16 3 27 8v7c0 7-4.5 11.5-11 14-6.5-2.5-11-7-11-14V8l11-5Z"/><path d="M16 12v8M12 16h8"/></svg></i>
+        </span>
         <span id="workspaceNavMoreLabel">More</span>
         <span class="mobileWorkspaceNavMore">
           <span class="mobileWorkspaceNavMoreIcons" aria-hidden="true">
@@ -1308,9 +1314,9 @@
         <h3>(v1.1.24) (September 1-2, 2026) - Desktop Dashboard, Workspace Management &amp; Timeline Hookups</h3>
         <ul>
           <li>New desktop-only <strong>Dashboard</strong> overview, opened from the sidebar foot or the RT logo: a full-window readout of the current line, changeover time as the hero figure, output, the next grouped hopper action, and RT Sync status &mdash; all drawn from live app state with no extra calculations or timers. <strong>Back to Line</strong> returns to whichever section was open, and the active workspace is never changed while Dashboard is up.</li>
-          <li>A small circular-arrows control beside the <strong>Changeover</strong> label opens the existing changeover-time wizard, whose two choice steps now carry the shared Back/Next bar. Duplicate line and workspace names (&ldquo;LINE 20&rdquo; / &ldquo;Line 20&rdquo;) collapse to a single row, while genuinely different names still show both.</li>
+          <li>A small calculator control beside the <strong>Changeover</strong> label opens the existing changeover-time wizard, whose two choice steps now carry the shared Back/Next bar. Duplicate line and workspace names (&ldquo;LINE 20&rdquo; / &ldquo;Line 20&rdquo;) collapse to a single row, while genuinely different names still show both.</li>
           <li>Redesigned <strong>Workspace Management</strong> into a desktop master/detail view: the workspace browser remains visible while a selected line&rsquo;s devices, actions, and maintenance controls are inspected alongside it.</li>
-          <li>The <strong>Next Recipe</strong> grid gains a <strong>show current resin</strong> toggle &mdash; the eye in the row-gutter corner. Each cell then overlays, in small print, the resin loaded in that hopper on the current recipe, so a changeover plan can be read against what is running now. Off by default.</li>
+          <li>The desktop <strong>Recipe</strong> grid gains a <strong>cross-resin</strong> toggle &mdash; the eye in the row-gutter corner. Each cell then overlays, in small print, the other page&rsquo;s resin for that hopper: the current recipe while planning <strong>Next</strong>, the planned recipe while editing <strong>Current</strong>. Hoppers whose resin does not match the overlaid one get an amber badge. Off by default; one toggle shared by both pages.</li>
           <li>Continued flattening the desktop workspace: quieter panel surfaces and dividers, a hairline-ruled production status bar, tidied Timeline and Resin Totals layouts, and <strong>Line Configuration</strong> brought onto the same flat bordered-list treatment as <strong>Workspace Management</strong> and <strong>Resin Database</strong>.</li>
           <li>Fixed <strong>Timeline Hookups</strong> grouping that could show a source as assigned for a resin while the tracked physical hopper had no source. Partial assignments now show <strong>Mixed</strong>; entering a source applies it to every matching hopper so Timeline labels stay in sync.</li>
         </ul>
@@ -1929,7 +1935,7 @@
       <span class="dashboardChangeoverHead">
         <span class="dashboardLabel">Changeover</span>
         <button type="button" class="dashboardChangeoverRefresh" id="dashboardChangeoverRefresh" data-changeover-wizard-trigger aria-haspopup="dialog" aria-controls="changeoverWizardDialog" aria-label="Update changeover estimate" title="Update changeover estimate">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7a8 8 0 0 1 13 1l2 3M19 17a8 8 0 0 1-13-1l-2-3"/><path d="M20 5v6h-6M4 19v-6h6"/></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8.5 11h1M12 11h1M15.5 11h1M8.5 14.5h1M12 14.5h1M15.5 14.5h1M8.5 18h1M12 18h4.5"/></svg>
         </button>
       </span>
       <div class="dashboardChangeoverClock" id="dashboardChangeoverClock">Not set</div>
@@ -2163,6 +2169,13 @@
     </label>
     <label for="timeFormatSel">Time format
       <select id="timeFormatSel"><option value="12" selected>12-hour</option><option value="24">24-hour</option></select>
+    </label>
+    <label for="desktopRailStyleSel" class="desktopRailStyleField">Side Rail Style
+      <select id="desktopRailStyleSel">
+        <option value="filled" selected>Solid selected strip</option>
+        <option value="underline">Baseline marker</option>
+      </select>
+      <small>Desktop only</small>
     </label>
     <label for="defaultScanActionSel" class="recipeScanHideDesktop">Default Scan Action
       <select id="defaultScanActionSel">

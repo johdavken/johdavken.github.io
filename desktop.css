@@ -892,6 +892,21 @@
   }
   body .workspaceNav .workspaceNavButton[data-step].active .workspaceTileIcon{color:var(--tile-accent)}
 
+  /* The desktop chooser intentionally keeps only the two most useful
+     selected-state treatments. Both leave the rail's row geometry intact. */
+  body[data-desktop-rail-style="filled"] .workspaceNav .workspaceNavButton[data-step].active{
+    border-color:var(--tile-accent);border-left-color:var(--tile-accent);border-radius:8px;
+    background:var(--tile-accent);color:var(--panel);box-shadow:none;
+  }
+  body[data-desktop-rail-style="filled"] .workspaceNav .workspaceNavButton[data-step].active .workspaceTileIcon,
+  body[data-desktop-rail-style="filled"] .workspaceNav .workspaceNavButton[data-step].active small,
+  body[data-desktop-rail-style="filled"] .workspaceNav .workspaceNavButton[data-step].active .desktopRailMetric,
+  body[data-desktop-rail-style="filled"] .workspaceNav .workspaceNavButton[data-step].active .desktopRailMetric em{color:inherit}
+  body[data-desktop-rail-style="filled"] .workspaceNav .workspaceNavButton[data-step].active::before{background:var(--panel);color:var(--tile-accent)}
+  body[data-desktop-rail-style="underline"] .workspaceNav .workspaceNavButton[data-step]{border-bottom-color:color-mix(in srgb,var(--tile-accent) 16%,var(--border));border-radius:0}
+  body[data-desktop-rail-style="underline"] .workspaceNav .workspaceNavButton[data-step].active{border:0;border-bottom:3px solid var(--tile-accent);border-radius:0;background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--tile-accent) 8%,transparent));color:var(--tile-accent)}
+  body[data-desktop-rail-style="underline"] .workspaceNav .workspaceNavButton[data-step].active .workspaceTileIcon{color:var(--tile-accent)}
+
   /* .recipeHeaderRow's own base rule (styles.css) only forces nowrap +
      shrinkable tabs inside "(max-width:900px), (min-width:901px) and
      (pointer:coarse)" - touch tablets and narrow/mobile widths, covered
