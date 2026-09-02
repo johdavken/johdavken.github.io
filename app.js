@@ -5826,15 +5826,8 @@
       const rows = Array.from(totals.values()).sort((a,b)=>b.lbs - a.lbs);
       renderDesktopRailTotals({ prod, scrap, total, rows });
 
-      const sumEl = $("resinCalcSummary");
-      if (sumEl){
-        sumEl.innerHTML = `
-          <div class="productionSummaryStatus">
-            <strong>Resin totals</strong>
-            <span>Production <b class="mono">${fmtLb(prod)}</b> lb <i>·</i> Scrap <b class="mono">${fmtLb(scrap)}</b> lb <i>·</i> Total <b class="mono">${fmtLb(total)}</b> lb</span>
-          </div>
-        `;
-      }
+      const totalEl = $("resinCalcTotal");
+      if (totalEl) totalEl.textContent = fmtLb(total);
 
       const out = $("resinCalcResults");
       if (!out) return;
@@ -5871,10 +5864,6 @@
         if (lot) row.querySelector("[data-resin-lot]").textContent = lot;
         out.appendChild(row);
       });
-      const issuedTotal = document.createElement("div");
-      issuedTotal.className = "productionSummaryIssuedTotal";
-      issuedTotal.innerHTML = `<strong>Total issued</strong><span class="mono">${fmtLb(total)} lb</span>`;
-      out.appendChild(issuedTotal);
       renderProductionEstimateHome();
     }
 

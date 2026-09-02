@@ -6489,26 +6489,26 @@ body:is([data-theme="industrial-slate-dark"],[data-theme="gruvbox-dark"]) .resul
 .calcName{ font-weight: 950; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .calcMeta{ font-size: var(--font-small); color: var(--muted); }
 
-/* Production Summary keeps the totals and material allocations compact while
-   retaining the shared calc-row grammar used elsewhere in the application. */
-.productionSummaryStatus{
-  display:grid;
-  gap:3px;
-  padding:9px 11px;
-  border:1px solid var(--row-border-2);
-  border-radius:var(--radius-row);
-  background:var(--row-bg);
-}
-.productionSummaryStatus > strong{color:var(--title);font-size:var(--font-small);font-weight:900}
-.productionSummaryStatus > span{color:var(--muted);font-size:var(--font-small);line-height:1.35}
-.productionSummaryStatus b{color:var(--text);font-weight:850}
-.productionSummaryStatus i{padding:0 2px;color:var(--muted);font-style:normal}
+/* One compact, editable summary: Production and Scrap retain their existing
+   inputs, while Total is a read-only calculation in the same visual strip. */
+.productionSummaryStrip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));overflow:hidden;border:1px solid var(--row-border-2);border-radius:var(--radius-row);background:var(--row-bg-2)}
+.productionSummaryMetric{display:grid;grid-template-rows:auto auto;gap:3px;min-width:0;padding:9px 11px}
+.productionSummaryMetric + .productionSummaryMetric{border-left:1px solid var(--row-border-2)}
+.productionSummaryMetric label,.productionSummaryMetricLabel{color:var(--muted);font-size:var(--font-tiny);font-weight:900;letter-spacing:.08em;line-height:1.15;text-transform:uppercase}
+.productionSummaryMetricValue{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;gap:6px;min-width:0;color:var(--title);font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;font-size:19px;font-weight:950;line-height:1.15}
+.productionSummaryMetricValue > .productionSummaryMetricUnit{color:var(--muted);font-family:var(--font-sans);font-size:var(--font-small);font-weight:750}
+.productionSummaryMetricValue input:not([type="checkbox"]):not([type="radio"]){width:100%;min-width:0;min-height:0;padding:0;border:0;border-radius:0;background:transparent;color:inherit;font:inherit;line-height:inherit;box-shadow:none}
+.productionSummaryMetricValue input:not([type="checkbox"]):not([type="radio"]):focus{border:0;box-shadow:none}
+.productionSummaryMetric:focus-within{background:var(--focus-ring);box-shadow:inset 0 0 0 1px var(--focus-border)}
+.productionSummaryMetricTotal{background:color-mix(in srgb,var(--workflow-resin-totals) 7%,transparent)}
+.productionSummaryMetricTotal .productionSummaryMetricLabel{color:var(--title)}
+.productionSummaryMetricTotal .productionSummaryMetricValue{color:var(--text)}
 .productionEstimate{margin:8px 0 0;color:var(--muted);font-size:var(--font-small);font-weight:700;line-height:1.4;letter-spacing:0.01em}
 .productionEstimateHome{display:block;margin:0 12px 4px;padding:0;color:var(--muted);font-size:var(--font-small);font-weight:700;line-height:1.4;letter-spacing:0.01em}
 .productionEstimateHome[hidden]{display:none}
 .productionEstimateStatus{color:var(--muted);font-size:var(--font-small);font-weight:700;letter-spacing:0.01em}
 .productionEstimateStatus[hidden]{display:none}
-.productionSummaryMaterialsIntro{display:grid;gap:1px;margin:1px 0 0;color:var(--muted);font-size:var(--font-small);line-height:1.25}
+.productionSummaryMaterialsIntro{display:grid;gap:1px;margin:0;color:var(--muted);font-size:var(--font-small);line-height:1.25}
 .productionSummaryMaterialsIntro strong{color:var(--title);font-size:var(--font-small);font-weight:900}
 /* width+min-width:0 pins the row to its grid track instead of letting it
    grow to its content's max-content width. Without this, .calcTable's
@@ -6552,72 +6552,12 @@ body:is([data-theme="industrial-slate-dark"],[data-theme="gruvbox-dark"]) .resul
   font-size:var(--font-small);
 }
 .productionSummaryLotLane{display:contents}
-.productionSummaryLotEmpty,
-.productionSummaryIssuedTotal{display:none}
+.productionSummaryLotEmpty{display:none}
 /* Tablet and desktop give scanned lot provenance a dedicated center lane.
    Resin and pounds remain fixed reading anchors, unusually long lots
    truncate inside the lane, and rows without a Heat Sheet explicitly
    identify that state. Phones retain the compact material-row geometry. */
 @media (min-width:701px){
-  #productionSummaryBlock .grid2{gap:10px}
-  .productionSummaryInputField{
-    display:grid;
-    grid-template-columns:minmax(0,1fr) auto;
-    grid-template-rows:auto auto;
-    gap:3px 10px;
-    min-width:0;
-    padding:9px 11px;
-    border:1px solid var(--row-border-2);
-    border-radius:var(--control-radius);
-    background:var(--row-bg-2);
-    transition:border-color .12s ease,box-shadow .12s ease;
-  }
-  .productionSummaryInputField:focus-within{
-    border-color:var(--focus-border);
-    box-shadow:0 0 0 3px var(--focus-ring);
-  }
-  .productionSummaryInputField label{
-    grid-column:1 / -1;
-    grid-row:1;
-    margin:0;
-    color:var(--muted);
-    font-size:var(--font-tiny);
-    font-weight:900;
-    letter-spacing:.08em;
-    line-height:1.15;
-    text-transform:uppercase;
-  }
-  .productionSummaryInputField .productionSummaryLabelUnit{display:none}
-  .productionSummaryInputField::after{
-    content:"lb";
-    grid-column:2;
-    grid-row:2;
-    align-self:end;
-    color:var(--muted);
-    font-size:var(--font-small);
-    line-height:1.15;
-  }
-  .productionSummaryInputField input:not([type="checkbox"]):not([type="radio"]){
-    grid-column:1;
-    grid-row:2;
-    width:100%;
-    min-width:0;
-    min-height:0;
-    padding:0;
-    border:0;
-    border-radius:0;
-    background:transparent;
-    color:var(--title);
-    font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
-    font-size:19px;
-    font-weight:950;
-    line-height:1.15;
-    box-shadow:none;
-  }
-  .productionSummaryInputField input:not([type="checkbox"]):not([type="radio"]):focus{
-    border:0;
-    box-shadow:none;
-  }
   .productionSummaryMaterialRow{
     display:grid;
     /* Every material is its own grid, so max-content here made each row's
@@ -6661,22 +6601,11 @@ body:is([data-theme="industrial-slate-dark"],[data-theme="gruvbox-dark"]) .resul
     white-space:nowrap;
   }
   .productionSummaryMaterialRow .calcValue{grid-column:3;align-self:center;padding:9px 11px;text-align:right}
-  .productionSummaryIssuedTotal{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:12px;
-    min-height:38px;
-    padding:8px 11px;
-    border:1px solid color-mix(in srgb,var(--workflow-resin-totals) 36%,var(--row-border-2));
-    border-radius:var(--control-radius);
-    background:color-mix(in srgb,var(--workflow-resin-totals) 12%,var(--row-bg));
-  }
-  .productionSummaryIssuedTotal strong{color:var(--title);font-weight:900}
-  .productionSummaryIssuedTotal span{color:var(--text);font-weight:950;white-space:nowrap}
 }
 @media (max-width:600px){
-  .productionSummaryStatus{padding:8px 10px}
+  .productionSummaryStrip{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .productionSummaryMetricTotal{grid-column:1 / -1;border-top:1px solid var(--row-border-2)}
+  .productionSummaryMetricTotal{border-left:0!important}
   .productionSummaryMaterialRow{min-height:36px;padding:6px 9px}
   /* Noticeably smaller than the resin code/weight it sits between, and
      smaller than its own desktop size - the row height doesn't grow. */

@@ -23,14 +23,12 @@ test("fmtLb truncates toward zero rather than rounding to nearest - operators en
   assert.equal(Math.floor(1624.06), 1624);
 });
 
-test("Production Summary's totals line (Production/Scrap/Total) uses fmtLb, not the 2-decimal fmtNum", () => {
+test("Production Summary's calculated Total uses fmtLb, not the 2-decimal fmtNum", () => {
   const summaryBlock = renderResinCalculator.slice(
-    renderResinCalculator.indexOf('sumEl.innerHTML'),
+    renderResinCalculator.indexOf('const totalEl = $("resinCalcTotal")'),
     renderResinCalculator.indexOf('const out = $("resinCalcResults")')
   );
-  assert.match(summaryBlock, /Production <b class="mono">\$\{fmtLb\(prod\)\}<\/b> lb/);
-  assert.match(summaryBlock, /Scrap <b class="mono">\$\{fmtLb\(scrap\)\}<\/b> lb/);
-  assert.match(summaryBlock, /Total <b class="mono">\$\{fmtLb\(total\)\}<\/b> lb/);
+  assert.match(summaryBlock, /totalEl\.textContent = fmtLb\(total\);/);
   assert.doesNotMatch(summaryBlock, /fmtNum\(prod/);
   assert.doesNotMatch(summaryBlock, /fmtNum\(scrap/);
   assert.doesNotMatch(summaryBlock, /fmtNum\(total/);

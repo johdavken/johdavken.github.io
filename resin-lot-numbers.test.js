@@ -132,7 +132,7 @@ test("a scanned lot renders in the dedicated lane; a resin without one gets the 
   assert.match(body, /productionSummaryLotLane\$\{lot \? " hasLot" : ""\}/);
   assert.match(body, /\$\{lot \? `<div class="calcLot mono" data-resin-lot><\/div>` : `<span class="productionSummaryLotEmpty">No scanned lot<\/span>`\}/);
   assert.match(body, /if \(lot\) row\.querySelector\("\[data-resin-lot\]"\)\.textContent = lot;/);
-  assert.match(styles, /\.productionSummaryLotEmpty,\s*\.productionSummaryIssuedTotal\{display:none\}/);
+  assert.match(styles, /\.productionSummaryLotEmpty\{display:none\}/);
   assert.match(styles, /@media \(min-width:701px\)\{[\s\S]*?\.productionSummaryLotEmpty\{[\s\S]*?display:block;/);
 });
 
@@ -145,7 +145,7 @@ test("Production Summary always describes Current, never Next - the aggregation 
 
 test("the lot lookup does not touch the weight/lbs math at all", () => {
   const body = functionBody("renderResinCalculator");
-  const beforeTotals = body.slice(0, body.indexOf("const sumEl"));
+  const beforeTotals = body.slice(0, body.indexOf("const totalEl"));
   assert.doesNotMatch(beforeTotals, /resinLots/, "lot lookup must happen at render time, not during aggregation");
   assert.match(beforeTotals, /const lbs = total \* layerFrac \* hopperFrac;/);
 });

@@ -25,8 +25,8 @@ test("mobile tool panels use one accessible Back to Tools header with the active
   assert.match(styles, /min-width:44px;/);
 });
 
-test("Production Summary has compact, shared recipe-percentage material presentation", () => {
-  assert.match(styles, /\.productionSummaryStatus\{/);
+test("Production Summary has a compact resin summary and shared recipe-percentage material presentation", () => {
+  assert.match(styles, /\.productionSummaryStrip\{/);
   assert.match(styles, /\.productionSummaryMaterialRow\{min-height:38px/);
   assert.match(app, /productionSummaryMaterialRow/);
   assert.match(app, /Calculated from the current recipe percentages\./);

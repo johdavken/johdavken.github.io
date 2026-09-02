@@ -7,6 +7,7 @@ const fs = require("node:fs");
 const app = fs.readFileSync("app.js", "utf8");
 const html = fs.readFileSync("index.html", "utf8");
 const styles = fs.readFileSync("styles.css", "utf8");
+const desktopCss = fs.readFileSync("desktop.css", "utf8");
 
 // The Timeline once had 6 selectable card styles (Soft Cards, Vertical Event
 // Rail, Precision Data Strips, Time-First Priority Lane, Borderless Divided
@@ -96,6 +97,17 @@ test("Timeline uses a constrained single-column grid and compact schedule region
   assert.match(gridRule, /align-items:start;/);
   assert.match(styles, /\.resultSchedule\{min-width:0;font-size:9px;text-align:right\}/);
   assert.match(styles, /\.resultStatusChip\{display:inline-flex;align-items:center;min-height:22px/);
+});
+
+test("Desktop Timeline keeps tabs, controls, and the ribbon on one responsive operator rail", () => {
+  const desktopRail = desktopCss.slice(
+    desktopCss.indexOf("/* Timeline is an operator rail"),
+    desktopCss.indexOf("#lineSyncBlock > .blockBody")
+  );
+  assert.match(desktopRail, /#resultsBlock \.timelineViewTabs,[\s\S]*?#resultsBlock #timelinePane,[\s\S]*?#resultsBlock #timelineHookupsArea\{width:min\(680px,100%\);max-width:100%;justify-self:start\}/);
+  assert.match(desktopRail, /#resultsBlock #timelinePane \.timelineControlBar,[\s\S]*?#resultsBlock #resultsArea\.resultGrid\{width:100%;max-width:100%\}/);
+  assert.match(desktopRail, /#resultsBlock \.resultRow\.done\{opacity:\.58;filter:grayscale\(\.72\)\}/);
+  assert.doesNotMatch(desktopRail, /min-width:/);
 });
 
 test("Timeline display rounds only presentation values and uses concise missing-data labels", () => {

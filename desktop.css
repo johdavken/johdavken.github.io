@@ -902,6 +902,18 @@
   #timelinePane{display:grid;grid-template-rows:auto auto minmax(0,1fr);align-content:start;min-height:0;overflow:hidden}
   #timelineHookupsArea{min-height:0;overflow:auto;overscroll-behavior:contain;padding-right:4px}
   #resultsArea{min-height:0;overflow:auto;overscroll-behavior:contain;padding-right:4px}
+  /* Timeline is an operator rail, not a full-width dashboard. The tabs,
+     controls, alarm setting, and ribbon share one naturally left-aligned
+     working width; below 680px they simply use the available panel width. */
+  #resultsBlock .timelineViewTabs,
+  #resultsBlock #timelinePane,
+  #resultsBlock #timelineHookupsArea{width:min(680px,100%);max-width:100%;justify-self:start}
+  #resultsBlock #timelinePane .timelineControlBar,
+  #resultsBlock #resultsArea.resultGrid{width:100%;max-width:100%}
+  /* Pumped-off rows remain subordinate to running hoppers, but are legible
+     enough to scan when Show all is active. Theme tokens still supply every
+     colour; only the existing completion treatment is softened on desktop. */
+  #resultsBlock .resultRow.done{opacity:.58;filter:grayscale(.72)}
   #lineSyncBlock > .blockBody{overflow:auto}
   /* RT Sync owns its desktop composition now. The old panel-level grid
      placed the retired Current line / This device controls next to the
