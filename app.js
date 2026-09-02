@@ -1816,10 +1816,12 @@
     // Desktop-only Recipe / Weights toolbar button treatment. Mirrors
     // applyDesktopRailStyle: one data attribute on <body> that
     // button-styling.css keys off, a local Display preference, echoed back to
-    // the <select>. Unknown/legacy values fall back to "default" - which adds
-    // no attribute effect, leaving the shipped button look untouched.
+    // the <select>. The picker was trialled with seven treatments; only
+    // Station console was kept, so every other value (and any unknown one)
+    // falls back to "default" - which adds no attribute effect, leaving the
+    // shipped button look untouched.
     function applyButtonStyle(value){
-      const allowed = new Set(["default", "blueprint", "console", "underline", "markers", "ribbons", "dividers", "tiles"]);
+      const allowed = new Set(["default", "console"]);
       const style = allowed.has(String(value)) ? String(value) : "default";
       state.buttonStyle = style;
       document.body.dataset.buttonStyle = style;

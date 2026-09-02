@@ -1,37 +1,32 @@
 /* =========================================================================
- * Button Styling — a desktop-only experiment.
+ * Button Styling — a desktop-only Display setting.
  *
- * Swappable visual treatments for the Recipe / Weights panel toolbar
- * buttons, chosen from Display settings ("Button Styling"). Seven ports of
- * previews/recipe-weights-toolbar-button-directions.html (02, 04, 05, 08,
- * 09, 11, 12), plus "default" which adds no attribute and leaves the
- * shipped look untouched.
+ * Trialled with seven treatments (ports of
+ * previews/recipe-weights-toolbar-button-directions.html); only "Station
+ * console" was kept. The picker is now Default | Station console, and this
+ * file carries the one surviving treatment. "default" adds no attribute and
+ * leaves the shipped look untouched.
  *
- * Scope, deliberately narrow so this stays easy to evaluate and to delete:
+ * Scope, deliberately narrow:
  *   - only inside #splitsBlock (the Recipe / Weights panel)
- *   - the button set the preview covers:
- *       CMD  = #recipeHeaderActionPill's buttons (Edit/Done, Load, Print) -
- *              the "RECIPE / WEIGHTS" row
+ *   - the button set the preview covered:
+ *       CMD  = #recipeHeaderActionPill's buttons (Edit/Done, Load, Print)
  *       BULK = the Edit-mode bulk bar's Clear / Empty cells / Reset /
  *              Rearrange (every .bulkTextAction in the bar, plus the
- *              #resetAllSplits danger button) - the "BULK ACTIONS" row
- *     The bulk bar's value-entry controls that the preview does NOT show -
- *     Apply, and the Undo/Redo history pair - are not given a treatment;
- *     they only get their corner radius matched to the active style so no
- *     stray rounded/pill/circle button is left sitting beside the flattened
- *     ones (see the "straggler radius" rule in each block).
+ *              #resetAllSplits danger button)
+ *     Apply and the Undo/Redo history pair only get their corner radius
+ *     matched, so no stray rounded button sits beside the treated ones.
  *   - only at the desktop breakpoint the rest of desktop.css uses
  *     (min-width:901px and pointer:fine)
  *
- * Every rule is scoped body[data-button-style="…"] #splitsBlock #… so it
- * carries two ids and outranks the tuned pill/bulk-bar rules in styles.css
- * without !important. applyButtonStyle() in app.js sets the attribute;
- * "default" / unknown values clear it.
+ * Every rule is scoped body[data-button-style="console"] #… so it carries
+ * two ids and outranks the tuned pill/bulk-bar rules in styles.css without
+ * !important. applyButtonStyle() in app.js sets the attribute.
  * ===================================================================== */
 
 body[data-button-style]{
-  /* Re-use the per-theme accent/danger the pill already tunes, with plain
-     fallbacks. One place to retune if a treatment reads wrong on a theme. */
+  /* Re-use the per-theme accent/danger the header pill already tunes, with
+     plain fallbacks. One place to retune if it reads wrong on a theme. */
   --btnstyle-accent: var(--recipe-pill-accent, var(--focus-border));
   --btnstyle-danger: var(--recipe-pill-danger, var(--bad));
   --btnstyle-edge: var(--btn-secondary-border);
@@ -42,74 +37,13 @@ body[data-button-style]{
 
 @media (min-width: 901px) and (pointer: fine){
 
-  /* ---- 02 · Blueprint brackets ------------------------------------- */
-  body[data-button-style="blueprint"] #splitsBlock #recipeHeaderActionPill .recipeHeaderAction,
-  body[data-button-style="blueprint"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
-  body[data-button-style="blueprint"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-weight-view="edit"],
-  body[data-button-style="blueprint"] #splitsBlock .splitsBulkBar .bulkTextAction,
-  body[data-button-style="blueprint"] #splitsBlock .weightsBulkBar .bulkTextAction,
-  body[data-button-style="blueprint"] #splitsBlock #resetAllSplits{
-    position: relative;
-    border: 0;
-    border-radius: 0;
-    background: transparent;
-    box-shadow: none;
-  }
-  body[data-button-style="blueprint"] #splitsArea #splitsBulkBar #applyBulkSplit,
-  body[data-button-style="blueprint"] #splitsArea #splitsBulkBar .recipeHistoryAction,
-  body[data-button-style="blueprint"] #splitsBlock .weightsBulkBar #applyBulkWeight{
-    border-radius: 0;
-  }
-  /* Bracket corners on the plain buttons only. The Edit/Done toggle already
-     owns its ::before (the pencil mask-image in styles.css), so it gets the
-     accent wash below but no brackets - overwriting its ::before would drop
-     the pencil. */
-  body[data-button-style="blueprint"] #splitsBlock #recipeHeaderActionPill .recipeHeaderAction::before,
-  body[data-button-style="blueprint"] #splitsBlock #recipeHeaderActionPill .recipeHeaderAction::after,
-  body[data-button-style="blueprint"] #splitsBlock .splitsBulkBar .bulkTextAction::before,
-  body[data-button-style="blueprint"] #splitsBlock .splitsBulkBar .bulkTextAction::after,
-  body[data-button-style="blueprint"] #splitsBlock .weightsBulkBar .bulkTextAction::before,
-  body[data-button-style="blueprint"] #splitsBlock .weightsBulkBar .bulkTextAction::after,
-  body[data-button-style="blueprint"] #splitsBlock #resetAllSplits::before,
-  body[data-button-style="blueprint"] #splitsBlock #resetAllSplits::after{
-    position: absolute;
-    width: 7px;
-    height: 7px;
-    content: "";
-    pointer-events: none;
-  }
-  body[data-button-style="blueprint"] #splitsBlock #recipeHeaderActionPill .recipeHeaderAction::before,
-  body[data-button-style="blueprint"] #splitsBlock .splitsBulkBar .bulkTextAction::before,
-  body[data-button-style="blueprint"] #splitsBlock .weightsBulkBar .bulkTextAction::before,
-  body[data-button-style="blueprint"] #splitsBlock #resetAllSplits::before{
-    top: 0; left: 0;
-    border-top: 2px solid var(--btnstyle-accent);
-    border-left: 2px solid var(--btnstyle-accent);
-  }
-  body[data-button-style="blueprint"] #splitsBlock #recipeHeaderActionPill .recipeHeaderAction::after,
-  body[data-button-style="blueprint"] #splitsBlock .splitsBulkBar .bulkTextAction::after,
-  body[data-button-style="blueprint"] #splitsBlock .weightsBulkBar .bulkTextAction::after,
-  body[data-button-style="blueprint"] #splitsBlock #resetAllSplits::after{
-    right: 0; bottom: 0;
-    border-right: 2px solid var(--btnstyle-accent);
-    border-bottom: 2px solid var(--btnstyle-accent);
-  }
-  body[data-button-style="blueprint"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
-  body[data-button-style="blueprint"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-weight-view="edit"]{
-    color: var(--btnstyle-accent);
-    background: color-mix(in srgb, var(--btnstyle-accent) 11%, transparent);
-  }
-  body[data-button-style="blueprint"] #splitsBlock #resetAllSplits{
-    color: var(--btnstyle-danger);
-    background: color-mix(in srgb, var(--btnstyle-danger) 11%, transparent);
-  }
-  body[data-button-style="blueprint"] #splitsBlock #resetAllSplits::before{ border-color: var(--btnstyle-danger); }
-  body[data-button-style="blueprint"] #splitsBlock #resetAllSplits::after{ border-color: var(--btnstyle-danger); }
-
-  /* ---- 04 · Station console -------------------------------------- */
-  /* Each row is a contained bay. The bulk bay is .splitsEditRowSecondary
-     itself (not its .splitsBulkActions child) so this also overrides that
-     element's border-radius:999px pill-clip from styles.css. */
+  /* ---- Station console -------------------------------------------
+     Each action row is a contained bay: a padded, softly-tinted panel with
+     small rounded controls sitting on it. The bulk bay is
+     .splitsEditRowSecondary itself (not its .splitsBulkActions child), which
+     also overrides that element's border-radius:999px pill-clip in
+     styles.css so its end buttons - Clear on the left, Rearrange on the
+     right - stop rounding into pill caps. */
   body[data-button-style="console"] #splitsBlock #recipeHeaderActionPill,
   body[data-button-style="console"] #splitsArea #splitsBulkBar .splitsEditRowSecondary,
   body[data-button-style="console"] #splitsBlock .weightsBulkActions{
@@ -117,9 +51,13 @@ body[data-button-style]{
     border-radius: 7px;
     background: color-mix(in srgb, var(--btnstyle-surface) 55%, transparent);
   }
+  body[data-button-style="console"] #splitsArea #splitsBulkBar .splitsEditRowSecondary{
+    overflow: visible;
+  }
   body[data-button-style="console"] #splitsArea #splitsBulkBar .splitsEditRowSecondary > .splitsBulkActions{
     border-radius: 7px;
   }
+
   body[data-button-style="console"] #splitsBlock #recipeHeaderActionPill .recipeHeaderAction,
   body[data-button-style="console"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
   body[data-button-style="console"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-weight-view="edit"],
@@ -133,260 +71,31 @@ body[data-button-style]{
     color: var(--btnstyle-ink);
     box-shadow: 0 1px 0 var(--btnstyle-edge);
   }
+  /* Controls the preview omits (Apply, Undo/Redo) - radius match only so
+     nothing stays a different shape. #applyBulkSplit is pinned by a 3-id
+     rule in styles.css, so this is scoped through #splitsArea #splitsBulkBar
+     to outrank it. */
   body[data-button-style="console"] #splitsArea #splitsBulkBar #applyBulkSplit,
   body[data-button-style="console"] #splitsArea #splitsBulkBar .recipeHistoryAction,
   body[data-button-style="console"] #splitsBlock .weightsBulkBar #applyBulkWeight{
     border-radius: 4px;
   }
+  /* Primary = the Edit/Done toggle: an inverted key, ink fill on light text. */
   body[data-button-style="console"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
   body[data-button-style="console"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-weight-view="edit"]{
     background: var(--btnstyle-ink);
     color: var(--panel);
   }
+  /* Destructive = Reset Recipe: solid danger. */
   body[data-button-style="console"] #splitsBlock #resetAllSplits{
     background: var(--btnstyle-danger);
     color: var(--btnstyle-on-fill);
   }
 
-  /* ---- 05 · Underline commands --------------------------------- */
-  body[data-button-style="underline"] #splitsBlock #recipeHeaderActionPill .recipeHeaderActions,
-  body[data-button-style="underline"] #splitsBlock .splitsBulkActions{
-    gap: 16px;
-  }
-  body[data-button-style="underline"] #splitsBlock #recipeHeaderActionPill .recipeHeaderAction,
-  body[data-button-style="underline"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
-  body[data-button-style="underline"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-weight-view="edit"],
-  body[data-button-style="underline"] #splitsBlock .splitsBulkBar .bulkTextAction,
-  body[data-button-style="underline"] #splitsBlock .weightsBulkBar .bulkTextAction{
-    min-height: 33px;
-    padding: 0 1px;
-    border: 0;
-    border-bottom: 2px solid transparent;
-    border-radius: 0;
-    background: transparent;
-    box-shadow: none;
-  }
-  body[data-button-style="underline"] #splitsArea #splitsBulkBar #applyBulkSplit,
-  body[data-button-style="underline"] #splitsArea #splitsBulkBar .recipeHistoryAction,
-  body[data-button-style="underline"] #splitsBlock .weightsBulkBar #applyBulkWeight{
-    border-radius: 0;
-  }
-  body[data-button-style="underline"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
-  body[data-button-style="underline"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-weight-view="edit"]{
-    border-bottom-color: var(--btnstyle-accent);
-    color: var(--btnstyle-accent);
-  }
-  body[data-button-style="underline"] #splitsBlock .splitsBulkBar .bulkTextAction,
-  body[data-button-style="underline"] #splitsBlock .weightsBulkBar .bulkTextAction{
-    border-bottom-color: color-mix(in srgb, var(--btnstyle-accent) 62%, transparent);
-  }
-  body[data-button-style="underline"] #splitsBlock #resetAllSplits{
-    padding: 0 11px;
-    border: 0;
-    border-radius: 4px;
-    background: var(--btnstyle-danger);
-    color: var(--btnstyle-on-fill);
-  }
-
-  /* ---- 08 · Marker stripe ------------------------------------- */
-  body[data-button-style="markers"] #splitsBlock #recipeHeaderActionPill,
-  body[data-button-style="markers"] #splitsBlock #recipeHeaderActionPill .recipeHeaderActions,
-  body[data-button-style="markers"] #splitsBlock .splitsBulkActions{
-    gap: 2px;
-  }
-  body[data-button-style="markers"] #splitsBlock #recipeHeaderActionPill .recipeHeaderAction,
-  body[data-button-style="markers"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
-  body[data-button-style="markers"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-weight-view="edit"],
-  body[data-button-style="markers"] #splitsBlock .splitsBulkBar .bulkTextAction,
-  body[data-button-style="markers"] #splitsBlock .weightsBulkBar .bulkTextAction,
-  body[data-button-style="markers"] #splitsBlock #resetAllSplits{
-    min-height: 35px;
-    border: 0;
-    border-left: 1px solid var(--btnstyle-edge);
-    border-radius: 0;
-    background: transparent;
-    box-shadow: none;
-  }
-  body[data-button-style="markers"] #splitsArea #splitsBulkBar #applyBulkSplit,
-  body[data-button-style="markers"] #splitsArea #splitsBulkBar .recipeHistoryAction,
-  body[data-button-style="markers"] #splitsBlock .weightsBulkBar #applyBulkWeight{
-    border-radius: 0;
-  }
-  body[data-button-style="markers"] #splitsBlock #recipeHeaderActionPill .recipeHeaderActions > .recipeHeaderAction:first-child,
-  body[data-button-style="markers"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
-  body[data-button-style="markers"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-weight-view="edit"],
-  body[data-button-style="markers"] #splitsBlock .splitsBulkActions .bulkTextAction:first-child{
-    border-left: 0;
-  }
-  body[data-button-style="markers"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
-  body[data-button-style="markers"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-weight-view="edit"]{
-    box-shadow: inset 0 -4px 0 var(--btnstyle-accent);
-    color: var(--btnstyle-accent);
-  }
-  body[data-button-style="markers"] #splitsBlock .splitsBulkBar .bulkTextAction,
-  body[data-button-style="markers"] #splitsBlock .weightsBulkBar .bulkTextAction{
-    border-bottom: 4px solid var(--btnstyle-accent);
-  }
-  body[data-button-style="markers"] #splitsBlock #resetAllSplits{
-    border-bottom: 4px solid var(--btnstyle-danger);
-    color: var(--btnstyle-danger);
-  }
-
-  /* ---- 09 · Folded ribbons ---------------------------------- */
-  body[data-button-style="ribbons"] #splitsBlock #recipeHeaderActionPill .recipeHeaderActions,
-  body[data-button-style="ribbons"] #splitsBlock .splitsBulkActions{
-    gap: 10px;
-  }
-  body[data-button-style="ribbons"] #splitsBlock #recipeHeaderActionPill .recipeHeaderAction,
-  body[data-button-style="ribbons"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
-  body[data-button-style="ribbons"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-weight-view="edit"],
-  body[data-button-style="ribbons"] #splitsBlock .splitsBulkBar .bulkTextAction,
-  body[data-button-style="ribbons"] #splitsBlock .weightsBulkBar .bulkTextAction,
-  body[data-button-style="ribbons"] #splitsBlock #resetAllSplits{
-    position: relative;
-    min-height: 32px;
-    border: 0;
-    border-radius: 0;
-    background: var(--btnstyle-surface);
-    color: var(--btnstyle-ink);
-    box-shadow: 0 3px 0 color-mix(in srgb, var(--btnstyle-edge) 85%, transparent);
-  }
-  body[data-button-style="ribbons"] #splitsArea #splitsBulkBar #applyBulkSplit,
-  body[data-button-style="ribbons"] #splitsArea #splitsBulkBar .recipeHistoryAction,
-  body[data-button-style="ribbons"] #splitsBlock .weightsBulkBar #applyBulkWeight{
-    border-radius: 0;
-  }
-  body[data-button-style="ribbons"] #splitsBlock #recipeHeaderActionPill .recipeHeaderAction::after,
-  body[data-button-style="ribbons"] #splitsBlock .splitsBulkBar .bulkTextAction::after,
-  body[data-button-style="ribbons"] #splitsBlock #resetAllSplits::after{
-    position: absolute;
-    right: -6px;
-    bottom: -3px;
-    width: 0;
-    height: 0;
-    border-top: 6px solid color-mix(in srgb, var(--btnstyle-ink) 25%, transparent);
-    border-right: 6px solid transparent;
-    content: "";
-    pointer-events: none;
-  }
-  body[data-button-style="ribbons"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
-  body[data-button-style="ribbons"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-weight-view="edit"]{
-    background: var(--btnstyle-accent);
-    color: var(--btnstyle-on-fill);
-  }
-  body[data-button-style="ribbons"] #splitsBlock .splitsBulkBar .bulkTextAction,
-  body[data-button-style="ribbons"] #splitsBlock .weightsBulkBar .bulkTextAction{
-    border-left: 4px solid var(--btnstyle-accent);
-  }
-  body[data-button-style="ribbons"] #splitsBlock #resetAllSplits{
-    background: var(--btnstyle-danger);
-    color: var(--btnstyle-on-fill);
-  }
-
-  /* ---- 11 · Vertical dividers ---------------------------- */
-  body[data-button-style="dividers"] #splitsBlock #recipeHeaderActionPill,
-  body[data-button-style="dividers"] #splitsBlock #recipeHeaderActionPill .recipeHeaderActions,
-  body[data-button-style="dividers"] #splitsBlock .splitsBulkActions{
-    gap: 0;
-  }
-  body[data-button-style="dividers"] #splitsBlock .splitsBulkActions{
-    border: 1px solid var(--btnstyle-edge);
-  }
-  body[data-button-style="dividers"] #splitsBlock #recipeHeaderActionPill .recipeHeaderAction,
-  body[data-button-style="dividers"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
-  body[data-button-style="dividers"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-weight-view="edit"],
-  body[data-button-style="dividers"] #splitsBlock .splitsBulkBar .bulkTextAction,
-  body[data-button-style="dividers"] #splitsBlock .weightsBulkBar .bulkTextAction,
-  body[data-button-style="dividers"] #splitsBlock #resetAllSplits{
-    min-height: 38px;
-    padding: 0 15px;
-    border: 0;
-    border-left: 1px solid var(--btnstyle-edge);
-    border-radius: 0;
-    background: transparent;
-    box-shadow: none;
-  }
-  body[data-button-style="dividers"] #splitsArea #splitsBulkBar #applyBulkSplit,
-  body[data-button-style="dividers"] #splitsArea #splitsBulkBar .recipeHistoryAction,
-  body[data-button-style="dividers"] #splitsBlock .weightsBulkBar #applyBulkWeight{
-    border-radius: 0;
-  }
-  body[data-button-style="dividers"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
-  body[data-button-style="dividers"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-weight-view="edit"],
-  body[data-button-style="dividers"] #splitsBlock .splitsBulkActions .bulkTextAction:first-child{
-    border-left: 0;
-  }
-  body[data-button-style="dividers"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
-  body[data-button-style="dividers"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-weight-view="edit"]{
-    border-top: 2px solid var(--btnstyle-accent);
-    color: var(--btnstyle-accent);
-  }
-  body[data-button-style="dividers"] #splitsBlock #resetAllSplits{
-    background: color-mix(in srgb, var(--btnstyle-danger) 12%, transparent);
-    color: var(--btnstyle-danger);
-  }
-
-  /* ---- 12 · Offset tiles -------------------------------- */
-  body[data-button-style="tiles"] #splitsBlock #recipeHeaderActionPill .recipeHeaderActions,
-  body[data-button-style="tiles"] #splitsBlock .splitsBulkActions{
-    gap: 7px;
-  }
-  body[data-button-style="tiles"] #splitsBlock #recipeHeaderActionPill .recipeHeaderAction,
-  body[data-button-style="tiles"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
-  body[data-button-style="tiles"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-weight-view="edit"],
-  body[data-button-style="tiles"] #splitsBlock .splitsBulkBar .bulkTextAction,
-  body[data-button-style="tiles"] #splitsBlock .weightsBulkBar .bulkTextAction,
-  body[data-button-style="tiles"] #splitsBlock #resetAllSplits{
-    min-height: 38px;
-    border: 1px solid var(--btnstyle-edge);
-    border-radius: 7px;
-    background: var(--btnstyle-surface);
-    color: var(--btnstyle-ink);
-    box-shadow: 3px 3px 0 color-mix(in srgb, var(--btnstyle-edge) 90%, transparent);
-  }
-  body[data-button-style="tiles"] #splitsArea #splitsBulkBar #applyBulkSplit,
-  body[data-button-style="tiles"] #splitsArea #splitsBulkBar .recipeHistoryAction,
-  body[data-button-style="tiles"] #splitsBlock .weightsBulkBar #applyBulkWeight{
-    border-radius: 7px;
-  }
-  body[data-button-style="tiles"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
-  body[data-button-style="tiles"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-weight-view="edit"]{
-    transform: translateY(-3px);
-    border-color: var(--btnstyle-accent);
-    box-shadow: 3px 6px 0 color-mix(in srgb, var(--btnstyle-accent) 20%, transparent);
-    color: var(--btnstyle-accent);
-  }
-  body[data-button-style="tiles"] #splitsBlock #resetAllSplits{
-    border-color: var(--btnstyle-danger);
-    box-shadow: 3px 3px 0 color-mix(in srgb, var(--btnstyle-danger) 18%, transparent);
-    color: var(--btnstyle-danger);
-  }
-
-  /* ---- Shared: the bulk-row container ------------------------------
-     styles.css gives .splitsEditRowSecondary border-radius:999px +
-     overflow-x:auto, which clips its end buttons (Clear on the left,
-     Rearrange on the right) into rounded pill caps regardless of the
-     buttons' own square corners. Flatten it to the active style's corner
-     so nothing pill-shaped survives; console keeps its own rounded bay
-     (handled in its block above). overflow:visible lets the offset /
-     drop shadows of the tiles and ribbons treatments show in full. */
-  body[data-button-style="blueprint"] #splitsArea #splitsBulkBar .splitsEditRowSecondary,
-  body[data-button-style="underline"] #splitsArea #splitsBulkBar .splitsEditRowSecondary,
-  body[data-button-style="markers"] #splitsArea #splitsBulkBar .splitsEditRowSecondary,
-  body[data-button-style="dividers"] #splitsArea #splitsBulkBar .splitsEditRowSecondary,
-  body[data-button-style="ribbons"] #splitsArea #splitsBulkBar .splitsEditRowSecondary{
-    border-radius: 0;
-    overflow: visible;
-  }
-  body[data-button-style="tiles"] #splitsArea #splitsBulkBar .splitsEditRowSecondary{
-    border-radius: 7px;
-    overflow: visible;
-  }
-
-  /* Shared: keep the focus ring legible on every treatment. */
-  body[data-button-style]:not([data-button-style="default"]) #splitsBlock #recipeHeaderActionPill button:focus-visible,
-  body[data-button-style]:not([data-button-style="default"]) #splitsBlock .splitsBulkBar button:focus-visible,
-  body[data-button-style]:not([data-button-style="default"]) #splitsBlock .weightsBulkBar button:focus-visible{
+  /* Keep the focus ring legible on the treated controls. */
+  body[data-button-style="console"] #splitsBlock #recipeHeaderActionPill button:focus-visible,
+  body[data-button-style="console"] #splitsBlock .splitsBulkBar button:focus-visible,
+  body[data-button-style="console"] #splitsBlock .weightsBulkBar button:focus-visible{
     outline: 2px solid var(--focus-border);
     outline-offset: 2px;
   }
