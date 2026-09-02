@@ -36,6 +36,7 @@
   <link rel="stylesheet" href="styles.css?v=0.62.29">
   <link rel="stylesheet" href="theme.css?v=0.18.9">
   <link rel="stylesheet" href="desktop.css?v=0.1.21">
+  <link rel="stylesheet" href="button-styling.css?v=0.1.0">
 <script src="validation.js?v=0.19" defer></script>
 <script src="scheduling.js?v=0.18.4" defer></script>
 <script src="storage.js?v=0.18" defer></script>
@@ -2178,6 +2179,19 @@
         <option value="underline">Baseline marker</option>
       </select>
       <small>Desktop only</small>
+    </label>
+    <label for="buttonStyleSel" class="buttonStyleField">Button Styling
+      <select id="buttonStyleSel">
+        <option value="default" selected>Default</option>
+        <option value="blueprint">Blueprint brackets</option>
+        <option value="console">Station console</option>
+        <option value="underline">Underline commands</option>
+        <option value="markers">Marker stripe</option>
+        <option value="ribbons">Folded ribbons</option>
+        <option value="dividers">Vertical dividers</option>
+        <option value="tiles">Offset tiles</option>
+      </select>
+      <small>Recipe / Weights toolbar &middot; desktop only</small>
     </label>
     <label for="defaultScanActionSel" class="recipeScanHideDesktop">Default Scan Action
       <select id="defaultScanActionSel">

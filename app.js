@@ -79,6 +79,12 @@
       // workspace side rail. It remains local when an RT Sync job arrives,
       // like the other Display settings below.
       desktopRailStyle: "filled",
+      // Desktop-only experiment: swappable visual treatment for the Recipe /
+      // Weights panel toolbar buttons, chosen in Display settings ("Button
+      // Styling"). "default" adds no attribute and leaves the shipped look
+      // untouched. Local like the other Display settings when an RT Sync job
+      // arrives - see applySharedActiveJob.
+      buttonStyle: "default",
       // Which scan source a tap on the mobile Scan action goes straight to.
       // "ask" preserves the original 3-source popup unchanged; picking a
       // specific source skips that popup entirely. Mobile/touch-only
@@ -1614,6 +1620,7 @@
         theme: state.theme,
         timeFormat: state.timeFormat,
         desktopRailStyle: state.desktopRailStyle,
+        buttonStyle: state.buttonStyle,
         defaultScanAction: state.defaultScanAction,
         surfaceStyle: state.surfaceStyle,
         mobileTileStyle: state.mobileTileStyle,
@@ -1642,6 +1649,7 @@
         theme: state.theme,
         timeFormat: state.timeFormat,
         desktopRailStyle: state.desktopRailStyle,
+        buttonStyle: state.buttonStyle,
         defaultScanAction: state.defaultScanAction,
         surfaceStyle: state.surfaceStyle,
         mobileTileStyle: state.mobileTileStyle,
@@ -1802,6 +1810,20 @@
       state.desktopRailStyle = style;
       document.body.dataset.desktopRailStyle = style;
       const select = $("desktopRailStyleSel");
+      if (select) select.value = style;
+    }
+
+    // Desktop-only Recipe / Weights toolbar button treatment. Mirrors
+    // applyDesktopRailStyle: one data attribute on <body> that
+    // button-styling.css keys off, a local Display preference, echoed back to
+    // the <select>. Unknown/legacy values fall back to "default" - which adds
+    // no attribute effect, leaving the shipped button look untouched.
+    function applyButtonStyle(value){
+      const allowed = new Set(["default", "blueprint", "console", "underline", "markers", "ribbons", "dividers", "tiles"]);
+      const style = allowed.has(String(value)) ? String(value) : "default";
+      state.buttonStyle = style;
+      document.body.dataset.buttonStyle = style;
+      const select = $("buttonStyleSel");
       if (select) select.value = style;
     }
 
@@ -2156,6 +2178,7 @@
       applyDefaultScanAction(payload.defaultScanAction || "ask");
       applySurfaceStyle(payload.surfaceStyle || defaultSurfaceStyle());
       applyDesktopRailStyle(payload.desktopRailStyle || "filled");
+      applyButtonStyle(payload.buttonStyle || "default");
         applyMobileTileStyle("minimal");
         applyMobileBackgroundStyle("theme-native");
       applyMobileTimelineAlarm(!!payload.mobileTimelineAlarm);
@@ -9324,6 +9347,11 @@
       saveSession();
     });
 
+    $("buttonStyleSel")?.addEventListener("change",(e)=>{
+      applyButtonStyle(e.target.value);
+      saveSession();
+    });
+
     $("defaultScanActionSel")?.addEventListener("change",(e)=>{
       applyDefaultScanAction(e.target.value);
       saveSession();
@@ -9940,6 +9968,7 @@
       applyTheme(state.theme || "industrial-slate");
       applyTimeFormat(state.timeFormat || "12");
       applyDesktopRailStyle(state.desktopRailStyle || "filled");
+      applyButtonStyle(state.buttonStyle || "default");
       applyDefaultScanAction(state.defaultScanAction || "ask");
       applySurfaceStyle(state.surfaceStyle || defaultSurfaceStyle());
       applyMobileTileStyle("minimal");
