@@ -6283,6 +6283,72 @@ body:is([data-theme="industrial-slate-dark"],[data-theme="gruvbox-dark"]) .resul
 .resultRow.late .resultTimingValue{color:var(--warn)}
 .resultRow.done{ opacity: 0.42; filter: grayscale(1); }
 
+/* Missing-weight Timeline state. Tracked hoppers that only lack a receiver
+   weight collect into one compact "NEEDS WEIGHT · N" section after every
+   calculable row - several at once read as one incomplete-setup note, not a
+   stack of competing warnings. Missing weight is incomplete configuration,
+   not an error: the accent colour is spent only on the group label and its
+   marker dot, the hopper rows stay in normal Timeline text so timed rows keep
+   the visual weight, and there is no repeated warning sentence. Each row's
+   identity is a button that opens the existing Receiver Hopper Weights
+   editor. */
+.resultNeedsWeightGroup{
+  display:grid;
+  gap:0;
+  margin-top:7px;
+  padding-top:6px;
+  border-top:1px solid var(--row-border-2);
+}
+.resultNeedsWeightHeading{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  margin:0 0 3px;
+  padding-left:2px;
+  color:var(--warn);
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:.14em;
+}
+.resultNeedsWeightHeading::before{
+  content:"";
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  background:var(--warn);
+}
+.resultNeedsWeightCount{ color:var(--muted); font-weight:800; letter-spacing:.08em; }
+.resultRow.needsWeight{ min-height:30px; }
+/* Quiet schedule node - the accent already lives on the group label. */
+.resultRow.needsWeight::before{ background:var(--row-border-2); }
+/* A plain centred em-dash, readable rather than the 9px "unavailable" size. */
+.resultRow.needsWeight .resultTimingValue{
+  align-items:center;
+  color:var(--muted);
+  font-size:13px;
+  font-weight:700;
+}
+.resultNeedsWeightRow{
+  display:flex;
+  align-items:baseline;
+  gap:5px;
+  min-width:0;
+  margin:0;
+  padding:0;
+  border:0;
+  background:transparent;
+  color:inherit;
+  font:inherit;
+  text-align:left;
+  cursor:pointer;
+}
+.resultNeedsWeightRow:hover{ text-decoration:underline; text-decoration-color:var(--row-border-2); }
+.resultNeedsWeightRow:focus-visible{
+  outline:2px solid var(--focus-border);
+  outline-offset:2px;
+  border-radius:5px;
+}
+
 /* Compact I / O pump-off toggle at the far right of every Timeline row - one
    implementation for mobile, tablet and desktop (replaced the old checkbox +
    "Pump off" label). I = pump running (subdued), O = pump off (active).

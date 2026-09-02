@@ -4016,6 +4016,77 @@
       saveSession();
     }
 
+    // Route the operator from a Timeline missing-weight row to the existing
+    // Receiver Hopper Weights editor, with that hopper's field targeted. This
+    // is a navigation helper, not a new weight-entry surface: it reuses the
+    // same panel + page moves the attention centre's "open-weights" action
+    // uses (setWorkspacePanel + setRecipePage), the shared weightsViewMode
+    // state renderWeightsArea() reads on every render, and the existing
+    // #w_<layer>_<index> weight input the desktop matrix already renders.
+    // layerName is the layer's name (flat rows carry layer:L.name); hi is the
+    // physical hopper index.
+    function openHopperWeightEditor(layerName, hi){
+      if (!isDesktopLayout() && state.mobileTimelineOnly){
+        // The correction lives in a panel the timeline-only view hides.
+        applyMobileTimelineMode(false);
+        saveSession();
+      }
+      // The weight fields only render in the matrix's Edit view, so ask for it
+      // before the page renders - renderWeightsArea() picks this up itself.
+      weightsViewMode = "edit";
+      const alreadyOnWeights = activeRecipePage === "weights";
+      setWorkspacePanel("splitsBlock", { reveal: true });
+      setRecipePage("weights");
+      // setRecipePage() no-ops when the page is already active; make sure the
+      // matrix still re-renders into Edit view in that case.
+      if (alreadyOnWeights) renderWeightsArea();
+
+      const panel = $("splitsBlock");
+      if (!isDesktopLayout() && panel){
+        // Same reassertion openRecipeFromAttention() does: a closing footer
+        // dialog can defer the <details> toggle in a native WebView.
+        document.body.dataset.mobileWorkspace = "panel";
+        panel.classList.add("mobile-active");
+        panel.open = true;
+      }
+
+      const usable = el => !!el && !el.disabled && el.getClientRects().length > 0;
+      const label = hopperBadgeLabel(layerName, hi);
+      // Land on this hopper's weight field. The desktop Edit matrix shows it
+      // as the labelled ".desktopVisualWeight" input; the compact
+      // #w_<layer>_<index> input is the fallback. On touch the matrix inputs
+      // are deliberately non-focusable, so it falls back to the Edit toggle
+      // or the first field - the nearest existing weight-edit control.
+      const pickTarget = ()=>{
+        const host = $("weightsArea");
+        if (!host) return null;
+        return [
+          host.querySelector(`input[aria-label="${label} manual weight in pounds"]`),
+          document.getElementById(weightId(layerName, hi)),
+          host.querySelector('[data-weight-view="edit"]:not(.active)'),
+          host.querySelector('[data-weight-view="edit"]'),
+          host.querySelector('input:not([type=checkbox]):not([type=radio])')
+        ].find(usable) || null;
+      };
+      // The panel reveal + matrix render + layout can take a few frames before
+      // the field is measurable, so retry briefly rather than firing once.
+      let tries = 0;
+      const settle = ()=>{
+        const target = pickTarget();
+        if (!target){
+          if (tries++ < 20){ setTimeout(settle, 40); }
+          return;
+        }
+        const scrollAnchor = target.closest("td, .mobileWeightCell, tr") || target;
+        try { scrollAnchor.scrollIntoView({ behavior: "smooth", block: "center" }); } catch (error) { /* older WebView */ }
+        try { target.focus(); } catch (error) { /* control went away */ }
+        if (target.matches("input") && typeof target.select === "function") target.select();
+      };
+      // setTimeout rather than only rAF: a backgrounded/inactive tab throttles
+      // rAF hard, and this is a deliberate operator action that must still land.
+      setTimeout(settle, 0);
+    }
+
     function hookRecipePageTabs(){
       const tabs = [...document.querySelectorAll(".recipePageTab")];
       if (!tabs.length) return;
@@ -6456,6 +6527,16 @@
         return;
       }
 
+      // Sort key is the true upcoming instant, never the displayed text or
+      // insertion order: when a changeover deadline exists it is the absolute
+      // start-by Date (startByDate.getTime(), so a next-day rollover is already
+      // baked into the timestamp); otherwise it is the numeric minutesToEmpty
+      // duration. Because start-by = deadline - runtime, a hopper with a longer
+      // "Empty in" can sit above a shorter one - it has to be started sooner -
+      // which is correct even though the runtime column then looks unsorted.
+      // Rows that cannot calculate a time (missing weight, not feeding) carry a
+      // null startByDate / minutesToEmpty, fall to the end via the Infinity
+      // fallback, then order stably by layer and hopper label.
       viewFlat.sort((a,b)=>{
         if (changeoverDate){
           const ta = a.startByDate ? a.startByDate.getTime() : Infinity;
@@ -6470,7 +6551,20 @@
         return a.hopperLabel.localeCompare(b.hopperLabel);
       });
 
-      viewFlat.forEach((h)=>{
+      // A tracked hopper whose feed rate is known but whose weight is not
+      // cannot produce a rundown time. Several of those at once should read as
+      // one incomplete-setup note, not a stack of competing warnings, so they
+      // are pulled out of the ribbon into a single compact "NEEDS WEIGHT"
+      // group rendered after every calculable row (see renderNeedsWeightGroup).
+      // Pump-off hoppers are excluded (their rundown is moot); a hopper missing
+      // both rate and weight stays on the ribbon's existing "Awaiting data"
+      // wording, which is not specifically a weight problem. The sort above
+      // already put these last, so the split preserves their stable order.
+      const isMissingWeight = h => !h.pumpOff && h.rate > 0 && !(h.weight > 0);
+      const needsWeightFlat = viewFlat.filter(isMissingWeight);
+      const timedFlat = viewFlat.filter(h => !isMissingWeight(h));
+
+      timedFlat.forEach((h)=>{
         const hasRate = h.rate > 0 && h.weight > 0;
         const notFeeding = h.rate <= 0 && h.weight > 0;
         const weightDetail = h.weight > 0
@@ -6601,6 +6695,89 @@
 
         area.appendChild(row);
       });
+
+      renderNeedsWeightGroup(area, needsWeightFlat, nextResins);
+    }
+
+    // The compact "NEEDS WEIGHT · N" section that trails the calculable rows.
+    // Missing weight is incomplete configuration, not an error, so the accent
+    // colour is spent only on the group label and its marker dot; the hopper
+    // rows themselves stay in normal Timeline text so timed rows keep the
+    // visual weight. No repeated "Weight needed to calculate rundown" line -
+    // the heading already says it and each row is itself the correction route:
+    // the identity button opens the existing Receiver Hopper Weights editor for
+    // that hopper (openHopperWeightEditor - the same navigation the attention
+    // centre's "open-weights" action uses, no second weight-entry surface).
+    // When a weight is entered the hopper stops matching isMissingWeight on the
+    // next validateAndCompute() render and rejoins the timed list in order.
+    function renderNeedsWeightGroup(area, needsWeightFlat, nextResins){
+      if (!needsWeightFlat.length) return;
+
+      const group = document.createElement("div");
+      group.className = "resultNeedsWeightGroup";
+      group.setAttribute("role", "group");
+      group.setAttribute("aria-label", `Needs weight: ${needsWeightFlat.length} tracked ${needsWeightFlat.length === 1 ? "hopper" : "hoppers"}`);
+
+      const heading = document.createElement("div");
+      heading.className = "resultNeedsWeightHeading";
+      const headingLabel = document.createElement("span");
+      headingLabel.textContent = "NEEDS WEIGHT";
+      const headingCount = document.createElement("span");
+      headingCount.className = "resultNeedsWeightCount";
+      headingCount.textContent = `· ${needsWeightFlat.length}`;
+      heading.append(headingLabel, headingCount);
+      group.append(heading);
+
+      needsWeightFlat.forEach((h)=>{
+        const row = document.createElement("div");
+        row.className = "resultRow needsWeight";
+        row.innerHTML = `
+          <div class="resultSchedule">
+            <span class="mono resultTimingValue resultTimingUnavailable">—</span>
+          </div>
+          <button type="button" class="resultNeedsWeightRow" data-weight-fix>
+            <span class="mono resultHopper">${h.hopperLabel}</span>
+            <span data-resin-chip></span>
+            <span data-next-resin></span>
+          </button>
+          <button type="button" class="pumpToggle" data-pump-toggle aria-pressed="${h.pumpOff ? "true" : "false"}" aria-label="${h.pumpOff ? "Pump off" : "Pump running"}" title="${h.pumpOff ? "Pump off" : "Pump running"}"><span aria-hidden="true">${h.pumpOff ? "O" : "I"}</span></button>
+        `;
+
+        const resinChip = row.querySelector("[data-resin-chip]");
+        resinChip.className = h.resinName ? "mono resultResin" : "resultStatusChip badge-warn";
+        resinChip.textContent = h.resinName || "No resin";
+
+        // Current -> next resin, on the same "only when the plan changes this
+        // position" rule the ribbon rows use. Built as nodes, never
+        // interpolated - resin names arrive over RT Sync and from scans
+        // (see security.test.js).
+        const nextChip = row.querySelector("[data-next-resin]");
+        const incoming = nextResins?.get(`${h.layer}:${h.hopperIndex}`);
+        if (incoming !== undefined && incoming !== h.resinName){
+          nextChip.className = "resultNextResin" + (incoming ? "" : " resultNextResinEmpty");
+          const arrow = document.createElement("span");
+          arrow.setAttribute("aria-hidden", "true");
+          arrow.textContent = "→";
+          const name = document.createElement("span");
+          name.className = incoming ? "mono" : "";
+          name.textContent = incoming || "Empty";
+          nextChip.replaceChildren(arrow, name);
+        }
+
+        const fixBtn = row.querySelector("[data-weight-fix]");
+        fixBtn.setAttribute("aria-label", `Add weight for hopper ${h.hopperLabel}`);
+        fixBtn.addEventListener("click",()=>openHopperWeightEditor(h.layer, h.hopperIndex));
+
+        row.querySelector("[data-pump-toggle]").addEventListener("click",()=>{
+          h._ref.h.pumpOff = !h._ref.h.pumpOff;
+          saveSession();
+          validateAndCompute({ sync: true, immediate: true, kind: "pump-off" });
+        });
+
+        group.append(row);
+      });
+
+      area.appendChild(group);
     }
 
     /* The Hookups view: derived entirely from the Current and Next recipes,
