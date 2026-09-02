@@ -61,7 +61,12 @@ test("every style rule is desktop-scoped and confined to the Recipe / Weights pa
     .filter(line => line.includes('body[data-button-style="'));
   assert.ok(ruleLines.length >= STYLES.length, "expected per-style selectors");
   for (const line of ruleLines) {
-    assert.ok(line.includes("#splitsBlock"), `selector escapes the panel: ${line.trim()}`);
+    // #splitsArea is the Recipe/Weights tab panel inside #splitsBlock - either
+    // anchor keeps a rule confined to the panel.
+    assert.ok(
+      line.includes("#splitsBlock") || line.includes("#splitsArea"),
+      `selector escapes the panel: ${line.trim()}`
+    );
   }
 });
 
@@ -77,6 +82,24 @@ test("each style has a rule; default is a no-op (only referenced to exclude it f
 test("danger (Reset Recipe) keeps a distinct treatment in every style", () => {
   for (const style of STYLES) {
     assert.match(buttonCss, new RegExp(`body\\[data-button-style="${style}"\\] #splitsBlock #resetAllSplits\\b`));
+  }
+});
+
+test("every bulk .bulkTextAction is covered (Clear / Empty cells / Rearrange all get the treatment)", () => {
+  for (const style of STYLES) {
+    // .splitsBulkBar .bulkTextAction catches #clearSelectedCells ("Empty
+    // cells") too, which .splitsBulkActions .bulkTextAction alone missed.
+    assert.match(buttonCss, new RegExp(`body\\[data-button-style="${style}"\\] #splitsBlock \\.splitsBulkBar \\.bulkTextAction`));
+  }
+});
+
+test("value-entry controls the preview omits (Apply, Undo/Redo) at least get their radius matched so no rounded button is left behind", () => {
+  for (const style of STYLES) {
+    // #applyBulkSplit is pinned by a 3-id rule in styles.css, so the radius
+    // match has to be scoped through #splitsArea #splitsBulkBar to outrank it.
+    assert.match(buttonCss, new RegExp(`body\\[data-button-style="${style}"\\] #splitsArea #splitsBulkBar #applyBulkSplit`));
+    assert.match(buttonCss, new RegExp(`body\\[data-button-style="${style}"\\] #splitsArea #splitsBulkBar \\.recipeHistoryAction`));
+    assert.match(buttonCss, new RegExp(`body\\[data-button-style="${style}"\\] #splitsBlock \\.weightsBulkBar #applyBulkWeight`));
   }
 });
 

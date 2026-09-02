@@ -9,11 +9,17 @@
  *
  * Scope, deliberately narrow so this stays easy to evaluate and to delete:
  *   - only inside #splitsBlock (the Recipe / Weights panel)
- *   - only the two action rows the preview covers:
- *       CMD  = #recipeHeaderActionPill's buttons (Edit/Done, Load, Print,
- *              Scan) - the "RECIPE / WEIGHTS" row
- *       BULK = the Edit-mode bulk bar's text actions + Rearrange + Reset -
- *              the "BULK ACTIONS" row
+ *   - the button set the preview covers:
+ *       CMD  = #recipeHeaderActionPill's buttons (Edit/Done, Load, Print) -
+ *              the "RECIPE / WEIGHTS" row
+ *       BULK = the Edit-mode bulk bar's Clear / Empty cells / Reset /
+ *              Rearrange (every .bulkTextAction in the bar, plus the
+ *              #resetAllSplits danger button) - the "BULK ACTIONS" row
+ *     The bulk bar's value-entry controls that the preview does NOT show -
+ *     Apply, and the Undo/Redo history pair - are not given a treatment;
+ *     they only get their corner radius matched to the active style so no
+ *     stray rounded/pill/circle button is left sitting beside the flattened
+ *     ones (see the "straggler radius" rule in each block).
  *   - only at the desktop breakpoint the rest of desktop.css uses
  *     (min-width:901px and pointer:fine)
  *
@@ -40,9 +46,8 @@ body[data-button-style]{
   body[data-button-style="blueprint"] #splitsBlock #recipeHeaderActionPill .recipeHeaderAction,
   body[data-button-style="blueprint"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
   body[data-button-style="blueprint"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-weight-view="edit"],
-  body[data-button-style="blueprint"] #splitsBlock .splitsBulkActions .bulkTextAction,
-  body[data-button-style="blueprint"] #splitsBlock .weightsBulkActions .bulkTextAction,
-  body[data-button-style="blueprint"] #splitsBlock .splitsRearrangeAction,
+  body[data-button-style="blueprint"] #splitsBlock .splitsBulkBar .bulkTextAction,
+  body[data-button-style="blueprint"] #splitsBlock .weightsBulkBar .bulkTextAction,
   body[data-button-style="blueprint"] #splitsBlock #resetAllSplits{
     position: relative;
     border: 0;
@@ -50,18 +55,21 @@ body[data-button-style]{
     background: transparent;
     box-shadow: none;
   }
+  body[data-button-style="blueprint"] #splitsArea #splitsBulkBar #applyBulkSplit,
+  body[data-button-style="blueprint"] #splitsArea #splitsBulkBar .recipeHistoryAction,
+  body[data-button-style="blueprint"] #splitsBlock .weightsBulkBar #applyBulkWeight{
+    border-radius: 0;
+  }
   /* Bracket corners on the plain buttons only. The Edit/Done toggle already
      owns its ::before (the pencil mask-image in styles.css), so it gets the
      accent wash below but no brackets - overwriting its ::before would drop
      the pencil. */
   body[data-button-style="blueprint"] #splitsBlock #recipeHeaderActionPill .recipeHeaderAction::before,
   body[data-button-style="blueprint"] #splitsBlock #recipeHeaderActionPill .recipeHeaderAction::after,
-  body[data-button-style="blueprint"] #splitsBlock .splitsBulkActions .bulkTextAction::before,
-  body[data-button-style="blueprint"] #splitsBlock .splitsBulkActions .bulkTextAction::after,
-  body[data-button-style="blueprint"] #splitsBlock .weightsBulkActions .bulkTextAction::before,
-  body[data-button-style="blueprint"] #splitsBlock .weightsBulkActions .bulkTextAction::after,
-  body[data-button-style="blueprint"] #splitsBlock .splitsRearrangeAction::before,
-  body[data-button-style="blueprint"] #splitsBlock .splitsRearrangeAction::after,
+  body[data-button-style="blueprint"] #splitsBlock .splitsBulkBar .bulkTextAction::before,
+  body[data-button-style="blueprint"] #splitsBlock .splitsBulkBar .bulkTextAction::after,
+  body[data-button-style="blueprint"] #splitsBlock .weightsBulkBar .bulkTextAction::before,
+  body[data-button-style="blueprint"] #splitsBlock .weightsBulkBar .bulkTextAction::after,
   body[data-button-style="blueprint"] #splitsBlock #resetAllSplits::before,
   body[data-button-style="blueprint"] #splitsBlock #resetAllSplits::after{
     position: absolute;
@@ -71,18 +79,16 @@ body[data-button-style]{
     pointer-events: none;
   }
   body[data-button-style="blueprint"] #splitsBlock #recipeHeaderActionPill .recipeHeaderAction::before,
-  body[data-button-style="blueprint"] #splitsBlock .splitsBulkActions .bulkTextAction::before,
-  body[data-button-style="blueprint"] #splitsBlock .weightsBulkActions .bulkTextAction::before,
-  body[data-button-style="blueprint"] #splitsBlock .splitsRearrangeAction::before,
+  body[data-button-style="blueprint"] #splitsBlock .splitsBulkBar .bulkTextAction::before,
+  body[data-button-style="blueprint"] #splitsBlock .weightsBulkBar .bulkTextAction::before,
   body[data-button-style="blueprint"] #splitsBlock #resetAllSplits::before{
     top: 0; left: 0;
     border-top: 2px solid var(--btnstyle-accent);
     border-left: 2px solid var(--btnstyle-accent);
   }
   body[data-button-style="blueprint"] #splitsBlock #recipeHeaderActionPill .recipeHeaderAction::after,
-  body[data-button-style="blueprint"] #splitsBlock .splitsBulkActions .bulkTextAction::after,
-  body[data-button-style="blueprint"] #splitsBlock .weightsBulkActions .bulkTextAction::after,
-  body[data-button-style="blueprint"] #splitsBlock .splitsRearrangeAction::after,
+  body[data-button-style="blueprint"] #splitsBlock .splitsBulkBar .bulkTextAction::after,
+  body[data-button-style="blueprint"] #splitsBlock .weightsBulkBar .bulkTextAction::after,
   body[data-button-style="blueprint"] #splitsBlock #resetAllSplits::after{
     right: 0; bottom: 0;
     border-right: 2px solid var(--btnstyle-accent);
@@ -111,9 +117,8 @@ body[data-button-style]{
   body[data-button-style="console"] #splitsBlock #recipeHeaderActionPill .recipeHeaderAction,
   body[data-button-style="console"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
   body[data-button-style="console"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-weight-view="edit"],
-  body[data-button-style="console"] #splitsBlock .splitsBulkActions .bulkTextAction,
-  body[data-button-style="console"] #splitsBlock .weightsBulkActions .bulkTextAction,
-  body[data-button-style="console"] #splitsBlock .splitsRearrangeAction,
+  body[data-button-style="console"] #splitsBlock .splitsBulkBar .bulkTextAction,
+  body[data-button-style="console"] #splitsBlock .weightsBulkBar .bulkTextAction,
   body[data-button-style="console"] #splitsBlock #resetAllSplits{
     min-height: 30px;
     border: 0;
@@ -121,6 +126,11 @@ body[data-button-style]{
     background: var(--btnstyle-surface);
     color: var(--btnstyle-ink);
     box-shadow: 0 1px 0 var(--btnstyle-edge);
+  }
+  body[data-button-style="console"] #splitsArea #splitsBulkBar #applyBulkSplit,
+  body[data-button-style="console"] #splitsArea #splitsBulkBar .recipeHistoryAction,
+  body[data-button-style="console"] #splitsBlock .weightsBulkBar #applyBulkWeight{
+    border-radius: 4px;
   }
   body[data-button-style="console"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
   body[data-button-style="console"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-weight-view="edit"]{
@@ -140,9 +150,8 @@ body[data-button-style]{
   body[data-button-style="underline"] #splitsBlock #recipeHeaderActionPill .recipeHeaderAction,
   body[data-button-style="underline"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
   body[data-button-style="underline"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-weight-view="edit"],
-  body[data-button-style="underline"] #splitsBlock .splitsBulkActions .bulkTextAction,
-  body[data-button-style="underline"] #splitsBlock .weightsBulkActions .bulkTextAction,
-  body[data-button-style="underline"] #splitsBlock .splitsRearrangeAction{
+  body[data-button-style="underline"] #splitsBlock .splitsBulkBar .bulkTextAction,
+  body[data-button-style="underline"] #splitsBlock .weightsBulkBar .bulkTextAction{
     min-height: 33px;
     padding: 0 1px;
     border: 0;
@@ -151,14 +160,18 @@ body[data-button-style]{
     background: transparent;
     box-shadow: none;
   }
+  body[data-button-style="underline"] #splitsArea #splitsBulkBar #applyBulkSplit,
+  body[data-button-style="underline"] #splitsArea #splitsBulkBar .recipeHistoryAction,
+  body[data-button-style="underline"] #splitsBlock .weightsBulkBar #applyBulkWeight{
+    border-radius: 0;
+  }
   body[data-button-style="underline"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
   body[data-button-style="underline"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-weight-view="edit"]{
     border-bottom-color: var(--btnstyle-accent);
     color: var(--btnstyle-accent);
   }
-  body[data-button-style="underline"] #splitsBlock .splitsBulkActions .bulkTextAction,
-  body[data-button-style="underline"] #splitsBlock .weightsBulkActions .bulkTextAction,
-  body[data-button-style="underline"] #splitsBlock .splitsRearrangeAction{
+  body[data-button-style="underline"] #splitsBlock .splitsBulkBar .bulkTextAction,
+  body[data-button-style="underline"] #splitsBlock .weightsBulkBar .bulkTextAction{
     border-bottom-color: color-mix(in srgb, var(--btnstyle-accent) 62%, transparent);
   }
   body[data-button-style="underline"] #splitsBlock #resetAllSplits{
@@ -178,9 +191,8 @@ body[data-button-style]{
   body[data-button-style="markers"] #splitsBlock #recipeHeaderActionPill .recipeHeaderAction,
   body[data-button-style="markers"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
   body[data-button-style="markers"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-weight-view="edit"],
-  body[data-button-style="markers"] #splitsBlock .splitsBulkActions .bulkTextAction,
-  body[data-button-style="markers"] #splitsBlock .weightsBulkActions .bulkTextAction,
-  body[data-button-style="markers"] #splitsBlock .splitsRearrangeAction,
+  body[data-button-style="markers"] #splitsBlock .splitsBulkBar .bulkTextAction,
+  body[data-button-style="markers"] #splitsBlock .weightsBulkBar .bulkTextAction,
   body[data-button-style="markers"] #splitsBlock #resetAllSplits{
     min-height: 35px;
     border: 0;
@@ -188,6 +200,11 @@ body[data-button-style]{
     border-radius: 0;
     background: transparent;
     box-shadow: none;
+  }
+  body[data-button-style="markers"] #splitsArea #splitsBulkBar #applyBulkSplit,
+  body[data-button-style="markers"] #splitsArea #splitsBulkBar .recipeHistoryAction,
+  body[data-button-style="markers"] #splitsBlock .weightsBulkBar #applyBulkWeight{
+    border-radius: 0;
   }
   body[data-button-style="markers"] #splitsBlock #recipeHeaderActionPill .recipeHeaderActions > .recipeHeaderAction:first-child,
   body[data-button-style="markers"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
@@ -200,9 +217,8 @@ body[data-button-style]{
     box-shadow: inset 0 -4px 0 var(--btnstyle-accent);
     color: var(--btnstyle-accent);
   }
-  body[data-button-style="markers"] #splitsBlock .splitsBulkActions .bulkTextAction,
-  body[data-button-style="markers"] #splitsBlock .weightsBulkActions .bulkTextAction,
-  body[data-button-style="markers"] #splitsBlock .splitsRearrangeAction{
+  body[data-button-style="markers"] #splitsBlock .splitsBulkBar .bulkTextAction,
+  body[data-button-style="markers"] #splitsBlock .weightsBulkBar .bulkTextAction{
     border-bottom: 4px solid var(--btnstyle-accent);
   }
   body[data-button-style="markers"] #splitsBlock #resetAllSplits{
@@ -218,9 +234,8 @@ body[data-button-style]{
   body[data-button-style="ribbons"] #splitsBlock #recipeHeaderActionPill .recipeHeaderAction,
   body[data-button-style="ribbons"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
   body[data-button-style="ribbons"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-weight-view="edit"],
-  body[data-button-style="ribbons"] #splitsBlock .splitsBulkActions .bulkTextAction,
-  body[data-button-style="ribbons"] #splitsBlock .weightsBulkActions .bulkTextAction,
-  body[data-button-style="ribbons"] #splitsBlock .splitsRearrangeAction,
+  body[data-button-style="ribbons"] #splitsBlock .splitsBulkBar .bulkTextAction,
+  body[data-button-style="ribbons"] #splitsBlock .weightsBulkBar .bulkTextAction,
   body[data-button-style="ribbons"] #splitsBlock #resetAllSplits{
     position: relative;
     min-height: 32px;
@@ -230,9 +245,13 @@ body[data-button-style]{
     color: var(--btnstyle-ink);
     box-shadow: 0 3px 0 color-mix(in srgb, var(--btnstyle-edge) 85%, transparent);
   }
+  body[data-button-style="ribbons"] #splitsArea #splitsBulkBar #applyBulkSplit,
+  body[data-button-style="ribbons"] #splitsArea #splitsBulkBar .recipeHistoryAction,
+  body[data-button-style="ribbons"] #splitsBlock .weightsBulkBar #applyBulkWeight{
+    border-radius: 0;
+  }
   body[data-button-style="ribbons"] #splitsBlock #recipeHeaderActionPill .recipeHeaderAction::after,
-  body[data-button-style="ribbons"] #splitsBlock .splitsBulkActions .bulkTextAction::after,
-  body[data-button-style="ribbons"] #splitsBlock .splitsRearrangeAction::after,
+  body[data-button-style="ribbons"] #splitsBlock .splitsBulkBar .bulkTextAction::after,
   body[data-button-style="ribbons"] #splitsBlock #resetAllSplits::after{
     position: absolute;
     right: -6px;
@@ -249,9 +268,8 @@ body[data-button-style]{
     background: var(--btnstyle-accent);
     color: var(--btnstyle-on-fill);
   }
-  body[data-button-style="ribbons"] #splitsBlock .splitsBulkActions .bulkTextAction,
-  body[data-button-style="ribbons"] #splitsBlock .weightsBulkActions .bulkTextAction,
-  body[data-button-style="ribbons"] #splitsBlock .splitsRearrangeAction{
+  body[data-button-style="ribbons"] #splitsBlock .splitsBulkBar .bulkTextAction,
+  body[data-button-style="ribbons"] #splitsBlock .weightsBulkBar .bulkTextAction{
     border-left: 4px solid var(--btnstyle-accent);
   }
   body[data-button-style="ribbons"] #splitsBlock #resetAllSplits{
@@ -271,9 +289,8 @@ body[data-button-style]{
   body[data-button-style="dividers"] #splitsBlock #recipeHeaderActionPill .recipeHeaderAction,
   body[data-button-style="dividers"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
   body[data-button-style="dividers"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-weight-view="edit"],
-  body[data-button-style="dividers"] #splitsBlock .splitsBulkActions .bulkTextAction,
-  body[data-button-style="dividers"] #splitsBlock .weightsBulkActions .bulkTextAction,
-  body[data-button-style="dividers"] #splitsBlock .splitsRearrangeAction,
+  body[data-button-style="dividers"] #splitsBlock .splitsBulkBar .bulkTextAction,
+  body[data-button-style="dividers"] #splitsBlock .weightsBulkBar .bulkTextAction,
   body[data-button-style="dividers"] #splitsBlock #resetAllSplits{
     min-height: 38px;
     padding: 0 15px;
@@ -282,6 +299,11 @@ body[data-button-style]{
     border-radius: 0;
     background: transparent;
     box-shadow: none;
+  }
+  body[data-button-style="dividers"] #splitsArea #splitsBulkBar #applyBulkSplit,
+  body[data-button-style="dividers"] #splitsArea #splitsBulkBar .recipeHistoryAction,
+  body[data-button-style="dividers"] #splitsBlock .weightsBulkBar #applyBulkWeight{
+    border-radius: 0;
   }
   body[data-button-style="dividers"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
   body[data-button-style="dividers"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-weight-view="edit"],
@@ -306,9 +328,8 @@ body[data-button-style]{
   body[data-button-style="tiles"] #splitsBlock #recipeHeaderActionPill .recipeHeaderAction,
   body[data-button-style="tiles"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
   body[data-button-style="tiles"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-weight-view="edit"],
-  body[data-button-style="tiles"] #splitsBlock .splitsBulkActions .bulkTextAction,
-  body[data-button-style="tiles"] #splitsBlock .weightsBulkActions .bulkTextAction,
-  body[data-button-style="tiles"] #splitsBlock .splitsRearrangeAction,
+  body[data-button-style="tiles"] #splitsBlock .splitsBulkBar .bulkTextAction,
+  body[data-button-style="tiles"] #splitsBlock .weightsBulkBar .bulkTextAction,
   body[data-button-style="tiles"] #splitsBlock #resetAllSplits{
     min-height: 38px;
     border: 1px solid var(--btnstyle-edge);
@@ -316,6 +337,11 @@ body[data-button-style]{
     background: var(--btnstyle-surface);
     color: var(--btnstyle-ink);
     box-shadow: 3px 3px 0 color-mix(in srgb, var(--btnstyle-edge) 90%, transparent);
+  }
+  body[data-button-style="tiles"] #splitsArea #splitsBulkBar #applyBulkSplit,
+  body[data-button-style="tiles"] #splitsArea #splitsBulkBar .recipeHistoryAction,
+  body[data-button-style="tiles"] #splitsBlock .weightsBulkBar #applyBulkWeight{
+    border-radius: 7px;
   }
   body[data-button-style="tiles"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
   body[data-button-style="tiles"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-weight-view="edit"]{
@@ -332,9 +358,8 @@ body[data-button-style]{
 
   /* Shared: keep the focus ring legible on every treatment. */
   body[data-button-style]:not([data-button-style="default"]) #splitsBlock #recipeHeaderActionPill button:focus-visible,
-  body[data-button-style]:not([data-button-style="default"]) #splitsBlock .splitsBulkActions button:focus-visible,
-  body[data-button-style]:not([data-button-style="default"]) #splitsBlock .weightsBulkActions button:focus-visible,
-  body[data-button-style]:not([data-button-style="default"]) #splitsBlock .splitsRearrangeAction:focus-visible{
+  body[data-button-style]:not([data-button-style="default"]) #splitsBlock .splitsBulkBar button:focus-visible,
+  body[data-button-style]:not([data-button-style="default"]) #splitsBlock .weightsBulkBar button:focus-visible{
     outline: 2px solid var(--focus-border);
     outline-offset: 2px;
   }
