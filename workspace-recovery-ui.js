@@ -19,7 +19,7 @@
     const el = $("workspaceRecoveryMessage");
     if (!el) return;
     el.textContent = text || "";
-    el.className = `tiny${type ? ` ${type}` : ""}`;
+    el.className = `tiny workspaceRecoveryMessage${type ? ` ${type}` : ""}`;
   }
 
   function admin(){ return root.PolynResinAdminInstance || null; }
@@ -57,8 +57,10 @@
 
   function renderList(){
     const host = $("workspaceRecoveryList");
+    const listMeta = $("workspaceRecoveryListMeta");
     if (!host) return;
     host.replaceChildren();
+    if (listMeta) listMeta.textContent = `${workspaces.length} workspace${workspaces.length === 1 ? "" : "s"}`;
     if (!workspaces.length){
       const empty = document.createElement("div");
       empty.className = "muted";
@@ -82,8 +84,10 @@
 
   function renderMembers(){
     const host = $("workspaceRecoveryMembersList");
+    const count = $("workspaceRecoveryMemberCount");
     if (!host) return;
     host.replaceChildren();
+    if (count) count.textContent = String(members.length);
     const descriptor = bridge()?.getRecoveryDescriptor?.() || {};
     if (!members.length){
       const empty = document.createElement("div");
@@ -97,8 +101,13 @@
       row.className = "workspaceRecoveryMemberRow";
       const isCurrent = member.member_user_id && member.member_user_id === descriptor.userId;
       const info = document.createElement("div");
-      info.className = "tiny mono";
-      info.textContent = `${member.member_device_label || "Unnamed device"} · ${member.member_role} · ${shortId(member.member_user_id)} · Last seen ${fmtDate(member.member_last_seen_at)}${isCurrent ? " · this device" : ""}`;
+      info.className = "workspaceRecoveryMemberInfo";
+      const name = document.createElement("strong");
+      name.textContent = member.member_device_label || "Unnamed device";
+      const meta = document.createElement("small");
+      meta.className = "mono";
+      meta.textContent = `${member.member_role} · ${shortId(member.member_user_id)} · Last seen ${fmtDate(member.member_last_seen_at)}${isCurrent ? " · this device" : ""}`;
+      info.append(name, meta);
       row.append(info);
       const actions = document.createElement("div");
       actions.className = "workspaceRecoveryMemberActions";
@@ -112,7 +121,7 @@
       }
       const removeBtn = document.createElement("button");
       removeBtn.type = "button";
-      removeBtn.className = "secondary";
+      removeBtn.className = "danger";
       removeBtn.textContent = "Disconnect";
       removeBtn.addEventListener("click", () => removeMember(member, isCurrent));
       actions.append(removeBtn);
@@ -131,6 +140,8 @@
       panel.hidden = true;
       if (transferBtn) transferBtn.disabled = true;
       if (mergeBtn) mergeBtn.disabled = true;
+      const memberCount = $("workspaceRecoveryMemberCount");
+      if (memberCount) memberCount.textContent = "0";
       return;
     }
     panel.hidden = false;

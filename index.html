@@ -33,9 +33,9 @@
        equivalent "keep content below the status bar" mode to opt into. -->
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
-  <link rel="stylesheet" href="styles.css?v=0.62.23">
+  <link rel="stylesheet" href="styles.css?v=0.62.24">
   <link rel="stylesheet" href="theme.css?v=0.18.6">
-  <link rel="stylesheet" href="desktop.css?v=0.1.15">
+  <link rel="stylesheet" href="desktop.css?v=0.1.16">
 <script src="validation.js?v=0.19" defer></script>
 <script src="scheduling.js?v=0.18.4" defer></script>
 <script src="storage.js?v=0.18" defer></script>
@@ -82,7 +82,7 @@
 <script src="line-configurations-ui.js?v=0.1.0" defer></script>
 <script src="database-health-ui.js?v=0.1.3" defer></script>
 <script src="bulk-density-measurement-ui.js?v=0.1.0" defer></script>
-<script src="workspace-recovery-ui.js?v=0.1.4" defer></script>
+<script src="workspace-recovery-ui.js?v=0.1.5" defer></script>
 <script src="beta-access-ui.js?v=0.1.0" defer></script>
 <!-- RT Notes TipTap experiment: self-contained IIFE bundle (window.RTNotesEditor),
      built by `npm run build:notes-editor` from notes-editor-vendor.src.js. Must
@@ -1297,6 +1297,12 @@
 
     <div class="blockBody">
       <div class="changelogBody">
+        <h3>(v1.1.24) (September 1, 2026) - Workspace Management &amp; Timeline Hookups</h3>
+        <ul>
+          <li>Redesigned <strong>Workspace Management</strong> into a desktop master/detail view: the workspace browser remains visible while a selected line&rsquo;s devices, actions, and maintenance controls are inspected alongside it.</li>
+          <li>Fixed <strong>Timeline Hookups</strong> grouping that could show a source as assigned for a resin while the tracked physical hopper had no source. Partial assignments now show <strong>Mixed</strong>; entering a source applies it to every matching hopper so Timeline labels stay in sync.</li>
+        </ul>
+
         <h3>(v1.1.23) (August 28-30, 2026) - RT Cloud, Line Configuration &amp; mobile workflow polish</h3>
         <ul>
           <li>Refined <strong>Recipe &rarr; Weights</strong> on mobile: bulk Weight/Height controls now use the same compact inline editor pattern as Current and Next, directly above the hopper matrix. The large lower editor card is gone; selection status now sits subtly below the matrix.</li>
@@ -1815,36 +1821,59 @@
       <div class="sumLeft"><div class="chev"><span class="chevRing"></span><span class="chevSatellite"></span><span class="chevCore"></span></div><div class="summaryText"><div class="layerTitle">Workspace Management</div><div class="layerMeta">Manage RT Sync lines, devices, and recovery actions</div></div></div>
     </summary>
     <div class="blockBody workspaceRecoveryPanel">
-      <p class="muted">Create or rename RT Sync lines, connect this desktop, review linked devices, and perform recovery or incident actions.</p>
-
-      <div id="workspaceRecoveryDeviceCard" class="workspaceRecoveryDeviceCard">
-        <div><strong id="workspaceRecoveryDeviceLabel">This device</strong></div>
-        <div id="workspaceRecoveryDeviceStatus" class="tiny" role="status">Checking RT Sync status…</div>
-        <details class="workspaceRecoveryDiagnostic"><summary>Diagnostic details</summary><div id="workspaceRecoveryDeviceIds" class="tiny mono"></div></details>
-      </div>
-
-      <div class="adminToolbar"><div id="workspaceRecoveryMessage" class="tiny" role="status"></div><button id="workspaceRecoveryCreateWorkspaceBtn" type="button" class="primary">Create Line</button><button id="workspaceRecoveryRefreshBtn" type="button" class="secondary">Refresh workspaces</button></div>
-
-      <div id="workspaceRecoveryList" class="workspaceRecoveryList" aria-live="polite"></div>
-
-      <div id="workspaceRecoveryDetail" class="workspaceRecoveryDetail" hidden>
-        <div class="layerTitle" id="workspaceRecoveryDetailName"></div>
-        <div id="workspaceRecoveryDetailMeta" class="tiny muted"></div>
-        <div class="buttonRow mt10">
-          <button id="workspaceRecoveryAddDeviceBtn" type="button" class="primary actionRail">Add This Device</button>
-          <button id="workspaceRecoveryRenameWorkspaceBtn" type="button" class="secondary">Rename Line</button>
-          <button id="workspaceRecoveryDetailRefreshBtn" type="button" class="secondary">Refresh details</button>
+      <section id="workspaceRecoveryDeviceCard" class="workspaceRecoveryDeviceCard" aria-labelledby="workspaceRecoveryDeviceHeading">
+        <div class="workspaceRecoveryEyebrow" id="workspaceRecoveryDeviceHeading">This device</div>
+        <div class="workspaceRecoveryDeviceSummary">
+          <div><strong id="workspaceRecoveryDeviceLabel">This device</strong><div id="workspaceRecoveryDeviceStatus" class="tiny" role="status">Checking RT Sync status…</div></div>
+          <details class="workspaceRecoveryDiagnostic"><summary>Diagnostic details</summary><div id="workspaceRecoveryDeviceIds" class="tiny mono"></div></details>
         </div>
-        <div class="buttonRow mt10">
-          <button id="workspaceRecoveryTransferOwnershipBtn" type="button" class="secondary" disabled>Reassign Ownership to This Device</button>
-          <button id="workspaceRecoveryDeleteWorkspaceBtn" type="button" class="danger">Delete Workspace</button>
-        </div>
-        <div class="workspaceRecoveryMerge mt10">
-          <div><strong>Merge duplicate workspace</strong><div class="tiny muted">Copy this workspace's recipes and weight profiles into the selected target, then delete this workspace. The target keeps its active job and linked devices.</div></div>
-          <label class="tiny" for="workspaceRecoveryMergeTarget">Merge into<select id="workspaceRecoveryMergeTarget"></select></label>
-          <button id="workspaceRecoveryMergeBtn" type="button" class="danger">Merge &amp; Delete This Workspace</button>
-        </div>
-        <details class="workspaceRecoveryDiagnostic mt10"><summary>Linked devices</summary><div class="tiny muted mt10">Disconnect immediately revokes this browser identity's RT Sync access. It takes effect when the device next reads or writes.</div><div id="workspaceRecoveryMembersList" class="workspaceRecoveryMembersList"></div></details>
+      </section>
+
+      <div id="workspaceRecoveryMessage" class="tiny workspaceRecoveryMessage" role="status"></div>
+
+      <div class="workspaceRecoveryWorkspaceGrid">
+        <section class="workspaceRecoveryMaster" aria-labelledby="workspaceRecoveryListHeading">
+          <div class="workspaceRecoveryPaneHead">
+            <div><div class="workspaceRecoveryEyebrow" id="workspaceRecoveryListHeading">Workspaces</div><div id="workspaceRecoveryListMeta" class="tiny muted">Loading workspaces…</div></div>
+            <div class="workspaceRecoveryPaneActions">
+              <button id="workspaceRecoveryCreateWorkspaceBtn" type="button" class="primary workspaceRecoveryCompactAction">Create Line</button>
+              <button id="workspaceRecoveryRefreshBtn" type="button" class="secondary workspaceRecoveryIconAction" aria-label="Refresh workspace list" title="Refresh workspace list"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 8V4m0 0h-4m4 0-3 3a7 7 0 1 0 1.4 6.8"/></svg></button>
+            </div>
+          </div>
+          <div id="workspaceRecoveryList" class="workspaceRecoveryList" aria-live="polite"></div>
+        </section>
+
+        <section id="workspaceRecoveryDetail" class="workspaceRecoveryDetail" aria-labelledby="workspaceRecoveryDetailName" hidden>
+          <div class="workspaceRecoveryDetailHead">
+            <div><div class="workspaceRecoveryEyebrow">Selected workspace</div><div class="layerTitle" id="workspaceRecoveryDetailName"></div><div id="workspaceRecoveryDetailMeta" class="tiny muted"></div></div>
+            <button id="workspaceRecoveryDetailRefreshBtn" type="button" class="secondary workspaceRecoveryIconAction" aria-label="Refresh selected workspace details" title="Refresh details"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 8V4m0 0h-4m4 0-3 3a7 7 0 1 0 1.4 6.8"/></svg></button>
+          </div>
+          <div class="workspaceRecoveryCommonActions">
+            <button id="workspaceRecoveryAddDeviceBtn" type="button" class="primary actionRail">Add This Device</button>
+            <button id="workspaceRecoveryRenameWorkspaceBtn" type="button" class="secondary">Rename Line</button>
+          </div>
+
+          <section class="workspaceRecoveryMembers" aria-labelledby="workspaceRecoveryMembersHeading">
+            <div class="workspaceRecoverySectionHead"><div><div class="workspaceRecoveryEyebrow" id="workspaceRecoveryMembersHeading">Linked devices</div><div class="tiny muted">Disconnect revokes this browser identity&rsquo;s RT Sync access on its next read or write.</div></div><span id="workspaceRecoveryMemberCount" class="workspaceRecoveryCount" aria-label="Linked devices">0</span></div>
+            <div id="workspaceRecoveryMembersList" class="workspaceRecoveryMembersList"></div>
+          </section>
+
+          <section class="workspaceRecoveryMaintenance" aria-labelledby="workspaceRecoveryMaintenanceHeading">
+            <div class="workspaceRecoveryEyebrow" id="workspaceRecoveryMaintenanceHeading">Workspace maintenance</div>
+            <details class="workspaceRecoveryMaintenanceItem">
+              <summary><span>Transfer ownership</span><small>Make this device the owner</small></summary>
+              <div class="workspaceRecoveryMaintenanceBody"><p class="tiny muted">Use only when the current owner&rsquo;s device is genuinely gone. The previous owner is demoted, not disconnected.</p><button id="workspaceRecoveryTransferOwnershipBtn" type="button" class="secondary" disabled>Reassign Ownership to This Device</button></div>
+            </details>
+            <details class="workspaceRecoveryMaintenanceItem">
+              <summary><span>Merge duplicate workspace</span><small>Copy configurations, then delete this workspace</small></summary>
+              <div class="workspaceRecoveryMaintenanceBody workspaceRecoveryMerge"><p class="tiny muted">The target keeps its active job and linked devices. Existing same-name configurations are preserved.</p><label class="tiny" for="workspaceRecoveryMergeTarget">Merge into<select id="workspaceRecoveryMergeTarget"></select></label><button id="workspaceRecoveryMergeBtn" type="button" class="danger">Merge &amp; Delete This Workspace</button></div>
+            </details>
+            <details class="workspaceRecoveryMaintenanceItem workspaceRecoveryMaintenanceDanger">
+              <summary><span>Delete workspace</span><small>Permanently remove its job, configurations, and members</small></summary>
+              <div class="workspaceRecoveryMaintenanceBody"><p class="tiny muted">This cannot be undone.</p><button id="workspaceRecoveryDeleteWorkspaceBtn" type="button" class="danger">Delete Workspace</button></div>
+            </details>
+          </section>
+        </section>
       </div>
     </div>
   </details>

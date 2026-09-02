@@ -107,13 +107,27 @@ test("sign-out closes Workspace Management and admin/RT Sync sessions stay separ
 test("Workspace Management is a main-panel workspacePanel, not an oversized modal", () => {
   assert.match(index, /id="workspaceManagementButton"[^>]*data-workspace-target="workspaceManagementBlock"/);
   assert.match(index, /<details class="block card workspacePanel adminResinPanel" id="workspaceManagementBlock">/);
-  assert.match(index, /Create or rename RT Sync lines/);
+  assert.match(index, /Manage RT Sync lines, devices, and recovery actions/);
 });
 
-test("Workspace recovery uses the shared action treatments for refresh and adding this device", () => {
-  assert.match(index, /id="workspaceRecoveryRefreshBtn" type="button" class="secondary">Refresh workspaces<\/button>/);
+test("Workspace recovery uses established primary, secondary, icon, and danger action treatments", () => {
+  assert.match(index, /id="workspaceRecoveryRefreshBtn" type="button" class="secondary workspaceRecoveryIconAction"/);
   assert.match(index, /id="workspaceRecoveryAddDeviceBtn" type="button" class="primary actionRail">Add This Device<\/button>/);
   assert.match(styles, /button\.primary\.actionRail\{[\s\S]*?border-radius:2px;\s*\n\}/);
+  assert.match(ui, /removeBtn\.className = "danger"/);
+  assert.match(index, /id="workspaceRecoveryDeleteWorkspaceBtn" type="button" class="danger">Delete Workspace<\/button>/);
+});
+
+test("Workspace Management uses a persistent master list and adjacent selected-workspace detail pane", () => {
+  const panel = index.slice(index.indexOf('id="workspaceManagementBlock"'), index.indexOf('id="databaseHealthBlock"'));
+  assert.match(panel, /id="workspaceRecoveryDeviceCard"[\s\S]*?workspaceRecoveryWorkspaceGrid/);
+  assert.match(panel, /class="workspaceRecoveryMaster"[\s\S]*?id="workspaceRecoveryList"/);
+  assert.match(panel, /id="workspaceRecoveryDetail" class="workspaceRecoveryDetail"/);
+  assert.match(panel, /id="workspaceRecoveryMembersHeading">Linked devices/);
+  assert.match(panel, /id="workspaceRecoveryMaintenanceHeading">Workspace maintenance/);
+  assert.match(styles, /#workspaceManagementBlock \.workspaceRecoveryWorkspaceGrid\{grid-template-columns:minmax\(280px,320px\) minmax\(0,1fr\);/);
+  assert.match(styles, /#workspaceManagementBlock \.workspaceRecoveryList\{max-height:none;min-height:0;overflow:auto;/);
+  assert.match(styles, /@media \(max-width:700px\)\{/);
 });
 
 test("desktop Workspace Management reserves two lines inside every workspace row", () => {
@@ -149,11 +163,12 @@ test("diagnostic details are opt-in and member identifiers are abbreviated in th
   assert.match(ui, /function shortId\(id\)/);
   assert.match(ui, /shortId\(descriptor\.userId\)/);
   assert.match(ui, /shortId\(member\.member_user_id\)/);
+  assert.match(ui, /workspaceRecoveryMemberInfo/);
 });
 
 test("incident controls can disconnect every linked device and delete a workspace only through admin RPCs", () => {
   assert.match(index, /id="workspaceRecoveryDeleteWorkspaceBtn"[^>]*class="danger"/);
-  assert.match(index, /<summary>Linked devices<\/summary>/);
+  assert.match(index, /id="workspaceRecoveryMembersHeading">Linked devices/);
   assert.match(ui, /removeBtn\.textContent = "Disconnect"/);
   assert.doesNotMatch(ui, /member\.member_role !== "owner"/);
   assert.match(ui, /function deleteWorkspace\(\)/);
