@@ -112,11 +112,14 @@
   --desktop-canvas-bg: #f8fafb;
   --panel: #ffffff;
   --panel2: #faf9f8;
-  --text: #29282b;
+  /* Keep the strongest body copy charcoal, not black, on the pale slate
+     surfaces. This is also the source ink for Industrial Slate's desktop
+     rail and Tools index. */
+  --text: #41464b;
   --subtitle: #5d7185;
   --title: #4f6d8b;
   --muted: #666269;
-  --fg: #4a4948;
+  --fg: #4a4f54;
   --yellow: #607d9b;
   --orange: #718ba5;
   --border: rgba(74,73,72,.17);
@@ -187,7 +190,7 @@
    workflow tiles' titles (.workspaceNavButton span, color:var(--text) -
    a later, equal-specificity rule than the button's own color:inherit,
    so it's what actually wins) both read as near-black against this
-   theme's pale slate background - var(--text) here is #29282b, far
+   theme's pale slate background - var(--text) is charcoal gray, but still
    darker than the blue everything else on this screen (the step-number
    circles) uses. Retuned to the same slate blue. :not(.active) leaves
    the selected tile's own color:var(--title) alone rather than tying
@@ -449,71 +452,67 @@
 /* ----------------------------------------------------------------------- * Gruvbox Light * ----------------------------------------------------------------------- */
 :where(html, body)[data-theme="gruvbox-light"]{
   color-scheme: light;
-  --bg: #ece7d8;
-  --desktop-canvas-bg: #ece7d8;
-
-/* bg0 */
-  --panel: rgba(249,245,233,.94);
-
-/* bg1 */
-  --panel2: rgba(241,235,218,.90);
-
-/* bg2 */
-  --text: #383329;
-  --title: #383329;
-  --subtitle: #a44f32;
-  --muted: #756a52;
-  --fg: #383329;
-  --yellow: #716243;
-  --orange: #a44f32;
-  --border: rgba(212,201,177,.92);
-  --border2: rgba(190,179,154,.74);
-  --field-bg: rgba(249,245,233,.78);
-  --panelOpen: rgba(249,245,233,.98);
-  --chev: rgba(56,51,41,.55);
-  --warn: #a44f32;
+  /* Traditional Gruvbox Light: its original light0/light1 paper surfaces
+     and muted (not bright) terminal accents. */
+  --bg: #fbf1c7;
+  --desktop-canvas-bg: #fbf1c7;
+  --panel: rgba(251,241,199,.96);
+  --panel2: rgba(235,219,178,.90);
+  --text: #3c3836;
+  --title: #3c3836;
+  --subtitle: #d65d0e;
+  --muted: #7c6f64;
+  --fg: #3c3836;
+  --yellow: #b57614;
+  --orange: #d65d0e;
+  --border: rgba(213,196,161,.92);
+  --border2: rgba(189,174,147,.82);
+  --field-bg: rgba(249,245,215,.84);
+  --panelOpen: rgba(251,241,199,.99);
+  --chev: rgba(60,56,54,.55);
+  --warn: #d65d0e;
   --bad: #cc241d;
-  --ok: #417849;
+  --ok: #79740e;
   --shadow2: 0 6px 18px rgba(0,0,0,.14);
-  --focus-border: rgba(113,98,67,.88);
-  --focus-ring: rgba(113,98,67,.18);
-  --row-bg: rgba(56,51,41,.04);
-  --row-border: rgba(212,201,177,.85);
-  --row-bg-2: rgba(56,51,41,.03);
-  --row-border-2: rgba(212,201,177,.92);
-  --readonly-bg: rgba(56,51,41,.06);
-  --readonly-border: rgba(117,106,82,.28);
-  --f-var1: #417849;
-  --f-var2: #716243;
-  --f-var3: #a44f32;
-  --f-const: #8b8068;
+  --focus-border: rgba(69,88,129,.88);
+  --focus-ring: rgba(69,88,129,.16);
+  --row-bg: rgba(60,56,54,.045);
+  --row-border: rgba(213,196,161,.86);
+  --row-bg-2: rgba(60,56,54,.035);
+  --row-border-2: rgba(213,196,161,.94);
+  --readonly-bg: rgba(60,56,54,.06);
+  --readonly-border: rgba(124,111,100,.34);
+  --f-var1: #79740e;
+  --f-var2: #b57614;
+  --f-var3: #b16286;
+  --f-const: #928374;
   --btn-text: var(--text);
-  --btn-border: rgba(117,106,82,.30);
-  --btn-primary-a: rgba(113,98,67,.22);
-  --btn-primary-b: rgba(113,98,67,.10);
-  --btn-secondary-bg: rgba(164,79,50,.11);
-  --btn-secondary-border: rgba(164,79,50,.34);
+  --btn-border: rgba(124,111,100,.36);
+  --btn-primary-a: rgba(69,88,129,.18);
+  --btn-primary-b: rgba(69,88,129,.08);
+  --btn-secondary-bg: rgba(121,116,14,.13);
+  --btn-secondary-border: rgba(121,116,14,.34);
   --btn-danger-bg: rgba(204,36,29,.14);
-  --btn-danger-border: rgba(204,36,29,.28);
-  --bg-glow-a: rgba(164,79,50,.08);
-  --bg-glow-b: rgba(65,120,73,.06);
-  --card-glow-a: rgba(164,79,50,.08);
-  --card-glow-b: rgba(65,120,73,.06);
-  --toggle-on-bg: rgba(113,98,67,.16);
-  --toggle-on-border: rgba(113,98,67,.38);
-  --footer-bg: rgba(249,245,233,.94);
-  --footer-border: rgba(117,106,82,.28);
+  --btn-danger-border: rgba(204,36,29,.32);
+  --bg-glow-a: rgba(214,93,14,.07);
+  --bg-glow-b: rgba(69,88,129,.055);
+  --card-glow-a: rgba(214,93,14,.07);
+  --card-glow-b: rgba(121,116,14,.055);
+  --toggle-on-bg: rgba(69,88,129,.15);
+  --toggle-on-border: rgba(69,88,129,.38);
+  --footer-bg: rgba(251,241,199,.96);
+  --footer-border: rgba(124,111,100,.32);
 
 }
 
 :where(html, body)[data-theme="gruvbox-light"] #splitsBlock .splitCellHopperName,
-:where(html, body)[data-theme="gruvbox-light"] #splitsBlock .splitCellHopperName.smart{ color: #a44f32; }
+:where(html, body)[data-theme="gruvbox-light"] #splitsBlock .splitCellHopperName.smart{ color: #d65d0e; }
 
 @media (max-width:700px){
-  :where(html, body)[data-theme="gruvbox-light"] #splitsBlock .splitsMatrix.compactMobileRecipe td.splitMatrixCell{border-color:rgba(117,106,82,.38)}
-  :where(html, body)[data-theme="gruvbox-light"] #splitsBlock .splitsMatrix.compactMobileRecipe .splitCellHopperName:not(.smart){color:#8f4d35}
-  :where(html, body)[data-theme="gruvbox-light"] #splitsBlock .splitsMatrix.compactMobileRecipe .splitTrackButton:not(.active){color:#756a52;opacity:.82}
-  :where(html, body)[data-theme="gruvbox-light"] #splitsBlock .splitsMatrix.compactMobileRecipe .splitCopyBtn{color:#8f4d35}
+  :where(html, body)[data-theme="gruvbox-light"] #splitsBlock .splitsMatrix.compactMobileRecipe td.splitMatrixCell{border-color:rgba(124,111,100,.42)}
+  :where(html, body)[data-theme="gruvbox-light"] #splitsBlock .splitsMatrix.compactMobileRecipe .splitCellHopperName:not(.smart){color:#d65d0e}
+  :where(html, body)[data-theme="gruvbox-light"] #splitsBlock .splitsMatrix.compactMobileRecipe .splitTrackButton:not(.active){color:#7c6f64;opacity:.82}
+  :where(html, body)[data-theme="gruvbox-light"] #splitsBlock .splitsMatrix.compactMobileRecipe .splitCopyBtn{color:#d65d0e}
 }
 
 /* ----------------------------------------------------------------------- * Nord * ----------------------------------------------------------------------- */
@@ -1054,56 +1053,118 @@
 
 }
 
-/* ----------------------------------------------------------------------- * Everforest Light * ----------------------------------------------------------------------- */
-:where(html, body)[data-theme="everforest-light"]{
+/* ----------------------------------------------------------------------- * Newsprint * ----------------------------------------------------------------------- */
+:where(html, body)[data-theme="newsprint"]{
   color-scheme: light;
-  --bg: #fdf6e3;
-  --panel: rgba(255,255,255,.96);
-  --panel2: rgba(239,235,212,.90);
-  --text: #5c6a72;
-  --subtitle: #35a77c;
-  --title: #8da101;
-  --muted: #a6b0a0;
-  --border: rgba(92,106,114,.28);
-  --border2: rgba(141,161,1,.28);
-  --field-bg: rgba(239,235,212,.70);
-  --panelOpen: rgba(255,255,255,.96);
-  --chev: rgba(92,106,114,.55);
-  --fg: #5c6a72;
-  --yellow: #dfa000;
-  --orange: #f57d26;
-  --warn: #dfa000;
-  --bad: #f85552;
-  --ok: #8da101;
+  /* The paper stays warm, while every hue is held back 25% from its
+     source saturation for a quieter, ink-on-stock palette. */
+  --bg: #f2efe8;
+  --desktop-canvas-bg: #f2efe8;
+  --panel: rgba(250,250,247,.96);
+  --panel2: rgba(230,226,216,.90);
+  --text: #292826;
+  --title: #1d1d1b;
+  --subtitle: #743735;
+  /* Desktop rail selection accents: quiet printing inks rather than the
+     denser brick/slate/green used by the surrounding semantic UI. */
+  --newsprint-rail-recipe: #805055;
+  --newsprint-rail-timeline: #64747c;
+  --newsprint-rail-totals: #657254;
+  --muted: #6c6963;
+  --border: rgba(133,128,120,.40);
+  --border2: rgba(65,64,60,.34);
+  --field-bg: rgba(245,242,236,.82);
+  --panelOpen: rgba(250,250,247,.99);
+  --chev: rgba(41,40,38,.54);
+  --fg: #292826;
+  --yellow: #936831;
+  --orange: #8e4a3e;
+  --warn: #936831;
+  --bad: #8f3c39;
+  --ok: #526655;
   --shadow2: 0 6px 18px rgba(0,0,0,.12);
-  --row-bg: rgba(92,106,114,.045);
-  --row-border: rgba(141,161,1,.20);
-  --row-bg-2: rgba(92,106,114,.03);
-  --row-border-2: rgba(92,106,114,.20);
-  --readonly-bg: rgba(92,106,114,.05);
-  --readonly-border: rgba(92,106,114,.22);
-  --focus-border: rgba(53,167,124,.80);
-  --focus-ring: rgba(53,167,124,.16);
-  --f-var1: #8da101;
-  --f-var2: #dfa000;
-  --f-var3: #35a77c;
-  --f-const: #a6b0a0;
+  --row-bg: rgba(41,40,38,.04);
+  --row-border: rgba(133,128,120,.26);
+  --row-bg-2: rgba(41,40,38,.03);
+  --row-border-2: rgba(133,128,120,.34);
+  --readonly-bg: rgba(41,40,38,.055);
+  --readonly-border: rgba(108,105,99,.30);
+  --focus-border: rgba(55,74,90,.86);
+  --focus-ring: rgba(55,74,90,.16);
+  --f-var1: #526655;
+  --f-var2: #936831;
+  --f-var3: #743735;
+  --f-const: #6c6963;
   --btn-text: var(--text);
-  --btn-border: rgba(141,161,1,.26);
-  --btn-primary-a: rgba(141,161,1,.16);
-  --btn-primary-b: rgba(141,161,1,.07);
-  --btn-secondary-bg: rgba(53,167,124,.12);
-  --btn-secondary-border: rgba(53,167,124,.26);
-  --btn-danger-bg: rgba(248,85,82,.12);
-  --btn-danger-border: rgba(248,85,82,.24);
-  --bg-glow-a: rgba(141,161,1,.08);
-  --bg-glow-b: rgba(53,167,124,.06);
-  --card-glow-a: rgba(141,161,1,.08);
-  --card-glow-b: rgba(53,167,124,.06);
-  --toggle-on-bg: rgba(141,161,1,.16);
-  --toggle-on-border: rgba(141,161,1,.36);
-  --footer-bg: rgba(253,246,227,.92);
-  --footer-border: rgba(92,106,114,.24);
+  --btn-border: rgba(108,105,99,.34);
+  --btn-primary-a: rgba(55,74,90,.18);
+  --btn-primary-b: rgba(55,74,90,.08);
+  --btn-secondary-bg: rgba(82,102,85,.13);
+  --btn-secondary-border: rgba(82,102,85,.30);
+  --btn-danger-bg: rgba(143,60,57,.13);
+  --btn-danger-border: rgba(143,60,57,.28);
+  --bg-glow-a: rgba(116,55,53,.06);
+  --bg-glow-b: rgba(55,74,90,.05);
+  --card-glow-a: rgba(116,55,53,.07);
+  --card-glow-b: rgba(82,102,85,.05);
+  --toggle-on-bg: rgba(55,74,90,.15);
+  --toggle-on-border: rgba(55,74,90,.36);
+  --footer-bg: rgba(250,250,247,.96);
+  --footer-border: rgba(108,105,99,.30);
+
+}
+
+/* ----------------------------------------------------------------------- * Ayu Light * ----------------------------------------------------------------------- */
+:where(html, body)[data-theme="ayu-light"]{
+  color-scheme: light;
+  --bg: #fafafa;
+  --desktop-canvas-bg: #fafafa;
+  --panel: rgba(250,250,250,.96);
+  --panel2: rgba(236,236,237,.92);
+  --text: #575f66;
+  --title: #3b9ee5;
+  --subtitle: #f98d3f;
+  --muted: #8b8e92;
+  --border: rgba(207,209,210,.92);
+  --border2: rgba(139,142,146,.42);
+  --field-bg: rgba(236,236,237,.80);
+  --panelOpen: rgba(250,250,250,.99);
+  --chev: rgba(87,95,102,.52);
+  --fg: #575f66;
+  --yellow: #f2ad48;
+  --orange: #fa8d3e;
+  --warn: #f2ad48;
+  --bad: #f07178;
+  --ok: #86b300;
+  --shadow2: 0 6px 18px rgba(73,81,87,.12);
+  --row-bg: rgba(87,95,102,.04);
+  --row-border: rgba(207,209,210,.84);
+  --row-bg-2: rgba(59,158,229,.04);
+  --row-border-2: rgba(207,209,210,.92);
+  --readonly-bg: rgba(87,95,102,.055);
+  --readonly-border: rgba(139,142,146,.28);
+  --focus-border: rgba(59,158,229,.84);
+  --focus-ring: rgba(59,158,229,.16);
+  --f-var1: #86b300;
+  --f-var2: #f2ad48;
+  --f-var3: #a37acc;
+  --f-const: #8b8e92;
+  --btn-text: var(--text);
+  --btn-border: rgba(139,142,146,.34);
+  --btn-primary-a: rgba(59,158,229,.18);
+  --btn-primary-b: rgba(59,158,229,.08);
+  --btn-secondary-bg: rgba(134,179,0,.13);
+  --btn-secondary-border: rgba(134,179,0,.30);
+  --btn-danger-bg: rgba(240,113,120,.13);
+  --btn-danger-border: rgba(240,113,120,.28);
+  --bg-glow-a: rgba(59,158,229,.06);
+  --bg-glow-b: rgba(249,141,63,.05);
+  --card-glow-a: rgba(59,158,229,.07);
+  --card-glow-b: rgba(134,179,0,.05);
+  --toggle-on-bg: rgba(59,158,229,.15);
+  --toggle-on-border: rgba(59,158,229,.36);
+  --footer-bg: rgba(250,250,250,.96);
+  --footer-border: rgba(139,142,146,.30);
 
 }
 

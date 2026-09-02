@@ -1700,6 +1700,11 @@
         ["vaporwave", "vaporwave"],
         ["gruvbox-dark", "gruvbox-dark"],
         ["gruvbox-light", "gruvbox-light"],
+        ["newsprint", "newsprint"],
+        // Kanagawa Lotus was replaced before release; retain its key so an
+        // early local selection lands on the intended Newsprint successor.
+        ["kanagawa-lotus", "newsprint"],
+        ["ayu-light", "ayu-light"],
         ["nord", "nord"],
         ["rose-pine", "rose-pine"],
         ["rose-pine-dark", "rose-pine"],
@@ -1708,8 +1713,11 @@
         ["rose-pine-light", "rose-pine-dawn"],
         ["everforest", "everforest"],
         ["evergreen", "everforest"],
-        ["everforest-light", "everforest-light"],
-        ["evergreen-light", "everforest-light"]
+        // Evergreen Light has been retired. Retain the aliases so a saved
+        // selection migrates naturally to Evergreen instead of falling back
+        // to an unrelated theme.
+        ["everforest-light", "everforest"],
+        ["evergreen-light", "everforest"]
       ]);
       // Unknown themes have a deterministic Industrial Slate fallback. Legacy
       // aliases remain accepted so stored/imported preferences survive theme

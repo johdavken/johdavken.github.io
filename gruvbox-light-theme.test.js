@@ -14,14 +14,14 @@ test("Gruvbox Light is a persistent, selectable theme", () => {
   assert.match(app, /\["gruvbox-light", "gruvbox-light"\]/);
 });
 
-test("Gruvbox Light uses warm paper surfaces and dark, readable ink app-wide", () => {
+test("Gruvbox Light follows the traditional light0 paper palette and muted accents", () => {
   const palette = theme.slice(theme.indexOf('[data-theme="gruvbox-light"]'), theme.indexOf('/* ----------------------------------------------------------------------- * Nord'));
-  assert.match(palette, /--bg: #ece7d8;/);
-  assert.match(palette, /--desktop-canvas-bg: #ece7d8;/);
-  assert.match(palette, /--panel: rgba\(249,245,233,.94\);/);
-  assert.match(palette, /--text: #383329;/);
-  assert.match(palette, /--title: #383329;/);
-  assert.match(palette, /--focus-border: rgba\(113,98,67,.88\);/);
+  assert.match(palette, /--bg: #fbf1c7;/);
+  assert.match(palette, /--desktop-canvas-bg: #fbf1c7;/);
+  assert.match(palette, /--panel: rgba\(251,241,199,.96\);/);
+  assert.match(palette, /--text: #3c3836;/);
+  assert.match(palette, /--title: #3c3836;/);
+  assert.match(palette, /--focus-border: rgba\(69,88,129,.88\);/);
   assert.doesNotMatch(palette, /#splitsBlock[\s\S]*?\)\{ color: #fbf1c7; \}/);
 });
 

@@ -62,7 +62,7 @@ test("Timeline uses the compact Schedule Ribbon: a shared spine, status nodes, a
   assert.match(styles, /\.resultRow\.late::before\{ background:var\(--warn\); \}/);
 
   assert.match(styles, /\.resultHopper\{display:inline-flex;flex:0 0 auto;align-items:center;min-height:22px;/);
-  assert.match(styles, /body\[data-theme="gruvbox-light"\] \.resultHopper\{color:#076678\}/);
+  assert.match(styles, /body\[data-theme="gruvbox-light"\] \.resultHopper\{color:#458588\}/);
   assert.match(styles, /body:is\(\[data-theme="industrial-slate-dark"\],\[data-theme="gruvbox-dark"\]\) \.resultHopper\{color:#d65d0e\}/);
 });
 

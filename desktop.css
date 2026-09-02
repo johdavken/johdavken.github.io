@@ -563,16 +563,16 @@
     box-shadow:none;
   }
   body[data-theme="gruvbox-light"] .workspaceNav{
-    --gruv-rail-edge:#d4c9b1;
-    --gruv-rail-paper:#383329;
+    --gruv-rail-edge:#d5c4a1;
+    --gruv-rail-paper:#3c3836;
     --gruv-rail-line:#d65d0e;
-    --gruv-rail-recipe:#716243;
-    --gruv-rail-timeline:#076678;
-    --gruv-rail-totals:#417849;
-    --gruv-rail-sync:#417849;
-    --gruv-rail-tools:#8f3f71;
-    --gruv-rail-help:#076678;
-    background:#f1ebda;
+    --gruv-rail-recipe:#b57614;
+    --gruv-rail-timeline:#458588;
+    --gruv-rail-totals:#79740e;
+    --gruv-rail-sync:#689d6a;
+    --gruv-rail-tools:#b16286;
+    --gruv-rail-help:#458588;
+    background:#fbf1c7;
     box-shadow:none;
   }
   body[data-theme="industrial-slate-dark"] .workspaceNav{
@@ -589,7 +589,7 @@
   }
   body[data-theme="industrial-slate"] .workspaceNav{
     --gruv-rail-edge:#9dafbf;
-    --gruv-rail-paper:#29282b;
+    --gruv-rail-paper:var(--text);
     --gruv-rail-line:var(--yellow);
     --gruv-rail-recipe:var(--yellow);
     --gruv-rail-timeline:var(--yellow);
@@ -714,7 +714,7 @@
     --gruv-rail-recipe:var(--warn);
   }
   body[data-theme="industrial-slate"] .toolsIndex{
-    --gruv-rail-paper:#29282b;
+    --gruv-rail-paper:var(--text);
     --gruv-rail-recipe:var(--yellow);
   }
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .toolsIndexButton{
@@ -906,6 +906,13 @@
   body[data-desktop-rail-style="underline"] .workspaceNav .workspaceNavButton[data-step]{border-bottom-color:color-mix(in srgb,var(--tile-accent) 16%,var(--border));border-radius:0}
   body[data-desktop-rail-style="underline"] .workspaceNav .workspaceNavButton[data-step].active{border:0;border-bottom:3px solid var(--tile-accent);border-radius:0;background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--tile-accent) 8%,transparent));color:var(--tile-accent)}
   body[data-desktop-rail-style="underline"] .workspaceNav .workspaceNavButton[data-step].active .workspaceTileIcon{color:var(--tile-accent)}
+
+  /* Newsprint keeps its document-ink resting rows, then marks the open
+     workflow panel in quieter printing inks: dusty oxblood for Recipe,
+     blue-gray for Timeline, and forest/olive for Resin Totals. */
+  body[data-theme="newsprint"] .workspaceNav .workspaceNavButton[data-workspace-target="splitsBlock"].active{--tile-accent:var(--newsprint-rail-recipe)}
+  body[data-theme="newsprint"] .workspaceNav .workspaceNavButton[data-workspace-target="resultsBlock"].active{--tile-accent:var(--newsprint-rail-timeline)}
+  body[data-theme="newsprint"] .workspaceNav .workspaceNavButton[data-workspace-target="productionSummaryBlock"].active{--tile-accent:var(--newsprint-rail-totals)}
 
   /* .recipeHeaderRow's own base rule (styles.css) only forces nowrap +
      shrinkable tabs inside "(max-width:900px), (min-width:901px) and

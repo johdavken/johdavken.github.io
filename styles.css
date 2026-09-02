@@ -6251,7 +6251,7 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
 .resultRibbonMain{display:grid;gap:0;min-width:0}
 .resultIdentity{display:flex;align-items:baseline;gap:5px;min-width:0;flex-wrap:nowrap}
 .resultHopper{display:inline-flex;flex:0 0 auto;align-items:center;min-height:22px;padding:1px 5px;border:1px solid color-mix(in srgb,currentColor 34%,transparent);border-radius:5px;background:color-mix(in srgb,currentColor 9%,transparent);color:var(--focus-border);font-size:16px;font-weight:900;line-height:1}
-body[data-theme="gruvbox-light"] .resultHopper{color:#076678}
+body[data-theme="gruvbox-light"] .resultHopper{color:#458588}
 body:is([data-theme="industrial-slate-dark"],[data-theme="gruvbox-dark"]) .resultHopper{color:#d65d0e}
 .resultResin{min-width:0;overflow:hidden;font-size:16px;text-overflow:ellipsis;white-space:nowrap}
 /* Enhanced tracking: the incoming resin from the planned Next Recipe, drawn
@@ -8670,11 +8670,11 @@ body[data-theme="gruvbox-dark"]{
 body[data-theme="gruvbox-light"]{
   --gruv-red:#cc241d;
   --gruv-orange:#d65d0e;
-  --gruv-yellow:#716243;
-  --gruv-green:#417849;
-  --gruv-aqua:#427b58;
-  --gruv-blue:#076678;
-  --gruv-purple:#8f3f71;
+  --gruv-yellow:#b57614;
+  --gruv-green:#79740e;
+  --gruv-aqua:#689d6a;
+  --gruv-blue:#458588;
+  --gruv-purple:#b16286;
   --recipe-pill-accent: var(--gruv-green);
 }
 
@@ -9390,12 +9390,12 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
     --gruv-mobile-shadow:rgba(0,0,0,.38);
   }
   body[data-theme="gruvbox-light"]{
-    --gruv-mobile-bg:#ece7d8;
-    --gruv-mobile-surface:#f9f5e9;
-    --gruv-mobile-surface-2:#f1ebda;
-    --gruv-mobile-ink:#383329;
-    --gruv-mobile-edge:#d4c9b1;
-    --gruv-mobile-shadow:rgba(56,51,41,.14);
+    --gruv-mobile-bg:#fbf1c7;
+    --gruv-mobile-surface:#fbf1c7;
+    --gruv-mobile-surface-2:#ebdbb2;
+    --gruv-mobile-ink:#3c3836;
+    --gruv-mobile-edge:#d5c4a1;
+    --gruv-mobile-shadow:rgba(60,56,54,.14);
   }
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]):not([data-mobile-background-style]){
     background:

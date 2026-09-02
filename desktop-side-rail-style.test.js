@@ -33,3 +33,16 @@ test("retired rail styles safely migrate to Solid selected strip", () => {
   assert.doesNotMatch(html, /value="(?:inboard|spine|tab|pointer)"/);
   assert.doesNotMatch(desktop, /data-desktop-rail-style="(?:inboard|spine|tab|pointer)"/);
 });
+
+test("Newsprint gives selected desktop workflow rows its muted editorial inks", () => {
+  for (const [target, token] of [
+    ["splitsBlock", "--newsprint-rail-recipe"],
+    ["resultsBlock", "--newsprint-rail-timeline"],
+    ["productionSummaryBlock", "--newsprint-rail-totals"]
+  ]) {
+    assert.match(
+      desktop,
+      new RegExp(`body\\[data-theme="newsprint"\\] \\.workspaceNav \\.workspaceNavButton\\[data-workspace-target="${target}"\\]\\.active\\{--tile-accent:var\\(${token}\\)\\}`)
+    );
+  }
+});

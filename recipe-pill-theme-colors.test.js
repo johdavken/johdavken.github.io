@@ -19,17 +19,17 @@ test("Industrial Slate mutes only the pill's danger fill, not the shared --bad t
   assert.match(block, /--recipe-pill-danger: #a05355;/);
 });
 
-test("Gruvbox (dark and light) point the pill's accent fill at the theme's own green instead of the yellow --focus-border resolves to, so it doesn't read as the shared --warn/caution color", () => {
+test("Gruvbox (dark and light) point the pill's accent fill at the theme's own green instead of its shared focus color", () => {
   assert.match(styles, /body\[data-theme="gruvbox-dark"\]\{[\s\S]*?--recipe-pill-accent: var\(--gruv-green\);\s*\n\}/);
   assert.match(styles, /body\[data-theme="gruvbox-light"\]\{[\s\S]*?--recipe-pill-accent: var\(--gruv-green\);\s*\n\}/);
-  // Confirms the yellow/green mismatch this fixes actually exists: gruvbox's
-  // --focus-border (theme.css) resolves to the exact same rgb as --gruv-yellow.
+  // The two variants retain distinct traditional focus cues, while the pill
+  // deliberately stays green so it doesn't read as a caution action.
   assert.match(theme, /:where\(html, body\)\[data-theme="gruvbox-dark"\]\{[\s\S]*?--focus-border: rgba\(201,180,107,\.88\);/);
-  assert.match(theme, /:where\(html, body\)\[data-theme="gruvbox-light"\]\{[\s\S]*?--focus-border: rgba\(113,98,67,\.88\);/);
+  assert.match(theme, /:where\(html, body\)\[data-theme="gruvbox-light"\]\{[\s\S]*?--focus-border: rgba\(69,88,129,\.88\);/);
 });
 
-test("themes the user confirmed are already fine (Dark/industrial-slate-dark, Nord, Evergreen/everforest, Evergreen Light/everforest-light, OLED Black, Rosé Pine Light/rose-pine-dawn) get no --recipe-pill-accent/--recipe-pill-danger override - they keep falling back to --focus-border/--bad", () => {
-  for (const themeName of ["industrial-slate-dark", "nord", "everforest", "everforest-light", "oled-black", "rose-pine-dawn"]) {
+test("themes without a dedicated recipe-pill treatment keep falling back to --focus-border/--bad", () => {
+  for (const themeName of ["industrial-slate-dark", "nord", "everforest", "newsprint", "ayu-light", "oled-black", "rose-pine-dawn"]) {
     const start = theme.indexOf(`:where(html, body)[data-theme="${themeName}"]{`);
     assert.notEqual(start, -1, `expected a theme.css block for ${themeName}`);
     const block = theme.slice(start, theme.indexOf("\n}\n", start));
