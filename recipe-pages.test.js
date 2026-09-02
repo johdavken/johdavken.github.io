@@ -47,6 +47,57 @@ test("Rearrange is parameterized rather than duplicated per page", () => {
 });
 
 /* ============================================================
+ *   Next Recipe: "show current resin" overlay
+ * ============================================================ */
+
+test("the current-resin overlay is Next-only, pointer-only, and off by default", () => {
+  const editor = recipeEditor();
+  // Off by default (crossed-out eye), module level so it survives re-renders,
+  // and never persisted with the session.
+  assert.match(app, /let nextRecipeShowCurrentResinOverlay = false;/);
+  const snapshot = app.slice(app.indexOf("function snapshotPayload(){"), app.indexOf("function applySharedActiveJob("));
+  assert.doesNotMatch(snapshot, /nextRecipeShowCurrentResinOverlay/);
+  // Availability is gated on the Next page AND a typeable (pointer) grid.
+  assert.match(editor, /const currentOverlayAvailable = isNextRecipePage\(\) && cellsTypeable;/);
+  assert.match(editor, /area\.dataset\.currentOverlay = \(currentOverlayAvailable && nextRecipeShowCurrentResinOverlay\) \? "on" : "off";/);
+});
+
+test("the overlay reads the live recipe through its own accessor, not the page array", () => {
+  const editor = recipeEditor();
+  // currentRecipeLayers() is the one deliberate cross-reference: the plan is
+  // compared against what is loaded now. It must not reach for recipeLayers()
+  // (that is the Next working copy on this page).
+  assert.match(app, /function currentRecipeLayers\(\)\{\s*\n\s*return state\.layers;/);
+  assert.match(editor, /currentRecipeLayers\(\)\?\.\[li\]\?\.hoppers\?\.\[hi\]\?\.resinName/);
+  assert.match(editor, /currentOverlay\.className = "splitCellCurrentResin"/);
+});
+
+test("the eye toggle flips the overlay without a re-render", () => {
+  const editor = recipeEditor();
+  // The corner (row-gutter) button replaces the "Select row" caption on Next.
+  assert.match(editor, /overlayToggle\.className = "splitCurrentOverlayToggle"/);
+  assert.match(editor, /corner\.appendChild\(overlayToggle\);/);
+  assert.match(editor, /\} else \{\s*\n\s*corner\.textContent = summaryView \? "" : "Select row";/);
+  // Click only flips the flag + the data attribute + the button state -
+  // no renderSplitsArea() in the handler body, so the grid is never rebuilt.
+  const clickHandler = editor.slice(
+    editor.indexOf('overlayToggle.addEventListener("click"'),
+    editor.indexOf("corner.appendChild(overlayToggle);")
+  );
+  assert.match(clickHandler, /nextRecipeShowCurrentResinOverlay = !nextRecipeShowCurrentResinOverlay;/);
+  assert.match(clickHandler, /area\.dataset\.currentOverlay = nextRecipeShowCurrentResinOverlay \? "on" : "off";/);
+  assert.doesNotMatch(clickHandler, /renderSplitsArea/);
+});
+
+test("overlay CSS: hidden until the toggle is on, and the eye icon swaps with it", () => {
+  assert.match(styles, /\.splitCellCurrentResin\{[^}]*display:none;/);
+  assert.match(styles, /#splitsArea\[data-current-overlay="on"\] \.splitCellCurrentResin\{display:flex\}/);
+  assert.match(styles, /\.splitCurrentOverlayToggle \.eyeOpen\{display:none\}/);
+  assert.match(styles, /\.splitCurrentOverlayToggle\.on \.eyeOpen\{display:block\}/);
+  assert.match(styles, /\.splitCurrentOverlayToggle\.on \.eyeSlash\{display:none\}/);
+});
+
+/* ============================================================
  *   Page state
  * ============================================================ */
 

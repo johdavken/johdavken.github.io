@@ -2660,6 +2660,62 @@ details[open] > summary .chevSatellite{
   letter-spacing:.02em;
 }
 .splitMatrixCell:not(.has-resin) .splitCellHopperName{opacity:.72}
+/* Next Recipe "show current resin" overlay ------------------------------- *
+ * The eye toggle lives in the row-gutter corner (replaces "Select row" on
+ * Next); each cell carries a small right-aligned "current / <code>" block
+ * that CSS reveals only while data-current-overlay is on. Sized to sit in
+ * the empty top-right of the cell header, within the hopper badge's height,
+ * so turning it on does not move the grid. */
+.splitCurrentOverlayToggle{
+  display:grid;
+  place-items:center;
+  width:26px;
+  height:26px;
+  margin:0 auto;
+  padding:0;
+  border:0;
+  border-radius:6px;
+  background:transparent;
+  color:var(--muted);
+  box-shadow:none;
+}
+.splitCurrentOverlayToggle:hover,
+.splitCurrentOverlayToggle:focus-visible{background:var(--row-bg-2);color:var(--title)}
+.splitCurrentOverlayToggle.on{color:var(--focus-border)}
+.splitCurrentOverlayToggle svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.splitCurrentOverlayToggle .eyeOpen{display:none}
+.splitCurrentOverlayToggle.on .eyeOpen{display:block}
+.splitCurrentOverlayToggle.on .eyeSlash{display:none}
+.splitCellCurrentResin{
+  display:none;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:1px;
+  margin-left:auto;
+  max-width:108px;
+  min-width:0;
+  line-height:1;
+  text-align:right;
+  pointer-events:none;
+}
+#splitsArea[data-current-overlay="on"] .splitCellCurrentResin{display:flex}
+.splitCellCurrentResin em{
+  font-style:normal;
+  font-size:7.5px;
+  font-weight:800;
+  letter-spacing:.04em;
+  color:var(--muted);
+  opacity:.7;
+}
+.splitCellCurrentResin b{
+  max-width:100%;
+  overflow:hidden;
+  color:var(--muted);
+  font-size:9.5px;
+  font-weight:800;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+}
 .splitClearButton{
   display:grid;
   place-items:center;
