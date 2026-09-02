@@ -15,9 +15,20 @@ test("the editor reuses the admin dialog, button hierarchy, toggle, and compact 
   assert.match(html,/id="lineConfigurationActive"[^>]*class="toggle"[^>]*role="switch"/);
   assert.doesNotMatch(html.slice(html.indexOf('id="lineConfigurationDialog"'),html.indexOf('</dialog>',html.indexOf('id="lineConfigurationDialog"'))),/<select/);
 });
-test("compact rows and editor use theme tokens and responsive wrapping",()=>{
+test("the list and rows reuse the Resin Database management surface classes",()=>{
+  // Same bordered list container and row skin as Resin Database / Workspace
+  // Management, so the three Sudo Access tools read as one design system
+  // instead of a third card treatment.
+  assert.match(html,/id="lineConfigurationList" class="lineConfigurationList adminResinList"/);
+  assert.match(ui,/row\.className = `lineConfigurationRow adminResinRow\$\{line\.is_active \? "" : " inactive"\}`/);
+  assert.match(css,/\.adminResinList\{[^}]*border: 1px solid var\(--border\)[^}]*\}/);
+  assert.match(css,/\.adminResinRow\{[^}]*background: var\(--row-bg\)[^}]*border-radius: var\(--radius-row\)[^}]*\}/);
+});
+test("the panel flows from the intro copy without stretched dead space, and rows still use theme tokens and responsive wrapping",()=>{
   const start=css.indexOf(".lineConfigurationPanel{"); const block=css.slice(start,css.indexOf("@media",start)+500);
-  assert.match(block,/var\(--row-bg\)/); assert.match(block,/var\(--focus-border\)/); assert.match(block,/var\(--radius-row\)/);
+  // align-content:start stops the blockBody grid from sharing spare vertical
+  // space between the intro, toolbar, and list tracks.
+  assert.match(block,/\.lineConfigurationPanel\{display:grid;gap:12px;align-content:start\}/);
   assert.doesNotMatch(block,/#[0-9a-f]{3,8}\b|rgba?\(/i);
   assert.match(block,/@media \(max-width:760px\)/); assert.match(block,/grid-template-columns:minmax\(0,1fr\) auto/);
 });
