@@ -159,6 +159,12 @@
   // Never consulted on the compact mobile recipe, which keeps its existing
   // always-editable layout and its own separate bulk-mode toggle.
   let splitsViewMode = "summary";
+  // Next Recipe only: overlay each cell with the CURRENT recipe's resin for
+  // that position, so a changeover plan can be read against what is loaded
+  // now. Off by default (crossed-out eye in the gutter corner). Module level,
+  // like splitsViewMode, so it survives renderSplitsArea() re-renders; not
+  // persisted - it resets to off each session.
+  let nextRecipeShowCurrentResinOverlay = false;
   // Receiver Hopper Weights' own Summary/Edit mode, on the same footing.
   // Module level so it survives the re-renders that toggling Smart Hoppers,
   // loading a profile or changing layer count all trigger - resetting an
@@ -3654,6 +3660,13 @@
     function recipeLayers(){
       return isNextRecipePage() ? ensureNextRecipeWorking() : state.layers;
     }
+    // The live recipe, whichever page is on screen. Only the Next page's
+    // "show current resin" overlay needs it - to display what each hopper
+    // holds now beside the plan. Everything else in the editor must keep
+    // going through recipeLayers() so the two pages never share an array.
+    function currentRecipeLayers(){
+      return state.layers;
+    }
 
     // Recipe edits are deliberately reversible within the open session. Keep
     // Current and Next separate: they are two different working documents,
@@ -4133,6 +4146,14 @@
       area.dataset.recipeView = viewMode;
       area.dataset.recipeCells = cellsTypeable ? "typeable" : "static";
       area.classList.toggle("recipeTrackingView", trackingView);
+      // The current-recipe overlay only exists on the typeable (pointer) Next
+      // Recipe grid: it is a planning aid for a changeover, and only there is
+      // the live recipe (via currentRecipeLayers()) something distinct from
+      // what the grid is editing. The eye toggle and per-cell spans are
+      // always built when available; nextRecipeShowCurrentResinOverlay only
+      // reveals them, so toggling never needs a re-render.
+      const currentOverlayAvailable = isNextRecipePage() && cellsTypeable;
+      area.dataset.currentOverlay = (currentOverlayAvailable && nextRecipeShowCurrentResinOverlay) ? "on" : "off";
 
       // Which parts of a cell keep an interaction of their own, and which
       // are just cell surface. Everything editable lives inside a field or
@@ -4633,7 +4654,35 @@
       // this text - only the label does. Row selection is an Edit-only
       // feature, so Summary leaves this quiet rather than naming a control
       // that isn't there; the row numbers below stay put either way.
-      corner.textContent = summaryView ? "" : "Select row";
+      //
+      // On Next Recipe the corner instead holds the eye toggle for the
+      // current-recipe overlay (replacing the "Select row" caption, which is
+      // only ever a label - the numbered buttons below still select).
+      if (currentOverlayAvailable){
+        const overlayToggle = document.createElement("button");
+        overlayToggle.type = "button";
+        overlayToggle.className = "splitCurrentOverlayToggle";
+        const syncOverlayToggle = ()=>{
+          const on = nextRecipeShowCurrentResinOverlay;
+          const label = on ? "Hide current recipe resin names" : "Show current recipe resin names";
+          overlayToggle.classList.toggle("on", on);
+          overlayToggle.setAttribute("aria-pressed", String(on));
+          overlayToggle.setAttribute("aria-label", label);
+          overlayToggle.title = label;
+        };
+        overlayToggle.innerHTML =
+          '<svg class="eyeSlash" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7c2.1 0 4 .8 5.5 1.8M22 12s-3.6 7-10 7c-2.1 0-4-.8-5.5-1.8"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/><path d="m3 3 18 18"/></svg>' +
+          '<svg class="eyeOpen" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
+        syncOverlayToggle();
+        overlayToggle.addEventListener("click", ()=>{
+          nextRecipeShowCurrentResinOverlay = !nextRecipeShowCurrentResinOverlay;
+          area.dataset.currentOverlay = nextRecipeShowCurrentResinOverlay ? "on" : "off";
+          syncOverlayToggle();
+        });
+        corner.appendChild(overlayToggle);
+      } else {
+        corner.textContent = summaryView ? "" : "Select row";
+      }
       headerRow.appendChild(corner);
 
       recipeLayers().forEach(L=>{
@@ -4760,7 +4809,7 @@
         rowHeader.appendChild(rowSelect);
         tr.appendChild(rowHeader);
 
-        recipeLayers().forEach(L=>{
+        recipeLayers().forEach((L, li)=>{
           const hopper = L.hoppers[hi];
           const key = `${L.name}:${hi}`;
           const td = document.createElement("td");
@@ -4851,6 +4900,27 @@
           hopperName.className = "splitCellHopperName mono";
           hopperName.textContent = hopperBadgeLabel(L.name, hi);
           cellHeader.append(hopperName);
+
+          // Next Recipe: the current recipe's resin for this same position,
+          // as a small right-aligned "current / <code>" overlay. Built here
+          // whenever the overlay is available and there is something loaded
+          // in that position; CSS reveals it only while the eye toggle is on
+          // (#splitsArea[data-current-overlay="on"]).
+          if (currentOverlayAvailable){
+            const currentResin = normName(currentRecipeLayers()?.[li]?.hoppers?.[hi]?.resinName || "");
+            if (currentResin){
+              const currentOverlay = document.createElement("span");
+              currentOverlay.className = "splitCellCurrentResin";
+              currentOverlay.setAttribute("aria-hidden", "true");
+              const tag = document.createElement("em");
+              tag.textContent = "current";
+              const value = document.createElement("b");
+              value.textContent = currentResin;
+              currentOverlay.append(tag, value);
+              currentOverlay.title = `Currently loaded in ${hopperBadgeLabel(L.name, hi)}: ${currentResin}`;
+              cellHeader.append(currentOverlay);
+            }
+          }
 
           const editor = document.createElement("div");
           editor.className = "splitCellEditor";
