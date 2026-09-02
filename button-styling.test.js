@@ -81,6 +81,21 @@ test("console covers every treated button and neutralises the pill container", (
   assert.match(buttonCss, /body\[data-button-style="console"\] #splitsArea #splitsBulkBar \.splitsEditRowSecondary/);
 });
 
+test("console reaches the Recipe Book desktop toolbar: bay, chips, Load primary, Delete danger", () => {
+  const bookBay = /body\[data-button-style="console"\] #splitsBlock \.splitsSavedRecipesPanel \.splitsSavedRecipesActions\{[\s\S]*?border-radius: 7px/;
+  assert.match(buttonCss, bookBay);
+  // the bar's buttons + the overflow trigger take the surface chip
+  assert.match(buttonCss, /\.splitsSavedRecipesPanel \.splitsSavedRecipesActions > button,[\s\S]*?\.workspaceConfigurationOverflow > summary,/);
+  // Load is the inverted primary, but only while it is armed
+  assert.match(buttonCss, /#splitsLoadRecipe:not\(:disabled\)\{[\s\S]*?background: var\(--btnstyle-ink\)/);
+  // Delete in the overflow menu is solid danger
+  assert.match(buttonCss, /\.workspaceConfigurationOverflowMenu #splitsDeleteRecipe\{[\s\S]*?background: var\(--btnstyle-danger\)/);
+  // still desktop-only + panel-scoped
+  for (const line of buttonCss.split("\n").map(l => l.trim()).filter(l => l.startsWith('body[data-button-style="'))) {
+    assert.ok(line.includes("#splitsBlock") || line.includes("#splitsArea"), line);
+  }
+});
+
 test("the treatment reuses existing theme tokens, not hard-coded colours", () => {
   assert.match(buttonCss, /--btnstyle-accent: var\(--recipe-pill-accent/);
   assert.match(buttonCss, /--btnstyle-danger: var\(--recipe-pill-danger/);

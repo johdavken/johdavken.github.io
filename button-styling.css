@@ -9,11 +9,13 @@
  *
  * Scope, deliberately narrow:
  *   - only inside #splitsBlock (the Recipe / Weights panel)
- *   - the button set the preview covered:
+ *   - the toolbars, surface by surface:
  *       CMD  = #recipeHeaderActionPill's buttons (Edit/Done, Load, Print)
  *       BULK = the Edit-mode bulk bar's Clear / Empty cells / Reset /
  *              Rearrange (every .bulkTextAction in the bar, plus the
  *              #resetAllSplits danger button)
+ *       BOOK = the Recipe Book page's desktop select-a-row-then-act bar
+ *              (.splitsSavedRecipesActions) + its overflow menu
  *     Apply and the Undo/Redo history pair only get their corner radius
  *     matched, so no stray rounded button sits beside the treated ones.
  *   - only at the desktop breakpoint the rest of desktop.css uses
@@ -92,10 +94,55 @@ body[data-button-style]{
     color: var(--btnstyle-on-fill);
   }
 
+  /* ---- Recipe Book (desktop) -----------------------------------------
+     The select-a-row-then-act bar (Save Current / Save Next / Load /
+     Update / more) becomes one contained bay, matching the header and
+     bulk rows. Desktop only: the <=700px block collapses this same bar to
+     round icon buttons, which this must not touch (the media query keeps
+     it out). The list rows below stay as they are - they are selectable
+     cards, not buttons. */
+  body[data-button-style="console"] #splitsBlock .splitsSavedRecipesPanel .splitsSavedRecipesActions{
+    padding: 6px 8px;
+    border-radius: 7px;
+    background: color-mix(in srgb, var(--btnstyle-surface) 55%, transparent);
+  }
+  body[data-button-style="console"] #splitsBlock .splitsSavedRecipesPanel .splitsSavedRecipesActions > button,
+  body[data-button-style="console"] #splitsBlock .splitsSavedRecipesPanel .splitsSavedRecipesActions .workspaceConfigurationOverflow > summary,
+  body[data-button-style="console"] #splitsBlock .splitsSavedRecipesPanel .workspaceConfigurationOverflowMenu button{
+    min-height: 30px;
+    border: 0;
+    border-radius: 4px;
+    background: var(--btnstyle-surface);
+    color: var(--btnstyle-ink);
+    box-shadow: 0 1px 0 var(--btnstyle-edge);
+    /* Match the header / bulk console chips - not the app's uppercase
+       secondary-button convention this bar otherwise inherits. */
+    text-transform: none;
+    letter-spacing: normal;
+  }
+  /* Popup items already sit on a shadowed panel - drop the extra lift. */
+  body[data-button-style="console"] #splitsBlock .splitsSavedRecipesPanel .workspaceConfigurationOverflowMenu button{
+    box-shadow: none;
+  }
+  /* Primary = Load: an inverted key. Falls back to a plain chip while it is
+     disabled (no row selected), so it doesn't read as armed. */
+  body[data-button-style="console"] #splitsBlock .splitsSavedRecipesPanel #splitsLoadRecipe:not(:disabled){
+    background: var(--btnstyle-ink);
+    color: var(--panel);
+  }
+  /* Destructive = Delete, in the overflow menu: solid danger. */
+  body[data-button-style="console"] #splitsBlock .splitsSavedRecipesPanel .workspaceConfigurationOverflowMenu #splitsDeleteRecipe{
+    background: var(--btnstyle-danger);
+    color: var(--btnstyle-on-fill);
+  }
+
   /* Keep the focus ring legible on the treated controls. */
   body[data-button-style="console"] #splitsBlock #recipeHeaderActionPill button:focus-visible,
   body[data-button-style="console"] #splitsBlock .splitsBulkBar button:focus-visible,
-  body[data-button-style="console"] #splitsBlock .weightsBulkBar button:focus-visible{
+  body[data-button-style="console"] #splitsBlock .weightsBulkBar button:focus-visible,
+  body[data-button-style="console"] #splitsBlock .splitsSavedRecipesActions button:focus-visible,
+  body[data-button-style="console"] #splitsBlock .splitsSavedRecipesActions .workspaceConfigurationOverflow > summary:focus-visible,
+  body[data-button-style="console"] #splitsBlock .workspaceConfigurationOverflowMenu button:focus-visible{
     outline: 2px solid var(--focus-border);
     outline-offset: 2px;
   }
