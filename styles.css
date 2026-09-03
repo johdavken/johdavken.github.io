@@ -12404,73 +12404,53 @@ body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .d
   min-width:0;
   text-align:right;
 }
+/* .desktopWeightEditFields layout (stacked weight/height) is owned by
+   block 7 below, shell-agnostic; block 6 only has to switch the readout on
+   for the touch shell. */
 body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .desktopWeightEditFields{
   display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:5px;
-  padding-top:7px;
-}
-body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .desktopWeightEditFields label{
-  display:grid;
-  gap:1px;
-  margin:0;
-  min-width:0;
-}
-body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .desktopWeightEditFields input{
-  width:100%;
-  height:22px;
-  min-height:22px;
-  padding:0 2px;
-  font-size:14px;
-  font-weight:800;
-  text-align:right;
-}
-body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .desktopWeightEditFields small{
-  color:var(--muted);
-  font-size:9px;
-  white-space:nowrap;
 }
 body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .desktopWeightSummaryValues{
   display:none;
 }
 
-/* 7. Tablet weight-cell edit fields and the bulk-edit panel.
+/* 7. Weight-cell edit fields, and the bulk-edit panel on the touch shell.
    -------------------------------------------------------------------------- */
 
-/* When Smart Hoppers is on, the cell carries both a weight and a height
-   input. desktop.css sits them side by side in a 2-column grid, which fits a
-   ~130px desktop column but not a ~150px tablet one - the "WEIGHT (LB)" /
-   "HEIGHT (IN)" captions overran each other. Stack them instead: weight on
-   top, height below, each with its caption. */
-body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .desktopWeightEditFields{
+/* When Smart Hoppers is on the cell carries a weight and a height input.
+   desktop.css sits them side by side in a 2-column grid; stacked reads
+   better and it is now the treatment on every width - weight row, height
+   row, caption left of the value. */
+body #weightsArea .weightsMatrix:has(.weightsLayerHeader) .desktopWeightEditFields{
   grid-template-columns:1fr;
   gap:3px;
 }
-body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .desktopWeightEditFields label{
+body #weightsArea .weightsMatrix:has(.weightsLayerHeader) .desktopWeightEditFields label{
   display:grid;
   grid-template-columns:1fr auto;
   align-items:baseline;
   gap:6px;
 }
-body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .desktopWeightEditFields label input{
+body #weightsArea .weightsMatrix:has(.weightsLayerHeader) .desktopWeightEditFields label input{
   order:2;
   width:100%;
 }
-body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .desktopWeightEditFields label small{
+body #weightsArea .weightsMatrix:has(.weightsLayerHeader) .desktopWeightEditFields label small{
   order:1;
   font-size:8px;
   text-align:left;
   white-space:nowrap;
 }
-body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .weightsMatrixCell{
+body #weightsArea .weightsMatrix:has(.weightsLayerHeader) .weightsMatrixCell{
   height:auto;
   min-height:64px;
 }
 
-/* The bulk-edit panel now sits below the grid (see renderWeightsArea). On
-   the touch shell it falls back to the base .weightsBulkBar grid, whose
-   180px min columns clipped the "No change" placeholders. Give it a single
-   stacked column of compact fields, sized to the tablet. */
+/* The bulk-edit panel sits below the grid (see renderWeightsArea). On the
+   touch shell it falls back to the base .weightsBulkBar grid, whose 180px
+   min columns clipped the "No change" placeholders and wrapped Clear onto
+   its own line. Lay it out by hand instead: a single row of content-sized
+   fields, then the actions, nothing wrapping. */
 body[data-shell="touch"] #weightsArea .weightsBulkBar{
   display:flex;
   flex-direction:column;
@@ -12482,18 +12462,20 @@ body[data-shell="touch"] #weightsArea .weightsBulkBar .weightsBulkFieldsRow{
   display:flex;
   flex-wrap:wrap;
   align-items:flex-end;
-  gap:10px;
+  gap:10px 14px;
 }
 body[data-shell="touch"] #weightsArea .weightsBulkBar .weightsBulkField{
-  flex:1 1 160px;
+  flex:0 0 auto;
   min-width:0;
+  margin:0;
 }
 body[data-shell="touch"] #weightsArea .weightsBulkBar .weightsBulkField > span:first-child{
   font-size:var(--font-tiny);
   margin-bottom:3px;
 }
+/* Just wide enough for the "No change" placeholder, no more. */
 body[data-shell="touch"] #weightsArea .weightsBulkBar .weightsInputWithUnit{
-  grid-template-columns:minmax(0,1fr) auto;
+  grid-template-columns:92px auto;
   gap:4px;
 }
 body[data-shell="touch"] #weightsArea .weightsBulkBar .weightsInputWithUnit input{
@@ -12509,16 +12491,21 @@ body[data-shell="touch"] #weightsArea .weightsBulkBar #applyBulkWeight{
 }
 body[data-shell="touch"] #weightsArea .weightsBulkBar .weightsBulkActions{
   grid-column:auto;
-  flex-wrap:wrap;
+  flex-wrap:nowrap;
+  gap:10px;
+}
+body[data-shell="touch"] #weightsArea .weightsBulkBar .weightsBulkActions #clearWeightSelection{
+  white-space:nowrap;
+  flex:0 0 auto;
 }
 
 /* 8. Smart Hoppers toggle in the grid's gutter corner, and the shared
       circumference field relocated into the bulk toolbar.
    -------------------------------------------------------------------------- */
 
-/* The corner keeps its sticky-left pinning; the toggle is laid over it,
+/* The corner keeps its sticky-left pinning; its control is laid over it,
    never sized into it, so it cannot change the column width or the header
-   row height. A compact toggle scale via the shared custom props. */
+   row height. */
 body #weightsArea .weightsMatrix .weightsRowCorner.weightsCornerToggle{
   position:sticky;
   overflow:visible;
@@ -12528,9 +12515,44 @@ body #weightsArea .weightsCornerToggleWrap{
   inset:0;
   display:grid;
   place-items:center;
-  --toggle-w:38px;
-  --toggle-h:20px;
-  --toggle-knob:14px;
+  padding:0 8px;
+}
+
+/* The pill switch read as ambiguous at this size, so #smartHoppersToggle is
+   styled as its own word instead: "Smart Hoppers", full-strength and the
+   title colour when on, faded and muted when off. hookToggle still drives
+   the .on class; only the look changes, so the base .toggle pill/knob are
+   all zeroed out. */
+body #weightsArea .weightsCornerSmartLabel.toggle{
+  width:auto;
+  height:auto;
+  min-height:0;
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:none;
+  box-shadow:none;
+  font-size:var(--font-tiny);
+  font-weight:750;
+  line-height:1.2;
+  letter-spacing:.02em;
+  text-align:center;
+  text-transform:uppercase;
+  color:var(--muted);
+  opacity:.55;
+  cursor:pointer;
+  transition:color .12s ease,opacity .12s ease;
+}
+body #weightsArea .weightsCornerSmartLabel.toggle::after{ content:none; }
+body #weightsArea .weightsCornerSmartLabel.toggle.on{
+  color:var(--title);
+  opacity:1;
+  font-weight:850;
+}
+body #weightsArea .weightsCornerSmartLabel.toggle:focus-visible{
+  outline:2px solid var(--focus-border);
+  outline-offset:2px;
+  border-radius:3px;
 }
 
 /* Circumference sits between Apply and Clear in the bulk toolbar. It reuses
@@ -12548,7 +12570,7 @@ body #weightsArea .weightsBulkBar .weightsBulkCircumference > span:first-child{
 }
 body #weightsArea .weightsBulkBar .weightsBulkCircumference .weightsInputWithUnit{
   display:grid;
-  grid-template-columns:minmax(56px,84px) auto;
+  grid-template-columns:72px auto;
   align-items:center;
   gap:4px;
 }
@@ -12557,7 +12579,7 @@ body #weightsArea .weightsBulkBar .weightsBulkCircumference input{
   min-width:0;
 }
 body[data-shell="touch"] #weightsArea .weightsBulkBar .weightsBulkCircumference{
-  flex:1 1 140px;
+  flex:0 0 auto;
 }
 
 /* 9. Apply / Clear in the weights bulk bar take the full station-console key

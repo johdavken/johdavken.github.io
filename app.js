@@ -3090,7 +3090,7 @@
           </label>
           ${state.smartHoppersEnabled && geometryMode === "volume" ? '<label class="weightsBulkField" for="bulkHeight"><span>Volume</span><span class="weightsInputWithUnit"><input id="bulkHeight" type="text" inputmode="decimal" placeholder="No change" /><span>gal</span></span></label>' : ""}
           ${state.smartHoppersEnabled && geometryMode === "cylindrical" ? '<label class="weightsBulkField" for="bulkHeight"><span>Height</span><span class="weightsInputWithUnit"><input id="bulkHeight" type="text" inputmode="decimal" placeholder="No change" /><span>in</span></span></label>' : ""}
-          <button id="applyBulkWeight" class="secondary" type="button" disabled>Apply to selected</button>
+          <button id="applyBulkWeight" class="secondary" type="button" disabled>Apply</button>
           <div class="weightsBulkActions">
             <div id="weightSelectionStatus" class="tiny weightsSelectionStatus" role="status" aria-live="polite">No hoppers selected</div>
             <button id="clearWeightSelection" type="button" class="bulkTextAction">Clear selection</button>
@@ -3142,17 +3142,22 @@
       corner.className = "weightsRowCorner";
       // Transposed, the first column names layers and the header row names
       // hopper positions - but the gutter corner is dead space, so the Smart
-      // Hoppers toggle moves into it (replacing the "Layer" caption) rather
-      // than taking a strip of its own above the grid. It is absolutely
-      // positioned in CSS so it can never grow the cell. Its live-region
-      // state span rides along, visually hidden, for the announcement.
-      // Circumference, when Smart Hoppers is on and the line is cylindrical,
-      // moves into the bulk toolbar between Apply and Clear (below).
+      // Hoppers control moves into it (replacing the "Layer" caption) rather
+      // than taking a strip of its own above the grid. The pill switch reads
+      // as ambiguous at this size, so it is rendered as its own label
+      // instead: "Smart Hoppers", full-strength when on, faded when off.
+      // hookToggle still drives it - same element, same id, same role and
+      // .on class - only the styling changes. Its live-region state span
+      // rides along, visually hidden, for the announcement. Circumference,
+      // when Smart Hoppers is on and the line is cylindrical, moves into the
+      // bulk toolbar between Apply and Clear (below).
       const smartToggleEl = desktopControls.querySelector("#smartHoppersToggle");
       const smartStateEl = desktopControls.querySelector(".desktopSmartHopperState");
       const circumferenceLabel = desktopControls.querySelector(".desktopSharedCircumference");
       if (smartToggleEl){
         corner.classList.add("weightsCornerToggle");
+        smartToggleEl.classList.add("weightsCornerSmartLabel");
+        smartToggleEl.textContent = "Smart Hoppers";
         const toggleWrap = document.createElement("span");
         toggleWrap.className = "weightsCornerToggleWrap";
         if (smartStateEl){ smartStateEl.classList.add("srOnly"); toggleWrap.appendChild(smartStateEl); }
@@ -3464,9 +3469,10 @@
         const hasBulkValue = bulkInputs.some(field=>field.value.trim() !== "");
         const validBulkValues = bulkInputs.every(field=>!field.value.trim() || validation.validateNumber(field.value, { min:0 }).valid);
         applyButton.disabled = selected.size === 0 || !hasBulkValue || !validBulkValues;
-        applyButton.textContent = selected.size
-          ? `Apply to ${selected.size} hopper${selected.size === 1 ? "" : "s"}`
-          : "Apply to selected";
+        // Fixed "Apply": the selection count already reads out in the status
+        // line beside it, and a growing "Apply to N hoppers" label kept
+        // pushing the toolbar row past its width on a tablet.
+        applyButton.textContent = "Apply";
         status.textContent = message || (
           selected.size === 0
             ? "No hoppers selected"

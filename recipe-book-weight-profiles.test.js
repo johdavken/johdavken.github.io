@@ -396,10 +396,28 @@ test("the Weights bulk-edit panel sits below the grid, matching the reworked Rec
   assert.match(app, /area\.appendChild\(desktopControls\);\s*area\.appendChild\(scroll\);\s*area\.appendChild\(toolbar\);/);
 });
 
-test("on the touch shell the weight/height cell inputs stack instead of overlapping", () => {
-  // desktop.css sits them in a 2-column grid, which mashed the WEIGHT (LB)
-  // and HEIGHT (IN) captions together in a tablet-width column.
-  assert.match(styles, /body\[data-shell="touch"\] #weightsArea \.weightsMatrix:has\(\.weightsLayerHeader\) \.desktopWeightEditFields\{\s*\n\s*grid-template-columns:1fr;/);
+test("the weight/height cell inputs stack on every width, not just the tablet", () => {
+  // desktop.css sits them in a 2-column grid; stacked reads better and is
+  // now the treatment everywhere - not shell-scoped.
+  assert.match(styles, /body #weightsArea \.weightsMatrix:has\(\.weightsLayerHeader\) \.desktopWeightEditFields\{\s*\n\s*grid-template-columns:1fr;/);
+  assert.match(styles, /body #weightsArea \.weightsMatrix:has\(\.weightsLayerHeader\) \.desktopWeightEditFields label small\{[\s\S]*?order:1;/);
+});
+
+test("the Smart Hoppers control in the gutter is a highlighted word, not the ambiguous pill switch", () => {
+  const body = (()=>{const start=app.indexOf("function renderWeightsArea(");const next=app.indexOf("\n    function ",start+1);return app.slice(start,next===-1?undefined:next);})();
+  assert.match(body, /smartToggleEl\.classList\.add\("weightsCornerSmartLabel"\);/);
+  assert.match(body, /smartToggleEl\.textContent = "Smart Hoppers";/);
+  // Base .toggle pill/knob zeroed; on-state gets the title colour + full opacity.
+  assert.match(styles, /body #weightsArea \.weightsCornerSmartLabel\.toggle\{[\s\S]*?opacity:\.55;/);
+  assert.match(styles, /body #weightsArea \.weightsCornerSmartLabel\.toggle\.on\{[\s\S]*?color:var\(--title\);[\s\S]*?opacity:1;/);
+  assert.match(styles, /body #weightsArea \.weightsCornerSmartLabel\.toggle::after\{ content:none; \}/);
+});
+
+test("the weights bulk Apply button reads just 'Apply', fixed", () => {
+  const body = (()=>{const start=app.indexOf("function renderWeightsArea(");const next=app.indexOf("\n    function ",start+1);return app.slice(start,next===-1?undefined:next);})();
+  assert.match(body, /applyButton\.textContent = "Apply";/);
+  assert.doesNotMatch(body, /Apply to \$\{selected\.size\} hopper/);
+  assert.match(app, /<button id="applyBulkWeight" class="secondary" type="button" disabled>Apply<\/button>/);
 });
 
 test("on the touch shell the weights bulk bar is a compact single column so 'No change' is not clipped", () => {
