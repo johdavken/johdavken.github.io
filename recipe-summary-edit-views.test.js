@@ -231,7 +231,7 @@ test("Empty cells empties only the selected hoppers and recomputes each affected
   assert.match(splitsArea, /touchedLayers\.forEach\(L=>\{\s*\n\s*recomputeAutoH1\(L\);/);
   // Disabled state moved from "nothing selected" to "nothing to empty" -
   // see recipe-empty-cells.test.js.
-  assert.match(splitsArea, /if \(clearCellsButton\) clearCellsButton\.disabled = emptyable === 0;/);
+  assert.match(splitsArea, /if \(clearCellsButton\) clearCellsButton\.disabled = rearrangingNow \|\| emptyable === 0;/);
 });
 
 test("every recipe view ends with a quiet, layout-aware hopper-action reminder", () => {
@@ -274,7 +274,7 @@ test("on wide desktop the centered hint is capped to the five-layer rail, so it 
 test("Load Current/Next and Print move beside the view buttons; Recipe Book remains beside Next", () => {
   assert.match(html, /data-recipe-page="next">[\s\S]*?data-recipe-page="saved" hidden><span class="recipeTabLabel">Recipe Book<\/span>/);
   assert.doesNotMatch(splitsArea, /recipeUtilityTabs\.append\(savedRecipesButton\);/);
-  assert.match(splitsArea, /toolbar\.querySelector\("\.splitsEditRowSecondary"\)\?\.append\(rearrangeButton\);/);
+  assert.match(splitsArea, /editSecondaryRow\?\.prepend\(rearrangeButton\);/);
   assert.match(html, /class="recipeHeaderActions" id="recipeHeaderActions" role="group" aria-label="Recipe actions"/);
   assert.match(splitsArea, /if \(loadNextButton\) headerActions\?\.append\(loadNextButton\);/);
   assert.match(splitsArea, /if \(loadCurrentButton\) headerActions\?\.append\(loadCurrentButton\);/);

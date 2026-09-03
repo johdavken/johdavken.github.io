@@ -264,6 +264,60 @@ test("the edit toolbar sits below the reworked grid, so raising it never moves t
   assert.match(styles, /#splitsArea > \.splitsBulkBar\{ order: -1;/);
 });
 
-test("the rearrange bar keeps its below-the-grid placement and sizes to its content", () => {
-  assert.match(styles, /#splitsArea > \.rearrangeModeBar\{ order:1; position:static; \}/);
+/* Rearrange reports itself through the toolbar rather than a panel.
+ *
+ * The standalone bar is no longer built on any width. With the edit toolbar
+ * always visible below the grid, the mode shows in the controls already
+ * there - and that also fixes the bar hiding the toolbar (and with it the
+ * button that commits the rearrangement) for the duration.
+ */
+test("the standalone rearrange bar is no longer built at all", () => {
+  const body = functionBody("renderSplitsArea");
+  assert.doesNotMatch(body, /rearrangeModeBar/);
+  assert.doesNotMatch(body, /rearrangeModeMessage|rearrangeModeActions/);
+});
+
+test("the edit toolbar is always present on the reworked grid, never raised and dropped", () => {
+  const body = functionBody("setBulkMode");
+  assert.match(body, /toolbar\.classList\.toggle\("hide", reworkedGrid \? false : !bulkMode\);/);
+  // And the selection no longer toggles it either.
+  const selection = functionBody("renderSplitsArea");
+  assert.doesNotMatch(selection, /if \(reworkedGrid\) toolbar\.classList\.toggle\("hide", selected\.size === 0\);/);
+});
+
+test("Rearrange leads the secondary row so Cancel cannot shift the other buttons", () => {
+  const body = functionBody("renderSplitsArea");
+  // That row is a right-anchored pill (margin-left:auto), so a button added
+  // at its head grows it leftwards and leaves Clear/Empty/Reset in place.
+  assert.match(body, /editSecondaryRow\?\.prepend\(rearrangeButton\);/);
+  assert.match(body, /rearrangeButton\.after\(cancelRearrange\);/);
+  assert.match(styles, /margin-left: auto;/);
+});
+
+test("while active the button commits and is filled in the selected-tab tokens, with Cancel beside it", () => {
+  const body = functionBody("renderSplitsArea");
+  assert.match(body, /hopperRearrangement\?\.active\?"Done":"Rearrange"/);
+  assert.match(body, /cancelRearrange\.addEventListener\("click", \(\)=>finishRearrangement\(true\)\);/);
+  // Same tokens the selected page tab resolves to.
+  assert.match(styles, /\.splitsRearrangeAction\.active[\s\S]{0,200}?background:var\(--btnstyle-ink\);\s*\n\s*color:var\(--panel\);/);
+});
+
+test("the interaction hint carries the rearrange guidance the bar used to", () => {
+  const body = functionBody("renderSplitsArea");
+  assert.match(body, /const rearranging = reworkedGrid && !!hopperRearrangement\?\.active;/);
+  assert.match(body, /Drag, or \$\{pointerVerb\} a hopper then \$\{pointerVerb\} another, to move assignments\. Hopper 1 is recalculated after each move\./);
+  // A fixed sentence, so the running count stops overwriting it.
+  assert.match(body, /if \(rearranging\) return;/);
+});
+
+test("Undo drives the move stack while rearranging, and Redo stands down", () => {
+  const body = functionBody("renderSplitsArea");
+  // The recipe edit history is not touched per move - finishRearrangement
+  // records the whole rearrangement as one entry - so the ordinary Undo
+  // would step back the edit *before* the rearrangement.
+  assert.match(body, /undoButton\.addEventListener\("click", undoRearrangement\);/);
+  assert.match(body, /undoButton\.disabled = !hopperRearrangement\?\.undo\?\.length;/);
+  assert.match(body, /if \(redoButton\) redoButton\.disabled = true;/);
+  // Controls that act on cells go out of service with the cells.
+  assert.match(body, /\[bulkNameInput, bulkPctInput, applyButton, resetButton, clearSelectionButton\]/);
 });

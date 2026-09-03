@@ -12140,3 +12140,36 @@ body #splitsArea[data-recipe-layout="transposed"] > .splitsBulkBar{
 body #splitsArea[data-recipe-layout="transposed"] > .recipeInteractionHint{
   order:2;
 }
+
+/* --------------------------------------------------------------------------
+   Rearrange reports itself through the toolbar, not a panel of its own
+   The standalone .rearrangeModeBar is no longer built on any width (its CSS
+   above is now inert). With the edit toolbar always visible below the grid,
+   the mode shows in the controls already there: the Rearrange button becomes
+   a filled Done, Cancel appears beside it, and the interaction hint carries
+   the guidance the bar used to.
+   -------------------------------------------------------------------------- */
+/* Filled rather than outlined, in exactly the tokens the selected page tab
+   resolves to (body #splitsBlock .recipePageTab.active: --btnstyle-ink on
+   --panel) - so "the mode you are in" looks the same wherever it appears.
+   Carries #splitsBlock to clear that same rule's specificity. */
+body #splitsBlock #splitsArea[data-recipe-layout="transposed"] .splitsRearrangeAction.active,
+body #splitsBlock #splitsArea[data-recipe-layout="transposed"] .splitsRearrangeAction.active:hover:not(:disabled){
+  border-color:var(--btnstyle-ink);
+  background:var(--btnstyle-ink);
+  color:var(--panel);
+  font-weight:900;
+}
+body #splitsBlock #splitsArea[data-recipe-layout="transposed"] .splitsRearrangeAction.active .recipeEditActionIcon{
+  color:var(--panel);
+}
+/* Cancel is the quiet way out beside it - ordinary quiet-action treatment,
+   never a danger colour: it restores the recipe rather than destroying it. */
+body #splitsArea[data-recipe-layout="transposed"] .splitsRearrangeCancel{
+  flex:0 0 auto;
+}
+/* While rearranging, the hint carries a sentence rather than a count, so it
+   needs room to breathe on a narrower window. */
+body #splitsArea[data-recipe-layout="transposed"] .recipeInteractionHint{
+  text-wrap:balance;
+}

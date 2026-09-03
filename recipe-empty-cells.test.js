@@ -72,7 +72,7 @@ test("availability tracks what is in the selection, not how big it is", () => {
   // H1's percentage is derived, so it is never on its own a reason to empty.
   assert.doesNotMatch(count, /ref\.hi >= 0|ref\.hi === 0/);
 
-  assert.match(splitsArea, /const emptyable = emptyableHopperCount\(\);\s*\n\s*if \(clearCellsButton\) clearCellsButton\.disabled = emptyable === 0;/);
+  assert.match(splitsArea, /const emptyable = emptyableHopperCount\(\);[\s\S]*?if \(clearCellsButton\) clearCellsButton\.disabled = rearrangingNow \|\| emptyable === 0;/);
   assert.match(splitsArea, /applyButton\.disabled = selected\.size === 0 \|\| !hasBulkValue\(\);/);
 });
 

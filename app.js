@@ -4497,7 +4497,7 @@
       // both collapsed into this one shared placement and style.
       rearrangeButton.className="bulkTextAction splitsRearrangeAction";
       rearrangeButton.classList.toggle("active", !!hopperRearrangement?.active);
-      rearrangeButton.innerHTML=`<svg class="recipeEditActionIcon" viewBox="0 0 24 24" aria-hidden="true"><g class="rearrangeArrowDown"><path d="M8 4v16m0 0-3-3m3 3 3-3"/></g><g class="rearrangeArrowUp"><path d="M16 20V4m0 0-3 3m3-3 3 3"/></g></svg><span>${hopperRearrangement?.active?"Done Rearranging":"Rearrange"}</span>`;
+      rearrangeButton.innerHTML=`<svg class="recipeEditActionIcon" viewBox="0 0 24 24" aria-hidden="true"><g class="rearrangeArrowDown"><path d="M8 4v16m0 0-3-3m3 3 3-3"/></g><g class="rearrangeArrowUp"><path d="M16 20V4m0 0-3 3m3-3 3 3"/></g></svg><span>${hopperRearrangement?.active?"Done":"Rearrange"}</span>`;
       rearrangeButton.setAttribute("aria-label", hopperRearrangement?.active ? "Done rearranging recipe" : "Rearrange recipe");
       rearrangeButton.title=hopperRearrangement?.active?"Done rearranging":"Rearrange recipe";
       rearrangeButton.disabled=!recipeLayers().some(L=>L.hoppers.some(h=>normName(h.resinName)||clampNum(h.pct)>0));
@@ -4874,10 +4874,24 @@
         if (loadCurrentButton) headerActions?.append(loadCurrentButton);
         headerActions?.append(printButton);
       }
-      // Rearrange keeps its real element (and therefore every handler
-      // wired to it above) - only appended once it has a home, next to
-      // Empty cells / Reset Recipe, on every width.
-      toolbar.querySelector(".splitsEditRowSecondary")?.append(rearrangeButton);
+      // Rearrange keeps its real element (and therefore every handler wired
+      // to it above) - only placed once it has a home. It leads the
+      // secondary row rather than trailing it: that row is a right-anchored
+      // pill (margin-left:auto), so a Cancel button appearing beside
+      // Rearrange grows the pill leftwards and leaves Clear selection /
+      // Empty cells / Reset Recipe exactly where they were.
+      const editSecondaryRow = toolbar.querySelector(".splitsEditRowSecondary");
+      editSecondaryRow?.prepend(rearrangeButton);
+      if (reworkedGrid && hopperRearrangement?.active){
+        const cancelRearrange = document.createElement("button");
+        cancelRearrange.type = "button";
+        cancelRearrange.className = "bulkTextAction splitsRearrangeCancel";
+        cancelRearrange.textContent = "Cancel";
+        cancelRearrange.setAttribute("aria-label", "Cancel rearranging");
+        cancelRearrange.title = "Discard every move and restore the recipe as it was";
+        cancelRearrange.addEventListener("click", ()=>finishRearrangement(true));
+        rearrangeButton.after(cancelRearrange);
+      }
 
       // Percentage problems are not printed here. They are conditions of the
       // recipe, not of this render, so they belong in the notification bell
@@ -4909,22 +4923,11 @@
       // Desktop has no lower recipe-action row: Load and Print moved to the
       // header, and Scan remains a mobile capture workflow.
 
-      if(hopperRearrangement?.active&&!compactMobileRecipe){
-        const bar=document.createElement("div");
-        bar.className="rearrangeModeBar";
-        bar.innerHTML='<div class="rearrangeModeMessage"><strong>Rearrange mode</strong><span>Drag, or tap a hopper then tap another, to move assignments. Hopper 1 is recalculated after each move.</span></div>';
-        const actions=document.createElement("div");
-        actions.className="rearrangeModeActions";
-        const undo=document.createElement("button");
-        undo.type="button"; undo.className="secondary"; undo.textContent="Undo Last Move"; undo.disabled=!hopperRearrangement.undo.length;
-        const cancel=document.createElement("button");
-        cancel.type="button"; cancel.className="secondary"; cancel.textContent="Cancel";
-        undo.addEventListener("click",undoRearrangement);
-        cancel.addEventListener("click",()=>finishRearrangement(true));
-        actions.append(undo,cancel);
-        bar.append(actions);
-        area.append(bar);
-      }
+      // No standalone rearrange bar: the edit toolbar is always visible on
+      // the reworked grid, so the mode reports itself through the controls
+      // already there - the Rearrange button becomes a highlighted Done with
+      // Cancel beside it, Undo repoints to the move stack, and the
+      // interaction hint carries the guidance text.
 
       // A vertical rail of per-layer buttons, sitting to the right of the
       // table (see .splitsMobileLayerLayout below) rather than a pager row
@@ -5564,6 +5567,11 @@
       const interactionHint = document.createElement("p");
       interactionHint.className = "recipeInteractionHint";
       const interactionVerb = isDesktopLayout() ? "CLICK" : "TAP";
+      // Rearrange has no bar of its own any more, so its guidance takes over
+      // this line for the duration - the one place the grid already explains
+      // what a click does.
+      const rearranging = reworkedGrid && !!hopperRearrangement?.active;
+      const pointerVerb = isDesktopLayout() ? "click" : "tap";
       // The reworked grid does both at once, so it names both rather than
       // whichever mode happens to be on.
       const interactionAction = reworkedGrid
@@ -5573,12 +5581,22 @@
       interactionCommand.className = "recipeInteractionHintCommand";
       interactionCommand.textContent = interactionVerb;
       const interactionCount = document.createElement("span");
-      interactionHint.append(
-        interactionCommand,
-        document.createTextNode(` a hopper to ${interactionAction}`),
-        interactionCount
-      );
+      if (rearranging){
+        interactionCommand.textContent = "REARRANGING";
+        interactionHint.append(
+          interactionCommand,
+          document.createTextNode(` Drag, or ${pointerVerb} a hopper then ${pointerVerb} another, to move assignments. Hopper 1 is recalculated after each move.`)
+        );
+      }else{
+        interactionHint.append(
+          interactionCommand,
+          document.createTextNode(` a hopper to ${interactionAction}`),
+          interactionCount
+        );
+      }
       function updateInteractionHint(){
+        // Rearrange's hint is a fixed sentence, not a running count.
+        if (rearranging) return;
         if (reworkedGrid){
           const parts = [];
           if (selected.size) parts.push(`${selected.size} selected`);
@@ -5668,11 +5686,32 @@
       const redoButton = toolbar.querySelector("#recipeRedo");
       attachResinAutocomplete(bulkNameInput);
 
+      // While rearranging, the recipe edit history is deliberately not
+      // touched per move - finishRearrangement records the whole
+      // rearrangement as one entry - so the toolbar's Undo would otherwise
+      // step back the edit *before* the rearrangement rather than the last
+      // move. For the duration it drives the move stack instead, and Redo
+      // (which the move stack has no counterpart for) stands down.
+      const rearrangingNow = reworkedGrid && !!hopperRearrangement?.active;
       function updateRecipeHistoryControls(){
+        if (rearrangingNow){
+          if (undoButton) undoButton.disabled = !hopperRearrangement?.undo?.length;
+          if (redoButton) redoButton.disabled = true;
+          return;
+        }
         syncRecipeEditHistoryControls();
       }
-      undoButton?.addEventListener("click",undoRecipeEdit);
-      redoButton?.addEventListener("click",redoRecipeEdit);
+      if (rearrangingNow){
+        if (undoButton){
+          undoButton.setAttribute("aria-label", "Undo last move");
+          undoButton.title = "Undo last move";
+          undoButton.addEventListener("click", undoRearrangement);
+        }
+        if (redoButton) redoButton.title = "Redo is unavailable while rearranging";
+      }else{
+        undoButton?.addEventListener("click",undoRecipeEdit);
+        redoButton?.addEventListener("click",redoRecipeEdit);
+      }
 
       function hasBulkValue(){
         return bulkNameInput.value.trim() !== "" || bulkPctInput.value.trim() !== "";
@@ -5708,11 +5747,17 @@
         // something. Selecting six blank hoppers used to light the button up
         // for an action that would do nothing.
         const emptyable = emptyableHopperCount();
-        if (clearCellsButton) clearCellsButton.disabled = emptyable === 0;
+        // Rearranging takes every cell field out of service, so the controls
+        // that act on cells go with them rather than sitting there live and
+        // doing nothing.
+        if (clearCellsButton) clearCellsButton.disabled = rearrangingNow || emptyable === 0;
+        if (rearrangingNow){
+          [bulkNameInput, bulkPctInput, applyButton, resetButton, clearSelectionButton]
+            .forEach(control=>{ if (control) control.disabled = true; });
+        }
         // Selection is what raises the reworked grid's edit toolbar, so the
         // visibility decision belongs on every selection change rather than
         // only on a mode switch.
-        if (reworkedGrid) toolbar.classList.toggle("hide", selected.size === 0);
         updateRecipeHistoryControls();
         selectionStatus.className = `srOnly tiny splitsSelectionStatus${type ? ` ${type}` : ""}`;
         selectionStatus.textContent = message || (
@@ -5731,11 +5776,11 @@
         // Desktop presentation is driven entirely by data-recipe-view
         // instead, so the two never fight over the same cells.
         area.classList.toggle("bulk-editing", bulkMode && compactMobileRecipe);
-        // The reworked grid is always in "bulk mode", so bulkMode alone
-        // would pin the toolbar open forever. There it is the selection
-        // that raises it (see updateSelectionUI), and it reserves no space
-        // while idle.
-        toolbar.classList.toggle("hide", reworkedGrid ? selected.size === 0 : !bulkMode);
+        // Always present on the reworked grid. It sits below the matrix, so
+        // it costs the grid no movement, and a toolbar that appears and
+        // disappears on every selection is harder to aim at than one that is
+        // simply always there.
+        toolbar.classList.toggle("hide", reworkedGrid ? false : !bulkMode);
         modeButton.textContent = bulkMode ? "Done bulk editing" : "Bulk edit";
         if(compactMobileRecipe){
           modeButton.setAttribute("aria-expanded", String(bulkMode));

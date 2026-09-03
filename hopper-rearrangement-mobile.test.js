@@ -156,13 +156,13 @@ test("mobile rearrange uses a contextual toolbar and temporary Undo toast instea
   assert.match(splitsArea,/mobileRearrangeContext\.innerHTML=/);
   assert.match(splitsArea,/mobileRearrangeCancel/);
   assert.match(splitsArea,/mobileRearrangeDone/);
-  assert.match(splitsArea,/if\(hopperRearrangement\?\.active&&!compactMobileRecipe\)\{/);
+  assert.match(splitsArea,/No standalone rearrange bar/);
   assert.match(splitsArea,/toast\.className="mobileRearrangeToast";/);
   assert.match(styles,/\.mobileRearrangeToast\{/);
 });
 
 test("the rearrange-mode help text mentions tapping as well as dragging", () => {
-  assert.match(splitsArea, /Drag, or tap a hopper then tap another, to move assignments\./);
+  assert.match(splitsArea, /Drag, or \$\{pointerVerb\} a hopper then \$\{pointerVerb\} another, to move assignments\./);
 });
 
 // --- Bulk Edit and Rearrange mode bars are more compact on mobile --------

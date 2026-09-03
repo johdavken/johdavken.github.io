@@ -21,12 +21,15 @@ function functionBody(name){
 // mutually-exclusive panel group - it's a small popup, not a dropped panel.
 
 test("Rearrange Hoppers was renamed to just Rearrange", () => {
-  assert.match(app, /rearrangeButton\.innerHTML=`<svg class="recipeEditActionIcon"[\s\S]*?<span>\$\{hopperRearrangement\?\.active\?"Done Rearranging":"Rearrange"\}<\/span>`;/);
+  assert.match(app, /rearrangeButton\.innerHTML=`<svg class="recipeEditActionIcon"[\s\S]*?<span>\$\{hopperRearrangement\?\.active\?"Done":"Rearrange"\}<\/span>`;/);
   assert.doesNotMatch(app, /"Rearrange Hoppers"/);
 });
 
 test("Rearrange carries one label on every width now that it lives in the Edit toolbar's wrapping pill row rather than a rigid four-item primary row - no compactMobileRecipe split needed to avoid the overflow that forced one", () => {
   assert.doesNotMatch(app, /compactMobileRecipe\?"Done":"Done Rearranging"/);
+  // Cancel is a sibling button while the mode is active, not a second label
+  // on this one.
+  assert.match(app, /cancelRearrange\.textContent = "Cancel";/);
 });
 
 test("the Scan Recipe button leads modeBar's own append order, ahead of Print Recipe - Rearrange moved out into .recipeUtilityTabs and is no longer appended into modeBar at all", () => {

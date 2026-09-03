@@ -111,12 +111,12 @@ test("desktop keeps Recipe Book as a page tab and moves recipe actions (incl. Pr
 test("Rearrange keeps its real element, appended into the Edit panel's secondary row after the if/else block closes", () => {
   const editor = recipeEditor();
   const block = mobileVsDesktopBlock(editor);
-  assert.match(block, /toolbar\.querySelector\("\.splitsEditRowSecondary"\)\?\.append\(rearrangeButton\);/);
+  assert.match(block, /editSecondaryRow\?\.prepend\(rearrangeButton\);/);
   const desktopSplit = block.indexOf("}else{");
   const closingBrace = block.indexOf("\n      }\n", desktopSplit);
   assert.ok(closingBrace > desktopSplit);
-  const appendIndex = block.indexOf('toolbar.querySelector(".splitsEditRowSecondary")?.append(rearrangeButton);');
-  assert.ok(appendIndex > closingBrace, "the rearrangeButton append must sit after the if/else block closes, not inside either branch");
+  const placeIndex = block.indexOf("editSecondaryRow?.prepend(rearrangeButton);");
+  assert.ok(placeIndex > closingBrace, "the rearrangeButton placement must sit after the if/else block closes, not inside either branch");
 });
 
 test("the mobile action tray no longer holds a primary row - only the rearrange context row (+ tracking bar)", () => {
@@ -176,9 +176,10 @@ test("Rearrange latches on the button itself while the mode is active - the Canc
   // Two groups so the left/right arrows can travel independently. Same
   // paths as the previous single-path glyph.
   assert.match(editor, /<g class="rearrangeArrowDown"><path d="M8 4v16m0 0-3-3m3 3 3-3"\/><\/g><g class="rearrangeArrowUp"><path d="M16 20V4m0 0-3 3m3-3 3 3"\/><\/g>/);
-  // The existing Done-Rearranging label stays (visible on tablet/desktop);
-  // phone hides it with font-size:0, so motion has to carry the state.
-  assert.match(editor, /hopperRearrangement\?\.active\?"Done Rearranging":"Rearrange"/);
+  // The label stays (visible on tablet/desktop); phone hides it with
+  // font-size:0, so motion has to carry the state. It reads just "Done" now
+  // that Cancel sits beside it and the pair needs no disambiguation.
+  assert.match(editor, /hopperRearrangement\?\.active\?"Done":"Rearrange"/);
 
   const start = styles.indexOf("@media (max-width:700px){");
   const compact = styles.slice(start, styles.indexOf("\n}\n\n@media (max-width: 720px)", start));
