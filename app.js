@@ -3079,12 +3079,13 @@
       toolbar.id = "desktopWeightsBulkContext";
       toolbar.className = "weightsBulkBar desktopWeightsBulkContext";
       // Always present on the reworked grid, matching the Recipe grid's own
-      // toolbar. It carries the Smart Hoppers toggle (moved in below), which
-      // has to be reachable whether or not a hopper is selected.
+      // toolbar. Smart Hoppers and the shared circumference live in the
+      // header pill instead (see the relocation below) - beside where
+      // Current/Next put Promote / Load Current / Print - which keeps this
+      // row short enough to carry the "N selected · Clear" status.
       toolbar.hidden = false;
       toolbar.innerHTML = `
         <div class="weightsBulkFieldsRow">
-          <span class="weightsBulkSmart" data-smart-slot></span>
           <label class="weightsBulkField" for="bulkWeight">
             <span>Weight</span>
             <span class="weightsInputWithUnit">
@@ -3096,7 +3097,7 @@
           ${state.smartHoppersEnabled && geometryMode === "cylindrical" ? '<label class="weightsBulkField" for="bulkHeight"><span>Height</span><span class="weightsInputWithUnit"><input id="bulkHeight" type="text" inputmode="decimal" placeholder="No change" /><span>in</span></span></label>' : ""}
           <button id="applyBulkWeight" class="secondary" type="button" disabled>Apply</button>
           <div class="weightsBulkActions">
-            <div id="weightSelectionStatus" class="tiny weightsSelectionStatus srOnly" role="status" aria-live="polite">No hoppers selected</div>
+            <div id="weightSelectionStatus" class="tiny weightsSelectionStatus" role="status" aria-live="polite">No hoppers selected</div>
             <button id="clearWeightSelection" type="button" class="bulkTextAction">Clear</button>
           </div>
         </div>
@@ -3145,38 +3146,44 @@
       corner.scope = "col";
       corner.className = "weightsRowCorner";
       // Transposed, the first column names layers and the header row names
-      // hopper positions - the gutter corner keeps its caption. The Smart
-      // Hoppers control and the shared circumference field both move into
-      // the always-visible bulk toolbar instead: a "Smart Hoppers" label +
-      // pill at its left, circumference between Apply and Clear when the
-      // line is cylindrical. hookToggle still drives the same #smartHoppersToggle
-      // element, moved not rebuilt, so its wiring is untouched.
+      // hopper positions - the gutter corner keeps its caption. Smart
+      // Hoppers and the shared circumference move into the header pill,
+      // where Current/Next put Promote / Load Current / Print - that frees
+      // enough room in the bulk toolbar for the "N selected · Clear" status.
+      // hookToggle still drives the same #smartHoppersToggle element, moved
+      // not rebuilt, so its wiring is untouched.
       corner.textContent = "Layer";
       const smartToggleEl = desktopControls.querySelector("#smartHoppersToggle");
       const smartStateEl = desktopControls.querySelector(".desktopSmartHopperState");
       const circumferenceLabel = desktopControls.querySelector(".desktopSharedCircumference");
-      const smartSlot = toolbar.querySelector("[data-smart-slot]");
-      if (smartSlot){
+      const headerActions = $("recipeHeaderActions");
+      if (headerActions){
+        // renderWeightsArea also runs on its own (Smart Hoppers toggle,
+        // circumference input, layer change) without renderSplitsArea
+        // clearing this first, so wipe it here every time.
+        headerActions.replaceChildren();
+        headerActions.hidden = false;
+        const smartField = document.createElement("span");
+        smartField.className = "weightsHeaderSmart";
         if (smartToggleEl){
-          const smartField = document.createElement("span");
-          smartField.className = "weightsBulkField weightsBulkSmartField";
           const smartLabel = document.createElement("span");
+          smartLabel.className = "weightsHeaderSmartLabel";
           smartLabel.textContent = "Smart Hoppers";
           smartField.appendChild(smartLabel);
           if (smartStateEl){ smartStateEl.classList.add("srOnly"); smartField.appendChild(smartStateEl); }
           smartField.appendChild(smartToggleEl);
-          smartSlot.replaceWith(smartField);
         } else {
           // No identified line - Smart Hoppers has no geometry to compute
-          // from. A muted, non-interactive marker keeps the control's place.
-          smartSlot.className = "weightsBulkField weightsBulkSmartField unavailable";
-          smartSlot.textContent = "Smart Hoppers · unavailable";
+          // from. A muted, non-interactive marker keeps its place.
+          smartField.classList.add("unavailable");
+          smartField.textContent = "Smart Hoppers · unavailable";
+        }
+        headerActions.appendChild(smartField);
+        if (circumferenceLabel){
+          circumferenceLabel.classList.add("weightsHeaderCircumference");
+          headerActions.appendChild(circumferenceLabel);
         }
         desktopControls.querySelector(".desktopWeightsSmartControl")?.remove();
-      }
-      if (circumferenceLabel){
-        circumferenceLabel.classList.add("weightsBulkCircumference");
-        toolbar.querySelector("#applyBulkWeight")?.after(circumferenceLabel);
       }
       headerRow.appendChild(corner);
       const tbody = document.createElement("tbody");
@@ -4182,11 +4189,10 @@
       const headerControls = $("recipeHeaderControls");
       if (headerControls) headerControls.hidden = isSavedRecipesPage();
       const headerActions = $("recipeHeaderActions");
-      // The Weights page uses this slot for its compact profiles icon on
-      // phones (renderMobileWeightsArea fills it); desktop Weights still
-      // keeps its inline Weight Profiles panel, so the slot stays hidden
-      // there. Recipe Book never has header actions.
-      if (headerActions) headerActions.hidden = isSavedRecipesPage() || (isWeightsPage() && isDesktopLayout());
+      // Current/Next fill this with Promote/Load Current/Print; the reworked
+      // Weights grid fills it with Smart Hoppers + the shared circumference
+      // (see renderWeightsArea). Only the Recipe Book has nothing for it.
+      if (headerActions) headerActions.hidden = isSavedRecipesPage();
       syncPlannedRecipeIndicator();
     }
 

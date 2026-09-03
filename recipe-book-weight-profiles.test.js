@@ -403,18 +403,26 @@ test("the weight/height cell inputs stack on every width, not just the tablet", 
   assert.match(styles, /body #weightsArea \.weightsMatrix:has\(\.weightsLayerHeader\) \.desktopWeightEditFields label small\{[\s\S]*?order:1;/);
 });
 
-test("the Smart Hoppers control lives in the always-visible bulk toolbar, not the gutter", () => {
+test("Smart Hoppers lives in the header pill, beside where Current/Next put Promote / Print", () => {
   const body = (()=>{const start=app.indexOf("function renderWeightsArea(");const next=app.indexOf("\n    function ",start+1);return app.slice(start,next===-1?undefined:next);})();
-  // A "Smart Hoppers" label + the real #smartHoppersToggle pill, moved (not
-  // rebuilt) into a field at the head of the fields row. The gutter keeps
-  // its "Layer" caption.
-  assert.match(body, /const smartSlot = toolbar\.querySelector\("\[data-smart-slot\]"\);/);
+  // The real #smartHoppersToggle pill + a "Smart Hoppers" label, moved (not
+  // rebuilt) into #recipeHeaderActions. The gutter keeps its "Layer" caption.
+  assert.match(body, /const headerActions = \$\("recipeHeaderActions"\);/);
   assert.match(body, /smartField\.appendChild\(smartToggleEl\);/);
-  assert.match(body, /smartSlot\.replaceWith\(smartField\);/);
+  assert.match(body, /headerActions\.appendChild\(smartField\);/);
+  assert.match(body, /headerActions\.replaceChildren\(\);/);
   assert.match(body, /corner\.textContent = "Layer";/);
   assert.doesNotMatch(body, /weightsCornerSmartLabel|weightsCornerToggle/);
-  assert.match(styles, /body #splitsBlock #weightsArea \.weightsBulkBar \.weightsBulkSmartField\{/);
-  assert.match(styles, /body #splitsBlock #weightsArea \.weightsBulkBar \.weightsBulkSmartField \.toggle\{/);
+  assert.match(styles, /body #splitsBlock #recipeHeaderControls \.weightsHeaderSmart\{/);
+  assert.match(styles, /body #splitsBlock #recipeHeaderControls \.weightsHeaderSmart \.toggle\{/);
+  // syncRecipePageUI no longer hides the header actions slot on desktop Weights.
+  assert.match(app, /headerActions\.hidden = isSavedRecipesPage\(\);/);
+});
+
+test("the bulk toolbar shows the visible 'N hoppers selected' count again", () => {
+  assert.match(app, /<div id="weightSelectionStatus" class="tiny weightsSelectionStatus" role="status"/);
+  assert.doesNotMatch(app, /class="tiny weightsSelectionStatus srOnly"/);
+  assert.match(styles, /body #splitsBlock #weightsArea \.weightsBulkBar \.weightsBulkActions \.weightsSelectionStatus\{[\s\S]*?position:static;/);
 });
 
 test("the toolbar is always visible - it carries the Smart Hoppers toggle", () => {
@@ -423,10 +431,10 @@ test("the toolbar is always visible - it carries the Smart Hoppers toggle", () =
   assert.doesNotMatch(body, /toolbar\.hidden = selected\.size === 0;/);
 });
 
-test("with no identified line, a muted 'Smart Hoppers . unavailable' marker holds the toolbar slot", () => {
+test("with no identified line, a muted 'Smart Hoppers . unavailable' marker holds the header slot", () => {
   const body = (()=>{const start=app.indexOf("function renderWeightsArea(");const next=app.indexOf("\n    function ",start+1);return app.slice(start,next===-1?undefined:next);})();
-  assert.match(body, /smartSlot\.textContent = "Smart Hoppers \u00b7 unavailable";/);
-  assert.match(styles, /body #splitsBlock #weightsArea \.weightsBulkBar \.weightsBulkSmartField\.unavailable\{/);
+  assert.match(body, /smartField\.textContent = "Smart Hoppers \u00b7 unavailable";/);
+  assert.match(styles, /body #splitsBlock #recipeHeaderControls \.weightsHeaderSmart\.unavailable\{/);
 });
 
 test("the weights bulk Apply button reads just 'Apply', fixed", () => {
@@ -456,10 +464,11 @@ test("the smart control and circumference are pulled from desktopControls, which
   assert.match(styles, /body #weightsArea > \.desktopWeightsControls:not\(:has\(\*\)\)\{[\s\S]*?display:none;/);
 });
 
-test("the shared circumference field relocates into the bulk toolbar, between Apply and Clear", () => {
+test("the shared circumference field moves into the header pill alongside Smart Hoppers", () => {
   const body = (()=>{const start=app.indexOf("function renderWeightsArea(");const next=app.indexOf("\n    function ",start+1);return app.slice(start,next===-1?undefined:next);})();
-  assert.match(body, /toolbar\.querySelector\("#applyBulkWeight"\)\?\.after\(circumferenceLabel\);/);
-  assert.match(styles, /body #splitsBlock #weightsArea \.weightsBulkBar \.weightsBulkCircumference\{/);
+  assert.match(body, /circumferenceLabel\.classList\.add\("weightsHeaderCircumference"\);/);
+  assert.match(body, /headerActions\.appendChild\(circumferenceLabel\);/);
+  assert.match(styles, /body #splitsBlock #recipeHeaderControls \.weightsHeaderCircumference\{/);
 });
 
 test("Apply in the weights bulk bar takes the station-console key, matching Clear", () => {

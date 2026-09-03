@@ -12512,32 +12512,55 @@ body #splitsBlock #weightsArea .weightsBulkBar .weightsInputWithUnit input::plac
   font-weight:600;
 }
 
-/* Smart Hoppers: "Smart Hoppers" label + its pill, in a box like the rest. */
-body #splitsBlock #weightsArea .weightsBulkBar .weightsBulkSmartField{
-  display:grid;
-  grid-template-columns:auto auto;
+/* Smart Hoppers + circumference sit in the header pill, beside where
+   Current/Next put Promote / Load Current / Print. Each is a compact inline
+   group; #recipeHeaderControls carries the specificity to beat the pill's
+   own segment rules. */
+body #splitsBlock #recipeHeaderControls .weightsHeaderSmart{
+  display:inline-flex;
   align-items:center;
   gap:8px;
+  padding:4px 10px;
+  border-radius:var(--control-radius);
+  background:color-mix(in srgb, var(--recipe-pill-accent) 28%, var(--panel2));
+  color:var(--text);
+  font-size:var(--font-small);
+  font-weight:750;
+  white-space:nowrap;
 }
-body #splitsBlock #weightsArea .weightsBulkBar .weightsBulkSmartField .toggle{
-  --toggle-w:42px;
-  --toggle-h:24px;
-  --toggle-knob:18px;
+body #splitsBlock #recipeHeaderControls .weightsHeaderSmart .toggle{
+  --toggle-w:40px;
+  --toggle-h:22px;
+  --toggle-knob:16px;
 }
-body #splitsBlock #weightsArea .weightsBulkBar .weightsBulkSmartField.unavailable{
-  display:flex;
-  opacity:.7;
+body #splitsBlock #recipeHeaderControls .weightsHeaderSmart.unavailable{
+  opacity:.6;
+  font-weight:600;
 }
-
-/* Circumference: same box, between Apply and Clear. */
-body #splitsBlock #weightsArea .weightsBulkBar .weightsBulkCircumference{
-  display:grid;
-  grid-template-columns:auto auto;
+body #splitsBlock #recipeHeaderControls .weightsHeaderCircumference{
+  display:inline-flex;
   align-items:center;
-  gap:8px;
+  gap:6px;
+  margin:0;
+  padding:4px 10px;
+  border-radius:var(--control-radius);
+  background:color-mix(in srgb, var(--recipe-pill-accent) 28%, var(--panel2));
+  color:var(--text);
+  font-size:var(--font-small);
+  font-weight:750;
+  white-space:nowrap;
 }
-body #splitsBlock #weightsArea .weightsBulkBar .weightsBulkCircumference .weightsInputWithUnit{
-  grid-template-columns:64px auto;
+body #splitsBlock #recipeHeaderControls .weightsHeaderCircumference .weightsInputWithUnit{
+  display:grid;
+  grid-template-columns:56px auto;
+  align-items:center;
+  gap:4px;
+}
+body #splitsBlock #recipeHeaderControls .weightsHeaderCircumference input{
+  min-height:24px;
+  min-width:0;
+  font-size:13px;
+  font-weight:800;
 }
 
 /* Apply: the recipe toolbar's own button metrics, and title case to match
@@ -12561,14 +12584,27 @@ body #splitsBlock #weightsArea .weightsBulkBar #applyBulkWeight{
    look). */
 body #splitsBlock #weightsArea .weightsBulkBar .weightsBulkActions{
   display:flex;
-  align-items:stretch;
-  gap:8px;
+  align-items:center;
+  gap:10px;
   flex:0 0 auto;
   margin-left:auto;
   padding:6px 8px;
   border-top:0;
   border-radius:7px;
   background:color-mix(in srgb, var(--btnstyle-surface) 55%, transparent);
+}
+/* Visible again: "N hoppers selected", the count the always-on toolbar
+   otherwise never shows. */
+body #splitsBlock #weightsArea .weightsBulkBar .weightsBulkActions .weightsSelectionStatus{
+  position:static;
+  width:auto;
+  height:auto;
+  margin:0;
+  overflow:visible;
+  clip:auto;
+  white-space:nowrap;
+  color:var(--muted);
+  font-size:var(--font-tiny);
 }
 body #splitsBlock #weightsArea .weightsBulkBar .weightsBulkActions #clearWeightSelection{
   white-space:nowrap;
