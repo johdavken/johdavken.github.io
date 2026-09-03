@@ -81,18 +81,27 @@ test("console covers every treated button and neutralises the pill container", (
   assert.match(buttonCss, /body\[data-button-style="console"\] #splitsArea #splitsBulkBar \.splitsEditRowSecondary/);
 });
 
-test("console reaches the Recipe Book desktop toolbar: bay, chips, Load primary, Delete danger", () => {
-  const bookBay = /body\[data-button-style="console"\] #splitsBlock \.splitsSavedRecipesPanel \.splitsSavedRecipesActions\{[\s\S]*?border-radius: 7px/;
-  assert.match(buttonCss, bookBay);
-  // the bar's buttons + the overflow trigger take the surface chip
-  assert.match(buttonCss, /\.splitsSavedRecipesPanel \.splitsSavedRecipesActions > button,[\s\S]*?\.workspaceConfigurationOverflow > summary,/);
-  // Load is the inverted primary, but only while it is armed
-  assert.match(buttonCss, /#splitsLoadRecipe:not\(:disabled\)\{[\s\S]*?background: var\(--btnstyle-ink\)/);
-  // Delete in the overflow menu is solid danger
-  assert.match(buttonCss, /\.workspaceConfigurationOverflowMenu #splitsDeleteRecipe\{[\s\S]*?background: var\(--btnstyle-danger\)/);
-  // still desktop-only + panel-scoped
+test("console reaches the shared Recipe Book / Weight Profiles toolbar: bay, chips, primary, danger", () => {
+  // one bay rule, panel-agnostic (both panels share .splitsSavedRecipesActions)
+  assert.match(buttonCss, /body\[data-button-style="console"\] #splitsBlock \.splitsSavedRecipesActions\{[\s\S]*?border-radius: 7px/);
+  // the bar's buttons + the overflow trigger + the overflow menu items take the chip
+  assert.match(buttonCss, /#splitsBlock \.splitsSavedRecipesActions > button,[\s\S]*?\.workspaceConfigurationOverflow > summary,[\s\S]*?\.workspaceConfigurationOverflowMenu button\{/);
+  // Load (either panel's) is the inverted primary, but only while armed - by class, not id
+  assert.match(buttonCss, /\.splitsSavedRecipesActions > button\.primary:not\(:disabled\)\{[\s\S]*?background: var\(--btnstyle-ink\)/);
+  // Delete (either panel's) is solid danger - by class, not id
+  assert.match(buttonCss, /\.workspaceConfigurationOverflowMenu button\.danger\{[\s\S]*?background: var\(--btnstyle-danger\)/);
+  assert.doesNotMatch(buttonCss, /#splitsDeleteRecipe|#setupDeleteWeightProfile|#splitsLoadRecipe|#setupLoadWeightProfile/);
+});
+
+test("console reaches the relocated Hopper Weights Summary/Edit toggle", () => {
+  // it lives in #recipeHeaderControls (not the action pill) on the Weights page
+  assert.match(buttonCss, /#splitsBlock #recipeHeaderControls \.weightsHeaderViewToggle button\[data-weight-view="edit"\]\{[\s\S]*?background: var\(--btnstyle-ink\)/);
+});
+
+test("every console selector stays desktop-only and inside the Recipe / Weights panel", () => {
   for (const line of buttonCss.split("\n").map(l => l.trim()).filter(l => l.startsWith('body[data-button-style="'))) {
     assert.ok(line.includes("#splitsBlock") || line.includes("#splitsArea"), line);
+    assert.ok(line.includes('"console"'), line);
   }
 });
 

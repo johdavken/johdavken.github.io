@@ -10,12 +10,15 @@
  * Scope, deliberately narrow:
  *   - only inside #splitsBlock (the Recipe / Weights panel)
  *   - the toolbars, surface by surface:
- *       CMD  = #recipeHeaderActionPill's buttons (Edit/Done, Load, Print)
+ *       CMD  = #recipeHeaderActionPill's buttons (Edit/Done, Load, Print),
+ *              plus the Hopper Weights page's relocated Summary/Edit toggle
+ *              (.weightsHeaderViewToggle in #recipeHeaderControls)
  *       BULK = the Edit-mode bulk bar's Clear / Empty cells / Reset /
  *              Rearrange (every .bulkTextAction in the bar, plus the
  *              #resetAllSplits danger button)
- *       BOOK = the Recipe Book page's desktop select-a-row-then-act bar
- *              (.splitsSavedRecipesActions) + its overflow menu
+ *       BOOK = the Recipe Book AND Weight Profiles panels' shared desktop
+ *              select-a-row-then-act bar (.splitsSavedRecipesActions) + its
+ *              overflow menu
  *     Apply and the Undo/Redo history pair only get their corner radius
  *     matched, so no stray rounded button sits beside the treated ones.
  *   - only at the desktop breakpoint the rest of desktop.css uses
@@ -82,11 +85,19 @@ body[data-button-style]{
   body[data-button-style="console"] #splitsBlock .weightsBulkBar #applyBulkWeight{
     border-radius: 4px;
   }
-  /* Primary = the Edit/Done toggle: an inverted key, ink fill on light text. */
+  /* Primary = the Edit/Done toggle: an inverted key, ink fill on light text.
+     On the Hopper Weights page the same Summary/Edit control is relocated
+     into #recipeHeaderControls (not the action pill) and carries
+     .weightsHeaderViewToggle, so it needs its own selector. */
   body[data-button-style="console"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
-  body[data-button-style="console"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-weight-view="edit"]{
+  body[data-button-style="console"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-weight-view="edit"],
+  body[data-button-style="console"] #splitsBlock #recipeHeaderControls .weightsHeaderViewToggle button[data-weight-view="edit"]{
+    min-height: 30px;
+    border: 0;
+    border-radius: 4px;
     background: var(--btnstyle-ink);
     color: var(--panel);
+    box-shadow: 0 1px 0 var(--btnstyle-edge);
   }
   /* Destructive = Reset Recipe: solid danger. */
   body[data-button-style="console"] #splitsBlock #resetAllSplits{
@@ -94,21 +105,23 @@ body[data-button-style]{
     color: var(--btnstyle-on-fill);
   }
 
-  /* ---- Recipe Book (desktop) -----------------------------------------
-     The select-a-row-then-act bar (Save Current / Save Next / Load /
-     Update / more) becomes one contained bay, matching the header and
-     bulk rows. Desktop only: the <=700px block collapses this same bar to
-     round icon buttons, which this must not touch (the media query keeps
-     it out). The list rows below stay as they are - they are selectable
-     cards, not buttons. */
-  body[data-button-style="console"] #splitsBlock .splitsSavedRecipesPanel .splitsSavedRecipesActions{
+  /* ---- Recipe Book + Weight Profiles (desktop) ----------------------
+     Both panels share .splitsSavedRecipesActions - the select-a-row-then-
+     act bar (Save / Load / Update / more). It becomes one contained bay,
+     matching the header and bulk rows. Desktop only: the <=700px block
+     collapses this same bar to round icon buttons, which this must not
+     touch (the media query keeps it out). The list rows below stay as
+     they are - selectable cards, not buttons. Primary and destructive are
+     targeted by .primary / .danger so both panels' differently-named
+     Load / Delete buttons are covered. */
+  body[data-button-style="console"] #splitsBlock .splitsSavedRecipesActions{
     padding: 6px 8px;
     border-radius: 7px;
     background: color-mix(in srgb, var(--btnstyle-surface) 55%, transparent);
   }
-  body[data-button-style="console"] #splitsBlock .splitsSavedRecipesPanel .splitsSavedRecipesActions > button,
-  body[data-button-style="console"] #splitsBlock .splitsSavedRecipesPanel .splitsSavedRecipesActions .workspaceConfigurationOverflow > summary,
-  body[data-button-style="console"] #splitsBlock .splitsSavedRecipesPanel .workspaceConfigurationOverflowMenu button{
+  body[data-button-style="console"] #splitsBlock .splitsSavedRecipesActions > button,
+  body[data-button-style="console"] #splitsBlock .splitsSavedRecipesActions .workspaceConfigurationOverflow > summary,
+  body[data-button-style="console"] #splitsBlock .workspaceConfigurationOverflowMenu button{
     min-height: 30px;
     border: 0;
     border-radius: 4px;
@@ -121,23 +134,24 @@ body[data-button-style]{
     letter-spacing: normal;
   }
   /* Popup items already sit on a shadowed panel - drop the extra lift. */
-  body[data-button-style="console"] #splitsBlock .splitsSavedRecipesPanel .workspaceConfigurationOverflowMenu button{
+  body[data-button-style="console"] #splitsBlock .workspaceConfigurationOverflowMenu button{
     box-shadow: none;
   }
   /* Primary = Load: an inverted key. Falls back to a plain chip while it is
      disabled (no row selected), so it doesn't read as armed. */
-  body[data-button-style="console"] #splitsBlock .splitsSavedRecipesPanel #splitsLoadRecipe:not(:disabled){
+  body[data-button-style="console"] #splitsBlock .splitsSavedRecipesActions > button.primary:not(:disabled){
     background: var(--btnstyle-ink);
     color: var(--panel);
   }
   /* Destructive = Delete, in the overflow menu: solid danger. */
-  body[data-button-style="console"] #splitsBlock .splitsSavedRecipesPanel .workspaceConfigurationOverflowMenu #splitsDeleteRecipe{
+  body[data-button-style="console"] #splitsBlock .workspaceConfigurationOverflowMenu button.danger{
     background: var(--btnstyle-danger);
     color: var(--btnstyle-on-fill);
   }
 
   /* Keep the focus ring legible on the treated controls. */
   body[data-button-style="console"] #splitsBlock #recipeHeaderActionPill button:focus-visible,
+  body[data-button-style="console"] #splitsBlock #recipeHeaderControls .weightsHeaderViewToggle button:focus-visible,
   body[data-button-style="console"] #splitsBlock .splitsBulkBar button:focus-visible,
   body[data-button-style="console"] #splitsBlock .weightsBulkBar button:focus-visible,
   body[data-button-style="console"] #splitsBlock .splitsSavedRecipesActions button:focus-visible,
