@@ -9,8 +9,9 @@
  *
  * Scope, deliberately narrow:
  *   - the Recipe / Weights panel (#splitsBlock), the Timeline panel's
- *     control bar (#resultsBlock #timelinePane .timelineControlBar), and
- *     RT Sync's desktop action buttons (#lineSyncBlock)
+ *     control bar (#resultsBlock #timelinePane .timelineControlBar),
+ *     RT Sync's desktop action buttons (#lineSyncBlock), and the Tools
+ *     section's per-tool action buttons (#toolsBlock)
  *   - the toolbars, surface by surface:
  *       CMD  = #recipeHeaderActionPill's buttons (Edit/Done, Load, Print),
  *              plus the Hopper Weights page's relocated Summary/Edit toggle
@@ -25,6 +26,9 @@
  *              / settings gear). The row ribbon below is untouched.
  *       SYNC = RT Sync's desktop CTAs (Connect This Desktop, Reconnect,
  *              Generate Link Code, Copy Code) + the generate-code panel bay.
+ *       TOOLS = Resin Reference's Copy buttons, Scan Recipe's three scan
+ *              buttons + info toggles (in a bay), Bulk Density's save bar
+ *              (bay) + Save to Resin Database (inverted key).
  *     Apply and the Undo/Redo history pair only get their corner radius
  *     matched, so no stray rounded button sits beside the treated ones.
  *   - only at the desktop breakpoint the rest of desktop.css uses
@@ -213,6 +217,46 @@ body[data-button-style]{
     color: var(--panel);
   }
 
+  /* ---- Tools section (desktop) --------------------------------
+     Most tools are input + live result with no buttons. The ones with
+     actions:
+       - Resin Reference: the two Copy buttons -> chips
+       - Scan Recipe: the three Scan X buttons + their info toggles, sitting
+         in one console bay
+       - Bulk Density Measurement: the save bar becomes a bay, "Save to
+         Resin Database" the inverted key while it is enabled
+     The left tool tab list (.toolsIndexButton) is navigation, left alone
+     like the Recipe / Timeline tabs. */
+  body[data-button-style="console"] #toolsBlock .recipeScanOptions,
+  body[data-button-style="console"] #toolsBlock .bulkDensitySaveBar{
+    border: 0;
+    border-radius: 7px;
+    padding: 8px 10px;
+    background: color-mix(in srgb, var(--btnstyle-surface) 55%, transparent);
+  }
+  body[data-button-style="console"] #toolsBlock .resinLookupCopyButton,
+  body[data-button-style="console"] #toolsBlock .recipeScanOptionRow > button,
+  body[data-button-style="console"] #toolsBlock #bulkDensitySaveButton{
+    min-height: 30px;
+    border: 0;
+    border-radius: 4px;
+    background: var(--btnstyle-surface);
+    color: var(--btnstyle-ink);
+    box-shadow: 0 1px 0 var(--btnstyle-edge);
+    text-transform: none;
+    letter-spacing: normal;
+  }
+  /* The Scan info toggles keep their 24px square; just chip the surface. */
+  body[data-button-style="console"] #toolsBlock .recipeScanInfo > summary{
+    border-radius: 4px;
+    background: var(--btnstyle-surface);
+    box-shadow: 0 1px 0 var(--btnstyle-edge);
+  }
+  body[data-button-style="console"] #toolsBlock #bulkDensitySaveButton:not(:disabled){
+    background: var(--btnstyle-ink);
+    color: var(--panel);
+  }
+
   /* Keep the focus ring legible on the treated controls. */
   body[data-button-style="console"] #splitsBlock #recipeHeaderActionPill button:focus-visible,
   body[data-button-style="console"] #splitsBlock #recipeHeaderControls .weightsHeaderViewToggle button:focus-visible,
@@ -225,7 +269,11 @@ body[data-button-style]{
   body[data-button-style="console"] #lineSyncBlock #desktopLineSyncSetupBtn:focus-visible,
   body[data-button-style="console"] #lineSyncBlock #lineSyncRetryBtn:focus-visible,
   body[data-button-style="console"] #lineSyncBlock #lineSyncGenerateCodeBtn:focus-visible,
-  body[data-button-style="console"] #lineSyncBlock #lineSyncCopyCodeBtn:focus-visible{
+  body[data-button-style="console"] #lineSyncBlock #lineSyncCopyCodeBtn:focus-visible,
+  body[data-button-style="console"] #toolsBlock .resinLookupCopyButton:focus-visible,
+  body[data-button-style="console"] #toolsBlock .recipeScanOptionRow > button:focus-visible,
+  body[data-button-style="console"] #toolsBlock .recipeScanInfo > summary:focus-visible,
+  body[data-button-style="console"] #toolsBlock #bulkDensitySaveButton:focus-visible{
     outline: 2px solid var(--focus-border);
     outline-offset: 2px;
   }

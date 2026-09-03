@@ -52,7 +52,7 @@ test("the preference persists locally and restores through the standard payload 
 
 test("the treatment is desktop-scoped and every selector stays inside a treated panel", () => {
   assert.match(buttonCss, /@media \(min-width: 901px\) and \(pointer: fine\)\{/);
-  const PANELS = ["#splitsBlock", "#splitsArea", "#resultsBlock", "#lineSyncBlock"];
+  const PANELS = ["#splitsBlock", "#splitsArea", "#resultsBlock", "#lineSyncBlock", "#toolsBlock"];
   const ruleLines = buttonCss
     .split("\n")
     .map(line => line.trim())
@@ -111,6 +111,20 @@ test("console reaches RT Sync's desktop CTAs + the generate-code bay", () => {
   assert.match(buttonCss, /#desktopLineSyncSetupBtn:not\(:disabled\),[\s\S]*?#lineSyncGenerateCodeBtn:not\(:disabled\)\{[\s\S]*?background: var\(--btnstyle-ink\)/);
   // desktop-only: no mobile RT Sync buttons pulled in
   assert.doesNotMatch(buttonCss, /#lineSyncLeaveBtn|#lineSyncRetryMobileBtn|#lineSyncJoinBtn/);
+});
+
+test("console reaches the Tools section's per-tool action buttons", () => {
+  // Scan Recipe + Bulk Density save bar become bays
+  assert.match(buttonCss, /body\[data-button-style="console"\] #toolsBlock \.recipeScanOptions,[\s\S]*?\.bulkDensitySaveBar\{[\s\S]*?border-radius: 7px/);
+  // Copy + Scan X + Save chips
+  assert.match(buttonCss, /#toolsBlock \.resinLookupCopyButton,[\s\S]*?\.recipeScanOptionRow > button,[\s\S]*?#bulkDensitySaveButton\{/);
+  // Save to Resin Database is the inverted key while enabled
+  assert.match(buttonCss, /#toolsBlock #bulkDensitySaveButton:not\(:disabled\)\{[\s\S]*?background: var\(--btnstyle-ink\)/);
+  // the tool tab list / mobile tiles are left alone - no selector targets them
+  const selectorLines = buttonCss.split("\n").map(l => l.trim()).filter(l => l.startsWith('body[data-button-style="'));
+  for (const line of selectorLines) {
+    assert.ok(!/\.toolsIndexButton|\.mobileToolTile/.test(line), `styles a tool tab / tile: ${line}`);
+  }
 });
 
 test("the treatment reuses existing theme tokens, not hard-coded colours", () => {
