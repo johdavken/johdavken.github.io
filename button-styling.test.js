@@ -163,8 +163,8 @@ test("Recipe and Timeline tabs use the console bay with visible resting keys", (
   assert.match(buttonCss, /body #resultsBlock :is\(#timelinePane, #timelineHookupsArea\)\{ border-top: 0; \}/);
 });
 
-test("Recipe's console tab bay keeps a steady desktop footprint across pages", () => {
-  assert.match(buttonCss, /body #splitsBlock \.recipePageTabs\{[\s\S]*?flex: 0 1 396px;[\s\S]*?inline-size: 396px;[\s\S]*?block-size: 42px;[\s\S]*?min-width: 0;/);
+test("Recipe's console tab bay sizes itself to its labels while remaining compact-safe", () => {
+  assert.match(buttonCss, /body #splitsBlock \.recipePageTabs\{[\s\S]*?flex: 0 1 max-content;[\s\S]*?inline-size: max-content;[\s\S]*?max-inline-size: 100%;[\s\S]*?block-size: 42px;[\s\S]*?min-width: 0;/);
   assert.match(buttonCss, /body #splitsBlock \.recipeHeaderRow\{ align-items: flex-start; \}/);
   assert.match(buttonCss, /body #splitsBlock \.recipeHeaderRow > \.recipePageTabs\{ align-self: flex-start; \}/);
   assert.match(buttonCss, /body #splitsBlock \.recipePageTab\{[\s\S]*?min-width: 0;[\s\S]*?overflow: hidden;[\s\S]*?text-overflow: ellipsis;[\s\S]*?white-space: nowrap;/);
