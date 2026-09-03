@@ -12446,118 +12446,132 @@ body #weightsArea .weightsMatrix:has(.weightsLayerHeader) .weightsMatrixCell{
   min-height:64px;
 }
 
-/* The bulk-edit panel sits below the grid (see renderWeightsArea). On the
-   touch shell it falls back to the base .weightsBulkBar grid, whose 180px
-   min columns clipped the "No change" placeholders and wrapped Clear onto
-   its own line. Lay it out by hand instead: a single row of content-sized
-   fields, then the actions, nothing wrapping. */
-body[data-shell="touch"] #weightsArea .weightsBulkBar{
-  display:flex;
-  flex-direction:column;
-  align-items:stretch;
-  gap:10px;
-  margin-top:12px;
-}
-body[data-shell="touch"] #weightsArea .weightsBulkBar .weightsBulkFieldsRow{
+/* -------------------------------------------------------------------------
+   The Weights bulk toolbar mirrors the Current/Next edit toolbar's visual
+   language: a transparent flex strip (no outer card), each field a small
+   bordered box like .splitsEditRowPrimary > .splitsBulkField, and the
+   actions grouped in a station-console bay. Applies on every width above
+   compact mobile; #splitsBlock #weightsArea carries the specificity to beat
+   desktop.css's own .desktopWeightsBulkContext block on the fine pointer.
+   ------------------------------------------------------------------------- */
+body #splitsBlock #weightsArea .weightsBulkBar{
   display:flex;
   flex-wrap:wrap;
-  align-items:flex-end;
-  gap:10px 14px;
+  align-items:center;
+  gap:8px;
+  margin-top:12px;
+  padding:6px 0;
+  border:0;
+  border-radius:0;
+  background:transparent;
 }
-body[data-shell="touch"] #weightsArea .weightsBulkBar .weightsBulkField{
-  flex:0 0 auto;
-  min-width:0;
-  margin:0;
-}
-body[data-shell="touch"] #weightsArea .weightsBulkBar .weightsBulkField > span:first-child{
-  font-size:var(--font-tiny);
-  margin-bottom:3px;
-}
-/* Just wide enough for the "No change" placeholder, no more. */
-body[data-shell="touch"] #weightsArea .weightsBulkBar .weightsInputWithUnit{
-  grid-template-columns:92px auto;
-  gap:4px;
-}
-body[data-shell="touch"] #weightsArea .weightsBulkBar .weightsInputWithUnit input{
-  font-size:var(--font-small);
-  min-width:0;
-}
-body[data-shell="touch"] #weightsArea .weightsBulkBar .weightsInputWithUnit input::placeholder{
-  font-size:var(--font-tiny);
-}
-body[data-shell="touch"] #weightsArea .weightsBulkBar #applyBulkWeight{
-  flex:0 0 auto;
-  align-self:flex-end;
-}
-body[data-shell="touch"] #weightsArea .weightsBulkBar .weightsBulkActions{
-  grid-column:auto;
-  flex-wrap:nowrap;
-  gap:10px;
-  /* Pushed to the right end of the fields row, the way desktop.css puts it
-     inside .desktopWeightsBulkContext. */
-  margin-left:auto;
-}
-body[data-shell="touch"] #weightsArea .weightsBulkBar .weightsBulkActions #clearWeightSelection{
-  white-space:nowrap;
-  flex:0 0 auto;
-}
-
-/* 8. Smart Hoppers control in the bulk toolbar, and the shared
-      circumference field relocated there too.
-   -------------------------------------------------------------------------- */
-
-/* A "Smart Hoppers" label above its pill toggle, sized like the row's other
-   .weightsBulkField groups. Always present - the toggle has to be reachable
-   whether or not a hopper is selected. */
-body #weightsArea .weightsBulkBar .weightsBulkSmartField{
+body #splitsBlock #weightsArea .weightsBulkBar .weightsBulkFieldsRow{
   display:flex;
-  flex-direction:column;
-  align-items:flex-start;
-  gap:4px;
-  margin:0;
-  flex:0 0 auto;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:8px;
+  width:100%;
 }
-body #weightsArea .weightsBulkBar .weightsBulkSmartField > span:first-child{
+
+/* Each field is a bordered box: label + control on one line, tiny muted
+   type - the same treatment .splitsBulkField gets in the recipe toolbar. */
+body #splitsBlock #weightsArea .weightsBulkBar .weightsBulkField{
+  display:grid;
+  grid-template-columns:auto auto;
+  align-items:center;
+  gap:8px;
+  flex:0 0 auto;
+  margin:0;
+  padding:5px 8px;
+  border:1px solid var(--row-border-2);
+  border-radius:var(--control-radius);
+  background:var(--row-bg-2);
+  color:var(--muted);
   font-size:var(--font-tiny);
+  font-weight:750;
+}
+body #splitsBlock #weightsArea .weightsBulkBar .weightsBulkField > span:first-child{
+  margin:0;
+  white-space:nowrap;
+}
+body #splitsBlock #weightsArea .weightsBulkBar .weightsInputWithUnit{
+  display:grid;
+  grid-template-columns:88px auto;
+  align-items:center;
+  gap:4px;
+}
+body #splitsBlock #weightsArea .weightsBulkBar .weightsInputWithUnit input{
+  min-height:28px;
+  min-width:0;
+  font-size:14px;
+  font-weight:800;
   color:var(--muted);
 }
-body #weightsArea .weightsBulkBar .weightsBulkSmartField .toggle{
+body #splitsBlock #weightsArea .weightsBulkBar .weightsInputWithUnit input::placeholder{
+  font-size:var(--font-tiny);
+  font-weight:600;
+}
+
+/* Smart Hoppers: "Smart Hoppers" label + its pill, in a box like the rest. */
+body #splitsBlock #weightsArea .weightsBulkBar .weightsBulkSmartField{
+  display:grid;
+  grid-template-columns:auto auto;
+  align-items:center;
+  gap:8px;
+}
+body #splitsBlock #weightsArea .weightsBulkBar .weightsBulkSmartField .toggle{
   --toggle-w:42px;
   --toggle-h:24px;
   --toggle-knob:18px;
 }
-/* No identified line: a muted, non-interactive marker holds the place. */
-body #weightsArea .weightsBulkBar .weightsBulkSmartField.unavailable{
-  align-self:center;
-  color:var(--muted);
-  font-size:var(--font-tiny);
+body #splitsBlock #weightsArea .weightsBulkBar .weightsBulkSmartField.unavailable{
+  display:flex;
   opacity:.7;
 }
 
-/* Circumference sits between Apply and Clear in the bulk toolbar. It reuses
-   the .weightsBulkField shape so it reads as one of the row's fields. */
-body #weightsArea .weightsBulkBar .weightsBulkCircumference{
-  display:flex;
-  flex-direction:column;
-  gap:3px;
-  margin:0;
-  flex:0 0 auto;
-}
-body #weightsArea .weightsBulkBar .weightsBulkCircumference > span:first-child{
-  font-size:var(--font-tiny);
-  color:var(--muted);
-}
-body #weightsArea .weightsBulkBar .weightsBulkCircumference .weightsInputWithUnit{
+/* Circumference: same box, between Apply and Clear. */
+body #splitsBlock #weightsArea .weightsBulkBar .weightsBulkCircumference{
   display:grid;
-  grid-template-columns:72px auto;
+  grid-template-columns:auto auto;
   align-items:center;
-  gap:4px;
+  gap:8px;
 }
-body #weightsArea .weightsBulkBar .weightsBulkCircumference input{
-  font-size:var(--font-small);
-  min-width:0;
+body #splitsBlock #weightsArea .weightsBulkBar .weightsBulkCircumference .weightsInputWithUnit{
+  grid-template-columns:64px auto;
 }
-body[data-shell="touch"] #weightsArea .weightsBulkBar .weightsBulkCircumference{
+
+/* Apply: the recipe toolbar's own button metrics, and title case to match
+   its "Apply" / "Clear" / "Reset" (a global .weightsBulkActions rule
+   uppercases these). */
+body #splitsBlock #weightsArea .weightsBulkBar #applyBulkWeight,
+body #splitsBlock #weightsArea .weightsBulkBar .weightsBulkActions .bulkTextAction{
+  text-transform:none;
+  letter-spacing:normal;
+}
+body #splitsBlock #weightsArea .weightsBulkBar #applyBulkWeight{
+  flex:0 0 auto;
+  min-height:30px;
+  min-width:70px;
+  padding:5px 14px;
+}
+
+/* Actions bay: padded, softly tinted, rounded - the station-console
+   treatment .splitsEditRowSecondary carries in the recipe toolbar. Pushed
+   to the row's right end. No top-border divider (that was the old card
+   look). */
+body #splitsBlock #weightsArea .weightsBulkBar .weightsBulkActions{
+  display:flex;
+  align-items:stretch;
+  gap:8px;
+  flex:0 0 auto;
+  margin-left:auto;
+  padding:6px 8px;
+  border-top:0;
+  border-radius:7px;
+  background:color-mix(in srgb, var(--btnstyle-surface) 55%, transparent);
+}
+body #splitsBlock #weightsArea .weightsBulkBar .weightsBulkActions #clearWeightSelection{
+  white-space:nowrap;
   flex:0 0 auto;
 }
 

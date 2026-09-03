@@ -413,8 +413,8 @@ test("the Smart Hoppers control lives in the always-visible bulk toolbar, not th
   assert.match(body, /smartSlot\.replaceWith\(smartField\);/);
   assert.match(body, /corner\.textContent = "Layer";/);
   assert.doesNotMatch(body, /weightsCornerSmartLabel|weightsCornerToggle/);
-  assert.match(styles, /body #weightsArea \.weightsBulkBar \.weightsBulkSmartField\{/);
-  assert.match(styles, /body #weightsArea \.weightsBulkBar \.weightsBulkSmartField \.toggle\{/);
+  assert.match(styles, /body #splitsBlock #weightsArea \.weightsBulkBar \.weightsBulkSmartField\{/);
+  assert.match(styles, /body #splitsBlock #weightsArea \.weightsBulkBar \.weightsBulkSmartField \.toggle\{/);
 });
 
 test("the toolbar is always visible - it carries the Smart Hoppers toggle", () => {
@@ -426,7 +426,7 @@ test("the toolbar is always visible - it carries the Smart Hoppers toggle", () =
 test("with no identified line, a muted 'Smart Hoppers . unavailable' marker holds the toolbar slot", () => {
   const body = (()=>{const start=app.indexOf("function renderWeightsArea(");const next=app.indexOf("\n    function ",start+1);return app.slice(start,next===-1?undefined:next);})();
   assert.match(body, /smartSlot\.textContent = "Smart Hoppers \u00b7 unavailable";/);
-  assert.match(styles, /body #weightsArea \.weightsBulkBar \.weightsBulkSmartField\.unavailable\{/);
+  assert.match(styles, /body #splitsBlock #weightsArea \.weightsBulkBar \.weightsBulkSmartField\.unavailable\{/);
 });
 
 test("the weights bulk Apply button reads just 'Apply', fixed", () => {
@@ -436,9 +436,16 @@ test("the weights bulk Apply button reads just 'Apply', fixed", () => {
   assert.match(app, /<button id="applyBulkWeight" class="secondary" type="button" disabled>Apply<\/button>/);
 });
 
-test("on the touch shell the weights bulk bar is a compact single column so 'No change' is not clipped", () => {
-  assert.match(styles, /body\[data-shell="touch"\] #weightsArea \.weightsBulkBar\{[\s\S]*?flex-direction:column;/);
-  assert.match(styles, /body\[data-shell="touch"\] #weightsArea \.weightsBulkBar \.weightsInputWithUnit input\{[\s\S]*?font-size:var\(--font-small\);/);
+test("the weights bulk bar mirrors the recipe toolbar - transparent strip, boxed fields, station-console actions bay", () => {
+  // No outer card: transparent, no border/radius, like #splitsBulkBar on
+  // the reworked grid.
+  assert.match(styles, /body #splitsBlock #weightsArea \.weightsBulkBar\{[\s\S]*?background:transparent;/);
+  // Each field a bordered box, matching .splitsEditRowPrimary > .splitsBulkField.
+  assert.match(styles, /body #splitsBlock #weightsArea \.weightsBulkBar \.weightsBulkField\{[\s\S]*?border:1px solid var\(--row-border-2\);[\s\S]*?background:var\(--row-bg-2\);/);
+  // Actions in a tinted rounded bay, like .splitsEditRowSecondary.
+  assert.match(styles, /body #splitsBlock #weightsArea \.weightsBulkBar \.weightsBulkActions\{[\s\S]*?border-radius:7px;[\s\S]*?background:color-mix\(in srgb, var\(--btnstyle-surface\) 55%, transparent\);/);
+  // Title case Apply / Clear, matching the recipe toolbar.
+  assert.match(styles, /body #splitsBlock #weightsArea \.weightsBulkBar #applyBulkWeight,\s*\n\s*body #splitsBlock #weightsArea \.weightsBulkBar \.weightsBulkActions \.bulkTextAction\{[\s\S]*?text-transform:none;/);
 });
 
 test("the smart control and circumference are pulled from desktopControls, which then collapses", () => {
@@ -452,15 +459,15 @@ test("the smart control and circumference are pulled from desktopControls, which
 test("the shared circumference field relocates into the bulk toolbar, between Apply and Clear", () => {
   const body = (()=>{const start=app.indexOf("function renderWeightsArea(");const next=app.indexOf("\n    function ",start+1);return app.slice(start,next===-1?undefined:next);})();
   assert.match(body, /toolbar\.querySelector\("#applyBulkWeight"\)\?\.after\(circumferenceLabel\);/);
-  assert.match(styles, /body #weightsArea \.weightsBulkBar \.weightsBulkCircumference\{/);
+  assert.match(styles, /body #splitsBlock #weightsArea \.weightsBulkBar \.weightsBulkCircumference\{/);
 });
 
 test("Apply in the weights bulk bar takes the station-console key, matching Clear", () => {
   assert.match(styles, /body #splitsBlock \.weightsBulkBar #applyBulkWeight,[\s\S]*?background:var\(--btnstyle-surface\);[\s\S]*?box-shadow:0 1px 0 var\(--btnstyle-edge\);/);
 });
 
-test("on the touch shell the weights bulk actions align right, like desktop", () => {
-  assert.match(styles, /body\[data-shell="touch"\] #weightsArea \.weightsBulkBar \.weightsBulkActions\{[\s\S]*?margin-left:auto;/);
+test("the weights bulk actions align right", () => {
+  assert.match(styles, /body #splitsBlock #weightsArea \.weightsBulkBar \.weightsBulkActions\{[\s\S]*?margin-left:auto;/);
 });
 
 test("the Weights page opens with the same gap above the grid as the other pages", () => {
