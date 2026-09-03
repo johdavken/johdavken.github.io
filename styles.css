@@ -2645,26 +2645,21 @@ details[open] > summary .chevSatellite{
    column order (row-header th, then one td per layer in recipeLayers()
    order), regardless of which columns are hidden/visible. */
 .splitsMatrix tbody td.splitMatrixCell:nth-child(even){background:color-mix(in srgb,var(--row-bg-2) 55%,transparent)}
-/* Tracking keeps the cell surface unchanged and adds the Timeline clock to
-   the physical hopper badge (for example, "E1 [clock]"). That puts the
-   status beside the hopper it belongs to without consuming a cell corner or
-   competing with Edit's own top-right label. */
+/* Tracking keeps the cell surface unchanged; the physical hopper badge
+   itself carries the status instead (see .splitCellHopperName below). That
+   puts the status beside the hopper it belongs to without consuming a cell
+   corner or competing with Edit's own top-right label. */
 .splitsMatrix tbody .splitMatrixCell.tracked:not(.selected){
   background:transparent;
 }
-.splitHopperTrackingClock{
-  display:none;
-  width:12px;
-  height:12px;
-  flex:0 0 auto;
-  fill:none;
-  stroke:currentColor;
-  stroke-width:2;
-  stroke-linecap:round;
-  stroke-linejoin:round;
-}
-#splitsArea[data-recipe-view="summary"] .splitsMatrix tbody .splitMatrixCell.tracked .splitHopperTrackingClock{
-  display:block;
+/* The badge picks up a brighter --ok accent - mixed over transparent (the
+   app's tinted-badge idiom, see .notesCloudBadge) so it reads correctly on
+   every theme and surface. Text goes fully --ok rather than staying
+   --muted, so the highlight reads as clearly "on". Summary view only, so it
+   never competes with Edit's own top-right status label; Current Recipe
+   only in practice, since Next's hoppers never carry track state. */
+#splitsArea[data-recipe-view="summary"] .splitsMatrix tbody .splitMatrixCell.tracked .splitCellHopperName{
+  background:color-mix(in srgb,var(--ok) 20%,transparent);
   color:var(--ok);
 }
 .splitsMatrix td.splitMatrixCell{padding:4px 6px}
@@ -4311,6 +4306,14 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     background:var(--desktop-recipe-cell-bg);
     box-shadow: none;
   }
+  /* Summary only, same as the badge highlight it pairs with - Edit already
+     has its own selection outline and status label, so tracking stays
+     passive there. Faint and inset (inside the cell's own fill, not an
+     added border) so it never nudges layout; the app's warn-badge idiom
+     (color-mix over transparent) reused with --ok. */
+  #splitsArea[data-recipe-view="summary"] .splitsMatrix tbody .splitMatrixCell.tracked:not(.selected){
+    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--ok) 22%, transparent);
+  }
   #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.selected{
     background: var(--desktop-recipe-cell-bg);
     box-shadow: inset 0 0 0 2px var(--focus-border);
@@ -5089,6 +5092,9 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     background:var(--compact-recipe-row-bg);
     border-color:var(--row-border-2);
     box-shadow:none;
+  }
+  #splitsArea[data-recipe-view="summary"] .splitsMatrix.compactMobileRecipe .splitMatrixCell.tracked:not(.selected){
+    box-shadow:inset 0 0 0 2px color-mix(in srgb, var(--ok) 22%, transparent);
   }
   #splitsArea[data-recipe-view="edit"] .splitsMatrix.compactMobileRecipe .splitMatrixCell.selected::after{
     content:"EDIT";
@@ -11188,6 +11194,9 @@ body[data-shell="touch"] .changeoverWizardDialog{position:fixed;inset:auto auto 
     border-color:var(--row-border-2);
     box-shadow:none;
   }
+  #splitsArea[data-recipe-view="summary"] .splitsMatrix tbody .splitMatrixCell.tracked:not(.selected){
+    box-shadow:inset 0 0 0 2px color-mix(in srgb, var(--ok) 22%, transparent);
+  }
   #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.selected{
     background:var(--tablet-recipe-cell-bg);
     border-color:color-mix(in srgb,var(--focus-border) 65%,var(--row-border-2));
@@ -11237,6 +11246,9 @@ body[data-shell="touch"] .changeoverWizardDialog{position:fixed;inset:auto auto 
     background:var(--tablet-recipe-cell-bg);
     border-color:var(--row-border-2);
     box-shadow:none;
+  }
+  body[data-shell="touch"] #splitsArea[data-recipe-view="summary"] .splitsMatrix tbody .splitMatrixCell.tracked:not(.selected){
+    box-shadow:inset 0 0 0 2px color-mix(in srgb, var(--ok) 22%, transparent);
   }
   body[data-shell="touch"] #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.selected{
     background:var(--tablet-recipe-cell-bg);

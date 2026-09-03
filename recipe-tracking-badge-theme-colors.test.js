@@ -26,23 +26,35 @@ test("none of the old hardcoded blues remain anywhere in the compact mobile matr
   assert.doesNotMatch(block, /#72b9e8|#397fae|#4d9bd0|#b9e2ff/);
 });
 
-test("the tracked hopper-name badge adds the Timeline clock instead of a cell-corner overlay", () => {
+test("the tracked hopper-name badge highlights instead of a cell-corner overlay or a clock icon", () => {
   const block = compactMobileRecipeBlock();
   assert.doesNotMatch(block, /\.splitMatrixCell\.tracked::before/);
-  assert.match(styles, /\.splitHopperTrackingClock\{[\s\S]*?width:12px;[\s\S]*?height:12px;[\s\S]*?stroke:currentColor;/);
+  assert.doesNotMatch(styles, /splitHopperTrackingClock/);
 });
 
-test("the tracked clock derives from the active theme's success token", () => {
-  assert.match(styles, /#splitsArea\[data-recipe-view="summary"\] \.splitsMatrix tbody \.splitMatrixCell\.tracked \.splitHopperTrackingClock\{[\s\S]*?color:var\(--ok\);/);
+test("the tracked badge highlight derives from the active theme's success token", () => {
+  assert.match(styles, /#splitsArea\[data-recipe-view="summary"\] \.splitsMatrix tbody \.splitMatrixCell\.tracked \.splitCellHopperName\{[\s\S]*?color:var\(--ok\);/);
 });
 
-test("Edit view leaves the clock hidden so its Track control remains the single tracking cue", () => {
-  assert.match(styles, /#splitsArea\[data-recipe-view="summary"\] \.splitsMatrix tbody \.splitMatrixCell\.tracked \.splitHopperTrackingClock/);
+test("Edit view leaves the badge unhighlighted so its Track control remains the single tracking cue", () => {
+  assert.doesNotMatch(
+    styles.slice(0, styles.indexOf('#splitsArea[data-recipe-view="summary"] .splitsMatrix tbody .splitMatrixCell.tracked .splitCellHopperName')),
+    /data-recipe-view="edit"\] \.splitsMatrix tbody \.splitMatrixCell\.tracked \.splitCellHopperName/
+  );
+  assert.match(styles, /#splitsArea\[data-recipe-view="summary"\] \.splitsMatrix tbody \.splitMatrixCell\.tracked \.splitCellHopperName/);
 });
 
 test("no per-theme override is needed for the tracked hopper badge", () => {
   const theme = fs.readFileSync("theme.css", "utf8");
   assert.doesNotMatch(theme, /\.splitMatrixCell\.tracked \.splitCellHopperName/);
+});
+
+test("a tracked hopper's badge picks up a brighter --ok highlight", () => {
+  // Summary view only, so Edit's own status label never competes.
+  assert.match(
+    styles,
+    /#splitsArea\[data-recipe-view="summary"\] \.splitsMatrix tbody \.splitMatrixCell\.tracked \.splitCellHopperName\{[\s\S]*?background:color-mix\(in srgb,var\(--ok\) \d+%,transparent\);[\s\S]*?color:var\(--ok\);/
+  );
 });
 
 test("the active track button's solid fill is var(--focus-border), matching the same solid-fill-plus-fixed-icon pairing already used by Weights' selected-header checkmark", () => {

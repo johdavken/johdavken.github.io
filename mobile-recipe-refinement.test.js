@@ -7,17 +7,18 @@ const app=fs.readFileSync("app.js","utf8");
 const styles=fs.readFileSync("styles.css","utf8");
 const theme=fs.readFileSync("theme.css","utf8");
 
-test("compact tracking is a plain theme-appropriate cell wash with a clock in the hopper badge",()=>{
-  // Tracked cells read as a --ok wash over their own row fill. No badge
-  // restyle, no dot, no left bar - the hopper name stays its ordinary badge.
+test("compact tracking is a plain theme-appropriate cell wash with a highlighted hopper badge",()=>{
+  // Tracked cells read as a --ok wash over their own row fill. No dot, no
+  // left bar - the hopper name stays its ordinary badge shape, just
+  // recolored.
   assert.match(styles,/\.splitsMatrix\.compactMobileRecipe \.splitMatrixCell\.tracked:not\(\.selected\)\{[\s\S]*?background:var\(--compact-recipe-row-bg\);[\s\S]*?border-color:var\(--row-border-2\);[\s\S]*?box-shadow:none;/);
-  assert.match(styles,/\.splitHopperTrackingClock\{[\s\S]*?width:12px;[\s\S]*?height:12px;[\s\S]*?stroke:currentColor;/);
   // A tracked cell selected in Edit keeps its ordinary surface under the selection outline.
   assert.match(styles,/\.bulk-editing \.splitsMatrix\.compactMobileRecipe \.splitMatrixCell\.tracked\.selected\{[\s\S]*?background:var\(--compact-recipe-row-bg\);/);
   assert.doesNotMatch(styles,/compactRecipeTrackTracer|compact-recipe-trace-angle/);
   assert.doesNotMatch(styles,/\.splitMatrixCell\.tracked:not\(\.selected\)::after/);
-  // The tracked hopper-name badge carries a clock, not a corner mark or dot.
-  assert.match(styles,/#splitsArea\[data-recipe-view="summary"\] \.splitsMatrix tbody \.splitMatrixCell\.tracked \.splitHopperTrackingClock\{[\s\S]*?display:block;/);
+  // The tracked hopper-name badge itself highlights - no clock, no corner mark, no dot.
+  assert.doesNotMatch(styles,/splitHopperTrackingClock/);
+  assert.match(styles,/#splitsArea\[data-recipe-view="summary"\] \.splitsMatrix tbody \.splitMatrixCell\.tracked \.splitCellHopperName\{[\s\S]*?background:color-mix\(in srgb,var\(--ok\)/);
   assert.doesNotMatch(styles,/\.splitMatrixCell\.tracked::before/);
   assert.doesNotMatch(theme,/\.splitMatrixCell\.tracked \.splitCellHopperName\{/);
 });
