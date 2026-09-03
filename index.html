@@ -1027,8 +1027,8 @@
           <button id="hopperWeightToolTab" class="toolsIndexButton" type="button" role="tab" aria-selected="false" aria-controls="hopperWeightTool" data-tool-target="hopperWeightTool" tabindex="-1">Hopper Weight</button>
           <button id="hopperVolumeWeightToolTab" class="toolsIndexButton" type="button" role="tab" aria-selected="false" aria-controls="hopperVolumeWeightTool" data-tool-target="hopperVolumeWeightTool" tabindex="-1">Hopper Volume Weight</button>
           <button id="resinLookupToolTab" class="toolsIndexButton" type="button" role="tab" aria-selected="false" aria-controls="resinLookupTool" data-tool-target="resinLookupTool" tabindex="-1">Resin Reference</button>
-          <button id="recipeScanToolTab" class="toolsIndexButton" type="button" role="tab" aria-selected="false" aria-controls="recipeScanTool" data-tool-target="recipeScanTool" tabindex="-1">Scan Recipe</button>
-          <button id="bulkDensityMeasurementToolTab" class="toolsIndexButton" type="button" role="tab" aria-selected="false" aria-controls="bulkDensityMeasurementTool" data-tool-target="bulkDensityMeasurementTool" tabindex="-1">Bulk Density Measurement</button>
+          <button id="recipeScanToolTab" class="toolsIndexButton toolsDesktopHidden" type="button" role="tab" aria-selected="false" aria-controls="recipeScanTool" data-tool-target="recipeScanTool" tabindex="-1">Scan Recipe</button>
+          <button id="bulkDensityMeasurementToolTab" class="toolsIndexButton" type="button" role="tab" aria-selected="false" aria-controls="bulkDensityMeasurementTool" data-tool-target="bulkDensityMeasurementTool" tabindex="-1">Bulk Density</button>
         </nav>
 
         <div class="toolsWorkspaceContent">
@@ -1037,10 +1037,12 @@
         <h1 id="mobileToolHeaderLabel">Short Footage</h1>
       </div>
       <section id="shortFootageTool" class="toolPanel toolWorkspacePanel" role="tabpanel" aria-labelledby="shortFootageToolTab shortFootageTitle">
-        <div id="shortFootageTitle" class="layerTitle">Short Footage</div>
-        <div class="muted">Actual Weight × Target Footage ÷ Last Good Weight</div>
+        <header class="toolPanelHeader">
+          <div><h2 id="shortFootageTitle" class="toolPanelTitle">Short Footage</h2><p>Estimate footage from current roll weight.</p></div>
+          <details class="toolInfoGuide"><summary aria-label="Short Footage information" title="Short Footage information"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11.5v4.75"/><path d="M12 7.75h.01"/></svg></summary><div class="toolInfoGuidePanel"><strong>Short Footage</strong><p>Use the current roll&rsquo;s actual weight, the desired footage, and the last known-good roll weight.</p><p>Calculation: Actual Weight × Target Footage ÷ Last Good Weight.</p></div></details>
+        </header>
 
-        <div class="grid3 mt10">
+        <div class="toolInputGrid toolInputGridThree mt10">
           <div>
             <label for="shortActualWeight">Actual weight</label>
             <input id="shortActualWeight" type="text" inputmode="decimal" placeholder="0" />
@@ -1063,10 +1065,12 @@
       </section>
 
       <section id="hopperWeightTool" class="toolPanel toolWorkspacePanel" role="tabpanel" aria-labelledby="hopperWeightToolTab hopperWeightCalculatorTitle" hidden>
-        <div id="hopperWeightCalculatorTitle" class="layerTitle">Hopper Weight</div>
-        <div class="muted">Estimates usable resin weight from cylindrical hopper dimensions.</div>
+        <header class="toolPanelHeader">
+          <div><h2 id="hopperWeightCalculatorTitle" class="toolPanelTitle">Hopper Weight</h2><p>Estimate usable resin weight from cylindrical hopper dimensions.</p></div>
+          <details class="toolInfoGuide"><summary aria-label="Hopper Weight information" title="Hopper Weight information"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11.5v4.75"/><path d="M12 7.75h.01"/></svg></summary><div class="toolInfoGuidePanel"><strong>Hopper Weight</strong><p>This calculation assumes a cylindrical usable hopper area. Enter circumference and usable fill height.</p><p>Bulk density is used directly when known. Otherwise, polymer density and packing factor provide an estimate; pellet shape commonly changes packing factor.</p></div></details>
+        </header>
 
-        <div class="grid3 mt10">
+        <div class="toolInputGrid toolInputGridThree mt10">
           <div>
             <label for="hopperCircumference">Hopper circumference (in)</label>
             <input id="hopperCircumference" type="text" inputmode="decimal" placeholder="0" />
@@ -1081,19 +1085,19 @@
           </div>
         </div>
 
-        <div class="grid2 mt10">
+        <div class="toolInputGrid toolInputGridTwo mt10">
           <div>
             <label for="hopperPolymerDensity">Polymer density (g/cm³)</label>
-            <input id="hopperPolymerDensity" type="text" inputmode="decimal" placeholder="Use when bulk density is unknown" />
+            <input id="hopperPolymerDensity" type="text" inputmode="decimal" placeholder="Optional" />
+            <div class="toolFieldHint">Used only when bulk density is unknown.</div>
           </div>
           <div>
             <label for="hopperPackingFactor">Packing factor</label>
             <input id="hopperPackingFactor" type="text" inputmode="decimal" value="0.63" />
-            <div class="tiny">Adjustable from 0.58 to 0.68 for different pellet shapes.</div>
+            <div class="toolFieldHint">Default 0.63</div>
           </div>
         </div>
 
-        <div class="tiny">A directly entered bulk density takes priority over the polymer-density estimate.</div>
         <div class="toolResult mt10" aria-live="polite">
           <span>Hopper weight</span>
           <strong id="hopperWeightResult" class="mono">—</strong>
@@ -1102,10 +1106,12 @@
       </section>
 
       <section id="hopperVolumeWeightTool" class="toolPanel toolWorkspacePanel" role="tabpanel" aria-labelledby="hopperVolumeWeightToolTab hopperVolumeWeightCalculatorTitle" hidden>
-        <div id="hopperVolumeWeightCalculatorTitle" class="layerTitle">Hopper Volume Weight</div>
-        <div class="muted">Estimates usable resin weight from known hopper volume.</div>
+        <header class="toolPanelHeader">
+          <div><h2 id="hopperVolumeWeightCalculatorTitle" class="toolPanelTitle">Hopper Volume Weight</h2><p>Estimate usable resin weight from known hopper volume.</p></div>
+          <details class="toolInfoGuide"><summary aria-label="Hopper Volume Weight information" title="Hopper Volume Weight information"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11.5v4.75"/><path d="M12 7.75h.01"/></svg></summary><div class="toolInfoGuidePanel"><strong>Hopper Volume Weight</strong><p>Use this when the hopper&rsquo;s usable volume is already known.</p><p>Bulk density takes priority. Polymer density and packing factor provide the fallback estimate when bulk density is unavailable.</p></div></details>
+        </header>
 
-        <div class="grid3 mt10">
+        <div class="toolInputGrid toolInputGridThree mt10">
           <div>
             <label for="hopperVolumeGallons">Hopper volume (gal)</label>
             <input id="hopperVolumeGallons" type="text" inputmode="decimal" placeholder="0" />
@@ -1116,19 +1122,19 @@
           </div>
           <div>
             <label for="hopperVolumePolymerDensity">Polymer density (g/cm³)</label>
-            <input id="hopperVolumePolymerDensity" type="text" inputmode="decimal" placeholder="Use when bulk density is unknown" />
+            <input id="hopperVolumePolymerDensity" type="text" inputmode="decimal" placeholder="Optional" />
+            <div class="toolFieldHint">Used only when bulk density is unknown.</div>
           </div>
         </div>
 
-        <div class="grid2 mt10">
+        <div class="toolInputGrid toolInputGridTwo mt10">
           <div>
             <label for="hopperVolumePackingFactor">Packing factor</label>
             <input id="hopperVolumePackingFactor" type="text" inputmode="decimal" value="0.63" />
-            <div class="tiny">Adjustable from 0.58 to 0.68 for different pellet shapes.</div>
+            <div class="toolFieldHint">Default 0.63</div>
           </div>
         </div>
 
-        <div class="tiny">A directly entered bulk density takes priority over the polymer-density estimate.</div>
         <div class="toolResult mt10" aria-live="polite">
           <span>Hopper volume weight</span>
           <strong id="hopperVolumeWeightResult" class="mono">—</strong>
@@ -1137,10 +1143,12 @@
       </section>
 
       <section id="resinLookupTool" class="toolPanel toolWorkspacePanel" role="tabpanel" aria-labelledby="resinLookupToolTab resinLookupTitle" hidden>
-        <div id="resinLookupTitle" class="layerTitle">Resin Reference</div>
-        <div class="muted">Find a resin by code.</div>
+        <header class="toolPanelHeader">
+          <div><h2 id="resinLookupTitle" class="toolPanelTitle">Resin Reference</h2><p>Find a resin by code.</p></div>
+          <details class="toolInfoGuide"><summary aria-label="Resin Reference information" title="Resin Reference information"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11.5v4.75"/><path d="M12 7.75h.01"/></svg></summary><div class="toolInfoGuidePanel"><strong>Resin Reference</strong><p>Search active resins by code. Density is material density; bulk density reflects pellet packing.</p><p>Use Copy to place a displayed value on the clipboard.</p></div></details>
+        </header>
 
-        <div class="grid3 mt10 resinLookupGrid">
+        <div class="toolInputGrid toolInputGridThree mt10 resinLookupGrid">
           <div class="resinLookupSearch">
             <label for="resinLookupInput">Resin</label>
             <input
@@ -1207,7 +1215,7 @@
             <div class="recipeScanOptionRow">
               <button id="recipeScanJobTravelerBtn" class="secondary" type="button">Scan Job Traveler</button>
               <details class="recipeScanInfo">
-                <summary aria-label="Scan Job Traveler information" title="Scan Job Traveler information">ⓘ</summary>
+                <summary aria-label="Scan Job Traveler information" title="Scan Job Traveler information"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11.5v4.75"/><path d="M12 7.75h.01"/></svg></summary>
                 <div class="recipeScanInfoPanel">
                   <p>Reads layer percentages and resin blends from a printed job traveler.</p>
                   <p>On a 3- or 5-layer line, you'll be asked which end layer A represents. Hand-written hopper numbers next to a resin are read automatically when legible.</p>
@@ -1219,7 +1227,7 @@
             <div class="recipeScanOptionRow">
               <button id="recipeScanDosingScreenBtn" class="secondary" type="button">Scan Dosing Screen</button>
               <details class="recipeScanInfo">
-                <summary aria-label="Scan Dosing Screen information" title="Scan Dosing Screen information">ⓘ</summary>
+                <summary aria-label="Scan Dosing Screen information" title="Scan Dosing Screen information"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11.5v4.75"/><path d="M12 7.75h.01"/></svg></summary>
                 <div class="recipeScanInfoPanel">
                   <p>Reads resin blends directly from the dosing controller's material overview screen, or a printout of it. Validated for lines 9-11.</p>
                   <p>No orientation question - component position maps directly to hopper number. This screen doesn't print layer percentages; you'll enter those on the review screen.</p>
@@ -1231,7 +1239,7 @@
             <div class="recipeScanOptionRow">
               <button id="recipeScanHeatSheetBtn" class="secondary" type="button">Scan Heat Sheet</button>
               <details class="recipeScanInfo">
-                <summary aria-label="Scan Heat Sheet information" title="Scan Heat Sheet information">ⓘ</summary>
+                <summary aria-label="Scan Heat Sheet information" title="Scan Heat Sheet information"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11.5v4.75"/><path d="M12 7.75h.01"/></svg></summary>
                 <div class="recipeScanInfoPanel">
                   <p>Reads layer/blender settings from a printed heat sheet. On a 3- or 5-layer line, you'll be asked which end layer A represents, same as Job Traveler.</p>
                   <p>Legible handwriting matters most here. Writing in layer percentages and hopper designations when you fill one out helps it import cleanly.</p>
@@ -1243,13 +1251,15 @@
       </section>
 
       <section id="bulkDensityMeasurementTool" class="toolPanel toolWorkspacePanel" role="tabpanel" aria-labelledby="bulkDensityMeasurementToolTab bulkDensityMeasurementTitle" hidden>
-        <div id="bulkDensityMeasurementTitle" class="layerTitle">Bulk Density Measurement</div>
-        <div class="muted">Measure and save resin-specific bulk density</div>
+        <header class="toolPanelHeader">
+          <div><h2 id="bulkDensityMeasurementTitle" class="toolPanelTitle">Bulk Density Measurement</h2><p>Measure and save resin-specific bulk density.</p></div>
+          <details class="toolInfoGuide"><summary aria-label="Bulk Density Measurement information" title="Bulk Density Measurement information"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11.5v4.75"/><path d="M12 7.75h.01"/></svg></summary><div class="toolInfoGuidePanel"><strong>Bulk Density Measurement</strong><p>Weigh water in a dry container at the calibration mark, then fill the same container to that mark with resin and enter its net weight.</p><p>Polymer density is used for the packing factor. Saving updates the selected resin&rsquo;s database record.</p></div></details>
+        </header>
 
         <div class="bulkDensityMeasurementWorkspace mt10">
           <div class="bulkDensityMeasurementIntro">
             <label for="bulkDensityWaterCalibration">Water calibration (lb net)<span class="bulkDensityInputWithUnit"><input id="bulkDensityWaterCalibration" type="text" inputmode="decimal" autocomplete="off" aria-describedby="bulkDensityCalibrationHint"><span>lb net</span></span></label>
-            <div><p>Enter the net water weight for your calibration mark, then fill the same dry container to that mark with resin.</p><small id="bulkDensityCalibrationHint">Use the same dry container and fill level for water and resin.</small></div>
+            <small id="bulkDensityCalibrationHint">Use the same dry container and fill level.</small>
           </div>
 
           <div class="bulkDensityMeasurementForm">
@@ -1267,12 +1277,12 @@
             </section>
 
             <section class="bulkDensityMeasureSection" aria-labelledby="bulkDensityMeasurementHeading">
-              <div class="bulkDensitySectionHead"><span class="setupControlLabel">Measurement</span><strong id="bulkDensityMeasurementHeading">Same calibrated container and fill level</strong></div>
+              <div class="bulkDensitySectionHead"><span class="setupControlLabel">Measurement</span><strong id="bulkDensityMeasurementHeading">Enter measured values</strong></div>
               <div class="bulkDensityInputGrid">
                 <label for="bulkDensityPolymerDensity">Polymer density<span class="bulkDensityInputWithUnit"><input id="bulkDensityPolymerDensity" type="text" inputmode="decimal" placeholder="Optional"><span>g/cm³</span></span></label>
                 <label for="bulkDensityResinWeight">Resin net weight<span class="bulkDensityInputWithUnit"><input id="bulkDensityResinWeight" type="text" inputmode="decimal" placeholder="Net weight" aria-describedby="bulkDensityWeightHint"><span>lb net</span></span></label>
               </div>
-              <p id="bulkDensityWeightHint" class="tiny muted">Enter resin weight after subtracting the container. Polymer density is only used to calculate packing factor.</p>
+              <p id="bulkDensityWeightHint" class="tiny muted">Net resin weight; polymer density is optional.</p>
             </section>
 
             <section class="bulkDensityResultSurface" aria-labelledby="bulkDensityResultsHeading" aria-live="polite">

@@ -166,6 +166,12 @@
     overscroll-behavior:contain;
     scrollbar-gutter:stable;
   }
+  /* The panel body fills the desktop viewport, so its auto grid rows would
+     otherwise stretch to absorb the leftover height - and re-stretch every
+     time their content resized. In Resin Database that meant the toolbar
+     and status row visibly slid down the moment a search filtered the list
+     shorter. Pack the rows at the top and let the free space stay free. */
+  .adminResinPanel > .blockBody{ align-content:start; }
   /* Desktop's primary figures already carry enough weight. Improve only the
      shared supporting tiers: metadata, captions, and helper copy become
      immediately readable without making controls or primary values larger. */
@@ -1010,10 +1016,12 @@
      is deliberately absent until a production line is restored. */
   #lineSyncBlock .lineSyncPanel.desktopDisconnected > #lineSyncMessage{display:none}
   #toolsBlock > .blockBody{overflow:hidden}
-  #toolsBlock .toolsWorkspace{height:100%;min-height:0;align-items:stretch}
+  #toolsBlock .toolsWorkspace{grid-template-columns:180px minmax(0,1fr);gap:18px;height:100%;min-height:0;align-items:stretch}
   #toolsBlock .toolsIndex{position:static;max-height:100%;overflow:auto}
-  #toolsBlock .toolsWorkspaceContent{min-height:0;overflow:hidden}
-  #toolsBlock .toolWorkspacePanel{height:100%;min-height:0;overflow:auto}
+  #toolsBlock .toolsWorkspaceContent{width:min(100%,1020px);min-height:0;overflow:hidden;justify-self:start}
+  #toolsBlock .toolWorkspacePanel{width:100%;height:100%;min-height:0;overflow:auto}
+  #toolsBlock .toolsDesktopHidden,
+  #toolsBlock #recipeScanTool{display:none!important}
   #resinCalcResults{min-height:0;overflow:auto}
   #changelogBlock > .blockBody{overflow:auto}
   #resinAdminBlock > .blockBody{overflow:auto}

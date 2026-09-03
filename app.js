@@ -7543,6 +7543,9 @@
       const changed = desktop !== renderedIsDesktop || compactRecipe !== renderedCompactRecipe;
       if (!desktop && dashboardActive) setDashboardActive(false);
       applyShellAttribute(desktop);
+      // Scan Recipe remains a touch tool. A panel left open before a
+      // fine-pointer layout change must not become an empty desktop view.
+      if (desktop && !$("recipeScanTool")?.hidden) selectToolPanel("shortFootageTool");
       renderedIsDesktop = desktop;
       renderedCompactRecipe = compactRecipe;
       // A touch-only palette falls back while a fine-pointer desktop is in
@@ -9468,8 +9471,12 @@
     const toolsIndexDropdown = document.querySelector(".toolsIndexDropdown");
     const toolsIndexDropdownLabel = document.querySelector(".toolsIndexDropdownLabel");
     const mobileToolHeaderLabel = $("mobileToolHeaderLabel");
+    function availableToolTabs(){
+      return toolTabs.filter(tab=>!isDesktopLayout() || !tab.classList.contains("toolsDesktopHidden"));
+    }
     function selectToolPanel(targetId, { focus = false } = {}){
-      if (!toolTabs.some(tab=>tab.dataset.toolTarget === targetId)) return;
+      const availableTabs = availableToolTabs();
+      if (!availableTabs.some(tab=>tab.dataset.toolTarget === targetId)) targetId = "shortFootageTool";
       toolTabs.forEach(tab=>{
         const selected = tab.dataset.toolTarget === targetId;
         tab.classList.toggle("active", selected);
@@ -9811,7 +9818,7 @@
         else if (!event.shiftKey && document.activeElement === last){ event.preventDefault(); first.focus(); }
       }
     });
-    toolTabs.forEach((tab, index)=>{
+    toolTabs.forEach(tab=>{
       tab.addEventListener("click", ()=>{
         selectToolPanel(tab.dataset.toolTarget);
         if (toolsIndexDropdown) toolsIndexDropdown.open = false;
@@ -9819,12 +9826,15 @@
       tab.addEventListener("keydown", event=>{
         if (!["ArrowDown", "ArrowUp", "ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
         event.preventDefault();
+        const availableTabs = availableToolTabs();
+        const index = availableTabs.indexOf(tab);
+        if (index < 0) return;
         let nextIndex = index;
-        if (["ArrowDown", "ArrowRight"].includes(event.key)) nextIndex = (index + 1) % toolTabs.length;
-        if (["ArrowUp", "ArrowLeft"].includes(event.key)) nextIndex = (index - 1 + toolTabs.length) % toolTabs.length;
+        if (["ArrowDown", "ArrowRight"].includes(event.key)) nextIndex = (index + 1) % availableTabs.length;
+        if (["ArrowUp", "ArrowLeft"].includes(event.key)) nextIndex = (index - 1 + availableTabs.length) % availableTabs.length;
         if (event.key === "Home") nextIndex = 0;
-        if (event.key === "End") nextIndex = toolTabs.length - 1;
-        selectToolPanel(toolTabs[nextIndex].dataset.toolTarget, { focus: true });
+        if (event.key === "End") nextIndex = availableTabs.length - 1;
+        selectToolPanel(availableTabs[nextIndex].dataset.toolTarget, { focus: true });
       });
     });
     $("resetTrackingBtn")?.addEventListener("click", resetTracking);
@@ -9874,6 +9884,9 @@
     setInterval(updateChangeoverCountdown, 30000);
     document.addEventListener("click",event=>{
       if (toolsIndexDropdown?.open && !toolsIndexDropdown.contains(event.target)) toolsIndexDropdown.open = false;
+      document.querySelectorAll(".toolInfoGuide[open]").forEach(guide=>{
+        if (!guide.contains(event.target)) guide.open = false;
+      });
       document.querySelectorAll(".hopperGeometryPopover[open]").forEach(popover=>{
         if (!popover.contains(event.target)) popover.open = false;
       });
@@ -9884,6 +9897,10 @@
         toolsIndexDropdown.querySelector(":scope > summary")?.focus();
       }
       if (event.key === "Escape"){
+        document.querySelectorAll(".toolInfoGuide[open]").forEach(guide=>{
+          guide.open = false;
+          guide.querySelector(":scope > summary")?.focus();
+        });
         document.querySelectorAll(".hopperGeometryPopover[open]").forEach(popover=>{
           popover.open = false;
           popover.querySelector(":scope > summary")?.focus();

@@ -49,13 +49,14 @@ test(".toolsIndexDropdown and .toolsIndex are siblings in the DOM, not nested - 
   assert.match(afterDetails, /<nav class="toolsIndex" role="tablist" aria-label="Production tools">/, "the real nav follows immediately as a sibling");
 });
 
-test("all 4 remaining tool tabs are still present and unchanged (same ids, data-tool-target, aria wiring) inside the sibling nav - Production Summary moved out to its own top-level section", () => {
+test("all Tools tabs remain in the shared touch structure, while Scan Recipe carries the desktop-only exclusion marker", () => {
   const navStart = html.indexOf('<nav class="toolsIndex"');
   const navEnd = html.indexOf("</nav>", navStart);
   const nav = html.slice(navStart, navEnd);
-  for (const id of ["shortFootageToolTab", "hopperWeightToolTab", "resinLookupToolTab", "recipeScanToolTab"]){
+  for (const id of ["shortFootageToolTab", "hopperWeightToolTab", "hopperVolumeWeightToolTab", "resinLookupToolTab", "recipeScanToolTab", "bulkDensityMeasurementToolTab"]){
     assert.match(nav, new RegExp(`id="${id}"`));
   }
+  assert.match(nav, /id="recipeScanToolTab" class="toolsIndexButton toolsDesktopHidden"/);
   assert.doesNotMatch(nav, /productionSummaryToolTab/);
 });
 
@@ -125,7 +126,7 @@ test("clicking a tab closes the dropdown, but arrow-key navigation between tabs 
   // Anchored to the Tools tab wiring: other tab strips (the Recipe
   // Current/Next pages) use the same addEventListener idiom earlier in the
   // file, and an unanchored search would find whichever comes first.
-  const toolTabs = app.indexOf("toolTabs.forEach((tab, index)=>{");
+  const toolTabs = app.indexOf("toolTabs.forEach(tab=>{");
   assert.notEqual(toolTabs, -1, "expected the Tools tab wiring");
   const clickStart = app.indexOf('tab.addEventListener("click"', toolTabs);
   const keydownStart = app.indexOf('tab.addEventListener("keydown"', clickStart);

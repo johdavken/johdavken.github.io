@@ -26,8 +26,8 @@ test("the calculator itself carries no admin gate - it's wired up unconditionall
 
 test("measurement UI provides persisted calibration, searchable active resins, compact inputs, and explicit results", () => {
   assert.match(html, /Water calibration \(lb net\)[\s\S]+id="bulkDensityWaterCalibration"/);
-  assert.match(html, /Use the same dry container and fill level for water and resin\./);
-  assert.match(html, /Enter the net water weight for your calibration mark/);
+  assert.match(html, /Use the same dry container and fill level\./);
+  assert.match(html, /Weigh water in a dry container at the calibration mark/);
   assert.match(html, /id="bulkDensityResinSearch"[^>]+role="combobox"/);
   assert.match(html, /id="bulkDensityPolymerDensity"/);
   assert.match(html, /id="bulkDensityResinWeight"/);
