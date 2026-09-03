@@ -11,8 +11,9 @@
  *   - the Recipe / Weights panel (#splitsBlock), the Timeline panel's
  *     control bar (#resultsBlock #timelinePane .timelineControlBar),
  *     RT Sync's desktop action buttons (#lineSyncBlock), the Tools
- *     section's per-tool action buttons (#toolsBlock), and the Sudo Access
- *     sub-panels (.adminResinPanel)
+ *     section's per-tool action buttons (#toolsBlock), the Sudo Access
+ *     sub-panels (.adminResinPanel), and the Dashboard's changeover-refresh
+ *     button (#dashboardPanel .dashboardChangeoverRefresh)
  *   - the toolbars, surface by surface:
  *       CMD  = #recipeHeaderActionPill's buttons (Edit/Done, Load, Print),
  *              plus the Hopper Weights page's relocated Summary/Edit toggle
@@ -302,6 +303,17 @@ body[data-button-style]{
     color: var(--btnstyle-on-fill);
   }
 
+  /* ---- Dashboard (desktop) --------------------------------------
+     One action button: the changeover-estimate refresh (a 32px icon
+     button beside the Changeover label). "Back to Line" is navigation,
+     left alone. */
+  body[data-button-style="console"] #dashboardPanel .dashboardChangeoverRefresh{
+    border-radius: 4px;
+    background: var(--btnstyle-surface);
+    color: var(--btnstyle-ink);
+    box-shadow: 0 1px 0 var(--btnstyle-edge);
+  }
+
   /* Keep the focus ring legible on the treated controls. */
   body[data-button-style="console"] #splitsBlock #recipeHeaderActionPill button:focus-visible,
   body[data-button-style="console"] #splitsBlock #recipeHeaderControls .weightsHeaderViewToggle button:focus-visible,
@@ -321,7 +333,8 @@ body[data-button-style]{
   body[data-button-style="console"] #toolsBlock #bulkDensitySaveButton:focus-visible,
   body[data-button-style="console"] .adminResinPanel button.primary:focus-visible,
   body[data-button-style="console"] .adminResinPanel button.secondary:focus-visible,
-  body[data-button-style="console"] .adminResinPanel button.danger:focus-visible{
+  body[data-button-style="console"] .adminResinPanel button.danger:focus-visible,
+  body[data-button-style="console"] #dashboardPanel .dashboardChangeoverRefresh:focus-visible{
     outline: 2px solid var(--focus-border);
     outline-offset: 2px;
   }

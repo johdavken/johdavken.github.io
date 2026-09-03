@@ -52,7 +52,7 @@ test("the preference persists locally and restores through the standard payload 
 
 test("the treatment is desktop-scoped and every selector stays inside a treated panel", () => {
   assert.match(buttonCss, /@media \(min-width: 901px\) and \(pointer: fine\)\{/);
-  const PANELS = ["#splitsBlock", "#splitsArea", "#resultsBlock", "#lineSyncBlock", "#toolsBlock", ".adminResinPanel"];
+  const PANELS = ["#splitsBlock", "#splitsArea", "#resultsBlock", "#lineSyncBlock", "#toolsBlock", ".adminResinPanel", "#dashboardPanel"];
   const ruleLines = buttonCss
     .split("\n")
     .map(line => line.trim())
@@ -125,6 +125,11 @@ test("console reaches the Tools section's per-tool action buttons", () => {
   for (const line of selectorLines) {
     assert.ok(!/\.toolsIndexButton|\.mobileToolTile/.test(line), `styles a tool tab / tile: ${line}`);
   }
+});
+
+test("console reaches the Dashboard's one action button (not the back button)", () => {
+  assert.match(buttonCss, /body\[data-button-style="console"\] #dashboardPanel \.dashboardChangeoverRefresh\{[\s\S]*?background: var\(--btnstyle-surface\)/);
+  assert.doesNotMatch(buttonCss, /\.dashboardBackButton/);
 });
 
 test("console reaches the Sudo Access sub-panels, but not their nav rows or dialogs", () => {
