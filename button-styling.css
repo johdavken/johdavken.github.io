@@ -8,7 +8,8 @@
  * leaves the shipped look untouched.
  *
  * Scope, deliberately narrow:
- *   - only inside #splitsBlock (the Recipe / Weights panel)
+ *   - the Recipe / Weights panel (#splitsBlock) and the Timeline panel's
+ *     control bar (#resultsBlock #timelinePane .timelineControlBar)
  *   - the toolbars, surface by surface:
  *       CMD  = #recipeHeaderActionPill's buttons (Edit/Done, Load, Print),
  *              plus the Hopper Weights page's relocated Summary/Edit toggle
@@ -19,6 +20,8 @@
  *       BOOK = the Recipe Book AND Weight Profiles panels' shared desktop
  *              select-a-row-then-act bar (.splitsSavedRecipesActions) + its
  *              overflow menu
+ *       TIME = the Timeline panel's control bar (Show all / Reset tracking
+ *              / settings gear). The row ribbon below is untouched.
  *     Apply and the Undo/Redo history pair only get their corner radius
  *     matched, so no stray rounded button sits beside the treated ones.
  *   - only at the desktop breakpoint the rest of desktop.css uses
@@ -149,6 +152,36 @@ body[data-button-style]{
     color: var(--btnstyle-on-fill);
   }
 
+  /* ---- Timeline panel (desktop) -----------------------------------
+     The control bar (Show all / Reset tracking / settings gear) becomes
+     one contained bay of small chips, matching the Recipe / Weights
+     toolbars. #resultsBlock #timelinePane (two ids) matches desktop.css's
+     own prefix so this always wins. The row ribbon below - status nodes,
+     resin chips, the per-row pump toggles, the NEEDS WEIGHT group - is
+     left alone; those are status surfaces, not a toolbar. */
+  body[data-button-style="console"] #resultsBlock #timelinePane .timelineControlBar{
+    gap: 6px;
+    padding: 6px 8px;
+    border-bottom: 0;
+    border-radius: 7px;
+    background: color-mix(in srgb, var(--btnstyle-surface) 55%, transparent);
+  }
+  body[data-button-style="console"] #resultsBlock #timelinePane .timelineControlBar #showPumpOffToggle,
+  body[data-button-style="console"] #resultsBlock #timelinePane .timelineControlBar #resetTrackingBtn,
+  body[data-button-style="console"] #resultsBlock #timelinePane .timelineControlBar #timelineDisplayToggle{
+    min-height: 30px;
+    border: 0;
+    border-radius: 4px;
+    background: var(--btnstyle-surface);
+    color: var(--btnstyle-ink);
+    box-shadow: 0 1px 0 var(--btnstyle-edge);
+  }
+  /* Show all reads as a pressed key while its filter is on. */
+  body[data-button-style="console"] #resultsBlock #timelinePane .timelineControlBar #showPumpOffToggle[aria-pressed="true"]{
+    background: var(--btnstyle-ink);
+    color: var(--panel);
+  }
+
   /* Keep the focus ring legible on the treated controls. */
   body[data-button-style="console"] #splitsBlock #recipeHeaderActionPill button:focus-visible,
   body[data-button-style="console"] #splitsBlock #recipeHeaderControls .weightsHeaderViewToggle button:focus-visible,
@@ -156,7 +189,8 @@ body[data-button-style]{
   body[data-button-style="console"] #splitsBlock .weightsBulkBar button:focus-visible,
   body[data-button-style="console"] #splitsBlock .splitsSavedRecipesActions button:focus-visible,
   body[data-button-style="console"] #splitsBlock .splitsSavedRecipesActions .workspaceConfigurationOverflow > summary:focus-visible,
-  body[data-button-style="console"] #splitsBlock .workspaceConfigurationOverflowMenu button:focus-visible{
+  body[data-button-style="console"] #splitsBlock .workspaceConfigurationOverflowMenu button:focus-visible,
+  body[data-button-style="console"] #resultsBlock #timelinePane .timelineControlBar button:focus-visible{
     outline: 2px solid var(--focus-border);
     outline-offset: 2px;
   }

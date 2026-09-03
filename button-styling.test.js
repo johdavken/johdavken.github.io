@@ -50,18 +50,16 @@ test("the preference persists locally and restores through the standard payload 
   assert.match(app, /\$\("buttonStyleSel"\)\?\.addEventListener\("change",\(e\)=>\{\s*\n\s*applyButtonStyle\(e\.target\.value\);/);
 });
 
-test("the treatment is desktop-scoped and confined to the Recipe / Weights panel", () => {
+test("the treatment is desktop-scoped and every selector stays inside a treated panel", () => {
   assert.match(buttonCss, /@media \(min-width: 901px\) and \(pointer: fine\)\{/);
+  const PANELS = ["#splitsBlock", "#splitsArea", "#resultsBlock"];
   const ruleLines = buttonCss
     .split("\n")
     .map(line => line.trim())
     .filter(line => line.startsWith('body[data-button-style="'));
   assert.ok(ruleLines.length >= 5, "expected the console selectors");
   for (const line of ruleLines) {
-    assert.ok(
-      line.includes("#splitsBlock") || line.includes("#splitsArea"),
-      `selector escapes the panel: ${line.trim()}`
-    );
+    assert.ok(PANELS.some(p => line.includes(p)), `selector escapes the panels: ${line.trim()}`);
     assert.ok(line.includes('"console"'), `stray non-console selector: ${line.trim()}`);
   }
 });
@@ -98,11 +96,12 @@ test("console reaches the relocated Hopper Weights Summary/Edit toggle", () => {
   assert.match(buttonCss, /#splitsBlock #recipeHeaderControls \.weightsHeaderViewToggle button\[data-weight-view="edit"\]\{[\s\S]*?background: var\(--btnstyle-ink\)/);
 });
 
-test("every console selector stays desktop-only and inside the Recipe / Weights panel", () => {
-  for (const line of buttonCss.split("\n").map(l => l.trim()).filter(l => l.startsWith('body[data-button-style="'))) {
-    assert.ok(line.includes("#splitsBlock") || line.includes("#splitsArea"), line);
-    assert.ok(line.includes('"console"'), line);
-  }
+test("console reaches the Timeline panel control bar: bay + chips, Show all as a pressed key", () => {
+  assert.match(buttonCss, /body\[data-button-style="console"\] #resultsBlock #timelinePane \.timelineControlBar\{[\s\S]*?border-radius: 7px/);
+  assert.match(buttonCss, /#timelinePane \.timelineControlBar #showPumpOffToggle,[\s\S]*?#resetTrackingBtn,[\s\S]*?#timelineDisplayToggle\{/);
+  assert.match(buttonCss, /#showPumpOffToggle\[aria-pressed="true"\]\{[\s\S]*?background: var\(--btnstyle-ink\)/);
+  // the row ribbon / pump toggles / NEEDS WEIGHT group are not touched
+  assert.doesNotMatch(buttonCss, /\.pumpToggle|\.resultRow|\.resultNeedsWeight|#resultsArea/);
 });
 
 test("the treatment reuses existing theme tokens, not hard-coded colours", () => {
