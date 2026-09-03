@@ -12260,3 +12260,176 @@ body[data-shell="touch"] #splitsArea[data-recipe-layout="transposed"] .splitPctC
 body[data-shell="touch"] #splitsArea[data-recipe-layout="transposed"] .splitLayerPct input{
   width:2.6em;
 }
+
+/* ==========================================================================
+   Recipe Book / Weight Profiles headers, and the touch-shell Weights grid
+   ========================================================================== */
+
+/* 1. The section title becomes a stacked block on the reworked grid: the
+      name + description take the full width on their own line, and the
+      Save / Load / Update / overflow cluster sits beneath them, left-
+      aligned. As a space-between flex row (the base rule) the buttons were
+      pinned to the right of a two-line title and read as detached from it.
+      Scoped to the saved page's panel so compact mobile keeps its own
+      three-piece title row. Covers both the Recipe Book heading and the
+      folded Weight Profiles heading. */
+body[data-recipe-page="saved"] #splitsArea > .splitsSavedRecipesPanel .workspaceConfigurationSectionTitle{
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  gap:10px;
+}
+body[data-recipe-page="saved"] #splitsArea > .splitsSavedRecipesPanel .workspaceConfigurationSectionTitle > div:first-child{
+  min-width:0;
+}
+body[data-recipe-page="saved"] #splitsArea > .splitsSavedRecipesPanel .splitsSavedRecipesActions{
+  flex-wrap:wrap;
+  justify-content:flex-start;
+}
+
+/* 2. The touch-shell Hopper Weights grid. Same defect the Recipe grid had
+      before c59cfd0: .weightsMatrixFrame is width:max-content, and the
+      transposed table inside it is table-layout:fixed; width:100%. That
+      pair is circular, and Chromium resolves it to its ~1,000,000px layout
+      maximum - the table rendered a million pixels wide, so on the tablet
+      the grid was simply not visible. The Recipe frame gets width:100% on
+      the touch shell (styles.css ~11603); the Weights frame never did.
+      Give it the same, and let .weightsMatrixScroll do the clipping. */
+body[data-shell="touch"] #weightsArea .weightsMatrixScroll{
+  overflow-x:auto;
+  width:100%;
+  max-width:100%;
+  min-width:0;
+  box-sizing:border-box;
+}
+body[data-shell="touch"] #weightsArea .weightsMatrixFrame{
+  width:100%;
+  max-width:100%;
+  min-width:0;
+  margin-inline:0;
+  overflow-x:visible;
+  box-sizing:border-box;
+}
+
+/* 3. Tighter minimums so six hopper positions plus the layer rail fit a
+      tablet outright, mirroring the Recipe grid's touch treatment. */
+body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader){
+  min-width:760px;
+}
+body[data-shell="touch"] #weightsArea .weightsMatrix .weightsLayerHeader{
+  min-width:82px;
+  width:82px;
+  max-width:82px;
+}
+body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) thead th,
+body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .weightsMatrixCell{
+  min-width:112px;
+}
+
+/* 4. Transposed, thead holds hopper POSITION numbers (1-6), not the layer
+      letters the 64px ghosted watermark style was built for - that style
+      rendered "1 2 3 4 5 6" as giant faded numerals filling the header.
+      Bring it back to an ordinary small column label, matching the Recipe
+      grid's own position headers. */
+body #weightsArea .weightsMatrix:has(.weightsLayerHeader) thead .weightsSelectHeader{
+  height:auto;
+  min-height:0;
+  font-family:inherit;
+  font-size:var(--font-tiny);
+  font-weight:700;
+  letter-spacing:.09em;
+  text-transform:uppercase;
+  color:var(--muted);
+  opacity:1;
+  padding:5px 6px;
+  line-height:1.2;
+}
+body #weightsArea .weightsMatrix:has(.weightsLayerHeader) thead .weightsSelectHeader.selected,
+body #weightsArea .weightsMatrix:has(.weightsLayerHeader) thead .weightsSelectHeader.partiallySelected{
+  opacity:1;
+  color:var(--focus-border);
+  background:color-mix(in srgb,var(--focus-border) 14%,transparent);
+  border-radius:5px;
+}
+
+/* 5. The transposed weight cell is [checkbox] [weight input] lb - keep the
+      input from collapsing to nothing beside the checkbox and unit. */
+body #weightsArea .weightsMatrix:has(.weightsLayerHeader) .weightsCellRow{
+  gap:5px;
+}
+body #weightsArea .weightsMatrix:has(.weightsLayerHeader) .weightsInputWithUnit{
+  flex:1 1 auto;
+  min-width:44px;
+}
+body #weightsArea .weightsMatrix:has(.weightsLayerHeader) .weightsInputWithUnit input{
+  min-width:0;
+}
+
+/* 6. The polished weight-cell presentation - position label, big weight
+      number, "WEIGHT (LB)" caption, geometry field - lives entirely inside
+      desktop.css's fine-pointer, wide-viewport media wrapper, so a tablet
+      (touch shell, coarse pointer) never got it and fell back to the raw
+      checkbox + bare input row. Mirror the essential rules here, scoped to
+      the transposed touch-shell grid, so the tablet cell matches the
+      desktop one. Kept in lockstep with desktop.css:517-532. */
+body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .weightsCellRow,
+body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .weightsCellSelector,
+body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .hopperGeometryPopover,
+body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .weightsComputedWeight{
+  display:none!important;
+}
+body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .weightsMatrixCell{
+  height:64px;
+  vertical-align:middle;
+  box-shadow:inset 0 0 0 1px var(--row-border-2);
+}
+body[data-shell="touch"] #weightsArea[data-desktop-bulk-mode="true"] .weightsMatrix:has(.weightsLayerHeader) .weightsMatrixCell.selected{
+  background:color-mix(in srgb,var(--focus-ring) 72%,var(--row-bg-2));
+  box-shadow:inset 0 0 0 2px var(--focus-border);
+}
+body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .desktopWeightVisualReadout{
+  position:relative;
+  display:grid!important;
+  align-items:center;
+  min-height:46px;
+  padding:5px 4px 3px;
+}
+body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .desktopWeightVisualId{
+  top:2px;
+  left:3px;
+  font-size:var(--font-tiny);
+}
+body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .desktopWeightVisualValues{
+  display:block;
+  min-width:0;
+  text-align:right;
+}
+body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .desktopWeightEditFields{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:5px;
+  padding-top:7px;
+}
+body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .desktopWeightEditFields label{
+  display:grid;
+  gap:1px;
+  margin:0;
+  min-width:0;
+}
+body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .desktopWeightEditFields input{
+  width:100%;
+  height:22px;
+  min-height:22px;
+  padding:0 2px;
+  font-size:14px;
+  font-weight:800;
+  text-align:right;
+}
+body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .desktopWeightEditFields small{
+  color:var(--muted);
+  font-size:9px;
+  white-space:nowrap;
+}
+body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .desktopWeightSummaryValues{
+  display:none;
+}

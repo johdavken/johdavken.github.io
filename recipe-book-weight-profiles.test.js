@@ -353,3 +353,36 @@ test("touch tightens the grid's minimums so six positions fit a tablet outright"
   // beside it gives up the room rather than the code.
   assert.match(styles, /body\[data-shell="touch"\] #splitsArea\[data-recipe-layout="transposed"\] \.splitPctControl input\{\s*\n\s*width:30px;/);
 });
+
+/* Recipe Book / Weight Profiles headers, and the Weights grid on the touch
+ * shell (tablet).
+ */
+test("the section title stacks on the reworked grid so the action buttons sit under it, not detached to its right", () => {
+  assert.match(styles, /body\[data-recipe-page="saved"\] #splitsArea > \.splitsSavedRecipesPanel \.workspaceConfigurationSectionTitle\{[\s\S]*?flex-direction:column;/);
+  assert.match(styles, /body\[data-recipe-page="saved"\] #splitsArea > \.splitsSavedRecipesPanel \.splitsSavedRecipesActions\{[\s\S]*?justify-content:flex-start;/);
+});
+
+test("the touch-shell Weights frame gets width:100% so the fixed-layout table cannot blow out to Chromium's layout maximum", () => {
+  // .weightsMatrixFrame is width:max-content and the transposed table is
+  // table-layout:fixed;width:100% - a circular pair Chromium resolves to
+  // ~1,000,000px, which made the grid invisible on the tablet. The Recipe
+  // frame already gets width:100% on the touch shell; the Weights frame did
+  // not until now.
+  assert.match(styles, /body\[data-shell="touch"\] #weightsArea \.weightsMatrixFrame\{[\s\S]*?width:100%;/);
+  assert.match(styles, /body\[data-shell="touch"\] #weightsArea \.weightsMatrixScroll\{[\s\S]*?overflow-x:auto;/);
+});
+
+test("the touch-shell Weights cell uses the same visual readout as desktop, not the raw checkbox row", () => {
+  // The polished cell (position label + weight number + WEIGHT (LB) caption)
+  // lives in desktop.css's fine-pointer wrapper, which a tablet never
+  // matches. The essential rules are mirrored for the touch shell.
+  assert.match(styles, /body\[data-shell="touch"\] #weightsArea \.weightsMatrix:has\(\.weightsLayerHeader\) \.desktopWeightVisualReadout\{[\s\S]*?display:grid!important;/);
+  assert.match(styles, /body\[data-shell="touch"\] #weightsArea \.weightsMatrix:has\(\.weightsLayerHeader\) \.weightsCellRow,[\s\S]*?display:none!important;/);
+  assert.match(styles, /body\[data-shell="touch"\] #weightsArea \.weightsMatrix:has\(\.weightsLayerHeader\) \.desktopWeightEditFields\{[\s\S]*?display:grid;/);
+});
+
+test("transposed Weights column headers are small labels, not the 64px layer-letter watermark", () => {
+  // thead now holds hopper position numbers (1-6), which the ghost-watermark
+  // style rendered as giant faded numerals.
+  assert.match(styles, /body #weightsArea \.weightsMatrix:has\(\.weightsLayerHeader\) thead \.weightsSelectHeader\{[\s\S]*?font-size:var\(--font-tiny\);[\s\S]*?opacity:1;/);
+});
