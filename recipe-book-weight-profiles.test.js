@@ -24,6 +24,15 @@ function functionBody(name){
   return app.slice(start, next === -1 ? undefined : next);
 }
 
+// Module-scope functions sit at two-space indent, so the four-space slice
+// above runs straight past their end and into unrelated code.
+function moduleFunctionBody(name){
+  const start = app.indexOf(`function ${name}(`);
+  assert.notEqual(start, -1, `expected ${name}`);
+  const next = app.indexOf("\n  function ", start + 1);
+  return app.slice(start, next === -1 ? undefined : next);
+}
+
 test("the Recipe Book panel adopts the shared profiles block itself, rather than rebuilding a second copy of it", () => {
   const body = functionBody("renderSplitsArea");
   assert.match(body, /if \(reworkedGrid && profilesBlock\)\{/);
@@ -145,4 +154,64 @@ test("every write path that could break the 100% invariant refuses before writin
 test("updateHopperTotals still runs, so restoring the readout stays a one-line change", () => {
   assert.match(app, /el\.classList\.toggle\("warn", !okay && !planning\);/);
   assert.match(app, /el\.textContent = `Total \$\{fmtTrim\(hopperTotal, 2\)\}%`;/);
+});
+
+/* The Recipe Book preview pane.
+ *
+ * One pane serves both sections: whichever configuration is selected - recipe
+ * or weight profile - is drawn read-only in the same transposed shape the live
+ * grid uses. Loading a shared configuration overwrites operator state, so the
+ * point is to see what will land before confirming it.
+ */
+test("the preview is its own read-only builder, not a second call into the live grid renderer", () => {
+  const body = moduleFunctionBody("renderWorkspaceConfigurationPreview");
+  // It reads the stored payload only - never live state.layers, and never any
+  // of the editing/selection/sync machinery renderSplitsArea wires per cell.
+  assert.doesNotMatch(body, /renderSplitsArea|cellRefs|notifyActiveJobMutation|attachResinAutocomplete|recomputeAutoH1/);
+  assert.match(body, /item\.payload\?\.layers/);
+  // Same axis as the live grid: layers down, hopper positions across.
+  assert.match(body, /corner\.textContent="Layer";/);
+  assert.match(body, /rowHeader\.scope="row";/);
+});
+
+test("one pane serves both configuration types", () => {
+  const body = moduleFunctionBody("renderWorkspaceConfigurationPreview");
+  assert.match(body, /\.\.\.workspaceConfigurations\.listRecipes\(workspaceId\)\.items,/);
+  assert.match(body, /\.\.\.workspaceConfigurations\.listReceiverWeightProfiles\(workspaceId\)\.items/);
+  assert.match(body, /const recipe=item\.type==="recipe";/);
+  // Recipes show resin + blend %, profiles show a receiver weight in lb.
+  assert.match(body, /hopper\?\.resin_name/);
+  assert.match(body, /layer\?\.receiver_weights_lb\?\.\[hi\]/);
+});
+
+test("a layer-count mismatch is surfaced in the preview, before the load dialog", () => {
+  const body = moduleFunctionBody("renderWorkspaceConfigurationPreview");
+  assert.match(body, /const required=derivedRequiredLayerCount\(syncState\);/);
+  // Recipes are only refused when the line is actually locked to a count;
+  // a weight profile always needs an exact match (applyReceiverWeightProfile).
+  assert.match(body, /\(required !== null && payloadLayers !== required\)/);
+  assert.match(body, /payloadLayers !== Number\(state\.lineType\)/);
+  assert.match(body, /configPreviewNotice/);
+});
+
+test("the preview hides itself when there is no workspace, rather than showing an empty frame", () => {
+  const body = moduleFunctionBody("renderWorkspaceConfigurationPreview");
+  assert.match(body, /if\(!workspaceId \|\| !workspaceConfigurations\)\{ host\.hidden=true; return; \}/);
+});
+
+test("a panel rebuild refreshes the whole hub, not just the recipe list", () => {
+  // The panel owns three things a rebuild leaves empty or stale: the recipe
+  // list, the moved Weight Profiles section, and the preview host - which
+  // would otherwise never resolve its own hidden state.
+  const body = functionBody("renderSplitsArea");
+  assert.match(body, /renderWorkspaceConfigurations\(lineSync\?\.getState\?\.\(\)\);/);
+  assert.doesNotMatch(body, /\n      renderSplitsSavedRecipes\(lineSync\?\.getState\?\.\(\)\);/);
+  const hub = app.slice(app.indexOf("function renderWorkspaceConfigurations("), app.indexOf("async function refreshWorkspaceConfigurations("));
+  assert.match(hub, /renderWorkspaceConfigurationPreview\(syncState\);/);
+});
+
+test("the preview table scrolls inside its own rail, so the panel never scrolls sideways", () => {
+  assert.match(styles, /\.configPreviewScroll\{ overflow-x:auto; \}/);
+  // And it steps down to a single column when the rail would be cramped.
+  assert.match(styles, /@media \(max-width:1240px\)\{[\s\S]*?\.splitsConfigurationPreview\{[\s\S]*?grid-column:1;/);
 });

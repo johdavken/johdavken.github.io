@@ -66,9 +66,16 @@ test("renderSplitsSavedRecipes explains why the list is empty when disconnected 
   assert.match(body, /Shared configurations service is unavailable\./);
 });
 
-test("renderSplitsArea calls renderSplitsSavedRecipes at the end of every render, so the freshly-rebuilt (and therefore empty) list host is immediately repopulated rather than staying blank until an unrelated RT Sync event fires", () => {
+test("renderSplitsArea repopulates the whole configuration hub at the end of every render, so the freshly-rebuilt (and therefore empty) hosts do not stay blank until an unrelated RT Sync event fires", () => {
   const body = functionBody("renderSplitsArea");
-  assert.match(body, /setSavedRecipesOpen\(splitsSavedRecipesOpen\);\s*\n\s*renderSplitsSavedRecipes\(lineSync\?\.getState\?\.\(\)\);/);
+  // The panel owns three things a rebuild empties or leaves stale now: the
+  // recipe list, the Weight Profiles section moved into it, and the preview
+  // pane - so the hub is called rather than the recipe list alone.
+  assert.match(body, /setSavedRecipesOpen\(splitsSavedRecipesOpen\);\s*\n(?:\s*\/\/[^\n]*\n)*\s*renderWorkspaceConfigurations\(lineSync\?\.getState\?\.\(\)\);/);
+  const hub = app.slice(app.indexOf("function renderWorkspaceConfigurations("), app.indexOf("async function refreshWorkspaceConfigurations("));
+  assert.match(hub, /renderSplitsSavedRecipes\(syncState\);/);
+  assert.match(hub, /renderSetupWeightProfiles\(syncState\);/);
+  assert.match(hub, /renderWorkspaceConfigurationPreview\(syncState\);/);
 });
 
 // --- Bulk edit / Rearrange / Saved Recipes are mutually exclusive -

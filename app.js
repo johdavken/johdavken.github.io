@@ -625,9 +625,168 @@
     renderConfigurationList(host,items,"profile",syncState,{ showRowActions:false });
     renderMobileWeightProfileRows(items,syncState);
   }
+  /* Recipe Book preview.
+   *
+   * One pane serves both sections: whichever configuration is selected -
+   * recipe or weight profile - is drawn here in the same transposed shape the
+   * live grid uses (layers down, hopper positions across), read-only. Loading
+   * a shared configuration overwrites operator state, so the point is to see
+   * exactly what is about to land before confirming it, rather than reading a
+   * paragraph that describes it.
+   *
+   * Deliberately its own small builder rather than a second call into
+   * renderSplitsArea: that renderer wires editing, selection, tracking,
+   * autocomplete, rearrangement and RT Sync mutation into every cell against
+   * live state.layers. A preview must touch none of that - it reads a stored
+   * payload and produces nothing but markup.
+   */
+  function renderWorkspaceConfigurationPreview(syncState){
+    const host=$("splitsConfigurationPreview");
+    if(!host) return;
+    host.replaceChildren();
+    const workspaceId=syncState?.selectedWorkspaceId || "";
+    if(!workspaceId || !workspaceConfigurations){ host.hidden=true; return; }
+    host.hidden=false;
+    const items=[
+      ...workspaceConfigurations.listRecipes(workspaceId).items,
+      ...workspaceConfigurations.listReceiverWeightProfiles(workspaceId).items
+    ];
+    const item=items.find(entry=>entry.id===selectedWorkspaceConfigurationId) || null;
+    if(!item){
+      const empty=document.createElement("div");
+      empty.className="configPreviewEmpty";
+      empty.textContent=items.length
+        ? "Select a saved recipe or weight profile to preview it here."
+        : "Nothing saved to this workspace yet.";
+      host.append(empty);
+      return;
+    }
+
+    // fmtTrim lives in the inner render scope, out of reach here - this
+    // preview only ever formats stored payload numbers, so a local trim is
+    // both sufficient and one less cross-scope dependency.
+    const trim=value=>Number.isFinite(value) ? String(Math.round(value*100)/100) : "";
+    const recipe=item.type==="recipe";
+    const layers=Array.isArray(item.payload?.layers) ? item.payload.layers : [];
+    const hopperCount=layers.reduce((most,layer)=>Math.max(most, Array.isArray(layer?.hoppers) ? layer.hoppers.length : (Array.isArray(layer?.receiver_weights_lb) ? layer.receiver_weights_lb.length : 0)), 0) || 6;
+
+    const header=document.createElement("div");
+    header.className="configPreviewHeader";
+    const title=document.createElement("strong");
+    if(item.favorite){
+      const star=document.createElement("span");
+      star.className="workspaceConfigurationFavorite";
+      star.setAttribute("aria-label","Favorite recipe");
+      star.textContent="\u2605";
+      title.append(star," ");
+    }
+    title.append(item.name);
+    const meta=document.createElement("small");
+    meta.textContent=`${recipe ? "Recipe" : "Weight profile"} \u00b7 ${item.payload?.line_type} Layer \u00b7 Updated ${item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : "unknown"}`;
+    header.append(title,meta);
+    host.append(header);
+
+    // A line locked to a different layer count is the one case where loading
+    // is refused outright (see applyRecipeToActivePage / applyReceiverWeightProfile).
+    // Saying so here means the operator finds out before the dialog, not after.
+    const required=derivedRequiredLayerCount(syncState);
+    const payloadLayers=Number(item.payload?.line_type);
+    const mismatch=recipe
+      ? (required !== null && payloadLayers !== required)
+      : payloadLayers !== Number(state.lineType);
+    if(mismatch){
+      const notice=document.createElement("p");
+      notice.className="configPreviewNotice";
+      notice.textContent=recipe
+        ? `This recipe is set up for ${payloadLayers} layers, but this line runs ${required}. Loading it into Current will be refused; loading into Next keeps only the layers this line has.`
+        : `This profile is set up for ${payloadLayers} layers, but this line runs ${state.lineType}. It cannot be loaded here.`;
+      host.append(notice);
+    }
+
+    const scroll=document.createElement("div");
+    scroll.className="configPreviewScroll";
+    const table=document.createElement("table");
+    table.className="configPreviewTable";
+    table.setAttribute("aria-label",`${item.name} preview`);
+
+    const thead=document.createElement("thead");
+    const headRow=document.createElement("tr");
+    const corner=document.createElement("th");
+    corner.scope="col";
+    corner.textContent="Layer";
+    headRow.append(corner);
+    for(let hi=0;hi<hopperCount;hi++){
+      const th=document.createElement("th");
+      th.scope="col";
+      th.textContent=window.PolynLineIdentity?.hopperPositionLabel(hi, syncState) || String(hi+1);
+      headRow.append(th);
+    }
+    thead.append(headRow);
+    table.append(thead);
+
+    const tbody=document.createElement("tbody");
+    layers.forEach(layer=>{
+      const tr=document.createElement("tr");
+      const rowHeader=document.createElement("th");
+      rowHeader.scope="row";
+      const name=document.createElement("b");
+      name.textContent=layer?.name || "?";
+      rowHeader.append(name);
+      if(recipe && Number.isFinite(Number(layer?.layer_pct))){
+        const pct=document.createElement("span");
+        pct.textContent=`${trim(Number(layer.layer_pct))}%`;
+        rowHeader.append(pct);
+      }
+      tr.append(rowHeader);
+      for(let hi=0;hi<hopperCount;hi++){
+        const td=document.createElement("td");
+        if(recipe){
+          const hopper=layer?.hoppers?.[hi];
+          const resin=typeof hopper?.resin_name==="string" ? hopper.resin_name.trim() : "";
+          const value=Number(hopper?.pct);
+          if(!resin && !(value>0)){
+            td.className="configPreviewEmptyCell";
+            td.textContent="\u2014";
+          }else{
+            const code=document.createElement("b");
+            code.textContent=resin || "\u2014";
+            const amount=document.createElement("span");
+            amount.textContent=Number.isFinite(value) ? `${trim(value)}%` : "";
+            td.append(code,amount);
+          }
+        }else{
+          const weight=Number(layer?.receiver_weights_lb?.[hi]);
+          if(!Number.isFinite(weight) || weight<=0){
+            td.className="configPreviewEmptyCell";
+            td.textContent="\u2014";
+          }else{
+            const amount=document.createElement("b");
+            amount.textContent=trim(weight);
+            const unit=document.createElement("span");
+            unit.textContent="lb";
+            td.append(amount,unit);
+          }
+        }
+        tr.append(td);
+      }
+      tbody.append(tr);
+    });
+    table.append(tbody);
+    scroll.append(table);
+    host.append(scroll);
+
+    const foot=document.createElement("p");
+    foot.className="configPreviewFoot";
+    foot.textContent=recipe
+      ? "Preview only \u2014 nothing changes until you choose Load."
+      : "Preview only \u2014 loading this changes receiver hopper weights and nothing else.";
+    host.append(foot);
+  }
+
   function renderWorkspaceConfigurations(syncState){
     renderSplitsSavedRecipes(syncState);
     renderSetupWeightProfiles(syncState);
+    renderWorkspaceConfigurationPreview(syncState);
     // workspaceConfigurationWorkspaceId is load-bearing for every save/
     // update/rename/duplicate/delete/favorite action from *both* remaining
     // surfaces (Recipe Setup's Saved Recipes panel, Line Setup's Receiver
@@ -4647,6 +4806,7 @@
         <div id="mobileSavedRecipesStatus" class="mobileSavedRecipesStatus" role="status" hidden></div>
         <div id="splitsSavedRecipesList" class="workspaceConfigurationList"></div>
         <div id="mobileSavedRecipesList" class="mobileSavedRecipesList"></div>
+        <aside id="splitsConfigurationPreview" class="splitsConfigurationPreview" aria-live="polite"></aside>
       `;
       savedRecipesPanel.querySelector("#splitsSaveRecipe").addEventListener("click", ()=>openWorkspaceConfigurationDialog("save-recipe"));
       const saveNextRecipeButton=savedRecipesPanel.querySelector("#splitsSaveNextRecipe");
@@ -5815,7 +5975,12 @@
       // one of them open via splitsBulkModeActive/splitsSavedRecipesOpen.
       setBulkMode(bulkMode);
       setSavedRecipesOpen(splitsSavedRecipesOpen);
-      renderSplitsSavedRecipes(lineSync?.getState?.());
+      // The whole hub, not just the recipe list: this panel now owns three
+      // things that a rebuild leaves empty or stale - the recipe list, the
+      // Weight Profiles section moved into it, and the preview pane. Calling
+      // only renderSplitsSavedRecipes left the freshly-built preview host
+      // untouched, so it never even resolved its own hidden state.
+      renderWorkspaceConfigurations(lineSync?.getState?.());
     }
 
     function renderDesktopRailTotals(summary){

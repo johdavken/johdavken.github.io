@@ -12009,3 +12009,110 @@ body #splitsArea[data-recipe-layout="transposed"] .splitMatrixCell.empty:hover .
 body #splitsArea[data-recipe-layout="transposed"] .splitMatrixCell.empty:focus-within .splitTrackButton{
   opacity:1;
 }
+
+/* --------------------------------------------------------------------------
+   Recipe Book preview pane
+   One pane serves both sections - whichever configuration is selected, recipe
+   or weight profile, is drawn read-only in the same transposed shape the live
+   grid uses. Loading overwrites operator state, so seeing what will land
+   beats reading a paragraph describing it.
+
+   The panel becomes two columns by explicit placement rather than source
+   order: everything the render builds lands in column 1, and the preview is
+   pinned to column 2 across every row. That keeps working no matter how many
+   sections column 1 grows (the Weight Profiles block is appended into this
+   same panel after the render builds it).
+   -------------------------------------------------------------------------- */
+body[data-recipe-page="saved"] #splitsArea .splitsSavedRecipesPanel{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(280px,340px);
+  gap:18px 22px;
+  align-items:start;
+}
+body[data-recipe-page="saved"] #splitsArea .splitsSavedRecipesPanel > *{
+  grid-column:1;
+  min-width:0;
+}
+body[data-recipe-page="saved"] #splitsArea .splitsConfigurationPreview{
+  grid-column:2;
+  grid-row:1 / -1;
+  position:sticky;
+  top:8px;
+  align-self:start;
+  border:1px solid var(--row-border);
+  border-radius:10px;
+  background:color-mix(in srgb,var(--panelOpen) 60%,transparent);
+  padding:14px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  min-width:0;
+}
+.splitsConfigurationPreview[hidden]{ display:none!important; }
+
+.configPreviewHeader{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+.configPreviewHeader strong{ font-size:var(--font-base); line-height:1.25; }
+.configPreviewHeader small{ color:var(--muted); font-size:var(--font-tiny); }
+.configPreviewEmpty{ color:var(--muted); font-size:var(--font-small); line-height:1.5; }
+.configPreviewNotice{
+  margin:0;
+  padding:8px 10px;
+  border:1px solid color-mix(in srgb,var(--warn) 45%,transparent);
+  border-radius:8px;
+  background:color-mix(in srgb,var(--warn) 12%,transparent);
+  color:var(--warn);
+  font-size:var(--font-tiny);
+  line-height:1.45;
+}
+.configPreviewFoot{ margin:0; color:var(--muted); font-size:var(--font-tiny); line-height:1.4; }
+
+/* Its own scroller: a 5-layer preview in a 380px rail is wider than the rail,
+   and the panel body must never scroll sideways because of it. */
+.configPreviewScroll{ overflow-x:auto; }
+.configPreviewTable{
+  border-collapse:separate;
+  border-spacing:0;
+  width:100%;
+  font-variant-numeric:tabular-nums;
+}
+.configPreviewTable th,
+.configPreviewTable td{
+  border-bottom:1px solid var(--row-border-2);
+  border-right:1px solid color-mix(in srgb,var(--row-border) 55%,transparent);
+  padding:4px 6px;
+  text-align:left;
+  vertical-align:middle;
+}
+.configPreviewTable tr:last-child > *{ border-bottom:0; }
+.configPreviewTable tr > *:last-child{ border-right:0; }
+.configPreviewTable thead th{
+  color:var(--muted);
+  font-size:9px;
+  font-weight:700;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  white-space:nowrap;
+}
+.configPreviewTable tbody th{ white-space:nowrap; }
+.configPreviewTable tbody th b{ font-size:var(--font-small); font-weight:800; }
+.configPreviewTable tbody th span{ color:var(--muted); font-size:9px; margin-left:4px; }
+.configPreviewTable td b{ display:block; font-size:10.5px; font-weight:700; line-height:1.25; }
+.configPreviewTable td span{ display:block; color:var(--muted); font-size:9px; line-height:1.2; }
+.configPreviewTable td.configPreviewEmptyCell{ color:color-mix(in srgb,var(--muted) 55%,transparent); }
+
+/* The threshold is deliberately high: the app keeps a ~320px fixed sidebar, so
+   this panel is roughly (viewport - 315px). Splitting it any narrower left
+   the list column too tight for its own action row, which wrapped Load and
+   Update into a stack; at 1240px the list still gets ~580px beside a 340px
+   preview. Under that, the preview simply becomes the last block in a single
+   column rather than a cramped rail. */
+@media (max-width:1240px){
+  body[data-recipe-page="saved"] #splitsArea .splitsSavedRecipesPanel{
+    grid-template-columns:minmax(0,1fr);
+  }
+  body[data-recipe-page="saved"] #splitsArea .splitsConfigurationPreview{
+    grid-column:1;
+    grid-row:auto;
+    position:static;
+  }
+}
