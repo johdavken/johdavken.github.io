@@ -26,21 +26,21 @@ test("none of the old hardcoded blues remain anywhere in the compact mobile matr
   assert.doesNotMatch(block, /#72b9e8|#397fae|#4d9bd0|#b9e2ff/);
 });
 
-test("the tracked hopper-name badge restyle is gone - tracking uses the universal corner overlay", () => {
+test("the tracked hopper-name badge adds the Timeline clock instead of a cell-corner overlay", () => {
   const block = compactMobileRecipeBlock();
-  assert.doesNotMatch(block, /\.splitMatrixCell\.tracked \.splitCellHopperName/);
-  assert.match(block, /\.splitsMatrix\.compactMobileRecipe \.splitMatrixCell\.tracked::before\{[\s\S]*?width:18px;[\s\S]*?height:18px;/);
+  assert.doesNotMatch(block, /\.splitMatrixCell\.tracked::before/);
+  assert.match(styles, /\.splitHopperTrackingClock\{[\s\S]*?width:12px;[\s\S]*?height:12px;[\s\S]*?stroke:currentColor;/);
 });
 
-test("the folded corner and check derive from active theme tokens", () => {
-  assert.match(styles, /\.splitsMatrix tbody \.splitMatrixCell\.tracked::before\{[\s\S]*?content:"✓";[\s\S]*?background:linear-gradient\(225deg,var\(--ok\) 0 50%,transparent 51%\);[\s\S]*?color:var\(--bg\);/);
+test("the tracked clock derives from the active theme's success token", () => {
+  assert.match(styles, /#splitsArea\[data-recipe-view="summary"\] \.splitsMatrix tbody \.splitMatrixCell\.tracked \.splitHopperTrackingClock\{[\s\S]*?color:var\(--ok\);/);
 });
 
-test("Edit view hides the tracking corner so its EDIT label owns the corner", () => {
-  assert.match(styles, /#splitsArea\[data-recipe-view="edit"\] \.splitsMatrix tbody \.splitMatrixCell\.tracked::before\{\s*content:none;\s*\}/);
+test("Edit view leaves the clock hidden so its Track control remains the single tracking cue", () => {
+  assert.match(styles, /#splitsArea\[data-recipe-view="summary"\] \.splitsMatrix tbody \.splitMatrixCell\.tracked \.splitHopperTrackingClock/);
 });
 
-test("no per-theme override recolors a tracked hopper name any more", () => {
+test("no per-theme override is needed for the tracked hopper badge", () => {
   const theme = fs.readFileSync("theme.css", "utf8");
   assert.doesNotMatch(theme, /\.splitMatrixCell\.tracked \.splitCellHopperName/);
 });

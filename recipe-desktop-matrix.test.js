@@ -75,7 +75,7 @@ test("column width, the hopper-designation badge, and the Track toggle clock ico
   assert.match(body, /#splitsArea \.splitTrackButton svg\{ width: 21px; height: 21px; \}/);
 });
 
-test("desktop tracked cells retain their normal surface while the universal corner marks tracking", () => {
+test("desktop tracked cells retain their normal surface while the hopper badge carries the Timeline clock", () => {
   const body = desktopBlock();
   // Tracked (Summary or Edit) = a --ok wash over the cell's own fill, no shadow.
   assert.match(body, /\.splitMatrixCell\.tracked,\s*\n\s*#splitsArea\[data-recipe-view="edit"\][^{]*\.splitMatrixCell\.tracked\{[\s\S]*?background:var\(--desktop-recipe-cell-bg\);[\s\S]*?box-shadow: none;/);
@@ -83,8 +83,10 @@ test("desktop tracked cells retain their normal surface while the universal corn
   // A tracked cell selected in Edit keeps the ordinary cell surface under the selection outline.
   assert.match(body, /\.splitMatrixCell\.tracked\.selected\{[\s\S]*?background:var\(--desktop-recipe-cell-bg\);/);
   assert.match(body, /\.splitMatrixCell\.selected::after\{[\s\S]*?content: "EDIT";[\s\S]*?font-size: 8px;/);
-  // No hopper-badge restyle, no dot, no spelled-out "TRACKING" label any more.
-  assert.doesNotMatch(body, /\.splitMatrixCell\.tracked \.splitCellHopperName/);
+  // Tracking sits inside the hopper badge; no cell-corner marker or
+  // spelled-out "TRACKING" label competes with the recipe data.
+  assert.match(styles, /#splitsArea\[data-recipe-view="summary"\] \.splitsMatrix tbody \.splitMatrixCell\.tracked \.splitHopperTrackingClock\{[\s\S]*?display:block;[\s\S]*?color:var\(--ok\);/);
+  assert.doesNotMatch(styles, /\.splitMatrixCell\.tracked::before/);
   assert.doesNotMatch(body, /content: "TRACKING"/);
 });
 

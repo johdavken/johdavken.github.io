@@ -66,9 +66,11 @@ test("every selector stays inside a treated panel - nothing styles buttons app-w
 });
 
 test("navigation and list rows are never restyled", () => {
+  // Recipe and Timeline page tabs are intentionally panel-local console
+  // controls; broader workspace navigation and list rows remain untouched.
   for (const line of selectorLines) {
     assert.ok(
-      !/\.toolsIndexButton|\.mobileToolTile|\.adminResinRow|\.workspaceRecoveryRow|\.sudoAccessAction|\.dashboardBackButton|\.recipePageTab|\.timelineViewTab|\.workspaceNavButton/.test(line),
+      !/\.toolsIndexButton|\.mobileToolTile|\.adminResinRow|\.workspaceRecoveryRow|\.sudoAccessAction|\.dashboardBackButton|\.workspaceNavButton/.test(line),
       `styles a nav / list row: ${line}`
     );
   }
@@ -100,6 +102,22 @@ test("Timeline control bar: bay + chips, Show all as a pressed key", () => {
   assert.match(buttonCss, /#showPumpOffToggle\[aria-pressed="true"\]\{[\s\S]*?background: var\(--btnstyle-ink\)/);
   // the row ribbon / pump toggles / NEEDS WEIGHT group stay untouched
   assert.doesNotMatch(buttonCss, /\.pumpToggle|\.resultRow|\.resultNeedsWeight|#resultsArea/);
+});
+
+test("Recipe and Timeline tabs use the console bay with visible resting keys", () => {
+  assert.match(buttonCss, /body #splitsBlock \.recipePageTabs,[\s\S]*?body #resultsBlock \.timelineViewTabs\{[\s\S]*?padding: 5px[\s\S]*?border-radius: 7px/);
+  assert.match(buttonCss, /body #splitsBlock \.recipePageTab,[\s\S]*?body #resultsBlock \.timelineViewTab\{[\s\S]*?border-radius: 4px[\s\S]*?background: var\(--btnstyle-surface\)/);
+  assert.match(buttonCss, /body #splitsBlock \.recipePageTab\.active,[\s\S]*?body #resultsBlock \.timelineViewTab\.active\{[\s\S]*?background: var\(--btnstyle-ink\)/);
+  // The fine-pointer desktop override removes only Timeline's old tab-to-pane
+  // seam; the Recipe panel keeps its own existing workspace layout intact.
+  assert.match(buttonCss, /body #resultsBlock :is\(#timelinePane, #timelineHookupsArea\)\{ border-top: 0; \}/);
+});
+
+test("Recipe's console tab bay keeps a steady desktop footprint across pages", () => {
+  assert.match(buttonCss, /body #splitsBlock \.recipePageTabs\{[\s\S]*?flex: 0 1 396px;[\s\S]*?inline-size: 396px;[\s\S]*?block-size: 42px;[\s\S]*?min-width: 0;/);
+  assert.match(buttonCss, /body #splitsBlock \.recipeHeaderRow\{ align-items: flex-start; \}/);
+  assert.match(buttonCss, /body #splitsBlock \.recipeHeaderRow > \.recipePageTabs\{ align-self: flex-start; \}/);
+  assert.match(buttonCss, /body #splitsBlock \.recipePageTab\{[\s\S]*?min-width: 0;[\s\S]*?overflow: hidden;[\s\S]*?text-overflow: ellipsis;[\s\S]*?white-space: nowrap;/);
 });
 
 test("RT Sync, Tools, Sudo Access, Dashboard and the changeover wizard are covered", () => {

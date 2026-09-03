@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Station console tab directions</title>
+  <style>
+    :root{
+      --canvas:#e9edf1; --panel:#fbfcfd; --bay:#e5ebf0; --ink:#2e3338; --muted:#66717b;
+      --line:#b7c3cd; --line-soft:#ced7de; --accent:#486f91; --accent-wash:#dce9f3;
+      --active-ink:#fff; --shadow:0 12px 28px rgb(42 58 70 / .12);
+    }
+    body[data-theme="dark"]{
+      --canvas:#111820; --panel:#18222d; --bay:#202c37; --ink:#e7eff5; --muted:#a6b4c1;
+      --line:#425260; --line-soft:#32414d; --accent:#d6a85f; --accent-wash:#3a3429;
+      --active-ink:#17212a; --shadow:0 14px 30px rgb(0 0 0 / .30);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(135deg,var(--canvas),color-mix(in srgb,var(--canvas) 80%,#fff));color:var(--ink);font:14px/1.4 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    button{font:inherit} main{width:min(1240px,100%);margin:auto;padding:36px 26px 70px}
+    h1{margin:0;font-size:clamp(27px,3vw,38px);letter-spacing:-.035em;line-height:1.05}.intro{max-width:790px;margin:10px 0 0;color:var(--muted);font-size:15px}
+    .topbar{display:flex;align-items:center;gap:14px;margin:22px 0 28px}.principle{color:var(--muted);font-size:12px}.theme-switch{display:flex;gap:3px;margin-left:auto;padding:3px;border:1px solid var(--line);border-radius:7px;background:var(--panel);box-shadow:0 2px 6px rgb(44 59 71 / .08)}.theme-switch button{padding:5px 9px;border:0;border-radius:4px;background:transparent;color:var(--muted);font-size:10px;font-weight:850;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}.theme-switch button[aria-pressed="true"]{background:var(--accent);color:var(--active-ink)}
+    .gallery{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px}.concept{min-width:0;padding:17px;border:1px solid var(--line-soft);border-radius:15px;background:color-mix(in srgb,var(--panel) 82%,transparent);box-shadow:0 7px 20px rgb(45 60 72 / .06)}.concept-header{display:grid;grid-template-columns:28px 1fr auto;gap:10px;align-items:start;margin:0 1px 14px}.number{display:grid;place-items:center;width:27px;height:27px;border-radius:7px;background:var(--bay);color:var(--accent);font-size:12px;font-weight:900}.concept h2{margin:2px 0 2px;font-size:16px;line-height:1.15;letter-spacing:-.01em}.concept p{margin:0;color:var(--muted);font-size:12px}.tag{margin-top:2px;padding:3px 7px;border:1px solid var(--line);border-radius:5px;color:var(--accent);font-size:9px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
+    .station{overflow:hidden;border:1px solid var(--line);border-radius:10px;background:var(--panel);box-shadow:var(--shadow)}.station-head{display:flex;align-items:center;justify-content:space-between;min-height:41px;padding:0 13px;border-bottom:1px solid var(--line-soft);background:color-mix(in srgb,var(--bay) 48%,transparent)}.station-head strong{font-size:11px;letter-spacing:.11em;text-transform:uppercase}.station-head span{color:var(--muted);font-size:10px;font-weight:750}.tab-zone{padding:14px 13px 0}.tabbar{display:flex;align-items:stretch;gap:4px;min-height:38px}.tabbar button{position:relative;min-width:0;flex:1;padding:7px 9px;border:1px solid transparent;border-radius:4px;background:transparent;color:var(--muted);font-size:12px;font-weight:850;letter-spacing:.015em;line-height:1;white-space:nowrap;cursor:pointer}.tabbar button:hover{color:var(--ink);background:color-mix(in srgb,var(--bay) 66%,transparent)}.tabbar button[aria-selected="true"]{color:var(--ink)}.tabbar button:focus-visible{z-index:2;outline:2px solid var(--accent);outline-offset:1px}.timeline-row{width:min(226px,100%);padding-top:11px}.workarea{min-height:108px;margin-top:0;padding:15px 14px;border-top:1px solid var(--line-soft);background:linear-gradient(125deg,color-mix(in srgb,var(--panel) 92%,var(--bay)),var(--panel))}.work-kicker{display:block;color:var(--accent);font-size:9px;font-weight:900;letter-spacing:.11em;text-transform:uppercase}.work-title{display:block;margin-top:6px;font-size:17px;font-weight:850;letter-spacing:-.02em}.work-line{display:block;width:63%;height:6px;margin-top:10px;border-radius:2px;background:var(--line-soft)}.work-line.short{width:39%;margin-top:6px}.footnote{margin:12px 1px 1px;color:var(--muted);font-size:11.5px}.footnote strong{color:var(--ink)}
+
+    /* 1. The shared toolbar bay and squared controls are directly inherited from the new console buttons. */
+    .console-bay .tabbar{gap:3px;padding:5px;border:1px solid var(--line);border-radius:7px;background:var(--bay)}.console-bay .tabbar button{border-radius:3px;background:color-mix(in srgb,var(--panel) 72%,transparent);box-shadow:0 1px 0 var(--line)}.console-bay .tabbar button[aria-selected="true"]{background:var(--accent);color:var(--active-ink);box-shadow:none}.console-bay .timeline-row .tabbar{width:100%}
+    /* 2. Each label lives on a shared equipment rail. The active tab is a high-contrast keyed module. */
+    .signal-rail .tabbar{gap:0;border-bottom:1px solid var(--line);background:linear-gradient(var(--bay),color-mix(in srgb,var(--bay) 60%,transparent))}.signal-rail .tabbar button{border-right:1px solid var(--line);border-radius:0;background:color-mix(in srgb,var(--panel) 40%,transparent)}.signal-rail .tabbar button:last-child{border-right:0}.signal-rail .tabbar button::before{content:"";position:absolute;top:0;right:0;left:0;height:3px;background:var(--line)}.signal-rail .tabbar button[aria-selected="true"]{background:var(--panel);color:var(--ink);box-shadow:inset 0 -2px var(--panel)}.signal-rail .tabbar button[aria-selected="true"]::before{background:var(--accent)}
+    /* 3. A dense keypad: inactive choices remain physical keys, selected is the one engaged. */
+    .keypad .tabbar{gap:5px;padding:6px;border:1px solid var(--line);border-radius:7px;background:color-mix(in srgb,var(--bay) 75%,transparent);box-shadow:inset 0 1px 2px rgb(32 49 62 / .10)}.keypad .tabbar button{border:1px solid var(--line);border-radius:4px;background:var(--panel);box-shadow:0 1px 0 color-mix(in srgb,var(--ink) 14%,transparent)}.keypad .tabbar button[aria-selected="true"]{border-color:var(--accent);background:var(--accent-wash);color:var(--ink);box-shadow:inset 0 0 0 1px var(--accent)}.keypad .tabbar button[aria-selected="true"]::after{content:"";position:absolute;top:6px;right:6px;width:5px;height:5px;border-radius:50%;background:var(--accent)}
+    /* 4. Label plates: clear inactive outlines, minimal fill, with the active plate inverted. */
+    .id-plates .tabbar{gap:6px;padding:5px 0}.id-plates .tabbar button{border:1px solid var(--line);border-radius:3px;background:color-mix(in srgb,var(--panel) 85%,transparent);box-shadow:inset 0 2px 0 color-mix(in srgb,var(--line) 50%,transparent)}.id-plates .tabbar button[aria-selected="true"]{border-color:var(--accent);background:var(--accent);color:var(--active-ink);box-shadow:inset 0 2px 0 color-mix(in srgb,#fff 20%,transparent)}.id-plates .tabbar button[aria-selected="true"]::before{content:"ACTIVE";position:absolute;right:5px;bottom:3px;font-size:6px;font-weight:900;letter-spacing:.07em;opacity:.75}.id-plates .timeline-row .tabbar button{flex:0 1 116px}
+    /* 5. Mounted modules: all buttons sit on a darkened equipment strip, the selected module has an accent edge. */
+    .mounted-modules .tabbar{gap:3px;padding:6px 6px 0;border-radius:7px 7px 0 0;background:var(--bay)}.mounted-modules .tabbar button{min-height:37px;border:1px solid var(--line);border-bottom:0;border-radius:4px 4px 0 0;background:color-mix(in srgb,var(--panel) 48%,transparent)}.mounted-modules .tabbar button[aria-selected="true"]{border-color:var(--accent);background:var(--panel);color:var(--ink);box-shadow:inset 0 3px var(--accent)}.mounted-modules .workarea{border-top-color:var(--accent)}.mounted-modules .timeline-row .tabbar{padding-right:4px}
+    /* 6. The quietest direction: distinct outlined rest states plus a precise active underline. */
+    .underlined-keys .tabbar{gap:4px;border-bottom:1px solid var(--line)}.underlined-keys .tabbar button{border:1px solid var(--line-soft);border-bottom:0;border-radius:4px 4px 0 0;background:color-mix(in srgb,var(--bay) 36%,transparent)}.underlined-keys .tabbar button[aria-selected="true"]{border-color:var(--accent);background:var(--panel);box-shadow:inset 0 -3px var(--accent)}.underlined-keys .tabbar button[aria-selected="true"]::after{content:"";position:absolute;right:9px;bottom:6px;left:9px;height:1px;background:color-mix(in srgb,var(--accent) 52%,transparent)}
+    @media(max-width:800px){.gallery{grid-template-columns:1fr}.concept{max-width:650px;margin-inline:auto}}@media(max-width:530px){main{padding:24px 12px 48px}.topbar{align-items:flex-start}.principle{max-width:200px}.concept{padding:12px}.concept-header{grid-template-columns:27px 1fr}.tag{display:none}.tab-zone{padding-inline:9px}.tabbar button{padding-inline:5px;font-size:10px}.station-head{padding-inline:10px}}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Station console tab directions</h1>
+    <p class="intro">Six desktop treatments for Recipe and Timeline tabs. Every option gives inactive tabs a physical, readable resting state while retaining the console button system’s compact bays, squared corners, subtle borders, and one decisive active signal.</p>
+    <div class="topbar"><span class="principle">Click any tab to compare selected and inactive states.</span><div class="theme-switch" aria-label="Preview theme"><button type="button" data-theme-choice="light" aria-pressed="true">Light</button><button type="button" data-theme-choice="dark" aria-pressed="false">Dark</button></div></div>
+    <section class="gallery" id="gallery" aria-label="Tab styling alternatives"></section>
+  </main>
+  <script>
+    const concepts=[
+      {className:'console-bay',name:'Console bay',tag:'Recommended',description:'A common recessed bay with raised square keys; selected becomes one decisive filled control.',note:'Closest match to the new station-console action rows. Clear, compact, and easy to extend.'},
+      {className:'signal-rail',name:'Signal rail',tag:'Structured',description:'A continuous hardware rail keeps every choice visible; a top signal bar identifies the current view.',note:'Best if the tabs should read as a single selector, not separate buttons.'},
+      {className:'keypad',name:'Engaged keypad',tag:'Tactile',description:'All views remain discrete physical keys, while the active key gets an inset accent and status dot.',note:'Most strongly button-like. A good fit for frequently switched operational views.'},
+      {className:'id-plates',name:'ID plates',tag:'Explicit',description:'Outlined labels retain definition at rest; the active plate inverts and adds a tiny state legend.',note:'Great legibility at rest, but use the tiny ACTIVE label only if the compact visual density feels right.'},
+      {className:'mounted-modules',name:'Mounted modules',tag:'Panel-led',description:'Controls are mounted onto a shared strip and selected content locks directly to its panel.',note:'Preserves the current attached-tab relationship, with clearer inactive modules.'},
+      {className:'underlined-keys',name:'Underlined keys',tag:'Quiet',description:'Outlined inactive keys stay present but the active tab is indicated with a precise console underline.',note:'The calmest option; it adds physical definition without a solid active fill.'}
+    ];
+    const recipe=['Current','Next','Hopper Weights','Recipe Book'];
+    const timeline=['Timeline','Hookups'];
+    const makeTabs=(labels,kind)=>`<div class="tabbar" role="tablist" aria-label="${kind} tab preview">${labels.map((label,index)=>`<button type="button" role="tab" aria-selected="${index===0}">${label}</button>`).join('')}</div>`;
+    const station=(labels,kind)=>`<div class="station"><div class="station-head"><strong>${kind}</strong><span>Line 20</span></div><div class="tab-zone">${makeTabs(labels,kind)}${kind==='Recipe'?`<div class="timeline-row">${makeTabs(timeline,'Timeline')}</div>`:''}</div><div class="workarea"><span class="work-kicker" data-kicker>${kind==='Recipe'?'Recipe workspace':'Timeline workspace'}</span><strong class="work-title" data-title>${labels[0]}</strong><i class="work-line"></i><i class="work-line short"></i></div></div>`;
+    const gallery=document.querySelector('#gallery');
+    concepts.forEach((concept,index)=>{
+      const card=document.createElement('article');card.className=`concept ${concept.className}`;
+      card.innerHTML=`<header class="concept-header"><span class="number">${index+1}</span><div><h2>${concept.name}</h2><p>${concept.description}</p></div><span class="tag">${concept.tag}</span></header>${station(recipe,'Recipe')}<p class="footnote"><strong>Why:</strong> ${concept.note}</p>`;
+      card.querySelectorAll('[role="tab"]').forEach(tab=>tab.addEventListener('click',()=>{
+        const bar=tab.closest('.tabbar');bar.querySelectorAll('[role="tab"]').forEach(item=>item.setAttribute('aria-selected',String(item===tab)));
+        const isTimeline=bar.getAttribute('aria-label').startsWith('Timeline');card.querySelector('[data-kicker]').textContent=isTimeline?'Timeline workspace':'Recipe workspace';card.querySelector('[data-title]').textContent=tab.textContent;
+      }));
+      gallery.append(card);
+    });
+    document.querySelectorAll('[data-theme-choice]').forEach(button=>button.addEventListener('click',()=>{
+      const dark=button.dataset.themeChoice==='dark';document.body.dataset.theme=dark?'dark':'';document.querySelectorAll('[data-theme-choice]').forEach(item=>item.setAttribute('aria-pressed',String(item===button)));
+    }));
+  </script>
+</body>
+</html>

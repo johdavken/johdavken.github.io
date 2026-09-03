@@ -5004,6 +5004,23 @@
           hopperName.id = hopperNameId(L.name, hi);
           hopperName.className = "splitCellHopperName mono";
           hopperName.textContent = hopperBadgeLabel(L.name, hi);
+          // Summary view's tracked-state marker lives inside the physical
+          // hopper badge (for example, "E1 [clock]") rather than taking
+          // over a cell corner. It intentionally repeats the exact clock
+          // geometry of the Track control below; CSS reveals it only for a
+          // tracked Current Recipe cell in Summary view.
+          const hopperTrackingClock = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+          hopperTrackingClock.classList.add("splitHopperTrackingClock");
+          hopperTrackingClock.setAttribute("viewBox", "0 0 24 24");
+          hopperTrackingClock.setAttribute("aria-hidden", "true");
+          const hopperClockFace = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+          hopperClockFace.setAttribute("cx", "12");
+          hopperClockFace.setAttribute("cy", "12");
+          hopperClockFace.setAttribute("r", "8.5");
+          const hopperClockHands = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          hopperClockHands.setAttribute("d", "M12 7.5v5l3.5 2");
+          hopperTrackingClock.append(hopperClockFace, hopperClockHands);
+          hopperName.appendChild(hopperTrackingClock);
           cellHeader.append(hopperName);
 
           // The other page's resin for this same position, as a small

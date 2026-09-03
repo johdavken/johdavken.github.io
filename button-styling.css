@@ -135,6 +135,82 @@ body{
     color: var(--btnstyle-on-fill);
   }
 
+  /* ---- Recipe + Timeline view tabs (desktop) -----------------------
+     Page/view selection is an operational choice on desktop, so it now
+     shares the same contained bay + square key language as the station
+     console toolbars. The underlying tabs remain ordinary ARIA tabs; this
+     only replaces the old document-tab surface on fine-pointer desktops.
+     Inactive choices deliberately keep their own pale key surface and
+     edge, rather than fading into a plain label. */
+  body #splitsBlock .recipePageTabs,
+  body #resultsBlock .timelineViewTabs{
+    align-items: stretch;
+    gap: 3px;
+    margin: 0;
+    padding: 5px;
+    border: 1px solid var(--btnstyle-edge);
+    border-radius: 7px;
+    background: color-mix(in srgb, var(--btnstyle-surface) 55%, transparent);
+  }
+  /* The Recipe selector keeps one stable desktop footprint as its companion
+     header controls change (Current/Next, Weights, and Recipe Book do not
+     expose the same controls). `flex-shrink:1` plus min-width:0 preserves
+     the existing compact-desktop escape hatch; only the ordinary desktop
+     size is pinned. No wrapping means the bay's 42px key height is stable
+     too, rather than growing when a long label is squeezed. */
+  body #splitsBlock .recipePageTabs{
+    flex: 0 1 396px;
+    inline-size: 396px;
+    block-size: 42px;
+    min-width: 0;
+  }
+  /* Current/Next has the taller action bay (Edit + Load + Print), whereas
+     Weights has a single Edit key and Recipe Book has no right controls.
+     The base row bottom-aligns its children, which made the tab bay start
+     lower only on Current/Next. Console bays share their top datum instead:
+     the divider-to-tab spacing now stays identical on every recipe page. */
+  body #splitsBlock .recipeHeaderRow{ align-items: flex-start; }
+  body #splitsBlock .recipeHeaderRow > .recipePageTabs{ align-self: flex-start; }
+  /* Timeline's old document-tab seam is no longer needed: this keeps the
+     view selector as a distinct console bay above its active workspace. */
+  body #resultsBlock .timelineViewTabs{ margin-bottom: 10px; }
+  body #resultsBlock :is(#timelinePane, #timelineHookupsArea){ border-top: 0; }
+
+  body #splitsBlock .recipePageTab,
+  body #resultsBlock .timelineViewTab{
+    min-height: 30px;
+    padding: 6px 14px 5px;
+    border: 0;
+    border-radius: 4px;
+    background: var(--btnstyle-surface);
+    color: var(--btnstyle-ink);
+    box-shadow: 0 1px 0 var(--btnstyle-edge);
+  }
+  body #splitsBlock .recipePageTab{
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  body #splitsBlock .recipePageTab:hover,
+  body #resultsBlock .timelineViewTab:hover{
+    background: var(--btnstyle-surface);
+    color: var(--btnstyle-ink);
+    filter: brightness(1.06);
+  }
+  body #splitsBlock .recipePageTab.active,
+  body #resultsBlock .timelineViewTab.active{
+    z-index: 1;
+    border: 0;
+    background: var(--btnstyle-ink);
+    color: var(--panel);
+    font-weight: 900;
+    box-shadow: none;
+  }
+  body #splitsBlock .recipePageTab.active .recipePageTabDot{
+    background: currentColor;
+  }
+
   /* The per-layer "Match X" copy buttons in the recipe grid header. They
      only exist in Edit view (styles.css hides them in Summary), so this is
      scoped to [data-recipe-view="edit"]. Chipped off their pill shape;

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tracking status indicator directions</title>
+  <style>
+    :root{
+      --canvas:#eef2f5;--panel:#fbfcfd;--cell:#f7f9fa;--cell-alt:#f2f5f7;--ink:#35404a;--muted:#71808c;
+      --line:#cbd5dc;--line-soft:#dce4e9;--accent:#507c9e;--accent-wash:#dbeaf4;--track:#248f60;--track-wash:#dff1e8;
+      --shadow:0 10px 26px rgb(39 56 69 / .11);
+    }
+    body[data-theme="dark"]{
+      --canvas:#111a21;--panel:#18242d;--cell:#1d2a33;--cell-alt:#202e38;--ink:#e5edf2;--muted:#a7b6c1;
+      --line:#3d4e5b;--line-soft:#31414d;--accent:#81b5d8;--accent-wash:#203b4d;--track:#64c995;--track-wash:#173d30;
+      --shadow:0 12px 28px rgb(0 0 0 / .3);
+    }
+    *{box-sizing:border-box} body{margin:0;background:linear-gradient(135deg,var(--canvas),color-mix(in srgb,var(--canvas) 82%,#fff));color:var(--ink);font:14px/1.4 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    main{width:min(1230px,100%);margin:auto;padding:36px 26px 70px} h1{margin:0;font-size:clamp(28px,3vw,39px);letter-spacing:-.035em;line-height:1.05}.intro{max-width:825px;margin:10px 0 0;color:var(--muted);font-size:15px}.topbar{display:flex;align-items:center;gap:14px;margin:22px 0 28px}.principle{color:var(--muted);font-size:12px}.theme-switch{display:flex;gap:3px;margin-left:auto;padding:3px;border:1px solid var(--line);border-radius:7px;background:var(--panel)}.theme-switch button{padding:5px 9px;border:0;border-radius:4px;background:transparent;color:var(--muted);font-size:10px;font-weight:850;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}.theme-switch button[aria-pressed="true"]{background:var(--accent);color:#fff}
+    .gallery{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px}.concept{min-width:0;padding:17px;border:1px solid var(--line-soft);border-radius:15px;background:color-mix(in srgb,var(--panel) 84%,transparent);box-shadow:0 7px 20px rgb(45 60 72 / .06)}.concept-header{display:grid;grid-template-columns:28px 1fr auto;gap:10px;align-items:start;margin:0 1px 14px}.number{display:grid;place-items:center;width:27px;height:27px;border-radius:7px;background:color-mix(in srgb,var(--accent) 12%,var(--panel));color:var(--accent);font-size:12px;font-weight:900}.concept h2{margin:2px 0 2px;font-size:16px;line-height:1.15;letter-spacing:-.01em}.concept p{margin:0;color:var(--muted);font-size:12px}.tag{margin-top:2px;padding:3px 7px;border:1px solid color-mix(in srgb,var(--accent) 42%,var(--line));border-radius:5px;color:var(--accent);font-size:9px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
+    .matrix{overflow:hidden;border:1px solid var(--line);border-radius:10px;background:var(--panel);box-shadow:var(--shadow)}.matrix-head{display:flex;align-items:center;justify-content:space-between;min-height:38px;padding:0 12px;border-bottom:1px solid var(--line-soft);background:color-mix(in srgb,var(--cell-alt) 65%,transparent)}.matrix-head strong{font-size:10px;letter-spacing:.11em;text-transform:uppercase}.matrix-head span{color:var(--muted);font-size:10px;font-weight:750}.cell-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}.cell{position:relative;min-width:0;height:103px;padding:9px 10px;overflow:hidden;background:var(--cell);cursor:pointer}.cell:nth-child(even){background:var(--cell-alt)}.cell+.cell{border-left:1px solid var(--line-soft)}.cell.is-tracked{--state:var(--track);--state-wash:var(--track-wash)}.cell:not(.is-tracked){--state:var(--muted);--state-wash:transparent}.cell:focus-visible{z-index:2;outline:2px solid var(--accent);outline-offset:-2px}.hopper-row{position:relative;z-index:2;display:flex;align-items:center;gap:6px;min-height:25px}.hopper{display:inline-flex;align-items:center;min-width:32px;height:23px;padding:0 7px;border-radius:6px;background:color-mix(in srgb,var(--ink) 5%,transparent);color:var(--muted);font-size:13px;font-weight:850}.resin{position:relative;z-index:2;display:block;margin-top:13px;color:var(--accent);font-size:15px;font-weight:850}.pct{position:absolute;right:10px;bottom:9px;z-index:2;color:var(--ink);font-size:18px;font-weight:900;font-variant-numeric:tabular-nums}.pct small{font-size:10px}.status-word,.status-icon,.status-footer{display:none}.footnote{margin:12px 1px 1px;color:var(--muted);font-size:11.5px}.footnote strong{color:var(--ink)}
+
+    /* 1. Compact console key in the free header corner. */
+    .console-key .status-word{position:absolute;top:9px;right:9px;z-index:3;display:none;padding:3px 5px;border-radius:3px;background:var(--state);color:#fff;font-size:7px;font-weight:950;letter-spacing:.08em}.console-key .is-tracked .status-word{display:block}.console-key .is-tracked .hopper-row{padding-right:50px}
+    /* 2. A clock is already the app's timeline language; this is the smallest version. */
+    .clock-badge .status-icon{display:none;width:15px;height:15px;color:var(--state)}.clock-badge .is-tracked .status-icon{display:inline-block}.clock-badge .status-icon svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.clock-badge .is-tracked .hopper{border:1px solid color-mix(in srgb,var(--track) 58%,var(--line));background:var(--track-wash);color:var(--track)}
+    /* 3. A narrow left rail is seen before any text, while leaving every datum in place. */
+    .side-rail .cell.is-tracked::before{content:"";position:absolute;top:0;bottom:0;left:0;width:4px;background:var(--track)}.side-rail .cell.is-tracked .hopper{margin-left:4px}
+    /* 4. Thin top signal: closest to industrial equipment-state marking. */
+    .top-signal .cell.is-tracked::before{content:"";position:absolute;top:0;right:0;left:0;height:4px;background:var(--track)}.top-signal .cell.is-tracked .hopper-row{margin-top:3px}.top-signal .cell.is-tracked .status-word{display:block;color:var(--track);font-size:8px;font-weight:950;letter-spacing:.09em}
+    /* 5. A defined status stamp sits next to the hopper ID, turning the status into a label rather than decoration. */
+    .status-stamp .status-word{display:none;padding:2px 5px;border:1px solid var(--state);border-radius:3px;color:var(--state);font-size:7px;font-weight:950;letter-spacing:.07em}.status-stamp .is-tracked .status-word{display:inline-flex}.status-stamp .is-tracked .hopper{color:var(--track)}
+    /* 6. A quiet footer ribbon uses the empty lower edge, leaving the already dense top line untouched. */
+    .footer-ribbon .cell{padding-bottom:25px}.footer-ribbon .status-footer{position:absolute;right:0;bottom:0;left:0;z-index:2;display:none;height:18px;padding:4px 9px;background:var(--track-wash);color:var(--track);font-size:7px;font-weight:950;letter-spacing:.1em}.footer-ribbon .is-tracked .status-footer{display:block}.footer-ribbon .is-tracked .resin{margin-top:8px}.footer-ribbon .is-tracked .pct{bottom:23px}
+    @media(max-width:800px){.gallery{grid-template-columns:1fr}.concept{max-width:650px;margin-inline:auto}}@media(max-width:520px){main{padding:24px 12px 48px}.topbar{align-items:flex-start}.principle{max-width:215px}.concept{padding:12px}.concept-header{grid-template-columns:27px 1fr}.tag{display:none}.cell{height:94px;padding-inline:7px}.resin{font-size:12px}.pct{right:7px;font-size:16px}.hopper{font-size:11px}.cell-grid{grid-template-columns:repeat(3,minmax(110px,1fr));overflow:auto}}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Tracking status indicator directions</h1>
+    <p class="intro">Six replacements for the folded green corner currently used on tracked Recipe cells. Every option keeps the resin, hopper ID, and percentage in their existing places; click cells to compare tracked and resting states.</p>
+    <div class="topbar"><span class="principle">Tracked status should scan fast without reading as a recipe edit or a warning.</span><div class="theme-switch" aria-label="Preview theme"><button type="button" data-theme-choice="light" aria-pressed="true">Light</button><button type="button" data-theme-choice="dark" aria-pressed="false">Dark</button></div></div>
+    <section class="gallery" id="gallery" aria-label="Tracking indicator alternatives"></section>
+  </main>
+  <script>
+    const concepts=[
+      {className:'console-key',name:'Console status key',tag:'Recommended',description:'A small filled TRACKED key occupies the empty header corner.',note:'Most aligned with the new station-console buttons; explicit and immediately scannable.'},
+      {className:'clock-badge',name:'Clock on hopper badge',tag:'Timeline-native',description:'A compact clock joins the hopper identifier only when it feeds the Timeline.',note:'Reuses the Timeline icon language and stays close to the thing being tracked.'},
+      {className:'side-rail',name:'Left signal rail',tag:'Fastest scan',description:'A four-pixel state rail makes tracked cells findable as a vertical pattern.',note:'Best at matrix scale. It is quiet, non-textual, and never competes with values.'},
+      {className:'top-signal',name:'Top signal line',tag:'Industrial',description:'A precise green status line sits on the cell edge, with a small TRACKED label.',note:'Reads like an equipment-state marker; the stronger edge is useful on wide matrices.'},
+      {className:'status-stamp',name:'Outlined status stamp',tag:'Explicit',description:'TRACKED becomes a compact outlined label beside the hopper badge.',note:'Most self-explanatory with the least color area, though it adds a little header density.'},
+      {className:'footer-ribbon',name:'Timeline footer ribbon',tag:'Separated',description:'A slim lower ribbon marks cells that appear in the Timeline.',note:'Keeps status separate from the recipe data, but is the least immediate when scanning upward.'}
+    ];
+    const cells=[['A1','MS1201','41',true],['B1','MS1201','54',false],['C1','MS0100','25',true]];
+    const clock='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v5l3.5 2"/></svg>';
+    const makeCell=([hopper,resin,pct,tracked])=>`<button class="cell${tracked?' is-tracked':''}" type="button" aria-pressed="${tracked}" aria-label="${hopper}, ${tracked?'tracked':'not tracked'}"><span class="hopper-row"><b class="hopper">${hopper}</b><i class="status-icon">${clock}</i><i class="status-word">TRACKED</i></span><strong class="resin">${resin}</strong><b class="pct">${pct}<small>%</small></b><i class="status-footer">TIMELINE TRACKED</i></button>`;
+    const matrix=()=>`<div class="matrix"><div class="matrix-head"><strong>Recipe summary</strong><span>Click a cell to toggle</span></div><div class="cell-grid">${cells.map(makeCell).join('')}</div></div>`;
+    const gallery=document.querySelector('#gallery');
+    concepts.forEach((concept,index)=>{const card=document.createElement('article');card.className=`concept ${concept.className}`;card.innerHTML=`<header class="concept-header"><span class="number">${index+1}</span><div><h2>${concept.name}</h2><p>${concept.description}</p></div><span class="tag">${concept.tag}</span></header>${matrix()}<p class="footnote"><strong>Why:</strong> ${concept.note}</p>`;card.querySelectorAll('.cell').forEach(cell=>cell.addEventListener('click',()=>{const next=!cell.classList.contains('is-tracked');cell.classList.toggle('is-tracked',next);cell.setAttribute('aria-pressed',String(next));cell.setAttribute('aria-label',`${cell.querySelector('.hopper').textContent}, ${next?'tracked':'not tracked'}`)}));gallery.append(card)});
+    document.querySelectorAll('[data-theme-choice]').forEach(button=>button.addEventListener('click',()=>{const dark=button.dataset.themeChoice==='dark';document.body.dataset.theme=dark?'dark':'';document.querySelectorAll('[data-theme-choice]').forEach(item=>item.setAttribute('aria-pressed',String(item===button)))}));
+  </script>
+</body>
+</html>

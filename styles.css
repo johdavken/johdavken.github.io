@@ -2637,38 +2637,27 @@ details[open] > summary .chevSatellite{
    column order (row-header th, then one td per layer in recipeLayers()
    order), regardless of which columns are hidden/visible. */
 .splitsMatrix tbody td.splitMatrixCell:nth-child(even){background:color-mix(in srgb,var(--row-bg-2) 55%,transparent)}
-/* Tracking is a fixed folded-corner check instead of a cell highlight.
-   Both colors follow the active palette: --ok supplies the fold, while the
-   page surface token supplies an automatically light/dark contrasting check.
-   The mark is an overlay, so it never changes cell measurements or moves
-   the hopper name, resin, percentage, or Edit's separate ::after label. */
+/* Tracking keeps the cell surface unchanged and adds the Timeline clock to
+   the physical hopper badge (for example, "E1 [clock]"). That puts the
+   status beside the hopper it belongs to without consuming a cell corner or
+   competing with Edit's own top-right label. */
 .splitsMatrix tbody .splitMatrixCell.tracked:not(.selected){
   background:transparent;
 }
-.splitsMatrix tbody .splitMatrixCell.tracked::before{
-  content:"✓";
-  position:absolute;
-  top:0;
-  right:0;
-  z-index:4;
-  display:flex;
-  justify-content:flex-end;
-  align-items:flex-start;
-  width:24px;
-  height:24px;
-  padding:2px 3px 0 0;
-  background:linear-gradient(225deg,var(--ok) 0 50%,transparent 51%);
-  color:var(--bg);
-  font-size:8px;
-  font-weight:950;
-  line-height:1;
-  pointer-events:none;
+.splitHopperTrackingClock{
+  display:none;
+  width:12px;
+  height:12px;
+  flex:0 0 auto;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:2;
+  stroke-linecap:round;
+  stroke-linejoin:round;
 }
-/* Edit is a temporary working view with its own top-right status label.
-   Keep tracking state intact, but reveal its folded corner only in Summary
-   so the two indicators never overlap or compete inside a dense cell. */
-#splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.tracked::before{
-  content:none;
+#splitsArea[data-recipe-view="summary"] .splitsMatrix tbody .splitMatrixCell.tracked .splitHopperTrackingClock{
+  display:block;
+  color:var(--ok);
 }
 .splitsMatrix td.splitMatrixCell{padding:4px 6px}
 .splitCellHeader{
@@ -5104,12 +5093,6 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     background:var(--compact-recipe-row-bg);
     border-color:var(--row-border-2);
     box-shadow:none;
-  }
-  .splitsMatrix.compactMobileRecipe .splitMatrixCell.tracked::before{
-    width:18px;
-    height:18px;
-    padding:1px 2px 0 0;
-    font-size:6px;
   }
   #splitsArea[data-recipe-view="edit"] .splitsMatrix.compactMobileRecipe .splitMatrixCell.selected::after{
     content:"EDIT";
