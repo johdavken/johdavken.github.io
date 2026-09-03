@@ -75,7 +75,7 @@ test("the overlay reads the OTHER page's recipe through its own accessor", () =>
   assert.match(editor, /tag\.textContent = crossOverlayLabel;/);
 });
 
-test("the eye toggle flips the overlay without a re-render", () => {
+test("the overlay toggle flips the overlay without a re-render", () => {
   const editor = recipeEditor();
   assert.match(editor, /overlayToggle\.className = "splitCrossOverlayToggle"/);
   assert.match(editor, /corner\.appendChild\(overlayToggle\);/);
@@ -89,31 +89,41 @@ test("the eye toggle flips the overlay without a re-render", () => {
   assert.doesNotMatch(clickHandler, /renderSplitsArea/);
 });
 
-test("overlay CSS: hidden until the toggle is on, and the eye icon swaps with it", () => {
+test("overlay CSS: hidden until the toggle is on, and the toggle recolours rather than swapping icons", () => {
   assert.match(styles, /\.splitCellCrossResin\{[^}]*display:none;/);
   assert.match(styles, /#splitsArea\[data-cross-overlay="on"\] \.splitCellCrossResin\{display:flex\}/);
-  assert.match(styles, /\.splitCrossOverlayToggle \.eyeOpen\{display:none\}/);
-  assert.match(styles, /\.splitCrossOverlayToggle\.on \.eyeOpen\{display:block\}/);
-  assert.match(styles, /\.splitCrossOverlayToggle\.on \.eyeSlash\{display:none\}/);
+  assert.match(styles, /\.splitCrossOverlayToggle\.on\{color:var\(--focus-border\);background:var\(--focus-ring\)\}/);
 });
 
-test("a differing cell flags its hopper badge, recomputed on live edits, in theme --warn", () => {
+test("the overlay toggle icon is two overlapping rounded cards, not an eye, not a swap, not a copy/duplicate glyph", () => {
   const editor = recipeEditor();
-  // Recomputed in refreshCellState() (the funnel every resin write hits), so
-  // the flag tracks typing without a full re-render.
-  const refreshStart = editor.indexOf("function refreshCellState(){");
-  const refresh = editor.slice(refreshStart, editor.indexOf("\n          }", refreshStart));
-  assert.match(refresh, /td\.classList\.toggle\("crossResinDiffers",\s*\n\s*!!crossResin && crossResin !== normName\(hopper\.resinName\)\);/);
-  // crossResin is hoisted out of the overlay-build block so refreshCellState
-  // can close over it.
-  assert.match(editor, /const crossResin = crossOverlayAvailable \? otherRecipeResinAt\(li, hi\) : "";/);
-  // Badge takes the theme's --warn, mixed over transparent (the app's warn
-  // idiom), and only while the overlay is on. No hard-coded colour.
-  const rule = styles.slice(styles.indexOf('.crossResinDiffers .splitCellHopperName{'), styles.indexOf('.crossResinDiffers .splitCellHopperName{') + 260);
-  assert.match(styles, /#splitsArea\[data-cross-overlay="on"\] \.splitMatrixCell\.crossResinDiffers \.splitCellHopperName\{/);
-  assert.match(rule, /color:var\(--warn\)/);
-  assert.match(rule, /color-mix\(in srgb,var\(--warn\) \d+%,transparent\)/);
-  assert.doesNotMatch(rule, /#[0-9a-fA-F]{3,}/);
+  const markup = editor.slice(
+    editor.indexOf("overlayToggle.innerHTML ="),
+    editor.indexOf("syncOverlayToggle();", editor.indexOf("overlayToggle.innerHTML ="))
+  );
+  // One glyph for both states - state is colour only, per syncOverlayToggle.
+  assert.match(markup, /<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">/);
+  const rectCount = (markup.match(/<rect /g) || []).length;
+  assert.equal(rectCount, 2);
+  assert.doesNotMatch(markup, /eyeOpen|eyeSlash|circle|path/);
+  assert.doesNotMatch(markup, /arrow|swap/i);
+  assert.match(styles, /\.splitCrossOverlayToggle svg\{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1\.6;stroke-linecap:round;stroke-linejoin:round\}/);
+});
+
+test("the overlay toggle's accessible label names the counterpart recipe, not a generic 'names' phrase", () => {
+  const editor = recipeEditor();
+  assert.match(editor, /const label = `\$\{on \? "Hide" : "Show"\} \$\{crossOverlayLabel\} resin`;/);
+});
+
+test("the overlay shows the other page's resin only - a differing cell gets no badge highlight", () => {
+  // The warn-tinted hopper badge that flagged current-vs-next mismatches was
+  // removed: with the overlay already printing the other page's code in the
+  // cell, the second signal was clutter. The overlay text itself stays.
+  assert.doesNotMatch(app, /crossResinDiffers/);
+  assert.doesNotMatch(styles, /crossResinDiffers/);
+  assert.match(app, /const crossResin = crossOverlayAvailable \? otherRecipeResinAt\(li, hi\) : "";/);
+  assert.match(app, /crossOverlay\.className = "splitCellCrossResin";/);
+  assert.match(styles, /#splitsArea\[data-cross-overlay="on"\]/);
 });
 
 /* ============================================================

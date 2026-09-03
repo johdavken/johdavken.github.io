@@ -4252,7 +4252,7 @@
       area.classList.toggle("recipeTrackingView", trackingView);
       // The cross-resin overlay only exists on the typeable (pointer) grid,
       // on both pages: it shows the other page's resin per cell so Current
-      // and the plan can be read against each other. The eye toggle and
+      // and the plan can be read against each other. The overlay toggle and
       // per-cell spans are always built when available; recipeShowCrossResinOverlay
       // only reveals them, so toggling never needs a re-render. The label
       // names whichever recipe is being overlaid.
@@ -4760,8 +4760,8 @@
       // feature, so Summary leaves this quiet rather than naming a control
       // that isn't there; the row numbers below stay put either way.
       //
-      // On the typeable grid the corner instead holds the eye toggle for the
-      // cross-resin overlay (replacing the "Select row" caption, which is
+      // On the typeable grid the corner instead holds the overlay toggle for
+      // the cross-resin overlay (replacing the "Select row" caption, which is
       // only ever a label - the numbered buttons below still select).
       if (crossOverlayAvailable){
         const overlayToggle = document.createElement("button");
@@ -4769,15 +4769,21 @@
         overlayToggle.className = "splitCrossOverlayToggle";
         const syncOverlayToggle = ()=>{
           const on = recipeShowCrossResinOverlay;
-          const label = `${on ? "Hide" : "Show"} ${crossOverlayLabel} recipe resin names`;
+          const label = `${on ? "Hide" : "Show"} ${crossOverlayLabel} resin`;
           overlayToggle.classList.toggle("on", on);
           overlayToggle.setAttribute("aria-pressed", String(on));
           overlayToggle.setAttribute("aria-label", label);
           overlayToggle.title = label;
         };
+        // Two overlapping rounded cards, not an eye: the toggle reveals the
+        // counterpart page's resin alongside this one, and an eye reads as
+        // visibility rather than "another related view shown together".
+        // One glyph serves both states - only .on's colour (below) changes.
         overlayToggle.innerHTML =
-          '<svg class="eyeSlash" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7c2.1 0 4 .8 5.5 1.8M22 12s-3.6 7-10 7c-2.1 0-4-.8-5.5-1.8"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/><path d="m3 3 18 18"/></svg>' +
-          '<svg class="eyeOpen" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
+          '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">' +
+            '<rect x="8" y="3" width="13" height="13" rx="3"/>' +
+            '<rect x="3" y="8" width="13" height="13" rx="3"/>' +
+          '</svg>';
         syncOverlayToggle();
         overlayToggle.addEventListener("click", ()=>{
           recipeShowCrossResinOverlay = !recipeShowCrossResinOverlay;
@@ -5026,10 +5032,8 @@
           // The other page's resin for this same position, as a small
           // right-aligned "<current|next> / <code>" overlay. Built whenever
           // the overlay is available and that position holds something; CSS
-          // reveals it only while the eye toggle is on
-          // (#splitsArea[data-cross-overlay="on"]). Captured here so
-          // refreshCellState() can also flag a cell whose plan no longer
-          // matches.
+          // reveals it only while the overlay toggle is on
+          // (#splitsArea[data-cross-overlay="on"]).
           const crossResin = crossOverlayAvailable ? otherRecipeResinAt(li, hi) : "";
           if (crossOverlayAvailable && crossResin){
             const crossOverlay = document.createElement("span");
@@ -5168,12 +5172,6 @@
             td.classList.toggle("tracked", !!hopper.track);
             td.classList.toggle("complete", complete);
             td.classList.toggle("empty", empty);
-            // Cross-resin overlay: flag the hopper badge when this cell's
-            // resin does not match the other page's for the same position
-            // (blank or changed). Recomputed here so it tracks live typing;
-            // CSS only paints it while the eye toggle is on.
-            td.classList.toggle("crossResinDiffers",
-              !!crossResin && crossResin !== normName(hopper.resinName));
             clearButton.hidden = !clearable;
             trackButton.classList.toggle("active", !!hopper.track);
             trackButton.setAttribute("aria-pressed", String(!!hopper.track));

@@ -2697,12 +2697,13 @@ details[open] > summary .chevSatellite{
 }
 .splitMatrixCell:not(.has-resin) .splitCellHopperName{opacity:.72}
 /* Recipe cross-resin overlay ------------------------------------------- *
- * The eye toggle lives in the row-gutter corner (replaces "Select row" on
- * the pointer grid); each cell carries a small right-aligned
- * "<current|next> / <code>" block - the other page's resin for that
- * position - revealed only while data-cross-overlay is on. Sized to sit in
- * the empty top-right of the cell header, within the hopper badge's height,
- * so turning it on does not move the grid. */
+ * The overlay toggle - two overlapping rounded cards, not an eye - lives in
+ * the row-gutter corner (replaces "Select row" on the pointer grid); each
+ * cell carries a small right-aligned "<current|next> / <code>" block - the
+ * other page's resin for that position - revealed only while
+ * data-cross-overlay is on. Sized to sit in the empty top-right of the cell
+ * header, within the hopper badge's height, so turning it on does not move
+ * the grid. */
 .splitCrossOverlayToggle{
   display:grid;
   place-items:center;
@@ -2718,11 +2719,8 @@ details[open] > summary .chevSatellite{
 }
 .splitCrossOverlayToggle:hover,
 .splitCrossOverlayToggle:focus-visible{background:var(--row-bg-2);color:var(--title)}
-.splitCrossOverlayToggle.on{color:var(--focus-border)}
-.splitCrossOverlayToggle svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
-.splitCrossOverlayToggle .eyeOpen{display:none}
-.splitCrossOverlayToggle.on .eyeOpen{display:block}
-.splitCrossOverlayToggle.on .eyeSlash{display:none}
+.splitCrossOverlayToggle.on{color:var(--focus-border);background:var(--focus-ring)}
+.splitCrossOverlayToggle svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
 .splitCellCrossResin{
   display:none;
   flex-direction:column;
@@ -2752,16 +2750,6 @@ details[open] > summary .chevSatellite{
   font-weight:800;
   white-space:nowrap;
   text-overflow:ellipsis;
-}
-/* The hopper badge takes the theme's --warn colour when this cell's resin
-   does not match the other page's for the same position - only while the
-   overlay is on. Mixed over transparent (the app's warn-tint idiom) so it
-   reads correctly on every theme and surface; an inset ring instead of a
-   border keeps the badge the same size. */
-#splitsArea[data-cross-overlay="on"] .splitMatrixCell.crossResinDiffers .splitCellHopperName{
-  background:color-mix(in srgb,var(--warn) 18%,transparent);
-  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--warn) 45%,transparent);
-  color:var(--warn);
 }
 .splitClearButton{
   display:grid;
