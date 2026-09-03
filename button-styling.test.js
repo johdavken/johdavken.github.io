@@ -52,7 +52,7 @@ test("the preference persists locally and restores through the standard payload 
 
 test("the treatment is desktop-scoped and every selector stays inside a treated panel", () => {
   assert.match(buttonCss, /@media \(min-width: 901px\) and \(pointer: fine\)\{/);
-  const PANELS = ["#splitsBlock", "#splitsArea", "#resultsBlock", "#lineSyncBlock", "#toolsBlock"];
+  const PANELS = ["#splitsBlock", "#splitsArea", "#resultsBlock", "#lineSyncBlock", "#toolsBlock", ".adminResinPanel"];
   const ruleLines = buttonCss
     .split("\n")
     .map(line => line.trim())
@@ -124,6 +124,20 @@ test("console reaches the Tools section's per-tool action buttons", () => {
   const selectorLines = buttonCss.split("\n").map(l => l.trim()).filter(l => l.startsWith('body[data-button-style="'));
   for (const line of selectorLines) {
     assert.ok(!/\.toolsIndexButton|\.mobileToolTile/.test(line), `styles a tool tab / tile: ${line}`);
+  }
+});
+
+test("console reaches the Sudo Access sub-panels, but not their nav rows or dialogs", () => {
+  // shared .adminToolbar -> bay
+  assert.match(buttonCss, /body\[data-button-style="console"\] \.adminResinPanel \.adminToolbar\{[\s\S]*?border-radius: 7px/);
+  // action buttons chipped by class, so list rows (.adminResinRow, .workspaceRecoveryRow) are untouched
+  assert.match(buttonCss, /\.adminResinPanel button\.primary,[\s\S]*?button\.secondary,[\s\S]*?button\.danger,[\s\S]*?button\[data-button-variant="primary"\]\{/);
+  assert.match(buttonCss, /\.adminResinPanel button\.primary:not\(:disabled\),[\s\S]*?background: var\(--btnstyle-ink\)/);
+  assert.match(buttonCss, /\.adminResinPanel button\.danger:not\(:disabled\)\{[\s\S]*?background: var\(--btnstyle-danger\)/);
+  const selectorLines = buttonCss.split("\n").map(l => l.trim()).filter(l => l.startsWith('body[data-button-style="'));
+  for (const line of selectorLines) {
+    // never the nav-row list buttons, never a raw admin dialog
+    assert.ok(!/\.adminResinRow|\.workspaceRecoveryRow|\.sudoAccessAction|adminDialog|#adminLogin/.test(line), `admin selector too broad: ${line}`);
   }
 });
 

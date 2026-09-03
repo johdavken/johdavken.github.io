@@ -10,8 +10,9 @@
  * Scope, deliberately narrow:
  *   - the Recipe / Weights panel (#splitsBlock), the Timeline panel's
  *     control bar (#resultsBlock #timelinePane .timelineControlBar),
- *     RT Sync's desktop action buttons (#lineSyncBlock), and the Tools
- *     section's per-tool action buttons (#toolsBlock)
+ *     RT Sync's desktop action buttons (#lineSyncBlock), the Tools
+ *     section's per-tool action buttons (#toolsBlock), and the Sudo Access
+ *     sub-panels (.adminResinPanel)
  *   - the toolbars, surface by surface:
  *       CMD  = #recipeHeaderActionPill's buttons (Edit/Done, Load, Print),
  *              plus the Hopper Weights page's relocated Summary/Edit toggle
@@ -29,6 +30,11 @@
  *       TOOLS = Resin Reference's Copy buttons, Scan Recipe's three scan
  *              buttons + info toggles (in a bay), Bulk Density's save bar
  *              (bay) + Save to Resin Database (inverted key).
+ *       ADMIN = the .adminResinPanel sub-panels' shared .adminToolbar (bay)
+ *              and every .primary / .secondary / .danger action button in
+ *              them (Add resin, Save, Delete, Refresh, recovery controls,
+ *              per-member Make owner / Remove, ...). The nav-row buttons
+ *              carry none of those classes, so they stay list rows.
  *     Apply and the Undo/Redo history pair only get their corner radius
  *     matched, so no stray rounded button sits beside the treated ones.
  *   - only at the desktop breakpoint the rest of desktop.css uses
@@ -257,6 +263,45 @@ body[data-button-style]{
     color: var(--panel);
   }
 
+  /* ---- Sudo Access sub-panels (desktop) -----------------------
+     Resin Database, Line Configuration, Beta Applicants, Database Health
+     and Workspace Management all share the .adminResinPanel wrapper. Their
+     shared .adminToolbar header bar becomes a console bay; every real
+     action button in these panels takes the chip (the selectable list
+     rows - .adminResinRow, .workspaceRecoveryRow - carry none of the
+     .primary/.secondary/.danger classes, so they are untouched). Primary
+     -> inverted key while enabled, destructive -> solid danger while
+     enabled. The Sudo Access hub itself (#sudoAccessBlock) is a menu of
+     navigation rows and is left alone, like every other nav list. Modal
+     admin dialogs live outside .adminResinPanel, so they are untouched. */
+  body[data-button-style="console"] .adminResinPanel .adminToolbar{
+    border-radius: 7px;
+    padding: 8px 10px;
+    background: color-mix(in srgb, var(--btnstyle-surface) 55%, transparent);
+  }
+  body[data-button-style="console"] .adminResinPanel button.primary,
+  body[data-button-style="console"] .adminResinPanel button.secondary,
+  body[data-button-style="console"] .adminResinPanel button.danger,
+  body[data-button-style="console"] .adminResinPanel button[data-button-variant="primary"]{
+    min-height: 30px;
+    border: 0;
+    border-radius: 4px;
+    background: var(--btnstyle-surface);
+    color: var(--btnstyle-ink);
+    box-shadow: 0 1px 0 var(--btnstyle-edge);
+    text-transform: none;
+    letter-spacing: normal;
+  }
+  body[data-button-style="console"] .adminResinPanel button.primary:not(:disabled),
+  body[data-button-style="console"] .adminResinPanel button[data-button-variant="primary"]:not(:disabled){
+    background: var(--btnstyle-ink);
+    color: var(--panel);
+  }
+  body[data-button-style="console"] .adminResinPanel button.danger:not(:disabled){
+    background: var(--btnstyle-danger);
+    color: var(--btnstyle-on-fill);
+  }
+
   /* Keep the focus ring legible on the treated controls. */
   body[data-button-style="console"] #splitsBlock #recipeHeaderActionPill button:focus-visible,
   body[data-button-style="console"] #splitsBlock #recipeHeaderControls .weightsHeaderViewToggle button:focus-visible,
@@ -273,7 +318,10 @@ body[data-button-style]{
   body[data-button-style="console"] #toolsBlock .resinLookupCopyButton:focus-visible,
   body[data-button-style="console"] #toolsBlock .recipeScanOptionRow > button:focus-visible,
   body[data-button-style="console"] #toolsBlock .recipeScanInfo > summary:focus-visible,
-  body[data-button-style="console"] #toolsBlock #bulkDensitySaveButton:focus-visible{
+  body[data-button-style="console"] #toolsBlock #bulkDensitySaveButton:focus-visible,
+  body[data-button-style="console"] .adminResinPanel button.primary:focus-visible,
+  body[data-button-style="console"] .adminResinPanel button.secondary:focus-visible,
+  body[data-button-style="console"] .adminResinPanel button.danger:focus-visible{
     outline: 2px solid var(--focus-border);
     outline-offset: 2px;
   }
