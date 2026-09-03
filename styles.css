@@ -9658,8 +9658,7 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
 .displaySheetPanel{display:grid;gap:15px;padding:18px}
 .displaySheetPanel > label{display:grid;gap:6px;margin:0;color:var(--muted);font-size:12px;font-weight:750}
 .displaySheetPanel select{width:100%;min-height:44px}
-.desktopRailStyleField > small,
-.buttonStyleField > small{color:var(--muted);font-size:10px;font-weight:600}
+.desktopRailStyleField > small{color:var(--muted);font-size:10px;font-weight:600}
 /* The manual layer-count fallback (#setupLayerCountGroup, relocated here by
    placeProductionControlsForLayout() in app.js). Empty and collapses to
    nothing whenever a linked RT Sync line dictates the layer count -
@@ -9734,7 +9733,6 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
   .workspaceStatusBar{display:none!important}
   .desktopDisplayToggle{display:none}
   .desktopRailStyleField{display:none!important}
-  .buttonStyleField{display:none!important}
   main{padding-bottom:calc(var(--app-dock-height) + env(safe-area-inset-bottom) + 22px)!important}
 
   body[data-theme="industrial-slate"][data-mobile-background-style="theme-native"]{

@@ -1,11 +1,11 @@
 /* =========================================================================
- * Button Styling — a desktop-only Display setting.
+ * Station console — the desktop button treatment.
  *
- * Trialled with seven treatments (ports of
- * previews/recipe-weights-toolbar-button-directions.html); only "Station
- * console" was kept. The picker is now Default | Station console, and this
- * file carries the one surviving treatment. "default" adds no attribute and
- * leaves the shipped look untouched.
+ * Trialled as a Display setting with seven treatments (ports of
+ * previews/recipe-weights-toolbar-button-directions.html); Station console
+ * was the one kept, and it is now simply how desktop buttons look. There is
+ * no picker and no attribute gate any more - these rules are unconditional
+ * within the desktop media query below.
  *
  * Scope, deliberately narrow:
  *   - the Recipe / Weights panel (#splitsBlock), the Timeline panel's
@@ -47,12 +47,19 @@
  *   - only at the desktop breakpoint the rest of desktop.css uses
  *     (min-width:901px and pointer:fine)
  *
- * Every rule is scoped body[data-button-style="console"] #… so it carries
- * two ids and outranks the tuned pill/bulk-bar rules in styles.css without
- * !important. applyButtonStyle() in app.js sets the attribute.
+ * Every selector keeps a leading `body ` on purpose. It is not decoration:
+ * two of these targets (#applyBulkSplit and .timelineControlBar) are pinned
+ * by rules in styles.css/desktop.css with identical id+class weight, so
+ * without that extra element in the selector they would only win on source
+ * order. The `body` restores a clean specificity win and keeps every
+ * override here !important-free.
+ *
+ * Below 901px, or on any coarse-pointer device, none of this applies and the
+ * base button rules in styles.css render instead - that is what mobile and
+ * tablet still use, so those base rules must stay.
  * ===================================================================== */
 
-body[data-button-style]{
+body{
   /* Re-use the per-theme accent/danger the header pill already tunes, with
      plain fallbacks. One place to retune if it reads wrong on a theme. */
   --btnstyle-accent: var(--recipe-pill-accent, var(--focus-border));
@@ -72,26 +79,26 @@ body[data-button-style]{
      also overrides that element's border-radius:999px pill-clip in
      styles.css so its end buttons - Clear on the left, Rearrange on the
      right - stop rounding into pill caps. */
-  body[data-button-style="console"] #splitsBlock #recipeHeaderActionPill,
-  body[data-button-style="console"] #splitsArea #splitsBulkBar .splitsEditRowSecondary,
-  body[data-button-style="console"] #splitsBlock .weightsBulkActions{
+  body #splitsBlock #recipeHeaderActionPill,
+  body #splitsArea #splitsBulkBar .splitsEditRowSecondary,
+  body #splitsBlock .weightsBulkActions{
     padding: 6px 8px;
     border-radius: 7px;
     background: color-mix(in srgb, var(--btnstyle-surface) 55%, transparent);
   }
-  body[data-button-style="console"] #splitsArea #splitsBulkBar .splitsEditRowSecondary{
+  body #splitsArea #splitsBulkBar .splitsEditRowSecondary{
     overflow: visible;
   }
-  body[data-button-style="console"] #splitsArea #splitsBulkBar .splitsEditRowSecondary > .splitsBulkActions{
+  body #splitsArea #splitsBulkBar .splitsEditRowSecondary > .splitsBulkActions{
     border-radius: 7px;
   }
 
-  body[data-button-style="console"] #splitsBlock #recipeHeaderActionPill .recipeHeaderAction,
-  body[data-button-style="console"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
-  body[data-button-style="console"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-weight-view="edit"],
-  body[data-button-style="console"] #splitsBlock .splitsBulkBar .bulkTextAction,
-  body[data-button-style="console"] #splitsBlock .weightsBulkBar .bulkTextAction,
-  body[data-button-style="console"] #splitsBlock #resetAllSplits{
+  body #splitsBlock #recipeHeaderActionPill .recipeHeaderAction,
+  body #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
+  body #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-weight-view="edit"],
+  body #splitsBlock .splitsBulkBar .bulkTextAction,
+  body #splitsBlock .weightsBulkBar .bulkTextAction,
+  body #splitsBlock #resetAllSplits{
     min-height: 30px;
     border: 0;
     border-radius: 4px;
@@ -103,18 +110,18 @@ body[data-button-style]{
      nothing stays a different shape. #applyBulkSplit is pinned by a 3-id
      rule in styles.css, so this is scoped through #splitsArea #splitsBulkBar
      to outrank it. */
-  body[data-button-style="console"] #splitsArea #splitsBulkBar #applyBulkSplit,
-  body[data-button-style="console"] #splitsArea #splitsBulkBar .recipeHistoryAction,
-  body[data-button-style="console"] #splitsBlock .weightsBulkBar #applyBulkWeight{
+  body #splitsArea #splitsBulkBar #applyBulkSplit,
+  body #splitsArea #splitsBulkBar .recipeHistoryAction,
+  body #splitsBlock .weightsBulkBar #applyBulkWeight{
     border-radius: 4px;
   }
   /* Primary = the Edit/Done toggle: an inverted key, ink fill on light text.
      On the Hopper Weights page the same Summary/Edit control is relocated
      into #recipeHeaderControls (not the action pill) and carries
      .weightsHeaderViewToggle, so it needs its own selector. */
-  body[data-button-style="console"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
-  body[data-button-style="console"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-weight-view="edit"],
-  body[data-button-style="console"] #splitsBlock #recipeHeaderControls .weightsHeaderViewToggle button[data-weight-view="edit"]{
+  body #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
+  body #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-weight-view="edit"],
+  body #splitsBlock #recipeHeaderControls .weightsHeaderViewToggle button[data-weight-view="edit"]{
     min-height: 30px;
     border: 0;
     border-radius: 4px;
@@ -123,7 +130,7 @@ body[data-button-style]{
     box-shadow: 0 1px 0 var(--btnstyle-edge);
   }
   /* Destructive = Reset Recipe: solid danger. */
-  body[data-button-style="console"] #splitsBlock #resetAllSplits{
+  body #splitsBlock #resetAllSplits{
     background: var(--btnstyle-danger);
     color: var(--btnstyle-on-fill);
   }
@@ -132,14 +139,14 @@ body[data-button-style]{
      only exist in Edit view (styles.css hides them in Summary), so this is
      scoped to [data-recipe-view="edit"]. Chipped off their pill shape;
      kept compact - they sit inside a table header, not on a toolbar. */
-  body[data-button-style="console"] #splitsArea[data-recipe-view="edit"] .splitCopyBtn{
+  body #splitsArea[data-recipe-view="edit"] .splitCopyBtn{
     border: 0;
     border-radius: 4px;
     background: var(--btnstyle-surface);
     color: var(--btnstyle-ink);
     box-shadow: 0 1px 0 var(--btnstyle-edge);
   }
-  body[data-button-style="console"] #splitsArea[data-recipe-view="edit"] .splitCopyBtn:hover{
+  body #splitsArea[data-recipe-view="edit"] .splitCopyBtn:hover{
     background: var(--btnstyle-surface);
     filter: brightness(1.06);
   }
@@ -153,14 +160,14 @@ body[data-button-style]{
      they are - selectable cards, not buttons. Primary and destructive are
      targeted by .primary / .danger so both panels' differently-named
      Load / Delete buttons are covered. */
-  body[data-button-style="console"] #splitsBlock .splitsSavedRecipesActions{
+  body #splitsBlock .splitsSavedRecipesActions{
     padding: 6px 8px;
     border-radius: 7px;
     background: color-mix(in srgb, var(--btnstyle-surface) 55%, transparent);
   }
-  body[data-button-style="console"] #splitsBlock .splitsSavedRecipesActions > button,
-  body[data-button-style="console"] #splitsBlock .splitsSavedRecipesActions .workspaceConfigurationOverflow > summary,
-  body[data-button-style="console"] #splitsBlock .workspaceConfigurationOverflowMenu button{
+  body #splitsBlock .splitsSavedRecipesActions > button,
+  body #splitsBlock .splitsSavedRecipesActions .workspaceConfigurationOverflow > summary,
+  body #splitsBlock .workspaceConfigurationOverflowMenu button{
     min-height: 30px;
     border: 0;
     border-radius: 4px;
@@ -173,17 +180,17 @@ body[data-button-style]{
     letter-spacing: normal;
   }
   /* Popup items already sit on a shadowed panel - drop the extra lift. */
-  body[data-button-style="console"] #splitsBlock .workspaceConfigurationOverflowMenu button{
+  body #splitsBlock .workspaceConfigurationOverflowMenu button{
     box-shadow: none;
   }
   /* Primary = Load: an inverted key. Falls back to a plain chip while it is
      disabled (no row selected), so it doesn't read as armed. */
-  body[data-button-style="console"] #splitsBlock .splitsSavedRecipesActions > button.primary:not(:disabled){
+  body #splitsBlock .splitsSavedRecipesActions > button.primary:not(:disabled){
     background: var(--btnstyle-ink);
     color: var(--panel);
   }
   /* Destructive = Delete, in the overflow menu: solid danger. */
-  body[data-button-style="console"] #splitsBlock .workspaceConfigurationOverflowMenu button.danger{
+  body #splitsBlock .workspaceConfigurationOverflowMenu button.danger{
     background: var(--btnstyle-danger);
     color: var(--btnstyle-on-fill);
   }
@@ -195,16 +202,16 @@ body[data-button-style]{
      own prefix so this always wins. The row ribbon below - status nodes,
      resin chips, the per-row pump toggles, the NEEDS WEIGHT group - is
      left alone; those are status surfaces, not a toolbar. */
-  body[data-button-style="console"] #resultsBlock #timelinePane .timelineControlBar{
+  body #resultsBlock #timelinePane .timelineControlBar{
     gap: 6px;
     padding: 6px 8px;
     border-bottom: 0;
     border-radius: 7px;
     background: color-mix(in srgb, var(--btnstyle-surface) 55%, transparent);
   }
-  body[data-button-style="console"] #resultsBlock #timelinePane .timelineControlBar #showPumpOffToggle,
-  body[data-button-style="console"] #resultsBlock #timelinePane .timelineControlBar #resetTrackingBtn,
-  body[data-button-style="console"] #resultsBlock #timelinePane .timelineControlBar #timelineDisplayToggle{
+  body #resultsBlock #timelinePane .timelineControlBar #showPumpOffToggle,
+  body #resultsBlock #timelinePane .timelineControlBar #resetTrackingBtn,
+  body #resultsBlock #timelinePane .timelineControlBar #timelineDisplayToggle{
     min-height: 30px;
     border: 0;
     border-radius: 4px;
@@ -213,7 +220,7 @@ body[data-button-style]{
     box-shadow: 0 1px 0 var(--btnstyle-edge);
   }
   /* Show all reads as a pressed key while its filter is on. */
-  body[data-button-style="console"] #resultsBlock #timelinePane .timelineControlBar #showPumpOffToggle[aria-pressed="true"]{
+  body #resultsBlock #timelinePane .timelineControlBar #showPumpOffToggle[aria-pressed="true"]{
     background: var(--btnstyle-ink);
     color: var(--panel);
   }
@@ -224,15 +231,15 @@ body[data-button-style]{
      (.lineSyncGeneratedCodePanel) is already a bordered box, so retune it
      into the tinted console bay. Primary = Connect This Desktop /
      Generate Link Code (an inverted key); the rest are plain chips. */
-  body[data-button-style="console"] #lineSyncBlock .lineSyncGeneratedCodePanel{
+  body #lineSyncBlock .lineSyncGeneratedCodePanel{
     border: 0;
     border-radius: 7px;
     background: color-mix(in srgb, var(--btnstyle-surface) 55%, transparent);
   }
-  body[data-button-style="console"] #lineSyncBlock #desktopLineSyncSetupBtn,
-  body[data-button-style="console"] #lineSyncBlock #lineSyncRetryBtn,
-  body[data-button-style="console"] #lineSyncBlock #lineSyncGenerateCodeBtn,
-  body[data-button-style="console"] #lineSyncBlock #lineSyncCopyCodeBtn{
+  body #lineSyncBlock #desktopLineSyncSetupBtn,
+  body #lineSyncBlock #lineSyncRetryBtn,
+  body #lineSyncBlock #lineSyncGenerateCodeBtn,
+  body #lineSyncBlock #lineSyncCopyCodeBtn{
     min-height: 30px;
     border: 0;
     border-radius: 4px;
@@ -240,8 +247,8 @@ body[data-button-style]{
     color: var(--btnstyle-ink);
     box-shadow: 0 1px 0 var(--btnstyle-edge);
   }
-  body[data-button-style="console"] #lineSyncBlock #desktopLineSyncSetupBtn:not(:disabled),
-  body[data-button-style="console"] #lineSyncBlock #lineSyncGenerateCodeBtn:not(:disabled){
+  body #lineSyncBlock #desktopLineSyncSetupBtn:not(:disabled),
+  body #lineSyncBlock #lineSyncGenerateCodeBtn:not(:disabled){
     background: var(--btnstyle-ink);
     color: var(--panel);
   }
@@ -256,16 +263,16 @@ body[data-button-style]{
          Resin Database" the inverted key while it is enabled
      The left tool tab list (.toolsIndexButton) is navigation, left alone
      like the Recipe / Timeline tabs. */
-  body[data-button-style="console"] #toolsBlock .recipeScanOptions,
-  body[data-button-style="console"] #toolsBlock .bulkDensitySaveBar{
+  body #toolsBlock .recipeScanOptions,
+  body #toolsBlock .bulkDensitySaveBar{
     border: 0;
     border-radius: 7px;
     padding: 8px 10px;
     background: color-mix(in srgb, var(--btnstyle-surface) 55%, transparent);
   }
-  body[data-button-style="console"] #toolsBlock .resinLookupCopyButton,
-  body[data-button-style="console"] #toolsBlock .recipeScanOptionRow > button,
-  body[data-button-style="console"] #toolsBlock #bulkDensitySaveButton{
+  body #toolsBlock .resinLookupCopyButton,
+  body #toolsBlock .recipeScanOptionRow > button,
+  body #toolsBlock #bulkDensitySaveButton{
     min-height: 30px;
     border: 0;
     border-radius: 4px;
@@ -276,12 +283,12 @@ body[data-button-style]{
     letter-spacing: normal;
   }
   /* The Scan info toggles keep their 24px square; just chip the surface. */
-  body[data-button-style="console"] #toolsBlock .recipeScanInfo > summary{
+  body #toolsBlock .recipeScanInfo > summary{
     border-radius: 4px;
     background: var(--btnstyle-surface);
     box-shadow: 0 1px 0 var(--btnstyle-edge);
   }
-  body[data-button-style="console"] #toolsBlock #bulkDensitySaveButton:not(:disabled){
+  body #toolsBlock #bulkDensitySaveButton:not(:disabled){
     background: var(--btnstyle-ink);
     color: var(--panel);
   }
@@ -297,15 +304,15 @@ body[data-button-style]{
      enabled. The Sudo Access hub itself (#sudoAccessBlock) is a menu of
      navigation rows and is left alone, like every other nav list. Modal
      admin dialogs live outside .adminResinPanel, so they are untouched. */
-  body[data-button-style="console"] .adminResinPanel .adminToolbar{
+  body .adminResinPanel .adminToolbar{
     border-radius: 7px;
     padding: 8px 10px;
     background: color-mix(in srgb, var(--btnstyle-surface) 55%, transparent);
   }
-  body[data-button-style="console"] .adminResinPanel button.primary,
-  body[data-button-style="console"] .adminResinPanel button.secondary,
-  body[data-button-style="console"] .adminResinPanel button.danger,
-  body[data-button-style="console"] .adminResinPanel button[data-button-variant="primary"]{
+  body .adminResinPanel button.primary,
+  body .adminResinPanel button.secondary,
+  body .adminResinPanel button.danger,
+  body .adminResinPanel button[data-button-variant="primary"]{
     min-height: 30px;
     border: 0;
     border-radius: 4px;
@@ -315,12 +322,12 @@ body[data-button-style]{
     text-transform: none;
     letter-spacing: normal;
   }
-  body[data-button-style="console"] .adminResinPanel button.primary:not(:disabled),
-  body[data-button-style="console"] .adminResinPanel button[data-button-variant="primary"]:not(:disabled){
+  body .adminResinPanel button.primary:not(:disabled),
+  body .adminResinPanel button[data-button-variant="primary"]:not(:disabled){
     background: var(--btnstyle-ink);
     color: var(--panel);
   }
-  body[data-button-style="console"] .adminResinPanel button.danger:not(:disabled){
+  body .adminResinPanel button.danger:not(:disabled){
     background: var(--btnstyle-danger);
     color: var(--btnstyle-on-fill);
   }
@@ -329,7 +336,7 @@ body[data-button-style]{
      One action button: the changeover-estimate refresh (a 32px icon
      button beside the Changeover label). "Back to Line" is navigation,
      left alone. */
-  body[data-button-style="console"] #dashboardPanel .dashboardChangeoverRefresh{
+  body #dashboardPanel .dashboardChangeoverRefresh{
     border-radius: 4px;
     background: var(--btnstyle-surface);
     color: var(--btnstyle-ink);
@@ -344,7 +351,7 @@ body[data-button-style]{
      picked one inverted. Desktop only: the mobile wizard keeps its large
      touch buttons. The × close and the grab handle are dialog chrome,
      left alone. */
-  body[data-button-style="console"] #changeoverWizardDialog .changeoverWizardActions{
+  body #changeoverWizardDialog .changeoverWizardActions{
     gap: 6px;
     padding: 6px;
     overflow: visible;
@@ -352,8 +359,8 @@ body[data-button-style]{
     border-radius: 7px;
     background: color-mix(in srgb, var(--btnstyle-surface) 55%, transparent);
   }
-  body[data-button-style="console"] #changeoverWizardDialog .changeoverWizardActions button,
-  body[data-button-style="console"] #changeoverWizardDialog .changeoverWizardChoices button{
+  body #changeoverWizardDialog .changeoverWizardActions button,
+  body #changeoverWizardDialog .changeoverWizardChoices button{
     min-height: 30px;
     border: 0;
     border-radius: 4px;
@@ -361,37 +368,37 @@ body[data-button-style]{
     color: var(--btnstyle-ink);
     box-shadow: 0 1px 0 var(--btnstyle-edge);
   }
-  body[data-button-style="console"] #changeoverWizardDialog .changeoverWizardActions button.primary,
-  body[data-button-style="console"] #changeoverWizardDialog .changeoverWizardChoices button.selected{
+  body #changeoverWizardDialog .changeoverWizardActions button.primary,
+  body #changeoverWizardDialog .changeoverWizardChoices button.selected{
     background: var(--btnstyle-ink);
     color: var(--panel);
     box-shadow: none;
   }
 
   /* Keep the focus ring legible on the treated controls. */
-  body[data-button-style="console"] #splitsBlock #recipeHeaderActionPill button:focus-visible,
-  body[data-button-style="console"] #splitsBlock #recipeHeaderControls .weightsHeaderViewToggle button:focus-visible,
-  body[data-button-style="console"] #splitsArea[data-recipe-view="edit"] .splitCopyBtn:focus-visible,
-  body[data-button-style="console"] #splitsBlock .splitsBulkBar button:focus-visible,
-  body[data-button-style="console"] #splitsBlock .weightsBulkBar button:focus-visible,
-  body[data-button-style="console"] #splitsBlock .splitsSavedRecipesActions button:focus-visible,
-  body[data-button-style="console"] #splitsBlock .splitsSavedRecipesActions .workspaceConfigurationOverflow > summary:focus-visible,
-  body[data-button-style="console"] #splitsBlock .workspaceConfigurationOverflowMenu button:focus-visible,
-  body[data-button-style="console"] #resultsBlock #timelinePane .timelineControlBar button:focus-visible,
-  body[data-button-style="console"] #lineSyncBlock #desktopLineSyncSetupBtn:focus-visible,
-  body[data-button-style="console"] #lineSyncBlock #lineSyncRetryBtn:focus-visible,
-  body[data-button-style="console"] #lineSyncBlock #lineSyncGenerateCodeBtn:focus-visible,
-  body[data-button-style="console"] #lineSyncBlock #lineSyncCopyCodeBtn:focus-visible,
-  body[data-button-style="console"] #toolsBlock .resinLookupCopyButton:focus-visible,
-  body[data-button-style="console"] #toolsBlock .recipeScanOptionRow > button:focus-visible,
-  body[data-button-style="console"] #toolsBlock .recipeScanInfo > summary:focus-visible,
-  body[data-button-style="console"] #toolsBlock #bulkDensitySaveButton:focus-visible,
-  body[data-button-style="console"] .adminResinPanel button.primary:focus-visible,
-  body[data-button-style="console"] .adminResinPanel button.secondary:focus-visible,
-  body[data-button-style="console"] .adminResinPanel button.danger:focus-visible,
-  body[data-button-style="console"] #dashboardPanel .dashboardChangeoverRefresh:focus-visible,
-  body[data-button-style="console"] #changeoverWizardDialog .changeoverWizardActions button:focus-visible,
-  body[data-button-style="console"] #changeoverWizardDialog .changeoverWizardChoices button:focus-visible{
+  body #splitsBlock #recipeHeaderActionPill button:focus-visible,
+  body #splitsBlock #recipeHeaderControls .weightsHeaderViewToggle button:focus-visible,
+  body #splitsArea[data-recipe-view="edit"] .splitCopyBtn:focus-visible,
+  body #splitsBlock .splitsBulkBar button:focus-visible,
+  body #splitsBlock .weightsBulkBar button:focus-visible,
+  body #splitsBlock .splitsSavedRecipesActions button:focus-visible,
+  body #splitsBlock .splitsSavedRecipesActions .workspaceConfigurationOverflow > summary:focus-visible,
+  body #splitsBlock .workspaceConfigurationOverflowMenu button:focus-visible,
+  body #resultsBlock #timelinePane .timelineControlBar button:focus-visible,
+  body #lineSyncBlock #desktopLineSyncSetupBtn:focus-visible,
+  body #lineSyncBlock #lineSyncRetryBtn:focus-visible,
+  body #lineSyncBlock #lineSyncGenerateCodeBtn:focus-visible,
+  body #lineSyncBlock #lineSyncCopyCodeBtn:focus-visible,
+  body #toolsBlock .resinLookupCopyButton:focus-visible,
+  body #toolsBlock .recipeScanOptionRow > button:focus-visible,
+  body #toolsBlock .recipeScanInfo > summary:focus-visible,
+  body #toolsBlock #bulkDensitySaveButton:focus-visible,
+  body .adminResinPanel button.primary:focus-visible,
+  body .adminResinPanel button.secondary:focus-visible,
+  body .adminResinPanel button.danger:focus-visible,
+  body #dashboardPanel .dashboardChangeoverRefresh:focus-visible,
+  body #changeoverWizardDialog .changeoverWizardActions button:focus-visible,
+  body #changeoverWizardDialog .changeoverWizardChoices button:focus-visible{
     outline: 2px solid var(--focus-border);
     outline-offset: 2px;
   }
