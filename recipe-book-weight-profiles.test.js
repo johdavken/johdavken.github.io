@@ -239,3 +239,31 @@ test("the Recipe Book page lets the preview through, and every other page stands
   const body = moduleFunctionBody("renderWorkspaceConfigurationPreview");
   assert.match(body, /if\(!isSavedRecipesPage\(\) \|\| !workspaceId \|\| !workspaceConfigurations\)\{ host\.hidden=true; return; \}/);
 });
+
+/* Contextual bars below the reworked grid.
+ *
+ * The 216px floor these shared existed so switching between Saved Recipes,
+ * Bulk Edit and Rearrange - three alternatives in one slot below the matrix -
+ * never jumped the panel by a different amount. None of that survives the
+ * rework: Recipe Book is a page, Bulk Edit is raised by the selection, and
+ * Rearrange is one line. The floor only bought Rearrange ~150px of empty
+ * panel, so it went - and the toolbar moved below the grid so its appearing
+ * costs the grid nothing either.
+ */
+test("no shared min-height floor is reserved below the matrix any more", () => {
+  assert.doesNotMatch(styles, /#splitsArea > \.rearrangeModeBar\{ min-height: 216px; \}/);
+  assert.doesNotMatch(styles, /min-height: 216px/);
+});
+
+test("the edit toolbar sits below the reworked grid, so raising it never moves the grid", () => {
+  // order:-1 (above the matrix) is right only for a deliberate mode switch;
+  // the reworked grid raises this on every cell click.
+  assert.match(styles, /body #splitsArea\[data-recipe-layout="transposed"\] > \.splitsBulkBar\{\s*\n\s*order:1;/);
+  assert.match(styles, /body #splitsArea\[data-recipe-layout="transposed"\] > \.recipeInteractionHint\{\s*\n\s*order:2;/);
+  // The stacked grid keeps its own placement untouched.
+  assert.match(styles, /#splitsArea > \.splitsBulkBar\{ order: -1;/);
+});
+
+test("the rearrange bar keeps its below-the-grid placement and sizes to its content", () => {
+  assert.match(styles, /#splitsArea > \.rearrangeModeBar\{ order:1; position:static; \}/);
+});

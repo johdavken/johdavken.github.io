@@ -1298,18 +1298,16 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .baseGlyph{dis
 #splitsArea > .splitsBulkBar,
 #splitsArea > .splitsSavedRecipesPanel,
 #splitsArea > .rearrangeModeBar{ order:1; position:static; }
-/* Desktop only (these three are the only ones ever direct children of
-   #splitsArea - mobile relocates Bulk Edit/Saved Recipes into their own
-   sheets, and Rearrange has no mobile .rearrangeModeBar at all): a shared
-   min-height so switching Saved Recipes/Bulk Edit/Rearrange doesn't jump
-   the rest of the Recipe panel up and down by a different amount each
-   time. Sized to Bulk Edit's own natural height (the tallest of the three
-   in the common case) so Bulk Edit itself never needs to shrink or
-   scroll - Saved Recipes with many rows can still grow past this via its
-   own already-scrollable list (see .workspaceConfigurationList). */
-#splitsArea > .splitsBulkBar,
-#splitsArea > .splitsSavedRecipesPanel,
-#splitsArea > .rearrangeModeBar{ min-height: 216px; }
+/* These three used to share a 216px min-height, so that switching between
+   Saved Recipes, Bulk Edit and Rearrange - three alternatives occupying one
+   slot below the matrix - never jumped the panel by a different amount each
+   time. None of that premise survives the recipe rework: Recipe Book is a
+   page that replaces the matrix outright (see the data-recipe-page="saved"
+   rules above), Bulk Edit is a compact row raised by the selection rather
+   than a panel you switch into, and Rearrange is a single line of guidance
+   plus two buttons. They are no longer alternatives in a shared slot, so the
+   floor bought nothing and cost Rearrange ~150px of empty panel. Removed;
+   each sizes to its own content. */
 /* Scan Recipe / Print Recipe / Load Next Recipe / Info: immediate actions,
    always last regardless of which utility panel (if any) is open above
    them - a fixed order number, rather than relying on DOM append position,
@@ -12122,4 +12120,23 @@ body[data-recipe-page="saved"] #splitsArea > .splitsConfigurationPreview{
     grid-row:auto;
     position:static;
   }
+}
+
+/* --------------------------------------------------------------------------
+   The edit toolbar sits BELOW the reworked grid
+   order:-1 put it above the matrix, which was right when it only appeared on
+   a deliberate Summary -> Edit switch: one shift, once, at a moment the
+   operator asked for. The reworked grid raises it on every cell selection, so
+   above the grid it shoved the whole working surface down by ~72px under the
+   pointer that had just clicked a cell. Below it, appearing and disappearing
+   costs the grid nothing, and no dead space has to be reserved for it either.
+   -------------------------------------------------------------------------- */
+body #splitsArea[data-recipe-layout="transposed"] > .splitsBulkBar{
+  order:1;
+  margin:10px 0 0;
+}
+/* The hint follows the toolbar rather than being stranded between the grid
+   and it. */
+body #splitsArea[data-recipe-layout="transposed"] > .recipeInteractionHint{
+  order:2;
 }
