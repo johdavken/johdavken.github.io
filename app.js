@@ -3141,8 +3141,32 @@
       corner.scope = "col";
       corner.className = "weightsRowCorner";
       // Transposed, the first column names layers and the header row names
-      // hopper positions.
-      corner.textContent = "Layer";
+      // hopper positions - but the gutter corner is dead space, so the Smart
+      // Hoppers toggle moves into it (replacing the "Layer" caption) rather
+      // than taking a strip of its own above the grid. It is absolutely
+      // positioned in CSS so it can never grow the cell. Its live-region
+      // state span rides along, visually hidden, for the announcement.
+      // Circumference, when Smart Hoppers is on and the line is cylindrical,
+      // moves into the bulk toolbar between Apply and Clear (below).
+      const smartToggleEl = desktopControls.querySelector("#smartHoppersToggle");
+      const smartStateEl = desktopControls.querySelector(".desktopSmartHopperState");
+      const circumferenceLabel = desktopControls.querySelector(".desktopSharedCircumference");
+      if (smartToggleEl){
+        corner.classList.add("weightsCornerToggle");
+        const toggleWrap = document.createElement("span");
+        toggleWrap.className = "weightsCornerToggleWrap";
+        if (smartStateEl){ smartStateEl.classList.add("srOnly"); toggleWrap.appendChild(smartStateEl); }
+        toggleWrap.appendChild(smartToggleEl);
+        corner.appendChild(toggleWrap);
+        // The heading/description that wrapped the toggle has no home now.
+        desktopControls.querySelector(".desktopWeightsSmartControl")?.remove();
+      } else {
+        corner.textContent = "Layer";
+      }
+      if (circumferenceLabel){
+        circumferenceLabel.classList.add("weightsBulkCircumference");
+        toolbar.querySelector("#applyBulkWeight")?.after(circumferenceLabel);
+      }
       headerRow.appendChild(corner);
       const tbody = document.createElement("tbody");
       // Same transposition as the Recipe grid, built from the same kind of

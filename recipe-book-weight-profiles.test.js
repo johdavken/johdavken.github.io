@@ -406,3 +406,26 @@ test("on the touch shell the weights bulk bar is a compact single column so 'No 
   assert.match(styles, /body\[data-shell="touch"\] #weightsArea \.weightsBulkBar\{[\s\S]*?flex-direction:column;/);
   assert.match(styles, /body\[data-shell="touch"\] #weightsArea \.weightsBulkBar \.weightsInputWithUnit input\{[\s\S]*?font-size:var\(--font-small\);/);
 });
+
+test("the Smart Hoppers toggle moves into the grid's gutter corner, replacing the Layer caption", () => {
+  const body = (()=>{const start=app.indexOf("function renderWeightsArea(");const next=app.indexOf("\n    function ",start+1);return app.slice(start,next===-1?undefined:next);})();
+  assert.match(body, /const smartToggleEl = desktopControls\.querySelector\("#smartHoppersToggle"\);/);
+  assert.match(body, /corner\.classList\.add\("weightsCornerToggle"\);/);
+  assert.match(body, /toggleWrap\.appendChild\(smartToggleEl\);/);
+  // Only when a toggle actually exists (an identified line); otherwise the
+  // corner keeps its caption and the "join a workspace" note stays put.
+  assert.match(body, /\} else \{\s*\n\s*corner\.textContent = "Layer";/);
+  assert.match(body, /desktopControls\.querySelector\("\.desktopWeightsSmartControl"\)\?\.remove\(\);/);
+  // Absolutely positioned so it can never grow the cell.
+  assert.match(styles, /body #weightsArea \.weightsCornerToggleWrap\{[\s\S]*?position:absolute;[\s\S]*?inset:0;/);
+});
+
+test("the shared circumference field relocates into the bulk toolbar, between Apply and Clear", () => {
+  const body = (()=>{const start=app.indexOf("function renderWeightsArea(");const next=app.indexOf("\n    function ",start+1);return app.slice(start,next===-1?undefined:next);})();
+  assert.match(body, /toolbar\.querySelector\("#applyBulkWeight"\)\?\.after\(circumferenceLabel\);/);
+  assert.match(styles, /body #weightsArea \.weightsBulkBar \.weightsBulkCircumference\{/);
+});
+
+test("Apply in the weights bulk bar takes the station-console key, matching Clear", () => {
+  assert.match(styles, /body #splitsBlock \.weightsBulkBar #applyBulkWeight,[\s\S]*?background:var\(--btnstyle-surface\);[\s\S]*?box-shadow:0 1px 0 var\(--btnstyle-edge\);/);
+});

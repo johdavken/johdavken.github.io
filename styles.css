@@ -12511,3 +12511,69 @@ body[data-shell="touch"] #weightsArea .weightsBulkBar .weightsBulkActions{
   grid-column:auto;
   flex-wrap:wrap;
 }
+
+/* 8. Smart Hoppers toggle in the grid's gutter corner, and the shared
+      circumference field relocated into the bulk toolbar.
+   -------------------------------------------------------------------------- */
+
+/* The corner keeps its sticky-left pinning; the toggle is laid over it,
+   never sized into it, so it cannot change the column width or the header
+   row height. A compact toggle scale via the shared custom props. */
+body #weightsArea .weightsMatrix .weightsRowCorner.weightsCornerToggle{
+  position:sticky;
+  overflow:visible;
+}
+body #weightsArea .weightsCornerToggleWrap{
+  position:absolute;
+  inset:0;
+  display:grid;
+  place-items:center;
+  --toggle-w:38px;
+  --toggle-h:20px;
+  --toggle-knob:14px;
+}
+
+/* Circumference sits between Apply and Clear in the bulk toolbar. It reuses
+   the .weightsBulkField shape so it reads as one of the row's fields. */
+body #weightsArea .weightsBulkBar .weightsBulkCircumference{
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+  margin:0;
+  flex:0 0 auto;
+}
+body #weightsArea .weightsBulkBar .weightsBulkCircumference > span:first-child{
+  font-size:var(--font-tiny);
+  color:var(--muted);
+}
+body #weightsArea .weightsBulkBar .weightsBulkCircumference .weightsInputWithUnit{
+  display:grid;
+  grid-template-columns:minmax(56px,84px) auto;
+  align-items:center;
+  gap:4px;
+}
+body #weightsArea .weightsBulkBar .weightsBulkCircumference input{
+  font-size:var(--font-small);
+  min-width:0;
+}
+body[data-shell="touch"] #weightsArea .weightsBulkBar .weightsBulkCircumference{
+  flex:1 1 140px;
+}
+
+/* 9. Apply / Clear in the weights bulk bar take the full station-console key
+      treatment, matching the Recipe toolbar's own actions. button-styling.css
+      already keys .bulkTextAction there; #applyBulkWeight (class "secondary")
+      only got a radius match, so it is brought up to the same key here. */
+body #splitsBlock .weightsBulkBar #applyBulkWeight,
+body[data-shell="touch"] #splitsBlock .weightsBulkBar #applyBulkWeight{
+  min-height:30px;
+  border:0;
+  border-radius:4px;
+  background:var(--btnstyle-surface);
+  color:var(--btnstyle-ink);
+  box-shadow:0 1px 0 var(--btnstyle-edge);
+  font-weight:800;
+}
+body #splitsBlock .weightsBulkBar #applyBulkWeight:disabled{
+  opacity:.5;
+}
