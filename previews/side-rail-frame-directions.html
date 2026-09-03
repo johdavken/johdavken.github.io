@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Six fresh side rail frame directions</title>
+  <style>
+    :root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:#222;background:#e8ebee}
+    *{box-sizing:border-box} body{margin:0;min-width:1080px}
+    .page{max-width:1550px;margin:0 auto;padding:38px 42px 54px}
+    .intro{display:flex;align-items:end;justify-content:space-between;gap:24px;margin-bottom:30px}
+    h1{margin:0;color:#1f2830;font-size:25px;letter-spacing:-.04em} .intro p{max-width:690px;margin:9px 0 0;color:#66737c;font-size:14px;line-height:1.5}
+    label{display:grid;gap:5px;color:#64717a;font-size:11px;font-weight:750;letter-spacing:.08em;text-transform:uppercase}
+    select{min-width:175px;padding:9px 12px;border:1px solid #b9c2c9;border-radius:7px;background:#fff;color:#26313a;font:600 14px/1 inherit}
+    .directions{display:grid;grid-template-columns:repeat(3,minmax(300px,1fr));gap:24px}
+    .direction{min-width:0}.direction h2{margin:0 0 5px;color:#3a464e;font-size:13px;letter-spacing:.08em;text-transform:uppercase}.direction>p{min-height:34px;margin:0 0 11px;color:#74818a;font-size:12px;line-height:1.35}
+    .workspace{--canvas:#edf1f3;--rail:#f9fafb;--surface:#fff;--ink:#3e4b55;--muted:#78848c;--line:#cbd4da;--accent:#607d9b;--accent-wash:#dfe8ef;position:relative;isolation:isolate;display:grid;grid-template-columns:42% 58%;height:284px;overflow:hidden;background:var(--canvas);color:var(--ink)}
+    .rail{position:relative;z-index:2;display:flex;flex-direction:column;min-width:0;padding:17px 15px;background:var(--rail)}
+    .brand{display:flex;align-items:center;gap:8px;margin:0 3px 15px;color:var(--ink);font-size:10px;font-weight:850;letter-spacing:.13em}.brand i{width:17px;height:17px;border:2px solid var(--accent);border-radius:5px;transform:rotate(45deg)}
+    .nav{display:grid;gap:3px}.item{display:grid;grid-template-columns:19px 1fr;align-items:center;gap:8px;min-height:31px;padding:6px 7px;color:var(--muted);font-size:10px;font-weight:750;letter-spacing:.045em}.item i{display:block;width:14px;height:14px;border:1.6px solid currentColor;border-radius:4px}.item:nth-child(2) i{border-radius:50%}.item:nth-child(3) i{border-radius:0;border-width:0 0 2px 2px}.item.active{color:var(--accent)}
+    .rail-foot{margin-top:auto;padding:10px 5px 0;border-top:1px solid var(--line);color:var(--muted);font-size:9px;font-weight:700;letter-spacing:.06em}
+    .content{position:relative;padding:26px 24px;overflow:hidden;background:var(--surface)}.content:before{position:absolute;inset:0;content:"";pointer-events:none}.eyebrow{position:relative;color:var(--accent);font-size:9px;font-weight:850;letter-spacing:.12em}.content h3{position:relative;max-width:145px;margin:7px 0 20px;font-size:20px;letter-spacing:-.04em}.ghost-line{position:relative;width:100%;height:7px;margin:9px 0;border-radius:99px;background:color-mix(in srgb,var(--line) 58%,transparent)}.ghost-line.short{width:62%}.ghost-box{position:relative;width:100%;height:70px;margin-top:19px;border:1px solid var(--line);border-radius:7px;background:color-mix(in srgb,var(--accent-wash) 35%,transparent)}
+
+    /* 01 — a narrow ledger card set into a wide, quiet field. */
+    .ledger{margin:0 5px;border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 26px rgba(48,65,76,.10)}
+    .ledger .rail{border-radius:12px 0 0 12px;background:linear-gradient(180deg,var(--rail),color-mix(in srgb,var(--rail) 82%,var(--accent-wash)))}
+    .ledger .rail:before{position:absolute;top:17px;right:11px;bottom:16px;width:1px;background:var(--line);content:""}.ledger .brand{padding-bottom:11px;border-bottom:2px solid var(--accent)}
+    .ledger .item.active{margin-left:-3px;border-left:3px solid var(--accent);background:var(--accent-wash)}
+    .ledger .content{border-radius:0 12px 12px 0}.ledger .content:before{background:repeating-linear-gradient(0deg,transparent 0 27px,color-mix(in srgb,var(--line) 38%,transparent) 28px)}
+
+    /* 02 — a hard paper seam with a fold marker, not a card. */
+    .seam{border-top:3px solid var(--ink);border-bottom:3px solid var(--ink)}
+    .seam .rail{padding-left:18px;background:var(--rail);border-right:2px solid var(--ink)}.seam .rail:after{position:absolute;top:0;right:-8px;width:14px;height:14px;border:2px solid var(--ink);border-width:0 2px 2px 0;background:var(--canvas);content:"";transform:translate(50%,-50%) rotate(45deg)}
+    .seam .brand{color:var(--accent)}.seam .item{border-bottom:1px dashed color-mix(in srgb,var(--line) 85%,transparent)}.seam .item.active{margin-left:-8px;padding-left:13px;background:var(--ink);color:var(--rail)}
+    .seam .content{background:linear-gradient(90deg,var(--surface),color-mix(in srgb,var(--surface) 94%,var(--accent-wash)))}
+
+    /* 03 — a color-bearing spine with a light interior rail. */
+    .signal{border:1px solid var(--line);border-radius:8px}.signal:before{position:absolute;z-index:3;top:0;bottom:0;left:0;width:7px;background:var(--accent);content:""}.signal .rail{padding-left:22px;background:var(--rail)}
+    .signal .brand i{border-radius:50%;box-shadow:inset 0 0 0 3px var(--rail);background:var(--accent)}.signal .item.active{border-radius:5px;background:var(--accent-wash);color:var(--ink);box-shadow:inset 2px 0 var(--accent)}
+    .signal .item.active i{background:var(--accent);border-color:var(--accent)}.signal .content:before{top:0;right:0;bottom:auto;left:auto;width:92px;height:92px;background:radial-gradient(circle at top right,var(--accent-wash),transparent 68%)}
+
+    /* 04 — a floating rail over a shaded operational canvas. */
+    .floating{padding:13px;background:radial-gradient(circle at 90% 15%,var(--accent-wash),transparent 34%),var(--canvas)}
+    .floating .rail{margin:0 10px 0 0;border:1px solid color-mix(in srgb,var(--line) 80%,var(--accent));border-radius:10px;background:var(--rail);box-shadow:7px 8px 0 color-mix(in srgb,var(--accent-wash) 74%,transparent)}
+    .floating .brand{margin-left:1px}.floating .item{margin-left:-7px;margin-right:-7px;border-radius:6px}.floating .item.active{background:var(--accent);color:var(--rail);box-shadow:0 4px 10px color-mix(in srgb,var(--accent) 25%,transparent)}
+    .floating .content{border:1px solid color-mix(in srgb,var(--line) 64%,transparent);border-radius:10px;background:color-mix(in srgb,var(--surface) 85%,transparent)}
+
+    /* 05 — a clipped utility board with a perforated perimeter. */
+    .perforated{border:10px solid var(--canvas);outline:1px solid var(--line);outline-offset:-10px}.perforated .rail{padding-top:22px;background:var(--rail);clip-path:polygon(0 0,100% 0,100% 90%,87% 100%,0 100%)}
+    .perforated .rail:before{position:absolute;top:11px;right:9px;bottom:13px;width:4px;background:radial-gradient(circle,var(--line) 1px,transparent 1.5px) center/4px 8px repeat-y;content:""}.perforated .brand{border-left:4px solid var(--accent);padding-left:7px}.perforated .item.active{border:1px solid var(--accent);border-radius:5px;background:transparent;color:var(--accent)}
+    .perforated .content{background-color:var(--surface);background-image:radial-gradient(color-mix(in srgb,var(--line) 45%,transparent) .7px,transparent .7px);background-size:9px 9px}.perforated .ghost-box{background:var(--surface)}
+
+    /* 06 — a weighted slab anchored by a contour-field background. */
+    .topo{border:1px solid var(--ink);box-shadow:5px 5px 0 var(--ink)}.topo .rail{border-right:1px solid var(--ink);background:var(--rail)}
+    .topo .rail:before{position:absolute;inset:0;background:linear-gradient(135deg,transparent 0 48%,color-mix(in srgb,var(--accent-wash) 75%,transparent) 49% 51%,transparent 52%);opacity:.45;content:"";pointer-events:none}.topo .brand{position:relative;padding:5px 0 11px;border-bottom:1px solid var(--ink)}
+    .topo .item{position:relative}.topo .item.active{font-weight:900;color:var(--ink)}.topo .item.active:after{position:absolute;right:3px;width:6px;height:6px;border-radius:50%;background:var(--accent);content:""}
+    .topo .content:before{background:repeating-radial-gradient(ellipse at 110% 110%,transparent 0 14px,color-mix(in srgb,var(--accent) 21%,transparent) 15px 16px,transparent 17px 27px);opacity:.9}.topo .ghost-box{border:2px solid var(--accent);border-radius:0;background:var(--surface)}
+
+    [data-theme="newsprint"]{--canvas:#e7e1d3;--rail:#faf7ef;--surface:#fdfbf6;--ink:#55504a;--muted:#817970;--line:#c8beb0;--accent:#805055;--accent-wash:#e7d9d5}
+    [data-theme="gruvbox"]{--canvas:#ebdbb2;--rail:#fbf1c7;--surface:#f9f5d7;--ink:#5b5346;--muted:#8b8068;--line:#d5c4a1;--accent:#b57614;--accent-wash:#ead9aa}
+    [data-theme="ayu"]{--canvas:#eceeef;--rail:#fafafa;--surface:#ffffff;--ink:#575f66;--muted:#8b8e92;--line:#d6d7d8;--accent:#3b9ee5;--accent-wash:#d9edf9}
+    [data-theme="night"]{--canvas:#16212b;--rail:#202d38;--surface:#263540;--ink:#e1e9ec;--muted:#a5b4bc;--line:#3c505d;--accent:#8db7b3;--accent-wash:#324b53}.workspace[data-theme="night"] .content{background-color:var(--surface)}.workspace[data-theme="night"] .ghost-box{background:color-mix(in srgb,var(--surface) 92%,black)}
+    .note{margin:30px 0 0;color:#74818a;font-size:12px}.note b{color:#4a565e}
+  </style>
+</head>
+<body>
+  <main class="page">
+    <div class="intro">
+      <div><h1>Side rail frame directions</h1><p>Six new framing ideas for a desktop side rail: each changes the relationship between navigation, the page surface, and the selected destination—not merely the selected row.</p></div>
+      <label>Preview palette<select id="theme"><option value="slate">Industrial Slate</option><option value="newsprint">Newsprint</option><option value="gruvbox">Gruvbox Light</option><option value="ayu">Ayu Light</option><option value="night">Night shift</option></select></label>
+    </div>
+    <section class="directions">
+      <article class="direction"><h2>01 — Inset ledger</h2><p>Contained card with ruled content; orderly without feeling like an app chrome panel.</p><div class="workspace ledger"><aside class="rail"><div class="brand"><i></i>LINE 20</div><nav class="nav"><div class="item"><i></i>RECIPE</div><div class="item active"><i></i>TIMELINE</div><div class="item"><i></i>RESIN TOTALS</div></nav><div class="rail-foot">3 PANELS · LOCAL</div></aside><section class="content"><div class="eyebrow">WORKFLOW / 02</div><h3>Timeline</h3><div class="ghost-line"></div><div class="ghost-line short"></div><div class="ghost-box"></div></section></div></article>
+      <article class="direction"><h2>02 — Paper seam</h2><p>A firm split in the interface, with the active panel stamped into the seam.</p><div class="workspace seam"><aside class="rail"><div class="brand"><i></i>LINE 20</div><nav class="nav"><div class="item"><i></i>RECIPE</div><div class="item active"><i></i>TIMELINE</div><div class="item"><i></i>RESIN TOTALS</div></nav><div class="rail-foot">3 PANELS · LOCAL</div></aside><section class="content"><div class="eyebrow">WORKFLOW / 02</div><h3>Timeline</h3><div class="ghost-line"></div><div class="ghost-line short"></div><div class="ghost-box"></div></section></div></article>
+      <article class="direction"><h2>03 — Signal band</h2><p>A persistent color spine gives the rail a spatial anchor while the interior stays light.</p><div class="workspace signal"><aside class="rail"><div class="brand"><i></i>LINE 20</div><nav class="nav"><div class="item"><i></i>RECIPE</div><div class="item active"><i></i>TIMELINE</div><div class="item"><i></i>RESIN TOTALS</div></nav><div class="rail-foot">3 PANELS · LOCAL</div></aside><section class="content"><div class="eyebrow">WORKFLOW / 02</div><h3>Timeline</h3><div class="ghost-line"></div><div class="ghost-line short"></div><div class="ghost-box"></div></section></div></article>
+      <article class="direction"><h2>04 — Floating dock</h2><p>The rail becomes a raised control dock over an operational canvas, with a softly inset page.</p><div class="workspace floating"><aside class="rail"><div class="brand"><i></i>LINE 20</div><nav class="nav"><div class="item"><i></i>RECIPE</div><div class="item active"><i></i>TIMELINE</div><div class="item"><i></i>RESIN TOTALS</div></nav><div class="rail-foot">3 PANELS · LOCAL</div></aside><section class="content"><div class="eyebrow">WORKFLOW / 02</div><h3>Timeline</h3><div class="ghost-line"></div><div class="ghost-line short"></div><div class="ghost-box"></div></section></div></article>
+      <article class="direction"><h2>05 — Perforated board</h2><p>Mechanical and utilitarian: perforation, clipped corner, and a subtle register grid.</p><div class="workspace perforated"><aside class="rail"><div class="brand"><i></i>LINE 20</div><nav class="nav"><div class="item"><i></i>RECIPE</div><div class="item active"><i></i>TIMELINE</div><div class="item"><i></i>RESIN TOTALS</div></nav><div class="rail-foot">3 PANELS · LOCAL</div></aside><section class="content"><div class="eyebrow">WORKFLOW / 02</div><h3>Timeline</h3><div class="ghost-line"></div><div class="ghost-line short"></div><div class="ghost-box"></div></section></div></article>
+      <article class="direction"><h2>06 — Topographic slab</h2><p>A bold outlined slab with a lightly mapped content field and a compact selected beacon.</p><div class="workspace topo"><aside class="rail"><div class="brand"><i></i>LINE 20</div><nav class="nav"><div class="item"><i></i>RECIPE</div><div class="item active"><i></i>TIMELINE</div><div class="item"><i></i>RESIN TOTALS</div></nav><div class="rail-foot">3 PANELS · LOCAL</div></aside><section class="content"><div class="eyebrow">WORKFLOW / 02</div><h3>Timeline</h3><div class="ghost-line"></div><div class="ghost-line short"></div><div class="ghost-box"></div></section></div></article>
+    </section>
+    <p class="note"><b>Interaction:</b> choose a palette above to recolor every direction. The frames are intentionally independent concepts, not variants of a shared existing preview.</p>
+  </main>
+  <script>
+    const theme = document.querySelector('#theme');
+    const previews = document.querySelectorAll('.workspace');
+    theme.addEventListener('change', () => previews.forEach(preview => preview.dataset.theme = theme.value));
+  </script>
+</body>
+</html>

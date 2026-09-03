@@ -930,6 +930,11 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .baseGlyph{dis
 .adminFieldGrid{ grid-template-columns: repeat(2,minmax(0,1fr)); }
 .adminFieldGrid label,.adminForm > label{ display: grid; gap: 5px; }
 .adminActiveField{ align-self: end; min-height: 38px; }
+/* Resin Database's toolbar is a search box plus one action, not a header bar
+   with a right-hand button cluster like the other admin panels: a full-width
+   1fr field stranded "Add resin" at the far edge. Keep them as one compact
+   group at the left, aligned with the list beneath. */
+#resinAdminBlock .adminToolbar{ grid-template-columns:minmax(0,320px) auto; justify-content:start; }
 .adminResinColumns{ display:grid; grid-template-columns:minmax(260px,.9fr) minmax(360px,1.1fr); gap:16px; align-items:start; }
 .adminResinListPane{ min-height:0; }
 .adminResinList{ display: grid; gap: 5px; max-height: min(58vh, 620px); overflow: auto; border: 1px solid var(--border); border-radius: var(--radius-row); padding: 7px; }
@@ -938,7 +943,7 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .baseGlyph{dis
 .adminResinRow.selected{ border-color: var(--focus-border); background: var(--focus-ring); }
 .adminResinRow.inactive{ opacity: .58; text-decoration: line-through; }
 .adminResinForm{ display: grid; gap: 11px; border: 1px solid var(--border); border-radius: var(--radius-card); padding: 14px; position:sticky; top:12px; }
-@media (max-width: 760px){ .adminFieldGrid,.adminToolbar,.adminResinColumns{ grid-template-columns: 1fr; }.adminResinList{ max-height: 42vh; }.adminResinForm{ position:static; }.adminDialog{ width: 96vw; } }
+@media (max-width: 760px){ .adminFieldGrid,.adminToolbar,.adminResinColumns{ grid-template-columns: 1fr; }#resinAdminBlock .adminToolbar{ grid-template-columns:1fr; justify-content:stretch; }.adminResinList{ max-height: 42vh; }.adminResinForm{ position:static; }.adminDialog{ width: 96vw; } }
 
 .workspaceRecoveryPanel{ display: grid; gap: 14px; }
 .databaseHealthPanel{ display:grid; gap:14px; max-width:620px; }
@@ -1088,16 +1093,15 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .baseGlyph{dis
   .workspaceRecoveryMemberActions{justify-content:flex-start}
 }
 
-.bulkDensityMeasurementWorkspace{display:grid;gap:12px;max-width:960px}
-.bulkDensityMeasurementIntro{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--control-radius);background:var(--readonly-bg)}
-.bulkDensityMeasurementIntro > label{display:grid;gap:5px;min-width:176px;color:var(--muted);font-size:11px;font-weight:800}
-.bulkDensityMeasurementIntro > div{display:grid;gap:3px;min-width:0}
-.bulkDensityMeasurementIntro p{margin:0;color:var(--muted);line-height:1.4}
+.bulkDensityMeasurementWorkspace{display:grid;gap:12px;max-width:760px}
+.bulkDensityMeasurementIntro{display:grid;grid-template-columns:minmax(190px,240px) minmax(0,1fr);align-items:end;gap:12px;padding:10px 12px;border:1px solid var(--readonly-border);border-radius:var(--radius-input);background:var(--readonly-bg)}
+.bulkDensityMeasurementIntro > label{display:grid;gap:5px;min-width:0;color:var(--muted);font-size:11px;font-weight:800}
+.bulkDensityMeasurementIntro > small{align-self:center;color:var(--muted);font-size:10px;line-height:1.35}
 .bulkDensityMeasurementIntro small{color:var(--muted);font-size:10px;line-height:1.35}
-.bulkDensityMeasurementForm{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.bulkDensityMeasurementForm{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .bulkDensityMeasureSection,.bulkDensityResultSurface{display:grid;align-content:start;gap:10px;min-width:0;padding:12px;border:1px solid var(--border);border-radius:var(--control-radius);background:var(--row-bg)}
 .bulkDensityResinSection{gap:8px;padding-block:10px}
-.bulkDensityResultSurface{grid-column:1 / -1;grid-template-columns:minmax(0,1fr) auto;align-items:center;background:var(--readonly-bg)}
+.bulkDensityResultSurface{grid-column:1 / -1;grid-template-columns:minmax(0,1fr) auto;align-items:center;border-color:var(--readonly-border);background:var(--readonly-bg)}
 .bulkDensityResultSurface .bulkDensitySectionHead{grid-column:1 / -1}
 .bulkDensitySectionHead{display:grid;gap:2px;min-width:0}
 .bulkDensitySectionHead strong{color:var(--title);font-size:13px}
@@ -1127,6 +1131,10 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .baseGlyph{dis
 .bulkDensitySaveBar span{color:var(--muted);font-size:11px}
 .bulkDensitySaveBar button{min-height:42px}
 .bulkDensitySaveDialog p{margin:0;line-height:1.5}
+
+@media (max-width:900px), (min-width:901px) and (pointer:coarse){
+  #toolsBlock .toolPanelHeader{ display:none; }
+}
 
 @media (max-width:760px){
   .bulkDensityMeasurementWorkspace{gap:10px}
@@ -7193,6 +7201,89 @@ button.compactAction{
   font-weight: 850;
 }
 .toolsWorkspaceContent{ min-width: 0; }
+.toolPanelHeader{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:start;
+  gap:14px;
+  padding-bottom:12px;
+  border-bottom:1px solid var(--border);
+}
+.toolPanelTitle{
+  margin:0;
+  color:var(--title);
+  font-size:16px;
+  font-weight:850;
+  letter-spacing:.08em;
+  line-height:1.2;
+  text-transform:uppercase;
+}
+.toolPanelHeader p{
+  margin:5px 0 0;
+  color:var(--muted);
+  font-size:var(--font-small);
+  line-height:1.4;
+}
+.toolInfoGuide{ position:relative; flex:0 0 auto; }
+.toolInfoGuide > summary{
+  display:grid;
+  place-items:center;
+  width:28px;
+  height:28px;
+  padding:0;
+  border:0;
+  border-radius:50%;
+  background:transparent;
+  color:var(--muted);
+  cursor:pointer;
+  list-style:none;
+}
+/* Identical to the Timeline guide's trigger (.timelineInfoGuide): same glyph,
+   same size, same bare treatment, so one info affordance reads the same
+   everywhere. The old bordered chip existed only because the serif "i" it
+   replaced needed a container to read as a button. */
+.toolInfoGuide > summary svg{
+  width:20px;
+  height:20px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.8;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.toolInfoGuide > summary::-webkit-details-marker{ display:none; }
+.toolInfoGuide > summary:hover,.toolInfoGuide[open] > summary,
+.toolInfoGuide > summary:focus-visible{ color:var(--title); background:var(--field-bg); }
+.toolInfoGuide > summary:focus-visible{ outline:2px solid var(--focus-border); outline-offset:1px; }
+.toolInfoGuidePanel{
+  position:absolute;
+  top:calc(100% + 7px);
+  right:0;
+  z-index:20;
+  width:min(330px,calc(100vw - 72px));
+  display:grid;
+  gap:7px;
+  padding:11px 12px;
+  border:1px solid var(--border2);
+  border-radius:var(--control-radius);
+  background:var(--panelOpen);
+  color:var(--muted);
+  box-shadow:var(--shadow2);
+  font-size:var(--font-small);
+  line-height:1.4;
+}
+.toolInfoGuidePanel strong{ color:var(--title); }
+.toolInfoGuidePanel p{ margin:0; }
+.toolInputGrid{
+  display:grid;
+  max-width:760px;
+  gap:12px;
+}
+.toolInputGridTwo{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+.toolInputGridThree{ grid-template-columns:repeat(3,minmax(0,1fr)); }
+.toolInputGrid > div{ display:grid; align-content:start; gap:5px; min-width:0; }
+.toolInputGrid input{ min-width:0; }
+.toolFieldHint{ color:var(--muted); font-size:10px; line-height:1.35; }
 .toolWorkspacePanel[hidden]{ display: none !important; }
 .toolsWorkspaceContent .toolPanel + .toolPanel{ margin-top: 0; }
 .mobileToolsHome,.mobileToolsBack,.mobileToolHeader{ display:none; }
@@ -8109,6 +8200,7 @@ button.compactAction{
 .recipeScanOptionRow button{ flex:1; width:auto; }
 .recipeScanInfo{ position:relative; flex-shrink:0; }
 .recipeScanInfo > summary{ display:grid; place-items:center; width:24px; height:24px; border:0; border-radius:50%; background:transparent; color:var(--muted); font-size:16px; line-height:1; cursor:pointer; list-style:none; }
+.recipeScanInfo > summary svg{ width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
 .recipeScanInfo > summary::-webkit-details-marker{ display:none; }
 .recipeScanInfo > summary:hover,.recipeScanInfo[open] > summary{ color:var(--title); background:var(--field-bg); }
 .recipeScanInfo > summary:focus-visible{ outline:2px solid var(--focus-border); outline-offset:1px; }
@@ -8185,9 +8277,11 @@ button.compactAction{
 .recipeScanReviewWarningText{ color: var(--warn); }
 .toolResult{
   display: grid;
-  grid-template-columns: auto auto 1fr;
+  grid-template-columns:minmax(0,1fr) auto minmax(0,1.4fr);
   gap: 10px;
   align-items: baseline;
+  max-width:760px;
+  min-height:48px;
   padding: 10px 12px;
   border: 1px solid var(--readonly-border);
   border-radius: var(--radius-input);

@@ -88,3 +88,22 @@ test("selected inactive rows remain visible and sign-out exits the admin panel",
   assert.match(ui, /adminResinSave/);
   assert.match(ui, /adminResinCancel/);
 });
+
+test("the desktop panel body packs its rows at the top, so filtering the list cannot slide the toolbar down the page", () => {
+  const desktop = fs.readFileSync("desktop.css", "utf8");
+  assert.match(desktop, /\.adminResinPanel > \.blockBody\{ align-content:start; \}/);
+  // The stretch this defends against comes from the panel body filling the
+  // desktop viewport; if that rule ever stops applying, the pack is moot.
+  assert.match(desktop, /\.workspaceContent > \.workspacePanel > \.blockBody\{[\s\S]*?height:100%/);
+});
+
+test("Resin Database's search field and Add resin sit together at the left, not a full-width field with a stranded button", () => {
+  const styles = fs.readFileSync("styles.css", "utf8");
+  assert.match(styles, /#resinAdminBlock \.adminToolbar\{ grid-template-columns:minmax\(0,320px\) auto; justify-content:start; \}/);
+  // The shared .adminToolbar keeps its header-bar behaviour for the other
+  // admin sub-panels, which do want their buttons pushed to the right edge.
+  assert.match(styles, /\.adminToolbar,\.adminFieldGrid\{ display: grid; grid-template-columns: 1fr auto;/);
+  // Narrow widths still stack, and the id rule has to be overridden there or
+  // it would out-specify the shared mobile rule.
+  assert.match(styles, /@media \(max-width: 760px\)\{[\s\S]*#resinAdminBlock \.adminToolbar\{ grid-template-columns:1fr; justify-content:stretch; \}/);
+});

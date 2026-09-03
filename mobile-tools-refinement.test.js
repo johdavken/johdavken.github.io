@@ -11,7 +11,7 @@ const styles = fs.readFileSync("styles.css", "utf8");
 test("Resin Reference is the consistent user-facing Tools label without renaming its internal target", () => {
   assert.match(html, /data-mobile-tool-target="resinLookupTool"[\s\S]*?<span>Resin Reference<\/span><small>Codes, density and material information<\/small>/);
   assert.match(html, /id="resinLookupToolTab"[\s\S]*?>Resin Reference<\/button>/);
-  assert.match(html, /id="resinLookupTitle" class="layerTitle">Resin Reference<\/div>/);
+  assert.match(html, /id="resinLookupTitle" class="toolPanelTitle">Resin Reference<\/h2>/);
   assert.match(html, /resinLookupTool/);
 });
 

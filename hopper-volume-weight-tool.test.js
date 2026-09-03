@@ -57,10 +57,12 @@ test("a Hopper Volume Weight tab exists in the desktop tools nav, immediately af
   assert.match(nav, /id="hopperVolumeWeightToolTab"[^>]*aria-controls="hopperVolumeWeightTool"[^>]*data-tool-target="hopperVolumeWeightTool"/);
 });
 
-test("the Hopper Volume Weight panel matches the Hopper Weight panel's layout: intro text, field order, and result panel", () => {
+test("the Hopper Volume Weight panel matches the Hopper Weight panel's layout: shared header, field order, help, and result panel", () => {
   const section = sectionBody("hopperVolumeWeightTool");
   assert.match(section, /class="toolPanel toolWorkspacePanel"/);
-  assert.match(section, /Estimates usable resin weight from known hopper volume\./);
+  assert.match(section, /Estimate usable resin weight from known hopper volume\./);
+  assert.match(section, /class="toolPanelHeader"/);
+  assert.match(section, /class="toolInfoGuide"/);
 
   const gallonsIndex = section.indexOf('id="hopperVolumeGallons"');
   const bulkIndex = section.indexOf('id="hopperVolumeBulkDensity"');
@@ -79,8 +81,8 @@ test("the Hopper Volume Weight panel matches the Hopper Weight panel's layout: i
   assert.match(section, /<label for="hopperVolumePackingFactor">Packing factor<\/label>/);
 
   assert.match(section, /<input id="hopperVolumePackingFactor" type="text" inputmode="decimal" value="0\.63" \/>/);
-  assert.match(section, /Adjustable from 0\.58 to 0\.68 for different pellet shapes\./);
-  assert.match(section, /A directly entered bulk density takes priority over the polymer-density estimate\./);
+  assert.match(section, /<div class="toolFieldHint">Default 0\.63<\/div>/);
+  assert.match(section, /Bulk density takes priority\. Polymer density and packing factor provide the fallback estimate/);
 
   assert.match(section, /<div class="toolResult mt10" aria-live="polite">/);
   assert.match(section, /<strong id="hopperVolumeWeightResult" class="mono">—<\/strong>/);
@@ -127,7 +129,7 @@ test("input listeners are wired for all four Hopper Volume Weight fields", () =>
 
 test("the existing Hopper Weight calculator's ids, formula wiring, and validation are unchanged", () => {
   const section = sectionBody("hopperWeightTool");
-  assert.match(section, /Estimates usable resin weight from cylindrical hopper dimensions\./);
+  assert.match(section, /Estimate usable resin weight from cylindrical hopper dimensions\./);
   assert.match(section, /<label for="hopperCircumference">Hopper circumference \(in\)<\/label>/);
   assert.match(section, /<label for="hopperUsableHeight">Hopper usable height \(in\)<\/label>/);
   assert.match(section, /<label for="hopperBulkDensity">Resin bulk density \(lb\/ft³\)<\/label>/);
