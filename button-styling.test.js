@@ -52,7 +52,7 @@ test("the preference persists locally and restores through the standard payload 
 
 test("the treatment is desktop-scoped and every selector stays inside a treated panel", () => {
   assert.match(buttonCss, /@media \(min-width: 901px\) and \(pointer: fine\)\{/);
-  const PANELS = ["#splitsBlock", "#splitsArea", "#resultsBlock", "#lineSyncBlock", "#toolsBlock", ".adminResinPanel", "#dashboardPanel"];
+  const PANELS = ["#splitsBlock", "#splitsArea", "#resultsBlock", "#lineSyncBlock", "#toolsBlock", ".adminResinPanel", "#dashboardPanel", "#changeoverWizardDialog"];
   const ruleLines = buttonCss
     .split("\n")
     .map(line => line.trim())
@@ -130,6 +130,14 @@ test("console reaches the Tools section's per-tool action buttons", () => {
 test("console reaches the Dashboard's one action button (not the back button)", () => {
   assert.match(buttonCss, /body\[data-button-style="console"\] #dashboardPanel \.dashboardChangeoverRefresh\{[\s\S]*?background: var\(--btnstyle-surface\)/);
   assert.doesNotMatch(buttonCss, /\.dashboardBackButton/);
+});
+
+test("console reaches the changeover wizard: action bar bay, chips, Next/Use + picked tile inverted", () => {
+  assert.match(buttonCss, /body\[data-button-style="console"\] #changeoverWizardDialog \.changeoverWizardActions\{[\s\S]*?border-radius: 7px/);
+  assert.match(buttonCss, /#changeoverWizardDialog \.changeoverWizardActions button,[\s\S]*?\.changeoverWizardChoices button\{/);
+  assert.match(buttonCss, /\.changeoverWizardActions button\.primary,[\s\S]*?\.changeoverWizardChoices button\.selected\{[\s\S]*?background: var\(--btnstyle-ink\)/);
+  // dialog chrome (close X, grab handle) left alone
+  assert.doesNotMatch(buttonCss, /\.changeoverWizardClose|\.changeoverWizardGrabber/);
 });
 
 test("console reaches the Sudo Access sub-panels, but not their nav rows or dialogs", () => {
