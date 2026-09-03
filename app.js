@@ -645,7 +645,9 @@
     if(!host) return;
     host.replaceChildren();
     const workspaceId=syncState?.selectedWorkspaceId || "";
-    if(!workspaceId || !workspaceConfigurations){ host.hidden=true; return; }
+    // It lives in #splitsArea beside the panel, so it has to stand down on
+    // the pages that area gives to the grid instead.
+    if(!isSavedRecipesPage() || !workspaceId || !workspaceConfigurations){ host.hidden=true; return; }
     host.hidden=false;
     const items=[
       ...workspaceConfigurations.listRecipes(workspaceId).items,
@@ -4806,7 +4808,6 @@
         <div id="mobileSavedRecipesStatus" class="mobileSavedRecipesStatus" role="status" hidden></div>
         <div id="splitsSavedRecipesList" class="workspaceConfigurationList"></div>
         <div id="mobileSavedRecipesList" class="mobileSavedRecipesList"></div>
-        <aside id="splitsConfigurationPreview" class="splitsConfigurationPreview" aria-live="polite"></aside>
       `;
       savedRecipesPanel.querySelector("#splitsSaveRecipe").addEventListener("click", ()=>openWorkspaceConfigurationDialog("save-recipe"));
       const saveNextRecipeButton=savedRecipesPanel.querySelector("#splitsSaveNextRecipe");
@@ -4893,6 +4894,18 @@
       // editing controls.
       area.append(toolbar);
       area.append(savedRecipesPanel);
+      // Sibling of the panel, not a child. As a child it had to span every
+      // grid row (grid-row:1/-1) to sit alongside a list of unknown length,
+      // and a grid item spanning multiple tracks inflates those tracks to fit
+      // itself - so selecting a recipe grew the preview, grew row 1 with it,
+      // and pushed the list down past the preview's own bottom edge. As a
+      // sibling in the page's two-column grid the panel keeps normal block
+      // flow and nothing can push it.
+      const configurationPreview = document.createElement("aside");
+      configurationPreview.id = "splitsConfigurationPreview";
+      configurationPreview.className = "splitsConfigurationPreview";
+      configurationPreview.setAttribute("aria-live", "polite");
+      area.append(configurationPreview);
       // Desktop has no lower recipe-action row: Load and Print moved to the
       // header, and Scan remains a mobile capture workflow.
 

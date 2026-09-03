@@ -196,7 +196,7 @@ test("a layer-count mismatch is surfaced in the preview, before the load dialog"
 
 test("the preview hides itself when there is no workspace, rather than showing an empty frame", () => {
   const body = moduleFunctionBody("renderWorkspaceConfigurationPreview");
-  assert.match(body, /if\(!workspaceId \|\| !workspaceConfigurations\)\{ host\.hidden=true; return; \}/);
+  assert.match(body, /if\(!isSavedRecipesPage\(\) \|\| !workspaceId \|\| !workspaceConfigurations\)\{ host\.hidden=true; return; \}/);
 });
 
 test("a panel rebuild refreshes the whole hub, not just the recipe list", () => {
@@ -214,4 +214,28 @@ test("the preview table scrolls inside its own rail, so the panel never scrolls 
   assert.match(styles, /\.configPreviewScroll\{ overflow-x:auto; \}/);
   // And it steps down to a single column when the rail would be cramped.
   assert.match(styles, /@media \(max-width:1240px\)\{[\s\S]*?\.splitsConfigurationPreview\{[\s\S]*?grid-column:1;/);
+});
+
+test("the preview is a sibling of the panel, not a child - a child had to span every row and inflated them", () => {
+  const body = functionBody("renderSplitsArea");
+  // Appended to the page area alongside the panel...
+  assert.match(body, /area\.append\(savedRecipesPanel\);[\s\S]{0,1200}?area\.append\(configurationPreview\);/);
+  // ...and not built into the panel's own markup any more.
+  assert.doesNotMatch(body, /<aside id="splitsConfigurationPreview"/);
+  // The two columns belong to the area, so the panel stays an ordinary block
+  // that its neighbour cannot stretch.
+  assert.match(styles, /body\[data-recipe-page="saved"\] #splitsArea\{\s*\n\s*display:grid;/);
+  assert.match(styles, /body\[data-recipe-page="saved"\] #splitsArea > \.splitsSavedRecipesPanel\{\s*\n\s*grid-column:1;/);
+  assert.doesNotMatch(styles, /#splitsArea \.splitsSavedRecipesPanel\{\s*\n\s*display:grid;/);
+  // Nothing spans a row range any more - that span was the bug.
+  assert.doesNotMatch(styles, /grid-row:1 \/ -1;/);
+});
+
+test("the Recipe Book page lets the preview through, and every other page stands it down", () => {
+  // The saved page hides everything in #splitsArea except these two.
+  assert.match(styles, /body\[data-recipe-page="saved"\] #splitsArea > :not\(\.splitsSavedRecipesPanel\):not\(\.splitsConfigurationPreview\)\{/);
+  // And the renderer refuses to fill it anywhere else, since the element now
+  // lives in the area the grid uses on the other pages.
+  const body = moduleFunctionBody("renderWorkspaceConfigurationPreview");
+  assert.match(body, /if\(!isSavedRecipesPage\(\) \|\| !workspaceId \|\| !workspaceConfigurations\)\{ host\.hidden=true; return; \}/);
 });

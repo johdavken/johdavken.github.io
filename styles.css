@@ -3436,7 +3436,7 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .lineSyncInfoG
 
 /* Recipe Book replaces the matrix on every width now, reached through the
    Recipe Book tab like Current/Next/Weights - phones included. */
-body[data-recipe-page="saved"] #splitsArea > :not(.splitsSavedRecipesPanel){
+body[data-recipe-page="saved"] #splitsArea > :not(.splitsSavedRecipesPanel):not(.splitsConfigurationPreview){
   display: none!important;
 }
 body[data-recipe-page="saved"] #splitsArea > .splitsSavedRecipesPanel{
@@ -12023,19 +12023,26 @@ body #splitsArea[data-recipe-layout="transposed"] .splitMatrixCell.empty:focus-w
    sections column 1 grows (the Weight Profiles block is appended into this
    same panel after the render builds it).
    -------------------------------------------------------------------------- */
-body[data-recipe-page="saved"] #splitsArea .splitsSavedRecipesPanel{
+/* The two columns are the page area's, not the panel's. Making the panel
+   itself the grid meant the preview had to span every row (grid-row:1/-1) to
+   sit beside a list of unknown length - and a grid item spanning multiple
+   tracks inflates those tracks to fit itself, so selecting a recipe grew the
+   preview, grew the panel's first row with it, and pushed the list down past
+   the preview's own bottom edge. Here the panel is one ordinary block in
+   column 1 and cannot be stretched by its neighbour. */
+body[data-recipe-page="saved"] #splitsArea{
   display:grid;
   grid-template-columns:minmax(0,1fr) minmax(280px,340px);
   gap:18px 22px;
   align-items:start;
 }
-body[data-recipe-page="saved"] #splitsArea .splitsSavedRecipesPanel > *{
+body[data-recipe-page="saved"] #splitsArea > .splitsSavedRecipesPanel{
   grid-column:1;
   min-width:0;
 }
-body[data-recipe-page="saved"] #splitsArea .splitsConfigurationPreview{
+body[data-recipe-page="saved"] #splitsArea > .splitsConfigurationPreview{
   grid-column:2;
-  grid-row:1 / -1;
+  grid-row:1;
   position:sticky;
   top:8px;
   align-self:start;
@@ -12107,10 +12114,10 @@ body[data-recipe-page="saved"] #splitsArea .splitsConfigurationPreview{
    preview. Under that, the preview simply becomes the last block in a single
    column rather than a cramped rail. */
 @media (max-width:1240px){
-  body[data-recipe-page="saved"] #splitsArea .splitsSavedRecipesPanel{
+  body[data-recipe-page="saved"] #splitsArea{
     grid-template-columns:minmax(0,1fr);
   }
-  body[data-recipe-page="saved"] #splitsArea .splitsConfigurationPreview{
+  body[data-recipe-page="saved"] #splitsArea > .splitsConfigurationPreview{
     grid-column:1;
     grid-row:auto;
     position:static;

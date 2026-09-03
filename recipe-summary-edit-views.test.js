@@ -285,7 +285,7 @@ test("Load Current/Next and Print move beside the view buttons; Recipe Book rema
 test("Recipe Book is a page replacement, so Edit controls and the matrix cannot remain visible behind it", () => {
   const setter = functionBody("setRecipePage");
   assert.match(setter, /if \(next === "saved" \|\| next === "weights"\)\{\s*splitsBulkModeActive = false;/);
-  assert.match(styles, /body\[data-recipe-page="saved"\] #splitsArea > :not\(\.splitsSavedRecipesPanel\)\{\s*display: none!important;/);
+  assert.match(styles, /body\[data-recipe-page="saved"\] #splitsArea > :not\(\.splitsSavedRecipesPanel\):not\(\.splitsConfigurationPreview\)\{\s*display: none!important;/);
   const sync = functionBody("syncRecipePageUI");
   assert.match(sync, /viewToggle\.hidden = isSavedRecipesPage\(\) \|\| isWeightsPage\(\) \|\| !layoutModeQueries\.compactRecipe\.matches;/);
 });

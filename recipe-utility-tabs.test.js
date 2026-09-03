@@ -75,7 +75,7 @@ test("mobile's action cluster never receives desktop tab styling, and Recipe Boo
 });
 
 test("the Recipe Book panel occupies the matrix slot at every width, sized for desktop/tablet from 701px up", () => {
-  assert.match(styles, /body\[data-recipe-page="saved"\] #splitsArea > :not\(\.splitsSavedRecipesPanel\)\{\s*display: none!important;/);
+  assert.match(styles, /body\[data-recipe-page="saved"\] #splitsArea > :not\(\.splitsSavedRecipesPanel\):not\(\.splitsConfigurationPreview\)\{\s*display: none!important;/);
   const panel = styles.slice(styles.indexOf('body[data-recipe-page="saved"] #splitsArea > .splitsSavedRecipesPanel{'));
   const panelRule = panel.slice(0, panel.indexOf("}") + 1);
   assert.match(panelRule, /display: block;/);

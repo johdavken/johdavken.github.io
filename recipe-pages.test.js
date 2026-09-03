@@ -259,7 +259,7 @@ test("Recipe Book is a real tab at every width, and crossing the phone/tablet bo
   assert.match(styles, /\.recipePageTab\[hidden\],\.recipeViewToggle\[hidden\],\.recipeHeaderControls\[hidden\]\{ display:none!important; \}/);
   // The matrix-hiding swap is unconditional now; only the panel's own
   // sizing still forks by width.
-  assert.match(styles, /body\[data-recipe-page="saved"\] #splitsArea > :not\(\.splitsSavedRecipesPanel\)\{\s*display: none!important;\s*\}/);
+  assert.match(styles, /body\[data-recipe-page="saved"\] #splitsArea > :not\(\.splitsSavedRecipesPanel\):not\(\.splitsConfigurationPreview\)\{\s*display: none!important;\s*\}/);
   assert.match(styles, /@media \(min-width: 701px\)\{[\s\S]*?body\[data-recipe-page="saved"\] #splitsArea > \.splitsSavedRecipesPanel\{[\s\S]*?width: min\(100%, var\(--recipe-five-layer-rail, 1062px\)\);/);
 });
 
@@ -268,7 +268,7 @@ test("Recipe Book replaces the desktop matrix without masquerading as Current or
   assert.match(app, /function isNextRecipePage\(\)\{ return activeRecipePage === "next"; \}/);
   const setter = app.slice(app.indexOf("function setRecipePage("), app.indexOf("function hookRecipePageTabs("));
   assert.match(setter, /splitsSavedRecipesOpen = next === "saved";/);
-  assert.match(styles, /body\[data-recipe-page="saved"\] #splitsArea > :not\(\.splitsSavedRecipesPanel\)\{\s*display: none!important;/);
+  assert.match(styles, /body\[data-recipe-page="saved"\] #splitsArea > :not\(\.splitsSavedRecipesPanel\):not\(\.splitsConfigurationPreview\)\{\s*display: none!important;/);
   assert.match(styles, /body\[data-recipe-page="saved"\] #splitsArea > \.splitsSavedRecipesPanel\{[\s\S]*?display: block;[\s\S]*?order: 0;/);
 });
 
