@@ -11965,3 +11965,36 @@ body .splitsSavedRecipesPanel .savedRecipesProfilesSection > .blockBody{
   padding-left:0;
   padding-right:0;
 }
+
+/* --------------------------------------------------------------------------
+   The tracking dot comes back on the reworked grid
+   The stacked grid hides the per-cell clock because tracking there is a
+   Summary-view action performed by clicking the whole cell, and selection is
+   an Edit-view one - two modes, never both at once. The reworked grid has no
+   modes: a cell click selects, so tracking needs a target of its own again.
+   Next is excluded, as it always was - a plan cannot carry tracking at all.
+   -------------------------------------------------------------------------- */
+body:not([data-recipe-page="next"]) #splitsArea[data-recipe-layout="transposed"] .splitTrackControl{
+  display:inline-flex;
+  margin-left:auto;
+}
+/* Legible at rest rather than hover-revealed: on a grid with no Edit mode to
+   enter, a control that only appears on hover is a control an operator on the
+   floor will not find. Empty cells keep theirs quieter than assigned ones. */
+body #splitsArea[data-recipe-layout="transposed"] .splitTrackButton{
+  width:22px;
+  height:22px;
+  min-height:22px;
+  opacity:1;
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitTrackButton svg{
+  width:18px;
+  height:18px;
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitMatrixCell.empty .splitTrackButton:not(.active){
+  opacity:.45;
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitMatrixCell.empty:hover .splitTrackButton,
+body #splitsArea[data-recipe-layout="transposed"] .splitMatrixCell.empty:focus-within .splitTrackButton{
+  opacity:1;
+}

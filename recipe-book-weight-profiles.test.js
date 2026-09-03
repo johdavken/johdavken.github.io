@@ -79,3 +79,39 @@ test("compact mobile is untouched - it keeps the profiles sheet and never folds 
   assert.match(app, /function renderMobileWeightProfileRows\(/);
   assert.match(app, /ensureMobileWeightProfilesSheet\(/);
 });
+
+/* Tracking on the reworked grid.
+ *
+ * The stacked grid hides the per-cell clock outright
+ * (#splitsArea[data-recipe-view] .splitTrackControl{display:none}) because
+ * tracking there is a Summary-view action done by clicking the whole cell,
+ * while selection is an Edit-view one. The reworked grid has no modes: a cell
+ * click selects, so tracking needs its own target back or there is no way to
+ * track at all.
+ */
+test("the reworked grid restores a per-cell tracking control, since a cell click now selects instead", () => {
+  // The rule it has to beat is #splitsArea[data-recipe-view] .splitTrackControl,
+  // so the override carries enough specificity to win.
+  assert.match(styles, /body:not\(\[data-recipe-page="next"\]\) #splitsArea\[data-recipe-layout="transposed"\] \.splitTrackControl\{[\s\S]*?display:inline-flex;/);
+  // Visible at rest, not hover-revealed - an operator on the floor will not
+  // discover a control that only appears under the cursor.
+  assert.match(styles, /body #splitsArea\[data-recipe-layout="transposed"\] \.splitTrackButton\{[\s\S]*?opacity:1;/);
+});
+
+test("Next still carries no tracking control at all - the plan structurally cannot hold tracking", () => {
+  // The override is scoped away from the Next page, so the established
+  // body[data-recipe-page="next"] .splitTrackControl{display:none} still wins
+  // there by being the only rule that applies.
+  assert.match(styles, /body\[data-recipe-page="next"\] \.splitTrackControl\{ display: none; \}/);
+  assert.doesNotMatch(styles, /body #splitsArea\[data-recipe-layout="transposed"\] \.splitTrackControl\{/);
+});
+
+test("the track button stays live on the reworked grid instead of standing down for bulk mode", () => {
+  const setBulkModeStart = app.indexOf("function setBulkMode(enabled){");
+  const body = app.slice(setBulkModeStart, app.indexOf("\n      }", setBulkModeStart));
+  assert.match(body, /trackButton\.disabled = reworkedGrid \? rearranging : \(bulkMode \|\| rearranging\);/);
+});
+
+test("the interaction hint names both actions, since the grid does both at once", () => {
+  assert.match(app, /"select · click its dot to track"/);
+});
