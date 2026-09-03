@@ -12493,6 +12493,9 @@ body[data-shell="touch"] #weightsArea .weightsBulkBar .weightsBulkActions{
   grid-column:auto;
   flex-wrap:nowrap;
   gap:10px;
+  /* Pushed to the right end of the fields row, the way desktop.css puts it
+     inside .desktopWeightsBulkContext. */
+  margin-left:auto;
 }
 body[data-shell="touch"] #weightsArea .weightsBulkBar .weightsBulkActions #clearWeightSelection{
   white-space:nowrap;
@@ -12598,4 +12601,20 @@ body[data-shell="touch"] #splitsBlock .weightsBulkBar #applyBulkWeight{
 }
 body #splitsBlock .weightsBulkBar #applyBulkWeight:disabled{
   opacity:.5;
+}
+
+/* 10. The Weights page opened with ~20px more space above the grid than
+       Current / Next / Recipe Book. Two causes, both touch-shell only
+       (desktop.css already zeroes them inside its fine-pointer wrapper):
+       #weightsArea carries a static .mt10 class, and its now-empty
+       .desktopWeightsControls first child still contributes a grid gap.
+       Match the other pages. */
+body #splitsArea.recipeWeightsPage > #weightsArea{
+  margin-top:0;
+}
+body #weightsArea > .desktopWeightsControls:not(:has(*)){
+  /* :empty fails here - the innerHTML template leaves whitespace text nodes
+     behind once the view toggle is relocated and the smart control removed.
+     :not(:has(*)) is "no element children", which is the real condition. */
+  display:none;
 }

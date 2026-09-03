@@ -447,3 +447,15 @@ test("the shared circumference field relocates into the bulk toolbar, between Ap
 test("Apply in the weights bulk bar takes the station-console key, matching Clear", () => {
   assert.match(styles, /body #splitsBlock \.weightsBulkBar #applyBulkWeight,[\s\S]*?background:var\(--btnstyle-surface\);[\s\S]*?box-shadow:0 1px 0 var\(--btnstyle-edge\);/);
 });
+
+test("on the touch shell the weights bulk actions align right, like desktop", () => {
+  assert.match(styles, /body\[data-shell="touch"\] #weightsArea \.weightsBulkBar \.weightsBulkActions\{[\s\S]*?margin-left:auto;/);
+});
+
+test("the Weights page opens with the same gap above the grid as the other pages", () => {
+  // #weightsArea carries a static .mt10 class and its now-empty
+  // .desktopWeightsControls first child still added a grid gap - both
+  // touch-shell only (desktop.css zeroes them in its fine-pointer wrapper).
+  assert.match(styles, /body #splitsArea\.recipeWeightsPage > #weightsArea\{\s*\n\s*margin-top:0;/);
+  assert.match(styles, /body #weightsArea > \.desktopWeightsControls:not\(:has\(\*\)\)\{[\s\S]*?display:none;/);
+});
