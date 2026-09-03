@@ -55,9 +55,26 @@
  * override here !important-free.
  *
  * Below 901px, or on any coarse-pointer device, none of this applies and the
- * base button rules in styles.css render instead - that is what mobile and
- * tablet still use, so those base rules must stay.
- * ===================================================================== */
+ * base button rules in styles.css render instead - that is what mobile still
+ * uses.
+ *
+ * Tablet (Wide Touch) gets the same treatment via a second copy of this
+ * block, below. "Tablet" here is the app's own Wide Touch tier - the touch
+ * shell (body[data-shell="touch"], set by app.js from the same fine-pointer
+ * desktop query the block above tests) at >=701px width, exactly the
+ * boundary styles.css's own "Responsive model" comment documents. A desktop
+ * browser resized down to tablet width is deliberately included, same as
+ * everywhere else that boundary is used - it is not phone-vs-tablet by
+ * device, it is Compact Touch (<=700px) vs Wide Touch (>=701px). Every
+ * selector is identical to the block above with `body` swapped for
+ * `body[data-shell="touch"]`, which is not just consistency: several of
+ * these targets (.recipePageTab, the Edit/Done toggle's
+ * [data-button-kind="toggle"] look, .splitCopyBtn) have an existing Wide
+ * Touch or mobile rule of their own to out-rank, and the extra attribute is
+ * what gets there - each of button-styling.css's chains already carries at
+ * least one id, or a second id, specifically because that is what wins;
+ * ties left over are settled by this file loading last. Keep both copies in
+ * sync: a change to one surface's look almost always belongs in both. */
 
 body{
   /* Re-use the per-theme accent/danger the header pill already tunes, with
@@ -475,6 +492,322 @@ body{
   body #dashboardPanel .dashboardChangeoverRefresh:focus-visible,
   body #changeoverWizardDialog .changeoverWizardActions button:focus-visible,
   body #changeoverWizardDialog .changeoverWizardChoices button:focus-visible{
+    outline: 2px solid var(--focus-border);
+    outline-offset: 2px;
+  }
+}
+
+/* =========================================================================
+ * Station console - Wide Touch (tablet)
+ *
+ * Exact mirror of the desktop block above, scoped to the Wide Touch tier
+ * instead of the fine-pointer desktop query - see the file comment's
+ * "Tablet (Wide Touch)" paragraph for why that boundary and not a raw
+ * pointer:coarse media query. Compact Touch (<=700px, phones) is untouched:
+ * this block only ever activates at >=701px, and its own selectors gain no
+ * ground below that width regardless of shell.
+ * ===================================================================== */
+@media (min-width: 701px){
+
+  body[data-shell="touch"] #splitsBlock #recipeHeaderActionPill,
+  body[data-shell="touch"] #splitsArea #splitsBulkBar .splitsEditRowSecondary,
+  body[data-shell="touch"] #splitsBlock .weightsBulkActions{
+    padding: 6px 8px;
+    border-radius: 7px;
+    background: color-mix(in srgb, var(--btnstyle-surface) 55%, transparent);
+  }
+  body[data-shell="touch"] #splitsArea #splitsBulkBar .splitsEditRowSecondary{
+    overflow: visible;
+  }
+  body[data-shell="touch"] #splitsArea #splitsBulkBar .splitsEditRowSecondary > .splitsBulkActions{
+    border-radius: 7px;
+  }
+
+  body[data-shell="touch"] #splitsBlock #recipeHeaderActionPill .recipeHeaderAction,
+  body[data-shell="touch"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
+  body[data-shell="touch"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-weight-view="edit"],
+  body[data-shell="touch"] #splitsBlock .splitsBulkBar .bulkTextAction,
+  body[data-shell="touch"] #splitsBlock .weightsBulkBar .bulkTextAction,
+  body[data-shell="touch"] #splitsBlock #resetAllSplits{
+    min-height: 30px;
+    border: 0;
+    border-radius: 4px;
+    background: var(--btnstyle-surface);
+    color: var(--btnstyle-ink);
+    box-shadow: 0 1px 0 var(--btnstyle-edge);
+  }
+  body[data-shell="touch"] #splitsArea #splitsBulkBar #applyBulkSplit,
+  body[data-shell="touch"] #splitsArea #splitsBulkBar .recipeHistoryAction,
+  body[data-shell="touch"] #splitsBlock .weightsBulkBar #applyBulkWeight{
+    border-radius: 4px;
+  }
+  body[data-shell="touch"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
+  body[data-shell="touch"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-weight-view="edit"],
+  body[data-shell="touch"] #splitsBlock #recipeHeaderControls .weightsHeaderViewToggle button[data-weight-view="edit"]{
+    min-height: 30px;
+    border: 0;
+    border-radius: 4px;
+    background: var(--btnstyle-ink);
+    color: var(--panel);
+    box-shadow: 0 1px 0 var(--btnstyle-edge);
+  }
+  body[data-shell="touch"] #splitsBlock #resetAllSplits{
+    background: var(--btnstyle-danger);
+    color: var(--btnstyle-on-fill);
+  }
+
+  body[data-shell="touch"] #splitsBlock .recipePageTabs,
+  body[data-shell="touch"] #resultsBlock .timelineViewTabs{
+    align-items: stretch;
+    gap: 3px;
+    margin: 0;
+    padding: 5px;
+    border: 1px solid var(--btnstyle-edge);
+    border-radius: 7px;
+    background: color-mix(in srgb, var(--btnstyle-surface) 55%, transparent);
+  }
+  body[data-shell="touch"] #splitsBlock .recipePageTabs{
+    flex: 0 1 396px;
+    inline-size: 396px;
+    block-size: 42px;
+    min-width: 0;
+  }
+  body[data-shell="touch"] #splitsBlock .recipeHeaderRow{ align-items: flex-start; }
+  body[data-shell="touch"] #splitsBlock .recipeHeaderRow > .recipePageTabs{ align-self: flex-start; }
+  body[data-shell="touch"] #resultsBlock .timelineViewTabs{ margin-bottom: 10px; }
+  body[data-shell="touch"] #resultsBlock :is(#timelinePane, #timelineHookupsArea){ border-top: 0; }
+
+  body[data-shell="touch"] #splitsBlock .recipePageTab,
+  body[data-shell="touch"] #resultsBlock .timelineViewTab{
+    min-height: 30px;
+    padding: 6px 14px 5px;
+    border: 0;
+    border-radius: 4px;
+    background: var(--btnstyle-surface);
+    color: var(--btnstyle-ink);
+    box-shadow: 0 1px 0 var(--btnstyle-edge);
+  }
+  body[data-shell="touch"] #splitsBlock .recipePageTab{
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  body[data-shell="touch"] #splitsBlock .recipePageTab:hover,
+  body[data-shell="touch"] #resultsBlock .timelineViewTab:hover{
+    background: var(--btnstyle-surface);
+    color: var(--btnstyle-ink);
+    filter: brightness(1.06);
+  }
+  body[data-shell="touch"] #splitsBlock .recipePageTab.active,
+  body[data-shell="touch"] #resultsBlock .timelineViewTab.active{
+    z-index: 1;
+    border: 0;
+    background: var(--btnstyle-ink);
+    color: var(--panel);
+    font-weight: 900;
+    box-shadow: none;
+  }
+  body[data-shell="touch"] #splitsBlock .recipePageTab.active .recipePageTabDot{
+    background: currentColor;
+  }
+
+  body[data-shell="touch"] #splitsArea[data-recipe-view="edit"] .splitCopyBtn{
+    border: 0;
+    border-radius: 4px;
+    background: var(--btnstyle-surface);
+    color: var(--btnstyle-ink);
+    box-shadow: 0 1px 0 var(--btnstyle-edge);
+  }
+  body[data-shell="touch"] #splitsArea[data-recipe-view="edit"] .splitCopyBtn:hover{
+    background: var(--btnstyle-surface);
+    filter: brightness(1.06);
+  }
+
+  body[data-shell="touch"] #splitsBlock .splitsSavedRecipesActions{
+    padding: 6px 8px;
+    border-radius: 7px;
+    background: color-mix(in srgb, var(--btnstyle-surface) 55%, transparent);
+  }
+  body[data-shell="touch"] #splitsBlock .splitsSavedRecipesActions > button,
+  body[data-shell="touch"] #splitsBlock .splitsSavedRecipesActions .workspaceConfigurationOverflow > summary,
+  body[data-shell="touch"] #splitsBlock .workspaceConfigurationOverflowMenu button{
+    min-height: 30px;
+    border: 0;
+    border-radius: 4px;
+    background: var(--btnstyle-surface);
+    color: var(--btnstyle-ink);
+    box-shadow: 0 1px 0 var(--btnstyle-edge);
+    text-transform: none;
+    letter-spacing: normal;
+  }
+  body[data-shell="touch"] #splitsBlock .workspaceConfigurationOverflowMenu button{
+    box-shadow: none;
+  }
+  body[data-shell="touch"] #splitsBlock .splitsSavedRecipesActions > button.primary:not(:disabled){
+    background: var(--btnstyle-ink);
+    color: var(--panel);
+  }
+  body[data-shell="touch"] #splitsBlock .workspaceConfigurationOverflowMenu button.danger{
+    background: var(--btnstyle-danger);
+    color: var(--btnstyle-on-fill);
+  }
+
+  body[data-shell="touch"] #resultsBlock #timelinePane .timelineControlBar{
+    gap: 6px;
+    padding: 6px 8px;
+    border-bottom: 0;
+    border-radius: 7px;
+    background: color-mix(in srgb, var(--btnstyle-surface) 55%, transparent);
+  }
+  body[data-shell="touch"] #resultsBlock #timelinePane .timelineControlBar #showPumpOffToggle,
+  body[data-shell="touch"] #resultsBlock #timelinePane .timelineControlBar #resetTrackingBtn,
+  body[data-shell="touch"] #resultsBlock #timelinePane .timelineControlBar #timelineDisplayToggle{
+    min-height: 30px;
+    border: 0;
+    border-radius: 4px;
+    background: var(--btnstyle-surface);
+    color: var(--btnstyle-ink);
+    box-shadow: 0 1px 0 var(--btnstyle-edge);
+  }
+  body[data-shell="touch"] #resultsBlock #timelinePane .timelineControlBar #showPumpOffToggle[aria-pressed="true"]{
+    background: var(--btnstyle-ink);
+    color: var(--panel);
+  }
+
+  body[data-shell="touch"] #lineSyncBlock .lineSyncGeneratedCodePanel{
+    border: 0;
+    border-radius: 7px;
+    background: color-mix(in srgb, var(--btnstyle-surface) 55%, transparent);
+  }
+  body[data-shell="touch"] #lineSyncBlock #desktopLineSyncSetupBtn,
+  body[data-shell="touch"] #lineSyncBlock #lineSyncRetryBtn,
+  body[data-shell="touch"] #lineSyncBlock #lineSyncGenerateCodeBtn,
+  body[data-shell="touch"] #lineSyncBlock #lineSyncCopyCodeBtn{
+    min-height: 30px;
+    border: 0;
+    border-radius: 4px;
+    background: var(--btnstyle-surface);
+    color: var(--btnstyle-ink);
+    box-shadow: 0 1px 0 var(--btnstyle-edge);
+  }
+  body[data-shell="touch"] #lineSyncBlock #desktopLineSyncSetupBtn:not(:disabled),
+  body[data-shell="touch"] #lineSyncBlock #lineSyncGenerateCodeBtn:not(:disabled){
+    background: var(--btnstyle-ink);
+    color: var(--panel);
+  }
+
+  body[data-shell="touch"] #toolsBlock .recipeScanOptions,
+  body[data-shell="touch"] #toolsBlock .bulkDensitySaveBar{
+    border: 0;
+    border-radius: 7px;
+    padding: 8px 10px;
+    background: color-mix(in srgb, var(--btnstyle-surface) 55%, transparent);
+  }
+  body[data-shell="touch"] #toolsBlock .resinLookupCopyButton,
+  body[data-shell="touch"] #toolsBlock .recipeScanOptionRow > button,
+  body[data-shell="touch"] #toolsBlock #bulkDensitySaveButton{
+    min-height: 30px;
+    border: 0;
+    border-radius: 4px;
+    background: var(--btnstyle-surface);
+    color: var(--btnstyle-ink);
+    box-shadow: 0 1px 0 var(--btnstyle-edge);
+    text-transform: none;
+    letter-spacing: normal;
+  }
+  body[data-shell="touch"] #toolsBlock .recipeScanInfo > summary{
+    border-radius: 4px;
+    background: var(--btnstyle-surface);
+    box-shadow: 0 1px 0 var(--btnstyle-edge);
+  }
+  body[data-shell="touch"] #toolsBlock #bulkDensitySaveButton:not(:disabled){
+    background: var(--btnstyle-ink);
+    color: var(--panel);
+  }
+
+  body[data-shell="touch"] .adminResinPanel .adminToolbar{
+    border-radius: 7px;
+    padding: 8px 10px;
+    background: color-mix(in srgb, var(--btnstyle-surface) 55%, transparent);
+  }
+  body[data-shell="touch"] .adminResinPanel button.primary,
+  body[data-shell="touch"] .adminResinPanel button.secondary,
+  body[data-shell="touch"] .adminResinPanel button.danger,
+  body[data-shell="touch"] .adminResinPanel button[data-button-variant="primary"]{
+    min-height: 30px;
+    border: 0;
+    border-radius: 4px;
+    background: var(--btnstyle-surface);
+    color: var(--btnstyle-ink);
+    box-shadow: 0 1px 0 var(--btnstyle-edge);
+    text-transform: none;
+    letter-spacing: normal;
+  }
+  body[data-shell="touch"] .adminResinPanel button.primary:not(:disabled),
+  body[data-shell="touch"] .adminResinPanel button[data-button-variant="primary"]:not(:disabled){
+    background: var(--btnstyle-ink);
+    color: var(--panel);
+  }
+  body[data-shell="touch"] .adminResinPanel button.danger:not(:disabled){
+    background: var(--btnstyle-danger);
+    color: var(--btnstyle-on-fill);
+  }
+
+  body[data-shell="touch"] #dashboardPanel .dashboardChangeoverRefresh{
+    border-radius: 4px;
+    background: var(--btnstyle-surface);
+    color: var(--btnstyle-ink);
+    box-shadow: 0 1px 0 var(--btnstyle-edge);
+  }
+
+  body[data-shell="touch"] #changeoverWizardDialog .changeoverWizardActions{
+    gap: 6px;
+    padding: 6px;
+    overflow: visible;
+    border: 0;
+    border-radius: 7px;
+    background: color-mix(in srgb, var(--btnstyle-surface) 55%, transparent);
+  }
+  body[data-shell="touch"] #changeoverWizardDialog .changeoverWizardActions button,
+  body[data-shell="touch"] #changeoverWizardDialog .changeoverWizardChoices button{
+    min-height: 30px;
+    border: 0;
+    border-radius: 4px;
+    background: var(--btnstyle-surface);
+    color: var(--btnstyle-ink);
+    box-shadow: 0 1px 0 var(--btnstyle-edge);
+  }
+  body[data-shell="touch"] #changeoverWizardDialog .changeoverWizardActions button.primary,
+  body[data-shell="touch"] #changeoverWizardDialog .changeoverWizardChoices button.selected{
+    background: var(--btnstyle-ink);
+    color: var(--panel);
+    box-shadow: none;
+  }
+
+  body[data-shell="touch"] #splitsBlock #recipeHeaderActionPill button:focus-visible,
+  body[data-shell="touch"] #splitsBlock #recipeHeaderControls .weightsHeaderViewToggle button:focus-visible,
+  body[data-shell="touch"] #splitsArea[data-recipe-view="edit"] .splitCopyBtn:focus-visible,
+  body[data-shell="touch"] #splitsBlock .splitsBulkBar button:focus-visible,
+  body[data-shell="touch"] #splitsBlock .weightsBulkBar button:focus-visible,
+  body[data-shell="touch"] #splitsBlock .splitsSavedRecipesActions button:focus-visible,
+  body[data-shell="touch"] #splitsBlock .splitsSavedRecipesActions .workspaceConfigurationOverflow > summary:focus-visible,
+  body[data-shell="touch"] #splitsBlock .workspaceConfigurationOverflowMenu button:focus-visible,
+  body[data-shell="touch"] #resultsBlock #timelinePane .timelineControlBar button:focus-visible,
+  body[data-shell="touch"] #lineSyncBlock #desktopLineSyncSetupBtn:focus-visible,
+  body[data-shell="touch"] #lineSyncBlock #lineSyncRetryBtn:focus-visible,
+  body[data-shell="touch"] #lineSyncBlock #lineSyncGenerateCodeBtn:focus-visible,
+  body[data-shell="touch"] #lineSyncBlock #lineSyncCopyCodeBtn:focus-visible,
+  body[data-shell="touch"] #toolsBlock .resinLookupCopyButton:focus-visible,
+  body[data-shell="touch"] #toolsBlock .recipeScanOptionRow > button:focus-visible,
+  body[data-shell="touch"] #toolsBlock .recipeScanInfo > summary:focus-visible,
+  body[data-shell="touch"] #toolsBlock #bulkDensitySaveButton:focus-visible,
+  body[data-shell="touch"] .adminResinPanel button.primary:focus-visible,
+  body[data-shell="touch"] .adminResinPanel button.secondary:focus-visible,
+  body[data-shell="touch"] .adminResinPanel button.danger:focus-visible,
+  body[data-shell="touch"] #dashboardPanel .dashboardChangeoverRefresh:focus-visible,
+  body[data-shell="touch"] #changeoverWizardDialog .changeoverWizardActions button:focus-visible,
+  body[data-shell="touch"] #changeoverWizardDialog .changeoverWizardChoices button:focus-visible{
     outline: 2px solid var(--focus-border);
     outline-offset: 2px;
   }

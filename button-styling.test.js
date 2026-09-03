@@ -19,6 +19,16 @@ const selectorLines = buttonCss
   .map(line => line.trim())
   .filter(line => line.startsWith("body "));
 
+// The tablet (Wide Touch) mirror: identical selector chains with `body`
+// swapped for `body[data-shell="touch"]` - see the file comment above the
+// desktop media query for why. These lines never satisfy the "body " filter
+// above (the very next character is "[", not a space), so the two sets
+// never overlap.
+const touchSelectorLines = buttonCss
+  .split("\n")
+  .map(line => line.trim())
+  .filter(line => line.startsWith('body[data-shell="touch"] '));
+
 test("the picker, its preference and its attribute gate are all gone", () => {
   // no <select>, no field, no label
   assert.doesNotMatch(html, /buttonStyleSel|buttonStyleField|Button Styling/);
@@ -33,14 +43,54 @@ test("the stylesheet is still loaded, after the existing three", () => {
   assert.match(html, /<link rel="stylesheet" href="styles\.css[^>]*>\s*<link rel="stylesheet" href="theme\.css[^>]*>\s*<link rel="stylesheet" href="desktop\.css[^>]*>\s*<link rel="stylesheet" href="button-styling\.css/);
 });
 
-test("every rule stays inside the desktop media query", () => {
+test("every desktop rule stays inside the desktop media query, and every tablet rule inside the tablet one", () => {
   assert.match(buttonCss, /@media \(min-width: 901px\) and \(pointer: fine\)\{/);
-  // exactly one media block, and every selector lives inside it
-  assert.equal((buttonCss.match(/@media/g) || []).length, 1);
-  const openIndex = buttonCss.indexOf("@media");
+  assert.match(buttonCss, /@media \(min-width: 701px\)\{/);
+  // exactly two media blocks: desktop, then its tablet mirror
+  assert.equal((buttonCss.match(/@media/g) || []).length, 2);
+  const desktopOpen = buttonCss.indexOf("@media (min-width: 901px)");
+  const tabletOpen = buttonCss.indexOf("@media (min-width: 701px)");
+  assert.ok(desktopOpen < tabletOpen, "desktop block should come first");
   for (const line of selectorLines) {
-    assert.ok(buttonCss.indexOf(line) > openIndex, `selector outside the media query: ${line}`);
+    const at = buttonCss.indexOf(line);
+    assert.ok(at > desktopOpen && at < tabletOpen, `desktop selector outside the desktop media query: ${line}`);
   }
+  for (const line of touchSelectorLines) {
+    assert.ok(buttonCss.indexOf(line) > tabletOpen, `tablet selector outside the tablet media query: ${line}`);
+  }
+});
+
+test("the tablet block is an exact mirror of the desktop block, body-for-body", () => {
+  // Guards against drift: strip comments from both blocks and diff them
+  // after undoing the one deliberate substitution (`body` <->
+  // `body[data-shell="touch"]`). Anything else different between the two
+  // blocks is a bug, not a tablet-specific tweak.
+  const stripComments = text => text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\n\s*\n+/g, "\n").trim();
+  const desktopOpen = buttonCss.indexOf("@media (min-width: 901px)");
+  const tabletOpen = buttonCss.indexOf("@media (min-width: 701px)");
+  // The raw slice runs past the desktop block's own closing brace and
+  // through the header comment introducing the tablet block below it, so
+  // comments are stripped first and the leftover trailing "}" (the desktop
+  // block's own) removed after - stripping in the other order leaves that
+  // brace behind, since the regex only matches a string that *ends* in "}".
+  const desktopBody = stripComments(
+    buttonCss.slice(buttonCss.indexOf("{", desktopOpen) + 1, tabletOpen)
+  ).replace(/\}\s*$/, "").trim();
+  const tabletBlockEnd = buttonCss.lastIndexOf("}");
+  const tabletBody = stripComments(
+    buttonCss.slice(buttonCss.indexOf("{", tabletOpen) + 1, tabletBlockEnd)
+  );
+  assert.notEqual(desktopBody.length, 0);
+  assert.notEqual(tabletBody.length, 0);
+  assert.equal(tabletBody, desktopBody.split("body ").join('body[data-shell="touch"] '));
+});
+
+test("every tablet selector carries body[data-shell=\"touch\"] - none quietly fell back to bare `body`", () => {
+  assert.ok(touchSelectorLines.length >= selectorLines.length, "expected a tablet line for every desktop line");
+  const tabletOpen = buttonCss.indexOf("@media (min-width: 701px)");
+  const tabletBlock = buttonCss.slice(tabletOpen);
+  assert.doesNotMatch(tabletBlock, /\n\s*body #/);
+  assert.doesNotMatch(tabletBlock, /\n\s*body \./);
 });
 
 test("every selector keeps its leading `body` so the tuned styles.css rules stay outranked", () => {
@@ -60,7 +110,7 @@ test("every selector stays inside a treated panel - nothing styles buttons app-w
     "#splitsBlock", "#splitsArea", "#resultsBlock", "#lineSyncBlock",
     "#toolsBlock", ".adminResinPanel", "#dashboardPanel", "#changeoverWizardDialog"
   ];
-  for (const line of selectorLines) {
+  for (const line of [...selectorLines, ...touchSelectorLines]) {
     assert.ok(PANELS.some(p => line.includes(p)), `selector escapes the panels: ${line}`);
   }
 });
@@ -68,7 +118,7 @@ test("every selector stays inside a treated panel - nothing styles buttons app-w
 test("navigation and list rows are never restyled", () => {
   // Recipe and Timeline page tabs are intentionally panel-local console
   // controls; broader workspace navigation and list rows remain untouched.
-  for (const line of selectorLines) {
+  for (const line of [...selectorLines, ...touchSelectorLines]) {
     assert.ok(
       !/\.toolsIndexButton|\.mobileToolTile|\.adminResinRow|\.workspaceRecoveryRow|\.sudoAccessAction|\.dashboardBackButton|\.workspaceNavButton/.test(line),
       `styles a nav / list row: ${line}`
@@ -136,11 +186,21 @@ test("the treatment reuses existing theme tokens, not hard-coded colours", () =>
   assert.deepEqual([...new Set(hexes)], ["#fff"]);
 });
 
-test("the base button rules mobile and tablet still render are left in place", () => {
-  // Nothing below 901px / on coarse pointers is covered by button-styling.css,
-  // so these styles.css rules are still the live ones there.
+test("the base button rules phones still render are left in place", () => {
+  // Compact Touch (<=700px, phones) is covered by neither media block above,
+  // so these styles.css rules are still the live ones there. Tablet
+  // (>=701px touch) now outranks them via the tablet block's added
+  // body[data-shell="touch"] specificity rather than removing them - see
+  // "the tablet block is an exact mirror..." above.
   assert.match(styles, /\.splitCopyBtn\{[\s\S]*?border-radius:999px/);
   assert.match(styles, /#splitsArea #splitsBulkBar \.splitsEditRowSecondary\{/);
   assert.match(styles, /\.changeoverWizardActions\{/);
   assert.match(styles, /\.timelineControlBar\{/);
+});
+
+test("phones (Compact Touch, <=700px) are outside both media blocks", () => {
+  // Neither block's condition can ever be true at <=700px: 901px+fine
+  // requires desktop width, and 701px is Wide Touch's own lower bound.
+  assert.match(buttonCss, /@media \(min-width: 701px\)\{/);
+  assert.doesNotMatch(buttonCss, /max-width:\s*700px/);
 });
