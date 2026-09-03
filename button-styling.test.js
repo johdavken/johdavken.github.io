@@ -79,6 +79,11 @@ test("console covers every treated button and neutralises the pill container", (
   assert.match(buttonCss, /body\[data-button-style="console"\] #splitsArea #splitsBulkBar \.splitsEditRowSecondary/);
 });
 
+test("console reaches the recipe grid's Edit-mode layer Match buttons", () => {
+  // scoped to Edit view - they don't exist in Summary
+  assert.match(buttonCss, /body\[data-button-style="console"\] #splitsArea\[data-recipe-view="edit"\] \.splitCopyBtn\{[\s\S]*?border-radius: 4px[\s\S]*?background: var\(--btnstyle-surface\)/);
+});
+
 test("console reaches the shared Recipe Book / Weight Profiles toolbar: bay, chips, primary, danger", () => {
   // one bay rule, panel-agnostic (both panels share .splitsSavedRecipesActions)
   assert.match(buttonCss, /body\[data-button-style="console"\] #splitsBlock \.splitsSavedRecipesActions\{[\s\S]*?border-radius: 7px/);

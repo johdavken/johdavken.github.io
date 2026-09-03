@@ -21,7 +21,9 @@
  *              (.weightsHeaderViewToggle in #recipeHeaderControls)
  *       BULK = the Edit-mode bulk bar's Clear / Empty cells / Reset /
  *              Rearrange (every .bulkTextAction in the bar, plus the
- *              #resetAllSplits danger button)
+ *              #resetAllSplits danger button), and the per-layer "Match X"
+ *              copy buttons that appear in the grid header in Edit view
+ *              (.splitCopyBtn)
  *       BOOK = the Recipe Book AND Weight Profiles panels' shared desktop
  *              select-a-row-then-act bar (.splitsSavedRecipesActions) + its
  *              overflow menu
@@ -124,6 +126,22 @@ body[data-button-style]{
   body[data-button-style="console"] #splitsBlock #resetAllSplits{
     background: var(--btnstyle-danger);
     color: var(--btnstyle-on-fill);
+  }
+
+  /* The per-layer "Match X" copy buttons in the recipe grid header. They
+     only exist in Edit view (styles.css hides them in Summary), so this is
+     scoped to [data-recipe-view="edit"]. Chipped off their pill shape;
+     kept compact - they sit inside a table header, not on a toolbar. */
+  body[data-button-style="console"] #splitsArea[data-recipe-view="edit"] .splitCopyBtn{
+    border: 0;
+    border-radius: 4px;
+    background: var(--btnstyle-surface);
+    color: var(--btnstyle-ink);
+    box-shadow: 0 1px 0 var(--btnstyle-edge);
+  }
+  body[data-button-style="console"] #splitsArea[data-recipe-view="edit"] .splitCopyBtn:hover{
+    background: var(--btnstyle-surface);
+    filter: brightness(1.06);
   }
 
   /* ---- Recipe Book + Weight Profiles (desktop) ----------------------
@@ -353,6 +371,7 @@ body[data-button-style]{
   /* Keep the focus ring legible on the treated controls. */
   body[data-button-style="console"] #splitsBlock #recipeHeaderActionPill button:focus-visible,
   body[data-button-style="console"] #splitsBlock #recipeHeaderControls .weightsHeaderViewToggle button:focus-visible,
+  body[data-button-style="console"] #splitsArea[data-recipe-view="edit"] .splitCopyBtn:focus-visible,
   body[data-button-style="console"] #splitsBlock .splitsBulkBar button:focus-visible,
   body[data-button-style="console"] #splitsBlock .weightsBulkBar button:focus-visible,
   body[data-button-style="console"] #splitsBlock .splitsSavedRecipesActions button:focus-visible,
