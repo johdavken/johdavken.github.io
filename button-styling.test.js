@@ -52,7 +52,7 @@ test("the preference persists locally and restores through the standard payload 
 
 test("the treatment is desktop-scoped and every selector stays inside a treated panel", () => {
   assert.match(buttonCss, /@media \(min-width: 901px\) and \(pointer: fine\)\{/);
-  const PANELS = ["#splitsBlock", "#splitsArea", "#resultsBlock"];
+  const PANELS = ["#splitsBlock", "#splitsArea", "#resultsBlock", "#lineSyncBlock"];
   const ruleLines = buttonCss
     .split("\n")
     .map(line => line.trim())
@@ -102,6 +102,15 @@ test("console reaches the Timeline panel control bar: bay + chips, Show all as a
   assert.match(buttonCss, /#showPumpOffToggle\[aria-pressed="true"\]\{[\s\S]*?background: var\(--btnstyle-ink\)/);
   // the row ribbon / pump toggles / NEEDS WEIGHT group are not touched
   assert.doesNotMatch(buttonCss, /\.pumpToggle|\.resultRow|\.resultNeedsWeight|#resultsArea/);
+});
+
+test("console reaches RT Sync's desktop CTAs + the generate-code bay", () => {
+  assert.match(buttonCss, /body\[data-button-style="console"\] #lineSyncBlock \.lineSyncGeneratedCodePanel\{[\s\S]*?border-radius: 7px/);
+  assert.match(buttonCss, /#lineSyncBlock #desktopLineSyncSetupBtn,[\s\S]*?#lineSyncRetryBtn,[\s\S]*?#lineSyncGenerateCodeBtn,[\s\S]*?#lineSyncCopyCodeBtn\{/);
+  // primary CTAs become the inverted key, but only while armed
+  assert.match(buttonCss, /#desktopLineSyncSetupBtn:not\(:disabled\),[\s\S]*?#lineSyncGenerateCodeBtn:not\(:disabled\)\{[\s\S]*?background: var\(--btnstyle-ink\)/);
+  // desktop-only: no mobile RT Sync buttons pulled in
+  assert.doesNotMatch(buttonCss, /#lineSyncLeaveBtn|#lineSyncRetryMobileBtn|#lineSyncJoinBtn/);
 });
 
 test("the treatment reuses existing theme tokens, not hard-coded colours", () => {

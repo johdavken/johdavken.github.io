@@ -8,8 +8,9 @@
  * leaves the shipped look untouched.
  *
  * Scope, deliberately narrow:
- *   - the Recipe / Weights panel (#splitsBlock) and the Timeline panel's
- *     control bar (#resultsBlock #timelinePane .timelineControlBar)
+ *   - the Recipe / Weights panel (#splitsBlock), the Timeline panel's
+ *     control bar (#resultsBlock #timelinePane .timelineControlBar), and
+ *     RT Sync's desktop action buttons (#lineSyncBlock)
  *   - the toolbars, surface by surface:
  *       CMD  = #recipeHeaderActionPill's buttons (Edit/Done, Load, Print),
  *              plus the Hopper Weights page's relocated Summary/Edit toggle
@@ -22,6 +23,8 @@
  *              overflow menu
  *       TIME = the Timeline panel's control bar (Show all / Reset tracking
  *              / settings gear). The row ribbon below is untouched.
+ *       SYNC = RT Sync's desktop CTAs (Connect This Desktop, Reconnect,
+ *              Generate Link Code, Copy Code) + the generate-code panel bay.
  *     Apply and the Undo/Redo history pair only get their corner radius
  *     matched, so no stray rounded button sits beside the treated ones.
  *   - only at the desktop breakpoint the rest of desktop.css uses
@@ -182,6 +185,34 @@ body[data-button-style]{
     color: var(--panel);
   }
 
+  /* ---- RT Sync panel (desktop) ----------------------------------
+     RT Sync's desktop actions are scattered CTAs, not a single bar.
+     Give each the console chip; the "Connect another device" panel
+     (.lineSyncGeneratedCodePanel) is already a bordered box, so retune it
+     into the tinted console bay. Primary = Connect This Desktop /
+     Generate Link Code (an inverted key); the rest are plain chips. */
+  body[data-button-style="console"] #lineSyncBlock .lineSyncGeneratedCodePanel{
+    border: 0;
+    border-radius: 7px;
+    background: color-mix(in srgb, var(--btnstyle-surface) 55%, transparent);
+  }
+  body[data-button-style="console"] #lineSyncBlock #desktopLineSyncSetupBtn,
+  body[data-button-style="console"] #lineSyncBlock #lineSyncRetryBtn,
+  body[data-button-style="console"] #lineSyncBlock #lineSyncGenerateCodeBtn,
+  body[data-button-style="console"] #lineSyncBlock #lineSyncCopyCodeBtn{
+    min-height: 30px;
+    border: 0;
+    border-radius: 4px;
+    background: var(--btnstyle-surface);
+    color: var(--btnstyle-ink);
+    box-shadow: 0 1px 0 var(--btnstyle-edge);
+  }
+  body[data-button-style="console"] #lineSyncBlock #desktopLineSyncSetupBtn:not(:disabled),
+  body[data-button-style="console"] #lineSyncBlock #lineSyncGenerateCodeBtn:not(:disabled){
+    background: var(--btnstyle-ink);
+    color: var(--panel);
+  }
+
   /* Keep the focus ring legible on the treated controls. */
   body[data-button-style="console"] #splitsBlock #recipeHeaderActionPill button:focus-visible,
   body[data-button-style="console"] #splitsBlock #recipeHeaderControls .weightsHeaderViewToggle button:focus-visible,
@@ -190,7 +221,11 @@ body[data-button-style]{
   body[data-button-style="console"] #splitsBlock .splitsSavedRecipesActions button:focus-visible,
   body[data-button-style="console"] #splitsBlock .splitsSavedRecipesActions .workspaceConfigurationOverflow > summary:focus-visible,
   body[data-button-style="console"] #splitsBlock .workspaceConfigurationOverflowMenu button:focus-visible,
-  body[data-button-style="console"] #resultsBlock #timelinePane .timelineControlBar button:focus-visible{
+  body[data-button-style="console"] #resultsBlock #timelinePane .timelineControlBar button:focus-visible,
+  body[data-button-style="console"] #lineSyncBlock #desktopLineSyncSetupBtn:focus-visible,
+  body[data-button-style="console"] #lineSyncBlock #lineSyncRetryBtn:focus-visible,
+  body[data-button-style="console"] #lineSyncBlock #lineSyncGenerateCodeBtn:focus-visible,
+  body[data-button-style="console"] #lineSyncBlock #lineSyncCopyCodeBtn:focus-visible{
     outline: 2px solid var(--focus-border);
     outline-offset: 2px;
   }
