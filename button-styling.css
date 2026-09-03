@@ -1,0 +1,405 @@
+/* =========================================================================
+ * Station console — the desktop button treatment.
+ *
+ * Trialled as a Display setting with seven treatments (ports of
+ * previews/recipe-weights-toolbar-button-directions.html); Station console
+ * was the one kept, and it is now simply how desktop buttons look. There is
+ * no picker and no attribute gate any more - these rules are unconditional
+ * within the desktop media query below.
+ *
+ * Scope, deliberately narrow:
+ *   - the Recipe / Weights panel (#splitsBlock), the Timeline panel's
+ *     control bar (#resultsBlock #timelinePane .timelineControlBar),
+ *     RT Sync's desktop action buttons (#lineSyncBlock), the Tools
+ *     section's per-tool action buttons (#toolsBlock), the Sudo Access
+ *     sub-panels (.adminResinPanel), the Dashboard's changeover-refresh
+ *     button (#dashboardPanel .dashboardChangeoverRefresh), and the
+ *     determine-changeover wizard dialog (#changeoverWizardDialog)
+ *   - the toolbars, surface by surface:
+ *       CMD  = #recipeHeaderActionPill's buttons (Edit/Done, Load, Print),
+ *              plus the Hopper Weights page's relocated Summary/Edit toggle
+ *              (.weightsHeaderViewToggle in #recipeHeaderControls)
+ *       BULK = the Edit-mode bulk bar's Clear / Empty cells / Reset /
+ *              Rearrange (every .bulkTextAction in the bar, plus the
+ *              #resetAllSplits danger button), and the per-layer "Match X"
+ *              copy buttons that appear in the grid header in Edit view
+ *              (.splitCopyBtn)
+ *       BOOK = the Recipe Book AND Weight Profiles panels' shared desktop
+ *              select-a-row-then-act bar (.splitsSavedRecipesActions) + its
+ *              overflow menu
+ *       TIME = the Timeline panel's control bar (Show all / Reset tracking
+ *              / settings gear). The row ribbon below is untouched.
+ *       SYNC = RT Sync's desktop CTAs (Connect This Desktop, Reconnect,
+ *              Generate Link Code, Copy Code) + the generate-code panel bay.
+ *       TOOLS = Resin Reference's Copy buttons, Scan Recipe's three scan
+ *              buttons + info toggles (in a bay), Bulk Density's save bar
+ *              (bay) + Save to Resin Database (inverted key).
+ *       ADMIN = the .adminResinPanel sub-panels' shared .adminToolbar (bay)
+ *              and every .primary / .secondary / .danger action button in
+ *              them (Add resin, Save, Delete, Refresh, recovery controls,
+ *              per-member Make owner / Remove, ...). The nav-row buttons
+ *              carry none of those classes, so they stay list rows.
+ *       WIZARD = the changeover wizard's per-step .changeoverWizardActions
+ *              bar (bay) + Back / Next / Adjust / Use chips and the
+ *              .changeoverWizardChoices tiles (picked one inverted).
+ *     Apply and the Undo/Redo history pair only get their corner radius
+ *     matched, so no stray rounded button sits beside the treated ones.
+ *   - only at the desktop breakpoint the rest of desktop.css uses
+ *     (min-width:901px and pointer:fine)
+ *
+ * Every selector keeps a leading `body ` on purpose. It is not decoration:
+ * two of these targets (#applyBulkSplit and .timelineControlBar) are pinned
+ * by rules in styles.css/desktop.css with identical id+class weight, so
+ * without that extra element in the selector they would only win on source
+ * order. The `body` restores a clean specificity win and keeps every
+ * override here !important-free.
+ *
+ * Below 901px, or on any coarse-pointer device, none of this applies and the
+ * base button rules in styles.css render instead - that is what mobile and
+ * tablet still use, so those base rules must stay.
+ * ===================================================================== */
+
+body{
+  /* Re-use the per-theme accent/danger the header pill already tunes, with
+     plain fallbacks. One place to retune if it reads wrong on a theme. */
+  --btnstyle-accent: var(--recipe-pill-accent, var(--focus-border));
+  --btnstyle-danger: var(--recipe-pill-danger, var(--bad));
+  --btnstyle-edge: var(--btn-secondary-border);
+  --btnstyle-surface: var(--panel2);
+  --btnstyle-ink: var(--text);
+  --btnstyle-on-fill: #fff;
+}
+
+@media (min-width: 901px) and (pointer: fine){
+
+  /* ---- Station console -------------------------------------------
+     Each action row is a contained bay: a padded, softly-tinted panel with
+     small rounded controls sitting on it. The bulk bay is
+     .splitsEditRowSecondary itself (not its .splitsBulkActions child), which
+     also overrides that element's border-radius:999px pill-clip in
+     styles.css so its end buttons - Clear on the left, Rearrange on the
+     right - stop rounding into pill caps. */
+  body #splitsBlock #recipeHeaderActionPill,
+  body #splitsArea #splitsBulkBar .splitsEditRowSecondary,
+  body #splitsBlock .weightsBulkActions{
+    padding: 6px 8px;
+    border-radius: 7px;
+    background: color-mix(in srgb, var(--btnstyle-surface) 55%, transparent);
+  }
+  body #splitsArea #splitsBulkBar .splitsEditRowSecondary{
+    overflow: visible;
+  }
+  body #splitsArea #splitsBulkBar .splitsEditRowSecondary > .splitsBulkActions{
+    border-radius: 7px;
+  }
+
+  body #splitsBlock #recipeHeaderActionPill .recipeHeaderAction,
+  body #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
+  body #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-weight-view="edit"],
+  body #splitsBlock .splitsBulkBar .bulkTextAction,
+  body #splitsBlock .weightsBulkBar .bulkTextAction,
+  body #splitsBlock #resetAllSplits{
+    min-height: 30px;
+    border: 0;
+    border-radius: 4px;
+    background: var(--btnstyle-surface);
+    color: var(--btnstyle-ink);
+    box-shadow: 0 1px 0 var(--btnstyle-edge);
+  }
+  /* Controls the preview omits (Apply, Undo/Redo) - radius match only so
+     nothing stays a different shape. #applyBulkSplit is pinned by a 3-id
+     rule in styles.css, so this is scoped through #splitsArea #splitsBulkBar
+     to outrank it. */
+  body #splitsArea #splitsBulkBar #applyBulkSplit,
+  body #splitsArea #splitsBulkBar .recipeHistoryAction,
+  body #splitsBlock .weightsBulkBar #applyBulkWeight{
+    border-radius: 4px;
+  }
+  /* Primary = the Edit/Done toggle: an inverted key, ink fill on light text.
+     On the Hopper Weights page the same Summary/Edit control is relocated
+     into #recipeHeaderControls (not the action pill) and carries
+     .weightsHeaderViewToggle, so it needs its own selector. */
+  body #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
+  body #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-weight-view="edit"],
+  body #splitsBlock #recipeHeaderControls .weightsHeaderViewToggle button[data-weight-view="edit"]{
+    min-height: 30px;
+    border: 0;
+    border-radius: 4px;
+    background: var(--btnstyle-ink);
+    color: var(--panel);
+    box-shadow: 0 1px 0 var(--btnstyle-edge);
+  }
+  /* Destructive = Reset Recipe: solid danger. */
+  body #splitsBlock #resetAllSplits{
+    background: var(--btnstyle-danger);
+    color: var(--btnstyle-on-fill);
+  }
+
+  /* The per-layer "Match X" copy buttons in the recipe grid header. They
+     only exist in Edit view (styles.css hides them in Summary), so this is
+     scoped to [data-recipe-view="edit"]. Chipped off their pill shape;
+     kept compact - they sit inside a table header, not on a toolbar. */
+  body #splitsArea[data-recipe-view="edit"] .splitCopyBtn{
+    border: 0;
+    border-radius: 4px;
+    background: var(--btnstyle-surface);
+    color: var(--btnstyle-ink);
+    box-shadow: 0 1px 0 var(--btnstyle-edge);
+  }
+  body #splitsArea[data-recipe-view="edit"] .splitCopyBtn:hover{
+    background: var(--btnstyle-surface);
+    filter: brightness(1.06);
+  }
+
+  /* ---- Recipe Book + Weight Profiles (desktop) ----------------------
+     Both panels share .splitsSavedRecipesActions - the select-a-row-then-
+     act bar (Save / Load / Update / more). It becomes one contained bay,
+     matching the header and bulk rows. Desktop only: the <=700px block
+     collapses this same bar to round icon buttons, which this must not
+     touch (the media query keeps it out). The list rows below stay as
+     they are - selectable cards, not buttons. Primary and destructive are
+     targeted by .primary / .danger so both panels' differently-named
+     Load / Delete buttons are covered. */
+  body #splitsBlock .splitsSavedRecipesActions{
+    padding: 6px 8px;
+    border-radius: 7px;
+    background: color-mix(in srgb, var(--btnstyle-surface) 55%, transparent);
+  }
+  body #splitsBlock .splitsSavedRecipesActions > button,
+  body #splitsBlock .splitsSavedRecipesActions .workspaceConfigurationOverflow > summary,
+  body #splitsBlock .workspaceConfigurationOverflowMenu button{
+    min-height: 30px;
+    border: 0;
+    border-radius: 4px;
+    background: var(--btnstyle-surface);
+    color: var(--btnstyle-ink);
+    box-shadow: 0 1px 0 var(--btnstyle-edge);
+    /* Match the header / bulk console chips - not the app's uppercase
+       secondary-button convention this bar otherwise inherits. */
+    text-transform: none;
+    letter-spacing: normal;
+  }
+  /* Popup items already sit on a shadowed panel - drop the extra lift. */
+  body #splitsBlock .workspaceConfigurationOverflowMenu button{
+    box-shadow: none;
+  }
+  /* Primary = Load: an inverted key. Falls back to a plain chip while it is
+     disabled (no row selected), so it doesn't read as armed. */
+  body #splitsBlock .splitsSavedRecipesActions > button.primary:not(:disabled){
+    background: var(--btnstyle-ink);
+    color: var(--panel);
+  }
+  /* Destructive = Delete, in the overflow menu: solid danger. */
+  body #splitsBlock .workspaceConfigurationOverflowMenu button.danger{
+    background: var(--btnstyle-danger);
+    color: var(--btnstyle-on-fill);
+  }
+
+  /* ---- Timeline panel (desktop) -----------------------------------
+     The control bar (Show all / Reset tracking / settings gear) becomes
+     one contained bay of small chips, matching the Recipe / Weights
+     toolbars. #resultsBlock #timelinePane (two ids) matches desktop.css's
+     own prefix so this always wins. The row ribbon below - status nodes,
+     resin chips, the per-row pump toggles, the NEEDS WEIGHT group - is
+     left alone; those are status surfaces, not a toolbar. */
+  body #resultsBlock #timelinePane .timelineControlBar{
+    gap: 6px;
+    padding: 6px 8px;
+    border-bottom: 0;
+    border-radius: 7px;
+    background: color-mix(in srgb, var(--btnstyle-surface) 55%, transparent);
+  }
+  body #resultsBlock #timelinePane .timelineControlBar #showPumpOffToggle,
+  body #resultsBlock #timelinePane .timelineControlBar #resetTrackingBtn,
+  body #resultsBlock #timelinePane .timelineControlBar #timelineDisplayToggle{
+    min-height: 30px;
+    border: 0;
+    border-radius: 4px;
+    background: var(--btnstyle-surface);
+    color: var(--btnstyle-ink);
+    box-shadow: 0 1px 0 var(--btnstyle-edge);
+  }
+  /* Show all reads as a pressed key while its filter is on. */
+  body #resultsBlock #timelinePane .timelineControlBar #showPumpOffToggle[aria-pressed="true"]{
+    background: var(--btnstyle-ink);
+    color: var(--panel);
+  }
+
+  /* ---- RT Sync panel (desktop) ----------------------------------
+     RT Sync's desktop actions are scattered CTAs, not a single bar.
+     Give each the console chip; the "Connect another device" panel
+     (.lineSyncGeneratedCodePanel) is already a bordered box, so retune it
+     into the tinted console bay. Primary = Connect This Desktop /
+     Generate Link Code (an inverted key); the rest are plain chips. */
+  body #lineSyncBlock .lineSyncGeneratedCodePanel{
+    border: 0;
+    border-radius: 7px;
+    background: color-mix(in srgb, var(--btnstyle-surface) 55%, transparent);
+  }
+  body #lineSyncBlock #desktopLineSyncSetupBtn,
+  body #lineSyncBlock #lineSyncRetryBtn,
+  body #lineSyncBlock #lineSyncGenerateCodeBtn,
+  body #lineSyncBlock #lineSyncCopyCodeBtn{
+    min-height: 30px;
+    border: 0;
+    border-radius: 4px;
+    background: var(--btnstyle-surface);
+    color: var(--btnstyle-ink);
+    box-shadow: 0 1px 0 var(--btnstyle-edge);
+  }
+  body #lineSyncBlock #desktopLineSyncSetupBtn:not(:disabled),
+  body #lineSyncBlock #lineSyncGenerateCodeBtn:not(:disabled){
+    background: var(--btnstyle-ink);
+    color: var(--panel);
+  }
+
+  /* ---- Tools section (desktop) --------------------------------
+     Most tools are input + live result with no buttons. The ones with
+     actions:
+       - Resin Reference: the two Copy buttons -> chips
+       - Scan Recipe: the three Scan X buttons + their info toggles, sitting
+         in one console bay
+       - Bulk Density Measurement: the save bar becomes a bay, "Save to
+         Resin Database" the inverted key while it is enabled
+     The left tool tab list (.toolsIndexButton) is navigation, left alone
+     like the Recipe / Timeline tabs. */
+  body #toolsBlock .recipeScanOptions,
+  body #toolsBlock .bulkDensitySaveBar{
+    border: 0;
+    border-radius: 7px;
+    padding: 8px 10px;
+    background: color-mix(in srgb, var(--btnstyle-surface) 55%, transparent);
+  }
+  body #toolsBlock .resinLookupCopyButton,
+  body #toolsBlock .recipeScanOptionRow > button,
+  body #toolsBlock #bulkDensitySaveButton{
+    min-height: 30px;
+    border: 0;
+    border-radius: 4px;
+    background: var(--btnstyle-surface);
+    color: var(--btnstyle-ink);
+    box-shadow: 0 1px 0 var(--btnstyle-edge);
+    text-transform: none;
+    letter-spacing: normal;
+  }
+  /* The Scan info toggles keep their 24px square; just chip the surface. */
+  body #toolsBlock .recipeScanInfo > summary{
+    border-radius: 4px;
+    background: var(--btnstyle-surface);
+    box-shadow: 0 1px 0 var(--btnstyle-edge);
+  }
+  body #toolsBlock #bulkDensitySaveButton:not(:disabled){
+    background: var(--btnstyle-ink);
+    color: var(--panel);
+  }
+
+  /* ---- Sudo Access sub-panels (desktop) -----------------------
+     Resin Database, Line Configuration, Beta Applicants, Database Health
+     and Workspace Management all share the .adminResinPanel wrapper. Their
+     shared .adminToolbar header bar becomes a console bay; every real
+     action button in these panels takes the chip (the selectable list
+     rows - .adminResinRow, .workspaceRecoveryRow - carry none of the
+     .primary/.secondary/.danger classes, so they are untouched). Primary
+     -> inverted key while enabled, destructive -> solid danger while
+     enabled. The Sudo Access hub itself (#sudoAccessBlock) is a menu of
+     navigation rows and is left alone, like every other nav list. Modal
+     admin dialogs live outside .adminResinPanel, so they are untouched. */
+  body .adminResinPanel .adminToolbar{
+    border-radius: 7px;
+    padding: 8px 10px;
+    background: color-mix(in srgb, var(--btnstyle-surface) 55%, transparent);
+  }
+  body .adminResinPanel button.primary,
+  body .adminResinPanel button.secondary,
+  body .adminResinPanel button.danger,
+  body .adminResinPanel button[data-button-variant="primary"]{
+    min-height: 30px;
+    border: 0;
+    border-radius: 4px;
+    background: var(--btnstyle-surface);
+    color: var(--btnstyle-ink);
+    box-shadow: 0 1px 0 var(--btnstyle-edge);
+    text-transform: none;
+    letter-spacing: normal;
+  }
+  body .adminResinPanel button.primary:not(:disabled),
+  body .adminResinPanel button[data-button-variant="primary"]:not(:disabled){
+    background: var(--btnstyle-ink);
+    color: var(--panel);
+  }
+  body .adminResinPanel button.danger:not(:disabled){
+    background: var(--btnstyle-danger);
+    color: var(--btnstyle-on-fill);
+  }
+
+  /* ---- Dashboard (desktop) --------------------------------------
+     One action button: the changeover-estimate refresh (a 32px icon
+     button beside the Changeover label). "Back to Line" is navigation,
+     left alone. */
+  body #dashboardPanel .dashboardChangeoverRefresh{
+    border-radius: 4px;
+    background: var(--btnstyle-surface);
+    color: var(--btnstyle-ink);
+    box-shadow: 0 1px 0 var(--btnstyle-edge);
+  }
+
+  /* ---- Changeover calculator (desktop) ------------------------
+     The determine-changeover wizard dialog. Its per-step action bar
+     (.changeoverWizardActions, a segmented pill in styles.css) becomes a
+     console bay; Back / Next / Adjust / Use become chips, with Next / Use
+     the inverted key. The number and Yes/No choice tiles chip too, the
+     picked one inverted. Desktop only: the mobile wizard keeps its large
+     touch buttons. The × close and the grab handle are dialog chrome,
+     left alone. */
+  body #changeoverWizardDialog .changeoverWizardActions{
+    gap: 6px;
+    padding: 6px;
+    overflow: visible;
+    border: 0;
+    border-radius: 7px;
+    background: color-mix(in srgb, var(--btnstyle-surface) 55%, transparent);
+  }
+  body #changeoverWizardDialog .changeoverWizardActions button,
+  body #changeoverWizardDialog .changeoverWizardChoices button{
+    min-height: 30px;
+    border: 0;
+    border-radius: 4px;
+    background: var(--btnstyle-surface);
+    color: var(--btnstyle-ink);
+    box-shadow: 0 1px 0 var(--btnstyle-edge);
+  }
+  body #changeoverWizardDialog .changeoverWizardActions button.primary,
+  body #changeoverWizardDialog .changeoverWizardChoices button.selected{
+    background: var(--btnstyle-ink);
+    color: var(--panel);
+    box-shadow: none;
+  }
+
+  /* Keep the focus ring legible on the treated controls. */
+  body #splitsBlock #recipeHeaderActionPill button:focus-visible,
+  body #splitsBlock #recipeHeaderControls .weightsHeaderViewToggle button:focus-visible,
+  body #splitsArea[data-recipe-view="edit"] .splitCopyBtn:focus-visible,
+  body #splitsBlock .splitsBulkBar button:focus-visible,
+  body #splitsBlock .weightsBulkBar button:focus-visible,
+  body #splitsBlock .splitsSavedRecipesActions button:focus-visible,
+  body #splitsBlock .splitsSavedRecipesActions .workspaceConfigurationOverflow > summary:focus-visible,
+  body #splitsBlock .workspaceConfigurationOverflowMenu button:focus-visible,
+  body #resultsBlock #timelinePane .timelineControlBar button:focus-visible,
+  body #lineSyncBlock #desktopLineSyncSetupBtn:focus-visible,
+  body #lineSyncBlock #lineSyncRetryBtn:focus-visible,
+  body #lineSyncBlock #lineSyncGenerateCodeBtn:focus-visible,
+  body #lineSyncBlock #lineSyncCopyCodeBtn:focus-visible,
+  body #toolsBlock .resinLookupCopyButton:focus-visible,
+  body #toolsBlock .recipeScanOptionRow > button:focus-visible,
+  body #toolsBlock .recipeScanInfo > summary:focus-visible,
+  body #toolsBlock #bulkDensitySaveButton:focus-visible,
+  body .adminResinPanel button.primary:focus-visible,
+  body .adminResinPanel button.secondary:focus-visible,
+  body .adminResinPanel button.danger:focus-visible,
+  body #dashboardPanel .dashboardChangeoverRefresh:focus-visible,
+  body #changeoverWizardDialog .changeoverWizardActions button:focus-visible,
+  body #changeoverWizardDialog .changeoverWizardChoices button:focus-visible{
+    outline: 2px solid var(--focus-border);
+    outline-offset: 2px;
+  }
+}
