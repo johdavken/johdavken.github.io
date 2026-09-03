@@ -403,14 +403,30 @@ test("the weight/height cell inputs stack on every width, not just the tablet", 
   assert.match(styles, /body #weightsArea \.weightsMatrix:has\(\.weightsLayerHeader\) \.desktopWeightEditFields label small\{[\s\S]*?order:1;/);
 });
 
-test("the Smart Hoppers control in the gutter is a highlighted word, not the ambiguous pill switch", () => {
+test("the Smart Hoppers control lives in the always-visible bulk toolbar, not the gutter", () => {
   const body = (()=>{const start=app.indexOf("function renderWeightsArea(");const next=app.indexOf("\n    function ",start+1);return app.slice(start,next===-1?undefined:next);})();
-  assert.match(body, /smartToggleEl\.classList\.add\("weightsCornerSmartLabel"\);/);
-  assert.match(body, /smartToggleEl\.textContent = "Smart Hoppers";/);
-  // Base .toggle pill/knob zeroed; on-state gets the title colour + full opacity.
-  assert.match(styles, /body #weightsArea \.weightsCornerSmartLabel\.toggle\{[\s\S]*?opacity:\.55;/);
-  assert.match(styles, /body #weightsArea \.weightsCornerSmartLabel\.toggle\.on\{[\s\S]*?color:var\(--title\);[\s\S]*?opacity:1;/);
-  assert.match(styles, /body #weightsArea \.weightsCornerSmartLabel\.toggle::after\{ content:none; \}/);
+  // A "Smart Hoppers" label + the real #smartHoppersToggle pill, moved (not
+  // rebuilt) into a field at the head of the fields row. The gutter keeps
+  // its "Layer" caption.
+  assert.match(body, /const smartSlot = toolbar\.querySelector\("\[data-smart-slot\]"\);/);
+  assert.match(body, /smartField\.appendChild\(smartToggleEl\);/);
+  assert.match(body, /smartSlot\.replaceWith\(smartField\);/);
+  assert.match(body, /corner\.textContent = "Layer";/);
+  assert.doesNotMatch(body, /weightsCornerSmartLabel|weightsCornerToggle/);
+  assert.match(styles, /body #weightsArea \.weightsBulkBar \.weightsBulkSmartField\{/);
+  assert.match(styles, /body #weightsArea \.weightsBulkBar \.weightsBulkSmartField \.toggle\{/);
+});
+
+test("the toolbar is always visible - it carries the Smart Hoppers toggle", () => {
+  const body = (()=>{const start=app.indexOf("function renderWeightsArea(");const next=app.indexOf("\n    function ",start+1);return app.slice(start,next===-1?undefined:next);})();
+  assert.match(body, /toolbar\.hidden = false;/);
+  assert.doesNotMatch(body, /toolbar\.hidden = selected\.size === 0;/);
+});
+
+test("with no identified line, a muted 'Smart Hoppers . unavailable' marker holds the toolbar slot", () => {
+  const body = (()=>{const start=app.indexOf("function renderWeightsArea(");const next=app.indexOf("\n    function ",start+1);return app.slice(start,next===-1?undefined:next);})();
+  assert.match(body, /smartSlot\.textContent = "Smart Hoppers \u00b7 unavailable";/);
+  assert.match(styles, /body #weightsArea \.weightsBulkBar \.weightsBulkSmartField\.unavailable\{/);
 });
 
 test("the weights bulk Apply button reads just 'Apply', fixed", () => {
@@ -425,17 +441,12 @@ test("on the touch shell the weights bulk bar is a compact single column so 'No 
   assert.match(styles, /body\[data-shell="touch"\] #weightsArea \.weightsBulkBar \.weightsInputWithUnit input\{[\s\S]*?font-size:var\(--font-small\);/);
 });
 
-test("the Smart Hoppers toggle moves into the grid's gutter corner, replacing the Layer caption", () => {
+test("the smart control and circumference are pulled from desktopControls, which then collapses", () => {
   const body = (()=>{const start=app.indexOf("function renderWeightsArea(");const next=app.indexOf("\n    function ",start+1);return app.slice(start,next===-1?undefined:next);})();
   assert.match(body, /const smartToggleEl = desktopControls\.querySelector\("#smartHoppersToggle"\);/);
-  assert.match(body, /corner\.classList\.add\("weightsCornerToggle"\);/);
-  assert.match(body, /toggleWrap\.appendChild\(smartToggleEl\);/);
-  // Only when a toggle actually exists (an identified line); otherwise the
-  // corner keeps its caption and the "join a workspace" note stays put.
-  assert.match(body, /\} else \{\s*\n\s*corner\.textContent = "Layer";/);
   assert.match(body, /desktopControls\.querySelector\("\.desktopWeightsSmartControl"\)\?\.remove\(\);/);
-  // Absolutely positioned so it can never grow the cell.
-  assert.match(styles, /body #weightsArea \.weightsCornerToggleWrap\{[\s\S]*?position:absolute;[\s\S]*?inset:0;/);
+  // The emptied controls strip is hidden so it adds no gap above the grid.
+  assert.match(styles, /body #weightsArea > \.desktopWeightsControls:not\(:has\(\*\)\)\{[\s\S]*?display:none;/);
 });
 
 test("the shared circumference field relocates into the bulk toolbar, between Apply and Clear", () => {

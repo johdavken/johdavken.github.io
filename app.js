@@ -3078,9 +3078,13 @@
       const toolbar = document.createElement("div");
       toolbar.id = "desktopWeightsBulkContext";
       toolbar.className = "weightsBulkBar desktopWeightsBulkContext";
-      toolbar.hidden = true;
+      // Always present on the reworked grid, matching the Recipe grid's own
+      // toolbar. It carries the Smart Hoppers toggle (moved in below), which
+      // has to be reachable whether or not a hopper is selected.
+      toolbar.hidden = false;
       toolbar.innerHTML = `
         <div class="weightsBulkFieldsRow">
+          <span class="weightsBulkSmart" data-smart-slot></span>
           <label class="weightsBulkField" for="bulkWeight">
             <span>Weight</span>
             <span class="weightsInputWithUnit">
@@ -3092,8 +3096,8 @@
           ${state.smartHoppersEnabled && geometryMode === "cylindrical" ? '<label class="weightsBulkField" for="bulkHeight"><span>Height</span><span class="weightsInputWithUnit"><input id="bulkHeight" type="text" inputmode="decimal" placeholder="No change" /><span>in</span></span></label>' : ""}
           <button id="applyBulkWeight" class="secondary" type="button" disabled>Apply</button>
           <div class="weightsBulkActions">
-            <div id="weightSelectionStatus" class="tiny weightsSelectionStatus" role="status" aria-live="polite">No hoppers selected</div>
-            <button id="clearWeightSelection" type="button" class="bulkTextAction">Clear selection</button>
+            <div id="weightSelectionStatus" class="tiny weightsSelectionStatus srOnly" role="status" aria-live="polite">No hoppers selected</div>
+            <button id="clearWeightSelection" type="button" class="bulkTextAction">Clear</button>
           </div>
         </div>
       `;
@@ -3141,32 +3145,34 @@
       corner.scope = "col";
       corner.className = "weightsRowCorner";
       // Transposed, the first column names layers and the header row names
-      // hopper positions - but the gutter corner is dead space, so the Smart
-      // Hoppers control moves into it (replacing the "Layer" caption) rather
-      // than taking a strip of its own above the grid. The pill switch reads
-      // as ambiguous at this size, so it is rendered as its own label
-      // instead: "Smart Hoppers", full-strength when on, faded when off.
-      // hookToggle still drives it - same element, same id, same role and
-      // .on class - only the styling changes. Its live-region state span
-      // rides along, visually hidden, for the announcement. Circumference,
-      // when Smart Hoppers is on and the line is cylindrical, moves into the
-      // bulk toolbar between Apply and Clear (below).
+      // hopper positions - the gutter corner keeps its caption. The Smart
+      // Hoppers control and the shared circumference field both move into
+      // the always-visible bulk toolbar instead: a "Smart Hoppers" label +
+      // pill at its left, circumference between Apply and Clear when the
+      // line is cylindrical. hookToggle still drives the same #smartHoppersToggle
+      // element, moved not rebuilt, so its wiring is untouched.
+      corner.textContent = "Layer";
       const smartToggleEl = desktopControls.querySelector("#smartHoppersToggle");
       const smartStateEl = desktopControls.querySelector(".desktopSmartHopperState");
       const circumferenceLabel = desktopControls.querySelector(".desktopSharedCircumference");
-      if (smartToggleEl){
-        corner.classList.add("weightsCornerToggle");
-        smartToggleEl.classList.add("weightsCornerSmartLabel");
-        smartToggleEl.textContent = "Smart Hoppers";
-        const toggleWrap = document.createElement("span");
-        toggleWrap.className = "weightsCornerToggleWrap";
-        if (smartStateEl){ smartStateEl.classList.add("srOnly"); toggleWrap.appendChild(smartStateEl); }
-        toggleWrap.appendChild(smartToggleEl);
-        corner.appendChild(toggleWrap);
-        // The heading/description that wrapped the toggle has no home now.
+      const smartSlot = toolbar.querySelector("[data-smart-slot]");
+      if (smartSlot){
+        if (smartToggleEl){
+          const smartField = document.createElement("span");
+          smartField.className = "weightsBulkField weightsBulkSmartField";
+          const smartLabel = document.createElement("span");
+          smartLabel.textContent = "Smart Hoppers";
+          smartField.appendChild(smartLabel);
+          if (smartStateEl){ smartStateEl.classList.add("srOnly"); smartField.appendChild(smartStateEl); }
+          smartField.appendChild(smartToggleEl);
+          smartSlot.replaceWith(smartField);
+        } else {
+          // No identified line - Smart Hoppers has no geometry to compute
+          // from. A muted, non-interactive marker keeps the control's place.
+          smartSlot.className = "weightsBulkField weightsBulkSmartField unavailable";
+          smartSlot.textContent = "Smart Hoppers · unavailable";
+        }
         desktopControls.querySelector(".desktopWeightsSmartControl")?.remove();
-      } else {
-        corner.textContent = "Layer";
       }
       if (circumferenceLabel){
         circumferenceLabel.classList.add("weightsBulkCircumference");
@@ -3441,9 +3447,8 @@
       });
 
       function updateSelectionUI(message){
-        // Selection is what raises the bulk bar now that there is no Edit
-        // view to enter, so the decision belongs on every selection change.
-        if (toolbar) toolbar.hidden = selected.size === 0;
+        // The toolbar is always present on the reworked grid (it carries the
+        // Smart Hoppers toggle); only the per-selection controls change.
         cellRefs.forEach((ref,key)=>{
           const isSelected = selected.has(key);
           ref.selector.checked = isSelected;
@@ -3512,8 +3517,7 @@
         weightsBulkModeActive = false;
         area.dataset.desktopWeightView = desktopWeightView;
         area.dataset.desktopBulkMode = "true";
-        // Selection raises the bulk bar, so it reserves no space while idle.
-        toolbar.hidden = selected.size === 0;
+        toolbar.hidden = false;
         // Nothing left to switch between, so the control goes away with the
         // mode rather than sitting there as a no-op.
         if (desktopViewToggle) desktopViewToggle.hidden = true;

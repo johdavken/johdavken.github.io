@@ -12502,60 +12502,36 @@ body[data-shell="touch"] #weightsArea .weightsBulkBar .weightsBulkActions #clear
   flex:0 0 auto;
 }
 
-/* 8. Smart Hoppers toggle in the grid's gutter corner, and the shared
-      circumference field relocated into the bulk toolbar.
+/* 8. Smart Hoppers control in the bulk toolbar, and the shared
+      circumference field relocated there too.
    -------------------------------------------------------------------------- */
 
-/* The corner keeps its sticky-left pinning; its control is laid over it,
-   never sized into it, so it cannot change the column width or the header
-   row height. */
-body #weightsArea .weightsMatrix .weightsRowCorner.weightsCornerToggle{
-  position:sticky;
-  overflow:visible;
+/* A "Smart Hoppers" label above its pill toggle, sized like the row's other
+   .weightsBulkField groups. Always present - the toggle has to be reachable
+   whether or not a hopper is selected. */
+body #weightsArea .weightsBulkBar .weightsBulkSmartField{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:4px;
+  margin:0;
+  flex:0 0 auto;
 }
-body #weightsArea .weightsCornerToggleWrap{
-  position:absolute;
-  inset:0;
-  display:grid;
-  place-items:center;
-  padding:0 8px;
-}
-
-/* The pill switch read as ambiguous at this size, so #smartHoppersToggle is
-   styled as its own word instead: "Smart Hoppers", full-strength and the
-   title colour when on, faded and muted when off. hookToggle still drives
-   the .on class; only the look changes, so the base .toggle pill/knob are
-   all zeroed out. */
-body #weightsArea .weightsCornerSmartLabel.toggle{
-  width:auto;
-  height:auto;
-  min-height:0;
-  padding:0;
-  border:0;
-  border-radius:0;
-  background:none;
-  box-shadow:none;
+body #weightsArea .weightsBulkBar .weightsBulkSmartField > span:first-child{
   font-size:var(--font-tiny);
-  font-weight:750;
-  line-height:1.2;
-  letter-spacing:.02em;
-  text-align:center;
-  text-transform:uppercase;
   color:var(--muted);
-  opacity:.55;
-  cursor:pointer;
-  transition:color .12s ease,opacity .12s ease;
 }
-body #weightsArea .weightsCornerSmartLabel.toggle::after{ content:none; }
-body #weightsArea .weightsCornerSmartLabel.toggle.on{
-  color:var(--title);
-  opacity:1;
-  font-weight:850;
+body #weightsArea .weightsBulkBar .weightsBulkSmartField .toggle{
+  --toggle-w:42px;
+  --toggle-h:24px;
+  --toggle-knob:18px;
 }
-body #weightsArea .weightsCornerSmartLabel.toggle:focus-visible{
-  outline:2px solid var(--focus-border);
-  outline-offset:2px;
-  border-radius:3px;
+/* No identified line: a muted, non-interactive marker holds the place. */
+body #weightsArea .weightsBulkBar .weightsBulkSmartField.unavailable{
+  align-self:center;
+  color:var(--muted);
+  font-size:var(--font-tiny);
+  opacity:.7;
 }
 
 /* Circumference sits between Apply and Clear in the bulk toolbar. It reuses
