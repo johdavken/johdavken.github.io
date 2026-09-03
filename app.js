@@ -2833,6 +2833,10 @@
       if (!isDesktopLayout()){
         return;
       }
+      // The Recipe Book owns this node while it is the active page (see
+      // renderSplitsArea) - both saved configuration types live there
+      // together now. Reclaiming it here would tear it back out mid-render.
+      if (isSavedRecipesPage()) return;
       if (profilesBlock.parentElement !== setupSection) weightsBlock.after(profilesBlock);
     }
 
@@ -3223,31 +3227,14 @@
       table.appendChild(tbody);
       frame.appendChild(table);
       scroll.appendChild(frame);
-      // Bulk edit is no longer a separate mode alongside Weight Profiles -
-      // it's folded into View: Edit (see the toolbar built above). Weight
-      // Profiles is the only thing left here, so it stands alone rather
-      // than sharing a tab strip with a sibling that no longer exists.
-      const actionToolbar = document.createElement("div");
-      actionToolbar.className = "desktopWeightsActionToolbar recipeUtilityTabs";
-      const profilesAction = document.createElement("button");
-      profilesAction.type = "button";
-      profilesAction.id = "desktopWeightProfilesButton";
-      profilesAction.className = "recipeUtilityTab recipeActionTab";
-      profilesAction.setAttribute("aria-expanded", "false");
-      profilesAction.setAttribute("aria-label", "Open receiver weight profiles");
-      profilesAction.innerHTML = '<span>Weight Profiles</span><svg viewBox="0 0 28 28" aria-hidden="true"><path d="M7 4h14l3 5v14l-4 3H8l-4-3V9z"/><path d="M9 12h10M9 16h10M9 20h6"/></svg>';
-      actionToolbar.append(profilesAction);
-
+      // Weight Profiles no longer lives on this page at all: both saved
+      // configuration types are shared workspace_configurations, and they
+      // now sit together in the Recipe Book (see renderSplitsArea, which
+      // moves #setupWeightProfilesBlock into that panel). Nothing is left
+      // to put in an action toolbar here.
       area.appendChild(desktopControls);
       area.appendChild(toolbar);
       area.appendChild(scroll);
-      area.appendChild(actionToolbar);
-      const profilesPanel = $("setupWeightProfilesBlock");
-      if (profilesPanel){
-        profilesPanel.open = true;
-        profilesPanel.hidden = true;
-        area.appendChild(profilesPanel);
-      }
 
       const bulkInput = toolbar.querySelector("#bulkWeight");
       const bulkHeightInput = toolbar.querySelector("#bulkHeight");
@@ -3308,19 +3295,13 @@
       // on a cell that isn't its input/wrench toggles selection, same as
       // the old bulk mode did) and reveals the toolbar built above;
       // switching back to Summary clears any selection and hides it.
+      // Kept as the single place that means "stop editing here" now that
+      // Weight Profiles has moved to the Recipe Book: the only thing it
+      // still does is drop the selection, which is what every caller
+      // (Android Back, page switches) actually wanted from it.
       function setDesktopProfilesOpen(open){
         desktopProfilesOpen = !!open;
-        if (desktopProfilesOpen){
-          setDesktopWeightView("summary");
-          if (profilesPanel){
-            profilesPanel.open = true;
-            profilesPanel.hidden = false;
-          }
-        } else if (profilesPanel) {
-          profilesPanel.hidden = true;
-        }
-        profilesAction.classList.toggle("active", desktopProfilesOpen);
-        profilesAction.setAttribute("aria-expanded", String(desktopProfilesOpen));
+        if (desktopProfilesOpen) setDesktopWeightView("summary");
       }
       exitWeightsBulkModeFn = () => setDesktopWeightView("summary");
       function setDesktopWeightView(mode){
@@ -3349,7 +3330,6 @@
         setDesktopWeightView(desktopWeightView === "edit" ? "summary" : "edit");
       });
       [bulkInput, bulkHeightInput].filter(Boolean).forEach(field=>field.addEventListener("input", ()=>updateSelectionUI()));
-      profilesAction.addEventListener("click", ()=>setDesktopProfilesOpen(!desktopProfilesOpen));
       applyButton.addEventListener("click", ()=>{
         const optionalValue = (field, label)=>{
           if (!field || !field.value.trim()) return { valid:true, value:null };
@@ -4228,6 +4208,12 @@
       const weightsArea = $("weightsArea");
       const weightsBlock = $("weightsBlock");
       const profilesBlock = $("setupWeightProfilesBlock");
+      // The Recipe Book parks the shared Weight Profiles block inside
+      // #splitsArea, and the area.innerHTML clear below would destroy the
+      // one real element every profile action is wired to. Return it to its
+      // stable Setup home first, on every page: the Book re-appends it
+      // further down when it rebuilds its panel.
+      if (profilesBlock && area.contains(profilesBlock)) weightsBlock?.after(profilesBlock);
       if (!isWeightsPage()){
         if (profilesBlock?.parentElement === weightsArea) weightsBlock?.after(profilesBlock);
         if (weightsArea && weightsBlock && weightsArea.parentElement !== weightsBlock.querySelector(":scope > .blockBody")){
@@ -4667,6 +4653,18 @@
       saveNextRecipeButton.disabled=!window.PolynNextRecipe?.isMeaningful(state.nextRecipe);
       saveNextRecipeButton.title=saveNextRecipeButton.disabled?"Create a Next Recipe before saving it":"Save the planned Next Recipe to this workspace";
       saveNextRecipeButton.addEventListener("click", ()=>openWorkspaceConfigurationDialog("save-next-recipe"));
+      // Weight Profiles is the Recipe Book's second section. It is the same
+      // real #setupWeightProfilesBlock element Line Setup uses - moved, not
+      // cloned - so its Save/Load/Update/Rename/Duplicate/Delete wiring and
+      // its element IDs keep a single owner. Both types are shared
+      // workspace_configurations; the Book is where saved configurations
+      // live, whichever kind they are.
+      if (reworkedGrid && profilesBlock){
+        profilesBlock.open = true;
+        profilesBlock.hidden = false;
+        profilesBlock.classList.add("savedRecipesProfilesSection");
+        savedRecipesPanel.append(profilesBlock);
+      }
       const mobileSavedRecipesSearchInput=savedRecipesPanel.querySelector("#mobileSavedRecipesSearch");
       mobileSavedRecipesSearchInput.value=splitsSavedRecipesSearch;
       mobileSavedRecipesSearchInput.addEventListener("input",event=>{

@@ -103,8 +103,10 @@ test("the gruvbox/industrial-slate rail caption reserves its own line height, so
   assert.match(rule, /overflow:hidden;/);
 });
 
-test("Weight Profiles stands alone in the desktop matrix action area - Bulk Edit was folded into View:Edit, not kept as a sibling tab", () => {
-  assert.match(app, /profilesAction\.innerHTML = '<span>Weight Profiles<\/span>/);
+test("the desktop matrix action area is gone - Bulk Edit folded into the always-live grid, Weight Profiles moved into the Recipe Book", () => {
+  // Both saved configuration types are shared workspace_configurations, so
+  // the Book holds both; the weights page keeps only its grid and bulk bar.
+  assert.match(app, /savedRecipesPanel\.append\(profilesBlock\);/);
   assert.doesNotMatch(app, /bulkModeButton|desktopWeightsBulkToggle/);
   assert.match(app, /desktopWeightsBulkContext/);
   assert.match(desktop, /desktopWeightsBulkContext\[hidden\]\{display:none!important\}/);

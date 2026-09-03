@@ -31,12 +31,13 @@ function functionBody(name){
   return app.slice(start, next === -1 ? undefined : next);
 }
 
-test("there is no standalone Bulk edit button/tab left in the desktop weights action row - Weight Profiles is the only item", () => {
+test("the desktop weights action row is gone entirely - Bulk edit was folded into the always-live grid, Weight Profiles moved to the Recipe Book", () => {
   const body = functionBody("renderWeightsArea");
   assert.doesNotMatch(body, /<span>Bulk edit<\/span>/);
   assert.doesNotMatch(body, /bulkModeButton|desktopWeightsBulkToggle/);
-  assert.match(body, /profilesAction\.innerHTML = '<span>Weight Profiles<\/span>/);
-  assert.match(body, /actionToolbar\.append\(profilesAction\);/);
+  // Nothing left to put in it, so the toolbar is not built at all.
+  assert.doesNotMatch(body, /desktopWeightsActionToolbar/);
+  assert.doesNotMatch(body, /profilesAction/);
 });
 
 test("the wide weights grid is always live - selection needs no mode, and desktopBulkMode is simply always on", () => {
@@ -71,9 +72,9 @@ test("the toolbar's own DOM order is Smart Hoppers/View controls, then the toolb
   assert.ok(controlsAppend > -1 && toolbarAppend > controlsAppend && scrollAppend > toolbarAppend);
 });
 
-test("opening Weight Profiles still drops any in-progress selection through the same exit call", () => {
+test("the profiles exit call survives as the one \"stop editing here\" hook, and still drops the selection", () => {
   const body = functionBody("renderWeightsArea");
-  assert.match(body, /function setDesktopProfilesOpen\(open\)\{\s*\n\s*desktopProfilesOpen = !!open;\s*\n\s*if \(desktopProfilesOpen\)\{\s*\n\s*setDesktopWeightView\("summary"\);/);
+  assert.match(body, /function setDesktopProfilesOpen\(open\)\{\s*\n\s*desktopProfilesOpen = !!open;\s*\n\s*if \(desktopProfilesOpen\) setDesktopWeightView\("summary"\);/);
   // "summary" no longer names a view - it is the one thing that request
   // still means now that the grid is always live: clear the selection.
   assert.match(body, /if \(mode !== "edit"\) selected\.clear\(\);/);

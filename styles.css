@@ -11941,3 +11941,27 @@ body #weightsArea .weightsMatrix:has(.weightsLayerHeader) .weightsMatrixCell inp
   width:100%;
   min-width:0;
 }
+
+/* --------------------------------------------------------------------------
+   Weight Profiles as the Recipe Book's second section
+   The block is the same collapsible #setupWeightProfilesBlock that Line Setup
+   uses, moved (not cloned) so its wiring keeps one owner. Inside the Book it
+   is not a disclosure - it is simply the second half of the page - so its
+   summary chrome stands down and its own section title carries the heading.
+   -------------------------------------------------------------------------- */
+body .splitsSavedRecipesPanel .savedRecipesProfilesSection{
+  margin-top:18px;
+  border:0;
+  border-top:1px solid var(--row-border);
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+  padding-top:4px;
+}
+body .splitsSavedRecipesPanel .savedRecipesProfilesSection > summary{
+  display:none;
+}
+body .splitsSavedRecipesPanel .savedRecipesProfilesSection > .blockBody{
+  padding-left:0;
+  padding-right:0;
+}
