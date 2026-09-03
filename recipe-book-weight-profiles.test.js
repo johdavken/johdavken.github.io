@@ -386,3 +386,23 @@ test("transposed Weights column headers are small labels, not the 64px layer-let
   // style rendered as giant faded numerals.
   assert.match(styles, /body #weightsArea \.weightsMatrix:has\(\.weightsLayerHeader\) thead \.weightsSelectHeader\{[\s\S]*?font-size:var\(--font-tiny\);[\s\S]*?opacity:1;/);
 });
+
+test("the Weights bulk-edit panel sits below the grid, matching the reworked Recipe grid", () => {
+  const body = moduleFunctionBody("renderWeightsArea") || (()=>{
+    const start = app.indexOf("function renderWeightsArea(");
+    const next = app.indexOf("\n    function ", start + 1);
+    return app.slice(start, next === -1 ? undefined : next);
+  })();
+  assert.match(app, /area\.appendChild\(desktopControls\);\s*area\.appendChild\(scroll\);\s*area\.appendChild\(toolbar\);/);
+});
+
+test("on the touch shell the weight/height cell inputs stack instead of overlapping", () => {
+  // desktop.css sits them in a 2-column grid, which mashed the WEIGHT (LB)
+  // and HEIGHT (IN) captions together in a tablet-width column.
+  assert.match(styles, /body\[data-shell="touch"\] #weightsArea \.weightsMatrix:has\(\.weightsLayerHeader\) \.desktopWeightEditFields\{\s*\n\s*grid-template-columns:1fr;/);
+});
+
+test("on the touch shell the weights bulk bar is a compact single column so 'No change' is not clipped", () => {
+  assert.match(styles, /body\[data-shell="touch"\] #weightsArea \.weightsBulkBar\{[\s\S]*?flex-direction:column;/);
+  assert.match(styles, /body\[data-shell="touch"\] #weightsArea \.weightsBulkBar \.weightsInputWithUnit input\{[\s\S]*?font-size:var\(--font-small\);/);
+});

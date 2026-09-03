@@ -12433,3 +12433,81 @@ body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .d
 body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .desktopWeightSummaryValues{
   display:none;
 }
+
+/* 7. Tablet weight-cell edit fields and the bulk-edit panel.
+   -------------------------------------------------------------------------- */
+
+/* When Smart Hoppers is on, the cell carries both a weight and a height
+   input. desktop.css sits them side by side in a 2-column grid, which fits a
+   ~130px desktop column but not a ~150px tablet one - the "WEIGHT (LB)" /
+   "HEIGHT (IN)" captions overran each other. Stack them instead: weight on
+   top, height below, each with its caption. */
+body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .desktopWeightEditFields{
+  grid-template-columns:1fr;
+  gap:3px;
+}
+body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .desktopWeightEditFields label{
+  display:grid;
+  grid-template-columns:1fr auto;
+  align-items:baseline;
+  gap:6px;
+}
+body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .desktopWeightEditFields label input{
+  order:2;
+  width:100%;
+}
+body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .desktopWeightEditFields label small{
+  order:1;
+  font-size:8px;
+  text-align:left;
+  white-space:nowrap;
+}
+body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .weightsMatrixCell{
+  height:auto;
+  min-height:64px;
+}
+
+/* The bulk-edit panel now sits below the grid (see renderWeightsArea). On
+   the touch shell it falls back to the base .weightsBulkBar grid, whose
+   180px min columns clipped the "No change" placeholders. Give it a single
+   stacked column of compact fields, sized to the tablet. */
+body[data-shell="touch"] #weightsArea .weightsBulkBar{
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  gap:10px;
+  margin-top:12px;
+}
+body[data-shell="touch"] #weightsArea .weightsBulkBar .weightsBulkFieldsRow{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:flex-end;
+  gap:10px;
+}
+body[data-shell="touch"] #weightsArea .weightsBulkBar .weightsBulkField{
+  flex:1 1 160px;
+  min-width:0;
+}
+body[data-shell="touch"] #weightsArea .weightsBulkBar .weightsBulkField > span:first-child{
+  font-size:var(--font-tiny);
+  margin-bottom:3px;
+}
+body[data-shell="touch"] #weightsArea .weightsBulkBar .weightsInputWithUnit{
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:4px;
+}
+body[data-shell="touch"] #weightsArea .weightsBulkBar .weightsInputWithUnit input{
+  font-size:var(--font-small);
+  min-width:0;
+}
+body[data-shell="touch"] #weightsArea .weightsBulkBar .weightsInputWithUnit input::placeholder{
+  font-size:var(--font-tiny);
+}
+body[data-shell="touch"] #weightsArea .weightsBulkBar #applyBulkWeight{
+  flex:0 0 auto;
+  align-self:flex-end;
+}
+body[data-shell="touch"] #weightsArea .weightsBulkBar .weightsBulkActions{
+  grid-column:auto;
+  flex-wrap:wrap;
+}

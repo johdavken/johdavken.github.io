@@ -36,7 +36,8 @@ test("desktop Hopper Weights and its Smart Hopper controls use Recipe's fixed fi
   assert.match(styles, /\.recipeWeightsPage > #weightsArea\{ width:100%; \}/);
   assert.match(desktop, /#splitsArea\.recipeWeightsPage > #weightsArea\{width:min\(100%,var\(--recipe-five-layer-rail,1062px\)\)\}/);
   assert.match(app, /desktopControls\.className = "desktopWeightsControls"/);
-  assert.match(app, /area\.appendChild\(desktopControls\);\s*area\.appendChild\(toolbar\);\s*area\.appendChild\(scroll\);/);
+  // Grid before the bulk-edit panel now, matching the reworked Recipe grid.
+  assert.match(app, /area\.appendChild\(desktopControls\);\s*area\.appendChild\(scroll\);\s*area\.appendChild\(toolbar\);/);
 });
 
 test("weights uses Recipe's header slot for its existing Summary/Edit control, relocated on every rebuild of the grid - not just on page navigation", () => {

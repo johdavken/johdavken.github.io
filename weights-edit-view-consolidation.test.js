@@ -64,12 +64,12 @@ test("the Edit-view toolbar has no numbered step captions and no separate Done b
   assert.match(body, /id="clearWeightSelection"/);
 });
 
-test("the toolbar's own DOM order is Smart Hoppers/View controls, then the toolbar, then the table", () => {
+test("DOM order is Smart Hoppers controls, then the grid, then the bulk-edit panel below it", () => {
   const body = functionBody("renderWeightsArea");
   const controlsAppend = body.indexOf("area.appendChild(desktopControls);");
-  const toolbarAppend = body.indexOf("area.appendChild(toolbar);");
   const scrollAppend = body.indexOf("area.appendChild(scroll);");
-  assert.ok(controlsAppend > -1 && toolbarAppend > controlsAppend && scrollAppend > toolbarAppend);
+  const toolbarAppend = body.indexOf("area.appendChild(toolbar);");
+  assert.ok(controlsAppend > -1 && scrollAppend > controlsAppend && toolbarAppend > scrollAppend);
 });
 
 test("the profiles exit call survives as the one \"stop editing here\" hook, and still drops the selection", () => {

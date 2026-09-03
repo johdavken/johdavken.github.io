@@ -207,13 +207,15 @@ test("workspace-derived naming has no user click handler", () => {
 // Hoppers/View, above the grid" - selection/bulk-apply is now part of Edit
 // view itself rather than a separate mode reached from below the table.)
 
-test("the Edit-view toolbar is appended right after the Smart Hoppers/View controls, before the table", () => {
+test("Smart Hoppers controls sit on top, then the grid, then the bulk-edit panel below it", () => {
   const body = functionBody("renderWeightsArea");
   const controlsAppend = body.indexOf("area.appendChild(desktopControls);");
-  const toolbarAppend = body.indexOf("area.appendChild(toolbar);");
   const scrollAppend = body.indexOf("area.appendChild(scroll);");
-  assert.ok(controlsAppend > -1 && toolbarAppend > controlsAppend && scrollAppend > toolbarAppend,
-    "expected desktopControls, then toolbar, then scroll(the table), in that order");
+  const toolbarAppend = body.indexOf("area.appendChild(toolbar);");
+  // Matches the reworked Recipe grid: the toolbar is below the matrix, so
+  // raising it never shoves the working surface.
+  assert.ok(controlsAppend > -1 && scrollAppend > controlsAppend && toolbarAppend > scrollAppend,
+    "expected desktopControls, then scroll(the table), then toolbar, in that order");
 });
 
 // --- Receiver Weight Profiles panel added under Setup ----------------------

@@ -3393,9 +3393,13 @@
       // now sit together in the Recipe Book (see renderSplitsArea, which
       // moves #setupWeightProfilesBlock into that panel). Nothing is left
       // to put in an action toolbar here.
+      // Grid first, bulk-edit panel below it - matching the reworked Recipe
+      // grid, where the toolbar sits under the matrix so raising it never
+      // shoves the working surface. Smart Hoppers / circumference stay on
+      // top as page context, the way the Recipe context strip does.
       area.appendChild(desktopControls);
-      area.appendChild(toolbar);
       area.appendChild(scroll);
+      area.appendChild(toolbar);
 
       const bulkInput = toolbar.querySelector("#bulkWeight");
       const bulkHeightInput = toolbar.querySelector("#bulkHeight");
