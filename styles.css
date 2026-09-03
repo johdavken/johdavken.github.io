@@ -12173,3 +12173,90 @@ body #splitsArea[data-recipe-layout="transposed"] .splitsRearrangeCancel{
 body #splitsArea[data-recipe-layout="transposed"] .recipeInteractionHint{
   text-wrap:balance;
 }
+
+/* ==========================================================================
+   Reworked grid on the touch shell (tablet)
+   --------------------------------------------------------------------------
+   A tablet lands on the reworked grid (it is over the 700px breakpoint) but
+   carries the touch shell's larger type and padding, which the desktop-sized
+   minimums above were never measured against. On a ~930x700 tablet that left
+   the matrix wider than the panel, pushing the whole page sideways, with the
+   resin codes clipped inside their fields.
+   ========================================================================== */
+
+/* 1. Contain the grid's own overflow. .splitsMatrixScroll is overflow-x:hidden,
+      so a table wider than the panel did not scroll - it stretched its
+      container and took the edit toolbar and everything else out past the
+      screen edge with it. Now the grid scrolls inside its own frame and the
+      panel keeps its width. */
+body #splitsArea[data-recipe-layout="transposed"] .splitsMatrixScroll{
+  overflow-x:auto;
+  max-width:100%;
+  min-width:0;
+}
+/* overflow-x:auto only engages once the box is actually allowed to be
+   narrower than its content. #splitsArea is a grid and these are its items
+   (and one item's child), all of which default to min-width:auto - so
+   without this the layout wrapper simply grew to the table's width and took
+   the panel with it, and the scroller never scrolled. */
+body #splitsArea[data-recipe-layout="transposed"] .splitsMobileLayerLayout{
+  min-width:0;
+  max-width:100%;
+}
+/* The frame must NOT clip. It carries overflow-x:hidden, so on a narrow
+   tablet it silently cut the sixth hopper column off with no way to reach
+   it - and hid the overflow from the scroller above, which therefore never
+   scrolled. Let it size to the table and leave the clipping-plus-scrolling
+   to .splitsMatrixScroll. */
+body #splitsArea[data-recipe-layout="transposed"] .splitsMatrixFrame{
+  min-width:0;
+  max-width:none;
+  overflow-x:visible;
+}
+
+/* 2. The per-layer Total is meant to be gone on this grid (it is 100% by
+      construction - see the note above). A touch rule scoped to short
+      viewports, @media (min-width:701px) and (max-height:800px), re-shows it
+      at inline-block and outranked the earlier removal - which is exactly the
+      shape of a landscape tablet, so it came back on the one surface with the
+      least room for it. Two IDs to settle it. */
+body #splitsBlock #splitsArea[data-recipe-layout="transposed"] .splitsMatrix .splitColumnTotal{
+  display:none;
+}
+
+/* 3. Tighter minimums so six hopper positions plus the layer rail fit a
+      tablet's content area outright rather than relying on the scroll above. */
+body[data-shell="touch"] #splitsArea[data-recipe-layout="transposed"] .splitsMatrix{
+  min-width:806px;
+}
+body[data-shell="touch"] #splitsBlock #splitsArea[data-recipe-layout="transposed"] .splitsMatrix tr > :first-child,
+body[data-shell="touch"] #splitsBlock #splitsArea[data-recipe-layout="transposed"] .splitsMatrix th:first-child,
+body[data-shell="touch"] #splitsBlock #splitsArea[data-recipe-layout="transposed"] .splitsMatrix tbody .splitLayerHeader{
+  min-width:92px;
+  width:92px;
+  max-width:92px;
+}
+body[data-shell="touch"] #splitsArea[data-recipe-layout="transposed"] .splitsMatrix thead th,
+body[data-shell="touch"] #splitsArea[data-recipe-layout="transposed"] .splitMatrixCell{
+  min-width:118px;
+}
+
+/* 4. The resin code is the value that has to survive: it is the longest text
+      in the cell and the one an operator reads across the line. Give it the
+      room by shrinking the percentage field beside it rather than the code,
+      and step the code's own size down to match the tighter column. */
+body[data-shell="touch"] #splitsArea[data-recipe-layout="transposed"] .splitCellEditor{
+  gap:4px;
+}
+body[data-shell="touch"] #splitsArea[data-recipe-layout="transposed"] .splitMatrixCell .resinNameInput{
+  font-size:var(--font-small);
+  letter-spacing:0;
+}
+body[data-shell="touch"] #splitsArea[data-recipe-layout="transposed"] .splitPctControl input{
+  width:30px;
+  min-width:30px;
+  font-size:13px;
+}
+body[data-shell="touch"] #splitsArea[data-recipe-layout="transposed"] .splitLayerPct input{
+  width:2.6em;
+}

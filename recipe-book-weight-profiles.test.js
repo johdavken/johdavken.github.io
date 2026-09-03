@@ -321,3 +321,35 @@ test("Undo drives the move stack while rearranging, and Redo stands down", () =>
   // Controls that act on cells go out of service with the cells.
   assert.match(body, /\[bulkNameInput, bulkPctInput, applyButton, resetButton, clearSelectionButton\]/);
 });
+
+/* The reworked grid on the touch shell (tablet).
+ *
+ * A tablet is over the 700px breakpoint so it gets the reworked grid, but it
+ * carries the touch shell's larger type and padding, which the desktop-sized
+ * minimums were never measured against.
+ */
+test("the grid scrolls inside its own frame instead of pushing the panel sideways", () => {
+  // .splitsMatrixFrame carries overflow:hidden, which clipped the sixth
+  // hopper column outright on a narrow tablet - and hid the overflow from the
+  // scroller above it, so nothing scrolled either.
+  assert.match(styles, /body #splitsArea\[data-recipe-layout="transposed"\] \.splitsMatrixFrame\{[\s\S]*?overflow-x:visible;/);
+  assert.match(styles, /body #splitsArea\[data-recipe-layout="transposed"\] \.splitsMatrixScroll\{[\s\S]*?overflow-x:auto;/);
+  // Both need to be allowed to shrink below their content, or overflow never
+  // engages: #splitsArea is a grid and these are its items.
+  assert.match(styles, /body #splitsArea\[data-recipe-layout="transposed"\] \.splitsMobileLayerLayout\{[\s\S]*?min-width:0;/);
+});
+
+test("the Total stays hidden on a landscape tablet, where a short-viewport touch rule re-showed it", () => {
+  // @media (min-width:701px) and (max-height:800px) sets it back to
+  // inline-block at (1,3,1) - the exact shape of a landscape tablet, so it
+  // returned on the one surface with the least room for it.
+  assert.match(styles, /body #splitsBlock #splitsArea\[data-recipe-layout="transposed"\] \.splitsMatrix \.splitColumnTotal\{\s*\n\s*display:none;/);
+});
+
+test("touch tightens the grid's minimums so six positions fit a tablet outright", () => {
+  assert.match(styles, /body\[data-shell="touch"\] #splitsArea\[data-recipe-layout="transposed"\] \.splitsMatrix\{\s*\n\s*min-width:806px;/);
+  assert.match(styles, /body\[data-shell="touch"\][\s\S]{0,400}?\.splitLayerHeader\{\s*\n\s*min-width:92px;/);
+  // The resin code is the value that has to survive, so the percentage field
+  // beside it gives up the room rather than the code.
+  assert.match(styles, /body\[data-shell="touch"\] #splitsArea\[data-recipe-layout="transposed"\] \.splitPctControl input\{\s*\n\s*width:30px;/);
+});
