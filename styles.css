@@ -11665,3 +11665,235 @@ body[data-shell="touch"] .changeoverWizardDialog{position:fixed;inset:auto auto 
     font-size:clamp(11px, 1.3vw + 1px, var(--font-base));
   }
 }
+
+/* ==========================================================================
+   Reworked Recipe grid (transposed)
+   --------------------------------------------------------------------------
+   Applies above the compact-mobile breakpoint only - app.js sets
+   data-recipe-layout="transposed" whenever the viewport is wider than 700px,
+   and "stacked" below it, so every rule in this block is inert on a phone and
+   the established stacked-grid CSS above keeps owning that surface untouched.
+
+   Layers become rows and hopper positions become columns. Deliberately last
+   in the file: these rules and the ones they replace often share specificity
+   (both are #splitsArea + an attribute), so source order is what decides.
+   ========================================================================== */
+/* table-layout:fixed is load-bearing, not a tidy-up. Under automatic layout
+   a table column is at least as wide as its content's max-content size, and
+   an <input> with no explicit width contributes its default ~20-character
+   intrinsic size - which pushed each of the six position columns out to
+   ~270px. The stacked grid never hit this because its five columns were
+   pinned to a fixed 180px. Fixed layout takes column widths from the first
+   row's declared widths instead, so the fields size to their column rather
+   than the other way round. min-width keeps the grid legible and lets it
+   scroll horizontally on a narrow tablet instead of crushing. */
+body #splitsArea[data-recipe-layout="transposed"] .splitsMatrix{
+  table-layout:fixed;
+  width:100%;
+  min-width:910px;
+}
+
+/* The stacked grid hides each row's first cell unless bulk editing (it is a
+   selection affordance there). Transposed, that first cell is the layer
+   header itself - the row's identity - so it must always be present.
+   #splitsBlock is carried here (and on the width rules below) purely to
+   outrank "#splitsBlock #splitsArea .splitsMatrix tr > :first-child", which
+   pins that column to 70px for the stacked grid at >700px. */
+body #splitsBlock #splitsArea[data-recipe-layout="transposed"] .splitsMatrix tr > :first-child{
+  display:table-cell;
+  min-width:118px;
+  width:118px;
+  max-width:118px;
+}
+
+/* Column headers are now hopper positions: short labels, so they need none of
+   the 180px layer-header width. */
+body #splitsArea[data-recipe-layout="transposed"] .splitsMatrix thead th{
+  min-width:132px;
+  width:auto;
+  padding:5px 8px;
+  vertical-align:middle;
+  text-align:center;
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitsMatrix thead .splitRowHeader{
+  font-weight:600;
+  font-size:var(--font-tiny);
+  letter-spacing:.09em;
+  text-transform:uppercase;
+  color:var(--muted);
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitRowSelect{
+  width:100%;
+  padding:5px 6px;
+  border-radius:6px;
+  font-weight:600;
+  letter-spacing:.09em;
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitRowSelect.selected,
+body #splitsArea[data-recipe-layout="transposed"] .splitRowSelect.partiallySelected{
+  background:color-mix(in srgb,var(--focus-border) 16%,transparent);
+  color:var(--title);
+}
+
+/* The corner keeps the cross-resin overlay toggle and pins to the left edge
+   alongside the layer headers below it. */
+body #splitsBlock #splitsArea[data-recipe-layout="transposed"] .splitsMatrix th:first-child{
+  min-width:118px;
+  width:118px;
+  max-width:118px;
+  z-index:4;
+}
+
+/* Layer header: a row header now, so it pins left while the positions scroll
+   horizontally. Letter, percentage, running total and Match stack in a
+   compact column instead of the stacked grid's 58px watermark treatment. */
+body #splitsBlock #splitsArea[data-recipe-layout="transposed"] .splitsMatrix tbody .splitLayerHeader{
+  position:sticky;
+  left:0;
+  z-index:2;
+  min-width:118px;
+  width:118px;
+  max-width:118px;
+  padding:8px 10px;
+  vertical-align:middle;
+  text-align:left;
+  background:var(--panelOpen);
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitLayerMain{
+  position:static;
+  display:flex;
+  align-items:baseline;
+  justify-content:flex-start;
+  gap:8px;
+  min-height:0;
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitLayerTitle{
+  position:static;
+  transform:none;
+  width:auto;
+  min-width:0;
+  height:auto;
+  min-height:0;
+  padding:0 2px;
+  font-size:clamp(17px,1.5vw,21px);
+  font-weight:800;
+  line-height:1.05;
+  color:var(--title);
+  opacity:1;
+  text-align:left;
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitLayerTitle.selected,
+body #splitsArea[data-recipe-layout="transposed"] .splitLayerTitle.partiallySelected{
+  opacity:1;
+  color:var(--focus-border);
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitLayerPct{
+  display:inline-flex;
+  align-items:baseline;
+  gap:1px;
+  margin:0;
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitLayerPct input{
+  width:3.1em;
+  min-height:0;
+  padding:2px 4px;
+  text-align:right;
+  font-variant-numeric:tabular-nums;
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitColumnTotal{
+  margin-top:4px;
+  text-align:left;
+  letter-spacing:.02em;
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitCopyBtn{
+  margin:5px 0 0;
+  padding:2px 8px;
+  font-size:var(--font-tiny);
+}
+
+/* Cells: narrower than the stacked grid's 180px, since six of them now sit
+   across the row instead of five. */
+body #splitsArea[data-recipe-layout="transposed"] .splitMatrixCell{
+  min-width:132px;
+  width:auto;
+  max-width:none;
+  padding:5px 7px;
+}
+
+/* Shading follows the layer (the row) rather than the column, so it keeps
+   pairing with the header that names it. */
+body #splitsArea[data-recipe-layout="transposed"] .splitsMatrix tbody td.splitMatrixCell:nth-child(even){
+  background:transparent;
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitsMatrix tbody tr:nth-child(even) td.splitMatrixCell{
+  background:color-mix(in srgb,var(--row-bg-2) 55%,transparent);
+}
+
+/* Tracking is always live here, so its badge highlight can no longer hang off
+   the Summary view that no longer exists. Same treatment, same tokens. */
+body #splitsArea[data-recipe-layout="transposed"] .splitsMatrix tbody .splitMatrixCell.tracked .splitCellHopperName{
+  background:color-mix(in srgb,var(--ok) 20%,transparent);
+  color:var(--ok);
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitsMatrix tbody .splitMatrixCell.tracked:not(.selected){
+  box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--ok) 22%,transparent);
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitsMatrix tbody .splitMatrixCell.selected{
+  box-shadow:inset 0 0 0 2px var(--focus-border);
+}
+/* Selection is no longer a mode you enter, so a cell does not need to shout
+   "EDIT" at you to explain why it is outlined. */
+body #splitsArea[data-recipe-layout="transposed"] .splitsMatrix tbody .splitMatrixCell.selected::after{
+  content:none;
+}
+
+/* Cells are live on every width above compact mobile now, tablet included,
+   so the static text mirror stands down and the real fields show. */
+body #splitsArea[data-recipe-layout="transposed"] .splitCellResinText{ display:none; }
+body #splitsArea[data-recipe-layout="transposed"] .splitMatrixCell .resinNameInput{
+  display:block;
+  pointer-events:auto;
+  /* An <input> with no width contributes its default ~20-character
+     intrinsic size to the table's max-content width. The stacked grid hid
+     that behind a fixed 180px column; six columns across cannot afford it,
+     and without this each column blows out to ~290px. */
+  width:100%;
+  min-width:0;
+  font-size:calc(var(--font-small) + 1px);
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitInput{
+  pointer-events:auto;
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitLayerHeader :is(input,button){
+  pointer-events:auto;
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitCellTop{ min-width:0; }
+
+/* Six columns of rows, not five columns of stacks: the cell gets a tighter
+   vertical rhythm than the stacked grid's tall "read it across the line"
+   treatment, and the percentage steps down from 19px accordingly. */
+body #splitsArea[data-recipe-layout="transposed"] .splitCellEditor{
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:6px;
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitPctControl input{
+  width:38px;
+  height:23px;
+  min-height:23px;
+  max-height:23px;
+  font-size:15px;
+  font-weight:800;
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitPctControl > span{
+  font-size:var(--font-tiny);
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitCellHopperName{
+  height:19px;
+  min-width:26px;
+  padding:0 5px;
+  font-size:var(--font-tiny);
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitCellHeader{
+  gap:5px;
+  margin-bottom:3px;
+}

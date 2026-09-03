@@ -70,15 +70,25 @@ test("leaving Edit cancels an in-progress rearrangement rather than stranding it
  *   View resolution, and mobile staying out of it
  * -------------------------------------------------------------------- */
 
-test("Summary/Edit is the single mode axis on every surface - Edit *is* bulk edit, so there is no second mode anywhere", () => {
+test("Summary/Edit survives on compact mobile only - the reworked wide grid has no mode axis at all", () => {
   assert.match(splitsArea, /const viewMode = splitsViewMode;/);
-  assert.match(splitsArea, /const summaryView = viewMode === "summary";/);
-  assert.match(splitsArea, /let bulkMode = viewMode === "edit";/);
-  assert.match(splitsArea, /area\.dataset\.recipeView = viewMode;/);
+  // One flag decides it: above the compact-mobile breakpoint the grid is
+  // always live, always selectable, and never in Summary.
+  assert.match(splitsArea, /const reworkedGrid = !compactMobileRecipe;/);
+  assert.match(splitsArea, /const summaryView = reworkedGrid \? false : viewMode === "summary";/);
+  assert.match(splitsArea, /let bulkMode = reworkedGrid \? true : viewMode === "edit";/);
+  assert.match(splitsArea, /area\.dataset\.recipeView = summaryView \? "summary" : "edit";/);
+  // The new grid's CSS hangs off its own attribute rather than overloading
+  // data-recipe-view, so the stacked mobile rules stay untouched.
+  assert.match(splitsArea, /area\.dataset\.recipeLayout = reworkedGrid \? "transposed" : "stacked";/);
+  // Nothing left to switch between, so the control goes away with the mode -
+  // set by syncRecipePageUI, which owns that flag and runs after the
+  // renderer, alongside the other pages that hide it.
+  assert.match(app, /viewToggle\.hidden = isSavedRecipesPage\(\) \|\| isWeightsPage\(\) \|\| !layoutModeQueries\.compactRecipe\.matches;/);
 });
 
-test("typing in a cell is a pointer-device capability, not a width one - every touch surface edits through the panel", () => {
-  assert.match(splitsArea, /const cellsTypeable = isDesktopLayout\(\);/);
+test("the reworked grid types in the cell on tablet too; compact mobile still edits through the panel", () => {
+  assert.match(splitsArea, /const cellsTypeable = reworkedGrid \|\| isDesktopLayout\(\);/);
   assert.match(splitsArea, /area\.dataset\.recipeCells = cellsTypeable \? "typeable" : "static";/);
   // Static cells swap the resin field for real text, so long codes
   // ("EXXON LD105.30", "00328 nexxstar") wrap instead of being ellipsised
@@ -107,8 +117,8 @@ test("the compact mobile grid keeps .bulk-editing to itself, so desktop presenta
  *   Tracking is Summary's one interaction, and never on Next
  * -------------------------------------------------------------------- */
 
-test("tracking view requires Summary and the Current page - the plan cannot carry tracking at all", () => {
-  assert.match(splitsArea, /const trackingView = summaryView && !isNextRecipePage\(\);/);
+test("tracking is Current-only - the plan cannot carry tracking at all - and no longer needs Summary on the reworked grid", () => {
+  assert.match(splitsArea, /const trackingView = !isNextRecipePage\(\) && \(reworkedGrid \|\| summaryView\);/);
   assert.match(splitsArea, /area\.classList\.toggle\("recipeTrackingView", trackingView\);/);
   // One condition, every surface - no per-platform special case left.
   assert.match(splitsArea, /if \(!trackingView \|\| bulkMode \|\| hopperRearrangement\?\.active\) return;/);
@@ -227,12 +237,18 @@ test("Empty cells empties only the selected hoppers and recomputes each affected
 test("every recipe view ends with a quiet, layout-aware hopper-action reminder", () => {
   assert.match(splitsArea, /interactionHint\.className = "recipeInteractionHint";/);
   assert.match(splitsArea, /const interactionVerb = isDesktopLayout\(\) \? "CLICK" : "TAP";/);
-  assert.match(splitsArea, /const interactionAction = viewMode === "edit"\s*\? "edit"\s*:\s*\(trackingView \? "track" : "view"\);/);
+  // The reworked grid selects and tracks at the same time, so it names both
+  // rather than whichever mode happens to be on; compact mobile keeps the
+  // one-mode-at-a-time wording.
+  assert.match(splitsArea, /const interactionAction = reworkedGrid\s*\?\s*\(trackingView \? "select · click its dot to track" : "select"\)\s*:\s*\(viewMode === "edit" \? "edit" : \(trackingView \? "track" : "view"\)\);/);
   assert.match(splitsArea, /interactionCommand\.className = "recipeInteractionHintCommand";/);
   assert.match(splitsArea, /interactionCommand\.textContent = interactionVerb;/);
   assert.match(splitsArea, /document\.createTextNode\(` a hopper to \$\{interactionAction\}`\),/);
   assert.match(splitsArea, /interactionCount\.textContent = ` - \$\{count\} selected`;/);
   assert.match(splitsArea, /viewMode === "edit"\s*\? selected\.size\s*:\ \(trackingView \? trackedHopperCount\(\) : 0\);/);
+  // Counts only appear once there is something to count, so an untouched
+  // grid ends with no trailing " - 0 selected".
+  assert.match(splitsArea, /interactionCount\.textContent = parts\.length \? ` - \$\{parts\.join\(" · "\)\}` : "";/);
   assert.match(splitsArea, /updateInteractionHint\(\);/);
   assert.match(splitsArea, /area\.append\(interactionHint\);/);
   assert.match(styles, /\.recipeInteractionHint\{[\s\S]*?color:var\(--muted\);[\s\S]*?font-size:calc\(var\(--font-tiny\) \* \.75\);[\s\S]*?text-align:center;/);
@@ -271,5 +287,5 @@ test("Recipe Book is a page replacement, so Edit controls and the matrix cannot 
   assert.match(setter, /if \(next === "saved" \|\| next === "weights"\)\{\s*splitsBulkModeActive = false;/);
   assert.match(styles, /body\[data-recipe-page="saved"\] #splitsArea > :not\(\.splitsSavedRecipesPanel\)\{\s*display: none!important;/);
   const sync = functionBody("syncRecipePageUI");
-  assert.match(sync, /viewToggle\.hidden = isSavedRecipesPage\(\) \|\| isWeightsPage\(\);/);
+  assert.match(sync, /viewToggle\.hidden = isSavedRecipesPage\(\) \|\| isWeightsPage\(\) \|\| !layoutModeQueries\.compactRecipe\.matches;/);
 });

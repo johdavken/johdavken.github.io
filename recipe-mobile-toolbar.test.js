@@ -83,11 +83,14 @@ test("Current's cluster gets Load Next (icon markup kept); Next's gets Load Curr
   assert.doesNotMatch(compact, /\.textContent = "Load Next"|\.textContent = "Load Current"/);
 });
 
-test("the accessible name on the Load buttons stays the full 'Load Next/Current Recipe'", () => {
-  assert.match(app, /loadNextButton\.setAttribute\("aria-label", "Load Next Recipe"\);/);
+test("the accessible name on the page-action buttons stays the full visible label", () => {
+  // Promoting the plan is named for what it does to the line, not for
+  // loading a recipe from somewhere; Load Current Recipe genuinely copies
+  // one recipe into another, so it keeps its name.
+  assert.match(app, /loadNextButton\.setAttribute\("aria-label", "Promote to Current"\);/);
   assert.match(app, /loadCurrentButton\.setAttribute\("aria-label", "Load Current Recipe"\);/);
   const editor = recipeEditor();
-  assert.match(editor, /loadNextButton\.innerHTML = `<svg class="recipeActionIcon"[\s\S]*?Load Next Recipe`;/);
+  assert.match(editor, /loadNextButton\.innerHTML = `<svg class="recipeActionIcon"[\s\S]*?Promote to Current`;/);
 });
 
 test("desktop keeps Recipe Book as a page tab and moves recipe actions (incl. Print) into the header pill", () => {

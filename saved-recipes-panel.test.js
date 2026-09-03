@@ -76,10 +76,11 @@ test("renderSplitsArea calls renderSplitsSavedRecipes at the end of every render
 test("splitsBulkModeActive and splitsSavedRecipesOpen persist at module scope (like hopperRearrangement already does), so a render triggered by switching panels can seed the one the operator meant to open", () => {
   assert.match(app, /let splitsBulkModeActive = false;/);
   assert.match(app, /let splitsSavedRecipesOpen = false;/);
-  // Selection is resolved from the Summary/Edit view on every surface now
-  // (Edit *is* bulk edit), so nothing seeds from the persisted flag - it
-  // survives only as the value setBulkMode writes back for Android Back.
-  assert.match(app, /let bulkMode = viewMode === "edit";/);
+  // Selection is resolved per render, never seeded from the persisted flag -
+  // it survives only as the value setBulkMode writes back for Android Back.
+  // The reworked wide grid is always selectable; compact mobile still
+  // resolves it from the Summary/Edit view.
+  assert.match(app, /let bulkMode = reworkedGrid \? true : viewMode === "edit";/);
 });
 
 test("opening Rearrange closes Bulk edit and Saved Recipes", () => {

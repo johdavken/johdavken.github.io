@@ -56,9 +56,10 @@ test("the cross-resin overlay is on both pages, pointer-only, one shared off-by-
   assert.match(app, /let recipeShowCrossResinOverlay = false;/);
   const snapshot = app.slice(app.indexOf("function snapshotPayload(){"), app.indexOf("function applySharedActiveJob("));
   assert.doesNotMatch(snapshot, /recipeShowCrossResinOverlay/);
-  // Available on any typeable (pointer) grid - Current or Next - and the
-  // label names whichever recipe is being overlaid.
-  assert.match(editor, /const crossOverlayAvailable = cellsTypeable;/);
+  // Available on the reworked wide grid (tablet included) and on any
+  // typeable pointer grid - Current or Next - and the label names whichever
+  // recipe is being overlaid.
+  assert.match(editor, /const crossOverlayAvailable = reworkedGrid \|\| cellsTypeable;/);
   assert.match(editor, /const crossOverlayLabel = isNextRecipePage\(\) \? "current" : "next";/);
   assert.match(editor, /area\.dataset\.crossOverlay = \(crossOverlayAvailable && recipeShowCrossResinOverlay\) \? "on" : "off";/);
 });
@@ -244,7 +245,9 @@ test("aria-selected, the panel label, and the view control follow every workspac
   const body = app.slice(app.indexOf("function syncRecipePageUI("), app.indexOf("function setRecipePage("));
   assert.match(body, /tab\.setAttribute\("aria-selected", String\(selected\)\)/);
   assert.match(body, /const labelledBy = isSavedRecipesPage\(\)[\s\S]*?"recipePageTabSaved"[\s\S]*?isWeightsPage\(\)[\s\S]*?"recipePageTabWeights"[\s\S]*?"recipePageTabNext" : "recipePageTabCurrent"/);
-  assert.match(body, /viewToggle\.hidden = isSavedRecipesPage\(\) \|\| isWeightsPage\(\);/);
+  // Plus every width above compact mobile, where the reworked grid is
+  // always live and Summary/Edit has nothing left to switch between.
+  assert.match(body, /viewToggle\.hidden = isSavedRecipesPage\(\) \|\| isWeightsPage\(\) \|\| !layoutModeQueries\.compactRecipe\.matches;/);
   assert.match(body, /headerControls\.hidden = isSavedRecipesPage\(\);/);
 });
 

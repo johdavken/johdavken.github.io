@@ -205,7 +205,10 @@ test("setBulkMode's per-cell disable pass keeps rearrange-mode disabling in plac
   assert.match(setBulkModeBody, /const readOnly = !cellsTypeable \|\| summaryView \|\| rearranging;/);
   assert.match(setBulkModeBody, /ref\.resinInput\.disabled = readOnly;/);
   assert.match(setBulkModeBody, /ref\.pctInput\.disabled = readOnly;/);
-  assert.match(setBulkModeBody, /trackButton\.disabled = bulkMode \|\| rearranging;/);
+  // Tracking is not a mode on the reworked grid - the dot stays live
+  // alongside editing there, so only a running rearrangement stands it
+  // down. Compact mobile keeps the old bulk-mode exclusion.
+  assert.match(setBulkModeBody, /trackButton\.disabled = reworkedGrid \? rearranging : \(bulkMode \|\| rearranging\);/);
 });
 
 test("setBulkMode runs unconditionally at the end of every render (reapplying the resolved bulkMode, not hardcoded false, so a render triggered by switching panels can seed bulk edit open) - this per-cell disable pass is exactly why the clobbering bug existed", () => {

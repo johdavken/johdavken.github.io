@@ -83,7 +83,7 @@ test("desktop health readout stays compact while mobile retains the shared card 
   assert.match(desktop, /align-content:start/);
   // index.html loads the stylesheets that carry these rules (cache-bust
   // version is bumped on every change, so match the file, not the number).
-  assert.match(fs.readFileSync("index.html", "utf8"), /styles\.css\?v=0\.62\.\d+/);
+  assert.match(fs.readFileSync("index.html", "utf8"), /styles\.css\?v=0\.\d+\.\d+/);
   assert.match(fs.readFileSync("index.html", "utf8"), /desktop\.css\?v=0\.1\.\d+/);
 });
 

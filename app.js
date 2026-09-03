@@ -3980,7 +3980,12 @@
           : (isNextRecipePage() ? "recipePageTabNext" : "recipePageTabCurrent");
       if (panel) panel.setAttribute("aria-labelledby", labelledBy);
       const viewToggle = $("recipeViewToggle");
-      if (viewToggle) viewToggle.hidden = isSavedRecipesPage() || isWeightsPage();
+      // Summary/Edit has nothing left to switch between above the compact
+      // mobile breakpoint - the reworked grid is always live (see
+      // reworkedGrid in renderSplitsArea). This function is the single
+      // owner of the control's visibility, so the condition belongs here
+      // rather than being set from a renderer that runs before it.
+      if (viewToggle) viewToggle.hidden = isSavedRecipesPage() || isWeightsPage() || !layoutModeQueries.compactRecipe.matches;
       const headerControls = $("recipeHeaderControls");
       if (headerControls) headerControls.hidden = isSavedRecipesPage();
       const headerActions = $("recipeHeaderActions");
@@ -4236,27 +4241,45 @@
       // Summary/Edit is now the single mode axis on every surface: Edit *is*
       // bulk edit, so there is no second mode to be in anywhere.
       const viewMode = splitsViewMode;
-      const summaryView = viewMode === "summary";
+      // The reworked wide grid (anything above the compact-mobile
+      // breakpoint - desktop and tablet alike) has no Summary/Edit axis at
+      // all: cells are always live, tracking is always available on
+      // Current, and selection alone raises the edit toolbar. Compact
+      // mobile keeps both modes exactly as they are.
+      const reworkedGrid = !compactMobileRecipe;
+      const summaryView = reworkedGrid ? false : viewMode === "summary";
       // Summary's one interaction. Tracking is runtime state that the
       // planned recipe structurally cannot hold (see next-recipe.js), so
-      // Next's Summary is a read-only preview with nothing to toggle.
-      const trackingView = summaryView && !isNextRecipePage();
-      let bulkMode = viewMode === "edit";
+      // Next stays a read-only preview with nothing to toggle - on the
+      // reworked grid the track control is simply absent there.
+      const trackingView = !isNextRecipePage() && (reworkedGrid || summaryView);
+      let bulkMode = reworkedGrid ? true : viewMode === "edit";
       // Typing directly into a cell needs a precise pointer. On touch it
       // never felt right at hopper-cell size, so every touch surface -
       // phones and the wide-but-touch tablet band alike - edits through the
       // panel instead, and only a real pointer device keeps the hybrid.
-      const cellsTypeable = isDesktopLayout();
-      area.dataset.recipeView = viewMode;
+      // The reworked wide grid types in the cell on tablet too: "the same
+      // interface as desktop" is the point of it, and a tablet cell is the
+      // same size as a desktop one. Only compact mobile still edits through
+      // the panel instead.
+      const cellsTypeable = reworkedGrid || isDesktopLayout();
+      area.dataset.recipeView = summaryView ? "summary" : "edit";
+      // New CSS for the reworked grid hangs off this rather than fighting
+      // the established stacked-grid rules, which stay untouched and keep
+      // owning compact mobile.
+      area.dataset.recipeLayout = reworkedGrid ? "transposed" : "stacked";
       area.dataset.recipeCells = cellsTypeable ? "typeable" : "static";
       area.classList.toggle("recipeTrackingView", trackingView);
+      // Summary/Edit's control is hidden by syncRecipePageUI(), which owns
+      // that flag and runs after this renderer; setRecipeViewMode behind it
+      // stays in place for compact mobile, which still has both modes.
       // The cross-resin overlay only exists on the typeable (pointer) grid,
       // on both pages: it shows the other page's resin per cell so Current
       // and the plan can be read against each other. The overlay toggle and
       // per-cell spans are always built when available; recipeShowCrossResinOverlay
       // only reveals them, so toggling never needs a re-render. The label
       // names whichever recipe is being overlaid.
-      const crossOverlayAvailable = cellsTypeable;
+      const crossOverlayAvailable = reworkedGrid || cellsTypeable;
       const crossOverlayLabel = isNextRecipePage() ? "current" : "next";
       area.dataset.crossOverlay = (crossOverlayAvailable && recipeShowCrossResinOverlay) ? "on" : "off";
 
@@ -4441,12 +4464,16 @@
         // down from Scan Recipe's primary gradient, one step up from Print
         // Recipe's tertiary ghost treatment (see .splitsBulkModeBar
         // button.secondary in styles.css).
-        loadNextButton.innerHTML = `<svg class="recipeActionIcon" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 5v16"/><path d="M10 15l6 6 6-6"/><path d="M6 26h20"/></svg>Load Next Recipe`;
+        // "Promote to Current" rather than "Load Next Recipe": the action
+        // is not loading a recipe from anywhere, it is putting the plan on
+        // the line. Placement is unchanged - it stays on Current, the page
+        // being changed, and is still never offered on the plan itself.
+        loadNextButton.innerHTML = `<svg class="recipeActionIcon" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 5v16"/><path d="M10 15l6 6 6-6"/><path d="M6 26h20"/></svg>Promote to Current`;
         // Visible mobile label is shorter (icon dropped along with it,
         // since .textContent replaces the whole icon+label innerHTML); the
-        // accessible name stays the full "Load Next Recipe" regardless of
+        // accessible name stays the full "Promote to Current" regardless of
         // which text is on screen.
-        loadNextButton.setAttribute("aria-label", "Load Next Recipe");
+        loadNextButton.setAttribute("aria-label", "Promote to Current");
         const planned = hasPlannedRecipe();
         const promotable = !!window.PolynNextRecipe?.isPromotable(state.nextRecipe);
         loadNextButton.hidden = !planned;
@@ -4796,9 +4823,14 @@
       }
       headerRow.appendChild(corner);
 
-      recipeLayers().forEach(L=>{
+      // Layer headers and hopper-position headers are built the same way in
+      // both orientations - only which axis they land on changes. The
+      // stacked grid puts layers across the top and positions down the
+      // side; the reworked (transposed) grid swaps them, so a layer is a
+      // row and a hopper position is a column.
+      function buildLayerHeader(L){
         const th = document.createElement("th");
-        th.scope = "col";
+        th.scope = reworkedGrid ? "row" : "col";
         th.className = "splitLayerHeader";
         th.dataset.layerColumn = L.name;
 
@@ -4894,16 +4926,12 @@
         pctInput.addEventListener("change",finishRecipeEditInput);
         pctInput.addEventListener("blur",finishRecipeEditInput);
 
-        headerRow.appendChild(th);
-      });
-      thead.appendChild(headerRow);
-      table.appendChild(thead);
+        return th;
+      }
 
-      const tbody = document.createElement("tbody");
-      for (let hi=0; hi<HOPPERS_PER_LAYER; hi++){
-        const tr = document.createElement("tr");
+      function buildPositionHeader(hi){
         const rowHeader = document.createElement("th");
-        rowHeader.scope = "row";
+        rowHeader.scope = reworkedGrid ? "col" : "row";
         rowHeader.className = "splitRowHeader mono";
         const rowSelect = document.createElement("button");
         rowSelect.type = "button";
@@ -4918,9 +4946,10 @@
         });
         rowSelectors.set(hi, rowSelect);
         rowHeader.appendChild(rowSelect);
-        tr.appendChild(rowHeader);
+        return rowHeader;
+      }
 
-        recipeLayers().forEach((L, li)=>{
+      function buildCell(L, li, hi){
           const hopper = L.hoppers[hi];
           const key = `${L.name}:${hi}`;
           const td = document.createElement("td");
@@ -5137,7 +5166,6 @@
           controls.appendChild(pctWrap);
           editor.append(cellTop, controls);
           td.append(cellHeader, editor);
-          tr.appendChild(td);
 
           function refreshCellState(){
             // Mirrors the field for the static (touch) cell presentation.
@@ -5288,9 +5316,33 @@
             updateRecipeHistoryControls();
           });
           refreshCellState();
-        });
-        tbody.appendChild(tr);
+          return td;
       }
+
+      // Assemble in the chosen orientation. Both orientations use the same
+      // three builders above, so a cell's DOM, its event handlers and its
+      // entry in cellRefs are identical either way - only the axis each
+      // header lands on, and the order cells are appended in, differ.
+      const tbody = document.createElement("tbody");
+      if (reworkedGrid){
+        recipeLayers().forEach((L, li)=>{
+          const tr = document.createElement("tr");
+          tr.appendChild(buildLayerHeader(L));
+          for (let hi=0; hi<HOPPERS_PER_LAYER; hi++) tr.appendChild(buildCell(L, li, hi));
+          tbody.appendChild(tr);
+        });
+        for (let hi=0; hi<HOPPERS_PER_LAYER; hi++) headerRow.appendChild(buildPositionHeader(hi));
+      }else{
+        recipeLayers().forEach(L=>headerRow.appendChild(buildLayerHeader(L)));
+        for (let hi=0; hi<HOPPERS_PER_LAYER; hi++){
+          const tr = document.createElement("tr");
+          tr.appendChild(buildPositionHeader(hi));
+          recipeLayers().forEach((L, li)=>tr.appendChild(buildCell(L, li, hi)));
+          tbody.appendChild(tr);
+        }
+      }
+      thead.appendChild(headerRow);
+      table.appendChild(thead);
       table.appendChild(tbody);
       frame.appendChild(table);
       scroll.appendChild(frame);
@@ -5327,9 +5379,11 @@
       const interactionHint = document.createElement("p");
       interactionHint.className = "recipeInteractionHint";
       const interactionVerb = isDesktopLayout() ? "CLICK" : "TAP";
-      const interactionAction = viewMode === "edit"
-        ? "edit"
-        : (trackingView ? "track" : "view");
+      // The reworked grid does both at once, so it names both rather than
+      // whichever mode happens to be on.
+      const interactionAction = reworkedGrid
+        ? (trackingView ? "select · click its dot to track" : "select")
+        : (viewMode === "edit" ? "edit" : (trackingView ? "track" : "view"));
       const interactionCommand = document.createElement("strong");
       interactionCommand.className = "recipeInteractionHintCommand";
       interactionCommand.textContent = interactionVerb;
@@ -5340,6 +5394,13 @@
         interactionCount
       );
       function updateInteractionHint(){
+        if (reworkedGrid){
+          const parts = [];
+          if (selected.size) parts.push(`${selected.size} selected`);
+          if (trackingView) parts.push(`${trackedHopperCount()} tracked`);
+          interactionCount.textContent = parts.length ? ` - ${parts.join(" · ")}` : "";
+          return;
+        }
         const count = viewMode === "edit"
           ? selected.size
           : (trackingView ? trackedHopperCount() : 0);
@@ -5463,6 +5524,10 @@
         // for an action that would do nothing.
         const emptyable = emptyableHopperCount();
         if (clearCellsButton) clearCellsButton.disabled = emptyable === 0;
+        // Selection is what raises the reworked grid's edit toolbar, so the
+        // visibility decision belongs on every selection change rather than
+        // only on a mode switch.
+        if (reworkedGrid) toolbar.classList.toggle("hide", selected.size === 0);
         updateRecipeHistoryControls();
         selectionStatus.className = `srOnly tiny splitsSelectionStatus${type ? ` ${type}` : ""}`;
         selectionStatus.textContent = message || (
@@ -5481,7 +5546,11 @@
         // Desktop presentation is driven entirely by data-recipe-view
         // instead, so the two never fight over the same cells.
         area.classList.toggle("bulk-editing", bulkMode && compactMobileRecipe);
-        toolbar.classList.toggle("hide", !bulkMode);
+        // The reworked grid is always in "bulk mode", so bulkMode alone
+        // would pin the toolbar open forever. There it is the selection
+        // that raises it (see updateSelectionUI), and it reserves no space
+        // while idle.
+        toolbar.classList.toggle("hide", reworkedGrid ? selected.size === 0 : !bulkMode);
         modeButton.textContent = bulkMode ? "Done bulk editing" : "Bulk edit";
         if(compactMobileRecipe){
           modeButton.setAttribute("aria-expanded", String(bulkMode));
@@ -5516,7 +5585,10 @@
           ref.resinInput.disabled = readOnly;
           ref.pctInput.disabled = readOnly;
           const trackButton = ref.td.querySelector(".splitTrackButton");
-          if (trackButton) trackButton.disabled = bulkMode || rearranging;
+          // Tracking is no longer a mode on the reworked grid - the dot is
+          // always live alongside editing, so only a running rearrangement
+          // stands it down there.
+          if (trackButton) trackButton.disabled = reworkedGrid ? rearranging : (bulkMode || rearranging);
         });
         if (!bulkMode) selected.clear();
         updateSelectionUI();
