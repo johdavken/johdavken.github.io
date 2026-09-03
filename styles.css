@@ -11800,10 +11800,21 @@ body #splitsArea[data-recipe-layout="transposed"] .splitLayerPct input{
   text-align:right;
   font-variant-numeric:tabular-nums;
 }
+/* The per-layer hopper Total (and the --ok bar above it) goes, for exactly
+   the reason mobile already dropped it: Hopper 1 is derived as
+   100 - sum(H2..H6) by recomputeAutoH1, and every write path that could push
+   H2-H6 over 100 refuses first - typing (validateHopperPercentages), bulk
+   apply (its pre-flight check across all layers), payload loads (the shared
+   payload validator) and rearrangement (move() returns invalid). So the total
+   is 100 by construction and the readout just repeats it back. The one case
+   that would matter - H2-H6 over-allocated, clamping H1 to 0 - is already
+   surfaced by the Recipe panel's status pill and the notification bell's
+   invalidLayers list, which are real validation surfaces. Removing it also
+   buys back a line in every layer row, which the transposed grid spends on
+   the cells instead. updateHopperTotals still runs and still sets .warn, so
+   bringing this back is a one-line change if the invariant ever loosens. */
 body #splitsArea[data-recipe-layout="transposed"] .splitColumnTotal{
-  margin-top:4px;
-  text-align:left;
-  letter-spacing:.02em;
+  display:none;
 }
 body #splitsArea[data-recipe-layout="transposed"] .splitCopyBtn{
   margin:5px 0 0;

@@ -115,3 +115,34 @@ test("the track button stays live on the reworked grid instead of standing down 
 test("the interaction hint names both actions, since the grid does both at once", () => {
   assert.match(app, /"select · click its dot to track"/);
 });
+
+/* The per-layer hopper Total readout, and the --ok bar above it.
+ *
+ * Hopper 1 is derived (recomputeAutoH1: h1 = 100 - sum(H2..H6), clamped), and
+ * every write path that could push H2-H6 past 100 refuses before writing, so
+ * the total is 100 by construction and the readout only ever repeats it back.
+ * Mobile already dropped it for this reason; the reworked grid follows.
+ */
+test("the layer Total readout is hidden on the reworked grid - the total is 100 by construction", () => {
+  assert.match(styles, /body #splitsArea\[data-recipe-layout="transposed"\] \.splitColumnTotal\{\s*\n?\s*display:none;/);
+});
+
+test("every write path that could break the 100% invariant refuses before writing", () => {
+  // Typing: the per-cell handler bails when H2-H6 would exceed 100.
+  assert.match(app, /const totalResult = validation\.validateHopperPercentages\(otherPercentages\);/);
+  assert.match(app, /if \(!totalResult\.valid\) return;/);
+  // Bulk apply: a pre-flight pass across every layer, refused with a message
+  // naming the layer, before any hopper is written.
+  assert.match(app, /const result = validation\.validateHopperPercentages\(projected\);\s*\n\s*if \(!result\.valid\)\{/);
+  assert.match(app, /Cannot apply: Layer \$\{L\.name\} hoppers 2–6 would total/);
+  // Payload loads (shared recipes, scans) go through the shared validator.
+  const validation = fs.readFileSync("validation.js", "utf8");
+  assert.match(validation, /Hopper percentages 2–6 cannot total more than 100%\./);
+  // And H1 is always re-derived rather than stored independently.
+  assert.match(app, /let h1 = 100 - sumOthers;/);
+});
+
+test("updateHopperTotals still runs, so restoring the readout stays a one-line change", () => {
+  assert.match(app, /el\.classList\.toggle\("warn", !okay && !planning\);/);
+  assert.match(app, /el\.textContent = `Total \$\{fmtTrim\(hopperTotal, 2\)\}%`;/);
+});
