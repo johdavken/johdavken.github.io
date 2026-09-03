@@ -100,7 +100,11 @@ test("structural renderers share the predicate instead of duplicating media quer
     `window.matchMedia("${DESKTOP_QUERY}")`,
     `window.matchMedia("(max-width: 700px)")`
   ].sort());
-  assert.match(functionBody("renderWeightsArea"), /if \(!isDesktopLayout\(\)\)\{/);
+  // renderWeightsArea is the one structural renderer that deliberately
+  // does NOT use the pointer-based predicate: Weights follows Recipe's
+  // reworked boundary (the compact-mobile breakpoint) so a tablet gets the
+  // same wide interface on both pages.
+  assert.match(functionBody("renderWeightsArea"), /if \(layoutModeQueries\.compactRecipe\.matches\)\{/);
   assert.match(functionBody("applySurfaceStyle"), /const renderedSurfaceStyle = isDesktopLayout\(\)/);
   assert.match(functionBody("syncWorkspaceForViewport"), /const desktop = isDesktopLayout\(\);/);
 });

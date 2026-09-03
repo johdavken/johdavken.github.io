@@ -62,10 +62,13 @@ test("weights uses Recipe's header slot for its existing Summary/Edit control, r
     "expected one call on the mobile (touch) branch and one on the desktop branch");
 });
 
-test("the weights view control adopts Recipe's button classes", () => {
+test("the wide weights view control is gone entirely - the grid is always live", () => {
+  // Recipe's own toggle keeps these classes for compact mobile, which still
+  // has both modes; the weights toggle has nothing left to style because it
+  // is hidden outright.
   assert.match(app, /button\.classList\.toggle\("primary", active\)/);
   assert.match(app, /button\.classList\.toggle\("secondary", !active\)/);
-  assert.match(app, /desktopViewToggle\.querySelectorAll\("\[data-weight-view\]"\)/);
+  assert.match(app, /if \(desktopViewToggle\) desktopViewToggle\.hidden = true;/);
 });
 
 test("touch Recipe and Weights use one Edit/Done action", () => {

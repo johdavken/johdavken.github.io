@@ -17,7 +17,10 @@ function functionBody(name){
 
 test("Receiver Hopper Weights switches to an all-layer mobile matrix without changing desktop rendering",()=>{
   const render = functionBody("renderWeightsArea");
-  assert.match(render,/!isDesktopLayout\(\)/);
+  // The split is the compact-mobile breakpoint now, not the pointer-based
+  // desktop predicate: a tablet gets the wide grid on Weights for the same
+  // reason it gets the reworked grid on Recipe.
+  assert.match(render,/layoutModeQueries\.compactRecipe\.matches/);
   assert.match(render,/renderMobileWeightsArea\(area\);/);
 
   const mobile = functionBody("renderMobileWeightsArea");
@@ -103,8 +106,9 @@ test("mobile receiver Summary cells are compact text readouts with no repeated h
 });
 
 test("the Summary/Edit mode persists at module scope, shared by both weights render paths",()=>{
-  // renderWeightsArea splits on isDesktopLayout(), so "desktop" and "mobile"
-  // here already mean pointer vs touch - one flag serves both.
+  // renderWeightsArea now splits on the compact-mobile breakpoint, so
+  // "mobile" here means phone-width; the wide grid keeps no view of its own
+  // (it is always live) and simply writes "edit" back to the shared flag.
   assert.match(app,/let weightsViewMode = "summary";/);
   assert.match(app,/weightsViewMode = visualMode \? "summary" : "edit";/);
   assert.match(app,/weightsViewMode = desktopWeightView;/);

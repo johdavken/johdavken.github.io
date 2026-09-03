@@ -39,9 +39,12 @@ test("there is no standalone Bulk edit button/tab left in the desktop weights ac
   assert.match(body, /actionToolbar\.append\(profilesAction\);/);
 });
 
-test("cell selection is gated on View being Edit, not a separate mode flag - desktopBulkMode is derived from setDesktopWeightView", () => {
+test("the wide weights grid is always live - selection needs no mode, and desktopBulkMode is simply always on", () => {
   const body = functionBody("renderWeightsArea");
-  assert.match(body, /function setDesktopWeightView\(mode\)\{\s*\n\s*desktopWeightView = mode === "edit" \? "edit" : "summary";\s*\n\s*weightsViewMode = desktopWeightView;\s*\n\s*desktopBulkMode = desktopWeightView === "edit";/);
+  // Summary is gone here for the same reason it is gone from the Recipe
+  // grid: the cells are always editable, so there is nothing to switch to.
+  assert.match(body, /desktopWeightView = "edit";\s*\n\s*weightsViewMode = desktopWeightView;\s*\n\s*desktopBulkMode = true;/);
+  assert.match(body, /if \(desktopViewToggle\) desktopViewToggle\.hidden = true;/);
   // The per-cell click/keydown handlers and header select buttons still
   // gate on the same desktopBulkMode variable - just no longer settable by
   // its own independent toggle.
@@ -68,15 +71,17 @@ test("the toolbar's own DOM order is Smart Hoppers/View controls, then the toolb
   assert.ok(controlsAppend > -1 && toolbarAppend > controlsAppend && scrollAppend > toolbarAppend);
 });
 
-test("opening Weight Profiles switches View back to Summary, and switching to Edit closes Weight Profiles - the two still can't be open together", () => {
+test("opening Weight Profiles still drops any in-progress selection through the same exit call", () => {
   const body = functionBody("renderWeightsArea");
   assert.match(body, /function setDesktopProfilesOpen\(open\)\{\s*\n\s*desktopProfilesOpen = !!open;\s*\n\s*if \(desktopProfilesOpen\)\{\s*\n\s*setDesktopWeightView\("summary"\);/);
-  assert.match(body, /desktopBulkMode = desktopWeightView === "edit";\s*\n\s*if \(desktopBulkMode\) setDesktopProfilesOpen\(false\);/);
+  // "summary" no longer names a view - it is the one thing that request
+  // still means now that the grid is always live: clear the selection.
+  assert.match(body, /if \(mode !== "edit"\) selected\.clear\(\);/);
 });
 
-test("exiting Edit view (Android Back, or switching to Summary) clears any in-progress selection", () => {
+test("the exit hook (Android Back, page switches) still clears any in-progress selection", () => {
   const body = functionBody("renderWeightsArea");
-  assert.match(body, /if \(!desktopBulkMode\) selected\.clear\(\);/);
+  assert.match(body, /if \(mode !== "edit"\) selected\.clear\(\);/);
   assert.match(app, /exitWeightsBulkModeFn = \(\) => setDesktopWeightView\("summary"\);/);
 });
 

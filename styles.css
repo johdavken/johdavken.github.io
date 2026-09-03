@@ -11897,3 +11897,47 @@ body #splitsArea[data-recipe-layout="transposed"] .splitCellHeader{
   gap:5px;
   margin-bottom:3px;
 }
+
+/* --------------------------------------------------------------------------
+   Reworked Hopper Weights grid (transposed)
+   Same axis swap as the Recipe grid above, and the same table-layout:fixed
+   reasoning: the weight fields are unsized <input>s whose intrinsic width
+   would otherwise set the column width. Scoped by the layer-header class the
+   transposed build emits, so the compact-mobile weights renderer (a wholly
+   different DOM) is untouched.
+   -------------------------------------------------------------------------- */
+body #weightsArea .weightsMatrix:has(.weightsLayerHeader){
+  table-layout:fixed;
+  width:100%;
+  min-width:880px;
+}
+body #weightsArea .weightsMatrix:has(.weightsLayerHeader) thead th{
+  min-width:0;
+  width:auto;
+  text-align:center;
+}
+body #weightsArea .weightsMatrix .weightsLayerHeader{
+  position:sticky;
+  left:0;
+  z-index:2;
+  min-width:96px;
+  width:96px;
+  max-width:96px;
+  text-align:left;
+  background:var(--panelOpen);
+}
+body #weightsArea .weightsMatrix .weightsLayerHeader .weightsSelectHeader{
+  width:100%;
+  font-size:clamp(15px,1.4vw,19px);
+  font-weight:800;
+  text-align:left;
+}
+body #weightsArea .weightsMatrix:has(.weightsLayerHeader) .weightsMatrixCell{
+  min-width:0;
+  width:auto;
+  max-width:none;
+}
+body #weightsArea .weightsMatrix:has(.weightsLayerHeader) .weightsMatrixCell input{
+  width:100%;
+  min-width:0;
+}

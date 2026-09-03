@@ -120,7 +120,10 @@ test("refreshSmartHopperState iterates every hopper unconditionally, so any numb
 
 test("view switching only toggles a CSS-driven view attribute - it never re-renders or re-reads stale markup", () => {
   const desktop = functionBody("renderWeightsArea");
-  assert.match(desktop, /function setDesktopWeightView\(mode\)\{\s*\n\s*desktopWeightView = mode === "edit" \? "edit" : "summary";\s*\n\s*weightsViewMode = desktopWeightView;/);
+  // The wide grid keeps no view of its own any more, but the attribute it
+  // writes is still the only thing that changes - no re-render, no stale
+  // markup re-read.
+  assert.match(desktop, /desktopWeightView = "edit";\s*\n\s*weightsViewMode = desktopWeightView;/);
   const setDesktopWeightViewBody = desktop.slice(
     desktop.indexOf("function setDesktopWeightView"),
     desktop.indexOf("\n      }", desktop.indexOf("function setDesktopWeightView"))

@@ -2867,7 +2867,12 @@
       const existingProfilesPanel = $("setupWeightProfilesBlock");
       if (existingProfilesPanel?.parentElement === area) $("weightsBlock")?.after(existingProfilesPanel);
       area.innerHTML = "";
-      if (!isDesktopLayout()){
+      // Weights follows Recipe's reworked boundary: the wide grid serves
+      // every width above the compact-mobile breakpoint, tablet included,
+      // so a tablet does not get the new Recipe grid on one page and the
+      // phone weights UI on the next. Only compact mobile keeps its own
+      // renderer.
+      if (layoutModeQueries.compactRecipe.matches){
         renderMobileWeightsArea(area);
         placeSetupWeightProfiles();
         placeWeightsViewToggleForPage();
@@ -2883,9 +2888,12 @@
       const cellRefs = new Map();
       const columnSelectors = new Map();
       const rowSelectors = new Map();
-      let desktopBulkMode = false;
+      // Always live, like the reworked Recipe grid: every weight field is
+      // typeable on arrival and the selection alone raises the bulk bar, so
+      // "edit" is the only view this surface has left.
+      let desktopBulkMode = true;
       let desktopProfilesOpen = false;
-      let desktopWeightView = "summary";
+      let desktopWeightView = "edit";
       const geometryMode = currentSmartHopperGeometryMode();
 
       function toggleSelection(keys){
@@ -2967,11 +2975,17 @@
       const corner = document.createElement("th");
       corner.scope = "col";
       corner.className = "weightsRowCorner";
-      corner.textContent = "Hopper";
+      // Transposed, the first column names layers and the header row names
+      // hopper positions.
+      corner.textContent = "Layer";
       headerRow.appendChild(corner);
-      state.layers.forEach(L=>{
+      const tbody = document.createElement("tbody");
+      // Same transposition as the Recipe grid, built from the same kind of
+      // shared builders: a layer is a row, a hopper position is a column.
+      function buildWeightsLayerHeader(L){
         const th = document.createElement("th");
-        th.scope = "col";
+        th.scope = "row";
+        th.className = "weightsLayerHeader";
         const button = document.createElement("button");
         button.type = "button";
         button.className = "weightsSelectHeader";
@@ -2985,16 +2999,12 @@
         });
         columnSelectors.set(L.name, button);
         th.appendChild(button);
-        headerRow.appendChild(th);
-      });
-      thead.appendChild(headerRow);
-      table.appendChild(thead);
+        return th;
+      }
 
-      const tbody = document.createElement("tbody");
-      for (let hi=0; hi<HOPPERS_PER_LAYER; hi++){
-        const tr = document.createElement("tr");
+      function buildWeightsPositionHeader(hi){
         const rowHeader = document.createElement("th");
-        rowHeader.scope = "row";
+        rowHeader.scope = "col";
         const rowButton = document.createElement("button");
         rowButton.type = "button";
         rowButton.className = "weightsSelectHeader mono";
@@ -3008,9 +3018,10 @@
         });
         rowSelectors.set(hi, rowButton);
         rowHeader.appendChild(rowButton);
-        tr.appendChild(rowHeader);
+        return rowHeader;
+      }
 
-        state.layers.forEach(L=>{
+      function buildWeightsCell(L, hi){
           const key = `${L.name}:${hi}`;
           const id = weightId(L.name, hi);
           const td = document.createElement("td");
@@ -3152,7 +3163,6 @@
           td.appendChild(cellRow);
           td.appendChild(visualReadout);
           if (computedWeight) td.appendChild(computedWeight);
-          tr.appendChild(td);
 
           cellRefs.set(key, { td, selector, input, visualWeightInput, visualHeightInput, layer: L, hi });
 
@@ -3198,9 +3208,18 @@
             if (!accepted) return;
             validateAndCompute({ sync:true }); saveSession();
           });
-        });
-        tbody.appendChild(tr);
+          return td;
       }
+
+      state.layers.forEach(L=>{
+        const tr = document.createElement("tr");
+        tr.appendChild(buildWeightsLayerHeader(L));
+        for (let hi=0; hi<HOPPERS_PER_LAYER; hi++) tr.appendChild(buildWeightsCell(L, hi));
+        tbody.appendChild(tr);
+      });
+      for (let hi=0; hi<HOPPERS_PER_LAYER; hi++) headerRow.appendChild(buildWeightsPositionHeader(hi));
+      thead.appendChild(headerRow);
+      table.appendChild(thead);
       table.appendChild(tbody);
       frame.appendChild(table);
       scroll.appendChild(frame);
@@ -3241,6 +3260,9 @@
       });
 
       function updateSelectionUI(message){
+        // Selection is what raises the bulk bar now that there is no Edit
+        // view to enter, so the decision belongs on every selection change.
+        if (toolbar) toolbar.hidden = selected.size === 0;
         cellRefs.forEach((ref,key)=>{
           const isSelected = selected.has(key);
           ref.selector.checked = isSelected;
@@ -3302,31 +3324,23 @@
       }
       exitWeightsBulkModeFn = () => setDesktopWeightView("summary");
       function setDesktopWeightView(mode){
-        desktopWeightView = mode === "edit" ? "edit" : "summary";
+        // The wide weights grid has no Summary any more - it is always
+        // live, exactly like the reworked Recipe grid. The parameter is
+        // kept so the existing exit hook (Android Back, page switches) can
+        // still ask for "summary" and get the one sane thing left: the
+        // selection dropped.
+        if (mode !== "edit") selected.clear();
+        desktopWeightView = "edit";
         weightsViewMode = desktopWeightView;
-        desktopBulkMode = desktopWeightView === "edit";
-        if (desktopBulkMode) setDesktopProfilesOpen(false);
-        weightsBulkModeActive = desktopBulkMode;
+        desktopBulkMode = true;
+        weightsBulkModeActive = false;
         area.dataset.desktopWeightView = desktopWeightView;
-        area.dataset.desktopBulkMode = String(desktopBulkMode);
-        toolbar.hidden = !desktopBulkMode;
-        if (!desktopBulkMode) selected.clear();
-        desktopViewToggle.querySelectorAll("[data-weight-view]").forEach(button=>{
-          const active = button.dataset.weightView === desktopWeightView;
-          button.classList.toggle("active", active);
-          button.classList.toggle("primary", active);
-          button.classList.toggle("actionRail", active);
-          button.classList.toggle("secondary", !active);
-          button.setAttribute("aria-pressed", String(active));
-        });
-        // Summary is CSS-hidden here too now (see .desktopWeightsViewToggle
-        // in styles.css) - same collapse as Recipe's own view toggle, so the
-        // one visible button always carries the Edit/Done label.
-        const editToggle = desktopViewToggle.querySelector('[data-weight-view="edit"]');
-        if (editToggle){
-          editToggle.textContent = desktopBulkMode ? "Done" : "Edit";
-          editToggle.setAttribute("aria-label", desktopBulkMode ? "Done editing hopper weights" : "Edit hopper weights");
-        }
+        area.dataset.desktopBulkMode = "true";
+        // Selection raises the bulk bar, so it reserves no space while idle.
+        toolbar.hidden = selected.size === 0;
+        // Nothing left to switch between, so the control goes away with the
+        // mode rather than sitting there as a no-op.
+        if (desktopViewToggle) desktopViewToggle.hidden = true;
         updateSelectionUI();
       }
       desktopViewToggle.addEventListener("click", event=>{
