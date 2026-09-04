@@ -12031,10 +12031,14 @@ body #splitsArea[data-recipe-layout="transposed"] .splitMatrixCell.empty:focus-w
 body[data-recipe-page="saved"] #splitsArea{
   display:grid;
   /* Left column sized to its content (heading, toolbar, two-line rows), the
-     preview takes the rest. Was minmax(0,1fr) minmax(280px,340px), which let
-     the list eat the workspace and pinned the matrix preview to a 340px rail
-     that always scrolled. */
-  grid-template-columns:minmax(620px,760px) minmax(500px,1fr);
+     preview takes the rest up to a cap. Was minmax(0,1fr) minmax(280px,340px),
+     which let the list eat the workspace and pinned the matrix preview to a
+     340px rail that always scrolled; then minmax(500px,1fr), which on a wide
+     monitor stretched a 7-column preview thin across ~1400px. The 980px cap
+     keeps the table dense, and justify-content:start parks the slack on the
+     right instead of inflating either column. */
+  grid-template-columns:minmax(620px,760px) minmax(500px,980px);
+  justify-content:start;
   gap:20px 24px;
   align-items:start;
 }
