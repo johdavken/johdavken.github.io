@@ -510,10 +510,12 @@ test("the Weights page opens with the same gap above the grid as the other pages
  * Structural/styling only - no change to save/load/update, RT Sync, or
  * preview behaviour.
  */
-test("the left column is constrained and the preview gets the rest", () => {
+test("the left column is constrained and the preview gets the rest, capped", () => {
   // Was minmax(0,1fr) minmax(280px,340px) - the list ate the workspace and
-  // the matrix preview was pinned to a 340px rail that always scrolled.
-  assert.match(styles, /body\[data-recipe-page="saved"\] #splitsArea\{[\s\S]*?grid-template-columns:minmax\(620px,760px\) minmax\(500px,1fr\);[\s\S]*?gap:20px 24px;/);
+  // the matrix preview was pinned to a 340px rail that always scrolled. Then
+  // minmax(500px,1fr), which stretched the preview thin on a wide monitor;
+  // the 980px cap + justify-content:start park the slack on the right.
+  assert.match(styles, /body\[data-recipe-page="saved"\] #splitsArea\{[\s\S]*?grid-template-columns:minmax\(620px,760px\) minmax\(500px,980px\);[\s\S]*?justify-content:start;[\s\S]*?gap:20px 24px;/);
 });
 
 test("the saved-recipe name is the primary text, its metadata secondary", () => {
