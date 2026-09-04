@@ -420,6 +420,19 @@ test("Smart Hoppers lives in the header pill, beside where Current/Next put Prom
   assert.match(app, /headerActions\.hidden = isSavedRecipesPage\(\);/);
 });
 
+test("the header-pill Smart Hoppers + circumference wear the station-console chip, not the old accent tint", () => {
+  // Both groups take the console key surface / edge shadow / 4px corner /
+  // 30px height (button-styling.css), matching the toolbar buttons beside
+  // them - the pale color-mix(var(--recipe-pill-accent) 28%) tint is gone.
+  const smart = styles.slice(styles.indexOf("body #splitsBlock #recipeHeaderControls .weightsHeaderSmart{"));
+  assert.match(smart, /^body #splitsBlock #recipeHeaderControls \.weightsHeaderSmart\{[\s\S]*?background:var\(--btnstyle-surface\);[\s\S]*?box-shadow:0 1px 0 var\(--btnstyle-edge\);[\s\S]*?border-radius:4px;/m);
+  const circ = styles.slice(styles.indexOf("body #splitsBlock #recipeHeaderControls .weightsHeaderCircumference{"));
+  assert.match(circ, /^body #splitsBlock #recipeHeaderControls \.weightsHeaderCircumference\{[\s\S]*?background:var\(--btnstyle-surface\);[\s\S]*?box-shadow:0 1px 0 var\(--btnstyle-edge\);/m);
+  assert.doesNotMatch(smart.slice(0, smart.indexOf("}")), /recipe-pill-accent/);
+  // Enabled Smart Hoppers inverts to the pressed-key fill, like the active tab.
+  assert.match(styles, /body #splitsBlock #recipeHeaderControls \.weightsHeaderSmart:has\(\.toggle\.on\)\{[\s\S]*?background:var\(--btnstyle-ink\);[\s\S]*?color:var\(--panel\);/);
+});
+
 test("the bulk toolbar shows the visible 'N hoppers selected' count again", () => {
   assert.match(app, /<div id="weightSelectionStatus" class="tiny weightsSelectionStatus" role="status"/);
   assert.doesNotMatch(app, /class="tiny weightsSelectionStatus srOnly"/);
@@ -470,6 +483,10 @@ test("the shared circumference field moves into the header pill alongside Smart 
   assert.match(body, /circumferenceLabel\.classList\.add\("weightsHeaderCircumference"\);/);
   assert.match(body, /headerActions\.appendChild\(circumferenceLabel\);/);
   assert.match(styles, /body #splitsBlock #recipeHeaderControls \.weightsHeaderCircumference\{/);
+  // Circumference is appended before the Smart Hoppers toggle so the
+  // right-aligned toggle stays pinned to the edge when enabling Smart
+  // Hoppers reveals the circumference field.
+  assert.match(body, /headerActions\.appendChild\(circumferenceLabel\);[\s\S]*?\n\s*\}\s*\n\s*headerActions\.appendChild\(smartField\);/);
 });
 
 test("Apply in the weights bulk bar takes the station-console key, matching Clear", () => {

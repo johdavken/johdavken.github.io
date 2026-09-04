@@ -3178,11 +3178,15 @@
           smartField.classList.add("unavailable");
           smartField.textContent = "Smart Hoppers · unavailable";
         }
-        headerActions.appendChild(smartField);
+        // Circumference leads, the Smart Hoppers toggle trails. The pill is
+        // right-aligned, and circumference only exists in the DOM while Smart
+        // Hoppers is on - keeping the toggle last pins it to the right edge
+        // so it doesn't jump left when enabling reveals the circumference.
         if (circumferenceLabel){
           circumferenceLabel.classList.add("weightsHeaderCircumference");
           headerActions.appendChild(circumferenceLabel);
         }
+        headerActions.appendChild(smartField);
         desktopControls.querySelector(".desktopWeightsSmartControl")?.remove();
       }
       headerRow.appendChild(corner);

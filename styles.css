@@ -12577,20 +12577,33 @@ body #splitsBlock #weightsArea .weightsBulkBar .weightsInputWithUnit input::plac
 }
 
 /* Smart Hoppers + circumference sit in the header pill, beside where
-   Current/Next put Promote / Load Current / Print. Each is a compact inline
-   group; #recipeHeaderControls carries the specificity to beat the pill's
-   own segment rules. */
+   Current/Next put Promote / Load Current / Print. Both read as
+   station-console chips (button-styling.css): the same key surface, edge
+   shadow, square 4px corner and 30px height as the toolbar buttons, rather
+   than the old pale accent tint that sat apart from that language.
+   #recipeHeaderControls carries the specificity to beat the pill's own
+   segment rules. */
 body #splitsBlock #recipeHeaderControls .weightsHeaderSmart{
   display:inline-flex;
   align-items:center;
   gap:8px;
-  padding:4px 10px;
-  border-radius:var(--control-radius);
-  background:color-mix(in srgb, var(--recipe-pill-accent) 28%, var(--panel2));
-  color:var(--text);
+  min-height:30px;
+  padding:0 10px;
+  border:0;
+  border-radius:4px;
+  background:var(--btnstyle-surface);
+  box-shadow:0 1px 0 var(--btnstyle-edge);
+  color:var(--btnstyle-ink);
   font-size:var(--font-small);
   font-weight:750;
   white-space:nowrap;
+}
+/* Enabled Smart Hoppers reads as a pressed key - the console's inverted
+   fill, matching the active view tab and the Timeline "Show all" toggle. */
+body #splitsBlock #recipeHeaderControls .weightsHeaderSmart:has(.toggle.on){
+  background:var(--btnstyle-ink);
+  box-shadow:none;
+  color:var(--panel);
 }
 body #splitsBlock #recipeHeaderControls .weightsHeaderSmart .toggle{
   --toggle-w:40px;
@@ -12600,16 +12613,21 @@ body #splitsBlock #recipeHeaderControls .weightsHeaderSmart .toggle{
 body #splitsBlock #recipeHeaderControls .weightsHeaderSmart.unavailable{
   opacity:.6;
   font-weight:600;
+  box-shadow:none;
+  background:color-mix(in srgb, var(--btnstyle-surface) 55%, transparent);
 }
 body #splitsBlock #recipeHeaderControls .weightsHeaderCircumference{
   display:inline-flex;
   align-items:center;
   gap:6px;
   margin:0;
-  padding:4px 10px;
-  border-radius:var(--control-radius);
-  background:color-mix(in srgb, var(--recipe-pill-accent) 28%, var(--panel2));
-  color:var(--text);
+  min-height:30px;
+  padding:0 10px;
+  border:0;
+  border-radius:4px;
+  background:var(--btnstyle-surface);
+  box-shadow:0 1px 0 var(--btnstyle-edge);
+  color:var(--btnstyle-ink);
   font-size:var(--font-small);
   font-weight:750;
   white-space:nowrap;
