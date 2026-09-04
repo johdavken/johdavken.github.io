@@ -3060,6 +3060,10 @@
       let desktopProfilesOpen = false;
       let desktopWeightView = "edit";
       const geometryMode = currentSmartHopperGeometryMode();
+      // Lets the grid reserve row height for the per-cell Smart Hoppers
+      // computed-weight readout (shown by refreshSmartHopperState) so cells
+      // stay aligned whether or not a given hopper resolves a computed value.
+      area.dataset.smartHoppers = String(state.smartHoppersEnabled);
 
       function toggleSelection(keys){
         const select = keys.some(key=>!selected.has(key));
@@ -3699,9 +3703,10 @@
           if (computedEl){
             if (smart){
               computedEl.hidden = false;
-              computedEl.textContent = computedEl.classList.contains("mobileWeightsComputedWeight")
-                ? `✓ ${fmtNum(smart.value, 1)} lb`
-                : `✓ Calculated: ${fmtNum(smart.value, 1)} lb`;
+              // Compact "✓ N lb" on both surfaces: the always-live wide grid's
+              // cell is too narrow for a "Calculated:" label, and the full
+              // explanation is on the hover title below.
+              computedEl.textContent = `✓ ${fmtNum(smart.value, 1)} lb`;
               computedEl.title = `Computed from ${hopperBadgeLabel(L.name, hi)}'s geometry and ${smart.resin.resin_code}'s bulk density (${smart.bulkDensity} lb/ft³). Used for the run-down formula instead of the entered weight above.`;
             } else {
               computedEl.hidden = true;

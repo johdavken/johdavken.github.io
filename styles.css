@@ -12442,14 +12442,29 @@ body #weightsArea .weightsMatrix:has(.weightsLayerHeader) .weightsInputWithUnit 
       desktop one. Kept in lockstep with desktop.css:517-532. */
 body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .weightsCellRow,
 body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .weightsCellSelector,
-body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .hopperGeometryPopover,
-body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .weightsComputedWeight{
+body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .hopperGeometryPopover{
   display:none!important;
 }
 body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .weightsMatrixCell{
   height:64px;
   vertical-align:middle;
   box-shadow:inset 0 0 0 1px var(--row-border-2);
+}
+/* Smart Hoppers computed-weight readout - kept in lockstep with
+   desktop.css. The always-live grid has no Summary view, so the corrected
+   value shows here under the Weight/Height fields; the row height is
+   reserved whenever Smart Hoppers is on. */
+body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .weightsComputedWeight{
+  margin:0;
+  padding-top:3px;
+  border-top:1px solid var(--row-border-2);
+  font-size:10px;
+  line-height:1;
+  font-weight:800;
+  text-align:right;
+}
+body[data-shell="touch"] #weightsArea[data-smart-hoppers="true"] .weightsMatrix:has(.weightsLayerHeader) .weightsMatrixCell{
+  height:84px;
 }
 body[data-shell="touch"] #weightsArea[data-desktop-bulk-mode="true"] .weightsMatrix:has(.weightsLayerHeader) .weightsMatrixCell.selected{
   background:color-mix(in srgb,var(--focus-ring) 72%,var(--row-bg-2));

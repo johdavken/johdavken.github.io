@@ -6,6 +6,7 @@ const fs = require("node:fs");
 
 const app = fs.readFileSync("app.js", "utf8");
 const styles = fs.readFileSync("styles.css", "utf8");
+const desktop = fs.readFileSync("desktop.css", "utf8");
 const rearrangement = fs.readFileSync("hopper-rearrangement.js", "utf8");
 
 // Smart Hoppers, stage 1: the toggle (replacing "Select row" in the
@@ -404,12 +405,30 @@ test("the \"weights not set\" and \"missing weight\" warnings also account for s
 
 test("the computed-weight readout uses the checkmark-verified style (mockup option 9): a checkmark, and --ok green instead of the theme's own accent color, since --title reads as a warning in some themes (e.g. Light, a brick red)", () => {
   const body = functionBody("refreshSmartHopperState");
-  assert.match(body, /computedEl\.classList\.contains\("mobileWeightsComputedWeight"\)/);
-  assert.match(body, /`✓ \$\{fmtNum\(smart\.value, 1\)\} lb`/);
-  assert.match(body, /`✓ Calculated: \$\{fmtNum\(smart\.value, 1\)\} lb`/);
+  // One compact "✓ N lb" form on every surface: the always-live wide grid's
+  // cell is too narrow for a "Calculated:" label, and the mobile readout was
+  // already compact. The full explanation stays on the hover title.
+  assert.match(body, /computedEl\.textContent = `✓ \$\{fmtNum\(smart\.value, 1\)\} lb`;/);
+  assert.doesNotMatch(body, /✓ Calculated:/);
   const ruleStart = styles.indexOf(".weightsComputedWeight{");
   assert.notEqual(ruleStart, -1);
   const rule = styles.slice(ruleStart, styles.indexOf("}", ruleStart) + 1);
   assert.match(rule, /color: var\(--ok\);/);
   assert.doesNotMatch(rule, /color: var\(--title\);/);
+});
+
+test("the always-live wide weights grid surfaces the Smart Hoppers computed weight per cell (it has no Summary view for the green .desktopWeightSummaryWeight)", () => {
+  // Was in the blanket display:none!important list beside .weightsCellRow /
+  // .weightsCellSelector / .hopperGeometryPopover; pulled out so
+  // refreshSmartHopperState's per-cell [hidden] toggle governs it.
+  assert.match(desktop, /\.weightsCellRow,\.weightsCellSelector,\.hopperGeometryPopover\{display:none!important\}/);
+  assert.doesNotMatch(desktop, /\.weightsCellRow,\.weightsCellSelector,\.hopperGeometryPopover,\.weightsComputedWeight\{display:none!important\}/);
+  assert.match(desktop, /#weightsArea \.weightsComputedWeight\{[^}]*border-top:1px solid var\(--row-border-2\)[^}]*text-align:right\}/);
+  // Row height reserved whenever Smart Hoppers is on, so cells with and
+  // without a computed value stay aligned.
+  assert.match(app, /area\.dataset\.smartHoppers = String\(state\.smartHoppersEnabled\);/);
+  assert.match(desktop, /#weightsArea\[data-smart-hoppers="true"\]\[data-desktop-weight-view="edit"\] \.weightsMatrixCell\{height:84px\}/);
+  // Touch-shell mirror keeps lockstep.
+  assert.doesNotMatch(styles, /:has\(\.weightsLayerHeader\) \.weightsComputedWeight\{\s*display:none!important/);
+  assert.match(styles, /body\[data-shell="touch"\] #weightsArea\[data-smart-hoppers="true"\] \.weightsMatrix:has\(\.weightsLayerHeader\) \.weightsMatrixCell\{\s*height:84px;/);
 });

@@ -514,7 +514,16 @@
   #weightsArea[data-desktop-bulk-mode="true"] .weightsMatrixCell:focus-visible{outline:2px solid var(--focus-border);outline-offset:-3px}
   #weightsArea[data-desktop-bulk-mode="true"] .weightsMatrixCell.selected{background:color-mix(in srgb,var(--focus-ring) 72%,var(--row-bg-2));box-shadow:inset 0 0 0 2px var(--focus-border)}
   #weightsArea[data-desktop-bulk-mode="true"] .weightsMatrixCell.selected::after{content:"";position:absolute;top:5px;right:5px;width:7px;height:7px;border-radius:2px;background:var(--focus-border)}
-  .weightsCellRow,.weightsCellSelector,.hopperGeometryPopover,.weightsComputedWeight{display:none!important}
+  .weightsCellRow,.weightsCellSelector,.hopperGeometryPopover{display:none!important}
+  /* Smart Hoppers' computed ("corrected") weight. The always-live grid has
+     no Summary view to carry the green .desktopWeightSummaryWeight.smart
+     number, so surface the computed value here instead, as a compact line
+     under the cell's Weight/Height fields. refreshSmartHopperState toggles
+     [hidden] per cell (only when geometry + the resin's bulk density make a
+     value possible); the row height is reserved whenever Smart Hoppers is on
+     so cells with and without a computed value stay aligned. */
+  #weightsArea .weightsComputedWeight{margin:0;padding-top:3px;border-top:1px solid var(--row-border-2);font-size:10px;line-height:1;font-weight:800;text-align:right}
+  #weightsArea[data-smart-hoppers="true"][data-desktop-weight-view="edit"] .weightsMatrixCell{height:84px}
   .desktopWeightVisualReadout{position:relative;display:grid!important;align-items:center;min-height:46px;padding:5px 4px 3px}
   .desktopWeightVisualId{top:2px;left:2px;font-size:var(--desktop-type-label)}
   .desktopWeightVisualValues{display:block;min-width:0;text-align:right}
