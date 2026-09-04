@@ -56,9 +56,10 @@ test("the cross-resin overlay is on both pages, pointer-only, one shared off-by-
   assert.match(app, /let recipeShowCrossResinOverlay = false;/);
   const snapshot = app.slice(app.indexOf("function snapshotPayload(){"), app.indexOf("function applySharedActiveJob("));
   assert.doesNotMatch(snapshot, /recipeShowCrossResinOverlay/);
-  // Available on any typeable (pointer) grid - Current or Next - and the
-  // label names whichever recipe is being overlaid.
-  assert.match(editor, /const crossOverlayAvailable = cellsTypeable;/);
+  // Available on the reworked wide grid (tablet included) and on any
+  // typeable pointer grid - Current or Next - and the label names whichever
+  // recipe is being overlaid.
+  assert.match(editor, /const crossOverlayAvailable = reworkedGrid \|\| cellsTypeable;/);
   assert.match(editor, /const crossOverlayLabel = isNextRecipePage\(\) \? "current" : "next";/);
   assert.match(editor, /area\.dataset\.crossOverlay = \(crossOverlayAvailable && recipeShowCrossResinOverlay\) \? "on" : "off";/);
 });
@@ -244,7 +245,9 @@ test("aria-selected, the panel label, and the view control follow every workspac
   const body = app.slice(app.indexOf("function syncRecipePageUI("), app.indexOf("function setRecipePage("));
   assert.match(body, /tab\.setAttribute\("aria-selected", String\(selected\)\)/);
   assert.match(body, /const labelledBy = isSavedRecipesPage\(\)[\s\S]*?"recipePageTabSaved"[\s\S]*?isWeightsPage\(\)[\s\S]*?"recipePageTabWeights"[\s\S]*?"recipePageTabNext" : "recipePageTabCurrent"/);
-  assert.match(body, /viewToggle\.hidden = isSavedRecipesPage\(\) \|\| isWeightsPage\(\);/);
+  // Plus every width above compact mobile, where the reworked grid is
+  // always live and Summary/Edit has nothing left to switch between.
+  assert.match(body, /viewToggle\.hidden = isSavedRecipesPage\(\) \|\| isWeightsPage\(\) \|\| !layoutModeQueries\.compactRecipe\.matches;/);
   assert.match(body, /headerControls\.hidden = isSavedRecipesPage\(\);/);
 });
 
@@ -256,7 +259,7 @@ test("Recipe Book is a real tab at every width, and crossing the phone/tablet bo
   assert.match(styles, /\.recipePageTab\[hidden\],\.recipeViewToggle\[hidden\],\.recipeHeaderControls\[hidden\]\{ display:none!important; \}/);
   // The matrix-hiding swap is unconditional now; only the panel's own
   // sizing still forks by width.
-  assert.match(styles, /body\[data-recipe-page="saved"\] #splitsArea > :not\(\.splitsSavedRecipesPanel\)\{\s*display: none!important;\s*\}/);
+  assert.match(styles, /body\[data-recipe-page="saved"\] #splitsArea > :not\(\.splitsSavedRecipesPanel\):not\(\.splitsConfigurationPreview\)\{\s*display: none!important;\s*\}/);
   assert.match(styles, /@media \(min-width: 701px\)\{[\s\S]*?body\[data-recipe-page="saved"\] #splitsArea > \.splitsSavedRecipesPanel\{[\s\S]*?width: min\(100%, var\(--recipe-five-layer-rail, 1062px\)\);/);
 });
 
@@ -265,7 +268,7 @@ test("Recipe Book replaces the desktop matrix without masquerading as Current or
   assert.match(app, /function isNextRecipePage\(\)\{ return activeRecipePage === "next"; \}/);
   const setter = app.slice(app.indexOf("function setRecipePage("), app.indexOf("function hookRecipePageTabs("));
   assert.match(setter, /splitsSavedRecipesOpen = next === "saved";/);
-  assert.match(styles, /body\[data-recipe-page="saved"\] #splitsArea > :not\(\.splitsSavedRecipesPanel\)\{\s*display: none!important;/);
+  assert.match(styles, /body\[data-recipe-page="saved"\] #splitsArea > :not\(\.splitsSavedRecipesPanel\):not\(\.splitsConfigurationPreview\)\{\s*display: none!important;/);
   assert.match(styles, /body\[data-recipe-page="saved"\] #splitsArea > \.splitsSavedRecipesPanel\{[\s\S]*?display: block;[\s\S]*?order: 0;/);
 });
 

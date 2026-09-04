@@ -112,7 +112,9 @@ test("desktop keeps the matrix corner compact and places the Smart Hoppers switc
   const start = app.indexOf('corner.className = "weightsRowCorner";');
   const body = app.slice(start, app.indexOf("headerRow.appendChild(corner);", start));
   assert.doesNotMatch(body, /corner\.textContent = "Select row"/);
-  assert.match(body, /corner\.textContent = "Hopper"/);
+  // Transposed, the first column names layers and the header row names
+  // hopper positions, so the corner label follows the column under it.
+  assert.match(body, /corner\.textContent = "Layer"/);
 
   const renderStart = app.indexOf("function renderWeightsArea(");
   const renderBody = app.slice(renderStart, app.indexOf("\n    function printRecipeSheet", renderStart));

@@ -344,7 +344,7 @@
   function renderConfigurationList(host,items,kind,syncState,{ showRowActions = true } = {}){
     host.replaceChildren();
     if(!items.length){ const empty=document.createElement("div"); empty.className="muted"; empty.textContent=kind==="recipe"?"No shared recipes saved for this workspace.":"No shared weight profiles saved for this workspace."; host.append(empty); return; }
-    items.forEach(item=>{ const row=document.createElement("div"); row.className="workspaceConfigurationRow"; row.tabIndex=0; row.setAttribute("role","group"); row.setAttribute("aria-label",`${item.name} configuration`); const select=()=>{selectedWorkspaceConfigurationId=item.id; renderWorkspaceConfigurations(syncState);}; const selected=selectedWorkspaceConfigurationId===item.id; row.classList.toggle("selected",selected); row.addEventListener("click",event=>{if(!event.target.closest("button,summary,details")) select();}); row.addEventListener("keydown",event=>{if((event.key==="Enter"||event.key===" ")&&!event.target.closest("button,summary")){event.preventDefault();select();}}); const info=document.createElement("div"); info.className="workspaceConfigurationInfo"; info.addEventListener("click",event=>{event.stopPropagation();select();}); const title=document.createElement("strong"); if(item.favorite){const star=document.createElement("span");star.className="workspaceConfigurationFavorite";star.setAttribute("aria-label","Favorite recipe");star.textContent="★";title.append(star," ");} title.append(item.name); const meta=document.createElement("small"); const count=kind==="recipe"&&Array.isArray(item.payload?.layers)?item.payload.layers.reduce((n,layer)=>n+(Array.isArray(layer?.hoppers)?layer.hoppers.filter(h=>typeof h?.resin_name==="string"&&h.resin_name.trim()).length:0),0):kind!=="recipe"&&Array.isArray(item.payload?.layers)?item.payload.layers.reduce((n,layer)=>n+(Array.isArray(layer?.receiver_weights_lb)&&layer.receiver_weights_lb.length===6?6:0),0):null; meta.textContent=`${item.payload.line_type} Layer${count===null?"":` · ${count} ${kind==="recipe"?"assigned hoppers":"receiver weights"}`} · Updated ${item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : "unknown"}`; info.append(title,meta); row.append(info); if(selected&&showRowActions){const actions=document.createElement("div"); actions.className="workspaceConfigurationActions"; const action=(label,fn,cls="secondary")=>{const b=document.createElement("button");b.type="button";b.className=cls;b.textContent=label;b.addEventListener("click",event=>{event.stopPropagation();fn();});return b;}; actions.append(action("Load",()=>previewWorkspaceConfiguration(item),"primary"),action("Update",()=>openWorkspaceConfigurationDialog("update",item))); const menu=document.createElement("details"); menu.className="workspaceConfigurationOverflow"; menu.addEventListener("click",event=>event.stopPropagation()); menu.addEventListener("toggle",()=>{const sheet=menu.closest(".mobileWeightProfilesSheet"); if(sheet) sheet.classList.toggle("profileMenuOpen",menu.open); if(menu.open){ window.requestAnimationFrame(()=>{const anchor=summary.getBoundingClientRect(); const popup=menuActions.getBoundingClientRect(); const margin=8; const top=Math.max(margin,anchor.top-popup.height-4); const left=Math.min(Math.max(margin,anchor.right-popup.width),window.innerWidth-popup.width-margin); menuActions.style.position="fixed"; menuActions.style.top=`${top}px`; menuActions.style.left=`${left}px`; menuActions.style.right="auto";});}else{menuActions.style.position="";menuActions.style.top="";menuActions.style.left="";menuActions.style.right="";}}); const summary=document.createElement("summary"); summary.setAttribute("aria-label",`More actions for ${item.name}`); summary.textContent="⋯"; const menuActions=document.createElement("div"); menuActions.className="workspaceConfigurationOverflowMenu"; const menuAction=(label,fn,cls="secondary")=>{const button=action(label,()=>{menu.open=false;fn();},cls);menuActions.append(button);}; menuAction("Rename",()=>openWorkspaceConfigurationDialog("rename",item)); menuAction("Duplicate",()=>openWorkspaceConfigurationDialog("duplicate",item)); if(kind==="recipe") menuAction(item.favorite?"Unfavorite":"Favorite",()=>mutateWorkspaceConfiguration("favorite",item)); menuAction("Delete",()=>{if(confirm(`Delete shared configuration “${item.name}”?`)) mutateWorkspaceConfiguration("delete",item);},"danger"); menu.append(summary,menuActions); actions.append(menu); row.append(actions);} host.append(row); });
+    items.forEach(item=>{ const row=document.createElement("div"); row.className="workspaceConfigurationRow"; row.tabIndex=0; row.setAttribute("role","group"); row.setAttribute("aria-label",`${item.name} configuration`); const select=()=>{selectedWorkspaceConfigurationId=item.id; renderWorkspaceConfigurations(syncState);}; const selected=selectedWorkspaceConfigurationId===item.id; row.classList.toggle("selected",selected); row.addEventListener("click",event=>{if(!event.target.closest("button,summary,.workspaceConfigurationOverflow")) select();}); row.addEventListener("keydown",event=>{if((event.key==="Enter"||event.key===" ")&&!event.target.closest("button,summary")){event.preventDefault();select();}}); const info=document.createElement("div"); info.className="workspaceConfigurationInfo"; const title=document.createElement("strong"); if(item.favorite){const star=document.createElement("span");star.className="workspaceConfigurationFavorite";star.setAttribute("aria-label","Favorite recipe");star.textContent="★";title.append(star," ");} title.append(item.name); const meta=document.createElement("small"); const count=kind==="recipe"&&Array.isArray(item.payload?.layers)?item.payload.layers.reduce((n,layer)=>n+(Array.isArray(layer?.hoppers)?layer.hoppers.filter(h=>typeof h?.resin_name==="string"&&h.resin_name.trim()).length:0),0):kind!=="recipe"&&Array.isArray(item.payload?.layers)?item.payload.layers.reduce((n,layer)=>n+(Array.isArray(layer?.receiver_weights_lb)&&layer.receiver_weights_lb.length===6?6:0),0):null; meta.textContent=`${item.payload.line_type} Layer${count===null?"":` · ${count} ${kind==="recipe"?"assigned hoppers":"receiver weights"}`} · Updated ${item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : "unknown"}`; info.append(title,meta); row.append(info); if(selected&&showRowActions){const actions=document.createElement("div"); actions.className="workspaceConfigurationActions"; const action=(label,fn,cls="secondary")=>{const b=document.createElement("button");b.type="button";b.className=cls;b.textContent=label;b.addEventListener("click",event=>{event.stopPropagation();fn();});return b;}; actions.append(action("Load",()=>previewWorkspaceConfiguration(item),"primary"),action("Update",()=>openWorkspaceConfigurationDialog("update",item))); const menu=document.createElement("details"); menu.className="workspaceConfigurationOverflow"; menu.addEventListener("click",event=>event.stopPropagation()); menu.addEventListener("toggle",()=>{const sheet=menu.closest(".mobileWeightProfilesSheet"); if(sheet) sheet.classList.toggle("profileMenuOpen",menu.open); if(menu.open){ window.requestAnimationFrame(()=>{const anchor=summary.getBoundingClientRect(); const popup=menuActions.getBoundingClientRect(); const margin=8; const top=Math.max(margin,anchor.top-popup.height-4); const left=Math.min(Math.max(margin,anchor.right-popup.width),window.innerWidth-popup.width-margin); menuActions.style.position="fixed"; menuActions.style.top=`${top}px`; menuActions.style.left=`${left}px`; menuActions.style.right="auto";});}else{menuActions.style.position="";menuActions.style.top="";menuActions.style.left="";menuActions.style.right="";}}); const summary=document.createElement("summary"); summary.setAttribute("aria-label",`More actions for ${item.name}`); summary.textContent="⋯"; const menuActions=document.createElement("div"); menuActions.className="workspaceConfigurationOverflowMenu"; const menuAction=(label,fn,cls="secondary")=>{const button=action(label,()=>{menu.open=false;fn();},cls);menuActions.append(button);}; menuAction("Rename",()=>openWorkspaceConfigurationDialog("rename",item)); menuAction("Duplicate",()=>openWorkspaceConfigurationDialog("duplicate",item)); if(kind==="recipe") menuAction(item.favorite?"Unfavorite":"Favorite",()=>mutateWorkspaceConfiguration("favorite",item)); menuAction("Delete",()=>{if(confirm(`Delete shared configuration “${item.name}”?`)) mutateWorkspaceConfiguration("delete",item);},"danger"); menu.append(summary,menuActions); actions.append(menu); row.append(actions);} host.append(row); });
   }
   function renderMobileSavedRecipeRows(items,syncState){
     const panel=$("splitsSavedRecipesPanel"), host=$("mobileSavedRecipesList"), search=$("mobileSavedRecipesSearch");
@@ -625,9 +625,170 @@
     renderConfigurationList(host,items,"profile",syncState,{ showRowActions:false });
     renderMobileWeightProfileRows(items,syncState);
   }
+  /* Recipe Book preview.
+   *
+   * One pane serves both sections: whichever configuration is selected -
+   * recipe or weight profile - is drawn here in the same transposed shape the
+   * live grid uses (layers down, hopper positions across), read-only. Loading
+   * a shared configuration overwrites operator state, so the point is to see
+   * exactly what is about to land before confirming it, rather than reading a
+   * paragraph that describes it.
+   *
+   * Deliberately its own small builder rather than a second call into
+   * renderSplitsArea: that renderer wires editing, selection, tracking,
+   * autocomplete, rearrangement and RT Sync mutation into every cell against
+   * live state.layers. A preview must touch none of that - it reads a stored
+   * payload and produces nothing but markup.
+   */
+  function renderWorkspaceConfigurationPreview(syncState){
+    const host=$("splitsConfigurationPreview");
+    if(!host) return;
+    host.replaceChildren();
+    const workspaceId=syncState?.selectedWorkspaceId || "";
+    // It lives in #splitsArea beside the panel, so it has to stand down on
+    // the pages that area gives to the grid instead.
+    if(!isSavedRecipesPage() || !workspaceId || !workspaceConfigurations){ host.hidden=true; return; }
+    host.hidden=false;
+    const items=[
+      ...workspaceConfigurations.listRecipes(workspaceId).items,
+      ...workspaceConfigurations.listReceiverWeightProfiles(workspaceId).items
+    ];
+    const item=items.find(entry=>entry.id===selectedWorkspaceConfigurationId) || null;
+    if(!item){
+      const empty=document.createElement("div");
+      empty.className="configPreviewEmpty";
+      empty.textContent=items.length
+        ? "Select a saved recipe or weight profile to preview it here."
+        : "Nothing saved to this workspace yet.";
+      host.append(empty);
+      return;
+    }
+
+    // fmtTrim lives in the inner render scope, out of reach here - this
+    // preview only ever formats stored payload numbers, so a local trim is
+    // both sufficient and one less cross-scope dependency.
+    const trim=value=>Number.isFinite(value) ? String(Math.round(value*100)/100) : "";
+    const recipe=item.type==="recipe";
+    const layers=Array.isArray(item.payload?.layers) ? item.payload.layers : [];
+    const hopperCount=layers.reduce((most,layer)=>Math.max(most, Array.isArray(layer?.hoppers) ? layer.hoppers.length : (Array.isArray(layer?.receiver_weights_lb) ? layer.receiver_weights_lb.length : 0)), 0) || 6;
+
+    const header=document.createElement("div");
+    header.className="configPreviewHeader";
+    const title=document.createElement("strong");
+    if(item.favorite){
+      const star=document.createElement("span");
+      star.className="workspaceConfigurationFavorite";
+      star.setAttribute("aria-label","Favorite recipe");
+      star.textContent="\u2605";
+      title.append(star," ");
+    }
+    title.append(item.name);
+    const meta=document.createElement("small");
+    meta.textContent=`${recipe ? "Recipe" : "Weight profile"} \u00b7 ${item.payload?.line_type} Layer \u00b7 Updated ${item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : "unknown"}`;
+    header.append(title,meta);
+    host.append(header);
+
+    // A line locked to a different layer count is the one case where loading
+    // is refused outright (see applyRecipeToActivePage / applyReceiverWeightProfile).
+    // Saying so here means the operator finds out before the dialog, not after.
+    const required=derivedRequiredLayerCount(syncState);
+    const payloadLayers=Number(item.payload?.line_type);
+    const mismatch=recipe
+      ? (required !== null && payloadLayers !== required)
+      : payloadLayers !== Number(state.lineType);
+    if(mismatch){
+      const notice=document.createElement("p");
+      notice.className="configPreviewNotice";
+      notice.textContent=recipe
+        ? `This recipe is set up for ${payloadLayers} layers, but this line runs ${required}. Loading it into Current will be refused; loading into Next keeps only the layers this line has.`
+        : `This profile is set up for ${payloadLayers} layers, but this line runs ${state.lineType}. It cannot be loaded here.`;
+      host.append(notice);
+    }
+
+    const scroll=document.createElement("div");
+    scroll.className="configPreviewScroll";
+    const table=document.createElement("table");
+    table.className="configPreviewTable";
+    table.setAttribute("aria-label",`${item.name} preview`);
+
+    const thead=document.createElement("thead");
+    const headRow=document.createElement("tr");
+    const corner=document.createElement("th");
+    corner.scope="col";
+    corner.textContent="Layer";
+    headRow.append(corner);
+    for(let hi=0;hi<hopperCount;hi++){
+      const th=document.createElement("th");
+      th.scope="col";
+      th.textContent=window.PolynLineIdentity?.hopperPositionLabel(hi, syncState) || String(hi+1);
+      headRow.append(th);
+    }
+    thead.append(headRow);
+    table.append(thead);
+
+    const tbody=document.createElement("tbody");
+    layers.forEach(layer=>{
+      const tr=document.createElement("tr");
+      const rowHeader=document.createElement("th");
+      rowHeader.scope="row";
+      const name=document.createElement("b");
+      name.textContent=layer?.name || "?";
+      rowHeader.append(name);
+      if(recipe && Number.isFinite(Number(layer?.layer_pct))){
+        const pct=document.createElement("span");
+        pct.textContent=`${trim(Number(layer.layer_pct))}%`;
+        rowHeader.append(pct);
+      }
+      tr.append(rowHeader);
+      for(let hi=0;hi<hopperCount;hi++){
+        const td=document.createElement("td");
+        if(recipe){
+          const hopper=layer?.hoppers?.[hi];
+          const resin=typeof hopper?.resin_name==="string" ? hopper.resin_name.trim() : "";
+          const value=Number(hopper?.pct);
+          if(!resin && !(value>0)){
+            td.className="configPreviewEmptyCell";
+            td.textContent="\u2014";
+          }else{
+            const code=document.createElement("b");
+            code.textContent=resin || "\u2014";
+            const amount=document.createElement("span");
+            amount.textContent=Number.isFinite(value) ? `${trim(value)}%` : "";
+            td.append(code,amount);
+          }
+        }else{
+          const weight=Number(layer?.receiver_weights_lb?.[hi]);
+          if(!Number.isFinite(weight) || weight<=0){
+            td.className="configPreviewEmptyCell";
+            td.textContent="\u2014";
+          }else{
+            const amount=document.createElement("b");
+            amount.textContent=trim(weight);
+            const unit=document.createElement("span");
+            unit.textContent="lb";
+            td.append(amount,unit);
+          }
+        }
+        tr.append(td);
+      }
+      tbody.append(tr);
+    });
+    table.append(tbody);
+    scroll.append(table);
+    host.append(scroll);
+
+    const foot=document.createElement("p");
+    foot.className="configPreviewFoot";
+    foot.textContent=recipe
+      ? "Preview only \u2014 nothing changes until you choose Load."
+      : "Preview only \u2014 loading this changes receiver hopper weights and nothing else.";
+    host.append(foot);
+  }
+
   function renderWorkspaceConfigurations(syncState){
     renderSplitsSavedRecipes(syncState);
     renderSetupWeightProfiles(syncState);
+    renderWorkspaceConfigurationPreview(syncState);
     // workspaceConfigurationWorkspaceId is load-bearing for every save/
     // update/rename/duplicate/delete/favorite action from *both* remaining
     // surfaces (Recipe Setup's Saved Recipes panel, Line Setup's Receiver
@@ -2833,6 +2994,10 @@
       if (!isDesktopLayout()){
         return;
       }
+      // The Recipe Book owns this node while it is the active page (see
+      // renderSplitsArea) - both saved configuration types live there
+      // together now. Reclaiming it here would tear it back out mid-render.
+      if (isSavedRecipesPage()) return;
       if (profilesBlock.parentElement !== setupSection) weightsBlock.after(profilesBlock);
     }
 
@@ -2867,7 +3032,12 @@
       const existingProfilesPanel = $("setupWeightProfilesBlock");
       if (existingProfilesPanel?.parentElement === area) $("weightsBlock")?.after(existingProfilesPanel);
       area.innerHTML = "";
-      if (!isDesktopLayout()){
+      // Weights follows Recipe's reworked boundary: the wide grid serves
+      // every width above the compact-mobile breakpoint, tablet included,
+      // so a tablet does not get the new Recipe grid on one page and the
+      // phone weights UI on the next. Only compact mobile keeps its own
+      // renderer.
+      if (layoutModeQueries.compactRecipe.matches){
         renderMobileWeightsArea(area);
         placeSetupWeightProfiles();
         placeWeightsViewToggleForPage();
@@ -2883,9 +3053,12 @@
       const cellRefs = new Map();
       const columnSelectors = new Map();
       const rowSelectors = new Map();
-      let desktopBulkMode = false;
+      // Always live, like the reworked Recipe grid: every weight field is
+      // typeable on arrival and the selection alone raises the bulk bar, so
+      // "edit" is the only view this surface has left.
+      let desktopBulkMode = true;
       let desktopProfilesOpen = false;
-      let desktopWeightView = "summary";
+      let desktopWeightView = "edit";
       const geometryMode = currentSmartHopperGeometryMode();
 
       function toggleSelection(keys){
@@ -2905,7 +3078,12 @@
       const toolbar = document.createElement("div");
       toolbar.id = "desktopWeightsBulkContext";
       toolbar.className = "weightsBulkBar desktopWeightsBulkContext";
-      toolbar.hidden = true;
+      // Always present on the reworked grid, matching the Recipe grid's own
+      // toolbar. Smart Hoppers and the shared circumference live in the
+      // header pill instead (see the relocation below) - beside where
+      // Current/Next put Promote / Load Current / Print - which keeps this
+      // row short enough to carry the "N selected · Clear" status.
+      toolbar.hidden = false;
       toolbar.innerHTML = `
         <div class="weightsBulkFieldsRow">
           <label class="weightsBulkField" for="bulkWeight">
@@ -2917,10 +3095,10 @@
           </label>
           ${state.smartHoppersEnabled && geometryMode === "volume" ? '<label class="weightsBulkField" for="bulkHeight"><span>Volume</span><span class="weightsInputWithUnit"><input id="bulkHeight" type="text" inputmode="decimal" placeholder="No change" /><span>gal</span></span></label>' : ""}
           ${state.smartHoppersEnabled && geometryMode === "cylindrical" ? '<label class="weightsBulkField" for="bulkHeight"><span>Height</span><span class="weightsInputWithUnit"><input id="bulkHeight" type="text" inputmode="decimal" placeholder="No change" /><span>in</span></span></label>' : ""}
-          <button id="applyBulkWeight" class="secondary" type="button" disabled>Apply to selected</button>
+          <button id="applyBulkWeight" class="secondary" type="button" disabled>Apply</button>
           <div class="weightsBulkActions">
             <div id="weightSelectionStatus" class="tiny weightsSelectionStatus" role="status" aria-live="polite">No hoppers selected</div>
-            <button id="clearWeightSelection" type="button" class="bulkTextAction">Clear selection</button>
+            <button id="clearWeightSelection" type="button" class="bulkTextAction">Clear</button>
           </div>
         </div>
       `;
@@ -2967,11 +3145,58 @@
       const corner = document.createElement("th");
       corner.scope = "col";
       corner.className = "weightsRowCorner";
-      corner.textContent = "Hopper";
+      // Transposed, the first column names layers and the header row names
+      // hopper positions - the gutter corner keeps its caption. Smart
+      // Hoppers and the shared circumference move into the header pill,
+      // where Current/Next put Promote / Load Current / Print - that frees
+      // enough room in the bulk toolbar for the "N selected · Clear" status.
+      // hookToggle still drives the same #smartHoppersToggle element, moved
+      // not rebuilt, so its wiring is untouched.
+      corner.textContent = "Layer";
+      const smartToggleEl = desktopControls.querySelector("#smartHoppersToggle");
+      const smartStateEl = desktopControls.querySelector(".desktopSmartHopperState");
+      const circumferenceLabel = desktopControls.querySelector(".desktopSharedCircumference");
+      const headerActions = $("recipeHeaderActions");
+      if (headerActions){
+        // renderWeightsArea also runs on its own (Smart Hoppers toggle,
+        // circumference input, layer change) without renderSplitsArea
+        // clearing this first, so wipe it here every time.
+        headerActions.replaceChildren();
+        headerActions.hidden = false;
+        const smartField = document.createElement("span");
+        smartField.className = "weightsHeaderSmart";
+        if (smartToggleEl){
+          const smartLabel = document.createElement("span");
+          smartLabel.className = "weightsHeaderSmartLabel";
+          smartLabel.textContent = "Smart Hoppers";
+          smartField.appendChild(smartLabel);
+          if (smartStateEl){ smartStateEl.classList.add("srOnly"); smartField.appendChild(smartStateEl); }
+          smartField.appendChild(smartToggleEl);
+        } else {
+          // No identified line - Smart Hoppers has no geometry to compute
+          // from. A muted, non-interactive marker keeps its place.
+          smartField.classList.add("unavailable");
+          smartField.textContent = "Smart Hoppers · unavailable";
+        }
+        // Circumference leads, the Smart Hoppers toggle trails. The pill is
+        // right-aligned, and circumference only exists in the DOM while Smart
+        // Hoppers is on - keeping the toggle last pins it to the right edge
+        // so it doesn't jump left when enabling reveals the circumference.
+        if (circumferenceLabel){
+          circumferenceLabel.classList.add("weightsHeaderCircumference");
+          headerActions.appendChild(circumferenceLabel);
+        }
+        headerActions.appendChild(smartField);
+        desktopControls.querySelector(".desktopWeightsSmartControl")?.remove();
+      }
       headerRow.appendChild(corner);
-      state.layers.forEach(L=>{
+      const tbody = document.createElement("tbody");
+      // Same transposition as the Recipe grid, built from the same kind of
+      // shared builders: a layer is a row, a hopper position is a column.
+      function buildWeightsLayerHeader(L){
         const th = document.createElement("th");
-        th.scope = "col";
+        th.scope = "row";
+        th.className = "weightsLayerHeader";
         const button = document.createElement("button");
         button.type = "button";
         button.className = "weightsSelectHeader";
@@ -2985,16 +3210,12 @@
         });
         columnSelectors.set(L.name, button);
         th.appendChild(button);
-        headerRow.appendChild(th);
-      });
-      thead.appendChild(headerRow);
-      table.appendChild(thead);
+        return th;
+      }
 
-      const tbody = document.createElement("tbody");
-      for (let hi=0; hi<HOPPERS_PER_LAYER; hi++){
-        const tr = document.createElement("tr");
+      function buildWeightsPositionHeader(hi){
         const rowHeader = document.createElement("th");
-        rowHeader.scope = "row";
+        rowHeader.scope = "col";
         const rowButton = document.createElement("button");
         rowButton.type = "button";
         rowButton.className = "weightsSelectHeader mono";
@@ -3008,9 +3229,10 @@
         });
         rowSelectors.set(hi, rowButton);
         rowHeader.appendChild(rowButton);
-        tr.appendChild(rowHeader);
+        return rowHeader;
+      }
 
-        state.layers.forEach(L=>{
+      function buildWeightsCell(L, hi){
           const key = `${L.name}:${hi}`;
           const id = weightId(L.name, hi);
           const td = document.createElement("td");
@@ -3152,7 +3374,6 @@
           td.appendChild(cellRow);
           td.appendChild(visualReadout);
           if (computedWeight) td.appendChild(computedWeight);
-          tr.appendChild(td);
 
           cellRefs.set(key, { td, selector, input, visualWeightInput, visualHeightInput, layer: L, hi });
 
@@ -3198,37 +3419,33 @@
             if (!accepted) return;
             validateAndCompute({ sync:true }); saveSession();
           });
-        });
-        tbody.appendChild(tr);
+          return td;
       }
+
+      state.layers.forEach(L=>{
+        const tr = document.createElement("tr");
+        tr.appendChild(buildWeightsLayerHeader(L));
+        for (let hi=0; hi<HOPPERS_PER_LAYER; hi++) tr.appendChild(buildWeightsCell(L, hi));
+        tbody.appendChild(tr);
+      });
+      for (let hi=0; hi<HOPPERS_PER_LAYER; hi++) headerRow.appendChild(buildWeightsPositionHeader(hi));
+      thead.appendChild(headerRow);
+      table.appendChild(thead);
       table.appendChild(tbody);
       frame.appendChild(table);
       scroll.appendChild(frame);
-      // Bulk edit is no longer a separate mode alongside Weight Profiles -
-      // it's folded into View: Edit (see the toolbar built above). Weight
-      // Profiles is the only thing left here, so it stands alone rather
-      // than sharing a tab strip with a sibling that no longer exists.
-      const actionToolbar = document.createElement("div");
-      actionToolbar.className = "desktopWeightsActionToolbar recipeUtilityTabs";
-      const profilesAction = document.createElement("button");
-      profilesAction.type = "button";
-      profilesAction.id = "desktopWeightProfilesButton";
-      profilesAction.className = "recipeUtilityTab recipeActionTab";
-      profilesAction.setAttribute("aria-expanded", "false");
-      profilesAction.setAttribute("aria-label", "Open receiver weight profiles");
-      profilesAction.innerHTML = '<span>Weight Profiles</span><svg viewBox="0 0 28 28" aria-hidden="true"><path d="M7 4h14l3 5v14l-4 3H8l-4-3V9z"/><path d="M9 12h10M9 16h10M9 20h6"/></svg>';
-      actionToolbar.append(profilesAction);
-
+      // Weight Profiles no longer lives on this page at all: both saved
+      // configuration types are shared workspace_configurations, and they
+      // now sit together in the Recipe Book (see renderSplitsArea, which
+      // moves #setupWeightProfilesBlock into that panel). Nothing is left
+      // to put in an action toolbar here.
+      // Grid first, bulk-edit panel below it - matching the reworked Recipe
+      // grid, where the toolbar sits under the matrix so raising it never
+      // shoves the working surface. Smart Hoppers / circumference stay on
+      // top as page context, the way the Recipe context strip does.
       area.appendChild(desktopControls);
-      area.appendChild(toolbar);
       area.appendChild(scroll);
-      area.appendChild(actionToolbar);
-      const profilesPanel = $("setupWeightProfilesBlock");
-      if (profilesPanel){
-        profilesPanel.open = true;
-        profilesPanel.hidden = true;
-        area.appendChild(profilesPanel);
-      }
+      area.appendChild(toolbar);
 
       const bulkInput = toolbar.querySelector("#bulkWeight");
       const bulkHeightInput = toolbar.querySelector("#bulkHeight");
@@ -3241,6 +3458,8 @@
       });
 
       function updateSelectionUI(message){
+        // The toolbar is always present on the reworked grid (it carries the
+        // Smart Hoppers toggle); only the per-selection controls change.
         cellRefs.forEach((ref,key)=>{
           const isSelected = selected.has(key);
           ref.selector.checked = isSelected;
@@ -3266,9 +3485,10 @@
         const hasBulkValue = bulkInputs.some(field=>field.value.trim() !== "");
         const validBulkValues = bulkInputs.every(field=>!field.value.trim() || validation.validateNumber(field.value, { min:0 }).valid);
         applyButton.disabled = selected.size === 0 || !hasBulkValue || !validBulkValues;
-        applyButton.textContent = selected.size
-          ? `Apply to ${selected.size} hopper${selected.size === 1 ? "" : "s"}`
-          : "Apply to selected";
+        // Fixed "Apply": the selection count already reads out in the status
+        // line beside it, and a growing "Apply to N hoppers" label kept
+        // pushing the toolbar row past its width on a tablet.
+        applyButton.textContent = "Apply";
         status.textContent = message || (
           selected.size === 0
             ? "No hoppers selected"
@@ -3286,47 +3506,32 @@
       // on a cell that isn't its input/wrench toggles selection, same as
       // the old bulk mode did) and reveals the toolbar built above;
       // switching back to Summary clears any selection and hides it.
+      // Kept as the single place that means "stop editing here" now that
+      // Weight Profiles has moved to the Recipe Book: the only thing it
+      // still does is drop the selection, which is what every caller
+      // (Android Back, page switches) actually wanted from it.
       function setDesktopProfilesOpen(open){
         desktopProfilesOpen = !!open;
-        if (desktopProfilesOpen){
-          setDesktopWeightView("summary");
-          if (profilesPanel){
-            profilesPanel.open = true;
-            profilesPanel.hidden = false;
-          }
-        } else if (profilesPanel) {
-          profilesPanel.hidden = true;
-        }
-        profilesAction.classList.toggle("active", desktopProfilesOpen);
-        profilesAction.setAttribute("aria-expanded", String(desktopProfilesOpen));
+        if (desktopProfilesOpen) setDesktopWeightView("summary");
       }
       exitWeightsBulkModeFn = () => setDesktopWeightView("summary");
       function setDesktopWeightView(mode){
-        desktopWeightView = mode === "edit" ? "edit" : "summary";
+        // The wide weights grid has no Summary any more - it is always
+        // live, exactly like the reworked Recipe grid. The parameter is
+        // kept so the existing exit hook (Android Back, page switches) can
+        // still ask for "summary" and get the one sane thing left: the
+        // selection dropped.
+        if (mode !== "edit") selected.clear();
+        desktopWeightView = "edit";
         weightsViewMode = desktopWeightView;
-        desktopBulkMode = desktopWeightView === "edit";
-        if (desktopBulkMode) setDesktopProfilesOpen(false);
-        weightsBulkModeActive = desktopBulkMode;
+        desktopBulkMode = true;
+        weightsBulkModeActive = false;
         area.dataset.desktopWeightView = desktopWeightView;
-        area.dataset.desktopBulkMode = String(desktopBulkMode);
-        toolbar.hidden = !desktopBulkMode;
-        if (!desktopBulkMode) selected.clear();
-        desktopViewToggle.querySelectorAll("[data-weight-view]").forEach(button=>{
-          const active = button.dataset.weightView === desktopWeightView;
-          button.classList.toggle("active", active);
-          button.classList.toggle("primary", active);
-          button.classList.toggle("actionRail", active);
-          button.classList.toggle("secondary", !active);
-          button.setAttribute("aria-pressed", String(active));
-        });
-        // Summary is CSS-hidden here too now (see .desktopWeightsViewToggle
-        // in styles.css) - same collapse as Recipe's own view toggle, so the
-        // one visible button always carries the Edit/Done label.
-        const editToggle = desktopViewToggle.querySelector('[data-weight-view="edit"]');
-        if (editToggle){
-          editToggle.textContent = desktopBulkMode ? "Done" : "Edit";
-          editToggle.setAttribute("aria-label", desktopBulkMode ? "Done editing hopper weights" : "Edit hopper weights");
-        }
+        area.dataset.desktopBulkMode = "true";
+        toolbar.hidden = false;
+        // Nothing left to switch between, so the control goes away with the
+        // mode rather than sitting there as a no-op.
+        if (desktopViewToggle) desktopViewToggle.hidden = true;
         updateSelectionUI();
       }
       desktopViewToggle.addEventListener("click", event=>{
@@ -3335,7 +3540,6 @@
         setDesktopWeightView(desktopWeightView === "edit" ? "summary" : "edit");
       });
       [bulkInput, bulkHeightInput].filter(Boolean).forEach(field=>field.addEventListener("input", ()=>updateSelectionUI()));
-      profilesAction.addEventListener("click", ()=>setDesktopProfilesOpen(!desktopProfilesOpen));
       applyButton.addEventListener("click", ()=>{
         const optionalValue = (field, label)=>{
           if (!field || !field.value.trim()) return { valid:true, value:null };
@@ -3980,15 +4184,19 @@
           : (isNextRecipePage() ? "recipePageTabNext" : "recipePageTabCurrent");
       if (panel) panel.setAttribute("aria-labelledby", labelledBy);
       const viewToggle = $("recipeViewToggle");
-      if (viewToggle) viewToggle.hidden = isSavedRecipesPage() || isWeightsPage();
+      // Summary/Edit has nothing left to switch between above the compact
+      // mobile breakpoint - the reworked grid is always live (see
+      // reworkedGrid in renderSplitsArea). This function is the single
+      // owner of the control's visibility, so the condition belongs here
+      // rather than being set from a renderer that runs before it.
+      if (viewToggle) viewToggle.hidden = isSavedRecipesPage() || isWeightsPage() || !layoutModeQueries.compactRecipe.matches;
       const headerControls = $("recipeHeaderControls");
       if (headerControls) headerControls.hidden = isSavedRecipesPage();
       const headerActions = $("recipeHeaderActions");
-      // The Weights page uses this slot for its compact profiles icon on
-      // phones (renderMobileWeightsArea fills it); desktop Weights still
-      // keeps its inline Weight Profiles panel, so the slot stays hidden
-      // there. Recipe Book never has header actions.
-      if (headerActions) headerActions.hidden = isSavedRecipesPage() || (isWeightsPage() && isDesktopLayout());
+      // Current/Next fill this with Promote/Load Current/Print; the reworked
+      // Weights grid fills it with Smart Hoppers + the shared circumference
+      // (see renderWeightsArea). Only the Recipe Book has nothing for it.
+      if (headerActions) headerActions.hidden = isSavedRecipesPage();
       syncPlannedRecipeIndicator();
     }
 
@@ -4209,6 +4417,12 @@
       const weightsArea = $("weightsArea");
       const weightsBlock = $("weightsBlock");
       const profilesBlock = $("setupWeightProfilesBlock");
+      // The Recipe Book parks the shared Weight Profiles block inside
+      // #splitsArea, and the area.innerHTML clear below would destroy the
+      // one real element every profile action is wired to. Return it to its
+      // stable Setup home first, on every page: the Book re-appends it
+      // further down when it rebuilds its panel.
+      if (profilesBlock && area.contains(profilesBlock)) weightsBlock?.after(profilesBlock);
       if (!isWeightsPage()){
         if (profilesBlock?.parentElement === weightsArea) weightsBlock?.after(profilesBlock);
         if (weightsArea && weightsBlock && weightsArea.parentElement !== weightsBlock.querySelector(":scope > .blockBody")){
@@ -4236,27 +4450,45 @@
       // Summary/Edit is now the single mode axis on every surface: Edit *is*
       // bulk edit, so there is no second mode to be in anywhere.
       const viewMode = splitsViewMode;
-      const summaryView = viewMode === "summary";
+      // The reworked wide grid (anything above the compact-mobile
+      // breakpoint - desktop and tablet alike) has no Summary/Edit axis at
+      // all: cells are always live, tracking is always available on
+      // Current, and selection alone raises the edit toolbar. Compact
+      // mobile keeps both modes exactly as they are.
+      const reworkedGrid = !compactMobileRecipe;
+      const summaryView = reworkedGrid ? false : viewMode === "summary";
       // Summary's one interaction. Tracking is runtime state that the
       // planned recipe structurally cannot hold (see next-recipe.js), so
-      // Next's Summary is a read-only preview with nothing to toggle.
-      const trackingView = summaryView && !isNextRecipePage();
-      let bulkMode = viewMode === "edit";
+      // Next stays a read-only preview with nothing to toggle - on the
+      // reworked grid the track control is simply absent there.
+      const trackingView = !isNextRecipePage() && (reworkedGrid || summaryView);
+      let bulkMode = reworkedGrid ? true : viewMode === "edit";
       // Typing directly into a cell needs a precise pointer. On touch it
       // never felt right at hopper-cell size, so every touch surface -
       // phones and the wide-but-touch tablet band alike - edits through the
       // panel instead, and only a real pointer device keeps the hybrid.
-      const cellsTypeable = isDesktopLayout();
-      area.dataset.recipeView = viewMode;
+      // The reworked wide grid types in the cell on tablet too: "the same
+      // interface as desktop" is the point of it, and a tablet cell is the
+      // same size as a desktop one. Only compact mobile still edits through
+      // the panel instead.
+      const cellsTypeable = reworkedGrid || isDesktopLayout();
+      area.dataset.recipeView = summaryView ? "summary" : "edit";
+      // New CSS for the reworked grid hangs off this rather than fighting
+      // the established stacked-grid rules, which stay untouched and keep
+      // owning compact mobile.
+      area.dataset.recipeLayout = reworkedGrid ? "transposed" : "stacked";
       area.dataset.recipeCells = cellsTypeable ? "typeable" : "static";
       area.classList.toggle("recipeTrackingView", trackingView);
+      // Summary/Edit's control is hidden by syncRecipePageUI(), which owns
+      // that flag and runs after this renderer; setRecipeViewMode behind it
+      // stays in place for compact mobile, which still has both modes.
       // The cross-resin overlay only exists on the typeable (pointer) grid,
       // on both pages: it shows the other page's resin per cell so Current
       // and the plan can be read against each other. The overlay toggle and
       // per-cell spans are always built when available; recipeShowCrossResinOverlay
       // only reveals them, so toggling never needs a re-render. The label
       // names whichever recipe is being overlaid.
-      const crossOverlayAvailable = cellsTypeable;
+      const crossOverlayAvailable = reworkedGrid || cellsTypeable;
       const crossOverlayLabel = isNextRecipePage() ? "current" : "next";
       area.dataset.crossOverlay = (crossOverlayAvailable && recipeShowCrossResinOverlay) ? "on" : "off";
 
@@ -4313,7 +4545,7 @@
       // both collapsed into this one shared placement and style.
       rearrangeButton.className="bulkTextAction splitsRearrangeAction";
       rearrangeButton.classList.toggle("active", !!hopperRearrangement?.active);
-      rearrangeButton.innerHTML=`<svg class="recipeEditActionIcon" viewBox="0 0 24 24" aria-hidden="true"><g class="rearrangeArrowDown"><path d="M8 4v16m0 0-3-3m3 3 3-3"/></g><g class="rearrangeArrowUp"><path d="M16 20V4m0 0-3 3m3-3 3 3"/></g></svg><span>${hopperRearrangement?.active?"Done Rearranging":"Rearrange"}</span>`;
+      rearrangeButton.innerHTML=`<svg class="recipeEditActionIcon" viewBox="0 0 24 24" aria-hidden="true"><g class="rearrangeArrowDown"><path d="M8 4v16m0 0-3-3m3 3 3-3"/></g><g class="rearrangeArrowUp"><path d="M16 20V4m0 0-3 3m3-3 3 3"/></g></svg><span>${hopperRearrangement?.active?"Done":"Rearrange"}</span>`;
       rearrangeButton.setAttribute("aria-label", hopperRearrangement?.active ? "Done rearranging recipe" : "Rearrange recipe");
       rearrangeButton.title=hopperRearrangement?.active?"Done rearranging":"Rearrange recipe";
       rearrangeButton.disabled=!recipeLayers().some(L=>L.hoppers.some(h=>normName(h.resinName)||clampNum(h.pct)>0));
@@ -4441,12 +4673,16 @@
         // down from Scan Recipe's primary gradient, one step up from Print
         // Recipe's tertiary ghost treatment (see .splitsBulkModeBar
         // button.secondary in styles.css).
-        loadNextButton.innerHTML = `<svg class="recipeActionIcon" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 5v16"/><path d="M10 15l6 6 6-6"/><path d="M6 26h20"/></svg>Load Next Recipe`;
+        // "Promote to Current" rather than "Load Next Recipe": the action
+        // is not loading a recipe from anywhere, it is putting the plan on
+        // the line. Placement is unchanged - it stays on Current, the page
+        // being changed, and is still never offered on the plan itself.
+        loadNextButton.innerHTML = `<svg class="recipeActionIcon" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 5v16"/><path d="M10 15l6 6 6-6"/><path d="M6 26h20"/></svg>Promote to Current`;
         // Visible mobile label is shorter (icon dropped along with it,
         // since .textContent replaces the whole icon+label innerHTML); the
-        // accessible name stays the full "Load Next Recipe" regardless of
+        // accessible name stays the full "Promote to Current" regardless of
         // which text is on screen.
-        loadNextButton.setAttribute("aria-label", "Load Next Recipe");
+        loadNextButton.setAttribute("aria-label", "Promote to Current");
         const planned = hasPlannedRecipe();
         const promotable = !!window.PolynNextRecipe?.isPromotable(state.nextRecipe);
         loadNextButton.hidden = !planned;
@@ -4626,6 +4862,18 @@
       saveNextRecipeButton.disabled=!window.PolynNextRecipe?.isMeaningful(state.nextRecipe);
       saveNextRecipeButton.title=saveNextRecipeButton.disabled?"Create a Next Recipe before saving it":"Save the planned Next Recipe to this workspace";
       saveNextRecipeButton.addEventListener("click", ()=>openWorkspaceConfigurationDialog("save-next-recipe"));
+      // Weight Profiles is the Recipe Book's second section. It is the same
+      // real #setupWeightProfilesBlock element Line Setup uses - moved, not
+      // cloned - so its Save/Load/Update/Rename/Duplicate/Delete wiring and
+      // its element IDs keep a single owner. Both types are shared
+      // workspace_configurations; the Book is where saved configurations
+      // live, whichever kind they are.
+      if (reworkedGrid && profilesBlock){
+        profilesBlock.open = true;
+        profilesBlock.hidden = false;
+        profilesBlock.classList.add("savedRecipesProfilesSection");
+        savedRecipesPanel.append(profilesBlock);
+      }
       const mobileSavedRecipesSearchInput=savedRecipesPanel.querySelector("#mobileSavedRecipesSearch");
       mobileSavedRecipesSearchInput.value=splitsSavedRecipesSearch;
       mobileSavedRecipesSearchInput.addEventListener("input",event=>{
@@ -4674,10 +4922,24 @@
         if (loadCurrentButton) headerActions?.append(loadCurrentButton);
         headerActions?.append(printButton);
       }
-      // Rearrange keeps its real element (and therefore every handler
-      // wired to it above) - only appended once it has a home, next to
-      // Empty cells / Reset Recipe, on every width.
-      toolbar.querySelector(".splitsEditRowSecondary")?.append(rearrangeButton);
+      // Rearrange keeps its real element (and therefore every handler wired
+      // to it above) - only placed once it has a home. It leads the
+      // secondary row rather than trailing it: that row is a right-anchored
+      // pill (margin-left:auto), so a Cancel button appearing beside
+      // Rearrange grows the pill leftwards and leaves Clear selection /
+      // Empty cells / Reset Recipe exactly where they were.
+      const editSecondaryRow = toolbar.querySelector(".splitsEditRowSecondary");
+      editSecondaryRow?.prepend(rearrangeButton);
+      if (reworkedGrid && hopperRearrangement?.active){
+        const cancelRearrange = document.createElement("button");
+        cancelRearrange.type = "button";
+        cancelRearrange.className = "bulkTextAction splitsRearrangeCancel";
+        cancelRearrange.textContent = "Cancel";
+        cancelRearrange.setAttribute("aria-label", "Cancel rearranging");
+        cancelRearrange.title = "Discard every move and restore the recipe as it was";
+        cancelRearrange.addEventListener("click", ()=>finishRearrangement(true));
+        rearrangeButton.after(cancelRearrange);
+      }
 
       // Percentage problems are not printed here. They are conditions of the
       // recipe, not of this render, so they belong in the notification bell
@@ -4694,25 +4956,26 @@
       // editing controls.
       area.append(toolbar);
       area.append(savedRecipesPanel);
+      // Sibling of the panel, not a child. As a child it had to span every
+      // grid row (grid-row:1/-1) to sit alongside a list of unknown length,
+      // and a grid item spanning multiple tracks inflates those tracks to fit
+      // itself - so selecting a recipe grew the preview, grew row 1 with it,
+      // and pushed the list down past the preview's own bottom edge. As a
+      // sibling in the page's two-column grid the panel keeps normal block
+      // flow and nothing can push it.
+      const configurationPreview = document.createElement("aside");
+      configurationPreview.id = "splitsConfigurationPreview";
+      configurationPreview.className = "splitsConfigurationPreview";
+      configurationPreview.setAttribute("aria-live", "polite");
+      area.append(configurationPreview);
       // Desktop has no lower recipe-action row: Load and Print moved to the
       // header, and Scan remains a mobile capture workflow.
 
-      if(hopperRearrangement?.active&&!compactMobileRecipe){
-        const bar=document.createElement("div");
-        bar.className="rearrangeModeBar";
-        bar.innerHTML='<div class="rearrangeModeMessage"><strong>Rearrange mode</strong><span>Drag, or tap a hopper then tap another, to move assignments. Hopper 1 is recalculated after each move.</span></div>';
-        const actions=document.createElement("div");
-        actions.className="rearrangeModeActions";
-        const undo=document.createElement("button");
-        undo.type="button"; undo.className="secondary"; undo.textContent="Undo Last Move"; undo.disabled=!hopperRearrangement.undo.length;
-        const cancel=document.createElement("button");
-        cancel.type="button"; cancel.className="secondary"; cancel.textContent="Cancel";
-        undo.addEventListener("click",undoRearrangement);
-        cancel.addEventListener("click",()=>finishRearrangement(true));
-        actions.append(undo,cancel);
-        bar.append(actions);
-        area.append(bar);
-      }
+      // No standalone rearrange bar: the edit toolbar is always visible on
+      // the reworked grid, so the mode reports itself through the controls
+      // already there - the Rearrange button becomes a highlighted Done with
+      // Cancel beside it, Undo repoints to the move stack, and the
+      // interaction hint carries the guidance text.
 
       // A vertical rail of per-layer buttons, sitting to the right of the
       // table (see .splitsMobileLayerLayout below) rather than a pager row
@@ -4796,9 +5059,14 @@
       }
       headerRow.appendChild(corner);
 
-      recipeLayers().forEach(L=>{
+      // Layer headers and hopper-position headers are built the same way in
+      // both orientations - only which axis they land on changes. The
+      // stacked grid puts layers across the top and positions down the
+      // side; the reworked (transposed) grid swaps them, so a layer is a
+      // row and a hopper position is a column.
+      function buildLayerHeader(L){
         const th = document.createElement("th");
-        th.scope = "col";
+        th.scope = reworkedGrid ? "row" : "col";
         th.className = "splitLayerHeader";
         th.dataset.layerColumn = L.name;
 
@@ -4894,16 +5162,12 @@
         pctInput.addEventListener("change",finishRecipeEditInput);
         pctInput.addEventListener("blur",finishRecipeEditInput);
 
-        headerRow.appendChild(th);
-      });
-      thead.appendChild(headerRow);
-      table.appendChild(thead);
+        return th;
+      }
 
-      const tbody = document.createElement("tbody");
-      for (let hi=0; hi<HOPPERS_PER_LAYER; hi++){
-        const tr = document.createElement("tr");
+      function buildPositionHeader(hi){
         const rowHeader = document.createElement("th");
-        rowHeader.scope = "row";
+        rowHeader.scope = reworkedGrid ? "col" : "row";
         rowHeader.className = "splitRowHeader mono";
         const rowSelect = document.createElement("button");
         rowSelect.type = "button";
@@ -4918,9 +5182,10 @@
         });
         rowSelectors.set(hi, rowSelect);
         rowHeader.appendChild(rowSelect);
-        tr.appendChild(rowHeader);
+        return rowHeader;
+      }
 
-        recipeLayers().forEach((L, li)=>{
+      function buildCell(L, li, hi){
           const hopper = L.hoppers[hi];
           const key = `${L.name}:${hi}`;
           const td = document.createElement("td");
@@ -5137,7 +5402,6 @@
           controls.appendChild(pctWrap);
           editor.append(cellTop, controls);
           td.append(cellHeader, editor);
-          tr.appendChild(td);
 
           function refreshCellState(){
             // Mirrors the field for the static (touch) cell presentation.
@@ -5288,9 +5552,33 @@
             updateRecipeHistoryControls();
           });
           refreshCellState();
-        });
-        tbody.appendChild(tr);
+          return td;
       }
+
+      // Assemble in the chosen orientation. Both orientations use the same
+      // three builders above, so a cell's DOM, its event handlers and its
+      // entry in cellRefs are identical either way - only the axis each
+      // header lands on, and the order cells are appended in, differ.
+      const tbody = document.createElement("tbody");
+      if (reworkedGrid){
+        recipeLayers().forEach((L, li)=>{
+          const tr = document.createElement("tr");
+          tr.appendChild(buildLayerHeader(L));
+          for (let hi=0; hi<HOPPERS_PER_LAYER; hi++) tr.appendChild(buildCell(L, li, hi));
+          tbody.appendChild(tr);
+        });
+        for (let hi=0; hi<HOPPERS_PER_LAYER; hi++) headerRow.appendChild(buildPositionHeader(hi));
+      }else{
+        recipeLayers().forEach(L=>headerRow.appendChild(buildLayerHeader(L)));
+        for (let hi=0; hi<HOPPERS_PER_LAYER; hi++){
+          const tr = document.createElement("tr");
+          tr.appendChild(buildPositionHeader(hi));
+          recipeLayers().forEach((L, li)=>tr.appendChild(buildCell(L, li, hi)));
+          tbody.appendChild(tr);
+        }
+      }
+      thead.appendChild(headerRow);
+      table.appendChild(thead);
       table.appendChild(tbody);
       frame.appendChild(table);
       scroll.appendChild(frame);
@@ -5327,19 +5615,43 @@
       const interactionHint = document.createElement("p");
       interactionHint.className = "recipeInteractionHint";
       const interactionVerb = isDesktopLayout() ? "CLICK" : "TAP";
-      const interactionAction = viewMode === "edit"
-        ? "edit"
-        : (trackingView ? "track" : "view");
+      // Rearrange has no bar of its own any more, so its guidance takes over
+      // this line for the duration - the one place the grid already explains
+      // what a click does.
+      const rearranging = reworkedGrid && !!hopperRearrangement?.active;
+      const pointerVerb = isDesktopLayout() ? "click" : "tap";
+      // The reworked grid does both at once, so it names both rather than
+      // whichever mode happens to be on.
+      const interactionAction = reworkedGrid
+        ? (trackingView ? "select · click its dot to track" : "select")
+        : (viewMode === "edit" ? "edit" : (trackingView ? "track" : "view"));
       const interactionCommand = document.createElement("strong");
       interactionCommand.className = "recipeInteractionHintCommand";
       interactionCommand.textContent = interactionVerb;
       const interactionCount = document.createElement("span");
-      interactionHint.append(
-        interactionCommand,
-        document.createTextNode(` a hopper to ${interactionAction}`),
-        interactionCount
-      );
+      if (rearranging){
+        interactionCommand.textContent = "REARRANGING";
+        interactionHint.append(
+          interactionCommand,
+          document.createTextNode(` Drag, or ${pointerVerb} a hopper then ${pointerVerb} another, to move assignments. Hopper 1 is recalculated after each move.`)
+        );
+      }else{
+        interactionHint.append(
+          interactionCommand,
+          document.createTextNode(` a hopper to ${interactionAction}`),
+          interactionCount
+        );
+      }
       function updateInteractionHint(){
+        // Rearrange's hint is a fixed sentence, not a running count.
+        if (rearranging) return;
+        if (reworkedGrid){
+          const parts = [];
+          if (selected.size) parts.push(`${selected.size} selected`);
+          if (trackingView) parts.push(`${trackedHopperCount()} tracked`);
+          interactionCount.textContent = parts.length ? ` - ${parts.join(" · ")}` : "";
+          return;
+        }
         const count = viewMode === "edit"
           ? selected.size
           : (trackingView ? trackedHopperCount() : 0);
@@ -5422,11 +5734,32 @@
       const redoButton = toolbar.querySelector("#recipeRedo");
       attachResinAutocomplete(bulkNameInput);
 
+      // While rearranging, the recipe edit history is deliberately not
+      // touched per move - finishRearrangement records the whole
+      // rearrangement as one entry - so the toolbar's Undo would otherwise
+      // step back the edit *before* the rearrangement rather than the last
+      // move. For the duration it drives the move stack instead, and Redo
+      // (which the move stack has no counterpart for) stands down.
+      const rearrangingNow = reworkedGrid && !!hopperRearrangement?.active;
       function updateRecipeHistoryControls(){
+        if (rearrangingNow){
+          if (undoButton) undoButton.disabled = !hopperRearrangement?.undo?.length;
+          if (redoButton) redoButton.disabled = true;
+          return;
+        }
         syncRecipeEditHistoryControls();
       }
-      undoButton?.addEventListener("click",undoRecipeEdit);
-      redoButton?.addEventListener("click",redoRecipeEdit);
+      if (rearrangingNow){
+        if (undoButton){
+          undoButton.setAttribute("aria-label", "Undo last move");
+          undoButton.title = "Undo last move";
+          undoButton.addEventListener("click", undoRearrangement);
+        }
+        if (redoButton) redoButton.title = "Redo is unavailable while rearranging";
+      }else{
+        undoButton?.addEventListener("click",undoRecipeEdit);
+        redoButton?.addEventListener("click",redoRecipeEdit);
+      }
 
       function hasBulkValue(){
         return bulkNameInput.value.trim() !== "" || bulkPctInput.value.trim() !== "";
@@ -5462,7 +5795,17 @@
         // something. Selecting six blank hoppers used to light the button up
         // for an action that would do nothing.
         const emptyable = emptyableHopperCount();
-        if (clearCellsButton) clearCellsButton.disabled = emptyable === 0;
+        // Rearranging takes every cell field out of service, so the controls
+        // that act on cells go with them rather than sitting there live and
+        // doing nothing.
+        if (clearCellsButton) clearCellsButton.disabled = rearrangingNow || emptyable === 0;
+        if (rearrangingNow){
+          [bulkNameInput, bulkPctInput, applyButton, resetButton, clearSelectionButton]
+            .forEach(control=>{ if (control) control.disabled = true; });
+        }
+        // Selection is what raises the reworked grid's edit toolbar, so the
+        // visibility decision belongs on every selection change rather than
+        // only on a mode switch.
         updateRecipeHistoryControls();
         selectionStatus.className = `srOnly tiny splitsSelectionStatus${type ? ` ${type}` : ""}`;
         selectionStatus.textContent = message || (
@@ -5481,7 +5824,11 @@
         // Desktop presentation is driven entirely by data-recipe-view
         // instead, so the two never fight over the same cells.
         area.classList.toggle("bulk-editing", bulkMode && compactMobileRecipe);
-        toolbar.classList.toggle("hide", !bulkMode);
+        // Always present on the reworked grid. It sits below the matrix, so
+        // it costs the grid no movement, and a toolbar that appears and
+        // disappears on every selection is harder to aim at than one that is
+        // simply always there.
+        toolbar.classList.toggle("hide", reworkedGrid ? false : !bulkMode);
         modeButton.textContent = bulkMode ? "Done bulk editing" : "Bulk edit";
         if(compactMobileRecipe){
           modeButton.setAttribute("aria-expanded", String(bulkMode));
@@ -5516,7 +5863,10 @@
           ref.resinInput.disabled = readOnly;
           ref.pctInput.disabled = readOnly;
           const trackButton = ref.td.querySelector(".splitTrackButton");
-          if (trackButton) trackButton.disabled = bulkMode || rearranging;
+          // Tracking is no longer a mode on the reworked grid - the dot is
+          // always live alongside editing, so only a running rearrangement
+          // stands it down there.
+          if (trackButton) trackButton.disabled = reworkedGrid ? rearranging : (bulkMode || rearranging);
         });
         if (!bulkMode) selected.clear();
         updateSelectionUI();
@@ -5731,7 +6081,12 @@
       // one of them open via splitsBulkModeActive/splitsSavedRecipesOpen.
       setBulkMode(bulkMode);
       setSavedRecipesOpen(splitsSavedRecipesOpen);
-      renderSplitsSavedRecipes(lineSync?.getState?.());
+      // The whole hub, not just the recipe list: this panel now owns three
+      // things that a rebuild leaves empty or stale - the recipe list, the
+      // Weight Profiles section moved into it, and the preview pane. Calling
+      // only renderSplitsSavedRecipes left the freshly-built preview host
+      // untouched, so it never even resolved its own hidden state.
+      renderWorkspaceConfigurations(lineSync?.getState?.());
     }
 
     function renderDesktopRailTotals(summary){

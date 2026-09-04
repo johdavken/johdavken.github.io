@@ -207,7 +207,7 @@ test("segments pick up the app's standard control-radius now that a real gap sep
 });
 
 test("Rearrange is still appended to the same element, unmoved - no DOM/JS restructuring beyond relocating .recipeEditHistory", () => {
-  assert.match(app, /toolbar\.querySelector\("\.splitsEditRowSecondary"\)\?\.append\(rearrangeButton\);/);
+  assert.match(app, /editSecondaryRow\?\.prepend\(rearrangeButton\);/);
 });
 
 test(".srOnly is a true global utility, not mobile-only", () => {

@@ -36,7 +36,8 @@ test("desktop Hopper Weights and its Smart Hopper controls use Recipe's fixed fi
   assert.match(styles, /\.recipeWeightsPage > #weightsArea\{ width:100%; \}/);
   assert.match(desktop, /#splitsArea\.recipeWeightsPage > #weightsArea\{width:min\(100%,var\(--recipe-five-layer-rail,1062px\)\)\}/);
   assert.match(app, /desktopControls\.className = "desktopWeightsControls"/);
-  assert.match(app, /area\.appendChild\(desktopControls\);\s*area\.appendChild\(toolbar\);\s*area\.appendChild\(scroll\);/);
+  // Grid before the bulk-edit panel now, matching the reworked Recipe grid.
+  assert.match(app, /area\.appendChild\(desktopControls\);\s*area\.appendChild\(scroll\);\s*area\.appendChild\(toolbar\);/);
 });
 
 test("weights uses Recipe's header slot for its existing Summary/Edit control, relocated on every rebuild of the grid - not just on page navigation", () => {
@@ -62,10 +63,13 @@ test("weights uses Recipe's header slot for its existing Summary/Edit control, r
     "expected one call on the mobile (touch) branch and one on the desktop branch");
 });
 
-test("the weights view control adopts Recipe's button classes", () => {
+test("the wide weights view control is gone entirely - the grid is always live", () => {
+  // Recipe's own toggle keeps these classes for compact mobile, which still
+  // has both modes; the weights toggle has nothing left to style because it
+  // is hidden outright.
   assert.match(app, /button\.classList\.toggle\("primary", active\)/);
   assert.match(app, /button\.classList\.toggle\("secondary", !active\)/);
-  assert.match(app, /desktopViewToggle\.querySelectorAll\("\[data-weight-view\]"\)/);
+  assert.match(app, /if \(desktopViewToggle\) desktopViewToggle\.hidden = true;/);
 });
 
 test("touch Recipe and Weights use one Edit/Done action", () => {

@@ -1298,18 +1298,16 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .baseGlyph{dis
 #splitsArea > .splitsBulkBar,
 #splitsArea > .splitsSavedRecipesPanel,
 #splitsArea > .rearrangeModeBar{ order:1; position:static; }
-/* Desktop only (these three are the only ones ever direct children of
-   #splitsArea - mobile relocates Bulk Edit/Saved Recipes into their own
-   sheets, and Rearrange has no mobile .rearrangeModeBar at all): a shared
-   min-height so switching Saved Recipes/Bulk Edit/Rearrange doesn't jump
-   the rest of the Recipe panel up and down by a different amount each
-   time. Sized to Bulk Edit's own natural height (the tallest of the three
-   in the common case) so Bulk Edit itself never needs to shrink or
-   scroll - Saved Recipes with many rows can still grow past this via its
-   own already-scrollable list (see .workspaceConfigurationList). */
-#splitsArea > .splitsBulkBar,
-#splitsArea > .splitsSavedRecipesPanel,
-#splitsArea > .rearrangeModeBar{ min-height: 216px; }
+/* These three used to share a 216px min-height, so that switching between
+   Saved Recipes, Bulk Edit and Rearrange - three alternatives occupying one
+   slot below the matrix - never jumped the panel by a different amount each
+   time. None of that premise survives the recipe rework: Recipe Book is a
+   page that replaces the matrix outright (see the data-recipe-page="saved"
+   rules above), Bulk Edit is a compact row raised by the selection rather
+   than a panel you switch into, and Rearrange is a single line of guidance
+   plus two buttons. They are no longer alternatives in a shared slot, so the
+   floor bought nothing and cost Rearrange ~150px of empty panel. Removed;
+   each sizes to its own content. */
 /* Scan Recipe / Print Recipe / Load Next Recipe / Info: immediate actions,
    always last regardless of which utility panel (if any) is open above
    them - a fixed order number, rather than relying on DOM append position,
@@ -3436,7 +3434,7 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .lineSyncInfoG
 
 /* Recipe Book replaces the matrix on every width now, reached through the
    Recipe Book tab like Current/Next/Weights - phones included. */
-body[data-recipe-page="saved"] #splitsArea > :not(.splitsSavedRecipesPanel){
+body[data-recipe-page="saved"] #splitsArea > :not(.splitsSavedRecipesPanel):not(.splitsConfigurationPreview){
   display: none!important;
 }
 body[data-recipe-page="saved"] #splitsArea > .splitsSavedRecipesPanel{
@@ -11664,4 +11662,1067 @@ body[data-shell="touch"] .changeoverWizardDialog{position:fixed;inset:auto auto 
   body[data-shell="touch"] .splitPctControl > span{
     font-size:clamp(11px, 1.3vw + 1px, var(--font-base));
   }
+}
+
+/* ==========================================================================
+   Reworked Recipe grid (transposed)
+   --------------------------------------------------------------------------
+   Applies above the compact-mobile breakpoint only - app.js sets
+   data-recipe-layout="transposed" whenever the viewport is wider than 700px,
+   and "stacked" below it, so every rule in this block is inert on a phone and
+   the established stacked-grid CSS above keeps owning that surface untouched.
+
+   Layers become rows and hopper positions become columns. Deliberately last
+   in the file: these rules and the ones they replace often share specificity
+   (both are #splitsArea + an attribute), so source order is what decides.
+   ========================================================================== */
+/* table-layout:fixed is load-bearing, not a tidy-up. Under automatic layout
+   a table column is at least as wide as its content's max-content size, and
+   an <input> with no explicit width contributes its default ~20-character
+   intrinsic size - which pushed each of the six position columns out to
+   ~270px. The stacked grid never hit this because its five columns were
+   pinned to a fixed 180px. Fixed layout takes column widths from the first
+   row's declared widths instead, so the fields size to their column rather
+   than the other way round. min-width keeps the grid legible and lets it
+   scroll horizontally on a narrow tablet instead of crushing. */
+body #splitsArea[data-recipe-layout="transposed"] .splitsMatrix{
+  table-layout:fixed;
+  width:100%;
+  min-width:910px;
+}
+
+/* The stacked grid hides each row's first cell unless bulk editing (it is a
+   selection affordance there). Transposed, that first cell is the layer
+   header itself - the row's identity - so it must always be present.
+   #splitsBlock is carried here (and on the width rules below) purely to
+   outrank "#splitsBlock #splitsArea .splitsMatrix tr > :first-child", which
+   pins that column to 70px for the stacked grid at >700px. */
+body #splitsBlock #splitsArea[data-recipe-layout="transposed"] .splitsMatrix tr > :first-child{
+  display:table-cell;
+  min-width:118px;
+  width:118px;
+  max-width:118px;
+}
+
+/* Column headers are now hopper positions: short labels, so they need none of
+   the 180px layer-header width. */
+body #splitsArea[data-recipe-layout="transposed"] .splitsMatrix thead th{
+  min-width:132px;
+  width:auto;
+  padding:5px 8px;
+  vertical-align:middle;
+  text-align:center;
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitsMatrix thead .splitRowHeader{
+  font-weight:600;
+  font-size:var(--font-tiny);
+  letter-spacing:.09em;
+  text-transform:uppercase;
+  color:var(--muted);
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitRowSelect{
+  width:100%;
+  padding:5px 6px;
+  border-radius:6px;
+  font-weight:600;
+  letter-spacing:.09em;
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitRowSelect.selected,
+body #splitsArea[data-recipe-layout="transposed"] .splitRowSelect.partiallySelected{
+  background:color-mix(in srgb,var(--focus-border) 16%,transparent);
+  color:var(--title);
+}
+
+/* The corner keeps the cross-resin overlay toggle and pins to the left edge
+   alongside the layer headers below it. */
+body #splitsBlock #splitsArea[data-recipe-layout="transposed"] .splitsMatrix th:first-child{
+  min-width:118px;
+  width:118px;
+  max-width:118px;
+  z-index:4;
+}
+
+/* Layer header: a row header now, so it pins left while the positions scroll
+   horizontally. Letter, percentage, running total and Match stack in a
+   compact column instead of the stacked grid's 58px watermark treatment. */
+body #splitsBlock #splitsArea[data-recipe-layout="transposed"] .splitsMatrix tbody .splitLayerHeader{
+  position:sticky;
+  left:0;
+  z-index:2;
+  min-width:118px;
+  width:118px;
+  max-width:118px;
+  padding:8px 10px;
+  vertical-align:middle;
+  text-align:left;
+  background:var(--panelOpen);
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitLayerMain{
+  position:static;
+  display:flex;
+  align-items:baseline;
+  justify-content:flex-start;
+  gap:8px;
+  min-height:0;
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitLayerTitle{
+  position:static;
+  transform:none;
+  width:auto;
+  min-width:0;
+  height:auto;
+  min-height:0;
+  padding:0 2px;
+  font-size:clamp(17px,1.5vw,21px);
+  font-weight:800;
+  line-height:1.05;
+  color:var(--title);
+  opacity:1;
+  text-align:left;
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitLayerTitle.selected,
+body #splitsArea[data-recipe-layout="transposed"] .splitLayerTitle.partiallySelected{
+  opacity:1;
+  color:var(--focus-border);
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitLayerPct{
+  display:inline-flex;
+  align-items:baseline;
+  gap:1px;
+  margin:0;
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitLayerPct input{
+  width:3.1em;
+  min-height:0;
+  padding:2px 4px;
+  text-align:right;
+  font-variant-numeric:tabular-nums;
+}
+/* The per-layer hopper Total (and the --ok bar above it) goes, for exactly
+   the reason mobile already dropped it: Hopper 1 is derived as
+   100 - sum(H2..H6) by recomputeAutoH1, and every write path that could push
+   H2-H6 over 100 refuses first - typing (validateHopperPercentages), bulk
+   apply (its pre-flight check across all layers), payload loads (the shared
+   payload validator) and rearrangement (move() returns invalid). So the total
+   is 100 by construction and the readout just repeats it back. The one case
+   that would matter - H2-H6 over-allocated, clamping H1 to 0 - is already
+   surfaced by the Recipe panel's status pill and the notification bell's
+   invalidLayers list, which are real validation surfaces. Removing it also
+   buys back a line in every layer row, which the transposed grid spends on
+   the cells instead. updateHopperTotals still runs and still sets .warn, so
+   bringing this back is a one-line change if the invariant ever loosens. */
+body #splitsArea[data-recipe-layout="transposed"] .splitColumnTotal{
+  display:none;
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitCopyBtn{
+  margin:5px 0 0;
+  padding:2px 8px;
+  font-size:var(--font-tiny);
+}
+
+/* Cells: narrower than the stacked grid's 180px, since six of them now sit
+   across the row instead of five. */
+body #splitsArea[data-recipe-layout="transposed"] .splitMatrixCell{
+  min-width:132px;
+  width:auto;
+  max-width:none;
+  padding:5px 7px;
+}
+
+/* Shading follows the layer (the row) rather than the column, so it keeps
+   pairing with the header that names it. */
+body #splitsArea[data-recipe-layout="transposed"] .splitsMatrix tbody td.splitMatrixCell:nth-child(even){
+  background:transparent;
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitsMatrix tbody tr:nth-child(even) td.splitMatrixCell{
+  background:color-mix(in srgb,var(--row-bg-2) 55%,transparent);
+}
+
+/* Tracking is always live here, so its badge highlight can no longer hang off
+   the Summary view that no longer exists. Same treatment, same tokens. */
+body #splitsArea[data-recipe-layout="transposed"] .splitsMatrix tbody .splitMatrixCell.tracked .splitCellHopperName{
+  background:color-mix(in srgb,var(--ok) 20%,transparent);
+  color:var(--ok);
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitsMatrix tbody .splitMatrixCell.tracked:not(.selected){
+  box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--ok) 22%,transparent);
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitsMatrix tbody .splitMatrixCell.selected{
+  box-shadow:inset 0 0 0 2px var(--focus-border);
+}
+/* Selection is no longer a mode you enter, so a cell does not need to shout
+   "EDIT" at you to explain why it is outlined. */
+body #splitsArea[data-recipe-layout="transposed"] .splitsMatrix tbody .splitMatrixCell.selected::after{
+  content:none;
+}
+
+/* Cells are live on every width above compact mobile now, tablet included,
+   so the static text mirror stands down and the real fields show. */
+body #splitsArea[data-recipe-layout="transposed"] .splitCellResinText{ display:none; }
+body #splitsArea[data-recipe-layout="transposed"] .splitMatrixCell .resinNameInput{
+  display:block;
+  pointer-events:auto;
+  /* An <input> with no width contributes its default ~20-character
+     intrinsic size to the table's max-content width. The stacked grid hid
+     that behind a fixed 180px column; six columns across cannot afford it,
+     and without this each column blows out to ~290px. */
+  width:100%;
+  min-width:0;
+  font-size:calc(var(--font-small) + 1px);
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitInput{
+  pointer-events:auto;
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitLayerHeader :is(input,button){
+  pointer-events:auto;
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitCellTop{ min-width:0; }
+
+/* Six columns of rows, not five columns of stacks: the cell gets a tighter
+   vertical rhythm than the stacked grid's tall "read it across the line"
+   treatment, and the percentage steps down from 19px accordingly. */
+body #splitsArea[data-recipe-layout="transposed"] .splitCellEditor{
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:6px;
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitPctControl input{
+  width:38px;
+  height:23px;
+  min-height:23px;
+  max-height:23px;
+  font-size:15px;
+  font-weight:800;
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitPctControl > span{
+  font-size:var(--font-tiny);
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitCellHopperName{
+  height:19px;
+  min-width:26px;
+  padding:0 5px;
+  font-size:var(--font-tiny);
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitCellHeader{
+  gap:5px;
+  margin-bottom:3px;
+}
+
+/* --------------------------------------------------------------------------
+   Reworked Hopper Weights grid (transposed)
+   Same axis swap as the Recipe grid above, and the same table-layout:fixed
+   reasoning: the weight fields are unsized <input>s whose intrinsic width
+   would otherwise set the column width. Scoped by the layer-header class the
+   transposed build emits, so the compact-mobile weights renderer (a wholly
+   different DOM) is untouched.
+   -------------------------------------------------------------------------- */
+body #weightsArea .weightsMatrix:has(.weightsLayerHeader){
+  table-layout:fixed;
+  width:100%;
+  min-width:880px;
+}
+body #weightsArea .weightsMatrix:has(.weightsLayerHeader) thead th{
+  min-width:0;
+  width:auto;
+  text-align:center;
+}
+body #weightsArea .weightsMatrix .weightsLayerHeader{
+  position:sticky;
+  left:0;
+  z-index:2;
+  min-width:96px;
+  width:96px;
+  max-width:96px;
+  text-align:left;
+  background:var(--panelOpen);
+}
+body #weightsArea .weightsMatrix .weightsLayerHeader .weightsSelectHeader{
+  width:100%;
+  font-size:clamp(15px,1.4vw,19px);
+  font-weight:800;
+  text-align:left;
+}
+body #weightsArea .weightsMatrix:has(.weightsLayerHeader) .weightsMatrixCell{
+  min-width:0;
+  width:auto;
+  max-width:none;
+}
+body #weightsArea .weightsMatrix:has(.weightsLayerHeader) .weightsMatrixCell input{
+  width:100%;
+  min-width:0;
+}
+
+/* --------------------------------------------------------------------------
+   Weight Profiles as the Recipe Book's second section
+   The block is the same collapsible #setupWeightProfilesBlock that Line Setup
+   uses, moved (not cloned) so its wiring keeps one owner. Inside the Book it
+   is not a disclosure - it is simply the second half of the page - so its
+   summary chrome stands down and its own section title carries the heading.
+   -------------------------------------------------------------------------- */
+body .splitsSavedRecipesPanel .savedRecipesProfilesSection{
+  margin-top:18px;
+  border:0;
+  border-top:1px solid var(--row-border);
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+  padding-top:4px;
+}
+body .splitsSavedRecipesPanel .savedRecipesProfilesSection > summary{
+  display:none;
+}
+body .splitsSavedRecipesPanel .savedRecipesProfilesSection > .blockBody{
+  padding-left:0;
+  padding-right:0;
+}
+
+/* --------------------------------------------------------------------------
+   The tracking dot comes back on the reworked grid
+   The stacked grid hides the per-cell clock because tracking there is a
+   Summary-view action performed by clicking the whole cell, and selection is
+   an Edit-view one - two modes, never both at once. The reworked grid has no
+   modes: a cell click selects, so tracking needs a target of its own again.
+   Next is excluded, as it always was - a plan cannot carry tracking at all.
+   -------------------------------------------------------------------------- */
+body:not([data-recipe-page="next"]) #splitsArea[data-recipe-layout="transposed"] .splitTrackControl{
+  display:inline-flex;
+  margin-left:auto;
+}
+/* Legible at rest rather than hover-revealed: on a grid with no Edit mode to
+   enter, a control that only appears on hover is a control an operator on the
+   floor will not find. Empty cells keep theirs quieter than assigned ones. */
+body #splitsArea[data-recipe-layout="transposed"] .splitTrackButton{
+  width:22px;
+  height:22px;
+  min-height:22px;
+  opacity:1;
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitTrackButton svg{
+  width:18px;
+  height:18px;
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitMatrixCell.empty .splitTrackButton:not(.active){
+  opacity:.45;
+}
+body #splitsArea[data-recipe-layout="transposed"] .splitMatrixCell.empty:hover .splitTrackButton,
+body #splitsArea[data-recipe-layout="transposed"] .splitMatrixCell.empty:focus-within .splitTrackButton{
+  opacity:1;
+}
+
+/* --------------------------------------------------------------------------
+   Recipe Book preview pane
+   One pane serves both sections - whichever configuration is selected, recipe
+   or weight profile, is drawn read-only in the same transposed shape the live
+   grid uses. Loading overwrites operator state, so seeing what will land
+   beats reading a paragraph describing it.
+
+   The panel becomes two columns by explicit placement rather than source
+   order: everything the render builds lands in column 1, and the preview is
+   pinned to column 2 across every row. That keeps working no matter how many
+   sections column 1 grows (the Weight Profiles block is appended into this
+   same panel after the render builds it).
+   -------------------------------------------------------------------------- */
+/* The two columns are the page area's, not the panel's. Making the panel
+   itself the grid meant the preview had to span every row (grid-row:1/-1) to
+   sit beside a list of unknown length - and a grid item spanning multiple
+   tracks inflates those tracks to fit itself, so selecting a recipe grew the
+   preview, grew the panel's first row with it, and pushed the list down past
+   the preview's own bottom edge. Here the panel is one ordinary block in
+   column 1 and cannot be stretched by its neighbour. */
+body[data-recipe-page="saved"] #splitsArea{
+  display:grid;
+  /* Left column sized to its content (heading, toolbar, two-line rows), the
+     preview takes the rest. Was minmax(0,1fr) minmax(280px,340px), which let
+     the list eat the workspace and pinned the matrix preview to a 340px rail
+     that always scrolled. */
+  grid-template-columns:minmax(620px,760px) minmax(500px,1fr);
+  gap:20px 24px;
+  align-items:start;
+}
+body[data-recipe-page="saved"] #splitsArea > .splitsSavedRecipesPanel{
+  grid-column:1;
+  min-width:0;
+}
+body[data-recipe-page="saved"] #splitsArea > .splitsConfigurationPreview{
+  grid-column:2;
+  grid-row:1;
+  position:sticky;
+  top:8px;
+  align-self:start;
+  border:1px solid var(--row-border);
+  border-radius:10px;
+  background:color-mix(in srgb,var(--panelOpen) 60%,transparent);
+  padding:14px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  min-width:0;
+}
+.splitsConfigurationPreview[hidden]{ display:none!important; }
+
+.configPreviewHeader{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+.configPreviewHeader strong{ font-size:var(--font-base); line-height:1.25; }
+.configPreviewHeader small{ color:var(--muted); font-size:var(--font-tiny); }
+.configPreviewEmpty{ color:var(--muted); font-size:var(--font-small); line-height:1.5; }
+.configPreviewNotice{
+  margin:0;
+  padding:8px 10px;
+  border:1px solid color-mix(in srgb,var(--warn) 45%,transparent);
+  border-radius:8px;
+  background:color-mix(in srgb,var(--warn) 12%,transparent);
+  color:var(--warn);
+  font-size:var(--font-tiny);
+  line-height:1.45;
+}
+.configPreviewFoot{ margin:0; color:var(--muted); font-size:var(--font-tiny); line-height:1.4; }
+
+/* Its own scroller: a 5-layer preview in a 380px rail is wider than the rail,
+   and the panel body must never scroll sideways because of it. */
+.configPreviewScroll{ overflow-x:auto; }
+.configPreviewTable{
+  border-collapse:separate;
+  border-spacing:0;
+  width:100%;
+  font-variant-numeric:tabular-nums;
+}
+.configPreviewTable th,
+.configPreviewTable td{
+  border-bottom:1px solid var(--row-border-2);
+  border-right:1px solid color-mix(in srgb,var(--row-border) 55%,transparent);
+  padding:4px 6px;
+  text-align:left;
+  vertical-align:middle;
+}
+.configPreviewTable tr:last-child > *{ border-bottom:0; }
+.configPreviewTable tr > *:last-child{ border-right:0; }
+.configPreviewTable thead th{
+  color:var(--muted);
+  font-size:9px;
+  font-weight:700;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  white-space:nowrap;
+}
+.configPreviewTable tbody th{ white-space:nowrap; }
+.configPreviewTable tbody th b{ font-size:var(--font-small); font-weight:800; }
+.configPreviewTable tbody th span{ color:var(--muted); font-size:9px; margin-left:4px; }
+.configPreviewTable td b{ display:block; font-size:10.5px; font-weight:700; line-height:1.25; }
+.configPreviewTable td span{ display:block; color:var(--muted); font-size:9px; line-height:1.2; }
+.configPreviewTable td.configPreviewEmptyCell{ color:color-mix(in srgb,var(--muted) 55%,transparent); }
+
+/* The threshold is deliberately high: the app keeps a ~320px fixed sidebar, so
+   this panel is roughly (viewport - 315px). Splitting it any narrower left
+   the list column too tight for its own action row, which wrapped Load and
+   Update into a stack; at 1240px the list still gets ~580px beside a 340px
+   preview. Under that, the preview simply becomes the last block in a single
+   column rather than a cramped rail. */
+@media (max-width:1460px){
+  body[data-recipe-page="saved"] #splitsArea{
+    grid-template-columns:minmax(0,1fr);
+  }
+  body[data-recipe-page="saved"] #splitsArea > .splitsConfigurationPreview{
+    grid-column:1;
+    grid-row:auto;
+    position:static;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   The edit toolbar sits BELOW the reworked grid
+   order:-1 put it above the matrix, which was right when it only appeared on
+   a deliberate Summary -> Edit switch: one shift, once, at a moment the
+   operator asked for. The reworked grid raises it on every cell selection, so
+   above the grid it shoved the whole working surface down by ~72px under the
+   pointer that had just clicked a cell. Below it, appearing and disappearing
+   costs the grid nothing, and no dead space has to be reserved for it either.
+   -------------------------------------------------------------------------- */
+body #splitsArea[data-recipe-layout="transposed"] > .splitsBulkBar{
+  order:1;
+  margin:10px 0 0;
+}
+/* The hint follows the toolbar rather than being stranded between the grid
+   and it. */
+body #splitsArea[data-recipe-layout="transposed"] > .recipeInteractionHint{
+  order:2;
+}
+
+/* --------------------------------------------------------------------------
+   Rearrange reports itself through the toolbar, not a panel of its own
+   The standalone .rearrangeModeBar is no longer built on any width (its CSS
+   above is now inert). With the edit toolbar always visible below the grid,
+   the mode shows in the controls already there: the Rearrange button becomes
+   a filled Done, Cancel appears beside it, and the interaction hint carries
+   the guidance the bar used to.
+   -------------------------------------------------------------------------- */
+/* Filled rather than outlined, in exactly the tokens the selected page tab
+   resolves to (body #splitsBlock .recipePageTab.active: --btnstyle-ink on
+   --panel) - so "the mode you are in" looks the same wherever it appears.
+   Carries #splitsBlock to clear that same rule's specificity. */
+body #splitsBlock #splitsArea[data-recipe-layout="transposed"] .splitsRearrangeAction.active,
+body #splitsBlock #splitsArea[data-recipe-layout="transposed"] .splitsRearrangeAction.active:hover:not(:disabled){
+  border-color:var(--btnstyle-ink);
+  background:var(--btnstyle-ink);
+  color:var(--panel);
+  font-weight:900;
+}
+body #splitsBlock #splitsArea[data-recipe-layout="transposed"] .splitsRearrangeAction.active .recipeEditActionIcon{
+  color:var(--panel);
+}
+/* Cancel is the quiet way out beside it - ordinary quiet-action treatment,
+   never a danger colour: it restores the recipe rather than destroying it. */
+body #splitsArea[data-recipe-layout="transposed"] .splitsRearrangeCancel{
+  flex:0 0 auto;
+}
+/* While rearranging, the hint carries a sentence rather than a count, so it
+   needs room to breathe on a narrower window. */
+body #splitsArea[data-recipe-layout="transposed"] .recipeInteractionHint{
+  text-wrap:balance;
+}
+
+/* ==========================================================================
+   Reworked grid on the touch shell (tablet)
+   --------------------------------------------------------------------------
+   A tablet lands on the reworked grid (it is over the 700px breakpoint) but
+   carries the touch shell's larger type and padding, which the desktop-sized
+   minimums above were never measured against. On a ~930x700 tablet that left
+   the matrix wider than the panel, pushing the whole page sideways, with the
+   resin codes clipped inside their fields.
+   ========================================================================== */
+
+/* 1. Contain the grid's own overflow. .splitsMatrixScroll is overflow-x:hidden,
+      so a table wider than the panel did not scroll - it stretched its
+      container and took the edit toolbar and everything else out past the
+      screen edge with it. Now the grid scrolls inside its own frame and the
+      panel keeps its width. */
+body #splitsArea[data-recipe-layout="transposed"] .splitsMatrixScroll{
+  overflow-x:auto;
+  max-width:100%;
+  min-width:0;
+}
+/* overflow-x:auto only engages once the box is actually allowed to be
+   narrower than its content. #splitsArea is a grid and these are its items
+   (and one item's child), all of which default to min-width:auto - so
+   without this the layout wrapper simply grew to the table's width and took
+   the panel with it, and the scroller never scrolled. */
+body #splitsArea[data-recipe-layout="transposed"] .splitsMobileLayerLayout{
+  min-width:0;
+  max-width:100%;
+}
+/* The frame must NOT clip. It carries overflow-x:hidden, so on a narrow
+   tablet it silently cut the sixth hopper column off with no way to reach
+   it - and hid the overflow from the scroller above, which therefore never
+   scrolled. Let it size to the table and leave the clipping-plus-scrolling
+   to .splitsMatrixScroll. */
+body #splitsArea[data-recipe-layout="transposed"] .splitsMatrixFrame{
+  min-width:0;
+  max-width:none;
+  overflow-x:visible;
+}
+
+/* 2. The per-layer Total is meant to be gone on this grid (it is 100% by
+      construction - see the note above). A touch rule scoped to short
+      viewports, @media (min-width:701px) and (max-height:800px), re-shows it
+      at inline-block and outranked the earlier removal - which is exactly the
+      shape of a landscape tablet, so it came back on the one surface with the
+      least room for it. Two IDs to settle it. */
+body #splitsBlock #splitsArea[data-recipe-layout="transposed"] .splitsMatrix .splitColumnTotal{
+  display:none;
+}
+
+/* 3. Tighter minimums so six hopper positions plus the layer rail fit a
+      tablet's content area outright rather than relying on the scroll above. */
+body[data-shell="touch"] #splitsArea[data-recipe-layout="transposed"] .splitsMatrix{
+  min-width:806px;
+}
+body[data-shell="touch"] #splitsBlock #splitsArea[data-recipe-layout="transposed"] .splitsMatrix tr > :first-child,
+body[data-shell="touch"] #splitsBlock #splitsArea[data-recipe-layout="transposed"] .splitsMatrix th:first-child,
+body[data-shell="touch"] #splitsBlock #splitsArea[data-recipe-layout="transposed"] .splitsMatrix tbody .splitLayerHeader{
+  min-width:92px;
+  width:92px;
+  max-width:92px;
+}
+body[data-shell="touch"] #splitsArea[data-recipe-layout="transposed"] .splitsMatrix thead th,
+body[data-shell="touch"] #splitsArea[data-recipe-layout="transposed"] .splitMatrixCell{
+  min-width:118px;
+}
+
+/* 4. The resin code is the value that has to survive: it is the longest text
+      in the cell and the one an operator reads across the line. Give it the
+      room by shrinking the percentage field beside it rather than the code,
+      and step the code's own size down to match the tighter column. */
+body[data-shell="touch"] #splitsArea[data-recipe-layout="transposed"] .splitCellEditor{
+  gap:4px;
+}
+body[data-shell="touch"] #splitsArea[data-recipe-layout="transposed"] .splitMatrixCell .resinNameInput{
+  font-size:var(--font-small);
+  letter-spacing:0;
+}
+body[data-shell="touch"] #splitsArea[data-recipe-layout="transposed"] .splitPctControl input{
+  width:30px;
+  min-width:30px;
+  font-size:13px;
+}
+body[data-shell="touch"] #splitsArea[data-recipe-layout="transposed"] .splitLayerPct input{
+  width:2.6em;
+}
+
+/* ==========================================================================
+   Recipe Book / Weight Profiles headers, and the touch-shell Weights grid
+   ========================================================================== */
+
+/* 1. The section title becomes a stacked block on the reworked grid: the
+      name + description take the full width on their own line, and the
+      Save / Load / Update / overflow cluster sits beneath them, left-
+      aligned. As a space-between flex row (the base rule) the buttons were
+      pinned to the right of a two-line title and read as detached from it.
+      Scoped to the saved page's panel so compact mobile keeps its own
+      three-piece title row. Covers both the Recipe Book heading and the
+      folded Weight Profiles heading. */
+body[data-recipe-page="saved"] #splitsArea > .splitsSavedRecipesPanel .workspaceConfigurationSectionTitle{
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  gap:10px;
+}
+body[data-recipe-page="saved"] #splitsArea > .splitsSavedRecipesPanel .workspaceConfigurationSectionTitle > div:first-child{
+  min-width:0;
+}
+body[data-recipe-page="saved"] #splitsArea > .splitsSavedRecipesPanel .splitsSavedRecipesActions{
+  flex-wrap:wrap;
+  justify-content:flex-start;
+}
+
+/* --------------------------------------------------------------------------
+   Recipe Book desktop rows: name-first hierarchy, full-row hit target,
+   tighter cards. All scoped to the saved page's panel, so Line Setup's own
+   configuration lists and compact mobile keep their existing treatment.
+   Reuses the app's tokens - no new visual language.
+   -------------------------------------------------------------------------- */
+body[data-recipe-page="saved"] #splitsArea > .splitsSavedRecipesPanel .workspaceConfigurationList{
+  gap:6px;
+  margin-top:8px;
+  padding-right:0;             /* was 2px for the scrollbar - it broke the
+                                  right-edge alignment with the toolbar above */
+  scrollbar-gutter:stable;
+}
+body[data-recipe-page="saved"] #splitsArea > .splitsSavedRecipesPanel .workspaceConfigurationRow{
+  min-height:56px;
+  padding:8px 12px;
+  gap:12px;
+  cursor:pointer;
+}
+body[data-recipe-page="saved"] #splitsArea > .splitsSavedRecipesPanel .workspaceConfigurationRow .workspaceConfigurationInfo{
+  flex:1 1 auto;             /* fill the row so the whole card is the target */
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  pointer-events:none;        /* clicks fall through to the row's own handler */
+}
+body[data-recipe-page="saved"] #splitsArea > .splitsSavedRecipesPanel .workspaceConfigurationRow .workspaceConfigurationActions{
+  pointer-events:auto;        /* ...but the action buttons stay clickable */
+}
+/* Name = primary. ~15px, medium weight, full-strength text - it was
+   var(--font-small)/var(--muted), weaker than its own metadata. */
+body[data-recipe-page="saved"] #splitsArea > .splitsSavedRecipesPanel .workspaceConfigurationRow strong{
+  font-size:15px;
+  font-weight:600;
+  line-height:1.3;
+  color:var(--text);
+  letter-spacing:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+body[data-recipe-page="saved"] #splitsArea > .splitsSavedRecipesPanel .workspaceConfigurationRow.selected strong{
+  color:var(--title);
+  font-weight:650;
+}
+/* Metadata = secondary. ~13px, muted, below the name. */
+body[data-recipe-page="saved"] #splitsArea > .splitsSavedRecipesPanel .workspaceConfigurationRow small{
+  font-size:13px;
+  line-height:1.35;
+  color:var(--muted);
+  margin-top:0;
+}
+/* Hover: a touch more surface, the same subtle language as the selected
+   state (which keeps its current accent - not made louder). */
+body[data-recipe-page="saved"] #splitsArea > .splitsSavedRecipesPanel .workspaceConfigurationRow:hover:not(.selected){
+  background:color-mix(in srgb,var(--panel) 82%,transparent);
+}
+
+
+/* 2. The touch-shell Hopper Weights grid. Same defect the Recipe grid had
+      before c59cfd0: .weightsMatrixFrame is width:max-content, and the
+      transposed table inside it is table-layout:fixed; width:100%. That
+      pair is circular, and Chromium resolves it to its ~1,000,000px layout
+      maximum - the table rendered a million pixels wide, so on the tablet
+      the grid was simply not visible. The Recipe frame gets width:100% on
+      the touch shell (styles.css ~11603); the Weights frame never did.
+      Give it the same, and let .weightsMatrixScroll do the clipping. */
+body[data-shell="touch"] #weightsArea .weightsMatrixScroll{
+  overflow-x:auto;
+  width:100%;
+  max-width:100%;
+  min-width:0;
+  box-sizing:border-box;
+}
+body[data-shell="touch"] #weightsArea .weightsMatrixFrame{
+  width:100%;
+  max-width:100%;
+  min-width:0;
+  margin-inline:0;
+  overflow-x:visible;
+  box-sizing:border-box;
+}
+
+/* 3. Tighter minimums so six hopper positions plus the layer rail fit a
+      tablet outright, mirroring the Recipe grid's touch treatment. */
+body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader){
+  min-width:760px;
+}
+body[data-shell="touch"] #weightsArea .weightsMatrix .weightsLayerHeader{
+  min-width:82px;
+  width:82px;
+  max-width:82px;
+}
+body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) thead th,
+body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .weightsMatrixCell{
+  min-width:112px;
+}
+
+/* 4. Transposed, thead holds hopper POSITION numbers (1-6), not the layer
+      letters the 64px ghosted watermark style was built for - that style
+      rendered "1 2 3 4 5 6" as giant faded numerals filling the header.
+      Bring it back to an ordinary small column label, matching the Recipe
+      grid's own position headers. */
+body #weightsArea .weightsMatrix:has(.weightsLayerHeader) thead .weightsSelectHeader{
+  height:auto;
+  min-height:0;
+  font-family:inherit;
+  font-size:var(--font-tiny);
+  font-weight:700;
+  letter-spacing:.09em;
+  text-transform:uppercase;
+  color:var(--muted);
+  opacity:1;
+  padding:5px 6px;
+  line-height:1.2;
+}
+body #weightsArea .weightsMatrix:has(.weightsLayerHeader) thead .weightsSelectHeader.selected,
+body #weightsArea .weightsMatrix:has(.weightsLayerHeader) thead .weightsSelectHeader.partiallySelected{
+  opacity:1;
+  color:var(--focus-border);
+  background:color-mix(in srgb,var(--focus-border) 14%,transparent);
+  border-radius:5px;
+}
+
+/* 5. The transposed weight cell is [checkbox] [weight input] lb - keep the
+      input from collapsing to nothing beside the checkbox and unit. */
+body #weightsArea .weightsMatrix:has(.weightsLayerHeader) .weightsCellRow{
+  gap:5px;
+}
+body #weightsArea .weightsMatrix:has(.weightsLayerHeader) .weightsInputWithUnit{
+  flex:1 1 auto;
+  min-width:44px;
+}
+body #weightsArea .weightsMatrix:has(.weightsLayerHeader) .weightsInputWithUnit input{
+  min-width:0;
+}
+
+/* 6. The polished weight-cell presentation - position label, big weight
+      number, "WEIGHT (LB)" caption, geometry field - lives entirely inside
+      desktop.css's fine-pointer, wide-viewport media wrapper, so a tablet
+      (touch shell, coarse pointer) never got it and fell back to the raw
+      checkbox + bare input row. Mirror the essential rules here, scoped to
+      the transposed touch-shell grid, so the tablet cell matches the
+      desktop one. Kept in lockstep with desktop.css:517-532. */
+body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .weightsCellRow,
+body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .weightsCellSelector,
+body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .hopperGeometryPopover,
+body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .weightsComputedWeight{
+  display:none!important;
+}
+body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .weightsMatrixCell{
+  height:64px;
+  vertical-align:middle;
+  box-shadow:inset 0 0 0 1px var(--row-border-2);
+}
+body[data-shell="touch"] #weightsArea[data-desktop-bulk-mode="true"] .weightsMatrix:has(.weightsLayerHeader) .weightsMatrixCell.selected{
+  background:color-mix(in srgb,var(--focus-ring) 72%,var(--row-bg-2));
+  box-shadow:inset 0 0 0 2px var(--focus-border);
+}
+body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .desktopWeightVisualReadout{
+  position:relative;
+  display:grid!important;
+  align-items:center;
+  min-height:46px;
+  padding:5px 4px 3px;
+}
+body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .desktopWeightVisualId{
+  top:2px;
+  left:3px;
+  font-size:var(--font-tiny);
+}
+body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .desktopWeightVisualValues{
+  display:block;
+  min-width:0;
+  text-align:right;
+}
+/* .desktopWeightEditFields layout (stacked weight/height) is owned by
+   block 7 below, shell-agnostic; block 6 only has to switch the readout on
+   for the touch shell. */
+body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .desktopWeightEditFields{
+  display:grid;
+}
+body[data-shell="touch"] #weightsArea .weightsMatrix:has(.weightsLayerHeader) .desktopWeightSummaryValues{
+  display:none;
+}
+
+/* 7. Weight-cell edit fields, and the bulk-edit panel on the touch shell.
+   -------------------------------------------------------------------------- */
+
+/* When Smart Hoppers is on the cell carries a weight and a height input.
+   desktop.css sits them side by side in a 2-column grid; stacked reads
+   better and it is now the treatment on every width - weight row, height
+   row, caption left of the value. */
+body #weightsArea .weightsMatrix:has(.weightsLayerHeader) .desktopWeightEditFields{
+  grid-template-columns:1fr;
+  gap:3px;
+}
+body #weightsArea .weightsMatrix:has(.weightsLayerHeader) .desktopWeightEditFields label{
+  display:grid;
+  grid-template-columns:1fr auto;
+  align-items:baseline;
+  gap:6px;
+}
+body #weightsArea .weightsMatrix:has(.weightsLayerHeader) .desktopWeightEditFields label input{
+  order:2;
+  width:100%;
+}
+body #weightsArea .weightsMatrix:has(.weightsLayerHeader) .desktopWeightEditFields label small{
+  order:1;
+  font-size:8px;
+  text-align:left;
+  white-space:nowrap;
+}
+body #weightsArea .weightsMatrix:has(.weightsLayerHeader) .weightsMatrixCell{
+  height:auto;
+  min-height:64px;
+}
+
+/* -------------------------------------------------------------------------
+   The Weights bulk toolbar mirrors the Current/Next edit toolbar's visual
+   language: a transparent flex strip (no outer card), each field a small
+   bordered box like .splitsEditRowPrimary > .splitsBulkField, and the
+   actions grouped in a station-console bay. Applies on every width above
+   compact mobile; #splitsBlock #weightsArea carries the specificity to beat
+   desktop.css's own .desktopWeightsBulkContext block on the fine pointer.
+   ------------------------------------------------------------------------- */
+body #splitsBlock #weightsArea .weightsBulkBar{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:8px;
+  margin-top:12px;
+  padding:6px 0;
+  border:0;
+  border-radius:0;
+  background:transparent;
+}
+body #splitsBlock #weightsArea .weightsBulkBar .weightsBulkFieldsRow{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:8px;
+  width:100%;
+}
+
+/* Each field is a bordered box: label + control on one line, tiny muted
+   type - the same treatment .splitsBulkField gets in the recipe toolbar. */
+body #splitsBlock #weightsArea .weightsBulkBar .weightsBulkField{
+  display:grid;
+  grid-template-columns:auto auto;
+  align-items:center;
+  gap:8px;
+  flex:0 0 auto;
+  margin:0;
+  padding:5px 8px;
+  border:1px solid var(--row-border-2);
+  border-radius:var(--control-radius);
+  background:var(--row-bg-2);
+  color:var(--muted);
+  font-size:var(--font-tiny);
+  font-weight:750;
+}
+body #splitsBlock #weightsArea .weightsBulkBar .weightsBulkField > span:first-child{
+  margin:0;
+  white-space:nowrap;
+}
+body #splitsBlock #weightsArea .weightsBulkBar .weightsInputWithUnit{
+  display:grid;
+  grid-template-columns:88px auto;
+  align-items:center;
+  gap:4px;
+}
+body #splitsBlock #weightsArea .weightsBulkBar .weightsInputWithUnit input{
+  min-height:28px;
+  min-width:0;
+  font-size:14px;
+  font-weight:800;
+  color:var(--muted);
+}
+body #splitsBlock #weightsArea .weightsBulkBar .weightsInputWithUnit input::placeholder{
+  font-size:var(--font-tiny);
+  font-weight:600;
+}
+
+/* Smart Hoppers + circumference sit in the header pill, beside where
+   Current/Next put Promote / Load Current / Print. Both read as
+   station-console chips (button-styling.css): the same key surface, edge
+   shadow, square 4px corner and 30px height as the toolbar buttons, rather
+   than the old pale accent tint that sat apart from that language.
+   #recipeHeaderControls carries the specificity to beat the pill's own
+   segment rules. */
+body #splitsBlock #recipeHeaderControls .weightsHeaderSmart{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  min-height:30px;
+  padding:0 10px;
+  border:0;
+  border-radius:4px;
+  background:var(--btnstyle-surface);
+  box-shadow:0 1px 0 var(--btnstyle-edge);
+  color:var(--btnstyle-ink);
+  font-size:var(--font-small);
+  font-weight:750;
+  white-space:nowrap;
+}
+/* Enabled Smart Hoppers reads as a pressed key - the console's inverted
+   fill, matching the active view tab and the Timeline "Show all" toggle. */
+body #splitsBlock #recipeHeaderControls .weightsHeaderSmart:has(.toggle.on){
+  background:var(--btnstyle-ink);
+  box-shadow:none;
+  color:var(--panel);
+}
+body #splitsBlock #recipeHeaderControls .weightsHeaderSmart .toggle{
+  --toggle-w:40px;
+  --toggle-h:22px;
+  --toggle-knob:16px;
+}
+body #splitsBlock #recipeHeaderControls .weightsHeaderSmart.unavailable{
+  opacity:.6;
+  font-weight:600;
+  box-shadow:none;
+  background:color-mix(in srgb, var(--btnstyle-surface) 55%, transparent);
+}
+body #splitsBlock #recipeHeaderControls .weightsHeaderCircumference{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  margin:0;
+  min-height:30px;
+  padding:0 10px;
+  border:0;
+  border-radius:4px;
+  background:var(--btnstyle-surface);
+  box-shadow:0 1px 0 var(--btnstyle-edge);
+  color:var(--btnstyle-ink);
+  font-size:var(--font-small);
+  font-weight:750;
+  white-space:nowrap;
+}
+body #splitsBlock #recipeHeaderControls .weightsHeaderCircumference .weightsInputWithUnit{
+  display:grid;
+  grid-template-columns:56px auto;
+  align-items:center;
+  gap:4px;
+}
+body #splitsBlock #recipeHeaderControls .weightsHeaderCircumference input{
+  min-height:24px;
+  min-width:0;
+  font-size:13px;
+  font-weight:800;
+}
+
+/* Apply: the recipe toolbar's own button metrics, and title case to match
+   its "Apply" / "Clear" / "Reset" (a global .weightsBulkActions rule
+   uppercases these). */
+body #splitsBlock #weightsArea .weightsBulkBar #applyBulkWeight,
+body #splitsBlock #weightsArea .weightsBulkBar .weightsBulkActions .bulkTextAction{
+  text-transform:none;
+  letter-spacing:normal;
+}
+body #splitsBlock #weightsArea .weightsBulkBar #applyBulkWeight{
+  flex:0 0 auto;
+  min-height:30px;
+  min-width:70px;
+  padding:5px 14px;
+}
+
+/* Actions bay: padded, softly tinted, rounded - the station-console
+   treatment .splitsEditRowSecondary carries in the recipe toolbar. Pushed
+   to the row's right end. No top-border divider (that was the old card
+   look). */
+body #splitsBlock #weightsArea .weightsBulkBar .weightsBulkActions{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex:0 0 auto;
+  margin-left:auto;
+  padding:6px 8px;
+  border-top:0;
+  border-radius:7px;
+  background:color-mix(in srgb, var(--btnstyle-surface) 55%, transparent);
+}
+/* Visible again: "N hoppers selected", the count the always-on toolbar
+   otherwise never shows. */
+body #splitsBlock #weightsArea .weightsBulkBar .weightsBulkActions .weightsSelectionStatus{
+  position:static;
+  width:auto;
+  height:auto;
+  margin:0;
+  overflow:visible;
+  clip:auto;
+  white-space:nowrap;
+  color:var(--muted);
+  font-size:var(--font-tiny);
+}
+body #splitsBlock #weightsArea .weightsBulkBar .weightsBulkActions #clearWeightSelection{
+  white-space:nowrap;
+  flex:0 0 auto;
+}
+
+/* 9. Apply / Clear in the weights bulk bar take the full station-console key
+      treatment, matching the Recipe toolbar's own actions. button-styling.css
+      already keys .bulkTextAction there; #applyBulkWeight (class "secondary")
+      only got a radius match, so it is brought up to the same key here. */
+body #splitsBlock .weightsBulkBar #applyBulkWeight,
+body[data-shell="touch"] #splitsBlock .weightsBulkBar #applyBulkWeight{
+  min-height:30px;
+  border:0;
+  border-radius:4px;
+  background:var(--btnstyle-surface);
+  color:var(--btnstyle-ink);
+  box-shadow:0 1px 0 var(--btnstyle-edge);
+  font-weight:800;
+}
+body #splitsBlock .weightsBulkBar #applyBulkWeight:disabled{
+  opacity:.5;
+}
+
+/* 10. The Weights page opened with ~20px more space above the grid than
+       Current / Next / Recipe Book. Two causes, both touch-shell only
+       (desktop.css already zeroes them inside its fine-pointer wrapper):
+       #weightsArea carries a static .mt10 class, and its now-empty
+       .desktopWeightsControls first child still contributes a grid gap.
+       Match the other pages. */
+body #splitsArea.recipeWeightsPage > #weightsArea{
+  margin-top:0;
+}
+body #weightsArea > .desktopWeightsControls:not(:has(*)){
+  /* :empty fails here - the innerHTML template leaves whitespace text nodes
+     behind once the view toggle is relocated and the smart control removed.
+     :not(:has(*)) is "no element children", which is the real condition. */
+  display:none;
 }
