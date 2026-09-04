@@ -212,8 +212,9 @@ test("a panel rebuild refreshes the whole hub, not just the recipe list", () => 
 
 test("the preview table scrolls inside its own rail, so the panel never scrolls sideways", () => {
   assert.match(styles, /\.configPreviewScroll\{ overflow-x:auto; \}/);
-  // And it steps down to a single column when the rail would be cramped.
-  assert.match(styles, /@media \(max-width:1240px\)\{[\s\S]*?\.splitsConfigurationPreview\{[\s\S]*?grid-column:1;/);
+  // And it steps down to a single column when two columns no longer fit -
+  // the left column now has a 620px floor, so the threshold moved up.
+  assert.match(styles, /@media \(max-width:1460px\)\{[\s\S]*?\.splitsConfigurationPreview\{[\s\S]*?grid-column:1;/);
 });
 
 test("the preview is a sibling of the panel, not a child - a child had to span every row and inflated them", () => {
@@ -485,4 +486,34 @@ test("the Weights page opens with the same gap above the grid as the other pages
   // touch-shell only (desktop.css zeroes them in its fine-pointer wrapper).
   assert.match(styles, /body #splitsArea\.recipeWeightsPage > #weightsArea\{\s*\n\s*margin-top:0;/);
   assert.match(styles, /body #weightsArea > \.desktopWeightsControls:not\(:has\(\*\)\)\{[\s\S]*?display:none;/);
+});
+
+/* Recipe Book desktop layout pass (48b9af1 follow-up).
+ *
+ * Structural/styling only - no change to save/load/update, RT Sync, or
+ * preview behaviour.
+ */
+test("the left column is constrained and the preview gets the rest", () => {
+  // Was minmax(0,1fr) minmax(280px,340px) - the list ate the workspace and
+  // the matrix preview was pinned to a 340px rail that always scrolled.
+  assert.match(styles, /body\[data-recipe-page="saved"\] #splitsArea\{[\s\S]*?grid-template-columns:minmax\(620px,760px\) minmax\(500px,1fr\);[\s\S]*?gap:20px 24px;/);
+});
+
+test("the saved-recipe name is the primary text, its metadata secondary", () => {
+  // Name was var(--font-small) / var(--muted) - weaker than its own meta.
+  assert.match(styles, /\.splitsSavedRecipesPanel \.workspaceConfigurationRow strong\{[\s\S]*?font-size:15px;[\s\S]*?color:var\(--text\);/);
+  assert.match(styles, /\.splitsSavedRecipesPanel \.workspaceConfigurationRow small\{[\s\S]*?font-size:13px;[\s\S]*?color:var\(--muted\);/);
+});
+
+test("the whole row is the click target, and it stays compact", () => {
+  // The app-side guard fix (bare 'details' -> the row's own overflow class)
+  // is asserted in workspace-configurations-ui.test.js. Here: the info block
+  // is click-through, the actions are not, and the row height is 56-64px.
+  assert.match(styles, /\.splitsSavedRecipesPanel \.workspaceConfigurationRow \.workspaceConfigurationInfo\{[\s\S]*?pointer-events:none;/);
+  assert.match(styles, /\.splitsSavedRecipesPanel \.workspaceConfigurationRow \.workspaceConfigurationActions\{[\s\S]*?pointer-events:auto;/);
+  assert.match(styles, /\.splitsSavedRecipesPanel \.workspaceConfigurationRow\{[\s\S]*?min-height:56px;/);
+});
+
+test("the row list aligns with the toolbar above it - no scrollbar-gutter inset", () => {
+  assert.match(styles, /\.splitsSavedRecipesPanel \.workspaceConfigurationList\{[\s\S]*?padding-right:0;[\s\S]*?scrollbar-gutter:stable;/);
 });

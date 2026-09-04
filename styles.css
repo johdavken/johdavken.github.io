@@ -12030,8 +12030,12 @@ body #splitsArea[data-recipe-layout="transposed"] .splitMatrixCell.empty:focus-w
    column 1 and cannot be stretched by its neighbour. */
 body[data-recipe-page="saved"] #splitsArea{
   display:grid;
-  grid-template-columns:minmax(0,1fr) minmax(280px,340px);
-  gap:18px 22px;
+  /* Left column sized to its content (heading, toolbar, two-line rows), the
+     preview takes the rest. Was minmax(0,1fr) minmax(280px,340px), which let
+     the list eat the workspace and pinned the matrix preview to a 340px rail
+     that always scrolled. */
+  grid-template-columns:minmax(620px,760px) minmax(500px,1fr);
+  gap:20px 24px;
   align-items:start;
 }
 body[data-recipe-page="saved"] #splitsArea > .splitsSavedRecipesPanel{
@@ -12111,7 +12115,7 @@ body[data-recipe-page="saved"] #splitsArea > .splitsConfigurationPreview{
    Update into a stack; at 1240px the list still gets ~580px beside a 340px
    preview. Under that, the preview simply becomes the last block in a single
    column rather than a cramped rail. */
-@media (max-width:1240px){
+@media (max-width:1460px){
   body[data-recipe-page="saved"] #splitsArea{
     grid-template-columns:minmax(0,1fr);
   }
@@ -12286,6 +12290,66 @@ body[data-recipe-page="saved"] #splitsArea > .splitsSavedRecipesPanel .splitsSav
   flex-wrap:wrap;
   justify-content:flex-start;
 }
+
+/* --------------------------------------------------------------------------
+   Recipe Book desktop rows: name-first hierarchy, full-row hit target,
+   tighter cards. All scoped to the saved page's panel, so Line Setup's own
+   configuration lists and compact mobile keep their existing treatment.
+   Reuses the app's tokens - no new visual language.
+   -------------------------------------------------------------------------- */
+body[data-recipe-page="saved"] #splitsArea > .splitsSavedRecipesPanel .workspaceConfigurationList{
+  gap:6px;
+  margin-top:8px;
+  padding-right:0;             /* was 2px for the scrollbar - it broke the
+                                  right-edge alignment with the toolbar above */
+  scrollbar-gutter:stable;
+}
+body[data-recipe-page="saved"] #splitsArea > .splitsSavedRecipesPanel .workspaceConfigurationRow{
+  min-height:56px;
+  padding:8px 12px;
+  gap:12px;
+  cursor:pointer;
+}
+body[data-recipe-page="saved"] #splitsArea > .splitsSavedRecipesPanel .workspaceConfigurationRow .workspaceConfigurationInfo{
+  flex:1 1 auto;             /* fill the row so the whole card is the target */
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  pointer-events:none;        /* clicks fall through to the row's own handler */
+}
+body[data-recipe-page="saved"] #splitsArea > .splitsSavedRecipesPanel .workspaceConfigurationRow .workspaceConfigurationActions{
+  pointer-events:auto;        /* ...but the action buttons stay clickable */
+}
+/* Name = primary. ~15px, medium weight, full-strength text - it was
+   var(--font-small)/var(--muted), weaker than its own metadata. */
+body[data-recipe-page="saved"] #splitsArea > .splitsSavedRecipesPanel .workspaceConfigurationRow strong{
+  font-size:15px;
+  font-weight:600;
+  line-height:1.3;
+  color:var(--text);
+  letter-spacing:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+body[data-recipe-page="saved"] #splitsArea > .splitsSavedRecipesPanel .workspaceConfigurationRow.selected strong{
+  color:var(--title);
+  font-weight:650;
+}
+/* Metadata = secondary. ~13px, muted, below the name. */
+body[data-recipe-page="saved"] #splitsArea > .splitsSavedRecipesPanel .workspaceConfigurationRow small{
+  font-size:13px;
+  line-height:1.35;
+  color:var(--muted);
+  margin-top:0;
+}
+/* Hover: a touch more surface, the same subtle language as the selected
+   state (which keeps its current accent - not made louder). */
+body[data-recipe-page="saved"] #splitsArea > .splitsSavedRecipesPanel .workspaceConfigurationRow:hover:not(.selected){
+  background:color-mix(in srgb,var(--panel) 82%,transparent);
+}
+
 
 /* 2. The touch-shell Hopper Weights grid. Same defect the Recipe grid had
       before c59cfd0: .weightsMatrixFrame is width:max-content, and the
