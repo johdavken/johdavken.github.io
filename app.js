@@ -25,6 +25,10 @@
     const LS_SCHEDULED_ALARMS_KEY = "resinTimer.scheduledAlarms.v0.01";
     const LS_CHANGEOVER_WIZARD_KEY = "resinTimer.changeoverWizard.v0.01";
     const LS_PRODUCTION_ESTIMATE_KEY = "resinTimer.productionEstimate.v0.01";
+    // Recipe matrix orientation is presentation-only. Keep it outside the
+    // session/active-job/configuration payloads so it can never travel over
+    // RT Sync or become part of a saved recipe/workspace configuration.
+    const LS_RECIPE_LAYER_ORIENTATION_KEY = "resinTimer.recipeLayerOrientation.v0.01";
 
     const DETAILS_IDS = [
       "lineSetupBlock",
@@ -79,6 +83,7 @@
       // workspace side rail. It remains local when an RT Sync job arrives,
       // like the other Display settings below.
       desktopRailStyle: "filled",
+      recipeLayerOrientation: "left",
       // Which scan source a tap on the mobile Scan action goes straight to.
       // "ask" preserves the original 3-source popup unchanged; picking a
       // specific source skips that popup entirely. Mobile/touch-only
@@ -1936,6 +1941,36 @@
       state.defaultScanAction = defaultScanAction;
       const sel = $("defaultScanActionSel");
       if (sel) sel.value = defaultScanAction;
+    }
+
+    function normalizeRecipeLayerOrientation(value){
+      return value === "top" ? "top" : "left";
+    }
+
+    function loadRecipeLayerOrientation(){
+      try{
+        return normalizeRecipeLayerOrientation(localStorage.getItem(LS_RECIPE_LAYER_ORIENTATION_KEY));
+      }catch(error){
+        return "left";
+      }
+    }
+
+    function saveRecipeLayerOrientation(){
+      try{
+        localStorage.setItem(LS_RECIPE_LAYER_ORIENTATION_KEY, state.recipeLayerOrientation);
+      }catch(error){
+        showStorageWarning("Display preference could not be saved on this device.");
+      }
+    }
+
+    function applyRecipeLayerOrientation(value, { render = false, persist = false } = {}){
+      state.recipeLayerOrientation = normalizeRecipeLayerOrientation(value);
+      const select = $("recipeLayerOrientationSel");
+      if (select) select.value = state.recipeLayerOrientation;
+      if (persist) saveRecipeLayerOrientation();
+      // Rendering replaces only the Recipe panel's presentation. It does not
+      // validate, save, or synchronize recipe data.
+      if (render) renderSplitsArea();
     }
 
     function defaultSurfaceStyle(){
@@ -4461,6 +4496,11 @@
       // Current, and selection alone raises the edit toolbar. Compact
       // mobile keeps both modes exactly as they are.
       const reworkedGrid = !compactMobileRecipe;
+      // Compact phone keeps its established layer-across-the-top layout; the
+      // selectable orientation applies to the full tablet/desktop matrix.
+      // `reworkedGrid` continues to own interaction/toolbars, while this flag
+      // owns only which axis receives the shared headers and hopper cells.
+      const layersLeft = reworkedGrid && state.recipeLayerOrientation !== "top";
       const summaryView = reworkedGrid ? false : viewMode === "summary";
       // Summary's one interaction. Tracking is runtime state that the
       // planned recipe structurally cannot hold (see next-recipe.js), so
@@ -4482,6 +4522,7 @@
       // the established stacked-grid rules, which stay untouched and keep
       // owning compact mobile.
       area.dataset.recipeLayout = reworkedGrid ? "transposed" : "stacked";
+      area.dataset.recipeOrientation = layersLeft ? "left" : "top";
       area.dataset.recipeCells = cellsTypeable ? "typeable" : "static";
       area.classList.toggle("recipeTrackingView", trackingView);
       // Summary/Edit's control is hidden by syncRecipePageUI(), which owns
@@ -5084,13 +5125,12 @@
       headerRow.appendChild(corner);
 
       // Layer headers and hopper-position headers are built the same way in
-      // both orientations - only which axis they land on changes. The
-      // stacked grid puts layers across the top and positions down the
-      // side; the reworked (transposed) grid swaps them, so a layer is a
-      // row and a hopper position is a column.
+      // both orientations - only which axis they land on changes. Layers
+      // Left makes a layer a row and a hopper position a column; Layers Top
+      // makes a layer a column and a hopper position a row.
       function buildLayerHeader(L){
         const th = document.createElement("th");
-        th.scope = reworkedGrid ? "row" : "col";
+        th.scope = layersLeft ? "row" : "col";
         th.className = "splitLayerHeader";
         th.dataset.layerColumn = L.name;
 
@@ -5196,7 +5236,7 @@
 
       function buildPositionHeader(hi){
         const rowHeader = document.createElement("th");
-        rowHeader.scope = reworkedGrid ? "col" : "row";
+        rowHeader.scope = layersLeft ? "col" : "row";
         rowHeader.className = "splitRowHeader mono";
         const rowSelect = document.createElement("button");
         rowSelect.type = "button";
@@ -5589,7 +5629,7 @@
       // entry in cellRefs are identical either way - only the axis each
       // header lands on, and the order cells are appended in, differ.
       const tbody = document.createElement("tbody");
-      if (reworkedGrid){
+      if (layersLeft){
         recipeLayers().forEach((L, li)=>{
           const tr = document.createElement("tr");
           tr.appendChild(buildLayerHeader(L));
@@ -9714,6 +9754,10 @@
       saveSession();
     });
 
+    $("recipeLayerOrientationSel")?.addEventListener("change",(e)=>{
+      applyRecipeLayerOrientation(e.target.value, { render: true, persist: true });
+    });
+
     $("mobileTimelineAlarmToggle")?.addEventListener("change",async event=>{
       const enabled = !!event.target.checked;
       if (enabled){
@@ -10289,6 +10333,7 @@
       // Publish the shell before any renderer chooses/builds its structural
       // branch. syncLayoutMode keeps it current on later media-query changes.
       applyShellAttribute();
+      applyRecipeLayerOrientation(loadRecipeLayerOrientation());
       ensureLayers();
       placeProductionControlsForLayout();
 
@@ -10340,6 +10385,7 @@
       applyTimeFormat(state.timeFormat || "12");
       applyDesktopRailStyle(state.desktopRailStyle || "filled");
       applyDefaultScanAction(state.defaultScanAction || "ask");
+      applyRecipeLayerOrientation(state.recipeLayerOrientation);
       applySurfaceStyle(state.surfaceStyle || defaultSurfaceStyle());
       applyMobileTileStyle("minimal");
       applyMobileBackgroundStyle("theme-native");

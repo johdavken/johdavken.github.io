@@ -9668,6 +9668,10 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
 .displaySheetPanel > label{display:grid;gap:6px;margin:0;color:var(--muted);font-size:12px;font-weight:750}
 .displaySheetPanel select{width:100%;min-height:44px}
 .desktopRailStyleField > small{color:var(--muted);font-size:10px;font-weight:600}
+.recipeLayerOrientationField > small{color:var(--muted);font-size:10px;font-weight:600}
+@media (max-width:700px){
+  .recipeLayerOrientationField{display:none!important}
+}
 /* The manual layer-count fallback (#setupLayerCountGroup, relocated here by
    placeProductionControlsForLayout() in app.js). Empty and collapses to
    nothing whenever a linked RT Sync line dictates the layer count -
@@ -12684,4 +12688,148 @@ body #weightsArea > .desktopWeightsControls:not(:has(*)){
      behind once the view toggle is relocated and the smart control removed.
      :not(:has(*)) is "no element children", which is the real condition. */
   display:none;
+}
+
+/* ==========================================================================
+   Recipe display option: layer headers across the top
+
+   The reworked Recipe workspace (toolbars, selection, tracking and cell
+   behavior) remains authoritative. This block changes only the table axes.
+   A fixed-layout, 100%-wide table divides the space left after the compact
+   hopper-number gutter between the actual 1, 3 or 5 layer columns, keeping
+   the matrix frame and every sibling toolbar on the same stable outer rail.
+   ========================================================================== */
+body #splitsArea[data-recipe-layout="transposed"][data-recipe-orientation="top"] .splitsMatrixScroll{
+  width:100%;
+  max-width:100%;
+  min-width:0;
+  overflow-x:auto;
+}
+body #splitsArea[data-recipe-layout="transposed"][data-recipe-orientation="top"] .splitsMatrixFrame{
+  width:min(100%, var(--recipe-five-layer-rail, 1062px));
+  max-width:100%;
+  min-width:0;
+  overflow:hidden;
+}
+body #splitsArea[data-recipe-layout="transposed"][data-recipe-orientation="top"] .splitsMatrix{
+  table-layout:fixed;
+  width:100%;
+  max-width:100%;
+  min-width:0;
+}
+
+/* Hopper positions are the short row-header gutter in this orientation. */
+body #splitsBlock #splitsArea[data-recipe-layout="transposed"][data-recipe-orientation="top"] .splitsMatrix tr > :first-child,
+body #splitsBlock #splitsArea[data-recipe-layout="transposed"][data-recipe-orientation="top"] .splitsMatrix th:first-child{
+  display:table-cell;
+  min-width:70px;
+  width:70px;
+  max-width:70px;
+}
+body #splitsArea[data-recipe-layout="transposed"][data-recipe-orientation="top"] .splitsMatrix tbody .splitRowHeader{
+  position:sticky;
+  left:0;
+  z-index:2;
+  padding:5px 6px;
+  background:var(--panelOpen);
+  color:var(--muted);
+  text-align:center;
+  vertical-align:middle;
+}
+
+/* The remaining width is shared by however many layer columns exist. */
+body #splitsArea[data-recipe-layout="transposed"][data-recipe-orientation="top"] .splitsMatrix thead th,
+body #splitsArea[data-recipe-layout="transposed"][data-recipe-orientation="top"] .splitMatrixCell{
+  min-width:0;
+  width:auto;
+  max-width:none;
+}
+body #splitsArea[data-recipe-layout="transposed"][data-recipe-orientation="top"] .splitsMatrix thead .splitLayerHeader{
+  position:static;
+  padding:6px 8px;
+  background:color-mix(in srgb,var(--panelOpen) 72%,transparent);
+  text-align:center;
+  vertical-align:top;
+}
+body #splitsArea[data-recipe-layout="transposed"][data-recipe-orientation="top"] .splitLayerMain{
+  position:static;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:2px;
+  min-height:0;
+  padding:0;
+}
+body #splitsArea[data-recipe-layout="transposed"][data-recipe-orientation="top"] .splitLayerTitle{
+  position:static;
+  transform:none;
+  width:auto;
+  min-width:0;
+  height:auto;
+  min-height:0;
+  padding:1px 6px;
+  color:var(--title);
+  font-size:16px;
+  font-weight:850;
+  line-height:1.1;
+  opacity:1;
+  text-align:center;
+}
+body #splitsArea[data-recipe-layout="transposed"][data-recipe-orientation="top"] .splitLayerPct{
+  display:inline-flex;
+  align-items:baseline;
+  justify-content:center;
+  gap:1px;
+  margin:0;
+  padding:0;
+  border:0;
+}
+body #splitsArea[data-recipe-layout="transposed"][data-recipe-orientation="top"] .splitLayerPct input{
+  width:3em;
+  min-width:0;
+  min-height:0;
+  padding:2px 3px;
+  font-size:14px;
+  text-align:right;
+}
+body #splitsArea[data-recipe-layout="transposed"][data-recipe-orientation="top"] .splitCopyBtn{
+  margin:3px auto 0;
+  padding:2px 7px;
+  font-size:var(--font-tiny);
+}
+
+/* Alternation follows layer columns after the axis swap. */
+body #splitsArea[data-recipe-layout="transposed"][data-recipe-orientation="top"] .splitsMatrix tbody tr:nth-child(even) td.splitMatrixCell{
+  background:transparent;
+}
+body #splitsArea[data-recipe-layout="transposed"][data-recipe-orientation="top"] .splitsMatrix tbody td.splitMatrixCell:nth-child(even){
+  background:color-mix(in srgb,var(--row-bg-2) 55%,transparent);
+}
+
+/* Wide touch uses the same stable shell, with its established 52px row
+   gutter. No data-column floor is retained, so five layers still fit while
+   one and three layers naturally receive wider cells. */
+@media (min-width:701px){
+  body[data-shell="touch"] #splitsArea[data-recipe-layout="transposed"][data-recipe-orientation="top"] .splitsMatrixFrame{
+    width:100%;
+    max-width:100%;
+  }
+  body[data-shell="touch"] #splitsArea[data-recipe-layout="transposed"][data-recipe-orientation="top"] .splitsMatrix{
+    width:100%;
+    min-width:0;
+    max-width:100%;
+  }
+  body[data-shell="touch"] #splitsBlock #splitsArea[data-recipe-layout="transposed"][data-recipe-orientation="top"] .splitsMatrix tr > :first-child,
+  body[data-shell="touch"] #splitsBlock #splitsArea[data-recipe-layout="transposed"][data-recipe-orientation="top"] .splitsMatrix th:first-child{
+    min-width:52px;
+    width:52px;
+    max-width:52px;
+  }
+  body[data-shell="touch"] #splitsArea[data-recipe-layout="transposed"][data-recipe-orientation="top"] .splitsMatrix thead th,
+  body[data-shell="touch"] #splitsArea[data-recipe-layout="transposed"][data-recipe-orientation="top"] .splitMatrixCell{
+    min-width:0;
+    width:auto;
+    max-width:none;
+  }
 }
