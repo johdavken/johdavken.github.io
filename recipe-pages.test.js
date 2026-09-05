@@ -339,10 +339,10 @@ test("a saved recipe for a different layer count is called out when planning", (
   assert.match(preview, /The planned recipe follows this line's \$\{state\.lineType\}-layer structure/);
 });
 
-test("Print prints the page on screen and says which one it is", () => {
-  const print = app.slice(app.indexOf("function printRecipeSheet(){"), app.indexOf("Recipe pages: Current and Next"));
-  assert.match(print, /title\.textContent = recipePageLabel\(\);/);
-  assert.match(print, /recipeLayers\(\)\.forEach/);
+test("Print prints whichever recipe(s) the operator chose (Current, Next, or Both) and says which is which", () => {
+  const print = app.slice(app.indexOf("function openPrintRecipeDialog("), app.indexOf("Recipe pages: Current and Next"));
+  assert.match(print, /title\.textContent = page === "next" \? "Next Recipe" : "Current Recipe";/);
+  assert.match(print, /recipeSheetLayersFor\(page\)/);
   // Screen chrome stays off the sheet.
   assert.doesNotMatch(print, /splitTrackControl|splitCellSelector|recipePageTab/);
 });

@@ -2040,6 +2040,21 @@
   </form>
 </dialog>
 
+<dialog id="printRecipeDialog" class="lineSyncConflictDialog" aria-labelledby="printRecipeDialogTitle">
+  <form method="dialog">
+    <div id="printRecipeDialogTitle" class="layerTitle">Print Recipe</div>
+    <div class="muted mt10">Choose which recipe to print.</div>
+    <div class="segmentedActionToolbar mt10">
+      <div class="segmentedActionRow">
+        <button value="current" class="secondary" type="submit">Current</button>
+        <button id="printRecipeNextButton" value="next" class="secondary" type="submit">Next</button>
+        <button id="printRecipeBothButton" value="both" class="secondary" type="submit">Both</button>
+      </div>
+    </div>
+    <div class="buttonRow mt10"><button value="cancel" class="secondary" type="submit">Cancel</button></div>
+  </form>
+</dialog>
+
 <dialog id="recipeScanOrientationDialog" class="lineSyncConflictDialog" aria-labelledby="recipeScanOrientationTitle">
   <form method="dialog">
     <div id="recipeScanOrientationTitle" class="layerTitle">Which layer is A?</div>

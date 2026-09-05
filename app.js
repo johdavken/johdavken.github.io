@@ -3758,19 +3758,64 @@
       });
     }
 
-    function printRecipeSheet(){
-      const existing = document.getElementById("recipePrintSheet");
-      if (existing) existing.remove();
+    // Asks which recipe(s) to put on the sheet before printRecipeSheet does
+    // any DOM work, so the pure render/print action never has to know about
+    // confirmation UI. "Next" and "Both" are disabled when nothing is
+    // planned - there is nothing meaningful to carry to the line.
+    function openPrintRecipeDialog(){
+      const dialog = $("printRecipeDialog");
+      if (!dialog?.showModal) return;
+      const planned = hasPlannedRecipe();
+      const nextButton = $("printRecipeNextButton");
+      const bothButton = $("printRecipeBothButton");
+      if (nextButton) nextButton.disabled = !planned;
+      if (bothButton) bothButton.disabled = !planned;
+      dialog.addEventListener("close", ()=>{
+        const value = dialog.returnValue;
+        if (value === "current" || value === "next" || value === "both") printRecipeSheet(value);
+      }, { once:true });
+      dialog.showModal();
+    }
 
-      const sheet = document.createElement("div");
-      sheet.id = "recipePrintSheet";
+    // The layers a print section reads, independent of which page (Current
+    // or Next) happens to be open in the editor right now - a printed sheet
+    // must reflect the page the operator asked for, not whichever one they
+    // were last looking at. "current" reads the live recipe directly;
+    // "next" reads the durable plan (never the working copy - printing must
+    // not depend on Next having been opened this session) and reshapes it
+    // from its stored resin_name/layer_pct fields to the resinName/layerPct
+    // shape the sheet builder shares with the live recipe.
+    function recipeSheetLayersFor(page){
+      if (page === "next"){
+        const plan = window.PolynNextRecipe?.normalize(state.nextRecipe);
+        return (plan?.layers || []).map(layer=>({
+          name: layer.name,
+          layerPct: layer.layer_pct,
+          hoppers: (layer.hoppers || []).map(hopper=>({ resinName: hopper.resin_name, pct: hopper.pct }))
+        }));
+      }
+      return state.layers;
+    }
+
+    // One recipe's worth of the sheet: a header naming the page/workspace/
+    // line, then a single overview table - to read like the printouts
+    // operators already get off the dosing controller itself (material
+    // overview: resin code and value stacked in each cell). Orientation
+    // follows the on-screen Recipe matrix setting (state.recipeLayerOrientation)
+    // so the printed axis always matches what the operator was just looking
+    // at: layers as rows when "left" (the controller's own layout), hoppers
+    // as rows when "top".
+    function buildRecipePrintSection(page){
+      const layers = recipeSheetLayersFor(page);
+      const section = document.createElement("div");
+      section.className = "printSheetSection";
 
       const header = document.createElement("div");
       header.className = "printSheetHeader";
       const title = document.createElement("h1");
       // Names the page it came from, so a sheet carried to the line is never
       // mistaken for the recipe that is actually running.
-      title.textContent = recipePageLabel();
+      title.textContent = page === "next" ? "Next Recipe" : "Current Recipe";
       const meta = document.createElement("div");
       meta.className = "printSheetMeta";
       const workspaceName = lineSync?.getState?.().selectedWorkspace?.name || "Local";
@@ -3778,63 +3823,108 @@
       const namingLabel = derivedHopperNamingMode() === "main" ? "Main + 1–5" : "1–6";
       meta.textContent = `${workspaceName} · ${lineTypeLabel} · Hopper naming: ${namingLabel} · Printed ${new Date().toLocaleString()}`;
       header.append(title, meta);
-      sheet.append(header);
+      section.append(header);
 
-      // A single overview table - layers as rows, hoppers as columns - to
-      // read like the printouts operators already get off the dosing
-      // controller itself (material overview: one row per layer, one
-      // column per hopper, resin code and value stacked in each cell).
       // Column headers are naming-mode-generic (not per-layer, unlike
       // hopperBadgeLabel) since H1's label is otherwise identical across
-      // every layer in "standard" mode and the row already carries the
-      // layer letter.
+      // every layer in "standard" mode and the layer identity is carried by
+      // the row/column it lands in instead.
       const hopperColumnLabels = derivedHopperNamingMode() === "main"
         ? ["Main", "1", "2", "3", "4", "5"]
         : ["H1", "H2", "H3", "H4", "H5", "H6"];
 
+      const hopperCell = h=>{
+        const cell = document.createElement("td");
+        const resinName = normName(h?.resinName);
+        const nameLine = document.createElement("div");
+        nameLine.className = "printSheetResin";
+        nameLine.textContent = resinName || "NOT USED";
+        const pctLine = document.createElement("div");
+        pctLine.className = "printSheetPct";
+        pctLine.textContent = `${fmtNum(clampNum(h?.pct), 2)}%`;
+        cell.append(nameLine, pctLine);
+        return cell;
+      };
+
+      // The overall layer percentage rides next to the layer letter itself
+      // (in whichever axis carries the layer - row header when layers are
+      // left, column header when layers are on top) instead of getting a
+      // whole extra row/column of its own.
+      const layerLabelCell = (name, layerPct, scope="row")=>{
+        const cell = document.createElement("th");
+        cell.className = "printSheetLayerLabel";
+        cell.scope = scope;
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = name;
+        const pctSpan = document.createElement("span");
+        pctSpan.className = "printSheetLayerPct";
+        pctSpan.textContent = `${fmtNum(clampNum(layerPct), 2)}%`;
+        cell.append(nameSpan, pctSpan);
+        return cell;
+      };
+
       const table = document.createElement("table");
       table.className = "printSheetTable";
       const thead = document.createElement("thead");
-      const headRow = document.createElement("tr");
-      headRow.appendChild(document.createElement("th"));
-      hopperColumnLabels.forEach(text=>{
-        const th = document.createElement("th");
-        th.textContent = text;
-        headRow.appendChild(th);
-      });
-      const layerPctHead = document.createElement("th");
-      layerPctHead.textContent = "Layer %";
-      headRow.appendChild(layerPctHead);
-      thead.appendChild(headRow);
-
       const tbody = document.createElement("tbody");
-      recipeLayers().forEach(L=>{
-        const row = document.createElement("tr");
-        const layerLabel = document.createElement("th");
-        layerLabel.className = "printSheetLayerLabel";
-        layerLabel.scope = "row";
-        layerLabel.textContent = L.name;
-        row.appendChild(layerLabel);
-        L.hoppers.forEach(h=>{
-          const cell = document.createElement("td");
-          const resinName = normName(h.resinName);
-          const nameLine = document.createElement("div");
-          nameLine.className = "printSheetResin";
-          nameLine.textContent = resinName || "NOT USED";
-          const pctLine = document.createElement("div");
-          pctLine.className = "printSheetPct";
-          pctLine.textContent = `${fmtNum(clampNum(h.pct), 2)}%`;
-          cell.append(nameLine, pctLine);
-          row.appendChild(cell);
+      const layersLeft = state.recipeLayerOrientation !== "top";
+
+      if (layersLeft){
+        const headRow = document.createElement("tr");
+        headRow.appendChild(document.createElement("th"));
+        hopperColumnLabels.forEach(text=>{
+          const th = document.createElement("th");
+          th.textContent = text;
+          headRow.appendChild(th);
         });
-        const layerPctCell = document.createElement("td");
-        layerPctCell.className = "printSheetLayerPct";
-        layerPctCell.textContent = `${fmtNum(clampNum(L.layerPct), 2)}%`;
-        row.appendChild(layerPctCell);
-        tbody.appendChild(row);
-      });
+        thead.appendChild(headRow);
+
+        layers.forEach(L=>{
+          const row = document.createElement("tr");
+          row.appendChild(layerLabelCell(L.name, L.layerPct));
+          L.hoppers.forEach(h=> row.appendChild(hopperCell(h)));
+          tbody.appendChild(row);
+        });
+      } else {
+        // Transposed: hoppers as rows, layers as columns.
+        const headRow = document.createElement("tr");
+        headRow.appendChild(document.createElement("th"));
+        layers.forEach(L=> headRow.appendChild(layerLabelCell(L.name, L.layerPct, "col")));
+        thead.appendChild(headRow);
+
+        hopperColumnLabels.forEach((label, hi)=>{
+          const row = document.createElement("tr");
+          const hopperLabel = document.createElement("th");
+          hopperLabel.className = "printSheetLayerLabel";
+          hopperLabel.scope = "row";
+          hopperLabel.textContent = label;
+          row.appendChild(hopperLabel);
+          layers.forEach(L=> row.appendChild(hopperCell(L.hoppers[hi])));
+          tbody.appendChild(row);
+        });
+      }
+
       table.append(thead, tbody);
-      sheet.append(table);
+      section.append(table);
+      return section;
+    }
+
+    function printRecipeSheet(which){
+      const existing = document.getElementById("recipePrintSheet");
+      if (existing) existing.remove();
+
+      const sheet = document.createElement("div");
+      sheet.id = "recipePrintSheet";
+
+      const pages = which === "both" ? ["current", "next"] : [which === "next" ? "next" : "current"];
+      pages.forEach((page, index)=>{
+        const section = buildRecipePrintSection(page);
+        // Both recipes share one page rather than each starting a fresh
+        // sheet of paper - a divider between them is enough to tell them
+        // apart.
+        if (index > 0) section.classList.add("printSheetSectionDivider");
+        sheet.append(section);
+      });
 
       document.body.appendChild(sheet);
       window.print();
@@ -4719,8 +4809,8 @@
       // Appended after the Load Next Recipe block below, so the desktop
       // action row reads Scan (primary) -> Load Next (secondary) -> Print
       // (tertiary), left to right in descending priority.
-      const printButton=document.createElement("button"); printButton.type="button"; printButton.className="secondary rearrangeDesktopOnly recipeActionTertiary"; printButton.innerHTML=`<svg class="recipeActionIcon" viewBox="0 0 32 32" aria-hidden="true"><path d="M9 12V5h14v7"/><rect x="6" y="12" width="20" height="10" rx="1.5"/><path d="M9 20h14v7H9z"/></svg>Print Recipe`; printButton.disabled=!recipeLayers().some(L=>L.hoppers.some(h=>normName(h.resinName)||clampNum(h.pct)>0));
-      printButton.addEventListener("click", printRecipeSheet);
+      const printButton=document.createElement("button"); printButton.type="button"; printButton.className="secondary rearrangeDesktopOnly recipeActionTertiary"; printButton.innerHTML=`<svg class="recipeActionIcon" viewBox="0 0 32 32" aria-hidden="true"><path d="M9 12V5h14v7"/><rect x="6" y="12" width="20" height="10" rx="1.5"/><path d="M9 20h14v7H9z"/></svg>Print Recipe`; printButton.disabled=!recipeLayers().some(L=>L.hoppers.some(h=>normName(h.resinName)||clampNum(h.pct)>0)) && !hasPlannedRecipe();
+      printButton.addEventListener("click", openPrintRecipeDialog);
 
       // The deliberate bridge from planned to running. Current-page only: on
       // the Next page you are looking at the plan, so there is nothing to

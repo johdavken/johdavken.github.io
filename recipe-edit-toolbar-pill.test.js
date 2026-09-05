@@ -106,16 +106,21 @@ test("Resin/Percentage fields get an explicit height:40px (not left to min-heigh
   assert.match(styles, /#splitsArea #splitsBulkBar \.splitsEditRowPrimary > \.splitsBulkField\{\s*\n\s*height: 40px;\s*\n\s*padding: 0 8px;\s*\n\s*\}/);
 });
 
-test("explicit widths match the redesign spec: Resin 180px, % 150px, Apply 70px, Clear/Empty 70px, Reset 65px, Rearrange 95px", () => {
-  // Resin/% hold the spec's 180/150 as flex-basis + max-width rather than as
+test("explicit widths match the redesign spec: Resin 180px, % 170px, Apply 70px, Clear/Empty 70px, Reset 65px, Rearrange 95px", () => {
+  // Resin/% hold the spec's 180/170 as flex-basis + max-width rather than as
   // min-width. As a min-width they were an absolute floor that made the row
   // unable to fit a panel narrower than its own content - which is what
   // pushed the Edit toolbar past the Recipe rail and made opening Edit look
   // like it widened the panel. The min-widths that remain are readability
   // floors (measured: below these the label and input stop fitting side by
-  // side), far below the preferred size.
+  // side), far below the preferred size. The % floor (and its own inner
+  // grid track, .splitsBulkFieldPct's grid-template-columns) was widened
+  // from 96/72px to 130/96px after the narrower floor let the field shrink
+  // to a width that clipped its own "No change" placeholder on a real
+  // touch-shell tablet (860-930px wide) - 72px left no margin over the
+  // placeholder's own measured width in a bold 14px system-ui fallback.
   assert.match(styles, /#splitsArea #splitsBulkBar \.splitsEditRowPrimary > label\[for="bulkResinName"\]\{\s*\n\s*flex: 1 1 180px;\s*\n\s*min-width: 120px;\s*\n\s*max-width: 180px;\s*\n\s*\}/);
-  assert.match(styles, /#splitsArea #splitsBulkBar \.splitsEditRowPrimary > \.splitsBulkFieldPct\{\s*\n\s*flex: 1 1 150px;\s*\n\s*min-width: 96px;\s*\n\s*max-width: 150px;\s*\n\s*\}/);
+  assert.match(styles, /#splitsArea #splitsBulkBar \.splitsEditRowPrimary > \.splitsBulkFieldPct\{\s*\n\s*flex: 1 1 170px;\s*\n\s*min-width: 130px;\s*\n\s*max-width: 170px;\s*\n\s*\}/);
   assert.match(styles, /#splitsArea #splitsBulkBar \.splitsEditRowPrimary > button\{\s*\n\s*min-width: 70px;\s*\n\s*\}/);
   assert.match(styles, /#splitsArea #splitsBulkBar #clearSplitSelection\{ min-width: 70px; \}/);
   assert.match(styles, /#splitsArea #splitsBulkBar #clearSelectedCells\{ min-width: 70px; \}/);

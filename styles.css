@@ -3881,9 +3881,16 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     gap: 4px;
   }
   /* ...and the field itself gets that suffix's width back, so the entry box
-     ends up the same size as the resin one beside it instead of clipping
-     its own "No change" placeholder. */
-  .splitsEditRowPrimary > .splitsBulkFieldPct{ grid-template-columns: auto minmax(72px, 105px); }
+     ends up close to the size of the resin one beside it instead of
+     clipping its own "No change" placeholder. The floor carries real
+     margin above the placeholder's own measured width (bold 14px "No
+     change" runs ~72-90px depending on the platform's system-ui fallback
+     font - Arial here, Roboto/San Francisco elsewhere) rather than sitting
+     flush against it, since the previous 72px floor left no room for that
+     font variance and clipped on at least one real device (a touch-shell
+     tablet in the 860-930px band, where the field can shrink to its
+     floor). */
+  .splitsEditRowPrimary > .splitsBulkFieldPct{ grid-template-columns: auto minmax(96px, 120px); }
   /* #splitsArea qualifies this past button.secondary, which is otherwise an
      equal-specificity rule appearing later in the sheet and so was winning
      the padding outright. */
@@ -4048,9 +4055,9 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     max-width: 180px;
   }
   #splitsArea #splitsBulkBar .splitsEditRowPrimary > .splitsBulkFieldPct{
-    flex: 1 1 150px;
-    min-width: 96px;
-    max-width: 150px;
+    flex: 1 1 170px;
+    min-width: 130px;
+    max-width: 170px;
   }
   #splitsArea #splitsBulkBar .splitsEditRowPrimary > button{
     min-width: 70px;
@@ -9630,10 +9637,21 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
   #recipePrintSheet .printSheetTable th,
   #recipePrintSheet .printSheetTable td{ border:1px solid #000; padding:4px 6px; text-align:left; vertical-align:top; }
   #recipePrintSheet .printSheetTable thead th{ font-size:11px; font-weight:600; }
+  /* Deliberately NOT display:flex on the cell itself - in the "top"
+     orientation sheet this <th> is one of several siblings across the
+     header row (one per layer column), and a <th> with a non-table
+     display value stops participating in the table's column layout: every
+     layer header collapses into a single stacked column instead of
+     sitting side by side across the top (the same failure mode the
+     on-screen transposed grid had). The cell stays an ordinary
+     table-cell; the letter and percentage are plain inline spans, so they
+     read left to right (or centered, via text-align) by ordinary text
+     flow - no flex needed. */
   #recipePrintSheet .printSheetLayerLabel{ font-size:20px; font-weight:700; text-align:center; vertical-align:middle; }
   #recipePrintSheet .printSheetResin{ font-size:11px; font-weight:600; line-height:1.3; }
   #recipePrintSheet .printSheetPct{ font-size:13px; line-height:1.3; }
-  #recipePrintSheet .printSheetLayerPct{ font-size:13px; font-weight:600; text-align:center; vertical-align:middle; }
+  #recipePrintSheet .printSheetLayerLabel .printSheetLayerPct{ font-size:13px; font-weight:600; margin-left:6px; }
+  #recipePrintSheet .printSheetSectionDivider{ margin-top:14px; padding-top:14px; border-top:2px solid #000; }
 }
 
 /* =======================================================================
@@ -11687,8 +11705,15 @@ body #splitsBlock #splitsArea[data-recipe-layout="transposed"] .splitsMatrix th:
 }
 
 /* Layer header: a row header now, so it pins left while the positions scroll
-   horizontally. Letter, percentage, running total and Match stack in a
-   compact column instead of the stacked grid's 58px watermark treatment. */
+   horizontally. "Top strip rail": a tinted band across the top of the cell
+   carries the letter and percentage, with Match as plain text underneath -
+   a horizontal rotation of the rail this replaced. .splitLayerMain draws a
+   real box again here (overriding the display:contents given to it below
+   for the "top" ledger row) so it can BE that band; .splitLayerHeader just
+   stacks band-then-Match in a column, no grid needed since there's only
+   one non-table-cell box in this row (the header cell itself) - see the
+   print-sheet bug this same shape caused when several such cells shared
+   one row instead. */
 body #splitsBlock #splitsArea[data-recipe-layout="transposed"] .splitsMatrix tbody .splitLayerHeader{
   position:sticky;
   left:0;
@@ -11696,46 +11721,52 @@ body #splitsBlock #splitsArea[data-recipe-layout="transposed"] .splitsMatrix tbo
   min-width:118px;
   width:118px;
   max-width:118px;
-  padding:8px 10px;
+  padding:0;
   vertical-align:middle;
   text-align:left;
   background:var(--panelOpen);
+  display:flex;
+  flex-direction:column;
 }
-body #splitsArea[data-recipe-layout="transposed"] .splitLayerMain{
-  position:static;
+body #splitsBlock #splitsArea[data-recipe-layout="transposed"] .splitLayerMain{
+  display:contents;
+}
+body #splitsBlock #splitsArea[data-recipe-layout="transposed"] .splitsMatrix tbody .splitLayerMain{
   display:flex;
   align-items:baseline;
-  justify-content:flex-start;
-  gap:8px;
-  min-height:0;
+  gap:6px;
+  background:color-mix(in srgb,var(--title) 14%,transparent);
+  padding:5px 10px;
 }
-body #splitsArea[data-recipe-layout="transposed"] .splitLayerTitle{
+body #splitsBlock #splitsArea[data-recipe-layout="transposed"] .splitsMatrix tbody .splitLayerTitle{
   position:static;
   transform:none;
   width:auto;
   min-width:0;
   height:auto;
   min-height:0;
-  padding:0 2px;
-  font-size:clamp(17px,1.5vw,21px);
+  padding:0;
+  background:transparent;
+  font-size:18px;
   font-weight:800;
   line-height:1.05;
   color:var(--title);
   opacity:1;
   text-align:left;
 }
-body #splitsArea[data-recipe-layout="transposed"] .splitLayerTitle.selected,
-body #splitsArea[data-recipe-layout="transposed"] .splitLayerTitle.partiallySelected{
+body #splitsBlock #splitsArea[data-recipe-layout="transposed"] .splitsMatrix tbody .splitLayerTitle.selected,
+body #splitsBlock #splitsArea[data-recipe-layout="transposed"] .splitsMatrix tbody .splitLayerTitle.partiallySelected{
   opacity:1;
   color:var(--focus-border);
 }
-body #splitsArea[data-recipe-layout="transposed"] .splitLayerPct{
+body #splitsBlock #splitsArea[data-recipe-layout="transposed"] .splitsMatrix tbody .splitLayerPct{
   display:inline-flex;
   align-items:baseline;
   gap:1px;
-  margin:0;
+  margin:0 0 0 auto;
+  padding:0;
 }
-body #splitsArea[data-recipe-layout="transposed"] .splitLayerPct input{
+body #splitsBlock #splitsArea[data-recipe-layout="transposed"] .splitLayerPct input{
   width:3.1em;
   min-height:0;
   padding:2px 4px;
@@ -11758,10 +11789,27 @@ body #splitsArea[data-recipe-layout="transposed"] .splitLayerPct input{
 body #splitsArea[data-recipe-layout="transposed"] .splitColumnTotal{
   display:none;
 }
-body #splitsArea[data-recipe-layout="transposed"] .splitCopyBtn{
-  margin:5px 0 0;
-  padding:2px 8px;
+/* Plain text, not a pill - Match reads like a caption under the band
+   rather than a second control competing with it. Still a real <button>
+   (it copies Layer copyFrom into this layer on click); only the chip
+   chrome is stripped. */
+body #splitsBlock #splitsArea[data-recipe-layout="transposed"] .splitsMatrix tbody .splitCopyBtn{
+  width:auto;
+  margin:4px 10px 6px;
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:none;
+  box-shadow:none;
+  color:var(--muted);
   font-size:var(--font-tiny);
+  font-weight:600;
+  text-align:left;
+}
+body #splitsBlock #splitsArea[data-recipe-layout="transposed"] .splitsMatrix tbody .splitCopyBtn:hover,
+body #splitsBlock #splitsArea[data-recipe-layout="transposed"] .splitsMatrix tbody .splitCopyBtn:focus-visible{
+  background:none;
+  color:var(--focus-border);
 }
 
 /* Cells: narrower than the stacked grid's 180px, since six of them now sit
@@ -12744,48 +12792,56 @@ body #splitsArea[data-recipe-layout="transposed"][data-recipe-orientation="top"]
   width:auto;
   max-width:none;
 }
-body #splitsArea[data-recipe-layout="transposed"][data-recipe-orientation="top"] .splitsMatrix thead .splitLayerHeader{
+/* "Ledger row": letter, percentage and Match sit on one line, divided from
+   the next column by a hairline, like a manifest row rather than a stacked
+   card. Deliberately NOT display:flex/grid on the header cell itself - a
+   <th> with a non-table display value stops participating in the table's
+   column layout (every layer header collapses into one stacked column
+   instead of sitting side by side across the top). The cell stays an
+   ordinary table-cell; .splitLayerMain's display:contents (set above, in
+   the left/rail rule) flattens the letter and percentage into direct
+   children of this cell, and every child here is inline-level, so they
+   read left to right on one line by ordinary text flow - no flex needed. */
+body #splitsBlock #splitsArea[data-recipe-layout="transposed"][data-recipe-orientation="top"] .splitsMatrix thead .splitLayerHeader{
+  display:table-cell;
   position:static;
-  padding:6px 8px;
+  padding:8px 10px;
   background:color-mix(in srgb,var(--panelOpen) 72%,transparent);
-  text-align:center;
-  vertical-align:top;
+  border-bottom:1px solid var(--border);
+  text-align:left;
+  vertical-align:middle;
+  white-space:nowrap;
 }
-body #splitsArea[data-recipe-layout="transposed"][data-recipe-orientation="top"] .splitLayerMain{
-  position:static;
-  display:flex;
-  flex-direction:column;
+body #splitsBlock #splitsArea[data-recipe-layout="transposed"][data-recipe-orientation="top"] .splitLayerTitle{
+  display:inline-flex;
   align-items:center;
-  justify-content:center;
-  gap:2px;
-  min-height:0;
-  padding:0;
-}
-body #splitsArea[data-recipe-layout="transposed"][data-recipe-orientation="top"] .splitLayerTitle{
+  vertical-align:middle;
   position:static;
   transform:none;
   width:auto;
   min-width:0;
   height:auto;
   min-height:0;
-  padding:1px 6px;
+  padding:0;
+  margin-right:10px;
+  background:transparent;
   color:var(--title);
   font-size:16px;
   font-weight:850;
   line-height:1.1;
   opacity:1;
-  text-align:center;
+  text-align:left;
 }
-body #splitsArea[data-recipe-layout="transposed"][data-recipe-orientation="top"] .splitLayerPct{
+body #splitsBlock #splitsArea[data-recipe-layout="transposed"][data-recipe-orientation="top"] .splitLayerPct{
   display:inline-flex;
+  vertical-align:middle;
   align-items:baseline;
-  justify-content:center;
   gap:1px;
   margin:0;
   padding:0;
   border:0;
 }
-body #splitsArea[data-recipe-layout="transposed"][data-recipe-orientation="top"] .splitLayerPct input{
+body #splitsBlock #splitsArea[data-recipe-layout="transposed"][data-recipe-orientation="top"] .splitLayerPct input{
   width:3em;
   min-width:0;
   min-height:0;
@@ -12793,8 +12849,10 @@ body #splitsArea[data-recipe-layout="transposed"][data-recipe-orientation="top"]
   font-size:14px;
   text-align:right;
 }
-body #splitsArea[data-recipe-layout="transposed"][data-recipe-orientation="top"] .splitCopyBtn{
-  margin:3px auto 0;
+body #splitsBlock #splitsArea[data-recipe-layout="transposed"][data-recipe-orientation="top"] .splitCopyBtn{
+  display:inline-flex;
+  vertical-align:middle;
+  margin:0 0 0 8px;
   padding:2px 7px;
   font-size:var(--font-tiny);
 }
