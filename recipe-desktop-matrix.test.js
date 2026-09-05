@@ -30,19 +30,23 @@ test("the matrix frame is capped at min(100%, rail) rather than a bare rail widt
   assert.match(styles, /#splitsBlock \.recipeHeaderRow,\s*\n\s*#splitsArea > \.splitsBulkBar\{\s*\n\s*width: min\(100%, var\(--recipe-five-layer-rail\)\);/);
 });
 
-test("desktop marks the active layer count and textures only the unused one- and three-layer rail space", () => {
+// The "unused rail" isometric lattice above was designed for the old
+// non-transposed (stacked) matrix, where fewer than 5 layers left real
+// unused column space to texture. Recipe Setup's grid is transposed
+// (layers as rows, all 6 hopper columns always rendered - see
+// area.dataset.recipeLayout in app.js) whenever reworkedGrid is true, which
+// is unconditionally the case at desktop widths now. So data-layer-count
+// "1"/"3" still got set (frame.dataset.layerCount = String(layerNames.length)
+// in app.js), the lattice rule still matched, and --recipe-active-rail's
+// stacked-layout pixel widths (268px/664px) landed mid-table - painting the
+// lattice over the Hopper 5/6 columns of a live 3-layer recipe. Removed
+// entirely: there is no "missing layer column" concept left to texture.
+test("the stale unused-rail lattice is gone; data-layer-count is still set for any other consumer, but no CSS keys off it", () => {
   const app = fs.readFileSync("app.js", "utf8");
   const body = desktopBlock();
   assert.match(app, /frame\.dataset\.layerCount = String\(layerNames\.length\);/);
-  assert.match(body, /\.splitsMatrixFrame\[data-layer-count="1"\],\s*\n\s*#splitsArea \.splitsMatrixFrame\[data-layer-count="3"\]/);
-  const latticeStart = body.indexOf('#splitsArea .splitsMatrixFrame[data-layer-count="1"],');
-  const latticeBlock = body.slice(latticeStart, body.indexOf('}', latticeStart) + 1);
-  assert.doesNotMatch(latticeBlock, /background:/, "the live cells stay on their existing transparent matrix surface");
-  assert.match(body, /\.splitsMatrixFrame\[data-layer-count="1"\]\{ --recipe-active-rail: 268px; \}/);
-  assert.match(body, /\.splitsMatrixFrame\[data-layer-count="3"\]\{ --recipe-active-rail: 664px; \}/);
-  assert.match(body, /background-size: 42px 72px;/);
-  assert.match(body, /pointer-events: none;/);
-  assert.match(body, /\[data-theme="gruvbox-dark"\],[\s\S]*?\[data-theme="everforest"\],[\s\S]*?\.splitsMatrixFrame:is\(\[data-layer-count="1"\],\[data-layer-count="3"\]\)::after\{[\s\S]*?background-color: color-mix\(in srgb, var\(--bg\) 76%, #000\);/);
+  assert.doesNotMatch(body, /data-layer-count/);
+  assert.doesNotMatch(styles, /recipe-active-rail/);
 });
 
 test("Summary no longer collapses the row gutter - it's a permanent column now, so toggling Edit never shifts Columns A-E. Same fix as the header-row/Edit-toolbar rail alignment work: the gutter is reserved everywhere, only its content (Select row label, interactive styling) changes with view", () => {

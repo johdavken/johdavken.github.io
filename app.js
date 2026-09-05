@@ -1690,7 +1690,7 @@
       return ["A","B","C"];
     }
     function getLayerCopyRules(lineType){
-      if (lineType === 3) return { "A": "C", "C": "A" };
+      if (lineType === 3) return { "A": "C", "B": "A", "C": "A" };
       if (lineType === 5) return {
         "A": "E",
         "B": "D",
@@ -4533,6 +4533,25 @@
         recordRecipeEdit(historyBefore);
       }
 
+      // 3-layer's B is the core layer: matching it to A/C should only carry
+      // over which resin is loaded, not the skin layers' blend percentages -
+      // B's own split is set independently. Every other copy pair (A<-C,
+      // C<-A, and the 5-layer pairs) intentionally copies both pct and
+      // resinName via copyLayer above.
+      function isResinOnlyCopyTarget(lineType, toName){
+        return lineType === 3 && toName === "B";
+      }
+      function copyLayerResinOnly(fromName, toName){
+        const from = recipeLayers().find(L=>L.name===fromName);
+        const to = recipeLayers().find(L=>L.name===toName);
+        if (!from || !to) return;
+        const historyBefore=snapshotRecipeEdit();
+        for (let i=0;i<HOPPERS_PER_LAYER;i++){
+          to.hoppers[i].resinName = normName(from.hoppers[i].resinName);
+        }
+        recordRecipeEdit(historyBefore);
+      }
+
       const modeBar = document.createElement("div");
       modeBar.className = "splitsBulkModeBar";
       const modeButton = document.createElement("button");
@@ -5124,15 +5143,20 @@
         const copyFrom = copyRules[L.name];
         th.classList.toggle("noCopy", !copyFrom);
         if (copyFrom){
+          const resinOnly = isResinOnlyCopyTarget(state.lineType, L.name);
           const copyButton = document.createElement("button");
           copyButton.type = "button";
           copyButton.className = "copyBtn splitCopyBtn";
           copyButton.textContent = `Match ${copyFrom}`;
-          copyButton.setAttribute("aria-label", `Make Layer ${L.name} match Layer ${copyFrom}`);
+          const copyDescription = resinOnly
+            ? `Copy Layer ${copyFrom}'s resin into Layer ${L.name} (percentages unchanged)`
+            : `Make Layer ${L.name} match Layer ${copyFrom}`;
+          copyButton.setAttribute("aria-label", copyDescription);
           copyButton.dataset.mobileCopySource = copyFrom;
-          copyButton.title = `Make Layer ${L.name} match Layer ${copyFrom}`;
+          copyButton.title = copyDescription;
           copyButton.addEventListener("click",()=>{
-            copyLayer(copyFrom, L.name);
+            if (resinOnly) copyLayerResinOnly(copyFrom, L.name);
+            else copyLayer(copyFrom, L.name);
             renderSplitsArea();
             validateAndCompute({ sync: true });
             saveSession();

@@ -4373,66 +4373,6 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     grid-template-columns: minmax(0, 1fr);
   }
 
-  /* A one- or three-layer recipe intentionally keeps the five-layer rail so
-     every Recipe control has a stable x-position. Give only that unoccupied
-     desktop surface a quiet isometric lattice: it is non-interactive,
-     clipped to the frame, and begins after the live table columns so it can
-     never read as a disabled hopper cell. Tablet and phone retain their
-     compact edge-to-edge grids because this rule lives in the fine-pointer
-     desktop query. */
-  #splitsArea .splitsMatrixFrame[data-layer-count="1"],
-  #splitsArea .splitsMatrixFrame[data-layer-count="3"]{
-    position: relative;
-    isolation: isolate;
-  }
-  #splitsArea .splitsMatrixFrame[data-layer-count="1"]{ --recipe-active-rail: 268px; }
-  #splitsArea .splitsMatrixFrame[data-layer-count="3"]{ --recipe-active-rail: 664px; }
-  #splitsArea .splitsMatrixFrame[data-layer-count="1"]::after,
-  #splitsArea .splitsMatrixFrame[data-layer-count="3"]::after{
-    content: "";
-    position: absolute;
-    z-index: 0;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    left: var(--recipe-active-rail);
-    pointer-events: none;
-    opacity: .52;
-    background-image:
-      linear-gradient(30deg, transparent 48%, color-mix(in srgb, var(--focus-border) 16%, transparent) 49% 50%, transparent 51%),
-      linear-gradient(150deg, transparent 48%, color-mix(in srgb, var(--focus-border) 16%, transparent) 49% 50%, transparent 51%),
-      linear-gradient(90deg, transparent 48%, color-mix(in srgb, var(--title) 9%, transparent) 49% 50%, transparent 51%);
-    background-size: 42px 72px;
-    background-position: 20px 0;
-    box-shadow: inset 0 0 76px color-mix(in srgb, var(--panel) 56%, transparent);
-  }
-  /* On dark palettes, darken the pseudo-layer itself instead of its frame:
-     matrix cells deliberately have transparent surfaces, and changing the
-     frame would bleed this treatment underneath the live A/B/C columns. */
-  body:is(
-    [data-theme="dark"],
-    [data-theme="industrial-slate-dark"],
-    [data-theme="oled-black"],
-    [data-theme="vaporwave"],
-    [data-theme="gruvbox-dark"],
-    [data-theme="nord"],
-    [data-theme="tokyo-night"],
-    [data-theme="dracula"],
-    [data-theme="solarized-dark"],
-    [data-theme="catppuccin-mocha"],
-    [data-theme="rose-pine"],
-    [data-theme="everforest"],
-    [data-theme="one-dark"],
-    [data-theme="high-contrast"]
-  ) #splitsArea .splitsMatrixFrame:is([data-layer-count="1"],[data-layer-count="3"])::after{
-    background-color: color-mix(in srgb, var(--bg) 76%, #000);
-  }
-  #splitsArea .splitsMatrixFrame[data-layer-count="1"] > .splitsMatrix,
-  #splitsArea .splitsMatrixFrame[data-layer-count="3"] > .splitsMatrix{
-    position: relative;
-    z-index: 1;
-  }
-
   /* 10% larger Recipe matrix on desktop only - font size, the Track
      toggle's clock icon, the hopper-designation badge, and the column/cell
      size itself - for easier reading on large monitors. The surrounding

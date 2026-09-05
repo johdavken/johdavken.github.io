@@ -24,8 +24,12 @@ function functionBody(name){
 //
 // The 3-layer line's A/C pair was left one-way (C<-A only) when the above
 // was done. Same fix, same reasoning: A now also copies from C, matching
-// the mutual-pair pattern already used for 5-layer's A/E and B/D. B (the
-// line's middle/core layer, same role as 5-layer's C) still has no mirror.
+// the mutual-pair pattern already used for 5-layer's A/E and B/D.
+//
+// B (the line's core layer) has since gained its own "Match A" button too,
+// but B's split is set independently of the skin layers, so that copy is
+// intentionally resin-only - see copyLayerResinOnly and
+// layer-copy-b-resin-only.test.js.
 
 test("a 5-layer line now offers both directions for the A/E and B/D pairs, leaving C's existing one-way copy from B untouched", () => {
   const rules = functionBody("getLayerCopyRules");
@@ -39,17 +43,18 @@ test("a 5-layer line now offers both directions for the A/E and B/D pairs, leavi
   assert.match(fiveLayerBody, /"E": "A"/, "E's existing rule must be untouched");
 });
 
-test("the 3-layer line's A/C pair is now mutual too, leaving B without a copy button", () => {
+test("the 3-layer line's A/C pair is mutual, and B now has its own Match-A button", () => {
   const rules = functionBody("getLayerCopyRules");
-  assert.match(rules, /if \(lineType === 3\) return \{ "A": "C", "C": "A" \};/);
+  assert.match(rules, /if \(lineType === 3\) return \{ "A": "C", "B": "A", "C": "A" \};/);
 });
 
-test("no new rendering code was needed - the copy button is still purely driven by copyRules[L.name], appended once per layer's <th>", () => {
+test("the copy button is still purely driven by copyRules[L.name], appended once per layer's <th>, with a resin-only branch for B's Match-A", () => {
   const renderStart = app.indexOf("const copyFrom = copyRules[L.name];");
   assert.notEqual(renderStart, -1);
-  const body = app.slice(renderStart, renderStart + 1100);
+  const body = app.slice(renderStart, renderStart + 1300);
   assert.match(body, /copyButton\.textContent = `Match \$\{copyFrom\}`;/);
-  assert.match(body, /copyButton\.setAttribute\("aria-label", `Make Layer \$\{L\.name\} match Layer \$\{copyFrom\}`\);/);
+  assert.match(body, /const resinOnly = isResinOnlyCopyTarget\(state\.lineType, L\.name\);/);
+  assert.match(body, /if \(resinOnly\) copyLayerResinOnly\(copyFrom, L\.name\);/);
   assert.match(body, /th\.appendChild\(copyButton\);/);
 });
 

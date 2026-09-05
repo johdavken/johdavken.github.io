@@ -118,9 +118,10 @@ test("the mobile toolbar has no overflow control left - Scan and Load fold into 
 
 test("layer controls describe matching rather than copying without changing the copyLayer operation",()=>{
   assert.match(app,/copyButton\.textContent = `Match \$\{copyFrom\}`;/);
-  assert.match(app,/copyButton\.title = `Make Layer \$\{L\.name\} match Layer \$\{copyFrom\}`;/);
+  assert.match(app,/copyButton\.title = copyDescription;/);
+  assert.match(app,/Make Layer \$\{L\.name\} match Layer \$\{copyFrom\}/);
   assert.match(styles,/content:"Match " attr\(data-mobile-copy-source\)/);
-  assert.match(app,/copyLayer\(copyFrom, L\.name\);/);
+  assert.match(app,/else copyLayer\(copyFrom, L\.name\);/);
 });
 
 test("top-level mobile headers no longer act as the redundant Main-menu return control",()=>{
