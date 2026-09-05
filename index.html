@@ -2209,6 +2209,13 @@
         <option value="dosing_screen">Dosing Screen</option>
       </select>
     </label>
+    <label for="recipeLayerOrientationSel" class="recipeLayerOrientationField">Recipe layer headers
+      <select id="recipeLayerOrientationSel" aria-describedby="recipeLayerOrientationHelp">
+        <option value="left" selected>Left</option>
+        <option value="top">Top</option>
+      </select>
+      <small id="recipeLayerOrientationHelp">Tablet and desktop Recipe panel</small>
+    </label>
     <!-- Manual layer-count fallback (see setupLayerCountGroup in Line Setup's
          source markup, relocated here by placeProductionControlsForLayout()
          in app.js). Only ever populated/visible while no linked RT Sync line
