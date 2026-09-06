@@ -84,13 +84,11 @@ test("Current's cluster gets Load Next (icon markup kept); Next's gets Load Curr
 });
 
 test("the accessible name on the page-action buttons stays the full visible label", () => {
-  // Promoting the plan is named for what it does to the line, not for
-  // loading a recipe from somewhere; Load Current Recipe genuinely copies
-  // one recipe into another, so it keeps its name.
-  assert.match(app, /loadNextButton\.setAttribute\("aria-label", "Promote to Current"\);/);
+  // Both page-action buttons are named for the recipe they load.
+  assert.match(app, /loadNextButton\.setAttribute\("aria-label", "Load Next Recipe"\);/);
   assert.match(app, /loadCurrentButton\.setAttribute\("aria-label", "Load Current Recipe"\);/);
   const editor = recipeEditor();
-  assert.match(editor, /loadNextButton\.innerHTML = `<svg class="recipeActionIcon"[\s\S]*?Promote to Current`;/);
+  assert.match(editor, /loadNextButton\.innerHTML = `<svg class="recipeActionIcon"[\s\S]*?Load Next Recipe`;/);
 });
 
 test("desktop keeps Recipe Book as a page tab and moves recipe actions (incl. Print) into the header pill", () => {
@@ -274,5 +272,5 @@ test("desktop/tablet toolbar sizing, positioning and colors are untouched by the
   // The >=701px merged-row layout (margin-left:auto pill, flex:1 1 auto
   // secondary row, tinted-surface fill) still exists verbatim.
   assert.match(styles, /#splitsArea #splitsBulkBar \.splitsEditRowSecondary \.bulkTextAction,\s*\n\s*#splitsArea #splitsBulkBar \.splitsEditRowSecondary \.splitsRearrangeAction,\s*\n\s*\.splitsEditRowSecondary #resetAllSplits\.danger\{\s*\n\s*min-height: 40px;\s*\n\s*\}/);
-  assert.match(styles, /\.splitsEditRowSecondary \.bulkTextAction,\s*\n\s*\.splitsEditRowSecondary \.splitsRearrangeAction\{[\s\S]*?border: 0;\s*\n\s*background: color-mix\(in srgb, var\(--recipe-pill-accent\) 28%, var\(--panel2\)\);\s*\n\s*color: var\(--text\);/);
+  assert.match(styles, /\.splitsEditRowSecondary \.bulkTextAction,\s*\n\s*\.splitsEditRowSecondary \.splitsRearrangeAction,\s*\n\s*\.splitsEditRowSecondary \.recipeHistoryAction\{[\s\S]*?border: 0;\s*\n\s*background: color-mix\(in srgb, var\(--recipe-pill-accent\) 28%, var\(--panel2\)\);\s*\n\s*color: var\(--text\);/);
 });

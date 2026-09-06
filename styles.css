@@ -3995,23 +3995,43 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     min-width: 0;
     gap: 8px;
   }
-  .recipeEditHistory{
+  /* Undo/Redo live inside the right-anchored pill now (.splitsEditRowSecondary
+     wraps .recipeEditHistory as its first child), leading the row:
+     Undo / Redo / Clear / Empty / Rearrange / Reset. On tablet/desktop they
+     read as text chips like their neighbours rather than icon-only circles;
+     the phone icon rail below flips them back to 40px icons. */
+  #splitsArea #splitsBulkBar .splitsEditRowSecondary .recipeEditHistory{
+    display: inline-flex;
+    align-items: stretch;
     flex-shrink: 0;
+    gap: 2px;
   }
-  /* Undo/Redo carry data-button-size="small" too, and that attribute
-     selector's own padding (button[data-button-size="small"]{padding:...})
-     outranks .recipeHistoryAction{padding:0} - an attribute selector beats
-     a plain class at equal specificity depth, regardless of where
-     .recipeHistoryAction lives. Without this they'd render with extra
-     padding around their icon instead of a clean circle. Sized to match
-     the rest of the toolbar's ~40px control height (was 26px, sized for
-     when this row's target height was 28px). */
-  #splitsBulkBar .recipeHistoryAction{
-    width: 38px;
-    min-width: 38px;
-    height: 38px;
-    min-height: 38px;
-    padding: 0;
+  #splitsArea #splitsBulkBar .splitsEditRowSecondary .recipeHistoryAction{
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    width: auto;
+    min-width: 0;
+    height: auto;
+    min-height: 40px;
+    /* attribute selector button[data-button-size="small"]{padding} outranks
+       a plain .recipeHistoryAction, so the padding is set at this
+       higher-specificity selector to survive. */
+    padding: 0 11px;
+    border: 0;
+    border-radius: var(--control-radius);
+    color: var(--text);
+    font-size: var(--font-small);
+  }
+  #splitsArea #splitsBulkBar .splitsEditRowSecondary .recipeHistoryAction > span{
+    display: inline;
+  }
+  #splitsArea #splitsBulkBar .splitsEditRowSecondary .recipeHistoryAction svg{
+    width: 15px;
+    height: 15px;
+  }
+  #splitsArea #splitsBulkBar .splitsEditRowSecondary .recipeHistoryAction:disabled{
+    opacity: .5;
   }
   /* Deliberate, legible sizes for every control on this row - not shrunk
      to fit, a consistent ~40px height throughout. #splitsArea
@@ -4157,12 +4177,14 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     gap: 0;
   }
   .splitsEditRowSecondary .bulkTextAction,
-  .splitsEditRowSecondary .splitsRearrangeAction{
+  .splitsEditRowSecondary .splitsRearrangeAction,
+  .splitsEditRowSecondary .recipeHistoryAction{
     /* .bulkTextAction, not ">" - #clearSplitSelection lives one level
        deeper than its siblings (inside .splitsBulkActions), so a direct-
        child combinator here would silently skip it and leave it in its old
        transparent/outlined look while everything around it turned into a
-       filled segment. */
+       filled segment. .recipeHistoryAction (Undo/Redo) rides the same
+       treatment now that it leads the pill. */
     /* Rounded per-segment now that there's a real 2px gap between segments
        instead of them touching edge-to-edge - var(--control-radius), the
        app's standard button corner, so these read as a cohesive row of
@@ -4232,7 +4254,8 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
      every leftover rule touching it). The double-id here plus an explicit
      background reasserts the fill outright rather than tying again. */
   #splitsArea #splitsBulkBar .splitsEditRowSecondary .bulkTextAction:hover:not(:disabled),
-  #splitsArea #splitsBulkBar .splitsEditRowSecondary .splitsRearrangeAction:hover:not(:disabled){
+  #splitsArea #splitsBulkBar .splitsEditRowSecondary .splitsRearrangeAction:hover:not(:disabled),
+  #splitsArea #splitsBulkBar .splitsEditRowSecondary .recipeHistoryAction:hover:not(:disabled){
     background: color-mix(in srgb, var(--recipe-pill-accent) 28%, var(--panel2));
     color: var(--text);
     filter: brightness(1.08);
@@ -4311,14 +4334,8 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     background:var(--desktop-recipe-cell-bg);
     box-shadow: none;
   }
-  /* Summary only, same as the badge highlight it pairs with - Edit already
-     has its own selection outline and status label, so tracking stays
-     passive there. Faint and inset (inside the cell's own fill, not an
-     added border) so it never nudges layout; the app's warn-badge idiom
-     (color-mix over transparent) reused with --ok. */
-  #splitsArea[data-recipe-view="summary"] .splitsMatrix tbody .splitMatrixCell.tracked:not(.selected){
-    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--ok) 22%, transparent);
-  }
+  /* Tracking carries no cell outline - the hopper-name badge highlight
+     (.splitCellHopperName below) is the only marker. */
   #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.selected{
     background: var(--desktop-recipe-cell-bg);
     box-shadow: inset 0 0 0 2px var(--focus-border);
@@ -5037,9 +5054,6 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     background:var(--compact-recipe-row-bg);
     border-color:var(--row-border-2);
     box-shadow:none;
-  }
-  #splitsArea[data-recipe-view="summary"] .splitsMatrix.compactMobileRecipe .splitMatrixCell.tracked:not(.selected){
-    box-shadow:inset 0 0 0 2px color-mix(in srgb, var(--ok) 22%, transparent);
   }
   #splitsArea[data-recipe-view="edit"] .splitsMatrix.compactMobileRecipe .splitMatrixCell.selected::after{
     content:"EDIT";
@@ -11154,9 +11168,6 @@ body[data-shell="touch"] .changeoverWizardDialog{position:fixed;inset:auto auto 
     border-color:var(--row-border-2);
     box-shadow:none;
   }
-  #splitsArea[data-recipe-view="summary"] .splitsMatrix tbody .splitMatrixCell.tracked:not(.selected){
-    box-shadow:inset 0 0 0 2px color-mix(in srgb, var(--ok) 22%, transparent);
-  }
   #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.selected{
     background:var(--tablet-recipe-cell-bg);
     border-color:color-mix(in srgb,var(--focus-border) 65%,var(--row-border-2));
@@ -11206,9 +11217,6 @@ body[data-shell="touch"] .changeoverWizardDialog{position:fixed;inset:auto auto 
     background:var(--tablet-recipe-cell-bg);
     border-color:var(--row-border-2);
     box-shadow:none;
-  }
-  body[data-shell="touch"] #splitsArea[data-recipe-view="summary"] .splitsMatrix tbody .splitMatrixCell.tracked:not(.selected){
-    box-shadow:inset 0 0 0 2px color-mix(in srgb, var(--ok) 22%, transparent);
   }
   body[data-shell="touch"] #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.selected{
     background:var(--tablet-recipe-cell-bg);
@@ -11835,9 +11843,6 @@ body #splitsArea[data-recipe-layout="transposed"] .splitsMatrix tbody tr:nth-chi
 body #splitsArea[data-recipe-layout="transposed"] .splitsMatrix tbody .splitMatrixCell.tracked .splitCellHopperName{
   background:color-mix(in srgb,var(--ok) 20%,transparent);
   color:var(--ok);
-}
-body #splitsArea[data-recipe-layout="transposed"] .splitsMatrix tbody .splitMatrixCell.tracked:not(.selected){
-  box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--ok) 22%,transparent);
 }
 body #splitsArea[data-recipe-layout="transposed"] .splitsMatrix tbody .splitMatrixCell.selected{
   box-shadow:inset 0 0 0 2px var(--focus-border);

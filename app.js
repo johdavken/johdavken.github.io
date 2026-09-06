@@ -4828,16 +4828,13 @@
         // down from Scan Recipe's primary gradient, one step up from Print
         // Recipe's tertiary ghost treatment (see .splitsBulkModeBar
         // button.secondary in styles.css).
-        // "Promote to Current" rather than "Load Next Recipe": the action
-        // is not loading a recipe from anywhere, it is putting the plan on
-        // the line. Placement is unchanged - it stays on Current, the page
-        // being changed, and is still never offered on the plan itself.
-        loadNextButton.innerHTML = `<svg class="recipeActionIcon" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 5v16"/><path d="M10 15l6 6 6-6"/><path d="M6 26h20"/></svg>Promote to Current`;
-        // Visible mobile label is shorter (icon dropped along with it,
-        // since .textContent replaces the whole icon+label innerHTML); the
-        // accessible name stays the full "Promote to Current" regardless of
-        // which text is on screen.
-        loadNextButton.setAttribute("aria-label", "Promote to Current");
+        // "Load Next Recipe": puts the planned Next Recipe on the line.
+        // Placement is unchanged - it stays on Current, the page being
+        // changed, and is still never offered on the plan itself.
+        loadNextButton.innerHTML = `<svg class="recipeActionIcon" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 5v16"/><path d="M10 15l6 6 6-6"/><path d="M6 26h20"/></svg>Load Next Recipe`;
+        // On mobile the header slot is icon-only; the "Load Next Recipe"
+        // accessible name stays regardless of which text is on screen.
+        loadNextButton.setAttribute("aria-label", "Load Next Recipe");
         const planned = hasPlannedRecipe();
         const promotable = !!window.PolynNextRecipe?.isPromotable(state.nextRecipe);
         loadNextButton.hidden = !planned;
@@ -4899,11 +4896,11 @@
           </label>
           <button id="applyBulkSplit" type="button" class="secondary" data-button-kind="action" data-button-variant="primary" data-button-size="small" disabled>Apply</button>
         </div>
-        <div class="recipeEditHistory" role="group" aria-label="Recipe edit history">
-          <button id="recipeUndo" type="button" class="recipeHistoryAction" data-button-kind="icon" data-button-size="small" aria-label="Undo recipe change" title="Undo" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4 12l5 5M4 12h9a6 6 0 1 1 0 12"/></svg></button>
-          <button id="recipeRedo" type="button" class="recipeHistoryAction" data-button-kind="icon" data-button-size="small" aria-label="Redo recipe change" title="Redo" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 7 5 5-5 5m5-5h-9a6 6 0 1 0 0 12"/></svg></button>
-        </div>
         <div class="splitsEditRow splitsEditRowSecondary">
+          <div class="recipeEditHistory" role="group" aria-label="Recipe edit history">
+            <button id="recipeUndo" type="button" class="recipeHistoryAction" data-button-kind="icon" data-button-size="small" aria-label="Undo recipe change" title="Undo" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4 12l5 5M4 12h9a6 6 0 1 1 0 12"/></svg><span>Undo</span></button>
+            <button id="recipeRedo" type="button" class="recipeHistoryAction" data-button-kind="icon" data-button-size="small" aria-label="Redo recipe change" title="Redo" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 7 5 5-5 5m5-5h-9a6 6 0 1 0 0 12"/></svg><span>Redo</span></button>
+          </div>
           <div class="splitsBulkActions">
             <div id="splitSelectionStatus" class="srOnly tiny splitsSelectionStatus" role="status" aria-live="polite">No hoppers selected</div>
             <button id="clearSplitSelection" type="button" class="bulkTextAction" data-button-kind="action" data-button-variant="quiet" data-button-size="small" aria-label="Clear selection" title="Clear selection"><svg class="recipeEditActionIcon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="11" height="11" rx="1"/><path d="m14 14 6 6m0-6-6 6"/></svg><span>Clear selection</span></button>
@@ -5078,11 +5075,12 @@
         headerActions?.append(printButton);
       }
       // Rearrange keeps its real element (and therefore every handler wired
-      // to it above) - only placed once it has a home. It leads the
-      // secondary row rather than trailing it: that row is a right-anchored
-      // pill (margin-left:auto), so a Cancel button appearing beside
-      // Rearrange grows the pill leftwards and leaves Clear selection /
-      // Empty cells / Reset Recipe exactly where they were.
+      // to it above) - only placed once it has a home. It LEADS the
+      // right-anchored pill, ahead of Undo/Redo, so the row reads
+      // Rearrange / Undo / Redo / Clear / Empty / Reset. Leading it means
+      // its wider mode form (Done + a Cancel button appearing beside it)
+      // grows the pill leftwards from its own end and leaves every other
+      // button where it was.
       const editSecondaryRow = toolbar.querySelector(".splitsEditRowSecondary");
       editSecondaryRow?.prepend(rearrangeButton);
       if (reworkedGrid && hopperRearrangement?.active){

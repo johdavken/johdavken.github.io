@@ -87,15 +87,18 @@ test("Primary's gap is double-id guaranteed, not left to tie against .splitsEdit
   assert.doesNotMatch(styles, /(?<!#splitsBulkBar )\.splitsEditRowPrimary\{[^}]*gap: 8px;[^}]*\}/, "Primary's own gap rule must not appear at single-id specificity, or it ties (and can lose) against the two overrides above");
 });
 
-test("the pill (not Undo/Redo) carries margin-left:auto - the flexible spacer sits between Undo/Redo and the pill, so Undo/Redo land right after Apply instead of being dragged to the far-right edge with the pill", () => {
+test("the pill carries margin-left:auto and Undo/Redo ride inside it (leading it, ahead of Rearrange's own lead) rather than sitting between Apply and the pill", () => {
   const block = pillBlock();
   assert.match(block, /margin-left: auto;/);
-  assert.doesNotMatch(styles, /\.recipeEditHistory\{\s*\n\s*flex-shrink: 0;\s*\n\s*margin-left: auto;/);
-  assert.match(styles, /\.recipeEditHistory\{\s*\n\s*flex-shrink: 0;\s*\n\s*\}/);
+  // .recipeEditHistory is now a sub-group INSIDE .splitsEditRowSecondary, not
+  // a top-level #splitsBulkBar sibling with its own flex-shrink rule.
+  assert.match(styles, /#splitsArea #splitsBulkBar \.splitsEditRowSecondary \.recipeEditHistory\{\s*\n\s*display: inline-flex;/);
 });
 
-test("Undo/Redo are a fixed 38x38px circle (was 26px, sized for an earlier 28px row target) and keep the padding:0 fix at their #splitsBulkBar-scoped home", () => {
-  assert.match(styles, /#splitsBulkBar \.recipeHistoryAction\{\s*\n\s*width: 38px;\s*\n\s*min-width: 38px;\s*\n\s*height: 38px;\s*\n\s*min-height: 38px;\s*\n\s*padding: 0;\s*\n\s*\}/);
+test("Undo/Redo are text chips in the pill on tablet/desktop (auto width, control-radius, label span shown), not the old fixed 38px icon circle", () => {
+  assert.match(styles, /#splitsArea #splitsBulkBar \.splitsEditRowSecondary \.recipeHistoryAction\{\s*\n\s*display: inline-flex;[\s\S]*?width: auto;[\s\S]*?border-radius: var\(--control-radius\);[\s\S]*?\}/);
+  assert.match(styles, /#splitsArea #splitsBulkBar \.splitsEditRowSecondary \.recipeHistoryAction > span\{\s*\n\s*display: inline;\s*\n\s*\}/);
+  assert.doesNotMatch(styles, /#splitsBulkBar \.recipeHistoryAction\{\s*\n\s*width: 38px;/);
 });
 
 test("every control on this row shares one consolidated ~40px min-height rule - the single source of truth, superseding the three separate pointer/height-gated 28px copies this used to need", () => {
@@ -128,20 +131,25 @@ test("explicit widths match the redesign spec: Resin 180px, % 170px, Apply 70px,
   assert.match(styles, /#splitsArea #splitsBulkBar \.splitsRearrangeAction\{ min-width: 95px; \}/);
 });
 
-test("Undo/Redo moved out of .splitsEditRowSecondary in the markup - .recipeEditHistory sits between the values/Apply row and the pill row as its own sibling, not nested inside the pill", () => {
+test("Undo/Redo live inside .splitsEditRowSecondary in the markup now - .recipeEditHistory is the pill's first child, so the right group reads Rearrange / Undo / Redo / Clear / Empty / Reset once JS prepends Rearrange", () => {
   const start = app.indexOf("    function renderSplitsArea(){");
   const end = app.indexOf("    function renderResinCalculator(){", start);
   const body = app.slice(start, end);
   const primaryStart = body.indexOf('<div class="splitsEditRow splitsEditRowPrimary">');
-  const historyStart = body.indexOf('<div class="recipeEditHistory" role="group" aria-label="Recipe edit history">');
   const secondaryStart = body.indexOf('<div class="splitsEditRow splitsEditRowSecondary">');
-  assert.ok(primaryStart > -1 && historyStart > primaryStart && secondaryStart > historyStart);
+  assert.ok(primaryStart > -1 && secondaryStart > primaryStart);
   const secondaryRow = body.slice(secondaryStart, body.indexOf("</div>\n      `;", secondaryStart));
-  assert.doesNotMatch(secondaryRow, /recipeEditHistory/);
+  // History is nested inside, as the first thing in the row.
+  const histInRow = secondaryRow.indexOf('<div class="recipeEditHistory"');
+  assert.ok(histInRow > -1, "expected .recipeEditHistory inside the secondary row");
+  assert.ok(histInRow < secondaryRow.indexOf('id="clearSplitSelection"'), "history leads the row, ahead of Clear");
+  // No standalone .recipeEditHistory between the two rows any more.
+  const between = body.slice(body.indexOf("</div>", primaryStart), secondaryStart);
+  assert.doesNotMatch(between, /recipeEditHistory/);
 });
 
-test("Undo/Redo are no longer part of the pill's gradient/hover/disabled/divider rules - they fall back to their own original circular, transparent, un-joined look", () => {
-  assert.doesNotMatch(styles, /\.splitsEditRowSecondary \.recipeHistoryAction,/);
+test("Undo/Redo take the pill's shared fill/hover/disabled treatment now that they lead it (they are no longer excluded from those rules)", () => {
+  assert.match(styles, /\.splitsEditRowSecondary \.splitsRearrangeAction,\s*\n\s*\.splitsEditRowSecondary \.recipeHistoryAction\{/);
   assert.doesNotMatch(styles, /\.recipeEditHistory > \.recipeHistoryAction:not\(:last-child\)/);
 });
 
@@ -151,7 +159,7 @@ test("the mobile history group is hidden as a whole, omitting both Undo and Redo
 });
 
 test("every non-danger pill segment (Clear selection/Empty cells/Rearrange) shares the identical tinted-surface fill the header pill uses, matching Print Recipe's font treatment", () => {
-  assert.match(styles, /\.splitsEditRowSecondary \.bulkTextAction,\s*\n\s*\.splitsEditRowSecondary \.splitsRearrangeAction\{[\s\S]*?border: 0;\s*\n\s*background: color-mix\(in srgb, var\(--recipe-pill-accent\) 28%, var\(--panel2\)\);\s*\n\s*color: var\(--text\);[\s\S]*?font-size: var\(--font-small\);\s*\n\s*text-transform: none;\s*\n\s*letter-spacing: normal;/);
+  assert.match(styles, /\.splitsEditRowSecondary \.bulkTextAction,\s*\n\s*\.splitsEditRowSecondary \.splitsRearrangeAction,\s*\n\s*\.splitsEditRowSecondary \.recipeHistoryAction\{[\s\S]*?border: 0;\s*\n\s*background: color-mix\(in srgb, var\(--recipe-pill-accent\) 28%, var\(--panel2\)\);\s*\n\s*color: var\(--text\);[\s\S]*?font-size: var\(--font-small\);\s*\n\s*text-transform: none;\s*\n\s*letter-spacing: normal;/);
 });
 
 test("desktop/tablet Apply uses the same filled non-destructive action styling as Empty, while mobile retains its compact secondary treatment", () => {
@@ -188,13 +196,13 @@ test("Rearrange latches to the same 55% accent fill Edit/Done uses, including on
   assert.match(block, /#splitsArea #splitsBulkBar \.splitsEditRowSecondary \.splitsRearrangeAction\.active,\s*\n\s*#splitsArea #splitsBulkBar \.splitsEditRowSecondary \.splitsRearrangeAction\[aria-pressed="true"\]\{\s*\n\s*background: color-mix\(in srgb, var\(--recipe-pill-accent\) 55%, var\(--panel2\)\);\s*\n\s*color: var\(--title\);\s*\n\s*\}/);
   assert.match(block, /#splitsArea #splitsBulkBar \.splitsEditRowSecondary \.splitsRearrangeAction\.active:hover:not\(:disabled\),\s*\n\s*#splitsArea #splitsBulkBar \.splitsEditRowSecondary \.splitsRearrangeAction\[aria-pressed="true"\]:hover:not\(:disabled\)\{\s*\n\s*background: color-mix\(in srgb, var\(--recipe-pill-accent\) 55%, var\(--panel2\)\);\s*\n\s*color: var\(--title\);\s*\n\s*filter: brightness\(1\.08\);\s*\n\s*\}/);
   // Idle siblings stay at 28% - the latch is Rearrange-only.
-  assert.match(block, /\.splitsEditRowSecondary \.bulkTextAction,\s*\n\s*\.splitsEditRowSecondary \.splitsRearrangeAction\{[\s\S]*?background: color-mix\(in srgb, var\(--recipe-pill-accent\) 28%, var\(--panel2\)\);/);
+  assert.match(block, /\.splitsEditRowSecondary \.bulkTextAction,\s*\n\s*\.splitsEditRowSecondary \.splitsRearrangeAction,\s*\n\s*\.splitsEditRowSecondary \.recipeHistoryAction\{[\s\S]*?background: color-mix\(in srgb, var\(--recipe-pill-accent\) 28%, var\(--panel2\)\);/);
 });
 
 test("Clear/Empty/Rearrange keep their fill on hover, double-id guaranteed against an old unscoped hover rule (still needed for Weights' own separate bulk-actions row) that sets background:transparent - that rule only tied our old hover rule's specificity for `color`, and since our old rule never redeclared `background` at all, the leftover rule's transparent background applied uncontested on hover, silently dropping the fill for every segment except Reset (safe only because its own selector happens to include an id)", () => {
   assert.match(styles, /\.splitsBulkActions \.bulkTextAction:hover,\s*\n\.weightsBulkActions \.bulkTextAction:hover,\s*\n\.splitsEditRowSecondary > \.bulkTextAction:hover:not\(:disabled\)\{color:var\(--title\);border-color:var\(--title\);background:transparent;text-decoration:none\}/, "expected the old leftover rule to still exist - it's shared with Weights, not deletable");
   const block = pillBlock();
-  assert.match(block, /#splitsArea #splitsBulkBar \.splitsEditRowSecondary \.bulkTextAction:hover:not\(:disabled\),\s*\n\s*#splitsArea #splitsBulkBar \.splitsEditRowSecondary \.splitsRearrangeAction:hover:not\(:disabled\)\{\s*\n\s*background: color-mix\(in srgb, var\(--recipe-pill-accent\) 28%, var\(--panel2\)\);\s*\n\s*color: var\(--text\);\s*\n\s*filter: brightness\(1\.08\);\s*\n\s*\}/, "expected the double-id hover rule to explicitly reassert the fill, not just color/filter");
+  assert.match(block, /#splitsArea #splitsBulkBar \.splitsEditRowSecondary \.bulkTextAction:hover:not\(:disabled\),\s*\n\s*#splitsArea #splitsBulkBar \.splitsEditRowSecondary \.splitsRearrangeAction:hover:not\(:disabled\),\s*\n\s*#splitsArea #splitsBulkBar \.splitsEditRowSecondary \.recipeHistoryAction:hover:not\(:disabled\)\{\s*\n\s*background: color-mix\(in srgb, var\(--recipe-pill-accent\) 28%, var\(--panel2\)\);\s*\n\s*color: var\(--text\);\s*\n\s*filter: brightness\(1\.08\);\s*\n\s*\}/, "expected the double-id hover rule to explicitly reassert the fill, not just color/filter");
 });
 
 test("segments are separated by a real 2px gap, not a border-right divider - a divider line needs contrast tuning per theme/state and still read as too faint once tried in both white and black; a gap is always visible since it's just page background showing through, and needs no per-theme tuning at all", () => {
@@ -207,7 +215,7 @@ test("segments are separated by a real 2px gap, not a border-right divider - a d
 });
 
 test("segments pick up the app's standard control-radius now that a real gap separates them, instead of the flat border-radius:0 that fit a seamless touching pill", () => {
-  assert.match(styles, /\.splitsEditRowSecondary \.bulkTextAction,\s*\n\s*\.splitsEditRowSecondary \.splitsRearrangeAction\{[\s\S]*?border-radius: var\(--control-radius\);/);
+  assert.match(styles, /\.splitsEditRowSecondary \.bulkTextAction,\s*\n\s*\.splitsEditRowSecondary \.splitsRearrangeAction,\s*\n\s*\.splitsEditRowSecondary \.recipeHistoryAction\{[\s\S]*?border-radius: var\(--control-radius\);/);
   assert.match(styles, /\.splitsEditRowSecondary #resetAllSplits\.danger\{\s*\n\s*border-radius: var\(--control-radius\);/);
 });
 

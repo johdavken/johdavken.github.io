@@ -33,19 +33,18 @@ test("recipe replacement drops only the history for the document being replaced"
 
 test("Edit replaces the selected-hopper count with compact, accessible undo and redo icons",()=>{
   const body=editor();
-  // .recipeEditHistory sits between the values/Apply row and the pill row
-  // now (a sibling of both, not nested inside the pill row) - Undo/Redo
-  // moved out of the pill so they read as plain icon buttons, not a
-  // filled segment.
-  const historyStart=body.indexOf('<div class="recipeEditHistory" role="group" aria-label="Recipe edit history">');
+  // .recipeEditHistory is the pill row's first child now - Undo/Redo lead
+  // the right-hand group (Rearrange / Undo / Redo / Clear / Empty / Reset
+  // once JS prepends Rearrange). They are still icon+label buttons in the
+  // markup; the desktop CSS shows the label, the phone icon rail hides it.
   const primaryStart=body.indexOf('<div class="splitsEditRow splitsEditRowPrimary">');
   const secondaryStart=body.indexOf('<div class="splitsEditRow splitsEditRowSecondary">');
-  assert.ok(primaryStart>-1&&historyStart>primaryStart&&secondaryStart>historyStart,"expected values/Apply, then .recipeEditHistory, then the pill row, in that order");
-  const history=body.slice(historyStart,secondaryStart);
-  assert.match(history,/id="recipeUndo"[\s\S]*?aria-label="Undo recipe change"[\s\S]*?<svg/);
-  assert.match(history,/id="recipeRedo"[\s\S]*?aria-label="Redo recipe change"[\s\S]*?<svg/);
+  const historyStart=body.indexOf('<div class="recipeEditHistory" role="group" aria-label="Recipe edit history">');
+  assert.ok(primaryStart>-1&&secondaryStart>primaryStart&&historyStart>secondaryStart,"expected the fields row, then the pill row, with .recipeEditHistory inside it");
   const row=body.slice(secondaryStart,body.indexOf('</div>\n      `;',secondaryStart));
-  assert.doesNotMatch(row,/recipeEditHistory/);
+  assert.match(row,/id="recipeUndo"[\s\S]*?aria-label="Undo recipe change"[\s\S]*?<svg[\s\S]*?<span>Undo<\/span>/);
+  assert.match(row,/id="recipeRedo"[\s\S]*?aria-label="Redo recipe change"[\s\S]*?<svg[\s\S]*?<span>Redo<\/span>/);
+  assert.ok(row.indexOf('recipeEditHistory')<row.indexOf('id="clearSplitSelection"'),"history leads the pill");
   assert.match(row,/id="splitSelectionStatus" class="srOnly tiny splitsSelectionStatus"/);
   assert.match(body,/undoButton\?\.addEventListener\("click",undoRecipeEdit\);/);
   assert.match(body,/redoButton\?\.addEventListener\("click",redoRecipeEdit\);/);

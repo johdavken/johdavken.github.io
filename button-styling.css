@@ -114,6 +114,7 @@ body{
   body #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
   body #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-weight-view="edit"],
   body #splitsBlock .splitsBulkBar .bulkTextAction,
+  body #splitsArea #splitsBulkBar .splitsEditRowSecondary .recipeHistoryAction,
   body #splitsBlock .weightsBulkBar .bulkTextAction,
   body #splitsBlock #resetAllSplits{
     min-height: 30px;
@@ -123,12 +124,12 @@ body{
     color: var(--btnstyle-ink);
     box-shadow: 0 1px 0 var(--btnstyle-edge);
   }
-  /* Controls the preview omits (Apply, Undo/Redo) - radius match only so
-     nothing stays a different shape. #applyBulkSplit is pinned by a 3-id
-     rule in styles.css, so this is scoped through #splitsArea #splitsBulkBar
-     to outrank it. */
+  /* Controls the preview omits (Apply) - radius match only so nothing stays
+     a different shape. #applyBulkSplit is pinned by a 3-id rule in
+     styles.css, so this is scoped through #splitsArea #splitsBulkBar to
+     outrank it. (Undo/Redo used to be here; they are chips in the pill now,
+     so they take the full treatment above instead.) */
   body #splitsArea #splitsBulkBar #applyBulkSplit,
-  body #splitsArea #splitsBulkBar .recipeHistoryAction,
   body #splitsBlock .weightsBulkBar #applyBulkWeight{
     border-radius: 4px;
   }
@@ -527,6 +528,7 @@ body{
   body[data-shell="touch"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
   body[data-shell="touch"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-weight-view="edit"],
   body[data-shell="touch"] #splitsBlock .splitsBulkBar .bulkTextAction,
+  body[data-shell="touch"] #splitsArea #splitsBulkBar .splitsEditRowSecondary .recipeHistoryAction,
   body[data-shell="touch"] #splitsBlock .weightsBulkBar .bulkTextAction,
   body[data-shell="touch"] #splitsBlock #resetAllSplits{
     min-height: 30px;
@@ -537,7 +539,6 @@ body{
     box-shadow: 0 1px 0 var(--btnstyle-edge);
   }
   body[data-shell="touch"] #splitsArea #splitsBulkBar #applyBulkSplit,
-  body[data-shell="touch"] #splitsArea #splitsBulkBar .recipeHistoryAction,
   body[data-shell="touch"] #splitsBlock .weightsBulkBar #applyBulkWeight{
     border-radius: 4px;
   }
