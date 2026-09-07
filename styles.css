@@ -4590,7 +4590,10 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
      .recipeHeaderActions was previously force-hidden here; it now holds
      this cluster (still hidden by its own [hidden] attr on Weights /
      Recipe Book, where syncRecipePageUI sets it). */
-  #splitsBlock .recipeHeaderRow #recipeHeaderActionPill{ gap:3px; }
+  /* ~7px between the three console keys (scan / load / pencil) - the
+     "6-8px, three distinct controls, not a segmented group" spacing the
+     ux-mobile-touch pass asked for. */
+  #splitsBlock .recipeHeaderRow #recipeHeaderActionPill{ gap:7px; }
   /* Weights page: tighten the gap between its Summary/Edit pencil and the
      profiles icon, and push the pencil to the right so the row reads
      [profiles-icon][pencil] - the same "pencil last" order as the Recipe
@@ -4601,31 +4604,35 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     display:flex;
     order:-1;
     align-items:center;
-    gap:3px;
+    gap:7px;
     padding-left:0;
     border-left:0;
   }
   #splitsBlock .recipeHeaderRow .recipeHeaderActions:empty{ display:none; }
   #splitsBlock .recipeHeaderRow .recipeHeaderActions[hidden]{ display:none!important; }
   #splitsBlock .recipeHeaderRow .recipeHeaderActions [hidden]{ display:none!important; }
+  /* Scan and Load Next: generous console keys, not tiny icon chips. ~48x44
+     tap target with the station-console surface (button-styling.css tokens,
+     the same recessed key the desktop Recipe actions use); the glyph inside
+     stays 16px - the target grew, not the icon. */
   #splitsBlock .recipeHeaderActions > .mobileScanIconAction > summary,
   #splitsBlock .recipeHeaderActions > .recipeHeaderMobileAction{
     display:inline-flex;
     align-items:center;
     justify-content:center;
-    width:30px;
-    min-width:30px;
-    height:26px;
-    min-height:26px;
+    width:48px;
+    min-width:48px;
+    height:44px;
+    min-height:44px;
     padding:0;
-    border:1px solid var(--row-border-2);
+    border:0;
     border-radius:var(--control-radius);
-    background:var(--row-bg-2);
-    color:var(--text);
+    background:var(--btnstyle-surface);
+    color:var(--btnstyle-ink);
     font-size:0;
     font-weight:800;
     letter-spacing:0;
-    box-shadow:none;
+    box-shadow:0 1px 0 var(--btnstyle-edge);
     cursor:pointer;
     list-style:none;
   }
@@ -4635,17 +4642,22 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     width:16px;
     height:16px;
   }
-  #splitsBlock .recipeHeaderActions .mobileScanIconAction[open] > summary,
   #splitsBlock .recipeHeaderActions .mobileScanIconAction > summary:hover,
-  #splitsBlock .recipeHeaderActions .mobileScanIconAction > summary:focus-visible,
-  #splitsBlock .recipeHeaderActions .recipeHeaderMobileAction:hover:not(:disabled),
-  #splitsBlock .recipeHeaderActions .recipeHeaderMobileAction:focus-visible,
-  #splitsBlock .recipeHeaderActions .recipeHeaderMobileAction[aria-expanded="true"]{
-    border-color:var(--focus-border);
-    color:var(--title);
+  #splitsBlock .recipeHeaderActions .recipeHeaderMobileAction:hover:not(:disabled){
+    filter:brightness(1.06);
+    color:var(--btnstyle-ink);
   }
+  #splitsBlock .recipeHeaderActions .mobileScanIconAction > summary:focus-visible,
+  #splitsBlock .recipeHeaderActions .recipeHeaderMobileAction:focus-visible{
+    outline:2px solid var(--focus-border);
+    outline-offset:2px;
+  }
+  /* Scan popup open reads as a pressed key. */
+  #splitsBlock .recipeHeaderActions .mobileScanIconAction[open] > summary,
   #splitsBlock .recipeHeaderActions .recipeHeaderMobileAction[aria-expanded="true"]{
-    background:var(--focus-ring);
+    background:var(--btnstyle-ink);
+    color:var(--panel);
+    box-shadow:none;
   }
   #splitsBlock .recipeHeaderActions .recipeHeaderMobileAction:disabled{ opacity:.5; cursor:default; }
   /* This scan sits near the top of the panel, so its popup opens downward
@@ -4672,12 +4684,20 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
   #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
   #splitsBlock.mobile-active #recipeHeaderControls .weightsHeaderViewToggle button[data-weight-view="edit"],
   #splitsBlock #recipeHeaderControls .weightsHeaderViewToggle button[data-weight-view="edit"]{
-    min-width:30px;
-    width:30px;
-    min-height:26px;
+    min-width:48px;
+    width:48px;
+    min-height:44px;
     padding:0;
     gap:0;
     font-size:0;
+    /* Square console key, matching the Scan / Load keys beside it - not the
+       base rule's fully-round (999px) accent pill. Understated in the
+       resting (Summary) state; the latched rule below inverts it in Edit. */
+    border:0;
+    border-radius:var(--control-radius);
+    background:var(--btnstyle-surface);
+    color:var(--btnstyle-ink);
+    box-shadow:0 1px 0 var(--btnstyle-edge);
   }
   #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"]::before,
   #splitsBlock #recipeHeaderControls .weightsHeaderViewToggle button[data-weight-view="edit"]::before{
@@ -4692,8 +4712,64 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
   #splitsBlock.mobile-active #recipeHeaderControls .weightsHeaderViewToggle button[data-weight-view="edit"][aria-pressed="true"],
   #splitsBlock #recipeHeaderControls .weightsHeaderViewToggle button[data-weight-view="edit"].active,
   #splitsBlock #recipeHeaderControls .weightsHeaderViewToggle button[data-weight-view="edit"][aria-pressed="true"]{
-    background:color-mix(in srgb, var(--recipe-pill-accent) 55%, var(--panel2));
-    color:var(--title);
+    /* Latched: the inverted console key (ink fill), the same "this mode is
+       on" signal the desktop Edit/Done toggle and the timeline "Show all"
+       key use. Size is unchanged from the resting state, so the button does
+       not move when Edit turns on. */
+    background:var(--btnstyle-ink);
+    color:var(--panel);
+    box-shadow:none;
+  }
+  #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"]:hover:not(:disabled),
+  #splitsBlock #recipeHeaderControls .weightsHeaderViewToggle button[data-weight-view="edit"]:hover:not(:disabled){
+    filter:brightness(1.06);
+  }
+  #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"]:focus-visible,
+  #splitsBlock #recipeHeaderControls .weightsHeaderViewToggle button[data-weight-view="edit"]:focus-visible{
+    outline:2px solid var(--focus-border);
+    outline-offset:2px;
+  }
+
+  /* Apply (Resin / % editor) - the station-console key treatment on the
+     compact Recipe screen too. The >=701px station-console blocks
+     (button-styling.css) already give #applyBulkSplit its metrics; phones
+     had kept the thin outlined "secondary" look. Three IDs to sit above the
+     generic button.secondary / [data-button-*] rules; stays in the same
+     .splitsEditRowPrimary grid column - metrics only, still on the Resin/%
+     row. State is driven purely by :disabled (app.js toggles it from
+     "cells selected AND a pending value"):
+       disabled  -> quiet flat chip, low contrast, not misleadingly armed
+       enabled   -> a pending change: the armed accent key */
+  #splitsArea #splitsBulkBar #applyBulkSplit{
+    align-self:stretch;
+    min-height:48px;
+    padding:6px 14px;
+    border:0;
+    border-radius:var(--control-radius);
+    background:var(--btnstyle-surface);
+    color:var(--btnstyle-ink);
+    box-shadow:inset 0 0 0 1px var(--btnstyle-edge);
+    font-size:var(--font-small);
+    font-weight:850;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+  }
+  #splitsArea #splitsBulkBar #applyBulkSplit:disabled{
+    background:color-mix(in srgb, var(--btnstyle-surface) 55%, transparent);
+    color:var(--muted);
+    box-shadow:none;
+    opacity:1;
+  }
+  #splitsArea #splitsBulkBar #applyBulkSplit:not(:disabled){
+    background:color-mix(in srgb, var(--btnstyle-accent) 20%, var(--btnstyle-surface));
+    box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--btnstyle-accent) 55%, transparent);
+  }
+  #splitsArea #splitsBulkBar #applyBulkSplit:not(:disabled):hover{
+    filter:brightness(1.06);
+  }
+  #splitsArea #splitsBulkBar #applyBulkSplit:focus-visible{
+    outline:2px solid var(--focus-border);
+    outline-offset:2px;
   }
 
   .workspaceRecoveryMerge{ grid-template-columns: 1fr; align-items: stretch; }
@@ -7981,16 +8057,20 @@ button.compactAction{
   #splitsArea > #splitsBulkBar .splitsEditRowSecondary > .splitsBulkActions{
     display:contents;
   }
+  /* Edit-mode utility rail (Undo / Redo / Rearrange / Clear / Empty / Reset).
+     46px tap targets - comfortably thumbable - while the glyphs stay 18px
+     and the controls stay unboxed and low-emphasis, secondary to the matrix
+     and to Apply. */
   #splitsArea > #splitsBulkBar :is(.recipeHistoryAction, .splitsEditRowSecondary .bulkTextAction, .splitsEditRowSecondary .splitsRearrangeAction, .splitsEditRowSecondary #resetAllSplits.danger){
     display:grid;
     place-items:center;
-    flex:0 0 40px;
+    flex:0 0 46px;
     box-sizing:border-box;
-    width:40px;
-    min-width:40px;
-    max-width:40px;
-    height:40px;
-    min-height:40px;
+    width:46px;
+    min-width:46px;
+    max-width:46px;
+    height:46px;
+    min-height:46px;
     margin:0;
     padding:0;
     border:1px solid transparent;
@@ -8010,10 +8090,10 @@ button.compactAction{
   #splitsArea > #splitsBulkBar .splitsRearrangeAction{ order:5; }
   #splitsArea > #splitsBulkBar #resetAllSplits{
     order:6;
-    flex-basis:44px;
-    width:44px;
-    min-width:44px;
-    max-width:44px;
+    flex-basis:46px;
+    width:46px;
+    min-width:46px;
+    max-width:46px;
     margin-left:2px;
     border-left-color:color-mix(in srgb,var(--bad) 42%,var(--row-border));
     border-radius:0 6px 6px 0;

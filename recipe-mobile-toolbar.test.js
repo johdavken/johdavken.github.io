@@ -141,6 +141,36 @@ test("the cluster is pulled left of the Edit/Done pencil with order:-1", () => {
 });
 
 /* ============================================================
+ *   ux-mobile-touch: the Scan / Load / Edit cluster and Apply become
+ *   generous station-console keys on the compact Recipe screen. Bigger tap
+ *   targets, same station-console visual language as desktop (the
+ *   --btnstyle-* tokens), icons unchanged.
+ * ============================================================ */
+
+test("Scan and Load are ~48x44 station-console keys on phone (target grew, not the icon)", () => {
+  assert.match(styles, /#splitsBlock \.recipeHeaderActions > \.mobileScanIconAction > summary,\s*\n\s*#splitsBlock \.recipeHeaderActions > \.recipeHeaderMobileAction\{[\s\S]*?width:48px;[\s\S]*?min-height:44px;[\s\S]*?background:var\(--btnstyle-surface\);[\s\S]*?box-shadow:0 1px 0 var\(--btnstyle-edge\);/);
+  // The glyph inside is untouched.
+  assert.match(styles, /#splitsBlock \.recipeHeaderActions \.recipeActionIcon\{\s*\n\s*display:block;\s*\n\s*width:16px;/);
+});
+
+test("the three console keys sit ~7px apart, not as a segmented group", () => {
+  assert.match(styles, /#splitsBlock \.recipeHeaderRow #recipeHeaderActionPill\{ gap:7px; \}/);
+  assert.match(styles, /#splitsBlock \.recipeHeaderRow \.recipeHeaderActions\{[\s\S]*?gap:7px;/);
+});
+
+test("the Edit pencil is a 48x44 square console key that inverts (does not resize) when latched", () => {
+  assert.match(styles, /#splitsBlock #recipeHeaderActionPill \.recipeViewToggle button\[data-recipe-view="edit"\],[\s\S]*?min-width:48px;[\s\S]*?min-height:44px;[\s\S]*?border-radius:var\(--control-radius\);[\s\S]*?background:var\(--btnstyle-surface\);/);
+  // Latched = the inverted console key, size unchanged so it does not move.
+  assert.match(styles, /#splitsBlock #recipeHeaderActionPill \.recipeViewToggle button\[data-recipe-view="edit"\]\[aria-pressed="true"\],[\s\S]*?\{\s*\n[\s\S]*?background:var\(--btnstyle-ink\);\s*\n\s*color:var\(--panel\);/);
+});
+
+test("Apply on the compact Recipe screen is a 48px station-console key with quiet-disabled / armed-enabled states", () => {
+  assert.match(styles, /#splitsArea #splitsBulkBar #applyBulkSplit\{[\s\S]*?min-height:48px;[\s\S]*?background:var\(--btnstyle-surface\);[\s\S]*?text-transform:uppercase;/);
+  assert.match(styles, /#splitsArea #splitsBulkBar #applyBulkSplit:disabled\{[\s\S]*?color:var\(--muted\);[\s\S]*?box-shadow:none;/);
+  assert.match(styles, /#splitsArea #splitsBulkBar #applyBulkSplit:not\(:disabled\)\{[\s\S]*?var\(--btnstyle-accent\)/);
+});
+
+/* ============================================================
  *   Mobile Recipe toolbar: the shared history and structural actions flatten
  *   into one six-control icon rail. It must not wrap on narrow phones.
  * ============================================================ */
@@ -151,8 +181,9 @@ test("on phone, Undo/Redo and the four Recipe actions form one compact icon tool
   const compact = styles.slice(start, styles.indexOf("\n}\n\n@media (max-width: 720px)", start));
   assert.match(compact, /#splitsArea > #splitsBulkBar \.recipeEditHistory,[\s\S]*?display:contents;/);
   assert.match(compact, /#recipeUndo\{ order:1; \}[\s\S]*?#recipeRedo\{ order:2; \}[\s\S]*?#clearSplitSelection\{ order:3; \}[\s\S]*?#clearSelectedCells\{ order:4; \}[\s\S]*?\.splitsRearrangeAction\{ order:5; \}[\s\S]*?#resetAllSplits\{[\s\S]*?order:6;/);
-  assert.match(compact, /flex:0 0 40px;[\s\S]*?width:40px;[\s\S]*?height:40px;/);
-  assert.match(compact, /#resetAllSplits\{[\s\S]*?flex-basis:44px;[\s\S]*?border-left-color:/);
+  // 46px tap targets (ux-mobile-touch): comfortably thumbable, glyphs stay 18px.
+  assert.match(compact, /flex:0 0 46px;[\s\S]*?width:46px;[\s\S]*?height:46px;/);
+  assert.match(compact, /#resetAllSplits\{[\s\S]*?flex-basis:46px;[\s\S]*?border-left-color:/);
   assert.match(compact, /\.recipeEditActionIcon\{ display:block; \}/);
   assert.match(compact, /\.splitsEditRowSecondary button > span\{ display:none; \}/);
 
