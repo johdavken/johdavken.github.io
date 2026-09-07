@@ -10681,7 +10681,9 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
   }
   .cloudSyncFooterStatus > span{font-size:9px}
   .cloudSyncFooterStatus > strong{max-width:100%;font-size:7px;font-weight:850;text-transform:uppercase}
-  .mobileFooterMeta{
+  /* Legal/version metadata belongs to the Main destination only. Section
+     screens keep the fixed navigation dock, but not this second footer row. */
+  body[data-mobile-workspace="home"] .mobileFooterMeta{
     position:fixed;
     right:0;
     bottom:calc(var(--app-dock-height) + env(safe-area-inset-bottom) + 2px);
@@ -10993,6 +10995,32 @@ body[data-shell="touch"] .changeoverWizardDialog{position:fixed;inset:auto auto 
  *   Width then selects the touch presentation, so an 800px fine-pointer
  *   emulator receives the same Wide Touch styling as an 800px tablet.
  *   ======================================================================= */
+@media (width <= 700px){
+  /* Compact Touch Recipe surface --------------------------------------
+     The matrix already has the bordered, rounded .splitsMatrixFrame it
+     needs. Remove the second, full-section card around it and spend that
+     space on the five recipe columns instead. This is intentionally tied
+     to both the compact breakpoint and the active Recipe destination so
+     Wide Touch and desktop retain their existing panel treatment. */
+  body[data-shell="touch"][data-mobile-workspace="panel"]:has(#splitsBlock.mobile-active) main{
+    padding-left:max(12px, env(safe-area-inset-left));
+    padding-right:max(12px, env(safe-area-inset-right));
+  }
+  body[data-shell="touch"][data-mobile-workspace="panel"] #splitsBlock.mobile-active,
+  body[data-shell="touch"][data-mobile-workspace="panel"] #splitsBlock.mobile-active[open]{
+    padding:0;
+    border:0;
+    border-radius:0;
+    background:transparent;
+    box-shadow:none;
+    overflow:visible;
+  }
+  body[data-shell="touch"][data-mobile-workspace="panel"] #splitsBlock.mobile-active > .blockBody{
+    padding-right:0;
+    padding-left:0;
+  }
+}
+
 @media (min-width: 701px){
   /* --- Recipe ------------------------------------------------------
      Keep hopper cells at their established reading/touch density and

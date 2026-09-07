@@ -380,11 +380,13 @@ test("the desktop side rail carries the same Android release version, as a norma
   assert.doesNotMatch(desktop, /\.desktopRailVersion\{[^}]*position:absolute/);
 });
 
-test("the main-screen footer metadata remains visible on touch layouts", () => {
-  assert.match(styles, /\.mobileFooterMeta\{[\s\S]*?display:flex;/);
-  const start = styles.lastIndexOf(".mobileFooterMeta{");
+test("the footer metadata is visible only on the touch Main screen", () => {
+  assert.match(styles, /\.mobileFooterMeta\{display:none\}/);
+  assert.match(styles, /body\[data-mobile-workspace="home"\] \.mobileFooterMeta\{[\s\S]*?display:flex;/);
+  const start = styles.lastIndexOf('body[data-mobile-workspace="home"] .mobileFooterMeta{');
   const rule = styles.slice(start, styles.indexOf("}", start) + 1);
   assert.doesNotMatch(rule, /display:\s*none/);
+  assert.doesNotMatch(styles, /body\[data-mobile-workspace="panel"\] \.mobileFooterMeta\{[^}]*display:flex/);
 });
 
 test("the privacy link's absolute URL keeps it out of build-www's allowlist, so the Android build does not try to copy a page that isn't a file", () => {
