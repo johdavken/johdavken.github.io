@@ -5091,6 +5091,15 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     border-radius:0;
     background:transparent;
   }
+  /* Open the top of the matrix frame so the A-E headers float free on the
+     workspace surface - the frame's box now starts under them (the header
+     border-bottom below draws that line). Sides and bottom of the frame
+     stay. */
+  .splitsMatrixFrame:has(.splitsMatrix.compactMobileRecipe){
+    border-top:0;
+    border-top-left-radius:0;
+    border-top-right-radius:0;
+  }
   .splitsMatrix.compactMobileRecipe [data-layer-column]{ display:table-cell!important; }
   .splitsMatrix.compactMobileRecipe [data-layer-column].mobile-layer-active.splitMatrixCell{ display:table-cell; }
   .splitsMatrix.compactMobileRecipe th:first-child{ display:none; }
@@ -5100,8 +5109,18 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     padding:4px 2px 4px;
     vertical-align:top;
   }
-  .splitsMatrix.compactMobileRecipe .splitLayerHeader{
-    border-bottom:1px solid color-mix(in srgb,var(--focus-border) 38%,var(--border));
+  /* Blend the A-E headers into the workspace surface: no fill (overrides
+     the base .splitsMatrix thead th --panelOpen wash) and no column grid
+     lines, so "A 50%" sits straight on the panel tone. Keep one line -
+     border-bottom in the ordinary grid-line colour - so it reads as the
+     top edge of the hopper grid (the frame's own top border is removed,
+     above). Matches th.splitLayerHeader.mobile-layer-active's own
+     specificity (0,4,1) so it wins that rule's border-bottom on source
+     order. */
+  .splitsMatrix.compactMobileRecipe th.splitLayerHeader.mobile-layer-active{
+    border:0;
+    border-bottom:1px solid var(--row-border-2);
+    background:transparent;
   }
   .splitsMatrix.compactMobileRecipe .splitLayerMain{
     display:flex;
@@ -5113,13 +5132,22 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
   }
   .splitsMatrix.compactMobileRecipe .splitLayerTitle{
     display:inline-flex;
+    justify-content:center;
     position:static;
-    width:auto;
+    /* Match the percentage's size, but hold the letter's old layout
+       footprint so the centred "A 50%" group - and the % beside it - does
+       not move (measured: the % input stays within 0.1px). The larger
+       glyph overflows its slot; translateX biases that overflow into the
+       wide empty margin on the left rather than crowding the number, and a
+       transform never shifts the sibling %. */
+    flex:0 0 9px;
+    width:9px;
     height:auto;
     min-height:0;
-    transform:none;
+    overflow:visible;
+    transform:translateX(-2px);
     color:var(--title);
-    font-size:10px;
+    font-size:16px;
     line-height:1;
     opacity:.72;
   }
@@ -5413,6 +5441,15 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
   #splitsArea[data-recipe-cells="static"] .splitsMatrix.compactMobileRecipe .splitCellHopperName{
     font-size:10px;
     font-weight:800;
+    /* Option A stacks the badge directly above the resin name in one grid
+       column, so their left edges must line up. The badge keeps a .mono
+       class from its shared markup; monospace centres a narrow first glyph
+       ("A", "1") in a wide fixed cell, which pushed the badge a few px
+       right of the proportional resin text below (visible on iOS/macOS SF
+       Mono especially). Drop back to the cell's own proportional font here
+       - the two-char label gains nothing from monospace in this layout. */
+    font-family:inherit;
+    justify-content:flex-start;
   }
   /* Tapping is now the only way to select or track, so the target needs to
      read as one - and stay well clear of the 44px guidance even at five
@@ -11232,6 +11269,41 @@ body[data-shell="touch"] .changeoverWizardDialog{position:fixed;inset:auto auto 
   body[data-shell="touch"][data-mobile-workspace="panel"] #splitsBlock.mobile-active > .blockBody{
     padding-right:0;
     padding-left:0;
+    /* No grid row-gap between the tab strip and #splitsArea, so the
+       workspace surface below starts right at the divider the tabs sit on
+       (see the #splitsArea / .recipePageTab.active rules below). */
+    gap:0;
+  }
+  /* ...but give the working area itself a faint surface back. #splitsArea
+     already wraps exactly what should feel like one workspace - the Edit
+     toolbar bands (rendered inside it, order:-1), the matrix, and the
+     helper line beneath - while the RECIPE header and the tab / view-toggle
+     row are its siblings above and stay on the page ground. So the surface
+     grows upward to take in the edit controls the moment Edit opens and
+     contracts in Summary with no JS and no extra DOM.
+
+     Deliberately not a card: a ~40% wash of the same --panel tone the
+     tablet/desktop panel uses (so it follows every theme, and collapses to
+     nothing on the flat OLED / high-contrast palettes), no border, a 3px
+     radius, and zero horizontal padding so the matrix keeps its full
+     width. One extra tonal step - page ground -> workspace surface ->
+     matrix cells - so tracked / edit cell tints can stay quiet.
+     Compact Touch only; Wide Touch and desktop keep their real panel. */
+  body[data-shell="touch"][data-mobile-workspace="panel"] #splitsBlock.mobile-active #splitsArea{
+    /* padding-block keeps content off the divider now that the surface
+       (below) reaches up to it - see the .blockBody gap:0 above. */
+    padding-block:8px;
+    padding-inline:0;
+    border-radius:3px;
+    background:color-mix(in srgb, var(--panel) 40%, transparent);
+  }
+  /* Match the active tab to the faint surface (not the solid --panel the
+     base rule paints) so the seam between them disappears. The 1px
+     box-shadow that erases the divider under the tab is retinted the same
+     way. Border stays --row-border so the tab still grows out of the line. */
+  body[data-shell="touch"][data-mobile-workspace="panel"] #splitsBlock.mobile-active .recipePageTab.active{
+    background:color-mix(in srgb, var(--panel) 40%, transparent);
+    box-shadow:0 1px 0 0 color-mix(in srgb, var(--panel) 40%, transparent);
   }
 }
 

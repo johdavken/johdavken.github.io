@@ -311,6 +311,16 @@ test("the resin name, now the cell's headline value, gets the size the % digits 
   assert.match(styles, /#splitsArea\[data-recipe-cells="static"\] \.splitsMatrix\.compactMobileRecipe \.splitCellResinText\{[\s\S]*?font-size:13px;[\s\S]*?-webkit-line-clamp:2;/);
 });
 
+test("the badge, now stacked directly above the resin name, drops its .mono font so the two left edges line up", () => {
+  // Monospace centres a narrow first glyph ("A", "1") in a wide cell,
+  // nudging the badge right of the proportional resin text (visible on SF
+  // Mono). font-family:inherit + flex-start puts them flush.
+  assert.match(styles, /#splitsArea\[data-recipe-cells="static"\] \.splitsMatrix\.compactMobileRecipe \.splitCellHopperName\{[\s\S]*?font-family:inherit;[\s\S]*?justify-content:flex-start;/);
+  // Tablet/desktop keep the monospace pill badge (the base .splitCellHopperName
+  // stays .mono/centred there - it is not stacked over the resin).
+  assert.doesNotMatch(styles, /#splitsArea \.splitCellHopperName\{[^}]*font-family:inherit/);
+});
+
 test("the grid is scoped to compact/touch only - .splitCellInner is untouched (plain block) on tablet and desktop", () => {
   // No unscoped or wider-width rule gives .splitCellInner a display of its own.
   assert.doesNotMatch(styles, /(?<!compactMobileRecipe )\.splitCellInner\{/);

@@ -59,8 +59,11 @@ test("the whole cell is the tracking target on every surface, gated on Summary v
   assert.match(styles,/#splitsArea\[data-recipe-view\] \.splitTrackControl,\s*\n#splitsArea\[data-recipe-view\] \.splitClearButton\{ display: none; \}/);
 });
 
-test("compact headers retain the layer letter but give the percentage the dominant treatment",()=>{
-  assert.match(styles,/\.splitsMatrix\.compactMobileRecipe \.splitLayerTitle\{[\s\S]*?display:inline-flex;[\s\S]*?font-size:10px;/);
+test("compact headers: the layer letter matches the percentage's size but holds its old footprint so nothing shifts",()=>{
+  // Same 16px as the % input below. flex/width pin the letter's old layout
+  // box (so the centred "A 50%" group and the % don't move), overflow +
+  // a small translateX push the larger glyph into the empty left margin.
+  assert.match(styles,/\.splitsMatrix\.compactMobileRecipe \.splitLayerTitle\{[\s\S]*?flex:0 0 9px;[\s\S]*?width:9px;[\s\S]*?overflow:visible;[\s\S]*?transform:translateX\(-2px\);[\s\S]*?font-size:16px;/);
   assert.match(styles,/\.splitsMatrix\.compactMobileRecipe \.splitLayerPct input:not\(\[type="checkbox"\]\):not\(\[type="radio"\]\)\{[\s\S]*?font-size:16px;/);
   // The per-layer hopper Total is dropped on mobile entirely (see
   // .splitColumnTotal{display:none} in the same max-width:700px block) -
