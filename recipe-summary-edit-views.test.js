@@ -289,3 +289,65 @@ test("Recipe Book is a page replacement, so Edit controls and the matrix cannot 
   const sync = functionBody("syncRecipePageUI");
   assert.match(sync, /viewToggle\.hidden = isSavedRecipesPage\(\) \|\| isWeightsPage\(\) \|\| !layoutModeQueries\.compactRecipe\.matches;/);
 });
+
+/* ----------------------------------------------------------------------
+ *   ux-mobile-touch3 - Option A compact cell: badge + % on the top line,
+ *   resin name full-width below. The old badge-only row is reclaimed.
+ * -------------------------------------------------------------------- */
+
+test("buildCell wraps the header + editor in a plain .splitCellInner div (a <td> cannot host the grid without ceasing to be a table cell)", () => {
+  assert.match(splitsArea, /cellInner\.className = "splitCellInner";\s*\n\s*cellInner\.append\(cellHeader, editor\);\s*\n\s*td\.append\(cellInner\);/);
+});
+
+test("on the compact/touch grid, .splitCellInner is a two-row grid: badge + % share the top line, resin spans the row below", () => {
+  assert.match(styles, /#splitsArea\[data-recipe-cells="static"\] \.splitsMatrix\.compactMobileRecipe \.splitCellInner\{[\s\S]*?display:grid;[\s\S]*?grid-template-areas:\s*\n\s*"badge pct"\s*\n\s*"resin resin";/);
+  assert.match(styles, /#splitsArea\[data-recipe-cells="static"\] \.splitsMatrix\.compactMobileRecipe \.splitCellEditor\{\s*\n\s*display:contents;/);
+  assert.match(styles, /#splitsArea\[data-recipe-cells="static"\] \.splitsMatrix\.compactMobileRecipe \.splitCellTop\{[\s\S]*?grid-area:resin;/);
+  assert.match(styles, /#splitsArea\[data-recipe-cells="static"\] \.splitsMatrix\.compactMobileRecipe \.splitCellControls\{[\s\S]*?grid-area:pct;[\s\S]*?justify-content:flex-end;/);
+  assert.match(styles, /#splitsArea\[data-recipe-cells="static"\] \.splitsMatrix\.compactMobileRecipe \.splitCellHeader\{[\s\S]*?grid-area:badge;/);
+});
+
+test("the resin name, now the cell's headline value, gets the size the % digits carry and stays clamped to two lines", () => {
+  assert.match(styles, /#splitsArea\[data-recipe-cells="static"\] \.splitsMatrix\.compactMobileRecipe \.splitCellResinText\{[\s\S]*?font-size:13px;[\s\S]*?-webkit-line-clamp:2;/);
+});
+
+test("the grid is scoped to compact/touch only - .splitCellInner is untouched (plain block) on tablet and desktop", () => {
+  // No unscoped or wider-width rule gives .splitCellInner a display of its own.
+  assert.doesNotMatch(styles, /(?<!compactMobileRecipe )\.splitCellInner\{/);
+});
+
+/* ----------------------------------------------------------------------
+ *   ux-mobile-touch3 - the first layer's % auto-derives on the compact
+ *   phone view, mirroring H1. Removes the "layers must total 100%" error
+ *   for normal edits. Desktop/tablet keep manual entry for now.
+ * -------------------------------------------------------------------- */
+
+test("recomputeAutoFirstLayerPct mirrors recomputeAutoH1: first layer = 100 - the rest, clamped, no-op below two layers", () => {
+  const fn = functionBody("recomputeAutoFirstLayerPct");
+  assert.match(fn, /if \(!Array\.isArray\(layers\) \|\| layers\.length < 2\) return;/);
+  assert.match(fn, /for \(let i = 1; i < layers\.length; i\+\+\)\{\s*\n\s*sumOthers \+= clampNum\(layers\[i\]\.layerPct\);/);
+  assert.match(fn, /let first = 100 - sumOthers;/);
+  assert.match(fn, /if \(first < 0\) first = 0;/);
+  assert.match(fn, /if \(first > 100\) first = 100;/);
+  assert.match(fn, /layers\[0\]\.layerPct = first;/);
+});
+
+test("it is gated to the compact phone Recipe view (<=700px), the same breakpoint as the reworked grid", () => {
+  assert.match(app, /function autoFirstLayerPctActive\(\)\{\s*\n\s*return layoutModeQueries\.compactRecipe\.matches;\s*\n\s*\}/);
+  // renderSplitsArea seeds the derived value once per render, before the headers read L.layerPct.
+  assert.match(splitsArea, /if \(compactMobileRecipe\) recomputeAutoFirstLayerPct\(recipeLayers\(\)\);/);
+});
+
+test("on the phone the first layer's % field is read-only with an Auto title, and editing another layer re-derives + repaints it", () => {
+  assert.match(splitsArea, /const isFirstLayer = autoLayers\[0\] === L;/);
+  assert.match(splitsArea, /const autoFirstLayer = compactMobileRecipe && isFirstLayer && autoLayers\.length > 1;/);
+  assert.match(splitsArea, /if \(autoFirstLayer\)\{[\s\S]*?pctInput\.readOnly = true;[\s\S]*?pctInput\.title = "Auto \(100% minus the other layers\)";/);
+  assert.match(splitsArea, /if \(compactMobileRecipe && !isFirstLayer && autoLayers\.length > 1\)\{\s*\n\s*recomputeAutoFirstLayerPct\(autoLayers\);[\s\S]*?firstInput\.value = String\(clampNum\(autoLayers\[0\]\.layerPct\)\);/);
+});
+
+test("the auto first layer reads a shade quieter, like H1 - and the shared layer-total validation rule is untouched", () => {
+  assert.match(styles, /\.splitsMatrix\.compactMobileRecipe \.splitLayerPct input:not\(\[type="checkbox"\]\):not\(\[type="radio"\]\):read-only\{[\s\S]*?color:color-mix/);
+  // Mobile stays inside the existing contract - no change to validation.js.
+  const validation = fs.readFileSync("validation.js", "utf8");
+  assert.match(validation, /errors\.push\(requireTotals \? "Layer percentages must total 100%\." : "Layer percentages cannot exceed 100%\."\);/);
+});

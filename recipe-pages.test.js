@@ -272,6 +272,20 @@ test("Recipe Book replaces the desktop matrix without masquerading as Current or
   assert.match(styles, /body\[data-recipe-page="saved"\] #splitsArea > \.splitsSavedRecipesPanel\{[\s\S]*?display: block;[\s\S]*?order: 0;/);
 });
 
+test("on phones, the Recipe Book tab reserves the missing Scan/Load/Edit cluster's height so switching tabs never shifts the strip or panel", () => {
+  const spacer = styles.slice(
+    styles.indexOf('body[data-recipe-page="saved"] #splitsBlock #recipeHeaderControls[hidden]{'),
+    styles.indexOf("}", styles.indexOf('body[data-recipe-page="saved"] #splitsBlock #recipeHeaderControls[hidden]{'))
+  );
+  assert.notEqual(spacer, "", "expected the saved-page header spacer rule");
+  assert.match(spacer, /display: flex !important;/);
+  assert.match(spacer, /visibility: hidden;/);
+  assert.match(spacer, /min-height: 44px;/);
+  // It only stands in on phones - the cluster still renders on tablet/desktop.
+  const at = styles.lastIndexOf("@media (max-width: 700px){", styles.indexOf('body[data-recipe-page="saved"] #splitsBlock #recipeHeaderControls[hidden]{'));
+  assert.notEqual(at, -1);
+});
+
 test("a planned recipe is marked quietly, and the marker tracks edits", () => {
   assert.match(html, /<span class="recipePageTabDot" id="recipePageTabNextDot" hidden aria-hidden="true">/);
   // Refreshed whenever the plan is committed, not only when tabs are clicked.
@@ -280,6 +294,16 @@ test("a planned recipe is marked quietly, and the marker tracks edits", () => {
   // A 6px dot, not a badge.
   const dot = styles.slice(styles.indexOf(".recipePageTabDot{"), styles.indexOf("}", styles.indexOf(".recipePageTabDot{")));
   assert.match(dot, /width: 6px;/);
+  // On phones the tabs are icon-only and can be squeezed, so the dot is
+  // lifted out of the tab's inline flow into an absolute corner badge -
+  // otherwise it wraps onto a second line under the icon and makes the
+  // Next tab a whole row taller than its siblings.
+  const phoneDot = styles.slice(
+    styles.indexOf("#splitsBlock .recipePageTab .recipePageTabDot{"),
+    styles.indexOf("}", styles.indexOf("#splitsBlock .recipePageTab .recipePageTabDot{"))
+  );
+  assert.match(phoneDot, /position:absolute;/);
+  assert.match(phoneDot, /margin:0;/);
 });
 
 test("operational controls are not offered on a plan", () => {

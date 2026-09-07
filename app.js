@@ -1690,6 +1690,25 @@
       layer.hoppers[0].pct = h1;
     }
 
+    // The layer-row analogue of recomputeAutoH1: the first layer's own
+    // percentage is not entered, it is derived as 100 - the other layers'
+    // percentages (clamped 0-100), so the layer total is always 100. Pure,
+    // like recomputeAutoH1 - callers gate it to the compact phone Recipe
+    // view (autoFirstLayerPctActive()); it stays a plain manual field on
+    // desktop/tablet for now. No-op below two layers: a single-layer line
+    // has no other layers to derive from.
+    function recomputeAutoFirstLayerPct(layers){
+      if (!Array.isArray(layers) || layers.length < 2) return;
+      let sumOthers = 0;
+      for (let i = 1; i < layers.length; i++){
+        sumOthers += clampNum(layers[i].layerPct);
+      }
+      let first = 100 - sumOthers;
+      if (first < 0) first = 0;
+      if (first > 100) first = 100;
+      layers[0].layerPct = first;
+    }
+
     function setStatus(html){
       const el = $("statusBox");
       if (el) el.innerHTML = html || "";
@@ -4591,6 +4610,12 @@
       // Current, and selection alone raises the edit toolbar. Compact
       // mobile keeps both modes exactly as they are.
       const reworkedGrid = !compactMobileRecipe;
+      // On the compact phone view the first layer's % is auto (see
+      // recomputeAutoFirstLayerPct). Recompute once per render, before the
+      // layer headers read L.layerPct, so every entry path - edit, recipe
+      // load, promote, page/line-type switch, a desktop->phone resize - lands
+      // the derived value in the field. Mirrors how H1 is seeded.
+      if (compactMobileRecipe) recomputeAutoFirstLayerPct(recipeLayers());
       // Compact phone keeps its established layer-across-the-top layout; the
       // selectable orientation applies to the full tablet/desktop matrix.
       // `reworkedGrid` continues to own interaction/toolbars, while this flag
@@ -5229,6 +5254,14 @@
         th.className = "splitLayerHeader";
         th.dataset.layerColumn = L.name;
 
+        // Same array recipeLayers() feeds the render loop, so identity holds.
+        const autoLayers = recipeLayers();
+        const isFirstLayer = autoLayers[0] === L;
+        // The compact phone view derives the first layer's % (see
+        // recomputeAutoFirstLayerPct); with one layer there is nothing to
+        // derive, so it stays a normal field.
+        const autoFirstLayer = compactMobileRecipe && isFirstLayer && autoLayers.length > 1;
+
         const title = document.createElement("button");
         title.type = "button";
         title.className = "splitLayerTitle";
@@ -5265,6 +5298,12 @@
         // "Match X" copy button below are recipe edits like any other, so
         // neither is reachable until Edit view is on.
         if(hopperRearrangement?.active || summaryView) pctInput.disabled=true;
+        if (autoFirstLayer){
+          // Mirrors H1: not entered, shown read-only, held at 100 minus the
+          // other layers by recomputeAutoFirstLayerPct.
+          pctInput.readOnly = true;
+          pctInput.title = "Auto (100% minus the other layers)";
+        }
         const pctUnit = document.createElement("span");
         pctUnit.textContent = "%";
         pctWrap.append(pctInput, pctUnit);
@@ -5318,6 +5357,15 @@
             value => { L.layerPct = value; }
           );
           if (!accepted) return;
+          // Editing any other layer on the phone re-derives the first layer
+          // and repaints its (read-only) field, before validation reads the
+          // totals - so the "layers must total 100%" error can't fire from a
+          // normal edit.
+          if (compactMobileRecipe && !isFirstLayer && autoLayers.length > 1){
+            recomputeAutoFirstLayerPct(autoLayers);
+            const firstInput = table.querySelector(`#lp_${autoLayers[0].name}`);
+            if (firstInput) firstInput.value = String(clampNum(autoLayers[0].layerPct));
+          }
           updateLayerMetaDisplays();
           updateHopperTotals();
           validateAndCompute({ sync: true });
@@ -5565,7 +5613,15 @@
           }
           controls.appendChild(pctWrap);
           editor.append(cellTop, controls);
-          td.append(cellHeader, editor);
+          // Plain wrapper around the cell's header + editor. It is an
+          // ordinary block on every layout except the compact/touch phone
+          // grid, where CSS turns it into the two-row "badge + % / resin"
+          // grid (Option A) - a <td> cannot take that grid itself without
+          // ceasing to be a table cell (see .splitCellInner in styles.css).
+          const cellInner = document.createElement("div");
+          cellInner.className = "splitCellInner";
+          cellInner.append(cellHeader, editor);
+          td.append(cellInner);
 
           function refreshCellState(){
             // Mirrors the field for the static (touch) cell presentation.
@@ -8097,6 +8153,13 @@
     // every other layout decision in the app already reads.
     function isDesktopLayout(){
       return layoutModeQueries.desktop.matches;
+    }
+
+    // Whether the first layer's percentage auto-derives (see
+    // recomputeAutoFirstLayerPct). Compact phone Recipe view only, for now -
+    // the same <=700px breakpoint the reworked-grid decision uses.
+    function autoFirstLayerPctActive(){
+      return layoutModeQueries.compactRecipe.matches;
     }
 
     // One canonical DOM signal mirrors the structural decision above so CSS

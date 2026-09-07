@@ -3456,6 +3456,23 @@ body[data-recipe-page="saved"] #splitsArea > .splitsSavedRecipesPanel{
     max-height: 430px;
   }
 }
+@media (max-width: 700px){
+  /* Recipe Book has no Scan / Load / Edit cluster - those act on a live
+     recipe, not a saved-config list - so #recipeHeaderControls is hidden on
+     this page. That shortened the header row by the cluster's height and
+     jumped the tab strip and the panel below it up ~16px on every switch to
+     the Book tab. Keep the (now empty) controls box in the layout as an
+     invisible spacer the same height as the icon cluster, so the row - and
+     everything under it - stays put across tabs. Its own children stay
+     display:none via their own [hidden]; visibility:hidden covers the box
+     itself. display:flex!important + the id/attr specificity beat the base
+     .recipeHeaderControls[hidden]{display:none!important}. */
+  body[data-recipe-page="saved"] #splitsBlock #recipeHeaderControls[hidden]{
+    display: flex !important;
+    visibility: hidden;
+    min-height: 44px;
+  }
+}
 
 /* The plan is a recipe definition only: it has no tracking, no pump-off and
    no receiver weights, so the controls for those are not offered on it. */
@@ -4589,6 +4606,20 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
   }
   #splitsBlock .recipePageTab.active .recipeTabIcon svg{ stroke-width:2; }
 
+  /* The "a recipe is planned" dot rides the Next icon as a corner badge on
+     phones - taken out of the tab's inline flow so it can no longer wrap
+     onto a second line under the icon (which made the Next tab a whole row
+     taller than its siblings) or widen that tab relative to the others.
+     .recipePageTab is position:relative, so this anchors to the tab. */
+  #splitsBlock .recipePageTab .recipePageTabDot{
+    position:absolute;
+    top:4px;
+    right:4px;
+    margin:0;
+    width:5px;
+    height:5px;
+  }
+
   /* The icon cluster: Scan (a <details> summary) and the page's Load button
      become square icon-only controls; order:-1 pulls them left of the
      Edit/Done pencil so the row reads [tabs] (scan)(load)(pencil).
@@ -5098,6 +5129,13 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     font-weight:900;
     line-height:18px;
   }
+  /* Auto first layer (A): its % is derived from the other layers and shown
+     read-only, a shade quieter than the entered values - the same cue H1
+     carries for the same reason. The :not() guards match the sibling rule
+     above so this wins on specificity, not source order. */
+  .splitsMatrix.compactMobileRecipe .splitLayerPct input:not([type="checkbox"]):not([type="radio"]):read-only{
+    color:color-mix(in srgb, var(--title) 58%, transparent);
+  }
   .splitsMatrix.compactMobileRecipe .splitLayerPct span{ color:var(--muted); font-size:9px; }
   /* No .splitColumnTotal sizing/colour here - the element is display:none
      on mobile (see .splitColumnTotal above), so nothing would ever read
@@ -5248,9 +5286,46 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
   #splitsArea[data-recipe-cells="static"] .splitsMatrix.compactMobileRecipe td.splitMatrixCell{
     padding:5px 3px;
   }
+  /* Option A cell layout: the hopper badge and the % share the top line; the
+     resin name gets the full cell width on its own line below. Once the
+     per-cell clock and x were dropped from this grid (see the
+     #splitsArea[data-recipe-view] .splitTrackControl rule far above), the old
+     badge row held nothing but the badge - ~90% empty. Folding the badge in
+     beside the % reclaims that whole row plus the %'s own wasted right half,
+     and both go to the resin name, the value operators scan for.
+
+     The grid lives on .splitCellInner (a plain wrapper div added in
+     buildCell), not the <td> itself: .splitsMatrix.compactMobileRecipe
+     [data-layer-column]{display:table-cell!important} pins every cell's own
+     display, and a <td> that is display:grid also stops being a table cell,
+     which breaks table-layout:fixed's column sizing. The wrapper sidesteps
+     both. It is an ordinary block everywhere else, so no other layout
+     changes. */
+  #splitsArea[data-recipe-cells="static"] .splitsMatrix.compactMobileRecipe .splitCellInner{
+    display:grid;
+    grid-template-columns:1fr auto;
+    grid-template-areas:
+      "badge pct"
+      "resin resin";
+    align-items:center;
+    column-gap:6px;
+    row-gap:2px;
+  }
+  /* Dissolve the editor wrapper so its two rows - resin (.splitCellTop) and
+     % (.splitCellControls) - become direct grid items alongside the badge
+     (.splitCellHeader), placed by grid-area. */
+  #splitsArea[data-recipe-cells="static"] .splitsMatrix.compactMobileRecipe .splitCellEditor{
+    display:contents;
+  }
+  #splitsArea[data-recipe-cells="static"] .splitsMatrix.compactMobileRecipe .splitCellTop{
+    grid-area:resin;
+    min-width:0;
+  }
   #splitsArea[data-recipe-cells="static"] .splitsMatrix.compactMobileRecipe .splitCellResinText{
-    font-size:11px;
-    line-height:13px;
+    /* The cell's headline value now - the size the % digits carry, still
+       clamped to two lines for the long codes. */
+    font-size:13px;
+    line-height:15px;
     /* Two lines is enough for the long codes and keeps rows even; anything
        past that would push the grid taller than it is worth. */
     display:-webkit-box;
@@ -5258,14 +5333,18 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     -webkit-box-orient:vertical;
     overflow:hidden;
   }
-  /* The number and its unit read as one value, so the % stays tucked
-     against the digits instead of drifting to the cell's right edge.
-     Width is fixed rather than content-sized: an input's intrinsic width
-     comes from its size attribute, not its value, and the newer CSS
-     property that would size it to its content is not safe to rely on in
-     the Android WebView this also ships in. 44px holds a decimal such as
-     "61.5" while remaining inside the cell's existing unused row width. */
-  #splitsArea[data-recipe-cells="static"] .splitsMatrix.compactMobileRecipe .splitCellControls,
+  /* The % block sits in the top row's right cell (grid-area:pct), hard
+     against the cell's right edge, opposite the badge. Inside that block the
+     digits and unit stay tucked together (flex-start). Width is fixed rather
+     than content-sized: an input's intrinsic width comes from its size
+     attribute, not its value, and the newer CSS property that would size it
+     to its content is not safe to rely on in the Android WebView this also
+     ships in. 44px holds a decimal such as "61.5". */
+  #splitsArea[data-recipe-cells="static"] .splitsMatrix.compactMobileRecipe .splitCellControls{
+    grid-area:pct;
+    justify-content:flex-end;
+    gap:2px;
+  }
   #splitsArea[data-recipe-cells="static"] .splitsMatrix.compactMobileRecipe .splitPctControl{
     justify-content:flex-start;
     gap:2px;
@@ -5285,8 +5364,10 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     text-align:right;
   }
   #splitsArea[data-recipe-cells="static"] .splitsMatrix.compactMobileRecipe .splitCellHeader{
+    grid-area:badge;
+    min-width:0;
     min-height:0;
-    margin:0 0 2px;
+    margin:0;
   }
   #splitsArea[data-recipe-cells="static"] .splitsMatrix.compactMobileRecipe .splitCellHopperName{
     font-size:10px;
