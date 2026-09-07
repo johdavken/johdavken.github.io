@@ -1326,3 +1326,127 @@
   --footer-border: rgba(17,24,39,.18);
 
 }
+
+/* ----------------------------------------------------------------------- * Green Team (NVIDIA) * ----------------------------------------------------------------------- */
+:where(html, body)[data-theme="green-team"]{
+  color-scheme: dark;
+  /* Flat neutral grey - no radial background glow (see --bg-glow-* below),
+     tuned to the NVIDIA developer-forums dark surface. */
+  --bg: #1b1b1b;
+  --panel: rgba(38,38,38,.96);
+  --panel2: rgba(31,31,31,.92);
+  --text: #e9ece3;
+  --subtitle: #c2cbb2;
+  --title: #76b900;
+  --muted: #8f978a;
+  --fg: #cad0c2;
+  --yellow: #c1a12e;
+  --orange: #d08a3c;
+  --warn: #e3b53c;
+  --bad: #e5484d;
+  --ok: #83c500;
+  --shadow2: 0 8px 22px rgba(0,0,0,.42);
+  --workflow-recipe: #a7c56e;
+  --border: rgba(255,255,255,.10);
+  --border2: rgba(118,185,0,.28);
+  --field-bg: rgba(0,0,0,.24);
+  --panelOpen: rgba(38,38,38,.99);
+  --chev: rgba(233,236,227,.5);
+  --row-bg: rgba(255,255,255,.04);
+  --row-border: rgba(255,255,255,.07);
+  --row-bg-2: rgba(255,255,255,.035);
+  --row-border-2: rgba(255,255,255,.10);
+  --readonly-bg: rgba(255,255,255,.05);
+  --readonly-border: rgba(255,255,255,.10);
+  --focus-border: rgba(118,185,0,.85);
+  --focus-ring: rgba(118,185,0,.20);
+  --f-var1: #83c500;
+  --f-var2: #e3b53c;
+  --f-var3: #c2cbb2;
+  --f-const: #8f978a;
+  --btn-text: var(--text);
+  --btn-border: rgba(255,255,255,.16);
+  --btn-primary-a: rgba(118,185,0,.24);
+  --btn-primary-b: rgba(118,185,0,.12);
+  --btn-secondary-bg: rgba(255,255,255,.06);
+  --btn-secondary-border: rgba(255,255,255,.16);
+  --btn-danger-bg: rgba(229,72,77,.14);
+  --btn-danger-border: rgba(229,72,77,.30);
+  /* Transparent glows collapse the body's two radial-gradient() layers,
+     leaving the flat --bg (same technique OLED Black uses). */
+  --bg-glow-a: transparent;
+  --bg-glow-b: transparent;
+  --card-glow-a: transparent;
+  --card-glow-b: transparent;
+  --toggle-on-bg: rgba(118,185,0,.26);
+  --toggle-on-border: rgba(118,185,0,.52);
+  --footer-bg: rgba(24,24,24,.96);
+  --footer-border: rgba(255,255,255,.08);
+}
+:where(html, body)[data-theme="green-team"] .resinToolsLogo .rtLayerRed{color:#e5484d;stroke:#e5484d}
+:where(html, body)[data-theme="green-team"] .resinToolsLogo .rtLayerOrange{color:#d08a3c;stroke:#d08a3c}
+:where(html, body)[data-theme="green-team"] .resinToolsLogo .rtLayerYellow{color:#c1a12e;stroke:#c1a12e}
+:where(html, body)[data-theme="green-team"] .resinToolsLogo .rtLayerGreen{color:#76b900;stroke:#76b900}
+:where(html, body)[data-theme="green-team"] .resinToolsLogo .rtLayerBlue{color:#5f9e8f;stroke:#5f9e8f}
+
+/* ----------------------------------------------------------------------- * Red Team (AMD) * ----------------------------------------------------------------------- */
+:where(html, body)[data-theme="red-team"]{
+  color-scheme: dark;
+  /* Flat neutral grey - no radial background glow (see --bg-glow-* below),
+     tuned to the AMD Adrenalin / Radeon Software dark surface. */
+  --bg: #1e1e1e;
+  --panel: rgba(42,42,42,.96);
+  --panel2: rgba(35,35,35,.92);
+  --text: #ededed;
+  --subtitle: #d2b7b7;
+  --title: #ed1c24;
+  --muted: #9c9494;
+  --fg: #d0c9c9;
+  --yellow: #d7a441;
+  --orange: #e07a3c;
+  --warn: #e3b53c;
+  --bad: #ff6257;
+  --ok: #3ddc84;
+  --shadow2: 0 8px 22px rgba(0,0,0,.45);
+  --workflow-recipe: #cf9a5b;
+  --border: rgba(255,255,255,.10);
+  --border2: rgba(237,28,36,.30);
+  --field-bg: rgba(0,0,0,.24);
+  --panelOpen: rgba(42,42,42,.99);
+  --chev: rgba(237,237,237,.5);
+  --row-bg: rgba(255,255,255,.04);
+  --row-border: rgba(255,255,255,.07);
+  --row-bg-2: rgba(255,255,255,.035);
+  --row-border-2: rgba(255,255,255,.10);
+  --readonly-bg: rgba(255,255,255,.05);
+  --readonly-border: rgba(255,255,255,.10);
+  --focus-border: rgba(237,28,36,.85);
+  --focus-ring: rgba(237,28,36,.20);
+  --f-var1: #3ddc84;
+  --f-var2: #e3b53c;
+  --f-var3: #d2b7b7;
+  --f-const: #9c9494;
+  --btn-text: var(--text);
+  --btn-border: rgba(255,255,255,.16);
+  --btn-primary-a: rgba(237,28,36,.26);
+  --btn-primary-b: rgba(237,28,36,.12);
+  --btn-secondary-bg: rgba(255,255,255,.06);
+  --btn-secondary-border: rgba(255,255,255,.16);
+  --btn-danger-bg: rgba(255,98,87,.16);
+  --btn-danger-border: rgba(255,98,87,.32);
+  /* Transparent glows collapse the body's two radial-gradient() layers,
+     leaving the flat --bg (same technique OLED Black uses). */
+  --bg-glow-a: transparent;
+  --bg-glow-b: transparent;
+  --card-glow-a: transparent;
+  --card-glow-b: transparent;
+  --toggle-on-bg: rgba(237,28,36,.26);
+  --toggle-on-border: rgba(237,28,36,.52);
+  --footer-bg: rgba(27,27,27,.96);
+  --footer-border: rgba(255,255,255,.08);
+}
+:where(html, body)[data-theme="red-team"] .resinToolsLogo .rtLayerRed{color:#ed1c24;stroke:#ed1c24}
+:where(html, body)[data-theme="red-team"] .resinToolsLogo .rtLayerOrange{color:#e07a3c;stroke:#e07a3c}
+:where(html, body)[data-theme="red-team"] .resinToolsLogo .rtLayerYellow{color:#d7a441;stroke:#d7a441}
+:where(html, body)[data-theme="red-team"] .resinToolsLogo .rtLayerGreen{color:#3ddc84;stroke:#3ddc84}
+:where(html, body)[data-theme="red-team"] .resinToolsLogo .rtLayerBlue{color:#6ea0c9;stroke:#6ea0c9}

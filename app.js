@@ -1903,6 +1903,8 @@
         ["rose-pine-light", "rose-pine-dawn"],
         ["everforest", "everforest"],
         ["evergreen", "everforest"],
+        ["green-team", "green-team"],
+        ["red-team", "red-team"],
         // Evergreen Light has been retired. Retain the aliases so a saved
         // selection migrates naturally to Evergreen instead of falling back
         // to an unrelated theme.
