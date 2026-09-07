@@ -356,9 +356,37 @@
     if(!items.length){ const empty=document.createElement("div"); empty.className="muted"; empty.textContent=kind==="recipe"?"No shared recipes saved for this workspace.":"No shared weight profiles saved for this workspace."; host.append(empty); return; }
     items.forEach(item=>{ const row=document.createElement("div"); row.className="workspaceConfigurationRow"; row.tabIndex=0; row.setAttribute("role","group"); row.setAttribute("aria-label",`${item.name} configuration`); const select=()=>{selectedWorkspaceConfigurationId=item.id; renderWorkspaceConfigurations(syncState);}; const selected=selectedWorkspaceConfigurationId===item.id; row.classList.toggle("selected",selected); row.addEventListener("click",event=>{if(!event.target.closest("button,summary,.workspaceConfigurationOverflow")) select();}); row.addEventListener("keydown",event=>{if((event.key==="Enter"||event.key===" ")&&!event.target.closest("button,summary")){event.preventDefault();select();}}); const info=document.createElement("div"); info.className="workspaceConfigurationInfo"; const title=document.createElement("strong"); if(item.favorite){const star=document.createElement("span");star.className="workspaceConfigurationFavorite";star.setAttribute("aria-label","Favorite recipe");star.textContent="★";title.append(star," ");} title.append(item.name); const meta=document.createElement("small"); const count=kind==="recipe"&&Array.isArray(item.payload?.layers)?item.payload.layers.reduce((n,layer)=>n+(Array.isArray(layer?.hoppers)?layer.hoppers.filter(h=>typeof h?.resin_name==="string"&&h.resin_name.trim()).length:0),0):kind!=="recipe"&&Array.isArray(item.payload?.layers)?item.payload.layers.reduce((n,layer)=>n+(Array.isArray(layer?.receiver_weights_lb)&&layer.receiver_weights_lb.length===6?6:0),0):null; meta.textContent=`${item.payload.line_type} Layer${count===null?"":` · ${count} ${kind==="recipe"?"assigned hoppers":"receiver weights"}`} · Updated ${item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : "unknown"}`; info.append(title,meta); row.append(info); if(selected&&showRowActions){const actions=document.createElement("div"); actions.className="workspaceConfigurationActions"; const action=(label,fn,cls="secondary")=>{const b=document.createElement("button");b.type="button";b.className=cls;b.textContent=label;b.addEventListener("click",event=>{event.stopPropagation();fn();});return b;}; actions.append(action("Load",()=>previewWorkspaceConfiguration(item),"primary"),action("Update",()=>openWorkspaceConfigurationDialog("update",item))); const menu=document.createElement("details"); menu.className="workspaceConfigurationOverflow"; menu.addEventListener("click",event=>event.stopPropagation()); menu.addEventListener("toggle",()=>{const sheet=menu.closest(".mobileWeightProfilesSheet"); if(sheet) sheet.classList.toggle("profileMenuOpen",menu.open); if(menu.open){ window.requestAnimationFrame(()=>{const anchor=summary.getBoundingClientRect(); const popup=menuActions.getBoundingClientRect(); const margin=8; const top=Math.max(margin,anchor.top-popup.height-4); const left=Math.min(Math.max(margin,anchor.right-popup.width),window.innerWidth-popup.width-margin); menuActions.style.position="fixed"; menuActions.style.top=`${top}px`; menuActions.style.left=`${left}px`; menuActions.style.right="auto";});}else{menuActions.style.position="";menuActions.style.top="";menuActions.style.left="";menuActions.style.right="";}}); const summary=document.createElement("summary"); summary.setAttribute("aria-label",`More actions for ${item.name}`); summary.textContent="⋯"; const menuActions=document.createElement("div"); menuActions.className="workspaceConfigurationOverflowMenu"; const menuAction=(label,fn,cls="secondary")=>{const button=action(label,()=>{menu.open=false;fn();},cls);menuActions.append(button);}; menuAction("Rename",()=>openWorkspaceConfigurationDialog("rename",item)); menuAction("Duplicate",()=>openWorkspaceConfigurationDialog("duplicate",item)); if(kind==="recipe") menuAction(item.favorite?"Unfavorite":"Favorite",()=>mutateWorkspaceConfiguration("favorite",item)); menuAction("Delete",()=>{if(confirm(`Delete shared configuration “${item.name}”?`)) mutateWorkspaceConfiguration("delete",item);},"danger"); menu.append(summary,menuActions); actions.append(menu); row.append(actions);} host.append(row); });
   }
+  // Phone counterpart to wireSplitsSavedRecipesActions: one consolidated row
+  // of actions sitting above the list, acting on whichever recipe is selected
+  // in it. It carries the same set desktop offers minus Favorite, which the
+  // phone Book no longer exposes at all (the star still shows on a row and
+  // still sorts favourites first - only the toggle is desktop-only now).
+  // Called from renderMobileSavedRecipeRows so every path that redraws the
+  // list - including the two "no workspace" / "no service" early returns in
+  // renderSplitsSavedRecipes - re-points these buttons at the current
+  // selection. .onclick assignment (not addEventListener) keeps that
+  // idempotent across repeated renders.
+  function wireMobileSavedRecipeActions(items){
+    const host=$("mobileSavedRecipesActions");
+    if(!host) return;
+    const selectedItem=items.find(item=>item.id===selectedWorkspaceConfigurationId) || null;
+    const bind=(id,handler)=>{
+      const button=$(id);
+      if(!button) return;
+      button.disabled=!selectedItem;
+      button.setAttribute("aria-label",selectedItem?`${button.textContent} ${selectedItem.name}`:button.textContent);
+      button.onclick=()=>{ if(selectedItem) handler(selectedItem); };
+    };
+    bind("mobileSavedRecipeLoadAction",item=>previewWorkspaceConfiguration(item));
+    bind("mobileSavedRecipeUpdateAction",item=>openWorkspaceConfigurationDialog("update",item));
+    bind("mobileSavedRecipeRenameAction",item=>openWorkspaceConfigurationDialog("rename",item));
+    bind("mobileSavedRecipeDuplicateAction",item=>openWorkspaceConfigurationDialog("duplicate",item));
+    bind("mobileSavedRecipeDeleteAction",item=>{ if(confirm(`Delete shared configuration “${item.name}”?`)) mutateWorkspaceConfiguration("delete",item); });
+  }
   function renderMobileSavedRecipeRows(items,syncState){
     const panel=$("splitsSavedRecipesPanel"), host=$("mobileSavedRecipesList"), search=$("mobileSavedRecipesSearch");
     if(!panel || !host) return;
+    wireMobileSavedRecipeActions(items);
     panel.setAttribute("aria-busy",String(!!workspaceConfigurationRefreshInFlight));
     const query=(search?.value ?? splitsSavedRecipesSearch).trim().toLocaleLowerCase();
     splitsSavedRecipesSearch=query;
@@ -394,45 +422,11 @@
         renderWorkspaceConfigurations(syncState);
       });
 
-      const load=document.createElement("button");
-      load.type="button";
-      load.className="mobileSavedRecipeLoad";
-      load.textContent="Load";
-      load.setAttribute("aria-label",`Load ${item.name}`);
-      load.addEventListener("click",()=>{
-        selectedWorkspaceConfigurationId=item.id;
-        row.classList.add("loading");
-        row.setAttribute("aria-busy","true");
-        previewWorkspaceConfiguration(item);
-      });
-
-      const overflow=document.createElement("details");
-      overflow.className="mobileSavedRecipeOverflow";
-      const overflowSummary=document.createElement("summary");
-      overflowSummary.setAttribute("aria-label",`More actions for ${item.name}`);
-      overflowSummary.textContent="⋯";
-      const menu=document.createElement("div");
-      menu.className="mobileSavedRecipeMenu";
-      const menuAction=(label,handler,className="")=>{
-        const button=document.createElement("button");
-        button.type="button";
-        button.textContent=label;
-        if(className) button.className=className;
-        button.addEventListener("click",async()=>{
-          overflow.open=false;
-          row.classList.add("loading");
-          row.setAttribute("aria-busy","true");
-          await handler();
-        });
-        menu.appendChild(button);
-      };
-      menuAction("Update",()=>openWorkspaceConfigurationDialog("update",item));
-      menuAction(item.favorite?"Unfavorite":"Favorite",()=>mutateWorkspaceConfiguration("favorite",item,!item.favorite));
-      menuAction("Rename",()=>openWorkspaceConfigurationDialog("rename",item));
-      menuAction("Duplicate",()=>openWorkspaceConfigurationDialog("duplicate",item));
-      menuAction("Delete",()=>{if(confirm(`Delete shared configuration “${item.name}”?`)) return mutateWorkspaceConfiguration("delete",item);},"danger");
-      overflow.append(overflowSummary,menu);
-      row.append(choose,load,overflow);
+      // A row is now purely a selection target - Load / Update / Rename /
+      // Duplicate / Delete all live in the one #mobileSavedRecipesActions
+      // row above the list (wireMobileSavedRecipeActions), so a long list is
+      // a column of names rather than a column of button clusters.
+      row.append(choose);
       host.appendChild(row);
     });
   }
@@ -5007,11 +5001,13 @@
       // renderSplitsSavedRecipes) - same service/cache, same Load/Update/
       // Rename/Duplicate/Favorite/Delete actions, just a closer-to-the-work
       // entry point. One panel serves every width now, reached through the
-      // Recipe Book tab like Current/Next/Weights: touch keeps its own
-      // search box and per-row Load/⋯ (rendered by renderMobileSavedRecipeRows
-      // into #mobileSavedRecipesList) while desktop keeps its
-      // select-a-row-then-act top bar (#splitsSavedRecipesList) - CSS shows
-      // only the one that matches the current width.
+      // Recipe Book tab like Current/Next/Weights. Both widths now use the
+      // same select-a-row-then-act model: desktop acts from
+      // .splitsSavedRecipesActions in the title row, phones from
+      // #mobileSavedRecipesActions just under the search field (see
+      // wireMobileSavedRecipeActions). Each width keeps its own list
+      // (#splitsSavedRecipesList / #mobileSavedRecipesList) and CSS shows
+      // only the pair that matches the current width.
       const savedRecipesPanel = document.createElement("div");
       savedRecipesPanel.id = "splitsSavedRecipesPanel";
       savedRecipesPanel.className = "splitsSavedRecipesPanel hide";
@@ -5037,6 +5033,13 @@
             </details>
           </div>
           <label class="mobileSavedRecipesSearch"><span class="srOnly">Search saved recipes</span><input id="mobileSavedRecipesSearch" type="search" placeholder="Search recipes" autocomplete="off" /></label>
+        </div>
+        <div class="mobileSavedRecipesActions" id="mobileSavedRecipesActions" role="group" aria-label="Actions for the selected recipe">
+          <button id="mobileSavedRecipeLoadAction" type="button" disabled>Load</button>
+          <button id="mobileSavedRecipeUpdateAction" type="button" disabled>Update</button>
+          <button id="mobileSavedRecipeRenameAction" type="button" disabled>Rename</button>
+          <button id="mobileSavedRecipeDuplicateAction" type="button" disabled>Duplicate</button>
+          <button id="mobileSavedRecipeDeleteAction" type="button" class="danger" disabled>Delete</button>
         </div>
         <div id="splitsSavedRecipesStatus" class="muted" role="status" hidden></div>
         <div id="mobileSavedRecipesStatus" class="mobileSavedRecipesStatus" role="status" hidden></div>

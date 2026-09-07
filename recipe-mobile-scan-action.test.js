@@ -42,7 +42,9 @@ function mainMobileBlock(){
 test("Scan and Load are square icon-only controls in #recipeHeaderActions - text label hidden (font-size:0), SVG icon shown", () => {
   const block = mainMobileBlock();
   assert.match(block, /#splitsBlock \.recipeHeaderActions > \.mobileScanIconAction > summary,\s*\n\s*#splitsBlock \.recipeHeaderActions > \.recipeHeaderMobileAction\{[\s\S]*?font-size:0;/);
-  assert.match(block, /#splitsBlock \.recipeHeaderActions \.recipeActionIcon\{\s*\n\s*display:block;\s*\n\s*width:16px;\s*\n\s*height:16px;/);
+  // The glyph is 20px since ux-mobile-update1 (+25% over the original 16px,
+  // in step with the tab icons); the 48x44 key around it is unchanged.
+  assert.match(block, /#splitsBlock \.recipeHeaderActions \.recipeActionIcon\{[\s\S]*?display:block;[\s\S]*?width:20px;[\s\S]*?height:20px;/);
 });
 
 test("the key zeroes the global summary{gap:12px} so the glyph sits centred, not pushed left by the phantom gap before the font-size:0 label", () => {

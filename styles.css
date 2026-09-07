@@ -2251,6 +2251,7 @@ details[open] > summary .chevSatellite{
    flips this back lives in the single shared max-width:700px mobile
    media block further down, not a second one of its own here. */
 .splitsSavedRecipesPanel .mobileSavedRecipesSearch,
+.splitsSavedRecipesPanel #mobileSavedRecipesActions,
 .splitsSavedRecipesPanel #mobileSavedRecipesList,
 .splitsSavedRecipesPanel #mobileSavedRecipesStatus{ display: none; }
 
@@ -4582,6 +4583,20 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
      below the matrix. The summary bar's icon guide (opposite the title)
      turns on here too. */
   #splitsBlock .recipeInfoLegend{ display: block; }
+  /* Tap scale. The tab strip stays welded to the divider beneath it and the
+     panel action keys (Scan / Load / pencil) deliberately float above that
+     line - that relationship is kept. What changes is that the tabs are no
+     longer a 32px strip sitting under a 44px cluster: at 48px each tab's top
+     edge lands level with the action keys, so the gap under the RECIPE
+     header reads the same on both sides of the row.
+     The row does not grow. .recipePageTabs' -1px bottom margin cancels its
+     own 1px border-bottom, so a 48px tab contributes exactly 48px - the same
+     48px the action cluster already contributed (44px key + its 4px
+     margin-bottom). #splitsArea, and everything under it, stays put. */
+  #splitsBlock .recipePageTab{
+    min-height:48px;
+    padding:6px 12px 5px;
+  }
   #splitsBlock .recipePageTab .recipeTabLabel{
     position:absolute;
     width:1px;
@@ -4600,8 +4615,10 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     justify-content:center;
   }
   #splitsBlock .recipePageTab .recipeTabIcon svg{
-    width:17px;
-    height:17px;
+    /* +25% over the original 17px, now that the tab has the height to
+       carry it. */
+    width:21px;
+    height:21px;
     fill:none;
     stroke:currentColor;
     stroke-width:1.8;
@@ -4617,8 +4634,11 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
      .recipePageTab is position:relative, so this anchors to the tab. */
   #splitsBlock .recipePageTab .recipePageTabDot{
     position:absolute;
-    top:4px;
-    right:4px;
+    /* Follows the icon, not the tab box: the taller (48px) tab would have
+       stranded a top:4px dot well above the glyph it belongs to. 12px/7px
+       parks it on the icon's own top-right corner. */
+    top:12px;
+    right:7px;
     margin:0;
     width:5px;
     height:5px;
@@ -4684,8 +4704,10 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
   #splitsBlock .recipeHeaderActions .mobileScanIconAction > summary::-webkit-details-marker{ display:none; }
   #splitsBlock .recipeHeaderActions .recipeActionIcon{
     display:block;
-    width:16px;
-    height:16px;
+    /* +25% over the original 16px. The 48x44 key is unchanged - only the
+       glyph inside it grew, matching the tab icons' step up. */
+    width:20px;
+    height:20px;
   }
   #splitsBlock .recipeHeaderActions .mobileScanIconAction > summary:hover,
   #splitsBlock .recipeHeaderActions .recipeHeaderMobileAction:hover:not(:disabled){
@@ -4746,8 +4768,9 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
   }
   #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"]::before,
   #splitsBlock #recipeHeaderControls .weightsHeaderViewToggle button[data-weight-view="edit"]::before{
-    width:15px;
-    height:15px;
+    /* +25% over the original 15px, in step with the Scan / Load glyphs. */
+    width:19px;
+    height:19px;
   }
   #splitsBlock.mobile-active #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"].active,
   #splitsBlock.mobile-active #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"][aria-pressed="true"],
@@ -5584,6 +5607,108 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
   .splitsSavedRecipesPanel #splitsRecipeOverflow,
   .splitsSavedRecipesPanel #splitsSavedRecipesList,
   .splitsSavedRecipesPanel #splitsSavedRecipesStatus{ display: none; }
+
+  /* Recipe Book, phone: one row of station-console keys under the search
+     field, acting on whichever recipe is selected in the list below. It
+     takes the slot the old status strip occupied - a filled bar that said
+     nothing about what it was - and replaces the per-row Load/⋯ cluster
+     each recipe used to carry. Favorite is gone from this surface (see
+     wireMobileSavedRecipeActions). Not in the display:revert group above:
+     this one needs a grid, and this rule is later in the file, so it beats
+     the base display:none on equal specificity. */
+  .splitsSavedRecipesPanel #mobileSavedRecipesActions{
+    display:grid;
+    grid-template-columns:repeat(5,minmax(0,1fr));
+    gap:5px;
+    margin:9px 0 8px;
+    /* The line between the actions and the list is an ordinary divider,
+       matching the one under the search field above it: the global input
+       rule strips that field to `border-width:0 0 1px`, and its colour comes
+       from .mobileSavedRecipesSearch input's var(--row-border-2). Same weight,
+       same token here. It belongs to the action row, so it is always exactly
+       1px, rather than being whatever height the status message below
+       happened to be. */
+    padding-bottom:9px;
+    border-bottom:1px solid var(--row-border-2);
+  }
+  .splitsSavedRecipesPanel #mobileSavedRecipesActions > button{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-height:40px;
+    padding:0 3px;
+    border:0;
+    border-radius:var(--control-radius);
+    background:var(--btnstyle-surface);
+    color:var(--btnstyle-ink);
+    font-size:10px;
+    font-weight:800;
+    letter-spacing:.01em;
+    /* button.danger is uppercased globally; the other four keys are not, and
+       a single shouting DELETE in a row of five reads as a different kind of
+       control rather than the same one. */
+    text-transform:none;
+    box-shadow:0 1px 0 var(--btnstyle-edge);
+  }
+  /* Destructive, but one of five keys in a row - danger ink on the same
+     console surface rather than a solid red fill, which would read as the
+     loudest thing on the page for the action taken least often. */
+  .splitsSavedRecipesPanel #mobileSavedRecipesActions > button.danger{
+    background:var(--btnstyle-surface);
+    color:var(--btnstyle-danger);
+  }
+  .splitsSavedRecipesPanel #mobileSavedRecipesActions > button:not(:disabled):hover{
+    filter:brightness(1.06);
+  }
+  .splitsSavedRecipesPanel #mobileSavedRecipesActions > button:focus-visible{
+    outline:2px solid var(--focus-border);
+    outline-offset:2px;
+  }
+  /* Nothing selected: the keys stay in place (the row never collapses and
+     shifts the list under the operator's thumb) but read clearly inert. */
+  .splitsSavedRecipesPanel #mobileSavedRecipesActions > button:disabled{
+    opacity:.42;
+    box-shadow:none;
+    cursor:default;
+  }
+  /* ...and the status goes back to being a message. It rendered as a filled,
+     rounded 28px band in var(--focus-ring) - wider and heavier than any real
+     divider in this panel - parked exactly where the divider belongs, so it
+     read as an oversized rule rather than as text. Plain muted type here; it
+     is still [hidden] whenever there is no message, and the sheet's own
+     #mobileWeightProfilesStatus (same .mobileSavedRecipesStatus class, but
+     outside this panel) keeps the chip treatment. */
+  .splitsSavedRecipesPanel #mobileSavedRecipesStatus{
+    margin:0 0 8px;
+    padding:0;
+    border-radius:0;
+    background:transparent;
+    color:var(--muted);
+    font-size:10px;
+    line-height:1.4;
+  }
+
+  /* Rows are selection targets only now, so the third grid column the
+     per-row Load/⋯ buttons used would otherwise leave a phantom gap. Scoped
+     to the recipe list: the receiver weight profile sheet reuses
+     .mobileSavedRecipeRow and keeps its own per-row controls. */
+  #mobileSavedRecipesList .mobileSavedRecipeRow{ grid-template-columns:minmax(0,1fr); }
+
+  /* The Book sits directly on the Recipe workspace surface, exactly as the
+     matrix does. #splitsArea already paints that faint panel on compact
+     touch, so the Book's own card - 1px border, 16px radius, its own fill -
+     was a second rounded box drawn inside the first, and its rounded top
+     corners broke the line the tab strip grows out of. Frame off; the
+     surface underneath is the panel. Frame gone, but not the breathing room:
+     a small inline inset keeps the rows, dividers and keys off the surface's
+     own edge (#splitsArea sets padding-inline:0 here, and supplies the 8px
+     block padding above and below). */
+  body[data-recipe-page="saved"] #splitsArea > .splitsSavedRecipesPanel{
+    padding:0 8px;
+    border:0;
+    border-radius:0;
+    background:transparent;
+  }
   .mobileSavedRecipesEmpty{padding:28px 12px;color:var(--muted);font-size:12px;text-align:center}
   .mobileSavedRecipeRow{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:5px;min-height:54px;padding:5px;border:1px solid var(--row-border-2);border-radius:10px;background:var(--row-bg-2);transition:border-color .14s ease,background .14s ease,opacity .14s ease}
   .mobileSavedRecipeRow.selected{border-color:var(--focus-border);background:var(--focus-ring);box-shadow:inset 2px 0 0 var(--focus-border)}
@@ -5739,6 +5864,17 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
   .betaApplicantStatus{ order: 2; }
   .betaApplicantCheck{ order: 3; }
   .betaApplicantRemove{ order: 4; justify-self: end; }
+}
+
+/* Narrow phones: four tabs plus the Next page's three-key action cluster runs
+   ~12px over the line at 360px, which clipped the Recipe Book tab behind the
+   keys. Trim the tab's side padding only - the 48px height and the 21px glyph,
+   the tap scale the <=700px block above is about, are untouched. Kept as its
+   own top-level block rather than nested inside that one: styles.css has no
+   nested media queries, and several tests locate a rule's block by scanning
+   back to the nearest "@media ". */
+@media (max-width: 384px){
+  #splitsBlock .recipePageTab{ padding-inline:7px; }
 }
 
 .hopperBadge{

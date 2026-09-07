@@ -149,8 +149,9 @@ test("the cluster is pulled left of the Edit/Done pencil with order:-1", () => {
 
 test("Scan and Load are ~48x44 station-console keys on phone (target grew, not the icon)", () => {
   assert.match(styles, /#splitsBlock \.recipeHeaderActions > \.mobileScanIconAction > summary,\s*\n\s*#splitsBlock \.recipeHeaderActions > \.recipeHeaderMobileAction\{[\s\S]*?width:48px;[\s\S]*?min-height:44px;[\s\S]*?background:var\(--btnstyle-surface\);[\s\S]*?box-shadow:0 1px 0 var\(--btnstyle-edge\);/);
-  // The glyph inside is untouched.
-  assert.match(styles, /#splitsBlock \.recipeHeaderActions \.recipeActionIcon\{\s*\n\s*display:block;\s*\n\s*width:16px;/);
+  // The glyph inside was untouched by this pass; ux-mobile-update1 later took
+  // it 16px -> 20px, still without resizing the key.
+  assert.match(styles, /#splitsBlock \.recipeHeaderActions \.recipeActionIcon\{[\s\S]*?display:block;[\s\S]*?width:20px;/);
 });
 
 test("the three console keys sit ~7px apart, not as a segmented group", () => {
