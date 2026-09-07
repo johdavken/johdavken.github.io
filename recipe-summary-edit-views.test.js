@@ -317,6 +317,36 @@ test("the grid is scoped to compact/touch only - .splitCellInner is untouched (p
 });
 
 /* ----------------------------------------------------------------------
+ *   ux-mobile-touch3 - compact phone tracking vs edit: two distinct cell
+ *   modes. Summary carries a soft full-cell --ok tint on tracked cells;
+ *   Edit suppresses it entirely and only the selection outline + EDIT tag
+ *   show. A cell that is both tracked and selected reads as Edit only.
+ * -------------------------------------------------------------------- */
+
+test("Summary: a tracked compact cell gets a soft full-cell --ok tint (mixed over its own row fill), a firmed border and a 1px inset ring", () => {
+  assert.match(styles, /#splitsArea\[data-recipe-cells="static"\]\[data-recipe-view="summary"\] \.splitsMatrix\.compactMobileRecipe tbody \.splitMatrixCell\.tracked\{\s*\n\s*background:color-mix\(in srgb, var\(--ok\) 18%, var\(--compact-recipe-row-bg\)\);\s*\n\s*border-color:color-mix\(in srgb, var\(--ok\) 45%, var\(--row-border-2\)\);\s*\n\s*box-shadow:inset 0 0 0 1px color-mix\(in srgb, var\(--ok\) 26%, transparent\);/);
+});
+
+test("the tracking tint is scoped to [data-recipe-view=\"summary\"], so Edit shows no tint - even on a cell that is both tracked and selected", () => {
+  const tint = styles.indexOf('#splitsArea[data-recipe-cells="static"][data-recipe-view="summary"] .splitsMatrix.compactMobileRecipe tbody .splitMatrixCell.tracked{');
+  assert.notEqual(tint, -1);
+  // No edit-view variant of the tint rule anywhere.
+  assert.doesNotMatch(styles, /data-recipe-view="edit"\][^{]*\.compactMobileRecipe[^{]*\.splitMatrixCell\.tracked\{[^}]*color-mix\(in srgb, var\(--ok\)/);
+  // Edit's tracked cell falls back to the plain row fill (no tint).
+  assert.match(styles, /\.splitsMatrix\.compactMobileRecipe \.splitMatrixCell\.tracked:not\(\.selected\)\{[\s\S]*?background:var\(--compact-recipe-row-bg\);[\s\S]*?box-shadow:none;/);
+});
+
+test("the compact cell snaps state changes (transition:none) - this WebView wedges when interpolating toward the color-mix() tint + inset ring", () => {
+  assert.match(styles, /\.splitsMatrix\.compactMobileRecipe \.splitMatrixCell\{[\s\S]*?transition:none;/);
+});
+
+test("the shared hopper-badge --ok highlight is held off the compact grid, so a tracked badge there is styled like an untracked one", () => {
+  assert.match(styles, /#splitsArea\[data-recipe-view="summary"\]:not\(\[data-recipe-cells="static"\]\) \.splitsMatrix tbody \.splitMatrixCell\.tracked \.splitCellHopperName\{/);
+  // and no compact-scoped rule re-colours it
+  assert.doesNotMatch(styles, /compactMobileRecipe[^{]*\.splitMatrixCell\.tracked[^{]*\.splitCellHopperName\{/);
+});
+
+/* ----------------------------------------------------------------------
  *   ux-mobile-touch3 - the first layer's % auto-derives on the compact
  *   phone view, mirroring H1. Removes the "layers must total 100%" error
  *   for normal edits. Desktop/tablet keep manual entry for now.

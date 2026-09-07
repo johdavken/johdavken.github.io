@@ -33,15 +33,19 @@ test("the tracked hopper-name badge highlights instead of a cell-corner overlay 
 });
 
 test("the tracked badge highlight derives from the active theme's success token", () => {
-  assert.match(styles, /#splitsArea\[data-recipe-view="summary"\] \.splitsMatrix tbody \.splitMatrixCell\.tracked \.splitCellHopperName\{[\s\S]*?color:var\(--ok\);/);
+  // The badge highlight is now the desktop/tablet cue only - the compact
+  // phone grid ([data-recipe-cells="static"]) tints the whole cell instead,
+  // so the shared rule carries a :not() that excludes it.
+  assert.match(styles, /#splitsArea\[data-recipe-view="summary"\]:not\(\[data-recipe-cells="static"\]\) \.splitsMatrix tbody \.splitMatrixCell\.tracked \.splitCellHopperName\{[\s\S]*?color:var\(--ok\);/);
 });
 
 test("Edit view leaves the badge unhighlighted so its Track control remains the single tracking cue", () => {
+  const landmark = '#splitsArea[data-recipe-view="summary"]:not([data-recipe-cells="static"]) .splitsMatrix tbody .splitMatrixCell.tracked .splitCellHopperName';
+  assert.notEqual(styles.indexOf(landmark), -1);
   assert.doesNotMatch(
-    styles.slice(0, styles.indexOf('#splitsArea[data-recipe-view="summary"] .splitsMatrix tbody .splitMatrixCell.tracked .splitCellHopperName')),
+    styles.slice(0, styles.indexOf(landmark)),
     /data-recipe-view="edit"\] \.splitsMatrix tbody \.splitMatrixCell\.tracked \.splitCellHopperName/
   );
-  assert.match(styles, /#splitsArea\[data-recipe-view="summary"\] \.splitsMatrix tbody \.splitMatrixCell\.tracked \.splitCellHopperName/);
 });
 
 test("no per-theme override is needed for the tracked hopper badge", () => {
@@ -50,10 +54,16 @@ test("no per-theme override is needed for the tracked hopper badge", () => {
 });
 
 test("a tracked hopper's badge picks up a brighter --ok highlight", () => {
-  // Summary view only, so Edit's own status label never competes.
+  // Summary view only, and desktop/tablet only - the compact phone grid
+  // ([data-recipe-cells="static"]) tints the whole cell instead.
   assert.match(
     styles,
-    /#splitsArea\[data-recipe-view="summary"\] \.splitsMatrix tbody \.splitMatrixCell\.tracked \.splitCellHopperName\{[\s\S]*?background:color-mix\(in srgb,var\(--ok\) \d+%,transparent\);[\s\S]*?color:var\(--ok\);/
+    /#splitsArea\[data-recipe-view="summary"\]:not\(\[data-recipe-cells="static"\]\) \.splitsMatrix tbody \.splitMatrixCell\.tracked \.splitCellHopperName\{[\s\S]*?background:color-mix\(in srgb,var\(--ok\) \d+%,transparent\);[\s\S]*?color:var\(--ok\);/
+  );
+  // The compact grid's replacement: a soft full-cell --ok tint.
+  assert.match(
+    styles,
+    /#splitsArea\[data-recipe-cells="static"\]\[data-recipe-view="summary"\] \.splitsMatrix\.compactMobileRecipe tbody \.splitMatrixCell\.tracked\{[\s\S]*?background:color-mix\(in srgb, var\(--ok\) \d+%, var\(--compact-recipe-row-bg\)\);/
   );
 });
 

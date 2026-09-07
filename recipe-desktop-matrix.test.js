@@ -91,7 +91,10 @@ test("desktop tracked cells retain their normal surface while the hopper badge i
   // cell-corner marker, no spelled-out "TRACKING" label) - Summary view
   // only, so it never competes with Edit's own status label.
   assert.doesNotMatch(styles, /splitHopperTrackingClock/);
-  assert.match(styles, /#splitsArea\[data-recipe-view="summary"\] \.splitsMatrix tbody \.splitMatrixCell\.tracked \.splitCellHopperName\{[\s\S]*?background:color-mix\(in srgb,var\(--ok\)[\s\S]*?color:var\(--ok\);/);
+  // The shared badge-highlight rule now excludes the compact phone grid
+  // (:not([data-recipe-cells="static"])); desktop is "typeable", so it
+  // still matches here.
+  assert.match(styles, /#splitsArea\[data-recipe-view="summary"\]:not\(\[data-recipe-cells="static"\]\) \.splitsMatrix tbody \.splitMatrixCell\.tracked \.splitCellHopperName\{[\s\S]*?background:color-mix\(in srgb,var\(--ok\)[\s\S]*?color:var\(--ok\);/);
   assert.doesNotMatch(styles, /\.splitMatrixCell\.tracked::before/);
   assert.doesNotMatch(body, /content: "TRACKING"/);
 });

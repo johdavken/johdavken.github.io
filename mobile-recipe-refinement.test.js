@@ -7,18 +7,27 @@ const app=fs.readFileSync("app.js","utf8");
 const styles=fs.readFileSync("styles.css","utf8");
 const theme=fs.readFileSync("theme.css","utf8");
 
-test("compact tracking is a plain theme-appropriate cell wash with a highlighted hopper badge",()=>{
-  // Tracked cells read as a --ok wash over their own row fill. No dot, no
-  // left bar - the hopper name stays its ordinary badge shape, just
-  // recolored.
+test("compact tracking is a soft full-cell --ok tint in Summary; the hopper badge stays neutral",()=>{
+  // SUMMARY: the whole tracked cell takes a soft --ok tint, mixed over its
+  // own row fill (not over transparent, so it stays calm on every theme),
+  // plus a firmed border and a 1px inset --ok ring. This is the glanceable
+  // signal - the badge/resin/% are left exactly as an untracked cell.
+  assert.match(styles,/#splitsArea\[data-recipe-cells="static"\]\[data-recipe-view="summary"\] \.splitsMatrix\.compactMobileRecipe tbody \.splitMatrixCell\.tracked\{[\s\S]*?background:color-mix\(in srgb, var\(--ok\) \d+%, var\(--compact-recipe-row-bg\)\);[\s\S]*?border-color:color-mix\(in srgb, var\(--ok\)[\s\S]*?box-shadow:inset 0 0 0 1px color-mix\(in srgb, var\(--ok\)/);
+  // The shared hopper-badge --ok highlight is explicitly held off the
+  // compact/touch grid ([data-recipe-cells="static"]), so a tracked badge
+  // there renders identically to an untracked one.
+  assert.match(styles,/#splitsArea\[data-recipe-view="summary"\]:not\(\[data-recipe-cells="static"\]\) \.splitsMatrix tbody \.splitMatrixCell\.tracked \.splitCellHopperName\{[\s\S]*?background:color-mix\(in srgb,var\(--ok\)/);
+  // EDIT: the compact tracked cell drops back to its ordinary row fill (no
+  // tint) - the summary rule above is scoped to [data-recipe-view="summary"].
   assert.match(styles,/\.splitsMatrix\.compactMobileRecipe \.splitMatrixCell\.tracked:not\(\.selected\)\{[\s\S]*?background:var\(--compact-recipe-row-bg\);[\s\S]*?border-color:var\(--row-border-2\);[\s\S]*?box-shadow:none;/);
   // A tracked cell selected in Edit keeps its ordinary surface under the selection outline.
   assert.match(styles,/\.bulk-editing \.splitsMatrix\.compactMobileRecipe \.splitMatrixCell\.tracked\.selected\{[\s\S]*?background:var\(--compact-recipe-row-bg\);/);
+  // The tint lands on a color-mix() fill + inset ring, which this WebView
+  // wedges mid-interpolation - so the compact cell snaps state changes.
+  assert.match(styles,/\.splitsMatrix\.compactMobileRecipe \.splitMatrixCell\{[\s\S]*?transition:none;/);
   assert.doesNotMatch(styles,/compactRecipeTrackTracer|compact-recipe-trace-angle/);
   assert.doesNotMatch(styles,/\.splitMatrixCell\.tracked:not\(\.selected\)::after/);
-  // The tracked hopper-name badge itself highlights - no clock, no corner mark, no dot.
   assert.doesNotMatch(styles,/splitHopperTrackingClock/);
-  assert.match(styles,/#splitsArea\[data-recipe-view="summary"\] \.splitsMatrix tbody \.splitMatrixCell\.tracked \.splitCellHopperName\{[\s\S]*?background:color-mix\(in srgb,var\(--ok\)/);
   assert.doesNotMatch(styles,/\.splitMatrixCell\.tracked::before/);
   assert.doesNotMatch(theme,/\.splitMatrixCell\.tracked \.splitCellHopperName\{/);
 });

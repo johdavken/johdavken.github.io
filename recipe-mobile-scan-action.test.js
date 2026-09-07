@@ -45,6 +45,11 @@ test("Scan and Load are square icon-only controls in #recipeHeaderActions - text
   assert.match(block, /#splitsBlock \.recipeHeaderActions \.recipeActionIcon\{\s*\n\s*display:block;\s*\n\s*width:16px;\s*\n\s*height:16px;/);
 });
 
+test("the key zeroes the global summary{gap:12px} so the glyph sits centred, not pushed left by the phantom gap before the font-size:0 label", () => {
+  const block = mainMobileBlock();
+  assert.match(block, /#splitsBlock \.recipeHeaderActions > \.mobileScanIconAction > summary,\s*\n\s*#splitsBlock \.recipeHeaderActions > \.recipeHeaderMobileAction\{[\s\S]*?justify-content:center;[\s\S]*?gap:0;/);
+});
+
 test("the cluster carries no Print - a phone can't print", () => {
   assert.doesNotMatch(styles, /mobilePrintIconAction/);
   const editor = recipeEditor();
