@@ -120,8 +120,10 @@ test("layer controls describe matching rather than copying without changing the 
   assert.match(app,/copyButton\.textContent = `Match \$\{copyFrom\}`;/);
   assert.match(app,/copyButton\.title = copyDescription;/);
   assert.match(app,/Make Layer \$\{L\.name\} match Layer \$\{copyFrom\}/);
-  assert.match(styles,/content:"Match " attr\(data-mobile-copy-source\)/);
   assert.match(app,/else copyLayer\(copyFrom, L\.name\);/);
+  // The Match X button is desktop/tablet only now - the compact Recipe grid
+  // hides it (its role moved to the Edit toolbar's Copy / Paste hoppers).
+  assert.match(styles,/\.splitsMatrix\.compactMobileRecipe \.splitCopyBtn\{ display:none; \}/);
 });
 
 test("top-level mobile headers no longer act as the redundant Main-menu return control",()=>{

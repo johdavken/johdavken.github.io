@@ -58,8 +58,8 @@ test("the legend groups all mobile Recipe icons by screen section, each with an 
     '<li class="recipeInfoLegendSectionHeading">Weights tab</li>'
   ]);
   const items = (legend.match(/<li>[\s\S]*?<\/li>/g) || []).filter(li=>!li.includes("recipeInfoLegendSectionHeading"));
-  assert.equal(items.length, 15, "one row per icon");
-  for (const name of ["Current", "Next", "Weights", "Recipe Book", "Scan", "Load Next", "Load Current", "Edit", "Undo", "Redo", "Clear selection", "Empty cells", "Rearrange", "Reset Recipe", "Weights profile"]){
+  assert.equal(items.length, 17, "one row per icon");
+  for (const name of ["Current", "Next", "Weights", "Recipe Book", "Scan", "Load Next", "Load Current", "Edit", "Undo", "Redo", "Clear selection", "Empty cells", "Copy hoppers", "Paste hoppers", "Rearrange", "Reset Recipe", "Weights profile"]){
     assert.ok(
       items.some(li => li.includes(`<strong>${name}</strong>`) && /<span class="recipeInfoLegendIcon[^"]*"><svg/.test(li) && li.replace(/<[^>]+>/g, "").trim().length > name.length + 6),
       `row for "${name}" with an icon and a description`

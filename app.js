@@ -160,6 +160,11 @@
   let splitsBulkModeActive = false;
   let splitsSavedRecipesOpen = false;
   let splitsSavedRecipesSearch = "";
+  // Recipe Edit "copy hoppers" / "paste hoppers" buffer: a positional list of
+  // { resinName, pct } for the hoppers that were selected when Copy was
+  // pressed. Runtime state - never saved to the session or synced - and the
+  // phone replacement for the per-layer "Match X" header button.
+  let recipeCellClipboard = null;
   // Desktop Recipe Setup's presentation mode, mirroring Receiver Hopper
   // Weights' own Summary/Edit split. "summary" is a read-only glance whose
   // only interaction is toggling tracking; "edit" carries the whole change
@@ -4906,6 +4911,8 @@
             <button id="clearSplitSelection" type="button" class="bulkTextAction" data-button-kind="action" data-button-variant="quiet" data-button-size="small" aria-label="Clear selection" title="Clear selection"><svg class="recipeEditActionIcon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="11" height="11" rx="1"/><path d="m14 14 6 6m0-6-6 6"/></svg><span>Clear selection</span></button>
           </div>
           <button id="clearSelectedCells" type="button" class="bulkTextAction" data-button-kind="action" data-button-variant="quiet" data-button-size="small" aria-label="Empty selected cells" title="Empty selected cells" disabled><svg class="recipeEditActionIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4zM9 4v16m6-16v16M4 9h16m-16 6h16"/><path d="m8 8 8 8m0-8-8 8"/></svg><span>Empty cells</span></button>
+          <button id="copySelectedCells" type="button" class="bulkTextAction recipeCellClipboardAction" data-button-kind="action" data-button-variant="quiet" data-button-size="small" aria-label="Copy selected hoppers" title="Copy selected hoppers" disabled><svg class="recipeEditActionIcon" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M6 15H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1"/></svg><span>Copy hoppers</span></button>
+          <button id="pasteSelectedCells" type="button" class="bulkTextAction recipeCellClipboardAction" data-button-kind="action" data-button-variant="quiet" data-button-size="small" aria-label="Paste hoppers" title="Paste hoppers" disabled><svg class="recipeEditActionIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/><path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/><path d="M9 12h6M9 16h4"/></svg><span>Paste hoppers</span></button>
           <button id="resetAllSplits" type="button" class="danger" data-button-kind="action" data-button-variant="danger" data-button-size="small" aria-label="Reset recipe" title="Reset recipe"><svg class="recipeEditActionIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0 1.2 4.2"/><path d="M20 4v7h-7"/></svg><span>Reset Recipe</span></button>
         </div>
       `;
@@ -5870,6 +5877,8 @@
       const applyButton = toolbar.querySelector("#applyBulkSplit");
       const selectionStatus = toolbar.querySelector("#splitSelectionStatus");
       const clearCellsButton = toolbar.querySelector("#clearSelectedCells");
+      const copyCellsButton = toolbar.querySelector("#copySelectedCells");
+      const pasteCellsButton = toolbar.querySelector("#pasteSelectedCells");
       const resetButton = toolbar.querySelector("#resetAllSplits");
       const clearSelectionButton = toolbar.querySelector("#clearSplitSelection");
       // Tablet/desktop read the whole toolbar as one row now, not just
@@ -5956,6 +5965,10 @@
         // that act on cells go with them rather than sitting there live and
         // doing nothing.
         if (clearCellsButton) clearCellsButton.disabled = rearrangingNow || emptyable === 0;
+        // Copy needs a selection; Paste also needs something in the buffer.
+        // Both stand down while rearranging, like every other cell action.
+        if (copyCellsButton) copyCellsButton.disabled = rearrangingNow || selected.size === 0;
+        if (pasteCellsButton) pasteCellsButton.disabled = rearrangingNow || selected.size === 0 || !(recipeCellClipboard && recipeCellClipboard.length);
         if (rearrangingNow){
           [bulkNameInput, bulkPctInput, applyButton, resetButton, clearSelectionButton]
             .forEach(control=>{ if (control) control.disabled = true; });
@@ -6118,6 +6131,78 @@
         updateSelectionUI("Emptied the selected hoppers.", "ok");
       }
       clearCellsButton?.addEventListener("click", emptySelectedCells);
+
+      // Copy / Paste hoppers: a positional { resinName, pct } buffer over the
+      // current selection - the phone replacement for the per-layer "Match X"
+      // header button. Select a whole column via its header to copy or paste
+      // an entire layer; a partial selection carries just those cells. The
+      // buffer (recipeCellClipboard, module scope) is runtime state: not
+      // saved, not synced, and it outlives re-renders so Copy on one layer
+      // then Paste on another works.
+      // Selected keys in layer-then-hopper order, built by walking the grid
+      // rather than sorting the Set - keeps the copy/paste mapping stable and
+      // keeps renderSplitsArea() free of any array reordering.
+      function orderedSelectionKeys(){
+        const keys = [];
+        recipeLayers().forEach(L=>{
+          for (let hi = 0; hi < HOPPERS_PER_LAYER; hi++){
+            const key = `${L.name}:${hi}`;
+            if (selected.has(key)) keys.push(key);
+          }
+        });
+        return keys;
+      }
+      function copySelectedHoppers(){
+        const keys = orderedSelectionKeys();
+        if (!keys.length) return;
+        recipeCellClipboard = keys.map(key=>{
+          const ref = cellRefs.get(key);
+          return {
+            resinName: normName(ref ? ref.hopper.resinName : ""),
+            pct: ref ? clampNum(ref.hopper.pct) : 0
+          };
+        });
+        updateSelectionUI(`Copied ${recipeCellClipboard.length} hopper${recipeCellClipboard.length === 1 ? "" : "s"}.`, "ok");
+      }
+      // Positional paste, clamped to the shorter of buffer / selection. Writes
+      // resin + blend %, recomputes each touched layer's automatic H1, and
+      // records one undo step - the same shape as emptySelectedCells and the
+      // "Match X" copyLayer() it replaces. No confirm: it is one Undo away,
+      // exactly like Empty cells.
+      function pasteHoppersIntoSelection(){
+        if (!recipeCellClipboard || !recipeCellClipboard.length) return;
+        const keys = orderedSelectionKeys();
+        if (!keys.length) return;
+        const count = Math.min(keys.length, recipeCellClipboard.length);
+        const historyBefore = snapshotRecipeEdit();
+        const touchedLayers = new Set();
+        for (let i = 0; i < count; i++){
+          const ref = cellRefs.get(keys[i]);
+          if (!ref) continue;
+          const src = recipeCellClipboard[i];
+          ref.hopper.resinName = src.resinName;
+          ref.resinInput.value = src.resinName;
+          if (ref.hi > 0){
+            ref.hopper.pct = src.pct;
+            ref.pctInput.value = src.pct ? String(src.pct) : "";
+          }
+          touchedLayers.add(ref.layer);
+        }
+        touchedLayers.forEach(L=>{
+          recomputeAutoH1(L);
+          const h1Ref = cellRefs.get(`${L.name}:0`);
+          if (h1Ref) h1Ref.pctInput.value = String(clampNum(L.hoppers[0].pct));
+        });
+        cellRefs.forEach(ref=>ref.refreshCellState());
+        updateHopperTotals();
+        validateAndCompute({ sync: true, immediate: true, kind: "recipe-clear" });
+        saveSession();
+        recordRecipeEdit(historyBefore);
+        updateSelectionUI(`Pasted into ${count} hopper${count === 1 ? "" : "s"}.`, "ok");
+      }
+      copyCellsButton?.addEventListener("click", copySelectedHoppers);
+      pasteCellsButton?.addEventListener("click", pasteHoppersIntoSelection);
+
       toolbar.querySelector("#resetAllSplits").addEventListener("click",()=>{
         const ok = confirm("Reset every hopper resin, percentage, and Track setting?");
         if (!ok) return;

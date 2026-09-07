@@ -180,10 +180,13 @@ test("on phone, Undo/Redo and the four Recipe actions form one compact icon tool
   assert.notEqual(start, -1);
   const compact = styles.slice(start, styles.indexOf("\n}\n\n@media (max-width: 720px)", start));
   assert.match(compact, /#splitsArea > #splitsBulkBar \.recipeEditHistory,[\s\S]*?display:contents;/);
-  assert.match(compact, /#recipeUndo\{ order:1; \}[\s\S]*?#recipeRedo\{ order:2; \}[\s\S]*?#clearSplitSelection\{ order:3; \}[\s\S]*?#clearSelectedCells\{ order:4; \}[\s\S]*?\.splitsRearrangeAction\{ order:5; \}[\s\S]*?#resetAllSplits\{[\s\S]*?order:6;/);
-  // 46px tap targets (ux-mobile-touch): comfortably thumbable, glyphs stay 18px.
-  assert.match(compact, /flex:0 0 46px;[\s\S]*?width:46px;[\s\S]*?height:46px;/);
-  assert.match(compact, /#resetAllSplits\{[\s\S]*?flex-basis:46px;[\s\S]*?border-left-color:/);
+  assert.match(compact, /#recipeUndo\{ order:1; \}[\s\S]*?#recipeRedo\{ order:2; \}[\s\S]*?#clearSplitSelection\{ order:3; \}[\s\S]*?#clearSelectedCells\{ order:4; \}[\s\S]*?#copySelectedCells\{ order:5; \}[\s\S]*?#pasteSelectedCells\{ order:6; \}[\s\S]*?\.splitsRearrangeAction\{ order:7; \}[\s\S]*?#resetAllSplits\{[\s\S]*?order:8;/);
+  // The eight keys flex with the panel width, capped at 46px (their old
+  // fixed size), and never wrap - flex-basis:0 + min-width:0 keeps their
+  // combined minimum far under any viewport. Height stays fixed.
+  assert.match(compact, /:is\(\.recipeHistoryAction[\s\S]*?\{[\s\S]*?flex:1 1 0;[\s\S]*?min-width:0;[\s\S]*?max-width:46px;[\s\S]*?height:46px;/);
+  assert.match(compact, /#resetAllSplits\{[\s\S]*?flex:1 1 0;[\s\S]*?max-width:46px;[\s\S]*?border-left-color:/);
+  assert.match(compact, /#splitsArea > #splitsBulkBar\{[\s\S]*?justify-content:space-between;/);
   assert.match(compact, /\.recipeEditActionIcon\{ display:block; \}/);
   assert.match(compact, /\.splitsEditRowSecondary button > span\{ display:none; \}/);
 
@@ -196,6 +199,51 @@ test("on phone, Undo/Redo and the four Recipe actions form one compact icon tool
     ["resetAllSplits", "Reset recipe"]
   ]) assert.match(editor, new RegExp(`id="${id}"[^>]*aria-label="${label}"[^>]*`));
   assert.match(editor, /rearrangeButton\.setAttribute\("aria-label", hopperRearrangement\?\.active \? "Done rearranging recipe" : "Rearrange recipe"\);/);
+});
+
+/* ============================================================
+ *   ux-mobile-touch2: per-layer "Match X" is dropped on the compact Recipe
+ *   screen; the Edit toolbar gains Copy hoppers / Paste hoppers, phone-only,
+ *   sitting between Empty cells and Rearrange.
+ * ============================================================ */
+
+test("the per-layer Match X button is hidden on the compact Recipe grid (desktop/tablet keep it)", () => {
+  assert.match(styles, /\.splitsMatrix\.compactMobileRecipe \.splitCopyBtn\{ display:none; \}/);
+  // The desktop layer-match operation is untouched.
+  const editor = recipeEditor();
+  assert.match(editor, /copyButton\.textContent = `Match \$\{copyFrom\}`;/);
+  assert.match(editor, /else copyLayer\(copyFrom, L\.name\);/);
+});
+
+test("Copy hoppers / Paste hoppers render between Empty cells and Reset, phone-only, disabled until usable", () => {
+  const editor = recipeEditor();
+  assert.match(editor, /id="clearSelectedCells"[\s\S]*?id="copySelectedCells"[\s\S]*?id="pasteSelectedCells"[\s\S]*?id="resetAllSplits"/);
+  assert.match(editor, /id="copySelectedCells"[^>]*class="bulkTextAction recipeCellClipboardAction"[^>]*aria-label="Copy selected hoppers"[^>]*disabled/);
+  assert.match(editor, /id="pasteSelectedCells"[^>]*class="bulkTextAction recipeCellClipboardAction"[^>]*aria-label="Paste hoppers"[^>]*disabled/);
+  // Both carry the shared icon so the compact rail renders them icon-only.
+  assert.match(editor, /id="copySelectedCells"[\s\S]*?<svg class="recipeEditActionIcon"[\s\S]*?<span>Copy hoppers<\/span>/);
+  assert.match(editor, /id="pasteSelectedCells"[\s\S]*?<svg class="recipeEditActionIcon"[\s\S]*?<span>Paste hoppers<\/span>/);
+  // Phone-only: hidden by default, re-shown only inside the compact block.
+  assert.match(styles, /#splitsArea #splitsBulkBar \.recipeCellClipboardAction\{ display:none; \}/);
+  assert.match(styles, /#splitsArea > #splitsBulkBar #copySelectedCells\{ order:5; \}/);
+  assert.match(styles, /#splitsArea > #splitsBulkBar #pasteSelectedCells\{ order:6; \}/);
+});
+
+test("Copy snapshots the selected hoppers; Paste writes the buffer back positionally as one undo step", () => {
+  const editor = recipeEditor();
+  // Module-scoped runtime buffer, not persisted.
+  assert.match(app, /let recipeCellClipboard = null;/);
+  // Copy: ordered by layer then hopper, captures resinName + pct.
+  assert.match(editor, /function copySelectedHoppers\(\)\{[\s\S]*?recipeCellClipboard = keys\.map\(key=>\{[\s\S]*?resinName: normName\([\s\S]*?pct: [\s\S]*?clampNum/);
+  // Paste: positional, clamped to the shorter of buffer / selection.
+  assert.match(editor, /function pasteHoppersIntoSelection\(\)\{[\s\S]*?Math\.min\(keys\.length, recipeCellClipboard\.length\)/);
+  // Paste is one undo step and repaints each touched layer's automatic H1.
+  assert.match(editor, /function pasteHoppersIntoSelection\(\)\{[\s\S]*?snapshotRecipeEdit\(\)[\s\S]*?recomputeAutoH1\(L\)[\s\S]*?recordRecipeEdit\(historyBefore\)/);
+  // Wiring + enable/disable rules.
+  assert.match(editor, /copyCellsButton\?\.addEventListener\("click", copySelectedHoppers\);/);
+  assert.match(editor, /pasteCellsButton\?\.addEventListener\("click", pasteHoppersIntoSelection\);/);
+  assert.match(editor, /copyCellsButton\.disabled = rearrangingNow \|\| selected\.size === 0;/);
+  assert.match(editor, /pasteCellsButton\.disabled = rearrangingNow \|\| selected\.size === 0 \|\| !\(recipeCellClipboard && recipeCellClipboard\.length\);/);
 });
 
 test("Rearrange latches on the button itself while the mode is active - the Cancel/Done row below the matrix is not the only cue", () => {

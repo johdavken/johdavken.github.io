@@ -2395,6 +2395,11 @@ details[open] > summary .chevSatellite{
   stroke-linecap:round;
   stroke-linejoin:round;
 }
+/* Copy / Paste hoppers are phone-only for now (may come to desktop later).
+   Hidden by default at (2,1,0); the compact icon-rail block below re-shows
+   them inside @media (max-width:700px) with a much higher-specificity
+   :is() rule, so nothing here needs !important. */
+#splitsArea #splitsBulkBar .recipeCellClipboardAction{ display:none; }
 .splitsSelectionStatus.ok{ color: var(--ok); }
 .splitsSelectionStatus.warn{ color: var(--warn); }
 /* Saved recipes / Bulk edit / Rearrange: a second, visually subordinate
@@ -5097,20 +5102,13 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
   /* No .splitColumnTotal sizing/colour here - the element is display:none
      on mobile (see .splitColumnTotal above), so nothing would ever read
      these. */
-  .splitsMatrix.compactMobileRecipe .splitCopyBtn{
-    display:grid;
-    place-items:center;
-    width:100%;
-    min-height:18px;
-    margin:1px auto 0;
-    padding:0;
-    border:0;
-    border-radius:5px;
-    background:transparent;
-    color:var(--focus-border);
-    font-size:0;
-  }
-  .splitsMatrix.compactMobileRecipe .splitCopyBtn::after{ content:"Match " attr(data-mobile-copy-source); font-size:8px; font-weight:800; line-height:1; opacity:.72; }
+  /* The per-layer "Match X" header button is gone on the compact Recipe
+     screen - its job is now the Edit toolbar's Copy / Paste hoppers pair
+     (#copySelectedCells / #pasteSelectedCells), which work layer-to-layer
+     via the column-header selection. Still present on desktop and tablet.
+     (0,3,0) so it beats the base + max-width:700px .splitCopyBtn rules and
+     the earlier .splitsMatrix.compactMobileRecipe treatment this replaced.) */
+  .splitsMatrix.compactMobileRecipe .splitCopyBtn{ display:none; }
   .splitsMatrix.compactMobileRecipe td.splitMatrixCell{
     width:20%;
     min-width:0;
@@ -8047,6 +8045,11 @@ button.compactAction{
   #splitsArea > #splitsBulkBar{
     gap:3px;
     overflow:hidden;
+    /* The utility rail's keys cap at 46px; once every key is at its cap on a
+       wide panel, space-between spreads the leftover across the row instead
+       of pooling it to the right. The full-width primary row above is a
+       single flex item, so this is a no-op for it. */
+    justify-content:space-between;
   }
   #splitsArea > #splitsBulkBar .splitsEditRowPrimary{
     flex:1 0 100%;
@@ -8057,17 +8060,21 @@ button.compactAction{
   #splitsArea > #splitsBulkBar .splitsEditRowSecondary > .splitsBulkActions{
     display:contents;
   }
-  /* Edit-mode utility rail (Undo / Redo / Rearrange / Clear / Empty / Reset).
-     46px tap targets - comfortably thumbable - while the glyphs stay 18px
-     and the controls stay unboxed and low-emphasis, secondary to the matrix
-     and to Apply. */
+  /* Edit-mode utility rail (Undo / Redo / Clear / Empty / Copy / Paste /
+     Rearrange / Reset). Eight controls that must never wrap: each one flexes
+     with the panel width and is capped at 46px (their previous fixed size),
+     so a wide phone gets 46px keys and a narrow one gets slightly smaller
+     ones instead of a second row. flex-basis:0 + min-width:0 means their
+     combined minimum is only ~8 glyph widths, far under any viewport, so the
+     parent's flex-wrap can never actually break the line. Height is fixed -
+     only the width tracks the panel. Glyphs stay 18px; unboxed, low-emphasis,
+     secondary to the matrix and Apply. */
   #splitsArea > #splitsBulkBar :is(.recipeHistoryAction, .splitsEditRowSecondary .bulkTextAction, .splitsEditRowSecondary .splitsRearrangeAction, .splitsEditRowSecondary #resetAllSplits.danger){
     display:grid;
     place-items:center;
-    flex:0 0 46px;
+    flex:1 1 0;
     box-sizing:border-box;
-    width:46px;
-    min-width:46px;
+    min-width:0;
     max-width:46px;
     height:46px;
     min-height:46px;
@@ -8087,12 +8094,17 @@ button.compactAction{
   #splitsArea > #splitsBulkBar #recipeRedo{ order:2; }
   #splitsArea > #splitsBulkBar #clearSplitSelection{ order:3; }
   #splitsArea > #splitsBulkBar #clearSelectedCells{ order:4; }
-  #splitsArea > #splitsBulkBar .splitsRearrangeAction{ order:5; }
+  /* Copy / Paste hoppers sit between Empty cells and Rearrange in the rail.
+     The :is() sizing rule above already gives them the 46px icon target and
+     display:grid (its specificity re-shows them past the base
+     .recipeCellClipboardAction{display:none}). */
+  #splitsArea > #splitsBulkBar #copySelectedCells{ order:5; }
+  #splitsArea > #splitsBulkBar #pasteSelectedCells{ order:6; }
+  #splitsArea > #splitsBulkBar .splitsRearrangeAction{ order:7; }
   #splitsArea > #splitsBulkBar #resetAllSplits{
-    order:6;
-    flex-basis:46px;
-    width:46px;
-    min-width:46px;
+    order:8;
+    flex:1 1 0;
+    min-width:0;
     max-width:46px;
     margin-left:2px;
     border-left-color:color-mix(in srgb,var(--bad) 42%,var(--row-border));
