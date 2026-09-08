@@ -13337,12 +13337,38 @@ body #splitsBlock #splitsArea[data-recipe-layout="transposed"][data-recipe-orien
   font-size:14px;
   text-align:right;
 }
+/* Plain text, not a key - the same caption treatment the Layers Left rail
+   above gives it. As a chip it was the widest thing in a header cell that
+   also has to hold the layer letter and its percentage field, and on a
+   tablet (where the station-console key rules apply too) five of them
+   squeezed the letters and percentages down the row. Nothing about the
+   control changes; only the chrome comes off. */
 body #splitsBlock #splitsArea[data-recipe-layout="transposed"][data-recipe-orientation="top"] .splitCopyBtn{
   display:inline-flex;
   vertical-align:middle;
+  width:auto;
+  min-height:0;
   margin:0 0 0 8px;
-  padding:2px 7px;
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:none;
+  box-shadow:none;
+  color:var(--muted);
   font-size:var(--font-tiny);
+  font-weight:600;
+}
+body #splitsBlock #splitsArea[data-recipe-layout="transposed"][data-recipe-orientation="top"] .splitCopyBtn:hover,
+body #splitsBlock #splitsArea[data-recipe-layout="transposed"][data-recipe-orientation="top"] .splitCopyBtn:focus-visible{
+  background:none;
+  color:var(--focus-border);
+}
+/* PASTE keeps the accent through the strip above, which is more specific
+   than button-styling.css's own key colours. CANCEL is already var(--muted)
+   here, which is exactly the quiet it wants. */
+body #splitsBlock #splitsArea[data-recipe-layout="transposed"][data-recipe-orientation="top"] .splitCopyBtn[data-layer-copy-state="paste"]{
+  color:var(--focus-border);
+  font-weight:700;
 }
 
 /* Alternation follows layer columns after the axis swap. */

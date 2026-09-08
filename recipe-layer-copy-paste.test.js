@@ -171,12 +171,27 @@ test("PASTE is the only state that takes the accent; CANCEL stays quiet and the 
   assert.match(ring.slice(0, 400), /box-shadow:inset 0 0 0 1px var\(--focus-border\);/);
 });
 
-test("the two wide-grid orientations each carry the state colours at their own specificity - the caption variant in styles.css, the console-key variant in button-styling.css", () => {
-  // Layers down the side: the copy action is a plain caption under the band.
+test("both wide-grid orientations render the control as plain text, not a key - a chip in the Layers Top header cell crowded the layer letter and its percentage field", () => {
+  const top = "[data-recipe-orientation=\"top\"] .splitCopyBtn{";
+  const rule = styles.slice(styles.indexOf(top), styles.indexOf("}", styles.indexOf(top)) + 1);
+  assert.notEqual(styles.indexOf(top), -1);
+  for (const stripped of [/border:0;/, /border-radius:0;/, /background:none;/, /box-shadow:none;/, /padding:0;/]){
+    assert.match(rule, stripped, "the key chrome comes off in Layers Top too");
+  }
+  assert.match(rule, /color:var\(--muted\);/);
+  // Layers Left has read this way since before the tri-state.
+  assert.match(styles, /\[data-recipe-layout="transposed"\] \.splitsMatrix tbody \.splitCopyBtn\{[\s\S]*?background:none;/);
+});
+
+test("each orientation restates the PASTE accent at its own specificity, since both outrank button-styling.css's key colours", () => {
+  // Layers down the side.
   assert.match(styles, /\[data-recipe-layout="transposed"\] \.splitsMatrix tbody \.splitCopyBtn\[data-layer-copy-state="paste"\]\{\s*\n\s*color:var\(--focus-border\);/);
-  // Layers across the top: it is a station-console key, and button-styling.css
-  // loads last, so the states have to be restated there or the key's own
-  // colour wins.
+  // Layers across the top - its own base rule above is more specific than
+  // button-styling.css, so the accent has to be restated at that level too.
+  assert.match(styles, /\[data-recipe-orientation="top"\] \.splitCopyBtn\[data-layer-copy-state="paste"\]\{\s*\n\s*color:var\(--focus-border\);/);
+});
+
+test("button-styling.css still carries the states for any surface that keeps the console-key treatment", () => {
   assert.match(buttons, /body #splitsArea\[data-recipe-view="edit"\] \.splitCopyBtn\[data-layer-copy-state="paste"\]\{[\s\S]*?color: var\(--btnstyle-accent\);/);
   assert.match(buttons, /body #splitsArea\[data-recipe-view="edit"\] \.splitCopyBtn\[data-layer-copy-state="cancel"\]\{[\s\S]*?color: var\(--muted\);/);
   assert.match(buttons, /body\[data-shell="touch"\] #splitsArea\[data-recipe-view="edit"\] \.splitCopyBtn\[data-layer-copy-state="paste"\]\{[\s\S]*?color: var\(--btnstyle-accent\);/);
