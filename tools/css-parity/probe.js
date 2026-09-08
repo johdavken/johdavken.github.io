@@ -50,6 +50,17 @@ const GEOMETRY_PROPS = [
   "outlineWidth", "outlineStyle", "outlineOffset", "strokeWidth",
 ];
 
+// Some CSS matches a GROUP of themes through an attribute that app.js derives
+// in applyTheme, not through data-theme itself. This probe drives data-theme
+// directly rather than calling into the app, so it has to apply the same
+// derivation - otherwise four themes lose their rail surface mid-sweep and the
+// capture reports a difference that does not exist in the running app.
+// css-parity-probe.test.js asserts this stays in step with app.js.
+const DERIVED_ATTRIBUTES = [
+  { attr: "data-rail-surface", value: "terminal",
+    themes: ["gruvbox-dark", "gruvbox-light", "industrial-slate", "industrial-slate-dark"] },
+];
+
 // One entry per thing worth watching. `all: true` records every match's box
 // rather than just the first - that is what caught the foldaway rows being
 // 8px short in four themes.
@@ -94,6 +105,7 @@ function buildProbe(options) {
   const THEMES = ${JSON.stringify(THEMES)};
   const PROPS = ${JSON.stringify(GEOMETRY_PROPS)};
   const SPECIMENS = ${JSON.stringify(SPECIMENS)};
+  const DERIVED = ${JSON.stringify(DERIVED_ATTRIBUTES)};
 
   const round = (n) => Math.round(n * 100) / 100;
   const box = (el) => { const r = el.getBoundingClientRect();
@@ -138,10 +150,15 @@ function buildProbe(options) {
 
   const htmlTheme = document.documentElement.getAttribute("data-theme");
   const bodyTheme = document.body.getAttribute("data-theme");
+  const derivedWas = DERIVED.map((d) => [d.attr, document.body.getAttribute(d.attr)]);
   const themes = {};
   for (const theme of THEMES) {
     document.documentElement.setAttribute("data-theme", theme);
     document.body.setAttribute("data-theme", theme);
+    for (const d of DERIVED) {
+      if (d.themes.indexOf(theme) >= 0) document.body.setAttribute(d.attr, d.value);
+      else document.body.removeAttribute(d.attr);
+    }
     const snap = {};
     for (const spec of SPECIMENS) {
       if (spec.all) {
@@ -157,6 +174,9 @@ function buildProbe(options) {
   // Leave the page as it was found.
   if (htmlTheme) document.documentElement.setAttribute("data-theme", htmlTheme);
   if (bodyTheme) document.body.setAttribute("data-theme", bodyTheme);
+  for (const [attr, was] of derivedWas) {
+    if (was === null) document.body.removeAttribute(attr); else document.body.setAttribute(attr, was);
+  }
 
   // Offsets are called out separately: they are the one outline property a
   // refactor is most likely to disturb by accident, and a histogram is small.
@@ -277,4 +297,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { THEMES, GEOMETRY_PROPS, SPECIMENS, buildProbe, diff, themeParity };
+module.exports = { THEMES, GEOMETRY_PROPS, SPECIMENS, DERIVED_ATTRIBUTES, buildProbe, diff, themeParity };

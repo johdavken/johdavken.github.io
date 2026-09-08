@@ -46,13 +46,13 @@ test("the four gruv-rail-grouped themes' block still exists for what it does own
   const start = desktop.indexOf("/* Experimental Gruvbox desktop rail.");
   assert.notEqual(start, -1);
   const end = desktop.indexOf(
-    'body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .workspaceNavButton small{'
+    'body[data-rail-surface="terminal"] .workspaceNavButton small{'
   );
   assert.notEqual(end, -1);
   const block = desktop.slice(start, end);
   assert.match(block, /--gruv-rail-edge:#665c54;/);
   assert.match(
     block,
-    /body:is\(\[data-theme="gruvbox-dark"\],\[data-theme="gruvbox-light"\],\[data-theme="industrial-slate-dark"\],\[data-theme="industrial-slate"\]\) \.workspaceNavButton > span\{/
+    /body\[data-rail-surface="terminal"\] \.workspaceNavButton > span\{/
   );
 });

@@ -38,7 +38,7 @@ test("the four gruv-rail-grouped themes do not re-introduce a stretching .worksp
   // Confirm this is really the theme-grouped .workspaceNav override.
   assert.match(
     groupedRule,
-    /body:is\(\[data-theme="gruvbox-dark"\],\[data-theme="gruvbox-light"\],\[data-theme="industrial-slate-dark"\],\[data-theme="industrial-slate"\]\) \.workspaceNav\{/
+    /body\[data-rail-surface="terminal"\] \.workspaceNav\{/
   );
   // It only restyles the surface (background/border), never re-declares the
   // layout model, so the shared flex-column rule above still governs sizing.

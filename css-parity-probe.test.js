@@ -108,3 +108,21 @@ test("the tool stays out of the shipped app", () => {
     assert.ok(!deps.includes(name), `${name} must not become a dependency of this project`);
   }
 });
+
+test("the probe's derived-attribute map stays in step with app.js", () => {
+  // The probe sets data-theme itself instead of calling applyTheme, so if
+  // app.js changes which themes belong to a group and the probe does not
+  // follow, every capture silently mismeasures those themes.
+  const app = fs.readFileSync("app.js", "utf8");
+  for (const derived of probe.DERIVED_ATTRIBUTES) {
+    assert.ok(app.includes(`"${derived.attr}", "${derived.value}"`),
+      `app.js no longer sets ${derived.attr}="${derived.value}" - the probe would mismeasure`);
+    const block = app.slice(app.indexOf("const TERMINAL_RAIL_THEMES"), app.indexOf("function applyThemeGroupings"));
+    for (const theme of derived.themes) {
+      assert.ok(block.includes(`"${theme}"`), `app.js does not list ${theme} in the ${derived.attr} group`);
+    }
+    const listed = [...block.matchAll(/"([a-z-]+)"/g)].map(m => m[1]);
+    assert.deepEqual(listed.sort(), [...derived.themes].sort(),
+      `the probe and app.js disagree about which themes get ${derived.attr}`);
+  }
+});

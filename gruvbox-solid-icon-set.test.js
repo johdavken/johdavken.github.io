@@ -78,7 +78,7 @@ test("no other theme is touched - industrial-slate shares the desktop rail treat
 
 test("V1 Terminal on desktop - the rail paints the glyph bare, with no tile of its own", () => {
   const railIconRule = desktop.slice(
-    desktop.indexOf(`${GRUVBOX_SCOPE.slice(0, -1)},[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .workspaceNavButton .workspaceTileIcon{`)
+    desktop.indexOf('body[data-rail-surface="terminal"] .workspaceNavButton .workspaceTileIcon{')
   );
   const block = railIconRule.slice(0, railIconRule.indexOf("}") + 1);
   assert.match(block, /color:var\(--gruv-rail-paper\)/,
