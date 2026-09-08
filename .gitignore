@@ -11,3 +11,6 @@ www/
 # Keep established branding source assets trackable.
 artifacts/
 branding/resin-tools/rt7-*
+
+# Theme Lab (developer-only tool) writes timestamped theme.css backups here.
+tools/theme-lab/backups/

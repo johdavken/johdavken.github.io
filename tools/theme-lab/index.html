@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Theme Lab — resin.tools</title>
+  <link rel="stylesheet" href="theme-lab.css" />
+</head>
+<body>
+  <div id="app" class="lab">
+    <header class="lab-topbar">
+      <div class="lab-brand">
+        <strong>Theme Lab</strong>
+        <span class="lab-sub">resin.tools &middot; developer-only</span>
+      </div>
+
+      <div class="lab-topbar-group" role="group" aria-label="Preview viewport">
+        <span class="lab-label">Viewport</span>
+        <div class="seg" id="viewportSeg">
+          <button data-vp="desktop" class="is-active" type="button">Desktop</button>
+          <button data-vp="tablet" type="button">Tablet</button>
+          <button data-vp="mobile" type="button">Mobile</button>
+          <button data-vp="flex" type="button">Flex</button>
+        </div>
+        <span class="lab-dim" id="viewportDim">1440 &times; 900</span>
+      </div>
+
+      <div class="lab-topbar-group">
+        <span class="lab-label">Theme</span>
+        <select id="themePicker" aria-label="Preview theme"></select>
+        <label class="lab-check" title="Keep the app from switching the preview theme back while you navigate it">
+          <input type="checkbox" id="lockTheme" checked /> lock
+        </label>
+      </div>
+
+      <div class="lab-topbar-group lab-grow-end">
+        <button id="pickBtn" type="button" class="btn">Select element</button>
+        <button id="reloadBtn" type="button" class="btn" title="Reload the preview app">Reload preview</button>
+      </div>
+    </header>
+
+    <main class="lab-body">
+      <section class="lab-preview" id="previewPane">
+        <div class="lab-preview-frameWrap" id="frameWrap">
+          <!-- src is set by theme-lab.js after the load listener is wired,
+               so the first load event is never missed. -->
+          <iframe
+            id="previewFrame"
+            title="resin.tools live preview"
+            referrerpolicy="no-referrer"></iframe>
+        </div>
+      </section>
+
+      <div class="lab-gutter" id="gutter" role="separator" aria-orientation="vertical" title="Drag to resize"></div>
+
+      <aside class="lab-controls" id="controlsPane">
+        <div class="lab-tabs" role="tablist">
+          <button class="lab-tab is-active" data-tab="tokens" role="tab" type="button">Tokens</button>
+          <button class="lab-tab" data-tab="changes" role="tab" type="button">
+            Changes <span class="lab-count" id="changeCount">0</span>
+          </button>
+          <button class="lab-tab" data-tab="inspect" role="tab" type="button">Inspect</button>
+        </div>
+
+        <div class="lab-tabpanel is-active" data-panel="tokens">
+          <div class="lab-toolbar">
+            <input type="search" id="tokenFilter" placeholder="Filter tokens…" autocomplete="off" />
+            <button id="resetAllBtn" class="btn btn-danger" type="button" disabled>Reset all</button>
+          </div>
+          <div id="tokenGroups" class="lab-token-groups"></div>
+        </div>
+
+        <div class="lab-tabpanel" data-panel="changes">
+          <div class="lab-toolbar">
+            <button id="copyBlockBtn" class="btn" type="button" disabled>Copy CSS block</button>
+            <button id="downloadBtn" class="btn" type="button" disabled>Download .css</button>
+            <button id="saveBtn" class="btn btn-primary" type="button" disabled>Save to theme.css…</button>
+          </div>
+          <div id="changeSummary" class="lab-change-summary">
+            <p class="lab-empty">No token changes yet.</p>
+          </div>
+          <details class="lab-preview-css">
+            <summary>Preview updated block</summary>
+            <pre id="blockPreview" class="lab-code"></pre>
+          </details>
+        </div>
+
+        <div class="lab-tabpanel" data-panel="inspect">
+          <p class="lab-hint">
+            Click <em>Select element</em> above, then hover and click in the preview.
+            Computed values only in v1 — source-rule / token tracing is Phase&nbsp;2.
+          </p>
+          <div id="inspectResult" class="lab-inspect">
+            <p class="lab-empty">Nothing selected.</p>
+          </div>
+        </div>
+      </aside>
+    </main>
+
+    <div id="toast" class="lab-toast" hidden></div>
+
+    <div id="saveDialog" class="lab-modal" hidden>
+      <div class="lab-modal-card" role="dialog" aria-modal="true" aria-labelledby="saveDialogTitle">
+        <h2 id="saveDialogTitle">Save to theme.css</h2>
+        <p class="lab-hint">
+          This rewrites only the changed <code>--token</code> lines inside the
+          <code id="saveDialogTheme"></code> block. A timestamped backup is written to
+          <code>tools/theme-lab/backups/</code> first. Everything else in the file is left byte-for-byte.
+        </p>
+        <pre id="saveDiff" class="lab-code"></pre>
+        <div class="lab-modal-actions">
+          <button id="saveCancel" class="btn" type="button">Cancel</button>
+          <button id="saveConfirm" class="btn btn-primary" type="button">Write file</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="theme-lab.js"></script>
+</body>
+</html>
