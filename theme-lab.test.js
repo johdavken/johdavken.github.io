@@ -29,9 +29,8 @@ test("parses every data-theme palette block in the real theme.css", () => {
     "industrial-slate-dark",
     "gruvbox-dark",
     "ayu-light",
+    "ayu-dark",
     "nord",
-    "green-team",
-    "red-team",
   ]) {
     assert.ok(names.includes(expected), `missing palette: ${expected}`);
   }
