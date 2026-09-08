@@ -14,3 +14,12 @@ branding/resin-tools/rt7-*
 
 # Theme Lab (developer-only tool) writes timestamped theme.css backups here.
 tools/theme-lab/backups/
+
+# Subagent project memory (.claude/agents/*.md declare `memory: project`).
+# Useful locally, but it is derived notes an agent writes about its own
+# findings - it grows unprompted and nothing reviews it the way code gets
+# reviewed. One entry here had already recorded a passing test as "flaky"
+# when it was simply reading node_modules from a worktree that had none.
+# Keep it out of history so a bad note stays a local annoyance; the agent
+# definitions themselves are tracked, in .claude/agents/.
+.claude/agent-memory/
