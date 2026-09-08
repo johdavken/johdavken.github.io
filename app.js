@@ -1866,6 +1866,29 @@
       return touchLayout;
   }
 
+  // Gruvbox Dark/Light and Industrial Slate/Dark share one flat, borderless
+  // side-rail surface - the "terminal" rail. The stylesheet used to name all
+  // four in every selector that painted it, which meant 31 copies of a
+  // 134-character selector in desktop.css and no way to add a theme to the
+  // group without editing every one of them. That is exactly how the rail
+  // drifted into resizing itself for those four themes only.
+  //
+  // Derive the group here instead. CSS matches body[data-rail-surface="terminal"]
+  // and adding a theme to the family is one line.
+  //
+  // index.html hard-codes this attribute alongside data-theme so the default
+  // theme (Industrial Slate, a member) paints its rail correctly before this
+  // script runs; keep the two in step.
+  const TERMINAL_RAIL_THEMES = new Set([
+    "gruvbox-dark", "gruvbox-light", "industrial-slate", "industrial-slate-dark",
+  ]);
+
+  function applyThemeGroupings(theme){
+      if (!document.body) return;
+      if (TERMINAL_RAIL_THEMES.has(theme)) document.body.setAttribute("data-rail-surface", "terminal");
+      else document.body.removeAttribute("data-rail-surface");
+  }
+
   function applyTheme(t){
       const saved = String(t || "");
       const migrations = new Map([
@@ -1918,6 +1941,7 @@
 
       document.documentElement.setAttribute("data-theme", theme);
       document.body.setAttribute("data-theme", theme);
+      applyThemeGroupings(theme);
 
       const sel = $("themeSel");
       if (sel) sel.value = theme === "industrial-slate" && touchOnlyThemePreferences.has(preference)

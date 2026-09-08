@@ -102,7 +102,7 @@ test("the gruvbox/industrial-slate rail caption no longer imposes its own overfl
   // shared rail, which every theme already shares, so there is no
   // theme-specific overflow to starve the track and no guard to carry. If
   // overflow ever returns to this rule, the min-height has to return with it.
-  const start = desktop.indexOf('body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .workspaceNavButton small{');
+  const start = desktop.indexOf('body[data-rail-surface="terminal"] .workspaceNavButton small{');
   assert.notEqual(start, -1);
   const rule = desktop.slice(start, desktop.indexOf("}", start) + 1);
   assert.doesNotMatch(rule, /overflow:/, "if this rule takes overflow back, restore min-height:1.15em with it");
