@@ -3,6 +3,20 @@
  *   Put theme palettes + per-theme accents in theme.css
  *   ======================================================================= */
 
+/* An author rule's `display` always beats the UA stylesheet's own
+   [hidden]{display:none}, whatever the specificity - so any element given a
+   display value renders even while carrying the hidden attribute. That was
+   being patched one selector at a time: 23 separate rules across this file
+   and desktop.css each said `.thing[hidden]{display:none!important}` for the
+   same reason, and new ones kept appearing because the cause isn't visible
+   at the site of the symptom.
+
+   This states it once. It is deliberately first in the file so a rule that
+   genuinely wants a hidden element laid out - the invisible spacer at
+   #recipeHeaderControls, which keeps the mobile Recipe row from jumping on
+   tab switch - still wins on both specificity and source order. */
+[hidden]{display:none!important}
+
 :root{
   color-scheme: light dark;
   /* -------------------------------------------------------------------
