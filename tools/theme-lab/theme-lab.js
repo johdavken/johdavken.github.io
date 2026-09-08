@@ -13,6 +13,7 @@
 (function () {
   var API = "/__theme-lab/api";
   var AGENT_SRC = "/__theme-lab/preview-agent.js";
+  var TRACE_SRC = "/__theme-lab/css-trace.js";
   var PREVIEW_URL = "/?themelab=1";
 
   var VIEWPORTS = {
@@ -50,6 +51,11 @@
     lockTheme: true,
     picking: false,
     agentReady: false,
+    tokenCounts: {}, // token -> { onScreen, selectors, pending }
+    tokenCountReq: 0,
+    coverageFilter: "all", // "all" | "rendering" | "offscreen"
+    hoverToken: null, // token whose consumers are currently highlighted
+    highlightSource: null, // "impact" | "hover" | null
   };
 
   /* --------------------------- boot --------------------------- */
@@ -58,10 +64,12 @@
     [
       "previewFrame", "frameWrap", "viewportSeg", "viewportDim", "themePicker",
       "lockTheme", "pickBtn", "reloadBtn", "tokenGroups", "tokenFilter",
+      "tokenCoverage",
       "resetAllBtn", "changeCount", "changeSummary", "blockPreview",
       "copyBlockBtn", "downloadBtn", "saveBtn", "inspectResult", "gutter",
       "controlsPane", "toast", "saveDialog", "saveDiff", "saveDialogTheme",
       "saveCancel", "saveConfirm",
+      "impactToken", "impactHighlightBtn", "impactResult", "impactThemeName",
     ].forEach(function (id) { el[id] = document.getElementById(id); });
 
     wireTopbar();
@@ -69,6 +77,7 @@
     wireGutter();
     wirePreviewFrame();
     wireExport();
+    wireImpact();
     window.addEventListener("message", onPreviewMessage);
 
     loadThemes();
@@ -80,6 +89,7 @@
       .then(function (data) {
         state.themes = data.themes || [];
         state.rootDefaults = data.rootDefaults || {};
+        state.themeCssPath = data.themeCssPath || "theme.css";
         el.themePicker.innerHTML = "";
         state.themes.forEach(function (t) {
           var o = document.createElement("option");
@@ -144,6 +154,7 @@
 
   function onPreviewLoad() {
     state.agentReady = false;
+    injectTracer();
     injectAgent();
     // Re-assert the previewed theme + working overrides after any in-app
     // navigation reload.
@@ -191,6 +202,47 @@
     s.id = "__themeLabAgent";
     s.src = AGENT_SRC;
     (d.head || d.documentElement).appendChild(s);
+  }
+
+  function injectTracer() {
+    var d = previewDoc();
+    if (!d) return;
+    var w = el.previewFrame.contentWindow;
+    if (w && w.__themeLabTrace) return;
+    if (d.getElementById("__themeLabTrace")) return;
+    var s = d.createElement("script");
+    s.id = "__themeLabTrace";
+    s.src = TRACE_SRC;
+    (d.head || d.documentElement).appendChild(s);
+  }
+
+  // Hand the agent the active theme's per-token source lines (straight from
+  // theme-parser.js via /api/themes) so the tracer can resolve palette tokens
+  // to their exact theme.css line without re-parsing.
+  function sendThemeData() {
+    if (!state.current) return;
+    var byName = {};
+    (state.current.tokens || []).forEach(function (t) {
+      byName[t.name] = { value: t.value, line: t.line };
+    });
+    try {
+      el.previewFrame.contentWindow.postMessage(
+        {
+          source: "theme-lab",
+          type: "themelab:themeData",
+          themeData: {
+            name: state.current.name,
+            themeCssPath: state.themeCssPath || "theme.css",
+            openLine: state.current.openLine,
+            closeLine: state.current.closeLine,
+            byName: byName,
+          },
+        },
+        "*"
+      );
+    } catch (e) {
+      /* ignore */
+    }
   }
 
   var guardObserver = null;
@@ -286,6 +338,10 @@
       el.frameWrap.style.width = vp.w + "px";
       el.frameWrap.style.height = vp.h + "px";
     }
+    // desktop/touch/mobile can have different consumer sets for the same
+    // token (Phase 3 found this with --btnstyle-ink) — recount after the
+    // preview reflows.
+    setTimeout(refreshTokenCounts, 250);
   }
 
   /* --------------------- theme selection --------------------- */
@@ -312,8 +368,14 @@
     });
 
     if (!opts || opts.switchPreview !== false) applyPreviewTheme(name);
+    sendThemeData();
+    // Previous theme's counts no longer apply — clear so a coverage filter
+    // shows every row (pending) until the new theme's scan lands.
+    state.tokenCounts = {};
     renderTokens();
     renderChanges();
+    populateImpactTokens();
+    refreshTokenCounts();
   }
 
   /* ---------------------- token editor ---------------------- */
@@ -344,8 +406,11 @@
       if (names.indexOf(n) === -1) names.push(n);
     });
 
+    var cf = state.coverageFilter || "all";
+    var hiddenByCoverage = 0;
     names.forEach(function (name) {
       if (filter && name.toLowerCase().indexOf(filter) === -1) return;
+      if (!coveragePasses(name, cf)) { hiddenByCoverage += 1; return; }
       var g = groupFor(name);
       if (!groups[g]) { groups[g] = []; order.push(g); }
       groups[g].push(name);
@@ -360,7 +425,11 @@
 
     el.tokenGroups.innerHTML = "";
     if (!order.length) {
-      el.tokenGroups.innerHTML = '<p class="lab-empty">No tokens match.</p>';
+      var msg = "No tokens match.";
+      if (!filter && cf === "rendering") msg = "No tokens are rendering in this view.";
+      else if (!filter && cf === "offscreen") msg = "Every token renders something in this view.";
+      else if (filter && hiddenByCoverage) msg = 'No matches under the "' + coverageLabel(cf) + '" filter.';
+      el.tokenGroups.innerHTML = '<p class="lab-empty">' + escapeHtml(msg) + "</p>";
       return;
     }
     order.forEach(function (gName) {
@@ -374,6 +443,7 @@
       });
       el.tokenGroups.appendChild(wrap);
     });
+    renderCoverage();
   }
 
   function renderTokenRow(name) {
@@ -407,7 +477,16 @@
     main.className = "tok-main";
     var nm = document.createElement("div");
     nm.className = "tok-name";
-    nm.textContent = name;
+    var nameBtn = document.createElement("button");
+    nameBtn.type = "button";
+    nameBtn.className = "tok-name-btn";
+    nameBtn.textContent = name;
+    nameBtn.title = "Show where " + name + " is used (Impact tab)";
+    nameBtn.addEventListener("click", function () {
+      activateTab("impact");
+      runImpact(name);
+    });
+    nm.appendChild(nameBtn);
     if (meta.inherited) {
       var badge = document.createElement("span");
       badge.className = "tok-inherit";
@@ -428,9 +507,17 @@
     main.appendChild(input);
     row.appendChild(main);
 
-    // reset
+    // actions: on-screen impact badge + reset
     var actions = document.createElement("div");
     actions.className = "tok-actions";
+
+    var badge = document.createElement("span");
+    badge.className = "tok-impact";
+    badge.title =
+      "On-screen elements this token affects in the current view (direct + via component tokens). Hover the row to highlight them.";
+    applyBadge(badge, state.tokenCounts[name]);
+    actions.appendChild(badge);
+
     var reset = document.createElement("button");
     reset.className = "tok-reset";
     reset.type = "button";
@@ -440,7 +527,55 @@
     actions.appendChild(reset);
     row.appendChild(actions);
 
+    // Hover / keyboard-focus a row to highlight what it affects in the preview.
+    row.addEventListener("mouseenter", function () { highlightTokenRow(name); });
+    row.addEventListener("mouseleave", function () { clearTokenHighlight(name); });
+    row.addEventListener("focusin", function () { highlightTokenRow(name); });
+    row.addEventListener("focusout", function (e) {
+      if (!row.contains(e.relatedTarget)) clearTokenHighlight(name);
+    });
+
     return row;
+  }
+
+  // Render the small "N" (or "\u00b7" / "\u2026") badge for a token row.
+  function applyBadge(badge, count) {
+    if (!badge) return;
+    badge.classList.remove("is-zero", "is-pending", "has-hits", "is-state");
+    if (!count || count.pending) {
+      badge.textContent = "\u2026";
+      badge.classList.add("is-pending");
+      return;
+    }
+    if (count.error) {
+      badge.textContent = "!";
+      badge.title = "Impact scan error: " + count.error;
+      return;
+    }
+    var n = count.onScreen || 0;
+    var stateExtra = count.onScreenStateExtra || 0;
+    var stat = count.onScreenStatic != null ? count.onScreenStatic : n;
+    badge.textContent = stateExtra > 0 ? n + "*" : String(n);
+    if (n === 0) {
+      badge.classList.add("is-zero");
+      badge.title = count.hasConsumers
+        ? "This token has consumers, but none are on screen in the current view."
+        : "No rule consumes this token (component/base token not rendered here).";
+    } else {
+      badge.classList.add("has-hits");
+      var t =
+        n + " on-screen element" + (n === 1 ? "" : "s") + " affected" +
+        (count.viaCount ? " (" + count.viaCount + " via a component token)" : "") + ".";
+      if (stateExtra > 0) {
+        badge.classList.add("is-state");
+        t +=
+          " " + stateExtra + " of those are only styled while hovered/focused, so the hover-highlight boxes " +
+          stat + ".";
+      } else {
+        t += " Hover the row to highlight them.";
+      }
+      badge.title = t;
+    }
   }
 
   function applyEdit(name, rawValue) {
@@ -700,54 +835,617 @@
     if (!d || d.source !== "theme-lab-agent") return;
     if (d.type === "themelab:ready") {
       state.agentReady = true;
+      sendThemeData();
+      refreshTokenCounts();
     } else if (d.type === "themelab:pickState") {
       if (!d.picking && state.picking) setPicking(false);
     } else if (d.type === "themelab:picked") {
-      renderInspect(d.info);
+      state.lastPick = { info: d.info, token: d.token, trace: null, tracePending: !!d.tracePending };
+      renderInspect();
+    } else if (d.type === "themelab:picked-trace") {
+      if (state.lastPick && state.lastPick.token === d.token) {
+        state.lastPick.trace = d.trace;
+        state.lastPick.tracePending = false;
+        renderInspect();
+      }
+    } else if (d.type === "themelab:impact-result") {
+      if (state.impact && state.impact.reqId === d.reqId) {
+        state.impact.result = d.result;
+        state.impact.pending = false;
+        renderImpact();
+      }
+    } else if (d.type === "themelab:impactCounts-progress") {
+      onImpactCounts(d);
+    } else if (d.type === "themelab:impactCounts-done") {
+      if (d.reqId === state.tokenCountReq) {
+        // Counts are settled: collapse the row list to the final filtered set
+        // (a no-op re-render when the filter is "all").
+        if (state.coverageFilter && state.coverageFilter !== "all") renderTokens();
+        else renderCoverage();
+      }
+    } else if (d.type === "themelab:impactCountOne-result") {
+      onImpactCountOne(d);
+    } else if (d.type === "themelab:highlight-done") {
+      // Only the Impact tab's explicit button reflects a persistent count in
+      // its label; the hover highlight is transient and owns no button.
+      if (state.highlightSource !== "hover" && el.impactHighlightBtn) {
+        el.impactHighlightBtn.textContent =
+          d.count > 0 ? "Clear highlight (" + d.count + ")" : "Highlight on screen";
+        state.impactHighlighting = d.count > 0;
+      }
     }
   }
 
-  function renderInspect(info) {
-    var c = info.computed || {};
-    var rows = [
-      ["tag", info.tag],
-      ["id", info.id || "\u2014"],
-      ["classes", info.classes && info.classes.length ? info.classes.join(" ") : "\u2014"],
-      ["text", info.text || "\u2014"],
-    ];
-    var colorRows = [
-      ["color", c.color],
-      ["background", c.backgroundColor],
-      ["border", (c.borderWidth || "") + " " + (c.borderColor || "")],
-    ];
-    if (c.fill) colorRows.push(["fill", c.fill]);
-    if (c.stroke) colorRows.push(["stroke", c.stroke]);
-    colorRows.push(["font", (c.fontWeight || "") + " " + (c.fontSize || "")]);
-    if (c.boxShadow && c.boxShadow !== "none") colorRows.push(["box-shadow", c.boxShadow]);
+  function swatch(val) {
+    var v = String(val || "").trim();
+    if (!/rgb|#|hsl|hwb|lab|lch|oklab|oklch/i.test(v)) return "";
+    var pick = v.split(/\s+/).filter(function (x) {
+      return /^#|rgb|hsl|hwb|lab|lch|oklab|oklch/i.test(x);
+    })[0] || v;
+    return '<span class="mini-swatch" style="background:' + escapeHtml(pick) + '"></span>';
+  }
 
-    var html = "<dl>";
-    rows.forEach(function (r) {
-      html += "<dt>" + r[0] + "</dt><dd>" + escapeHtml(String(r[1])) + "</dd>";
-    });
-    colorRows.forEach(function (r) {
-      var val = String(r[1] || "").trim();
-      var sw = /rgb|#|hsl/.test(val)
-        ? '<span class="mini-swatch" style="background:' + escapeHtml(val.split(" ").filter(function(x){return /rgb|#|hsl/.test(x);})[0] || val) + '"></span>'
-        : "";
-      html += "<dt>" + r[0] + "</dt><dd>" + sw + escapeHtml(val || "\u2014") + "</dd>";
-    });
+  var CLASS_LABEL = {
+    "token-driven": "token-driven",
+    "theme-specific-override": "theme-specific override",
+    hardcoded: "hardcoded",
+    inline: "inline style",
+    unresolved: "unresolved",
+  };
+
+  function renderTraceProperty(key, p) {
+    var title = { color: "Text colour", background: "Background", border: "Border colour", fill: "Fill", stroke: "Stroke" }[key] || key;
+    var h = '<section class="trace-prop">';
+    h += "<h4>" + title + "</h4>";
+    h += '<div class="trace-computed">' + swatch(p.computed) + escapeHtml(p.computed || "\u2014") + "</div>";
+
+    if (!p.matched) {
+      h += '<p class="lab-hint">' + escapeHtml(p.note || "No authored rule \u2014 inherited or UA default.") + "</p>";
+      return h + "</section>";
+    }
+
+    var w = p.winning;
+    var cls = (p.classification && p.classification.kind) || "?";
+    h += '<div class="trace-badge trace-' + escapeHtml(cls) + '">' + escapeHtml(CLASS_LABEL[cls] || cls) + "</div>";
+    h += '<dl class="trace-dl">';
+    h += "<dt>Winning rule</dt><dd>" + escapeHtml(w.selector) + (w.important ? ' <span class="trace-imp">!important</span>' : "") + "</dd>";
+    h += "<dt>Source</dt><dd>" + escapeHtml(w.file) + ":" + w.line + "</dd>";
+    if (w.media && w.media.length) h += "<dt>Media</dt><dd>" + escapeHtml(w.media.join(" / ")) + "</dd>";
+    h += "<dt>Declaration</dt><dd><code>" + escapeHtml(w.declaration) + "</code></dd>";
+    h += "</dl>";
+
+    if (p.chain && p.chain.length) {
+      h += '<ol class="trace-chain">';
+      p.chain.forEach(function (link) {
+        var s = link.source || {};
+        var loc = s.file ? s.file + ":" + s.line : (s.where || s.kind || "");
+        var kindNote =
+          s.kind === "palette-block"
+            ? (s.paletteName ? s.paletteName + " palette block" : "palette block")
+            : s.kind === "theme-scoped-rule"
+            ? "theme-scoped rule"
+            : s.kind === "root-default"
+            ? ":root default"
+            : s.kind === "component-rule"
+            ? "component/base rule"
+            : s.kind === "inline"
+            ? (s.isPreviewOverride ? "Theme Lab preview override (inline)" : s.where || "inline")
+            : s.kind === "fallback"
+            ? "var() fallback"
+            : s.kind || "";
+        h += "<li>";
+        h += "<code>var(" + escapeHtml(link.ref) + ")</code>";
+        if (link.value != null) {
+          h += ' &rarr; ' + swatch(link.value) + "<code>" + escapeHtml(link.value) + "</code>";
+        } else {
+          h += ' &rarr; <em>unresolved</em>';
+        }
+        if (loc) h += ' <span class="trace-loc">(' + escapeHtml(loc) + (kindNote ? ", " + escapeHtml(kindNote) : "") + ")</span>";
+        if (s.selector && s.kind !== "inline") h += ' <span class="trace-loc">' + escapeHtml(s.selector) + "</span>";
+        if (link.usedFallback) h += ' <span class="trace-loc">\u2014 fallback used (token undefined)</span>';
+        (link.overridden || []).forEach(function (ov) {
+          h += '<div class="trace-overridden">overrides <code>' + escapeHtml(link.ref) + ": " + escapeHtml(ov.value || "") +
+            "</code> <span class=\"trace-loc\">(" + escapeHtml((ov.file || "") + (ov.line ? ":" + ov.line : "")) +
+            (ov.themeScoped ? ", theme-scoped" : "") + ")</span></div>";
+        });
+        h += "</li>";
+      });
+      h += "</ol>";
+    }
+
+    var cl = p.classification || {};
+    if (cl.summary) {
+      h += '<p class="trace-summary">' + escapeHtml(cl.summary) + "</p>";
+    }
+    if (cl.componentTokenOverride) {
+      var cto = cl.componentTokenOverride;
+      h += '<p class="trace-summary trace-warn">Base <code>' + escapeHtml(cto.token) + ": " + escapeHtml(cto.baseValue) +
+        "</code> at " + escapeHtml(cto.baseFile + ":" + cto.baseLine) + " is overridden by <code>" +
+        escapeHtml(cto.token) + ": " + escapeHtml(cto.overrideValue) + "</code> at " +
+        escapeHtml(cto.overrideFile + ":" + cto.overrideLine) + ".</p>";
+    }
+    return h + "</section>";
+  }
+
+  function renderInspect() {
+    var pick = state.lastPick;
+    if (!pick) { el.inspectResult.innerHTML = '<p class="lab-empty">Nothing selected.</p>'; return; }
+    var info = pick.info || {};
+    var c = info.computed || {};
+
+    var html = '<dl class="trace-identity">';
+    html += "<dt>tag</dt><dd>" + escapeHtml(info.tag || "?") + (info.isSvg ? " <span class=\"trace-loc\">(SVG)</span>" : "") + "</dd>";
+    html += "<dt>id</dt><dd>" + escapeHtml(info.id || "\u2014") + "</dd>";
+    html += "<dt>classes</dt><dd>" + escapeHtml((info.classes || []).join(" ") || "\u2014") + "</dd>";
+    html += "<dt>text</dt><dd>" + escapeHtml(info.text || "\u2014") + "</dd>";
+    html += "<dt>font</dt><dd>" + escapeHtml((c.fontWeight || "") + " " + (c.fontSize || "")) + "</dd>";
+    if (c.boxShadow && c.boxShadow !== "none") html += "<dt>box-shadow</dt><dd>" + escapeHtml(c.boxShadow) + "</dd>";
     html += "</dl>";
 
-    var guess = info.tokenGuess || {};
-    var gk = Object.keys(guess);
-    if (gk.length) {
-      html += '<p class="lab-hint" style="margin-top:8px">Likely token (guess, not verified):</p><dl>';
-      gk.forEach(function (k) {
-        html += "<dt>" + k + "</dt><dd>" + escapeHtml(guess[k]) + "</dd>";
+    var trace = pick.trace;
+    if (pick.tracePending && !trace) {
+      html += '<p class="lab-hint">Tracing the cascade\u2026</p>';
+      el.inspectResult.innerHTML = html;
+      return;
+    }
+    if (trace && trace.ok === false) {
+      html += '<p class="lab-hint">Trace unavailable: ' + escapeHtml(trace.error || "?") + ". Computed values only.</p>";
+      html += legacyComputedDl(c, info);
+      el.inspectResult.innerHTML = html;
+      return;
+    }
+    if (trace && trace.substituted && trace.subject) {
+      html +=
+        '<p class="trace-substituted">Clicked <code>' +
+        escapeHtml(trace.clicked ? trace.clicked.hint : (info.tag || "?")) +
+        "</code> has no authored colour rules of its own. Showing <code>" +
+        escapeHtml(trace.subject.hint) + "</code> \u2014 " +
+        trace.ancestorDepth + " level" + (trace.ancestorDepth === 1 ? "" : "s") +
+        " up.</p>";
+    }
+    if (trace && trace.properties) {
+      var isSvg = !!(trace.properties.fill || trace.properties.stroke);
+      var order = isSvg ? ["fill", "stroke", "color"] : ["color", "background", "border"];
+      order.forEach(function (k) {
+        if (trace.properties[k]) html += renderTraceProperty(k, trace.properties[k]);
       });
-      html += "</dl>";
+      if (trace.indexErrors && trace.indexErrors.length) {
+        html += '<p class="lab-hint">Note: ' + trace.indexErrors.length + " stylesheet(s) could not be parsed for tracing.</p>";
+      }
+      html += '<p class="lab-hint">Sheets indexed: ' + escapeHtml((trace.sheets || []).join(", ")) + "</p>";
     }
     el.inspectResult.innerHTML = html;
+  }
+
+  function legacyComputedDl(c, info) {
+    var rows = [["color", c.color], ["background", c.backgroundColor], ["border", (c.borderWidth || "") + " " + (c.borderColor || "")]];
+    if (info.isSvg) { rows.push(["fill", c.fill]); rows.push(["stroke", c.stroke]); }
+    var h = '<dl class="trace-dl">';
+    rows.forEach(function (r) { h += "<dt>" + r[0] + "</dt><dd>" + swatch(r[1]) + escapeHtml(String(r[1] || "\u2014")) + "</dd>"; });
+    return h + "</dl>";
+  }
+
+  /* -------------- impact / token -> used-by (Phase 3B) ------------- */
+
+  function wireImpact() {
+    el.impactToken.addEventListener("change", function () {
+      runImpact(el.impactToken.value);
+    });
+    el.impactHighlightBtn.addEventListener("click", function () {
+      if (state.impactHighlighting) {
+        postAgent({ type: "themelab:highlight", clear: true });
+        return;
+      }
+      var sels = collectImpactSelectors();
+      if (!sels.length) return;
+      postAgent({ type: "themelab:highlight", selectors: sels });
+    });
+  }
+
+  function postAgent(msg) {
+    try {
+      msg.source = "theme-lab";
+      el.previewFrame.contentWindow.postMessage(msg, "*");
+    } catch (e) { /* ignore */ }
+  }
+
+  function populateImpactTokens() {
+    if (!el.impactToken) return;
+    var prev = el.impactToken.value;
+    var names = Object.keys(state.originals || {}).sort();
+    el.impactToken.innerHTML =
+      '<option value="">\u2014 select a token \u2014</option>' +
+      names
+        .map(function (n) {
+          return '<option value="' + escapeHtml(n) + '">' + escapeHtml(n) + "</option>";
+        })
+        .join("");
+    if (prev && names.indexOf(prev) !== -1) el.impactToken.value = prev;
+    if (el.impactThemeName && state.current) el.impactThemeName.textContent = state.current.name;
+  }
+
+  function runImpact(token) {
+    if (!token) {
+      state.impact = null;
+      el.impactResult.innerHTML = '<p class="lab-empty">Pick a token.</p>';
+      el.impactHighlightBtn.disabled = true;
+      return;
+    }
+    var reqId = (state.impactReq = (state.impactReq || 0) + 1);
+    state.impact = { token: token, reqId: reqId, pending: true, result: null };
+    el.impactHighlightBtn.disabled = true;
+    if (el.impactToken.value !== token) el.impactToken.value = token;
+    el.impactResult.innerHTML =
+      '<p class="lab-hint">Scanning stylesheets for consumers of <code>' +
+      escapeHtml(token) + "</code>\u2026</p>";
+    postAgent({ type: "themelab:impact", token: token, reqId: reqId });
+  }
+
+  function collectImpactSelectors() {
+    var r = state.impact && state.impact.result;
+    if (!r || !r.ok) return [];
+    var out = [];
+    (r.direct || []).forEach(function (g) { out = out.concat(g.selectors || []); });
+    (r.via || []).forEach(function (v) {
+      if (v.routes) (v.consumers || []).forEach(function (g) { out = out.concat(g.selectors || []); });
+    });
+    return out;
+  }
+
+  /* ---- Phase 4: per-row on-screen counts + hover highlight ---- */
+
+  var _countTimer = null;
+
+  // Kick off (debounced) an eager pass computing the on-screen consumer count
+  // for every token currently in the editor. Runs in the agent, chunked and
+  // cancelable; results stream back via themelab:impactCounts-progress.
+  function refreshTokenCounts() {
+    if (!state.current || !state.agentReady) return;
+    clearTimeout(_countTimer);
+    _countTimer = setTimeout(function () {
+      var tokens = Object.keys(state.originals || {});
+      if (!tokens.length) return;
+      var reqId = (state.tokenCountReq = (state.tokenCountReq || 0) + 1);
+      // Mark every known row pending.
+      state.tokenCounts = {};
+      tokens.forEach(function (t) { state.tokenCounts[t] = { pending: true }; });
+      // With a coverage filter active, rebuild the row list so every token is
+      // shown while its (now-unknown) status is rescanned — never leave a
+      // stale filtered subset from the previous viewport/theme on screen.
+      if (state.coverageFilter && state.coverageFilter !== "all") renderTokens();
+      else updateAllBadges();
+      // Drop the agent's live caches (DOM/theme may have changed), then scan.
+      postAgent({ type: "themelab:bumpLive" });
+      postAgent({ type: "themelab:impactCounts", tokens: tokens, reqId: reqId });
+    }, 120);
+  }
+
+  function updateAllBadges() {
+    el.tokenGroups.querySelectorAll(".tok").forEach(function (row) {
+      var b = row.querySelector(".tok-impact");
+      applyBadge(b, state.tokenCounts[row.dataset.token]);
+    });
+    renderCoverage();
+  }
+
+  function updateBadge(token) {
+    var row = el.tokenGroups.querySelector('.tok[data-token="' + cssEscape(token) + '"]');
+    if (row) applyBadge(row.querySelector(".tok-impact"), state.tokenCounts[token]);
+  }
+
+  function onImpactCounts(d) {
+    if (d.reqId !== state.tokenCountReq) return; // superseded
+    var counts = d.counts || {};
+    Object.keys(counts).forEach(function (tok) {
+      state.tokenCounts[tok] = counts[tok] || { error: "no result" };
+      updateBadge(tok);
+      // If the user is hovering this row right now, (re)highlight with the
+      // freshly-known selectors.
+      if (state.hoverToken === tok) highlightTokenRow(tok);
+    });
+    renderCoverage();
+  }
+
+  /* ---- Phase 5: per-viewport token coverage summary ---- */
+  /* ---- Phase 6: coverage summary doubles as a row filter ---- */
+
+  // Mirrors css-trace.js `coverageMatch` (unit-tested there); inline because
+  // the parent window does not load that module. A pending/errored token
+  // passes every mode so a filter never hides a row we can't classify yet.
+  function coveragePasses(name, mode) {
+    mode = mode || state.coverageFilter || "all";
+    if (mode === "all") return true;
+    var c = state.tokenCounts[name];
+    if (!c || c.pending || c.error) return true;
+    var on = (c.onScreen || 0) > 0;
+    return mode === "rendering" ? on : !on;
+  }
+
+  function coverageLabel(mode) {
+    return mode === "rendering" ? "Rendering" : mode === "offscreen" ? "Off screen" : "All";
+  }
+
+  function setCoverageFilter(mode) {
+    if (mode === state.coverageFilter) return;
+    state.coverageFilter = mode;
+    renderTokens(); // re-applies the predicate; also re-renders the summary
+  }
+
+  // Read/aggregation over state.tokenCounts (which Phase 4's eager pass
+  // fills) + state.originals — no rescanning, no second refresh path. The
+  // reduction mirrors css-trace.js `summarizeCoverage` (unit-tested there);
+  // kept inline here because the parent window does not load that module.
+  function renderCoverage() {
+    if (!el.tokenCoverage) return;
+    if (!state.current || !Object.keys(state.tokenCounts || {}).length) {
+      el.tokenCoverage.hidden = true;
+      return;
+    }
+    var names = Object.keys(state.originals || {});
+    var m = names.length;
+    var rendering = 0, pending = 0;
+    var offScreen = []; // onScreen 0 but the theme's CSS does reference it
+    var unused = []; // no rule references var(--token) in this theme at all
+    names.forEach(function (name) {
+      var c = state.tokenCounts[name];
+      if (!c || c.pending) { pending += 1; return; }
+      if (c.error) return;
+      if ((c.onScreen || 0) > 0) { rendering += 1; return; }
+      var entry = { name: name, inherited: !!(state.originals[name] && state.originals[name].inherited) };
+      if (c.hasConsumers) offScreen.push(entry);
+      else unused.push(entry);
+    });
+    offScreen.sort(function (a, b) { return a.name < b.name ? -1 : 1; });
+    unused.sort(function (a, b) { return a.name < b.name ? -1 : 1; });
+
+    var zero = offScreen.length + unused.length;
+    var settled = m - pending;
+    var cf = state.coverageFilter || "all";
+    var h = '<div class="cov-line">';
+    if (pending) {
+      h += '<strong>' + rendering + "</strong> of <strong>" + m +
+        "</strong> tokens render in this view <span class=\"cov-progress\">(scanning… " +
+        settled + "/" + m + ")</span>";
+    } else {
+      h += '<strong>' + rendering + "</strong> of <strong>" + m +
+        "</strong> tokens render in this view";
+      if (zero) h += ' <span class="cov-muted">&middot; ' + zero + " not on screen</span>";
+    }
+    h += "</div>";
+
+    // Filter control — reuses state.tokenCounts, no recomputation.
+    h += '<div class="seg cov-seg" role="group" aria-label="Filter token rows">';
+    [["all", "All"], ["rendering", "Rendering"], ["offscreen", "Off screen"]].forEach(function (o) {
+      h += '<button type="button" data-cf="' + o[0] + '"' +
+        (cf === o[0] ? ' class="is-active"' : "") + ">" + o[1] + "</button>";
+    });
+    h += "</div>";
+
+    if (!pending && zero) {
+      h += '<details class="cov-zero"' + (cf === "offscreen" ? " open" : "") + '><summary>' +
+        zero + " token" + (zero === 1 ? "" : "s") +
+        " with no on-screen effect right now" +
+        (cf === "offscreen" ? " (shown below)" : "") + "</summary>";
+      if (offScreen.length) {
+        h += '<div class="cov-group"><span class="cov-group-label">Used in this theme, but nothing on screen (' +
+          offScreen.length + ")</span><div class=\"cov-chips\">" +
+          offScreen.map(chip).join("") + "</div></div>";
+      }
+      if (unused.length) {
+        h += '<div class="cov-group"><span class="cov-group-label">Not consumed anywhere in this theme (' +
+          unused.length + ")</span><div class=\"cov-chips\">" +
+          unused.map(chip).join("") + "</div></div>";
+      }
+      h += "</details>";
+    }
+    el.tokenCoverage.innerHTML = h;
+    el.tokenCoverage.hidden = false;
+
+    Array.prototype.forEach.call(
+      el.tokenCoverage.querySelectorAll(".cov-seg button[data-cf]"),
+      function (b) {
+        b.addEventListener("click", function () { setCoverageFilter(b.dataset.cf); });
+      }
+    );
+    Array.prototype.forEach.call(
+      el.tokenCoverage.querySelectorAll(".cov-chip"),
+      function (c) {
+        c.addEventListener("click", function () { flashTokenRow(c.dataset.token); });
+      }
+    );
+  }
+
+  function chip(entry) {
+    return (
+      '<button type="button" class="cov-chip" data-token="' + escapeHtml(entry.name) + '">' +
+      escapeHtml(entry.name) +
+      (entry.inherited ? ' <span class="cov-chip-tag">inherited</span>' : "") +
+      "</button>"
+    );
+  }
+
+  function flashTokenRow(name) {
+    var needsRerender = false;
+    if (el.tokenFilter.value) { el.tokenFilter.value = ""; needsRerender = true; }
+    // If the active coverage filter would hide this row, drop to "All" so the
+    // jump lands somewhere visible.
+    if (!coveragePasses(name, state.coverageFilter)) {
+      state.coverageFilter = "all";
+      needsRerender = true;
+    }
+    if (needsRerender) renderTokens();
+    var row = el.tokenGroups.querySelector('.tok[data-token="' + cssEscape(name) + '"]');
+    if (!row) return;
+    row.scrollIntoView({ block: "center", behavior: "smooth" });
+    row.classList.add("tok-flash");
+    setTimeout(function () { row.classList.remove("tok-flash"); }, 1100);
+  }
+
+  function highlightTokenRow(name) {
+    state.hoverToken = name;
+    var c = state.tokenCounts[name];
+    if (c && !c.pending && c.selectors && c.selectors.length) {
+      state.highlightSource = "hover";
+      postAgent({ type: "themelab:highlight", selectors: c.selectors });
+      return;
+    }
+    if (c && !c.pending && c.selectors && !c.selectors.length) {
+      // nothing to highlight — make sure any prior box is gone
+      if (state.highlightSource === "hover") clearTokenHighlight(name);
+      return;
+    }
+    // Count not ready yet: fetch just this one token on demand (does not
+    // disturb any in-flight eager pass).
+    if (!state.agentReady) return;
+    postAgent({ type: "themelab:impactCountOne", token: name });
+  }
+
+  function onImpactCountOne(d) {
+    if (!d.token) return;
+    state.tokenCounts[d.token] = d.count || { error: "no result" };
+    updateBadge(d.token);
+    renderCoverage();
+    if (state.hoverToken === d.token) highlightTokenRow(d.token);
+  }
+
+  function clearTokenHighlight(name) {
+    if (name && state.hoverToken !== name) return;
+    state.hoverToken = null;
+    if (state.highlightSource === "hover") {
+      state.highlightSource = null;
+      postAgent({ type: "themelab:highlight", clear: true });
+    }
+  }
+
+  function consumerGroupHtml(g) {
+    var h = '<div class="impact-consumer">';
+    h += '<div class="impact-decl"><code>' + escapeHtml(g.declaration) + "</code>" +
+      (g.important ? ' <span class="trace-imp">!important</span>' : "") + "</div>";
+    h += '<div class="impact-loc">' + escapeHtml(g.file + ":" + g.line);
+    if (g.media && g.media.length) h += " \u00b7 " + escapeHtml(g.media.join(" / "));
+    h += "</div>";
+    h += '<div class="impact-selectors">';
+    g.selectors.slice(0, 8).forEach(function (s) {
+      h += "<code>" + escapeHtml(s) + "</code>";
+    });
+    if (g.selectors.length > 8) h += "<span class=\"trace-loc\">+" + (g.selectors.length - 8) + " more</span>";
+    h += "</div>";
+    var live = g.liveVisible || 0;
+    h += '<div class="impact-live">' +
+      (live > 0
+        ? "<strong>" + live + "</strong> visible on screen now"
+        : (g.liveTotal ? g.liveTotal + " in DOM, none visible" : "none in DOM right now")) +
+      "</div>";
+    h += "</div>";
+    return h;
+  }
+
+  function directGroupSplit(groups) {
+    var onScreen = [];
+    var offScreen = [];
+    (groups || []).forEach(function (g) {
+      (g.liveVisible > 0 ? onScreen : offScreen).push(g);
+    });
+    onScreen.sort(function (a, b) { return b.liveVisible - a.liveVisible; });
+    return { onScreen: onScreen, offScreen: offScreen };
+  }
+
+  function renderImpact() {
+    var st = state.impact;
+    if (!st) { el.impactResult.innerHTML = '<p class="lab-empty">Pick a token.</p>'; return; }
+    if (st.pending) return;
+    var r = st.result;
+    if (!r || r.ok === false) {
+      el.impactResult.innerHTML =
+        '<p class="lab-hint">Impact scan failed: ' + escapeHtml((r && r.error) || "?") + "</p>";
+      return;
+    }
+
+    var h = '<div class="impact-head"><code>' + escapeHtml(r.token) + "</code> in <strong>" +
+      escapeHtml(r.theme) + "</strong></div>";
+
+    var totalVisible = 0;
+    (r.direct || []).forEach(function (g) { totalVisible += g.liveVisible || 0; });
+    (r.via || []).forEach(function (v) {
+      if (v.routes) (v.consumers || []).forEach(function (g) { totalVisible += g.liveVisible || 0; });
+    });
+
+    var split = directGroupSplit(r.direct);
+    h += '<h4 class="impact-h">Direct consumers <span class="lab-count">' + (r.direct || []).length + "</span></h4>";
+    if (!(r.direct || []).length) {
+      h += '<p class="lab-hint">No rule references <code>var(' + escapeHtml(r.token) + ")</code> directly in this theme.</p>";
+    } else {
+      if (split.onScreen.length) {
+        h += '<p class="impact-sub">On screen now (' + split.onScreen.length + " rule group" +
+          (split.onScreen.length === 1 ? "" : "s") + "):</p>";
+        split.onScreen.forEach(function (g) { h += consumerGroupHtml(g); });
+      }
+      if (split.offScreen.length) {
+        h += '<details class="impact-more"><summary>' + split.offScreen.length +
+          " more rule group" + (split.offScreen.length === 1 ? "" : "s") +
+          " in this theme (not on screen right now)</summary>";
+        split.offScreen.forEach(function (g) { h += consumerGroupHtml(g); });
+        h += "</details>";
+      }
+    }
+
+    var routing = (r.via || []).filter(function (v) { return v.routes && (v.consumers || []).length; });
+    var notRouting = (r.via || []).filter(function (v) { return !v.routes; });
+
+    if (routing.length) {
+      h += '<h4 class="impact-h">Via component token — currently routing <span class="lab-count">' + routing.length + "</span></h4>";
+      routing.forEach(function (v) {
+        h += '<div class="impact-via"><div class="impact-chainpath">' +
+          v.through.map(function (t) { return "<code>" + escapeHtml(t) + "</code>"; }).join(" &larr; ") +
+          "</div>";
+        var vs = directGroupSplit(v.consumers);
+        vs.onScreen.forEach(function (g) { h += consumerGroupHtml(g); });
+        if (vs.offScreen.length) {
+          h += '<details class="impact-more"><summary>' + vs.offScreen.length + " more (off screen)</summary>";
+          vs.offScreen.forEach(function (g) { h += consumerGroupHtml(g); });
+          h += "</details>";
+        }
+        h += "</div>";
+      });
+    }
+
+    if (notRouting.length) {
+      h += '<h4 class="impact-h impact-h-muted">Via component token — NOT routing in this theme <span class="lab-count">' + notRouting.length + "</span></h4>";
+      notRouting.forEach(function (v) {
+        var b = v.blockedBy;
+        h += '<div class="impact-via impact-blocked"><div class="impact-chainpath">' +
+          v.through.map(function (t) { return "<code>" + escapeHtml(t) + "</code>"; }).join(" &larr; ") +
+          "</div>";
+        var reason;
+        if (b) {
+          reason = "<code>" + escapeHtml(b.token) + "</code> is redefined to <code>" +
+            escapeHtml(b.value) + "</code> at " + escapeHtml(b.file + ":" + b.line) +
+            " (" + escapeHtml(b.kind) + ")";
+        } else if (v.unresolvedAtScope) {
+          reason = "<code>" + escapeHtml(v.through[v.through.length - 1]) +
+            "</code> is not defined at :root/body scope (set per-element), so routing can't be confirmed from here";
+        } else {
+          reason = "<code>" + escapeHtml(v.through[v.through.length - 1]) +
+            "</code> currently resolves to <code>" + escapeHtml(v.producerResolvesTo || "?") +
+            "</code>, which does not pass through <code>" + escapeHtml(r.token) + "</code>";
+        }
+        h += '<p class="lab-hint">' + reason + " — its " + (v.consumers || []).length +
+          " consumer(s) do <strong>not</strong> depend on <code>" + escapeHtml(r.token) + "</code> right now.</p>";
+        h += '<details class="impact-more"><summary>show the ' + (v.consumers || []).length + " consumer(s)</summary>";
+        (v.consumers || []).forEach(function (g) { h += consumerGroupHtml(g); });
+        h += "</details></div>";
+      });
+    }
+
+    (r.notes || []).forEach(function (n) {
+      h += '<p class="lab-hint">' + escapeHtml(n) + "</p>";
+    });
+    h += '<p class="lab-hint">' + totalVisible + " matching element(s) visible on screen now. Indexed: " +
+      escapeHtml((r.sheets || []).join(", ")) + "</p>";
+
+    el.impactResult.innerHTML = h;
+    var sels = collectImpactSelectors();
+    el.impactHighlightBtn.disabled = sels.length === 0;
   }
 
   /* -------------------------- tabs -------------------------- */
@@ -764,6 +1462,15 @@
     document.querySelectorAll(".lab-tabpanel").forEach(function (p) {
       p.classList.toggle("is-active", p.dataset.panel === name);
     });
+    // Leaving Impact clears its highlight boxes; leaving Tokens clears any
+    // lingering hover highlight.
+    if (name !== "impact" && state.impactHighlighting && state.highlightSource !== "hover") {
+      postAgent({ type: "themelab:highlight", clear: true });
+      state.impactHighlighting = false;
+    }
+    if (name !== "tokens" && state.highlightSource === "hover") {
+      clearTokenHighlight(state.hoverToken);
+    }
   }
 
   /* ------------------------- gutter ------------------------ */

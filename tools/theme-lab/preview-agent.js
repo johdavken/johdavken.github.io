@@ -32,6 +32,8 @@
       lastEl: null,
       probe: null,
       handlersBound: false,
+      themeData: null,
+      traceSrc: "/__theme-lab/css-trace.js",
     };
   }
   window.__themeLabAgent = true;
@@ -89,7 +91,12 @@
       var el = targetAt(e.clientX, e.clientY) || S.lastEl;
       if (!el) return;
       positionOverlay(el);
-      post("themelab:picked", { info: describe(el) });
+      var token = (S.pickToken = (S.pickToken || 0) + 1);
+      post("themelab:picked", { info: describe(el), token: token, tracePending: true });
+      runTrace(el).then(function (trace) {
+        if (token !== S.pickToken) return; // superseded by a newer pick
+        post("themelab:picked-trace", { token: token, trace: trace });
+      });
     });
     c.addEventListener("contextmenu", function (e) {
       e.preventDefault();
@@ -127,45 +134,114 @@
     o.style.height = r.height + "px";
   }
 
-  function normalizeColor(value) {
-    if (!value) return "";
-    if (!S.probe || !S.probe.isConnected) {
-      S.probe = document.createElement("span");
-      S.probe.style.display = "none";
-      (document.body || document.documentElement).appendChild(S.probe);
-    }
-    S.probe.style.color = "";
-    S.probe.style.color = value;
-    return getComputedStyle(S.probe).color || "";
+  // Phase 2: real matched-rule / token-source tracing. Loaded lazily; the
+  // parent normally injects it, but pick before it lands and we add it here.
+  function ensureTracer() {
+    if (window.__themeLabTrace) return Promise.resolve(window.__themeLabTrace);
+    return new Promise(function (resolve) {
+      var s = document.createElement("script");
+      s.src = S.traceSrc;
+      s.onload = function () { resolve(window.__themeLabTrace || null); };
+      s.onerror = function () { resolve(null); };
+      (document.head || document.documentElement).appendChild(s);
+      // safety timeout
+      setTimeout(function () { resolve(window.__themeLabTrace || null); }, 2500);
+    });
   }
 
-  function guessTokens(cs) {
-    var rootCs = getComputedStyle(document.documentElement);
-    var names = [
-      "--text", "--fg", "--title", "--subtitle", "--muted",
-      "--bg", "--panel", "--panel2", "--panelOpen", "--field-bg",
-      "--border", "--border2", "--focus-border",
-      "--ok", "--bad", "--warn", "--yellow", "--orange",
-    ];
-    var map = {};
-    names.forEach(function (n) {
-      var v = rootCs.getPropertyValue(n).trim();
-      if (v) map[n] = normalizeColor(v);
+  function runTrace(el) {
+    return ensureTracer().then(function (tracer) {
+      if (!tracer) return { ok: false, error: "tracer unavailable" };
+      return tracer.trace(el, { themeTokens: S.themeData }).catch(function (e) {
+        return { ok: false, error: String(e && e.message || e) };
+      });
     });
-    var out = {};
-    [["color", "color"], ["backgroundColor", "background"], ["borderTopColor", "border"]].forEach(
-      function (pair) {
-        var target = normalizeColor(cs[pair[0]]);
-        if (!target || target === "rgba(0, 0, 0, 0)") return;
-        for (var n in map) {
-          if (map[n] && map[n] === target) {
-            out[pair[1]] = n;
-            break;
-          }
-        }
+  }
+
+  function runImpact(token) {
+    return ensureTracer().then(function (tracer) {
+      if (!tracer || !tracer.impact) return { ok: false, error: "tracer unavailable" };
+      return tracer
+        .impact(token, { doc: document, themeTokens: S.themeData })
+        .catch(function (e) {
+          return { ok: false, error: String((e && e.message) || e) };
+        });
+    });
+  }
+
+  // Batch on-screen counts for the Tokens tab. Processed in small chunks with
+  // a yield between them so the iframe stays responsive, streaming partial
+  // results back. `reqId` lets the parent discard a superseded pass.
+  function runImpactCounts(tokens, reqId) {
+    ensureTracer().then(function (tracer) {
+      if (!tracer || !tracer.impactCount) {
+        post("themelab:impactCounts-done", { reqId: reqId, error: "tracer unavailable" });
+        return;
       }
-    );
-    return out;
+      var i = 0;
+      var CHUNK = 8;
+      function step() {
+        if (reqId !== S.countReqId) return; // superseded
+        var slice = tokens.slice(i, i + CHUNK);
+        i += CHUNK;
+        var out = {};
+        var work = slice.map(function (tok) {
+          return tracer
+            .impactCount(tok, { doc: document, themeTokens: S.themeData })
+            .then(function (r) { out[tok] = r; })
+            .catch(function (e) {
+              out[tok] = { ok: false, token: tok, error: String((e && e.message) || e) };
+            });
+        });
+        Promise.all(work).then(function () {
+          if (reqId !== S.countReqId) return;
+          post("themelab:impactCounts-progress", { reqId: reqId, counts: out });
+          if (i < tokens.length) setTimeout(step, 0);
+          else post("themelab:impactCounts-done", { reqId: reqId });
+        });
+      }
+      step();
+    });
+  }
+
+  // Translucent boxes over every visible element matching any of `selectors`.
+  function highlightSelectors(selectors) {
+    clearHighlights();
+    if (!selectors || !selectors.length) return 0;
+    var host = document.createElement("div");
+    host.setAttribute("data-theme-lab", "impact-highlights");
+    host.style.cssText = "position:fixed;inset:0;pointer-events:none;z-index:2147483645";
+    var count = 0;
+    selectors.forEach(function (sel) {
+      var nodes;
+      try {
+        nodes = document.querySelectorAll(sel);
+      } catch (e) {
+        return;
+      }
+      for (var i = 0; i < nodes.length && count < 300; i += 1) {
+        var rects = nodes[i].getClientRects();
+        if (!rects.length) continue;
+        var r = rects[0];
+        var box = document.createElement("div");
+        box.style.cssText =
+          "position:absolute;left:" + r.left + "px;top:" + r.top + "px;width:" +
+          r.width + "px;height:" + r.height +
+          "px;background:rgba(240,180,41,.22);outline:2px solid #f0b429;border-radius:2px";
+        host.appendChild(box);
+        count += 1;
+      }
+    });
+    (document.body || document.documentElement).appendChild(host);
+    S.highlightHost = host;
+    return count;
+  }
+
+  function clearHighlights() {
+    if (S.highlightHost && S.highlightHost.parentNode) {
+      S.highlightHost.parentNode.removeChild(S.highlightHost);
+    }
+    S.highlightHost = null;
   }
 
   function describe(el) {
@@ -196,8 +272,8 @@
     if (el.namespaceURI === "http://www.w3.org/2000/svg") {
       info.computed.fill = cs.fill;
       info.computed.stroke = cs.stroke;
+      info.isSvg = true;
     }
-    info.tokenGuess = guessTokens(cs);
     return info;
   }
 
@@ -219,13 +295,64 @@
 
   function onScroll() {
     if (S.picking && S.lastEl) positionOverlay(S.lastEl);
+    // Impact highlight boxes are fixed-position snapshots; drop them on
+    // scroll rather than let them drift.
+    if (S.highlightHost) {
+      clearHighlights();
+      post("themelab:highlight-done", { count: 0, reason: "scrolled" });
+    }
   }
 
   function onMessage(e) {
     var d = e.data;
     if (!d || d.source !== "theme-lab") return;
-    if (d.type === "themelab:pick") setPicking(!!d.on, false);
-    else if (d.type === "themelab:ping") post("themelab:ready", {});
+    if (d.type === "themelab:pick") {
+      setPicking(!!d.on, false);
+      if (!d.on) clearHighlights();
+    } else if (d.type === "themelab:ping") {
+      post("themelab:ready", {});
+    } else if (d.type === "themelab:themeData") {
+      S.themeData = d.themeData || null;
+      // stylesheets are unchanged, but the active [data-theme] differs, so
+      // matched rules and body-scope var() resolution do — drop the live
+      // caches, keep the parsed index.
+      if (window.__themeLabTrace && window.__themeLabTrace.bumpLiveGen) {
+        window.__themeLabTrace.bumpLiveGen();
+      }
+    } else if (d.type === "themelab:bumpLive") {
+      if (window.__themeLabTrace && window.__themeLabTrace.bumpLiveGen) {
+        window.__themeLabTrace.bumpLiveGen();
+      }
+    } else if (d.type === "themelab:impact") {
+      var reqId = d.reqId;
+      runImpact(d.token).then(function (result) {
+        post("themelab:impact-result", { reqId: reqId, token: d.token, result: result });
+      });
+    } else if (d.type === "themelab:impactCounts") {
+      S.countReqId = d.reqId;
+      runImpactCounts(d.tokens || [], d.reqId);
+    } else if (d.type === "themelab:impactCountOne") {
+      ensureTracer().then(function (tracer) {
+        if (!tracer || !tracer.impactCount) {
+          post("themelab:impactCountOne-result", { token: d.token, count: { ok: false, token: d.token, error: "tracer unavailable" } });
+          return;
+        }
+        tracer
+          .impactCount(d.token, { doc: document, themeTokens: S.themeData })
+          .then(function (r) { post("themelab:impactCountOne-result", { token: d.token, count: r }); })
+          .catch(function (e) {
+            post("themelab:impactCountOne-result", { token: d.token, count: { ok: false, token: d.token, error: String((e && e.message) || e) } });
+          });
+      });
+    } else if (d.type === "themelab:highlight") {
+      if (d.clear) {
+        clearHighlights();
+        post("themelab:highlight-done", { count: 0 });
+      } else {
+        var n = highlightSelectors(d.selectors || []);
+        post("themelab:highlight-done", { count: n });
+      }
+    }
   }
 
   if (!S.handlersBound) {

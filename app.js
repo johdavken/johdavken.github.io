@@ -1871,10 +1871,11 @@
       const migrations = new Map([
         ["system", "system"],
         ["auto", "system"],
-        ["light", "industrial-slate"],
-        ["mse", "industrial-slate"],
+        // The original bare "light" / "dark" palettes were retired; a saved
+        // selection migrates to the Ayu Light / Ayu Dark successors.
+        ["light", "ayu-light"],
         ["industrial-slate", "industrial-slate"],
-        ["dark", "industrial-slate-dark"],
+        ["dark", "ayu-dark"],
         ["industrial-slate-dark", "industrial-slate-dark"],
         ["oled-black", "oled-black"],
         ["amoled", "oled-black"],
@@ -1886,6 +1887,9 @@
         // early local selection lands on the intended Newsprint successor.
         ["kanagawa-lotus", "newsprint"],
         ["ayu-light", "ayu-light"],
+        ["ayu-mirage", "ayu-mirage"],
+        ["mirage", "ayu-mirage"],
+        ["ayu-dark", "ayu-dark"],
         ["nord", "nord"],
         ["rose-pine", "rose-pine"],
         ["rose-pine-dark", "rose-pine"],
@@ -1894,8 +1898,6 @@
         ["rose-pine-light", "rose-pine-dawn"],
         ["everforest", "everforest"],
         ["evergreen", "everforest"],
-        ["green-team", "green-team"],
-        ["red-team", "red-team"],
         // Evergreen Light has been retired. Retain the aliases so a saved
         // selection migrates naturally to Evergreen instead of falling back
         // to an unrelated theme.

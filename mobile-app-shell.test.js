@@ -76,8 +76,11 @@ test("Timeline tile status is set inside the existing next-action renderer",()=>
 test("theme choices include the supported light palettes and retain legacy migration",()=>{
   const select = html.slice(html.indexOf('<select id="themeSel">'),html.indexOf('</select>',html.indexOf('<select id="themeSel">')));
   assert.equal((select.match(/<option/g) || []).length,15);
-  assert.match(select,/<option value="green-team">Green Team<\/option>/);
-  assert.match(select,/<option value="red-team">Red Team<\/option>/);
+  assert.match(select,/<option value="ayu-mirage">Ayu Mirage<\/option>/);
+  assert.match(select,/<option value="ayu-dark">Ayu Dark<\/option>/);
+  assert.match(app,/\["ayu-mirage", "ayu-mirage"\]/);
+  assert.match(app,/\["ayu-dark", "ayu-dark"\]/);
+  assert.doesNotMatch(select,/green-team|red-team/);
   assert.match(select,/<option value="system">System \/ Auto<\/option>/);
   assert.match(select,/<option value="oled-black" data-touch-only-theme>OLED Black<\/option>/);
   assert.match(select,/<option value="vaporwave" data-touch-only-theme>Vaporwave<\/option>/);
@@ -89,9 +92,9 @@ test("theme choices include the supported light palettes and retain legacy migra
   assert.doesNotMatch(select,/<option value="kanagawa-lotus">/);
   assert.match(select,/<option value="ayu-light">Ayu Light<\/option>/);
   assert.doesNotMatch(select,/<option value="everforest-light">/);
-  assert.match(app,/\["light", "industrial-slate"\]/);
-  assert.match(app,/\["mse", "industrial-slate"\]/);
-  assert.match(app,/\["dark", "industrial-slate-dark"\]/);
+  assert.match(app,/\["light", "ayu-light"\]/);
+  assert.match(app,/\["dark", "ayu-dark"\]/);
+  assert.doesNotMatch(app,/"mse"|"green-team"|"red-team"/);
   assert.match(app,/\["system", "system"\]/);
   assert.match(app,/\["oled-black", "oled-black"\]/);
   assert.match(app,/\["vaporwave", "vaporwave"\]/);

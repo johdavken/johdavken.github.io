@@ -413,41 +413,8 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .gruvboxIconDe
 .gruvboxSolidGlyph{display:none;fill:currentColor;stroke:none}
 body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .gruvboxSolidGlyph{display:block}
 body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .baseGlyph{display:none}
-:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerRed{color:var(--bad);stroke:var(--bad)}
-:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerOrange{color:var(--orange);stroke:var(--orange)}
-:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerYellow{color:var(--warn);stroke:var(--warn)}
-:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerGreen{color:var(--ok);stroke:var(--ok)}
-:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerBlue{color:var(--focus-border);stroke:var(--focus-border)}
-:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtWord{fill:var(--text);font:900 66px/1 ui-monospace,"Cascadia Mono","Liberation Mono",monospace;letter-spacing:-4px}
-/* Draw-on-loop (chosen from the animated-logo mockup round): each layer
-   continuously re-traces its outline, fills solid, holds, fades, and
-   restarts - staggered per layer so the mark always has exactly one
-   segment mid-draw. stroke-dasharray:137 matches this path's actual
-   perimeter (a rhombus, 4 equal sides of sqrt(31^2+14^2) =~ 34.01 each)
-   so the traced line closes with no visible seam. */
-:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerRed,
-:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerOrange,
-:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerYellow,
-:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerGreen,
-:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerBlue{
-  stroke-width:2.5;
-  stroke-dasharray:137;
-  stroke-dashoffset:137;
-  animation:rtLogoDrawLoop 3s ease-in-out infinite;
-}
-:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerRed{animation-delay:0s}
-:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerOrange{animation-delay:.25s}
-:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerYellow{animation-delay:.5s}
-:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerGreen{animation-delay:.75s}
-:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerBlue{animation-delay:1s}
-@keyframes rtLogoDrawLoop{
-  0%{ stroke-dashoffset:137; fill:transparent; opacity:1; }
-  28%{ stroke-dashoffset:0; fill:transparent; }
-  40%{ stroke-dashoffset:0; fill:currentColor; }
-  70%{ stroke-dashoffset:0; fill:currentColor; opacity:1; }
-  88%{ stroke-dashoffset:0; fill:currentColor; opacity:0; }
-  100%{ stroke-dashoffset:137; fill:transparent; opacity:0; }
-}
+.rtLogoSprite{position:absolute;width:0;height:0;overflow:hidden;color:var(--text)}
+:is(.resinToolsLogo,.resinToolsSidebarIcon){color:var(--text)}
 .workspaceBrandLogo{ display: block; width: min(100%, 196px); height: auto; }
 .workspaceBrandLogo path{ stroke-linecap: round; stroke-linejoin: round; }
 .workspaceBrandLogo [class^="polynFlow"]{ fill: none; stroke-width: 11; }
@@ -9162,18 +9129,17 @@ body[data-surface-style="divided"] .toolPanel{
    where they belong. Values are unchanged, and nothing inside the mobile
    block redeclares them, so the tile home renders exactly as before. */
 body[data-theme="gruvbox-dark"]{
-  --gruv-red:#c87968;
-  --gruv-orange:#c99554;
-  --gruv-yellow:#c9b46b;
-  --gruv-green:#89a86b;
-  --gruv-aqua:#82a78b;
-  --gruv-blue:#7b9e9a;
-  --gruv-purple:#ae8d80;
+  --gruv-red:#fb4934;
+  --gruv-orange:#fe8019;
+  --gruv-yellow:#fabd2f;
+  --gruv-green:#b8bb26;
+  --gruv-aqua:#8ec07c;
+  --gruv-blue:#83a598;
+  --gruv-purple:#d3869b;
   /* The Recipe pill's non-danger segments fill from --focus-border, which
-     resolves to this theme's yellow (theme.css) - too close to the app's
-     shared --warn/caution color to read as a neutral action. Swap in the
-     theme's own desaturated green instead, already used elsewhere here
-     (rtLayerGreen, the Production Totals tile accent). */
+     resolves to this theme's bright_blue (theme.css). Keep the pill on the
+     theme's own green instead so it never reads as a caution action -
+     matches the Production Totals tile accent. */
   --recipe-pill-accent: var(--gruv-green);
 }
 body[data-theme="gruvbox-light"]{
@@ -9282,17 +9248,21 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"])[data-mobile-wo
 body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"])[data-mobile-workspace="home"] .mobileWorkspaceNavMoreIcons .moreIconChangelog{ --tint:var(--gruv-blue); }
 body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"])[data-mobile-workspace="home"] .mobileWorkspaceNavMoreIcons .moreIconRt{ --tint:var(--gruv-aqua); }
 
-/* Main-screen numbered workflow only. Gruvbox keeps its established
-   palette above; no Gruvbox selectors are changed here. */
-body[data-theme="dark"] .workspaceNavButton[data-workspace-target="lineSetupBlock"]{ --tile-accent:var(--title); }
-body[data-theme="dark"] .workspaceNavButton[data-workspace-target="splitsBlock"]{ --tile-accent:var(--workflow-recipe); }
-
 /* Industrial Slate Light gives all four numbered sections one accent. */
 body[data-theme="industrial-slate"] .workspaceNavButton[data-step]{ --tile-accent:var(--yellow); }
 
 body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-target="lineSetupBlock"]{ --tile-accent:var(--bad); }
 body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-target="splitsBlock"]{ --tile-accent:var(--warn); }
 body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-target="resultsBlock"]{ --tile-accent:var(--workflow-timeline); }
+
+/* Ayu Light: Recipe carries its warm identity on the numbered marker
+   rather than the blue --title default. Timeline (--focus-border) and
+   Resin Totals (--workflow-resin-totals, from --ok) already resolve to
+   Ayu Light's blue and green. */
+body[data-theme="ayu-light"] .workspaceNavButton[data-workspace-target="splitsBlock"]{ --tile-accent:var(--orange); }
+/* Ayu Mirage / Ayu Dark: same Recipe-is-warm convention as Ayu Light. */
+body[data-theme="ayu-mirage"] .workspaceNavButton[data-workspace-target="splitsBlock"]{ --tile-accent:var(--orange); }
+body[data-theme="ayu-dark"] .workspaceNavButton[data-workspace-target="splitsBlock"]{ --tile-accent:var(--orange); }
 
 
 @media (max-width:900px), (min-width: 901px) and (pointer: coarse){
@@ -9940,13 +9910,6 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) #lineSyncBlock .mobileSectionHeaderIcon{color:var(--gruv-aqua)}
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) #toolsBlock .mobileSectionHeaderIcon{color:var(--gruv-purple)}
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) #changelogBlock .mobileSectionHeaderIcon{color:var(--gruv-blue)}
-  /* Main-screen numbered workflow only. Gruvbox keeps its established
-     palette above; no Gruvbox selectors are changed here. */
-  body[data-theme="dark"] #lineSetupBlock .mobileSectionHeaderIcon{color:var(--title)}
-  body[data-theme="dark"] #splitsBlock .mobileSectionHeaderIcon{color:var(--workflow-recipe)}
-  body[data-theme="dark"] #resultsBlock .mobileSectionHeaderIcon{color:var(--focus-border)}
-  body[data-theme="dark"] #productionSummaryBlock .mobileSectionHeaderIcon{color:var(--workflow-resin-totals)}
-
   body[data-theme="industrial-slate"] #lineSetupBlock .mobileSectionHeaderIcon,
   body[data-theme="industrial-slate"] #splitsBlock .mobileSectionHeaderIcon,
   body[data-theme="industrial-slate"] #resultsBlock .mobileSectionHeaderIcon,
@@ -9956,6 +9919,13 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
   body[data-theme="industrial-slate-dark"] #splitsBlock .mobileSectionHeaderIcon{color:var(--warn)}
   body[data-theme="industrial-slate-dark"] #resultsBlock .mobileSectionHeaderIcon{color:var(--workflow-timeline)}
   body[data-theme="industrial-slate-dark"] #productionSummaryBlock .mobileSectionHeaderIcon{color:var(--workflow-resin-totals)}
+
+  /* Ayu Light: keep Recipe warm on the mobile section headers too; Timeline
+     and Resin Totals already resolve to Ayu Light's blue and green. */
+  body[data-theme="ayu-light"] #splitsBlock .mobileSectionHeaderIcon{color:var(--orange)}
+  body[data-theme="ayu-mirage"] #splitsBlock .mobileSectionHeaderIcon{color:var(--orange)}
+  body[data-theme="ayu-dark"] #splitsBlock .mobileSectionHeaderIcon{color:var(--orange)}
+
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .appearanceNavTile{ --tile-accent:var(--gruv-red); }
   /* Request beta access is a .helpPlayBanner, not a .workspaceNavButton, but
      sits in the same expanded Workspace & support list - its title needs the

@@ -14,14 +14,19 @@ test("Gruvbox Light is a persistent, selectable theme", () => {
   assert.match(app, /\["gruvbox-light", "gruvbox-light"\]/);
 });
 
-test("Gruvbox Light follows the traditional light0 paper palette and muted accents", () => {
+test("Gruvbox Light follows the canonical light0 paper palette and FADED accents", () => {
   const palette = theme.slice(theme.indexOf('[data-theme="gruvbox-light"]'), theme.indexOf('/* ----------------------------------------------------------------------- * Nord'));
   assert.match(palette, /--bg: #fbf1c7;/);
   assert.match(palette, /--desktop-canvas-bg: #fbf1c7;/);
   assert.match(palette, /--panel: rgba\(251,241,199,.96\);/);
   assert.match(palette, /--text: #3c3836;/);
-  assert.match(palette, /--title: #3c3836;/);
-  assert.match(palette, /--focus-border: rgba\(69,88,129,.88\);/);
+  // Identity blue and focus are Gruvbox faded_blue #076678 — not the
+  // off-palette navy the earlier pass carried.
+  assert.match(palette, /--title: #076678;/);
+  assert.match(palette, /--focus-border: rgba\(7,102,120,.9\);/);
+  assert.doesNotMatch(palette, /rgba\(69,88,129/);
+  // Destructive is faded_red #9d0006, legible on cream.
+  assert.match(palette, /--bad: #9d0006;/);
   assert.doesNotMatch(palette, /#splitsBlock[\s\S]*?\)\{ color: #fbf1c7; \}/);
 });
 

@@ -9,9 +9,9 @@ const html = fs.readFileSync("index.html", "utf8");
 const styles = fs.readFileSync("styles.css", "utf8");
 
 // Two independent changes: (1) the default theme moved from Everforest to
-// Industrial Slate ("industrial-slate", formerly the legacy "mse" id)
-// everywhere a default is asserted. Everforest may still be offered as an
-// explicit choice; it just must not regain default status. (2) The
+// Industrial Slate ("industrial-slate") everywhere a default is asserted.
+// Everforest may still be offered as an explicit choice; it just must not
+// regain default status. (2) The
 // Header style picker - added specifically so the operator could preview
 // several font treatments (Monospace, Condensed, System Sans, Bold Slab,
 // Editorial Serif, Rounded Grotesk, Wide Display) - served its purpose:
@@ -39,7 +39,6 @@ test("theme migration has a deterministic industrial-slate fallback, including f
   assert.doesNotMatch(app, /applyTheme\("everforest"\)/);
   assert.doesNotMatch(app, /state\.theme \|\| "everforest"/);
   assert.match(app, /theme: "industrial-slate",/);
-  assert.match(app, /\["mse", "industrial-slate"\]/);
   assert.match(app, /const preference = migrations\.get\(saved\) \|\| "industrial-slate";/);
   assert.match(app, /applyTheme\(payload\.theme \|\| "industrial-slate"\);/);
   assert.match(app, /applyTheme\("industrial-slate"\);/);

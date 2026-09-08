@@ -60,6 +60,7 @@
             Changes <span class="lab-count" id="changeCount">0</span>
           </button>
           <button class="lab-tab" data-tab="inspect" role="tab" type="button">Inspect</button>
+          <button class="lab-tab" data-tab="impact" role="tab" type="button">Impact</button>
         </div>
 
         <div class="lab-tabpanel is-active" data-panel="tokens">
@@ -67,6 +68,7 @@
             <input type="search" id="tokenFilter" placeholder="Filter tokens…" autocomplete="off" />
             <button id="resetAllBtn" class="btn btn-danger" type="button" disabled>Reset all</button>
           </div>
+          <div id="tokenCoverage" class="tok-coverage" hidden></div>
           <div id="tokenGroups" class="lab-token-groups"></div>
         </div>
 
@@ -88,10 +90,28 @@
         <div class="lab-tabpanel" data-panel="inspect">
           <p class="lab-hint">
             Click <em>Select element</em> above, then hover and click in the preview.
-            Computed values only in v1 — source-rule / token tracing is Phase&nbsp;2.
+            Reports the computed value plus the winning rule, its <code>file:line</code>,
+            and the resolved <code>var()</code> token chain for text colour, background,
+            border and SVG fill/stroke.
           </p>
           <div id="inspectResult" class="lab-inspect">
             <p class="lab-empty">Nothing selected.</p>
+          </div>
+        </div>
+
+        <div class="lab-tabpanel" data-panel="impact">
+          <div class="lab-toolbar">
+            <select id="impactToken" aria-label="Token to analyse"></select>
+            <button id="impactHighlightBtn" class="btn" type="button" disabled>Highlight on screen</button>
+          </div>
+          <p class="lab-hint">
+            Read-only. Everywhere the selected token is consumed in the
+            <strong id="impactThemeName">current</strong> theme &mdash; directly, or
+            through a component token that resolves to it. Selecting here does not
+            enter edit mode.
+          </p>
+          <div id="impactResult" class="lab-inspect">
+            <p class="lab-empty">Pick a token.</p>
           </div>
         </div>
       </aside>

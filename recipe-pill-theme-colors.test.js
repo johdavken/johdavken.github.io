@@ -24,8 +24,8 @@ test("Gruvbox (dark and light) point the pill's accent fill at the theme's own g
   assert.match(styles, /body\[data-theme="gruvbox-light"\]\{[\s\S]*?--recipe-pill-accent: var\(--gruv-green\);\s*\n\}/);
   // The two variants retain distinct traditional focus cues, while the pill
   // deliberately stays green so it doesn't read as a caution action.
-  assert.match(theme, /:where\(html, body\)\[data-theme="gruvbox-dark"\]\{[\s\S]*?--focus-border: rgba\(201,180,107,\.88\);/);
-  assert.match(theme, /:where\(html, body\)\[data-theme="gruvbox-light"\]\{[\s\S]*?--focus-border: rgba\(69,88,129,\.88\);/);
+  assert.match(theme, /:where\(html, body\)\[data-theme="gruvbox-dark"\]\{[\s\S]*?--focus-border: rgba\(131,165,152,\.9\);/);
+  assert.match(theme, /:where\(html, body\)\[data-theme="gruvbox-light"\]\{[\s\S]*?--focus-border: rgba\(7,102,120,\.9\);/);
 });
 
 test("themes without a dedicated recipe-pill treatment keep falling back to --focus-border/--bad", () => {

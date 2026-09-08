@@ -8,13 +8,8 @@ const styles = fs.readFileSync("styles.css", "utf8");
 const theme = fs.readFileSync("theme.css", "utf8");
 
 // The Main screen's four numbered workflow tiles are theme-specific. Keep
-// Gruvbox's existing palette intact while Dark and Industrial Slate each get
-// their requested treatment without touching other workspace tiles.
-
-test("Dark uses a dedicated restrained Recipe yellow, leaving the shared warning token alone", () => {
-  const dark = theme.slice(theme.indexOf('[data-theme="dark"]'), theme.indexOf('[data-theme="light"]'));
-  assert.match(dark, /--workflow-recipe: #d6a85f;/);
-});
+// Gruvbox's existing palette intact while Industrial Slate gets its
+// requested treatment without touching other workspace tiles.
 
 test("Industrial Slate Dark retains its dedicated Timeline blue", () => {
   const slateDark = theme.slice(theme.indexOf('[data-theme="industrial-slate-dark"]'), theme.indexOf('[data-theme="gruvbox-dark"]'));
@@ -30,8 +25,7 @@ test("the nav-button icons need no separate color rule - .workspaceTileIcon alre
   assert.match(styles, /\.workspaceTileIcon\{[^}]*color:var\(--tile-accent\)/);
 });
 
-test("Dark and Industrial Slate Dark match each workflow section header icon to its tile", () => {
-  assert.match(styles, /body\[data-theme="dark"\] #splitsBlock \.mobileSectionHeaderIcon\{color:var\(--workflow-recipe\)\}/);
+test("Industrial Slate Dark matches each workflow section header icon to its tile", () => {
   assert.match(styles, /body\[data-theme="industrial-slate-dark"\] #splitsBlock \.mobileSectionHeaderIcon\{color:var\(--warn\)\}/);
   assert.match(styles, /body\[data-theme="industrial-slate-dark"\] #productionSummaryBlock \.mobileSectionHeaderIcon\{color:var\(--workflow-resin-totals\)\}/);
 });
