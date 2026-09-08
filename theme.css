@@ -1114,58 +1114,133 @@
 
 }
 
-/* ----------------------------------------------------------------------- * Ayu Light * ----------------------------------------------------------------------- */
+/* ----------------------------------------------------------------------- * Ayu Light * -----------------------------------------------------------------------
+   Ayu is the palette, not an orange redesign. The interface stays
+   predominantly neutral: three near-white surfaces (#f8f9fa page,
+   #fafafa panel, #ffffff raised pop/dialog) carry the hierarchy through
+   small tonal steps and fine cool-grey separators. Colour appears only
+   where it means something:
+     Recipe  -> warm  (--orange / --subtitle, used sparingly)
+     Timeline / editing / focus -> blue  (--title / --focus-border)
+     Resin Totals / tracked / synced -> green  (--ok)
+     destructive / reset / error -> red  (--bad = Ayu Light error #e65050)
+   Ayu's accent-on brown (#7e4b01) is deliberately not used anywhere. */
 :where(html, body)[data-theme="ayu-light"]{
   color-scheme: light;
-  --bg: #fafafa;
-  --desktop-canvas-bg: #fafafa;
+  --bg: #f8f9fa;
+  --desktop-canvas-bg: #f8f9fa;
   --panel: rgba(250,250,250,.96);
-  --panel2: rgba(236,236,237,.92);
-  --text: #575f66;
-  --title: #3b9ee5;
-  --subtitle: #f98d3f;
-  --muted: #8b8e92;
-  --border: rgba(207,209,210,.92);
-  --border2: rgba(139,142,146,.42);
-  --field-bg: rgba(236,236,237,.80);
+  --panel2: rgba(236,238,240,.92);
+  --text: #5c6166;
+  --title: #1a91cd;
+  --subtitle: #6b7787;
+  --muted: #828e9f;
+  --border: rgba(107,125,143,.22);
+  --border2: rgba(107,125,143,.36);
+  --field-bg: rgba(107,125,143,.07);
   --panelOpen: rgba(250,250,250,.99);
-  --chev: rgba(87,95,102,.52);
-  --fg: #575f66;
-  --yellow: #f2ad48;
-  --orange: #fa8d3e;
-  --warn: #f2ad48;
-  --bad: #f07178;
+  --chev: rgba(92,97,102,.5);
+  --fg: #5c6166;
+  --yellow: #eba400;
+  --orange: #fa8532;
+  --warn: #eba400;
+  --bad: #e65050;
   --ok: #86b300;
-  --shadow2: 0 6px 18px rgba(73,81,87,.12);
-  --row-bg: rgba(87,95,102,.04);
-  --row-border: rgba(207,209,210,.84);
-  --row-bg-2: rgba(59,158,229,.04);
-  --row-border-2: rgba(207,209,210,.92);
-  --readonly-bg: rgba(87,95,102,.055);
-  --readonly-border: rgba(139,142,146,.28);
-  --focus-border: rgba(59,158,229,.84);
-  --focus-ring: rgba(59,158,229,.16);
+  --shadow2: 0 4px 16px rgba(107,125,143,.16);
+  --row-bg: rgba(92,97,102,.035);
+  --row-border: rgba(107,125,143,.16);
+  --row-bg-2: rgba(92,97,102,.025);
+  --row-border-2: rgba(107,125,143,.22);
+  --readonly-bg: rgba(92,97,102,.05);
+  --readonly-border: rgba(107,125,143,.2);
+  --focus-border: rgba(57,158,230,.85);
+  --focus-ring: rgba(57,158,230,.16);
   --f-var1: #86b300;
-  --f-var2: #f2ad48;
+  --f-var2: #eba400;
   --f-var3: #a37acc;
-  --f-const: #8b8e92;
+  --f-const: #828e9f;
   --btn-text: var(--text);
-  --btn-border: rgba(139,142,146,.34);
-  --btn-primary-a: rgba(59,158,229,.18);
-  --btn-primary-b: rgba(59,158,229,.08);
-  --btn-secondary-bg: rgba(134,179,0,.13);
-  --btn-secondary-border: rgba(134,179,0,.30);
-  --btn-danger-bg: rgba(240,113,120,.13);
-  --btn-danger-border: rgba(240,113,120,.28);
-  --bg-glow-a: rgba(59,158,229,.06);
-  --bg-glow-b: rgba(249,141,63,.05);
-  --card-glow-a: rgba(59,158,229,.07);
-  --card-glow-b: rgba(134,179,0,.05);
-  --toggle-on-bg: rgba(59,158,229,.15);
-  --toggle-on-border: rgba(59,158,229,.36);
+  --btn-border: rgba(107,125,143,.3);
+  --btn-primary-a: rgba(57,158,230,.16);
+  --btn-primary-b: rgba(57,158,230,.07);
+  --btn-secondary-bg: rgba(107,125,143,.09);
+  --btn-secondary-border: rgba(107,125,143,.24);
+  --btn-danger-bg: rgba(230,80,80,.12);
+  --btn-danger-border: rgba(230,80,80,.28);
+  --bg-glow-a: rgba(107,125,143,.05);
+  --bg-glow-b: rgba(107,125,143,.03);
+  --card-glow-a: rgba(107,125,143,.05);
+  --card-glow-b: rgba(107,125,143,.03);
+  --toggle-on-bg: rgba(57,158,230,.16);
+  --toggle-on-border: rgba(57,158,230,.4);
   --footer-bg: rgba(250,250,250,.96);
-  --footer-border: rgba(139,142,146,.30);
+  --footer-border: rgba(107,125,143,.22);
 
+  /* Station Console selected/active fill (active recipe/timeline tab, the
+     Edit/Done key, the inverted keys in Tools/Admin/Wizard). The shared
+     default is var(--text) charcoal, which reads as a foreign graphite
+     slab on Ayu Light's near-white surfaces. This is Ayu Light's own UI
+     blue-slate (common.ui family): clearly the selected state, clearly
+     darker than the neutral --panel2 keys, ~4.5:1 under the near-white
+     --panel label — not black, not orange, not bright blue. Only consumed
+     within the Station Console scope; every other theme keeps var(--text). */
+  --btnstyle-ink: #5f7391;
+
+}
+/* The animated brand mark keeps a full spectrum, drawn from Ayu Light's
+   own hue families (same treatment every themed palette applies). */
+:where(html, body)[data-theme="ayu-light"] :is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerRed{color:#f07171;stroke:#f07171}
+:where(html, body)[data-theme="ayu-light"] :is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerOrange{color:#fa8532;stroke:#fa8532}
+:where(html, body)[data-theme="ayu-light"] :is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerYellow{color:#eba400;stroke:#eba400}
+:where(html, body)[data-theme="ayu-light"] :is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerGreen{color:#86b300;stroke:#86b300}
+:where(html, body)[data-theme="ayu-light"] :is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerBlue{color:#399ee6;stroke:#399ee6}
+
+/* Compact Recipe: lift the near-white grid's chrome just enough. The
+   hopper ID stays muted neutral by default (green when tracked is handled
+   by the cell tint on this layout); the inactive track pip and the cell
+   border get a touch more presence; copy stays a quiet blue. Resin and
+   percentage colours are set once, for every layout, further below. */
+@media (max-width:700px){
+  :where(html, body)[data-theme="ayu-light"] #splitsBlock .splitsMatrix.compactMobileRecipe td.splitMatrixCell{border-color:rgba(107,125,143,.24)}
+  :where(html, body)[data-theme="ayu-light"] #splitsBlock .splitsMatrix.compactMobileRecipe .splitCellHopperName:not(.smart){color:var(--muted)}
+  :where(html, body)[data-theme="ayu-light"] #splitsBlock .splitsMatrix.compactMobileRecipe .splitTrackButton:not(.active){color:#5c6166;opacity:.8}
+  :where(html, body)[data-theme="ayu-light"] #splitsBlock .splitsMatrix.compactMobileRecipe .splitCopyBtn{color:#399ee6}
+}
+
+/* The open Recipe section heading reads as primary ink, not the emphasis
+   blue: the warm Recipe icon already carries section identity, so the
+   title needn't also be coloured. Scoped to the Recipe panel's own open
+   heading (--section-title is a retired hook and stays unset); --title
+   keeps driving matrix A/B/C labels, edit outlines and Timeline identity.
+   Collapsed, the heading still falls to --muted like every other card. */
+body[data-theme="ayu-light"] #splitsBlock[open] > summary .layerTitle{
+  color: var(--text);
+}
+
+/* Recipe matrix data hierarchy — one convention on every layout (desktop,
+   size-tablet, touch tablet, mobile summary + edit). State behaviour still
+   differs by device; only the data colours are unified here.
+
+   Resin name -> --muted, the same soft blue-grey the layer-percentage text
+   uses, rather than the heavier primary ink. On desktop the base rule is
+   already --muted; this also re-neutralises the touch/summary static-cell
+   rules in styles.css that tint the code with --title, and drops the
+   :disabled -webkit-text-fill-color those rules set on WebKit. */
+body[data-theme="ayu-light"] #splitsArea .splitMatrixCell:not(.empty) .splitCellResinText,
+body[data-theme="ayu-light"] #splitsArea .splitMatrixCell:not(.empty) .resinNameInput,
+body[data-theme="ayu-light"] #splitsArea .splitMatrixCell:not(.empty) .resinNameInput:disabled{
+  color: var(--muted);
+  -webkit-text-fill-color: var(--muted);
+}
+
+/* Percentage value -> a restrained Ayu Light red (red family L1). It marks
+   the number as its own data category; it is deliberately NOT --bad
+   (#e65050), which stays reserved for destructive/error. The trailing "%"
+   span is untouched and stays --muted. */
+body[data-theme="ayu-light"] #splitsArea .splitMatrixCell:not(.empty) .splitInput,
+body[data-theme="ayu-light"] #splitsArea .splitMatrixCell:not(.empty) .splitInput:disabled{
+  color: #e5474f;
+  -webkit-text-fill-color: #e5474f;
 }
 
 /* ----------------------------------------------------------------------- * One Dark * ----------------------------------------------------------------------- */

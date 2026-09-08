@@ -9294,6 +9294,12 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
 body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-target="splitsBlock"]{ --tile-accent:var(--warn); }
 body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-target="resultsBlock"]{ --tile-accent:var(--workflow-timeline); }
 
+/* Ayu Light: Recipe carries its warm identity on the numbered marker
+   rather than the blue --title default. Timeline (--focus-border) and
+   Resin Totals (--workflow-resin-totals, from --ok) already resolve to
+   Ayu Light's blue and green. */
+body[data-theme="ayu-light"] .workspaceNavButton[data-workspace-target="splitsBlock"]{ --tile-accent:var(--orange); }
+
 
 @media (max-width:900px), (min-width: 901px) and (pointer: coarse){
   /* Mobile workspace navigation is a tile home. Each tile reuses the live
@@ -9956,6 +9962,11 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
   body[data-theme="industrial-slate-dark"] #splitsBlock .mobileSectionHeaderIcon{color:var(--warn)}
   body[data-theme="industrial-slate-dark"] #resultsBlock .mobileSectionHeaderIcon{color:var(--workflow-timeline)}
   body[data-theme="industrial-slate-dark"] #productionSummaryBlock .mobileSectionHeaderIcon{color:var(--workflow-resin-totals)}
+
+  /* Ayu Light: keep Recipe warm on the mobile section headers too; Timeline
+     and Resin Totals already resolve to Ayu Light's blue and green. */
+  body[data-theme="ayu-light"] #splitsBlock .mobileSectionHeaderIcon{color:var(--orange)}
+
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .appearanceNavTile{ --tile-accent:var(--gruv-red); }
   /* Request beta access is a .helpPlayBanner, not a .workspaceNavButton, but
      sits in the same expanded Workspace & support list - its title needs the
