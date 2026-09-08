@@ -1888,6 +1888,7 @@
         ["ayu-light", "ayu-light"],
         ["ayu-mirage", "ayu-mirage"],
         ["mirage", "ayu-mirage"],
+        ["ayu-dark", "ayu-dark"],
         ["nord", "nord"],
         ["rose-pine", "rose-pine"],
         ["rose-pine-dark", "rose-pine"],

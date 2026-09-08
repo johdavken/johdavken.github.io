@@ -9129,18 +9129,17 @@ body[data-surface-style="divided"] .toolPanel{
    where they belong. Values are unchanged, and nothing inside the mobile
    block redeclares them, so the tile home renders exactly as before. */
 body[data-theme="gruvbox-dark"]{
-  --gruv-red:#c87968;
-  --gruv-orange:#c99554;
-  --gruv-yellow:#c9b46b;
-  --gruv-green:#89a86b;
-  --gruv-aqua:#82a78b;
-  --gruv-blue:#7b9e9a;
-  --gruv-purple:#ae8d80;
+  --gruv-red:#fb4934;
+  --gruv-orange:#fe8019;
+  --gruv-yellow:#fabd2f;
+  --gruv-green:#b8bb26;
+  --gruv-aqua:#8ec07c;
+  --gruv-blue:#83a598;
+  --gruv-purple:#d3869b;
   /* The Recipe pill's non-danger segments fill from --focus-border, which
-     resolves to this theme's yellow (theme.css) - too close to the app's
-     shared --warn/caution color to read as a neutral action. Swap in the
-     theme's own desaturated green instead, already used elsewhere here
-     (rtLayerGreen, the Production Totals tile accent). */
+     resolves to this theme's bright_blue (theme.css). Keep the pill on the
+     theme's own green instead so it never reads as a caution action -
+     matches the Production Totals tile accent. */
   --recipe-pill-accent: var(--gruv-green);
 }
 body[data-theme="gruvbox-light"]{
@@ -9266,8 +9265,9 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
    Resin Totals (--workflow-resin-totals, from --ok) already resolve to
    Ayu Light's blue and green. */
 body[data-theme="ayu-light"] .workspaceNavButton[data-workspace-target="splitsBlock"]{ --tile-accent:var(--orange); }
-/* Ayu Mirage: same Recipe-is-warm convention as Ayu Light. */
+/* Ayu Mirage / Ayu Dark: same Recipe-is-warm convention as Ayu Light. */
 body[data-theme="ayu-mirage"] .workspaceNavButton[data-workspace-target="splitsBlock"]{ --tile-accent:var(--orange); }
+body[data-theme="ayu-dark"] .workspaceNavButton[data-workspace-target="splitsBlock"]{ --tile-accent:var(--orange); }
 
 
 @media (max-width:900px), (min-width: 901px) and (pointer: coarse){
@@ -9936,6 +9936,7 @@ body[data-theme="ayu-mirage"] .workspaceNavButton[data-workspace-target="splitsB
      and Resin Totals already resolve to Ayu Light's blue and green. */
   body[data-theme="ayu-light"] #splitsBlock .mobileSectionHeaderIcon{color:var(--orange)}
   body[data-theme="ayu-mirage"] #splitsBlock .mobileSectionHeaderIcon{color:var(--orange)}
+  body[data-theme="ayu-dark"] #splitsBlock .mobileSectionHeaderIcon{color:var(--orange)}
 
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .appearanceNavTile{ --tile-accent:var(--gruv-red); }
   /* Request beta access is a .helpPlayBanner, not a .workspaceNavButton, but

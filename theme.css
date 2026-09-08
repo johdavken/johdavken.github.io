@@ -372,62 +372,65 @@
 /* ----------------------------------------------------------------------- * Gruvbox Dark * ----------------------------------------------------------------------- */
 :where(html, body)[data-theme="gruvbox-dark"]{
   color-scheme: dark;
-  /* Muted Terminal: Gruvbox's warm color family, lowered in saturation
-     and anchored in olive-charcoal surfaces for long production sessions. */
-  --bg: #20211d;
-  --panel: rgba(44,45,37,.97);
-  --panel2: rgba(54,55,45,.94);
-  --text: #d8d1a8;
-  --title: #c9b46b;
-  --subtitle: #9f9a7f;
-  --muted: #9f9a7f;
-  --fg: #d8d1a8;
-  --yellow: #c9b46b;
-  --orange: #c99554;
-  --logo-i: #7b9e9a;
-  --logo-q: #c87968;
-  --border: rgba(87,87,71,.82);
-  --border2: rgba(87,87,71,.72);
-  --field-bg: rgba(27,28,24,.78);
-  --panelOpen: rgba(54,55,45,.99);
-  --chev: rgba(159,154,127,.68);
-  --warn: #c99554;
-  --bad: #c87968;
-  --ok: #89a86b;
-  --shadow2: 0 9px 24px rgba(0,0,0,.42);
-  --focus-border: rgba(201,180,107,.88);
-  --focus-ring: rgba(201,180,107,.18);
-  --row-bg: rgba(216,209,168,.045);
-  --row-border: rgba(87,87,71,.38);
-  --row-bg-2: rgba(27,28,24,.34);
-  --row-border-2: rgba(87,87,71,.48);
-  --readonly-bg: rgba(27,28,24,.58);
-  --readonly-border: rgba(87,87,71,.62);
-  --f-var1: #89a86b;
-  --f-var2: #c9b46b;
-  --f-var3: #7b9e9a;
-  --f-const: #9f9a7f;
+  /* Canonical Gruvbox Dark: bg0 (#282828) raised over bg0_h (#1d2021), fg1
+     (#ebdbb2) ink, and the BRIGHT accent column meant to read on dark0 —
+     bright_red #fb4934, bright_yellow #fabd2f, bright_green #b8bb26,
+     bright_blue #83a598, bright_purple #d3869b, bright_aqua #8ec07c, and
+     bright_orange #fe8019 for the warm Recipe cue. Identity + focus are
+     Gruvbox's bright_blue #83a598. */
+  --bg: #282828;
+  --desktop-canvas-bg: #1d2021;
+  --panel: #32302f;
+  --panel2: rgba(60,56,54,.92);
+  --text: #ebdbb2;
+  --title: #83a598;
+  --subtitle: #bdae93;
+  --muted: #a89984;
+  --fg: #ebdbb2;
+  --yellow: #fabd2f;
+  --orange: #fe8019;
+  --border: rgba(102,92,84,.82);
+  --border2: rgba(102,92,84,.66);
+  --field-bg: rgba(0,0,0,.28);
+  --panelOpen: #3c3836;
+  --chev: rgba(235,219,178,.55);
+  --warn: #fabd2f;
+  --bad: #fb4934;
+  --ok: #b8bb26;
+  --shadow2: 0 10px 26px rgba(0,0,0,.5);
+  --focus-border: rgba(131,165,152,.9);
+  --focus-ring: rgba(131,165,152,.2);
+  --row-bg: rgba(235,219,178,.045);
+  --row-border: rgba(102,92,84,.4);
+  --row-bg-2: rgba(0,0,0,.22);
+  --row-border-2: rgba(102,92,84,.5);
+  --readonly-bg: rgba(0,0,0,.26);
+  --readonly-border: rgba(102,92,84,.6);
+  --f-var1: #b8bb26;
+  --f-var2: #fabd2f;
+  --f-var3: #d3869b;
+  --f-const: #a89984;
   --btn-text: var(--text);
-  --btn-border: rgba(87,87,71,.72);
-  --btn-primary-a: rgba(201,180,107,.28);
-  --btn-primary-b: rgba(201,180,107,.14);
-  --btn-secondary-bg: rgba(137,168,107,.15);
-  --btn-secondary-border: rgba(137,168,107,.36);
-  --btn-danger-bg: rgba(200,121,104,.14);
-  --btn-danger-border: rgba(200,121,104,.34);
-  --bg-glow-a: rgba(123,158,154,.08);
-  --bg-glow-b: rgba(201,180,107,.055);
-  --card-glow-a: rgba(123,158,154,.08);
-  --card-glow-b: rgba(137,168,107,.05);
-  --toggle-on-bg: rgba(137,168,107,.28);
-  --toggle-on-border: rgba(137,168,107,.52);
-  --footer-bg: rgba(32,33,29,.96);
-  --footer-border: rgba(87,87,71,.72);
+  --btn-border: rgba(102,92,84,.66);
+  --btn-primary-a: rgba(131,165,152,.26);
+  --btn-primary-b: rgba(131,165,152,.13);
+  --btn-secondary-bg: rgba(168,153,132,.14);
+  --btn-secondary-border: rgba(168,153,132,.32);
+  --btn-danger-bg: rgba(251,73,52,.15);
+  --btn-danger-border: rgba(251,73,52,.36);
+  --bg-glow-a: rgba(254,128,25,.08);
+  --bg-glow-b: rgba(131,165,152,.06);
+  --card-glow-a: rgba(254,128,25,.08);
+  --card-glow-b: rgba(184,187,38,.05);
+  --toggle-on-bg: rgba(184,187,38,.26);
+  --toggle-on-border: rgba(184,187,38,.5);
+  --footer-bg: rgba(29,32,33,.96);
+  --footer-border: rgba(102,92,84,.66);
 
 }
 
-/* Recipe controls retain the terminal's high-contrast paper ink; hopper
-   designations use its dusty orange accent. */
+/* Recipe controls keep the canonical fg1 paper ink; hopper designations
+   take Gruvbox's bright orange accent. */
 :where(html, body)[data-theme="gruvbox-dark"] #splitsBlock :is(
   .splitCopyBtn,
   .splitCopyBtn:hover,
@@ -440,30 +443,29 @@
   .splitLayerPct input,
   .splitLayerPct span,
   .splitColumnTotal
-){ color: #d8d1a8; }
+){ color: #ebdbb2; }
 :where(html, body)[data-theme="gruvbox-dark"] #splitsBlock .splitCellHopperName,
-:where(html, body)[data-theme="gruvbox-dark"] #splitsBlock .splitCellHopperName.smart{ color: #c99554; }
+:where(html, body)[data-theme="gruvbox-dark"] #splitsBlock .splitCellHopperName.smart{ color: #fe8019; }
 
-/* The animated mark follows the same restrained terminal palette. */
-:where(html, body)[data-theme="gruvbox-dark"] .resinToolsLogo .rtLayerRed{color:#c87968;stroke:#c87968}
-:where(html, body)[data-theme="gruvbox-dark"] .resinToolsLogo .rtLayerOrange{color:#c99554;stroke:#c99554}
-:where(html, body)[data-theme="gruvbox-dark"] .resinToolsLogo .rtLayerYellow{color:#c9b46b;stroke:#c9b46b}
-:where(html, body)[data-theme="gruvbox-dark"] .resinToolsLogo .rtLayerGreen{color:#89a86b;stroke:#89a86b}
-:where(html, body)[data-theme="gruvbox-dark"] .resinToolsLogo .rtLayerBlue{color:#7b9e9a;stroke:#7b9e9a}
-:where(html, body)[data-theme="gruvbox-dark"] .resinToolsLogo{--rt-stream-1:#c87968;--rt-stream-2:#c99554;--rt-stream-3:#c9b46b;--rt-stream-4:#89a86b;--rt-stream-5:#7b9e9a}
+/* The animated mark follows the same bright Gruvbox hue families. */
+:where(html, body)[data-theme="gruvbox-dark"] .resinToolsLogo{--rt-stream-1:#fb4934;--rt-stream-2:#fe8019;--rt-stream-3:#fabd2f;--rt-stream-4:#b8bb26;--rt-stream-5:#83a598}
 
 /* ----------------------------------------------------------------------- * Gruvbox Light * ----------------------------------------------------------------------- */
 :where(html, body)[data-theme="gruvbox-light"]{
   color-scheme: light;
-  /* Traditional Gruvbox Light: its original light0/light1 paper surfaces
-     and muted (not bright) terminal accents. */
+  /* Canonical Gruvbox Light: light0 (#fbf1c7) paper over light1 (#ebdbb2),
+     dark3/dark4 ink, and the FADED accent set — the darker column meant to
+     read on cream (faded_red #9d0006, faded_yellow #b57614, faded_green
+     #79740e, faded_blue #076678, faded_purple #8f3f71, neutral_orange
+     #d65d0e for the warm Recipe cue). The blue is Gruvbox's #076678, not
+     the off-palette navy the previous pass used. */
   --bg: #fbf1c7;
   --desktop-canvas-bg: #fbf1c7;
   --panel: rgba(251,241,199,.96);
   --panel2: rgba(235,219,178,.90);
   --text: #3c3836;
-  --title: #3c3836;
-  --subtitle: #d65d0e;
+  --title: #076678;
+  --subtitle: #665c54;
   --muted: #7c6f64;
   --fg: #3c3836;
   --yellow: #b57614;
@@ -473,12 +475,12 @@
   --field-bg: rgba(249,245,215,.84);
   --panelOpen: rgba(251,241,199,.99);
   --chev: rgba(60,56,54,.55);
-  --warn: #d65d0e;
-  --bad: #cc241d;
+  --warn: #b57614;
+  --bad: #9d0006;
   --ok: #79740e;
   --shadow2: 0 6px 18px rgba(0,0,0,.14);
-  --focus-border: rgba(69,88,129,.88);
-  --focus-ring: rgba(69,88,129,.16);
+  --focus-border: rgba(7,102,120,.9);
+  --focus-ring: rgba(7,102,120,.16);
   --row-bg: rgba(60,56,54,.045);
   --row-border: rgba(213,196,161,.86);
   --row-bg-2: rgba(60,56,54,.035);
@@ -487,22 +489,22 @@
   --readonly-border: rgba(124,111,100,.34);
   --f-var1: #79740e;
   --f-var2: #b57614;
-  --f-var3: #b16286;
+  --f-var3: #8f3f71;
   --f-const: #928374;
   --btn-text: var(--text);
   --btn-border: rgba(124,111,100,.36);
-  --btn-primary-a: rgba(69,88,129,.18);
-  --btn-primary-b: rgba(69,88,129,.08);
-  --btn-secondary-bg: rgba(121,116,14,.13);
-  --btn-secondary-border: rgba(121,116,14,.34);
-  --btn-danger-bg: rgba(204,36,29,.14);
-  --btn-danger-border: rgba(204,36,29,.32);
+  --btn-primary-a: rgba(7,102,120,.16);
+  --btn-primary-b: rgba(7,102,120,.07);
+  --btn-secondary-bg: rgba(124,111,100,.12);
+  --btn-secondary-border: rgba(124,111,100,.3);
+  --btn-danger-bg: rgba(157,0,6,.13);
+  --btn-danger-border: rgba(157,0,6,.3);
   --bg-glow-a: rgba(214,93,14,.07);
-  --bg-glow-b: rgba(69,88,129,.055);
+  --bg-glow-b: rgba(7,102,120,.05);
   --card-glow-a: rgba(214,93,14,.07);
   --card-glow-b: rgba(121,116,14,.055);
-  --toggle-on-bg: rgba(69,88,129,.15);
-  --toggle-on-border: rgba(69,88,129,.38);
+  --toggle-on-bg: rgba(7,102,120,.14);
+  --toggle-on-border: rgba(7,102,120,.4);
   --footer-bg: rgba(251,241,199,.96);
   --footer-border: rgba(124,111,100,.32);
 
@@ -1312,6 +1314,73 @@ body[data-theme="ayu-light"] #splitsArea .splitMatrixCell:not(.empty) .splitInpu
 /* Brand mark redrawn from Ayu Mirage's own hue families (same treatment
    Ayu Light gets); the streams fall back to the semantic tokens above. */
 :where(html, body)[data-theme="ayu-mirage"] :is(.resinToolsLogo,.resinToolsSidebarIcon){--rt-stream-1:#f28779;--rt-stream-2:#ffa659;--rt-stream-3:#ffcd66;--rt-stream-4:#d5ff80;--rt-stream-5:#73d0ff}
+
+/* ----------------------------------------------------------------------- * Ayu Dark * -----------------------------------------------------------------------
+   The Dark column of the same Ayu palette sheet, completing the family.
+   The deepest of the three: near-black surfaces (#0d1017 page, #141821
+   panel, #1b2029 raised) and Ayu Dark's warm off-white ink (#bfbdb6).
+   Same semantic mapping the whole family shares:
+     Recipe  -> warm  (--orange keyword #ff8f40, on the workflow marker only)
+     Timeline / editing / focus -> blue  (--title / --focus-border #59c2ff)
+     Resin Totals / tracked / synced -> green  (--ok string #aad94c)
+     destructive / reset / error -> red  (--bad = Ayu Dark error #d95757)
+   --muted is lifted one step off Ayu Dark's very dim ui.fg (#5a6378, ~3:1
+   on this ground) to #6b7580 so secondary labels stay legible — the same
+   kind of deliberate deviation Ayu Light's block documents. --btnstyle-ink
+   is not overridden: on a dark theme the shared var(--text) is the ink. */
+:where(html, body)[data-theme="ayu-dark"]{
+  color-scheme: dark;
+  --bg: #0d1017;
+  --desktop-canvas-bg: #0a0e15;
+  --panel: #141821;
+  --panel2: rgba(15,19,26,.86);
+  --text: #bfbdb6;
+  --title: #59c2ff;
+  --subtitle: #7a828e;
+  --muted: #6b7580;
+  --border: rgba(115,127,143,.15);
+  --border2: rgba(115,127,143,.26);
+  --field-bg: rgba(0,0,0,.32);
+  --panelOpen: #1b2029;
+  --chev: rgba(191,189,182,.42);
+  --fg: #bfbdb6;
+  --yellow: #ffb454;
+  --orange: #ff8f40;
+  --warn: #ffb454;
+  --bad: #d95757;
+  --ok: #aad94c;
+  --shadow2: 0 10px 26px rgba(0,0,0,.5);
+  --row-bg: rgba(191,189,182,.035);
+  --row-border: rgba(89,194,255,.13);
+  --row-bg-2: rgba(89,194,255,.028);
+  --row-border-2: rgba(115,127,143,.24);
+  --readonly-bg: rgba(0,0,0,.3);
+  --readonly-border: rgba(115,127,143,.18);
+  --focus-border: rgba(89,194,255,.85);
+  --focus-ring: rgba(89,194,255,.18);
+  --f-var1: #aad94c;
+  --f-var2: #ffb454;
+  --f-var3: #d2a6ff;
+  --f-const: #6b7580;
+  --btn-text: var(--text);
+  --btn-border: rgba(115,127,143,.24);
+  --btn-primary-a: rgba(89,194,255,.18);
+  --btn-primary-b: rgba(89,194,255,.09);
+  --btn-secondary-bg: rgba(115,127,143,.1);
+  --btn-secondary-border: rgba(115,127,143,.22);
+  --btn-danger-bg: rgba(217,87,87,.14);
+  --btn-danger-border: rgba(217,87,87,.3);
+  --bg-glow-a: rgba(89,194,255,.09);
+  --bg-glow-b: rgba(255,180,84,.05);
+  --card-glow-a: rgba(89,194,255,.11);
+  --card-glow-b: rgba(255,143,64,.06);
+  --toggle-on-bg: rgba(89,194,255,.2);
+  --toggle-on-border: rgba(89,194,255,.45);
+  --footer-bg: rgba(13,16,23,.94);
+  --footer-border: rgba(115,127,143,.18);
+}
+/* Brand mark redrawn from Ayu Dark's own hue families. */
+:where(html, body)[data-theme="ayu-dark"] :is(.resinToolsLogo,.resinToolsSidebarIcon){--rt-stream-1:#f07178;--rt-stream-2:#ff8f40;--rt-stream-3:#ffb454;--rt-stream-4:#aad94c;--rt-stream-5:#59c2ff}
 
 /* ----------------------------------------------------------------------- * One Dark * ----------------------------------------------------------------------- */
 :where(html, body)[data-theme="one-dark"]{
