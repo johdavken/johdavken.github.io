@@ -124,7 +124,7 @@ test("no error-red anywhere in the missing-weight rules", () => {
 });
 
 test("the grouped row keeps a visible keyboard focus state", () => {
-  assert.match(styles, /\.resultNeedsWeightRow:focus-visible\{[\s\S]*?outline:2px solid var\(--focus-border\);/);
+  assert.match(styles, /\.resultNeedsWeightRow:focus-visible\{[\s\S]*?outline:var\(--focus-outline\);/);
 });
 
 /* ----------------------------------------------------------------------

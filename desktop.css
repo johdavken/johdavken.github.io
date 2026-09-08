@@ -123,7 +123,7 @@
   }
   .desktopChangeoverWizardTrigger{display:grid;place-items:center;flex:0 0 auto;width:34px;height:34px;min-height:34px;padding:7px;border:0;border-radius:var(--control-radius);background:transparent;color:var(--focus-border);box-shadow:none}
   .desktopChangeoverWizardTrigger:hover{background:var(--row-bg)}
-  .desktopChangeoverWizardTrigger:focus-visible{outline:2px solid var(--focus-border);outline-offset:1px}
+  .desktopChangeoverWizardTrigger:focus-visible{outline:var(--focus-outline);outline-offset:1px}
   .desktopChangeoverWizardTrigger svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
   .workspaceNavButton{gap:5px}
   .workspaceNavButton span{font-size:14px;font-weight:650;letter-spacing:.06em;text-transform:uppercase}
@@ -195,7 +195,7 @@
   #appFooterAccount{width:38px;height:38px;border-color:transparent;background:transparent;box-shadow:none}
   .desktopDisplayToggle:hover,#appFooterAccount:hover{background:color-mix(in srgb,var(--focus-border) 9%,transparent);color:var(--title)}
   .desktopDisplayToggle:active,#appFooterAccount:active{background:color-mix(in srgb,var(--focus-border) 15%,transparent);transform:scale(.96)}
-  .desktopDisplayToggle:focus-visible,#appFooterAccount:focus-visible{outline:2px solid var(--focus-border);outline-offset:2px}
+  .desktopDisplayToggle:focus-visible,#appFooterAccount:focus-visible{outline:var(--focus-outline);outline-offset:2px}
   #appFooterAccount[aria-expanded="true"]{background:var(--focus-ring);color:var(--title)}
   .footerAccountMenu{
     position:fixed;
@@ -231,7 +231,7 @@
   .desktopNotificationsToggle svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
   .desktopNotificationsToggle:hover{background:color-mix(in srgb,var(--focus-border) 9%,transparent);color:var(--title)}
   .desktopNotificationsToggle:active{background:color-mix(in srgb,var(--focus-border) 15%,transparent);transform:scale(.96)}
-  .desktopNotificationsToggle:focus-visible{outline:2px solid var(--focus-border);outline-offset:2px}
+  .desktopNotificationsToggle:focus-visible{outline:var(--focus-outline);outline-offset:2px}
   .desktopNotificationsToggle[aria-expanded="true"]{background:var(--focus-ring);color:var(--title)}
   .desktopNotificationsToggle[data-severity="warning"]{color:var(--warn)}
   .desktopNotificationsToggle[data-severity="error"]{color:var(--bad)}
@@ -294,7 +294,7 @@
     pointer-events:auto;
   }
   .desktopNotificationsMenu:not([open]){display:none!important}
-  .desktopNotificationsMenu:focus-visible{outline:2px solid var(--focus-border);outline-offset:-2px}
+  .desktopNotificationsMenu:focus-visible{outline:var(--focus-outline);outline-offset:-2px}
 
   /* Timeline Display gear popover - anchored non-modal, like the notification
      centre. The gear scrolls with the panel content, so app.js positions this
@@ -315,7 +315,7 @@
     pointer-events:auto;
   }
   .timelineDisplaySheet:not([open]){display:none!important}
-  .timelineDisplaySheet:focus-visible{outline:2px solid var(--focus-border);outline-offset:-2px}
+  .timelineDisplaySheet:focus-visible{outline:var(--focus-outline);outline-offset:-2px}
   .desktopNotificationsHead{
     display:flex;
     align-items:baseline;
@@ -366,7 +366,7 @@
     box-shadow:none;
   }
   .desktopNotificationAction:hover{background:var(--focus-ring);color:var(--title)}
-  .desktopNotificationAction:focus-visible{outline:2px solid var(--focus-border);outline-offset:1px}
+  .desktopNotificationAction:focus-visible{outline:var(--focus-outline);outline-offset:1px}
 
   /* The notification center supersedes the large global heads-up banner on
      desktop. The banner itself is untouched (mobile still renders it from
@@ -511,7 +511,7 @@
   #weightsArea[data-desktop-bulk-mode="true"] .weightsMatrix tbody th .weightsSelectHeader::before{display:grid}
   .weightsMatrixCell{height:54px;vertical-align:middle;cursor:default;box-shadow:inset 0 0 0 1px var(--row-border-2)}
   #weightsArea[data-desktop-bulk-mode="true"] .weightsMatrixCell{cursor:pointer}
-  #weightsArea[data-desktop-bulk-mode="true"] .weightsMatrixCell:focus-visible{outline:2px solid var(--focus-border);outline-offset:-3px}
+  #weightsArea[data-desktop-bulk-mode="true"] .weightsMatrixCell:focus-visible{outline:var(--focus-outline);outline-offset:-3px}
   #weightsArea[data-desktop-bulk-mode="true"] .weightsMatrixCell.selected{background:color-mix(in srgb,var(--focus-ring) 72%,var(--row-bg-2));box-shadow:inset 0 0 0 2px var(--focus-border)}
   #weightsArea[data-desktop-bulk-mode="true"] .weightsMatrixCell.selected::after{content:"";position:absolute;top:5px;right:5px;width:7px;height:7px;border-radius:2px;background:var(--focus-border)}
   .weightsCellRow,.weightsCellSelector,.hopperGeometryPopover{display:none!important}
@@ -1063,7 +1063,7 @@
     color:var(--text);
   }
   .workspaceNavDashboard:focus-visible{
-    outline:2px solid var(--focus-border);
+    outline:var(--focus-outline);
     outline-offset:1px;
   }
 
@@ -1078,7 +1078,7 @@
   }
   #workspaceBrandDashboard:hover .resinToolsSidebarIcon{ opacity:.82; }
   #workspaceBrandDashboard:focus-visible{
-    outline:2px solid var(--focus-border);
+    outline:var(--focus-outline);
     outline-offset:2px;
   }
 
@@ -1118,7 +1118,7 @@
     color:var(--text);
   }
   .dashboardChangeoverRefresh:focus-visible{
-    outline:2px solid var(--focus-border);
+    outline:var(--focus-outline);
     outline-offset:1px;
   }
 
@@ -1168,7 +1168,7 @@
     stroke-linejoin:round;
   }
   .dashboardBackButton:hover{ background:var(--row-bg); border-color:var(--border2); }
-  .dashboardBackButton:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
+  .dashboardBackButton:focus-visible{ outline:var(--focus-outline); outline-offset:2px; }
   .dashboardIdentity{
     display:flex;
     flex-direction:column;

@@ -45,7 +45,7 @@ test("desktop action-strip controls stay quiet and keyboard-visible", () => {
   assert.match(actionRule, /background: transparent;/);
   assert.match(actionRule, /font-size: var\(--font-tiny\);/);
   const focusRule = rule(".recipeUtilityTab:focus-visible{");
-  assert.match(focusRule, /outline: 2px solid var\(--focus-border\);/);
+  assert.match(focusRule, /outline: var\(--focus-outline\);/);
 });
 
 test("immediate actions never gain tab semantics", () => {

@@ -105,9 +105,9 @@ test("outside click dismisses without stealing focus; Escape dismisses and resto
 
 test("keyboard focus enters the popover and every control is focus-visible", () => {
   assert.match(app, /const first = footerSheetFocusable\(sheet\)\[0\];\s*\n\s*\(first \|\| sheet\)\?\.focus\(\);/);
-  assert.match(desktop, /\.desktopNotificationsMenu:focus-visible\{outline:2px solid var\(--focus-border\)/);
-  assert.match(desktop, /\.desktopNotificationAction:focus-visible\{outline:2px solid var\(--focus-border\)/);
-  assert.match(desktop, /\.desktopNotificationsToggle:focus-visible\{outline:2px solid var\(--focus-border\)/);
+  assert.match(desktop, /\.desktopNotificationsMenu:focus-visible\{outline:var\(--focus-outline\)/);
+  assert.match(desktop, /\.desktopNotificationAction:focus-visible\{outline:var\(--focus-outline\)/);
+  assert.match(desktop, /\.desktopNotificationsToggle:focus-visible\{outline:var\(--focus-outline\)/);
 });
 
 /* ----------------------------------------------------------------------
