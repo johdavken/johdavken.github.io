@@ -169,6 +169,41 @@
     });
   }
 
+  // Batch on-screen counts for the Tokens tab. Processed in small chunks with
+  // a yield between them so the iframe stays responsive, streaming partial
+  // results back. `reqId` lets the parent discard a superseded pass.
+  function runImpactCounts(tokens, reqId) {
+    ensureTracer().then(function (tracer) {
+      if (!tracer || !tracer.impactCount) {
+        post("themelab:impactCounts-done", { reqId: reqId, error: "tracer unavailable" });
+        return;
+      }
+      var i = 0;
+      var CHUNK = 8;
+      function step() {
+        if (reqId !== S.countReqId) return; // superseded
+        var slice = tokens.slice(i, i + CHUNK);
+        i += CHUNK;
+        var out = {};
+        var work = slice.map(function (tok) {
+          return tracer
+            .impactCount(tok, { doc: document, themeTokens: S.themeData })
+            .then(function (r) { out[tok] = r; })
+            .catch(function (e) {
+              out[tok] = { ok: false, token: tok, error: String((e && e.message) || e) };
+            });
+        });
+        Promise.all(work).then(function () {
+          if (reqId !== S.countReqId) return;
+          post("themelab:impactCounts-progress", { reqId: reqId, counts: out });
+          if (i < tokens.length) setTimeout(step, 0);
+          else post("themelab:impactCounts-done", { reqId: reqId });
+        });
+      }
+      step();
+    });
+  }
+
   // Translucent boxes over every visible element matching any of `selectors`.
   function highlightSelectors(selectors) {
     clearHighlights();
@@ -279,11 +314,35 @@
     } else if (d.type === "themelab:themeData") {
       S.themeData = d.themeData || null;
       // stylesheets are unchanged, but the active [data-theme] differs, so
-      // matched rules differ — the parsed index itself stays valid.
+      // matched rules and body-scope var() resolution do — drop the live
+      // caches, keep the parsed index.
+      if (window.__themeLabTrace && window.__themeLabTrace.bumpLiveGen) {
+        window.__themeLabTrace.bumpLiveGen();
+      }
+    } else if (d.type === "themelab:bumpLive") {
+      if (window.__themeLabTrace && window.__themeLabTrace.bumpLiveGen) {
+        window.__themeLabTrace.bumpLiveGen();
+      }
     } else if (d.type === "themelab:impact") {
       var reqId = d.reqId;
       runImpact(d.token).then(function (result) {
         post("themelab:impact-result", { reqId: reqId, token: d.token, result: result });
+      });
+    } else if (d.type === "themelab:impactCounts") {
+      S.countReqId = d.reqId;
+      runImpactCounts(d.tokens || [], d.reqId);
+    } else if (d.type === "themelab:impactCountOne") {
+      ensureTracer().then(function (tracer) {
+        if (!tracer || !tracer.impactCount) {
+          post("themelab:impactCountOne-result", { token: d.token, count: { ok: false, token: d.token, error: "tracer unavailable" } });
+          return;
+        }
+        tracer
+          .impactCount(d.token, { doc: document, themeTokens: S.themeData })
+          .then(function (r) { post("themelab:impactCountOne-result", { token: d.token, count: r }); })
+          .catch(function (e) {
+            post("themelab:impactCountOne-result", { token: d.token, count: { ok: false, token: d.token, error: String((e && e.message) || e) } });
+          });
       });
     } else if (d.type === "themelab:highlight") {
       if (d.clear) {

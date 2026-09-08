@@ -282,3 +282,229 @@ test("subjectDesc builds a compact tag#id.class hint", () => {
   assert.equal(d.hint, "button#resetAllSplits.primary.danger.huge");
   assert.deepEqual(d.classes.slice(0, 2), ["primary", "danger"]);
 });
+
+/* ---------------- Phase 4: impactCount / walkConsumers -------------- */
+
+// A DOM-free stand-in for document.body: matches nothing, has no ancestors.
+// Lets walkConsumers' direct-consumer collection + theme filtering + BFS
+// structure be unit-tested; routing (which needs live computed styles) then
+// resolves to "not confirmed" for every branch, which is the expected
+// DOM-free outcome.
+function fakeBody() {
+  var win = {
+    matchMedia: function () { return { matches: true }; },
+    CSS: { supports: function () { return true; } },
+    getComputedStyle: function () { return { getPropertyValue: function () { return ""; } }; },
+  };
+  var body = {
+    nodeType: 1,
+    tagName: "BODY",
+    id: "",
+    className: "",
+    style: { getPropertyValue: function () { return ""; } },
+    parentElement: null,
+    matches: function () { return false; },
+  };
+  body.ownerDocument = { documentElement: body, body: body, defaultView: win };
+  return body;
+}
+
+function realIndexAndRefMap() {
+  var files = ["styles.css", "theme.css", "button-styling.css", "desktop.css"];
+  var rules = [];
+  files.forEach(function (f) {
+    rules = rules.concat(T.parseStylesheet(read(f), { sheet: f }));
+  });
+  var index = { rules: rules, sheetOrder: files, sheets: files };
+  return { index: index, refMap: T.buildRefMap(index) };
+}
+
+test("walkConsumers: direct consumers of --btnstyle-ink are all in the ayu-light-allowed set", () => {
+  var b = realIndexAndRefMap();
+  var walk = T.walkConsumers(
+    "--btnstyle-ink",
+    b.index,
+    b.refMap.byToken,
+    { name: "ayu-light" },
+    fakeBody()
+  );
+  // Every direct entry is a real CSS property (not a producer) and either
+  // theme-agnostic or scoped to ayu-light.
+  assert.ok(walk.direct.length > 20, "--btnstyle-ink has many direct consumers");
+  walk.direct.forEach(function (e) {
+    assert.equal(e.producesToken, null);
+    assert.ok(!e.themeScopeMatch || e.themeScopeMatch === "ayu-light");
+  });
+  // The Phase 2 / Phase 3 landmark: recipePageTab.active background @ 224.
+  assert.ok(
+    walk.direct.some(function (e) {
+      return e.file === "button-styling.css" && e.line === 224 && e.prop === "background";
+    })
+  );
+  // --btnstyle-ink is a leaf token: nothing defines a component token as
+  // var(--btnstyle-ink), so no branches.
+  assert.equal(walk.branches.length, 0);
+});
+
+test("walkConsumers: --focus-border produces component-token branches", () => {
+  var b = realIndexAndRefMap();
+  var walk = T.walkConsumers(
+    "--focus-border",
+    b.index,
+    b.refMap.byToken,
+    { name: "ayu-light" },
+    fakeBody()
+  );
+  var throughTokens = walk.branches.map(function (br) { return br.through[br.through.length - 1]; });
+  assert.ok(throughTokens.indexOf("--recipe-pill-accent") !== -1);
+  assert.ok(throughTokens.indexOf("--btnstyle-accent") !== -1);
+  // every branch carries a through-path starting at the target
+  walk.branches.forEach(function (br) {
+    assert.equal(br.through[0], "--focus-border");
+    assert.ok(Array.isArray(br.entries));
+  });
+});
+
+test("walkConsumers: theme scoping splits direct vs otherThemeDirect", () => {
+  var b = realIndexAndRefMap();
+  var ayu = T.walkConsumers("--text", b.index, b.refMap.byToken, { name: "ayu-light" }, fakeBody());
+  var gruv = T.walkConsumers("--text", b.index, b.refMap.byToken, { name: "gruvbox-dark" }, fakeBody());
+  // --text has consumers scoped to specific themes; the allowed set differs
+  // between two themes, but the union (direct + otherThemeDirect) is stable.
+  assert.equal(
+    ayu.direct.length + ayu.otherThemeDirect.length,
+    gruv.direct.length + gruv.otherThemeDirect.length
+  );
+  assert.notDeepEqual(
+    ayu.direct.map(function (e) { return e.selector; }).sort(),
+    gruv.direct.map(function (e) { return e.selector; }).sort()
+  );
+});
+
+test("bumpLiveGen advances the generation and invalidate() bumps it too", () => {
+  var g0 = T.liveGen();
+  T.bumpLiveGen();
+  assert.equal(T.liveGen(), g0 + 1);
+  T.invalidate();
+  assert.equal(T.liveGen(), g0 + 2);
+});
+
+/* ---------------- Phase 5: coverage summary + state-pseudo split -------- */
+
+test("hasStatePseudo flags interaction states, not structural pseudos", () => {
+  assert.equal(T.hasStatePseudo("a:hover"), true);
+  assert.equal(T.hasStatePseudo("button:focus-visible"), true);
+  assert.equal(T.hasStatePseudo(".x:active .y"), true);
+  assert.equal(T.hasStatePseudo("li:first-child"), false);
+  assert.equal(T.hasStatePseudo(".card .title"), false);
+  assert.equal(T.hasStatePseudo("input:disabled"), false); // not a transient state
+});
+
+test("summarizeCoverage: rendering vs off-screen vs unused vs pending", () => {
+  const counts = {
+    "--a": { onScreen: 5, hasConsumers: true },   // rendering
+    "--b": { onScreen: 0, hasConsumers: true },   // off-screen (used, not visible)
+    "--c": { onScreen: 0, hasConsumers: false },  // unused (nothing references it)
+    "--d": { pending: true },                     // not counted yet
+    "--e": { onScreen: 1, hasConsumers: true },   // rendering
+    "--f": { onScreen: 0, hasConsumers: false },  // unused
+    "--g": { error: "bad selector" },             // errored, excluded from buckets
+  };
+  const inherited = new Set(["--c"]); // palette doesn't declare --c
+  const s = T.summarizeCoverage(counts, inherited);
+  assert.equal(s.total, 7);
+  assert.equal(s.rendering, 2);
+  assert.equal(s.pending, 1);
+  assert.equal(s.errored, 1);
+  assert.deepEqual(s.offScreen.map((x) => x.name), ["--b"]);
+  assert.deepEqual(s.unused.map((x) => x.name).sort(), ["--c", "--f"]);
+  assert.equal(s.unused.find((x) => x.name === "--c").inherited, true);
+  assert.equal(s.unused.find((x) => x.name === "--f").inherited, false);
+  assert.equal(s.zero, 3);
+});
+
+test("summarizeCoverage accepts a plain array for `inherited` too", () => {
+  const s = T.summarizeCoverage(
+    { "--x": { onScreen: 0, hasConsumers: false } },
+    ["--x"]
+  );
+  assert.equal(s.unused[0].inherited, true);
+});
+
+// Minimal fake document for countVisibleUnique: each selector maps to a list
+// of fake elements; getClientRects() length flags "visible".
+function fakeDoc(map) {
+  var nodes = {};
+  function node(id, visible) {
+    if (!nodes[id]) nodes[id] = { _id: id, getClientRects: function () { return visible ? [{}] : []; } };
+    return nodes[id];
+  }
+  return {
+    querySelectorAll: function (sel) {
+      var spec = map[sel] || [];
+      return spec.map(function (s) { return node(s.id, s.visible !== false); });
+    },
+  };
+}
+
+test("countVisibleUnique splits static vs state-pseudo matches and de-dupes", () => {
+  // Selectors are pseudo-stripped before matching, so the fake doc is keyed
+  // by the stripped form. Static consumers reach A,B (visible) + C (hidden);
+  // a :focus-visible consumer strips to `.copyBtn`, matching D (a new,
+  // visible element) plus A (already counted in the static pass).
+  const doc = fakeDoc({
+    ".btn": [{ id: "A" }, { id: "B" }, { id: "C", visible: false }],
+    ".tab": [{ id: "A" }],
+    ".copyBtn": [{ id: "D" }, { id: "A" }],
+  });
+  const r = T.countVisibleUnique(doc, [".btn", ".tab", ".copyBtn:focus-visible"]);
+  assert.equal(r.onScreenStatic, 2); // A, B
+  assert.equal(r.onScreenStateExtra, 1); // D only (A already seen, C hidden)
+  assert.equal(r.onScreen, 3);
+  assert.equal(r.stateSelectorCount, 1);
+});
+
+/* ---------------- Phase 6: coverage filter predicate ------------------- */
+
+test("coverageMatch: All passes everything", () => {
+  assert.equal(T.coverageMatch({ onScreen: 0, hasConsumers: true }, "all"), true);
+  assert.equal(T.coverageMatch({ onScreen: 5 }, "all"), true);
+  assert.equal(T.coverageMatch(undefined, "all"), true);
+  assert.equal(T.coverageMatch({ pending: true }, undefined), true); // default = all
+});
+
+test("coverageMatch: Rendering only keeps onScreen>0", () => {
+  assert.equal(T.coverageMatch({ onScreen: 3 }, "rendering"), true);
+  assert.equal(T.coverageMatch({ onScreen: 0, hasConsumers: true }, "rendering"), false);
+  assert.equal(T.coverageMatch({ onScreen: 0, hasConsumers: false }, "rendering"), false);
+});
+
+test("coverageMatch: Off screen only keeps onScreen===0", () => {
+  assert.equal(T.coverageMatch({ onScreen: 0, hasConsumers: true }, "offscreen"), true);
+  assert.equal(T.coverageMatch({ onScreen: 0, hasConsumers: false }, "offscreen"), true);
+  assert.equal(T.coverageMatch({ onScreen: 2 }, "offscreen"), false);
+});
+
+test("coverageMatch: pending/errored tokens pass every mode (never hidden)", () => {
+  ["rendering", "offscreen", "all"].forEach((mode) => {
+    assert.equal(T.coverageMatch({ pending: true }, mode), true);
+    assert.equal(T.coverageMatch({ error: "bad" }, mode), true);
+    assert.equal(T.coverageMatch(null, mode), true);
+  });
+});
+
+test("coverageMatch composes with summarizeCoverage — counts add up", () => {
+  const counts = {
+    "--a": { onScreen: 5, hasConsumers: true },
+    "--b": { onScreen: 0, hasConsumers: true },
+    "--c": { onScreen: 0, hasConsumers: false },
+    "--d": { onScreen: 1, hasConsumers: true },
+  };
+  const s = T.summarizeCoverage(counts, []);
+  const names = Object.keys(counts);
+  const rendering = names.filter((n) => T.coverageMatch(counts[n], "rendering"));
+  const offscreen = names.filter((n) => T.coverageMatch(counts[n], "offscreen"));
+  assert.equal(rendering.length, s.rendering);          // 2
+  assert.equal(offscreen.length, s.zero);               // 2
+  assert.equal(rendering.length + offscreen.length, names.length);
+});

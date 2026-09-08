@@ -51,6 +51,11 @@
     lockTheme: true,
     picking: false,
     agentReady: false,
+    tokenCounts: {}, // token -> { onScreen, selectors, pending }
+    tokenCountReq: 0,
+    coverageFilter: "all", // "all" | "rendering" | "offscreen"
+    hoverToken: null, // token whose consumers are currently highlighted
+    highlightSource: null, // "impact" | "hover" | null
   };
 
   /* --------------------------- boot --------------------------- */
@@ -59,6 +64,7 @@
     [
       "previewFrame", "frameWrap", "viewportSeg", "viewportDim", "themePicker",
       "lockTheme", "pickBtn", "reloadBtn", "tokenGroups", "tokenFilter",
+      "tokenCoverage",
       "resetAllBtn", "changeCount", "changeSummary", "blockPreview",
       "copyBlockBtn", "downloadBtn", "saveBtn", "inspectResult", "gutter",
       "controlsPane", "toast", "saveDialog", "saveDiff", "saveDialogTheme",
@@ -332,6 +338,10 @@
       el.frameWrap.style.width = vp.w + "px";
       el.frameWrap.style.height = vp.h + "px";
     }
+    // desktop/touch/mobile can have different consumer sets for the same
+    // token (Phase 3 found this with --btnstyle-ink) — recount after the
+    // preview reflows.
+    setTimeout(refreshTokenCounts, 250);
   }
 
   /* --------------------- theme selection --------------------- */
@@ -359,9 +369,13 @@
 
     if (!opts || opts.switchPreview !== false) applyPreviewTheme(name);
     sendThemeData();
+    // Previous theme's counts no longer apply — clear so a coverage filter
+    // shows every row (pending) until the new theme's scan lands.
+    state.tokenCounts = {};
     renderTokens();
     renderChanges();
     populateImpactTokens();
+    refreshTokenCounts();
   }
 
   /* ---------------------- token editor ---------------------- */
@@ -392,8 +406,11 @@
       if (names.indexOf(n) === -1) names.push(n);
     });
 
+    var cf = state.coverageFilter || "all";
+    var hiddenByCoverage = 0;
     names.forEach(function (name) {
       if (filter && name.toLowerCase().indexOf(filter) === -1) return;
+      if (!coveragePasses(name, cf)) { hiddenByCoverage += 1; return; }
       var g = groupFor(name);
       if (!groups[g]) { groups[g] = []; order.push(g); }
       groups[g].push(name);
@@ -408,7 +425,11 @@
 
     el.tokenGroups.innerHTML = "";
     if (!order.length) {
-      el.tokenGroups.innerHTML = '<p class="lab-empty">No tokens match.</p>';
+      var msg = "No tokens match.";
+      if (!filter && cf === "rendering") msg = "No tokens are rendering in this view.";
+      else if (!filter && cf === "offscreen") msg = "Every token renders something in this view.";
+      else if (filter && hiddenByCoverage) msg = 'No matches under the "' + coverageLabel(cf) + '" filter.';
+      el.tokenGroups.innerHTML = '<p class="lab-empty">' + escapeHtml(msg) + "</p>";
       return;
     }
     order.forEach(function (gName) {
@@ -422,6 +443,7 @@
       });
       el.tokenGroups.appendChild(wrap);
     });
+    renderCoverage();
   }
 
   function renderTokenRow(name) {
@@ -485,9 +507,17 @@
     main.appendChild(input);
     row.appendChild(main);
 
-    // reset
+    // actions: on-screen impact badge + reset
     var actions = document.createElement("div");
     actions.className = "tok-actions";
+
+    var badge = document.createElement("span");
+    badge.className = "tok-impact";
+    badge.title =
+      "On-screen elements this token affects in the current view (direct + via component tokens). Hover the row to highlight them.";
+    applyBadge(badge, state.tokenCounts[name]);
+    actions.appendChild(badge);
+
     var reset = document.createElement("button");
     reset.className = "tok-reset";
     reset.type = "button";
@@ -497,7 +527,55 @@
     actions.appendChild(reset);
     row.appendChild(actions);
 
+    // Hover / keyboard-focus a row to highlight what it affects in the preview.
+    row.addEventListener("mouseenter", function () { highlightTokenRow(name); });
+    row.addEventListener("mouseleave", function () { clearTokenHighlight(name); });
+    row.addEventListener("focusin", function () { highlightTokenRow(name); });
+    row.addEventListener("focusout", function (e) {
+      if (!row.contains(e.relatedTarget)) clearTokenHighlight(name);
+    });
+
     return row;
+  }
+
+  // Render the small "N" (or "\u00b7" / "\u2026") badge for a token row.
+  function applyBadge(badge, count) {
+    if (!badge) return;
+    badge.classList.remove("is-zero", "is-pending", "has-hits", "is-state");
+    if (!count || count.pending) {
+      badge.textContent = "\u2026";
+      badge.classList.add("is-pending");
+      return;
+    }
+    if (count.error) {
+      badge.textContent = "!";
+      badge.title = "Impact scan error: " + count.error;
+      return;
+    }
+    var n = count.onScreen || 0;
+    var stateExtra = count.onScreenStateExtra || 0;
+    var stat = count.onScreenStatic != null ? count.onScreenStatic : n;
+    badge.textContent = stateExtra > 0 ? n + "*" : String(n);
+    if (n === 0) {
+      badge.classList.add("is-zero");
+      badge.title = count.hasConsumers
+        ? "This token has consumers, but none are on screen in the current view."
+        : "No rule consumes this token (component/base token not rendered here).";
+    } else {
+      badge.classList.add("has-hits");
+      var t =
+        n + " on-screen element" + (n === 1 ? "" : "s") + " affected" +
+        (count.viaCount ? " (" + count.viaCount + " via a component token)" : "") + ".";
+      if (stateExtra > 0) {
+        badge.classList.add("is-state");
+        t +=
+          " " + stateExtra + " of those are only styled while hovered/focused, so the hover-highlight boxes " +
+          stat + ".";
+      } else {
+        t += " Hover the row to highlight them.";
+      }
+      badge.title = t;
+    }
   }
 
   function applyEdit(name, rawValue) {
@@ -758,6 +836,7 @@
     if (d.type === "themelab:ready") {
       state.agentReady = true;
       sendThemeData();
+      refreshTokenCounts();
     } else if (d.type === "themelab:pickState") {
       if (!d.picking && state.picking) setPicking(false);
     } else if (d.type === "themelab:picked") {
@@ -775,8 +854,21 @@
         state.impact.pending = false;
         renderImpact();
       }
+    } else if (d.type === "themelab:impactCounts-progress") {
+      onImpactCounts(d);
+    } else if (d.type === "themelab:impactCounts-done") {
+      if (d.reqId === state.tokenCountReq) {
+        // Counts are settled: collapse the row list to the final filtered set
+        // (a no-op re-render when the filter is "all").
+        if (state.coverageFilter && state.coverageFilter !== "all") renderTokens();
+        else renderCoverage();
+      }
+    } else if (d.type === "themelab:impactCountOne-result") {
+      onImpactCountOne(d);
     } else if (d.type === "themelab:highlight-done") {
-      if (el.impactHighlightBtn) {
+      // Only the Impact tab's explicit button reflects a persistent count in
+      // its label; the hover highlight is transient and owns no button.
+      if (state.highlightSource !== "hover" && el.impactHighlightBtn) {
         el.impactHighlightBtn.textContent =
           d.count > 0 ? "Clear highlight (" + d.count + ")" : "Highlight on screen";
         state.impactHighlighting = d.count > 0;
@@ -1000,6 +1092,231 @@
     return out;
   }
 
+  /* ---- Phase 4: per-row on-screen counts + hover highlight ---- */
+
+  var _countTimer = null;
+
+  // Kick off (debounced) an eager pass computing the on-screen consumer count
+  // for every token currently in the editor. Runs in the agent, chunked and
+  // cancelable; results stream back via themelab:impactCounts-progress.
+  function refreshTokenCounts() {
+    if (!state.current || !state.agentReady) return;
+    clearTimeout(_countTimer);
+    _countTimer = setTimeout(function () {
+      var tokens = Object.keys(state.originals || {});
+      if (!tokens.length) return;
+      var reqId = (state.tokenCountReq = (state.tokenCountReq || 0) + 1);
+      // Mark every known row pending.
+      state.tokenCounts = {};
+      tokens.forEach(function (t) { state.tokenCounts[t] = { pending: true }; });
+      // With a coverage filter active, rebuild the row list so every token is
+      // shown while its (now-unknown) status is rescanned — never leave a
+      // stale filtered subset from the previous viewport/theme on screen.
+      if (state.coverageFilter && state.coverageFilter !== "all") renderTokens();
+      else updateAllBadges();
+      // Drop the agent's live caches (DOM/theme may have changed), then scan.
+      postAgent({ type: "themelab:bumpLive" });
+      postAgent({ type: "themelab:impactCounts", tokens: tokens, reqId: reqId });
+    }, 120);
+  }
+
+  function updateAllBadges() {
+    el.tokenGroups.querySelectorAll(".tok").forEach(function (row) {
+      var b = row.querySelector(".tok-impact");
+      applyBadge(b, state.tokenCounts[row.dataset.token]);
+    });
+    renderCoverage();
+  }
+
+  function updateBadge(token) {
+    var row = el.tokenGroups.querySelector('.tok[data-token="' + cssEscape(token) + '"]');
+    if (row) applyBadge(row.querySelector(".tok-impact"), state.tokenCounts[token]);
+  }
+
+  function onImpactCounts(d) {
+    if (d.reqId !== state.tokenCountReq) return; // superseded
+    var counts = d.counts || {};
+    Object.keys(counts).forEach(function (tok) {
+      state.tokenCounts[tok] = counts[tok] || { error: "no result" };
+      updateBadge(tok);
+      // If the user is hovering this row right now, (re)highlight with the
+      // freshly-known selectors.
+      if (state.hoverToken === tok) highlightTokenRow(tok);
+    });
+    renderCoverage();
+  }
+
+  /* ---- Phase 5: per-viewport token coverage summary ---- */
+  /* ---- Phase 6: coverage summary doubles as a row filter ---- */
+
+  // Mirrors css-trace.js `coverageMatch` (unit-tested there); inline because
+  // the parent window does not load that module. A pending/errored token
+  // passes every mode so a filter never hides a row we can't classify yet.
+  function coveragePasses(name, mode) {
+    mode = mode || state.coverageFilter || "all";
+    if (mode === "all") return true;
+    var c = state.tokenCounts[name];
+    if (!c || c.pending || c.error) return true;
+    var on = (c.onScreen || 0) > 0;
+    return mode === "rendering" ? on : !on;
+  }
+
+  function coverageLabel(mode) {
+    return mode === "rendering" ? "Rendering" : mode === "offscreen" ? "Off screen" : "All";
+  }
+
+  function setCoverageFilter(mode) {
+    if (mode === state.coverageFilter) return;
+    state.coverageFilter = mode;
+    renderTokens(); // re-applies the predicate; also re-renders the summary
+  }
+
+  // Read/aggregation over state.tokenCounts (which Phase 4's eager pass
+  // fills) + state.originals — no rescanning, no second refresh path. The
+  // reduction mirrors css-trace.js `summarizeCoverage` (unit-tested there);
+  // kept inline here because the parent window does not load that module.
+  function renderCoverage() {
+    if (!el.tokenCoverage) return;
+    if (!state.current || !Object.keys(state.tokenCounts || {}).length) {
+      el.tokenCoverage.hidden = true;
+      return;
+    }
+    var names = Object.keys(state.originals || {});
+    var m = names.length;
+    var rendering = 0, pending = 0;
+    var offScreen = []; // onScreen 0 but the theme's CSS does reference it
+    var unused = []; // no rule references var(--token) in this theme at all
+    names.forEach(function (name) {
+      var c = state.tokenCounts[name];
+      if (!c || c.pending) { pending += 1; return; }
+      if (c.error) return;
+      if ((c.onScreen || 0) > 0) { rendering += 1; return; }
+      var entry = { name: name, inherited: !!(state.originals[name] && state.originals[name].inherited) };
+      if (c.hasConsumers) offScreen.push(entry);
+      else unused.push(entry);
+    });
+    offScreen.sort(function (a, b) { return a.name < b.name ? -1 : 1; });
+    unused.sort(function (a, b) { return a.name < b.name ? -1 : 1; });
+
+    var zero = offScreen.length + unused.length;
+    var settled = m - pending;
+    var cf = state.coverageFilter || "all";
+    var h = '<div class="cov-line">';
+    if (pending) {
+      h += '<strong>' + rendering + "</strong> of <strong>" + m +
+        "</strong> tokens render in this view <span class=\"cov-progress\">(scanning… " +
+        settled + "/" + m + ")</span>";
+    } else {
+      h += '<strong>' + rendering + "</strong> of <strong>" + m +
+        "</strong> tokens render in this view";
+      if (zero) h += ' <span class="cov-muted">&middot; ' + zero + " not on screen</span>";
+    }
+    h += "</div>";
+
+    // Filter control — reuses state.tokenCounts, no recomputation.
+    h += '<div class="seg cov-seg" role="group" aria-label="Filter token rows">';
+    [["all", "All"], ["rendering", "Rendering"], ["offscreen", "Off screen"]].forEach(function (o) {
+      h += '<button type="button" data-cf="' + o[0] + '"' +
+        (cf === o[0] ? ' class="is-active"' : "") + ">" + o[1] + "</button>";
+    });
+    h += "</div>";
+
+    if (!pending && zero) {
+      h += '<details class="cov-zero"' + (cf === "offscreen" ? " open" : "") + '><summary>' +
+        zero + " token" + (zero === 1 ? "" : "s") +
+        " with no on-screen effect right now" +
+        (cf === "offscreen" ? " (shown below)" : "") + "</summary>";
+      if (offScreen.length) {
+        h += '<div class="cov-group"><span class="cov-group-label">Used in this theme, but nothing on screen (' +
+          offScreen.length + ")</span><div class=\"cov-chips\">" +
+          offScreen.map(chip).join("") + "</div></div>";
+      }
+      if (unused.length) {
+        h += '<div class="cov-group"><span class="cov-group-label">Not consumed anywhere in this theme (' +
+          unused.length + ")</span><div class=\"cov-chips\">" +
+          unused.map(chip).join("") + "</div></div>";
+      }
+      h += "</details>";
+    }
+    el.tokenCoverage.innerHTML = h;
+    el.tokenCoverage.hidden = false;
+
+    Array.prototype.forEach.call(
+      el.tokenCoverage.querySelectorAll(".cov-seg button[data-cf]"),
+      function (b) {
+        b.addEventListener("click", function () { setCoverageFilter(b.dataset.cf); });
+      }
+    );
+    Array.prototype.forEach.call(
+      el.tokenCoverage.querySelectorAll(".cov-chip"),
+      function (c) {
+        c.addEventListener("click", function () { flashTokenRow(c.dataset.token); });
+      }
+    );
+  }
+
+  function chip(entry) {
+    return (
+      '<button type="button" class="cov-chip" data-token="' + escapeHtml(entry.name) + '">' +
+      escapeHtml(entry.name) +
+      (entry.inherited ? ' <span class="cov-chip-tag">inherited</span>' : "") +
+      "</button>"
+    );
+  }
+
+  function flashTokenRow(name) {
+    var needsRerender = false;
+    if (el.tokenFilter.value) { el.tokenFilter.value = ""; needsRerender = true; }
+    // If the active coverage filter would hide this row, drop to "All" so the
+    // jump lands somewhere visible.
+    if (!coveragePasses(name, state.coverageFilter)) {
+      state.coverageFilter = "all";
+      needsRerender = true;
+    }
+    if (needsRerender) renderTokens();
+    var row = el.tokenGroups.querySelector('.tok[data-token="' + cssEscape(name) + '"]');
+    if (!row) return;
+    row.scrollIntoView({ block: "center", behavior: "smooth" });
+    row.classList.add("tok-flash");
+    setTimeout(function () { row.classList.remove("tok-flash"); }, 1100);
+  }
+
+  function highlightTokenRow(name) {
+    state.hoverToken = name;
+    var c = state.tokenCounts[name];
+    if (c && !c.pending && c.selectors && c.selectors.length) {
+      state.highlightSource = "hover";
+      postAgent({ type: "themelab:highlight", selectors: c.selectors });
+      return;
+    }
+    if (c && !c.pending && c.selectors && !c.selectors.length) {
+      // nothing to highlight — make sure any prior box is gone
+      if (state.highlightSource === "hover") clearTokenHighlight(name);
+      return;
+    }
+    // Count not ready yet: fetch just this one token on demand (does not
+    // disturb any in-flight eager pass).
+    if (!state.agentReady) return;
+    postAgent({ type: "themelab:impactCountOne", token: name });
+  }
+
+  function onImpactCountOne(d) {
+    if (!d.token) return;
+    state.tokenCounts[d.token] = d.count || { error: "no result" };
+    updateBadge(d.token);
+    renderCoverage();
+    if (state.hoverToken === d.token) highlightTokenRow(d.token);
+  }
+
+  function clearTokenHighlight(name) {
+    if (name && state.hoverToken !== name) return;
+    state.hoverToken = null;
+    if (state.highlightSource === "hover") {
+      state.highlightSource = null;
+      postAgent({ type: "themelab:highlight", clear: true });
+    }
+  }
+
   function consumerGroupHtml(g) {
     var h = '<div class="impact-consumer">';
     h += '<div class="impact-decl"><code>' + escapeHtml(g.declaration) + "</code>" +
@@ -1145,9 +1462,14 @@
     document.querySelectorAll(".lab-tabpanel").forEach(function (p) {
       p.classList.toggle("is-active", p.dataset.panel === name);
     });
-    // Leaving Impact clears any on-screen highlight boxes.
-    if (name !== "impact" && state.impactHighlighting) {
+    // Leaving Impact clears its highlight boxes; leaving Tokens clears any
+    // lingering hover highlight.
+    if (name !== "impact" && state.impactHighlighting && state.highlightSource !== "hover") {
       postAgent({ type: "themelab:highlight", clear: true });
+      state.impactHighlighting = false;
+    }
+    if (name !== "tokens" && state.highlightSource === "hover") {
+      clearTokenHighlight(state.hoverToken);
     }
   }
 

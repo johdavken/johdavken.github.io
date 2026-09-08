@@ -1024,9 +1024,30 @@
   var _indexCache = null;
   var _refMapCache = null;
 
+  // Live (DOM-dependent) result caches, keyed implicitly by _liveGen. The
+  // parsed stylesheet index and refMap do NOT change when the DOM does, but
+  // querySelectorAll results and body-scope var() resolution do — bump the
+  // generation on theme switch / viewport change / app navigation so those
+  // are recomputed while the expensive parse work is kept.
+  var _liveGen = 0;
+  var _selStatsCache = new Map(); // normalizedSelector -> { inDom, onScreen }
+  var _routeCache = new Map(); // "target|producer" -> { routes, terminal, chainLen }
+
   function invalidate() {
     _indexCache = null;
     _refMapCache = null;
+    bumpLiveGen();
+  }
+
+  // Stylesheets unchanged, but the rendered DOM / active theme did.
+  function bumpLiveGen() {
+    _liveGen += 1;
+    _selStatsCache.clear();
+    _routeCache.clear();
+  }
+
+  function liveGen() {
+    return _liveGen;
   }
 
   function getIndex(doc) {
@@ -1172,20 +1193,39 @@
     return (
       sel
         .replace(/::[-\w]+(\([^)]*\))?/g, "")
-        .replace(/:(hover|focus|focus-visible|focus-within|active|visited|target|checked|disabled|enabled|placeholder-shown|first-child|last-child|nth-child\([^)]*\)|nth-of-type\([^)]*\))/gi, "")
+        // Longest alternatives first so `:focus-visible` isn't clipped to
+        // `-visible` by an earlier `:focus` match.
+        .replace(/:(focus-visible|focus-within|focus|hover|active|visited|target|checked|disabled|enabled|read-only|read-write|placeholder-shown|first-child|last-child|only-child|nth-child\([^)]*\)|nth-of-type\([^)]*\)|nth-last-child\([^)]*\))/gi, "")
         .trim() || "*"
     );
   }
 
+  // Transient interaction states — an element only matches these while the
+  // user is hovering / focusing / pressing it, so a consumer selector using
+  // one can't be boxed by the static hover-highlight. (Structural pseudos
+  // like :first-child are not "states" and are excluded here.)
+  var STATE_PSEUDO_RE = /:(hover|focus|focus-visible|focus-within|active|visited|target)\b/i;
+
+  function hasStatePseudo(selector) {
+    return STATE_PSEUDO_RE.test(String(selector));
+  }
+
   // How many elements currently in the DOM match this consumer's selector,
-  // and how many of those are visible. Best-effort; capped.
+  // and how many of those are visible. Best-effort; capped. Cached per
+  // _liveGen (the same normalized selector is shared by many tokens' consumer
+  // lists, so this collapses an eager all-token pass to one query each).
   function liveMatchStats(doc, selector) {
     var sel = stripPseudoAll(selector);
+    var hit = _selStatsCache.get(sel);
+    if (hit) return hit;
+    var out;
     var nodes;
     try {
       nodes = doc.querySelectorAll(sel);
     } catch (e) {
-      return { total: null, visible: null, error: "unmatchable selector" };
+      out = { total: null, visible: null, error: "unmatchable selector", sel: sel };
+      _selStatsCache.set(sel, out);
+      return out;
     }
     var visible = 0;
     var cap = Math.min(nodes.length, 400);
@@ -1193,12 +1233,159 @@
       var n = nodes[i];
       if (n.getClientRects && n.getClientRects().length) visible += 1;
     }
-    return { total: nodes.length, visible: visible, sel: sel };
+    out = { total: nodes.length, visible: visible, sel: sel };
+    _selStatsCache.set(sel, out);
+    return out;
+  }
+
+  // Walk one batch of (pseudo-stripped) selectors, adding matched elements to
+  // a shared `seen` Set and tallying how many were newly seen / visible.
+  function tallySelectors(doc, selectors, seen) {
+    var inDom = 0;
+    var onScreen = 0;
+    var bad = 0;
+    for (var s = 0; s < selectors.length; s += 1) {
+      var sel = stripPseudoAll(selectors[s]);
+      var nodes;
+      try {
+        nodes = doc.querySelectorAll(sel);
+      } catch (e) {
+        bad += 1;
+        continue;
+      }
+      var cap = Math.min(nodes.length, 500);
+      for (var i = 0; i < cap; i += 1) {
+        var n = nodes[i];
+        if (seen.has(n)) continue;
+        seen.add(n);
+        inDom += 1;
+        if (n.getClientRects && n.getClientRects().length) onScreen += 1;
+      }
+    }
+    return { inDom: inDom, onScreen: onScreen, unmatchable: bad };
+  }
+
+  // Unique visible-element count for a set of consumer selectors, de-duped by
+  // element. `static` selectors always style their match; `state` selectors
+  // only style it while hovered/focused/etc, so their extra matches are
+  // reported separately (they inflate a token's badge relative to what the
+  // static hover-highlight can box).
+  function countVisibleUnique(doc, selectors) {
+    var staticSels = [];
+    var stateSels = [];
+    for (var i = 0; i < selectors.length; i += 1) {
+      (hasStatePseudo(selectors[i]) ? stateSels : staticSels).push(selectors[i]);
+    }
+    var seen = new Set();
+    var st = tallySelectors(doc, staticSels, seen);
+    var ex = tallySelectors(doc, stateSels, seen); // only elements not already seen
+    return {
+      inDom: st.inDom + ex.inDom,
+      onScreen: st.onScreen + ex.onScreen,
+      onScreenStatic: st.onScreen,
+      onScreenStateExtra: ex.onScreen,
+      stateSelectorCount: stateSels.length,
+      unmatchable: st.unmatchable + ex.unmatchable,
+    };
   }
 
   function themeAllows(entry, themeName) {
     if (!entry.themeScopeMatch) return true; // theme-agnostic rule
     return entry.themeScopeMatch === themeName;
+  }
+
+  // Does component token `producer` currently resolve THROUGH `target` at
+  // :root/body scope in the live document? Cached per _liveGen — a given
+  // component token is referenced by many target tokens, but resolves once.
+  function producerRoutesThrough(producer, target, index, themeTokens, body) {
+    var key = target + "|" + producer;
+    var hit = _routeCache.get(key);
+    if (hit) return hit;
+    var chainInfo = resolveChain(body, "var(" + producer + ")", index, themeTokens, {});
+    var routes = chainInfo.chain.some(function (l) { return l.ref === target; });
+    var unresolvedAtScope = chainInfo.chain.length === 0;
+    var blockedBy = null;
+    if (!routes && chainInfo.chain.length) {
+      var firstLink = chainInfo.chain[0];
+      if (
+        firstLink.ref === producer &&
+        firstLink.source &&
+        (firstLink.source.kind === "palette-block" ||
+          firstLink.source.kind === "theme-scoped-rule")
+      ) {
+        blockedBy = {
+          token: producer,
+          value: firstLink.value,
+          file: firstLink.source.file,
+          line: firstLink.source.line,
+          kind: firstLink.source.kind,
+        };
+      }
+    }
+    var out = {
+      routes: routes,
+      unresolvedAtScope: unresolvedAtScope,
+      blockedBy: blockedBy,
+      terminal: chainInfo.terminal,
+    };
+    _routeCache.set(key, out);
+    return out;
+  }
+
+  // Shared BFS behind both impact() and impactCount(): collect the flat
+  // consumer entries for `targetToken` — direct, and via component-token
+  // chains — with per-branch routing status. No grouping, no counting.
+  function walkConsumers(targetToken, index, byToken, themeTokens, body) {
+    var themeName = themeTokens && themeTokens.name;
+    var direct = (byToken[targetToken] || []).filter(function (e) {
+      return !e.producesToken && themeAllows(e, themeName);
+    });
+    var otherThemeDirect = (byToken[targetToken] || []).filter(function (e) {
+      return !e.producesToken && !themeAllows(e, themeName);
+    });
+
+    var branches = [];
+    var seenProducers = {};
+    var queue = [];
+    (byToken[targetToken] || []).forEach(function (e) {
+      if (e.producesToken && !seenProducers[e.producesToken]) {
+        queue.push({ token: e.producesToken, through: [targetToken] });
+      }
+    });
+
+    var guard = 0;
+    while (queue.length && guard < 200) {
+      guard += 1;
+      var item = queue.shift();
+      var producer = item.token;
+      if (seenProducers[producer]) continue;
+      seenProducers[producer] = true;
+      if (producer === targetToken) continue;
+
+      var route = producerRoutesThrough(producer, targetToken, index, themeTokens, body);
+      var producerConsumers = (byToken[producer] || []).filter(function (e) {
+        return !e.producesToken && themeAllows(e, themeName);
+      });
+
+      if (producerConsumers.length || route.blockedBy) {
+        branches.push({
+          through: item.through.concat(producer),
+          routes: route.routes,
+          blockedBy: route.blockedBy,
+          unresolvedAtScope: route.unresolvedAtScope,
+          producerResolvesTo: route.terminal,
+          entries: producerConsumers,
+        });
+      }
+
+      (byToken[producer] || []).forEach(function (e) {
+        if (e.producesToken && !seenProducers[e.producesToken]) {
+          queue.push({ token: e.producesToken, through: item.through.concat(producer) });
+        }
+      });
+    }
+
+    return { direct: direct, otherThemeDirect: otherThemeDirect, branches: branches };
   }
 
   /**
@@ -1262,92 +1449,24 @@
         return orderList;
       }
 
-      // --- direct consumers: real CSS props that reference the token -------
-      var directEntries = (byToken[targetToken] || []).filter(function (e) {
-        return !e.producesToken && themeAllows(e, themeName);
-      });
-      var otherThemeDirect = (byToken[targetToken] || []).filter(function (e) {
-        return !e.producesToken && !themeAllows(e, themeName);
-      });
-      var direct = groupConsumers(directEntries, null);
-
-      // --- component tokens that (may) resolve to the target -------------
-      var via = [];
+      var walk = walkConsumers(targetToken, index, byToken, themeTokens, body);
       var notes = [];
-      var seenProducers = {};
-      var queue = [];
-      // seed: producers that directly reference the target token
-      (byToken[targetToken] || []).forEach(function (e) {
-        if (e.producesToken && !seenProducers[e.producesToken]) {
-          queue.push({ token: e.producesToken, through: [targetToken] });
-        }
+
+      var direct = groupConsumers(walk.direct, null);
+      var via = walk.branches.map(function (b) {
+        return {
+          through: b.through,
+          routes: b.routes,
+          blockedBy: b.blockedBy,
+          unresolvedAtScope: b.unresolvedAtScope,
+          producerResolvesTo: b.producerResolvesTo,
+          consumers: groupConsumers(b.entries, b.through),
+        };
       });
 
-      var guard = 0;
-      while (queue.length && guard < 200) {
-        guard += 1;
-        var item = queue.shift();
-        var producer = item.token;
-        if (seenProducers[producer]) continue;
-        seenProducers[producer] = true;
-        if (producer === targetToken) continue;
-
-        // Does `producer` currently resolve THROUGH `targetToken`? Resolve it
-        // at :root/body scope in the live (current-theme) document.
-        var chainInfo = resolveChain(body, "var(" + producer + ")", index, themeTokens, {});
-        var routesThrough = chainInfo.chain.some(function (l) {
-          return l.ref === targetToken;
-        });
-        // No chain at all = `producer` is not defined at :root/body scope
-        // (typically set per-element via a scoped rule or inline), so we
-        // can't confirm from here whether it routes through the target.
-        var unresolvedAtScope = chainInfo.chain.length === 0;
-        var blockedBy = null;
-        if (!routesThrough && chainInfo.chain.length) {
-          var firstLink = chainInfo.chain[0];
-          if (
-            firstLink.ref === producer &&
-            firstLink.source &&
-            (firstLink.source.kind === "palette-block" ||
-              firstLink.source.kind === "theme-scoped-rule")
-          ) {
-            blockedBy = {
-              token: producer,
-              value: firstLink.value,
-              file: firstLink.source.file,
-              line: firstLink.source.line,
-              kind: firstLink.source.kind,
-            };
-          }
-        }
-
-        var producerConsumers = (byToken[producer] || []).filter(function (e) {
-          return !e.producesToken && themeAllows(e, themeName);
-        });
-        var recs = groupConsumers(producerConsumers, item.through.concat(producer));
-
-        if (recs.length || blockedBy) {
-          via.push({
-            through: item.through.concat(producer),
-            routes: routesThrough,
-            blockedBy: blockedBy,
-            unresolvedAtScope: unresolvedAtScope,
-            producerResolvesTo: chainInfo.terminal,
-            consumers: recs,
-          });
-        }
-
-        // enqueue producers that reference THIS producer (deeper hops)
-        (byToken[producer] || []).forEach(function (e) {
-          if (e.producesToken && !seenProducers[e.producesToken]) {
-            queue.push({ token: e.producesToken, through: item.through.concat(producer) });
-          }
-        });
-      }
-
-      if (otherThemeDirect.length) {
+      if (walk.otherThemeDirect.length) {
         notes.push(
-          otherThemeDirect.length +
+          walk.otherThemeDirect.length +
             " direct consumer(s) are scoped to other themes and excluded from this list."
         );
       }
@@ -1359,19 +1478,119 @@
         sheets: index.sheetOrder,
         direct: direct,
         via: via,
-        otherThemeDirectCount: otherThemeDirect.length,
+        otherThemeDirectCount: walk.otherThemeDirect.length,
         notes: notes,
       };
     });
+  }
+
+  /**
+   * Lightweight companion to impact(): just the on-screen count and the
+   * union of consumer selectors, for the per-row badge + hover-highlight in
+   * the Tokens tab. Same "affects" definition as impact() (shared
+   * walkConsumers), minus the grouped/classified breakdown.
+   *
+   * @returns Promise<{ ok, token, theme, selectors:[...], onScreen, inDom,
+   *   directCount, viaCount, hasConsumers, note }>
+   */
+  function impactCount(targetToken, opts) {
+    opts = opts || {};
+    var doc = opts.doc || (typeof document !== "undefined" ? document : null);
+    var themeTokens = opts.themeTokens || null;
+    var themeName = themeTokens && themeTokens.name;
+
+    return getRefMap(doc).then(function (bundle) {
+      var index = bundle.index;
+      var byToken = bundle.refMap.byToken;
+      var body = doc.body || doc.documentElement;
+      var walk = walkConsumers(targetToken, index, byToken, themeTokens, body);
+
+      var selSet = new Set();
+      walk.direct.forEach(function (e) { selSet.add(e.selector); });
+      var viaCount = 0;
+      walk.branches.forEach(function (b) {
+        if (!b.routes) return; // only branches that currently resolve through the target
+        viaCount += 1;
+        b.entries.forEach(function (e) { selSet.add(e.selector); });
+      });
+      var selectors = Array.from(selSet);
+      var counts = countVisibleUnique(doc, selectors);
+
+      return {
+        ok: true,
+        token: targetToken,
+        theme: themeName || "(unknown)",
+        selectors: selectors,
+        onScreen: counts.onScreen,
+        onScreenStatic: counts.onScreenStatic,
+        onScreenStateExtra: counts.onScreenStateExtra,
+        hasStateConsumers: counts.stateSelectorCount > 0,
+        inDom: counts.inDom,
+        directCount: walk.direct.length,
+        viaCount: viaCount,
+        hasConsumers: selectors.length > 0,
+        otherThemeDirectCount: walk.otherThemeDirect.length,
+      };
+    });
+  }
+
+  // Pure aggregation for the Tokens-tab coverage summary (Phase 5). Reads the
+  // map Phase 4's eager pass already produced — no DOM, no rescan.
+  //   counts: { token -> { onScreen, hasConsumers, pending, error } }
+  //   inherited: array or Set of token names the palette does NOT declare
+  function summarizeCoverage(counts, inherited) {
+    var inh = inherited && inherited.has ? inherited : new Set(inherited || []);
+    var names = Object.keys(counts || {});
+    var rendering = 0, pending = 0, errored = 0;
+    var offScreen = []; // onScreen 0, but the theme's CSS references it
+    var unused = []; // nothing in this theme references var(--token)
+    names.forEach(function (name) {
+      var c = counts[name];
+      if (!c || c.pending) { pending += 1; return; }
+      if (c.error) { errored += 1; return; }
+      if ((c.onScreen || 0) > 0) { rendering += 1; return; }
+      (c.hasConsumers ? offScreen : unused).push({ name: name, inherited: inh.has(name) });
+    });
+    offScreen.sort(byName);
+    unused.sort(byName);
+    return {
+      total: names.length,
+      rendering: rendering,
+      pending: pending,
+      errored: errored,
+      offScreen: offScreen,
+      unused: unused,
+      zero: offScreen.length + unused.length,
+    };
+  }
+
+  function byName(a, b) {
+    return a.name < b.name ? -1 : a.name > b.name ? 1 : 0;
+  }
+
+  // Coverage filter predicate (Phase 6). `mode` is "all" | "rendering" |
+  // "offscreen". A token whose count is not yet known (pending) or errored
+  // passes every mode, so filtering never hides a row we can't classify yet.
+  function coverageMatch(count, mode) {
+    if (!mode || mode === "all") return true;
+    if (!count || count.pending || count.error) return true;
+    var on = (count.onScreen || 0) > 0;
+    return mode === "rendering" ? on : !on;
   }
 
   return {
     // browser
     trace: trace,
     impact: impact,
+    impactCount: impactCount,
+    summarizeCoverage: summarizeCoverage,
+    coverageMatch: coverageMatch,
     buildIndex: buildIndex,
     buildRefMap: buildRefMap,
+    walkConsumers: walkConsumers,
     invalidate: invalidate,
+    bumpLiveGen: bumpLiveGen,
+    liveGen: liveGen,
     // pure helpers (unit-tested in Node)
     parseStylesheet: parseStylesheet,
     computeSpecificity: computeSpecificity,
@@ -1385,6 +1604,8 @@
     colorPartOf: colorPartOf,
     isPaletteBlock: isPaletteBlock,
     subjectDesc: subjectDesc,
+    hasStatePseudo: hasStatePseudo,
+    countVisibleUnique: countVisibleUnique,
     stripComments: stripComments,
   };
 

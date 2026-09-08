@@ -37,6 +37,12 @@ Prints two URLs (default port `4178`, override with `--port` or `THEME_LAB_PORT`
 
 The picker result panel shows, per property: computed value, the winning selector, its `file:line`, the full declaration, and — for `var()` — every hop of the token chain (`var(--x) → value @ file:line`), including any base definition a palette block overrides. If nothing authored matches a property it says so (inherited / UA default) rather than guessing.
 
+**Impact-aware Tokens tab.** Every token row carries a small badge — the number of on-screen elements that token currently affects (same "affects" definition as the Impact tab: direct consumers plus component-token chains that presently resolve through it). Hovering or keyboard-focusing a row highlights those elements in the preview (reusing the Impact tab's highlight channel; cleared on mouse-out, scroll, or tab change). Counts recompute on theme switch and viewport-preset change (desktop / touch / mobile can have different consumer sets for the same token) and never gate editing — the badge is decorative. The pass is eager but chunked: `impactCount()` (a lightweight companion to `impact()`, sharing `walkConsumers()`), run in the agent 8 tokens at a time with a shared per-DOM-generation cache of `querySelectorAll` results and body-scope `var()` resolutions, streaming results back so badges fill in progressively.
+
+A token whose consumers are all `:hover` / `:focus-visible` / `:active` selectors matches more elements than the static hover-highlight can box (an element only matches `:focus-visible` while focused). Those rows show the badge with a `*` and a dotted border, and the tooltip breaks it down — *"122 on-screen … 101 only styled while hovered/focused, so the hover-highlight boxes 21."*
+
+**Coverage summary + filter.** The Tokens tab opens with a one-liner — *"62 of 87 tokens render in this view · 25 not on screen"* — computed by folding the same `state.tokenCounts` the badges use (no extra scan, same refresh triggers). An expandable list shows the tokens with no on-screen effect right now, split into **used in this theme but nothing on screen** vs **not consumed anywhere in this theme**, with `inherited` tags for tokens the palette itself doesn't declare. Chips jump to the row. An **All / Rendering / Off screen** segmented control filters the row list to that subset (the same `onScreen` data, `coverageMatch()` predicate — no recomputation); it re-applies across viewport and theme changes rather than going stale, shows every row while a rescan is in flight, skips categories that empty out, and drops back to *All* if you click a chip for a row it would hide.
+
 ### Token classification
 
 - **token-driven** — the winning declaration is `var(--token)` and `--token` resolves through the active theme's palette block.
@@ -49,5 +55,5 @@ The picker result panel shows, per property: computed value, the winning selecto
 - `index.html`, `theme-lab.css`, `theme-lab.js` — the editor UI
 - `theme-parser.js` — `theme.css` block parser + conservative rewriter (unit-tested by `../../theme-lab.test.js`)
 - `preview-agent.js` — injected into the preview iframe: element picker + trace dispatch
-- `css-trace.js` — injected into the preview iframe: stylesheet line-parser, specificity, cascade resolution, `var()` chain resolution (`trace`), and the reverse token → consumer map (`buildRefMap` / `impact`). Pure helpers unit-tested by `../../theme-lab-trace.test.js`
+- `css-trace.js` — injected into the preview iframe: stylesheet line-parser, specificity, cascade resolution, `var()` chain resolution (`trace`), the reverse token → consumer map (`buildRefMap` / `walkConsumers` / `impact`), and the lightweight per-row `impactCount` with a `bumpLiveGen()`-keyed live cache. Pure helpers unit-tested by `../../theme-lab-trace.test.js`
 - `backups/` — auto-created, git-ignored `theme.css` backups from Save
