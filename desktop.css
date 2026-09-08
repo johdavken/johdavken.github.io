@@ -553,11 +553,12 @@
     --gruv-rail-sync:#ebdbb2;
     --gruv-rail-tools:#d3869b;
     --gruv-rail-help:#ebdbb2;
-    /* Layout model (flex column + bottom-anchored footer) comes from the
-       shared .workspaceNav rule above; this override is surface-only. */
+    /* Surface only - genuinely, now. The layout model (flex column +
+       bottom-anchored footer) AND the rail's own gap/padding come from the
+       shared .workspaceNav rule above; a 14px/12px padding here made every
+       row in these four themes 14px narrower than the same row in the other
+       eleven, which is what pushed RESIN TOTALS onto a second line. */
     position:sticky;
-    gap:5px;
-    padding:14px 12px 16px;
     border-color:transparent;
     border-radius:12px;
     background:#282828;
@@ -641,51 +642,29 @@
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .resinToolsSidebarIcon{--rt-stream-1:var(--bad);--rt-stream-2:var(--gruv-rail-line);--rt-stream-3:var(--gruv-rail-recipe);--rt-stream-4:var(--gruv-rail-totals);--rt-stream-5:var(--gruv-rail-help);color:var(--gruv-rail-paper)}
   body[data-theme="gruvbox-dark"] .resinToolsSidebarIcon{--rt-stream-1:#fb4934;--rt-stream-2:#fe8019;--rt-stream-3:#fabd2f;--rt-stream-4:#b8bb26;--rt-stream-5:#83a598}
   body[data-theme="industrial-slate"] .resinToolsSidebarIcon{--rt-stream-1:#dc2626;--rt-stream-2:#d97706;--rt-stream-3:#d6a85f;--rt-stream-4:#16a34a;--rt-stream-5:#607d9b}
+  /* Surface only. Row metrics, label type and icon size come from the shared
+     rail so all fifteen themes lay out identically - see the note above
+     .workspaceNavButton in the base block. A theme may recolour this rail; it
+     may not resize it. */
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .workspaceNavButton{
-    min-height:55px;
-    padding:9px 12px 9px 15px;
-    border:0;
     border-radius:0;
     background:transparent;
     color:var(--gruv-rail-paper);
     box-shadow:inset 0 0 0 0 transparent;
   }
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .workspaceNavButton > span{
-    gap:13px;
     color:inherit;
-    font-size:13px;
-    font-weight:800;
-    letter-spacing:.1em;
-    line-height:1;
   }
+  /* Ink only. The caption's size, leading, indent and overflow behaviour are
+     the shared rail's - keeping a 10px/1.15 caption here left the four
+     foldaway rows (RT Sync, Tools, Changelog, Sudo access) 8px shorter than
+     the same rows in every other theme, which in turn decided whether the
+     rail overflowed and grew a scrollbar. */
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .workspaceNavButton small{
-    display:block;
-    margin:-2px 0 0 40px;
-    padding:0;
-    border:0;
-    border-radius:0;
     color:color-mix(in srgb,var(--gruv-rail-paper) 57%,var(--gruv-rail-edge));
-    font-size:10px;
-    font-weight:650;
-    letter-spacing:.01em;
-    line-height:1.15;
-    /* An item with overflow other than visible gets its automatic minimum
-       size treated as 0 for grid track sizing (CSS Grid  2.7), so without
-       this the button's own auto-sized row for this line was free to
-       shrink to whatever space happened to be left over instead of
-       growing to fit one line of text - starving it down to a few px and
-       clipping every caption's descenders under overflow:hidden below. An
-       explicit min-height isn't "auto", so it isn't zeroed by that rule. */
-    min-height:1.15em;
-    overflow:hidden;
-    text-overflow:ellipsis;
-    white-space:nowrap;
   }
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .workspaceNavButton .workspaceTileIcon{
-    width:27px;
-    height:27px;
     color:var(--gruv-rail-paper);
-    stroke-width:1.85;
   }
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .workspaceNavButton[data-workspace-target="lineSetupBlock"] .workspaceTileIcon{color:var(--gruv-rail-line)}
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .workspaceNavButton[data-workspace-target="splitsBlock"] .workspaceTileIcon{color:var(--gruv-rail-recipe)}
