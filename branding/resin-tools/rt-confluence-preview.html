@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en" data-theme="gruvbox-dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Confluence · Resin.Tools logo study</title>
+<link rel="stylesheet" href="../../theme.css">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.6 system-ui,sans-serif}
+button,select,a{ -webkit-tap-highlight-color:transparent }
+.page{max-width:1160px;margin:auto;padding:42px 44px 32px}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:24px;padding-bottom:24px;border-bottom:1px solid var(--border2)}
+.eyebrow,.caption,.index,.meta{font:11px/1.5 ui-monospace,monospace;letter-spacing:.13em;text-transform:uppercase;color:var(--muted)}
+.brand{font-weight:750;letter-spacing:-.03em;font-size:18px}
+.brand span{font-weight:400;color:var(--muted);margin-left:14px;font-size:12px;letter-spacing:0}
+.controls{display:flex;align-items:center;gap:12px}
+select,button,.download{font:12px/1.3 ui-monospace,monospace;color:var(--text);border:1px solid var(--border2);background:var(--panel);padding:10px 12px;border-radius:5px}
+button,.download{cursor:pointer}
+button[aria-pressed="true"]{background:var(--text);color:var(--bg)}
+:is(button,select,a):focus-visible{outline:2px solid var(--focus-border);outline-offset:4px}
+h1{font:500 clamp(36px,5.4vw,64px)/1.05 Georgia,serif;letter-spacing:-.04em;margin:14px 0 16px}
+.intro{padding:32px 0 28px;display:flex;justify-content:space-between;gap:40px;align-items:flex-end}
+.intro p{max-width:415px;color:var(--muted);margin:0;font-size:14px}
+.study{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(260px,1fr);border:1px solid var(--border2);border-radius:8px;overflow:hidden}
+.hero{position:relative;min-height:352px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--panel);padding:52px 30px 42px;border-right:1px solid var(--border2)}
+.hero::before{content:"";position:absolute;inset:0;background-image:radial-gradient(var(--muted) .6px,transparent .6px);background-size:18px 18px;opacity:.10;pointer-events:none}
+.hero .rtConfluence{position:relative;width:min(100%,460px);height:auto}
+.hero .caption{position:absolute;left:24px;top:18px}
+.hero .footnote{position:absolute;bottom:18px;left:24px;font:11px ui-monospace,monospace;color:var(--muted)}
+.sidebar{padding:20px 24px;background:var(--panel2)}
+.rail{max-width:216px;margin:20px auto 0;border:1px solid var(--border2);border-radius:6px;overflow:hidden;background:var(--bg)}
+.rail-brand{display:flex;justify-content:center;padding:12px 8px;border-bottom:1px solid var(--border2)}
+.rail-brand .rtConfluence{width:137.5px;height:auto}
+.navitem{display:flex;align-items:center;gap:12px;padding:9px 17px;font-size:12px;color:var(--muted)}
+.navitem:first-of-type{margin-top:7px}
+.navitem.active{color:var(--text);background:var(--row-bg);border-left:2px solid var(--warn);padding-left:15px}
+.navitem svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.4}
+.rail-footer{margin-top:7px;padding:10px 17px;border-top:1px solid var(--border2);font:10px ui-monospace,monospace;letter-spacing:.08em;color:var(--muted)}
+.specimens{display:grid;grid-template-columns:1fr 1fr;gap:30px;padding:28px 0;border-bottom:1px solid var(--border2)}
+.mobile{margin-top:16px;border:1px solid var(--border2);border-radius:7px;overflow:hidden;background:var(--panel)}
+.mobile-brand{display:flex;justify-content:center;padding:2px 12px 4px;min-height:46px}
+.mobile-brand .rtConfluence{width:min(100%,210px);height:auto}
+.mobile-status{display:flex;justify-content:space-between;border-top:1px solid var(--border);padding:10px 15px;color:var(--muted);font:10px ui-monospace,monospace}
+.details{display:grid;gap:13px;padding-top:17px}
+.detail{display:grid;grid-template-columns:28px 1fr;gap:7px}
+.detail strong{display:block;font-size:12px;font-weight:650;margin-bottom:1px}
+.detail p{margin:0;font-size:12px;color:var(--muted)}
+.index{padding-top:3px;font-size:10px}
+.bottom{display:flex;align-items:center;justify-content:space-between;gap:20px;padding-top:23px}
+.bottom p{max-width:660px;font-size:11px;color:var(--muted);margin:0}
+.download{display:inline-flex;gap:20px;white-space:nowrap;text-decoration:none}
+[data-monochrome="true"] .rtConfluence{--rt-stream-1:currentColor;--rt-stream-2:currentColor;--rt-stream-3:currentColor;--rt-stream-4:currentColor;--rt-stream-5:currentColor}
+@media(max-width:740px){.page{padding:24px 20px}.topbar,.intro{align-items:flex-start;flex-direction:column;gap:20px}.brand span{margin-left:8px}.controls{flex-wrap:wrap}.intro{padding:26px 0}.study,.specimens{grid-template-columns:1fr}.hero{border-right:0;border-bottom:1px solid var(--border2);min-height:270px;padding:55px 25px}.sidebar{padding:20px}.rail{max-width:240px}.bottom{align-items:flex-start;flex-direction:column}.specimens{gap:24px}h1{margin-top:10px}}
+</style>
+</head>
+<body>
+<main class="page">
+  <header class="topbar">
+    <div class="brand">resin.tools<span>Identity study / 01</span></div>
+    <div class="controls"><label class="caption" for="theme">Palette</label><select id="theme"><option value="dark">Dark</option>
+<option value="light">Light</option>
+<option value="industrial-slate">Industrial Slate</option>
+<option value="industrial-slate-dark">Industrial Slate Dark</option>
+<option value="oled-black">Oled Black</option>
+<option value="vaporwave">Vaporwave</option>
+<option value="gruvbox-dark" selected>Gruvbox Dark</option>
+<option value="gruvbox-light">Gruvbox Light</option>
+<option value="nord">Nord</option>
+<option value="tokyo-night">Tokyo Night</option>
+<option value="dracula">Dracula</option>
+<option value="solarized-dark">Solarized Dark</option>
+<option value="solarized-light">Solarized Light</option>
+<option value="catppuccin-mocha">Catppuccin Mocha</option>
+<option value="catppuccin-latte">Catppuccin Latte</option>
+<option value="rose-pine">Rose Pine</option>
+<option value="rose-pine-dawn">Rose Pine Dawn</option>
+<option value="everforest">Everforest</option>
+<option value="newsprint">Newsprint</option>
+<option value="ayu-light">Ayu Light</option>
+<option value="one-dark">One Dark</option>
+<option value="high-contrast">High Contrast</option>
+<option value="monochrome">Monochrome</option>
+<option value="green-team">Green Team</option>
+<option value="red-team">Red Team</option></select><button id="mono" type="button" aria-pressed="false">Monochrome</button></div>
+  </header>
+  <section class="intro" aria-labelledby="heading">
+    <div><div class="eyebrow">Five streams. One material.</div><h1 id="heading">Confluence</h1></div>
+    <p>A precision die built from five curling resin streams. At its center, a layered film section; alongside it, a custom RT wordmark. A small emblem of a coordinated production line.</p>
+  </section>
+  <section class="study" aria-label="Logo detail and desktop preview">
+    <div class="hero"><span class="caption">01 / Enlarged detail</span><div class="logo-slot" style="width:100%;display:flex;justify-content:center"></div><span class="footnote">COEXTRUSION / RECIPE / TIMING</span></div>
+    <div class="sidebar"><div class="caption">02 / Desktop · 137.5px</div><div class="rail">
+      <div class="rail-brand logo-slot"></div>
+      <div class="navitem"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 16V9l7-6 7 6v7H3Z"/></svg>Overview</div>
+      <div class="navitem active"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m3 6 7-3 7 3-7 3ZM3 10l7 3 7-3M3 14l7 3 7-3"/></svg>Recipe</div>
+      <div class="navitem"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="M10 5v5l3 2"/></svg>Timeline</div>
+      <div class="navitem"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 16V9m6 7V4m6 12v-5"/></svg>Resin totals</div>
+      <div class="rail-footer">LINE 01 · WORKSPACE</div>
+    </div></div>
+  </section>
+  <section class="specimens" aria-label="Mobile preview and design details">
+    <div><div class="caption">03 / Mobile · 210px</div><div class="mobile"><div class="mobile-brand logo-slot"></div><div class="mobile-status"><span>LINE 01</span><span>RECIPE &amp; CHANGEOVER</span><span>RT SYNC</span></div></div></div>
+    <div><div class="caption">Construction notes</div><div class="details">
+      <div class="detail"><span class="index">01</span><div><strong>Five continuous channels</strong><p>The app’s layer colors follow curved paths into a shared die.</p></div></div>
+      <div class="detail"><span class="index">02</span><div><strong>Precision in the small details</strong><p>Indexed divisions, machined edges, and a film section at the core.</p></div></div>
+      <div class="detail"><span class="index">03</span><div><strong>A familiar footprint</strong><p>The current 196 × 104 canvas, with lettering drawn entirely as paths.</p></div></div>
+    </div></div>
+  </section>
+  <footer class="bottom"><p>Transparent SVG. Inline use inherits the app’s theme colors; the standalone file follows your system’s light or dark appearance. The palette menu uses the app’s theme stylesheet.</p><a class="download" href="rt-confluence.svg" download="rt-confluence.svg">Download SVG <span aria-hidden="true">↗</span></a></footer>
+</main>
+<template id="logo-template"><svg xmlns="http://www.w3.org/2000/svg" class="rtConfluence" width="196" height="104" viewBox="0 0 196 104" role="img" aria-label="Resin.Tools — Confluence: five resin streams around a coextrusion die, with RT lettering">
+  <style>
+    /* Inline SVG inherits the app's palette. Standalone SVG follows the OS.
+       Set --rt-ink and --rt-stream-1 through --rt-stream-5 to override. */
+    .rtConfluence { --rt-fallback-ink:#35332f; --rt-fallback-1:#b94f41; --rt-fallback-2:#bc732d; --rt-fallback-3:#a58a2e; --rt-fallback-4:#577c56; --rt-fallback-5:#427f88; color:var(--rt-ink,var(--text,var(--rt-fallback-ink))); }
+    @media (prefers-color-scheme:dark) {
+      .rtConfluence { --rt-fallback-ink:#eee5d3; --rt-fallback-1:#c87968; --rt-fallback-2:#c99554; --rt-fallback-3:#c9b46b; --rt-fallback-4:#89a86b; --rt-fallback-5:#7b9e9a; }
+    }
+    .rtConfluence .rtStream1 { color:var(--rt-stream-1,var(--bad,var(--rt-fallback-1))); }
+    .rtConfluence .rtStream2 { color:var(--rt-stream-2,var(--orange,var(--rt-fallback-2))); }
+    .rtConfluence .rtStream3 { color:var(--rt-stream-3,var(--warn,var(--rt-fallback-3))); }
+    .rtConfluence .rtStream4 { color:var(--rt-stream-4,var(--ok,var(--rt-fallback-4))); }
+    .rtConfluence .rtStream5 { color:var(--rt-stream-5,var(--focus-border,var(--rt-fallback-5))); }
+  </style>
+  <g aria-hidden="true">
+    <!-- Calibration ring: open quadrants and twenty indexed divisions. -->
+    <g transform="translate(49 52)" fill="none" stroke="currentColor">
+      <circle r="40" stroke-width=".65" opacity=".22"/>
+      <path d="M0.000 -38.500 0.000 -43.000" stroke-width="1" opacity="0.65"/>
+      <path d="M12.361 -38.042 12.917 -39.754" stroke-width="0.65" opacity="0.32"/>
+      <path d="M23.511 -32.361 24.569 -33.817" stroke-width="0.65" opacity="0.32"/>
+      <path d="M32.361 -23.511 33.817 -24.569" stroke-width="0.65" opacity="0.32"/>
+      <path d="M38.042 -12.361 39.754 -12.917" stroke-width="0.65" opacity="0.32"/>
+      <path d="M38.500 -0.000 43.000 -0.000" stroke-width="1" opacity="0.65"/>
+      <path d="M38.042 12.361 39.754 12.917" stroke-width="0.65" opacity="0.32"/>
+      <path d="M32.361 23.511 33.817 24.569" stroke-width="0.65" opacity="0.32"/>
+      <path d="M23.511 32.361 24.569 33.817" stroke-width="0.65" opacity="0.32"/>
+      <path d="M12.361 38.042 12.917 39.754" stroke-width="0.65" opacity="0.32"/>
+      <path d="M0.000 38.500 0.000 43.000" stroke-width="1" opacity="0.65"/>
+      <path d="M-12.361 38.042 -12.917 39.754" stroke-width="0.65" opacity="0.32"/>
+      <path d="M-23.511 32.361 -24.569 33.817" stroke-width="0.65" opacity="0.32"/>
+      <path d="M-32.361 23.511 -33.817 24.569" stroke-width="0.65" opacity="0.32"/>
+      <path d="M-38.042 12.361 -39.754 12.917" stroke-width="0.65" opacity="0.32"/>
+      <path d="M-38.500 0.000 -43.000 0.000" stroke-width="1" opacity="0.65"/>
+      <path d="M-38.042 -12.361 -39.754 -12.917" stroke-width="0.65" opacity="0.32"/>
+      <path d="M-32.361 -23.511 -33.817 -24.569" stroke-width="0.65" opacity="0.32"/>
+      <path d="M-23.511 -32.361 -24.569 -33.817" stroke-width="0.65" opacity="0.32"/>
+      <path d="M-12.361 -38.042 -12.917 -39.754" stroke-width="0.65" opacity="0.32"/>
+    </g>
+    <!-- Five swept feed channels. Each has a separate inner machining line;
+         deliberate transparent gaps preserve the host surface at any theme. -->
+    <g transform="translate(49 52)">
+      <g class="rtStream1" transform="rotate(0)">
+        <path d="M0-35C16-35 29-25 33-12L24-9C21-19 12-25 2-25C-5-25-11-22-15-17L-22-23C-16-31-8-35 0-35Z" fill="currentColor"/>
+        <path d="M-19-14C-12-23 0-26 10-22" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        <path d="M-9-29C-3-31 3-31 9-29" fill="none" stroke="var(--rt-ink,var(--text,var(--rt-fallback-ink)))" stroke-width=".7" opacity=".52"/>
+        <path d="M24-20 27-17" fill="none" stroke="var(--rt-ink,var(--text,var(--rt-fallback-ink)))" stroke-width="1" opacity=".6"/>
+      </g>
+      <g class="rtStream2" transform="rotate(72)">
+        <path d="M0-35C16-35 29-25 33-12L24-9C21-19 12-25 2-25C-5-25-11-22-15-17L-22-23C-16-31-8-35 0-35Z" fill="currentColor"/>
+        <path d="M-19-14C-12-23 0-26 10-22" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        <path d="M-9-29C-3-31 3-31 9-29" fill="none" stroke="var(--rt-ink,var(--text,var(--rt-fallback-ink)))" stroke-width=".7" opacity=".52"/>
+        <path d="M24-20 27-17" fill="none" stroke="var(--rt-ink,var(--text,var(--rt-fallback-ink)))" stroke-width="1" opacity=".6"/>
+      </g>
+      <g class="rtStream3" transform="rotate(144)">
+        <path d="M0-35C16-35 29-25 33-12L24-9C21-19 12-25 2-25C-5-25-11-22-15-17L-22-23C-16-31-8-35 0-35Z" fill="currentColor"/>
+        <path d="M-19-14C-12-23 0-26 10-22" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        <path d="M-9-29C-3-31 3-31 9-29" fill="none" stroke="var(--rt-ink,var(--text,var(--rt-fallback-ink)))" stroke-width=".7" opacity=".52"/>
+        <path d="M24-20 27-17" fill="none" stroke="var(--rt-ink,var(--text,var(--rt-fallback-ink)))" stroke-width="1" opacity=".6"/>
+      </g>
+      <g class="rtStream4" transform="rotate(216)">
+        <path d="M0-35C16-35 29-25 33-12L24-9C21-19 12-25 2-25C-5-25-11-22-15-17L-22-23C-16-31-8-35 0-35Z" fill="currentColor"/>
+        <path d="M-19-14C-12-23 0-26 10-22" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        <path d="M-9-29C-3-31 3-31 9-29" fill="none" stroke="var(--rt-ink,var(--text,var(--rt-fallback-ink)))" stroke-width=".7" opacity=".52"/>
+        <path d="M24-20 27-17" fill="none" stroke="var(--rt-ink,var(--text,var(--rt-fallback-ink)))" stroke-width="1" opacity=".6"/>
+      </g>
+      <g class="rtStream5" transform="rotate(288)">
+        <path d="M0-35C16-35 29-25 33-12L24-9C21-19 12-25 2-25C-5-25-11-22-15-17L-22-23C-16-31-8-35 0-35Z" fill="currentColor"/>
+        <path d="M-19-14C-12-23 0-26 10-22" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        <path d="M-9-29C-3-31 3-31 9-29" fill="none" stroke="var(--rt-ink,var(--text,var(--rt-fallback-ink)))" stroke-width=".7" opacity=".52"/>
+        <path d="M24-20 27-17" fill="none" stroke="var(--rt-ink,var(--text,var(--rt-fallback-ink)))" stroke-width="1" opacity=".6"/>
+      </g>
+      <!-- Die core and the three-layer film section. -->
+      <path d="M0-15 14.3-4.6 8.8 12.1H-8.8L-14.3-4.6Z" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round" opacity=".75"/>
+      <g fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round">
+        <path d="m-7-3 7-3.3L7-3 0 .3Z"/>
+        <path d="m-7 .5 7 3.3L7 .5M-7 4l7 3.3L7 4"/>
+      </g>
+    </g>
+    <!-- Original outlined RT letterforms: no font dependency. -->
+    <g fill="currentColor">
+      <path fill-rule="evenodd" d="M99 28h23c14 0 22 7 22 19 0 8-4 14-11 17l15 19h-15l-13-17h-9v17H99Zm12 11v16h10c8 0 11-3 11-8s-3-8-11-8Z"/>
+      <path d="M146 28h43v11h-16v44h-12V39h-15Z"/>
+    </g>
+    <!-- Five calibrated output lanes echo the material entering the die. -->
+    <g fill="none" stroke-width="1.5" stroke-linecap="square">
+      <path class="rtStream1" d="M100 91h12" stroke="currentColor"/>
+      <path class="rtStream2" d="M117 91h12" stroke="currentColor"/>
+      <path class="rtStream3" d="M134 91h12" stroke="currentColor"/>
+      <path class="rtStream4" d="M151 91h12" stroke="currentColor"/>
+      <path class="rtStream5" d="M168 91h20" stroke="currentColor"/>
+    </g>
+    <path d="M100 20h24m4 0h4" fill="none" stroke="currentColor" stroke-width=".7" opacity=".4"/>
+  </g>
+</svg>
+</template>
+<script>
+  const template = document.getElementById('logo-template');
+  document.querySelectorAll('.logo-slot').forEach(slot => slot.append(template.content.cloneNode(true)));
+  const theme = document.getElementById('theme');
+  theme.addEventListener('change', () => { document.documentElement.dataset.theme = theme.value; });
+  document.getElementById('mono').addEventListener('click', event => {
+    const enabled = event.currentTarget.getAttribute('aria-pressed') !== 'true';
+    event.currentTarget.setAttribute('aria-pressed', String(enabled));
+    document.documentElement.dataset.monochrome = String(enabled);
+  });
+</script>
+</body>
+</html>

@@ -638,6 +638,9 @@
   body[data-theme="industrial-slate"] .resinToolsSidebarIcon .rtLayerGreen{color:#16a34a;stroke:#16a34a}
   body[data-theme="industrial-slate"] .resinToolsSidebarIcon .rtLayerBlue{color:#607d9b;stroke:#607d9b}
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .resinToolsSidebarIcon .rtWord{fill:var(--gruv-rail-paper)}
+  body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .resinToolsSidebarIcon{--rt-stream-1:var(--bad);--rt-stream-2:var(--gruv-rail-line);--rt-stream-3:var(--gruv-rail-recipe);--rt-stream-4:var(--gruv-rail-totals);--rt-stream-5:var(--gruv-rail-help);color:var(--gruv-rail-paper)}
+  body[data-theme="gruvbox-dark"] .resinToolsSidebarIcon{--rt-stream-1:#c87968;--rt-stream-2:#c99554;--rt-stream-3:#c9b46b;--rt-stream-4:#89a86b;--rt-stream-5:#7b9e9a}
+  body[data-theme="industrial-slate"] .resinToolsSidebarIcon{--rt-stream-1:#dc2626;--rt-stream-2:#d97706;--rt-stream-3:#d6a85f;--rt-stream-4:#16a34a;--rt-stream-5:#607d9b}
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .workspaceNavButton{
     min-height:55px;
     padding:9px 12px 9px 15px;

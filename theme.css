@@ -92,6 +92,7 @@
 :where(html, body)[data-theme="light"] :is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerYellow{color:#eab308;stroke:#eab308}
 :where(html, body)[data-theme="light"] :is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerGreen{color:#16a34a;stroke:#16a34a}
 :where(html, body)[data-theme="light"] :is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerBlue{color:#5f7f9e;stroke:#5f7f9e}
+:where(html, body)[data-theme="light"] :is(.resinToolsLogo,.resinToolsSidebarIcon){--rt-stream-1:#dc2626;--rt-stream-2:#f97316;--rt-stream-3:#eab308;--rt-stream-4:#16a34a;--rt-stream-5:#5f7f9e}
 
 /* Compact Recipe: raise only the supporting contrast on paper-white
    surfaces. Resin and percentage remain the strongest cell values. */
@@ -176,6 +177,7 @@
 :where(html, body)[data-theme="industrial-slate"] .resinToolsLogo .rtLayerYellow{color:#d6a85f;stroke:#d6a85f}
 :where(html, body)[data-theme="industrial-slate"] .resinToolsLogo .rtLayerGreen{color:#16a34a;stroke:#16a34a}
 :where(html, body)[data-theme="industrial-slate"] .resinToolsLogo .rtLayerBlue{color:#607d9b;stroke:#607d9b}
+:where(html, body)[data-theme="industrial-slate"] .resinToolsLogo{--rt-stream-1:#dc2626;--rt-stream-2:#d97706;--rt-stream-3:#d6a85f;--rt-stream-4:#16a34a;--rt-stream-5:#607d9b}
 
 @media (max-width:700px){
   :where(html, body)[data-theme="industrial-slate"] #splitsBlock .splitsMatrix.compactMobileRecipe td.splitMatrixCell{border-color:rgba(96,125,155,.22)}
@@ -448,6 +450,7 @@
 :where(html, body)[data-theme="gruvbox-dark"] .resinToolsLogo .rtLayerYellow{color:#c9b46b;stroke:#c9b46b}
 :where(html, body)[data-theme="gruvbox-dark"] .resinToolsLogo .rtLayerGreen{color:#89a86b;stroke:#89a86b}
 :where(html, body)[data-theme="gruvbox-dark"] .resinToolsLogo .rtLayerBlue{color:#7b9e9a;stroke:#7b9e9a}
+:where(html, body)[data-theme="gruvbox-dark"] .resinToolsLogo{--rt-stream-1:#c87968;--rt-stream-2:#c99554;--rt-stream-3:#c9b46b;--rt-stream-4:#89a86b;--rt-stream-5:#7b9e9a}
 
 /* ----------------------------------------------------------------------- * Gruvbox Light * ----------------------------------------------------------------------- */
 :where(html, body)[data-theme="gruvbox-light"]{
@@ -1194,6 +1197,7 @@
 :where(html, body)[data-theme="ayu-light"] :is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerYellow{color:#eba400;stroke:#eba400}
 :where(html, body)[data-theme="ayu-light"] :is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerGreen{color:#86b300;stroke:#86b300}
 :where(html, body)[data-theme="ayu-light"] :is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerBlue{color:#399ee6;stroke:#399ee6}
+:where(html, body)[data-theme="ayu-light"] :is(.resinToolsLogo,.resinToolsSidebarIcon){--rt-stream-1:#f07171;--rt-stream-2:#fa8532;--rt-stream-3:#eba400;--rt-stream-4:#86b300;--rt-stream-5:#399ee6}
 
 /* Compact Recipe: lift the near-white grid's chrome just enough. The
    hopper ID stays muted neutral by default (green when tracked is handled
@@ -1463,6 +1467,7 @@ body[data-theme="ayu-light"] #splitsArea .splitMatrixCell:not(.empty) .splitInpu
 :where(html, body)[data-theme="green-team"] .resinToolsLogo .rtLayerYellow{color:#c1a12e;stroke:#c1a12e}
 :where(html, body)[data-theme="green-team"] .resinToolsLogo .rtLayerGreen{color:#76b900;stroke:#76b900}
 :where(html, body)[data-theme="green-team"] .resinToolsLogo .rtLayerBlue{color:#5f9e8f;stroke:#5f9e8f}
+:where(html, body)[data-theme="green-team"] .resinToolsLogo{--rt-stream-1:#e5484d;--rt-stream-2:#d08a3c;--rt-stream-3:#c1a12e;--rt-stream-4:#76b900;--rt-stream-5:#5f9e8f}
 
 /* ----------------------------------------------------------------------- * Red Team (AMD) * ----------------------------------------------------------------------- */
 :where(html, body)[data-theme="red-team"]{
@@ -1525,3 +1530,4 @@ body[data-theme="ayu-light"] #splitsArea .splitMatrixCell:not(.empty) .splitInpu
 :where(html, body)[data-theme="red-team"] .resinToolsLogo .rtLayerYellow{color:#d7a441;stroke:#d7a441}
 :where(html, body)[data-theme="red-team"] .resinToolsLogo .rtLayerGreen{color:#3ddc84;stroke:#3ddc84}
 :where(html, body)[data-theme="red-team"] .resinToolsLogo .rtLayerBlue{color:#6ea0c9;stroke:#6ea0c9}
+:where(html, body)[data-theme="red-team"] .resinToolsLogo{--rt-stream-1:#ed1c24;--rt-stream-2:#e07a3c;--rt-stream-3:#d7a441;--rt-stream-4:#3ddc84;--rt-stream-5:#6ea0c9}

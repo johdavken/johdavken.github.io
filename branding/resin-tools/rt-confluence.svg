@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" class="rtConfluence" width="196" height="104" viewBox="0 0 196 104" role="img" aria-label="Resin.Tools — Confluence: five resin streams around a coextrusion die, with RT lettering">
+  <style>
+    /* Inline SVG inherits the app's palette. Standalone SVG follows the OS.
+       Set --rt-ink and --rt-stream-1 through --rt-stream-5 to override. */
+    .rtConfluence { --rt-fallback-ink:#35332f; --rt-fallback-1:#b94f41; --rt-fallback-2:#bc732d; --rt-fallback-3:#a58a2e; --rt-fallback-4:#577c56; --rt-fallback-5:#427f88; color:var(--rt-ink,var(--text,var(--rt-fallback-ink))); }
+    @media (prefers-color-scheme:dark) {
+      .rtConfluence { --rt-fallback-ink:#eee5d3; --rt-fallback-1:#c87968; --rt-fallback-2:#c99554; --rt-fallback-3:#c9b46b; --rt-fallback-4:#89a86b; --rt-fallback-5:#7b9e9a; }
+    }
+    .rtConfluence .rtStream1 { color:var(--rt-stream-1,var(--bad,var(--rt-fallback-1))); }
+    .rtConfluence .rtStream2 { color:var(--rt-stream-2,var(--orange,var(--rt-fallback-2))); }
+    .rtConfluence .rtStream3 { color:var(--rt-stream-3,var(--warn,var(--rt-fallback-3))); }
+    .rtConfluence .rtStream4 { color:var(--rt-stream-4,var(--ok,var(--rt-fallback-4))); }
+    .rtConfluence .rtStream5 { color:var(--rt-stream-5,var(--focus-border,var(--rt-fallback-5))); }
+  </style>
+  <g aria-hidden="true">
+    <!-- Calibration ring: open quadrants and twenty indexed divisions. -->
+    <g transform="translate(49 52)" fill="none" stroke="currentColor">
+      <circle r="40" stroke-width=".65" opacity=".22"/>
+      <path d="M0.000 -38.500 0.000 -43.000" stroke-width="1" opacity="0.65"/>
+      <path d="M12.361 -38.042 12.917 -39.754" stroke-width="0.65" opacity="0.32"/>
+      <path d="M23.511 -32.361 24.569 -33.817" stroke-width="0.65" opacity="0.32"/>
+      <path d="M32.361 -23.511 33.817 -24.569" stroke-width="0.65" opacity="0.32"/>
+      <path d="M38.042 -12.361 39.754 -12.917" stroke-width="0.65" opacity="0.32"/>
+      <path d="M38.500 -0.000 43.000 -0.000" stroke-width="1" opacity="0.65"/>
+      <path d="M38.042 12.361 39.754 12.917" stroke-width="0.65" opacity="0.32"/>
+      <path d="M32.361 23.511 33.817 24.569" stroke-width="0.65" opacity="0.32"/>
+      <path d="M23.511 32.361 24.569 33.817" stroke-width="0.65" opacity="0.32"/>
+      <path d="M12.361 38.042 12.917 39.754" stroke-width="0.65" opacity="0.32"/>
+      <path d="M0.000 38.500 0.000 43.000" stroke-width="1" opacity="0.65"/>
+      <path d="M-12.361 38.042 -12.917 39.754" stroke-width="0.65" opacity="0.32"/>
+      <path d="M-23.511 32.361 -24.569 33.817" stroke-width="0.65" opacity="0.32"/>
+      <path d="M-32.361 23.511 -33.817 24.569" stroke-width="0.65" opacity="0.32"/>
+      <path d="M-38.042 12.361 -39.754 12.917" stroke-width="0.65" opacity="0.32"/>
+      <path d="M-38.500 0.000 -43.000 0.000" stroke-width="1" opacity="0.65"/>
+      <path d="M-38.042 -12.361 -39.754 -12.917" stroke-width="0.65" opacity="0.32"/>
+      <path d="M-32.361 -23.511 -33.817 -24.569" stroke-width="0.65" opacity="0.32"/>
+      <path d="M-23.511 -32.361 -24.569 -33.817" stroke-width="0.65" opacity="0.32"/>
+      <path d="M-12.361 -38.042 -12.917 -39.754" stroke-width="0.65" opacity="0.32"/>
+    </g>
+    <!-- Five swept feed channels. Each has a separate inner machining line;
+         deliberate transparent gaps preserve the host surface at any theme. -->
+    <g transform="translate(49 52)">
+      <g class="rtStream1" transform="rotate(0)">
+        <path d="M0-35C16-35 29-25 33-12L24-9C21-19 12-25 2-25C-5-25-11-22-15-17L-22-23C-16-31-8-35 0-35Z" fill="currentColor"/>
+        <path d="M-19-14C-12-23 0-26 10-22" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        <path d="M-9-29C-3-31 3-31 9-29" fill="none" stroke="var(--rt-ink,var(--text,var(--rt-fallback-ink)))" stroke-width=".7" opacity=".52"/>
+        <path d="M24-20 27-17" fill="none" stroke="var(--rt-ink,var(--text,var(--rt-fallback-ink)))" stroke-width="1" opacity=".6"/>
+      </g>
+      <g class="rtStream2" transform="rotate(72)">
+        <path d="M0-35C16-35 29-25 33-12L24-9C21-19 12-25 2-25C-5-25-11-22-15-17L-22-23C-16-31-8-35 0-35Z" fill="currentColor"/>
+        <path d="M-19-14C-12-23 0-26 10-22" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        <path d="M-9-29C-3-31 3-31 9-29" fill="none" stroke="var(--rt-ink,var(--text,var(--rt-fallback-ink)))" stroke-width=".7" opacity=".52"/>
+        <path d="M24-20 27-17" fill="none" stroke="var(--rt-ink,var(--text,var(--rt-fallback-ink)))" stroke-width="1" opacity=".6"/>
+      </g>
+      <g class="rtStream3" transform="rotate(144)">
+        <path d="M0-35C16-35 29-25 33-12L24-9C21-19 12-25 2-25C-5-25-11-22-15-17L-22-23C-16-31-8-35 0-35Z" fill="currentColor"/>
+        <path d="M-19-14C-12-23 0-26 10-22" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        <path d="M-9-29C-3-31 3-31 9-29" fill="none" stroke="var(--rt-ink,var(--text,var(--rt-fallback-ink)))" stroke-width=".7" opacity=".52"/>
+        <path d="M24-20 27-17" fill="none" stroke="var(--rt-ink,var(--text,var(--rt-fallback-ink)))" stroke-width="1" opacity=".6"/>
+      </g>
+      <g class="rtStream4" transform="rotate(216)">
+        <path d="M0-35C16-35 29-25 33-12L24-9C21-19 12-25 2-25C-5-25-11-22-15-17L-22-23C-16-31-8-35 0-35Z" fill="currentColor"/>
+        <path d="M-19-14C-12-23 0-26 10-22" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        <path d="M-9-29C-3-31 3-31 9-29" fill="none" stroke="var(--rt-ink,var(--text,var(--rt-fallback-ink)))" stroke-width=".7" opacity=".52"/>
+        <path d="M24-20 27-17" fill="none" stroke="var(--rt-ink,var(--text,var(--rt-fallback-ink)))" stroke-width="1" opacity=".6"/>
+      </g>
+      <g class="rtStream5" transform="rotate(288)">
+        <path d="M0-35C16-35 29-25 33-12L24-9C21-19 12-25 2-25C-5-25-11-22-15-17L-22-23C-16-31-8-35 0-35Z" fill="currentColor"/>
+        <path d="M-19-14C-12-23 0-26 10-22" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        <path d="M-9-29C-3-31 3-31 9-29" fill="none" stroke="var(--rt-ink,var(--text,var(--rt-fallback-ink)))" stroke-width=".7" opacity=".52"/>
+        <path d="M24-20 27-17" fill="none" stroke="var(--rt-ink,var(--text,var(--rt-fallback-ink)))" stroke-width="1" opacity=".6"/>
+      </g>
+      <!-- Die core and the three-layer film section. -->
+      <path d="M0-15 14.3-4.6 8.8 12.1H-8.8L-14.3-4.6Z" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round" opacity=".75"/>
+      <g fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round">
+        <path d="m-7-3 7-3.3L7-3 0 .3Z"/>
+        <path d="m-7 .5 7 3.3L7 .5M-7 4l7 3.3L7 4"/>
+      </g>
+    </g>
+    <!-- Original outlined RT letterforms: no font dependency. -->
+    <g fill="currentColor">
+      <path fill-rule="evenodd" d="M99 28h23c14 0 22 7 22 19 0 8-4 14-11 17l15 19h-15l-13-17h-9v17H99Zm12 11v16h10c8 0 11-3 11-8s-3-8-11-8Z"/>
+      <path d="M146 28h43v11h-16v44h-12V39h-15Z"/>
+    </g>
+    <!-- Five calibrated output lanes echo the material entering the die. -->
+    <g fill="none" stroke-width="1.5" stroke-linecap="square">
+      <path class="rtStream1" d="M100 91h12" stroke="currentColor"/>
+      <path class="rtStream2" d="M117 91h12" stroke="currentColor"/>
+      <path class="rtStream3" d="M134 91h12" stroke="currentColor"/>
+      <path class="rtStream4" d="M151 91h12" stroke="currentColor"/>
+      <path class="rtStream5" d="M168 91h20" stroke="currentColor"/>
+    </g>
+    <path d="M100 20h24m4 0h4" fill="none" stroke="currentColor" stroke-width=".7" opacity=".4"/>
+  </g>
+</svg>

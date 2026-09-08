@@ -413,41 +413,8 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .gruvboxIconDe
 .gruvboxSolidGlyph{display:none;fill:currentColor;stroke:none}
 body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .gruvboxSolidGlyph{display:block}
 body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .baseGlyph{display:none}
-:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerRed{color:var(--bad);stroke:var(--bad)}
-:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerOrange{color:var(--orange);stroke:var(--orange)}
-:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerYellow{color:var(--warn);stroke:var(--warn)}
-:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerGreen{color:var(--ok);stroke:var(--ok)}
-:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerBlue{color:var(--focus-border);stroke:var(--focus-border)}
-:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtWord{fill:var(--text);font:900 66px/1 ui-monospace,"Cascadia Mono","Liberation Mono",monospace;letter-spacing:-4px}
-/* Draw-on-loop (chosen from the animated-logo mockup round): each layer
-   continuously re-traces its outline, fills solid, holds, fades, and
-   restarts - staggered per layer so the mark always has exactly one
-   segment mid-draw. stroke-dasharray:137 matches this path's actual
-   perimeter (a rhombus, 4 equal sides of sqrt(31^2+14^2) =~ 34.01 each)
-   so the traced line closes with no visible seam. */
-:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerRed,
-:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerOrange,
-:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerYellow,
-:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerGreen,
-:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerBlue{
-  stroke-width:2.5;
-  stroke-dasharray:137;
-  stroke-dashoffset:137;
-  animation:rtLogoDrawLoop 3s ease-in-out infinite;
-}
-:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerRed{animation-delay:0s}
-:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerOrange{animation-delay:.25s}
-:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerYellow{animation-delay:.5s}
-:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerGreen{animation-delay:.75s}
-:is(.resinToolsLogo,.resinToolsSidebarIcon) .rtLayerBlue{animation-delay:1s}
-@keyframes rtLogoDrawLoop{
-  0%{ stroke-dashoffset:137; fill:transparent; opacity:1; }
-  28%{ stroke-dashoffset:0; fill:transparent; }
-  40%{ stroke-dashoffset:0; fill:currentColor; }
-  70%{ stroke-dashoffset:0; fill:currentColor; opacity:1; }
-  88%{ stroke-dashoffset:0; fill:currentColor; opacity:0; }
-  100%{ stroke-dashoffset:137; fill:transparent; opacity:0; }
-}
+.rtLogoSprite{position:absolute;width:0;height:0;overflow:hidden;color:var(--text)}
+:is(.resinToolsLogo,.resinToolsSidebarIcon){color:var(--text)}
 .workspaceBrandLogo{ display: block; width: min(100%, 196px); height: auto; }
 .workspaceBrandLogo path{ stroke-linecap: round; stroke-linejoin: round; }
 .workspaceBrandLogo [class^="polynFlow"]{ fill: none; stroke-width: 11; }
