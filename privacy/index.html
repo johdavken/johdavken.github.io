@@ -19,7 +19,7 @@
        Industrial Slate palettes change in theme.css, the tokens here do not
        follow, and nothing will break to tell you. privacy-policy.test.js
        pins the values against theme.css so that drift is caught. -->
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='14 10 62 80'><path d='m14 24 31-14 31 14-31 14Z' fill='%23dc2626'/><path d='m14 37 31-14 31 14-31 14Z' fill='%23718ba5'/><path d='m14 50 31-14 31 14-31 14Z' fill='%23d97706'/><path d='m14 63 31-14 31 14-31 14Z' fill='%2316a34a'/><path d='m14 76 31-14 31 14-31 14Z' fill='%23607d9b'/></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 108 108'><g transform='translate(54 54)'><g fill='none' stroke='%23575279'><circle r='40' stroke-width='.65' opacity='.25'/><path d='M0-38.5V-43M38.5 0H43M0 38.5V43M-38.5 0H-43' stroke-width='1' opacity='.72'/></g><g id='c'><path d='M0-35C16-35 29-25 33-12L24-9C21-19 12-25 2-25C-5-25-11-22-15-17L-22-23C-16-31-8-35 0-35Z' fill='currentColor'/></g><g color='%23b4637a'><use href='%23c'/></g><g color='%23d7827e' transform='rotate(72)'><use href='%23c'/></g><g color='%23ea9d34' transform='rotate(144)'><use href='%23c'/></g><g color='%23907aa9' transform='rotate(216)'><use href='%23c'/></g><g color='%2356949f' transform='rotate(288)'><use href='%23c'/></g><path d='M0-15 14.3-4.6 8.8 12.1H-8.8L-14.3-4.6Z' fill='%23faf4ed' stroke='%23575279' stroke-width='1.25' stroke-linejoin='round'/><g fill='none' stroke='%23575279' stroke-width='1.45' stroke-linecap='round' stroke-linejoin='round'><path d='m-7-3 7-3.3L7-3 0 .3Z'/><path d='m-7 .5 7 3.3L7 .5M-7 4l7 3.3L7 4'/></g></g></svg>">
 
   <style>
     /* Industrial Slate, the app's default theme (theme.css). Only the tokens
@@ -98,17 +98,7 @@
     }
     /* The app's mark, drawn here rather than fetched. It animates in the app;
        on a document that would only be a distraction, so it sits still. */
-    .docLogo{ display: block; width: 104px; height: auto; }
-    .docLogo .rtLayerRed{ fill: var(--bad); }
-    .docLogo .rtLayerOrange{ fill: var(--orange); }
-    .docLogo .rtLayerYellow{ fill: var(--warn); }
-    .docLogo .rtLayerGreen{ fill: var(--ok); }
-    .docLogo .rtLayerBlue{ fill: var(--focus-border); }
-    .docLogo .rtWord{
-      fill: var(--text);
-      font: 900 66px/1 ui-monospace, "Cascadia Mono", "Liberation Mono", monospace;
-      letter-spacing: -4px;
-    }
+    .docLogo{ display: block; width: 104px; height: auto; color: var(--text); }
     .docBack{ color: var(--muted); font-size: 13px; }
 
     h1{
@@ -178,14 +168,42 @@
   <main>
     <nav class="docNav">
       <svg class="docLogo" viewBox="0 0 196 104" role="img" aria-label="Resin.Tools">
-        <g transform="translate(5 6)">
-          <path class="rtLayerRed" d="m14 24 31-14 31 14-31 14Z"/>
-          <path class="rtLayerOrange" d="m14 37 31-14 31 14-31 14Z"/>
-          <path class="rtLayerYellow" d="m14 50 31-14 31 14-31 14Z"/>
-          <path class="rtLayerGreen" d="m14 63 31-14 31 14-31 14Z"/>
-          <path class="rtLayerBlue" d="m14 76 31-14 31 14-31 14Z"/>
+        <defs>
+          <g id="docConfluenceChannel">
+            <path d="M0-35C16-35 29-25 33-12L24-9C21-19 12-25 2-25C-5-25-11-22-15-17L-22-23C-16-31-8-35 0-35Z" fill="currentColor"/>
+            <path d="M-19-14C-12-23 0-26 10-22" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+            <path d="M-9-29C-3-31 3-31 9-29M24-20l3 3" fill="none" stroke="var(--text)" stroke-width=".7" opacity=".52"/>
+          </g>
+        </defs>
+        <g transform="translate(49 52)" fill="none" stroke="currentColor">
+          <circle r="40" stroke-width=".65" opacity=".22"/>
+          <path d="M0-38.5V-43M12.361-38.042l.556-1.712M23.511-32.361l1.058-1.456M32.361-23.511l1.456-1.058M38.042-12.361l1.712-.556M38.5 0H43M38.042 12.361l1.712.556M32.361 23.511l1.456 1.058M23.511 32.361l1.058 1.456M12.361 38.042l.556 1.712M0 38.5V43M-12.361 38.042l-.556 1.712M-23.511 32.361l-1.058 1.456M-32.361 23.511l-1.456 1.058M-38.042 12.361l-1.712.556M-38.5 0H-43M-38.042-12.361l-1.712-.556M-32.361-23.511l-1.456-1.058M-23.511-32.361l-1.058-1.456M-12.361-38.042l-.556-1.712" stroke-width=".65" opacity=".32"/>
+          <path d="M0-38.5V-43M38.5 0H43M0 38.5V43M-38.5 0H-43" stroke-width="1" opacity=".65"/>
         </g>
-        <text class="rtWord" x="89" y="83" font-size="66">RT</text>
+        <g transform="translate(49 52)">
+          <use class="rtStream1" href="#docConfluenceChannel" style="color:var(--bad)"/>
+          <use class="rtStream2" href="#docConfluenceChannel" transform="rotate(72)" style="color:var(--orange)"/>
+          <use class="rtStream3" href="#docConfluenceChannel" transform="rotate(144)" style="color:var(--warn)"/>
+          <use class="rtStream4" href="#docConfluenceChannel" transform="rotate(216)" style="color:var(--ok)"/>
+          <use class="rtStream5" href="#docConfluenceChannel" transform="rotate(288)" style="color:var(--focus-border)"/>
+          <path d="M0-15 14.3-4.6 8.8 12.1H-8.8L-14.3-4.6Z" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round" opacity=".75"/>
+          <g fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m-7-3 7-3.3L7-3 0 .3Z"/>
+            <path d="m-7 .5 7 3.3L7 .5M-7 4l7 3.3L7 4"/>
+          </g>
+        </g>
+        <g fill="currentColor">
+          <path fill-rule="evenodd" d="M99 28h23c14 0 22 7 22 19 0 8-4 14-11 17l15 19h-15l-13-17h-9v17H99Zm12 11v16h10c8 0 11-3 11-8s-3-8-11-8Z"/>
+          <path d="M146 28h43v11h-16v44h-12V39h-15Z"/>
+        </g>
+        <g fill="none" stroke-width="1.5">
+          <path class="rtStream1" d="M100 91h12" stroke="var(--bad)"/>
+          <path class="rtStream2" d="M117 91h12" stroke="var(--orange)"/>
+          <path class="rtStream3" d="M134 91h12" stroke="var(--warn)"/>
+          <path class="rtStream4" d="M151 91h12" stroke="var(--ok)"/>
+          <path class="rtStream5" d="M168 91h20" stroke="var(--focus-border)"/>
+        </g>
+        <path d="M100 20h24m4 0h4" fill="none" stroke="currentColor" stroke-width=".7" opacity=".4"/>
       </svg>
       <a class="docBack" href="/">Back to the app</a>
     </nav>
