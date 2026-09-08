@@ -415,6 +415,33 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .gruvboxSolidG
 body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .baseGlyph{display:none}
 .rtLogoSprite{position:absolute;width:0;height:0;overflow:hidden;color:var(--text)}
 :is(.resinToolsLogo,.resinToolsSidebarIcon){color:var(--text)}
+.rtConfluenceRotor{animation:rtConfluenceRevolve 30s linear infinite;transform-origin:0 0}
+.rtConfluenceHighlight{
+  fill:none;
+  stroke:var(--text);
+  stroke-width:.85;
+  stroke-linecap:round;
+  stroke-dasharray:14 86;
+  opacity:0;
+  animation:rtConfluenceTravel 6s linear var(--rt-flow-delay,0s) infinite;
+}
+.rtConfluenceOutput{animation:rtConfluenceOutput 6s ease-in-out var(--rt-flow-delay,0s) infinite}
+@keyframes rtConfluenceRevolve{to{transform:rotate(360deg)}}
+@keyframes rtConfluenceTravel{
+  0%{stroke-dashoffset:18;opacity:0}
+  10%{opacity:.7}
+  72%{opacity:.7}
+  90%,100%{stroke-dashoffset:-100;opacity:0}
+}
+@keyframes rtConfluenceOutput{
+  0%,100%{opacity:.45}
+  25%,45%{opacity:1}
+  75%{opacity:.45}
+}
+@media (prefers-reduced-motion:reduce){
+  .rtConfluenceRotor,.rtConfluenceHighlight,.rtConfluenceOutput{animation:none}
+  .rtConfluenceHighlight{opacity:0}
+}
 .workspaceBrandLogo{ display: block; width: min(100%, 196px); height: auto; }
 .workspaceBrandLogo path{ stroke-linecap: round; stroke-linejoin: round; }
 .workspaceBrandLogo [class^="polynFlow"]{ fill: none; stroke-width: 11; }

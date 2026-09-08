@@ -33,7 +33,7 @@
        equivalent "keep content below the status bar" mode to opt into. -->
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
-  <link rel="stylesheet" href="styles.css?v=0.75.28">
+  <link rel="stylesheet" href="styles.css?v=0.75.29">
   <link rel="stylesheet" href="theme.css?v=0.18.18">
   <link rel="stylesheet" href="desktop.css?v=0.1.24">
   <link rel="stylesheet" href="button-styling.css?v=0.1.7">
@@ -307,11 +307,18 @@
           <path d="M0-38.5V-43M38.5 0H43M0 38.5V43M-38.5 0H-43" stroke-width="1" opacity=".65"/>
         </g>
         <g transform="translate(49 52)">
-          <use class="rtStream1" href="#rtConfluenceChannel" style="color:var(--rt-stream-1,var(--bad))"/>
-          <use class="rtStream2" href="#rtConfluenceChannel" transform="rotate(72)" style="color:var(--rt-stream-2,var(--orange))"/>
-          <use class="rtStream3" href="#rtConfluenceChannel" transform="rotate(144)" style="color:var(--rt-stream-3,var(--warn))"/>
-          <use class="rtStream4" href="#rtConfluenceChannel" transform="rotate(216)" style="color:var(--rt-stream-4,var(--ok))"/>
-          <use class="rtStream5" href="#rtConfluenceChannel" transform="rotate(288)" style="color:var(--rt-stream-5,var(--focus-border))"/>
+          <g class="rtConfluenceRotor">
+            <use class="rtStream1" href="#rtConfluenceChannel" style="--rt-flow-delay:0s;color:var(--rt-stream-1,var(--bad))"/>
+            <use class="rtStream2" href="#rtConfluenceChannel" transform="rotate(72)" style="--rt-flow-delay:-1.2s;color:var(--rt-stream-2,var(--orange))"/>
+            <use class="rtStream3" href="#rtConfluenceChannel" transform="rotate(144)" style="--rt-flow-delay:-2.4s;color:var(--rt-stream-3,var(--warn))"/>
+            <use class="rtStream4" href="#rtConfluenceChannel" transform="rotate(216)" style="--rt-flow-delay:-3.6s;color:var(--rt-stream-4,var(--ok))"/>
+            <use class="rtStream5" href="#rtConfluenceChannel" transform="rotate(288)" style="--rt-flow-delay:-4.8s;color:var(--rt-stream-5,var(--focus-border))"/>
+            <path class="rtConfluenceHighlight" style="--rt-flow-delay:0s" d="M-18-22C-11-30 0-33 11-28C20-25 26-18 28-12" pathLength="100"/>
+            <path class="rtConfluenceHighlight" style="--rt-flow-delay:-1.2s" transform="rotate(72)" d="M-18-22C-11-30 0-33 11-28C20-25 26-18 28-12" pathLength="100"/>
+            <path class="rtConfluenceHighlight" style="--rt-flow-delay:-2.4s" transform="rotate(144)" d="M-18-22C-11-30 0-33 11-28C20-25 26-18 28-12" pathLength="100"/>
+            <path class="rtConfluenceHighlight" style="--rt-flow-delay:-3.6s" transform="rotate(216)" d="M-18-22C-11-30 0-33 11-28C20-25 26-18 28-12" pathLength="100"/>
+            <path class="rtConfluenceHighlight" style="--rt-flow-delay:-4.8s" transform="rotate(288)" d="M-18-22C-11-30 0-33 11-28C20-25 26-18 28-12" pathLength="100"/>
+          </g>
           <path d="M0-15 14.3-4.6 8.8 12.1H-8.8L-14.3-4.6Z" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round" opacity=".75"/>
           <g fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round">
             <path d="m-7-3 7-3.3L7-3 0 .3Z"/>
@@ -323,11 +330,11 @@
           <path d="M146 28h43v11h-16v44h-12V39h-15Z"/>
         </g>
         <g fill="none" stroke-width="1.5">
-          <path class="rtStream1" d="M100 91h12" stroke="var(--rt-stream-1,var(--bad))"/>
-          <path class="rtStream2" d="M117 91h12" stroke="var(--rt-stream-2,var(--orange))"/>
-          <path class="rtStream3" d="M134 91h12" stroke="var(--rt-stream-3,var(--warn))"/>
-          <path class="rtStream4" d="M151 91h12" stroke="var(--rt-stream-4,var(--ok))"/>
-          <path class="rtStream5" d="M168 91h20" stroke="var(--rt-stream-5,var(--focus-border))"/>
+          <path class="rtStream1 rtConfluenceOutput" style="--rt-flow-delay:0s" d="M100 91h12" stroke="var(--rt-stream-1,var(--bad))"/>
+          <path class="rtStream2 rtConfluenceOutput" style="--rt-flow-delay:-1.2s" d="M117 91h12" stroke="var(--rt-stream-2,var(--orange))"/>
+          <path class="rtStream3 rtConfluenceOutput" style="--rt-flow-delay:-2.4s" d="M134 91h12" stroke="var(--rt-stream-3,var(--warn))"/>
+          <path class="rtStream4 rtConfluenceOutput" style="--rt-flow-delay:-3.6s" d="M151 91h12" stroke="var(--rt-stream-4,var(--ok))"/>
+          <path class="rtStream5 rtConfluenceOutput" style="--rt-flow-delay:-4.8s" d="M168 91h20" stroke="var(--rt-stream-5,var(--focus-border))"/>
         </g>
         <path d="M100 20h24m4 0h4" fill="none" stroke="currentColor" stroke-width=".7" opacity=".4"/>
       </symbol>

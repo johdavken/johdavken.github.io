@@ -50,6 +50,14 @@ h1{font:500 clamp(36px,5.4vw,64px)/1.05 Georgia,serif;letter-spacing:-.04em;marg
 .bottom{display:flex;align-items:center;justify-content:space-between;gap:20px;padding-top:23px}
 .bottom p{max-width:660px;font-size:11px;color:var(--muted);margin:0}
 .download{display:inline-flex;gap:20px;white-space:nowrap;text-decoration:none}
+.motion-study{margin-top:30px;border:1px solid var(--border2);border-radius:8px;overflow:hidden;background:var(--panel)}
+.motion-heading{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:22px 24px;border-bottom:1px solid var(--border)}
+.motion-heading h2{font:500 28px/1.2 Georgia,serif;letter-spacing:-.025em;margin:7px 0 0}
+.motion-stage{min-height:300px;display:flex;align-items:center;justify-content:center;padding:30px 24px;background:radial-gradient(ellipse at center,var(--row-bg),transparent 70%)}
+.motion-stage svg{display:block;width:min(100%,var(--motion-size,360px));height:auto}
+.motion-footer{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:18px 24px;border-top:1px solid var(--border)}
+.motion-footer p{max-width:550px;margin:0;font-size:12px;color:var(--muted)}
+@media(max-width:740px){.motion-heading,.motion-footer{align-items:flex-start;flex-direction:column}.motion-stage{min-height:240px}.motion-heading .controls{gap:8px}.motion-heading,.motion-footer{padding:20px}}
 [data-monochrome="true"] .rtConfluence{--rt-stream-1:currentColor;--rt-stream-2:currentColor;--rt-stream-3:currentColor;--rt-stream-4:currentColor;--rt-stream-5:currentColor}
 @media(max-width:740px){.page{padding:24px 20px}.topbar,.intro{align-items:flex-start;flex-direction:column;gap:20px}.brand span{margin-left:8px}.controls{flex-wrap:wrap}.intro{padding:26px 0}.study,.specimens{grid-template-columns:1fr}.hero{border-right:0;border-bottom:1px solid var(--border2);min-height:270px;padding:55px 25px}.sidebar{padding:20px}.rail{max-width:240px}.bottom{align-items:flex-start;flex-direction:column}.specimens{gap:24px}h1{margin-top:10px}}
 </style>
@@ -106,6 +114,21 @@ h1{font:500 clamp(36px,5.4vw,64px)/1.05 Georgia,serif;letter-spacing:-.04em;marg
       <div class="detail"><span class="index">02</span><div><strong>Precision in the small details</strong><p>Indexed divisions, machined edges, and a film section at the core.</p></div></div>
       <div class="detail"><span class="index">03</span><div><strong>A familiar footprint</strong><p>The current 196 × 104 canvas, with lettering drawn entirely as paths.</p></div></div>
     </div></div>
+  </section>
+  <section class="motion-study" id="confluence-motion" aria-labelledby="motion-heading">
+    <header class="motion-heading">
+      <div><div class="caption">04 / Motion study</div><h2 id="motion-heading">Continuous flow</h2></div>
+      <div class="controls">
+        <label class="caption" for="motion-size">Size</label>
+        <select id="motion-size"><option value="360">Detail · 360px</option><option value="210">Mobile · 210px</option><option value="137.5">Desktop · 137.5px</option></select>
+        <button id="motion-pause" type="button" aria-pressed="false" aria-controls="motion-stage">Pause motion</button>
+      </div>
+    </header>
+    <div class="motion-stage" id="motion-stage"></div>
+    <div class="motion-footer">
+      <p>Five streams turn slowly around a steady die. Fine highlights travel through the channels; the five output lanes breathe in sequence. The calibration ring and RT lettering hold their position.</p>
+      <button id="motion-download" type="button">Download animated SVG ↗</button>
+    </div>
   </section>
   <footer class="bottom"><p>Transparent SVG. Inline use inherits the app’s theme colors; the standalone file follows your system’s light or dark appearance. The palette menu uses the app’s theme stylesheet.</p><a class="download" href="rt-confluence.svg" download="rt-confluence.svg">Download SVG <span aria-hidden="true">↗</span></a></footer>
 </main>
@@ -208,6 +231,79 @@ h1{font:500 clamp(36px,5.4vw,64px)/1.05 Georgia,serif;letter-spacing:-.04em;marg
 <script>
   const template = document.getElementById('logo-template');
   document.querySelectorAll('.logo-slot').forEach(slot => slot.append(template.content.cloneNode(true)));
+  // Build a single motion specimen from the original paths. Motion lives in
+  // the SVG's own stylesheet, so the downloadable SVG needs no JavaScript.
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const motion = template.content.querySelector('svg').cloneNode(true);
+  motion.classList.add('rtConfluenceMotion');
+  motion.setAttribute('aria-label', 'Resin.Tools Confluence — continuous flow animation');
+  const motionStyles = document.createElementNS(svgNS, 'style');
+  motionStyles.textContent = `
+    .rtConfluenceMotion .cfRotor{animation:cfRevolve 30s linear infinite;transform-origin:0 0}
+    .rtConfluenceMotion .cfHighlight{fill:none;stroke:var(--rt-ink,var(--text,var(--rt-fallback-ink)));stroke-width:.85;stroke-linecap:round;stroke-dasharray:14 86;animation:cfTravel 6s linear infinite;animation-delay:var(--cf-phase);opacity:0}
+    .rtConfluenceMotion .cfOutput{animation:cfOutput 6s ease-in-out infinite;animation-delay:var(--cf-phase)}
+    .rtConfluenceMotion[data-paused="true"] .cfRotor,
+    .rtConfluenceMotion[data-paused="true"] .cfHighlight,
+    .rtConfluenceMotion[data-paused="true"] .cfOutput{animation-play-state:paused}
+    @keyframes cfRevolve{to{transform:rotate(360deg)}}
+    @keyframes cfTravel{0%{stroke-dashoffset:18;opacity:0}10%{opacity:.7}72%{opacity:.7}90%,100%{stroke-dashoffset:-100;opacity:0}}
+    @keyframes cfOutput{0%,100%{opacity:.45}25%,45%{opacity:1}75%{opacity:.45}}
+    @media(prefers-reduced-motion:reduce){
+      .rtConfluenceMotion .cfRotor,.rtConfluenceMotion .cfHighlight,.rtConfluenceMotion .cfOutput{animation:none}
+      .rtConfluenceMotion .cfHighlight{opacity:0}
+    }
+  `;
+  motion.append(motionStyles);
+  const channels = [...motion.querySelectorAll('g[class^="rtStream"]')];
+  const rotor = document.createElementNS(svgNS, 'g');
+  rotor.setAttribute('class', 'cfRotor');
+  channels[0].before(rotor);
+  channels.forEach((channel, index) => {
+    rotor.append(channel);
+    const highlight = document.createElementNS(svgNS, 'path');
+    highlight.setAttribute('class', 'cfHighlight');
+    highlight.setAttribute('d', 'M-18-22C-11-30 0-33 11-28C20-25 26-18 28-12');
+    highlight.setAttribute('pathLength', '100');
+    highlight.style.setProperty('--cf-phase', `${-index * 1.2}s`);
+    channel.append(highlight);
+  });
+  motion.querySelectorAll('path[class^="rtStream"]').forEach((lane, index) => {
+    lane.classList.add('cfOutput');
+    lane.style.setProperty('--cf-phase', `${-index * 1.2}s`);
+  });
+  document.getElementById('motion-stage').append(motion);
+  const pause = document.getElementById('motion-pause');
+  pause.addEventListener('click', () => {
+    const paused = motion.dataset.paused !== 'true';
+    motion.dataset.paused = String(paused);
+    pause.setAttribute('aria-pressed', String(paused));
+    pause.textContent = paused ? 'Resume motion' : 'Pause motion';
+  });
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  const syncMotionPreference = () => {
+    pause.disabled = reducedMotion.matches;
+    pause.textContent = reducedMotion.matches ? 'Reduced motion' : motion.dataset.paused === 'true' ? 'Resume motion' : 'Pause motion';
+  };
+  reducedMotion.addEventListener('change', syncMotionPreference);
+  syncMotionPreference();
+  document.getElementById('motion-size').addEventListener('change', event => {
+    document.getElementById('motion-stage').style.setProperty('--motion-size', `${event.target.value}px`);
+  });
+  document.getElementById('motion-download').addEventListener('click', () => {
+    const exported = motion.cloneNode(true);
+    exported.removeAttribute('data-paused');
+    // Preserve the chosen preview palette in a standalone SVG, including mono.
+    exported.style.setProperty('--rt-ink', getComputedStyle(motion).color);
+    channels.forEach((channel, index) => {
+      exported.style.setProperty(`--rt-stream-${index + 1}`, getComputedStyle(channel).color);
+    });
+    const url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(exported)], { type: 'image/svg+xml' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'rt-confluence-continuous-flow.svg';
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
   const theme = document.getElementById('theme');
   theme.addEventListener('change', () => { document.documentElement.dataset.theme = theme.value; });
   document.getElementById('mono').addEventListener('click', event => {

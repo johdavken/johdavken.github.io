@@ -40,7 +40,14 @@ test("all five material streams follow the active semantic theme colors", () => 
   assert.match(styles, /\.rtLogoSprite\{position:absolute;width:0;height:0;overflow:hidden;color:var\(--text\)\}/);
 });
 
-test("the replaced draw-loop animation is absent", () => {
-  assert.doesNotMatch(styles, /rtLogoDrawLoop|stroke-dasharray:137/);
+test("continuous flow rotates the channels, traces their highlights, and pulses each output", () => {
+  assert.match(html, /class="rtConfluenceRotor"/);
+  assert.equal((html.match(/class="rtConfluenceHighlight"/g) || []).length, 5);
+  assert.equal((html.match(/rtConfluenceOutput/g) || []).length, 5);
+  assert.match(styles, /\.rtConfluenceRotor\{animation:rtConfluenceRevolve 30s linear infinite/);
+  assert.match(styles, /animation:rtConfluenceTravel 6s linear var\(--rt-flow-delay,0s\) infinite/);
+  assert.match(styles, /\.rtConfluenceOutput\{animation:rtConfluenceOutput 6s ease-in-out var\(--rt-flow-delay,0s\) infinite\}/);
+  assert.match(styles, /@media \(prefers-reduced-motion:reduce\)/);
+  assert.match(styles, /\.rtConfluenceRotor,\.rtConfluenceHighlight,\.rtConfluenceOutput\{animation:none\}/);
   assert.doesNotMatch(html, /class="rtLayer(?:Red|Orange|Yellow|Green|Blue)"/);
 });
