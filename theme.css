@@ -1247,6 +1247,72 @@ body[data-theme="ayu-light"] #splitsArea .splitMatrixCell:not(.empty) .splitInpu
   -webkit-text-fill-color: #e5474f;
 }
 
+/* ----------------------------------------------------------------------- * Ayu Mirage * -----------------------------------------------------------------------
+   The Mirage column of the same Ayu palette sheet Ayu Light was mapped
+   from, onto the identical semantic token set. Three cool blue-grey
+   surfaces (#1f2430 page, #242936 panel, #282e3b raised) carry the
+   hierarchy; colour still means the same things:
+     Recipe  -> warm  (--orange keyword #ffa659, on the workflow marker only)
+     Timeline / editing / focus -> blue  (--title / --focus-border #73d0ff)
+     Resin Totals / tracked / synced -> green  (--ok string #d5ff80)
+     destructive / reset / error -> red  (--bad = Ayu Mirage error #ff6666)
+   Unlike Ayu Light, --btnstyle-ink is NOT overridden: on a dark theme the
+   shared var(--text) (#cccac2) is the correct Station Console ink. */
+:where(html, body)[data-theme="ayu-mirage"]{
+  color-scheme: dark;
+  --bg: #1f2430;
+  --desktop-canvas-bg: #1a1f29;
+  --panel: #242936;
+  --panel2: rgba(28,33,44,.86);
+  --text: #cccac2;
+  --title: #73d0ff;
+  --subtitle: #8f96a3;
+  --muted: #707a8c;
+  --border: rgba(150,166,190,.16);
+  --border2: rgba(150,166,190,.28);
+  --field-bg: rgba(20,24,33,.55);
+  --panelOpen: #282e3b;
+  --chev: rgba(204,202,194,.45);
+  --fg: #cccac2;
+  --yellow: #ffcd66;
+  --orange: #ffa659;
+  --warn: #ffcd66;
+  --bad: #ff6666;
+  --ok: #d5ff80;
+  --shadow2: 0 8px 22px rgba(0,0,0,.36);
+  --row-bg: rgba(204,202,194,.04);
+  --row-border: rgba(115,208,255,.14);
+  --row-bg-2: rgba(115,208,255,.03);
+  --row-border-2: rgba(150,166,190,.26);
+  --readonly-bg: rgba(20,24,33,.5);
+  --readonly-border: rgba(150,166,190,.2);
+  --focus-border: rgba(115,208,255,.85);
+  --focus-ring: rgba(115,208,255,.18);
+  --f-var1: #d5ff80;
+  --f-var2: #ffcd66;
+  --f-var3: #dfbfff;
+  --f-const: #707a8c;
+  --btn-text: var(--text);
+  --btn-border: rgba(150,166,190,.26);
+  --btn-primary-a: rgba(115,208,255,.18);
+  --btn-primary-b: rgba(115,208,255,.09);
+  --btn-secondary-bg: rgba(150,166,190,.1);
+  --btn-secondary-border: rgba(150,166,190,.22);
+  --btn-danger-bg: rgba(255,102,102,.14);
+  --btn-danger-border: rgba(255,102,102,.3);
+  --bg-glow-a: rgba(115,208,255,.09);
+  --bg-glow-b: rgba(255,205,102,.05);
+  --card-glow-a: rgba(115,208,255,.11);
+  --card-glow-b: rgba(255,166,89,.06);
+  --toggle-on-bg: rgba(115,208,255,.2);
+  --toggle-on-border: rgba(115,208,255,.45);
+  --footer-bg: rgba(31,36,48,.94);
+  --footer-border: rgba(150,166,190,.18);
+}
+/* Brand mark redrawn from Ayu Mirage's own hue families (same treatment
+   Ayu Light gets); the streams fall back to the semantic tokens above. */
+:where(html, body)[data-theme="ayu-mirage"] :is(.resinToolsLogo,.resinToolsSidebarIcon){--rt-stream-1:#f28779;--rt-stream-2:#ffa659;--rt-stream-3:#ffcd66;--rt-stream-4:#d5ff80;--rt-stream-5:#73d0ff}
+
 /* ----------------------------------------------------------------------- * One Dark * ----------------------------------------------------------------------- */
 :where(html, body)[data-theme="one-dark"]{
   color-scheme: dark;

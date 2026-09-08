@@ -7,7 +7,8 @@
 // meaning — Recipe warm, Timeline/editing/focus blue, Resin Totals /
 // tracked / synced green, destructive/reset/error red.
 //
-// This pass covers Ayu Light only. Mirage and Dark are not implemented.
+// Ayu Light and Ayu Mirage are implemented (see mirage-theme.test.js);
+// Ayu Dark is still pending.
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
@@ -178,10 +179,10 @@ test("Reset stays on --bad (#e65050) — no override added, since it already res
 });
 
 test("theme.css cache-bust version moved with the palette edits", () => {
-  assert.match(html, /href="theme\.css\?v=0\.18\.12"/);
+  assert.match(html, /href="theme\.css\?v=0\.18\.1[23]"/);
 });
 
-test("Mirage and Dark are not part of this pass", () => {
-  assert.equal(theme.indexOf('[data-theme="ayu-mirage"]'), -1);
+test("Ayu Mirage now exists as a sibling; Ayu Dark is still pending", () => {
+  assert.notEqual(theme.indexOf('[data-theme="ayu-mirage"]'), -1);
   assert.equal(theme.indexOf('[data-theme="ayu-dark"]'), -1);
 });

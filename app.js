@@ -1886,6 +1886,8 @@
         // early local selection lands on the intended Newsprint successor.
         ["kanagawa-lotus", "newsprint"],
         ["ayu-light", "ayu-light"],
+        ["ayu-mirage", "ayu-mirage"],
+        ["mirage", "ayu-mirage"],
         ["nord", "nord"],
         ["rose-pine", "rose-pine"],
         ["rose-pine-dark", "rose-pine"],

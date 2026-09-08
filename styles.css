@@ -9266,6 +9266,8 @@ body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-targ
    Resin Totals (--workflow-resin-totals, from --ok) already resolve to
    Ayu Light's blue and green. */
 body[data-theme="ayu-light"] .workspaceNavButton[data-workspace-target="splitsBlock"]{ --tile-accent:var(--orange); }
+/* Ayu Mirage: same Recipe-is-warm convention as Ayu Light. */
+body[data-theme="ayu-mirage"] .workspaceNavButton[data-workspace-target="splitsBlock"]{ --tile-accent:var(--orange); }
 
 
 @media (max-width:900px), (min-width: 901px) and (pointer: coarse){
@@ -9933,6 +9935,7 @@ body[data-theme="ayu-light"] .workspaceNavButton[data-workspace-target="splitsBl
   /* Ayu Light: keep Recipe warm on the mobile section headers too; Timeline
      and Resin Totals already resolve to Ayu Light's blue and green. */
   body[data-theme="ayu-light"] #splitsBlock .mobileSectionHeaderIcon{color:var(--orange)}
+  body[data-theme="ayu-mirage"] #splitsBlock .mobileSectionHeaderIcon{color:var(--orange)}
 
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .appearanceNavTile{ --tile-accent:var(--gruv-red); }
   /* Request beta access is a .helpPlayBanner, not a .workspaceNavButton, but

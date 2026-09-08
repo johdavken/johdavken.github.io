@@ -75,7 +75,9 @@ test("Timeline tile status is set inside the existing next-action renderer",()=>
 
 test("theme choices include the supported light palettes and retain legacy migration",()=>{
   const select = html.slice(html.indexOf('<select id="themeSel">'),html.indexOf('</select>',html.indexOf('<select id="themeSel">')));
-  assert.equal((select.match(/<option/g) || []).length,15);
+  assert.equal((select.match(/<option/g) || []).length,16);
+  assert.match(select,/<option value="ayu-mirage">Ayu Mirage<\/option>/);
+  assert.match(app,/\["ayu-mirage", "ayu-mirage"\]/);
   assert.match(select,/<option value="green-team">Green Team<\/option>/);
   assert.match(select,/<option value="red-team">Red Team<\/option>/);
   assert.match(select,/<option value="system">System \/ Auto<\/option>/);
