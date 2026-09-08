@@ -545,16 +545,34 @@ Prefer installing browser tooling outside the project or configuring it as an MC
 
 # Subagents
 
-The project defines four read-only diagnostic subagents in `.claude/agents/`:
+The project defines four diagnostic subagents in `.claude/agents/`:
 `ui-debugger`, `supabase-debugger`, `android-debugger`, and
-`regression-reviewer`. None of them can edit files or touch Git state; each
-returns findings to the parent session, which does the work.
+`regression-reviewer`. Each investigates and returns findings to the parent
+session, which does the work.
+
+Their restraint is behavioural, not structural. Treat "diagnostic" as a rule
+Claude follows, not a wall the runtime enforces:
+
+- Three of the four declare `Bash`, and `Bash` is write access — `sed -i`,
+  `git checkout`, `>` are all reachable from it. Only `ui-debugger` has no
+  `Bash`.
+- The runtime has been observed granting `Write`/`Edit` to all four regardless
+  of the `tools:` line in their file, so omitting those tools does not by
+  itself prevent editing.
+
+So the guarantee is the instruction in each agent's body, and it holds only as
+well as instructions hold. A diagnostic agent must not edit files, run
+migrations, deploy, or touch Git state, and the parent session should not rely
+on it being unable to.
 
 Claude may launch these without asking first. Prefer them when the task
 genuinely benefits:
 
 - `regression-reviewer` after any substantial change — the value is a reviewer
-  with no stake in the implementer's assumptions, not saved effort.
+  with no stake in the implementer's assumptions, not saved effort. Never
+  extend it to fixing what it finds: a reviewer that repairs its own findings
+  acquires the stake that made it worth spawning, and removes the review step
+  from between the finding and the change.
 - The debuggers for parallel fan-out (sweeping many themes, viewports, or
   tables) or when a second opinion is worth its cost.
 
@@ -564,10 +582,25 @@ focused investigation that is already underway it is slower and usually
 shallower than finishing it inline.
 
 Claude may also add a new agent to `.claude/agents/` when a diagnostic role
-recurs often enough to be worth encoding. Match the established shape: a
-read-only tool list with no `Write`/`Edit`, and a body of *When to invoke /
-Non-negotiable rules / How to investigate / Project memory / Report format*.
-Prefer instructing an existing agent over adding a near-duplicate of one.
+recurs often enough to be worth encoding. Match the established shape: no
+`Write`/`Edit` in the tool list, `Bash` only if the role needs it, and a body
+of *When to invoke / Non-negotiable rules / How to investigate / Project
+memory / Report format*. Prefer instructing an existing agent over adding a
+near-duplicate of one.
+
+An agent intended to change files is a different thing from these four and
+should be scoped to one task rather than added to a diagnostic role. Require
+all three of:
+
+- the judgment is already settled, so the work is transformation and not
+  decision;
+- a hard automated gate exists that fails loudly — a test suite, or the CSS
+  parity probe in `tools/css-parity/`;
+- `isolation: "worktree"`, so a bad run is a discarded checkout.
+
+The first is the one that gets assumed. A gate proves a change did not break
+anything; it cannot say the change was worth making. The Stage 3 breakpoint
+consolidation cleared the gate byte-identical and was still the wrong change.
 
 # Git and Workflow Rules
 

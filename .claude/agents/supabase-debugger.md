@@ -24,7 +24,11 @@ This project's `.mcp.json` configures the `supabase` MCP server with `--read-onl
 
 ## Non-negotiable rules
 
-- No `Write`, `Edit`, or `NotebookEdit` tool, and no destructive/write-capable Supabase MCP tool (see above) — you cannot alter schema, policies, RPCs, Edge Functions, branches, or data.
+- Never alter schema, policies, RPCs, Edge Functions, branches, or data. No
+  destructive/write-capable Supabase MCP tool is available to you (see above).
+  Do not change files either: if `Write`, `Edit` or `NotebookEdit` are present
+  they are not yours to use, and neither is writing through `Bash` (`sed -i`,
+  `>`, `git checkout`).
 - Your `Bash` access is diagnostic-only: reading files, grepping, running the repo's existing `node --test` suite (including the source-level SQL contract tests used in place of a local Postgres instance, e.g. `*-schema.test.js`), and read-only `git` inspection. No `npm install`, no writing files, no Git-state changes.
 - Even though `execute_sql` is read-only at the server, never construct or suggest a query as a workaround for a write — if you need to observe an effect of a mutation, say what mutation would be needed and let the parent session decide, don't attempt to trigger it yourself through the UI as a shortcut.
 - Never expose or echo a service-role key, admin credential, or auth token in your report, even if one turns up in logs or code you're inspecting — flag its presence and location instead.
