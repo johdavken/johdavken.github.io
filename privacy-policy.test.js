@@ -233,7 +233,13 @@ test("the mark is drawn inline from the app's own path data, not fetched as an S
   // stays copied rather than drifting once the app's mark is retouched.
   const symbol = html.slice(html.indexOf('<symbol id="rtConfluenceMark"'), html.indexOf("</symbol>"));
   const channel = html.slice(html.indexOf('<g id="rtConfluenceChannel">'), html.indexOf("</g>", html.indexOf('<g id="rtConfluenceChannel">')));
-  const geometry = [...`${channel}${symbol}`.matchAll(/ d="([^"]+)"/g)].map(match => match[1]);
+  // The app's mark animates: .rtConfluenceHighlight is a sweep that travels the
+  // channels, drawn only to be moved. These pages deliberately sit still (see
+  // the .docLogo comment in privacy/index.html), so the sweep is correctly
+  // absent here and comparing it would force motion onto a legal document.
+  // Everything that defines the mark's SHAPE still has to match.
+  const structural = `${channel}${symbol}`.replace(/<path class="rtConfluenceHighlight"[^>]*>/g, "");
+  const geometry = [...structural.matchAll(/ d="([^"]+)"/g)].map(match => match[1]);
   assert.ok(geometry.length > 8, "expected the app's mark to expose its path data");
   for (const d of geometry) {
     assert.ok(logo.includes(` d="${d}"`), `expected the app's own path data: ${d.slice(0, 48)}...`);
@@ -241,6 +247,17 @@ test("the mark is drawn inline from the app's own path data, not fetched as an S
   // The five streams still read as the five semantic tokens, not fixed hexes.
   for (const token of ["--bad", "--orange", "--warn", "--ok", "--focus-border"]) {
     assert.ok(logo.includes(`var(${token})`), `expected the stream to follow var(${token})`);
+  }
+  // ...and the exclusion above is bounded: the app must still be the thing
+  // that animates, so if the sweep ever stops existing there, this test is
+  // silently comparing less than it thinks it is.
+  assert.match(symbol, /class="rtConfluenceHighlight"/, "the app's mark no longer has the animated sweep - re-check what this test excludes");
+});
+
+test("the public documents do not animate - the mark sits still on a legal page", () => {
+  for (const [name, page] of [["policy", policy], ["deletion", deletion]]) {
+    assert.doesNotMatch(page, /rtConfluenceHighlight/, `${name} page must not carry the app's animated sweep`);
+    assert.doesNotMatch(page, /@keyframes|animation\s*:/, `${name} page must not animate`);
   }
 });
 
