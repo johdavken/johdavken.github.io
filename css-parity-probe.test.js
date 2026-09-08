@@ -114,14 +114,29 @@ test("the probe's derived-attribute map stays in step with app.js", () => {
   // app.js changes which themes belong to a group and the probe does not
   // follow, every capture silently mismeasures those themes.
   const app = fs.readFileSync("app.js", "utf8");
+  // Which app.js collection backs each attribute. A Set lists themes; a Map
+  // lists [theme, value] pairs, so only the first of each pair is a theme.
+  const SOURCE = {
+    "data-rail-surface": { name: "TERMINAL_RAIL_THEMES", kind: "set" },
+    "data-theme-family": { name: "THEME_FAMILIES", kind: "map" },
+  };
   for (const derived of probe.DERIVED_ATTRIBUTES) {
-    assert.ok(app.includes(`"${derived.attr}", "${derived.value}"`),
-      `app.js no longer sets ${derived.attr}="${derived.value}" - the probe would mismeasure`);
-    const block = app.slice(app.indexOf("const TERMINAL_RAIL_THEMES"), app.indexOf("function applyThemeGroupings"));
-    for (const theme of derived.themes) {
-      assert.ok(block.includes(`"${theme}"`), `app.js does not list ${theme} in the ${derived.attr} group`);
-    }
-    const listed = [...block.matchAll(/"([a-z-]+)"/g)].map(m => m[1]);
+    const source = SOURCE[derived.attr];
+    assert.ok(source, `the probe declares ${derived.attr} but this test does not know where app.js defines it`);
+    // The attribute must be both set and cleared. The VALUE may be a literal
+    // (the rail surface) or come from the collection itself (the family), so
+    // it is the membership check below that pins the value, not this.
+    assert.ok(app.includes(`setAttribute("${derived.attr}"`),
+      `app.js no longer sets ${derived.attr} - the probe would mismeasure`);
+    assert.ok(app.includes(`removeAttribute("${derived.attr}")`),
+      `app.js never clears ${derived.attr} - switching themes would strand it`);
+
+    const start = app.indexOf(`const ${source.name}`);
+    assert.notEqual(start, -1, `app.js no longer defines ${source.name}`);
+    const block = app.slice(start, app.indexOf("]);", start));
+    const listed = source.kind === "map"
+      ? [...block.matchAll(/\["([a-z-]+)", "([a-z-]+)"\]/g)].filter(m => m[2] === derived.value).map(m => m[1])
+      : [...block.matchAll(/"([a-z-]+)"/g)].map(m => m[1]);
     assert.deepEqual(listed.sort(), [...derived.themes].sort(),
       `the probe and app.js disagree about which themes get ${derived.attr}`);
   }

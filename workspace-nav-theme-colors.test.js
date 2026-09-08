@@ -31,8 +31,8 @@ test("Industrial Slate Dark matches each workflow section header icon to its til
 });
 
 test("gruvbox's own rainbow override is untouched", () => {
-  assert.match(styles, /body:is\(\[data-theme="gruvbox-dark"\],\[data-theme="gruvbox-light"\]\) \.workspaceNavButton\[data-workspace-target="lineSetupBlock"\]\{ --tile-accent:var\(--gruv-orange\); \}/);
-  assert.match(styles, /body:is\(\[data-theme="gruvbox-dark"\],\[data-theme="gruvbox-light"\]\) \.workspaceNavButton\[data-workspace-target="resultsBlock"\]\{ --tile-accent:var\(--gruv-blue\); \}/);
+  assert.match(styles, /body\[data-theme-family="gruvbox"\] \.workspaceNavButton\[data-workspace-target="lineSetupBlock"\]\{ --tile-accent:var\(--gruv-orange\); \}/);
+  assert.match(styles, /body\[data-theme-family="gruvbox"\] \.workspaceNavButton\[data-workspace-target="resultsBlock"\]\{ --tile-accent:var\(--gruv-blue\); \}/);
 });
 
 // "Request beta access" is a .helpPlayBanner, not a .workspaceNavButton, but
@@ -44,7 +44,7 @@ test("gruvbox's own rainbow override is untouched", () => {
 test("the beta-access banner title tracks the same mobile nav-title colour as the other Workspace & support rows", () => {
   assert.match(
     styles,
-    /body:is\(\[data-theme="gruvbox-dark"\],\[data-theme="gruvbox-light"\]\) \.helpPlayBanner strong\{ color:var\(--gruv-mobile-ink\); \}/
+    /body\[data-theme-family="gruvbox"\] \.helpPlayBanner strong\{ color:var\(--gruv-mobile-ink\); \}/
   );
   assert.match(
     theme,
@@ -57,7 +57,7 @@ test("the beta-access title fix rides the same rule as the workspaceNavButton ti
   // never drift apart on a future palette change.
   assert.match(
     styles,
-    /body:is\(\[data-theme="gruvbox-dark"\],\[data-theme="gruvbox-light"\]\) \.workspaceNavButton span,\s*\n\s*body:is\(\[data-theme="gruvbox-dark"\],\[data-theme="gruvbox-light"\]\) \.helpPlayBanner strong\{ color:var\(--gruv-mobile-ink\); \}/
+    /body\[data-theme-family="gruvbox"\] \.workspaceNavButton span,\s*\n\s*body\[data-theme-family="gruvbox"\] \.helpPlayBanner strong\{ color:var\(--gruv-mobile-ink\); \}/
   );
   assert.match(
     theme,
