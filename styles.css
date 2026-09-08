@@ -2619,6 +2619,31 @@ details[open] > summary .chevSatellite{
   color:var(--title);
   opacity:1;
 }
+/* Per-layer Copy / Paste / Cancel (tablet + desktop). One button, three
+   states, set by syncLayerCopyButtons: every layer reads COPY at rest; arm
+   one and it reads CANCEL while every other layer reads PASTE. Uppercased
+   here rather than in the label text so the accessible name stays ordinary
+   sentence case. */
+.splitCopyBtn[data-layer-copy-state]{
+  text-transform:uppercase;
+  letter-spacing:.05em;
+}
+/* PASTE is the one actionable state while a layer is armed, so it is the
+   only one that takes the accent. CANCEL stays quiet - it is the way out,
+   not a third thing to do - and the armed layer is identified by the ring
+   on its own header instead (.layerCopySource below). */
+.splitCopyBtn[data-layer-copy-state="paste"]{
+  border-color:var(--focus-border);
+  color:var(--focus-border);
+}
+.splitCopyBtn[data-layer-copy-state="cancel"]{
+  color:var(--muted);
+}
+.splitsMatrix th.splitLayerHeader.layerCopySource{
+  /* inset, so arming a copy never changes the header's box and shifts the
+     grid under the operator. */
+  box-shadow:inset 0 0 0 1px var(--focus-border);
+}
 .splitRowHeader{
   color: var(--muted);
   font-weight: 950;
@@ -3698,7 +3723,8 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
  *   Summary is a read-only glance whose one interaction is tracking:
  *   fields are inert (pointer-events:none so a click anywhere in the cell
  *   reaches the cell itself), and every editing affordance - the clock,
- *   the clear x, the Match buttons, the layer percentage - is gone.
+ *   the clear x, the per-layer Copy/Paste buttons, the layer percentage -
+ *   is gone.
  * ===================================================================== */
 #splitsArea[data-recipe-view="summary"] .splitMatrixCell input,
 #splitsArea[data-recipe-view="summary"] .splitLayerPct input{
@@ -5200,7 +5226,7 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
   /* No .splitColumnTotal sizing/colour here - the element is display:none
      on mobile (see .splitColumnTotal above), so nothing would ever read
      these. */
-  /* The per-layer "Match X" header button is gone on the compact Recipe
+  /* The per-layer Copy / Paste / Cancel header button is gone on the compact Recipe
      screen - its job is now the Edit toolbar's Copy / Paste hoppers pair
      (#copySelectedCells / #pasteSelectedCells), which work layer-to-layer
      via the column-header selection. Still present on desktop and tablet.
@@ -11697,7 +11723,7 @@ body[data-shell="touch"] .changeoverWizardDialog{position:fixed;inset:auto auto 
 }
 
 /* Wide Touch layer header: compact inline hierarchy (small layer letter,
-   dominant percentage, quiet total and Match action). Shell + width owns
+   dominant percentage, quiet total and copy action). Shell + width owns
    this presentation, so fine-pointer previews cannot fall into Desktop. */
 @media (min-width: 701px){
   body[data-shell="touch"] #splitsArea .splitsMatrix thead th{
@@ -11908,7 +11934,7 @@ body[data-shell="touch"] .changeoverWizardDialog{position:fixed;inset:auto auto 
    touch. Previously .splitCopyBtn's
    display:inline-grid outranked (equal specificity, later source order)
    #splitsArea[data-recipe-view="summary"] .splitCopyBtn{display:none}, so
-   Summary's Match button reappeared purely from a short window, never
+   Summary's per-layer copy button reappeared purely from a short window, never
    Edit/view-state; and .splitLayerMain's min-height:22px fought the
    percentage-forward header's own sizing, visibly compressing it. */
 @media (min-width: 701px) and (max-height: 800px){
@@ -12164,7 +12190,7 @@ body #splitsBlock #splitsArea[data-recipe-layout="transposed"] .splitsMatrix th:
 
 /* Layer header: a row header now, so it pins left while the positions scroll
    horizontally. "Top strip rail": a tinted band across the top of the cell
-   carries the letter and percentage, with Match as plain text underneath -
+   carries the letter and percentage, with Copy/Paste as plain text underneath -
    a horizontal rotation of the rail this replaced. .splitLayerMain draws a
    real box again here (overriding the display:contents given to it below
    for the "top" ledger row) so it can BE that band; .splitLayerHeader just
@@ -12247,10 +12273,10 @@ body #splitsBlock #splitsArea[data-recipe-layout="transposed"] .splitLayerPct in
 body #splitsArea[data-recipe-layout="transposed"] .splitColumnTotal{
   display:none;
 }
-/* Plain text, not a pill - Match reads like a caption under the band
-   rather than a second control competing with it. Still a real <button>
-   (it copies Layer copyFrom into this layer on click); only the chip
-   chrome is stripped. */
+/* Plain text, not a pill - the copy action reads like a caption under the
+   band rather than a second control competing with it. Still a real <button>
+   (see syncLayerCopyButtons: it arms this layer, pastes the armed one into
+   it, or cancels); only the chip chrome is stripped. */
 body #splitsBlock #splitsArea[data-recipe-layout="transposed"] .splitsMatrix tbody .splitCopyBtn{
   width:auto;
   margin:4px 10px 6px;
@@ -12268,6 +12294,13 @@ body #splitsBlock #splitsArea[data-recipe-layout="transposed"] .splitsMatrix tbo
 body #splitsBlock #splitsArea[data-recipe-layout="transposed"] .splitsMatrix tbody .splitCopyBtn:focus-visible{
   background:none;
   color:var(--focus-border);
+}
+/* The caption variant strips the pill, so the base rules' border/colour do
+   not reach it - PASTE needs the accent restated at this specificity.
+   CANCEL is already var(--muted) here, which is exactly the quiet it wants. */
+body #splitsBlock #splitsArea[data-recipe-layout="transposed"] .splitsMatrix tbody .splitCopyBtn[data-layer-copy-state="paste"]{
+  color:var(--focus-border);
+  font-weight:700;
 }
 
 /* Cells: narrower than the stacked grid's 180px, since six of them now sit

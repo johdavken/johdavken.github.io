@@ -21,7 +21,8 @@
  *              (.weightsHeaderViewToggle in #recipeHeaderControls)
  *       BULK = the Edit-mode bulk bar's Clear / Empty cells / Reset /
  *              Rearrange (every .bulkTextAction in the bar, plus the
- *              #resetAllSplits danger button), and the per-layer "Match X"
+ *              #resetAllSplits danger button), and the per-layer Copy /
+ *              Paste / Cancel
  *              copy buttons that appear in the grid header in Edit view
  *              (.splitCopyBtn)
  *       BOOK = the Recipe Book AND Weight Profiles panels' shared desktop
@@ -229,9 +230,9 @@ body{
     background: currentColor;
   }
 
-  /* The per-layer "Match X" copy buttons in the recipe grid header. They
-     only exist in Edit view (styles.css hides them in Summary), so this is
-     scoped to [data-recipe-view="edit"]. Chipped off their pill shape;
+  /* The per-layer Copy / Paste / Cancel buttons in the recipe grid header.
+     They only exist in Edit view (styles.css hides them in Summary), so this
+     is scoped to [data-recipe-view="edit"]. Chipped off their pill shape;
      kept compact - they sit inside a table header, not on a toolbar. */
   body #splitsArea[data-recipe-view="edit"] .splitCopyBtn{
     border: 0;
@@ -243,6 +244,21 @@ body{
   body #splitsArea[data-recipe-view="edit"] .splitCopyBtn:hover{
     background: var(--btnstyle-surface);
     filter: brightness(1.06);
+  }
+  /* While one layer is armed, PASTE is the only thing there is to do, so it
+     takes the accent ink on the same key - not a fill, which would put four
+     loud keys down one edge of the grid. CANCEL stays quiet: the armed layer
+     is already identified by the ring on its own header. These restate the
+     state colours from styles.css because the key treatment above outranks
+     them here; the transposed (caption) variant is more specific still and
+     keeps its own. */
+  body #splitsArea[data-recipe-view="edit"] .splitCopyBtn[data-layer-copy-state="paste"]{
+    background: var(--btnstyle-surface);
+    color: var(--btnstyle-accent);
+  }
+  body #splitsArea[data-recipe-view="edit"] .splitCopyBtn[data-layer-copy-state="cancel"]{
+    background: var(--btnstyle-surface);
+    color: var(--muted);
   }
 
   /* ---- Recipe Book + Weight Profiles (desktop) ----------------------
@@ -624,6 +640,15 @@ body{
   body[data-shell="touch"] #splitsArea[data-recipe-view="edit"] .splitCopyBtn:hover{
     background: var(--btnstyle-surface);
     filter: brightness(1.06);
+  }
+  /* Same Copy / Paste / Cancel states as the desktop block above. */
+  body[data-shell="touch"] #splitsArea[data-recipe-view="edit"] .splitCopyBtn[data-layer-copy-state="paste"]{
+    background: var(--btnstyle-surface);
+    color: var(--btnstyle-accent);
+  }
+  body[data-shell="touch"] #splitsArea[data-recipe-view="edit"] .splitCopyBtn[data-layer-copy-state="cancel"]{
+    background: var(--btnstyle-surface);
+    color: var(--muted);
   }
 
   body[data-shell="touch"] #splitsBlock .splitsSavedRecipesActions{

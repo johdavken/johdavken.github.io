@@ -128,13 +128,15 @@ test("the mobile toolbar has no overflow control left - Scan and Load fold into 
   assert.match(styles,/#splitsBlock \.recipeHeaderActions > \.mobileScanIconAction > summary,\s*\n\s*#splitsBlock \.recipeHeaderActions > \.recipeHeaderMobileAction\{/);
 });
 
-test("layer controls describe matching rather than copying without changing the copyLayer operation",()=>{
-  assert.match(app,/copyButton\.textContent = `Match \$\{copyFrom\}`;/);
-  assert.match(app,/copyButton\.title = copyDescription;/);
-  assert.match(app,/Make Layer \$\{L\.name\} match Layer \$\{copyFrom\}/);
-  assert.match(app,/else copyLayer\(copyFrom, L\.name\);/);
-  // The Match X button is desktop/tablet only now - the compact Recipe grid
-  // hides it (its role moved to the Edit toolbar's Copy / Paste hoppers).
+// The per-layer header control has since become a Copy / Paste / Cancel
+// tri-state between any two layers (ux-tablet-desktop-update1, see
+// recipe-layer-copy-paste.test.js). What this test still owns is the phone
+// end of it: that control is desktop/tablet only, and its role on the compact
+// grid belongs to the Edit toolbar's Copy / Paste hoppers pair.
+test("the per-layer header control still drives copyLayer, and stays hidden on the compact Recipe grid",()=>{
+  assert.match(app,/button\.textContent = mode === "copy" \? "Copy" : mode === "cancel" \? "Cancel" : "Paste";/);
+  assert.match(app,/button\.title = description;/);
+  assert.match(app,/else copyLayer\(fromName, L\.name\);/);
   assert.match(styles,/\.splitsMatrix\.compactMobileRecipe \.splitCopyBtn\{ display:none; \}/);
 });
 

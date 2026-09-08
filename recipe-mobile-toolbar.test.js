@@ -203,17 +203,20 @@ test("on phone, Undo/Redo and the four Recipe actions form one compact icon tool
 });
 
 /* ============================================================
- *   ux-mobile-touch2: per-layer "Match X" is dropped on the compact Recipe
- *   screen; the Edit toolbar gains Copy hoppers / Paste hoppers, phone-only,
- *   sitting between Empty cells and Rearrange.
+ *   ux-mobile-touch2: the per-layer copy button is dropped on the compact
+ *   Recipe screen; the Edit toolbar gains Copy hoppers / Paste hoppers,
+ *   phone-only, sitting between Empty cells and Rearrange. (That per-layer
+ *   button was "Match X" then and is a Copy / Paste / Cancel tri-state now -
+ *   see recipe-layer-copy-paste.test.js - but it is still desktop/tablet
+ *   only, which is what this test owns.)
  * ============================================================ */
 
-test("the per-layer Match X button is hidden on the compact Recipe grid (desktop/tablet keep it)", () => {
+test("the per-layer copy button is hidden on the compact Recipe grid (desktop/tablet keep it)", () => {
   assert.match(styles, /\.splitsMatrix\.compactMobileRecipe \.splitCopyBtn\{ display:none; \}/);
-  // The desktop layer-match operation is untouched.
+  // The wide-grid layer copy operation is untouched.
   const editor = recipeEditor();
-  assert.match(editor, /copyButton\.textContent = `Match \$\{copyFrom\}`;/);
-  assert.match(editor, /else copyLayer\(copyFrom, L\.name\);/);
+  assert.match(editor, /copyButton\.className = "copyBtn splitCopyBtn";/);
+  assert.match(editor, /else copyLayer\(fromName, L\.name\);/);
 });
 
 test("Copy hoppers / Paste hoppers render between Empty cells and Reset, phone-only, disabled until usable", () => {

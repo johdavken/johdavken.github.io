@@ -163,8 +163,17 @@
   // Recipe Edit "copy hoppers" / "paste hoppers" buffer: a positional list of
   // { resinName, pct } for the hoppers that were selected when Copy was
   // pressed. Runtime state - never saved to the session or synced - and the
-  // phone replacement for the per-layer "Match X" header button.
+  // phone replacement for the per-layer copy button in the grid header.
   let recipeCellClipboard = null;
+  // Tablet/desktop per-layer Copy / Paste / Cancel: the name of the layer
+  // currently armed for copying, or null when nothing is. Runtime state like
+  // recipeCellClipboard - never saved, never synced - held at module level so
+  // it survives the renderSplitsArea() a paste triggers. Deliberately a live
+  // reference to a layer rather than a snapshot of one: pasting reads that
+  // layer as it stands at paste time, exactly as the "Match X" button it
+  // replaces did. Cleared when the page changes (a layer name means something
+  // different on Current vs Next) and when the armed layer stops existing.
+  let recipeLayerCopySource = null;
   // Desktop Recipe Setup's presentation mode, mirroring Receiver Hopper
   // Weights' own Summary/Edit split. "summary" is a read-only glance whose
   // only interaction is toggling tracking; "edit" carries the whole change
@@ -1712,18 +1721,6 @@
       if (lineType === 5) return ["A","B","C","D","E"];
       return ["A","B","C"];
     }
-    function getLayerCopyRules(lineType){
-      if (lineType === 3) return { "A": "C", "B": "A", "C": "A" };
-      if (lineType === 5) return {
-        "A": "E",
-        "B": "D",
-        "C": "B",
-        "D": "B",
-        "E": "A"
-      };
-      return {};
-    }
-
     function ensureLayers(){
       const names = getLayerNamesForType(state.lineType);
       const prevByName = {};
@@ -4364,6 +4361,10 @@
         }
       }
       activeRecipePage = next;
+      // Layer A on Current and Layer A on Next are different recipes, so an
+      // armed copy must not survive the switch and silently paste the wrong
+      // one.
+      recipeLayerCopySource = null;
       // On desktop this opens the page-replacement panel. On Current/Next it
       // guarantees the old below-grid disclosure cannot reappear.
       splitsSavedRecipesOpen = next === "saved";
@@ -4588,7 +4589,6 @@
         return;
       }
       area.className = "gap10";
-      const copyRules = getLayerCopyRules(state.lineType);
       const selected = new Set();
       const cellRefs = new Map();
       const columnSelectors = new Map();
@@ -4690,11 +4690,11 @@
         recordRecipeEdit(historyBefore);
       }
 
-      // 3-layer's B is the core layer: matching it to A/C should only carry
-      // over which resin is loaded, not the skin layers' blend percentages -
-      // B's own split is set independently. Every other copy pair (A<-C,
-      // C<-A, and the 5-layer pairs) intentionally copies both pct and
-      // resinName via copyLayer above.
+      // 3-layer's B is the core layer: pasting a skin layer (A/C) into it
+      // should only carry over which resin is loaded, not that layer's blend
+      // percentages - B's own split is set independently. Keyed on the
+      // target, so it holds whichever layer the operator copied. Every other
+      // target intentionally takes both pct and resinName via copyLayer.
       function isResinOnlyCopyTarget(lineType, toName){
         return lineType === 3 && toName === "B";
       }
@@ -4707,6 +4707,47 @@
           to.hoppers[i].resinName = normName(from.hoppers[i].resinName);
         }
         recordRecipeEdit(historyBefore);
+      }
+
+      // Per-layer Copy / Paste / Cancel (tablet + desktop; the compact phone
+      // grid hides .splitCopyBtn and uses the Edit toolbar's Copy/Paste
+      // hoppers pair instead). One button per layer, three states:
+      //   nothing armed          -> every layer reads "Copy"
+      //   layer X armed          -> X reads "Cancel", every other reads "Paste"
+      // A paste is a single act: it disarms, so all three states collapse back
+      // to "Copy" straight after. Cancel is the way out without pasting.
+      // This replaces the fixed-pair "Match X" button, which hard-coded a
+      // single source per layer (getLayerCopyRules); any layer can now feed
+      // any other. Pasting keeps the one existing exception: 3-layer's B is
+      // the core layer whose split is set independently of the skins, so a
+      // paste into it carries resin only (isResinOnlyCopyTarget).
+      const layerCopyButtons = new Map();
+      function layerCopyDescription(name, mode, source){
+        if (mode === "copy") return `Copy Layer ${name}`;
+        if (mode === "cancel") return `Cancel copying Layer ${name}`;
+        return isResinOnlyCopyTarget(state.lineType, name)
+          ? `Paste Layer ${source}'s resin into Layer ${name} (percentages unchanged)`
+          : `Paste Layer ${source} into Layer ${name}`;
+      }
+      // Relabels every layer's button from recipeLayerCopySource. Arming and
+      // cancelling go through here rather than renderSplitsArea() so they
+      // never clear the operator's cell selection - only a paste, which
+      // actually changes hopper values, rebuilds the grid.
+      function syncLayerCopyButtons(){
+        // A line-type change can strip the armed layer out from under us.
+        if (recipeLayerCopySource && !layerCopyButtons.has(recipeLayerCopySource)) recipeLayerCopySource = null;
+        const source = recipeLayerCopySource;
+        layerCopyButtons.forEach((button, name)=>{
+          const mode = !source ? "copy" : source === name ? "cancel" : "paste";
+          const description = layerCopyDescription(name, mode, source);
+          button.dataset.layerCopyState = mode;
+          button.textContent = mode === "copy" ? "Copy" : mode === "cancel" ? "Cancel" : "Paste";
+          button.setAttribute("aria-label", description);
+          button.title = description;
+          // The armed layer's own header is ringed, so which layer is on the
+          // clipboard is readable without hunting for the word "Cancel".
+          button.closest("th")?.classList.toggle("layerCopySource", mode === "cancel");
+        });
       }
 
       const modeBar = document.createElement("div");
@@ -5283,7 +5324,7 @@
         // In Edit view the whole header cell selects the column instead;
         // the letter's own handler above still runs for a direct hit (the
         // closest("button") guard here stops it counting twice), and the
-        // percentage field and Match button keep their own behavior.
+        // percentage field and Copy/Paste button keep their own behavior.
         th.addEventListener("click", event=>{
           if (!bulkMode || hopperRearrangement?.active) return;
           if (event.target.closest("input,button,label,a,select,textarea")) return;
@@ -5300,7 +5341,7 @@
         pctInput.value = String(clampNum(L.layerPct));
         pctInput.setAttribute("aria-label", `Layer ${L.name} percentage`);
         // Summary is strictly read-only: the layer percentage and the
-        // "Match X" copy button below are recipe edits like any other, so
+        // Copy / Paste button below are recipe edits like any other, so
         // neither is reachable until Edit view is on.
         if(hopperRearrangement?.active || summaryView) pctInput.disabled=true;
         if (autoFirstLayer){
@@ -5319,27 +5360,40 @@
 
         th.append(headerMain);
 
-        const copyFrom = copyRules[L.name];
-        th.classList.toggle("noCopy", !copyFrom);
-        if (copyFrom){
-          const resinOnly = isResinOnlyCopyTarget(state.lineType, L.name);
+        // Copy / Paste / Cancel - see syncLayerCopyButtons, which owns the
+        // label and state of every one of these. A single-layer line has
+        // nothing to copy between, so it gets no button at all (.noCopy,
+        // exactly as before, when a layer without a copy rule got none).
+        const canCopy = recipeLayers().length > 1;
+        th.classList.toggle("noCopy", !canCopy);
+        if (canCopy){
           const copyButton = document.createElement("button");
           copyButton.type = "button";
           copyButton.className = "copyBtn splitCopyBtn";
-          copyButton.textContent = `Match ${copyFrom}`;
-          const copyDescription = resinOnly
-            ? `Copy Layer ${copyFrom}'s resin into Layer ${L.name} (percentages unchanged)`
-            : `Make Layer ${L.name} match Layer ${copyFrom}`;
-          copyButton.setAttribute("aria-label", copyDescription);
-          copyButton.dataset.mobileCopySource = copyFrom;
-          copyButton.title = copyDescription;
+          copyButton.dataset.layerCopyTarget = L.name;
           copyButton.addEventListener("click",()=>{
-            if (resinOnly) copyLayerResinOnly(copyFrom, L.name);
-            else copyLayer(copyFrom, L.name);
+            if (!recipeLayerCopySource){
+              recipeLayerCopySource = L.name;
+              syncLayerCopyButtons();
+              return;
+            }
+            if (recipeLayerCopySource === L.name){
+              recipeLayerCopySource = null;
+              syncLayerCopyButtons();
+              return;
+            }
+            const fromName = recipeLayerCopySource;
+            if (isResinOnlyCopyTarget(state.lineType, L.name)) copyLayerResinOnly(fromName, L.name);
+            else copyLayer(fromName, L.name);
+            // One paste per copy: disarming here is what returns every layer
+            // to "Copy" on the re-render below, so the grid is never left
+            // sitting in a half-armed state the operator has to clear.
+            recipeLayerCopySource = null;
             renderSplitsArea();
             validateAndCompute({ sync: true });
             saveSession();
           });
+          layerCopyButtons.set(L.name, copyButton);
           th.appendChild(copyButton);
         }
 
@@ -6194,7 +6248,7 @@
       clearCellsButton?.addEventListener("click", emptySelectedCells);
 
       // Copy / Paste hoppers: a positional { resinName, pct } buffer over the
-      // current selection - the phone replacement for the per-layer "Match X"
+      // current selection - the phone replacement for the per-layer copy
       // header button. Select a whole column via its header to copy or paste
       // an entire layer; a partial selection carries just those cells. The
       // buffer (recipeCellClipboard, module scope) is runtime state: not
@@ -6228,7 +6282,7 @@
       // Positional paste, clamped to the shorter of buffer / selection. Writes
       // resin + blend %, recomputes each touched layer's automatic H1, and
       // records one undo step - the same shape as emptySelectedCells and the
-      // "Match X" copyLayer() it replaces. No confirm: it is one Undo away,
+      // per-layer copyLayer() it mirrors. No confirm: it is one Undo away,
       // exactly like Empty cells.
       function pasteHoppersIntoSelection(){
         if (!recipeCellClipboard || !recipeCellClipboard.length) return;
@@ -6377,6 +6431,9 @@
       }
       updateHopperTotals();
       updateTrackingUI();
+      // Buttons are created blank by buildLayerHeader; this is what gives
+      // them their Copy / Paste / Cancel label for the current armed layer.
+      syncLayerCopyButtons();
 
       // Reapply (not force-close) the resolved state to this render's
       // freshly-created elements - both default to closed, but a render

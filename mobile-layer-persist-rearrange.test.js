@@ -16,9 +16,10 @@ test("lastActiveMobileLayer is declared at module scope, alongside hopperRearran
   const hoisted = app.indexOf("let hopperRearrangement = null;");
   assert.notEqual(hoisted, -1);
   // Window covers the whole module-scope recipe-state cluster; it grew when
-  // splitsViewMode (desktop Summary/Edit) and later recipeCellClipboard
-  // (Copy/Paste hoppers buffer) joined the same block.
-  const nearby = app.slice(hoisted, hoisted + 2600);
+  // splitsViewMode (desktop Summary/Edit), then recipeCellClipboard
+  // (Copy/Paste hoppers buffer) and recipeLayerCopySource (the tablet/desktop
+  // per-layer Copy/Paste/Cancel) joined the same block.
+  const nearby = app.slice(hoisted, hoisted + 3400);
   assert.match(nearby, /let lastActiveMobileLayer = "";/);
 });
 

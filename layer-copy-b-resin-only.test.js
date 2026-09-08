@@ -6,13 +6,6 @@ const fs = require("node:fs");
 
 const app = fs.readFileSync("app.js", "utf8");
 
-function functionBody(name){
-  const start = app.indexOf(`function ${name}(`);
-  assert.notEqual(start, -1, `Expected function ${name}`);
-  const next = app.indexOf("\n    function ", start + 1);
-  return app.slice(start, next === -1 ? undefined : next);
-}
-
 // copyLayer/copyLayerResinOnly/isResinOnlyCopyTarget are nested (6-space
 // indent) inside renderSplitsArea, not top-level, so functionBody's
 // "next top-level function" boundary sweeps in unrelated code after them.
@@ -26,20 +19,15 @@ function nestedFunctionBody(name){
 }
 
 // 3-layer's B is the core layer: its own blend percentages are set
-// independently of the skin layers (A/C), so its "Match A" button must only
-// carry over which resin is loaded, never A's blend percentages. Every
-// other copy pair (A<-C, C<-A, and all 5-layer pairs) keeps copying both
-// pct and resinName via the existing copyLayer().
-
-test("B gets a Match-A rule alongside the existing mutual A/C pair", () => {
-  const rules = functionBody("getLayerCopyRules");
-  const threeLayerStart = rules.indexOf("if (lineType === 3) return {");
-  const threeLayerEnd = rules.indexOf("};", threeLayerStart);
-  const threeLayerBody = rules.slice(threeLayerStart, threeLayerEnd);
-  assert.match(threeLayerBody, /"A": "C"/);
-  assert.match(threeLayerBody, /"B": "A"/);
-  assert.match(threeLayerBody, /"C": "A"/);
-});
+// independently of the skin layers (A/C), so a copy into it must only carry
+// over which resin is loaded, never the source layer's blend percentages.
+// Every other target keeps copying both pct and resinName via copyLayer().
+//
+// The fixed-pair "Match X" button this rule was written for is gone - the
+// grid header now offers a free Copy / Paste / Cancel between any two layers
+// (see recipe-layer-copy-paste.test.js) - but the rule itself is unchanged
+// and still keyed on the *target*, so pasting either skin layer into B is
+// resin-only exactly as "Match A" was.
 
 test("copyLayerResinOnly copies only resinName, never pct, and is generic on from/to", () => {
   const body = nestedFunctionBody("copyLayerResinOnly");
@@ -54,22 +42,21 @@ test("isResinOnlyCopyTarget flags only 3-layer's B, leaving every other lineType
   assert.match(body, /return lineType === 3 && toName === "B";/);
 });
 
-test("the Match button dispatches to copyLayerResinOnly only for the resin-only target, and to copyLayer otherwise", () => {
-  const renderStart = app.indexOf("const copyFrom = copyRules[L.name];");
+test("a paste dispatches to copyLayerResinOnly only for the resin-only target, and to copyLayer otherwise", () => {
+  const renderStart = app.indexOf("const canCopy = recipeLayers().length > 1;");
   assert.notEqual(renderStart, -1);
-  const body = app.slice(renderStart, renderStart + 1300);
-  assert.match(body, /if \(resinOnly\) copyLayerResinOnly\(copyFrom, L\.name\);/);
-  assert.match(body, /else copyLayer\(copyFrom, L\.name\);/);
+  const body = app.slice(renderStart, renderStart + 1600);
+  assert.match(body, /if \(isResinOnlyCopyTarget\(state\.lineType, L\.name\)\) copyLayerResinOnly\(fromName, L\.name\);/);
+  assert.match(body, /else copyLayer\(fromName, L\.name\);/);
 });
 
-test("the resin-only button's title/aria-label tells the operator percentages are unchanged, unlike the normal Match buttons", () => {
-  const renderStart = app.indexOf("const copyFrom = copyRules[L.name];");
-  const body = app.slice(renderStart, renderStart + 1300);
-  assert.match(body, /Copy Layer \$\{copyFrom\}'s resin into Layer \$\{L\.name\} \(percentages unchanged\)/);
-  assert.match(body, /Make Layer \$\{L\.name\} match Layer \$\{copyFrom\}/);
+test("the resin-only target's title/aria-label tells the operator percentages are unchanged, unlike a normal paste", () => {
+  const body = app.slice(app.indexOf("function layerCopyDescription("), app.indexOf("\n      }", app.indexOf("function layerCopyDescription(")));
+  assert.match(body, /Paste Layer \$\{source\}'s resin into Layer \$\{name\} \(percentages unchanged\)/);
+  assert.match(body, /Paste Layer \$\{source\} into Layer \$\{name\}/);
 });
 
-test("copyLayer (used by every non-B pair) is untouched: still copies both pct and resinName", () => {
+test("copyLayer (used by every non-B target) is untouched: still copies both pct and resinName", () => {
   const body = nestedFunctionBody("copyLayer");
   assert.match(body, /to\.hoppers\[i\]\.pct = clampNum\(from\.hoppers\[i\]\.pct\);/);
   assert.match(body, /to\.hoppers\[i\]\.resinName = normName\(from\.hoppers\[i\]\.resinName\);/);
