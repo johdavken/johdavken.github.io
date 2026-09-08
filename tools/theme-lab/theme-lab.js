@@ -13,6 +13,7 @@
 (function () {
   var API = "/__theme-lab/api";
   var AGENT_SRC = "/__theme-lab/preview-agent.js";
+  var TRACE_SRC = "/__theme-lab/css-trace.js";
   var PREVIEW_URL = "/?themelab=1";
 
   var VIEWPORTS = {
@@ -62,6 +63,7 @@
       "copyBlockBtn", "downloadBtn", "saveBtn", "inspectResult", "gutter",
       "controlsPane", "toast", "saveDialog", "saveDiff", "saveDialogTheme",
       "saveCancel", "saveConfirm",
+      "impactToken", "impactHighlightBtn", "impactResult", "impactThemeName",
     ].forEach(function (id) { el[id] = document.getElementById(id); });
 
     wireTopbar();
@@ -69,6 +71,7 @@
     wireGutter();
     wirePreviewFrame();
     wireExport();
+    wireImpact();
     window.addEventListener("message", onPreviewMessage);
 
     loadThemes();
@@ -80,6 +83,7 @@
       .then(function (data) {
         state.themes = data.themes || [];
         state.rootDefaults = data.rootDefaults || {};
+        state.themeCssPath = data.themeCssPath || "theme.css";
         el.themePicker.innerHTML = "";
         state.themes.forEach(function (t) {
           var o = document.createElement("option");
@@ -144,6 +148,7 @@
 
   function onPreviewLoad() {
     state.agentReady = false;
+    injectTracer();
     injectAgent();
     // Re-assert the previewed theme + working overrides after any in-app
     // navigation reload.
@@ -191,6 +196,47 @@
     s.id = "__themeLabAgent";
     s.src = AGENT_SRC;
     (d.head || d.documentElement).appendChild(s);
+  }
+
+  function injectTracer() {
+    var d = previewDoc();
+    if (!d) return;
+    var w = el.previewFrame.contentWindow;
+    if (w && w.__themeLabTrace) return;
+    if (d.getElementById("__themeLabTrace")) return;
+    var s = d.createElement("script");
+    s.id = "__themeLabTrace";
+    s.src = TRACE_SRC;
+    (d.head || d.documentElement).appendChild(s);
+  }
+
+  // Hand the agent the active theme's per-token source lines (straight from
+  // theme-parser.js via /api/themes) so the tracer can resolve palette tokens
+  // to their exact theme.css line without re-parsing.
+  function sendThemeData() {
+    if (!state.current) return;
+    var byName = {};
+    (state.current.tokens || []).forEach(function (t) {
+      byName[t.name] = { value: t.value, line: t.line };
+    });
+    try {
+      el.previewFrame.contentWindow.postMessage(
+        {
+          source: "theme-lab",
+          type: "themelab:themeData",
+          themeData: {
+            name: state.current.name,
+            themeCssPath: state.themeCssPath || "theme.css",
+            openLine: state.current.openLine,
+            closeLine: state.current.closeLine,
+            byName: byName,
+          },
+        },
+        "*"
+      );
+    } catch (e) {
+      /* ignore */
+    }
   }
 
   var guardObserver = null;
@@ -312,8 +358,10 @@
     });
 
     if (!opts || opts.switchPreview !== false) applyPreviewTheme(name);
+    sendThemeData();
     renderTokens();
     renderChanges();
+    populateImpactTokens();
   }
 
   /* ---------------------- token editor ---------------------- */
@@ -407,7 +455,16 @@
     main.className = "tok-main";
     var nm = document.createElement("div");
     nm.className = "tok-name";
-    nm.textContent = name;
+    var nameBtn = document.createElement("button");
+    nameBtn.type = "button";
+    nameBtn.className = "tok-name-btn";
+    nameBtn.textContent = name;
+    nameBtn.title = "Show where " + name + " is used (Impact tab)";
+    nameBtn.addEventListener("click", function () {
+      activateTab("impact");
+      runImpact(name);
+    });
+    nm.appendChild(nameBtn);
     if (meta.inherited) {
       var badge = document.createElement("span");
       badge.className = "tok-inherit";
@@ -700,54 +757,378 @@
     if (!d || d.source !== "theme-lab-agent") return;
     if (d.type === "themelab:ready") {
       state.agentReady = true;
+      sendThemeData();
     } else if (d.type === "themelab:pickState") {
       if (!d.picking && state.picking) setPicking(false);
     } else if (d.type === "themelab:picked") {
-      renderInspect(d.info);
+      state.lastPick = { info: d.info, token: d.token, trace: null, tracePending: !!d.tracePending };
+      renderInspect();
+    } else if (d.type === "themelab:picked-trace") {
+      if (state.lastPick && state.lastPick.token === d.token) {
+        state.lastPick.trace = d.trace;
+        state.lastPick.tracePending = false;
+        renderInspect();
+      }
+    } else if (d.type === "themelab:impact-result") {
+      if (state.impact && state.impact.reqId === d.reqId) {
+        state.impact.result = d.result;
+        state.impact.pending = false;
+        renderImpact();
+      }
+    } else if (d.type === "themelab:highlight-done") {
+      if (el.impactHighlightBtn) {
+        el.impactHighlightBtn.textContent =
+          d.count > 0 ? "Clear highlight (" + d.count + ")" : "Highlight on screen";
+        state.impactHighlighting = d.count > 0;
+      }
     }
   }
 
-  function renderInspect(info) {
-    var c = info.computed || {};
-    var rows = [
-      ["tag", info.tag],
-      ["id", info.id || "\u2014"],
-      ["classes", info.classes && info.classes.length ? info.classes.join(" ") : "\u2014"],
-      ["text", info.text || "\u2014"],
-    ];
-    var colorRows = [
-      ["color", c.color],
-      ["background", c.backgroundColor],
-      ["border", (c.borderWidth || "") + " " + (c.borderColor || "")],
-    ];
-    if (c.fill) colorRows.push(["fill", c.fill]);
-    if (c.stroke) colorRows.push(["stroke", c.stroke]);
-    colorRows.push(["font", (c.fontWeight || "") + " " + (c.fontSize || "")]);
-    if (c.boxShadow && c.boxShadow !== "none") colorRows.push(["box-shadow", c.boxShadow]);
+  function swatch(val) {
+    var v = String(val || "").trim();
+    if (!/rgb|#|hsl|hwb|lab|lch|oklab|oklch/i.test(v)) return "";
+    var pick = v.split(/\s+/).filter(function (x) {
+      return /^#|rgb|hsl|hwb|lab|lch|oklab|oklch/i.test(x);
+    })[0] || v;
+    return '<span class="mini-swatch" style="background:' + escapeHtml(pick) + '"></span>';
+  }
 
-    var html = "<dl>";
-    rows.forEach(function (r) {
-      html += "<dt>" + r[0] + "</dt><dd>" + escapeHtml(String(r[1])) + "</dd>";
-    });
-    colorRows.forEach(function (r) {
-      var val = String(r[1] || "").trim();
-      var sw = /rgb|#|hsl/.test(val)
-        ? '<span class="mini-swatch" style="background:' + escapeHtml(val.split(" ").filter(function(x){return /rgb|#|hsl/.test(x);})[0] || val) + '"></span>'
-        : "";
-      html += "<dt>" + r[0] + "</dt><dd>" + sw + escapeHtml(val || "\u2014") + "</dd>";
-    });
+  var CLASS_LABEL = {
+    "token-driven": "token-driven",
+    "theme-specific-override": "theme-specific override",
+    hardcoded: "hardcoded",
+    inline: "inline style",
+    unresolved: "unresolved",
+  };
+
+  function renderTraceProperty(key, p) {
+    var title = { color: "Text colour", background: "Background", border: "Border colour", fill: "Fill", stroke: "Stroke" }[key] || key;
+    var h = '<section class="trace-prop">';
+    h += "<h4>" + title + "</h4>";
+    h += '<div class="trace-computed">' + swatch(p.computed) + escapeHtml(p.computed || "\u2014") + "</div>";
+
+    if (!p.matched) {
+      h += '<p class="lab-hint">' + escapeHtml(p.note || "No authored rule \u2014 inherited or UA default.") + "</p>";
+      return h + "</section>";
+    }
+
+    var w = p.winning;
+    var cls = (p.classification && p.classification.kind) || "?";
+    h += '<div class="trace-badge trace-' + escapeHtml(cls) + '">' + escapeHtml(CLASS_LABEL[cls] || cls) + "</div>";
+    h += '<dl class="trace-dl">';
+    h += "<dt>Winning rule</dt><dd>" + escapeHtml(w.selector) + (w.important ? ' <span class="trace-imp">!important</span>' : "") + "</dd>";
+    h += "<dt>Source</dt><dd>" + escapeHtml(w.file) + ":" + w.line + "</dd>";
+    if (w.media && w.media.length) h += "<dt>Media</dt><dd>" + escapeHtml(w.media.join(" / ")) + "</dd>";
+    h += "<dt>Declaration</dt><dd><code>" + escapeHtml(w.declaration) + "</code></dd>";
+    h += "</dl>";
+
+    if (p.chain && p.chain.length) {
+      h += '<ol class="trace-chain">';
+      p.chain.forEach(function (link) {
+        var s = link.source || {};
+        var loc = s.file ? s.file + ":" + s.line : (s.where || s.kind || "");
+        var kindNote =
+          s.kind === "palette-block"
+            ? (s.paletteName ? s.paletteName + " palette block" : "palette block")
+            : s.kind === "theme-scoped-rule"
+            ? "theme-scoped rule"
+            : s.kind === "root-default"
+            ? ":root default"
+            : s.kind === "component-rule"
+            ? "component/base rule"
+            : s.kind === "inline"
+            ? (s.isPreviewOverride ? "Theme Lab preview override (inline)" : s.where || "inline")
+            : s.kind === "fallback"
+            ? "var() fallback"
+            : s.kind || "";
+        h += "<li>";
+        h += "<code>var(" + escapeHtml(link.ref) + ")</code>";
+        if (link.value != null) {
+          h += ' &rarr; ' + swatch(link.value) + "<code>" + escapeHtml(link.value) + "</code>";
+        } else {
+          h += ' &rarr; <em>unresolved</em>';
+        }
+        if (loc) h += ' <span class="trace-loc">(' + escapeHtml(loc) + (kindNote ? ", " + escapeHtml(kindNote) : "") + ")</span>";
+        if (s.selector && s.kind !== "inline") h += ' <span class="trace-loc">' + escapeHtml(s.selector) + "</span>";
+        if (link.usedFallback) h += ' <span class="trace-loc">\u2014 fallback used (token undefined)</span>';
+        (link.overridden || []).forEach(function (ov) {
+          h += '<div class="trace-overridden">overrides <code>' + escapeHtml(link.ref) + ": " + escapeHtml(ov.value || "") +
+            "</code> <span class=\"trace-loc\">(" + escapeHtml((ov.file || "") + (ov.line ? ":" + ov.line : "")) +
+            (ov.themeScoped ? ", theme-scoped" : "") + ")</span></div>";
+        });
+        h += "</li>";
+      });
+      h += "</ol>";
+    }
+
+    var cl = p.classification || {};
+    if (cl.summary) {
+      h += '<p class="trace-summary">' + escapeHtml(cl.summary) + "</p>";
+    }
+    if (cl.componentTokenOverride) {
+      var cto = cl.componentTokenOverride;
+      h += '<p class="trace-summary trace-warn">Base <code>' + escapeHtml(cto.token) + ": " + escapeHtml(cto.baseValue) +
+        "</code> at " + escapeHtml(cto.baseFile + ":" + cto.baseLine) + " is overridden by <code>" +
+        escapeHtml(cto.token) + ": " + escapeHtml(cto.overrideValue) + "</code> at " +
+        escapeHtml(cto.overrideFile + ":" + cto.overrideLine) + ".</p>";
+    }
+    return h + "</section>";
+  }
+
+  function renderInspect() {
+    var pick = state.lastPick;
+    if (!pick) { el.inspectResult.innerHTML = '<p class="lab-empty">Nothing selected.</p>'; return; }
+    var info = pick.info || {};
+    var c = info.computed || {};
+
+    var html = '<dl class="trace-identity">';
+    html += "<dt>tag</dt><dd>" + escapeHtml(info.tag || "?") + (info.isSvg ? " <span class=\"trace-loc\">(SVG)</span>" : "") + "</dd>";
+    html += "<dt>id</dt><dd>" + escapeHtml(info.id || "\u2014") + "</dd>";
+    html += "<dt>classes</dt><dd>" + escapeHtml((info.classes || []).join(" ") || "\u2014") + "</dd>";
+    html += "<dt>text</dt><dd>" + escapeHtml(info.text || "\u2014") + "</dd>";
+    html += "<dt>font</dt><dd>" + escapeHtml((c.fontWeight || "") + " " + (c.fontSize || "")) + "</dd>";
+    if (c.boxShadow && c.boxShadow !== "none") html += "<dt>box-shadow</dt><dd>" + escapeHtml(c.boxShadow) + "</dd>";
     html += "</dl>";
 
-    var guess = info.tokenGuess || {};
-    var gk = Object.keys(guess);
-    if (gk.length) {
-      html += '<p class="lab-hint" style="margin-top:8px">Likely token (guess, not verified):</p><dl>';
-      gk.forEach(function (k) {
-        html += "<dt>" + k + "</dt><dd>" + escapeHtml(guess[k]) + "</dd>";
+    var trace = pick.trace;
+    if (pick.tracePending && !trace) {
+      html += '<p class="lab-hint">Tracing the cascade\u2026</p>';
+      el.inspectResult.innerHTML = html;
+      return;
+    }
+    if (trace && trace.ok === false) {
+      html += '<p class="lab-hint">Trace unavailable: ' + escapeHtml(trace.error || "?") + ". Computed values only.</p>";
+      html += legacyComputedDl(c, info);
+      el.inspectResult.innerHTML = html;
+      return;
+    }
+    if (trace && trace.substituted && trace.subject) {
+      html +=
+        '<p class="trace-substituted">Clicked <code>' +
+        escapeHtml(trace.clicked ? trace.clicked.hint : (info.tag || "?")) +
+        "</code> has no authored colour rules of its own. Showing <code>" +
+        escapeHtml(trace.subject.hint) + "</code> \u2014 " +
+        trace.ancestorDepth + " level" + (trace.ancestorDepth === 1 ? "" : "s") +
+        " up.</p>";
+    }
+    if (trace && trace.properties) {
+      var isSvg = !!(trace.properties.fill || trace.properties.stroke);
+      var order = isSvg ? ["fill", "stroke", "color"] : ["color", "background", "border"];
+      order.forEach(function (k) {
+        if (trace.properties[k]) html += renderTraceProperty(k, trace.properties[k]);
       });
-      html += "</dl>";
+      if (trace.indexErrors && trace.indexErrors.length) {
+        html += '<p class="lab-hint">Note: ' + trace.indexErrors.length + " stylesheet(s) could not be parsed for tracing.</p>";
+      }
+      html += '<p class="lab-hint">Sheets indexed: ' + escapeHtml((trace.sheets || []).join(", ")) + "</p>";
     }
     el.inspectResult.innerHTML = html;
+  }
+
+  function legacyComputedDl(c, info) {
+    var rows = [["color", c.color], ["background", c.backgroundColor], ["border", (c.borderWidth || "") + " " + (c.borderColor || "")]];
+    if (info.isSvg) { rows.push(["fill", c.fill]); rows.push(["stroke", c.stroke]); }
+    var h = '<dl class="trace-dl">';
+    rows.forEach(function (r) { h += "<dt>" + r[0] + "</dt><dd>" + swatch(r[1]) + escapeHtml(String(r[1] || "\u2014")) + "</dd>"; });
+    return h + "</dl>";
+  }
+
+  /* -------------- impact / token -> used-by (Phase 3B) ------------- */
+
+  function wireImpact() {
+    el.impactToken.addEventListener("change", function () {
+      runImpact(el.impactToken.value);
+    });
+    el.impactHighlightBtn.addEventListener("click", function () {
+      if (state.impactHighlighting) {
+        postAgent({ type: "themelab:highlight", clear: true });
+        return;
+      }
+      var sels = collectImpactSelectors();
+      if (!sels.length) return;
+      postAgent({ type: "themelab:highlight", selectors: sels });
+    });
+  }
+
+  function postAgent(msg) {
+    try {
+      msg.source = "theme-lab";
+      el.previewFrame.contentWindow.postMessage(msg, "*");
+    } catch (e) { /* ignore */ }
+  }
+
+  function populateImpactTokens() {
+    if (!el.impactToken) return;
+    var prev = el.impactToken.value;
+    var names = Object.keys(state.originals || {}).sort();
+    el.impactToken.innerHTML =
+      '<option value="">\u2014 select a token \u2014</option>' +
+      names
+        .map(function (n) {
+          return '<option value="' + escapeHtml(n) + '">' + escapeHtml(n) + "</option>";
+        })
+        .join("");
+    if (prev && names.indexOf(prev) !== -1) el.impactToken.value = prev;
+    if (el.impactThemeName && state.current) el.impactThemeName.textContent = state.current.name;
+  }
+
+  function runImpact(token) {
+    if (!token) {
+      state.impact = null;
+      el.impactResult.innerHTML = '<p class="lab-empty">Pick a token.</p>';
+      el.impactHighlightBtn.disabled = true;
+      return;
+    }
+    var reqId = (state.impactReq = (state.impactReq || 0) + 1);
+    state.impact = { token: token, reqId: reqId, pending: true, result: null };
+    el.impactHighlightBtn.disabled = true;
+    if (el.impactToken.value !== token) el.impactToken.value = token;
+    el.impactResult.innerHTML =
+      '<p class="lab-hint">Scanning stylesheets for consumers of <code>' +
+      escapeHtml(token) + "</code>\u2026</p>";
+    postAgent({ type: "themelab:impact", token: token, reqId: reqId });
+  }
+
+  function collectImpactSelectors() {
+    var r = state.impact && state.impact.result;
+    if (!r || !r.ok) return [];
+    var out = [];
+    (r.direct || []).forEach(function (g) { out = out.concat(g.selectors || []); });
+    (r.via || []).forEach(function (v) {
+      if (v.routes) (v.consumers || []).forEach(function (g) { out = out.concat(g.selectors || []); });
+    });
+    return out;
+  }
+
+  function consumerGroupHtml(g) {
+    var h = '<div class="impact-consumer">';
+    h += '<div class="impact-decl"><code>' + escapeHtml(g.declaration) + "</code>" +
+      (g.important ? ' <span class="trace-imp">!important</span>' : "") + "</div>";
+    h += '<div class="impact-loc">' + escapeHtml(g.file + ":" + g.line);
+    if (g.media && g.media.length) h += " \u00b7 " + escapeHtml(g.media.join(" / "));
+    h += "</div>";
+    h += '<div class="impact-selectors">';
+    g.selectors.slice(0, 8).forEach(function (s) {
+      h += "<code>" + escapeHtml(s) + "</code>";
+    });
+    if (g.selectors.length > 8) h += "<span class=\"trace-loc\">+" + (g.selectors.length - 8) + " more</span>";
+    h += "</div>";
+    var live = g.liveVisible || 0;
+    h += '<div class="impact-live">' +
+      (live > 0
+        ? "<strong>" + live + "</strong> visible on screen now"
+        : (g.liveTotal ? g.liveTotal + " in DOM, none visible" : "none in DOM right now")) +
+      "</div>";
+    h += "</div>";
+    return h;
+  }
+
+  function directGroupSplit(groups) {
+    var onScreen = [];
+    var offScreen = [];
+    (groups || []).forEach(function (g) {
+      (g.liveVisible > 0 ? onScreen : offScreen).push(g);
+    });
+    onScreen.sort(function (a, b) { return b.liveVisible - a.liveVisible; });
+    return { onScreen: onScreen, offScreen: offScreen };
+  }
+
+  function renderImpact() {
+    var st = state.impact;
+    if (!st) { el.impactResult.innerHTML = '<p class="lab-empty">Pick a token.</p>'; return; }
+    if (st.pending) return;
+    var r = st.result;
+    if (!r || r.ok === false) {
+      el.impactResult.innerHTML =
+        '<p class="lab-hint">Impact scan failed: ' + escapeHtml((r && r.error) || "?") + "</p>";
+      return;
+    }
+
+    var h = '<div class="impact-head"><code>' + escapeHtml(r.token) + "</code> in <strong>" +
+      escapeHtml(r.theme) + "</strong></div>";
+
+    var totalVisible = 0;
+    (r.direct || []).forEach(function (g) { totalVisible += g.liveVisible || 0; });
+    (r.via || []).forEach(function (v) {
+      if (v.routes) (v.consumers || []).forEach(function (g) { totalVisible += g.liveVisible || 0; });
+    });
+
+    var split = directGroupSplit(r.direct);
+    h += '<h4 class="impact-h">Direct consumers <span class="lab-count">' + (r.direct || []).length + "</span></h4>";
+    if (!(r.direct || []).length) {
+      h += '<p class="lab-hint">No rule references <code>var(' + escapeHtml(r.token) + ")</code> directly in this theme.</p>";
+    } else {
+      if (split.onScreen.length) {
+        h += '<p class="impact-sub">On screen now (' + split.onScreen.length + " rule group" +
+          (split.onScreen.length === 1 ? "" : "s") + "):</p>";
+        split.onScreen.forEach(function (g) { h += consumerGroupHtml(g); });
+      }
+      if (split.offScreen.length) {
+        h += '<details class="impact-more"><summary>' + split.offScreen.length +
+          " more rule group" + (split.offScreen.length === 1 ? "" : "s") +
+          " in this theme (not on screen right now)</summary>";
+        split.offScreen.forEach(function (g) { h += consumerGroupHtml(g); });
+        h += "</details>";
+      }
+    }
+
+    var routing = (r.via || []).filter(function (v) { return v.routes && (v.consumers || []).length; });
+    var notRouting = (r.via || []).filter(function (v) { return !v.routes; });
+
+    if (routing.length) {
+      h += '<h4 class="impact-h">Via component token — currently routing <span class="lab-count">' + routing.length + "</span></h4>";
+      routing.forEach(function (v) {
+        h += '<div class="impact-via"><div class="impact-chainpath">' +
+          v.through.map(function (t) { return "<code>" + escapeHtml(t) + "</code>"; }).join(" &larr; ") +
+          "</div>";
+        var vs = directGroupSplit(v.consumers);
+        vs.onScreen.forEach(function (g) { h += consumerGroupHtml(g); });
+        if (vs.offScreen.length) {
+          h += '<details class="impact-more"><summary>' + vs.offScreen.length + " more (off screen)</summary>";
+          vs.offScreen.forEach(function (g) { h += consumerGroupHtml(g); });
+          h += "</details>";
+        }
+        h += "</div>";
+      });
+    }
+
+    if (notRouting.length) {
+      h += '<h4 class="impact-h impact-h-muted">Via component token — NOT routing in this theme <span class="lab-count">' + notRouting.length + "</span></h4>";
+      notRouting.forEach(function (v) {
+        var b = v.blockedBy;
+        h += '<div class="impact-via impact-blocked"><div class="impact-chainpath">' +
+          v.through.map(function (t) { return "<code>" + escapeHtml(t) + "</code>"; }).join(" &larr; ") +
+          "</div>";
+        var reason;
+        if (b) {
+          reason = "<code>" + escapeHtml(b.token) + "</code> is redefined to <code>" +
+            escapeHtml(b.value) + "</code> at " + escapeHtml(b.file + ":" + b.line) +
+            " (" + escapeHtml(b.kind) + ")";
+        } else if (v.unresolvedAtScope) {
+          reason = "<code>" + escapeHtml(v.through[v.through.length - 1]) +
+            "</code> is not defined at :root/body scope (set per-element), so routing can't be confirmed from here";
+        } else {
+          reason = "<code>" + escapeHtml(v.through[v.through.length - 1]) +
+            "</code> currently resolves to <code>" + escapeHtml(v.producerResolvesTo || "?") +
+            "</code>, which does not pass through <code>" + escapeHtml(r.token) + "</code>";
+        }
+        h += '<p class="lab-hint">' + reason + " — its " + (v.consumers || []).length +
+          " consumer(s) do <strong>not</strong> depend on <code>" + escapeHtml(r.token) + "</code> right now.</p>";
+        h += '<details class="impact-more"><summary>show the ' + (v.consumers || []).length + " consumer(s)</summary>";
+        (v.consumers || []).forEach(function (g) { h += consumerGroupHtml(g); });
+        h += "</details></div>";
+      });
+    }
+
+    (r.notes || []).forEach(function (n) {
+      h += '<p class="lab-hint">' + escapeHtml(n) + "</p>";
+    });
+    h += '<p class="lab-hint">' + totalVisible + " matching element(s) visible on screen now. Indexed: " +
+      escapeHtml((r.sheets || []).join(", ")) + "</p>";
+
+    el.impactResult.innerHTML = h;
+    var sels = collectImpactSelectors();
+    el.impactHighlightBtn.disabled = sels.length === 0;
   }
 
   /* -------------------------- tabs -------------------------- */
@@ -764,6 +1145,10 @@
     document.querySelectorAll(".lab-tabpanel").forEach(function (p) {
       p.classList.toggle("is-active", p.dataset.panel === name);
     });
+    // Leaving Impact clears any on-screen highlight boxes.
+    if (name !== "impact" && state.impactHighlighting) {
+      postAgent({ type: "themelab:highlight", clear: true });
+    }
   }
 
   /* ------------------------- gutter ------------------------ */
