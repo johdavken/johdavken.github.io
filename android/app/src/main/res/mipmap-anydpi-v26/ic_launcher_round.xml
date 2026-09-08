@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@mipmap/ic_launcher_background" />
-    <!-- No inset on either layer. The Layer Stack foreground is already drawn
-         to Android's 66-unit safe circle in layer-stack-rose-pine-light-launcher.svg,
-         and the background has to reach the tile edge or the mask exposes corners. -->
-    <foreground android:drawable="@mipmap/ic_launcher_foreground" />
+    <!-- No inset: the Confluence vector is already fitted to Android's
+         66-unit safe circle and the background must reach the mask edge. -->
+    <foreground android:drawable="@drawable/ic_launcher_foreground" />
 </adaptive-icon>

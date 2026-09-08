@@ -110,9 +110,11 @@ test("the existing viewport keeps viewport-fit=cover and its other settings", ()
   assert.equal((head.match(/name="viewport"/g) || []).length, 1);
 });
 
-test("the SVG favicon uses the Rosé Pine Light Layer Stack without RT lettering", () => {
-  assert.match(head, /<link rel="icon" type="image\/svg\+xml" sizes="any" href="branding\/resin-tools\/layer-stack-rose-pine-light\.svg\?v=1">/);
-  const favicon = fs.readFileSync("branding/resin-tools/layer-stack-rose-pine-light.svg", "utf8");
+test("the SVG favicon uses the circular Confluence mark without RT lettering", () => {
+  assert.match(head, /<link rel="icon" type="image\/svg\+xml" sizes="any" href="branding\/resin-tools\/rt-confluence-icon\.svg\?v=1">/);
+  const favicon = fs.readFileSync("branding/resin-tools/rt-confluence-icon.svg", "utf8");
+  assert.match(favicon, /prefers-color-scheme:dark/);
+  assert.match(favicon, /Five colored resin streams circling a layered coextrusion die/);
   assert.doesNotMatch(favicon, /<text\b|>\s*RT\s*</i);
 });
 

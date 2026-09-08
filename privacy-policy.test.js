@@ -226,11 +226,21 @@ test("the mark is drawn inline from the app's own path data, not fetched as an S
   // Search from the logo, not the top of the file - the favicon's data: URI
   // is itself an SVG, and closes before this one opens.
   const logoStart = policy.indexOf('<svg class="docLogo"');
-  const logo = policy.slice(logoStart, policy.indexOf("</svg>", logoStart));
-  // The same five rhombus paths the app's header draws, so the two marks are
-  // the same shape rather than a hand-redrawn approximation.
-  for (const path of html.match(/<path class="rtLayer\w+" d="[^"]+"\/>/g).slice(0, 5)){
-    assert.ok(logo.includes(path), `expected the app's own ${path.match(/rtLayer\w+/)[0]} path`);
+  const logo = policy.slice(logoStart, policy.lastIndexOf("</svg>"));
+  // Every path the app's own #rtConfluenceMark draws, so the two marks are the
+  // same shape rather than a hand-redrawn approximation. The pages may not
+  // fetch anything, so this is copied geometry - this is the guard that it
+  // stays copied rather than drifting once the app's mark is retouched.
+  const symbol = html.slice(html.indexOf('<symbol id="rtConfluenceMark"'), html.indexOf("</symbol>"));
+  const channel = html.slice(html.indexOf('<g id="rtConfluenceChannel">'), html.indexOf("</g>", html.indexOf('<g id="rtConfluenceChannel">')));
+  const geometry = [...`${channel}${symbol}`.matchAll(/ d="([^"]+)"/g)].map(match => match[1]);
+  assert.ok(geometry.length > 8, "expected the app's mark to expose its path data");
+  for (const d of geometry) {
+    assert.ok(logo.includes(` d="${d}"`), `expected the app's own path data: ${d.slice(0, 48)}...`);
+  }
+  // The five streams still read as the five semantic tokens, not fixed hexes.
+  for (const token of ["--bad", "--orange", "--warn", "--ok", "--focus-border"]) {
+    assert.ok(logo.includes(`var(${token})`), `expected the stream to follow var(${token})`);
   }
 });
 
