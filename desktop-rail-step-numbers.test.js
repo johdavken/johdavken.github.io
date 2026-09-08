@@ -84,14 +84,14 @@ test("a circle, filled with the section's own workflow accent and a knocked-out 
 });
 
 test("Gruvbox knocks the numeral out in the app background tone, exactly as mobile does", () => {
-  const desktop = ruleBody('body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNavButton[data-step]::before{');
+  const desktop = ruleBody('body[data-theme-family="gruvbox"] .workspaceNavButton[data-step]::before{');
   assert.match(desktop, /color: var\(--bg\);/);
   assert.equal(
-    enclosingAtRule('body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNavButton[data-step]::before{'),
+    enclosingAtRule('body[data-theme-family="gruvbox"] .workspaceNavButton[data-step]::before{'),
     DESKTOP_QUERY
   );
   // The mobile marker's equivalent override, unchanged.
-  assert.match(styles, /body:is\(\[data-theme="gruvbox-dark"\],\[data-theme="gruvbox-light"\]\) \.workspaceNav \.workspaceNavButton\[data-step\]::before\{\s*\n\s*color:var\(--bg\);/);
+  assert.match(styles, /body\[data-theme-family="gruvbox"\] \.workspaceNav \.workspaceNavButton\[data-step\]::before\{\s*\n\s*color:var\(--bg\);/);
 });
 
 // The bug this replaced: the circle was absolutely positioned with
@@ -150,7 +150,7 @@ test("every theme override of the workflow accents is hoisted with them, or a th
   [
     'body[data-theme="industrial-slate"] .workspaceNavButton[data-step]{ --tile-accent:var(--yellow); }',
     'body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-target="resultsBlock"]{ --tile-accent:var(--workflow-timeline); }',
-    'body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNavButton[data-workspace-target="lineSetupBlock"]{ --tile-accent:var(--gruv-orange); }'
+    'body[data-theme-family="gruvbox"] .workspaceNavButton[data-workspace-target="lineSetupBlock"]{ --tile-accent:var(--gruv-orange); }'
   ].forEach(rule => {
     assert.equal(enclosingAtRule("\n" + rule), null, `${rule} must not be inside a media query`);
   });

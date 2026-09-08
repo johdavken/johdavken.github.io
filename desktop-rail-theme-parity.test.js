@@ -93,14 +93,18 @@ test("the rail surface is addressed by one derived attribute, not by naming four
 
 test("app.js derives the attribute from the active theme, and removes it for the rest", () => {
   const app = fs.readFileSync("app.js", "utf8");
-  const block = app.slice(app.indexOf("const TERMINAL_RAIL_THEMES"), app.indexOf("function applyTheme(t)"));
-  assert.ok(block, "expected a TERMINAL_RAIL_THEMES set in app.js");
-  const listed = [...block.matchAll(/"([a-z-]+)"/g)].map(m => m[1]).filter(v => v !== "data-rail-surface" && v !== "terminal");
-  assert.deepEqual(listed.sort(), [...TERMINAL_THEMES].sort(), "the family membership drifted");
+  // Slice the Set literal itself, not "everything up to the next function" -
+  // a second grouping declared alongside it would otherwise be read as extra
+  // members of this one.
+  const start = app.indexOf("const TERMINAL_RAIL_THEMES");
+  assert.notEqual(start, -1, "expected a TERMINAL_RAIL_THEMES set in app.js");
+  const block = app.slice(start, app.indexOf("]);", start));
+  const listed = [...block.matchAll(/"([a-z-]+)"/g)].map(m => m[1]);
+  assert.deepEqual(listed.sort(), [...TERMINAL_THEMES].sort(), "the rail-surface membership drifted");
   // Removing it matters as much as setting it: without the else branch a
   // theme switch would leave the previous theme's rail surface behind.
-  assert.match(block, /setAttribute\("data-rail-surface", "terminal"\)/);
-  assert.match(block, /removeAttribute\("data-rail-surface"\)/);
+  assert.match(app, /setAttribute\("data-rail-surface", "terminal"\)/);
+  assert.match(app, /removeAttribute\("data-rail-surface"\)/);
   // applyTheme has to actually call it, or none of the above runs.
   assert.match(app, /applyThemeGroupings\(theme\);/);
 });

@@ -1883,10 +1883,23 @@
     "gruvbox-dark", "gruvbox-light", "industrial-slate", "industrial-slate-dark",
   ]);
 
+  // The second grouping: a theme FAMILY, which is a different idea from the
+  // rail surface above (Industrial Slate shares the rail but is not Gruvbox).
+  // styles.css carried 48 copies of the paired selector for this one, almost
+  // all of it mobile - home tiles, tile styles, section headers.
+  const THEME_FAMILIES = new Map([
+    ["gruvbox-dark", "gruvbox"],
+    ["gruvbox-light", "gruvbox"],
+  ]);
+
   function applyThemeGroupings(theme){
       if (!document.body) return;
       if (TERMINAL_RAIL_THEMES.has(theme)) document.body.setAttribute("data-rail-surface", "terminal");
       else document.body.removeAttribute("data-rail-surface");
+
+      const family = THEME_FAMILIES.get(theme);
+      if (family) document.body.setAttribute("data-theme-family", family);
+      else document.body.removeAttribute("data-theme-family");
   }
 
   function applyTheme(t){

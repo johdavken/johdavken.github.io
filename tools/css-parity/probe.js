@@ -59,6 +59,8 @@ const GEOMETRY_PROPS = [
 const DERIVED_ATTRIBUTES = [
   { attr: "data-rail-surface", value: "terminal",
     themes: ["gruvbox-dark", "gruvbox-light", "industrial-slate", "industrial-slate-dark"] },
+  { attr: "data-theme-family", value: "gruvbox",
+    themes: ["gruvbox-dark", "gruvbox-light"] },
 ];
 
 // One entry per thing worth watching. `all: true` records every match's box
@@ -80,6 +82,15 @@ const SPECIMENS = [
   { name: "recipe.grid",     sel: "#splitsArea .splitsMatrix" },
   { name: "recipe.cell",     sel: "#splitsArea .splitMatrixCell" },
   { name: "footer",          sel: ".footerBar" },
+  // Mobile surfaces. The Gruvbox family pass lives almost entirely here
+  // (home tiles, tile styles, section headers), so a desktop-only specimen
+  // list would have declared a change to it "no difference" without ever
+  // having looked.
+  { name: "home.tiles",      sel: ".workspaceNavButton[data-step]", all: true },
+  { name: "home.tile1",      sel: '.workspaceNavButton[data-step="1"]' },
+  { name: "home.tile1.icon", sel: '.workspaceNavButton[data-step="1"] .workspaceTileIcon' },
+  { name: "mobile.section",  sel: ".mobileSectionHeader" },
+  { name: "mobile.dock",     sel: ".appDock" },
 ];
 
 /* ------------------------------------------------------------------ *

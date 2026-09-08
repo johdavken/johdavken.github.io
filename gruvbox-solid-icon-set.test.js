@@ -27,7 +27,9 @@ const html = fs.readFileSync("index.html", "utf8");
 const styles = fs.readFileSync("styles.css", "utf8");
 const desktop = fs.readFileSync("desktop.css", "utf8");
 
-const GRUVBOX_SCOPE = 'body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"])';
+// app.js derives this from the active theme; the stylesheet no longer names
+// the two Gruvbox themes to reach their shared family styling.
+const GRUVBOX_SCOPE = 'body[data-theme-family="gruvbox"]';
 
 function iconSvgs(){
   return [...html.matchAll(/<svg(?![^>]*class="(?:resinToolsLogo|resinToolsSidebarIcon)")[^>]*viewBox="0 0 32 32"[^>]*>([\s\S]*?)<\/svg>/g)]

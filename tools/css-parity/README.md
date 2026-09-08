@@ -75,6 +75,31 @@ its Dark variant) and the other ten. That split is expected and benign:
 **No box differs between the two groups.** If a `.box` difference ever appears
 in that split, something has regressed.
 
+## Capture hygiene
+
+The two captures must differ **only** by the change under test. This is easier
+to get wrong than it sounds, and the failure is loud but misleading: it reports
+a difference in every theme, including ones the change cannot possibly touch.
+
+That tell is the diagnostic. **If a theme your change provably cannot reach has
+moved, the captures are not comparable** — stop and re-take them; nothing is
+broken. Sources of drift seen in practice:
+
+- Driving the app's theme picker between captures. It persists the preference,
+  so the next load starts somewhere else.
+- Leaving `data-mobile-tile-style` / `data-mobile-workspace` wherever the last
+  interaction left them. Pin every such attribute explicitly in the probe.
+- Comparing a fresh load against a page that has been clicked around in.
+
+The reliable procedure is back-to-back on fresh loads:
+
+```
+git stash -u            # tree = pre-change
+# reload, capture before
+git stash pop           # tree = post-change
+# reload, capture after
+```
+
 ## Caveats
 
 - The probe records `viewport` and `--diff` refuses to compare snapshots taken
