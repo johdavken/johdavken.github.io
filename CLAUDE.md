@@ -543,6 +543,32 @@ Prefer installing browser tooling outside the project or configuring it as an MC
 
 ---
 
+# Subagents
+
+The project defines four read-only diagnostic subagents in `.claude/agents/`:
+`ui-debugger`, `supabase-debugger`, `android-debugger`, and
+`regression-reviewer`. None of them can edit files or touch Git state; each
+returns findings to the parent session, which does the work.
+
+Claude may launch these without asking first. Prefer them when the task
+genuinely benefits:
+
+- `regression-reviewer` after any substantial change — the value is a reviewer
+  with no stake in the implementer's assumptions, not saved effort.
+- The debuggers for parallel fan-out (sweeping many themes, viewports, or
+  tables) or when a second opinion is worth its cost.
+
+Do not spawn one for work already in progress in the main session. A subagent
+starts cold and re-derives context the session already holds, so for a
+focused investigation that is already underway it is slower and usually
+shallower than finishing it inline.
+
+Claude may also add a new agent to `.claude/agents/` when a diagnostic role
+recurs often enough to be worth encoding. Match the established shape: a
+read-only tool list with no `Write`/`Edit`, and a body of *When to invoke /
+Non-negotiable rules / How to investigate / Project memory / Report format*.
+Prefer instructing an existing agent over adding a near-duplicate of one.
+
 # Git and Workflow Rules
 
 Work in small feature branches.
