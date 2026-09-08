@@ -73,8 +73,7 @@ test("compact headers: the layer letter matches the percentage's size but holds 
   assert.doesNotMatch(styles,/\.splitsMatrix\.compactMobileRecipe \.splitColumnTotal\.warn\{/);
 });
 
-test("light-theme support contrast is scoped per palette, not painted into Dark or Gruvbox globally",()=>{
-  assert.match(theme,/@media \(max-width:700px\)\{[\s\S]*?\[data-theme="light"\][\s\S]*?splitTrackButton:not\(\.active\)/);
+test("light-theme support contrast is scoped per palette, not painted into other themes globally",()=>{
   assert.match(theme,/@media \(max-width:700px\)\{[\s\S]*?\[data-theme="industrial-slate"\][\s\S]*?splitCopyBtn/);
   assert.match(theme,/@media \(max-width:700px\)\{[\s\S]*?\[data-theme="gruvbox-light"\][\s\S]*?splitCellHopperName/);
 });

@@ -25,8 +25,6 @@ test("parses every data-theme palette block in the real theme.css", () => {
   const names = themes.map((t) => t.name);
   // A representative spread from the app's <select id="themeSel">.
   for (const expected of [
-    "dark",
-    "light",
     "industrial-slate",
     "industrial-slate-dark",
     "gruvbox-dark",

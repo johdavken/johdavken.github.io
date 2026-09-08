@@ -1871,10 +1871,12 @@
       const migrations = new Map([
         ["system", "system"],
         ["auto", "system"],
-        ["light", "industrial-slate"],
+        // The original bare "light" / "dark" palettes were retired; a saved
+        // selection migrates to the Ayu Light / Ayu Dark successors.
+        ["light", "ayu-light"],
         ["mse", "industrial-slate"],
         ["industrial-slate", "industrial-slate"],
-        ["dark", "industrial-slate-dark"],
+        ["dark", "ayu-dark"],
         ["industrial-slate-dark", "industrial-slate-dark"],
         ["oled-black", "oled-black"],
         ["amoled", "oled-black"],

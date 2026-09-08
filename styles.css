@@ -9248,11 +9248,6 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"])[data-mobile-wo
 body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"])[data-mobile-workspace="home"] .mobileWorkspaceNavMoreIcons .moreIconChangelog{ --tint:var(--gruv-blue); }
 body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"])[data-mobile-workspace="home"] .mobileWorkspaceNavMoreIcons .moreIconRt{ --tint:var(--gruv-aqua); }
 
-/* Main-screen numbered workflow only. Gruvbox keeps its established
-   palette above; no Gruvbox selectors are changed here. */
-body[data-theme="dark"] .workspaceNavButton[data-workspace-target="lineSetupBlock"]{ --tile-accent:var(--title); }
-body[data-theme="dark"] .workspaceNavButton[data-workspace-target="splitsBlock"]{ --tile-accent:var(--workflow-recipe); }
-
 /* Industrial Slate Light gives all four numbered sections one accent. */
 body[data-theme="industrial-slate"] .workspaceNavButton[data-step]{ --tile-accent:var(--yellow); }
 
@@ -9915,13 +9910,6 @@ body[data-theme="ayu-dark"] .workspaceNavButton[data-workspace-target="splitsBlo
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) #lineSyncBlock .mobileSectionHeaderIcon{color:var(--gruv-aqua)}
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) #toolsBlock .mobileSectionHeaderIcon{color:var(--gruv-purple)}
   body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) #changelogBlock .mobileSectionHeaderIcon{color:var(--gruv-blue)}
-  /* Main-screen numbered workflow only. Gruvbox keeps its established
-     palette above; no Gruvbox selectors are changed here. */
-  body[data-theme="dark"] #lineSetupBlock .mobileSectionHeaderIcon{color:var(--title)}
-  body[data-theme="dark"] #splitsBlock .mobileSectionHeaderIcon{color:var(--workflow-recipe)}
-  body[data-theme="dark"] #resultsBlock .mobileSectionHeaderIcon{color:var(--focus-border)}
-  body[data-theme="dark"] #productionSummaryBlock .mobileSectionHeaderIcon{color:var(--workflow-resin-totals)}
-
   body[data-theme="industrial-slate"] #lineSetupBlock .mobileSectionHeaderIcon,
   body[data-theme="industrial-slate"] #splitsBlock .mobileSectionHeaderIcon,
   body[data-theme="industrial-slate"] #resultsBlock .mobileSectionHeaderIcon,

@@ -93,9 +93,9 @@ test("theme choices include the supported light palettes and retain legacy migra
   assert.doesNotMatch(select,/<option value="kanagawa-lotus">/);
   assert.match(select,/<option value="ayu-light">Ayu Light<\/option>/);
   assert.doesNotMatch(select,/<option value="everforest-light">/);
-  assert.match(app,/\["light", "industrial-slate"\]/);
+  assert.match(app,/\["light", "ayu-light"\]/);
   assert.match(app,/\["mse", "industrial-slate"\]/);
-  assert.match(app,/\["dark", "industrial-slate-dark"\]/);
+  assert.match(app,/\["dark", "ayu-dark"\]/);
   assert.match(app,/\["system", "system"\]/);
   assert.match(app,/\["oled-black", "oled-black"\]/);
   assert.match(app,/\["vaporwave", "vaporwave"\]/);

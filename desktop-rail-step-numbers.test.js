@@ -148,7 +148,6 @@ test("--tile-accent is defined at top level so both surfaces resolve the same co
 
 test("every theme override of the workflow accents is hoisted with them, or a theme would only apply on one surface", () => {
   [
-    'body[data-theme="dark"] .workspaceNavButton[data-workspace-target="splitsBlock"]{ --tile-accent:var(--workflow-recipe); }',
     'body[data-theme="industrial-slate"] .workspaceNavButton[data-step]{ --tile-accent:var(--yellow); }',
     'body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-target="resultsBlock"]{ --tile-accent:var(--workflow-timeline); }',
     'body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .workspaceNavButton[data-workspace-target="lineSetupBlock"]{ --tile-accent:var(--gruv-orange); }'

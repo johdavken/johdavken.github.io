@@ -183,7 +183,7 @@ test("splitTopLevel respects parens and brackets", () => {
 });
 
 test("isPaletteBlock only matches the canonical palette root selector", () => {
-  assert.equal(T.isPaletteBlock(':where(html, body)[data-theme="dark"]'), true);
+  assert.equal(T.isPaletteBlock(':where(html, body)[data-theme="industrial-slate-dark"]'), true);
   assert.equal(T.isPaletteBlock(':where(html, body)[data-theme="ayu-light"] .rtLayerRed'), false);
   assert.equal(T.isPaletteBlock('body[data-theme="ayu-light"] #splitsArea .splitInput'), false);
   assert.equal(T.isPaletteBlock(":root"), false);
