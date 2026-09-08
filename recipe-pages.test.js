@@ -238,7 +238,7 @@ test("the tabs use real tab semantics and are keyboard navigable", () => {
   assert.match(hook, /ArrowLeft/);
   // Roving tabindex: the strip is a single stop.
   assert.match(app, /tab\.tabIndex = selected \? 0 : -1;/);
-  assert.match(styles, /\.recipePageTab:focus-visible\{[\s\S]*?outline: 2px solid var\(--focus-border\);/);
+  assert.match(styles, /\.recipePageTab:focus-visible\{[\s\S]*?outline: var\(--focus-outline\);/);
 });
 
 test("aria-selected, the panel label, and the view control follow every workspace page", () => {

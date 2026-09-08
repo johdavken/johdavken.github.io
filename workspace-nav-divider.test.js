@@ -130,7 +130,7 @@ test("the label pill paints over the rule rather than sitting beside it", () => 
 });
 
 test("the control is keyboard-reachable and respects reduced motion", () => {
-  assert.match(styles, /\.workspaceNavMore:focus-visible\{\s*\n\s*outline: 2px solid var\(--focus-border\);/);
+  assert.match(styles, /\.workspaceNavMore:focus-visible\{\s*\n\s*outline: var\(--focus-outline\);/);
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)\{[\s\S]*?\.workspaceNavMoreChev\{ transition: none; \}/);
 });
 

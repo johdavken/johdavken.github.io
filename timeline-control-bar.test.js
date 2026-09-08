@@ -52,7 +52,7 @@ test("Show all is a compact toggle button: subdued when off, theme-accent tint w
   // and stays light: a --focus-ring wash, --focus-border edge, title-weight ink.
   assert.match(block, /\.timelineControlToggle\[aria-pressed="true"\]\{[\s\S]*?border-color:var\(--focus-border\);[\s\S]*?background:var\(--focus-ring\);[\s\S]*?color:var\(--title\);[\s\S]*?\}/);
   assert.doesNotMatch(block, /#[0-9a-fA-F]{3,6}\b/);
-  assert.match(block, /\.timelineControlToggle:focus-visible\{ outline:2px solid var\(--focus-border\);/);
+  assert.match(block, /\.timelineControlToggle:focus-visible\{ outline:var\(--focus-outline\);/);
   // Grows to a comfortable touch target on mobile, same as its siblings.
   assert.match(styles, /@media \(max-width:600px\)\{[\s\S]*?\.timelineControlToggle\{ min-height:36px;[\s\S]*?\}/);
 });
@@ -89,7 +89,7 @@ test("Reset tracking is a quiet icon-text action, not a large outlined button", 
   // No border/background at rest; subtle hover/active/focus treatment.
   assert.match(styles, /\.timelineControlAction\{[\s\S]*?border:1px solid transparent;[\s\S]*?background:transparent;[\s\S]*?\}/);
   assert.match(styles, /\.timelineControlAction:hover\{/);
-  assert.match(styles, /\.timelineControlAction:focus-visible\{ outline:2px solid var\(--focus-border\);/);
+  assert.match(styles, /\.timelineControlAction:focus-visible\{ outline:var\(--focus-outline\);/);
 });
 
 test("the settings icon is a cog, not the radial sun used by the global display control", () => {

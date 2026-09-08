@@ -266,7 +266,7 @@ test("the Dashboard panel and its rail-foot entry are hidden by default so touch
 });
 
 test("Dashboard back button and sidebar entry are keyboard-focusable with visible focus styles", () => {
-  assert.match(desktop, /\.dashboardBackButton:focus-visible\{ outline:2px solid var\(--focus-border\); outline-offset:2px; \}/);
+  assert.match(desktop, /\.dashboardBackButton:focus-visible\{ outline:var\(--focus-outline\); outline-offset:2px; \}/);
   assert.match(desktop, /\.workspaceNavDashboard:focus-visible\{/);
   // Real <button> elements, not divs with a click handler.
   assert.match(html, /<button type="button" class="dashboardBackButton"/);

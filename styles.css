@@ -65,6 +65,13 @@
   --page-bottom-pad: calc(var(--footer-height) + var(--footer-gap) + env(safe-area-inset-bottom));
   --focus-border: rgba(74,163,255,.80);
   --focus-ring: rgba(74,163,255,.16);
+  /* The keyboard focus ring, composed once. Every :focus-visible rule
+     references this rather than restating the shorthand - there were 65
+     literal copies across three files. --focus-border stays theme-scoped,
+     so the nested var() still resolves per theme at the point of use.
+     outline-offset is deliberately NOT folded in: it is per-component and
+     currently takes six different values (2px, 1px, 3px, -1px, -2px, -3px). */
+  --focus-outline: 2px solid var(--focus-border);
 
   /* Recipe pill segments (header Edit/Done + Load Next/Print, and the Edit
      toolbar's Clear/Empty/Reset/Rearrange row) fill from these two tokens
@@ -360,7 +367,7 @@ main{
 .workspaceIdentityBar:hover,
 .workspaceIdentityBar:hover strong{ color: var(--focus-border); }
 .workspaceIdentityBar:focus-visible{
-  outline: 2px solid var(--focus-border);
+  outline: var(--focus-outline);
   outline-offset: 2px;
   border-radius: 4px;
 }
@@ -465,7 +472,7 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .baseGlyph{dis
 .statusPreferences > summary{display:flex;align-items:center;justify-content:center;width:34px;height:34px;padding:0;border:0;border-radius:0;background:transparent;color:var(--text);font-size:20px;line-height:1;cursor:pointer;list-style:none}
 .statusPreferences > summary::-webkit-details-marker{display:none}
 .statusPreferences > summary:hover,.statusPreferences[open] > summary{background:transparent;color:var(--title)}
-.statusPreferences > summary:focus-visible{outline:2px solid var(--focus-border);outline-offset:-3px}
+.statusPreferences > summary:focus-visible{outline:var(--focus-outline);outline-offset:-3px}
 .statusPreferencesPanel{position:absolute;top:calc(100% + 8px);right:0;z-index:60;width:min(390px,calc(100vw - 24px));padding:14px;border:1px solid var(--border2);border-radius:var(--radius-row);background:var(--panelOpen);box-shadow:var(--shadow2)}
 .statusPreferencesHead{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:12px;padding-bottom:9px;border-bottom:1px solid var(--border)}
 .statusPreferencesHead strong{font-size:14px}.statusPreferencesHead small{color:var(--muted);font-size:var(--font-tiny)}
@@ -729,7 +736,7 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .baseGlyph{dis
     color: var(--title);
   }
   .workspaceNavMore:focus-visible{
-    outline: 2px solid var(--focus-border);
+    outline: var(--focus-outline);
     outline-offset: 2px;
   }
   .workspaceNavMoreChev{
@@ -1104,7 +1111,7 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .baseGlyph{dis
 .bulkDensityResinSuggestions{position:absolute;top:100%;right:0;left:0;z-index:12;display:grid;gap:3px;max-height:230px;margin-top:4px;padding:5px;overflow:auto;border:1px solid var(--border2);border-radius:var(--control-radius);background:var(--panelOpen);box-shadow:var(--shadow2)}
 .bulkDensityResinSuggestions[hidden]{display:none!important}
 .bulkDensityResinOption{display:grid;width:100%;min-height:40px;padding:7px 9px;border:0;border-radius:calc(var(--control-radius) - 2px);background:transparent;color:var(--text);text-align:left;box-shadow:none}
-.bulkDensityResinOption:hover,.bulkDensityResinOption:focus-visible{background:var(--focus-ring);outline:2px solid var(--focus-border);outline-offset:-2px}
+.bulkDensityResinOption:hover,.bulkDensityResinOption:focus-visible{background:var(--focus-ring);outline:var(--focus-outline);outline-offset:-2px}
 .bulkDensitySelectedResin{display:flex;align-items:baseline;gap:8px;padding:7px 10px;border-left:3px solid var(--focus-border);background:var(--readonly-bg)}
 .bulkDensitySelectedResin[hidden]{display:none!important}
 .bulkDensitySelectedResin > div{min-width:0}
@@ -1265,7 +1272,7 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .baseGlyph{dis
 .workspaceConfigurationActions{display:flex;gap:5px;align-items:center;justify-content:flex-end}.workspaceConfigurationActions button{font-size:12px;padding:5px 8px}.workspaceConfigurationOverflow{position:relative}.workspaceConfigurationOverflow summary{cursor:pointer;list-style:none;border:1px solid var(--border);border-radius:var(--control-radius);padding:4px 9px;font-size:18px;line-height:1}.workspaceConfigurationOverflow summary::-webkit-details-marker{display:none}.workspaceConfigurationOverflowMenu{position:absolute;right:0;top:calc(100% + 4px);z-index:30;display:grid;gap:4px;min-width:130px;padding:6px;border:1px solid var(--border2);border-radius:var(--control-radius);background:var(--panelOpen);box-shadow:var(--shadow2)}.workspaceConfigurationOverflowMenu button{text-align:left;white-space:nowrap}
 .mobileWeightProfilesSheet.profileMenuOpen .mobileSavedRecipesList{overflow:visible}
 .mobileWeightProfilesSheet.profileMenuOpen .workspaceConfigurationOverflowMenu{top:auto;bottom:calc(100% + 4px)}
-.workspaceConfigurationRow{cursor:pointer}.workspaceConfigurationRow.selected strong{font-weight:750;color:var(--text)}.workspaceConfigurationRow:focus-visible{outline:2px solid var(--focus-border);outline-offset:2px}.workspaceConfigurationFavorite{color:var(--warn);font-size:13px}
+.workspaceConfigurationRow{cursor:pointer}.workspaceConfigurationRow.selected strong{font-weight:750;color:var(--text)}.workspaceConfigurationRow:focus-visible{outline:var(--focus-outline);outline-offset:2px}.workspaceConfigurationFavorite{color:var(--warn);font-size:13px}
 .workspaceConfigurationRow strong{font-size:var(--font-small);font-weight:600;color:var(--muted);letter-spacing:.01em}
 .rearrangeTarget{cursor:grab;user-select:none}.rearrangeSource{opacity:.5;outline:2px dashed var(--focus-border)}.rearrangeOver{outline:2px solid var(--ok);background:color-mix(in srgb,var(--ok) 12%,var(--panel2))}@media(max-width:900px), (min-width: 901px) and (pointer: coarse){.rearrangeDesktopOnly{display:none!important}}
 /* Scan Recipe is a mobile-capture workflow (camera/photo scan) - the
@@ -1726,7 +1733,7 @@ input[readonly]:focus{
   box-shadow: 0 0 0 1px var(--focus-ring);
 }
 .layerCountTile:focus-visible{
-  outline: 2px solid var(--focus-border);
+  outline: var(--focus-outline);
   outline-offset: 2px;
 }
 /* Id-qualified so these outrank the `#lineSetupBlock .layerCountTiles` and
@@ -2275,7 +2282,7 @@ details[open] > summary .chevSatellite{
 }
 .splitsScanShortcut > summary::-webkit-details-marker{ display: none; }
 .splitsScanShortcut > summary:hover{ background: color-mix(in srgb, var(--text) 6%, transparent); }
-.splitsScanShortcut > summary:focus-visible{ outline: 2px solid var(--focus-border); outline-offset: -2px; }
+.splitsScanShortcut > summary:focus-visible{ outline: var(--focus-outline); outline-offset: -2px; }
 .splitsScanShortcut .statusScanShortcutPanel{ left: 0; top: auto; bottom: calc(100% + 6px); }
 /* Primary: Scan Recipe, in the desktop Recipe Actions row specifically -
    the same gradient button.primary uses everywhere else, so it reads as
@@ -2299,7 +2306,7 @@ details[open] > summary .chevSatellite{
   filter: brightness(1.08);
 }
 .splitsBulkModeBar .splitsScanShortcut > summary:focus-visible{
-  outline: 2px solid var(--focus-border);
+  outline: var(--focus-outline);
   outline-offset: 2px;
 }
 .splitsBulkSteps{grid-column:1/-1;display:flex;align-items:center;gap:18px;padding-bottom:8px;border-bottom:1px solid var(--row-border)}
@@ -2454,7 +2461,7 @@ details[open] > summary .chevSatellite{
   font-weight: 800;
   box-shadow: 0 1px 0 0 var(--readonly-bg);
 }
-.recipeUtilityTab:focus-visible{ outline: 2px solid var(--focus-border); outline-offset: 2px; }
+.recipeUtilityTab:focus-visible{ outline: var(--focus-outline); outline-offset: 2px; }
 .recipeUtilityTab:disabled{ opacity: .45; cursor: not-allowed; }
 /* Load Next Recipe / Print Recipe carry both .recipeUtilityTab (the same
    shape/color/hover as Saved recipes/Bulk edit/Rearrange - they sit in the
@@ -2979,7 +2986,7 @@ details[open] > summary .chevSatellite{
 .recipeViewToggle button.active{
   font-weight: 850;
 }
-.recipeViewToggle button:focus-visible{ outline: 2px solid var(--focus-border); outline-offset: 2px; }
+.recipeViewToggle button:focus-visible{ outline: var(--focus-outline); outline-offset: 2px; }
 /* Summary is CSS-hidden everywhere (see #recipeViewToggle > span above), so
    this Edit/Done control is always the only visible thing in its header
    row - starkest on Receiver Hopper Weights, which has no sibling action
@@ -3194,7 +3201,7 @@ details[open] > summary .chevSatellite{
 .recipeInfoLegend > summary:hover,
 .recipeInfoLegend[open] > summary,
 .recipeInfoLegend > summary:focus-visible{ color: var(--title); background: var(--field-bg); }
-.recipeInfoLegend > summary:focus-visible{ outline: 2px solid var(--focus-border); outline-offset: 1px; }
+.recipeInfoLegend > summary:focus-visible{ outline: var(--focus-outline); outline-offset: 1px; }
 .recipeInfoLegendPanel{
   position: absolute;
   top: calc(100% + 6px);
@@ -3281,7 +3288,7 @@ details[open] > summary .chevSatellite{
 .timelineInfoGuide > summary:hover,
 .timelineInfoGuide[open] > summary,
 .timelineInfoGuide > summary:focus-visible{ color: var(--title); background: var(--field-bg); }
-.timelineInfoGuide > summary:focus-visible{ outline: 2px solid var(--focus-border); outline-offset: 1px; }
+.timelineInfoGuide > summary:focus-visible{ outline: var(--focus-outline); outline-offset: 1px; }
 .timelineInfoGuidePanel{
   position: absolute;
   top: calc(100% + 6px);
@@ -3409,7 +3416,7 @@ body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"]) .lineSyncInfoG
      so it doesn't add height and unbalance the two tabs. */
   box-shadow: 0 1px 0 0 var(--panel);
 }
-.recipePageTab:focus-visible{ outline: 2px solid var(--focus-border); outline-offset: 2px; }
+.recipePageTab:focus-visible{ outline: var(--focus-outline); outline-offset: 2px; }
 /* "A recipe is planned." Quiet by design - it is information, not an alert. */
 .recipePageTabDot{
   display: inline-block;
@@ -4736,7 +4743,7 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
   }
   #splitsBlock .recipeHeaderActions .mobileScanIconAction > summary:focus-visible,
   #splitsBlock .recipeHeaderActions .recipeHeaderMobileAction:focus-visible{
-    outline:2px solid var(--focus-border);
+    outline:var(--focus-outline);
     outline-offset:2px;
   }
   /* Scan popup open reads as a pressed key. */
@@ -4814,7 +4821,7 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
   }
   #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"]:focus-visible,
   #splitsBlock #recipeHeaderControls .weightsHeaderViewToggle button[data-weight-view="edit"]:focus-visible{
-    outline:2px solid var(--focus-border);
+    outline:var(--focus-outline);
     outline-offset:2px;
   }
 
@@ -4856,7 +4863,7 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     filter:brightness(1.06);
   }
   #splitsArea #splitsBulkBar #applyBulkSplit:focus-visible{
-    outline:2px solid var(--focus-border);
+    outline:var(--focus-outline);
     outline-offset:2px;
   }
 
@@ -5681,7 +5688,7 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     filter:brightness(1.06);
   }
   .splitsSavedRecipesPanel #mobileSavedRecipesActions > button:focus-visible{
-    outline:2px solid var(--focus-border);
+    outline:var(--focus-outline);
     outline-offset:2px;
   }
   /* Nothing selected: the keys stay in place (the row never collapses and
@@ -5966,7 +5973,7 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
 }
 .timelineControlAction:hover{ background:color-mix(in srgb,var(--text) 6%,transparent); color:var(--title); }
 .timelineControlAction:active{ background:color-mix(in srgb,var(--text) 12%,transparent); }
-.timelineControlAction:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
+.timelineControlAction:focus-visible{ outline:var(--focus-outline); outline-offset:2px; }
 .timelineControlActionShort{ display:none; }
 
 /* "Show all" is a temporary Timeline view filter, not a system preference, so
@@ -5991,7 +5998,7 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
   cursor:pointer;
 }
 .timelineControlToggle:hover{ background:color-mix(in srgb,var(--text) 6%,transparent); color:var(--title); }
-.timelineControlToggle:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
+.timelineControlToggle:focus-visible{ outline:var(--focus-outline); outline-offset:2px; }
 .timelineControlToggle[aria-pressed="true"]{
   border-color:var(--focus-border);
   background:var(--focus-ring);
@@ -6226,7 +6233,7 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
   border-color: var(--focus-border);
   background: linear-gradient(180deg, var(--btn-primary-a), var(--btn-primary-b));
 }
-.hopperGeometryTrigger:focus-visible{ outline: 2px solid var(--focus-border); outline-offset: 1px; }
+.hopperGeometryTrigger:focus-visible{ outline: var(--focus-outline); outline-offset: 1px; }
 .hopperGeometryPanel{
   /* fixed, not absolute: .weightsMatrixFrame clips overflow, so a hopper
      near the table's bottom/right edge would clip an absolutely
@@ -6677,7 +6684,7 @@ body:is([data-theme="industrial-slate-dark"],[data-theme="gruvbox-dark"]) .resul
 }
 .resultNeedsWeightRow:hover{ text-decoration:underline; text-decoration-color:var(--row-border-2); }
 .resultNeedsWeightRow:focus-visible{
-  outline:2px solid var(--focus-border);
+  outline:var(--focus-outline);
   outline-offset:2px;
   border-radius:5px;
 }
@@ -6716,7 +6723,7 @@ body:is([data-theme="industrial-slate-dark"],[data-theme="gruvbox-dark"]) .resul
    would push a horizontal scrollbar onto #resultsArea. */
 .pumpToggle::after{ content:""; position:absolute; inset:-10px 0 -10px -12px; }
 .pumpToggle:hover{ border-color:var(--muted); color:var(--title); }
-.pumpToggle:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
+.pumpToggle:focus-visible{ outline:var(--focus-outline); outline-offset:2px; }
 .pumpToggle[aria-pressed="true"]{
   border-color:var(--muted);
   background:color-mix(in srgb,var(--text) 16%,transparent);
@@ -6824,7 +6831,7 @@ body:is([data-theme="industrial-slate-dark"],[data-theme="gruvbox-dark"]) .resul
   font-weight:900;
   box-shadow:0 1px 0 0 var(--panel);
 }
-.timelineViewTab:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
+.timelineViewTab:focus-visible{ outline:var(--focus-outline); outline-offset:2px; }
 #timelinePane,#timelineHookupsArea{ border-top:1px solid var(--row-border); padding-top:12px; }
 #timelinePane[hidden],#timelineHookupsArea[hidden]{ display:none; }
 
@@ -6846,7 +6853,7 @@ body:is([data-theme="industrial-slate-dark"],[data-theme="gruvbox-dark"]) .resul
 }
 .timelineDisplayToggle svg{ width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
 .timelineDisplayToggle:hover{ background:color-mix(in srgb,var(--text) 6%,transparent); color:var(--title); }
-.timelineDisplayToggle:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
+.timelineDisplayToggle:focus-visible{ outline:var(--focus-outline); outline-offset:2px; }
 .timelineDisplayToggle[aria-expanded="true"]{ background:var(--focus-ring); color:var(--title); }
 
 /* Mobile: tighten the bar's gaps and shorten the Reset label to "Reset"
@@ -6975,7 +6982,7 @@ body:is([data-theme="industrial-slate-dark"],[data-theme="gruvbox-dark"]) .resul
   color:var(--title);
 }
 .timelineDisplayChoice button:disabled{ opacity:.4; cursor:not-allowed; }
-.timelineDisplayChoice button:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
+.timelineDisplayChoice button:focus-visible{ outline:var(--focus-outline); outline-offset:2px; }
 .timelineChoiceUnavailable button{ opacity:.6; }
 .timelineSourceLabelsNote[hidden]{ display:none; }
 
@@ -7161,7 +7168,7 @@ button:hover{ filter: brightness(1.05); }
 button:active{ transform: translateY(1px); }
 button:focus-visible{
   border-color:var(--focus-border);
-  outline:2px solid var(--focus-border);
+  outline:var(--focus-outline);
   outline-offset:2px;
 }
 button:disabled{
@@ -7596,7 +7603,7 @@ button.compactAction{
 .toolInfoGuide > summary::-webkit-details-marker{ display:none; }
 .toolInfoGuide > summary:hover,.toolInfoGuide[open] > summary,
 .toolInfoGuide > summary:focus-visible{ color:var(--title); background:var(--field-bg); }
-.toolInfoGuide > summary:focus-visible{ outline:2px solid var(--focus-border); outline-offset:1px; }
+.toolInfoGuide > summary:focus-visible{ outline:var(--focus-outline); outline-offset:1px; }
 .toolInfoGuidePanel{
   position:absolute;
   top:calc(100% + 7px);
@@ -7676,7 +7683,7 @@ button.compactAction{
     font-weight:850;
   }
   #toolsBlock .mobileToolsBack svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-  #toolsBlock .mobileToolsBack:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
+  #toolsBlock .mobileToolsBack:focus-visible{ outline:var(--focus-outline); outline-offset:2px; }
 }
 
 /* =======================================================================
@@ -7706,7 +7713,7 @@ button.compactAction{
   color:var(--muted); font-size:11px; font-weight:800;
 }
 .notesBackupAdvanced > summary::-webkit-details-marker{ display:none; }
-.notesBackupAdvanced > summary:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
+.notesBackupAdvanced > summary:focus-visible{ outline:var(--focus-outline); outline-offset:2px; }
 .notesBackupAdvanced[open] > summary{ color:var(--title); border-bottom:1px solid var(--border2); }
 /* Explicitly gate the body on [open] rather than trusting the native
    <details> content-hiding (which an author display: on the child can defeat
@@ -7785,7 +7792,7 @@ button.compactAction{
   padding:4px 0;
 }
 .notesCloudDanger > summary::-webkit-details-marker{ display:none; }
-.notesCloudDanger > summary:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
+.notesCloudDanger > summary:focus-visible{ outline:var(--focus-outline); outline-offset:2px; }
 .notesCloudDangerBody{ display:none; }
 .notesCloudDanger[open] > .notesCloudDangerBody{
   display:flex; flex-direction:column; gap:6px;
@@ -7831,7 +7838,7 @@ button.compactAction{
   text-align:left; cursor:pointer;
 }
 .notesItem:hover{ border-color:var(--border2); }
-.notesItem:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
+.notesItem:focus-visible{ outline:var(--focus-outline); outline-offset:2px; }
 .notesItem.pinned{ border-color:color-mix(in srgb,var(--focus-border) 45%,var(--row-border)); }
 .notesItemHead{ display:flex; align-items:center; gap:6px; min-width:0; }
 .notesItemTitle{
@@ -7853,7 +7860,7 @@ button.compactAction{
 }
 .notesItemMenuBtn svg{ width:16px; height:16px; fill:currentColor; }
 .notesItemMenuBtn:hover{ color:var(--title); border-color:var(--border2); }
-.notesItemMenuBtn:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
+.notesItemMenuBtn:focus-visible{ outline:var(--focus-outline); outline-offset:2px; }
 .notesItemPreview{
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   color:var(--muted); font-size:12px;
@@ -7871,7 +7878,7 @@ button.compactAction{
   width:100%; margin:0; padding:4px 2px;
   border:0; background:transparent; cursor:pointer;
 }
-.notesFoldersHeader:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
+.notesFoldersHeader:focus-visible{ outline:var(--focus-outline); outline-offset:2px; }
 .notesFoldersLabel{
   flex:1 1 auto; min-width:0; text-align:left;
   color:var(--muted); font-size:10px; font-weight:800;
@@ -7911,7 +7918,7 @@ button.compactAction{
 }
 .notesFolderRowBtn:hover{ color:var(--title); }
 .notesFolderRowBtn:focus-visible{
-  outline:2px solid var(--focus-border); outline-offset:-2px;
+  outline:var(--focus-outline); outline-offset:-2px;
   border-radius:var(--control-radius);
 }
 .notesFolderRowIcon{
@@ -7943,7 +7950,7 @@ button.compactAction{
 }
 .notesFolderRow .notesFolderManage svg{ width:16px; height:16px; fill:currentColor; }
 .notesFolderRow .notesFolderManage:hover{ color:var(--title); }
-.notesFolderRow .notesFolderManage:focus-visible{ outline:2px solid var(--focus-border); outline-offset:-1px; }
+.notesFolderRow .notesFolderManage:focus-visible{ outline:var(--focus-outline); outline-offset:-1px; }
 
 /* New folder: same grammar, quiet, no rail through it. */
 .notesFolderNew{ color:var(--muted); }
@@ -8007,7 +8014,7 @@ button.compactAction{
 .notesPinBtn.active{ color:var(--focus-border); }
 .notesPinBtn.active svg{ fill:color-mix(in srgb,var(--focus-border) 22%,transparent); }
 .notesPinBtn:focus-visible,
-.notesEditorMenu > summary:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
+.notesEditorMenu > summary:focus-visible{ outline:var(--focus-outline); outline-offset:2px; }
 .notesEditorMenu{ position:relative; flex:0 0 auto; }
 .notesEditorMenuPanel{
   position:absolute; right:0; top:calc(100% + 4px); z-index:5;
@@ -8046,7 +8053,7 @@ button.compactAction{
 }
 .notesToolbar button:hover{ border-color:var(--muted); color:var(--title); }
 .notesToolbar button:active{ background:color-mix(in srgb,var(--text) 10%,transparent); }
-.notesToolbar button:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
+.notesToolbar button:focus-visible{ outline:var(--focus-outline); outline-offset:2px; }
 .notesToolbarSep{ flex:0 0 auto; width:1px; height:20px; margin:0 3px; background:var(--border2); }
 
 .notesBodyInput{
@@ -8115,7 +8122,7 @@ button.compactAction{
     font-size:11px; font-weight:850;
   }
   #notesBlock .notesEditorHeader .mobileToolsBack svg{ width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
-  #notesBlock .notesEditorHeader .mobileToolsBack:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
+  #notesBlock .notesEditorHeader .mobileToolsBack:focus-visible{ outline:var(--focus-outline); outline-offset:2px; }
   /* Comfortable phone touch targets without growing the header. */
   #notesBlock .notesItem{ min-height:56px; padding-right:48px; }
   #notesBlock .notesPinBtn,
@@ -8563,7 +8570,7 @@ button.compactAction{
 .recipeScanInfo > summary svg{ width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
 .recipeScanInfo > summary::-webkit-details-marker{ display:none; }
 .recipeScanInfo > summary:hover,.recipeScanInfo[open] > summary{ color:var(--title); background:var(--field-bg); }
-.recipeScanInfo > summary:focus-visible{ outline:2px solid var(--focus-border); outline-offset:1px; }
+.recipeScanInfo > summary:focus-visible{ outline:var(--focus-outline); outline-offset:1px; }
 @media (width <= 720px){
   #recipeScanTool .recipeScanOptions{ gap:9px; }
   #recipeScanTool .recipeScanOptionRow{ gap:7px; align-items:stretch; }
@@ -8773,7 +8780,7 @@ input.resinLookupValue.copied[readonly]{
   }
   .helpPlayBanner:hover,
   .helpPlayBanner:focus-visible{ background: var(--focus-ring); }
-  .helpPlayBanner:focus-visible{ outline: 2px solid var(--focus-border); outline-offset: 2px; }
+  .helpPlayBanner:focus-visible{ outline: var(--focus-outline); outline-offset: 2px; }
   /* The node ring every row's icon now sits in, matching
      .workspaceTileIcon in the opened list. */
   .helpPlayBannerIcon{
@@ -9120,7 +9127,7 @@ body[data-surface-style="divided"] .toolPanel{
 .statusScanShortcut > summary svg{ width:15px; height:15px; }
 .statusScanShortcut > summary::-webkit-details-marker{ display:none; }
 .statusScanShortcut > summary:hover,.statusScanShortcut[open] > summary{ color:var(--title); background:var(--field-bg); }
-.statusScanShortcut > summary:focus-visible{ outline:2px solid var(--focus-border); outline-offset:1px; }
+.statusScanShortcut > summary:focus-visible{ outline:var(--focus-outline); outline-offset:1px; }
 .statusScanShortcutPanel{ position:absolute; top:calc(100% + 6px); left:0; z-index:60; display:grid; gap:6px; width:min(220px,calc(100vw - 32px)); padding:8px; border:1px solid var(--border2); border-radius:var(--control-radius); background:var(--panelOpen); box-shadow:var(--shadow2); }
 .statusScanShortcutPanel button{ width:100%; text-align:left; }
 .statusTimelineToggle{ display:none; }
@@ -9381,7 +9388,7 @@ body[data-theme="ayu-dark"] .workspaceNavButton[data-workspace-target="splitsBlo
   }
   .workspaceNavButton.active .workspaceTileIcon{ color:var(--title); }
   .workspaceNavButton:hover{ border-color:color-mix(in srgb,var(--tile-accent) 64%,var(--border)); transform:translateY(-1px); }
-  .workspaceNavButton:focus-visible{ outline:2px solid var(--focus-border); outline-offset:2px; }
+  .workspaceNavButton:focus-visible{ outline:var(--focus-outline); outline-offset:2px; }
   body[data-mobile-workspace="panel"] .workspaceNav{ display:none; }
   body:not([data-mobile-workspace="home"]) .mobileBrand{ display:none; }
   body[data-mobile-workspace="home"] .workspaceContent > .workspacePanel{ display:none!important; }
@@ -10094,7 +10101,7 @@ body[data-theme="ayu-dark"] .workspaceNavButton[data-workspace-target="splitsBlo
   color:var(--focus-border);
 }
 .desktopDisplayToggle svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round}
-.desktopDisplayToggle:focus-visible{outline:2px solid var(--focus-border);outline-offset:2px}
+.desktopDisplayToggle:focus-visible{outline:var(--focus-outline);outline-offset:2px}
 
 .displaySheet{
   width:min(430px,calc(100vw - 28px));
@@ -10236,7 +10243,7 @@ body[data-theme="ayu-dark"] .workspaceNavButton[data-workspace-target="splitsBlo
   }
   .workspaceNavButton:hover{background:color-mix(in srgb,var(--tile-accent) 6%,transparent);border-bottom-color:var(--tile-accent);transform:none}
   .workspaceNavButton:active{background:color-mix(in srgb,var(--tile-accent) 11%,transparent);transform:translateY(1px)}
-  .workspaceNavButton:focus-visible{outline:2px solid var(--focus-border);outline-offset:-2px;background:var(--focus-ring)}
+  .workspaceNavButton:focus-visible{outline:var(--focus-outline);outline-offset:-2px;background:var(--focus-ring)}
   /* white-space:normal (not nowrap) so a longer destination name like
      "Production Summary" wraps to a second line within the tile's own
      minmax(92px,auto) row instead of overflowing - every other label here
@@ -10522,7 +10529,7 @@ body[data-theme="ayu-dark"] .workspaceNavButton[data-workspace-target="splitsBlo
     text-align:left;
   }
   body[data-mobile-workspace="home"] .workspaceNavMore:focus-visible{
-    outline:2px solid var(--focus-border);
+    outline:var(--focus-outline);
     outline-offset:-2px;
     background:var(--focus-ring);
   }
@@ -10796,7 +10803,7 @@ body[data-theme="ayu-dark"] .workspaceNavButton[data-workspace-target="splitsBlo
   .appDockControl svg,.cloudSyncFooterStatus svg{width:27.5px;height:27.5px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
   .appDockControl > span:not(.mobileNotificationsBadge),.cloudSyncFooterStatus > strong{display:none}
   .appDockControl:hover,.appDockControl:focus-visible,.cloudSyncFooterStatus:hover,.cloudSyncFooterStatus:focus-visible{background:var(--row-bg);color:var(--title)}
-  .appDockControl:focus-visible,.cloudSyncFooterStatus:focus-visible{outline:2px solid var(--focus-border);outline-offset:-2px}
+  .appDockControl:focus-visible,.cloudSyncFooterStatus:focus-visible{outline:var(--focus-outline);outline-offset:-2px}
   .appDockControl[aria-current="page"],.appDockControl[aria-expanded="true"]{color:var(--title);background:var(--focus-ring)}
   .appDockMain{
     justify-self:center;
@@ -10914,7 +10921,7 @@ body[data-theme="ayu-dark"] .workspaceNavButton[data-workspace-target="splitsBlo
   .desktopNotificationSection{color:var(--muted);font-size:10px;font-weight:700;letter-spacing:.03em;text-transform:uppercase}
   .desktopNotificationAction{min-height:32px;padding:5px 11px;border:1px solid var(--border2);border-radius:var(--control-radius);background:var(--row-bg);color:var(--focus-border);font:inherit;font-size:12px;font-weight:750;box-shadow:none}
   .desktopNotificationAction:hover,.desktopNotificationAction:active{background:var(--focus-ring);color:var(--title)}
-  .desktopNotificationAction:focus-visible{outline:2px solid var(--focus-border);outline-offset:1px}
+  .desktopNotificationAction:focus-visible{outline:var(--focus-outline);outline-offset:1px}
 
   .displaySheet{max-height:calc(100dvh - var(--app-dock-height) - 32px)}
   .displaySheetPanel{padding:16px}
@@ -10983,7 +10990,7 @@ body[data-theme="ayu-dark"] .workspaceNavButton[data-workspace-target="splitsBlo
   .cloudSyncFooterStatus:focus-visible{
     background:transparent;
     color:var(--title);
-    outline:2px solid var(--focus-border);
+    outline:var(--focus-outline);
     outline-offset:-2px;
   }
   .appDockControl:active:not(.cloudSyncFooterStatus){
@@ -11118,7 +11125,7 @@ body[data-theme="ayu-dark"] .workspaceNavButton[data-workspace-target="splitsBlo
     white-space:nowrap;
   }
   .mobileFooterMetaLink{color:var(--focus-border);text-decoration:none}
-  .mobileFooterMetaLink:focus-visible{outline:2px solid var(--focus-border);outline-offset:2px}
+  .mobileFooterMetaLink:focus-visible{outline:var(--focus-outline);outline-offset:2px}
   .mobileFooterVersion{display:block;font-family:var(--font-mono);font-variant-numeric:tabular-nums}
 
 }
@@ -11133,7 +11140,7 @@ body[data-theme="ayu-dark"] .workspaceNavButton[data-workspace-target="splitsBlo
   #appFooterAccount svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
   #appFooterAccount > span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
   #appFooterAccount:hover,#appFooterAccount:focus-visible,#appFooterAccount[aria-expanded="true"]{background:var(--focus-ring);color:var(--title)}
-  #appFooterAccount:focus-visible{outline:2px solid var(--focus-border);outline-offset:2px}
+  #appFooterAccount:focus-visible{outline:var(--focus-outline);outline-offset:2px}
   .footerAccountMenu{position:absolute;top:46px;right:0;display:grid;gap:4px;width:290px;padding:8px;border:1px solid var(--border2);border-radius:12px;background:var(--panelOpen);box-shadow:var(--shadow2)}
   .appOverlayRoot > .footerAccountMenu{pointer-events:auto}
   .footerAccountMenu[hidden],.footerAccountMenu [hidden]{display:none!important}
@@ -11296,7 +11303,7 @@ body[data-theme="ayu-dark"] .workspaceNavButton[data-workspace-target="splitsBlo
   .mobileSavedRecipesSheet[open]{display:grid;grid-template-rows:auto auto auto minmax(0,1fr)}
   .mobileSavedRecipesSheet::backdrop{background:color-mix(in srgb,#000 48%,transparent);backdrop-filter:blur(1.5px)}
   .mobileSavedRecipesGrabber{display:block;width:42px;height:5px;min-height:5px;margin:8px auto 5px;padding:0;border:0;border-radius:999px;background:color-mix(in srgb,var(--muted) 45%,transparent);box-shadow:none}
-  .mobileSavedRecipesGrabber:focus-visible{outline:2px solid var(--focus-border);outline-offset:3px}
+  .mobileSavedRecipesGrabber:focus-visible{outline:var(--focus-outline);outline-offset:3px}
   .mobileSavedRecipesHeader{padding:5px 0 10px}
   .mobileSavedRecipesTools button{font-size:10px}
   /* Receiver profiles can expose four row actions. Reserve enough vertical
@@ -11311,7 +11318,7 @@ body[data-theme="ayu-dark"] .workspaceNavButton[data-workspace-target="splitsBlo
      marker, inset outline, and tint keep selection clear without a second
      column of egg-shaped checkboxes. */
   #weightsArea[data-mobile-bulk-mode="true"] .mobileWeightCell{cursor:pointer}
-  #weightsArea[data-mobile-bulk-mode="true"] .mobileWeightCell:focus-visible{outline:2px solid var(--focus-border);outline-offset:1px}
+  #weightsArea[data-mobile-bulk-mode="true"] .mobileWeightCell:focus-visible{outline:var(--focus-outline);outline-offset:1px}
   #weightsArea[data-mobile-bulk-mode="true"] .mobileWeightCell.selected{
     border-width:1px;
     background:color-mix(in srgb,var(--focus-ring) 72%,var(--row-bg-2));

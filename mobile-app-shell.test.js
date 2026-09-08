@@ -52,7 +52,7 @@ test("footer active states use accent-only styling with accessible focus and pre
   assert.match(refinement,/\.appDockControl\[aria-current="page"\],[\s\S]*?background:transparent;/);
   assert.match(refinement,/\.appDockControl\[aria-expanded="true"\][\s\S]*?color:var\(--title\);/);
   assert.match(refinement,/\.appDockMain\[aria-current="page"\],[\s\S]*?border:0;[\s\S]*?background:transparent;/);
-  assert.match(refinement,/\.appDockControl:focus-visible[\s\S]*?outline:2px solid var\(--focus-border\)/);
+  assert.match(refinement,/\.appDockControl:focus-visible[\s\S]*?outline:var\(--focus-outline\)/);
   assert.match(refinement,/\.appDockControl:active:not\(\.cloudSyncFooterStatus\)[\s\S]*?background:color-mix/);
 });
 

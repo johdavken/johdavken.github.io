@@ -509,7 +509,7 @@ body{
   body #dashboardPanel .dashboardChangeoverRefresh:focus-visible,
   body #changeoverWizardDialog .changeoverWizardActions button:focus-visible,
   body #changeoverWizardDialog .changeoverWizardChoices button:focus-visible{
-    outline: 2px solid var(--focus-border);
+    outline: var(--focus-outline);
     outline-offset: 2px;
   }
 }
@@ -835,7 +835,7 @@ body{
   body[data-shell="touch"] #dashboardPanel .dashboardChangeoverRefresh:focus-visible,
   body[data-shell="touch"] #changeoverWizardDialog .changeoverWizardActions button:focus-visible,
   body[data-shell="touch"] #changeoverWizardDialog .changeoverWizardChoices button:focus-visible{
-    outline: 2px solid var(--focus-border);
+    outline: var(--focus-outline);
     outline-offset: 2px;
   }
 }
