@@ -88,19 +88,26 @@ test("desktop refinements keep Smart Hoppers obvious and utility/sidebar chrome 
   assert.match(desktop, /\.desktopDisplayToggle\{[\s\S]*?border-color:transparent;[\s\S]*?background:transparent/);
 });
 
-test("the gruvbox/industrial-slate rail caption reserves its own line height, so it can't be starved to a sliver by overflow:hidden", () => {
-  // A grid item with overflow other than visible has its automatic minimum
-  // size treated as 0 for track sizing (CSS Grid  2.7) - without an
-  // explicit min-height here, .workspaceNavButton's auto row for this
-  // single-line, ellipsis-truncated caption was free to shrink to whatever
-  // space was left over in the button's fixed min-height instead of
-  // growing to fit one line, clipping every RT Sync/Tools/Help/Sudo access
-  // caption's descenders under the overflow:hidden a few lines below.
+test("the gruvbox/industrial-slate rail caption no longer imposes its own overflow, so it needs no min-height guard of its own", () => {
+  // History, because this rule used to be the opposite. The four-theme rail
+  // pass gave this caption `overflow:hidden` plus a 10px/1.15 type ramp of its
+  // own. A grid item with overflow other than visible has its automatic
+  // minimum size treated as 0 for track sizing (CSS Grid  2.7), so the
+  // button's auto row for the caption was free to shrink to whatever space was
+  // left over rather than growing to fit one line - clipping every RT Sync/
+  // Tools/Changelog/Sudo access caption's descenders. The fix at the time was
+  // an explicit min-height:1.15em here.
+  //
+  // That whole pass is now ink-only: size, leading and overflow come from the
+  // shared rail, which every theme already shares, so there is no
+  // theme-specific overflow to starve the track and no guard to carry. If
+  // overflow ever returns to this rule, the min-height has to return with it.
   const start = desktop.indexOf('body:is([data-theme="gruvbox-dark"],[data-theme="gruvbox-light"],[data-theme="industrial-slate-dark"],[data-theme="industrial-slate"]) .workspaceNavButton small{');
   assert.notEqual(start, -1);
   const rule = desktop.slice(start, desktop.indexOf("}", start) + 1);
-  assert.match(rule, /min-height:1\.15em;/);
-  assert.match(rule, /overflow:hidden;/);
+  assert.doesNotMatch(rule, /overflow:/, "if this rule takes overflow back, restore min-height:1.15em with it");
+  assert.doesNotMatch(rule, /min-height:/);
+  assert.match(rule, /color:color-mix\(in srgb,var\(--gruv-rail-paper\) 57%,var\(--gruv-rail-edge\)\)/);
 });
 
 test("the desktop matrix action area is gone - Bulk Edit folded into the always-live grid, Weight Profiles moved into the Recipe Book", () => {
