@@ -101,7 +101,7 @@
    full touch shell - the same "(width <= 900px), pointer:coarse" range
    styles.css uses to render this home screen - so tablets get the retune
    too, not just phones (<=700px). */
-@media (width <= 900px), (min-width: 901px) and (pointer: coarse){
+@media (max-width: 900px), (min-width: 901px) and (pointer: coarse){
   :where(html, body)[data-theme="industrial-slate"] .mobileProductionControls .gaugeTimeValue,
   :where(html, body)[data-theme="industrial-slate"] .mobileProductionControls .mobileLineRateReadout{color:#4f6d8b}
   :where(html, body)[data-theme="industrial-slate"] .workspaceNavButton:not(.active) span,

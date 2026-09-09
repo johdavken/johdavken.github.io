@@ -234,7 +234,9 @@ test("pointer queries remain for structural shell and actual hover capability", 
   const desktopBlocks = styles.match(/@media \(min-width:\s?901px\)[^{]*\{/g) || [];
   assert.ok(desktopBlocks.length >= 5);
   for (const block of desktopBlocks) assert.match(block, /pointer: fine/);
-  const desktopCssBlocks = desktopCss.match(/@media \(min-width:901px\)[^{]*\{/g) || [];
+  // Optional space: the shell boundary is normalised to "(min-width: 901px)",
+  // while the narrower 901-1180px desktop band keeps its own tight spelling.
+  const desktopCssBlocks = desktopCss.match(/@media \(min-width:\s?901px\)[^{]*\{/g) || [];
   assert.ok(desktopCssBlocks.length >= 2);
   for (const block of desktopCssBlocks) assert.match(block, /pointer: fine/);
   assert.match(styles, /@media \(max-width: ?900px\), \(min-width: 901px\) and \(pointer: coarse\)/);

@@ -28,7 +28,7 @@ test("Print Recipe remains desktop-only, even though Rearrange itself no longer 
   assert.match(modeBar, /modeBar\.appendChild\(scanRecipeButton\)[\s\S]*modeBar\.appendChild\(printButton\)/);
   // Print now asks which recipe(s) to print before it does any rendering.
   assert.match(modeBar, /printButton\.addEventListener\("click", openPrintRecipeDialog\)/);
-  assert.match(styles, /@media\(max-width:900px\), \(min-width: 901px\) and \(pointer: coarse\)\{\.rearrangeDesktopOnly\{display:none!important\}\}/);
+  assert.match(styles, /@media \(max-width: 900px\), \(min-width: 901px\) and \(pointer: coarse\)\{\.rearrangeDesktopOnly\{display:none!important\}\}/);
 });
 
 test("the print button is enabled when either the page on screen or the planned Next recipe has content", () => {

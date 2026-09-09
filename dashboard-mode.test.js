@@ -248,9 +248,9 @@ test("leaving desktop width while Dashboard is open closes it automatically", ()
 });
 
 test("Dashboard CSS hides the working shell and is scoped to the existing desktop media query, never a new breakpoint", () => {
-  assert.match(desktop, /@media \(min-width:901px\) and \(pointer: fine\)\{/);
+  assert.match(desktop, /@media \(min-width: 901px\) and \(pointer: fine\)\{/);
   const dashboardCssIndex = desktop.indexOf(".dashboardPanel{");
-  assert.ok(dashboardCssIndex > desktop.indexOf("@media (min-width:901px) and (pointer: fine){"));
+  assert.ok(dashboardCssIndex > desktop.indexOf("@media (min-width: 901px) and (pointer: fine){"));
   assert.match(desktop, /body\.dashboardActive \.workspaceNav,\s*\n\s*body\.dashboardActive \.workspaceContent\{ display:none; \}/);
   assert.match(desktop, /body\.dashboardActive \.dashboardPanel\{/);
 });

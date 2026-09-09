@@ -22,9 +22,15 @@ const styles = fs.readFileSync("styles.css", "utf8");
 // white via --gruv-rail-paper rather than --title, so honouring the override
 // keeps the two surfaces agreeing rather than splitting them.
 
+// Anchored on the block's own opening comment rather than on its @media
+// header. Every touch block is now spelled identically - the shell boundary
+// is one canonical string - so a header search selects whichever block
+// happens to be last in the file, which is not this one. The comment is
+// unique to the tile-home block these tests are about.
 function mobileBlock(){
-  const start = styles.lastIndexOf("@media (max-width:900px)");
-  assert.notEqual(start, -1, "expected the mobile media query block");
+  const marker = styles.indexOf("/* Mobile workspace navigation is a tile home.");
+  assert.notEqual(marker, -1, "expected the mobile tile-home block");
+  const start = styles.lastIndexOf("@media", marker);
   const end = styles.indexOf("\n}", start);
   return styles.slice(start, end);
 }
