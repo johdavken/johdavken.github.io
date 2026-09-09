@@ -93,7 +93,11 @@ test("Recipe Book gets no cluster; desktop Weights keeps its inline panel - only
   // the slot for its profiles icon).
   assert.match(sync, /headerActions\.hidden = isSavedRecipesPage\(\) \|\| \(isWeightsPage\(\) && isDesktopLayout\(\)\)/);
   const block = mobileBlock();
-  assert.match(block, /#splitsBlock \.recipeHeaderRow \.recipeHeaderActions\[hidden\]\{ display:none!important; \}/);
+  // No rule of its own any more: the global [hidden]{display:none!important}
+  // at the top of styles.css hides it. That can only be outranked by an
+  // !important display on a more specific selector, so check for exactly that.
+  assert.match(styles, /\[hidden\]\{display:none!important\}/);
+  assert.doesNotMatch(styles, /\.recipeHeaderActions[^{}]*\{[^}]*display:\s*(?!none)[a-z-]+\s*!important/);
   assert.match(block, /#splitsBlock \.recipeHeaderRow \.recipeHeaderActions:empty\{ display:none; \}/);
 });
 

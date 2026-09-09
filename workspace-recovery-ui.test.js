@@ -18,7 +18,11 @@ test("Workspace Management is hidden during initialization, when signed out, and
   assert.match(ui, /const adminAccess = !initializing && !!state\?\.isAdmin/);
   assert.match(ui, /button\.hidden = initializing \|\| !adminAccess/);
   assert.match(ui, /if \(!adminAccess\) resetPanel\(\)/);
-  assert.match(styles, /\.adminNavButton\[hidden\]\{ display: none !important; \}/);
+  // No rule of its own any more: the global [hidden]{display:none!important}
+  // at the top of styles.css hides it. That can only be outranked by an
+  // !important display on a more specific selector, so check for exactly that.
+  assert.match(styles, /\[hidden\]\{display:none!important\}/);
+  assert.doesNotMatch(styles, /\.adminNavButton[^{}]*\{[^}]*display:\s*(?!none)[a-z-]+\s*!important/);
 });
 
 test("visibility is driven by the shared admin instance, not a second admin session", () => {

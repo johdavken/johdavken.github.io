@@ -256,7 +256,21 @@ test("Recipe Book is a real tab at every width, and crossing the phone/tablet bo
   assert.match(sync, /if \(savedTab\) savedTab\.hidden = false;/);
   const layout = app.slice(app.indexOf("function syncLayoutMode("), app.indexOf("function watchLayoutMode("));
   assert.doesNotMatch(layout, /activeRecipePage = "current";\s*\n\s*splitsSavedRecipesOpen = false;/);
-  assert.match(styles, /\.recipePageTab\[hidden\],\.recipeViewToggle\[hidden\],\.recipeHeaderControls\[hidden\]\{ display:none!important; \}/);
+  // The global [hidden]{display:none!important} hides all three now.
+  assert.match(styles, /\[hidden\]\{display:none!important\}/);
+  for (const sel of ["recipePageTab", "recipeViewToggle"]) {
+    assert.doesNotMatch(styles,
+      new RegExp(`\\.${sel}[^{}]*\\{[^}]*display:\\s*(?!none)[a-z-]+\\s*!important`),
+      `${sel} has an !important display that outranks the global [hidden] rule`);
+  }
+  // .recipeHeaderControls is the one deliberate exception: on the Book tab it
+  // stays laid out as an invisible spacer so the row does not jump. Pin it as
+  // the ONLY such override, so a second one cannot appear unnoticed.
+  const laidOutWhileHidden = styles.match(
+    /[^{}]*[#.]recipeHeaderControls[^{}]*\{[^}]*display:\s*(?!none)[a-z-]+\s*!important/g) || [];
+  assert.equal(laidOutWhileHidden.length, 1,
+    "expected exactly one deliberate display override for .recipeHeaderControls");
+  assert.match(laidOutWhileHidden[0], /data-recipe-page="saved"/);
   // The matrix-hiding swap is unconditional now; only the panel's own
   // sizing still forks by width.
   assert.match(styles, /body\[data-recipe-page="saved"\] #splitsArea > :not\(\.splitsSavedRecipesPanel\):not\(\.splitsConfigurationPreview\)\{\s*display: none!important;\s*\}/);

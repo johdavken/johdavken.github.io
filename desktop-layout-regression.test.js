@@ -116,7 +116,11 @@ test("the desktop matrix action area is gone - Bulk Edit folded into the always-
   assert.match(app, /savedRecipesPanel\.append\(profilesBlock\);/);
   assert.doesNotMatch(app, /bulkModeButton|desktopWeightsBulkToggle/);
   assert.match(app, /desktopWeightsBulkContext/);
-  assert.match(desktop, /desktopWeightsBulkContext\[hidden\]\{display:none!important\}/);
+  // No rule of its own any more: the global [hidden]{display:none!important}
+  // in styles.css hides it. That can only be outranked by an !important
+  // display on a more specific selector, so check for exactly that.
+  assert.match(styles, /\[hidden\]\{display:none!important\}/);
+  assert.doesNotMatch(desktop, /\.desktopWeightsBulkContext[^{}]*\{[^}]*display:\s*(?!none)[a-z-]+\s*!important/);
 });
 
 test("desktop utility dialogs remain bounded and closed account menus cannot paint", () => {
