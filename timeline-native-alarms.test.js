@@ -224,7 +224,15 @@ test("the sound/vibrate rows' own hidden attribute isn't silently defeated by th
   // [hidden]{display:none}, regardless of selector specificity - so without
   // an explicit override here, Change/Preview/Vibrate would render in every
   // browser, not just inside the Capacitor app.
-  assert.match(styles, /\.pumpOffAlarmSoundRow\[hidden\],\.pumpOffAlarmVibrateChoice\[hidden\]\{display:none!important\}/);
+  // These rows carry display:flex, which is exactly why the attribute alone
+  // was not enough. The global [hidden]{display:none!important} now wins for
+  // them, and nothing may grant either row an !important display to beat it.
+  assert.match(styles, /\[hidden\]\{display:none!important\}/);
+  for (const sel of ["pumpOffAlarmSoundRow", "pumpOffAlarmVibrateChoice"]) {
+    assert.doesNotMatch(styles,
+      new RegExp(`\\.${sel}[^{}]*\\{[^}]*display:\\s*(?!none)[a-z-]+\\s*!important`),
+      `${sel} has an !important display that outranks the global [hidden] rule`);
+  }
 });
 
 test("applyPumpOffAlarmSound stores the choice, refreshes the displayed name/toggle, and gates visibility on native availability alone", () => {

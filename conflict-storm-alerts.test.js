@@ -124,7 +124,11 @@ test("stopping admin access clears the storm list along with stopping the poll",
 test("the nav badge is scoped to its own host so it never disturbs the shared admin-row grid", () => {
   assert.match(styles, /\.conflictStormBadgeHost\{ position:relative; \}/);
   assert.match(styles, /\.conflictStormBadge\{[\s\S]*?position:absolute;/);
-  assert.match(styles, /\.conflictStormBadge\[hidden\]\{ display:none!important; \}/);
+  // No rule of its own any more: the global [hidden]{display:none!important}
+  // at the top of styles.css hides it. That can only be outranked by an
+  // !important display on a more specific selector, so check for exactly that.
+  assert.match(styles, /\[hidden\]\{display:none!important\}/);
+  assert.doesNotMatch(styles, /\.conflictStormBadge[^{}]*\{[^}]*display:\s*(?!none)[a-z-]+\s*!important/);
 });
 
 test("an active storm row reads visually distinct from a resolved one", () => {

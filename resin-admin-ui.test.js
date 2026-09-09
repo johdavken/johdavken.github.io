@@ -13,7 +13,12 @@ test("admin navigation is explicitly hidden during initialization and rendered f
   assert.match(ui, /renderAccess\(admin\.getState\(\)\)/);
   assert.match(ui,/const sudoStatus = \$\("sudoAccessStatus"\);/);
   assert.match(ui,/sudoStatus\) sudoStatus\.textContent = initializing/);
-  assert.match(fs.readFileSync("styles.css", "utf8"), /\.sudoAccessActions \[hidden\]\{display:none!important\}/);
+  // No rule of its own any more: the global [hidden]{display:none!important}
+  // at the top of styles.css hides it. That can only be outranked by an
+  // !important display on a more specific selector, so check for exactly that.
+  const css = fs.readFileSync("styles.css", "utf8");
+  assert.match(css, /\[hidden\]\{display:none!important\}/);
+  assert.doesNotMatch(css, /\.sudoAccessActions[^{}]*\{[^}]*display:\s*(?!none)[a-z-]+\s*!important/);
 });
 
 test("Sudo access presents administrator destinations as icon-led action rows", () => {

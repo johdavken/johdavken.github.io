@@ -921,7 +921,6 @@ body[data-theme-family="gruvbox"] .baseGlyph{display:none}
   .footerBar{ display: none; }
 }
 .adminNavButton{ margin-top: 2px; }
-.adminNavButton[hidden]{ display: none !important; }
 .appearanceNavTile{ display:none!important; }
 .mobileTileStyleSection,.mobileBackgroundStyleSection,.mobileTimelineAlarmSection{ display:none; }
 .pumpOffAlarmBanner{ position:fixed; right:12px; bottom:12px; left:12px; z-index:100; display:grid; grid-template-columns:1fr auto; gap:3px 12px; padding:14px; border:1px solid var(--warn); border-radius:var(--radius-row); background:var(--panelOpen); color:var(--text); box-shadow:var(--shadow2); }
@@ -995,7 +994,6 @@ body[data-theme-family="gruvbox"] .baseGlyph{display:none}
   font-variant-numeric:tabular-nums;
   line-height:1;
 }
-.conflictStormBadge[hidden]{ display:none!important; }
 .workspaceRecoveryDeviceCard{ display: grid; gap: 5px; border: 1px solid var(--border); border-radius: var(--radius-row); padding: 10px 12px; }
 .workspaceRecoveryDiagnostic summary{ cursor: pointer; }
 .workspaceRecoveryList{ display: grid; gap: 6px; max-height: min(50vh, 520px); overflow: auto; }
@@ -1123,11 +1121,9 @@ body[data-theme-family="gruvbox"] .baseGlyph{display:none}
 .bulkDensityResinSearch{position:relative;display:grid;gap:5px;min-width:0}
 .bulkDensityResinSearch > label,.bulkDensityInputGrid > label{display:grid;gap:5px;color:var(--muted);font-size:11px;font-weight:800}
 .bulkDensityResinSuggestions{position:absolute;top:100%;right:0;left:0;z-index:12;display:grid;gap:3px;max-height:230px;margin-top:4px;padding:5px;overflow:auto;border:1px solid var(--border2);border-radius:var(--control-radius);background:var(--panelOpen);box-shadow:var(--shadow2)}
-.bulkDensityResinSuggestions[hidden]{display:none!important}
 .bulkDensityResinOption{display:grid;width:100%;min-height:40px;padding:7px 9px;border:0;border-radius:calc(var(--control-radius) - 2px);background:transparent;color:var(--text);text-align:left;box-shadow:none}
 .bulkDensityResinOption:hover,.bulkDensityResinOption:focus-visible{background:var(--focus-ring);outline:var(--focus-outline);outline-offset:-2px}
 .bulkDensitySelectedResin{display:flex;align-items:baseline;gap:8px;padding:7px 10px;border-left:3px solid var(--focus-border);background:var(--readonly-bg)}
-.bulkDensitySelectedResin[hidden]{display:none!important}
 .bulkDensitySelectedResin > div{min-width:0}
 .bulkDensitySelectedResin small{overflow:hidden;color:var(--muted);font-size:10px;text-overflow:ellipsis;white-space:nowrap}
 .bulkDensityInputGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
@@ -1236,7 +1232,6 @@ body[data-theme-family="gruvbox"] .baseGlyph{display:none}
 .desktopLineSyncMain{ display:grid; grid-template-columns:minmax(300px,1.1fr) minmax(250px,.9fr); gap:20px; align-items:start; }
 .lineSyncConnect{ min-width:0; padding-top:2px; }
 .lineSyncGeneratedCodePanel{ display:grid; grid-template-columns:minmax(0,1fr) auto; gap:12px; align-items:center; padding:12px; border:1px solid var(--row-border); border-radius:var(--radius-row); background:var(--row-bg); }
-.lineSyncGeneratedCodePanel [hidden]{ display:none!important; }
 .lineSyncGeneratedCodeRow{ display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
 .lineSyncGeneratedCodeRow .lineSyncCode{ min-width:72px; padding:6px 8px; color:var(--title); font-size:22px; letter-spacing:.14em; }
 /* QR scanners need a solid light quiet zone independent of app theme. */
@@ -1443,7 +1438,6 @@ body[data-theme-family="gruvbox"] .baseGlyph{display:none}
 /* =======================================================================
  *   Header image
  *   ======================================================================= */
-.site-header[hidden]{ display: none !important; }
 .site-header{
   display: flex;
   justify-content: center;
@@ -1979,7 +1973,6 @@ details.block[open]{ background: var(--panelOpen); }
    Line Setup destinations; when a child is moved into Recipe, this selector
    no longer applies to that child. */
 .setupSection > #weightsBlock[hidden],
-.setupSection > #setupWeightProfilesBlock[hidden]{ display:none!important; }
 
 /* Make nested blocks inside a card always span full width */
 .blockBody > details.block{
@@ -3442,7 +3435,6 @@ body[data-theme-family="gruvbox"] .lineSyncInfoGuideSectionHeading{ color: var(-
   vertical-align: middle;
 }
 .recipePageTabDot[hidden]{ display: none; }
-.recipePageTab[hidden],.recipeViewToggle[hidden],.recipeHeaderControls[hidden]{ display:none!important; }
 .recipeWeightsTabCompact{ display:none; }
 /* Recipe tabs carry both a text label and an icon; only one shows at a
    time. Desktop/tablet: text label, icon hidden (see .recipeTabIcon here).
@@ -3510,8 +3502,8 @@ body[data-recipe-page="saved"] #splitsArea > .splitsSavedRecipesPanel{
      invisible spacer the same height as the icon cluster, so the row - and
      everything under it - stays put across tabs. Its own children stay
      display:none via their own [hidden]; visibility:hidden covers the box
-     itself. display:flex!important + the id/attr specificity beat the base
-     .recipeHeaderControls[hidden]{display:none!important}. */
+     itself. display:flex!important + the id/attr specificity beat the global
+     [hidden]{display:none!important} at the top of this file. */
   body[data-recipe-page="saved"] #splitsBlock #recipeHeaderControls[hidden]{
     display: flex !important;
     visibility: hidden;
@@ -4710,8 +4702,6 @@ body[data-recipe-page="next"] .splitTrackControl{ display: none; }
     border-left:0;
   }
   #splitsBlock .recipeHeaderRow .recipeHeaderActions:empty{ display:none; }
-  #splitsBlock .recipeHeaderRow .recipeHeaderActions[hidden]{ display:none!important; }
-  #splitsBlock .recipeHeaderRow .recipeHeaderActions [hidden]{ display:none!important; }
   /* Scan and Load Next: generous console keys, not tiny icon chips. ~48x44
      tap target with the station-console surface (button-styling.css tokens,
      the same recessed key the desktop Recipe actions use); the glyph inside
@@ -6632,7 +6622,6 @@ body:is([data-theme="industrial-slate-dark"],[data-theme="gruvbox-dark"]) .resul
 .resultTimingValue{display:inline-flex;align-items:baseline;justify-content:flex-end;gap:2px;color:var(--text);font-weight:900;white-space:nowrap}
 .resultTimingClock{line-height:1}
 .resultTimingPeriod{font-size:.72em;line-height:1;letter-spacing:.04em}
-.resultTimingPeriod[hidden]{display:none!important}
 .resultTimingUnavailable{font-size:9px}
 .resultRow.late .resultTimingValue{color:var(--warn)}
 .resultRow.done{ opacity: 0.42; filter: grayscale(1); }
@@ -7647,7 +7636,6 @@ button.compactAction{
 .toolInputGrid > div{ display:grid; align-content:start; gap:5px; min-width:0; }
 .toolInputGrid input{ min-width:0; }
 .toolFieldHint{ color:var(--muted); font-size:10px; line-height:1.35; }
-.toolWorkspacePanel[hidden]{ display: none !important; }
 .toolsWorkspaceContent .toolPanel + .toolPanel{ margin-top: 0; }
 .mobileToolsHome,.mobileToolsBack,.mobileToolHeader{ display:none; }
 .mobileSectionHeaderIcon{ display:none; }
@@ -9282,7 +9270,6 @@ body[data-mobile-workspace="home"] .mobileWorkspaceNavMoreIcons .moreIconRt{ --t
 .sudoAccessSignOut{grid-template-columns:30px minmax(0,1fr);color:var(--bad)}
 .sudoAccessSignOut > svg:first-child{stroke:var(--bad)}
 .sudoAccessSignOut strong{color:var(--bad)}
-.sudoAccessActions [hidden]{display:none!important}
 
 /* Gruvbox's own rainbow: each section keeps a distinct palette hue. */
 body[data-theme-family="gruvbox"] .workspaceNavButton[data-workspace-target="lineSetupBlock"]{ --tile-accent:var(--gruv-orange); }
@@ -9757,13 +9744,6 @@ body[data-theme="ayu-dark"] .workspaceNavButton[data-workspace-target="splitsBlo
   .pumpOffAlarmVibrateChoice{display:flex;align-items:center;gap:8px;min-height:36px;margin-top:5px;padding:6px 8px;border:1px solid var(--border);border-radius:var(--control-radius);background:var(--row-bg)}
   .pumpOffAlarmVibrateChoice input{width:20px;height:20px;flex:0 0 auto;margin:0;accent-color:var(--focus-border)}
   .pumpOffAlarmVibrateChoice span{color:var(--text);font-size:11px}
-  /* An author rule's display:flex always beats the UA stylesheet's own
-     [hidden]{display:none}, regardless of specificity - without this, the
-     rows above would render even while carrying the hidden attribute (set
-     whenever the native PumpOffAlarm plugin isn't present, i.e. every
-     browser - see applyPumpOffAlarmSound). Same fix applied to
-     .recipeHeaderActions on phones for the same reason. */
-  .pumpOffAlarmSoundRow[hidden],.pumpOffAlarmVibrateChoice[hidden]{display:none!important}
 
   /* APK only: native sound/vibration controls are available together, so
      condense them into the Timeline alarm panel rather than three cards.
@@ -10191,7 +10171,6 @@ body[data-theme="ayu-dark"] .workspaceNavButton[data-workspace-target="splitsBlo
 .desktopNotificationsMenu:not([open]){display:none!important}
 .footerSheet{z-index:72}
 .footerSheetBackdrop{position:fixed;inset:0;z-index:60;padding:0;border:0;background:rgba(0,0,0,.42);backdrop-filter:blur(1.5px)}
-.footerSheetBackdrop[hidden]{display:none!important}
 
 @media (width <= 900px), (min-width: 901px) and (pointer: coarse){
   /* Text-only status rail: one 32px row, shared by navigation and RT Sync. */
@@ -10865,7 +10844,6 @@ body[data-theme="ayu-dark"] .workspaceNavButton[data-workspace-target="splitsBlo
     text-align:left;
   }
   .footerSheet:not([open]){display:none!important}
-  .footerDockMenu [hidden]{display:none!important}
   .footerSheetHead{padding:10px 11px 11px;border-bottom:1px solid var(--border)}
   .footerSheetHead strong{color:var(--title);font-size:14px}
   .footerDockMenu button{display:grid;grid-template-columns:28px minmax(0,1fr);align-items:center;gap:10px;min-height:48px;padding:8px 11px;border:0;border-radius:9px;background:transparent;color:var(--text);font:inherit;text-align:left}
@@ -10908,7 +10886,6 @@ body[data-theme="ayu-dark"] .workspaceNavButton[data-workspace-target="splitsBlo
     line-height:1;
   }
   .mobileNotificationsBadge[data-severity="error"]{border-radius:50%;background:var(--bad);color:#fff}
-  .mobileNotificationsBadge[hidden]{display:none!important}
 
   /* Notification center content - the mobile footer bell and the desktop
      status-bar bell open the exact same #footerNotificationsMenu dialog and
@@ -11157,7 +11134,6 @@ body[data-theme="ayu-dark"] .workspaceNavButton[data-workspace-target="splitsBlo
   #appFooterAccount:focus-visible{outline:var(--focus-outline);outline-offset:2px}
   .footerAccountMenu{position:absolute;top:46px;right:0;display:grid;gap:4px;width:290px;padding:8px;border:1px solid var(--border2);border-radius:12px;background:var(--panelOpen);box-shadow:var(--shadow2)}
   .appOverlayRoot > .footerAccountMenu{pointer-events:auto}
-  .footerAccountMenu[hidden],.footerAccountMenu [hidden]{display:none!important}
   .footerAccountMenu button{min-height:42px;padding:8px 10px;border:0;border-radius:8px;background:transparent;color:var(--text);font:inherit;font-weight:750;text-align:left}
   .footerAccountMenu button:hover,.footerAccountMenu button:focus-visible{background:var(--row-bg);outline:0;box-shadow:inset 0 0 0 2px var(--focus-border)}
   .footerAccountDetails{display:grid;gap:2px;padding:9px 10px 11px;border-bottom:1px solid var(--border)}
@@ -12559,7 +12535,6 @@ body[data-recipe-page="saved"] #splitsArea > .splitsConfigurationPreview{
   gap:10px;
   min-width:0;
 }
-.splitsConfigurationPreview[hidden]{ display:none!important; }
 
 .configPreviewHeader{ display:flex; flex-direction:column; gap:2px; min-width:0; }
 .configPreviewHeader strong{ font-size:var(--font-base); line-height:1.25; }

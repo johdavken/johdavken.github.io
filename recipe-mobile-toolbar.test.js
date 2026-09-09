@@ -133,7 +133,11 @@ test("Scan and Load render as icon-only square buttons in #recipeHeaderActions o
 });
 
 test("a hidden Load button in the cluster still collapses - [hidden] override present", () => {
-  assert.match(styles, /#splitsBlock \.recipeHeaderRow \.recipeHeaderActions \[hidden\]\{ display:none!important; \}/);
+  // No rule of its own any more: the global [hidden]{display:none!important}
+  // at the top of styles.css hides it. That can only be outranked by an
+  // !important display on a more specific selector, so check for exactly that.
+  assert.match(styles, /\[hidden\]\{display:none!important\}/);
+  assert.doesNotMatch(styles, /\.recipeHeaderActions[^{}]*\{[^}]*display:\s*(?!none)[a-z-]+\s*!important/);
 });
 
 test("the cluster is pulled left of the Edit/Done pencil with order:-1", () => {
