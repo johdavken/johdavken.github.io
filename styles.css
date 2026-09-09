@@ -9392,8 +9392,6 @@ body[data-theme="ayu-dark"] .workspaceNavButton[data-workspace-target="splitsBlo
   .workspaceNavButton:focus-visible{ outline:var(--focus-outline); outline-offset:2px; }
   body[data-mobile-workspace="panel"] .workspaceNav{ display:none; }
   body:not([data-mobile-workspace="home"]) .mobileBrand{ display:none; }
-  body[data-mobile-workspace="home"] .workspaceContent > .workspacePanel{ display:none!important; }
-  body[data-mobile-workspace="panel"] .workspaceContent > .workspacePanel:not(.mobile-active){ display:none!important; }
   body[data-mobile-workspace="panel"] .workspaceContent > .workspacePanel.mobile-active > summary{
     display:flex;
     align-items:center;
@@ -9601,8 +9599,27 @@ body[data-theme="ayu-dark"] .workspaceNavButton[data-workspace-target="splitsBlo
    preferences control becomes a modal sheet, keeping one source of truth
    for all appearance settings without changing the desktop menu. */
 @media (width <= 900px), (min-width: 901px) and (pointer: coarse){
-  /* The safe mobile default is always the tile home. Restored <details>
-     state must never expose a workspace before a tile explicitly selects it. */
+  /* Mobile panel visibility, in full. Two rules, and deliberately only two:
+     hide every workspace panel, then let the selected one back in. The safe
+     default is the tile home - restored <details> state must never expose a
+     workspace before a tile explicitly selects it, so the hide is
+     unconditional and the reveal is what carries the condition.
+
+     This replaced three overlapping hiders. The other two were
+     [data-mobile-workspace="home"] and [data-mobile-workspace="panel"]
+     :not(.mobile-active), which said the same display:none!important this
+     rule already says for the same elements - measured across all 90
+     reachable mobile states (2 workspace modes x 3 isolation modes x 15
+     active-panel choices), removing both changed nothing, and removing all
+     three broke 30. Nothing sits between them in specificity, so they could
+     never win a cascade this rule loses.
+
+     Add a mode by giving it a reveal, not another hide. A new conditional
+     display:none on .workspacePanel is redundant on arrival and makes the
+     next reader trace four rules to answer one question - the ratchet in
+     mobile-panel-visibility.test.js exists to say so. The two isolation
+     modes further up this file are the pattern: :not(#panel) to narrow,
+     #panel{display:block!important} to reveal. */
   .workspaceContent > .workspacePanel{ display:none!important; }
   body[data-mobile-workspace="panel"] .workspaceContent > .workspacePanel.mobile-active{ display:block!important; }
   .appearanceNavTile{ display:grid!important; }
