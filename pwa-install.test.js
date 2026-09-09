@@ -4,9 +4,10 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const { readStyles } = require("./css-source");
 
 const html = fs.readFileSync("index.html", "utf8");
-const styles = fs.readFileSync("styles.css", "utf8");
+const styles = readStyles();
 const manifestRaw = fs.readFileSync("manifest.webmanifest", "utf8");
 const head = html.slice(0, html.indexOf("</head>"));
 

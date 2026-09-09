@@ -3,6 +3,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const { readStyles } = require("./css-source");
 
 const html = fs.readFileSync("index.html", "utf8");
 const desktopStyles = fs.readFileSync("desktop.css", "utf8");
@@ -25,7 +26,7 @@ test("the panel is clearly marked experimental, using the existing warning-pill 
   const sectionEnd = html.indexOf("</section>", sectionStart);
   const section = html.slice(sectionStart, sectionEnd);
   assert.match(section, /<span class="pill badge-warn">Experimental<\/span>/);
-  assert.match(fs.readFileSync("styles.css", "utf8"), /\.pill\.badge-warn\{/, "badge-warn must already exist - this feature reuses it rather than inventing new badge CSS");
+  assert.match(readStyles(), /\.pill\.badge-warn\{/, "badge-warn must already exist - this feature reuses it rather than inventing new badge CSS");
 });
 
 test("all three scan options are present and enabled", () => {
@@ -63,7 +64,7 @@ test("all three options use the native <details>/<summary> disclosure pattern, o
 });
 
 test("the info icon uses the app's established round-icon-button disclosure treatment, not a plain link/button", () => {
-  const styles = fs.readFileSync("styles.css", "utf8");
+  const styles = readStyles();
   assert.match(styles, /\.recipeScanInfo > summary\{[^}]*border-radius:50%/);
 });
 
@@ -95,7 +96,7 @@ test("the shortcut panel offers all three scan modes, each wired through the sam
 });
 
 test("the shortcut is hidden by default and only shown inside the existing mobile status-bar media query, same convention as the Timeline/Recipe chips", () => {
-  const styles = fs.readFileSync("styles.css", "utf8");
+  const styles = readStyles();
   assert.match(styles, /\.statusScanShortcut\{ display:none;/);
   const mobileStart = styles.lastIndexOf(
     "@media", styles.indexOf("/* Mobile workspace navigation is a tile home."));

@@ -1,11 +1,12 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const { readStyles } = require("./css-source");
 
 const app = fs.readFileSync("app.js", "utf8");
 const html = fs.readFileSync("index.html", "utf8");
 const desktop = fs.readFileSync("desktop.css", "utf8");
-const styles = fs.readFileSync("styles.css", "utf8");
+const styles = readStyles();
 
 /* ----------------------------------------------------------------------
  *   Bell placement and treatment
@@ -250,7 +251,7 @@ test("the global layer-total summary line is not printed inline - that verbose s
   // validation sentence, and was deliberately brought back.
   assert.doesNotMatch(app, /splitsMatrixSummary/);
   assert.doesNotMatch(app, /Layer total: /);
-  const styles = fs.readFileSync("styles.css", "utf8");
+  const styles = readStyles();
   assert.doesNotMatch(styles, /\.splitsMatrixSummary|\.splitsMatrixActionInfo/);
 });
 

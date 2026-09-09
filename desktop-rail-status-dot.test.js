@@ -17,9 +17,10 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const { readStyles } = require("./css-source");
 
 const desktop = fs.readFileSync("desktop.css", "utf8");
-const styles = fs.readFileSync("styles.css", "utf8");
+const styles = readStyles();
 
 test("the status dot rule and its per-status colour variants are gone from styles.css", () => {
   assert.doesNotMatch(styles, /\.workspaceNavButton > span::before\{/);

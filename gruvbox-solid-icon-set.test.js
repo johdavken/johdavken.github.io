@@ -22,9 +22,10 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const { readStyles } = require("./css-source");
 
 const html = fs.readFileSync("index.html", "utf8");
-const styles = fs.readFileSync("styles.css", "utf8");
+const styles = readStyles();
 const desktop = fs.readFileSync("desktop.css", "utf8");
 
 // app.js derives this from the active theme; the stylesheet no longer names

@@ -3,9 +3,10 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const { readStyles } = require("./css-source");
 
 const html = fs.readFileSync("index.html", "utf8");
-const styles = fs.readFileSync("styles.css", "utf8");
+const styles = readStyles();
 
 test("Receiver Hopper Weights and Profiles retain their shared desktop markup but gain separate themed SVG entry art", () => {
   assert.match(html, /mobileSetupEntryArt mobileWeightsEntryArt/);

@@ -28,8 +28,9 @@ const test = require("node:test");
 const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
+const { readStyles } = require("./css-source");
 
-const styles = fs.readFileSync(path.join(__dirname, "styles.css"), "utf8");
+const styles = readStyles();
 const desktop = fs.readFileSync(path.join(__dirname, "desktop.css"), "utf8");
 
 // Comments are stripped before any structural check. The rules this file

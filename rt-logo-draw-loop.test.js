@@ -3,9 +3,10 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const { readStyles } = require("./css-source");
 
 const html = fs.readFileSync("index.html", "utf8");
-const styles = fs.readFileSync("styles.css", "utf8");
+const styles = readStyles();
 
 test("Confluence is the live mobile and desktop Resin.Tools mark", () => {
   assert.equal((html.match(/href="#rtConfluenceMark"/g) || []).length, 2);

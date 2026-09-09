@@ -16,8 +16,9 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const { readStyles } = require("./css-source");
 
-const styles = fs.readFileSync("styles.css", "utf8");
+const styles = readStyles();
 const html = fs.readFileSync("index.html", "utf8");
 
 const DESKTOP_QUERY = "@media (min-width: 901px) and (pointer: fine){";

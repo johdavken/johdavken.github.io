@@ -12,6 +12,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const { readStyles } = require("./css-source");
 
 const html = fs.readFileSync("index.html", "utf8");
 const app = fs.readFileSync("app.js", "utf8");
@@ -81,7 +82,7 @@ test("the resin search suggestion dropdown shows only the resin code now - descr
 });
 
 test("the copied-state visual feedback CSS applies to any readonly resin lookup value, not just density - so it also covers the new bulk density copy button", () => {
-  const styles = fs.readFileSync("styles.css", "utf8");
+  const styles = readStyles();
   assert.match(styles, /input\.resinLookupValue\.copied\[readonly\]\{/);
   assert.doesNotMatch(styles, /\.resinLookupInformation textarea/);
 });

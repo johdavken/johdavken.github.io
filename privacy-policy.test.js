@@ -4,11 +4,12 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const { localRuntimeReferences } = require("./scripts/build-www.js");
+const { readStyles } = require("./css-source");
 
 const policy = fs.readFileSync("privacy/index.html", "utf8");
 const deletion = fs.readFileSync("privacy/delete-data/index.html", "utf8");
 const html = fs.readFileSync("index.html", "utf8");
-const styles = fs.readFileSync("styles.css", "utf8");
+const styles = readStyles();
 const theme = fs.readFileSync("theme.css", "utf8");
 const cloudSync = fs.readFileSync("cloud-sync.js", "utf8");
 const androidBuild = fs.readFileSync("android/app/build.gradle", "utf8");

@@ -3,8 +3,9 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const { readStyles } = require("./css-source");
 
-const styles = fs.readFileSync("styles.css", "utf8");
+const styles = readStyles();
 
 // On mobile, collapsed top-level cards (Recipe Setup, Timeline, RT Sync,
 // Help) each showed a status chip to the right of the title (e.g. "Check

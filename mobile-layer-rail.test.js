@@ -3,9 +3,10 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const { readStyles } = require("./css-source");
 
 const app = fs.readFileSync("app.js", "utf8");
-const styles = fs.readFileSync("styles.css", "utf8");
+const styles = readStyles();
 
 // Recipe Setup's mobile layer switcher went through two shapes before this
 // one: originally a sticky pill tab strip, then a swipe/paged control

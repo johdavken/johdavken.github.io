@@ -3,8 +3,9 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const { readStyles } = require("./css-source");
 
-const styles = fs.readFileSync("styles.css", "utf8");
+const styles = readStyles();
 
 // Mobile RT logo (.resinToolsLogo, inside .mobileBrand - hidden entirely on
 // desktop via .mobileBrand{display:none} at >=901px) reduced 25%: 280px -> 210px.

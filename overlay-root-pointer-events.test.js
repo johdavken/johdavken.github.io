@@ -21,8 +21,9 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const { readStyles } = require("./css-source");
 
-const styles = fs.readFileSync("styles.css", "utf8");
+const styles = readStyles();
 const desktop = fs.readFileSync("desktop.css", "utf8");
 const html = fs.readFileSync("index.html", "utf8");
 

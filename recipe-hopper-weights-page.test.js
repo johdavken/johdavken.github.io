@@ -1,11 +1,12 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const { readStyles } = require("./css-source");
 
 const html = fs.readFileSync("index.html", "utf8");
 const app = fs.readFileSync("app.js", "utf8");
 const desktop = fs.readFileSync("desktop.css", "utf8");
-const styles = fs.readFileSync("styles.css", "utf8");
+const styles = readStyles();
 
 test("Hopper Weights is an accessible Recipe workspace page", () => {
   assert.match(html, /id="recipePageTabWeights" role="tab" aria-selected="false" aria-controls="splitsArea" data-recipe-page="weights"><span class="recipeTabLabel"><span class="recipeWeightsTabFull">Hopper Weights<\/span><span class="recipeWeightsTabCompact" aria-hidden="true">Weights<\/span><\/span><span class="recipeTabIcon" aria-hidden="true">/);

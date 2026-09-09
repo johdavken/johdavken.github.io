@@ -2,9 +2,10 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const { readStyles } = require("./css-source");
 const app = fs.readFileSync("app.js","utf8");
 const html = fs.readFileSync("index.html","utf8");
-const styles = fs.readFileSync("styles.css","utf8");
+const styles = readStyles();
 
 // The mobile footer's Shortcuts action (Production Summary / Scan Dosing
 // Screen) is gone: Production Summary is now a first-class main section
