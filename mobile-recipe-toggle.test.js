@@ -128,7 +128,10 @@ test("chipToggle is a fixed-size round icon button now that there's no text to s
 });
 
 test("the mobile status bar has a gap so adjacent icon-only controls (scan shortcut, timeline, recipe) aren't touching - easier to tap", () => {
-  const mobileStart = styles.lastIndexOf("@media (max-width:900px)");
+  // Anchored on content: every touch block now shares one canonical header,
+  // so a header search no longer identifies this particular block.
+  const mobileStart = styles.lastIndexOf(
+    "@media", styles.indexOf("/* Mobile workspace navigation is a tile home."));
   const barStart = styles.indexOf(".workspaceStatusBar{", mobileStart);
   const barEnd = styles.indexOf("}", barStart);
   const bar = styles.slice(barStart, barEnd);
@@ -140,7 +143,7 @@ test("the mobile status bar has a gap so adjacent icon-only controls (scan short
 // .chipToggle and .statusTimelineToggle/.statusRecipeToggle apply to the
 // same elements. .statusTimelineToggle{ display:none; } is unconditional;
 // its mobile-only override to display:inline-flex lives inside the
-// @media(max-width:900px) block further down. If .chipToggle ever declares
+// touch-shell @media block further down. If .chipToggle ever declares
 // its own `display`, that declaration - same specificity, later in the
 // file - wins the cascade over display:none and shows the chips on desktop
 // too. .chipToggle must never set display; visibility belongs entirely to
@@ -157,7 +160,8 @@ test("the desktop-hidden rule for both chips still comes strictly before .chipTo
   const timelineHiddenIndex = styles.indexOf(".statusTimelineToggle{ display:none; }");
   const recipeHiddenIndex = styles.indexOf(".statusRecipeToggle{ display:none; }");
   const chipToggleIndex = styles.indexOf(".chipToggle{");
-  const mobileBlockIndex = styles.lastIndexOf("@media (max-width:900px)");
+  const mobileBlockIndex = styles.lastIndexOf(
+    "@media", styles.indexOf("/* Mobile workspace navigation is a tile home."));
   assert.ok(timelineHiddenIndex > -1 && timelineHiddenIndex < chipToggleIndex);
   assert.ok(recipeHiddenIndex > -1 && recipeHiddenIndex < chipToggleIndex);
   assert.ok(mobileBlockIndex > chipToggleIndex, "the mobile display:inline-flex override must come after .chipToggle so it's the one that ends up winning on mobile");

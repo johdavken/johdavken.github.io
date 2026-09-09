@@ -37,7 +37,8 @@ test("the footer grid grows to five cells only in the compact (mobile) block", (
   const compact = styles.slice(styles.lastIndexOf("/* Compact footer:"));
   assert.match(compact, /grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/);
   // Desktop still collapses the whole bar (display:contents + hide-all).
-  const desktop = styles.slice(styles.indexOf("@media (min-width:901px) and (pointer: fine){"));
+  const desktop = styles.slice(styles.lastIndexOf("@media", styles.indexOf(
+    "#workspaceManagementBlock > .workspaceRecoveryPanel{grid-template-rows:auto auto minmax(0,1fr)")));
   assert.match(desktop, /\.footerBar\{display:contents\}/);
   assert.match(desktop, /\.footerBar > :not\(\.footerAccountHost\)\{display:none!important\}/);
 });

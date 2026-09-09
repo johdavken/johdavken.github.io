@@ -7,7 +7,11 @@ const fs = require("node:fs");
 const styles = fs.readFileSync("styles.css","utf8");
 
 test("Gruvbox light and dark receive mobile background and tile treatments",()=>{
-  const mobileStart = styles.indexOf("@media (width <= 900px)");
+  // Anchored on the first rule of the block these assertions live in; the
+  // shell boundary is one canonical header now, so searching for the header
+  // selects the first touch block in the file rather than this one.
+  const mobileStart = styles.lastIndexOf(
+    "@media", styles.indexOf("#weightsArea{ display:grid; gap:10px; }"));
   const mobileStyles = styles.slice(mobileStart);
 
   assert.match(mobileStyles,/body\[data-theme="gruvbox-dark"\]\{/);

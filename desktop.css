@@ -2,7 +2,7 @@
 /* =======================================================================
  *   Desktop viewport workspace
  *   ======================================================================= */
-@media (min-width:901px) and (pointer: fine){
+@media (min-width: 901px) and (pointer: fine){
   :root{
     --desktop-type-body:14px;
     --desktop-type-secondary:13px;

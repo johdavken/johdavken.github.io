@@ -19,7 +19,29 @@ test("wizard is exposed only by the calculator affordance beside Changeover time
   assert.doesNotMatch(html, /changeoverLabelRow/);
   assert.match(css, /\.changeoverWizardTrigger\{display:none\}/);
   assert.match(css, /body\[data-shell="touch"\] \.changeoverWizardTrigger\{display:grid\}/);
-  assert.doesNotMatch(css, /@media [^{]*pointer:coarse[^}]*\{[\s\S]*?\.changeoverWizardTrigger\{display:grid\}/);
+  // The reveal must come from body[data-shell="touch"], never from a media
+  // query. The previous form of this check was a regex with an unbounded
+  // [\s\S]*? between a "pointer:coarse" header and the rule, so it matched
+  // across hundreds of KB of unrelated CSS and reported a violation that was
+  // not there - and it only ever fired on the one header that happened to be
+  // spelled without a space, so normalising the shell boundary would have
+  // turned it into an assertion that can never fail. Check the actual
+  // structural claim instead: count the reveals that sit inside an open
+  // @media block whose condition mentions a coarse pointer.
+  const revealsInsideCoarseMedia = [];
+  for (const match of css.matchAll(/\.changeoverWizardTrigger\{display:grid\}/g)){
+    const at = css.lastIndexOf("@media", match.index);
+    if (at === -1) continue;
+    const between = css.slice(at, match.index);
+    let depth = 0;
+    for (const ch of between){ if (ch === "{") depth++; else if (ch === "}") depth--; }
+    if (depth <= 0) continue; // that @media closed before this rule
+    const condition = css.slice(at, css.indexOf("{", at)).replace(/\s+/g, "");
+    if (condition.includes("pointer:coarse")) revealsInsideCoarseMedia.push(condition);
+  }
+  assert.deepEqual(revealsInsideCoarseMedia, [],
+    "the wizard trigger is revealed by the data-shell attribute, not by a " +
+    "pointer/width media query - see the touch-shell rule above");
   assert.match(css, /\.mobileProductionControls \.changeoverWizardTrigger\{position:absolute;right:calc\(50% \+ 54px\);top:-16px;z-index:3;display:grid;width:44px;height:44px/);
   assert.doesNotMatch(css, /changeoverLabelRow/);
   assert.equal((html.match(/id="changeoverWizardTrigger"/g) || []).length, 1);

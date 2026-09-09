@@ -86,7 +86,7 @@ test("Industrial Slate retunes its near-black Changeover/Output values and workf
   assert.notEqual(anchor, -1);
   const start = theme.lastIndexOf('@media ', anchor);
   const mediaLine = theme.slice(start, theme.indexOf('{', start));
-  assert.match(mediaLine, /@media \(width <= 900px\), \(min-width: 901px\) and \(pointer: coarse\)/);
+  assert.match(mediaLine, /@media \(max-width: 900px\), \(min-width: 901px\) and \(pointer: coarse\)/);
   const block = theme.slice(start, theme.indexOf("\n}\n", start));
   // Changeover time / Output values (.mobileProductionControls
   // .gaugeTimeValue/.mobileLineRateReadout, styles.css color:var(--text))

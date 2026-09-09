@@ -148,7 +148,7 @@ test("desktop Recipe controls use the five-layer rail and Summary omits the redu
 });
 
 test("the LAYERS/1-3-5/Done/Load Next Recipe/Print Recipe toolbar stays one unbroken, right-anchored unit on a real desktop mouse - styles.css's own fix for this row (.recipeHeaderRow{flex-wrap:nowrap}, tabs flex:1 1 auto;min-width:0) only lives inside \"(max-width:900px), (min-width:901px) and (pointer:coarse)\", which a pointer:fine window never matches at any width - the same coarse/fine gap that bit the edit toolbar earlier, here on the row above it", () => {
-  const start = desktop.indexOf("@media (min-width:901px) and (pointer: fine){");
+  const start = desktop.indexOf("@media (min-width: 901px) and (pointer: fine){");
   assert.notEqual(start, -1);
   // Tabs get first claim on shrinking, same as the existing touch-tablet fix -
   // so the toolbar group never has to give up space or wrap internally.

@@ -32,10 +32,27 @@ const test = require("node:test");
  * assertion for an 8% tidier file is a bad deal, and breaking things to
  * prevent things from breaking defeats the point.
  *
- * Normalising the spelling was rejected for the same reason and worse: the
+ * Normalising the spelling was rejected wholesale for the same reason: the
  * same query is written both "(max-width: 700px)" and "(max-width:700px)",
- * which hides duplicates from a grep, but making it consistent broke 48 tests.
- * blockCounts() below is whitespace-insensitive so this guard works anyway.
+ * which hides duplicates from a grep, but making it all consistent broke 48
+ * tests. blockCounts() below is whitespace-insensitive so this guard works
+ * anyway.
+ *
+ * The SHELL BOUNDARY was later normalised on its own, and that part is done:
+ * the 901px pivot was 16 headers in 6 spellings ("(width <= 900px)" and
+ * "(max-width:900px)" and "@media(max-width:900px)" all naming one
+ * condition), and is now exactly two canonical strings - one per shell.
+ * It was measured, not argued: every element x 44 computed properties at
+ * 390px touch, 1280px coarse and 1280px fine came back byte-identical with
+ * app state reset on both sides. It cost 21 test repoints rather than 48
+ * because it left the 700px/600px families alone, and those are still mixed
+ * - which is why blockCounts() must stay whitespace-insensitive.
+ *
+ * The repoint that matters, if this is ever extended: a test that finds a
+ * block by searching for its @media header stops identifying a particular
+ * block the moment every block of that condition is spelled the same, and
+ * lands on whichever one happens to be first or last in the file - still
+ * passing, now guarding something else. Anchor those on block content.
  *
  * What is left is the part that carries its weight: stop it getting worse.
  * Opening a new block for a condition that already has one is exactly how it
@@ -45,10 +62,9 @@ const test = require("node:test");
 const CEILING = {
   "(min-width:701px)": 13,
   "(max-width:600px)": 8,
-  "(max-width:900px),(min-width:901px)and(pointer:coarse)": 8,
+  "(max-width:900px),(min-width:901px)and(pointer:coarse)": 15,
   "(min-width:901px)and(pointer:fine)": 8,
   "(prefers-reduced-motion:reduce)": 7,
-  "(width<=900px),(min-width:901px)and(pointer:coarse)": 7,
   "(max-width:700px)": 6,
   "(max-width:760px)": 3,
   "(min-width:720px)": 3,
