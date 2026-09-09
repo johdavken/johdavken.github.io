@@ -3,8 +3,9 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const { readStyles } = require("./css-source");
 
-const styles = fs.readFileSync("styles.css", "utf8");
+const styles = readStyles();
 
 // On mobile, the 7+ top-level cards (Setup, Recipe Setup, Timeline, RT Sync,
 // Line Configurations, Tools, Help, plus admin panels) stack vertically and

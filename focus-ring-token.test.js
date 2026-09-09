@@ -4,8 +4,10 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const test = require("node:test");
 
+const { readStylesheet } = require("./css-source");
+
 const FILES = ["styles.css", "desktop.css", "button-styling.css", "theme.css"];
-const css = Object.fromEntries(FILES.map(f => [f, fs.readFileSync(f, "utf8")]));
+const css = Object.fromEntries(FILES.map(f => [f, readStylesheet(f)]));
 
 // The keyboard focus ring used to be written out as a literal shorthand 65
 // times across three files, in two spellings that differed only by a space -

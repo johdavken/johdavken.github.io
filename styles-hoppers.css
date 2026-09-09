@@ -1,0 +1,1644 @@
+/* =======================================================================
+ *   Hopper rows
+ *   ======================================================================= */
+
+.hopperList{ display: grid; gap: 10px; }
+
+.hopperRow{
+  display: grid;
+  gap: calc(var(--gap) + 2px);
+  padding: max(4px, var(--row-pad));
+  border-radius: var(--radius-row);
+  background: var(--row-bg);
+  border: 1px solid var(--row-border);
+  align-items: center;
+  grid-template-columns: auto minmax(140px, 1fr) 88px 120px;
+}
+
+.hopperRow input{
+  padding:
+  max(4px, calc(var(--pad-input-y) - 2px))
+  max(6px, calc(var(--pad-input-x) - 4px));
+  font-size: var(--font-small);
+}
+
+@media (max-width: 520px){
+  .hopperRow{
+    grid-template-columns: auto minmax(120px, 1fr) 58px 55px;
+    gap: 6px;
+  }
+  .hopperRow .trackLabel{ display: none; }
+}
+
+/* Recipe Actions: Scan Recipe on desktop (Load Next Recipe/Print Recipe
+   live in .recipeUtilityTabs instead - see renderSplitsArea in app.js), or
+   Scan Recipe/Load Next on mobile's primary row. No border/background of
+   its own any more - the button carries its own chrome, so the row reads
+   as part of the Recipe section's normal rhythm rather than a boxed-off
+   footer widget. */
+.splitsBulkModeBar{
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.recipeActionIcon{
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* Secondary: Load Next Recipe. The app's ordinary secondary button - same
+   tokens as everywhere else - just with an icon and shared row height. */
+.splitsBulkModeBar button.secondary{
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: var(--control-height);
+  padding: var(--btn-pad-y) var(--btn-pad-x);
+  font-size: var(--font-small);
+  font-weight: 700;
+}
+/* Tertiary: Print Recipe. Quieter than Load Next - no border/fill of its
+   own until hovered, so it reads as the lowest-priority action here. */
+.splitsBulkModeBar button.recipeActionTertiary{
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 600;
+}
+.splitsBulkModeBar button.recipeActionTertiary:hover:not(:disabled){
+  border-color: var(--btn-secondary-border);
+  background: var(--btn-secondary-bg);
+  color: var(--text);
+}
+.splitsBulkBar{
+  position:sticky;
+  top:54px;
+  z-index:7;
+  display: grid;
+  grid-template-columns:minmax(180px,1fr) minmax(150px,.7fr) minmax(180px,auto);
+  gap: var(--gap);
+  align-items: end;
+  padding: 10px;
+  border: 1px solid var(--row-border);
+  border-radius: var(--radius-row);
+  background: var(--readonly-bg);
+}
+.splitsSavedRecipesPanel{
+  padding: 10px;
+  border: 1px solid var(--row-border);
+  border-radius: var(--radius-row);
+  background: var(--readonly-bg);
+}
+/* Summary's counterpart to the Edit panel: how many hoppers are tracked
+   and the one action that applies to them all. It sits above the grid in
+   the same slot .splitsBulkBar takes in Edit (it is appended before the
+   matrix and both default to order 0), and the two are never rendered
+   together - Summary and Edit are one axis. */
+.splitsTrackingBar{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--row-border);
+  border-radius: var(--radius-row);
+  background: var(--readonly-bg);
+}
+.splitsTrackingBar[hidden]{ display: none; }
+.splitsTrackingBar .splitsSelectionStatus{ margin: 0; }
+.splitsTrackingBar .bulkTextAction{
+  margin-left: auto;
+  width: auto;
+  min-height: 28px;
+  padding: 4px 9px;
+  border: 1.5px solid var(--btn-secondary-border);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--btn-text);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  box-shadow: none;
+}
+.splitsTrackingBar .bulkTextAction:hover:not(:disabled){
+  color: var(--title);
+  border-color: var(--title);
+  background: transparent;
+  text-decoration: none;
+}
+.splitsTrackingBar .bulkTextAction:disabled{ opacity: .48; }
+/* A small, stable reminder of the cell action sits under the matrix on every
+   Recipe view. It has no box or reserved control height, so it doesn't add
+   competing chrome to the working panel. */
+.recipeInteractionHint{
+  margin:0;
+  color:var(--muted);
+  font-size:calc(var(--font-tiny) * .75);
+  font-weight:750;
+  letter-spacing:.04em;
+  line-height:1.25;
+  text-align:center;
+}
+.recipeInteractionHintCommand{
+  color:var(--recipe-pill-accent);
+  font-weight:900;
+}
+/* Save Current / Load / Update / (rename, duplicate, favorite, delete) -
+   a single consolidated bar acting on whichever recipe is selected below,
+   instead of each row carrying its own Load/Update/overflow buttons. */
+.splitsSavedRecipesActions{ display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.splitsSavedRecipesActions .overflow-disabled summary{ opacity: .45; cursor: not-allowed; }
+/* Touch's own search field, sharing the panel's title row - desktop hides
+   it and searches nothing, since its list is short enough to scan. */
+.mobileSavedRecipesSearch{
+  flex: 1 1 220px;
+  display: flex;
+  align-items: center;
+}
+.mobileSavedRecipesSearch input{
+  width: 100%;
+  min-width: 0;
+  height: 36px;
+  padding: 6px 10px;
+  border: 1px solid var(--row-border-2);
+  border-radius: 10px;
+  background: var(--field-bg);
+  font-size: 12px;
+}
+/* Recipe Book has two interaction models sharing one panel: desktop
+   selects a row then acts from the bar above (#splitsLoadRecipe etc, tied
+   to selection); phones search and act per row instead (see
+   .mobileSavedRecipeRow), so each keeps only its own pieces visible.
+   Tablet stays on desktop's list - .mobileSavedRecipesList and its row
+   styling only exist below 700px (see that breakpoint), so anything wider
+   showing them would just be unstyled markup. Only ever display:none
+   below - never a forced display:block - so the status rows' own
+   [hidden] toggle (see setStatus in renderSplitsSavedRecipes) is never
+   fought by a higher-specificity rule. The phone-width override that
+   flips this back lives in the single shared max-width:700px mobile
+   media block further down, not a second one of its own here. */
+.splitsSavedRecipesPanel .mobileSavedRecipesSearch,
+.splitsSavedRecipesPanel #mobileSavedRecipesActions,
+.splitsSavedRecipesPanel #mobileSavedRecipesList,
+.splitsSavedRecipesPanel #mobileSavedRecipesStatus{ display: none; }
+
+
+/* Scan Recipe: a <details> popup styled like a real button (this base rule
+   is a shared fallback - both real contexts override it: the desktop
+   Recipe Actions row below, and the phone tab-row icon cluster's own
+   sizing, see #recipeHeaderActions in the <=700px block). Reuses
+   .statusScanShortcutPanel (the mobile status-bar shortcut's own dropdown)
+   for the panel itself, flipped to open upward here as a default; the
+   phone cluster flips it back downward since it sits near the panel top. */
+.splitsScanShortcut{ position: relative; }
+.splitsScanShortcut > summary{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  border-right: 1px solid var(--btn-secondary-border);
+  padding: 8px 13px;
+  border-radius: 0;
+  background: transparent;
+  color: var(--btn-text);
+  font-weight: 700;
+  font-size: var(--font-small);
+  cursor: pointer;
+  list-style: none;
+}
+.splitsScanShortcut > summary::-webkit-details-marker{ display: none; }
+.splitsScanShortcut > summary:hover{ background: color-mix(in srgb, var(--text) 6%, transparent); }
+.splitsScanShortcut > summary:focus-visible{ outline: var(--focus-outline); outline-offset: -2px; }
+.splitsScanShortcut .statusScanShortcutPanel{ left: 0; top: auto; bottom: calc(100% + 6px); }
+/* Primary: Scan Recipe, in the desktop Recipe Actions row specifically -
+   the same gradient button.primary uses everywhere else, so it reads as
+   "the" action here rather than a bespoke one-off treatment. Higher
+   specificity than the shared fallback above (2 classes vs 1), and never
+   in scope on mobile (modeBar/.splitsBulkModeBar is desktop-only - see
+   renderSplitsArea in app.js). */
+.splitsBulkModeBar .splitsScanShortcut > summary{
+  gap: 7px;
+  height: auto;
+  min-height: var(--control-height);
+  border: 1px solid var(--btn-border);
+  border-radius: var(--control-radius);
+  padding: var(--btn-pad-y) calc(var(--btn-pad-x) + 2px);
+  background: linear-gradient(180deg, var(--btn-primary-a), var(--btn-primary-b));
+  color: var(--text);
+  font-weight: 800;
+}
+.splitsBulkModeBar .splitsScanShortcut > summary:hover{
+  background: linear-gradient(180deg, var(--btn-primary-a), var(--btn-primary-b));
+  filter: brightness(1.08);
+}
+.splitsBulkModeBar .splitsScanShortcut > summary:focus-visible{
+  outline: var(--focus-outline);
+  outline-offset: 2px;
+}
+.splitsBulkSteps{grid-column:1/-1;display:flex;align-items:center;gap:18px;padding-bottom:8px;border-bottom:1px solid var(--row-border)}
+.splitsBulkSteps span{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:var(--font-small)}
+.splitsBulkSteps b{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:999px;background:var(--btn-primary-a);color:var(--title);font-size:var(--font-tiny)}
+.splitsBulkField{ margin: 0; }
+.splitsBulkField > span:first-child{
+  display: block;
+  margin-bottom: 6px;
+}
+.splitsBulkPctInput{
+  display: grid;
+  grid-template-columns: minmax(90px, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+}
+.splitsBulkPctInput > span{
+  color: var(--muted);
+  font-size: var(--font-small);
+}
+.splitsBulkApply{display:grid;align-content:end;gap:6px}
+.splitsBulkApply button{width:100%}
+.splitsBulkActions{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding-top:4px;border-top:1px solid var(--row-border)}
+.splitsBulkActions .bulkTextAction,
+.weightsBulkActions .bulkTextAction,
+/* Empty cells and Rearrange are direct children of the tablet Edit row,
+   not members of .splitsBulkActions. Keep them in the exact same action
+   family at every non-phone layout rather than depending on a viewport
+   refinement that can be superseded by the active shell. */
+.splitsEditRowSecondary > .bulkTextAction{width:auto;min-height:28px;padding:4px 9px;border:1.5px solid var(--btn-secondary-border);border-radius:2px;background:transparent;color:var(--btn-text);font-weight:700;text-transform:uppercase;letter-spacing:.04em;box-shadow:none}
+.splitsBulkActions .bulkTextAction:hover,
+.weightsBulkActions .bulkTextAction:hover,
+.splitsEditRowSecondary > .bulkTextAction:hover:not(:disabled){color:var(--title);border-color:var(--title);background:transparent;text-decoration:none}
+.splitsEditRowSecondary > .bulkTextAction:disabled{opacity:.48}
+.splitsBulkActions .danger{margin-left:auto}
+.splitsBulkNote{grid-column:1/-1;color:var(--muted)}
+.splitsSelectionStatus{
+  min-height: 1.2em;
+}
+/* Screen-reader-only, every viewport - not just mobile, where this used to
+   live before it moved here. It was defined inside the max-width:700px
+   block, so #splitSelectionStatus ("No hoppers selected") and two search
+   labels ("Search saved recipes"/"Search receiver weight profiles") that
+   also carry this class rendered fully visible on desktop and tablet
+   instead of being announced-only, everywhere the class name promised. */
+.srOnly{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+.recipeEditHistory{
+  display:inline-flex;
+  align-items:center;
+  gap:2px;
+  flex:0 0 auto;
+}
+.recipeHistoryAction{
+  display:grid;
+  place-items:center;
+  width:26px;
+  min-width:26px;
+  min-height:26px;
+  padding:0;
+  border:0;
+  border-radius:50%;
+  background:transparent;
+  color:var(--muted);
+  box-shadow:none;
+}
+.recipeHistoryAction svg{
+  width:18px;
+  height:18px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:2;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.recipeHistoryAction:hover:not(:disabled){
+  background:color-mix(in srgb,var(--title) 10%,transparent);
+  color:var(--title);
+  filter:none;
+}
+.recipeHistoryAction:disabled{ opacity:.32; }
+.recipeEditActionIcon{
+  display:none;
+  width:18px;
+  height:18px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.8;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+/* Copy / Paste hoppers are phone-only for now (may come to desktop later).
+   Hidden by default at (2,1,0); the compact icon-rail block below re-shows
+   them inside @media (max-width:700px) with a much higher-specificity
+   :is() rule, so nothing here needs !important. */
+#splitsArea #splitsBulkBar .recipeCellClipboardAction{ display:none; }
+.splitsSelectionStatus.ok{ color: var(--ok); }
+.splitsSelectionStatus.warn{ color: var(--warn); }
+/* Saved recipes / Bulk edit / Rearrange: a second, visually subordinate
+   tab strip beneath the grid, echoing .recipePageTabs above it without
+   competing with it - smaller, quieter, and flush to the panel's own left
+   edge rather than centered under .splitsMatrixFrame (the table's width,
+   and therefore its centered position, changes with layer count, while
+   the divider spans the panel at every layer count - anchoring to the
+   divider is what keeps this strip in one fixed spot across a 1/3/5-layer
+   line). Exactly one of the three buttons' panels is ever open; the click
+   handlers that already enforce that mutual exclusion (see
+   setSavedRecipesOpen/setBulkMode/the rearrange handlers in app.js) are
+   unchanged here - only how the choice between them looks is new. */
+.recipeUtilityTabs{
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  margin: 10px 0 0;
+  /* Left inset matches #splitsArea's own row gap (see the #splitsArea gap
+     rule below) instead of .recipePageTabs' 2px, so the strip's left edge
+     sits closer to the open panel's own left edge (.splitsBulkBar/
+     .splitsSavedRecipesPanel, both flush at 0) rather than crowding the
+     divider's own start. */
+  padding: 0 2px 0 6px;
+  border-bottom: 1px solid var(--row-border);
+}
+.recipeUtilityTab{
+  position: relative;
+  min-height: 26px;
+  padding: 5px 12px 4px;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  /* Rounded top corners only - a tab shape, matching .recipePageTab. */
+  border-radius: var(--control-radius) var(--control-radius) 0 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--font-tiny);
+  font-weight: 700;
+  letter-spacing: .01em;
+  line-height: 1.2;
+  cursor: pointer;
+}
+.recipeUtilityTab:hover{
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+  color: var(--title);
+}
+.recipeUtilityTab.active{
+  /* Grows out of the divider exactly like .recipePageTab.active does,
+     just in the panel's own readonly-bg tone (matching .splitsBulkBar/
+     .splitsSavedRecipesPanel below) instead of the main content colour -
+     that shared colour, plus the box-shadow seam, is what makes whichever
+     panel is open read as this tab's own surface. */
+  z-index: 1;
+  border-color: var(--row-border);
+  background: var(--readonly-bg);
+  color: var(--title);
+  font-weight: 800;
+  box-shadow: 0 1px 0 0 var(--readonly-bg);
+}
+.recipeUtilityTab:focus-visible{ outline: var(--focus-outline); outline-offset: 2px; }
+.recipeUtilityTab:disabled{ opacity: .45; cursor: not-allowed; }
+/* Load Next Recipe / Print Recipe carry both .recipeUtilityTab (the same
+   shape/color/hover as Saved recipes/Bulk edit/Rearrange - they sit in the
+   same .recipeUtilityTabs strip, on the same divider) and this modifier,
+   which adds only the icon+label flex layout .recipeUtilityTab doesn't
+   otherwise need (its three other tabs are plain text). They still run an
+   action immediately rather than opening a panel, so they carry no
+   role="tab"/aria-selected/aria-controls - see renderSplitsArea in app.js. */
+.recipeActionTab{
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+/* The active tab's panel - .splitsBulkBar or .splitsSavedRecipesPanel,
+   exactly one visible at a time (the other stays .hide). Pulled up to sit
+   flush against .recipeUtilityTabs' own divider - closing #splitsArea's
+   6px grid row-gap the same way .recipeUtilityTab.active's box-shadow
+   closes the divider itself - so the open panel reads as a continuation
+   of its tab rather than a separate floating card. */
+.splitsBulkBar,
+.splitsSavedRecipesPanel{ margin-top: -7px; }
+#splitsArea{gap:6px}
+
+.splitsMobileLayerRail{ display: none; }
+
+.splitsMatrixScroll{
+  overflow-x:auto;
+}
+.splitsMatrixFrame{
+  width:max-content;
+  margin-inline:auto;
+  overflow:hidden;
+  border:1px solid var(--row-border);
+  border-radius:var(--radius-row);
+  background:transparent;
+}
+.splitsMatrix{
+  width:max-content;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.splitsMatrix th,
+.splitsMatrix td{
+  padding: 8px;
+  border-right:1px solid color-mix(in srgb,var(--row-border) 64%,transparent);
+  border-bottom: 1px solid var(--row-border-2);
+}
+.splitsMatrix tr:last-child > *{ border-bottom: 0; }
+.splitsMatrix tr > *:last-child{ border-right: 0; }
+#splitsArea:not(.bulk-editing) .splitsMatrix tr > :first-child{display:none}
+.splitsMatrix thead th{
+  min-width:180px;
+  width:180px;
+  max-width:180px;
+  padding-top:6px;
+  padding-bottom:6px;
+  vertical-align: top;
+  background:color-mix(in srgb,var(--panelOpen) 72%,transparent);
+}
+.splitsMatrix th:first-child{
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  min-width: 64px;
+  width: 64px;
+  background: var(--panelOpen);
+  text-align: center;
+}
+.splitLayerMain{
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:58px;
+}
+.splitLayerTitle{
+  position:absolute;
+  top:0;
+  left:50%;
+  width:64px;
+  height:58px;
+  min-height:58px;
+  padding:0;
+  transform:translateX(-50%);
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  color:color-mix(in srgb,var(--focus-border) 62%,var(--muted));
+  font-family:"Arial Narrow","Roboto Condensed",Impact,sans-serif;
+  font-size:64px;
+  line-height:.9;
+  font-weight: 950;
+  text-align: center;
+  opacity:.14;
+  pointer-events:none;
+  cursor: default;
+}
+.splitLayerPct{
+  position:relative;
+  z-index:1;
+  display:flex;
+  align-items: center;
+  gap:1px;
+  margin-top:25px;
+}
+.splitLayerPct input{
+  width:36px;
+  min-width:36px;
+  padding:4px 3px;
+  border-color:transparent;
+  background:transparent;
+  box-shadow:none;
+  color:var(--muted);
+  font-size:15px;
+  font-weight:900;
+  font-variant-numeric:tabular-nums;
+  text-align:right;
+}
+.splitLayerPct input:hover,.splitLayerPct input:focus{border-color:var(--border2);background:var(--field-bg)}
+.splitLayerPct span,
+.splitLayerMeta{
+  color: var(--muted);
+  font-size: var(--font-small);
+}
+.splitLayerMeta{ margin-top: 5px; text-align: center; }
+/* Always rendered - fixing a percentage must never move the grid. Muted at
+   rest (matches a complete Current total and any Next total alike, since an
+   unfinished plan is expected rather than a fault); only Current's own
+   invalid case switches to the warn colour. The verbose "why" lives in the
+   notification bell, not here. */
+.splitColumnTotal{
+  margin-top: 5px;
+  min-height: 1.2em;
+  color: var(--muted);
+  font-size: var(--font-tiny);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.splitColumnTotal.warn{ color: var(--warn); }
+.splitCopyBtn{
+  width:auto;
+  min-height:0;
+  margin:6px auto 0;
+  padding:4px 10px;
+  border:1px solid var(--btn-secondary-border);
+  border-radius:999px;
+  background:var(--btn-secondary-bg);
+  color:var(--title);
+  font-size:var(--font-tiny);
+  opacity:1;
+  box-shadow:none;
+}
+.splitCopyBtn:hover,.splitCopyBtn:focus-visible{
+  border-color:var(--focus-border);
+  background:linear-gradient(180deg, var(--btn-primary-a), var(--btn-primary-b));
+  color:var(--title);
+  opacity:1;
+}
+/* Per-layer Copy / Paste / Cancel (tablet + desktop). One button, three
+   states, set by syncLayerCopyButtons: every layer reads COPY at rest; arm
+   one and it reads CANCEL while every other layer reads PASTE. Uppercased
+   here rather than in the label text so the accessible name stays ordinary
+   sentence case. */
+.splitCopyBtn[data-layer-copy-state]{
+  text-transform:uppercase;
+  letter-spacing:.05em;
+}
+/* PASTE is the one actionable state while a layer is armed, so it is the
+   only one that takes the accent. CANCEL stays quiet - it is the way out,
+   not a third thing to do - and the armed layer is identified by the ring
+   on its own header instead (.layerCopySource below). */
+.splitCopyBtn[data-layer-copy-state="paste"]{
+  border-color:var(--focus-border);
+  color:var(--focus-border);
+}
+.splitCopyBtn[data-layer-copy-state="cancel"]{
+  color:var(--muted);
+}
+.splitsMatrix th.splitLayerHeader.layerCopySource{
+  /* inset, so arming a copy never changes the header's box and shifts the
+     grid under the operator. */
+  box-shadow:inset 0 0 0 1px var(--focus-border);
+}
+.splitRowHeader{
+  color: var(--muted);
+  font-weight: 950;
+}
+.splitRowCorner{
+  color: var(--muted);
+  font-size:var(--font-tiny);
+  line-height:1.15;
+  white-space:normal;
+}
+.splitRowSelect{
+  width: 100%;
+  padding: 7px 8px;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  cursor: default;
+}
+.splitMatrixCell{
+  min-width:180px;
+  width:180px;
+  max-width:180px;
+  background: transparent;
+  transition: background .12s ease, box-shadow .12s ease;
+}
+/* Shading alternates by column (layer), not by row - td:nth-child stays
+   aligned to the same layer in every row since each row has the same fixed
+   column order (row-header th, then one td per layer in recipeLayers()
+   order), regardless of which columns are hidden/visible. */
+.splitsMatrix tbody td.splitMatrixCell:nth-child(even){background:color-mix(in srgb,var(--row-bg-2) 55%,transparent)}
+/* Tracking keeps the cell surface unchanged; the physical hopper badge
+   itself carries the status instead (see .splitCellHopperName below). That
+   puts the status beside the hopper it belongs to without consuming a cell
+   corner or competing with Edit's own top-right label. */
+.splitsMatrix tbody .splitMatrixCell.tracked:not(.selected){
+  background:transparent;
+}
+/* The badge picks up a brighter --ok accent - mixed over transparent (the
+   app's tinted-badge idiom, see .notesCloudBadge) so it reads correctly on
+   every theme and surface. Text goes fully --ok rather than staying
+   --muted, so the highlight reads as clearly "on". Summary view only, so it
+   never competes with Edit's own top-right status label; Current Recipe
+   only in practice, since Next's hoppers never carry track state.
+   Excluded on the compact phone grid ([data-recipe-cells="static"]), where
+   the whole cell now carries a soft tracking tint instead and the badge
+   stays styled exactly like an untracked one - see the .splitCellInner
+   tint rule in the max-width:700px block. */
+#splitsArea[data-recipe-view="summary"]:not([data-recipe-cells="static"]) .splitsMatrix tbody .splitMatrixCell.tracked .splitCellHopperName{
+  background:color-mix(in srgb,var(--ok) 20%,transparent);
+  color:var(--ok);
+}
+.splitsMatrix td.splitMatrixCell{padding:4px 6px}
+.splitCellHeader{
+  display:flex;
+  align-items:center;
+  gap:5px;
+  min-height:15px;
+  margin-bottom:1px;
+  color:var(--muted);
+  font-size:var(--font-tiny);
+  font-weight:850;
+  line-height:1;
+}
+/* Small boxed badge instead of plain muted text - applies on both desktop
+   and mobile (shipped on mobile first, then ported here unchanged). */
+.splitCellHopperName{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 22px;
+  padding: 0 5px;
+  border-radius: 6px;
+  background: var(--field-bg);
+  color: var(--muted);
+  font-weight: 900;
+  font-size: 12.5px;
+  letter-spacing:.02em;
+}
+.splitMatrixCell:not(.has-resin) .splitCellHopperName{opacity:.72}
+/* Recipe cross-resin overlay ------------------------------------------- *
+ * The overlay toggle - two overlapping rounded cards, not an eye - lives in
+ * the row-gutter corner (replaces "Select row" on the pointer grid); each
+ * cell carries a small right-aligned "<current|next> / <code>" block - the
+ * other page's resin for that position - revealed only while
+ * data-cross-overlay is on. Sized to sit in the empty top-right of the cell
+ * header, within the hopper badge's height, so turning it on does not move
+ * the grid. */
+.splitCrossOverlayToggle{
+  display:grid;
+  place-items:center;
+  width:26px;
+  height:26px;
+  margin:0 auto;
+  padding:0;
+  border:0;
+  border-radius:6px;
+  background:transparent;
+  color:var(--muted);
+  box-shadow:none;
+}
+.splitCrossOverlayToggle:hover,
+.splitCrossOverlayToggle:focus-visible{background:var(--row-bg-2);color:var(--title)}
+.splitCrossOverlayToggle.on{color:var(--focus-border);background:var(--focus-ring)}
+.splitCrossOverlayToggle svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.splitCellCrossResin{
+  display:none;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:1px;
+  margin-left:auto;
+  max-width:108px;
+  min-width:0;
+  line-height:1;
+  text-align:right;
+  pointer-events:none;
+}
+#splitsArea[data-cross-overlay="on"] .splitCellCrossResin{display:flex}
+.splitCellCrossResin em{
+  font-style:normal;
+  font-size:7.5px;
+  font-weight:800;
+  letter-spacing:.04em;
+  color:var(--muted);
+  opacity:.7;
+}
+.splitCellCrossResin b{
+  max-width:100%;
+  overflow:hidden;
+  color:var(--muted);
+  font-size:9.5px;
+  font-weight:800;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+}
+.splitClearButton{
+  display:grid;
+  place-items:center;
+  width:17px;
+  height:17px;
+  min-height:17px;
+  margin-left:auto;
+  padding:0;
+  border:0;
+  border-radius:4px;
+  background:transparent;
+  color:var(--muted);
+  font:800 14px/1 system-ui,sans-serif;
+  opacity:.48;
+  box-shadow:none;
+}
+.splitClearButton:hover,.splitClearButton:focus-visible{background:var(--btn-danger-bg);color:var(--bad);opacity:1}
+.splitClearButton[hidden]{display:none}
+.splitMatrixCell.selected{
+  background: var(--btn-primary-a);
+  box-shadow: inset 0 0 0 2px var(--focus-border);
+}
+.splitCellEditor{
+  display:grid;
+  grid-template-columns:minmax(78px,1fr) auto;
+  gap:7px;
+  align-items:center;
+}
+.splitCellTop{
+  display:grid;
+  grid-template-columns: minmax(0,1fr);
+  gap: 5px;
+  align-items: center;
+}
+.splitCellSelector{
+  display: none;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+}
+.bulk-editing .splitCellTop{
+  grid-template-columns: 18px minmax(0,1fr);
+}
+.bulk-editing .splitCellSelector{ display: block; }
+.bulk-editing .splitLayerTitle,
+.bulk-editing .splitRowSelect{
+  border-color:transparent;
+  background:transparent;
+  cursor: pointer;
+}
+.bulk-editing .splitLayerTitle{
+  pointer-events:auto;
+  cursor:pointer;
+  opacity:.24;
+}
+.bulk-editing .splitLayerTitle:hover,
+.bulk-editing .splitLayerTitle.selected,
+.bulk-editing .splitLayerTitle.partiallySelected{
+  border-color:transparent;
+  background:transparent;
+  color:var(--title);
+}
+.bulk-editing .splitLayerTitle.selected{opacity:.48}
+.bulk-editing .splitLayerTitle.partiallySelected{opacity:.34}
+.bulk-editing .splitRowSelect{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+}
+.bulk-editing .splitRowSelect::before{
+  content:"";
+  display:grid;
+  place-items:center;
+  width:14px;
+  height:14px;
+  flex:0 0 14px;
+  border:1px solid var(--border-strong);
+  border-radius:3px;
+  background:var(--input-bg);
+  color:var(--btn-text);
+  font-family:system-ui,sans-serif;
+  font-size:11px;
+  font-weight:900;
+  line-height:1;
+}
+.bulk-editing .splitRowSelect.partiallySelected::before{
+  content:"−";
+  border-color:var(--focus-border);
+  background:var(--focus-ring);
+}
+.bulk-editing .splitRowSelect.selected::before{
+  content:"✓";
+  border-color:var(--focus-border);
+  background:var(--focus-border);
+  color:#fff;
+}
+.bulk-editing .splitRowSelect:hover{background:var(--row-bg-2);color:var(--title)}
+.bulk-editing .splitRowSelect.selected{
+  border-color: var(--focus-border);
+  background: linear-gradient(180deg, var(--btn-primary-a), var(--btn-primary-b));
+  color: var(--title);
+}
+.bulk-editing .splitRowSelect.partiallySelected{
+  border-color: color-mix(in srgb, var(--focus-border) 55%, var(--border));
+  background: color-mix(in srgb, var(--focus-ring) 55%, transparent);
+}
+.bulk-editing .splitCopyBtn,.bulk-editing .splitTrackControl,.bulk-editing .splitClearButton{display:none}
+
+/* ---- Recipe pages: Current / Next -----------------------------------------
+   Two pages of one Recipe workspace, as a compact pair of page selectors
+   sitting on the section's top divider - not app navigation, and not tall
+   tab panels.
+
+   The strip is anchored to the divider rather than to the grid: the grid's
+   height and width change with layer count (1/3/5) and with how much of the
+   recipe is filled in, and the tabs must not move when it does. align-self
+   keeps the strip at its own natural height inside .blockBody's grid, so a
+   short 1-layer recipe cannot stretch it either.
+
+   Both are real buttons at all times - the inactive one is quieter, never
+   plain text.
+
+   .blockBody is a grid, and a grid's default align-content:stretch shares
+   any spare panel height out equally between its rows. In the Recipe panel
+   that inflated the tab strip to the height of the recipe grid beside it -
+   a 38px control rendering 145px tall, and moving whenever the layer count
+   changed the grid's height. Packing the rows to the top instead sizes both
+   to their own content: the tabs stay on the top divider, the grid and its
+   action bar keep their natural height, and the spare space falls below the
+   section instead of being pushed into its controls. */
+#splitsBlock .blockBody{ align-content: start; }
+/* Same fix as #splitsBlock above: without this, .blockBody's default
+   align-content:stretch shares this panel's full available height equally
+   between its 3 rows (inputs / summary / results), leaving large gaps
+   between a few short controls instead of sizing to their own content.
+   width/max-width cap the same three rows (inputs, totals, by-material
+   list) to one shared right edge on very wide monitors - desktop's <main>
+   is intentionally max-width:none (desktop.css) so the sidebar+content
+   layout can use the full viewport, but that let this panel's own content
+   stretch edge to edge. No margin:auto, so it stays left-aligned at the
+   panel's existing left edge rather than centering; width:100% (not a
+   fixed width) is what keeps this a no-op on narrower desktop/tablet
+   widths, where the track is already under 800px anyway. */
+#productionSummaryBlock .blockBody{ align-content: start; width: 100%; max-width: 800px; }
+/* margin's -1px is exactly the divider's own thickness, so the active tab's
+   matching box-shadow seam (below) can sit precisely on top of it - the
+   standard document-tab "grows out of the divider" technique. */
+/* Which recipe (Current/Next) on the left, how it is presented
+   (Summary/Edit) on the right. The divider under the page tabs runs the
+   full row width so the grid below still reads as continuing from the
+   active tab. */
+.recipeHeaderRow{
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.recipeHeaderRow > .recipePageTabs{ align-self: end; flex: 0 0 auto; }
+.recipeHeaderControls{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 5px;
+  flex: 0 0 auto;
+}
+.recipeViewToggle{
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  flex: 0 0 auto;
+}
+/* Recipe's and Hopper Weights' own Summary/Edit controls each collapse to
+   one stateful Done/Edit button on every device now, not just touch - both
+   click handlers (hookRecipeViewToggle/setDesktopWeightView's toggle in
+   app.js) flip between edit/summary regardless of which button was
+   clicked, so hiding Summary here is safe on both.
+   #recipeHeaderControls-prefixed so this outranks the existing (0,2,1)
+   ".recipeHeaderControls > .weightsHeaderViewToggle button{display:...}"
+   base rule below regardless of source order - a bare class selector here
+   would tie it and lose to source order. */
+#recipeViewToggle > span,
+#recipeViewToggle [data-recipe-view="summary"],
+#recipeHeaderControls .desktopWeightsViewToggle > span,
+#recipeHeaderControls .desktopWeightsViewToggle [data-weight-view="summary"]{ display: none; }
+.recipeViewToggle > span{
+  color: var(--muted);
+  font-size: var(--font-tiny);
+  font-weight: 750;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.recipeViewToggle button{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  font-size: var(--font-small);
+  line-height: 1.2;
+}
+.recipeViewToggle button.active{
+  font-weight: 850;
+}
+.recipeViewToggle button:focus-visible{ outline: var(--focus-outline); outline-offset: 2px; }
+/* Summary is CSS-hidden everywhere (see #recipeViewToggle > span above), so
+   this Edit/Done control is always the only visible thing in its header
+   row - starkest on Receiver Hopper Weights, which has no sibling action
+   at all. It used to inherit the app's plain button.secondary/button.primary
+   look, which reads as a stray unstyled rectangle with nothing else nearby
+   to relate it to. This gives it its own accent-filled pill instead - one
+   consistent shape for both Edit and Done (only the label changes), scoped
+   to this one control so button.secondary/button.primary stay untouched
+   everywhere else. #recipeHeaderControls-prefixed so it outranks
+   button.primary.actionRail below regardless of source order, the same
+   reasoning as the #recipeViewToggle > span rule above. See
+   previews/edit-toggle-button-alternatives.html (mockup #1) for the
+   design exploration this came from. */
+#recipeHeaderControls .recipeViewToggle button[data-recipe-view="edit"],
+#recipeHeaderControls .recipeViewToggle button[data-weight-view="edit"]{
+  gap: 6px;
+  padding: 6px 14px 6px 11px;
+  /* A solid var(--recipe-pill-accent) fill + white text read fine on some
+     themes but far too saturated/bright on others (worst on dark themes,
+     where a full-strength accent fill glows against the dark surface) -
+     Rose Pine Light was the one theme this always looked right on, purely
+     because its own accent happens to sit at a similar strength to this
+     formula already. Tinted-surface fill + normal foreground text is the
+     theme-agnostic version of that same look: quiet everywhere instead of
+     accidentally-quiet on one theme. A matching ~45%-strength border was
+     tried alongside the tint but didn't sit cleanly on this fully round
+     (border-radius:999px) pill - a 1px solid border doesn't trace a tight
+     radius as cleanly as it does the toolbar's own var(--control-radius)
+     corners, so it's dropped here; the tint alone still reads as a
+     distinct, quiet fill without it. */
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--recipe-pill-accent) 28%, var(--panel2));
+  color: var(--text);
+  font-weight: 850;
+  letter-spacing: .03em;
+  box-shadow: none;
+}
+#recipeHeaderControls .recipeViewToggle button[data-recipe-view="edit"]::before,
+#recipeHeaderControls .recipeViewToggle button[data-weight-view="edit"]::before{
+  content: "";
+  width: 13px;
+  height: 13px;
+  flex: 0 0 auto;
+  background-color: currentColor;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 20h9'/%3E%3Cpath d='M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 20h9'/%3E%3Cpath d='M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z'/%3E%3C/svg%3E");
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+#recipeHeaderControls .recipeViewToggle button[data-recipe-view="edit"]:hover:not(:disabled),
+#recipeHeaderControls .recipeViewToggle button[data-weight-view="edit"]:hover:not(:disabled){
+  filter: brightness(1.08);
+}
+/* Recipe's Edit/Done pill, Load Next-or-Current, and Print used to be two
+   unrelated visual languages sitting side by side (one accent pill, one
+   pair of plain outlined .secondary buttons) with a hairline divider
+   between them. This wraps both groups (unchanged - same ids/classes, same
+   JS append/hide/disable logic) in #recipeHeaderActionPill so they read as
+   one segmented group, matching the edit toolbar pill's own pattern
+   (recipe-edit-toolbar-pill.test.js): individually rounded segments
+   separated by a real gap, not a seamless clip with a border divider. That
+   divider approach (tried here first, then on the toolbar) needed a color
+   tuned for contrast against every theme's fill and every disabled state's
+   opacity, and still read as too faint in some of them; a gap is always
+   visible since it's just page background showing through.
+   Quick reference for future edits to this group:
+   - To add/remove a segment: nothing here needs to change. Every segment
+     keeps painting its OWN copy of the identical tinted-surface fill (this
+     is deliberate - a shared background looks seamless across horizontally
+     adjacent segments no matter which ones are hidden or disabled, so
+     segments never need to coordinate a shared background). Two earlier
+     fill treatments were tried and dropped: a vertical gradient read as a
+     glossy button-skin effect that didn't survive contact with every
+     theme's palette, and a flat 100%-strength var(--recipe-pill-accent)
+     fill (color:#fff) was better but still glowed far too bright on dark
+     themes, with Rose Pine Light the one theme it happened to look right
+     on. color-mix(var(--recipe-pill-accent) 28%, var(--panel2)) + var(--text)
+     (not white) is quiet on every theme by construction, not by
+     coincidence - --recipe-pill-accent/--recipe-pill-danger (styles.css
+     :root, retuned per-theme in theme.css/gruvbox blocks) still do the
+     per-theme work underneath it. A matching tinted border was tried
+     alongside the fill but didn't sit cleanly on the fully round
+     (border-radius:999px) Edit/Done pill it shares a look with - dropped
+     everywhere here too rather than mismatch pill vs. segment borders.
+   - Each segment carries its own border-radius (var(--control-radius), the
+     app's standard button corner) now that they're not touching edge to
+     edge - see .recipeViewToggle/.recipeHeaderAction below.
+   - The #recipeHeaderActionPill.recipeHeaderActionPill (id+class) prefix on
+     every override here is deliberate, matching this file's established
+     "guarantee via specificity, not source order" convention (see the
+     #recipeViewToggle > span comment above) - it outranks the Edit pill's
+     own (1,2,1)-specificity rule and .secondary's, so it doesn't matter
+     which is declared first.
+   - Mobile (<=700px) must stay pixel-identical to the solo Edit pill - see
+     the bare #recipeHeaderActionPill rule just below, and everything
+     decorative (rounding, fill, gap, inset focus ring) is scoped inside
+     min-width:701px. Do not move any of that outside the media query.
+   - A visually-empty .recipeHeaderActions (no planned Next AND Print
+     force-hidden by .rearrangeDesktopOnly, tablet-only) no longer needs a
+     special-case guard: the old divider was a border+padding that still
+     painted even when empty, but an empty group here has no border/padding
+     of its own left to paint - it just collapses to nothing, leaving at
+     most the outer gap's few px of harmless empty space. */
+#recipeHeaderActionPill{
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+}
+@media (min-width: 701px){
+  #recipeHeaderActionPill.recipeHeaderActionPill{
+    /* A small real gap between segments instead of a seamless clipped pill
+       - see the file comment above #recipeHeaderActionPill for why
+       (recipe-edit-toolbar-pill.test.js went through the same change first). */
+    gap: 2px;
+  }
+  /* align-items:stretch on the wrapper only equalizes .recipeViewToggle's
+     and .recipeHeaderActions' own box heights - each group still centers
+     its button(s) inside that box by default (their own align-items:center),
+     so the shorter segment's painted background stopped short of the taller
+     one's, leaving a visible gap top/bottom and a jagged pill outline.
+     Stretching here too makes every segment's button fill the full row
+     height, so they all paint edge-to-edge and the outline stays clean
+     regardless of which segment's own content happens to be tallest. */
+  #recipeHeaderActionPill.recipeHeaderActionPill .recipeViewToggle,
+  #recipeHeaderActionPill.recipeHeaderActionPill .recipeHeaderActions{
+    align-items: stretch;
+  }
+  /* Rounded per-segment now that there's a real gap between segments -
+     var(--control-radius), the app's standard button corner, matching the
+     edit toolbar pill's own segments. */
+  #recipeHeaderActionPill.recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"],
+  #recipeHeaderActionPill.recipeHeaderActionPill .recipeViewToggle button[data-weight-view="edit"],
+  #recipeHeaderActionPill.recipeHeaderActionPill .recipeHeaderAction{
+    border-radius: var(--control-radius);
+  }
+  #recipeHeaderActionPill.recipeHeaderActionPill .recipeHeaderAction{
+    /* Tinted-surface fill, not a solid accent fill - see the matching
+       comment on the Edit/Done pill above for why. A matching tinted border
+       was tried and dropped (see that same comment). */
+    border: 0;
+    background: color-mix(in srgb, var(--recipe-pill-accent) 28%, var(--panel2));
+    color: var(--text);
+    text-transform: none;
+    letter-spacing: normal;
+  }
+  #recipeHeaderActionPill.recipeHeaderActionPill .recipeHeaderAction:hover:not(:disabled){
+    color: var(--text);
+    filter: brightness(1.08);
+  }
+  #recipeHeaderActionPill.recipeHeaderActionPill .recipeHeaderAction:disabled{
+    opacity: .5;
+  }
+  /* No divider left to maintain - Load Next-or-Current and Print separate
+     with the same plain gap as everything else on this row, not the old
+     border-left+padding-left hairline. */
+  #recipeHeaderActionPill.recipeHeaderActionPill .recipeHeaderActions{
+    gap: 2px;
+    padding-left: 0;
+    border-left: 0;
+  }
+  #recipeHeaderActionPill.recipeHeaderActionPill button:focus-visible{
+    outline-offset: -2px;
+  }
+}
+.recipeHeaderActions{
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-left: 10px;
+  border-left: 1px solid var(--row-border-2);
+}
+.recipeHeaderAction{
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 28px;
+  font-size: var(--font-small);
+  line-height: 1.2;
+}
+
+/* Mobile-only icon guide in the Recipe panel's summary bar, opposite the
+   RECIPE title. Hidden entirely at desktop widths (where the tabs still
+   carry text labels); the <=700px block flips it on. Follows the
+   .recipeScanInfo <details> popover pattern, opening downward. */
+.recipeInfoLegend{ display: none; position: relative; flex: 0 0 auto; margin-left: auto; }
+.recipeInfoLegend > summary{
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  list-style: none;
+}
+.recipeInfoLegend > summary::-webkit-details-marker{ display: none; }
+.recipeInfoLegend > summary svg{
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.recipeInfoLegend > summary:hover,
+.recipeInfoLegend[open] > summary,
+.recipeInfoLegend > summary:focus-visible{ color: var(--title); background: var(--field-bg); }
+.recipeInfoLegend > summary:focus-visible{ outline: var(--focus-outline); outline-offset: 1px; }
+.recipeInfoLegendPanel{
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 60;
+  width: min(320px, calc(100vw - 28px));
+  max-height: min(62vh, 400px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 12px 14px;
+  border: 1px solid var(--border2);
+  border-radius: var(--control-radius);
+  background: var(--panelOpen);
+  box-shadow: var(--shadow2);
+  text-align: left;
+}
+.recipeInfoLegendHeading{
+  margin: 0 0 9px;
+  color: var(--title);
+  font-size: var(--font-small);
+  font-weight: 850;
+  letter-spacing: .02em;
+}
+.recipeInfoLegendList{ margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+.recipeInfoLegendList li{ display: grid; grid-template-columns: 22px 1fr; gap: 11px; align-items: start; }
+.recipeInfoLegendList li.recipeInfoLegendSectionHeading{
+  display:block;
+  margin:4px 0 -3px;
+  color:var(--title);
+  font-size:10px;
+  font-weight:850;
+  letter-spacing:.08em;
+  line-height:1.2;
+  text-transform:uppercase;
+}
+.recipeInfoLegendList li.recipeInfoLegendSectionHeading:first-child{ margin-top:0; }
+.recipeInfoLegendIcon{ display: grid; place-items: center; width: 22px; height: 22px; color: var(--title); }
+.recipeInfoLegendIcon.recipeInfoLegendDanger{ color:var(--bad); }
+.recipeInfoLegendIcon svg{
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.recipeInfoLegendList li > span:last-child{
+  color: var(--muted);
+  font-size: var(--font-small);
+  line-height: 1.35;
+}
+.recipeInfoLegendList strong{ display: block; color: var(--text); font-weight: 800; }
+
+/* Starter guide in the Timeline panel's summary bar, opposite the TIMELINE
+   title. Same <details> popover pattern as the Recipe icon guide above,
+   but shown at every width - this is conceptual onboarding, not a
+   phone-only icon crib - and its body is three short prose sections
+   (Timeline / Hookups / Options) rather than an icon legend. */
+.timelineInfoGuide{ position: relative; flex: 0 0 auto; margin-left: auto; }
+.timelineInfoGuide > summary{
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  list-style: none;
+}
+.timelineInfoGuide > summary::-webkit-details-marker{ display: none; }
+.timelineInfoGuide > summary svg{
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.timelineInfoGuide > summary:hover,
+.timelineInfoGuide[open] > summary,
+.timelineInfoGuide > summary:focus-visible{ color: var(--title); background: var(--field-bg); }
+.timelineInfoGuide > summary:focus-visible{ outline: var(--focus-outline); outline-offset: 1px; }
+.timelineInfoGuidePanel{
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 60;
+  width: min(340px, calc(100vw - 28px));
+  max-height: min(66vh, 440px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 12px 14px;
+  border: 1px solid var(--border2);
+  border-radius: var(--control-radius);
+  background: var(--panelOpen);
+  box-shadow: var(--shadow2);
+  text-align: left;
+}
+.timelineInfoGuideHeading{
+  margin: 0 0 9px;
+  color: var(--title);
+  font-size: var(--font-small);
+  font-weight: 850;
+  letter-spacing: .02em;
+}
+.timelineInfoGuideSection{ margin-top: 11px; }
+.timelineInfoGuideSection:first-of-type{ margin-top: 0; }
+.timelineInfoGuideSection strong{
+  display: block;
+  margin-bottom: 3px;
+  color: var(--text);
+  font-weight: 800;
+  font-size: var(--font-small);
+}
+.timelineInfoGuideSection p{
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--font-small);
+  line-height: 1.4;
+}
+.timelineInfoGuideSection b{ color: var(--text); font-weight: 700; }
+
+/* RT Sync uses the same mobile info popover as Timeline. Its copy is an
+   operator-ready sequence, so retain the existing compact prose treatment
+   and add only the small uppercase wayfinding labels. */
+.lineSyncInfoGuide{ display: none; }
+.lineSyncInfoGuide > summary{ color: var(--ok); }
+.lineSyncInfoGuide > summary:hover,
+.lineSyncInfoGuide[open] > summary,
+.lineSyncInfoGuide > summary:focus-visible{ color: var(--ok); }
+.lineSyncInfoGuideIntro{
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: var(--font-small);
+  line-height: 1.4;
+}
+.lineSyncInfoGuideSectionHeading{
+  margin: 13px 0 -1px;
+  color: var(--ok);
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: .08em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+.lineSyncInfoGuideChoices{
+  margin: 5px 0 0;
+  padding-left: 17px;
+  color: var(--muted);
+  font-size: var(--font-small);
+  line-height: 1.4;
+}
+.lineSyncInfoGuideChoices li + li{ margin-top: 3px; }
+.lineSyncInfoGuideChoices b{ color: var(--text); font-weight: 700; }
+body[data-theme-family="gruvbox"] .lineSyncInfoGuide > summary,
+body[data-theme-family="gruvbox"] .lineSyncInfoGuide > summary:hover,
+body[data-theme-family="gruvbox"] .lineSyncInfoGuide[open] > summary,
+body[data-theme-family="gruvbox"] .lineSyncInfoGuide > summary:focus-visible,
+body[data-theme-family="gruvbox"] .lineSyncInfoGuideSectionHeading{ color: var(--gruv-aqua); }
+
+.recipePageTabs{
+  display: flex;
+  align-self: start;
+  align-items: flex-end;
+  gap: 4px;
+  margin: 0 0 -1px;
+  padding: 0 2px;
+  border-bottom: 1px solid var(--row-border);
+}
+.recipePageTab{
+  position: relative;
+  min-height: 30px;
+  padding: 6px 14px 5px;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  /* Rounded top corners only - a tab shape, not a pill or a rectangle. */
+  border-radius: var(--control-radius) var(--control-radius) 0 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--font-small);
+  font-weight: 800;
+  letter-spacing: .02em;
+  line-height: 1.2;
+  cursor: pointer;
+}
+/* Quiet at rest - closer to a clickable label sitting on the divider than a
+   button - so it never competes with the active tab's document-tab shape.
+   Hover is where "still obviously selectable" comes from. */
+.recipePageTab:hover{
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+  color: var(--title);
+}
+.recipePageTab.active{
+  /* Grows out of the divider: a real top+side border in the panel's own
+     border colour, and a background matching the Recipe workspace content
+     below - so the divider line appears to break exactly where this tab
+     sits, and the grid reads as a continuation of the tab rather than a
+     separate surface. Restrained on purpose - no glow, no animation. */
+  z-index: 1;
+  border-color: var(--row-border);
+  background: var(--panel);
+  color: var(--title);
+  font-weight: 900;
+  /* The 1px seam that actually erases the divider under this tab: same
+     width as .recipePageTabs' own border-bottom, painted in the content
+     colour instead of the divider colour. box-shadow (not a real border)
+     so it doesn't add height and unbalance the two tabs. */
+  box-shadow: 0 1px 0 0 var(--panel);
+}
+.recipePageTab:focus-visible{ outline: var(--focus-outline); outline-offset: 2px; }
+/* "A recipe is planned." Quiet by design - it is information, not an alert. */
+.recipePageTabDot{
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: 7px;
+  border-radius: 50%;
+  background: var(--title);
+  vertical-align: middle;
+}
+.recipePageTabDot[hidden]{ display: none; }
+.recipeWeightsTabCompact{ display:none; }
+/* Recipe tabs carry both a text label and an icon; only one shows at a
+   time. Desktop/tablet: text label, icon hidden (see .recipeTabIcon here).
+   Phone (<=700px): the label is clipped to the a11y tree and the icon
+   shows instead - see the late <=700px block near the end of this file. */
+.recipeTabIcon{ display:none; }
+.recipeWeightsPage{ width:100%; min-width:0; }
+.recipeWeightsPage > #weightsArea{ width:100%; }
+.recipeHeaderControls > .weightsHeaderViewToggle{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  margin:0;
+  padding:0;
+  color:inherit;
+  font-size:inherit;
+}
+.recipeHeaderControls > .weightsHeaderViewToggle > span{
+  margin:0;
+  color:var(--muted);
+  font-size:var(--font-tiny);
+  font-weight:750;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.recipeHeaderControls > .weightsHeaderViewToggle button{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:28px;
+  padding:var(--button-pad-y) var(--button-pad-x);
+  border-radius:var(--control-radius);
+  font-size:var(--font-small);
+  line-height:1.2;
+}
+.recipeHeaderControls > .weightsHeaderViewToggle button.active{
+  font-weight:850;
+}
+
+/* Recipe Book replaces the matrix on every width now, reached through the
+   Recipe Book tab like Current/Next/Weights - phones included. */
+body[data-recipe-page="saved"] #splitsArea > :not(.splitsSavedRecipesPanel):not(.splitsConfigurationPreview){
+  display: none!important;
+}
+body[data-recipe-page="saved"] #splitsArea > .splitsSavedRecipesPanel{
+  display: block;
+  order: 0;
+  margin: 0;
+}
+@media (min-width: 701px){
+  body[data-recipe-page="saved"] #splitsArea > .splitsSavedRecipesPanel{
+    width: min(100%, var(--recipe-five-layer-rail, 1062px));
+    min-height: 540px;
+  }
+  body[data-recipe-page="saved"] #splitsArea > .splitsSavedRecipesPanel .workspaceConfigurationList{
+    max-height: 430px;
+  }
+}
+@media (max-width: 700px){
+  /* Recipe Book has no Scan / Load / Edit cluster - those act on a live
+     recipe, not a saved-config list - so #recipeHeaderControls is hidden on
+     this page. That shortened the header row by the cluster's height and
+     jumped the tab strip and the panel below it up ~16px on every switch to
+     the Book tab. Keep the (now empty) controls box in the layout as an
+     invisible spacer the same height as the icon cluster, so the row - and
+     everything under it - stays put across tabs. Its own children stay
+     display:none via their own [hidden]; visibility:hidden covers the box
+     itself. display:flex!important + the id/attr specificity beat the global
+     [hidden]{display:none!important} at the top of this file. */
+  body[data-recipe-page="saved"] #splitsBlock #recipeHeaderControls[hidden]{
+    display: flex !important;
+    visibility: hidden;
+    min-height: 44px;
+  }
+}
+
+/* The plan is a recipe definition only: it has no tracking, no pump-off and
+   no receiver weights, so the controls for those are not offered on it. */
+body[data-recipe-page="next"] .splitTrackControl{ display: none; }
+/* A half-finished plan is expected, not a fault. Neither page prints its
+   percentage totals inline any more - both report through the notification
+   bell instead, where the plan keeps its own section and its own wording
+   (see PolynAttentionCenter's nextRecipeEntries). */
+
+/* Load Next Recipe confirmation: a compact scale-of-change summary, not a
+   full diff. The grid itself is where the detail belongs. */
+.loadNextSummary{ display: grid; gap: 4px; }
+.loadNextSummary:empty{ display: none; }
+.loadNextSummaryRow{
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 10px;
+  border-radius: var(--radius-row);
+  background: var(--row-bg-2);
+  font-size: var(--font-small);
+}
+.loadNextSummaryRow strong{ color: var(--title); }
+.loadNextSummaryRow span{ color: var(--text); font-variant-numeric: tabular-nums; }
+.loadNextSummary p{ margin: 4px 0 0; }
+
+@media (max-width: 900px), (min-width: 901px) and (pointer: coarse){
+  /* Tabs use the same quiet document-tab styling as desktop (see the base
+     .recipePageTab rule) - no separate boxed/equal-width touch treatment.
+     Only the label still shortens for width. */
+  .recipeWeightsTabFull{ display:none; }
+  .recipeWeightsTabCompact{ display:inline; }
+  /* Touch uses one stateful Edit/Done action instead of a segmented
+     Summary/Edit control. It stays beside the tabs without wrapping and is
+     identical for Recipe and Hopper Weights. */
+  .recipeHeaderRow{flex-wrap:nowrap;align-items:flex-end}
+  .recipeHeaderRow > .recipePageTabs{min-width:0;flex:1 1 auto}
+  .recipeHeaderControls{flex:0 0 auto;margin-bottom:4px}
+  .recipeViewToggle > span,
+  .recipeViewToggle [data-recipe-view="summary"],
+  .weightsHeaderViewToggle [data-weight-view="visual"]{display:none!important}
+  #recipeHeaderActionPill > .recipeViewToggle,
+  .recipeHeaderControls > .weightsHeaderViewToggle{display:block;margin:0;padding:0}
+  #recipeHeaderActionPill > .recipeViewToggle button,
+  .recipeHeaderControls > .weightsHeaderViewToggle button{
+    min-width:58px;
+    min-height:32px;
+    padding:4px 11px;
+    border-radius:var(--control-radius);
+    font-size:var(--font-small);
+    font-weight:850;
+  }
+  /* Stateful header controls use one toggle treatment. Legacy primary /
+     secondary classes remain attached during migration, but no longer turn
+     Edit/Done into an action-rail button - this never got the Outlined
+     Technical pass the rest of the button system did, so it kept the old
+     filled-chip look (tinted fill, inset accent line) instead of the
+     border-only, uppercase treatment everything around it now uses. */
+  .recipeHeaderControls button[data-button-kind="toggle"]{
+    border:1.5px solid var(--btn-secondary-border);
+    border-radius:2px;
+    background:transparent;
+    color:var(--btn-text);
+    text-transform:uppercase;
+    letter-spacing:.04em;
+    box-shadow:none;
+  }
+  .recipeHeaderControls button[data-button-kind="toggle"][aria-pressed="true"]{
+    border-color:var(--title);
+    background:transparent;
+    color:var(--title);
+    box-shadow:none;
+  }
+  /* No empty-group guard needed here anymore - see the file comment above
+     #recipeHeaderActionPill (styles.css). A visually-empty .recipeHeaderActions
+     (no planned Next AND Print force-hidden by .rearrangeDesktopOnly at
+     this width) now has no border/padding of its own to paint as a
+     dangling notch; it just collapses. */
+}
+
+.bulk-editing .splitMatrixCell .resinNameInput:disabled,.bulk-editing .splitMatrixCell .splitInput:disabled{opacity:.52;color:var(--muted);cursor:default}
+.splitMatrixCell .resinNameInput{
+  height:22px;
+  min-height:22px;
+  max-height:22px;
+  padding:0 2px;
+  border-color:transparent;
+  background:transparent;
+  box-shadow:none;
+  color:var(--muted);
+  font-size:calc(var(--font-small) + 2px);
+  font-weight:700;
+  line-height:21px;
+  letter-spacing:.01em;
+}
+.splitMatrixCell.has-resin .resinNameInput{
+  color:var(--muted);
+  font-weight:900;
+}
+.splitMatrixCell .resinNameInput:focus{
+  border-color:var(--border2);
+  background:var(--field-bg);
+}
+.splitMatrixCell.empty .splitCellHopperName{color:color-mix(in srgb,var(--muted) 72%,transparent)}
+.splitMatrixCell.empty .resinNameInput:not(:focus),.splitMatrixCell.empty .splitPctControl input:not(:focus){border:0;background:transparent;box-shadow:none}
+.splitMatrixCell.empty .splitPctControl{opacity:.62}
+.splitMatrixCell.empty .splitPctControl > span{visibility:hidden}
+.splitCellControls{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:4px;
+  margin:0;
+}
+.splitPctControl{
+  display:flex;
+  align-items:center;
+  gap:2px;
+  min-width: 0;
+  margin: 0;
+}
+.splitPctControl input{
+  width:40px;
+  height:22px;
+  min-height:22px;
+  max-height:22px;
+  min-width: 0;
+  padding:0 3px;
+  border-color:transparent;
+  background:transparent;
+  box-shadow:none;
+  color:var(--muted);
+  text-align:right;
+  font-size:calc(var(--font-small) + 3px);
+  line-height:21px;
+  font-variant-numeric:tabular-nums;
+}
+.splitPctControl input:hover,.splitPctControl input:focus{border-color:var(--border2);background:var(--field-bg);color:var(--muted)}
+.splitPctControl input:read-only{color:color-mix(in srgb,var(--muted) 78%,transparent)}
+.splitPctControl > span{
+  color: var(--muted);
+  font-size:calc(var(--font-small) + 3px);
+}
+.splitTrackControl{
+  display:inline-flex;
+  align-items:center;
+  margin:0;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.splitTrackButton{
+  display: inline-grid;
+  place-items: center;
+  width:23px;
+  height:23px;
+  min-height:23px;
+  margin: 0;
+  padding: 0;
+  border:0;
+  border-radius: 5px;
+  background:transparent;
+  color:var(--muted);
+  opacity:.52;
+  box-shadow: none;
+}
+.splitTrackButton svg{
+  width:19px;
+  height:19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.splitTrackButton:hover{
+  background:var(--field-bg);
+  color: var(--title);
+  opacity:1;
+}
+.splitTrackButton:focus-visible{
+  border-color: var(--focus-border);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+  outline: none;
+}
+.splitTrackButton.active{
+  background: linear-gradient(180deg, var(--btn-primary-a), var(--btn-primary-b));
+  color: var(--title);
+  opacity:1;
+}
+/* Shown when this hopper's weight is currently computed from Smart Hopper
+   geometry + its resin's known density (see refreshSmartHopperState in
+   app.js), rather than the operator's own entered weight. */
+.splitSmartBadge{
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .04em;
+  color: var(--ok);
+  white-space: nowrap;
+}
+.splitSmartBadge[hidden]{ display: none; }
+/* Smart capacity remains functional everywhere, but the explicit SMART text
+   is unnecessary once the tablet/desktop matrix has room for the computed
+   weight and Smart Hopper controls themselves. Reserve that visual cue for
+   narrow phone layouts only. */
+@media (min-width:701px){
+  #splitsArea .splitSmartBadge{display:none!important}
+}
+

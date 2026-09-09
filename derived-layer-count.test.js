@@ -4,10 +4,11 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const identity = require("./line-identity.js");
+const { readStyles } = require("./css-source");
 
 const app = fs.readFileSync("app.js", "utf8");
 const html = fs.readFileSync("index.html", "utf8");
-const styles = fs.readFileSync("styles.css", "utf8");
+const styles = readStyles();
 
 const workspace = (name, extra = {}) => ({ id: `ws-${name}`, name, membership: { role: "member" }, ...extra });
 const linked = (ws, { connected = true } = {}) => ws

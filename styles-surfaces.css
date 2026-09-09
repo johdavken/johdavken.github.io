@@ -1,0 +1,1181 @@
+/* =======================================================================
+ *   Surface styles
+ *   Layered Flat is the base treatment; these selectors provide alternatives.
+ *   ======================================================================= */
+body[data-surface-style="elevated"] .card{
+  border-color: var(--border);
+  box-shadow: var(--shadow2);
+}
+body[data-surface-style="elevated"] .card::before{
+  content: "";
+  display: block;
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(135deg, var(--card-glow-a), var(--card-glow-b), transparent 60%);
+  opacity: .55;
+  pointer-events: none;
+  filter: blur(14px);
+}
+body[data-surface-style="elevated"] details.block{
+  border-color: var(--border);
+  box-shadow: 0 8px 18px rgba(0,0,0,.20);
+}
+body[data-surface-style="elevated"] .blockBody > details.block{ background: var(--panel2); }
+body[data-surface-style="elevated"] .workspaceNav,
+body[data-surface-style="elevated"] .workspaceStatusBar{
+  border-color: var(--border);
+  box-shadow: var(--shadow2);
+}
+body[data-surface-style="elevated"] .workspaceNav{ background: var(--panel2); }
+body[data-surface-style="elevated"] .workspaceStatusBar{
+  background: color-mix(in srgb, var(--panel) 94%, transparent);
+  backdrop-filter: blur(10px);
+}
+@media (min-width: 901px) and (pointer: fine){
+  body[data-surface-style="elevated"] .workspaceContent > .workspacePanel.card,
+  body[data-surface-style="elevated"] .workspaceContent > .workspacePanel.card[open]{
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+  }
+}
+
+body[data-surface-style="flat"] .card,
+body[data-surface-style="flat"] details.block,
+body[data-surface-style="flat"] .workspaceNav,
+body[data-surface-style="flat"] .workspaceStatusBar,
+body[data-surface-style="flat"] .toolPanel{
+  border-color: var(--border);
+  box-shadow: none;
+}
+body[data-surface-style="flat"] .blockBody > details.block{ background: var(--panel2); }
+body[data-surface-style="flat"] .workspaceStatusBar{ background: var(--panel); }
+body[data-surface-style="flat"] .workspaceContent > .workspacePanel.card,
+body[data-surface-style="flat"] .workspaceContent > .workspacePanel.card[open]{
+  border-color: var(--border);
+  background: var(--panel);
+}
+
+body[data-surface-style="accent-frame"] .workspaceContent > .workspacePanel.card,
+body[data-surface-style="accent-frame"] .workspaceContent > .workspacePanel.card[open]{
+  border-left: 5px solid var(--title);
+}
+body[data-surface-style="accent-frame"] .workspaceStatusBar{
+  border-color: color-mix(in srgb, var(--focus-border) 52%, transparent);
+}
+body[data-surface-style="accent-frame"] .blockBody > details.block,
+body[data-surface-style="accent-frame"] .toolPanel{
+  border-left: 3px solid color-mix(in srgb, var(--focus-border) 72%, transparent);
+}
+
+body[data-surface-style="divided"] .workspaceContent > .workspacePanel.card,
+body[data-surface-style="divided"] .workspaceContent > .workspacePanel.card[open]{
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+body[data-surface-style="divided"] .blockBody > details.block,
+body[data-surface-style="divided"] .toolPanel{
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+}
+body[data-surface-style="divided"] .workspaceNav,
+body[data-surface-style="divided"] .workspaceStatusBar{
+  border-color: transparent;
+  border-radius: 0;
+}
+
+body[data-surface-style="low-elevation"] .card,
+body[data-surface-style="low-elevation"] details.block,
+body[data-surface-style="low-elevation"] .workspaceNav,
+body[data-surface-style="low-elevation"] .workspaceStatusBar,
+body[data-surface-style="low-elevation"] .toolPanel{
+  border-color: color-mix(in srgb, var(--focus-border) 18%, var(--border));
+  box-shadow: 0 1px 2px rgba(0,0,0,.14);
+}
+
+/* Unified surface contract: every selection styles the same panel families. */
+body{
+  --surface-main-bg:var(--panel);
+  --surface-main-border:transparent;
+  --surface-main-radius:var(--radius2);
+  --surface-main-shadow:none;
+  --surface-inner-bg:var(--panel2);
+  --surface-inner-border:transparent;
+  --surface-inner-radius:var(--radius-row);
+  --surface-inner-shadow:none;
+  --surface-chrome-bg:var(--panel);
+  --surface-chrome-border:transparent;
+  --surface-chrome-radius:var(--radius-row);
+  --surface-chrome-shadow:none;
+  --surface-accent-width:0px;
+}
+body[data-surface-style="elevated"]{
+  --surface-main-bg:var(--panel);
+  --surface-main-border:var(--border);
+  --surface-main-shadow:var(--shadow2);
+  --surface-inner-bg:var(--panel2);
+  --surface-inner-border:var(--border);
+  --surface-inner-shadow:0 5px 14px rgba(0,0,0,.16);
+  --surface-chrome-bg:var(--panel2);
+  --surface-chrome-border:var(--border);
+  --surface-chrome-shadow:var(--shadow2);
+}
+body[data-surface-style="flat"]{
+  --surface-main-bg:var(--panel);
+  --surface-main-border:var(--border);
+  --surface-inner-bg:var(--panel2);
+  --surface-inner-border:var(--border);
+  --surface-chrome-bg:var(--panel);
+  --surface-chrome-border:var(--border);
+}
+body[data-surface-style="accent-frame"]{
+  --surface-main-bg:var(--panel);
+  --surface-main-border:var(--border);
+  --surface-inner-bg:var(--panel2);
+  --surface-inner-border:var(--border);
+  --surface-chrome-bg:var(--panel);
+  --surface-chrome-border:color-mix(in srgb, var(--focus-border) 45%, var(--border));
+  --surface-accent-width:3px;
+}
+body[data-surface-style="divided"]{
+  --surface-main-bg:transparent;
+  --surface-main-border:transparent;
+  --surface-main-radius:0;
+  --surface-inner-bg:transparent;
+  --surface-inner-border:var(--border);
+  --surface-inner-radius:0;
+  --surface-chrome-bg:transparent;
+  --surface-chrome-border:transparent;
+  --surface-chrome-radius:0;
+}
+body[data-surface-style="low-elevation"]{
+  --surface-main-bg:var(--panel);
+  --surface-main-border:color-mix(in srgb, var(--focus-border) 18%, var(--border));
+  --surface-main-shadow:0 1px 2px rgba(0,0,0,.14);
+  --surface-inner-bg:var(--panel2);
+  --surface-inner-border:color-mix(in srgb, var(--focus-border) 18%, var(--border));
+  --surface-inner-shadow:0 1px 2px rgba(0,0,0,.12);
+  --surface-chrome-bg:var(--panel);
+  --surface-chrome-border:color-mix(in srgb, var(--focus-border) 18%, var(--border));
+  --surface-chrome-shadow:0 1px 2px rgba(0,0,0,.14);
+}
+
+body[data-surface-style="elevated"] .card::before{ display:none; }
+body[data-surface-style] .workspaceContent > .workspacePanel.card,
+body[data-surface-style] .workspaceContent > .workspacePanel.card[open]{
+  border-color:var(--surface-main-border);
+  border-radius:var(--surface-main-radius);
+  background:var(--surface-main-bg);
+  box-shadow:var(--surface-main-shadow);
+}
+body[data-surface-style] .blockBody > details.block,
+body[data-surface-style] .blockBody > details.block[open],
+body[data-surface-style] .toolPanel{
+  border-color:var(--surface-inner-border);
+  border-radius:var(--surface-inner-radius);
+  background:var(--surface-inner-bg);
+  box-shadow:var(--surface-inner-shadow);
+}
+body[data-surface-style] .workspaceNav,
+body[data-surface-style] .workspaceStatusBar{
+  border-color:var(--surface-chrome-border);
+  border-radius:var(--surface-chrome-radius);
+  background:var(--surface-chrome-bg);
+  box-shadow:var(--surface-chrome-shadow);
+}
+body[data-surface-style="accent-frame"] .workspaceContent > .workspacePanel.card,
+body[data-surface-style="accent-frame"] .workspaceContent > .workspacePanel.card[open]{
+  border-left:5px solid var(--title);
+  box-shadow:var(--surface-main-shadow);
+}
+body[data-surface-style="accent-frame"] .blockBody > details.block,
+body[data-surface-style="accent-frame"] .blockBody > details.block[open],
+body[data-surface-style="accent-frame"] .toolPanel{
+  border-left:var(--surface-accent-width) solid var(--focus-border);
+}
+body[data-surface-style="divided"] .blockBody > details.block,
+body[data-surface-style="divided"] .blockBody > details.block[open],
+body[data-surface-style="divided"] .toolPanel{
+  border:0;
+  border-top:1px solid var(--surface-inner-border);
+}
+
+/* =======================================================================
+ *   Everyday / Advanced mode
+ *   ======================================================================= */
+.modeBar{display:flex;align-items:center;justify-content:flex-end}
+.statusScanShortcut{ display:none; position:relative; align-self:center; }
+.statusScanShortcut > summary{ display:flex; align-items:center; justify-content:center; width:24px; height:24px; padding:0; border:0; border-radius:50%; background:transparent; color:var(--muted); cursor:pointer; list-style:none; }
+.statusScanShortcut > summary svg{ width:15px; height:15px; }
+.statusScanShortcut > summary::-webkit-details-marker{ display:none; }
+.statusScanShortcut > summary:hover,.statusScanShortcut[open] > summary{ color:var(--title); background:var(--field-bg); }
+.statusScanShortcut > summary:focus-visible{ outline:var(--focus-outline); outline-offset:1px; }
+.statusScanShortcutPanel{ position:absolute; top:calc(100% + 6px); left:0; z-index:60; display:grid; gap:6px; width:min(220px,calc(100vw - 32px)); padding:8px; border:1px solid var(--border2); border-radius:var(--control-radius); background:var(--panelOpen); box-shadow:var(--shadow2); }
+.statusScanShortcutPanel button{ width:100%; text-align:left; }
+.statusTimelineToggle{ display:none; }
+.statusRecipeToggle{ display:none; }
+.statusChangeoverCountdown{ display:none; }
+.chipToggle{
+  /* No display here on purpose: .statusTimelineToggle/.statusRecipeToggle
+     own visibility (display:none by default, inline-flex only inside the
+     mobile media query below) - a display here at equal specificity would
+     win the cascade over that display:none since this rule comes later in
+     the file, showing the chips on desktop too. */
+  align-items:center;
+  justify-content:center;
+  width:28px;
+  height:28px;
+  padding:0;
+  border:0;
+  border-radius:999px;
+  background:transparent;
+  color:var(--muted);
+  cursor:pointer;
+  flex:0 0 auto;
+}
+.chipToggle svg{ width:16px; height:16px; flex:0 0 auto; }
+.chipToggle:hover{ color:var(--title); background:var(--field-bg); }
+.chipToggle.on{ color:var(--title); }
+/* Gruvbox's seven palette hues. These are plain colours, not surface
+   treatments, and both surfaces now need them: the mobile tile home paints
+   its tiles with them, and the desktop side rail's numbered step markers
+   read them through --tile-accent (see the workflow accents below). They
+   sit at top level for that reason - the --gruv-mobile-* surface tokens
+   they used to share a block with stay inside the mobile media query,
+   where they belong. Values are unchanged, and nothing inside the mobile
+   block redeclares them, so the tile home renders exactly as before. */
+body[data-theme="gruvbox-dark"]{
+  --gruv-red:#fb4934;
+  --gruv-orange:#fe8019;
+  --gruv-yellow:#fabd2f;
+  --gruv-green:#b8bb26;
+  --gruv-aqua:#8ec07c;
+  --gruv-blue:#83a598;
+  --gruv-purple:#d3869b;
+  /* The Recipe pill's non-danger segments fill from --focus-border, which
+     resolves to this theme's bright_blue (theme.css). Keep the pill on the
+     theme's own green instead so it never reads as a caution action -
+     matches the Production Totals tile accent. */
+  --recipe-pill-accent: var(--gruv-green);
+}
+body[data-theme="gruvbox-light"]{
+  --gruv-red:#cc241d;
+  --gruv-orange:#d65d0e;
+  --gruv-yellow:#b57614;
+  --gruv-green:#79740e;
+  --gruv-aqua:#689d6a;
+  --gruv-blue:#458588;
+  --gruv-purple:#b16286;
+  --recipe-pill-accent: var(--gruv-green);
+}
+
+/* =======================================================================
+ *   --tile-accent: the per-section workflow colour
+ *   ---------------------------------------------------------------------
+ *   Both surfaces read these: the mobile tile home paints the whole tile
+ *   with them (border, gradient, icon, numbered step marker), and the
+ *   desktop side rail uses them for its own numbered step marker. They
+ *   live at top level rather than inside either surface's media block so
+ *   the two can never drift into showing a different colour for the same
+ *   section.
+ *
+ *   Order and specificity are unchanged from when these sat inside the
+ *   mobile block: the base per-target rules are (0,2,0) and every
+ *   theme-specific override below is (0,3,1), so a theme always wins on
+ *   weight regardless of where these are read. The themed groups target
+ *   mutually exclusive [data-theme] values and so never race each other.
+ * ===================================================================== */
+.workspaceNavButton[data-workspace-target="lineSetupBlock"]{ --tile-accent:var(--orange); }
+.workspaceNavButton[data-workspace-target="splitsBlock"]{ --tile-accent:var(--title); }
+.workspaceNavButton[data-workspace-target="resultsBlock"]{ --tile-accent:var(--focus-border); }
+.workspaceNavButton[data-workspace-target="productionSummaryBlock"]{ --tile-accent:var(--workflow-resin-totals); }
+.workspaceNavButton[data-workspace-target="lineSyncBlock"]{ --tile-accent:var(--ok); }
+.workspaceNavButton[data-workspace-target="toolsBlock"]{ --tile-accent:var(--warn); }
+.workspaceNavButton[data-workspace-target="changelogBlock"]{ --tile-accent:var(--focus-border); }
+.workspaceNavButton[data-workspace-target="resinAdminBlock"]{ --tile-accent:var(--ok); }
+.workspaceNavButton[data-workspace-target="workspaceManagementBlock"]{ --tile-accent:var(--focus-border); }
+.workspaceNavButton[data-workspace-target="sudoAccessBlock"]{ --tile-accent:var(--warn); }
+/* Not a workspace-target button (it opens a modal, not a panel), so it
+   keys off its own id instead of the attribute selector above. */
+#helpBetaAccess{ --tile-accent:var(--ok); }
+
+/* The overlapping icon cluster on the collapsed "Workspace & support" bar
+   previews these same five sections, but lives outside the buttons it
+   previews - CSS custom properties don't reach across unrelated subtrees,
+   so each --tint here is kept in sync by hand with the --tile-accent
+   assignments above (and the gruvbox overrides just below). */
+/* body[data-mobile-workspace="home"] .mobileWorkspaceNavMoreIcons i{--tint:
+   var(--muted)} outranks a bare two-class selector on specificity (its
+   attribute selector plus two type selectors add up to more than two
+   classes alone), so these repeat that exact prefix to win outright
+   rather than relying on source order. */
+body[data-mobile-workspace="home"] .mobileWorkspaceNavMoreIcons .moreIconSudo{ --tint:var(--warn); }
+body[data-mobile-workspace="home"] .mobileWorkspaceNavMoreIcons .moreIconChangelog{ --tint:var(--focus-border); }
+body[data-mobile-workspace="home"] .mobileWorkspaceNavMoreIcons .moreIconBeta{ --tint:var(--ok); }
+body[data-mobile-workspace="home"] .mobileWorkspaceNavMoreIcons .moreIconTools{ --tint:var(--warn); }
+body[data-mobile-workspace="home"] .mobileWorkspaceNavMoreIcons .moreIconNotes{ --tint:var(--muted); }
+body[data-mobile-workspace="home"] .mobileWorkspaceNavMoreIcons .moreIconRt{ --tint:var(--ok); }
+
+.sudoAccessBody{display:grid;align-content:start;gap:12px}
+.sudoAccessDetails{display:grid;gap:2px;padding:10px 11px;border:1px solid var(--border);border-radius:var(--control-radius);background:var(--row-bg)}
+.sudoAccessDetails strong{color:var(--title);font-size:13px}.sudoAccessDetails small{color:var(--muted);font-size:11px}
+.sudoAccessBody > .muted{margin:0}
+.sudoAccessPanel .mobileSectionHeaderIcon{color:var(--warn)}
+.sudoAccessActions{display:grid;gap:0;border-top:1px solid var(--border)}
+.sudoAccessAction{
+  display:grid;
+  grid-template-columns:30px minmax(0,1fr) auto;
+  align-items:center;
+  gap:11px;
+  width:100%;
+  min-height:58px;
+  margin:0;
+  padding:9px 4px;
+  border:0;
+  border-bottom:1px solid var(--border);
+  border-radius:0;
+  background:transparent;
+  color:var(--text);
+  font:inherit;
+  text-align:left;
+  box-shadow:none;
+}
+.sudoAccessAction:hover,.sudoAccessAction:focus-visible{background:var(--row-bg);outline:0}
+.sudoAccessAction:focus-visible{box-shadow:inset 3px 0 0 var(--focus-border)}
+.sudoAccessAction > svg:first-child{width:24px;height:24px;fill:none;stroke:var(--focus-border);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.sudoAccessAction > span{display:grid;gap:2px;min-width:0}
+.sudoAccessAction strong{color:var(--title);font-size:13px;font-weight:800}
+.sudoAccessAction small{overflow:hidden;color:var(--muted);font-size:11px;font-weight:500;text-overflow:ellipsis;white-space:nowrap}
+.sudoAccessChev{width:17px;height:17px;fill:none;stroke:var(--muted);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.sudoAccessSignOut{grid-template-columns:30px minmax(0,1fr);color:var(--bad)}
+.sudoAccessSignOut > svg:first-child{stroke:var(--bad)}
+.sudoAccessSignOut strong{color:var(--bad)}
+
+/* Gruvbox's own rainbow: each section keeps a distinct palette hue. */
+body[data-theme-family="gruvbox"] .workspaceNavButton[data-workspace-target="lineSetupBlock"]{ --tile-accent:var(--gruv-orange); }
+body[data-theme-family="gruvbox"] .workspaceNavButton[data-workspace-target="splitsBlock"]{ --tile-accent:var(--gruv-yellow); }
+body[data-theme-family="gruvbox"] .workspaceNavButton[data-workspace-target="resultsBlock"]{ --tile-accent:var(--gruv-blue); }
+body[data-theme-family="gruvbox"] .workspaceNavButton[data-workspace-target="productionSummaryBlock"]{ --tile-accent:var(--gruv-green); }
+body[data-theme-family="gruvbox"] .workspaceNavButton[data-workspace-target="lineSyncBlock"]{ --tile-accent:var(--gruv-aqua); }
+body[data-theme-family="gruvbox"] .workspaceNavButton[data-workspace-target="toolsBlock"]{ --tile-accent:var(--gruv-purple); }
+body[data-theme-family="gruvbox"] .workspaceNavButton[data-workspace-target="changelogBlock"]{ --tile-accent:var(--gruv-blue); }
+body[data-theme-family="gruvbox"][data-mobile-workspace="home"] .mobileWorkspaceNavMoreIcons .moreIconTools{ --tint:var(--gruv-purple); }
+body[data-theme-family="gruvbox"][data-mobile-workspace="home"] .mobileWorkspaceNavMoreIcons .moreIconChangelog{ --tint:var(--gruv-blue); }
+body[data-theme-family="gruvbox"][data-mobile-workspace="home"] .mobileWorkspaceNavMoreIcons .moreIconRt{ --tint:var(--gruv-aqua); }
+
+/* Industrial Slate Light gives all four numbered sections one accent. */
+body[data-theme="industrial-slate"] .workspaceNavButton[data-step]{ --tile-accent:var(--yellow); }
+
+body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-target="lineSetupBlock"]{ --tile-accent:var(--bad); }
+body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-target="splitsBlock"]{ --tile-accent:var(--warn); }
+body[data-theme="industrial-slate-dark"] .workspaceNavButton[data-workspace-target="resultsBlock"]{ --tile-accent:var(--workflow-timeline); }
+
+/* Ayu Light: Recipe carries its warm identity on the numbered marker
+   rather than the blue --title default. Timeline (--focus-border) and
+   Resin Totals (--workflow-resin-totals, from --ok) already resolve to
+   Ayu Light's blue and green. */
+body[data-theme="ayu-light"] .workspaceNavButton[data-workspace-target="splitsBlock"]{ --tile-accent:var(--orange); }
+/* Ayu Mirage / Ayu Dark: same Recipe-is-warm convention as Ayu Light. */
+body[data-theme="ayu-mirage"] .workspaceNavButton[data-workspace-target="splitsBlock"]{ --tile-accent:var(--orange); }
+body[data-theme="ayu-dark"] .workspaceNavButton[data-workspace-target="splitsBlock"]{ --tile-accent:var(--orange); }
+
+
+@media (max-width: 900px), (min-width: 901px) and (pointer: coarse){
+  /* Mobile workspace navigation is a tile home. Each tile reuses the live
+     state from the desktop sidebar, then opens one focused work area. */
+  .mobileBrand{
+    min-height:52px;
+    padding:3px 12px;
+  }
+  .resinToolsLogo{ width:min(100%,152.5px); }
+  .workspaceNav{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:8px;
+    padding:12px var(--page-pad) 16px;
+    margin:0 calc(-1 * var(--page-pad));
+    border-top:1px solid var(--border);
+    border-bottom:1px solid var(--surface-chrome-border);
+    background:var(--surface-chrome-bg);
+  }
+  .workspaceNav .workspaceBrand{ display:none; }
+  .workspaceNavButton{
+    --tile-accent:var(--focus-border);
+    display:grid;
+    grid-template-columns:1fr;
+    align-content:center;
+    gap:7px;
+    min-height:78px;
+    padding:12px;
+    border:1px solid color-mix(in srgb,var(--tile-accent) 24%,var(--border));
+    border-radius:var(--control-radius);
+    background:linear-gradient(145deg,color-mix(in srgb,var(--tile-accent) 9%,var(--row-bg)),var(--row-bg) 68%);
+    color:var(--muted);
+    text-align:left;
+    box-shadow:inset 0 2px 0 color-mix(in srgb,var(--tile-accent) 60%,transparent);
+    transition:border-color .16s ease,background .16s ease,transform .16s ease;
+  }
+  .appearanceNavTile{ --tile-accent:var(--title); }
+  .workspaceNavButton span{
+    display:flex;
+    align-items:center;
+    gap:9px;
+    color:var(--text);
+    font-size:13px;
+    font-weight:700;
+    line-height:1.1;
+    letter-spacing:.02em;
+    text-transform:none;
+    white-space:normal;
+  }
+  .workspaceTileIcon{
+    width:calc(34px * 1.25);
+    height:calc(34px * 1.25);
+    padding:5px;
+    border:1px solid color-mix(in srgb,var(--tile-accent) 38%,transparent);
+    border-radius:9px;
+    background:color-mix(in srgb,var(--tile-accent) 12%,transparent);
+    color:var(--tile-accent);
+  }
+  .workspaceNavButton small{
+    display:flex;
+    align-items:center;
+    gap:5px;
+    max-width:145px;
+    overflow:hidden;
+    color:inherit;
+    font-size:11px;
+    line-height:1.15;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    opacity:.82;
+  }
+  .workspaceNavButton small::before{
+    content:"";
+    width:6px;
+    height:6px;
+    flex:0 0 auto;
+    border-radius:50%;
+    background:var(--muted);
+  }
+  .workspaceNavButton[data-status="info"] small::before{ background:var(--focus-border); }
+  .workspaceNavButton[data-status="ok"] small::before{ background:var(--ok); }
+  .workspaceNavButton[data-status="warn"] small::before{ background:var(--warn); }
+  .workspaceNavButton[data-status="bad"] small::before{ background:var(--bad); }
+  .workspaceNavButton.active{
+    border-color:var(--focus-border);
+    background:var(--focus-ring);
+    color:var(--title);
+  }
+  .workspaceNavButton.active .workspaceTileIcon{ color:var(--title); }
+  .workspaceNavButton:hover{ border-color:color-mix(in srgb,var(--tile-accent) 64%,var(--border)); transform:translateY(-1px); }
+  .workspaceNavButton:focus-visible{ outline:var(--focus-outline); outline-offset:2px; }
+  body[data-mobile-workspace="panel"] .workspaceNav{ display:none; }
+  body:not([data-mobile-workspace="home"]) .mobileBrand{ display:none; }
+  body[data-mobile-workspace="panel"] .workspaceContent > .workspacePanel.mobile-active > summary{
+    display:flex;
+    align-items:center;
+    min-height:46px;
+    padding:8px 2px 10px;
+    border-bottom:1px solid var(--border);
+  }
+  body[data-mobile-workspace="panel"] .workspaceContent > .workspacePanel.mobile-active > summary::after{ display:none; }
+  body[data-mobile-workspace="panel"] .workspaceContent > .workspacePanel.mobile-active > summary .chev{ display:none; }
+  body[data-mobile-workspace="panel"] .workspaceContent > .workspacePanel.mobile-active > summary .sumLeft{display:flex;align-items:center;gap:9px;min-width:0}
+  body[data-mobile-workspace="panel"] .workspaceContent > .workspacePanel.mobile-active > summary .summaryText{min-width:0}
+  body[data-mobile-workspace="panel"] .workspaceContent > .workspacePanel.mobile-active > summary .mobileSectionHeaderIcon{
+    display:block;
+    flex:0 0 auto;
+    width:26px;
+    height:26px;
+    fill:none;
+    stroke:currentColor;
+    stroke-width:1.7;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+  }
+  #lineSetupBlock .mobileSectionHeaderIcon{color:var(--orange)}
+  #splitsBlock .mobileSectionHeaderIcon{color:var(--title)}
+  #resultsBlock .mobileSectionHeaderIcon{color:var(--focus-border)}
+  #lineSyncBlock .mobileSectionHeaderIcon{color:var(--ok)}
+  #toolsBlock .mobileSectionHeaderIcon{color:var(--warn)}
+  #changelogBlock .mobileSectionHeaderIcon{color:var(--focus-border)}
+  body[data-mobile-workspace="panel"] .workspaceContent > .workspacePanel.mobile-active > summary .layerMeta{ display:none; }
+  body[data-mobile-workspace="panel"] .workspaceContent > .workspacePanel.mobile-active > .blockBody{ padding-top:10px; }
+  /* Recipe ends with its action bar; it needs only a short breathing edge,
+     not the generic panel's full bottom padding. */
+  body[data-mobile-workspace="panel"] #splitsBlock.mobile-active{ padding-bottom:6px; }
+  body[data-mobile-workspace="panel"] #splitsBlock.mobile-active > .blockBody{ padding-bottom:4px; }
+  /* Scoped to just the top-level card summaries (.layerTitle is a generic
+     heading class reused by dialogs, tool panels, admin forms, etc. - a
+     blanket size bump there would spill into all of those). Subtitle stays
+     hidden both collapsed and open - collapsed, it cuts the visual noise of
+     7+ stacked cards; open, it was found to be redundant with the card's
+     own content in almost every case (e.g. Setup's "Current changeover and
+     line configuration" tells you nothing the open panel doesn't already
+     show), so it no longer reappears there either.
+     Title color reuses the same two-tone treatment desktop's sidebar nav
+     already has (.workspaceNavButton: --muted normally, --title once
+     .active) - open vs. collapsed stands in for the desktop nav's active
+     vs. inactive. --muted/--title are theme-aware tokens already, so this
+     is theme-agnostic on purpose - confirmed on Dark and Light first, now
+     applied everywhere rather than enumerating every data-theme value. */
+  .workspaceContent > .workspacePanel > summary .layerTitle{
+    font-size: calc(var(--title-size) * 1.05);
+    color: var(--muted);
+    letter-spacing:.08em;
+  }
+  /* Mobile has less room to create hierarchy with layout alone. Keep body
+     copy calm, but give every heading and card label a decisive, consistent
+     weight across all themes. */
+  :is(h1,h2,h3,h4,h5,h6),
+  .layerTitle,
+  .workspaceNavButton span,
+  .workspaceConfigurationInfo strong,
+  .workspaceConfigurationSectionTitle strong,
+  .workspaceRecoveryDetail strong,
+  .mobileTileStyleSection legend,
+  .mobileBackgroundStyleSection legend{ font-weight:800; font-synthesis:none; }
+  .workspaceContent > .workspacePanel[open] > summary .layerTitle{ color: var(--section-title, var(--title)); }
+  .workspaceContent > .workspacePanel > summary .layerMeta{ display: none; }
+  .workspaceContent > .workspacePanel > summary .pill.summaryStatus{ display: none !important; }
+  /* These two Setup entries keep their familiar desktop summary markup, but
+     become purpose-built mobile entry cards. SVG inherits the active theme's
+     colors and the animation is transform-only, so it stays inexpensive. */
+  #lineSetupBlock #weightsBlock,
+  #lineSetupBlock #setupWeightProfilesBlock{
+    margin-top:12px;
+    overflow:visible;
+    border:1px solid color-mix(in srgb,var(--focus-border) 36%,var(--border));
+    border-radius:18px;
+    background:linear-gradient(120deg,color-mix(in srgb,var(--focus-ring) 58%,var(--panel2)),var(--panel2));
+    box-shadow:0 9px 18px color-mix(in srgb,#000 16%,transparent);
+  }
+  #lineSetupBlock #weightsBlock + #setupWeightProfilesBlock{ margin-top:12px; }
+  /* On phones profiles are part of the weights task, not a second setup
+     destination. Keep a clear divider while preserving the same controls. */
+  #lineSetupBlock #weightsBlock > .blockBody > #setupWeightProfilesBlock{
+    margin:16px 0 0;
+    border-width:1px 0 0;
+    border-radius:0;
+    background:transparent;
+    box-shadow:none;
+  }
+  #lineSetupBlock #weightsBlock > .blockBody > #setupWeightProfilesBlock > summary{
+    min-height:64px;
+    padding:10px 0;
+  }
+  #lineSetupBlock #weightsBlock > summary,
+  #lineSetupBlock #setupWeightProfilesBlock > summary{
+    min-height:78px;
+    padding:12px 15px;
+    border:0;
+    cursor:pointer;
+  }
+  #lineSetupBlock #weightsBlock > summary .chev,
+  #lineSetupBlock #setupWeightProfilesBlock > summary .chev{ display:none; }
+  #lineSetupBlock #weightsBlock > summary .sumLeft,
+  #lineSetupBlock #setupWeightProfilesBlock > summary .sumLeft{ width:100%; align-items:center; gap:13px; }
+  #lineSetupBlock #weightsBlock > summary .summaryText,
+  #lineSetupBlock #setupWeightProfilesBlock > summary .summaryText{ min-width:0; }
+  #lineSetupBlock #weightsBlock > summary .nestedLayerTitle,
+  #lineSetupBlock #setupWeightProfilesBlock > summary .nestedLayerTitle{ color:var(--title); font-size:14px; letter-spacing:.12em; }
+  #lineSetupBlock #weightsBlock > summary .layerMeta,
+  #lineSetupBlock #setupWeightProfilesBlock > summary .layerMeta{ display:block; margin-top:4px; color:var(--muted); font-size:12px; }
+  #lineSetupBlock #setupWeightProfilesBlock > summary > .pill{ display:none; }
+  #lineSetupBlock #weightsBlock > summary::after,
+  #lineSetupBlock #setupWeightProfilesBlock > summary::after{
+    content:"";
+    width:9px;
+    height:9px;
+    margin-left:auto;
+    border-right:2px solid var(--focus-border);
+    border-bottom:2px solid var(--focus-border);
+    transform:rotate(45deg) translateY(-3px);
+    transition:transform .2s ease;
+  }
+  #lineSetupBlock #weightsBlock[open] > summary::after,
+  #lineSetupBlock #setupWeightProfilesBlock[open] > summary::after{ transform:rotate(225deg) translateY(-1px); }
+  .mobileSetupEntryArt{ display:block; width:46px; height:46px; flex:0 0 auto; overflow:visible; color:var(--focus-border); }
+  .mobileSetupEntryArt path,.mobileSetupEntryArt circle{ fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+  .mobileWeightsEntryArt .entryHopperFill{ fill:color-mix(in srgb,var(--ok) 28%,transparent); stroke:none; transform-origin:24px 37px; animation:mobileHopperFill 3.4s ease-in-out infinite; }
+  .mobileWeightsEntryArt .entryGaugeDot{ fill:var(--orange); stroke:none; animation:mobileGaugePulse 2.2s ease-in-out infinite; }
+  .mobileProfilesEntryArt .entryProfileFront{ fill:color-mix(in srgb,var(--focus-ring) 70%,transparent); }
+  .mobileProfilesEntryArt .entryProfileMark{ fill:var(--ok); stroke:none; animation:mobileProfileMark 2.8s ease-in-out infinite; }
+  #lineSetupBlock #weightsBlock[open] .mobileWeightsEntryArt{ color:var(--ok); }
+  #lineSetupBlock #setupWeightProfilesBlock[open] .mobileProfilesEntryArt{ color:var(--title); }
+  @keyframes mobileHopperFill{ 0%,100%{ transform:scaleY(.62); opacity:.62; } 50%{ transform:scaleY(1); opacity:1; } }
+  @keyframes mobileGaugePulse{ 0%,100%{ transform:scale(.8); opacity:.55; } 50%{ transform:scale(1.25); opacity:1; } }
+  @keyframes mobileProfileMark{ 0%,100%{ transform:translateX(0); } 50%{ transform:translateX(2px); } }
+  @media (prefers-reduced-motion:reduce){
+    .mobileWeightsEntryArt .entryHopperFill,.mobileWeightsEntryArt .entryGaugeDot,.mobileProfilesEntryArt .entryProfileMark{ animation:none; }
+    #lineSetupBlock #weightsBlock > summary::after,#lineSetupBlock #setupWeightProfilesBlock > summary::after{ transition:none; }
+  }
+  .mobileBrand{
+    margin-bottom:calc(0px - var(--page-gap));
+    border-bottom:0;
+  }
+  .workspaceStatusBar{
+    position:fixed;
+    right:0;
+    bottom:0;
+    left:0;
+    top:auto;
+    z-index:40;
+    display:flex;
+    align-items:center;
+    flex-wrap:wrap;
+    justify-content:flex-start;
+    gap:8px;
+    min-height:34px;
+    padding:0 var(--page-pad);
+    border-bottom:1px solid var(--surface-chrome-border);
+    background:var(--surface-chrome-bg);
+    box-shadow:var(--surface-chrome-shadow);
+    backdrop-filter:blur(10px);
+  }
+  main{ padding-bottom:calc(58px + var(--page-bottom-pad)); }
+  .statusPreferences{position:absolute;right:var(--page-pad);margin-left:0}
+  .statusPreferencesPanel{position:fixed;top:auto;right:var(--page-pad);bottom:46px}
+  .workspaceStatusBar .workspaceStatusItem{ display:none; }
+  .statusScanShortcut{ display:inline-block; }
+  .statusTimelineToggle{ display:inline-flex; }
+  .statusRecipeToggle{ display:inline-flex; }
+  .workspaceStatusBar .workspaceStatusItem.statusChangeoverCountdown{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    line-height:1;
+    white-space:nowrap;
+    margin-left:auto;
+    margin-right:38px;
+  }
+  .workspaceStatusBar .workspaceStatusItem span{ color:var(--muted); font-size:var(--font-tiny); }
+  .workspaceStatusBar .workspaceStatusItem strong{ color:var(--text); font-size:var(--font-small); line-height:1; }
+  .workspaceStatusBar .workspaceStatusItem strong.stale{ color:var(--warn); }
+  /* Compact action icons share the tile icon system's line weight and
+     accent color, so the persistent bar reads as one deliberate control
+     family rather than a row of unrelated glyphs. */
+  .statusScanShortcut > summary,
+  .statusTimelineToggle,
+  .statusRecipeToggle{ color:var(--focus-border); }
+  .statusScanShortcut > summary{ width:28px; height:28px; }
+  .statusScanShortcut svg,
+  .chipToggle svg{
+    width:18px;
+    height:18px;
+    stroke-width:1.7;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+  }
+  body[data-mobile-workspace="panel"] .statusScanShortcut{ display:none; }
+  body[data-mobile-timeline-only="true"] .workspaceContent > .workspacePanel:not(#resultsBlock){ display:none !important; }
+  body[data-mobile-timeline-only="true"] #resultsBlock{ display:block !important; }
+  body[data-mobile-recipe-only="true"] .workspaceContent > .workspacePanel:not(#splitsBlock){ display:none !important; }
+  body[data-mobile-recipe-only="true"] #splitsBlock{ display:block !important; }
+}
+
+/* Mobile uses the tile home instead of the old status bar. The existing
+   preferences control becomes a modal sheet, keeping one source of truth
+   for all appearance settings without changing the desktop menu. */
+@media (max-width: 900px), (min-width: 901px) and (pointer: coarse){
+  /* Mobile panel visibility, in full. Two rules, and deliberately only two:
+     hide every workspace panel, then let the selected one back in. The safe
+     default is the tile home - restored <details> state must never expose a
+     workspace before a tile explicitly selects it, so the hide is
+     unconditional and the reveal is what carries the condition.
+
+     This replaced three overlapping hiders. The other two were
+     [data-mobile-workspace="home"] and [data-mobile-workspace="panel"]
+     :not(.mobile-active), which said the same display:none!important this
+     rule already says for the same elements - measured across all 90
+     reachable mobile states (2 workspace modes x 3 isolation modes x 15
+     active-panel choices), removing both changed nothing, and removing all
+     three broke 30. Nothing sits between them in specificity, so they could
+     never win a cascade this rule loses.
+
+     Add a mode by giving it a reveal, not another hide. A new conditional
+     display:none on .workspacePanel is redundant on arrival and makes the
+     next reader trace four rules to answer one question - the ratchet in
+     mobile-panel-visibility.test.js exists to say so. The two isolation
+     modes further up this file are the pattern: :not(#panel) to narrow,
+     #panel{display:block!important} to reveal. */
+  .workspaceContent > .workspacePanel{ display:none!important; }
+  body[data-mobile-workspace="panel"] .workspaceContent > .workspacePanel.mobile-active{ display:block!important; }
+  .appearanceNavTile{ display:grid!important; }
+  body[data-mobile-workspace="home"] .mobileQuickActions{
+    position:fixed;
+    right:max(16px,env(safe-area-inset-right));
+    bottom:calc(var(--footer-height) + 16px + env(safe-area-inset-bottom));
+    z-index:45;
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    gap:10px;
+  }
+  .mobileQuickActionsMenu{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    gap:8px;
+    pointer-events:none;
+  }
+  .mobileQuickActionsMenu button{
+    display:grid;
+    grid-template-columns:auto 38px;
+    align-items:center;
+    gap:10px;
+    min-height:46px;
+    padding:4px 4px 4px 14px;
+    border:1px solid color-mix(in srgb,var(--focus-border) 42%,var(--border));
+    border-radius:999px;
+    background:color-mix(in srgb,var(--panelOpen) 94%,transparent);
+    color:var(--text);
+    box-shadow:0 7px 20px color-mix(in srgb,#000 22%,transparent);
+    opacity:0;
+    transform:translateY(12px) scale(.94);
+    transition:opacity .18s ease,transform .22s cubic-bezier(.2,.8,.2,1),border-color .16s ease;
+    backdrop-filter:blur(10px);
+  }
+  .mobileQuickActionsMenu button:nth-child(1){ transition-delay:0s; }
+  .mobileQuickActionsMenu button:nth-child(2){ transition-delay:.035s; }
+  .mobileQuickActions[data-open="true"] .mobileQuickActionsMenu{ pointer-events:auto; }
+  .mobileQuickActions[data-open="true"] .mobileQuickActionsMenu button{ opacity:1; transform:translateY(0) scale(1); }
+  .mobileQuickActions[data-open="true"] .mobileQuickActionsMenu button:nth-child(1){ transition-delay:.045s; }
+  .mobileQuickActions[data-open="true"] .mobileQuickActionsMenu button:nth-child(2){ transition-delay:0s; }
+  .mobileQuickActionsMenu button:hover,.mobileQuickActionsMenu button:focus-visible{ border-color:var(--focus-border); background:var(--panelOpen); }
+  .mobileQuickActionsMenu button span{ font-size:12px; font-weight:750; white-space:nowrap; }
+  .mobileQuickActionsMenu button svg{
+    width:36px;
+    height:36px;
+    padding:7px;
+    border-radius:50%;
+    background:color-mix(in srgb,var(--focus-border) 14%,var(--field-bg));
+    fill:none;
+    stroke:var(--focus-border);
+    stroke-width:1.8;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+  }
+  .mobileQuickActionsToggle{
+    position:relative;
+    display:grid;
+    place-items:center;
+    width:56px;
+    height:56px;
+    padding:0;
+    border:1px solid color-mix(in srgb,var(--title) 60%,var(--border));
+    border-radius:50%;
+    background:linear-gradient(145deg,color-mix(in srgb,var(--title) 24%,var(--panel)),var(--panel));
+    color:var(--title);
+    box-shadow:0 8px 22px color-mix(in srgb,#000 28%,transparent),inset 0 1px 0 color-mix(in srgb,var(--text) 24%,transparent);
+  }
+  .mobileQuickActionsToggle::before{
+    content:"";
+    position:absolute;
+    inset:-5px;
+    border:1px solid color-mix(in srgb,var(--title) 34%,transparent);
+    border-radius:50%;
+    animation:quickActionPulse 2.4s ease-out infinite;
+  }
+  .mobileQuickActionsToggle svg{ width:30px; height:30px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+  .mobileQuickActionsToggle .quickActionPlus{ transform-origin:16px 16px; transition:transform .24s ease; }
+  .mobileQuickActionsToggle .quickActionSpark{ animation:quickActionSpark 2.4s ease-in-out infinite; }
+  .mobileQuickActions[data-open="true"] .mobileQuickActionsToggle .quickActionPlus{ transform:rotate(45deg); }
+  .mobileQuickActions[data-open="true"] .mobileQuickActionsToggle::before{ animation:none; opacity:0; }
+  @keyframes quickActionPulse{ 0%,55%{ transform:scale(.9); opacity:0; } 70%{ opacity:.75; } 100%{ transform:scale(1.18); opacity:0; } }
+  @keyframes quickActionSpark{ 0%,45%,100%{ opacity:.35; transform:scale(.82); } 60%,72%{ opacity:1; transform:scale(1); } }
+  @media (prefers-reduced-motion:reduce){
+    .mobileQuickActionsToggle::before,.mobileQuickActionsToggle .quickActionSpark{ animation:none; }
+    .mobileQuickActionsMenu button,.mobileQuickActionsToggle .quickActionPlus{ transition:none; }
+  }
+  .mobileTileStyleSection{ display:block; margin:14px 0 0; padding:12px 0 0; border:0; border-top:1px solid var(--border); }
+  .mobileTileStyleSection legend{ padding:0; color:var(--title); font-size:13px; font-weight:750; }
+  .mobileTileStyleChoices{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; margin-top:9px; }
+  .mobileTileStyleChoices button{ display:flex; align-items:center; gap:8px; min-height:42px; padding:7px 9px; border:1px solid var(--border); border-radius:var(--control-radius); background:var(--row-bg); color:var(--muted); font-size:12px; text-align:left; }
+  .mobileTileStyleChoices button[aria-checked="true"]{ border-color:var(--focus-border); background:var(--focus-ring); color:var(--text); }
+  .mobileTileStyleChoices button span{ width:24px; height:20px; flex:0 0 auto; border-radius:5px; background:var(--row-bg); }
+  .mobileTileStyleChoices button[data-mobile-tile-style="accent"] span{ border:1px solid var(--border2); box-shadow:inset 0 3px 0 var(--orange); }
+  .mobileTileStyleChoices button[data-mobile-tile-style="solid"] span{ border:1px solid color-mix(in srgb,var(--ok) 45%,var(--border)); background:color-mix(in srgb,var(--ok) 24%,var(--row-bg)); }
+  .mobileTileStyleChoices button[data-mobile-tile-style="outline"] span{ border:2px solid var(--focus-border); background:transparent; }
+  .mobileTileStyleChoices button[data-mobile-tile-style="glass"] span{ border:1px solid color-mix(in srgb,var(--text) 30%,transparent); border-radius:9px; background:color-mix(in srgb,var(--text) 10%,transparent); box-shadow:0 3px 7px color-mix(in srgb,var(--text) 12%,transparent); }
+  .mobileTileStyleChoices button[data-mobile-tile-style="minimal"] span{ height:14px; border:0; border-bottom:2px solid var(--title); border-radius:0; background:transparent; }
+  .mobileTileStyleChoices button[data-mobile-tile-style="layered"] span{ border:1px solid color-mix(in srgb,var(--focus-border) 45%,var(--border)); background:color-mix(in srgb,var(--focus-border) 12%,var(--row-bg)); box-shadow:3px 3px 0 color-mix(in srgb,var(--title) 26%,var(--row-bg)),6px 6px 0 color-mix(in srgb,var(--orange) 18%,var(--row-bg)); }
+  .mobileBackgroundStyleSection{ display:block; margin:14px 0 0; padding:12px 0 0; border:0; border-top:1px solid var(--border); }
+  .mobileBackgroundStyleSection legend{ padding:0; color:var(--title); font-size:13px; font-weight:750; }
+  .mobileBackgroundStyleChoices{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; margin-top:9px; }
+  .mobileBackgroundStyleChoices button{ display:grid; grid-template-columns:42px 1fr; align-items:center; gap:9px; min-height:48px; padding:7px 9px; border:1px solid var(--border); border-radius:var(--control-radius); background:var(--row-bg); color:var(--muted); font-size:12px; text-align:left; }
+  .mobileBackgroundStyleChoices button[aria-checked="true"]{ border-color:var(--focus-border); background:var(--focus-ring); color:var(--text); }
+  .mobileBackgroundStyleChoices button span{ width:42px; height:30px; border:1px solid var(--border2); border-radius:7px; background-color:var(--bg); }
+  .mobileBackgroundStyleChoices button[data-mobile-background-style="layer-glow"] span{
+    background:
+      radial-gradient(circle at 20% 20%,color-mix(in srgb,var(--bad) 34%,transparent),transparent 45%),
+      radial-gradient(circle at 82% 72%,color-mix(in srgb,var(--ok) 28%,transparent),transparent 48%),
+      var(--bg);
+  }
+  .mobileBackgroundStyleChoices button[data-mobile-background-style="industrial-grid"] span{
+    background:
+      linear-gradient(color-mix(in srgb,var(--focus-border) 18%,transparent) 1px,transparent 1px),
+      linear-gradient(90deg,color-mix(in srgb,var(--focus-border) 18%,transparent) 1px,transparent 1px),
+      var(--bg);
+    background-size:8px 8px;
+  }
+  .mobileBackgroundStyleChoices button[data-mobile-background-style="paper-grain"] span{ background:repeating-radial-gradient(circle at 20% 30%,color-mix(in srgb,var(--text) 16%,transparent) 0 1px,transparent 1px 5px),var(--bg); background-size:8px 8px; }
+  .mobileBackgroundStyleChoices button[data-mobile-background-style="dot-matrix"] span{ background:radial-gradient(circle,color-mix(in srgb,var(--focus-border) 42%,transparent) 1px,transparent 1.5px),var(--bg); background-size:7px 7px; }
+  .mobileBackgroundStyleChoices button[data-mobile-background-style="blueprint"] span{ background:linear-gradient(color-mix(in srgb,var(--focus-border) 24%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,var(--focus-border) 24%,transparent) 1px,transparent 1px),color-mix(in srgb,var(--focus-border) 13%,var(--bg)); background-size:9px 9px; }
+  .mobileBackgroundStyleChoices button[data-mobile-background-style="contour-lines"] span{ background:repeating-radial-gradient(ellipse at 20% 80%,transparent 0 4px,color-mix(in srgb,var(--ok) 27%,transparent) 5px 6px,transparent 7px 10px),var(--bg); }
+  .mobileBackgroundStyleChoices button[data-mobile-background-style="prism-fade"] span{ background:linear-gradient(135deg,color-mix(in srgb,var(--bad) 34%,var(--bg)),transparent 48%),linear-gradient(315deg,color-mix(in srgb,var(--ok) 30%,var(--bg)),var(--bg) 64%); }
+  .mobileBackgroundStyleChoices button[data-mobile-background-style="pinstripe"] span{ background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--title) 26%,transparent) 0 1px,transparent 1px 5px),var(--bg); }
+  .mobileTimelineAlarmSection{display:block;margin:8px 0 0;padding:8px 0 0;border:0;border-top:1px solid var(--border)}
+  .mobileTimelineAlarmSection legend{padding:0;color:var(--title);font-size:11px;font-weight:800}
+  .mobileTimelineAlarmChoice{display:flex;align-items:center;gap:8px;min-height:44px;margin-top:5px;padding:6px 8px;border:1px solid var(--border);border-radius:var(--control-radius);background:var(--row-bg)}
+  .mobileTimelineAlarmChoice input{width:20px;height:20px;flex:0 0 auto;margin:0;accent-color:var(--focus-border)}
+  .mobileTimelineAlarmChoice span{display:grid;min-width:0;gap:1px}
+  .mobileTimelineAlarmChoice strong{color:var(--text);font-size:11px}
+  .mobileTimelineAlarmChoice small{color:var(--muted);font-size:10px;line-height:1.25}
+  .pumpOffAlarmSoundRow{display:flex;align-items:center;gap:8px;min-height:44px;margin-top:5px;padding:6px 8px;border:1px solid var(--border);border-radius:var(--control-radius);background:var(--row-bg)}
+  .pumpOffAlarmSoundInfo{display:grid;min-width:0;gap:1px;flex:1 1 auto}
+  .pumpOffAlarmSoundInfo strong{color:var(--text);font-size:11px}
+  .pumpOffAlarmSoundInfo small{color:var(--muted);font-size:10px;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pumpOffAlarmSoundRow .copyBtn{flex:0 0 auto;padding:6px 10px;font-size:10px}
+  .pumpOffAlarmVibrateChoice{display:flex;align-items:center;gap:8px;min-height:36px;margin-top:5px;padding:6px 8px;border:1px solid var(--border);border-radius:var(--control-radius);background:var(--row-bg)}
+  .pumpOffAlarmVibrateChoice input{width:20px;height:20px;flex:0 0 auto;margin:0;accent-color:var(--focus-border)}
+  .pumpOffAlarmVibrateChoice span{color:var(--text);font-size:11px}
+
+  /* APK only: native sound/vibration controls are available together, so
+     condense them into the Timeline alarm panel rather than three cards.
+     Browser/mobile keeps the fuller rows above because it never receives
+     .native-pump-off-alarm. */
+  body.native-pump-off-alarm .timelineAlarmSetting{
+    display:grid;
+    grid-template-columns:auto auto minmax(0,1fr) auto;
+    align-items:center;
+    gap:6px 8px;
+    padding:8px;
+    border:1px solid var(--border);
+    border-radius:var(--control-radius);
+    background:var(--row-bg);
+  }
+  body.native-pump-off-alarm .timelineAlarmSetting legend{padding:0 4px;color:var(--title);font-size:11px;font-weight:800}
+  body.native-pump-off-alarm .mobileTimelineAlarmChoice,
+  body.native-pump-off-alarm .pumpOffAlarmVibrateChoice{
+    min-height:30px;
+    margin:0;
+    padding:3px 0;
+    border:0;
+    border-radius:0;
+    background:transparent;
+  }
+  body.native-pump-off-alarm .mobileTimelineAlarmChoice{grid-column:1}
+  body.native-pump-off-alarm .pumpOffAlarmVibrateChoice{grid-column:2;grid-row:1}
+  body.native-pump-off-alarm .mobileTimelineAlarmChoice input,
+  body.native-pump-off-alarm .pumpOffAlarmVibrateChoice input{width:18px;height:18px}
+  body.native-pump-off-alarm .mobileTimelineAlarmChoice strong{font-size:0}
+  body.native-pump-off-alarm .mobileTimelineAlarmChoice strong::before{content:"Alarm";font-size:11px}
+  body.native-pump-off-alarm .mobileTimelineAlarmChoice small{display:none}
+  body.native-pump-off-alarm .pumpOffAlarmVibrateChoice span{font-size:11px}
+  body.native-pump-off-alarm .pumpOffAlarmSoundRow{display:contents}
+  body.native-pump-off-alarm .pumpOffAlarmSoundInfo{grid-column:3;grid-row:1;min-width:0}
+  body.native-pump-off-alarm .pumpOffAlarmSoundInfo strong{display:none}
+  body.native-pump-off-alarm .pumpOffAlarmSoundInfo small{font-size:11px}
+  body.native-pump-off-alarm .pumpOffAlarmSoundActions{grid-column:4;grid-row:1;display:flex;gap:4px}
+  body.native-pump-off-alarm .pumpOffAlarmSoundRow .copyBtn{padding:5px 7px;font-size:10px}
+
+  body[data-mobile-background-style="layer-glow"]{
+    background:
+      radial-gradient(circle at 8% 22%,color-mix(in srgb,var(--bad) 12%,transparent),transparent 30%),
+      radial-gradient(circle at 94% 34%,color-mix(in srgb,var(--ok) 11%,transparent),transparent 33%),
+      radial-gradient(circle at 48% 72%,color-mix(in srgb,var(--orange) 7%,transparent),transparent 37%),
+      var(--bg);
+    background-attachment:fixed;
+  }
+  body[data-mobile-background-style="layer-glow"] .workspaceNav{
+    position:relative;
+    isolation:isolate;
+    overflow:hidden;
+    background:color-mix(in srgb,var(--surface-chrome-bg) 86%,transparent);
+  }
+  body[data-mobile-background-style="layer-glow"] .workspaceNav::before{
+    content:"";
+    position:absolute;
+    z-index:0;
+    top:-72px;
+    right:-68px;
+    width:240px;
+    height:240px;
+    pointer-events:none;
+    opacity:.42;
+    transform:rotate(45deg);
+    background:
+      linear-gradient(135deg,transparent 38%,color-mix(in srgb,var(--bad) 18%,transparent) 38% 43%,transparent 43% 50%,color-mix(in srgb,var(--orange) 15%,transparent) 50% 55%,transparent 55% 62%,color-mix(in srgb,var(--ok) 14%,transparent) 62% 67%,transparent 67%);
+  }
+  body[data-mobile-background-style="layer-glow"] .workspaceNavButton{ position:relative; z-index:1; }
+  body[data-mobile-background-style="industrial-grid"]{
+    background:
+      linear-gradient(color-mix(in srgb,var(--focus-border) 8%,transparent) 1px,transparent 1px),
+      linear-gradient(90deg,color-mix(in srgb,var(--focus-border) 8%,transparent) 1px,transparent 1px),
+      radial-gradient(circle at 50% 0,color-mix(in srgb,var(--focus-border) 9%,transparent),transparent 46%),
+      var(--bg);
+    background-size:24px 24px,24px 24px,auto,auto;
+    background-attachment:fixed;
+  }
+  body[data-mobile-background-style="industrial-grid"] .workspaceNav{
+    background:color-mix(in srgb,var(--surface-chrome-bg) 80%,transparent);
+  }
+  body[data-mobile-background-style="paper-grain"]{
+    background:
+      repeating-radial-gradient(circle at 12% 18%,color-mix(in srgb,var(--text) 6%,transparent) 0 1px,transparent 1px 7px),
+      radial-gradient(circle at 86% 12%,color-mix(in srgb,var(--warn) 7%,transparent),transparent 40%),
+      var(--bg);
+    background-size:12px 12px,auto,auto;
+    background-attachment:fixed;
+  }
+  body[data-mobile-background-style="dot-matrix"]{
+    background:
+      radial-gradient(circle,color-mix(in srgb,var(--focus-border) 18%,transparent) 1px,transparent 1.6px),
+      radial-gradient(circle at 50% 10%,color-mix(in srgb,var(--title) 8%,transparent),transparent 46%),
+      var(--bg);
+    background-size:18px 18px,auto,auto;
+    background-attachment:fixed;
+  }
+  body[data-mobile-background-style="blueprint"]{
+    background:
+      linear-gradient(color-mix(in srgb,var(--focus-border) 12%,transparent) 1px,transparent 1px),
+      linear-gradient(90deg,color-mix(in srgb,var(--focus-border) 12%,transparent) 1px,transparent 1px),
+      linear-gradient(135deg,color-mix(in srgb,var(--focus-border) 14%,var(--bg)),var(--bg) 62%);
+    background-size:28px 28px,28px 28px,auto;
+    background-attachment:fixed;
+  }
+  body[data-mobile-background-style="contour-lines"]{
+    background:
+      repeating-radial-gradient(ellipse at 4% 88%,transparent 0 28px,color-mix(in srgb,var(--ok) 10%,transparent) 29px 30px,transparent 31px 47px),
+      repeating-radial-gradient(ellipse at 96% 8%,transparent 0 34px,color-mix(in srgb,var(--focus-border) 9%,transparent) 35px 36px,transparent 37px 54px),
+      var(--bg);
+    background-attachment:fixed;
+  }
+  body[data-mobile-background-style="prism-fade"]{
+    background:
+      linear-gradient(135deg,color-mix(in srgb,var(--bad) 14%,transparent),transparent 43%),
+      linear-gradient(230deg,color-mix(in srgb,var(--focus-border) 13%,transparent),transparent 48%),
+      linear-gradient(315deg,color-mix(in srgb,var(--ok) 11%,transparent),transparent 53%),
+      var(--bg);
+    background-attachment:fixed;
+  }
+  body[data-mobile-background-style="pinstripe"]{
+    background:
+      repeating-linear-gradient(135deg,color-mix(in srgb,var(--title) 7%,transparent) 0 1px,transparent 1px 10px),
+      radial-gradient(circle at 14% 12%,color-mix(in srgb,var(--title) 9%,transparent),transparent 38%),
+      var(--bg);
+    background-attachment:fixed;
+  }
+
+  body[data-mobile-tile-style="solid"] .workspaceNavButton{ border-color:color-mix(in srgb,var(--tile-accent) 42%,var(--border)); background:color-mix(in srgb,var(--tile-accent) 20%,var(--panel)); box-shadow:none; }
+  body[data-mobile-tile-style="solid"] .workspaceTileIcon{ background:color-mix(in srgb,var(--tile-accent) 28%,transparent); }
+  body[data-mobile-tile-style="outline"] .workspaceNavButton{ border:2px solid color-mix(in srgb,var(--tile-accent) 72%,var(--border)); background:transparent; box-shadow:none; }
+  body[data-mobile-tile-style="outline"] .workspaceTileIcon{ border:0; background:transparent; }
+  body[data-mobile-tile-style="glass"] .workspaceNavButton{ border-color:color-mix(in srgb,var(--text) 22%,transparent); border-radius:18px; background:linear-gradient(145deg,color-mix(in srgb,var(--tile-accent) 12%,transparent),color-mix(in srgb,var(--text) 5%,transparent)); box-shadow:0 6px 16px color-mix(in srgb,#000 16%,transparent),inset 0 1px 0 color-mix(in srgb,var(--text) 22%,transparent); backdrop-filter:blur(9px); }
+  body[data-mobile-tile-style="glass"] .workspaceTileIcon{ border-radius:50%; }
+  body[data-mobile-tile-style="minimal"] .workspaceNav{ gap:2px 10px; }
+  body[data-mobile-tile-style="minimal"] .workspaceNavButton{ min-height:68px; padding:10px 4px; border:0; border-bottom:1px solid color-mix(in srgb,var(--tile-accent) 45%,var(--border)); border-radius:0; background:transparent; box-shadow:none; }
+  body[data-mobile-tile-style="minimal"] .workspaceTileIcon{ width:calc(30px * 1.25); height:calc(30px * 1.25); padding:3px; border:0; border-radius:0; background:transparent; }
+  body[data-mobile-tile-style="layered"] .workspaceNav{ gap:10px; }
+  body[data-mobile-tile-style="layered"] .workspaceNavButton{ border-color:color-mix(in srgb,var(--tile-accent) 36%,var(--border)); border-radius:12px; background:linear-gradient(145deg,color-mix(in srgb,var(--tile-accent) 11%,var(--row-bg)),var(--row-bg) 72%); box-shadow:3px 3px 0 color-mix(in srgb,var(--tile-accent) 22%,var(--panel)),6px 6px 0 color-mix(in srgb,var(--border2) 55%,transparent); }
+  body[data-mobile-tile-style="layered"] .workspaceTileIcon{ border-radius:7px; background:color-mix(in srgb,var(--tile-accent) 15%,var(--row-bg)); }
+
+  /* Gruvbox mobile home: warm, tactile surfaces and the full retro palette.
+     Each existing tile treatment keeps its character, but is rendered with
+     Gruvbox paper/terminal tones instead of the generic theme gradients. */
+  body[data-theme="gruvbox-dark"]{
+    --gruv-mobile-bg:#1d2021;
+    --gruv-mobile-surface:#282828;
+    --gruv-mobile-surface-2:#32302f;
+    --gruv-mobile-ink:#ebdbb2;
+    --gruv-mobile-edge:#665c54;
+    --gruv-mobile-shadow:rgba(0,0,0,.38);
+  }
+  body[data-theme="gruvbox-light"]{
+    --gruv-mobile-bg:#fbf1c7;
+    --gruv-mobile-surface:#fbf1c7;
+    --gruv-mobile-surface-2:#ebdbb2;
+    --gruv-mobile-ink:#3c3836;
+    --gruv-mobile-edge:#d5c4a1;
+    --gruv-mobile-shadow:rgba(60,56,54,.14);
+  }
+  body[data-theme-family="gruvbox"]:not([data-mobile-background-style]){
+    background:
+      repeating-linear-gradient(135deg,transparent 0 12px,color-mix(in srgb,var(--gruv-mobile-edge) 5%,transparent) 12px 13px),
+      radial-gradient(circle at 12% 18%,color-mix(in srgb,var(--gruv-orange) 13%,transparent),transparent 34%),
+      radial-gradient(circle at 92% 40%,color-mix(in srgb,var(--gruv-aqua) 11%,transparent),transparent 38%),
+      var(--gruv-mobile-bg);
+    background-attachment:fixed;
+  }
+  body[data-theme-family="gruvbox"][data-mobile-background-style="industrial-grid"]{
+    background:
+      linear-gradient(color-mix(in srgb,var(--gruv-yellow) 10%,transparent) 1px,transparent 1px),
+      linear-gradient(90deg,color-mix(in srgb,var(--gruv-yellow) 10%,transparent) 1px,transparent 1px),
+      radial-gradient(circle at 50% 0,color-mix(in srgb,var(--gruv-orange) 14%,transparent),transparent 52%),
+      var(--gruv-mobile-bg);
+    background-size:24px 24px,24px 24px,auto,auto;
+  }
+  body[data-theme-family="gruvbox"][data-mobile-background-style="layer-glow"]{
+    background:
+      repeating-linear-gradient(135deg,transparent 0 12px,color-mix(in srgb,var(--gruv-mobile-edge) 5%,transparent) 12px 13px),
+      radial-gradient(circle at 10% 20%,color-mix(in srgb,var(--gruv-orange) 15%,transparent),transparent 34%),
+      radial-gradient(circle at 94% 38%,color-mix(in srgb,var(--gruv-aqua) 13%,transparent),transparent 39%),
+      radial-gradient(circle at 45% 78%,color-mix(in srgb,var(--gruv-purple) 8%,transparent),transparent 42%),
+      var(--gruv-mobile-bg);
+  }
+  body[data-theme-family="gruvbox"] .workspaceNav{
+    border-color:color-mix(in srgb,var(--gruv-mobile-edge) 76%,transparent);
+    background:color-mix(in srgb,var(--gruv-mobile-surface) 88%,transparent);
+  }
+  body[data-theme-family="gruvbox"] #lineSetupBlock .mobileSectionHeaderIcon{color:var(--gruv-orange)}
+  body[data-theme-family="gruvbox"] #splitsBlock .mobileSectionHeaderIcon{color:var(--gruv-yellow)}
+  body[data-theme-family="gruvbox"] #resultsBlock .mobileSectionHeaderIcon{color:var(--gruv-blue)}
+  body[data-theme-family="gruvbox"] #lineSyncBlock .mobileSectionHeaderIcon{color:var(--gruv-aqua)}
+  body[data-theme-family="gruvbox"] #toolsBlock .mobileSectionHeaderIcon{color:var(--gruv-purple)}
+  body[data-theme-family="gruvbox"] #changelogBlock .mobileSectionHeaderIcon{color:var(--gruv-blue)}
+  body[data-theme="industrial-slate"] #lineSetupBlock .mobileSectionHeaderIcon,
+  body[data-theme="industrial-slate"] #splitsBlock .mobileSectionHeaderIcon,
+  body[data-theme="industrial-slate"] #resultsBlock .mobileSectionHeaderIcon,
+  body[data-theme="industrial-slate"] #productionSummaryBlock .mobileSectionHeaderIcon{color:var(--yellow)}
+
+  body[data-theme="industrial-slate-dark"] #lineSetupBlock .mobileSectionHeaderIcon{color:var(--bad)}
+  body[data-theme="industrial-slate-dark"] #splitsBlock .mobileSectionHeaderIcon{color:var(--warn)}
+  body[data-theme="industrial-slate-dark"] #resultsBlock .mobileSectionHeaderIcon{color:var(--workflow-timeline)}
+  body[data-theme="industrial-slate-dark"] #productionSummaryBlock .mobileSectionHeaderIcon{color:var(--workflow-resin-totals)}
+
+  /* Ayu Light: keep Recipe warm on the mobile section headers too; Timeline
+     and Resin Totals already resolve to Ayu Light's blue and green. */
+  body[data-theme="ayu-light"] #splitsBlock .mobileSectionHeaderIcon{color:var(--orange)}
+  body[data-theme="ayu-mirage"] #splitsBlock .mobileSectionHeaderIcon{color:var(--orange)}
+  body[data-theme="ayu-dark"] #splitsBlock .mobileSectionHeaderIcon{color:var(--orange)}
+
+  body[data-theme-family="gruvbox"] .appearanceNavTile{ --tile-accent:var(--gruv-red); }
+  /* Request beta access is a .helpPlayBanner, not a .workspaceNavButton, but
+     sits in the same expanded Workspace & support list - its title needs the
+     same mobile-ink retune so it doesn't read as a differently-coloured row. */
+  body[data-theme-family="gruvbox"] .workspaceNavButton span,
+  body[data-theme-family="gruvbox"] .helpPlayBanner strong{ color:var(--gruv-mobile-ink); }
+  body[data-theme-family="gruvbox"] .workspaceTileIcon{
+    border-color:color-mix(in srgb,var(--tile-accent) 56%,var(--gruv-mobile-edge));
+    background:color-mix(in srgb,var(--tile-accent) 13%,var(--gruv-mobile-surface));
+  }
+  body[data-theme-family="gruvbox"][data-mobile-tile-style="accent"] .workspaceNavButton{
+    border-color:color-mix(in srgb,var(--tile-accent) 38%,var(--gruv-mobile-edge));
+    background:linear-gradient(145deg,color-mix(in srgb,var(--tile-accent) 12%,var(--gruv-mobile-surface)),var(--gruv-mobile-surface) 68%);
+    box-shadow:inset 0 3px 0 var(--tile-accent),3px 3px 0 var(--gruv-mobile-shadow);
+  }
+  body[data-theme-family="gruvbox"][data-mobile-tile-style="solid"] .workspaceNavButton{
+    border-color:color-mix(in srgb,var(--tile-accent) 52%,var(--gruv-mobile-edge));
+    background:color-mix(in srgb,var(--tile-accent) 22%,var(--gruv-mobile-surface));
+    box-shadow:3px 3px 0 var(--gruv-mobile-shadow);
+  }
+  body[data-theme-family="gruvbox"][data-mobile-tile-style="outline"] .workspaceNavButton{
+    border-color:var(--tile-accent);
+    background:color-mix(in srgb,var(--gruv-mobile-surface) 48%,transparent);
+  }
+  body[data-theme-family="gruvbox"][data-mobile-tile-style="glass"] .workspaceNavButton{
+    border-color:color-mix(in srgb,var(--tile-accent) 42%,var(--gruv-mobile-edge));
+    background:linear-gradient(145deg,color-mix(in srgb,var(--tile-accent) 14%,var(--gruv-mobile-surface)),color-mix(in srgb,var(--gruv-mobile-surface) 70%,transparent));
+    box-shadow:3px 3px 0 var(--gruv-mobile-shadow),inset 0 1px 0 color-mix(in srgb,var(--gruv-mobile-ink) 20%,transparent);
+  }
+  body[data-theme-family="gruvbox"][data-mobile-tile-style="minimal"] .workspaceNavButton{
+    border:0;
+    border-bottom:1px solid color-mix(in srgb,var(--tile-accent) 62%,var(--gruv-mobile-edge));
+    border-radius:3px;
+    background:linear-gradient(90deg,color-mix(in srgb,var(--tile-accent) 9%,var(--gruv-mobile-surface)),color-mix(in srgb,var(--gruv-mobile-surface) 46%,transparent) 72%);
+    box-shadow:inset 3px 0 0 color-mix(in srgb,var(--tile-accent) 78%,transparent);
+  }
+  .workspaceStatusBar{ display:contents!important; }
+  .workspaceStatusBar > :not(.statusPreferences){ display:none!important; }
+  .workspaceStatusBar .statusPreferences{ display:none; }
+  body[data-mobile-workspace="appearance"] .workspaceNav{ display:none; }
+  body[data-mobile-workspace="appearance"] .workspaceStatusBar .statusPreferences[open]{
+    display:block;
+    position:static;
+    width:100%;
+    margin:0;
+  }
+  body[data-mobile-workspace="appearance"] .workspaceStatusBar .statusPreferences[open] > summary{ display:none; }
+  body[data-mobile-workspace="appearance"] .workspaceStatusBar .statusPreferencesPanel{
+    position:static;
+    width:auto;
+    max-width:none;
+    margin:0;
+    padding:0 0 calc(14px + env(safe-area-inset-bottom));
+    border:0;
+    border-radius:0;
+    background:transparent;
+    box-shadow:none;
+    transform:none;
+  }
+  body[data-mobile-workspace="appearance"] .statusPreferencesHead{ display:none; }
+  body[data-mobile-workspace="appearance"] .mobileAppearancePanelHeader{
+    position:sticky;
+    top:0;
+    z-index:2;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:12px;
+    padding:8px 0 10px;
+    border-bottom:1px solid var(--border);
+    background:transparent;
+  }
+  body[data-mobile-workspace="appearance"] .mobileAppearancePanelHeader strong{ display:block; color:var(--title); font-size:calc(var(--title-size) * 1.05); font-weight:650; letter-spacing:.04em; }
+  body[data-mobile-workspace="appearance"] .mobileAppearancePanelHeader small{ display:block; margin-top:2px; color:var(--muted); font-size:11px; }
+  body[data-mobile-workspace="appearance"] .mobileAppearancePanelHeader button{
+    display:flex;
+    flex:0 0 auto;
+    width:30px;
+    height:30px;
+    padding:0;
+    border:1px solid color-mix(in srgb,var(--focus-border) 34%,transparent);
+    border-radius:7px;
+    background:transparent;
+  }
+  body[data-mobile-workspace="appearance"] .mobileAppearancePanelHeader button span{
+    width:18px;
+    height:18px;
+    margin:auto;
+    background:linear-gradient(var(--focus-border) 0 0) 1px 1px / 6px 6px no-repeat,linear-gradient(var(--focus-border) 0 0) calc(100% - 1px) 1px / 6px 6px no-repeat,linear-gradient(var(--focus-border) 0 0) 1px calc(100% - 1px) / 6px 6px no-repeat,linear-gradient(var(--focus-border) 0 0) calc(100% - 1px) calc(100% - 1px) / 6px 6px no-repeat;
+  }
+  main{ padding-bottom:calc(24px + var(--page-bottom-pad)); }
+}
+
+#recipePrintSheet{ display:none; }
+@page{ margin:12mm; }
+@media print{
+  html, body{ background:#fff !important; }
+  body > *:not(#recipePrintSheet){ display:none !important; }
+  #recipePrintSheet{ display:block !important; background:#fff !important; color:#000 !important; }
+  #recipePrintSheet *{ color:#000 !important; background:transparent !important; }
+  #recipePrintSheet .printSheetHeader{ margin-bottom:10px; }
+  #recipePrintSheet .printSheetHeader h1{ font-size:18px; margin:0 0 3px; }
+  #recipePrintSheet .printSheetMeta{ font-size:11px; }
+  #recipePrintSheet .printSheetTable{ width:100%; border-collapse:collapse; table-layout:fixed; }
+  #recipePrintSheet .printSheetTable th,
+  #recipePrintSheet .printSheetTable td{ border:1px solid #000; padding:4px 6px; text-align:left; vertical-align:top; }
+  #recipePrintSheet .printSheetTable thead th{ font-size:11px; font-weight:600; }
+  /* Deliberately NOT display:flex on the cell itself - in the "top"
+     orientation sheet this <th> is one of several siblings across the
+     header row (one per layer column), and a <th> with a non-table
+     display value stops participating in the table's column layout: every
+     layer header collapses into a single stacked column instead of
+     sitting side by side across the top (the same failure mode the
+     on-screen transposed grid had). The cell stays an ordinary
+     table-cell; the letter and percentage are plain inline spans, so they
+     read left to right (or centered, via text-align) by ordinary text
+     flow - no flex needed. */
+  #recipePrintSheet .printSheetLayerLabel{ font-size:20px; font-weight:700; text-align:center; vertical-align:middle; }
+  #recipePrintSheet .printSheetResin{ font-size:11px; font-weight:600; line-height:1.3; }
+  #recipePrintSheet .printSheetPct{ font-size:13px; line-height:1.3; }
+  #recipePrintSheet .printSheetLayerLabel .printSheetLayerPct{ font-size:13px; font-weight:600; margin-left:6px; }
+  #recipePrintSheet .printSheetSectionDivider{ margin-top:14px; padding-top:14px; border-top:2px solid #000; }
+}
+

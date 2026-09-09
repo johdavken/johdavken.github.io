@@ -33,7 +33,27 @@
        equivalent "keep content below the status bar" mode to opt into. -->
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
-  <link rel="stylesheet" href="styles.css?v=0.75.35">
+  <!-- The base stylesheet, cut into consecutive parts. These links ARE the
+       cascade: concatenating the parts in this order reproduces the single
+       styles.css they were cut from, byte for byte, so order here is not a
+       preference - reordering them changes which rules win. New parts go in
+       their positional place, never appended for convenience.
+
+       Each part opens with the section banner that names it. The test suite
+       reads them as one stylesheet through css-source.js, which derives this
+       list from these very tags, so a part with no link here is a part the
+       suite cannot see either. -->
+  <link rel="stylesheet" href="styles-base.css?v=0.76.0">
+  <link rel="stylesheet" href="styles-hoppers.css?v=0.76.0">
+  <link rel="stylesheet" href="styles-recipe-views.css?v=0.76.0">
+  <link rel="stylesheet" href="styles-recipe-views-phone.css?v=0.76.0">
+  <link rel="stylesheet" href="styles-results.css?v=0.76.0">
+  <link rel="stylesheet" href="styles-controls.css?v=0.76.0">
+  <link rel="stylesheet" href="styles-tools-notes.css?v=0.76.0">
+  <link rel="stylesheet" href="styles-surfaces.css?v=0.76.0">
+  <link rel="stylesheet" href="styles-shell.css?v=0.76.0">
+  <link rel="stylesheet" href="styles-responsive.css?v=0.76.0">
+  <link rel="stylesheet" href="styles-recipe-grid.css?v=0.76.0">
   <link rel="stylesheet" href="theme.css?v=0.18.19">
   <link rel="stylesheet" href="desktop.css?v=0.1.28">
   <link rel="stylesheet" href="button-styling.css?v=0.1.8">

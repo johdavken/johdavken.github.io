@@ -41,8 +41,23 @@ const TOOL_ROOT = __dirname;
 const BACKUP_DIR = path.join(TOOL_ROOT, "backups");
 const TOOL_PREFIX = "/__theme-lab";
 const THEME_CSS = path.join(REPO_ROOT, "theme.css");
-const STYLES_CSS = path.join(REPO_ROOT, "styles.css");
 const INDEX_HTML = path.join(REPO_ROOT, "index.html");
+
+/* The base stylesheet is a set of consecutive styles-*.css parts, linked in
+ * cascade order by index.html. Theme Lab only reads it, to show the :root token
+ * defaults a palette inherits, so it wants the same single view the test suite
+ * uses - and derives the part list the same way, from index.html itself, so a
+ * new part needs no change here. */
+function readStylesParts(indexHtml) {
+  const parts = [];
+  const re = /<link\b[^>]*rel="stylesheet"[^>]*href="([^"]+)"/g;
+  let m;
+  while ((m = re.exec(indexHtml))) {
+    const file = m[1].split("?")[0];
+    if (/^styles(-[a-z0-9-]+)?\.css$/.test(path.basename(file))) parts.push(file);
+  }
+  return parts;
+}
 
 function parsePort(argv) {
   const flagIdx = argv.indexOf("--port");
@@ -202,11 +217,17 @@ function parseRootDefaults(css) {
 }
 
 async function apiThemes(req, res) {
-  const [themeCss, indexHtml, stylesCss] = await Promise.all([
+  const [themeCss, indexHtml] = await Promise.all([
     fsp.readFile(THEME_CSS, "utf8"),
     fsp.readFile(INDEX_HTML, "utf8"),
-    fsp.readFile(STYLES_CSS, "utf8"),
   ]);
+  const stylesCss = (
+    await Promise.all(
+      readStylesParts(indexHtml).map((part) =>
+        fsp.readFile(path.join(REPO_ROOT, part), "utf8")
+      )
+    )
+  ).join("");
   const parsed = parseThemeCss(themeCss);
   const themeCssLines = themeCss.split("\n");
   const rawOf = (block) =>

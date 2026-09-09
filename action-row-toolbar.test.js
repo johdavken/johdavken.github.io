@@ -3,10 +3,11 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const { readStyles } = require("./css-source");
 
 const app = fs.readFileSync("app.js", "utf8");
 const html = fs.readFileSync("index.html", "utf8");
-const styles = fs.readFileSync("styles.css", "utf8");
+const styles = readStyles();
 
 test("desktop recipe actions share the header with Summary and Edit", () => {
   const row = html.slice(html.indexOf('<div class="recipeHeaderRow">'), html.indexOf('id="splitsArea"'));

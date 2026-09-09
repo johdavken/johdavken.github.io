@@ -3,8 +3,9 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const { readStyles } = require("./css-source");
 
-const styles = fs.readFileSync("styles.css", "utf8");
+const styles = readStyles();
 
 // Desktop's sidebar nav already uses two colors for section titles: --muted
 // normally, --title once .workspaceNavButton is .active. Mobile's cards

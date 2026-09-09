@@ -3,8 +3,9 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const { readStyles } = require("./css-source");
 
-const styles = fs.readFileSync("styles.css", "utf8");
+const styles = readStyles();
 const theme = fs.readFileSync("theme.css", "utf8");
 
 test("--recipe-pill-accent/--recipe-pill-danger default to the tokens the pill fills always used, so every theme without an override is pixel-unchanged", () => {

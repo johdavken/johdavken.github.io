@@ -65,16 +65,29 @@ test("www/ never contains tests, migrations, the Cloudflare worker, git/dev meta
 
 test("www/ does contain the real runtime entry point and its scripts (the allowlist isn't accidentally empty)", () => {
   buildWww();
-  for (const expected of ["index.html", "app.js", "styles.css", "android-back-button.js"]) {
+  for (const expected of ["index.html", "app.js", "styles-base.css", "android-back-button.js"]) {
     assert.ok(fs.existsSync(path.join(OUT, expected)), `expected www/${expected} to exist`);
   }
+});
+
+test("every part of the base stylesheet reaches www/, not just the first", () => {
+  // The Android shell serves www/ from local assets, so a part that fails to be
+  // copied is not a slow load - it is missing rules, on the device, with no
+  // network error to notice. The allowlist is derived from index.html's own
+  // link tags, which is exactly why this is worth asserting: it confirms the
+  // derivation actually enumerates all eleven rather than stopping at one.
+  buildWww();
+  const { STYLE_PARTS } = require("./css-source");
+  assert.ok(STYLE_PARTS.length > 1, "expected the base stylesheet to be split into parts");
+  const missing = STYLE_PARTS.filter(part => !fs.existsSync(path.join(OUT, part)));
+  assert.deepEqual(missing, [], "these linked stylesheet parts were not copied into www/");
 });
 
 test("localRuntimeReferences only picks up local, non-CDN paths from index.html's own src=/href=", () => {
   const html = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
   const refs = localRuntimeReferences(html);
   assert.ok(refs.includes("app.js"));
-  assert.ok(refs.includes("styles.css"));
+  assert.ok(refs.includes("styles-base.css"));
   for (const ref of refs) {
     assert.doesNotMatch(ref, /^https?:\/\//, `"${ref}" should have been filtered as external`);
     assert.doesNotMatch(ref, /\?/, `"${ref}" should have had its query string stripped`);

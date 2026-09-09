@@ -3,9 +3,10 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const { readStyles } = require("./css-source");
 
 const html = fs.readFileSync("index.html", "utf8");
-const styles = fs.readFileSync("styles.css", "utf8");
+const styles = readStyles();
 
 test("mobile home renders the three visible workflow destinations as one connected rail", () => {
   assert.match(html, /class="workspaceIdentityBar" id="workspaceIdentityButton" type="button"[\s\S]*?<strong id="workspaceIdentityName">LOCAL<\/strong>/);

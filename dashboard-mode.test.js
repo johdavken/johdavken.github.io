@@ -10,6 +10,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const { readStyles } = require("./css-source");
 
 const html = fs.readFileSync("index.html", "utf8");
 const app = fs.readFileSync("app.js", "utf8");
@@ -256,7 +257,7 @@ test("Dashboard CSS hides the working shell and is scoped to the existing deskto
 });
 
 test("the Dashboard panel and its rail-foot entry are hidden by default so touch layouts never render them inline", () => {
-  const styles = fs.readFileSync("styles.css", "utf8");
+  const styles = readStyles();
   // Sits with the other base (mobile-first) "hide desktop-only chrome" rules
   // next to .desktopRailVersion; desktop.css opts them back in behind the
   // desktop/fine-pointer query.

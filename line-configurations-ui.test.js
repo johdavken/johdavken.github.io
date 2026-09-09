@@ -1,6 +1,7 @@
 "use strict";
 const test=require("node:test"); const assert=require("node:assert/strict"); const fs=require("node:fs");
-const html=fs.readFileSync("index.html","utf8"); const css=fs.readFileSync("styles.css","utf8"); const ui=fs.readFileSync("line-configurations-ui.js","utf8");
+const { readStyles } = require("./css-source");
+const html=fs.readFileSync("index.html","utf8"); const css=readStyles(); const ui=fs.readFileSync("line-configurations-ui.js","utf8");
 test("Line Configuration is an admin-gated Sudo destination and workspace panel",()=>{
   assert.match(html,/id="lineConfigurationButton"[^>]*class="footerAdminDestination sudoAccessAction"[^>]*data-admin-only="true"[^>]*data-workspace-target="lineConfigurationBlock"[^>]*hidden/);
   assert.match(html,/<details class="block card workspacePanel adminResinPanel" id="lineConfigurationBlock">/);

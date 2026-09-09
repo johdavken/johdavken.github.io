@@ -3,8 +3,9 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const { readStyles } = require("./css-source");
 
-const styles = fs.readFileSync("styles.css", "utf8");
+const styles = readStyles();
 
 // Desktop's per-layer column header (ghosted letter, percentage, Copy)
 // picked "option A" from the mockup: keep the giant translucent letter as

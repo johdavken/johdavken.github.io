@@ -3,8 +3,9 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const { readStyles } = require("./css-source");
 
-const styles = fs.readFileSync("styles.css", "utf8");
+const styles = readStyles();
 
 // Mobile "icon-first compact bar" (option C from the mockup round): Save/
 // Load/Update collapse to small round icon buttons in Recipe Setup's Saved

@@ -13,7 +13,10 @@ const path = require("node:path");
 
 const T = require("./tools/theme-lab/css-trace.js");
 
-const read = (f) => fs.readFileSync(path.join(__dirname, f), "utf8");
+const { readStylesheet } = require("./css-source");
+// "styles.css" resolves to all of its parts joined - one logical sheet, so
+// sheetOrder still describes four cascade participants, not fourteen.
+const read = (f) => readStylesheet(f);
 
 /* ------------------------- stripComments ------------------------- */
 

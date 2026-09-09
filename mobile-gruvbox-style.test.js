@@ -3,8 +3,9 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const { readStyles } = require("./css-source");
 
-const styles = fs.readFileSync("styles.css","utf8");
+const styles = readStyles();
 
 test("Gruvbox light and dark receive mobile background and tile treatments",()=>{
   // Anchored on the first rule of the block these assertions live in; the

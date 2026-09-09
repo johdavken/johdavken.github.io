@@ -7,9 +7,10 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const { readStyles } = require("./css-source");
 
 const html = fs.readFileSync("index.html", "utf8");
-const css = fs.readFileSync("styles.css", "utf8");
+const css = readStyles();
 const ui = fs.readFileSync("rt-cloud-ui.js", "utf8");
 const svc = fs.readFileSync("rt-cloud.js", "utf8");
 const notesUi = fs.readFileSync("notes-ui.js", "utf8");

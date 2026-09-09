@@ -3,6 +3,7 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const test = require("node:test");
+const { readStylesheet } = require("./css-source");
 
 /* The desktop/touch boundary is decided ONCE, in app.js:
  *
@@ -45,7 +46,7 @@ const test = require("node:test");
 
 const app = fs.readFileSync("app.js", "utf8");
 const CSS = ["styles.css", "desktop.css", "button-styling.css"]
-  .map(f => fs.readFileSync(f, "utf8"));
+  .map(f => readStylesheet(f));
 
 const squash = s => s.replace(/\s+/g, "");
 

@@ -1,6 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const { readStyles } = require("./css-source");
 
 /* Weight Profiles folded into the Recipe Book.
  *
@@ -14,7 +15,7 @@ const fs = require("node:fs");
  * wireSetupWeightProfileActions keep a single owner.
  */
 const app = fs.readFileSync("app.js", "utf8");
-const styles = fs.readFileSync("styles.css", "utf8");
+const styles = readStyles();
 const html = fs.readFileSync("index.html", "utf8");
 
 function functionBody(name){

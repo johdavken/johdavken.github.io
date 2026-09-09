@@ -1,6 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const { readStyles } = require("./css-source");
 const index = fs.readFileSync("index.html", "utf8");
 const ui = fs.readFileSync("resin-admin-ui.js", "utf8");
 
@@ -16,7 +17,7 @@ test("admin navigation is explicitly hidden during initialization and rendered f
   // No rule of its own any more: the global [hidden]{display:none!important}
   // at the top of styles.css hides it. That can only be outranked by an
   // !important display on a more specific selector, so check for exactly that.
-  const css = fs.readFileSync("styles.css", "utf8");
+  const css = readStyles();
   assert.match(css, /\[hidden\]\{display:none!important\}/);
   assert.doesNotMatch(css, /\.sudoAccessActions[^{}]*\{[^}]*display:\s*(?!none)[a-z-]+\s*!important/);
 });
@@ -27,7 +28,7 @@ test("Sudo access presents administrator destinations as icon-led action rows", 
   assert.match(index, /id="workspaceManagementButton" class="footerAdminDestination sudoAccessAction"[\s\S]*?<strong>Workspace management<\/strong>/);
   assert.match(index, /id="betaApplicantsButton" class="footerAdminDestination sudoAccessAction"[\s\S]*?<strong>Beta applicants<\/strong>/);
   assert.match(index, /id="databaseHealthButton" class="footerAdminDestination sudoAccessAction"[\s\S]*?<strong>Database health<\/strong>/);
-  const styles = fs.readFileSync("styles.css", "utf8");
+  const styles = readStyles();
   assert.match(styles, /\.sudoAccessAction\{[\s\S]*?grid-template-columns:30px minmax\(0,1fr\) auto;/);
   assert.match(styles, /\.sudoAccessBody\{display:grid;align-content:start;gap:12px\}/);
 });
@@ -78,7 +79,7 @@ test("Resin Database is an in-app workspace panel with a two-column responsive e
   assert.match(index, /class="adminResinColumns"/);
   assert.doesNotMatch(index, /id="resinAdminDialog"/);
   assert.doesNotMatch(ui, /resinAdminDialog/);
-  const styles = fs.readFileSync("styles.css", "utf8");
+  const styles = readStyles();
   assert.match(styles, /\.adminResinColumns\{ display:grid; grid-template-columns:/);
   assert.match(styles, /@media \(max-width: 760px\)\{[\s\S]*\.adminResinColumns\{ grid-template-columns: 1fr; \}/);
   assert.doesNotMatch(styles, /\.adminResinPanel\{ display:none!important; \}/);
@@ -103,7 +104,7 @@ test("the desktop panel body packs its rows at the top, so filtering the list ca
 });
 
 test("Resin Database's search field and Add resin sit together at the left, not a full-width field with a stranded button", () => {
-  const styles = fs.readFileSync("styles.css", "utf8");
+  const styles = readStyles();
   assert.match(styles, /#resinAdminBlock \.adminToolbar\{ grid-template-columns:minmax\(0,320px\) auto; justify-content:start; \}/);
   // The shared .adminToolbar keeps its header-bar behaviour for the other
   // admin sub-panels, which do want their buttons pushed to the right edge.

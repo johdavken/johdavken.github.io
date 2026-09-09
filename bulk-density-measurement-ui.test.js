@@ -3,12 +3,13 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const { readStyles } = require("./css-source");
 
 const html = fs.readFileSync("index.html", "utf8");
 const app = fs.readFileSync("app.js", "utf8");
 const ui = fs.readFileSync("bulk-density-measurement-ui.js", "utf8");
 const admin = fs.readFileSync("resin-admin.js", "utf8");
-const css = `${fs.readFileSync("styles.css", "utf8")}\n${fs.readFileSync("desktop.css", "utf8")}`;
+const css = `${readStyles()}\n${fs.readFileSync("desktop.css", "utf8")}`;
 
 test("Bulk Density Measurement is an ordinary operator Tool, not an admin-only Account destination", () => {
   assert.doesNotMatch(html, /id="bulkDensityMeasurementButton"/);

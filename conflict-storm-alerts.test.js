@@ -4,11 +4,12 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const stormsApi = require("./conflict-storm-alerts.js");
+const { readStyles } = require("./css-source");
 
 const migration = fs.readFileSync("supabase/migrations/202608260001_admin_conflict_storm_alerts.sql", "utf8");
 const ui = fs.readFileSync("database-health-ui.js", "utf8");
 const workspaceUi = fs.readFileSync("workspace-recovery-ui.js", "utf8");
-const styles = fs.readFileSync("styles.css", "utf8");
+const styles = readStyles();
 
 function fakeClient(handlers = {}){
   const calls = [];

@@ -3,6 +3,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const { readStyles } = require("./css-source");
 
 const index = fs.readFileSync("index.html", "utf8");
 const ui = fs.readFileSync("workspace-recovery-ui.js", "utf8");
@@ -10,7 +11,7 @@ const app = fs.readFileSync("app.js", "utf8");
 const cloudSync = fs.readFileSync("cloud-sync.js", "utf8");
 const resinAdmin = fs.readFileSync("resin-admin.js", "utf8");
 const resinAdminUi = fs.readFileSync("resin-admin-ui.js", "utf8");
-const styles = fs.readFileSync("styles.css", "utf8");
+const styles = readStyles();
 
 test("Workspace Management is hidden during initialization, when signed out, and for non-admins", () => {
   assert.match(index, /id="workspaceManagementButton"[^>]*hidden/);
