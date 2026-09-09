@@ -9,14 +9,14 @@ const styles = fs.readFileSync("styles.css", "utf8");
 // Mobile RT logo (.resinToolsLogo, inside .mobileBrand - hidden entirely on
 // desktop via .mobileBrand{display:none} at >=901px) reduced 25%: 280px -> 210px.
 // The desktop sidebar icon (.resinToolsSidebarIcon) is a separate element/rule
-// and must stay untouched.
+// and is independently enlarged by 25%: 137.5px -> 171.875px.
 
 test("the mobile logo's max width is 210px (280px reduced by 25%), still capped to the container via min(100%, ...)", () => {
   assert.match(styles, /\.resinToolsLogo\{display:block;width:min\(100%,210px\);height:auto\}/);
 });
 
-test("the desktop sidebar icon is untouched", () => {
-  assert.match(styles, /\.resinToolsSidebarIcon\{display:block;width:137\.5px;height:auto\}/);
+test("the desktop sidebar icon is 25% larger", () => {
+  assert.match(styles, /\.resinToolsSidebarIcon\{display:block;width:171\.875px;height:auto\}/);
 });
 
 test(".resinToolsLogo lives inside .mobileBrand, which is hidden on desktop - confirms this change is mobile-only by construction, not by a separate media query on the logo itself", () => {

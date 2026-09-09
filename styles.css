@@ -406,7 +406,7 @@ main{
   border-bottom: 1px solid var(--border);
 }
 .resinToolsLogo{display:block;width:min(100%,210px);height:auto}
-.resinToolsSidebarIcon{display:block;width:137.5px;height:auto}
+.resinToolsSidebarIcon{display:block;width:171.875px;height:auto}
 .workspaceTileIcon{
   width:15px;
   height:15px;
