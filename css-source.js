@@ -4,10 +4,10 @@
  *
  * WHY THIS EXISTS
  *
- * styles.css is ~600 KB in a single file, and the plan is to cut it into
- * consecutive parts that index.html links in the same order. Concatenating
- * those parts reproduces today's bytes exactly, so the cascade is unchanged
- * by construction - a positional cut cannot move one rule past another.
+ * styles.css was ~600 KB in a single file. It is now eleven consecutive parts
+ * that index.html links in the same order. Concatenating those parts
+ * reproduces the original bytes exactly, so the cascade is unchanged by
+ * construction - a positional cut cannot move one rule past another.
  *
  * What a cut WOULD break is the test suite: 110 test files read styles.css
  * as text, and many locate a rule by its offset in that text. Repointing
@@ -64,4 +64,52 @@ function stylePartFilesOnDisk() {
   return fs.readdirSync(ROOT).filter(name => PART_NAME.test(name)).sort();
 }
 
-module.exports = { STYLE_PARTS, readStyles, stylePartFilesOnDisk };
+/* The name the base stylesheet still goes by.
+ *
+ * No file called styles.css exists any more - it is the eleven styles-*.css
+ * parts. But several tests reason about the stylesheets AS a set, keyed or
+ * ordered by name: "which sheet declares this token", "in what order do these
+ * three sheets get to override each other". For those, the parts are not
+ * eleven participants in the cascade, they are one, and splitting them into
+ * eleven keys would change what the test is asserting rather than just where
+ * it reads from. So the set keeps one entry under this name. */
+const BASE_STYLESHEET = "styles.css";
+
+/** One stylesheet by name, where the base name means all of its parts joined. */
+function readStylesheet(name) {
+  if (name === BASE_STYLESHEET) return readStyles();
+  return fs.readFileSync(path.join(ROOT, name), "utf8");
+}
+
+/* Which part carries a given rule.
+ *
+ * Several tests were written to assert "the stylesheet holding this fix got a
+ * fresh ?v=", back when there was one stylesheet to name. Rather than freeze
+ * a part name into those tests - which would then be wrong the moment a rule
+ * moves between parts - they ask for it by content. Returns null if no part
+ * contains the text, which is itself worth failing on.
+ */
+function partContaining(needle) {
+  for (const part of STYLE_PARTS) {
+    if (fs.readFileSync(path.join(ROOT, part), "utf8").includes(needle)) return part;
+  }
+  return null;
+}
+
+/** The ?v= tag index.html links a stylesheet with, or null if untagged. */
+function cacheTagOf(file) {
+  const html = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
+  const escaped = file.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const found = new RegExp(`href="${escaped}\\?v=([0-9.]+)"`).exec(html);
+  return found ? found[1] : null;
+}
+
+module.exports = {
+  STYLE_PARTS,
+  BASE_STYLESHEET,
+  readStyles,
+  readStylesheet,
+  stylePartFilesOnDisk,
+  partContaining,
+  cacheTagOf,
+};

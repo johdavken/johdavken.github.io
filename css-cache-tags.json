@@ -1,0 +1,58 @@
+{
+  "styles-base.css": {
+    "v": "0.76.0",
+    "hash": "b20d420e4556d9ee"
+  },
+  "styles-hoppers.css": {
+    "v": "0.76.0",
+    "hash": "84267475e10fc233"
+  },
+  "styles-recipe-views.css": {
+    "v": "0.76.0",
+    "hash": "98c3c1f57653e907"
+  },
+  "styles-recipe-views-phone.css": {
+    "v": "0.76.0",
+    "hash": "3c171bbc70e7049f"
+  },
+  "styles-results.css": {
+    "v": "0.76.0",
+    "hash": "a5dba533205702b1"
+  },
+  "styles-controls.css": {
+    "v": "0.76.0",
+    "hash": "235c9339a5a83c74"
+  },
+  "styles-tools-notes.css": {
+    "v": "0.76.0",
+    "hash": "4ee013a092b84897"
+  },
+  "styles-surfaces.css": {
+    "v": "0.76.0",
+    "hash": "00e9473779ca552a"
+  },
+  "styles-shell.css": {
+    "v": "0.76.0",
+    "hash": "6521ca32ded09e18"
+  },
+  "styles-responsive.css": {
+    "v": "0.76.0",
+    "hash": "62f4a890a131ab81"
+  },
+  "styles-recipe-grid.css": {
+    "v": "0.76.0",
+    "hash": "42bf0684c509243b"
+  },
+  "theme.css": {
+    "v": "0.18.19",
+    "hash": "2e809c615d0b518b"
+  },
+  "desktop.css": {
+    "v": "0.1.28",
+    "hash": "dc7474c691b4a736"
+  },
+  "button-styling.css": {
+    "v": "0.1.8",
+    "hash": "8e752d3a15d700ea"
+  }
+}

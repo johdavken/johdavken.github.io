@@ -3,6 +3,7 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const test = require("node:test");
+const { readStylesheet } = require("./css-source");
 
 /* styles.css opens the same screen size over and over: 85 @media blocks across
  * 26 distinct conditions, with (min-width: 701px) alone opened 13 separate
@@ -78,7 +79,10 @@ const CEILING = {
 const TOTAL_CEILING = 85;
 
 function blockCounts(file) {
-  const css = fs.readFileSync(file, "utf8").replace(/\/\*[\s\S]*?\*\//g, " ");
+  // "styles.css" is the eleven parts joined: the ceiling counts blocks in the
+  // cascade, and a cut that moves a block from one part to another has not
+  // added one.
+  const css = readStylesheet(file).replace(/\/\*[\s\S]*?\*\//g, " ");
   const counts = new Map();
   for (const match of css.matchAll(/@media([^{]*)\{/g)) {
     // Whitespace-insensitive, so both spellings of one query count as one.

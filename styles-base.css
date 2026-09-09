@@ -1,0 +1,2076 @@
+/* =======================================================================
+ *   Resin.Tools — Base styles (theme-agnostic)
+ *   Put theme palettes + per-theme accents in theme.css
+ *   ======================================================================= */
+
+/* An author rule's `display` always beats the UA stylesheet's own
+   [hidden]{display:none}, whatever the specificity - so any element given a
+   display value renders even while carrying the hidden attribute. That was
+   being patched one selector at a time: 23 separate rules across this file
+   and desktop.css each said `.thing[hidden]{display:none!important}` for the
+   same reason, and new ones kept appearing because the cause isn't visible
+   at the site of the symptom.
+
+   This states it once. It is deliberately first in the file so a rule that
+   genuinely wants a hidden element laid out - the invisible spacer at
+   #recipeHeaderControls, which keeps the mobile Recipe row from jumping on
+   tab switch - still wins on both specificity and source order. */
+[hidden]{display:none!important}
+
+:root{
+  color-scheme: light dark;
+  /* -------------------------------------------------------------------
+   *     Core theme tokens (defaults = Dark)
+   *     ------------------------------------------------------------------- */
+  --bg: #0b0f14;
+  /* Desktop can use a quieter workspace canvas without changing the
+     document/mobile background token. Individual themes may override it. */
+  --desktop-canvas-bg: var(--bg);
+  --panel: rgba(18,26,35,.88);
+  --panel2: rgba(15,22,32,.76);
+
+  --fg:     #c7c1bb; /* near-black text */
+  --yellow: #b02323; /* muted gold */
+  --orange: #e06c00;
+
+  --text: #eaf2ff;
+  --muted: #9bb0c6;
+  --title: #f2543f;
+  --subtitle: #cfcfcf;
+
+  --border: rgba(255,255,255,.10);
+  --border2: rgba(255,255,255,.14);
+
+  --warn: #ffb020;
+  --bad: #ff5c5c;
+  --ok: #5dff9f;
+
+  /* Resin Totals has no dedicated --tile-accent elsewhere (it silently falls
+     back to the same focus-border blue as Timeline/Help) - this is only
+     consumed by the numbered-workflow step marker on the Main tile grid.
+     Derived from --ok (darkened, not reused as-is) so it tracks every theme
+     automatically and stays visually distinct from plain --ok green. */
+  --workflow-resin-totals: color-mix(in srgb, var(--ok) 75%, black 25%);
+
+  --shadow2: 0 8px 20px rgba(0,0,0,.25);
+  --radius2: 18px;
+
+  --field-bg: rgba(0,0,0,.20);
+  --panelOpen: rgba(18,26,35,.92);
+  --chev: rgba(255,255,255,.45);
+
+  /* this is for the APK button */
+  --btn-pad-y: 10px;
+  --btn-pad-x: 12px;
+  --btn-radius: 14px;
+  --control-height: 33px;
+  --control-radius: 8px;
+
+  /* Common surface tokens */
+  --row-bg: rgba(255,255,255,.04);
+  --row-border: rgba(255,255,255,.07);
+  --row-bg-2: rgba(255,255,255,.03);
+  --row-border-2: rgba(255,255,255,.07);
+
+  --readonly-bg: rgba(255,255,255,.06);
+  --readonly-border: rgba(255,255,255,.10);
+  --footer-height: 56px;      /* baseline footer height */
+  --footer-gap: 18px;         /* breathing room above footer */
+  --page-bottom-pad: calc(var(--footer-height) + var(--footer-gap) + env(safe-area-inset-bottom));
+  --focus-border: rgba(74,163,255,.80);
+  --focus-ring: rgba(74,163,255,.16);
+  /* The keyboard focus ring, composed once. Every :focus-visible rule
+     references this rather than restating the shorthand - there were 65
+     literal copies across three files. --focus-border stays theme-scoped,
+     so the nested var() still resolves per theme at the point of use.
+     outline-offset is deliberately NOT folded in: it is per-component and
+     currently takes six different values (2px, 1px, 3px, -1px, -2px, -3px). */
+  --focus-outline: 2px solid var(--focus-border);
+
+  /* Recipe pill segments (header Edit/Done + Load Next/Print, and the Edit
+     toolbar's Clear/Empty/Reset/Rearrange row) fill from these two tokens
+     rather than reading --focus-border/--bad directly, so a theme can retune
+     just these buttons without touching its global accent/error colors used
+     everywhere else. Default = the same tokens they always used. */
+  --recipe-pill-accent: var(--focus-border);
+  --recipe-pill-danger: var(--bad);
+
+  /* -------------------------------------------------------------------
+   *     Density tokens (default = Comfort)
+   *     ------------------------------------------------------------------- */
+  --font-base: 16px;
+  --font-small: 12px;
+  --font-tiny: 11px;
+
+  --pad-input-y: 8px;
+  --pad-input-x: 12px;
+  --pad-card: 12px;
+
+  --gap: 10px;
+  --row-pad: 6px;
+
+  --radius-input: 14px;
+  --radius-row: 16px;
+
+  --toggle-w: 52px;
+  --toggle-h: 30px;
+  --toggle-knob: 24px;
+
+  --badge-font: 12px;
+  --title-size: 14px;
+  --summary-pad: 12px;
+  --body-pad: 12px;
+  --tool-pad: 12px;
+  --page-pad: 14px;
+  --page-gap: 16px;
+
+  /* -------------------------------------------------------------------
+   *     Formula colors (defaults)
+   *     ------------------------------------------------------------------- */
+  --f-var1: var(--ok);
+  --f-var2: var(--warn);
+  --f-var3: var(--title);
+  --f-const: var(--muted);
+
+  /* -------------------------------------------------------------------
+   *     Button scheme tokens (defaults)
+   *     ------------------------------------------------------------------- */
+  --btn-text: var(--muted);
+  --btn-border: rgba(255,255,255,.16);
+
+  --btn-primary-a: rgba(74,163,255,.22);
+  --btn-primary-b: rgba(74,163,255,.10);
+
+  --btn-secondary-bg: rgba(255,255,255,.06);
+  --btn-secondary-border: rgba(255,255,255,.16);
+
+  --btn-danger-bg: rgba(255,92,92,.12);
+  --btn-danger-border: rgba(255,92,92,.28);
+
+  /* Canonical button controls. These aliases keep every theme and density
+     working while the legacy button classes are migrated to semantic kinds. */
+  --button-height: var(--control-height);
+  --button-radius: var(--control-radius);
+  --button-padding-y: var(--btn-pad-y);
+  --button-padding-x: var(--btn-pad-x);
+  --button-font-size: var(--font-small);
+  --button-font-weight: 700;
+
+  /* -------------------------------------------------------------------
+   *     Cross-theme accent tokens (theme.css may override these)
+   *     ------------------------------------------------------------------- */
+  --bg-glow-a: rgba(74,163,255,.16);
+  --bg-glow-b: rgba(93,255,159,.10);
+
+  --card-glow-a: rgba(74,163,255,.14);
+  --card-glow-b: rgba(93,255,159,.10);
+
+  --toggle-on-bg: rgba(74,163,255,.22);
+  --toggle-on-border: rgba(74,163,255,.45);
+
+  --footer-bg: rgba(11,15,20,.92);
+  --footer-border: rgba(255,255,255,.08);
+
+}
+
+
+/* Spacious: presentation and touch-first spacing. */
+:where(html, body)[data-density="spacious"]{
+  --font-base: 17px;
+  --font-small: 13px;
+  --font-tiny: 12px;
+  --pad-input-y: 11px;
+  --pad-input-x: 14px;
+  --pad-card: 16px;
+  --gap: 14px;
+  --row-pad: 8px;
+  --radius-input: 18px;
+  --radius-row: 20px;
+  --radius2: 22px;
+  --toggle-w: 58px;
+  --toggle-h: 34px;
+  --toggle-knob: 28px;
+  --badge-font: 13px;
+  --btn-pad-y: 11px;
+  --btn-pad-x: 15px;
+  --btn-radius: 16px;
+  --control-height: 40px;
+  --control-radius: 12px;
+  --title-size: 16px;
+  --summary-pad: 16px;
+  --body-pad: 16px;
+  --tool-pad: 16px;
+  --page-pad: 18px;
+  --page-gap: 20px;
+}
+
+/* Compact */
+:where(html, body)[data-density="compact"]{
+  --font-base: 14px;
+  --font-small: 10px;
+  --font-tiny: 9px;
+  --pad-input-y: 6px;
+  --pad-input-x: 9px;
+  --pad-card: 8px;
+  --gap: 7px;
+  --row-pad: 3px;
+  --radius-input: 10px;
+  --radius-row: 12px;
+  --radius2: 14px;
+  --toggle-w: 46px;
+  --toggle-h: 26px;
+  --toggle-knob: 20px;
+  --badge-font: 10px;
+  --btn-pad-y: 6px;
+  --btn-pad-x: 9px;
+  --btn-radius: 10px;
+  --control-height: 30px;
+  --control-radius: 7px;
+  --title-size: 13px;
+  --summary-pad: 9px;
+  --body-pad: 9px;
+  --tool-pad: 9px;
+  --page-pad: 10px;
+  --page-gap: 12px;
+}
+
+/* Dense */
+:where(html, body)[data-density="dense"]{
+  --font-base: 12px;
+  --font-small: 9px;
+  --font-tiny: 8px;
+  --pad-input-y: 4px;
+  --pad-input-x: 6px;
+  --pad-card: 4px;
+  --gap: 4px;
+  --row-pad: 4px;
+  --radius-input: 7px;
+  --radius-row: 8px;
+  --radius2: 10px;
+  --toggle-w: 38px;
+  --toggle-h: 20px;
+  --toggle-knob: 16px;
+  --badge-font: 9px;
+  --btn-pad-y: 4px;
+  --btn-pad-x: 6px;
+  --btn-radius: 7px;
+  --control-height: 26px;
+  --control-radius: 5px;
+  --title-size: 12px;
+  --summary-pad: 7px;
+  --body-pad: 7px;
+  --tool-pad: 7px;
+  --page-pad: 7px;
+  --page-gap: 8px;
+}
+
+/* Maximum Data: prioritizes maximum on-screen information on large displays. */
+:where(html, body)[data-density="maximum"]{
+  --font-base: 10px;
+  --font-small: 8px;
+  --font-tiny: 7px;
+  --pad-input-y: 2px;
+  --pad-input-x: 4px;
+  --pad-card: 2px;
+  --gap: 2px;
+  --row-pad: 1px;
+  --radius-input: 4px;
+  --radius-row: 5px;
+  --radius2: 6px;
+  --toggle-w: 32px;
+  --toggle-h: 18px;
+  --toggle-knob: 14px;
+  --badge-font: 8px;
+  --btn-pad-y: 3px;
+  --btn-pad-x: 5px;
+  --btn-radius: 4px;
+  --control-height: 22px;
+  --control-radius: 4px;
+  --title-size: 11px;
+  --summary-pad: 5px;
+  --body-pad: 5px;
+  --tool-pad: 5px;
+  --page-pad: 4px;
+  --page-gap: 5px;
+}
+
+/* =======================================================================
+ *   Base layout
+ *   ======================================================================= */
+
+*{ box-sizing: border-box; }
+
+body{
+  min-height: 100vh;
+  margin: 0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  background:
+  radial-gradient(1200px 600px at 20% -10%, var(--bg-glow-a), transparent 60%),
+  radial-gradient(800px 500px at 90% 0%,  var(--bg-glow-b), transparent 55%),
+  var(--bg);
+  color: var(--text);
+  font-size: var(--font-base);
+}
+
+main{
+  max-width: 1100px;
+  margin: 0 auto;
+  /* Android's edge-to-edge enforcement (targetSdk 36) draws the WebView
+     under the status bar the same way it already draws under the gesture
+     nav bar - env(safe-area-inset-bottom) has compensated for that side for
+     a long time, this is the same mechanism finally applied to the top, so
+     it reads the device's real status-bar height instead of a guessed
+     constant. Resolves to 0 in any browser/PWA context that doesn't need it. */
+  padding: calc(var(--page-pad) + env(safe-area-inset-top, 0px)) var(--page-pad) calc(24px + var(--page-bottom-pad));
+  display: grid;
+  gap: var(--page-gap);
+}
+
+/* The foldaway group (RT Sync / Tools / Help) and the control that reveals
+   it. Both default to the un-folded state here, and only the desktop side
+   rail below opts into collapsing: the mobile tile home shows all seven
+   tiles at once, where there is no rail to shorten and no divider to draw. */
+.workspaceNavDivider{ display: none; }
+.workspaceIdentityBar,
+.mobileProductionControls,
+.mobileRailChev,
+.mobileWorkspaceNavMore,
+.desktopNavMoreIcons,
+.mobileWorkspaceSyncStatus{ display:none; }
+.desktopRailMetric{ display:none!important; }
+.mobileLineRateReadout{display:none}
+
+/* Shared everywhere the rail itself renders (mobile home tile grid and the
+   desktop sidebar alike) - each context only toggles display and the
+   surrounding margin below. A labeled divider: two flex-filled hairlines
+   flanking the connected workspace name (or "Connect" when there is none),
+   doubling as the button that opens RT Sync. */
+.workspaceIdentityBar{
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+.workspaceIdentityBar::before,
+.workspaceIdentityBar::after{
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border2);
+}
+.workspaceIdentityBar strong{
+  flex: 0 1 auto;
+  overflow: hidden;
+  max-width: 60%;
+  color: var(--title);
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.workspaceIdentityBar:hover,
+.workspaceIdentityBar:hover strong{ color: var(--focus-border); }
+.workspaceIdentityBar:focus-visible{
+  outline: var(--focus-outline);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.workspaceNav,
+.workspaceStatusBar{ display: none; }
+.desktopChangeoverWizardTrigger{display:none}
+
+/* Line Setup has been folded into Recipe. The legacy panel remains only as
+   a stable DOM host before its live controls mount into the desktop rail. */
+.workspaceNavButton[data-workspace-target="lineSetupBlock"],
+#lineSetupBlock{ display:none!important; }
+.mobileQuickActions{ display:none; }
+.mobileAppearancePanelHeader{ display:none; }
+.workspaceContent{ display: contents; }
+.mobileBrand{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 2px 12px 4px;
+  border-bottom: 1px solid var(--border);
+}
+.resinToolsLogo{display:block;width:min(100%,210px);height:auto}
+.resinToolsSidebarIcon{display:block;width:171.875px;height:auto}
+.workspaceTileIcon{
+  width:15px;
+  height:15px;
+  flex:0 0 auto;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.7;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  color:var(--muted);
+}
+/* Gruvbox gets a small set of squared construction marks inspired by classic
+   terminal icon themes. The base glyph is retained for every other theme. */
+.gruvboxIconDetail{display:none}
+body[data-theme-family="gruvbox"] .gruvboxIconDetail{display:block}
+/* Gruvbox goes a step further and swaps the stroked line art itself for a
+   solid filled glyph set - the defining trait of the classic terminal icon
+   themes those construction marks were borrowed from. Both surfaces paint
+   that glyph bare, with no tile of its own: the desktop rail and the mobile
+   home already render a flat, transparent icon slot, so the swap is purely
+   stroke -> fill and each section keeps its existing accent colour. Every
+   other theme, industrial-slate included, keeps the stroked base glyph and
+   never paints the solid twin. Both sets ship in the markup so the swap
+   stays a pure CSS concern. */
+.gruvboxSolidGlyph{display:none;fill:currentColor;stroke:none}
+body[data-theme-family="gruvbox"] .gruvboxSolidGlyph{display:block}
+body[data-theme-family="gruvbox"] .baseGlyph{display:none}
+.rtLogoSprite{position:absolute;width:0;height:0;overflow:hidden;color:var(--text)}
+:is(.resinToolsLogo,.resinToolsSidebarIcon){color:var(--text)}
+.rtConfluenceRotor{animation:rtConfluenceRevolve 30s linear infinite;transform-origin:0 0}
+.rtConfluenceHighlight{
+  fill:none;
+  stroke:var(--text);
+  stroke-width:.85;
+  stroke-linecap:round;
+  stroke-dasharray:14 86;
+  opacity:0;
+  animation:rtConfluenceTravel 6s linear var(--rt-flow-delay,0s) infinite;
+}
+.rtConfluenceOutput{animation:rtConfluenceOutput 6s ease-in-out var(--rt-flow-delay,0s) infinite}
+@keyframes rtConfluenceRevolve{to{transform:rotate(360deg)}}
+@keyframes rtConfluenceTravel{
+  0%{stroke-dashoffset:18;opacity:0}
+  10%{opacity:.7}
+  72%{opacity:.7}
+  90%,100%{stroke-dashoffset:-100;opacity:0}
+}
+@keyframes rtConfluenceOutput{
+  0%,100%{opacity:.45}
+  25%,45%{opacity:1}
+  75%{opacity:.45}
+}
+@media (prefers-reduced-motion:reduce){
+  .rtConfluenceRotor,.rtConfluenceHighlight,.rtConfluenceOutput{animation:none}
+  .rtConfluenceHighlight{opacity:0}
+}
+.workspaceBrandLogo{ display: block; width: min(100%, 196px); height: auto; }
+.workspaceBrandLogo path{ stroke-linecap: round; stroke-linejoin: round; }
+.workspaceBrandLogo [class^="polynFlow"]{ fill: none; stroke-width: 11; }
+.workspaceBrandLogo .polynFlowRed{ stroke: var(--bad); }
+.workspaceBrandLogo .polynFlowOrange{ stroke: var(--orange); }
+.workspaceBrandLogo .polynFlowYellow{ stroke: var(--warn); }
+.workspaceBrandLogo .polynFlowGreen{ stroke: var(--ok); }
+.workspaceBrandLogo .polynFlowBlue{ stroke: var(--focus-border); }
+.workspaceBrandLogo .polynWord{
+  fill: var(--text);
+  font: 900 76px/1 ui-monospace, "Cascadia Mono", "Liberation Mono", monospace;
+  letter-spacing: -7px;
+}
+.workspaceBrandLogo .polynTagline{
+  fill: var(--muted);
+  font: 800 17px/1 ui-monospace, "Cascadia Mono", "Liberation Mono", monospace;
+  letter-spacing: .8px;
+}
+.mobileBrand .workspaceBrandLogo{ width: min(100%, 190px); }
+.statusPreferences{position:relative;align-self:center;margin-left:auto}
+.statusPreferences > summary{display:flex;align-items:center;justify-content:center;width:34px;height:34px;padding:0;border:0;border-radius:0;background:transparent;color:var(--text);font-size:20px;line-height:1;cursor:pointer;list-style:none}
+.statusPreferences > summary::-webkit-details-marker{display:none}
+.statusPreferences > summary:hover,.statusPreferences[open] > summary{background:transparent;color:var(--title)}
+.statusPreferences > summary:focus-visible{outline:var(--focus-outline);outline-offset:-3px}
+.statusPreferencesPanel{position:absolute;top:calc(100% + 8px);right:0;z-index:60;width:min(390px,calc(100vw - 24px));padding:14px;border:1px solid var(--border2);border-radius:var(--radius-row);background:var(--panelOpen);box-shadow:var(--shadow2)}
+.statusPreferencesHead{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:12px;padding-bottom:9px;border-bottom:1px solid var(--border)}
+.statusPreferencesHead strong{font-size:14px}.statusPreferencesHead small{color:var(--muted);font-size:var(--font-tiny)}
+
+@media (min-width: 901px) and (pointer: fine){
+  .mobileBrand{ display: none; }
+  main{
+    max-width: 1320px;
+    grid-template-columns: 220px minmax(0, 1fr);
+    align-items: start;
+  }
+  main > .site-header{
+    position: relative;
+    grid-column: 2;
+    grid-row: 1;
+    justify-content: flex-start;
+    width: 100%;
+    height: 74px;
+    padding: 0 220px 0 0;
+    overflow: hidden;
+  }
+  main > .site-header svg{
+    flex: 0 0 auto;
+    width: 100%;
+    height: auto;
+  }
+  main > .site-header .headerWordmark{ display: none; }
+  main > .modeBar{
+    z-index: 2;
+    grid-column: 2;
+    grid-row: 1;
+    align-self: center;
+    justify-self: end;
+  }
+  .workspaceNav{
+    position: sticky;
+    top: 14px;
+    display: grid;
+    grid-column: 1;
+    grid-row: 1;
+    gap: 5px;
+    padding: 5px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-row);
+    background: var(--panel);
+    box-shadow: none;
+  }
+  .workspaceStatusBar{
+    position: sticky;
+    top: 14px;
+    z-index: 5;
+    display:flex;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:10px;
+    min-height:34px;
+    padding:0 8px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-row);
+    background: var(--readonly-bg);
+    box-shadow: none;
+  }
+  .workspaceContent{
+    display: grid;
+    grid-column: 2;
+    grid-row: 1;
+    gap: var(--page-gap);
+    min-width: 0;
+  }
+  .workspaceStatusItem{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    min-height:0;
+    padding:0;
+    border:0;
+    border-radius:0;
+    background:transparent;
+    line-height:1;
+    white-space:nowrap;
+  }
+  .workspaceStatusItem span{
+    color: var(--muted);
+    font-size: var(--font-tiny);
+  }
+  .workspaceStatusItem strong{
+    color: var(--text);
+    font-size: var(--font-small);
+    line-height:1;
+  }
+  .workspaceStatusItem strong.stale{ color: var(--warn); }
+  /* Output/Changeover are readouts that turn into their own input in place,
+     on click - the same reveal pattern the Recipe gauge tiles use, applied
+     to the always-visible status bar instead so editing them never depends
+     on expanding the Recipe rail stage. Both write straight to
+     state.lineRate/state.changeoverTime, the same fields the gauge tiles
+     read and write, so the two stay in sync without duplicated state. */
+  .workspaceStatusItem .statusReadout{
+    min-height:0;
+    padding:0;
+    border:0;
+    border-radius:3px;
+    background:transparent;
+    color:var(--text);
+    font:inherit;
+    font-family:inherit;
+    line-height:1;
+    cursor:pointer;
+  }
+  .workspaceStatusItem .statusReadout:hover,
+  .workspaceStatusItem .statusReadout:focus-visible{
+    color:var(--focus-border);
+  }
+  .statusEditableItem.editing .statusReadout{ display:none; }
+  .statusEditInput{ display:none; }
+  .statusEditableItem.editing .statusEditInput{
+    display:block;
+    min-height:0;
+    padding:1px 4px;
+    border:1px solid var(--focus-border);
+    border-radius:3px;
+    background:var(--panel);
+    color:var(--text);
+    font:inherit;
+    font-size:var(--font-small);
+    line-height:1.2;
+  }
+  #workspaceOutputInput{ width:64px; }
+  #workspaceChangeoverInput{ width:98px; }
+  /* No border-bottom here - .workspaceIdentityBar sits directly below and
+     draws its own pair of divider hairlines flanking the workspace name,
+     so a second line here would just double it up. */
+  .workspaceBrand{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 8px 12px;
+    user-select: none;
+  }
+  .workspaceNavButton{
+    display: grid;
+    gap: 3px;
+    width: 100%;
+    padding: 10px 11px;
+    border: 1px solid transparent;
+    border-radius: calc(var(--radius-row) - 4px);
+    background: transparent;
+    color: var(--muted);
+    text-align: left;
+    box-shadow: none;
+  }
+  .workspaceNavButton span{
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: inherit;
+    font-size: 13px;
+    font-weight: 850;
+  }
+  /* The per-row status dot that used to sit before the icon+title (a small
+     filled circle, colour keyed off data-status) is gone - at this row's
+     real width (icon + a two-word title like "RESIN TOTALS"/"TIMELINE"
+     sharing one line with it), the dot's own width plus its flex gap was
+     enough to push the title into wrapping on several sections. The
+     step-number badge (.workspaceNavButton[data-step]::before, further
+     down) and the coloured "small" status line beneath already carry this
+     same status signal without costing the title row any width. */
+  .workspaceNavButton small{
+    justify-self: start;
+    overflow: hidden;
+    max-width: 100%;
+    padding: 2px 7px;
+    border: 1px solid color-mix(in srgb, currentColor 22%, transparent);
+    border-radius: 999px;
+    color: var(--muted);
+    font-size: var(--font-tiny);
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  /* Numbered-workflow step markers, the side rail's counterpart to the
+     mobile tile home's own (see the [data-step] block in the mobile media
+     query). Same four sections - Line Setup/Recipe/Timeline/Resin Totals,
+     the ones carrying data-step in index.html - same --tile-accent fill and
+     same knocked-out numeral, so a section is the same colour and the same
+     number on both surfaces. RT Sync/Tools/Help have no data-step and are
+     untouched.
+
+     The marker has to originate on the button, not on the label span:
+     attr() reads the attribute off the pseudo-element's own originating
+     element, and data-step lives on the button. ::before, matching the
+     mobile marker's own choice - there the circle is ::before and ::after
+     is spent on the divider rule the rail has no need for. (The rail's
+     status dot is span::before, a different element.)
+
+     It is a real grid item, in a column of its own, NOT absolutely
+     positioned. That distinction is the whole point: the sidebar column is
+     a fixed 220px (see `main` above) and the labels are uppercase with
+     .22em tracking, so "RESIN TOTALS" already fills the row. An absolutely
+     positioned circle plus padding-right only *reserves* space - the label
+     is a flex line that cannot shrink below its longest word, so it
+     overflowed the padding and ran under the circle. As a grid item the
+     circle takes its width out of the row before the label is measured,
+     so the label wraps in what is left and the two can never collide at
+     any width.
+
+     Spanning both rows and centred, so it sits against the label/status
+     pair as a unit rather than aligning to either line on its own.
+
+     Decorative only. The button still handles nav; nothing here adds a
+     hover, focus or pressed state of its own. */
+  /* Line Setup / Recipe / Timeline / Resin Totals are the job; RT Sync,
+     Tools and Help are the toolbox. The rule makes that split structural
+     rather than implied, and doubles as the control that folds the toolbox
+     away - seven rows is a lot to meet on first open.
+
+     The label pill sits ON the rule rather than beside it: the rule is
+     drawn by ::before across the full width and the pill paints over its
+     middle with the panel's own background, so one line reads as one
+     divider with a handle, not as a button with decoration either side.
+
+     The active section is never hidden. A rail that folds away the row you
+     are currently looking at leaves you with no "you are here" at all, so
+     the collapse rule exempts .active - fold the group while sitting in
+     Tools and Tools stays, alone, under the divider. */
+  .workspaceNavDivider{
+    position: relative;
+    display: flex;
+    justify-content: center;
+    margin: 9px 4px 4px;
+  }
+  .workspaceNavDivider::before{
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    border-top: 1px solid var(--border);
+  }
+  .workspaceNavMore{
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: auto;
+    padding: 3px 11px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--panel);
+    color: var(--muted);
+    font: inherit;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .workspaceNavMore:hover{
+    border-color: var(--border2);
+    background: var(--row-bg);
+    color: var(--title);
+  }
+  .workspaceNavMore:focus-visible{
+    outline: var(--focus-outline);
+    outline-offset: 2px;
+  }
+  .workspaceNavMoreChev{
+    width: 14px;
+    height: 14px;
+    flex: 0 0 auto;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: transform .18s ease;
+  }
+  .workspaceNav.navExpanded .workspaceNavMoreChev{ transform: rotate(180deg); }
+  .workspaceNav:not(.navExpanded) .workspaceNavExtra:not(.active){ display: none; }
+  /* The four foldaway sections (RT Sync · Tools · Changelog · Sudo) preview
+     inside the More pill so the fold's contents are legible before it opens.
+     A staggered scale/brightness beat ripples across them on a loop - a quiet
+     "there is more here" cue - and stops once expanded (see the .navExpanded
+     rule below and the reduced-motion block near .workspaceNavMoreChev). */
+  .desktopNavMoreIcons{
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .desktopNavMoreIcons i{
+    display: grid;
+    place-items: center;
+    width: 12px;
+    height: 12px;
+    animation: navMoreIconPulse 2.4s ease-in-out infinite;
+  }
+  .desktopNavMoreIcons i:nth-child(2){ animation-delay: .13s; }
+  .desktopNavMoreIcons i:nth-child(3){ animation-delay: .26s; }
+  .desktopNavMoreIcons i:nth-child(4){ animation-delay: .39s; }
+  .desktopNavMoreIcons svg{
+    width: 12px;
+    height: 12px;
+    fill: none;
+    stroke: var(--dMoreTint, currentColor);
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .desktopNavMoreIcons .dMoreIconRt{ --dMoreTint: var(--ok); }
+  .desktopNavMoreIcons .dMoreIconTools{ --dMoreTint: var(--warn); }
+  .desktopNavMoreIcons .dMoreIconChangelog{ --dMoreTint: var(--focus-border); }
+  .desktopNavMoreIcons .dMoreIconSudo{ --dMoreTint: var(--warn); }
+  @keyframes navMoreIconPulse{
+    0%, 55%, 100%{ transform: scale(1); opacity: .7; }
+    18%{ transform: scale(1.16); opacity: 1; }
+  }
+  .workspaceNav.navExpanded .desktopNavMoreIcons i{ animation: none; opacity: 1; }
+  /* The Google Play banner (in Help's old nav slot) has nothing to offer a
+     fine-pointer desktop - the app is already being used on desktop, and
+     every one of its three states (.helpPlayBanner, further down) stays
+     hidden at this width anyway. Collapse the empty host itself so it takes
+     up no row/gap in the More list, rather than leaving a blank one. */
+  #helpBetaAccess{ display: none; }
+
+  .workspaceNavButton[data-step]{
+    grid-template-columns: minmax(0,1fr) auto;
+    column-gap: 9px;
+  }
+  .workspaceNavButton[data-step] > span,
+  .workspaceNavButton[data-step] > small{
+    grid-column: 1;
+    min-width: 0;
+  }
+  /* Last resort, and only ever reached below the 220px the sidebar column
+     is actually fixed at (a zoomed-in browser gets there). A label wraps at
+     its spaces first; this only matters for a single word with nowhere to
+     break - "TIMELINE" - which would otherwise overflow its column and run
+     back under the circle, since a flex line cannot shrink below its
+     longest word. A broken word is worse-looking than a whole one and far
+     better than a collision. */
+  .workspaceNavButton[data-step] > span{
+    overflow-wrap: anywhere;
+  }
+  .workspaceNavButton[data-step]::before{
+    content: attr(data-step);
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--tile-accent);
+    color: #fff;
+    font-family: "Arial Narrow","Roboto Condensed",Impact,sans-serif;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  /* Gruvbox knocks the numeral out in the app background tone instead of
+     white, exactly as the mobile marker does - same reasoning, same token.
+     Specificity (0,4,1) beats the (0,2,1) rule above on weight. */
+  body[data-theme-family="gruvbox"] .workspaceNavButton[data-step]::before{
+    color: var(--bg);
+  }
+  .workspaceNavButton[data-status="info"] small{ color: var(--focus-border); }
+  .workspaceNavButton[data-status="ok"] small{ color: var(--ok); }
+  .workspaceNavButton[data-status="warn"] small{ color: var(--warn); }
+  .workspaceNavButton[data-status="bad"] small{ color: var(--bad); }
+  .workspaceNavButton:hover{
+    border-color: var(--border2);
+    background: var(--row-bg);
+  }
+.workspaceNavButton.active{
+    border-color: var(--focus-border);
+    background: linear-gradient(180deg, var(--btn-primary-a), var(--btn-primary-b));
+    color: var(--title);
+  }
+  .workspaceContent > .workspacePanel{
+    min-width: 0;
+  }
+  .workspaceContent > .workspacePanel:not(.desktop-active){ display: none !important; }
+  /* Notes is a mobile-only section - no desktop nav entry, and the panel
+     itself is never rendered on desktop even if reached some other way. */
+  #workspaceNavNotes,
+  #notesBlock{ display: none !important; }
+  .workspaceContent > .workspacePanel.card,
+  .workspaceContent > .workspacePanel.card[open]{
+    border: 1px solid transparent;
+    background: var(--panel);
+    box-shadow: none;
+  }
+  .workspaceContent > .workspacePanel > summary{
+    padding: 3px 0 12px;
+    border-bottom: 1px solid var(--border);
+    cursor: default;
+  }
+  .workspaceContent > .workspacePanel > summary .chev{ display: none; }
+  .workspaceContent > .workspacePanel > summary .mobileSectionHeaderIcon{
+    display:block;
+    flex:0 0 auto;
+    width:26px;
+    height:26px;
+    fill:none;
+    stroke:currentColor;
+    stroke-width:1.7;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+  }
+  #lineSetupBlock .mobileSectionHeaderIcon{color:var(--orange)}
+  #splitsBlock .mobileSectionHeaderIcon{color:var(--title)}
+  #resultsBlock .mobileSectionHeaderIcon{color:var(--focus-border)}
+  #lineSyncBlock .mobileSectionHeaderIcon{color:var(--ok)}
+  #toolsBlock .mobileSectionHeaderIcon{color:var(--warn)}
+  #changelogBlock .mobileSectionHeaderIcon{color:var(--focus-border)}
+  body[data-theme-family="gruvbox"] #lineSetupBlock .mobileSectionHeaderIcon{color:var(--gruv-orange)}
+  body[data-theme-family="gruvbox"] #splitsBlock .mobileSectionHeaderIcon{color:var(--gruv-yellow)}
+  body[data-theme-family="gruvbox"] #resultsBlock .mobileSectionHeaderIcon{color:var(--gruv-blue)}
+  body[data-theme-family="gruvbox"] #lineSyncBlock .mobileSectionHeaderIcon{color:var(--gruv-aqua)}
+  body[data-theme-family="gruvbox"] #toolsBlock .mobileSectionHeaderIcon{color:var(--gruv-purple)}
+  body[data-theme-family="gruvbox"] #changelogBlock .mobileSectionHeaderIcon{color:var(--gruv-blue)}
+  .workspaceContent > .workspacePanel > summary .layerTitle{ font-size: 18px; }
+  .workspaceContent > .workspacePanel > summary .layerMeta{
+    margin-top: 3px;
+    font-size: 13px;
+  }
+  .workspaceContent > details.block.workspacePanel[open] > summary .pill.summaryStatus{ display: inline-flex; }
+  .workspaceContent > .workspacePanel > .blockBody{ padding: 14px 0 0; }
+  .footerBar{ display: none; }
+}
+.adminNavButton{ margin-top: 2px; }
+.appearanceNavTile{ display:none!important; }
+.mobileTileStyleSection,.mobileBackgroundStyleSection,.mobileTimelineAlarmSection{ display:none; }
+.pumpOffAlarmBanner{ position:fixed; right:12px; bottom:12px; left:12px; z-index:100; display:grid; grid-template-columns:1fr auto; gap:3px 12px; padding:14px; border:1px solid var(--warn); border-radius:var(--radius-row); background:var(--panelOpen); color:var(--text); box-shadow:var(--shadow2); }
+.pumpOffAlarmBanner strong{ color:var(--warn); }
+.pumpOffAlarmBanner span{ grid-column:1; color:var(--muted); font-size:var(--font-small); }
+.pumpOffAlarmBanner button{ grid-column:2; grid-row:1 / 3; align-self:center; }
+/* iOS Home Screen hint. Same shape and placement as .pumpOffAlarmBanner above
+   so there is one bottom-notice pattern, but in the quiet border colour - this
+   is guidance, not an alarm. Only ever rendered on iOS in a browser tab; see
+   install-hint.js. */
+.installHint{ position:fixed; right:12px; bottom:12px; left:12px; z-index:100; display:grid; grid-template-columns:1fr auto; gap:3px 12px; padding:14px; border:1px solid var(--border2); border-radius:var(--radius-row); background:var(--panelOpen); color:var(--text); box-shadow:var(--shadow2); }
+.installHint strong{ color:var(--title); }
+.installHint span{ grid-column:1; color:var(--muted); font-size:var(--font-small); }
+.installHint button{ grid-column:2; grid-row:1 / 3; align-self:center; }
+.adminDialog{ width: min(94vw, 560px); border: 1px solid var(--border2); border-radius: var(--radius-card); background: var(--panel); color: var(--text); padding: 0; }
+.adminDialog::backdrop{ background: rgba(0,0,0,.58); }
+.adminForm{ display: grid; gap: 13px; padding: 20px; }
+.dialogHead{ display: flex; align-items: start; justify-content: space-between; gap: 14px; }
+.dialogHead p{ margin: 4px 0 0; }
+.adminToolbar,.adminFieldGrid{ display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: end; }
+.adminFieldGrid{ grid-template-columns: repeat(2,minmax(0,1fr)); }
+.adminFieldGrid label,.adminForm > label{ display: grid; gap: 5px; }
+.adminActiveField{ align-self: end; min-height: 38px; }
+/* Resin Database's toolbar is a search box plus one action, not a header bar
+   with a right-hand button cluster like the other admin panels: a full-width
+   1fr field stranded "Add resin" at the far edge. Keep them as one compact
+   group at the left, aligned with the list beneath. */
+#resinAdminBlock .adminToolbar{ grid-template-columns:minmax(0,320px) auto; justify-content:start; }
+.adminResinColumns{ display:grid; grid-template-columns:minmax(260px,.9fr) minmax(360px,1.1fr); gap:16px; align-items:start; }
+.adminResinListPane{ min-height:0; }
+.adminResinList{ display: grid; gap: 5px; max-height: min(58vh, 620px); overflow: auto; border: 1px solid var(--border); border-radius: var(--radius-row); padding: 7px; }
+.adminResinRow{ text-align: left; background: var(--row-bg); color: var(--text); border: 1px solid transparent; padding: 8px 10px; border-radius: var(--radius-row); }
+.adminResinRow:hover{ border-color: var(--focus-border); }
+.adminResinRow.selected{ border-color: var(--focus-border); background: var(--focus-ring); }
+.adminResinRow.inactive{ opacity: .58; text-decoration: line-through; }
+.adminResinForm{ display: grid; gap: 11px; border: 1px solid var(--border); border-radius: var(--radius-card); padding: 14px; position:sticky; top:12px; }
+@media (max-width: 760px){ .adminFieldGrid,.adminToolbar,.adminResinColumns{ grid-template-columns: 1fr; }#resinAdminBlock .adminToolbar{ grid-template-columns:1fr; justify-content:stretch; }.adminResinList{ max-height: 42vh; }.adminResinForm{ position:static; }.adminDialog{ width: 96vw; } }
+
+.workspaceRecoveryPanel{ display: grid; gap: 14px; }
+.databaseHealthPanel{ display:grid; gap:14px; max-width:620px; }
+.databaseHealthMetrics{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.databaseHealthMetrics > div{ display:grid; gap:4px; padding:10px 12px; border:1px solid var(--border); border-radius:var(--radius-row); background:var(--row-bg); }
+.databaseHealthMetrics span{ font-size:18px; color:var(--title); }
+.databaseHealthSparkline{ min-height:24px; letter-spacing:2px; color:var(--accent); font-size:20px; }
+.conflictStormSection{ display:grid; gap:6px; padding-top:4px; border-top:1px solid var(--border); }
+.conflictStormList{ display:grid; gap:6px; }
+.conflictStormRow{ display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:10px; padding:8px 10px; border:1px solid var(--border); border-radius:var(--radius-row); background:var(--row-bg); }
+.conflictStormRow.active{ border-color:var(--bad); background:color-mix(in srgb, var(--bad) 10%, var(--row-bg)); }
+.conflictStormMain{ display:grid; gap:2px; min-width:0; }
+.conflictStormMain strong{ color:var(--title); font-size:13px; }
+.conflictStormRow.active .conflictStormMain strong{ color:var(--bad); }
+/* Anchors the nav badge to the button's own text block rather than the
+   whole three-column .sudoAccessAction grid, so adding it never disturbs
+   the icon/chevron layout every other admin nav row already relies on. */
+.conflictStormBadgeHost{ position:relative; }
+.conflictStormBadge{
+  position:absolute;
+  top:-4px;
+  right:-8px;
+  display:grid;
+  place-items:center;
+  min-width:16px;
+  height:16px;
+  padding:0 4px;
+  border:1.5px solid var(--panel);
+  border-radius:50%;
+  background:var(--bad);
+  color:#fff;
+  font-size:10px;
+  font-weight:900;
+  font-variant-numeric:tabular-nums;
+  line-height:1;
+}
+.workspaceRecoveryDeviceCard{ display: grid; gap: 5px; border: 1px solid var(--border); border-radius: var(--radius-row); padding: 10px 12px; }
+.workspaceRecoveryDiagnostic summary{ cursor: pointer; }
+.workspaceRecoveryList{ display: grid; gap: 6px; max-height: min(50vh, 520px); overflow: auto; }
+.workspaceRecoveryRow{ display: grid; gap: 3px; text-align: left; background: var(--row-bg); color: var(--text); border: 1px solid transparent; padding: 8px 10px; border-radius: var(--radius-row); }
+.workspaceRecoveryRow:hover{ border-color: var(--focus-border); }
+.workspaceRecoveryRow.selected{ border-color: var(--focus-border); background: var(--focus-ring); }
+.workspaceRecoveryDetail{ border: 1px solid var(--border); border-radius: var(--radius-card); padding: 14px; }
+/* align-content:start keeps the toolbar and list flowing directly under the
+   intro copy - without it the grid's default stretch shares free vertical
+   space between the tracks and pushes the list toward the viewport bottom,
+   the way #splitsBlock .blockBody already guards against it. */
+.lineConfigurationPanel{display:grid;gap:12px;align-content:start}
+/* The list host reuses .adminResinList in index.html for the shared bordered
+   management surface, and each row reuses .adminResinRow for its skin (see
+   line-configurations-ui.js), so this rule only owns the line row's own
+   two-column info/Edit layout. Same design language as Resin Database and
+   Workspace Management rather than a third card treatment. */
+.lineConfigurationRow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center}
+.lineConfigurationRow.inactive{opacity:.62;text-decoration:none}
+.lineConfigurationRowInfo{min-width:0;display:grid;gap:3px}
+.lineConfigurationRowInfo strong,.lineConfigurationRowInfo small{display:block;overflow-wrap:anywhere}
+.lineConfigurationRowInfo small{color:var(--muted);font-size:11px}
+.lineConfigurationEdit{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:5px 9px}
+.lineConfigurationEdit svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.lineConfigurationDialog{width:min(94vw,620px)}
+.lineConfigurationFieldset{display:grid;gap:10px;min-width:0;margin:0;padding:12px;border:1px solid var(--border);border-radius:var(--radius-row)}
+.lineConfigurationFieldset legend{padding:0 6px;color:var(--title);font-size:12px;font-weight:800}
+.lineConfigurationFieldset label{display:grid;gap:5px}
+.lineConfigurationLabel{display:block;margin-bottom:5px;font-size:12px;font-weight:700;color:var(--muted)}
+.compactChoice{display:flex;flex-wrap:wrap;gap:5px}
+.compactChoice button{min-height:34px;padding:6px 10px;border:1px solid var(--btn-secondary-border);border-radius:var(--control-radius);background:var(--btn-secondary-bg);color:var(--btn-secondary-text);font:inherit;font-size:12px;font-weight:750}
+.compactChoice button:hover{border-color:var(--focus-border);background:var(--row-bg)}
+.compactChoice button.selected{border-color:var(--focus-border);background:var(--focus-ring);color:var(--title);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--focus-border) 20%,transparent)}
+.lineConfigurationStatus{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;padding:8px 0}
+.lineConfigurationStatus > span{display:grid;gap:2px}
+.lineConfigurationStatus small{font-weight:500}
+@media (max-width:760px){.lineConfigurationRow{align-items:start}.lineConfigurationRowInfo small{line-height:1.4}.lineConfigurationDialog{width:96vw}.lineConfigurationFieldset{padding:10px}.compactChoice button{flex:1 1 auto}.lineConfigurationEdit span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}}
+.workspaceRecoveryMembersList{ display: grid; gap: 6px; margin-top: 8px; }
+
+/* Workspace Management is a browser plus inspector: the workspace list
+   remains in place while selection changes only the adjacent detail pane. */
+.workspaceRecoveryPanel{display:grid;gap:12px;min-width:0}
+.workspaceRecoveryDeviceCard{gap:7px;padding:10px 12px;background:var(--row-bg)}
+.workspaceRecoveryEyebrow{color:var(--muted);font-size:10px;font-weight:850;letter-spacing:.1em;text-transform:uppercase}
+.workspaceRecoveryDeviceSummary{display:flex;align-items:center;justify-content:space-between;gap:14px;min-width:0}
+.workspaceRecoveryDeviceSummary > div{display:grid;gap:2px;min-width:0}
+.workspaceRecoveryDeviceSummary strong{color:var(--title);font-size:14px}
+.workspaceRecoveryDeviceStatus{color:var(--muted)}
+.workspaceRecoveryDiagnostic{min-width:0}
+.workspaceRecoveryDiagnostic summary{color:var(--focus-border);font-size:11px;font-weight:750;white-space:nowrap}
+.workspaceRecoveryDiagnostic > div{margin-top:7px;color:var(--muted);overflow-wrap:anywhere}
+.workspaceRecoveryMessage{min-height:1.2em;margin:0;color:var(--muted)}
+.workspaceRecoveryMessage:empty{display:none}
+.workspaceRecoveryWorkspaceGrid{display:grid;gap:12px;min-width:0}
+.workspaceRecoveryMaster,.workspaceRecoveryDetail{min-width:0;border:1px solid var(--border);border-radius:var(--radius-card);background:var(--row-bg)}
+.workspaceRecoveryMaster{display:grid;grid-template-rows:auto minmax(0,1fr);gap:8px;padding:10px}
+.workspaceRecoveryPaneHead,.workspaceRecoveryDetailHead,.workspaceRecoverySectionHead{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;min-width:0}
+.workspaceRecoveryPaneHead > div:first-child,.workspaceRecoveryDetailHead > div:first-child,.workspaceRecoverySectionHead > div:first-child{display:grid;gap:3px;min-width:0}
+.workspaceRecoveryPaneActions,.workspaceRecoveryCommonActions,.workspaceRecoveryMemberActions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.workspaceRecoveryCompactAction{min-height:32px;padding:5px 9px;font-size:11px}
+.workspaceRecoveryIconAction{display:grid;place-items:center;width:32px;height:32px;min-height:32px;padding:0;border-color:transparent;background:transparent;box-shadow:none}
+.workspaceRecoveryIconAction:hover:not(:disabled),.workspaceRecoveryIconAction:focus-visible{border-color:var(--focus-border);background:var(--focus-ring);color:var(--title)}
+.workspaceRecoveryIconAction svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.workspaceRecoveryList{display:grid;align-content:start;gap:4px;max-height:min(42vh,480px);padding-right:2px}
+.workspaceRecoveryRow{position:relative;gap:3px;min-height:0;padding:8px 9px;border-radius:var(--control-radius);background:transparent}
+.workspaceRecoveryRow:hover{background:var(--row-bg-2);border-color:transparent}
+.workspaceRecoveryRow.selected{border-color:transparent;background:var(--focus-ring);box-shadow:inset 3px 0 0 var(--focus-border)}
+.workspaceRecoveryRow strong{color:var(--title);font-size:13px}
+.workspaceRecoveryRow small{color:var(--muted);font-size:10px;line-height:1.35}
+.workspaceRecoveryDetail{display:grid;align-content:start;gap:14px;padding:13px;background:var(--panel)}
+.workspaceRecoveryDetail[hidden]{display:none}
+.workspaceRecoveryDetailHead .layerTitle{margin-top:1px;color:var(--title);font-size:16px}
+.workspaceRecoveryCommonActions{padding-bottom:12px;border-bottom:1px solid var(--border)}
+.workspaceRecoveryMembers{display:grid;gap:4px;min-width:0}
+.workspaceRecoverySectionHead{align-items:center}
+.workspaceRecoveryCount{display:grid;place-items:center;min-width:24px;height:24px;padding:0 7px;border:1px solid var(--border);border-radius:999px;background:var(--row-bg-2);color:var(--title);font-size:11px;font-weight:850;font-variant-numeric:tabular-nums}
+.workspaceRecoveryMembersList{margin-top:4px}
+.workspaceRecoveryMemberRow{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;padding:8px 9px;border-radius:var(--control-radius);background:var(--row-bg-2)}
+.workspaceRecoveryMemberInfo{display:grid;gap:2px;min-width:0}
+.workspaceRecoveryMemberInfo strong{overflow:hidden;color:var(--text);font-size:12px;text-overflow:ellipsis;white-space:nowrap}
+.workspaceRecoveryMemberInfo small{overflow:hidden;color:var(--muted);font-size:10px;text-overflow:ellipsis;white-space:nowrap}
+.workspaceRecoveryMemberActions{justify-content:flex-end;flex-wrap:nowrap}
+.workspaceRecoveryMemberActions button{min-height:28px;padding:4px 8px;font-size:10px;white-space:nowrap}
+.workspaceRecoveryMaintenance{display:grid;gap:5px;padding-top:12px;border-top:1px solid var(--border)}
+.workspaceRecoveryMaintenanceItem{border:1px solid var(--border);border-radius:var(--control-radius);background:var(--row-bg-2)}
+.workspaceRecoveryMaintenanceItem > summary{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;padding:8px 10px;cursor:pointer;list-style:none}
+.workspaceRecoveryMaintenanceItem > summary::-webkit-details-marker{display:none}
+.workspaceRecoveryMaintenanceItem > summary::after{align-self:center;content:"›";color:var(--muted);font-size:18px;line-height:1;transition:transform .14s ease}
+.workspaceRecoveryMaintenanceItem[open] > summary::after{transform:rotate(90deg)}
+.workspaceRecoveryMaintenanceItem summary span{color:var(--text);font-size:12px;font-weight:800}
+.workspaceRecoveryMaintenanceItem summary small{grid-column:1;color:var(--muted);font-size:10px;line-height:1.35}
+.workspaceRecoveryMaintenanceDanger summary span{color:var(--bad)}
+.workspaceRecoveryMaintenanceBody{display:grid;gap:9px;padding:0 10px 10px}
+.workspaceRecoveryMaintenanceBody p{margin:0;line-height:1.4}
+.workspaceRecoveryMaintenanceBody button{justify-self:start;min-height:30px;padding:5px 9px;font-size:11px}
+.workspaceRecoveryMerge{grid-template-columns:1fr;align-items:stretch;gap:9px;border:0;border-radius:0;padding:0;background:transparent}
+.workspaceRecoveryMerge label{display:grid;gap:4px;color:var(--muted)}
+
+@media (min-width: 901px) and (pointer: fine){
+  #workspaceManagementBlock > .workspaceRecoveryPanel{grid-template-rows:auto auto minmax(0,1fr);height:100%;min-height:0;overflow:hidden}
+  #workspaceManagementBlock .workspaceRecoveryWorkspaceGrid{grid-template-columns:minmax(280px,320px) minmax(0,1fr);min-height:0;overflow:hidden}
+  #workspaceManagementBlock .workspaceRecoveryMaster,#workspaceManagementBlock .workspaceRecoveryDetail{min-height:0;overflow:hidden}
+  #workspaceManagementBlock .workspaceRecoveryList{max-height:none;min-height:0;overflow:auto;overscroll-behavior:contain;padding-right:4px}
+  #workspaceManagementBlock .workspaceRecoveryDetail{overflow:auto;overscroll-behavior:contain;padding-right:12px}
+}
+
+@media (max-width: 700px){
+  .workspaceRecoveryDeviceSummary{align-items:flex-start;flex-direction:column;gap:6px}
+  .workspaceRecoveryMemberRow{align-items:start;grid-template-columns:1fr}
+  .workspaceRecoveryMemberActions{justify-content:flex-start}
+}
+
+.bulkDensityMeasurementWorkspace{display:grid;gap:12px;max-width:760px}
+.bulkDensityMeasurementIntro{display:grid;grid-template-columns:minmax(190px,240px) minmax(0,1fr);align-items:end;gap:12px;padding:10px 12px;border:1px solid var(--readonly-border);border-radius:var(--radius-input);background:var(--readonly-bg)}
+.bulkDensityMeasurementIntro > label{display:grid;gap:5px;min-width:0;color:var(--muted);font-size:11px;font-weight:800}
+.bulkDensityMeasurementIntro > small{align-self:center;color:var(--muted);font-size:10px;line-height:1.35}
+.bulkDensityMeasurementIntro small{color:var(--muted);font-size:10px;line-height:1.35}
+.bulkDensityMeasurementForm{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.bulkDensityMeasureSection,.bulkDensityResultSurface{display:grid;align-content:start;gap:10px;min-width:0;padding:12px;border:1px solid var(--border);border-radius:var(--control-radius);background:var(--row-bg)}
+.bulkDensityResinSection{gap:8px;padding-block:10px}
+.bulkDensityResultSurface{grid-column:1 / -1;grid-template-columns:minmax(0,1fr) auto;align-items:center;border-color:var(--readonly-border);background:var(--readonly-bg)}
+.bulkDensityResultSurface .bulkDensitySectionHead{grid-column:1 / -1}
+.bulkDensitySectionHead{display:grid;gap:2px;min-width:0}
+.bulkDensitySectionHead strong{color:var(--title);font-size:13px}
+.bulkDensityResinSearch{position:relative;display:grid;gap:5px;min-width:0}
+.bulkDensityResinSearch > label,.bulkDensityInputGrid > label{display:grid;gap:5px;color:var(--muted);font-size:11px;font-weight:800}
+.bulkDensityResinSuggestions{position:absolute;top:100%;right:0;left:0;z-index:12;display:grid;gap:3px;max-height:230px;margin-top:4px;padding:5px;overflow:auto;border:1px solid var(--border2);border-radius:var(--control-radius);background:var(--panelOpen);box-shadow:var(--shadow2)}
+.bulkDensityResinOption{display:grid;width:100%;min-height:40px;padding:7px 9px;border:0;border-radius:calc(var(--control-radius) - 2px);background:transparent;color:var(--text);text-align:left;box-shadow:none}
+.bulkDensityResinOption:hover,.bulkDensityResinOption:focus-visible{background:var(--focus-ring);outline:var(--focus-outline);outline-offset:-2px}
+.bulkDensitySelectedResin{display:flex;align-items:baseline;gap:8px;padding:7px 10px;border-left:3px solid var(--focus-border);background:var(--readonly-bg)}
+.bulkDensitySelectedResin > div{min-width:0}
+.bulkDensitySelectedResin small{overflow:hidden;color:var(--muted);font-size:10px;text-overflow:ellipsis;white-space:nowrap}
+.bulkDensityInputGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.bulkDensityInputWithUnit{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:7px}
+.bulkDensityInputWithUnit > span{color:var(--muted);font-size:10px;font-weight:850;white-space:nowrap}
+.bulkDensityPrimaryResult{display:flex;align-items:baseline;gap:6px;color:var(--title)}
+.bulkDensityPrimaryResult strong{font-size:clamp(28px,4vw,42px);line-height:1}
+.bulkDensityPrimaryResult span{color:var(--muted);font-size:12px;font-weight:850}
+.bulkDensitySecondaryResults{display:grid;min-width:138px;gap:8px}
+.bulkDensitySecondaryResults > div{display:grid;gap:2px;padding:7px 9px;border-left:1px solid var(--border)}
+.bulkDensitySecondaryResults span{color:var(--muted);font-size:10px}
+.bulkDensityWarnings{grid-column:1 / -1;min-height:0;color:var(--warn);font-size:11px;font-weight:750;line-height:1.4}
+.bulkDensityWarnings:empty{display:none}
+.bulkDensitySaveBar{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;padding:9px 10px;border:1px solid var(--border);border-radius:var(--control-radius);background:var(--row-bg)}
+.bulkDensitySaveBar > div{display:grid;gap:2px;min-width:0}
+.bulkDensitySaveBar span{color:var(--muted);font-size:11px}
+.bulkDensitySaveBar button{min-height:42px}
+.bulkDensitySaveDialog p{margin:0;line-height:1.5}
+
+@media (max-width: 900px), (min-width: 901px) and (pointer: coarse){
+  #toolsBlock .toolPanelHeader{ display:none; }
+}
+
+@media (max-width:760px){
+  .bulkDensityMeasurementWorkspace{gap:10px}
+  .bulkDensityMeasurementIntro,.bulkDensityMeasurementForm,.bulkDensityResultSurface,.bulkDensitySaveBar{grid-template-columns:1fr}
+  .bulkDensityMeasurementIntro > label{min-width:0}
+  .bulkDensityResultSurface{align-items:start}
+  .bulkDensityInputGrid{grid-template-columns:1fr}
+  .bulkDensitySecondaryResults{width:100%}
+  .bulkDensitySecondaryResults > div{padding-left:0;border-left:0;border-top:1px solid var(--border);padding-top:7px}
+  .bulkDensitySaveBar button{width:100%}
+}
+.mobileSetupEntryArt{ display:none; }
+
+.lineSyncStatusItem strong[data-state="synced"]{ color: var(--ok); }
+.lineSyncStatusItem strong[data-state="pending"],
+.lineSyncStatusItem strong[data-state="offline"],
+.lineSyncStatusItem strong[data-state="conflict"]{ color: var(--warn); }
+.lineSyncStatusItem strong[data-state="error"]{ color: var(--bad); }
+
+.lineSyncPanel{ overflow: visible; }
+.mobileLineSyncStatus,
+.mobileSyncSectionLabel,
+.mobileSyncJoinHint{ display:none; }
+.lineSyncMetrics{ display:flex; flex-wrap:wrap; gap:8px; }
+.lineSyncMetrics span{
+  padding:5px 9px;
+  border:1px solid var(--row-border);
+  border-radius:999px;
+  background:var(--row-bg);
+  color:var(--muted);
+  font-size:var(--font-small);
+}
+.lineSyncMetrics strong{ color:var(--text); }
+.lineSyncPendingList{ margin:8px 0 0; padding-left:0; list-style:none; display:grid; gap:4px; }
+.lineSyncPendingList li{
+  padding:5px 9px;
+  border:1px solid var(--row-border);
+  border-radius:8px;
+  background:var(--row-bg);
+  color:var(--muted);
+  font-size:var(--font-small);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.lineSyncPendingDiscardBtn{ padding:4px 10px; font-size:var(--font-tiny); flex-shrink:0; }
+.lineSyncJoin{
+  display:grid;
+  grid-template-columns:minmax(150px, 1fr) auto minmax(110px, auto);
+  gap:10px;
+  align-items:end;
+}
+.lineSyncCode{
+  min-height:40px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:0 14px;
+  border:1px dashed var(--border);
+  border-radius:var(--radius-input);
+  font-size:1.25rem;
+  font-weight:900;
+  letter-spacing:.14em;
+  color:var(--focus-border);
+}
+.desktopLineSyncOverview{ margin-top:10px; }
+.desktopLineSyncSetup{ margin-top:10px; padding:12px 0; }
+.desktopLineSyncSetup p{ max-width:560px; margin:4px 0 10px; }
+.desktopLineSyncSetupSelection{ max-width:320px; margin:0 0 10px; }
+.desktopLineSyncSetupSelection label{ display:block; margin-bottom:4px; }
+.desktopLineSyncIdentity{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 0; border-top:1px solid var(--row-border); border-bottom:1px solid var(--row-border); }
+.desktopLineSyncIdentity strong{ color:var(--title); font-size:16px; letter-spacing:.06em; }
+.desktopLineSyncState{ color:var(--muted); font-size:12px; font-weight:800; white-space:nowrap; }
+.desktopLineSyncState[data-state="synced"]{ color:var(--ok); }
+.desktopLineSyncState[data-state="error"],
+.desktopLineSyncState[data-state="offline"],
+.desktopLineSyncState[data-state="conflict"]{ color:var(--bad); }
+.lineSyncReconnect{ padding:10px 12px; border-left:3px solid var(--bad); background:var(--row-bg); }
+.lineSyncReconnect .layerTitle{ color:var(--bad); }
+.lineSyncReconnect p,
+.lineSyncConnect p{ margin:4px 0 10px; }
+.desktopLineSyncMain{ display:grid; grid-template-columns:minmax(300px,1.1fr) minmax(250px,.9fr); gap:20px; align-items:start; }
+.lineSyncConnect{ min-width:0; padding-top:2px; }
+.lineSyncGeneratedCodePanel{ display:grid; grid-template-columns:minmax(0,1fr) auto; gap:12px; align-items:center; padding:12px; border:1px solid var(--row-border); border-radius:var(--radius-row); background:var(--row-bg); }
+.lineSyncGeneratedCodeRow{ display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
+.lineSyncGeneratedCodeRow .lineSyncCode{ min-width:72px; padding:6px 8px; color:var(--title); font-size:22px; letter-spacing:.14em; }
+/* QR scanners need a solid light quiet zone independent of app theme. */
+.lineSyncQrCode{ display:grid; place-items:center; width:150px; height:150px; padding:10px; background:#fff; border-radius:4px; }
+.lineSyncQrCode svg{ display:block; width:100%; height:100%; }
+.lineSyncGeneratedCodePanel small{ grid-column:1 / -1; color:var(--muted); }
+.lineSyncDevices{ min-width:0; padding-left:20px; border-left:1px solid var(--row-border); }
+.lineSyncDevicesList{ display:grid; gap:0; margin-top:6px; }
+.lineSyncDevice{ display:grid; gap:2px; padding:9px 0; border-bottom:1px solid var(--row-border); }
+.lineSyncDevice strong{ color:var(--text); font-size:var(--font-small); }
+.lineSyncDevice span,.lineSyncDevicesEmpty{ font-size:var(--font-small); }
+.lineSyncDevicesEmpty{ margin:6px 0 0; }
+@media(max-width:1100px){.desktopLineSyncMain{grid-template-columns:1fr;gap:16px}.lineSyncDevices{padding:16px 0 0;border-left:0;border-top:1px solid var(--row-border)}}
+.lineSyncMembers{
+  padding:12px;
+  border:1px solid var(--border);
+  border-radius:var(--radius-row);
+  background:var(--panel2);
+}
+.lineSyncMember{
+  display:grid;
+  grid-template-columns:minmax(120px,1fr) auto auto;
+  gap:8px;
+  align-items:center;
+  padding:8px 0;
+  border-bottom:1px solid var(--border);
+}
+.lineSyncMember:last-child{ border-bottom:0; }
+.lineSyncMemberActions{ display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+.lineSyncMemberActions button{
+  width:auto;
+  min-height:var(--control-height);
+  padding:max(3px, calc(var(--btn-pad-y) - 3px)) var(--btn-pad-x);
+  border-radius:var(--control-radius);
+  font-size:var(--font-small);
+}
+.lineSyncConflictDialog{
+  max-width:560px;
+  color:var(--text);
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:var(--radius-row);
+  box-shadow:var(--shadow2);
+}
+.lineSyncConflictDialog::backdrop{ background:rgba(0,0,0,.48); }
+.workspaceConfigurationSectionTitle,.workspaceConfigurationRow{display:flex;gap:10px;justify-content:space-between;align-items:center}.workspaceConfigurationSectionTitle small{display:block;color:var(--muted);margin-top:2px}.workspaceConfigurationList{display:grid;gap:5px;max-height:330px;margin-top:7px;overflow-y:auto;padding-right:2px}.workspaceConfigurationRow{min-height:52px;padding:7px 9px;border-radius:var(--control-radius);background:color-mix(in srgb,var(--panel) 70%,transparent)}.workspaceConfigurationRow small{display:block;color:var(--muted);margin-top:1px}@media(max-width:600px){.workspaceConfigurationRow{align-items:stretch;flex-direction:column}.workspaceConfigurationRow button{width:100%}}
+.workspaceConfigurationActions{display:flex;gap:5px;align-items:center;justify-content:flex-end}.workspaceConfigurationActions button{font-size:12px;padding:5px 8px}.workspaceConfigurationOverflow{position:relative}.workspaceConfigurationOverflow summary{cursor:pointer;list-style:none;border:1px solid var(--border);border-radius:var(--control-radius);padding:4px 9px;font-size:18px;line-height:1}.workspaceConfigurationOverflow summary::-webkit-details-marker{display:none}.workspaceConfigurationOverflowMenu{position:absolute;right:0;top:calc(100% + 4px);z-index:30;display:grid;gap:4px;min-width:130px;padding:6px;border:1px solid var(--border2);border-radius:var(--control-radius);background:var(--panelOpen);box-shadow:var(--shadow2)}.workspaceConfigurationOverflowMenu button{text-align:left;white-space:nowrap}
+.mobileWeightProfilesSheet.profileMenuOpen .mobileSavedRecipesList{overflow:visible}
+.mobileWeightProfilesSheet.profileMenuOpen .workspaceConfigurationOverflowMenu{top:auto;bottom:calc(100% + 4px)}
+.workspaceConfigurationRow{cursor:pointer}.workspaceConfigurationRow.selected strong{font-weight:750;color:var(--text)}.workspaceConfigurationRow:focus-visible{outline:var(--focus-outline);outline-offset:2px}.workspaceConfigurationFavorite{color:var(--warn);font-size:13px}
+.workspaceConfigurationRow strong{font-size:var(--font-small);font-weight:600;color:var(--muted);letter-spacing:.01em}
+.rearrangeTarget{cursor:grab;user-select:none}.rearrangeSource{opacity:.5;outline:2px dashed var(--focus-border)}.rearrangeOver{outline:2px solid var(--ok);background:color-mix(in srgb,var(--ok) 12%,var(--panel2))}@media (max-width: 900px), (min-width: 901px) and (pointer: coarse){.rearrangeDesktopOnly{display:none!important}}
+/* Scan Recipe is a mobile-capture workflow (camera/photo scan) - the
+   desktop Recipe Actions row keeps Load Next/Print, but hides Scan Recipe
+   itself on real desktop widths. Mobile keeps every existing entry point
+   (status-bar shortcut, Next-page primary action, Tools tab) unaffected -
+   those don't carry this class. */
+@media (min-width: 901px) and (pointer: fine){.recipeScanHideDesktop{display:none!important}}
+/* Disabled form controls don't reliably dispatch/bubble click events (some
+   browsers suppress them entirely) - without this, a tap that lands on the
+   resin name/percentage field inside a rearranging cell can silently do
+   nothing instead of reaching the cell's tap-to-select handler. Excluding
+   disabled fields from hit-testing makes every tap on the cell land on the
+   td, regardless of which child it visually lands on. */
+.rearrangeTarget :disabled{ pointer-events:none; }
+/* The layer panel stays put when Bulk Edit or Rearrange Hoppers is
+   toggled, on both mobile and desktop: the trigger buttons and the
+   resulting toolbar/mode bar render below the panel instead of above it,
+   in the same spot either way. Both also drop their sticky-to-top
+   positioning here - sticky plus being reordered after the table meant
+   they'd suddenly jump to the top of the viewport once their normal
+   flow position scrolled past it, forcing an unwanted scroll. */
+#splitsArea > .recipeUtilityTabs,
+#splitsArea > .splitsBulkBar,
+#splitsArea > .splitsSavedRecipesPanel,
+#splitsArea > .rearrangeModeBar{ order:1; position:static; }
+/* These three used to share a 216px min-height, so that switching between
+   Saved Recipes, Bulk Edit and Rearrange - three alternatives occupying one
+   slot below the matrix - never jumped the panel by a different amount each
+   time. None of that premise survives the recipe rework: Recipe Book is a
+   page that replaces the matrix outright (see the data-recipe-page="saved"
+   rules above), Bulk Edit is a compact row raised by the selection rather
+   than a panel you switch into, and Rearrange is a single line of guidance
+   plus two buttons. They are no longer alternatives in a shared slot, so the
+   floor bought nothing and cost Rearrange ~150px of empty panel. Removed;
+   each sizes to its own content. */
+/* Scan Recipe / Print Recipe / Load Next Recipe / Info: immediate actions,
+   always last regardless of which utility panel (if any) is open above
+   them - a fixed order number, rather than relying on DOM append position,
+   since the rearrange bar above is only ever appended to the DOM when
+   rearrange mode is actually active. justify-self:start keeps the strip a
+   compact, content-sized row flush to the panel's left edge instead of
+   stretching to #splitsArea's full grid-track width (a plain grid item
+   stretches by default) - the same left-edge-anchored, not-spread-full-
+   width shape .recipeUtilityTabs' own buttons already have by virtue of
+   being a flex row. */
+#splitsArea > .splitsBulkModeBar{ order:2; justify-self: start; }
+.rearrangeModeBar{position:sticky;top:54px;z-index:7;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px;border:1px solid var(--row-border);border-radius:var(--radius-row);background:var(--readonly-bg)}.rearrangeModeMessage{display:flex;align-items:baseline;gap:7px;min-width:0}.rearrangeModeMessage strong{color:var(--title);white-space:nowrap}.rearrangeModeMessage span{color:var(--muted);font-size:var(--font-small)}.rearrangeModeActions{display:flex;align-items:center;gap:6px;flex:0 0 auto}@media(max-width:700px){.rearrangeModeBar{top:38px;align-items:stretch;flex-direction:column}.rearrangeModeMessage{align-items:flex-start;flex-direction:column;gap:2px}.rearrangeModeActions{display:grid;grid-template-columns:1fr 1fr 1fr}.rearrangeModeActions button{min-width:0;padding-inline:6px}}
+.mobileSyncLabel,
+.mobileSyncOnly{ display: none; }
+
+@media (max-width: 900px), (min-width: 901px) and (pointer: coarse){
+  #lineSyncBlock .lineSyncInfoGuide{ display: block; }
+  .lineSyncPanel .desktopSyncOnly,
+  .lineSyncPanel .desktopSyncLabel{ display: none !important; }
+  .lineSyncPanel .mobileSyncLabel{ display: inline; }
+  .lineSyncPanel .mobileSyncOnly{ display: block; }
+  .lineSyncPanel > #lineSyncMessage,
+  .lineSyncPanel > .lineSyncMetrics{ display:none; }
+  .lineSyncPanel .mobileLineSyncStatus{
+    display:grid;
+    grid-template-columns:30px minmax(0,1fr);
+    gap:9px;
+    align-items:start;
+    padding:8px 0 9px;
+    border-bottom:1px solid var(--border);
+    color:var(--muted);
+  }
+  .mobileLineSyncStatusIcon{
+    width:24px;
+    height:24px;
+    margin-top:1px;
+    fill:none;
+    stroke:currentColor;
+    stroke-width:1.7;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+  }
+  .mobileLineSyncStatusCopy{display:grid;min-width:0;gap:2px}
+  .mobileLineSyncStatusCopy strong{color:var(--text);font-size:var(--font-small);font-weight:850}
+  .mobileLineSyncStatusCopy > span{font-size:var(--font-small);line-height:1.25;overflow-wrap:anywhere}
+  .mobileLineSyncStatusCopy > #mobileLineSyncEvent{font-size:10px}
+  .mobileLineSyncMetadata{display:flex;flex-wrap:wrap;gap:3px 10px;margin-top:2px;color:var(--muted);font-size:10px;line-height:1.2}
+  .mobileLineSyncStatus[data-state="synced"]{color:var(--ok)}
+  .mobileLineSyncStatus[data-state="synced"] .mobileLineSyncStatusCopy strong{color:var(--ok)}
+  .mobileLineSyncStatus[data-state="pending"],
+  .mobileLineSyncStatus[data-state="offline"],
+  .mobileLineSyncStatus[data-state="conflict"]{color:var(--warn)}
+  .mobileLineSyncStatus[data-state="error"]{color:var(--bad)}
+  .mobileLineSyncStatus[data-state="error"] .mobileLineSyncStatusCopy strong{color:var(--bad)}
+  .mobileSyncSectionLabel{display:none;margin-top:11px;color:var(--title);font-size:11px;font-weight:850;letter-spacing:.12em}
+  .lineSyncPanel.mobileHasLine .mobileSyncConnectionTitle{display:block}
+  .lineSyncPanel:not(.mobileHasLine) .mobileSyncJoinPreTitle{display:block}
+  .lineSyncPanel .lineSyncConnectionFields{gap:7px;margin-top:6px}
+  .lineSyncPanel .lineSyncConnectionFields > div{
+    display:grid;
+    gap:3px;
+    padding:7px 9px;
+    border:1px solid var(--row-border);
+    border-radius:var(--control-radius);
+    background:var(--row-bg);
+  }
+  .lineSyncPanel .lineSyncConnectionFields label{margin:0;color:var(--muted);font-size:10px;font-weight:750}
+  .lineSyncPanel .lineSyncConnectionFields input,
+  .lineSyncPanel .lineSyncConnectionFields select{min-height:34px;padding:4px 0;border-width:0 0 1px;border-radius:0;background:transparent}
+  .lineSyncPanel:not(.mobileHasWorkspaces) .lineSyncCurrentLineField{ display: none; }
+  .lineSyncPanel:not(.mobileHasLine) .lineSyncActionBar{ display: none; }
+  .lineSyncPanel:not(.mobileHasLine) .lineSyncMobileLeave{ display:none; }
+  .lineSyncPanel:not(.mobileConnected) #lineSyncDisconnectBtn{display:none}
+  .lineSyncPanel:not(.mobileConnected) #lineSyncMobileActionHint{display:none}
+  .lineSyncPanel .lineSyncJoin{ display: none; }
+  .lineSyncPanel .lineSyncJoin.mobileJoinVisible{
+    display: grid;
+    grid-template-columns: 1fr;
+    gap:8px;
+    margin-top:10px;
+  }
+  .lineSyncPanel .lineSyncJoin.mobileJoinVisible .lineSyncJoinField,
+  .lineSyncPanel .lineSyncJoin.mobileJoinVisible .lineSyncCode{ grid-column: auto; }
+  .lineSyncPanel .lineSyncJoinField{display:grid;gap:4px;padding:7px 9px;border:1px solid var(--row-border);border-radius:var(--control-radius);background:var(--row-bg)}
+  .lineSyncPanel .lineSyncJoinField label{margin:0;color:var(--muted);font-size:10px;font-weight:750}
+  .lineSyncPanel .mobileSyncJoinHint{display:block;color:var(--muted);font-size:10px;line-height:1.25}
+  .lineSyncPanel .lineSyncJoinField input{min-height:36px;padding:4px 0;border-width:0 0 1px;border-radius:0;background:transparent;letter-spacing:.12em}
+  .lineSyncPanel .lineSyncJoin .compactAction{width:100%;min-height:38px}
+  .lineSyncPanel .lineSyncActionBar{gap:7px;margin-top:10px}
+  .lineSyncPanel .lineSyncActionBar .segmentedActionRow{width:100%;overflow:visible}
+  .lineSyncPanel .lineSyncActionBar .segmentedActionRow button{flex:1 1 0;min-width:0;min-height:38px;padding-inline:8px}
+  .lineSyncPanel .lineSyncActionBar .segmentedActionDivider{width:100%}
+  .lineSyncMobileRefresh{display:block}
+  .lineSyncMobileRefresh #lineSyncRetryMobileBtn{width:100%;min-height:38px;color:var(--focus-border);font-weight:800}
+  .lineSyncMobileLeave #lineSyncLeaveBtn{width:100%;min-height:38px;font-weight:800}
+  .mobileSyncRefreshLabel{display:inline-flex!important;align-items:center;justify-content:center;gap:6px}
+  .mobileSyncRefreshLabel svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .lineSyncPanel #lineSyncRetryBtn{color:var(--focus-border);font-weight:800}
+  .lineSyncPanel #lineSyncLeaveBtn{color:var(--bad)}
+  .lineSyncPanel.syncActionBusy #lineSyncRetryBtn,
+  .lineSyncPanel.syncActionBusy #lineSyncJoinBtn{cursor:progress}
+}
+
+@media (max-width: 720px){
+  .lineSyncJoin{ grid-template-columns:1fr 1fr; }
+  .lineSyncJoin > div:first-child,
+  .lineSyncCode{ grid-column:1 / -1; }
+  .lineSyncMember{ grid-template-columns:1fr; }
+  .lineSyncMemberActions{ justify-content:flex-start; }
+}
+
+/* Small utility classes */
+.mt10{ margin-top: 10px; }
+.mt14{ margin-top: 14px; }
+.gap10{ display: grid; gap: 10px; }
+.hide{ display: none !important; }
+
+/* =======================================================================
+ *   Header image
+ *   ======================================================================= */
+.site-header{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2.25rem 1rem; /* slightly less than 3rem */
+}
+
+/* Works for inline <svg class="logo"> OR <img class="logo"> */
+.site-header .logo{
+  display: block;      /* avoids baseline gaps */
+  width: min(92vw, 900px);
+  height: auto;
+}
+
+@media (max-width: 520px){
+  .site-header{
+    padding: 1.25rem 0.75rem;
+  }
+  .site-header .logo{
+    width: 96vw;       /* lets it fill the screen */
+    max-width: none;   /* remove the cap on small screens */
+  }
+}
+
+
+
+/* =======================================================================
+ *   Cards
+ *   ======================================================================= */
+
+.card{
+  position: relative;
+  background: var(--panel);
+  border: 1px solid transparent;
+  border-radius: var(--radius2);
+  padding: var(--pad-card);
+  box-shadow: none;
+  overflow: hidden;
+}
+.card::before{ display: none; }
+.card > *{ position: relative; }
+
+/* Mobile: the outer .card padding already insets the summary, so the
+   summary's own padding (meant for the non-card desktop treatment) would
+   otherwise stack on top of it and make collapsed cards taller than needed. */
+@media (max-width: 900px), (min-width: 901px) and (pointer: coarse){
+  .workspacePanel.card > summary{
+    padding: calc(var(--summary-pad) / 2);
+  }
+}
+
+/* Typography helpers */
+.layerTitle{
+  font-size: var(--title-size);
+  white-space: nowrap;
+  /* Section headings can be tinted independently of the palette's general
+     emphasis accent via --section-title. Only Gruvbox Dark sets it; every
+     other theme falls through to --title exactly as before. */
+  color: var(--section-title, var(--title, var(--text)));
+}
+
+/* Wide Display was chosen (out of several previewed options) as the
+   permanent header typography - thin weight, wide tracking, always caps.
+   The desktop sidebar nav label (.workspaceNavButton span) is the same
+   heading tier as .layerTitle - it names the same section - so it gets
+   identical treatment. */
+.layerTitle,
+.workspaceNavButton span{
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  font-weight: 300;
+  text-transform: uppercase;
+  letter-spacing: .22em;
+}
+
+/* One level down: section-level headings pick up the same font, but stay
+   in sentence case — they support a header, they aren't one. */
+.setupSectionTitle,
+.toolsIndexButton{
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+}
+.layerMeta{
+  color: var(--subtitle, var(--muted));
+  font-size: var(--font-small);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.muted{ color: var(--muted); font-size: var(--font-small); }
+.tiny{ font-size: var(--font-tiny); color: var(--muted); margin-top: 6px; line-height: 1.35; }
+.mono{
+  font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+/* Documentation intro text (above nested cards) */
+.docIntro{
+  padding: 10px 12px 6px;
+  font-size: var(--font-small);
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.docIntro + .blockBody{
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+/* =======================================================================
+ *   Forms
+ *   ======================================================================= */
+
+label{ display: block; font-size: var(--font-small); color: var(--muted); margin-bottom: 6px; }
+
+input, select, textarea{
+  width: 100%;
+  padding: var(--pad-input-y) var(--pad-input-x);
+  border-radius: var(--radius-input);
+  border: 1px solid var(--border2);
+  background: var(--field-bg);
+  color: var(--text);
+  outline: none;
+  font-size: var(--font-base);
+  transition: box-shadow .12s ease, border-color .12s ease, transform .06s ease;
+}
+
+/* Sleek underline fields: compact without shrinking their readable text. */
+input:not([type="checkbox"]):not([type="radio"]),
+select{
+  min-height:var(--control-height);
+  padding:min(5px, var(--pad-input-y)) 2px;
+  border-width:0 0 1px;
+  border-radius:0;
+  background:transparent;
+}
+select{ padding-right:24px; }
+
+/* The closed control stays transparent (sleek underline look above), but the
+   native option list is its own opaque surface in most browsers/OSes — give
+   it explicit theme colors so it doesn't fall back to a light system default
+   that's unreadable against light text in dark themes. */
+select option{
+  background-color: var(--panelOpen);
+  color: var(--text);
+}
+
+input:focus, select:focus, textarea:focus{
+  border-color: var(--focus-border);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+input:not([type="checkbox"]):not([type="radio"]):focus,
+select:focus{
+  box-shadow:0 2px 0 var(--focus-border);
+}
+input[aria-invalid="true"]{
+  border-color: var(--bad);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--bad) 20%, transparent);
+}
+input:not([type="checkbox"]):not([type="radio"])[aria-invalid="true"]{
+  box-shadow:0 2px 0 var(--bad);
+}
+
+textarea{ min-height: 120px; resize: vertical; }
+
+/* Read-only inputs should NOT look editable */
+input[readonly]{
+  opacity: 0.75;
+  cursor: not-allowed;
+  background: transparent;
+  border-color: var(--readonly-border);
+  box-shadow: none;
+}
+input[readonly]:focus{
+  border-color: var(--readonly-border);
+  box-shadow: none;
+}
+
+.resinAutocomplete{
+  position: fixed;
+  z-index: 1000;
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 4px;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-input);
+  background: var(--panelOpen);
+  box-shadow: var(--shadow2);
+}
+.resinAutocompleteOption{
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: calc(var(--radius-input) - 4px);
+  background: transparent;
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: var(--font-small);
+  text-align: left;
+}
+.resinAutocompleteOption:hover,
+.resinAutocompleteOption.active{
+  background: linear-gradient(180deg, var(--btn-primary-a), var(--btn-primary-b));
+  color: var(--muted);
+}
+
+/* =======================================================================
+ *   Grids
+ *   ======================================================================= */
+
+.grid3{ display: grid; gap: var(--gap); grid-template-columns: 1fr; }
+@media (min-width: 720px){ .grid3{ grid-template-columns: 1.2fr 1fr 1fr; } }
+
+.grid2{ display: grid; gap: var(--gap); grid-template-columns: 1fr; }
+@media (min-width: 720px){ .grid2{ grid-template-columns: 1fr 1fr; } }
+
+.gridAuto{ display: grid; gap: var(--gap); grid-template-columns: 1fr; }
+@media (min-width: 720px){ .gridAuto{ grid-template-columns: repeat(3, 1fr); } }
+
+.setupSection + .setupSection{ margin-top: 18px; }
+.setupSectionTitle{
+  margin: 0 0 10px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  font-size: 15px;
+}
+.setupFields{ display: grid; gap: var(--gap); grid-template-columns: 1fr; }
+.setupNaming{ margin-top: var(--gap); max-width: 320px; }
+.setupPreferenceFields{ display:grid;gap:10px;grid-template-columns:repeat(2,minmax(0,1fr)); }
+/* Changeover deadline and Line rate: side by side on both desktop and
+   mobile - minmax(0,1fr) lets each column shrink to fit a narrow viewport. */
+.setupPrimaryFields{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width:600px){.setupPreferenceFields{grid-template-columns:1fr}}
+/* On desktop the two-column grid leaves a lot of empty space beside each
+   (max-width-capped) gauge tile, making them look far apart even though the
+   grid gap itself is small. Pack them into a plain flex row instead, same
+   gap as .setupTopRow above, so the two rows read at a consistent rhythm. */
+@media (min-width: 901px) and (pointer: fine){
+  .setupPrimaryFields{
+    display: flex;
+    gap: 16px;
+  }
+  .setupPrimaryFields > div{ flex: 0 0 auto; }
+}
+
+/* Layer count tiles and the Line 9 hopper naming toggle: paired in one row
+   above Changeover deadline/Line rate - both controls are the same height,
+   so they read as one group rather than two unrelated rows. */
+.setupTopRow{
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* Phone Setup header: treat the layer and hopper-label controls as one
+   centered control group, and center the two dashboard gauges beneath it.
+   This avoids the loose, left-anchored arrangement above receiver weights. */
+@media (max-width: 900px), (min-width: 901px) and (pointer: coarse){
+  #lineSetupBlock .setupTopRow{
+    display:grid;
+    grid-template-columns:auto auto;
+    justify-content:center;
+    align-items:center;
+    gap:10px;
+  }
+  #lineSetupBlock .setupPrimaryFields{
+    width:min(100%,540px);
+    margin-inline:auto;
+    gap:12px;
+  }
+  #lineSetupBlock .setupPrimaryFields > div{display:flex;justify-content:center;min-width:0}
+  #lineSetupBlock .gaugeTile{ width:100%; max-width: 200px; }
+}
+
+/* Layer count: graphic-only tiles (no visible label - the stacked-diamond
+   glyph is self-explanatory), left-aligned. */
+.layerCountTiles{
+  display: flex;
+  gap: 6px;
+}
+.layerCountTile{
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--border2);
+  border-radius: var(--control-radius);
+  background: var(--field-bg);
+  color: var(--muted);
+  cursor: pointer;
+}
+.layerCountTile svg{ width: 26px; height: 18px; overflow: visible; }
+.layerCountTile.active{
+  border-color: var(--focus-border);
+  background: linear-gradient(180deg, var(--btn-primary-a), var(--btn-primary-b));
+  color: var(--title);
+  box-shadow: 0 0 0 1px var(--focus-ring);
+}
+.layerCountTile:focus-visible{
+  outline: var(--focus-outline);
+  outline-offset: 2px;
+}
+/* Id-qualified so these outrank the `#lineSetupBlock .layerCountTiles` and
+   `#lineSetupBlock .setupControlGroup` display rules further down this file -
+   a plain `[hidden]` rule loses that specificity contest and leaves the
+   control visible on mobile. The group carries the "Layers" heading as well
+   as the tiles, so hiding it removes both while a line sets the count. */
+#lineSetupBlock .layerCountTiles[hidden]{ display: none; }
+#lineSetupBlock .setupLayerCountGroup[hidden]{ display: none; }
+
+/* ---- Line Setup: Overview ------------------------------------------------
+   Status, not form. Everything here is derived from the connected line, so it
+   reads as a quiet readout beneath the Changeover/Output gauges: no field
+   borders, no control backgrounds, no tap targets. Sized to survive the
+   ~214px desktop setup column, and built only from theme tokens so light,
+   dark and Gruvbox all follow the palette they already define. */
+.lineOverview{
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+/* Tighter than the section heading it inherits from - this one labels a small
+   readout, not a whole region. Id-qualified to outrank both the desktop and
+   mobile `#lineSetupBlock .setupSectionHeading` rules. */
+#lineSetupBlock .lineOverview .setupSectionHeading{ margin: 0 0 9px; }
+.lineOverviewFacts{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 12px;
+  margin: 0;
+}
+.lineOverviewFact{ min-width: 0; }
+.lineOverviewFacts dt{
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.lineOverviewFacts dd{
+  margin: 1px 0 0;
+  color: var(--title);
+  font-size: 19px;
+  font-weight: 850;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+/* No line resolved yet - the dash should not carry the weight of a real value. */
+.lineOverviewFacts dd.lineOverviewUnknown{ color: var(--muted); font-weight: 700; }
+
+.lineOverviewOrder{ margin-top: 11px; }
+.lineOverviewOrder[hidden]{ display: none; }
+.lineOverviewOrderLabel{
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+/* Two columns rather than a dt/dd flex row: the layer letters stay aligned
+   under each other no matter how wide "Outside" renders in a given theme. */
+.lineOverviewOrderRows{
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 2px 14px;
+  margin: 5px 0 0;
+}
+.lineOverviewOrderRows dt{
+  color: var(--title);
+  font-size: var(--font-small);
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
+}
+.lineOverviewOrderRows dd{
+  margin: 0;
+  color: var(--text);
+  font-size: var(--font-small);
+  font-weight: 650;
+}
+.lineOverviewNote{
+  margin: 9px 0 0;
+  color: var(--muted);
+  font-size: var(--font-small);
+  font-weight: 650;
+}
+.lineOverviewNote[hidden]{ display: none; }
+
+/* Changeover deadline / Line rate: big centered dashboard-style readouts -
+   icon, bold value, small caption - instead of a labeled underline field.
+   No "Required" text; an empty/zero gauge is already visually obvious. */
+.gaugeTile{
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  max-width: 200px;
+  height: 100%;
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  background: var(--field-bg);
+  padding: 12px 12px 10px;
+  text-align: center;
+}
+.gaugeTile:focus-within{
+  border-color: var(--focus-border);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+.gaugeTile .gaugeIcon{
+  display: block;
+  width: 20px;
+  height: 20px;
+  margin: 0 auto 4px;
+  color: var(--title);
+  stroke: currentColor;
+  fill: none;
+}
+/* :not([type=checkbox]):not([type=radio]) matches the "sleek underline
+   fields" rule's own specificity above - without it, that rule's
+   border-width/focus box-shadow would still win and leave a stray
+   underline stripe inside the tile. */
+.gaugeTile input:not([type="checkbox"]):not([type="radio"]){
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 22px;
+  font-weight: 850;
+  text-align: center;
+  padding: 0;
+}
+.gaugeTile input:not([type="checkbox"]):not([type="radio"]):focus{ box-shadow: none; }
+.gaugeTile label{
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: var(--font-tiny);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+/* =======================================================================
+ *   Badges / pills
+ *   ======================================================================= */
+
+.pill{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--text) 18%, transparent);
+  background: color-mix(in srgb, var(--text) 7%, transparent);
+  color: var(--muted);
+  font-size: var(--font-small);
+  white-space: nowrap;
+}
+
+/* TEMP: hide right-side card labels */
+details.block > summary .pill{ display: none; }
+details.block:not([open]) > summary .summaryStatus{ display: inline-flex; }
+
+.summaryStatus{
+  max-width: 52%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.summaryStatus.badge-ok{
+  border-color: color-mix(in srgb, var(--ok) 55%, transparent);
+  background: color-mix(in srgb, var(--ok) 16%, transparent);
+  color: var(--ok);
+  font-weight: 700;
+}
+
+.pill.badge-warn{
+  border-color: color-mix(in srgb, var(--warn) 55%, transparent);
+  background: color-mix(in srgb, var(--warn) 18%, transparent);
+  color: var(--muted);
+  font-weight: 650;
+}
+
+@media (max-width: 600px){
+  .summaryStatus{ max-width: 48%; }
+}
+
+/* =======================================================================
+ *   Status box
+ *   ======================================================================= */
+
+.status{
+  margin-top: 10px;
+  border-left: 4px solid var(--warn);
+  background: color-mix(in srgb, var(--warn) 10%, transparent);
+  border-radius: 14px;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+.status.bad{
+  border-left-color: var(--bad);
+  background: color-mix(in srgb, var(--bad) 10%, transparent);
+}
+.status.ok{
+  border-left-color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 10%, transparent);
+}
+.status ul{ margin: 6px 0 0 0; padding-left: 18px; }
+.statusTitle{ margin-bottom:6px; font-weight:950; }
+
+/* =======================================================================
+ *   Details blocks
+ *   ======================================================================= */
+
+details.block{
+  display: block;
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: var(--radius2);
+  overflow: hidden;
+  background: var(--panel2);
+  box-shadow: none;
+}
+details.block[open]{ background: var(--panelOpen); }
+
+/* Receiver Hopper Weights and Receiver Weight Profiles otherwise sit flush
+   against each other with no spacing of their own. */
+#weightsBlock + #setupWeightProfilesBlock{ margin-top: var(--gap); }
+/* The legacy containers remain stable DOM homes for the single weights and
+   profile editors between Recipe-page renders. They are no longer separate
+   Line Setup destinations; when a child is moved into Recipe, this selector
+   no longer applies to that child. */
+.setupSection > #weightsBlock[hidden],
+
+/* Make nested blocks inside a card always span full width */
+.blockBody > details.block{
+  width: 100%;
+  grid-column: 1 / -1;
+  background: var(--readonly-bg);
+}
+.blockBody > details.block[open]{ background: var(--readonly-bg); }
+
+summary{
+  list-style: none;
+  cursor: pointer;
+  padding: var(--summary-pad);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  user-select: none;
+}
+summary::-webkit-details-marker{ display: none; }
+
+.sumLeft{ display: flex; align-items: center; gap: 10px; min-width: 0; }
+.summaryText{ min-width:0; }
+.nestedLayerTitle{ font-size:var(--font-small); }
+
+/* Disclosure indicator (chosen from the "no chevron" mockup round: "Orbit
+   Ring") - no arrow/corner shape at all. Closed, it's a plain dot. Open, a
+   faint dashed ring appears around it with a small bright satellite
+   continuously circling - an idle "active" motion for as long as the panel
+   stays open, not just a one-shot transition. The .chev class name is kept
+   (only its contents/rules changed) so no markup beyond the three inner
+   spans needed touching across every summary that uses it. */
+.chev{
+  position: relative;
+  width: 18px; height: 18px;
+  flex: 0 0 auto;
+  margin-left: 2px;
+}
+.chevCore{
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  width: 6px; height: 6px; border-radius: 999px;
+  background: var(--chev);
+  transition: background .15s ease;
+}
+.chevRing{
+  position: absolute; inset: 0;
+  border-radius: 999px;
+  border: 1px dashed var(--btn-secondary-border);
+  opacity: 0;
+  transition: opacity .2s ease;
+}
+.chevSatellite{
+  position: absolute; top: 50%; left: 50%;
+  width: 3.5px; height: 3.5px; border-radius: 999px;
+  background: var(--title);
+  opacity: 0;
+  transform-origin: -7px 0;
+}
+summary:hover .chevCore{ background: var(--focus-border); }
+details[open] > summary .chevCore{ background: var(--focus-border); }
+details[open] > summary .chevRing{ opacity: 1; }
+details[open] > summary .chevSatellite{
+  opacity: 1;
+  animation: chevOrbit 2.6s linear infinite;
+}
+@keyframes chevOrbit{
+  from{ transform: translate(-50%,-50%) rotate(0deg) translateX(7px); }
+  to{ transform: translate(-50%,-50%) rotate(360deg) translateX(7px); }
+}
+
+/* grid-template-columns is explicit (not the default auto) so a long nowrap
+   descendant (e.g. a summary subtitle) can't grow this single column past
+   the container's own width - minmax(0,1fr) lets the track shrink to fit
+   instead of sizing to its widest child's min-content. */
+.blockBody{ padding: 0 var(--body-pad) var(--body-pad); display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--gap); }
+
+/* Small copy chip button */
+.copyBtn{
+  width: auto;
+  min-height:var(--control-height);
+  padding:max(3px, calc(var(--btn-pad-y) - 3px)) var(--btn-pad-x);
+  border-radius:var(--control-radius);
+  border: 1px solid var(--btn-border);
+  background: var(--btn-secondary-bg);
+  color: var(--btn-text);
+  font-weight: 900;
+  font-size: var(--font-small);
+  cursor: pointer;
+  box-shadow: none;
+  flex: 0 0 auto;
+}
+
+.hr{ height: 1px; background: var(--border); margin: 12px 0; }
+
+
+
+/* =======================================================================
+ *   Setup toggles
+ *   ======================================================================= */
+
+

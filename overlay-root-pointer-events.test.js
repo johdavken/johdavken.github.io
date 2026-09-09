@@ -21,7 +21,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
-const { readStyles } = require("./css-source");
+const { readStyles, partContaining, cacheTagOf } = require("./css-source");
 
 const styles = readStyles();
 const desktop = fs.readFileSync("desktop.css", "utf8");
@@ -78,7 +78,12 @@ test("desktop.css's own pointer-events:auto is breakpoint-scoped, so it could ne
 });
 
 test("the stylesheet cache-bust version moved, so the fix reaches returning browsers", () => {
-  const version = html.match(/href="styles\.css\?v=([\d.]+)"/);
-  assert.ok(version, "expected a versioned styles.css link");
-  assert.notEqual(version[1], "0.61.0", "styles.css changed - its ?v= must move with it");
+  // The base stylesheet is eleven parts now, so pinning a literal version
+  // against a file called styles.css no longer describes anything. Ask which
+  // part carries the rule and require that part to be versioned. Whether a
+  // changed part's tag actually moved is enforced for every part on every
+  // change by css-cache-tags.test.js, which is stronger than one literal here.
+  const part = partContaining(".appOverlayRoot{");
+  assert.ok(part, "no stylesheet part carries the .appOverlayRoot rule any more");
+  assert.ok(cacheTagOf(part), `${part} is linked without a ?v= cache tag`);
 });

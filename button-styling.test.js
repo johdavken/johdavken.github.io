@@ -41,7 +41,19 @@ test("the picker, its preference and its attribute gate are all gone", () => {
 });
 
 test("the stylesheet is still loaded, after the existing three", () => {
-  assert.match(html, /<link rel="stylesheet" href="styles\.css[^>]*>\s*<link rel="stylesheet" href="theme\.css[^>]*>\s*<link rel="stylesheet" href="desktop\.css[^>]*>\s*<link rel="stylesheet" href="button-styling\.css/);
+  // This used to match the four links as one adjacent run. The base stylesheet
+  // is now eleven styles-*.css parts with a comment above them, so adjacency no
+  // longer describes anything - but the claim never was about adjacency. It is
+  // that button-styling.css is last, so it wins its ties. Assert that.
+  const links = [...html.matchAll(/<link rel="stylesheet" href="([^"?]+)/g)].map(m => m[1]);
+  assert.ok(links.includes("button-styling.css"), "button-styling.css is not loaded at all");
+  const order = name => links.indexOf(name);
+  const lastPart = Math.max(...links.filter(f => /^styles(-[a-z0-9-]+)?\.css$/.test(f)).map(order));
+  assert.ok(lastPart >= 0, "no base stylesheet part is loaded");
+  assert.ok(order("theme.css") > lastPart, "theme.css must come after the base parts");
+  assert.ok(order("desktop.css") > order("theme.css"), "desktop.css must come after theme.css");
+  assert.equal(order("button-styling.css"), links.length - 1,
+    "button-styling.css must be the last stylesheet, so its treatment is not overridden");
 });
 
 test("every desktop rule stays inside the desktop media query, and every tablet rule inside the tablet one", () => {

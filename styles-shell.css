@@ -1,0 +1,1308 @@
+/* =======================================================================
+ *   Simplified application shell
+ *   ======================================================================= */
+.desktopDisplayToggle{
+  display:grid;
+  place-items:center;
+  width:38px;
+  height:38px;
+  margin-left:auto;
+  padding:0;
+  border:1px solid var(--border);
+  border-radius:var(--control-radius);
+  background:var(--row-bg);
+  color:var(--focus-border);
+}
+.desktopDisplayToggle svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round}
+.desktopDisplayToggle:focus-visible{outline:var(--focus-outline);outline-offset:2px}
+
+.displaySheet{
+  width:min(430px,calc(100vw - 28px));
+  max-height:min(620px,calc(100dvh - 28px));
+  padding:0;
+  border:1px solid var(--border2);
+  border-radius:16px;
+  background:var(--panelOpen);
+  color:var(--text);
+  box-shadow:var(--shadow2);
+}
+.displaySheetPanel{display:grid;gap:15px;padding:18px}
+.displaySheetPanel > label{display:grid;gap:6px;margin:0;color:var(--muted);font-size:12px;font-weight:750}
+.displaySheetPanel select{width:100%;min-height:44px}
+.desktopRailStyleField > small{color:var(--muted);font-size:10px;font-weight:600}
+.recipeLayerOrientationField > small{color:var(--muted);font-size:10px;font-weight:600}
+@media (max-width:700px){
+  .recipeLayerOrientationField{display:none!important}
+}
+/* The manual layer-count fallback (#setupLayerCountGroup, relocated here by
+   placeProductionControlsForLayout() in app.js). Empty and collapses to
+   nothing whenever a linked RT Sync line dictates the layer count -
+   .setupLayerCountGroup's own [hidden] attribute (set by applyLayerCountLock)
+   already does that with no CSS needed here, since nothing in this file
+   redeclares display for .setupControlGroup/.setupLayerCountGroup outside
+   #lineSetupBlock to fight the native [hidden] default. Only the label/tile
+   look needs restating for this context - .setupControlLabel and
+   .layerCountTiles/.layerCountTile are otherwise only styled scoped to
+   #lineSetupBlock (their original home) or the now-removed Recipe-header
+   host. */
+.displaySheetLayerHost .setupControlLabel{
+  display:block;
+  margin-bottom:6px;
+  color:var(--muted);
+  font-size:12px;
+  font-weight:750;
+}
+.displaySheetLayerHost .layerCountTiles{ gap:8px; }
+.displaySheetHead{display:flex;align-items:center;justify-content:flex-start;gap:12px;padding-bottom:11px;border-bottom:1px solid var(--border)}
+.displaySheetHead strong{display:block;color:var(--title);font-size:18px}
+.displaySheetHead small{display:block;margin-top:2px;color:var(--muted);font-size:11px}
+.visuallyHidden{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+.appOverlayRoot{position:fixed;inset:0;z-index:70;pointer-events:none}
+.mobileFooterMeta{display:none}
+.mobileFooterVersion{display:none}
+.desktopRailVersion{display:none}
+/* Dashboard is a desktop-only overview mode (re-enabled in desktop.css behind
+   the min-width:901px + pointer:fine query). Its panel and the rail-foot entry
+   point that opens it are hidden by default so touch layouts, which have no
+   desktop media rule to catch them, don't render them inline - the bug where
+   "Dashboard", the Back to Line control, and the changeover glyph leaked onto
+   mobile/tablet and pushed the home flow apart. */
+.workspaceNavFooter{display:none}
+.dashboardPanel{display:none}
+/* The root spans the viewport and is click-through on purpose, so it never
+   blocks the page beneath it - but anything actually hosted inside it has to
+   take clicks back, or it inherits pointer-events:none and every click within
+   it falls straight through to whatever sits below. On mobile that is
+   .footerSheetBackdrop, which only closes the sheet, so the notification
+   center's action buttons ("Open Recipe", "Review Setup", ...) silently did
+   nothing. Desktop happened to work by accident: desktop.css re-enables
+   .desktopNotificationsMenu itself, and that file is behind a desktop-only
+   media query. Restoring it here covers every width and every current or
+   future overlay child, rather than per-element at one breakpoint. */
+.appOverlayRoot > *{pointer-events:auto}
+/* The notification center's bell/popover chrome (.desktopNotificationsToggle,
+   the nonmodal anchored positioning) is desktop-only and styled in
+   desktop.css. On mobile the same dialog opens as an ordinary modal
+   .footerSheet bottom sheet instead (see #appFooterNotifications) - its
+   content styling (.desktopNotificationsHead/List/Item/etc.) is provided
+   for both widths below. This is the safety net that keeps the dialog from
+   ever presenting unstyled if a viewport change catches it open. */
+.desktopNotificationsMenu:not([open]){display:none!important}
+.footerSheet{z-index:72}
+.footerSheetBackdrop{position:fixed;inset:0;z-index:60;padding:0;border:0;background:rgba(0,0,0,.42);backdrop-filter:blur(1.5px)}
+
+@media (max-width: 900px), (min-width: 901px) and (pointer: coarse){
+  /* Text-only status rail: one 32px row, shared by navigation and RT Sync. */
+  :root{--app-dock-height:32px}
+
+  /* Mobile is a document-scrolling shell. Keep the viewport fill dynamic so
+     browser chrome changes do not become an extra content-sized block, while
+     leaving the desktop fixed-height shell in desktop.css untouched. */
+  html{min-height:100%;height:auto}
+  body{height:auto;min-height:100vh;min-height:100dvh;overflow-x:hidden;overflow-y:auto}
+  main{height:auto;min-height:100vh;min-height:100dvh;padding-bottom:calc(var(--app-dock-height) + env(safe-area-inset-bottom) + 22px)!important}
+
+  /* The old production strip is retained for desktop context only. Mobile
+     uses one persistent application dock on every primary screen. */
+  .workspaceStatusBar{display:none!important}
+  .desktopDisplayToggle{display:none}
+  .desktopRailStyleField{display:none!important}
+  main{padding-bottom:calc(var(--app-dock-height) + env(safe-area-inset-bottom) + 22px)!important}
+
+  body[data-theme="industrial-slate"][data-mobile-background-style="theme-native"]{
+    background:radial-gradient(circle at 20% 0,color-mix(in srgb,var(--focus-border) 7%,transparent),transparent 42%),var(--bg);
+    background-attachment:fixed;
+  }
+  body[data-theme="industrial-slate-dark"][data-mobile-background-style="theme-native"]{
+    background:radial-gradient(circle at 18% 0,color-mix(in srgb,var(--focus-border) 8%,transparent),transparent 44%),var(--bg);
+    background-attachment:fixed;
+  }
+  body[data-theme="gruvbox-dark"][data-mobile-background-style="theme-native"]{
+    background:radial-gradient(circle at 18% 0,color-mix(in srgb,#fe8019 7%,transparent),transparent 42%),var(--bg);
+    background-attachment:fixed;
+  }
+  body[data-theme="vaporwave"][data-mobile-background-style="theme-native"]{
+    background:radial-gradient(circle at 16% 0,color-mix(in srgb,#ff2aa1 22%,transparent),transparent 42%),radial-gradient(circle at 86% 18%,color-mix(in srgb,#585cff 17%,transparent),transparent 45%),var(--bg);
+    background-attachment:fixed;
+  }
+
+  /* One fixed Minimal destination language: no card fill, icon chips,
+     shadows, or stored cosmetic variants. */
+  body[data-mobile-workspace="home"] .workspaceNav{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    grid-auto-rows:minmax(92px,auto);
+    gap:4px 14px;
+    padding:12px 16px 18px;
+    border:0;
+    border-radius:0;
+    background:transparent!important;
+    box-shadow:none!important;
+    overflow:visible;
+  }
+  .workspaceNavButton,
+  body[data-mobile-tile-style] .workspaceNavButton,
+  body[data-theme-family="gruvbox"][data-mobile-tile-style] .workspaceNavButton{
+    min-width:0;
+    min-height:92px;
+    padding:12px 5px 10px;
+    border:0;
+    border-bottom:1px solid color-mix(in srgb,var(--tile-accent) 42%,var(--border));
+    border-radius:0;
+    background:transparent;
+    box-shadow:none;
+    transform:none;
+    transition:background .15s ease,border-color .15s ease,transform .08s ease;
+  }
+  .workspaceNavButton:hover{background:color-mix(in srgb,var(--tile-accent) 6%,transparent);border-bottom-color:var(--tile-accent);transform:none}
+  .workspaceNavButton:active{background:color-mix(in srgb,var(--tile-accent) 11%,transparent);transform:translateY(1px)}
+  .workspaceNavButton:focus-visible{outline:var(--focus-outline);outline-offset:-2px;background:var(--focus-ring)}
+  /* white-space:normal (not nowrap) so a longer destination name like
+     "Production Summary" wraps to a second line within the tile's own
+     minmax(92px,auto) row instead of overflowing - every other label here
+     is short enough to still render on one line either way. */
+  .workspaceNavButton > span{min-width:0;gap:8px;font-size:14px;font-weight:850;white-space:normal}
+  .workspaceNavButton .workspaceTileIcon,
+  body[data-mobile-tile-style] .workspaceNavButton .workspaceTileIcon,
+  body[data-theme-family="gruvbox"][data-mobile-tile-style] .workspaceTileIcon{
+    width:40px;
+    height:40px;
+    padding:2px;
+    border:0;
+    border-radius:0;
+    background:transparent;
+    color:var(--tile-accent);
+  }
+  .workspaceNavButton small{max-width:100%;font-size:10.5px}
+
+  /* Numbered-workflow step markers - Recipe/Timeline/Resin Totals tiles only
+     (the three carrying data-step in index.html). RT Sync/Tools/
+     Help keep the plain border-bottom divider above, untouched.
+
+     ONE horizontal rule per tile: the tile's own border-bottom is switched
+     off and re-drawn by ::after inset at the circle's vertical center, since
+     a border-bottom can only ever sit on the border-box edge and so cannot
+     be raised to meet the circle without pushing the circle out of the tile
+     and into the next grid row.
+
+     Two things this has to get right, both of which are load-bearing:
+       - The `body` + .workspaceNav prefix is deliberate. applyMobileTileStyle
+         in app.js always sets body[data-mobile-tile-style], so the
+         `body[data-mobile-tile-style] .workspaceNavButton` rule further up
+         (and its gruvbox :is() variant) outranks a bare
+         .workspaceNavButton[...] selector and would put the original divider
+         back, leaving two stacked lines.
+       - ::before is given z-index so the solid circle paints OVER ::after.
+         Without it the later-painted ::after draws its line straight across
+         the circle's face. The line starts at the circle's horizontal center
+         so the masked half leaves it emerging cleanly from the right edge,
+         with no seam and no gap.
+
+     Decorative only - no hover/focus/pressed styling of its own, and the
+     tile's click target is unchanged since the button still handles nav. */
+  body .workspaceNav .workspaceNavButton[data-step]{
+    position:relative;
+    border-bottom:0;
+    padding-bottom:32px;
+  }
+  body .workspaceNav .workspaceNavButton[data-step]::after{
+    content:"";
+    position:absolute;
+    left:13px;
+    right:0;
+    bottom:13px;
+    border-top:1px solid color-mix(in srgb,var(--tile-accent) 42%,var(--border));
+  }
+  body .workspaceNav .workspaceNavButton[data-step]::before{
+    content:attr(data-step);
+    position:absolute;
+    z-index:1;
+    left:0;
+    bottom:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:26px;
+    height:26px;
+    border-radius:50%;
+    background:var(--tile-accent);
+    color:#fff;
+    font-family:"Arial Narrow","Roboto Condensed",Impact,sans-serif;
+    font-size:15px;
+    font-weight:800;
+    line-height:1;
+    font-variant-numeric:tabular-nums;
+  }
+  /* Gruvbox only: knock the numeral out in the app background tone instead of
+     white, so the marker reads as part of the palette rather than sitting on
+     top of it. --bg is the canonical background token from theme.css (not
+     --gruv-mobile-bg, which carries the same value but only exists inside a
+     mobile media block). Circle fill, size, divider, and spacing are
+     untouched, and Industrial Slate light/dark keep the white numeral above.
+     Specificity here is (0,4,2) vs (0,3,2) for that rule, so this wins on
+     weight rather than on source order. */
+  body[data-theme-family="gruvbox"] .workspaceNav .workspaceNavButton[data-step]::before{
+    color:var(--bg);
+  }
+
+  /* Connected production rail: four primary steps form one vertical sequence.
+     The existing More disclosure becomes the single mobile entry to the
+     secondary RT Sync / Tools / Help group, while desktop keeps its pill. */
+  body[data-mobile-workspace="home"] .workspaceNav{
+    grid-template-columns:minmax(0,1fr);
+    grid-auto-rows:auto;
+    gap:0;
+    padding:10px 17px 18px;
+  }
+  body[data-mobile-workspace="home"] .workspaceIdentityBar{
+    display:flex;
+    margin:0 0 4px;
+  }
+  /* RT Sync used to get its own shortcut icon in here, but that duplicated
+     the workspace identity bar directly above (same click target, same
+     setWorkspacePanel("lineSyncBlock") action) - removed, leaving just the
+     two live production readouts sitting directly on the page, no card. A
+     max-width keeps them from drifting far apart on wider tablets;
+     margin:auto centers that capped row within whatever gutter the
+     surrounding nav padding leaves on narrower phones. */
+  body[data-mobile-workspace="home"] .mobileProductionControls{
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap:16px;
+    width:100%;
+    max-width:440px;
+    margin:10px auto 16px;
+    box-sizing:border-box;
+  }
+  .mobileProductionControls .setupPrimaryFields{
+    display:contents;
+    margin:0!important;
+  }
+  .mobileProductionControls .setupPrimaryFields > div{min-width:0}
+  .mobileProductionControls .setupPrimaryFields > div:last-child{text-align:right}
+  .mobileProductionControls .gaugeTile{
+    position:relative;
+    display:grid;
+    grid-template-rows:auto auto;
+    gap:6px;
+    min-width:0;
+    margin:0;
+    padding:0;
+    border:0;
+    background:transparent;
+    box-shadow:none;
+  }
+  .mobileProductionControls .gaugeTile label{
+    grid-row:1;
+    margin:0;
+    color:var(--muted);
+    font-size:10px;
+    font-weight:850;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+  }
+  .mobileProductionControls .gaugeTimeValue,
+  .mobileProductionControls .mobileLineRateReadout{
+    grid-row:2;
+    width:100%;
+    min-width:0;
+    min-height:44px;
+    padding:0;
+    border:0;
+    border-radius:0;
+    background:transparent;
+    color:var(--text);
+    /* .mobileLineRateReadout is a <button>, which - unlike the plain <span>
+       .gaugeTimeValue wraps - carries its own UA-default font-family (a
+       plain, thinner Arial here) that this rule never reset. Both still
+       declared the identical font-weight:850, but that weight renders
+       markedly thinner in Arial than in the app's own system-ui stack, so
+       Output read visibly less bold than Changeover time right next to it. */
+    font-family:inherit;
+    font-size:clamp(24px,7.5vw,32px);
+    font-weight:850;
+    font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;
+    box-sizing:border-box;
+    box-shadow:none;
+  }
+  .mobileProductionControls .mobileLineRateReadout{display:flex;align-items:center;justify-content:flex-end;text-align:right}
+  .mobileProductionControls .gaugeTile input:not([type="time"]){display:none;grid-row:2;min-height:44px;padding:6px 8px;font-size:clamp(20px,6vw,26px);font-weight:850;text-align:right}
+  .mobileProductionControls .gaugeTile.mobileOutputEditing .mobileLineRateReadout{display:none}
+  .mobileProductionControls .gaugeTile.mobileOutputEditing input:not([type="time"]){display:block}
+  .mobileProductionControls .gaugeTimeValue{display:flex;align-items:center;justify-content:flex-start;gap:8px}
+  .mobileProductionControls .gaugeTimeValue > span{white-space:nowrap}
+  .mobileProductionControls .gaugeTimeValue svg{width:20px;height:20px;flex:0 0 auto;fill:none;stroke:var(--focus-border)}
+  .mobileProductionControls .gaugeIcon{display:none}
+  .mobileProductionControls .gaugeTile input[type="time"]{
+    position:absolute;
+    z-index:2;
+    left:0;
+    right:0;
+    bottom:0;
+    width:100%;
+    height:44px;
+    opacity:0;
+    cursor:pointer;
+  }
+  body[data-mobile-workspace="home"] .workspaceNavButton[data-step],
+  body[data-mobile-tile-style] .workspaceNav .workspaceNavButton[data-step]{
+    position:relative;
+    display:grid;
+    grid-template-columns:minmax(0,1fr);
+    align-content:center;
+    gap:2px;
+    min-height:82px;
+    padding:11px 30px 11px 54px;
+    border:0;
+    border-bottom:1px solid var(--border2);
+    border-radius:0;
+    background:transparent;
+    box-shadow:none;
+  }
+  body[data-mobile-workspace="home"] .workspaceNavButton[data-step] > span:first-child{
+    grid-column:1;
+    gap:9px;
+    font-size:15px;
+  }
+  body[data-mobile-workspace="home"] .workspaceNavButton[data-step] > small{
+    grid-column:1;
+    margin-left:37px;
+    font-size:10.5px;
+  }
+  body[data-mobile-workspace="home"] .workspaceNavButton[data-step] > small::before{
+    display:none;
+  }
+  body[data-mobile-workspace="home"] .workspaceNavButton[data-step] .workspaceTileIcon{
+    width:28px;
+    height:28px;
+  }
+  body[data-mobile-workspace="home"] .workspaceNavButton[data-step]::before{
+    content:attr(data-step);
+    position:absolute;
+    z-index:2;
+    top:50%;
+    bottom:auto;
+    left:12px;
+    width:27px;
+    height:27px;
+    transform:translateY(-50%);
+    border-radius:50%;
+    background:var(--tile-accent);
+    color:#fff;
+    font-family:"Arial Narrow","Roboto Condensed",Impact,sans-serif;
+    font-size:14px;
+    font-weight:800;
+  }
+  body[data-mobile-workspace="home"] .workspaceNavButton:is([data-step="1"],[data-step="2"])::after{
+    content:"";
+    position:absolute;
+    z-index:1;
+    top:calc(50% + 13px);
+    bottom:auto;
+    left:25px;
+    width:1px;
+    height:calc(100% - 26px);
+    border:0;
+    background:var(--border2);
+  }
+  body[data-mobile-workspace="home"] .workspaceNavButton[data-step="3"]::after{display:none}
+  body[data-theme-family="gruvbox"][data-mobile-workspace="home"] .workspaceNav .workspaceNavButton[data-step]::before{
+    color:var(--bg);
+  }
+  body[data-mobile-workspace="home"] .mobileRailChev{
+    position:absolute;
+    top:50%;
+    right:8px;
+    display:block;
+    transform:translateY(-50%);
+    color:var(--muted);
+    font-size:22px;
+    font-weight:400;
+  }
+  body[data-mobile-workspace="home"] .workspaceNavDivider{
+    position:relative;
+    display:grid;
+    grid-column:1;
+    gap:8px;
+    margin:14px 0 0;
+    padding-top:5px;
+  }
+  body[data-mobile-workspace="home"] .workspaceNavMore{
+    display:flex;
+    align-items:center;
+    width:100%;
+    min-height:0;
+    padding:11px 12px;
+    border:0;
+    border-radius:0;
+    background:transparent;
+    color:var(--text);
+    text-align:left;
+  }
+  body[data-mobile-workspace="home"] .workspaceNavMore:focus-visible{
+    outline:var(--focus-outline);
+    outline-offset:-2px;
+    background:var(--focus-ring);
+  }
+  body[data-mobile-workspace="home"] #workspaceNavMoreLabel{display:none}
+  body[data-mobile-workspace="home"] .mobileWorkspaceNavMore{
+    display:flex;
+    align-items:center;
+    gap:11px;
+    min-width:0;
+  }
+  body[data-mobile-workspace="home"] .mobileWorkspaceNavMore > span:last-child{min-width:0}
+  body[data-mobile-workspace="home"] .mobileWorkspaceNavMore strong{
+    display:block;
+    color:var(--title);
+    font-size:13px;
+    letter-spacing:0;
+    text-transform:none;
+  }
+  body[data-mobile-workspace="home"] .mobileWorkspaceNavMore small{
+    display:block;
+    margin-top:2px;
+    color:var(--muted);
+    font-size:9px;
+    font-weight:500;
+    letter-spacing:0;
+    text-transform:none;
+  }
+  body[data-mobile-workspace="home"] .mobileWorkspaceNavMoreIcons{display:flex}
+  /* The five real section icons, overlapping like a group of avatars,
+     instead of three generic hint glyphs that never matched what the row
+     actually expands into. Later siblings paint over earlier ones, so RT
+     Sync (last in the DOM) sits fully visible on top - --tint per icon
+     mirrors the --tile-accent each section's own button already carries,
+     so the cluster and the opened list below never disagree on colour. */
+  body[data-mobile-workspace="home"] .mobileWorkspaceNavMoreIcons i{
+    --tint:var(--muted);
+    display:grid;
+    place-items:center;
+    width:26px;
+    height:26px;
+    margin-left:-9px;
+    border:2px solid var(--panel);
+    border-radius:50%;
+    background:var(--tint);
+    color:var(--panel);
+  }
+  body[data-mobile-workspace="home"] .mobileWorkspaceNavMoreIcons i:first-child{ margin-left:0; }
+  body[data-mobile-workspace="home"] .mobileWorkspaceNavMoreIcons i svg{
+    width:12px;
+    height:12px;
+    fill:none;
+    stroke:currentColor;
+    stroke-width:2;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+  }
+  body[data-mobile-workspace="home"] .workspaceNavMoreChev{
+    width:18px;
+    height:18px;
+    margin-left:auto;
+    color:var(--muted);
+    /* This chevron never picked up the desktop version's own fill:none/
+       stroke:currentColor (styles.css, .workspaceNavMoreChev inside the
+       901+pointer:fine block) - with neither declared, the bare <path>
+       fell back to the SVG spec default (fill:black, no stroke), so it
+       rendered as a solid black arrowhead on every theme instead of a
+       themed outline chevron matching the icons beside it. */
+    fill:none;
+    stroke:currentColor;
+    stroke-width:2;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+    transition:transform .18s ease;
+  }
+  body[data-mobile-workspace="home"] .workspaceNav.navExpanded .workspaceNavMoreChev{transform:rotate(180deg)}
+  body[data-mobile-workspace="home"] .mobileWorkspaceSyncStatus{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    color:var(--muted);
+    font-size:9px;
+    font-weight:500;
+  }
+  body[data-mobile-workspace="home"] .mobileWorkspaceSyncStatus i{
+    width:6px;
+    height:6px;
+    border-radius:50%;
+    background:currentColor;
+  }
+  body[data-mobile-workspace="home"] .workspaceNav.navExpanded .mobileWorkspaceSyncStatus{display:none}
+  body[data-mobile-workspace="home"] .workspaceNav:not(.navExpanded) .workspaceNavExtra:not(.active){display:none}
+  body[data-mobile-workspace="home"] .workspaceNav.navExpanded .workspaceNavExtra{
+    grid-column:1;
+    padding:0;
+    border:0;
+    border-radius:0;
+    background:transparent;
+    box-shadow:none;
+  }
+  /* RT Sync / Tools / Request beta access / Changelog / Sudo access read as
+     one continuous thread once expanded: a single vertical line runs
+     behind every row and each icon becomes a ringed node sitting on it,
+     the same visual language the numbered Recipe/Timeline/Resin Totals
+     rail above already uses for a sequence, borrowed here for a list. The
+     line is each row's own ::before segment (icon position is identical
+     everywhere, so the segments line up into one continuous rule); only
+     the first (RT Sync) and last (Sudo access) rows trim their own half.
+     display:contents unwraps the icon+title span so the icon and the
+     (inherited-styled) title text become independent grid items the row
+     can place - the span itself never painted a box, so removing it
+     changes nothing else. #helpBetaAccess itself is a plain div, not a
+     .workspaceNavButton, so this never touches its own three-state layout
+     (see .helpPlayBanner further up for its matching thread segment). */
+  body[data-mobile-workspace="home"] .workspaceNav.navExpanded .workspaceNavButton.workspaceNavExtra{
+    position:relative;
+    display:grid;
+    grid-template-columns:auto 1fr;
+    column-gap:12px;
+    row-gap:1px;
+    align-items:center;
+    min-height:0;
+    padding:11px 12px;
+  }
+  body[data-mobile-workspace="home"] .workspaceNav.navExpanded .workspaceNavButton.workspaceNavExtra::before{
+    content:"";
+    position:absolute;
+    left:26px;
+    top:-1px;
+    width:1px;
+    height:calc(100% + 1px);
+    background:var(--border2);
+  }
+  #workspaceNavLineSync::before{ top:50%; }
+  #workspaceNavSudo::before{ height:50%; }
+  body[data-mobile-workspace="home"] .workspaceNav.navExpanded .workspaceNavButton.workspaceNavExtra > span{
+    display:contents;
+    font-size:13px;
+  }
+  body[data-mobile-workspace="home"] .workspaceNav.navExpanded .workspaceNavExtra .workspaceTileIcon{
+    position:relative;
+    z-index:1;
+    width:28px;
+    height:28px;
+    padding:6px;
+    box-sizing:border-box;
+    border:2px solid var(--tile-accent);
+    border-radius:50%;
+    background:var(--panel);
+    color:var(--tile-accent);
+  }
+  body[data-mobile-workspace="home"] .workspaceNav.navExpanded .workspaceNavButton.workspaceNavExtra .workspaceTileIcon{
+    grid-row:1 / 3;
+    grid-column:1;
+  }
+  body[data-mobile-workspace="home"] .workspaceNav.navExpanded .workspaceNavExtra > small{
+    font-size:10px;
+  }
+  body[data-mobile-workspace="home"] .workspaceNav.navExpanded .workspaceNavButton.workspaceNavExtra > small{
+    grid-column:2;
+  }
+  /* The currently open panel's node fills solid instead of just
+     outlined, and its title picks up the same accent - overrides the
+     generic .workspaceNavButton.active treatment (a background tint and
+     var(--title) icon colour) so an open row reads through the node/title
+     alone, not a highlighted box breaking the thread. */
+  body[data-mobile-workspace="home"] .workspaceNav.navExpanded .workspaceNavButton.workspaceNavExtra.active{
+    border-color:transparent;
+    background:transparent;
+  }
+  body[data-mobile-workspace="home"] .workspaceNav.navExpanded .workspaceNavButton.workspaceNavExtra.active .workspaceTileIcon{
+    background:var(--tile-accent);
+    color:var(--panel);
+  }
+  body[data-mobile-workspace="home"] .workspaceNav.navExpanded .workspaceNavButton.workspaceNavExtra.active > span{
+    color:var(--tile-accent);
+  }
+
+  .footerBar{
+    position:fixed;
+    right:0;
+    bottom:0;
+    left:0;
+    z-index:71;
+    display:grid;
+    grid-template-columns:repeat(5,minmax(0,1fr));
+    align-items:stretch;
+    gap:0;
+    height:calc(var(--app-dock-height) + env(safe-area-inset-bottom));
+    min-height:0;
+    padding:4px max(4px,env(safe-area-inset-right)) env(safe-area-inset-bottom) max(4px,env(safe-area-inset-left));
+    /* The unscoped legacy .footerBar rule (the old "Next Pump Off" footer,
+       further up this file) still sets a 1px top border - explicitly zero
+       it here rather than just omitting a declaration, or it bleeds back
+       through on mobile. */
+    border-top:0;
+    /* Square on all four corners of the box itself. The top's shape comes
+       entirely from the raised-end pseudo-elements below, and the bottom
+       must stay hard against the screen edge - any rounding there lets the
+       page background show through in the bottom corners. */
+    border-radius:0;
+    background:color-mix(in srgb,var(--panelOpen) 94%,transparent);
+    text-align:center;
+    backdrop-filter:blur(14px);
+  }
+  /* Inverted (concave) top corners, mirrored on both ends: the footer's own
+     material rises 20px above the flat top at each outer edge, 24px wide,
+     and the join back down to the flat top is a true concave curve - as if
+     the panel above were settling down into the footer.
+
+     border-radius cannot do this. A radius always keeps material INSIDE its
+     corner ellipse, which bulges convex (the "pill" corner, already
+     rejected); this shape needs material kept OUTSIDE an ellipse, so the
+     arc sags toward the corner instead. Hence a mask.
+
+     Each pseudo-element is a 24x20 block of the bar's own material sitting
+     directly above the bar's sharp top corner, with an ellipse the full
+     size of that block masked out of its INNER-TOP corner (the corner
+     diagonally opposite the outer screen edge). What survives is a solid
+     full-height column against the screen edge - the raised end - and a
+     solid strip along the bottom where it meets the bar's flat top, joined
+     by the ellipse's arc, which sags toward the outer-bottom corner. That
+     sag is the concave transition. Filled with the bar's own material and
+     blur, never the page background, so it reads as the footer rising
+     rather than as a cutout - and the mask clips the backdrop-filter too,
+     so no blurred rectangle shows through the removed quadrant. */
+  .footerBar::before,.footerBar::after{
+    content:"";
+    position:absolute;
+    top:-20px;
+    width:24px;
+    height:20px;
+    background:color-mix(in srgb,var(--panelOpen) 94%,transparent);
+    backdrop-filter:blur(14px);
+    pointer-events:none;
+  }
+  .footerBar::before{
+    left:0;
+    -webkit-mask:radial-gradient(24px 20px at 100% 0,transparent 99%,#000 100%);
+    mask:radial-gradient(24px 20px at 100% 0,transparent 99%,#000 100%);
+  }
+  .footerBar::after{
+    right:0;
+    -webkit-mask:radial-gradient(24px 20px at 0 0,transparent 99%,#000 100%);
+    mask:radial-gradient(24px 20px at 0 0,transparent 99%,#000 100%);
+  }
+  .appDockMenuHost{position:relative;display:grid;min-width:0}
+  .appDockControl,.cloudSyncFooterStatus{
+    display:flex;
+    min-width:0;
+    /* 64px reduced 10%, matching --app-dock-height above - icon size (set
+       further down) is untouched. */
+    min-height:57.6px;
+    margin:0;
+    padding:5px 2px;
+    border:0;
+    border-radius:8px;
+    background:transparent;
+    color:var(--muted);
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+    gap:3px;
+    font:inherit;
+    text-align:center;
+  }
+  /* Icon-only dock: labels are visually hidden below (aria-label already
+     carries the accessible name for every control, so removing the visible
+     text loses nothing for assistive tech). 27.5px is 22px + 25%, and is now
+     the one size every dock icon uses - Main no longer gets a larger icon of
+     its own. */
+  .appDockControl svg,.cloudSyncFooterStatus svg{width:27.5px;height:27.5px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .appDockControl > span:not(.mobileNotificationsBadge),.cloudSyncFooterStatus > strong{display:none}
+  .appDockControl:hover,.appDockControl:focus-visible,.cloudSyncFooterStatus:hover,.cloudSyncFooterStatus:focus-visible{background:var(--row-bg);color:var(--title)}
+  .appDockControl:focus-visible,.cloudSyncFooterStatus:focus-visible{outline:var(--focus-outline);outline-offset:-2px}
+  .appDockControl[aria-current="page"],.appDockControl[aria-expanded="true"]{color:var(--title);background:var(--focus-ring)}
+  .appDockMain{
+    justify-self:center;
+    width:calc(100% - 8px);
+    border:1px solid color-mix(in srgb,var(--focus-border) 24%,var(--border));
+    border-radius:13px;
+    background:color-mix(in srgb,var(--focus-ring) 72%,var(--panelOpen));
+  }
+  .appDockMain[aria-current="page"]{border-color:color-mix(in srgb,var(--focus-border) 48%,var(--border));background:color-mix(in srgb,var(--focus-ring) 94%,var(--panelOpen));color:var(--title)}
+  .appDockMain:not([aria-current="page"]){color:var(--muted);background:color-mix(in srgb,var(--row-bg) 82%,var(--panelOpen))}
+  .appDockControl:disabled{opacity:.58}
+  /* Back / Forward hold their slot but read as inert until usable - a
+     firmer fade than a merely busy control, and no press feedback. */
+  .appDockNav:disabled{opacity:.34;pointer-events:none}
+  .cloudSyncFooterStatus{border:0;text-align:center}
+  .cloudSyncFooterStatus strong{max-width:100%;overflow:hidden;color:var(--text);font-size:8px;font-weight:850;line-height:1;text-overflow:ellipsis;white-space:nowrap}
+  .cloudSyncFooterStatus[data-state="synced"]{color:var(--ok)}
+  .cloudSyncFooterStatus[data-state="pending"],.cloudSyncFooterStatus[data-state="offline"],.cloudSyncFooterStatus[data-state="conflict"]{color:var(--warn)}
+  .cloudSyncFooterStatus[data-state="error"]{color:var(--bad)}
+
+  .footerSheet{
+    position:fixed;
+    right:auto;
+    bottom:calc(var(--app-dock-height) + env(safe-area-inset-bottom) + 10px);
+    left:50%;
+    top:auto;
+    z-index:72;
+    width:min(410px,calc(100vw - 20px));
+    max-width:calc(100vw - 20px);
+    margin:0;
+    padding:0;
+    transform:translateX(-50%);
+    border:1px solid var(--border2);
+    border-radius:14px;
+    background:var(--panelOpen);
+    color:var(--text);
+    box-shadow:0 12px 32px color-mix(in srgb,#000 30%,transparent);
+  }
+  .footerDockMenu{
+    display:grid;
+    gap:4px;
+    max-height:calc(100dvh - var(--app-dock-height) - 32px);
+    padding:8px;
+    overflow:auto;
+    text-align:left;
+  }
+  .footerSheet:not([open]){display:none!important}
+  .footerSheetHead{padding:10px 11px 11px;border-bottom:1px solid var(--border)}
+  .footerSheetHead strong{color:var(--title);font-size:14px}
+  .footerDockMenu button{display:grid;grid-template-columns:28px minmax(0,1fr);align-items:center;gap:10px;min-height:48px;padding:8px 11px;border:0;border-radius:9px;background:transparent;color:var(--text);font:inherit;text-align:left}
+  .footerDockMenu button:not(:has(svg)){grid-template-columns:1fr}
+  .footerDockMenu button:hover,.footerDockMenu button:focus-visible{background:var(--row-bg);outline:0}
+  .footerDockMenu button:focus-visible{box-shadow:inset 0 0 0 2px var(--focus-border)}
+  .footerDockMenu button svg{width:24px;height:24px;fill:none;stroke:var(--focus-border);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .footerDockMenu button span{font-size:13px;font-weight:800}
+  .footerAccountDetails{display:grid;gap:2px;padding:10px 11px 12px;border-bottom:1px solid var(--border)}
+  .footerAccountDetails[hidden]{display:none}
+  .footerAccountDetails strong{color:var(--title);font-size:13px}
+  .footerAccountDetails small{overflow:hidden;color:var(--muted);font-size:11px;text-overflow:ellipsis;white-space:nowrap}
+
+  /* Mobile footer notification bell - same .appDockControl treatment as
+     Display/Main/Account, plus a corner badge. Severity color and the
+     badge's count/hidden state are kept in sync with the desktop toggle by
+     renderAttentionCenter in app.js (one summary, two real buttons). */
+  .mobileNotificationsToggle{position:relative}
+  .mobileNotificationsToggle[data-severity="warning"]{color:var(--warn)}
+  .mobileNotificationsToggle[data-severity="error"]{color:var(--bad)}
+  .mobileNotificationsBadge{
+    position:absolute;
+    top:3px;
+    /* The bell is centered within its fluid dock tile. Anchor the badge to
+       that same center so widening the tile never pulls the count away. */
+    left:calc(50% + 7px);
+    right:auto;
+    display:grid;
+    place-items:center;
+    min-width:15px;
+    height:15px;
+    padding:0 3px;
+    border:1.5px solid var(--panelOpen);
+    border-radius:5px;
+    background:var(--warn);
+    color:#12161c;
+    font-size:9px;
+    font-weight:900;
+    font-variant-numeric:tabular-nums;
+    line-height:1;
+  }
+  .mobileNotificationsBadge[data-severity="error"]{border-radius:50%;background:var(--bad);color:#fff}
+
+  /* Notification center content - the mobile footer bell and the desktop
+     status-bar bell open the exact same #footerNotificationsMenu dialog and
+     these same classes (.desktopNotification*), just presented as a modal
+     .footerSheet bottom sheet here instead of desktop's anchored popover
+     (see desktop.css for that presentation and the shared severity/icon
+     rules). One data source, one set of markup, two responsive treatments. */
+  .desktopNotificationsHead{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:12px 13px 10px;border-bottom:1px solid var(--border)}
+  .desktopNotificationsHead strong{color:var(--title);font-size:14px;font-weight:850}
+  .desktopNotificationsHead small{color:var(--muted);font-size:11px;font-weight:700}
+  .desktopNotificationsList{display:grid;gap:0;max-height:calc(100dvh - var(--app-dock-height) - 90px);overflow:auto}
+  .desktopNotificationsEmpty{margin:0;padding:20px 14px;color:var(--muted);font-size:13px;text-align:center}
+  .desktopNotificationItem{display:grid;grid-template-columns:20px minmax(0,1fr);align-items:start;gap:10px;padding:12px 14px}
+  .desktopNotificationItem + .desktopNotificationItem{border-top:1px solid var(--border)}
+  .desktopNotificationIcon{width:18px;height:18px;margin-top:1px;fill:none;stroke:var(--warn);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .desktopNotificationItem[data-severity="error"] .desktopNotificationIcon{stroke:var(--bad)}
+  .desktopNotificationBody{display:grid;gap:4px;min-width:0}
+  .desktopNotificationHeadRow{display:flex;align-items:baseline;justify-content:space-between;gap:8px;min-width:0}
+  .desktopNotificationHeadRow strong{min-width:0;color:var(--text);font-size:13px;font-weight:750;line-height:1.3}
+  .desktopNotificationSeverityTag{flex:0 0 auto;color:var(--warn);font-size:10px;font-weight:850;letter-spacing:.06em;text-transform:uppercase}
+  .desktopNotificationItem[data-severity="error"] .desktopNotificationSeverityTag{color:var(--bad)}
+  .desktopNotificationMessage{margin:0;color:var(--muted);font-size:12px;line-height:1.4}
+  .desktopNotificationFoot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:3px}
+  .desktopNotificationSection{color:var(--muted);font-size:10px;font-weight:700;letter-spacing:.03em;text-transform:uppercase}
+  .desktopNotificationAction{min-height:32px;padding:5px 11px;border:1px solid var(--border2);border-radius:var(--control-radius);background:var(--row-bg);color:var(--focus-border);font:inherit;font-size:12px;font-weight:750;box-shadow:none}
+  .desktopNotificationAction:hover,.desktopNotificationAction:active{background:var(--focus-ring);color:var(--title)}
+  .desktopNotificationAction:focus-visible{outline:var(--focus-outline);outline-offset:1px}
+
+  .displaySheet{max-height:calc(100dvh - var(--app-dock-height) - 32px)}
+  .displaySheetPanel{padding:16px}
+  .footerSheetBackdrop{bottom:calc(var(--app-dock-height) + env(safe-area-inset-bottom));z-index:69}
+
+  .timelineAlarmSetting{margin:12px 0 0}
+  .mobileRecipeActionTray{bottom:calc(var(--app-dock-height) + env(safe-area-inset-bottom) + 6px)!important}
+  .mobileRearrangeToast{bottom:calc(var(--app-dock-height) + env(safe-area-inset-bottom) + 8px)!important}
+  .pumpOffAlarmBanner,.installHint{bottom:calc(var(--app-dock-height) + env(safe-area-inset-bottom) + 10px)}
+}
+
+@media (width <= 340px){
+  .workspaceNavButton > span{gap:5px;font-size:12.5px}
+  .workspaceNavButton .workspaceTileIcon{width:36px;height:36px}
+  .appDockControl > span,.cloudSyncFooterStatus > span{font-size:8px}
+  .appDockMain{width:calc(100% - 4px)}
+}
+
+/* Footer state refinement: selection is communicated by the theme accent,
+   without a persistent button-shaped container.  Touch targets remain full
+   sized and focus/press feedback stays available. */
+@media (max-width: 900px), (min-width: 901px) and (pointer: coarse){
+  .appDockControl,
+  .cloudSyncFooterStatus{
+    background:transparent;
+    box-shadow:none;
+  }
+  .appDockControl:hover,
+  .cloudSyncFooterStatus:hover{
+    background:transparent;
+    color:var(--title);
+  }
+  .appDockControl[aria-current="page"],
+  .appDockControl[aria-expanded="true"]{
+    background:transparent;
+    color:var(--title);
+    box-shadow:none;
+  }
+  .appDockControl[aria-current="page"] > span,
+  .appDockControl[aria-expanded="true"] > span{
+    color:var(--title);
+    font-weight:900;
+  }
+  .appDockControl[aria-current="page"] svg,
+  .appDockControl[aria-expanded="true"] svg{
+    color:var(--title);
+    transform:scale(1.04);
+  }
+
+  /* Main keeps its raised, larger touch target, but has no visible block. */
+  .appDockMain,
+  .appDockMain[aria-current="page"],
+  .appDockMain:not([aria-current="page"]){
+    border:0;
+    border-color:transparent;
+    border-radius:0;
+    background:transparent;
+    box-shadow:none;
+  }
+  .appDockMain[aria-current="page"]{color:var(--title)}
+  .appDockMain:not([aria-current="page"]){color:var(--muted)}
+
+  /* Preserve a clear keyboard affordance without turning focus into a
+     persistent selected container. */
+  .appDockControl:focus-visible,
+  .cloudSyncFooterStatus:focus-visible{
+    background:transparent;
+    color:var(--title);
+    outline:var(--focus-outline);
+    outline-offset:-2px;
+  }
+  .appDockControl:active:not(.cloudSyncFooterStatus){
+    background:color-mix(in srgb,var(--title) 10%,transparent);
+    color:var(--title);
+    transform:translateY(1px);
+  }
+
+  /* Compact footer: Main remains a centered text destination; Display and
+     Alerts use their familiar palette and bell symbols at either side, with
+     Back / Forward flanking Main (concept 7). Forward keeps its slot at all
+     times and only lights up once Back has been used, so the row never
+     reflows. */
+  .footerBar{
+    grid-template-columns:repeat(5,minmax(0,1fr));
+    height:calc(var(--app-dock-height) + env(safe-area-inset-bottom));
+    padding:0 max(0px,env(safe-area-inset-right)) env(safe-area-inset-bottom) max(0px,env(safe-area-inset-left));
+    border-top:1px solid var(--border2);
+    background:color-mix(in srgb,var(--panelOpen) 96%,transparent);
+    backdrop-filter:blur(12px);
+  }
+  .footerBar::before,.footerBar::after{display:none}
+  .appDockControl,.cloudSyncFooterStatus{
+    min-height:32px;
+    padding:0 3px;
+    border-radius:0;
+    flex-direction:row;
+    gap:3px;
+    box-shadow:none;
+  }
+  .appDockControl svg,.cloudSyncFooterStatus svg{display:none}
+  #appFooterDisplay svg,#appFooterBack svg,#appFooterMain svg,#appFooterForward svg,#appFooterNotifications svg{
+    display:block;
+    width:19px;
+    height:19px;
+    stroke-width:1.9;
+  }
+  /* Reserved-slot Forward (and Back at the history root): visibly present
+     but clearly inert until there is somewhere to go. No press/hover
+     feedback and no pointer cursor while disabled. */
+  .appDockNav:disabled{opacity:.32;pointer-events:none}
+  .appDockControl > span:not(.mobileNotificationsBadge),
+  .cloudSyncFooterStatus > span,
+  .cloudSyncFooterStatus > strong{
+    position:static;
+    display:block;
+    width:auto;
+    height:auto;
+    overflow:hidden;
+    clip:auto;
+    color:inherit;
+    font-size:9px;
+    font-weight:800;
+    line-height:1;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .appDockControl[aria-current="page"]{color:var(--title)}
+  #appFooterDisplay > span,
+  #appFooterBack > span,
+  #appFooterMain > span,
+  #appFooterForward > span,
+  #appFooterNotifications > span:last-child{
+    position:absolute;
+    width:1px;
+    height:1px;
+    overflow:hidden;
+    clip-path:inset(50%);
+    white-space:nowrap;
+  }
+  .appDockMain,
+  .appDockMain[aria-current="page"],
+  .appDockMain:not([aria-current="page"]){
+    width:100%;
+    border:0;
+    border-radius:0;
+    background:transparent;
+  }
+  .mobileNotificationsToggle{position:relative;justify-content:center;color:var(--warn)}
+  .mobileNotificationsBadge{
+    position:absolute;
+    top:3px;
+    left:calc(50% + 5px);
+    display:grid;
+    min-width:12px;
+    height:12px;
+    padding:0 3px;
+    border:0;
+    border-radius:4px;
+    background:var(--warn);
+    color:#171a1c;
+    font-size:7px;
+    line-height:1;
+  }
+  .mobileNotificationsBadge[data-severity="error"]{border-radius:50%;background:var(--bad);color:#fff}
+  .cloudSyncFooterStatus{
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    gap:1px;
+    border:0;
+    border-left:1px solid var(--border2);
+    background:color-mix(in srgb,var(--ok) 7%,transparent);
+    color:var(--ok);
+  }
+  .cloudSyncFooterStatus > span{font-size:9px}
+  .cloudSyncFooterStatus > strong{max-width:100%;font-size:7px;font-weight:850;text-transform:uppercase}
+  /* Legal/version metadata belongs to the Main destination only. Section
+     screens keep the fixed navigation dock, but not this second footer row. */
+  body[data-mobile-workspace="home"] .mobileFooterMeta{
+    position:fixed;
+    right:0;
+    bottom:calc(var(--app-dock-height) + env(safe-area-inset-bottom) + 2px);
+    left:0;
+    z-index:59;
+    display:flex;
+    align-items:center;
+    justify-content:flex-start;
+    gap:5px;
+    min-height:10px;
+    padding:0 max(9px, env(safe-area-inset-left)) 0 max(9px, env(safe-area-inset-right));
+    pointer-events:auto;
+  }
+  .mobileFooterMetaLink,
+  .mobileFooterMetaSep,
+  .mobileFooterVersion{
+    color:var(--muted);
+    font-size:7px;
+    font-weight:700;
+    line-height:1;
+    letter-spacing:.06em;
+    white-space:nowrap;
+  }
+  .mobileFooterMetaLink{color:var(--focus-border);text-decoration:none}
+  .mobileFooterMetaLink:focus-visible{outline:var(--focus-outline);outline-offset:2px}
+  .mobileFooterVersion{display:block;font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+
+}
+
+@media (min-width: 901px) and (pointer: fine){
+  /* Desktop keeps its established sidebar and production status strip. The
+     Account utility remains reachable without reintroducing admin tiles. */
+  .footerBar{display:contents}
+  .footerBar > :not(.footerAccountHost){display:none!important}
+  .footerAccountHost{position:fixed;top:15px;right:66px;z-index:65;display:block}
+  #appFooterAccount{display:grid;place-items:center;width:38px;height:38px;padding:0;border:1px solid var(--border);border-radius:var(--control-radius);background:var(--row-bg);color:var(--focus-border)}
+  #appFooterAccount svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  #appFooterAccount > span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+  #appFooterAccount:hover,#appFooterAccount:focus-visible,#appFooterAccount[aria-expanded="true"]{background:var(--focus-ring);color:var(--title)}
+  #appFooterAccount:focus-visible{outline:var(--focus-outline);outline-offset:2px}
+  .footerAccountMenu{position:absolute;top:46px;right:0;display:grid;gap:4px;width:290px;padding:8px;border:1px solid var(--border2);border-radius:12px;background:var(--panelOpen);box-shadow:var(--shadow2)}
+  .appOverlayRoot > .footerAccountMenu{pointer-events:auto}
+  .footerAccountMenu button{min-height:42px;padding:8px 10px;border:0;border-radius:8px;background:transparent;color:var(--text);font:inherit;font-weight:750;text-align:left}
+  .footerAccountMenu button:hover,.footerAccountMenu button:focus-visible{background:var(--row-bg);outline:0;box-shadow:inset 0 0 0 2px var(--focus-border)}
+  .footerAccountDetails{display:grid;gap:2px;padding:9px 10px 11px;border-bottom:1px solid var(--border)}
+  .footerAccountDetails[hidden]{display:none}
+  .footerAccountDetails strong{color:var(--title);font-size:13px}.footerAccountDetails small{color:var(--muted);font-size:11px}
+}
+
+/* =======================================================================
+ *   Mobile Setup refinement
+ *   ======================================================================= */
+@media (max-width: 900px), (min-width: 901px) and (pointer: coarse){
+  #lineSetupBlock .setupLineConfiguration{margin-top:0;padding:10px 0 2px}
+  #lineSetupBlock .setupSectionHeading{
+    margin:0 0 10px;
+    color:var(--title);
+    font-size:13px;
+    font-weight:850;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+  }
+  #lineSetupBlock .setupTopRow{
+    grid-template-columns:1fr;
+    width:min(100%,480px);
+    gap:10px;
+  }
+  #lineSetupBlock .setupControlGroup{display:grid;gap:5px;min-width:0}
+  #lineSetupBlock .setupControlLabel{color:var(--muted);font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+  #lineSetupBlock .layerCountTiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;width:100%}
+  #lineSetupBlock .layerCountTile{
+    display:flex;
+    width:auto;
+    height:42px;
+    gap:7px;
+    border-color:var(--row-border-2);
+    border-radius:var(--control-radius);
+    background:var(--row-bg-2);
+    color:var(--muted);
+    font-size:13px;
+    font-weight:850;
+  }
+  #lineSetupBlock .layerCountTile svg{width:23px;height:17px}
+  #lineSetupBlock .layerCountTile.active{
+    border-color:color-mix(in srgb,var(--focus-border) 66%,var(--row-border-2));
+    background:transparent;
+    color:var(--title);
+    box-shadow:inset 0 -2px 0 var(--focus-border);
+  }
+  #lineSetupBlock .setupPrimaryFields{margin-top:12px!important;gap:10px}
+  #lineSetupBlock .gaugeTile{
+    position:relative;
+    min-height:94px;
+    max-width:none;
+    padding:10px 10px 9px;
+    border-color:var(--row-border-2);
+    border-radius:var(--control-radius);
+    background:var(--row-bg-2);
+  }
+  #lineSetupBlock .gaugeTile input:not([type="checkbox"]):not([type="radio"]){
+    min-width:0;
+    color:var(--text);
+    font-size:clamp(19px,6vw,25px);
+    line-height:1.05;
+    letter-spacing:-.03em;
+    font-variant-numeric:tabular-nums;
+  }
+  #lineSetupBlock .gaugeTile input[type="time"]{min-width:0;padding-inline:0}
+  #lineSetupBlock .gaugeTile input[type="time"]{
+    position:absolute;
+    inset:0;
+    z-index:2;
+    width:100%;
+    height:100%;
+    opacity:0;
+    cursor:pointer;
+  }
+  #lineSetupBlock .gaugeTimeValue{display:flex;align-items:center;justify-content:center;gap:7px;min-width:0;color:var(--text);font-size:clamp(19px,6vw,25px);font-weight:850;line-height:1.05;font-variant-numeric:tabular-nums;letter-spacing:-.03em;white-space:nowrap}
+  #lineSetupBlock .gaugeTimeValue svg{width:22px;height:22px;flex:0 0 auto;fill:none;stroke:var(--title);stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+  #lineSetupBlock .gaugeTile label{margin-top:6px;color:var(--muted);font-size:9px;letter-spacing:.08em}
+  .mobileProductionControls .changeoverWizardTrigger{position:absolute;right:calc(50% + 54px);top:-16px;z-index:3;display:grid;width:44px;height:44px;min-height:44px;margin:0;padding:11px;border:0;background:transparent;color:var(--focus-border);box-shadow:none}
+  .changeoverWizardTrigger svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  #lineSetupBlock .gaugeTile .gaugeIcon{width:17px;height:17px;margin-bottom:3px}
+
+  #lineSetupBlock #weightsBlock{border:0;border-radius:0;background:transparent;box-shadow:none}
+  #lineSetupBlock #weightsBlock > summary{
+    min-height:62px;
+    padding:8px 0 10px;
+    border-bottom:1px solid var(--border);
+  }
+  #lineSetupBlock #weightsBlock > summary .sumLeft{gap:9px;min-width:0}
+  #lineSetupBlock #weightsBlock > summary .mobileSetupEntryArt{width:35px;height:35px}
+  #lineSetupBlock #weightsBlock > summary .summaryText{overflow:visible}
+  #lineSetupBlock #weightsBlock > summary .nestedLayerTitle{font-size:13px;letter-spacing:.08em;white-space:normal}
+  #lineSetupBlock #weightsBlock > summary .layerMeta{margin-top:2px;font-size:10px;line-height:1.25;white-space:normal}
+  #lineSetupBlock #weightsBlock > summary::after{width:8px;height:8px}
+  #lineSetupBlock #weightsBlock > .blockBody{min-width:0;padding-top:10px}
+  #lineSetupBlock #setupWeightProfilesBlock{display:none!important}
+  .weightsIntroduction{display:grid;min-width:0;width:100%;max-width:100%;gap:6px;margin:0;color:var(--muted);font-size:11px;line-height:1.38}
+  .weightsIntroduction > *{min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere}
+  .weightsSmartHow{display:block;min-width:0;width:100%;max-width:100%;box-sizing:border-box;font-size:10px;white-space:normal}
+  .weightsSmartHow summary{min-width:0;max-width:100%;color:var(--focus-border);font-weight:800;white-space:normal;overflow-wrap:anywhere;cursor:pointer}
+  .weightsSmartHow p{min-width:0;max-width:100%;margin:6px 0 0;padding:8px;box-sizing:border-box;border-left:2px solid var(--focus-border);background:color-mix(in srgb,var(--focus-ring) 34%,transparent);font-size:10px;line-height:1.35;white-space:normal;overflow-wrap:anywhere}
+
+  .mobileWeightsControlRail{grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:7px}
+  /* Compact control-row treatment: these read as a small header strip above
+     the weight matrix, not as feature panels. No min-height, no flex/aspect
+     stretching - the rail's align-items:stretch keeps both cards the exact
+     same height, driven only by their real content (the 34px toggle / 32px
+     circumference field plus trimmed padding). The Circumference card is a
+     <label>, so it inherits the global label{margin-bottom:6px} - that stray
+     margin used to inflate the rail and desync the two card heights, hence
+     the explicit margin:0. */
+  .mobileWeightsSmartControl{
+    padding:5px 8px;
+    gap:6px;
+    border:1px solid var(--row-border-2);
+    border-radius:var(--control-radius);
+    background:var(--row-bg-2);
+    color:var(--text);
+    box-shadow:none;
+  }
+  .mobileWeightsSmartControl strong{font-size:11px}
+  .mobileWeightsSmartControl small{font-size:8px}
+  .mobileSharedCircumference{grid-template-columns:auto minmax(50px,58px);justify-content:space-between;gap:0 6px;margin:0;padding:4px 8px}
+  .mobileSharedCircumference > span{align-self:end;color:var(--text);font-size:10px;font-weight:800;white-space:nowrap}
+  .mobileSharedCircumference small{grid-column:1;text-align:left}
+  /* width comes from the base rule below (100%, min-width:0); the value
+     column above (not a fixed 48px) is what guarantees "36.25" always fits
+     inside the card. box-sizing keeps padding inside that column width. */
+  .mobileSharedCircumference input{grid-column:2;grid-row:1 / span 2;height:32px;padding:2px 3px;font-size:16px;box-sizing:border-box}
+  .mobileWeightsViewToggle:not(.weightsHeaderViewToggle){padding-top:2px}
+  .mobileWeightsViewToggle:not(.weightsHeaderViewToggle) button{border-radius:var(--control-radius)}
+  .mobileWeightsViewToggle:not(.weightsHeaderViewToggle) button.active{background:transparent;box-shadow:inset 0 -2px 0 var(--focus-border)}
+
+  /* Static cells in both views - see the tablet block above. The fixed
+     70px height (and the 17px readout margin that went with it) was
+     originally sized to clear a decorative hopper SVG that render no
+     longer inserts - height:auto plus a floor lets the cell match its
+     real content, the way Recipe's matrix cells already do, without
+     touching the value/unit or badge font sizes. */
+  #weightsArea[data-mobile-weight-view] .mobileWeightCell{height:auto;min-height:40px;padding:4px 5px 3px}
+  #weightsArea[data-mobile-weight-view] .mobileWeightVisualReadout{display:block;margin-top:10px}
+  .mobileWeightVisualValues{display:grid;gap:3px;min-width:0;text-align:left}
+  .mobileWeightVisualValues b{display:flex;align-items:baseline;justify-content:flex-end;gap:2px;min-width:0;font-size:13px;line-height:1}
+  .mobileWeightVisualValues small{display:inline;margin:0;color:var(--muted);font-size:7px!important}
+  .mobileWeightVisualValues b:first-child small::after,.mobileWeightVisualValues b:nth-child(2) small::after{content:none}
+  /* With Smart Hoppers off a hopper has one operator-facing value. Keep that
+     reading centered in the compact cell rather than leaving a blank line
+     where geometry would have appeared. */
+  #weightsArea[data-smart-hoppers="false"][data-mobile-weight-view] .mobileWeightVisualReadout{display:grid;grid-template-columns:minmax(0,1fr);align-items:center;min-height:22px;margin-top:5px}
+  #weightsArea[data-smart-hoppers="false"] .mobileWeightVisualValues b:only-child{justify-content:center}
+
+  /* Receiver weight profiles moved out of a bottom bar into the tab-row
+     header cluster as an icon button - see #recipeHeaderActions
+     .recipeHeaderMobileAction in the earlier <=700px block. */
+
+  .mobileSavedRecipesSheet{bottom:calc(var(--app-dock-height) + env(safe-area-inset-bottom) + 8px);width:min(410px,calc(100vw - 20px));max-width:calc(100vw - 20px);max-height:min(74dvh,620px);margin:0;padding:0 12px 12px;border:1px solid var(--border2);border-radius:16px;background:var(--panelOpen);box-shadow:0 12px 32px color-mix(in srgb,#000 30%,transparent)}
+  .mobileSavedRecipesSheet[open]{display:grid;grid-template-rows:auto auto auto minmax(0,1fr)}
+  .mobileSavedRecipesSheet::backdrop{background:color-mix(in srgb,#000 48%,transparent);backdrop-filter:blur(1.5px)}
+  .mobileSavedRecipesGrabber{display:block;width:42px;height:5px;min-height:5px;margin:8px auto 5px;padding:0;border:0;border-radius:999px;background:color-mix(in srgb,var(--muted) 45%,transparent);box-shadow:none}
+  .mobileSavedRecipesGrabber:focus-visible{outline:var(--focus-outline);outline-offset:3px}
+  .mobileSavedRecipesHeader{padding:5px 0 10px}
+  .mobileSavedRecipesTools button{font-size:10px}
+  /* Receiver profiles can expose four row actions. Reserve enough vertical
+     space for that menu, then open it back into the sheet rather than into
+     the clipped list below the row. */
+  .mobileWeightProfilesSheet{min-height:min(360px,calc(100dvh - var(--app-dock-height) - env(safe-area-inset-bottom) - 20px))}
+  .mobileWeightProfilesSheet.profileMenuOpen{overflow:visible}
+  .mobileWeightProfilesSheet.profileMenuOpen .mobileSavedRecipesList{overflow:visible}
+  .mobileWeightProfilesSheet .mobileSavedRecipeOverflow[open] .mobileSavedRecipeMenu{top:auto;bottom:calc(100% + 4px)}
+
+  /* Receiver bulk selection: cells themselves are the controls. A corner
+     marker, inset outline, and tint keep selection clear without a second
+     column of egg-shaped checkboxes. */
+  #weightsArea[data-mobile-bulk-mode="true"] .mobileWeightCell{cursor:pointer}
+  #weightsArea[data-mobile-bulk-mode="true"] .mobileWeightCell:focus-visible{outline:var(--focus-outline);outline-offset:1px}
+  #weightsArea[data-mobile-bulk-mode="true"] .mobileWeightCell.selected{
+    border-width:1px;
+    background:color-mix(in srgb,var(--focus-ring) 72%,var(--row-bg-2));
+    box-shadow:inset 0 0 0 2px var(--focus-border);
+  }
+  #weightsArea[data-mobile-bulk-mode="true"] .mobileWeightCell.selected::after{
+    content:"";
+    position:absolute;
+    top:5px;
+    right:5px;
+    width:7px;
+    height:7px;
+    border-radius:2px;
+    background:var(--focus-border);
+  }
+  .mobileWeightCellSelector{display:none!important}
+
+  /* Smart capacity replaces the manual display in place, so the separate
+     computed-weight line would just repeat it. Cells are static in both
+     views now, so this applies to both rather than Summary alone. */
+  .mobileWeightSummaryWeight.smart{color:var(--ok)}
+  #weightsArea[data-mobile-weight-view] .mobileWeightsComputedWeight{display:none!important}
+
+  /* Recipes and receiver profiles share Display's centered mobile sheet
+     geometry instead of relying on dialog's edge-to-edge default margins. */
+  .mobileSavedRecipesSheet{
+    position:fixed;
+    inset:auto;
+    right:auto;
+    bottom:calc(var(--app-dock-height) + env(safe-area-inset-bottom) + 10px);
+    left:50%;
+    transform:translateX(-50%);
+    width:min(410px,calc(100vw - 20px));
+    max-width:calc(100vw - 20px);
+    margin:0;
+  }
+}
+
+.changeoverWizardTrigger{display:none}
+.changeoverWizardDialog{width:min(410px,calc(100vw - 20px));max-width:calc(100vw - 20px);margin:auto;padding:0;border:1px solid var(--border2);border-radius:16px;background:var(--panelOpen);color:var(--text);box-shadow:var(--shadow2)}
+.changeoverWizardDialog::backdrop{background:color-mix(in srgb,#000 52%,transparent);backdrop-filter:blur(1.5px)}
+.changeoverWizardPanel{display:grid;grid-template-rows:auto auto minmax(0,1fr);min-height:min(500px,calc(100dvh - var(--app-dock-height) - env(safe-area-inset-bottom) - 30px));max-height:calc(100dvh - var(--app-dock-height) - env(safe-area-inset-bottom) - 30px);padding:0 16px 18px;overflow:auto}
+.changeoverWizardGrabber{display:block;width:42px;height:5px;min-height:5px;margin:8px auto 8px;padding:0;border:0;border-radius:999px;background:color-mix(in srgb,var(--muted) 45%,transparent);box-shadow:none}
+.changeoverWizardHeader{display:flex;align-items:start;justify-content:space-between;gap:12px;padding:3px 0 12px;border-bottom:1px solid var(--border)}
+.changeoverWizardHeader > div{display:grid;gap:3px}
+.changeoverWizardHeader strong{color:var(--title);font-size:16px}
+.changeoverWizardHeader small{color:var(--muted);font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.changeoverWizardClose{width:44px;height:44px;min-height:44px;padding:0;border-color:transparent!important;background:transparent;font-size:23px;line-height:1}
+.changeoverWizardClose:hover{border-color:var(--btn-secondary-border)!important;background:var(--row-bg)!important}
+.changeoverWizardBody{display:flex;min-width:0;flex-direction:column;align-items:stretch;justify-content:center;gap:22px;padding:22px 2px 4px;text-align:center}
+.changeoverWizardQuestion{margin:0;color:var(--title);font-size:clamp(20px,6vw,26px);line-height:1.2}
+.changeoverWizardField{display:grid;gap:7px;width:min(100%,300px);margin-inline:auto;text-align:left}
+.changeoverWizardField input{width:100%;min-height:58px;padding:8px 12px;text-align:center;font-size:28px;font-weight:850;font-variant-numeric:tabular-nums}
+.changeoverWizardField small{color:var(--muted);text-align:center}
+.changeoverWizardActions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;margin-top:auto;overflow:hidden;border:1px solid var(--btn-secondary-border);border-radius:var(--control-radius);background:var(--btn-secondary-bg)}
+.changeoverWizardActions.one{grid-template-columns:1fr}
+.changeoverWizardActions button,.changeoverWizardChoices button{min-height:48px}
+.changeoverWizardActions button{border:0;border-right:1px solid var(--btn-secondary-border);border-radius:0;font-size:var(--font-small);font-weight:800;box-shadow:none}
+.changeoverWizardActions button:last-child{border-right:0}
+.changeoverWizardActions button.secondary{background:transparent;color:var(--muted)}
+.changeoverWizardActions button.primary{background:linear-gradient(180deg,var(--btn-primary-a),var(--btn-primary-b));color:var(--text)}
+.changeoverWizardActions button:hover{background-color:var(--row-bg)}
+.changeoverWizardChoices{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px}
+.changeoverWizardChoices.binary{grid-template-columns:repeat(2,minmax(0,1fr))}
+.changeoverWizardChoices button{padding:8px 2px;border:1px solid var(--row-border-2);border-radius:var(--control-radius);background:var(--row-bg-2);color:var(--muted);font-size:17px;font-weight:850;box-shadow:none}
+.changeoverWizardChoices button:hover{border-color:var(--focus-border);background:var(--row-bg);color:var(--title)}
+.changeoverWizardChoices button.selected{border-color:color-mix(in srgb,var(--focus-border) 66%,var(--row-border-2));background:transparent;color:var(--title);box-shadow:inset 0 -2px 0 var(--focus-border)}
+.changeoverWizardTime{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;width:min(100%,330px);margin-inline:auto;text-align:left}
+.changeoverWizardTime label{display:grid;gap:6px;color:var(--muted);font-size:11px;font-weight:800;text-transform:uppercase}
+.changeoverWizardTime select{width:100%;min-height:52px;font-size:20px;font-weight:800}
+.changeoverWizardError{min-height:18px;margin:0;color:var(--danger,#c94b4b);font-size:12px}
+.changeoverWizardResultTime{color:var(--title);font-size:clamp(38px,12vw,54px);font-weight:900;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.changeoverWizardRemaining{margin-top:-15px;color:var(--text);font-size:16px;font-weight:750}
+.changeoverWizardSummary{margin-top:-12px;color:var(--muted);font-size:12px}
+
+body[data-shell="touch"] .changeoverWizardTrigger{display:grid}
+body[data-shell="touch"] .changeoverWizardDialog{position:fixed;inset:auto auto calc(var(--app-dock-height) + env(safe-area-inset-bottom) + 10px) 50%;transform:translateX(-50%);margin:0}
+

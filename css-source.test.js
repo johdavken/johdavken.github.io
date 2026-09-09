@@ -1,11 +1,17 @@
 "use strict";
 
-/* Guards for the one-logical-view helper the suite reads styles.css through.
+/* Guards for the one-logical-view helper the suite reads the base stylesheet
+ * through.
  *
- * These are the invariants a positional split of styles.css depends on. They
- * are nearly free to satisfy today, with the stylesheet still in one piece -
- * which is the point: they are installed BEFORE the cut, so the cut lands on
- * a net that already works rather than one written to describe it afterwards.
+ * These are the invariants the positional split depends on. They were written
+ * and made to fail on injected regressions while styles.css was still one
+ * file, so the cut landed on a net that already worked rather than one written
+ * afterwards to describe whatever the cut happened to produce.
+ *
+ * styles.css is now eleven consecutive styles-*.css parts. Concatenating them
+ * in link order reproduces the original file byte for byte, which is what
+ * makes the cascade provably unchanged - but see the self-containment test for
+ * the one thing that identity does NOT prove.
  */
 
 const test = require("node:test");
@@ -64,6 +70,33 @@ test("each part is brace-balanced, so no cut lands inside a block", () => {
   }
 });
 
+test("each part is self-contained, so no cut landed inside a selector list", () => {
+  // Brace balance is not enough, and neither is byte-identical concatenation.
+  // A cut between a selector and its block -
+  //
+  //     .a,          <- end of one part
+  //     .b{ ... }    <- start of the next
+  //
+  // rejoins to exactly the original bytes, and every part is brace-balanced.
+  // But the browser parses each file on its own: the dangling ".a," is
+  // discarded as a parse error and .a silently loses the rule. That is a real
+  // cascade change that the identity proof cannot see, so it is checked here.
+  //
+  // The condition: with comments removed, a part ends at "}" with nothing
+  // trailing, and begins something new rather than continuing a selector.
+  for (const part of STYLE_PARTS) {
+    const css = fs.readFileSync(path.join(__dirname, part), "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "").trim();
+    assert.ok(css.endsWith("}"), `${part} does not end with a closed block`);
+    assert.equal(css.slice(css.lastIndexOf("}") + 1).trim(), "",
+      `${part} has text after its last block - a cut landed mid-rule`);
+    assert.doesNotMatch(css, /^[,>+~]/,
+      `${part} starts with a combinator or comma - it continues the previous part's selector`);
+    assert.match(css.slice(0, css.indexOf("{")), /\S/,
+      `${part} opens a block with no selector`);
+  }
+});
+
 test("the parts are linked before theme.css, desktop.css and button-styling.css", () => {
   // Cascade order is document order. These three deliberately come after and
   // override; a part linked below them would quietly stop losing ties it is
@@ -80,10 +113,12 @@ test("the parts are linked before theme.css, desktop.css and button-styling.css"
 });
 
 test("every part carries a cache-busting version tag", () => {
-  // Eight parts means eight tags to bump. Shipping a changed part under its
-  // old tag serves stale CSS from cache, which reads as "the change did
-  // nothing" - the exact misdiagnosis that cost two debugging passes while
-  // consolidating [hidden].
+  // Eleven parts means eleven tags to bump, and an edit usually touches one.
+  // Shipping a changed part under its old tag serves stale CSS from cache,
+  // which reads as "the change did nothing" - the exact misdiagnosis that cost
+  // two debugging passes while consolidating [hidden]. css-cache-tags.test.js
+  // enforces the harder half (a changed part's tag actually moved); this only
+  // checks a tag is there to move.
   for (const part of STYLE_PARTS) {
     const tag = new RegExp(`href="${part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\?v=[0-9.]+"`);
     assert.match(html, tag, `${part} is linked without a ?v= cache tag`);

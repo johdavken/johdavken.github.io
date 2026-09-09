@@ -1,0 +1,1431 @@
+/* =======================================================================
+ *   Tools
+ *   ======================================================================= */
+.toolPanel{
+  padding: var(--tool-pad);
+  border: 1px solid transparent;
+  border-radius: var(--radius-row);
+  background: var(--panel2);
+}
+.toolPanel + .toolPanel{ margin-top: var(--gap); }
+.toolsWorkspace{
+  display: grid;
+  grid-template-columns: 170px minmax(0, 1fr);
+  gap: var(--gap);
+  align-items: start;
+}
+.toolsIndex{
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  position: sticky;
+  top: 70px;
+}
+/* Mobile collapses the tab list into a <details> dropdown trigger (see the
+   mobile media query below for its open/closed styling) - desktop keeps
+   the original always-visible list. .toolsIndex is deliberately a *sibling*
+   of .toolsIndexDropdown, not nested inside it: Chromium internally treats
+   a closed <details>'s non-summary content as content-visibility:hidden,
+   which skips layout/paint even when author CSS overrides `display` back
+   to visible - nesting the real nav in there and trying to force it open
+   with CSS alone silently failed to render on desktop. As a sibling,
+   .toolsIndex is never subject to that at all.
+   The whole .toolsIndexDropdown element - not just its <summary> - is
+   display:none by default: .toolsWorkspace is a 2-column grid
+   (170px nav | content), and a *hidden-but-still-present* grid item still
+   consumes a track. Hiding only the summary left an invisible .details
+   occupying column 1, bumping .toolsIndex into column 2 and
+   .toolsWorkspaceContent down into row 2 - exactly the "buttons on the
+   right, panel on the left" bug this fixes. Removing the dropdown from
+   grid participation entirely restores the original 2-column layout. */
+.toolsIndexDropdown{ display: none; }
+.toolsIndexDropdown > summary{
+  list-style: none;
+  cursor: pointer;
+}
+.toolsIndexDropdown > summary::-webkit-details-marker{ display: none; }
+.toolsIndexButton{
+  width: 100%;
+  min-height:var(--control-height);
+  padding:var(--btn-pad-y) var(--btn-pad-x);
+  border: 1px solid transparent;
+  border-radius:var(--control-radius);
+  background: transparent;
+  color: var(--muted);
+  box-shadow: none;
+  text-align: left;
+}
+.toolsIndexButton:hover{
+  border-color: var(--border2);
+  background: var(--row-bg);
+  color: var(--text);
+}
+.toolsIndexButton.active{
+  border-color: var(--focus-border);
+  background: linear-gradient(180deg, var(--btn-primary-a), var(--btn-primary-b));
+  color: var(--title);
+  font-weight: 850;
+}
+.toolsWorkspaceContent{ min-width: 0; }
+.toolPanelHeader{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:start;
+  gap:14px;
+  padding-bottom:12px;
+  border-bottom:1px solid var(--border);
+}
+.toolPanelTitle{
+  margin:0;
+  color:var(--title);
+  font-size:16px;
+  font-weight:850;
+  letter-spacing:.08em;
+  line-height:1.2;
+  text-transform:uppercase;
+}
+.toolPanelHeader p{
+  margin:5px 0 0;
+  color:var(--muted);
+  font-size:var(--font-small);
+  line-height:1.4;
+}
+.toolInfoGuide{ position:relative; flex:0 0 auto; }
+.toolInfoGuide > summary{
+  display:grid;
+  place-items:center;
+  width:28px;
+  height:28px;
+  padding:0;
+  border:0;
+  border-radius:50%;
+  background:transparent;
+  color:var(--muted);
+  cursor:pointer;
+  list-style:none;
+}
+/* Identical to the Timeline guide's trigger (.timelineInfoGuide): same glyph,
+   same size, same bare treatment, so one info affordance reads the same
+   everywhere. The old bordered chip existed only because the serif "i" it
+   replaced needed a container to read as a button. */
+.toolInfoGuide > summary svg{
+  width:20px;
+  height:20px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.8;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.toolInfoGuide > summary::-webkit-details-marker{ display:none; }
+.toolInfoGuide > summary:hover,.toolInfoGuide[open] > summary,
+.toolInfoGuide > summary:focus-visible{ color:var(--title); background:var(--field-bg); }
+.toolInfoGuide > summary:focus-visible{ outline:var(--focus-outline); outline-offset:1px; }
+.toolInfoGuidePanel{
+  position:absolute;
+  top:calc(100% + 7px);
+  right:0;
+  z-index:20;
+  width:min(330px,calc(100vw - 72px));
+  display:grid;
+  gap:7px;
+  padding:11px 12px;
+  border:1px solid var(--border2);
+  border-radius:var(--control-radius);
+  background:var(--panelOpen);
+  color:var(--muted);
+  box-shadow:var(--shadow2);
+  font-size:var(--font-small);
+  line-height:1.4;
+}
+.toolInfoGuidePanel strong{ color:var(--title); }
+.toolInfoGuidePanel p{ margin:0; }
+.toolInputGrid{
+  display:grid;
+  max-width:760px;
+  gap:12px;
+}
+.toolInputGridTwo{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+.toolInputGridThree{ grid-template-columns:repeat(3,minmax(0,1fr)); }
+.toolInputGrid > div{ display:grid; align-content:start; gap:5px; min-width:0; }
+.toolInputGrid input{ min-width:0; }
+.toolFieldHint{ color:var(--muted); font-size:10px; line-height:1.35; }
+.toolsWorkspaceContent .toolPanel + .toolPanel{ margin-top: 0; }
+.mobileToolsHome,.mobileToolsBack,.mobileToolHeader{ display:none; }
+.mobileSectionHeaderIcon{ display:none; }
+@media (max-width: 900px), (min-width: 901px) and (pointer: coarse){
+  #toolsBlock .mobileToolsHome{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:8px;
+  }
+  #toolsBlock .mobileToolTile{
+    display:grid;
+    align-content:center;
+    gap:6px;
+    min-height:104px;
+    padding:12px;
+    border:1px solid var(--border);
+    border-radius:var(--control-radius);
+    background:var(--row-bg);
+    color:var(--text);
+    text-align:left;
+  }
+  #toolsBlock .mobileToolTile svg{ width:28px; height:28px; fill:none; stroke:var(--focus-border); stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+  #toolsBlock .mobileToolTile span{ font-size:13px; font-weight:700; line-height:1.15; }
+  #toolsBlock .mobileToolTile small{ color:var(--muted); font-size:11px; }
+  #toolsBlock .mobileToolTile:hover{ border-color:var(--focus-border); background:var(--focus-ring); }
+  #toolsBlock .toolsWorkspace{ display:none; grid-template-columns:1fr; }
+  body[data-mobile-tools="panel"] #toolsBlock .mobileToolsHome{ display:none; }
+  body[data-mobile-tools="panel"] #toolsBlock .toolsWorkspace{ display:grid; }
+  body[data-mobile-tools="panel"] #toolsBlock > summary{ display:none; }
+  #toolsBlock .toolsIndexDropdown,#toolsBlock .toolsIndex{ display:none!important; }
+  #toolsBlock .mobileToolHeader{ display:flex; align-items:center; gap:8px; margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+  #toolsBlock .mobileToolHeader h1{ min-width:0; margin:0; color:var(--title); font:inherit; font-size:calc(var(--title-size) * 1.05); font-weight:800; letter-spacing:.035em; line-height:1.15; overflow-wrap:anywhere; }
+  #toolsBlock .mobileToolsBack{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:4px;
+    flex:0 0 auto;
+    min-width:44px;
+    min-height:44px;
+    padding:0 6px;
+    border:0;
+    border-radius:var(--control-radius);
+    background:transparent;
+    color:var(--focus-border);
+    font-size:11px;
+    font-weight:850;
+  }
+  #toolsBlock .mobileToolsBack svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  #toolsBlock .mobileToolsBack:focus-visible{ outline:var(--focus-outline); outline-offset:2px; }
+}
+
+/* =======================================================================
+ *   Notes (mobile-only)
+ *
+ *   A lightweight notebook built into the section navigation, not a
+ *   separate app. Reuses the existing type scale, spacing, control chrome
+ *   and theme tokens. The list/editor swap mirrors the Tools home/panel
+ *   pattern exactly (body[data-mobile-notes="editor"]).
+ *   ===================================================================== */
+.notesEditorView{ display:none; }
+#notesBlock .notesListView{ display:flex; flex-direction:column; gap:10px; }
+
+.notesListBar{ display:flex; align-items:center; gap:8px; }
+.notesNewBtn{ flex:0 0 auto; }
+.notesBackupBtn{ flex:0 0 auto; margin-left:auto; }
+
+/* Backup dialog: a touch wider than the default small notes dialog because it
+   carries the export/import controls. Opening it must not move the list. */
+.notesBackupDialog{ width:min(94vw, 420px); }
+.notesBackupAdvanced{
+  border:1px solid var(--border2); border-radius:var(--control-radius);
+  background:var(--row-bg);
+}
+.notesBackupAdvanced > summary{
+  padding:8px 10px; cursor:pointer; list-style:none;
+  color:var(--muted); font-size:11px; font-weight:800;
+}
+.notesBackupAdvanced > summary::-webkit-details-marker{ display:none; }
+.notesBackupAdvanced > summary:focus-visible{ outline:var(--focus-outline); outline-offset:2px; }
+.notesBackupAdvanced[open] > summary{ color:var(--title); border-bottom:1px solid var(--border2); }
+/* Explicitly gate the body on [open] rather than trusting the native
+   <details> content-hiding (which an author display: on the child can defeat
+   in some engines). */
+.notesBackupAdvancedBody{ display:none; }
+.notesBackupAdvanced[open] > .notesBackupAdvancedBody{
+  display:flex; flex-direction:column; gap:8px; padding:10px;
+}
+.notesBackupIntro,
+.notesBackupStatus{ margin:0; color:var(--muted); font-size:11px; line-height:1.35; }
+.notesBackupStatus[data-tone="ok"]{ color:var(--ok); }
+.notesBackupStatus[data-tone="error"]{ color:var(--bad); }
+.notesBackupStatus:empty{ display:none; }
+.notesBackupGroup{ display:flex; align-items:center; flex-wrap:wrap; gap:6px; }
+.notesImportFileLabel{ color:var(--muted); font-size:11px; font-weight:700; }
+
+/* The native file picker's own button matches .copyBtn (Export / Back up now)
+   so the Backup dialog reads as one set of controls. Declarations are copied
+   from .copyBtn - a pseudo-element can't inherit a class. */
+#notesImportFile{ color:var(--muted); font-size:var(--font-small); max-width:100%; }
+#notesImportFile::file-selector-button{
+  margin-right:8px;
+  min-height:var(--control-height);
+  padding:max(3px, calc(var(--btn-pad-y) - 3px)) var(--btn-pad-x);
+  border-radius:var(--control-radius);
+  border:1px solid var(--btn-border);
+  background:var(--btn-secondary-bg);
+  color:var(--btn-text);
+  font-weight:900;
+  font-size:var(--font-small);
+  cursor:pointer;
+}
+.notesBackupText{
+  width:100%; min-height:64px;
+  padding:8px; border:1px solid var(--border2); border-radius:var(--control-radius);
+  background:var(--panel); color:var(--text);
+  font-family:var(--font-mono); font-size:11px; line-height:1.4;
+  resize:vertical;
+}
+
+.notesDeviceHint{
+  margin:0; color:var(--muted);
+  font-size:11px; line-height:1.35;
+}
+.notesUnavailable{ margin:0; color:var(--muted); font-size:12px; }
+
+/* RT Cloud block inside the Backup dialog. Reuses the notesBackup* / copyBtn
+   grammar; adds only its own header row, badge, and status line. */
+.notesBackupDivider{
+  border:0; border-top:1px solid var(--border2);
+  margin:4px 0 2px;
+}
+.notesCloud{ display:flex; flex-direction:column; gap:8px; }
+.notesCloudHead{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.notesCloudTitle{ font-weight:800; font-size:12px; letter-spacing:.04em; text-transform:uppercase; color:var(--title); }
+.notesCloudBadge{
+  font-size:10px; font-weight:700; line-height:1;
+  padding:3px 7px; border-radius:999px;
+  background:color-mix(in srgb,var(--muted) 18%,transparent); color:var(--muted);
+  white-space:nowrap;
+}
+.notesCloud[data-rt-cloud-state="on"] .notesCloudBadge{
+  background:color-mix(in srgb,var(--ok) 16%,transparent); color:var(--ok);
+}
+.notesCloudBlurb,
+.notesCloudStatusLine,
+.notesCloudDangerNote{ margin:0; color:var(--muted); font-size:11px; line-height:1.35; }
+.notesCloudStatusLine:empty{ display:none; }
+.notesCloudActions{ display:flex; flex-wrap:wrap; gap:6px; }
+.notesCloudActions[hidden]{ display:none; }
+.notesCloudRestoreRow{ margin-top:2px; }
+
+.notesCloudDanger > summary{
+  list-style:none; cursor:pointer;
+  font-size:11px; font-weight:700; color:var(--muted);
+  padding:4px 0;
+}
+.notesCloudDanger > summary::-webkit-details-marker{ display:none; }
+.notesCloudDanger > summary:focus-visible{ outline:var(--focus-outline); outline-offset:2px; }
+.notesCloudDangerBody{ display:none; }
+.notesCloudDanger[open] > .notesCloudDangerBody{
+  display:flex; flex-direction:column; gap:6px;
+  padding:8px; border:1px solid var(--border2); border-radius:var(--control-radius);
+}
+
+/* Recovery code presentation - monospace, grouped, selectable. */
+.notesCloudCode{
+  display:block; width:100%;
+  padding:10px; border:1px dashed var(--border2); border-radius:var(--control-radius);
+  background:var(--panel); color:var(--text);
+  font-family:var(--font-mono); font-size:15px; letter-spacing:.06em;
+  text-align:center; word-break:break-all; user-select:all;
+}
+.notesCloudCodeWarn{ margin:0; color:var(--text); font-size:12px; line-height:1.4; }
+.notesCloudCodeStatus{ margin:0; color:var(--ok); font-size:11px; min-height:14px; }
+.notesCloudCodeStatus:empty{ min-height:0; }
+.notesCloudCodeCopyRow{ justify-content:center; }
+.notesCloudAck{
+  display:flex; align-items:flex-start; gap:8px;
+  font-size:12px; color:var(--text); line-height:1.35;
+}
+.notesCloudAck[hidden]{ display:none; }
+.notesCloudAck input{ margin-top:2px; flex:none; }
+.notesCloudRestoreSummary{
+  padding:8px; border:1px solid var(--border2); border-radius:var(--control-radius);
+  background:color-mix(in srgb,var(--ok) 8%,transparent);
+  color:var(--text); font-size:12px; line-height:1.4;
+}
+.notesCloudRestoreSummary[hidden]{ display:none; }
+
+.notesList{ display:flex; flex-direction:column; gap:8px; }
+/* Each card is a row: the tappable note button + an absolutely-positioned
+   right-side action cluster (pin indicator + "…" overflow). The overflow
+   button is a real sibling <button>, never nested in the card button. */
+.notesItemRow{ position:relative; }
+.notesItem{
+  display:flex; flex-direction:column; gap:3px;
+  width:100%; min-height:44px;
+  padding:10px 44px 10px 12px;
+  border:1px solid var(--row-border); border-radius:var(--control-radius);
+  background:var(--row-bg); color:var(--text);
+  text-align:left; cursor:pointer;
+}
+.notesItem:hover{ border-color:var(--border2); }
+.notesItem:focus-visible{ outline:var(--focus-outline); outline-offset:2px; }
+.notesItem.pinned{ border-color:color-mix(in srgb,var(--focus-border) 45%,var(--row-border)); }
+.notesItemHead{ display:flex; align-items:center; gap:6px; min-width:0; }
+.notesItemTitle{
+  min-width:0; flex:1 1 auto;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  color:var(--title); font-size:14px; font-weight:800;
+}
+.notesItemActions{
+  position:absolute; top:7px; right:7px; z-index:2;
+  display:flex; align-items:center; gap:2px;
+}
+.notesItemPin{ display:inline-flex; flex:0 0 auto; align-items:center; color:var(--focus-border); }
+.notesItemPin svg{ width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.notesItemMenuBtn{
+  display:inline-grid; place-items:center; flex:0 0 auto;
+  width:28px; height:28px; min-height:28px; padding:0;
+  border:1px solid transparent; border-radius:var(--control-radius);
+  background:transparent; color:var(--muted); cursor:pointer;
+}
+.notesItemMenuBtn svg{ width:16px; height:16px; fill:currentColor; }
+.notesItemMenuBtn:hover{ color:var(--title); border-color:var(--border2); }
+.notesItemMenuBtn:focus-visible{ outline:var(--focus-outline); outline-offset:2px; }
+.notesItemPreview{
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  color:var(--muted); font-size:12px;
+}
+.notesItemMeta{ color:var(--muted); font-size:10.5px; }
+.notesListEmpty{ margin:0; padding:16px 4px; color:var(--muted); font-size:12px; text-align:center; }
+.notesCardMenuList{ display:flex; flex-direction:column; gap:2px; }
+
+/* Device-local folders. A compact vertical navigation tree - deliberately
+   secondary to the note cards. The flat data model has no hierarchy; the
+   left rail is decoration only. Never scrolls horizontally. */
+.notesFolders{ display:flex; flex-direction:column; }
+.notesFoldersHeader{
+  display:flex; align-items:center; gap:6px;
+  width:100%; margin:0; padding:4px 2px;
+  border:0; background:transparent; cursor:pointer;
+}
+.notesFoldersHeader:focus-visible{ outline:var(--focus-outline); outline-offset:2px; }
+.notesFoldersLabel{
+  flex:1 1 auto; min-width:0; text-align:left;
+  color:var(--muted); font-size:10px; font-weight:800;
+  text-transform:uppercase; letter-spacing:.07em;
+}
+.notesFoldersChevron{
+  flex:0 0 auto; width:14px; height:14px;
+  fill:none; stroke:currentColor; stroke-width:2;
+  stroke-linecap:round; stroke-linejoin:round;
+  color:var(--muted); transition:transform .15s ease;
+}
+.notesFoldersHeader[aria-expanded="false"] .notesFoldersChevron{ transform:rotate(180deg); }
+
+.notesFolderTree{ display:flex; flex-direction:column; }
+.notesFolderTree[hidden]{ display:none; }
+
+/* Rows stack with no gap so the left-rail segments join into one line. */
+.notesFolderRow{ position:relative; display:flex; align-items:center; }
+.notesFolderRow::before{
+  content:""; position:absolute; left:14px; top:0; bottom:0;
+  width:1px; background:var(--border2);
+}
+.notesFolderRow:first-child::before{ top:50%; }
+/* Selected row: the rail segment beside it turns accent - a subtle "node"
+   that connects the row to the rail without a filled block. */
+.notesFolderRow.is-active::before{ width:2px; background:var(--focus-border); }
+.notesFolderRow.is-active{
+  background:color-mix(in srgb,var(--focus-border) 8%,transparent);
+  border-radius:var(--control-radius);
+}
+
+.notesFolderRowBtn{
+  flex:1 1 auto; display:flex; align-items:center; gap:8px;
+  min-width:0; min-height:34px; padding:5px 4px 5px 6px;
+  border:0; background:transparent; color:var(--muted);
+  font-size:12.5px; font-weight:700; text-align:left; cursor:pointer;
+}
+.notesFolderRowBtn:hover{ color:var(--title); }
+.notesFolderRowBtn:focus-visible{
+  outline:var(--focus-outline); outline-offset:-2px;
+  border-radius:var(--control-radius);
+}
+.notesFolderRowIcon{
+  position:relative; z-index:1; flex:0 0 auto;
+  width:16px; height:16px;
+  fill:none; stroke:currentColor; stroke-width:1.7;
+  stroke-linecap:round; stroke-linejoin:round;
+}
+.notesFolderRowName{
+  flex:1 1 auto; min-width:0;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.notesFolderCount{
+  flex:0 0 auto; margin-left:6px;
+  color:var(--muted); font-size:11px; font-weight:700;
+  font-variant-numeric:tabular-nums;
+}
+/* Restrained selected state: accent icon, stronger text, brighter count. */
+.notesFolderRow.is-active .notesFolderRowBtn{ color:var(--title); font-weight:800; }
+.notesFolderRow.is-active .notesFolderRowIcon{ color:var(--focus-border); }
+.notesFolderRow.is-active .notesFolderCount{ color:var(--title); }
+
+/* Manage "…" - only on the selected user folder row. */
+.notesFolderRow .notesFolderManage{
+  flex:0 0 auto; display:inline-grid; place-items:center;
+  width:28px; height:28px; min-height:28px; margin-right:2px; padding:0;
+  border:0; border-radius:var(--control-radius);
+  background:transparent; color:var(--muted); cursor:pointer;
+}
+.notesFolderRow .notesFolderManage svg{ width:16px; height:16px; fill:currentColor; }
+.notesFolderRow .notesFolderManage:hover{ color:var(--title); }
+.notesFolderRow .notesFolderManage:focus-visible{ outline:var(--focus-outline); outline-offset:-1px; }
+
+/* New folder: same grammar, quiet, no rail through it. */
+.notesFolderNew{ color:var(--muted); }
+.notesFolderNew:hover{ color:var(--title); }
+
+/* Small RT Notes dialogs (folder create/rename/manage, move-to-folder).
+   Buttons reuse the app's global button.primary / .secondary / .danger. */
+.notesDialog{ width:min(92vw, 380px); padding:0; }
+.notesDialogForm{ display:flex; flex-direction:column; gap:10px; padding:16px; }
+.notesDialogLabel{ color:var(--muted); font-size:11px; font-weight:800; }
+.notesDialog input[type="text"]{
+  width:100%; padding:9px 10px;
+  border:1px solid var(--border2); border-radius:var(--control-radius);
+  background:var(--panel); color:var(--text); font:inherit; font-size:14px;
+}
+.notesDialog input[type="text"]:focus{ outline:none; border-color:var(--focus-border); }
+.notesDialogName{ margin:0; font-size:13px; font-weight:700; color:var(--text); }
+.notesDialogError{ margin:0; color:var(--bad); font-size:11px; }
+.notesDialogError:empty{ display:none; }
+.notesDialogActions{ display:flex; justify-content:flex-end; flex-wrap:wrap; gap:6px; }
+.notesMoveList{ display:flex; flex-direction:column; gap:4px; max-height:46vh; overflow-y:auto; }
+.notesMoveOption{
+  width:100%; padding:9px 10px; text-align:left;
+  border:1px solid var(--row-border); border-radius:var(--control-radius);
+  background:var(--row-bg); color:var(--text);
+  font-size:13px; font-weight:700; cursor:pointer;
+}
+.notesMoveOption:hover,
+.notesMoveOption:focus-visible{ border-color:var(--muted); outline:none; }
+.notesMoveOption.is-current{
+  border-color:var(--focus-border);
+  background:color-mix(in srgb,var(--focus-border) 14%,transparent);
+}
+.notesMenuBtn{
+  width:100%; padding:8px 10px;
+  border:0; border-radius:calc(var(--control-radius) - 2px);
+  background:transparent; color:var(--text);
+  font-size:12px; font-weight:800; text-align:left; cursor:pointer;
+}
+.notesMenuBtn:hover{ background:color-mix(in srgb,var(--text) 8%,transparent); }
+
+/* Editor. The header carries class="mobileToolHeader" for shared chrome but
+   that class is display:none by default (Tools re-shows its own), so the
+   Notes header opts back in explicitly - inside the shell media query below. */
+.notesEditorHeader .notesSaveState{
+  min-width:0; flex:1 1 auto;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  color:var(--muted); font-size:10.5px; font-weight:600;
+}
+.notesPinBtn,
+.notesEditorMenu > summary{
+  display:inline-grid; place-items:center; flex:0 0 auto;
+  width:34px; height:34px; min-height:34px;
+  padding:0; border:1px solid transparent; border-radius:var(--control-radius);
+  background:transparent; color:var(--muted);
+  list-style:none; cursor:pointer;
+}
+.notesEditorMenu > summary::-webkit-details-marker{ display:none; }
+.notesPinBtn svg,
+.notesEditorMenu > summary svg{ width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.notesPinBtn.active{ color:var(--focus-border); }
+.notesPinBtn.active svg{ fill:color-mix(in srgb,var(--focus-border) 22%,transparent); }
+.notesPinBtn:focus-visible,
+.notesEditorMenu > summary:focus-visible{ outline:var(--focus-outline); outline-offset:2px; }
+.notesEditorMenu{ position:relative; flex:0 0 auto; }
+.notesEditorMenuPanel{
+  position:absolute; right:0; top:calc(100% + 4px); z-index:5;
+  min-width:160px; padding:6px;
+  border:1px solid var(--border2); border-radius:var(--control-radius);
+  background:var(--panelOpen); box-shadow:var(--shadow2);
+}
+.notesDeleteBtn{
+  width:100%; padding:8px 10px;
+  border:0; border-radius:calc(var(--control-radius) - 2px);
+  background:transparent; color:var(--bad);
+  font-size:12px; font-weight:800; text-align:left; cursor:pointer;
+}
+.notesDeleteBtn:hover{ background:color-mix(in srgb,var(--bad) 12%,transparent); }
+
+.notesTitleInput{
+  width:100%; margin-top:10px; padding:8px 2px;
+  border:0; border-bottom:1px solid var(--border2);
+  background:transparent; color:var(--title);
+  font-size:17px; font-weight:800;
+}
+.notesTitleInput:focus{ outline:none; border-bottom-color:var(--focus-border); }
+
+.notesToolbar{
+  display:flex; align-items:center; gap:4px;
+  margin-top:8px; padding:4px 0;
+  overflow-x:auto; -webkit-overflow-scrolling:touch;
+}
+.notesToolbar button{
+  flex:0 0 auto;
+  min-width:34px; height:34px; min-height:34px;
+  padding:0 8px;
+  border:1px solid var(--border2); border-radius:var(--control-radius);
+  background:var(--row-bg); color:var(--text);
+  font-size:13px; font-weight:800; line-height:1; cursor:pointer;
+}
+.notesToolbar button:hover{ border-color:var(--muted); color:var(--title); }
+.notesToolbar button:active{ background:color-mix(in srgb,var(--text) 10%,transparent); }
+.notesToolbar button:focus-visible{ outline:var(--focus-outline); outline-offset:2px; }
+.notesToolbarSep{ flex:0 0 auto; width:1px; height:20px; margin:0 3px; background:var(--border2); }
+
+.notesBodyInput{
+  width:100%; min-height:220px; margin-top:8px; padding:10px 2px;
+  border:0; background:transparent; color:var(--text);
+  font:inherit; font-size:14px; line-height:1.5;
+  resize:vertical;
+}
+.notesBodyInput:focus{ outline:none; }
+
+/* TipTap experiment: the rich editable surface. Deliberately borrows the
+   textarea's metrics and the app's theme tokens so it reads as the same
+   RT Notes editor, not a pasted-in demo. .notesProse is set as the
+   ProseMirror element class in notes-ui.js (editorProps). */
+.notesBodyEditor{ margin-top:8px; }
+.notesBodyEditor .notesProse{
+  min-height:220px; padding:10px 2px;
+  color:var(--text); font-size:14px; line-height:1.5;
+  outline:none; white-space:pre-wrap; word-wrap:break-word;
+}
+.notesBodyEditor .notesProse:focus{ outline:none; }
+.notesBodyEditor .notesProse > * + *{ margin-top:8px; }
+.notesBodyEditor .notesProse h1{ margin:0; font-size:19px; font-weight:800; color:var(--title); }
+.notesBodyEditor .notesProse h2{ margin:0; font-size:16px; font-weight:800; color:var(--title); }
+.notesBodyEditor .notesProse h3{ margin:0; font-size:14px; font-weight:800; color:var(--title); }
+.notesBodyEditor .notesProse p{ margin:0; }
+.notesBodyEditor .notesProse ul,
+.notesBodyEditor .notesProse ol{ margin:0; padding-left:22px; }
+.notesBodyEditor .notesProse li{ margin:2px 0; }
+.notesBodyEditor .notesProse li > p{ margin:0; }
+.notesBodyEditor .notesProse ul[data-type="taskList"]{ list-style:none; padding-left:2px; }
+.notesBodyEditor .notesProse ul[data-type="taskList"] li{ display:flex; align-items:flex-start; gap:8px; }
+.notesBodyEditor .notesProse ul[data-type="taskList"] li > label{
+  flex:0 0 auto; margin-top:2px; user-select:none;
+}
+.notesBodyEditor .notesProse ul[data-type="taskList"] li > div{ flex:1 1 auto; min-width:0; }
+.notesBodyEditor .notesProse ul[data-type="taskList"] input[type="checkbox"]{
+  width:15px; height:15px; accent-color:var(--focus-border); cursor:pointer;
+}
+.notesBodyEditor .notesProse ul[data-type="taskList"] li[data-checked="true"] > div{
+  color:var(--muted); text-decoration:line-through;
+}
+.notesBodyEditor .notesProse ::selection{ background:color-mix(in srgb,var(--focus-border) 30%,transparent); }
+
+/* Toolbar buttons reflect the format under the cursor. */
+.notesToolbar button.is-active{
+  border-color:var(--focus-border);
+  background:color-mix(in srgb,var(--focus-border) 16%,transparent);
+  color:var(--title);
+}
+
+@media (max-width: 900px), (min-width: 901px) and (pointer: coarse){
+  body[data-mobile-notes="editor"] #notesBlock .notesListView{ display:none; }
+  body[data-mobile-notes="editor"] #notesBlock .notesEditorView{ display:flex; flex-direction:column; }
+  body[data-mobile-notes="editor"] #notesBlock > summary{ display:none; }
+  #notesBlock .notesEditorHeader{
+    display:flex; align-items:center; gap:6px;
+    margin-bottom:8px; padding-bottom:8px;
+    border-bottom:1px solid var(--border);
+  }
+  #notesBlock .notesEditorHeader .mobileToolsBack{
+    display:inline-flex; align-items:center; justify-content:center; gap:4px;
+    flex:0 0 auto; min-width:44px; min-height:44px; padding:0 6px;
+    border:0; border-radius:var(--control-radius);
+    background:transparent; color:var(--focus-border);
+    font-size:11px; font-weight:850;
+  }
+  #notesBlock .notesEditorHeader .mobileToolsBack svg{ width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  #notesBlock .notesEditorHeader .mobileToolsBack:focus-visible{ outline:var(--focus-outline); outline-offset:2px; }
+  /* Comfortable phone touch targets without growing the header. */
+  #notesBlock .notesItem{ min-height:56px; padding-right:48px; }
+  #notesBlock .notesPinBtn,
+  #notesBlock .notesEditorMenu > summary{ width:38px; height:38px; min-height:38px; }
+  #notesBlock .notesToolbar button{ min-width:38px; height:38px; min-height:38px; }
+  #notesBlock .notesItemMenuBtn{ width:36px; height:36px; min-height:36px; }
+  #notesBlock .notesItemMenuBtn svg{ width:18px; height:18px; }
+  #notesBlock .notesFolderRowBtn{ min-height:40px; }
+  #notesBlock .notesFolderRow .notesFolderManage{ width:34px; height:34px; min-height:34px; }
+  #notesBlock .notesBodyInput{ min-height:46vh; }
+  #notesBlock .notesBodyEditor .notesProse{ min-height:46vh; }
+}
+
+@media (max-width:700px){
+  .mobileMatrixActionBar{width:100%;max-width:100%;min-width:0;margin-top:8px}
+
+  /* Phone Recipe uses the tablet's inline Edit model: inputs and selection
+     actions stay directly above the matrix, with no modal sheet and no
+     duplicate context row below it. Two compact bands preserve the cell
+     dimensions while keeping the complete editing workflow in one view. */
+  #splitsArea > .splitsBulkBar{
+    position:static;
+    order:-1;
+    /* flex, not block: .recipeEditHistory (Undo) and .splitsEditRowSecondary
+       (Clear selection/Empty cells/Reset Recipe/Rearrange) are DOM siblings
+       here, not nested - see the #recipeRedo comment below, left from when
+       Undo/Redo moved out of .splitsEditRowSecondary for the desktop pill
+       merge. A block parent stacked every child (Primary, Undo, the toolbar)
+       on its own line regardless, stranding Undo alone between two rows -
+       flex-wrap lets Primary force its own full-width row (flex:1 1 100%
+       below) while Undo and the toolbar flow onto the shared row after it,
+       which is what "one row of Undo + wrapping toolbar buttons" actually
+       requires. */
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    /* #splitsArea is itself a flex column on phones (see #splitsBlock.
+       mobile-active #splitsArea below), sized to whatever's left of the
+       viewport after the header/tabs. Without an explicit flex-shrink:0
+       here this row was still shrinkable (the flex default), so on a short
+       phone the column would compress it below its own wrapped content's
+       real height instead of shrinking .splitsMobileLayerLayout (the
+       matrix, which already has its own internal scroll to absorb exactly
+       that) - the toolbar's own buttons would then paint past its shrunk
+       box, overlapping the matrix below it. flex-shrink:0 makes this row's
+       natural content height a hard floor; the matrix is the only part of
+       this column still expected to give up space. */
+    flex-shrink:0;
+    min-height:0;
+    margin:0;
+    padding:4px 5px;
+    /* No outer panel look on phones - unlike the tablet/desktop toolbar,
+       which keeps the card border+fill (base .splitsBulkBar rule) it sits
+       inside of a roomier layout. Border-radius has nothing left to round
+       once border/background are gone, so it's dropped here rather than
+       left as dead styling. */
+    border:0;
+    border-radius:0;
+    background:none;
+  }
+  #splitsArea > .splitsBulkBar.hide{display:none}
+  #splitsArea .splitsEditRow{gap:3px}
+  #splitsArea .splitsEditRowPrimary{
+    flex:1 1 100%;
+    display:grid;
+    grid-template-columns:minmax(0,1.15fr) minmax(0,.9fr) auto;
+    align-items:stretch;
+  }
+  #splitsArea .splitsEditRowPrimary > .splitsBulkField,
+  #splitsArea .splitsEditRowPrimary > .splitsBulkFieldPct{
+    display:grid;
+    grid-template-columns:minmax(0,1fr);
+    grid-template-rows:auto 22px;
+    gap:1px;
+    min-width:0;
+    padding:2px 4px;
+    border:1px solid var(--row-border-2);
+    border-radius:5px;
+    background:var(--row-bg-2);
+    font-size:8px;
+    line-height:1;
+  }
+  #splitsArea .splitsEditRowPrimary > .splitsBulkField > span:first-child{margin:0}
+  #splitsArea .splitsEditRowPrimary > .splitsBulkField input{
+    width:100%;
+    min-width:0;
+    height:22px;
+    min-height:22px;
+    padding:1px 2px;
+    font-size:10px;
+    line-height:20px;
+  }
+  #splitsArea .splitsEditRowPrimary .splitsBulkPctInput{
+    grid-template-columns:minmax(0,1fr) auto;
+    gap:2px;
+  }
+  #splitsArea .splitsEditRowPrimary .splitsBulkPctInput > span{font-size:9px}
+  #splitsArea .splitsEditRowPrimary > button{
+    /* No border-radius here (unlike the 5px input fields above) - Apply to
+       selected is a real button.primary and should keep the shared 2px
+       sharp corner everywhere else uses, not the fields' rounded look. This
+       rule used to set border-radius:5px, rounding Apply into a pill that
+       stood out against every other sharp-cornered button on the phone. */
+    align-self:stretch;
+    min-width:48px;
+    min-height:0;
+    padding:2px 5px;
+    font-size:8px;
+    line-height:1.1;
+    white-space:nowrap;
+  }
+  /* The phone editor keeps its value fields on the first row and gives the
+     four structural actions a dedicated, balanced grid below. This avoids
+     relying on incidental flex wrapping when the Recipe panel gets narrow. */
+  #splitsArea .splitsEditRowSecondary{
+    flex:1 1 100%;
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    align-items:stretch;
+    gap:6px;
+    min-width:0;
+    margin-top:0;
+    padding-top:0;
+  }
+  /* History remains available on tablet/desktop. The phone workflow keeps
+     the requested four edit actions and deliberately omits Undo/Redo. */
+  #splitsArea .recipeEditHistory{
+    display:none;
+  }
+  #splitsArea .splitsEditRowSecondary > .splitsBulkActions{
+    display:contents;
+    margin:0;
+    padding:0;
+    border:0;
+  }
+  #splitsArea .splitsEditRowSecondary .splitsSelectionStatus{
+    flex:1 1 100%;
+    min-width:0;
+    margin:0;
+    overflow:hidden;
+    font-size:var(--font-tiny);
+    line-height:1.3;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  #splitsArea .splitsEditRowSecondary :is(.bulkTextAction,button.danger){
+    width:100%;
+    min-width:0;
+    min-height:36px;
+    padding:5px 4px;
+    border-radius:2px;
+    font-size:10px;
+    font-weight:750;
+    line-height:1.1;
+    text-transform:uppercase;
+    letter-spacing:.03em;
+    box-shadow:none;
+    white-space:nowrap;
+  }
+  /* Clear selection/Empty cells/Rearrange: a faint theme-tinted border and
+     a whisper of background, not desktop/tablet's stronger tinted-surface
+     fill (styles.css, --recipe-pill-accent's :root declaration) - mobile
+     stays visually lighter throughout, these three just need to read as
+     tappable, not as filled buttons. Reset Recipe (button.danger, below)
+     keeps its own separate, stronger red border/text so it still reads as
+     the row's one destructive action next to these quieter three. */
+  #splitsArea .splitsEditRowSecondary .bulkTextAction{
+    border:1px solid color-mix(in srgb, var(--recipe-pill-accent) 25%, var(--border));
+    background:color-mix(in srgb, var(--recipe-pill-accent) 10%, transparent);
+    color:var(--btn-text);
+  }
+  /* Keep the same readable action treatment in every grid cell. */
+  #splitsArea .splitsEditRowSecondary #clearSplitSelection,
+  #splitsArea .splitsEditRowSecondary #clearSelectedCells,
+  #splitsArea .splitsEditRowSecondary .splitsRearrangeAction.bulkTextAction,
+  #splitsArea .splitsEditRowSecondary #resetAllSplits{
+    padding:5px 4px;
+    font-size:10px;
+    letter-spacing:.01em;
+  }
+  #splitsArea .splitsEditRowSecondary .splitsRearrangeAction{
+    margin-left:0;
+  }
+  /* Reset Recipe used to break onto its own divider-topped full-width row.
+     Its DOM position already sits immediately before Rearrange, so folding
+     it back into the same wrapping pill row (instead of overriding
+     flex/order to isolate it) reclaims that row's height for a short phone
+     where the matrix loses a row to it - see .mobile-active #splitsArea's
+     100px chrome estimate below. Still reads as the one destructive action
+     via its red border/text, just without the dedicated row. */
+  #splitsArea .splitsEditRowSecondary button.danger{
+    /* Its own full border/background now that the shared .bulkTextAction
+       rule above no longer carries either - kept at the same strength Reset
+       always had here (1.5px, transparent fill), deliberately a shade
+       stronger than Clear/Empty/Rearrange's new faint tint so it still
+       reads as the row's one destructive action, not just another quiet
+       button that happens to be red. */
+    border:1.5px solid color-mix(in srgb, var(--bad) 55%, var(--btn-secondary-border));
+    background:transparent;
+    color:var(--bad);
+  }
+
+  /* Current, Next, and Weights remain ordinary document-flow panels on
+     phones. Do not give them a viewport-height budget or a scroll boundary:
+     their matrices retain their natural height and the browser page scrolls
+     them clear of the fixed app dock. The shared mobile shell below supplies
+     dock-aware bottom padding for that final clearance. */
+  #splitsBlock.mobile-active #splitsArea{ min-width:0; }
+  #splitsBlock.mobile-active #splitsArea > .splitsMobileLayerLayout,
+  #splitsBlock.mobile-active #splitsArea > #weightsArea{ min-width:0; }
+  #splitsBlock.mobile-active .splitsMobileLayerLayout .splitsMatrixScroll{
+    height:auto;
+    min-height:auto;
+    /* `overflow-x:hidden` makes a paired visible y-axis compute to `auto`.
+       Reset both axes so this wrapper cannot become a vertical scrollport. */
+    overflow:visible;
+  }
+
+  /* At genuinely narrow phone widths the four actions intentionally become
+     two equal columns, rather than leaving a single wrapped final button. */
+  @media (max-width:560px){
+    #splitsArea .splitsEditRowSecondary{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+  }
+
+  /* Semantic-button migration: Recipe's edit controls. One primary commit,
+     quiet reversible utilities, and one clearly destructive action. Context
+     controls layout only - the shared button[data-button-variant] rules own
+     appearance, so phone matches tablet and desktop instead of forking. */
+  #splitsArea .recipeHistoryAction[data-button-kind="icon"]{
+    border:1px solid transparent;
+    border-radius:6px;
+  }
+  #splitsArea .recipeHistoryAction[data-button-kind="icon"]:not(:disabled):hover,
+  #splitsArea .recipeHistoryAction[data-button-kind="icon"]:focus-visible{
+    border-color:var(--row-border-2);
+    background:var(--row-bg-2);
+  }
+
+  /* Phone Edit uses one compact icon rail.  Flatten the history and action
+     groups into the toolbar flex row so all six controls stay together even
+     on a narrow viewport; the value fields above remain their own row. */
+  #splitsArea > #splitsBulkBar{
+    gap:3px;
+    overflow:hidden;
+    /* The utility rail's keys cap at 46px; once every key is at its cap on a
+       wide panel, space-between spreads the leftover across the row instead
+       of pooling it to the right. The full-width primary row above is a
+       single flex item, so this is a no-op for it. */
+    justify-content:space-between;
+  }
+  #splitsArea > #splitsBulkBar .splitsEditRowPrimary{
+    flex:1 0 100%;
+    order:0;
+  }
+  #splitsArea > #splitsBulkBar .recipeEditHistory,
+  #splitsArea > #splitsBulkBar .splitsEditRowSecondary,
+  #splitsArea > #splitsBulkBar .splitsEditRowSecondary > .splitsBulkActions{
+    display:contents;
+  }
+  /* Edit-mode utility rail (Undo / Redo / Clear / Empty / Copy / Paste /
+     Rearrange / Reset). Eight controls that must never wrap: each one flexes
+     with the panel width and is capped at 46px (their previous fixed size),
+     so a wide phone gets 46px keys and a narrow one gets slightly smaller
+     ones instead of a second row. flex-basis:0 + min-width:0 means their
+     combined minimum is only ~8 glyph widths, far under any viewport, so the
+     parent's flex-wrap can never actually break the line. Height is fixed -
+     only the width tracks the panel. Glyphs stay 18px; unboxed, low-emphasis,
+     secondary to the matrix and Apply. */
+  #splitsArea > #splitsBulkBar :is(.recipeHistoryAction, .splitsEditRowSecondary .bulkTextAction, .splitsEditRowSecondary .splitsRearrangeAction, .splitsEditRowSecondary #resetAllSplits.danger){
+    display:grid;
+    place-items:center;
+    flex:1 1 0;
+    box-sizing:border-box;
+    min-width:0;
+    max-width:46px;
+    height:46px;
+    min-height:46px;
+    margin:0;
+    padding:0;
+    border:1px solid transparent;
+    border-radius:6px;
+    background:transparent;
+    box-shadow:none;
+    color:var(--muted);
+    font-size:0;
+    line-height:1;
+  }
+  #splitsArea > #splitsBulkBar .recipeEditActionIcon{ display:block; }
+  #splitsArea > #splitsBulkBar .splitsEditRowSecondary button > span{ display:none; }
+  #splitsArea > #splitsBulkBar #recipeUndo{ order:1; }
+  #splitsArea > #splitsBulkBar #recipeRedo{ order:2; }
+  #splitsArea > #splitsBulkBar #clearSplitSelection{ order:3; }
+  #splitsArea > #splitsBulkBar #clearSelectedCells{ order:4; }
+  /* Copy / Paste hoppers sit between Empty cells and Rearrange in the rail.
+     The :is() sizing rule above already gives them the 46px icon target and
+     display:grid (its specificity re-shows them past the base
+     .recipeCellClipboardAction{display:none}). */
+  #splitsArea > #splitsBulkBar #copySelectedCells{ order:5; }
+  #splitsArea > #splitsBulkBar #pasteSelectedCells{ order:6; }
+  #splitsArea > #splitsBulkBar .splitsRearrangeAction{ order:7; }
+  #splitsArea > #splitsBulkBar #resetAllSplits{
+    order:8;
+    flex:1 1 0;
+    min-width:0;
+    max-width:46px;
+    margin-left:2px;
+    border-left-color:color-mix(in srgb,var(--bad) 42%,var(--row-border));
+    border-radius:0 6px 6px 0;
+    color:var(--bad);
+  }
+  #splitsArea > #splitsBulkBar :is(.recipeHistoryAction, .splitsEditRowSecondary button):not(:disabled):hover,
+  #splitsArea > #splitsBulkBar :is(.recipeHistoryAction, .splitsEditRowSecondary button):not(:disabled):focus-visible{
+    border-color:var(--row-border-2);
+    background:color-mix(in srgb,var(--focus-border) 10%,transparent);
+    color:var(--title);
+    filter:none;
+  }
+  /* Match the wider toolbar's selector weight so its tinted pill hover
+     cannot leak back into the phone's unboxed icon controls. */
+  #splitsArea > #splitsBulkBar .splitsEditRowSecondary .bulkTextAction:not(:disabled):hover,
+  #splitsArea > #splitsBulkBar .splitsEditRowSecondary .bulkTextAction:not(:disabled):focus-visible{
+    border-color:var(--row-border-2);
+    background:color-mix(in srgb,var(--focus-border) 10%,transparent);
+    color:var(--title);
+    filter:none;
+  }
+  #splitsArea > #splitsBulkBar #resetAllSplits:not(:disabled):hover,
+  #splitsArea > #splitsBulkBar #resetAllSplits:not(:disabled):focus-visible{
+    border-left-color:var(--bad);
+    background:color-mix(in srgb,var(--bad) 10%,transparent);
+    color:var(--bad);
+  }
+  #splitsArea > #splitsBulkBar .splitsEditRowSecondary .bulkTextAction:disabled{ opacity:.42; }
+
+  /* Rearrange is the only mode toggle in this rail. Phone uses opposing
+     travel on the two arrows as the on-cue — no filled latch, and the
+     hover/focus fills above must not paint one back on. Chained :is so
+     this beats the idle chrome rule, whose :is() includes #resetAllSplits
+     and therefore carries 3-id specificity onto every sibling. */
+  #splitsArea > #splitsBulkBar :is(.recipeHistoryAction, .splitsEditRowSecondary .bulkTextAction, .splitsEditRowSecondary .splitsRearrangeAction, .splitsEditRowSecondary #resetAllSplits.danger):is(.splitsRearrangeAction.active, .splitsRearrangeAction[aria-pressed="true"]),
+  #splitsArea > #splitsBulkBar :is(.recipeHistoryAction, .splitsEditRowSecondary .bulkTextAction, .splitsEditRowSecondary .splitsRearrangeAction, .splitsEditRowSecondary #resetAllSplits.danger):is(.splitsRearrangeAction.active, .splitsRearrangeAction[aria-pressed="true"]):not(:disabled):hover,
+  #splitsArea > #splitsBulkBar :is(.recipeHistoryAction, .splitsEditRowSecondary .bulkTextAction, .splitsEditRowSecondary .splitsRearrangeAction, .splitsEditRowSecondary #resetAllSplits.danger):is(.splitsRearrangeAction.active, .splitsRearrangeAction[aria-pressed="true"]):not(:disabled):focus-visible{
+    border-color:transparent;
+    background:transparent;
+    color:var(--muted);
+    filter:none;
+  }
+  #splitsArea > #splitsBulkBar .splitsRearrangeAction .recipeEditActionIcon{ overflow:visible; }
+  #splitsArea > #splitsBulkBar .splitsRearrangeAction :is(.rearrangeArrowDown, .rearrangeArrowUp){
+    transform-box:view-box;
+    transform-origin:center;
+  }
+  #splitsArea > #splitsBulkBar .splitsRearrangeAction.active .rearrangeArrowDown,
+  #splitsArea > #splitsBulkBar .splitsRearrangeAction[aria-pressed="true"] .rearrangeArrowDown{
+    animation:rearrangeOpposingDown 1.8s ease-in-out infinite;
+  }
+  #splitsArea > #splitsBulkBar .splitsRearrangeAction.active .rearrangeArrowUp,
+  #splitsArea > #splitsBulkBar .splitsRearrangeAction[aria-pressed="true"] .rearrangeArrowUp{
+    animation:rearrangeOpposingUp 1.8s ease-in-out infinite;
+  }
+  @keyframes rearrangeOpposingDown{
+    0%,100%{ transform:translateY(-14%); }
+    50%{ transform:translateY(14%); }
+  }
+  @keyframes rearrangeOpposingUp{
+    0%,100%{ transform:translateY(14%); }
+    50%{ transform:translateY(-14%); }
+  }
+  @media (prefers-reduced-motion:reduce){
+    #splitsArea > #splitsBulkBar .splitsRearrangeAction :is(.rearrangeArrowDown, .rearrangeArrowUp){ animation:none; }
+    /* Motion is the on-cue; without it, restore the 55% fill latch so the
+       mode still reads as on. */
+    #splitsArea > #splitsBulkBar :is(.recipeHistoryAction, .splitsEditRowSecondary .bulkTextAction, .splitsEditRowSecondary .splitsRearrangeAction, .splitsEditRowSecondary #resetAllSplits.danger):is(.splitsRearrangeAction.active, .splitsRearrangeAction[aria-pressed="true"]){
+      border-color:color-mix(in srgb, var(--recipe-pill-accent) 55%, var(--border));
+      background:color-mix(in srgb, var(--recipe-pill-accent) 55%, var(--panel2));
+      color:var(--title);
+    }
+  }
+}
+
+@media (max-width: 720px){
+  .toolsWorkspace{ grid-template-columns: 1fr; }
+  .toolsIndexDropdown{ display: block; }
+  /* The trigger is styled as the .layerTitle heading it replaces - same
+     thin-weight tracked uppercase treatment as every other card/panel
+     title - rather than a boxed pill, so tapping it to change tools reads
+     as "the heading is the control" instead of introducing a second,
+     differently-styled name for the same tool right above the heading
+     that used to repeat it (see the .toolWorkspacePanel > .layerTitle
+     rule below, which retires that redundant second heading on mobile). */
+  .toolsIndexDropdown > summary{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: var(--control-height);
+    padding: 6px 2px;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    font-size: var(--title-size);
+    font-weight: 300;
+    text-transform: uppercase;
+    letter-spacing: .22em;
+    color: var(--title, var(--text));
+  }
+  .toolsIndexDropdownLabel{
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .toolsIndexDropdown > summary::after{
+    content: "▾";
+    color: var(--muted);
+    font-size: var(--font-small);
+    letter-spacing: normal;
+    flex: 0 0 auto;
+  }
+  .toolsIndexDropdown[open] > summary::after{ content: "▴"; }
+  .toolsIndex{ display: none; }
+  .toolsIndexDropdown[open] + .toolsIndex{
+    display: grid;
+    position: static;
+    grid-template-columns: 1fr;
+    margin-top: 6px;
+  }
+  .toolsIndexButton{ text-align: left; }
+  .toolsIndexButton.active{ box-shadow: inset 3px 0 0 var(--title); }
+  /* Retired in favor of the dropdown trigger above, which now carries the
+     active tool's name using the same heading treatment this rule would
+     otherwise duplicate immediately below it. A descendant selector, not
+     a direct-child one: Scan Recipe wraps its title in .toolTitleRow
+     alongside the "Experimental" badge, one level deeper than every other
+     panel's title - ">" alone missed that one and left its title showing.
+     The badge is unaffected; only .layerTitle itself is hidden. */
+  .toolWorkspacePanel .layerTitle{ display: none; }
+}
+
+.toolTitleRow{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.recipeScanOptions{ display:grid; gap:12px; }
+.recipeScanOption{ display:grid; gap:4px; }
+.recipeScanOptionRow{ display:flex; align-items:center; gap:8px; }
+.recipeScanOptionRow button{ flex:1; width:auto; }
+.recipeScanInfo{ position:relative; flex-shrink:0; }
+.recipeScanInfo > summary{ display:grid; place-items:center; width:24px; height:24px; border:0; border-radius:50%; background:transparent; color:var(--muted); font-size:16px; line-height:1; cursor:pointer; list-style:none; }
+.recipeScanInfo > summary svg{ width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.recipeScanInfo > summary::-webkit-details-marker{ display:none; }
+.recipeScanInfo > summary:hover,.recipeScanInfo[open] > summary{ color:var(--title); background:var(--field-bg); }
+.recipeScanInfo > summary:focus-visible{ outline:var(--focus-outline); outline-offset:1px; }
+@media (width <= 720px){
+  #recipeScanTool .recipeScanOptions{ gap:9px; }
+  #recipeScanTool .recipeScanOptionRow{ gap:7px; align-items:stretch; }
+  #recipeScanTool .recipeScanOptionRow > button{
+    display:grid;
+    grid-template-columns:30px minmax(0,1fr) auto;
+    align-items:center;
+    gap:9px;
+    min-height:62px;
+    padding:9px 12px 9px 9px;
+    border:1px solid var(--border2);
+    border-radius:var(--control-radius);
+    background:linear-gradient(135deg,var(--row-bg),var(--panel2));
+    color:var(--text);
+    font-size:14px;
+    font-weight:750;
+    text-align:left;
+    box-shadow:inset 3px 0 0 color-mix(in srgb,var(--focus-border) 72%,transparent);
+  }
+  #recipeScanTool .recipeScanOptionRow > button::before{
+    display:grid;
+    place-items:center;
+    width:30px;
+    height:30px;
+    border:1px solid color-mix(in srgb,var(--focus-border) 38%,transparent);
+    border-radius:8px;
+    background:var(--focus-ring);
+    color:var(--focus-border);
+    font:750 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
+    letter-spacing:.04em;
+  }
+  #recipeScanTool .recipeScanOption:nth-child(1) .recipeScanOptionRow > button::before{ content:"JT"; }
+  #recipeScanTool .recipeScanOption:nth-child(2) .recipeScanOptionRow > button::before{ content:"DS"; }
+  #recipeScanTool .recipeScanOption:nth-child(3) .recipeScanOptionRow > button::before{ content:"HS"; }
+  #recipeScanTool .recipeScanOptionRow > button::after{
+    content:"›";
+    color:var(--focus-border);
+    font-size:23px;
+    font-weight:400;
+    line-height:1;
+  }
+  #recipeScanTool .recipeScanOptionRow > button:hover{
+    border-color:var(--focus-border);
+    background:var(--focus-ring);
+  }
+  #recipeScanTool .recipeScanInfo > summary{
+    width:38px;
+    height:100%;
+    min-height:62px;
+    border:1px solid var(--border);
+    border-radius:var(--control-radius);
+    background:var(--row-bg);
+    color:var(--focus-border);
+  }
+}
+/* Opens upward, not downward: with only 3 stacked options the container's
+   overflow:hidden boundary sits close beneath every one of them, not just
+   the last - the 2nd option clipped too. Upward always has the title/
+   description text above for room, regardless of which option it is. */
+.recipeScanInfoPanel{ position:absolute; bottom:calc(100% + 6px); right:0; z-index:20; width:min(300px,calc(100vw - 100px)); padding:10px 12px; border:1px solid var(--border2); border-radius:var(--control-radius); background:var(--panelOpen); color:var(--muted); font-size:var(--font-small); box-shadow:var(--shadow2); }
+.recipeScanInfoPanel p{ margin:0; } .recipeScanInfoPanel p+p{ margin-top:7px; }
+.recipeScanReviewDialog{ max-width: 560px; width: 92vw; max-height: 86vh; overflow-y: auto; }
+.recipeScanReviewContent{ display:grid; gap:12px; }
+.recipeScanReviewLayer{ border:1px solid var(--border); border-radius:8px; padding:8px 10px; display:grid; gap:6px; }
+.recipeScanReviewLayerHead{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; font-weight:600; }
+.recipeScanReviewHopper{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; font-size: 0.9em; }
+.recipeScanReviewHopper .muted{ font-style:italic; }
+.recipeScanReviewLayerPctInput{ display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
+.recipeScanReviewLayerPctInput input{ width:5em; }
+.recipeScanReviewEstimated{ color: var(--warn); }
+.recipeScanReviewWarningText{ color: var(--warn); }
+.toolResult{
+  display: grid;
+  grid-template-columns:minmax(0,1fr) auto minmax(0,1.4fr);
+  gap: 10px;
+  align-items: baseline;
+  max-width:760px;
+  min-height:48px;
+  padding: 10px 12px;
+  border: 1px solid var(--readonly-border);
+  border-radius: var(--radius-input);
+  background: var(--readonly-bg);
+}
+.toolResult > span:first-child{ font-weight: 850; }
+.toolResult strong{
+  color: var(--title);
+  font-size: 1.1em;
+}
+.toolResult .muted{ text-align: right; }
+.resinLookupSearch{ position: relative; }
+.resinLookupSuggestions{
+  position: fixed;
+  z-index: 1000;
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 4px;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-input);
+  background: var(--panelOpen);
+  box-shadow: var(--shadow2);
+}
+.resinLookupOption{
+  display: grid;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: calc(var(--radius-input) - 4px);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  box-shadow: none;
+}
+.resinLookupOption:hover,
+.resinLookupOption.active{
+  background: linear-gradient(180deg, var(--btn-primary-a), var(--btn-primary-b));
+}
+.resinLookupOptionCode{
+  overflow: hidden;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+input.resinLookupValue[readonly]{
+  width: 100%;
+  color: var(--title);
+  font-weight: 800;
+  opacity: 1;
+  cursor: default;
+}
+.resinLookupDensityField{
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items:end;
+  gap:6px;
+}
+.resinLookupCopyButton{
+  min-width:52px;
+  min-height:var(--control-height);
+  padding:max(3px, calc(var(--btn-pad-y) - 3px)) var(--btn-pad-x);
+  border-radius:var(--control-radius);
+  box-shadow: none;
+}
+input.resinLookupValue.copied[readonly]{
+  border-color: var(--ok);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 18%, transparent);
+}
+.resinLookupCopyStatus:not(:empty){ min-height: 1.35em; }
+@media (max-width: 600px){
+  .toolResult{ grid-template-columns: 1fr auto; }
+  .toolResult .muted{
+    grid-column: 1 / -1;
+    text-align: left;
+  }
+  input.resinLookupValue[readonly]{
+    min-height: 44px;
+    font-size: 16px;
+  }
+}
+
+/* Android internal-testing entry point - lives in the "Workspace & support"
+   nav list, in Help's old slot, and stays mobile+tablet only: the desktop
+   rail has no install path of its own to promote and this app is already
+   installed wherever this page is being read on desktop (see #helpBetaAccess
+   in the desktop nav rule further up, which hides the whole host there).
+   Hidden by default; the >=901px override does not exist on purpose,
+   matching every other mobile-only surface's pattern in this file (base rule
+   hides, the narrow-viewport media query is the only place that re-enables
+   it). */
+.helpPlayBanner{ display: none; }
+/* Exactly one of the three banner states is ever shown, chosen by
+   data-beta-state on the host. "loading" shows none of them, so the nav row
+   never flashes a request button at an operator who has already been
+   approved while the anonymous session is still coming up. */
+.helpPlayBannerHost > [data-beta-when]{ display: none; }
+@media (max-width: 900px), (min-width: 901px) and (pointer: coarse){
+  .helpPlayBannerHost[data-beta-state="none"] > [data-beta-when="none"],
+  .helpPlayBannerHost[data-beta-state="pending"] > [data-beta-when="pending"],
+  .helpPlayBannerHost[data-beta-state="invited"] > [data-beta-when="invited"]{ display: flex; }
+  .helpPlayBanner{
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 12px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: inherit;
+    text-decoration: none;
+  }
+  /* RT Sync/Tools/Changelog/Sudo access and this banner all read as one
+     continuous thread once the list is open: a single vertical line runs
+     behind every row and each icon sits on it as a ringed node - see the
+     matching rule on .workspaceNavButton.workspaceNavExtra. This row is
+     never a middle-of-nowhere segment (it always has a real row above and
+     below it), so it always draws the full-height line, no first/last
+     trimming needed. */
+  .helpPlayBanner::before{
+    content: "";
+    position: absolute;
+    left: 26px;
+    top: -1px;
+    width: 1px;
+    height: calc(100% + 1px);
+    background: var(--border2);
+  }
+  .helpPlayBanner:hover,
+  .helpPlayBanner:focus-visible{ background: var(--focus-ring); }
+  .helpPlayBanner:focus-visible{ outline: var(--focus-outline); outline-offset: 2px; }
+  /* The node ring every row's icon now sits in, matching
+     .workspaceTileIcon in the opened list. */
+  .helpPlayBannerIcon{
+    position: relative;
+    z-index: 1;
+    width: 28px;
+    height: 28px;
+    flex: 0 0 auto;
+    padding: 6px;
+    box-sizing: border-box;
+    border: 2px solid var(--tile-accent);
+    border-radius: 50%;
+    background: var(--panel);
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    color: var(--tile-accent);
+  }
+  .helpPlayBanner span{ display: grid; gap: 1px; min-width: 0; }
+  /* Same title treatment as RT Sync/Tools/Changelog/Sudo access
+     (.workspaceNavButton span in the navExpanded list), so this row reads
+     as one of the set rather than a differently-styled banner. */
+  .helpPlayBanner strong{ color: var(--text); font-size: 13px; font-weight: 850; }
+  .helpPlayBanner small{
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--muted);
+    font-size: var(--font-tiny);
+  }
+  /* Same status dot every other nav row's subtitle carries - muted while
+     there is nothing to report, then warn/ok once a request is pending or
+     answered, echoing RT Sync's own status dot. */
+  .helpPlayBanner small::before{
+    content: "";
+    width: 6px;
+    height: 6px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    background: var(--muted);
+  }
+  [data-beta-when="pending"] small::before{ background: var(--warn); }
+  [data-beta-when="invited"] small::before{ background: var(--ok); }
+  /* The request state is a button, not a link, so it needs the anchor's
+     appearance reset back onto it. */
+  .helpPlayBannerAction{ width: 100%; text-align: left; font: inherit; cursor: pointer; }
+  /* Waiting is a status, not an action: no hover lift. Only the small
+     "Change" control inside it is interactive. The icon keeps its usual
+     accent colour - the dot above is what marks the state as pending. */
+  .helpPlayBannerPending{ opacity: .82; }
+  .helpPlayBannerPending:hover{ background: transparent; }
+  .helpPlayBannerEdit{
+    flex: 0 0 auto;
+    margin-left: auto;
+    min-height: 0;
+    padding: 4px 9px;
+    border: 1px solid var(--btn-secondary-border);
+    border-radius: 999px;
+    background: var(--btn-secondary-bg);
+    color: var(--btn-text);
+    font-size: var(--font-tiny);
+    font-weight: 700;
+  }
+  .helpPlayBannerEdit:hover{ color: var(--title); border-color: var(--focus-border); }
+}
+/* Beta Applicants (admin). One row per request: the checkbox that records
+   "added to internal testing on Play Console", who asked, and where they
+   are. Ticking the box is what reveals the download link in that person's
+   own Workspace & support list, which is why it reads as the row's primary
+   control rather than a trailing detail. */
+.betaApplicantsList{ display: grid; gap: 8px; }
+.betaApplicantRow{
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--row-border);
+  border-radius: var(--radius-row);
+  background: var(--row-bg);
+}
+.betaApplicantRow[data-status="pending"]{ border-color: color-mix(in srgb, var(--warn) 38%, var(--row-border)); }
+.betaApplicantCheck{
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  font-size: var(--font-tiny);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.betaApplicantCheck input{ width: 17px; height: 17px; accent-color: var(--ok); cursor: pointer; }
+.betaApplicantInfo{ display: grid; gap: 1px; min-width: 0; }
+.betaApplicantInfo strong{ color: var(--title); font-size: var(--font-small); }
+.betaApplicantEmail{ color: var(--text); font-size: var(--font-small); overflow-wrap: anywhere; }
+.betaApplicantInfo small{ color: var(--muted); font-size: var(--font-tiny); }
+.betaApplicantStatus{ font-size: var(--font-tiny); font-weight: 800; white-space: nowrap; }
+.betaApplicantStatus.pending{ color: var(--warn); }
+.betaApplicantStatus.invited{ color: var(--ok); }
+.betaApplicantRemove{
+  min-height: 0;
+  padding: 2px 9px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+}
+.betaApplicantRemove:hover{ color: var(--bad); }
+/* =======================================================================
+ *   Changelog
+ *   ======================================================================= */
+.changelogBody{ color: var(--text); line-height: 1.55; font-size: 0.75em; }
+.changelogBody ol,
+.changelogBody ul{ margin: 0; padding-left: 22px; }
+.changelogBody li + li{ margin-top: 7px; }
+.changelogBody h3{
+  margin: 16px 0 8px;
+  color: var(--title);
+  font-size: 10.5px;
+}
+.changelogBody > h3:first-child{ margin-top: 0; }
+@media (prefers-reduced-motion: reduce){
+  .workspaceNavMoreChev{ transition: none; }
+  .desktopNavMoreIcons i{ animation: none; }
+}

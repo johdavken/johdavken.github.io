@@ -22,7 +22,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
-const { readStyles } = require("./css-source");
+const { readStyles, partContaining, cacheTagOf } = require("./css-source");
 
 const html = fs.readFileSync("index.html", "utf8");
 const styles = readStyles();
@@ -123,9 +123,14 @@ test("Hopper Weight and Hopper Volume Weight still share one identical icon, sol
 });
 
 test("the stylesheet cache-bust version was bumped, so the swap actually reaches returning browsers", () => {
-  const version = html.match(/href="styles\.css\?v=([\d.]+)"/);
-  assert.ok(version, "expected a versioned styles.css link");
-  assert.notEqual(version[1], "0.60.1", "styles.css changed - its ?v= must move with it");
+  // The base stylesheet is eleven parts now, so pinning a literal version
+  // against a file called styles.css no longer describes anything. Ask which
+  // part carries the rule and require that part to be versioned. Whether a
+  // changed part's tag actually moved is enforced for every part on every
+  // change by css-cache-tags.test.js, which is stronger than one literal here.
+  const part = partContaining(".gruvboxSolidGlyph{");
+  assert.ok(part, "no stylesheet part carries the .gruvboxSolidGlyph rule any more");
+  assert.ok(cacheTagOf(part), `${part} is linked without a ?v= cache tag`);
 });
 
 function escapeRe(value){

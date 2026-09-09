@@ -1,0 +1,334 @@
+/* =======================================================================
+ *   Buttons
+ *   ======================================================================= */
+
+button{
+  min-height:var(--button-height);
+  border-radius:var(--button-radius);
+  padding:var(--button-padding-y) var(--button-padding-x);
+  border: 1px solid var(--btn-border);
+  background: linear-gradient(180deg, var(--btn-primary-a), var(--btn-primary-b));
+  color: var(--btn-text);
+  font-size:var(--button-font-size);
+  font-weight:var(--button-font-weight);
+  cursor: pointer;
+  box-shadow: none;
+  transition: filter .12s ease, transform .06s ease;
+}
+button:hover{ filter: brightness(1.05); }
+button:active{ transform: translateY(1px); }
+button:focus-visible{
+  border-color:var(--focus-border);
+  outline:var(--focus-outline);
+  outline-offset:2px;
+}
+button:disabled{
+  opacity: .5;
+  cursor: not-allowed;
+  filter: none;
+  transform: none;
+}
+
+button.secondary,
+button[data-button-variant="secondary"]{
+  /* Outlined Technical: borders and geometry carry the emphasis instead of
+     fill or a left accent bar. Secondary is the plain, un-filled default -
+     visible border, no background, uppercase label. */
+  padding:max(3px, calc(var(--btn-pad-y) - 4px)) max(7px, calc(var(--btn-pad-x) - 4px));
+  border:1.5px solid var(--btn-secondary-border);
+  border-radius:2px;
+  background:transparent;
+  box-shadow:none;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+}
+button.secondary:hover:not(:disabled),
+button[data-button-variant="secondary"]:hover:not(:disabled){
+  border-color:var(--title);
+  color:var(--title);
+  filter:none;
+}
+button.primary,
+button[data-button-variant="primary"]{
+  background:linear-gradient(180deg, var(--btn-primary-a), var(--btn-primary-b));
+  border:1.5px solid var(--title);
+  border-radius:2px;
+  color:var(--text);
+  text-transform:uppercase;
+  letter-spacing:.04em;
+  box-shadow:none;
+}
+/* Committing an operational change stays primary; the compact rail-height
+   sizing some panels want lives here, no longer a left accent bar. */
+button.primary.actionRail{
+  padding:max(3px, calc(var(--btn-pad-y) - 4px)) max(7px, calc(var(--btn-pad-x) - 4px));
+  border-radius:2px;
+}
+/* Configuration-panel Load actions are primary semantically, but belong to
+   the same compact sizing as Save and Update. */
+.workspaceConfigurationSectionTitle button.primary{
+  padding:max(3px, calc(var(--btn-pad-y) - 4px)) max(7px, calc(var(--btn-pad-x) - 4px));
+  border-radius:2px;
+}
+button.danger,
+button[data-button-variant="danger"]{
+  padding:max(3px, calc(var(--btn-pad-y) - 4px)) max(7px, calc(var(--btn-pad-x) - 4px));
+  border-radius:2px;
+  background:transparent;
+  border:1.5px solid var(--bad);
+  color:var(--bad);
+  text-transform:uppercase;
+  letter-spacing:.04em;
+  box-shadow:none;
+}
+button.danger:hover:not(:disabled),
+button[data-button-variant="danger"]:hover:not(:disabled){
+  background:color-mix(in srgb, var(--bad) 10%, transparent);
+  filter:none;
+}
+button[data-button-variant="quiet"]{
+  border:1.5px solid transparent;
+  background:transparent;
+  color:var(--muted);
+  box-shadow:none;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+}
+button[data-button-variant="quiet"]:hover:not(:disabled),
+button[data-button-variant="quiet"]:focus-visible{
+  border-color:var(--btn-secondary-border);
+  color:var(--btn-text);
+  filter:none;
+}
+button[data-button-size="small"]{
+  min-height:calc(var(--button-height) - 6px);
+  padding:max(2px, calc(var(--button-padding-y) - 3px)) max(6px, calc(var(--button-padding-x) - 3px));
+  font-size:var(--font-tiny);
+}
+button[data-button-size="large"]{
+  min-height:calc(var(--button-height) + 8px);
+  padding:calc(var(--button-padding-y) + 2px) calc(var(--button-padding-x) + 4px);
+}
+button.compactAction{
+  width:auto;
+  min-height:var(--control-height);
+  padding:max(3px, calc(var(--btn-pad-y) - 3px)) var(--btn-pad-x);
+  border-radius:2px;
+  font-size:var(--font-small);
+}
+
+/* Two-tier segmented toolbars keep related commands compact and visible. */
+.segmentedActionToolbar{
+  display:grid;
+  justify-items:start;
+  gap:8px;
+}
+.segmentedActionRow{
+  display:inline-flex;
+  max-width:100%;
+  overflow-x:auto;
+  border:1px solid var(--btn-secondary-border);
+  border-radius:var(--control-radius);
+  background:var(--btn-secondary-bg);
+}
+.segmentedActionRow button{
+  flex:0 0 auto;
+  width:auto;
+  min-height:var(--control-height);
+  padding:max(3px, calc(var(--btn-pad-y) - 3px)) var(--btn-pad-x);
+  border:0;
+  border-right:1px solid var(--btn-secondary-border);
+  border-radius:0;
+  background:transparent;
+  color:var(--muted);
+  font-size:var(--font-small);
+  white-space:nowrap;
+  box-shadow:none;
+}
+.segmentedActionRow button:last-child{ border-right:0; }
+.segmentedActionRow button.primary{
+  background:linear-gradient(180deg, var(--btn-primary-a), var(--btn-primary-b));
+  color:var(--text);
+}
+.segmentedActionRow button.danger{
+  background:transparent;
+  color:var(--bad);
+}
+.segmentedActionRow button:hover{ background-color:var(--row-bg); }
+/* A few high-value sync controls intentionally break out of the connected
+   segmented toolbar: they use the same outlined treatment as Save/Load/
+   Update so their actions remain distinct at a glance. */
+.segmentedActionRow button.actionRail{
+  border:1.5px solid var(--btn-secondary-border);
+  border-radius:2px;
+  background:transparent;
+  color:var(--btn-text);
+  text-transform:uppercase;
+  letter-spacing:.04em;
+  box-shadow:none;
+}
+.segmentedActionRow button.actionRail:hover:not(:disabled){
+  border-color:var(--title);
+  color:var(--title);
+}
+.segmentedActionRow button.actionRail:last-child{border-right:1.5px solid var(--btn-secondary-border)}
+.segmentedActionRow #lineSyncLeaveBtn.actionRail{color:var(--bad)}
+.segmentedActionDivider{
+  width:min(100%, 520px);
+  height:1px;
+  background:var(--border);
+}
+/* Button-like links (works for <a> and <button>) */
+.btn{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  padding: var(--btn-pad-y) var(--btn-pad-x);
+  border-radius: var(--btn-radius);
+
+  border: 1px solid var(--btn-border, rgba(255,255,255,.16));
+  background: linear-gradient(
+    180deg,
+    var(--btn-primary-a, rgba(74,163,255,.22)),
+                              var(--btn-primary-b, rgba(74,163,255,.10))
+  );
+
+  color: var(--btn-text, var(--text));
+  font-weight: 700;
+  font-size: var(--font-base);
+  text-decoration: none;
+
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+
+  transition: filter .12s ease, transform .06s ease;
+}
+
+.btn:hover{ filter: brightness(1.05); }
+.btn:active{ transform: translateY(1px); }
+
+.btn.secondary{
+  background: var(--btn-secondary-bg);
+  border-color: var(--btn-secondary-border);
+}
+
+.btn.danger{
+  background: var(--btn-danger-bg);
+  border-color: var(--btn-danger-border);
+}
+
+
+/* =======================================================================
+ *   Footer bar (Next Pump Off)
+ *   ======================================================================= */
+
+.footerBar{
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 41;
+  padding: 8px 12px;
+  background: var(--footer-bg);
+  border-top: 1px solid var(--footer-border);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.footerNextHopper{
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.footerMsg{
+  overflow: hidden;
+  color: var(--title, var(--text));
+  font-size: 13px;
+  font-weight: 950;
+  letter-spacing: .2px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.footerMsg.stale{ color: var(--warn); }
+
+.footerSub{
+  overflow: hidden;
+  margin-top: 2px;
+  color: var(--subtitle, var(--muted));
+  font-size: 11px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cloudSyncFooterStatus{
+  display: grid;
+  flex: 0 0 auto;
+  gap: 1px;
+  min-width: 82px;
+  padding: 4px 4px 4px 12px;
+  margin: -4px 0;
+  border-left: 1px solid var(--footer-border);
+  border-top: none; border-right: none; border-bottom: none;
+  border-radius: 6px;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cloudSyncFooterStatus:hover, .cloudSyncFooterStatus:focus-visible{ background: var(--row-bg); }
+.cloudSyncFooterStatus:active{ opacity: 0.7; }
+.cloudSyncFooterStatus span{
+  color: var(--subtitle, var(--muted));
+  font-size: 10px;
+  font-weight: 650;
+}
+.cloudSyncFooterStatus strong{
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 850;
+  white-space: nowrap;
+}
+.cloudSyncFooterStatus[data-state="synced"] strong{ color: var(--ok); }
+.cloudSyncFooterStatus[data-state="pending"] strong,
+.cloudSyncFooterStatus[data-state="offline"] strong,
+.cloudSyncFooterStatus[data-state="conflict"] strong{ color: var(--warn); }
+.cloudSyncFooterStatus[data-state="error"] strong{ color: var(--bad); }
+
+@media (max-width: 420px){
+  .footerBar{ gap: 8px; padding-inline: 9px; }
+  .cloudSyncFooterStatus{ min-width: 74px; padding-left: 8px; }
+  .cloudSyncFooterStatus span{ font-size: 9px; }
+  .cloudSyncFooterStatus strong{ font-size: 10px; }
+}
+
+@media (min-width: 901px) and (pointer: fine){
+  .footerBar{ display: none; }
+}
+
+/* =======================================================================
+ *   Formula helpers
+ *   ======================================================================= */
+
+.formulaGroup{ display: grid; gap: 8px; }
+
+.f-label{ color: var(--text); font-weight: 900; }
+.f-var1{ color: var(--f-var1); }
+.f-var2{ color: var(--f-var2); }
+.f-var3{ color: var(--f-var3); }
+.f-const{ color: var(--f-const); }
+
+
+/* Results (Timeline) toggle row */
+.resultsToggleRow{
+  padding: 10px 12px;
+  border-radius: var(--radius-row);
+  background: var(--row-bg-2);
+  border: 1px solid var(--row-border-2);
+}
+

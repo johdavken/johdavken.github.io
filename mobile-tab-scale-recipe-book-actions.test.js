@@ -22,7 +22,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
-const { readStyles } = require("./css-source");
+const { readStyles, partContaining, cacheTagOf } = require("./css-source");
 
 const app = fs.readFileSync("app.js", "utf8");
 const html = fs.readFileSync("index.html", "utf8");
@@ -297,9 +297,16 @@ test("desktop Recipe Book is untouched - it keeps its title-row Load/Update and 
  * ------------------------------------------------------------------- */
 
 test("styles.css and app.js carry bumped ?v= query strings so a returning device does not run the old pair", () => {
-  const css = html.match(/styles\.css\?v=([\d.]+)/);
+  // The base stylesheet is eleven parts now, so pinning a literal version
+  // against a file called styles.css no longer describes anything. Ask which
+  // part carries the rule and require that part to be versioned. Whether a
+  // changed part's tag actually moved is enforced for every part on every
+  // change by css-cache-tags.test.js, which is stronger than one literal here.
+  const part = partContaining(".recipePageTab{");
+  assert.ok(part, "no stylesheet part carries the .recipePageTab rule any more");
+  assert.ok(cacheTagOf(part), `${part} is linked without a ?v= cache tag`);
+  // app.js is still one file, so its original pin still means what it meant.
   const js = html.match(/app\.js\?v=([\d.]+)/);
-  assert.ok(css && js);
-  assert.notEqual(css[1], "0.75.13");
+  assert.ok(js);
   assert.notEqual(js[1], "0.25.5");
 });

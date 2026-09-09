@@ -1,0 +1,890 @@
+/* =======================================================================
+ *   Recipe Summary / Edit views (desktop + tablet, not compact mobile)
+ *   ---------------------------------------------------------------------
+ *   data-recipe-view is only ever "summary" outside the compact mobile
+ *   recipe (JS pins it to "edit" there), so summary-keyed rules are
+ *   inherently desktop-scoped and need no media guard. Rules keyed on
+ *   "edit" alone would also match the mobile grid, so those live in the
+ *   width-guarded block further down.
+ *
+ *   Summary is a read-only glance whose one interaction is tracking:
+ *   fields are inert (pointer-events:none so a click anywhere in the cell
+ *   reaches the cell itself), and every editing affordance - the clock,
+ *   the clear x, the per-layer Copy/Paste buttons, the layer percentage -
+ *   is gone.
+ * ===================================================================== */
+#splitsArea[data-recipe-view="summary"] .splitMatrixCell input,
+#splitsArea[data-recipe-view="summary"] .splitLayerPct input{
+  pointer-events: none;
+}
+/* Disabled here means "not editable", not "unavailable" - so these keep
+   full-strength text rather than the usual dimmed disabled treatment. */
+#splitsArea[data-recipe-view="summary"] .splitMatrixCell input:disabled,
+#splitsArea[data-recipe-view="summary"] .splitLayerPct input:disabled{
+  opacity: 1;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text);
+  -webkit-text-fill-color: var(--text);
+}
+#splitsArea[data-recipe-view="summary"] .splitMatrixCell .resinNameInput:disabled{
+  color: var(--title);
+  -webkit-text-fill-color: var(--title);
+  font-weight: 800;
+}
+#splitsArea[data-recipe-view="summary"] .splitLayerPct input:disabled{ color: var(--muted); -webkit-text-fill-color: var(--muted); }
+#splitsArea[data-recipe-view="summary"] .splitCopyBtn{ display: none; }
+/* The whole cell is the tracking target, so it advertises itself as one. */
+#splitsArea.recipeTrackingView .splitMatrixCell{ cursor: pointer; }
+#splitsArea.recipeTrackingView .splitMatrixCell:hover{ background: color-mix(in srgb, var(--focus-ring) 40%, transparent); }
+
+/* Tracking is a Summary-view action and bulk selection is an Edit-view one,
+   so the per-cell clock and clear x have no role in either, on any surface -
+   both were replaced by clicking the cell and by the panel's own Clear cell
+   contents. On phones this is also what buys the space back: dropping the
+   clock from a ~59px cell is most of the room the resin name needed. */
+#splitsArea[data-recipe-view] .splitTrackControl,
+#splitsArea[data-recipe-view] .splitClearButton{ display: none; }
+#splitsArea[data-recipe-view="summary"] .splitCellSelector{ display: none; }
+/* Selection reads as a highlighted cell rather than a checkbox, but the
+   checkbox stays in the accessibility tree and keyboard tab order - it is
+   the only way to select a cell without a pointer. */
+#splitsArea[data-recipe-view="edit"] .splitCellSelector{
+  display: block;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+  border: 0;
+}
+/* The resin mirror: text on touch surfaces, the real field on pointer ones.
+   Exactly one of the two is ever visible, so they can never be mistaken for
+   two separate values. */
+.splitCellResinText{ display: none; }
+#splitsArea[data-recipe-cells="static"] .splitCellResinText{
+  display: block;
+  min-width: 0;
+  color: var(--title);
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+#splitsArea[data-recipe-cells="static"] .splitMatrixCell .resinNameInput{ display: none; }
+
+/* Cells that cannot be typed into (every touch surface) render their fields
+   as plain text: no borders, no field chrome, and no pointer target of their
+   own, so the whole cell is one reliable tap target for select/track. */
+#splitsArea[data-recipe-cells="static"] .splitMatrixCell input{
+  pointer-events: none;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+#splitsArea[data-recipe-cells="static"] .splitMatrixCell input:disabled{
+  opacity: 1;
+  color: var(--text);
+  -webkit-text-fill-color: var(--text);
+}
+#splitsArea[data-recipe-cells="static"] .splitMatrixCell .resinNameInput:disabled{
+  color: var(--title);
+  -webkit-text-fill-color: var(--title);
+  font-weight: 800;
+}
+
+@media (min-width: 701px){
+  /* Row and column select targets. The base layer letter is an inert
+     watermark (opacity .14, pointer-events:none) and the row header is a
+     plain label; the .bulk-editing rules that used to promote both into
+     real controls are compact-mobile-only now, so Edit view restores them. */
+  #splitsArea[data-recipe-view="edit"] .splitLayerTitle{
+    pointer-events: auto;
+    cursor: pointer;
+    opacity: .24;
+  }
+  #splitsArea[data-recipe-view="edit"] .splitLayerTitle:hover,
+  #splitsArea[data-recipe-view="edit"] .splitLayerTitle.selected,
+  #splitsArea[data-recipe-view="edit"] .splitLayerTitle.partiallySelected{ color: var(--title); }
+  #splitsArea[data-recipe-view="edit"] .splitLayerTitle.selected{ opacity: .52; }
+  #splitsArea[data-recipe-view="edit"] .splitLayerTitle.partiallySelected{ opacity: .34; }
+  #splitsArea[data-recipe-view="edit"] .splitRowSelect{
+    cursor: pointer;
+    border-radius: var(--control-radius);
+    color: var(--muted);
+    font-weight: 800;
+  }
+  #splitsArea[data-recipe-view="edit"] .splitRowSelect:hover{ background: var(--row-bg-2); color: var(--title); }
+  #splitsArea[data-recipe-view="edit"] .splitRowSelect.selected{
+    background: var(--focus-border);
+    color: #fff;
+  }
+  #splitsArea[data-recipe-view="edit"] .splitRowSelect.partiallySelected{
+    background: color-mix(in srgb, var(--focus-ring) 70%, transparent);
+    color: var(--title);
+  }
+  #splitsArea[data-recipe-view="edit"] .splitLayerHeader{ cursor: pointer; }
+  #splitsArea[data-recipe-view="edit"] .splitLayerHeader :is(input,button,label){ cursor: auto; }
+  #splitsArea[data-recipe-view="edit"] .splitLayerHeader :is(button){ cursor: pointer; }
+  #splitsArea[data-recipe-view="edit"] .splitRowCorner{
+    color: var(--muted);
+    font-size: var(--font-tiny);
+    font-weight: 750;
+  }
+
+  /* Selected (Edit) and tracked (Summary) are deliberately different:
+     selection is an outlined working state; tracking is the folded corner. */
+  #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.selected{
+    background: color-mix(in srgb, var(--focus-ring) 72%, transparent);
+    box-shadow: inset 0 0 0 2px var(--focus-border);
+  }
+  #splitsArea[data-recipe-view="summary"] .splitsMatrix tbody .splitMatrixCell.tracked,
+  #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.tracked:not(.selected){ background:transparent; }
+
+  /* "Large percentage number" - the value operators read across the line.
+     Same element in both views; Summary simply renders it inert. */
+  #splitsArea[data-recipe-view] .splitPctControl input{
+    height: 30px;
+    min-height: 30px;
+    max-height: 30px;
+    font-size: 19px;
+    font-weight: 850;
+    line-height: 29px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* The Edit panel: two rows above the grid, mirroring Receiver Hopper
+     Weights' own Edit toolbar. Row 1 is the per-selection edit; row 2 is
+     the destructive/structural actions. */
+  /* Overrides the base three-column grid: this layout is two stacked rows
+     that each manage their own flex flow. */
+  #splitsArea > .splitsBulkBar{ order: -1; display: block; min-height: 0; margin: 0 0 2px; }
+  /* The row gutter (Select row / per-row numbers) is a PERMANENT structural
+     column at every width that reaches this block, not just in Edit - the
+     base rule hides it whenever .bulk-editing is absent, which desktop/
+     tablet never set (that class is compact-mobile-only), so without this
+     override the column disappeared outside Edit and Columns A-E shifted
+     left to fill the gap. Unconditional now (was [data-recipe-view="edit"]
+     only) so Summary keeps the exact same column, just with the "Select
+     row" label and interactive styling withheld (see corner/.splitRowSelect
+     rules and app.js) rather than the column itself removed. Explicit width
+     (not left to size from its own content) because "Select row" and a
+     blank Summary label are different widths, and the five-layer-rail's own
+     1062px is literally this 70px gutter + five 198px layer tracks + 2
+     border px (styles.css, --recipe-five-layer-rail) - the desktop rail was
+     always sized assuming this column exists, so hiding it in Summary was
+     what created the dead space on the right, not the other way around.
+     #splitsBlock #splitsArea-prefixed (double-id): the base hiding rule is
+     "#splitsArea:not(.bulk-editing) .splitsMatrix tr > :first-child" - the
+     :not() adds a class-level specificity point, so a single #splitsArea
+     prefix here only ties it (and loses on source order, since the base
+     rule comes later in the file) rather than beating it outright. */
+  #splitsBlock #splitsArea .splitsMatrix tr > :first-child{
+    display: table-cell;
+    min-width: 70px;
+    width: 70px;
+    max-width: 70px;
+  }
+  .splitsEditRow{ display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+  .splitsEditRowSecondary{
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--row-border);
+  }
+  .splitsEditRowPrimary > .splitsBulkField{
+    display: grid;
+    /* Half the original entry width - a resin code and a percentage are
+       both short values, so the wide fields only added dead space. */
+    grid-template-columns: auto minmax(52px, 85px);
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+    margin: 0;
+    padding: 5px 8px;
+    border: 1px solid var(--row-border-2);
+    border-radius: var(--control-radius);
+    background: var(--row-bg-2);
+    color: var(--muted);
+    font-size: var(--font-tiny);
+    font-weight: 750;
+  }
+  .splitsEditRowPrimary > .splitsBulkField input{ min-height: 28px; font-size: 14px; font-weight: 800; }
+  /* The percentage field nests its own input+unit grid, whose base rule
+     reserves minmax(90px,1fr) for the input alone - wider than the halved
+     85px track above it, which pushed the % symbol out past the field's
+     right edge and onto the Apply button. minmax(0,1fr) lets it shrink to
+     the track instead of overflowing it. */
+  .splitsEditRowPrimary .splitsBulkPctInput{
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 4px;
+  }
+  /* ...and the field itself gets that suffix's width back, so the entry box
+     ends up close to the size of the resin one beside it instead of
+     clipping its own "No change" placeholder. The floor carries real
+     margin above the placeholder's own measured width (bold 14px "No
+     change" runs ~72-90px depending on the platform's system-ui fallback
+     font - Arial here, Roboto/San Francisco elsewhere) rather than sitting
+     flush against it, since the previous 72px floor left no room for that
+     font variance and clipped on at least one real device (a touch-shell
+     tablet in the 860-930px band, where the field can shrink to its
+     floor). */
+  .splitsEditRowPrimary > .splitsBulkFieldPct{ grid-template-columns: auto minmax(96px, 120px); }
+  /* #splitsArea qualifies this past button.secondary, which is otherwise an
+     equal-specificity rule appearing later in the sheet and so was winning
+     the padding outright. */
+  #splitsArea .splitsEditRowPrimary > button{
+    flex: 0 0 auto;
+    min-height: 30px;
+    padding: 5px 14px;
+  }
+  .splitsEditRowSecondary > .splitsBulkActions{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 0 0 auto;
+    margin: 0;
+    padding-top: 0;
+    border-top: 0;
+  }
+  .splitsEditRowSecondary .splitsSelectionStatus{ margin: 0; white-space: nowrap; }
+  /* #splitsArea > .splitsBulkBar (styles.css:3336) is what made this row a
+     block box in the first place ("two stacked rows that each manage
+     their own flex flow" - exactly the layout being replaced) at
+     #splitsArea+class specificity (1,1,0); #splitsArea #splitsBulkBar
+     (two real ids) beats it outright rather than tying and hoping source
+     order favors this rule.
+     One toolbar row: [Resin][%][Apply] (left group, natural width) -
+     [Undo][Redo] (fixed-size, sits right after the left group - "in the
+     middle") - a flexible gap (margin-left:auto on the pill, not on
+     Undo/Redo - see .splitsEditRowSecondary below) - [Clear][Empty]
+     [Reset][Rearrange] (right group, pinned to the far edge). Nothing
+     here shrinks below its own content; every control keeps a deliberate,
+     legible size (see the explicit min-widths below) rather than
+     compressing to fit. nowrap is what actually prevents Apply (or
+     anything else) from dropping to a second line. */
+  /* The base .splitsBulkBar rule (styles.css:1973) still paints its own
+     bordered/filled card behind this row - built for the old stacked
+     mobile layout, where that panel was the only visual grouping the
+     Resin/%/Apply controls had. Now that row sits beside its own
+     rounded pill (Clear/Empty/Reset/Rearrange), which paints its own
+     shape - the outer card's rectangle behind just the left half reads as
+     a mismatched, oddly-cropped box next to the pill rather than one
+     grouping. Dropped for this merged row; the individual controls (each
+     already bordered/filled on their own) carry the grouping now. */
+  #splitsArea #splitsBulkBar{
+    display: flex;
+    /* wrap, not nowrap: the three groups (values/Apply, Undo/Redo, and the
+       action pill) each stay internally unbroken via their own nowrap, but
+       once even the fields' readability floors won't fit on one line, the
+       pill drops to a second line (still right-aligned, its margin-left:
+       auto applies per flex line) instead of overflowing the rail. Growing
+       taller is explicitly acceptable here; growing wider is not, since the
+       panel's width must not change between Summary and Edit. */
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    /* No horizontal inset: with the card border/background gone (above),
+       this padding only pushed the right action group inboard of the rail,
+       so the Edit toolbar's right edge stopped matching the header's and
+       the grid's. Vertical padding is left to the density blocks. */
+    padding-inline: 0;
+  }
+  /* #splitsArea #splitsBulkBar-prefixed (double-id, same guarantee as the
+     rest of this row) because .splitsEditRow{gap:...} gets overridden again
+     at plain #splitsArea+class specificity by both the pointer:coarse
+     tablet-density block and the max-height:800px short-viewport block -
+     those only mean to retune the pill's own gap, but since Primary shares
+     the .splitsEditRow class, a same-specificity rule ties with whichever
+     one of those matches, and a real tablet that's also short/landscape
+     matches both, with the later one winning and quietly shrinking this
+     gap from 8px to 6px. */
+  /* flex:0 1 auto + min-width:0, not the old flex:0 0 auto: this left group
+     is the row's designated shrink absorber. Undo/Redo and the right action
+     pill are fixed-content by design, so if nothing here can give, the row's
+     min-content width exceeds the panel and the toolbar overflows the rail
+     (min-width:auto on a flex item defaults to its min-content size, which
+     is what actually blocked shrinking - flex-shrink alone can't go below
+     it). It still never GROWS past its fields' bases, so a wide desktop
+     keeps the exact same 180/150/70 layout as before. */
+  #splitsArea #splitsBulkBar .splitsEditRowPrimary{
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    /* flex-basis:min-content is what makes "shrink before wrapping" actually
+       work. A flex container picks its line breaks from each item's
+       HYPOTHETICAL size (flex-basis), before flex-shrink runs - so with the
+       default basis:auto this group advertised its max-content width (~416px)
+       and the bar wrapped the action pill onto a second line while the fields
+       still had plenty of room left to give. Advertising min-content (the
+       fields at their readability floors, ~302px) means a wrap only happens
+       once even those floors genuinely don't fit; the max-width then stops
+       the grow from pushing Undo/Redo away from Apply, so a wide desktop
+       still renders the identical 180/150/70 layout. That cap is the spec's
+       own preferred widths added up (180 Resin + 150 % + 70 Apply + 2x8
+       gap); max-content would NOT work here, because each field's own
+       max-content (~150/125) is smaller than its preferred width - the
+       fields only ever reached 180/150 because the old min-width forced
+       them past their intrinsic size. */
+    flex: 1 1 min-content;
+    max-width: 416px;
+    min-width: 0;
+    gap: 8px;
+  }
+  /* Undo/Redo live inside the right-anchored pill now (.splitsEditRowSecondary
+     wraps .recipeEditHistory as its first child), leading the row:
+     Undo / Redo / Clear / Empty / Rearrange / Reset. On tablet/desktop they
+     read as text chips like their neighbours rather than icon-only circles;
+     the phone icon rail below flips them back to 40px icons. */
+  #splitsArea #splitsBulkBar .splitsEditRowSecondary .recipeEditHistory{
+    display: inline-flex;
+    align-items: stretch;
+    flex-shrink: 0;
+    gap: 2px;
+  }
+  #splitsArea #splitsBulkBar .splitsEditRowSecondary .recipeHistoryAction{
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    width: auto;
+    min-width: 0;
+    height: auto;
+    min-height: 40px;
+    /* attribute selector button[data-button-size="small"]{padding} outranks
+       a plain .recipeHistoryAction, so the padding is set at this
+       higher-specificity selector to survive. */
+    padding: 0 11px;
+    border: 0;
+    border-radius: var(--control-radius);
+    color: var(--text);
+    font-size: var(--font-small);
+  }
+  #splitsArea #splitsBulkBar .splitsEditRowSecondary .recipeHistoryAction > span{
+    display: inline;
+  }
+  #splitsArea #splitsBulkBar .splitsEditRowSecondary .recipeHistoryAction svg{
+    width: 15px;
+    height: 15px;
+  }
+  #splitsArea #splitsBulkBar .splitsEditRowSecondary .recipeHistoryAction:disabled{
+    opacity: .5;
+  }
+  /* Deliberate, legible sizes for every control on this row - not shrunk
+     to fit, a consistent ~40px height throughout. #splitsArea
+     #splitsBulkBar-prefixed (same double-id guarantee used throughout
+     this row) because the tablet-density and short-tablet blocks further
+     down set their own min-height/padding on these same selectors at a
+     single-id specificity, which would only tie (and lose on source
+     order to) a plain #splitsArea prefix here. This one rule is the
+     single source of truth for sizing on this row now, superseding the
+     three separate pointer/height-gated copies this used to need. */
+  #splitsArea #splitsBulkBar .splitsEditRowPrimary > button,
+  #splitsArea #splitsBulkBar .splitsEditRowSecondary .bulkTextAction,
+  #splitsArea #splitsBulkBar .splitsEditRowSecondary .splitsRearrangeAction,
+  .splitsEditRowSecondary #resetAllSplits.danger{
+    min-height: 40px;
+  }
+  /* .splitsBulkField gets an explicit height (not just min-height on its
+     input child, which - combined with the field's own padding on top -
+     summed to 52px, well past the 38-42px target) and tightened padding,
+     so the whole chip lands at exactly 40px with its label+input
+     vertically centered inside via the field's own align-items:center. */
+  #splitsArea #splitsBulkBar .splitsEditRowPrimary > .splitsBulkField{
+    height: 40px;
+    padding: 0 8px;
+  }
+  /* The redesign spec's 180px/150px are the fields' PREFERRED widths, held
+     as flex-basis rather than as a hard min-width: as a min-width they were
+     an absolute floor that made the row unable to fit a panel narrower than
+     its own content, which is what pushed the Edit toolbar past the rail.
+     flex:0 1 <basis> keeps them at exactly those sizes whenever there's
+     room (no grow), and lets them - and only them - give ground first when
+     there isn't. The min-widths that remain are readability floors, well
+     below the preferred basis: without them these collapse far past their
+     own label+input content (measured ~60px at a 912px viewport, where the
+     "Resin" label and its input no longer fit side by side). Once even
+     these floors don't fit, the bar wraps between its groups rather than
+     compressing further - see flex-wrap on #splitsBulkBar above. */
+  #splitsArea #splitsBulkBar .splitsEditRowPrimary > label[for="bulkResinName"]{
+    flex: 1 1 180px;
+    min-width: 120px;
+    max-width: 180px;
+  }
+  #splitsArea #splitsBulkBar .splitsEditRowPrimary > .splitsBulkFieldPct{
+    flex: 1 1 170px;
+    min-width: 130px;
+    max-width: 170px;
+  }
+  #splitsArea #splitsBulkBar .splitsEditRowPrimary > button{
+    min-width: 70px;
+  }
+  #splitsArea #splitsBulkBar #clearSplitSelection{ min-width: 70px; }
+  #splitsArea #splitsBulkBar #clearSelectedCells{ min-width: 70px; }
+  #splitsArea #splitsBulkBar #resetAllSplits{ min-width: 65px; }
+  #splitsArea #splitsBulkBar .splitsRearrangeAction{ min-width: 95px; }
+  /* Clear selection, Empty cells, and Reset Recipe (outlined danger) used
+     to be two different visual languages in this row, with Rearrange
+     pushed away from both via margin-left:auto. Joined into one segmented
+     pill here, matching #recipeHeaderActionPill's pattern (Undo/Redo used
+     to be part of this pill too - see .recipeEditHistory above for why
+     they're not anymore):
+     - overflow-x:auto (not plain overflow:hidden - .segmentedActionRow
+       elsewhere in this file uses the same horizontal-scroll fallback)
+       + border-radius:999px clips whichever segment ends up visually
+       first/last to a rounded corner - no per-segment radius needed. Now
+       that Undo/Redo are gone, that's Clear selection on the left.
+     - align-items:stretch has to cascade all the way to the leaf buttons
+       (this row AND .splitsBulkActions), or the shorter segments' painted
+       background floats centered with gaps and the outline turns jagged -
+       the exact bug already fixed once on the header pill.
+     - every segment paints the identical tinted-surface fill already used
+       by the header pill (color-mix(var(--recipe-pill-accent) 28%,
+       var(--panel2)), var(--text) for the label - not white, no border),
+       except Reset Recipe which reads var(--recipe-pill-danger) instead -
+       same formula, red instead of blue, so it stays visually a filled
+       segment (not a transparent hole in the pill) while still reading as
+       the row's one destructive action. Both tokens default to
+       --focus-border/--bad (styles.css :root) but a theme can retune just
+       these two buttons without touching its global accent/error colors -
+       see the industrial-slate/gruvbox overrides. Three earlier fill
+       treatments were tried and dropped here first: a vertical gradient; a
+       100%-strength flat fill with white text, which read too bright/
+       saturated on several themes (dark themes worst of all); and this
+       same tint with a matching ~45%-strength border added, which didn't
+       sit cleanly on the header's fully round (border-radius:999px)
+       Edit/Done pill - dropped from every segment here too rather than
+       mismatch pill vs. segment borders.
+     - nothing in this row is ever [hidden] (only ever :disabled), so
+       dividers are plain :not(:last-child) - no :has() empty-group guard
+       needed like the header pill required for its hideable segments.
+     - hairline dividers only (1px, translucent white) and gap:0 throughout
+       - a real gap here reproduces the "spacing far too wide" issue
+       already fixed once on the header pill. */
+  /* #splitsArea #splitsBulkBar-prefixed (two real ancestor IDs, not one) -
+     the tablet-density blocks further down (min-width:701px and
+     pointer:coarse; min-width:701px and max-height:800px) set their own
+     gap/padding-top on this same element via "#splitsArea
+     .splitsEditRowSecondary" - a single #splitsArea prefix here would only
+     TIE their specificity, not beat it, and lose the tie to their later
+     source position. #splitsBulkBar (the toolbar's own id, a genuine
+     ancestor - see app.js's `toolbar.id = "splitsBulkBar"`) adds a second
+     ID so this always wins outright, the same "guarantee via specificity"
+     reasoning as the #recipeHeaderActionPill overrides earlier. */
+  #splitsArea #splitsBulkBar .splitsEditRowSecondary{
+    /* This row is a block-level flex container (display:flex, not
+       inline-flex), so like any block box it defaults to filling the full
+       width of its flex parent - width:fit-content makes it hug its own
+       buttons instead, so overflow-x:auto + border-radius:999px round the
+       actual pill shape rather than a much-wider, mostly-empty box.
+       margin-top/padding-top/border-top (the old divider separating this
+       row from the values/Apply row when they were stacked) are zeroed
+       entirely now that both sit side by side in one row - there's no "row
+       above" left to divide, so no replacement line is needed either. */
+    width: fit-content;
+    flex-shrink: 0;
+    /* The flexible spacer: absorbs whatever room is left between Undo/Redo
+       and here, pinning this group (Clear/Empty/Reset/Rearrange) to the
+       row's far-right edge - moved here from .recipeEditHistory so Undo/
+       Redo sit right after Apply ("in the middle") instead of being
+       dragged all the way to the right edge along with the pill. */
+    margin-left: auto;
+    overflow-x: auto;
+    border-radius: 999px;
+    align-items: stretch;
+    flex-wrap: nowrap;
+    /* A small real gap instead of a seamless touching pill with a
+       border-right "divider" on each segment - simpler and more robust
+       than tuning a divider color for contrast against every theme's fill
+       colors and every disabled state's opacity. The gap itself is the
+       page background showing through, so it's always visible regardless
+       of what colors sit on either side of it. Segments pick up their own
+       border-radius below now that they're not touching edge-to-edge. */
+    gap: 2px;
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+  }
+  /* Same double-ID reasoning as the row rule above - the tablet-density
+     blocks set gap on this exact "#splitsArea .splitsEditRowSecondary >
+     .splitsBulkActions" selector, which a single #splitsArea prefix here
+     would only tie, not beat. */
+  #splitsArea #splitsBulkBar .splitsEditRowSecondary > .splitsBulkActions{
+    align-items: stretch;
+    gap: 0;
+  }
+  .splitsEditRowSecondary .bulkTextAction,
+  .splitsEditRowSecondary .splitsRearrangeAction,
+  .splitsEditRowSecondary .recipeHistoryAction{
+    /* .bulkTextAction, not ">" - #clearSplitSelection lives one level
+       deeper than its siblings (inside .splitsBulkActions), so a direct-
+       child combinator here would silently skip it and leave it in its old
+       transparent/outlined look while everything around it turned into a
+       filled segment. .recipeHistoryAction (Undo/Redo) rides the same
+       treatment now that it leads the pill. */
+    /* Rounded per-segment now that there's a real 2px gap between segments
+       instead of them touching edge-to-edge - var(--control-radius), the
+       app's standard button corner, so these read as a cohesive row of
+       chips rather than plain rectangles. */
+    border-radius: var(--control-radius);
+    /* Tinted-surface fill, not a solid accent fill - see the matching
+       comment on the header Edit/Done pill (styles.css, near
+       --recipe-pill-accent's :root declaration) for why. A matching tinted
+       border was tried and dropped (see that same comment). */
+    border: 0;
+    background: color-mix(in srgb, var(--recipe-pill-accent) 28%, var(--panel2));
+    color: var(--text);
+    /* Matching Print Recipe's own treatment (the header pill's .recipeHeaderAction,
+       which never adopted the app's uppercase/letter-spaced button-text
+       convention) rather than the "quiet" outlined buttons' uppercase
+       .04em-tracked look this row inherited. font-size explicit (not left
+       to inherit data-button-size="small"'s var(--font-tiny)) because that's
+       exactly what was making Rearrange (no data-button-size attribute,
+       falls through to the base button{}'s larger size) read bigger than
+       its siblings - one explicit size here means every segment, Rearrange
+       included, matches. This treatment is meant to be the shared "filled
+       pill segment" font going forward, not a one-off for this row. */
+    font-size: var(--font-small);
+    text-transform: none;
+    letter-spacing: normal;
+  }
+  .splitsEditRowSecondary #resetAllSplits.danger{
+    border-radius: var(--control-radius);
+    border: 0;
+    background: color-mix(in srgb, var(--recipe-pill-danger) 28%, var(--panel2));
+    color: var(--text);
+    font-size: var(--font-small);
+    text-transform: none;
+    letter-spacing: normal;
+  }
+  /* Apply belongs to the same desktop/tablet action row as Empty and Reset.
+     Give it the shared non-destructive filled treatment rather than the
+     generic outlined-secondary style it uses on compact mobile. */
+  #splitsArea #splitsBulkBar #applyBulkSplit{
+    border:0;
+    border-radius:var(--control-radius);
+    background:color-mix(in srgb,var(--recipe-pill-accent) 28%,var(--panel2));
+    color:var(--text);
+    font-size:var(--font-small);
+    text-transform:none;
+    letter-spacing:normal;
+  }
+  #splitsArea #splitsBulkBar #applyBulkSplit:hover:not(:disabled){
+    background:color-mix(in srgb,var(--recipe-pill-accent) 28%,var(--panel2));
+    color:var(--text);
+    filter:brightness(1.08);
+  }
+  /* #splitsArea #splitsBulkBar-prefixed (double-id) on the first two
+     selectors specifically because an old, unscoped "quiet outlined"
+     hover rule (styles.css: ".splitsBulkActions .bulkTextAction:hover,
+     .weightsBulkActions .bulkTextAction:hover, .splitsEditRowSecondary >
+     .bulkTextAction:hover:not(:disabled)") still sets background:
+     transparent on hover - a leftover from before this row's filled-pill
+     redesign, left in place because .splitsBulkActions/.bulkTextAction are
+     shared with Weights' own separate (and still outlined) bulk-actions
+     row, so it can't just be deleted. At plain class specificity this hover
+     rule only tied that old one for `color` (and won on source order) - it
+     never redeclared `background` at all, so the old rule's transparent
+     background applied uncontested, silently dropping the fill on hover
+     for Clear/Empty/Rearrange (Reset was already safe - its own selector
+     happens to include #resetAllSplits, an id, which already outranked
+     every leftover rule touching it). The double-id here plus an explicit
+     background reasserts the fill outright rather than tying again. */
+  #splitsArea #splitsBulkBar .splitsEditRowSecondary .bulkTextAction:hover:not(:disabled),
+  #splitsArea #splitsBulkBar .splitsEditRowSecondary .splitsRearrangeAction:hover:not(:disabled),
+  #splitsArea #splitsBulkBar .splitsEditRowSecondary .recipeHistoryAction:hover:not(:disabled){
+    background: color-mix(in srgb, var(--recipe-pill-accent) 28%, var(--panel2));
+    color: var(--text);
+    filter: brightness(1.08);
+  }
+  /* Rearrange is the only mode toggle in this row. Latch it the same way
+     Edit/Done latches (55% accent fill + title color) so the operator can
+     see the mode is on without relying on the rearrange bar below. */
+  #splitsArea #splitsBulkBar .splitsEditRowSecondary .splitsRearrangeAction.active,
+  #splitsArea #splitsBulkBar .splitsEditRowSecondary .splitsRearrangeAction[aria-pressed="true"]{
+    background: color-mix(in srgb, var(--recipe-pill-accent) 55%, var(--panel2));
+    color: var(--title);
+  }
+  #splitsArea #splitsBulkBar .splitsEditRowSecondary .splitsRearrangeAction.active:hover:not(:disabled),
+  #splitsArea #splitsBulkBar .splitsEditRowSecondary .splitsRearrangeAction[aria-pressed="true"]:hover:not(:disabled){
+    background: color-mix(in srgb, var(--recipe-pill-accent) 55%, var(--panel2));
+    color: var(--title);
+    filter: brightness(1.08);
+  }
+  .splitsEditRowSecondary #resetAllSplits.danger:hover:not(:disabled){
+    color: var(--text);
+    filter: brightness(1.08);
+  }
+  .splitsEditRowSecondary .bulkTextAction:disabled{
+    opacity: .5;
+  }
+  /* No more border-right divider rule here - a black-based line was tried
+     first (matching the header pill's own divider) but still read as too
+     thin/low-contrast against a disabled segment's dimmed opacity, and
+     needed retuning per theme regardless. The 2px gap above (real page
+     background between segments) replaced it: always visible, no contrast
+     tuning needed for any theme or state. */
+  /* Undo/Redo used to be joined into this pill; pulled back out (see
+     .recipeEditHistory below), they revert to their own original circular/
+     transparent look (styles.css:2164/2175) with no extra CSS needed here -
+     "no pill body" is just the absence of the rules above, not new ones. */
+  /* Timeline owns the bulk Reset tracking action on wider layouts. The
+     compact phone tray keeps its visually-hidden live status, but tablet
+     and desktop no longer spend vertical space on this duplicate bar. */
+  #splitsArea > .splitsTrackingBar{ display:none; }
+}
+
+@media (min-width: 901px) and (pointer: fine){
+  /* Keep Recipe's top controls attached to the working grid instead of the
+     full-width desktop canvas. The width is the matrix's 70px row-selector
+     track plus five 198px layer tracks and its two outer border pixels.
+     Recipes with fewer layers deliberately retain this five-layer rail, so
+     View and tracking controls never jump horizontally between recipes. */
+  #splitsBlock{
+    --recipe-five-layer-rail: 1062px;
+  }
+  #splitsBlock .recipeHeaderRow,
+  #splitsArea > .splitsBulkBar{
+    width: min(100%, var(--recipe-five-layer-rail));
+  }
+  /* The row gutter used to collapse entirely in Summary here (deliberately,
+     per the removed comment that lived on this rule) because "row selection
+     only exists in Edit." That traded a stable x-position for saving the
+     gutter's width whenever Summary was showing - Columns A-E shifted left
+     by the track's width on every view toggle. The shared >=701px rule
+     above now reserves this column permanently in both views (Select row
+     appears/disappears, the column doesn't), so nothing desktop-specific is
+     needed here any more. */
+
+  /* Desktop cell states. The folded check is inherited from the universal
+     rule; Edit retains its stronger outline and explicit EDIT label. */
+  #splitsArea .splitsMatrix tbody .splitMatrixCell{
+    --desktop-recipe-cell-bg: transparent;
+    position: relative;
+    overflow: hidden;
+  }
+  #splitsArea .splitsMatrix tbody td.splitMatrixCell:nth-child(even){
+    --desktop-recipe-cell-bg: color-mix(in srgb,var(--row-bg-2) 55%,transparent);
+  }
+  #splitsArea[data-recipe-view="summary"] .splitsMatrix tbody .splitMatrixCell.tracked,
+  #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.tracked{
+    background:var(--desktop-recipe-cell-bg);
+    box-shadow: none;
+  }
+  /* Tracking carries no cell outline - the hopper-name badge highlight
+     (.splitCellHopperName below) is the only marker. */
+  #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.selected{
+    background: var(--desktop-recipe-cell-bg);
+    box-shadow: inset 0 0 0 2px var(--focus-border);
+  }
+  #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.tracked.selected{
+    background:var(--desktop-recipe-cell-bg);
+  }
+  #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.selected::after{
+    content: "EDIT";
+    position: absolute;
+    top: 4px;
+    right: 6px;
+    z-index: 3;
+    color: var(--focus-border);
+    font-size: 8px;
+    font-weight: 950;
+    line-height: 1;
+    letter-spacing: .11em;
+    pointer-events: none;
+  }
+
+  /* Left-align instead of centering under the panel: .splitsMatrixFrame's
+     base rule (margin-inline:auto) centers it whenever the table is
+     narrower than the available width - true for any 1- or 2-layer recipe
+     on a wide monitor, which then floats in the middle of the screen
+     instead of sitting with the rest of the panel's rows. Mobile already
+     avoids this (width:100% forces the frame edge-to-edge instead), this
+     just gives desktop the equivalent flush-left result at its own,
+     narrower table width. */
+  /* min(100%, rail), not a bare rail width: this frame is the widest thing
+     in #splitsArea, so a fixed 1062px here sizes #splitsArea's own (auto,
+     max-content) grid column to 1062px even when the panel itself only has
+     ~726px available. Everything in that column then resolves percentages
+     against 1062px instead of the panel's real width - including
+     #splitsBulkBar's own "width: min(100%, rail)" above, whose 100% became
+     1062px, which is why opening Edit appeared to blow the panel back out
+     to its full natural width and detach the header from the grid's right
+     edge. The header row was already capped with this same min(100%, rail)
+     formula, so the two rails disagreed whenever the panel was narrower
+     than 1062px. Same formula here makes the frame, the header row, and
+     the Edit toolbar all resolve from one shared rail. */
+  .splitsMatrixFrame{
+    width: min(100%, var(--recipe-five-layer-rail));
+    margin-inline: 0;
+  }
+  /* The "CLICK a hopper to..." hint is centered text, but as a full-width
+     grid child of #splitsArea it centered on the whole panel - which drifts
+     right of the matrix once the panel is wider than the left-aligned
+     five-layer rail. Cap it to that same rail (like the header row and the
+     matrix frame) so its centered text stays under the matrix. */
+  #splitsArea > .recipeInteractionHint{
+    width: min(100%, var(--recipe-five-layer-rail));
+  }
+  /* Default (auto) grid columns size to max-content, so a single wide child
+     stretches the column past the grid container itself and every sibling
+     inherits that over-wide containing block. minmax(0,1fr) pins the column
+     to the container's real width instead. */
+  #splitsArea{
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* 10% larger Recipe matrix on desktop only - font size, the Track
+     toggle's clock icon, the hopper-designation badge, and the column/cell
+     size itself - for easier reading on large monitors. The surrounding
+     toolbars (Saved recipes/Bulk edit/Rearrange, Load Next Recipe/Print
+     Recipe) are siblings of .splitsMatrixFrame, not descendants, and stay
+     their normal size on purpose - only the grid itself grows. Scoped to
+     .splitsMatrixFrame so it composes with whatever text-density preference
+     is active instead of hardcoding font sizes: --font-base/--font-small/
+     --font-tiny cascade to every var()-based rule in the matrix
+     automatically. The remaining, genuinely hardcoded pixel values (column
+     width, track icon, hopper badge, layer letter) get their own explicit
+     1.1x overrides below.
+     A custom property that reads its own name back out (even through
+     calc()) is a cycle per spec - Chromium resolves the whole declaration
+     to nothing, not to the inherited value the comment above assumed. That
+     silently dropped every "* 1.1"/"* .85" override in this file (this one
+     and the panel block below), so #splitsArea precomputes the scaled
+     values under different names first and the real tokens are just
+     reassigned from those - no property ever appears on both sides of its
+     own declaration. */
+  #splitsArea{
+    --font-base-x11: calc(var(--font-base) * 1.1);
+    --font-small-x11: calc(var(--font-small) * 1.1);
+    --font-tiny-x11: calc(var(--font-tiny) * 1.1);
+  }
+  #splitsArea .splitsMatrixFrame{
+    --font-base: var(--font-base-x11);
+    --font-small: var(--font-small-x11);
+    --font-tiny: var(--font-tiny-x11);
+  }
+  #splitsArea .splitsMatrix thead th,
+  #splitsArea .splitMatrixCell{ min-width: 198px; width: 198px; max-width: 198px; }
+  #splitsArea .splitsMatrix th:first-child{ min-width: 70px; width: 70px; }
+  #splitsArea .splitsMatrix th,
+  #splitsArea .splitsMatrix td{ padding: 9px; }
+  #splitsArea .splitsMatrix td.splitMatrixCell{ padding: 4px 7px; }
+  #splitsArea .splitLayerMain{ min-height: 64px; }
+  #splitsArea .splitLayerTitle{ width: 70px; height: 64px; min-height: 64px; font-size: 70px; }
+  #splitsArea .splitLayerPct{ margin-top: 28px; }
+  #splitsArea .splitLayerPct input{ width: 40px; font-size: 16.5px; }
+  /* Hopper-designation badge - "the label". */
+  #splitsArea .splitCellHopperName{ min-width: 29px; height: 24px; padding: 0 6px; border-radius: 7px; font-size: 13.75px; }
+  /* Track toggle - "the clock". */
+  #splitsArea .splitTrackButton{ width: 25px; height: 25px; min-height: 25px; }
+  #splitsArea .splitTrackButton svg{ width: 21px; height: 21px; }
+  #splitsArea .splitClearButton{ width: 19px; height: 19px; min-height: 19px; font-size: 15px; }
+  #splitsArea .splitSmartBadge{ font-size: 10px; }
+  #splitsArea .splitMatrixCell .resinNameInput{ height: 24px; min-height: 24px; max-height: 24px; line-height: 23px; }
+  #splitsArea .splitPctControl input{ width: 44px; height: 24px; min-height: 24px; max-height: 24px; line-height: 23px; }
+  #splitsArea .splitCellEditor{ grid-template-columns: minmax(86px,1fr) auto; gap: 8px; }
+
+  /* Saved Recipes / Bulk edit / Rearrange panel content, 15% smaller - the
+     tab strip that opens them (.recipeUtilityTabs/.recipeUtilityTab) is a
+     sibling, not a descendant, and keeps its normal size; only the content
+     shown once a tab is open shrinks. Same technique as the matrix's own
+     10% increase above: locally scale every density token these panels'
+     shared reusable components (buttons, inputs, .workspaceConfigurationList
+     rows) already read from, rather than hunting down each one's hardcoded
+     pixel values.
+     Same self-reference cycle as the matrix block above, at 25 properties
+     instead of 3 - every one of these silently computed to nothing, so
+     Select all/Clear selection/Empty cells/Reset Recipe/Apply to selected/
+     Rearrange (and the rest of this panel's controls) rendered at their
+     un-scaled, full desktop size instead of 15% smaller. Precomputed on
+     #splitsBlock (not #splitsArea) so the same "-x85" tokens also reach
+     .recipeHeaderControls below - Load Next Recipe/Print Recipe/the
+     Summary-Edit toggle sit in the header row beside #splitsArea, not
+     inside it, but were visually part of the same oversized toolbar. The
+     real tokens are reassigned from the "-x85" names so nothing here reads
+     its own name back out. */
+  #splitsBlock{
+    --font-base-x85: calc(var(--font-base) * .85);
+    --font-small-x85: calc(var(--font-small) * .85);
+    --font-tiny-x85: calc(var(--font-tiny) * .85);
+    --pad-input-y-x85: calc(var(--pad-input-y) * .85);
+    --pad-input-x-x85: calc(var(--pad-input-x) * .85);
+    --pad-card-x85: calc(var(--pad-card) * .85);
+    --gap-x85: calc(var(--gap) * .85);
+    --row-pad-x85: calc(var(--row-pad) * .85);
+    --radius-input-x85: calc(var(--radius-input) * .85);
+    --radius-row-x85: calc(var(--radius-row) * .85);
+    --radius2-x85: calc(var(--radius2) * .85);
+    --toggle-w-x85: calc(var(--toggle-w) * .85);
+    --toggle-h-x85: calc(var(--toggle-h) * .85);
+    --toggle-knob-x85: calc(var(--toggle-knob) * .85);
+    --badge-font-x85: calc(var(--badge-font) * .85);
+    --btn-pad-y-x85: calc(var(--btn-pad-y) * .85);
+    --btn-pad-x-x85: calc(var(--btn-pad-x) * .85);
+    --btn-radius-x85: calc(var(--btn-radius) * .85);
+    --control-height-x85: calc(var(--control-height) * .85);
+    --control-radius-x85: calc(var(--control-radius) * .85);
+    --title-size-x85: calc(var(--title-size) * .85);
+    --summary-pad-x85: calc(var(--summary-pad) * .85);
+    --body-pad-x85: calc(var(--body-pad) * .85);
+    --tool-pad-x85: calc(var(--tool-pad) * .85);
+    --page-pad-x85: calc(var(--page-pad) * .85);
+    --page-gap-x85: calc(var(--page-gap) * .85);
+  }
+  .splitsBulkBar,
+  .splitsSavedRecipesPanel,
+  .rearrangeModeBar,
+  .recipeHeaderControls{
+    --font-base: var(--font-base-x85);
+    --font-small: var(--font-small-x85);
+    --font-tiny: var(--font-tiny-x85);
+    --pad-input-y: var(--pad-input-y-x85);
+    --pad-input-x: var(--pad-input-x-x85);
+    --pad-card: var(--pad-card-x85);
+    --gap: var(--gap-x85);
+    --row-pad: var(--row-pad-x85);
+    --radius-input: var(--radius-input-x85);
+    --radius-row: var(--radius-row-x85);
+    --radius2: var(--radius2-x85);
+    --toggle-w: var(--toggle-w-x85);
+    --toggle-h: var(--toggle-h-x85);
+    --toggle-knob: var(--toggle-knob-x85);
+    --badge-font: var(--badge-font-x85);
+    --btn-pad-y: var(--btn-pad-y-x85);
+    --btn-pad-x: var(--btn-pad-x-x85);
+    --btn-radius: var(--btn-radius-x85);
+    --control-height: var(--control-height-x85);
+    --control-radius: var(--control-radius-x85);
+    --title-size: var(--title-size-x85);
+    --summary-pad: var(--summary-pad-x85);
+    --body-pad: var(--body-pad-x85);
+    --tool-pad: var(--tool-pad-x85);
+    --page-pad: var(--page-pad-x85);
+    --page-gap: var(--page-gap-x85);
+  }
+  /* The Recipe utility panels are intentionally denser than Line Setup,
+     but long secondary labels such as “Save Current Recipe” need a little
+     more room than the global compact treatment provides. */
+  /* The panel scales its shared density tokens locally. The global compact
+     primary rule is declared later, so pin these header actions to concrete
+     padding rather than letting an unresolved local token collapse Load's
+     short label underneath its left accent rail. */
+  .splitsSavedRecipesPanel .workspaceConfigurationSectionTitle > .splitsSavedRecipesActions > :is(button.secondary,button.primary){
+    min-height:30px;
+    padding:4px 9px;
+  }
+  .splitsBulkBar :is(.bulkTextAction,button.danger),
+  .rearrangeModeBar button.secondary{
+    min-height:30px;
+    padding:4px 9px;
+  }
+}
+
+@media (hover:hover){
+  .splitMatrixCell.empty .splitTrackButton:not(.active){opacity:0}
+  .splitMatrixCell.empty:hover .splitTrackButton,.splitMatrixCell.empty:focus-within .splitTrackButton{opacity:1}
+}

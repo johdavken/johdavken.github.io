@@ -1,0 +1,717 @@
+/* =======================================================================
+ *   Responsive model
+ *
+ *   Structural shells:
+ *     desktop = >=901px + fine primary pointer
+ *     touch   = everything else
+ *
+ *   Touch presentation:
+ *     <=700px = Compact Touch
+ *     >=701px = Wide Touch
+ *
+ *   JavaScript publishes the structural decision as body[data-shell].
+ *   Width then selects the touch presentation, so an 800px fine-pointer
+ *   emulator receives the same Wide Touch styling as an 800px tablet.
+ *   ======================================================================= */
+@media (width <= 700px){
+  /* Compact Touch Recipe surface --------------------------------------
+     The matrix already has the bordered, rounded .splitsMatrixFrame it
+     needs. Remove the second, full-section card around it and spend that
+     space on the five recipe columns instead. This is intentionally tied
+     to both the compact breakpoint and the active Recipe destination so
+     Wide Touch and desktop retain their existing panel treatment. */
+  body[data-shell="touch"][data-mobile-workspace="panel"]:has(#splitsBlock.mobile-active) main{
+    padding-left:max(12px, env(safe-area-inset-left));
+    padding-right:max(12px, env(safe-area-inset-right));
+  }
+  body[data-shell="touch"][data-mobile-workspace="panel"] #splitsBlock.mobile-active,
+  body[data-shell="touch"][data-mobile-workspace="panel"] #splitsBlock.mobile-active[open]{
+    padding:0;
+    border:0;
+    border-radius:0;
+    background:transparent;
+    box-shadow:none;
+    overflow:visible;
+  }
+  body[data-shell="touch"][data-mobile-workspace="panel"] #splitsBlock.mobile-active > .blockBody{
+    padding-right:0;
+    padding-left:0;
+    /* No grid row-gap between the tab strip and #splitsArea, so the
+       workspace surface below starts right at the divider the tabs sit on
+       (see the #splitsArea / .recipePageTab.active rules below). */
+    gap:0;
+  }
+  /* ...but give the working area itself a faint surface back. #splitsArea
+     already wraps exactly what should feel like one workspace - the Edit
+     toolbar bands (rendered inside it, order:-1), the matrix, and the
+     helper line beneath - while the RECIPE header and the tab / view-toggle
+     row are its siblings above and stay on the page ground. So the surface
+     grows upward to take in the edit controls the moment Edit opens and
+     contracts in Summary with no JS and no extra DOM.
+
+     Deliberately not a card: a ~40% wash of the same --panel tone the
+     tablet/desktop panel uses (so it follows every theme, and collapses to
+     nothing on the flat OLED / high-contrast palettes), no border, a 3px
+     radius, and zero horizontal padding so the matrix keeps its full
+     width. One extra tonal step - page ground -> workspace surface ->
+     matrix cells - so tracked / edit cell tints can stay quiet.
+     Compact Touch only; Wide Touch and desktop keep their real panel. */
+  body[data-shell="touch"][data-mobile-workspace="panel"] #splitsBlock.mobile-active #splitsArea{
+    /* padding-block keeps content off the divider now that the surface
+       (below) reaches up to it - see the .blockBody gap:0 above. */
+    padding-block:8px;
+    padding-inline:0;
+    border-radius:3px;
+    background:color-mix(in srgb, var(--panel) 40%, transparent);
+  }
+  /* Match the active tab to the faint surface (not the solid --panel the
+     base rule paints) so the seam between them disappears. The 1px
+     box-shadow that erases the divider under the tab is retinted the same
+     way. Border stays --row-border so the tab still grows out of the line. */
+  body[data-shell="touch"][data-mobile-workspace="panel"] #splitsBlock.mobile-active .recipePageTab.active{
+    background:color-mix(in srgb, var(--panel) 40%, transparent);
+    box-shadow:0 1px 0 0 color-mix(in srgb, var(--panel) 40%, transparent);
+  }
+}
+
+@media (min-width: 701px){
+  /* --- Recipe ------------------------------------------------------
+     Keep hopper cells at their established reading/touch density and
+     recover height from the chrome and oversized layer headers around
+     them. On a tablet, Edit uses two deliberate toolbar bands
+     (values/apply, then selection/actions) instead of allowing selection
+     controls to wrap into an accidental third band. */
+  body[data-shell="touch"][data-mobile-workspace="panel"] #splitsBlock.mobile-active > summary{
+    min-height:36px;
+    padding:3px 2px 6px;
+  }
+  body[data-shell="touch"][data-mobile-workspace="panel"] #splitsBlock.mobile-active > summary .mobileSectionHeaderIcon{
+    width:22px;
+    height:22px;
+  }
+  body[data-shell="touch"][data-mobile-workspace="panel"] #splitsBlock.mobile-active > .blockBody{
+    padding-top:5px;
+  }
+  body[data-shell="touch"] #splitsBlock .recipeHeaderRow{ gap:8px; }
+  body[data-shell="touch"] #splitsBlock .recipePageTab{
+    min-height:32px;
+    padding:4px 12px 3px;
+  }
+  body[data-shell="touch"] #splitsBlock .recipeHeaderControls{ margin-bottom:2px; }
+  body[data-shell="touch"] #splitsBlock .recipeViewToggle{ gap:5px; margin-bottom:0; }
+  body[data-shell="touch"] #splitsBlock .recipeViewToggle button{
+    min-height:26px;
+    padding:3px 10px;
+  }
+  /* Wide Touch intentionally keeps the base text tabs and action labels.
+     Icon-only Recipe controls remain owned by Compact Touch (<=700px). */
+  body[data-shell="touch"] #splitsArea > .splitsBulkBar{
+    margin-bottom:0;
+    padding:6px 8px;
+  }
+  body[data-shell="touch"] #splitsArea .splitsEditRow{ gap:6px 8px; }
+  /* display:grid/grid-template-columns sizing for Resin/% now lives only in
+     the shared >=701px block - this block used to carry its own
+     grid-template-columns with an unconstrained 1fr max track, which won
+     the specificity fight (single #splitsArea id beats the shared block's
+     plain two-class selector for that property, since the shared block's
+     double-id rule never redeclared grid-template-columns) and let both
+     fields balloon to fill the row on real touch tablets - not caught
+     during this redesign because testing only used mouse-based desktop
+     emulation, which never matched this block. Same story for the input's
+     height:26px, which fought the row's unified 40px field height; removed
+     rather than fixed forward, since the shared block's min-height:28px on
+     the input already fits comfortably inside the 40px field. */
+  body[data-shell="touch"] #splitsArea .splitsEditRowPrimary > button{
+    min-height:28px;
+    padding:3px 10px;
+  }
+  body[data-shell="touch"] #splitsArea .splitsEditRowSecondary{
+    flex-wrap:nowrap;
+    gap:6px;
+    margin-top:5px;
+    padding-top:5px;
+  }
+  body[data-shell="touch"] #splitsArea .splitsEditRowSecondary > .splitsBulkActions{
+    min-width:0;
+    gap:6px;
+  }
+  body[data-shell="touch"] #splitsArea .splitsEditRowSecondary :is(.bulkTextAction,button.danger){
+    min-height:28px;
+    padding:3px 8px;
+    white-space:nowrap;
+  }
+  /* Sizing for this row (height, and Resin/%/Apply/pill-segment widths) now
+     comes from one consolidated, double-id-guaranteed rule in the shared
+     >=701px block above, which supersedes the min-height:28px this block
+     and the base .splitsEditRowSecondary :is(...) rule above still show -
+     harmless, since the double-id rule always wins the specificity fight
+     regardless of source order. */
+  body[data-shell="touch"] #splitsArea .splitsTrackingBar{
+    padding:4px 8px;
+  }
+  body[data-shell="touch"] #splitsArea .recipeUtilityTabs{ margin-top:5px; }
+  body[data-shell="touch"] #splitsArea .recipeUtilityTab{
+    min-height:24px;
+    padding:3px 10px;
+  }
+  body[data-shell="touch"] #splitsArea .splitsBulkModeBar :is(button.secondary,.recipeActionTertiary),
+  body[data-shell="touch"] #splitsArea .splitsBulkModeBar .splitsScanShortcut > summary{
+    min-height:28px;
+    padding:3px 9px;
+  }
+}
+
+/* Narrow Wide Touch cells stack by available width, not device orientation
+   or pointer reporting. This covers portrait tablets, split-screen windows,
+   Fold-sized layouts, and fine-pointer browser previews consistently. */
+@media (min-width: 701px) and (max-width: 900px){
+  body[data-shell="touch"] #splitsArea .splitsMatrix tbody td.splitMatrixCell{
+    padding: 4px 6px;
+  }
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitCellEditor{
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+  }
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitCellTop{
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    width: 100%;
+  }
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitCellTop .resinNameInput{
+    width: 100%;
+    min-width: 0;
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    padding: 0;
+    color: var(--title);
+    font-size: clamp(12px, 1.6vw + 1px, 15px);
+    font-weight: 900;
+    line-height: 1.2;
+    letter-spacing: .01em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitCellControls{
+    display: flex;
+    justify-content: flex-start;
+    width: 100%;
+  }
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitPctControl{
+    display: flex;
+    align-items: baseline;
+    gap: 1px;
+    min-width: 0;
+  }
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitPctControl input{
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    padding: 0;
+    color: var(--title);
+    font-size: clamp(11px, 1.3vw + 1px, 14px);
+    line-height: 1.2;
+    font-weight: 900;
+    text-align: left;
+  }
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitPctControl > span{
+    color: var(--muted);
+    font-size: clamp(10px, 1.1vw + 1px, 12px);
+    font-weight: 800;
+  }
+}
+
+/* Recipe state styling is shared by both shells through 1200px, preserving
+   the established narrow-desktop appearance as well as Wide Touch. */
+@media (min-width: 701px) and (max-width: 1200px){
+  /* Tablet keeps the same universal folded check and restrained Edit
+     outline used at the other view sizes. */
+  #splitsArea .splitsMatrix tbody .splitMatrixCell{
+    --tablet-recipe-cell-bg:transparent;
+    position:relative;
+    overflow:hidden;
+  }
+  #splitsArea .splitsMatrix tbody td.splitMatrixCell:nth-child(even){
+    --tablet-recipe-cell-bg:color-mix(in srgb,var(--row-bg-2) 55%,transparent);
+  }
+  #splitsArea[data-recipe-view="summary"] .splitsMatrix tbody .splitMatrixCell.tracked,
+  #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.tracked{
+    background:var(--tablet-recipe-cell-bg);
+    border-color:var(--row-border-2);
+    box-shadow:none;
+  }
+  #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.selected{
+    background:var(--tablet-recipe-cell-bg);
+    border-color:color-mix(in srgb,var(--focus-border) 65%,var(--row-border-2));
+    box-shadow:inset 0 0 0 1px var(--focus-border);
+  }
+  #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.tracked.selected{
+    background:var(--tablet-recipe-cell-bg);
+  }
+  #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.selected::after{
+    content:"EDIT";
+    position:absolute;
+    top:3px;
+    right:4px;
+    z-index:3;
+    color:var(--focus-border);
+    font-size:6px;
+    font-weight:950;
+    line-height:1;
+    letter-spacing:.1em;
+    pointer-events:none;
+  }
+
+  /* Four-character percentages such as 61.5 need a few more pixels than
+     the desktop field allowed. Take those pixels from the editor's empty
+     inter-column gap, keeping the cell's overall horizontal footprint
+     unchanged. */
+  #splitsArea .splitsMatrix .splitCellEditor{ gap:3px; }
+  #splitsArea .splitsMatrix .splitPctControl input{
+    width:44px;
+    padding-inline:0;
+  }
+}
+
+/* Continue that same Recipe-state treatment on very wide touch shells.
+   Shell selection, rather than pointer CSS, owns this layout decision. */
+@media (min-width: 1201px){
+  body[data-shell="touch"] #splitsArea .splitsMatrix tbody .splitMatrixCell{
+    --tablet-recipe-cell-bg:transparent;
+    position:relative;
+    overflow:hidden;
+  }
+  body[data-shell="touch"] #splitsArea .splitsMatrix tbody td.splitMatrixCell:nth-child(even){
+    --tablet-recipe-cell-bg:color-mix(in srgb,var(--row-bg-2) 55%,transparent);
+  }
+  body[data-shell="touch"] #splitsArea[data-recipe-view="summary"] .splitsMatrix tbody .splitMatrixCell.tracked,
+  body[data-shell="touch"] #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.tracked{
+    background:var(--tablet-recipe-cell-bg);
+    border-color:var(--row-border-2);
+    box-shadow:none;
+  }
+  body[data-shell="touch"] #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.selected{
+    background:var(--tablet-recipe-cell-bg);
+    border-color:color-mix(in srgb,var(--focus-border) 65%,var(--row-border-2));
+    box-shadow:inset 0 0 0 1px var(--focus-border);
+  }
+  body[data-shell="touch"] #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.tracked.selected{
+    background:var(--tablet-recipe-cell-bg);
+  }
+  body[data-shell="touch"] #splitsArea[data-recipe-view="edit"] .splitsMatrix tbody .splitMatrixCell.selected::after{
+    content:"EDIT";
+    position:absolute;
+    top:3px;
+    right:4px;
+    z-index:3;
+    color:var(--focus-border);
+    font-size:6px;
+    font-weight:950;
+    line-height:1;
+    letter-spacing:.1em;
+    pointer-events:none;
+  }
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitCellEditor{ gap:3px; }
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitPctControl input{
+    width:44px;
+    padding-inline:0;
+  }
+}
+
+/* Wide Touch layer header: compact inline hierarchy (small layer letter,
+   dominant percentage, quiet total and copy action). Shell + width owns
+   this presentation, so fine-pointer previews cannot fall into Desktop. */
+@media (min-width: 701px){
+  body[data-shell="touch"] #splitsArea .splitsMatrix thead th{
+    padding:4px 2px;
+  }
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitLayerHeader{
+    border-bottom:1px solid color-mix(in srgb,var(--focus-border) 38%,var(--border));
+  }
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitLayerMain{
+    display:flex;
+    align-items:baseline;
+    justify-content:center;
+    gap:2px;
+    min-height:26px;
+    padding:0;
+  }
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitLayerTitle,
+  body[data-shell="touch"] #splitsArea[data-recipe-view="edit"] .splitsMatrix .splitLayerTitle{
+    display:inline-flex;
+    position:static;
+    width:auto;
+    height:auto;
+    min-height:0;
+    padding:0;
+    transform:none;
+    color:var(--title);
+    font-size:10px;
+    line-height:1;
+    opacity:.72;
+  }
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitLayerPct{
+    margin-top:0;
+    padding:0;
+    border:0;
+  }
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitLayerPct input:not([type="checkbox"]):not([type="radio"]){
+    width:31px;
+    min-width:31px;
+    min-height:0;
+    height:auto;
+    padding:0;
+    color:var(--title);
+    font-size:16px;
+    font-weight:900;
+    line-height:18px;
+  }
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitLayerPct span{
+    color:var(--muted);
+    font-size:9px;
+  }
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitColumnTotal{
+    margin-top:1px;
+    min-height:1.1em;
+    font-size:8px;
+    line-height:1.1;
+  }
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitCopyBtn{
+    display:grid;
+    place-items:center;
+    width:100%;
+    min-height:18px;
+    margin:1px auto 0;
+    padding:0;
+    border:0;
+    border-radius:5px;
+    background:transparent;
+    color:var(--focus-border);
+    font-size:8px;
+  }
+}
+
+/* Percentage-forward layer header (previews/recipe-layer-header-compact-
+   alternatives.html, concept 4) - Desktop only. The percentage is the only
+   thing worth reading twice, so it
+   becomes the largest element; the layer letter shrinks to a corner tag
+   instead of a 64px watermark, and the total becomes a thin colour-coded
+   bar - still labelled with its number, since a bar with no number would be
+   a step back from today's text-only total. Reuses the existing .warn
+   toggle from updateHopperTotals() - no JS or markup changes needed. */
+@media (min-width: 701px){
+  body[data-shell="desktop"] #splitsArea .splitLayerMain{
+    min-height: 0;
+    padding-top: 4px;
+  }
+  body[data-shell="desktop"] #splitsArea .splitLayerTitle{
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform: none;
+    width: auto;
+    height: auto;
+    min-height: 0;
+    padding: 0;
+    font-size: 9px;
+    font-weight: 800;
+    opacity: .6;
+  }
+  body[data-shell="desktop"] #splitsArea .splitLayerPct{
+    margin-top: 0;
+    justify-content: center;
+  }
+  body[data-shell="desktop"] #splitsArea .splitLayerPct input{
+    width: 54px;
+    min-width: 0;
+    padding: 0;
+    font-size: 22px;
+    font-weight: 900;
+    line-height: 1;
+    text-align: center;
+  }
+  body[data-shell="desktop"] #splitsArea .splitLayerPct span{ font-size: 11px; }
+  body[data-shell="desktop"] #splitsArea .splitColumnTotal{
+    position: relative;
+    margin-top: 4px;
+    padding-top: 5px;
+    font-size: 9px;
+  }
+  body[data-shell="desktop"] #splitsArea .splitColumnTotal::before{
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--ok);
+  }
+  body[data-shell="desktop"] #splitsArea .splitColumnTotal.warn::before{ background: var(--warn); }
+}
+
+/* A Fold's unfolded landscape viewport is tablet-wide but only about
+   670 CSS pixels tall. Preserve every label and its current font size,
+   while reclaiming the remaining vertical overflow from chrome, padding,
+   and the Smart label's otherwise separate line. */
+@media (min-width: 701px) and (max-height: 800px){
+  body[data-shell="touch"] main{
+    padding-bottom:calc(var(--app-dock-height) + env(safe-area-inset-bottom) + 12px)!important;
+  }
+  body[data-shell="touch"][data-mobile-workspace="panel"] #splitsBlock.mobile-active{
+    padding-bottom:2px;
+  }
+  body[data-shell="touch"][data-mobile-workspace="panel"] #splitsBlock.mobile-active > summary{
+    min-height:30px;
+    padding:1px 2px 3px;
+  }
+  body[data-shell="touch"][data-mobile-workspace="panel"] #splitsBlock.mobile-active > summary .mobileSectionHeaderIcon{
+    width:20px;
+    height:20px;
+  }
+  body[data-shell="touch"][data-mobile-workspace="panel"] #splitsBlock.mobile-active > .blockBody{
+    padding-top:2px;
+    padding-bottom:0;
+  }
+  body[data-shell="touch"] #splitsBlock .recipeHeaderRow{ gap:2px; }
+  body[data-shell="touch"] #splitsBlock .recipePageTab{
+    min-height:28px;
+    padding:2px 10px 1px;
+  }
+  body[data-shell="touch"] #splitsBlock .recipeHeaderControls{ margin-bottom:1px; }
+  body[data-shell="touch"] #splitsBlock .recipeViewToggle{ gap:4px; margin-bottom:0; }
+  body[data-shell="touch"] #splitsBlock .recipeViewToggle button{
+    min-height:24px;
+    padding:2px 9px;
+  }
+  body[data-shell="touch"] #splitsArea{ gap:2px; }
+  body[data-shell="touch"] #splitsArea > .splitsBulkBar{
+    margin-bottom:0;
+    padding:3px 6px;
+  }
+  body[data-shell="touch"] #splitsArea .splitsEditRow{ gap:3px 6px; }
+  body[data-shell="touch"] #splitsArea .splitsEditRowPrimary > .splitsBulkField{
+    padding:1px 5px;
+  }
+  body[data-shell="touch"] #splitsArea .splitsEditRowPrimary > .splitsBulkField input{
+    min-height:22px;
+    height:22px;
+    padding-block:0;
+  }
+  body[data-shell="touch"] #splitsArea .splitsEditRowPrimary > button{
+    min-height:24px;
+    padding:2px 8px;
+  }
+  body[data-shell="touch"] #splitsArea .splitsEditRowSecondary{
+    gap:4px;
+    margin-top:2px;
+    padding-top:2px;
+  }
+  body[data-shell="touch"] #splitsArea .splitsEditRowSecondary > .splitsBulkActions{ gap:4px; }
+  body[data-shell="touch"] #splitsArea .splitsEditRowSecondary :is(.bulkTextAction,button.danger){
+    min-height:24px;
+    padding:2px 7px;
+  }
+  body[data-shell="touch"] #splitsArea .splitsTrackingBar{ padding:2px 6px; }
+
+  body[data-shell="touch"] #splitsArea .recipeUtilityTabs{
+    margin-top:1px;
+    padding-left:3px;
+  }
+  body[data-shell="touch"] #splitsArea .recipeUtilityTab{
+    min-height:20px;
+    padding:2px 8px 1px;
+  }
+}
+
+/* The Recipe matrix's short-height compaction belongs to Wide Touch. Shell
+   scoping prevents a short Desktop window from picking it up, while an
+   emulator using a fine pointer still matches when its structural shell is
+   touch. Previously .splitCopyBtn's
+   display:inline-grid outranked (equal specificity, later source order)
+   #splitsArea[data-recipe-view="summary"] .splitCopyBtn{display:none}, so
+   Summary's per-layer copy button reappeared purely from a short window, never
+   Edit/view-state; and .splitLayerMain's min-height:22px fought the
+   percentage-forward header's own sizing, visibly compressing it. */
+@media (min-width: 701px) and (max-height: 800px){
+  body[data-shell="touch"] #splitsArea .splitsMatrix thead th{ padding:2px; }
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitLayerMain{ min-height:22px; }
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitCopyBtn{
+    display:inline-grid;
+    width:auto;
+    min-height:14px;
+    margin:0 3px 0 0;
+    padding:0 2px;
+  }
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitColumnTotal{
+    display:inline-block;
+    margin:0;
+    min-height:0;
+    line-height:14px;
+    vertical-align:middle;
+  }
+
+  body[data-shell="touch"] #splitsArea .splitsMatrix td.splitMatrixCell{ padding:2px 6px; }
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitCellHeader{
+    min-height:18px;
+    margin-bottom:0;
+  }
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitSmartBadge{
+    position:absolute;
+    top:7px;
+    left:44px;
+    line-height:1;
+  }
+  body[data-shell="touch"] #splitsArea .splitsMatrix .splitCellTop{ gap:0; }
+  body[data-shell="touch"] #splitsArea[data-recipe-view] .splitsMatrix .splitPctControl input{
+    height:26px;
+    min-height:26px;
+    max-height:26px;
+    line-height:25px;
+  }
+}
+
+@media (min-width: 701px){
+  /* --- Line Setup ---------------------------------------------------
+     The phone layout stacks Changeover/Output above Overview and caps the
+     pair at 540px centered, which on an unfolded Fold leaves a wide empty
+     gutter and reads as an accident. Put the gauges and the (read-only)
+     Overview side by side instead: same information, same hierarchy, one
+     screenful, no stretching. Receiver Weights is its own .setupSection
+     below and keeps the full width to itself. */
+  body[data-shell="touch"] #lineSetupBlock .setupLineConfiguration{
+    display:grid;
+    grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);
+    align-items:start;
+    gap:18px 24px;
+  }
+  body[data-shell="touch"] #lineSetupBlock .setupTopRow{ grid-column:1 / -1; }
+  body[data-shell="touch"] #lineSetupBlock .setupPrimaryFields{
+    /* Undo the phone cap/centering - the column is already the right width. */
+    width:100%;
+    max-width:none;
+    margin-inline:0;
+    gap:16px;
+  }
+  body[data-shell="touch"] #lineSetupBlock .setupPrimaryFields > div{ justify-content:stretch; }
+  /* Bigger gauges: comfortable touch targets, and they no longer look
+     marooned in the middle of a wide row. */
+  body[data-shell="touch"] #lineSetupBlock .gaugeTile{ max-width:none; }
+  body[data-shell="touch"] #lineSetupBlock .lineOverview{ margin-top:0; }
+
+  /* --- Receiver Weights ---------------------------------------------
+     Full useful width, never squeezed into a side column and never a
+     horizontal scroller. The layer columns simply have more room to
+     breathe at this size. */
+  body[data-shell="touch"] #weightsBlock .blockBody{ max-width:none; }
+  body[data-shell="touch"] .mobileWeightsLayer{ gap:5px; }
+
+  /* Recipe state and layer-header refinements live above. Hopper-row and
+     resin-detail sizing remain unchanged; the overflow rules below only
+     make the five existing columns share the available tablet width. */
+}
+
+/* =======================================================================
+ *   Recipe matrix: fit all five layer columns without overflow
+ *
+ *   The base (desktop) rules give every layer column a fixed 180px, on
+ *   both the header (.splitsMatrix thead th) and the body cell
+ *   (.splitMatrixCell) independently. The phone-width fix above
+ *   (max-width: 700px) already resets this - table-layout:fixed on a
+ *   100%-wide table, no column claiming an explicit width - but that
+ *   reset stopped at 700px. Above it, on an unfolded Fold (~884-890px),
+ *   five untouched 180px columns plus the 52-64px hopper-number corner
+ *   demand ~950px+: wider than the viewport, so the table silently
+ *   overflows its container. There is no scrollbar to reveal this -
+ *   nothing here scrolls - so the rightmost column (E) and its
+ *   percentages simply render past the visible edge and get clipped,
+ *   exactly as photographed on a real Fold.
+ *
+ *   Fix: extend the same proven table-layout:fixed + width:100%
+ *   mechanism to Wide Touch at every width and pointer capability. The
+ *   body[data-shell="touch"] guard follows JavaScript's structural choice;
+ *   the 701px floor leaves Compact Touch as the sole owner below it. With
+ *   no column left an explicit
+ *   width, a fixed-layout table divides its own 100% width evenly across
+ *   whichever columns remain unset - conceptually
+ *   `grid-template-columns: repeat(5, minmax(0,1fr))`, achieved with the
+ *   table this matrix already is rather than restructuring it into a
+ *   CSS grid.
+ *
+ *   Every rule below only removes a width floor or lets something
+ *   shrink - the matrix's structure, its controls, and tracking behavior
+ *   are all unchanged; nothing here changes what renders. */
+@media (min-width: 701px){
+  body[data-shell="touch"] .splitsMatrixScroll{ width:100%; max-width:100%; min-width:0; overflow-x:hidden; box-sizing:border-box; }
+  body[data-shell="touch"] .splitsMatrixFrame{ width:100%; max-width:100%; min-width:0; margin-inline:0; box-sizing:border-box; }
+  body[data-shell="touch"] .splitsMatrix{
+    table-layout:fixed;
+    width:100%;
+    max-width:100%;
+    min-width:0;
+    box-sizing:border-box;
+  }
+  body[data-shell="touch"] .splitsMatrix th,
+  body[data-shell="touch"] .splitsMatrix td{ box-sizing:border-box; }
+  /* No layer column claims a fixed or minimum share - table-layout:fixed
+     then divides the table's own 100% width evenly across the five that
+     are left unset, after the corner column below takes its own small
+     fixed share. */
+  body[data-shell="touch"] .splitsMatrix thead th{ min-width:0; width:auto; max-width:none; }
+  body[data-shell="touch"] .splitMatrixCell{ min-width:0; width:auto; max-width:100%; }
+  /* The hopper-number corner is the one column that should NOT flex - it
+     holds a short fixed label ("1"-"6") and taking width from it would
+     not meaningfully help the other five. Same value the phone layout
+     already uses, for the same reason. */
+  body[data-shell="touch"] .splitsMatrix th:first-child{ min-width:52px; width:52px; max-width:52px; }
+
+  /* Every child inside a column must be able to shrink with it, not just
+     the column itself - a fixed intrinsic width on any of these would
+     reintroduce the same overflow one level down, inside the cell. */
+  body[data-shell="touch"] .splitCellHeader,
+  body[data-shell="touch"] .splitCellEditor,
+  body[data-shell="touch"] .splitCellTop,
+  body[data-shell="touch"] .splitCellControls,
+  body[data-shell="touch"] .splitPctControl,
+  body[data-shell="touch"] .splitTrackControl,
+  body[data-shell="touch"] .resinNameInput,
+  body[data-shell="touch"] .splitPctControl input{
+    min-width:0;
+    max-width:100%;
+  }
+  /* 78px was a safe floor when this matrix's columns were always a fixed
+     180px. Now that columns are free to be much narrower on a folded-
+     width device, that same floor could reintroduce overflow one level
+     down, inside the cell - let the grid negotiate the space instead. */
+  body[data-shell="touch"] .splitCellEditor{ grid-template-columns:minmax(0,1fr) auto; }
+
+  /* Resin names keep the fuller, larger treatment this same block used
+     before (desktop's own two-row cell layout, not the compact single-
+     row phone one) - but tied to how much room five columns actually
+     leave, via clamp's viewport-relative middle term, rather than a
+     fixed floor. That only gives size back when the device genuinely
+     needs it to keep all five columns on screen (the tight end of this
+     range, ~701px), and reaches the same ceiling as before once there is
+     room (~900px and up, including the Fold rotated to landscape). */
+  body[data-shell="touch"] .splitMatrixCell .resinNameInput{
+    height:32px;
+    min-height:32px;
+    max-height:32px;
+    font-size:clamp(14px, 2vw + 1px, calc(var(--font-base) + 4px));
+    line-height:31px;
+  }
+  body[data-shell="touch"] .splitPctControl input,
+  body[data-shell="touch"] .splitPctControl > span{
+    font-size:clamp(11px, 1.3vw + 1px, var(--font-base));
+  }
+}
+
