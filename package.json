@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "description": "Capacitor Android shell for Resin.tools. The canonical web app is the repo root; this only wraps it for Android. Not used by the GitHub Pages web deployment.",
   "scripts": {
+    "serve": "node tools/serve.js",
     "theme-lab": "node tools/theme-lab/server.js",
     "build:android": "node scripts/build-www.js",
     "sync:android": "npm run build:android && npx cap sync android",
