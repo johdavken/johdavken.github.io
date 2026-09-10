@@ -143,12 +143,18 @@ test("bulk edit still needs the letter - it's the tap target for selecting an en
 
 // --- Layer % + Copy: mockup option 10, "minimal ghost, no chip borders" ---
 
-test("the layer header becomes a grid pairing the percentage and Copy side by side - the running total row is dropped on mobile entirely", () => {
+test("the layer header is a single full-width percentage row - no Copy column, and the running total row is dropped on mobile entirely", () => {
   const mobileBlock = rulesUnder(styles);
   const rule = phoneRule(".splitsMatrix th.splitLayerHeader.mobile-layer-active{");
   assert.match(rule, /display: grid;/);
-  assert.match(rule, /grid-template-columns: auto 1fr;/);
-  assert.match(rule, /grid-template-areas: "pct copy";/);
+  // Was `auto 1fr` / "pct copy", pairing the percentage with a Copy button.
+  // Copy between layers is a desktop/tablet utility; on phones it lives in
+  // the Edit toolbar, and the header button is hidden outright - so the
+  // second column reserved nothing. Removing it was measured inert: every
+  // element in the mobile Recipe panel kept its exact box.
+  assert.match(rule, /grid-template-columns: 1fr;/);
+  assert.match(rule, /grid-template-areas: "pct";/);
+  assert.doesNotMatch(rule, /copy/, "the Copy column is a desktop/tablet concern, not a phone one");
   assert.doesNotMatch(rule, /total/);
   // Hopper 1 is auto-derived from Hoppers 2-6 (recomputeAutoH1, app.js), so
   // this readout almost always just repeats "100%" back at the operator -
@@ -162,18 +168,21 @@ test("the layer header becomes a grid pairing the percentage and Copy side by si
   assert.match(mobileBlock, /\.splitColumnTotal\{ display: none; \}/);
 });
 
+test("the phone stylesheet only hides the header Copy button - it never styles it", () => {
+  // Copy between layers is desktop/tablet. If phone styling for it comes
+  // back, either the button is being shown on phones again (a design change
+  // worth noticing) or the rules are dead the way these were.
+  const phone = rulesUnder(styles).replace(/\/\*[\s\S]*?\*\//g, "");
+  const rules = [...phone.matchAll(/([^{}]*)\{([^}]*)\}/g)]
+    .filter(m => /splitCopyBtn/.test(m[1]))
+    .map(m => m[1].replace(/\s+/g, " ").trim() + " {" + m[2].replace(/\s+/g, " ").trim() + "}");
+  assert.deepEqual(rules, [".splitsMatrix.compactMobileRecipe .splitCopyBtn {display:none;}"]);
+});
+
 test("the grid display is scoped specifically enough to beat .splitsMatrix [data-layer-column].mobile-layer-active (shared with <td> body cells) - otherwise this silently stays display:table-cell", () => {
   const displayRuleStart = styles.indexOf("[data-layer-column].mobile-layer-active{ display: table-cell; }");
   assert.notEqual(displayRuleStart, -1, "expected the shared td/th visibility rule to still exist");
   assert.match(styles, /\.splitsMatrix th\.splitLayerHeader\.mobile-layer-active\{\s*\n\s*display: grid;/);
-});
-
-test("a layer with no copy source (e.g. Layer B at 3 layers) collapses to a single full-width percentage row instead of leaving an empty gap where Copy would be", () => {
-  assert.match(app, /th\.classList\.toggle\("noCopy", !copyFrom\);/);
-  const mobileBlock = rulesUnder(styles);
-  const rule = phoneRule(".splitsMatrix th.splitLayerHeader.noCopy.mobile-layer-active{");
-  assert.match(rule, /grid-template-columns: 1fr;/);
-  assert.match(rule, /grid-template-areas: "pct";/);
 });
 
 test("tablet and desktop keep the per-layer hopper Total exactly as before - only the mobile block above touches .splitColumnTotal", () => {
@@ -191,8 +200,7 @@ test("tablet and desktop keep the per-layer hopper Total exactly as before - onl
   assert.equal(touchCount, 0, "the tablet/desktop-scoped selector must not appear inside the phone block");
 });
 
-test("neither the percentage nor Copy has a chip background/border any more - the percentage reads as an inline-edit field via its own focus-colored underline, Copy is plain link-style text, and a single light divider sits under the whole row instead", () => {
-  const mobileBlock = rulesUnder(styles);
+test("the percentage has no chip background/border - it reads as an inline-edit field via its own focus-colored underline, with a single light divider under the whole row", () => {
   const rowRule = phoneRule(".splitsMatrix th.splitLayerHeader.mobile-layer-active{");
   assert.match(rowRule, /border-bottom: 1px solid var\(--border\);/);
   const mainRule = phoneRule(".splitLayerMain{");
@@ -200,25 +208,7 @@ test("neither the percentage nor Copy has a chip background/border any more - th
   assert.doesNotMatch(mainRule, /background:/);
   const pctRule = phoneRule(".splitLayerPct{");
   assert.match(pctRule, /border-bottom: 2px solid var\(--focus-border\);/);
-  const copyChip = phoneRule(".splitCopyBtn{");
-  assert.match(copyChip, /grid-area: copy;/);
-  assert.match(copyChip, /border: none;/);
-  assert.match(copyChip, /background: none;/);
-  assert.match(copyChip, /justify-self: end;/);
-});
-
-test("Copy gets a subtle trailing arrow via ::after (decorative only - not part of the button's accessible text) to read as a tappable link", () => {
-  const mobileBlock = rulesUnder(styles);
-  const afterRule = phoneRule(".splitCopyBtn::after{");
-  assert.match(afterRule, /content: " ›";/);
-});
-
-test("long Copy text still truncates with an ellipsis instead of overflowing on a narrow phone, even without a chip box constraining its width", () => {
-  const mobileBlock = rulesUnder(styles);
-  const copyChip = phoneRule(".splitCopyBtn{");
-  assert.match(copyChip, /white-space: nowrap;/);
-  assert.match(copyChip, /overflow: hidden;/);
-  assert.match(copyChip, /text-overflow: ellipsis;/);
+  // The Copy half of this test went with the button's phone styling.
 });
 
 test("the percentage input is deliberately large and bold on mobile (unlike the old chip design, which left the input at its compact desktop size) - no size=3 attribute is used to do this, it's pure CSS", () => {

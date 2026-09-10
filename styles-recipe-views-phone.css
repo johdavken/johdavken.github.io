@@ -354,19 +354,26 @@
 
   /* With the ghosted letter gone, the percentage and Copy sit side by side
      (mockup option 10, "minimal ghost, no chip borders"): no chip
-     background or border on either - the percentage reads as an
-     inline-edit field (bold number, focus-colored underline of its own)
-     and Copy as plain link-style text, with one light divider under the
-     whole row separating the header from the hopper rows beneath it. When a
-     layer has no copy source, the percentage alone fills the row.
+     background or border on either - the percentage reads as an inline-edit
+     field (bold number, focus-colored underline of its own), with one light
+     divider under the whole row separating the header from the hopper rows
+     beneath it.
+
+     The row used to pair the percentage with a Copy button, in a second grid
+     column. Copy between layers is a desktop/tablet utility; on phones it
+     lives in the Edit toolbar instead, and .splitsMatrix.compactMobileRecipe
+     .splitCopyBtn below hides the header button outright. The reserved
+     column and the button's own phone styling outlived it as dead rules -
+     measured inert before removal, since the percentage already spanned the
+     full width with the copy column empty.
      Specificity note: .splitsMatrix [data-layer-column].mobile-layer-active
      (shared with the <td> body cells, which must stay display:table-cell)
      otherwise wins over a plain .splitLayerHeader and this silently stays
      table-cell instead of becoming a grid. */
   .splitsMatrix th.splitLayerHeader.mobile-layer-active{
     display: grid;
-    grid-template-columns: auto 1fr;
-    grid-template-areas: "pct copy";
+    grid-template-columns: 1fr;
+    grid-template-areas: "pct";
     align-items: center;
     gap: 8px;
     padding-bottom: 8px;
@@ -384,10 +391,6 @@
      message" - the row it used to occupy is worth more on a phone than a
      third copy of that number. */
   .splitColumnTotal{ display: none; }
-  .splitsMatrix th.splitLayerHeader.noCopy.mobile-layer-active{
-    grid-template-columns: 1fr;
-    grid-template-areas: "pct";
-  }
   .splitLayerMain{
     grid-area: pct;
     min-height: 0;
@@ -416,28 +419,6 @@
     font-size: 20px;
     font-weight: 900;
     color: var(--text);
-  }
-  .splitCopyBtn{
-    grid-area: copy;
-    justify-self: end;
-    align-self: center;
-    width: auto;
-    min-height: 0;
-    margin: 0;
-    padding: 0;
-    border: none;
-    border-radius: 0;
-    background: none;
-    color: var(--title);
-    opacity: 1;
-    font-weight: 700;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .splitCopyBtn::after{
-    content: " ›";
-    opacity: .7;
   }
   .splitsMatrixScroll{ overflow-x: hidden; }
   .splitsMatrixFrame{width:100%;margin-inline:0}
