@@ -125,6 +125,20 @@
   .desktopChangeoverWizardTrigger:hover{background:var(--row-bg)}
   .desktopChangeoverWizardTrigger:focus-visible{outline:var(--focus-outline);outline-offset:1px}
   .desktopChangeoverWizardTrigger svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  /* Force a sync from the status bar. Same flat chip treatment as the
+     changeover wizard trigger beside it, one size down so it reads as an
+     adornment on the RT Sync readout rather than a peer of it. Visibility is
+     owned by the hidden attribute in app.js - there is nothing to refresh
+     without a selected line - and the whole .workspaceStatusItem is
+     display:none on touch shells, where phones have their own Refresh now. */
+  .statusSyncRefresh{display:grid;place-items:center;flex:0 0 auto;width:22px;height:22px;min-height:22px;margin-left:2px;padding:3px;border:0;border-radius:var(--control-radius);background:transparent;color:var(--muted);box-shadow:none}
+  .statusSyncRefresh:hover{background:var(--row-bg);color:var(--focus-border)}
+  .statusSyncRefresh:focus-visible{outline:var(--focus-outline);outline-offset:1px}
+  .statusSyncRefresh[disabled]{opacity:.45;cursor:default}
+  .statusSyncRefresh svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  /* Spins only while a sync is actually in flight. */
+  .statusSyncRefresh[data-busy="true"] svg{animation:statusSyncSpin .9s linear infinite}
+  @keyframes statusSyncSpin{to{transform:rotate(360deg)}}
   .workspaceNavButton{gap:5px}
   .workspaceNavButton span{font-size:14px;font-weight:650;letter-spacing:.06em;text-transform:uppercase}
   .workspaceNavButton small{font-size:var(--desktop-type-secondary);font-weight:600;color:color-mix(in srgb,var(--muted) 88%,var(--text));letter-spacing:0}
