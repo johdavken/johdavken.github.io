@@ -94,11 +94,24 @@ test("#recipeHeaderActions is a flex icon row pulled left of the pencil (order:-
   assert.doesNotMatch(styles, /@media \(max-width: 700px\)\{\s*\.recipeHeaderActions\{ display: none; \}/);
 });
 
-test("Recipe Book gets no cluster; desktop Weights keeps its inline panel - only phone Weights fills #recipeHeaderActions", () => {
+test("Recipe Book is the only page that hides #recipeHeaderActions outright", () => {
   const sync = app.slice(app.indexOf("function syncRecipePageUI("), app.indexOf("function setRecipePage("));
-  // Recipe Book always hidden; Weights hidden only on desktop (phone uses
-  // the slot for its profiles icon).
-  assert.match(sync, /headerActions\.hidden = isSavedRecipesPage\(\) \|\| \(isWeightsPage\(\) && isDesktopLayout\(\)\)/);
+  /* This used to read `isSavedRecipesPage() || (isWeightsPage() &&
+   * isDesktopLayout())` - desktop Weights kept an inline panel and left the
+   * slot empty. 48b9af1 retired that on purpose: Smart Hoppers and
+   * Circumference moved into the slot as tinted pill segments, and its message
+   * says so directly - "syncRecipePageUI no longer hides the slot on desktop
+   * Weights". renderWeightsArea populates it on both shells now.
+   *
+   * Desktop has no Summary/Edit mode and therefore no pencil, so on desktop
+   * Weights those two controls are the entire contents of that space. That is
+   * the intended design, not a leftover - do not narrow this back to phones.
+   *
+   * 48b9af1 updated recipe-book-weight-profiles.test.js and missed this file,
+   * which is why the assertion outlived the behaviour it described. */
+  assert.match(sync, /headerActions\.hidden = isSavedRecipesPage\(\);/);
+  assert.doesNotMatch(sync, /headerActions\.hidden = [^;]*isWeightsPage\(\)/,
+    "a desktop-Weights exception is back - that slot is where Smart Hoppers and Circumference live");
   const block = mobileBlock();
   // No rule of its own any more: the global [hidden]{display:none!important}
   // at the top of styles.css hides it. That can only be outranked by an
