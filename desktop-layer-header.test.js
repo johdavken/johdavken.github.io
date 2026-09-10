@@ -52,22 +52,22 @@ test("Copy's hover/focus state shifts to the same gradient-fill treatment used e
   assert.doesNotMatch(hoverRule, /text-decoration:underline/);
 });
 
-test("the mobile layout still fully overrides the desktop pill treatment on narrow screens - this desktop refinement doesn't leak into or conflict with it", () => {
-  // Anchored to the landmark itself (there's more than one
-  // "@media (max-width: 700px){" block in the file now, e.g. the Saved
-  // Recipes icon-button row's own mobile block) rather than blindly taking
-  // the first match, which would grab the wrong one.
-  const copyBtnLandmark = styles.indexOf("\n  .splitCopyBtn{");
-  assert.notEqual(copyBtnLandmark, -1);
-  const mobileStart = styles.lastIndexOf("@media (max-width: 700px){", copyBtnLandmark);
-  const mobileBlock = styles.slice(mobileStart, styles.indexOf("\n}\n", mobileStart));
-  const mobileCopyStart = mobileBlock.indexOf("\n  .splitCopyBtn{");
-  assert.notEqual(mobileCopyStart, -1);
-  const mobileCopyRule = mobileBlock.slice(mobileCopyStart, mobileBlock.indexOf("}", mobileCopyStart) + 1);
-  assert.match(mobileCopyRule, /grid-area: copy;/);
-  // Mobile (option 10, "minimal ghost") deliberately drops the desktop
-  // pill's border/background/radius - not a leak, an intentional override.
-  assert.match(mobileCopyRule, /border: none;/);
-  assert.match(mobileCopyRule, /background: none;/);
-  assert.match(mobileCopyRule, /border-radius: 0;/);
+test("the desktop pill treatment cannot leak onto phones - the header Copy button is hidden there outright", () => {
+  /* This used to check that the phone block re-styled .splitCopyBtn to strip
+   * the desktop pill's border, background and radius - an intentional
+   * override rather than a leak.
+   *
+   * There is nothing left to override. Copy between layers is a
+   * desktop/tablet utility; on phones it lives in the Edit toolbar, and the
+   * header button is hidden outright. The phone re-styling was dead the whole
+   * time it was being asserted here, so it went, and the guarantee this test
+   * makes is now the stronger one: the desktop pill cannot appear on a phone
+   * because the element it styles never renders there. */
+  const { rulesUnder } = require("./css-media");
+  const phone = rulesUnder(styles).replace(/\/\*[\s\S]*?\*\//g, "");
+  const copyRules = [...phone.matchAll(/([^{}]*)\{([^}]*)\}/g)]
+    .filter(m => /splitCopyBtn/.test(m[1]))
+    .map(m => m[1].replace(/\s+/g, " ").trim() + " {" + m[2].replace(/\s+/g, " ").trim() + "}");
+  assert.deepEqual(copyRules, [".splitsMatrix.compactMobileRecipe .splitCopyBtn {display:none;}"],
+    "the phone stylesheet should only hide the header Copy button, never style it");
 });
