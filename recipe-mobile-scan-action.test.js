@@ -101,7 +101,22 @@ test("defaults to Ask each time, so existing muscle memory doesn't change for an
 });
 
 test("is a per-device local preference like theme/timeFormat - persisted in the session payload and preserved across a shared active-job apply", () => {
-  assert.match(app, /timeFormat: state\.timeFormat,\s*\n\s*defaultScanAction: state\.defaultScanAction,\s*\n\s*surfaceStyle: state\.surfaceStyle,/g);
+  /* This used to pin defaultScanAction between timeFormat and surfaceStyle as
+   * literal adjacent lines. desktopRailStyle was later added between the first
+   * two, and the assertion failed as though the preference had stopped being
+   * persisted. The claim is that it travels with the other per-device
+   * preferences, not that it sits on a particular line, so check that instead:
+   * it appears wherever they do, in both the saved payload and the
+   * apply-a-shared-job path. */
+  const payloads = [...app.matchAll(/timeFormat: state\.timeFormat,[\s\S]{0,400}?mobileTimelineAlarm/g)]
+    .map(m => m[0]);
+  assert.ok(payloads.length >= 2,
+    `expected the local-preference group in both the session payload and the shared-apply path, found ${payloads.length}`);
+  for (const group of payloads){
+    assert.match(group, /defaultScanAction: state\.defaultScanAction,/,
+      "defaultScanAction is missing from a local-preference group it should travel with");
+    assert.match(group, /surfaceStyle: state\.surfaceStyle,/);
+  }
 });
 
 test("restore path and change listener both apply it the same way timeFormat is applied", () => {
