@@ -10,6 +10,7 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const { occurrences, PHONE } = require("./css-media");
 const fs = require("node:fs");
 const { readStyles } = require("./css-source");
 
@@ -87,9 +88,16 @@ test("legend icons reuse the real tab / action icon paths", () => {
 
 test("hidden at desktop widths, shown only <=700px", () => {
   assert.match(styles, /\.recipeInfoLegend\{ display: none; position: relative;/);
-  const mStart = styles.indexOf("@media (max-width: 700px){");
-  const mobile = styles.slice(mStart, styles.indexOf("@media (max-width: 720px){", mStart));
-  assert.match(mobile, /#splitsBlock \.recipeInfoLegend\{ display: block; \}/);
+  // Asked as "is the reveal inside a phone media query", not "is it in the
+  // slice between the first max-width:700px block and the next 720px one".
+  // There are three max-width:700px blocks now and this rule is in the third,
+  // so the old positional slice looked straight past it and reported the
+  // legend missing while it was working fine.
+  const anchor = "#splitsBlock .recipeInfoLegend{ display: block; }";
+  const hits = occurrences(styles, anchor);
+  assert.ok(hits.length, "the phone reveal rule for .recipeInfoLegend is gone");
+  assert.ok(hits.some(h => h.condition && PHONE.test(h.condition)),
+    `the reveal exists but not under a phone media query - found under: ${hits.map(h => h.condition || "top level").join(", ")}`);
 });
 
 test("the panel drops downward and hugs the right edge (opens to the left)", () => {

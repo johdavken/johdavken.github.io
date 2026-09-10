@@ -4,9 +4,23 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const { readStyles } = require("./css-source");
+const { ruleIn, rulesUnder } = require("./css-media");
 
 const app = fs.readFileSync("app.js", "utf8");
 const styles = readStyles();
+
+/* The phone-scoped rule for a selector, brace-matched.
+ *
+ * The old form sliced from the first max-width:700px block to end of file and
+ * then took the first matching selector. Both .splitsBulkSteps and
+ * .splitsBulkActions .danger have a top-level base rule sitting in that range,
+ * so the slice handed back the base rule and the phone assertions failed
+ * against it while the phone override was present and correct further down. */
+function phoneRule(selector){
+  const hit = ruleIn(styles, selector);
+  assert.ok(hit, `no max-width:700px rule found for ${selector}`);
+  return hit.body;
+}
 
 function functionBody(name){
   const start = app.indexOf(`function ${name}(`);
@@ -169,8 +183,7 @@ test("the rearrange-mode help text mentions tapping as well as dragging", () => 
 // --- Bulk Edit and Rearrange mode bars are more compact on mobile --------
 
 test("the bulk-edit steps legend is a single right-aligned row on narrow mobile, not a bordered banner above the fields", () => {
-  const narrowBlock = styles.slice(styles.indexOf("@media (max-width: 700px){"));
-  const stepsRule = narrowBlock.slice(narrowBlock.indexOf(".splitsBulkSteps{"), narrowBlock.indexOf("}", narrowBlock.indexOf(".splitsBulkSteps{")) + 1);
+  const stepsRule = phoneRule(".splitsBulkSteps{");
   assert.match(stepsRule, /justify-content:flex-end/);
   assert.match(stepsRule, /border-bottom:0/);
   assert.match(stepsRule, /padding-bottom:0/);
@@ -178,9 +191,7 @@ test("the bulk-edit steps legend is a single right-aligned row on narrow mobile,
 });
 
 test("Reset all matches the compact text-style treatment already used by Clear selection", () => {
-  const narrowBlock = styles.slice(styles.indexOf("@media (max-width: 700px){"));
-  const dangerStart = narrowBlock.indexOf(".splitsBulkActions .danger{");
-  const dangerRule = narrowBlock.slice(dangerStart, narrowBlock.indexOf("}", dangerStart) + 1);
+  const dangerRule = phoneRule(".splitsBulkActions .danger{");
   assert.match(dangerRule, /min-height:0/);
   assert.match(dangerRule, /border:0/);
   assert.match(dangerRule, /background:transparent/);
@@ -188,7 +199,7 @@ test("Reset all matches the compact text-style treatment already used by Clear s
 });
 
 test("the bulk-edit bar and the rearrange mode bar both get tighter padding/gap on narrow mobile", () => {
-  const narrowBlock = styles.slice(styles.indexOf("@media (max-width: 700px){"));
+  const narrowBlock = rulesUnder(styles);
   assert.match(narrowBlock, /\.splitsBulkBar\{ padding:8px; gap:8px; \}/);
   assert.match(narrowBlock, /\.rearrangeModeBar\{padding:8px;gap:8px\}/);
 });

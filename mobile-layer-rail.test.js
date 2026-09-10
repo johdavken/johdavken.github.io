@@ -4,9 +4,26 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const { readStyles } = require("./css-source");
+const { ruleIn, rulesUnder } = require("./css-media");
 
 const app = fs.readFileSync("app.js", "utf8");
 const styles = readStyles();
+
+/* The phone-scoped rule for a selector, brace-matched.
+ *
+ * These lookups used to be styles.indexOf(selector, firstPhoneBlockOffset).
+ * That assumed the first max-width:700px block was the only one, and that the
+ * next occurrence of the selector after it was the phone override. Neither
+ * holds: there are three such blocks, and most of these selectors also have a
+ * top-level base rule sitting between the first block and the override - so
+ * the assertions were reading the base rule and reporting the mobile layout
+ * broken while it was fine. Ask for the rule under a phone media query
+ * instead, and let it be found wherever it lives. */
+function phoneRule(selector){
+  const hit = ruleIn(styles, selector);
+  assert.ok(hit, `no max-width:700px rule found for ${selector}`);
+  return hit.body;
+}
 
 // Recipe Setup's mobile layer switcher went through two shapes before this
 // one: originally a sticky pill tab strip, then a swipe/paged control
@@ -89,32 +106,19 @@ test(".splitsMobileLayerRail is hidden by default (desktop) - same pattern the o
 });
 
 test("on mobile, .splitsMobileLayerLayout is a flex row (table content flexes to fill, rail stays a fixed-width column) - not the old stacked pager-above-table layout", () => {
-  const mobileStart = styles.indexOf("@media (max-width: 700px){");
-  assert.notEqual(mobileStart, -1);
-  const layoutStart = styles.indexOf(".splitsMobileLayerLayout{", mobileStart);
-  assert.notEqual(layoutStart, -1);
-  const layoutRule = styles.slice(layoutStart, styles.indexOf("}", layoutStart) + 1);
+  const layoutRule = phoneRule(".splitsMobileLayerLayout{");
   assert.match(layoutRule, /display: flex;/);
-  const scrollRuleStart = styles.indexOf(".splitsMobileLayerLayout .splitsMatrixScroll{", mobileStart);
-  assert.notEqual(scrollRuleStart, -1);
-  const scrollRule = styles.slice(scrollRuleStart, styles.indexOf("}", scrollRuleStart) + 1);
+  const scrollRule = phoneRule(".splitsMobileLayerLayout .splitsMatrixScroll{");
   assert.match(scrollRule, /flex: 1;/);
-  const railRuleStart = styles.indexOf(".splitsMobileLayerRail{", mobileStart);
-  assert.notEqual(railRuleStart, -1);
-  const railRule = styles.slice(railRuleStart, styles.indexOf("}", railRuleStart) + 1);
+  const railRule = phoneRule(".splitsMobileLayerRail{");
   assert.match(railRule, /flex-direction: column;/);
   assert.match(railRule, /flex: 0 0 auto;/);
 });
 
 test("rail buttons are squared off (var(--control-radius)) matching the layer-header chips, not fully round pills, and the active one is highlighted the same way as those chips (tinted background + focus-colored border)", () => {
-  const mobileStart = styles.indexOf("@media (max-width: 700px){");
-  const btnRuleStart = styles.indexOf(".splitsMobileLayerRailBtn{", mobileStart);
-  assert.notEqual(btnRuleStart, -1);
-  const btnRule = styles.slice(btnRuleStart, styles.indexOf("}", btnRuleStart) + 1);
+  const btnRule = phoneRule(".splitsMobileLayerRailBtn{");
   assert.match(btnRule, /border-radius: var\(--control-radius\);/);
-  const activeRuleStart = styles.indexOf(".splitsMobileLayerRailBtn.active{", mobileStart);
-  assert.notEqual(activeRuleStart, -1);
-  const activeRule = styles.slice(activeRuleStart, styles.indexOf("}", activeRuleStart) + 1);
+  const activeRule = phoneRule(".splitsMobileLayerRailBtn.active{");
   assert.match(activeRule, /border-color: var\(--focus-border\);/);
   assert.match(activeRule, /background: var\(--btn-primary-a\);/);
 });
@@ -122,23 +126,16 @@ test("rail buttons are squared off (var(--control-radius)) matching the layer-he
 // --- Ghosted column-header letter dropped on mobile - the rail already shows the active layer ---
 
 test("the big ghosted layer letter is hidden by default under the mobile breakpoint, and the header shrinks to reclaim its space", () => {
-  const mobileStart = styles.indexOf("@media (max-width: 700px){");
-  assert.notEqual(mobileStart, -1);
-  const mobileBlock = styles.slice(mobileStart, styles.indexOf("\n}\n", mobileStart));
+  const mobileBlock = rulesUnder(styles);
   assert.match(mobileBlock, /\.splitLayerTitle\{ display: none; \}/);
-  const mainRuleStart = mobileBlock.indexOf("\n  .splitLayerMain{");
-  assert.notEqual(mainRuleStart, -1);
-  const mainRule = mobileBlock.slice(mainRuleStart, mobileBlock.indexOf("}", mainRuleStart) + 1);
+  const mainRule = phoneRule(".splitLayerMain{");
   assert.match(mainRule, /min-height: 0;/);
-  const pctRuleStart = mobileBlock.indexOf("\n  .splitLayerPct{");
-  assert.notEqual(pctRuleStart, -1);
-  const pctRule = mobileBlock.slice(pctRuleStart, mobileBlock.indexOf("}", pctRuleStart) + 1);
+  const pctRule = phoneRule(".splitLayerPct{");
   assert.match(pctRule, /margin-top: 0;/);
 });
 
 test("bulk edit still needs the letter - it's the tap target for selecting an entire layer's hoppers - so it's restored to full size while bulk-editing is active", () => {
-  const mobileStart = styles.indexOf("@media (max-width: 700px){");
-  const mobileBlock = styles.slice(mobileStart, styles.indexOf("\n}\n", mobileStart));
+  const mobileBlock = rulesUnder(styles);
   assert.match(mobileBlock, /\.bulk-editing \.splitLayerTitle\{ display: inline-block; \}/);
   assert.match(mobileBlock, /\.bulk-editing \.splitLayerMain\{ min-height: 58px; \}/);
   assert.match(mobileBlock, /\.bulk-editing \.splitLayerPct\{ margin-top: 25px; \}/);
@@ -147,12 +144,8 @@ test("bulk edit still needs the letter - it's the tap target for selecting an en
 // --- Layer % + Copy: mockup option 10, "minimal ghost, no chip borders" ---
 
 test("the layer header becomes a grid pairing the percentage and Copy side by side - the running total row is dropped on mobile entirely", () => {
-  const mobileStart = styles.indexOf("@media (max-width: 700px){");
-  assert.notEqual(mobileStart, -1);
-  const mobileBlock = styles.slice(mobileStart, styles.indexOf("\n}\n", mobileStart));
-  const ruleStart = mobileBlock.indexOf(".splitsMatrix th.splitLayerHeader.mobile-layer-active{");
-  assert.notEqual(ruleStart, -1);
-  const rule = mobileBlock.slice(ruleStart, mobileBlock.indexOf("}", ruleStart) + 1);
+  const mobileBlock = rulesUnder(styles);
+  const rule = phoneRule(".splitsMatrix th.splitLayerHeader.mobile-layer-active{");
   assert.match(rule, /display: grid;/);
   assert.match(rule, /grid-template-columns: auto 1fr;/);
   assert.match(rule, /grid-template-areas: "pct copy";/);
@@ -177,11 +170,8 @@ test("the grid display is scoped specifically enough to beat .splitsMatrix [data
 
 test("a layer with no copy source (e.g. Layer B at 3 layers) collapses to a single full-width percentage row instead of leaving an empty gap where Copy would be", () => {
   assert.match(app, /th\.classList\.toggle\("noCopy", !copyFrom\);/);
-  const mobileStart = styles.indexOf("@media (max-width: 700px){");
-  const mobileBlock = styles.slice(mobileStart, styles.indexOf("\n}\n", mobileStart));
-  const ruleStart = mobileBlock.indexOf(".splitsMatrix th.splitLayerHeader.noCopy.mobile-layer-active{");
-  assert.notEqual(ruleStart, -1);
-  const rule = mobileBlock.slice(ruleStart, mobileBlock.indexOf("}", ruleStart) + 1);
+  const mobileBlock = rulesUnder(styles);
+  const rule = phoneRule(".splitsMatrix th.splitLayerHeader.noCopy.mobile-layer-active{");
   assert.match(rule, /grid-template-columns: 1fr;/);
   assert.match(rule, /grid-template-areas: "pct";/);
 });
@@ -196,27 +186,21 @@ test("tablet and desktop keep the per-layer hopper Total exactly as before - onl
   assert.match(styles, /^\.splitColumnTotal\.warn\{ color: var\(--warn\); \}/m);
   // The three >=701px-scoped .splitColumnTotal rules (touch tablet, wide
   // desktop, short-tablet) are unaffected - none sits inside max-width:700px.
-  const mobileStart = styles.indexOf("@media (max-width: 700px){");
-  const mobileBlock = styles.slice(mobileStart, styles.indexOf("\n}\n", mobileStart));
+  const mobileBlock = rulesUnder(styles);
   const touchCount = (mobileBlock.match(/#splitsArea \.splitsMatrix \.splitColumnTotal\{/g) || []).length;
   assert.equal(touchCount, 0, "the tablet/desktop-scoped selector must not appear inside the phone block");
 });
 
 test("neither the percentage nor Copy has a chip background/border any more - the percentage reads as an inline-edit field via its own focus-colored underline, Copy is plain link-style text, and a single light divider sits under the whole row instead", () => {
-  const mobileStart = styles.indexOf("@media (max-width: 700px){");
-  const mobileBlock = styles.slice(mobileStart, styles.indexOf("\n}\n", mobileStart));
-  const rowRuleStart = mobileBlock.indexOf(".splitsMatrix th.splitLayerHeader.mobile-layer-active{");
-  const rowRule = mobileBlock.slice(rowRuleStart, mobileBlock.indexOf("}", rowRuleStart) + 1);
+  const mobileBlock = rulesUnder(styles);
+  const rowRule = phoneRule(".splitsMatrix th.splitLayerHeader.mobile-layer-active{");
   assert.match(rowRule, /border-bottom: 1px solid var\(--border\);/);
-  const mainRuleStart = mobileBlock.indexOf("\n  .splitLayerMain{");
-  const mainRule = mobileBlock.slice(mainRuleStart, mobileBlock.indexOf("}", mainRuleStart) + 1);
+  const mainRule = phoneRule(".splitLayerMain{");
   assert.doesNotMatch(mainRule, /border:/);
   assert.doesNotMatch(mainRule, /background:/);
-  const pctRuleStart = mobileBlock.indexOf("\n  .splitLayerPct{");
-  const pctRule = mobileBlock.slice(pctRuleStart, mobileBlock.indexOf("}", pctRuleStart) + 1);
+  const pctRule = phoneRule(".splitLayerPct{");
   assert.match(pctRule, /border-bottom: 2px solid var\(--focus-border\);/);
-  const copyChipStart = mobileBlock.indexOf("\n  .splitCopyBtn{");
-  const copyChip = mobileBlock.slice(copyChipStart, mobileBlock.indexOf("}", copyChipStart) + 1);
+  const copyChip = phoneRule(".splitCopyBtn{");
   assert.match(copyChip, /grid-area: copy;/);
   assert.match(copyChip, /border: none;/);
   assert.match(copyChip, /background: none;/);
@@ -224,19 +208,14 @@ test("neither the percentage nor Copy has a chip background/border any more - th
 });
 
 test("Copy gets a subtle trailing arrow via ::after (decorative only - not part of the button's accessible text) to read as a tappable link", () => {
-  const mobileStart = styles.indexOf("@media (max-width: 700px){");
-  const mobileBlock = styles.slice(mobileStart, styles.indexOf("\n}\n", mobileStart));
-  const afterRuleStart = mobileBlock.indexOf(".splitCopyBtn::after{");
-  assert.notEqual(afterRuleStart, -1);
-  const afterRule = mobileBlock.slice(afterRuleStart, mobileBlock.indexOf("}", afterRuleStart) + 1);
+  const mobileBlock = rulesUnder(styles);
+  const afterRule = phoneRule(".splitCopyBtn::after{");
   assert.match(afterRule, /content: " ›";/);
 });
 
 test("long Copy text still truncates with an ellipsis instead of overflowing on a narrow phone, even without a chip box constraining its width", () => {
-  const mobileStart = styles.indexOf("@media (max-width: 700px){");
-  const mobileBlock = styles.slice(mobileStart, styles.indexOf("\n}\n", mobileStart));
-  const copyChipStart = mobileBlock.indexOf("\n  .splitCopyBtn{");
-  const copyChip = mobileBlock.slice(copyChipStart, mobileBlock.indexOf("}", copyChipStart) + 1);
+  const mobileBlock = rulesUnder(styles);
+  const copyChip = phoneRule(".splitCopyBtn{");
   assert.match(copyChip, /white-space: nowrap;/);
   assert.match(copyChip, /overflow: hidden;/);
   assert.match(copyChip, /text-overflow: ellipsis;/);
@@ -244,8 +223,7 @@ test("long Copy text still truncates with an ellipsis instead of overflowing on 
 
 test("the percentage input is deliberately large and bold on mobile (unlike the old chip design, which left the input at its compact desktop size) - no size=3 attribute is used to do this, it's pure CSS", () => {
   assert.doesNotMatch(app, /pctInput\.size = 3;/);
-  const mobileStart = styles.indexOf("@media (max-width: 700px){");
-  const mobileBlock = styles.slice(mobileStart, styles.indexOf("\n}\n", mobileStart));
+  const mobileBlock = rulesUnder(styles);
   const inputRuleStart = mobileBlock.indexOf('.splitLayerPct input:not([type="checkbox"]):not([type="radio"]){');
   assert.notEqual(inputRuleStart, -1);
   const inputRule = mobileBlock.slice(inputRuleStart, mobileBlock.indexOf("}", inputRuleStart) + 1);

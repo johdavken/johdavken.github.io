@@ -12,6 +12,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const { readStyles } = require("./css-source");
+const { rulesUnder } = require("./css-media");
 
 const app = fs.readFileSync("app.js", "utf8");
 const html = fs.readFileSync("index.html", "utf8");
@@ -25,13 +26,18 @@ function tabsMarkup(){
 }
 
 function mobileBlock(){
-  // Everything from the shared @media (max-width: 700px) block through the
-  // rest of the phone-width rules (up to the next, wider breakpoint).
-  const start = styles.indexOf("@media (max-width: 700px){");
-  assert.notEqual(start, -1);
-  const end = styles.indexOf("@media (max-width: 720px){", start);
-  assert.notEqual(end, -1);
-  return styles.slice(start, end);
+  // Every phone-width rule, from all max-width:700px blocks.
+  //
+  // This used to be the slice from the first such block to the next 720px one,
+  // which assumed there was only one. There are three, and the rules this file
+  // checks live in a later one - so the slice was reading a different part of
+  // the stylesheet entirely and reporting the tab icons missing while they
+  // were working. Collecting all the blocks keeps both directions honest: a
+  // rule that must be phone-scoped is found, and one that must not be is
+  // still absent.
+  const rules = rulesUnder(styles);
+  assert.ok(rules.length > 0, "no max-width:700px rules found at all");
+  return rules;
 }
 
 /* -------------------------------------------------------------------
