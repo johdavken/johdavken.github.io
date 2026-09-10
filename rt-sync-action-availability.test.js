@@ -36,7 +36,14 @@ test("the available operator actions get their disabled state from one shared pa
   ["lineSyncGenerateCodeBtn", "lineSyncCopyCodeBtn"].forEach(id=>{
     assert.match(helper, new RegExp(`"${id}"`));
   });
-  assert.match(helper, /\["lineSyncRetryBtn", "lineSyncRetryMobileBtn"\]/);
+  // Membership, not the literal array. Every control that re-runs a sync
+  // belongs to this pass; pinning the array text meant that adding one - which
+  // is complying with the rule - read as breaking it.
+  ["lineSyncRetryBtn", "lineSyncRetryMobileBtn", "lineSyncRefreshStatusBtn"].forEach(id=>{
+    assert.match(helper, new RegExp(`"${id}"`),
+      `${id} must take its disabled state from the shared pass`);
+  });
+  assert.match(helper, /\.disabled = lineSyncActionInFlight;/);
   // Join's own availability has an extra condition (a well-formed code), so
   // it stays in its own function - but it belongs to the same pass.
   assert.match(helper, /updateLineSyncJoinAvailability\(syncState\);/);

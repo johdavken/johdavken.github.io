@@ -9158,9 +9158,18 @@
     ["lineSyncGenerateCodeBtn", "lineSyncCopyCodeBtn"].forEach(id=>{
       if ($(id)) $(id).disabled = lineSyncActionInFlight || !selected || !connected;
     });
-    ["lineSyncRetryBtn", "lineSyncRetryMobileBtn"].forEach(id=>{
+    ["lineSyncRetryBtn", "lineSyncRetryMobileBtn", "lineSyncRefreshStatusBtn"].forEach(id=>{
       if ($(id)) $(id).disabled = lineSyncActionInFlight;
     });
+    const statusRefresh = $("lineSyncRefreshStatusBtn");
+    if (statusRefresh){
+      // Nothing to refresh without a selected line, so the control is absent
+      // rather than present-but-dead. The attribute is what hides it - the
+      // global [hidden]{display:none!important} outranks the desktop
+      // display:grid, so a class alone would not do it.
+      statusRefresh.hidden = !syncState.selectedWorkspaceId;
+      statusRefresh.dataset.busy = String(lineSyncActionInFlight && lineSyncBusyAction === "refresh");
+    }
     const isWorkspaceOwner = (selected?.membership?.role || "") === "owner";
     if ($("lineSyncLeaveBtn")) $("lineSyncLeaveBtn").disabled = lineSyncActionInFlight || !selected || !syncState.available || isWorkspaceOwner;
     updateLineSyncJoinAvailability(syncState);
@@ -9775,6 +9784,10 @@
     , "refresh");
     $("lineSyncRetryBtn")?.addEventListener("click",reconnectRtSync);
     $("lineSyncRetryMobileBtn")?.addEventListener("click",reconnectRtSync);
+    // Status-bar refresh: the desktop's only way to force a sync while the
+    // connection looks healthy. Deliberately the same action as the other two
+    // rather than a new code path into RT Sync.
+    $("lineSyncRefreshStatusBtn")?.addEventListener("click",reconnectRtSync);
     $("lineSyncLeaveBtn")?.addEventListener("click",()=>{
       if (confirm("Leave RT Sync on this device? Local Resin.Tools data will remain.")) {
         void runLineSyncAction(()=>lineSync.leaveWorkspace(), "leave");
