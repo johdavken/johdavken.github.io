@@ -10024,15 +10024,24 @@
     // locations never show different values.
     const workspaceOutputItem = $("workspaceOutputStatus")?.closest(".statusEditableItem");
     const workspaceOutputInput = $("workspaceOutputInput");
+    // The .editing class is what styles the revealed input, but it is not what
+    // reveals it: these inputs ship with the hidden attribute, and styles.css
+    // states [hidden]{display:none!important} once, globally. That !important
+    // outranks .editing's plain display, so adding the class alone hides the
+    // readout and shows nothing in its place - and focus()/showPicker() then
+    // act on a 0x0 box at the viewport origin, which is where the time picker
+    // was appearing. The attribute is the source of truth; clear it to edit.
     $("workspaceOutputStatus")?.addEventListener("click",()=>{
       if (!workspaceOutputItem || !workspaceOutputInput) return;
       workspaceOutputInput.value = state.lineRate > 0 ? state.lineRate : "";
       workspaceOutputItem.classList.add("editing");
+      workspaceOutputInput.hidden = false;
       workspaceOutputInput.focus();
       workspaceOutputInput.select();
     });
     workspaceOutputInput?.addEventListener("blur",()=>{
       workspaceOutputItem?.classList.remove("editing");
+      workspaceOutputInput.hidden = true;
     });
     workspaceOutputInput?.addEventListener("keydown",event=>{
       if (event.key === "Enter") event.currentTarget.blur();
@@ -10052,6 +10061,9 @@
       if (!workspaceChangeoverItem || !workspaceChangeoverInput) return;
       workspaceChangeoverInput.value = state.changeoverTime || "";
       workspaceChangeoverItem.classList.add("editing");
+      // Unhide before focus/showPicker - see the Output handler above for why.
+      // A picker opened on a still-hidden input anchors to nothing.
+      workspaceChangeoverInput.hidden = false;
       workspaceChangeoverInput.focus();
       if (typeof workspaceChangeoverInput.showPicker === "function"){
         try { workspaceChangeoverInput.showPicker(); } catch {}
@@ -10059,6 +10071,7 @@
     });
     workspaceChangeoverInput?.addEventListener("blur",()=>{
       workspaceChangeoverItem?.classList.remove("editing");
+      workspaceChangeoverInput.hidden = true;
     });
     workspaceChangeoverInput?.addEventListener("input",(e)=>{
       state.changeoverTime = e.target.value || "";

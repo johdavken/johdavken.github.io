@@ -128,3 +128,63 @@ test("the status bar's Output and Changeover are click-to-edit readouts, not jus
   assert.match(styles, /\.statusEditableItem\.editing \.statusReadout\{ display:none; \}/);
   assert.match(styles, /\.statusEditableItem\.editing \.statusEditInput\{/);
 });
+
+test("clicking a status readout really reveals its input - the hidden attribute is cleared, not just the .editing class added", () => {
+  /* This shipped broken. The reveal was written as a CSS state class, which is
+   * the right shape, but the inputs also carry the hidden attribute and
+   * styles.css states [hidden]{display:none!important} once, globally. An
+   * !important beats .editing's plain display, so adding the class hid the
+   * readout and revealed nothing in its place: the Changeover and Output
+   * values simply vanished until a reload, and because focus()/showPicker()
+   * then acted on a 0x0 box at the viewport origin, the time picker opened
+   * detached from the field it belonged to.
+   *
+   * The attribute is the source of truth. The class styles the input; it does
+   * not unhide it. So the three facts below have to stay consistent with each
+   * other, and this test is what keeps them that way. */
+  assert.match(html, /id="workspaceChangeoverInput"[^>]*\bhidden\b/,
+    "the input ships hidden - if that ever stops being true, the rest of this test is moot");
+  assert.match(html, /id="workspaceOutputInput"[^>]*\bhidden\b/);
+  assert.match(styles, /\[hidden\]\{display:none!important\}/,
+    "the global rule is what makes clearing the attribute mandatory");
+
+  // The reveal rule is deliberately not !important - adding one here would be
+  // the other way to fix this, and would put back a duplicate the global rule
+  // exists to remove. So it must stay plain, and the JS must do the unhiding.
+  const at = styles.indexOf(".statusEditableItem.editing .statusEditInput{");
+  assert.notEqual(at, -1);
+  const revealRule = styles.slice(at, styles.indexOf("}", at));
+  assert.doesNotMatch(revealRule, /display\s*:[^;]*!important/);
+
+  // Each handler must unhide BEFORE it focuses: focus() and showPicker() on a
+  // display:none element do nothing useful, and showPicker() is exactly what
+  // was mis-anchoring.
+  for (const [readout, input] of [
+    ["workspaceChangeoverStatus", "workspaceChangeoverInput"],
+    ["workspaceOutputStatus", "workspaceOutputInput"],
+  ]){
+    const open = handlerBody(app, `$("${readout}")?.addEventListener("click"`);
+    const unhide = open.indexOf(`${input}.hidden = false`);
+    const focus = open.indexOf(`${input}.focus()`);
+    assert.notEqual(unhide, -1, `${readout} click never clears ${input}.hidden - the field will vanish`);
+    assert.notEqual(focus, -1);
+    assert.ok(unhide < focus, `${input} is focused while still hidden`);
+
+    const close = handlerBody(app, `${input}?.addEventListener("blur"`);
+    assert.match(close, new RegExp(`${input}\\.hidden = true`),
+      `${input} stays visible after blur, so the readout never comes back`);
+  }
+});
+
+// The body of one addEventListener callback, by its opening text.
+function handlerBody(source, opening){
+  const at = source.indexOf(opening);
+  assert.notEqual(at, -1, `expected to find ${opening}`);
+  const start = source.indexOf("{", source.indexOf("=>", at));
+  let depth = 0;
+  for (let i = start; i < source.length; i++){
+    if (source[i] === "{") depth++;
+    else if (source[i] === "}"){ depth--; if (depth === 0) return source.slice(start, i + 1); }
+  }
+  throw new Error(`unbalanced handler for ${opening}`);
+}
