@@ -57,11 +57,32 @@ function enclosingMedia(css, index) {
   return null;
 }
 
-/** Every occurrence of `anchor`, with the media condition each sits under. */
-function occurrences(css, anchor) {
+/* True when `index` begins a selector rather than sitting inside a longer one.
+ *
+ * ".splitLayerMain{" is a substring of ".bulk-editing .splitLayerMain{", and a
+ * plain indexOf hands back the second when asked for the first - a different
+ * rule, with different declarations. That is the same class of mistake as the
+ * positional slicing this module replaces, so it is checked here rather than
+ * left to every caller to remember.
+ *
+ * A selector starts where the previous non-space character closed a block, a
+ * declaration, a comment, or a preceding selector in a list. */
+function startsSelector(css, index) {
+  let i = index - 1;
+  while (i >= 0 && /\s/.test(css[i])) i--;
+  if (i < 0) return true;
+  return "{},;/".includes(css[i]);
+}
+
+/** Every occurrence of `anchor`, with the media condition each sits under.
+ *
+ * Only occurrences that begin a selector count, unless `anywhere` is set -
+ * which is for anchors that are deliberately a fragment of a longer selector. */
+function occurrences(css, anchor, { anywhere = false } = {}) {
   const found = [];
   let i = -1;
   while ((i = css.indexOf(anchor, i + 1)) !== -1) {
+    if (!anywhere && !startsSelector(css, i)) continue;
     found.push({ index: i, condition: enclosingMedia(css, i), body: blockBodyAt(css, i) });
   }
   return found;
@@ -90,8 +111,8 @@ function blockBodyAt(css, index) {
 }
 
 /** The occurrence of `anchor` inside a media query matching `condition`. */
-function ruleIn(css, anchor, condition = PHONE) {
-  return occurrences(css, anchor).find(o => o.condition && condition.test(o.condition)) || null;
+function ruleIn(css, anchor, condition = PHONE, options) {
+  return occurrences(css, anchor, options).find(o => o.condition && condition.test(o.condition)) || null;
 }
 
 /** The whole media block that contains `anchor`, for "and not X" assertions. */
@@ -155,4 +176,4 @@ function rulesUnder(css, condition = PHONE) {
   return parts.join("\n");
 }
 
-module.exports = { PHONE, enclosingMedia, occurrences, ruleIn, blockContaining, blockBodyAt, rulesUnder };
+module.exports = { PHONE, enclosingMedia, occurrences, ruleIn, blockContaining, blockBodyAt, rulesUnder, startsSelector };

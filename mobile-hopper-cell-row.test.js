@@ -4,6 +4,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const { readStyles } = require("./css-source");
+const { rulesUnder, blockBodyAt } = require("./css-media");
 
 const styles = readStyles();
 
@@ -17,10 +18,17 @@ const styles = readStyles();
 // it's cheap to revert if it doesn't look right on a real device.
 
 function mobileBlock(){
-  const start = styles.indexOf("@media (max-width: 700px)");
-  assert.notEqual(start, -1, "expected the existing 700px mobile matrix media query");
-  const end = styles.indexOf("\n}", start);
-  return styles.slice(start, end);
+  /* Every phone-width rule.
+   *
+   * This used to slice from the first "@media (max-width: 700px)" to the next
+   * "\n}" - which is the end of the first rule INSIDE the block, not the end
+   * of the block, so it returned about 250 characters of a 59,000-character
+   * block. Every assertion below then failed against that fragment while the
+   * rules themselves were present and correctly scoped. There are also three
+   * such blocks now, so "the first one" was never the right question either. */
+  const rules = rulesUnder(styles);
+  assert.ok(rules.length > 0, "expected the existing 700px mobile matrix media query");
+  return rules;
 }
 
 test("the single-row layout is scoped to the existing 700px mobile media query, not a global rule that would also affect desktop's matrix view", () => {
@@ -28,7 +36,9 @@ test("the single-row layout is scoped to the existing 700px mobile media query, 
   assert.match(mobile, /\.splitsMatrix \[data-layer-column\]\.mobile-layer-active\.splitMatrixCell\{\s*display: flex;/);
   const globalMatch = styles.match(/^\.splitMatrixCell\{/m);
   assert.ok(globalMatch, "the base rule should still exist above the media query");
-  const globalBody = styles.slice(styles.indexOf(globalMatch[0]), styles.indexOf(globalMatch[0]) + 200);
+  // Brace-matched rather than a fixed 200-character window, which could end
+  // mid-declaration and miss a display it was meant to catch.
+  const globalBody = blockBodyAt(styles, styles.indexOf(globalMatch[0]));
   assert.doesNotMatch(globalBody, /display:\s*flex/, "display:flex must only apply inside the mobile media query, not the shared base rule");
 });
 
