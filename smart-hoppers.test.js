@@ -163,8 +163,37 @@ test("clicking the wrench (or anything inside its popover) does not also toggle 
 });
 
 test("clicking outside any open wrench popover, or pressing Escape, closes it - same established pattern as the appearance-preferences and tools dropdowns", () => {
+  // Outside-click: the popover closes when the click was not inside it.
   assert.match(app, /document\.querySelectorAll\("\.hopperGeometryPopover\[open\]"\)\.forEach\(popover=>\{\s*\n\s*if \(!popover\.contains\(event\.target\)\) popover\.open = false;/);
-  assert.match(app, /if \(event\.key === "Escape"\)\{\s*\n\s*document\.querySelectorAll\("\.hopperGeometryPopover\[open\]"\)\.forEach\(popover=>\{\s*\n\s*popover\.open = false;/);
+
+  /* Escape: asserted inside the branch rather than immediately after it.
+   * This used to require .hopperGeometryPopover to be the first thing in the
+   * `if (event.key === "Escape"){` body. A .toolInfoGuide block was later
+   * added above it - same handler, same behaviour, different line - and the
+   * adjacency check failed as though Escape had stopped closing the popover.
+   * What matters is that it is handled in that branch at all. */
+  const bodyAt = (from) => {
+    const open = app.indexOf("{", from);
+    let depth = 0;
+    for (let i = open; i < app.length; i++){
+      if (app[i] === "{") depth++;
+      else if (app[i] === "}"){ depth--; if (depth === 0) return app.slice(open, i + 1); }
+    }
+    throw new Error("unbalanced Escape branch");
+  };
+  // app.js has four `if (event.key === "Escape"){` branches and the first is
+  // not this one, so pick the branch by what it handles rather than by
+  // position - the same mistake in miniature as the adjacency check above.
+  const escapeBodies = [];
+  for (let at = app.indexOf('if (event.key === "Escape"){'); at !== -1;
+       at = app.indexOf('if (event.key === "Escape"){', at + 1)){
+    escapeBodies.push(bodyAt(at));
+  }
+  const escapeBody = escapeBodies.find(b => b.includes(".hopperGeometryPopover[open]"));
+  assert.ok(escapeBody,
+    `no Escape branch handles the wrench popover (checked ${escapeBodies.length})`);
+  assert.match(escapeBody, /document\.querySelectorAll\("\.hopperGeometryPopover\[open\]"\)\.forEach\(popover=>\{\s*\n\s*popover\.open = false;/,
+    "Escape no longer closes the wrench popover");
 });
 
 test(".weightsMatrixCell stays a plain table cell (position:relative only, as an anchor for the popover) - display:flex lives on an inner .weightsCellRow wrapper instead, since overriding a <td>'s display away from table-cell drops it out of the table's column layout entirely", () => {

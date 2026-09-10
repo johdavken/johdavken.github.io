@@ -78,7 +78,11 @@ test("foreground/resume forces one immediate refresh on both native (appStateCha
   assert.match(nativeBlock, /refreshTimelinePresentation\(\);/);
 
   assert.match(app, /document\.addEventListener\("visibilitychange", \(\)=>\{/);
-  const webStart = app.indexOf('addEventListener("visibilitychange"');
+  // app.js registers more than one visibilitychange listener, and the first is
+  // not this one - so search from the native handler this is paired with
+  // rather than from the top of the file.
+  const webStart = app.indexOf('addEventListener("visibilitychange"', nativeStart);
+  assert.notEqual(webStart, -1, "no visibilitychange listener after the appStateChange one");
   const webBlock = app.slice(webStart, app.indexOf("});", webStart));
   assert.match(webBlock, /if \(!document\.hidden\) refreshTimelinePresentation\(\);/);
 });

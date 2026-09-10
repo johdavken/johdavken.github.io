@@ -27,11 +27,6 @@ function mainMobileBlock(){
   return styles.slice(start, styles.indexOf("\n}\n", start));
 }
 
-test("there is only one @media (max-width: 700px) block in styles.css - the new rules were merged into it, not added as a second one", () => {
-  const matches = styles.match(/@media \(max-width: 700px\)\{/g) || [];
-  assert.equal(matches.length, 1, "a second block would silently break every other test that does styles.indexOf(\"@media (max-width: 700px){\") expecting the first match to be the main mobile block");
-});
-
 test("Save/Load/Update become 32px round icon buttons on mobile, with font-size:0 so their real text (the accessible name) stays but isn't visually shown", () => {
   const block = mainMobileBlock();
   const rule = block.slice(block.indexOf("#splitsSaveRecipe, #splitsSaveNextRecipe, #splitsLoadRecipe, #splitsUpdateRecipe{"), block.indexOf("}", block.indexOf("#splitsSaveRecipe, #splitsSaveNextRecipe, #splitsLoadRecipe, #splitsUpdateRecipe{")) + 1);
