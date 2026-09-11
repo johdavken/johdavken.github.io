@@ -1,0 +1,177 @@
+#!/usr/bin/env node
+/* Station browser spec - see README.md beside this file. */
+"use strict";
+
+const path = require("path");
+const fs = require("fs");
+
+const playwrightModule = process.env.PLAYWRIGHT_MODULE || "playwright";
+let playwright;
+try {
+  playwright = require(playwrightModule);
+} catch (error) {
+  console.error(`Playwright is not a project dependency. Install it outside the repo and set PLAYWRIGHT_MODULE (tried "${playwrightModule}").`);
+  process.exit(2);
+}
+
+const BASE = process.env.STATION_BASE || "http://127.0.0.1:8765";
+const BROWSERS = (process.env.BROWSERS || "chromium,firefox").split(",").map(s => s.trim()).filter(Boolean);
+const OUT = path.join(__dirname, "out");
+const PAGE = "/station/station.html?source=demo";
+
+let failures = 0;
+function check(browser, name, ok, detail) {
+  const mark = ok ? "ok  " : "FAIL";
+  console.log(`${mark} [${browser}] ${name}${ok ? "" : ` - ${typeof detail === "string" ? detail : JSON.stringify(detail)}`}`);
+  if (!ok) failures += 1;
+}
+
+const settled = async page => {
+  await page.waitForFunction(() => !document.querySelector("[data-station-mount='machine']").classList.contains("is-transitioning"), null, { timeout: 5000 });
+  await page.waitForTimeout(120);
+};
+const stateOf = page => page.evaluate(() => { const m = document.querySelector("[data-station-mount='machine']"); return { transitioning: m.classList.contains("is-transitioning"), focus: m.getAttribute("data-focus-layer") }; });
+const active = page => page.evaluate(() => { const a = document.activeElement; const c = a.className && a.className.baseVal !== undefined ? a.className.baseVal : a.className; return { cls: String(c || "").split(" ")[0], hopper: a.closest && a.closest("[data-hopper]") ? a.closest("[data-hopper]").getAttribute("data-hopper") : null, slot: a.getAttribute ? a.getAttribute("data-slot") : null }; });
+const listInfo = page => page.evaluate(() => {
+  const r = document.querySelector(".station-editor__results");
+  if (!r) return null;
+  const opts = Array.from(r.querySelectorAll(".station-editor__option"));
+  const visible = o => { const b = o.getBoundingClientRect(); const h = document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2); return !!(h && o.contains(h)); };
+  return { placement: r.getAttribute("data-placement"), count: opts.length, firstVisible: opts.length ? visible(opts[0]) : null, lastVisible: opts.length ? visible(opts[opts.length - 1]) : null, ariaActive: document.querySelector(".station-editor__search").getAttribute("aria-activedescendant"), activeIndex: opts.findIndex(o => o.classList.contains("is-active")) };
+});
+const clusterAt = (page, layer) => page.evaluate(id => { const c = document.querySelector(`[data-role='layer'][data-layer='${id}'] [data-role='hopper-cluster']`).getBoundingClientRect(); const s = document.querySelector(".station-machine__stage").getBoundingClientRect(); return [c.x - s.x, c.y - s.y, c.width, c.height].map(n => +n.toFixed(1)); }, layer);
+const mixerHit = layer => `[data-role='layer'][data-layer='${layer}'] [data-role='mixer'] .station-hit`;
+const dispatchClick = (page, selector) => page.evaluate(sel => { document.querySelector(sel).dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, composed: true })); }, selector);
+
+async function run(browserName) {
+  const type = playwright[browserName];
+  if (!type) { console.error(`unknown browser ${browserName}`); failures += 1; return; }
+  const browser = await type.launch();
+  for (const [w, h] of [[1920, 1080], [1440, 900], [1160, 800]]) {
+    const ctx = await browser.newContext({ viewport: { width: w, height: h } });
+    const page = await ctx.newPage();
+    const errors = [];
+    page.on("pageerror", e => errors.push(e.message));
+    await page.goto(BASE + PAGE, { waitUntil: "load" });
+    await page.waitForSelector("[data-role='layer']");
+    await page.click("[data-demo='three-layer']");
+    await page.waitForTimeout(150);
+    const tag = `${w}x${h}`;
+
+    /* viewport */
+    const pageState = await page.evaluate(() => ({ scrollW: document.documentElement.scrollWidth, scrollH: document.documentElement.scrollHeight, innerW: innerWidth, innerH: innerHeight, tooSmall: getComputedStyle(document.querySelector(".station-too-small")).display !== "none" }));
+    check(browserName, `${tag} no page scrollbar`, pageState.scrollW <= pageState.innerW && pageState.scrollH <= pageState.innerH, pageState);
+    check(browserName, `${tag} too-small notice hidden`, !pageState.tooSmall);
+
+    /* open / close */
+    const normalCluster = await clusterAt(page, "B");
+    await dispatchClick(page, mixerHit("B"));
+    const opening = await stateOf(page);
+    check(browserName, `${tag} fast click on the mixer opens with no prior hover`, opening.transitioning || opening.focus === "B", opening);
+    await settled(page);
+    check(browserName, `${tag} transition reaches focused`, (await stateOf(page)).focus === "B");
+    const editorScroll = await page.evaluate(() => { const e = document.querySelector(".station-editor"); return { sh: e.scrollHeight, ch: e.clientHeight }; });
+    check(browserName, `${tag} editor content fits its workspace`, editorScroll.sh <= editorScroll.ch, editorScroll);
+
+    /* click targets through the foreignObject */
+    const hits = await page.evaluate(() => { const out = {}; for (const [k, sel] of [["resin", ".station-editor__item[data-hopper='B1'] .station-editor__resin-value"], ["pct", ".station-editor__item[data-hopper='B1'] .station-editor__pct-input"], ["source", ".station-editor__item[data-hopper='B3'] .station-editor__source-value"], ["badge", ".station-editor__item[data-hopper='B1'] .station-editor__badge"], ["add", ".station-editor__item[data-hopper='B4'] .station-editor__resin-value"]]) { const el = document.querySelector(sel); const r = el.getBoundingClientRect(); const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2); out[k] = hit === el || el.contains(hit); } return out; });
+    check(browserName, `${tag} every editor control hit-tests to itself`, Object.values(hits).every(Boolean), hits);
+
+    /* linkage */
+    const link = id => page.evaluate(id => ({ hopperHi: document.querySelector(`[data-role='hopper'][data-hopper='${id}']`).classList.contains("is-highlighted"), rowHi: document.querySelector(`.station-editor__item[data-hopper='${id}']`).classList.contains("is-highlighted"), hopperSel: document.querySelector(`[data-role='hopper'][data-hopper='${id}']`).classList.contains("is-selected"), rowSel: document.querySelector(`.station-editor__item[data-hopper='${id}']`).classList.contains("is-selected") }), id);
+    await page.hover(".station-editor__item[data-hopper='B2']"); await page.waitForTimeout(40);
+    let l = await link("B2");
+    check(browserName, `${tag} hovering a row highlights its hopper`, l.rowHi && l.hopperHi, l);
+    await page.mouse.move(5, 5);
+    await page.hover("[data-role='layer'][data-layer='B'] [data-role='hopper'][data-hopper='B2'] .station-hopper__shell", { force: true }); await page.waitForTimeout(40);
+    l = await link("B2");
+    check(browserName, `${tag} hovering a hopper highlights its row`, l.rowHi && l.hopperHi, l);
+    await page.mouse.move(5, 5);
+    await dispatchClick(page, "[data-role='layer'][data-layer='B'] [data-role='hopper'][data-hopper='B3'] .station-hopper__shell");
+    l = await link("B3");
+    check(browserName, `${tag} fast click on a hopper selects it and its row`, l.hopperSel && l.rowSel, l);
+    await dispatchClick(page, ".station-editor__item[data-hopper='B1'] .station-editor__badge");
+    l = await link("B1");
+    check(browserName, `${tag} fast click on a row selects it and its hopper`, l.hopperSel && l.rowSel, l);
+    check(browserName, `${tag} hopper clicks never close the layer`, (await stateOf(page)).focus === "B");
+
+    /* search keyboard flow */
+    await page.focus(".station-editor__item[data-hopper='B1'] .station-editor__resin-value");
+    await page.keyboard.press("Enter"); await page.waitForTimeout(60);
+    let a = await active(page);
+    const sel = await page.evaluate(() => { const s = document.querySelector(".station-editor__search"); return s && [s.selectionStart, s.selectionEnd, s.value.length]; });
+    check(browserName, `${tag} Enter on the value opens the search with the value selected`, a.cls === "station-editor__search" && sel && sel[0] === 0 && sel[1] === sel[2], { a, sel });
+    await page.keyboard.type("l"); await page.waitForTimeout(40);
+    let info = await listInfo(page);
+    check(browserName, `${tag} top row: list below, fully hit-testable`, info.placement === "below" && info.count > 1 && info.firstVisible && info.lastVisible, info);
+    await page.keyboard.press("ArrowDown"); await page.waitForTimeout(30);
+    info = await listInfo(page);
+    check(browserName, `${tag} ArrowDown moves the active option and aria-activedescendant`, info.activeIndex === 1 && /-1$/.test(info.ariaActive || ""), info);
+    await page.keyboard.press("Enter"); await page.waitForTimeout(60);
+    a = await active(page);
+    const note = await page.$eval(".station-editor__note", n => n.textContent);
+    check(browserName, `${tag} Enter chooses, closes, returns focus to the value`, !(await page.$(".station-editor__search")) && a.cls === "station-editor__resin-value" && a.hopper === "B1" && /not applied/.test(note), { a, note });
+    await page.keyboard.press("Enter"); await page.waitForTimeout(60);
+    await page.keyboard.press("Escape"); await page.waitForTimeout(60);
+    a = await active(page);
+    check(browserName, `${tag} Escape closes the search only`, !(await page.$(".station-editor__search")) && (await stateOf(page)).focus === "B" && a.cls === "station-editor__resin-value", a);
+    await page.keyboard.press("Enter"); await page.waitForTimeout(60);
+    await page.keyboard.press("Tab"); await page.waitForTimeout(60);
+    a = await active(page);
+    // The row's source value is visibility:hidden while its search is open,
+    // so Tab lands on the next control that is focusable at that instant: the
+    // percentage. Either is "moved on"; leaving the row or the layer is not.
+    check(browserName, `${tag} Tab closes the search and moves on`, !(await page.$(".station-editor__search")) && ["source", "pct"].includes(a.slot) && a.hopper === "B1", a);
+    await page.focus(".station-editor__item[data-hopper='B1'] .station-editor__resin-value");
+    await page.keyboard.press("Enter"); await page.waitForTimeout(60);
+    const keep = await page.evaluate(() => { const r = document.querySelector(".station-editor__results"); r.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true })); return !!document.querySelector(".station-editor__search"); });
+    check(browserName, `${tag} mousedown on the list does not close it`, keep);
+    await page.keyboard.press("Escape"); await page.waitForTimeout(40);
+
+    /* bottom row placement */
+    await page.focus(".station-editor__item[data-hopper='B6'] .station-editor__resin-value");
+    await page.keyboard.press("Enter"); await page.waitForTimeout(60);
+    info = await listInfo(page);
+    check(browserName, `${tag} bottom row: list above, fully hit-testable`, info.placement === "above" && info.count > 1 && info.firstVisible && info.lastVisible, info);
+    await page.keyboard.type("zzqq"); await page.waitForTimeout(40);
+    info = await listInfo(page);
+    check(browserName, `${tag} bottom row: a no-match list is re-placed and visible`, info.count === 0 && info.placement, info);
+    await page.keyboard.press("Escape"); await page.waitForTimeout(40);
+
+    /* percentage field */
+    const pct = await page.evaluate(() => { const i = document.querySelector(".station-editor__item[data-hopper='B1'] .station-editor__pct-input"); const was = i.value; const out = {}; for (const v of ["60", "100", "33.33"]) { i.value = v; out[v] = i.scrollWidth <= i.clientWidth; } i.value = was; return out; });
+    check(browserName, `${tag} the percentage field fits 60, 100 and 33.33`, Object.values(pct).every(Boolean), pct);
+
+    /* close, reverse, rapid */
+    await page.keyboard.press("Escape"); await settled(page);
+    check(browserName, `${tag} Escape closes the layer`, (await stateOf(page)).focus === null);
+    const backCluster = await clusterAt(page, "B");
+    check(browserName, `${tag} the cluster lands back on its normal position`, JSON.stringify(backCluster) === JSON.stringify(normalCluster), { normalCluster, backCluster });
+    await dispatchClick(page, mixerHit("B"));
+    await page.waitForTimeout(150);
+    await page.keyboard.press("Escape");
+    await settled(page);
+    const reversed = await page.evaluate(() => ({ focus: document.querySelector("[data-station-mount='machine']").getAttribute("data-focus-layer"), activating: !!document.querySelector(".is-activating"), leftover: Array.from(document.querySelectorAll("[data-role='layer']")).some(l => /is-[a-z]+-selected/.test(l.className.baseVal)) }));
+    check(browserName, `${tag} Escape mid-flight reverses to normal with no leftover marks`, reversed.focus === null && !reversed.activating && !reversed.leftover, reversed);
+    for (let i = 0; i < 3; i++) { await dispatchClick(page, mixerHit("B")); await page.waitForTimeout(40); }
+    await settled(page);
+    check(browserName, `${tag} three rapid clicks end focused`, (await stateOf(page)).focus === "B");
+
+    if (w === 1440) {
+      fs.mkdirSync(OUT, { recursive: true });
+      const fo = await page.$eval(".station-workspace__editor", el => el.getBoundingClientRect().toJSON());
+      await page.screenshot({ path: path.join(OUT, `${browserName}-editor-2x.png`), clip: { x: fo.x - 4, y: fo.y - 4, width: fo.width + 8, height: Math.min(fo.height + 8, h - fo.y) } });
+    }
+    check(browserName, `${tag} no page errors`, errors.length === 0, errors);
+    await ctx.close();
+  }
+  await browser.close();
+}
+
+(async () => {
+  for (const name of BROWSERS) {
+    try { await run(name); } catch (error) { failures += 1; console.error(`FAIL [${name}] ${error && error.stack || error}`); }
+  }
+  console.log(failures ? `\n${failures} failure(s)` : "\nall checks passed");
+  process.exit(failures ? 1 : 0);
+})();

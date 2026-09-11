@@ -1,0 +1,62 @@
+# Station browser spec
+
+Developer tool. Not part of the app, not loaded by it, no dependency in
+`package.json`.
+
+## Why it exists
+
+Station's node tests drive the editor against a small fake DOM. That proves
+structure and behaviour, but a `<foreignObject>` inside a scaled `<svg>`,
+focus moving between an HTML input and SVG hit areas, and the FLIP focus
+transition are exactly where engines disagree, and none of it can be
+measured without a browser. This spec runs the same flows in Chromium and
+Firefox and fails on the first difference from what the node tests promise.
+
+It was written during the cross-browser hardening pass (Firefox as the
+primary target, Chromium as the baseline). The two things that pass found -
+the resin list running off the bottom of the stage on the lower rows, and
+the percentage field clipping "100" (and measuring differently in each
+engine, because Chromium resolves `ch` from an uninstalled first font
+family) - are covered here so they cannot come back unnoticed.
+
+## Using it
+
+Playwright is deliberately not a project dependency. Install it anywhere
+outside the repo and point the spec at it:
+
+```
+cd /somewhere/outside && npm i playwright && npx playwright install chromium firefox
+cd /path/to/repo && python3 -m http.server 8765 --bind 127.0.0.1 &
+PLAYWRIGHT_MODULE=/somewhere/outside/node_modules/playwright node tools/station-browser/spec.js
+```
+
+Options: `STATION_BASE` (default `http://127.0.0.1:8765`), `BROWSERS`
+(default `chromium,firefox`). Exit code is non-zero on any failure; every
+check is named in the output.
+
+## What it checks
+
+- **Fast click before hover** - a click dispatched on a mixer, a hopper and
+  an editor row with no preceding pointer movement lands exactly like a
+  hovered one.
+- **Open / close focus** - the transition reaches `focused` and back to
+  `normal`; Escape mid-flight reverses it; three rapid clicks end focused;
+  the layer's cluster lands back on its normal-row position to the pixel.
+- **Resin search keyboard flow** - Enter on the value opens the search with
+  the value selected; ArrowDown moves `aria-activedescendant`; Enter chooses
+  and closes, focus returning to the value; Escape closes the search and not
+  the layer; Tab closes it and moves on; a mousedown on the list does not
+  close it.
+- **Result list placement** - on the top row the list is below and fully
+  hit-testable; on the bottom row it is above and fully hit-testable; a
+  no-match list is re-placed.
+- **Focused editor click targets** - the centre of each control hit-tests
+  to that control through the `<foreignObject>`.
+- **Row <-> hopper linkage** - hovering a row highlights its hopper and vice
+  versa; clicking either selects both.
+- **Percentage field** - "60", "100" and "33.33" all fit without clipping.
+- **Viewports** - 1920x1080, 1440x900 and 1160x800; no page scrollbar, the
+  too-small notice hidden, the editor's content not scrolling inside it.
+
+The last item that cannot be automated here is font rasterisation. Compare
+`out/*-editor-2x.png` by eye when a Station font token changes.
