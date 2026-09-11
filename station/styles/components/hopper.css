@@ -1,0 +1,233 @@
+/* The hopper assembly, and the bank it sits in.
+ *
+ * One component, instantiated once per configured hopper. It is split into the
+ * parts the real equipment stacks in - receiver, body, material, cone, feed -
+ * because each of those will eventually be driven by something different:
+ * the receiver by loading, the material by calculated fill, the body by
+ * selection and warning state, the feed by pump-off.
+ *
+ * STATE
+ *
+ * Hopper state is expressed as `is-` classes on the assembly group, set by
+ * JavaScript from application state. There is no `.green`, no `.small`: the
+ * class says what is true about the hopper, and this file decides what that
+ * looks like. Nothing below is wired to live data yet; the rules exist so the
+ * structure is provably ready for it.
+ */
+
+/* ---------------------------------------------------------------------
+ *   Vacuum receiver
+ * ------------------------------------------------------------------- */
+
+.station-hopper__cap,
+.station-hopper__neck {
+  fill: var(--station-steel-light);
+  stroke: var(--station-edge);
+  stroke-width: var(--station-line-hairline);
+}
+
+/* ---------------------------------------------------------------------
+ *   Receiver = pump state
+ * -------------------------------------------------------------------
+ * The receiver is the pump indicator, and will later be the toggle. Amber is
+ * "conveying"; a pump that is off drops back to plain steel so a stopped
+ * hopper reads as stopped at a glance across a five-layer bank, without a
+ * separate light or badge being bolted onto the equipment.
+ */
+.station-hopper__receiver-cone {
+  fill: var(--station-receiver);
+  stroke: var(--station-receiver-edge);
+  stroke-width: var(--station-line-hairline);
+}
+
+.station-hopper__receiver[data-pump="off"] .station-hopper__receiver-cone {
+  fill: var(--station-steel);
+  stroke: var(--station-edge);
+}
+
+.station-hopper__receiver[data-pump="off"] .station-hopper__cap {
+  fill: var(--station-steel-dark);
+}
+
+/* ---------------------------------------------------------------------
+ *   Source, above the receiver
+ * ------------------------------------------------------------------- */
+
+.station-hopper__source {
+  fill: var(--station-text-faint);
+  font-family: var(--station-font);
+  font-size: var(--station-text-2xs);
+  letter-spacing: 0.04em;
+}
+
+/* A short drop from the label to the receiver, so the label reads as belonging
+   to this hopper rather than floating above the bank. */
+.station-hopper__source-drop {
+  stroke: var(--station-edge-soft);
+  stroke-width: var(--station-line-hairline);
+}
+
+.station-hopper__hose {
+  fill: none;
+  stroke: var(--station-edge);
+  stroke-width: var(--station-line-thin);
+  stroke-linecap: round;
+}
+
+/* ---------------------------------------------------------------------
+ *   Material vessel
+ * ------------------------------------------------------------------- */
+
+.station-hopper__shell {
+  fill: var(--station-hopper-body);
+  stroke: var(--station-hopper-stroke);
+  stroke-width: var(--station-line-thin);
+}
+
+.station-hopper__band {
+  stroke: var(--station-hopper-stroke);
+  stroke-width: var(--station-line-hairline);
+}
+
+/* The fill is the one element driven by a live number.
+ * `--station-hopper-fill` is a 0-1 fraction written as an inline custom
+ * property by the renderer; everything about how that fraction is drawn stays
+ * here. */
+.station-hopper__fill {
+  fill: var(--station-hopper-fill);
+  transform: scaleY(var(--station-hopper-fill, 0));
+  transform-origin: bottom;
+  transform-box: fill-box;
+}
+
+/* ---------------------------------------------------------------------
+ *   Discharge
+ * ------------------------------------------------------------------- */
+
+.station-hopper__cone-shape,
+.station-hopper__spout {
+  fill: var(--station-hopper-body);
+  stroke: var(--station-hopper-stroke);
+  stroke-width: var(--station-line-thin);
+}
+
+/* ---------------------------------------------------------------------
+ *   Compact recipe readout
+ * ------------------------------------------------------------------- */
+
+.station-hopper__id {
+  fill: var(--station-text-muted);
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-2xs);
+}
+
+.station-hopper__resin {
+  fill: var(--station-text);
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-2xs);
+}
+
+.station-hopper__pct {
+  fill: var(--station-layer-accent, var(--station-text-muted));
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-2xs);
+  font-weight: 600;
+}
+
+/* A hopper with no Receiver Weight Profile height is drawn at the default
+   size. The dashed outline says that size is a default and not a measurement,
+   so nobody reads it as a short hopper. */
+.station-hopper.is-unprofiled .station-hopper__shell {
+  stroke-dasharray: 4 3;
+}
+
+/* ---------------------------------------------------------------------
+ *   State
+ * ------------------------------------------------------------------- */
+
+.station-hopper.is-selected .station-hopper__shell {
+  stroke: var(--station-accent);
+  stroke-width: var(--station-line-medium);
+}
+
+.station-hopper.is-tracking .station-hopper__shell {
+  stroke: var(--station-tracking);
+  stroke-width: var(--station-line-medium);
+}
+
+.station-hopper.is-warning .station-hopper__shell {
+  stroke: var(--station-warning);
+  stroke-width: var(--station-line-medium);
+}
+
+.station-hopper.is-empty .station-hopper__shell {
+  stroke: var(--station-danger);
+}
+
+.station-hopper.is-pump-off .station-hopper__fill {
+  fill: var(--station-pump-off);
+}
+
+.station-hopper.is-pump-off .station-hopper__spout {
+  stroke: var(--station-pump-off);
+}
+
+.station-hopper.is-unassigned .station-hopper__resin,
+.station-hopper.is-unassigned .station-hopper__pct,
+.station-hopper.is-unassigned .station-hopper__id {
+  fill: var(--station-text-faint);
+}
+
+/* An empty vessel reads as empty. */
+.station-hopper.is-unassigned .station-hopper__shell {
+  fill: var(--station-steel-dark);
+}
+
+/* Deliberately NOT restyled by assignment any more. The receiver now means one
+   thing - whether the pump is conveying - and an unassigned hopper whose pump
+   is running is a real and visible state. Assignment is said by the caption
+   and the vessel, which is where it belongs. */
+
+/* ---------------------------------------------------------------------
+ *   Controls on the equipment (expanded layer)
+ * -------------------------------------------------------------------
+ * These are drawn as wells so they read as the places values live, which is
+ * what they will be. They are read-only until a Station write contract exists,
+ * and they say so: a dashed well rather than a solid one, and a muted value.
+ * Solid wells would promise an edit that cannot yet be committed.
+ */
+
+.station-field__well {
+  fill: var(--station-surface-sunken);
+  stroke: var(--station-border-strong);
+  stroke-width: var(--station-line-thin);
+  stroke-dasharray: 3 2;
+}
+
+.station-field__value {
+  fill: var(--station-text);
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-sm);
+}
+
+.station-field__value--resin {
+  font-family: var(--station-font-mono);
+}
+
+.station-field__value--pct {
+  fill: var(--station-layer-accent, var(--station-text));
+  font-weight: 600;
+}
+
+.station-field__value--source {
+  fill: var(--station-text-muted);
+  font-family: var(--station-font);
+  font-size: var(--station-text-2xs);
+  letter-spacing: 0.04em;
+}
+
+/* Nothing set yet: the well is still there, because an empty value is the one
+   you are most likely to want to fill in. */
+.station-field.is-empty .station-field__value {
+  fill: var(--station-text-faint);
+}

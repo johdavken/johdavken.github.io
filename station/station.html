@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en" class="station-root">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Resin.Tools Station</title>
+
+  <!-- THE ISOLATED HARNESS.
+       This page exists to develop and inspect Station's components with no
+       application around them: demo line configurations, the demo selectors in
+       the sidebar, and ?source=demo. It is NOT how Station reaches live state -
+       that is /?view=station in the real application, which runs the same
+       renderer and the same shell builder as this page.
+
+       Station loads NONE of the application's stylesheets. The legacy cascade
+       is not inherited and then overridden, it is simply not present.
+       station-isolation.test.js enforces this in both directions. -->
+  <link rel="stylesheet" href="styles/tokens.css?v=0.3.1">
+  <link rel="stylesheet" href="styles/base.css?v=0.2.0">
+  <link rel="stylesheet" href="styles/shell.css?v=0.2.1">
+  <link rel="stylesheet" href="styles/components/machine.css?v=0.3.0">
+  <link rel="stylesheet" href="styles/components/hopper.css?v=0.5.0">
+  <link rel="stylesheet" href="styles/components/layer-bank.css?v=0.5.0">
+  <link rel="stylesheet" href="styles/components/inspector.css?v=0.3.0">
+  <link rel="stylesheet" href="styles/components/recipe-strip.css?v=0.1.0">
+  <link rel="stylesheet" href="styles/components/rundown.css?v=0.1.0">
+
+  <!-- Shared application modules, read as the source of truth for line facts.
+       Station resolves layer count, Layer A's physical side, hopper naming
+       and layer names through these rather than restating them. -->
+  <script src="../workspace-configuration-payloads.js?v=0.20.1" defer></script>
+  <script src="../line-identity.js?v=0.5.0" defer></script>
+  <script src="../hookup-sources.js?v=0.1.0" defer></script>
+
+  <!-- The read-only state bridge. Loaded so this page runs the same code path
+       the application host does; nothing connects to it here, so Station falls
+       back to the demo configurations. That is the fallback working. -->
+  <script src="../station-state-bridge.js?v=0.3.0" defer></script>
+
+  <!-- Station's own layer, in the same order the application host loads it. -->
+  <script src="station-line-model.js?v=0.1.0" defer></script>
+  <script src="station-machine-layout.js?v=0.6.3" defer></script>
+  <script src="station-machine-parts.js?v=0.6.1" defer></script>
+  <script src="station-render.js?v=0.3.1" defer></script>
+  <script src="station-shell.js?v=0.1.0" defer></script>
+  <script src="station-demo-lines.js?v=0.3.1" defer></script>
+  <script src="station-source.js?v=0.3.0" defer></script>
+  <!-- Development-only extruder study (?lab=extruder). Loaded by this harness
+       and deliberately NOT by station-host.js, so the real application cannot
+       reach it. Delete this tag and the file to remove it. -->
+  <script src="station-extruder-lab.js?v=0.1.1" defer></script>
+  <script src="station.js?v=0.5.0" defer></script>
+</head>
+<body>
+
+  <!-- The shell is built by station-shell.js, so this page and the application
+       host cannot drift apart. -->
+  <div data-station-app></div>
+
+</body>
+</html>

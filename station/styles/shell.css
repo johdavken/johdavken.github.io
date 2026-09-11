@@ -1,0 +1,172 @@
+/* Station shell - the page frame and nothing inside it.
+ *
+ * Owns: the grid, the header, the left navigation column, the right inspector
+ * column, the status bar, and the too-small notice. Everything that lives
+ * inside one of those regions is owned by its own component file.
+ */
+
+.station-shell {
+  display: grid;
+  grid-template-columns: var(--station-sidebar-width) minmax(0, 1fr) var(--station-inspector-width);
+  grid-template-rows: var(--station-header-height) minmax(0, 1fr) auto var(--station-status-height);
+  grid-template-areas:
+    "header  header   header"
+    "sidebar machine  inspector"
+    "sidebar strip    inspector"
+    "status  status   status";
+  /* A definite height, not a minimum.
+   *
+   * The machine stage scales an SVG to fit its cell, and `height: 100%` only
+   * resolves against a parent with a definite height. Under `min-height` the
+   * row was indefinite, the SVG fell back to its intrinsic aspect ratio, and a
+   * square viewBox in a 1000px-wide cell asked for 1000px of height - which
+   * grew the row, grew the grid and put a scrollbar on a console that is meant
+   * to fit the window. The side columns already scroll internally, so nothing
+   * here needs the page to grow. */
+  height: 100vh;
+}
+
+/* ---- Header ---- */
+
+.station-header {
+  grid-area: header;
+  display: flex;
+  align-items: center;
+  gap: var(--station-space-3);
+  padding: 0 var(--station-space-4);
+  background: var(--station-surface);
+  border-bottom: var(--station-stroke) solid var(--station-border);
+}
+
+.station-header__title {
+  font-size: var(--station-text-lg);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.station-header__tag {
+  padding: 2px var(--station-space-2);
+  border: var(--station-stroke) solid var(--station-border-strong);
+  border-radius: var(--station-radius-sm);
+  color: var(--station-text-muted);
+  font-size: var(--station-text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* ---- Regions ---- */
+
+.station-sidebar {
+  grid-area: sidebar;
+  padding: var(--station-space-4);
+  background: var(--station-surface);
+  border-right: var(--station-stroke) solid var(--station-border);
+  overflow-y: auto;
+}
+
+/* The machine is scaled to fit rather than scrolled: a schematic you have to
+ * pan around stops being readable at a glance, which is the only thing it is
+ * for. The SVG's viewBox does the fitting, so a wider machine (more layers,
+ * more hoppers) gets smaller rather than overflowing. */
+.station-machine {
+  grid-area: machine;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  padding: var(--station-space-4);
+  overflow: hidden;
+}
+
+.station-inspector {
+  grid-area: inspector;
+  padding: var(--station-space-4);
+  background: var(--station-surface);
+  border-left: var(--station-stroke) solid var(--station-border);
+  overflow-y: auto;
+}
+
+.station-recipe-strip {
+  grid-area: strip;
+}
+
+.station-status {
+  grid-area: status;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--station-space-4);
+  background: var(--station-surface-sunken);
+  border-top: var(--station-stroke) solid var(--station-border);
+  color: var(--station-text-muted);
+  font-size: var(--station-text-sm);
+}
+
+/* ---- Section headings, shared by the side columns ---- */
+
+.station-section__heading {
+  margin-bottom: var(--station-space-3);
+  color: var(--station-text-faint);
+  font-size: var(--station-text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* ---- Left navigation ---- */
+
+.station-nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--station-space-2);
+}
+
+.station-nav__item {
+  display: block;
+  width: 100%;
+  padding: var(--station-space-3);
+  background: var(--station-surface-raised);
+  border: var(--station-stroke) solid var(--station-border);
+  border-radius: var(--station-radius);
+  text-align: left;
+}
+
+.station-nav__item.is-selected {
+  background: var(--station-accent-soft);
+  border-color: var(--station-accent);
+}
+
+.station-nav__label {
+  display: block;
+  font-weight: 600;
+}
+
+.station-nav__note {
+  display: block;
+  margin-top: var(--station-space-1);
+  color: var(--station-text-muted);
+  font-size: var(--station-text-xs);
+  line-height: var(--station-line-tight);
+}
+
+/* ---- Below Station's supported width ----
+ * Station is a desktop console. Rather than reflowing into something that
+ * would compete with the existing mobile UI, it states the range it supports.
+ */
+
+.station-too-small {
+  display: none;
+  padding: var(--station-space-6) var(--station-space-4);
+  color: var(--station-text-muted);
+  text-align: center;
+}
+
+@media (max-width: 1099px) {
+  .station-shell { display: none; }
+  .station-too-small { display: block; }
+}
+
+@media (min-width: 1100px) and (max-width: 1439px) {
+  .station-root {
+    --station-sidebar-width: 210px;
+    --station-inspector-width: 240px;
+  }
+}

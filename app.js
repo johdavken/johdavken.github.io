@@ -136,6 +136,10 @@
   const resinCatalog = window.PolynResinCatalog;
   const resinLookup = window.PolynLookup;
   const activeJob = window.PolynActiveJob;
+  // Read-only window onto committed state for the Station console. Optional
+  // by design: the app runs identically when it is absent.
+  const stationBridge = window.PolynStationStateBridge || null;
+  let stationBridgeHandle = null;
   const { parseChangeoverDate, formatTime, formatTimelineStart, isChangeoverStale } = window.PolynScheduling;
   const fmtTime = (date, baseDate) => formatTime(date, baseDate, state.timeFormat);
   const { writeJson } = window.PolynStorage;
@@ -2485,6 +2489,13 @@
    * ============================ */
   function saveSession(){
       const result = writeJson(localStorage, LS_SESSION_KEY, snapshotPayload());
+      // Station bridge: say the committed state moved. Deliberately AFTER
+      // snapshotPayload(), which commits the working Next Recipe, and
+      // deliberately outside the failure branch below - state moved whether or
+      // not persisting it worked. Safe on this keystroke-rate path because
+      // publish() only increments a revision and queues at most one coalesced
+      // notification per tick; nothing is cloned unless a consumer asks.
+      stationBridgeHandle?.publish();
       if (!result.ok){
         showStorageWarning("Autosave failed. Changes may be lost when this page closes.");
         return false;
@@ -9690,6 +9701,31 @@
     refreshConfigDropdown();
   }
 
+  /* Register this application as the Station console's read-only source.
+   *
+   * `read` is a lazy projection: the bridge calls it only when a consumer
+   * actually asks for a snapshot, and deep-clones and freezes whatever comes
+   * back before handing it out. `state` itself is never passed anywhere - the
+   * projection builds a new plain object every call - so nothing here widens
+   * what the rest of the app can reach.
+   *
+   * Failure is swallowed on purpose. A console that cannot be fed is a console
+   * that shows its own empty state; it is not a reason for the floor UI to
+   * fail to start. */
+  function connectStationBridge(){
+    if (!stationBridge || stationBridgeHandle) return;
+    try{
+      stationBridgeHandle = stationBridge.connect({
+        read: ()=>stationBridge.project(state, {
+          lineConfiguration: derivedLineConfiguration(),
+          // The run-down formula's own weight, Smart Hoppers included, so the
+          // console never has to re-derive a number this app already resolves.
+          resolveHopperWeight: effectiveHopperWeight
+        })
+      });
+    }catch(error){ stationBridgeHandle = null; }
+  }
+
   function setupLineSync(){
     if (!window.PolynCloudSync || !window.PolynSyncStorage) return;
     lineSync = window.PolynCloudSync.create({
@@ -10755,6 +10791,7 @@
       applyMobileTimelineAlarm(!!state.mobileTimelineAlarm);
       applyPumpOffAlarmSound(state.pumpOffAlarmSoundUri, state.pumpOffAlarmSoundName, state.pumpOffAlarmVibrate);
       saveSession();
+      connectStationBridge();
       setupLineSync();
 
       // Timeline clock: makes card status/relative time advance with real

@@ -1,0 +1,137 @@
+/* Station design tokens.
+ *
+ * The only file in the Station stylesheet set that defines a raw colour, a
+ * raw length, or a raw font stack. Every other Station rule spends tokens.
+ * That is the whole contract: if a value is repeated anywhere, it belongs
+ * here, and if a component wants a value nothing else uses, it still comes
+ * through a token so the palette stays readable in one place.
+ *
+ * Station does NOT read the existing app's theme variables. Those are shaped
+ * around the floor UI's own surfaces and would drag the legacy cascade in
+ * behind them. When Station eventually needs to follow the operator's chosen
+ * theme, it should map that theme onto these tokens deliberately - one
+ * mapping layer - rather than consuming the legacy custom properties raw.
+ */
+
+.station-root {
+  /* ---- Surface ---- */
+  --station-bg: #11151c;
+  --station-surface: #171d26;
+  --station-surface-raised: #1e2632;
+  --station-surface-sunken: #0d1117;
+  --station-border: #2a3442;
+  --station-border-strong: #3a4757;
+
+  /* ---- Text ---- */
+  --station-text: #e5eaf1;
+  --station-text-muted: #93a1b3;
+  --station-text-faint: #64748b;
+
+  /* ---- Equipment ----
+   * The machine schematic's whole palette. Three steel values give the
+   * drawing depth without shading: structure sits back, vessels sit mid,
+   * lit faces come forward. Everything else is a process material, and those
+   * are the only saturated colours in the machine - so what an operator's eye
+   * lands on is resin, melt, bubble and film, not the steelwork. */
+  --station-steel: #253040;
+  --station-steel-light: #2e3b4d;
+  --station-steel-dark: #1b2430;
+  --station-frame: #222c3a;
+  --station-edge: #445468;
+  --station-edge-soft: #35424f;
+
+  --station-equipment-fill: #202a37;
+  --station-equipment-stroke: #384454;
+
+  --station-hopper-body: #1c2531;
+  --station-hopper-stroke: #3d4b5d;
+  --station-hopper-fill: #4f7ba8;
+  --station-hopper-loader: #495a6e;
+  /* The vacuum receiver. Amber because that is the colour this equipment
+   * actually is on the floor, and it makes the top of every hopper findable. */
+  --station-receiver: #b9832f;
+  --station-receiver-edge: #d0a255;
+
+  /* ---- Layer identity ----
+   * Accents only: a layer's colour appears on its label, its mixer agitator,
+   * its extruder motor and its blend percentages - never as an equipment fill,
+   * which would turn the machine into a colour chart. Outside and inside are
+   * the two ends of the film, so they are the two ends of the ramp. */
+  --station-layer-outside: #6fa8dc;
+  --station-layer-subskin: #7fb89c;
+  --station-layer-core: #c9a14a;
+  --station-layer-inside: #b58ac4;
+
+  /* ---- Process materials ---- */
+  --station-melt: #8a6a4a;
+  --station-bubble: rgba(122, 178, 222, 0.16);
+  --station-bubble-edge: #6ea6d8;
+  --station-frost: #9fc4e4;
+  --station-film: #5f93bd;
+
+  /* ---- Machine line weights ---- */
+  --station-line-hairline: 0.6px;
+  --station-line-thin: 0.9px;
+  --station-line-medium: 1.3px;
+  --station-web-width: 13px;
+
+  /* ---- State ---- */
+  --station-accent: #4f9ad6;
+  --station-accent-soft: rgba(79, 154, 214, 0.16);
+  --station-tracking: #5fb98a;
+  --station-warning: #d8a250;
+  --station-danger: #d16a63;
+  --station-pump-off: #8b7bb8;
+
+  /* ---- Space ---- */
+  --station-space-1: 4px;
+  --station-space-2: 8px;
+  --station-space-3: 12px;
+  --station-space-4: 16px;
+  --station-space-5: 24px;
+  --station-space-6: 32px;
+
+  /* ---- Shape ---- */
+  --station-radius-sm: 3px;
+  --station-radius: 6px;
+  --station-radius-lg: 10px;
+  --station-stroke: 1px;
+
+  /* ---- Type ---- */
+  --station-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --station-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  /* Small enough for a per-hopper readout in a six-wide bank; the only place
+   * it is used. */
+  --station-text-2xs: 9px;
+  --station-text-xs: 11px;
+  --station-text-sm: 12px;
+  --station-text-md: 14px;
+  --station-text-lg: 17px;
+  --station-line-tight: 1.25;
+  --station-line-normal: 1.5;
+
+  /* ---- Shell layout ---- */
+  --station-sidebar-width: 260px;
+  --station-inspector-width: 300px;
+  --station-header-height: 52px;
+  --station-status-height: 32px;
+  --station-recipe-strip-height: 64px;
+}
+
+/* ---------------------------------------------------------------------
+ *   Breakpoints
+ * -------------------------------------------------------------------
+ * Station has exactly two, and they are documented here rather than
+ * scattered through the component files.
+ *
+ *   >= 1440px   the design target. Sidebar and inspector both at full width.
+ *   1100-1439px compact desktop. Both side columns narrow; nothing is hidden,
+ *               nothing reflows to a different layout.
+ *   <  1100px   below Station's supported range. The shell says so rather
+ *               than degrading into a phone layout - Station is desktop-only
+ *               by design, and the existing mobile UI is where floor work
+ *               happens.
+ *
+ * A third breakpoint is not a small addition. If a component appears to need
+ * one, the layout above it is the thing to fix.
+ */

@@ -1,0 +1,35 @@
+/* Run-down and changeover timing readouts.
+ *
+ * The component exists as an ownership boundary, reserved ahead of the work
+ * that fills it: run-down timing is not wired to live state in this phase,
+ * so the only rules here are the ones the eventual readout will need and no
+ * speculative variants. The point of declaring it now is that the next person
+ * to add a run-down rule has an obvious place to put it, instead of appending
+ * it to machine.css and starting the override pile this stylesheet set exists
+ * to avoid.
+ */
+
+.station-rundown {
+  display: flex;
+  flex-direction: column;
+  gap: var(--station-space-2);
+}
+
+.station-rundown__value {
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-md);
+  font-variant-numeric: tabular-nums;
+}
+
+.station-rundown__value.is-late {
+  color: var(--station-danger);
+}
+
+.station-rundown__value.is-warning {
+  color: var(--station-warning);
+}
+
+.station-rundown__caption {
+  color: var(--station-text-faint);
+  font-size: var(--station-text-xs);
+}

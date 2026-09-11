@@ -1,0 +1,154 @@
+/* The right-hand inspector's contents. The column itself - its width,
+ * background and border - belongs to shell.css.
+ */
+
+.station-inspector__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--station-space-3);
+}
+
+.station-inspector__row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--station-space-1);
+  padding-bottom: var(--station-space-3);
+  border-bottom: var(--station-stroke) solid var(--station-border);
+}
+
+.station-inspector__term {
+  color: var(--station-text-faint);
+  font-size: var(--station-text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.station-inspector__value {
+  color: var(--station-text);
+  font-size: var(--station-text-sm);
+  line-height: var(--station-line-tight);
+  overflow-wrap: anywhere;
+}
+
+/* ---------------------------------------------------------------------
+ *   Focus panels
+ * -------------------------------------------------------------------
+ * The three equipment targets report into this same column rather than into
+ * a modal of their own: the inspector already exists, already has the width,
+ * and already is where a Station reader looks for detail. A new overlay system
+ * for three read-outs would be a second pattern to maintain.
+ */
+
+.station-panel__header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--station-space-2);
+  margin-bottom: var(--station-space-4);
+  padding-bottom: var(--station-space-3);
+  border-bottom: var(--station-stroke) solid var(--station-border);
+}
+
+.station-panel__title {
+  margin: 0;
+  font-size: var(--station-text-md);
+  font-weight: 600;
+}
+
+.station-panel__subtitle {
+  grid-column: 1;
+  color: var(--station-text-faint);
+  font-size: var(--station-text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.station-panel__close {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  padding: var(--station-space-1) var(--station-space-3);
+  border: var(--station-stroke) solid var(--station-border-strong);
+  border-radius: var(--station-radius-sm);
+  color: var(--station-text-muted);
+  font-size: var(--station-text-xs);
+}
+
+.station-panel__metric {
+  margin-bottom: var(--station-space-4);
+  color: var(--station-accent);
+  font-family: var(--station-font-mono);
+  font-size: 34px;
+  font-weight: 600;
+  line-height: var(--station-line-tight);
+}
+
+/* Said plainly wherever an edit would otherwise be implied. */
+.station-panel__notice {
+  margin-top: var(--station-space-4);
+  color: var(--station-text-faint);
+  font-size: var(--station-text-xs);
+  line-height: var(--station-line-normal);
+}
+
+/* ---------------------------------------------------------------------
+ *   Blend table
+ * ------------------------------------------------------------------- */
+
+.station-blend {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--station-text-sm);
+}
+
+.station-blend__row.is-unassigned {
+  color: var(--station-text-faint);
+}
+
+.station-blend__id,
+.station-blend__resin,
+.station-blend__pct,
+.station-blend__source {
+  padding: var(--station-space-1) 0;
+  text-align: left;
+  vertical-align: baseline;
+}
+
+.station-blend__id {
+  width: 3.4em;
+  color: var(--station-text-muted);
+  font-family: var(--station-font-mono);
+}
+
+.station-blend__resin {
+  font-family: var(--station-font-mono);
+}
+
+.station-blend__pct {
+  width: 3.6em;
+  font-family: var(--station-font-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.station-blend__source {
+  padding-left: var(--station-space-3);
+  color: var(--station-text-faint);
+  font-size: var(--station-text-xs);
+}
+
+.station-blend__total {
+  border-top: var(--station-stroke) solid var(--station-border);
+  font-weight: 600;
+}
+
+/* A blend that does not add to 100 is a fact worth seeing, not a styling
+   accident - the same judgement the application's own validation makes. */
+.station-blend__total.is-warning .station-blend__pct {
+  color: var(--station-warning);
+}
+
+/* A blend that does not add to 100 is worth seeing in the summary too. */
+.station-inspector__value.is-warning {
+  color: var(--station-warning);
+}

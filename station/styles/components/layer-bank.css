@@ -1,0 +1,270 @@
+/* One layer's equipment train: header, mixer, extruder, and the emphasis
+ * states that make expanding a layer read as zooming in.
+ *
+ * A deliberate second machine component file rather than more rules appended
+ * to machine.css: the bank is the thing that repeats per layer, and giving it
+ * its own ownership is what keeps "adjust the mixer" from meaning "read the
+ * whole machine stylesheet".
+ *
+ * The hopper cluster inside it belongs to hopper.css.
+ */
+
+/* ---------------------------------------------------------------------
+ *   Header
+ * ------------------------------------------------------------------- */
+
+.station-layer__name {
+  fill: var(--station-layer-accent, var(--station-text));
+  font-family: var(--station-font);
+  font-size: var(--station-text-lg);
+  font-weight: 600;
+}
+
+.station-layer__role {
+  fill: var(--station-text-faint);
+  font-family: var(--station-font);
+  font-size: var(--station-text-xs);
+  letter-spacing: 0.12em;
+}
+
+/* Layer identity is an accent, never an equipment fill. Set as a custom
+ * property on the bank so every part that wants to carry the layer's colour
+ * reads one value. */
+.station-layer[data-layer-role="outside"] { --station-layer-accent: var(--station-layer-outside); }
+.station-layer[data-layer-role="subskin-outside"] { --station-layer-accent: var(--station-layer-subskin); }
+.station-layer[data-layer-role="core"] { --station-layer-accent: var(--station-layer-core); }
+.station-layer[data-layer-role="subskin-inside"] { --station-layer-accent: var(--station-layer-subskin); }
+.station-layer[data-layer-role="inside"] { --station-layer-accent: var(--station-layer-inside); }
+.station-layer[data-layer-role="single"] { --station-layer-accent: var(--station-layer-core); }
+
+/* ---------------------------------------------------------------------
+ *   Mixer
+ * ------------------------------------------------------------------- */
+
+.station-mixer__body,
+.station-mixer__inlet,
+.station-mixer__outlet {
+  fill: var(--station-steel);
+  stroke: var(--station-edge);
+  stroke-width: var(--station-line-thin);
+}
+
+.station-mixer__viewport {
+  fill: var(--station-steel-dark);
+  stroke: var(--station-layer-accent, var(--station-edge));
+  stroke-width: var(--station-line-thin);
+}
+
+.station-mixer__blade {
+  stroke: var(--station-edge);
+  stroke-width: var(--station-line-medium);
+  stroke-linecap: round;
+}
+
+.station-mixer__shaft {
+  fill: var(--station-edge);
+}
+
+/* ---------------------------------------------------------------------
+ *   The one piece of motion in Station
+ * -------------------------------------------------------------------
+ * A slow turn of the agitator blades inside a static viewport. Just enough to
+ * say the line is running, and deliberately the smallest moving thing on the
+ * screen: no glow, no pulse, no moving equipment, and nothing at all on a
+ * layer with no recipe to mix or on a layer dimmed behind an expanded one.
+ *
+ * `transform-box: fill-box` makes `transform-origin: center` the centre of the
+ * blades' own bounding box, which is the shaft - so no JavaScript, no timer and
+ * no per-element transform has to be kept in step with the layout.
+ */
+@keyframes station-agitate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.station-mixer__agitator {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.station-layer.is-running:not(.is-dimmed) .station-mixer__agitator {
+  animation: station-agitate 9s linear infinite;
+}
+
+/* An operator who has asked the system for less motion gets none: the blades
+ * are still drawn, in their resting position, so nothing disappears. */
+@media (prefers-reduced-motion: reduce) {
+  .station-layer.is-running:not(.is-dimmed) .station-mixer__agitator {
+    animation: none;
+  }
+}
+
+/* ---------------------------------------------------------------------
+ *   Extruder
+ * ------------------------------------------------------------------- */
+
+/* ---------------------------------------------------------------------
+ *   Extruder
+ * -------------------------------------------------------------------
+ * The barrel is the form; everything else supports it. Three steel values do
+ * all the depth work - a lit strip down one side of the barrel turns a flat
+ * quad into a tube, the cap face sits forward of it, and the bore is the one
+ * genuinely dark thing because it is a hole. No gradients, no filters.
+ */
+
+.station-extruder__barrel-body {
+  fill: var(--station-steel);
+  stroke: var(--station-edge);
+  stroke-width: var(--station-line-thin);
+}
+
+/* The highlight that makes the barrel read as round rather than flat. */
+.station-extruder__barrel-lit {
+  fill: var(--station-steel-light);
+  stroke: none;
+}
+
+/* Heater-zone bands, and the one longitudinal seam down the shaded side. */
+.station-extruder__seam {
+  stroke: var(--station-edge);
+  stroke-width: var(--station-line-hairline);
+}
+
+.station-extruder__seam-long {
+  stroke: var(--station-edge-soft);
+  stroke-width: var(--station-line-hairline);
+}
+
+/* Front end: flange, face, bore - three rings reading inward. */
+.station-extruder__flange {
+  fill: var(--station-steel-dark);
+  stroke: var(--station-edge);
+  stroke-width: var(--station-line-thin);
+}
+
+.station-extruder__cap-face {
+  fill: var(--station-steel-light);
+  stroke: var(--station-edge);
+  stroke-width: var(--station-line-thin);
+}
+
+.station-extruder__bore {
+  fill: var(--station-surface-sunken);
+  stroke: var(--station-edge);
+  stroke-width: var(--station-line-hairline);
+}
+
+/* Rear: the feed block the mixer lands on, and the drive behind it. */
+.station-extruder__feed {
+  fill: var(--station-steel);
+  stroke: var(--station-edge);
+  stroke-width: var(--station-line-thin);
+}
+
+.station-extruder__drive {
+  fill: var(--station-steel-light);
+  stroke: var(--station-layer-accent, var(--station-edge));
+  stroke-width: var(--station-line-thin);
+}
+
+.station-extruder__drive-vent {
+  stroke: var(--station-edge);
+  stroke-width: var(--station-line-hairline);
+}
+
+/* Short feet under both ends. Dark, because they are in the shadow of the
+   machine and because they must not compete with the barrel. */
+.station-extruder__foot {
+  fill: var(--station-steel-dark);
+  stroke: var(--station-edge-soft);
+  stroke-width: var(--station-line-hairline);
+}
+
+/* The front pair is nearer the viewer, so it catches a little more light. */
+.station-extruder__foot[data-position="front"] {
+  fill: var(--station-steel);
+}
+
+/* The layer's share of the film structure, on the equipment that represents it. */
+.station-extruder__pct {
+  fill: var(--station-text);
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-sm);
+  font-weight: 600;
+}
+
+/* ---------------------------------------------------------------------
+ *   Emphasis
+ * ------------------------------------------------------------------- */
+
+/* Expanding a layer leaves the others in place for context but takes them out
+ * of the conversation: quieter, and not clickable, so a click during edit
+ * cannot silently jump to a different layer. */
+.station-layer.is-dimmed {
+  opacity: 0.32;
+}
+
+.station-layer.is-dimmed .station-hit {
+  pointer-events: none;
+  cursor: default;
+}
+
+.station-layer.is-focused .station-layer__name {
+  fill: var(--station-accent);
+}
+
+/* Which of the three targets the inspector is currently showing. */
+.station-layer.is-mixer-selected .station-mixer__body,
+.station-layer.is-extruder-selected .station-extruder__barrel-body,
+.station-layer.is-cluster-selected .station-hopper__shell {
+  stroke: var(--station-accent);
+  stroke-width: var(--station-line-medium);
+}
+
+/* ---------------------------------------------------------------------
+ *   Read-only notice on the expanded layer
+ * ------------------------------------------------------------------- */
+
+.station-layer__notice {
+  fill: var(--station-warning);
+  font-family: var(--station-font);
+  font-size: var(--station-text-2xs);
+  letter-spacing: 0.1em;
+}
+
+.station-cluster__hint {
+  fill: var(--station-text-faint);
+  font-family: var(--station-font);
+  font-size: var(--station-text-xs);
+  letter-spacing: 0.06em;
+}
+
+/* ---------------------------------------------------------------------
+ *   Extruder Lab (development only)
+ * -------------------------------------------------------------------
+ * Styles for the ?lab=extruder study on the standalone harness. Scoped to
+ * `station-lab` classes that nothing in the product emits, so they are inert
+ * on the real stage. Removed along with station-extruder-lab.js.
+ */
+
+.station-lab__title {
+  fill: var(--station-text);
+  font-family: var(--station-font);
+  font-size: var(--station-text-md);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.station-lab__caption {
+  fill: var(--station-text-faint);
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-sm);
+}
+
+/* The layer centreline, so the rear feed point can be seen staying on it. */
+.station-lab__centreline {
+  stroke: var(--station-accent);
+  stroke-width: var(--station-line-hairline);
+  stroke-dasharray: 4 5;
+  opacity: 0.5;
+}
