@@ -1,0 +1,473 @@
+/* The focused layer's recipe editor (station-focus-editor.js).
+ *
+ * A stacked list of configuration rows in the focus workspace: one per
+ * hopper, badge at the left, resin and source in the middle, the blend
+ * percentage leading at the right, and the total under the column. Not a
+ * table, so nothing here draws a column line or a header row; rows are
+ * separated by space and a hairline, and the hierarchy is carried by type.
+ *
+ * WHERE IT LIVES
+ *
+ * Inside the stage's <svg>, in a <foreignObject> the workspace builder
+ * sizes to the layout's box. Lengths here are therefore canvas units,
+ * scaled with the drawing - the editor's type grows and shrinks with the
+ * equipment beside it, as the bank's own labels do.
+ *
+ * THE STATES
+ *
+ *   is-highlighted   the pointer or keyboard focus is on this hopper, on
+ *                    either side of the link (see hopper.css for the drawn
+ *                    hopper's half). Quiet: a raised surface.
+ *   is-selected      the inspector's hopper. Stronger: the accent, on the
+ *                    surface and on the badge.
+ *   is-empty         an unassigned hopper: one placeholder, not a row of
+ *                    empty fields.
+ *   is-searching     the resin value has become a search.
+ *   is-invalid       (the total) the blend does not add to 100.
+ */
+
+.station-workspace__editor {
+  /* Nothing here relies on this any more - the result list is placed so it
+     stays inside the box (station-focus-editor.js), because Firefox does
+     not repaint foreignObject content that grows past the box until the
+     <svg> relays out. It stays so a focus ring on an edge row is never
+     shaved off by the box either. */
+  overflow: visible;
+}
+
+.station-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  /* The workspace is as narrow as 240 canvas units on a compact stage and
+     several times that on a wide one; the side padding follows it. */
+  padding: var(--station-space-5) clamp(var(--station-space-4), 6%, var(--station-space-6));
+  color: var(--station-text);
+  font-family: var(--station-font);
+  font-size: var(--station-text-md);
+  line-height: var(--station-line-tight);
+}
+
+/* The layer's accent, for the badge. The same mapping the drawn layer
+   uses (layer-bank.css); the editor is not inside that group, so it is
+   stated again for the editor's root. */
+.station-editor[data-layer-role="outside"] { --station-layer-accent: var(--station-layer-outside); }
+.station-editor[data-layer-role="subskin-outside"] { --station-layer-accent: var(--station-layer-subskin); }
+.station-editor[data-layer-role="core"] { --station-layer-accent: var(--station-layer-core); }
+.station-editor[data-layer-role="subskin-inside"] { --station-layer-accent: var(--station-layer-subskin); }
+.station-editor[data-layer-role="inside"] { --station-layer-accent: var(--station-layer-inside); }
+.station-editor[data-layer-role="single"] { --station-layer-accent: var(--station-layer-core); }
+
+/* ---------------------------------------------------------------------
+ *   Header
+ * ------------------------------------------------------------------- */
+
+.station-editor__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--station-space-4);
+  max-width: 640px;
+  padding-bottom: var(--station-space-4);
+  border-bottom: var(--station-stroke) solid var(--station-border-strong);
+}
+
+.station-editor__title {
+  font-size: var(--station-text-lg);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.station-editor__role {
+  margin-top: var(--station-space-1);
+  color: var(--station-text-faint);
+  font-size: var(--station-text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+/* Said once, quietly, at the top: nothing here writes back yet. */
+.station-editor__mode {
+  flex: none;
+  padding: 2px var(--station-space-2);
+  border: var(--station-stroke) solid var(--station-border);
+  border-radius: var(--station-radius-sm);
+  color: var(--station-text-faint);
+  font-size: var(--station-text-2xs);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  cursor: help;
+}
+
+/* ---------------------------------------------------------------------
+ *   Rows
+ * ------------------------------------------------------------------- */
+
+.station-editor__list {
+  max-width: 640px;
+  margin-top: var(--station-space-2);
+}
+
+.station-editor__item {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--station-space-4);
+  min-height: 64px;
+  padding: var(--station-space-3) var(--station-space-2);
+  margin: 0 calc(-1 * var(--station-space-2));
+  border-bottom: var(--station-stroke) solid var(--station-border);
+  border-radius: var(--station-radius);
+  /* The surface is what the states change; at rest there is none. */
+  background: transparent;
+}
+
+.station-editor__item.is-highlighted {
+  background: var(--station-surface-raised);
+}
+
+.station-editor__item.is-selected {
+  background: var(--station-accent-soft);
+  box-shadow: inset 2px 0 0 var(--station-accent);
+}
+
+/* The total's rule closes the list; the last row does not draw its own. */
+.station-editor__item:last-child {
+  border-bottom-color: transparent;
+}
+
+/* A row with a search open stands above the rows its list covers, and
+   its own source line steps out from under the list. */
+.station-editor__item.is-searching {
+  z-index: 1;
+}
+
+.station-editor__item.is-searching .station-editor__source-value {
+  visibility: hidden;
+}
+
+/* ---- Badge: the hopper's identity ---- */
+
+.station-editor__badge {
+  min-width: 2.6em;
+  padding: 3px var(--station-space-2);
+  border: var(--station-stroke) solid color-mix(in srgb, var(--station-layer-accent, var(--station-text-muted)) 40%, transparent);
+  border-radius: var(--station-radius-sm);
+  background: color-mix(in srgb, var(--station-layer-accent, var(--station-text-muted)) 14%, transparent);
+  color: var(--station-layer-accent, var(--station-text-muted));
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-align: center;
+}
+
+.station-editor__item.is-empty .station-editor__badge {
+  border-color: var(--station-border);
+  background: transparent;
+  color: var(--station-text-faint);
+}
+
+.station-editor__item.is-selected .station-editor__badge {
+  border-color: var(--station-accent);
+  background: var(--station-accent);
+  color: var(--station-surface-sunken);
+}
+
+/* ---- Resin and source: the middle column ---- */
+
+.station-editor__main {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--station-space-1);
+  min-width: 0;
+}
+
+/* Spans the column so the value inside can be limited to it; the value
+   itself stays shrink-to-fit, so its hover surface is the text's width. */
+.station-editor__resin {
+  position: relative;
+  align-self: stretch;
+  min-width: 0;
+}
+
+/* The values are buttons that read as text: no chrome at rest, a faint
+   surface under the pointer. The negative margin keeps the text where it
+   was when the surface appears. */
+.station-editor__resin-value,
+.station-editor__source-value {
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: top;
+  padding: 2px var(--station-space-2);
+  margin: -2px calc(-1 * var(--station-space-2));
+  border-radius: var(--station-radius-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The value steps aside while its search is open. Stated here because the
+   display above would otherwise out-rank the browser's own [hidden]. */
+.station-editor__resin-value[hidden] {
+  display: none;
+}
+
+.station-editor__resin-value:hover,
+.station-editor__source-value:hover {
+  background: var(--station-surface-raised);
+}
+
+.station-editor__resin-value {
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-md);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.station-editor__source-value {
+  color: var(--station-text-muted);
+  font-size: var(--station-text-xs);
+  letter-spacing: 0.04em;
+}
+
+/* Placeholders: what an empty slot offers, said quietly. */
+.station-editor__resin-value.is-placeholder,
+.station-editor__source-value.is-placeholder {
+  color: var(--station-text-faint);
+  font-family: var(--station-font);
+  font-weight: 400;
+  letter-spacing: normal;
+}
+
+.station-editor__resin-value.is-placeholder:hover,
+.station-editor__source-value.is-placeholder:hover {
+  color: var(--station-text-muted);
+}
+
+.station-editor__glyph {
+  display: inline-block;
+  width: 1.1em;
+  color: var(--station-text-faint);
+}
+
+/* ---- Percentage: the leading number ---- */
+
+.station-editor__pct {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 0;
+  min-width: 3.4em;
+  color: var(--station-text);
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-xl);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Sized to its value, not to a character count. `3ch` was too narrow for
+   "100" in both engines, and it was not even the same width in both:
+   Chromium resolves `ch` from the FIRST family in the stack when that
+   family is not installed - 0.5em, the spec's fallback - while Firefox
+   measures the font actually in use, so the field came out 20% narrower
+   in Chromium than in Firefox. `field-sizing: content` fits the digits
+   exactly in either; the minimum keeps a one-digit value from collapsing
+   to a sliver, and is what "60" measured before, so nothing moves. */
+.station-editor__pct-input {
+  --station-field-padding: 2px 3px;
+  --station-field-radius: var(--station-radius-sm);
+  --station-field-cursor: default;
+  --station-field-width: auto;
+  --station-field-sizing: content;
+  min-width: calc(1.25em + 6px);
+  text-align: right;
+}
+
+.station-editor__pct-input:hover {
+  --station-field-bg: var(--station-surface-raised);
+}
+
+.station-editor__pct-input:focus {
+  --station-field-bg: var(--station-surface-raised);
+  --station-field-shadow: 0 0 0 2px var(--station-accent-soft);
+}
+
+.station-editor__unit {
+  color: var(--station-text-muted);
+  font-size: var(--station-text-md);
+  font-weight: 500;
+}
+
+.station-editor__item.is-empty .station-editor__pct {
+  /* Keeps the column, shows nothing: an empty hopper has no share. */
+  min-height: 1em;
+}
+
+/* ---------------------------------------------------------------------
+ *   Resin search
+ * ------------------------------------------------------------------- */
+
+.station-editor__search {
+  --station-field-padding: 2px var(--station-space-2);
+  --station-field-radius: var(--station-radius-sm);
+  --station-field-bg: var(--station-surface-sunken);
+  --station-field-border: var(--station-stroke) solid var(--station-accent);
+  --station-field-shadow: 0 0 0 2px var(--station-accent-soft);
+  --station-field-width: min(16em, 100%);
+  margin: -3px calc(-1 * var(--station-space-2) - 1px);
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-md);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.station-editor__search::placeholder {
+  color: var(--station-text-faint);
+  font-family: var(--station-font);
+  font-weight: 400;
+  letter-spacing: normal;
+}
+
+.station-editor__results {
+  position: absolute;
+  top: calc(100% + var(--station-space-2));
+  left: calc(-1 * var(--station-space-2) - 1px);
+  z-index: 2;
+  /* Wider than the value it hangs from, but never past a compact workspace. */
+  width: min(20em, calc(100% + 6em));
+  /* The editor measures the list and places it (station-focus-editor.js):
+     this is the height it may have when neither side of the value has room
+     for all of it. Unset, it is as tall as its options. */
+  max-height: var(--station-results-max, none);
+  overflow-y: auto;
+  padding: var(--station-space-1);
+  border: var(--station-stroke) solid var(--station-border-strong);
+  border-radius: var(--station-radius);
+  background: var(--station-surface-raised);
+  box-shadow: var(--station-shadow-pop);
+}
+
+/* Placed above the value when it would run off the drawing below it. The
+   same list, the same gap, the other side. */
+.station-editor__results[data-placement="above"] {
+  top: auto;
+  bottom: calc(100% + var(--station-space-2));
+}
+
+.station-editor__option {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--station-space-3);
+  padding: var(--station-space-2) var(--station-space-3);
+  border-radius: var(--station-radius-sm);
+  cursor: pointer;
+}
+
+.station-editor__option:hover {
+  background: var(--station-surface);
+}
+
+.station-editor__option.is-active {
+  background: var(--station-accent-soft);
+}
+
+.station-editor__option-code {
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-md);
+  font-weight: 500;
+}
+
+.station-editor__option-note {
+  color: var(--station-text-faint);
+  font-size: var(--station-text-xs);
+  white-space: nowrap;
+}
+
+.station-editor__no-match {
+  padding: var(--station-space-2) var(--station-space-3);
+  color: var(--station-text-faint);
+  font-size: var(--station-text-sm);
+}
+
+/* ---------------------------------------------------------------------
+ *   Total
+ * ------------------------------------------------------------------- */
+
+.station-editor__total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--station-space-4);
+  max-width: 640px;
+  margin-top: var(--station-space-3);
+  padding: var(--station-space-3) 0;
+  border-top: var(--station-stroke) solid var(--station-border-strong);
+}
+
+.station-editor__total-label {
+  display: flex;
+  align-items: baseline;
+  gap: var(--station-space-3);
+  color: var(--station-text-muted);
+  font-size: var(--station-text-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* Under the percentage column: the same type, the same right edge, so the
+   numbers above read as summing into it. */
+.station-editor__total-value {
+  padding-right: var(--station-space-1);
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-xl);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.station-editor__total.is-empty .station-editor__total-value {
+  color: var(--station-text-faint);
+}
+
+/* Wrong is worth seeing; right is the normal state and is not dressed up. */
+.station-editor__total.is-invalid .station-editor__total-value {
+  color: var(--station-warning);
+}
+
+.station-editor__total-flag {
+  padding: 1px var(--station-space-2);
+  text-transform: none;
+  border: var(--station-stroke) solid var(--station-warning);
+  border-radius: var(--station-radius-sm);
+  color: var(--station-warning);
+  font-size: var(--station-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+/* Why an edit did nothing. Empty until it has something to say. */
+.station-editor__note {
+  min-height: 1.5em;
+  max-width: 640px;
+  margin-top: var(--station-space-2);
+  color: var(--station-warning);
+  font-size: var(--station-text-xs);
+  line-height: var(--station-line-normal);
+}
+
+.station-editor__note:empty {
+  color: transparent;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .station-editor__item,
+  .station-editor__badge,
+  .station-editor__resin-value,
+  .station-editor__source-value {
+    transition: background var(--station-motion-ack) ease-out, color var(--station-motion-ack) ease-out,
+      border-color var(--station-motion-ack) ease-out;
+  }
+}

@@ -69,6 +69,10 @@
    * @param {object} [options.layerState]   per-layer state by layer id
    * @param {string} [options.focusLayer]   layer to expand, or null
    * @param {string} [options.selectedTarget] "cluster" | "mixer" | "extruder"
+   * @param {string} [options.selectedHopper] the selected hopper's id, on the open layer
+   * @param {Element} [options.workspace]   HTML content for the focus workspace
+   * @param {string} [options.raiseLayer]    layer to paint last (in transit)
+   * @param {number} [options.stageAspect]  the stage's width/height, for the focus canvas
    * @param {object} [options.dimensions]   layout overrides
    */
   function renderStage(model, options) {
@@ -82,23 +86,41 @@
       // Hopper bodies are drawn to their Receiver Weight Profile height, so
       // the layout needs the runtime state too - not just the renderer.
       hopperState: settings.hopperState || null,
-      dimensions: settings.dimensions
+      dimensions: settings.dimensions,
+      stageAspect: settings.stageAspect
     });
     if (!layout) return null;
 
+    /* A drawing, until the workspace holds an editor - then it is a region
+     * with controls in it, and an image role would hide them from
+     * assistive technology. */
     const svg = parts.node(doc, "svg", "station-machine__stage", {
       viewBox: `0 0 ${Math.round(layout.width)} ${Math.round(layout.height)}`,
       preserveAspectRatio: "xMidYMid meet",
-      role: "img",
+      role: layout.workspace && settings.workspace ? "group" : "img",
       "aria-label": `${model.line.displayName}: ${model.line.layerCount} layer extrusion train`,
       "data-layer-count": model.line.layerCount,
       "data-focus-layer": layout.focusLayer || null
     });
 
+    /* The reserved workspace goes down first: it is a surface the focused
+     * layer's objects sit in front of, never something they pass behind. */
+    if (layout.workspace) svg.appendChild(parts.workspace(doc, layout.workspace, settings.workspace || null));
+
     const row = parts.group(doc, "station-machine__row", "layer-row");
-    for (const bank of layout.banks) {
+    /* Paint order is the layout's: in focus mode the dimmed banks go down
+     * first so the focused one is on top of anything it overlaps. A layer in
+     * TRANSIT (`raiseLayer`) is painted last whatever the layout says, so a
+     * layer travelling home through the normal row passes over its
+     * neighbours rather than behind them. */
+    let order = layout.paintOrder || layout.banks.map((_, index) => index);
+    const raised = settings.raiseLayer ? layout.banks.findIndex(bank => bank.id === settings.raiseLayer) : -1;
+    if (raised >= 0) order = order.filter(index => index !== raised).concat([raised]);
+    for (const index of order) {
+      const bank = layout.banks[index];
       row.appendChild(parts.layerBank(doc, bank, settings.hopperState, settings.layerState, {
         selectedTarget: bank.id === layout.focusLayer ? settings.selectedTarget : null,
+        selectedHopper: bank.id === layout.focusLayer ? settings.selectedHopper || null : null,
         showHint: settings.showHint
       }));
     }
@@ -131,14 +153,24 @@
       mount.removeAttribute("data-focus-layer");
       return null;
     }
+    /* The focus canvas takes the stage's shape, so it is measured here -
+     * once, before anything is built or animated. The mount's size does not
+     * depend on what is drawn in it. */
+    const stageAspect = settings.stageAspect !== undefined
+      ? settings.stageAspect
+      : (mount.clientWidth > 0 && mount.clientHeight > 0 ? mount.clientWidth / mount.clientHeight : undefined);
     const svg = renderStage(model, {
       document: doc,
       hopperState: settings.hopperState,
       layerState: settings.layerState,
       focusLayer: settings.focusLayer,
       selectedTarget: settings.selectedTarget,
+      selectedHopper: settings.selectedHopper,
+      workspace: settings.workspace,
+      raiseLayer: settings.raiseLayer,
       showHint: settings.showHint,
-      dimensions: settings.dimensions
+      dimensions: settings.dimensions,
+      stageAspect
     });
     mount.appendChild(svg);
     mount.setAttribute("data-layer-count", String(model.line.layerCount));

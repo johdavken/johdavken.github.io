@@ -31,9 +31,11 @@
   const demoLines = root.PolynStationDemoLines;
   const source = root.PolynStationSource;
   const shell = root.PolynStationShell;
+  const transition = root.PolynStationTransition;
+  const focusEditor = root.PolynStationFocusEditor;
   const bridge = root.PolynStationStateBridge || null;
 
-  if (!lineModel || !render || !demoLines || !source || !shell) return;
+  if (!lineModel || !render || !demoLines || !source || !shell || !transition || !focusEditor) return;
 
   const mounts = {};
   let selectedDemoId = demoLines.DEMO_LINES[0] ? demoLines.DEMO_LINES[0].id : "";
@@ -50,19 +52,138 @@
    * the job and must never travel anywhere. The recipe values it displays all
    * come from the bridge snapshot; nothing is copied into here.
    *
-   *   target "cluster"    -> edit the layer's recipe contents
-   *   target "mixer"      -> inspect the layer blend
-   *   target "extruder"   -> inspect / edit the layer percentage
+   *   target "mixer"      -> OPEN the layer in the workspace; inspect the blend
+   *   target "extruder"   -> OPEN the layer in the workspace; inspect the share
+   *   target "cluster"    -> the hoppers themselves: pumps, tracking, and
+   *                          whatever else belongs on the equipment once it
+   *                          is wired up. Never opens the layer. Carries
+   *                          `hopper`, the id of the one hopper selected -
+   *                          by a click on it, or on its row in the focused
+   *                          editor - or null for the cluster as a whole.
    *
-   * That mapping is fixed. See station-machine-parts.js, which is the only
-   * place the targets are marked.
+   * The equipment train is the handle on the layer; the hoppers are the
+   * controls in it. See station-machine-parts.js, which is the only place
+   * the targets are marked.
    */
-  let focus = null;   // { layer, target } or null
+  let focus = null;   // { layer, target, hopper } or null
+
+  /* Which hopper the pointer (or keyboard focus) is on, as "<layer>:<id>".
+   * Transient and DOM-only: it links a drawn hopper to its editor row and
+   * back, and is reset by every render, which removes the classes. */
+  let highlighted = null;
+
+  /* The stage's transition controller (station-transition.js): the one
+   * thing that renders the machine, so that every change of focus is a
+   * transition and no code path can redraw the stage out from under one.
+   * Created in start(), once the mount exists. */
+  let stage = null;
+  // What the stage is drawing from, for the controller's render callback.
+  let current = { model: null, resolved: null };
+
+  /* Which targets OPEN the layer: the equipment train - mixer or extruder.
+   * The hopper cluster is the future home of pump and tracking controls; a
+   * click there selects it for the inspector and, on a layer that is
+   * already open, keeps it open - it never opens or closes one. */
+  function opensLayer(target) {
+    return target === "mixer" || target === "extruder";
+  }
+
+  /* Which layer the stage should show for the current focus. The train
+   * decides: mixer or extruder means their layer. The cluster decides
+   * nothing - whatever is open stays open, whatever is closed stays closed
+   * - so no click on a hopper, on a row, or on anything that resolves to a
+   * cluster can ever close a layer or open one. */
+  function focusLayerFor() {
+    if (!focus) return null;
+    if (opensLayer(focus.target)) return focus.layer;
+    return stage ? stage.getState().focusLayer : null;
+  }
 
   function setFocus(next) {
     const same = focus && next && focus.layer === next.layer && focus.target === next.target;
-    focus = same ? null : next;
-    renderAll();
+    if (opensLayer(next.target)) {
+      // The train toggles: the same target again closes the layer.
+      focus = same ? null : { layer: next.layer, target: next.target, hopper: null };
+    } else {
+      /* The cluster never opens or closes anything, so it never clears the
+       * focus either. A second click on the selected hopper deselects it
+       * and leaves the cluster selected. */
+      const hopper = next.hopper || null;
+      focus = { layer: next.layer, target: "cluster", hopper: same && focus.hopper === hopper ? null : hopper };
+    }
+    stage.request(focusLayerFor());
+    syncSelection();
+    renderInspector(current.model, current.resolved);
+  }
+
+  function clearFocus() {
+    if (!focus) return;
+    focus = null;
+    stage.request(null);
+    syncSelection();
+    renderInspector(current.model, current.resolved);
+  }
+
+  /* --------------------------------------------------------------------
+   *   Hopper <-> editor row linking
+   * ------------------------------------------------------------------ */
+
+  /* The selection classes on the stage as drawn, brought into line with
+   * `focus` without a render. A change of target or hopper on the layer
+   * that is already open must not rebuild the stage - that would throw
+   * away an open resin search - so the classes the renderer would have
+   * written are written here instead, from the same state, to the same
+   * elements. The drawing is the source of which elements those are: a
+   * hopper and its row both carry data-hopper and data-layer. */
+  function syncSelection() {
+    const mount = mounts.machine;
+    if (!mount || !stage) return;
+    const shown = stage.getState().focusLayer;
+    const active = focus && shown && focus.layer === shown ? focus : null;
+    for (const layer of mount.querySelectorAll("[data-role='layer']")) {
+      const id = layer.getAttribute("data-layer");
+      for (const target of ["mixer", "extruder", "cluster"]) {
+        const on = !!active && id === shown && active.target === target &&
+          !(target === "cluster" && active.hopper);
+        layer.classList.toggle(`is-${target}-selected`, on);
+      }
+    }
+    const selected = active ? active.hopper : null;
+    for (const el of mount.querySelectorAll(".station-hopper[data-hopper], .station-editor__item[data-hopper]")) {
+      el.classList.toggle("is-selected",
+        !!selected && el.getAttribute("data-layer") === shown && el.getAttribute("data-hopper") === selected);
+    }
+  }
+
+  /* The hopper an event target belongs to - drawn or in the editor - when
+   * it is on the open layer; null otherwise. Hover linking is a focused-
+   * view behaviour: the normal row is not restyled by the pointer. */
+  function hopperAt(target) {
+    const el = target && target.closest ? target.closest("[data-hopper][data-layer]") : null;
+    if (!el) return null;
+    const layer = el.getAttribute("data-layer");
+    if (!layer || layer !== stage.getState().focusLayer) return null;
+    return { layer, hopper: el.getAttribute("data-hopper") };
+  }
+
+  function highlight(key) {
+    const mount = mounts.machine;
+    if (!mount) return;
+    const next = key ? `${key.layer}:${key.hopper}` : null;
+    if (next === highlighted) return;
+    highlighted = next;
+    for (const el of mount.querySelectorAll(".station-hopper[data-hopper], .station-editor__item[data-hopper]")) {
+      el.classList.toggle("is-highlighted",
+        !!key && el.getAttribute("data-layer") === key.layer && el.getAttribute("data-hopper") === key.hopper);
+    }
+  }
+
+  /* The shared resin catalog, when the page has it. The application host
+   * always does; the harness loads the same module. Nothing Station-only:
+   * the list the search offers is the list Recipe Setup offers. */
+  function catalogResins() {
+    const catalog = root.PolynResinCatalog;
+    return catalog && typeof catalog.getResins === "function" ? catalog.getResins() : [];
   }
 
   /* The seam. Everything below reads this one resolved object, so the
@@ -129,23 +250,11 @@
     return item;
   }
 
-  /* The blend a layer's hoppers add up to. One derivation, used by both the
-   * mixer summary and the expanded edit panel, so they can never disagree. */
+  /* The blend a layer's hoppers add up to. One derivation - the focused
+   * editor's - used by the inspector too, so the two can never disagree. */
   function blendFor(model, resolved, layerId) {
     const layer = model && model.layers.find(entry => entry.id === layerId);
-    if (!layer) return null;
-    const rows = layer.hoppers.map(hopper => {
-      const runtime = resolved.hopperState[`${layerId}:${hopper.index}`] || {};
-      return {
-        id: hopper.id,
-        index: hopper.index,
-        resin: runtime.resinName || "",
-        pct: Number.isFinite(runtime.pct) ? runtime.pct : 0,
-        source: runtime.source || ""
-      };
-    });
-    const total = rows.reduce((sum, row) => sum + row.pct, 0);
-    return { layer, rows, total, assigned: rows.filter(row => row.resin || row.pct) };
+    return layer ? focusEditor.blendFor(layer, resolved.hopperState) : null;
   }
 
   function panelHeader(doc, title, subtitle) {
@@ -165,7 +274,7 @@
     close.type = "button";
     close.className = "station-panel__close";
     close.textContent = "Close";
-    close.addEventListener("click", () => { focus = null; renderAll(); });
+    close.addEventListener("click", clearFocus);
     header.appendChild(close);
     return header;
   }
@@ -252,15 +361,10 @@
       return true;
     }
 
-    /* Cluster: the expanded edit state.
-     *
-     * The controls are ON the equipment now - resin on the body, blend under
-     * the discharge, source above the receiver - so this panel is deliberately
-     * NOT a second copy of them. Repeating the per-hopper table here would make
-     * the expansion pointless again and leave two places showing the same
-     * values. What it carries instead is what the equipment cannot: the layer's
-     * totals, and the fact that the blend adds up. */
-    host.appendChild(panelHeader(doc, `Layer ${blend.layer.id}`, "Expanded for editing"));
+    /* Cluster: the hoppers. Pump and tracking controls will live on the
+     * equipment itself once they are wired up; until then this panel carries
+     * what a summary can: the layer's totals, and whether the blend adds up. */
+    host.appendChild(panelHeader(doc, `Layer ${blend.layer.id} hoppers`, blend.layer.roleLabel));
 
     const summary = doc.createElement("dl");
     summary.className = "station-inspector__list";
@@ -268,8 +372,14 @@
     summary.appendChild(inspectorRow(doc, "Hoppers assigned",
       `${blend.assigned.length} of ${blend.rows.length}`));
     const total = inspectorRow(doc, "Blend total", `${Math.round(blend.total)}%`,
-      Math.round(blend.total) === 100 ? "" : "is-warning");
+      blend.valid ? "" : "is-warning");
     summary.appendChild(total);
+    if (focus.hopper) {
+      const row = blend.rows.find(entry => entry.id === focus.hopper);
+      summary.appendChild(inspectorRow(doc, "Selected hopper", row
+        ? `${row.id} · ${row.resin || "no resin"}${row.pct ? ` · ${row.pct}%` : ""}${row.source ? ` · ${row.source}` : ""}`
+        : focus.hopper));
+    }
     const layerPct = resolved.layerState && resolved.layerState[focus.layer]
       ? resolved.layerState[focus.layer].layerPct
       : null;
@@ -279,7 +389,7 @@
 
     const where = doc.createElement("p");
     where.className = "station-panel__notice";
-    where.textContent = "Resin, blend and source are on the hoppers themselves.";
+    where.textContent = "Pump and tracking controls will live on the hoppers themselves; nothing is wired up yet.";
     host.appendChild(where);
     host.appendChild(readOnlyNotice(doc, "Recipe editing"));
     return true;
@@ -327,7 +437,7 @@
 
     const hint = doc.createElement("p");
     hint.className = "station-panel__notice";
-    hint.textContent = "Click a hopper cluster to edit a layer, a mixer for its blend, or an extruder for its share.";
+    hint.textContent = "Click a mixer or extruder to open its layer in the workspace. The hoppers will carry pump and tracking controls.";
     host.appendChild(hint);
   }
 
@@ -388,10 +498,12 @@
     if (labRequested()) {
       root.PolynStationExtruderLab.mount(mounts.machine, root.document, {
         layout: root.PolynStationMachineLayout,
-        parts: root.PolynStationMachineParts
+        parts: root.PolynStationMachineParts,
+        extruderAssets: root.PolynStationExtruderAssets,
+        mixerAssets: root.PolynStationMixerAssets
       });
       if (mounts.status) mounts.status.textContent =
-        "Extruder study — development only. The same component the stage draws, at 3.2x.";
+        "Equipment review — development only. Original assets beside the Station derivatives the stage draws.";
       return;
     }
 
@@ -400,19 +512,64 @@
     // A focus on a layer that no longer exists (the line changed under us)
     // must not survive into the render.
     if (focus && (!model || !model.layers.some(layer => layer.id === focus.layer))) focus = null;
+    current = { model, resolved };
 
     renderNav(resolved.live);
-    render.mountStage(mounts.machine, model, {
-      hopperState: resolved.hopperState,
-      layerState: resolved.layerState,
-      // Only the cluster expands the layer; the other two targets are
-      // inspections and leave the machine as it was.
-      focusLayer: focus && focus.target === "cluster" ? focus.layer : null,
-      selectedTarget: focus ? focus.target : null
-    });
+    // A plain redraw: any transition in flight lands first, then the stage
+    // is drawn in the state it was heading for.
+    stage.refresh(focusLayerFor());
     renderInspector(model, resolved);
     renderRecipeStrip(model);
     renderStatus(model, resolved);
+  }
+
+  /* The controller's render callback: the stage for the current line, at a
+   * given focus. The selected target is drawn only on the layer that is
+   * open, as before; the open layer's editor is built here and handed to
+   * the renderer as the workspace's content, so the renderer never learns
+   * what a recipe is. */
+  function drawStage(focusLayer, extra) {
+    highlighted = null;
+    const model = current.model;
+    const hopperState = current.resolved ? current.resolved.hopperState : null;
+    const layer = focusLayer && model ? model.layers.find(entry => entry.id === focusLayer) : null;
+    const selectedHopper = focus && focus.layer === focusLayer ? focus.hopper : null;
+    const editor = layer ? focusEditor.create(mounts.machine.ownerDocument, {
+      layer,
+      hopperState,
+      resins: catalogResins,
+      selected: selectedHopper,
+      onSelect: hopper => setFocus({ layer: focusLayer, target: "cluster", hopper })
+    }) : null;
+    return render.mountStage(mounts.machine, model, {
+      hopperState,
+      layerState: current.resolved ? current.resolved.layerState : null,
+      focusLayer,
+      selectedTarget: focus ? focus.target : null,
+      selectedHopper,
+      workspace: editor ? editor.element : null,
+      raiseLayer: extra && extra.raiseLayer
+    });
+  }
+
+  function prefersReducedMotion() {
+    try {
+      return !!(root.matchMedia && root.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /* Development-only transition controls, at ?transition=debug on the
+   * standalone harness. As with the lab: station-host.js never loads the
+   * module, so this is false in the application whatever the URL says. */
+  function transitionDebugRequested() {
+    if (!root.PolynStationTransitionDev) return false;
+    try {
+      return new URL(root.location.href).searchParams.get("transition") === "debug";
+    } catch (error) {
+      return false;
+    }
   }
 
   /* Station mounts into whatever element carries [data-station-app]: the body
@@ -470,6 +627,19 @@
       const layer = hit.getAttribute("data-layer");
       const target = hit.getAttribute("data-station-target");
       if (!layer || !target) return;
+      /* A ghost - a layer stepped back while another is open - is not a
+       * control. The stylesheet makes it inert to the pointer; this is the
+       * same rule for a click that reaches here anyway, so a target on a
+       * layer that is not the open one changes nothing while one is open.
+       * (Anything that resolves to no target at all, such as the editor's
+       * blank space, has already returned above.) */
+      const bank = hit.closest("[data-role='layer']");
+      if (bank && bank.classList.contains("is-dimmed")) return;
+      const shown = stage.getState().focusLayer;
+      if (shown && layer !== shown) return;
+      // The one hopper under the click, when the click is on one.
+      const hopperEl = event.target.closest("[data-role='hopper']");
+      const hopper = hopperEl ? hopperEl.getAttribute("data-hopper") : null;
 
       /* The receiver is the pump's indicator and its eventual toggle, and it
        * is marked as a target so it is already addressable. Toggling a pump is
@@ -481,19 +651,46 @@
       if (target === "receiver") {
         const cluster = hit.closest ? hit.closest("[data-station-target='cluster']") : null;
         if (!cluster) return;
-        setFocus({ layer: cluster.getAttribute("data-layer") || layer, target: "cluster" });
+        setFocus({ layer: cluster.getAttribute("data-layer") || layer, target: "cluster", hopper });
         return;
       }
 
-      setFocus({ layer, target });
+      setFocus({ layer, target, hopper });
     });
 
-    // Escape leaves whatever is open, which is the exit people try first.
+    /* Hover and keyboard focus link a drawn hopper to its editor row and
+     * back: whichever side the pointer is on, both are highlighted. The
+     * two sides share data-hopper and data-layer, so one lookup serves
+     * both, and nothing is held but the key. */
+    mounts.machine?.addEventListener("mouseover", event => highlight(hopperAt(event.target)));
+    mounts.machine?.addEventListener("mouseleave", () => highlight(null));
+    mounts.machine?.addEventListener("focusin", event => highlight(hopperAt(event.target)));
+    mounts.machine?.addEventListener("focusout", event => {
+      if (!hopperAt(event.relatedTarget)) highlight(null);
+    });
+
+    // Escape leaves whatever is open, which is the exit people try first -
+    // including a layer that is still on its way open, which turns around.
     doc.addEventListener("keydown", event => {
       if (event.key !== "Escape" || !focus) return;
-      focus = null;
-      renderAll();
+      clearFocus();
     });
+
+    let devPanel = null;
+    stage = transition.createController({
+      mount: mounts.machine,
+      render: drawStage,
+      reducedMotion: prefersReducedMotion,
+      onChange: state => { if (devPanel) devPanel.update(state); }
+    });
+
+    if (transitionDebugRequested()) {
+      devPanel = root.PolynStationTransitionDev.mount(container, doc, {
+        stage,
+        open: layer => setFocus({ layer, target: "mixer" }),
+        close: clearFocus
+      });
+    }
 
     renderAll();
 

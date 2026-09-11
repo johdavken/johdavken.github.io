@@ -53,6 +53,7 @@
     "station/styles/components/machine.css",
     "station/styles/components/hopper.css",
     "station/styles/components/layer-bank.css",
+    "station/styles/components/focus-editor.css",
     "station/styles/components/inspector.css",
     "station/styles/components/recipe-strip.css",
     "station/styles/components/rundown.css"
@@ -60,18 +61,22 @@
 
   const SCRIPTS = [
     "station/station-line-model.js",
+    "station/station-extruder-assets.js",
+    "station/station-mixer-assets.js",
     // Layout before parts before the renderer: the renderer reads both of
     // their globals when it executes.
     "station/station-machine-layout.js",
     "station/station-machine-parts.js",
     "station/station-render.js",
+    "station/station-transition.js",
+    "station/station-focus-editor.js",
     "station/station-shell.js",
     "station/station-demo-lines.js",
     "station/station-source.js",
     "station/station.js"
   ];
 
-  const VERSION = "0.7.0";
+  const VERSION = "0.13.1";
 
   function requested() {
     try {

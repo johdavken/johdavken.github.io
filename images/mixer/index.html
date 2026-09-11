@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Batch mixer SVG views</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 42px clamp(20px,5vw,72px); background: #10151c; color: #e5eaf1; font: 16px/1.5 system-ui,sans-serif; }
+  main { max-width: 1440px; margin: auto; }
+  .eyebrow { color: #8494a7; font-size: 12px; letter-spacing: .18em; text-transform: uppercase; }
+  h1 { font-size: clamp(28px,4vw,42px); font-weight: 550; margin: 10px 0; }
+  p { color: #8494a7; margin: 0 0 24px; }
+  .toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 30px 0 16px; }
+  button, a.download { border: 1px solid #445468; color: inherit; background: transparent; border-radius: 7px; padding: 8px 14px; font: inherit; cursor: pointer; text-decoration: none; }
+  button[aria-pressed="true"] { color: #10151c; background: #a8bdcd; border-color: #a8bdcd; }
+  button:focus-visible, a:focus-visible { outline: 3px solid #69a9d2; outline-offset: 4px; }
+  .cards { display: grid; grid-template-columns: repeat(3,1fr); gap: 18px; }
+  .card { border: 1px solid #2e3b4d; border-radius: 14px; padding: 20px; background: #161e28; }
+  .card img { display: block; width: 100%; height: 350px; object-fit: contain; }
+  .card h2 { margin: 20px 0 12px; font-weight: 550; font-size: 18px; }
+  .download { display: inline-block; font-size: 13px !important; }
+  .steel .card { background: #f1f4f3; color: #253239; border-color: #c1cbcf; }
+  .layout-heading { font-size: 23px; font-weight: 550; margin: 44px 0 8px; }
+  .layout { overflow-x: auto; border: 1px solid #2e3b4d; border-radius: 14px; }
+  #arrangement { display: block; width: 100%; min-width: 800px; }
+  .note { font-size: 13px; margin-top: 16px; }
+  @media(max-width:700px) { .cards { grid-template-columns: 1fr; } .card img { height: 280px; } }
+</style>
+<main>
+  <div class="eyebrow">Batch mixer / SVG assets</div>
+  <h1>Three views of the batch mixer</h1>
+  <p>The workplace mixer, drawn to match the screw housing: flat shading, a clear silhouette, and restrained mechanical detail.</p>
+  <div class="toolbar" role="group" aria-label="Mixer color palette">
+    <button data-palette="ui" aria-pressed="true">Station palette</button>
+    <button data-palette="steel" aria-pressed="false">Neutral steel</button>
+  </div>
+  <div class="cards" id="cards">
+    <article class="card"><img data-view="front" src="mixer-front.svg" alt="Front-facing batch mixer"><h2>Front · 0°</h2><a class="download" data-view="front" href="mixer-front.svg" download>Download SVG</a></article>
+    <article class="card"><img data-view="intermediate" src="mixer-intermediate.svg" alt="Batch mixer at the photograph's approximate angle"><h2>Photo angle · 30°</h2><a class="download" data-view="intermediate" href="mixer-intermediate.svg" download>Download SVG</a></article>
+    <article class="card"><img data-view="angled" src="mixer-angled.svg" alt="Batch mixer at sixty degrees"><h2>Outer angle · 60°</h2><a class="download" data-view="angled" href="mixer-angled.svg" download>Download SVG</a></article>
+  </div>
+  <h2 class="layout-heading">Mixer and screw together</h2>
+  <p><a class="download" href="../mixer-extruder/index.html">Open complete assemblies and SVG downloads</a></p>
+  <p>Aligned at the discharge connection, with mirrored views on the left.</p>
+  <div class="toolbar" role="group" aria-label="Layer count">
+    <button data-layers="1" aria-pressed="false">1 layer</button>
+    <button data-layers="3" aria-pressed="false">3 layers</button>
+    <button data-layers="5" aria-pressed="true">5 layers</button>
+  </div>
+  <div class="layout"><img id="arrangement" src="layers-5.svg" alt="Five mixers connected to their screws"></div>
+  <p class="note">Assembly previews use the station palette. The individual mixer SVGs have transparent backgrounds and a shared outlet anchor.</p>
+</main>
+<script>
+  document.querySelectorAll('[data-palette]').forEach(button => button.addEventListener('click', () => {
+    const steel = button.dataset.palette === 'steel';
+    document.getElementById('cards').classList.toggle('steel', steel);
+    document.querySelectorAll('[data-palette]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+    document.querySelectorAll('[data-view]').forEach(item => {
+      const path = `${steel ? 'steel/' : ''}mixer-${item.dataset.view}.svg`;
+      item.setAttribute(item.tagName === 'IMG' ? 'src' : 'href', path);
+    });
+  }));
+  document.querySelectorAll('[data-layers]').forEach(button => button.addEventListener('click', () => {
+    const count = button.dataset.layers;
+    document.querySelectorAll('[data-layers]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+    const image = document.getElementById('arrangement');
+    image.src = `layers-${count}.svg`;
+    image.alt = `${count} mixers connected to their screws`;
+  }));
+</script>
+</html>

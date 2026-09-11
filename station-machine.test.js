@@ -218,139 +218,173 @@ test("a narrow line is centred on the canvas rather than stretched to fill it", 
 });
 
 /* ----------------------------------------------------------------------
- *   Extruder convergence
+ *   Extruder convergence: three authored views, picked by position
  * -------------------------------------------------------------------- */
 
-test("extruder angle is derived from distance off centre, not from the layer letter", () => {
-  const angle = layoutModule.extruderAngle;
-  // Same position in the stack, same angle, whatever the layer is called.
-  assert.equal(angle(0, 5, 12), angle(0, 5, 12));
-  // Symmetric about the centre.
-  assert.equal(angle(0, 5, 12), -angle(4, 5, 12));
-  assert.equal(angle(1, 5, 12), -angle(3, 5, 12));
-});
+const assets = require("./station/station-extruder-assets.js");
+const mixerAssets = require("./station/station-mixer-assets.js");
 
-test("the centre layer of an odd stack is straight, and the outermost is at the full angle", () => {
-  /* Stated as magnitude and symmetry rather than as signed numbers. Which sign
-   * means "inward" is a fact about SVG's rotation direction, and it is asserted
-   * where it belongs - in the geometry test below - so that hard-coding it here
-   * cannot quietly lock in a convention nobody re-derived. */
-  for (const layerCount of [3, 5, 7]) {
-    const centre = (layerCount - 1) / 2;
-    const first = layoutModule.extruderAngle(0, layerCount, 12);
-    const last = layoutModule.extruderAngle(layerCount - 1, layerCount, 12);
-    assert.equal(layoutModule.extruderAngle(centre, layerCount, 12), 0, `${layerCount}: centre is not straight`);
-    assert.equal(Math.abs(first), 12, `${layerCount}: outermost is not at the full angle`);
-    assert.equal(first, -last, `${layerCount}: the ends are not mirror images`);
+test("the view is derived from distance off centre, not from the layer letter", () => {
+  const view = layoutModule.equipmentView;
+  // Same position in the stack, same view, whatever the layer is called.
+  assert.deepEqual(view(0, 5), view(0, 5));
+  // Mirror images about the centre: same view, opposite side.
+  for (const [a, b] of [[0, 4], [1, 3]]) {
+    assert.equal(view(a, 5).view, view(b, 5).view);
+    assert.equal(view(a, 5).mirrored, true);
+    assert.equal(view(b, 5).mirrored, false);
   }
 });
 
-test("a single layer is straight, because there is nothing to converge on", () => {
-  assert.equal(layoutModule.extruderAngle(0, 1, 12), 0);
-  assert.equal(layoutFor(literal({ layerCount: 1, layerAPosition: null })).banks[0].extruder.angle, 0);
+test("front for the centre, intermediate one ring out, angled from two rings out", () => {
+  /* The documented mapping of the three assets onto a stack - the masters'
+   * own suggested views: 0; -30, 0, 30; -60, -30, 0, 30, 60. Stated for the
+   * three supported counts and for the ones nobody has drawn yet, because
+   * the rule has to hold for those too. */
+  const names = count => Array.from({ length: count }, (_, i) => {
+    const facing = layoutModule.equipmentView(i, count);
+    return `${facing.mirrored ? "-" : ""}${facing.view}`;
+  });
+  assert.deepEqual(names(1), ["front"]);
+  // Three layers turn 30 degrees, not 60: the outer pair is close to the core.
+  assert.deepEqual(names(3), ["-intermediate", "front", "intermediate"]);
+  assert.deepEqual(names(5), ["-angled", "-intermediate", "front", "intermediate", "angled"]);
+  // Beyond the second ring there is no further view to turn to.
+  assert.deepEqual(names(7), ["-angled", "-angled", "-intermediate", "front", "intermediate", "angled", "angled"]);
+  // An even count has no centre layer, so no machine faces straight out.
+  assert.deepEqual(names(2), ["-intermediate", "intermediate"]);
+  assert.deepEqual(names(4), ["-angled", "-intermediate", "intermediate", "angled"]);
+  // And the human-readable key says the same thing.
+  assert.deepEqual(Array.from({ length: 5 }, (_, i) => layoutModule.equipmentView(i, 5).key),
+    ["angled-left", "intermediate-left", "front", "intermediate-right", "angled-right"]);
 });
 
-test("yaw grows with distance from the centre and stays within the maximum", () => {
+test("a single layer faces straight out, because there is nothing to converge on", () => {
+  const bank = layoutFor(literal({ layerCount: 1, layerAPosition: null })).banks[0];
+  assert.equal(bank.extruder.view, "front");
+  assert.equal(bank.extruder.mirrored, false);
+  assert.equal(bank.extruder.yaw, 0);
+});
+
+test("the turn grows with distance from the centre, and is the asset's own yaw", () => {
   const banks = layoutFor(literal({ layerCount: 5 })).banks;
-  const magnitudes = banks.map(bank => Math.abs(bank.extruder.angle));
-  // Progressively more turned the further out, in both directions.
-  assert.ok(magnitudes[0] > magnitudes[1] && magnitudes[1] > magnitudes[2]);
-  assert.ok(magnitudes[4] > magnitudes[3] && magnitudes[3] > magnitudes[2]);
-  assert.equal(magnitudes[2], 0);
-  // Mirror image about the centre.
-  assert.equal(banks[0].extruder.angle, -banks[4].extruder.angle);
-  assert.equal(banks[1].extruder.angle, -banks[3].extruder.angle);
-  for (const bank of banks) {
-    assert.ok(Math.abs(bank.extruder.angle) <= layoutModule.DIMENSIONS.extruderMaxYaw + 0.001,
-      "an extruder is turned past the maximum yaw");
-  }
+  const yaw = banks.map(bank => bank.extruder.yaw);
+  assert.deepEqual(yaw.map(Math.abs), [
+    assets.views.angled.yaw, assets.views.intermediate.yaw, 0,
+    assets.views.intermediate.yaw, assets.views.angled.yaw
+  ]);
+  // Signed like a compass: negative left of centre, positive right of it.
+  assert.ok(yaw[0] < 0 && yaw[1] < 0 && yaw[3] > 0 && yaw[4] > 0);
+  assert.equal(yaw[0], -yaw[4]);
 });
 
-test("an even layer count has no straight extruder and stays symmetric", () => {
-  const angles = layoutFor(literal({ layerCount: 4 })).banks.map(b => b.extruder.angle);
-  assert.ok(!angles.includes(0));
-  assert.equal(angles[0], -angles[3]);
-  assert.equal(angles[1], -angles[2]);
-});
-
-test("no extruder is rotated in the plane of the screen - the machines stand upright", () => {
-  /* The whole point of yaw over tilt. A rotate() anywhere in this group would
-   * lean the machine, which is the thing this pass replaced. */
+test("no extruder is rotated or transformed in the plane of the screen - the machines stand upright", () => {
+  /* Perspective is in the artwork; mirroring is in the coordinates. Nothing in
+   * the group carries a transform, so no machine can lean and no later reader
+   * has to find a scale(-1) to understand a left-hand layer. */
   const svg = stageFor(literal({ layerCount: 5 }), { layerState: { A: { layerPct: 20 } } });
   for (const extruder of allWith(svg, "data-role", "extruder")) {
     walk(extruder, node => {
       const transform = node.getAttribute("transform");
-      assert.ok(!transform || !/rotate/.test(transform),
-        `${node.nodeName} inside the extruder is rotated: ${transform}`);
+      assert.ok(!transform, `${node.nodeName} inside the extruder carries a transform: ${transform}`);
     });
-    // The percentage is upright by construction, so it needs no correction.
-    const readout = [];
-    walk(extruder, node => {
-      if (String(node.getAttribute("class") || "").includes("station-extruder__pct")) readout.push(node);
-    });
+    const readout = allWithClassName(extruder, "station-extruder__pct");
     assert.equal(readout.length, 1);
     assert.equal(readout[0].getAttribute("transform"), null);
   }
 });
 
-test("yaw reaches the markup as a facing direction, mirrored about the centre", () => {
+test("the view reaches the markup as a facing direction, mirrored about the centre", () => {
   const svg = stageFor(literal({ layerCount: 5 }));
   const facing = allWith(svg, "data-role", "extruder").map(node => ({
     layer: node.getAttribute("data-layer"),
+    view: node.getAttribute("data-view"),
+    mirrored: node.getAttribute("data-mirrored"),
     yaw: Number(node.getAttribute("data-yaw")),
     facing: node.getAttribute("data-facing")
   }));
-  // Left-hand machines turn right and show their left flank; mirror on the
-  // other side; the centre shows no flank at all.
   assert.deepEqual(facing.map(f => f.facing), ["left", "left", "front", "right", "right"]);
+  assert.deepEqual(facing.map(f => f.view), ["angled", "intermediate", "front", "intermediate", "angled"]);
+  assert.deepEqual(facing.map(f => f.mirrored), ["true", "true", "false", "false", "false"]);
   assert.equal(facing[0].yaw, -facing[4].yaw);
   assert.equal(facing[2].yaw, 0);
 });
 
-test("the barrel lengthens and the end cap flattens as a machine turns", () => {
-  /* The three things that move together and make the turn read as depth: the
-   * front end swings sideways, the projected barrel gets longer because it is
-   * less foreshortened, and the cap squashes because you are no longer looking
-   * straight down it. */
-  const banks = layoutFor(literal({ layerCount: 5 })).banks;
-  const e = banks.map(b => b.extruder);
-
-  // Centre: straight down, shortest projection, round cap.
-  assert.equal(e[2].front.x, e[2].rear.x);
-  assert.equal(Math.round(e[2].capRy), Math.round(e[2].capRx));
-
-  // Outward: longer barrel, flatter cap, monotonically.
-  assert.ok(e[0].length > e[1].length && e[1].length > e[2].length);
-  assert.ok(e[0].capRy < e[1].capRy && e[1].capRy < e[2].capRy);
-  // The cap never collapses to a line.
-  for (const one of e) assert.ok(one.capRy > one.capRx * 0.3);
+test("extruderPlacement is pure geometry and mirrors exactly about the feed anchor", () => {
+  const place = layoutModule.assetPlacement;
+  const asset = assets.views.angled;
+  const right = place("angled", false, asset, { centerX: 100, anchorY: 50, scale: 1 });
+  const left = place("angled", true, asset, { centerX: 100, anchorY: 50, scale: 1 });
+  // The feed anchor is the one thing that does not mirror.
+  assert.deepEqual(left.anchor, right.anchor);
+  assert.deepEqual(left.anchor, { x: 100, y: 50 });
+  // Everything else reflects through it.
+  const near = (a, b) => assert.ok(Math.abs(a - b) < 1e-9, `${a} != ${b}`);
+  near(left.bounds.left - 100, -(right.bounds.right - 100));
+  near(left.bounds.right - 100, -(right.bounds.left - 100));
+  near(left.bounds.top, right.bounds.top);
+  near(left.bounds.bottom, right.bounds.bottom);
+  near(left.outlet.x - 100, -(right.outlet.x - 100));
+  near(left.outlet.y, right.outlet.y);
+  assert.equal(left.yaw, -right.yaw);
+  // And scale is uniform.
+  const big = place("angled", false, asset, { centerX: 0, anchorY: 0, scale: 2 });
+  assert.ok(Math.abs(big.width / right.width - 2) < 1e-9);
+  assert.ok(Math.abs(big.height / right.height - 2) < 1e-9);
 });
 
-test("extruderGeometry is pure geometry and mirrors exactly", () => {
-  const geometry = layoutModule.extruderGeometry;
-  const d = layoutModule.DIMENSIONS;
-  const at = angle => geometry(angle, d, { pivotX: 0, pivotY: 0 });
-
-  // Facing straight out: no lateral travel at all.
-  assert.equal(at(0).front.x, 0);
-  assert.equal(at(0).fraction, 0);
-
-  // Mirrored in every dimension that should be, and only in the sign of the
-  // one that should not.
-  const left = at(-20);
-  const right = at(20);
-  assert.equal(left.front.x, -right.front.x);
-  assert.equal(left.front.y, right.front.y);
-  assert.equal(left.length, right.length);
-  assert.equal(left.capRy, right.capRy);
-  assert.equal(left.rear.x, right.rear.x, "the rear anchor must not mirror - it never moves");
-});
-
-test("the extruder pivots where it meets the mixer, so tilting never opens a gap", () => {
+test("the feed anchor sits on the mixer's discharge, on the layer centreline, at every view", () => {
   for (const bank of layoutFor(literal({ layerCount: 5 })).banks) {
-    assert.equal(bank.extruder.pivotX, bank.mixer.centerX);
-    assert.ok(bank.extruder.pivotY >= bank.mixer.y + bank.mixer.height,
-      "the extruder pivot is inside the mixer body");
+    assert.equal(bank.extruder.anchor.x, bank.mixer.centerX);
+    assert.equal(bank.extruder.anchor.x, bank.mixer.outlet.x);
+    assert.equal(bank.extruder.anchor.y, bank.mixer.outlet.y + layoutModule.DIMENSIONS.mixerFeedGap,
+      "the extruder does not start at the mixer's discharge");
+  }
+});
+
+test("extruders aim inward: the die-facing outlet is nearer the centre than the feed", () => {
+  /* Convergence, checked as geometry: on every turned machine the outlet end
+   * lies between its own feed anchor and the line's centre. */
+  const banks = layoutFor(literal({ layerCount: 5 })).banks;
+  const centreX = banks[2].centerX;
+  for (const bank of banks) {
+    const e = bank.extruder;
+    if (e.view === "front") { assert.equal(e.outlet.x, e.anchor.x); continue; }
+    assert.ok(Math.abs(e.outlet.x - centreX) < Math.abs(e.anchor.x - centreX),
+      `layer ${bank.id} does not aim toward the centre`);
+  }
+});
+
+test("neighbouring extruders never overlap, in any layer count or focus state", () => {
+  /* A turned machine reaches a long way toward the core. This is the number
+   * that decides whether the arrangement is readable, so it is pinned for
+   * every state the layout can produce. In focus the open layer's objects
+   * stand in their own columns, in front of ghosts that have faded; the
+   * ghosts still never overlap EACH OTHER, so the way back is orderly. */
+  for (const layerCount of [2, 3, 4, 5, 7]) {
+    const config = literal({ layerCount });
+    const focuses = [null, ...model.buildLineModel(config).layers.map(l => l.id)];
+    for (const focusLayer of focuses) {
+      const layout = layoutFor(config, { focusLayer });
+      const row = layout.banks.filter(bank => bank.id !== focusLayer);
+      for (let i = 1; i < row.length; i++) {
+        assert.ok(row[i - 1].extruder.bounds.right < row[i].extruder.bounds.left,
+          `${layerCount} layers, focus ${focusLayer}: extruders ${row[i - 1].id} and ${row[i].id} overlap`);
+      }
+      // And the whole machine, readout included, stays on the canvas.
+      for (const bank of layout.banks) {
+        assert.ok(bank.extruder.label.y + 4 <= layoutModule.DIMENSIONS.height,
+          `${layerCount} layers, focus ${focusLayer}: layer ${bank.id} runs off the bottom`);
+      }
+      if (focusLayer) {
+        // The open layer's train, cluster and workspace are three columns.
+        const open = layout.banks.find(bank => bank.id === focusLayer);
+        const { train, cluster } = open.objects;
+        assert.ok(train.x >= 0 && train.x + train.width <= cluster.x, `${layerCount} layers, focus ${focusLayer}: train and cluster overlap`);
+        assert.ok(cluster.x + cluster.width <= layout.workspace.x, `${layerCount} layers, focus ${focusLayer}: cluster and workspace overlap`);
+        assert.ok(layout.workspace.x + layout.workspace.width <= layout.width);
+      }
+    }
   }
 });
 
@@ -368,7 +402,7 @@ test("a bank stacks receiver, vessel, cone, mixer and extruder in that order", (
     ["cone", hopper.coneTop],
     ["spout", hopper.spoutTop],
     ["mixer", bank.mixer.y],
-    ["extruder", bank.extruder.pivotY]
+    ["extruder", bank.extruder.anchor.y]
   ];
   for (let i = 1; i < stages.length; i++) {
     assert.ok(stages[i][1] > stages[i - 1][1], `${stages[i][0]} must sit below ${stages[i - 1][0]}`);
@@ -549,45 +583,250 @@ test("focusing a layer expands it and dims the others, without removing them", (
   const svg = stageFor(literal({ layerCount: 5 }), { focusLayer: "C" });
   const banks = allWith(svg, "data-role", "layer");
   assert.equal(banks.length, 5, "the other layers must stay present for context");
-  assert.deepEqual(banks.map(b => b.getAttribute("data-emphasis")),
-    ["dimmed", "dimmed", "focused", "dimmed", "dimmed"]);
+  const emphasis = Object.fromEntries(banks.map(b => [b.getAttribute("data-layer"), b.getAttribute("data-emphasis")]));
+  assert.deepEqual(emphasis, { A: "dimmed", B: "dimmed", C: "focused", D: "dimmed", E: "dimmed" });
   assert.equal(svg.getAttribute("data-focus-layer"), "C");
+  // Painted last, so it is on top of anything it overlaps.
+  assert.equal(banks[banks.length - 1].getAttribute("data-layer"), "C");
 });
 
-test("the focused layer is genuinely bigger and the dimmed ones genuinely smaller", () => {
+/* Focus is a camera move. A bank is a rigid machine assembly: it may be
+ * drawn bigger or smaller, but every one of its parts scales by the same
+ * factor, so nothing can widen without getting taller and nothing can be
+ * squashed. These are the tests that hold that. */
+
+function hopperShape(bank) {
+  const h = bank.cluster.hoppers[0];
+  return {
+    width: h.width, pitch: h.pitch,
+    vessel: h.vesselHeight, receiver: h.receiverHeight, cone: h.coneHeight, spout: h.spoutHeight,
+    caption: h.captionHeight,
+    mixerW: bank.mixer.width, mixerH: bank.mixer.height,
+    extruderW: bank.extruder.width, extruderH: bank.extruder.height,
+    throatW: bank.throat.width, throatH: bank.throat.height
+  };
+}
+
+test("the focused bank is the same machine at the same proportions - nothing stretches", () => {
+  const plain = hopperShape(layoutFor(literal({ layerCount: 5 })).banks[2]);
+  const focused = hopperShape(layoutFor(literal({ layerCount: 5 }), { focusLayer: "C" }).banks[2]);
+  const s = layoutModule.DIMENSIONS.focusScale;
+  for (const key of Object.keys(plain)) {
+    assert.ok(Math.abs(focused[key] - plain[key] * s) < 1e-6, `${key} did not scale by the focus factor (${plain[key]} -> ${focused[key]})`);
+  }
+  // In particular the hopper is not widened to make room for controls.
+  assert.equal(focused.width / focused.vessel, plain.width / plain.vessel);
+});
+
+test("the dimmed banks shrink uniformly - never compressed sideways", () => {
+  const plain = hopperShape(layoutFor(literal({ layerCount: 5 })).banks[0]);
+  const dimmed = hopperShape(layoutFor(literal({ layerCount: 5 }), { focusLayer: "C" }).banks[0]);
+  const s = layoutModule.DIMENSIONS.dimScale;
+  assert.ok(s < 1);
+  for (const key of Object.keys(plain)) {
+    assert.ok(Math.abs(dimmed[key] - plain[key] * s) < 1e-6, `${key} did not scale by the dim factor (${plain[key]} -> ${dimmed[key]})`);
+  }
+  // The receiver keeps its shape: width and height shrink together.
+  const plainBank = layoutFor(literal({ layerCount: 5 })).banks[0];
+  const dimBank = layoutFor(literal({ layerCount: 5 }), { focusLayer: "C" }).banks[0];
+  assert.ok(Math.abs(dimBank.cluster.hoppers[0].receiverHeight / dimBank.cluster.hopperWidth -
+    plainBank.cluster.hoppers[0].receiverHeight / plainBank.cluster.hopperWidth) < 1e-9);
+});
+
+test("a bank scales about its own vertical centre, so a ghost floats mid-stage rather than hanging off the top", () => {
+  const plain = layoutFor(literal({ layerCount: 5 })).banks[0];
+  const dimmed = layoutFor(literal({ layerCount: 5 }), { focusLayer: "C" }).banks[0];
+  const pivot = layoutModule.DIMENSIONS.height / 2;
+  const s = layoutModule.DIMENSIONS.dimScale;
+  for (const [what, read] of [
+    ["header", b => b.header.y],
+    ["discharge line", b => b.cluster.hoppers[0].coneTop],
+    ["mixer top", b => b.mixer.y],
+    ["extruder label", b => b.extruder.label.y]
+  ]) {
+    assert.ok(Math.abs(read(dimmed) - (pivot + (read(plain) - pivot) * s)) < 1e-6, `${what} is not scaled about the centre`);
+  }
+});
+
+test("rigid scaling is the whole mechanism: every length in the dimensions scales, ratios do not", () => {
+  const d = layoutModule.DIMENSIONS;
+  const scaled = layoutModule.bankDimensions(d, 2, 350);
+  assert.equal(scaled.hopperWidth, d.hopperWidth * 2);
+  assert.equal(scaled.vesselHeight, d.vesselHeight * 2);
+  assert.equal(scaled.receiverHeight, d.receiverHeight * 2);
+  assert.equal(scaled.mixerScale, d.mixerScale * 2);
+  assert.equal(scaled.extruderScale, d.extruderScale * 2);
+  assert.equal(scaled.mixerFeedGap, d.mixerFeedGap * 2);
+  // Anchors move away from the pivot by the same factor.
+  assert.equal(scaled.vesselBottom, 350 + (d.vesselBottom - 350) * 2);
+  // Ratios and canvas numbers are untouched.
+  assert.equal(scaled.resinVisibleRatio, d.resinVisibleRatio);
+  assert.equal(scaled.referenceHeightIn, d.referenceHeightIn);
+  assert.equal(scaled.height, d.height);
+  assert.equal(scaled.bankScale, 2);
+});
+
+test("the open layer lands in the same columns whichever layer it is, on a canvas of one width", () => {
+  const widths = new Set();
+  const columns = new Set();
+  for (const id of ["A", "B", "C", "D", "E"]) {
+    const layout = layoutFor(literal({ layerCount: 5 }), { focusLayer: id });
+    const bank = layout.banks.find(b => b.id === id);
+    widths.add(Math.round(layout.width));
+    // The train column is sized for the widest view, so a front-on machine
+    // and a turned one put their cluster and workspace in the same place.
+    columns.add(`${Math.round(bank.objects.cluster.x)}:${Math.round(layout.workspace.x)}`);
+    // The train is at the left edge; its column starts at the padding.
+    assert.ok(bank.objects.train.x >= layoutModule.DIMENSIONS.focusPadding - 1e-6);
+    // Both objects are centred on the canvas height.
+    for (const object of ["cluster", "train"]) {
+      const box = bank.objects[object];
+      assert.ok(Math.abs((box.y + box.height / 2) - layout.height / 2) < 1e-6, `${id}: ${object} is not centred vertically`);
+    }
+    // The same size wherever it is in the stack.
+    assert.equal(bank.cluster.hopperWidth, layoutModule.DIMENSIONS.hopperWidth * layoutModule.DIMENSIONS.focusScale);
+  }
+  assert.equal(widths.size, 1, `the canvas changes width with the focused layer: ${[...widths]}`);
+  assert.equal(columns.size, 1, `the columns move with the focused layer: ${[...columns]}`);
+  // The canvas is the stage's shape - height times the measured aspect -
+  // whatever the line, so the layout fills the stage at the scale its
+  // height allows; with nothing measured, the fallback aspect.
+  const d = layoutModule.DIMENSIONS;
+  assert.equal(layoutFor(literal({ layerCount: 1, layerAPosition: null }), { focusLayer: "A" }).width, d.height * d.focusAspect);
+  assert.equal(layoutFor(literal({ layerCount: 5 }), { focusLayer: "C" }).width, d.height * d.focusAspect);
+  assert.equal(layoutFor(literal({ layerCount: 5 }), { focusLayer: "C", stageAspect: 1.8 }).width, d.height * 1.8);
+  // But never narrower than the three columns need.
+  const narrow = layoutFor(literal({ layerCount: 5 }), { focusLayer: "C", stageAspect: 0.5 });
+  assert.ok(narrow.width > d.height * 0.5);
+  assert.ok(narrow.workspace.width >= d.workspaceMin - 1e-6);
+});
+
+test("the reserved workspace is placed to the right of the open layer, and only in focus", () => {
+  assert.equal(layoutFor(literal({ layerCount: 5 })).workspace, undefined);
+  const layout = layoutFor(literal({ layerCount: 5 }), { focusLayer: "D" });
+  const bank = layout.banks.find(b => b.id === "D");
+  const ws = layout.workspace;
+  assert.ok(ws.x >= bank.objects.cluster.x + bank.objects.cluster.width + layoutModule.DIMENSIONS.focusColumnGap - 1e-6);
+  assert.ok(ws.width > 400, `the workspace is only ${ws.width} wide`);
+  assert.equal(ws.y, layoutModule.DIMENSIONS.padding);
+  assert.equal(ws.height, layout.height - layoutModule.DIMENSIONS.padding * 2);
+  // Drawn as a placeholder that says what it is, under everything else.
+  const svg = stageFor(literal({ layerCount: 5 }), { focusLayer: "D" });
+  const workspace = allWith(svg, "data-role", "focus-workspace");
+  assert.equal(workspace.length, 1);
+  assert.equal(svg.children[0], workspace[0], "the workspace must be painted first");
+  assert.deepEqual(textOf(svg, "station-workspace__title"), ["RESERVED — FOCUS WORKSPACE"]);
+  assert.deepEqual(textOf(svg, "station-workspace__notice"), ["READ-ONLY — NO WRITE CONTRACT YET"]);
+  assert.equal(allWith(stageFor(literal({ layerCount: 5 })), "data-role", "focus-workspace").length, 0);
+});
+
+test("the workspace carries the editor it is given, in a foreignObject sized to its box, behind the layers", () => {
+  const doc = fakeDocument();
+  const content = doc.createElement("div");
+  content.setAttribute("class", "station-editor");
+  const svg = render.renderStage(model.buildLineModel(literal({ layerCount: 5 })), { document: doc, focusLayer: "D", workspace: content });
+  const workspace = allWith(svg, "data-role", "focus-workspace")[0];
+  assert.equal(svg.children[0], workspace, "painted first, so a layer in transit passes in front of it");
+  const host = workspace.children.find(c => c.nodeName === "foreignObject");
+  assert.ok(host, "no foreignObject");
+  assert.equal(host.getAttribute("class"), "station-workspace__editor");
+  const box = layoutFor(literal({ layerCount: 5 }), { focusLayer: "D" }).workspace;
+  assert.deepEqual(["x", "y", "width", "height"].map(k => Number(host.getAttribute(k))),
+    [box.x, box.y, box.width, box.height].map(v => Math.round(v * 100) / 100));
+  assert.equal(host.children[0], content);
+  // With controls in it the stage is no longer an image to assistive technology.
+  assert.equal(svg.getAttribute("role"), "group");
+  assert.deepEqual(textOf(svg, "station-workspace__title"), [], "the reserved label is gone once there is content");
+  // The normal row and an empty workspace are untouched.
+  assert.equal(stageFor(literal({ layerCount: 5 })).getAttribute("role"), "img");
+  assert.equal(stageFor(literal({ layerCount: 5 }), { focusLayer: "D" }).getAttribute("role"), "img");
+});
+
+test("the selected hopper is marked on the open layer only, and stands in for the cluster outline", () => {
+  const hoppers = svg => allWith(svg, "data-role", "hopper");
+  const svg = stageFor(literal({ layerCount: 5 }), { focusLayer: "D", selectedTarget: "cluster", selectedHopper: "D2" });
+  const selected = hoppers(svg).filter(h => String(h.getAttribute("class")).split(/\s+/).includes("is-selected"));
+  assert.deepEqual(selected.map(h => h.getAttribute("data-hopper")), ["D2"]);
+  const layerD = allWith(svg, "data-layer", "D").find(n => n.getAttribute("data-role") === "layer");
+  assert.ok(!layerD.getAttribute("class").includes("is-cluster-selected"), "one hopper selected: the whole bank is not outlined too");
+  // Without a hopper the cluster outline is what it was.
+  const whole = stageFor(literal({ layerCount: 5 }), { focusLayer: "D", selectedTarget: "cluster" });
+  const wholeD = allWith(whole, "data-layer", "D").find(n => n.getAttribute("data-role") === "layer");
+  assert.ok(wholeD.getAttribute("class").includes("is-cluster-selected"));
+  assert.equal(hoppers(whole).filter(h => String(h.getAttribute("class")).includes("is-selected")).length, 0);
+  // A hopper id on a layer that is not open marks nothing.
+  const other = stageFor(literal({ layerCount: 5 }), { focusLayer: "D", selectedTarget: "cluster", selectedHopper: "A2" });
+  assert.equal(hoppers(other).filter(h => String(h.getAttribute("class")).includes("is-selected")).length, 0);
+});
+
+test("the dimmed banks step outward from the open layer, on the side they belong to, in their normal order", () => {
   const plain = layoutFor(literal({ layerCount: 5 }));
-  const focused = layoutFor(literal({ layerCount: 5 }), { focusLayer: "C" });
-  const base = plain.banks[2].cluster.hopperWidth;
-
-  assert.ok(focused.banks[2].cluster.hopperWidth > base * 1.5, "the focused bank did not expand");
-  assert.ok(focused.banks[0].cluster.hopperWidth < base * 0.75, "the other banks did not shrink");
-  // The whole bank scales together, not just its hoppers.
-  assert.ok(focused.banks[0].extruder.scale < plain.banks[0].extruder.scale);
-  assert.ok(focused.banks[2].extruder.scale > plain.banks[2].extruder.scale);
+  const layout = layoutFor(literal({ layerCount: 5 }), { focusLayer: "C" });
+  const offset = (layout.width - plain.width) / 2;
+  const retreat = layoutModule.DIMENSIONS.focusRetreat;
+  for (const [index, bank] of layout.banks.entries()) {
+    if (bank.id === "C") continue;
+    const was = plain.banks[index];
+    const away = index < 2 ? -retreat : retreat;
+    // Scaled about its own centre, then moved a step further out.
+    assert.ok(Math.abs(bank.centerX - (offset + was.centerX + away)) < 1e-6, `${bank.id} did not retreat by ${retreat}`);
+  }
+  // Ghosts keep their physical order with air between them.
+  const [a, b, , d, e] = layout.banks;
+  assert.ok(a.x + a.width < b.x && d.x + d.width < e.x);
+  // Ghosts are painted first, the open layer last.
+  assert.deepEqual(layout.paintOrder, [0, 1, 3, 4, 2]);
+  assert.deepEqual(layoutFor(literal({ layerCount: 5 }), { focusLayer: "A" }).paintOrder, [1, 2, 3, 4, 0]);
 });
 
-test("the row recentres around the expanded layer instead of drifting off the canvas", () => {
-  const focused = layoutFor(literal({ layerCount: 5 }), { focusLayer: "A" });
-  const right = focused.width - (focused.row.x + focused.row.width);
-  assert.ok(Math.abs(right - focused.row.x) < 1.5, "the row is no longer centred while focused");
+test("the focused bank fits the canvas top to bottom, controls included", () => {
+  for (const layerCount of [1, 3, 5]) {
+    const config = literal({ layerCount });
+    for (const layer of model.buildLineModel(config).layers) {
+      const layout = layoutFor(config, { focusLayer: layer.id, hopperState: { [`${layer.id}:0`]: { usableHeight: 40 } } });
+      const bank = layout.banks.find(b => b.id === layer.id);
+      assert.ok(bank.header.y > 0);
+      assert.ok(bank.extruder.label.y + 4 <= layout.height, `${layerCount} layers, ${layer.id}: runs off the bottom`);
+    }
+  }
 });
 
-test("only the focused layer shows per-hopper source detail", () => {
+test("a layer is the same drawing in every emphasis - so it can be carried between layouts as one object", () => {
+  /* The transition (station-transition.js) moves a layer's cluster and
+   * train as rigid objects: the destination element is placed over the
+   * source and released. That only reads as one object if the two renders
+   * are the same drawing at two scales - the same elements, the same
+   * classes, in the same order. */
   const hopperState = {
     "A:0": { assigned: true, resinName: "HX204", pct: 60, source: "SILO 3" },
     "B:0": { assigned: true, resinName: "LD105", pct: 60, source: "SILO 4" }
   };
-  const svg = stageFor(literal({ layerCount: 3, hopperCount: 1 }), { focusLayer: "A", hopperState });
-  // Expanded, the source is a control on the equipment rather than a caption.
-  assert.deepEqual(textOf(svg, "station-field__value--source"), ["SILO 3"]);
-  // Dimmed banks drop their captions entirely - at that size they are noise.
-  assert.deepEqual(textOf(svg, "station-hopper__id"), ["A1"]);
+  const config = literal({ layerCount: 3, hopperCount: 2 });
+  const shape = (svg, id) => {
+    const layer = allWith(svg, "data-role", "layer").find(l => l.getAttribute("data-layer") === id);
+    const out = [];
+    walk(layer, node => out.push(`${node.nodeName}.${node.getAttribute("class") || ""}`));
+    return out;
+  };
+  const normal = stageFor(config, { hopperState });
+  const focused = stageFor(config, { focusLayer: "A", hopperState });
+  for (const id of ["A", "B"]) {
+    const before = shape(normal, id);
+    const after = shape(focused, id);
+    // Only the layer's own state classes differ; every element is there.
+    const strip = list => list.map(entry => entry.replace(/ ?is-(focused|dimmed|[a-z]+-selected)/g, ""));
+    assert.deepEqual(strip(after), strip(before), `${id} is a different drawing when ${id === "A" ? "open" : "dimmed"}`);
+  }
+  // And the captions say the same things at every size (paint order aside).
+  assert.deepEqual(textOf(focused, "station-hopper__id").sort(), textOf(normal, "station-hopper__id").sort());
+  assert.deepEqual(textOf(focused, "station-hopper__source").sort(), textOf(normal, "station-hopper__source").sort());
 });
 
-test("focusing one layer does not change any other layer's extruder angle", () => {
+test("focusing one layer does not change any other layer's extruder view", () => {
   const plain = layoutFor(literal({ layerCount: 5 }));
   const focused = layoutFor(literal({ layerCount: 5 }), { focusLayer: "A" });
-  assert.deepEqual(focused.banks.map(b => b.extruder.angle), plain.banks.map(b => b.extruder.angle));
+  assert.deepEqual(focused.banks.map(b => [b.extruder.view, b.extruder.mirrored]),
+    plain.banks.map(b => [b.extruder.view, b.extruder.mirrored]));
 });
 
 test("a selected target is marked on its own bank and nowhere else", () => {
@@ -606,27 +845,28 @@ test("a component can be resized without touching any other component", () => {
   /* The reason the layout is separate from the paths. Changing the mixer is one
    * number, and nothing else in the drawing moves with it. */
   const base = layoutFor(literal({ layerCount: 3 }));
-  const moved = layoutFor(literal({ layerCount: 3 }), { dimensions: { mixerHeight: 120 } });
+  const moved = layoutFor(literal({ layerCount: 3 }), { dimensions: { mixerScale: 1.3 } });
   assert.notEqual(moved.banks[0].mixer.height, base.banks[0].mixer.height);
   for (const [what, read] of [
     ["hopper vessel", l => l.banks[0].cluster.hoppers[0].vesselTop],
     ["hopper width", l => l.banks[0].cluster.hopperWidth],
-    ["extruder yaw", l => l.banks[0].extruder.angle],
+    ["extruder view", l => l.banks[0].extruder.view],
+    ["extruder yaw", l => l.banks[0].extruder.yaw],
     ["bank x", l => l.banks[1].x]
   ]) {
     assert.equal(read(moved), read(base), `${what} moved with the mixer`);
   }
   /* The extruder DOES follow the mixer, and that is deliberate: it hangs off
-   * the bottom of the neck, so a taller blender pushes it down instead of
+   * the mixer's discharge, so a taller blender pushes it down instead of
    * being drawn through it. Everything else stays put. */
-  assert.ok(moved.banks[0].extruder.pivotY > base.banks[0].extruder.pivotY,
+  assert.ok(moved.banks[0].extruder.anchor.y > base.banks[0].extruder.anchor.y,
     "the extruder should follow the bottom of the neck");
 });
 
 test("changing the extruder does not disturb the hoppers or the banks", () => {
   const base = layoutFor(literal({ layerCount: 3 }));
-  const longer = layoutFor(literal({ layerCount: 3 }), { dimensions: { extruderAxisDrop: 240 } });
-  assert.ok(longer.banks[0].extruder.length > base.banks[0].extruder.length);
+  const longer = layoutFor(literal({ layerCount: 3 }), { dimensions: { extruderScale: 1.3 } });
+  assert.ok(longer.banks[0].extruder.height > base.banks[0].extruder.height);
   assert.deepEqual(longer.banks.map(b => b.x), base.banks.map(b => b.x));
   assert.equal(longer.banks[0].cluster.hoppers[0].vesselTop, base.banks[0].cluster.hoppers[0].vesselTop);
 });
@@ -753,14 +993,25 @@ test("no presentation attribute is written into the markup", () => {
   });
 });
 
-test("the only inline style is the hopper's fill fraction", () => {
-  const svg = stageFor(literal({ layerCount: 5 }));
+test("the only inline styles are the two numbers the layout owns: a hopper's fill and a bank's scale", () => {
+  const svg = stageFor(literal({ layerCount: 5 }), { focusLayer: "C" });
   const styled = [];
   walk(svg, node => { if (node.getAttribute("style") !== null) styled.push(node); });
-  assert.equal(styled.length, hoppersIn(svg).length);
+  const layers = allWith(svg, "data-role", "layer");
+  assert.equal(styled.length, hoppersIn(svg).length + layers.length);
   for (const node of styled) {
-    assert.match(node.getAttribute("style"), /^--station-hopper-fill:/);
+    if (node.getAttribute("data-role") === "layer") {
+      // The bank's scale, so the type inside it is sized with the equipment.
+      assert.match(node.getAttribute("style"), /^--station-bank-scale: [0-9.]+;$/);
+    } else {
+      assert.match(node.getAttribute("style"), /^--station-hopper-fill:/);
+    }
   }
+  const scales = Object.fromEntries(layers.map(l => [l.getAttribute("data-layer"), l.getAttribute("style")]));
+  assert.equal(scales.C, `--station-bank-scale: ${layoutModule.DIMENSIONS.focusScale};`);
+  assert.equal(scales.A, `--station-bank-scale: ${layoutModule.DIMENSIONS.dimScale};`);
+  assert.equal(allWith(stageFor(literal({ layerCount: 1, layerAPosition: null })), "data-role", "layer")[0].getAttribute("style"),
+    "--station-bank-scale: 1;");
 });
 
 test("the view is described for assistive technology by what it is", () => {
@@ -861,207 +1112,164 @@ test("expanding a layer never distorts its mixer", () => {
   const aspect = box => box.width / box.height;
   assert.ok(Math.abs(aspect(after) - aspect(before)) < 0.001,
     "the mixer was stretched rather than scaled");
-  // It is still centred under its own cluster.
-  assert.equal(Math.round(after.x + after.width / 2), Math.round(focused.banks[2].centerX));
+  // Its discharge is on its train's centreline, and the extruder's feed is
+  // still exactly under it. (The discharge, not the bounding box: the master
+  // carries its air regulator on one side, so the box is off-centre.)
+  assert.equal(Math.round(after.outlet.x * 100) / 100, Math.round(focused.banks[2].objects.train.centerX * 100) / 100);
+  assert.equal(after.outlet.x, focused.banks[2].extruder.anchor.x);
 });
 
 test("the mixer does not grow with the hopper count it happens to sit under", () => {
-  // Its width comes from the bank at normal scale and is capped, so a
-  // nine-hopper bank does not produce a mixer three times the size of a
-  // three-hopper one.
+  // It is authored artwork at one size, so a nine-hopper bank does not
+  // produce a mixer three times the size of a three-hopper one.
   const few = layoutFor(literal({ layerCount: 1, layerAPosition: null, hopperCount: 3 })).banks[0].mixer;
   const many = layoutFor(literal({ layerCount: 1, layerAPosition: null, hopperCount: 9 })).banks[0].mixer;
   assert.equal(few.height, many.height);
-  assert.ok(many.width <= layoutModule.DIMENSIONS.mixerMaxWidth);
+  assert.equal(few.width, many.width);
 });
 
 /* ----------------------------------------------------------------------
- *   Extruder orientation
+ *   Extruder: adapted artwork, not a procedural drawing
  * -------------------------------------------------------------------- */
 
-test("the extruder is drawn as a barrel, with the anatomy the references show", () => {
-  /* Barrel, heater bands, end cap with a bore, a rear feed block and a drive,
-   * and feet at both ends. Those six are the whole machine at this scale. */
-  const svg = stageFor(literal({ layerCount: 1, layerAPosition: null }));
-  const extruder = allWith(svg, "data-role", "extruder")[0];
-  const classes = [];
-  walk(extruder, node => { if (node.getAttribute("class")) classes.push(node.getAttribute("class")); });
-  for (const part of ["station-extruder__barrel-body", "station-extruder__barrel-lit",
-    "station-extruder__seam", "station-extruder__seam-long", "station-extruder__flange",
-    "station-extruder__cap-face", "station-extruder__bore",
-    "station-extruder__feed", "station-extruder__drive", "station-extruder__foot"]) {
-    assert.ok(classes.includes(part), `the extruder is missing ${part}`);
-  }
-  // And nothing invented: no decorative circle floating near the bore.
-  assert.ok(!classes.includes("station-extruder__motor"));
-});
-
-test("the barrel is segmented into heater zones", () => {
-  const svg = stageFor(literal({ layerCount: 1, layerAPosition: null }));
-  const seams = allWithClassName(svg, "station-extruder__seam");
-  assert.equal(seams.length, layoutModule.DIMENSIONS.extruderSeams);
-  assert.ok(seams.length >= 3, "too few bands to read as a segmented barrel");
-  // Each band crosses the barrel rather than running along it.
-  const geometry = layoutFor(literal({ layerCount: 1, layerAPosition: null })).banks[0].extruder;
-  for (const seam of seams) {
-    const span = Math.hypot(
-      Number(seam.getAttribute("x2")) - Number(seam.getAttribute("x1")),
-      Number(seam.getAttribute("y2")) - Number(seam.getAttribute("y1")));
-    assert.ok(Math.abs(span - geometry.radius * 2) < 0.5);
-  }
-});
-
-test("there are feet under both ends, and the near end stands lower", () => {
-  /* The fix for a machine that looked like it hung off a single front foot.
-   * Front feet lower than rear feet is also the depth cue that costs nothing. */
-  const geometry = layoutFor(literal({ layerCount: 5 })).banks[0].extruder;
-  assert.equal(geometry.feet.rear.length, 2);
-  assert.equal(geometry.feet.front.length, 2);
-  assert.ok(geometry.feet.front[0].y > geometry.feet.rear[0].y,
-    "the near end's feet should sit lower on screen than the far end's");
-
+test("the extruder is the asset's polygons, every one labelled by part and face", () => {
   const svg = stageFor(literal({ layerCount: 5 }));
-  const positions = allWithClassName(svg, "station-extruder__foot")
-    .map(foot => foot.getAttribute("data-position"));
-  assert.equal(positions.filter(p => p === "front").length, 10);
-  assert.equal(positions.filter(p => p === "rear").length, 10);
+  const extruders = allWith(svg, "data-role", "extruder");
+  extruders.forEach((extruder, index) => {
+    const view = extruder.getAttribute("data-view");
+    const faces = allWithClassName(extruder, "station-extruder__face");
+    assert.equal(faces.length, assets.views[view].polygons.length,
+      `layer ${index}: not every polygon of the ${view} view was drawn`);
+    faces.forEach((face, i) => {
+      const polygon = assets.views[view].polygons[i];
+      assert.equal(face.getAttribute("data-part"), polygon.part);
+      assert.equal(face.getAttribute("data-face"), polygon.face);
+      const classes = face.getAttribute("class").split(" ");
+      assert.ok(classes.includes(`station-extruder__${polygon.part}`));
+      assert.ok(classes.includes(`station-extruder__${polygon.part}--${polygon.face}`));
+      assert.match(face.getAttribute("d"), /^M [-\d.]+ [-\d.]+( L [-\d.]+ [-\d.]+)+ Z$/);
+    });
+  });
 });
 
-test("the bore belongs to the cap it is cut into", () => {
-  // Both are built from the same two radii, so the opening turns with the end
-  // it is in rather than sitting on it as a decoration.
-  const svg = stageFor(literal({ layerCount: 5 }));
-  const extruder = allWith(svg, "data-role", "extruder")[0];
-  const face = allWithClassName(extruder, "station-extruder__cap-face")[0];
-  const bore = allWithClassName(extruder, "station-extruder__bore")[0];
-  const radiiOf = node => node.getAttribute("d").match(/A ([\d.]+) ([\d.]+)/).slice(1, 3).map(Number);
-  const [faceRx, faceRy] = radiiOf(face);
-  const [boreRx, boreRy] = radiiOf(bore);
-  assert.ok(Math.abs(boreRx / faceRx - boreRy / faceRy) < 0.01,
-    "the bore is not the same shape as the cap");
-  assert.ok(boreRx < faceRx);
+test("the parts that carry recognition are all present in every view", () => {
+  /* Housing, feed, outlet flange with its bore, gearbox and motor, base and
+   * feet. Those are what the derivative was asked to keep. */
+  for (const bank of layoutFor(literal({ layerCount: 5 })).banks) {
+    const parts = new Set(assets.views[bank.extruder.view].polygons.map(p => p.part));
+    for (const part of ["housing", "feed", "outlet", "flange", "recess", "bore", "gearbox", "motor", "base", "foot"]) {
+      assert.ok(parts.has(part), `${bank.extruder.view} view has no ${part}`);
+    }
+  }
 });
 
-test("extruders aim inward: left of centre swings right, right of centre swings left", () => {
-  /* Sign convention, checked as geometry rather than as a number. The assembly
-   * pivots at the top where it meets the mixer, so a positive (clockwise)
-   * angle moves its lower end to the right. */
+test("the same artwork handles both sides - a mirrored machine is the same polygons reflected", () => {
   const banks = layoutFor(literal({ layerCount: 5 })).banks;
-  const centreX = banks[2].centerX;
-  for (const bank of banks) {
-    const angle = bank.extruder.angle;
-    const offset = bank.centerX - centreX;
-    if (Math.abs(offset) < 1) { assert.equal(angle, 0); continue; }
-    /* Where the foot of the machine ends up, after rotating about the pivot.
-     *
-     * SVG rotate() with y pointing down sends a point at (0, d) below the pivot
-     * to (-d*sin θ, d*cos θ). The minus is the whole test: an earlier version of
-     * this assertion had a plus, which is the same sign error the drawing had,
-     * so it confirmed the bug instead of catching it. */
-    const radians = (angle * Math.PI) / 180;
-    const footX = bank.extruder.pivotX - Math.sin(radians) * bank.extruder.length;
-    assert.ok(Math.abs(footX - centreX) < Math.abs(bank.extruder.pivotX - centreX),
-      `layer ${bank.id} does not aim toward the centre`);
+  const svg = stageFor(literal({ layerCount: 5 }));
+  const extruders = allWith(svg, "data-role", "extruder");
+  const points = node => allWithClassName(node, "station-extruder__face").map(face =>
+    face.getAttribute("d").match(/[-\d.]+ [-\d.]+/g).map(pair => pair.split(" ").map(Number)));
+
+  for (const [a, b] of [[0, 4], [1, 3]]) {
+    const left = points(extruders[a]);
+    const right = points(extruders[b]);
+    assert.equal(left.length, right.length);
+    const leftCentre = banks[a].extruder.anchor.x;
+    const rightCentre = banks[b].extruder.anchor.x;
+    left.forEach((polygon, i) => polygon.forEach(([x, y], j) => {
+      const [rx, ry] = right[i][j];
+      assert.ok(Math.abs((x - leftCentre) + (rx - rightCentre)) < 0.011, "x does not reflect");
+      assert.ok(Math.abs((y - banks[a].extruder.anchor.y) - (ry - banks[b].extruder.anchor.y)) < 0.011, "y moved");
+    }));
+  }
+});
+
+test("there are feet under both ends, and the machine stands on them", () => {
+  for (const view of assets.ORDER) {
+    const feet = assets.views[view].polygons.filter(p => p.part === "foot");
+    assert.ok(feet.length >= 8, `${view}: too few foot faces to be two pairs of legs`);
+    /* The feet reach the floor: their lowest point is level with the lowest
+     * point of the whole machine. (Not necessarily BELOW it - seen from the
+     * die at a slight elevation, the base's near edge projects as low as the
+     * feet behind it, in the source as well as here.) */
+    const lowest = Math.max(...assets.views[view].polygons.flatMap(p => p.points.filter((_, i) => i % 2 === 1)));
+    const lowestFoot = Math.max(...feet.flatMap(p => p.points.filter((_, i) => i % 2 === 1)));
+    assert.ok(lowest - lowestFoot < 3, `${view}: the machine does not stand on its feet`);
+  }
+});
+
+test("the bore is in the flange, and the flange is on the outlet end", () => {
+  /* The front end has to read: outlet boss, flange face, recess, bore, each
+   * inside the last. Checked as centroids and extents in the asset. */
+  for (const view of assets.ORDER) {
+    const asset = assets.views[view];
+    const one = part => asset.polygons.find(p => p.part === part && p.face === "cap");
+    const extent = polygon => {
+      const xs = polygon.points.filter((_, i) => i % 2 === 0);
+      return Math.max(...xs) - Math.min(...xs);
+    };
+    const centre = polygon => {
+      const xs = polygon.points.filter((_, i) => i % 2 === 0);
+      const ys = polygon.points.filter((_, i) => i % 2 === 1);
+      return [xs.reduce((a, b) => a + b) / xs.length, ys.reduce((a, b) => a + b) / ys.length];
+    };
+    const [flange, recess, bore] = [one("flange"), one("recess"), one("bore")];
+    assert.ok(extent(flange) > extent(recess) && extent(recess) > extent(bore), `${view}: rings out of order`);
+    const [fc, bc] = [centre(flange), centre(bore)];
+    assert.ok(Math.hypot(fc[0] - bc[0], fc[1] - bc[1]) < 1, `${view}: the bore is not centred in the flange`);
+    // The bore is where the asset says the outlet is.
+    assert.ok(Math.hypot(bc[0] - asset.outlet.x, bc[1] - asset.outlet.y) < 1.5, `${view}: outlet metadata disagrees with the bore`);
   }
 });
 
 /* ----------------------------------------------------------------------
- *   The expanded cluster is the edit surface
+ *   The two rigid objects a bank declares
  * -------------------------------------------------------------------- */
 
-test("expanding a layer puts a control on each hopper for resin, blend and source", () => {
-  /* The point of the expansion. Before this pass it only enlarged equipment
-   * while the values lived in a side panel, which did not justify the state. */
-  const svg = stageFor(literal({ layerCount: 3, hopperCount: 3 }), {
+test("every bank declares its cluster and train as boxes, and they are the same shape in every layout", () => {
+  /* What the transition reads. A box's aspect ratio is the proof that the
+   * object was scaled, not stretched: the same in the normal row, opened,
+   * and dimmed. */
+  const config = literal({ layerCount: 5 });
+  const boxes = svg => Object.fromEntries(allWith(svg, "data-role", "layer").map(layer => [
+    layer.getAttribute("data-layer"),
+    {
+      cluster: layer.getAttribute("data-object-cluster").split(" ").map(Number),
+      train: layer.getAttribute("data-object-train").split(" ").map(Number)
+    }
+  ]));
+  const normal = boxes(stageFor(config));
+  const focused = boxes(stageFor(config, { focusLayer: "C" }));
+  const aspect = box => box[2] / box[3];
+  for (const id of ["A", "B", "C", "D", "E"]) {
+    for (const object of ["cluster", "train"]) {
+      assert.equal(normal[id][object].length, 4);
+      assert.ok(Math.abs(aspect(focused[id][object]) - aspect(normal[id][object])) < 1e-3,
+        `${id} ${object} changed shape between layouts`);
+      const scale = id === "C" ? layoutModule.DIMENSIONS.focusScale : layoutModule.DIMENSIONS.dimScale;
+      assert.ok(Math.abs(focused[id][object][2] / normal[id][object][2] - scale) < 1e-3,
+        `${id} ${object} is not at the ${scale} scale`);
+    }
+  }
+  // The boxes are where the layout says the objects are.
+  const layout = layoutFor(config, { focusLayer: "C" });
+  const c = layout.banks.find(b => b.id === "C");
+  assert.deepEqual(focused.C.train.map(n => Math.round(n)), [c.objects.train.x, c.objects.train.y, c.objects.train.width, c.objects.train.height].map(n => Math.round(n)));
+  // And the train box holds the mixer and the extruder, readout included.
+  assert.ok(c.objects.train.x <= c.mixer.bounds.left && c.objects.train.x <= c.extruder.bounds.left);
+  assert.ok(c.objects.train.y <= c.mixer.bounds.top);
+  assert.ok(c.objects.train.y + c.objects.train.height >= c.extruder.label.y);
+});
+
+test("no entry fields are drawn on the equipment - the workspace is reserved for them", () => {
+  const svg = stageFor(literal({ layerCount: 3 }), {
     focusLayer: "B",
-    hopperState: {
-      "B:0": { assigned: true, resinName: "HX204", pct: 60, source: "SILO 3" },
-      "B:1": { assigned: true, resinName: "LD105", pct: 40 }
-    }
-  });
-  const fields = allWith(svg, "data-station-field");
-  // Three controls on each of the focused layer's three hoppers, and none
-  // anywhere else.
-  assert.equal(fields.length, 9);
-  assert.ok(fields.every(f => f.getAttribute("data-layer") === "B"));
-  for (const hopper of ["B1", "B2", "B3"]) {
-    const forHopper = fields.filter(f => f.getAttribute("data-hopper") === hopper)
-      .map(f => f.getAttribute("data-station-field")).sort();
-    assert.deepEqual(forHopper, ["pct", "resin", "source"]);
-  }
-});
-
-test("each control is attached to the part of the equipment it describes", () => {
-  const svg = stageFor(literal({ layerCount: 1, layerAPosition: null, hopperCount: 1 }), {
-    focusLayer: "A",
-    hopperState: { "A:0": { assigned: true, resinName: "HX204", pct: 60, source: "SILO 3" } }
-  });
-  const geometry = layoutFor(literal({ layerCount: 1, layerAPosition: null, hopperCount: 1 }),
-    { focusLayer: "A", hopperState: { "A:0": { assigned: true } } }).banks[0].cluster.hoppers[0];
-
-  const wellFor = kind => {
-    const group = allWith(svg, "data-station-field", kind)[0];
-    const wells = [];
-    walk(group, node => {
-      if (String(node.getAttribute("class") || "") === "station-field__well") wells.push(node);
-    });
-    return Number(wells[0].getAttribute("y"));
-  };
-
-  // Source above the receiver, resin on the body, blend below the discharge.
-  assert.ok(wellFor("source") < geometry.receiverTop, "source is not above the receiver");
-  assert.ok(wellFor("resin") > geometry.vesselTop && wellFor("resin") < geometry.coneTop,
-    "resin is not on the hopper body");
-  assert.ok(wellFor("pct") > geometry.spoutTop, "blend is not below the discharge");
-});
-
-test("resin wells line up across a bank of mixed-height hoppers", () => {
-  const svg = stageFor(literal({ layerCount: 1, layerAPosition: null, hopperCount: 3 }), {
-    focusLayer: "A",
-    hopperState: {
-      "A:0": { assigned: true, usableHeight: 22 },
-      "A:1": { assigned: true, usableHeight: 34 },
-      "A:2": { assigned: true, usableHeight: 28 }
-    }
-  });
-  const tops = allWith(svg, "data-station-field", "resin").map(group => {
-    const wells = [];
-    walk(group, node => {
-      if (String(node.getAttribute("class") || "") === "station-field__well") wells.push(node);
-    });
-    return Math.round(Number(wells[0].getAttribute("y")));
-  });
-  assert.equal(new Set(tops).size, 1, "resin wells drift with each hopper's body height");
-});
-
-test("the controls are marked read-only, and say so on the surface", () => {
-  /* They look like controls because that is what they will be. The one thing
-   * they must not do is look live while the bridge has no write API. */
-  const svg = stageFor(literal({ layerCount: 3 }), { focusLayer: "B" });
-  for (const field of allWith(svg, "data-station-field")) {
-    assert.equal(field.getAttribute("aria-readonly"), "true");
-    assert.ok(String(field.getAttribute("class")).includes("is-readonly"));
-  }
-  assert.deepEqual(textOf(svg, "station-layer__notice"), ["READ-ONLY — NO WRITE CONTRACT YET"]);
-});
-
-test("an unset value still gets a well, with a placeholder rather than nothing", () => {
-  const svg = stageFor(literal({ layerCount: 1, layerAPosition: null, hopperCount: 1 }), {
-    focusLayer: "A", hopperState: { "A:0": { assigned: false } }
-  });
-  assert.deepEqual(textOf(svg, "station-field__value--resin"), ["no resin"]);
-  assert.deepEqual(textOf(svg, "station-field__value--source"), ["no source"]);
-  for (const field of allWith(svg, "data-station-field")) {
-    assert.ok(String(field.getAttribute("class")).includes("is-empty"));
-  }
-});
-
-test("the dense view has no controls at all", () => {
-  const svg = stageFor(literal({ layerCount: 5 }), {
-    hopperState: { "A:0": { assigned: true, resinName: "HX204", pct: 60, source: "SILO 3" } }
+    hopperState: { "B:0": { assigned: true, resinName: "HX204", pct: 60, source: "SILO 3" } }
   });
   assert.equal(allWith(svg, "data-station-field").length, 0);
-  assert.deepEqual(textOf(svg, "station-layer__notice"), []);
+  const classes = new Set();
+  walk(svg, node => { for (const c of String(node.getAttribute("class") || "").split(/\s+/)) classes.add(c); });
+  assert.ok(![...classes].some(c => /station-field/.test(c)), "an entry field is drawn");
 });
 
 /* ----------------------------------------------------------------------
@@ -1087,184 +1295,227 @@ test("no funnel is drawn between the hoppers and the blender", () => {
   assert.ok(bank.cluster.bottom < bank.mixer.y);
 });
 
-test("expanding a layer scales the whole blender rather than stretching it", () => {
+test("expanding a layer scales the whole blender with the bank rather than stretching it", () => {
+  // With a focus factor above 1 so the mechanism is visible; the shipped
+  // factor is 1 because the canvas has no more height to give.
   const plain = layoutFor(literal({ layerCount: 3 })).banks[1];
-  const focused = layoutFor(literal({ layerCount: 3 }), { focusLayer: "B" }).banks[1];
+  const focused = layoutFor(literal({ layerCount: 3 }), { focusLayer: "B", dimensions: { focusScale: 1.3 } }).banks[1];
   const aspect = m => m.width / m.height;
   assert.ok(Math.abs(aspect(focused.mixer) - aspect(plain.mixer)) < 0.001,
     "the blender was distorted by the expansion");
   const grown = focused.mixer.width / plain.mixer.width;
-  assert.ok(grown >= 1.35 && grown <= 1.65, `expected roughly 1.4-1.6x, got ${grown.toFixed(2)}x`);
-  // Both axes by the same factor.
+  assert.ok(Math.abs(grown - 1.3) < 0.001, `expected exactly the focus scale, got ${grown.toFixed(2)}x`);
+  // Both axes by the same factor, and the extruder by the same factor too:
+  // one bank, one scale.
   assert.ok(Math.abs(grown - focused.mixer.height / plain.mixer.height) < 0.001);
-  /* And the extruder grows LESS. It is the least important thing in the
-   * picture, and matching a blender that went up by half would make it the
-   * dominant artwork. */
-  assert.ok(focused.extruder.scale / plain.extruder.scale < grown,
-    "the extruder grew as much as the blender");
+  assert.ok(Math.abs(focused.extruder.scale / plain.extruder.scale - 1.3) < 0.001);
+  assert.ok(Math.abs(focused.cluster.hopperWidth / plain.cluster.hopperWidth - 1.3) < 0.001);
 });
 
-test("the agitator is drawn once and placed, so it scales with its blender", () => {
-  /* The bug this replaces: the agitator radius was computed with an absolute
-   * cap in it, so an expanded blender got a normal-sized agitator and nobody
-   * noticed because the only comparison was against a DIMMED one. It is now
-   * authored once at unit size in its own coordinate system and placed with a
-   * transform, so there is no second size to keep in step.
-   *
-   * Compared against the UNFOCUSED state, which is what the bug hid behind. */
-  const scaleOf = (svg, layer) => {
+test("the rotor is authored once and placed, so it scales with its blender", () => {
+  /* The bug this guards against: an agitator whose size was computed with an
+   * absolute cap in it, so an expanded blender got a normal-sized agitator.
+   * The rotor's paddles are now the asset's own polygons, in the plane of
+   * the inspection cover, placed by ONE transform that carries the mixer's
+   * scale. Compared against the UNFOCUSED state, which is what the old bug
+   * hid behind. */
+  const mountOf = (svg, layer) => {
     const bank = allWith(svg, "data-layer", layer).find(n => n.getAttribute("data-role") === "layer");
-    const mount = allWithClassName(bank, "station-mixer__agitator-mount")[0];
-    return Number(mount.getAttribute("transform").match(/scale\(([-\d.]+)\)/)[1]);
+    return allWith(bank, "data-role", "mixer-rotor-mount")[0].getAttribute("transform");
   };
+  const matrixOf = transform => transform.match(/matrix\(([^)]+)\)/)[1].split(" ").map(Number);
   const plain = stageFor(literal({ layerCount: 3 }));
-  const focused = stageFor(literal({ layerCount: 3 }), { focusLayer: "B" });
+  const focused = stageFor(literal({ layerCount: 3 }), { focusLayer: "B", dimensions: { focusScale: 1.3 } });
 
-  const plainScale = scaleOf(plain, "B");
-  const focusedScale = scaleOf(focused, "B");
-  assert.equal(plainScale, 1);
-  // Exactly the blender's own scale, not an approximation of it.
-  const mixers = layoutFor(literal({ layerCount: 3 }), { focusLayer: "B" }).banks[1].mixer;
-  assert.equal(focusedScale, Math.round(mixers.scale * 100) / 100);
-  assert.ok(focusedScale > plainScale * 1.3, "the agitator did not grow with the expanded blender");
+  const [pa, pb, , pd] = matrixOf(mountOf(plain, "B"));
+  const [fa, fb, , fd] = matrixOf(mountOf(focused, "B"));
+  const scale = layoutFor(literal({ layerCount: 3 }), { focusLayer: "B", dimensions: { focusScale: 1.3 } }).banks[1].mixer.scale;
+  // Every entry of the placing matrix grows by exactly the blender's scale.
+  for (const [p, f] of [[pa, fa], [pb, fb], [pd, fd]]) {
+    if (p === 0) { assert.equal(f, 0); continue; }
+    assert.ok(Math.abs(f / p - scale) < 0.02, `rotor plane did not scale with the mixer: ${p} -> ${f}`);
+  }
+  assert.ok(scale > 1.1);
 
-  // The blades themselves are authored at one size - no per-state geometry.
-  const bladeOf = svg => allWithClassName(svg, "station-mixer__blade")[0].getAttribute("x2");
+  // The paddles themselves are authored at one size - no per-state geometry.
+  const bladeOf = svg => {
+    const bank = allWith(svg, "data-layer", "B").find(n => n.getAttribute("data-role") === "layer");
+    return allWithClassName(bank, "station-mixer__blade").map(b => b.getAttribute("d")).join("|");
+  };
   assert.equal(bladeOf(plain), bladeOf(focused));
+  // And the animated group carries no transform of its own: CSS rotates it
+  // about the origin the mount put at the cover's centre.
+  for (const blades of allWithClassName(focused, "station-mixer__agitator")) {
+    assert.equal(blades.getAttribute("transform"), null);
+  }
 });
 
-test("the blender reaches the extruder with one neck and nothing else", () => {
-  /* There was a taper, then a separate throat box, then the housing - three
-   * shapes to say "connected". One says it. */
-  const bank = layoutFor(literal({ layerCount: 3 })).banks[0];
-  assert.equal(Math.round(bank.extruder.pivotY),
-    Math.round(bank.mixer.y + bank.mixer.height + bank.mixer.outletHeight),
-    "the extruder does not start where the neck ends");
-  const svg = stageFor(literal({ layerCount: 3 }));
-  assert.equal(allWithClassName(svg, "station-extruder__throat").length, 0,
-    "the extra throat box is back");
-  assert.equal(allWithClassName(svg, "station-mixer__outlet").length, 3, "one neck per layer");
-  // The drive is part of the extruder's rear now, not an adapter between them.
-  assert.equal(allWithClassName(svg, "station-extruder__drive").length, 3);
-});
-
-test("the barrel is a tube, not a flat panel", () => {
-  // A lit strip down one side is what makes a quad read as round, and it stays
-  // on the same side however the machine turns.
+test("the rotor is seen only through the inspection windows, and turns in the plane of the door", () => {
   const svg = stageFor(literal({ layerCount: 5 }));
+  const mixers = allWith(svg, "data-role", "mixer");
+  assert.equal(mixers.length, 5);
+  for (const mixer of mixers) {
+    const view = mixer.getAttribute("data-view");
+    const rotor = allWith(mixer, "data-role", "mixer-rotor")[0];
+    const clipId = rotor.getAttribute("clip-path").match(/^url\(#(.+)\)$/)[1];
+    const clip = allWith(mixer, "id", clipId)[0];
+    assert.equal(clip.nodeName, "clipPath");
+    assert.equal(clip.children.length, 2, "two windows clip the rotor");
+    // Four paddles: the asset's two glimpses and their opposites.
+    assert.equal(allWithClassName(mixer, "station-mixer__blade").length, 4);
+    // The placing matrix is the asset's door plane: foreshortened by the yaw.
+    const [a] = allWith(mixer, "data-role", "mixer-rotor-mount")[0]
+      .getAttribute("transform").match(/matrix\(([^)]+)\)/)[1].split(" ").map(Number);
+    assert.ok(Math.abs(Math.abs(a) - mixerAssets.views[view].rotor.plane.a) < 0.01);
+    // A mirrored machine's plane is mirrored: the x column flips sign.
+    assert.equal(a < 0, mixer.getAttribute("data-mirrored") === "true");
+  }
+  // Clip ids are per layer, so five mixers on one stage cannot clip each other.
+  const ids = mixers.map(m => allWith(m, "data-role", "mixer-rotor")[0].getAttribute("clip-path"));
+  assert.equal(new Set(ids).size, 5);
+});
+
+test("the rotor animation is CSS on the blades group: slow, and off under reduced motion", () => {
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const css = fs.readFileSync(path.join(__dirname, "station/styles/components/layer-bank.css"), "utf8");
+  assert.match(css, /\.station-layer\.is-running \.station-mixer__agitator \{\s*animation: station-agitate 9s linear infinite;/);
+  assert.match(css, /@keyframes station-agitate \{\s*from \{ transform: rotate\(0deg\); \}\s*to \{ transform: rotate\(360deg\); \}/);
+  const reduced = css.match(/@media \(prefers-reduced-motion: reduce\) \{([\s\S]*?)\n\}/);
+  assert.ok(reduced, "no reduced-motion rule");
+  assert.match(reduced[1], /\.station-mixer__agitator \{\s*animation: none;/);
+  // Rotation about the local origin - which the mount puts at the door's
+  // centre - not about the paddles' bounding box.
+  assert.match(css, /\.station-mixer__agitator \{\s*transform-box: view-box;\s*transform-origin: 0 0;/);
+});
+
+test("the mixer's own outlet neck is the feed connection - nothing else is drawn between the machines", () => {
+  const svg = stageFor(literal({ layerCount: 3 }));
+  assert.equal(allWithClassName(svg, "station-extruder__throat").length, 0, "the extra throat box is back");
+  assert.equal(allWithClassName(svg, "station-mixer__outlet").length, 0, "a separate neck is drawn again");
+  assert.equal(allWithClassName(svg, "station-mixer__collector").length, 0);
+  for (const mixer of allWith(svg, "data-role", "mixer")) {
+    const parts = allWith(mixer, "data-part").map(n => n.getAttribute("data-part"));
+    assert.ok(parts.includes("outlet-neck") && parts.includes("outlet-flange"), "the asset's discharge is missing");
+  }
+  // And the neck lands on the asset's feed flange: that is what the anchor is.
   for (const extruder of allWith(svg, "data-role", "extruder")) {
-    assert.equal(allWithClassName(extruder, "station-extruder__barrel-lit").length, 1);
-  }
-  /* Which flank is lit legitimately differs between a barrel angled left and
-   * one angled right. What must hold is that every highlight is consistent
-   * with ONE light - so the lit side's outward normal always faces it. */
-  const light = layoutModule.LIGHT;
-  for (const bank of layoutFor(literal({ layerCount: 5 })).banks) {
-    const e = bank.extruder;
-    const dot = e.perp.x * e.litSign * light.x + e.perp.y * e.litSign * light.y;
-    assert.ok(dot > 0, `layer ${bank.id} is lit from the wrong side`);
+    assert.ok(allWithClassName(extruder, "station-extruder__feed").length >= 2);
   }
 });
 
-test("the turn is strong enough to read at a glance", () => {
-  /* The test that matters: can you see which way a machine faces without
-   * studying it. Measured as how far the front end travels off the layer's
-   * centreline, in barrel widths - a whole barrel width or more at the outside
-   * is unmistakable. */
-  const e = layoutFor(literal({ layerCount: 5 })).banks.map(b => b.extruder);
-  assert.equal(e[2].sideShare, 0);
-  assert.ok(e[1].sideShare > 0.5, `adjacent layers barely move: ${e[1].sideShare.toFixed(2)}`);
-  assert.ok(e[0].sideShare > 1.2, `outer layers are not obviously turned: ${e[0].sideShare.toFixed(2)}`);
-  assert.ok(e[0].sideShare > e[1].sideShare);
-  // Mirrored.
-  assert.equal(e[0].sideShare, e[4].sideShare);
-  assert.equal(e[1].sideShare, e[3].sideShare);
-  assert.equal(e[0].front.x - e[0].rear.x, -(e[4].front.x - e[4].rear.x));
+test("the throat is the one thing between the machines: mixer discharge to extruder feed, on the centreline", () => {
+  const svg = stageFor(literal({ layerCount: 5 }));
+  const banks = layoutFor(literal({ layerCount: 5 })).banks;
+  const feeds = allWith(svg, "data-role", "feed");
+  assert.equal(feeds.length, 5);
+  const gap = layoutModule.DIMENSIONS.mixerFeedGap;
+  feeds.forEach((feed, i) => {
+    const bank = banks.find(b => b.id === feed.getAttribute("data-layer"));
+    const throat = allWithClassName(feed, "station-feed__throat")[0];
+    const shadow = allWithClassName(feed, "station-feed__shadow")[0];
+    assert.ok(shadow, `layer ${bank.id}: contact shadow missing`);
+    // The shadow is where the discharge lands: on the feed anchor, on the
+    // layer's centreline whichever way the machines are turned.
+    assert.equal(Number(shadow.getAttribute("cx")), bank.centerX);
+    assert.equal(Number(shadow.getAttribute("cy")), Math.round(bank.extruder.anchor.y * 100) / 100);
+    // The neck exists only when the layout opens a gap for it. The masters
+    // mount the discharge flange directly on the feed flange, so today the
+    // gap is zero and there is no neck at all - the mixer's flange IS the
+    // connection. The mixer's discharge and the extruder's feed coincide.
+    if (gap === 0) {
+      assert.equal(throat, undefined, `layer ${bank.id}: a zero-height neck was drawn`);
+      assert.equal(Math.round(bank.mixer.outlet.y * 100) / 100, Math.round(bank.extruder.anchor.y * 100) / 100);
+      return;
+    }
+    assert.ok(throat, `layer ${bank.id}: throat missing`);
+    // From the mixer's discharge down to the extruder's feed anchor, exactly.
+    assert.equal(Number(throat.getAttribute("y")), Math.round(bank.mixer.outlet.y * 100) / 100);
+    assert.equal(Number(throat.getAttribute("y")) + Number(throat.getAttribute("height")),
+      Math.round(bank.extruder.anchor.y * 100) / 100);
+    assert.equal(Number(throat.getAttribute("x")) + Number(throat.getAttribute("width")) / 2, bank.centerX);
+    // Short: a connection, not an adapter.
+    assert.ok(Number(throat.getAttribute("height")) <= 12);
+  });
+  // Painted between the two machines: over the extruder, under the mixer.
+  for (const layer of allWith(svg, "data-role", "layer")) {
+    const roles = layer.children.map(c => c.getAttribute("data-role"));
+    assert.ok(roles.indexOf("extruder") < roles.indexOf("feed") && roles.indexOf("feed") < roles.indexOf("mixer"));
+  }
+  // And nothing else: no hose, no funnel, no adapter stack. (The mixer's
+  // own air hose - a tone on the master's pneumatic stack - is the mixer,
+  // not a connection between the machines.)
+  const classes = new Set();
+  walk(svg, node => { for (const c of String(node.getAttribute("class") || "").split(/\s+/)) classes.add(c); });
+  const own = /^station-mixer__(face|seam)--hose$/;
+  for (const banned of [...classes].filter(c => /hose|funnel|collector|adapter/.test(c) && !own.test(c))) assert.fail(`${banned} is back`);
 });
 
-test("the rear feed point stays on the layer centreline at every yaw", () => {
-  /* The anchor. The mixer feeds into this point, so it must not wander when the
-   * barrel swings - which is exactly what a model that rotated the whole machine
-   * would do. */
-  for (const bank of layoutFor(literal({ layerCount: 5 })).banks) {
-    const e = bank.extruder;
-    assert.equal(e.rear.x, bank.centerX);
-    assert.equal(e.rearBlock.centerX, bank.centerX);
-    assert.equal(e.drive.centerX, bank.centerX);
-    assert.equal(e.mixerAligned === undefined, true);
-  }
-  // And the neck lands on it.
-  for (const bank of layoutFor(literal({ layerCount: 5 })).banks) {
-    assert.equal(bank.mixer.centerX, bank.extruder.drive.centerX);
+test("the throat scales with its bank, so a ghost's connection is a ghost's size", () => {
+  const plain = layoutFor(literal({ layerCount: 3 })).banks[0].throat;
+  const dimmed = layoutFor(literal({ layerCount: 3 }), { focusLayer: "B" }).banks[0].throat;
+  const s = layoutModule.DIMENSIONS.dimScale;
+  assert.ok(Math.abs(dimmed.width - plain.width * s) < 1e-6);
+  assert.ok(Math.abs(dimmed.height - plain.height * s) < 1e-6);
+  assert.ok(Math.abs(dimmed.shadow.rx - plain.shadow.rx * s) < 1e-6);
+});
+
+test("the extruder's drive stays in the mixer's lower structure, never up in the drum", () => {
+  /* The two anchors coincide, so the extruder's motor - which stands higher
+   * than its feed flange - rises behind the mixer's base plate. That is the
+   * real arrangement. What must not happen is the motor reaching up behind
+   * the chamber where it would read as part of the mixer. */
+  for (const focusLayer of [null, "A", "B"]) {
+    for (const bank of layoutFor(literal({ layerCount: 3 }), { focusLayer }).banks) {
+      const chamberCentre = bank.mixer.anchor.y + mixerAssets.views[bank.mixer.view].rotor.centre.y * bank.mixer.scale;
+      assert.ok(bank.extruder.bounds.top > chamberCentre,
+        `layer ${bank.id} (focus ${focusLayer}): the drive reaches up into the drum`);
+      // And it is painted first, so whatever it overlaps, it is behind.
+      assert.ok(bank.extruder.anchor.y >= bank.mixer.outlet.y);
+    }
   }
 });
 
 /* ----------------------------------------------------------------------
- *   One component, three perspective states
+ *   One artwork set, three perspective states
  * -------------------------------------------------------------------- */
 
-test("one component renders front-facing, moderate and strong yaw", () => {
-  /* The requirement the Extruder Lab exists to show: three readable states out
-   * of one function, differing only in the number handed to it. */
-  const d = layoutModule.DIMENSIONS;
-  const at = angle => layoutModule.extruderGeometry(angle, d, { pivotX: 0, pivotY: 0 });
-  const front = at(0);
-  const moderate = at(d.extruderMaxYaw / 2);
-  const strong = at(d.extruderMaxYaw);
-
-  // Front-facing: no travel, round cap, shortest barrel.
-  assert.equal(front.front.x, 0);
-  assert.equal(front.capRy, front.capRx);
-  // Each step out: more travel, longer barrel, flatter cap.
-  assert.ok(Math.abs(moderate.front.x) > Math.abs(front.front.x));
-  assert.ok(Math.abs(strong.front.x) > Math.abs(moderate.front.x));
-  assert.ok(strong.length > moderate.length && moderate.length > front.length);
-  assert.ok(strong.capRy < moderate.capRy && moderate.capRy < front.capRy);
-  // And the rear never budges in any of them.
-  for (const state of [front, moderate, strong]) assert.equal(state.rear.x, 0);
+test("the three views are one machine at one scale", () => {
+  /* The assets share a physical scale, and the derivation keeps it: a turned
+   * machine is the same size, differently seen. Height from feed anchor to
+   * feet is the measure, and it is the same to within the perspective's own
+   * foreshortening. */
+  const heights = assets.ORDER.map(view => assets.views[view].bounds.bottom);
+  assert.equal(heights[0], assets.MACHINE_HEIGHT);
+  for (const height of heights) assert.ok(Math.abs(height - assets.MACHINE_HEIGHT) < assets.MACHINE_HEIGHT * 0.08);
+  // The feed anchor is the origin of every view - that is the contract.
+  for (const view of assets.ORDER) assert.deepEqual(assets.views[view].feed, { x: 0, y: 0 });
 });
 
-test("the same component handles both sides - there is no second artwork", () => {
-  const d = layoutModule.DIMENSIONS;
-  const doc = fakeDocument();
-  const draw = angle => {
-    const g = parts.extruder(doc, {
-      id: "X", extruder: layoutModule.extruderGeometry(angle, d, { pivotX: 0, pivotY: 0 })
-    }, 20);
-    const shapes = [];
-    walk(g, node => { if (node.getAttribute("class")) shapes.push(`${node.nodeName}.${node.getAttribute("class")}`); });
-    return shapes;
-  };
-  // Identical element structure on both sides and straight on; only the
-  // coordinates differ.
-  assert.deepEqual(draw(-34), draw(34));
-  assert.deepEqual(draw(-34).filter(s => !/foot/.test(s)), draw(0).filter(s => !/foot/.test(s)));
+test("the turn is strong enough to read at a glance", () => {
+  /* Can you see which way a machine faces without studying it. Measured as
+   * how far the outlet travels from the feed anchor, in machine heights. */
+  const travel = view => Math.abs(assets.views[view].outlet.x) / assets.MACHINE_HEIGHT;
+  assert.equal(travel("front"), 0);
+  assert.ok(travel("intermediate") > 0.4, `intermediate barely turns: ${travel("intermediate").toFixed(2)}`);
+  assert.ok(travel("angled") > 0.8, `angled is not obviously turned: ${travel("angled").toFixed(2)}`);
+  assert.ok(travel("angled") > travel("intermediate"));
 });
 
-test("nothing in the extruder is rotated in the screen plane", () => {
-  /* The machine stands upright. The barrel points somewhere, but it does so as
-   * path geometry - the cap's ellipse angle rides in the arc command, not in a
-   * transform - so no part of this component leans. */
-  const svg = stageFor(literal({ layerCount: 5 }));
-  for (const extruder of allWith(svg, "data-role", "extruder")) {
-    walk(extruder, node => {
-      const transform = node.getAttribute("transform");
-      assert.ok(!transform, `${node.nodeName} inside the extruder carries a transform: ${transform}`);
-    });
-  }
-});
-
-test("the percentage stays upright and readable at every yaw", () => {
+test("the percentage stays upright and readable at every view", () => {
   const svg = stageFor(literal({ layerCount: 5 }), {
     layerState: { A: { layerPct: 15 }, C: { layerPct: 30 }, E: { layerPct: 15 } }
   });
   const readouts = allWithClassName(svg, "station-extruder__pct");
   assert.equal(readouts.length, 5);
-  for (const readout of readouts) {
+  const banks = layoutFor(literal({ layerCount: 5 })).banks;
+  readouts.forEach((readout, index) => {
     assert.equal(readout.getAttribute("transform"), null, "the percentage was dragged into the perspective");
-    // Anchored on the layer centreline, where the rear is.
+    // Under the machine, on the layer centreline.
     assert.equal(readout.getAttribute("text-anchor"), "middle");
-  }
+    assert.equal(Number(readout.getAttribute("x")), banks[index].centerX);
+    assert.ok(Number(readout.getAttribute("y")) > banks[index].extruder.bounds.bottom);
+  });
   assert.ok(readouts.map(r => r.textContent).includes("30%"));
 });
 
@@ -1272,35 +1523,49 @@ test("the percentage stays upright and readable at every yaw", () => {
  *   Extruder Lab (development only)
  * -------------------------------------------------------------------- */
 
-test("the lab draws the documented states from the real component", () => {
+test("the lab shows every view of both machines as original beside derivative, from the real component", () => {
   const lab = require("./station/station-extruder-lab.js");
   const doc = fakeDocument();
-  const svg = lab.mount(doc.createElement("div"), doc, {
-    layout: layoutModule, parts
+  const root = lab.mount(doc.createElement("div"), doc, {
+    layout: layoutModule, parts, extruderAssets: assets, mixerAssets
   });
-  const cells = allWith(svg, "data-role", "lab-cell");
-  assert.equal(cells.length, 5);
-  // Derived from the real maximum, so the lab cannot drift from the stage.
-  const max = layoutModule.DIMENSIONS.extruderMaxYaw;
-  assert.deepEqual(cells.map(c => Number(c.getAttribute("data-yaw"))),
-    [-max, -max / 2, 0, max / 2, max]);
-  // Each cell contains a real extruder, not a lab-only drawing.
-  assert.equal(allWith(svg, "data-role", "extruder").length, 5);
-  for (const extruder of allWith(svg, "data-role", "extruder")) {
-    assert.ok(allWithClassName(extruder, "station-extruder__barrel-body").length === 1);
-    assert.ok(allWithClassName(extruder, "station-extruder__cap-face").length === 1);
+  const rows = allWith(root, "data-role", "lab-row");
+  assert.deepEqual(rows.map(r => `${r.getAttribute("data-machine")}/${r.getAttribute("data-view")}`),
+    [...mixerAssets.ORDER.map(v => `mixer/${v}`), ...assets.ORDER.map(v => `extruder/${v}`)]);
+  for (const row of rows) {
+    const machine = row.getAttribute("data-machine");
+    const view = row.getAttribute("data-view");
+    const module = machine === "mixer" ? mixerAssets : assets;
+    // The untouched source, as an image.
+    const originals = allWithClassName(row, "station-lab__original");
+    assert.equal(originals.length, 1);
+    assert.equal(originals[0].getAttribute("src"), `${lab.ORIGINALS[machine]}/${machine}-${view}.svg`);
+    // The derivative twice - as drawn, and mirrored - by the product's builder.
+    const drawn = allWith(row, "data-role", machine);
+    assert.equal(drawn.length, 2);
+    assert.deepEqual(drawn.map(e => e.getAttribute("data-mirrored")), ["false", "true"]);
+    for (const one of drawn) {
+      assert.equal(allWithClassName(one, `station-${machine}__face`).length, module.views[view].polygons.length);
+    }
   }
 });
 
-test("the lab scales the component rather than redrawing it", () => {
+test("the lab also shows the five-layer assembly - mixer on extruder - at actual Station size", () => {
   const lab = require("./station/station-extruder-lab.js");
-  const d = layoutModule.DIMENSIONS;
-  const small = layoutModule.extruderGeometry(20, d, { pivotX: 0, pivotY: 0, scale: 1 });
-  const large = layoutModule.extruderGeometry(20, d, { pivotX: 0, pivotY: 0, scale: 3 });
-  // Every dimension triples; nothing changes shape.
-  assert.ok(Math.abs(large.length / small.length - 3) < 0.001);
-  assert.ok(Math.abs(large.radius / small.radius - 3) < 0.001);
-  assert.ok(Math.abs(large.capRy / small.capRy - 3) < 0.001);
-  assert.equal(large.fraction, small.fraction);
-  assert.equal(lab.specimens(d.extruderMaxYaw).length, 5);
+  const doc = fakeDocument();
+  const root = lab.mount(doc.createElement("div"), doc, {
+    layout: layoutModule, parts, extruderAssets: assets, mixerAssets
+  });
+  const strip = allWith(root, "data-role", "lab-strip")[0];
+  const specimens = allWithClassName(strip, "station-lab__specimen");
+  assert.equal(specimens.length, 5);
+  assert.deepEqual(specimens.map(s => `${s.getAttribute("data-mirrored") === "true" ? "-" : ""}${s.getAttribute("data-view")}`),
+    ["-angled", "-intermediate", "front", "intermediate", "angled"]);
+  for (const one of specimens) {
+    assert.equal(allWith(one, "data-role", "mixer").length, 1);
+    assert.equal(allWith(one, "data-role", "extruder").length, 1);
+    // Both machines in one specimen face the same way.
+    assert.equal(allWith(one, "data-role", "mixer")[0].getAttribute("data-view"),
+      allWith(one, "data-role", "extruder")[0].getAttribute("data-view"));
+  }
 });

@@ -25,16 +25,33 @@
  * something unrecognizable.
  */
 (function (root, factory) {
-  const api = factory();
+  const deps = {
+    extruderAssets: typeof require === "function"
+      ? require("./station-extruder-assets.js")
+      : (root && root.PolynStationExtruderAssets),
+    mixerAssets: typeof require === "function"
+      ? require("./station-mixer-assets.js")
+      : (root && root.PolynStationMixerAssets)
+  };
+  const api = factory(deps);
   if (typeof module === "object" && module.exports) module.exports = api;
   if (root) root.PolynStationMachineLayout = api;
-})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+})(typeof globalThis !== "undefined" ? globalThis : this, function (deps) {
   "use strict";
+
+  /* The mixer and the extruder are authored artwork, placed rather than
+   * drawn: the layout needs their measurements (bounds, anchors) and nothing
+   * else. */
+  const extruderAssets = deps.extruderAssets;
+  const mixerAssets = deps.mixerAssets;
 
   /* Every dimension the composition depends on. Corrections belong here, not
    * in path data. Values are viewBox units. */
   const DIMENSIONS = Object.freeze({
-    height: 700,
+    /* Tall enough for the equipment train at the masters' own scale: hopper
+     * stack, the batch mixer (185 units at UNIT 0.42), the extruder and its
+     * readout, with the read-only notice under that when a layer is open. */
+    height: 740,
     padding: 34,
 
     // --- Hopper ---------------------------------------------------------
@@ -78,72 +95,48 @@
     headerTop: 22,
 
     // --- Mixer ----------------------------------------------------------
-    /* Compact and close to square: a blender sitting under the bank, not a
-     * console spanning it. Its width is capped well below a full hopper bank on
-     * purpose - the aggregation point is a machine, and a machine that grows
-     * with the number of hoppers above it stops reading as one.
+    /* Authored artwork, placed - see station-mixer-assets.js. Three views of
+     * one batch mixer, carried whole from the masters by
+     * tools/station-mixer/derive.js at the masters' own assembly scale, in
+     * stage units with the discharge at the origin. The layout hangs the
+     * machine from `mixerTop` and puts the extruder's feed anchor on its
+     * discharge: the mixer's own outlet flange sits on the extruder's feed
+     * flange, exactly as the masters' assembly previews stack them.
      *
      * There is deliberately NO funnel between the bank and the blender. The
      * real connection is hose and material routing, which this view does not
-     * draw; a bank-width funnel was inventing a piece of equipment to make the
-     * drawing look continuous. The hoppers simply end above the mixer.
+     * draw; a bank-width funnel was inventing a piece of equipment to make
+     * the drawing look continuous. The hoppers simply end above the mixer.
      */
-    mixerTop: 424,
-    mixerHeight: 68,
-    mixerMaxWidth: 88,
-    mixerMinWidth: 68,
-    /* One short neck down to the extruder, and nothing else between them. The
-     * UI does not need to show every physical transition. */
-    mixerOutletHeight: 20,
-    /* How much bigger the blender gets when its layer is expanded. Scaled
-     * whole - width, height, agitator - never stretched, so it stays the same
-     * component and the animation stays legible at the larger size. */
-    mixerFocusScale: 1.45,
+    mixerTop: 414,
+    // Multiplier on the asset's native stage-unit size, for tuning.
+    mixerScale: 1,
+    /* The throat: the only thing drawn BETWEEN the two machines - a dark
+     * neck `mixerFeedGap` tall from the mixer's discharge flange down to
+     * the extruder's feed flange, with a contact shadow where it lands.
+     * The masters mount the discharge flange directly on the feed flange,
+     * so the gap is ZERO and the neck collapses to nothing; only the
+     * contact shadow remains, tucked under the flange. The machinery stays
+     * because it is one number to open the gap again. */
+    mixerFeedGap: 0,
+    throatWidth: 13,
+    throatShadowRx: 13,
+    throatShadowRy: 3.5,
 
     // --- Extruder -------------------------------------------------------
-    /* A long barrel projecting away from a fixed rear anchor.
+    /* Authored artwork, placed - not a procedural drawing.
      *
-     * The previous version treated yaw as "narrower front rectangle plus a side
-     * polygon", which reads as a cabinet however hard the shading works. A real
-     * extruder is overwhelmingly BARREL: a long tube with an end cap at the near
-     * end and the drive and feed at the far end. So the model here is an axis,
-     * not a box.
-     *
-     * The rear feed point never moves - it is the anchor under the mixer - and
-     * the barrel swings toward the core. That is what keeps the feed throat
-     * centred on its layer at every yaw, and it is why the front end is the
-     * thing that travels.
+     * Three views of one machine (front, intermediate, angled) come from
+     * station-extruder-assets.js, already in stage units with the feed
+     * anchor at their origin. The layout's whole job is to pick a view for
+     * the layer's position in the stack, mirror it for the left-hand side,
+     * and put its origin under the mixer neck. Which view a layer gets is
+     * decided in equipmentView(); how it is placed in assetPlacement().
      */
-    extruderBarrelRadius: 11,
-    // How far the front end drops down the screen: the foreshortened length of
-    // a machine pointing straight at you. Never zero, or the centre layer would
-    // collapse to a disc.
-    extruderAxisDrop: 60,
-    // How far the front end swings sideways at full yaw. Larger than the drop
-    // on purpose - lateral travel is what the eye reads as "turned".
-    extruderAxisReach: 66,
-    extruderRearWidth: 40,
-    extruderRearHeight: 18,
-    extruderDriveWidth: 26,
-    extruderDriveHeight: 12,
-    extruderFootHeight: 9,
-    extruderFootWidth: 8,
-    extruderSeams: 5,
-    /* How much the end cap flattens at full yaw. Looking straight down the
-     * barrel you see a circle; turned side-on you would see an edge. This is the
-     * single value that makes the cap belong to the barrel it caps. */
-    extruderCapFlatten: 0.52,
-    extruderFocusScale: 1.2,
-
-    /* Convergence, as YAW rather than as tilt.
-     *
-     * The machine stands upright. What changes with distance from the centre is
-     * the direction its barrel projects: straight down the screen at the core,
-     * swinging progressively toward the core on either side. The centre layer
-     * is at 0; the outermost is at exactly `extruderMaxYaw`, with the rest
-     * evenly spaced between.
-     */
-    extruderMaxYaw: 34,
+    // Multiplier on the asset's native stage-unit size, for tuning.
+    extruderScale: 1,
+    // The layer-share readout sits this far under the lowest foot.
+    extruderLabelGap: 14,
 
     /* A line narrower than this ratio is CENTRED on the canvas rather than
      * stretched to fill it: the equipment that exists stays the same size, and
@@ -154,49 +147,160 @@
     minAspect: 1.0,
 
     // --- Focus ----------------------------------------------------------
-    /* Expanded edit state. The focused bank's hoppers grow, the rest shrink,
-     * and the row recentres - so it reads as zooming into one layer rather
-     * than as a panel opening over the top of everything. */
-    focusScale: 2.3,
-    dimScale: 0.52
+    /* The expanded state is a WINDOW OPENING, not a re-layout.
+     *
+     * A bank is two rigid objects - its hopper cluster (with the layer's
+     * header) and its equipment train (mixer, throat, extruder) - and
+     * focusing a layer moves those two objects, whole, into a workspace:
+     * the train to the left edge, the cluster beside it, and the rest of
+     * the canvas reserved for the editing surface that a later phase will
+     * design. Both objects are drawn at `focusScale`, vertically centred on
+     * the canvas. Nothing changes shape: every dimension the bank is built
+     * from scales by the one factor (see bankDimensions()), so a hopper
+     * cannot widen without getting taller, a receiver cannot squash, and
+     * mixer and extruder keep exactly their authored proportions.
+     *
+     * The other banks become secondary: drawn at `dimScale` about their own
+     * centre, moved `focusRetreat` outward from the focused layer, and faded
+     * (the opacity is the stylesheet's). They keep their normal positions
+     * otherwise, so the transition that carries a layer into focus and back
+     * (station-transition.js) has a real place to return everything to.
+     *
+     * The canvas is the STAGE'S OWN SHAPE - its height times the aspect the
+     * renderer measures on the mount - so the focused layout fills the
+     * stage edge to edge and is drawn at the scale the stage's height
+     * allows, never letterboxed smaller. `focusAspect` is the fallback when
+     * nothing can be measured. The canvas is never narrower than the three
+     * columns need, with `workspaceMin` for the workspace: the narrowest
+     * the focused editor's rows can be drawn without truncating their
+     * quiet placeholders ("Add resin", "Add source"), which only binds on
+     * a compact stage - a wide one gives the workspace the rest of the
+     * canvas.
+     */
+    focusScale: 1.25,
+    dimScale: 0.9,
+    focusRetreat: 90,
+    focusAspect: 1.5,
+    workspaceMin: 280,
+    // Left edge to the train, and the gutters between the three columns.
+    focusPadding: 40,
+    focusColumnGap: 48
   });
 
   /* --------------------------------------------------------------------
    *   Extruder convergence
    * ------------------------------------------------------------------ */
 
-  /**
-   * How far a layer's extruder is TURNED - yawed about its own vertical axis -
-   * from its position in the stack. Degrees. Derived from distance off centre,
-   * never from the layer's letter, which is what lets it be correct for a layer
-   * count nobody has drawn yet.
-   *
-   * The machine does not lean: nothing rotates in the plane of the screen. Yaw
-   * changes which faces you can see, and by how much - see extruderFaces().
-   *
-   * SIGN: negative for a bank LEFT of centre, positive for one to the right.
-   * A left-hand machine turns to its right to face the core, which brings its
-   * own left flank into view; the mirror holds on the other side. The centre
-   * layer of an odd stack is exactly 0; an even stack has no centre layer and
-   * its two middle banks are turned slightly, symmetrically.
-   */
-  function extruderAngle(index, layerCount, maxYaw) {
-    const limit = maxYaw === undefined ? DIMENSIONS.extruderMaxYaw : maxYaw;
-    if (!Number.isInteger(layerCount) || layerCount < 2) return 0;
-    const centre = (layerCount - 1) / 2;
-    const offset = index - centre;
-    // Normalised so the outermost layer is always at the full yaw.
-    const angle = (offset / centre) * limit;
-    // The centre layer computes -0, which is not 0 under strict equality.
-    return angle === 0 ? 0 : angle;
-  }
-
-  /* The stage's single light direction, pointing from the scene toward the
-   * light: up and to the left. Everything that picks a lit side asks this. */
-  const LIGHT = Object.freeze({ x: -0.6, y: -0.8 });
-
   function clamp(value, low, high) {
     return Math.min(high, Math.max(low, value));
+  }
+
+  /**
+   * Which authored view a layer's EQUIPMENT gets - mixer and extruder both,
+   * from one answer, so the two can never face different ways - from its
+   * position in the stack. Never from the layer's letter, which is what lets
+   * it be right for a layer count nobody has drawn yet.
+   *
+   * The views are discrete perspective STATES, not samples of a continuous
+   * angle: a layer is either on the centreline (front), one ring out
+   * (intermediate, 30 degrees), or further out (angled, 60 degrees). Rings
+   * are distinct distances from the centre, nearest first. So a three-layer
+   * line is intermediate / front / intermediate, a five-layer line angled /
+   * intermediate / front / intermediate / angled, and a seven-layer line has
+   * two angled rings each side. A stack with no centre layer - an even
+   * count - has no front view at all. These are the masters' own suggested
+   * views (images/mixer/README.md).
+   *
+   * MIRRORING is a flag, not artwork. Every view is authored with its near
+   * end toward the viewer's left, which is the turn a machine RIGHT of centre
+   * makes to face the core; a machine left of centre is the same view
+   * mirrored. Which side a layer is on is `offset < 0`, and nothing else.
+   *
+   * @returns {{view: string, mirrored: boolean, side: string, key: string, ring: number}}
+   *   `key` is the human form: "front", "intermediate-left", "angled-right".
+   */
+  function equipmentView(index, layerCount) {
+    if (!Number.isInteger(layerCount) || layerCount < 1 || !Number.isInteger(index)) {
+      return { view: "front", mirrored: false, side: "centre", key: "front", ring: 0 };
+    }
+    const centre = (layerCount - 1) / 2;
+    const offset = index - centre;
+    const distances = [...new Set(
+      Array.from({ length: layerCount }, (_, i) => Math.abs(i - centre)))].sort((a, b) => a - b);
+    // Ring 0 is the centreline itself. If no layer sits on it, the nearest
+    // ring is still ring 1: it is turned, just not much.
+    const ring = distances.indexOf(Math.abs(offset)) + (distances[0] === 0 ? 0 : 1);
+    // A layer one ring out is turned 30 degrees; from two rings out, 60 -
+    // so a three-layer line is 30/0/30 and only the fourth ring of a
+    // five-layer line reaches 60. The masters' own suggested views.
+    const view = ring === 0 ? "front" : ring === 1 ? "intermediate" : "angled";
+    const side = offset < 0 ? "left" : offset > 0 ? "right" : "centre";
+    return {
+      view,
+      mirrored: offset < 0,
+      side,
+      key: side === "centre" ? view : `${view}-${side}`,
+      ring
+    };
+  }
+
+  /**
+   * Where one piece of authored equipment goes, from its view and the point
+   * its anchor lands on.
+   *
+   * An asset's origin IS its anchor (the extruder's feed flange, the mixer's
+   * discharge), so placement is a translate to (centerX, anchorY), a uniform
+   * scale, and for a left-hand layer a sign flip in x. The anchor therefore
+   * lands on the layer's centreline at every view by construction - it is
+   * the one point that cannot move - and only the machine around it swings.
+   * Nothing is rotated in the screen plane.
+   *
+   * Returns numbers only. The renderer applies the same mapping to the
+   * asset's polygons; the two agree because they read the same three values.
+   *
+   * @param {string}  view      "front" | "intermediate" | "angled"
+   * @param {boolean} mirrored
+   * @param {object}  asset     a view from station-*-assets.js
+   * @param {object}  options   { centerX, anchorY, scale, labelGap }
+   */
+  function assetPlacement(view, mirrored, asset, options) {
+    const settings = options || {};
+    const scale = settings.scale === undefined ? 1 : settings.scale;
+    const centerX = settings.centerX === undefined ? 0 : settings.centerX;
+    const anchorY = settings.anchorY === undefined ? 0 : settings.anchorY;
+    const labelGap = settings.labelGap === undefined ? DIMENSIONS.extruderLabelGap : settings.labelGap;
+    const sign = mirrored ? -1 : 1;
+    const x = value => centerX + sign * scale * value;
+    const y = value => anchorY + scale * value;
+    const b = asset.bounds;
+    const edges = [x(b.left), x(b.right)];
+    const bounds = {
+      left: Math.min(edges[0], edges[1]),
+      right: Math.max(edges[0], edges[1]),
+      top: y(b.top),
+      bottom: y(b.bottom)
+    };
+
+    return {
+      view,
+      mirrored,
+      sign,
+      // Signed like a compass: negative for a machine left of centre.
+      yaw: sign * asset.yaw,
+      scale,
+      anchor: { x: centerX, y: anchorY },
+      outlet: { x: x(asset.outlet.x), y: y(asset.outlet.y) },
+      inlet: asset.inlet ? { x: x(asset.inlet.x), y: y(asset.inlet.y) } : null,
+      bounds,
+      // The bounds again, in the shape every other component reports.
+      x: bounds.left,
+      y: bounds.top,
+      width: (b.right - b.left) * scale,
+      height: (b.bottom - b.top) * scale,
+      centerX,
+      // A readout under the machine, on the layer centreline, upright.
+      label: { x: centerX, y: y(b.bottom) + labelGap }
+    };
   }
 
   /**
@@ -221,176 +325,129 @@
     return clamp(scaled, d.vesselMinHeight, d.vesselMaxHeight);
   }
 
-  /**
-   * The whole geometry of one extruder, from its yaw.
-   *
-   * PERSPECTIVE MODEL. Two points and everything hangs off them:
-   *
-   *   rear  - the anchor, always on the layer's centreline, under the mixer
-   *   front - the near end, dropped down the screen and swung toward the core
-   *
-   * The axis between them is the barrel. At zero yaw the axis is straight down:
-   * the machine points at the viewer, the barrel is foreshortened, and the end
-   * cap is a full circle. As yaw grows the front swings sideways, the projected
-   * barrel gets LONGER (less foreshortening, which is what actually happens),
-   * and the cap flattens into an ellipse. Those three moving together are what
-   * make the turn read as depth rather than as a decoration.
-   *
-   * MIRRORING is the sign of one number. `lateral` is negated from the yaw, so
-   * a bank left of centre swings its front right and a bank right of centre
-   * swings left. There is no left artwork and no right artwork.
-   *
-   * Nothing here is rotated in the screen plane. The drive, the feed block and
-   * every foot are axis-aligned boxes; only the barrel and its cap follow the
-   * axis, because those are the parts that are actually pointing somewhere.
-   *
-   * @param {number} angle    signed yaw in degrees
-   * @param {object} d        dimensions
-   * @param {object} options  { pivotX, pivotY, scale }
-   */
-  function extruderGeometry(angle, d, options) {
-    const settings = options || {};
-    const scale = settings.scale === undefined ? 1 : settings.scale;
-    const pivotX = settings.pivotX === undefined ? 0 : settings.pivotX;
-    const pivotY = settings.pivotY === undefined ? 0 : settings.pivotY;
-    const maxYaw = d.extruderMaxYaw || 34;
-    // -1 at the far left, 0 at the core, +1 at the far right.
-    const fraction = clamp(angle / maxYaw, -1, 1);
-
-    const radius = d.extruderBarrelRadius * scale;
-    const drop = d.extruderAxisDrop * scale;
-    const reach = d.extruderAxisReach * scale;
-    const driveHeight = d.extruderDriveHeight * scale;
-    const rearHeight = d.extruderRearHeight * scale;
-    const rearWidth = d.extruderRearWidth * scale;
-    const driveWidth = d.extruderDriveWidth * scale;
-    const footHeight = d.extruderFootHeight * scale;
-    const footWidth = d.extruderFootWidth * scale;
-
-    // The feed throat lands here, on the centreline, whatever the yaw.
-    const drive = {
-      x: pivotX - driveWidth / 2, y: pivotY,
-      width: driveWidth, height: driveHeight, centerX: pivotX
-    };
-    const rearBlock = {
-      x: pivotX - rearWidth / 2, y: pivotY + driveHeight,
-      width: rearWidth, height: rearHeight, centerX: pivotX
-    };
-
-    const rear = { x: pivotX, y: pivotY + driveHeight + rearHeight };
-    const lateral = -fraction * reach;
-    const front = { x: rear.x + lateral, y: rear.y + drop };
-
-    const length = Math.sqrt(lateral * lateral + drop * drop);
-    const axis = { x: lateral / length, y: drop / length };
-    // Perpendicular, used for the barrel's width and for every seam across it.
-    const perp = { x: -axis.y, y: axis.x };
-
-    // End cap: a disc on the end of the barrel, so it is widest across the
-    // barrel and squashed along it, by however much the machine is turned.
-    const capRx = radius;
-    const capRy = radius * (1 - d.extruderCapFlatten * Math.abs(fraction));
-    const capAngle = (Math.atan2(perp.y, perp.x) * 180) / Math.PI;
-
-    /* One light, from the upper left, for the whole stage.
-     *
-     * Which FLANK of a barrel that lights depends on where the barrel points,
-     * so the sign genuinely differs between a machine angled left and one
-     * angled right - that is correct shading, not an inconsistency. What must
-     * stay constant is the light, and that is what the test checks. */
-    const litSign = perp.x * LIGHT.x + perp.y * LIGHT.y >= 0 ? 1 : -1;
-
-    const seams = Array.from({ length: d.extruderSeams }, (_, index) =>
-      (index + 1) / (d.extruderSeams + 1));
-
-    // Front feet sit lower than the rear feet because the front is nearer. That
-    // is most of what stops the machine looking like it hangs off one foot.
-    const feet = {
-      /* Set wide, outside where the barrel emerges - a foot tucked under the
-       * centre of the block disappears behind the barrel on a yawed machine and
-       * the far end looks unsupported. */
-      rear: [-1, 1].map(side => ({
-        x: rear.x + side * rearWidth * 0.42 - footWidth / 2,
-        y: rearBlock.y + rearHeight, width: footWidth, height: footHeight
-      })),
-      /* Below the cap, not beside it. A flattened cap on a strongly yawed
-       * machine is shallow, so feet placed at a fraction of it ended up inside
-       * the cap and invisible exactly when the machine was most turned. */
-      front: [-1, 1].map(side => ({
-        x: front.x + side * radius * 0.95 - footWidth / 2,
-        y: front.y + capRy, width: footWidth, height: footHeight
-      }))
-    };
-
-    const left = Math.min(rearBlock.x, front.x - radius) - footWidth;
-    const right = Math.max(rearBlock.x + rearWidth, front.x + radius) + footWidth;
-    const bottom = Math.max(
-      feet.front[0].y + footHeight,
-      feet.rear[0].y + footHeight
-    );
-
-    return {
-      angle, fraction, scale,
-      pivotX, pivotY,
-      drive, rearBlock, rear, front,
-      radius, length, axis, perp, litSign,
-      capRx, capRy, capAngle,
-      seams, feet,
-      // How far the front travelled from the centreline, as a share of the
-      // barrel's own width. The number the perspective is tuned against.
-      sideShare: Math.abs(lateral) / (radius * 2),
-      bounds: { left, right, top: pivotY, bottom },
-      height: bottom - pivotY
-    };
-  }
-
   function bankInnerWidth(hopperCount, hopperWidth, hopperGap) {
     return hopperCount * hopperWidth + Math.max(0, hopperCount - 1) * hopperGap;
+  }
+
+  /* --------------------------------------------------------------------
+   *   Rigid scaling
+   * ------------------------------------------------------------------ */
+
+  /* Every dimension a bank is built from that is a LENGTH, and so scales with
+   * the bank. Anything not listed is a ratio, a count, or a canvas-level
+   * number, and is left alone. */
+  const BANK_LENGTHS = Object.freeze([
+    "hopperWidth", "hopperGap",
+    "vesselHeight", "vesselMinHeight", "vesselMaxHeight",
+    "receiverHeight", "receiverGap", "sourceGap",
+    "coneHeight", "spoutHeight", "hopperCaptionGap", "hopperCaptionHeight",
+    "bankPadding", "bankMinWidth",
+    "mixerFeedGap", "throatWidth", "throatShadowRx", "throatShadowRy", "extruderLabelGap",
+    // The asset multipliers are lengths per stage unit, so they scale too.
+    "mixerScale", "extruderScale"
+  ]);
+  /* The three absolute vertical positions a bank hangs from. Everything else
+   * vertical is derived from these plus lengths. */
+  const BANK_ANCHORS = Object.freeze(["headerTop", "vesselBottom", "mixerTop"]);
+
+  /**
+   * The dimensions for one bank drawn at `scale`, scaled about `pivotY`.
+   *
+   * This is what makes a bank rigid. A bank is laid out from these numbers
+   * and nothing else, so scaling all of them by one factor scales the whole
+   * assembly by that factor - width and height together, hoppers and
+   * receivers and machines alike - and there is no way to widen one part
+   * without the rest. Ratios (the resin threshold) and counts are untouched.
+   */
+  function bankDimensions(d, scale, pivotY) {
+    const out = Object.assign({}, d, { bankScale: scale });
+    for (const key of BANK_LENGTHS) out[key] = d[key] * scale;
+    for (const key of BANK_ANCHORS) out[key] = pivotY + (d[key] - pivotY) * scale;
+    return out;
+  }
+
+  /* A bank's width from its hopper count alone - needed before it is placed. */
+  function bankWidth(layer, d) {
+    const inner = bankInnerWidth(layer.hopperCount, d.hopperWidth, d.hopperGap);
+    return Math.max(inner + d.bankPadding * 2, d.bankMinWidth);
   }
 
   /* --------------------------------------------------------------------
    *   One layer bank
    * ------------------------------------------------------------------ */
 
-  function layoutBank(layer, x, d, emphasis, index, layerCount, hopperState, canvasWidth) {
-    // Emphasis scales the hoppers, and the bank is sized from its own hoppers,
-    // so the whole bank grows and shrinks without a second set of dimensions.
-    const scale = emphasis === "focused" ? d.focusScale
-      : emphasis === "dimmed" ? d.dimScale
-      : 1;
-    const hopperWidth = d.hopperWidth * scale;
-    const hopperGap = d.hopperGap * scale;
+  /* `d` is this bank's own dimensions - already scaled for its emphasis by
+   * bankDimensions() - so nothing in here knows or cares whether the bank is
+   * focused, dimmed or plain. Emphasis only decides how much detail is drawn. */
+  /* `composition`, when given, moves the bank's two rigid objects apart: the
+   * cluster (with the header) by `cluster`, the train (mixer, throat,
+   * extruder, readout) by `train`, each {dx, dy} from where the bank would
+   * put them. That is the whole of the focus composition: two objects
+   * carried to new places, unchanged. `showResin` carries the normal row's
+   * decision about the resin caption into the other layouts, so a bank is
+   * the same drawing wherever it is. */
+  function layoutBank(layer, x, d, emphasis, index, layerCount, hopperState, canvasWidth, composition) {
+    const scale = d.bankScale === undefined ? 1 : d.bankScale;
+    const hopperWidth = d.hopperWidth;
+    const hopperGap = d.hopperGap;
     const inner = bankInnerWidth(layer.hopperCount, hopperWidth, hopperGap);
-    const width = Math.max(inner + d.bankPadding * 2, d.bankMinWidth * Math.min(scale, 1));
-    const centerX = x + width / 2;
+    const width = bankWidth(layer, d);
+    const move = Object.assign({ cluster: { dx: 0, dy: 0 }, train: { dx: 0, dy: 0 } }, composition || {});
+    const bankCenterX = x + width / 2;
+    // The cluster's centreline and the train's: one and the same unless the
+    // composition has carried them apart.
+    const centerX = bankCenterX + move.cluster.dx;
+    const trainX = bankCenterX + move.train.dx;
+    const headerY = d.headerTop + move.cluster.dy;
+    const mixerTop = d.mixerTop + move.train.dy;
     const clusterX = centerX - inner / 2;
     // The discharge line: fixed for every hopper on the bank, whatever its
     // body height, because that is where they all feed the mixer.
-    const coneTop = d.vesselBottom;
+    const coneTop = d.vesselBottom + move.cluster.dy;
 
-    /* Mixer PROPORTIONS are fixed; its SIZE is not. Width and height come from
-     * the bank at its normal scale and are then scaled by one factor, so an
-     * expanded layer gets a bigger blender - agitator and all - rather than a
-     * stretched one. Deriving width from the expanded cluster is what turned it
-     * into a console the first time.
-     *
-     * The extruder scales less. It is the least important thing in the picture
-     * and should not grow to match a blender that just went up by half. */
-    const baseInner = bankInnerWidth(layer.hopperCount, d.hopperWidth, d.hopperGap);
-    const mixerScale = Math.min(scale, d.mixerFocusScale);
-    const extruderScale = Math.min(scale, d.extruderFocusScale);
-    const mixerWidth = clamp(baseInner + 8, d.mixerMinWidth, d.mixerMaxWidth) * mixerScale;
-    const mixerHeight = d.mixerHeight * mixerScale;
-    const mixerOutletHeight = d.mixerOutletHeight * mixerScale;
-    // The extruder hangs off the bottom of the neck, wherever that ends up -
-    // so a bigger blender pushes it down instead of colliding with it.
-    const extruderTop = d.mixerTop + mixerHeight + mixerOutletHeight;
+    /* One view for the whole equipment train, so mixer and extruder turn
+     * together. Both are authored artwork hung from anchors: the mixer from
+     * `mixerTop`, the extruder from the mixer's discharge. Both scale WHOLE
+     * with the bank - the multipliers arrive already scaled - never stretched. */
+    const facing = equipmentView(index, layerCount);
+    const mixerScale = d.mixerScale;
+    const extruderScale = d.extruderScale;
+    const mixerAsset = mixerAssets.views[facing.view];
+    const mixer = assetPlacement(facing.view, facing.mirrored, mixerAsset, {
+      centerX: trainX,
+      // Hung from the top: the discharge lands wherever the machine's height
+      // puts it, and the extruder follows.
+      anchorY: mixerTop - mixerAsset.bounds.top * mixerScale,
+      scale: mixerScale
+    });
+    // The extruder's feed anchor sits under the mixer's discharge, the
+    // throat's length below it.
+    const extruderTop = mixer.outlet.y + d.mixerFeedGap;
+    const throat = {
+      x: trainX - d.throatWidth / 2,
+      y: mixer.outlet.y,
+      width: d.throatWidth,
+      height: d.mixerFeedGap,
+      centerX: trainX,
+      // The contact shadow, on the extruder's feed flange where the throat lands.
+      shadow: { cx: trainX, cy: extruderTop, rx: d.throatShadowRx, ry: d.throatShadowRy }
+    };
+    const extruder = assetPlacement(facing.view, facing.mirrored, extruderAssets.views[facing.view], {
+      // The feed anchor lands exactly here for every layer and every view:
+      // it is the asset's origin, so only the machine around it swings.
+      centerX: trainX,
+      anchorY: extruderTop,
+      scale: extruderScale,
+      labelGap: d.extruderLabelGap
+    });
 
     /* A resin code is only legible when the hopper is a reasonable share of the
      * canvas, and the canvas is scaled to fit. Below the threshold the code is
      * dropped rather than shrunk - it stays on hover and in the expanded view. */
     const effectiveCanvas = canvasWidth || d.height * d.minAspect;
-    const showResin = hopperWidth / effectiveCanvas >= d.resinVisibleRatio;
+    const showResin = move.showResin !== undefined
+      ? move.showResin
+      : hopperWidth / effectiveCanvas >= d.resinVisibleRatio;
 
     const hoppers = layer.hoppers.map((hopper, hopperIndex) => {
       const runtime = hopperState ? hopperState[`${layer.id}:${hopper.index}`] : null;
@@ -405,6 +462,9 @@
         positionLabel: hopper.positionLabel,
         x: clusterX + hopperIndex * (hopperWidth + hopperGap),
         width: hopperWidth,
+        // Centre-to-centre distance to the next hopper: what a control that
+        // has to be wider than its hopper is sized against.
+        pitch: hopperWidth + hopperGap,
         // Above the receiver: where the material is connected from.
         sourceY: receiverTop - d.sourceGap,
         receiverTop,
@@ -432,10 +492,12 @@
       recipeIndex: layer.recipeIndex,
       emphasis,
       scale,
-      x,
+      // The bank's column: where its cluster stands. In the normal row that
+      // is the whole bank; in focus the train has its own place (below).
+      x: x + move.cluster.dx,
       width,
       centerX,
-      header: { x: centerX, y: d.headerTop },
+      header: { x: centerX, y: headerY },
       cluster: {
         x: clusterX,
         // Bodies differ in height, so the cluster's top is whichever hopper
@@ -446,24 +508,33 @@
         hopperWidth,
         hoppers
       },
-      mixer: {
-        x: centerX - mixerWidth / 2,
-        y: d.mixerTop,
-        width: mixerWidth,
-        height: mixerHeight,
-        centerX,
-        outletHeight: mixerOutletHeight,
-        scale: mixerScale
-      },
-      extruder: extruderGeometry(
-        extruderAngle(index, layerCount, d.extruderMaxYaw), d,
-        {
-          // The feed throat lands exactly here for every layer and every yaw:
-          // the rear is the anchor, and only the barrel travels.
-          pivotX: centerX,
-          pivotY: extruderTop,
-          scale: extruderScale
-        })
+      // Which way this layer's equipment faces - mixer and extruder alike.
+      facing,
+      mixer,
+      throat,
+      extruder,
+      /* The bank's two RIGID OBJECTS, as boxes in canvas units. These are
+       * what the transition carries between layouts (station-transition.js
+       * reads them off the markup): each is the same shape in every layout,
+       * only placed and scaled differently, which is what lets an object be
+       * moved as one thing rather than re-drawn. `objects.cluster` is the
+       * header and the hoppers; `objects.train` the mixer, throat, extruder
+       * and readout. */
+      objects: {
+        cluster: {
+          x: clusterX,
+          y: headerY - 12 * scale,
+          width: inner,
+          height: coneTop + d.coneHeight + d.spoutHeight + d.hopperCaptionGap + d.hopperCaptionHeight - (headerY - 12 * scale)
+        },
+        train: {
+          x: Math.min(mixer.bounds.left, extruder.bounds.left),
+          y: mixer.bounds.top,
+          width: Math.max(mixer.bounds.right, extruder.bounds.right) - Math.min(mixer.bounds.left, extruder.bounds.left),
+          height: extruder.label.y + 6 * scale - mixer.bounds.top,
+          centerX: trainX
+        }
+      }
     };
   }
 
@@ -476,32 +547,37 @@
    * @param {object} [options]
    * @param {string} [options.focusLayer]  layer id to expand, or null
    * @param {object} [options.dimensions]  DIMENSIONS overrides
+   * @param {number} [options.stageAspect] width/height of the stage the canvas fills (focus only)
    */
   function computeLayout(model, options) {
     if (!model || !Array.isArray(model.layers) || !model.layers.length) return null;
     const settings = options || {};
     const d = Object.assign({}, DIMENSIONS, settings.dimensions || {});
     const focusLayer = settings.focusLayer || null;
+    const hopperState = settings.hopperState || null;
+
+    if (focusLayer && model.layers.some(layer => layer.id === focusLayer)) {
+      const aspect = Number.isFinite(settings.stageAspect) && settings.stageAspect > 0 ? settings.stageAspect : d.focusAspect;
+      return placeFocused(d, model, focusLayer, hopperState, aspect);
+    }
 
     // Laid out twice: once to measure the row, then again shifted so it sits
     // centred on a canvas that respects minAspect. Two cheap passes beat
     // threading an offset through every placement.
-    const hopperState = settings.hopperState || null;
-    const natural = place(d, model, focusLayer, 0, undefined, hopperState);
+    const natural = place(d, model, 0, undefined, hopperState);
     const canvasWidth = Math.max(natural.width, d.height * d.minAspect);
-    return place(d, model, focusLayer, (canvasWidth - natural.width) / 2, canvasWidth, hopperState);
+    return place(d, model, (canvasWidth - natural.width) / 2, canvasWidth, hopperState);
   }
 
-  function place(d, model, focusLayer, offset, canvasWidth, hopperState) {
+  /* The normal row: every bank at scale 1, in physical order, centred. */
+  function place(d, model, offset, canvasWidth, hopperState) {
     const layerCount = model.layers.length;
+    const bankD = bankDimensions(d, 1, d.height / 2);
     const banks = [];
     let cursor = d.padding + offset;
 
     model.layers.forEach((layer, index) => {
-      const emphasis = !focusLayer ? "normal"
-        : layer.id === focusLayer ? "focused"
-        : "dimmed";
-      const bank = layoutBank(layer, cursor, d, emphasis, index, layerCount, hopperState, canvasWidth);
+      const bank = layoutBank(layer, cursor, bankD, "normal", index, layerCount, hopperState, canvasWidth);
       banks.push(bank);
       cursor += bank.width + d.bankGap;
     });
@@ -513,10 +589,98 @@
       dimensions: d,
       width: canvasWidth === undefined ? naturalRight : canvasWidth,
       height: d.height,
-      focusLayer,
+      focusLayer: null,
       row: { x: d.padding + offset, width: rowWidth, banks },
       // Kept as its own field so callers do not have to know it is row.banks.
-      banks
+      banks,
+      // Painted in physical order; nothing overlaps.
+      paintOrder: banks.map((_, index) => index)
+    };
+  }
+
+  /* The focus composition: the chosen bank's train at the left edge, its
+   * cluster beside it, the rest of the canvas reserved as the workspace;
+   * the other banks smaller, faded, and moved a little outward from where
+   * they were. See the Focus notes in DIMENSIONS. */
+  function placeFocused(d, model, focusLayer, hopperState, stageAspect) {
+    const layerCount = model.layers.length;
+    const focusIndex = model.layers.findIndex(layer => layer.id === focusLayer);
+    const pivotY = d.height / 2;
+
+    // The normal row is the reference: ghosts retreat from where they stand
+    // there.
+    const normal = computeLayout(model, { dimensions: d, hopperState });
+
+    /* The focused bank: laid out once where it stands, to learn the size of
+     * its two objects at focus scale, then again with each object carried to
+     * its column and centred on the canvas height. */
+    const focusedD = bankDimensions(d, d.focusScale, pivotY);
+    const layer = model.layers[focusIndex];
+    const showResin = index => normal.banks[index].cluster.hoppers.length
+      ? normal.banks[index].cluster.hoppers[0].showResin : false;
+    // (The resin decision is carried from the normal row, so the canvas
+    // width passed here is immaterial.)
+    const probe = layoutBank(layer, normal.banks[focusIndex].x, focusedD, "focused", focusIndex, layerCount, hopperState, normal.width,
+      { showResin: showResin(focusIndex) });
+    const train = probe.objects.train;
+    const cluster = probe.objects.cluster;
+    /* The train column is as wide as the widest VIEW of the train, not this
+     * layer's, so the columns are in the same place whichever layer opens
+     * and a turned machine and a front-on one share one workspace. */
+    const trainColumn = Math.max(...Object.keys(mixerAssets.views).map(view => {
+      const m = mixerAssets.views[view].bounds;
+      const e = extruderAssets.views[view].bounds;
+      return Math.max(m.right * focusedD.mixerScale, e.right * focusedD.extruderScale) -
+        Math.min(m.left * focusedD.mixerScale, e.left * focusedD.extruderScale);
+    }));
+    const trainLeft = d.focusPadding + (trainColumn - train.width) / 2;
+    const clusterLeft = d.focusPadding + trainColumn + d.focusColumnGap;
+    const workspaceLeft = clusterLeft + cluster.width + d.focusColumnGap;
+    // The stage's own shape, or as wide as the three columns need.
+    const canvasWidth = Math.max(d.height * stageAspect, workspaceLeft + d.workspaceMin + d.focusPadding);
+    const offset = (canvasWidth - normal.width) / 2;
+    const centreOn = box => pivotY - (box.y + box.height / 2);
+    const focused = layoutBank(layer, normal.banks[focusIndex].x, focusedD, "focused", focusIndex, layerCount, hopperState, canvasWidth, {
+      cluster: { dx: clusterLeft - cluster.x, dy: centreOn(cluster) },
+      train: { dx: trainLeft - train.x, dy: centreOn(train) },
+      showResin: showResin(focusIndex)
+    });
+
+    const banks = new Array(layerCount);
+    banks[focusIndex] = focused;
+    const ghostD = bankDimensions(d, d.dimScale, pivotY);
+    model.layers.forEach((other, index) => {
+      if (index === focusIndex) return;
+      const was = normal.banks[index];
+      const width = bankWidth(other, ghostD);
+      // Smaller about its own centre, and a step further from the focused
+      // layer on the side it is already on.
+      const away = index < focusIndex ? -d.focusRetreat : d.focusRetreat;
+      const x = offset + was.centerX - width / 2 + away;
+      banks[index] = layoutBank(other, x, ghostD, "dimmed", index, layerCount, hopperState, canvasWidth,
+        { showResin: showResin(index) });
+    });
+
+    const left = Math.min(...banks.map(bank => bank.x));
+    const right = Math.max(...banks.map(bank => bank.x + bank.width));
+    return {
+      dimensions: d,
+      width: canvasWidth,
+      height: d.height,
+      focusLayer,
+      row: { x: left, width: right - left, banks },
+      banks,
+      /* The reserved editing surface: placed, not designed. Its geometry is
+       * the point - a later phase fills it - so it is a box and a label. */
+      workspace: {
+        x: workspaceLeft,
+        y: d.padding,
+        width: Math.max(0, canvasWidth - d.focusPadding - workspaceLeft),
+        height: d.height - d.padding * 2
+      },
+      // Ghosts first, so the focused bank is always on top of anything it
+      // happens to overlap.
+      paintOrder: banks.map((_, index) => index).filter(index => index !== focusIndex).concat([focusIndex])
     };
   }
 
@@ -527,11 +691,12 @@
 
   return {
     DIMENSIONS,
-    LIGHT,
-    extruderAngle,
-    extruderGeometry,
+    equipmentView,
+    assetPlacement,
     hopperBodyHeight,
     bankInnerWidth,
+    bankDimensions,
+    bankWidth,
     layoutBank,
     computeLayout,
     totalHopperCount

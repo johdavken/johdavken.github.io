@@ -34,11 +34,11 @@ const indexHtml = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
  * Derived rather than hand-listed where it can be: station-machine-parts.js
  * is the only place SVG elements are created, so the list is checked against
  * what that file actually creates. */
-const STATION_ELEMENTS = ["button", "h1", "h2", "p", "dl", "dt", "dd",
+const STATION_ELEMENTS = ["button", "input", "h1", "h2", "p", "dl", "dt", "dd", "ol", "ul", "li",
   "div", "span", "section", "nav", "aside", "header", "footer",
   "table", "thead", "tbody", "tfoot", "tr", "td", "th",
   "svg", "g", "path", "rect", "circle", "line", "text", "tspan", "ellipse",
-  "polygon", "polyline", "defs", "use", "clipPath", "mask", "marker"];
+  "polygon", "polyline", "defs", "use", "clipPath", "mask", "marker", "foreignObject"];
 
 const VIEW_GATE = '[data-station-view="station"]';
 
@@ -349,15 +349,20 @@ test("the only animation is the agitator, and it is CSS with no JavaScript timer
   assert.equal(applied.length, 1, "more than one thing is being animated");
   assert.match(applied[0], /station-agitate/);
 
-  // No Station file spins anything from JavaScript.
+  // No Station file spins anything from JavaScript: no timers, no frame
+  // loop. The one script that animates is the transition (finite Web
+  // Animations, transform and opacity, run by the compositor), and only it.
   const stationDir = path.join(ROOT, "station");
   const stationFiles = fs.readdirSync(stationDir).filter(name => name.endsWith(".js"));
   assert.ok(stationFiles.length > 4, "expected to find the Station modules");
   for (const file of stationFiles.concat(["station-host.js"])) {
     const full = file === "station-host.js" ? path.join(ROOT, file) : path.join(stationDir, file);
     const source = codeOnly(fs_.readFileSync(full, "utf8"));
-    for (const pattern of [/setInterval/, /requestAnimationFrame/, /\.animate\s*\(/]) {
+    for (const pattern of [/setInterval/, /requestAnimationFrame/]) {
       assert.doesNotMatch(source, pattern, `${file} drives animation from JavaScript`);
+    }
+    if (file !== "station-transition.js") {
+      assert.doesNotMatch(source, /\.animate\s*\(/, `${file} animates outside the transition module`);
     }
   }
 });
@@ -377,9 +382,29 @@ test("reduced motion is not counted as one of Station's two layout breakpoints",
   assert.doesNotMatch(layout, /prefers-reduced-motion/);
 });
 
-test("the agitator is animated only while the layer is running and not dimmed", () => {
+test("a ghost layer is inert to the pointer as a whole, not only at its hit rectangles", () => {
+  /* Ghosts fade to opacity 0 but stand where the open layer's editor and
+   * hoppers are drawn. Every path in them would still take a click - an
+   * invisible receiver under an editor row would resolve to a cluster on
+   * another layer and close the view. The rule is on the group. */
   const css = cssCode(fs.readFileSync(path.join(ROOT, "station/styles/components/layer-bank.css"), "utf8"));
-  assert.match(css, /\.station-layer\.is-running:not\(\.is-dimmed\)\s+\.station-mixer__agitator\s*\{[^}]*animation:/);
+  const rule = css.match(/\.station-layer\.is-dimmed\s*\{([^}]*)\}/);
+  assert.ok(rule, "no rule for .station-layer.is-dimmed");
+  assert.match(rule[1], /pointer-events:\s*none/);
+  // And the boot file refuses a click that reaches it from a ghost or from a
+  // layer other than the open one - the cluster can never close a layer.
+  const boot = codeOnly(fs.readFileSync(path.join(ROOT, "station/station.js"), "utf8"));
+  assert.match(boot, /classList\.contains\("is-dimmed"\)\)\s*return/);
+  assert.match(boot, /if \(shown && layer !== shown\) return/);
+});
+
+test("the agitator is animated only while the layer is running", () => {
+  // Whatever the layer's emphasis: a dimmed layer keeps turning under its
+  // fade so it has not been reset when it comes back, and the transition
+  // hands the rotor's phase across renders.
+  const css = cssCode(fs.readFileSync(path.join(ROOT, "station/styles/components/layer-bank.css"), "utf8"));
+  assert.match(css, /\.station-layer\.is-running\s+\.station-mixer__agitator\s*\{[^}]*animation:/);
+  assert.doesNotMatch(css, /is-running:not\(\.is-dimmed\)/);
 });
 
 /* ----------------------------------------------------------------------

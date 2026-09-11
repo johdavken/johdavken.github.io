@@ -26,3 +26,12 @@
   fill: transparent;
   cursor: pointer;
 }
+
+/* While a layer is travelling between layouts nothing on the stage is a
+   target: a click mid-flight would land on wherever the equipment happens
+   to be that frame. The transition state (station-transition.js) sets this
+   on the mount and clears it when the layout has settled. */
+.station-machine.is-transitioning .station-hit {
+  pointer-events: none;
+  cursor: default;
+}

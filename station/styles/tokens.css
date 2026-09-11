@@ -43,6 +43,21 @@
   --station-equipment-fill: #202a37;
   --station-equipment-stroke: #384454;
 
+  /* The extruder's enclosure. One step lighter than the structural steel so
+   * the machine's housing reads as a housing and not as more frame - three
+   * faces, three values, top lit most because the light is above. `metal` is
+   * the one machined surface on the stage: the outlet flange. */
+  --station-housing-top: #3c4b5f;
+  --station-housing-side: #313f52;
+  --station-housing-end: #27333f;
+  --station-metal: #55677d;
+  /* The mixer's remaining metals, straight from its masters: the lit
+   * machined faces (regulator, knobs, rims), the mid steel of the brackets
+   * and posts, and the one blue fitting on the air regulator. */
+  --station-metal-light: #65788d;
+  --station-metal-dark: #495b70;
+  --station-fitting: #477f9c;
+
   --station-hopper-body: #1c2531;
   --station-hopper-stroke: #3d4b5d;
   --station-hopper-fill: #4f7ba8;
@@ -68,9 +83,16 @@
   --station-bubble-edge: #6ea6d8;
   --station-frost: #9fc4e4;
   --station-film: #5f93bd;
+  /* Weighed batch material in the mixer's hopper. Grey-blue, not a resin
+   * colour: it is a pile of pellets, not a level being reported. */
+  --station-batch: #687b8c;
 
   /* ---- Machine line weights ---- */
   --station-line-hairline: 0.6px;
+  /* A curved band's facet edge: stroked in its own colour, just wide enough
+   * to close the antialiasing gap between facets, never wide enough to
+   * read as a line. */
+  --station-line-seam: 0.15px;
   --station-line-thin: 0.9px;
   --station-line-medium: 1.3px;
   --station-web-width: 13px;
@@ -82,6 +104,24 @@
   --station-warning: #d8a250;
   --station-danger: #d16a63;
   --station-pump-off: #8b7bb8;
+
+  /* ---- Motion ----
+   * Opening and closing a layer is a window opening and closing: an
+   * acknowledgement the instant it is asked for, one decelerating move,
+   * and a short settle for the destination's own chrome. The curve is a
+   * desktop window's - fast off the mark, easing into place, no bounce.
+   * station-transition.js reads these; there is no second copy in script. */
+  --station-motion-ack: 80ms;
+  --station-motion-move: 300ms;
+  /* The equipment train sets off this much before its hopper bank follows,
+   * so the thing that was clicked is seen to lead; closing is the mirror,
+   * the bank leaving first and the train landing last. */
+  --station-motion-lead: 40ms;
+  --station-motion-settle: 120ms;
+  --station-motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* What the other layers fade to while one is open. They still stand where
+   * they stood, a step further out, so the way back is a real place. */
+  --station-ghost-opacity: 0;
 
   /* ---- Space ---- */
   --station-space-1: 4px;
@@ -96,6 +136,9 @@
   --station-radius: 6px;
   --station-radius-lg: 10px;
   --station-stroke: 1px;
+  /* The one floating surface Station has: the resin search's result list,
+   * which has to stand off the rows it covers. */
+  --station-shadow-pop: 0 10px 28px rgba(0, 0, 0, 0.42);
 
   /* ---- Type ---- */
   --station-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -107,6 +150,10 @@
   --station-text-sm: 12px;
   --station-text-md: 14px;
   --station-text-lg: 17px;
+  /* The focused editor's leading numbers: a hopper's blend percentage and
+   * the total under the column. Larger than any label so the number is
+   * what the eye lands on first. */
+  --station-text-xl: 22px;
   --station-line-tight: 1.25;
   --station-line-normal: 1.5;
 

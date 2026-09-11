@@ -15,18 +15,31 @@
  *
  * INTERACTION
  *
- * Three targets, and only three: the cluster edits the layer's recipe, the
- * mixer inspects the blend, the extruder inspects the layer percentage. They
- * are marked with data-station-target and nothing else is clickable, so the
- * mapping cannot drift. No listeners are attached here - the renderer stays
+ * Three targets, and only three: the mixer and the extruder - the equipment
+ * train - open the layer in the workspace (and inspect the blend and the
+ * layer percentage respectively); the hopper cluster is the hoppers
+ * themselves, where pump and tracking controls will live. They are marked
+ * with data-station-target and nothing else is clickable, so the mapping
+ * cannot drift. No listeners are attached here - the renderer stays
  * event-free and testable, and station.js delegates from the mount.
  */
 (function (root, factory) {
-  const api = factory();
+  const deps = {
+    extruderAssets: typeof require === "function"
+      ? require("./station-extruder-assets.js")
+      : (root && root.PolynStationExtruderAssets),
+    mixerAssets: typeof require === "function"
+      ? require("./station-mixer-assets.js")
+      : (root && root.PolynStationMixerAssets)
+  };
+  const api = factory(deps);
   if (typeof module === "object" && module.exports) module.exports = api;
   if (root) root.PolynStationMachineParts = api;
-})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+})(typeof globalThis !== "undefined" ? globalThis : this, function (deps) {
   "use strict";
+
+  const extruderAssets = deps.extruderAssets;
+  const mixerAssets = deps.mixerAssets;
 
   const SVG_NS = "http://www.w3.org/2000/svg";
 
@@ -75,37 +88,6 @@
     });
   }
 
-  /* A value attached to a piece of equipment.
-   *
-   * Drawn as a control - a bordered well with the value in it - because that is
-   * what it will be. It is NOT editable yet: the Station state bridge is a
-   * one-way window with no write API, so committing an edit is impossible and
-   * offering an input that silently discarded one would be worse than not
-   * offering it. The surface is built, marked read-only in the markup and
-   * styled as read-only, and the day a write contract lands this becomes live
-   * without the layout moving.
-   */
-  function field(doc, box, options) {
-    const settings = options || {};
-    const classes = ["station-field", "is-readonly"];
-    if (!settings.value) classes.push("is-empty");
-
-    const g = group(doc, classes.join(" "), "field", {
-      "data-station-field": settings.kind,
-      "data-layer": settings.layer,
-      "data-hopper": settings.hopper,
-      "aria-readonly": "true"
-    });
-    g.appendChild(node(doc, "rect", "station-field__well", {
-      x: box.x, y: box.y, width: box.width, height: box.height, rx: 3
-    }));
-    g.appendChild(label(doc,
-      settings.value ? fitText(settings.value, box.width - 8, 11) : (settings.placeholder || "—"),
-      box.x + box.width / 2, box.y + box.height * 0.7,
-      `station-field__value station-field__value--${settings.kind}`));
-    return g;
-  }
-
   /* Truncate to what the cell can actually show. Roughly 0.58em per character
    * at this type size; a label that overruns its hopper is worse than one that
    * ends in an ellipsis. */
@@ -126,7 +108,12 @@
    * structure it emits with an empty one. */
   function hopper(doc, geometry, runtime, options) {
     const settings = options || {};
-    const detail = settings.detail || "normal";   // "none" | "normal" | "full"
+    /* The bank's scale, for the things drawn in TYPE rather than geometry:
+     * the caption's line spacing and its fit. The layout has already scaled
+     * every length; this keeps the text in step so a hopper is the same
+     * drawing at every scale - which is what lets it be carried between
+     * layouts as one rigid object. */
+    const scale = settings.scale === undefined ? 1 : settings.scale;
 
     const classes = ["station-hopper"];
     if (runtime) {
@@ -135,6 +122,8 @@
       if (runtime.assigned === false) classes.push("is-unassigned");
     }
     if (!geometry.profiled) classes.push("is-unprofiled");
+    // Selected in the focused editor, or by a click on the hopper itself.
+    if (settings.selected) classes.push("is-selected");
 
     const g = group(doc, classes.join(" "), "hopper", {
       "data-hopper": geometry.id,
@@ -164,28 +153,14 @@
 
     /* ---- Source ----
      * Above the receiver, because that is where the material arrives from.
-     *
-     * Expanded, it is a control and is always present - an unset source is
-     * something you would want to set, so the well is drawn empty rather than
-     * hidden. In the dense overview it appears only when it has a value: a bank
-     * of six "no source" labels is noise that crowds out the fields that do
-     * carry information. */
-    if (detail === "full") {
-      g.appendChild(field(doc, {
-        x: cx - w * 0.56, y: geometry.sourceY - 13, width: w * 1.12, height: 17
-      }, {
-        kind: "source", value: runtime && runtime.source, placeholder: "no source",
-        layer: geometry.layer, hopper: geometry.id
-      }));
-      g.appendChild(node(doc, "line", "station-hopper__source-drop", {
-        x1: cx, y1: geometry.sourceY + 4, x2: cx, y2: geometry.receiverTop - 1
-      }));
-    } else if (detail !== "none" && runtime && runtime.source) {
+     * Shown only when it has a value: a bank of six "no source" labels is
+     * noise that crowds out the fields that do carry information. */
+    if (runtime && runtime.source) {
       const source = group(doc, "station-hopper__source-mark", "hopper-source");
-      source.appendChild(label(doc, fitText(runtime.source, w * 1.3, 9),
+      source.appendChild(label(doc, fitText(runtime.source, w * 1.3, 9 * scale),
         cx, geometry.sourceY, "station-hopper__source"));
       source.appendChild(node(doc, "line", "station-hopper__source-drop", {
-        x1: cx, y1: geometry.sourceY + 3, x2: cx, y2: geometry.receiverTop - 1
+        x1: cx, y1: geometry.sourceY + 3 * scale, x2: cx, y2: geometry.receiverTop - 1
       }));
       g.appendChild(source);
     }
@@ -253,63 +228,30 @@
     }));
     g.appendChild(feed);
 
-    /* ---- Expanded: the controls live on the equipment ----
-     * Resin on the body, because that is what is in the vessel. Blend beneath
-     * the discharge, because that is what comes out of it. Source above the
-     * receiver, because that is where it came from. An operator reading this is
-     * reading the hopper, not a form that happens to be next to one. */
-    if (detail === "full") {
-      const controls = group(doc, "station-hopper__controls", "hopper-controls");
-      /* Anchored to the discharge, not to the top of the vessel. Bodies are
-       * different heights, so following each one's top left the resin wells in
-       * a ragged line across the bank; sitting them a fixed distance above the
-       * cone keeps them in one readable row and still puts each one on its own
-       * body, which is the placement that matters. */
-      controls.appendChild(field(doc, {
-        x: x + 3, y: geometry.coneTop - 40, width: w - 6, height: 22
-      }, {
-        kind: "resin", value: runtime && runtime.resinName, placeholder: "no resin",
-        layer: geometry.layer, hopper: geometry.id
-      }));
-      controls.appendChild(label(doc, geometry.id, cx, geometry.captionTop, "station-hopper__id"));
-      controls.appendChild(field(doc, {
-        x: cx - w * 0.38, y: geometry.captionTop + 7, width: w * 0.76, height: 22
-      }, {
-        kind: "pct",
-        value: runtime && runtime.pct ? `${round(runtime.pct)}%` : "",
-        placeholder: "0%",
-        layer: geometry.layer, hopper: geometry.id
-      }));
-      g.appendChild(controls);
-      return g;
-    }
-
-    /* ---- Dense readout ----
-     * Identity and contribution only. The resin code joins them when the hopper
+    /* ---- Readout ----
+     * Identity and contribution. The resin code joins them when the hopper
      * is wide enough to draw it at full size; it is never shrunk to fit,
      * because an unreadable code is worse than no code. */
-    if (detail !== "none") {
-      const caption = group(doc, "station-hopper__caption", "hopper-caption");
-      let y = geometry.captionTop;
-      caption.appendChild(label(doc, geometry.id, cx, y, "station-hopper__id"));
-      y += 13;
+    const caption = group(doc, "station-hopper__caption", "hopper-caption");
+    let y = geometry.captionTop;
+    caption.appendChild(label(doc, geometry.id, cx, y, "station-hopper__id"));
+    y += 13 * scale;
+    caption.appendChild(label(doc,
+      runtime && runtime.pct ? `${round(runtime.pct)}%` : "—",
+      cx, y, "station-hopper__pct"));
+    if (geometry.showResin) {
+      y += 12 * scale;
       caption.appendChild(label(doc,
-        runtime && runtime.pct ? `${round(runtime.pct)}%` : "—",
-        cx, y, "station-hopper__pct"));
-      if (geometry.showResin) {
-        y += 12;
-        caption.appendChild(label(doc,
-          runtime && runtime.resinName ? fitText(runtime.resinName, w, 9) : "",
-          cx, y, "station-hopper__resin"));
-      }
-      g.appendChild(caption);
+        runtime && runtime.resinName ? fitText(runtime.resinName, w, 9 * scale) : "",
+        cx, y, "station-hopper__resin"));
     }
+    g.appendChild(caption);
 
     return g;
   }
 
   /* --------------------------------------------------------------------
-   *   Hopper cluster - click target: edit the layer's recipe
+   *   Hopper cluster - click target: the hoppers' own controls (pumps, tracking)
    * ------------------------------------------------------------------ */
 
   function hopperCluster(doc, bank, hopperState, options) {
@@ -320,251 +262,204 @@
     });
 
     const cluster = bank.cluster;
-    const detail = bank.emphasis === "dimmed" ? "none"
-      : bank.emphasis === "focused" ? "full"
-      : "normal";
-
     const padding = 8;
     g.appendChild(hitArea(doc,
       cluster.x - padding, cluster.y - padding,
       cluster.width + padding * 2,
-      (cluster.bottom - cluster.y) + padding * 2 +
-        (detail === "none" ? 0 : cluster.hoppers[0] ? cluster.hoppers[0].captionHeight + 12 : 0)));
+      (cluster.bottom - cluster.y) + padding * 2 + (cluster.hoppers[0] ? cluster.hoppers[0].captionHeight + 12 : 0)));
 
-    for (const geometry of cluster.hoppers) {
+    /* The same drawing whatever the bank's emphasis. A focused or dimmed
+     * cluster is this cluster placed and scaled, never a different one, so
+     * the transition can carry it as one object. */
+    cluster.hoppers.forEach(geometry => {
       const runtime = hopperState ? hopperState[`${bank.id}:${geometry.index}`] : null;
-      g.appendChild(hopper(doc, Object.assign({ layer: bank.id }, geometry), runtime, { detail }));
-    }
+      g.appendChild(hopper(doc, Object.assign({ layer: bank.id }, geometry), runtime, {
+        scale: bank.scale,
+        selected: !!settings.selectedHopper && settings.selectedHopper === geometry.id
+      }));
+    });
     if (settings.showHint && bank.emphasis === "normal") {
-      g.appendChild(label(doc, "Edit recipe", bank.centerX,
+      g.appendChild(label(doc, "Hopper controls", bank.centerX,
         cluster.y - 12, "station-cluster__hint"));
     }
     return g;
   }
 
   /* --------------------------------------------------------------------
-   *   Mixer - click target: inspect the layer blend
+   *   Mixer - click target: open the layer; inspect the blend
    * ------------------------------------------------------------------ */
 
+  /* Shared by both authored machines: map an asset polygon through its
+   * placement into stage coordinates. The mapping goes into the COORDINATES,
+   * not a transform attribute, so strokes stay in stage units like every
+   * other component's and mirroring is geometry rather than a scale(-1) a
+   * later reader has to find. */
+  function placed(placement) {
+    const px = value => round(placement.anchor.x + placement.sign * placement.scale * value);
+    const py = value => round(placement.anchor.y + placement.scale * value);
+    return points => {
+      const out = [];
+      for (let i = 0; i < points.length; i += 2) out.push(`${px(points[i])} ${py(points[i + 1])}`);
+      return `M ${out.join(" L ")} Z`;
+    };
+  }
+
+  /* Authored artwork, placed - the same scheme as the extruder below, from
+   * station-mixer-assets.js. This builder does not know what a weigh hopper
+   * is; it labels each path with the TONE the asset says it was painted in
+   * and lets the stylesheet colour it.
+   *
+   * THE ROTOR is the one thing built rather than copied. The asset supplies
+   * four paddles in the plane of the inspection cover, the 2x2 projection of
+   * that plane, where its centre sits, and the two window outlines. They are
+   * assembled as:
+   *
+   *   <g clip-path=windows>            seen only through the openings
+   *     <g transform=place the plane>  translate + the plane's matrix, scaled
+   *       <g class=agitator>           what CSS rotates, about its own origin
+   *         paddles                    authored once, in plane units
+   *
+   * The rotation therefore happens in the plane of the door - foreshortened
+   * on a yawed machine exactly as the door is - and at whatever scale the
+   * mixer is drawn, because the scale is in the placing transform and the
+   * paddles never change. There is no focused rotor size to keep in step.
+   */
   function mixer(doc, bank) {
     const m = bank.mixer;
+    const asset = mixerAssets.views[m.view];
     const g = group(doc, "station-mixer", "mixer", {
       "data-layer": bank.id,
-      "data-station-target": "mixer"
+      "data-station-target": "mixer",
+      "data-view": m.view,
+      "data-mirrored": m.mirrored ? "true" : "false",
+      "data-yaw": round(m.yaw)
     });
 
-    g.appendChild(hitArea(doc, m.x - 6, m.y - 10, m.width + 12, m.height + m.outletHeight + 16));
+    g.appendChild(hitArea(doc, m.bounds.left - 4, m.bounds.top - 4,
+      m.bounds.right - m.bounds.left + 8, m.bounds.bottom - m.bounds.top + 8));
 
-    // Inlet band across the top of the body.
-    g.appendChild(node(doc, "rect", "station-mixer__inlet", {
-      x: m.x + m.width * 0.06, y: m.y - 5, width: m.width * 0.88, height: 7, rx: 2
-    }));
-    g.appendChild(node(doc, "rect", "station-mixer__body", {
-      x: m.x, y: m.y, width: m.width, height: m.height, rx: 4
-    }));
-    /* Agitator: the detail that makes this read as a mixer and not a crate, and
-     * the anchor for the one piece of motion in Station.
-     *
-     * Drawn ONCE at a unit size in its own local coordinate system and placed
-     * with a translate+scale, so an expanded layer's larger blender gets a
-     * larger agitator for free. The previous version computed a radius with an
-     * absolute cap in it, which silently stopped the agitator growing while the
-     * blender around it did - a focused mixer with a normal-sized agitator.
-     * There is no focused size to maintain here because there is only one size.
-     *
-     * Two nested groups on purpose: the outer one carries the SVG transform,
-     * the inner one is what CSS animates. A CSS transform on the outer group
-     * would replace the placement rather than compose with it.
-     */
-    const mount = group(doc, "station-mixer__agitator-mount", "mixer-agitator", {
-      transform: `translate(${round(m.centerX)} ${round(m.y + m.height * 0.52)}) ` +
-                 `scale(${round(m.scale)})`
+    const pathFor = placed(m);
+    // A face the master stroked in its own colour (a curved band's facet)
+    // carries the seam classes too; the stylesheet gives those the fill's
+    // colour at seam width, so facets meet without a visible line.
+    const face = polygon => node(doc, "path",
+      `station-mixer__face station-mixer__face--${polygon.tone}` +
+        (polygon.seamless ? ` station-mixer__seam station-mixer__seam--${polygon.tone}` : ""),
+      { "data-part": polygon.part, d: pathFor(polygon.points) });
+
+    // Painter's order is the asset's order, with the rotor slotted in where
+    // the asset says: after the windows, before the frame in front of them.
+    const body = group(doc, "station-mixer__body", "mixer-body");
+    asset.polygons.slice(0, asset.rotorAfter).forEach(polygon => body.appendChild(face(polygon)));
+
+    const r = asset.rotor;
+    const clipId = `station-mixer-windows-${bank.id}`;
+    const clip = node(doc, "clipPath", null, { id: clipId });
+    for (const window of r.windows) clip.appendChild(node(doc, "path", null, { d: pathFor(window) }));
+    body.appendChild(clip);
+
+    const shutter = group(doc, null, "mixer-rotor", { "clip-path": `url(#${clipId})` });
+    const mount = group(doc, null, "mixer-rotor-mount", {
+      transform: `translate(${round(m.anchor.x + m.sign * m.scale * r.centre.x)} ` +
+                 `${round(m.anchor.y + m.scale * r.centre.y)}) ` +
+                 `matrix(${round(m.sign * m.scale * r.plane.a)} ${round(m.scale * r.plane.b)} ` +
+                 `${round(m.sign * m.scale * r.plane.c)} ${round(m.scale * r.plane.d)} 0 0)`
     });
-    const unitRadius = 13;
-    mount.appendChild(node(doc, "circle", "station-mixer__viewport", { cx: 0, cy: 0, r: unitRadius }));
-
     const blades = group(doc, "station-mixer__agitator", "mixer-blades");
-    const reach = unitRadius * 0.74;
-    for (const side of [-1, 1]) {
-      blades.appendChild(node(doc, "line", "station-mixer__blade", {
-        x1: -side * reach, y1: -side * reach * 0.34,
-        x2: side * reach, y2: side * reach * 0.34
-      }));
+    for (const paddle of r.paddles) {
+      const points = [];
+      for (let i = 0; i < paddle.length; i += 2) points.push(`${round(paddle[i])} ${round(paddle[i + 1])}`);
+      blades.appendChild(node(doc, "path", "station-mixer__blade", { d: `M ${points.join(" L ")} Z` }));
     }
-    blades.appendChild(node(doc, "circle", "station-mixer__shaft", { cx: 0, cy: 0, r: unitRadius * 0.2 }));
     mount.appendChild(blades);
-    g.appendChild(mount);
+    shutter.appendChild(mount);
+    body.appendChild(shutter);
 
-    /* One short neck down to the extruder. There was a taper, then a separate
-     * throat box on the extruder, then the housing - three shapes to say
-     * "connected". One says it. */
-    const neckHalf = Math.max(9, m.width * 0.13);
-    g.appendChild(taper(doc, "station-mixer__outlet",
-      m.x + m.width * 0.34, m.x + m.width * 0.66,
-      m.centerX - neckHalf, m.centerX + neckHalf,
-      m.y + m.height, m.y + m.height + m.outletHeight));
+    asset.polygons.slice(asset.rotorAfter).forEach(polygon => body.appendChild(face(polygon)));
+    g.appendChild(body);
     return g;
   }
 
   /* --------------------------------------------------------------------
-   *   Extruder - click target: inspect the layer percentage
+   *   Extruder - click target: open the layer; inspect the layer percentage
    * ------------------------------------------------------------------ */
 
-  /* Tilted about the point where it meets the mixer outlet, so the convergence
-   * never opens a gap between the two. The percentage readout is
-   * counter-rotated so a tilted barrel does not produce tilted text. */
-  /* --------------------------------------------------------------------
-   *   Extruder
-   * ------------------------------------------------------------------ */
-
-  /* A long barrel projecting away from a fixed rear anchor, toward the core.
+  /* Authored artwork, placed.
    *
-   * WHAT THE REFERENCES GAVE US
+   * The polygons come from station-extruder-assets.js - three views of one
+   * machine, derived from the authored SVGs in images/extruder/ and already
+   * in stage units with the feed anchor at their origin. This builder does
+   * not know what a barrel is. It maps every point through the placement the
+   * layout computed (translate to the feed point, scale, and a sign flip in x
+   * for a mirrored machine), and labels each path with the part and face the
+   * asset says it is, so the stylesheet can colour it.
    *
-   * The anatomy, not the camera. A real extruder reads as: a heavy end cap with
-   * a bore at the near end; a long barrel banded into heater zones with one
-   * longitudinal seam down it; a compact drive and feed block at the far end;
-   * and short feet under both ends of a base. Everything below is one of those
-   * six things. The barrel is by far the largest, which is the single biggest
-   * correction from the cabinet-shaped version this replaces.
-   *
-   * WHAT IS DELIBERATELY LEFT OUT
-   *
-   * Motor cowlings, couplings, hose fittings, vent stacks, wiring, bolt heads
-   * and the base rail's own structure. None of them survives at Station scale,
-   * and each one costs clarity at the size this is actually read.
-   *
-   * HOW THE TURN IS DRAWN
-   *
-   * Not with a transform. The barrel is a quad between two points the layout
-   * computed, the seams are lines across it, and the cap is an arc pair with its
-   * own axis rotation baked into the path data. Nothing is rotated in the screen
-   * plane, so the drive, the feed block and every foot stay square and the
-   * machine stays standing - only the barrel points somewhere.
+   * The mapping is applied to the COORDINATES, not as a transform attribute:
+   * the whole group stays free of transforms, strokes stay in stage units
+   * like every other component's, and mirroring is a matter of geometry
+   * rather than of a scale(-1) somewhere a later reader has to find.
    */
   function extruder(doc, bank, layerPct) {
     const e = bank.extruder;
+    const asset = extruderAssets.views[e.view];
     const g = group(doc, "station-extruder", "extruder", {
       "data-layer": bank.id,
       "data-station-target": "extruder",
-      "data-yaw": round(e.angle),
-      "data-facing": e.fraction < 0 ? "left" : e.fraction > 0 ? "right" : "front"
+      "data-view": e.view,
+      "data-mirrored": e.mirrored ? "true" : "false",
+      "data-yaw": round(e.yaw),
+      "data-facing": e.yaw === 0 ? "front" : e.mirrored ? "left" : "right"
     });
-
-    const { rear, front, perp, radius, litSign } = e;
-    const along = (t, offset) => ({
-      x: rear.x + (front.x - rear.x) * t + perp.x * offset,
-      y: rear.y + (front.y - rear.y) * t + perp.y * offset
-    });
-    const point = p => `${round(p.x)} ${round(p.y)}`;
 
     g.appendChild(hitArea(doc, e.bounds.left - 4, e.bounds.top - 4,
       e.bounds.right - e.bounds.left + 8, e.bounds.bottom - e.bounds.top + 8));
 
-    /* ---- Feet ----
-     * Drawn first, so the machine stands on them rather than in front of them.
-     * Front feet sit lower than rear feet because the front end is nearer; that
-     * difference is most of what stops the barrel looking like it hangs in the
-     * air off a single support. */
-    const supports = group(doc, "station-extruder__supports", "extruder-supports");
-    for (const [where, feet] of [["rear", e.feet.rear], ["front", e.feet.front]]) {
-      for (const foot of feet) {
-        supports.appendChild(node(doc, "rect", "station-extruder__foot", {
-          x: foot.x, y: foot.y, width: foot.width, height: foot.height, rx: 1.5,
-          "data-position": where
+    const pathFor = placed(e);
+
+    // Painter's order is the asset's order: it was depth-sorted at source.
+    const body = group(doc, "station-extruder__body", "extruder-body");
+    for (const polygon of asset.polygons) {
+      body.appendChild(node(doc, "path",
+        `station-extruder__face station-extruder__${polygon.part} ` +
+        `station-extruder__${polygon.part}--${polygon.face}`, {
+          "data-part": polygon.part,
+          "data-face": polygon.face,
+          d: pathFor(polygon.points)
         }));
-      }
     }
-    g.appendChild(supports);
+    g.appendChild(body);
 
-    /* ---- Barrel ----
-     * One quad from the rear anchor to the front end, offset either side by the
-     * barrel radius. This is the dominant form and everything else is sized
-     * against it. */
-    const barrel = group(doc, "station-extruder__barrel", "extruder-barrel");
-    /* The barrel starts INSIDE the feed block, not flush with its underside.
-     * Its rear edge is perpendicular to the axis, so on a yawed machine a flush
-     * joint reads as a barrel stuck on the corner of the block; running it up
-     * behind the block and letting the block cover the join is what makes it
-     * emerge from the machine. */
-    const barrelStart = -0.2;
-    barrel.appendChild(node(doc, "path", "station-extruder__barrel-body", {
-      d: `M ${point(along(barrelStart, radius))} L ${point(along(1, radius))} ` +
-         `L ${point(along(1, -radius))} L ${point(along(barrelStart, -radius))} Z`
-    }));
-    /* A lit strip down one side turns a flat quad into a tube. Fixed to the
-     * upper-left so the light never flips as the machine turns past straight-on. */
-    barrel.appendChild(node(doc, "path", "station-extruder__barrel-lit", {
-      d: `M ${point(along(barrelStart, radius * litSign))} L ${point(along(1, radius * litSign))} ` +
-         `L ${point(along(1, radius * litSign * 0.42))} L ${point(along(barrelStart, radius * litSign * 0.42))} Z`
-    }));
-    // Heater-zone bands across the barrel.
-    for (const t of e.seams) {
-      barrel.appendChild(node(doc, "line", "station-extruder__seam", {
-        x1: along(t, radius).x, y1: along(t, radius).y,
-        x2: along(t, -radius).x, y2: along(t, -radius).y
-      }));
-    }
-    // One longitudinal seam, on the shaded side so it does not fight the
-    // highlight.
-    barrel.appendChild(node(doc, "line", "station-extruder__seam-long", {
-      x1: along(0.06, -radius * litSign * 0.5).x, y1: along(0.06, -radius * litSign * 0.5).y,
-      x2: along(0.94, -radius * litSign * 0.5).x, y2: along(0.94, -radius * litSign * 0.5).y
-    }));
-    g.appendChild(barrel);
-
-    /* ---- Front end cap ----
-     * A disc on the end of the barrel: widest across it, squashed along it by
-     * however much the machine is turned. Built from two arcs rather than a
-     * rotated <ellipse>, so no part of this component carries a rotation. */
-    const ellipse = (rx, ry) =>
-      `M ${point({ x: front.x + perp.x * rx, y: front.y + perp.y * rx })} ` +
-      `A ${round(rx)} ${round(ry)} ${round(e.capAngle)} 0 1 ` +
-      `${point({ x: front.x - perp.x * rx, y: front.y - perp.y * rx })} ` +
-      `A ${round(rx)} ${round(ry)} ${round(e.capAngle)} 0 1 ` +
-      `${point({ x: front.x + perp.x * rx, y: front.y + perp.y * rx })} Z`;
-
-    const cap = group(doc, "station-extruder__cap", "extruder-cap");
-    // Flange first, then the face, then the bore: three rings reading inward.
-    cap.appendChild(node(doc, "path", "station-extruder__flange", {
-      d: ellipse(e.capRx * 1.24, e.capRy * 1.24)
-    }));
-    cap.appendChild(node(doc, "path", "station-extruder__cap-face", {
-      d: ellipse(e.capRx, e.capRy)
-    }));
-    cap.appendChild(node(doc, "path", "station-extruder__bore", {
-      d: ellipse(e.capRx * 0.42, e.capRy * 0.42)
-    }));
-    g.appendChild(cap);
-
-    /* ---- Rear: feed block and drive ----
-     * Square to the screen and centred on the layer, because this is the anchor
-     * the mixer feeds into. Compact on purpose: the feed entry and the drive
-     * need to be legible as a region, not as a mechanism. */
-    const back = group(doc, "station-extruder__rear", "extruder-rear");
-    back.appendChild(node(doc, "rect", "station-extruder__feed", {
-      x: e.rearBlock.x, y: e.rearBlock.y,
-      width: e.rearBlock.width, height: e.rearBlock.height, rx: 2
-    }));
-    back.appendChild(node(doc, "rect", "station-extruder__drive", {
-      x: e.drive.x, y: e.drive.y, width: e.drive.width, height: e.drive.height, rx: 2
-    }));
-    // Drive cooling, as two ticks - enough to say "gearbox", cheap at any size.
-    for (const side of [-1, 1]) {
-      back.appendChild(node(doc, "line", "station-extruder__drive-vent", {
-        x1: e.drive.centerX + side * e.drive.width * 0.22, y1: e.drive.y + e.drive.height * 0.25,
-        x2: e.drive.centerX + side * e.drive.width * 0.22, y2: e.drive.y + e.drive.height * 0.75
-      }));
-    }
-    g.appendChild(back);
-
-    /* The layer's share of the film structure. Upright, always: it is data, and
-     * it must not be dragged into the equipment's perspective. */
+    /* The layer's share of the film structure. Upright, always, and under the
+     * machine on the layer centreline: it is data, and it must not be dragged
+     * into the equipment's perspective. */
     g.appendChild(label(doc,
       Number.isFinite(layerPct) && layerPct > 0 ? `${round(layerPct)}%` : "—",
-      e.rearBlock.centerX, e.rearBlock.y + e.rearBlock.height * 0.72,
-      "station-extruder__pct"));
+      e.label.x, e.label.y, "station-extruder__pct"));
 
+    return g;
+  }
+
+  /* --------------------------------------------------------------------
+   *   Throat - the one thing drawn between the mixer and the extruder
+   * ------------------------------------------------------------------ */
+
+  /* A short dark neck from the mixer's discharge flange down into the
+   * extruder's feed flange, and a contact shadow where it lands. Nothing
+   * mechanical is being claimed: it is the cue that makes a mixer over a
+   * strongly turned extruder read as feeding the rear of the machine rather
+   * than standing beside it. Not a target; it belongs to the two things it
+   * joins. */
+  function throat(doc, bank) {
+    const t = bank.throat;
+    const g = group(doc, "station-feed", "feed", { "data-layer": bank.id });
+    g.appendChild(node(doc, "ellipse", "station-feed__shadow", {
+      cx: t.shadow.cx, cy: t.shadow.cy, rx: t.shadow.rx, ry: t.shadow.ry
+    }));
+    if (t.height > 0) {
+      g.appendChild(node(doc, "rect", "station-feed__throat", {
+        x: t.x, y: t.y, width: t.width, height: t.height
+      }));
+    }
     return g;
   }
 
@@ -584,34 +479,81 @@
       const runtime = hopperState ? hopperState[`${bank.id}:${h.index}`] : null;
       return !!(runtime && runtime.resinName);
     })) classes.push("is-running");
-    if (settings.selectedTarget) classes.push(`is-${settings.selectedTarget}-selected`);
+    /* Which target the inspector is showing. A selected hopper stands for
+     * the cluster on its own - the whole bank is not outlined as well. */
+    if (settings.selectedTarget && !(settings.selectedTarget === "cluster" && settings.selectedHopper)) {
+      classes.push(`is-${settings.selectedTarget}-selected`);
+    }
 
+    const box = b => [b.x, b.y, b.width, b.height].map(round).join(" ");
     const g = group(doc, classes.join(" "), "layer", {
       "data-layer": bank.id,
       "data-layer-role": bank.role,
-      "data-emphasis": bank.emphasis
+      "data-emphasis": bank.emphasis,
+      /* The bank's two rigid objects, declared on the markup so the transition
+       * (station-transition.js) can carry each between layouts without
+       * measuring anything the drawing did not already decide. Canvas units. */
+      "data-object-cluster": box(bank.objects.cluster),
+      "data-object-train": box(bank.objects.train)
     });
+    /* The one inline value besides the hopper's fill fraction, and for the
+     * same reason: it is a number from the layout, not a design decision.
+     * Type inside the bank is sized against it, so text scales with the
+     * equipment it labels. */
+    g.setAttribute("style", `--station-bank-scale: ${round(bank.scale)};`);
 
     const header = group(doc, "station-layer__header", "layer-header", { "data-layer": bank.id });
     header.appendChild(label(doc, bank.id, bank.header.x, bank.header.y, "station-layer__name"));
     header.appendChild(label(doc, String(bank.roleLabel || "").toUpperCase(),
-      bank.header.x, bank.header.y + 14, "station-layer__role"));
-    /* Said on the surface itself, not only in a side panel. The controls below
-     * look like controls, so the one thing they must not do is look live. */
-    if (bank.emphasis === "focused") {
-      header.appendChild(label(doc, "READ-ONLY — NO WRITE CONTRACT YET",
-        bank.header.x, bank.header.y + 28, "station-layer__notice"));
-    }
+      bank.header.x, bank.header.y + 14 * bank.scale, "station-layer__role"));
     g.appendChild(header);
 
     g.appendChild(hopperCluster(doc, bank, hopperState, settings));
-    g.appendChild(mixer(doc, bank));
+    /* Extruder, then the throat, then the mixer. The throat lands on the feed
+     * flange, which stands in front of the gearbox and motor; drawn the other
+     * way round the motor would paint over it and the two would look
+     * unconnected. */
     g.appendChild(extruder(doc, bank, layerState && layerState[bank.id] ? layerState[bank.id].layerPct : null));
+    g.appendChild(throat(doc, bank));
+    g.appendChild(mixer(doc, bank));
+    return g;
+  }
+
+  /* --------------------------------------------------------------------
+   *   Focus workspace
+   * ------------------------------------------------------------------ */
+
+  /* The surface the focused layer's editor occupies. Placed by the layout;
+   * what goes in it is built by the boot file (station-focus-editor.js)
+   * and handed in as `content`, so this builder stays as ignorant of
+   * recipes as it is of blend percentages. The content is HTML, carried
+   * into the drawing by a <foreignObject> sized to the box: that keeps it
+   * locked to the layout's geometry at any stage size, lets the transition
+   * fade it with the workspace it belongs to, and keeps it BEHIND a layer
+   * in transit, since the workspace is painted first. Without content
+   * (a renderer with nothing to show) the frame says what the space is. */
+  function workspace(doc, box, content) {
+    const g = group(doc, "station-workspace", "focus-workspace");
+    g.appendChild(node(doc, "rect", "station-workspace__frame", {
+      x: box.x, y: box.y, width: box.width, height: box.height, rx: 6
+    }));
+    if (content) {
+      const host = node(doc, "foreignObject", "station-workspace__editor", {
+        x: box.x, y: box.y, width: box.width, height: box.height
+      });
+      host.appendChild(content);
+      g.appendChild(host);
+      return g;
+    }
+    g.appendChild(label(doc, "RESERVED — FOCUS WORKSPACE", box.x + box.width / 2, box.y + box.height / 2 - 6,
+      "station-workspace__title"));
+    g.appendChild(label(doc, "READ-ONLY — NO WRITE CONTRACT YET", box.x + box.width / 2, box.y + box.height / 2 + 14,
+      "station-workspace__notice"));
     return g;
   }
 
   return {
     SVG_NS, node, label, group, taper, hitArea, fitText,
-    field, hopper, hopperCluster, mixer, extruder, layerBank
+    hopper, hopperCluster, mixer, throat, extruder, layerBank, workspace
   };
 });

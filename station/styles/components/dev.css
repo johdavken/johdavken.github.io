@@ -1,0 +1,53 @@
+/* Development-only review controls (station-transition-dev.js). Loaded by
+ * the standalone harness only; station-host.js never loads it, so nothing
+ * here can reach the application. Owns `station-dev__*`. */
+
+.station-dev {
+  position: fixed;
+  right: var(--station-space-4);
+  bottom: var(--station-space-6);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: var(--station-space-2);
+  padding: var(--station-space-2) var(--station-space-3);
+  border: var(--station-stroke) solid var(--station-border-strong);
+  border-radius: var(--station-radius);
+  background: var(--station-surface-raised);
+  color: var(--station-text-muted);
+  font-family: var(--station-font);
+  font-size: var(--station-text-xs);
+}
+
+.station-dev__title {
+  color: var(--station-text-faint);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.station-dev__group {
+  display: inline-flex;
+  gap: var(--station-space-1);
+}
+
+.station-dev__button,
+.station-dev__select {
+  font: inherit;
+  color: var(--station-text);
+  background: var(--station-surface-sunken);
+  border: var(--station-stroke) solid var(--station-border-strong);
+  border-radius: var(--station-radius-sm);
+  padding: 2px var(--station-space-2);
+  cursor: pointer;
+}
+
+.station-dev__range {
+  width: 140px;
+}
+
+.station-dev__readout,
+.station-dev__state {
+  min-width: 3.5em;
+  font-family: var(--station-font-mono);
+  color: var(--station-text-faint);
+}

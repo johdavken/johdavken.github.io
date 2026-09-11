@@ -65,6 +65,68 @@
   cursor: pointer;
 }
 
+/* The input reset, for the same reason as the button reset, and wider
+ * again: the legacy stylesheet styles inputs at several specificities -
+ * bare `input`, `input:not([type="checkbox"]):not([type="radio"])`,
+ * `input[readonly]`, and each of those on :focus - so a flat `.station-root
+ * input` rule would lose to all but the first inside ?view=station. The
+ * second rule below repeats legacy's own selector shapes under
+ * .station-root, so every one of them is out-specified.
+ *
+ * That raises a second problem: a component's class (0,1,0) cannot then
+ * restyle an input either. So the reset does not fix values - it reads
+ * them from custom properties, with the bare default as the fallback, and
+ * a component sets the PROPERTY on its input's class. Custom properties
+ * are not subject to the specificity of the declaration that spends them,
+ * which is what makes this a flat cascade again:
+ *
+ *   --station-field-padding, --station-field-border, --station-field-radius,
+ *   --station-field-bg, --station-field-shadow, --station-field-min-height,
+ *   --station-field-opacity, --station-field-cursor, --station-field-width,
+ *   --station-field-sizing
+ */
+.station-root input {
+  width: var(--station-field-width, auto);
+  /* `content` lets a field be as wide as its value (the blend percentage);
+     the default is the browser's own fixed sizing. */
+  field-sizing: var(--station-field-sizing, fixed);
+  min-height: var(--station-field-min-height, 0);
+  padding: var(--station-field-padding, 0);
+  margin: 0;
+  border: var(--station-field-border, 0);
+  border-radius: var(--station-field-radius, 0);
+  background: var(--station-field-bg, none);
+  box-shadow: var(--station-field-shadow, none);
+  color: inherit;
+  font: inherit;
+  outline: none;
+  opacity: var(--station-field-opacity, 1);
+  cursor: var(--station-field-cursor, text);
+  transition: none;
+}
+
+.station-root input:not([type="checkbox"]):not([type="radio"]),
+.station-root input[readonly],
+.station-root input:focus,
+.station-root input[readonly]:focus,
+.station-root input:not([type="checkbox"]):not([type="radio"]):focus {
+  min-height: var(--station-field-min-height, 0);
+  padding: var(--station-field-padding, 0);
+  border: var(--station-field-border, 0);
+  border-radius: var(--station-field-radius, 0);
+  background: var(--station-field-bg, none);
+  box-shadow: var(--station-field-shadow, none);
+  opacity: var(--station-field-opacity, 1);
+  cursor: var(--station-field-cursor, text);
+}
+
+.station-root ol,
+.station-root ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
 .station-root :focus-visible {
   outline: 2px solid var(--station-accent);
   outline-offset: 2px;

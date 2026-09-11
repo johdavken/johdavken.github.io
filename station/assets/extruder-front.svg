@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-30.98 -32.35 61.96 134.35" role="img" aria-labelledby="station-extruder-front-title"
+     data-view="front" data-yaw="0" data-feed-x="0" data-feed-y="0" data-outlet-x="0" data-outlet-y="57.22">
+  <title id="station-extruder-front-title">Station extruder — front view</title>
+  <!-- DERIVED from images/extruder/extruder-front.svg by tools/station-extruder/derive.js. Do not edit; edit the
+       source or the tool and regenerate. Coordinates are stage units; the feed anchor (where the
+       mixer neck lands) is the origin. Colour comes from station/styles, inlined here with the
+       token values resolved so the file can be viewed on its own. -->
+  <style>
+    .station-extruder__face { stroke: #35424f; stroke-width: 0.6px; stroke-linejoin: round; }
+    .station-extruder__housing { stroke: #445468; stroke-width: 0.9px; }
+    .station-extruder__housing--top, .station-extruder__feed--top { fill: #3c4b5f; }
+    .station-extruder__housing--side, .station-extruder__feed--side { fill: #313f52; }
+    .station-extruder__housing--front, .station-extruder__feed--front { fill: #27333f; }
+    .station-extruder__vent--top { fill: #3c4b5f; stroke: #35424f; }
+    .station-extruder__seam--side { fill: #445468; stroke: none; }
+    .station-extruder__base--top, .station-extruder__foot--top, .station-extruder__gearbox--top { fill: #2e3b4d; }
+    .station-extruder__base--side, .station-extruder__foot--side, .station-extruder__gearbox--side, .station-extruder__motor--round { fill: #253040; }
+    .station-extruder__base--front, .station-extruder__foot--front, .station-extruder__gearbox--front { fill: #1b2430; }
+    .station-extruder__motor--cap { fill: #2e3b4d; stroke: #445468; }
+    .station-extruder__outlet--round { fill: #1b2430; }
+    .station-extruder__outlet--cap { fill: #253040; }
+    .station-extruder__flange--round { fill: #2e3b4d; }
+    .station-extruder__flange--cap { fill: #55677d; stroke: #445468; }
+    .station-extruder__recess--cap { fill: #1b2430; }
+    .station-extruder__bore--cap { fill: #0d1117; }
+    .station-extruder__pct { fill: #e5eaf1; font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace; font-size: calc(12px * 1); font-weight: 600; }
+  </style>
+  <path class="station-extruder__face station-extruder__foot station-extruder__foot--top" data-part="foot" data-face="top" d="M-23.67,65.51 L-19.99,65.51 L-19.99,64.52 L-23.67,64.52 Z"/>
+  <path class="station-extruder__face station-extruder__foot station-extruder__foot--top" data-part="foot" data-face="top" d="M19.99,65.51 L23.67,65.51 L23.67,64.52 L19.99,64.52 Z"/>
+  <path class="station-extruder__face station-extruder__foot station-extruder__foot--top" data-part="foot" data-face="top" d="M-24.98,59.14 L-18.67,59.14 L-18.67,57.5 L-24.98,57.5 Z"/>
+  <path class="station-extruder__face station-extruder__foot station-extruder__foot--top" data-part="foot" data-face="top" d="M18.67,59.14 L24.98,59.14 L24.98,57.5 L18.67,57.5 Z"/>
+  <path class="station-extruder__face station-extruder__foot station-extruder__foot--front" data-part="foot" data-face="front" d="M-23.67,71.17 L-19.99,71.17 L-19.99,65.51 L-23.67,65.51 Z"/>
+  <path class="station-extruder__face station-extruder__foot station-extruder__foot--front" data-part="foot" data-face="front" d="M19.99,71.17 L23.67,71.17 L23.67,65.51 L19.99,65.51 Z"/>
+  <path class="station-extruder__face station-extruder__foot station-extruder__foot--front" data-part="foot" data-face="front" d="M-24.98,67.12 L-18.67,67.12 L-18.67,59.14 L-24.98,59.14 Z"/>
+  <path class="station-extruder__face station-extruder__foot station-extruder__foot--front" data-part="foot" data-face="front" d="M18.67,67.12 L24.98,67.12 L24.98,59.14 L18.67,59.14 Z"/>
+  <path class="station-extruder__face station-extruder__motor station-extruder__motor--round" data-part="motor" data-face="round" d="M11.57,-8.02 L11.18,-10.95 L10.02,-13.68 L8.18,-16.02 L5.79,-17.82 L3,-18.95 L0,-19.34 L-3,-18.95 L-5.79,-17.82 L-8.18,-16.02 L-10.02,-13.68 L-11.18,-10.95 L-11.57,-8.02 L-11.47,-16.6 L-10.69,-19.46 L-9.18,-22.02 L-7.04,-24.11 L-4.43,-25.58 L-1.51,-26.35 L1.51,-26.35 L4.43,-25.58 L7.04,-24.11 L9.18,-22.02 L10.69,-19.46 L11.47,-16.6 Z"/>
+  <path class="station-extruder__face station-extruder__motor station-extruder__motor--cap" data-part="motor" data-face="cap" d="M11.57,-8.02 L11.35,-10.22 L10.69,-12.35 L9.62,-14.3 L8.18,-16.02 L6.43,-17.43 L4.43,-18.47 L2.26,-19.12 L0,-19.33 L-2.26,-19.12 L-4.43,-18.47 L-6.43,-17.43 L-8.18,-16.02 L-9.62,-14.3 L-10.69,-12.35 L-11.35,-10.22 L-11.57,-8.02 L-11.35,-5.81 L-10.69,-3.68 L-9.62,-1.73 L-8.18,-0.01 L-6.43,1.39 L-4.43,2.44 L-2.26,3.08 L0,3.3 L2.26,3.08 L4.43,2.44 L6.43,1.39 L8.18,-0.01 L9.62,-1.73 L10.69,-3.68 L11.35,-5.81 Z"/>
+  <path class="station-extruder__face station-extruder__gearbox station-extruder__gearbox--top" data-part="gearbox" data-face="top" d="M-12.89,-10.6 L12.89,-10.6 L12.89,-14.48 L-12.89,-14.48 Z"/>
+  <path class="station-extruder__face station-extruder__gearbox station-extruder__gearbox--front" data-part="gearbox" data-face="front" d="M-12.89,7.41 L12.89,7.41 L12.89,-10.6 L-12.89,-10.6 Z"/>
+  <path class="station-extruder__face station-extruder__base station-extruder__base--top" data-part="base" data-face="top" d="M-19.46,81.59 L19.46,81.59 L19.46,47.26 L-19.46,47.26 Z"/>
+  <path class="station-extruder__face station-extruder__housing station-extruder__housing--top" data-part="housing" data-face="top" d="M-19.72,30.66 L19.72,30.66 L19.72,-3.23 L-19.72,-3.23 Z"/>
+  <path class="station-extruder__face station-extruder__foot station-extruder__foot--top" data-part="foot" data-face="top" d="M-23.67,88.47 L-19.99,88.47 L-19.99,87.49 L-23.67,87.49 Z"/>
+  <path class="station-extruder__face station-extruder__foot station-extruder__foot--top" data-part="foot" data-face="top" d="M19.99,88.47 L23.67,88.47 L23.67,87.49 L19.99,87.49 Z"/>
+  <path class="station-extruder__face station-extruder__foot station-extruder__foot--top" data-part="foot" data-face="top" d="M-24.98,82.11 L-18.67,82.11 L-18.67,80.47 L-24.98,80.47 Z"/>
+  <path class="station-extruder__face station-extruder__foot station-extruder__foot--top" data-part="foot" data-face="top" d="M18.67,82.11 L24.98,82.11 L24.98,80.47 L18.67,80.47 Z"/>
+  <path class="station-extruder__face station-extruder__foot station-extruder__foot--front" data-part="foot" data-face="front" d="M-23.67,94.13 L-19.99,94.13 L-19.99,88.47 L-23.67,88.47 Z"/>
+  <path class="station-extruder__face station-extruder__foot station-extruder__foot--front" data-part="foot" data-face="front" d="M19.99,94.13 L23.67,94.13 L23.67,88.47 L19.99,88.47 Z"/>
+  <path class="station-extruder__face station-extruder__foot station-extruder__foot--front" data-part="foot" data-face="front" d="M-24.98,90.08 L-18.67,90.08 L-18.67,82.11 L-24.98,82.11 Z"/>
+  <path class="station-extruder__face station-extruder__foot station-extruder__foot--front" data-part="foot" data-face="front" d="M18.67,90.08 L24.98,90.08 L24.98,82.11 L18.67,82.11 Z"/>
+  <path class="station-extruder__face station-extruder__base station-extruder__base--front" data-part="base" data-face="front" d="M-19.46,96 L19.46,96 L19.46,81.59 L-19.46,81.59 Z"/>
+  <path class="station-extruder__face station-extruder__housing station-extruder__housing--front" data-part="housing" data-face="front" d="M-19.72,78.76 L19.72,78.76 L19.72,30.66 L-19.72,30.66 Z"/>
+  <path class="station-extruder__face station-extruder__feed station-extruder__feed--top" data-part="feed" data-face="top" d="M-7.36,2.87 L7.36,2.87 L7.36,0.73 L-7.36,0.73 Z"/>
+  <path class="station-extruder__face station-extruder__feed station-extruder__feed--top" data-part="feed" data-face="top" d="M-9.2,1.39 L9.2,1.39 L9.2,-1.39 L-9.2,-1.39 Z"/>
+  <path class="station-extruder__face station-extruder__feed station-extruder__feed--front" data-part="feed" data-face="front" d="M-7.36,10.33 L7.36,10.33 L7.36,2.87 L-7.36,2.87 Z"/>
+  <path class="station-extruder__face station-extruder__feed station-extruder__feed--front" data-part="feed" data-face="front" d="M-9.2,3.2 L9.2,3.2 L9.2,1.39 L-9.2,1.39 Z"/>
+  <path class="station-extruder__face station-extruder__outlet station-extruder__outlet--round" data-part="outlet" data-face="round" d="M13.41,56.42 L12.95,53.03 L11.62,49.86 L9.48,47.14 L6.71,45.06 L3.47,43.75 L0,43.3 L-3.47,43.75 L-6.71,45.06 L-9.48,47.14 L-11.62,49.86 L-12.95,53.03 L-13.41,56.42 L-13.3,54.17 L-12.39,50.86 L-10.64,47.89 L-8.17,45.47 L-5.13,43.76 L-1.75,42.87 L1.75,42.87 L5.13,43.76 L8.17,45.47 L10.64,47.89 L12.39,50.86 L13.3,54.17 Z"/>
+  <path class="station-extruder__face station-extruder__outlet station-extruder__outlet--cap" data-part="outlet" data-face="cap" d="M13.41,56.42 L13.15,53.86 L12.39,51.4 L11.15,49.13 L9.48,47.15 L7.45,45.51 L5.13,44.3 L2.62,43.56 L0,43.3 L-2.62,43.56 L-5.13,44.3 L-7.45,45.51 L-9.48,47.15 L-11.15,49.13 L-12.39,51.4 L-13.15,53.86 L-13.41,56.42 L-13.15,58.98 L-12.39,61.44 L-11.15,63.71 L-9.48,65.7 L-7.45,67.33 L-5.13,68.54 L-2.62,69.29 L0,69.54 L2.62,69.29 L5.13,68.54 L7.45,67.33 L9.48,65.7 L11.15,63.71 L12.39,61.44 L13.15,58.98 Z"/>
+  <path class="station-extruder__face station-extruder__flange station-extruder__flange--round" data-part="flange" data-face="round" d="M11.83,57.19 L11.43,54.19 L10.25,51.4 L8.37,49 L5.92,47.16 L3.06,46 L0,45.61 L-3.06,46 L-5.92,47.16 L-8.37,49 L-10.25,51.4 L-11.43,54.19 L-11.83,57.19 L-11.73,54.92 L-10.93,52 L-9.39,49.38 L-7.2,47.25 L-4.53,45.74 L-1.54,44.95 L1.54,44.95 L4.53,45.74 L7.2,47.25 L9.39,49.38 L10.93,52 L11.73,54.92 Z"/>
+  <path class="station-extruder__face station-extruder__flange station-extruder__flange--cap" data-part="flange" data-face="cap" d="M11.83,57.19 L11.61,54.93 L10.93,52.76 L9.84,50.76 L8.37,49 L6.57,47.56 L4.53,46.49 L2.31,45.84 L0,45.61 L-2.31,45.84 L-4.53,46.49 L-6.57,47.56 L-8.37,49 L-9.84,50.76 L-10.93,52.76 L-11.61,54.93 L-11.83,57.19 L-11.61,59.45 L-10.93,61.62 L-9.84,63.62 L-8.37,65.37 L-6.57,66.81 L-4.53,67.88 L-2.31,68.54 L0,68.76 L2.31,68.54 L4.53,67.88 L6.57,66.81 L8.37,65.37 L9.84,63.62 L10.93,61.62 L11.61,59.45 Z"/>
+  <path class="station-extruder__face station-extruder__vent station-extruder__vent--top" data-part="vent" data-face="top" d="M-14.99,28.97 L14.99,28.97 L14.99,11.21 L-14.99,11.21 Z"/>
+  <path class="station-extruder__face station-extruder__recess station-extruder__recess--cap" data-part="recess" data-face="cap" d="M4.73,57.21 L4.64,56.3 L4.37,55.43 L3.94,54.63 L3.35,53.93 L2.63,53.36 L1.81,52.93 L0.92,52.67 L0,52.58 L-0.92,52.67 L-1.81,52.93 L-2.63,53.36 L-3.35,53.93 L-3.94,54.63 L-4.37,55.43 L-4.64,56.3 L-4.73,57.21 L-4.64,58.11 L-4.37,58.98 L-3.94,59.78 L-3.35,60.48 L-2.63,61.06 L-1.81,61.49 L-0.92,61.75 L0,61.84 L0.92,61.75 L1.81,61.49 L2.63,61.06 L3.35,60.48 L3.94,59.78 L4.37,58.98 L4.64,58.11 Z"/>
+  <path class="station-extruder__face station-extruder__bore station-extruder__bore--cap" data-part="bore" data-face="cap" d="M3.16,57.22 L3.1,56.61 L2.92,56.04 L2.62,55.5 L2.23,55.03 L1.75,54.65 L1.21,54.37 L0.62,54.19 L0,54.13 L-0.62,54.19 L-1.21,54.37 L-1.75,54.65 L-2.23,55.03 L-2.62,55.5 L-2.92,56.04 L-3.1,56.61 L-3.16,57.22 L-3.1,57.82 L-2.92,58.4 L-2.62,58.93 L-2.23,59.4 L-1.75,59.78 L-1.21,60.07 L-0.62,60.25 L0,60.3 L0.62,60.25 L1.21,60.07 L1.75,59.78 L2.23,59.4 L2.62,58.93 L2.92,58.4 L3.1,57.82 Z"/>
+</svg>

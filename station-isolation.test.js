@@ -23,7 +23,9 @@ const STATION = path.join(ROOT, "station");
 
 const STATION_FILES = ["station-line-model.js", "station-render.js", "station.js",
   "station-demo-lines.js", "station-source.js", "station-shell.js",
-  "station-machine-layout.js", "station-machine-parts.js", "station-extruder-lab.js"];
+  "station-machine-layout.js", "station-machine-parts.js", "station-extruder-lab.js",
+  "station-extruder-assets.js", "station-mixer-assets.js", "station-transition.js",
+  "station-focus-editor.js"];
 
 const stationHtml = fs.readFileSync(path.join(STATION, "station.html"), "utf8");
 const indexHtml = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");

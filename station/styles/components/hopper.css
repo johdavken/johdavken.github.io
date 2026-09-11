@@ -56,7 +56,7 @@
 .station-hopper__source {
   fill: var(--station-text-faint);
   font-family: var(--station-font);
-  font-size: var(--station-text-2xs);
+  font-size: calc(var(--station-text-2xs) * var(--station-bank-scale, 1));
   letter-spacing: 0.04em;
 }
 
@@ -113,24 +113,27 @@
 
 /* ---------------------------------------------------------------------
  *   Compact recipe readout
- * ------------------------------------------------------------------- */
+ * -------------------------------------------------------------------
+ * Sized against the bank's scale (--station-bank-scale, set by the
+ * renderer on the layer group), so a focused bank's readout is the normal
+ * readout enlarged and the hopper stays one rigid drawing at every size. */
 
 .station-hopper__id {
   fill: var(--station-text-muted);
   font-family: var(--station-font-mono);
-  font-size: var(--station-text-2xs);
+  font-size: calc(var(--station-text-2xs) * var(--station-bank-scale, 1));
 }
 
 .station-hopper__resin {
   fill: var(--station-text);
   font-family: var(--station-font-mono);
-  font-size: var(--station-text-2xs);
+  font-size: calc(var(--station-text-2xs) * var(--station-bank-scale, 1));
 }
 
 .station-hopper__pct {
   fill: var(--station-layer-accent, var(--station-text-muted));
   font-family: var(--station-font-mono);
-  font-size: var(--station-text-2xs);
+  font-size: calc(var(--station-text-2xs) * var(--station-bank-scale, 1));
   font-weight: 600;
 }
 
@@ -145,9 +148,22 @@
  *   State
  * ------------------------------------------------------------------- */
 
+/* Linked to the focused editor's rows (station.js applies both halves).
+   Highlighted is the pointer or keyboard focus on either side: a lifted
+   outline, no fill. Selected is the inspector's hopper: the accent, and
+   the id in it, so it is stronger than a hover without being louder. */
+.station-hopper.is-highlighted .station-hopper__shell {
+  stroke: color-mix(in srgb, var(--station-accent) 60%, var(--station-hopper-stroke));
+  stroke-width: var(--station-line-medium);
+}
+
 .station-hopper.is-selected .station-hopper__shell {
   stroke: var(--station-accent);
   stroke-width: var(--station-line-medium);
+}
+
+.station-hopper.is-selected .station-hopper__id {
+  fill: var(--station-accent);
 }
 
 .station-hopper.is-tracking .station-hopper__shell {
@@ -187,47 +203,3 @@
    thing - whether the pump is conveying - and an unassigned hopper whose pump
    is running is a real and visible state. Assignment is said by the caption
    and the vessel, which is where it belongs. */
-
-/* ---------------------------------------------------------------------
- *   Controls on the equipment (expanded layer)
- * -------------------------------------------------------------------
- * These are drawn as wells so they read as the places values live, which is
- * what they will be. They are read-only until a Station write contract exists,
- * and they say so: a dashed well rather than a solid one, and a muted value.
- * Solid wells would promise an edit that cannot yet be committed.
- */
-
-.station-field__well {
-  fill: var(--station-surface-sunken);
-  stroke: var(--station-border-strong);
-  stroke-width: var(--station-line-thin);
-  stroke-dasharray: 3 2;
-}
-
-.station-field__value {
-  fill: var(--station-text);
-  font-family: var(--station-font-mono);
-  font-size: var(--station-text-sm);
-}
-
-.station-field__value--resin {
-  font-family: var(--station-font-mono);
-}
-
-.station-field__value--pct {
-  fill: var(--station-layer-accent, var(--station-text));
-  font-weight: 600;
-}
-
-.station-field__value--source {
-  fill: var(--station-text-muted);
-  font-family: var(--station-font);
-  font-size: var(--station-text-2xs);
-  letter-spacing: 0.04em;
-}
-
-/* Nothing set yet: the well is still there, because an empty value is the one
-   you are most likely to want to fill in. */
-.station-field.is-empty .station-field__value {
-  fill: var(--station-text-faint);
-}
