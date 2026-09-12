@@ -208,7 +208,9 @@
     head.appendChild(text(doc, "h2", "station-handbook__title", "Operator Handbook"));
     const tabs = element(doc, "div", "station-handbook__tabs", { role: "tablist", "aria-label": "Handbook sections" });
     head.appendChild(tabs);
-    const closeButton = text(doc, "button", "station-handbook__close", "Close", { type: "button", "data-action": "close-handbook" });
+    const closeButton = text(doc, "button", "station-handbook__close", "Close", {
+      type: "button", "data-action": "close-handbook", title: "Close the Handbook (Esc)"
+    });
     head.appendChild(closeButton);
     panel.appendChild(head);
     const body = element(doc, "div", "station-handbook__body");
@@ -219,7 +221,7 @@
     const built = {};
     for (const section of sections) {
       const tab = text(doc, "button", "station-handbook__tab", String(section.title || section.id), {
-        type: "button", role: "tab", "data-section": section.id, "aria-pressed": "false"
+        type: "button", role: "tab", "data-section": section.id, "aria-pressed": "false", "aria-selected": "false"
       });
       tabs.appendChild(tab);
       const host = element(doc, "div", "station-handbook__section", { "data-section": section.id, role: "tabpanel", hidden: "" });
@@ -240,6 +242,7 @@
       for (const key of Object.keys(built)) {
         const on = key === id;
         built[key].tab.setAttribute("aria-pressed", on ? "true" : "false");
+        built[key].tab.setAttribute("aria-selected", on ? "true" : "false");
         show(built[key].host, on);
       }
       const current = built[id].instance;

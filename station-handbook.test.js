@@ -257,7 +257,13 @@ test("the panel is a region over the stage: no dialog role, no backdrop, no elem
   assert.match(panel, /width: min\(var\(--station-handbook-width\), calc\(100% - 2 \* var\(--station-handbook-clearance\)\)\);/, "the panel spans the window instead of its preferred width");
   assert.match(panel, /margin: 0 auto;/, "the panel is not centred");
   assert.match(panel, /bottom: var\(--station-space-3\);/);
-  assert.doesNotMatch(css, /backdrop-filter|\.station-handbook__backdrop|inset: 0;\s*background/);
+  assert.doesNotMatch(css, /\.station-handbook__backdrop|inset: 0;\s*background/);
+  // The glass is the panel's own material - a backdrop-filter on the panel,
+  // never on anything laid over the stage. Its tint, edge and blur are the
+  // theme's tokens, so the panel rule names no colour and no length.
+  assert.match(panel, /backdrop-filter: blur\(var\(--station-handbook-glass-blur\)\)/);
+  assert.match(panel, /background: var\(--station-handbook-glass\);/);
+  assert.equal((css.match(/backdrop-filter/g) || []).length, 2, "backdrop-filter appears outside the panel rule (one prefixed, one unprefixed)");
   // The root lets the pointer through to the hoppers; only its two boxes take it.
   assert.match(css, /\.station-handbook \{[^}]*pointer-events: none;/);
   assert.match(css, /\.station-root \.station-handbook__launcher \{[^}]*pointer-events: auto;/);

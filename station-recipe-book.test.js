@@ -380,7 +380,13 @@ test("the mode's controls show which layers are turned over, turn one or all, an
   click(byAction(root, "blend-edit"));
   const chips = () => root.querySelectorAll(".station-book__layer-chip");
   assert.deepEqual(chips().map(chip => [chip.getAttribute("data-layer"), chip.getAttribute("aria-pressed")]), [["A", "false"], ["B", "false"], ["C", "false"]]);
-  assert.match(root.querySelector(".station-book__blend-hint").textContent, /Turn a layer over/);
+  assert.match(root.querySelector(".station-book__blend-hint").textContent, /Select layers to edit their blends in place/);
+  // The longer explanation is behind the information mark, on the tab
+  // order, not on the bench.
+  const info = root.querySelector(".station-book__blend-info");
+  assert.equal(info.getAttribute("tabindex"), "0");
+  assert.match(info.getAttribute("title"), /Turn a layer over here, or with the chip under its name on the stage/);
+  assert.match(info.getAttribute("aria-label"), /Done turns them back/);
   assert.equal(byAction(root, "show-all").disabled, true);
   assert.equal(byAction(root, "edit-all").disabled, false);
   click(chips()[1]);

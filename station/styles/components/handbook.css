@@ -1,5 +1,5 @@
-/* The Operator Handbook (station-handbook.js) and its first section, the
- * Recipe Book (station-recipe-book.js).
+/* The Operator Handbook (station-handbook.js) and its sections: the Recipe
+ * Book (station-recipe-book.js) and Appearance (station-appearance.js).
  *
  * WHERE IT SITS
  *
@@ -25,6 +25,31 @@
  *
  * The slot is inert to the pointer; the launcher and the panel take it
  * back for their own boxes only.
+ *
+ * ONE GLASS, FLAT CONTROLS
+ *
+ * The frame is the one piece of glass: a smoked (or, in a light theme,
+ * frosted) surface that lets the machine read through as depth and keeps
+ * the words on it legible. Its material - tint, edge, highlight, blur -
+ * is the theme's to set (the `--station-handbook-*` tokens in
+ * themes/*.css); nothing here names a colour. Everything ON the glass is
+ * flat, and drawn in one of five kinds of control, which is the whole of
+ * the Handbook's vocabulary and what a new section is expected to draw in:
+ *
+ *   .station-handbook__tab       navigation: a word with an underline
+ *   .station-handbook__action    a command; `is-primary` for the one that
+ *                                completes the work at hand, `is-quiet`
+ *                                for one that only steps back
+ *   .station-handbook__utility   a small icon-only command (Refresh)
+ *   .station-handbook__chip      a compact stateful selector (a layer)
+ *   .station-handbook__close     the window control, kept quiet
+ *
+ * Hierarchy is carried by surface, weight and space: a primary action is
+ * the one thing filled in the accent; a secondary has a hairline; a quiet
+ * one is a word; a tab is a word with a line under it when it is the page
+ * showing. Borders are kept where they do a job - a field, a secondary
+ * command, a chip's outline against its filled state - and nowhere as
+ * decoration. There are no boxes inside the box.
  */
 
 .station-handbook {
@@ -103,13 +128,18 @@
   fill: var(--station-accent);
 }
 
-/* ---- Panel: centred across the lower part of the stage ---- */
+/* ---- Panel: the glass, centred across the lower part of the stage ---- */
 
 /* The frame. Width and height are the stage's to give (tokens.css): the
    panel takes its share of the cell's height from the bottom edge up, no
    more than its cap, and its preferred width as long as the launcher's
    column stays clear on both sides. A definite height, not a maximum -
-   the sections inside size to it, never the other way round. */
+   the sections inside size to it, never the other way round.
+
+   The surface is the theme's glass: a translucent tint over a blur of
+   what stands behind, a hairline edge, a highlight along the top edge
+   where light would catch it, and a soft shadow that lifts it off the
+   machine. The one place in the Handbook that is not flat. */
 .station-handbook__panel {
   position: absolute;
   left: 0;
@@ -121,10 +151,14 @@
   width: min(var(--station-handbook-width), calc(100% - 2 * var(--station-handbook-clearance)));
   height: min(var(--station-handbook-max-height), calc(var(--station-handbook-share) - var(--station-space-3)));
   margin: 0 auto;
-  background: var(--station-surface-raised);
-  border: var(--station-stroke) solid var(--station-border-strong);
+  background: var(--station-handbook-glass);
+  -webkit-backdrop-filter: blur(var(--station-handbook-glass-blur)) saturate(var(--station-handbook-glass-saturate));
+  backdrop-filter: blur(var(--station-handbook-glass-blur)) saturate(var(--station-handbook-glass-saturate));
+  border: var(--station-stroke) solid var(--station-handbook-glass-border);
   border-radius: var(--station-radius-lg);
-  box-shadow: var(--station-shadow-pop);
+  box-shadow:
+    inset 0 var(--station-stroke) 0 var(--station-handbook-glass-highlight),
+    var(--station-handbook-glass-shadow);
   color: var(--station-text);
   font-size: var(--station-text-sm);
   pointer-events: auto;
@@ -139,68 +173,86 @@
   display: none;
 }
 
+/* ---- Head: the title, the sections as tabs, Close at the far edge ----
+ * One line, one hairline under it. The title is the workspace's name -
+ * small, spaced, quiet - and the tabs stand beside it as words; the one
+ * showing is underlined on the head's own rule, so the tab and the page
+ * under it read as one. */
 .station-handbook__head {
   display: flex;
-  align-items: center;
-  gap: var(--station-space-3);
-  padding: var(--station-space-2) var(--station-space-4);
-  border-bottom: var(--station-stroke) solid var(--station-border);
+  align-items: stretch;
+  gap: var(--station-space-5);
+  padding: 0 var(--station-space-4);
+  border-bottom: var(--station-stroke) solid var(--station-handbook-rule);
 }
 
 .station-handbook__title {
+  align-self: center;
   margin: 0;
   color: var(--station-text-muted);
   font-size: var(--station-text-xs);
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
-/* The sections' tabs: one today, more later, the same chips either way. */
 .station-handbook__tabs {
-  display: inline-flex;
-  gap: var(--station-space-1);
+  display: flex;
+  align-items: stretch;
+  gap: var(--station-space-4);
 }
 
+/* A tab: a word, padded to the head's height, carrying its own underline
+   over the head's rule when it is the page showing. No box. */
 .station-root .station-handbook__tab {
-  padding: 2px var(--station-space-3);
-  border: var(--station-stroke) solid transparent;
-  border-radius: var(--station-radius-sm);
+  display: inline-flex;
+  align-items: center;
+  padding: var(--station-space-3) var(--station-space-1);
+  margin-bottom: calc(-1 * var(--station-stroke));
+  border-bottom: calc(2 * var(--station-stroke)) solid transparent;
   color: var(--station-text-muted);
   font-size: var(--station-text-sm);
   font-weight: 600;
+  white-space: nowrap;
+}
+
+.station-root .station-handbook__tab:hover {
+  color: var(--station-text);
+  border-bottom-color: var(--station-handbook-rule);
 }
 
 .station-root .station-handbook__tab[aria-pressed="true"] {
-  background: var(--station-selection);
-  border-color: var(--station-accent);
   color: var(--station-text);
+  border-bottom-color: var(--station-handbook-tab-active);
 }
 
-.station-root .station-handbook__close {
-  margin-left: auto;
-  padding: var(--station-space-1) var(--station-space-3);
-  border: var(--station-stroke) solid var(--station-border-strong);
+.station-root .station-handbook__tab:focus-visible {
+  outline-offset: calc(-1 * var(--station-space-1));
   border-radius: var(--station-radius-sm);
-  color: var(--station-text-muted);
-  font-size: var(--station-text-xs);
 }
 
-.station-root .station-handbook__tab:hover,
-.station-root .station-handbook__close:hover,
-.station-root .station-book__action:hover,
-.station-root .station-book__layer-chip:hover {
-  background: var(--station-surface-hover);
-  border-color: var(--station-accent-hover);
+/* Close: a window control, said in a small word at the far edge. Quieter
+   than any action on the bench; still a full target and still on the
+   tab order, and Escape does the same (station-handbook.js). */
+.station-root .station-handbook__close {
+  align-self: center;
+  margin-left: auto;
+  padding: var(--station-space-1) var(--station-space-2);
+  border-radius: var(--station-radius-sm);
+  color: var(--station-text-faint);
+  font-size: var(--station-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.station-root .station-handbook__close:hover {
+  background: var(--station-handbook-control-hover);
   color: var(--station-text);
 }
 
-.station-root .station-handbook__tab:active,
-.station-root .station-handbook__close:active,
-.station-root .station-book__action:active:not(:disabled),
-.station-root .station-book__layer-chip:active {
-  background: var(--station-surface-selected);
-  border-color: var(--station-accent-active);
+.station-root .station-handbook__close:active {
+  background: var(--station-handbook-control-active);
 }
 
 /* The bench: what is left of the frame under its head. Clipped, so no
@@ -226,11 +278,184 @@
 }
 
 /* ---------------------------------------------------------------------
+ *   The controls
+ * -------------------------------------------------------------------
+ * The five kinds, drawn once, for every section. Under .station-root the
+ * base layer resets buttons at (0,1,1); a control says what chrome it
+ * wants at (0,2,0), as the line console's do.
+ */
+
+/* ---- Action: a command ----
+ * Secondary by default - a word in the text colour with a hairline round
+ * it, visibly a thing to press and no louder. */
+.station-root .station-handbook__action {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--station-space-2);
+  padding: var(--station-space-1) var(--station-space-3);
+  border: var(--station-stroke) solid var(--station-handbook-control-border);
+  border-radius: var(--station-radius-sm);
+  color: var(--station-text);
+  font-size: var(--station-text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.station-root .station-handbook__action:hover:not(:disabled) {
+  background: var(--station-handbook-control-hover);
+  border-color: var(--station-border-strong);
+}
+
+.station-root .station-handbook__action:active:not(:disabled) {
+  background: var(--station-handbook-control-active);
+}
+
+/* Primary: the one action that completes the work at hand, and the one
+   thing on the bench filled in the accent. One per section. */
+.station-root .station-handbook__action.is-primary {
+  background: var(--station-accent);
+  border-color: var(--station-accent);
+  color: var(--station-text-on-accent);
+}
+
+.station-root .station-handbook__action.is-primary:hover:not(:disabled) {
+  background: var(--station-accent-hover);
+  border-color: var(--station-accent-hover);
+}
+
+.station-root .station-handbook__action.is-primary:active:not(:disabled) {
+  background: var(--station-accent-active);
+  border-color: var(--station-accent-active);
+}
+
+/* Quiet: a step back (Cancel, Show all hoppers) - a word, no line. */
+.station-root .station-handbook__action.is-quiet {
+  border-color: transparent;
+  color: var(--station-text-muted);
+}
+
+.station-root .station-handbook__action.is-quiet:hover:not(:disabled) {
+  border-color: transparent;
+  color: var(--station-text);
+}
+
+.station-root .station-handbook__action:disabled {
+  color: var(--station-text-disabled);
+  border-color: var(--station-handbook-rule);
+  cursor: default;
+}
+
+.station-root .station-handbook__action.is-quiet:disabled {
+  border-color: transparent;
+}
+
+.station-root .station-handbook__action.is-primary:disabled {
+  background: var(--station-handbook-control-active);
+  border-color: transparent;
+  color: var(--station-text-disabled);
+}
+
+.station-handbook__action[hidden] {
+  display: none;
+}
+
+/* ---- Utility: an icon-only command ----
+ * A glyph in a square, no outline until the pointer is on it; what it
+ * does is its title and its accessible name (the section sets both). */
+.station-root .station-handbook__utility {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--station-space-5) + var(--station-space-1));
+  height: calc(var(--station-space-5) + var(--station-space-1));
+  border-radius: var(--station-radius-sm);
+  color: var(--station-text-muted);
+}
+
+.station-root .station-handbook__utility:hover:not(:disabled) {
+  background: var(--station-handbook-control-hover);
+  color: var(--station-text);
+}
+
+.station-root .station-handbook__utility:active:not(:disabled) {
+  background: var(--station-handbook-control-active);
+}
+
+.station-root .station-handbook__utility:disabled {
+  color: var(--station-text-disabled);
+  cursor: default;
+}
+
+/* The glyphs the sections draw (station-recipe-book.js): stroked in the
+   control's own colour, so a glyph is never a second colour to manage. */
+.station-handbook__glyph {
+  display: block;
+  flex: none;
+}
+
+.station-handbook__glyph-stroke {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.station-handbook__glyph-fill {
+  fill: currentColor;
+}
+
+/* ---- Chip: a compact stateful selector ----
+ * Outlined when it is not set, filled when it is: the state is the shape
+ * as well as the colour. Sized to a letter or a short word. */
+.station-root .station-handbook__chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: calc(var(--station-space-5) + var(--station-space-2));
+  padding: 2px var(--station-space-2);
+  border: var(--station-stroke) solid var(--station-handbook-control-border);
+  border-radius: var(--station-radius-sm);
+  color: var(--station-text-muted);
+  font-size: var(--station-text-sm);
+  font-weight: 600;
+  text-align: center;
+}
+
+.station-root .station-handbook__chip:hover:not(:disabled) {
+  background: var(--station-handbook-control-hover);
+  border-color: var(--station-border-strong);
+  color: var(--station-text);
+}
+
+.station-root .station-handbook__chip:active:not(:disabled) {
+  background: var(--station-handbook-control-active);
+}
+
+.station-root .station-handbook__chip[aria-pressed="true"] {
+  background: var(--station-handbook-selector-active);
+  border-color: var(--station-handbook-selector-active);
+  color: var(--station-text-on-accent);
+}
+
+.station-root .station-handbook__chip[aria-pressed="true"]:hover:not(:disabled) {
+  background: var(--station-accent-hover);
+  border-color: var(--station-accent-hover);
+  color: var(--station-text-on-accent);
+}
+
+.station-root .station-handbook__chip:disabled {
+  color: var(--station-text-disabled);
+  border-color: var(--station-handbook-rule);
+  cursor: default;
+}
+
+/* ---------------------------------------------------------------------
  *   Recipe Book
  * -------------------------------------------------------------------
- * A toolbar across the top; under it the saved list on the left and the
- * selected recipe's blend on the right, each scrolling on its own inside
- * the bench the frame gives them. While Blend Edit is on, the toolbar's
+ * A row of actions across the top; under it the saved list on the left
+ * and the selected recipe's blend on the right, each scrolling on its own
+ * inside the bench the frame gives them. While Blend Edit is on, the
  * actions give way to the mode's own: which layers are turned over, Edit
  * all, Done. Compact by design - the editing happens on the hoppers
  * above, and this panel is where it is entered and left.
@@ -244,43 +469,17 @@
   min-height: 0;
 }
 
+/* Save Current, Blend Edit, Refresh, and the line's name at the far end.
+   Spaced from what follows, not ruled off from it. */
 .station-book__toolbar {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: var(--station-space-2);
-  padding: var(--station-space-2) var(--station-space-4);
-  border-bottom: var(--station-stroke) solid var(--station-border);
+  padding: var(--station-space-3) var(--station-space-4) var(--station-space-2);
 }
 
-/* Under .station-root: the base layer resets buttons at (0,1,1); a button
-   that wants chrome says so at (0,2,0), as the line console's do. */
-.station-root .station-book__action {
-  padding: var(--station-space-1) var(--station-space-3);
-  border: var(--station-stroke) solid var(--station-border-strong);
-  border-radius: var(--station-radius-sm);
-  color: var(--station-text);
-  font-size: var(--station-text-sm);
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.station-book__action.is-primary {
-  background: var(--station-selection);
-  border-color: var(--station-accent);
-}
-
-.station-book__action.is-quiet {
-  border-color: transparent;
-  color: var(--station-text-muted);
-}
-
-.station-book__action:disabled {
-  color: var(--station-text-faint);
-  cursor: default;
-}
-
-.station-book__action[hidden] {
+.station-book__toolbar[hidden] {
   display: none;
 }
 
@@ -300,8 +499,7 @@
   align-items: center;
   gap: var(--station-space-2);
   padding: var(--station-space-2) var(--station-space-4);
-  border-bottom: var(--station-stroke) solid var(--station-border);
-  background: var(--station-surface);
+  border-bottom: var(--station-stroke) solid var(--station-handbook-rule);
 }
 
 .station-book__entry[hidden] {
@@ -316,6 +514,7 @@
   white-space: nowrap;
 }
 
+/* The one input on the bench: the one place a border is an affordance. */
 .station-book__name {
   --station-field-padding: var(--station-space-1) var(--station-space-2);
   --station-field-radius: var(--station-radius-sm);
@@ -356,7 +555,8 @@
 
 /* The list keeps to two fifths; a recipe's blend, with a resin name and
    a share for every hopper on every layer, is the wider reading. Both
-   columns scroll within the frame's height; neither asks for more. */
+   columns scroll within the frame's height; neither asks for more. One
+   hairline between them is the only line on the bench. */
 .station-book__columns {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
@@ -368,11 +568,21 @@
   display: none;
 }
 
+/* The columns scroll on a thin bar in the rule's own colour, so a bar is
+   never the heaviest line on the glass. */
+.station-book__list,
+.station-book__detail,
+.station-book__blend,
+.station-appearance {
+  scrollbar-width: thin;
+  scrollbar-color: var(--station-handbook-control-border) transparent;
+}
+
 .station-book__list {
   min-height: 0;
   overflow-y: auto;
-  padding: var(--station-space-2) var(--station-space-3);
-  border-right: var(--station-stroke) solid var(--station-border);
+  padding: var(--station-space-1) var(--station-space-3) var(--station-space-3);
+  border-right: var(--station-stroke) solid var(--station-handbook-rule);
 }
 
 .station-book__empty {
@@ -382,7 +592,9 @@
   line-height: var(--station-line-normal);
 }
 
-/* A row an operator can land on: a full line of height, the name leading. */
+/* A row an operator can land on: a full line of height, the name leading.
+   Selected is a wash and a bar at the left edge, not a box - the glass
+   gives it all the separation it needs. */
 .station-root .station-book__row {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
@@ -391,16 +603,17 @@
   width: 100%;
   padding: var(--station-space-2) var(--station-space-3);
   border-radius: var(--station-radius-sm);
+  color: var(--station-text);
   font-size: var(--station-text-md);
 }
 
 .station-root .station-book__row:hover {
-  background: var(--station-surface-hover);
+  background: var(--station-handbook-control-hover);
 }
 
 .station-root .station-book__row[aria-pressed="true"] {
-  background: var(--station-selection);
-  box-shadow: inset 2px 0 0 var(--station-accent);
+  background: var(--station-handbook-selection);
+  box-shadow: inset calc(2 * var(--station-stroke)) 0 0 var(--station-accent);
 }
 
 .station-book__star {
@@ -419,6 +632,10 @@
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.station-book__row[aria-pressed="true"] .station-book__row-name {
+  font-weight: 700;
 }
 
 .station-book__row-meta {
@@ -447,7 +664,7 @@
   align-items: baseline;
   gap: var(--station-space-4);
   padding: var(--station-space-2) 0;
-  border-top: var(--station-stroke) solid var(--station-border);
+  border-top: var(--station-stroke) solid var(--station-handbook-rule);
 }
 
 /* Layer identity as an accent, as the drawing carries it (layer-bank.css). */
@@ -489,10 +706,10 @@
 }
 
 /* ---- Blend Edit's controls ----
- * The mode's controller, not another editor: one group at the top of the
- * bench - what the mode is doing, the layers, the actions - nearest the
- * cards it speaks for. The rest of the bench stays clear; the frame is
- * the same one the Recipe Book fills. */
+ * The mode's controller, not another editor: three lines at the top of
+ * the bench - what the mode is doing, the layers, the actions - nearest
+ * the cards it speaks for. The rest of the bench stays clear; the frame
+ * is the same one the Recipe Book fills. */
 
 .station-book__blend {
   display: flex;
@@ -508,34 +725,64 @@
   display: none;
 }
 
+/* One short line of state, and the longer explanation behind an
+   information mark beside it - a note, on the tab order, that says its
+   piece on hover and to a reader, and takes no room on the bench. */
+.station-book__blend-status {
+  display: flex;
+  align-items: center;
+  gap: var(--station-space-2);
+}
+
 .station-book__blend-hint {
   margin: 0;
   color: var(--station-text-muted);
-  font-size: var(--station-text-sm);
+  font-size: var(--station-text-xs);
   line-height: var(--station-line-tight);
 }
 
+.station-book__blend-info {
+  display: inline-flex;
+  flex: none;
+  border-radius: 50%;
+  color: var(--station-text-faint);
+  cursor: help;
+}
+
+.station-book__blend-info:hover {
+  color: var(--station-text);
+}
+
+/* The layers: a label and a row of chips, reading "Layers  A B C D E". */
 .station-book__layers {
   display: flex;
+  align-items: center;
+  gap: var(--station-space-3);
+}
+
+.station-book__layers-label {
+  color: var(--station-text-faint);
+  font-size: var(--station-text-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.station-book__layer-chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--station-space-1);
+}
+
+/* Edit all and Show all together; Done at the far end, on its own. */
+.station-book__blend-actions {
+  display: flex;
+  align-items: center;
   flex-wrap: wrap;
   gap: var(--station-space-2);
 }
 
-.station-root .station-book__layer-chip {
-  display: inline-flex;
-  align-items: baseline;
-  gap: var(--station-space-2);
-  padding: var(--station-space-1) var(--station-space-3);
-  border: var(--station-stroke) solid var(--station-border-strong);
-  border-radius: var(--station-radius-sm);
-  color: var(--station-text-muted);
-  font-size: var(--station-text-sm);
-}
-
-.station-root .station-book__layer-chip[aria-pressed="true"] {
-  background: var(--station-selection);
-  border-color: var(--station-accent);
-  color: var(--station-text);
+.station-book__blend-actions .station-handbook__action.is-primary {
+  margin-left: auto;
 }
 
 /* ---------------------------------------------------------------------
@@ -543,7 +790,9 @@
  * -------------------------------------------------------------------
  * A second Handbook page in the same fixed bench. The rows are native
  * buttons with radio semantics: immediate, keyboard reachable, and large
- * enough to read without turning this into a theme editor.
+ * enough to read without turning this into a theme editor. Drawn as
+ * rows, not cards: the chosen one is a wash and a bar at the left edge,
+ * as a selected recipe is.
  */
 
 .station-appearance {
@@ -552,7 +801,7 @@
   gap: var(--station-space-3);
   width: 100%;
   min-height: 0;
-  padding: var(--station-space-4);
+  padding: var(--station-space-3) var(--station-space-4);
   overflow-y: auto;
 }
 
@@ -564,13 +813,14 @@
 
 .station-appearance__title {
   color: var(--station-text);
-  font-size: var(--station-text-lg);
+  font-size: var(--station-text-md);
   font-weight: 600;
 }
 
 .station-appearance__copy {
-  max-width: 32em;
+  max-width: 48em;
   color: var(--station-text-muted);
+  font-size: var(--station-text-xs);
   line-height: var(--station-line-normal);
 }
 
@@ -578,7 +828,7 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   align-content: start;
-  gap: var(--station-space-2);
+  gap: var(--station-space-1);
 }
 
 .station-root .station-appearance__choice {
@@ -588,26 +838,21 @@
   gap: var(--station-space-3);
   width: 100%;
   padding: var(--station-space-2) var(--station-space-3);
-  background: var(--station-surface-interactive);
-  border: var(--station-stroke) solid var(--station-border);
-  border-radius: var(--station-radius);
+  border-radius: var(--station-radius-sm);
   color: var(--station-text);
 }
 
 .station-root .station-appearance__choice:hover {
-  background: var(--station-surface-hover);
-  border-color: var(--station-accent-hover);
+  background: var(--station-handbook-control-hover);
 }
 
 .station-root .station-appearance__choice:active {
-  background: var(--station-surface-selected);
-  border-color: var(--station-accent-active);
+  background: var(--station-handbook-control-active);
 }
 
 .station-root .station-appearance__choice[aria-checked="true"] {
-  background: var(--station-surface-selected);
-  border-color: var(--station-accent);
-  box-shadow: inset 3px 0 0 var(--station-accent);
+  background: var(--station-handbook-selection);
+  box-shadow: inset calc(2 * var(--station-stroke)) 0 0 var(--station-accent);
 }
 
 .station-appearance__mark {
@@ -615,12 +860,11 @@
   height: 14px;
   border: 2px solid var(--station-border-strong);
   border-radius: 50%;
-  background: var(--station-surface-sunken);
 }
 
 .station-appearance__choice[aria-checked="true"] .station-appearance__mark {
   border-color: var(--station-accent);
-  box-shadow: inset 0 0 0 3px var(--station-surface-selected);
+  box-shadow: inset 0 0 0 3px var(--station-handbook-glass);
   background: var(--station-accent);
 }
 
@@ -640,16 +884,4 @@
   color: var(--station-text-muted);
   font-size: var(--station-text-xs);
   line-height: var(--station-line-tight);
-}
-
-.station-book__chip-state {
-  font-size: var(--station-text-2xs);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.station-book__blend-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--station-space-2);
 }

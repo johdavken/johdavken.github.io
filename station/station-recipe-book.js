@@ -52,6 +52,23 @@
 
   const ID = "recipe-book";
   const TITLE = "Recipe Book";
+  const SVG_NS = "http://www.w3.org/2000/svg";
+
+  /* The Handbook's control language (handbook.css), which every section
+   * draws its controls in and this one does not extend:
+   *
+   *   station-handbook__action               a command; `is-primary` for the
+   *                                          one that completes the work at
+   *                                          hand, `is-quiet` for one that
+   *                                          only steps back
+   *   station-handbook__utility              a small icon-only command
+   *   station-handbook__chip                 a compact stateful selector
+   *
+   * Which of these a control is says what it is FOR; nothing else here
+   * decides how a button looks. */
+  const ACTION = "station-handbook__action";
+  const PRIMARY = `${ACTION} is-primary`;
+  const QUIET = `${ACTION} is-quiet`;
 
   function element(doc, name, className, attributes) {
     const node = doc.createElement(name);
@@ -79,6 +96,31 @@
   function show(node, on) {
     if (on) node.removeAttribute("hidden");
     else node.setAttribute("hidden", "");
+  }
+
+  function svgNode(doc, name, className, attributes) {
+    const node = doc.createElementNS ? doc.createElementNS(SVG_NS, name) : doc.createElement(name);
+    if (className) node.setAttribute("class", className);
+    if (attributes) for (const key of Object.keys(attributes)) node.setAttribute(key, String(attributes[key]));
+    return node;
+  }
+
+  /* The two glyphs this section draws, 16 by 16, stroked in the current
+   * colour by the stylesheet (handbook.css) so they follow the control
+   * they sit in: a refresh arrow, and an information mark. */
+  function glyph(doc, kind) {
+    const svg = svgNode(doc, "svg", "station-handbook__glyph", {
+      viewBox: "0 0 16 16", width: "16", height: "16", "aria-hidden": "true", focusable: "false"
+    });
+    if (kind === "refresh") {
+      svg.appendChild(svgNode(doc, "path", "station-handbook__glyph-stroke", { d: "M 13.2 8.6 A 5.2 5.2 0 1 1 11.9 4.3" }));
+      svg.appendChild(svgNode(doc, "path", "station-handbook__glyph-stroke", { d: "M 13.4 2.6 L 13.4 5.8 L 10.2 5.8" }));
+    } else {
+      svg.appendChild(svgNode(doc, "circle", "station-handbook__glyph-stroke", { cx: 8, cy: 8, r: 6.4 }));
+      svg.appendChild(svgNode(doc, "path", "station-handbook__glyph-stroke", { d: "M 8 7.2 L 8 11.4" }));
+      svg.appendChild(svgNode(doc, "circle", "station-handbook__glyph-fill", { cx: 8, cy: 4.9, r: 0.9 }));
+    }
+    return svg;
   }
 
   function round(value) {
@@ -159,11 +201,16 @@
 
     const rootEl = element(doc, "div", "station-book", { "data-role": "recipe-book" });
 
-    /* ---- Toolbar ---- */
+    /* ---- Toolbar ----
+     * Save Current leads; Blend Edit is the other command; Refresh is a
+     * utility, an icon that says what it is on hover and to a reader. */
     const toolbar = element(doc, "div", "station-book__toolbar");
-    const saveButton = text(doc, "button", "station-book__action is-primary", "Save Current", { type: "button", "data-action": "save-current" });
-    const blendButton = text(doc, "button", "station-book__action", "Blend Edit", { type: "button", "data-action": "blend-edit" });
-    const refreshButton = text(doc, "button", "station-book__action is-quiet", "Refresh", { type: "button", "data-action": "refresh" });
+    const saveButton = text(doc, "button", PRIMARY, "Save Current", { type: "button", "data-action": "save-current" });
+    const blendButton = text(doc, "button", ACTION, "Blend Edit", { type: "button", "data-action": "blend-edit" });
+    const refreshButton = element(doc, "button", "station-handbook__utility", {
+      type: "button", "data-action": "refresh", "aria-label": "Refresh", title: "Refresh the line's saved recipes"
+    });
+    refreshButton.appendChild(glyph(doc, "refresh"));
     const contextLabel = element(doc, "span", "station-book__context");
     toolbar.appendChild(saveButton); toolbar.appendChild(blendButton); toolbar.appendChild(refreshButton); toolbar.appendChild(contextLabel);
     rootEl.appendChild(toolbar);
@@ -174,9 +221,9 @@
     const nameInput = element(doc, "input", "station-book__name", {
       type: "text", autocomplete: "off", spellcheck: "false", placeholder: "Recipe name", "aria-label": "Recipe name"
     });
-    const confirmButton = text(doc, "button", "station-book__action is-primary", "Save", { type: "button", "data-action": "confirm-save" });
-    const replaceButton = text(doc, "button", "station-book__action", "Replace existing", { type: "button", "data-action": "replace", hidden: "" });
-    const cancelButton = text(doc, "button", "station-book__action is-quiet", "Cancel", { type: "button", "data-action": "cancel-save" });
+    const confirmButton = text(doc, "button", PRIMARY, "Save", { type: "button", "data-action": "confirm-save" });
+    const replaceButton = text(doc, "button", ACTION, "Replace existing", { type: "button", "data-action": "replace", hidden: "" });
+    const cancelButton = text(doc, "button", QUIET, "Cancel", { type: "button", "data-action": "cancel-save" });
     entry.appendChild(nameInput); entry.appendChild(confirmButton); entry.appendChild(replaceButton); entry.appendChild(cancelButton);
     rootEl.appendChild(entry);
 
@@ -190,16 +237,31 @@
     columns.appendChild(list); columns.appendChild(detail);
     rootEl.appendChild(columns);
 
-    /* ---- Blend Edit's controls ---- */
+    /* ---- Blend Edit's controls ----
+     * One line of state with the longer explanation behind an information
+     * mark; the layers as a row of chips; then the actions, Done leading.
+     * Show all hoppers is a step back, not a completion, and is drawn as
+     * one. */
     const blendPanel = element(doc, "div", "station-book__blend", { hidden: "", "data-role": "blend-controls" });
+    const blendStatus = element(doc, "div", "station-book__blend-status");
     const blendHint = text(doc, "p", "station-book__blend-hint", "");
-    const layerChips = element(doc, "div", "station-book__layers", { role: "group", "aria-label": "Layers in Blend Edit" });
+    const blendInfo = element(doc, "span", "station-book__blend-info", {
+      tabindex: "0", role: "note",
+      "aria-label": "About Blend Edit: turn a layer over here, or with the chip under its name on the stage, to edit its blend in place. The hoppers stay where they are; Done turns them back.",
+      title: "Turn a layer over here, or with the chip under its name on the stage, to edit its blend in place. The hoppers stay where they are; Done turns them back."
+    });
+    blendInfo.appendChild(glyph(doc, "info"));
+    blendStatus.appendChild(blendHint); blendStatus.appendChild(blendInfo);
+    const layerRow = element(doc, "div", "station-book__layers", { role: "group", "aria-label": "Layers in Blend Edit" });
+    layerRow.appendChild(text(doc, "span", "station-book__layers-label", "Layers"));
+    const layerChips = element(doc, "span", "station-book__layer-chips");
+    layerRow.appendChild(layerChips);
     const blendActions = element(doc, "div", "station-book__blend-actions");
-    const editAllButton = text(doc, "button", "station-book__action", "Edit all layers", { type: "button", "data-action": "edit-all" });
-    const showAllButton = text(doc, "button", "station-book__action is-quiet", "Show all hoppers", { type: "button", "data-action": "show-all" });
-    const doneButton = text(doc, "button", "station-book__action is-primary", "Done", { type: "button", "data-action": "done" });
+    const editAllButton = text(doc, "button", ACTION, "Edit all layers", { type: "button", "data-action": "edit-all" });
+    const showAllButton = text(doc, "button", QUIET, "Show all hoppers", { type: "button", "data-action": "show-all" });
+    const doneButton = text(doc, "button", PRIMARY, "Done", { type: "button", "data-action": "done" });
     blendActions.appendChild(editAllButton); blendActions.appendChild(showAllButton); blendActions.appendChild(doneButton);
-    blendPanel.appendChild(blendHint); blendPanel.appendChild(layerChips); blendPanel.appendChild(blendActions);
+    blendPanel.appendChild(blendStatus); blendPanel.appendChild(layerRow); blendPanel.appendChild(blendActions);
     rootEl.appendChild(blendPanel);
 
     /* ---- Reading ---- */
@@ -305,20 +367,21 @@
       clearChildren(layerChips);
       const layers = blend && typeof blend.layers === "function" ? blend.layers() : [];
       for (const layer of layers) {
-        const chip = element(doc, "button", "station-book__layer-chip", {
+        // The chip is the letter; its state is the chip's own fill, said in
+        // words by the title and aria-pressed.
+        const chip = text(doc, "button", "station-handbook__chip station-book__layer-chip", layer.id, {
           type: "button", "data-layer": layer.id, "aria-pressed": layer.flipped ? "true" : "false",
+          "aria-label": `Layer ${layer.id}`,
           title: layer.flipped ? `Layer ${layer.id}: editing its blend in place; click to show its hoppers` : `Layer ${layer.id}: click to edit its blend in place`
         });
-        chip.appendChild(text(doc, "span", "station-book__chip-id", layer.id));
-        chip.appendChild(text(doc, "span", "station-book__chip-state", layer.flipped ? "editing" : "hoppers"));
         layerChips.appendChild(chip);
       }
       const flipped = layers.filter(layer => layer.flipped).length;
       blendHint.textContent = blend && typeof blend.available === "function" && !blend.available()
         ? "Blend Edit is read-only here: no application is connected to Station commands. Turn a layer over to see its blend as a list."
         : (flipped
-          ? `${flipped} of ${layers.length} layer${layers.length === 1 ? "" : "s"} turned over. Each change is applied to the running recipe as it is made; Done turns the hoppers back.`
-          : "Turn a layer over - here, or with the chip under its name on the stage - to edit its blend in place. The hoppers stay where they are.");
+          ? `${flipped} of ${layers.length} layer${layers.length === 1 ? "" : "s"} turned over. Changes apply to the running recipe as they are made.`
+          : "Select layers to edit their blends in place.");
       editAllButton.disabled = flipped === layers.length;
       showAllButton.disabled = flipped === 0;
     }
@@ -331,11 +394,17 @@
         ? `${current.workspace.displayName} · ${current.count} saved`
         : (on ? "No line" : "Not connected");
       saveButton.disabled = !on || !assigned || !!state.pending;
+      // One primary at a time: while the name is being asked for, the
+      // entry's own Save is the action that completes the work.
+      saveButton.classList.toggle("is-primary", !state.entryOpen);
       saveButton.setAttribute("title", !on
         ? "Saving is not available: no application is connected to Station."
         : (!assigned ? "Connect this desktop to a production line to save shared recipes." : "Save the running recipe to this line's shared recipes."));
       refreshButton.disabled = !on || !assigned || !!state.pending || !!(current && current.refreshing);
-      refreshButton.textContent = current && current.refreshing ? "Refreshing…" : "Refresh";
+      const refreshing = !!(current && current.refreshing);
+      refreshButton.setAttribute("aria-label", refreshing ? "Refreshing…" : "Refresh");
+      refreshButton.setAttribute("title", refreshing ? "Refreshing the line's saved recipes…" : "Refresh the line's saved recipes");
+      refreshButton.classList.toggle("is-busy", refreshing);
       blendButton.disabled = !(blend && typeof blend.enter === "function" && (typeof blend.canEnter !== "function" || blend.canEnter()));
       blendButton.setAttribute("title", blendButton.disabled
         ? "Blend Edit needs a line with layers on the stage."
