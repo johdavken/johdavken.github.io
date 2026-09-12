@@ -268,7 +268,7 @@ test("patchStage redraws only the hoppers whose runtime changed, and their class
   assert.ok(!classesOf(c2).includes("is-unassigned"), "a newly assigned hopper still reads unassigned");
 });
 
-test("patchStage updates a layer's running state and its extruder share in place", () => {
+test("patchStage updates a layer's running state and the share in its header in place", () => {
   const doc = fakeDocument();
   const before = runtimeFor();
   const { mount } = mountFocused(doc, before);
@@ -283,9 +283,35 @@ test("patchStage updates a layer's running state and its extruder share in place
   assert.ok(!classesOf(layerC).includes("is-running"));
   const shares = {};
   for (const layer of allWith(mount, "data-role", "layer")) {
-    shares[layer.getAttribute("data-layer")] = allWithClass(layer, "station-extruder__pct")[0].textContent;
+    shares[layer.getAttribute("data-layer")] = allWithClass(layer, "station-layer__share-value")[0].textContent;
+    assert.equal(allWithClass(layer, "station-extruder__pct").length, 0, "the old readout under the extruder was drawn");
   }
   assert.deepEqual(shares, { A: "30%", B: "70%", C: "—" });
+});
+
+test("patchStage rewrites the share's offer and leaves a share editor standing in the slot", () => {
+  const doc = fakeDocument();
+  const { mount } = mountFocused(doc, runtimeFor());
+  const shareOf = id => allWith(mount, "data-role", "layer-share").find(n => n.getAttribute("data-layer") === id);
+  assert.equal(shareOf("A").getAttribute("data-able"), "false");
+  // Something the boot file put in A's slot: the patch does not know it,
+  // and must not touch it.
+  const editor = doc.createElement("foreignObject");
+  editor.setAttribute("class", "station-layer__share-editor");
+  shareOf("A").appendChild(editor);
+  render.patchStage(mount, model.buildLineModel(literal({ layerCount: 3 })), {
+    document: doc, hopperState: runtimeFor(), layerState: { A: { layerPct: 55 }, B: { layerPct: 25 }, C: { layerPct: 20 } },
+    focusLayer: "B", stageAspect: 1.6, layerShare: { share: true }
+  });
+  assert.equal(shareOf("A").getAttribute("data-able"), "true");
+  assert.equal(shareOf("A").children[shareOf("A").children.length - 1], editor, "the editor was removed or moved");
+  assert.equal(allWithClass(shareOf("A"), "station-layer__share-value")[0].textContent, "55%");
+  // And with no offer given, the offer as drawn is left alone.
+  render.patchStage(mount, model.buildLineModel(literal({ layerCount: 3 })), {
+    document: doc, hopperState: runtimeFor(), layerState: { A: { layerPct: 55 }, B: { layerPct: 25 }, C: { layerPct: 20 } },
+    focusLayer: "B", stageAspect: 1.6
+  });
+  assert.equal(shareOf("A").getAttribute("data-able"), "true");
 });
 
 test("a patched stage and a fresh render of the same inputs are the same drawing", () => {

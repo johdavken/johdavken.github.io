@@ -274,6 +274,14 @@ function boot(options) {
     clickTarget: (name, layer) => { const el = api.target(name, layer); assert.ok(el, `no ${name} on layer ${layer}`); el.click(); return el; },
     cards: () => machine.querySelectorAll("[data-role='blend-card']"),
     chips: () => machine.querySelectorAll("[data-station-target='flip']"),
+    /* Turning a layer over is the Handbook's: its A-C selector for the
+     * layer, the same button an operator clicks. */
+    flipLayer: layer => {
+      const chip = panel.querySelectorAll(".station-book__layer-chip").find(n => n.getAttribute("data-layer") === layer);
+      assert.ok(chip, `no Handbook selector for layer ${layer}`);
+      chip.click();
+      return chip;
+    },
     flipped: () => machine.querySelectorAll("[data-role='layer'].is-flipped").map(n => n.getAttribute("data-layer")),
     clusters: () => machine.querySelectorAll(".station-hopper-cluster").length,
     modeOn: () => machine.getAttribute("data-blend-edit") === "true",
@@ -290,7 +298,7 @@ function boot(options) {
     /* A draft on a card: layer B's hopper 2 field, focused, with a new
      * value typed and not yet committed. */
     draftOnCard(layer, value) {
-      api.clickTarget("flip", layer);
+      api.flipLayer(layer);
       const card = api.cards().find(c => c.getAttribute("data-layer") === layer) || api.cards()[0];
       assert.ok(card, `layer ${layer} has a card`);
       const input = card.querySelectorAll("input").find(i => /blend percentage/.test(i.getAttribute("aria-label") || "") && !i.hasAttribute("readonly"));
@@ -353,7 +361,7 @@ test("Handbook Close with Blend Edit on is Done first: the mode ends, every laye
 
 test("Escape inside the Handbook with Blend Edit on does the same, and is spent there", () => {
   const s = boot().enterBlendEdit();
-  s.clickTarget("flip", "B");
+  s.flipLayer("B");
   assert.deepEqual(s.flipped(), ["B"]);
   const event = makeEvent("keydown", { key: "Escape", bubbles: true });
   s.panel.dispatchEvent(event);
@@ -364,7 +372,7 @@ test("Escape inside the Handbook with Blend Edit on does the same, and is spent 
 
 test("the launcher closing the Handbook is a close too, and ends the mode the same way", () => {
   const s = boot().enterBlendEdit();
-  s.clickTarget("flip", "C");
+  s.flipLayer("C");
   s.launcher.click();
   assert.equal(s.isHandbookOpen(), false);
   assertModeCleared(s);
@@ -383,7 +391,7 @@ test("a field being entered on a card commits along the editor's own path before
 
 test("with motion on, the close still ends the mode before the panel sets off", () => {
   const s = boot({ reducedMotion: false }).enterBlendEdit();
-  s.clickTarget("flip", "A");
+  s.flipLayer("A");
   s.clickAction("close-handbook");
   assert.equal(s.isHandbookOpen(), false);
   assert.equal(s.modeOn(), false);
@@ -397,7 +405,7 @@ test("with motion on, the close still ends the mode before the panel sets off", 
 
 test("normal interactions work at once after the close: the train opens a layer, a hopper control toggles", () => {
   const s = boot().enterBlendEdit();
-  s.clickTarget("flip", "B");
+  s.flipLayer("B");
   s.clickAction("close-handbook");
   // The train opens the layer's detailed editor - the full one, not a card.
   s.clickTarget("extruder", "A");
@@ -425,8 +433,10 @@ test("Blend Edit state is fully cleared: reopening the Handbook offers Blend Edi
   s.clickAction("blend-edit");
   assert.equal(s.modeOn(), true);
   assert.deepEqual(s.flipped(), [], "the layers turned over before the close did not come back turned");
-  assert.equal(s.chips().length, 3);
-  assert.ok(s.chips().every(chip => chip.getAttribute("data-on") !== "true"));
+  assert.equal(s.chips().length, 0, "no chip is drawn on the stage for the mode");
+  const selectors = s.panel.querySelectorAll(".station-book__layer-chip");
+  assert.equal(selectors.length, 3);
+  assert.ok(selectors.every(chip => chip.getAttribute("aria-pressed") !== "true"));
 });
 
 /* ----------------------------------------------------------------------
@@ -446,7 +456,7 @@ test("a valid interaction clears the refusal: a flip, Edit All, and the mode's e
   const s = boot().enterBlendEdit();
   s.clickTarget("extruder", "A");
   assert.equal(count(s.status.textContent, REFUSAL), 1);
-  s.clickTarget("flip", "A");
+  s.flipLayer("A");
   assert.equal(count(s.status.textContent, REFUSAL), 0, "turning a layer over cleared it");
   s.clickTarget("mixer", "B");
   assert.equal(count(s.status.textContent, REFUSAL), 1);
@@ -548,14 +558,14 @@ function frameOf(s) {
 /* The drawn machine, as its geometry: every placed coordinate of every
  * node under the canvas - and nothing of its state (class, hidden), so a
  * turned-over cluster, which is hidden and not moved, reads the same. The
- * cards Blend Edit lays over the clusters and the chips it hangs under
- * the layer names are the mode's own and are left out; what is compared
- * is the machine under them. */
+ * cards Blend Edit lays over the clusters are the mode's own and are left
+ * out; what is compared is the machine under them - the layer headers
+ * and their share slots included, which the mode does not touch. */
 const GEOMETRY_ATTRIBUTES = ["viewBox", "x", "y", "width", "height", "transform", "d", "points", "cx", "cy", "r", "rx", "ry", "x1", "y1", "x2", "y2"];
 function stageGeometry(s) {
   const nodes = [];
   const walk = node => {
-    if (node.getAttribute && (node.getAttribute("data-role") === "blend-card" || node.getAttribute("data-station-target") === "flip")) return;
+    if (node.getAttribute && node.getAttribute("data-role") === "blend-card") return;
     const placed = {};
     for (const key of GEOMETRY_ATTRIBUTES) if (node.getAttribute && node.getAttribute(key) !== null) placed[key] = node.getAttribute(key);
     if (Object.keys(placed).length) nodes.push([node.tagName, placed]);
@@ -574,7 +584,7 @@ test("Recipe Book and Blend Edit stand in one and the same frame: the shell's ro
   assert.equal(s.modeOn(), true);
   const blend = frameOf(s);
   assert.deepEqual(blend, book, "entering Blend Edit changed the frame");
-  s.clickTarget("flip", "B");
+  s.flipLayer("B");
   s.clickAction("edit-all");
   assert.deepEqual(frameOf(s), book, "turning layers over changed the frame");
   s.clickAction("done");

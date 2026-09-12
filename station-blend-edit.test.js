@@ -6,9 +6,11 @@
  * Three layers of it, tested at three levels:
  *
  *   the renderer   (station-render.js, station-machine-parts.js) draws the
- *                  flip chip on every normal bank while the mode is on and
- *                  the card where a cluster was turned over - at the
- *                  cluster's own box, with the layout untouched;
+ *                  card where a cluster was turned over - at the cluster's
+ *                  own box, with the layout untouched - and nothing else
+ *                  for the mode: turning a layer over is the Handbook's,
+ *                  and the header above, share slot included, is the same
+ *                  in the mode as out of it;
  *   the card       (station-focus-editor.js, variant "compact") is the
  *                  focused editor with its header, source line and drag
  *                  left out, committing through the same commands;
@@ -163,7 +165,7 @@ function stage(options) {
  *   The renderer: chips, cards, and a layout that does not move
  * -------------------------------------------------------------------- */
 
-test("outside Blend Edit nothing is drawn for it: no chip, no card, no class - the stage is the stage it was", () => {
+test("outside Blend Edit nothing is drawn for it: no card, no class - the stage is the stage it was", () => {
   const { svg } = stage();
   assert.equal(allWith(svg, "data-role", "flip").length, 0);
   assert.equal(allWith(svg, "data-role", "blend-card").length, 0);
@@ -174,19 +176,38 @@ test("outside Blend Edit nothing is drawn for it: no chip, no card, no class - t
   assert.equal(svg.getAttribute("role"), "img");
 });
 
-test("with the mode on, every normal bank carries its flip chip, off until its cluster is turned over", () => {
+test("with the mode on, no chip is drawn on the stage: turning a layer over is the Handbook's, and every normal bank can be", () => {
   const { svg } = stage({ blendEdit: true });
-  const chips = allWith(svg, "data-role", "flip");
-  assert.deepEqual(chips.map(chip => chip.getAttribute("data-layer")), ["A", "B", "C"]);
-  for (const chip of chips) {
-    assert.equal(chip.getAttribute("data-station-target"), "flip", "the chip is a click target the boot file resolves");
-    assert.equal(chip.getAttribute("data-on"), "false");
-    assert.ok(chip.querySelector(".station-hit"), "the chip has no hit area");
-    assert.equal(chip.querySelector(".station-flip__label").textContent, "EDIT BLEND");
-    assert.match(chip.querySelector("title").textContent, /click to edit its blend in place/);
-  }
+  assert.equal(allWith(svg, "data-role", "flip").length, 0, "a flip chip is drawn");
+  assert.equal(allWith(svg, "data-station-target", "flip").length, 0);
   assert.equal(allWith(svg, "data-role", "blend-card").length, 0, "no card until a layer is turned over");
   for (const id of ["A", "B", "C"]) assert.ok(layerGroup(svg, id).classList.contains("is-flippable"));
+});
+
+test("the layer's share stays in its header slot in Blend Edit, unchanged in value and place, so the mode swaps nothing there", () => {
+  const plain = stage();
+  const doc = fakeDocument();
+  const { model: m, resolved: r } = model();
+  const cards = { B: doc.createElement("div") };
+  const on = render.renderStage(m, { document: doc, hopperState: r.hopperState, layerState: r.layerState, blendEdit: true, blendCards: cards, layerShare: { share: true } });
+  const off = render.renderStage(m, { document: doc, hopperState: r.hopperState, layerState: r.layerState, layerShare: { share: true } });
+  const shareOf = (svg, id) => allWith(svg, "data-role", "layer-share").find(n => n.getAttribute("data-layer") === id);
+  for (const id of ["A", "B", "C"]) {
+    for (const [name, svg] of [["on", on], ["off", off]]) {
+      const share = shareOf(svg, id);
+      assert.ok(share, `${id} has no share with the mode ${name}`);
+      assert.equal(share.getAttribute("data-station-target"), "share");
+      assert.equal(share.getAttribute("data-able"), "true", "the share is not editable in the mode");
+      assert.equal(share.querySelector(".station-layer__share-value").textContent, `${id === "B" ? 40 : 30}%`);
+      const face = share.querySelector(".station-layer__share-face");
+      const resting = shareOf(plain.svg, id).querySelector(".station-layer__share-face");
+      for (const attr of ["x", "y", "width", "height"]) assert.equal(face.getAttribute(attr), resting.getAttribute(attr), `${id}'s slot moved with the mode ${name}`);
+    }
+  }
+  // The turned-over layer's card starts under the slot, never over it.
+  const card = allWith(on, "data-role", "blend-card")[0].querySelector("foreignObject");
+  const slot = shareOf(on, "B").querySelector(".station-layer__share-face");
+  assert.ok(Number(card.getAttribute("y")) > Number(slot.getAttribute("y")) + Number(slot.getAttribute("height")), "the card covers the share");
 });
 
 test("a layer turned over shows its card where its cluster stood; the others are untouched, and the clusters are hidden, not removed", () => {
@@ -224,9 +245,7 @@ test("a layer turned over shows its card where its cluster stood; the others are
   const cluster = allWith(b, "data-role", "hopper-cluster")[0];
   assert.ok(cluster, "the cluster was removed");
   assert.equal(allWith(cluster, "data-role", "hopper").length, 6);
-  const chip = allWith(b, "data-role", "flip")[0];
-  assert.equal(chip.getAttribute("data-on"), "true");
-  assert.equal(chip.querySelector(".station-flip__label").textContent, "HOPPERS");
+  assert.equal(allWith(b, "data-role", "flip").length, 0, "a flip chip is drawn on the turned-over layer");
   // A card makes the drawing a group with controls in it.
   assert.equal(svg.getAttribute("role"), "group");
   // The stylesheet hides the turned-over cluster.
@@ -257,11 +276,11 @@ test("turning a layer over moves nothing: the viewBox and every bank's declared 
     }
   }
   assert.equal(allWith(flipped, "data-role", "blend-card").length, 3);
-  // Cards never appear in the focused layout, and the chip is not drawn on
-  // a dimmed bank: the mode and the open layer are exclusive.
+  // Cards never appear in the focused layout: the mode and the open
+  // layer are exclusive.
   const focusedSvg = render.renderStage(m, { document: doc, hopperState: r.hopperState, layerState: r.layerState, focusLayer: "B", blendEdit: true, blendCards: cards, stageAspect: 1.6 });
   assert.equal(allWith(focusedSvg, "data-role", "blend-card").length, 0);
-  assert.equal(allWith(focusedSvg, "data-role", "flip").length, 0);
+  for (const id of ["A", "B", "C"]) assert.ok(!layerGroup(focusedSvg, id).classList.contains("is-flippable"));
 });
 
 test("the mount says when the mode is on, and a value patch works through a turned-over cluster", () => {
@@ -285,14 +304,14 @@ test("the mount says when the mode is on, and a value patch works through a turn
   assert.ok(!mount.hasAttribute("data-blend-edit"));
 });
 
-test("the card's box is exported and stable: the cluster's column, no narrower than the bank, under the chip", () => {
+test("the card's box is exported and stable: the cluster's column, no narrower than the bank, under the header's share slot", () => {
   const { model: m, resolved: r } = model();
   const layout = require("./station/station-machine-layout.js").computeLayout(m, { hopperState: r.hopperState });
   for (const bank of layout.banks) {
-    const chip = parts.flipChipBox(bank);
+    const slot = parts.shareSlotBox(bank);
     const box = parts.blendCardBox(bank);
-    assert.ok(chip.y > bank.header.y, "the chip is above the header");
-    assert.ok(box.y > chip.y + chip.height, "the card overlaps the chip");
+    assert.ok(slot.y > bank.header.y, "the slot is above the header");
+    assert.ok(box.y > slot.y + slot.height, "the card overlaps the slot");
     assert.equal(box.width, Math.max(bank.objects.cluster.width, bank.width));
     assert.ok(box.x <= bank.objects.cluster.x);
     assert.ok(Math.abs(box.y + box.height - (bank.objects.cluster.y + bank.objects.cluster.height)) < 0.01, "the card's bottom is not the cluster's");
@@ -543,14 +562,15 @@ test("the stage draws the cards from the same editor, addressed to the same reci
   assert.match(all, /if \(blendEdit\.active && \(!model \|\| !model\.layers\.length\)\) blendEdit\.active = false;/);
 });
 
-test("the flip chip is its own click target; a train click during the mode opens nothing and says so; ordinary clicks are untouched", () => {
+test("the header's share is its own click target, ahead of the mode's guard; a train click during the mode opens nothing and says so; ordinary clicks are untouched", () => {
   const start = boot.slice(boot.indexOf("function start()"));
   const click = start.slice(start.indexOf('mounts.machine?.addEventListener("click"'), start.indexOf("mounts.machine?.addEventListener(\"mouseover\""));
-  assert.match(click, /if \(target === "flip"\) \{\n\s+flipLayer\(layer\);\n\s+return;\n\s+\}/);
+  assert.doesNotMatch(click, /"flip"/, "the click handler still resolves a flip chip");
+  assert.match(click, /if \(target === "share"\) \{\n\s+openShareEditor\(hit\);\n\s+return;\n\s+\}/);
   assert.match(click, /if \(blendEdit\.active && opensLayer\(target\)\) \{\n\s+say\("Finish Blend Edit \(Done in the Handbook\) to open a layer's detailed editor\."\);\n\s+return;\n\s+\}/);
   // The controls and the focus paths that were there are there, in order:
-  // controls first, then the chip, then the mode's guard, then focus.
-  const order = ["toggleHopperControl(hit)", 'if (target === "flip")', "if (blendEdit.active && opensLayer(target))", "setFocus({ layer, target, hopper })"];
+  // controls first, then the share, then the mode's guard, then focus.
+  const order = ["toggleHopperControl(hit)", 'if (target === "share")', "if (blendEdit.active && opensLayer(target))", "setFocus({ layer, target, hopper })"];
   const positions = order.map(needle => click.indexOf(needle));
   assert.ok(positions.every(p => p > -1) && positions.every((p, i) => i === 0 || p > positions[i - 1]), "the click handler's order changed");
 });

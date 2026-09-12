@@ -247,8 +247,8 @@
     const blendHint = text(doc, "p", "station-book__blend-hint", "");
     const blendInfo = element(doc, "span", "station-book__blend-info", {
       tabindex: "0", role: "note",
-      "aria-label": "About Blend Edit: turn a layer over here, or with the chip under its name on the stage, to edit its blend in place. The hoppers stay where they are; Done turns them back.",
-      title: "Turn a layer over here, or with the chip under its name on the stage, to edit its blend in place. The hoppers stay where they are; Done turns them back."
+      "aria-label": "About Blend Edit: turn a layer over here to edit its blend in place; its share stays editable in its header. The hoppers stay where they are; Done turns them back.",
+      title: "Turn a layer over here to edit its blend in place; its share stays editable in its header. The hoppers stay where they are; Done turns them back."
     });
     blendInfo.appendChild(glyph(doc, "info"));
     blendStatus.appendChild(blendHint); blendStatus.appendChild(blendInfo);

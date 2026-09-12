@@ -425,45 +425,18 @@
 /* ---------------------------------------------------------------------
  *   Blend Edit: the cluster turned over
  * -------------------------------------------------------------------
- * While Blend Edit is on, a normal bank carries a flip chip under its
- * header, and a bank that has been turned over shows its compact blend
- * editor (station-machine-parts.js: flipChip, blendCard) where its
- * hoppers stood. The cluster is still built under the card - hidden, not
- * removed - so a value patch finds the hoppers it expects and the layer
- * comes back exactly as it was. The two faces occupy one footprint: the
- * card is sized to the cluster's own box, so nothing beside it moves.
+ * While Blend Edit is on, a bank that has been turned over (from the
+ * Handbook's A-E selectors) shows its compact blend editor
+ * (station-machine-parts.js: blendCard) where its hoppers stood. The
+ * cluster is still built under the card - hidden, not removed - so a
+ * value patch finds the hoppers it expects and the layer comes back
+ * exactly as it was. The two faces occupy one footprint: the card is
+ * sized to the cluster's own box, so nothing beside it moves. The
+ * header above, its share slot included, is the same in both modes.
  */
 
 .station-layer.is-flipped .station-hopper-cluster {
   display: none;
-}
-
-.station-flip__chip {
-  fill: var(--station-surface-raised);
-  stroke: var(--station-border-strong);
-  stroke-width: var(--station-line-thin);
-}
-
-.station-flip__label {
-  fill: var(--station-text-muted);
-  font-family: var(--station-font);
-  font-size: calc(var(--station-text-2xs) * var(--station-bank-scale, 1));
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  pointer-events: none;
-}
-
-.station-flip[data-on="true"] .station-flip__chip {
-  fill: var(--station-selection);
-  stroke: var(--station-accent);
-}
-
-.station-flip[data-on="true"] .station-flip__label {
-  fill: var(--station-text);
-}
-
-.station-flip:hover .station-flip__chip {
-  stroke: var(--station-accent);
 }
 
 /* The card's own surface: the same sunken panel the focus workspace is,

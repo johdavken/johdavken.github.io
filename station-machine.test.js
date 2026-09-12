@@ -300,9 +300,9 @@ test("no extruder is rotated or transformed in the plane of the screen - the mac
       const transform = node.getAttribute("transform");
       assert.ok(!transform, `${node.nodeName} inside the extruder carries a transform: ${transform}`);
     });
-    const readout = allWithClassName(extruder, "station-extruder__pct");
-    assert.equal(readout.length, 1);
-    assert.equal(readout[0].getAttribute("transform"), null);
+    // Nothing but the machine: the layer's share is in the header now.
+    assert.equal(allWithClassName(extruder, "station-extruder__pct").length, 0);
+    assert.equal(allWithClassName(extruder, "text").length, 0);
   }
 });
 
@@ -560,15 +560,79 @@ test("a resin code too wide for its hopper is truncated, not overrun", () => {
   assert.ok(parts.fitText("VERYLONGRESINCODE", 30, 9).length < "VERYLONGRESINCODE".length);
 });
 
-test("the layer percentage is shown on the extruder that represents it", () => {
-  const svg = stageFor(literal({ layerCount: 3 }), {
-    layerState: { A: { layerPct: 25 }, B: { layerPct: 50 }, C: { layerPct: 25 } }
+test("the layer percentage is shown in the layer's header, under its letter and role - and nowhere else", () => {
+  const svg = stageFor(literal({ layerCount: 5 }), {
+    layerState: { A: { layerPct: 20 }, B: { layerPct: 20 }, C: { layerPct: 20 }, D: { layerPct: 20 }, E: { layerPct: 20 } }
   });
-  assert.deepEqual(textOf(svg, "station-extruder__pct").sort(), ["25%", "25%", "50%"]);
+  assert.deepEqual(textOf(svg, "station-layer__share-value"), ["20%", "20%", "20%", "20%", "20%"]);
+  // The old readout under the extruder is gone: one place, not two.
+  assert.deepEqual(textOf(svg, "station-extruder__pct"), []);
+  for (const layer of allWith(svg, "data-role", "layer")) {
+    const header = allWith(layer, "data-role", "layer-header")[0];
+    const share = allWith(header, "data-role", "layer-share")[0];
+    assert.ok(share, "the share is not in the header");
+    const [name, role] = header.children;
+    assert.equal(String(name.getAttribute("class")), "station-layer__name");
+    assert.equal(String(role.getAttribute("class")), "station-layer__role");
+    const value = allWithClassName(share, "station-layer__share-value")[0];
+    // Directly beneath the role, on the same centreline, upright.
+    assert.ok(Number(value.getAttribute("y")) > Number(role.getAttribute("y")), "the share is not below the role");
+    assert.equal(Number(value.getAttribute("x")), Number(name.getAttribute("x")));
+    assert.equal(value.getAttribute("text-anchor"), "middle");
+    assert.equal(value.getAttribute("transform"), null);
+  }
+});
+
+test("the header's share is the same slot at every scale - normal, focused and dimmed - so a mode change moves nothing", () => {
+  const config = literal({ layerCount: 5 });
+  for (const focusLayer of [null, "C"]) {
+    const layout = layoutFor(config, focusLayer ? { focusLayer, stageAspect: 1.6 } : {});
+    const svg = stageFor(config, focusLayer ? { focusLayer, stageAspect: 1.6 } : {});
+    for (const bank of layout.banks) {
+      const slot = parts.shareSlotBox(bank);
+      const share = allWith(svg, "data-role", "layer-share").find(n => n.getAttribute("data-layer") === bank.id);
+      const face = allWithClassName(share, "station-layer__share-face")[0];
+      assert.equal(Number(face.getAttribute("x")), Math.round(slot.x * 100) / 100);
+      assert.equal(Number(face.getAttribute("y")), Math.round(slot.y * 100) / 100);
+      // Under the role's line, above the tallest hopper the layout allows.
+      assert.ok(slot.y > bank.header.y + 14 * bank.scale, "the slot overlaps the role");
+      assert.ok(slot.y + slot.height < bank.cluster.y, "the slot runs into the hoppers");
+      // And a compact one: the type is the role's size, not a chip's.
+      assert.ok(slot.height <= 16 * bank.scale + 0.01);
+    }
+  }
+  // The tallest profile the layout draws still leaves the slot clear.
+  const tall = {};
+  for (const layer of ["A", "B", "C", "D", "E"]) for (let index = 0; index < 6; index++) tall[`${layer}:${index}`] = { usableHeight: 999 };
+  const tallest = layoutFor(config, { hopperState: tall });
+  for (const bank of tallest.banks) {
+    const slot = parts.shareSlotBox(bank);
+    assert.ok(slot.y + slot.height < bank.cluster.y, "the slot runs into the tallest hoppers");
+  }
 });
 
 test("with no layer state the percentage reads as unknown, never as zero or a guess", () => {
-  assert.deepEqual(textOf(stageFor(literal({ layerCount: 3 })), "station-extruder__pct"), ["—", "—", "—"]);
+  assert.deepEqual(textOf(stageFor(literal({ layerCount: 3 })), "station-layer__share-value"), ["—", "—", "—"]);
+});
+
+test("the share is a target the boot file resolves, and says whether it may be changed", () => {
+  const config = literal({ layerCount: 3 });
+  const plain = stageFor(config, { layerState: { A: { layerPct: 30 } } });
+  for (const share of allWith(plain, "data-role", "layer-share")) {
+    assert.equal(share.getAttribute("data-station-target"), "share");
+    assert.equal(share.getAttribute("data-able"), "false", "with no offer, the share cannot be changed");
+    const [title, face, value, hit] = share.children;
+    assert.equal(title.nodeName, "title");
+    assert.doesNotMatch(title.textContent, /click to change/);
+    assert.equal(face.getAttribute("class"), "station-layer__share-face");
+    assert.equal(value.getAttribute("class"), "station-layer__share-value");
+    assert.equal(hit.getAttribute("class"), "station-hit");
+    for (const attr of ["x", "y", "width", "height"]) assert.equal(hit.getAttribute(attr), face.getAttribute(attr), "the hit and the face differ");
+  }
+  const offered = stageFor(config, { layerState: { A: { layerPct: 30 } }, layerShare: { share: true } });
+  const a = allWith(offered, "data-role", "layer-share").find(n => n.getAttribute("data-layer") === "A");
+  assert.equal(a.getAttribute("data-able"), "true");
+  assert.match(a.children[0].textContent, /Layer A · 30% of the film · click to change/);
 });
 
 /* ----------------------------------------------------------------------
@@ -576,13 +640,14 @@ test("with no layer state the percentage reads as unknown, never as zero or a gu
  * -------------------------------------------------------------------- */
 
 test("the documented targets exist per layer, and nothing else is declared", () => {
-  /* Three equipment targets per layer, plus two per hopper: its receiver
-   * is the pump control and its body the tracking control, which toggle
-   * the running job's state through the application. */
+  /* Three equipment targets per layer and the share in its header, plus
+   * two per hopper: its receiver is the pump control and its body the
+   * tracking control, which toggle the running job's state through the
+   * application. */
   const svg = stageFor(literal({ layerCount: 3, hopperCount: 2 }));
   const targets = allWith(svg, "data-station-target");
   const kinds = new Set(targets.map(node => node.getAttribute("data-station-target")));
-  assert.deepEqual([...kinds].sort(), ["cluster", "extruder", "mixer", "pump", "tracking"]);
+  assert.deepEqual([...kinds].sort(), ["cluster", "extruder", "mixer", "pump", "share", "tracking"]);
 
   for (const layer of ["A", "B", "C"]) {
     const forLayer = targets.filter(node => node.getAttribute("data-layer") === layer)
@@ -590,6 +655,7 @@ test("the documented targets exist per layer, and nothing else is declared", () 
     assert.equal(forLayer.filter(t => t === "cluster").length, 1);
     assert.equal(forLayer.filter(t => t === "mixer").length, 1);
     assert.equal(forLayer.filter(t => t === "extruder").length, 1);
+    assert.equal(forLayer.filter(t => t === "share").length, 1, "one share per layer, in its header");
     assert.equal(forLayer.filter(t => t === "tracking").length, 2, "one tracking control (the body) per hopper");
     assert.equal(forLayer.filter(t => t === "pump").length, 2, "one pump control (the receiver) per hopper");
   }
@@ -1796,21 +1862,21 @@ test("the turn is strong enough to read at a glance", () => {
   assert.ok(travel("angled") > travel("intermediate"));
 });
 
-test("the percentage stays upright and readable at every view", () => {
+test("the percentage stays upright and readable at every view, on the layer centreline in its header", () => {
   const svg = stageFor(literal({ layerCount: 5 }), {
     layerState: { A: { layerPct: 15 }, C: { layerPct: 30 }, E: { layerPct: 15 } }
   });
-  const readouts = allWithClassName(svg, "station-extruder__pct");
+  const readouts = allWithClassName(svg, "station-layer__share-value");
   assert.equal(readouts.length, 5);
   const banks = layoutFor(literal({ layerCount: 5 })).banks;
   readouts.forEach((readout, index) => {
     assert.equal(readout.getAttribute("transform"), null, "the percentage was dragged into the perspective");
-    // Under the machine, on the layer centreline.
+    // In the header, on the layer centreline, whichever way the train turns.
     assert.equal(readout.getAttribute("text-anchor"), "middle");
-    assert.equal(Number(readout.getAttribute("x")), banks[index].centerX);
-    assert.ok(Number(readout.getAttribute("y")) > banks[index].extruder.bounds.bottom);
+    assert.equal(Number(readout.getAttribute("x")), banks[index].header.x);
+    assert.ok(Number(readout.getAttribute("y")) < banks[index].cluster.y);
   });
-  assert.ok(readouts.map(r => r.textContent).includes("30%"));
+  assert.deepEqual(readouts.map(r => r.textContent), ["15%", "—", "30%", "—", "15%"]);
 });
 
 /* ----------------------------------------------------------------------

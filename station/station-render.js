@@ -72,9 +72,11 @@
    * @param {string} [options.selectedHopper] the selected hopper's id, on the open layer
    * @param {object} [options.hopperControls] { tracking, pump }: which of a hopper's
    *        operational controls may act - the bridge's offer, read once by the caller
+   * @param {object} [options.layerShare]   { share }: whether the layer share in each
+   *        header may be changed - the bridge's offer, read once by the caller
    * @param {Element} [options.workspace]   HTML content for the focus workspace
    * @param {boolean} [options.blendEdit]   Blend Edit is on: every normal bank
-   *        carries its flip chip
+   *        can be turned over
    * @param {object} [options.blendCards]   HTML content per layer id, for the
    *        banks turned over to their compact blend editor
    * @param {string} [options.raiseLayer]    layer to paint last (in transit)
@@ -131,6 +133,7 @@
         selectedHopper: bank.id === layout.focusLayer ? settings.selectedHopper || null : null,
         showHint: settings.showHint,
         hopperControls: settings.hopperControls || null,
+        layerShare: settings.layerShare || null,
         blendEdit: !!settings.blendEdit,
         blendCard: cards[bank.id] || null
       }));
@@ -156,8 +159,8 @@
    *   - a hopper whose runtime facts changed is drawn again by the same
    *     builder that drew it, and swapped for the old group in place - so
    *     a patched stage and a fresh one are the same drawing;
-   *   - a layer's running state and its extruder's share are updated on
-   *     the elements that carry them;
+   *   - a layer's running state and the share in its header are updated
+   *     on the elements that carry them;
    *   - everything else, the workspace and its <foreignObject> above all,
    *     is not touched.
    *
@@ -208,7 +211,8 @@
    * @param {Element} mount
    * @param {object} model
    * @param {object} [options]  hopperState, layerState, focusLayer,
-   *        selectedHopper, hopperControls, dimensions, stageAspect - as for renderStage
+   *        selectedHopper, hopperControls, layerShare, dimensions, stageAspect -
+   *        as for renderStage
    */
   function patchStage(mount, model, options) {
     if (!mount || !model) return null;
@@ -264,9 +268,20 @@
         hoppers += 1;
       }
 
-      const share = findAll(layerEl, node => hasClass(node, "station-extruder__pct"))[0];
+      /* The header's share: its value, and whether it may be changed. The
+       * share editor, when it is in the slot, is a separate node the boot
+       * file put there (station-layer-share.js); it is not touched, so a
+       * draft survives a value arriving from elsewhere and the rebuilt
+       * label under it shows what the application now holds. */
+      const share = findAll(layerEl, node => attributeOf(node, "data-role") === "layer-share")[0];
       if (share) {
-        share.textContent = parts.shareText(layerState && layerState[bank.id] ? layerState[bank.id].layerPct : null);
+        const layerPct = layerState && layerState[bank.id] ? layerState[bank.id].layerPct : null;
+        if (settings.layerShare) share.setAttribute("data-able", settings.layerShare.share ? "true" : "false");
+        const able = attributeOf(share, "data-able") === "true";
+        const value = findAll(share, node => hasClass(node, "station-layer__share-value"))[0];
+        if (value) value.textContent = parts.shareText(layerPct);
+        const title = childrenOf(share).find(node => String(node.nodeName || "").toLowerCase() === "title");
+        if (title) title.textContent = parts.shareTitle(bank.id, layerPct, able);
       }
     }
     return { hoppers, layers: layout.banks.length };
@@ -306,6 +321,7 @@
       selectedTarget: settings.selectedTarget,
       selectedHopper: settings.selectedHopper,
       hopperControls: settings.hopperControls,
+      layerShare: settings.layerShare,
       workspace: settings.workspace,
       blendEdit: settings.blendEdit,
       blendCards: settings.blendCards,

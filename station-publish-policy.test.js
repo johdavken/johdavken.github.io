@@ -70,12 +70,12 @@ test("a command's answer runs the same publish policy, marked as Station's own, 
   assert.match(committed, /onPublish\(\{ own: true \}\);/);
   // Nothing else: no patching of its own, no second render path, no note.
   assert.doesNotMatch(committed, /patchStage|renderAll|editorHandle|mountStage|note\(/);
-  // And the boot file writes lastOwnRevision there, and in the three other
+  // And the boot file writes lastOwnRevision there, and in the four other
   // places a command's answer arrives - a cluster control's toggle, the
-  // header's job controls' onCommitted, and a Blend Edit card's
-  // onCommitted (the same editor, compact) - which run the identical two
-  // lines.
-  assert.equal((boot.match(/lastOwnRevision\s*=/g) || []).length, 5, "lastOwnRevision is written somewhere other than its declaration, the editor's and the cards' onCommitted, toggleHopperControl and the job controls' onCommitted");
+  // header's job controls' onCommitted, a Blend Edit card's onCommitted
+  // (the same editor, compact), and the layer share editor's onCommitted
+  // - which run the identical two lines.
+  assert.equal((boot.match(/lastOwnRevision\s*=/g) || []).length, 6, "lastOwnRevision is written somewhere other than its declaration, the editor's and the cards' onCommitted, toggleHopperControl, the job controls' onCommitted and the share editor's onCommitted");
   const cards = draw.slice(draw.indexOf("const card = focusEditor.create("), draw.indexOf("cardHandles[entry.id] = card;"));
   assert.match(cards, /onCommitted: result => \{\n\s+lastOwnRevision = Number\.isInteger\(result\.revision\) \? result\.revision : null;\n\s+onPublish\(\{ own: true \}\);/);
   assert.match(cards, /variant: "compact",/);
@@ -85,6 +85,10 @@ test("a command's answer runs the same publish policy, marked as Station's own, 
   const toggle = body("toggleHopperControl");
   assert.match(toggle, /lastOwnRevision = Number\.isInteger\(result\.revision\) \? result\.revision : null;\n\s+onPublish\(\{ own: true \}\);/);
   assert.doesNotMatch(toggle, /patchStage|renderAll|mountStage|setFocus|clearFocus/);
+  const share = body("openShareEditor");
+  assert.match(share, /onCommitted: result => \{\n\s+lastOwnRevision = Number\.isInteger\(result\.revision\) \? result\.revision : null;\n\s+onPublish\(\{ own: true \}\);/);
+  assert.match(share, /commands: commandsFor\(current\.resolved\),/, "the share editor is not handed the same command bridge");
+  assert.doesNotMatch(share, /patchStage|renderAll|mountStage|setFocus|clearFocus/);
 });
 
 test("commands are on offer only for the live source: demo data pinned in the host stays read-only", () => {
@@ -125,7 +129,9 @@ test("the policy classifies first, patches a value change in place, and renders 
 
   const structural = publish.slice(publish.indexOf("const abandoned = own ? null : editing;"));
   assert.match(structural, /renderAll\(\);/);
-  assert.match(structural, /changed underneath you; what you were entering for \$\{abandoned\.hopper\} was not applied/);
+  // The abandoned control is named: the hopper, or the layer's share.
+  assert.match(structural, /const what = abandoned\.hopper \? abandoned\.hopper : `layer \$\{abandoned\.layer\}'s share`;/);
+  assert.match(structural, /changed underneath you; what you were entering for \$\{what\} was not applied/);
   assert.match(structural, /editorHandle\.note\(message\)/);
 });
 

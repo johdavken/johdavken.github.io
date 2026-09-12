@@ -80,6 +80,7 @@
     "station/station-transition.js",
     "station/station-focus-editor.js",
     "station/station-hopper-controls.js",
+    "station/station-layer-share.js",
     // The run-down projection before the two that read it: the timeline
     // and the header's job controls.
     "station/station-rundown.js",
@@ -97,7 +98,7 @@
     "station/station.js"
   ];
 
-  const VERSION = "0.25.0";
+  const VERSION = "0.26.0";
 
   function requested() {
     try {

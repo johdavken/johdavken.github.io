@@ -126,7 +126,7 @@
     ].join("|");
   }
 
-  /* The layer's share of the film structure, as the extruder shows it. */
+  /* The layer's share of the film structure, as the layer header shows it. */
   function shareText(layerPct) {
     return Number.isFinite(layerPct) && layerPct > 0 ? `${round(layerPct)}%` : "—";
   }
@@ -612,7 +612,7 @@
    * like every other component's, and mirroring is a matter of geometry
    * rather than of a scale(-1) somewhere a later reader has to find.
    */
-  function extruder(doc, bank, layerPct) {
+  function extruder(doc, bank) {
     const e = bank.extruder;
     const asset = extruderAssets.views[e.view];
     const g = group(doc, "station-extruder", "extruder", {
@@ -655,14 +655,6 @@
         }));
     }
     g.appendChild(body);
-
-    /* The layer's share of the film structure. Upright, always, and under the
-     * machine on the layer centreline: it is data, and it must not be dragged
-     * into the equipment's perspective. */
-    g.appendChild(label(doc,
-      shareText(layerPct),
-      e.label.x, e.label.y, "station-extruder__pct"));
-
     return g;
   }
 
@@ -695,21 +687,22 @@
    * ------------------------------------------------------------------ */
 
   /* --------------------------------------------------------------------
-   *   Blend Edit: the cluster's other face
+   *   Layer share: the header's third line
    * ------------------------------------------------------------------
-   * While Blend Edit is on (station.js), a layer's hopper cluster can be
-   * turned over to show a compact editor of its blend - the same layer,
-   * in the same place, the cluster's drawing hidden under it. Two builders:
-   * the flip chip, the one control that turns a cluster over, drawn on
-   * every normal bank while the mode is on; and the card, the frame and
-   * the <foreignObject> that carries the editor the boot file built
-   * (station-focus-editor.js, compact variant), sized to the cluster's
-   * own footprint so nothing around it moves.
+   * The layer's share of the film structure, under the layer's letter and
+   * role - where the value belongs, with the identity it qualifies, and
+   * clear of anything the Operator Handbook can cover. One slot, in every
+   * mode: the same box in Blend Edit as out of it, so the header never
+   * changes height and nothing below it moves. It is drawn as a target
+   * (data-station-target "share") that the boot file resolves to the
+   * share editor (station-layer-share.js), which puts its field in this
+   * same box; `data-able` says whether the application offers the
+   * command, so a share that cannot be changed reads as a label.
    */
 
-  /* The chip's place: under the layer's header, centred on the cluster,
+  /* The slot's place: under the layer's header, centred on the cluster,
    * sized in type against the bank's scale like the labels beside it. */
-  function flipChipBox(bank) {
+  function shareSlotBox(bank) {
     const scale = bank.scale || 1;
     const width = 64 * scale;
     const height = 16 * scale;
@@ -721,38 +714,62 @@
     };
   }
 
+  /* The slot's tooltip: the value, and the invitation only when the
+   * application offers the change. Exported so the renderer's patch path
+   * writes the same words a fresh render would. */
+  function shareTitle(layerId, layerPct, able) {
+    return able
+      ? `Layer ${layerId} · ${shareText(layerPct)} of the film · click to change`
+      : `Layer ${layerId} · ${shareText(layerPct)} of the film`;
+  }
+
+  function layerShare(doc, bank, layerPct, able) {
+    const box = shareSlotBox(bank);
+    const g = group(doc, "station-layer__share", "layer-share", {
+      "data-station-target": "share",
+      "data-layer": bank.id,
+      "data-able": able ? "true" : "false"
+    });
+    const tip = doc.createElementNS ? doc.createElementNS(SVG_NS, "title") : doc.createElement("title");
+    tip.textContent = shareTitle(bank.id, layerPct, able);
+    g.appendChild(tip);
+    /* The face under the value: transparent at rest, lit on hover and
+     * while the editor is in the slot. The hit area over both is the
+     * slot itself - a pointer target wider than the digits, without
+     * larger type. */
+    g.appendChild(node(doc, "rect", "station-layer__share-face", {
+      x: box.x, y: box.y, width: box.width, height: box.height, rx: 3 * (bank.scale || 1)
+    }));
+    g.appendChild(label(doc, shareText(layerPct), box.x + box.width / 2, box.y + box.height * 0.72, "station-layer__share-value"));
+    g.appendChild(hitArea(doc, box.x, box.y, box.width, box.height));
+    return g;
+  }
+
+  /* --------------------------------------------------------------------
+   *   Blend Edit: the cluster's other face
+   * ------------------------------------------------------------------
+   * While Blend Edit is on (station.js), a layer's hopper cluster can be
+   * turned over to show a compact editor of its blend - the same layer,
+   * in the same place, the cluster's drawing hidden under it. Which
+   * layers are turned over is the Handbook's to say (its A-E selectors,
+   * Edit all and Show all); nothing on the stage turns one. One builder:
+   * the card, the frame and the <foreignObject> that carries the editor
+   * the boot file built (station-focus-editor.js, compact variant), sized
+   * to the cluster's own footprint so nothing around it moves.
+   */
+
   /* The card's footprint: the cluster's column, no narrower than the
-   * bank's own, from under the flip chip to the bottom of the captions.
-   * Read off the layout the cluster was drawn from, so the card and the
-   * cluster it stands in for are the same box in every layout. */
+   * bank's own, from under the header's share slot to the bottom of the
+   * captions. Read off the layout the cluster was drawn from, so the card
+   * and the cluster it stands in for are the same box in every layout. */
   function blendCardBox(bank) {
     const scale = bank.scale || 1;
-    const chip = flipChipBox(bank);
+    const slot = shareSlotBox(bank);
     const cluster = bank.objects.cluster;
     const x = Math.min(cluster.x, bank.x);
     const width = Math.max(cluster.width, bank.width);
-    const y = chip.y + chip.height + 6 * scale;
+    const y = slot.y + slot.height + 6 * scale;
     return { x, y, width, height: cluster.y + cluster.height - y };
-  }
-
-  function flipChip(doc, bank, flipped) {
-    const box = flipChipBox(bank);
-    const g = group(doc, "station-flip", "flip", {
-      "data-station-target": "flip",
-      "data-layer": bank.id,
-      "data-on": flipped ? "true" : "false"
-    });
-    const tip = doc.createElementNS ? doc.createElementNS(SVG_NS, "title") : doc.createElement("title");
-    tip.textContent = flipped
-      ? `Layer ${bank.id} · editing its blend · click to show its hoppers`
-      : `Layer ${bank.id} · click to edit its blend in place`;
-    g.appendChild(tip);
-    g.appendChild(node(doc, "rect", "station-flip__chip", {
-      x: box.x, y: box.y, width: box.width, height: box.height, rx: 3 * (bank.scale || 1)
-    }));
-    g.appendChild(label(doc, flipped ? "HOPPERS" : "EDIT BLEND", box.x + box.width / 2, box.y + box.height * 0.72, "station-flip__label"));
-    g.appendChild(hitArea(doc, box.x - 4, box.y - 4, box.width + 8, box.height + 8));
-    return g;
   }
 
   function blendCard(doc, bank, content) {
@@ -774,10 +791,10 @@
     const classes = ["station-layer"];
     if (bank.emphasis === "focused") classes.push("is-focused");
     if (bank.emphasis === "dimmed") classes.push("is-dimmed");
-    /* Blend Edit: the flip chip is drawn on every normal bank while the
-     * mode is on; a bank whose card was handed in is turned over - its
-     * cluster still built, and hidden (hopper.css), so a patch finds the
-     * hoppers it expects and the layer comes back exactly as it was. */
+    /* Blend Edit: every normal bank can be turned over while the mode is
+     * on; a bank whose card was handed in is - its cluster still built,
+     * and hidden (hopper.css), so a patch finds the hoppers it expects
+     * and the layer comes back exactly as it was. */
     const flippable = !!settings.blendEdit && bank.emphasis === "normal";
     const card = flippable && settings.blendCard ? settings.blendCard : null;
     if (flippable) classes.push("is-flippable");
@@ -816,16 +833,18 @@
     header.appendChild(label(doc, bank.id, bank.header.x, bank.header.y, "station-layer__name"));
     header.appendChild(label(doc, String(bank.roleLabel || "").toUpperCase(),
       bank.header.x, bank.header.y + 14 * bank.scale, "station-layer__role"));
+    header.appendChild(layerShare(doc, bank,
+      layerState && layerState[bank.id] ? layerState[bank.id].layerPct : null,
+      !!(settings.layerShare && settings.layerShare.share)));
     g.appendChild(header);
 
     g.appendChild(hopperCluster(doc, bank, hopperState, settings));
-    if (flippable) g.appendChild(flipChip(doc, bank, !!card));
     if (card) g.appendChild(blendCard(doc, bank, card));
     /* Extruder, then the throat, then the mixer. The throat lands on the feed
      * flange, which stands in front of the gearbox and motor; drawn the other
      * way round the motor would paint over it and the two would look
      * unconnected. */
-    g.appendChild(extruder(doc, bank, layerState && layerState[bank.id] ? layerState[bank.id].layerPct : null));
+    g.appendChild(extruder(doc, bank));
     g.appendChild(throat(doc, bank));
     g.appendChild(mixer(doc, bank));
     return g;
@@ -867,6 +886,6 @@
   return {
     SVG_NS, node, label, group, taper, hitArea, fitText, hopperStateKey, shareText,
     hopper, hopperCluster, mixer, throat, extruder, layerBank, workspace,
-    flipChipBox, blendCardBox, flipChip, blendCard
+    shareSlotBox, shareTitle, layerShare, blendCardBox, blendCard
   };
 });

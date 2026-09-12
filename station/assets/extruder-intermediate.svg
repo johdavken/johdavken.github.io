@@ -23,7 +23,6 @@
     .station-extruder__stop--metal-2 { stop-color: #50637a; }
     .station-extruder__stop--drive-0 { stop-color: #50637a; }
     .station-extruder__stop--drive-1 { stop-color: #1b2430; }
-    .station-extruder__pct { fill: #e5eaf1; font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace; font-size: calc(12px * 1); font-weight: 600; }
   </style>
   <defs>
     <linearGradient id="station-extruder-intermediate-lid" x1="0" y1="0" x2="0.2" y2="1"><stop offset="0" class="station-extruder__stop--lid-0"/><stop offset="1" class="station-extruder__stop--lid-1"/></linearGradient>

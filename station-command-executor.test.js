@@ -189,7 +189,7 @@ test("app.js installs the executor once, beside the state bridge, and nothing el
   for (const file of fs.readdirSync(path.join(ROOT, "station")).filter(name => name.endsWith(".js"))) {
     const source = fs.readFileSync(path.join(ROOT, "station", file), "utf8");
     assert.doesNotMatch(source, /PolynStationCommandBridge\s*\.\s*connect|commands\.connect\s*\(/, `${file} connects a producer`);
-    if (!["station-focus-editor.js", "station-hopper-controls.js", "station-job-controls.js"].includes(file)) assert.doesNotMatch(source, /\.dispatch\s*\(/, `${file} dispatches a command`);
+    if (!["station-focus-editor.js", "station-hopper-controls.js", "station-job-controls.js", "station-layer-share.js"].includes(file)) assert.doesNotMatch(source, /\.dispatch\s*\(/, `${file} dispatches a command`);
   }
 });
 

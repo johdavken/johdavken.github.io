@@ -31,6 +31,108 @@
   letter-spacing: 0.12em;
 }
 
+/* ---- The layer's share: the header's third line ----
+   The layer's percentage of the film structure, under the role, in one
+   fixed slot (station-machine-parts.js: shareSlotBox) that is the same
+   box in every mode - so the header never changes height and nothing
+   under it moves. Subordinate to the letter above it: the value's type,
+   not a chip's. The face under it is the pointer target, wider than the
+   digits; it is transparent at rest and lit on hover and while the
+   editor (station-layer-share.js) is in the slot, on the same surface
+   tokens the editors' fields use, so it is a control of the same family
+   in every theme rather than a browser's own grey box.
+
+     data-able     whether the application offers the command: a share it
+                   does not still shows its value, and reads as a label -
+                   the same rule as the hopper controls' and the editor's
+                   read-only values.
+     is-editing    the editor is in the slot: the label is hidden under
+                   it, the face is the field's surface. */
+.station-layer__share-value {
+  fill: var(--station-text);
+  font-family: var(--station-font-mono);
+  font-size: calc(var(--station-text-sm) * var(--station-bank-scale, 1));
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.station-layer__share-face {
+  fill: transparent;
+  stroke: none;
+  pointer-events: none;
+}
+
+.station-layer__share[data-able="false"] .station-hit {
+  cursor: default;
+}
+
+.station-layer__share[data-able="true"]:hover .station-layer__share-face {
+  fill: var(--station-surface-hover);
+}
+
+.station-layer__share[data-able="true"]:hover .station-layer__share-value {
+  fill: var(--station-accent);
+}
+
+.station-layer__share.is-editing .station-layer__share-value {
+  visibility: hidden;
+}
+
+.station-layer__share.is-editing .station-layer__share-face {
+  fill: var(--station-surface-editable);
+  stroke: var(--station-selection);
+  stroke-width: 2;
+}
+
+/* With the field in the slot, the hit under it must not take the
+   pointer from the field. */
+.station-layer__share.is-editing .station-hit {
+  pointer-events: none;
+}
+
+/* The editor's box: the slot itself. Its input is under the root's field
+   reset (base.css), so the surface, the edge and the focus ring are the
+   face's - the field itself paints nothing of its own. */
+.station-layer__share-editor {
+  overflow: visible;
+}
+
+.station-layer__share-form {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  width: 100%;
+  height: 100%;
+  color: var(--station-text);
+  font-family: var(--station-font-mono);
+  font-size: calc(var(--station-text-sm) * var(--station-bank-scale, 1));
+  font-weight: 600;
+  line-height: 1;
+}
+
+.station-layer__share-input {
+  --station-field-padding: 0;
+  --station-field-width: 2.6em;
+  --station-field-bg: transparent;
+  --station-field-cursor: text;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.station-layer__share-input[aria-invalid="true"] {
+  color: var(--station-danger);
+}
+
+.station-layer__share-unit {
+  color: var(--station-text-muted);
+}
+
+/* A refused draft: the face says so, as the editors' fields do. */
+.station-layer__share.is-editing.is-invalid .station-layer__share-face {
+  stroke: var(--station-danger);
+}
+
 /* Layer identity is an accent, never an equipment fill. Set as a custom
  * property on the bank so every part that wants to carry the layer's colour
  * reads one value. */
@@ -288,14 +390,6 @@
 
 .station-extruder__stop--drive-1 {
   stop-color: var(--station-steel-dark);
-}
-
-/* The layer's share of the film structure, on the equipment that represents it. */
-.station-extruder__pct {
-  fill: var(--station-text);
-  font-family: var(--station-font-mono);
-  font-size: calc(var(--station-text-sm) * var(--station-bank-scale, 1));
-  font-weight: 600;
 }
 
 /* ---------------------------------------------------------------------

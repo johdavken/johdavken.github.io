@@ -385,7 +385,7 @@ test("the mode's controls show which layers are turned over, turn one or all, an
   // order, not on the bench.
   const info = root.querySelector(".station-book__blend-info");
   assert.equal(info.getAttribute("tabindex"), "0");
-  assert.match(info.getAttribute("title"), /Turn a layer over here, or with the chip under its name on the stage/);
+  assert.match(info.getAttribute("title"), /Turn a layer over here to edit its blend in place; its share stays editable in its header/);
   assert.match(info.getAttribute("aria-label"), /Done turns them back/);
   assert.equal(byAction(root, "show-all").disabled, true);
   assert.equal(byAction(root, "edit-all").disabled, false);

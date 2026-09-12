@@ -63,6 +63,13 @@
    * it is handed; what happens after is the same publish policy the
    * editor's commands run (see toggleHopperControl). */
   const hopperControls = root.PolynStationHopperControls || null;
+  /* The layer header's write seam (station-layer-share.js): the layer's
+   * share of the film, drawn under its role and edited in that same
+   * slot. This file resolves a click on the drawn value to the module,
+   * which opens its field there and issues the command on the bridge it
+   * is handed; what happens after is the same publish policy the
+   * editor's commands run (see openShareEditor). */
+  const layerShare = root.PolynStationLayerShare || null;
   /* The run-down timeline (station-rundown-timeline.js) and the header's
    * job controls (station-job-controls.js). The timeline is a reader: it
    * is fed the same resolved state the stage draws from and projects it;
@@ -98,6 +105,13 @@
    * the offer is the bridge's answer, asked each time. */
   function controlsFor(resolved) {
     return hopperControls ? hopperControls.abilities(commandsFor(resolved), "current") : null;
+  }
+
+  /* Whether the layer share in each header may be changed, for what is on
+   * screen: the same question, asked of the share module, written onto
+   * each drawn share by the renderer. */
+  function shareFor(resolved) {
+    return layerShare ? layerShare.abilities(commandsFor(resolved), "current") : null;
   }
 
   if (!lineModel || !render || !demoLines || !source || !shell || !transition || !focusEditor) return;
@@ -154,7 +168,9 @@
    *   editing          the control the operator is in, if any:
    *                    { recipe, layer, index, hopper, slot, mode, draft,
    *                      baseRevision, baseValue }
-   *                    recipe: current | next   slot: resin | pct | source
+   *                    recipe: current | next
+   *                    slot: resin | pct | source | share (the header's
+   *                    layer share: index and hopper null)
    *                    mode: search | typing    baseRevision: the snapshot
    *                    revision when the control was entered; baseValue:
    *                    the canonical value then
@@ -171,14 +187,20 @@
    * drawn: what a value-only publish updates in place. Null when no layer
    * is open. */
   let editorHandle = null;
+  /* The share editor's handle (station-layer-share.js) while one is in a
+   * header's slot: at most one, on one layer. Null otherwise, and after
+   * every render, which rebuilds the header it was in. */
+  let shareHandle = null;
 
   /* BLEND EDIT - PRESENTATION STATE, NOT APPLICATION STATE.
    *
-   * A mode of the stage, entered from the Handbook's Recipe Book: while it
-   * is on, each layer's hopper cluster carries a flip chip, and a layer
-   * that has been turned over shows the compact blend editor
-   * (station-focus-editor.js, variant "compact") in its cluster's own
-   * footprint. Which layers are turned over is a fact about this screen,
+   * A mode of the stage, entered from the Handbook's Recipe Book: while
+   * it is on, a layer can be turned over from the Handbook's A-E
+   * selectors (or all at once), and a layer that has been turned over
+   * shows the compact blend editor (station-focus-editor.js, variant
+   * "compact") in its cluster's own footprint. The header above stays as
+   * it is, its share slot included: the layer's share is edited there in
+   * this mode as out of it. Which layers are turned over is a fact about this screen,
    * like which layer is open; it travels nowhere and copies nothing. The
    * recipe values every card shows come from the bridge snapshot, and
    * every edit made on a card is a command through the same bridge the
@@ -864,7 +886,8 @@
         layerState: resolved.layerState,
         focusLayer: shown,
         selectedHopper: focus && focus.layer === shown ? focus.hopper : null,
-        hopperControls: controlsFor(resolved)
+        hopperControls: controlsFor(resolved),
+        layerShare: shareFor(resolved)
       });
       if (editorHandle) editorHandle.update({ hopperState: resolved.hopperState });
       // The cards are editors too: the same update, around whatever
@@ -887,7 +910,8 @@
     const abandoned = own ? null : editing;
     renderAll();
     if (abandoned) {
-      const message = `Layer ${abandoned.layer} changed underneath you; what you were entering for ${abandoned.hopper} was not applied.`;
+      const what = abandoned.hopper ? abandoned.hopper : `layer ${abandoned.layer}'s share`;
+      const message = `Layer ${abandoned.layer} changed underneath you; what you were entering for ${what} was not applied.`;
       if (editorHandle) editorHandle.note(message);
       else say(message);
     }
@@ -946,6 +970,55 @@
     }
   }
 
+  /* A click on a layer header's share - the drawn value, or the field
+   * already in its slot. The request is what the share's own element
+   * says (station-layer-share.js reads the layer and the offer off it);
+   * the module opens its field in the slot, and each commit the field
+   * makes is one command whose answer runs the same publish policy the
+   * editor's commands run: the header is patched from the application's
+   * snapshot, showing what it applied. Nothing here selects, opens or
+   * closes anything - a share is edited with a layer open, with none,
+   * and in Blend Edit alike. A second click on the slot that is already
+   * open returns the caret to it; a click on another layer's slot has
+   * already left this one (leaving the field commits it) by the time it
+   * lands here. */
+  function openShareEditor(element) {
+    if (!layerShare) return;
+    const request = layerShare.requestFrom(element);
+    if (!request) return;
+    if (shareHandle && shareHandle.isOpen() && shareHandle.layer === request.layer) {
+      shareHandle.focus();
+      return;
+    }
+    if (!request.able) {
+      say(`Layer ${request.layer}'s share cannot be changed here: ${layerShare.reason(commandsFor(current.resolved), "current")}`);
+      return;
+    }
+    if (shareHandle && shareHandle.isOpen()) shareHandle.commit();
+    const recipe = "current";
+    const layerState = current.resolved ? current.resolved.layerState : null;
+    const handle = layerShare.open(mounts.machine.ownerDocument, {
+      target: element,
+      layer: request.layer,
+      value: layerState && layerState[request.layer] ? layerState[request.layer].layerPct : null,
+      commands: commandsFor(current.resolved),
+      recipe,
+      note: say,
+      onEditing: record => {
+        editing = record ? Object.assign({
+          recipe,
+          baseRevision: current.resolved ? current.resolved.revision : null
+        }, record) : null;
+      },
+      onCommitted: result => {
+        lastOwnRevision = Number.isInteger(result.revision) ? result.revision : null;
+        onPublish({ own: true });
+      },
+      onClosed: () => { if (shareHandle === handle) shareHandle = null; }
+    });
+    shareHandle = handle;
+  }
+
   /* The controller's render callback: the stage for the current line, at a
    * given focus. The selected target is drawn only on the layer that is
    * open, as before; the open layer's editor is built here and handed to
@@ -955,6 +1028,7 @@
     highlighted = null;
     // A render replaces the editor, so no control can still be active.
     editing = null;
+    shareHandle = null;
     const model = current.model;
     const hopperState = current.resolved ? current.resolved.hopperState : null;
     const layer = focusLayer && model ? model.layers.find(entry => entry.id === focusLayer) : null;
@@ -1030,6 +1104,7 @@
       selectedTarget: focus ? focus.target : null,
       selectedHopper,
       hopperControls: controlsFor(current.resolved),
+      layerShare: shareFor(current.resolved),
       workspace: editor ? editor.element : null,
       blendEdit: blendEdit.active && !focusLayer,
       blendCards: cards,
@@ -1138,10 +1213,12 @@
         return;
       }
 
-      /* Blend Edit's flip chip: turn the layer over, or back. Drawn only
-       * while the mode is on, so it cannot be hit otherwise. */
-      if (target === "flip") {
-        flipLayer(layer);
+      /* The header's share: its field, in the slot. Like the controls
+       * above, the whole of the click - no selection, no focus change -
+       * and open in every mode, Blend Edit included, so the mode's guard
+       * below never sees it. */
+      if (target === "share") {
+        openShareEditor(hit);
         return;
       }
       /* While Blend Edit is on, the train opens nothing: the compact face
