@@ -70,6 +70,13 @@ producer, is visited once at the end to check that it is read-only.
   labels all hit the owning hopper's rectangle; the receiver retains its
   delegated target. Every drawing element remains pointer-inert.
 - **Percentage field** - "60", "100" and "33.33" all fit without clipping.
+- **Hopper drag** - a press on a row's surface that does not travel is not
+  a drag; one that does marks the row and the row under the pointer with
+  no text selected; the drop moves the assignment through the application
+  (the rows, the bridge snapshot and the hidden legacy fields agree, one
+  history entry); every mark is gone afterwards; a press in the percentage
+  field never becomes a drag; Escape cancels a drag and leaves the layer
+  open.
 - **Viewports** - 1920x1080, 1440x900 and 1160x800; no page scrollbar, the
   too-small notice hidden, the editor's content not scrolling inside it.
 

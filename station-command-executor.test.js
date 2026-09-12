@@ -29,6 +29,7 @@ const stateBridgeModule = require("./station-state-bridge.js");
 const hookups = require("./hookup-sources.js");
 const nextRecipe = require("./next-recipe.js");
 const validation = require("./validation.js");
+const rearrangement = require("./hopper-rearrangement.js");
 
 /* ----------------------------------------------------------------------
  *   Lifting the application's own code
@@ -124,7 +125,7 @@ function boot(options) {
     };
   `);
   const env = {
-    window: { PolynHookupSources: hookups, PolynNextRecipe: nextRecipe },
+    window: { PolynHookupSources: hookups, PolynNextRecipe: nextRecipe, PolynHopperRearrangement: rearrangement },
     state: settings.state || {
       lineType: 3, hopperNamingLine9: "standard",
       layers: layersFor(["A", "B", "C"], "LIVE"),
@@ -161,7 +162,7 @@ test("unavailable until the application connects; available with exactly the imp
   const handle = h.commands.connect({ execute: h.executor.execute, capabilities: h.executor.capabilities });
   assert.equal(h.commands.isAvailable(), true);
   assert.deepEqual([...h.commands.capabilities()].sort(), [...contract.COMMANDS].sort());
-  assert.deepEqual(h.executor.capabilities, ["setHopperResin", "setHopperBlend", "setLayerShare", "clearHopper", "setSource", "undo", "redo"]);
+  assert.deepEqual(h.executor.capabilities, ["setHopperResin", "setHopperBlend", "setLayerShare", "clearHopper", "setSource", "moveHopper", "undo", "redo"]);
   assert.throws(() => h.commands.connect({ execute: () => {}, capabilities: [] }), /already connected/);
   assert.equal(handle.disconnect(), true);
   assert.equal(h.commands.isAvailable(), false);
@@ -433,6 +434,162 @@ test("setSource removes a label with an empty source, refuses a hopper with no r
 });
 
 /* ----------------------------------------------------------------------
+ *   Move: rearrange mode's one move, per command
+ * -------------------------------------------------------------------- */
+
+const assignmentsOf = layers => layers.map(L => L.hoppers.map(h => `${h.resinName}:${h.pct}`));
+const physicalOf = layers => layers.map(L => L.hoppers.map(h => `${h.weight}:${h.track}:${h.pumpOff}`));
+
+test("moveHopper carries the assignment to an empty position through PolynHopperRearrangement.move, and only the assignment", () => {
+  const h = boot();
+  const physical = physicalOf(h.state.layers);
+  const result = h.dispatch("moveHopper", Object.assign({}, CUR, { index: 1, toLayer: "A", toIndex: 3 }));
+  assert.equal(result.ok, true);
+  assert.equal(result.changed, true);
+  assert.equal(h.hopper("current", "A", 3).resinName, "LIVE-A1");
+  assert.equal(h.hopper("current", "A", 3).pct, 40);
+  assert.equal(h.hopper("current", "A", 1).resinName, "", "an empty destination clears the source");
+  assert.equal(h.hopper("current", "A", 1).pct, 0);
+  assert.equal(h.hopper("current", "A", 0).pct, 60, "H1 re-derived over the moved share");
+  // Weight, tracking and pump-off stayed with the physical hoppers.
+  assert.deepEqual(physicalOf(h.state.layers), physical);
+  // The application's own module did the move: the same call on a copy of
+  // the fixture agrees with the state byte for byte, and the result's
+  // snapshot shows it.
+  const copy = layersFor(["A", "B", "C"], "LIVE");
+  rearrangement.move(copy, { layer: "A", index: 1 }, { layer: "A", index: 3 });
+  assert.deepEqual(assignmentsOf(h.state.layers), assignmentsOf(copy));
+  assert.equal(result.snapshot.layers[0].hoppers[3].resinName, "LIVE-A1");
+});
+
+test("moveHopper swaps with an occupied position, H1 included, and across layers", () => {
+  const h = boot();
+  // A1 (LIVE-A1, 40) onto A0 (LIVE-A0, 60): the two swap and H1 is re-derived.
+  let result = h.dispatch("moveHopper", Object.assign({}, CUR, { index: 1, toLayer: "A", toIndex: 0 }));
+  assert.equal(result.changed, true);
+  assert.deepEqual([h.hopper("current", "A", 0).resinName, h.hopper("current", "A", 1).resinName], ["LIVE-A1", "LIVE-A0"]);
+  assert.deepEqual([h.hopper("current", "A", 0).pct, h.hopper("current", "A", 1).pct], [40, 60]);
+  // A1 (now LIVE-A0, 60) onto B2 (empty): across layers, both H1s re-derived.
+  result = h.dispatch("moveHopper", Object.assign({}, CUR, { index: 1, toLayer: "B", toIndex: 2 }));
+  assert.equal(result.changed, true);
+  assert.equal(h.hopper("current", "B", 2).resinName, "LIVE-A0");
+  assert.equal(h.hopper("current", "B", 2).pct, 60);
+  assert.equal(h.hopper("current", "A", 1).resinName, "");
+  assert.equal(h.hopper("current", "A", 0).pct, 100, "A's H1 is the remainder once A1 is empty");
+  assert.equal(h.hopper("current", "B", 0).pct, 0, "B's H1 is the remainder: B1 40 + B2 60");
+});
+
+test("moveHopper on Next moves the plan's hoppers and leaves Current alone", () => {
+  const h = boot();
+  // With no plan stored, Next's working copy is empty: nothing to move.
+  const empty = h.dispatch("moveHopper", Object.assign({}, NXT, { index: 1, toLayer: "A", toIndex: 4 }));
+  assert.equal(empty.code, "empty_hopper");
+  assert.equal(h.working(), null, "the refusal did not leave a working copy behind");
+  h.dispatch("setHopperResin", Object.assign({}, NXT, { index: 1, resin: "PLAN-1" }));
+  h.dispatch("setHopperBlend", Object.assign({}, NXT, { index: 1, pct: 35 }));
+  const current = JSON.stringify(h.state.layers);
+  const result = h.dispatch("moveHopper", Object.assign({}, NXT, { index: 1, toLayer: "A", toIndex: 4 }));
+  assert.equal(result.changed, true);
+  assert.equal(h.hopper("next", "A", 4).resinName, "PLAN-1");
+  assert.equal(h.hopper("next", "A", 4).pct, 35);
+  assert.equal(h.hopper("next", "A", 1).resinName, "");
+  assert.equal(h.state.nextRecipe.layers[0].hoppers[4].resin_name, "PLAN-1", "saveSession commits the working plan");
+  assert.equal(result.snapshot.nextRecipe.layers[0].hoppers[4].resinName, "PLAN-1");
+  assert.equal(JSON.stringify(h.state.layers), current);
+  assert.equal(h.recipeEditHistory.next.undo.length, 3);
+  assert.equal(h.recipeEditHistory.current.undo.length, 0);
+});
+
+test("moveHopper no-ops: the same position, and two positions holding the same assignment", () => {
+  const h = boot();
+  h.log.saves = 0; h.log.notified.length = 0;
+  const before = h.stateJson();
+  const same = h.dispatch("moveHopper", Object.assign({}, CUR, { index: 1, toLayer: "A", toIndex: 1 }));
+  assert.deepEqual([same.ok, same.changed, same.persisted], [true, false, false]);
+  assert.equal(h.stateJson(), before);
+  // Two hoppers with the same resin and share swap into the same recipe.
+  h.state.layers[0].hoppers[2] = Object.assign({}, h.state.layers[0].hoppers[2], { resinName: "LIVE-A1", pct: 40 });
+  h.state.layers[0].hoppers[0].pct = 20;
+  const twin = h.stateJson();
+  const swap = h.dispatch("moveHopper", Object.assign({}, CUR, { index: 1, toLayer: "A", toIndex: 2 }));
+  assert.deepEqual([swap.ok, swap.changed], [true, false]);
+  assert.equal(h.stateJson(), twin);
+  assert.equal(h.log.saves, 0);
+  assert.equal(h.log.notified.length, 0);
+  assert.equal(h.recipeEditHistory.current.undo.length, 0);
+});
+
+test("moveHopper refuses an empty source, an unknown destination, and a blend that would not total - touching nothing", () => {
+  const h = boot();
+  const before = h.stateJson();
+  assert.equal(h.dispatch("moveHopper", Object.assign({}, CUR, { index: 4, toLayer: "A", toIndex: 1 })).code, "empty_hopper");
+  assert.equal(h.dispatch("moveHopper", Object.assign({}, CUR, { index: 1, toLayer: "Q", toIndex: 1 })).code, "unknown_layer");
+  const hopper = h.dispatch("moveHopper", Object.assign({}, CUR, { index: 1, toLayer: "B", toIndex: 6 }));
+  assert.equal(hopper.code, "unknown_hopper");
+  assert.equal(hopper.field, "toIndex");
+  assert.equal(h.dispatch("moveHopper", { recipe: "current", layer: "A", index: 1, toLayer: "B" }).code, "bad_argument");
+  assert.equal(h.stateJson(), before);
+  // B3 given 70 beside B1's 40: A1's 40 arriving at B2 would put B's
+  // hoppers 2-6 at 150.
+  h.state.layers[1].hoppers[3] = Object.assign({}, h.state.layers[1].hoppers[3], { resinName: "LIVE-B3", pct: 70 });
+  const stacked = h.stateJson();
+  const invalid = h.dispatch("moveHopper", Object.assign({}, CUR, { index: 1, toLayer: "B", toIndex: 2 }));
+  assert.equal(invalid.code, "blend_total");
+  assert.match(invalid.message, /percentages would be invalid/);
+  assert.equal(h.stateJson(), stacked);
+  assert.equal(h.recipeEditHistory.current.undo.length, 0);
+  assert.equal(h.log.saves, 0);
+});
+
+test("one move is one history entry - as Done records one for a rearrangement - and undo/redo restore the layouts", () => {
+  const h = boot();
+  const before = assignmentsOf(h.state.layers);
+  const move = h.dispatch("moveHopper", Object.assign({}, CUR, { index: 1, toLayer: "A", toIndex: 2 }));
+  assert.equal(move.changed, true);
+  const after = assignmentsOf(h.state.layers);
+  assert.notDeepEqual(after, before);
+  assert.equal(h.recipeEditHistory.current.undo.length, 1, "exactly one entry for one move");
+  assert.equal(h.recipeEditHistory.current.redo.length, 0);
+  assert.deepEqual(move.snapshot.history.current, { canUndo: true, canRedo: false });
+
+  const undone = h.dispatch("undo", { recipe: "current" });
+  assert.equal(undone.ok, true);
+  assert.deepEqual(assignmentsOf(h.state.layers), before, "undo restores the prior layout");
+  assert.deepEqual(undone.snapshot.history.current, { canUndo: false, canRedo: true });
+  const redone = h.dispatch("redo", { recipe: "current" });
+  assert.deepEqual(assignmentsOf(h.state.layers), after, "redo reapplies the move");
+  assert.deepEqual(redone.snapshot.history.current, { canUndo: true, canRedo: false });
+});
+
+test("one move is synced at once as rearrange-hoppers with Done's save count; no-ops and refusals sync nothing", () => {
+  const h = boot();
+  h.log.notified.length = 0; h.log.saves = 0; h.log.renders = 0;
+  h.dispatch("moveHopper", Object.assign({}, CUR, { index: 1, toLayer: "A", toIndex: 5 }));
+  // finishRearrangement: renderSplitsArea, validateAndCompute (which
+  // saves), saveSession, notifyActiveJobMutation({ immediate: true,
+  // kind: "rearrange-hoppers" }) - reproduced, not reinvented.
+  assert.deepEqual(h.log.notified, [{ immediate: true, kind: "rearrange-hoppers" }]);
+  assert.equal(h.log.saves, 2);
+  assert.equal(h.log.renders, 1);
+  h.log.notified.length = 0; h.log.saves = 0;
+  h.dispatch("moveHopper", Object.assign({}, CUR, { index: 5, toLayer: "A", toIndex: 5 }));
+  h.dispatch("moveHopper", Object.assign({}, CUR, { index: 1, toLayer: "A", toIndex: 5 }));
+  assert.equal(h.log.notified.length, 0);
+  assert.equal(h.log.saves, 0);
+});
+
+test("a move does not carry a source label: the tail prunes the label whose resin left, as a grid rearrangement does", () => {
+  const stationSource = require("./station/station-source.js");
+  const h = boot();
+  assert.equal(stationSource.hopperStateFrom(h.stationBridge.getSnapshot())["A:0"].source, "SILO 1");
+  const result = h.dispatch("moveHopper", Object.assign({}, CUR, { index: 0, toLayer: "A", toIndex: 2 }));
+  const after = stationSource.hopperStateFrom(result.snapshot);
+  assert.equal(after["A:2"].resinName, "LIVE-A0");
+  assert.equal(after["A:2"].source, "", "the label stays with the position, and the position has a new resin");
+  assert.equal(h.state.hookupSources.current["A:0"], undefined, "pruned from the store, not hidden");
+});
+
+/* ----------------------------------------------------------------------
  *   History: one stack per recipe, shared with the grid
  * -------------------------------------------------------------------- */
 
@@ -637,7 +794,10 @@ test("every failure leaves state, history and the save log untouched", () => {
     ["undo", { recipe: "current" }],
     ["redo", { recipe: "next" }],
     ["setLayerShare", { recipe: "next", layer: "Q", pct: 1 }],
-    ["clearHopper", { recipe: "current", layer: "A", index: 9 }]
+    ["clearHopper", { recipe: "current", layer: "A", index: 9 }],
+    ["moveHopper", Object.assign({}, CUR, { index: 3, toLayer: "A", toIndex: 0 })],
+    ["moveHopper", Object.assign({}, CUR, { index: 1, toLayer: "Z", toIndex: 0 })],
+    ["moveHopper", Object.assign({}, CUR, { index: 1, toLayer: "A", toIndex: 9 })]
   ];
   for (const [command, args] of attempts) {
     const result = h.dispatch(command, args);
@@ -658,7 +818,7 @@ test("rearrangement mode and a remote apply in progress refuse every command wit
   const before = h.stateJson();
   h.setRearranging(true);
   for (const command of contract.COMMANDS) {
-    const result = h.dispatch(command, { recipe: "current", layer: "A", index: 1, pct: 10, resin: "X", source: "Y" });
+    const result = h.dispatch(command, { recipe: "current", layer: "A", index: 1, pct: 10, resin: "X", source: "Y", toLayer: "B", toIndex: 2 });
     assert.equal(result.code, "rearranging", `${command} ran during rearrangement`);
   }
   h.setRearranging(false);

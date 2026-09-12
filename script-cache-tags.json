@@ -40,8 +40,8 @@
     "hash": "f7e942645b9e622d"
   },
   "station-command-contract.js": {
-    "v": "0.1.0",
-    "hash": "8669c43305ac5082"
+    "v": "0.2.0",
+    "hash": "6899240b0b749c42"
   },
   "station-command-bridge.js": {
     "v": "0.1.0",
@@ -152,8 +152,8 @@
     "hash": "b8efd231de7bb46f"
   },
   "app.js": {
-    "v": "0.26.0",
-    "hash": "b295be078cb6b8ed"
+    "v": "0.27.0",
+    "hash": "a79cfb37fdb90326"
   },
   "resin-admin-ui.js": {
     "v": "0.20.4",

@@ -21,7 +21,7 @@ const GOOD = { recipe: "current", layer: "A", index: 1, pct: 25, resin: "HX204",
 
 test("the approved command vocabulary, and nothing else", () => {
   assert.deepEqual([...contract.COMMANDS],
-    ["setHopperResin", "setHopperBlend", "setLayerShare", "clearHopper", "setSource", "undo", "redo"]);
+    ["setHopperResin", "setHopperBlend", "setLayerShare", "clearHopper", "setSource", "moveHopper", "undo", "redo"]);
   assert.ok(Object.isFrozen(contract.COMMANDS));
   assert.deepEqual([...contract.RECIPES], ["current", "next"]);
   for (const command of contract.COMMANDS) {
@@ -33,7 +33,7 @@ test("the approved command vocabulary, and nothing else", () => {
 test("the error vocabulary is declared in full, with a default message for each code", () => {
   assert.deepEqual([...contract.ERROR_CODES], [
     "unavailable", "rearranging", "busy", "unknown_command", "bad_argument", "unknown_layer",
-    "unknown_hopper", "h1_derived", "out_of_range", "blend_total", "no_resin", "nothing_to_undo", "internal"
+    "unknown_hopper", "h1_derived", "out_of_range", "blend_total", "no_resin", "empty_hopper", "nothing_to_undo", "internal"
   ]);
   for (const code of contract.ERROR_CODES) {
     assert.equal(typeof contract.MESSAGES[code], "string", `${code} has no message`);
@@ -154,6 +154,27 @@ test("normalizeArguments rebuilds exactly the command's arguments, normalized an
     { recipe: "current", layer: "A", index: 1, source: "BOX 12" });
   assert.deepEqual(contract.normalizeArguments("setHopperResin", Object.assign({}, GOOD, { resin: "" })).args,
     { recipe: "current", layer: "A", index: 1, resin: "" });
+});
+
+test("moveHopper names the position it moves as every command does, and the destination as toLayer/toIndex", () => {
+  assert.deepEqual([...contract.ARGUMENTS.moveHopper], ["recipe", "layer", "index", "toLayer", "toIndex"]);
+  assert.deepEqual(contract.normalizeArguments("moveHopper", Object.assign({}, GOOD, { toLayer: " B ", toIndex: "3" })).args,
+    { recipe: "current", layer: "A", index: 1, toLayer: "B", toIndex: 3 });
+  // The same position twice is well formed: whether it is a change is the
+  // executor's answer (a no-op), not a malformed request.
+  assert.equal(contract.normalizeArguments("moveHopper", Object.assign({}, GOOD, { toLayer: "A", toIndex: 1 })).ok, true);
+  // The destination is held to the same rules as the source, under its own names.
+  assert.deepEqual(contract.normalizeArguments("moveHopper", Object.assign({}, GOOD, { toLayer: "1A", toIndex: 0 })), {
+    ok: false, code: "bad_argument", message: "The layer must be named.", field: "toLayer"
+  });
+  assert.equal(contract.normalizeArguments("moveHopper", Object.assign({}, GOOD, { toLayer: "B", toIndex: 6 })).code, "unknown_hopper");
+  assert.equal(contract.normalizeArguments("moveHopper", Object.assign({}, GOOD, { toLayer: "B", toIndex: 6 })).field, "toIndex");
+  assert.equal(contract.normalizeArguments("moveHopper", Object.assign({}, GOOD, { toLayer: "B" })).field, "toIndex");
+  assert.equal(contract.normalizeArguments("moveHopper", GOOD).field, "toLayer");
+  // Nothing but the five: a `resin` or `pct` passed along is dropped.
+  assert.deepEqual(Object.keys(contract.normalizeArguments("moveHopper", Object.assign({}, GOOD, { toLayer: "B", toIndex: 0 })).args),
+    ["recipe", "layer", "index", "toLayer", "toIndex"]);
+  assert.equal(contract.MESSAGES.empty_hopper, "The hopper has no resin or share to move.");
 });
 
 test("a bad argument is a value naming the field, never a throw", () => {

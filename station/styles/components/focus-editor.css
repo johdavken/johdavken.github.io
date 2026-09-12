@@ -29,6 +29,19 @@
  *   is-changed-underneath  (a row) the canonical value under its active
  *                    control moved while the operator was in it.
  *   is-invalid       (the total) the blend does not add to 100.
+ *   is-movable       (a row) it has an assignment and the move is on
+ *                    offer: its own surface can be dragged.
+ *   is-dragging      (a row) it is being dragged: left in place as a
+ *                    dimmed placeholder so nothing else in the list moves.
+ *   is-drop-target   (a row) the dragged row is over it: releasing here
+ *                    moves onto it.
+ *   is-moving        (the list) a drag is in progress.
+ *
+ * station-editor__drag-proxy is not a state but a separate element: the
+ * floating card a drag lifts, mounted at .station-root's top level (see
+ * station-focus-editor.js) rather than in the list, so it can sit above
+ * everything else Station draws and follow the pointer under a transform
+ * with no layout of its own to disturb.
  */
 
 .station-workspace__editor {
@@ -140,6 +153,61 @@
 /* The total's rule closes the list; the last row does not draw its own. */
 .station-editor__item:last-child {
   border-bottom-color: transparent;
+}
+
+/* ---- Moving: a row dragged onto another ---- */
+
+/* The row's own surface offers the drag; the controls in it keep their
+   own cursors (the button reset's pointer, the field's text), so a value
+   or a field never looks draggable. */
+.station-editor__item.is-movable {
+  cursor: grab;
+}
+
+/* While a drag is on, the whole list is the hand's: no text selection
+   starts under it, and every surface says it is holding something. */
+.station-editor__list.is-moving,
+.station-editor__list.is-moving .station-editor__item,
+.station-editor__list.is-moving .station-editor__resin-value,
+.station-editor__list.is-moving .station-editor__source-value {
+  cursor: grabbing;
+  user-select: none;
+}
+
+/* The row being carried: lifted a little, and out of the way of what
+   the pointer is over. */
+.station-editor__item.is-dragging {
+  background: var(--station-surface-raised);
+  opacity: 0.55;
+}
+
+/* Where it would land: the accent, as a frame - obvious, and no louder
+   than the selection it sits beside. */
+.station-editor__item.is-drop-target {
+  background: var(--station-accent-soft);
+  box-shadow: inset 0 0 0 var(--station-stroke) var(--station-accent);
+}
+
+/* The card the drag lifts: the row's own layout (station-editor__item)
+   reused for its grid of badge, resin and percentage, with the flat
+   list styling replaced by a raised one - a real border and a shadow, so
+   it reads as picked up rather than as a second copy of the row sitting
+   in place. Width and height are set inline, to the row it was lifted
+   from; position and motion are inline too, in the one transform that
+   moves it (station-focus-editor.js), so this rule carries only what is
+   static: the card's own look, and how it sits above everything else. */
+.station-editor__drag-proxy {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  margin: 0;
+  border: var(--station-stroke) solid var(--station-border-strong);
+  border-radius: var(--station-radius-lg);
+  background: var(--station-surface-raised);
+  box-shadow: var(--station-shadow-pop);
+  pointer-events: none;
+  will-change: transform;
 }
 
 /* A row with a search open stands above the rows its list covers, and
@@ -325,6 +393,11 @@
    read-only attribute and the resting cursor. */
 .station-editor__pct-input:not([readonly]) {
   --station-field-cursor: text;
+}
+
+/* While a row is being dragged the field is under the hand like the rest. */
+.station-editor__list.is-moving .station-editor__pct-input {
+  --station-field-cursor: grabbing;
 }
 
 /* A draft the application refused stays in the field, marked, for the

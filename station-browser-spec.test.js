@@ -56,13 +56,19 @@ test("the spec runs Firefox as well as Chromium, and every documented flow is a 
     "hovering a row highlights its hopper",
     "hovering a hopper highlights its row",
     "the percentage field fits 60, 100 and 33.33",
+    "a press that does not travel is not a drag",
+    "dragging a row marks it and the row under the pointer, with no text selected",
+    "dropping moves the assignment through the application: row, bridge and legacy field agree, one history entry",
+    "every drag mark is gone after the drop",
+    "a press in the percentage field never becomes a drag",
+    "Escape cancels a drag and leaves the layer open",
     "no page scrollbar",
     "editor content fits its workspace"
   ]) {
     assert.ok(spec.includes(flow), `spec lacks the check "${flow}"`);
   }
   for (const viewport of ["1920, 1080", "1440, 900", "1160, 800"]) assert.ok(spec.includes(viewport), `spec lacks viewport ${viewport}`);
-  for (const heading of ["Fast click before hover", "Open / close focus", "Resin search keyboard flow", "Read-only harness", "Result list placement", "Focused editor click targets", "Row <-> hopper linkage", "Percentage field", "Viewports"]) {
+  for (const heading of ["Fast click before hover", "Open / close focus", "Resin search keyboard flow", "Read-only harness", "Result list placement", "Focused editor click targets", "Row <-> hopper linkage", "Percentage field", "Hopper drag", "Viewports"]) {
     assert.ok(readme.includes(heading), `README does not document "${heading}"`);
   }
 });

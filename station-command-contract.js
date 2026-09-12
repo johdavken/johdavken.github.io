@@ -13,7 +13,7 @@
  *
  * WHAT IT DEFINES
  *
- *   COMMANDS       the vocabulary: seven names, nothing else is a command
+ *   COMMANDS       the vocabulary: eight names, nothing else is a command
  *   ARGUMENTS      which arguments each command takes
  *   normalize*     one normalizer per argument, in the terms the application
  *                  already uses (its own resin-name trimming, its own
@@ -41,7 +41,10 @@
  * without a default. Station must never inherit which recipe the hidden
  * Recipe editor happens to be showing. Layers are named as the recipe names
  * them ("A".."E") and hoppers by physical index (0..5), the same
- * "<layer>:<index>" the hookup-source store and the state bridge use.
+ * "<layer>:<index>" the hookup-source store and the state bridge use. A
+ * command that names two positions - moveHopper - names the one it acts
+ * on as every other command does (layer, index) and the other as
+ * toLayer, toIndex: hopper-rearrangement.js's own source and target.
  */
 (function (root, factory) {
   const hookups = typeof require === "function"
@@ -63,6 +66,9 @@
     "setLayerShare",    // { recipe, layer, pct }
     "clearHopper",      // { recipe, layer, index }
     "setSource",        // { recipe, layer, index, source } source "" removes the label
+    "moveHopper",       // { recipe, layer, index, toLayer, toIndex }
+                        //   the assignment (resin, blend) at layer:index moves to
+                        //   toLayer:toIndex; an occupied destination swaps back
     "undo",             // { recipe }
     "redo"              // { recipe }
   ]);
@@ -75,6 +81,7 @@
     setLayerShare: Object.freeze(["recipe", "layer", "pct"]),
     clearHopper: Object.freeze(["recipe", "layer", "index"]),
     setSource: Object.freeze(["recipe", "layer", "index", "source"]),
+    moveHopper: Object.freeze(["recipe", "layer", "index", "toLayer", "toIndex"]),
     undo: Object.freeze(["recipe"]),
     redo: Object.freeze(["recipe"])
   });
@@ -95,6 +102,7 @@
     "out_of_range",     // a finite percentage outside 0..100; carries `field`
     "blend_total",      // H2-H6 would exceed 100; carries `total`
     "no_resin",         // a source needs a resin in the hopper
+    "empty_hopper",     // a move needs a resin or a share in the hopper it moves
     "nothing_to_undo",
     "internal"          // the producer threw or answered with something malformed
   ]);
@@ -114,6 +122,7 @@
     out_of_range: "The percentage must be between 0 and 100.",
     blend_total: "Hopper percentages 2-6 cannot total more than 100%.",
     no_resin: "Assign a resin to the hopper before naming its source.",
+    empty_hopper: "The hopper has no resin or share to move.",
     nothing_to_undo: "There is nothing to undo.",
     internal: "The command could not be carried out."
   });
@@ -264,7 +273,9 @@
     index: normalizeIndex,
     pct: normalizePercentage,
     resin: normalizeResin,
-    source: normalizeSource
+    source: normalizeSource,
+    toLayer: normalizeLayer,
+    toIndex: normalizeIndex
   });
 
   /**

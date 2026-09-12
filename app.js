@@ -9759,9 +9759,9 @@
    * bounded, source through hookup-sources' own rule) before calling
    * execute(). What is checked HERE is what only live state can answer:
    * the layer exists, the hopper exists on that layer, H1 is derived, the
-   * blend would still total, the hopper has a resin to label. All of it
-   * before any assignment, so a failure leaves state byte-identical, with
-   * no history entry and no save.
+   * blend would still total, the hopper has a resin to label, the hopper
+   * has something to move. All of it before any assignment, so a failure
+   * leaves state byte-identical, with no history entry and no save.
    *
    * ADDRESSING
    *
@@ -9947,6 +9947,52 @@
         if (hookups.sourceForPosition(store[args.recipe], key, resin) === args.source){ at.release(); return unchanged(); }
         state.hookupSources = hookups.applyGroup(state.hookupSources, args.recipe, [key], resin, args.source);
         const persisted = commit({ sync: true, kind: "hookup-edit", grid: false });
+        return done(true, persisted);
+      },
+
+      /* Rearrange mode's one move, done and finished in one command:
+       * PolynHopperRearrangement.move carries the assignment (resin and
+       * share - never the weight, tracking or pump-off, which belong to the
+       * physical hopper) from one position to another, swapping back
+       * whatever the destination held, across layers if the two positions
+       * are on different layers, re-deriving every H1 and refusing a
+       * blend that would not total; then the same tail as Done - synced
+       * at once as "rearrange-hoppers", and one history entry for the
+       * move, as Done records one for a whole rearrangement. Sources are
+       * not moved: the tail's reconciliation drops a label whose resin
+       * left its position, as it does for a grid rearrangement. The
+       * module's own refusals, in its own order: the same position twice
+       * is "no_change" and a no-op here; a position with nothing in it is
+       * empty_hopper; a result that would not validate is blend_total,
+       * the one way a valid recipe's move can fail. None of them touches
+       * the layers - the module works on a copy until it validates. */
+      moveHopper(args){
+        const rearrangement = window.PolynHopperRearrangement;
+        if (!rearrangement) return contract.failure("internal", { message: "Hopper rearrangement is not available." });
+        const from = locate(args.recipe, args.layer, args.index);
+        if (from.failure) return from.failure;
+        const toLayer = from.layers.find(L=>L.name === args.toLayer) || null;
+        if (!toLayer){
+          from.release();
+          return contract.failure("unknown_layer", { message: `Layer ${args.toLayer} is not part of the ${args.recipe} recipe.` });
+        }
+        if (!toLayer.hoppers[args.toIndex]){
+          from.release();
+          return contract.failure("unknown_hopper", { field: "toIndex", message: `Layer ${args.toLayer} has no hopper ${args.toIndex + 1}.` });
+        }
+        const before = snapshotRecipeEdit(args.recipe);
+        const moved = rearrangement.move(from.layers, { layer: args.layer, index: args.index }, { layer: args.toLayer, index: args.toIndex });
+        if (!moved.ok){
+          from.release();
+          if (moved.reason === "invalid") return contract.failure("blend_total", { message: "Move rejected: percentages would be invalid." });
+          if (moved.reason === "empty_source") return contract.failure("empty_hopper");
+          return unchanged();
+        }
+        // Two positions holding the same assignment swap into the same
+        // recipe: the module applied, nothing moved, and nothing is saved.
+        if (JSON.stringify(snapshotRecipeEdit(args.recipe)) === JSON.stringify(before)){ from.release(); return unchanged(); }
+        const persisted = commit({ sync: true, immediate: true, kind: "rearrange-hoppers" });
+        recordRecipeEdit(before, args.recipe);
         return done(true, persisted);
       },
 

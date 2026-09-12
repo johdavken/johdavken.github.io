@@ -205,22 +205,22 @@ function editorOver(commands, recipe) {
 
 test("the same editor is editable over the production host's bridge and read-only over the demo host's null", () => {
   const bridge = require("./station-command-bridge.js").create();
-  bridge.connect({ execute: () => contract.success({ changed: false }), capabilities: ["setHopperResin", "setHopperBlend", "setLayerShare", "clearHopper", "setSource", "undo", "redo"] });
+  bridge.connect({ execute: () => contract.success({ changed: false }), capabilities: [...contract.COMMANDS] });
   const commandsFor = commandsForFrom(bridge);
 
   const live = editorOver(commandsFor({ live: true }), "current");
-  assert.deepEqual(live.able, { resin: true, pct: true, source: true });
+  assert.deepEqual(live.able, { resin: true, pct: true, source: true, move: true });
   assert.equal(live.mode.textContent, "Editing");
 
   const demo = editorOver(commandsFor({ live: false }), "current");
-  assert.deepEqual(demo.able, { resin: false, pct: false, source: false });
+  assert.deepEqual(demo.able, { resin: false, pct: false, source: false, move: false });
   assert.equal(demo.mode.textContent, "Read-only");
   assert.match(demo.mode.getAttribute("title"), /No application is connected to Station commands/);
 
   // And an unconnected bridge - the harness, or a cached app.js from before
   // the executor - reads the same way, from the bridge's own answer.
   const unconnected = editorOver(require("./station-command-bridge.js").create(), "current");
-  assert.deepEqual(unconnected.able, { resin: false, pct: false, source: false });
+  assert.deepEqual(unconnected.able, { resin: false, pct: false, source: false, move: false });
   assert.match(unconnected.mode.getAttribute("title"), /No application is connected to Station commands/);
 });
 

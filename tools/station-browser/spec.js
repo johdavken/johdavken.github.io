@@ -198,6 +198,51 @@ async function run(browserName) {
     const pct = await page.evaluate(() => { const i = document.querySelector(".station-editor__item[data-hopper='B1'] .station-editor__pct-input"); const was = i.value; const out = {}; for (const v of ["60", "100", "33.33"]) { i.value = v; out[v] = i.scrollWidth <= i.clientWidth; } i.value = was; return out; });
     check(browserName, `${tag} the percentage field fits 60, 100 and 33.33`, Object.values(pct).every(Boolean), pct);
 
+    /* hopper drag: a row carried onto another, through the application */
+    const centreOf = async selector => { const b = await page.locator(selector).first().boundingBox(); return { x: b.x + b.width / 2, y: b.y + b.height / 2 }; };
+    const badgeOf = id => `.station-editor__item[data-hopper='${id}'] .station-editor__badge`;
+    const marksOf = () => page.evaluate(() => ({
+      dragging: [...document.querySelectorAll(".station-editor__item.is-dragging")].map(i => i.getAttribute("data-hopper")),
+      target: [...document.querySelectorAll(".station-editor__item.is-drop-target")].map(i => i.getAttribute("data-hopper")),
+      moving: document.querySelector(".station-editor__list").classList.contains("is-moving"),
+      selection: String(window.getSelection && window.getSelection().toString())
+    }));
+    const layoutOf = () => page.evaluate(() => ({
+      app: window.PolynStationStateBridge.getSnapshot().layers[1].hoppers.map(h => `${h.resinName}:${h.pct}`),
+      rows: [...document.querySelectorAll(".station-editor__item")].map(i => `${i.getAttribute("data-hopper")}:${(i.querySelector(".station-editor__resin-value") || {}).textContent}`),
+      legacy: [0, 1, 2, 3, 4, 5].map(i => document.getElementById(`r_B_${i}`).value),
+      canUndo: window.PolynStationStateBridge.getSnapshot().history.current.canUndo,
+      focus: document.querySelector("[data-station-mount='machine']").getAttribute("data-focus-layer")
+    }));
+    const from = await centreOf(badgeOf("B2")); const to = await centreOf(badgeOf("B4"));
+    await page.mouse.move(from.x, from.y); await page.mouse.down();
+    await page.mouse.move(from.x + 2, from.y + 2, { steps: 2 });
+    const beforeThreshold = await marksOf();
+    await page.mouse.move(to.x, to.y, { steps: 8 }); await page.waitForTimeout(40);
+    const midDrag = await marksOf();
+    await page.mouse.up(); await page.waitForTimeout(200);
+    const moved = await layoutOf(); const afterDrop = await marksOf();
+    check(browserName, `${tag} a press that does not travel is not a drag`, !beforeThreshold.moving && beforeThreshold.dragging.length === 0, beforeThreshold);
+    check(browserName, `${tag} dragging a row marks it and the row under the pointer, with no text selected`, midDrag.moving && midDrag.dragging[0] === "B2" && midDrag.target[0] === "B4" && midDrag.selection === "", midDrag);
+    check(browserName, `${tag} dropping moves the assignment through the application: row, bridge and legacy field agree, one history entry`,
+      moved.app[3].startsWith("LD105:") && moved.app[1] === ":0" && moved.rows[3] === "B4:LD105" && moved.legacy[3] === "LD105" && moved.legacy[1] === "" && moved.canUndo && moved.focus === "B",
+      moved);
+    check(browserName, `${tag} every drag mark is gone after the drop`, !afterDrop.moving && afterDrop.dragging.length === 0 && afterDrop.target.length === 0, afterDrop);
+    // Back where it was, so what follows sees the seeded layout.
+    await page.mouse.move(to.x, to.y); await page.mouse.down(); await page.mouse.move(from.x, from.y, { steps: 8 }); await page.mouse.up(); await page.waitForTimeout(200);
+    const restored = await layoutOf();
+    check(browserName, `${tag} dragging it back restores the layout`, restored.rows[1] === "B2:LD105" && restored.app[3] === ":0", restored);
+    const pctBox = await page.locator(".station-editor__item[data-hopper='B1'] .station-editor__pct-input").boundingBox();
+    await page.mouse.move(pctBox.x + 2, pctBox.y + pctBox.height / 2); await page.mouse.down(); await page.mouse.move(to.x, to.y, { steps: 6 });
+    const fieldDrag = await marksOf();
+    await page.mouse.up(); await page.waitForTimeout(60);
+    check(browserName, `${tag} a press in the percentage field never becomes a drag`, !fieldDrag.moving && fieldDrag.dragging.length === 0, fieldDrag);
+    await page.mouse.move(from.x, from.y); await page.mouse.down(); await page.mouse.move(to.x, to.y, { steps: 6 });
+    await page.keyboard.press("Escape"); await page.waitForTimeout(40);
+    const escaped = await marksOf(); const escapedLayout = await layoutOf();
+    await page.mouse.up(); await page.waitForTimeout(100);
+    check(browserName, `${tag} Escape cancels a drag and leaves the layer open`, !escaped.moving && escaped.dragging.length === 0 && escapedLayout.focus === "B" && (await layoutOf()).rows[1] === "B2:LD105", { escaped, escapedLayout });
+
     /* close, reverse, rapid */
     await page.keyboard.press("Escape"); await settled(page);
     check(browserName, `${tag} Escape closes the layer`, (await stateOf(page)).focus === null);

@@ -17,6 +17,7 @@ const stationSource = require("./station/station-source.js");
 const contract = require("./station-command-contract.js");
 const commandBridge = require("./station-command-bridge.js");
 const hookups = require("./hookup-sources.js");
+const rearrangement = require("./hopper-rearrangement.js");
 
 const ROOT = __dirname;
 
@@ -25,6 +26,8 @@ const ROOT = __dirname;
  * -------------------------------------------------------------------- */
 
 let focused = null;
+let captured = [];
+let released = [];
 
 function makeNode(name) {
   const node = {
@@ -36,6 +39,9 @@ function makeNode(name) {
     textContent: "",
     value: "",
     get firstChild() { return this.children[0] || null; },
+    get parentNode() { return this.parent; },
+    setPointerCapture(id) { captured.push({ node: this, id }); },
+    releasePointerCapture(id) { released.push({ node: this, id }); },
     setAttribute(key, value) { this.attributes[key] = String(value); },
     getAttribute(key) { return Object.prototype.hasOwnProperty.call(this.attributes, key) ? this.attributes[key] : null; },
     hasAttribute(key) { return Object.prototype.hasOwnProperty.call(this.attributes, key); },
@@ -97,7 +103,20 @@ function walk(node, visit) {
   for (const child of node.children) walk(child, visit);
 }
 
-const fakeDocument = () => ({ createElement: name => makeNode(name) });
+const fakeDocument = () => {
+  const doc = makeNode("#document");
+  doc.createElement = name => makeNode(name);
+  doc.captureListeners = {};
+  doc.addEventListener = (type, fn, capture) => {
+    const bucket = capture ? doc.captureListeners : doc.listeners;
+    (bucket[type] = bucket[type] || []).push(fn);
+  };
+  doc.removeEventListener = (type, fn, capture) => {
+    const bucket = capture ? doc.captureListeners : doc.listeners;
+    bucket[type] = (bucket[type] || []).filter(entry => entry !== fn);
+  };
+  return doc;
+};
 
 function event(type, extra) {
   return Object.assign({
@@ -212,6 +231,27 @@ function fakeApp(options) {
       if (args.source) sources[key] = { resin: hopper.resinName, source: args.source };
       else delete sources[key];
       return done(true);   // no history: sources are not recipe state
+    },
+    /* The application's own module does the move, as the executor's
+     * adapter does; the tail's reconciliation is stood in for by
+     * dropping a label whose resin left its position. */
+    moveHopper(args) {
+      if (args.toLayer !== "D") return contract.failure("unknown_layer");
+      const before = JSON.stringify(rearrangement.snapshot([{ name: "D", hoppers }]));
+      const moved = rearrangement.move([{ name: "D", hoppers }], { layer: "D", index: args.index }, { layer: "D", index: args.toIndex });
+      if (!moved.ok) {
+        if (moved.reason === "invalid") return contract.failure("blend_total");
+        if (moved.reason === "empty_source") return contract.failure("empty_hopper");
+        return done(false);
+      }
+      // Two positions holding the same assignment: the executor's no-op.
+      if (JSON.stringify(rearrangement.snapshot([{ name: "D", hoppers }])) === before) return done(false);
+      for (const index of [args.index, args.toIndex]) {
+        const key = `D:${index}`;
+        if (sources[key] && sources[key].resin !== hoppers[index].resinName) delete sources[key];
+      }
+      log.history.push(`move ${args.recipe}`);
+      return done(true);
     }
   };
   const bridge = commandBridge.create();
@@ -241,6 +281,8 @@ function fakeApp(options) {
  * show after a command is what the application answered with. */
 function build(options) {
   focused = null;
+  captured = [];
+  released = [];
   const doc = fakeDocument();
   const given = Object.assign({}, options || {});
   const app = given.app === null ? null : (given.app || fakeApp({ hopperState: given.hopperState, capabilities: given.capabilities, refuse: given.refuse }));
@@ -989,9 +1031,9 @@ test("the editor consults the bridge and keeps no permission table of its own", 
   assert.match(source, /commands\.isAvailable\(\)/);
   // One mapping from slot to command, and every capability check goes
   // through it - no command name is compared anywhere else.
-  assert.match(source, /const SLOT_COMMAND = Object\.freeze\(\{ resin: "setHopperResin", pct: "setHopperBlend", source: "setSource" \}\);/);
+  assert.match(source, /const SLOT_COMMAND = Object\.freeze\(\{ resin: "setHopperResin", pct: "setHopperBlend", source: "setSource", move: "moveHopper" \}\);/);
   const body = source.replace(/const SLOT_COMMAND = [^\n]*\n/, "");
-  for (const name of ["setHopperResin", "setHopperBlend", "setSource"]) {
+  for (const name of ["setHopperResin", "setHopperBlend", "setSource", "moveHopper"]) {
     assert.doesNotMatch(body, new RegExp(`"${name}"`), `${name} is named outside SLOT_COMMAND`);
   }
   // Every command goes out through the one addressed helper: the bridge
@@ -1439,4 +1481,532 @@ test("percentage: zeroing the share of a hopper with no resin empties the row fr
   assert.equal(d2.querySelectorAll("[data-slot='pct']").length, 0);
   assert.equal(focused, d2.querySelector("[data-slot='resin']"), "focus stays in the row, on what it still has");
   assert.equal(records[records.length - 1], null, "the field that was being edited is gone, so nothing is");
+});
+
+/* ----------------------------------------------------------------------
+ *   Moving a hopper: dragging a row onto another
+ * -------------------------------------------------------------------- */
+
+const pointer = (type, target, extra) => event(type, Object.assign({
+  target, pointerId: 1, pointerType: "mouse", button: 0, buttons: 1, clientX: 0, clientY: 0
+}, extra || {}));
+const rowEl = (root, id) => root.querySelector(`[data-hopper='${id}']`);
+const badgeOf = (root, id) => rowEl(root, id).querySelector(".station-editor__badge");
+const listOf = root => root.querySelector(".station-editor__list");
+const marks = root => ({
+  dragging: root.querySelectorAll(".station-editor__item").filter(i => i.classList.contains("is-dragging")).map(i => i.getAttribute("data-hopper")),
+  targets: root.querySelectorAll(".station-editor__item").filter(i => i.classList.contains("is-drop-target")).map(i => i.getAttribute("data-hopper")),
+  moving: listOf(root).classList.contains("is-moving")
+});
+const resinsOf = root => root.querySelectorAll(".station-editor__item").map(i => {
+  const value = i.querySelector(".station-editor__resin-value");
+  return value.textContent || value.children.map(n => n.textContent).join("");
+});
+const escapeListeners = doc => (doc.captureListeners.keydown || []).length;
+
+/* A drag from one row to another, step by step: press on the badge,
+ * travel past the threshold, arrive over `to`, release. `under` is what
+ * elementFromPoint would answer - it is set as the pointer moves. */
+function buildDraggable(options) {
+  const hit = { under: null };
+  const built = build(Object.assign({ elementAt: () => hit.under }, options || {}));
+  built.hit = hit;
+  built.press = (id, x, y) => badgeOf(built.root, id).dispatchEvent(pointer("pointerdown", badgeOf(built.root, id), { clientX: x || 0, clientY: y || 0 }));
+  built.moveTo = (x, y, under) => {
+    hit.under = under === undefined ? hit.under : under;
+    listOf(built.root).dispatchEvent(pointer("pointermove", listOf(built.root), { clientX: x, clientY: y }));
+  };
+  built.release = (x, y) => listOf(built.root).dispatchEvent(pointer("pointerup", listOf(built.root), { clientX: x || 0, clientY: y || 0, buttons: 0 }));
+  built.click = id => rowEl(built.root, id).dispatchEvent(event("click", { target: badgeOf(built.root, id), detail: 1 }));
+  return built;
+}
+
+test("a press on the row's surface is not a move, and a press that travels less than the threshold is the click it always was", () => {
+  const chosen = [];
+  const b = buildDraggable({ onSelect: id => chosen.push(id) });
+  b.press("D2", 10, 10);
+  assert.deepEqual(marks(b.root), { dragging: [], targets: [], moving: false });
+  b.moveTo(12, 13, badgeOf(b.root, "D2"));
+  b.moveTo(14, 12, badgeOf(b.root, "D3"));   // under another row, but not far enough
+  assert.deepEqual(marks(b.root), { dragging: [], targets: [], moving: false }, "below the threshold nothing is a drag");
+  b.release(14, 12);
+  b.click("D2");
+  assert.deepEqual(chosen, ["D2"], "the click selected the hopper as before");
+  assert.equal(b.app.calls.length, 0);
+  assert.equal(captured.length, 0, "no capture for a click");
+  assert.equal(editor.DRAG_THRESHOLD, 6);
+});
+
+test("a press that travels past the threshold is a drag: the row is marked, the list is moving, the pointer is captured to the row", () => {
+  const b = buildDraggable();
+  b.press("D2", 10, 10);
+  b.moveTo(10, 17, badgeOf(b.root, "D2"));
+  assert.deepEqual(marks(b.root), { dragging: ["D2"], targets: [], moving: true });
+  assert.deepEqual(captured, [{ node: rowEl(b.root, "D2"), id: 1 }]);
+  assert.equal(escapeListeners(b.doc), 1, "Escape is listened for on the document while - and only while - a drag is on");
+  assert.equal(b.app.calls.length, 0, "nothing is handed over until the release");
+  b.release();
+  assert.equal(escapeListeners(b.doc), 0);
+});
+
+test("the destination follows the pointer: marked as it arrives over a row, cleared as it leaves; the dragged row and off-list are none", () => {
+  const b = buildDraggable();
+  b.press("D2", 10, 10);
+  b.moveTo(10, 20, badgeOf(b.root, "D3"));
+  assert.deepEqual(marks(b.root).targets, ["D3"]);
+  b.moveTo(10, 30, rowEl(b.root, "D1").querySelector(".station-editor__pct-input"));
+  assert.deepEqual(marks(b.root).targets, ["D1"], "any element in a row resolves to that row; the previous mark is gone");
+  b.moveTo(10, 40, badgeOf(b.root, "D2"));
+  assert.deepEqual(marks(b.root).targets, [], "the dragged row itself is no destination");
+  b.moveTo(10, 50, null);
+  assert.deepEqual(marks(b.root).targets, [], "off the list is no destination");
+  b.moveTo(10, 60, badgeOf(b.root, "D5"));
+  assert.deepEqual(marks(b.root).targets, ["D5"], "an empty row is a destination: the assignment moves into it");
+  b.release();
+  assert.deepEqual(marks(b.root), { dragging: [], targets: [], moving: false });
+});
+
+test("a release on another row hands the application exactly one moveHopper, addressed from this row to that one, and the rows show its answer", () => {
+  const chosen = [];
+  const b = buildDraggable({ onSelect: id => chosen.push(id), selected: "D2" });
+  assert.deepEqual(resinsOf(b.root), ["HX204", "LD105", "EVA340", "+Add resin", "+Add resin", "+Add resin"]);
+  b.press("D2", 10, 10);
+  b.moveTo(10, 40, badgeOf(b.root, "D4"));
+  b.release(10, 40);
+  assert.deepEqual(b.app.calls, [{ command: "moveHopper", args: { recipe: "current", layer: "D", index: 1, toLayer: "D", toIndex: 3 } }]);
+  assert.deepEqual(b.app.history, ["move current"]);
+  // The rows are the application's snapshot: the assignment moved into
+  // D4, D2 is empty, and H1 is still the remainder.
+  assert.deepEqual(resinsOf(b.root), ["HX204", "+Add resin", "EVA340", "LD105", "+Add resin", "+Add resin"]);
+  assert.equal(pctOf(b.root, "D4").value, "30");
+  assert.equal(pctOf(b.root, "D2"), null, "an emptied row has no field");
+  assert.ok(rowEl(b.root, "D2").classList.contains("is-empty"));
+  assert.ok(rowEl(b.root, "D4").classList.contains("is-movable"));
+  assert.ok(!rowEl(b.root, "D2").classList.contains("is-movable"), "an emptied row has nothing to drag");
+  assert.equal(b.committed.length, 1, "one authoritative update");
+  assert.equal(noteOf(b.root), "");
+  // Every mark is gone, the capture released, the Escape listener down.
+  assert.deepEqual(marks(b.root), { dragging: [], targets: [], moving: false });
+  assert.deepEqual(released, [{ node: rowEl(b.root, "D2"), id: 1 }]);
+  assert.equal(escapeListeners(b.doc), 0);
+  // The click the release fires is the end of a drag, not a click: the
+  // selection is not touched by a drag. The next click is a click.
+  b.click("D2");
+  assert.deepEqual(chosen, []);
+  b.click("D2");
+  assert.deepEqual(chosen, ["D2"]);
+});
+
+test("Focus after a move is deterministic: the selection stays on the physical hopper, and the drag itself selects nothing", () => {
+  // The selected hopper is equipment - its weight, tracking and pump
+  // stay put when the assignment moves (hopper-rearrangement.js) - so
+  // the selection stays with the position and its row shows what the
+  // position now holds. The boot file owns the class; the editor never
+  // reports a selection for a drag, so nothing moves it.
+  const chosen = [];
+  const b = buildDraggable({ onSelect: id => chosen.push(id), selected: "D2" });
+  b.press("D2", 0, 0);
+  b.moveTo(0, 30, badgeOf(b.root, "D3"));
+  b.release();
+  assert.equal(b.app.calls.length, 1);
+  assert.deepEqual(chosen, []);
+  assert.ok(rowEl(b.root, "D2").classList.contains("is-selected"));
+  assert.ok(!rowEl(b.root, "D3").classList.contains("is-selected"));
+  assert.deepEqual(resinsOf(b.root).slice(0, 3), ["HX204", "EVA340", "LD105"], "D2 now shows the assignment that swapped back into it");
+  b.click("D2");
+  assert.deepEqual(chosen, [], "the release's click is swallowed");
+});
+
+test("a release on the row itself, or off the list, hands nothing over and leaves nothing behind", () => {
+  const b = buildDraggable();
+  b.press("D2", 0, 0);
+  b.moveTo(0, 30, badgeOf(b.root, "D3"));
+  b.moveTo(0, 5, badgeOf(b.root, "D2"));
+  b.release();
+  assert.equal(b.app.calls.length, 0, "back on the original row: no command");
+  assert.deepEqual(marks(b.root), { dragging: [], targets: [], moving: false });
+  b.press("D2", 0, 0);
+  b.moveTo(0, 30, badgeOf(b.root, "D3"));
+  b.moveTo(0, 300, null);
+  b.release(0, 300);
+  assert.equal(b.app.calls.length, 0, "released outside: no command");
+  assert.deepEqual(marks(b.root), { dragging: [], targets: [], moving: false });
+  assert.equal(released.length, 2);
+  assert.equal(escapeListeners(b.doc), 0);
+});
+
+test("a refused move reorders nothing: the rows stay as the bridge has them, the note says why, and every mark is gone", () => {
+  const b = buildDraggable({ refuse: { moveHopper: "blend_total" } });
+  const before = resinsOf(b.root);
+  b.press("D2", 0, 0);
+  b.moveTo(0, 30, badgeOf(b.root, "D3"));
+  b.release();
+  assert.equal(b.app.calls.length, 1);
+  assert.deepEqual(resinsOf(b.root), before);
+  assert.equal(b.committed.length, 0);
+  assert.equal(noteOf(b.root), contract.MESSAGES.blend_total);
+  assert.deepEqual(marks(b.root), { dragging: [], targets: [], moving: false });
+  assert.equal(escapeListeners(b.doc), 0);
+  // And a move the application answers as unchanged is a no-op here too.
+  const twins = buildDraggable({ hopperState: Object.assign({}, STATE, {
+    "D:0": { assigned: true, resinName: "HX204", pct: 80, source: "SILO 3" },
+    "D:1": { assigned: true, resinName: "EVA340", pct: 10, source: "" }
+  }) });
+  twins.press("D2", 0, 0);
+  twins.moveTo(0, 30, badgeOf(twins.root, "D3"));
+  twins.release();
+  assert.equal(twins.app.calls.length, 1);
+  assert.equal(twins.app.calls[0].command, "moveHopper");
+  assert.equal(twins.committed.length, 0, "changed:false is not an update");
+  assert.deepEqual(twins.app.history, []);
+  assert.equal(noteOf(twins.root), "");
+});
+
+test("pointercancel and a lost capture end the drag with no command and no mark left", () => {
+  const b = buildDraggable();
+  b.press("D2", 0, 0);
+  b.moveTo(0, 30, badgeOf(b.root, "D3"));
+  listOf(b.root).dispatchEvent(pointer("pointercancel", listOf(b.root)));
+  assert.equal(b.app.calls.length, 0);
+  assert.deepEqual(marks(b.root), { dragging: [], targets: [], moving: false });
+  assert.equal(escapeListeners(b.doc), 0);
+  assert.equal(released.length, 1);
+  // The editor replaced under the pointer (a structural render): the
+  // capture is lost with no release to hear, and the drag is over.
+  b.press("D2", 0, 0);
+  b.moveTo(0, 30, badgeOf(b.root, "D3"));
+  listOf(b.root).dispatchEvent(pointer("lostpointercapture", listOf(b.root)));
+  assert.deepEqual(marks(b.root), { dragging: [], targets: [], moving: false });
+  assert.equal(escapeListeners(b.doc), 0);
+  assert.equal(b.app.calls.length, 0);
+  // A pointer released where the list could not hear it is not a press
+  // any more when it next moves over the list.
+  b.press("D2", 0, 0);
+  listOf(b.root).dispatchEvent(pointer("pointermove", listOf(b.root), { clientX: 0, clientY: 50, buttons: 0 }));
+  assert.deepEqual(marks(b.root), { dragging: [], targets: [], moving: false });
+  listOf(b.root).dispatchEvent(pointer("pointermove", listOf(b.root), { clientX: 0, clientY: 80, buttons: 1 }));
+  assert.deepEqual(marks(b.root), { dragging: [], targets: [], moving: false }, "the press was dropped, so a later move is not a drag");
+});
+
+test("Escape cancels a drag in progress and is spent on it; with no drag on, Escape is not touched", () => {
+  const b = buildDraggable();
+  const keyTo = (doc, key) => {
+    const e = event("keydown", { key, target: doc });
+    for (const fn of doc.captureListeners.keydown || []) fn(e);
+    return e;
+  };
+  // No drag: no listener, nothing consumed (the boot file's own Escape closes the layer).
+  assert.equal(escapeListeners(b.doc), 0);
+  b.press("D2", 0, 0);
+  b.moveTo(0, 30, badgeOf(b.root, "D3"));
+  const other = keyTo(b.doc, "a");
+  assert.equal(other.defaultPrevented, false);
+  assert.deepEqual(marks(b.root).dragging, ["D2"]);
+  const escape = keyTo(b.doc, "Escape");
+  assert.equal(escape.defaultPrevented, true);
+  assert.equal(escape.stopped, true, "spent here: the layer does not close");
+  assert.deepEqual(marks(b.root), { dragging: [], targets: [], moving: false });
+  assert.equal(escapeListeners(b.doc), 0, "the listener is gone with the drag");
+  b.release();
+  assert.equal(b.app.calls.length, 0, "the release after a cancelled drag drops nothing");
+  // The Step 6 Escape on a draft is untouched: it restores the value in the field.
+  const pct = pctOf(b.root, "D3");
+  pct.dispatchEvent(event("focus"));
+  pct.value = "44";
+  pct.dispatchEvent(event("input"));
+  const draft = event("keydown", { key: "Escape", target: pct });
+  pct.dispatchEvent(draft);
+  assert.equal(pct.value, "10");
+  assert.equal(draft.stopped, true);
+});
+
+test("a press on a control is that control's, never a drag: the percentage field, the resin value and its search, the source value and its field, a read-only value", () => {
+  const b = buildDraggable();
+  const far = (node, id) => {
+    node.dispatchEvent(pointer("pointerdown", node));
+    b.moveTo(0, 40, badgeOf(b.root, id || "D3"));
+    const state = marks(b.root);
+    b.release();
+    return state;
+  };
+  const d2 = rowEl(b.root, "D2");
+  assert.deepEqual(far(d2.querySelector(".station-editor__pct-input")), { dragging: [], targets: [], moving: false }, "percentage field");
+  assert.deepEqual(far(d2.querySelector(".station-editor__resin-value")), { dragging: [], targets: [], moving: false }, "resin value");
+  d2.querySelector(".station-editor__resin-value").dispatchEvent(event("click"));
+  const search = d2.querySelector(".station-editor__search");
+  assert.ok(search);
+  assert.deepEqual(far(search), { dragging: [], targets: [], moving: false }, "search input");
+  const option = d2.querySelector(".station-editor__option");
+  assert.deepEqual(far(option), { dragging: [], targets: [], moving: false }, "a result option");
+  assert.deepEqual(far(option.querySelector(".station-editor__option-code")), { dragging: [], targets: [], moving: false }, "text inside an option");
+  assert.deepEqual(far(d2.querySelector(".station-editor__results")), { dragging: [], targets: [], moving: false }, "the list's own surface");
+  assert.ok(d2.querySelector(".station-editor__search"), "the search is still open: nothing here closed it");
+  search.dispatchEvent(event("keydown", { key: "Escape" }));
+  const d1 = rowEl(b.root, "D1");
+  assert.deepEqual(far(d1.querySelector(".station-editor__source-value")), { dragging: [], targets: [], moving: false }, "source value");
+  d1.querySelector(".station-editor__source-value").dispatchEvent(event("click"));
+  const field = d1.querySelector(".station-editor__source-input");
+  assert.deepEqual(far(field), { dragging: [], targets: [], moving: false }, "source field");
+  field.dispatchEvent(event("keydown", { key: "Escape" }));
+  assert.equal(b.app.calls.length, 0);
+  // Read-only values are still controls (they say why they do nothing).
+  const partial = buildDraggable({ capabilities: ["moveHopper"] });
+  const value = rowEl(partial.root, "D2").querySelector(".station-editor__resin-value");
+  assert.ok(value.classList.contains("is-readonly"));
+  value.dispatchEvent(pointer("pointerdown", value));
+  partial.moveTo(0, 40, badgeOf(partial.root, "D3"));
+  assert.deepEqual(marks(partial.root), { dragging: [], targets: [], moving: false });
+  partial.release();
+  // And the row's own surface in that same editor does drag.
+  partial.press("D2", 0, 0);
+  partial.moveTo(0, 40, badgeOf(partial.root, "D3"));
+  assert.deepEqual(marks(partial.root), { dragging: ["D2"], targets: ["D3"], moving: true });
+  partial.release();
+  assert.equal(partial.app.calls.length, 1);
+});
+
+test("isInteractiveTarget judges what an element is: native controls, focusables, widget roles, the editor's slots - up to the row, not past it", () => {
+  const b = build();
+  const d2 = rowEl(b.root, "D2");
+  const is = node => editor.isInteractiveTarget(node, d2);
+  assert.equal(is(d2.querySelector(".station-editor__badge")), false);
+  assert.equal(is(d2.querySelector(".station-editor__main")), false);
+  assert.equal(is(d2.querySelector(".station-editor__pct")), false, "the field's box, beside the field, is surface");
+  assert.equal(is(d2.querySelector(".station-editor__unit")), false);
+  assert.equal(is(d2), false, "the row itself is the surface");
+  assert.equal(is(d2.querySelector(".station-editor__pct-input")), true);
+  assert.equal(is(d2.querySelector(".station-editor__resin-value")), true);
+  assert.equal(is(d2.querySelector(".station-editor__source-value")), true);
+  for (const tag of ["button", "a", "input", "select", "textarea", "label", "summary"]) {
+    const node = makeNode(tag); d2.querySelector(".station-editor__main").appendChild(node);
+    assert.equal(is(node), true, tag);
+  }
+  const focusable = makeNode("div"); focusable.setAttribute("tabindex", "0"); d2.appendChild(focusable);
+  const inside = makeNode("span"); focusable.appendChild(inside);
+  assert.equal(is(inside), true, "inside a focusable");
+  const widget = makeNode("div"); widget.setAttribute("role", "listbox"); d2.appendChild(widget);
+  assert.equal(is(widget), true);
+  const editable = makeNode("div"); editable.setAttribute("contenteditable", ""); d2.appendChild(editable);
+  assert.equal(is(editable), true);
+  assert.equal(is(null), false);
+  // The row is an <li> with no role: a press on it is a press on the surface.
+  assert.equal(editor.isInteractiveTarget(d2.querySelector(".station-editor__badge"), b.root), false);
+});
+
+test("an empty row, a secondary button, a touch pointer, and a row whose move is not on offer do not start a drag", () => {
+  const b = buildDraggable();
+  b.press("D4", 0, 0);
+  b.moveTo(0, 40, badgeOf(b.root, "D2"));
+  assert.deepEqual(marks(b.root), { dragging: [], targets: [], moving: false }, "nothing in D4 to move");
+  b.release();
+  badgeOf(b.root, "D2").dispatchEvent(pointer("pointerdown", badgeOf(b.root, "D2"), { button: 2, buttons: 2 }));
+  b.moveTo(0, 40, badgeOf(b.root, "D3"));
+  assert.deepEqual(marks(b.root), { dragging: [], targets: [], moving: false }, "not the primary button");
+  b.release();
+  badgeOf(b.root, "D2").dispatchEvent(pointer("pointerdown", badgeOf(b.root, "D2"), { pointerType: "touch" }));
+  b.moveTo(0, 40, badgeOf(b.root, "D3"));
+  assert.deepEqual(marks(b.root), { dragging: [], targets: [], moving: false }, "touch is not this step's interaction");
+  b.release();
+  assert.equal(b.app.calls.length, 0);
+});
+
+test("moveHopper on offer: rows with an assignment are movable; not on offer: they simply do not drag, and resin, percentage and source edit as before", () => {
+  const offered = buildDraggable();
+  assert.deepEqual(offered.root.querySelectorAll(".station-editor__item").map(i => i.classList.contains("is-movable")), [true, true, true, false, false, false]);
+  assert.deepEqual(textOf(offered.root, "station-editor__mode"), ["Editing"]);
+
+  const without = buildDraggable({ capabilities: ["setHopperResin", "setHopperBlend", "setSource"] });
+  assert.deepEqual(without.root.querySelectorAll(".station-editor__item").map(i => i.classList.contains("is-movable")), [false, false, false, false, false, false]);
+  assert.deepEqual(textOf(without.root, "station-editor__mode"), ["Partly read-only"]);
+  assert.match(without.root.querySelector(".station-editor__mode").getAttribute("title"), /Changes to resin and percentage and source are applied to the current recipe; the rest is read-only here/);
+  without.press("D2", 0, 0);
+  without.moveTo(0, 40, badgeOf(without.root, "D3"));
+  assert.deepEqual(marks(without.root), { dragging: [], targets: [], moving: false });
+  without.release();
+  assert.equal(without.app.calls.length, 0);
+  // Nothing else went read-only with it.
+  const d2 = rowEl(without.root, "D2");
+  assert.ok(!d2.querySelector(".station-editor__resin-value").classList.contains("is-readonly"));
+  assert.ok(!d2.querySelector(".station-editor__source-value").classList.contains("is-readonly"));
+  assert.ok(!d2.querySelector(".station-editor__pct-input").hasAttribute("readonly"));
+  typeAndEnter(pctOf(without.root, "D2"), "25");
+  assert.deepEqual(without.app.calls.map(c => c.command), ["setHopperBlend"]);
+  assert.equal(pctOf(without.root, "D2").value, "25");
+
+  // Not connected at all: no row is movable, as no value is editable.
+  const none = buildReadOnly({ elementAt: () => null });
+  assert.ok(none.root.querySelectorAll(".station-editor__item").every(i => !i.classList.contains("is-movable")));
+  assert.ok(!none.able.move);
+  assert.deepEqual(Object.keys(none.able), ["resin", "pct", "source", "move"]);
+});
+
+test("a draft in another row is committed by the press as the field's own blur commits it - once - and the drag that follows is a second command", () => {
+  const b = buildDraggable();
+  const pct = pctOf(b.root, "D3");
+  pct.dispatchEvent(event("focus"));
+  pct.value = "20";
+  pct.dispatchEvent(event("input"));
+  // The browser moves focus off the field on the press (the row's surface
+  // takes no focus); the field's blur commits the draft. The fake DOM has
+  // no focus model, so the blur is dispatched as the browser would.
+  b.press("D2", 0, 0);
+  pct.dispatchEvent(event("blur"));
+  assert.deepEqual(b.app.calls.map(c => c.command), ["setHopperBlend"]);
+  assert.equal(b.app.pctOf(2), 20);
+  b.moveTo(0, 40, badgeOf(b.root, "D5"));
+  assert.deepEqual(marks(b.root), { dragging: ["D2"], targets: ["D5"], moving: true }, "the press was a press; the drag went on");
+  b.release();
+  assert.deepEqual(b.app.calls.map(c => c.command), ["setHopperBlend", "moveHopper"]);
+  assert.equal(b.app.resinOf(4), "LD105");
+  assert.equal(pctOf(b.root, "D3").value, "20");
+});
+
+test("a value-only publish arriving mid-drag patches the rows and leaves the drag standing", () => {
+  const b = buildDraggable();
+  b.press("D2", 0, 0);
+  b.moveTo(0, 40, badgeOf(b.root, "D3"));
+  b.update({ hopperState: Object.assign({}, STATE, { "D:2": { assigned: true, resinName: "EVA340", pct: 12, source: "BOX 12" } }) });
+  assert.deepEqual(marks(b.root), { dragging: ["D2"], targets: ["D3"], moving: true });
+  assert.equal(pctOf(b.root, "D3").value, "12");
+  b.release();
+  assert.deepEqual(b.app.calls.map(c => c.command), ["moveHopper"]);
+  assert.deepEqual(marks(b.root), { dragging: [], targets: [], moving: false });
+});
+
+test("the drag's marks are styled from the theme's tokens, with the hand's cursors, and text selection off while a row is carried", () => {
+  const css = fs.readFileSync(path.join(ROOT, "station/styles/components/focus-editor.css"), "utf8");
+  const rule = name => { const at = css.indexOf(name); assert.ok(at > -1, `${name} is not styled`); return css.slice(css.indexOf("{", at) + 1, css.indexOf("}", at)); };
+  assert.match(rule(".station-editor__item.is-movable"), /cursor:\s*grab;/);
+  assert.match(rule(".station-editor__list.is-moving"), /cursor:\s*grabbing;/);
+  assert.match(rule(".station-editor__list.is-moving"), /user-select:\s*none;/);
+  assert.match(rule(".station-editor__item.is-dragging"), /var\(--station-surface-raised\)/);
+  assert.match(rule(".station-editor__item.is-drop-target"), /var\(--station-accent-soft\)/);
+  assert.match(rule(".station-editor__item.is-drop-target"), /var\(--station-accent\)/);
+  for (const name of [".station-editor__item.is-dragging", ".station-editor__item.is-drop-target"]) {
+    assert.doesNotMatch(rule(name), /#[0-9a-f]{3,8}\b|rgb\(/i, `${name} hard-codes a colour`);
+  }
+  // No deprecated ARIA, no drag handle, no HTML5 drag-and-drop.
+  const source = fs.readFileSync(path.join(ROOT, "station/station-focus-editor.js"), "utf8");
+  for (const pattern of [/aria-grabbed/, /aria-dropeffect/, /draggable/, /dataTransfer/, /"dragstart"/, /"drop"/, /setTimeout/, /setInterval/]) {
+    assert.doesNotMatch(source, pattern);
+  }
+  assert.match(source, /"pointerdown"/); assert.match(source, /"pointermove"/); assert.match(source, /"pointerup"/); assert.match(source, /"pointercancel"/);
+  assert.match(source, /setPointerCapture/); assert.match(source, /releasePointerCapture/);
+  // The one listener outside the list is taken down with the drag.
+  assert.equal((source.match(/doc\.addEventListener\("keydown", onDragKey, true\)/g) || []).length, 1);
+  assert.equal((source.match(/doc\.removeEventListener\("keydown", onDragKey, true\)/g) || []).length, 1);
+});
+
+test("a new press ends a drag the list never heard released, and that press's own click is still a click", () => {
+  const chosen = [];
+  const b = buildDraggable({ onSelect: id => chosen.push(id) });
+  b.press("D2", 0, 0);
+  b.moveTo(0, 30, badgeOf(b.root, "D3"));
+  assert.deepEqual(marks(b.root).dragging, ["D2"]);
+  // No release, no cancel: a second press arrives (another pointer, say).
+  badgeOf(b.root, "D1").dispatchEvent(pointer("pointerdown", badgeOf(b.root, "D1"), { pointerId: 2 }));
+  assert.deepEqual(marks(b.root), { dragging: [], targets: [], moving: false }, "the stale drag is over, with no command");
+  assert.equal(b.app.calls.length, 0);
+  assert.equal(escapeListeners(b.doc), 0);
+  listOf(b.root).dispatchEvent(pointer("pointerup", listOf(b.root), { pointerId: 2, buttons: 0 }));
+  b.click("D1");
+  assert.deepEqual(chosen, ["D1"], "the fresh press was a click");
+});
+
+/* ----------------------------------------------------------------------
+ *   The floating card a drag lifts
+ * -------------------------------------------------------------------- */
+
+test("the drag lifts a floating card that mirrors the row, follows the pointer under a transform, and is gone whichever way the drag ends", () => {
+  const mount = makeNode("div");
+  const rect = { left: 100, top: 50, width: 120, height: 64 };
+
+  const b = buildDraggable({ measure: () => rect, dragRoot: () => mount });
+  b.press("D2", 110, 60);
+  b.moveTo(110, 70, badgeOf(b.root, "D2"));
+  assert.equal(mount.children.length, 1, "one card while a drag is on");
+  const proxy = mount.children[0];
+  assert.equal(proxy.getAttribute("class"), "station-editor__item station-editor__drag-proxy");
+  assert.equal(proxy.getAttribute("aria-hidden"), "true");
+  assert.equal(proxy.querySelector(".station-editor__badge").textContent, "D2");
+  assert.equal(proxy.querySelector(".station-editor__resin-value").textContent, "LD105");
+  assert.equal(proxy.querySelector(".station-editor__source-value").textContent, "No source");
+  assert.equal(proxy.querySelector(".station-editor__pct-input").textContent, "30");
+  assert.equal(listOf(b.root).contains(proxy), false, "mounted outside the list, not a second row inside it");
+  assert.deepEqual(listOf(b.root).children.map(c => c.getAttribute("data-hopper")), ["D1", "D2", "D3", "D4", "D5", "D6"],
+    "the real rows are never reordered while the card floats");
+  // Sized to the row it was lifted from; positioned at the same offset
+  // from the pointer it was grabbed at, in one fixed-position transform.
+  assert.equal(proxy.getAttribute("style"), "width:120px;height:64px;transform:translate3d(100px, 60px, 0) scale(1.02);");
+  b.moveTo(110, 90, badgeOf(b.root, "D4"));
+  assert.equal(proxy.getAttribute("style"), "width:120px;height:64px;transform:translate3d(100px, 80px, 0) scale(1.02);");
+  b.release(110, 90);
+  assert.equal(mount.children.length, 0, "the card is gone once the drop lands");
+  assert.equal(b.app.calls.length, 1);
+
+  // A refusal still clears it.
+  const refused = buildDraggable({ measure: () => rect, dragRoot: () => mount, refuse: { moveHopper: "blend_total" } });
+  refused.press("D2", 110, 60);
+  refused.moveTo(110, 90, badgeOf(refused.root, "D3"));
+  assert.equal(mount.children.length, 1);
+  refused.release(110, 90);
+  assert.equal(mount.children.length, 0, "a refusal still removes the card");
+
+  // Released on the dragged row itself, or off the list: gone either way.
+  const self = buildDraggable({ measure: () => rect, dragRoot: () => mount });
+  self.press("D2", 110, 60);
+  self.moveTo(110, 90, badgeOf(self.root, "D3"));
+  self.moveTo(110, 65, badgeOf(self.root, "D2"));
+  self.release(110, 65);
+  assert.equal(mount.children.length, 0);
+  const off = buildDraggable({ measure: () => rect, dragRoot: () => mount });
+  off.press("D2", 110, 60);
+  off.moveTo(110, 90, badgeOf(off.root, "D3"));
+  off.moveTo(110, 300, null);
+  off.release(110, 300);
+  assert.equal(mount.children.length, 0);
+
+  // pointercancel and a lost capture end the drag with the card removed.
+  const cancelled = buildDraggable({ measure: () => rect, dragRoot: () => mount });
+  cancelled.press("D2", 110, 60);
+  cancelled.moveTo(110, 90, badgeOf(cancelled.root, "D3"));
+  listOf(cancelled.root).dispatchEvent(pointer("pointercancel", listOf(cancelled.root)));
+  assert.equal(mount.children.length, 0);
+  const lost = buildDraggable({ measure: () => rect, dragRoot: () => mount });
+  lost.press("D2", 110, 60);
+  lost.moveTo(110, 90, badgeOf(lost.root, "D3"));
+  listOf(lost.root).dispatchEvent(pointer("lostpointercapture", listOf(lost.root)));
+  assert.equal(mount.children.length, 0);
+
+  // Escape mid-drag removes it too.
+  const escaped = buildDraggable({ measure: () => rect, dragRoot: () => mount });
+  escaped.press("D2", 110, 60);
+  escaped.moveTo(110, 90, badgeOf(escaped.root, "D3"));
+  for (const fn of escaped.doc.captureListeners.keydown || []) fn(event("keydown", { key: "Escape" }));
+  assert.equal(mount.children.length, 0);
+});
+
+test("with no measurable layout - the node tests' own case - the drag still works with no floating card at all", () => {
+  const b = buildDraggable();
+  b.press("D2", 0, 0);
+  b.moveTo(0, 30, badgeOf(b.root, "D3"));
+  b.release();
+  assert.equal(b.app.calls.length, 1, "the move itself never depended on the card existing");
+});
+
+test("the floating card is a fixed, non-interactive layer above everything else, built from tokens rather than a clone of the row", () => {
+  const css = fs.readFileSync(path.join(ROOT, "station/styles/components/focus-editor.css"), "utf8");
+  const rule = name => { const at = css.indexOf(name); assert.ok(at > -1, `${name} is not styled`); return css.slice(css.indexOf("{", at) + 1, css.indexOf("}", at)); };
+  const proxyRule = rule(".station-editor__drag-proxy");
+  assert.match(proxyRule, /position:\s*fixed;/);
+  assert.match(proxyRule, /pointer-events:\s*none;/);
+  assert.match(proxyRule, /z-index:\s*\d+;/);
+  assert.match(proxyRule, /var\(--station-surface-raised\)/);
+  assert.match(proxyRule, /var\(--station-border-strong\)/);
+  assert.match(proxyRule, /var\(--station-shadow-pop\)/);
+  assert.doesNotMatch(proxyRule, /#[0-9a-f]{3,8}\b|rgb\(/i, "the card hard-codes no colour");
+
+  // Built fresh from the row's values, not a clone of its live controls.
+  const source = fs.readFileSync(path.join(ROOT, "station/station-focus-editor.js"), "utf8");
+  assert.doesNotMatch(source, /cloneNode/);
 });

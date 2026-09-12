@@ -18,9 +18,9 @@
  * the command bridge (station-command-bridge.js), addressed explicitly to
  * one recipe, one layer and one hopper, and the application carries it out
  * along its own paths - the same validation, the same history, the same
- * save - and answers with a result. The three seams are marked WRITE
+ * save - and answers with a result. The four seams are marked WRITE
  * CONTRACT below: a resin chosen from the search, a percentage committed,
- * a source committed.
+ * a source committed, a row dropped on another.
  *
  * What the operator asked for is never shown as if it had happened. A
  * successful command's snapshot is the application's own; the boot file
@@ -37,10 +37,38 @@
  * Whatever the application declares it will carry out. The editor asks
  * the bridge's `capabilities()` once per build and enables each control
  * on its own command: the resin on setHopperResin, the percentage on
- * setHopperBlend, the source on setSource. A control whose command is not
- * on offer is read-only - readable, in the Tab order, and honest about
- * being read-only - rather than a control that opens and then declines.
- * There is no table of permissions here; the bridge is the only source.
+ * setHopperBlend, the source on setSource, and dragging a row on
+ * moveHopper. A control whose command is not on offer is read-only -
+ * readable, in the Tab order, and honest about being read-only - rather
+ * than a control that opens and then declines; a row whose move is not
+ * on offer simply does not drag. There is no table of permissions here;
+ * the bridge is the only source.
+ *
+ * MOVING A HOPPER
+ *
+ * A row is dragged directly - there is no rearrange mode to enter. A
+ * press on the row's own surface (the badge, the space around the values)
+ * that travels DRAG_THRESHOLD pixels becomes a drag; a press that does
+ * not is the click it always was, and selects the hopper. A press that
+ * begins on a control - the resin value or its search, the percentage
+ * field, the source value or its field, any button - is that control's
+ * interaction and never a drag (isInteractiveTarget), so the caret, the
+ * list and the buttons behave as they do with no drag in the file. Once
+ * a drag is recognized the pointer is captured to the row, and a floating
+ * card - built fresh from the row's own values, not a clone of its live
+ * controls - follows the pointer under fixed positioning and a transform,
+ * so the hopper itself reads as picked up rather than as a target chosen
+ * out from under it. The row it was lifted from stays exactly where it
+ * was, dimmed, so nothing else in the list shifts. The drag follows the
+ * pointer wherever it goes and ends when it is released, or cancelled,
+ * wherever that is. The row under the pointer is marked as the
+ * destination as the pointer moves; the release hands the application
+ * one moveHopper for that destination - or nothing, released on the row
+ * itself or off the list - and the application's answer draws the rows.
+ * Nothing is reordered here: a refused move leaves every row where it
+ * was, with the reason in the note. Escape cancels a drag in progress
+ * and is spent on that, and only then; the listener that hears it exists
+ * for the drag's duration and no longer.
  *
  * WHAT IT HOLDS, AND WHAT IT DOES NOT
  *
@@ -96,9 +124,15 @@
 
   const RESULT_LIMIT = 8;
 
-  /* The command each editable slot rides on. The only mapping in this
-   * file; whether a command is on offer is the bridge's answer. */
-  const SLOT_COMMAND = Object.freeze({ resin: "setHopperResin", pct: "setHopperBlend", source: "setSource" });
+  /* The command each editable slot rides on - the three values, and the
+   * row itself, moved by dragging. The only mapping in this file; whether
+   * a command is on offer is the bridge's answer. */
+  const SLOT_COMMAND = Object.freeze({ resin: "setHopperResin", pct: "setHopperBlend", source: "setSource", move: "moveHopper" });
+
+  /* How far a press travels before it is a drag rather than a click, in
+   * CSS pixels of the pointer's own coordinates: a hand that is only
+   * clicking does not move this far. */
+  const DRAG_THRESHOLD = 6;
 
   /* --------------------------------------------------------------------
    *   Result list placement
@@ -475,6 +509,34 @@
   }
 
   /* --------------------------------------------------------------------
+   *   Moving a hopper: which presses may become a drag
+   * ------------------------------------------------------------------ */
+
+  const INTERACTIVE_TAGS = ["BUTTON", "A", "INPUT", "SELECT", "TEXTAREA", "LABEL", "SUMMARY"];
+  const INTERACTIVE_ROLES = ["button", "link", "combobox", "listbox", "option", "textbox", "checkbox", "menuitem"];
+
+  /* Whether an element is a control - or inside one - between itself and
+   * `within` (exclusive): something with its own pointer interaction,
+   * whose press must stay its own. Judged by what the element IS, not
+   * by which class it happens to carry: a native control, anything
+   * focusable, anything with a widget role, and this editor's own slots
+   * (the values, the search, the field, the result list). One rule, so
+   * a control added later is excluded by being a control. */
+  function isInteractiveTarget(target, within) {
+    let node = target || null;
+    while (node && node !== within) {
+      const tag = typeof node.tagName === "string" ? node.tagName.toUpperCase() : "";
+      const has = name => typeof node.hasAttribute === "function" && node.hasAttribute(name);
+      const role = typeof node.getAttribute === "function" ? node.getAttribute("role") : null;
+      if (INTERACTIVE_TAGS.includes(tag)) return true;
+      if (has("tabindex") || has("contenteditable") || has("data-slot")) return true;
+      if (role && INTERACTIVE_ROLES.includes(role)) return true;
+      node = node.parentNode || null;
+    }
+    return false;
+  }
+
+  /* --------------------------------------------------------------------
    *   Rows
    * ------------------------------------------------------------------ */
 
@@ -568,6 +630,8 @@
     item.classList.remove("is-searching");
     item.classList.remove("is-entering-source");
     item.classList.toggle("is-empty", !entry.assigned);
+    // A row with something in it can be dragged, when the move is on offer.
+    item.classList.toggle("is-movable", !!(able.move && entry.assigned));
 
     /* The badge: static identity, anchoring the row. Not a control. */
     item.appendChild(text(doc, "span", "station-editor__badge", entry.id));
@@ -721,7 +785,13 @@
     fillRow(doc, row, entry, state, deps);
     // Any click in the row selects its hopper - including the clicks that
     // also open a control, since selecting is what the operator means too.
-    item.addEventListener("click", () => { if (deps.onSelect) deps.onSelect(entry.id); });
+    // Not the click a pointer release fires at the end of a drag: that
+    // was a drag. (A keyboard activation is a click with no detail and
+    // is never the end of one.)
+    item.addEventListener("click", event => {
+      if (state.dragClick && event.detail !== 0) { state.dragClick = false; return; }
+      if (deps.onSelect) deps.onSelect(entry.id);
+    });
     return row;
   }
 
@@ -755,12 +825,13 @@
     row.entry = entry;
     row.resin = entry.resin;
     row.item.classList.toggle("is-empty", !entry.assigned);
+    row.item.classList.toggle("is-movable", !!(deps.able.move && entry.assigned));
     writeResinButton(doc, row.resinButton, entry, deps.able.resin);
     if (row.sourceButton) writeSourceButton(row.sourceButton, entry, deps.able.source);
     if (row.pctInput && protect !== "pct") row.pctInput.value = String(round(entry.pct));
   }
 
-  const SLOT_LABEL = { resin: "resin", pct: "percentage", source: "source" };
+  const SLOT_LABEL = { resin: "resin", pct: "percentage", source: "source", move: "arrangement" };
 
   function canonicalOf(entry, slot) {
     if (slot === "pct") return entry.pct;
@@ -897,6 +968,12 @@
    *        result list's placement; defaults to getBoundingClientRect
    * @param {function} [options.bounds]    (row) => the rect the list must
    *        stay inside; defaults to the <foreignObject> the row is drawn in
+   * @param {function} [options.elementAt] (x, y) => the element under a
+   *        point, for the drag's destination; defaults to elementFromPoint
+   * @param {function} [options.dragRoot]  (row) => the element the floating
+   *        drag proxy is mounted under; defaults to the row's closest
+   *        .station-root, so the proxy carries Station's own tokens and
+   *        resets and rises above everything else Station draws
    * @returns {{ element: Element, blend: object, note: function, update: function, able: object }}
    */
   function create(doc, options) {
@@ -948,6 +1025,12 @@
         : () => (doc && "activeElement" in doc ? doc.activeElement : null),
       measure: typeof settings.measure === "function" ? settings.measure : measureRect,
       bounds: typeof settings.bounds === "function" ? settings.bounds : workspaceBounds,
+      elementAt: typeof settings.elementAt === "function"
+        ? settings.elementAt
+        : (x, y) => (doc && typeof doc.elementFromPoint === "function" ? doc.elementFromPoint(x, y) : null),
+      dragRoot: typeof settings.dragRoot === "function"
+        ? settings.dragRoot
+        : row => { try { return row.item.closest(".station-root") || null; } catch (error) { return null; } },
       note: message => { note.textContent = message; },
       able: offer.able,
       reason: offer.reason,
@@ -964,7 +1047,7 @@
     /* The mode, said once at the top: what this view can change, as the
      * bridge declares it. */
     const editable = Object.keys(offer.able).filter(slot => offer.able[slot]);
-    const mode = editable.length === 0 ? "read-only" : (editable.length === 3 ? "editing" : "partial");
+    const mode = editable.length === 0 ? "read-only" : (editable.length === Object.keys(SLOT_COMMAND).length ? "editing" : "partial");
     header.appendChild(text(doc, "span", "station-editor__mode",
       mode === "read-only" ? "Read-only" : (mode === "editing" ? "Editing" : "Partly read-only"), {
         "data-mode": mode,
@@ -1010,6 +1093,174 @@
       if (to && row.item.contains && row.item.contains(to)) return;
       if (row.pending) settleRow(doc, row, state, deps);
     });
+
+    /* --------------------------------------------------------------
+     *   Moving a hopper by dragging its row
+     * --------------------------------------------------------------
+     * Pointer events, delegated to the list so no listener is attached
+     * to a row that a refill would orphan. `press` is a press that may
+     * yet be a click; `active` is a drag. Nothing below is left standing
+     * after the pointer is released or the drag is cancelled: the
+     * capture is released, the classes are removed, and the one
+     * listener placed outside the list - Escape, on the document, for
+     * the drag's duration - is taken down again. */
+    const drag = { press: null, active: null };
+
+    const rowOf = node => rows.find(row => row.item === node || (node && row.item.contains && row.item.contains(node))) || null;
+
+    /* The floating card a drag lifts: built from the row's own values, not
+     * a clone of it - so there is no live control, no listener, and no
+     * duplicate id to carry. Mounted under the row's own .station-root so
+     * it reads Station's tokens and the button/input resets like anything
+     * else here, and rendered fixed with a high z-index so it is drawn
+     * over every other Station layer. Sized to the row it was lifted from;
+     * a rect that cannot be measured (no layout, as in the node tests)
+     * means no card, not a broken one - the drag still works with none. */
+    function buildDragProxy(row, press) {
+      const rect = deps.measure(row.item);
+      const mount = deps.dragRoot(row);
+      if (!rect || !rect.width || !rect.height || !mount || typeof mount.appendChild !== "function") return null;
+      const entry = row.entry;
+      const proxy = element(doc, "li", "station-editor__item station-editor__drag-proxy", { "aria-hidden": "true" });
+      proxy.appendChild(text(doc, "span", "station-editor__badge", entry.id));
+      const main = element(doc, "div", "station-editor__main");
+      const resinBlock = element(doc, "div", "station-editor__resin");
+      const resinValue = element(doc, "span", "station-editor__resin-value");
+      writeResinButton(doc, resinValue, entry, false);
+      resinBlock.appendChild(resinValue);
+      main.appendChild(resinBlock);
+      if (entry.resin) {
+        const sourceValue = element(doc, "span", "station-editor__source-value");
+        writeSourceButton(sourceValue, entry, false);
+        main.appendChild(sourceValue);
+      }
+      proxy.appendChild(main);
+      if (entry.assigned) {
+        const pct = element(doc, "div", "station-editor__pct");
+        pct.appendChild(text(doc, "span", "station-editor__pct-input", String(round(entry.pct))));
+        pct.appendChild(text(doc, "span", "station-editor__unit", "%", { "aria-hidden": "true" }));
+        proxy.appendChild(pct);
+      }
+      mount.appendChild(proxy);
+      return { element: proxy, width: rect.width, height: rect.height, offsetX: press.x - rect.left, offsetY: press.y - rect.top };
+    }
+
+    // Kept under the pointer at the same point it was grabbed, in one
+    // inline style so the fake DOM's plain attribute store shows it too.
+    function paintProxy(proxy, event) {
+      const x = event.clientX - proxy.offsetX;
+      const y = event.clientY - proxy.offsetY;
+      proxy.element.setAttribute("style", `width:${proxy.width}px;height:${proxy.height}px;transform:translate3d(${x}px, ${y}px, 0) scale(1.02);`);
+    }
+
+    function removeDragProxy(proxy) {
+      if (proxy && proxy.element.parentNode) proxy.element.parentNode.removeChild(proxy.element);
+    }
+
+    function beginDrag(press, event) {
+      drag.press = null;
+      const row = press.row;
+      drag.active = { row, pointerId: press.pointerId, target: null, proxy: buildDragProxy(row, press) };
+      row.item.classList.add("is-dragging");
+      list.classList.add("is-moving");
+      try { row.item.setPointerCapture(press.pointerId); } catch (error) { /* an engine without capture: the list still hears the pointer while it is over it */ }
+      // A press that became a drag was not the start of a text selection.
+      try { const selection = doc.getSelection ? doc.getSelection() : null; if (selection) selection.removeAllRanges(); } catch (error) { /* nothing selected */ }
+      doc.addEventListener("keydown", onDragKey, true);
+      deps.note("");
+      trackDrag(event);
+    }
+
+    /* The destination is the row under the pointer, when it is another
+     * row of this list: marked as the pointer arrives, unmarked as it
+     * leaves. The dragged row itself and anything off the list are no
+     * destination. The floating card follows every move, target or not. */
+    function trackDrag(event) {
+      const active = drag.active;
+      const over = rowOf(deps.elementAt(event.clientX, event.clientY));
+      const target = over && over !== active.row ? over : null;
+      if (target !== active.target) {
+        if (active.target) active.target.item.classList.remove("is-drop-target");
+        if (target) target.item.classList.add("is-drop-target");
+        active.target = target;
+      }
+      if (active.proxy) paintProxy(active.proxy, event);
+    }
+
+    /* WRITE CONTRACT: the row released on another row is handed to the
+     * application as moveHopper, from this position to that one, on
+     * this layer. Released anywhere else, nothing is handed over. Every
+     * mark the drag made is removed first, whatever the answer: the rows
+     * are drawn from the application's snapshot, never reordered here. */
+    function endDrag(drop) {
+      const active = drag.active;
+      if (!active) return;
+      drag.active = null;
+      const target = active.target;
+      active.row.item.classList.remove("is-dragging");
+      if (target) target.item.classList.remove("is-drop-target");
+      list.classList.remove("is-moving");
+      doc.removeEventListener("keydown", onDragKey, true);
+      try { active.row.item.releasePointerCapture(active.pointerId); } catch (error) { /* already released */ }
+      removeDragProxy(active.proxy);
+      // The release will fire a click on the row; it is the end of a drag.
+      state.dragClick = true;
+      if (drop && target) issue(active.row, "move", { index: active.row.index, toLayer: state.layer.id, toIndex: target.index }, deps);
+    }
+
+    function onDragKey(event) {
+      if (event.key !== "Escape" || !drag.active) return;
+      event.preventDefault();
+      event.stopPropagation();
+      endDrag(false);
+    }
+
+    list.addEventListener("pointerdown", event => {
+      // A drag still standing from a pointer the list never heard released
+      // (its capture lost without a cancel) is over the moment a new press
+      // arrives - and this press is a fresh one: the click it may end in
+      // is a click.
+      if (drag.active) endDrag(false);
+      state.dragClick = false;
+      drag.press = null;
+      if (!deps.able.move) return;
+      if ((event.button !== undefined && event.button !== 0) || event.pointerType === "touch") return;
+      const row = rowOf(event.target);
+      if (!row || !row.entry.assigned) return;
+      if (isInteractiveTarget(event.target, row.item)) return;
+      drag.press = { row, pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+    });
+    list.addEventListener("pointermove", event => {
+      if (drag.active) {
+        if (event.pointerId === drag.active.pointerId) trackDrag(event);
+        return;
+      }
+      const press = drag.press;
+      if (!press || press.pointerId !== event.pointerId) return;
+      // The button came up somewhere the list did not hear it: not a press any more.
+      if (event.buttons !== undefined && (event.buttons & 1) === 0) { drag.press = null; return; }
+      if (Math.hypot(event.clientX - press.x, event.clientY - press.y) < DRAG_THRESHOLD) return;
+      beginDrag(press, event);
+    });
+    list.addEventListener("pointerup", event => {
+      if (drag.active) {
+        if (event.pointerId === drag.active.pointerId) endDrag(true);
+        return;
+      }
+      // A press that never travelled: the click that follows is a click.
+      if (drag.press && drag.press.pointerId === event.pointerId) drag.press = null;
+    });
+    list.addEventListener("pointercancel", event => {
+      if (drag.active && event.pointerId === drag.active.pointerId) endDrag(false);
+      else if (drag.press && drag.press.pointerId === event.pointerId) drag.press = null;
+    });
+    /* The capture can be lost without a release or a cancel reaching the
+     * list - the editor was replaced under the pointer by a structural
+     * render. Then there is nothing to drop on: the drag is over. A
+     * capture lost by the release itself has already been ended by it. */
+    list.addEventListener("lostpointercapture", event => {
+      if (drag.active && event.pointerId === drag.active.pointerId && !(list.isConnected === true)) endDrag(false);
+    });
     rootEl.appendChild(list);
 
     /* The total: persistent, integrated, and flagged only when it is wrong.
@@ -1034,5 +1285,5 @@
     return { element: rootEl, blend, note: deps.note, update, able: offer.able };
   }
 
-  return { RESULT_LIMIT, SLOTS, SLOT_COMMAND, blendFor, filterResins, placeResults, create };
+  return { RESULT_LIMIT, SLOTS, SLOT_COMMAND, DRAG_THRESHOLD, blendFor, filterResins, placeResults, isInteractiveTarget, create };
 });
