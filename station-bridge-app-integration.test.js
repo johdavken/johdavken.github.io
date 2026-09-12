@@ -105,6 +105,25 @@ test("the projection is fed the app's own line configuration and weight resolver
   assert.match(body, /resolveHopperWeight: effectiveHopperWeight/);
 });
 
+test("the projection is fed the effective planned recipe and history availability, not the stacks", () => {
+  /* The Next recipe must come from the same source the application reads
+   * when it needs the effective plan (plannedRecipePayload: the working copy
+   * while one is open), not from state.nextRecipe, which lags one save
+   * behind. History crosses as two booleans per document. */
+  const connect = app.slice(app.indexOf("function connectStationBridge()"));
+  const body = connect.slice(0, connect.indexOf("\n  function "));
+  assert.match(body, /plannedRecipe: plannedRecipePayload\(\)/);
+  assert.doesNotMatch(body, /plannedRecipe: state\.nextRecipe/);
+  assert.match(body, /history: recipeHistoryAvailability\(\)/);
+  assert.doesNotMatch(body, /recipeEditHistory\b/, "the read closure must not hand the history object over");
+
+  const availability = app.slice(app.indexOf("function recipeHistoryAvailability()"));
+  const availabilityBody = availability.slice(0, availability.indexOf("\n    function "));
+  assert.match(availabilityBody, /canUndo: recipeEditHistory\[page\]\.undo\.length > 0/);
+  assert.match(availabilityBody, /canRedo: recipeEditHistory\[page\]\.redo\.length > 0/);
+  assert.doesNotMatch(availabilityBody, /undo:\s*recipeEditHistory|\.undo,|\.undo\s*\}/, "the stacks themselves are exposed");
+});
+
 test("no application state is exposed on window beyond the bridge", () => {
   for (const leak of [/window\.state\s*=/, /window\.appState\s*=/, /globalThis\.state\s*=/,
     /window\.PolynAppState\s*=/, /root\.state\s*=/]) {

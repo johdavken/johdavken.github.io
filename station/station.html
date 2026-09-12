@@ -22,7 +22,7 @@
   <link rel="stylesheet" href="styles/components/machine.css?v=0.4.0">
   <link rel="stylesheet" href="styles/components/hopper.css?v=0.7.0">
   <link rel="stylesheet" href="styles/components/layer-bank.css?v=0.11.1">
-  <link rel="stylesheet" href="styles/components/focus-editor.css?v=0.1.1">
+  <link rel="stylesheet" href="styles/components/focus-editor.css?v=0.2.0">
   <link rel="stylesheet" href="styles/components/inspector.css?v=0.3.0">
   <link rel="stylesheet" href="styles/components/recipe-strip.css?v=0.1.0">
   <link rel="stylesheet" href="styles/components/rundown.css?v=0.1.0">
@@ -35,6 +35,13 @@
   <script src="../workspace-configuration-payloads.js?v=0.20.1" defer></script>
   <script src="../line-identity.js?v=0.5.0" defer></script>
   <script src="../hookup-sources.js?v=0.1.0" defer></script>
+  <!-- The command contract and command bridge: the write direction's
+       vocabulary and transport. Loaded so Station discovers commands the
+       same way here as in the application host; nothing connects a producer
+       on this page, so every command is answered "unavailable" and Station
+       stays read-only. -->
+  <script src="../station-command-contract.js?v=0.1.0" defer></script>
+  <script src="../station-command-bridge.js?v=0.1.0" defer></script>
   <!-- The shared resin catalog, for the focused editor's resin search: the
        same list Recipe Setup offers, from the same service. On this page
        nothing is configured behind it, so it serves its built-in fallback. -->
@@ -44,7 +51,7 @@
   <!-- The read-only state bridge. Loaded so this page runs the same code path
        the application host does; nothing connects to it here, so Station falls
        back to the demo configurations. That is the fallback working. -->
-  <script src="../station-state-bridge.js?v=0.3.0" defer></script>
+  <script src="../station-state-bridge.js?v=0.4.0" defer></script>
 
   <!-- Station's own layer, in the same order the application host loads it. -->
   <script src="station-line-model.js?v=0.1.0" defer></script>
@@ -53,13 +60,13 @@
   <script src="station-extruder-assets.js?v=0.1.1" defer></script>
   <script src="station-mixer-assets.js?v=0.2.0" defer></script>
   <script src="station-machine-layout.js?v=0.12.0" defer></script>
-  <script src="station-machine-parts.js?v=0.12.0" defer></script>
-  <script src="station-render.js?v=0.6.0" defer></script>
+  <script src="station-machine-parts.js?v=0.12.1" defer></script>
+  <script src="station-render.js?v=0.7.0" defer></script>
   <script src="station-transition.js?v=0.1.0" defer></script>
-  <script src="station-focus-editor.js?v=0.1.1" defer></script>
+  <script src="station-focus-editor.js?v=0.2.0" defer></script>
   <script src="station-shell.js?v=0.1.0" defer></script>
-  <script src="station-demo-lines.js?v=0.3.1" defer></script>
-  <script src="station-source.js?v=0.3.0" defer></script>
+  <script src="station-demo-lines.js?v=0.3.2" defer></script>
+  <script src="station-source.js?v=0.4.0" defer></script>
   <!-- Development-only extruder study (?lab=extruder). Loaded by this harness
        and deliberately NOT by station-host.js, so the real application cannot
        reach it. Delete this tag and the file to remove it. -->
@@ -67,7 +74,7 @@
   <!-- Development-only transition review (?transition=debug). Harness only,
        like the lab: never loaded by station-host.js. -->
   <script src="station-transition-dev.js?v=0.1.0" defer></script>
-  <script src="station.js?v=0.7.1" defer></script>
+  <script src="station.js?v=0.8.1" defer></script>
 </head>
 <body>
 

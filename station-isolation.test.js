@@ -81,15 +81,24 @@ const allStationCss = stationStylesheets().map(file => ({
  * in one place, so widening the boundary is an edit to this list and shows up
  * in review as exactly that - rather than as a new script tag nobody reads.
  *
- *   station-state-bridge.js  the read-only state window (app.js publishes)
- *   station-host.js          the ?view=station activation switch
+ *   station-state-bridge.js      the read-only state window (app.js publishes)
+ *   station-host.js              the ?view=station activation switch
+ *   station-command-contract.js  what a Station write request is (pure)
+ *   station-command-bridge.js    the letterbox for such requests; app.js
+ *                                connects its one executor (an adapter over
+ *                                the grid's own mutation tails), but Station
+ *                                itself dispatches nothing through it yet -
+ *                                the editing controls are a later step
  *
- * Both are inert on a normal load: the bridge only bumps a revision nobody
- * reads, and the host returns before touching the document.
+ * All are inert on a normal load: the state bridge only bumps a revision
+ * nobody reads, the host returns before touching the document, and the
+ * command pair is never called by the floor UI.
  */
 const SHARED_BRIDGE = "station-state-bridge.js";
 const STATION_HOST = "station-host.js";
-const INDEX_STATION_ASSETS = [SHARED_BRIDGE, STATION_HOST].sort();
+const COMMAND_CONTRACT = "station-command-contract.js";
+const COMMAND_BRIDGE = "station-command-bridge.js";
+const INDEX_STATION_ASSETS = [SHARED_BRIDGE, STATION_HOST, COMMAND_CONTRACT, COMMAND_BRIDGE].sort();
 
 /* The one Station stylesheet permitted to name an application selector, use
  * !important, or style a bare element: hiding the application's shell is
@@ -133,6 +142,22 @@ test("the bridge gives consumers no way to write - publish lives only on the pro
       `the module surface exposes ${forbidden}, which would make it writable by any consumer`);
   }
   assert.ok(Object.isFrozen(bridge), "the module surface is not frozen, so a consumer could replace getSnapshot");
+});
+
+test("the command pair touches no DOM and reaches nothing outside itself either", () => {
+  for (const file of [COMMAND_CONTRACT, COMMAND_BRIDGE]) {
+    const source = fs.readFileSync(path.join(ROOT, file), "utf8");
+    for (const pattern of [/\bdocument\b/, /localStorage/, /\bfetch\s*\(/, /supabase/i, /XMLHttpRequest/, /addEventListener/]) {
+      assert.doesNotMatch(source, pattern, `${file} reaches outside itself`);
+    }
+  }
+  // Loaded after hookup-sources.js, which the contract normalizes sources
+  // through, and before app.js, which connects the producer.
+  for (const page of [indexHtml, stationHtml]) {
+    assert.ok(page.indexOf("hookup-sources.js") < page.indexOf(COMMAND_CONTRACT));
+    assert.ok(page.indexOf(COMMAND_CONTRACT) < page.indexOf(COMMAND_BRIDGE));
+  }
+  assert.ok(indexHtml.indexOf(COMMAND_BRIDGE) < indexHtml.indexOf('src="app.js'));
 });
 
 test("the station- class namespace is unused by the existing application", () => {
@@ -373,6 +398,16 @@ test("Station never writes through the bridge - it only reads and subscribes", (
     const source = fs.readFileSync(path.join(STATION, file), "utf8");
     assert.doesNotMatch(source, /\.connect\s*\(/, `${file} connects a producer to the bridge`);
     assert.doesNotMatch(source, /\.publish\s*\(/, `${file} publishes to the bridge`);
+  }
+});
+
+test("Station dispatches no commands yet - the executor is connected, the controls are not built", () => {
+  // The write path exists end to end on the application side. Until the
+  // Station editing step lands, no Station file may call it; this pins that
+  // so the step arrives as an edit to this test, not as a quiet new call.
+  for (const file of STATION_FILES) {
+    const source = fs.readFileSync(path.join(STATION, file), "utf8");
+    assert.doesNotMatch(source, /\.dispatch\s*\(/, `${file} dispatches a command`);
   }
 });
 

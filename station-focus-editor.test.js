@@ -573,3 +573,205 @@ test("the list is kept inside the foreignObject that carries the editor, not mer
   assert.match(source, /closest\("foreignObject"\)/);
   assert.doesNotMatch(source, /closest\("svg"\)/);
 });
+
+/* ----------------------------------------------------------------------
+ *   Updating in place: what a publish does to an open editor
+ * -------------------------------------------------------------------- */
+
+/* Every bridge publish used to rebuild the editor, destroying an open
+ * search, the caret and keyboard focus - for a weight typed on a phone.
+ * The editor now takes new canonical values through update(), keeps its
+ * rows, and protects whichever control the operator is in. */
+
+function serialize(node) {
+  return {
+    tag: node.tagName,
+    attributes: Object.assign({}, node.attributes),
+    value: node.value,
+    text: node.children.length ? "" : node.textContent,
+    children: node.children.map(serialize)
+  };
+}
+
+function withEditing(options) {
+  const records = [];
+  const built = build(Object.assign({ activeElement: () => focused, onEditing: record => records.push(record) }, options || {}));
+  return Object.assign(built, { records });
+}
+
+const CHANGED = Object.assign({}, STATE, {
+  "D:0": { assigned: true, resinName: "HX999", pct: 65, source: "SILO 3" },
+  "D:1": { assigned: true, resinName: "LD105", pct: 30, source: "BOX 1" }
+});
+
+test("update patches new values into the existing rows: same items, values follow, total follows", () => {
+  const { root, update } = withEditing();
+  const items = root.querySelectorAll(".station-editor__item");
+  update({ hopperState: CHANGED });
+  assert.deepEqual(root.querySelectorAll(".station-editor__item"), items, "the row items were rebuilt");
+  const d1 = items[0];
+  assert.equal(d1.querySelector(".station-editor__resin-value").textContent, "HX999");
+  assert.equal(d1.querySelector(".station-editor__resin-value").getAttribute("aria-label"), "D1 resin, HX999");
+  assert.equal(d1.querySelector("[data-slot='pct']").value, "65");
+  assert.equal(items[1].querySelector(".station-editor__source-value").textContent, "BOX 1");
+  assert.ok(!items[1].querySelector(".station-editor__source-value").classList.contains("is-placeholder"));
+  assert.deepEqual(textOf(root, "station-editor__total-value"), ["105%"]);
+  assert.ok(root.querySelector(".station-editor__total").classList.contains("is-invalid"));
+});
+
+test("an open resin search survives a value-only update: the input, its draft, its focus and its list stay", () => {
+  const { root, update } = withEditing();
+  const d1 = root.querySelector("[data-hopper='D1']");
+  d1.querySelector(".station-editor__resin-value").dispatchEvent(event("click"));
+  const input = d1.querySelector(".station-editor__search");
+  input.value = "ld";
+  input.dispatchEvent(event("input"));
+  const list = d1.querySelector(".station-editor__results");
+
+  update({ hopperState: Object.assign({}, STATE, {
+    "D:0": { assigned: true, resinName: "HX204", pct: 50, source: "SILO 3" },
+    "D:1": { assigned: true, resinName: "LD999", pct: 40, source: "" }
+  }) });
+
+  assert.ok(d1.classList.contains("is-searching"));
+  assert.equal(d1.querySelector(".station-editor__search"), input, "the search input was replaced");
+  assert.equal(focused, input, "focus left the search");
+  assert.equal(input.value, "ld", "the draft was overwritten");
+  assert.equal(d1.querySelector(".station-editor__results"), list);
+  assert.deepEqual(textOf(list, "station-editor__option-code"), ["LD165", "LD317", "EXXON LD105.30"]);
+  // The rest of the row, and the other rows, follow the publish.
+  assert.equal(d1.querySelector("[data-slot='pct']").value, "50");
+  assert.equal(root.querySelector("[data-hopper='D2']").querySelector(".station-editor__resin-value").textContent, "LD999");
+  assert.ok(!d1.classList.contains("is-changed-underneath"), "D1's resin did not move, so nothing is marked");
+  assert.equal(root.querySelector(".station-editor__note").textContent, "");
+});
+
+test("a focused input is never overwritten by a publish; a canonical move under it is marked and noted, and applied once it is left", () => {
+  const { root, update, records } = withEditing();
+  const d1 = root.querySelector("[data-hopper='D1']");
+  const pct = d1.querySelector("[data-slot='pct']");
+  pct.focus();
+  pct.dispatchEvent(event("focus", { bubbles: false }));
+  assert.deepEqual(records[records.length - 1], { layer: "D", index: 0, hopper: "D1", slot: "pct", mode: "typing", draft: "60", baseValue: 60 });
+
+  update({ hopperState: Object.assign({}, STATE, { "D:0": { assigned: true, resinName: "HX204", pct: 75, source: "SILO 3" } }) });
+  assert.equal(pct.value, "60", "the focused field's value was overwritten by the publish");
+  assert.equal(d1.querySelector("[data-slot='pct']"), pct, "the focused field was replaced");
+  assert.equal(focused, pct);
+  assert.ok(d1.classList.contains("is-changed-underneath"));
+  assert.match(root.querySelector(".station-editor__note").textContent, /D1's percentage is now 75% in the application/);
+  assert.match(root.querySelector(".station-editor__note").textContent, /has not been changed/);
+
+  // A second publish that moves it back to where the operator started
+  // clears the mark: nothing is different underneath any more.
+  update({ hopperState: STATE });
+  assert.ok(!d1.classList.contains("is-changed-underneath"));
+
+  update({ hopperState: Object.assign({}, STATE, { "D:0": { assigned: true, resinName: "HX204", pct: 80, source: "SILO 3" } }) });
+  focused = null;
+  pct.dispatchEvent(event("blur", { bubbles: false }));
+  assert.equal(pct.value, "80", "once the field is left it shows the canonical value");
+  assert.ok(!d1.classList.contains("is-changed-underneath"));
+  assert.equal(records[records.length - 1], null, "leaving the field reports that nothing is being edited");
+});
+
+test("the editor reports the control the operator is in - search or field - and null once it is left", () => {
+  const { root, records } = withEditing();
+  const d2 = root.querySelector("[data-hopper='D2']");
+  d2.querySelector(".station-editor__resin-value").dispatchEvent(event("click"));
+  assert.deepEqual(records, [{ layer: "D", index: 1, hopper: "D2", slot: "resin", mode: "search", draft: "LD105", baseValue: "LD105" }]);
+  const input = d2.querySelector(".station-editor__search");
+  input.value = "hd";
+  input.dispatchEvent(event("input"));
+  assert.deepEqual(records[1], { layer: "D", index: 1, hopper: "D2", slot: "resin", mode: "search", draft: "hd", baseValue: "LD105" });
+  input.dispatchEvent(event("keydown", { key: "Escape" }));
+  assert.equal(records[2], null);
+  assert.equal(records.length, 3);
+  // Choosing reports the same: the search closes, so nothing is being edited.
+  d2.querySelector(".station-editor__resin-value").dispatchEvent(event("click"));
+  d2.querySelector(".station-editor__search").dispatchEvent(event("keydown", { key: "Enter" }));
+  assert.equal(records[records.length - 1], null);
+});
+
+test("a canonical resin change under an open search marks the row and leaves the draft alone; closing shows the new value", () => {
+  const { root, update } = withEditing();
+  const d1 = root.querySelector("[data-hopper='D1']");
+  d1.querySelector(".station-editor__resin-value").dispatchEvent(event("click"));
+  const input = d1.querySelector(".station-editor__search");
+  input.value = "ld";
+  input.dispatchEvent(event("input"));
+  update({ hopperState: Object.assign({}, STATE, { "D:0": { assigned: true, resinName: "REMOTE-1", pct: 60, source: "SILO 3" } }) });
+  assert.ok(d1.classList.contains("is-searching"));
+  assert.ok(d1.classList.contains("is-changed-underneath"));
+  assert.equal(input.value, "ld");
+  assert.equal(focused, input);
+  assert.match(root.querySelector(".station-editor__note").textContent, /D1's resin is now REMOTE-1 in the application/);
+  input.dispatchEvent(event("keydown", { key: "Escape" }));
+  assert.ok(!d1.classList.contains("is-searching"));
+  assert.ok(!d1.classList.contains("is-changed-underneath"));
+  assert.equal(d1.querySelector(".station-editor__resin-value").textContent, "REMOTE-1", "the resting value is the canonical one");
+});
+
+test("a row whose shape changes under an active control is rebuilt only once the control is left", () => {
+  const { root, update } = withEditing();
+  const d1 = root.querySelector("[data-hopper='D1']");
+  d1.querySelector(".station-editor__resin-value").dispatchEvent(event("click"));
+  const input = d1.querySelector(".station-editor__search");
+  // D1 is emptied in the application while its search is open.
+  update({ hopperState: Object.assign({}, STATE, { "D:0": { assigned: false, resinName: "", pct: 0, source: "" } }) });
+  assert.ok(d1.classList.contains("is-searching"), "the search was closed by the publish");
+  assert.equal(d1.querySelector(".station-editor__search"), input);
+  assert.equal(d1.querySelectorAll("[data-slot='pct']").length, 1, "the row was reshaped under an open control");
+  assert.ok(d1.classList.contains("is-changed-underneath"));
+  input.dispatchEvent(event("keydown", { key: "Escape" }));
+  assert.ok(d1.classList.contains("is-empty"));
+  assert.equal(d1.querySelectorAll("[data-slot='pct']").length, 0, "the emptied row still has a percentage field");
+  assert.equal(d1.querySelectorAll(".station-editor__source-value").length, 0);
+  assert.ok(d1.querySelector(".station-editor__resin-value").classList.contains("is-placeholder"));
+  assert.equal(d1.querySelector(".station-editor__resin-value").getAttribute("aria-label"), "Add resin to D1");
+});
+
+test("a row whose shape changes with no control active is rebuilt at once, in the same item", () => {
+  const { root, update } = withEditing({ selected: "D4" });
+  const d4 = root.querySelector("[data-hopper='D4']");
+  assert.ok(d4.classList.contains("is-empty"));
+  update({ hopperState: Object.assign({}, STATE, { "D:3": { assigned: true, resinName: "NEW-D4", pct: 5, source: "" } }) });
+  assert.equal(root.querySelector("[data-hopper='D4']"), d4);
+  assert.ok(!d4.classList.contains("is-empty"));
+  assert.ok(d4.classList.contains("is-selected"), "the item's own selection class was lost in the rebuild");
+  assert.equal(d4.querySelector("[data-slot='pct']").value, "5");
+  assert.equal(d4.querySelector(".station-editor__source-value").textContent, "Add source");
+  assert.equal(d4.querySelector(".station-editor__resin-value").textContent, "NEW-D4");
+});
+
+test("a fresh editor and a patched editor over the same canonical state are the same DOM", () => {
+  const before = STATE;
+  const after = Object.assign({}, STATE, {
+    "D:0": { assigned: true, resinName: "HX999", pct: 55, source: "" },
+    "D:1": { assigned: false, resinName: "", pct: 0, source: "" },
+    "D:3": { assigned: true, resinName: "NEW", pct: 45, source: "BOX 2" }
+  });
+  const patched = withEditing({ hopperState: before, selected: "D3" });
+  patched.update({ hopperState: after });
+  const fresh = withEditing({ hopperState: after, selected: "D3" });
+  assert.deepEqual(serialize(patched.root), serialize(fresh.root));
+});
+
+test("the header reports command discovery: read-only, with the reason", () => {
+  const none = build();
+  assert.deepEqual(textOf(none.root, "station-editor__mode"), ["Read-only"]);
+  assert.match(none.root.querySelector(".station-editor__mode").getAttribute("title"), /No application is connected to Station commands/);
+  const connected = build({ commands: { isAvailable: () => true, capabilities: () => ["setHopperResin"] } });
+  assert.deepEqual(textOf(connected.root, "station-editor__mode"), ["Read-only"]);
+  assert.match(connected.root.querySelector(".station-editor__mode").getAttribute("title"), /not wired up yet/);
+  // Discovery is not a write: the editor never dispatches.
+  const source = fs.readFileSync(path.join(ROOT, "station/station-focus-editor.js"), "utf8");
+  assert.doesNotMatch(source, /\.dispatch\s*\(/);
+});
+
+test("the changed-underneath mark is styled on the badge, from the warning token", () => {
+  const css = fs.readFileSync(path.join(ROOT, "station/styles/components/focus-editor.css"), "utf8");
+  const rule = css.match(/\.station-editor__item\.is-changed-underneath \.station-editor__badge\s*\{([^}]*)\}/);
+  assert.ok(rule, "no rule for the changed-underneath mark");
+  assert.match(rule[1], /var\(--station-warning\)/);
+});

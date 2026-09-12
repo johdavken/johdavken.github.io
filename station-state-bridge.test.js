@@ -37,7 +37,17 @@ function appState(overrides) {
       current: { "A:0": { source: "silo 3" } },
       next: { "A:0": { source: "next-only-source" } }
     },
-    nextRecipe: { schema_version: 1, line_type: 3 },
+    // A stored plan in PolynNextRecipe.normalize's shape: the durable
+    // payload, which is what project() reads when the application does not
+    // hand it the effective one.
+    nextRecipe: {
+      schema_version: 1, line_type: 3, hopper_naming_mode: "standard",
+      layers: [
+        { name: "A", layer_pct: 40, hoppers: [{ resin_name: "PLAN-A", pct: 100 }, { resin_name: null, pct: 0 }] },
+        { name: "B", layer_pct: 30, hoppers: [{ resin_name: null, pct: 100 }] },
+        { name: "C", layer_pct: 30, hoppers: [] }
+      ]
+    },
     layers: [
       { name: "A", layerPct: 34, hoppers: [
         { pct: 100, weight: 420, resinName: "RESIN-A", track: true, pumpOff: false, usableHeight: 30 },
@@ -221,8 +231,8 @@ test("preferences, identity and transport state never cross the bridge", () => {
   const { bridge, handle } = connected(appState());
   const serialized = JSON.stringify(bridge.getSnapshot());
   for (const leaked of ["theme", "density", "timeFormat", "surfaceStyle", "mobileTimelineAlarm",
-    "pumpOffAlarmSoundUri", "hopperNamingLine9", "resinLots", "nextRecipe",
-    "industrial-slate", "content://alarm", "LOT-9", "next-only-source"]) {
+    "pumpOffAlarmSoundUri", "hopperNamingLine9", "resinLots", "schema_version", "line_type",
+    "industrial-slate", "content://alarm", "LOT-9"]) {
     assert.ok(!serialized.includes(leaked), `the snapshot carries "${leaked}"`);
   }
   handle.disconnect();
@@ -231,20 +241,155 @@ test("preferences, identity and transport state never cross the bridge", () => {
 test("the snapshot's top level is exactly the documented blocks", () => {
   const { bridge, handle } = connected(appState());
   assert.deepEqual(Object.keys(bridge.getSnapshot()).sort(),
-    ["job", "layers", "line", "revision", "sources"]);
+    ["history", "job", "layers", "line", "nextRecipe", "revision", "sources"]);
   handle.disconnect();
 });
 
-test("hookup sources cross for the current recipe only, in their own module's shape", () => {
+test("hookup sources cross per recipe document, in their own module's shape", () => {
   /* Added when Station's expanded layer view needed to show where a resin came
-   * from. Narrow on purpose: `current` only, and carrying the resin alongside
-   * the label so hookup-sources' own sourceForPosition() can refuse a label
-   * whose resin has since changed. */
+   * from, and widened to both documents when the Next recipe crossed: the
+   * planned recipe's editor needs its own labels. Each map carries the resin
+   * alongside the label so hookup-sources' own sourceForPosition() can refuse
+   * a label whose resin has since changed. */
   const { bridge, handle } = connected(appState());
   const snapshot = bridge.getSnapshot();
-  assert.deepEqual(snapshot.sources, { "A:0": { resin: "", source: "silo 3" } });
-  assert.ok(!JSON.stringify(snapshot).includes("next-only-source"));
+  assert.deepEqual(snapshot.sources, {
+    current: { "A:0": { resin: "", source: "silo 3" } },
+    next: { "A:0": { resin: "", source: "next-only-source" } }
+  });
+  assert.deepEqual(Object.keys(snapshot.sources), ["current", "next"]);
   handle.disconnect();
+});
+
+/* ----------------------------------------------------------------------
+ *   The Next recipe and history availability
+ * -------------------------------------------------------------------- */
+
+/* Added ahead of Station editing. The bridge stays a one-way window: what
+ * crosses here is the planned recipe as recipe fields, and whether each
+ * document has anything to undo - never the stacks, never a setter. */
+
+test("the Current projection is unchanged by the Next recipe crossing", () => {
+  const snapshot = bridgeModule.project(appState(), {});
+  assert.deepEqual(Object.keys(snapshot.layers[0].hoppers[0]).sort(),
+    ["effectiveWeight", "index", "pct", "pumpOff", "resinName", "track", "usableHeight", "weight"]);
+  assert.deepEqual(Object.keys(snapshot.layers[0]).sort(), ["hoppers", "layerPct", "name"]);
+  assert.equal(snapshot.layers[0].hoppers[0].resinName, "RESIN-A", "Current must still read the live layers");
+  assert.equal(snapshot.layers[0].layerPct, 34);
+});
+
+test("the Next recipe is projected from the effective plan the application hands over, not the stored payload", () => {
+  // The application passes the plan it itself reads when it needs the
+  // effective one - the operator's working copy. Here it differs from the
+  // stored payload, and the working copy must win.
+  const working = {
+    schema_version: 1, line_type: 3, hopper_naming_mode: "standard",
+    layers: [
+      { name: "A", layer_pct: 50, hoppers: [{ resin_name: "WORKING-A", pct: 70 }, { resin_name: "WORKING-A2", pct: 30 }] },
+      { name: "B", layer_pct: 25, hoppers: [{ resin_name: null, pct: 100 }] },
+      { name: "C", layer_pct: 25, hoppers: [] }
+    ]
+  };
+  const snapshot = bridgeModule.project(appState(), { plannedRecipe: working });
+  assert.deepEqual(snapshot.nextRecipe, {
+    layers: [
+      { name: "A", layerPct: 50, hoppers: [
+        { index: 0, pct: 70, resinName: "WORKING-A" },
+        { index: 1, pct: 30, resinName: "WORKING-A2" }
+      ] },
+      { name: "B", layerPct: 25, hoppers: [{ index: 0, pct: 100, resinName: "" }] },
+      { name: "C", layerPct: 25, hoppers: [] }
+    ]
+  });
+});
+
+test("without the effective plan, the Next recipe falls back to the stored payload", () => {
+  const snapshot = bridgeModule.project(appState(), {});
+  assert.equal(snapshot.nextRecipe.layers[0].hoppers[0].resinName, "PLAN-A");
+  assert.equal(snapshot.nextRecipe.layers[0].layerPct, 40);
+  assert.equal(snapshot.nextRecipe.layers.length, 3);
+});
+
+test("the Next recipe is null when nothing is planned", () => {
+  assert.equal(bridgeModule.project(appState({ nextRecipe: null }), {}).nextRecipe, null);
+  assert.equal(bridgeModule.project(appState(), { plannedRecipe: null }).nextRecipe, null,
+    "an explicit null from the application means no plan, whatever is stored");
+  // A malformed stored plan is no plan either, not a throw.
+  assert.equal(bridgeModule.project(appState({ nextRecipe: { layers: "nonsense" } }), {}).nextRecipe, null);
+  assert.equal(bridgeModule.project(appState({ nextRecipe: "x" }), {}).nextRecipe, null);
+});
+
+test("the Next recipe carries recipe fields only: no weight, tracking, pump or geometry", () => {
+  const snapshot = bridgeModule.project(appState(), {
+    plannedRecipe: {
+      layers: [{ name: "A", layer_pct: 100, hoppers: [
+        // A payload that somehow carried physical fields must still not
+        // project them: a plan cannot hold operational state.
+        { resin_name: "X", pct: 100, weight: 400, track: true, pumpOff: true, usableHeight: 30 }
+      ] }]
+    }
+  });
+  const hopper = snapshot.nextRecipe.layers[0].hoppers[0];
+  assert.deepEqual(Object.keys(hopper).sort(), ["index", "pct", "resinName"]);
+  assert.deepEqual(Object.keys(snapshot.nextRecipe.layers[0]).sort(), ["hoppers", "layerPct", "name"]);
+  assert.deepEqual(Object.keys(snapshot.nextRecipe), ["layers"]);
+  const serialized = JSON.stringify(snapshot.nextRecipe);
+  for (const field of ["weight", "track", "pumpOff", "usableHeight", "effectiveWeight", "circumference"]) {
+    assert.ok(!serialized.includes(field), `the plan carries ${field}`);
+  }
+});
+
+test("history availability crosses as two booleans per document, never the stacks", () => {
+  const snapshot = bridgeModule.project(appState(), {
+    history: { current: { canUndo: true, canRedo: false }, next: { canUndo: 0, canRedo: "yes" } }
+  });
+  assert.deepEqual(snapshot.history, {
+    current: { canUndo: true, canRedo: false },
+    next: { canUndo: false, canRedo: true }
+  });
+  assert.deepEqual(bridgeModule.project(appState(), {}).history, {
+    current: { canUndo: false, canRedo: false },
+    next: { canUndo: false, canRedo: false }
+  });
+  // Handing over the stacks themselves is ignored: only the two facts cross.
+  const withStacks = bridgeModule.project(appState(), {
+    history: { current: { canUndo: true, canRedo: true, undo: [{ layers: [] }], redo: [] }, next: {} }
+  });
+  assert.deepEqual(Object.keys(withStacks.history.current).sort(), ["canRedo", "canUndo"]);
+});
+
+test("the Next recipe and history are frozen and pure like the rest of the snapshot", () => {
+  const state = appState();
+  const before = JSON.stringify(state);
+  const plan = state.nextRecipe;
+  const planBefore = JSON.stringify(plan);
+  const { bridge, handle } = connected(state, { plannedRecipe: plan, history: { current: { canUndo: true } } });
+  const snapshot = bridge.getSnapshot();
+  assert.ok(Object.isFrozen(snapshot.nextRecipe));
+  assert.ok(Object.isFrozen(snapshot.nextRecipe.layers[0]));
+  assert.ok(Object.isFrozen(snapshot.nextRecipe.layers[0].hoppers[0]));
+  assert.ok(Object.isFrozen(snapshot.history));
+  assert.ok(Object.isFrozen(snapshot.history.current));
+  assert.ok(Object.isFrozen(snapshot.sources.next));
+  try { snapshot.nextRecipe.layers[0].hoppers[0].resinName = "HACKED"; } catch (error) {}
+  try { snapshot.history.current.canUndo = false; } catch (error) {}
+  assert.equal(snapshot.nextRecipe.layers[0].hoppers[0].resinName, "PLAN-A");
+  assert.equal(snapshot.history.current.canUndo, true);
+  assert.equal(JSON.stringify(state), before, "project wrote to application state");
+  assert.equal(JSON.stringify(plan), planBefore, "project wrote to the plan it was handed");
+  assert.notEqual(snapshot.nextRecipe.layers[0], plan.layers[0], "the plan is copied, not shared");
+  handle.disconnect();
+});
+
+test("the module surface still offers nothing that writes, with the wider projection", () => {
+  assert.deepEqual(
+    Object.keys(bridgeModule).sort(),
+    ["connect", "create", "getRevision", "getSnapshot", "isConnected", "project", "subscribe"]
+  );
+  const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "station-state-bridge.js"), "utf8");
+  for (const pattern of [/\bdispatch\b/, /\bexecute\b/, /\bsetState\b/, /\bsetHopper/, /\bcommand/i]) {
+    assert.doesNotMatch(source, pattern, "the state bridge gained a write path");
+  }
 });
 
 /* ----------------------------------------------------------------------

@@ -101,6 +101,28 @@
    *   Hopper - the one reusable material-handling component
    * ------------------------------------------------------------------ */
 
+  /* The runtime facts a hopper's drawing depends on, as one string. Carried
+   * on the group (data-state) so the renderer's patch path can tell an
+   * unchanged hopper from a changed one without reading the drawing back.
+   * Geometry is deliberately not in it: a profile height changes the
+   * layout, and that is a render, not a patch. */
+  function hopperStateKey(runtime) {
+    const r = runtime || {};
+    return [
+      r.track ? "t" : "",
+      r.pumpOff ? "p" : "",
+      r.assigned === false ? "u" : "",
+      r.resinName || "",
+      Number.isFinite(r.pct) ? r.pct : "",
+      r.source || ""
+    ].join("|");
+  }
+
+  /* The layer's share of the film structure, as the extruder shows it. */
+  function shareText(layerPct) {
+    return Number.isFinite(layerPct) && layerPct > 0 ? `${round(layerPct)}%` : "—";
+  }
+
   /* Structured as the real assembly stacks, so a later phase can drive each
    * part independently: the receiver shows loading, the material shows
    * calculated fill, the body carries selection and warning state, the feed
@@ -128,7 +150,8 @@
     const g = group(doc, classes.join(" "), "hopper", {
       "data-hopper": geometry.id,
       "data-layer": geometry.layer,
-      "data-hopper-index": geometry.index
+      "data-hopper-index": geometry.index,
+      "data-state": hopperStateKey(runtime)
     });
 
     const x = geometry.x;
@@ -433,7 +456,7 @@
      * machine on the layer centreline: it is data, and it must not be dragged
      * into the equipment's perspective. */
     g.appendChild(label(doc,
-      Number.isFinite(layerPct) && layerPct > 0 ? `${round(layerPct)}%` : "—",
+      shareText(layerPct),
       e.label.x, e.label.y, "station-extruder__pct"));
 
     return g;
@@ -553,7 +576,7 @@
   }
 
   return {
-    SVG_NS, node, label, group, taper, hitArea, fitText,
+    SVG_NS, node, label, group, taper, hitArea, fitText, hopperStateKey, shareText,
     hopper, hopperCluster, mixer, throat, extruder, layerBank, workspace
   };
 });

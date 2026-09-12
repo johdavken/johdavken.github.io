@@ -23,6 +23,8 @@
  *   is-empty         an unassigned hopper: one placeholder, not a row of
  *                    empty fields.
  *   is-searching     the resin value has become a search.
+ *   is-changed-underneath  (a row) the canonical value under its active
+ *                    control moved while the operator was in it.
  *   is-invalid       (the total) the blend does not add to 100.
  */
 
@@ -446,6 +448,14 @@
   font-size: var(--station-text-xs);
   font-weight: 600;
   letter-spacing: 0.04em;
+}
+
+/* The canonical value under an active control moved while the operator
+   was in it (a change from the application or another device). The draft
+   is left alone; the badge carries the mark and the note says what moved. */
+.station-editor__item.is-changed-underneath .station-editor__badge {
+  border-color: var(--station-warning);
+  color: var(--station-warning);
 }
 
 /* Why an edit did nothing. Empty until it has something to say. */

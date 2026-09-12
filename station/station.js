@@ -34,6 +34,19 @@
   const transition = root.PolynStationTransition;
   const focusEditor = root.PolynStationFocusEditor;
   const bridge = root.PolynStationStateBridge || null;
+  /* The command bridge (station-command-bridge.js): the write direction's
+   * transport. Read here for DISCOVERY only - whether an application has
+   * connected an executor to it. The application host connects one; the
+   * standalone harness has none, so it answers "unavailable" there. */
+  const commands = root.PolynStationCommandBridge || null;
+
+  /* The commands Station may offer for what it is SHOWING. The executor
+   * writes the application's live recipe, so it is only on offer while the
+   * live snapshot is what is on screen: with demo data pinned in the host,
+   * a write would change a real recipe under a drawing of a demo one. */
+  function commandsFor(resolved) {
+    return commands && resolved && resolved.live ? commands : null;
+  }
 
   if (!lineModel || !render || !demoLines || !source || !shell || !transition || !focusEditor) return;
 
@@ -71,6 +84,38 @@
    * Transient and DOM-only: it links a drawn hopper to its editor row and
    * back, and is reset by every render, which removes the classes. */
   let highlighted = null;
+
+  /* TWO KINDS OF STATE, KEPT APART
+   *
+   * Canonical state is the application's: the frozen bridge snapshot and
+   * its revision, read through currentSource() and never copied here as
+   * anything authoritative. Everything in `current` derives from it.
+   *
+   * Transient interaction state is Station's own and goes nowhere:
+   *
+   *   focus            which equipment is open / selected     (above)
+   *   highlighted      which hopper the pointer is on          (above)
+   *   editing          the control the operator is in, if any:
+   *                    { recipe, layer, index, hopper, slot, mode, draft,
+   *                      baseRevision, baseValue }
+   *                    recipe: current | next   slot: resin | pct | source
+   *                    mode: search | typing    baseRevision: the snapshot
+   *                    revision when the control was entered; baseValue:
+   *                    the canonical value then
+   *   lastOwnRevision  the revision Station's own most recent command
+   *                    produced, so a publish that is only Station's echo
+   *                    can be told from someone else's change. Dormant:
+   *                    no command can be carried out in this phase.
+   *
+   * A publish updates canonical state and must leave transient state
+   * standing - see onPublish() - unless the structure it lives in is gone. */
+  let editing = null;
+  let lastOwnRevision = null;
+
+  /* The focused editor's handle (station-focus-editor.js) for the stage as
+   * drawn: what a value-only publish updates in place. Null when no layer
+   * is open. */
+  let editorHandle = null;
 
   /* The stage's transition controller (station-transition.js): the one
    * thing that renders the machine, so that every change of focus is a
@@ -167,14 +212,21 @@
   }
 
   function highlight(key) {
-    const mount = mounts.machine;
-    if (!mount) return;
     const next = key ? `${key.layer}:${key.hopper}` : null;
     if (next === highlighted) return;
     highlighted = next;
+    applyHighlight();
+  }
+
+  /* The highlight classes as `highlighted` says, written to the drawing
+   * as it stands - after a patch as well as on a pointer move. */
+  function applyHighlight() {
+    const mount = mounts.machine;
+    if (!mount) return;
+    const [layer, hopper] = highlighted ? highlighted.split(":") : [null, null];
     for (const el of mount.querySelectorAll(".station-hopper[data-hopper], .station-editor__item[data-hopper]")) {
       el.classList.toggle("is-highlighted",
-        !!key && el.getAttribute("data-layer") === key.layer && el.getAttribute("data-hopper") === key.hopper);
+        !!highlighted && el.getAttribute("data-layer") === layer && el.getAttribute("data-hopper") === hopper);
     }
   }
 
@@ -523,6 +575,67 @@
     renderStatus(model, resolved);
   }
 
+  /* --------------------------------------------------------------------
+   *   Publish policy
+   * ------------------------------------------------------------------
+   * The bridge publishes on every committed change, and until now every
+   * one redrew the stage - rebuilding the <foreignObject> and the editor in
+   * it, and with them an open resin search, the caret, and keyboard focus.
+   * A weight typed on a phone would close a search here.
+   *
+   * So a publish is classified first (station-source.js):
+   *
+   *   structural  the drawing's structure changed, or the open layer is
+   *               gone: the full render path. If a control was active its
+   *               interaction cannot be kept; it is closed on purpose and
+   *               the editor's note says why, rather than the DOM simply
+   *               disappearing under the operator.
+   *   values      only values moved: the mounted stage is patched in place
+   *               (hoppers, running state, shares) and the editor's rows
+   *               are updated around whatever control is active. Nothing
+   *               is rebuilt; the <foreignObject> node is the same node.
+   *   none        the drawing reads nothing new; the resolved state is
+   *               kept current and that is all. */
+  function onPublish() {
+    if (labRequested()) { renderAll(); return; }
+    const resolved = currentSource();
+    const model = lineModel.buildLineModel(resolved.modelInput);
+    const kind = source.classifyChange(current.resolved, resolved);
+    if (kind === "none") { current = { model, resolved }; return; }
+
+    const shown = stage.getState().shown;
+    const openLayerGone = !!shown && (!model || !model.layers.some(layer => layer.id === shown));
+    if (kind === "values" && !openLayerGone && stage.getState().phase !== "opening" && stage.getState().phase !== "closing") {
+      current = { model, resolved };
+      render.patchStage(mounts.machine, model, {
+        hopperState: resolved.hopperState,
+        layerState: resolved.layerState,
+        focusLayer: shown,
+        selectedHopper: focus && focus.layer === shown ? focus.hopper : null
+      });
+      if (editorHandle) editorHandle.update({ hopperState: resolved.hopperState });
+      // A patched hopper is a new element; the classes the boot file owns
+      // are written to it again from the state that owns them.
+      applyHighlight();
+      syncSelection();
+      renderInspector(model, resolved);
+      renderRecipeStrip(model);
+      renderStatus(model, resolved);
+      return;
+    }
+
+    /* Structural (or a value change arriving mid-flight, which the landing
+     * render will draw anyway): the full path. An interaction in progress
+     * is abandoned deliberately, and said so. */
+    const abandoned = editing;
+    renderAll();
+    if (abandoned) {
+      const message = `Layer ${abandoned.layer} changed underneath you; what you were entering for ${abandoned.hopper} was not applied.`;
+      if (editorHandle) editorHandle.note(message);
+      else if (mounts.status) mounts.status.textContent = `${message} · ${mounts.status.textContent}`;
+    }
+  }
+
   /* The controller's render callback: the stage for the current line, at a
    * given focus. The selected target is drawn only on the layer that is
    * open, as before; the open layer's editor is built here and handed to
@@ -530,6 +643,8 @@
    * what a recipe is. */
   function drawStage(focusLayer, extra) {
     highlighted = null;
+    // A render replaces the editor, so no control can still be active.
+    editing = null;
     const model = current.model;
     const hopperState = current.resolved ? current.resolved.hopperState : null;
     const layer = focusLayer && model ? model.layers.find(entry => entry.id === focusLayer) : null;
@@ -539,8 +654,19 @@
       hopperState,
       resins: catalogResins,
       selected: selectedHopper,
-      onSelect: hopper => setFocus({ layer: focusLayer, target: "cluster", hopper })
+      commands: commandsFor(current.resolved),
+      onSelect: hopper => setFocus({ layer: focusLayer, target: "cluster", hopper }),
+      /* The editor reports the control the operator is in; Station keeps
+       * the record, stamped with which recipe it addresses (the editor
+       * shows Current) and the revision it was entered at. */
+      onEditing: record => {
+        editing = record ? Object.assign({
+          recipe: "current",
+          baseRevision: current.resolved ? current.resolved.revision : null
+        }, record) : null;
+      }
     }) : null;
+    editorHandle = editor;
     return render.mountStage(mounts.machine, model, {
       hopperState,
       layerState: current.resolved ? current.resolved.layerState : null,
@@ -694,12 +820,14 @@
 
     renderAll();
 
-    // Re-render on every published change. The bridge coalesces publishes
+    // Every published change goes through the publish policy above: a
+    // value-only change is patched into the stage and the editor in place,
+    // a structural one is a full render. The bridge coalesces publishes
     // within a tick, so a burst of edits in the application produces one
-    // render here rather than one per keystroke. This is the only path by
+    // pass here rather than one per keystroke. This is the only path by
     // which live state reaches Station - there is no polling and no second
     // subscription to anything else.
-    bridge?.subscribe(() => { renderAll(); });
+    bridge?.subscribe(() => { onPublish(); });
   }
 
   if (root.document) {

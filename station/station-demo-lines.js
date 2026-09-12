@@ -138,7 +138,9 @@
 
     const sources = {};
     return {
-      sources,
+      // The bridge's own shape: labels per recipe document. The demo plans
+      // nothing, so `next` is empty.
+      sources: { current: sources, next: {} },
       layers: names.map((name, layerIndex) => {
         const layerConfig = declared ? declared.find(entry => (entry.id || entry.name) === name) : null;
         const hopperCount = Number(layerConfig && layerConfig.hopperCount) || defaultHoppers;

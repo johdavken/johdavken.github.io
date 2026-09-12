@@ -38,7 +38,12 @@
   function hopperStateFrom(snapshot) {
     const bySlot = {};
     if (!snapshot || !Array.isArray(snapshot.layers)) return bySlot;
-    const sources = snapshot.sources && typeof snapshot.sources === "object" ? snapshot.sources : {};
+    // The CURRENT recipe's labels: this is the running job's hopper state.
+    // The bridge carries `sources.next` beside them for the planned recipe.
+    const sources = snapshot.sources && typeof snapshot.sources === "object" && snapshot.sources.current
+      && typeof snapshot.sources.current === "object"
+      ? snapshot.sources.current
+      : {};
     for (const layer of snapshot.layers) {
       if (!layer || !Array.isArray(layer.hoppers)) continue;
       for (const hopper of layer.hoppers) {
@@ -159,5 +164,44 @@
     };
   }
 
-  return { MODE_AUTO, MODE_DEMO, hopperStateFrom, layerStateFrom, configFromSnapshot, resolveSource };
+  /* --------------------------------------------------------------------
+   *   What kind of change a new resolution is
+   * ------------------------------------------------------------------
+   * The bridge publishes on every committed change. Station used to redraw
+   * everything on each one, which rebuilt the stage - and with it the
+   * focused editor, its open search and its keyboard focus - for a weight
+   * edit on a phone. The boot file now asks this first:
+   *
+   *   "structural"  the drawing's structure changed: which source is in
+   *                 play, the line's layers or hopper counts or naming, a
+   *                 hopper's profile height (which changes the layout).
+   *                 The stage must be rendered again.
+   *   "values"      only runtime values moved: resin, blend, tracking,
+   *                 pump state, source, layer share. The mounted stage and
+   *                 the editor are patched in place.
+   *   "none"        nothing the drawing reads changed (a publish that only
+   *                 moved the revision, or a value outside the machine).
+   *
+   * Pure, over two resolved objects, so the policy is tested rather than
+   * inferred from what happens to a render. */
+
+  function structureKey(resolved) {
+    if (!resolved) return null;
+    const heights = {};
+    const hopperState = resolved.hopperState || {};
+    for (const key of Object.keys(hopperState)) heights[key] = Number(hopperState[key] && hopperState[key].usableHeight) || 0;
+    return JSON.stringify({ kind: resolved.kind, modelInput: resolved.modelInput === undefined ? null : resolved.modelInput, heights });
+  }
+
+  function valuesKey(resolved) {
+    return JSON.stringify({ hopperState: resolved.hopperState || {}, layerState: resolved.layerState || {} });
+  }
+
+  function classifyChange(before, after) {
+    if (!after || !before) return "structural";
+    if (structureKey(before) !== structureKey(after)) return "structural";
+    return valuesKey(before) === valuesKey(after) ? "none" : "values";
+  }
+
+  return { MODE_AUTO, MODE_DEMO, hopperStateFrom, layerStateFrom, configFromSnapshot, resolveSource, classifyChange };
 });

@@ -289,3 +289,75 @@ test("a publish propagates all the way to a changed machine", () => {
   const afterDisconnect = source.resolveSource({ snapshot: bridge.getSnapshot(), demoLines, demoId: "three-layer" });
   assert.equal(afterDisconnect.kind, "demo");
 });
+
+/* ----------------------------------------------------------------------
+ *   Classifying a publish
+ * -------------------------------------------------------------------- */
+
+/* Every publish used to redraw the stage, which rebuilt the focused editor
+ * and lost an open search. The boot file now asks what kind of change a
+ * new resolution is, and only a structural one goes down the render path. */
+
+function resolvedFor(state, options) {
+  return source.resolveSource({
+    snapshot: snapshotFor(state, Object.assign({ lineConfiguration: LIVE_CONFIG }, options || {})),
+    demoLines, demoId: "three-layer"
+  });
+}
+
+function edited(mutate) {
+  const state = liveState();
+  mutate(state);
+  return state;
+}
+
+test("a publish that changes no value the drawing reads is 'none'", () => {
+  const a = resolvedFor(liveState());
+  const b = resolvedFor(liveState({ lineRate: 999, changeoverTime: "2026-01-01T00:00" }));
+  assert.equal(source.classifyChange(a, b), "none");
+  assert.equal(source.classifyChange(a, resolvedFor(liveState())), "none");
+});
+
+test("a value change - resin, blend, tracking, pump, source, share - is 'values'", () => {
+  const base = resolvedFor(liveState());
+  const cases = {
+    resin: edited(s => { s.layers[0].hoppers[1].resinName = "REMOTE"; }),
+    blend: edited(s => { s.layers[0].hoppers[0].pct = 90; }),
+    tracking: edited(s => { s.layers[1].hoppers[0].track = false; }),
+    pump: edited(s => { s.layers[2].hoppers[0].pumpOff = true; }),
+    source: edited(s => { s.hookupSources = { current: { "A:0": { resin: "RESIN-X", source: "SILO 9" } }, next: {} }; }),
+    share: edited(s => { s.layers[0].layerPct = 50; }),
+    weight: edited(s => { s.layers[0].hoppers[0].weight = 12; })
+  };
+  for (const [name, state] of Object.entries(cases)) {
+    const kind = source.classifyChange(base, resolvedFor(state));
+    // A weight is not read by the drawing yet, so it is 'none'; the rest move a value.
+    assert.equal(kind, name === "weight" ? "none" : "values", `${name} classified as ${kind}`);
+  }
+});
+
+test("a structural change - layers, hopper counts, naming, profile height, or the source itself - is 'structural'", () => {
+  const base = resolvedFor(liveState());
+  assert.equal(source.classifyChange(base, resolvedFor(liveState({ lineType: 3, layers: liveState().layers.slice(0, 3) }))), "structural");
+  assert.equal(source.classifyChange(base, resolvedFor(edited(s => { s.layers[0].hoppers.pop(); }))), "structural");
+  assert.equal(source.classifyChange(base, resolvedFor(liveState(), { lineConfiguration: Object.assign({}, LIVE_CONFIG, { hopperNamingMode: "main-plus-five" }) })), "structural");
+  assert.equal(source.classifyChange(base, resolvedFor(liveState(), { lineConfiguration: Object.assign({}, LIVE_CONFIG, { layerAPosition: "inside" }) })), "structural");
+  // A profile height changes the layout, so it is a render even though it is one number.
+  assert.equal(source.classifyChange(base, resolvedFor(edited(s => { s.layers[0].hoppers[0].usableHeight = 40; }))), "structural");
+  // Live to demo and back.
+  const demo = source.resolveSource({ snapshot: null, demoLines, demoId: "three-layer" });
+  assert.equal(source.classifyChange(base, demo), "structural");
+  assert.equal(source.classifyChange(demo, base), "structural");
+  // Nothing before, or nothing after, is a render.
+  assert.equal(source.classifyChange(null, base), "structural");
+  assert.equal(source.classifyChange(base, null), "structural");
+});
+
+test("classifyChange is pure and reads nothing it is not given", () => {
+  const a = resolvedFor(liveState());
+  const b = resolvedFor(edited(s => { s.layers[0].hoppers[1].resinName = "X"; }));
+  const before = JSON.stringify([a, b]);
+  source.classifyChange(a, b);
+  source.classifyChange(b, a);
+  assert.equal(JSON.stringify([a, b]), before);
+});

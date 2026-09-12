@@ -96,8 +96,21 @@
    *   notes, saved configurations, scanned lots - real data, but nothing in
    *     Station reads them yet. They can be added when something needs them;
    *     a snapshot that carries everything is not a narrow bridge.
-   *   the NEXT recipe's hookup sources - only `current` crosses, because only
-   *     the current recipe is shown.
+   *   the undo/redo stacks themselves - only whether each recipe (Current, Next)
+   *     HAS something to undo or redo crosses (see `history`). A stack is a
+   *     copy of past state; handing it out would be handing out a second
+   *     recipe model.
+   *
+   * WHAT THE NEXT RECIPE LOOKS LIKE HERE
+   *
+   * `nextRecipe` is the planned recipe as the application itself reads it
+   * when it needs the effective plan - the caller passes the same normalized
+   * payload it uses for that (`options.plannedRecipe`), which reflects the
+   * operator's working copy and not merely the last committed one. It is
+   * projected as recipe fields only: a plan has no receiver weights, no
+   * tracking, no pump state and no geometry, so none of those appear on its
+   * hoppers - by construction, not by omission. It is null when there is no
+   * plan at all.
    *
    * @param {object} state                 The application state object.
    * @param {object} [options]
@@ -107,6 +120,14 @@
    *        effective-weight function (Smart Hoppers included). Defaults to the
    *        operator's entered weight, which is what a caller that has not
    *        extracted Smart Hoppers can honestly supply.
+   * @param {object|null} [options.plannedRecipe]  The effective planned recipe
+   *        as a normalized recipe payload (PolynNextRecipe.normalize's shape),
+   *        or null for "nothing planned". When the option is absent the stored
+   *        `state.nextRecipe` is read instead, which is the last committed
+   *        plan - one save behind an open working copy.
+   * @param {object} [options.history]  Undo/redo availability per recipe
+   *        recipe: { current: { canUndo, canRedo }, next: { ... } }. Booleans
+   *        only; absent means nothing to undo or redo.
    */
   function project(state, options) {
     if (!state || typeof state !== "object") return null;
@@ -115,6 +136,7 @@
     const resolveWeight = typeof settings.resolveHopperWeight === "function"
       ? settings.resolveHopperWeight
       : hopper => finite(hopper && hopper.weight);
+    const plannedRecipe = settings.plannedRecipe !== undefined ? settings.plannedRecipe : state.nextRecipe;
 
     // state.lineType is the live layer count of the running session - it is
     // enforced to match the connected line when there is one, and remains the
@@ -146,13 +168,20 @@
         // not to a transport boundary.
         changeoverTime: state.changeoverTime ? String(state.changeoverTime) : ""
       },
-      /* Hookup source labels for the CURRENT recipe, keyed by physical slot
-       * exactly as hookup-sources.js keys them ("<layer>:<index>"), and
+      /* Hookup source labels for each recipe (Current, Next), keyed by physical
+       * slot exactly as hookup-sources.js keys them ("<layer>:<index>"), and
        * carried in that module's own {resin, source} shape so Station can
        * resolve them with sourceForPosition() rather than reading the entry
        * raw. The resin is part of the record, not decoration: it is what lets
-       * that helper refuse a label whose resin has since changed. */
-      sources: currentSources(state),
+       * that helper refuse a label whose resin has since changed. Sources are
+       * operational job state, not recipe state, which is why they sit beside
+       * the two recipes rather than inside them. */
+      sources: {
+        current: sourcesFor(state, "current"),
+        next: sourcesFor(state, "next")
+      },
+      nextRecipe: projectPlannedRecipe(plannedRecipe),
+      history: projectHistory(settings.history),
       layers: layers.map(layer => ({
         name: String((layer && layer.name) || ""),
         layerPct: finite(layer && layer.layerPct),
@@ -179,8 +208,39 @@
     };
   }
 
-  function currentSources(state) {
-    const store = state && state.hookupSources && state.hookupSources.current;
+  /* The planned recipe's layers, from a normalized recipe payload. Recipe
+   * fields only - see the note on project(). A payload with no layers is no
+   * plan. */
+  function projectPlannedRecipe(payload) {
+    if (!payload || typeof payload !== "object" || !Array.isArray(payload.layers)) return null;
+    return {
+      layers: payload.layers.map(layer => ({
+        name: String((layer && layer.name) || ""),
+        layerPct: finite(layer && layer.layer_pct),
+        hoppers: (Array.isArray(layer && layer.hoppers) ? layer.hoppers : []).map((hopper, index) => ({
+          index,
+          pct: finite(hopper && hopper.pct),
+          resinName: hopper && hopper.resin_name ? String(hopper.resin_name) : ""
+        }))
+      }))
+    };
+  }
+
+  /* Whether each recipe has anything to undo or redo. Informational:
+   * two booleans per recipe, never the entries themselves. */
+  function projectHistory(history) {
+    const of = recipe => {
+      const entry = history && history[recipe];
+      return {
+        canUndo: !!(entry && entry.canUndo),
+        canRedo: !!(entry && entry.canRedo)
+      };
+    };
+    return { current: of("current"), next: of("next") };
+  }
+
+  function sourcesFor(state, recipe) {
+    const store = state && state.hookupSources && state.hookupSources[recipe];
     if (!store || typeof store !== "object" || Array.isArray(store)) return {};
     const out = {};
     for (const key of Object.keys(store)) {
