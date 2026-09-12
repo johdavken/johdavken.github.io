@@ -10071,6 +10071,65 @@
         return done(true, persisted);
       },
 
+      /* The Output field, exactly (the gauge tile's #lineRate and the status
+       * bar's #workspaceOutputInput share this path): state.lineRate set,
+       * validateAndCompute({ sync:true }) - which re-derives every run-down
+       * and notifies RT Sync as an ordinary debounced edit - and saveSession.
+       * The two hidden inputs and the phone readout are mirrored as the
+       * status-bar handler mirrors them, so the floor UI shows the value the
+       * console set. No history entry: the field records none - line output
+       * is job state, not recipe state. Zero is "not set", as the fields
+       * read it. */
+      setLineRate(args){
+        if (clampNum(state.lineRate) === args.lineRate) return unchanged();
+        state.lineRate = args.lineRate;
+        const lineRateEl = $("lineRate");
+        if (lineRateEl) lineRateEl.value = String(state.lineRate);
+        const workspaceEl = $("workspaceOutputInput");
+        if (workspaceEl) workspaceEl.value = state.lineRate > 0 ? String(state.lineRate) : "";
+        syncMobileLineRateReadout();
+        const persisted = commit({ sync: true, grid: false, hookups: false });
+        return done(true, persisted);
+      },
+
+      /* The Changeover field, exactly: state.changeoverTime is the clock
+       * time "HH:MM" the job stores and synchronizes, changeoverSetAt the
+       * moment it was set, then the same tail as the field's input event.
+       * The command states an absolute instant; the clock time is derived
+       * from it here, in this device's local time, which is the same
+       * reading parseChangeoverDate makes of it (today, or tomorrow when
+       * the time has already passed today, with the field's one-minute
+       * grace). What the job cannot store is refused rather than stored
+       * wrongly: an instant already past, or more than a day away. Setting
+       * the same time again is a change only when the stored one has gone
+       * stale - that is the field's "confirm or update it" - and a no-op
+       * otherwise. */
+      setChangeover(args){
+        const now = Date.now();
+        let value = "";
+        if (args.at !== null){
+          if (args.at < now - 60 * 1000){
+            return contract.failure("out_of_range", { field: "at", message: "That changeover time has already passed." });
+          }
+          if (args.at > now + 24 * 60 * 60 * 1000){
+            return contract.failure("out_of_range", { field: "at", message: "The changeover must be within the next 24 hours: the job stores it as a clock time." });
+          }
+          const date = new Date(args.at);
+          value = `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+        }
+        const same = (state.changeoverTime || "") === value;
+        if (same && !(value && isChangeoverStale(state.changeoverSetAt, new Date(now)))) return unchanged();
+        state.changeoverTime = value;
+        state.changeoverSetAt = value ? now : null;
+        const changeoverEl = $("changeoverTime");
+        if (changeoverEl) changeoverEl.value = state.changeoverTime;
+        const workspaceEl = $("workspaceChangeoverInput");
+        if (workspaceEl) workspaceEl.value = state.changeoverTime;
+        syncChangeoverTimeDisplay();
+        const persisted = commit({ sync: true, grid: false, hookups: false });
+        return done(true, persisted);
+      },
+
       /* The toolbar's Undo/Redo, addressed explicitly. Checked before the
        * helper runs so an empty stack never touches Next's working copy. */
       undo(args){

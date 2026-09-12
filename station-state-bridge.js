@@ -166,7 +166,13 @@
         gauge: finite(state.gauge),
         // A plain string exactly as stored; parsing belongs to scheduling.js,
         // not to a transport boundary.
-        changeoverTime: state.changeoverTime ? String(state.changeoverTime) : ""
+        changeoverTime: state.changeoverTime ? String(state.changeoverTime) : "",
+        // When that clock time was last set on this device, as epoch
+        // milliseconds - what scheduling.isChangeoverStale reads to decide
+        // whether a deadline is still today's. Null when none is set.
+        changeoverSetAt: state.changeoverTime && Number.isFinite(Number(state.changeoverSetAt))
+          ? Number(state.changeoverSetAt)
+          : null
       },
       /* Hookup source labels for each recipe (Current, Next), keyed by physical
        * slot exactly as hookup-sources.js keys them ("<layer>:<index>"), and

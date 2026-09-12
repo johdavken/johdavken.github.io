@@ -31,14 +31,18 @@
   /* Every mount point the boot file looks for. Named here so the shell and
    * the code that fills it cannot disagree about what exists.
    *
-   * Three regions and nothing else: the header (with the line console's
-   * slot), the machine stage, and the status bar. The earlier side columns
-   * - a demo-configuration list on the left, an inspector on the right - and
-   * the Current / Next recipe strip under the stage were taken out
-   * (2026-09-12) so the stage has the whole width: configuration switching
-   * is the workspace's job now, and the recipe readout will come back in a
-   * different place and shape. Nothing here reserves space for them. */
-  const MOUNTS = Object.freeze(["machine", "status", "connection"]);
+   * Four regions and nothing else: the header (with the job controls' slot
+   * and the line console's slot), the machine stage, the run-down timeline
+   * across the foot of the workspace, and the status bar. The earlier side
+   * columns - a demo-configuration list on the left, an inspector on the
+   * right - and the Current / Next recipe strip under the stage were taken
+   * out (2026-09-12) so the stage has the whole width: configuration
+   * switching is the workspace's job now, and the recipe readout will come
+   * back in a different place and shape. Nothing here reserves space for
+   * them. The timeline row is not a strip of that kind: it is an
+   * operational view of the job the stage shows, one modest row deep, and
+   * the stage keeps everything above it. */
+  const MOUNTS = Object.freeze(["machine", "timeline", "status", "job", "connection"]);
 
   function element(doc, name, className, attributes) {
     const node = doc.createElement(name);
@@ -79,6 +83,10 @@
     header.appendChild(text(doc, "h1", "station-header__title", "Station"));
     const tags = Array.isArray(settings.tags) ? settings.tags : ["Experimental"];
     for (const tag of tags) header.appendChild(text(doc, "span", "station-header__tag", tag));
+    /* The job controls' slot: the line's output, the changeover and the
+     * timeline's scale, filled by station-job-controls.js. A temporary
+     * home in the header while the timeline is new. */
+    header.appendChild(element(doc, "div", "station-header__job", { "data-station-mount": "job" }));
     /* The line console's slot, at the header's far end: the one place the
      * connection is shown, filled by station-sync-console.js when the
      * application publishes a connection and left empty otherwise. */
@@ -87,6 +95,12 @@
 
     shell.appendChild(element(doc, "section", "station-machine", {
       "data-station-mount": "machine", "aria-label": "Machine stage"
+    }));
+
+    /* The run-down timeline's row: no heading, no card - the timeline
+     * itself (station-rundown-timeline.js) begins with its Now anchor. */
+    shell.appendChild(element(doc, "section", "station-timeline", {
+      "data-station-mount": "timeline", "aria-label": "Run-down timeline"
     }));
 
     shell.appendChild(element(doc, "footer", "station-status", { "data-station-mount": "status" }));

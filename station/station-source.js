@@ -54,6 +54,10 @@
           assigned: !!hopper.resinName,
           resinName: hopper.resinName || "",
           pct: Number.isFinite(hopper.pct) ? hopper.pct : 0,
+          // The weight the run-down formula uses - the bridge's own resolved
+          // value, Smart Hoppers included - in pounds. 0 means "no weight",
+          // which is what the application reads it as too.
+          effectiveWeight: Number.isFinite(hopper.effectiveWeight) && hopper.effectiveWeight > 0 ? hopper.effectiveWeight : 0,
           // Receiver Weight Profile height, in inches. 0 means "not profiled".
           usableHeight: Number.isFinite(hopper.usableHeight) ? hopper.usableHeight : 0,
           // Resolved through hookup-sources' own helper, which refuses a label
@@ -78,6 +82,20 @@
       byLayer[layer.name] = { layerPct: Number.isFinite(layer.layerPct) ? layer.layerPct : 0 };
     }
     return byLayer;
+  }
+
+  /* The running job's own values: the line's output and the changeover
+   * deadline as the application stores them (a clock time, and when it was
+   * set), carried exactly - resolving the clock time to an instant is the
+   * run-down projection's job, at the moment it projects. Zero output and an
+   * empty time are what the application means by "not set". */
+  function jobStateFrom(snapshot) {
+    const job = snapshot && snapshot.job && typeof snapshot.job === "object" ? snapshot.job : {};
+    return {
+      lineRate: Number.isFinite(job.lineRate) && job.lineRate > 0 ? job.lineRate : 0,
+      changeoverTime: typeof job.changeoverTime === "string" ? job.changeoverTime : "",
+      changeoverSetAt: Number.isFinite(job.changeoverSetAt) ? job.changeoverSetAt : null
+    };
   }
 
   /* The live snapshot rendered as a line configuration the model understands.
@@ -110,7 +128,7 @@
    * @param {string} input.demoId          Which demo entry is selected.
    * @param {string} [input.mode]          "auto" (default) or "demo" to pin
    *        demo data even while the application is connected - the dev mode.
-   * @returns {{kind, modelInput, label, detail, hopperState, live}}
+   * @returns {{kind, modelInput, label, detail, hopperState, layerState, job, live}}
    */
   function resolveSource(input) {
     const settings = input || {};
@@ -127,6 +145,7 @@
         modelInput: configFromSnapshot(snapshot),
         hopperState: hopperStateFrom(snapshot),
         layerState: layerStateFrom(snapshot),
+        job: jobStateFrom(snapshot),
         revision: typeof snapshot.revision === "number" ? snapshot.revision : null,
         label: snapshot.line && snapshot.line.linked ? "Live" : "Live (no line linked)",
         detail: snapshot.line && snapshot.line.linked
@@ -156,6 +175,8 @@
        * state, and a demo line is not running a job. */
       hopperState: demoSnapshot ? hopperStateFrom(demoSnapshot) : {},
       layerState: demoSnapshot ? layerStateFrom(demoSnapshot) : {},
+      // A demo line runs no job: no output, no changeover, as no tracking.
+      job: jobStateFrom(demoSnapshot),
       revision: null,
       label: mode === MODE_DEMO ? "Demo (pinned)" : "Demo",
       detail: mode === MODE_DEMO
@@ -177,8 +198,11 @@
    *                 hopper's profile height (which changes the layout).
    *                 The stage must be rendered again.
    *   "values"      only runtime values moved: resin, blend, tracking,
-   *                 pump state, source, layer share. The mounted stage and
-   *                 the editor are patched in place.
+   *                 pump state, source, layer share, a receiver weight,
+   *                 the line's output or changeover. The mounted stage and
+   *                 the editor are patched in place (a hopper whose drawing
+   *                 reads nothing new is left alone), and the run-down
+   *                 timeline re-projects.
    *   "none"        nothing the drawing reads changed (a publish that only
    *                 moved the revision, or a value outside the machine).
    *
@@ -194,7 +218,7 @@
   }
 
   function valuesKey(resolved) {
-    return JSON.stringify({ hopperState: resolved.hopperState || {}, layerState: resolved.layerState || {} });
+    return JSON.stringify({ hopperState: resolved.hopperState || {}, layerState: resolved.layerState || {}, job: resolved.job || null });
   }
 
   function classifyChange(before, after) {
@@ -203,5 +227,5 @@
     return valuesKey(before) === valuesKey(after) ? "none" : "values";
   }
 
-  return { MODE_AUTO, MODE_DEMO, hopperStateFrom, layerStateFrom, configFromSnapshot, resolveSource, classifyChange };
+  return { MODE_AUTO, MODE_DEMO, hopperStateFrom, layerStateFrom, jobStateFrom, configFromSnapshot, resolveSource, classifyChange };
 });

@@ -126,7 +126,7 @@ async function boot() {
     resinLots: {}, nextRecipeLots: {}
   };
   const payloadOf = () => ({
-    version: "0.17", lineRate: state.lineRate, lineType: state.lineType, gauge: 0, changeoverTime: "", offsets: {},
+    version: "0.17", lineRate: state.lineRate, lineType: state.lineType, gauge: 0, changeoverTime: state.changeoverTime, offsets: {},
     layers: JSON.parse(JSON.stringify(state.layers)), prodResinLb: 0, scrapResinLb: 0, hopperNamingLine9: "standard",
     hookupSources: JSON.parse(JSON.stringify(state.hookupSources)), nextRecipe: state.nextRecipe
   });
@@ -166,6 +166,9 @@ async function boot() {
     function autoFirstLayerPctActive(){ return false; }
     function renderSplitsArea(){}
     function renderTimelineHookups(){}
+    function syncMobileLineRateReadout(){}
+    function syncChangeoverTimeDisplay(){}
+    const isChangeoverStale = env.scheduling.isChangeoverStale;
     // app.js's tail, with the real RT Sync notification at the end of it.
     function notifyActiveJobMutation(options){ log.notified.push(options); env.lineSync().notifyActiveJobMutation(options); }
     function validateAndCompute({ sync = false, immediate = false, kind = "edit" } = {}){
@@ -190,7 +193,8 @@ async function boot() {
   `);
   const built = factory({
     window: { PolynHookupSources: hookups, PolynNextRecipe: nextRecipe, PolynHopperRearrangement: rearrangement },
-    state, validation, contract, stateBridgeModule, commandBridgeModule, log, lineSync: () => lineSync
+    state, validation, contract, stateBridgeModule, commandBridgeModule, log, lineSync: () => lineSync,
+    scheduling: require("./scheduling.js")
   });
 
   lineSync = cloudSync.create({
@@ -396,4 +400,46 @@ test("the hopper controls module has no way onto the line of its own: it dispatc
   const source = fs.readFileSync(path.join(ROOT, "station", "station-hopper-controls.js"), "utf8");
   assert.equal((source.match(/commands\.dispatch\s*\(/g) || []).length, 1);
   assert.doesNotMatch(source, /PolynStationCommandBridge\s*\.|PolynStationStateBridge|PolynCloudSync|localStorage|setTimeout|fetch\s*\(/);
+});
+
+/* ----------------------------------------------------------------------
+ *   Output and changeover (Step 11)
+ * -------------------------------------------------------------------- */
+
+test("set output from Station: state.lineRate moves once, the bridge publishes, one debounced edit notification, one upload carrying the output", async () => {
+  const h = await boot();
+  const revision = h.stationBridge.getRevision();
+  const result = h.commands.dispatch("setLineRate", { lineRate: 850 });
+  assert.equal(result.ok, true);
+  assert.equal(h.state.lineRate, 850);
+  assert.ok(h.stationBridge.getRevision() > revision);
+  assert.equal(result.snapshot.job.lineRate, 850);
+  const uploaded = await expectOneUpload(h, "edit", false);
+  assert.equal(uploaded.lineRate, 850, "the line receives the output as an ordinary active-job field");
+  assert.equal(h.history.current.undo.length, 0, "no recipe history");
+});
+
+test("set changeover from Station: the clock time the job synchronizes moves once, one edit notification, one upload carrying it; changeoverSetAt stays local", async () => {
+  const h = await boot();
+  const at = new Date(Date.now() + 2 * 60 * 60 * 1000);
+  at.setSeconds(0, 0);
+  const result = h.commands.dispatch("setChangeover", { at: at.getTime() });
+  assert.equal(result.ok, true);
+  const expected = `${String(at.getHours()).padStart(2, "0")}:${String(at.getMinutes()).padStart(2, "0")}`;
+  assert.equal(h.state.changeoverTime, expected);
+  assert.equal(result.snapshot.job.changeoverTime, expected);
+  const uploaded = await expectOneUpload(h, "edit", false);
+  assert.equal(uploaded.changeoverTime, expected);
+  assert.ok(!("changeoverSetAt" in uploaded), "when it was set is this device's own and does not travel");
+  assert.equal(h.history.current.undo.length, 0);
+});
+
+test("the job controls module has no way onto the line of its own: it dispatches on the bridge it is handed and nothing else", () => {
+  const source = fs.readFileSync(path.join(ROOT, "station/station-job-controls.js"), "utf8");
+  assert.match(source, /commands\.dispatch\s*\(/);
+  for (const pattern of [/PolynStationCommandBridge/, /PolynCloudSync/, /supabase/i, /\.rpc\s*\(/, /update_active_job/, /notifyActiveJobMutation/, /\.publish\s*\(/, /saveSession/, /localStorage/]) {
+    assert.doesNotMatch(source, pattern, `station-job-controls.js matched ${pattern}`);
+  }
+  const timeline = fs.readFileSync(path.join(ROOT, "station/station-rundown-timeline.js"), "utf8");
+  assert.doesNotMatch(timeline, /\.dispatch\s*\(|PolynCloudSync|supabase|\.rpc\s*\(|notifyActiveJobMutation|\.publish\s*\(|saveSession|localStorage/i);
 });

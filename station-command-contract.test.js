@@ -21,12 +21,61 @@ const GOOD = { recipe: "current", layer: "A", index: 1, pct: 25, resin: "HX204",
 
 test("the approved command vocabulary, and nothing else", () => {
   assert.deepEqual([...contract.COMMANDS],
-    ["setHopperResin", "setHopperBlend", "setLayerShare", "clearHopper", "setSource", "moveHopper", "setHopperTracking", "setPumpOff", "undo", "redo"]);
+    ["setHopperResin", "setHopperBlend", "setLayerShare", "clearHopper", "setSource", "moveHopper", "setHopperTracking", "setPumpOff", "undo", "redo", "setLineRate", "setChangeover"]);
   assert.ok(Object.isFrozen(contract.COMMANDS));
   assert.deepEqual([...contract.RECIPES], ["current", "next"]);
+  assert.deepEqual([...contract.JOB_COMMANDS], ["setLineRate", "setChangeover"]);
   for (const command of contract.COMMANDS) {
     assert.ok(Array.isArray(contract.ARGUMENTS[command]), `${command} declares no arguments`);
-    assert.equal(contract.ARGUMENTS[command][0], "recipe", `${command} does not name its recipe first`);
+    // A recipe command names its recipe first; a job command names no
+    // recipe at all - output and changeover belong to the whole job.
+    if (contract.JOB_COMMANDS.includes(command)) {
+      assert.ok(!contract.ARGUMENTS[command].includes("recipe"), `${command} names a recipe`);
+    } else {
+      assert.equal(contract.ARGUMENTS[command][0], "recipe", `${command} does not name its recipe first`);
+    }
+  }
+});
+
+/* ----------------------------------------------------------------------
+ *   Job commands: output and changeover
+ * -------------------------------------------------------------------- */
+
+test("setLineRate takes a non-negative number of lb/hr, as the Output field does; zero clears", () => {
+  assert.deepEqual(contract.ARGUMENTS.setLineRate, ["lineRate"]);
+  for (const [given, expected] of [[850, 850], ["850", 850], ["1,200.5", 1200.5], [0, 0], ["0", 0]]) {
+    const request = contract.normalizeArguments("setLineRate", { lineRate: given });
+    assert.equal(request.ok, true, `${JSON.stringify(given)} refused`);
+    assert.deepEqual(request.args, { lineRate: expected });
+    assert.ok(Object.isFrozen(request.args));
+  }
+  for (const bad of [undefined, null, "", "abc", NaN, Infinity, {}, true]) {
+    const request = contract.normalizeArguments("setLineRate", { lineRate: bad });
+    assert.equal(request.ok, false, `${JSON.stringify(bad)} accepted`);
+    assert.equal(request.code, "bad_argument");
+    assert.equal(request.field, "lineRate");
+  }
+  const negative = contract.normalizeArguments("setLineRate", { lineRate: -1 });
+  assert.equal(negative.code, "out_of_range");
+  assert.equal(negative.field, "lineRate");
+  // Nothing else rides along.
+  assert.deepEqual(Object.keys(contract.normalizeArguments("setLineRate", { lineRate: 1, recipe: "next", layer: "A" }).args), ["lineRate"]);
+});
+
+test("setChangeover takes an absolute instant in epoch milliseconds, or null to clear; never a clock string or a duration", () => {
+  assert.deepEqual(contract.ARGUMENTS.setChangeover, ["at"]);
+  const at = Date.UTC(2026, 8, 12, 3, 28);
+  assert.deepEqual(contract.normalizeArguments("setChangeover", { at }).args, { at });
+  assert.deepEqual(contract.normalizeArguments("setChangeover", { at: String(at) }).args, { at });
+  assert.deepEqual(contract.normalizeArguments("setChangeover", { at: at + 0.4 }).args, { at });
+  for (const clear of [null, undefined, ""]) {
+    assert.deepEqual(contract.normalizeArguments("setChangeover", { at: clear }).args, { at: null });
+  }
+  for (const bad of ["03:28", "in 45m", 0, -5, NaN, Infinity, {}, true, "abc"]) {
+    const request = contract.normalizeArguments("setChangeover", { at: bad });
+    assert.equal(request.ok, false, `${JSON.stringify(bad)} accepted`);
+    assert.equal(request.code, "bad_argument");
+    assert.equal(request.field, "at");
   }
 });
 

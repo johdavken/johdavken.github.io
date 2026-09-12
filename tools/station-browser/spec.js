@@ -176,22 +176,25 @@ async function run(browserName) {
     check(browserName, `${tag} too-small notice hidden`, !pageState.tooSmall);
     const frame = await page.evaluate(() => {
       const rect = sel => { const el = document.querySelector(sel); return el ? el.getBoundingClientRect() : null; };
-      const shell = rect(".station-shell"), header = rect(".station-header"), machine = rect(".station-machine"), status = rect(".station-status");
+      const shell = rect(".station-shell"), header = rect(".station-header"), machine = rect(".station-machine"), timeline = rect(".station-timeline"), status = rect(".station-status");
       const stage = rect(".station-machine__stage");
       return {
         columns: getComputedStyle(document.querySelector(".station-shell")).gridTemplateColumns.split(" ").length,
         regions: [...document.querySelector(".station-shell").children].map(el => el.className),
         panes: document.querySelectorAll(".station-sidebar, .station-inspector, .station-recipe-strip, .station-nav, [data-station-mount='inspector'], [data-station-mount='nav'], [data-station-mount='recipe-strip']").length,
         headerFull: header && Math.abs(header.width - shell.width) < 1 && header.y === shell.y,
-        machineFull: machine && Math.abs(machine.width - shell.width) < 1 && Math.abs(machine.y - header.bottom) < 1 && Math.abs(status.y - machine.bottom) < 1,
+        machineFull: machine && Math.abs(machine.width - shell.width) < 1 && Math.abs(machine.y - header.bottom) < 1 && Math.abs(timeline.y - machine.bottom) < 1,
+        // The run-down timeline: one modest row between the stage and the
+        // status bar, the full width, no heading.
+        timelineFull: timeline && Math.abs(timeline.width - shell.width) < 1 && Math.abs(status.y - timeline.bottom) < 1 && timeline.height < shell.height * 0.14 && !document.querySelector(".station-timeline h1, .station-timeline h2, .station-timeline h3"),
         statusFull: status && Math.abs(status.width - shell.width) < 1 && Math.abs(status.bottom - shell.bottom) < 1,
         stageWide: stage && stage.width > shell.width * 0.9,
         shellWidth: shell.width, machineWidth: machine.width, stageWidth: stage ? stage.width : null,
         console: !!document.querySelector("[data-station-mount='connection'] *")
       };
     });
-    check(browserName, `${tag} the shell is header, stage and status bar across the full width - no side pane, no strip, no spare track`,
-      frame.columns === 1 && frame.regions.join() === "station-header,station-machine,station-status" && frame.panes === 0 && frame.headerFull && frame.machineFull && frame.statusFull && frame.stageWide && frame.console, frame);
+    check(browserName, `${tag} the shell is header, stage, run-down timeline and status bar across the full width - no side pane, no recipe strip, no spare track`,
+      frame.columns === 1 && frame.regions.join() === "station-header,station-machine,station-timeline,station-status" && frame.panes === 0 && frame.headerFull && frame.machineFull && frame.timelineFull && frame.statusFull && frame.stageWide && frame.console, frame);
     let hopperHits = await hopperHitFailures(page);
     check(browserName, `${tag} overview hopper artwork routes through stable hit areas`, hopperHits.length === 0, hopperHits);
 

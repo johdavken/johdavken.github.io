@@ -94,7 +94,7 @@ function layers(prefix) {
 
 function payloadWith(state) {
   return {
-    version: "0.17", lineRate: state.lineRate, lineType: state.lineType, gauge: 0, changeoverTime: "", offsets: {},
+    version: "0.17", lineRate: state.lineRate, lineType: state.lineType, gauge: 0, changeoverTime: state.changeoverTime || "", offsets: {},
     layers: JSON.parse(JSON.stringify(state.layers)), prodResinLb: 0, scrapResinLb: 0, hopperNamingLine9: "standard",
     hookupSources: JSON.parse(JSON.stringify(state.hookupSources))
   };
@@ -167,6 +167,10 @@ async function bootDesktop({ remotePayload } = {}) {
       applyRemoteActiveJob: (payload, meta) => {
         log.applied.push(meta.reason);
         state.lineType = payload.lineType; state.lineRate = payload.lineRate;
+        // As applyPayload: a remote clock time is stamped as set now on
+        // this device, since when it was set does not travel.
+        state.changeoverTime = payload.changeoverTime || "";
+        state.changeoverSetAt = state.changeoverTime ? Date.now() : null;
         state.layers = JSON.parse(JSON.stringify(payload.layers));
         state.hookupSources = JSON.parse(JSON.stringify(payload.hookupSources || { current: {}, next: {} }));
         saveSession();
@@ -218,6 +222,7 @@ function fakeDocument() {
       setAttribute(k, v) { this.attributes[k] = String(v); }, getAttribute(k) { return k in this.attributes ? this.attributes[k] : null; },
       hasAttribute(k) { return k in this.attributes; }, removeAttribute(k) { delete this.attributes[k]; },
       appendChild(c) { this.children.push(c); c.parent = this; return c; },
+      append(...nodes) { for (const c of nodes) this.appendChild(c); },
       removeChild(c) { const at = this.children.indexOf(c); if (at >= 0) this.children.splice(at, 1); c.parent = null; return c; },
       contains(o) { let n = o; while (n) { if (n === this) return true; n = n.parent; } return false; },
       closest(sel) { let n = this; while (n) { if (matches(n, sel)) return n; n = n.parent; } return null; },
@@ -394,9 +399,11 @@ test("a push that changes the line's structure is classified structural; one tha
   const before = stationOver(desktop.stateBridge).resolved;
   const resolve = () => source.resolveSource({ snapshot: desktop.stateBridge.getSnapshot(), demoLines: require("./station/station-demo-lines.js"), demoId: "", mode: "auto" });
 
-  // Only the line rate moved: nothing the machine draws.
-  const rateOnly = payloadWith(desktop.state); rateOnly.lineRate = 1200;
-  await desktop.remote.channels[0].fireActiveJobUpdate({ workspace_id: "ws-9", payload: rateOnly, revision: 2, last_operation_id: "op-rate" });
+  // Only the production total moved: nothing the machine or the timeline
+  // reads (the line rate, by contrast, is a value now - the run-down
+  // timeline projects from it; see the values test below).
+  const totalOnly = payloadWith(desktop.state); totalOnly.prodResinLb = 4321;
+  await desktop.remote.channels[0].fireActiveJobUpdate({ workspace_id: "ws-9", payload: totalOnly, revision: 2, last_operation_id: "op-total" });
   assert.equal(source.classifyChange(before, resolve()), "none");
 
   // A hopper's profile height changed: the drawing's geometry, structural.
@@ -630,4 +637,81 @@ test("a phone toggles B1's tracking while a resin search is open on B3: the sear
   assert.equal(search.value, "NEW");
   assert.ok(searchRow.classList.contains("is-searching"));
   assert.ok(!searchRow.classList.contains("is-changed-underneath"));
+});
+
+/* ----------------------------------------------------------------------
+ *   The run-down timeline over the live line (Step 11)
+ * -------------------------------------------------------------------- */
+
+const timelineModule = require("./station/station-rundown-timeline.js");
+
+/* Station's timeline over the bridge, fed exactly as station.js feeds it
+ * (feedJob): the model and the resolved state, never the bridge itself. */
+function timelineOver(desktop, doc) {
+  const timeline = timelineModule.create(doc, { view: null, timers: { setTimeout: () => 1, clearTimeout() {} } });
+  const feed = () => {
+    const resolved = source.resolveSource({ snapshot: desktop.stateBridge.getSnapshot(), demoLines: require("./station/station-demo-lines.js"), demoId: "", mode: "auto" });
+    const model = lineModel.buildLineModel(resolved.modelInput);
+    timeline.update({ model, hopperState: resolved.hopperState, layerState: resolved.layerState, job: resolved.job, live: resolved.live });
+    return resolved;
+  };
+  feed();
+  return { timeline, feed };
+}
+const markerX = (timeline, id) => Number(timeline.element.querySelector(`[data-hopper='${id}']`).getAttribute("style").match(/([\d.]+)%/)[1]);
+
+test("a phone changes the line's output: the timeline's markers reposition through the application, while the operator's percentage draft is untouched", async () => {
+  const desktop = await bootDesktop();
+  const doc = fakeDocument();
+  const station = stationOver(desktop.stateBridge, "B", doc);
+  const { timeline, feed } = timelineOver(desktop, doc);
+  const before = markerX(timeline, "BM");
+  assert.ok(before > 0);
+
+  const pct = row(station.editor, "B2").querySelector(".station-editor__pct-input");
+  pct.focus(); pct.dispatchEvent({ type: "focus" }); pct.value = "12"; pct.dispatchEvent({ type: "input" });
+
+  const after = await pushFromPhone(desktop, payload => { payload.lineRate = 1800; });
+  assert.equal(source.classifyChange(station.resolved, after), "values", "an output change is a value change, patched in place");
+  station.editor.update({ hopperState: after.hopperState });
+  feed();
+  assert.equal(desktop.state.lineRate, 1800);
+  assert.ok(Math.abs(markerX(timeline, "BM") - before / 2) < 0.01, "double the output, half the distance to empty");
+  assert.equal(pct.value, "12", "the draft is intact");
+  assert.equal(row(station.editor, "B2").querySelector(".station-editor__pct-input"), pct);
+});
+
+test("a phone sets the changeover: the boundary appears on the timeline and the header's readout would follow, through the same published job", async () => {
+  const desktop = await bootDesktop();
+  const doc = fakeDocument();
+  const { timeline, feed } = timelineOver(desktop, doc);
+  const co = timeline.element.querySelector(".station-rundown__changeover");
+  assert.ok(co.hasAttribute("hidden"));
+  const at = new Date(Date.now() + 90 * 60 * 1000);
+  const hhmm = `${String(at.getHours()).padStart(2, "0")}:${String(at.getMinutes()).padStart(2, "0")}`;
+  const after = await pushFromPhone(desktop, payload => { payload.changeoverTime = hhmm; });
+  assert.equal(after.job.changeoverTime, hhmm);
+  assert.ok(Number.isFinite(after.job.changeoverSetAt), "stamped as set now on this device");
+  feed();
+  assert.ok(!co.hasAttribute("hidden"));
+  const x = Number(co.getAttribute("style").match(/([\d.]+)%/)[1]);
+  assert.ok(Math.abs(x - 90 / 360 * 100) < 0.5, `the changeover sits 90 minutes into a six-hour window (${x}%)`);
+  const jobControls = require("./station/station-job-controls.js");
+  assert.match(jobControls.changeoverText(after.job, Date.now(), require("./station/station-rundown.js")).text, /in 1h (29|30)m$/);
+});
+
+test("a phone updates a tracked hopper's weight and tracks another: the markers follow, the new one appears, and nothing but the inputs reached the timeline", async () => {
+  const desktop = await bootDesktop();
+  const doc = fakeDocument();
+  const { timeline, feed } = timelineOver(desktop, doc);
+  // Line 9 names its first hopper Main: AM, BM, CM.
+  assert.deepEqual(timeline.element.querySelectorAll(".station-rundown__marker").map(m => m.getAttribute("data-hopper")).sort(), ["AM", "BM", "CM"]);
+  const before = markerX(timeline, "BM");
+  await pushFromPhone(desktop, payload => { payload.layers[1].hoppers[0].weight = 200; payload.layers[1].hoppers[1].track = true; });
+  feed();
+  assert.ok(Math.abs(markerX(timeline, "BM") - before / 2) < 0.01, "half the weight, half the distance");
+  assert.deepEqual(timeline.element.querySelectorAll(".station-rundown__marker").map(m => m.getAttribute("data-hopper")).sort(), ["AM", "B1", "BM", "CM"]);
+  await pushFromPhone(desktop, payload => { payload.layers[1].hoppers[1].track = false; payload.layers[0].hoppers[0].track = false; });
+  feed();
+  assert.deepEqual(timeline.element.querySelectorAll(".station-rundown__marker").map(m => m.getAttribute("data-hopper")).sort(), ["BM", "CM"]);
 });

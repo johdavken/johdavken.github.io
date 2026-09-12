@@ -93,6 +93,9 @@ function boot(options) {
     function autoFirstLayerPctActive(){ return flags.autoFirst; }
     function renderSplitsArea(){ log.renders += 1; }
     function renderTimelineHookups(){ log.hookupRenders += 1; }
+    function syncMobileLineRateReadout(){ log.lineRateReadouts = (log.lineRateReadouts || 0) + 1; }
+    function syncChangeoverTimeDisplay(){ log.changeoverDisplays = (log.changeoverDisplays || 0) + 1; }
+    const isChangeoverStale = env.scheduling.isChangeoverStale;
     function validateAndCompute({ sync = false, immediate = false, kind = "edit" } = {}){
       log.validates.push({ sync, immediate, kind });
       reconcileHookupSources();
@@ -133,7 +136,8 @@ function boot(options) {
       hookupSources: { current: { "A:0": { resin: "LIVE-A0", source: "SILO 1" } }, next: {} },
       resinLots: {}, nextRecipeLots: {}
     },
-    validation, contract, stateBridgeModule, commandBridgeModule, lifted: LIFTED
+    validation, contract, stateBridgeModule, commandBridgeModule, lifted: LIFTED,
+    scheduling: require("./scheduling.js")
   };
   const built = factory(env);
   if (settings.connect !== false) {
@@ -162,7 +166,7 @@ test("unavailable until the application connects; available with exactly the imp
   const handle = h.commands.connect({ execute: h.executor.execute, capabilities: h.executor.capabilities });
   assert.equal(h.commands.isAvailable(), true);
   assert.deepEqual([...h.commands.capabilities()].sort(), [...contract.COMMANDS].sort());
-  assert.deepEqual(h.executor.capabilities, ["setHopperResin", "setHopperBlend", "setLayerShare", "clearHopper", "setSource", "moveHopper", "setHopperTracking", "setPumpOff", "undo", "redo"]);
+  assert.deepEqual(h.executor.capabilities, ["setHopperResin", "setHopperBlend", "setLayerShare", "clearHopper", "setSource", "moveHopper", "setHopperTracking", "setPumpOff", "setLineRate", "setChangeover", "undo", "redo"]);
   assert.throws(() => h.commands.connect({ execute: () => {}, capabilities: [] }), /already connected/);
   assert.equal(handle.disconnect(), true);
   assert.equal(h.commands.isAvailable(), false);
@@ -185,7 +189,7 @@ test("app.js installs the executor once, beside the state bridge, and nothing el
   for (const file of fs.readdirSync(path.join(ROOT, "station")).filter(name => name.endsWith(".js"))) {
     const source = fs.readFileSync(path.join(ROOT, "station", file), "utf8");
     assert.doesNotMatch(source, /PolynStationCommandBridge\s*\.\s*connect|commands\.connect\s*\(/, `${file} connects a producer`);
-    if (!["station-focus-editor.js", "station-hopper-controls.js"].includes(file)) assert.doesNotMatch(source, /\.dispatch\s*\(/, `${file} dispatches a command`);
+    if (!["station-focus-editor.js", "station-hopper-controls.js", "station-job-controls.js"].includes(file)) assert.doesNotMatch(source, /\.dispatch\s*\(/, `${file} dispatches a command`);
   }
 });
 
@@ -818,7 +822,7 @@ test("rearrangement mode and a remote apply in progress refuse every command wit
   const before = h.stateJson();
   h.setRearranging(true);
   for (const command of contract.COMMANDS) {
-    const result = h.dispatch(command, { recipe: "current", layer: "A", index: 1, pct: 10, resin: "X", source: "Y", toLayer: "B", toIndex: 2, track: true, pumpOff: true });
+    const result = h.dispatch(command, { recipe: "current", layer: "A", index: 1, pct: 10, resin: "X", source: "Y", toLayer: "B", toIndex: 2, track: true, pumpOff: true, lineRate: 10, at: Date.now() + 3600000 });
     assert.equal(result.code, "rearranging", `${command} ran during rearrangement`);
   }
   h.setRearranging(false);
@@ -966,4 +970,143 @@ test("the executor's runtime cases mirror the floor UI's own toggles: the same k
   assert.match(legacyPump, /h\._ref\.h\.pumpOff = !h\._ref\.h\.pumpOff;/);
   assert.match(legacyPump, /validateAndCompute\(\{ sync: true, immediate: true, kind: "pump-off" \}\);/);
   assert.doesNotMatch(legacyPump, /snapshotRecipeEdit|recordRecipeEdit/);
+});
+
+/* ----------------------------------------------------------------------
+ *   Job commands: output and changeover
+ * -------------------------------------------------------------------- */
+
+test("setLineRate writes state.lineRate through the Output field's own tail: validateAndCompute({ sync }), saved, no grid rebuild, no history", () => {
+  const h = boot();
+  h.state.lineRate = 850;
+  const before = h.stationBridge.getRevision();
+  const result = h.dispatch("setLineRate", { lineRate: "1,200" });
+  assert.equal(result.ok, true);
+  assert.equal(result.changed, true);
+  assert.equal(result.persisted, true);
+  assert.equal(h.state.lineRate, 1200);
+  assert.deepEqual(h.log.validates, [{ sync: true, immediate: false, kind: "edit" }]);
+  assert.deepEqual(h.log.notified, [{ immediate: false, kind: "edit" }]);
+  assert.equal(h.log.renders, 0, "output is not a recipe value; the grid is not rebuilt");
+  assert.equal(h.log.hookupRenders, 0);
+  assert.equal(h.log.lineRateReadouts, 1, "the phone's readout is mirrored, as the status-bar field mirrors it");
+  assert.equal(h.log.saves, 2);
+  assert.ok(result.revision > before);
+  assert.equal(result.snapshot.job.lineRate, 1200, "the snapshot carries the new output");
+  assert.equal(h.recipeEditHistory.current.undo.length, 0, "no recipe history for a job value");
+  assert.equal(h.recipeEditHistory.next.undo.length, 0);
+  assert.equal(h.stationBridge.getSnapshot().history.current.canUndo, false);
+  // Zero clears; the same value again is a no-op.
+  assert.equal(h.dispatch("setLineRate", { lineRate: 1200 }).changed, false);
+  assert.equal(h.log.saves, 2);
+  assert.equal(h.dispatch("setLineRate", { lineRate: 0 }).changed, true);
+  assert.equal(h.state.lineRate, 0);
+});
+
+test("an invalid output never reaches state: refused by the contract, nothing touched", () => {
+  const h = boot();
+  h.state.lineRate = 850;
+  const before = h.stateJson();
+  for (const bad of [-1, "abc", null, undefined, NaN, Infinity]) {
+    const result = h.dispatch("setLineRate", { lineRate: bad });
+    assert.equal(result.ok, false, `${bad} accepted`);
+    assert.ok(["bad_argument", "out_of_range"].includes(result.code));
+  }
+  assert.equal(h.stateJson(), before);
+  assert.equal(h.state.lineRate, 850);
+  assert.equal(h.log.saves, 0);
+  assert.deepEqual(h.log.notified, []);
+});
+
+test("setChangeover stores the instant as the clock time the job synchronizes, stamps changeoverSetAt, and runs the Changeover field's own tail", () => {
+  const h = boot();
+  h.state.changeoverTime = "";
+  h.state.changeoverSetAt = null;
+  const at = new Date(Date.now() + 3 * 60 * 60 * 1000);
+  at.setSeconds(0, 0);
+  const t0 = Date.now();
+  const result = h.dispatch("setChangeover", { at: at.getTime() });
+  assert.equal(result.ok, true);
+  assert.equal(result.changed, true);
+  const expected = `${String(at.getHours()).padStart(2, "0")}:${String(at.getMinutes()).padStart(2, "0")}`;
+  assert.equal(h.state.changeoverTime, expected, "the job field is the clock time, as the floor UI stores it");
+  assert.ok(h.state.changeoverSetAt >= t0 && h.state.changeoverSetAt <= Date.now());
+  assert.deepEqual(h.log.validates, [{ sync: true, immediate: false, kind: "edit" }]);
+  assert.deepEqual(h.log.notified, [{ immediate: false, kind: "edit" }]);
+  assert.equal(h.log.renders, 0);
+  assert.equal(h.log.changeoverDisplays, 1, "the field's display is synced, as its input event syncs it");
+  assert.equal(h.log.saves, 2);
+  assert.equal(result.snapshot.job.changeoverTime, expected);
+  assert.equal(result.snapshot.job.changeoverSetAt, h.state.changeoverSetAt);
+  assert.equal(h.recipeEditHistory.current.undo.length, 0);
+  // And reading it back through scheduling gives the instant that was asked for.
+  const scheduling = require("./scheduling.js");
+  assert.equal(scheduling.parseChangeoverDate(h.state.changeoverTime, new Date()).getTime(), at.getTime());
+  // The same instant again is a no-op while the deadline is fresh.
+  assert.equal(h.dispatch("setChangeover", { at: at.getTime() + 20000 }).changed, false);
+  assert.equal(h.log.saves, 2);
+  // Null clears.
+  const cleared = h.dispatch("setChangeover", { at: null });
+  assert.equal(cleared.changed, true);
+  assert.equal(h.state.changeoverTime, "");
+  assert.equal(h.state.changeoverSetAt, null);
+  assert.equal(cleared.snapshot.job.changeoverSetAt, null);
+});
+
+test("a changeover already past, or more than a day away, is refused with nothing touched; a stale deadline restated is confirmed", () => {
+  const h = boot();
+  h.state.changeoverTime = "";
+  h.state.changeoverSetAt = null;
+  const before = h.stateJson();
+  const past = h.dispatch("setChangeover", { at: Date.now() - 5 * 60 * 1000 });
+  assert.equal(past.code, "out_of_range");
+  assert.equal(past.field, "at");
+  assert.match(past.message, /already passed/);
+  const far = h.dispatch("setChangeover", { at: Date.now() + 25 * 60 * 60 * 1000 });
+  assert.equal(far.code, "out_of_range");
+  assert.match(far.message, /24 hours/);
+  assert.equal(h.dispatch("setChangeover", { at: "03:28" }).code, "bad_argument");
+  assert.equal(h.stateJson(), before);
+  assert.equal(h.log.saves, 0);
+  // Within the field's own one-minute grace: accepted, as the field accepts it.
+  const grace = new Date(Date.now() - 30 * 1000);
+  assert.equal(h.dispatch("setChangeover", { at: grace.getTime() }).ok, true);
+  // A deadline set a day ago and restated: the same clock time, but a
+  // change - the field's "confirm or update it".
+  h.state.changeoverSetAt = Date.now() - 22 * 60 * 60 * 1000;
+  const savesBefore = h.log.saves;
+  const confirmed = h.dispatch("setChangeover", { at: require("./scheduling.js").parseChangeoverDate(h.state.changeoverTime, new Date()).getTime() });
+  assert.equal(confirmed.changed, true);
+  assert.ok(Date.now() - h.state.changeoverSetAt < 1000);
+  assert.equal(h.log.saves, savesBefore + 2);
+});
+
+test("the job commands mirror the floor UI's own Output and Changeover handlers, and record nothing into recipe history", () => {
+  const executor = block("  function createStationCommandExecutor(){", "\n  }\n");
+  const rate = executor.slice(executor.indexOf("setLineRate(args){"), executor.indexOf("setChangeover(args){"));
+  const changeover = executor.slice(executor.indexOf("setChangeover(args){"), executor.indexOf("undo(args){"));
+  assert.match(rate, /state\.lineRate = args\.lineRate;/);
+  assert.match(rate, /syncMobileLineRateReadout\(\);/);
+  assert.match(rate, /commit\(\{ sync: true, grid: false, hookups: false \}\)/);
+  assert.match(changeover, /state\.changeoverTime = value;/);
+  assert.match(changeover, /state\.changeoverSetAt = value \? now : null;/);
+  assert.match(changeover, /syncChangeoverTimeDisplay\(\);/);
+  assert.match(changeover, /commit\(\{ sync: true, grid: false, hookups: false \}\)/);
+  for (const source of [rate, changeover]) {
+    assert.doesNotMatch(source, /snapshotRecipeEdit|recordRecipeEdit|locate\(/);
+    assert.doesNotMatch(source, /supabase|localStorage|notifyActiveJobMutation/i);
+  }
+  // The legacy handlers these adapt.
+  const legacyRate = block('    $("lineRate")?.addEventListener("input",(e)=>{', "\n    });\n");
+  assert.match(legacyRate, /state\.lineRate = value;/);
+  assert.match(legacyRate, /validateAndCompute\(\{ sync: true \}\);/);
+  const legacyChangeover = block('    $("changeoverTime")?.addEventListener("input",(e)=>{', "\n    });\n");
+  assert.match(legacyChangeover, /state\.changeoverTime = e\.target\.value \|\| "";/);
+  assert.match(legacyChangeover, /state\.changeoverSetAt = state\.changeoverTime \? Date\.now\(\) : null;/);
+  assert.match(legacyChangeover, /validateAndCompute\(\{ sync: true \}\);/);
+  // Both are ordinary synchronized active-job fields, already.
+  const activeJob = require("./active-job.js");
+  assert.ok(activeJob.ACTIVE_JOB_FIELDS.includes("lineRate"));
+  assert.ok(activeJob.ACTIVE_JOB_FIELDS.includes("changeoverTime"));
+  assert.ok(!activeJob.ACTIVE_JOB_FIELDS.includes("changeoverSetAt"), "when it was set is this device's own");
 });

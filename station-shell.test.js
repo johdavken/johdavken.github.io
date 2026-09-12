@@ -122,12 +122,22 @@ test("the shell sets no inline styles", () => {
  *   Three regions, the whole width
  * -------------------------------------------------------------------- */
 
-test("the shell is a header, the stage and a status bar - no side column, no strip under the stage", () => {
+test("the shell is a header, the stage, the run-down timeline and a status bar - no side column, no recipe band under the stage", () => {
   const root = built();
   const shell = find(root, node => /\bstation-shell\b/.test(node.getAttribute("class") || ""))[0];
   assert.deepEqual(shell.children.map(node => [node.nodeName, node.getAttribute("class")]),
-    [["HEADER", "station-header"], ["SECTION", "station-machine"], ["FOOTER", "station-status"]]);
-  assert.deepEqual([...require("./station/station-shell.js").MOUNTS], ["machine", "status", "connection"]);
+    [["HEADER", "station-header"], ["SECTION", "station-machine"], ["SECTION", "station-timeline"], ["FOOTER", "station-status"]]);
+  assert.deepEqual([...require("./station/station-shell.js").MOUNTS], ["machine", "timeline", "status", "job", "connection"]);
+  // The timeline row is a mount and nothing else: no heading, no title,
+  // no card - the component begins with its Now anchor.
+  const timeline = shell.children[2];
+  assert.equal(timeline.getAttribute("data-station-mount"), "timeline");
+  assert.equal(timeline.getAttribute("aria-label"), "Run-down timeline");
+  assert.equal(timeline.children.length, 0);
+  // The header carries the job controls' slot before the line console's.
+  const header = shell.children[0];
+  const slots = header.children.filter(node => node.getAttribute("data-station-mount")).map(node => node.getAttribute("data-station-mount"));
+  assert.deepEqual(slots, ["job", "connection"]);
   // Nothing of the old columns survives: no nav, no aside, no heading, no
   // recipe strip - and no element with nothing in it holding a place.
   walk(root, node => {
@@ -136,7 +146,7 @@ test("the shell is a header, the stage and a status bar - no side column, no str
   });
 });
 
-test("the stylesheet reserves no track for a side column or a strip: one column, three rows, and the tokens for the old widths are gone", () => {
+test("the stylesheet reserves no track for a side column or a strip: one column, four rows, and the tokens for the old widths are gone", () => {
   const fs = require("node:fs");
   const path = require("node:path");
   // Rules only: the file's comments are allowed to say what is no longer there.
@@ -144,8 +154,10 @@ test("the stylesheet reserves no track for a side column or a strip: one column,
   const css = codeOnly(fs.readFileSync(path.join(__dirname, "station/styles/shell.css"), "utf8"));
   const tokens = codeOnly(fs.readFileSync(path.join(__dirname, "station/styles/tokens.css"), "utf8"));
   assert.match(css, /\.station-shell \{[^}]*grid-template-columns: minmax\(0, 1fr\);/);
-  assert.match(css, /grid-template-rows: var\(--station-header-height\) minmax\(0, 1fr\) var\(--station-status-height\);/);
-  assert.match(css, /grid-template-areas:\s*"header"\s*"machine"\s*"status";/);
+  // The timeline's row is `auto`: sized by its component, never a share of
+  // the height the stage would otherwise have.
+  assert.match(css, /grid-template-rows: var\(--station-header-height\) minmax\(0, 1fr\) auto var\(--station-status-height\);/);
+  assert.match(css, /grid-template-areas:\s*"header"\s*"machine"\s*"timeline"\s*"status";/);
   for (const gone of ["sidebar", "inspector", "recipe-strip", "station-nav", "section__heading", "strip"]) {
     assert.doesNotMatch(css, new RegExp(gone), `shell.css still styles ${gone}`);
   }

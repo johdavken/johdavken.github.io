@@ -70,10 +70,13 @@ test("a command's answer runs the same publish policy, marked as Station's own, 
   assert.match(committed, /onPublish\(\{ own: true \}\);/);
   // Nothing else: no patching of its own, no second render path, no note.
   assert.doesNotMatch(committed, /patchStage|renderAll|editorHandle|mountStage|note\(/);
-  // And the boot file writes lastOwnRevision there, and in the one other
-  // place a command's answer arrives - a cluster control's toggle - which
-  // runs the identical two lines.
-  assert.equal((boot.match(/lastOwnRevision\s*=/g) || []).length, 3, "lastOwnRevision is written somewhere other than its declaration, onCommitted and toggleHopperControl");
+  // And the boot file writes lastOwnRevision there, and in the two other
+  // places a command's answer arrives - a cluster control's toggle, and
+  // the header's job controls' onCommitted - which run the identical two
+  // lines.
+  assert.equal((boot.match(/lastOwnRevision\s*=/g) || []).length, 4, "lastOwnRevision is written somewhere other than its declaration, onCommitted, toggleHopperControl and the job controls' onCommitted");
+  const job = boot.slice(boot.indexOf("jobPanel = jobControls.create("), boot.indexOf("mounts.job.appendChild"));
+  assert.match(job, /onCommitted: result => \{\n\s+lastOwnRevision = Number\.isInteger\(result\.revision\) \? result\.revision : null;\n\s+onPublish\(\{ own: true \}\);/);
   const toggle = body("toggleHopperControl");
   assert.match(toggle, /lastOwnRevision = Number\.isInteger\(result\.revision\) \? result\.revision : null;\n\s+onPublish\(\{ own: true \}\);/);
   assert.doesNotMatch(toggle, /patchStage|renderAll|mountStage|setFocus|clearFocus/);

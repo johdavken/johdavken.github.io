@@ -13,7 +13,7 @@
  *
  * WHAT IT DEFINES
  *
- *   COMMANDS       the vocabulary: ten names, nothing else is a command
+ *   COMMANDS       the vocabulary: twelve names, nothing else is a command
  *   ARGUMENTS      which arguments each command takes
  *   normalize*     one normalizer per argument, in the terms the application
  *                  already uses (its own resin-name trimming, its own
@@ -72,7 +72,10 @@
     "setHopperTracking",// { recipe, layer, index, track }   track true/false
     "setPumpOff",       // { recipe, layer, index, pumpOff } pumpOff true/false
     "undo",             // { recipe }
-    "redo"              // { recipe }
+    "redo",             // { recipe }
+    "setLineRate",      // { lineRate }  the line's output in lb/hr; 0 clears it
+    "setChangeover"     // { at }        the changeover as an absolute epoch-ms
+                        //   timestamp, or null to clear it
   ]);
 
   /* The two runtime commands. Tracking and pump-off are operational state
@@ -83,6 +86,15 @@
    * before any executor sees the request, so a Station view addressing
    * Next can never turn a plan into something that tracks. */
   const RUNTIME_COMMANDS = Object.freeze(["setHopperTracking", "setPumpOff"]);
+
+  /* The two job commands. Line output and the changeover deadline are
+   * operational state of the running job as a whole - neither belongs to a
+   * recipe, a layer or a hopper - so these name no recipe and no position.
+   * The changeover is stated as an absolute instant (epoch milliseconds):
+   * the application keeps it as the clock time it already stores and
+   * synchronizes, and derives that from the instant; a later producer (the
+   * Changeover Calculator) states the same kind of value. */
+  const JOB_COMMANDS = Object.freeze(["setLineRate", "setChangeover"]);
 
   const RECIPES = Object.freeze(["current", "next"]);
 
@@ -96,7 +108,9 @@
     setHopperTracking: Object.freeze(["recipe", "layer", "index", "track"]),
     setPumpOff: Object.freeze(["recipe", "layer", "index", "pumpOff"]),
     undo: Object.freeze(["recipe"]),
-    redo: Object.freeze(["recipe"])
+    redo: Object.freeze(["recipe"]),
+    setLineRate: Object.freeze(["lineRate"]),
+    setChangeover: Object.freeze(["at"])
   });
 
   /* The error vocabulary, complete now. The first three and the last are
@@ -112,7 +126,9 @@
     "unknown_layer",
     "unknown_hopper",   // carries `field`
     "h1_derived",       // H1's percentage is computed, never set
-    "out_of_range",     // a finite percentage outside 0..100; carries `field`
+    "out_of_range",     // a finite value outside its range - a percentage past
+                        //   0..100, a negative output, a changeover already past
+                        //   or too far away to store; carries `field`
     "blend_total",      // H2-H6 would exceed 100; carries `total`
     "no_resin",         // a source needs a resin in the hopper
     "empty_hopper",     // a move needs a resin or a share in the hopper it moves
@@ -289,6 +305,33 @@
     return { ok: false, code: "bad_argument", message: "The state must be true or false." };
   }
 
+  /* The line's output, in lb/hr: the same rule the application's own Output
+   * field applies (validation.validateNumber with min 0) - finite and not
+   * negative. Zero is allowed and means "not set", which is how the
+   * application reads a zero line rate everywhere it shows one. */
+  function normalizeRate(value) {
+    const number = typeof value === "string" && value.trim() !== "" ? Number(value.replace(/,/g, "")) : value;
+    if (typeof number !== "number" || !Number.isFinite(number)) {
+      return { ok: false, code: "bad_argument", message: "The output must be a number of pounds per hour." };
+    }
+    if (number < 0) {
+      return { ok: false, code: "out_of_range", message: "The output cannot be less than 0." };
+    }
+    return { ok: true, value: number };
+  }
+
+  /* An absolute instant as epoch milliseconds, or null to clear. Whether
+   * the instant is in the past, or further away than the application can
+   * store, is the executor's question: it needs the clock. */
+  function normalizeTimestamp(value) {
+    if (value === null || value === undefined || value === "") return { ok: true, value: null };
+    const number = typeof value === "string" && value.trim() !== "" ? Number(value) : value;
+    if (typeof number !== "number" || !Number.isFinite(number) || number <= 0) {
+      return { ok: false, code: "bad_argument", message: "The changeover must be a timestamp in milliseconds, or null to clear it." };
+    }
+    return { ok: true, value: Math.round(number) };
+  }
+
   const NORMALIZERS = Object.freeze({
     recipe: normalizeRecipe,
     layer: normalizeLayer,
@@ -299,7 +342,9 @@
     toLayer: normalizeLayer,
     toIndex: normalizeIndex,
     track: normalizeFlag,
-    pumpOff: normalizeFlag
+    pumpOff: normalizeFlag,
+    lineRate: normalizeRate,
+    at: normalizeTimestamp
   });
 
   /**
@@ -331,6 +376,7 @@
   return Object.freeze({
     COMMANDS,
     RUNTIME_COMMANDS,
+    JOB_COMMANDS,
     RECIPES,
     ARGUMENTS,
     ERROR_CODES,
@@ -345,6 +391,8 @@
     normalizeResin,
     normalizeSource,
     normalizeFlag,
+    normalizeRate,
+    normalizeTimestamp,
     normalizeArguments,
     success,
     failure,

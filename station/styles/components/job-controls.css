@@ -1,0 +1,161 @@
+/* The job controls (station-job-controls.js): OUTPUT, CHANGEOVER and the
+ * timeline's 6H | 12H, as three small items in the header.
+ *
+ * Subordinate by design - the same small caps as the line console's
+ * trigger, no border until one is being edited, and a value that reads as
+ * a readout rather than a field. A temporary home while the timeline is
+ * new; nothing here claims a track of the shell.
+ */
+
+.station-job {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--station-space-4);
+  min-width: 0;
+  font-size: var(--station-text-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.station-job__item {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Under .station-root: the base layer resets buttons at (0,1,1); a trigger
+ * that wants padding and a border on edit has to say so at (0,2,0). */
+.station-root .station-job__trigger {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--station-space-2);
+  padding: var(--station-space-1) var(--station-space-2);
+  border: var(--station-stroke) solid transparent;
+  border-radius: var(--station-radius-sm);
+  color: var(--station-text-muted);
+  white-space: nowrap;
+}
+
+.station-root .station-job__trigger:hover {
+  border-color: var(--station-border-strong);
+}
+
+.station-job__key {
+  font-weight: 600;
+}
+
+.station-job__value {
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--station-text);
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.station-job__item.is-unset .station-job__value {
+  color: var(--station-text-faint);
+}
+
+/* A deadline set long enough ago that it may be yesterday's. */
+.station-job__item.is-stale .station-job__value {
+  color: var(--station-warning);
+}
+
+/* Not on offer - no application, or demo data on screen - so the readout
+ * stays and the hand stays a pointer for the explanation on click. */
+.station-job__item.is-readonly .station-job__trigger {
+  border-color: transparent;
+  cursor: default;
+}
+
+.station-job__item.is-editing .station-job__trigger {
+  display: none;
+}
+
+/* ---- The in-place editor ---- */
+
+.station-job__editor {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--station-space-1);
+  padding: 0 var(--station-space-2);
+  border: var(--station-stroke) solid var(--station-accent);
+  border-radius: var(--station-radius-sm);
+  background: var(--station-surface-raised);
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.station-job__input {
+  --station-field-padding: 2px 0;
+  --station-field-width: 7ch;
+  --station-field-cursor: text;
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--station-text);
+}
+
+.station-job__input[type="time"] {
+  --station-field-width: auto;
+  color-scheme: dark;
+}
+
+.station-job__input[aria-invalid="true"] {
+  --station-field-shadow: 0 0 0 2px var(--station-warning);
+}
+
+.station-job__unit {
+  color: var(--station-text-muted);
+  font-size: var(--station-text-xs);
+}
+
+/* ---- 6H | 12H ---- */
+
+.station-job__window {
+  display: inline-flex;
+  border: var(--station-stroke) solid var(--station-border-strong);
+  border-radius: var(--station-radius-sm);
+  overflow: hidden;
+}
+
+.station-root .station-job__scale {
+  padding: 2px var(--station-space-2);
+  color: var(--station-text-muted);
+  font-size: var(--station-text-xs);
+  letter-spacing: 0.08em;
+}
+
+.station-root .station-job__scale[aria-pressed="true"] {
+  background: var(--station-accent-soft);
+  color: var(--station-text);
+}
+
+.station-job__scale + .station-job__scale {
+  border-left: var(--station-stroke) solid var(--station-border-strong);
+}
+
+/* ---- The one line of feedback ---- */
+
+.station-job__note {
+  position: absolute;
+  top: calc(100% + var(--station-space-1));
+  left: 0;
+  z-index: 20;
+  max-width: 360px;
+  padding: var(--station-space-1) var(--station-space-2);
+  background: var(--station-surface-raised);
+  border: var(--station-stroke) solid var(--station-border-strong);
+  border-radius: var(--station-radius-sm);
+  box-shadow: var(--station-shadow-pop);
+  color: var(--station-text);
+  font-size: var(--station-text-sm);
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: normal;
+}
+
+.station-job__note[data-kind="error"] {
+  border-color: var(--station-warning);
+}

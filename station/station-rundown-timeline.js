@@ -1,0 +1,564 @@
+/* The Station run-down timeline: a thin horizontal axis across the foot of
+ * the workspace, Now at its left edge, each tracked hopper marked where it
+ * is expected to run empty, the changeover as a boundary through it.
+ *
+ * WHAT IT IS
+ *
+ * A renderer over station-rundown.js. Everything drawn is that module's
+ * answer to "given what the application holds right now, and the clock,
+ * where does each hopper land"; this file measures the width, hands the
+ * inputs over, and writes the answer to the DOM. It holds no estimate of
+ * its own, decrements nothing, and never writes back: a marker is a
+ * button that opens a detail, not a control on the job. Tracking - what
+ * puts a hopper on the axis and takes it off - is the drawn hopper's own
+ * control (station-hopper-controls.js), and arrives here through the
+ * bridge as any other change does.
+ *
+ * WHAT IT HOLDS
+ *
+ * Presentation state only:
+ *
+ *   window      6 or 12 hours - a scale, not a fact about the job
+ *   observed    slot -> { weight, at }: when this screen last saw each
+ *               tracked hopper's weight change, which anchors its estimate
+ *               so the marker moves with the clock (see station-rundown.js
+ *               on why the application itself has no such timestamp)
+ *   detail      which marker's detail is showing, and whether it is pinned
+ *               by a click or only following the pointer or focus
+ *
+ * THE CLOCK
+ *
+ * Real time, coarsely: one pass every twenty seconds moves every marker
+ * and the Now clock. Nothing is animated between passes - a marker moves
+ * about a pixel a minute at the six-hour scale, and a pass is a handful of
+ * nodes. The pass is a self-rescheduling timeout rather than an interval
+ * so a hidden tab's throttled timer never queues up a burst, and the page
+ * becoming visible or focused runs one pass at once, so a laptop opened
+ * after an hour's sleep never shows the hour-old picture.
+ */
+(function (root, factory) {
+  const rundown = typeof require === "function"
+    ? require("./station-rundown.js")
+    : (root && root.PolynStationRundown);
+  const api = factory(rundown);
+  if (typeof module === "object" && module.exports) module.exports = api;
+  if (root) root.PolynStationRundownTimeline = api;
+})(typeof globalThis !== "undefined" ? globalThis : this, function (rundownModule) {
+  "use strict";
+
+  const TICK_MS = 20 * 1000;
+  /* What the layout works with when the track has not been laid out yet
+   * (a first render before the stylesheet, or a test document). */
+  const FALLBACK_WIDTH = 1000;
+  /* Past this many entries the right-hand column folds the rest into one
+   * "+N" chip, so several far-off hoppers never grow a side panel. */
+  const SIDE_LIMIT = 4;
+  const DETAIL_ID = "station-rundown-detail";
+  /* Half a tick label's width: a label whose centre is this close to the
+   * changeover's box would show from under it. */
+  const LABEL_HALF_PX = 28;
+
+  function element(doc, name, className, attributes) {
+    const node = doc.createElement(name);
+    if (className) node.setAttribute("class", className);
+    if (attributes) {
+      for (const key of Object.keys(attributes)) node.setAttribute(key, attributes[key]);
+    }
+    return node;
+  }
+
+  function text(doc, name, className, value, attributes) {
+    const node = element(doc, name, className, attributes);
+    node.textContent = value;
+    return node;
+  }
+
+  function clearChildren(node) {
+    while (node.firstChild) node.removeChild(node.firstChild);
+  }
+
+  function show(node, on) {
+    if (on) node.removeAttribute("hidden");
+    else node.setAttribute("hidden", "");
+  }
+
+  function percent(fraction) {
+    return `${(Math.max(0, Math.min(1, fraction)) * 100).toFixed(3)}%`;
+  }
+
+  /* The one inline declaration a positioned node carries: its place along
+   * the axis as a custom property the stylesheet spends. */
+  function placeAt(node, fraction) {
+    node.setAttribute("style", `--station-rundown-x: ${percent(fraction)};`);
+  }
+
+  /* What a marker says in words, for its label and its detail. */
+  function describe(entry, rundown) {
+    if (entry.reason) return `${entry.id}: ${rundown.reasonLabel(entry.reason)}`;
+    const when = rundown.formatClock(entry.emptyAt);
+    if (entry.past) return `${entry.id}: estimated empty since ${when}`;
+    return `${entry.id}: empty in ${rundown.formatRemaining(entry.remainingMs)}, at ${when}${entry.pumpOff ? ", pump off" : ""}`;
+  }
+
+  /**
+   * Build the timeline.
+   *
+   * @param {Document} doc
+   * @param {object} [options]
+   * @param {object}   [options.rundown]   station-rundown.js, when not global
+   * @param {function} [options.now]       () => epoch ms; Date.now by default
+   * @param {object}   [options.timers]    { setTimeout, clearTimeout }
+   * @param {object}   [options.view]      the window: visibility/focus events
+   *        and ResizeObserver; the global one by default, none in tests
+   * @param {number}   [options.window]    6 or 12; 6 by default
+   * @param {number}   [options.tickMs]
+   * @param {function} [options.onTick]    told after every clock pass, so a
+   *        sibling readout (the header's changeover) can follow the clock
+   *        without a clock of its own
+   */
+  function create(doc, options) {
+    const settings = options || {};
+    const rundown = settings.rundown || rundownModule;
+    const now = typeof settings.now === "function" ? settings.now : () => Date.now();
+    const timers = settings.timers || { setTimeout: root_setTimeout, clearTimeout: root_clearTimeout };
+    const view = settings.view === undefined ? (typeof globalThis !== "undefined" ? globalThis : null) : settings.view;
+    const tickMs = Number.isFinite(settings.tickMs) && settings.tickMs >= 1000 ? settings.tickMs : TICK_MS;
+    const onTick = typeof settings.onTick === "function" ? settings.onTick : null;
+
+    const state = {
+      window: rundown.WINDOWS.includes(settings.window) ? settings.window : rundown.DEFAULT_WINDOW,
+      inputs: null,        // { model, hopperState, layerState, job }
+      observed: {},        // slot -> { weight, at }
+      detail: null,        // { key, pinned }
+      timer: null,
+      layout: null,        // the last layout, for inspection
+      entries: [],
+      width: 0
+    };
+
+    /* ---- Structure, built once ---- */
+
+    const rootEl = element(doc, "div", "station-rundown", { "data-window": String(state.window), "aria-label": "Run-down timeline" });
+
+    const nowEl = element(doc, "div", "station-rundown__now");
+    nowEl.appendChild(text(doc, "span", "station-rundown__now-label", "Now"));
+    const clockEl = text(doc, "span", "station-rundown__now-clock", "");
+    nowEl.appendChild(clockEl);
+    rootEl.appendChild(nowEl);
+
+    const track = element(doc, "div", "station-rundown__track");
+    const zone = element(doc, "div", "station-rundown__zone", { hidden: "" });
+    const ticksEl = element(doc, "div", "station-rundown__ticks", { "aria-hidden": "true" });
+    const axis = element(doc, "div", "station-rundown__axis", { "aria-hidden": "true" });
+    const nowLine = element(doc, "div", "station-rundown__now-line", { "aria-hidden": "true" });
+    const changeoverEl = element(doc, "div", "station-rundown__changeover", { hidden: "" });
+    const markers = element(doc, "div", "station-rundown__markers", { role: "list" });
+    const hint = element(doc, "p", "station-rundown__hint", { hidden: "" });
+    const detail = element(doc, "div", "station-rundown__detail", { id: DETAIL_ID, role: "tooltip", hidden: "" });
+    // In the track, so its place along the axis is the same property a
+    // marker's is.
+    track.append(zone, ticksEl, axis, nowLine, changeoverEl, markers, hint, detail);
+    rootEl.appendChild(track);
+
+    const side = element(doc, "div", "station-rundown__side", { role: "list" });
+    rootEl.appendChild(side);
+
+    /* ---- Observation anchors ---- */
+
+    /* Bring the anchors into line with what is tracked now: a hopper newly
+     * tracked, or whose weight moved, is observed now; one no longer
+     * tracked is forgotten, so tracking it again starts fresh. */
+    function observe(inputs, at) {
+      const next = {};
+      const model = inputs && inputs.model;
+      const hopperState = (inputs && inputs.hopperState) || {};
+      if (model && Array.isArray(model.layers)) {
+        for (const layer of model.layers) {
+          for (const hopper of layer.hoppers) {
+            const key = `${layer.id}:${hopper.index}`;
+            const runtime = hopperState[key];
+            if (!runtime || !runtime.track) continue;
+            const weight = Number.isFinite(runtime.effectiveWeight) ? runtime.effectiveWeight : 0;
+            const previous = state.observed[key];
+            next[key] = previous && previous.weight === weight ? previous : { weight, at };
+          }
+        }
+      }
+      state.observed = next;
+    }
+
+    function observedAt() {
+      const out = {};
+      for (const key of Object.keys(state.observed)) out[key] = state.observed[key].at;
+      return out;
+    }
+
+    /* ---- Rendering ---- */
+
+    function measuredWidth() {
+      const width = typeof track.clientWidth === "number" ? track.clientWidth : 0;
+      return width > 0 ? width : FALLBACK_WIDTH;
+    }
+
+    function entryByKey(key) {
+      return state.entries.find(entry => entry.key === key) || null;
+    }
+
+    function render() {
+      const t = now();
+      const inputs = state.inputs;
+      const entries = inputs ? rundown.projectEntries({
+        model: inputs.model, hopperState: inputs.hopperState, layerState: inputs.layerState,
+        job: inputs.job, observed: observedAt()
+      }, { now: t }) : [];
+      const changeover = inputs ? rundown.resolveChangeover(inputs.job, { now: t }) : { at: null, stale: false };
+      state.width = measuredWidth();
+      const layout = rundown.layout({
+        entries, changeover, now: t, windowMs: state.window * rundown.HOUR, width: state.width
+      });
+      state.entries = entries;
+      state.layout = layout;
+
+      const focusedKey = focusedMarkerKey();
+
+      clockEl.textContent = rundown.formatClock(t);
+      rootEl.setAttribute("data-window", String(state.window));
+      renderTicks(layout.ticks, changeoverLabelSpan(layout.changeover));
+      renderChangeover(layout.changeover);
+      renderMarkers(layout.markers);
+      renderSide(layout);
+      renderHint(entries, inputs);
+      renderDetail();
+
+      if (focusedKey) restoreFocus(focusedKey);
+    }
+
+    function renderTicks(plan, covered) {
+      clearChildren(ticksEl);
+      for (const mark of plan.marks) {
+        const tick = element(doc, "span", `station-rundown__tick is-${mark.kind}`);
+        placeAt(tick, mark.fraction);
+        ticksEl.appendChild(tick);
+        const x = mark.fraction * state.width;
+        const underLabel = !!covered && x >= covered[0] - LABEL_HALF_PX && x <= covered[1] + LABEL_HALF_PX;
+        if (mark.label && !underLabel) {
+          const label = text(doc, "span", "station-rundown__tick-label", mark.label);
+          placeAt(label, mark.fraction);
+          ticksEl.appendChild(label);
+        }
+      }
+    }
+
+    /* The changeover's words sit in one opaque box on the axis's upper
+     * band - to the right of the line, or to its left when the line is
+     * near the track's end - and the tick labels that box would cover are
+     * left out rather than half shown (see renderTicks). */
+    const CHANGEOVER_LABEL_PX = 210;
+
+    function changeoverLabelSpan(co) {
+      if (!co || !co.inWindow || co.stale) return null;
+      const x = co.fraction * state.width;
+      const flipped = x + CHANGEOVER_LABEL_PX > state.width;
+      return flipped ? [x - CHANGEOVER_LABEL_PX, x] : [x, x + CHANGEOVER_LABEL_PX];
+    }
+
+    function renderChangeover(co) {
+      const drawn = !!co && co.inWindow && !co.stale;
+      show(zone, drawn);
+      show(changeoverEl, drawn);
+      clearChildren(changeoverEl);
+      changeoverEl.classList.remove("is-end");
+      if (!drawn) return;
+      placeAt(zone, co.fraction);
+      placeAt(changeoverEl, co.fraction);
+      const span = changeoverLabelSpan(co);
+      if (span && span[0] < co.fraction * state.width) changeoverEl.classList.add("is-end");
+      const label = element(doc, "span", "station-rundown__changeover-label");
+      label.appendChild(text(doc, "span", "station-rundown__changeover-name", "Line changeover"));
+      label.appendChild(text(doc, "span", "station-rundown__changeover-time", rundown.formatClock(co.at)));
+      label.appendChild(text(doc, "span", "station-rundown__changeover-rel", `in ${rundown.formatRemaining(co.remainingMs)}`));
+      changeoverEl.appendChild(label);
+      changeoverEl.setAttribute("title", `Line changeover at ${rundown.formatClock(co.at)}, in ${rundown.formatRemaining(co.remainingMs)}`);
+    }
+
+    function marker(item) {
+      const entry = item.entry;
+      const button = element(doc, "button", "station-rundown__marker", {
+        type: "button",
+        role: "listitem",
+        "data-key": entry.key,
+        "data-hopper": entry.id,
+        "data-layer": entry.layer,
+        "data-layer-role": entry.role,
+        "data-lane": String(item.lane),
+        "aria-label": describe(entry, rundown)
+      });
+      if (item.past) button.classList.add("is-past");
+      if (item.crowded) button.classList.add("is-crowded");
+      if (entry.pumpOff) button.classList.add("is-pump-off");
+      placeAt(button, item.fraction);
+      button.appendChild(element(doc, "span", "station-rundown__stem", { "aria-hidden": "true" }));
+      button.appendChild(element(doc, "span", "station-rundown__dot", { "aria-hidden": "true" }));
+      const label = element(doc, "span", "station-rundown__label");
+      label.appendChild(text(doc, "span", "station-rundown__id", entry.id));
+      label.appendChild(text(doc, "span", "station-rundown__time",
+        item.past ? "Empty" : rundown.formatRemaining(entry.remainingMs)));
+      button.appendChild(label);
+      return button;
+    }
+
+    function renderMarkers(items) {
+      clearChildren(markers);
+      for (const item of items) markers.appendChild(marker(item));
+    }
+
+    /* The right-hand column: hoppers past the window's edge, soonest
+     * first, then tracked hoppers with no estimate, each a chip that opens
+     * the same detail a marker does. A changeover past the edge is stated
+     * here too, as text - it is a boundary, not a hopper. */
+    function chip(entry, kind) {
+      const button = element(doc, "button", `station-rundown__chip is-${kind}`, {
+        type: "button",
+        role: "listitem",
+        "data-key": entry.key,
+        "data-hopper": entry.id,
+        "data-layer": entry.layer,
+        "data-layer-role": entry.role,
+        "aria-label": describe(entry, rundown)
+      });
+      if (entry.pumpOff) button.classList.add("is-pump-off");
+      button.appendChild(text(doc, "span", "station-rundown__id", entry.id));
+      button.appendChild(text(doc, "span", "station-rundown__chip-sep", kind === "beyond" ? "→" : "·"));
+      button.appendChild(text(doc, "span", kind === "beyond" ? "station-rundown__time" : "station-rundown__reason",
+        kind === "beyond" ? rundown.formatRemaining(entry.remainingMs) : rundown.reasonLabel(entry.reason)));
+      return button;
+    }
+
+    function renderSide(layout) {
+      clearChildren(side);
+      const items = [];
+      for (const entry of layout.beyond) items.push({ entry, kind: "beyond" });
+      for (const entry of layout.unavailable) items.push({ entry, kind: "unavailable" });
+      const co = layout.changeover;
+      const coBeyond = !!co && !co.inWindow && !co.past && !co.stale;
+      const visible = items.slice(0, items.length > SIDE_LIMIT ? SIDE_LIMIT - 1 : SIDE_LIMIT);
+      for (const item of visible) side.appendChild(chip(item.entry, item.kind));
+      const rest = items.slice(visible.length);
+      if (rest.length) {
+        const more = text(doc, "button", "station-rundown__chip is-more", `+${rest.length}`, {
+          type: "button", role: "listitem",
+          "data-more": rest.map(item => item.entry.key).join(" "),
+          "aria-label": `${rest.length} more: ${rest.map(item => describe(item.entry, rundown)).join("; ")}`,
+          title: rest.map(item => describe(item.entry, rundown)).join("\n")
+        });
+        side.appendChild(more);
+      }
+      if (coBeyond) {
+        side.appendChild(text(doc, "span", "station-rundown__chip is-changeover",
+          `Changeover → ${rundown.formatRemaining(co.remainingMs)}`, {
+            role: "listitem", title: `Line changeover at ${rundown.formatClock(co.at)}`
+          }));
+      }
+      if (co && co.stale) {
+        side.appendChild(text(doc, "span", "station-rundown__chip is-stale", "Changeover needs confirming", {
+          role: "listitem", title: "The changeover time was set long enough ago that it may be yesterday's. Confirm or update it."
+        }));
+      }
+      show(side, side.children.length > 0);
+    }
+
+    function renderHint(entries, inputs) {
+      const tracked = entries.length;
+      let message = "";
+      if (!inputs || !inputs.model) message = "No line to project.";
+      else if (tracked === 0) message = "No tracked hoppers — click a hopper's body to track it.";
+      hint.textContent = message;
+      show(hint, !!message);
+    }
+
+    /* ---- Detail ---- */
+
+    function detailRow(term, value, className) {
+      const row = element(doc, "div", "station-rundown__row");
+      row.appendChild(text(doc, "dt", "station-rundown__term", term));
+      row.appendChild(text(doc, "dd", `station-rundown__value${className ? ` ${className}` : ""}`, value));
+      return row;
+    }
+
+    function renderDetail() {
+      clearChildren(detail);
+      const entry = state.detail ? entryByKey(state.detail.key) : null;
+      if (!entry) {
+        state.detail = null;
+        show(detail, false);
+        detail.removeAttribute("style");
+        for (const el of rootEl.querySelectorAll("[aria-describedby]")) el.removeAttribute("aria-describedby");
+        return;
+      }
+      const head = element(doc, "div", "station-rundown__detail-head", { "data-layer-role": entry.role });
+      head.appendChild(text(doc, "span", "station-rundown__id", entry.id));
+      head.appendChild(text(doc, "span", "station-rundown__detail-resin", entry.resin || "No resin"));
+      detail.appendChild(head);
+      const list = element(doc, "dl", "station-rundown__list");
+      list.appendChild(detailRow("Layer", entry.layer));
+      list.appendChild(detailRow("Weight", entry.weight > 0 ? `${entry.weight.toLocaleString([], { maximumFractionDigits: 1 })} lb` : "—", entry.weight > 0 ? "" : "is-missing"));
+      list.appendChild(detailRow("Blend", entry.pct > 0 ? `${entry.pct}% of layer ${entry.layer} (${entry.layerPct}%)` : "—", entry.pct > 0 ? "" : "is-missing"));
+      list.appendChild(detailRow("Consumption", entry.rate !== null ? rundown.formatRate(entry.rate) : "—", entry.rate !== null ? "" : "is-missing"));
+      if (entry.reason) {
+        list.appendChild(detailRow("Estimate", rundown.reasonLabel(entry.reason), "is-missing"));
+      } else {
+        list.appendChild(detailRow("Time remaining", entry.past ? "Estimated empty" : rundown.formatRemaining(entry.remainingMs), entry.past ? "is-past" : ""));
+        list.appendChild(detailRow("Empty at", rundown.formatClock(entry.emptyAt), entry.past ? "is-past" : ""));
+      }
+      if (entry.pumpOff) list.appendChild(detailRow("Pump", "Pump off", "is-pump-off"));
+      detail.appendChild(list);
+
+      // Anchored to the marker's own place on the axis; a chip anchors to
+      // the column's edge. The stylesheet keeps it inside the timeline.
+      const item = state.layout ? state.layout.markers.find(m => m.entry.key === entry.key) : null;
+      const fraction = item ? item.fraction : 1;
+      placeAt(detail, fraction);
+      detail.classList.toggle("is-end", fraction > 0.75);
+      detail.classList.toggle("is-pinned", !!state.detail.pinned);
+      show(detail, true);
+      for (const el of rootEl.querySelectorAll("[aria-describedby]")) el.removeAttribute("aria-describedby");
+      for (const el of rootEl.querySelectorAll(`[data-key='${entry.key}']`)) el.setAttribute("aria-describedby", DETAIL_ID);
+    }
+
+    function showDetail(key, pinned) {
+      if (!key || !entryByKey(key)) return;
+      if (state.detail && state.detail.pinned && !pinned && state.detail.key !== key) return;
+      state.detail = { key, pinned: !!pinned || (state.detail && state.detail.key === key && state.detail.pinned) };
+      renderDetail();
+    }
+
+    function hideDetail(force) {
+      if (!state.detail) return;
+      if (state.detail.pinned && !force) return;
+      state.detail = null;
+      renderDetail();
+    }
+
+    function keyOf(target) {
+      const el = target && target.closest ? target.closest("[data-key]") : null;
+      return el ? el.getAttribute("data-key") : null;
+    }
+
+    function focusedMarkerKey() {
+      const active = doc.activeElement;
+      if (!active || !rootEl.contains(active)) return null;
+      return keyOf(active);
+    }
+
+    function restoreFocus(key) {
+      const next = rootEl.querySelector(`[data-key='${key}']`);
+      if (next && typeof next.focus === "function") next.focus();
+    }
+
+    rootEl.addEventListener("click", event => {
+      const key = keyOf(event.target);
+      if (!key) return;
+      if (state.detail && state.detail.key === key && state.detail.pinned) { hideDetail(true); return; }
+      showDetail(key, true);
+    });
+    rootEl.addEventListener("mouseover", event => { const key = keyOf(event.target); if (key) showDetail(key, false); });
+    rootEl.addEventListener("mouseleave", () => hideDetail(false));
+    rootEl.addEventListener("focusin", event => { const key = keyOf(event.target); if (key) showDetail(key, false); });
+    rootEl.addEventListener("focusout", event => {
+      if (keyOf(event.relatedTarget)) return;
+      hideDetail(false);
+    });
+    rootEl.addEventListener("keydown", event => {
+      if (event.key !== "Escape" || !state.detail) return;
+      hideDetail(true);
+      if (typeof event.stopPropagation === "function") event.stopPropagation();
+    });
+
+    /* ---- The clock ---- */
+
+    function tick() {
+      render();
+      if (onTick) onTick();
+    }
+
+    function schedule() {
+      if (!timers || typeof timers.setTimeout !== "function") return;
+      if (state.timer !== null && typeof timers.clearTimeout === "function") timers.clearTimeout(state.timer);
+      state.timer = timers.setTimeout(() => {
+        state.timer = null;
+        tick();
+        schedule();
+      }, tickMs);
+    }
+
+    function wake() {
+      tick();
+      schedule();
+    }
+
+    const listeners = [];
+    if (view && typeof view.addEventListener === "function") {
+      const onVisible = () => { if (!doc.visibilityState || doc.visibilityState === "visible") wake(); };
+      const viewDoc = view.document || doc;
+      if (viewDoc && typeof viewDoc.addEventListener === "function") {
+        viewDoc.addEventListener("visibilitychange", onVisible);
+        listeners.push(() => viewDoc.removeEventListener("visibilitychange", onVisible));
+      }
+      view.addEventListener("focus", wake);
+      view.addEventListener("pageshow", wake);
+      listeners.push(() => view.removeEventListener("focus", wake));
+      listeners.push(() => view.removeEventListener("pageshow", wake));
+    }
+
+    let observer = null;
+    if (view && typeof view.ResizeObserver === "function") {
+      observer = new view.ResizeObserver(() => {
+        if (measuredWidth() !== state.width) render();
+      });
+      observer.observe(track);
+    }
+
+    /* ---- The surface ---- */
+
+    function update(inputs) {
+      state.inputs = inputs || null;
+      observe(state.inputs, now());
+      render();
+    }
+
+    function setWindow(hours) {
+      if (!rundown.WINDOWS.includes(hours) || hours === state.window) return false;
+      state.window = hours;
+      render();
+      return true;
+    }
+
+    function destroy() {
+      if (state.timer !== null && timers && typeof timers.clearTimeout === "function") timers.clearTimeout(state.timer);
+      state.timer = null;
+      for (const off of listeners) off();
+      if (observer) observer.disconnect();
+    }
+
+    schedule();
+
+    return {
+      element: rootEl,
+      update,
+      tick,
+      wake,
+      setWindow,
+      getWindow: () => state.window,
+      getLayout: () => state.layout,
+      getEntries: () => state.entries.slice(),
+      getObserved: () => Object.assign({}, observedAt()),
+      getDetail: () => (state.detail ? Object.assign({}, state.detail) : null),
+      destroy
+    };
+  }
+
+  function root_setTimeout(fn, ms) { return setTimeout(fn, ms); }
+  function root_clearTimeout(id) { return clearTimeout(id); }
+
+  return Object.freeze({ TICK_MS, SIDE_LIMIT, DETAIL_ID, create });
+});

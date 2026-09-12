@@ -173,6 +173,14 @@
    * takes everything between them, the full width of the window. */
   --station-header-height: 52px;
   --station-status-height: 32px;
+  /* The run-down timeline's row: the axis with its tick labels above and
+   * three marker lanes below. Modest on purpose - the stage is the screen. */
+  --station-timeline-height: 92px;
+  /* The Now column at the timeline's left: the anchor's label and clock. */
+  --station-timeline-now-width: 64px;
+  /* The right-hand column for what lies past the window's edge or has no
+   * estimate; capped so it can never become a side panel. */
+  --station-timeline-side-width: 168px;
 }
 
 /* ---------------------------------------------------------------------

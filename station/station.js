@@ -20,8 +20,10 @@
  * Station is mounted in a document where the application is running, and is
  * covered by tests rather than by this page.
  *
- * Still not wired up in this phase: run-down timing, changeover, the recipe
- * strip's contents. The bridge carries the inputs; nothing reads them yet.
+ * Still not wired up in this phase: the recipe strip's contents. Run-down
+ * timing and the changeover are read by the timeline across the foot of
+ * the workspace (station-rundown-timeline.js) and set from the header's
+ * job controls (station-job-controls.js).
  */
 (function (root) {
   "use strict";
@@ -57,6 +59,14 @@
    * it is handed; what happens after is the same publish policy the
    * editor's commands run (see toggleHopperControl). */
   const hopperControls = root.PolynStationHopperControls || null;
+  /* The run-down timeline (station-rundown-timeline.js) and the header's
+   * job controls (station-job-controls.js). The timeline is a reader: it
+   * is fed the same resolved state the stage draws from and projects it;
+   * the controls are the third dispatching file, for the line's output
+   * and changeover, on the same bridge the editor is handed. Both are
+   * optional, as the line console is. */
+  const rundownTimeline = root.PolynStationRundownTimeline || null;
+  const jobControls = root.PolynStationJobControls || null;
 
   /* The commands Station may offer for what it is SHOWING. The executor
    * writes the application's live recipe, so it is only on offer while the
@@ -153,6 +163,24 @@
   let stage = null;
   // What the stage is drawing from, for the controller's render callback.
   let current = { model: null, resolved: null };
+
+  /* The timeline's and the job controls' handles, once mounted. Fed from
+   * the same `current` the stage draws from - never from a second read of
+   * the bridge - so the three can never disagree about the job. */
+  let timeline = null;
+  let jobPanel = null;
+
+  function feedJob(model, resolved) {
+    const inputs = {
+      model,
+      hopperState: resolved ? resolved.hopperState : null,
+      layerState: resolved ? resolved.layerState : null,
+      job: resolved ? resolved.job : null,
+      live: !!(resolved && resolved.live)
+    };
+    if (timeline) timeline.update(inputs);
+    if (jobPanel) jobPanel.update(inputs);
+  }
 
   /* Which targets OPEN the layer: the equipment train - mixer or extruder.
    * The hopper cluster carries the pump and tracking controls - the
@@ -605,6 +633,7 @@
     stage.refresh(focusLayerFor());
     renderInspector(model, resolved);
     renderStatus(model, resolved);
+    feedJob(model, resolved);
   }
 
   /* --------------------------------------------------------------------
@@ -660,6 +689,7 @@
       syncSelection();
       renderInspector(model, resolved);
       renderStatus(model, resolved);
+      feedJob(model, resolved);
       return;
     }
 
@@ -938,6 +968,32 @@
       const lineConsole = syncConsole.create(doc, { connection });
       mounts.connection.appendChild(lineConsole.element);
     }
+
+    /* The run-down timeline across the foot of the workspace, and the
+     * header's job controls that set what it projects from. The timeline
+     * keeps the one coarse clock this screen has; the controls' changeover
+     * readout follows it through onTick rather than keeping a second. The
+     * controls' commands run the same publish policy the editor's do. */
+    if (rundownTimeline && mounts.timeline) {
+      timeline = rundownTimeline.create(doc, {
+        view: root,
+        onTick: () => { if (jobPanel) jobPanel.refresh(); }
+      });
+      mounts.timeline.appendChild(timeline.element);
+    }
+    if (jobControls && mounts.job) {
+      jobPanel = jobControls.create(doc, {
+        commands: () => commandsFor(current.resolved),
+        window: timeline ? timeline.getWindow() : undefined,
+        onWindow: hours => { if (timeline) timeline.setWindow(hours); },
+        onCommitted: result => {
+          lastOwnRevision = Number.isInteger(result.revision) ? result.revision : null;
+          onPublish({ own: true });
+        }
+      });
+      mounts.job.appendChild(jobPanel.element);
+    }
+    feedJob(current.model, current.resolved);
   }
 
   if (root.document) {

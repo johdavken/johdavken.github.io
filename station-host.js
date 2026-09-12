@@ -56,6 +56,7 @@
     "station/styles/components/focus-editor.css",
     "station/styles/components/inspector.css",
     "station/styles/components/rundown.css",
+    "station/styles/components/job-controls.css",
     "station/styles/components/sync-console.css"
   ];
 
@@ -71,6 +72,11 @@
     "station/station-transition.js",
     "station/station-focus-editor.js",
     "station/station-hopper-controls.js",
+    // The run-down projection before the two that read it: the timeline
+    // and the header's job controls.
+    "station/station-rundown.js",
+    "station/station-rundown-timeline.js",
+    "station/station-job-controls.js",
     "station/station-shell.js",
     "station/station-sync-console.js",
     "station/station-demo-lines.js",
@@ -78,7 +84,7 @@
     "station/station.js"
   ];
 
-  const VERSION = "0.20.0";
+  const VERSION = "0.21.0";
 
   function requested() {
     try {

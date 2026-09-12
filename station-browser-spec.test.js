@@ -56,7 +56,7 @@ test("the spec runs Firefox as well as Chromium, and every documented flow is a 
     "hovering a row highlights its hopper",
     "hovering a hopper highlights its row",
     "the percentage field fits 60, 100 and 33.33",
-    "the shell is header, stage and status bar across the full width",
+    "the shell is header, stage, run-down timeline and status bar across the full width",
     "clicking B3's body tracks it through the application",
     "a control click neither selects the hopper nor opens the layer",
     "every tracked hopper wears one halo in its layer's colour",

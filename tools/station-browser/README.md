@@ -44,8 +44,9 @@ producer, is visited once at the end to check that it is read-only.
 
 ## What it checks
 
-- **Shell** - the page is a header, the stage and a status bar, each the
-  full width of the shell, in one grid column; no side pane, no recipe
+- **Shell** - the page is a header, the stage, the run-down timeline row
+  and a status bar, each the full width of the shell, in one grid column;
+  the timeline is one modest row with no heading; no side pane, no recipe
   strip and no mount for one remains; the line console is in the header.
 - **Fast click before hover** - a click dispatched on a mixer, a hopper and
   an editor row with no preceding pointer movement lands exactly like a

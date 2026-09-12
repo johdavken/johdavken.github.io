@@ -311,11 +311,20 @@ function edited(mutate) {
   return state;
 }
 
-test("a publish that changes no value the drawing reads is 'none'", () => {
+test("a publish that changes no value the drawing or the timeline reads is 'none'", () => {
   const a = resolvedFor(liveState());
-  const b = resolvedFor(liveState({ lineRate: 999, changeoverTime: "2026-01-01T00:00" }));
+  const b = resolvedFor(liveState({ prodResinLb: 999, scrapResinLb: 12, gauge: 3 }));
   assert.equal(source.classifyChange(a, b), "none");
   assert.equal(source.classifyChange(a, resolvedFor(liveState())), "none");
+});
+
+test("the job's output and changeover are values - the run-down timeline projects from them", () => {
+  const a = resolvedFor(liveState());
+  assert.equal(source.classifyChange(a, resolvedFor(liveState({ lineRate: 999 }))), "values");
+  assert.equal(source.classifyChange(a, resolvedFor(liveState({ changeoverTime: "03:28", changeoverSetAt: 1 }))), "values");
+  assert.deepEqual(a.job, { lineRate: 900, changeoverTime: "", changeoverSetAt: null });
+  const b = resolvedFor(liveState({ lineRate: 850, changeoverTime: "03:28", changeoverSetAt: 1700000000000 }));
+  assert.deepEqual(b.job, { lineRate: 850, changeoverTime: "03:28", changeoverSetAt: 1700000000000 });
 });
 
 test("a value change - resin, blend, tracking, pump, source, share - is 'values'", () => {
@@ -331,8 +340,9 @@ test("a value change - resin, blend, tracking, pump, source, share - is 'values'
   };
   for (const [name, state] of Object.entries(cases)) {
     const kind = source.classifyChange(base, resolvedFor(state));
-    // A weight is not read by the drawing yet, so it is 'none'; the rest move a value.
-    assert.equal(kind, name === "weight" ? "none" : "values", `${name} classified as ${kind}`);
+    // A weight is not read by the drawing, but the run-down timeline
+    // projects from it, so it too is a value.
+    assert.equal(kind, "values", `${name} classified as ${kind}`);
   }
 });
 

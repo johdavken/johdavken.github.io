@@ -4,19 +4,22 @@
  * Everything that lives inside one of those regions is owned by its own
  * component file.
  *
- * Three rows, one column. The stage takes the whole width between the
- * window's edges: there is no side column and no strip under the stage, and
- * no track is held for one. A five-layer line is drawn across the full
- * window, which is what the console is for.
+ * Four rows, one column. The stage takes the whole width between the
+ * window's edges: there is no side column, and no track is held for one. A
+ * five-layer line is drawn across the full window, which is what the
+ * console is for. Under the stage, one modest row carries the run-down
+ * timeline - part of the control surface, sized by its own component and
+ * never growing into the stage's share.
  */
 
 .station-shell {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: var(--station-header-height) minmax(0, 1fr) var(--station-status-height);
+  grid-template-rows: var(--station-header-height) minmax(0, 1fr) auto var(--station-status-height);
   grid-template-areas:
     "header"
     "machine"
+    "timeline"
     "status";
   /* A definite height, not a minimum.
    *
@@ -45,6 +48,15 @@
   font-size: var(--station-text-lg);
   font-weight: 600;
   letter-spacing: 0.01em;
+}
+
+/* The job controls' slot: after the title and tags, before the spare width
+ * the line console takes. */
+.station-header__job {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  margin-left: var(--station-space-3);
 }
 
 /* The line console's slot: takes the header's spare width so the console
@@ -79,6 +91,16 @@
   min-height: 0;
   padding: var(--station-space-4);
   overflow: hidden;
+}
+
+/* The timeline's row: the component inside sets its own height; the row
+ * only frames it against the stage above and the status bar below. */
+.station-timeline {
+  grid-area: timeline;
+  min-width: 0;
+  padding: 0 var(--station-space-4);
+  border-top: var(--station-stroke) solid var(--station-border);
+  background: var(--station-surface);
 }
 
 .station-status {
