@@ -25,6 +25,11 @@ test("the browser spec is not loaded by any page and adds no dependency", () => 
     assert.ok(!pkg[field] || !("playwright" in pkg[field]), `playwright must not be a ${field}`);
   }
   assert.match(spec, /process\.env\.PLAYWRIGHT_MODULE/, "the spec must take Playwright from outside the repo");
+  // It drives the real application host with a seeded session, so every
+  // request that is not to the local server is aborted: nothing it types
+  // can reach RT Sync or Supabase.
+  assert.match(spec, /route\.request\(\)\.url\(\)\.startsWith\(BASE\) \? route\.continue\(\) : route\.abort\(\)/);
+  assert.match(spec, /addInitScript\(/, "the host needs a seeded session to draw a line");
 });
 
 test("the spec runs Firefox as well as Chromium, and every documented flow is a named check", () => {
@@ -39,7 +44,9 @@ test("the spec runs Firefox as well as Chromium, and every documented flow is a 
     "the cluster lands back on its normal position",
     "Enter on the value opens the search with the value selected",
     "ArrowDown moves the active option",
-    "Enter chooses, closes, returns focus to the value",
+    "Enter chooses, applies through the application, closes, returns focus to the value",
+    "the host offers editing",
+    "harness: read-only throughout, the value reads, the search does not open, and the note says why",
     "Escape closes the search only",
     "Tab closes the search and moves on",
     "mousedown on the list does not close it",
@@ -55,7 +62,7 @@ test("the spec runs Firefox as well as Chromium, and every documented flow is a 
     assert.ok(spec.includes(flow), `spec lacks the check "${flow}"`);
   }
   for (const viewport of ["1920, 1080", "1440, 900", "1160, 800"]) assert.ok(spec.includes(viewport), `spec lacks viewport ${viewport}`);
-  for (const heading of ["Fast click before hover", "Open / close focus", "Resin search keyboard flow", "Result list placement", "Focused editor click targets", "Row <-> hopper linkage", "Percentage field", "Viewports"]) {
+  for (const heading of ["Fast click before hover", "Open / close focus", "Resin search keyboard flow", "Read-only harness", "Result list placement", "Focused editor click targets", "Row <-> hopper linkage", "Percentage field", "Viewports"]) {
     assert.ok(readme.includes(heading), `README does not document "${heading}"`);
   }
 });

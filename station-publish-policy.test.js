@@ -47,12 +47,31 @@ test("transient interaction state is declared beside canonical state, and named 
 test("the editing record is stamped by Station with the recipe it addresses and the revision it began at", () => {
   const draw = body("drawStage");
   assert.match(draw, /onEditing: record => \{/);
-  assert.match(draw, /recipe: "current"/);
+  // The recipe the editor addresses is named once, explicitly, and is what
+  // both the editing record and every command carry - never inherited from
+  // the hidden Recipe editor's page.
+  assert.match(draw, /const recipe = "current";/);
+  assert.match(draw, /\n\s+recipe,\n/, "the editor is not told which recipe its commands address");
+  assert.match(draw, /Object\.assign\(\{\n\s+recipe,\n/, "the editing record is not stamped with the recipe");
+  assert.doesNotMatch(draw, /recipeEditHistoryKey|recipePageTab|activePage/);
   assert.match(draw, /baseRevision: current\.resolved \? current\.resolved\.revision : null/);
   // A render replaces the editor, so no control can still be active.
   assert.match(draw, /editing = null;/);
   assert.match(draw, /editorHandle = editor;/);
-  assert.match(draw, /commands: commandsFor\(current\.resolved\),/, "the editor is not handed the command bridge for discovery");
+  assert.match(draw, /commands: commandsFor\(current\.resolved\),/, "the editor is not handed the command bridge");
+});
+
+test("a command's answer runs the same publish policy, marked as Station's own, and records the revision it produced", () => {
+  const draw = body("drawStage");
+  const at = draw.indexOf("onCommitted: result => {");
+  assert.ok(at > -1, "the editor is not told what to do with a command's result");
+  const committed = draw.slice(at, draw.indexOf("\n      }", at));
+  assert.match(committed, /lastOwnRevision = Number\.isInteger\(result\.revision\) \? result\.revision : null;/);
+  assert.match(committed, /onPublish\(\{ own: true \}\);/);
+  // Nothing else: no patching of its own, no second render path, no note.
+  assert.doesNotMatch(committed, /patchStage|renderAll|editorHandle|mountStage|note\(/);
+  // And the boot file writes lastOwnRevision there and nowhere else.
+  assert.equal((boot.match(/lastOwnRevision\s*=/g) || []).length, 2, "lastOwnRevision is written somewhere other than its declaration and onCommitted");
 });
 
 test("commands are on offer only for the live source: demo data pinned in the host stays read-only", () => {
@@ -87,7 +106,7 @@ test("the policy classifies first, patches a value change in place, and renders 
   assert.doesNotMatch(values, /renderAll\(\)|stage\.refresh\(|mountStage\(|focusEditor\.create\(/,
     "the value path rebuilds the stage or the editor");
 
-  const structural = publish.slice(publish.indexOf("const abandoned = editing;"));
+  const structural = publish.slice(publish.indexOf("const abandoned = own ? null : editing;"));
   assert.match(structural, /renderAll\(\);/);
   assert.match(structural, /changed underneath you; what you were entering for \$\{abandoned\.hopper\} was not applied/);
   assert.match(structural, /editorHandle\.note\(message\)/);
@@ -111,14 +130,24 @@ test("the renderer's patch path leaves the workspace alone", () => {
   assert.match(patch, /cluster\.replaceChild\(fresh, old\)/);
 });
 
+test("an own publish is the same policy with one difference: an interaction is not reported as abandoned", () => {
+  const publish = body("onPublish");
+  assert.match(publish, /function onPublish\(options\)/);
+  assert.match(publish, /const own = !!\(options && options\.own\);/);
+  // `own` decides nothing else: not the classification, not the patch path.
+  const code = publish.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+  const uses = code.match(/\bown\b/g) || [];
+  assert.equal(uses.length, 3, "own is consulted somewhere other than its declaration and the abandoned note");
+  assert.match(publish, /const abandoned = own \? null : editing;/);
+});
+
 /* ----------------------------------------------------------------------
- *   Still read-only
+ *   The boot file's boundary
  * -------------------------------------------------------------------- */
 
-test("Station discovers commands and never dispatches or connects one in this step", () => {
+test("the boot file hands the bridge over and never dispatches, connects, or publishes itself", () => {
   assert.match(boot, /const commands = root\.PolynStationCommandBridge \|\| null;/);
-  assert.doesNotMatch(boot, /\.dispatch\s*\(/, "station.js dispatches a command");
+  assert.doesNotMatch(boot, /\.dispatch\s*\(/, "station.js dispatches a command; the editor is the one place that does");
   assert.doesNotMatch(boot, /commands\.connect|PolynStationCommandBridge\.connect/, "station.js connects a producer");
-  // lastOwnRevision is declared for the shape and never written in this phase.
-  assert.equal((boot.match(/lastOwnRevision\s*=/g) || []).length, 1, "lastOwnRevision is written; no command can have produced a revision yet");
+  assert.doesNotMatch(boot, /\.publish\s*\(|saveSession|notifyActiveJobMutation|localStorage/, "station.js reaches a write path of its own");
 });

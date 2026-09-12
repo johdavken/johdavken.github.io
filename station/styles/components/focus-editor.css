@@ -23,6 +23,9 @@
  *   is-empty         an unassigned hopper: one placeholder, not a row of
  *                    empty fields.
  *   is-searching     the resin value has become a search.
+ *   is-entering-source  the source value has become a field.
+ *   is-readonly      (a value) its command is not on offer: it reads as
+ *                    text, not as a control.
  *   is-changed-underneath  (a row) the canonical value under its active
  *                    control moved while the operator was in it.
  *   is-invalid       (the total) the blend does not add to 100.
@@ -88,7 +91,7 @@
   letter-spacing: 0.12em;
 }
 
-/* Said once, quietly, at the top: nothing here writes back yet. */
+/* Said once, quietly, at the top: what this view can change. */
 .station-editor__mode {
   flex: none;
   padding: 2px var(--station-space-2);
@@ -211,15 +214,35 @@
   white-space: nowrap;
 }
 
-/* The value steps aside while its search is open. Stated here because the
-   display above would otherwise out-rank the browser's own [hidden]. */
-.station-editor__resin-value[hidden] {
+/* The value steps aside while its search or field is open. Stated here
+   because the display above would otherwise out-rank the browser's own
+   [hidden]. */
+.station-editor__resin-value[hidden],
+.station-editor__source-value[hidden] {
   display: none;
 }
 
 .station-editor__resin-value:hover,
 .station-editor__source-value:hover {
   background: var(--station-surface-raised);
+}
+
+/* A value whose command is not on offer is text: no surface under the
+   pointer, no pointer cursor, and its placeholder stays as quiet as it is
+   at rest. It keeps its place in the Tab order and says why when activated. */
+.station-editor__resin-value.is-readonly,
+.station-editor__source-value.is-readonly {
+  cursor: default;
+}
+
+.station-editor__resin-value.is-readonly:hover,
+.station-editor__source-value.is-readonly:hover {
+  background: transparent;
+}
+
+.station-editor__resin-value.is-placeholder.is-readonly:hover,
+.station-editor__source-value.is-placeholder.is-readonly:hover {
+  color: var(--station-text-faint);
 }
 
 .station-editor__resin-value {
@@ -295,6 +318,19 @@
 .station-editor__pct-input:focus {
   --station-field-bg: var(--station-surface-raised);
   --station-field-shadow: 0 0 0 2px var(--station-accent-soft);
+}
+
+/* An editable percentage is a text field and says so with its cursor;
+   H1's, and every one where the blend command is not on offer, keeps the
+   read-only attribute and the resting cursor. */
+.station-editor__pct-input:not([readonly]) {
+  --station-field-cursor: text;
+}
+
+/* A draft the application refused stays in the field, marked, for the
+   operator to correct; the note under the total says why. */
+.station-editor__pct-input[aria-invalid="true"] {
+  --station-field-shadow: 0 0 0 2px var(--station-warning);
 }
 
 .station-editor__unit {
@@ -393,6 +429,32 @@
   padding: var(--station-space-2) var(--station-space-3);
   color: var(--station-text-faint);
   font-size: var(--station-text-sm);
+}
+
+/* ---------------------------------------------------------------------
+ *   Source entry
+ * ------------------------------------------------------------------- */
+
+/* The source value as a field, in its place under the resin: the same
+   surface as the search, at the source line's own size. */
+.station-editor__source-input {
+  --station-field-padding: 1px var(--station-space-2);
+  --station-field-radius: var(--station-radius-sm);
+  --station-field-bg: var(--station-surface-sunken);
+  --station-field-border: var(--station-stroke) solid var(--station-accent);
+  --station-field-shadow: 0 0 0 2px var(--station-accent-soft);
+  --station-field-width: min(12em, 100%);
+  margin: -2px calc(-1 * var(--station-space-2) - 1px);
+  color: var(--station-text);
+  font-size: var(--station-text-xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.station-editor__source-input::placeholder {
+  color: var(--station-text-faint);
+  letter-spacing: normal;
+  text-transform: none;
 }
 
 /* ---------------------------------------------------------------------

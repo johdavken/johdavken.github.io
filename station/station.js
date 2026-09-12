@@ -35,9 +35,12 @@
   const focusEditor = root.PolynStationFocusEditor;
   const bridge = root.PolynStationStateBridge || null;
   /* The command bridge (station-command-bridge.js): the write direction's
-   * transport. Read here for DISCOVERY only - whether an application has
-   * connected an executor to it. The application host connects one; the
-   * standalone harness has none, so it answers "unavailable" there. */
+   * transport. The application host connects an executor to it; the
+   * standalone harness has none, so it answers "unavailable" there. This
+   * file never dispatches: the bridge is handed to the focused editor,
+   * which issues each edit as a command and reads the answer, and the
+   * boot file's part is what happens after - see onCommitted in
+   * drawStage. */
   const commands = root.PolynStationCommandBridge || null;
 
   /* The commands Station may offer for what it is SHOWING. The executor
@@ -104,8 +107,7 @@
    *                    the canonical value then
    *   lastOwnRevision  the revision Station's own most recent command
    *                    produced, so a publish that is only Station's echo
-   *                    can be told from someone else's change. Dormant:
-   *                    no command can be carried out in this phase.
+   *                    can be told from someone else's change.
    *
    * A publish updates canonical state and must leave transient state
    * standing - see onPublish() - unless the structure it lives in is gone. */
@@ -443,7 +445,14 @@
     where.className = "station-panel__notice";
     where.textContent = "Pump and tracking controls will live on the hoppers themselves; nothing is wired up yet.";
     host.appendChild(where);
-    host.appendChild(readOnlyNotice(doc, "Recipe editing"));
+    if (commandsFor(resolved)) {
+      const how = doc.createElement("p");
+      how.className = "station-panel__notice";
+      how.textContent = "Resin, blend and source are edited in the open layer's rows; the application applies each change.";
+      host.appendChild(how);
+    } else {
+      host.appendChild(readOnlyNotice(doc, "Recipe editing"));
+    }
     return true;
   }
 
@@ -517,6 +526,40 @@
     }
   }
 
+  /* Inside the application host (?view=station, marked on the body by
+   * station-host.js) the application connects both bridges before any of
+   * Station's scripts run. Finding the state bridge unconnected there is
+   * therefore not "no application": it is an application from before the
+   * bridges existed - which a returning browser serves from its cache
+   * under an unmoved tag, while this newer Station arrives under the
+   * host's own version. The standalone harness has no application and
+   * this is false there; demo pinned in the host is a choice, and the
+   * bridge is connected either way. */
+  const STALE_APPLICATION = "The application on this page did not connect to Station - it is likely a cached copy from before Station. Reload bypassing the cache.";
+
+  function hosted() {
+    const body = root.document ? root.document.body : null;
+    return !!(body && typeof body.hasAttribute === "function" && body.hasAttribute("data-station-view"));
+  }
+
+  function applicationConnected() {
+    return !!(bridge && typeof bridge.isConnected === "function" && bridge.isConnected());
+  }
+
+  function hostWithoutApplication() {
+    return hosted() && !applicationConnected();
+  }
+
+  /* The standalone harness: no application, by design - and nothing in the
+   * application links to either page yet, so the harness is easy to open
+   * expecting the application. Its status names itself and where the
+   * application's Station view is. */
+  const HARNESS = "Standalone harness: demo data, read-only. The application's Station view is index.html?view=station.";
+
+  function standaloneHarness() {
+    return !hosted() && !applicationConnected();
+  }
+
   function renderStatus(model, resolved) {
     const host = mounts.status;
     if (!host) return;
@@ -528,9 +571,10 @@
     } else {
       parts.push("No line configuration");
     }
-    parts.push(resolved.detail);
+    parts.push(hostWithoutApplication() ? STALE_APPLICATION : (standaloneHarness() ? HARNESS : resolved.detail));
     host.textContent = parts.join(" · ");
     host.setAttribute("data-source", resolved.kind);
+    host.classList.toggle("is-stale-application", hostWithoutApplication());
   }
 
   /* Development-only extruder study, at ?lab=extruder on the standalone
@@ -595,8 +639,15 @@
    *               are updated around whatever control is active. Nothing
    *               is rebuilt; the <foreignObject> node is the same node.
    *   none        the drawing reads nothing new; the resolved state is
-   *               kept current and that is all. */
-  function onPublish() {
+   *               kept current and that is all.
+   *
+   * The same policy runs for the answer to Station's own command
+   * (`own`): the editor was told the result, and the snapshot it carries
+   * is the one the bridge now holds, so this is the publish arriving
+   * early rather than a second way in. The bridge's own notification
+   * follows on the next tick and reads as "none". */
+  function onPublish(options) {
+    const own = !!(options && options.own);
     if (labRequested()) { renderAll(); return; }
     const resolved = currentSource();
     const model = lineModel.buildLineModel(resolved.modelInput);
@@ -626,8 +677,9 @@
 
     /* Structural (or a value change arriving mid-flight, which the landing
      * render will draw anyway): the full path. An interaction in progress
-     * is abandoned deliberately, and said so. */
-    const abandoned = editing;
+     * is abandoned deliberately, and said so - unless what landed was the
+     * operator's own edit, which was applied; the rebuilt editor shows it. */
+    const abandoned = own ? null : editing;
     renderAll();
     if (abandoned) {
       const message = `Layer ${abandoned.layer} changed underneath you; what you were entering for ${abandoned.hopper} was not applied.`;
@@ -649,21 +701,35 @@
     const hopperState = current.resolved ? current.resolved.hopperState : null;
     const layer = focusLayer && model ? model.layers.find(entry => entry.id === focusLayer) : null;
     const selectedHopper = focus && focus.layer === focusLayer ? focus.hopper : null;
+    /* The editor shows the running job's hopper state - the Current
+     * recipe - so that is the recipe every command it issues addresses,
+     * named here once and passed explicitly; nothing is inherited from
+     * whichever page the hidden Recipe editor happens to show. */
+    const recipe = "current";
     const editor = layer ? focusEditor.create(mounts.machine.ownerDocument, {
       layer,
       hopperState,
       resins: catalogResins,
       selected: selectedHopper,
       commands: commandsFor(current.resolved),
+      recipe,
       onSelect: hopper => setFocus({ layer: focusLayer, target: "cluster", hopper }),
       /* The editor reports the control the operator is in; Station keeps
-       * the record, stamped with which recipe it addresses (the editor
-       * shows Current) and the revision it was entered at. */
+       * the record, stamped with which recipe it addresses and the
+       * revision it was entered at. */
       onEditing: record => {
         editing = record ? Object.assign({
-          recipe: "current",
+          recipe,
           baseRevision: current.resolved ? current.resolved.revision : null
         }, record) : null;
+      },
+      /* A command changed something. The result's snapshot is the one the
+       * bridge now holds; the publish policy runs over it at once, so the
+       * stage, the inspector and the editor's rows show what the
+       * application applied - not what was asked for. */
+      onCommitted: result => {
+        lastOwnRevision = Number.isInteger(result.revision) ? result.revision : null;
+        onPublish({ own: true });
       }
     }) : null;
     editorHandle = editor;

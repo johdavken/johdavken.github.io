@@ -97,6 +97,7 @@ test("styled as an adornment on the readout, not a peer of the wizard trigger be
 
 test("app.js and desktop.css carry moved ?v= tags, so a returning desktop gets both halves", () => {
   // The button is inert without its handler, and unstyled without the CSS.
-  assert.match(html, /app\.js\?v=0\.25\.(1[5-9]|[2-9]\d)/);
+  // At least 0.25.15: any later patch, minor or major counts as moved.
+  assert.match(html, /app\.js\?v=(0\.25\.(1[5-9]|[2-9]\d)|0\.(2[6-9]|[3-9]\d)\.\d+|[1-9]\d*\.\d+\.\d+)"/);
   assert.match(html, /desktop\.css\?v=0\.1\.(29|[3-9]\d)/);
 });

@@ -179,11 +179,12 @@ test("app.js installs the executor once, beside the state bridge, and nothing el
   for (const forbidden of [/localStorage/, /supabase/i, /notifyActiveJobMutation/, /stationBridgeHandle/, /\.publish\s*\(/, /fetch\s*\(/]) {
     assert.doesNotMatch(executorSource, forbidden, `the executor reaches past the application's own tail (${forbidden})`);
   }
-  // Station files still connect nothing and dispatch nothing.
+  // Station files connect nothing; the focused editor is the one that
+  // dispatches, and only on the bridge it is handed (station-isolation).
   for (const file of fs.readdirSync(path.join(ROOT, "station")).filter(name => name.endsWith(".js"))) {
     const source = fs.readFileSync(path.join(ROOT, "station", file), "utf8");
     assert.doesNotMatch(source, /PolynStationCommandBridge\s*\.\s*connect|commands\.connect\s*\(/, `${file} connects a producer`);
-    assert.doesNotMatch(source, /\.dispatch\s*\(/, `${file} dispatches a command`);
+    if (file !== "station-focus-editor.js") assert.doesNotMatch(source, /\.dispatch\s*\(/, `${file} dispatches a command`);
   }
 });
 
@@ -451,6 +452,81 @@ test("a Station edit is undone by the grid's own undo, and a grid edit is undone
   assert.equal(result.snapshot.history.current.canRedo, true);
   assert.equal(h.dispatch("redo", { recipe: "current" }).ok, true);
   assert.equal(h.hopper("current", "A", 3).resinName, "FROM-GRID");
+});
+
+/* The Station Focus editor's blend field rides on setHopperBlend; what it
+ * promises the operator - one history entry per real edit, undo back to
+ * the prior blend with H1 following, redo forward again - is the
+ * executor's to keep. */
+test("one blend edit from Station is one history entry: undo restores the prior blend and H1, redo reapplies it", () => {
+  const h = boot();
+  assert.deepEqual([h.hopper("current", "A", 1).pct, h.hopper("current", "A", 0).pct], [40, 60]);
+  const edit = h.dispatch("setHopperBlend", Object.assign({}, CUR, { index: 1, pct: 25 }));
+  assert.equal(edit.changed, true);
+  assert.equal(h.recipeEditHistory.current.undo.length, 1, "exactly one entry for one edit");
+  assert.equal(h.recipeEditHistory.current.redo.length, 0);
+  // A repeat of the same value adds nothing to the stack.
+  assert.equal(h.dispatch("setHopperBlend", Object.assign({}, CUR, { index: 1, pct: 25 })).changed, false);
+  assert.equal(h.recipeEditHistory.current.undo.length, 1);
+
+  const undone = h.dispatch("undo", { recipe: "current" });
+  assert.equal(undone.ok, true);
+  assert.deepEqual([h.hopper("current", "A", 1).pct, h.hopper("current", "A", 0).pct], [40, 60], "the prior blend, H1 included");
+  assert.deepEqual(undone.snapshot.history.current, { canUndo: false, canRedo: true });
+  const redone = h.dispatch("redo", { recipe: "current" });
+  assert.deepEqual([h.hopper("current", "A", 1).pct, h.hopper("current", "A", 0).pct], [25, 75]);
+  assert.deepEqual(redone.snapshot.history.current, { canUndo: true, canRedo: false });
+});
+
+test("one real command is one RT Sync notification, and its save count is the grid handler's own", () => {
+  const h = boot();
+  h.log.notified.length = 0; h.log.saves = 0;
+  h.dispatch("setHopperResin", Object.assign({}, CUR, { index: 2, resin: "ONE" }));
+  assert.equal(h.log.notified.length, 1, "one sync notification for one resin edit");
+  // validateAndCompute saves on its own and the tail saves once more - the
+  // shape every grid field handler has (validateAndCompute({sync:true});
+  // saveSession();), reproduced rather than reinvented. RT Sync sees one
+  // mutation; the state bridge coalesces the publishes into one
+  // notification per tick (station-state-bridge.test.js).
+  assert.equal(h.log.saves, 2);
+  h.log.notified.length = 0; h.log.saves = 0;
+  h.dispatch("setHopperBlend", Object.assign({}, CUR, { index: 2, pct: 5 }));
+  assert.equal(h.log.notified.length, 1);
+  assert.equal(h.log.saves, 2);
+  h.log.notified.length = 0; h.log.saves = 0;
+  h.dispatch("setSource", Object.assign({}, CUR, { index: 2, source: "silo 4" }));
+  assert.deepEqual(h.log.notified, [{ immediate: false, kind: "hookup-edit" }]);
+  assert.equal(h.log.saves, 2);
+  // And a no-op is none of it.
+  h.log.notified.length = 0; h.log.saves = 0;
+  h.dispatch("setSource", Object.assign({}, CUR, { index: 2, source: "SILO 4" }));
+  h.dispatch("setHopperBlend", Object.assign({}, CUR, { index: 2, pct: 5 }));
+  h.dispatch("setHopperResin", Object.assign({}, CUR, { index: 2, resin: "ONE" }));
+  assert.equal(h.log.notified.length, 0);
+  assert.equal(h.log.saves, 0);
+});
+
+test("a resin change prunes the position's source, in the store and in the snapshot Station reads", () => {
+  const stationSource = require("./station/station-source.js");
+  const h = boot();
+  const before = stationSource.hopperStateFrom(h.stationBridge.getSnapshot());
+  assert.equal(before["A:0"].source, "SILO 1");
+  const result = h.dispatch("setHopperResin", Object.assign({}, CUR, { index: 0, resin: "OTHER" }));
+  const after = stationSource.hopperStateFrom(result.snapshot);
+  assert.equal(after["A:0"].resinName, "OTHER");
+  assert.equal(after["A:0"].source, "", "the label was for LIVE-A0; it does not follow the new resin");
+  // The tail's own reconciliation (validateAndCompute -> reconcileHookupSources)
+  // dropped the stale label from the store, as it does for a grid edit; the
+  // result's snapshot already shows that. Putting the resin back does not
+  // bring the label back - it is gone, not hidden.
+  assert.equal(h.state.hookupSources.current["A:0"], undefined);
+  assert.equal(result.snapshot.sources.current["A:0"], undefined);
+  const restored = h.dispatch("setHopperResin", Object.assign({}, CUR, { index: 0, resin: "LIVE-A0" }));
+  assert.equal(stationSource.hopperStateFrom(restored.snapshot)["A:0"].source, "");
+  // A source set against the new resin is stored under it.
+  h.dispatch("setHopperResin", Object.assign({}, CUR, { index: 0, resin: "OTHER" }));
+  h.dispatch("setSource", Object.assign({}, CUR, { index: 0, source: "box 2" }));
+  assert.deepEqual(h.state.hookupSources.current["A:0"], { resin: "OTHER", source: "BOX 2" });
 });
 
 test("Current and Next stacks stay separate whatever the hidden grid shows", () => {

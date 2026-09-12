@@ -11,18 +11,36 @@
  * arrow keys move between hoppers, and the resin is found by searching the
  * shared catalog rather than typed blind.
  *
- * WHAT IT IS NOT, YET
+ * HOW IT WRITES
  *
- * A way to change anything. The Station state bridge is a one-way window
- * onto the application, and the command bridge (station-command-bridge.js)
- * has no producer connected. So the structure here is the structure we
- * intend to keep - the fields, their semantics, their focus order, the
- * search - but nothing commits: a resin chosen from the search, or a key
- * pressed on a percentage, is answered with a note saying it was not
- * applied, and the row keeps showing what the bridge says. No value that
- * looks saved and is not is ever shown, because that is worse than no field
- * at all. When the executor exists it plugs in at the two places marked
- * WRITE CONTRACT below.
+ * It does not. Every change the operator makes here is handed to the
+ * application as a Station command (station-command-contract.js) through
+ * the command bridge (station-command-bridge.js), addressed explicitly to
+ * one recipe, one layer and one hopper, and the application carries it out
+ * along its own paths - the same validation, the same history, the same
+ * save - and answers with a result. The three seams are marked WRITE
+ * CONTRACT below: a resin chosen from the search, a percentage committed,
+ * a source committed.
+ *
+ * What the operator asked for is never shown as if it had happened. A
+ * successful command's snapshot is the application's own; the boot file
+ * is told (`onCommitted`) and runs the publish policy over it, which
+ * brings every row - this one included - into line with what the
+ * application actually holds. A resin change that prunes a source shows
+ * the source gone; a percentage that moved H1 shows H1 moved. A failed
+ * command leaves the row showing the bridge's value and says why in the
+ * note. And a value the editor can see is unchanged is not handed over at
+ * all, so leaving a field you only looked at costs nothing.
+ *
+ * WHAT IT MAY OFFER
+ *
+ * Whatever the application declares it will carry out. The editor asks
+ * the bridge's `capabilities()` once per build and enables each control
+ * on its own command: the resin on setHopperResin, the percentage on
+ * setHopperBlend, the source on setSource. A control whose command is not
+ * on offer is read-only - readable, in the Tab order, and honest about
+ * being read-only - rather than a control that opens and then declines.
+ * There is no table of permissions here; the bridge is the only source.
  *
  * WHAT IT HOLDS, AND WHAT IT DOES NOT
  *
@@ -51,6 +69,12 @@
  * emptied or filled) while one of its controls is active is rebuilt only
  * once the control is left.
  *
+ * The one exception is the operator's own edit landing: when the update
+ * is the answer to a command this row just issued, the committing control
+ * takes the canonical value instead of being protected, and its baseline
+ * moves with it - so the application's echo of the edit is not mistaken
+ * for someone else's change underneath it.
+ *
  * HOW IT IS LINKED TO THE DRAWING
  *
  * Every row carries `data-hopper` and `data-layer`, the same two attributes
@@ -71,6 +95,10 @@
   "use strict";
 
   const RESULT_LIMIT = 8;
+
+  /* The command each editable slot rides on. The only mapping in this
+   * file; whether a command is on offer is the bridge's answer. */
+  const SLOT_COMMAND = Object.freeze({ resin: "setHopperResin", pct: "setHopperBlend", source: "setSource" });
 
   /* --------------------------------------------------------------------
    *   Result list placement
@@ -135,7 +163,9 @@
    * `hopperState` is the runtime shape station-source.js resolves, keyed
    * "<layer>:<index>". A hopper counts as assigned when it has a resin or a
    * percentage; the total is over every row, so a percentage on a hopper
-   * with no resin still counts, because it counts on the floor.
+   * with no resin still counts, because it counts on the floor. A source
+   * belongs to a resin - the application's rule, applied to what is shown
+   * as well as to what may be set - so a hopper with no resin shows none.
    */
   function blendFor(layer, hopperState) {
     if (!layer) return null;
@@ -148,7 +178,7 @@
         index: hopper.index,
         resin,
         pct,
-        source: runtime.source || "",
+        source: resin ? (runtime.source || "") : "",
         assigned: !!(resin || pct)
       };
     });
@@ -235,10 +265,15 @@
 
     const catalog = deps.resins();
 
+    /* Whether the query is blank. A blank query lists the start of the
+     * catalog to browse, but pre-selects nothing in it: Enter on a blank
+     * query means "no resin", not "the first resin in the catalog". */
+    const blank = () => input.value.trim() === "";
+
     function renderResults() {
       while (results.firstChild) results.removeChild(results.firstChild);
       search.matches = filterResins(catalog, input.value);
-      search.active = search.matches.length ? Math.max(0, Math.min(search.active, search.matches.length - 1)) : -1;
+      search.active = search.matches.length ? Math.max(-1, Math.min(search.active, search.matches.length - 1)) : -1;
       if (!search.matches.length) {
         results.appendChild(text(doc, "li", "station-editor__no-match", "No matching resin", { role: "presentation" }));
         input.removeAttribute("aria-activedescendant");
@@ -258,7 +293,7 @@
         // mousedown would move focus off the input and close the search
         // before the click could land; the click itself does the choosing.
         option.addEventListener("mousedown", event => event.preventDefault());
-        option.addEventListener("click", () => choose(entry));
+        option.addEventListener("click", () => choose(entry.resin_code));
         results.appendChild(option);
       });
       input.setAttribute("aria-activedescendant", search.active >= 0 ? `${listId}-${search.active}` : "");
@@ -287,21 +322,24 @@
 
     function move(step) {
       if (!search.matches.length) return;
-      search.active = (search.active + step + search.matches.length) % search.matches.length;
+      search.active = search.active < 0
+        ? (step > 0 ? 0 : search.matches.length - 1)
+        : (search.active + step + search.matches.length) % search.matches.length;
       renderResults();
     }
 
-    function choose(entry) {
+    /* WRITE CONTRACT: the chosen resin - a catalog code, or "" for none -
+     * is handed to the application as setHopperResin. The search closes
+     * first, so what the row shows while the answer is read is the
+     * bridge's value, never the choice. */
+    function choose(resin) {
       closeSearch(doc, row, state, deps);
-      /* WRITE CONTRACT: this is where a chosen resin would be handed to the
-       * application. There is no such hand-off yet, and nothing is held
-       * back here as if there were; the row keeps showing what the bridge
-       * says, and the note says why. */
-      deps.note(`${entry.resin_code} for ${row.id} was not applied: Station is read-only in this phase.`);
+      if (resin === row.resin) return;   // the same again: nothing to hand over
+      issue(row, "resin", { index: row.index, resin }, deps);
     }
 
     input.addEventListener("input", () => {
-      search.active = 0;
+      search.active = blank() ? -1 : 0;
       renderResults();
       position();
       deps.onEditing(editingRecord(state, row, "resin", "search", input.value, row.base));
@@ -311,7 +349,10 @@
       if (event.key === "ArrowUp") { event.preventDefault(); move(-1); return; }
       if (event.key === "Enter") {
         event.preventDefault();
-        if (search.active >= 0 && search.matches[search.active]) choose(search.matches[search.active]);
+        if (search.active >= 0 && search.matches[search.active]) choose(search.matches[search.active].resin_code);
+        // A blank query on a hopper that has a resin: the resin is cleared.
+        // On a hopper that has none there is nothing to choose or clear.
+        else if (blank() && row.resin) choose("");
         return;
       }
       if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); closeSearch(doc, row, state, deps); }
@@ -324,7 +365,7 @@
       closeSearch(doc, row, state, deps, { keepFocus: true });
     });
 
-    search.active = 0;
+    search.active = blank() ? -1 : 0;
     renderResults();
     position();
     if (typeof input.focus === "function") input.focus();
@@ -343,6 +384,94 @@
     row.resinButton.setAttribute("aria-expanded", "false");
     if (!(options && options.keepFocus) && typeof row.resinButton.focus === "function") row.resinButton.focus();
     settleRow(doc, row, state, deps);
+  }
+
+  /* --------------------------------------------------------------------
+   *   Source entry
+   * ------------------------------------------------------------------
+   * The source, opened in place of a row's source value: one text field,
+   * as the Hookups board has. Enter commits and returns to the value;
+   * Escape drops the draft; leaving the field by any other route commits
+   * a change. The field closes before the command goes, as the search
+   * does, so the row never shows a draft as if it were saved. */
+  function openSourceEntry(doc, row, state, deps) {
+    if (row.sourceEntry) return;
+    const button = row.sourceButton;
+    const input = element(doc, "input", "station-editor__source-input", {
+      type: "text",
+      autocomplete: "off",
+      spellcheck: "false",
+      autocapitalize: "characters",
+      "data-slot": "source",
+      "aria-label": `Source for ${row.id}`,
+      placeholder: "Source"
+    });
+    input.value = row.entry.source;
+    row.sourceEntry = input;
+    row.base = row.entry.source;
+    row.item.classList.add("is-entering-source");
+    button.setAttribute("hidden", "");
+    row.main.appendChild(input);
+
+    /* WRITE CONTRACT: the source is handed to the application as
+     * setSource; "" removes the label. */
+    function commit(options) {
+      const draft = input.value.trim();
+      closeSourceEntry(doc, row, state, deps, options);
+      if (draft === row.entry.source) return;   // unchanged: nothing to hand over
+      issue(row, "source", { index: row.index, source: draft }, deps);
+    }
+
+    input.addEventListener("input", () => {
+      deps.onEditing(editingRecord(state, row, "source", "typing", input.value, row.base));
+    });
+    input.addEventListener("keydown", event => {
+      if (event.key === "Enter") { event.preventDefault(); commit(); return; }
+      if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); closeSourceEntry(doc, row, state, deps); }
+    });
+    input.addEventListener("blur", () => { if (row.sourceEntry === input) commit({ keepFocus: true }); });
+
+    if (typeof input.focus === "function") input.focus();
+    if (typeof input.select === "function") input.select();
+    deps.onEditing(editingRecord(state, row, "source", "typing", input.value, row.base));
+  }
+
+  function closeSourceEntry(doc, row, state, deps, options) {
+    const input = row.sourceEntry;
+    if (!input) return;
+    row.sourceEntry = null;
+    row.item.classList.remove("is-entering-source");
+    row.main.removeChild(input);
+    row.sourceButton.removeAttribute("hidden");
+    if (!(options && options.keepFocus) && typeof row.sourceButton.focus === "function") row.sourceButton.focus();
+    settleRow(doc, row, state, deps);
+  }
+
+  /* --------------------------------------------------------------------
+   *   Issuing a command
+   * ------------------------------------------------------------------ */
+
+  /* Hand one change for one slot to the application and read the answer.
+   * The request is addressed by the boot file's recipe and this layer;
+   * the row adds its hopper. A failure is said in the note and nothing
+   * else moves. A success that changed something is reported through
+   * `onCommitted`, which is where the authoritative state comes back in
+   * (see the header); while it does, the slot is marked as committing so
+   * the update treats its control as the operator's own edit landing. A
+   * success that changed nothing - the application saw the same value -
+   * is a no-op here as it was there. Returns the result. */
+  function issue(row, slot, args, deps) {
+    const result = deps.dispatch(SLOT_COMMAND[slot], args);
+    if (!result || !result.ok) {
+      deps.note(result && result.message ? result.message : "The change could not be applied.");
+      return result;
+    }
+    deps.note("");
+    if (result.changed) {
+      row.committing = slot;
+      try { deps.onCommitted(result); } finally { row.committing = null; }
+    }
+    return result;
   }
 
   /* --------------------------------------------------------------------
@@ -367,31 +496,57 @@
     while (node.firstChild) node.removeChild(node.firstChild);
   }
 
-  /* The resin value at rest: the code, or the "add" placeholder. Written
-   * on build and again on patch, so a row's resin follows the bridge. */
-  function writeResinButton(doc, button, entry) {
+  /* The controls a row is built with, from its entry: an empty hopper has
+   * its resin control only; a share with no resin adds the percentage; a
+   * resin adds the source. A row is refilled when this changes. */
+  function shapeOf(entry) {
+    if (!entry.assigned) return "empty";
+    return entry.resin ? "full" : "share";
+  }
+
+  /* The resin value at rest: the code, or a placeholder - the offer to add
+   * one where that is possible, the plain fact where it is not. Written on
+   * build and again on patch, so a row's resin follows the bridge. */
+  function writeResinButton(doc, button, entry, editable) {
     clearChildren(button);
-    button.setAttribute("aria-label", entry.resin ? `${entry.id} resin, ${entry.resin}` : `Add resin to ${entry.id}`);
+    button.setAttribute("aria-label", entry.resin
+      ? `${entry.id} resin, ${entry.resin}`
+      : (editable ? `Add resin to ${entry.id}` : `${entry.id} resin, none`));
     if (entry.resin) {
       button.classList.remove("is-placeholder");
       button.textContent = entry.resin;
     } else {
       button.classList.add("is-placeholder");
       button.textContent = "";
-      button.appendChild(text(doc, "span", "station-editor__glyph", "+", { "aria-hidden": "true" }));
-      button.appendChild(text(doc, "span", null, "Add resin"));
+      if (editable) {
+        button.appendChild(text(doc, "span", "station-editor__glyph", "+", { "aria-hidden": "true" }));
+        button.appendChild(text(doc, "span", null, "Add resin"));
+      } else {
+        button.appendChild(text(doc, "span", null, "No resin"));
+      }
     }
   }
 
-  function writeSourceButton(button, entry) {
-    button.setAttribute("aria-label", entry.source ? `${entry.id} source, ${entry.source}` : `Add source for ${entry.id}`);
+  function writeSourceButton(button, entry, editable) {
+    button.setAttribute("aria-label", entry.source
+      ? `${entry.id} source, ${entry.source}`
+      : (editable ? `Add source for ${entry.id}` : `${entry.id} source, none`));
     if (entry.source) {
       button.classList.remove("is-placeholder");
       button.textContent = entry.source;
     } else {
       button.classList.add("is-placeholder");
-      button.textContent = "Add source";
+      button.textContent = editable ? "Add source" : "No source";
     }
+  }
+
+  /* A value whose command is not on offer: still the value, still in the
+   * Tab order, announced as read-only, and styled as text rather than as
+   * a control. Activating it says why. */
+  function markReadOnly(button, on) {
+    button.classList.toggle("is-readonly", on);
+    if (on) button.setAttribute("aria-disabled", "true");
+    else button.removeAttribute("aria-disabled");
   }
 
   /* Fill (or refill) a row's item from an entry. The <li> itself is kept:
@@ -400,21 +555,25 @@
    * to. Everything inside it is built here. */
   function fillRow(doc, row, entry, state, deps) {
     const item = row.item;
+    const able = deps.able;
     clearChildren(item);
     row.entry = entry;
-    row.built = entry.assigned;   // the shape the controls below were built for
+    row.built = shapeOf(entry);   // the shape the controls below were built for
     row.resin = entry.resin;
     row.search = null;
+    row.sourceEntry = null;
     row.pctInput = null;
     row.sourceButton = null;
     row.pending = null;
     item.classList.remove("is-searching");
+    item.classList.remove("is-entering-source");
     item.classList.toggle("is-empty", !entry.assigned);
 
     /* The badge: static identity, anchoring the row. Not a control. */
     item.appendChild(text(doc, "span", "station-editor__badge", entry.id));
 
     const main = element(doc, "div", "station-editor__main");
+    row.main = main;
     const resinBlock = element(doc, "div", "station-editor__resin");
     row.resinBlock = resinBlock;
 
@@ -424,28 +583,33 @@
     const resinButton = element(doc, "button", "station-editor__resin-value", {
       type: "button",
       "data-slot": "resin",
-      "aria-haspopup": "listbox",
-      "aria-expanded": "false"
+      "aria-haspopup": able.resin ? "listbox" : null,
+      "aria-expanded": able.resin ? "false" : null
     });
-    writeResinButton(doc, resinButton, entry);
-    resinButton.addEventListener("click", () => openSearch(doc, row, state, deps));
+    writeResinButton(doc, resinButton, entry, able.resin);
+    markReadOnly(resinButton, !able.resin);
+    resinButton.addEventListener("click", () => {
+      if (able.resin) openSearch(doc, row, state, deps);
+      else deps.note(`${row.id}'s resin cannot be changed here: ${deps.reason("resin")}`);
+    });
     row.resinButton = resinButton;
     resinBlock.appendChild(resinButton);
     main.appendChild(resinBlock);
 
     /* The source, under the resin: secondary, quiet when absent. Only a
-     * hopper that has a resin can have a source, so an empty hopper does
-     * not get a second placeholder under its first. */
-    if (entry.assigned) {
+     * hopper that has a resin can have a source - the application's rule,
+     * and what setSource refuses - so a hopper without one does not get a
+     * second placeholder under its first. */
+    if (entry.resin) {
       const sourceButton = element(doc, "button", "station-editor__source-value", {
         type: "button",
         "data-slot": "source"
       });
-      writeSourceButton(sourceButton, entry);
+      writeSourceButton(sourceButton, entry, able.source);
+      markReadOnly(sourceButton, !able.source);
       sourceButton.addEventListener("click", () => {
-        /* WRITE CONTRACT: setting a source. Hookup sources are the
-         * application's; this reports that they cannot be set from here. */
-        deps.note(`The source for ${entry.id} is set in the application: Station is read-only in this phase.`);
+        if (able.source) openSourceEntry(doc, row, state, deps);
+        else deps.note(`The source for ${row.id} cannot be changed here: ${deps.reason("source")}`);
       });
       row.sourceButton = sourceButton;
       main.appendChild(sourceButton);
@@ -453,40 +617,97 @@
     item.appendChild(main);
 
     /* The percentage: the leading number, right-aligned so the column
-     * sums into the total below it. A real input, read-only for now, so
-     * its semantics and its place in the Tab order are already right. */
+     * sums into the total below it. A real input; read-only on H1, whose
+     * share the application derives from the others, and wherever the
+     * blend command is not on offer. */
     const pct = element(doc, "div", "station-editor__pct");
     if (entry.assigned) {
+      const editable = able.pct && entry.index > 0;
       const input = element(doc, "input", "station-editor__pct-input", {
         type: "text",
         inputmode: "decimal",
-        readonly: "",
+        readonly: editable ? null : "",
         size: "3",
         "data-slot": "pct",
         "aria-label": `${entry.id} blend percentage`
       });
       input.value = String(round(entry.pct));
       input.addEventListener("keydown", event => {
-        // A printable key on a read-only value is an attempt to edit it;
-        // say why it does nothing rather than letting it silently not.
-        if (event.key && event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
-          deps.note(`${entry.id}'s percentage was not changed: Station is read-only in this phase.`);
+        if (!editable) {
+          // A printable key on a read-only value is an attempt to edit it;
+          // say why it does nothing rather than letting it silently not.
+          if (event.key && event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
+            deps.note(`${row.id}'s percentage was not changed: ${entry.index === 0
+              ? "hopper 1's share is calculated from hoppers 2-6."
+              : deps.reason("pct")}`);
+          }
+          return;
         }
+        if (event.key === "Enter") { event.preventDefault(); commitPct(doc, row, state, deps, false); return; }
+        if (event.key === "Escape" && input.value.trim() !== String(round(row.entry.pct))) {
+          // A draft is dropped and the field shows the application's value
+          // again; the key is spent here. With no draft it is not, and
+          // reaches the boot file, which closes the layer.
+          event.preventDefault();
+          event.stopPropagation();
+          input.value = String(round(row.entry.pct));
+          input.removeAttribute("aria-invalid");
+          deps.note("");
+          deps.onEditing(editingRecord(state, row, "pct", "typing", input.value, row.base));
+        }
+      });
+      input.addEventListener("input", () => {
+        input.removeAttribute("aria-invalid");
+        deps.onEditing(editingRecord(state, row, "pct", "typing", input.value, row.base));
       });
       /* Focus in the field is an interaction in progress, even while the
        * field is read-only: a publish must not rewrite a value the
-       * operator is looking at with the caret in it. Reported as
-       * "typing" so the boot file's record has the shape it will keep. */
+       * operator is looking at with the caret in it. */
       input.addEventListener("focus", () => {
         row.base = row.entry.pct;
         deps.onEditing(editingRecord(state, row, "pct", "typing", input.value, row.base));
       });
-      input.addEventListener("blur", () => settleRow(doc, row, state, deps));
+      /* Leaving the field commits a changed value - once: a value Enter
+       * already committed reads as unchanged by then and is not sent
+       * again. Then the row settles as it always has. */
+      input.addEventListener("blur", () => {
+        if (editable) commitPct(doc, row, state, deps, true);
+        settleRow(doc, row, state, deps);
+      });
       row.pctInput = input;
       pct.appendChild(input);
       pct.appendChild(text(doc, "span", "station-editor__unit", "%", { "aria-hidden": "true" }));
     }
     item.appendChild(pct);
+  }
+
+  /* WRITE CONTRACT: the percentage field's value is handed to the
+   * application as setHopperBlend. The field's own reading of itself is
+   * the grid's: blank means 0. Everything else - whether it is a number,
+   * in range, and what the other hoppers leave room for - is the
+   * application's to judge, and its answer is shown as the note. A
+   * refused draft stays in the field, marked, for the operator to correct;
+   * an accepted one is replaced by what the application now holds. */
+  function commitPct(doc, row, state, deps, leaving) {
+    const input = row.pctInput;
+    if (!input) return;
+    const resting = String(round(row.entry.pct));
+    const draft = input.value.trim();
+    if (draft === resting) return;   // unchanged: nothing to hand over
+    const result = issue(row, "pct", { index: row.index, pct: draft === "" ? "0" : draft }, deps);
+    if (!result || !result.ok) {
+      input.setAttribute("aria-invalid", "true");
+      return;
+    }
+    input.removeAttribute("aria-invalid");
+    // The application saw the same value (60 for "60.0"): the field shows
+    // it as the row shows it. A changed value was written by the update
+    // the commit ran, for this control as for every other.
+    if (!result.changed) input.value = String(round(row.entry.pct));
+    // Still in the field, from the new baseline - unless the row was
+    // reshaped by its own edit (a share zeroed on a hopper with no resin)
+    // and this field is gone with it.
+    if (!leaving) deps.onEditing(row.pctInput === input ? editingRecord(state, row, "pct", "typing", input.value, row.base) : null);
   }
 
   function buildRow(doc, entry, state, deps) {
@@ -496,7 +717,7 @@
       "data-hopper-index": entry.index
     });
     if (deps.selected === entry.id) item.classList.add("is-selected");
-    const row = { id: entry.id, index: entry.index, item, search: null, entry, pending: null, base: null };
+    const row = { id: entry.id, index: entry.index, item, search: null, sourceEntry: null, entry, pending: null, base: null, committing: null };
     fillRow(doc, row, entry, state, deps);
     // Any click in the row selects its hopper - including the clicks that
     // also open a control, since selecting is what the operator means too.
@@ -516,10 +737,12 @@
     };
   }
 
-  /* Which of a row's slots the operator is in: the search, when it is
-   * open, or the slot of the focused control. Null when none. */
+  /* Which of a row's slots the operator is in: the search or the source
+   * field, when one is open, or the slot of the focused control. Null
+   * when none. */
   function activeSlotOf(row, deps) {
     if (row.search) return "resin";
+    if (row.sourceEntry) return "source";
     const active = deps.activeElement();
     if (!active || !row.item.contains || !row.item.contains(active)) return null;
     const slot = typeof active.getAttribute === "function" ? active.getAttribute("data-slot") : null;
@@ -528,12 +751,12 @@
 
   /* Write an entry's values onto a row's existing controls. `protect`
    * names the slot whose live value must be left alone. */
-  function patchRow(doc, row, entry, protect) {
+  function patchRow(doc, row, entry, protect, deps) {
     row.entry = entry;
     row.resin = entry.resin;
     row.item.classList.toggle("is-empty", !entry.assigned);
-    writeResinButton(doc, row.resinButton, entry);
-    if (row.sourceButton) writeSourceButton(row.sourceButton, entry);
+    writeResinButton(doc, row.resinButton, entry, deps.able.resin);
+    if (row.sourceButton) writeSourceButton(row.sourceButton, entry, deps.able.source);
     if (row.pctInput && protect !== "pct") row.pctInput.value = String(round(entry.pct));
   }
 
@@ -551,21 +774,38 @@
   }
 
   /* Bring one row into line with a new entry. A row with no control active
-   * is refilled when its shape changes (assigned or not) and patched
-   * otherwise. A row with an active control is patched around that
-   * control; a shape change is held as `pending` until the control is
-   * left; and if the canonical value under the control has moved since
-   * the operator started, the row says so rather than moving the draft. */
+   * is refilled when its shape changes and patched otherwise. A row with an
+   * active control is patched around that control; a shape change is held
+   * as `pending` until the control is left; and if the canonical value
+   * under the control has moved since the operator started, the row says
+   * so rather than moving the draft.
+   *
+   * Unless the update is this row's own edit landing (`committing`): then
+   * the control takes the value, a shape change is applied at once with
+   * focus kept on the same slot, and the baseline moves to the new value
+   * so the echo is not reported as a move. */
   function refreshRow(doc, row, entry, state, deps) {
     const active = activeSlotOf(row, deps);
     if (!active) {
       row.item.classList.remove("is-changed-underneath");
-      if (entry.assigned !== row.built) fillRow(doc, row, entry, state, deps);
-      else patchRow(doc, row, entry, null);
+      if (shapeOf(entry) !== row.built) fillRow(doc, row, entry, state, deps);
+      else patchRow(doc, row, entry, null, deps);
       return;
     }
-    patchRow(doc, row, entry, active);
-    row.pending = entry.assigned !== row.built ? entry : null;
+    if (row.committing === active) {
+      row.item.classList.remove("is-changed-underneath");
+      if (shapeOf(entry) !== row.built) {
+        fillRow(doc, row, entry, state, deps);
+        const again = focusableFor(row, active);
+        if (again && typeof again.focus === "function") again.focus();
+      } else {
+        patchRow(doc, row, entry, null, deps);
+      }
+      row.base = canonicalOf(entry, active);
+      return;
+    }
+    patchRow(doc, row, entry, active, deps);
+    row.pending = shapeOf(entry) !== row.built ? entry : null;
     const moved = row.base !== null && row.base !== undefined && String(canonicalOf(entry, active)) !== String(row.base);
     row.item.classList.toggle("is-changed-underneath", moved);
     if (moved) {
@@ -579,12 +819,15 @@
   function settleRow(doc, row, state, deps) {
     row.base = null;
     row.item.classList.remove("is-changed-underneath");
+    // A refused draft that was left behind is no longer anything: the
+    // field shows the application's value, which is not invalid.
+    if (row.pctInput) row.pctInput.removeAttribute("aria-invalid");
     if (row.pending) {
       const entry = row.pending;
       row.pending = null;
       fillRow(doc, row, entry, state, deps);
     } else if (row.entry) {
-      patchRow(doc, row, row.entry, null);
+      patchRow(doc, row, row.entry, null, deps);
     }
     deps.onEditing(null);
   }
@@ -610,6 +853,24 @@
     total.appendChild(text(doc, "span", "station-editor__total-value", empty ? "—" : `${Math.round(blend.total)}%`));
   }
 
+  /* What the bridge offers, per slot, and why a slot is read-only when it
+   * is. Asked once per build: the application declares its commands when
+   * it connects, and a structural render rebuilds the editor. */
+  function abilities(commands, recipe) {
+    const connected = !!(commands && typeof commands.isAvailable === "function" && commands.isAvailable());
+    const usable = connected && typeof commands.dispatch === "function" && typeof commands.capabilities === "function";
+    const offered = usable ? commands.capabilities() : [];
+    const has = name => Array.isArray(offered) && offered.includes(name);
+    const able = {};
+    for (const slot of Object.keys(SLOT_COMMAND)) able[slot] = !!recipe && usable && has(SLOT_COMMAND[slot]);
+    const reason = slot => {
+      if (!connected) return "no application is connected to Station commands.";
+      if (!recipe) return "this view does not address a recipe.";
+      return `the application does not offer ${SLOT_LABEL[slot]} editing from Station.`;
+    };
+    return { able: Object.freeze(able), reason, connected };
+  }
+
   /**
    * Build the editor for one layer.
    *
@@ -622,16 +883,21 @@
    * @param {function} [options.onSelect]  (hopperId) when a row is clicked
    * @param {function} [options.onEditing] (record|null) as the operator
    *        enters and leaves a control; see the header
-   * @param {object} [options.commands]    the command bridge, for discovery
-   *        only: whether an application is connected to it decides what
-   *        the header says
+   * @param {object} [options.commands]    the command bridge: what it
+   *        offers decides what is editable, and it carries the commands
+   * @param {string} [options.recipe]      "current" | "next": the recipe
+   *        every command from this editor addresses. No default - with
+   *        none given, nothing is editable
+   * @param {function} [options.onCommitted] (result) after a command that
+   *        changed something; the boot file brings the stage and this
+   *        editor into line with the result's snapshot
    * @param {function} [options.activeElement] () => the focused element;
    *        defaults to the document's
    * @param {function} [options.measure]   (element) => client rect, for the
    *        result list's placement; defaults to getBoundingClientRect
    * @param {function} [options.bounds]    (row) => the rect the list must
    *        stay inside; defaults to the <foreignObject> the row is drawn in
-   * @returns {{ element: Element, blend: object, note: function, update: function }}
+   * @returns {{ element: Element, blend: object, note: function, update: function, able: object }}
    */
   function create(doc, options) {
     const settings = options || {};
@@ -664,6 +930,10 @@
       "data-role": "focus-editor"
     });
 
+    const commands = settings.commands || null;
+    const recipe = settings.recipe === "current" || settings.recipe === "next" ? settings.recipe : null;
+    const offer = abilities(commands, recipe);
+
     // The note is one line under the total, updated in place; aria-live so
     // a screen reader hears why a field did not take the edit.
     const note = text(doc, "p", "station-editor__note", "", { "aria-live": "polite" });
@@ -672,30 +942,40 @@
       selected: settings.selected || null,
       onSelect: settings.onSelect,
       onEditing: typeof settings.onEditing === "function" ? settings.onEditing : () => {},
+      onCommitted: typeof settings.onCommitted === "function" ? settings.onCommitted : () => {},
       activeElement: typeof settings.activeElement === "function"
         ? settings.activeElement
         : () => (doc && "activeElement" in doc ? doc.activeElement : null),
       measure: typeof settings.measure === "function" ? settings.measure : measureRect,
       bounds: typeof settings.bounds === "function" ? settings.bounds : workspaceBounds,
-      note: message => { note.textContent = message; }
+      note: message => { note.textContent = message; },
+      able: offer.able,
+      reason: offer.reason,
+      /* Every command from this editor is addressed here, once: the recipe
+       * the boot file named, and this layer. A row adds its hopper. */
+      dispatch: (command, args) => commands.dispatch(command, Object.assign({ recipe, layer: blend.layer.id }, args))
     };
-
-    /* Discovery, not capability: the header reports whether an application
-     * has connected to the command bridge. In this phase none has, so the
-     * editor reads as read-only wherever it runs - and says which reason. */
-    const commands = settings.commands || null;
-    const connected = !!(commands && typeof commands.isAvailable === "function" && commands.isAvailable());
 
     const header = element(doc, "header", "station-editor__header");
     const heading = element(doc, "div", "station-editor__heading");
     heading.appendChild(text(doc, "h2", "station-editor__title", `Layer ${blend.layer.id}`));
     heading.appendChild(text(doc, "p", "station-editor__role", String(blend.layer.roleLabel || "")));
     header.appendChild(heading);
-    header.appendChild(text(doc, "span", "station-editor__mode", "Read-only", {
-      title: connected
-        ? "The application is connected to Station commands, but editing from this view is not wired up yet."
-        : "No application is connected to Station commands; the state bridge is a one-way window onto the application."
-    }));
+    /* The mode, said once at the top: what this view can change, as the
+     * bridge declares it. */
+    const editable = Object.keys(offer.able).filter(slot => offer.able[slot]);
+    const mode = editable.length === 0 ? "read-only" : (editable.length === 3 ? "editing" : "partial");
+    header.appendChild(text(doc, "span", "station-editor__mode",
+      mode === "read-only" ? "Read-only" : (mode === "editing" ? "Editing" : "Partly read-only"), {
+        "data-mode": mode,
+        title: mode === "read-only"
+          ? (offer.connected
+            ? "The application offers none of the editing commands this view uses."
+            : "No application is connected to Station commands; the state bridge is a one-way window onto the application.")
+          : (mode === "editing"
+            ? `Changes here are applied to the ${recipe} recipe by the application.`
+            : `Changes to ${editable.map(slot => SLOT_LABEL[slot]).join(" and ")} are applied to the ${recipe} recipe; the rest is read-only here.`)
+      }));
     rootEl.appendChild(header);
 
     const list = element(doc, "ol", "station-editor__list", { "aria-label": `Layer ${blend.layer.id} hoppers` });
@@ -725,7 +1005,7 @@
     list.addEventListener("focusout", event => {
       const target = event.target;
       const row = rows.find(entry => entry.item === (target && target.closest ? target.closest("[data-hopper]") : null));
-      if (!row || row.search) return;
+      if (!row || row.search || row.sourceEntry) return;
       const to = event.relatedTarget;
       if (to && row.item.contains && row.item.contains(to)) return;
       if (row.pending) settleRow(doc, row, state, deps);
@@ -751,8 +1031,8 @@
       return fresh;
     }
 
-    return { element: rootEl, blend, note: deps.note, update };
+    return { element: rootEl, blend, note: deps.note, update, able: offer.able };
   }
 
-  return { RESULT_LIMIT, SLOTS, blendFor, filterResins, placeResults, create };
+  return { RESULT_LIMIT, SLOTS, SLOT_COMMAND, blendFor, filterResins, placeResults, create };
 });

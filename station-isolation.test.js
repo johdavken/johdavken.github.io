@@ -86,9 +86,9 @@ const allStationCss = stationStylesheets().map(file => ({
  *   station-command-contract.js  what a Station write request is (pure)
  *   station-command-bridge.js    the letterbox for such requests; app.js
  *                                connects its one executor (an adapter over
- *                                the grid's own mutation tails), but Station
- *                                itself dispatches nothing through it yet -
- *                                the editing controls are a later step
+ *                                the grid's own mutation tails), and the
+ *                                focused editor is the one Station file
+ *                                that dispatches through it
  *
  * All are inert on a normal load: the state bridge only bumps a revision
  * nobody reads, the host returns before touching the document, and the
@@ -401,13 +401,22 @@ test("Station never writes through the bridge - it only reads and subscribes", (
   }
 });
 
-test("Station dispatches no commands yet - the executor is connected, the controls are not built", () => {
-  // The write path exists end to end on the application side. Until the
-  // Station editing step lands, no Station file may call it; this pins that
-  // so the step arrives as an edit to this test, not as a quiet new call.
+test("exactly one Station file dispatches commands - the focused editor - and only through the bridge it is handed", () => {
+  /* The write path is: editor -> command bridge -> the application's
+   * executor. The editor is the one place a Station file may say
+   * `.dispatch(`, and it says it on the bridge object it was given, never
+   * on the global. Every other file stays a reader; the boot file's part
+   * is to hand the bridge over and to re-run the publish policy on the
+   * answer. A second dispatching file arrives as an edit to this test. */
+  const DISPATCHES = ["station-focus-editor.js"];
   for (const file of STATION_FILES) {
     const source = fs.readFileSync(path.join(STATION, file), "utf8");
-    assert.doesNotMatch(source, /\.dispatch\s*\(/, `${file} dispatches a command`);
+    if (DISPATCHES.includes(file)) {
+      assert.match(source, /commands\.dispatch\s*\(/, `${file} no longer dispatches through the bridge it is handed`);
+      assert.doesNotMatch(source, /PolynStationCommandBridge/, `${file} reaches for the global bridge instead of the one it is handed`);
+    } else {
+      assert.doesNotMatch(source, /\.dispatch\s*\(/, `${file} dispatches a command`);
+    }
   }
 });
 

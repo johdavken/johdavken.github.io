@@ -100,6 +100,13 @@
   font-size: var(--station-text-sm);
 }
 
+/* The application on the page never connected: inside the host that is a
+   cached application from before Station, and the status says so in the
+   warning colour rather than letting demo data pass for a live line. */
+.station-status.is-stale-application {
+  color: var(--station-warning);
+}
+
 /* ---- Section headings, shared by the side columns ---- */
 
 .station-section__heading {

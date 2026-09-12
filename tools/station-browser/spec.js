@@ -17,7 +17,34 @@ try {
 const BASE = process.env.STATION_BASE || "http://127.0.0.1:8765";
 const BROWSERS = (process.env.BROWSERS || "chromium,firefox").split(",").map(s => s.trim()).filter(Boolean);
 const OUT = path.join(__dirname, "out");
-const PAGE = "/station/station.html?source=demo";
+/* The application host, with the executor connected, so the editor's
+ * search and fields are the real thing. The standalone harness has no
+ * producer and is read-only there by design; it is visited once at the
+ * end to check exactly that. */
+const PAGE = "/?view=station";
+const DEMO_PAGE = "/station/station.html?source=demo";
+
+/* A three-layer session seeded into the browser's own storage before the
+ * page loads - the same shape the application saves - so the host has a
+ * line to draw and a recipe to edit. Local only: every request that is
+ * not to BASE is aborted, so nothing here can reach RT Sync or Supabase. */
+const SESSION_KEY = "resinTimer.session.v0.09";
+const SESSION = {
+  version: "0.17", lineRate: 1200, lineType: 3, changeoverTime: "", offsets: { A: 0, B: 0, C: 0 },
+  layers: ["A", "B", "C"].map((name, i) => ({
+    name, layerPct: i === 1 ? 40 : 30,
+    hoppers: [
+      { pct: 60, weight: 500, resinName: "HX204", track: true, pumpOff: false, usableHeight: 40 },
+      { pct: 30, weight: 400, resinName: "LD105", track: true, pumpOff: false, usableHeight: 30 },
+      { pct: 10, weight: 0, resinName: "EVA340", track: false, pumpOff: false, usableHeight: 0 },
+      { pct: 0, weight: 0, resinName: "", track: false, pumpOff: false },
+      { pct: 0, weight: 0, resinName: "", track: false, pumpOff: false },
+      { pct: 0, weight: 0, resinName: "", track: false, pumpOff: false }
+    ]
+  })),
+  hookupSources: { current: { "B:0": { resin: "HX204", source: "SILO 3" }, "B:2": { resin: "EVA340", source: "BOX 12" } }, next: {} },
+  theme: "industrial-slate"
+};
 
 let failures = 0;
 function check(browser, name, ok, detail) {
@@ -49,14 +76,17 @@ async function run(browserName) {
   const browser = await type.launch();
   for (const [w, h] of [[1920, 1080], [1440, 900], [1160, 800]]) {
     const ctx = await browser.newContext({ viewport: { width: w, height: h } });
+    await ctx.route("**/*", route => (route.request().url().startsWith(BASE) ? route.continue() : route.abort()));
+    await ctx.addInitScript(({ key, value }) => { try { if (!localStorage.getItem(key)) localStorage.setItem(key, JSON.stringify(value)); } catch (error) { /* no storage: the host draws nothing and the checks say so */ } }, { key: SESSION_KEY, value: SESSION });
     const page = await ctx.newPage();
     const errors = [];
-    page.on("pageerror", e => errors.push(e.message));
+    // The host's own noise from aborted RT Sync requests is not Station's.
+    page.on("pageerror", e => { if (!/LockManager|Failed to fetch/.test(e.message)) errors.push(e.message); });
     await page.goto(BASE + PAGE, { waitUntil: "load" });
-    await page.waitForSelector("[data-role='layer']");
-    await page.click("[data-demo='three-layer']");
-    await page.waitForTimeout(150);
+    await page.waitForSelector("[data-role='layer']", { timeout: 15000 });
+    await page.waitForTimeout(300);
     const tag = `${w}x${h}`;
+    check(browserName, `${tag} the host offers editing`, (await page.$eval(".station-editor__mode, [data-station-mount='machine']", () => true)) && (await page.evaluate(() => window.PolynStationCommandBridge.isAvailable())));
 
     /* viewport */
     const pageState = await page.evaluate(() => ({ scrollW: document.documentElement.scrollWidth, scrollH: document.documentElement.scrollHeight, innerW: innerWidth, innerH: innerHeight, tooSmall: getComputedStyle(document.querySelector(".station-too-small")).display !== "none" }));
@@ -107,10 +137,12 @@ async function run(browserName) {
     await page.keyboard.press("ArrowDown"); await page.waitForTimeout(30);
     info = await listInfo(page);
     check(browserName, `${tag} ArrowDown moves the active option and aria-activedescendant`, info.activeIndex === 1 && /-1$/.test(info.ariaActive || ""), info);
-    await page.keyboard.press("Enter"); await page.waitForTimeout(60);
+    const chosen = await page.$eval(".station-editor__option.is-active .station-editor__option-code", n => n.textContent);
+    await page.keyboard.press("Enter"); await page.waitForTimeout(120);
     a = await active(page);
     const note = await page.$eval(".station-editor__note", n => n.textContent);
-    check(browserName, `${tag} Enter chooses, closes, returns focus to the value`, !(await page.$(".station-editor__search")) && a.cls === "station-editor__resin-value" && a.hopper === "B1" && /not applied/.test(note), { a, note });
+    const applied = await page.evaluate(() => ({ row: document.querySelector(".station-editor__item[data-hopper='B1'] .station-editor__resin-value").textContent, app: window.PolynStationStateBridge.getSnapshot().layers[1].hoppers[0].resinName, legacy: document.getElementById("r_B_0").value }));
+    check(browserName, `${tag} Enter chooses, applies through the application, closes, returns focus to the value`, !(await page.$(".station-editor__search")) && a.cls === "station-editor__resin-value" && a.hopper === "B1" && note === "" && applied.row === chosen && applied.app === chosen && applied.legacy === chosen, { a, note, chosen, applied });
     await page.keyboard.press("Enter"); await page.waitForTimeout(60);
     await page.keyboard.press("Escape"); await page.waitForTimeout(60);
     a = await active(page);
@@ -165,6 +197,33 @@ async function run(browserName) {
     check(browserName, `${tag} no page errors`, errors.length === 0, errors);
     await ctx.close();
   }
+
+  /* The standalone harness: nothing is connected, so the editor is
+   * read-only - the values read, the search does not open, the field
+   * says why. */
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  await ctx.route("**/*", route => (route.request().url().startsWith(BASE) ? route.continue() : route.abort()));
+  const page = await ctx.newPage();
+  await page.goto(BASE + DEMO_PAGE, { waitUntil: "load" });
+  await page.waitForSelector("[data-role='layer']");
+  await page.click("[data-demo='three-layer']");
+  await page.waitForTimeout(150);
+  await dispatchClick(page, mixerHit("B"));
+  await settled(page);
+  const mode = await page.$eval(".station-editor__mode", n => n.textContent);
+  await page.focus(".station-editor__item[data-hopper='B1'] .station-editor__resin-value");
+  await page.keyboard.press("Enter"); await page.waitForTimeout(60);
+  const readOnly = await page.evaluate(() => ({
+    search: !!document.querySelector(".station-editor__search"),
+    resin: document.querySelector(".station-editor__item[data-hopper='B1'] .station-editor__resin-value").textContent,
+    disabled: document.querySelector(".station-editor__item[data-hopper='B1'] .station-editor__resin-value").getAttribute("aria-disabled"),
+    cursor: getComputedStyle(document.querySelector(".station-editor__item[data-hopper='B1'] .station-editor__resin-value")).cursor,
+    pctReadOnly: document.querySelector(".station-editor__item[data-hopper='B2'] .station-editor__pct-input").hasAttribute("readonly"),
+    note: document.querySelector(".station-editor__note").textContent
+  }));
+  check(browserName, "harness: read-only throughout, the value reads, the search does not open, and the note says why",
+    mode === "Read-only" && !readOnly.search && readOnly.resin && readOnly.disabled === "true" && readOnly.cursor === "default" && readOnly.pctReadOnly && /no application is connected/.test(readOnly.note), { mode, readOnly });
+  await ctx.close();
   await browser.close();
 }
 

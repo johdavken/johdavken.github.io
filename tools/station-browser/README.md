@@ -34,6 +34,14 @@ Options: `STATION_BASE` (default `http://127.0.0.1:8765`), `BROWSERS`
 (default `chromium,firefox`). Exit code is non-zero on any failure; every
 check is named in the output.
 
+The spec runs against the application host (`/?view=station`) with a
+three-layer session seeded into the browser context's own storage, so the
+executor is connected and the editor's search and fields are real. Every
+request that is not to `STATION_BASE` is aborted, so nothing reaches RT
+Sync or Supabase; the seeded session lives only in that context. The
+standalone harness (`/station/station.html?source=demo`), which has no
+producer, is visited once at the end to check that it is read-only.
+
 ## What it checks
 
 - **Fast click before hover** - a click dispatched on a mixer, a hopper and
@@ -43,10 +51,14 @@ check is named in the output.
   `normal`; Escape mid-flight reverses it; three rapid clicks end focused;
   the layer's cluster lands back on its normal-row position to the pixel.
 - **Resin search keyboard flow** - Enter on the value opens the search with
-  the value selected; ArrowDown moves `aria-activedescendant`; Enter chooses
-  and closes, focus returning to the value; Escape closes the search and not
-  the layer; Tab closes it and moves on; a mousedown on the list does not
-  close it.
+  the value selected; ArrowDown moves `aria-activedescendant`; Enter chooses,
+  the application applies it (the row, the bridge snapshot and the hidden
+  legacy field all agree), the search closes and focus returns to the
+  value; Escape closes the search and not the layer; Tab closes it and
+  moves on; a mousedown on the list does not close it.
+- **Read-only harness** - with no application connected the values read,
+  the resin value is announced disabled and does not open a search, the
+  percentage is read-only, and the note says why.
 - **Result list placement** - on the top row the list is below and fully
   hit-testable; on the bottom row it is above and fully hit-testable; a
   no-match list is re-placed.
