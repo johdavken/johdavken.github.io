@@ -1296,7 +1296,7 @@ test("an unassigned hopper's hose is drawn emptier: clearer tube, faded helix", 
   const fs = require("node:fs");
   const path = require("node:path");
   const css = fs.readFileSync(path.join(__dirname, "station/styles/components/hopper.css"), "utf8");
-  const tokens = fs.readFileSync(path.join(__dirname, "station/styles/tokens.css"), "utf8");
+  const tokens = fs.readFileSync(path.join(__dirname, "station/styles/themes/industrial-dark.css"), "utf8");
   // The running hose and the empty hose are two tokens, and the empty one is
   // the more transparent of the two.
   const alpha = name => Number(tokens.match(new RegExp(`${name}: rgba\\([^)]*, ([0-9.]+)\\);`))[1]);

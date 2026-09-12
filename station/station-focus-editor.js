@@ -111,6 +111,19 @@
  * applied there, not here: this module builds the list and owns the search;
  * it holds no selection of its own.
  *
+ * THE COMPACT VARIANT
+ *
+ * The same editor, built with `variant: "compact"`, is what Blend Edit
+ * (station-handbook.js, station.js) shows in a layer's own hopper
+ * footprint: the rows and the total and the note, with no header, no
+ * source line and no dragging - blend composition only, in the space a
+ * hopper cluster takes. It is not a second editor. Every row is built by
+ * the same builder, every value is committed by the same WRITE CONTRACT
+ * through the same command, and a publish updates it through the same
+ * update(). The variant is a data attribute the stylesheet reads and two
+ * things left out; nothing about how a value reaches the application
+ * differs between the two faces.
+ *
  * It is built the way the rest of Station is built: HTML from an injected
  * document, no framework, no timers, and every decision about appearance in
  * the stylesheet (styles/components/focus-editor.css).
@@ -668,7 +681,7 @@
      * hopper that has a resin can have a source - the application's rule,
      * and what setSource refuses - so a hopper without one does not get a
      * second placeholder under its first. */
-    if (entry.resin) {
+    if (entry.resin && deps.withSource) {
       const sourceButton = element(doc, "button", "station-editor__source-value", {
         type: "button",
         "data-slot": "source"
@@ -931,13 +944,18 @@
   /* What the bridge offers, per slot, and why a slot is read-only when it
    * is. Asked once per build: the application declares its commands when
    * it connects, and a structural render rebuilds the editor. */
-  function abilities(commands, recipe) {
+  function abilities(commands, recipe, variant) {
     const connected = !!(commands && typeof commands.isAvailable === "function" && commands.isAvailable());
     const usable = connected && typeof commands.dispatch === "function" && typeof commands.capabilities === "function";
     const offered = usable ? commands.capabilities() : [];
     const has = name => Array.isArray(offered) && offered.includes(name);
     const able = {};
     for (const slot of Object.keys(SLOT_COMMAND)) able[slot] = !!recipe && usable && has(SLOT_COMMAND[slot]);
+    /* The compact face carries no source line and no drag: blend
+     * composition only. Said here, as "not on offer", so every path that
+     * reads the offer - the rows, the proxy, the pointer handlers - stays
+     * one path. */
+    if (variant === "compact") { able.source = false; able.move = false; }
     const reason = slot => {
       if (!connected) return "no application is connected to Station commands.";
       if (!recipe) return "this view does not address a recipe.";
@@ -978,7 +996,10 @@
    *        drag proxy is mounted under; defaults to the row's closest
    *        .station-root, so the proxy carries Station's own tokens and
    *        resets and rises above everything else Station draws
-   * @returns {{ element: Element, blend: object, note: function, update: function, able: object }}
+   * @param {string} [options.variant]    "compact" for Blend Edit's face in
+   *        a hopper cluster's footprint: no header, no source, no drag.
+   *        Anything else is the full focused editor.
+   * @returns {{ element: Element, blend: object, note: function, update: function, able: object, variant: string }}
    */
   function create(doc, options) {
     const settings = options || {};
@@ -1005,15 +1026,18 @@
       return measureRect(box);
     };
 
+    const variant = settings.variant === "compact" ? "compact" : "full";
     const rootEl = element(doc, "div", "station-editor", {
       "data-layer": blend.layer.id,
       "data-layer-role": blend.layer.role,
-      "data-role": "focus-editor"
+      "data-role": variant === "compact" ? "blend-editor" : "focus-editor",
+      "data-variant": variant,
+      "aria-label": variant === "compact" ? `Layer ${blend.layer.id} blend` : null
     });
 
     const commands = settings.commands || null;
     const recipe = settings.recipe === "current" || settings.recipe === "next" ? settings.recipe : null;
-    const offer = abilities(commands, recipe);
+    const offer = abilities(commands, recipe, variant);
 
     // The note is one line under the total, updated in place; aria-live so
     // a screen reader hears why a field did not take the edit.
@@ -1038,21 +1062,27 @@
       note: message => { note.textContent = message; },
       able: offer.able,
       reason: offer.reason,
+      // The source line is the full editor's; the compact face has none.
+      withSource: variant !== "compact",
       /* Every command from this editor is addressed here, once: the recipe
        * the boot file named, and this layer. A row adds its hopper. */
       dispatch: (command, args) => commands.dispatch(command, Object.assign({ recipe, layer: blend.layer.id }, args))
     };
 
-    const header = element(doc, "header", "station-editor__header");
+    /* The header - the layer's name and role, and the mode - belongs to
+     * the full editor, which stands on its own in the workspace. The
+     * compact face sits under the layer's own drawn header and repeats
+     * none of it. */
+    const header = variant === "compact" ? null : element(doc, "header", "station-editor__header");
     const heading = element(doc, "div", "station-editor__heading");
     heading.appendChild(text(doc, "h2", "station-editor__title", `Layer ${blend.layer.id}`));
     heading.appendChild(text(doc, "p", "station-editor__role", String(blend.layer.roleLabel || "")));
-    header.appendChild(heading);
+    if (header) header.appendChild(heading);
     /* The mode, said once at the top: what this view can change, as the
      * bridge declares it. */
     const editable = Object.keys(offer.able).filter(slot => offer.able[slot]);
     const mode = editable.length === 0 ? "read-only" : (editable.length === Object.keys(SLOT_COMMAND).length ? "editing" : "partial");
-    header.appendChild(text(doc, "span", "station-editor__mode",
+    if (header) header.appendChild(text(doc, "span", "station-editor__mode",
       mode === "read-only" ? "Read-only" : (mode === "editing" ? "Editing" : "Partly read-only"), {
         "data-mode": mode,
         title: mode === "read-only"
@@ -1063,7 +1093,8 @@
             ? `Changes here are applied to the ${recipe} recipe by the application.`
             : `Changes to ${editable.map(slot => SLOT_LABEL[slot]).join(" and ")} are applied to the ${recipe} recipe; the rest is read-only here.`)
       }));
-    rootEl.appendChild(header);
+    if (header) rootEl.appendChild(header);
+    rootEl.setAttribute("data-mode", mode);
 
     const list = element(doc, "ol", "station-editor__list", { "aria-label": `Layer ${blend.layer.id} hoppers` });
     const rows = blend.rows.map(entry => buildRow(doc, entry, state, deps));
@@ -1133,7 +1164,7 @@
       writeResinButton(doc, resinValue, entry, false);
       resinBlock.appendChild(resinValue);
       main.appendChild(resinBlock);
-      if (entry.resin) {
+      if (entry.resin && deps.withSource) {
         const sourceValue = element(doc, "span", "station-editor__source-value");
         writeSourceButton(sourceValue, entry, false);
         main.appendChild(sourceValue);
@@ -1286,7 +1317,7 @@
       return fresh;
     }
 
-    return { element: rootEl, blend, note: deps.note, update, able: offer.able };
+    return { element: rootEl, blend, note: deps.note, update, able: offer.able, variant };
   }
 
   return { RESULT_LIMIT, SLOTS, SLOT_COMMAND, DRAG_THRESHOLD, blendFor, filterResins, placeResults, isInteractiveTarget, create };

@@ -7,21 +7,21 @@
        token values resolved so the file can be viewed on its own. -->
   <style>
     .station-extruder__paint--housing { --station-extruder-shade-dark: #27333f; --station-extruder-shade-light: #3c4b5f; }
-    .station-extruder__paint--steel, .station-extruder__paint--metal { --station-extruder-shade-dark: #1b2430; --station-extruder-shade-light: #65788d; }
-    .station-extruder__paint--motor { --station-extruder-shade-dark: #253040; --station-extruder-shade-light: #65788d; }
+    .station-extruder__paint--steel, .station-extruder__paint--metal { --station-extruder-shade-dark: #1b2430; --station-extruder-shade-light: #71849a; }
+    .station-extruder__paint--motor { --station-extruder-shade-dark: #253040; --station-extruder-shade-light: #71849a; }
     .station-extruder__paint--dark { --station-extruder-shade-dark: #0d1117; --station-extruder-shade-light: #253040; }
     .station-extruder__face { fill: color-mix(in srgb, var(--station-extruder-shade-light) var(--station-extruder-tone, 50%), var(--station-extruder-shade-dark)); stroke: color-mix(in srgb, var(--station-extruder-shade-light) var(--station-extruder-edge-tone, 50%), var(--station-extruder-shade-dark)); stroke-width: var(--station-extruder-line, 0.2); }
     .station-extruder__housing, .station-extruder__feed, .station-extruder__foot, .station-extruder__base, .station-extruder__gearbox, .station-extruder__motor, .station-extruder__outlet, .station-extruder__flange, .station-extruder__recess, .station-extruder__bore, .station-extruder__vent, .station-extruder__seam, .station-extruder__detail { stroke-linejoin: round; }
     .station-extruder__gradient { fill: var(--station-extruder-gradient); }
-    .station-extruder__motor { stroke: #65788d; }
-    .station-extruder__stop--lid-0 { stop-color: #495b70; }
+    .station-extruder__motor { stroke: #71849a; }
+    .station-extruder__stop--lid-0 { stop-color: #50637a; }
     .station-extruder__stop--lid-1 { stop-color: #3c4b5f; }
     .station-extruder__stop--end-0 { stop-color: #313f52; }
     .station-extruder__stop--end-1 { stop-color: #27333f; }
-    .station-extruder__stop--metal-0 { stop-color: #65788d; }
-    .station-extruder__stop--metal-1 { stop-color: #55677d; }
-    .station-extruder__stop--metal-2 { stop-color: #495b70; }
-    .station-extruder__stop--drive-0 { stop-color: #495b70; }
+    .station-extruder__stop--metal-0 { stop-color: #71849a; }
+    .station-extruder__stop--metal-1 { stop-color: #5d7087; }
+    .station-extruder__stop--metal-2 { stop-color: #50637a; }
+    .station-extruder__stop--drive-0 { stop-color: #50637a; }
     .station-extruder__stop--drive-1 { stop-color: #1b2430; }
     .station-extruder__pct { fill: #e5eaf1; font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace; font-size: calc(12px * 1); font-weight: 600; }
   </style>

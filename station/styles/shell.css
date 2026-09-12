@@ -93,6 +93,21 @@
   overflow: hidden;
 }
 
+/* The Operator Handbook's slot: the stage's own cell, laid over the
+ * machine. Two items in one grid area - the machine is drawn, the slot
+ * floats above it - so the Handbook reserves no track and moves nothing
+ * when it opens. The slot itself lets every pointer event through to the
+ * hoppers under it; the launcher and the panel (handbook.css) take them
+ * back for their own surfaces only. */
+.station-handbook-slot {
+  grid-area: machine;
+  position: relative;
+  z-index: 5;
+  min-width: 0;
+  min-height: 0;
+  pointer-events: none;
+}
+
 /* The timeline's row: the component inside sets its own height; the row
  * only frames it against the stage above and the status bar below. */
 .station-timeline {

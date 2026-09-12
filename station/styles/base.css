@@ -12,6 +12,7 @@
   margin: 0;
   background: var(--station-bg);
   color: var(--station-text);
+  color-scheme: var(--station-color-scheme);
   font-family: var(--station-font);
   font-size: var(--station-text-md);
   line-height: var(--station-line-normal);
@@ -120,6 +121,20 @@
   cursor: var(--station-field-cursor, text);
 }
 
+.station-root input::placeholder {
+  color: var(--station-text-faint);
+  opacity: 1;
+}
+
+.station-root input:disabled {
+  color: var(--station-text-disabled);
+  cursor: default;
+}
+
+.station-root input[aria-invalid="true"]:focus-visible {
+  outline-color: var(--station-danger);
+}
+
 .station-root ol,
 .station-root ul {
   margin: 0;
@@ -128,7 +143,7 @@
 }
 
 .station-root :focus-visible {
-  outline: 2px solid var(--station-accent);
+  outline: 2px solid var(--station-focus-ring);
   outline-offset: 2px;
 }
 

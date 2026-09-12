@@ -26,7 +26,8 @@ const STATION_FILES = ["station-line-model.js", "station-render.js", "station.js
   "station-machine-layout.js", "station-machine-parts.js", "station-extruder-lab.js",
   "station-extruder-assets.js", "station-mixer-assets.js", "station-transition.js",
   "station-focus-editor.js", "station-sync-console.js", "station-hopper-controls.js",
-  "station-rundown.js", "station-rundown-timeline.js", "station-job-controls.js"];
+  "station-rundown.js", "station-rundown-timeline.js", "station-job-controls.js",
+  "station-handbook.js", "station-recipe-book.js", "station-appearance.js"];
 
 const stationHtml = fs.readFileSync(path.join(STATION, "station.html"), "utf8");
 const indexHtml = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
@@ -97,6 +98,14 @@ const allStationCss = stationStylesheets().map(file => ({
  *                                for, each an application closure; the line
  *                                console is the one Station file that
  *                                requests through it
+ *   station-recipes-bridge.js    the workspace's saved recipes: the
+ *                                configurations service's cached book as a
+ *                                projected list (app.js publishes when the
+ *                                cache or the workspace moves) and a
+ *                                letterbox for the three Recipe Book
+ *                                actions, each an application closure; the
+ *                                Recipe Book is the one Station file that
+ *                                requests through it
  *
  * All are inert on a normal load: the bridges only bump a revision nobody
  * reads, the host returns before touching the document, and the command
@@ -107,7 +116,9 @@ const STATION_HOST = "station-host.js";
 const COMMAND_CONTRACT = "station-command-contract.js";
 const COMMAND_BRIDGE = "station-command-bridge.js";
 const CONNECTION_BRIDGE = "station-connection-bridge.js";
-const INDEX_STATION_ASSETS = [SHARED_BRIDGE, STATION_HOST, COMMAND_CONTRACT, COMMAND_BRIDGE, CONNECTION_BRIDGE].sort();
+const RECIPES_BRIDGE = "station-recipes-bridge.js";
+const THEME = "station-theme.js";
+const INDEX_STATION_ASSETS = [SHARED_BRIDGE, STATION_HOST, COMMAND_CONTRACT, COMMAND_BRIDGE, CONNECTION_BRIDGE, RECIPES_BRIDGE, THEME].sort();
 
 /* The one Station stylesheet permitted to name an application selector, use
  * !important, or style a bare element: hiding the application's shell is
@@ -211,6 +222,24 @@ test("the connection bridge gives consumers no way to publish, and its action vo
     "a new RT Sync action Station may ask for arrives as an edit to this list");
 });
 
+test("the recipes bridge touches no DOM, names no RT Sync internal, and knows no cache key or payload rule", () => {
+  const source = fs.readFileSync(path.join(ROOT, RECIPES_BRIDGE), "utf8");
+  for (const pattern of [/\bdocument\b/, /addEventListener/, /polyn\.workspaceConfigurations/, /createRecipePayload/, /PolynWorkspaceConfigurations\b/, ...RT_SYNC_INTERNALS]) {
+    assert.doesNotMatch(source, pattern, `${RECIPES_BRIDGE} reaches outside itself (matched ${pattern})`);
+  }
+  for (const page of [indexHtml, stationHtml]) {
+    assert.ok(page.indexOf(SHARED_BRIDGE) < page.indexOf(RECIPES_BRIDGE), "the recipes bridge loads before the state bridge it requires");
+  }
+  assert.ok(indexHtml.indexOf(RECIPES_BRIDGE) < indexHtml.indexOf('src="app.js'));
+  const bridge = require("./station-recipes-bridge.js");
+  for (const forbidden of ["publish", "disconnect", "setBook", "setState", "state"]) {
+    assert.equal(bridge[forbidden], undefined, `the module surface exposes ${forbidden}`);
+  }
+  assert.ok(Object.isFrozen(bridge));
+  assert.deepEqual([...bridge.ACTIONS], ["saveCurrentRecipe", "replaceRecipe", "refresh"],
+    "a new saved-recipe action Station may ask for arrives as an edit to this list");
+});
+
 test("no Station file names an RT Sync internal, subscribes to anything but the bridges, or reloads the page", () => {
   for (const file of STATION_FILES) {
     const source = fs.readFileSync(path.join(STATION, file), "utf8");
@@ -220,9 +249,9 @@ test("no Station file names an RT Sync internal, subscribes to anything but the 
     // The only subscriptions Station holds are to the two windows the
     // application publishes through: the state bridge and the connection
     // bridge. Anything else would be a second live feed.
-    for (const match of source.matchAll(/(\w+)\.subscribe\s*\(/g)) {
-      assert.ok(["bridge", "connection"].includes(match[1]),
-        `${file} subscribes to "${match[1]}", which is neither bridge`);
+    for (const match of source.matchAll(/(\w+)\??\.subscribe\s*\(/g)) {
+      assert.ok(["bridge", "connection", "recipes"].includes(match[1]),
+        `${file} subscribes to "${match[1]}", which is none of the bridges`);
     }
   }
 });
@@ -244,6 +273,23 @@ test("exactly one Station file requests a line-connection action - the line cons
     // second remembered line.
     assert.doesNotMatch(source, /selectWorkspace|joinWorkspace|createWorkspace|leaveWorkspace|workspaceSelect|selectedWorkspaceId/,
       `${file} reaches for a workspace selection`);
+  }
+});
+
+test("exactly one Station file requests a saved-recipe action - the Recipe Book - and only through the bridge it is handed", () => {
+  const REQUESTS = ["station-recipe-book.js"];
+  for (const file of STATION_FILES) {
+    const source = fs.readFileSync(path.join(STATION, file), "utf8");
+    if (REQUESTS.includes(file)) {
+      assert.match(source, /recipes\.request\s*\(/, `${file} no longer requests through the bridge it is handed`);
+      assert.doesNotMatch(source, /PolynStationRecipesBridge/, `${file} reaches for the global bridge instead of the one it is handed`);
+    } else {
+      assert.doesNotMatch(source, /recipes\.request\s*\(/, `${file} requests a saved-recipe action`);
+    }
+    // The book holds no recipe of its own: no payload builder, no cache
+    // key, no second list. What it lists is what the bridge published.
+    assert.doesNotMatch(source, /createRecipePayload|applyRecipePayload|polyn\.workspaceConfigurations|savedRecipes\s*=\s*\[/,
+      `${file} keeps a recipe list or a payload of its own`);
   }
 });
 
@@ -380,9 +426,9 @@ test("Station state is expressed semantically, never as a visual name", () => {
   }
 });
 
-test("raw colours live only in the token file", () => {
+test("raw colours live only in the centralized theme mappings", () => {
   for (const sheet of allStationCss) {
-    if (sheet.name.endsWith("tokens.css")) continue;
+    if (sheet.name.includes("station/styles/themes/")) continue;
     const body = sheet.css.replace(/\/\*[\s\S]*?\*\//g, "");
     assert.doesNotMatch(body, /#[0-9a-f]{3,8}\b/i, `${sheet.name} hard-codes a hex colour instead of using a token`);
     assert.doesNotMatch(body, /\brgba?\(/i, `${sheet.name} hard-codes an rgb colour instead of using a token`);

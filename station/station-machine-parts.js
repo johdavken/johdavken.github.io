@@ -694,11 +694,94 @@
    *   Layer bank - one layer's whole equipment train
    * ------------------------------------------------------------------ */
 
+  /* --------------------------------------------------------------------
+   *   Blend Edit: the cluster's other face
+   * ------------------------------------------------------------------
+   * While Blend Edit is on (station.js), a layer's hopper cluster can be
+   * turned over to show a compact editor of its blend - the same layer,
+   * in the same place, the cluster's drawing hidden under it. Two builders:
+   * the flip chip, the one control that turns a cluster over, drawn on
+   * every normal bank while the mode is on; and the card, the frame and
+   * the <foreignObject> that carries the editor the boot file built
+   * (station-focus-editor.js, compact variant), sized to the cluster's
+   * own footprint so nothing around it moves.
+   */
+
+  /* The chip's place: under the layer's header, centred on the cluster,
+   * sized in type against the bank's scale like the labels beside it. */
+  function flipChipBox(bank) {
+    const scale = bank.scale || 1;
+    const width = 64 * scale;
+    const height = 16 * scale;
+    return {
+      x: bank.header.x - width / 2,
+      y: bank.header.y + 20 * scale,
+      width,
+      height
+    };
+  }
+
+  /* The card's footprint: the cluster's column, no narrower than the
+   * bank's own, from under the flip chip to the bottom of the captions.
+   * Read off the layout the cluster was drawn from, so the card and the
+   * cluster it stands in for are the same box in every layout. */
+  function blendCardBox(bank) {
+    const scale = bank.scale || 1;
+    const chip = flipChipBox(bank);
+    const cluster = bank.objects.cluster;
+    const x = Math.min(cluster.x, bank.x);
+    const width = Math.max(cluster.width, bank.width);
+    const y = chip.y + chip.height + 6 * scale;
+    return { x, y, width, height: cluster.y + cluster.height - y };
+  }
+
+  function flipChip(doc, bank, flipped) {
+    const box = flipChipBox(bank);
+    const g = group(doc, "station-flip", "flip", {
+      "data-station-target": "flip",
+      "data-layer": bank.id,
+      "data-on": flipped ? "true" : "false"
+    });
+    const tip = doc.createElementNS ? doc.createElementNS(SVG_NS, "title") : doc.createElement("title");
+    tip.textContent = flipped
+      ? `Layer ${bank.id} · editing its blend · click to show its hoppers`
+      : `Layer ${bank.id} · click to edit its blend in place`;
+    g.appendChild(tip);
+    g.appendChild(node(doc, "rect", "station-flip__chip", {
+      x: box.x, y: box.y, width: box.width, height: box.height, rx: 3 * (bank.scale || 1)
+    }));
+    g.appendChild(label(doc, flipped ? "HOPPERS" : "EDIT BLEND", box.x + box.width / 2, box.y + box.height * 0.72, "station-flip__label"));
+    g.appendChild(hitArea(doc, box.x - 4, box.y - 4, box.width + 8, box.height + 8));
+    return g;
+  }
+
+  function blendCard(doc, bank, content) {
+    const box = blendCardBox(bank);
+    const g = group(doc, "station-blend-card", "blend-card", { "data-layer": bank.id });
+    g.appendChild(node(doc, "rect", "station-blend-card__frame", {
+      x: box.x, y: box.y, width: box.width, height: box.height, rx: 6
+    }));
+    const host = node(doc, "foreignObject", "station-blend-card__editor", {
+      x: box.x, y: box.y, width: box.width, height: box.height
+    });
+    host.appendChild(content);
+    g.appendChild(host);
+    return g;
+  }
+
   function layerBank(doc, bank, hopperState, layerState, options) {
     const settings = options || {};
     const classes = ["station-layer"];
     if (bank.emphasis === "focused") classes.push("is-focused");
     if (bank.emphasis === "dimmed") classes.push("is-dimmed");
+    /* Blend Edit: the flip chip is drawn on every normal bank while the
+     * mode is on; a bank whose card was handed in is turned over - its
+     * cluster still built, and hidden (hopper.css), so a patch finds the
+     * hoppers it expects and the layer comes back exactly as it was. */
+    const flippable = !!settings.blendEdit && bank.emphasis === "normal";
+    const card = flippable && settings.blendCard ? settings.blendCard : null;
+    if (flippable) classes.push("is-flippable");
+    if (card) classes.push("is-flipped");
     /* "Running" means the layer has a recipe to mix. Derived from the state
      * already on screen - no new field, no timer - and it is what gates the
      * agitator's motion, so an unconfigured layer sits still. */
@@ -736,6 +819,8 @@
     g.appendChild(header);
 
     g.appendChild(hopperCluster(doc, bank, hopperState, settings));
+    if (flippable) g.appendChild(flipChip(doc, bank, !!card));
+    if (card) g.appendChild(blendCard(doc, bank, card));
     /* Extruder, then the throat, then the mixer. The throat lands on the feed
      * flange, which stands in front of the gearbox and motor; drawn the other
      * way round the motor would paint over it and the two would look
@@ -781,6 +866,7 @@
 
   return {
     SVG_NS, node, label, group, taper, hitArea, fitText, hopperStateKey, shareText,
-    hopper, hopperCluster, mixer, throat, extruder, layerBank, workspace
+    hopper, hopperCluster, mixer, throat, extruder, layerBank, workspace,
+    flipChipBox, blendCardBox, flipChip, blendCard
   };
 });

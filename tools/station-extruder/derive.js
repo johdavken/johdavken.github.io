@@ -37,7 +37,13 @@ const ROOT = path.resolve(__dirname, "..", "..");
 const SOURCE_DIR = path.join(ROOT, "images", "extruder");
 const ASSET_DIR = path.join(ROOT, "station", "assets");
 const MODULE_PATH = path.join(ROOT, "station", "station-extruder-assets.js");
-const TOKENS_PATH = path.join(ROOT, "station", "styles", "tokens.css");
+const TOKENS_PATHS = [
+  path.join(ROOT, "station", "styles", "tokens.css"),
+  // Standalone review SVGs need one concrete palette. Production assets keep
+  // their semantic classes and are themed at runtime; the review artefact is
+  // resolved against Station's default only.
+  path.join(ROOT, "station", "styles", "themes", "industrial-dark.css")
+];
 const RULES_PATH = path.join(ROOT, "station", "styles", "components", "layer-bank.css");
 
 const VIEWS = [
@@ -280,7 +286,7 @@ function normalise(view, adapted, unit) {
  * ---------------------------------------------------------------------- */
 
 function readTokens() {
-  const css = fs.readFileSync(TOKENS_PATH, "utf8");
+  const css = TOKENS_PATHS.map(file => fs.readFileSync(file, "utf8")).join("\n");
   const tokens = {};
   for (const m of css.matchAll(/(--station-[a-z0-9-]+)\s*:\s*([^;]+);/g)) tokens[m[1]] = m[2].trim();
   return tokens;

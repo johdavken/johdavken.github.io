@@ -179,6 +179,38 @@
   }
 
   /* ------------------------------------------------------------------
+   *   Motion for the rest of Station
+   * ------------------------------------------------------------------
+   * The transition module is the one Station file that animates
+   * (station-host-isolation.test.js), so any other surface that moves -
+   * the Handbook opening out of its launcher, a hopper cluster turning
+   * over to its blend card - moves through these two helpers, on the same
+   * tokens, with the same fallbacks, and never by calling animate() of
+   * its own. Both are finite Web Animations of transform and opacity,
+   * run by the compositor; neither keeps a timer. */
+
+  /** The transform that lays an element standing at `to` over the box
+   * `from`, in CSS terms - a translate and one uniform scale from the
+   * element's top-left corner (transform-origin: 0 0). Both rects in the
+   * viewport (getBoundingClientRect). Null when either cannot be measured. */
+  function overlayTransform(from, to) {
+    if (!from || !to || !(to.width > 0) || !(to.height > 0) || !(from.width > 0)) return null;
+    const s = from.width / to.width;
+    return transformValue({ s, tx: from.left - to.left, ty: from.top - to.top });
+  }
+
+  /** Play keyframes on an element that can be animated; null for one that
+   * cannot (a test's fake node), so a caller never has to guard. */
+  function play(element, keyframes, options) {
+    if (!element || typeof element.animate !== "function") return null;
+    try {
+      return element.animate(keyframes, options);
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /* ------------------------------------------------------------------
    *   The controller
    * ---------------------------------------------------------------- */
 
@@ -528,5 +560,5 @@
     };
   }
 
-  return { DEFAULT_TIMING, OBJECTS, readTiming, parseBox, objectBoxes, screenMatrix, rebox, flip, transformValue, createController };
+  return { DEFAULT_TIMING, OBJECTS, readTiming, parseBox, objectBoxes, screenMatrix, rebox, flip, transformValue, overlayTransform, play, createController };
 });

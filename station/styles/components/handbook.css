@@ -1,0 +1,655 @@
+/* The Operator Handbook (station-handbook.js) and its first section, the
+ * Recipe Book (station-recipe-book.js).
+ *
+ * WHERE IT SITS
+ *
+ * In the stage's own grid cell, laid over the machine (shell.css puts the
+ * slot there). The launcher is an application icon in the cell's lower
+ * left corner; the panel it opens stands centred across the lower part of
+ * the cell, under the hopper bank - so the hoppers drawn above stay where
+ * they are and stay clickable, which is what Blend Edit needs of them.
+ * Nothing here dims the stage or takes a track of the shell: the Handbook
+ * is a surface Station opens out of itself, not a dialog laid over it.
+ *
+ * ONE SURFACE, FIXED CAPACITY
+ *
+ * The panel is a workstation with a set amount of bench: its box is sized
+ * from the stage (the Handbook tokens in tokens.css) and from nothing
+ * inside it. Every section - the Recipe Book, Blend Edit's controls in
+ * it, whatever comes next - draws into the same frame: same edges, same
+ * head, same Close, same place the opening flight lands. A section with
+ * more than fits scrolls, splits or paginates INSIDE its own box; the
+ * frame does not grow to meet it, and a section with less leaves the
+ * bench clear rather than shrinking the frame around itself. Switching
+ * sections is turning a page, not opening a different window.
+ *
+ * The slot is inert to the pointer; the launcher and the panel take it
+ * back for their own boxes only.
+ */
+
+.station-handbook {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* ---- Launcher: an application icon, not a toolbar button ---- */
+
+.station-root .station-handbook__launcher {
+  position: absolute;
+  left: var(--station-space-4);
+  bottom: var(--station-space-4);
+  width: 64px;
+  height: 64px;
+  padding: 0;
+  border-radius: var(--station-radius-lg);
+  pointer-events: auto;
+}
+
+.station-handbook__launcher:hover .station-handbook__icon-plate,
+.station-handbook.is-open .station-handbook__icon-plate {
+  stroke: var(--station-accent);
+}
+
+.station-handbook__icon {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* The icon's parts, in Station's own palette: a tile, two open pages, the
+   lines of a written page on the left, a blend's rows on the right, and a
+   ribbon in the accent. Every colour is a token, so the icon follows the
+   theme the rest of the console follows. */
+.station-handbook__icon-plate {
+  fill: var(--station-surface-raised);
+  stroke: var(--station-border-strong);
+  stroke-width: 1.5;
+}
+
+.station-handbook__icon-page {
+  fill: var(--station-surface);
+  stroke: var(--station-text-muted);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+
+.station-handbook__icon-spine {
+  fill: none;
+  stroke: var(--station-text-muted);
+  stroke-width: 1.5;
+}
+
+.station-handbook__icon-line {
+  fill: none;
+  stroke: var(--station-text-faint);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+.station-handbook__icon-row {
+  fill: var(--station-layer-outside);
+}
+
+.station-handbook__icon-row--core {
+  fill: var(--station-layer-core);
+}
+
+.station-handbook__icon-row--inside {
+  fill: var(--station-layer-inside);
+}
+
+.station-handbook__icon-ribbon {
+  fill: var(--station-accent);
+}
+
+/* ---- Panel: centred across the lower part of the stage ---- */
+
+/* The frame. Width and height are the stage's to give (tokens.css): the
+   panel takes its share of the cell's height from the bottom edge up, no
+   more than its cap, and its preferred width as long as the launcher's
+   column stays clear on both sides. A definite height, not a maximum -
+   the sections inside size to it, never the other way round. */
+.station-handbook__panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: var(--station-space-3);
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  width: min(var(--station-handbook-width), calc(100% - 2 * var(--station-handbook-clearance)));
+  height: min(var(--station-handbook-max-height), calc(var(--station-handbook-share) - var(--station-space-3)));
+  margin: 0 auto;
+  background: var(--station-surface-raised);
+  border: var(--station-stroke) solid var(--station-border-strong);
+  border-radius: var(--station-radius-lg);
+  box-shadow: var(--station-shadow-pop);
+  color: var(--station-text);
+  font-size: var(--station-text-sm);
+  pointer-events: auto;
+  /* The opening flight scales the panel out of the launcher's corner
+     (station-handbook.js); a transform from the top-left corner is what
+     that arithmetic assumes. */
+  transform-origin: 0 0;
+  will-change: transform, opacity;
+}
+
+.station-handbook__panel[hidden] {
+  display: none;
+}
+
+.station-handbook__head {
+  display: flex;
+  align-items: center;
+  gap: var(--station-space-3);
+  padding: var(--station-space-2) var(--station-space-4);
+  border-bottom: var(--station-stroke) solid var(--station-border);
+}
+
+.station-handbook__title {
+  margin: 0;
+  color: var(--station-text-muted);
+  font-size: var(--station-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* The sections' tabs: one today, more later, the same chips either way. */
+.station-handbook__tabs {
+  display: inline-flex;
+  gap: var(--station-space-1);
+}
+
+.station-root .station-handbook__tab {
+  padding: 2px var(--station-space-3);
+  border: var(--station-stroke) solid transparent;
+  border-radius: var(--station-radius-sm);
+  color: var(--station-text-muted);
+  font-size: var(--station-text-sm);
+  font-weight: 600;
+}
+
+.station-root .station-handbook__tab[aria-pressed="true"] {
+  background: var(--station-selection);
+  border-color: var(--station-accent);
+  color: var(--station-text);
+}
+
+.station-root .station-handbook__close {
+  margin-left: auto;
+  padding: var(--station-space-1) var(--station-space-3);
+  border: var(--station-stroke) solid var(--station-border-strong);
+  border-radius: var(--station-radius-sm);
+  color: var(--station-text-muted);
+  font-size: var(--station-text-xs);
+}
+
+.station-root .station-handbook__tab:hover,
+.station-root .station-handbook__close:hover,
+.station-root .station-book__action:hover,
+.station-root .station-book__layer-chip:hover {
+  background: var(--station-surface-hover);
+  border-color: var(--station-accent-hover);
+  color: var(--station-text);
+}
+
+.station-root .station-handbook__tab:active,
+.station-root .station-handbook__close:active,
+.station-root .station-book__action:active:not(:disabled),
+.station-root .station-book__layer-chip:active {
+  background: var(--station-surface-selected);
+  border-color: var(--station-accent-active);
+}
+
+/* The bench: what is left of the frame under its head. Clipped, so no
+   section can push the frame; a section that has more than fits scrolls
+   within its own box. */
+.station-handbook__body {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.station-handbook__section {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.station-handbook__section[hidden] {
+  display: none;
+}
+
+/* ---------------------------------------------------------------------
+ *   Recipe Book
+ * -------------------------------------------------------------------
+ * A toolbar across the top; under it the saved list on the left and the
+ * selected recipe's blend on the right, each scrolling on its own inside
+ * the bench the frame gives them. While Blend Edit is on, the toolbar's
+ * actions give way to the mode's own: which layers are turned over, Edit
+ * all, Done. Compact by design - the editing happens on the hoppers
+ * above, and this panel is where it is entered and left.
+ */
+
+.station-book {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.station-book__toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--station-space-2);
+  padding: var(--station-space-2) var(--station-space-4);
+  border-bottom: var(--station-stroke) solid var(--station-border);
+}
+
+/* Under .station-root: the base layer resets buttons at (0,1,1); a button
+   that wants chrome says so at (0,2,0), as the line console's do. */
+.station-root .station-book__action {
+  padding: var(--station-space-1) var(--station-space-3);
+  border: var(--station-stroke) solid var(--station-border-strong);
+  border-radius: var(--station-radius-sm);
+  color: var(--station-text);
+  font-size: var(--station-text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.station-book__action.is-primary {
+  background: var(--station-selection);
+  border-color: var(--station-accent);
+}
+
+.station-book__action.is-quiet {
+  border-color: transparent;
+  color: var(--station-text-muted);
+}
+
+.station-book__action:disabled {
+  color: var(--station-text-faint);
+  cursor: default;
+}
+
+.station-book__action[hidden] {
+  display: none;
+}
+
+.station-book__context {
+  margin-left: auto;
+  color: var(--station-text-faint);
+  font-size: var(--station-text-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* ---- Save Current: the name, asked for in place ---- */
+
+.station-book__entry {
+  display: flex;
+  align-items: center;
+  gap: var(--station-space-2);
+  padding: var(--station-space-2) var(--station-space-4);
+  border-bottom: var(--station-stroke) solid var(--station-border);
+  background: var(--station-surface);
+}
+
+.station-book__entry[hidden] {
+  display: none;
+}
+
+.station-book__entry-label {
+  color: var(--station-text-muted);
+  font-size: var(--station-text-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.station-book__name {
+  --station-field-padding: var(--station-space-1) var(--station-space-2);
+  --station-field-radius: var(--station-radius-sm);
+  --station-field-bg: var(--station-surface-editable);
+  --station-field-border: var(--station-stroke) solid var(--station-editable);
+  --station-field-width: min(28em, 100%);
+  flex: 1 1 auto;
+  color: var(--station-text);
+  font-size: var(--station-text-md);
+}
+
+.station-book__name[aria-invalid="true"] {
+  --station-field-shadow: 0 0 0 2px var(--station-danger);
+}
+
+/* ---- The one line of feedback ---- */
+
+.station-book__note {
+  padding: var(--station-space-1) var(--station-space-4);
+  color: var(--station-text-muted);
+  font-size: var(--station-text-xs);
+  line-height: var(--station-line-tight);
+}
+
+.station-book__note[hidden] {
+  display: none;
+}
+
+.station-book__note[data-kind="error"] {
+  color: var(--station-danger);
+}
+
+.station-book__note[data-kind="ok"] {
+  color: var(--station-success);
+}
+
+/* ---- List and detail ---- */
+
+/* The list keeps to two fifths; a recipe's blend, with a resin name and
+   a share for every hopper on every layer, is the wider reading. Both
+   columns scroll within the frame's height; neither asks for more. */
+.station-book__columns {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.station-book__columns[hidden] {
+  display: none;
+}
+
+.station-book__list {
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--station-space-2) var(--station-space-3);
+  border-right: var(--station-stroke) solid var(--station-border);
+}
+
+.station-book__empty {
+  padding: var(--station-space-3) var(--station-space-2);
+  color: var(--station-text-faint);
+  font-size: var(--station-text-sm);
+  line-height: var(--station-line-normal);
+}
+
+/* A row an operator can land on: a full line of height, the name leading. */
+.station-root .station-book__row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--station-space-2);
+  width: 100%;
+  padding: var(--station-space-2) var(--station-space-3);
+  border-radius: var(--station-radius-sm);
+  font-size: var(--station-text-md);
+}
+
+.station-root .station-book__row:hover {
+  background: var(--station-surface-hover);
+}
+
+.station-root .station-book__row[aria-pressed="true"] {
+  background: var(--station-selection);
+  box-shadow: inset 2px 0 0 var(--station-accent);
+}
+
+.station-book__star {
+  width: 1em;
+  color: var(--station-text-faint);
+  font-size: var(--station-text-xs);
+  text-align: center;
+}
+
+.station-book__row.is-favorite .station-book__star {
+  color: var(--station-warning);
+}
+
+.station-book__row-name {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.station-book__row-meta {
+  color: var(--station-text-faint);
+  font-size: var(--station-text-xs);
+  white-space: nowrap;
+}
+
+.station-book__detail {
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--station-space-3) var(--station-space-5);
+}
+
+.station-book__detail-name {
+  margin: 0 0 var(--station-space-3);
+  font-size: var(--station-text-lg);
+  font-weight: 600;
+}
+
+/* One line per layer: its letter in the layer's accent, its share of the
+   film, then its hoppers along the rest of the line. */
+.station-book__layer {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: var(--station-space-4);
+  padding: var(--station-space-2) 0;
+  border-top: var(--station-stroke) solid var(--station-border);
+}
+
+/* Layer identity as an accent, as the drawing carries it (layer-bank.css). */
+.station-book__layer[data-layer-role="outside"] { --station-layer-accent: var(--station-layer-outside); }
+.station-book__layer[data-layer-role="subskin-outside"] { --station-layer-accent: var(--station-layer-subskin); }
+.station-book__layer[data-layer-role="core"] { --station-layer-accent: var(--station-layer-core); }
+.station-book__layer[data-layer-role="subskin-inside"] { --station-layer-accent: var(--station-layer-subskin); }
+.station-book__layer[data-layer-role="inside"] { --station-layer-accent: var(--station-layer-inside); }
+.station-book__layer[data-layer-role="single"] { --station-layer-accent: var(--station-layer-core); }
+
+.station-book__layer-id {
+  color: var(--station-layer-accent, var(--station-text));
+  font-weight: 600;
+}
+
+.station-book__layer-share {
+  color: var(--station-text-muted);
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.station-book__hoppers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--station-space-1) var(--station-space-4);
+  min-width: 0;
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-sm);
+}
+
+.station-book__hopper-id {
+  color: var(--station-text-faint);
+}
+
+.station-book__hopper-pct {
+  color: var(--station-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Blend Edit's controls ----
+ * The mode's controller, not another editor: one group at the top of the
+ * bench - what the mode is doing, the layers, the actions - nearest the
+ * cards it speaks for. The rest of the bench stays clear; the frame is
+ * the same one the Recipe Book fills. */
+
+.station-book__blend {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--station-space-3);
+  min-height: 0;
+  padding: var(--station-space-3) var(--station-space-4);
+  overflow-y: auto;
+}
+
+.station-book__blend[hidden] {
+  display: none;
+}
+
+.station-book__blend-hint {
+  margin: 0;
+  color: var(--station-text-muted);
+  font-size: var(--station-text-sm);
+  line-height: var(--station-line-tight);
+}
+
+.station-book__layers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--station-space-2);
+}
+
+.station-root .station-book__layer-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--station-space-2);
+  padding: var(--station-space-1) var(--station-space-3);
+  border: var(--station-stroke) solid var(--station-border-strong);
+  border-radius: var(--station-radius-sm);
+  color: var(--station-text-muted);
+  font-size: var(--station-text-sm);
+}
+
+.station-root .station-book__layer-chip[aria-pressed="true"] {
+  background: var(--station-selection);
+  border-color: var(--station-accent);
+  color: var(--station-text);
+}
+
+/* ---------------------------------------------------------------------
+ *   Appearance
+ * -------------------------------------------------------------------
+ * A second Handbook page in the same fixed bench. The rows are native
+ * buttons with radio semantics: immediate, keyboard reachable, and large
+ * enough to read without turning this into a theme editor.
+ */
+
+.station-appearance {
+  display: flex;
+  flex-direction: column;
+  gap: var(--station-space-3);
+  width: 100%;
+  min-height: 0;
+  padding: var(--station-space-4);
+  overflow-y: auto;
+}
+
+.station-appearance__intro {
+  display: flex;
+  align-items: baseline;
+  gap: var(--station-space-4);
+}
+
+.station-appearance__title {
+  color: var(--station-text);
+  font-size: var(--station-text-lg);
+  font-weight: 600;
+}
+
+.station-appearance__copy {
+  max-width: 32em;
+  color: var(--station-text-muted);
+  line-height: var(--station-line-normal);
+}
+
+.station-appearance__choices {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-content: start;
+  gap: var(--station-space-2);
+}
+
+.station-root .station-appearance__choice {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--station-space-3);
+  width: 100%;
+  padding: var(--station-space-2) var(--station-space-3);
+  background: var(--station-surface-interactive);
+  border: var(--station-stroke) solid var(--station-border);
+  border-radius: var(--station-radius);
+  color: var(--station-text);
+}
+
+.station-root .station-appearance__choice:hover {
+  background: var(--station-surface-hover);
+  border-color: var(--station-accent-hover);
+}
+
+.station-root .station-appearance__choice:active {
+  background: var(--station-surface-selected);
+  border-color: var(--station-accent-active);
+}
+
+.station-root .station-appearance__choice[aria-checked="true"] {
+  background: var(--station-surface-selected);
+  border-color: var(--station-accent);
+  box-shadow: inset 3px 0 0 var(--station-accent);
+}
+
+.station-appearance__mark {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--station-border-strong);
+  border-radius: 50%;
+  background: var(--station-surface-sunken);
+}
+
+.station-appearance__choice[aria-checked="true"] .station-appearance__mark {
+  border-color: var(--station-accent);
+  box-shadow: inset 0 0 0 3px var(--station-surface-selected);
+  background: var(--station-accent);
+}
+
+.station-appearance__words {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.station-appearance__name {
+  font-size: var(--station-text-md);
+  font-weight: 600;
+}
+
+.station-appearance__description {
+  color: var(--station-text-muted);
+  font-size: var(--station-text-xs);
+  line-height: var(--station-line-tight);
+}
+
+.station-book__chip-state {
+  font-size: var(--station-text-2xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.station-book__blend-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--station-space-2);
+}

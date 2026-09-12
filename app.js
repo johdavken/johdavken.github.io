@@ -148,9 +148,15 @@
   // may ask for - the same closures the floor UI's own buttons call. Optional
   // like the other two; the handle is the only thing that can publish.
   const stationConnection = window.PolynStationConnectionBridge || null;
+  // The workspace's saved recipes as Station may see them, and the three
+  // Recipe Book actions it may ask for - the same save, replace and refresh
+  // the floor UI's own Recipe Book runs. Optional like the other three; the
+  // handle is the only thing that can publish.
+  const stationRecipes = window.PolynStationRecipesBridge || null;
   let stationCommandHandle = null;
   let stationBridgeHandle = null;
   let stationConnectionHandle = null;
+  let stationRecipesHandle = null;
   const { parseChangeoverDate, formatTime, formatTimelineStart, isChangeoverStale } = window.PolynScheduling;
   const fmtTime = (date, baseDate) => formatTime(date, baseDate, state.timeFormat);
   const { writeJson } = window.PolynStorage;
@@ -845,8 +851,10 @@
     const workspaceId=lineSync?.getState?.().selectedWorkspaceId || "";
     if(!workspaceId || !workspaceConfigurations || workspaceConfigurationRefreshInFlight) return;
     workspaceConfigurationRefreshInFlight=true; workspaceConfigurationStatus("Refreshing shared configurations…"); renderWorkspaceConfigurations(lineSync.getState());
+    stationRecipesHandle?.publish();
     const result=await workspaceConfigurations.refresh(workspaceId);
     workspaceConfigurationRefreshInFlight=false;
+    stationRecipesHandle?.publish();
     if(workspaceId !== lineSync?.getState?.().selectedWorkspaceId) return;
     renderWorkspaceConfigurations(lineSync.getState());
     if(!result.ok) workspaceConfigurationStatus(result.cache?.cachedAt ? "Refresh failed; showing cached shared configurations." : "Shared configurations are unavailable right now.");
@@ -9657,6 +9665,9 @@
     // connection descriptor is announced. Last, after the derived layer
     // count and naming have been brought into line with the workspace.
     stationConnectionHandle?.publish();
+    // And the saved recipes: which workspace's book Station shows follows
+    // the selected workspace, which changes here and nowhere else.
+    stationRecipesHandle?.publish();
   }
 
   function openRtSyncJoinFromUrl(urlValue = window.location.href, requireAppLinkOrigin = false){
@@ -10238,6 +10249,69 @@
     }catch(error){ stationConnectionHandle = null; }
   }
 
+  /* Register this application as the source of Station's Recipe Book, and
+   * hand it the three saved-recipe actions it may ask for.
+   *
+   * The book is projected by the bridge's own allow-list (project()) from
+   * the workspace-configurations service's cached envelope for the selected
+   * workspace - the same cache the floor UI's Recipe Book lists - and the
+   * line's name from the same resolver the state bridge uses. The actions
+   * are this file's own tails: a save is the service's create with the
+   * recipe payload createRecipePayload builds from live state (exactly what
+   * the Save Current Recipe dialog submits), a replace is the service's
+   * update with that payload (the Update action), a refresh is
+   * refreshWorkspaceConfigurations. Each finishes through
+   * finishWorkspaceConfigurationMutation, so the floor UI's own lists and
+   * status follow a save made from Station as they follow one made here.
+   *
+   * Optional and failure-tolerant like the other three bridges. */
+  function stationRecipePayload(){ return window.PolynWorkspaceConfigurationPayloads?.createRecipePayload(state) || null; }
+  function connectStationRecipes(){
+    if (!stationRecipes || stationRecipesHandle) return;
+    try{
+      stationRecipesHandle = stationRecipes.connect({
+        read: ()=>{
+          const syncState = lineSync?.getState?.() || null;
+          const workspaceId = syncState?.selectedWorkspaceId || "";
+          const configuration = derivedLineConfiguration(syncState);
+          return stationRecipes.project(workspaceId && workspaceConfigurations ? workspaceConfigurations.getCached(workspaceId) : null, {
+            workspaceId,
+            displayName: configuration?.displayName || syncState?.selectedWorkspace?.name || "",
+            refreshing: workspaceConfigurationRefreshInFlight
+          });
+        },
+        actions: {
+          saveCurrentRecipe: async ({ name })=>{
+            const workspaceId = lineSync?.getState?.().selectedWorkspaceId || "";
+            if (!workspaceId || !workspaceConfigurations) return { ok:false, code:"unavailable", message:"Connect to an RT Sync workspace to save shared recipes." };
+            const payload = stationRecipePayload();
+            if (!payload) return { ok:false, code:"failed", message:"The running recipe could not be read." };
+            const result = await workspaceConfigurations.create(workspaceId, "recipe", name, payload);
+            if (result?.code !== "duplicate_name") finishWorkspaceConfigurationMutation(result, "Configuration saved successfully.");
+            return result;
+          },
+          replaceRecipe: async ({ id })=>{
+            const workspaceId = lineSync?.getState?.().selectedWorkspaceId || "";
+            if (!workspaceId || !workspaceConfigurations) return { ok:false, code:"unavailable", message:"Connect to an RT Sync workspace to save shared recipes." };
+            const existing = workspaceConfigurations.listRecipes(workspaceId).items.find(item=>item.id === id);
+            if (!existing) return { ok:false, code:"failed", message:"That saved recipe is no longer in this workspace." };
+            const payload = stationRecipePayload();
+            if (!payload) return { ok:false, code:"failed", message:"The running recipe could not be read." };
+            const result = await workspaceConfigurations.update(workspaceId, existing.id, payload);
+            finishWorkspaceConfigurationMutation(result, "Configuration updated successfully.");
+            return result;
+          },
+          refresh: async ()=>{
+            const workspaceId = lineSync?.getState?.().selectedWorkspaceId || "";
+            if (!workspaceId || !workspaceConfigurations) return { ok:false, code:"unavailable", message:"Connect to an RT Sync workspace to view shared recipes." };
+            await refreshWorkspaceConfigurations();
+            return { ok:true };
+          }
+        }
+      });
+    }catch(error){ stationRecipesHandle = null; }
+  }
+
   function setupLineSync(){
     if (!window.PolynCloudSync || !window.PolynSyncStorage) return;
     lineSync = window.PolynCloudSync.create({
@@ -10269,6 +10343,9 @@
       });
       workspaceConfigurations.subscribe(snapshot=>{
         if (snapshot.workspaceId === lineSync?.getState?.().selectedWorkspaceId) renderWorkspaceConfigurations(lineSync.getState());
+        // Station's Recipe Book reads the same cache; every change to it
+        // arrives here, so this is where the book is announced.
+        stationRecipesHandle?.publish();
       });
       $("workspaceConfigurationsRefresh")?.addEventListener("click",()=>void refreshWorkspaceConfigurations());
       $("workspaceSaveProfile")?.addEventListener("click",()=>openWorkspaceConfigurationDialog("save-profile"));
@@ -10357,6 +10434,7 @@
         return svg ? { ok:true, code, svg } : { ok:false, code:"failed", message:"The QR code could not be drawn." };
       }
     });
+    connectStationRecipes();
     $("lineSyncLeaveBtn")?.addEventListener("click",()=>{
       if (confirm("Leave RT Sync on this device? Local Resin.Tools data will remain.")) {
         void runLineSyncAction(()=>lineSync.leaveWorkspace(), "leave");

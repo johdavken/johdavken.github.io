@@ -73,6 +73,10 @@
    * @param {object} [options.hopperControls] { tracking, pump }: which of a hopper's
    *        operational controls may act - the bridge's offer, read once by the caller
    * @param {Element} [options.workspace]   HTML content for the focus workspace
+   * @param {boolean} [options.blendEdit]   Blend Edit is on: every normal bank
+   *        carries its flip chip
+   * @param {object} [options.blendCards]   HTML content per layer id, for the
+   *        banks turned over to their compact blend editor
    * @param {string} [options.raiseLayer]    layer to paint last (in transit)
    * @param {number} [options.stageAspect]  the stage's width/height, for the focus canvas
    * @param {object} [options.dimensions]   layout overrides
@@ -96,10 +100,12 @@
     /* A drawing, until the workspace holds an editor - then it is a region
      * with controls in it, and an image role would hide them from
      * assistive technology. */
+    const cards = settings.blendCards && typeof settings.blendCards === "object" ? settings.blendCards : {};
+    const carded = Object.keys(cards).some(id => !!cards[id]);
     const svg = parts.node(doc, "svg", "station-machine__stage", {
       viewBox: `0 0 ${Math.round(layout.width)} ${Math.round(layout.height)}`,
       preserveAspectRatio: "xMidYMid meet",
-      role: layout.workspace && settings.workspace ? "group" : "img",
+      role: (layout.workspace && settings.workspace) || carded ? "group" : "img",
       "aria-label": `${model.line.displayName}: ${model.line.layerCount} layer extrusion train`,
       "data-layer-count": model.line.layerCount,
       "data-focus-layer": layout.focusLayer || null
@@ -124,7 +130,9 @@
         selectedTarget: bank.id === layout.focusLayer ? settings.selectedTarget : null,
         selectedHopper: bank.id === layout.focusLayer ? settings.selectedHopper || null : null,
         showHint: settings.showHint,
-        hopperControls: settings.hopperControls || null
+        hopperControls: settings.hopperControls || null,
+        blendEdit: !!settings.blendEdit,
+        blendCard: cards[bank.id] || null
       }));
     }
     svg.appendChild(row);
@@ -299,6 +307,8 @@
       selectedHopper: settings.selectedHopper,
       hopperControls: settings.hopperControls,
       workspace: settings.workspace,
+      blendEdit: settings.blendEdit,
+      blendCards: settings.blendCards,
       raiseLayer: settings.raiseLayer,
       showHint: settings.showHint,
       dimensions: settings.dimensions,
@@ -308,6 +318,8 @@
     mount.setAttribute("data-layer-count", String(model.line.layerCount));
     if (settings.focusLayer) mount.setAttribute("data-focus-layer", settings.focusLayer);
     else mount.removeAttribute("data-focus-layer");
+    if (settings.blendEdit) mount.setAttribute("data-blend-edit", "true");
+    else mount.removeAttribute("data-blend-edit");
     return svg;
   }
 

@@ -33,7 +33,7 @@
   align-items: flex-end;
   gap: 2px;
   padding: 6px var(--station-space-2) 0 0;
-  color: var(--station-accent);
+  color: var(--station-timeline-current);
   text-align: right;
 }
 
@@ -48,7 +48,7 @@
   font-family: var(--station-font-mono);
   font-size: var(--station-text-sm);
   font-variant-numeric: tabular-nums;
-  color: var(--station-text);
+  color: var(--station-timeline-label);
   line-height: var(--station-line-tight);
 }
 
@@ -66,7 +66,7 @@
   right: 0;
   left: 0;
   height: var(--station-stroke);
-  background: var(--station-border-strong);
+  background: var(--station-timeline-rail);
 }
 
 .station-rundown__now-line {
@@ -75,7 +75,7 @@
   bottom: 4px;
   left: 0;
   width: 2px;
-  background: var(--station-accent);
+  background: var(--station-timeline-current);
 }
 
 /* The time after the changeover: a faint wash, so the boundary reads,
@@ -86,7 +86,7 @@
   right: 0;
   bottom: 0;
   left: var(--station-rundown-x);
-  background: color-mix(in srgb, var(--station-warning) 5%, transparent);
+  background: color-mix(in srgb, var(--station-timeline-transition) 7%, transparent);
   pointer-events: none;
 }
 
@@ -104,17 +104,17 @@
   left: var(--station-rundown-x);
   width: var(--station-stroke);
   height: 4px;
-  background: var(--station-border-strong);
+  background: var(--station-timeline-rail);
 }
 
 .station-rundown__tick.is-major {
   height: 7px;
-  background: var(--station-text-faint);
+  background: var(--station-timeline-upcoming);
 }
 
 .station-rundown__tick.is-hour {
   height: 10px;
-  background: var(--station-text-muted);
+  background: var(--station-timeline-muted);
 }
 
 .station-rundown__tick-label {
@@ -124,7 +124,7 @@
   transform: translateX(-50%);
   font-family: var(--station-font-mono);
   font-variant-numeric: tabular-nums;
-  color: var(--station-text-faint);
+  color: var(--station-timeline-muted);
   line-height: var(--station-line-tight);
   white-space: nowrap;
 }
@@ -136,7 +136,7 @@
   top: 4px;
   bottom: 4px;
   left: var(--station-rundown-x);
-  border-left: 2px dashed var(--station-warning);
+  border-left: 2px dashed var(--station-timeline-transition);
   pointer-events: none;
 }
 
@@ -164,7 +164,7 @@
 }
 
 .station-rundown__changeover-name {
-  color: var(--station-warning);
+  color: var(--station-timeline-transition);
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -173,11 +173,11 @@
 .station-rundown__changeover-time {
   font-family: var(--station-font-mono);
   font-variant-numeric: tabular-nums;
-  color: var(--station-text);
+  color: var(--station-timeline-label);
 }
 
 .station-rundown__changeover-rel {
-  color: var(--station-text-muted);
+  color: var(--station-timeline-muted);
 }
 
 /* ---- Hopper markers ---- */
@@ -260,7 +260,7 @@
 .station-rundown__time {
   font-family: var(--station-font-mono);
   font-variant-numeric: tabular-nums;
-  color: var(--station-text);
+  color: var(--station-timeline-label);
 }
 
 .station-rundown__reason {
@@ -297,7 +297,7 @@
   position: absolute;
   top: 46px;
   left: var(--station-space-2);
-  color: var(--station-text-faint);
+  color: var(--station-timeline-upcoming);
 }
 
 /* ---- The side column ---- */

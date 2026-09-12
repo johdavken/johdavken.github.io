@@ -70,11 +70,16 @@ test("a command's answer runs the same publish policy, marked as Station's own, 
   assert.match(committed, /onPublish\(\{ own: true \}\);/);
   // Nothing else: no patching of its own, no second render path, no note.
   assert.doesNotMatch(committed, /patchStage|renderAll|editorHandle|mountStage|note\(/);
-  // And the boot file writes lastOwnRevision there, and in the two other
-  // places a command's answer arrives - a cluster control's toggle, and
-  // the header's job controls' onCommitted - which run the identical two
+  // And the boot file writes lastOwnRevision there, and in the three other
+  // places a command's answer arrives - a cluster control's toggle, the
+  // header's job controls' onCommitted, and a Blend Edit card's
+  // onCommitted (the same editor, compact) - which run the identical two
   // lines.
-  assert.equal((boot.match(/lastOwnRevision\s*=/g) || []).length, 4, "lastOwnRevision is written somewhere other than its declaration, onCommitted, toggleHopperControl and the job controls' onCommitted");
+  assert.equal((boot.match(/lastOwnRevision\s*=/g) || []).length, 5, "lastOwnRevision is written somewhere other than its declaration, the editor's and the cards' onCommitted, toggleHopperControl and the job controls' onCommitted");
+  const cards = draw.slice(draw.indexOf("const card = focusEditor.create("), draw.indexOf("cardHandles[entry.id] = card;"));
+  assert.match(cards, /onCommitted: result => \{\n\s+lastOwnRevision = Number\.isInteger\(result\.revision\) \? result\.revision : null;\n\s+onPublish\(\{ own: true \}\);/);
+  assert.match(cards, /variant: "compact",/);
+  assert.match(cards, /commands: commandsFor\(current\.resolved\),/, "a card is not handed the same command bridge");
   const job = boot.slice(boot.indexOf("jobPanel = jobControls.create("), boot.indexOf("mounts.job.appendChild"));
   assert.match(job, /onCommitted: result => \{\n\s+lastOwnRevision = Number\.isInteger\(result\.revision\) \? result\.revision : null;\n\s+onPublish\(\{ own: true \}\);/);
   const toggle = body("toggleHopperControl");
@@ -98,7 +103,11 @@ test("commands are on offer only for the live source: demo data pinned in the ho
 test("a publish goes through the policy, never straight to a full render", () => {
   assert.match(boot, /bridge\?\.subscribe\(\(\) => \{ onPublish\(\); \}\);/);
   assert.doesNotMatch(boot, /subscribe\(\(\) => \{ renderAll\(\); \}\)/);
-  assert.equal((boot.match(/\.subscribe\(/g) || []).length, 1, "a second subscription appeared");
+  // Two subscriptions and no more: the state bridge, into the policy, and
+  // the recipes bridge, which only tells the Handbook its book moved -
+  // never the stage.
+  assert.equal((boot.match(/\.subscribe\(/g) || []).length, 2, "a third subscription appeared");
+  assert.match(boot, /recipes\?\.subscribe\(\(\) => \{ if \(handbookPanel\) handbookPanel\.update\(\); \}\);/);
 });
 
 test("the policy classifies first, patches a value change in place, and renders only a structural one", () => {

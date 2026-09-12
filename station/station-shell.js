@@ -33,7 +33,9 @@
    *
    * Four regions and nothing else: the header (with the job controls' slot
    * and the line console's slot), the machine stage, the run-down timeline
-   * across the foot of the workspace, and the status bar. The earlier side
+   * across the foot of the workspace, and the status bar - plus one slot
+   * that is not a region: the Operator Handbook's, laid over the stage's
+   * own cell (see below). The earlier side
    * columns - a demo-configuration list on the left, an inspector on the
    * right - and the Current / Next recipe strip under the stage were taken
    * out (2026-09-12) so the stage has the whole width: configuration
@@ -42,7 +44,7 @@
    * them. The timeline row is not a strip of that kind: it is an
    * operational view of the job the stage shows, one modest row deep, and
    * the stage keeps everything above it. */
-  const MOUNTS = Object.freeze(["machine", "timeline", "status", "job", "connection"]);
+  const MOUNTS = Object.freeze(["machine", "timeline", "status", "job", "connection", "handbook"]);
 
   function element(doc, name, className, attributes) {
     const node = doc.createElement(name);
@@ -96,6 +98,15 @@
     shell.appendChild(element(doc, "section", "station-machine", {
       "data-station-mount": "machine", "aria-label": "Machine stage"
     }));
+
+    /* The Operator Handbook's slot (station-handbook.js): the launcher in
+     * the stage's corner and the panel it opens over the stage's lower
+     * half. The SAME grid cell as the machine - laid over it, not beside
+     * it - so opening the Handbook reserves no track, reflows nothing and
+     * leaves the hoppers above it drawn exactly where they were: Blend
+     * Edit works on them while it is open. The slot itself is inert to
+     * the pointer (shell.css); only what the Handbook puts in it is not. */
+    shell.appendChild(element(doc, "div", "station-handbook-slot", { "data-station-mount": "handbook" }));
 
     /* The run-down timeline's row: no heading, no card - the timeline
      * itself (station-rundown-timeline.js) begins with its Now anchor. */

@@ -7,30 +7,30 @@
        with the token values resolved so the file can be viewed on its own. The rotor is shown at
        rest; the stage rotates it. -->
   <style>
-    .station-mixer__face { stroke: #445468; stroke-width: 0.6px; stroke-linejoin: round; }
+    .station-mixer__face { stroke: #4d5f75; stroke-width: 0.6px; stroke-linejoin: round; }
     .station-mixer__face--front { fill: #313f52; }
     .station-mixer__face--side { fill: #27333f; }
     .station-mixer__face--top { fill: #3c4b5f; }
-    .station-mixer__face--light { fill: #65788d; }
+    .station-mixer__face--light { fill: #71849a; }
     .station-mixer__face--dark { fill: #1b2430; }
-    .station-mixer__face--steel { fill: #495b70; }
-    .station-mixer__face--edge { fill: #55677d; }
-    .station-mixer__face--material { fill: #687b8c; }
+    .station-mixer__face--steel { fill: #50637a; }
+    .station-mixer__face--edge { fill: #5d7087; }
+    .station-mixer__face--material { fill: #718494; }
     .station-mixer__face--hose { fill: #253040; }
-    .station-mixer__face--blue { fill: #477f9c; }
-    .station-mixer__face--window { fill: #0d1117; stroke: #445468; }
+    .station-mixer__face--blue { fill: #4f89a8; }
+    .station-mixer__face--window { fill: #0d1117; stroke: #4d5f75; }
     .station-mixer__seam { stroke-width: 0.15px; }
     .station-mixer__seam--front { stroke: #313f52; }
     .station-mixer__seam--side { stroke: #27333f; }
     .station-mixer__seam--top { stroke: #3c4b5f; }
-    .station-mixer__seam--light { stroke: #65788d; }
+    .station-mixer__seam--light { stroke: #71849a; }
     .station-mixer__seam--dark { stroke: #1b2430; }
-    .station-mixer__seam--edge { stroke: #55677d; }
-    .station-mixer__seam--material { stroke: #687b8c; }
+    .station-mixer__seam--edge { stroke: #5d7087; }
+    .station-mixer__seam--material { stroke: #718494; }
     .station-mixer__seam--hose { stroke: #253040; }
-    .station-mixer__seam--accent { stroke: #d0a255; }
-    .station-mixer__face--accent { fill: #b9832f; stroke: #d0a255; }
-    .station-mixer__blade { fill: #313f52; stroke: #35424f; stroke-width: 0.6px; }
+    .station-mixer__seam--accent { stroke: #d6a85d; }
+    .station-mixer__face--accent { fill: #b9832f; stroke: #d6a85d; }
+    .station-mixer__blade { fill: #313f52; stroke: #3b4959; stroke-width: 0.6px; }
     .station-mixer__agitator { transform-box: view-box; transform-origin: 0 0; }
   </style>
   <path class="station-mixer__face station-mixer__face--front" data-part="rear-upright" d="M-25.9,-177.39 L-20.08,-176.69 L-16.72,-177.9 L-22.54,-178.6 Z"/>

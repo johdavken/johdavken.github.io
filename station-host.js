@@ -48,6 +48,9 @@
   const STYLESHEETS = [
     "station/styles/host.css",
     "station/styles/tokens.css",
+    "station/styles/themes/industrial-light.css",
+    "station/styles/themes/industrial-dark.css",
+    "station/styles/themes/gruvbox-dark.css",
     "station/styles/base.css",
     "station/styles/shell.css",
     "station/styles/components/machine.css",
@@ -57,7 +60,8 @@
     "station/styles/components/inspector.css",
     "station/styles/components/rundown.css",
     "station/styles/components/job-controls.css",
-    "station/styles/components/sync-console.css"
+    "station/styles/components/sync-console.css",
+    "station/styles/components/handbook.css"
   ];
 
   const SCRIPTS = [
@@ -79,12 +83,16 @@
     "station/station-job-controls.js",
     "station/station-shell.js",
     "station/station-sync-console.js",
+    // The Operator Handbook: its first section before the shell that hosts it.
+    "station/station-recipe-book.js",
+    "station/station-appearance.js",
+    "station/station-handbook.js",
     "station/station-demo-lines.js",
     "station/station-source.js",
     "station/station.js"
   ];
 
-  const VERSION = "0.21.0";
+  const VERSION = "0.23.0";
 
   function requested() {
     try {
@@ -122,6 +130,11 @@
     host.setAttribute("data-station-host", "");
     host.setAttribute("data-station-app", "");
     host.className = "station-root";
+    const theme = root.PolynStationTheme;
+    host.stationTheme = theme && typeof theme.initialize === "function"
+      ? theme.initialize(host, root)
+      : null;
+    if (!host.stationTheme) host.setAttribute("data-theme", "industrial-dark");
     doc.body.appendChild(host);
 
     // Set last: the moment this lands, host.css hides the application shell,

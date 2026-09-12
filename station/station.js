@@ -20,10 +20,14 @@
  * Station is mounted in a document where the application is running, and is
  * covered by tests rather than by this page.
  *
- * Still not wired up in this phase: the recipe strip's contents. Run-down
- * timing and the changeover are read by the timeline across the foot of
- * the workspace (station-rundown-timeline.js) and set from the header's
- * job controls (station-job-controls.js).
+ * Run-down timing and the changeover are read by the timeline across the
+ * foot of the workspace (station-rundown-timeline.js) and set from the
+ * header's job controls (station-job-controls.js). The Operator Handbook
+ * (station-handbook.js) opens over the stage's lower half from the
+ * launcher in its corner; its Recipe Book (station-recipe-book.js) lists
+ * the line's saved recipes, saves the running one, and enters Blend Edit
+ * - the mode under which this file turns hopper clusters over into
+ * compact editors (see BLEND EDIT below).
  */
 (function (root) {
   "use strict";
@@ -67,6 +71,17 @@
    * optional, as the line console is. */
   const rundownTimeline = root.PolynStationRundownTimeline || null;
   const jobControls = root.PolynStationJobControls || null;
+  /* The Operator Handbook (station-handbook.js) and its first section, the
+   * Recipe Book (station-recipe-book.js), and the bridge the book reads
+   * through: the workspace's saved recipes as the application publishes
+   * them (station-recipes-bridge.js), with the letterbox for Save Current.
+   * All optional, as the line console is; the Handbook is mounted only
+   * when the shell has its slot. */
+  const handbook = root.PolynStationHandbook || null;
+  const recipeBook = root.PolynStationRecipeBook || null;
+  const appearance = root.PolynStationAppearance || null;
+  const theme = root.PolynStationTheme || null;
+  const recipes = root.PolynStationRecipesBridge || null;
 
   /* The commands Station may offer for what it is SHOWING. The executor
    * writes the application's live recipe, so it is only on offer while the
@@ -156,6 +171,41 @@
    * is open. */
   let editorHandle = null;
 
+  /* BLEND EDIT - PRESENTATION STATE, NOT APPLICATION STATE.
+   *
+   * A mode of the stage, entered from the Handbook's Recipe Book: while it
+   * is on, each layer's hopper cluster carries a flip chip, and a layer
+   * that has been turned over shows the compact blend editor
+   * (station-focus-editor.js, variant "compact") in its cluster's own
+   * footprint. Which layers are turned over is a fact about this screen,
+   * like which layer is open; it travels nowhere and copies nothing. The
+   * recipe values every card shows come from the bridge snapshot, and
+   * every edit made on a card is a command through the same bridge the
+   * focused editor uses - the card IS that editor, built smaller.
+   *
+   *   active     the mode is on
+   *   flipped    the ids of the layers turned over, in no particular order
+   *
+   * The mode and the open layer are exclusive: entering Blend Edit closes
+   * whatever layer is open, and while it is on a click on a mixer or an
+   * extruder opens nothing (it says so instead). One interaction model at
+   * a time, and no click that means two things. */
+  const blendEdit = { active: false, flipped: [] };
+  /* The compact editors' handles, by layer id, for the stage as drawn:
+   * what a value-only publish updates in place, as editorHandle is for
+   * the open layer. Rebuilt by every render. */
+  let cardHandles = {};
+  /* The Handbook's handle, once mounted, so the boot file can tell it
+   * something it shows changed (the mode, a flip, a line change). */
+  let handbookPanel = null;
+  /* The theme controller belongs to the Station root, not to this boot file
+   * or the application global. Resolved once the host root is known. */
+  let themeController = null;
+  /* The one transient line the status bar carries ahead of what it was
+   * saying: why a click did nothing, until something newer replaces it
+   * or a valid interaction clears it. One, replaced - never stacked. */
+  let notice = "";
+
   /* The stage's transition controller (station-transition.js): the one
    * thing that renders the machine, so that every change of focus is a
    * transition and no code path can redraw the stage out from under one.
@@ -214,6 +264,10 @@
       const hopper = next.hopper || null;
       focus = { layer: next.layer, target: "cluster", hopper: same && focus.hopper === hopper ? null : hopper };
     }
+    // A layer opening or a hopper selecting is a valid interaction: a
+    // refusal still on the status line is stale. The open editor's own
+    // note is its own.
+    if (notice && !editorHandle) say("");
     stage.request(focusLayerFor());
     syncSelection();
     renderInspector(current.model, current.resolved);
@@ -226,6 +280,126 @@
     syncSelection();
     renderInspector(current.model, current.resolved);
   }
+
+  /* --------------------------------------------------------------------
+   *   Blend Edit
+   * ------------------------------------------------------------------ */
+
+  function layerIds() {
+    return current.model ? current.model.layers.map(layer => layer.id) : [];
+  }
+
+  function isFlipped(id) {
+    return blendEdit.flipped.includes(id);
+  }
+
+  /* A control the operator is in on the stage - a card's percentage
+   * field, an open search - is left before the stage is rebuilt, so the
+   * value in it is committed along the editor's own path (leaving a field
+   * commits it) rather than thrown away with the element. Nothing is
+   * discarded silently: a draft that commits is applied, a draft the
+   * application refuses is reported by the editor's note before the
+   * rebuild, and the rebuilt card shows what the application holds. */
+  function leaveStageControl() {
+    const doc = root.document;
+    const active = doc && "activeElement" in doc ? doc.activeElement : null;
+    if (!active || !mounts.machine || typeof mounts.machine.contains !== "function") return;
+    if (mounts.machine.contains(active) && typeof active.blur === "function") active.blur();
+  }
+
+  /* The card face that just arrived settles in, as the focus workspace
+   * does: opacity and a little scale over the settle time, on the same
+   * tokens, and nothing when the operator asked for less motion. Which
+   * layers changed face is what the caller says; the stage has already
+   * been rendered. */
+  function settleFaces(ids) {
+    if (!mounts.machine || !ids.length || prefersReducedMotion()) return;
+    const timing = stage && typeof stage.getTiming === "function" ? stage.getTiming() : { settle: 120 };
+    for (const id of ids) {
+      const layer = mounts.machine.querySelector(`[data-role='layer'][data-layer='${id}']`);
+      if (!layer) continue;
+      const face = layer.querySelector(isFlipped(id) ? ".station-blend-card" : ".station-hopper-cluster");
+      if (!face) continue;
+      // Through the transition module, the one place Station animates.
+      transition.play(face, [{ opacity: 0, transform: "scaleX(0.92)" }, { opacity: 1, transform: "none" }],
+        { duration: timing.settle, easing: "ease-out", fill: "none" });
+    }
+  }
+
+  function redrawForBlend(changed) {
+    stage.refresh(focusLayerFor());
+    settleFaces(changed || []);
+    if (handbookPanel) handbookPanel.update();
+  }
+
+  function canEnterBlendEdit() {
+    return !!(current.model && current.model.layers.length);
+  }
+
+  function enterBlendEdit() {
+    if (blendEdit.active || !canEnterBlendEdit()) return false;
+    leaveStageControl();
+    // The open layer closes: the two modes do not share the stage.
+    focus = null;
+    blendEdit.active = true;
+    blendEdit.flipped = [];
+    redrawForBlend([]);
+    say("");
+    return true;
+  }
+
+  /* Done: every card's pending entry is committed along the editor's own
+   * path (see leaveStageControl), every layer comes back as hoppers, and
+   * the stage is the stage it was. Edits made while the mode was on were
+   * each applied by the application as they were made; there is nothing
+   * held back to apply or discard here. */
+  function exitBlendEdit() {
+    if (!blendEdit.active) return false;
+    leaveStageControl();
+    const were = blendEdit.flipped.slice();
+    blendEdit.active = false;
+    blendEdit.flipped = [];
+    redrawForBlend(were);
+    // Whatever the mode refused to do is no longer refused.
+    say("");
+    return true;
+  }
+
+  function flipLayer(id, on) {
+    if (!blendEdit.active || !layerIds().includes(id)) return false;
+    const wanted = on === undefined ? !isFlipped(id) : !!on;
+    if (wanted === isFlipped(id)) return false;
+    leaveStageControl();
+    blendEdit.flipped = wanted ? blendEdit.flipped.concat([id]) : blendEdit.flipped.filter(other => other !== id);
+    redrawForBlend([id]);
+    say("");
+    return true;
+  }
+
+  function flipAll(on) {
+    if (!blendEdit.active) return false;
+    const ids = layerIds();
+    const changed = ids.filter(id => isFlipped(id) !== !!on);
+    if (!changed.length) return false;
+    leaveStageControl();
+    blendEdit.flipped = on ? ids.slice() : [];
+    redrawForBlend(changed);
+    say("");
+    return true;
+  }
+
+  /* Blend Edit as the Handbook sees it: a small surface over the state
+   * above, handed to the Recipe Book, which holds nothing of its own. */
+  const blendSurface = Object.freeze({
+    available: () => !!commandsFor(current.resolved),
+    isActive: () => blendEdit.active,
+    canEnter: canEnterBlendEdit,
+    layers: () => (current.model ? current.model.layers.map(layer => ({ id: layer.id, roleLabel: layer.roleLabel, flipped: isFlipped(layer.id) })) : []),
+    enter: enterBlendEdit,
+    exit: exitBlendEdit,
+    flip: flipLayer,
+    flipAll
+  });
 
   /* --------------------------------------------------------------------
    *   Hopper <-> editor row linking
@@ -590,7 +764,7 @@
       parts.push("No line configuration");
     }
     parts.push(hostWithoutApplication() ? STALE_APPLICATION : (standaloneHarness() ? HARNESS : resolved.detail));
-    host.textContent = parts.join(" · ");
+    host.textContent = (notice ? [notice] : []).concat(parts).join(" · ");
     host.setAttribute("data-source", resolved.kind);
     host.classList.toggle("is-stale-application", hostWithoutApplication());
   }
@@ -626,7 +800,15 @@
     // A focus on a layer that no longer exists (the line changed under us)
     // must not survive into the render.
     if (focus && (!model || !model.layers.some(layer => layer.id === focus.layer))) focus = null;
+    // Nor a card for one: the mode stays on, the layer that is gone is not
+    // turned over, and a line with no layers has nothing to be in the
+    // mode with.
+    blendEdit.flipped = blendEdit.flipped.filter(id => !!model && model.layers.some(layer => layer.id === id));
+    if (blendEdit.active && (!model || !model.layers.length)) blendEdit.active = false;
     current = { model, resolved };
+    // A rebuilt stage starts with a clean line: what a click on the old
+    // one could not do is not what this one is refusing.
+    notice = "";
 
     // A plain redraw: any transition in flight lands first, then the stage
     // is drawn in the state it was heading for.
@@ -634,6 +816,7 @@
     renderInspector(model, resolved);
     renderStatus(model, resolved);
     feedJob(model, resolved);
+    if (handbookPanel) handbookPanel.update();
   }
 
   /* --------------------------------------------------------------------
@@ -683,6 +866,9 @@
         hopperControls: controlsFor(resolved)
       });
       if (editorHandle) editorHandle.update({ hopperState: resolved.hopperState });
+      // The cards are editors too: the same update, around whatever
+      // control is active in each.
+      for (const id of Object.keys(cardHandles)) cardHandles[id].update({ hopperState: resolved.hopperState });
       // A patched hopper is a new element; the classes the boot file owns
       // are written to it again from the state that owns them.
       applyHighlight();
@@ -702,18 +888,22 @@
     if (abandoned) {
       const message = `Layer ${abandoned.layer} changed underneath you; what you were entering for ${abandoned.hopper} was not applied.`;
       if (editorHandle) editorHandle.note(message);
-      else if (mounts.status) mounts.status.textContent = `${message} · ${mounts.status.textContent}`;
+      else say(message);
     }
   }
 
   /* Where a message about a cluster control goes: the open editor's note
    * when a layer is open - it is the one line Station already keeps for
-   * "why an edit did nothing" - and otherwise the status bar, ahead of
-   * what it was saying, until the next render says something newer. */
+   * "why an edit did nothing" - and otherwise the status bar's notice,
+   * ahead of what it was saying. Saying it again replaces it; saying
+   * nothing clears it. The status line is redrawn from state either way,
+   * so a repeated refusal reads once, not once per click. */
   function say(message) {
     if (editorHandle) { editorHandle.note(message); return; }
-    if (!message || !mounts.status) return;
-    mounts.status.textContent = `${message} · ${mounts.status.textContent}`;
+    const next = message || "";
+    if (next === notice) return;
+    notice = next;
+    if (current.resolved) renderStatus(current.model, current.resolved);
   }
 
   /* A click on one of a hopper's operational controls - tracking on the
@@ -800,6 +990,38 @@
       }
     }) : null;
     editorHandle = editor;
+    /* Blend Edit's cards: the same editor, compact, one per layer turned
+     * over, addressed to the same recipe through the same bridge. Only in
+     * the normal layout - the mode and an open layer are exclusive (see
+     * enterBlendEdit) - and only for layers the model still has. */
+    const cards = {};
+    cardHandles = {};
+    if (blendEdit.active && model && !focusLayer) {
+      for (const entry of model.layers) {
+        if (!isFlipped(entry.id)) continue;
+        const card = focusEditor.create(mounts.machine.ownerDocument, {
+          layer: entry,
+          hopperState,
+          resins: catalogResins,
+          commands: commandsFor(current.resolved),
+          recipe,
+          variant: "compact",
+          onEditing: record => {
+            editing = record ? Object.assign({
+              recipe,
+              baseRevision: current.resolved ? current.resolved.revision : null
+            }, record) : null;
+          },
+          onCommitted: result => {
+            lastOwnRevision = Number.isInteger(result.revision) ? result.revision : null;
+            onPublish({ own: true });
+          }
+        });
+        if (!card) continue;
+        cards[entry.id] = card.element;
+        cardHandles[entry.id] = card;
+      }
+    }
     return render.mountStage(mounts.machine, model, {
       hopperState,
       layerState: current.resolved ? current.resolved.layerState : null,
@@ -808,6 +1030,8 @@
       selectedHopper,
       hopperControls: controlsFor(current.resolved),
       workspace: editor ? editor.element : null,
+      blendEdit: blendEdit.active && !focusLayer,
+      blendCards: cards,
       raiseLayer: extra && extra.raiseLayer
     });
   }
@@ -852,6 +1076,7 @@
   function start() {
     const doc = root.document;
     let container = mountPoint(doc);
+    themeController = container.stationTheme || (doc.documentElement && doc.documentElement.stationTheme) || null;
 
     // An empty container is the harness's thin body: fill it from the same
     // builder the application host uses.
@@ -912,6 +1137,20 @@
         return;
       }
 
+      /* Blend Edit's flip chip: turn the layer over, or back. Drawn only
+       * while the mode is on, so it cannot be hit otherwise. */
+      if (target === "flip") {
+        flipLayer(layer);
+        return;
+      }
+      /* While Blend Edit is on, the train opens nothing: the compact face
+       * and the focused editor are two ways to edit the same layer, and
+       * the operator is in one of them. Said, rather than silently not. */
+      if (blendEdit.active && opensLayer(target)) {
+        say("Finish Blend Edit (Done in the Handbook) to open a layer's detailed editor.");
+        return;
+      }
+
       setFocus({ layer, target, hopper });
     });
 
@@ -929,8 +1168,11 @@
     // Escape leaves whatever is open, which is the exit people try first -
     // including a layer that is still on its way open, which turns around.
     doc.addEventListener("keydown", event => {
-      if (event.key !== "Escape" || !focus) return;
-      clearFocus();
+      if (event.key !== "Escape") return;
+      if (focus) { clearFocus(); return; }
+      // With nothing open, Escape leaves Blend Edit - the same exit Done
+      // is, with the same commit of whatever field was being entered.
+      if (blendEdit.active) exitBlendEdit();
     });
 
     let devPanel = null;
@@ -992,6 +1234,35 @@
         }
       });
       mounts.job.appendChild(jobPanel.element);
+    }
+
+    /* The Operator Handbook, in the slot laid over the stage. Built once
+     * with its sections - the Recipe Book today - and handed what they
+     * may use: the recipes bridge (read and request; never the global
+     * reached for from inside) and the Blend Edit surface above. The
+     * book redraws from the recipes bridge's own notifications, as the
+     * line console does from the connection bridge's. */
+    if (handbook && mounts.handbook) {
+      const handbookSections = [];
+      if (recipeBook) handbookSections.push(recipeBook.section);
+      if (appearance) handbookSections.push(appearance.section);
+      handbookPanel = handbook.create(doc, {
+        sections: handbookSections,
+        context: {
+          recipes,
+          blend: blendSurface,
+          theme: themeController,
+          themes: theme ? theme.THEMES : []
+        },
+        mount: mounts.handbook,
+        reducedMotion: prefersReducedMotion,
+        /* Closing the Handbook - its Close, its launcher, Escape inside it
+         * - is Done first when Blend Edit is on: the mode's one exit,
+         * before the panel that holds its Done goes away with it on. */
+        beforeClose: () => { if (blendEdit.active) exitBlendEdit(); }
+      });
+      mounts.handbook.appendChild(handbookPanel.element);
+      recipes?.subscribe(() => { if (handbookPanel) handbookPanel.update(); });
     }
     feedJob(current.model, current.resolved);
   }

@@ -142,11 +142,11 @@
 }
 
 .station-editor__item.is-highlighted {
-  background: var(--station-surface-raised);
+  background: var(--station-surface-hover);
 }
 
 .station-editor__item.is-selected {
-  background: var(--station-accent-soft);
+  background: var(--station-selection);
   box-shadow: inset 2px 0 0 var(--station-accent);
 }
 
@@ -177,14 +177,14 @@
 /* The row being carried: lifted a little, and out of the way of what
    the pointer is over. */
 .station-editor__item.is-dragging {
-  background: var(--station-surface-raised);
+  background: var(--station-surface-hover);
   opacity: 0.55;
 }
 
 /* Where it would land: the accent, as a frame - obvious, and no louder
    than the selection it sits beside. */
 .station-editor__item.is-drop-target {
-  background: var(--station-accent-soft);
+  background: var(--station-selection);
   box-shadow: inset 0 0 0 var(--station-stroke) var(--station-accent);
 }
 
@@ -245,7 +245,7 @@
 .station-editor__item.is-selected .station-editor__badge {
   border-color: var(--station-accent);
   background: var(--station-accent);
-  color: var(--station-surface-sunken);
+  color: var(--station-text-on-accent);
 }
 
 /* ---- Resin and source: the middle column ---- */
@@ -292,7 +292,14 @@
 
 .station-editor__resin-value:hover,
 .station-editor__source-value:hover {
-  background: var(--station-surface-raised);
+  background: var(--station-surface-hover);
+}
+
+.station-editor__resin-value:active:not(.is-readonly),
+.station-editor__source-value:active:not(.is-readonly),
+.station-editor__option:active {
+  background: var(--station-surface-selected);
+  box-shadow: inset 2px 0 0 var(--station-accent-active);
 }
 
 /* A value whose command is not on offer is text: no surface under the
@@ -380,12 +387,12 @@
 }
 
 .station-editor__pct-input:hover {
-  --station-field-bg: var(--station-surface-raised);
+  --station-field-bg: var(--station-surface-hover);
 }
 
 .station-editor__pct-input:focus {
-  --station-field-bg: var(--station-surface-raised);
-  --station-field-shadow: 0 0 0 2px var(--station-accent-soft);
+  --station-field-bg: var(--station-surface-editable);
+  --station-field-shadow: 0 0 0 2px var(--station-selection);
 }
 
 /* An editable percentage is a text field and says so with its cursor;
@@ -403,7 +410,7 @@
 /* A draft the application refused stays in the field, marked, for the
    operator to correct; the note under the total says why. */
 .station-editor__pct-input[aria-invalid="true"] {
-  --station-field-shadow: 0 0 0 2px var(--station-warning);
+  --station-field-shadow: 0 0 0 2px var(--station-danger);
 }
 
 .station-editor__unit {
@@ -424,9 +431,9 @@
 .station-editor__search {
   --station-field-padding: 2px var(--station-space-2);
   --station-field-radius: var(--station-radius-sm);
-  --station-field-bg: var(--station-surface-sunken);
-  --station-field-border: var(--station-stroke) solid var(--station-accent);
-  --station-field-shadow: 0 0 0 2px var(--station-accent-soft);
+  --station-field-bg: var(--station-surface-editable);
+  --station-field-border: var(--station-stroke) solid var(--station-editable);
+  --station-field-shadow: 0 0 0 2px var(--station-selection);
   --station-field-width: min(16em, 100%);
   margin: -3px calc(-1 * var(--station-space-2) - 1px);
   font-family: var(--station-font-mono);
@@ -479,11 +486,11 @@
 }
 
 .station-editor__option:hover {
-  background: var(--station-surface);
+  background: var(--station-surface-hover);
 }
 
 .station-editor__option.is-active {
-  background: var(--station-accent-soft);
+  background: var(--station-selection);
 }
 
 .station-editor__option-code {
@@ -513,9 +520,9 @@
 .station-editor__source-input {
   --station-field-padding: 1px var(--station-space-2);
   --station-field-radius: var(--station-radius-sm);
-  --station-field-bg: var(--station-surface-sunken);
-  --station-field-border: var(--station-stroke) solid var(--station-accent);
-  --station-field-shadow: 0 0 0 2px var(--station-accent-soft);
+  --station-field-bg: var(--station-surface-editable);
+  --station-field-border: var(--station-stroke) solid var(--station-editable);
+  --station-field-shadow: 0 0 0 2px var(--station-selection);
   --station-field-width: min(12em, 100%);
   margin: -2px calc(-1 * var(--station-space-2) - 1px);
   color: var(--station-text);
@@ -571,15 +578,15 @@
 
 /* Wrong is worth seeing; right is the normal state and is not dressed up. */
 .station-editor__total.is-invalid .station-editor__total-value {
-  color: var(--station-warning);
+  color: var(--station-danger);
 }
 
 .station-editor__total-flag {
   padding: 1px var(--station-space-2);
   text-transform: none;
-  border: var(--station-stroke) solid var(--station-warning);
+  border: var(--station-stroke) solid var(--station-danger);
   border-radius: var(--station-radius-sm);
-  color: var(--station-warning);
+  color: var(--station-danger);
   font-size: var(--station-text-xs);
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -615,4 +622,104 @@
     transition: background var(--station-motion-ack) ease-out, color var(--station-motion-ack) ease-out,
       border-color var(--station-motion-ack) ease-out;
   }
+}
+
+/* ---------------------------------------------------------------------
+ *   The compact variant: Blend Edit's face
+ * -------------------------------------------------------------------
+ * The same editor in a hopper cluster's footprint (station-machine-parts
+ * .js: blendCard), built with variant "compact": no header, no source
+ * line, no dragging. Everything below only re-sizes what the rules above
+ * already draw - the rows, the badge, the percentage, the total, the note
+ * - to the room a cluster has, which is a column 130 to 250 canvas units
+ * wide. The type is the bank's own scale: the card is in the drawing, so
+ * it grows and shrinks with the hoppers it stands in for.
+ */
+
+.station-editor[data-variant="compact"] {
+  padding: var(--station-space-2) var(--station-space-2) var(--station-space-1);
+  font-size: var(--station-text-sm);
+}
+
+.station-editor[data-variant="compact"] .station-editor__list {
+  margin-top: 0;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.station-editor[data-variant="compact"] .station-editor__item {
+  gap: var(--station-space-2);
+  min-height: 0;
+  padding: var(--station-space-1) var(--station-space-1);
+  margin: 0;
+  border-radius: var(--station-radius-sm);
+}
+
+.station-editor[data-variant="compact"] .station-editor__badge {
+  min-width: 2.2em;
+  padding: 1px var(--station-space-1);
+  font-size: var(--station-text-2xs);
+}
+
+.station-editor[data-variant="compact"] .station-editor__resin-value {
+  font-size: var(--station-text-sm);
+  padding: 1px var(--station-space-1);
+  margin: -1px calc(-1 * var(--station-space-1));
+}
+
+.station-editor[data-variant="compact"] .station-editor__pct {
+  min-width: 2.8em;
+  font-size: var(--station-text-md);
+}
+
+.station-editor[data-variant="compact"] .station-editor__unit {
+  font-size: var(--station-text-xs);
+}
+
+.station-editor[data-variant="compact"] .station-editor__search {
+  --station-field-width: 100%;
+  --station-field-padding: 1px var(--station-space-1);
+  margin: -2px calc(-1 * var(--station-space-1) - 1px);
+  font-size: var(--station-text-sm);
+}
+
+/* The result list is as wide as the card allows, never wider: it is
+   placed inside the card's own box (station-focus-editor.js). */
+.station-editor[data-variant="compact"] .station-editor__results {
+  left: calc(-1 * var(--station-space-1) - 1px);
+  width: min(16em, calc(100% + 3em));
+}
+
+.station-editor[data-variant="compact"] .station-editor__option {
+  padding: var(--station-space-1) var(--station-space-2);
+}
+
+.station-editor[data-variant="compact"] .station-editor__option-code {
+  font-size: var(--station-text-sm);
+}
+
+.station-editor[data-variant="compact"] .station-editor__total {
+  margin-top: var(--station-space-1);
+  padding: var(--station-space-1) var(--station-space-1);
+}
+
+.station-editor[data-variant="compact"] .station-editor__total-label {
+  gap: var(--station-space-1);
+  font-size: var(--station-text-2xs);
+}
+
+.station-editor[data-variant="compact"] .station-editor__total-value {
+  font-size: var(--station-text-md);
+}
+
+.station-editor[data-variant="compact"] .station-editor__total-flag {
+  padding: 0 var(--station-space-1);
+  font-size: var(--station-text-2xs);
+}
+
+.station-editor[data-variant="compact"] .station-editor__note {
+  min-height: 0;
+  margin-top: 0;
+  font-size: var(--station-text-2xs);
+  line-height: var(--station-line-tight);
 }

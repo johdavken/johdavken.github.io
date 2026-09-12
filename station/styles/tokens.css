@@ -1,103 +1,16 @@
-/* Station design tokens.
+/* Station's theme-independent design tokens.
  *
- * The only file in the Station stylesheet set that defines a raw colour, a
- * raw length, or a raw font stack. Every other Station rule spends tokens.
- * That is the whole contract: if a value is repeated anywhere, it belongs
- * here, and if a component wants a value nothing else uses, it still comes
- * through a token so the palette stays readable in one place.
+ * Layout, type, shape and motion live here. Colour lives only in themes/*.css,
+ * where each registered theme maps the same semantic contract onto a palette.
+ * Component styles spend those semantic tokens and never name a theme.
  *
- * Station does NOT read the existing app's theme variables. Those are shaped
- * around the floor UI's own surfaces and would drag the legacy cascade in
- * behind them. When Station eventually needs to follow the operator's chosen
- * theme, it should map that theme onto these tokens deliberately - one
- * mapping layer - rather than consuming the legacy custom properties raw.
+ * Station deliberately does not read the existing application's theme
+ * variables. The hosted Station root owns its own data-theme, so changing
+ * this device-local presentation preference cannot recolour the mobile/tablet
+ * application hidden behind it or become part of operational state.
  */
 
 .station-root {
-  /* ---- Surface ---- */
-  --station-bg: #11151c;
-  --station-surface: #171d26;
-  --station-surface-raised: #1e2632;
-  --station-surface-sunken: #0d1117;
-  --station-border: #2a3442;
-  --station-border-strong: #3a4757;
-
-  /* ---- Text ---- */
-  --station-text: #e5eaf1;
-  --station-text-muted: #93a1b3;
-  --station-text-faint: #64748b;
-
-  /* ---- Equipment ----
-   * The machine schematic's whole palette. Three steel values give the
-   * drawing depth without shading: structure sits back, vessels sit mid,
-   * lit faces come forward. Everything else is a process material, and those
-   * are the only saturated colours in the machine - so what an operator's eye
-   * lands on is resin, melt, bubble and film, not the steelwork. */
-  --station-steel: #253040;
-  --station-steel-light: #2e3b4d;
-  --station-steel-dark: #1b2430;
-  --station-frame: #222c3a;
-  --station-edge: #445468;
-  --station-edge-soft: #35424f;
-
-  --station-equipment-fill: #202a37;
-  --station-equipment-stroke: #384454;
-
-  /* The extruder's enclosure. One step lighter than the structural steel so
-   * the machine's housing reads as a housing and not as more frame - three
-   * faces, three values, top lit most because the light is above. `metal` is
-   * the one machined surface on the stage: the outlet flange. */
-  --station-housing-top: #3c4b5f;
-  --station-housing-side: #313f52;
-  --station-housing-end: #27333f;
-  --station-metal: #55677d;
-  /* The mixer's remaining metals, straight from its masters: the lit
-   * machined faces (regulator, knobs, rims), the mid steel of the brackets
-   * and posts, and the one blue fitting on the air regulator. */
-  --station-metal-light: #65788d;
-  --station-metal-dark: #495b70;
-  --station-fitting: #477f9c;
-
-  --station-hopper-body: #1c2531;
-  --station-hopper-stroke: #3d4b5d;
-  --station-hopper-fill: #4f7ba8;
-  --station-hopper-loader: #495a6e;
-  /* The vacuum receiver. Amber because that is the colour this equipment
-   * actually is on the floor, and it makes the top of every hopper findable. */
-  --station-receiver: #b9832f;
-  --station-receiver-edge: #d0a255;
-  /* The clear spiral-reinforced hose under every hopper: a translucent tube
-   * over the dark stage, edged brighter than its body, ribbed in the pale
-   * mint of the embedded helix. The one piece of equipment that is not steel
-   * or amber, and it is meant to read as glass-clear, not as a colour. */
-  --station-hose-clear: rgba(226, 236, 244, 0.2);
-  --station-hose-edge: rgba(226, 236, 244, 0.55);
-  --station-hose-spiral: #a3d6c4;
-  --station-hose-glint: rgba(255, 255, 255, 0.4);
-  /* The same hose with nothing in it: the stage shows almost straight
-   * through, so an empty line reads as empty next to a running one. */
-  --station-hose-empty: rgba(226, 236, 244, 0.05);
-
-  /* ---- Layer identity ----
-   * Accents only: a layer's colour appears on its label, its mixer agitator,
-   * its extruder motor and its blend percentages - never as an equipment fill,
-   * which would turn the machine into a colour chart. Outside and inside are
-   * the two ends of the film, so they are the two ends of the ramp. */
-  --station-layer-outside: #6fa8dc;
-  --station-layer-subskin: #7fb89c;
-  --station-layer-core: #c9a14a;
-  --station-layer-inside: #b58ac4;
-
-  /* ---- Process materials ---- */
-  --station-melt: #8a6a4a;
-  --station-bubble: rgba(122, 178, 222, 0.16);
-  --station-bubble-edge: #6ea6d8;
-  --station-frost: #9fc4e4;
-  --station-film: #5f93bd;
-  /* Weighed batch material in the mixer's hopper. Grey-blue, not a resin
-   * colour: it is a pile of pellets, not a level being reported. */
-  --station-batch: #687b8c;
-
   /* ---- Machine line weights ---- */
   --station-line-hairline: 0.6px;
   /* A curved band's facet edge: stroked in its own colour, just wide enough
@@ -107,14 +20,6 @@
   --station-line-thin: 0.9px;
   --station-line-medium: 1.3px;
   --station-web-width: 13px;
-
-  /* ---- State ---- */
-  --station-accent: #4f9ad6;
-  --station-accent-soft: rgba(79, 154, 214, 0.16);
-  --station-tracking: #5fb98a;
-  --station-warning: #d8a250;
-  --station-danger: #d16a63;
-  --station-pump-off: #8b7bb8;
 
   /* ---- Motion ----
    * Opening and closing a layer is a window opening and closing: an
@@ -147,10 +52,6 @@
   --station-radius: 6px;
   --station-radius-lg: 10px;
   --station-stroke: 1px;
-  /* The one floating surface Station has: the resin search's result list,
-   * which has to stand off the rows it covers. */
-  --station-shadow-pop: 0 10px 28px rgba(0, 0, 0, 0.42);
-
   /* ---- Type ---- */
   --station-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --station-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
@@ -181,6 +82,26 @@
   /* The right-hand column for what lies past the window's edge or has no
    * estimate; capped so it can never become a side panel. */
   --station-timeline-side-width: 168px;
+
+  /* ---- Operator Handbook ----
+   * One work surface of fixed capacity, standing across the lower part of
+   * the stage. Its box is the STAGE'S, never its contents': `share` is the
+   * part of the stage's height the panel takes, from the bottom up, chosen
+   * so its top edge clears the hopper bank. The machine's drawing is 740
+   * units tall and its hopper clusters - and the Blend Edit cards that
+   * take their place - end at unit 404, 55% of the way down, when the
+   * drawing is fitted to the stage's height; fitted to its width instead
+   * it is centred, and the bank ends higher still. So 40% from the bottom
+   * never reaches a hopper, at any window Station supports, and shrinks
+   * only as the machine above it does. `max-height` keeps a tall stage
+   * from opening a panel taller than its work needs; `width` is what a
+   * 1440px window gives it comfortably. `clearance` is the launcher's
+   * column with its margins, kept free on either side so the centred
+   * panel never lands on the launcher at Station's narrowest. */
+  --station-handbook-width: 1080px;
+  --station-handbook-share: 40%;
+  --station-handbook-max-height: 400px;
+  --station-handbook-clearance: 96px;
 }
 
 /* ---------------------------------------------------------------------

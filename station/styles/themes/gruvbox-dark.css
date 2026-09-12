@@ -1,0 +1,90 @@
+/* Gruvbox Dark — canonical warm neutrals and bright-column accents, mapped
+ * by semantic role rather than sprayed across individual components. */
+.station-root[data-theme="gruvbox-dark"] {
+  color-scheme: dark;
+  --station-color-scheme: dark;
+
+  --station-bg: #1d2021;
+  --station-surface: #282828;
+  --station-surface-raised: #3c3836;
+  --station-surface-sunken: #1d2021;
+  --station-surface-interactive: #32302f;
+  --station-surface-hover: #45403d;
+  --station-surface-selected: #504945;
+  --station-surface-editable: #3a3734;
+
+  --station-text: #ebdbb2;
+  --station-text-muted: #d5c4a1;
+  --station-text-faint: #a89984;
+  --station-text-disabled: #928374;
+  --station-text-on-accent: #1d2021;
+
+  --station-border-subtle: #3c3836;
+  --station-border: #504945;
+  --station-border-strong: #665c54;
+  --station-focus-ring: #fabd2f;
+
+  --station-accent: #fe8019;
+  --station-accent-hover: #fabd2f;
+  --station-accent-active: #d65d0e;
+  --station-accent-soft: rgba(254, 128, 25, 0.17);
+  --station-selection: rgba(254, 128, 25, 0.24);
+  --station-editable: #fabd2f;
+
+  --station-success: #b8bb26;
+  --station-tracking: #b8bb26;
+  --station-warning: #fabd2f;
+  --station-danger: #fb4934;
+  --station-info: #83a598;
+  --station-inactive: #a89984;
+  --station-pump-off: #d3869b;
+
+  --station-steel: #3c3836;
+  --station-steel-light: #504945;
+  --station-steel-dark: #282828;
+  --station-frame: #32302f;
+  --station-edge: #7c6f64;
+  --station-edge-soft: #665c54;
+  --station-equipment-fill: #3c3836;
+  --station-equipment-stroke: #665c54;
+  --station-housing-top: #665c54;
+  --station-housing-side: #504945;
+  --station-housing-end: #3c3836;
+  --station-metal: #7c6f64;
+  --station-metal-light: #928374;
+  --station-metal-dark: #665c54;
+  --station-fitting: #458588;
+  --station-hopper-body: #3c3836;
+  --station-hopper-stroke: #7c6f64;
+  --station-hopper-fill: #458588;
+  --station-hopper-loader: #665c54;
+  --station-receiver: #d65d0e;
+  --station-receiver-edge: #fe8019;
+  --station-hose-clear: rgba(235, 219, 178, 0.18);
+  --station-hose-edge: rgba(235, 219, 178, 0.52);
+  --station-hose-spiral: #8ec07c;
+  --station-hose-glint: rgba(235, 219, 178, 0.42);
+  --station-hose-empty: rgba(235, 219, 178, 0.04);
+
+  --station-layer-outside: #83a598;
+  --station-layer-subskin: #8ec07c;
+  --station-layer-core: #fabd2f;
+  --station-layer-inside: #d3869b;
+  --station-melt: #b57614;
+  --station-bubble: rgba(131, 165, 152, 0.16);
+  --station-bubble-edge: #83a598;
+  --station-frost: #8ec07c;
+  --station-film: #458588;
+  --station-batch: #928374;
+
+  --station-timeline-rail: #665c54;
+  --station-timeline-current: #ebdbb2;
+  --station-timeline-upcoming: #a89984;
+  --station-timeline-transition: #fabd2f;
+  --station-timeline-marker: #83a598;
+  --station-timeline-label: #ebdbb2;
+  --station-timeline-muted: #d5c4a1;
+
+  --station-shadow-pop: 0 10px 28px rgba(0, 0, 0, 0.48);
+  --station-qr-surface: #ffffff;
+}

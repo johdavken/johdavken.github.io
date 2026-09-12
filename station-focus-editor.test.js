@@ -1879,8 +1879,8 @@ test("the drag's marks are styled from the theme's tokens, with the hand's curso
   assert.match(rule(".station-editor__item.is-movable"), /cursor:\s*grab;/);
   assert.match(rule(".station-editor__list.is-moving"), /cursor:\s*grabbing;/);
   assert.match(rule(".station-editor__list.is-moving"), /user-select:\s*none;/);
-  assert.match(rule(".station-editor__item.is-dragging"), /var\(--station-surface-raised\)/);
-  assert.match(rule(".station-editor__item.is-drop-target"), /var\(--station-accent-soft\)/);
+  assert.match(rule(".station-editor__item.is-dragging"), /var\(--station-surface-hover\)/);
+  assert.match(rule(".station-editor__item.is-drop-target"), /var\(--station-selection\)/);
   assert.match(rule(".station-editor__item.is-drop-target"), /var\(--station-accent\)/);
   for (const name of [".station-editor__item.is-dragging", ".station-editor__item.is-drop-target"]) {
     assert.doesNotMatch(rule(name), /#[0-9a-f]{3,8}\b|rgb\(/i, `${name} hard-codes a colour`);
