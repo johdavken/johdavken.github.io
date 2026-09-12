@@ -18,7 +18,7 @@
        station-isolation.test.js enforces this in both directions. -->
   <link rel="stylesheet" href="styles/tokens.css?v=0.7.0">
   <link rel="stylesheet" href="styles/base.css?v=0.3.1">
-  <link rel="stylesheet" href="styles/shell.css?v=0.2.2">
+  <link rel="stylesheet" href="styles/shell.css?v=0.3.0">
   <link rel="stylesheet" href="styles/components/machine.css?v=0.4.0">
   <link rel="stylesheet" href="styles/components/hopper.css?v=0.8.1">
   <link rel="stylesheet" href="styles/components/layer-bank.css?v=0.12.0">
@@ -26,6 +26,7 @@
   <link rel="stylesheet" href="styles/components/inspector.css?v=0.3.0">
   <link rel="stylesheet" href="styles/components/recipe-strip.css?v=0.1.0">
   <link rel="stylesheet" href="styles/components/rundown.css?v=0.1.0">
+  <link rel="stylesheet" href="styles/components/sync-console.css?v=0.1.0">
   <!-- Development-only review controls (?transition=debug). Harness only. -->
   <link rel="stylesheet" href="styles/components/dev.css?v=0.1.0">
 
@@ -52,6 +53,10 @@
        the application host does; nothing connects to it here, so Station falls
        back to the demo configurations. That is the fallback working. -->
   <script src="../station-state-bridge.js?v=0.4.0" defer></script>
+  <!-- The line connection bridge: the application's RT Sync state and
+       actions as Station may see them. Nothing connects a producer on this
+       page, so the line console stays hidden here. -->
+  <script src="../station-connection-bridge.js?v=0.1.0" defer></script>
 
   <!-- Station's own layer, in the same order the application host loads it. -->
   <script src="station-line-model.js?v=0.1.0" defer></script>
@@ -64,7 +69,8 @@
   <script src="station-render.js?v=0.7.0" defer></script>
   <script src="station-transition.js?v=0.1.0" defer></script>
   <script src="station-focus-editor.js?v=0.4.1" defer></script>
-  <script src="station-shell.js?v=0.1.0" defer></script>
+  <script src="station-shell.js?v=0.2.0" defer></script>
+  <script src="station-sync-console.js?v=0.1.0" defer></script>
   <script src="station-demo-lines.js?v=0.3.2" defer></script>
   <script src="station-source.js?v=0.4.0" defer></script>
   <!-- Development-only extruder study (?lab=extruder). Loaded by this harness
@@ -74,7 +80,7 @@
   <!-- Development-only transition review (?transition=debug). Harness only,
        like the lab: never loaded by station-host.js. -->
   <script src="station-transition-dev.js?v=0.1.0" defer></script>
-  <script src="station.js?v=0.9.2" defer></script>
+  <script src="station.js?v=0.10.0" defer></script>
 </head>
 <body>
 

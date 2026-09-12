@@ -16,7 +16,7 @@ test("RT Sync refresh is removed from the footer", () => {
 
 test("the RT Sync panel retains its reconnect action", () => {
   assert.match(index, /id="lineSyncRetryBtn"/);
-  assert.match(app, /const reconnectRtSync\s*=\s*\(\)=>runLineSyncAction\(\(\)=>/);
+  assert.match(app, /const reconnectRtSync\s*=\s*\(\)=>runLineSyncAction\(refreshRtSyncAction, "refresh"\);/);
   assert.match(app, /\$\("lineSyncRetryBtn"\)\?\.addEventListener\("click",reconnectRtSync\);/);
 });
 

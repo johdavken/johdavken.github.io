@@ -60,10 +60,12 @@ test("it runs the same action as the existing retry buttons, not a new path into
   // reconnectRtSync -> refreshSelected() when a line is selected, retry()
   // otherwise. Reusing it keeps one definition of what "refresh" means.
   assert.match(app, /\$\("lineSyncRefreshStatusBtn"\)\?\.addEventListener\("click",reconnectRtSync\);/);
-  assert.match(app, /const reconnectRtSync = \(\)=>runLineSyncAction\(\(\)=>[\s\S]*?lineSync\.refreshSelected\(\)[\s\S]*?: lineSync\.retry\(\)/);
-  // No second call site inventing its own reconcile.
+  assert.match(app, /const refreshRtSyncAction = \(\)=>lineSync\.getState\(\)\.selectedWorkspaceId\s*\?\s*lineSync\.refreshSelected\(\)\s*:\s*lineSync\.retry\(\);/);
+  assert.match(app, /const reconnectRtSync = \(\)=>runLineSyncAction\(refreshRtSyncAction, "refresh"\);/);
+  // No second call site inventing its own reconcile - the Station line
+  // console is handed refreshRtSyncAction itself, not a copy of it.
   const calls = app.match(/lineSync\.refreshSelected\(\)/g) || [];
-  assert.ok(calls.length <= 2, `refreshSelected() has ${calls.length} call sites - expected the setup button and reconnectRtSync only`);
+  assert.ok(calls.length <= 2, `refreshSelected() has ${calls.length} call sites - expected the setup button and refreshRtSyncAction only`);
 });
 
 test("it is disabled while a sync action is already running, like the other two", () => {

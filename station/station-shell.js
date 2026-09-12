@@ -30,7 +30,7 @@
 
   /* Every mount point the boot file looks for. Named here so the shell and
    * the code that fills it cannot disagree about what exists. */
-  const MOUNTS = Object.freeze(["nav", "machine", "recipe-strip", "inspector", "status"]);
+  const MOUNTS = Object.freeze(["nav", "machine", "recipe-strip", "inspector", "status", "connection"]);
 
   function element(doc, name, className, attributes) {
     const node = doc.createElement(name);
@@ -71,6 +71,10 @@
     header.appendChild(text(doc, "h1", "station-header__title", "Station"));
     const tags = Array.isArray(settings.tags) ? settings.tags : ["Experimental"];
     for (const tag of tags) header.appendChild(text(doc, "span", "station-header__tag", tag));
+    /* The line console's slot, at the header's far end: the one place the
+     * connection is shown, filled by station-sync-console.js when the
+     * application publishes a connection and left empty otherwise. */
+    header.appendChild(element(doc, "div", "station-header__connection", { "data-station-mount": "connection" }));
     shell.appendChild(header);
 
     const sidebar = element(doc, "nav", "station-sidebar", { "aria-label": "Line configuration" });

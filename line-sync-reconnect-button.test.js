@@ -7,19 +7,23 @@ const fs = require("node:fs");
 const app = fs.readFileSync("app.js", "utf8");
 const cloudSync = fs.readFileSync("cloud-sync.js", "utf8");
 
+// The one definition of what "refresh" means: the action the Reconnect/
+// Refresh buttons run through runLineSyncAction, and the same action the
+// Station line console is handed (station-connection-bridge.js).
 function handlerBody(marker){
   const start = app.indexOf(marker);
   assert.notEqual(start, -1, `Expected to find ${marker}`);
-  const end = app.indexOf("));", start) + 3;
+  const end = app.indexOf("lineSync.retry();", start) + "lineSync.retry();".length;
   return app.slice(start, end);
 }
 
-const retryHandler = handlerBody("const reconnectRtSync =");
+const retryHandler = handlerBody("const refreshRtSyncAction =");
 
 test("the Reconnect/Connect-retry button uses refreshSelected() whenever a line is selected, on both desktop and mobile", () => {
   assert.doesNotMatch(retryHandler, /matchMedia\("\(max-width: 900px\)"\)/,
     "the fix removes the mobile-only gate - desktop previously fell through to retry() even when a line was selected");
   assert.match(retryHandler, /lineSync\.getState\(\)\.selectedWorkspaceId\s*\?\s*lineSync\.refreshSelected\(\)\s*:\s*lineSync\.retry\(\)/);
+  assert.match(app, /const reconnectRtSync = \(\)=>runLineSyncAction\(refreshRtSyncAction, "refresh"\);/);
   assert.match(app, /\$\("lineSyncRetryBtn"\)\?\.addEventListener\("click",reconnectRtSync\);/);
   assert.match(app, /\$\("lineSyncRetryMobileBtn"\)\?\.addEventListener\("click",reconnectRtSync\);/);
 });

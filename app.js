@@ -144,14 +144,23 @@
   // them. The handle is the only thing that can disconnect the executor.
   const stationCommands = window.PolynStationCommandBridge || null;
   const stationCommandContract = window.PolynStationCommandContract || null;
+  // The line connection as Station may see it, and the RT Sync actions it
+  // may ask for - the same closures the floor UI's own buttons call. Optional
+  // like the other two; the handle is the only thing that can publish.
+  const stationConnection = window.PolynStationConnectionBridge || null;
   let stationCommandHandle = null;
   let stationBridgeHandle = null;
+  let stationConnectionHandle = null;
   const { parseChangeoverDate, formatTime, formatTimelineStart, isChangeoverStale } = window.PolynScheduling;
   const fmtTime = (date, baseDate) => formatTime(date, baseDate, state.timeFormat);
   const { writeJson } = window.PolynStorage;
   let lineSync = null;
   let lineSyncActionInFlight = false;
   let lineSyncBusyAction = "";
+  // The message the most recent failed RT Sync action produced, kept so a
+  // second presentation (Station) can report the same failure the floor UI
+  // wrote into its own panel, without reading it back out of the DOM.
+  let lastLineSyncErrorMessage = "";
   let lastRenderedLinkCodeQr = "";
   let pendingQrJoinCode = "";
   let rtSyncLinkHandlingReady = false;
@@ -9232,6 +9241,9 @@
     const join = $("lineSyncJoinBtn");
     if (join) join.textContent = busy && action === "join" ? "Joining…" : "Join RT Sync";
     applyLineSyncActionAvailability();
+    // Station reads busy from the connection descriptor to hold its own
+    // controls while an action runs; the flag changes here and nowhere else.
+    stationConnectionHandle?.publish();
   }
 
   function formatLineSyncTimestamp(value){
@@ -9269,17 +9281,30 @@
     window.history.replaceState(window.history.state, document.title, `${url.pathname}${url.search}${url.hash}`);
   }
 
+  // The one QR drawing in the application: the join link for a code, as an
+  // SVG string, or "" when it cannot be drawn. Both the RT Sync panel and
+  // the Station line console draw from here, so there is one link format
+  // and one set of drawing options.
+  async function linkCodeQrSvg(code){
+    const url = rtSyncLinkUrl(code);
+    if (!url) return "";
+    try{
+      const svg = await window.QRCode?.toString?.(url, {
+        type: "svg", errorCorrectionLevel: "M", margin: 4,
+        color: { dark: "#111111", light: "#ffffff" }
+      });
+      return typeof svg === "string" ? svg : "";
+    }catch{ return ""; }
+  }
+
   async function renderLinkCodeQr(code){
     const host = $("lineSyncQrCode");
     if (!host || !code || code === lastRenderedLinkCodeQr) return;
     lastRenderedLinkCodeQr = code;
-    try{
-      const svg = await window.QRCode?.toString?.(rtSyncLinkUrl(code), {
-        type: "svg", errorCorrectionLevel: "M", margin: 4,
-        color: { dark: "#111111", light: "#ffffff" }
-      });
-      if (code === lastRenderedLinkCodeQr && svg) host.innerHTML = svg;
-    }catch{
+    const svg = await linkCodeQrSvg(code);
+    if (code !== lastRenderedLinkCodeQr) return;
+    if (svg) host.innerHTML = svg;
+    else {
       lastRenderedLinkCodeQr = "";
       host.replaceChildren();
     }
@@ -9351,9 +9376,11 @@
   async function runLineSyncAction(action, actionName = ""){
     if (lineSyncActionInFlight) return;
     setLineSyncActionBusy(true, actionName);
+    lastLineSyncErrorMessage = "";
     try{ await action(); return true; }
     catch(error){
       const message = lineSyncErrorMessage(error);
+      lastLineSyncErrorMessage = message;
       const target = $("lineSyncMessage");
       if (target) target.textContent = message;
       renderMobileLineSyncStatus(lineSync?.getState?.() || {}, { status:"Error", message });
@@ -9625,6 +9652,11 @@
       syncNativeTimelineAlarms(lastTimelineFlat, lastTimelineChangeoverDate);
     }
     renderDashboard();
+    // Station's line console: every RT Sync state change already arrives
+    // here (cloud-sync's onStateChange), so this is the one place the
+    // connection descriptor is announced. Last, after the derived layer
+    // count and naming have been brought into line with the workspace.
+    stationConnectionHandle?.publish();
   }
 
   function openRtSyncJoinFromUrl(urlValue = window.location.href, requireAppLinkOrigin = false){
@@ -10065,6 +10097,45 @@
     }catch(error){ stationBridgeHandle = null; }
   }
 
+  /* Register this application as the source of Station's line connection
+   * console, and hand it the RT Sync actions it may ask for.
+   *
+   * The actions are the floor UI's own closures, passed in by setupLineSync
+   * once they exist: Station's Refresh IS the status bar's refresh, Station's
+   * Add Device IS the panel's Generate Link Code. Nothing here reaches RT
+   * Sync by a second path, and nothing Station can ask for skips
+   * runLineSyncAction's in-flight guard or its error reporting.
+   *
+   * The descriptor is projected by the bridge's own allow-list (project()),
+   * from cloud-sync's public state plus the line number PolynLineIdentity
+   * resolves for the selected workspace - the same resolver the state bridge
+   * and the recipe scanners use, so there is one answer to "which line".
+   *
+   * Optional and failure-tolerant like the other two bridges. */
+  function connectStationConnection(actions){
+    if (!stationConnection || stationConnectionHandle) return;
+    try{
+      stationConnectionHandle = stationConnection.connect({
+        read: ()=>{
+          const syncState = lineSync?.getState?.() || null;
+          const workspace = syncState?.selectedWorkspaceId && syncState.selectedWorkspace?.id === syncState.selectedWorkspaceId
+            ? syncState.selectedWorkspace
+            : null;
+          const lineNumber = window.PolynLineIdentity?.workspaceLineNumber?.(workspace) ?? null;
+          const configuration = lineNumber !== null ? window.PolynLineIdentity?.getLineConfiguration?.(lineNumber) : null;
+          return stationConnection.project(syncState, {
+            lineNumber,
+            displayName: configuration?.displayName || "",
+            busy: lineSyncActionInFlight,
+            busyAction: lineSyncBusyAction,
+            joinUrl: syncState?.generatedCode ? rtSyncLinkUrl(syncState.generatedCode) : ""
+          });
+        },
+        actions
+      });
+    }catch(error){ stationConnectionHandle = null; }
+  }
+
   function setupLineSync(){
     if (!window.PolynCloudSync || !window.PolynSyncStorage) return;
     lineSync = window.PolynCloudSync.create({
@@ -10133,7 +10204,8 @@
       if (event.target.value !== upper) event.target.value = upper;
       updateLineSyncJoinAvailability();
     });
-    const generateLinkCode = ()=>runLineSyncAction(()=>lineSync.generateLinkCode(), "generate-code");
+    const generateLinkCodeAction = ()=>lineSync.generateLinkCode();
+    const generateLinkCode = ()=>runLineSyncAction(generateLinkCodeAction, "generate-code");
     $("lineSyncGenerateCodeBtn")?.addEventListener("click",generateLinkCode);
     $("lineSyncCopyCodeBtn")?.addEventListener("click",async()=>{
       const code = lineSync.getState().generatedCode || "";
@@ -10144,25 +10216,45 @@
         window.setTimeout(()=>{ if (button) button.textContent = "Copy Code"; }, 1600);
       }
     });
-    const reconnectRtSync = ()=>runLineSyncAction(()=>
-      // refreshSelected() clears the locally-disconnected flag before
-      // reconciling, which retry() deliberately doesn't (retry() also runs
-      // automatically on tab visibility change, where silently reconnecting
-      // a line the operator explicitly disconnected would be wrong). This
-      // button is an explicit "reconnect" action on both desktop and
-      // mobile, so it must always use refreshSelected() when a line is
-      // selected - previously only mobile did, leaving desktop with no
-      // working way back into a disconnected line.
-      lineSync.getState().selectedWorkspaceId
-        ? lineSync.refreshSelected()
-        : lineSync.retry()
-    , "refresh");
+    // refreshSelected() clears the locally-disconnected flag before
+    // reconciling, which retry() deliberately doesn't (retry() also runs
+    // automatically on tab visibility change, where silently reconnecting
+    // a line the operator explicitly disconnected would be wrong). The
+    // buttons below are an explicit "reconnect" action on both desktop and
+    // mobile, so they must always use refreshSelected() when a line is
+    // selected - previously only mobile did, leaving desktop with no
+    // working way back into a disconnected line.
+    const refreshRtSyncAction = ()=>lineSync.getState().selectedWorkspaceId
+      ? lineSync.refreshSelected()
+      : lineSync.retry();
+    const reconnectRtSync = ()=>runLineSyncAction(refreshRtSyncAction, "refresh");
     $("lineSyncRetryBtn")?.addEventListener("click",reconnectRtSync);
     $("lineSyncRetryMobileBtn")?.addEventListener("click",reconnectRtSync);
     // Status-bar refresh: the desktop's only way to force a sync while the
     // connection looks healthy. Deliberately the same action as the other two
     // rather than a new code path into RT Sync.
     $("lineSyncRefreshStatusBtn")?.addEventListener("click",reconnectRtSync);
+    // Station's line console asks for these same two closures, wrapped so
+    // the answer carries the floor UI's own failure text. A refresh and a
+    // reconnect are one application action (refreshSelected clears the
+    // local-disconnect flag before reconciling); Station offers whichever
+    // name fits the state it reads, and both arrive here.
+    const stationSyncAction = async (run, name)=>{
+      if (lineSyncActionInFlight) return { ok:false, code:"busy", message:"Another RT Sync action is still running." };
+      const ok = await runLineSyncAction(run, name);
+      return ok ? { ok:true } : { ok:false, code:"failed", message: lastLineSyncErrorMessage || "RT Sync request failed." };
+    };
+    connectStationConnection({
+      refresh: ()=>stationSyncAction(refreshRtSyncAction, "refresh"),
+      reconnect: ()=>stationSyncAction(refreshRtSyncAction, "refresh"),
+      generateJoinCode: ()=>stationSyncAction(generateLinkCodeAction, "generate-code"),
+      renderJoinQr: async ()=>{
+        const code = lineSync.getState().generatedCode || "";
+        if (!code) return { ok:false, code:"failed", message:"No join code has been generated." };
+        const svg = await linkCodeQrSvg(code);
+        return svg ? { ok:true, code, svg } : { ok:false, code:"failed", message:"The QR code could not be drawn." };
+      }
+    });
     $("lineSyncLeaveBtn")?.addEventListener("click",()=>{
       if (confirm("Leave RT Sync on this device? Local Resin.Tools data will remain.")) {
         void runLineSyncAction(()=>lineSync.leaveWorkspace(), "leave");

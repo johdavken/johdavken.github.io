@@ -56,7 +56,8 @@
     "station/styles/components/focus-editor.css",
     "station/styles/components/inspector.css",
     "station/styles/components/recipe-strip.css",
-    "station/styles/components/rundown.css"
+    "station/styles/components/rundown.css",
+    "station/styles/components/sync-console.css"
   ];
 
   const SCRIPTS = [
@@ -71,12 +72,13 @@
     "station/station-transition.js",
     "station/station-focus-editor.js",
     "station/station-shell.js",
+    "station/station-sync-console.js",
     "station/station-demo-lines.js",
     "station/station-source.js",
     "station/station.js"
   ];
 
-  const VERSION = "0.17.0";
+  const VERSION = "0.18.0";
 
   function requested() {
     try {

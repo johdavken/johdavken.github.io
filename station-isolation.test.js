@@ -25,7 +25,7 @@ const STATION_FILES = ["station-line-model.js", "station-render.js", "station.js
   "station-demo-lines.js", "station-source.js", "station-shell.js",
   "station-machine-layout.js", "station-machine-parts.js", "station-extruder-lab.js",
   "station-extruder-assets.js", "station-mixer-assets.js", "station-transition.js",
-  "station-focus-editor.js"];
+  "station-focus-editor.js", "station-sync-console.js"];
 
 const stationHtml = fs.readFileSync(path.join(STATION, "station.html"), "utf8");
 const indexHtml = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
@@ -89,16 +89,24 @@ const allStationCss = stationStylesheets().map(file => ({
  *                                the grid's own mutation tails), and the
  *                                focused editor is the one Station file
  *                                that dispatches through it
+ *   station-connection-bridge.js the line connection: RT Sync's state as a
+ *                                projected descriptor (app.js publishes from
+ *                                its own sync render) and a letterbox for
+ *                                the four RT Sync actions Station may ask
+ *                                for, each an application closure; the line
+ *                                console is the one Station file that
+ *                                requests through it
  *
- * All are inert on a normal load: the state bridge only bumps a revision
- * nobody reads, the host returns before touching the document, and the
- * command pair is never called by the floor UI.
+ * All are inert on a normal load: the bridges only bump a revision nobody
+ * reads, the host returns before touching the document, and the command
+ * pair and the connection letterbox are never called by the floor UI.
  */
 const SHARED_BRIDGE = "station-state-bridge.js";
 const STATION_HOST = "station-host.js";
 const COMMAND_CONTRACT = "station-command-contract.js";
 const COMMAND_BRIDGE = "station-command-bridge.js";
-const INDEX_STATION_ASSETS = [SHARED_BRIDGE, STATION_HOST, COMMAND_CONTRACT, COMMAND_BRIDGE].sort();
+const CONNECTION_BRIDGE = "station-connection-bridge.js";
+const INDEX_STATION_ASSETS = [SHARED_BRIDGE, STATION_HOST, COMMAND_CONTRACT, COMMAND_BRIDGE, CONNECTION_BRIDGE].sort();
 
 /* The one Station stylesheet permitted to name an application selector, use
  * !important, or style a bare element: hiding the application's shell is
@@ -158,6 +166,99 @@ test("the command pair touches no DOM and reaches nothing outside itself either"
     assert.ok(page.indexOf(COMMAND_CONTRACT) < page.indexOf(COMMAND_BRIDGE));
   }
   assert.ok(indexHtml.indexOf(COMMAND_BRIDGE) < indexHtml.indexOf('src="app.js'));
+});
+
+/* ----------------------------------------------------------------------
+ *   The connection bridge is a window and a letterbox, never a sync client
+ * -------------------------------------------------------------------- */
+
+/* What RT Sync is made of, by name. None of it may appear in a Station
+ * file or in the connection bridge: not the client library, not a channel,
+ * not a table, not an RPC, not the storage keys, not the outbox, and not
+ * the application's own sync module or its other narrow bridges. */
+const RT_SYNC_INTERNALS = [
+  /supabase/i, /realtime/i, /\.channel\s*\(/, /postgres_changes/, /\.rpc\s*\(/, /\.from\s*\(\s*["'`]/,
+  /line_workspaces?\b/, /line_workspace_members/, /active_jobs/, /saved_setups/, /workspace_configurations/,
+  /update_active_job/, /generate_link_code/, /join_workspace/,
+  /PolynCloudSync/, /PolynSyncStorage/, /PolynRtSyncBridge/, /PolynRecipeScanBridge/, /PolynBetaAccessBridge/,
+  /polyn\.lineSync/, /outbox/i, /access_token/, /accessToken/, /getSession/, /signInAnonymously/,
+  /localStorage/, /sessionStorage/, /\bfetch\s*\(/, /XMLHttpRequest/, /WebSocket/, /EventSource/,
+  /location\.reload/, /\.reload\s*\(/
+];
+
+test("the connection bridge touches no DOM and names no RT Sync internal", () => {
+  const source = fs.readFileSync(path.join(ROOT, CONNECTION_BRIDGE), "utf8");
+  for (const pattern of [/\bdocument\b/, /addEventListener/, ...RT_SYNC_INTERNALS]) {
+    assert.doesNotMatch(source, pattern, `${CONNECTION_BRIDGE} reaches outside itself (matched ${pattern})`);
+  }
+  // Loaded after the state bridge it is built on, and before app.js, which
+  // connects the producer - on both pages.
+  for (const page of [indexHtml, stationHtml]) {
+    assert.ok(page.indexOf(SHARED_BRIDGE) < page.indexOf(CONNECTION_BRIDGE), "the connection bridge loads before the state bridge it requires");
+  }
+  assert.ok(indexHtml.indexOf(CONNECTION_BRIDGE) < indexHtml.indexOf('src="app.js'));
+});
+
+test("the connection bridge gives consumers no way to publish, and its action vocabulary is closed", () => {
+  const bridge = require("./station-connection-bridge.js");
+  for (const forbidden of ["publish", "disconnect", "setStatus", "setState", "state"]) {
+    assert.equal(bridge[forbidden], undefined, `the module surface exposes ${forbidden}`);
+  }
+  assert.ok(Object.isFrozen(bridge));
+  assert.ok(Object.isFrozen(bridge.ACTIONS));
+  assert.deepEqual([...bridge.ACTIONS], ["refresh", "reconnect", "generateJoinCode", "renderJoinQr"],
+    "a new RT Sync action Station may ask for arrives as an edit to this list");
+});
+
+test("no Station file names an RT Sync internal, subscribes to anything but the bridges, or reloads the page", () => {
+  for (const file of STATION_FILES) {
+    const source = fs.readFileSync(path.join(STATION, file), "utf8");
+    for (const pattern of RT_SYNC_INTERNALS) {
+      assert.doesNotMatch(source, pattern, `${file} reaches into RT Sync (matched ${pattern})`);
+    }
+    // The only subscriptions Station holds are to the two windows the
+    // application publishes through: the state bridge and the connection
+    // bridge. Anything else would be a second live feed.
+    for (const match of source.matchAll(/(\w+)\.subscribe\s*\(/g)) {
+      assert.ok(["bridge", "connection"].includes(match[1]),
+        `${file} subscribes to "${match[1]}", which is neither bridge`);
+    }
+  }
+});
+
+test("exactly one Station file requests a line-connection action - the line console - and only through the bridge it is handed", () => {
+  const REQUESTS = ["station-sync-console.js"];
+  for (const file of STATION_FILES) {
+    const source = fs.readFileSync(path.join(STATION, file), "utf8");
+    if (REQUESTS.includes(file)) {
+      assert.match(source, /connection\.request\s*\(/, `${file} no longer requests through the bridge it is handed`);
+      assert.doesNotMatch(source, /PolynStationConnectionBridge/, `${file} reaches for the global bridge instead of the one it is handed`);
+    } else {
+      // stage.request() is the transition controller's own verb; what is
+      // forbidden here is a request on the connection bridge, or one that
+      // names an action.
+      assert.doesNotMatch(source, /connection\.request|\.request\s*\(\s*["'`]/, `${file} requests a line-connection action`);
+    }
+    // The console holds no workspace choice: no selector, no switch, no
+    // second remembered line.
+    assert.doesNotMatch(source, /selectWorkspace|joinWorkspace|createWorkspace|leaveWorkspace|workspaceSelect|selectedWorkspaceId/,
+      `${file} reaches for a workspace selection`);
+  }
+});
+
+test("the application's use of the connection bridge is one connect and two publish sites - the sync render and the busy flag", () => {
+  const app = fs.readFileSync(path.join(ROOT, "app.js"), "utf8");
+  assert.equal((app.match(/stationConnection\.connect\s*\(/g) || []).length, 1);
+  const publishes = [...app.matchAll(/stationConnectionHandle\?\.publish\(\)/g)].map(match => match.index);
+  assert.equal(publishes.length, 2, "the connection descriptor is announced from exactly two places");
+  const renderLineSync = app.slice(app.indexOf("function renderLineSync(syncState){"), app.indexOf("function openRtSyncJoinFromUrl("));
+  const setBusy = app.slice(app.indexOf("function setLineSyncActionBusy(busy, action = \"\"){"), app.indexOf("function formatLineSyncTimestamp("));
+  assert.match(renderLineSync, /stationConnectionHandle\?\.publish\(\)/, "one publish is the sync state render");
+  assert.match(setBusy, /stationConnectionHandle\?\.publish\(\)/, "the other is the in-flight flag");
+  // The projection is the bridge's allow-list, called on cloud-sync's public
+  // state; the sync module itself is never handed over.
+  assert.match(app, /stationConnection\.project\(syncState,/);
+  assert.doesNotMatch(app, /connect\(\s*\{\s*read:\s*\(\s*\)\s*=>\s*lineSync\b/);
 });
 
 test("the station- class namespace is unused by the existing application", () => {

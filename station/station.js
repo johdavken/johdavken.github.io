@@ -33,7 +33,16 @@
   const shell = root.PolynStationShell;
   const transition = root.PolynStationTransition;
   const focusEditor = root.PolynStationFocusEditor;
+  const syncConsole = root.PolynStationSyncConsole || null;
   const bridge = root.PolynStationStateBridge || null;
+  /* The connection bridge (station-connection-bridge.js): the line this
+   * desktop is attached to and how the connection stands, as the
+   * application publishes it, plus the letterbox for Refresh and Add
+   * device. Consumed by the line console alone; this file only mounts
+   * that console and hands the bridge over. With no producer - the
+   * standalone harness - getStatus() is null and the console stays
+   * hidden, which is the truthful state: this page has no line. */
+  const connection = root.PolynStationConnectionBridge || null;
   /* The command bridge (station-command-bridge.js): the write direction's
    * transport. The application host connects an executor to it; the
    * standalone harness has none, so it answers "unavailable" there. This
@@ -894,6 +903,15 @@
     // which live state reaches Station - there is no polling and no second
     // subscription to anything else.
     bridge?.subscribe(() => { onPublish(); });
+
+    /* The line console, in the header's slot. It subscribes to the
+     * connection bridge itself and redraws from each descriptor; a
+     * connection change never touches the stage, and a job change never
+     * touches the console - the two bridges publish independently. */
+    if (syncConsole && mounts.connection) {
+      const lineConsole = syncConsole.create(doc, { connection });
+      mounts.connection.appendChild(lineConsole.element);
+    }
   }
 
   if (root.document) {

@@ -44,6 +44,15 @@
   letter-spacing: 0.01em;
 }
 
+/* The line console's slot: takes the header's spare width so the console
+ * sits at the far end, and lets the popover it opens overhang the stage. */
+.station-header__connection {
+  display: flex;
+  flex: 1 1 auto;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
 .station-header__tag {
   padding: 2px var(--station-space-2);
   border: var(--station-stroke) solid var(--station-border-strong);

@@ -1,0 +1,299 @@
+/* The line console (station-sync-console.js): the header's connection
+ * trigger and the small panel it opens.
+ *
+ * Subordinate by design. The trigger is one line of small caps in the
+ * header's spare width; the panel is a popover under it, sized for a device
+ * list and a QR code and no more. Nothing here claims a column of the shell.
+ */
+
+.station-sync {
+  position: relative;
+  margin-left: auto;
+  font-size: var(--station-text-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ---- Trigger ----
+ * The console's three buttons are written under .station-root on purpose:
+ * Station's base layer resets `.station-root button` (padding, border,
+ * radius) at (0,1,1), which a single class cannot out-rank, so a button
+ * that wants chrome has to say so at (0,2,0). */
+
+.station-root .station-sync__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--station-space-2);
+  padding: var(--station-space-1) var(--station-space-3);
+  border: var(--station-stroke) solid var(--station-border-strong);
+  border-radius: var(--station-radius-sm);
+  color: var(--station-text-muted);
+  white-space: nowrap;
+}
+
+.station-sync.is-open > .station-sync__trigger {
+  background: var(--station-accent-soft);
+  border-color: var(--station-accent);
+  color: var(--station-text);
+}
+
+.station-sync__line {
+  color: var(--station-text);
+  font-weight: 600;
+}
+
+.station-sync__sep {
+  color: var(--station-text-faint);
+}
+
+/* The state dot: one colour per connection state, from the state tokens.
+ * The same dot is drawn in the trigger and at the top of the panel, so the
+ * two cannot disagree. Unknown states show the neutral dot. */
+.station-sync__dot {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--station-text-faint);
+}
+
+.station-sync[data-state="synced"] .station-sync__dot {
+  background: var(--station-tracking);
+}
+
+.station-sync[data-state="syncing"] .station-sync__dot,
+.station-sync[data-state="connecting"] .station-sync__dot {
+  background: var(--station-accent);
+}
+
+.station-sync[data-state="pending"] .station-sync__dot,
+.station-sync[data-state="offline"] .station-sync__dot,
+.station-sync[data-state="conflict"] .station-sync__dot {
+  background: var(--station-warning);
+}
+
+.station-sync[data-state="error"] .station-sync__dot {
+  background: var(--station-danger);
+}
+
+.station-sync[data-state="offline"] .station-sync__state,
+.station-sync[data-state="conflict"] .station-sync__state,
+.station-sync[data-state="pending"] .station-sync__state {
+  color: var(--station-warning);
+}
+
+.station-sync[data-state="error"] .station-sync__state {
+  color: var(--station-danger);
+}
+
+/* ---- Panel ---- */
+
+.station-sync__panel {
+  position: absolute;
+  top: calc(100% + var(--station-space-2));
+  right: 0;
+  z-index: 20;
+  width: 360px;
+  max-height: calc(100vh - var(--station-header-height) - var(--station-space-5));
+  padding: var(--station-space-4);
+  overflow-y: auto;
+  background: var(--station-surface-raised);
+  border: var(--station-stroke) solid var(--station-border-strong);
+  border-radius: var(--station-radius);
+  box-shadow: var(--station-shadow-pop);
+  color: var(--station-text);
+  font-size: var(--station-text-sm);
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.station-sync__head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--station-space-2);
+  margin-bottom: var(--station-space-3);
+  padding-bottom: var(--station-space-3);
+  border-bottom: var(--station-stroke) solid var(--station-border);
+}
+
+.station-sync__title {
+  margin: 0;
+  font-size: var(--station-text-lg);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.station-sync__subtitle {
+  grid-column: 1;
+  color: var(--station-text-faint);
+  font-size: var(--station-text-xs);
+}
+
+.station-root .station-sync__close {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  padding: var(--station-space-1) var(--station-space-3);
+  border: var(--station-stroke) solid var(--station-border-strong);
+  border-radius: var(--station-radius-sm);
+  color: var(--station-text-muted);
+  font-size: var(--station-text-xs);
+}
+
+.station-sync__status {
+  display: flex;
+  align-items: center;
+  gap: var(--station-space-2);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.station-sync__message {
+  margin-top: var(--station-space-1);
+  color: var(--station-text-muted);
+  line-height: var(--station-line-tight);
+}
+
+.station-sync__meta {
+  margin-top: var(--station-space-2);
+  color: var(--station-text-faint);
+  font-size: var(--station-text-xs);
+}
+
+/* ---- Actions ---- */
+
+.station-sync__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--station-space-2);
+  margin-top: var(--station-space-4);
+}
+
+.station-root .station-sync__action {
+  padding: var(--station-space-2) var(--station-space-3);
+  border: var(--station-stroke) solid var(--station-border-strong);
+  border-radius: var(--station-radius-sm);
+  color: var(--station-text);
+  font-size: var(--station-text-sm);
+  font-weight: 600;
+}
+
+.station-sync__action.is-primary {
+  background: var(--station-accent-soft);
+  border-color: var(--station-accent);
+}
+
+.station-sync__action:disabled {
+  color: var(--station-text-faint);
+  cursor: default;
+}
+
+.station-sync__note {
+  margin-top: var(--station-space-3);
+  padding: var(--station-space-2) var(--station-space-3);
+  border-left: 3px solid var(--station-border-strong);
+  color: var(--station-text-muted);
+  font-size: var(--station-text-xs);
+  line-height: var(--station-line-tight);
+}
+
+.station-sync__note[data-kind="error"] {
+  border-left-color: var(--station-danger);
+  color: var(--station-text);
+}
+
+/* ---- QR view ---- */
+
+.station-sync__qr {
+  margin-top: var(--station-space-4);
+  padding-top: var(--station-space-4);
+  border-top: var(--station-stroke) solid var(--station-border);
+  text-align: center;
+}
+
+.station-sync__heading {
+  margin: 0 0 var(--station-space-2);
+  color: var(--station-text-faint);
+  font-size: var(--station-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+/* The QR is drawn black on white by the application (it has to be, to
+ * scan); the white is the card it sits on, kept small and centred. */
+.station-sync__qr-image {
+  width: 200px;
+  margin: 0 auto;
+  padding: var(--station-space-2);
+  background: var(--station-text);
+  border-radius: var(--station-radius-sm);
+}
+
+.station-sync__qr-image > svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.station-sync__code {
+  margin-top: var(--station-space-3);
+  color: var(--station-accent);
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-xl);
+  font-weight: 600;
+  letter-spacing: 0.3em;
+}
+
+.station-sync__hint {
+  margin-top: var(--station-space-2);
+  color: var(--station-text-muted);
+  font-size: var(--station-text-xs);
+  line-height: var(--station-line-tight);
+  text-align: left;
+}
+
+.station-sync__qr > .station-sync__action {
+  margin-top: var(--station-space-3);
+}
+
+/* ---- Devices ---- */
+
+.station-sync__device-list {
+  margin-top: var(--station-space-4);
+  padding-top: var(--station-space-4);
+  border-top: var(--station-stroke) solid var(--station-border);
+}
+
+.station-sync__devices-items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--station-space-2);
+}
+
+.station-sync__device {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--station-space-2) var(--station-space-3);
+  background: var(--station-surface);
+  border: var(--station-stroke) solid var(--station-border);
+  border-radius: var(--station-radius-sm);
+}
+
+.station-sync__device.is-this-device {
+  border-color: var(--station-accent);
+}
+
+.station-sync__device-name {
+  font-weight: 600;
+}
+
+.station-sync__device-detail {
+  color: var(--station-text-faint);
+  font-size: var(--station-text-xs);
+}

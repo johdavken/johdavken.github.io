@@ -63,7 +63,7 @@ test("the manifest covers app.js and every Station runtime file index.html loads
   // The files whose staleness produced the symptom, named so the guard
   // cannot quietly stop covering them if the survey's pattern ever narrows.
   const manifest = readManifest("js");
-  for (const file of ["app.js", "station-host.js", "station-state-bridge.js", "station-command-contract.js", "station-command-bridge.js"]) {
+  for (const file of ["app.js", "station-host.js", "station-state-bridge.js", "station-command-contract.js", "station-command-bridge.js", "station-connection-bridge.js"]) {
     assert.ok(manifest[file], `${file} is not in script-cache-tags.json`);
     assert.ok(linkedScripts().some(r => r.file === file), `${file} is not loaded by index.html`);
   }
