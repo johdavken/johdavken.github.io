@@ -81,13 +81,6 @@
   stroke-width: var(--station-line-hairline);
 }
 
-.station-hopper__hose {
-  fill: none;
-  stroke: var(--station-edge);
-  stroke-width: var(--station-line-thin);
-  stroke-linecap: round;
-}
-
 /* ---------------------------------------------------------------------
  *   Material vessel
  * ------------------------------------------------------------------- */
@@ -111,8 +104,7 @@
   stroke-width: var(--station-line-thin);
 }
 
-.station-hopper__metal-face,
-.station-hopper__cone-face {
+.station-hopper__metal-face {
   fill: var(--station-hopper-metal-lit);
   opacity: 0.35;
 }
@@ -123,7 +115,6 @@
 }
 
 .station-hopper__metal-shadow,
-.station-hopper__cone-shadow,
 .station-hopper__receiver-shade {
   fill: var(--station-steel-dark);
   opacity: 0.3;
@@ -131,7 +122,7 @@
 
 .station-hopper__lid,
 .station-hopper__clamp,
-.station-hopper__outlet-collar {
+.station-hopper__outlet-flange {
   fill: var(--station-hopper-metal-lit);
   stroke: var(--station-edge);
   stroke-width: var(--station-line-hairline);
@@ -163,11 +154,42 @@
  *   Discharge
  * ------------------------------------------------------------------- */
 
-.station-hopper__cone-shape,
-.station-hopper__spout {
+/* The vessel ends in a flat plate; the flange under it is where the hose
+ * clamps on. Both are the vessel's own steel. */
+.station-hopper__bottom-plate {
   fill: var(--station-hopper-metal);
   stroke: var(--station-hopper-stroke);
   stroke-width: var(--station-line-thin);
+}
+
+/* The clear hose. The tube is mostly the stage showing through; its edge,
+ * the helix and one glint are what make it a hose and not a gap. */
+.station-hopper__hose {
+  fill: var(--station-hose-clear);
+  stroke: var(--station-hose-edge);
+  stroke-width: var(--station-line-hairline);
+}
+
+.station-hopper__hose-spiral,
+.station-hopper__hose-spiral-far {
+  fill: none;
+  stroke: var(--station-hose-spiral);
+  stroke-width: var(--station-line-hairline);
+  stroke-linecap: round;
+}
+
+.station-hopper__hose-spiral-far {
+  opacity: 0.35;
+}
+
+.station-hopper__hose-glint {
+  fill: var(--station-hose-glint);
+}
+
+.station-hopper__hose-end {
+  fill: var(--station-hose-clear);
+  stroke: var(--station-hose-edge);
+  stroke-width: var(--station-line-hairline);
 }
 
 /* ---------------------------------------------------------------------
@@ -276,7 +298,8 @@
   fill: var(--station-pump-off);
 }
 
-.station-hopper.is-pump-off .station-hopper__spout {
+.station-hopper.is-pump-off .station-hopper__hose,
+.station-hopper.is-pump-off .station-hopper__hose-end {
   stroke: var(--station-pump-off);
 }
 

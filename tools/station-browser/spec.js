@@ -75,7 +75,7 @@ const dispatchClick = (page, selector) => page.evaluate(sel => { document.queryS
 const hopperHitFailures = page => page.evaluate(() => {
   const failures = [];
   for (const hopper of document.querySelectorAll(".station-layer:not(.is-dimmed) .station-hopper")) {
-    for (const part of ["shell", "band", "port", "fill-valve", "valve-core", "cone-shape", "spout", "id", "pct", "receiver-cone"]) {
+    for (const part of ["shell", "band", "port", "fill-valve", "valve-core", "bottom-plate", "hose", "id", "pct", "receiver-cone"]) {
       const shape = hopper.querySelector(`.station-hopper__${part}`);
       const box = shape.getBoundingClientRect();
       const hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);

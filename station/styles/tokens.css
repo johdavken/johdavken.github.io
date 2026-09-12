@@ -66,6 +66,14 @@
    * actually is on the floor, and it makes the top of every hopper findable. */
   --station-receiver: #b9832f;
   --station-receiver-edge: #d0a255;
+  /* The clear spiral-reinforced hose under every hopper: a translucent tube
+   * over the dark stage, edged brighter than its body, ribbed in the pale
+   * mint of the embedded helix. The one piece of equipment that is not steel
+   * or amber, and it is meant to read as glass-clear, not as a colour. */
+  --station-hose-clear: rgba(226, 236, 244, 0.2);
+  --station-hose-edge: rgba(226, 236, 244, 0.55);
+  --station-hose-spiral: #a3d6c4;
+  --station-hose-glint: rgba(255, 255, 255, 0.4);
 
   /* ---- Layer identity ----
    * Accents only: a layer's colour appears on its label, its mixer agitator,

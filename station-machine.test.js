@@ -1244,6 +1244,51 @@ test("extreme profile heights are clamped so the layout cannot be broken", () =>
     "a fully clamped hopper collides with the layer header");
 });
 
+test("the discharge is a flat plate and a clear 3\" hose filling the old cone-and-spout span", () => {
+  const config = literal({ layerCount: 3, hopperCount: 3 });
+  const hopperState = { "A:0": { usableHeight: 20 }, "A:1": { usableHeight: 36 } };
+  for (const focusLayer of [null, "B"]) {
+    const options = { hopperState, focusLayer };
+    const layout = layoutFor(config, options);
+    const svg = stageFor(config, options);
+    for (const bank of layout.banks) {
+      const scale = layoutModule.unitsPerInch(layoutModule.DIMENSIONS) * bank.scale;
+      for (const geometry of bank.cluster.hoppers) {
+        // True diameter on the vessel's inch scale, whatever the body height.
+        assert.ok(Math.abs(geometry.hoseWidth - 3 * scale) < 1e-9);
+        const hopper = hoppersIn(svg).find(h => h.getAttribute("data-hopper") === geometry.id);
+        const parts = {};
+        walk(hopper, n => {
+          const cls = n.getAttribute("class");
+          if (cls && cls.startsWith("station-hopper__")) parts[cls] = parts[cls] || n;
+        });
+        for (const gone of ["station-hopper__cone-shape", "station-hopper__spout"]) {
+          assert.ok(!parts[gone], `${gone} should no longer be drawn`);
+        }
+        const plate = parts["station-hopper__bottom-plate"];
+        const hose = parts["station-hopper__hose"];
+        assert.ok(plate && hose, "flat plate and hose must both exist");
+        // The plate straddles the discharge line: the body ends flat, no cone.
+        const plateMid = Number(plate.getAttribute("y")) + Number(plate.getAttribute("height")) / 2;
+        assert.ok(Math.abs(plateMid - geometry.coneTop) < 0.01);
+        // The hose is centred, drawn at its diameter, and ends where the old
+        // spout ended so the caption below it does not move.
+        const hoseX = Number(hose.getAttribute("x"));
+        const hoseW = Number(hose.getAttribute("width"));
+        assert.ok(Math.abs(hoseW - geometry.hoseWidth) < 0.01);
+        assert.ok(Math.abs(hoseX + hoseW / 2 - (geometry.x + geometry.width / 2)) < 0.01);
+        assert.ok(Number(hose.getAttribute("y")) > geometry.coneTop);
+        const hoseEnd = Number(hose.getAttribute("y")) + Number(hose.getAttribute("height"));
+        assert.ok(Math.abs(hoseEnd - (geometry.spoutTop + geometry.spoutHeight)) < 0.01);
+        assert.ok(hoseEnd < geometry.captionTop);
+        // The helix is drawn, and drawn as a few paths, not one node per turn.
+        assert.ok(parts["station-hopper__hose-spiral"]);
+        assert.ok(parts["station-hopper__hose-spiral"].getAttribute("d").split("M").length > 4);
+      }
+    }
+  }
+});
+
 test("only the storage body scales - receiver, cone and feed keep their proportions", () => {
   const short = layoutFor(literal({ layerCount: 1, layerAPosition: null, hopperCount: 1 }),
     { hopperState: { "A:0": { usableHeight: 20 } } }).banks[0].cluster.hoppers[0];
@@ -1669,10 +1714,12 @@ test("the throat is the one thing between the machines: mixer discharge to extru
   }
   // And nothing else: no hose, no funnel, no adapter stack. (The mixer's
   // own air hose - a tone on the master's pneumatic stack - is the mixer,
-  // not a connection between the machines.)
+  // not a connection between the machines; and each hopper's clear discharge
+  // hose hangs under its own flat bottom, above the mixer, not between it
+  // and the extruder.)
   const classes = new Set();
   walk(svg, node => { for (const c of String(node.getAttribute("class") || "").split(/\s+/)) classes.add(c); });
-  const own = /^station-mixer__(face|seam)--hose$/;
+  const own = /^(station-mixer__(face|seam)--hose|station-hopper__hose(-[a-z-]+)?)$/;
   for (const banned of [...classes].filter(c => /hose|funnel|collector|adapter/.test(c) && !own.test(c))) assert.fail(`${banned} is back`);
 });
 

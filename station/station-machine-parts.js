@@ -277,26 +277,58 @@
     material.appendChild(fill);
     drawing.appendChild(material);
 
-    /* ---- Discharge ---- */
-    const cone = group(doc, "station-hopper__cone", "hopper-cone");
-    cone.appendChild(path("station-hopper__cone-shape",
-      `${arc(bottom)} L ${round(cx + w * 0.13)} ${round(geometry.spoutTop)} ` +
-      `L ${round(cx - w * 0.13)} ${round(geometry.spoutTop)} Z`));
-    cone.appendChild(path("station-hopper__cone-face",
-      `M ${round(x + w * 0.12)} ${round(bottom + rim)} L ${round(cx + w * 0.06)} ${round(bottom + rim)} ` +
-      `L ${round(cx)} ${round(geometry.spoutTop)} L ${round(cx - w * 0.13)} ${round(geometry.spoutTop)} Z`));
-    cone.appendChild(path("station-hopper__cone-shadow",
-      `M ${round(right - w * 0.06)} ${round(bottom)} L ${round(right - w * 0.28)} ${round(bottom + rim)} ` +
-      `L ${round(cx + w * 0.02)} ${round(geometry.spoutTop)} L ${round(cx + w * 0.13)} ${round(geometry.spoutTop)} Z`));
-    drawing.appendChild(cone);
+    /* ---- Discharge: flat bottom plate and a clear spiral hose ----
+     * On this floor the vessel shows no cone. It ends in a flat plate with an
+     * outlet flange, and a clear 3" spiral-reinforced hose carries the
+     * material down towards the mixer. The hose fills exactly the span the
+     * cone and spout used to (coneTop to the bottom of spoutHeight), so the
+     * caption and the bank's vertical rhythm do not move. Group names keep
+     * their roles: `cone` is the discharge hardware, `feed` is the line the
+     * material travels down, which pump-off tints. */
+    const plateHeight = rim * 0.8;
+    const collarHeight = rim * 0.7;
+    const hoseW = geometry.hoseWidth;
+    const hoseLeft = cx - hoseW / 2;
+    const hoseRight = cx + hoseW / 2;
+    const hoseTop = bottom + plateHeight / 2 + collarHeight;
+    const hoseBottom = geometry.spoutTop + geometry.spoutHeight;
+
+    const discharge = group(doc, "station-hopper__cone", "hopper-cone");
+    discharge.appendChild(node(doc, "rect", "station-hopper__bottom-plate", {
+      x: x - w * 0.02, y: bottom - plateHeight / 2, width: w * 1.04, height: plateHeight, rx: plateHeight / 2
+    }));
+    discharge.appendChild(node(doc, "rect", "station-hopper__outlet-flange", {
+      x: cx - hoseW * 0.75, y: bottom + plateHeight / 2, width: hoseW * 1.5, height: collarHeight, rx: collarHeight / 3
+    }));
+    drawing.appendChild(discharge);
 
     const feed = group(doc, "station-hopper__feed", "hopper-feed");
-    feed.appendChild(node(doc, "rect", "station-hopper__spout", {
-      x: x + w * 0.37, y: geometry.spoutTop, width: w * 0.26, height: geometry.spoutHeight
+    feed.appendChild(node(doc, "rect", "station-hopper__hose", {
+      x: hoseLeft, y: hoseTop, width: hoseW, height: Math.max(0, hoseBottom - hoseTop), rx: hoseW * 0.12
     }));
-    feed.appendChild(node(doc, "rect", "station-hopper__outlet-collar", {
-      x: cx - w * 0.18, y: geometry.spoutTop + geometry.spoutHeight * 0.68,
-      width: w * 0.36, height: geometry.spoutHeight * 0.2, rx: rim / 3
+    /* The embedded helix: one slanted, bowed rib per turn, drawn as one path
+     * for the near side and a fainter one for the far side, half a turn out
+     * of phase, which is what makes a flat tube read as a round one. */
+    const pitch = hoseW * 0.42;
+    const bow = hoseW * 0.22;
+    const slant = hoseW * 0.12;
+    const near = [];
+    const far = [];
+    for (let ribY = hoseTop + pitch * 0.7; ribY < hoseBottom - pitch * 0.3; ribY += pitch) {
+      near.push(`M ${round(hoseLeft)} ${round(ribY)} Q ${round(cx)} ${round(ribY + bow)} ${round(hoseRight)} ${round(ribY - slant)}`);
+      const farY = ribY - pitch / 2;
+      if (farY > hoseTop) {
+        far.push(`M ${round(hoseLeft)} ${round(farY)} Q ${round(cx)} ${round(farY - bow)} ${round(hoseRight)} ${round(farY + slant)}`);
+      }
+    }
+    if (far.length) feed.appendChild(node(doc, "path", "station-hopper__hose-spiral-far", { d: far.join(" ") }));
+    if (near.length) feed.appendChild(node(doc, "path", "station-hopper__hose-spiral", { d: near.join(" ") }));
+    feed.appendChild(node(doc, "rect", "station-hopper__hose-glint", {
+      x: cx - hoseW * 0.34, y: hoseTop + pitch * 0.3, width: hoseW * 0.1,
+      height: Math.max(0, hoseBottom - hoseTop - pitch * 0.6), rx: hoseW * 0.05
+    }));
+    feed.appendChild(node(doc, "ellipse", "station-hopper__hose-end", {
+      cx, cy: hoseBottom, rx: hoseW / 2, ry: hoseW * 0.16
     }));
     drawing.appendChild(feed);
 

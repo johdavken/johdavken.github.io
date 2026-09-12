@@ -58,9 +58,9 @@
     hopperWidth: 30,
     hopperGap: 6,
 
-    /* Bodies are BOTTOM-aligned. The discharge geometry - cone, spout - sits at
-     * one fixed height above the mixer for every hopper on the bank, because
-     * that is where they physically all discharge into it. A taller vessel
+    /* Bodies are BOTTOM-aligned. The discharge geometry - flat plate, hose -
+     * sits at one fixed height above the mixer for every hopper on the bank,
+     * because that is where they physically all discharge into it. A taller vessel
      * therefore grows upward, taking its receiver with it, which is exactly
      * how a bank of mixed-height hoppers looks on the floor. */
     vesselBottom: 320,
@@ -89,8 +89,15 @@
     receiverGap: 8,             // neck between the receiver cone and the vessel
     sourceGap: 9,               // the source label sits above the receiver
 
+    /* The discharge below the flat bottom plate. On this floor there is no
+     * visible cone: a clear spiral hose hangs from an outlet flange and fills
+     * the space down to the caption. The two lengths are kept under their
+     * original names - together they are the span the hose fills - so the
+     * bank's vertical rhythm is exactly what it was with the cone. */
     coneHeight: 26,
     spoutHeight: 12,
+    // The hose's outside diameter, drawn on the vessel's own inch scale.
+    hoseDiameterIn: 3,
     // The compact readout under each hopper: id, blend, and resin when wide.
     hopperCaptionGap: 12,
     hopperCaptionHeight: 34,
@@ -511,6 +518,8 @@
         vesselHeight,
         fillValveY,
         vesselSectionHeight: d.vesselSectionHeightIn * inchScale,
+        // The discharge hose, at true diameter against the vessel.
+        hoseWidth: d.hoseDiameterIn * inchScale,
         // Whether this hopper was profiled at all, so the drawing can be honest
         // about a default rather than implying a measurement.
         profiled: !!(runtime && Number(runtime.usableHeight) > 0),
