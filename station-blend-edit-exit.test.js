@@ -625,3 +625,34 @@ test("the Handbook's arrival, and Blend Edit inside it, move nothing above the f
   assert.match(shellCss, /\.station-handbook-slot \{[^}]*grid-area: machine;/);
   assert.doesNotMatch(shellCss, /grid-area: timeline;[^}]*handbook|handbook[^}]*grid-area: timeline/);
 });
+
+/* ----------------------------------------------------------------------
+ *   Rearranging on a card
+ * -------------------------------------------------------------------- */
+
+test("a row dragged on a Blend Edit card and dropped on another row is one moveHopper through the executor, within that layer, with the mode and every card left standing", () => {
+  const s = boot().enterBlendEdit();
+  s.clickAction("edit-all");
+  const card = s.cards().find(c => c.getAttribute("data-layer") === "B");
+  assert.ok(card, "layer B has a card");
+  const rows = card.querySelectorAll(".station-editor__item");
+  assert.ok(rows[1].classList.contains("is-movable"), "an assigned row on the card offers the drag");
+  const badge = id => rows.find(r => r.getAttribute("data-hopper") === id).querySelector(".station-editor__badge");
+  const list = card.querySelector(".station-editor__list");
+  s.doc.elementFromPoint = () => badge("B4");
+  const pointer = (type, target, extra) => makeEvent(type, Object.assign({ bubbles: true, pointerId: 1, pointerType: "mouse", button: 0, buttons: 1, clientX: 0, clientY: 0 }, extra || {}));
+  badge("B2").dispatchEvent(pointer("pointerdown", badge("B2"), { clientX: 10, clientY: 10 }));
+  list.dispatchEvent(pointer("pointermove", list, { clientX: 10, clientY: 60 }));
+  assert.ok(list.classList.contains("is-moving"), "the card's list is carrying a row");
+  list.dispatchEvent(pointer("pointerup", list, { clientX: 10, clientY: 60, buttons: 0 }));
+  assert.deepEqual(s.calls.map(c => [c.command, c.args, c.handbookOpen]),
+    [["moveHopper", { recipe: "current", layer: "B", index: 1, toLayer: "B", toIndex: 3 }, true]]);
+  assert.equal(s.modeOn(), true, "the mode is still on");
+  assert.equal(s.cards().length, 3, "every card is still drawn");
+  assert.equal(s.isHandbookOpen(), true);
+  assert.ok(!list.classList.contains("is-moving"), "the drag is over");
+  assert.doesNotMatch(s.status.textContent, /Blend Edit/, "nothing was refused");
+  // Done afterwards is what it was.
+  s.clickAction("done");
+  assertModeCleared(s);
+});

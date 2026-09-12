@@ -107,6 +107,7 @@ function fakeDocument() {
   doc.createElement = name => makeNode(name);
   doc.createElementNS = (ns, name) => makeNode(name, ns);
   Object.defineProperty(doc, "activeElement", { get: () => focused });
+  doc.removeEventListener = (type, fn) => { const list = doc.listeners[type] || []; const at = list.indexOf(fn); if (at >= 0) list.splice(at, 1); };
   return doc;
 }
 const allWith = (node, attribute, value) => { const out = []; walk(node, n => { if (n.getAttribute(attribute) === value) out.push(n); }); return out; };
@@ -315,7 +316,7 @@ function buildCard(bridge, options) {
   return { doc, card, committed, model: m, resolved: r };
 }
 
-test("the compact variant is the same editor with its header, source line and drag left out", () => {
+test("the compact variant is the same editor with its header and source line left out - and its drag kept", () => {
   const { bridge } = connectedBridge();
   const { card } = buildCard(bridge);
   assert.equal(card.variant, "compact");
@@ -327,13 +328,15 @@ test("the compact variant is the same editor with its header, source line and dr
   assert.equal(card.element.querySelector(".station-editor__list.is-moving"), null);
   const rows = card.element.querySelectorAll(".station-editor__item");
   assert.equal(rows.length, 6);
-  assert.ok(rows.every(row => !row.classList.contains("is-movable")), "a compact row offers a drag");
+  // Rearranging is part of the blend: a row with an assignment offers the
+  // drag on the card as in the editor; an empty row has nothing to lift.
+  assert.deepEqual(rows.map(row => row.classList.contains("is-movable")), [true, true, false, false, false, false]);
   assert.deepEqual(rows.slice(0, 2).map(row => row.querySelector(".station-editor__badge").textContent), ["A1", "A2"]);
   assert.deepEqual(rows.slice(0, 2).map(row => row.querySelector(".station-editor__resin-value").textContent), ["HX0", "LD0"]);
   assert.deepEqual(rows.slice(0, 2).map(row => row.querySelector(".station-editor__pct-input").value), ["60", "40"]);
   assert.equal(card.element.querySelector(".station-editor__total-value").textContent, "100%");
   assert.ok(card.element.querySelector(".station-editor__note"));
-  assert.deepEqual(card.able, { resin: true, pct: true, source: false, move: false });
+  assert.deepEqual(card.able, { resin: true, pct: true, source: false, move: true });
   // The full editor is untouched by the variant: header, source, drag.
   const { card: full } = buildCard(bridge, { variant: undefined });
   assert.equal(full.variant, "full");
@@ -341,6 +344,96 @@ test("the compact variant is the same editor with its header, source line and dr
   assert.ok(full.element.querySelector(".station-editor__header"));
   assert.ok(full.element.querySelector(".station-editor__source-value"));
   assert.deepEqual(full.able, { resin: true, pct: true, source: true, move: true });
+  // Not on offer from the application: the card's rows do not drag, as
+  // the editor's do not - the one offer, read once.
+  const { bridge: noMove } = connectedBridge([...contract.COMMANDS].filter(name => name !== "moveHopper"));
+  const { card: still } = buildCard(noMove);
+  assert.equal(still.able.move, false);
+  assert.ok(still.element.querySelectorAll(".station-editor__item").every(row => !row.classList.contains("is-movable")));
+});
+
+/* A drag on a card, step by step, as the editor's own tests drive it:
+ * press on the badge, travel past the threshold, arrive over another row,
+ * release. `under` stands in for elementFromPoint. */
+function dragOnCard(bridge, options) {
+  const hit = { under: null };
+  const built = buildCard(bridge, Object.assign({ elementAt: () => hit.under }, options || {}));
+  const root = built.card.element;
+  const list = root.querySelector(".station-editor__list");
+  const rowEl = id => root.querySelector(`[data-hopper='${id}']`);
+  const badge = id => rowEl(id).querySelector(".station-editor__badge");
+  const pointer = (type, target, extra) => Object.assign({ type, target, bubbles: true, pointerId: 1, pointerType: "mouse", button: 0, buttons: 1, clientX: 0, clientY: 0, preventDefault() {}, stopPropagation() {} }, extra || {});
+  built.rowEl = rowEl;
+  built.press = (id, x, y) => badge(id).dispatchEvent(pointer("pointerdown", badge(id), { clientX: x, clientY: y }));
+  built.moveTo = (x, y, underId) => { hit.under = underId ? badge(underId) : null; list.dispatchEvent(pointer("pointermove", list, { clientX: x, clientY: y })); };
+  built.release = (x, y) => list.dispatchEvent(pointer("pointerup", list, { clientX: x, clientY: y, buttons: 0 }));
+  built.marks = () => ({
+    dragging: root.querySelectorAll(".station-editor__item").filter(i => i.classList.contains("is-dragging")).map(i => i.getAttribute("data-hopper")),
+    targets: root.querySelectorAll(".station-editor__item").filter(i => i.classList.contains("is-drop-target")).map(i => i.getAttribute("data-hopper")),
+    moving: list.classList.contains("is-moving")
+  });
+  return built;
+}
+
+test("a row dragged on a card and released on another is one moveHopper within the card's layer, through the bridge handed in; the marks are the editor's own and gone after", () => {
+  const { bridge, calls } = connectedBridge();
+  const b = dragOnCard(bridge);
+  b.press("A2", 10, 10);
+  assert.deepEqual(b.marks(), { dragging: [], targets: [], moving: false }, "a press is not yet a drag");
+  b.moveTo(10, 40, "A4");
+  assert.deepEqual(b.marks(), { dragging: ["A2"], targets: ["A4"], moving: true });
+  b.release(10, 40);
+  assert.deepEqual(calls, [{ command: "moveHopper", args: { recipe: "current", layer: "A", index: 1, toLayer: "A", toIndex: 3 } }]);
+  assert.equal(b.committed.length, 1, "one authoritative update, as a value committed on the card");
+  assert.deepEqual(b.marks(), { dragging: [], targets: [], moving: false });
+  // Released off every row, or on the row itself: nothing is handed over.
+  b.press("A1", 10, 10);
+  b.moveTo(10, 200, null);
+  b.release(10, 200);
+  b.press("A1", 10, 10);
+  b.moveTo(10, 30, "A1");
+  b.release(10, 30);
+  assert.equal(calls.length, 1);
+  // A press on a control is that control's: the percentage field never
+  // starts a drag, so typing on the card is what it was.
+  const pct = b.rowEl("A2").querySelector(".station-editor__pct-input");
+  pct.dispatchEvent({ type: "pointerdown", target: pct, bubbles: true, pointerId: 1, pointerType: "mouse", button: 0, buttons: 1, clientX: 0, clientY: 0 });
+  b.moveTo(0, 60, "A4");
+  assert.deepEqual(b.marks(), { dragging: [], targets: [], moving: false });
+});
+
+test("the card a drag lifts off a compact row is stamped compact, so the stylesheet sizes its badge, resin and percentage as the row's - the editor's own drag rules name the stamp", () => {
+  const { bridge } = connectedBridge();
+  const mount = makeNode("div");
+  const b = dragOnCard(bridge, { measure: () => ({ left: 100, top: 50, width: 90, height: 22 }), dragRoot: () => mount });
+  b.press("A2", 110, 60);
+  b.moveTo(110, 90, "A3");
+  assert.equal(mount.children.length, 1);
+  const proxy = mount.children[0];
+  assert.equal(proxy.getAttribute("class"), "station-editor__item station-editor__drag-proxy");
+  assert.equal(proxy.getAttribute("data-variant"), "compact");
+  assert.equal(proxy.querySelector(".station-editor__source-value"), null, "the compact card's proxy has no source line either");
+  assert.equal(proxy.getAttribute("style"), "width:90px;height:22px;transform:translate3d(100px, 80px, 0) scale(1.02);");
+  b.release(110, 90);
+  assert.equal(mount.children.length, 0);
+  // The full editor's proxy says which face it left too.
+  const full = dragOnCard(bridge, { variant: undefined, measure: () => ({ left: 0, top: 0, width: 200, height: 64 }), dragRoot: () => mount });
+  full.press("A2", 10, 10);
+  full.moveTo(10, 40, "A3");
+  assert.equal(mount.children[0].getAttribute("data-variant"), "full");
+  full.release(10, 40);
+  // The stylesheet: every compact row rule that sizes what the proxy
+  // carries names the stamped proxy alongside the row.
+  const css = fs.readFileSync(path.join(ROOT, "station/styles/components/focus-editor.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+  for (const part of ["__badge", "__resin-value", "__pct", "__unit"]) {
+    assert.match(css, new RegExp(`\\.station-editor\\[data-variant="compact"\\] \\.station-editor${part},\\n\\.station-editor__drag-proxy\\[data-variant="compact"\\] \\.station-editor${part} \\{`), `the compact ${part} rule leaves the proxy out`);
+  }
+  assert.match(css, /\.station-editor\[data-variant="compact"\] \.station-editor__item,\n\.station-editor__drag-proxy\[data-variant="compact"\] \{/);
+  assert.match(css, /\.station-editor__drag-proxy\[data-variant="compact"\] \{\n  font-size: var\(--station-text-sm\);\n\}/);
+  // And the compact face no longer declares the move off: one offer, read once.
+  const source = fs.readFileSync(path.join(ROOT, "station/station-focus-editor.js"), "utf8");
+  assert.match(source, /if \(variant === "compact"\) able\.source = false;/);
+  assert.doesNotMatch(source, /able\.move = false/);
 });
 
 test("a percentage committed on a card is one setHopperBlend to the Current recipe, and a resin chosen is one setHopperResin - through the bridge handed in", () => {

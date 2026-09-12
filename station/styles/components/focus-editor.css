@@ -629,15 +629,24 @@
  * -------------------------------------------------------------------
  * The same editor in a hopper cluster's footprint (station-machine-parts
  * .js: blendCard), built with variant "compact": no header, no source
- * line, no dragging. Everything below only re-sizes what the rules above
- * already draw - the rows, the badge, the percentage, the total, the note
- * - to the room a cluster has, which is a column 130 to 250 canvas units
- * wide. The type is the bank's own scale: the card is in the drawing, so
- * it grows and shrinks with the hoppers it stands in for.
+ * line. Everything below only re-sizes what the rules above already draw
+ * - the rows, the badge, the percentage, the total, the note - to the
+ * room a cluster has, which is a column 130 to 250 canvas units wide. The
+ * type is the bank's own scale: the card is in the drawing, so it grows
+ * and shrinks with the hoppers it stands in for.
+ *
+ * The floating card a drag lifts is mounted outside the editor (under the
+ * Station root, above everything) and stamped with the variant it left,
+ * so the row rules here name it too: lifted from a compact row, it is a
+ * compact row's size inside as well as out.
  */
 
 .station-editor[data-variant="compact"] {
   padding: var(--station-space-2) var(--station-space-2) var(--station-space-1);
+  font-size: var(--station-text-sm);
+}
+
+.station-editor__drag-proxy[data-variant="compact"] {
   font-size: var(--station-text-sm);
 }
 
@@ -647,7 +656,8 @@
   min-height: 0;
 }
 
-.station-editor[data-variant="compact"] .station-editor__item {
+.station-editor[data-variant="compact"] .station-editor__item,
+.station-editor__drag-proxy[data-variant="compact"] {
   gap: var(--station-space-2);
   min-height: 0;
   padding: var(--station-space-1) var(--station-space-1);
@@ -655,24 +665,28 @@
   border-radius: var(--station-radius-sm);
 }
 
-.station-editor[data-variant="compact"] .station-editor__badge {
+.station-editor[data-variant="compact"] .station-editor__badge,
+.station-editor__drag-proxy[data-variant="compact"] .station-editor__badge {
   min-width: 2.2em;
   padding: 1px var(--station-space-1);
   font-size: var(--station-text-2xs);
 }
 
-.station-editor[data-variant="compact"] .station-editor__resin-value {
+.station-editor[data-variant="compact"] .station-editor__resin-value,
+.station-editor__drag-proxy[data-variant="compact"] .station-editor__resin-value {
   font-size: var(--station-text-sm);
   padding: 1px var(--station-space-1);
   margin: -1px calc(-1 * var(--station-space-1));
 }
 
-.station-editor[data-variant="compact"] .station-editor__pct {
+.station-editor[data-variant="compact"] .station-editor__pct,
+.station-editor__drag-proxy[data-variant="compact"] .station-editor__pct {
   min-width: 2.8em;
   font-size: var(--station-text-md);
 }
 
-.station-editor[data-variant="compact"] .station-editor__unit {
+.station-editor[data-variant="compact"] .station-editor__unit,
+.station-editor__drag-proxy[data-variant="compact"] .station-editor__unit {
   font-size: var(--station-text-xs);
 }
 

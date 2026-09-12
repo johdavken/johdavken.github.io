@@ -115,14 +115,17 @@
  *
  * The same editor, built with `variant: "compact"`, is what Blend Edit
  * (station-handbook.js, station.js) shows in a layer's own hopper
- * footprint: the rows and the total and the note, with no header, no
- * source line and no dragging - blend composition only, in the space a
- * hopper cluster takes. It is not a second editor. Every row is built by
- * the same builder, every value is committed by the same WRITE CONTRACT
- * through the same command, and a publish updates it through the same
- * update(). The variant is a data attribute the stylesheet reads and two
- * things left out; nothing about how a value reaches the application
- * differs between the two faces.
+ * footprint: the rows and the total and the note, with no header and no
+ * source line - blend composition only, in the space a hopper cluster
+ * takes. A row is dragged there as it is here: the same press, the same
+ * threshold, the same floating card (stamped with the variant so the
+ * stylesheet sizes it to the row it left), the same one moveHopper on
+ * release, within the card's own layer. It is not a second editor. Every
+ * row is built by the same builder, every value is committed by the same
+ * WRITE CONTRACT through the same command, and a publish updates it
+ * through the same update(). The variant is a data attribute the
+ * stylesheet reads and two things left out; nothing about how a value
+ * reaches the application differs between the two faces.
  *
  * It is built the way the rest of Station is built: HTML from an injected
  * document, no framework, no timers, and every decision about appearance in
@@ -951,11 +954,12 @@
     const has = name => Array.isArray(offered) && offered.includes(name);
     const able = {};
     for (const slot of Object.keys(SLOT_COMMAND)) able[slot] = !!recipe && usable && has(SLOT_COMMAND[slot]);
-    /* The compact face carries no source line and no drag: blend
-     * composition only. Said here, as "not on offer", so every path that
-     * reads the offer - the rows, the proxy, the pointer handlers - stays
-     * one path. */
-    if (variant === "compact") { able.source = false; able.move = false; }
+    /* The compact face carries no source line: blend composition only.
+     * Said here, as "not on offer", so every path that reads the offer -
+     * the rows, the proxy, the pointer handlers - stays one path. The
+     * move stays on offer: rearranging a layer's resins is part of its
+     * blend, on the card as in the editor. */
+    if (variant === "compact") able.source = false;
     const reason = slot => {
       if (!connected) return "no application is connected to Station commands.";
       if (!recipe) return "this view does not address a recipe.";
@@ -997,8 +1001,9 @@
    *        .station-root, so the proxy carries Station's own tokens and
    *        resets and rises above everything else Station draws
    * @param {string} [options.variant]    "compact" for Blend Edit's face in
-   *        a hopper cluster's footprint: no header, no source, no drag.
-   *        Anything else is the full focused editor.
+   *        a hopper cluster's footprint: no header, no source line; the
+   *        rows edit and drag as in the full editor. Anything else is the
+   *        full focused editor.
    * @returns {{ element: Element, blend: object, note: function, update: function, able: object, variant: string }}
    */
   function create(doc, options) {
@@ -1156,7 +1161,9 @@
       const mount = deps.dragRoot(row);
       if (!rect || !rect.width || !rect.height || !mount || typeof mount.appendChild !== "function") return null;
       const entry = row.entry;
-      const proxy = element(doc, "li", "station-editor__item station-editor__drag-proxy", { "aria-hidden": "true" });
+      // Stamped with the face it was lifted from: mounted outside the
+      // editor, it has no ancestor to read the variant off.
+      const proxy = element(doc, "li", "station-editor__item station-editor__drag-proxy", { "aria-hidden": "true", "data-variant": variant });
       proxy.appendChild(text(doc, "span", "station-editor__badge", entry.id));
       const main = element(doc, "div", "station-editor__main");
       const resinBlock = element(doc, "div", "station-editor__resin");
