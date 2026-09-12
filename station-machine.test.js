@@ -678,7 +678,7 @@ test("the focused bank is the same machine at the same proportions - nothing str
     assert.ok(Math.abs(focused[key] - plain[key] * s) < 1e-6, `${key} did not scale by the focus factor (${plain[key]} -> ${focused[key]})`);
   }
   // In particular the hopper is not widened to make room for controls.
-  assert.equal(focused.width / focused.vessel, plain.width / plain.vessel);
+  assert.ok(Math.abs(focused.width / focused.vessel - plain.width / plain.vessel) < 1e-9);
 });
 
 test("the dimmed banks shrink uniformly - never compressed sideways", () => {
@@ -715,7 +715,10 @@ test("rigid scaling is the whole mechanism: every length in the dimensions scale
   const d = layoutModule.DIMENSIONS;
   const scaled = layoutModule.bankDimensions(d, 2, 350);
   assert.equal(scaled.hopperWidth, d.hopperWidth * 2);
-  assert.equal(scaled.vesselHeight, d.vesselHeight * 2);
+  // The vessel's inch scale rides on hopperWidth, so it scales with the bank
+  // and a profiled body keeps its shape at every emphasis.
+  assert.equal(layoutModule.unitsPerInch(scaled), layoutModule.unitsPerInch(d) * 2);
+  assert.equal(layoutModule.hopperBodyHeight(26, scaled), layoutModule.hopperBodyHeight(26, d) * 2);
   assert.equal(scaled.receiverHeight, d.receiverHeight * 2);
   assert.equal(scaled.mixerScale, d.mixerScale * 2);
   assert.equal(scaled.extruderScale, d.extruderScale * 2);
@@ -724,7 +727,11 @@ test("rigid scaling is the whole mechanism: every length in the dimensions scale
   assert.equal(scaled.vesselBottom, 350 + (d.vesselBottom - 350) * 2);
   // Ratios and canvas numbers are untouched.
   assert.equal(scaled.resinVisibleRatio, d.resinVisibleRatio);
-  assert.equal(scaled.referenceHeightIn, d.referenceHeightIn);
+  // Physical inches are facts about the vessel, not lengths on the canvas.
+  assert.equal(scaled.vesselCircumferenceIn, d.vesselCircumferenceIn);
+  assert.equal(scaled.defaultUsableHeightIn, d.defaultUsableHeightIn);
+  assert.equal(scaled.vesselMinUsableHeightIn, d.vesselMinUsableHeightIn);
+  assert.equal(scaled.vesselMaxUsableHeightIn, d.vesselMaxUsableHeightIn);
   assert.equal(scaled.vesselHeadroomIn, d.vesselHeadroomIn);
   assert.equal(scaled.vesselSectionHeightIn, d.vesselSectionHeightIn);
   assert.equal(scaled.height, d.height);
@@ -1092,12 +1099,34 @@ test("the view is described for assistive technology by what it is", () => {
  *   Weight Profile height
  * -------------------------------------------------------------------- */
 
+test("the vessel is drawn at its true proportions: width is the diameter, inches follow", () => {
+  const d = layoutModule.DIMENSIONS;
+  const diameterIn = d.vesselCircumferenceIn / Math.PI;
+  const scale = layoutModule.unitsPerInch(d);
+  // The drawn width stands for the outside diameter of a 36.25" vessel.
+  assert.ok(Math.abs(scale * diameterIn - d.hopperWidth) < 1e-9);
+  assert.ok(Math.abs(scale - 30 / 11.539) < 0.001, "36.25\" round is about 11.54\" across");
+  // A 26" body on that vessel is 2.25 times taller than it is wide, cone
+  // shoulder to fill valve - the shape an operator sees on the floor.
+  const geometry = layoutFor(literal({ layerCount: 1, layerAPosition: null, hopperCount: 1 }),
+    { hopperState: { "A:0": { usableHeight: 26 } } }).banks[0].cluster.hoppers[0];
+  const measured = geometry.coneTop - geometry.fillValveY;
+  assert.ok(Math.abs(measured / geometry.width - 26 / diameterIn) < 1e-9,
+    "drawn height-to-width must equal the vessel's real height-to-diameter");
+  // Changing the circumference changes the scale, never the width: a wider
+  // vessel is drawn as a squatter one.
+  const wider = layoutModule.unitsPerInch({ ...d, vesselCircumferenceIn: d.vesselCircumferenceIn * 2 });
+  assert.ok(Math.abs(wider - scale / 2) < 1e-9);
+});
+
 test("body height scales linearly from the profile height, on one shared scale", () => {
   const height = layoutModule.hopperBodyHeight;
   const d = layoutModule.DIMENSIONS;
-  const defaultUsableHeight = d.referenceHeightIn - d.vesselHeadroomIn;
-  assert.equal(height(defaultUsableHeight), d.vesselHeight);
+  const scale = layoutModule.unitsPerInch(d);
+  const defaultUsableHeight = d.defaultUsableHeightIn;
+  assert.equal(height(defaultUsableHeight), (defaultUsableHeight + d.vesselHeadroomIn) * scale);
   // The measured portion is linear; the allowance above the valve is fixed.
+  assert.ok(Math.abs(height(36) - height(24) - 12 * scale) < 1e-9);
   assert.ok(height(defaultUsableHeight * 1.2) > height(defaultUsableHeight));
   assert.ok(height(defaultUsableHeight * 0.8) < height(defaultUsableHeight));
   // One shared scale: the same inches give the same height, always. It does
@@ -1107,8 +1136,9 @@ test("body height scales linearly from the profile height, on one shared scale",
 
 test("a missing or nonsense profile height falls back to the default body", () => {
   const d = layoutModule.DIMENSIONS;
+  const fallback = layoutModule.hopperBodyHeight(d.defaultUsableHeightIn);
   for (const input of [undefined, null, 0, -12, NaN, Infinity, "", "tall", {}]) {
-    assert.equal(layoutModule.hopperBodyHeight(input), d.vesselHeight,
+    assert.equal(layoutModule.hopperBodyHeight(input), fallback,
       `${String(input)} should fall back to the default body`);
   }
 });
@@ -1122,7 +1152,7 @@ test("vessel bands repeat every 12 inches from the discharge at every bank scale
     const layout = layoutFor(config, options);
     const svg = stageFor(config, options);
     for (const bank of layout.banks) {
-      const sectionHeight = 12 * layoutModule.DIMENSIONS.vesselHeight / layoutModule.DIMENSIONS.referenceHeightIn * bank.scale;
+      const sectionHeight = 12 * layoutModule.unitsPerInch(layoutModule.DIMENSIONS) * bank.scale;
       for (const geometry of bank.cluster.hoppers) {
         assert.ok(Math.abs(geometry.vesselSectionHeight - sectionHeight) < 0.001);
         const hopper = hoppersIn(svg).find(h => h.getAttribute("data-hopper") === geometry.id);
@@ -1171,11 +1201,11 @@ test("usable height ends at the lower fill valve, with separate headroom and hos
   for (const focusLayer of [null, "B"]) {
     for (const vesselHeadroomIn of [12, 18, 24]) {
       // Keep this measurement test inside the normal drawing limits.
-      const options = { hopperState, focusLayer, dimensions: { vesselHeadroomIn, vesselMaxHeight: 250 } };
+      const options = { hopperState, focusLayer, dimensions: { vesselHeadroomIn } };
       const layout = layoutFor(config, options);
       const svg = stageFor(config, options);
       for (const bank of layout.banks) {
-        const unitsPerInch = layoutModule.DIMENSIONS.vesselHeight / layoutModule.DIMENSIONS.referenceHeightIn * bank.scale;
+        const unitsPerInch = layoutModule.unitsPerInch(layoutModule.DIMENSIONS) * bank.scale;
         for (const geometry of bank.cluster.hoppers) {
           assert.ok(Math.abs(geometry.coneTop - geometry.fillValveY - heights[geometry.index] * unitsPerInch) < 0.001,
             "profile height must measure from cone shoulder to fill valve");
@@ -1201,10 +1231,15 @@ test("usable height ends at the lower fill valve, with separate headroom and hos
 
 test("extreme profile heights are clamped so the layout cannot be broken", () => {
   const d = layoutModule.DIMENSIONS;
-  assert.equal(layoutModule.hopperBodyHeight(100000), d.vesselMaxHeight);
-  assert.equal(layoutModule.hopperBodyHeight(0.01), d.vesselMinHeight);
+  const tallest = layoutModule.hopperBodyHeight(d.vesselMaxUsableHeightIn);
+  const shortest = layoutModule.hopperBodyHeight(d.vesselMinUsableHeightIn);
+  assert.equal(layoutModule.hopperBodyHeight(100000), tallest);
+  assert.equal(layoutModule.hopperBodyHeight(0.01), shortest);
+  // The clamp acts on the usable inches: even a clamped body keeps its full
+  // headroom above the valve, so the valve never rides up to the lid.
+  assert.equal(shortest, (d.vesselMinUsableHeightIn + d.vesselHeadroomIn) * layoutModule.unitsPerInch(d));
   // And the tallest possible hopper still leaves the header room to breathe.
-  const tallestTop = d.vesselBottom - d.vesselMaxHeight - d.receiverGap - d.receiverHeight - d.sourceGap;
+  const tallestTop = d.vesselBottom - tallest - d.receiverGap - d.receiverHeight - d.sourceGap;
   assert.ok(tallestTop > d.headerTop + 14,
     "a fully clamped hopper collides with the layer header");
 });

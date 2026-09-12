@@ -64,13 +64,20 @@
      * therefore grows upward, taking its receiver with it, which is exactly
      * how a bank of mixed-height hoppers looks on the floor. */
     vesselBottom: 320,
-    vesselHeight: 168,          // the default body, used when no profile height
-    vesselMinHeight: 96,
-    vesselMaxHeight: 210,
-    /* Total inches represented by the default body: 30 measured inches from
-     * the cone shoulder to the fill valve, plus 18 inches above the valve.
-     * One scale is shared by the body, ports and physical sections. */
-    referenceHeightIn: 48,
+    /* The vessel's true proportions. The drawn hopper width IS the vessel's
+     * outside diameter, and that diameter comes from the measured
+     * circumference of the receivers on the floor. Every vertical inch -
+     * usable height, headroom, clamp-band spacing - is drawn on the scale
+     * that implies, so a profiled hopper is the same shape on screen as it is
+     * in the plant. See unitsPerInch(). */
+    vesselCircumferenceIn: 36.25,
+    /* Usable inches (cone shoulder to fill valve) drawn when a hopper has no
+     * profile height, and the range a profile value is clamped to so an
+     * unreasonable entry cannot push a receiver off the canvas or collapse a
+     * body to nothing. */
+    defaultUsableHeightIn: 30,
+    vesselMinUsableHeightIn: 8,
+    vesselMaxUsableHeightIn: 48,
     // Drawing allowance above the measured fill valve (1.5 twelve-inch
     // sections). This is not added to stored usable height or calculations.
     vesselHeadroomIn: 18,
@@ -313,6 +320,22 @@
   }
 
   /**
+   * Drawing units per physical inch, for a bank drawn from `dimensions`.
+   *
+   * The hopper is drawn `hopperWidth` units wide and that width stands for the
+   * vessel's outside diameter, circumference / pi. Dividing the two gives the
+   * one scale every vertical measurement on the vessel is drawn on, so a
+   * 26" body on an 11.5" vessel is drawn 2.25 times taller than it is wide -
+   * its true shape - rather than on some unrelated vertical scale. Because
+   * hopperWidth is a bank length, the scale follows rigid bank scaling for
+   * free: a focused bank is the same shape drawn larger.
+   */
+  function unitsPerInch(dimensions) {
+    const d = dimensions || DIMENSIONS;
+    return d.hopperWidth / (d.vesselCircumferenceIn / Math.PI);
+  }
+
+  /**
    * The complete drawn vessel body. Receiver Weight Profile usable height
    * measures from the top of the cone to the fill valve, not to the lid;
    * the unmeasured headroom above that valve is a drawing allowance.
@@ -320,7 +343,9 @@
    * One linear scale shared by every hopper on every line - a hopper profiled
    * at 42" is always drawn taller than one at 30", wherever it is - and clamped
    * at both ends so an unreasonable profile value cannot push a receiver off
-   * the top of the canvas or collapse a body to nothing.
+   * the top of the canvas or collapse a body to nothing. The clamp is applied
+   * to the usable inches, before the headroom, so a clamped body still shows
+   * its full drawing allowance above the valve.
    *
    * Missing, zero, negative or non-finite input means "not profiled", and falls
    * back to the default body. That is deliberately not an error: volume-geometry
@@ -330,9 +355,10 @@
   function hopperBodyHeight(usableHeightIn, dimensions) {
     const d = dimensions || DIMENSIONS;
     const inches = Number(usableHeightIn);
-    if (!Number.isFinite(inches) || inches <= 0) return d.vesselHeight;
-    const scaled = d.vesselHeight * ((inches + d.vesselHeadroomIn) / d.referenceHeightIn);
-    return clamp(scaled, d.vesselMinHeight, d.vesselMaxHeight);
+    const usable = Number.isFinite(inches) && inches > 0
+      ? clamp(inches, d.vesselMinUsableHeightIn, d.vesselMaxUsableHeightIn)
+      : d.defaultUsableHeightIn;
+    return (usable + d.vesselHeadroomIn) * unitsPerInch(d);
   }
 
   function bankInnerWidth(hopperCount, hopperWidth, hopperGap) {
@@ -348,7 +374,8 @@
    * number, and is left alone. */
   const BANK_LENGTHS = Object.freeze([
     "hopperWidth", "hopperGap",
-    "vesselHeight", "vesselMinHeight", "vesselMaxHeight",
+    /* Vessel heights are not listed: they are inches, drawn through
+     * unitsPerInch(), which scales with hopperWidth. */
     "receiverHeight", "receiverGap", "sourceGap",
     "coneHeight", "spoutHeight", "hopperCaptionGap", "hopperCaptionHeight",
     "bankPadding", "bankMinWidth",
@@ -457,13 +484,15 @@
       ? move.showResin
       : hopperWidth / effectiveCanvas >= d.resinVisibleRatio;
 
+    // The vessel's inch scale for this bank: true proportions at this width.
+    const inchScale = unitsPerInch(d);
     const hoppers = layer.hoppers.map((hopper, hopperIndex) => {
       const runtime = hopperState ? hopperState[`${layer.id}:${hopper.index}`] : null;
       // Drawn to the Receiver Weight Profile, growing upward from the shared
       // discharge line.
       const vesselHeight = hopperBodyHeight(runtime ? runtime.usableHeight : null, d);
       const vesselTop = coneTop - vesselHeight;
-      const fillValveY = vesselTop + d.vesselHeight * d.vesselHeadroomIn / d.referenceHeightIn;
+      const fillValveY = vesselTop + d.vesselHeadroomIn * inchScale;
       const receiverTop = vesselTop - d.receiverGap - d.receiverHeight;
       return {
         id: hopper.id,
@@ -481,7 +510,7 @@
         vesselTop,
         vesselHeight,
         fillValveY,
-        vesselSectionHeight: d.vesselHeight * d.vesselSectionHeightIn / d.referenceHeightIn,
+        vesselSectionHeight: d.vesselSectionHeightIn * inchScale,
         // Whether this hopper was profiled at all, so the drawing can be honest
         // about a default rather than implying a measurement.
         profiled: !!(runtime && Number(runtime.usableHeight) > 0),
@@ -704,6 +733,7 @@
     DIMENSIONS,
     equipmentView,
     assetPlacement,
+    unitsPerInch,
     hopperBodyHeight,
     bankInnerWidth,
     bankDimensions,
