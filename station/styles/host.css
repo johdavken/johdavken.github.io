@@ -41,7 +41,18 @@
  * future change is likely to get wrong.
  */
 
-body[data-station-view="station"] > :not([data-station-host]) {
+/* WHY A MODAL IS THE ONE EXCEPTION
+ *
+ * The application asks questions with <dialog>.showModal(): a sync conflict,
+ * a join code, a device recovery. A modal sits in the browser's top layer
+ * and makes the rest of the document inert - and it stays that way when a
+ * stylesheet hides it. Hidden, then, it is the worst of both: the operator
+ * sees Station, unchanged, and nothing on it answers a click, because the
+ * question they cannot see is waiting. So a modal is let through - by what
+ * it IS (:modal), not by naming any dialog - and everything else the
+ * application puts on screen stays hidden. A non-modal sheet (show()) is
+ * not a question and is not let through. */
+body[data-station-view="station"] > :not([data-station-host]):not(:modal) {
   display: none !important;
 }
 

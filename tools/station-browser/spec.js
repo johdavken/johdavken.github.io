@@ -193,8 +193,35 @@ async function run(browserName) {
         console: !!document.querySelector("[data-station-mount='connection'] *")
       };
     });
+    /* The Handbook's slot lies over the stage's cell (shell.css: grid-area
+     * machine, pointer-events none), so it is a child of the shell without
+     * being a region of it. */
     check(browserName, `${tag} the shell is header, stage, run-down timeline and status bar across the full width - no side pane, no recipe strip, no spare track`,
-      frame.columns === 1 && frame.regions.join() === "station-header,station-machine,station-timeline,station-status" && frame.panes === 0 && frame.headerFull && frame.machineFull && frame.timelineFull && frame.statusFull && frame.stageWide && frame.console, frame);
+      frame.columns === 1 && frame.regions.join() === "station-header,station-machine,station-handbook-slot,station-timeline,station-status" && frame.panes === 0 && frame.headerFull && frame.machineFull && frame.timelineFull && frame.statusFull && frame.stageWide && frame.console, frame);
+
+    /* A modal the application opens (a sync conflict, a join code) must be
+     * SEEN over Station, not hidden with the rest of the legacy shell: a
+     * hidden modal leaves the document inert, and Station then answers
+     * nothing with no sign of why (host.css: the :modal exception). Opened
+     * here the way resolveLineSyncConflict opens it; closed again after. */
+    const modal = await page.evaluate(() => {
+      const dialog = document.getElementById("lineSyncConflictDialog");
+      if (!dialog || typeof dialog.showModal !== "function") return { missing: true };
+      dialog.showModal();
+      const box = dialog.getBoundingClientRect();
+      const button = dialog.querySelector("button");
+      const bb = button ? button.getBoundingClientRect() : null;
+      const at = bb ? document.elementFromPoint(bb.x + bb.width / 2, bb.y + bb.height / 2) : null;
+      const shown = { display: getComputedStyle(dialog).display, visible: box.width > 0 && box.height > 0, answerable: !!at && dialog.contains(at),
+        leaked: [...document.body.children].filter(el => !el.hasAttribute("data-station-host") && el !== dialog && getComputedStyle(el).display !== "none").map(el => el.tagName + "#" + el.id) };
+      dialog.close();
+      const launcher = document.querySelector(".station-handbook__launcher");
+      const lb = launcher.getBoundingClientRect();
+      const back = document.elementFromPoint(lb.x + lb.width / 2, lb.y + lb.height / 2);
+      return Object.assign(shown, { hiddenAgain: getComputedStyle(dialog).display === "none", launcherBack: !!back && !!back.closest(".station-handbook__launcher") });
+    });
+    check(browserName, `${tag} a modal the application opens is visible and answerable over Station, leaks nothing else, and Station is back when it closes`,
+      !modal.missing && modal.display !== "none" && modal.visible && modal.answerable && modal.leaked.length === 0 && modal.hiddenAgain && modal.launcherBack, modal);
     let hopperHits = await hopperHitFailures(page);
     check(browserName, `${tag} overview hopper artwork routes through stable hit areas`, hopperHits.length === 0, hopperHits);
 

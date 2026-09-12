@@ -141,6 +141,20 @@ test("host.css hides the application by exclusion, never by naming its elements"
   }
 });
 
+test("an open modal is the one application element let through the hide rule - by what it is, not by name", () => {
+  /* showModal() puts a dialog in the top layer and makes the rest of the
+   * document inert, and hiding it does not undo that: a hidden modal is
+   * a Station that looks normal and answers nothing (a sync conflict did
+   * exactly this on 2026-09-12). So the hide rule excepts :modal - which
+   * names no dialog, so the exclusion test above still holds - and only
+   * :modal: a non-modal sheet is not a question, and stays hidden. */
+  const hide = selectorsIn(hostCss).find(selector => selector.includes(":not([data-station-host])"));
+  assert.ok(hide, "the hide rule is gone");
+  assert.equal(hide, 'body[data-station-view="station"] > :not([data-station-host]):not(:modal)');
+  assert.doesNotMatch(hide, /dialog|\[open\]/, "the exception names a dialog rather than the modal state");
+  assert.match(hostCss, /WHY A MODAL IS THE ONE EXCEPTION/, "the exception is not explained beside the rule");
+});
+
 test("!important appears only in host.css, and only on the hide rule", () => {
   const sheets = [];
   (function walk(dir) {
