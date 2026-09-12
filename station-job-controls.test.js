@@ -1,9 +1,10 @@
 "use strict";
 
 /* The header's job controls (station/station-job-controls.js): OUTPUT,
- * CHANGEOVER and 6H | 12H, driven against a small fake DOM and a fake
+ * CHANGEOVER, driven against a small fake DOM and a fake
  * command bridge. What they show for a job, how an edit becomes one
- * command, what a refusal does, and that the window is a scale only.
+ * command, what a refusal does, and that the timeline's scale is no longer
+ * here (it is the timeline's own: station-rundown-timeline.test.js).
  */
 
 const test = require("node:test");
@@ -85,13 +86,12 @@ function connected(capabilities, answer) {
 function mount(options) {
   const doc = fakeDocument();
   const committed = [];
-  const windows = [];
-  const settings = Object.assign({ now: () => NOW, onCommitted: r => committed.push(r), onWindow: h => windows.push(h) }, options || {});
+  const settings = Object.assign({ now: () => NOW, onCommitted: r => committed.push(r) }, options || {});
   const controls = controlsModule.create(doc, settings);
   const root = controls.element;
   const item = field => root.querySelector(`[data-field='${field}']`);
   return {
-    doc, controls, root, committed, windows,
+    doc, controls, root, committed,
     trigger: field => byClass(item(field), "station-job__trigger"),
     value: field => byClass(item(field), "station-job__value"),
     input: field => byClass(item(field), "station-job__input"),
@@ -105,14 +105,30 @@ function mount(options) {
  *   Display
  * -------------------------------------------------------------------- */
 
-test("the three items, compact and in order: OUTPUT, CHANGEOVER, then 6H | 12H; nothing is a heading", () => {
+test("the two readouts, compact and in order: OUTPUT, then CHANGEOVER; nothing is a heading", () => {
   const { root } = mount();
-  assert.deepEqual(root.children.map(n => n.getAttribute("class").split(" ")[0]), ["station-job__item", "station-job__item", "station-job__window", "station-job__note"]);
+  assert.deepEqual(root.children.map(n => n.getAttribute("class").split(" ")[0]), ["station-job__item", "station-job__item", "station-job__note"]);
   assert.deepEqual(root.children.slice(0, 2).map(n => n.getAttribute("data-field")), ["output", "changeover"]);
   assert.deepEqual(root.querySelectorAll(".station-job__key").map(n => n.textContent), ["Output", "Changeover"]);
-  assert.deepEqual(root.querySelectorAll(".station-job__scale").map(n => [n.textContent, n.getAttribute("aria-pressed")]), [["6H", "true"], ["12H", "false"]]);
   walk(root, node => assert.ok(!/^H[1-6]$/.test(node.tagName)));
   assert.equal(root.getAttribute("role"), "group");
+});
+
+test("the timeline's 6H | 12H scale is not in the header: no button, no window state, no window API", () => {
+  const { root, controls } = mount({ window: 12, onWindow: () => { throw new Error("nothing here scales"); } });
+  walk(root, node => {
+    assert.doesNotMatch(String(node.textContent), /\b(6|12)H\b/);
+    assert.equal(node.getAttribute("data-window"), null);
+    assert.equal(node.getAttribute("aria-pressed"), null);
+  });
+  assert.equal(root.querySelector(".station-job__window"), null);
+  assert.equal(root.querySelector(".station-job__scale"), null);
+  assert.equal(typeof controls.getWindow, "undefined");
+  assert.equal(typeof controls.setWindow, "undefined");
+  const src = fs.readFileSync(path.join(__dirname, "station/station-job-controls.js"), "utf8");
+  assert.doesNotMatch(src, /onWindow|data-window|station-job__scale|station-job__window/);
+  const css = fs.readFileSync(path.join(__dirname, "station/styles/components/job-controls.css"), "utf8");
+  assert.doesNotMatch(css, /__scale|__window/);
 });
 
 test("the readouts state the job: output in lb/hr or Not set; the changeover as its clock time and how far off, or Not set, or needing confirmation", () => {
@@ -276,27 +292,6 @@ test("with no bridge, or one without the command, the readouts stand and a click
   click(p.trigger("changeover"));
   assert.match(p.note().textContent, /does not support setChangeover/);
   assert.deepEqual(partial.calls, []);
-});
-
-/* ----------------------------------------------------------------------
- *   Window
- * -------------------------------------------------------------------- */
-
-test("6H | 12H is a scale: it presses the button, tells the host, and asks the application nothing", () => {
-  const { bridge, calls } = connected();
-  const h = mount({ commands: () => bridge });
-  const twelve = h.root.querySelector("[data-window='12']");
-  click(twelve);
-  assert.deepEqual(h.windows, [12]);
-  assert.equal(h.controls.getWindow(), 12);
-  assert.deepEqual(h.root.querySelectorAll(".station-job__scale").map(n => n.getAttribute("aria-pressed")), ["false", "true"]);
-  assert.equal(h.root.getAttribute("data-window"), "12");
-  click(twelve);
-  assert.deepEqual(h.windows, [12], "the same scale again is nothing");
-  assert.deepEqual(calls, [], "no command");
-  assert.equal(h.committed.length, 0);
-  assert.equal(h.controls.setWindow(6), true);
-  assert.equal(h.controls.setWindow(7), false);
 });
 
 /* ----------------------------------------------------------------------

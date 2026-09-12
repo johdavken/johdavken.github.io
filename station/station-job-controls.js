@@ -1,13 +1,13 @@
-/* The Station job controls: the running job's two line-wide settings, and
- * the timeline's scale, as three compact items in the header.
+/* The Station job controls: the running job's two line-wide settings, as
+ * two compact readouts in the header.
  *
  *   OUTPUT 850 lb/hr     the line's output, edited in place
  *   CHANGEOVER 3:28 AM   the changeover deadline, edited in place
- *   6H | 12H             the run-down timeline's window
  *
- * A temporary home. The header is where these can sit without a layout of
- * their own while the timeline is new; they are visually subordinate to
- * the line console beside them and to the stage below.
+ * They are the machine status the header carries beside Station's name;
+ * visually subordinate to the line console beside them and to the stage
+ * below. (The run-down timeline's 6H | 12H scale sat here too while the
+ * timeline was new; it is the timeline's own now, in its Now column.)
  *
  * WHERE THEY WRITE
  *
@@ -25,9 +25,6 @@
  * time - today, or tomorrow once it has passed, scheduling.js's own
  * parseChangeoverDate - turns it into the instant, so what Station asks
  * for is what the floor UI's field would have stored.
- *
- * The window is not job state. It is a scale for this screen, held here
- * and told to the timeline; it goes nowhere else.
  */
 (function (root, factory) {
   const rundown = typeof require === "function"
@@ -110,9 +107,6 @@
    *        when Station is not showing live state. Asked at each edit, as
    *        the hopper controls are, so a source change is honoured.
    * @param {function} [options.now]      () => epoch ms
-   * @param {number}   [options.window]   the timeline's initial window
-   * @param {function} [options.onWindow] told the hours when the scale is
-   *        chosen; the timeline is the one that changes
    * @param {function} [options.onCommitted]  told a changed result, so the
    *        boot file can run its publish policy as it does for the editor
    */
@@ -122,12 +116,10 @@
     const scheduling = settings.scheduling || schedulingModule;
     const commandsFor = typeof settings.commands === "function" ? settings.commands : () => null;
     const now = typeof settings.now === "function" ? settings.now : () => Date.now();
-    const onWindow = typeof settings.onWindow === "function" ? settings.onWindow : () => {};
     const onCommitted = typeof settings.onCommitted === "function" ? settings.onCommitted : () => {};
 
     const state = {
       job: null,
-      window: rundown.WINDOWS.includes(settings.window) ? settings.window : rundown.DEFAULT_WINDOW,
       editing: null,     // "output" | "changeover" | null
       note: ""
     };
@@ -153,17 +145,6 @@
     const changeover = item("changeover", "", { type: "time" });
     const fields = { output, changeover };
     rootEl.append(output.wrap, changeover.wrap);
-
-    const windowGroup = element(doc, "div", "station-job__window", { role: "group", "aria-label": "Timeline window" });
-    const windowButtons = {};
-    for (const hours of rundown.WINDOWS) {
-      const button = text(doc, "button", "station-job__scale", `${hours}H`, {
-        type: "button", "data-window": String(hours), "aria-pressed": String(hours === state.window)
-      });
-      windowButtons[hours] = button;
-      windowGroup.appendChild(button);
-    }
-    rootEl.appendChild(windowGroup);
 
     const note = element(doc, "p", "station-job__note", { role: "status", hidden: "" });
     rootEl.appendChild(note);
@@ -195,10 +176,6 @@
           ? `Edit the ${LABEL[field].toLowerCase()}`
           : `${LABEL[field]} is read-only here: ${reason(commands, field)}`);
       }
-      for (const hours of rundown.WINDOWS) {
-        windowButtons[hours].setAttribute("aria-pressed", String(hours === state.window));
-      }
-      rootEl.setAttribute("data-window", String(state.window));
     }
 
     /* ---- Editing ---- */
@@ -311,16 +288,6 @@
       });
     }
 
-    windowGroup.addEventListener("click", event => {
-      const button = event.target && event.target.closest ? event.target.closest("[data-window]") : null;
-      if (!button) return;
-      const hours = Number(button.getAttribute("data-window"));
-      if (!rundown.WINDOWS.includes(hours) || hours === state.window) return;
-      state.window = hours;
-      refresh();
-      onWindow(hours);
-    });
-
     /* ---- The surface ---- */
 
     function update(inputs) {
@@ -337,13 +304,6 @@
       open,
       commit,
       cancel,
-      getWindow: () => state.window,
-      setWindow(hours) {
-        if (!rundown.WINDOWS.includes(hours) || hours === state.window) return false;
-        state.window = hours;
-        refresh();
-        return true;
-      },
       isEditing: () => state.editing
     };
   }

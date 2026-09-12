@@ -367,6 +367,47 @@ test("6H and 12H change the scale and nothing else: the same instant at half the
   assert.equal(allByClass(root, "station-rundown__tick-label").length, 11, "the last half-hour is too near the edge for a label");
 });
 
+test("the scale is chosen on the timeline: 6H | 12H under the Now clock, one pressed, and a click is exactly setWindow - the same fractions, the same entries, no command", () => {
+  const windows = [];
+  const { root, timeline } = mount({ onWindow: h => windows.push(h) });
+  timeline.update(inputsFor(snapshot()));
+  const now = byClass(root, "station-rundown__now");
+  assert.deepEqual(now.children.map(n => n.getAttribute("class")), ["station-rundown__now-label", "station-rundown__now-clock", "station-rundown__range"], "under the label and the clock, in the anchor's column");
+  const range = byClass(root, "station-rundown__range");
+  assert.equal(range.getAttribute("role"), "group");
+  assert.equal(range.getAttribute("aria-label"), "Timeline range");
+  const options = allByClass(root, "station-rundown__range-option");
+  assert.deepEqual(options.map(n => [n.tagName, n.getAttribute("type"), n.textContent, n.getAttribute("data-window"), n.getAttribute("aria-pressed")]),
+    [["BUTTON", "button", "6H", "6", "true"], ["BUTTON", "button", "12H", "12", "false"]]);
+  const six = xOf(root.querySelector("[data-hopper='B1']"));
+  const entriesBefore = JSON.stringify(timeline.getEntries());
+  // Clicking 12H is what setWindow(12) is (the test above): half the fraction, the entries untouched.
+  click(options[1]);
+  assert.equal(timeline.getWindow(), 12);
+  assert.equal(root.getAttribute("data-window"), "12");
+  assert.deepEqual(options.map(n => n.getAttribute("aria-pressed")), ["false", "true"]);
+  assert.ok(Math.abs(xOf(root.querySelector("[data-hopper='B1']")) - six / 2) < 0.001);
+  assert.equal(JSON.stringify(timeline.getEntries()), entriesBefore);
+  assert.equal(timeline.getLayout().ticks.plan.minor, 10);
+  assert.deepEqual(windows, [12], "the host is told once");
+  click(options[1]);
+  assert.deepEqual(windows, [12], "the pressed scale again is nothing");
+  // And 6H brings the six-hour picture back exactly.
+  click(options[0]);
+  assert.equal(timeline.getWindow(), 6);
+  assert.deepEqual(options.map(n => n.getAttribute("aria-pressed")), ["true", "false"]);
+  assert.ok(Math.abs(xOf(root.querySelector("[data-hopper='B1']")) - six) < 0.001);
+  assert.equal(timeline.getLayout().ticks.plan.minor, 5);
+  assert.deepEqual(windows, [12, 6]);
+  // A programmatic setWindow keeps the buttons true to the scale, and tells nobody.
+  timeline.setWindow(12);
+  assert.deepEqual(options.map(n => n.getAttribute("aria-pressed")), ["false", "true"]);
+  assert.deepEqual(windows, [12, 6]);
+  // The initial scale is the option pressed at build.
+  const twelve = mount({ window: 12 });
+  assert.deepEqual(allByClass(twelve.root, "station-rundown__range-option").map(n => n.getAttribute("aria-pressed")), ["false", "true"]);
+});
+
 /* ----------------------------------------------------------------------
  *   Beyond the window, and the changeover
  * -------------------------------------------------------------------- */

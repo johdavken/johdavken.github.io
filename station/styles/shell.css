@@ -50,13 +50,35 @@
   letter-spacing: 0.01em;
 }
 
-/* The job controls' slot: after the title and tags, before the spare width
- * the line console takes. */
+/* The way back to the legacy interface, beside the name: a word in the
+ * small caps the header's readout keys use, underlined the way a link is
+ * and no more - no box, no badge - so it reads as navigation and never as
+ * a warning or a control. Focus is the root's own ring. */
+.station-header__legacy {
+  color: var(--station-text-muted);
+  font-size: var(--station-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: underline;
+  text-decoration-color: var(--station-border-strong);
+  text-decoration-thickness: var(--station-stroke);
+  text-underline-offset: 0.3em;
+  white-space: nowrap;
+}
+
+.station-header__legacy:hover {
+  color: var(--station-text);
+  text-decoration-color: currentColor;
+}
+
+/* The job readouts' slot: set off from the identity by a wider gap than
+ * the header's own, before the spare width the line console takes. */
 .station-header__job {
   display: flex;
   align-items: center;
   min-width: 0;
-  margin-left: var(--station-space-3);
+  margin-left: var(--station-space-5);
 }
 
 /* The line console's slot: takes the header's spare width so the console
@@ -66,16 +88,6 @@
   flex: 1 1 auto;
   justify-content: flex-end;
   min-width: 0;
-}
-
-.station-header__tag {
-  padding: 2px var(--station-space-2);
-  border: var(--station-stroke) solid var(--station-border-strong);
-  border-radius: var(--station-radius-sm);
-  color: var(--station-text-muted);
-  font-size: var(--station-text-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
 }
 
 /* ---- Regions ---- */

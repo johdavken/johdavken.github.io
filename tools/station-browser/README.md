@@ -48,6 +48,13 @@ producer, is visited once at the end to check that it is read-only.
   and a status bar, each the full width of the shell, in one grid column;
   the timeline is one modest row with no heading; no side pane, no recipe
   strip and no mount for one remains; the line console is in the header.
+- **Header and timeline scale** - the header is Station's name, a quiet
+  Legacy link (to the same page without `?view=station`), the Output and
+  Changeover readouts and the console, one 52px row, no EXPERIMENTAL badge
+  and no 6H | 12H; the scale sits under the Now clock in the timeline's own
+  column, the pressed segment marked by weight and a rule, and choosing
+  12H halves every marker's fraction without moving the axis; 6H by
+  keyboard restores the six-hour picture exactly.
 - **Fast click before hover** - a click dispatched on a mixer, a hopper and
   an editor row with no preceding pointer movement lands exactly like a
   hovered one.

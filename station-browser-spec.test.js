@@ -57,6 +57,11 @@ test("the spec runs Firefox as well as Chromium, and every documented flow is a 
     "hovering a hopper highlights its row",
     "the percentage field fits 60, 100 and 33.33",
     "the shell is header, stage, run-down timeline and status bar across the full width",
+    "the header is Station, Legacy, Output and Changeover, then the console: no EXPERIMENTAL, no 6H | 12H, one 52px row",
+    "Legacy is a quiet link beside the name to the application without the Station flag",
+    "6H | 12H sits under Now in the timeline's anchor column, 6H pressed and marked by weight and a rule",
+    "12H presses the other segment and redraws every marker at half its fraction; the axis and the row do not move",
+    "6H by keyboard brings the six-hour picture back exactly",
     "clicking B3's body tracks it through the application",
     "a control click neither selects the hopper nor opens the layer",
     "every tracked hopper wears one halo in its layer's colour",
@@ -79,7 +84,7 @@ test("the spec runs Firefox as well as Chromium, and every documented flow is a 
     assert.ok(spec.includes(flow), `spec lacks the check "${flow}"`);
   }
   for (const viewport of ["1920, 1080", "1440, 900", "1160, 800"]) assert.ok(spec.includes(viewport), `spec lacks viewport ${viewport}`);
-  for (const heading of ["Fast click before hover", "Open / close focus", "Resin search keyboard flow", "Read-only harness", "Result list placement", "Focused editor click targets", "Row <-> hopper linkage", "Percentage field", "Hopper drag", "Viewports"]) {
+  for (const heading of ["Fast click before hover", "Open / close focus", "Resin search keyboard flow", "Read-only harness", "Result list placement", "Focused editor click targets", "Row <-> hopper linkage", "Percentage field", "Hopper drag", "Header and timeline scale", "Viewports"]) {
     assert.ok(readme.includes(heading), `README does not document "${heading}"`);
   }
 });

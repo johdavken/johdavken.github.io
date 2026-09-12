@@ -52,6 +52,39 @@
   line-height: var(--station-line-tight);
 }
 
+/* ---- The scale: 6H | 12H ---- */
+
+/* Under the clock, in the anchor's column: two segments on one hairline in
+ * the rail's own colour, the pressed one lit in the Now colour and carrying
+ * a rule beneath it - weight and a mark, not colour alone. Sized to the
+ * column: the mono digits of the tick labels, no box of their own. */
+.station-rundown__range {
+  display: inline-flex;
+  margin-top: var(--station-space-1);
+  border-top: var(--station-stroke) solid var(--station-timeline-rail);
+}
+
+.station-root .station-rundown__range-option {
+  padding: 3px var(--station-space-1) 1px;
+  border-bottom: 2px solid transparent;
+  color: var(--station-timeline-muted);
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-xs);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  line-height: var(--station-line-tight);
+}
+
+.station-root .station-rundown__range-option:hover {
+  color: var(--station-timeline-label);
+}
+
+.station-root .station-rundown__range-option[aria-pressed="true"] {
+  color: var(--station-timeline-current);
+  font-weight: 700;
+  border-bottom-color: var(--station-timeline-current);
+}
+
 /* ---- Track ---- */
 
 .station-rundown__track {

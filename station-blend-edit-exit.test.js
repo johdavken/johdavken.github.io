@@ -250,6 +250,9 @@ function boot(options) {
   window.window = window;
   window.globalThis = window;
   window.self = window;
+  // The document's location is the window's, as in a browser: the shell
+  // derives the way back to the legacy interface from it.
+  doc.location = window.location;
   const context = vm.createContext(window);
   for (const file of SHARED.concat(hostScripts())) new vm.Script(read(file), { filename: file }).runInContext(context);
 
@@ -886,6 +889,53 @@ test("the Handbook's arrival, and Blend Edit inside it, move nothing above the f
   assert.match(shellCss, /grid-template-areas:\n\s+"header"\n\s+"machine"\n\s+"timeline"\n\s+"status";/);
   assert.match(shellCss, /\.station-handbook-slot \{[^}]*grid-area: machine;/);
   assert.doesNotMatch(shellCss, /grid-area: timeline;[^}]*handbook|handbook[^}]*grid-area: timeline/);
+});
+
+test("the header around the stage is identity, the way back and the two readouts; the timeline's scale is the timeline's own, under Now, and the Handbook's arrival neither covers nor moves it", () => {
+  const s = boot();
+  const header = s.q(".station-header");
+  assert.deepEqual(header.children.map(n => n.getAttribute("class")), ["station-header__title", "station-header__legacy", "station-header__job", "station-header__connection"]);
+  assert.equal(header.children[0].textContent, "Station");
+  assert.doesNotMatch(header.textContent, /experimental|6H|12H/i, "no badge and no scale in the header");
+  assert.equal(header.querySelector("[data-window]"), null);
+  // The way back is the host's own URL without the Station flag - the route
+  // the application already has - as a link, not a script.
+  const legacy = header.querySelector(".station-header__legacy");
+  assert.equal(legacy.tagName, "A");
+  assert.equal(legacy.textContent, "Legacy");
+  assert.equal(legacy.getAttribute("href"), "/");
+  assert.deepEqual(Object.keys(legacy.listeners), []);
+  // The readouts are what they were: Output and Changeover, editable.
+  assert.deepEqual(header.querySelectorAll(".station-job__key").map(n => n.textContent), ["Output", "Changeover"]);
+  assert.match(header.querySelectorAll(".station-job__value")[0].textContent, /900 lb\/hr/);
+  // The scale lives in the timeline's Now column, and pressing it is the
+  // timeline's own setWindow: the row redraws at the new window.
+  const timeline = s.q("[data-station-mount='timeline']");
+  const range = timeline.querySelector(".station-rundown__now .station-rundown__range");
+  assert.ok(range, "6H | 12H is under Now");
+  const options = range.querySelectorAll("[data-window]");
+  assert.deepEqual(options.map(n => [n.textContent, n.getAttribute("aria-pressed")]), [["6H", "true"], ["12H", "false"]]);
+  const rundown = timeline.querySelector(".station-rundown");
+  options[1].click();
+  assert.equal(rundown.getAttribute("data-window"), "12");
+  assert.deepEqual(options.map(n => n.getAttribute("aria-pressed")), ["false", "true"]);
+  // Opening the Handbook, and Blend Edit in it, is laid over the stage's
+  // cell only: the timeline row, its scale and its state are untouched.
+  const serialize = node => JSON.stringify([Object.entries(node.attributes || {}).sort(), node.children.map(child => [child.tagName, Object.entries(child.attributes || {}).sort()])]);
+  const before = { timeline: serialize(timeline), now: serialize(timeline.querySelector(".station-rundown__now")), range: serialize(range) };
+  s.launcher.click();
+  s.clickAction("blend-edit");
+  s.clickAction("edit-all");
+  assert.equal(serialize(timeline), before.timeline);
+  assert.equal(serialize(timeline.querySelector(".station-rundown__now")), before.now);
+  assert.equal(serialize(range), before.range);
+  assert.equal(rundown.getAttribute("data-window"), "12", "the scale chosen before the Handbook opened is still the scale");
+  // And it is still the operator's to change with the Handbook open.
+  options[0].click();
+  assert.equal(rundown.getAttribute("data-window"), "6");
+  s.clickAction("close-handbook");
+  assert.equal(rundown.getAttribute("data-window"), "6");
+  assert.deepEqual(s.calls, [], "no command: the scale is this screen's");
 });
 
 /* ----------------------------------------------------------------------

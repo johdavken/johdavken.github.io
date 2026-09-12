@@ -1,10 +1,9 @@
-/* The job controls (station-job-controls.js): OUTPUT, CHANGEOVER and the
- * timeline's 6H | 12H, as three small items in the header.
+/* The job controls (station-job-controls.js): OUTPUT and CHANGEOVER, as
+ * two small readouts in the header.
  *
  * Subordinate by design - the same small caps as the line console's
  * trigger, no border until one is being edited, and a value that reads as
- * a readout rather than a field. A temporary home while the timeline is
- * new; nothing here claims a track of the shell.
+ * a readout rather than a field. Nothing here claims a track of the shell.
  */
 
 .station-job {
@@ -41,8 +40,7 @@
   border-color: var(--station-border-strong);
 }
 
-.station-root .station-job__trigger:active,
-.station-root .station-job__scale:active {
+.station-root .station-job__trigger:active {
   background: var(--station-surface-selected);
   border-color: var(--station-accent-active);
 }
@@ -116,31 +114,6 @@
 .station-job__unit {
   color: var(--station-text-muted);
   font-size: var(--station-text-xs);
-}
-
-/* ---- 6H | 12H ---- */
-
-.station-job__window {
-  display: inline-flex;
-  border: var(--station-stroke) solid var(--station-border-strong);
-  border-radius: var(--station-radius-sm);
-  overflow: hidden;
-}
-
-.station-root .station-job__scale {
-  padding: 2px var(--station-space-2);
-  color: var(--station-text-muted);
-  font-size: var(--station-text-xs);
-  letter-spacing: 0.08em;
-}
-
-.station-root .station-job__scale[aria-pressed="true"] {
-  background: var(--station-selection);
-  color: var(--station-text);
-}
-
-.station-job__scale + .station-job__scale {
-  border-left: var(--station-stroke) solid var(--station-border-strong);
 }
 
 /* ---- The one line of feedback ---- */

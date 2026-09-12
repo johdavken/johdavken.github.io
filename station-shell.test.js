@@ -8,6 +8,8 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
 
 const shell = require("./station/station-shell.js");
 
@@ -91,17 +93,76 @@ test("the too-small notice is part of the shell, not of a page", () => {
   assert.match(notice[0].textContent, /1100px/);
 });
 
-test("header tags are configurable, so a host can label the mode it is in", () => {
-  const doc = fakeDocument();
-  const root = shell.createShell(doc, { tags: ["Experimental", "Live"] });
-  const tags = find(root, node => /station-header__tag/.test(node.getAttribute("class") || ""))
-    .map(node => node.textContent);
-  assert.deepEqual(tags, ["Experimental", "Live"]);
-  // And there is a sane default.
-  assert.deepEqual(
-    find(built(), node => /station-header__tag/.test(node.getAttribute("class") || "")).map(n => n.textContent),
-    ["Experimental"]
-  );
+test("the header is identity and status only: Station, the way back, the two job readouts' slot, the connection - no tag, no badge, no EXPERIMENTAL", () => {
+  const root = built();
+  const header = find(root, node => /station-header$/.test(node.getAttribute("class") || ""))[0];
+  assert.ok(header);
+  assert.deepEqual(header.children.map(node => [node.nodeName, node.getAttribute("class")]), [
+    ["H1", "station-header__title"],
+    ["A", "station-header__legacy"],
+    ["DIV", "station-header__job"],
+    ["DIV", "station-header__connection"]
+  ]);
+  assert.equal(header.children[0].textContent, "Station");
+  walk(root, node => {
+    assert.doesNotMatch(String(node.textContent), /experimental/i);
+    assert.doesNotMatch(String(node.getAttribute("class") || ""), /__tag|badge|pill/);
+  });
+  // Nor is a tag on offer to a host any more.
+  const tagged = shell.createShell(fakeDocument(), { tags: ["Experimental", "Live"] });
+  assert.equal(find(tagged, node => /experimental|live/i.test(String(node.textContent))).length, 0);
+});
+
+test("Legacy is a plain link beside the name - the word alone, no explanation - to the application without the Station flag", () => {
+  const root = built();
+  const link = find(root, node => /station-header__legacy/.test(node.getAttribute("class") || ""))[0];
+  assert.equal(link.nodeName, "A", "a link: keyboard-reachable and focusable as itself, nothing scripted");
+  assert.equal(link.textContent, "Legacy");
+  assert.equal(link.getAttribute("data-action"), "legacy");
+  assert.ok(link.getAttribute("href"));
+  assert.equal(link.getAttribute("role"), null);
+  assert.equal(link.getAttribute("target"), null, "the same tab: it is the same application");
+  // A fake document with no location is the harness's case.
+  assert.equal(link.getAttribute("href"), shell.HARNESS_LEGACY);
+  // A host may hand the href in; the document's own location is the default.
+  const given = shell.createShell(fakeDocument(), { legacy: "/?demo=x" });
+  assert.equal(find(given, node => /station-header__legacy/.test(node.getAttribute("class") || ""))[0].getAttribute("href"), "/?demo=x");
+  const located = shell.createShell(Object.assign(fakeDocument(), { location: { href: "https://resin.tools/index.html?view=station&x=1#top" } }));
+  assert.equal(find(located, node => /station-header__legacy/.test(node.getAttribute("class") || ""))[0].getAttribute("href"), "/index.html?x=1#top");
+});
+
+test("legacyHref is the existing route: the page's own URL with ?view=station removed and nothing else touched; the harness goes to the application beside it", () => {
+  assert.equal(shell.legacyHref("https://resin.tools/?view=station"), "/");
+  assert.equal(shell.legacyHref("https://resin.tools/index.html?view=station"), "/index.html");
+  assert.equal(shell.legacyHref("https://johdavken.github.io/repo/?demo=three-layer&view=station&rtSyncCode=ABC"), "/repo/?demo=three-layer&rtSyncCode=ABC", "other parameters are kept, in order, under the deployment's own path");
+  assert.equal(shell.legacyHref("http://127.0.0.1:8791/?view=station#station"), "/#station");
+  assert.equal(shell.legacyHref("https://resin.tools/station/station.html?source=demo&demo=three-layer"), "../index.html", "the standalone harness");
+  assert.equal(shell.legacyHref("https://resin.tools/?view=legacy"), "../index.html", "any other view flag is not Station's");
+  assert.equal(shell.legacyHref(undefined), "../index.html");
+  assert.equal(shell.legacyHref("not a url"), "../index.html");
+  // It navigates, and never redirects: the shell holds no script for it.
+  const src = fs.readFileSync(path.join(__dirname, "station/station-shell.js"), "utf8");
+  assert.doesNotMatch(src, /location\.(assign|replace|href\s*=)|history\./);
+  assert.doesNotMatch(src, /addEventListener/);
+});
+
+test("the way back is Station's alone: the legacy interface, its stylesheets and app.js carry nothing of the link or the timeline's scale, and the host builds nothing without the flag", () => {
+  // The legacy application - its markup, every stylesheet the phone and
+  // tablet shells use, and app.js - is untouched by the desktop chrome.
+  const legacyFiles = ["index.html", "app.js"].concat(
+    fs.readdirSync(__dirname).filter(name => /^(styles-.*|desktop|theme|button-styling)\.css$/.test(name)));
+  for (const file of legacyFiles) {
+    const text = fs.readFileSync(path.join(__dirname, file), "utf8");
+    assert.doesNotMatch(text, /station-header__legacy|station-rundown__range|legacyHref|HARNESS_LEGACY/, `${file} knows about the Station chrome`);
+  }
+  // The shell is built by the Station modules only, which the host loads
+  // only for ?view=station (station-host.test.js); nothing else calls it.
+  const callers = fs.readdirSync(__dirname).filter(name => /\.js$/.test(name) && !/\.test\.js$/.test(name))
+    .filter(name => /createShell\(/.test(fs.readFileSync(path.join(__dirname, name), "utf8")));
+  assert.deepEqual(callers, [], "no top-level file builds the shell");
+  const stationCallers = fs.readdirSync(path.join(__dirname, "station")).filter(name => /\.js$/.test(name))
+    .filter(name => /createShell\(/.test(fs.readFileSync(path.join(__dirname, "station", name), "utf8")));
+  assert.deepEqual(stationCallers, ["station-shell.js", "station.js"]);
 });
 
 test("every class the shell emits is in the station- namespace", () => {

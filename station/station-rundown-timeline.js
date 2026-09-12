@@ -18,7 +18,9 @@
  *
  * Presentation state only:
  *
- *   window      6 or 12 hours - a scale, not a fact about the job
+ *   window      6 or 12 hours - a scale, not a fact about the job. Chosen
+ *               on the timeline itself: the 6H | 12H selector under the
+ *               Now clock, the one control here that is not a marker
  *   observed    slot -> { weight, at }: when this screen last saw each
  *               tracked hopper's weight change, which anchors its estimate
  *               so the marker moves with the clock (see station-rundown.js
@@ -111,6 +113,8 @@
    * @param {object}   [options.view]      the window: visibility/focus events
    *        and ResizeObserver; the global one by default, none in tests
    * @param {number}   [options.window]    6 or 12; 6 by default
+   * @param {function} [options.onWindow]  told the hours when the operator
+   *        chooses a scale on the selector (not on setWindow)
    * @param {number}   [options.tickMs]
    * @param {function} [options.onTick]    told after every clock pass, so a
    *        sibling readout (the header's changeover) can follow the clock
@@ -124,6 +128,7 @@
     const view = settings.view === undefined ? (typeof globalThis !== "undefined" ? globalThis : null) : settings.view;
     const tickMs = Number.isFinite(settings.tickMs) && settings.tickMs >= 1000 ? settings.tickMs : TICK_MS;
     const onTick = typeof settings.onTick === "function" ? settings.onTick : null;
+    const onWindow = typeof settings.onWindow === "function" ? settings.onWindow : () => {};
 
     const state = {
       window: rundown.WINDOWS.includes(settings.window) ? settings.window : rundown.DEFAULT_WINDOW,
@@ -144,6 +149,22 @@
     nowEl.appendChild(text(doc, "span", "station-rundown__now-label", "Now"));
     const clockEl = text(doc, "span", "station-rundown__now-clock", "");
     nowEl.appendChild(clockEl);
+    /* The scale, under the clock: two segments, one pressed. Part of the
+     * Now anchor because that is what it scales from - the window always
+     * begins at Now - and because the anchor's column is the one place on
+     * the row that is not the axis. Choosing a scale redraws the row at
+     * the new window and nothing else: no job state, no command. */
+    const rangeEl = element(doc, "div", "station-rundown__range", { role: "group", "aria-label": "Timeline range" });
+    const rangeButtons = {};
+    for (const hours of rundown.WINDOWS) {
+      const button = text(doc, "button", "station-rundown__range-option", `${hours}H`, {
+        type: "button", "data-window": String(hours), "aria-pressed": String(hours === state.window),
+        title: `Show the next ${hours} hours`
+      });
+      rangeButtons[hours] = button;
+      rangeEl.appendChild(button);
+    }
+    nowEl.appendChild(rangeEl);
     rootEl.appendChild(nowEl);
 
     const track = element(doc, "div", "station-rundown__track");
@@ -223,6 +244,9 @@
 
       clockEl.textContent = rundown.formatClock(t);
       rootEl.setAttribute("data-window", String(state.window));
+      for (const hours of rundown.WINDOWS) {
+        rangeButtons[hours].setAttribute("aria-pressed", String(hours === state.window));
+      }
       renderTicks(layout.ticks, changeoverLabelSpan(layout.changeover));
       renderChangeover(layout.changeover);
       renderMarkers(layout.markers);
@@ -532,6 +556,13 @@
       render();
       return true;
     }
+
+    rangeEl.addEventListener("click", event => {
+      const button = event.target && event.target.closest ? event.target.closest("[data-window]") : null;
+      if (!button) return;
+      const hours = Number(button.getAttribute("data-window"));
+      if (setWindow(hours)) onWindow(hours);
+    });
 
     function destroy() {
       if (state.timer !== null && timers && typeof timers.clearTimeout === "function") timers.clearTimeout(state.timer);

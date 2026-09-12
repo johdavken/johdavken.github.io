@@ -1291,8 +1291,9 @@
 
     /* The run-down timeline across the foot of the workspace, and the
      * header's job controls that set what it projects from. The timeline
-     * keeps the one coarse clock this screen has; the controls' changeover
-     * readout follows it through onTick rather than keeping a second. The
+     * keeps the one coarse clock this screen has - and its own 6H | 12H
+     * scale, in its Now column; the controls' changeover readout follows
+     * the clock through onTick rather than keeping a second. The
      * controls' commands run the same publish policy the editor's do. */
     if (rundownTimeline && mounts.timeline) {
       timeline = rundownTimeline.create(doc, {
@@ -1304,8 +1305,6 @@
     if (jobControls && mounts.job) {
       jobPanel = jobControls.create(doc, {
         commands: () => commandsFor(current.resolved),
-        window: timeline ? timeline.getWindow() : undefined,
-        onWindow: hours => { if (timeline) timeline.setWindow(hours); },
         onCommitted: result => {
           lastOwnRevision = Number.isInteger(result.revision) ? result.revision : null;
           onPublish({ own: true });

@@ -55,10 +55,37 @@
     return node;
   }
 
-  function text(doc, name, className, value) {
-    const node = element(doc, name, className);
+  function text(doc, name, className, value, attributes) {
+    const node = element(doc, name, className, attributes);
     node.textContent = value;
     return node;
+  }
+
+  /* THE WAY BACK
+   *
+   * Station and the legacy interface coexist on one page: the application
+   * host is index.html, and ?view=station is the one flag that makes it
+   * show Station instead (station-host.js does nothing without it). So the
+   * route back is that same URL without the flag - nothing is redirected,
+   * nothing else about the address is touched, and the application starts
+   * exactly as it does for anyone who never asked for Station. On the
+   * standalone harness (station/station.html), which has no application,
+   * the route is the application's page beside it.
+   *
+   * @param {string} [href]  the page's own URL
+   * @returns {string} a relative href for the legacy interface
+   */
+  const HARNESS_LEGACY = "../index.html";
+  function legacyHref(href) {
+    let url;
+    try {
+      url = new URL(String(href));
+    } catch (error) {
+      return HARNESS_LEGACY;
+    }
+    if (url.searchParams.get("view") !== "station") return HARNESS_LEGACY;
+    url.searchParams.delete("view");
+    return url.pathname + url.search + url.hash;
   }
 
   /**
@@ -70,7 +97,8 @@
    *
    * @param {Document} doc
    * @param {object} [options]
-   * @param {string[]} [options.tags]  Short labels in the header, e.g. ["Live"].
+   * @param {string} [options.legacy]  the href of the legacy interface; by
+   *        default derived from the document's own location (legacyHref)
    */
   function createShell(doc, options) {
     const settings = options || {};
@@ -81,13 +109,21 @@
 
     const shell = element(doc, "div", "station-shell");
 
+    /* The header: identity, the way back, the job's two line-wide readouts,
+     * and the connection at the far end. Nothing else lives here. */
     const header = element(doc, "header", "station-header");
     header.appendChild(text(doc, "h1", "station-header__title", "Station"));
-    const tags = Array.isArray(settings.tags) ? settings.tags : ["Experimental"];
-    for (const tag of tags) header.appendChild(text(doc, "span", "station-header__tag", tag));
-    /* The job controls' slot: the line's output, the changeover and the
-     * timeline's scale, filled by station-job-controls.js. A temporary
-     * home in the header while the timeline is new. */
+    /* Beside the name, the way back to the legacy interface: a plain link,
+     * quiet by design - text, not a button, no explanation - so it is
+     * there when wanted and never competes with the readouts. */
+    const legacy = typeof settings.legacy === "string" && settings.legacy
+      ? settings.legacy
+      : legacyHref(doc.location && doc.location.href);
+    header.appendChild(text(doc, "a", "station-header__legacy", "Legacy", {
+      href: legacy, "data-action": "legacy", title: "Resin.Tools, the legacy interface"
+    }));
+    /* The job controls' slot: the line's output and the changeover, filled
+     * by station-job-controls.js. */
     header.appendChild(element(doc, "div", "station-header__job", { "data-station-mount": "job" }));
     /* The line console's slot, at the header's far end: the one place the
      * connection is shown, filled by station-sync-console.js when the
@@ -120,5 +156,5 @@
     return root;
   }
 
-  return { MOUNTS, createShell };
+  return { MOUNTS, HARNESS_LEGACY, legacyHref, createShell };
 });

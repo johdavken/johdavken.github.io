@@ -199,6 +199,65 @@ async function run(browserName) {
     check(browserName, `${tag} the shell is header, stage, run-down timeline and status bar across the full width - no side pane, no recipe strip, no spare track`,
       frame.columns === 1 && frame.regions.join() === "station-header,station-machine,station-handbook-slot,station-timeline,station-status" && frame.panes === 0 && frame.headerFull && frame.machineFull && frame.timelineFull && frame.statusFull && frame.stageWide && frame.console, frame);
 
+    /* The header: Station's name, the way back, the two job readouts and
+     * the line console - one row, no badge, no scale. Legacy is a plain
+     * link to the page without the Station flag, in the header's muted
+     * small caps, never a box. */
+    const chrome = await page.evaluate(() => {
+      const header = document.querySelector(".station-header");
+      const legacy = header.querySelector(".station-header__legacy");
+      const cs = getComputedStyle(legacy);
+      const ls = legacy.getBoundingClientRect(), title = header.querySelector(".station-header__title").getBoundingClientRect();
+      const keys = [...header.querySelectorAll(".station-job__key")].map(k => k.textContent);
+      const values = [...header.querySelectorAll(".station-job__value")].map(v => v.textContent);
+      return {
+        text: header.textContent, badge: !!header.querySelector(".station-header__tag, .pill, .badge"),
+        scaleInHeader: !!header.querySelector("[data-window], .station-job__scale, .station-job__window"),
+        legacy: legacy && legacy.tagName === "A" && legacy.textContent === "Legacy" ? legacy.getAttribute("href") : null,
+        legacyQuiet: cs.borderStyle === "none" && cs.backgroundColor === "rgba(0, 0, 0, 0)" && cs.textDecorationLine === "underline" && parseFloat(cs.fontSize) <= 12,
+        legacyBesideName: ls.x > title.right && ls.x - title.right < 24 && Math.abs((ls.y + ls.height / 2) - (title.y + title.height / 2)) < 6,
+        keys, values, headerHeight: header.getBoundingClientRect().height,
+        oneRow: [...header.children].every(el => Math.abs(el.getBoundingClientRect().height) <= header.getBoundingClientRect().height)
+      };
+    });
+    check(browserName, `${tag} the header is Station, Legacy, Output and Changeover, then the console: no EXPERIMENTAL, no 6H | 12H, one 52px row`,
+      !/experimental/i.test(chrome.text) && !chrome.badge && !chrome.scaleInHeader && chrome.keys.join() === "Output,Changeover" && /lb\/hr/.test(chrome.values[0]) && /Not set|PM|AM/.test(chrome.values[1]) && chrome.headerHeight === 52 && chrome.oneRow, chrome);
+    check(browserName, `${tag} Legacy is a quiet link beside the name to the application without the Station flag`,
+      chrome.legacy === "/" && chrome.legacyQuiet && chrome.legacyBesideName, chrome);
+
+    /* The timeline's scale: 6H | 12H under the Now clock, in the anchor's
+     * column, one pressed - and choosing the other redraws the row at the
+     * new window without moving the axis a pixel. */
+    const scaleGeometry = () => page.evaluate(() => {
+      const r = sel => { const b = document.querySelector(sel).getBoundingClientRect(); return { x: b.x, y: b.y, w: b.width, h: b.height, bottom: b.bottom }; };
+      const options = [...document.querySelectorAll(".station-rundown__range-option")];
+      const pressed = options.find(o => o.getAttribute("aria-pressed") === "true");
+      const pcs = pressed ? getComputedStyle(pressed) : null, other = options.find(o => o !== pressed), ocs = other ? getComputedStyle(other) : null;
+      return {
+        now: r(".station-rundown__now"), clock: r(".station-rundown__now-clock"), range: r(".station-rundown__range"), axis: r(".station-rundown__axis"), track: r(".station-rundown__track"), timeline: r(".station-timeline"),
+        options: options.map(o => [o.textContent, o.getAttribute("aria-pressed")]), window: document.querySelector(".station-rundown").getAttribute("data-window"),
+        // The pressed segment is told apart by weight and a rule, not colour alone.
+        pressedMarked: !!pcs && parseInt(pcs.fontWeight, 10) >= 700 && parseFloat(pcs.borderBottomWidth) >= 2 && pcs.borderBottomColor !== "rgba(0, 0, 0, 0)",
+        otherPlain: !!ocs && parseInt(ocs.fontWeight, 10) < 700 && (ocs.borderBottomColor === "rgba(0, 0, 0, 0)" || parseFloat(ocs.borderBottomWidth) === 0),
+        markers: [...document.querySelectorAll(".station-rundown__marker")].map(m => [m.getAttribute("data-hopper"), m.style.getPropertyValue("--station-rundown-x")])
+      };
+    });
+    let scale = await scaleGeometry();
+    check(browserName, `${tag} 6H | 12H sits under Now in the timeline's anchor column, 6H pressed and marked by weight and a rule`,
+      scale.options.join() === "6H,true,12H,false" && scale.window === "6" && scale.range.y >= scale.clock.bottom && scale.range.x >= scale.now.x && scale.range.x + scale.range.w <= scale.track.x + 1 && scale.range.bottom <= scale.timeline.bottom && scale.pressedMarked && scale.otherPlain, scale);
+    const sixAxis = scale.axis, sixMarkers = scale.markers;
+    await page.click(".station-rundown__range-option[data-window='12']"); await page.waitForTimeout(150);
+    scale = await scaleGeometry();
+    const halved = sixMarkers.length > 0 && sixMarkers.every(([id, x]) => { const now = scale.markers.find(m => m[0] === id); return now && Math.abs(parseFloat(now[1]) - parseFloat(x) / 2) < 0.01; });
+    check(browserName, `${tag} 12H presses the other segment and redraws every marker at half its fraction; the axis and the row do not move`,
+      scale.options.join() === "6H,false,12H,true" && scale.window === "12" && halved && scale.axis.x === sixAxis.x && scale.axis.y === sixAxis.y && scale.axis.w === sixAxis.w && scale.pressedMarked && scale.otherPlain, { scale, sixAxis, sixMarkers });
+    await page.focus(".station-rundown__range-option[data-window='6']"); await page.keyboard.press("Space"); await page.waitForTimeout(150);
+    scale = await scaleGeometry();
+    // The clock ran on between the two presses: a marker moves a hair with
+    // it, so the six-hour picture is the same to within a tick's drift.
+    const sixAgain = sixMarkers.every(([id, x]) => { const now = scale.markers.find(m => m[0] === id); return now && Math.abs(parseFloat(now[1]) - parseFloat(x)) < 0.02; });
+    check(browserName, `${tag} 6H by keyboard brings the six-hour picture back exactly`, scale.window === "6" && scale.options.join() === "6H,true,12H,false" && sixAgain && scale.axis.x === sixAxis.x && scale.axis.w === sixAxis.w, { scale, sixMarkers });
+
     /* A modal the application opens (a sync conflict, a join code) must be
      * SEEN over Station, not hidden with the rest of the legacy shell: a
      * hidden modal leaves the document inert, and Station then answers
