@@ -10,7 +10,12 @@
   box-sizing: border-box;
   min-height: 100vh;
   margin: 0;
-  background: var(--station-bg);
+  background-color: var(--station-bg);
+  /* The theme's canvas pattern (the technical themes' drafting grid),
+     or none. Sizes are the grid's own (tokens.css); with no pattern they
+     size nothing. */
+  background-image: var(--station-canvas-pattern);
+  background-size: var(--station-canvas-grid-size);
   color: var(--station-text);
   color-scheme: var(--station-color-scheme);
   font-family: var(--station-font);

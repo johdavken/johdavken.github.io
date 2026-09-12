@@ -10,16 +10,47 @@
  * application hidden behind it or become part of operational state.
  */
 
-.station-root {
-  /* ---- Machine line weights ---- */
-  --station-line-hairline: 0.6px;
+/* Line weights are declared for the theme-preview scope as well as the
+ * root: a theme may scale them (--station-line-scale, themes/*.css), and a
+ * miniature drawn under another theme's tokens must take that theme's
+ * weights, not inherit the live root's. */
+.station-root,
+.station-theme-scope {
+  /* ---- Machine line weights ----
+   * Multiplied by the theme's line scale (1 for a rendered machine, more
+   * for a schematic that is drawn in its edges). */
+  --station-line-hairline: calc(0.6px * var(--station-line-scale, 1));
   /* A curved band's facet edge: stroked in its own colour, just wide enough
    * to close the antialiasing gap between facets, never wide enough to
-   * read as a line. */
+   * read as a line. Not scaled: it is not a line. */
   --station-line-seam: 0.15px;
-  --station-line-thin: 0.9px;
-  --station-line-medium: 1.3px;
+  --station-line-thin: calc(0.9px * var(--station-line-scale, 1));
+  --station-line-medium: calc(1.3px * var(--station-line-scale, 1));
+}
+
+.station-root {
   --station-web-width: 13px;
+
+  /* ---- Drafting grid ----
+   * The canvas pattern the technical themes draw: a fine minor grid with a
+   * heavier major line every fifth. The colours are the theme's
+   * (--station-grid-major / --station-grid-minor, transparent where a
+   * theme has no grid) and the theme chooses whether the canvas shows it
+   * at all (--station-canvas-pattern: none | var(--station-canvas-grid)),
+   * so a theme without a grid paints no gradient layers. CSS gradients,
+   * not an image: nothing to download, nothing to tile at the wrong DPI. */
+  --station-grid-major-size: 120px;
+  --station-grid-minor-size: 24px;
+  --station-canvas-grid:
+    linear-gradient(to right, var(--station-grid-major) var(--station-stroke), transparent var(--station-stroke)),
+    linear-gradient(to bottom, var(--station-grid-major) var(--station-stroke), transparent var(--station-stroke)),
+    linear-gradient(to right, var(--station-grid-minor) var(--station-stroke), transparent var(--station-stroke)),
+    linear-gradient(to bottom, var(--station-grid-minor) var(--station-stroke), transparent var(--station-stroke));
+  --station-canvas-grid-size:
+    var(--station-grid-major-size) var(--station-grid-major-size),
+    var(--station-grid-major-size) var(--station-grid-major-size),
+    var(--station-grid-minor-size) var(--station-grid-minor-size),
+    var(--station-grid-minor-size) var(--station-grid-minor-size);
 
   /* ---- Motion ----
    * Opening and closing a layer is a window opening and closing: an

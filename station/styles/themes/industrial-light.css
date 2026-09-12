@@ -1,9 +1,20 @@
 /* Industrial Light — cool low-glare neutrals rather than white cards on a
  * white page. Equipment remains steel, while edit and status colours carry
  * enough contrast for long-duration operational use. */
-.station-root[data-theme="industrial-light"] {
+.station-root[data-theme="industrial-light"],
+.station-theme-scope[data-theme="industrial-light"] {
   color-scheme: light;
   --station-color-scheme: light;
+
+  /* ---- Character ----
+   * A rendered machine in a light room: shaded surfaces, ordinary line
+   * weights, no drafting grid, the same face for every label. */
+  --station-line-scale: 1;
+  --station-schematic-outline: 0%;
+  --station-font-annotation: var(--station-font);
+  --station-grid-major: transparent;
+  --station-grid-minor: transparent;
+  --station-canvas-pattern: none;
 
   --station-bg: #d8dee2;
   --station-surface: #e5e9eb;

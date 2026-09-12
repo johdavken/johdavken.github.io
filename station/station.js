@@ -80,6 +80,7 @@
   const handbook = root.PolynStationHandbook || null;
   const recipeBook = root.PolynStationRecipeBook || null;
   const appearance = root.PolynStationAppearance || null;
+  const themePreview = root.PolynStationThemePreview || null;
   const theme = root.PolynStationTheme || null;
   const recipes = root.PolynStationRecipesBridge || null;
 
@@ -1252,7 +1253,11 @@
           recipes,
           blend: blendSurface,
           theme: themeController,
-          themes: theme ? theme.THEMES : []
+          themes: theme ? theme.THEMES : [],
+          families: theme ? theme.FAMILIES : [],
+          /* The Appearance gallery's miniatures: a picture per theme,
+           * drawn under that theme's own tokens. Presentation only. */
+          preview: themePreview
         },
         mount: mounts.handbook,
         reducedMotion: prefersReducedMotion,

@@ -8,7 +8,7 @@
 
   <!-- Theme state restores before the first stylesheet can paint, so the
        standalone harness never flashes the default before a saved choice. -->
-  <script src="../station-theme.js?v=0.1.0"></script>
+  <script src="../station-theme.js?v=0.2.0"></script>
   <script>
     if (globalThis.PolynStationTheme && typeof globalThis.PolynStationTheme.initialize === "function") {
       document.documentElement.stationTheme = globalThis.PolynStationTheme.initialize(document.documentElement, globalThis);
@@ -28,21 +28,25 @@
        Station loads NONE of the application's stylesheets. The legacy cascade
        is not inherited and then overridden, it is simply not present.
        station-isolation.test.js enforces this in both directions. -->
-  <link rel="stylesheet" href="styles/tokens.css?v=0.13.0">
-  <link rel="stylesheet" href="styles/themes/industrial-light.css?v=0.2.0">
-  <link rel="stylesheet" href="styles/themes/industrial-dark.css?v=0.2.0">
-  <link rel="stylesheet" href="styles/themes/gruvbox-dark.css?v=0.2.0">
-  <link rel="stylesheet" href="styles/base.css?v=0.4.0">
+  <link rel="stylesheet" href="styles/tokens.css?v=0.14.0">
+  <link rel="stylesheet" href="styles/themes/industrial-light.css?v=0.3.0">
+  <link rel="stylesheet" href="styles/themes/industrial-dark.css?v=0.3.0">
+  <link rel="stylesheet" href="styles/themes/gruvbox-light.css?v=0.1.0">
+  <link rel="stylesheet" href="styles/themes/gruvbox-dark.css?v=0.3.0">
+  <link rel="stylesheet" href="styles/themes/engineering-paper.css?v=0.1.0">
+  <link rel="stylesheet" href="styles/themes/blueprint.css?v=0.1.0">
+  <link rel="stylesheet" href="styles/base.css?v=0.5.0">
   <link rel="stylesheet" href="styles/shell.css?v=0.6.0">
   <link rel="stylesheet" href="styles/components/machine.css?v=0.4.0">
-  <link rel="stylesheet" href="styles/components/hopper.css?v=0.14.0">
-  <link rel="stylesheet" href="styles/components/layer-bank.css?v=0.13.0">
+  <link rel="stylesheet" href="styles/components/hopper.css?v=0.15.0">
+  <link rel="stylesheet" href="styles/components/layer-bank.css?v=0.14.0">
   <link rel="stylesheet" href="styles/components/focus-editor.css?v=0.7.1">
   <link rel="stylesheet" href="styles/components/inspector.css?v=0.3.1">
   <link rel="stylesheet" href="styles/components/rundown.css?v=0.3.0">
   <link rel="stylesheet" href="styles/components/job-controls.css?v=0.2.0">
   <link rel="stylesheet" href="styles/components/sync-console.css?v=0.2.0">
-  <link rel="stylesheet" href="styles/components/handbook.css?v=0.3.0">
+  <link rel="stylesheet" href="styles/components/handbook.css?v=0.4.0">
+  <link rel="stylesheet" href="styles/components/theme-preview.css?v=0.1.0">
   <!-- Development-only review controls (?transition=debug). Harness only. -->
   <link rel="stylesheet" href="styles/components/dev.css?v=0.1.0">
 
@@ -103,7 +107,8 @@
   <!-- The Operator Handbook: the launcher and shell, and its first section,
        the Recipe Book (with Blend Edit's controls). -->
   <script src="station-recipe-book.js?v=0.2.0" defer></script>
-  <script src="station-appearance.js?v=0.1.0" defer></script>
+  <script src="station-theme-preview.js?v=0.1.0" defer></script>
+  <script src="station-appearance.js?v=0.2.0" defer></script>
   <script src="station-handbook.js?v=0.2.0" defer></script>
   <script src="station-demo-lines.js?v=0.3.2" defer></script>
   <script src="station-source.js?v=0.5.0" defer></script>
@@ -114,7 +119,7 @@
   <!-- Development-only transition review (?transition=debug). Harness only,
        like the lab: never loaded by station-host.js. -->
   <script src="station-transition-dev.js?v=0.1.0" defer></script>
-  <script src="station.js?v=0.15.0" defer></script>
+  <script src="station.js?v=0.16.0" defer></script>
 </head>
 <body>
 

@@ -69,7 +69,7 @@
 
 .station-hopper__source {
   fill: var(--station-text-faint);
-  font-family: var(--station-font);
+  font-family: var(--station-font-annotation);
   font-size: calc(var(--station-text-2xs) * var(--station-bank-scale, 1));
   letter-spacing: 0.04em;
 }

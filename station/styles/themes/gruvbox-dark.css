@@ -1,8 +1,19 @@
 /* Gruvbox Dark — canonical warm neutrals and bright-column accents, mapped
  * by semantic role rather than sprayed across individual components. */
-.station-root[data-theme="gruvbox-dark"] {
+.station-root[data-theme="gruvbox-dark"],
+.station-theme-scope[data-theme="gruvbox-dark"] {
   color-scheme: dark;
   --station-color-scheme: dark;
+
+  /* ---- Character ----
+   * A rendered machine in warm charcoal: shaded surfaces, ordinary line
+   * weights, no drafting grid, the same face for every label. */
+  --station-line-scale: 1;
+  --station-schematic-outline: 0%;
+  --station-font-annotation: var(--station-font);
+  --station-grid-major: transparent;
+  --station-grid-minor: transparent;
+  --station-canvas-pattern: none;
 
   --station-bg: #1d2021;
   --station-surface: #282828;

@@ -190,6 +190,7 @@
   align-self: center;
   margin: 0;
   color: var(--station-text-muted);
+  font-family: var(--station-font-annotation);
   font-size: var(--station-text-xs);
   font-weight: 600;
   letter-spacing: 0.1em;
@@ -788,11 +789,20 @@
 /* ---------------------------------------------------------------------
  *   Appearance
  * -------------------------------------------------------------------
- * A second Handbook page in the same fixed bench. The rows are native
- * buttons with radio semantics: immediate, keyboard reachable, and large
- * enough to read without turning this into a theme editor. Drawn as
- * rows, not cards: the chosen one is a wash and a bar at the left edge,
- * as a selected recipe is.
+ * A second Handbook page in the same fixed bench: a gallery of the six
+ * themes, three family columns with the light theme over the dark, each
+ * a tile - the miniature (station-theme-preview.js) beside its name -
+ * and native buttons with radio semantics: immediate, keyboard reachable.
+ *
+ * The tiles are flat. The glass already gives the page its surface, so
+ * a tile is a picture and a word, a wash on hover, and when chosen a
+ * ring in the accent around the picture and a check by the name - both
+ * in the CONSOLE'S accent, outside the miniature's scope, so the chosen
+ * tile is marked the same way whichever theme it shows and whichever is
+ * on. Nothing is sized to the panel: the columns share its width, the
+ * two rows share what height the page has, and the miniature keeps its
+ * aspect inside that, so the gallery fits the bench at every stage
+ * height Station supports rather than the bench growing to fit it.
  */
 
 .station-appearance {
@@ -807,6 +817,7 @@
 
 .station-appearance__intro {
   display: flex;
+  flex: 0 0 auto;
   align-items: baseline;
   gap: var(--station-space-4);
 }
@@ -824,64 +835,104 @@
   line-height: var(--station-line-normal);
 }
 
-.station-appearance__choices {
+.station-appearance__gallery {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  align-content: start;
-  gap: var(--station-space-1);
+  flex: 1 1 auto;
+  gap: var(--station-space-2) var(--station-space-4);
+  min-height: 0;
 }
 
-.station-root .station-appearance__choice {
+/* A family: its name, then its two tiles sharing the column's height. */
+.station-appearance__family {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--station-space-2);
+  min-height: 0;
+}
+
+.station-appearance__family-name {
+  padding: 0 var(--station-space-2);
+  color: var(--station-text-faint);
+  font-family: var(--station-font-annotation);
+  font-size: var(--station-text-2xs);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.station-root .station-appearance__tile {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: var(--station-space-3);
   width: 100%;
-  padding: var(--station-space-2) var(--station-space-3);
-  border-radius: var(--station-radius-sm);
+  min-height: 0;
+  padding: var(--station-space-1) var(--station-space-2);
+  border-radius: var(--station-radius);
   color: var(--station-text);
 }
 
-.station-root .station-appearance__choice:hover {
+.station-root .station-appearance__tile:hover {
   background: var(--station-handbook-control-hover);
 }
 
-.station-root .station-appearance__choice:active {
+.station-root .station-appearance__tile:active {
   background: var(--station-handbook-control-active);
 }
 
-.station-root .station-appearance__choice[aria-checked="true"] {
+.station-root .station-appearance__tile[aria-checked="true"] {
   background: var(--station-handbook-selection);
-  box-shadow: inset calc(2 * var(--station-stroke)) 0 0 var(--station-accent);
 }
 
-.station-appearance__mark {
-  width: 14px;
-  height: 14px;
-  border: 2px solid var(--station-border-strong);
-  border-radius: 50%;
+/* The picture's frame: as tall as the tile's row allows, as wide as its
+   aspect makes it, and a hairline of the control border - or, chosen,
+   a ring in the accent - around it. */
+.station-appearance__preview {
+  display: block;
+  height: 100%;
+  min-height: 56px;
+  max-height: 128px;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--station-radius-sm);
+  box-shadow: 0 0 0 var(--station-stroke) var(--station-handbook-control-border);
+  overflow: hidden;
 }
 
-.station-appearance__choice[aria-checked="true"] .station-appearance__mark {
-  border-color: var(--station-accent);
-  box-shadow: inset 0 0 0 3px var(--station-handbook-glass);
-  background: var(--station-accent);
+.station-appearance__tile:hover .station-appearance__preview {
+  box-shadow: 0 0 0 var(--station-stroke) var(--station-border-strong);
 }
 
-.station-appearance__words {
+.station-appearance__tile[aria-checked="true"] .station-appearance__preview {
+  box-shadow: 0 0 0 calc(2 * var(--station-stroke)) var(--station-accent);
+}
+
+.station-appearance__caption {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  gap: var(--station-space-2);
   min-width: 0;
 }
 
 .station-appearance__name {
-  font-size: var(--station-text-md);
+  font-size: var(--station-text-sm);
   font-weight: 600;
 }
 
-.station-appearance__description {
-  color: var(--station-text-muted);
-  font-size: var(--station-text-xs);
-  line-height: var(--station-line-tight);
+/* The check: drawn but not shown until its tile is the chosen one, so
+   the caption never shifts. */
+.station-appearance__mark {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: var(--station-accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  visibility: hidden;
+}
+
+.station-appearance__tile[aria-checked="true"] .station-appearance__mark {
+  visibility: visible;
 }

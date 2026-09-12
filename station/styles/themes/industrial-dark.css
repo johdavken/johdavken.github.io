@@ -1,8 +1,19 @@
 /* Industrial Dark — Station's original graphite/slate character, promoted
  * into the complete semantic theme contract. This is the default. */
-.station-root[data-theme="industrial-dark"] {
+.station-root[data-theme="industrial-dark"],
+.station-theme-scope[data-theme="industrial-dark"] {
   color-scheme: dark;
   --station-color-scheme: dark;
+
+  /* ---- Character ----
+   * A rendered machine: shaded surfaces, ordinary line weights, no
+   * drafting grid, the same face for every label. */
+  --station-line-scale: 1;
+  --station-schematic-outline: 0%;
+  --station-font-annotation: var(--station-font);
+  --station-grid-major: transparent;
+  --station-grid-minor: transparent;
+  --station-canvas-pattern: none;
 
   --station-bg: #11151c;
   --station-surface: #171d26;

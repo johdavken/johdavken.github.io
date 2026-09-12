@@ -27,7 +27,7 @@ const STATION_FILES = ["station-line-model.js", "station-render.js", "station.js
   "station-extruder-assets.js", "station-mixer-assets.js", "station-transition.js",
   "station-focus-editor.js", "station-sync-console.js", "station-hopper-controls.js",
   "station-rundown.js", "station-rundown-timeline.js", "station-job-controls.js",
-  "station-handbook.js", "station-recipe-book.js", "station-appearance.js"];
+  "station-handbook.js", "station-recipe-book.js", "station-appearance.js", "station-theme-preview.js"];
 
 const stationHtml = fs.readFileSync(path.join(STATION, "station.html"), "utf8");
 const indexHtml = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");

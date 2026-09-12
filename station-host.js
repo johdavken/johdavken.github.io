@@ -50,7 +50,10 @@
     "station/styles/tokens.css",
     "station/styles/themes/industrial-light.css",
     "station/styles/themes/industrial-dark.css",
+    "station/styles/themes/gruvbox-light.css",
     "station/styles/themes/gruvbox-dark.css",
+    "station/styles/themes/engineering-paper.css",
+    "station/styles/themes/blueprint.css",
     "station/styles/base.css",
     "station/styles/shell.css",
     "station/styles/components/machine.css",
@@ -61,7 +64,8 @@
     "station/styles/components/rundown.css",
     "station/styles/components/job-controls.css",
     "station/styles/components/sync-console.css",
-    "station/styles/components/handbook.css"
+    "station/styles/components/handbook.css",
+    "station/styles/components/theme-preview.css"
   ];
 
   const SCRIPTS = [
@@ -85,6 +89,7 @@
     "station/station-sync-console.js",
     // The Operator Handbook: its first section before the shell that hosts it.
     "station/station-recipe-book.js",
+    "station/station-theme-preview.js",
     "station/station-appearance.js",
     "station/station-handbook.js",
     "station/station-demo-lines.js",
@@ -92,7 +97,7 @@
     "station/station.js"
   ];
 
-  const VERSION = "0.24.0";
+  const VERSION = "0.25.0";
 
   function requested() {
     try {

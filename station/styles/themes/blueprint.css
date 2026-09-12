@@ -1,0 +1,138 @@
+/* Blueprint — an engineering drawing at night: a blueprint-blue sheet, a
+ * faint drafting grid, and the machine drawn in pale linework over fills
+ * that barely leave the sheet. The technical pair's dark half.
+ *
+ * What makes it a schematic and not Industrial Dark in blue is the
+ * character block: heavier line weights, the extruder's facets edged in
+ * the one pale edge colour instead of their own shading, and equipment
+ * fills kept within a few steps of the canvas so the edges are what
+ * draw the shape. The semantic colours are kept - the receiver's amber,
+ * the layers' identities, tracking, warning, danger - but taken down to
+ * a draughtsman's markup, never a glow. No neon; the brightest thing on
+ * the sheet is a label. */
+.station-root[data-theme="blueprint"],
+.station-theme-scope[data-theme="blueprint"] {
+  color-scheme: dark;
+  --station-color-scheme: dark;
+
+  /* ---- Character ----
+   * A schematic: lines a step heavier, the extruder outlined in the edge
+   * colour, annotations in the monospace face, and the drafting grid on
+   * the sheet - pale, and faint enough to be found rather than seen. */
+  --station-line-scale: 1.4;
+  --station-schematic-outline: 100%;
+  --station-font-annotation: var(--station-font-mono);
+  --station-grid-major: rgba(173, 206, 240, 0.085);
+  --station-grid-minor: rgba(173, 206, 240, 0.035);
+  --station-canvas-pattern: var(--station-canvas-grid);
+
+  --station-bg: #10294b;
+  --station-surface: #132e54;
+  --station-surface-raised: #1a3a66;
+  --station-surface-sunken: #0b1f3a;
+  --station-surface-interactive: #17345c;
+  --station-surface-hover: #1d4070;
+  --station-surface-selected: #214a80;
+  --station-surface-editable: #1a3d6d;
+
+  --station-text: #dbe9f7;
+  --station-text-muted: #a9c4e0;
+  --station-text-faint: #86a5c6;
+  --station-text-disabled: #5f7ea0;
+  --station-text-on-accent: #0b1f3a;
+
+  --station-border-subtle: #1f416c;
+  --station-border: #2b527f;
+  --station-border-strong: #4a76a6;
+  --station-focus-ring: #a9d6f5;
+
+  --station-accent: #8ec8f0;
+  --station-accent-hover: #a9d6f5;
+  --station-accent-active: #6fb3e0;
+  --station-accent-soft: rgba(142, 200, 240, 0.16);
+  --station-selection: rgba(142, 200, 240, 0.22);
+  --station-editable: #a9d6f5;
+
+  --station-success: #7fd3a8;
+  --station-tracking: #7fd3a8;
+  --station-warning: #e8c170;
+  --station-danger: #f28b82;
+  --station-info: #8ec8f0;
+  --station-inactive: #6f8fb0;
+  --station-pump-off: #c6a6e8;
+
+  /* ---- Equipment: linework over the sheet ----
+   * Every fill is a blue within a few steps of the canvas; the edge is
+   * the pale line every part is drawn in. The hopper's own outline is a
+   * shade less pale than the edge, so the vessel's tinted body (mixed
+   * from it in hopper.css) stays a body and not a slab. */
+  --station-steel: #163257;
+  --station-steel-light: #1b3b63;
+  --station-steel-dark: #0e2440;
+  --station-frame: #163257;
+  --station-edge: #b7d5f0;
+  --station-edge-soft: #6f97c2;
+  --station-equipment-fill: #142e52;
+  --station-equipment-stroke: #b7d5f0;
+  --station-housing-top: #22466f;
+  --station-housing-side: #183760;
+  --station-housing-end: #112b4d;
+  --station-metal: #2a5282;
+  --station-metal-light: #3d6a99;
+  --station-metal-dark: #1e416c;
+  --station-fitting: #6fb3e0;
+  --station-hopper-body: #142e52;
+  --station-hopper-stroke: #93b6da;
+  --station-hopper-fill: #5aa7dc;
+  --station-hopper-loader: #2a5282;
+  --station-receiver: #c99a45;
+  --station-receiver-edge: #e8c170;
+  --station-hose-clear: rgba(183, 213, 240, 0.10);
+  --station-hose-edge: rgba(183, 213, 240, 0.62);
+  --station-hose-spiral: #9fd0f5;
+  --station-hose-glint: rgba(255, 255, 255, 0.30);
+  --station-hose-empty: rgba(183, 213, 240, 0.03);
+
+  --station-layer-outside: #8ec8f0;
+  --station-layer-subskin: #8fd6b4;
+  --station-layer-core: #e8c170;
+  --station-layer-inside: #cfaeea;
+  --station-melt: #8a6a4a;
+  --station-bubble: rgba(142, 200, 240, 0.14);
+  --station-bubble-edge: #8ec8f0;
+  --station-frost: #a9d6f5;
+  --station-film: #5aa7dc;
+  --station-batch: #4a76a6;
+
+  /* ---- Timeline: a dimension line ----
+   * The rail in the border's blue, ticks and labels in the annotation
+   * blues; the transition keeps its amber, the marker its pale blue. */
+  --station-timeline-rail: #4a76a6;
+  --station-timeline-current: #dbe9f7;
+  --station-timeline-upcoming: #86a5c6;
+  --station-timeline-transition: #e8c170;
+  --station-timeline-marker: #8ec8f0;
+  --station-timeline-label: #dbe9f7;
+  --station-timeline-muted: #a9c4e0;
+
+  --station-shadow-pop: 0 10px 28px rgba(3, 12, 28, 0.55);
+  --station-qr-surface: #ffffff;
+
+  /* ---- Operator Handbook: the glass ----
+   * Blue drafting glass: a deep translucent blueprint tint, so the grid
+   * and the linework behind read through faintly, a pale technical
+   * border, and the lines and washes in the pale blue of the text. */
+  --station-handbook-glass: rgba(16, 41, 75, 0.78);
+  --station-handbook-glass-border: rgba(183, 213, 240, 0.28);
+  --station-handbook-glass-highlight: rgba(219, 233, 247, 0.10);
+  --station-handbook-glass-blur: 12px;
+  --station-handbook-glass-saturate: 1.1;
+  --station-handbook-glass-shadow: 0 14px 36px rgba(3, 12, 28, 0.55);
+  --station-handbook-rule: rgba(183, 213, 240, 0.14);
+  --station-handbook-control-border: rgba(183, 213, 240, 0.26);
+  --station-handbook-control-hover: rgba(183, 213, 240, 0.08);
+  --station-handbook-control-active: rgba(183, 213, 240, 0.14);
+  --station-handbook-tab-active: #a9d6f5;
+  --station-handbook-selection: rgba(142, 200, 240, 0.16);
+  --station-handbook-selector-active: #8ec8f0;
+}

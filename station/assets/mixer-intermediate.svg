@@ -7,7 +7,7 @@
        with the token values resolved so the file can be viewed on its own. The rotor is shown at
        rest; the stage rotates it. -->
   <style>
-    .station-mixer__face { stroke: #4d5f75; stroke-width: 0.6px; stroke-linejoin: round; }
+    .station-mixer__face { stroke: #4d5f75; stroke-width: calc(0.6px * 1); stroke-linejoin: round; }
     .station-mixer__face--front { fill: #313f52; }
     .station-mixer__face--side { fill: #27333f; }
     .station-mixer__face--top { fill: #3c4b5f; }
@@ -30,7 +30,7 @@
     .station-mixer__seam--hose { stroke: #253040; }
     .station-mixer__seam--accent { stroke: #d6a85d; }
     .station-mixer__face--accent { fill: #b9832f; stroke: #d6a85d; }
-    .station-mixer__blade { fill: #313f52; stroke: #3b4959; stroke-width: 0.6px; }
+    .station-mixer__blade { fill: #313f52; stroke: #3b4959; stroke-width: calc(0.6px * 1); }
     .station-mixer__agitator { transform-box: view-box; transform-origin: 0 0; }
   </style>
   <path class="station-mixer__face station-mixer__face--front" data-part="rear-upright" d="M-25.9,-177.39 L-20.08,-176.69 L-16.72,-177.9 L-22.54,-178.6 Z"/>

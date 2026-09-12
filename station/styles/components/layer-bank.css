@@ -26,7 +26,7 @@
 
 .station-layer__role {
   fill: var(--station-text-faint);
-  font-family: var(--station-font);
+  font-family: var(--station-font-annotation);
   font-size: calc(var(--station-text-xs) * var(--station-bank-scale, 1));
   letter-spacing: 0.12em;
 }
@@ -217,10 +217,15 @@
   --station-extruder-shade-light: var(--station-steel);
 }
 
+/* A facet's edge is its own shade, lit or dark as the source drew it - or,
+   as far as the theme asks (--station-schematic-outline, 0% for a rendered
+   machine, 100% for a schematic), the stage's one edge colour, so a
+   technical theme draws the extruder in its lines and not in its
+   shading. The authored line widths scale with the theme's line weight. */
 .station-extruder__face {
   fill: color-mix(in srgb, var(--station-extruder-shade-light) var(--station-extruder-tone, 50%), var(--station-extruder-shade-dark));
-  stroke: color-mix(in srgb, var(--station-extruder-shade-light) var(--station-extruder-edge-tone, 50%), var(--station-extruder-shade-dark));
-  stroke-width: var(--station-extruder-line, 0.2);
+  stroke: color-mix(in srgb, var(--station-edge) var(--station-schematic-outline, 0%), color-mix(in srgb, var(--station-extruder-shade-light) var(--station-extruder-edge-tone, 50%), var(--station-extruder-shade-dark)));
+  stroke-width: calc(var(--station-extruder-line, 0.2) * var(--station-line-scale, 1));
 }
 
 /* Semantic part hooks remain independent of the material shading. */

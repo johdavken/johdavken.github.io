@@ -1,0 +1,134 @@
+/* Engineering Paper — the same drawing by day: a warm drafting sheet with
+ * its faint blue-grey grid, the machine drawn in graphite line over pale
+ * fills, technical blue for what is chosen and red-orange only for markup
+ * (warning, danger). The technical pair's light half.
+ *
+ * Not Blueprint in white, and not Industrial Light on paper. Industrial
+ * Light shades steel in a light room; here the fills are one flat pale
+ * tone apiece and the shape is carried by the lines, which are heavier
+ * and graphite-dark. Not a notebook either: the grid is one tone of
+ * blue-grey at very low contrast, found after looking. */
+.station-root[data-theme="engineering-paper"],
+.station-theme-scope[data-theme="engineering-paper"] {
+  color-scheme: light;
+  --station-color-scheme: light;
+
+  /* ---- Character ----
+   * A schematic: lines a step heavier, the extruder outlined in the edge
+   * colour, annotations in the monospace face, and the drafting grid on
+   * the sheet in a pale blue-grey. */
+  --station-line-scale: 1.4;
+  --station-schematic-outline: 100%;
+  --station-font-annotation: var(--station-font-mono);
+  --station-grid-major: rgba(88, 120, 160, 0.13);
+  --station-grid-minor: rgba(88, 120, 160, 0.055);
+  --station-canvas-pattern: var(--station-canvas-grid);
+
+  --station-bg: #f3f1ea;
+  --station-surface: #faf8f2;
+  --station-surface-raised: #ffffff;
+  --station-surface-sunken: #e8e5dc;
+  --station-surface-interactive: #f6f4ee;
+  --station-surface-hover: #ebe8e0;
+  --station-surface-selected: #dfe6ec;
+  --station-surface-editable: #f2f4f0;
+
+  --station-text: #2b3038;
+  --station-text-muted: #4d555f;
+  --station-text-faint: #626b76;
+  --station-text-disabled: #8b929b;
+  --station-text-on-accent: #f7f9fb;
+
+  --station-border-subtle: #d9d6cc;
+  --station-border: #bfbcb2;
+  --station-border-strong: #8a8f96;
+  --station-focus-ring: #2f5f8f;
+
+  --station-accent: #2f5f8f;
+  --station-accent-hover: #285580;
+  --station-accent-active: #1f4569;
+  --station-accent-soft: rgba(47, 95, 143, 0.12);
+  --station-selection: rgba(47, 95, 143, 0.18);
+  --station-editable: #2f5f8f;
+
+  --station-success: #2f6b4f;
+  --station-tracking: #2f6b4f;
+  --station-warning: #a3540f;
+  --station-danger: #b23a2f;
+  --station-info: #2f5f8f;
+  --station-inactive: #6a727c;
+  --station-pump-off: #6b5590;
+
+  /* ---- Equipment: graphite line over pale fill ----
+   * Fills are a few flat pale blue-greys off the sheet; the edge is
+   * graphite, and the hopper's outline a blue-grey step lighter so its
+   * body (mixed from it in hopper.css) stays pale. */
+  --station-steel: #d8dde3;
+  --station-steel-light: #eef1f4;
+  --station-steel-dark: #b9c1c9;
+  --station-frame: #cfd5db;
+  --station-edge: #3a4552;
+  --station-edge-soft: #6b7784;
+  --station-equipment-fill: #dde2e7;
+  --station-equipment-stroke: #3a4552;
+  --station-housing-top: #eceff2;
+  --station-housing-side: #dde2e7;
+  --station-housing-end: #c8cfd6;
+  --station-metal: #9aa5b0;
+  --station-metal-light: #f2f4f6;
+  --station-metal-dark: #8792a0;
+  --station-fitting: #4878a6;
+  --station-hopper-body: #dde2e7;
+  --station-hopper-stroke: #55657a;
+  --station-hopper-fill: #4f83b4;
+  --station-hopper-loader: #9aa5b0;
+  --station-receiver: #c0761a;
+  --station-receiver-edge: #8a5210;
+  --station-hose-clear: rgba(58, 69, 82, 0.08);
+  --station-hose-edge: rgba(58, 69, 82, 0.60);
+  --station-hose-spiral: #4d7f6e;
+  --station-hose-glint: rgba(255, 255, 255, 0.70);
+  --station-hose-empty: rgba(58, 69, 82, 0.03);
+
+  --station-layer-outside: #2f5f8f;
+  --station-layer-subskin: #2f6b4f;
+  --station-layer-core: #8a5a10;
+  --station-layer-inside: #6b4d86;
+  --station-melt: #7a5a3a;
+  --station-bubble: rgba(47, 95, 143, 0.12);
+  --station-bubble-edge: #2f5f8f;
+  --station-frost: #7ba3c8;
+  --station-film: #4f83b4;
+  --station-batch: #8f99a3;
+
+  /* ---- Timeline: a dimension line ----
+   * The rail in the strong border's grey, labels in graphite; the
+   * transition in the markup orange, the marker in the technical blue. */
+  --station-timeline-rail: #8a8f96;
+  --station-timeline-current: #2b3038;
+  --station-timeline-upcoming: #626b76;
+  --station-timeline-transition: #a3540f;
+  --station-timeline-marker: #2f5f8f;
+  --station-timeline-label: #2b3038;
+  --station-timeline-muted: #4d555f;
+
+  --station-shadow-pop: 0 10px 28px rgba(43, 48, 56, 0.16);
+  --station-qr-surface: #ffffff;
+
+  /* ---- Operator Handbook: the glass ----
+   * A sheet of vellum laid over the drawing: nearly opaque, a short
+   * blur, a graphite hairline for an edge, the grid faint through it. */
+  --station-handbook-glass: rgba(250, 248, 242, 0.90);
+  --station-handbook-glass-border: rgba(58, 69, 82, 0.34);
+  --station-handbook-glass-highlight: rgba(255, 255, 255, 0.80);
+  --station-handbook-glass-blur: 6px;
+  --station-handbook-glass-saturate: 1;
+  --station-handbook-glass-shadow: 0 14px 36px rgba(43, 48, 56, 0.16);
+  --station-handbook-rule: rgba(43, 48, 56, 0.14);
+  --station-handbook-control-border: rgba(43, 48, 56, 0.30);
+  --station-handbook-control-hover: rgba(43, 48, 56, 0.06);
+  --station-handbook-control-active: rgba(43, 48, 56, 0.10);
+  --station-handbook-tab-active: #2f5f8f;
+  --station-handbook-selection: rgba(47, 95, 143, 0.14);
+  --station-handbook-selector-active: #2f5f8f;
+}

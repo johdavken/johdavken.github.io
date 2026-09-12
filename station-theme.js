@@ -15,10 +15,22 @@
 
   const STORAGE_KEY = "polyn.station.theme.v1";
   const DEFAULT_THEME = "industrial-dark";
+  /* The registry, in gallery order: three families, each a light theme
+   * over its dark one. `family` is what the Appearance gallery groups by
+   * and what the two technical themes share (the drafting grid, the
+   * schematic linework); it changes nothing about how a theme is applied. */
+  const FAMILIES = Object.freeze([
+    Object.freeze({ id: "standard", label: "Standard" }),
+    Object.freeze({ id: "gruvbox", label: "Gruvbox" }),
+    Object.freeze({ id: "technical", label: "Technical" })
+  ]);
   const THEMES = Object.freeze([
-    Object.freeze({ id: "industrial-light", label: "Industrial Light", description: "Low-glare slate and steel for bright work areas." }),
-    Object.freeze({ id: "industrial-dark", label: "Industrial Dark", description: "Graphite surfaces for long shifts in lower light." }),
-    Object.freeze({ id: "gruvbox-dark", label: "Gruvbox Dark", description: "Warm charcoal, cream, and restrained earthy accents." })
+    Object.freeze({ id: "industrial-light", label: "Industrial Light", family: "standard", scheme: "light", description: "Low-glare slate and steel for bright work areas." }),
+    Object.freeze({ id: "industrial-dark", label: "Industrial Dark", family: "standard", scheme: "dark", description: "Graphite surfaces for long shifts in lower light." }),
+    Object.freeze({ id: "gruvbox-light", label: "Gruvbox Light", family: "gruvbox", scheme: "light", description: "Warm cream paper, dark earthy machinery, faded accents." }),
+    Object.freeze({ id: "gruvbox-dark", label: "Gruvbox Dark", family: "gruvbox", scheme: "dark", description: "Warm charcoal, cream, and restrained earthy accents." }),
+    Object.freeze({ id: "engineering-paper", label: "Engineering Paper", family: "technical", scheme: "light", description: "Graphite linework on a drafting sheet." }),
+    Object.freeze({ id: "blueprint", label: "Blueprint", family: "technical", scheme: "dark", description: "Pale schematic linework on blueprint blue." })
   ]);
   const THEME_IDS = Object.freeze(THEMES.map(theme => theme.id));
   const VALID = new Set(THEME_IDS);
@@ -86,5 +98,5 @@
     return create(element, storage);
   }
 
-  return Object.freeze({ STORAGE_KEY, DEFAULT_THEME, THEMES, THEME_IDS, normalize, read, create, initialize });
+  return Object.freeze({ STORAGE_KEY, DEFAULT_THEME, FAMILIES, THEMES, THEME_IDS, normalize, read, create, initialize });
 });

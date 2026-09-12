@@ -32,12 +32,12 @@
     "hash": "1121a7e8348424c3"
   },
   "station-theme.js": {
-    "v": "0.1.0",
-    "hash": "85d5f567367a13ea"
+    "v": "0.2.0",
+    "hash": "45eb154879a36623"
   },
   "station-host.js": {
-    "v": "0.4.2",
-    "hash": "5e56d1049e859ec6"
+    "v": "0.4.3",
+    "hash": "9b04aa5302c7d7a0"
   },
   "workspace-configuration-payloads.js": {
     "v": "0.20.1",
