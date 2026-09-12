@@ -66,6 +66,9 @@ producer, is visited once at the end to check that it is read-only.
   to that control through the `<foreignObject>`.
 - **Row <-> hopper linkage** - hovering a row highlights its hopper and vice
   versa; clicking either selects both.
+- **Hopper hit areas** - in overview and focus, vessel hardware, cones and
+  labels all hit the owning hopper's rectangle; the receiver retains its
+  delegated target. Every drawing element remains pointer-inert.
 - **Percentage field** - "60", "100" and "33.33" all fit without clipping.
 - **Viewports** - 1920x1080, 1440x900 and 1160x800; no page scrollbar, the
   too-small notice hidden, the editor's content not scrolling inside it.

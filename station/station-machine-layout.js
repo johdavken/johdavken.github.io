@@ -67,10 +67,16 @@
     vesselHeight: 168,          // the default body, used when no profile height
     vesselMinHeight: 96,
     vesselMaxHeight: 210,
-    /* Inches of usable height that the default body represents. One shared
-     * constant, so two hoppers of the same profile height are the same size
-     * on screen whichever bank or line they are on. */
-    referenceHeightIn: 30,
+    /* Total inches represented by the default body: 30 measured inches from
+     * the cone shoulder to the fill valve, plus 18 inches above the valve.
+     * One scale is shared by the body, ports and physical sections. */
+    referenceHeightIn: 48,
+    // Drawing allowance above the measured fill valve (1.5 twelve-inch
+    // sections). This is not added to stored usable height or calculations.
+    vesselHeadroomIn: 18,
+    // Physical distance between vessel clamp bands. Adjust this to tune the
+    // section model; it uses the same inches-to-drawing scale as body height.
+    vesselSectionHeightIn: 12,
 
     receiverHeight: 30,
     receiverGap: 8,             // neck between the receiver cone and the vessel
@@ -304,8 +310,9 @@
   }
 
   /**
-   * The drawn height of a hopper's storage body, from its Receiver Weight
-   * Profile height in inches.
+   * The complete drawn vessel body. Receiver Weight Profile usable height
+   * measures from the top of the cone to the fill valve, not to the lid;
+   * the unmeasured headroom above that valve is a drawing allowance.
    *
    * One linear scale shared by every hopper on every line - a hopper profiled
    * at 42" is always drawn taller than one at 30", wherever it is - and clamped
@@ -321,7 +328,7 @@
     const d = dimensions || DIMENSIONS;
     const inches = Number(usableHeightIn);
     if (!Number.isFinite(inches) || inches <= 0) return d.vesselHeight;
-    const scaled = d.vesselHeight * (inches / d.referenceHeightIn);
+    const scaled = d.vesselHeight * ((inches + d.vesselHeadroomIn) / d.referenceHeightIn);
     return clamp(scaled, d.vesselMinHeight, d.vesselMaxHeight);
   }
 
@@ -455,6 +462,7 @@
       // discharge line.
       const vesselHeight = hopperBodyHeight(runtime ? runtime.usableHeight : null, d);
       const vesselTop = coneTop - vesselHeight;
+      const fillValveY = vesselTop + d.vesselHeight * d.vesselHeadroomIn / d.referenceHeightIn;
       const receiverTop = vesselTop - d.receiverGap - d.receiverHeight;
       return {
         id: hopper.id,
@@ -471,6 +479,8 @@
         receiverHeight: d.receiverHeight,
         vesselTop,
         vesselHeight,
+        fillValveY,
+        vesselSectionHeight: d.vesselHeight * d.vesselSectionHeightIn / d.referenceHeightIn,
         // Whether this hopper was profiled at all, so the drawing can be honest
         // about a default rather than implying a measurement.
         profiled: !!(runtime && Number(runtime.usableHeight) > 0),

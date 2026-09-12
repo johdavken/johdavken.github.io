@@ -157,8 +157,17 @@
     const x = geometry.x;
     const w = geometry.width;
     const right = x + w;
-    const capHeight = Math.max(5, w * 0.22);
+    const capHeight = geometry.receiverHeight * 0.38;
     const cx = x + w / 2;
+    const top = geometry.vesselTop;
+    const bottom = geometry.coneTop;
+    const rim = w * 0.095;
+
+    // Local drawing helpers. All dimensions follow the existing layout;
+    // none of these paths participates in hit testing or stores state.
+    const path = (className, d) => node(doc, "path", className, { d });
+    const ellipse = (className, cy, rx, ry) => node(doc, "ellipse", className, { cx, cy, rx, ry });
+    const arc = y => `M ${round(x)} ${round(y)} Q ${round(cx)} ${round(y + rim * 2)} ${round(right)} ${round(y)}`;
 
     /* ---- Resin identity, for hover and assistive technology ----
      * The dense view drops the resin code because it cannot be drawn legibly
@@ -174,6 +183,29 @@
       : `${geometry.id} · no resin assigned`;
     g.appendChild(name);
 
+    /* Interaction geometry is independent of the equipment silhouette.
+     * Keep the existing receiver target for delegated dispatch, and keep
+     * identity/index on the assembly. The drawing below is pointer-inert.
+     * The cell stops inside its pitch, so adjacent hopper targets never overlap. */
+    const interaction = group(doc, "station-hopper__interaction", "hopper-interaction");
+    const hitPadding = Math.min(w * 0.08, Math.max(0, ((geometry.pitch || w) - w) / 2));
+    const hitTop = geometry.sourceY - 10 * scale;
+    interaction.appendChild(hitArea(doc, x - hitPadding, hitTop, w + hitPadding * 2,
+      geometry.captionTop + geometry.captionHeight - hitTop));
+    const receiverTarget = group(doc, "station-hopper__receiver", "hopper-receiver", {
+      "data-station-target": "receiver",
+      "data-layer": geometry.layer,
+      "data-hopper": geometry.id,
+      "data-pump": runtime && runtime.pumpOff ? "off" : "on"
+    });
+    receiverTarget.appendChild(hitArea(doc, x - hitPadding, geometry.receiverTop,
+      w + hitPadding * 2, geometry.vesselTop - geometry.receiverTop));
+    interaction.appendChild(receiverTarget);
+    g.appendChild(interaction);
+
+    const drawing = group(doc, "station-hopper__drawing", "hopper-drawing", { "pointer-events": "none" });
+    g.appendChild(drawing);
+
     /* ---- Source ----
      * Above the receiver, because that is where the material arrives from.
      * Shown only when it has a value: a bank of six "no source" labels is
@@ -185,71 +217,125 @@
       source.appendChild(node(doc, "line", "station-hopper__source-drop", {
         x1: cx, y1: geometry.sourceY + 3 * scale, x2: cx, y2: geometry.receiverTop - 1
       }));
-      g.appendChild(source);
+      drawing.appendChild(source);
     }
 
-    /* ---- Vacuum receiver, which is also the pump indicator ----
-     * Marked as its own target and carrying its own state, so the pump can
-     * later be toggled here without the artwork changing. Nothing is bolted on
-     * to say "pump": the receiver IS the control, which is how the equipment
-     * reads on the floor. */
-    const receiver = group(doc, "station-hopper__receiver", "hopper-receiver", {
-      "data-station-target": "receiver",
-      "data-layer": geometry.layer,
-      "data-hopper": geometry.id,
-      "data-pump": runtime && runtime.pumpOff ? "off" : "on"
-    });
+    /* ---- Vacuum receiver: steel canister, lid and conveying cone ---- */
+    const receiver = group(doc, "station-hopper__receiver-drawing", "hopper-receiver-drawing");
+    const shoulder = geometry.receiverTop + capHeight;
+    const receiverBottom = geometry.receiverTop + geometry.receiverHeight;
     receiver.appendChild(node(doc, "rect", "station-hopper__cap", {
-      x: x + w * 0.16, y: geometry.receiverTop, width: w * 0.68, height: capHeight, rx: 2
+      x: x + w * 0.09, y: geometry.receiverTop, width: w * 0.82, height: capHeight, rx: rim
     }));
-    receiver.appendChild(taper(doc, "station-hopper__receiver-cone",
-      x, right, x + w * 0.4, right - w * 0.4,
-      geometry.receiverTop + capHeight, geometry.receiverTop + geometry.receiverHeight));
+    receiver.appendChild(node(doc, "rect", "station-hopper__metal-face", {
+      x: x + w * 0.23, y: geometry.receiverTop + rim, width: w * 0.3, height: capHeight - rim, rx: rim / 2
+    }));
+    receiver.appendChild(ellipse("station-hopper__lid", geometry.receiverTop + rim / 2, w * 0.43, rim));
+    receiver.appendChild(path("station-hopper__receiver-cone",
+      `M ${round(x)} ${round(shoulder)} Q ${round(cx)} ${round(shoulder - rim)} ${round(right)} ${round(shoulder)} ` +
+      `L ${round(right - w * 0.06)} ${round(shoulder + rim * 2)} L ${round(cx + w * 0.1)} ${round(receiverBottom)} ` +
+      `L ${round(cx - w * 0.1)} ${round(receiverBottom)} L ${round(x + w * 0.06)} ${round(shoulder + rim * 2)} Z`));
+    receiver.appendChild(path("station-hopper__receiver-shade",
+      `M ${round(cx + w * 0.18)} ${round(shoulder + rim)} L ${round(right - w * 0.05)} ${round(shoulder)} ` +
+      `L ${round(cx + w * 0.1)} ${round(receiverBottom)} L ${round(cx)} ${round(receiverBottom)} Z`));
+    receiver.appendChild(path("station-hopper__receiver-rim", arc(shoulder)));
     receiver.appendChild(node(doc, "rect", "station-hopper__neck", {
-      x: x + w * 0.4, y: geometry.receiverTop + geometry.receiverHeight,
-      width: w * 0.2, height: Math.max(0, geometry.vesselTop - (geometry.receiverTop + geometry.receiverHeight))
+      x: x + w * 0.4, y: receiverBottom,
+      width: w * 0.2, height: Math.max(0, top - receiverBottom)
     }));
-    g.appendChild(receiver);
+    drawing.appendChild(receiver);
 
     /* ---- Material vessel ----
-     * Drawn to the Receiver Weight Profile height. Band spacing is a fraction
-     * of the body, so a short vessel gets the same three bands as a tall one
-     * rather than looking like a different component. */
+     * Drawn to the Receiver Weight Profile height. The decorative bands below
+     * use a physical section height from layout, independent of body height. */
     const body = group(doc, "station-hopper__body", "hopper-body");
     body.appendChild(node(doc, "rect", "station-hopper__shell", {
-      x, y: geometry.vesselTop, width: w, height: geometry.vesselHeight, rx: 2
+      x, y: top, width: w, height: geometry.vesselHeight, rx: rim
     }));
-    for (let band = 1; band <= 3; band++) {
-      const y = geometry.vesselTop + (geometry.vesselHeight * band) / 4;
-      body.appendChild(node(doc, "line", "station-hopper__band", { x1: x, y1: y, x2: right, y2: y }));
-    }
-    g.appendChild(body);
+    body.appendChild(node(doc, "rect", "station-hopper__metal-face", {
+      x: x + w * 0.13, y: top + rim, width: w * 0.42, height: geometry.vesselHeight - rim * 2, rx: rim
+    }));
+    body.appendChild(node(doc, "rect", "station-hopper__metal-glint", {
+      x: x + w * 0.18, y: top + rim * 2, width: w * 0.055, height: geometry.vesselHeight - rim * 4, rx: rim / 2
+    }));
+    body.appendChild(node(doc, "rect", "station-hopper__metal-shadow", {
+      x: x + w * 0.78, y: top + rim, width: w * 0.18, height: geometry.vesselHeight - rim * 2, rx: rim / 2
+    }));
+    drawing.appendChild(body);
 
     /* ---- Material level ----
      * The one element driven by a live number. The fraction arrives as an
      * inline custom property because it is data, not design. It is 0 until a
-     * later phase computes it. */
+     * later phase computes it. Its full range ends at the fill valve, so a
+     * future 100% level does not fill the unmeasured space above that valve. */
     const material = group(doc, "station-hopper__material", "hopper-material");
     const fill = node(doc, "rect", "station-hopper__fill", {
-      x: x + 1.2, y: geometry.vesselTop + 1.2,
-      width: Math.max(0, w - 2.4), height: Math.max(0, geometry.vesselHeight - 2.4), rx: 1
+      x: x + w * 0.04, y: geometry.fillValveY,
+      width: w * 0.92, height: Math.max(0, bottom - geometry.fillValveY - w * 0.04), rx: w * 0.04
     });
     fill.setAttribute("style", "--station-hopper-fill: 0;");
     material.appendChild(fill);
-    g.appendChild(material);
+    drawing.appendChild(material);
 
     /* ---- Discharge ---- */
     const cone = group(doc, "station-hopper__cone", "hopper-cone");
-    cone.appendChild(taper(doc, "station-hopper__cone-shape",
-      x, right, x + w * 0.37, right - w * 0.37,
-      geometry.coneTop, geometry.coneTop + geometry.coneHeight));
-    g.appendChild(cone);
+    cone.appendChild(path("station-hopper__cone-shape",
+      `${arc(bottom)} L ${round(cx + w * 0.13)} ${round(geometry.spoutTop)} ` +
+      `L ${round(cx - w * 0.13)} ${round(geometry.spoutTop)} Z`));
+    cone.appendChild(path("station-hopper__cone-face",
+      `M ${round(x + w * 0.12)} ${round(bottom + rim)} L ${round(cx + w * 0.06)} ${round(bottom + rim)} ` +
+      `L ${round(cx)} ${round(geometry.spoutTop)} L ${round(cx - w * 0.13)} ${round(geometry.spoutTop)} Z`));
+    cone.appendChild(path("station-hopper__cone-shadow",
+      `M ${round(right - w * 0.06)} ${round(bottom)} L ${round(right - w * 0.28)} ${round(bottom + rim)} ` +
+      `L ${round(cx + w * 0.02)} ${round(geometry.spoutTop)} L ${round(cx + w * 0.13)} ${round(geometry.spoutTop)} Z`));
+    drawing.appendChild(cone);
 
     const feed = group(doc, "station-hopper__feed", "hopper-feed");
     feed.appendChild(node(doc, "rect", "station-hopper__spout", {
       x: x + w * 0.37, y: geometry.spoutTop, width: w * 0.26, height: geometry.spoutHeight
     }));
-    g.appendChild(feed);
+    feed.appendChild(node(doc, "rect", "station-hopper__outlet-collar", {
+      x: cx - w * 0.18, y: geometry.spoutTop + geometry.spoutHeight * 0.68,
+      width: w * 0.36, height: geometry.spoutHeight * 0.2, rx: rim / 3
+    }));
+    drawing.appendChild(feed);
+
+    /* ---- Decorative hardware: rolled rims, curved clamp bands, side port ----
+     * Kept separate from both the shell outline and future material fill. */
+    const details = group(doc, "station-hopper__details", "hopper-details");
+    details.appendChild(ellipse("station-hopper__lid", top + rim / 2, w / 2, rim));
+    // Build upward from the discharge: full sections stay the same height
+    // on every vessel, with any partial section at the top. The top and
+    // bottom rims are hardware insets, not an extra section of material.
+    const bandYs = [top + rim, bottom - rim];
+    const sectionHeight = geometry.vesselSectionHeight;
+    if (Number.isFinite(sectionHeight) && sectionHeight > 0) {
+      for (let y = bottom - rim - sectionHeight; y > top + rim * 3; y -= sectionHeight) {
+        bandYs.push(y);
+      }
+    }
+    for (const y of bandYs.sort((a, b) => a - b)) {
+      details.appendChild(path("station-hopper__band-shadow", arc(y + rim * 0.5)));
+      details.appendChild(path("station-hopper__band", arc(y)));
+      for (const offset of [0.08, 0.82]) {
+        details.appendChild(node(doc, "rect", "station-hopper__clamp", {
+          x: x + w * offset, y: y - rim * 0.25,
+          width: w * 0.1, height: rim * 1.6, rx: rim * 0.2
+        }));
+      }
+    }
+    details.appendChild(node(doc, "ellipse", "station-hopper__port", {
+      cx: right - w * 0.2, cy: top + w * 0.47, rx: w * 0.115, ry: w * 0.15
+    }));
+    // The upper port is the hose connection. This second, collared port is
+    // the fill valve: its centre is the upper endpoint of usable height.
+    details.appendChild(node(doc, "ellipse", "station-hopper__fill-valve", {
+      cx: right - w * 0.2, cy: geometry.fillValveY, rx: w * 0.14, ry: w * 0.17
+    }));
+    details.appendChild(node(doc, "ellipse", "station-hopper__valve-core", {
+      cx: right - w * 0.2, cy: geometry.fillValveY, rx: w * 0.055, ry: w * 0.085
+    }));
+    drawing.appendChild(details);
 
     /* ---- Readout ----
      * Identity and contribution. The resin code joins them when the hopper
@@ -268,7 +354,7 @@
         runtime && runtime.resinName ? fitText(runtime.resinName, w, 9 * scale) : "",
         cx, y, "station-hopper__resin"));
     }
-    g.appendChild(caption);
+    drawing.appendChild(caption);
 
     return g;
   }

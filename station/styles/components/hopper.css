@@ -11,9 +11,23 @@
  * Hopper state is expressed as `is-` classes on the assembly group, set by
  * JavaScript from application state. There is no `.green`, no `.small`: the
  * class says what is true about the hopper, and this file decides what that
- * looks like. Nothing below is wired to live data yet; the rules exist so the
- * structure is provably ready for it.
+ * looks like. Tracking, assignment and pump state already come from runtime;
+ * dragging, drop-target, empty and attention are presentation hooks for callers.
  */
+
+/* Identity belongs to .station-hopper; only its interaction subtree is hit.
+ * Explicitly cover descendants so new decoration cannot become a target.
+ * Do not override .station-hit's transition/ghost pointer suppression. */
+.station-hopper__drawing,
+.station-hopper__drawing * {
+  pointer-events: none;
+}
+
+.station-hopper {
+  --station-hopper-metal: color-mix(in srgb, var(--station-steel-light) 72%, var(--station-hopper-stroke));
+  --station-hopper-metal-lit: color-mix(in srgb, var(--station-steel-light) 66%, var(--station-text-muted));
+  --station-hopper-material-color: var(--station-hopper-fill);
+}
 
 /* ---------------------------------------------------------------------
  *   Vacuum receiver
@@ -21,7 +35,7 @@
 
 .station-hopper__cap,
 .station-hopper__neck {
-  fill: var(--station-steel-light);
+  fill: var(--station-hopper-metal);
   stroke: var(--station-edge);
   stroke-width: var(--station-line-hairline);
 }
@@ -40,12 +54,12 @@
   stroke-width: var(--station-line-hairline);
 }
 
-.station-hopper__receiver[data-pump="off"] .station-hopper__receiver-cone {
+.station-hopper.is-pump-off .station-hopper__receiver-cone {
   fill: var(--station-steel);
   stroke: var(--station-edge);
 }
 
-.station-hopper__receiver[data-pump="off"] .station-hopper__cap {
+.station-hopper.is-pump-off .station-hopper__cap {
   fill: var(--station-steel-dark);
 }
 
@@ -79,14 +93,59 @@
  * ------------------------------------------------------------------- */
 
 .station-hopper__shell {
-  fill: var(--station-hopper-body);
+  fill: var(--station-hopper-metal);
   stroke: var(--station-hopper-stroke);
   stroke-width: var(--station-line-thin);
 }
 
-.station-hopper__band {
-  stroke: var(--station-hopper-stroke);
+.station-hopper__band,
+.station-hopper__receiver-rim {
+  fill: none;
+  stroke: var(--station-hopper-metal-lit);
   stroke-width: var(--station-line-hairline);
+}
+
+.station-hopper__band-shadow {
+  fill: none;
+  stroke: var(--station-steel-dark);
+  stroke-width: var(--station-line-thin);
+}
+
+.station-hopper__metal-face,
+.station-hopper__cone-face {
+  fill: var(--station-hopper-metal-lit);
+  opacity: 0.35;
+}
+
+.station-hopper__metal-glint {
+  fill: var(--station-text-muted);
+  opacity: 0.2;
+}
+
+.station-hopper__metal-shadow,
+.station-hopper__cone-shadow,
+.station-hopper__receiver-shade {
+  fill: var(--station-steel-dark);
+  opacity: 0.3;
+}
+
+.station-hopper__lid,
+.station-hopper__clamp,
+.station-hopper__outlet-collar {
+  fill: var(--station-hopper-metal-lit);
+  stroke: var(--station-edge);
+  stroke-width: var(--station-line-hairline);
+}
+
+.station-hopper__port,
+.station-hopper__fill-valve {
+  fill: var(--station-steel-dark);
+  stroke: var(--station-hopper-metal-lit);
+  stroke-width: var(--station-line-hairline);
+}
+
+.station-hopper__valve-core {
+  fill: var(--station-hopper-metal-lit);
 }
 
 /* The fill is the one element driven by a live number.
@@ -94,7 +153,7 @@
  * property by the renderer; everything about how that fraction is drawn stays
  * here. */
 .station-hopper__fill {
-  fill: var(--station-hopper-fill);
+  fill: var(--station-hopper-material-color);
   transform: scaleY(var(--station-hopper-fill, 0));
   transform-origin: bottom;
   transform-box: fill-box;
@@ -106,7 +165,7 @@
 
 .station-hopper__cone-shape,
 .station-hopper__spout {
-  fill: var(--station-hopper-body);
+  fill: var(--station-hopper-metal);
   stroke: var(--station-hopper-stroke);
   stroke-width: var(--station-line-thin);
 }
@@ -152,6 +211,9 @@
    Highlighted is the pointer or keyboard focus on either side: a lifted
    outline, no fill. Selected is the inspector's hopper: the accent, and
    the id in it, so it is stronger than a hover without being louder. */
+.station-hopper:hover .station-hopper__shell,
+.station-hopper:focus-within .station-hopper__shell,
+.station-hopper.is-focused .station-hopper__shell,
 .station-hopper.is-highlighted .station-hopper__shell {
   stroke: color-mix(in srgb, var(--station-accent) 60%, var(--station-hopper-stroke));
   stroke-width: var(--station-line-medium);
@@ -162,15 +224,14 @@
   stroke-width: var(--station-line-medium);
 }
 
-.station-hopper.is-selected .station-hopper__id {
-  fill: var(--station-accent);
-}
-
+.station-hopper.is-tracked .station-hopper__shell,
 .station-hopper.is-tracking .station-hopper__shell {
   stroke: var(--station-tracking);
   stroke-width: var(--station-line-medium);
 }
 
+.station-hopper.is-changed .station-hopper__shell,
+.station-hopper.is-attention .station-hopper__shell,
 .station-hopper.is-warning .station-hopper__shell {
   stroke: var(--station-warning);
   stroke-width: var(--station-line-medium);
@@ -178,6 +239,37 @@
 
 .station-hopper.is-empty .station-hopper__shell {
   stroke: var(--station-danger);
+}
+
+.station-hopper.is-empty .station-hopper__fill {
+  visibility: hidden;
+}
+
+/* No gesture handling lives here. These hooks can be applied by the existing
+ * interaction owner when drag/drop is available; labels remain fully opaque. */
+.station-hopper.is-dragging .station-hopper__body,
+.station-hopper.is-dragging .station-hopper__details,
+.station-hopper.is-dragging .station-hopper__cone {
+  opacity: 0.55;
+}
+
+.station-hopper.is-dragging .station-hit {
+  cursor: grabbing;
+}
+
+.station-hopper.is-drop-target .station-hopper__shell {
+  stroke: var(--station-accent);
+  stroke-width: var(--station-line-medium);
+  stroke-dasharray: 3 2;
+}
+
+/* Keep focus legible even when another state owns the vessel outline. */
+.station-hopper:hover .station-hopper__id,
+.station-hopper:focus-within .station-hopper__id,
+.station-hopper.is-focused .station-hopper__id,
+.station-hopper.is-highlighted .station-hopper__id,
+.station-hopper.is-selected .station-hopper__id {
+  fill: var(--station-accent);
 }
 
 .station-hopper.is-pump-off .station-hopper__fill {

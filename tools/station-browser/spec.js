@@ -70,6 +70,26 @@ const clusterAt = (page, layer) => page.evaluate(id => { const c = document.quer
 const mixerHit = layer => `[data-role='layer'][data-layer='${layer}'] [data-role='mixer'] .station-hit`;
 const dispatchClick = (page, selector) => page.evaluate(sel => { document.querySelector(sel).dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, composed: true })); }, selector);
 
+/* Test real pointer routing through the decorative drawing, including the
+ * receiver's retained target. Synthetic events alone bypass pointer-events. */
+const hopperHitFailures = page => page.evaluate(() => {
+  const failures = [];
+  for (const hopper of document.querySelectorAll(".station-layer:not(.is-dimmed) .station-hopper")) {
+    for (const part of ["shell", "band", "port", "fill-valve", "valve-core", "cone-shape", "spout", "id", "pct", "receiver-cone"]) {
+      const shape = hopper.querySelector(`.station-hopper__${part}`);
+      const box = shape.getBoundingClientRect();
+      const hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+      const target = hit && hit.closest("[data-station-target]");
+      if (getComputedStyle(shape).pointerEvents !== "none" || !hit ||
+          !hit.classList.contains("station-hit") || hit.closest(".station-hopper") !== hopper ||
+          !target || target.getAttribute("data-station-target") !== (part === "receiver-cone" ? "receiver" : "cluster")) {
+        failures.push(`${hopper.getAttribute("data-hopper")}:${part}`);
+      }
+    }
+  }
+  return failures;
+});
+
 async function run(browserName) {
   const type = playwright[browserName];
   if (!type) { console.error(`unknown browser ${browserName}`); failures += 1; return; }
@@ -92,6 +112,8 @@ async function run(browserName) {
     const pageState = await page.evaluate(() => ({ scrollW: document.documentElement.scrollWidth, scrollH: document.documentElement.scrollHeight, innerW: innerWidth, innerH: innerHeight, tooSmall: getComputedStyle(document.querySelector(".station-too-small")).display !== "none" }));
     check(browserName, `${tag} no page scrollbar`, pageState.scrollW <= pageState.innerW && pageState.scrollH <= pageState.innerH, pageState);
     check(browserName, `${tag} too-small notice hidden`, !pageState.tooSmall);
+    let hopperHits = await hopperHitFailures(page);
+    check(browserName, `${tag} overview hopper artwork routes through stable hit areas`, hopperHits.length === 0, hopperHits);
 
     /* open / close */
     const normalCluster = await clusterAt(page, "B");
@@ -100,6 +122,8 @@ async function run(browserName) {
     check(browserName, `${tag} fast click on the mixer opens with no prior hover`, opening.transitioning || opening.focus === "B", opening);
     await settled(page);
     check(browserName, `${tag} transition reaches focused`, (await stateOf(page)).focus === "B");
+    hopperHits = await hopperHitFailures(page);
+    check(browserName, `${tag} focused hopper artwork routes through stable hit areas`, hopperHits.length === 0, hopperHits);
     const editorScroll = await page.evaluate(() => { const e = document.querySelector(".station-editor"); return { sh: e.scrollHeight, ch: e.clientHeight }; });
     check(browserName, `${tag} editor content fits its workspace`, editorScroll.sh <= editorScroll.ch, editorScroll);
 
@@ -117,7 +141,7 @@ async function run(browserName) {
     l = await link("B2");
     check(browserName, `${tag} hovering a hopper highlights its row`, l.rowHi && l.hopperHi, l);
     await page.mouse.move(5, 5);
-    await dispatchClick(page, "[data-role='layer'][data-layer='B'] [data-role='hopper'][data-hopper='B3'] .station-hopper__shell");
+    await dispatchClick(page, "[data-role='layer'][data-layer='B'] [data-role='hopper'][data-hopper='B3'] .station-hopper__interaction > .station-hit");
     l = await link("B3");
     check(browserName, `${tag} fast click on a hopper selects it and its row`, l.hopperSel && l.rowSel, l);
     await dispatchClick(page, ".station-editor__item[data-hopper='B1'] .station-editor__badge");

@@ -427,6 +427,57 @@ test("the hopper assembly keeps the boundaries a later phase has to drive", () =
  *   Recipe readout
  * -------------------------------------------------------------------- */
 
+test("hopper artwork is inert and existing identity and receiver targets belong to hit geometry", () => {
+  const svg = stageFor(literal({ layerCount: 3, hopperCount: 3 }), {
+    hopperState: { "B:2": { assigned: true, track: true, pumpOff: true, resinName: "HX204", pct: 25 } }
+  });
+  for (const hopper of hoppersIn(svg)) {
+    const interaction = allWith(hopper, "data-role", "hopper-interaction")[0];
+    const drawing = allWith(hopper, "data-role", "hopper-drawing")[0];
+    assert.ok(hopper.children.includes(interaction));
+    assert.ok(hopper.children.includes(drawing));
+    assert.equal(drawing.getAttribute("pointer-events"), "none");
+    const hit = interaction.children[0];
+    assert.equal(hit.nodeName, "rect");
+    assert.ok(Number(hit.getAttribute("width")) > 0);
+    assert.ok(Number(hit.getAttribute("height")) > 0);
+    const receiver = allWith(interaction, "data-station-target", "receiver")[0];
+    assert.equal(receiver.getAttribute("data-layer"), hopper.getAttribute("data-layer"));
+    assert.equal(receiver.getAttribute("data-hopper"), hopper.getAttribute("data-hopper"));
+    assert.equal(receiver.children[0].nodeName, "rect");
+    walk(drawing, n => {
+      for (const attr of ["data-hopper", "data-hopper-index", "data-layer", "data-station-target", "tabindex", "draggable", "onclick", "onpointerdown"]) {
+        assert.equal(n.getAttribute(attr), null, `artwork owns ${attr}`);
+      }
+    });
+  }
+  const b3 = hoppersIn(svg).find(h => h.getAttribute("data-hopper") === "B3");
+  assert.equal(b3.getAttribute("data-layer"), "B");
+  assert.equal(b3.getAttribute("data-hopper-index"), "2");
+  assert.match(b3.getAttribute("class"), /is-tracking/);
+  assert.equal(allWith(b3, "data-station-target", "receiver")[0].getAttribute("data-pump"), "off");
+});
+
+test("hopper hit cells cover captions without overlapping adjacent slots at any bank scale", () => {
+  for (const focusLayer of [null, "B"]) {
+    const config = literal({ layerCount: 5, hopperCount: 6 });
+    const layout = layoutFor(config, { focusLayer });
+    const svg = stageFor(config, { focusLayer });
+    for (const bank of layout.banks) {
+      let previousRight = -Infinity;
+      for (const geometry of bank.cluster.hoppers) {
+        const hopper = hoppersIn(svg).find(h => h.getAttribute("data-hopper") === geometry.id);
+        const hit = allWith(hopper, "data-role", "hopper-interaction")[0].children[0];
+        const x = Number(hit.getAttribute("x"));
+        const bottom = Number(hit.getAttribute("y")) + Number(hit.getAttribute("height"));
+        assert.ok(x >= previousRight, "adjacent hopper hits overlap");
+        assert.ok(bottom >= geometry.captionTop + 13 * bank.scale, "percentage is outside the hopper hit");
+        previousRight = x + Number(hit.getAttribute("width"));
+      }
+    }
+  }
+});
+
 test("the compact readout leads with identity and contribution", () => {
   /* Hopper id and blend percentage always; those are what a narrow column can
    * carry legibly. */
@@ -662,6 +713,8 @@ test("rigid scaling is the whole mechanism: every length in the dimensions scale
   // Ratios and canvas numbers are untouched.
   assert.equal(scaled.resinVisibleRatio, d.resinVisibleRatio);
   assert.equal(scaled.referenceHeightIn, d.referenceHeightIn);
+  assert.equal(scaled.vesselHeadroomIn, d.vesselHeadroomIn);
+  assert.equal(scaled.vesselSectionHeightIn, d.vesselSectionHeightIn);
   assert.equal(scaled.height, d.height);
   assert.equal(scaled.bankScale, 2);
 });
@@ -1027,11 +1080,11 @@ test("the view is described for assistive technology by what it is", () => {
 test("body height scales linearly from the profile height, on one shared scale", () => {
   const height = layoutModule.hopperBodyHeight;
   const d = layoutModule.DIMENSIONS;
-  // The reference height is the default body, by definition.
-  assert.equal(height(d.referenceHeightIn), d.vesselHeight);
-  // Twice the reference is twice the body, until the clamp bites.
-  assert.ok(height(d.referenceHeightIn * 1.2) > height(d.referenceHeightIn));
-  assert.ok(height(d.referenceHeightIn * 0.8) < height(d.referenceHeightIn));
+  const defaultUsableHeight = d.referenceHeightIn - d.vesselHeadroomIn;
+  assert.equal(height(defaultUsableHeight), d.vesselHeight);
+  // The measured portion is linear; the allowance above the valve is fixed.
+  assert.ok(height(defaultUsableHeight * 1.2) > height(defaultUsableHeight));
+  assert.ok(height(defaultUsableHeight * 0.8) < height(defaultUsableHeight));
   // One shared scale: the same inches give the same height, always. It does
   // not normalise per bank, which would make two lines incomparable.
   assert.equal(height(26), height(26));
@@ -1042,6 +1095,92 @@ test("a missing or nonsense profile height falls back to the default body", () =
   for (const input of [undefined, null, 0, -12, NaN, Infinity, "", "tall", {}]) {
     assert.equal(layoutModule.hopperBodyHeight(input), d.vesselHeight,
       `${String(input)} should fall back to the default body`);
+  }
+});
+
+test("vessel bands repeat every 12 inches from the discharge at every bank scale", () => {
+  const config = literal({ layerCount: 3, hopperCount: 3 });
+  const hopperState = Object.fromEntries(["A", "B", "C"].flatMap(layer =>
+    [20, 24, 36].map((usableHeight, index) => [`${layer}:${index}`, { usableHeight }])));
+  for (const focusLayer of [null, "B"]) {
+    const options = { hopperState, focusLayer };
+    const layout = layoutFor(config, options);
+    const svg = stageFor(config, options);
+    for (const bank of layout.banks) {
+      const sectionHeight = 12 * layoutModule.DIMENSIONS.vesselHeight / layoutModule.DIMENSIONS.referenceHeightIn * bank.scale;
+      for (const geometry of bank.cluster.hoppers) {
+        assert.ok(Math.abs(geometry.vesselSectionHeight - sectionHeight) < 0.001);
+        const hopper = hoppersIn(svg).find(h => h.getAttribute("data-hopper") === geometry.id);
+        const bands = [];
+        walk(hopper, n => {
+          if (n.getAttribute("class") === "station-hopper__band") {
+            bands.push(Number(n.getAttribute("d").split(" ")[2]));
+          }
+        });
+        assert.equal(bands.length, [4, 5, 6][geometry.index],
+          "a taller body must gain sections instead of stretching its bands");
+        // The top section can be partial. All sections below it have one
+        // fixed physical height, independent of the profile and focus size.
+        for (let i = 2; i < bands.length; i++) {
+          assert.ok(Math.abs(bands[i] - bands[i - 1] - sectionHeight) < 0.02);
+        }
+      }
+    }
+  }
+});
+
+test("section calibration changes only the bands, not vessel height or hit geometry", () => {
+  const config = literal({ layerCount: 1, layerAPosition: null, hopperCount: 1 });
+  const options = { hopperState: { "A:0": { usableHeight: 36 } } };
+  const adjusted = { ...options, dimensions: { vesselSectionHeightIn: 8 } };
+  const standardGeometry = layoutFor(config, options).banks[0].cluster.hoppers[0];
+  const adjustedGeometry = layoutFor(config, adjusted).banks[0].cluster.hoppers[0];
+  assert.deepEqual({ ...adjustedGeometry, vesselSectionHeight: standardGeometry.vesselSectionHeight }, standardGeometry);
+  const standard = hoppersIn(stageFor(config, options))[0];
+  const tuned = hoppersIn(stageFor(config, adjusted))[0];
+  const countBands = hopper => {
+    let count = 0;
+    walk(hopper, n => { if (n.getAttribute("class") === "station-hopper__band") count++; });
+    return count;
+  };
+  assert.ok(countBands(tuned) > countBands(standard));
+  assert.deepEqual(allWith(tuned, "data-role", "hopper-interaction")[0].children[0].attributes,
+    allWith(standard, "data-role", "hopper-interaction")[0].children[0].attributes);
+});
+
+test("usable height ends at the lower fill valve, with separate headroom and hose port", () => {
+  const config = literal({ layerCount: 3, hopperCount: 3 });
+  const heights = [20, 30, 40];
+  const hopperState = Object.fromEntries(["A", "B", "C"].flatMap(layer =>
+    heights.map((usableHeight, index) => [`${layer}:${index}`, { usableHeight }])));
+  for (const focusLayer of [null, "B"]) {
+    for (const vesselHeadroomIn of [12, 18, 24]) {
+      // Keep this measurement test inside the normal drawing limits.
+      const options = { hopperState, focusLayer, dimensions: { vesselHeadroomIn, vesselMaxHeight: 250 } };
+      const layout = layoutFor(config, options);
+      const svg = stageFor(config, options);
+      for (const bank of layout.banks) {
+        const unitsPerInch = layoutModule.DIMENSIONS.vesselHeight / layoutModule.DIMENSIONS.referenceHeightIn * bank.scale;
+        for (const geometry of bank.cluster.hoppers) {
+          assert.ok(Math.abs(geometry.coneTop - geometry.fillValveY - heights[geometry.index] * unitsPerInch) < 0.001,
+            "profile height must measure from cone shoulder to fill valve");
+          assert.ok(Math.abs(geometry.fillValveY - geometry.vesselTop - vesselHeadroomIn * unitsPerInch) < 0.001);
+          const hopper = hoppersIn(svg).find(h => h.getAttribute("data-hopper") === geometry.id);
+          const ports = {};
+          walk(hopper, n => {
+            for (const cls of ["station-hopper__port", "station-hopper__fill-valve"]) {
+              if (n.getAttribute("class") === cls) ports[cls] = n;
+            }
+          });
+          assert.ok(Number(ports["station-hopper__port"].getAttribute("cy")) < geometry.fillValveY);
+          assert.ok(Math.abs(Number(ports["station-hopper__fill-valve"].getAttribute("cy")) - geometry.fillValveY) < 0.01);
+          const fill = allWith(hopper, "data-role", "hopper-material")[0].children[0];
+          assert.ok(Math.abs(Number(fill.getAttribute("y")) - geometry.fillValveY) < 0.01);
+          assert.ok(Number(fill.getAttribute("y")) + Number(fill.getAttribute("height")) < geometry.coneTop,
+            "the material range must stay between the valve and cone shoulder");
+        }
+      }
+    }
   }
 });
 
@@ -1084,7 +1223,7 @@ test("source is drawn above the receiver, not under the hopper", () => {
     if (String(node.getAttribute("class") || "").includes("station-hopper__source")) sources.push(node);
   });
   const text = sources.find(n => n.nodeName === "text");
-  const receiver = allWith(svg, "data-station-target", "receiver")[0];
+  const receiver = allWith(svg, "data-role", "hopper-receiver-drawing")[0];
   const cap = [];
   walk(receiver, n => { if (String(n.getAttribute("class") || "").includes("station-hopper__cap")) cap.push(n); });
   assert.ok(Number(text.getAttribute("y")) < Number(cap[0].getAttribute("y")),
