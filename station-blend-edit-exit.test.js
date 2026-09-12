@@ -15,12 +15,23 @@
  *     and cleared by a valid interaction or the mode's exit - never
  *     appended to.
  *
+ * The same exit leaves whatever field the operator is in along that
+ * field's own path - a card's percentage (station-focus-editor.js), a
+ * header's share (station-layer-share.js): Enter and leaving commit,
+ * Escape drops the draft and is spent in the field - so a value that was
+ * accepted is held, a value Escape dropped is not sent, and no field or
+ * handle survives the exit. And the mode is the Handbook's whichever
+ * section is showing: Close from another section is Done first too.
+ *
  * station.js is a self-starting file over a browser document, so it is
  * run here for real: every module the production host loads, in the
  * host's own order, evaluated into one context over a small fake DOM,
  * with the state and command bridges connected the way app.js connects
- * them. What the tests then drive is the drawn stage and the Handbook's
- * own buttons - the same elements an operator clicks.
+ * them - the executor applies the commands the fields issue and answers
+ * with the state bridge's own frozen snapshot, as app.js does, so an
+ * accepted value is the value the rebuilt stage shows. What the tests
+ * then drive is the drawn stage and the Handbook's own buttons - the
+ * same elements an operator clicks.
  */
 
 const test = require("node:test");
@@ -242,16 +253,31 @@ function boot(options) {
   const context = vm.createContext(window);
   for (const file of SHARED.concat(hostScripts())) new vm.Script(read(file), { filename: file }).runInContext(context);
 
-  // The bridges, connected as app.js connects them: a snapshot to read,
-  // an executor that answers every command and records it.
+  /* The bridges, connected as app.js connects them: a state to read, and
+   * an executor that records every command, applies the two the fields
+   * on the stage issue to that state, publishes, and answers with the
+   * state bridge's own frozen snapshot at the new revision - the object
+   * the command bridge insists on (an unfrozen one is refused as
+   * `internal`, and a refused draft never leaves its field). So a value
+   * a field hands over is the value the rebuilt stage then shows. */
   const snap = snapshot();
+  const stateBridge = window.PolynStationStateBridge;
   const contract = window.PolynStationCommandContract;
   const calls = [];
-  window.PolynStationStateBridge.connect({ read: () => snap });
+  const handle = stateBridge.connect({ read: () => snap });
+  const layerOf = id => snap.layers.find(layer => layer.name === id) || null;
   window.PolynStationCommandBridge.connect({
     execute(command, args) {
       calls.push({ command, args: JSON.parse(JSON.stringify(args)), handbookOpen: isHandbookOpen() });
-      return contract.success({ changed: true, revision: 2, snapshot: snap });
+      // A test may have the application refuse: `refuse(command, args)`
+      // returns the reason, and the answer is the contract's refusal.
+      const refused = typeof settings.refuse === "function" ? settings.refuse(command, args) : null;
+      if (refused) return contract.failure("out_of_range", { message: refused });
+      if (command === "setHopperBlend" && layerOf(args.layer)) layerOf(args.layer).hoppers[args.index].pct = Number(args.pct);
+      else if (command === "setLayerShare" && layerOf(args.layer)) layerOf(args.layer).layerPct = Number(args.pct);
+      snap.revision += 1;
+      handle.publish();
+      return contract.success({ changed: true, revision: stateBridge.getRevision(), persisted: true, snapshot: stateBridge.getSnapshot() });
     },
     capabilities: [...contract.COMMANDS]
   });
@@ -267,6 +293,8 @@ function boot(options) {
 
   const api = {
     doc, window, calls, machine, status, launcher, panel, q,
+    /* The application's state, as the executor holds it. */
+    state: () => snap,
     isHandbookOpen,
     action: name => panel.querySelector(`[data-action='${name}']`),
     clickAction: name => { const button = api.action(name); assert.ok(button, `no action ${name}`); button.click(); return button; },
@@ -288,6 +316,30 @@ function boot(options) {
     blendControls: () => panel.querySelector("[data-role='blend-controls']"),
     escapeInPanel: () => panel.dispatchEvent(makeEvent("keydown", { key: "Escape", bubbles: true })),
     escapeOnStage: () => doc.dispatchEvent(makeEvent("keydown", { key: "Escape", bubbles: true })),
+    /* The Handbook's tab for a section, the same button an operator
+     * clicks to show it. */
+    showSection: id => {
+      const tab = panel.querySelectorAll("[role='tab']").find(n => n.getAttribute("data-section") === id);
+      assert.ok(tab, `no Handbook tab for ${id}`);
+      tab.click();
+      return tab;
+    },
+    /* The layer's share field in its header (station-layer-share.js),
+     * as a click on the drawn value opens it; null when none is open. */
+    shareEditor: () => machine.querySelector(".station-layer__share-editor"),
+    shareInput: () => machine.querySelector(".station-layer__share-input"),
+    /* A draft in a header's share field: opened by the click, focused,
+     * with a new value typed and not yet committed. */
+    draftOnShare(layer, value) {
+      api.clickTarget("share", layer);
+      const input = api.shareInput();
+      assert.ok(input, `layer ${layer}'s share field opened`);
+      assert.ok(api.doc.activeElement === input, "the field took the focus");
+      input.value = String(value);
+      input.dispatchEvent(makeEvent("input", { bubbles: true }));
+      assert.ok(machine.contains(doc.activeElement), "the field is the active element, inside the stage");
+      return input;
+    },
     /* The mode as an operator reaches it: Handbook open, Blend Edit on. */
     enterBlendEdit() {
       if (!isHandbookOpen()) launcher.click();
@@ -326,6 +378,9 @@ function assertModeCleared(s) {
   assert.equal(s.clusters(), 3, "every layer shows its hopper cluster");
   assert.ok(!s.blendControls() || s.blendControls().hidden, "the Handbook no longer shows Done");
   assert.doesNotMatch(s.status.textContent, /Blend Edit/, "no Blend Edit notice is left on the status line");
+  assert.ok(s.shareEditor() === null, "no share field is left in a header");
+  assert.ok(s.machine.querySelector(".is-editing") === null, "no header is still marked as being edited");
+  assert.equal(s.machine.contains(s.doc.activeElement), false, "nothing on the stage keeps the focus");
 }
 
 /* ----------------------------------------------------------------------
@@ -386,7 +441,25 @@ test("a field being entered on a card commits along the editor's own path before
   assert.equal(s.calls[0].handbookOpen, true, "the commit ran while the Handbook was still open - before the close, not after");
   assert.equal(s.isHandbookOpen(), false);
   assertModeCleared(s);
-  assert.equal(s.machine.contains(s.doc.activeElement), false, "nothing on the stage keeps the focus");
+  assert.equal(s.state().layers[1].hoppers[1].pct, 35, "the application holds the value the field handed over");
+  // The rebuilt stage shows it: the layer's full editor opens on 35.
+  s.clickTarget("extruder", "B");
+  const row = s.machine.querySelectorAll("[data-role='focus-editor'] input").find(i => /blend percentage/.test(i.getAttribute("aria-label") || "") && !i.hasAttribute("readonly"));
+  assert.ok(row, "the focused editor has the editable percentage field");
+  assert.equal(row.value, "35");
+});
+
+test("a draft the application refuses on the way out is not applied and strands nothing: the mode ends, the panel closes, the stage shows the application's value", () => {
+  const s = boot({ refuse: (command, args) => (command === "setHopperBlend" && args.pct > 90 ? "Hoppers 2-6 would exceed 100%." : null) }).enterBlendEdit();
+  s.draftOnCard("B", 95);
+  s.clickAction("close-handbook");
+  assert.deepEqual(s.calls.map(c => c.command), ["setHopperBlend"], "the draft was offered to the application once");
+  assert.equal(s.state().layers[1].hoppers[1].pct, 40, "and refused: the application's value stands");
+  assert.equal(s.isHandbookOpen(), false);
+  assertModeCleared(s);
+  s.clickTarget("extruder", "B");
+  const row = s.machine.querySelectorAll("[data-role='focus-editor'] input").find(i => /blend percentage/.test(i.getAttribute("aria-label") || "") && !i.hasAttribute("readonly"));
+  assert.equal(row.value, "40");
 });
 
 test("with motion on, the close still ends the mode before the panel sets off", () => {
@@ -479,6 +552,185 @@ test("Blend Edit's notice is cleared by the Handbook's close as by Done, and the
   s.clickTarget("extruder", "A");
   assert.ok(s.machine.querySelector("[data-role='focus-editor']"));
   assert.doesNotMatch(s.status.textContent, /Blend Edit/);
+});
+
+/* ----------------------------------------------------------------------
+ *   The header's share field, open on the way out
+ * -------------------------------------------------------------------- */
+
+/* A layer's share is edited in its header in every mode, Blend Edit
+ * included (station-layer-share.js). Its field has its own contract -
+ * Enter commits, Escape drops the draft and is spent there, leaving the
+ * field commits a changed value once - and the mode's exit leans on it
+ * rather than adding a second: the field is left (leaveStageControl)
+ * before the stage is rebuilt, so what it does with its draft is what it
+ * always does. */
+
+test("a share draft being entered in a header commits along the field's own path before the mode ends and the panel closes - once, as one command", () => {
+  const s = boot().enterBlendEdit();
+  s.flipLayer("A");
+  s.draftOnShare("B", 45);
+  assert.equal(s.modeOn(), true, "the field opened with the mode still on");
+  s.clickAction("close-handbook");
+  assert.deepEqual(s.calls.map(c => [c.command, c.args]), [["setLayerShare", { recipe: "current", layer: "B", pct: 45 }]]);
+  assert.equal(s.calls[0].handbookOpen, true, "the commit ran while the Handbook was still open - before the close, not after");
+  assert.equal(s.isHandbookOpen(), false);
+  assertModeCleared(s);
+});
+
+test("a share draft cancelled with Escape stays cancelled: the key is the field's, the mode stays on, and the close afterwards hands nothing over", () => {
+  const s = boot().enterBlendEdit();
+  s.flipLayer("C");
+  const input = s.draftOnShare("B", 45);
+  const escape = makeEvent("keydown", { key: "Escape", bubbles: true });
+  input.dispatchEvent(escape);
+  assert.equal(escape.stopped, true, "Escape was spent in the field");
+  assert.ok(s.shareEditor() === null, "the field closed");
+  assert.equal(s.modeOn(), true, "the mode is still on: the key did not leave it");
+  assert.equal(s.isHandbookOpen(), true, "nor close the Handbook");
+  assert.deepEqual(s.flipped(), ["C"], "the turned layer is still turned");
+  s.clickAction("close-handbook");
+  assert.deepEqual(s.calls, [], "the cancelled draft was never sent");
+  assert.equal(s.isHandbookOpen(), false);
+  assertModeCleared(s);
+});
+
+test("a share value committed with Enter stays committed and is not sent again by the close", () => {
+  const s = boot().enterBlendEdit();
+  const input = s.draftOnShare("A", 25);
+  input.dispatchEvent(makeEvent("keydown", { key: "Enter", bubbles: true }));
+  assert.deepEqual(s.calls.map(c => c.command), ["setLayerShare"]);
+  assert.ok(s.shareEditor() === null, "Enter closed the field");
+  s.clickAction("close-handbook");
+  assert.deepEqual(s.calls.map(c => c.command), ["setLayerShare"], "one command, not two");
+  assertModeCleared(s);
+});
+
+test("a share field left unchanged by the close is closed without a command", () => {
+  const s = boot().enterBlendEdit();
+  s.clickTarget("share", "B");
+  assert.ok(s.shareInput(), "the field is open");
+  s.escapeInPanel();
+  assert.deepEqual(s.calls, []);
+  assert.equal(s.isHandbookOpen(), false);
+  assertModeCleared(s);
+});
+
+test("Escape on the stage with a share field open drops the draft only; the next Escape leaves the mode as Done does, with the Handbook still open", () => {
+  const s = boot().enterBlendEdit();
+  s.flipLayer("B");
+  const input = s.draftOnShare("B", 45);
+  // The key bubbles from the field to the document, where the boot file's
+  // Escape lives: it must not get there.
+  input.dispatchEvent(makeEvent("keydown", { key: "Escape", bubbles: true }));
+  assert.equal(s.modeOn(), true);
+  assert.ok(s.shareEditor() === null);
+  s.escapeOnStage();
+  assertModeCleared(s);
+  assert.equal(s.isHandbookOpen(), true, "Escape on the stage is Done, not Close");
+  assert.deepEqual(s.calls, [], "the dropped draft was not sent");
+  const enter = s.action("blend-edit");
+  assert.ok(enter && !enter.disabled, "Blend Edit is on offer again");
+});
+
+test("a card field and a share field cannot both be open: opening the share commits the card's draft first, and the close then finds one field to leave", () => {
+  const s = boot().enterBlendEdit();
+  s.draftOnCard("B", 35);
+  s.draftOnShare("A", 25);
+  assert.deepEqual(s.calls.map(c => c.command), ["setHopperBlend"], "moving to the share field left the card's field, which committed");
+  s.clickAction("close-handbook");
+  assert.deepEqual(s.calls.map(c => [c.command, c.args]), [
+    ["setHopperBlend", { recipe: "current", layer: "B", index: 1, pct: 35 }],
+    ["setLayerShare", { recipe: "current", layer: "A", pct: 25 }]
+  ]);
+  assertModeCleared(s);
+});
+
+test("after the exit the share is editable in its header at once, and a fresh field opens", () => {
+  const s = boot().enterBlendEdit();
+  s.draftOnShare("B", 45);
+  s.clickAction("done");
+  assertModeCleared(s);
+  s.clickTarget("share", "B");
+  const input = s.shareInput();
+  assert.ok(input, "a new field opened in the header");
+  assert.equal(input.value, "45", "it opens on what the application now holds - the value the close handed over");
+  assert.ok(s.doc.activeElement === input);
+});
+
+/* ----------------------------------------------------------------------
+ *   Another section showing
+ * -------------------------------------------------------------------- */
+
+test("switching the Handbook to another section leaves the mode on, its exits intact: Close from there is Done first, and the Recipe Book offers the mode afresh", () => {
+  const s = boot().enterBlendEdit();
+  s.clickAction("edit-all");
+  s.showSection("appearance");
+  assert.equal(s.modeOn(), true, "showing another section does not end the mode");
+  assert.deepEqual(s.flipped(), ["A", "B", "C"]);
+  assert.equal(s.panel.querySelectorAll("[role='tabpanel']").find(n => n.getAttribute("data-section") === "recipe-book").hidden, true);
+  // The mode's Done is in the hidden section, but every Handbook exit is
+  // still the one exit: Close from here ends the mode first.
+  s.clickAction("close-handbook");
+  assert.equal(s.isHandbookOpen(), false);
+  assertModeCleared(s);
+  s.launcher.click();
+  s.showSection("recipe-book");
+  const enter = s.action("blend-edit");
+  assert.ok(enter && !enter.disabled, "Blend Edit is on offer again");
+  assert.ok(!s.blendControls() || s.blendControls().hidden);
+});
+
+test("Escape inside the Handbook from another section is the same exit", () => {
+  const s = boot().enterBlendEdit();
+  s.flipLayer("B");
+  s.showSection("appearance");
+  s.escapeInPanel();
+  assert.equal(s.isHandbookOpen(), false);
+  assertModeCleared(s);
+});
+
+/* ----------------------------------------------------------------------
+ *   Round after round, no refresh
+ * -------------------------------------------------------------------- */
+
+test("entering and leaving the mode by every exit in turn leaves nothing behind: each round's refusal reads once and is cleared, each edit is one command, the train opens a layer after each, and no handler doubles", () => {
+  const s = boot();
+  const exits = [
+    { name: "Done", leave: () => s.clickAction("done"), closes: false },
+    { name: "Close", leave: () => s.clickAction("close-handbook"), closes: true },
+    { name: "Escape in the panel", leave: () => s.escapeInPanel(), closes: true },
+    { name: "the launcher", leave: () => s.launcher.click(), closes: true },
+    { name: "Escape on the stage", leave: () => s.escapeOnStage(), closes: false },
+    { name: "Close", leave: () => s.clickAction("close-handbook"), closes: true }
+  ];
+  let commands = 0;
+  exits.forEach((exit, round) => {
+    s.enterBlendEdit();
+    assert.deepEqual(s.flipped(), [], `round ${round + 1} (${exit.name}): no layer came back turned`);
+    s.flipLayer("B");
+    s.clickTarget("extruder", "A");
+    s.clickTarget("extruder", "A");
+    assert.equal(count(s.status.textContent, REFUSAL), 1, `round ${round + 1}: the refusal reads once`);
+    s.draftOnCard("A", 55 + round);
+    exit.leave();
+    commands += 1;
+    assert.equal(s.calls.length, commands, `round ${round + 1}: the draft went once - no handler dispatched it twice`);
+    assert.deepEqual(s.calls[commands - 1].args, { recipe: "current", layer: "A", index: 1, pct: 55 + round });
+    assert.equal(s.isHandbookOpen(), !exit.closes, `round ${round + 1}: ${exit.name} ${exit.closes ? "closes" : "keeps"} the Handbook`);
+    assertModeCleared(s);
+    // The stage is the stage: the train opens the layer's full editor.
+    s.clickTarget("extruder", "C");
+    const editor = s.machine.querySelector("[data-role='focus-editor']");
+    assert.ok(editor && editor.getAttribute("data-variant") === "full", `round ${round + 1}: the focused editor opened`);
+    assert.equal(count(s.status.textContent, REFUSAL), 0);
+    s.escapeOnStage();
+    assert.ok(s.machine.querySelector("[data-role='focus-editor']") === null);
+    if (!s.isHandbookOpen()) s.launcher.click();
+    assert.equal(s.isHandbookOpen(), true, `round ${round + 1}: the Handbook reopened`);
+  });
+  assert.equal(s.calls.length, exits.length);
+  assert.ok(s.calls.every(c => c.command === "setHopperBlend"));
 });
 
 /* ----------------------------------------------------------------------
