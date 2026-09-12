@@ -39,11 +39,14 @@ three-layer session seeded into the browser context's own storage, so the
 executor is connected and the editor's search and fields are real. Every
 request that is not to `STATION_BASE` is aborted, so nothing reaches RT
 Sync or Supabase; the seeded session lives only in that context. The
-standalone harness (`/station/station.html?source=demo`), which has no
+standalone harness (`/station/station.html?source=demo&demo=three-layer`), which has no
 producer, is visited once at the end to check that it is read-only.
 
 ## What it checks
 
+- **Shell** - the page is a header, the stage and a status bar, each the
+  full width of the shell, in one grid column; no side pane, no recipe
+  strip and no mount for one remains; the line console is in the header.
 - **Fast click before hover** - a click dispatched on a mixer, a hopper and
   an editor row with no preceding pointer movement lands exactly like a
   hovered one.
@@ -67,8 +70,18 @@ producer, is visited once at the end to check that it is read-only.
 - **Row <-> hopper linkage** - hovering a row highlights its hopper and vice
   versa; clicking either selects both.
 - **Hopper hit areas** - in overview and focus, vessel hardware, cones and
-  labels all hit the owning hopper's rectangle; the receiver retains its
-  delegated target. Every drawing element remains pointer-inert.
+  labels all hit the owning hopper's tracking cell, and the receiver cone
+  its pump cell. Every drawing element remains pointer-inert.
+- **Tracking and pump-off** - a click on a hopper's body tracks it through
+  the application (the bridge snapshot, the legacy grid's clock button and
+  the saved session agree), draws the halo over its receiver in the
+  layer's colour, leaves the pump alone, and neither selects the hopper
+  nor opens the layer; a click on the receiver marks the pump off the same
+  way, the amber goes and the receiver steps back, tracking untouched;
+  each toggles back from the same place. Every tracked hopper wears one
+  halo, nothing animates, no icon is drawn. In the open layer the drawn
+  hopper toggles the same state and the rows carry no operational control.
+  On the harness the controls are read-only and a click says why.
 - **Percentage field** - "60", "100" and "33.33" all fit without clipping.
 - **Hopper drag** - a press on a row's surface that does not travel is not
   a drag; one that does marks the row and the row under the pointer with

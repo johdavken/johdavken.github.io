@@ -344,3 +344,56 @@ test("neither the executor nor any Station file publishes, queues or uploads on 
     }
   }
 });
+
+/* ----------------------------------------------------------------------
+ *   Step 10: tracking and pump-off ride the same path
+ * -------------------------------------------------------------------- */
+
+test("toggle tracking: one immediate tracking notification through the application's tail, one upload carrying the flag, no history", async () => {
+  const h = await boot();
+  const revision = h.stationBridge.getRevision();
+  const result = h.commands.dispatch("setHopperTracking", Object.assign({}, CUR, { index: 2, track: true }));
+  assert.equal(result.ok, true);
+  assert.equal(h.state.layers[1].hoppers[2].track, true);
+  assert.ok(h.stationBridge.getRevision() > revision, "the state bridge published");
+  assert.equal(h.history.current.undo.length, 0, "runtime state records no recipe history");
+  const uploaded = await expectOneUpload(h, "tracking", true);
+  assert.equal(uploaded.layers[1].hoppers[2].track, true, "the line receives the flag");
+  assert.equal(uploaded.layers[1].hoppers[2].resinName, "", "and nothing else about the hopper moved");
+});
+
+test("toggle pump-off: one immediate pump-off notification, one upload carrying the flag", async () => {
+  const h = await boot();
+  const result = h.commands.dispatch("setPumpOff", Object.assign({}, CUR, { index: 0, pumpOff: true }));
+  assert.equal(result.ok, true);
+  assert.equal(h.state.layers[1].hoppers[0].pumpOff, true);
+  const uploaded = await expectOneUpload(h, "pump-off", true);
+  assert.equal(uploaded.layers[1].hoppers[0].pumpOff, true);
+  assert.equal(uploaded.layers[1].hoppers[0].track, true, "tracking is untouched by a pump change");
+});
+
+test("a runtime no-op causes no RT churn: no save, no publish, no notification, no upload", async () => {
+  const h = await boot();
+  const revision = h.stationBridge.getRevision();
+  const saves = h.log.saves;
+  for (const [command, args] of [
+    ["setHopperTracking", Object.assign({}, CUR, { index: 0, track: true })],
+    ["setPumpOff", Object.assign({}, CUR, { index: 0, pumpOff: false })]
+  ]) {
+    const result = h.commands.dispatch(command, args);
+    assert.equal(result.ok, true, command);
+    assert.equal(result.changed, false, command);
+  }
+  assert.equal(h.stationBridge.getRevision(), revision);
+  assert.equal(h.log.saves, saves);
+  assert.deepEqual(h.log.notified, []);
+  assert.equal(h.lineSync.getState().pendingCount, 0);
+  await h.flush();
+  assert.deepEqual(h.uploads(), []);
+});
+
+test("the hopper controls module has no way onto the line of its own: it dispatches on the bridge it is handed and nothing else", () => {
+  const source = fs.readFileSync(path.join(ROOT, "station", "station-hopper-controls.js"), "utf8");
+  assert.equal((source.match(/commands\.dispatch\s*\(/g) || []).length, 1);
+  assert.doesNotMatch(source, /PolynStationCommandBridge\s*\.|PolynStationStateBridge|PolynCloudSync|localStorage|setTimeout|fetch\s*\(/);
+});

@@ -22,7 +22,7 @@ const OUT = path.join(__dirname, "out");
  * producer and is read-only there by design; it is visited once at the
  * end to check exactly that. */
 const PAGE = "/?view=station";
-const DEMO_PAGE = "/station/station.html?source=demo";
+const DEMO_PAGE = "/station/station.html?source=demo&demo=three-layer";
 
 /* A three-layer session seeded into the browser's own storage before the
  * page loads - the same shape the application saves - so the host has a
@@ -70,8 +70,9 @@ const clusterAt = (page, layer) => page.evaluate(id => { const c = document.quer
 const mixerHit = layer => `[data-role='layer'][data-layer='${layer}'] [data-role='mixer'] .station-hit`;
 const dispatchClick = (page, selector) => page.evaluate(sel => { document.querySelector(sel).dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, composed: true })); }, selector);
 
-/* Test real pointer routing through the decorative drawing, including the
- * receiver's retained target. Synthetic events alone bypass pointer-events. */
+/* Test real pointer routing through the decorative drawing: the receiver
+ * is the pump control, everything below it the tracking control. Synthetic
+ * events alone bypass pointer-events. */
 const hopperHitFailures = page => page.evaluate(() => {
   const failures = [];
   for (const hopper of document.querySelectorAll(".station-layer:not(.is-dimmed) .station-hopper")) {
@@ -80,15 +81,76 @@ const hopperHitFailures = page => page.evaluate(() => {
       const box = shape.getBoundingClientRect();
       const hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
       const target = hit && hit.closest("[data-station-target]");
+      // The receiver's cone is under the pump control's cell; the vessel,
+      // its hardware, the hose and the readout under the tracking control's.
+      const expected = part === "receiver-cone" ? "pump" : "tracking";
       if (getComputedStyle(shape).pointerEvents !== "none" || !hit ||
           !hit.classList.contains("station-hit") || hit.closest(".station-hopper") !== hopper ||
-          !target || target.getAttribute("data-station-target") !== (part === "receiver-cone" ? "receiver" : "cluster")) {
+          !target || target.getAttribute("data-station-target") !== expected) {
         failures.push(`${hopper.getAttribute("data-hopper")}:${part}`);
       }
     }
   }
   return failures;
 });
+
+/* The hopper's operational controls, read through the application: the
+ * bridge's snapshot, the legacy grid's own clock button, and the saved
+ * session - all three must agree after a Station toggle - and the drawing:
+ * the halo over a tracked hopper, the receiver stepping back when its
+ * pump is off. */
+const hopperSel = (layer, id) => `[data-role='layer'][data-layer='${layer}'] [data-role='hopper'][data-hopper='${id}']`;
+const controlSel = (layer, id, kind) => `${hopperSel(layer, id)} [data-station-target='${kind}'] .station-hit`;
+const opState = (page, layer, index, id) => page.evaluate(([layer, index, id, key]) => {
+  const snapshot = window.PolynStationStateBridge.getSnapshot();
+  const layerIndex = snapshot.layers.findIndex(l => l.name === layer);
+  const hopper = document.querySelector(`[data-role='layer'][data-layer='${layer}'] [data-role='hopper'][data-hopper='${id}']`);
+  const control = kind => hopper.querySelector(`[data-station-target='${kind}']`);
+  const legacyCell = document.getElementById(`r_${layer}_${index}`) && document.getElementById(`r_${layer}_${index}`).closest("td");
+  const session = JSON.parse(localStorage.getItem(key)).layers[layerIndex].hoppers[index];
+  const row = document.querySelector(`.station-editor__item[data-hopper='${id}']`);
+  return {
+    app: { track: snapshot.layers[layerIndex].hoppers[index].track, pumpOff: snapshot.layers[layerIndex].hoppers[index].pumpOff },
+    session: { track: !!session.track, pumpOff: !!session.pumpOff },
+    legacyTrack: legacyCell ? legacyCell.querySelector(".splitTrackButton").getAttribute("aria-pressed") : null,
+    drawn: {
+      tracking: hopper.classList.contains("is-tracking"), pumpOff: hopper.classList.contains("is-pump-off"),
+      halo: !!hopper.querySelector(".station-hopper__halo"), receiver: control("pump").getAttribute("data-pump"),
+      haloStroke: hopper.querySelector(".station-hopper__halo-ring") ? getComputedStyle(hopper.querySelector(".station-hopper__halo-ring")).stroke : null,
+      layerAccent: getComputedStyle(hopper.closest("[data-role='layer']")).getPropertyValue("--station-layer-accent").trim(),
+      receiverOpacity: Number(getComputedStyle(hopper.querySelector(".station-hopper__receiver-drawing")).opacity),
+      coneFill: getComputedStyle(hopper.querySelector(".station-hopper__receiver-cone")).fill,
+      icons: hopper.querySelectorAll(".station-hopper__clock, .station-hopper__power-ring").length
+    },
+    control: { tracking: control("tracking").getAttribute("data-on"), pump: control("pump").getAttribute("data-on"), able: [control("tracking").getAttribute("data-able"), control("pump").getAttribute("data-able")] },
+    pending: !!document.querySelector(".is-pending"),
+    selected: !!document.querySelector(".station-hopper.is-selected"),
+    focus: document.querySelector("[data-station-mount='machine']").getAttribute("data-focus-layer"),
+    // The open layer's rows carry no operational controls.
+    rowOps: row ? row.querySelectorAll(".station-editor__op, [data-slot='tracking'], [data-slot='pump']").length : null,
+    hover: !!hopper.querySelector(".station-hopper__control:hover")
+  };
+}, [layer, index, id, SESSION_KEY]);
+const clickCentre = async (page, selector) => { const b = await page.locator(selector).first().boundingBox(); await page.mouse.click(b.x + b.width / 2, b.y + b.height / 2); await page.waitForTimeout(120); };
+const halos = page => page.evaluate(() => ({
+  tracked: document.querySelectorAll(".station-layer:not(.is-dimmed) .station-hopper.is-tracking").length,
+  halos: document.querySelectorAll(".station-layer:not(.is-dimmed) .station-hopper__halo").length,
+  // Each halo in its own layer's colour: the ring's computed stroke against
+  // the accent resolved on the layer group it sits in.
+  offColour: [...document.querySelectorAll(".station-layer:not(.is-dimmed) .station-hopper__halo-ring")].filter(ring => {
+    const probe = document.createElement("span");
+    probe.style.color = getComputedStyle(ring.closest("[data-role='layer']")).getPropertyValue("--station-layer-accent").trim();
+    ring.closest("[data-role='layer']").appendChild(probe);
+    const want = getComputedStyle(probe).color;
+    probe.remove();
+    return getComputedStyle(ring).stroke !== want;
+  }).length,
+  animated: [...document.querySelectorAll(".station-layer:not(.is-dimmed) .station-hopper *")].filter(el => getComputedStyle(el).animationName !== "none").length,
+  icons: document.querySelectorAll(".station-hopper__clock, .station-hopper__power-ring, .station-hopper__marks").length,
+  glowWider: [...document.querySelectorAll(".station-layer:not(.is-dimmed) .station-hopper__halo")].every(h =>
+    parseFloat(getComputedStyle(h.querySelector(".station-hopper__halo-glow")).strokeWidth) > parseFloat(getComputedStyle(h.querySelector(".station-hopper__halo-ring")).strokeWidth) &&
+    Number(getComputedStyle(h.querySelector(".station-hopper__halo-glow")).opacity) < 1)
+}));
 
 async function run(browserName) {
   const type = playwright[browserName];
@@ -112,8 +174,58 @@ async function run(browserName) {
     const pageState = await page.evaluate(() => ({ scrollW: document.documentElement.scrollWidth, scrollH: document.documentElement.scrollHeight, innerW: innerWidth, innerH: innerHeight, tooSmall: getComputedStyle(document.querySelector(".station-too-small")).display !== "none" }));
     check(browserName, `${tag} no page scrollbar`, pageState.scrollW <= pageState.innerW && pageState.scrollH <= pageState.innerH, pageState);
     check(browserName, `${tag} too-small notice hidden`, !pageState.tooSmall);
+    const frame = await page.evaluate(() => {
+      const rect = sel => { const el = document.querySelector(sel); return el ? el.getBoundingClientRect() : null; };
+      const shell = rect(".station-shell"), header = rect(".station-header"), machine = rect(".station-machine"), status = rect(".station-status");
+      const stage = rect(".station-machine__stage");
+      return {
+        columns: getComputedStyle(document.querySelector(".station-shell")).gridTemplateColumns.split(" ").length,
+        regions: [...document.querySelector(".station-shell").children].map(el => el.className),
+        panes: document.querySelectorAll(".station-sidebar, .station-inspector, .station-recipe-strip, .station-nav, [data-station-mount='inspector'], [data-station-mount='nav'], [data-station-mount='recipe-strip']").length,
+        headerFull: header && Math.abs(header.width - shell.width) < 1 && header.y === shell.y,
+        machineFull: machine && Math.abs(machine.width - shell.width) < 1 && Math.abs(machine.y - header.bottom) < 1 && Math.abs(status.y - machine.bottom) < 1,
+        statusFull: status && Math.abs(status.width - shell.width) < 1 && Math.abs(status.bottom - shell.bottom) < 1,
+        stageWide: stage && stage.width > shell.width * 0.9,
+        shellWidth: shell.width, machineWidth: machine.width, stageWidth: stage ? stage.width : null,
+        console: !!document.querySelector("[data-station-mount='connection'] *")
+      };
+    });
+    check(browserName, `${tag} the shell is header, stage and status bar across the full width - no side pane, no strip, no spare track`,
+      frame.columns === 1 && frame.regions.join() === "station-header,station-machine,station-status" && frame.panes === 0 && frame.headerFull && frame.machineFull && frame.statusFull && frame.stageWide && frame.console, frame);
     let hopperHits = await hopperHitFailures(page);
     check(browserName, `${tag} overview hopper artwork routes through stable hit areas`, hopperHits.length === 0, hopperHits);
+
+    /* the hopper's operational controls, in the overview: the body is the
+     * tracking toggle, the receiver the pump toggle, each a command through
+     * the application and nothing else */
+    let ops = await opState(page, "B", 2, "B3");
+    check(browserName, `${tag} controls are on offer and B3 starts untracked, pump running, no icon drawn`, ops.control.able.join() === "true,true" && !ops.app.track && !ops.drawn.halo && ops.control.tracking === "false" && ops.control.pump === "false" && ops.drawn.icons === 0, ops);
+    const cellHit = await page.evaluate(sel => { const out = {}; for (const kind of ["tracking", "pump"]) { const cell = document.querySelector(`${sel} [data-station-target='${kind}'] .station-hit`); const b = cell.getBoundingClientRect(); const hit = document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2); out[kind] = !!(hit && hit.closest("[data-station-target]") && hit.closest("[data-station-target]").getAttribute("data-station-target") === kind); } return out; }, hopperSel("B", "B3"));
+    check(browserName, `${tag} each control's cell hit-tests to itself`, cellHit.tracking && cellHit.pump, cellHit);
+    await clickCentre(page, controlSel("B", "B3", "tracking"));
+    ops = await opState(page, "B", 2, "B3");
+    check(browserName, `${tag} clicking B3's body tracks it through the application: bridge, legacy clock button and saved session agree, the halo is drawn, the pump is untouched`,
+      ops.app.track && ops.session.track && ops.legacyTrack === "true" && ops.drawn.tracking && ops.drawn.halo && ops.control.tracking === "true" && !ops.app.pumpOff && !ops.pending, ops);
+    check(browserName, `${tag} a control click neither selects the hopper nor opens the layer`, !ops.selected && ops.focus === null, ops);
+    let drawn = await halos(page);
+    check(browserName, `${tag} every tracked hopper wears one halo in its layer's colour - glow under a crisp ring - and nothing animates, no icon anywhere`,
+      drawn.tracked === drawn.halos && drawn.tracked >= 3 && drawn.offColour === 0 && drawn.animated === 0 && drawn.icons === 0 && drawn.glowWider, drawn);
+    await clickCentre(page, controlSel("B", "B3", "tracking"));
+    ops = await opState(page, "B", 2, "B3");
+    check(browserName, `${tag} clicking it again untracks B3: the halo is gone, nothing stuck`, !ops.app.track && !ops.session.track && ops.legacyTrack === "false" && !ops.drawn.halo && ops.control.tracking === "false" && !ops.pending && !ops.selected, ops);
+    const runningCone = ops.drawn.coneFill;
+    await clickCentre(page, controlSel("B", "B1", "pump"));
+    const hovered = await opState(page, "B", 0, "B1");
+    await page.mouse.move(5, 5); await page.waitForTimeout(40);
+    ops = await opState(page, "B", 0, "B1");
+    check(browserName, `${tag} clicking B1's receiver marks its pump off through the application: bridge and session agree, the amber is gone and the receiver steps back, tracking untouched`,
+      ops.app.pumpOff && ops.session.pumpOff && ops.drawn.pumpOff && ops.drawn.receiver === "off" && ops.control.pump === "true" && ops.drawn.coneFill !== runningCone && ops.drawn.receiverOpacity <= 0.5 && ops.app.track && ops.drawn.halo && !ops.pending && !ops.selected && ops.focus === null, ops);
+    check(browserName, `${tag} under the pointer a stopped receiver comes part of the way back - the hover cue - and no further`, hovered.hover && hovered.drawn.receiverOpacity > ops.drawn.receiverOpacity && hovered.drawn.receiverOpacity < 1 && hovered.drawn.coneFill !== runningCone, { hovered: hovered.drawn, resting: ops.drawn });
+    await clickCentre(page, controlSel("B", "B1", "pump"));
+    await page.mouse.move(5, 5); await page.waitForTimeout(40);
+    ops = await opState(page, "B", 0, "B1");
+    check(browserName, `${tag} clicking the same place again marks the pump running: the amber is back`, !ops.app.pumpOff && !ops.session.pumpOff && !ops.drawn.pumpOff && ops.drawn.receiver === "on" && ops.control.pump === "false" && ops.drawn.coneFill === runningCone && ops.drawn.receiverOpacity === 1, ops);
+    check(browserName, `${tag} no hover or pending state remains on the controls`, !ops.hover && !ops.pending, ops);
 
     /* open / close */
     const normalCluster = await clusterAt(page, "B");
@@ -148,6 +260,26 @@ async function run(browserName) {
     l = await link("B1");
     check(browserName, `${tag} fast click on a row selects it and its hopper`, l.hopperSel && l.rowSel, l);
     check(browserName, `${tag} hopper clicks never close the layer`, (await stateOf(page)).focus === "B");
+
+    /* the same controls in the open layer: the drawn hopper toggles, the
+     * rows carry nothing operational */
+    await dispatchClick(page, ".station-editor__item[data-hopper='B2'] .station-editor__badge");
+    let focusedOps = await opState(page, "B", 1, "B2");
+    check(browserName, `${tag} the open layer's rows carry no tracking or pump control`, focusedOps.rowOps === 0 && focusedOps.selected, focusedOps);
+    await clickCentre(page, controlSel("B", "B2", "pump"));
+    await page.mouse.move(5, 5); await page.waitForTimeout(40);
+    focusedOps = await opState(page, "B", 1, "B2");
+    check(browserName, `${tag} the drawn receiver in the open layer marks B2's pump off through the application, leaves the layer open and the selection alone`,
+      focusedOps.app.pumpOff && focusedOps.session.pumpOff && focusedOps.drawn.pumpOff && focusedOps.drawn.receiverOpacity <= 0.5 && (await stateOf(page)).focus === "B" && focusedOps.selected, focusedOps);
+    await clickCentre(page, controlSel("B", "B2", "pump"));
+    focusedOps = await opState(page, "B", 1, "B2");
+    check(browserName, `${tag} and the same place toggles it back`, !focusedOps.app.pumpOff && !focusedOps.drawn.pumpOff && (await stateOf(page)).focus === "B" && focusedOps.selected, focusedOps);
+    await clickCentre(page, controlSel("B", "B3", "tracking"));
+    focusedOps = await opState(page, "B", 2, "B3");
+    check(browserName, `${tag} the drawn body in the open layer tracks B3 and leaves the layer open`, focusedOps.app.track && focusedOps.legacyTrack === "true" && focusedOps.drawn.halo && (await stateOf(page)).focus === "B", focusedOps);
+    await clickCentre(page, controlSel("B", "B3", "tracking"));
+    focusedOps = await opState(page, "B", 2, "B3");
+    check(browserName, `${tag} and again untracks it`, !focusedOps.app.track && !focusedOps.drawn.halo, focusedOps);
 
     /* search keyboard flow */
     await page.focus(".station-editor__item[data-hopper='B1'] .station-editor__resin-value");
@@ -275,8 +407,6 @@ async function run(browserName) {
   const page = await ctx.newPage();
   await page.goto(BASE + DEMO_PAGE, { waitUntil: "load" });
   await page.waitForSelector("[data-role='layer']");
-  await page.click("[data-demo='three-layer']");
-  await page.waitForTimeout(150);
   await dispatchClick(page, mixerHit("B"));
   await settled(page);
   const mode = await page.$eval(".station-editor__mode", n => n.textContent);
@@ -292,6 +422,16 @@ async function run(browserName) {
   }));
   check(browserName, "harness: read-only throughout, the value reads, the search does not open, and the note says why",
     mode === "Read-only" && !readOnly.search && readOnly.resin && readOnly.disabled === "true" && readOnly.cursor === "default" && readOnly.pctReadOnly && /no application is connected/.test(readOnly.note), { mode, readOnly });
+  await clickCentre(page, controlSel("B", "B2", "tracking"));
+  const harnessOps = await page.evaluate(() => ({
+    able: document.querySelector("[data-role='hopper'][data-hopper='B2'] [data-station-target='tracking']").getAttribute("data-able"),
+    cursor: getComputedStyle(document.querySelector("[data-role='hopper'][data-hopper='B2'] [data-station-target='tracking'] .station-hit")).cursor,
+    tracked: document.querySelector("[data-role='hopper'][data-hopper='B2']").classList.contains("is-tracking"),
+    rowOps: document.querySelectorAll(".station-editor__op").length,
+    note: document.querySelector(".station-editor__note").textContent
+  }));
+  check(browserName, "harness: the hopper controls are read-only - no offer, a plain cursor, a click changes nothing and says why",
+    harnessOps.able === "false" && harnessOps.cursor === "default" && !harnessOps.tracked && harnessOps.rowOps === 0 && /no application is connected/.test(harnessOps.note), harnessOps);
   await ctx.close();
   await browser.close();
 }

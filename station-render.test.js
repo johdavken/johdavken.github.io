@@ -261,7 +261,7 @@ test("patchStage redraws only the hoppers whose runtime changed, and their class
   assert.notEqual(b0, b0Before);
   assert.ok(classesOf(b0).includes("is-tracking"));
   assert.ok(classesOf(b0).includes("is-pump-off"));
-  assert.equal(allWith(b0, "data-role", "hopper-receiver")[0].getAttribute("data-pump"), "off");
+  assert.equal(allWith(b0, "data-role", "hopper-pump")[0].getAttribute("data-pump"), "off");
   assert.deepEqual(allWithClass(b0, "station-hopper__pct").map(n => n.textContent), ["55%"]);
   assert.deepEqual(allWithClass(b0, "station-hopper__source").map(n => n.textContent), ["BOX 9"]);
   const c2 = hopperNodes(mount).find(n => n.getAttribute("data-layer") === "C" && n.getAttribute("data-hopper-index") === "2");

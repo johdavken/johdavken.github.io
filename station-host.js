@@ -55,7 +55,6 @@
     "station/styles/components/layer-bank.css",
     "station/styles/components/focus-editor.css",
     "station/styles/components/inspector.css",
-    "station/styles/components/recipe-strip.css",
     "station/styles/components/rundown.css",
     "station/styles/components/sync-console.css"
   ];
@@ -71,6 +70,7 @@
     "station/station-render.js",
     "station/station-transition.js",
     "station/station-focus-editor.js",
+    "station/station-hopper-controls.js",
     "station/station-shell.js",
     "station/station-sync-console.js",
     "station/station-demo-lines.js",
@@ -78,7 +78,7 @@
     "station/station.js"
   ];
 
-  const VERSION = "0.18.0";
+  const VERSION = "0.20.0";
 
   function requested() {
     try {

@@ -28,8 +28,8 @@
     "hash": "c81d250017c69884"
   },
   "station-host.js": {
-    "v": "0.2.7",
-    "hash": "a265653d6e66fc4f"
+    "v": "0.2.11",
+    "hash": "d0572ff1ec96812a"
   },
   "workspace-configuration-payloads.js": {
     "v": "0.20.1",
@@ -44,8 +44,8 @@
     "hash": "f7e942645b9e622d"
   },
   "station-command-contract.js": {
-    "v": "0.2.0",
-    "hash": "6899240b0b749c42"
+    "v": "0.3.0",
+    "hash": "22487dda56825710"
   },
   "station-command-bridge.js": {
     "v": "0.1.0",
@@ -156,8 +156,8 @@
     "hash": "b8efd231de7bb46f"
   },
   "app.js": {
-    "v": "0.28.0",
-    "hash": "5c3e03e045e19e91"
+    "v": "0.29.1",
+    "hash": "3d0fd82a20c5b606"
   },
   "resin-admin-ui.js": {
     "v": "0.20.4",

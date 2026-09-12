@@ -213,7 +213,11 @@
         resin,
         pct,
         source: resin ? (runtime.source || "") : "",
-        assigned: !!(resin || pct)
+        assigned: !!(resin || pct),
+        // Runtime state, carried beside the recipe values so the inspector
+        // can say it; not part of what "assigned" means.
+        track: !!runtime.track,
+        pumpOff: !!runtime.pumpOff
       };
     });
     const total = rows.reduce((sum, row) => sum + row.pct, 0);

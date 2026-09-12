@@ -74,6 +74,9 @@
   --station-hose-edge: rgba(226, 236, 244, 0.55);
   --station-hose-spiral: #a3d6c4;
   --station-hose-glint: rgba(255, 255, 255, 0.4);
+  /* The same hose with nothing in it: the stage shows almost straight
+   * through, so an empty line reads as empty next to a running one. */
+  --station-hose-empty: rgba(226, 236, 244, 0.05);
 
   /* ---- Layer identity ----
    * Accents only: a layer's colour appears on its label, its mixer agitator,
@@ -165,23 +168,24 @@
   --station-line-tight: 1.25;
   --station-line-normal: 1.5;
 
-  /* ---- Shell layout ---- */
-  --station-sidebar-width: 260px;
-  --station-inspector-width: 300px;
+  /* ---- Shell layout ----
+   * The header and the status bar are the only fixed tracks; the stage
+   * takes everything between them, the full width of the window. */
   --station-header-height: 52px;
   --station-status-height: 32px;
-  --station-recipe-strip-height: 64px;
 }
 
 /* ---------------------------------------------------------------------
  *   Breakpoints
  * -------------------------------------------------------------------
- * Station has exactly two, and they are documented here rather than
- * scattered through the component files.
+ * Station has exactly one, and it is documented here rather than
+ * scattered through the component files. (The compact-desktop step at
+ * 1100-1439px went with the side columns it narrowed: with the stage the
+ * whole width there is nothing left to narrow.)
  *
- *   >= 1440px   the design target. Sidebar and inspector both at full width.
- *   1100-1439px compact desktop. Both side columns narrow; nothing is hidden,
- *               nothing reflows to a different layout.
+ *   >= 1100px   the supported range. The stage takes the full width and
+ *               scales the machine to fit; nothing is hidden, nothing
+ *               reflows to a different layout.
  *   <  1100px   below Station's supported range. The shell says so rather
  *               than degrading into a phone layout - Station is desktop-only
  *               by design, and the existing mobile UI is where floor work

@@ -51,6 +51,12 @@
    * boot file's part is what happens after - see onCommitted in
    * drawStage. */
   const commands = root.PolynStationCommandBridge || null;
+  /* The hopper cluster's write seam (station-hopper-controls.js): the
+   * tracking and pump controls drawn on every hopper. This file resolves
+   * a click on one to the module, which issues the command on the bridge
+   * it is handed; what happens after is the same publish policy the
+   * editor's commands run (see toggleHopperControl). */
+  const hopperControls = root.PolynStationHopperControls || null;
 
   /* The commands Station may offer for what it is SHOWING. The executor
    * writes the application's live recipe, so it is only on offer while the
@@ -60,9 +66,22 @@
     return commands && resolved && resolved.live ? commands : null;
   }
 
+  /* Which of a hopper's operational controls may act, for what is on
+   * screen: the bridge's offer, read once per render and written onto
+   * each control by the renderer. No table of permissions is kept here:
+   * the offer is the bridge's answer, asked each time. */
+  function controlsFor(resolved) {
+    return hopperControls ? hopperControls.abilities(commandsFor(resolved), "current") : null;
+  }
+
   if (!lineModel || !render || !demoLines || !source || !shell || !transition || !focusEditor) return;
 
   const mounts = {};
+  /* Which demo line the demo source draws. There is no list to choose from
+   * on screen any more (the left column went with the shell cleanup:
+   * switching lines is the workspace's job); a developer opening the
+   * harness names one at ?demo=<id> (station-demo-lines.js), or gets the
+   * first. */
   let selectedDemoId = demoLines.DEMO_LINES[0] ? demoLines.DEMO_LINES[0].id : "";
   // "auto" follows the bridge and falls back to demo; "demo" pins demo data
   // even while the application is connected. Pinning is what makes the demo
@@ -79,12 +98,11 @@
    *
    *   target "mixer"      -> OPEN the layer in the workspace; inspect the blend
    *   target "extruder"   -> OPEN the layer in the workspace; inspect the share
-   *   target "cluster"    -> the hoppers themselves: pumps, tracking, and
-   *                          whatever else belongs on the equipment once it
-   *                          is wired up. Never opens the layer. Carries
+   *   target "cluster"    -> the hoppers themselves. Never opens the layer. Carries
    *                          `hopper`, the id of the one hopper selected -
-   *                          by a click on it, or on its row in the focused
-   *                          editor - or null for the cluster as a whole.
+   *                          by a click on its row in the focused editor -
+   *                          or null for the cluster as a whole. A click on
+   *                          a hopper itself is one of its two controls.
    *
    * The equipment train is the handle on the layer; the hoppers are the
    * controls in it. See station-machine-parts.js, which is the only place
@@ -137,9 +155,10 @@
   let current = { model: null, resolved: null };
 
   /* Which targets OPEN the layer: the equipment train - mixer or extruder.
-   * The hopper cluster is the future home of pump and tracking controls; a
-   * click there selects it for the inspector and, on a layer that is
-   * already open, keeps it open - it never opens or closes one. */
+   * The hopper cluster carries the pump and tracking controls - the
+   * receiver and the body of each hopper; a click on the cluster around
+   * them selects it for the inspector and, on a layer that is already
+   * open, keeps it open - it never opens or closes one. */
   function opensLayer(target) {
     return target === "mixer" || target === "extruder";
   }
@@ -260,45 +279,17 @@
     });
   }
 
-  function renderNav(live) {
-    const host = mounts.nav;
-    if (!host) return;
-    render.clear(host);
-    const doc = host.ownerDocument;
-    for (const demo of demoLines.DEMO_LINES) {
-      const button = doc.createElement("button");
-      button.type = "button";
-      button.className = "station-nav__item";
-      button.dataset.demo = demo.id;
-      const active = demo.id === selectedDemoId && !live;
-      if (active) button.classList.add("is-selected");
-      button.setAttribute("aria-pressed", active ? "true" : "false");
-
-      const label = doc.createElement("span");
-      label.className = "station-nav__label";
-      label.textContent = demo.label;
-      button.appendChild(label);
-
-      const note = doc.createElement("span");
-      note.className = "station-nav__note";
-      note.textContent = demo.note;
-      button.appendChild(note);
-
-      button.addEventListener("click", () => {
-        selectedDemoId = demo.id;
-        // Choosing a demo configuration while the application is connected is
-        // an explicit request to look at that demo, so it pins demo mode
-        // rather than being silently overridden on the next publish.
-        sourceMode = source.MODE_DEMO;
-        renderAll();
-      });
-      host.appendChild(button);
-    }
-  }
-
   /* --------------------------------------------------------------------
    *   Inspector
-   * ------------------------------------------------------------------ */
+   * --------------------------------------------------------------------
+   * NOT ON SCREEN. The shell no longer has an inspector column
+   * (station-shell.js), so `mounts.inspector` is null and everything below
+   * returns before drawing. The panels are kept because what they say -
+   * the layer's blend as a table, its share, a hopper's operational state
+   * in words - is due to come back in a different place; when it does, a
+   * mount named "inspector" is all this needs. Nothing here is a second
+   * source of truth: it reads the same snapshot the stage draws from.
+   */
 
   function inspectorRow(doc, term, value, className) {
     const item = doc.createElement("div");
@@ -424,9 +415,10 @@
       return true;
     }
 
-    /* Cluster: the hoppers. Pump and tracking controls will live on the
-     * equipment itself once they are wired up; until then this panel carries
-     * what a summary can: the layer's totals, and whether the blend adds up. */
+    /* Cluster: the hoppers. The pump and tracking controls are on the
+     * equipment itself; this panel carries the summary - the layer's
+     * totals, whether the blend adds up - and, for a selected hopper, its
+     * operational state said in words. */
     host.appendChild(panelHeader(doc, `Layer ${blend.layer.id} hoppers`, blend.layer.roleLabel));
 
     const summary = doc.createElement("dl");
@@ -442,6 +434,16 @@
       summary.appendChild(inspectorRow(doc, "Selected hopper", row
         ? `${row.id} · ${row.resin || "no resin"}${row.pct ? ` · ${row.pct}%` : ""}${row.source ? ` · ${row.source}` : ""}`
         : focus.hopper));
+      /* The running job's state for this hopper, as the application
+       * holds it - the same two flags the drawn hopper shows, so a state
+       * that was missed on the drawing is explicit here. Read-out only:
+       * the toggles are the hopper's receiver and body. */
+      if (row && hopperControls) {
+        summary.appendChild(inspectorRow(doc, "Tracking", hopperControls.stateLabel("tracking", row.track),
+          row.track ? "is-tracking" : ""));
+        summary.appendChild(inspectorRow(doc, "Pump", hopperControls.stateLabel("pump", row.pumpOff),
+          row.pumpOff ? "is-pump-off" : ""));
+      }
     }
     const layerPct = resolved.layerState && resolved.layerState[focus.layer]
       ? resolved.layerState[focus.layer].layerPct
@@ -452,7 +454,10 @@
 
     const where = doc.createElement("p");
     where.className = "station-panel__notice";
-    where.textContent = "Pump and tracking controls will live on the hoppers themselves; nothing is wired up yet.";
+    const able = controlsFor(resolved);
+    where.textContent = able && (able.tracking || able.pump)
+      ? "Click a hopper's body to track it in the timeline, and its receiver to mark the pump off or running. The application applies each change."
+      : "Tracking and pump-off are shown on each hopper - the halo around a tracked one, the amber receiver of a running pump - and are read-only here.";
     host.appendChild(where);
     if (commandsFor(resolved)) {
       const how = doc.createElement("p");
@@ -507,32 +512,8 @@
 
     const hint = doc.createElement("p");
     hint.className = "station-panel__notice";
-    hint.textContent = "Click a mixer or extruder to open its layer in the workspace. The hoppers will carry pump and tracking controls.";
+    hint.textContent = "Click a mixer or extruder to open its layer in the workspace. Click a hopper's body to track it, and its receiver to mark the pump off or running.";
     host.appendChild(hint);
-  }
-
-  function renderRecipeStrip(model) {
-    const host = mounts.recipeStrip;
-    if (!host) return;
-    render.clear(host);
-    const doc = host.ownerDocument;
-    // Placeholder only. Current/Next recipe state is not wired up in this
-    // phase; this proves the slot exists in the shell, nothing more.
-    for (const label of ["Current recipe", "Next recipe"]) {
-      const cell = doc.createElement("div");
-      cell.className = "station-recipe-strip__cell";
-      const title = doc.createElement("span");
-      title.className = "station-recipe-strip__title";
-      title.textContent = label;
-      const value = doc.createElement("span");
-      value.className = "station-recipe-strip__value";
-      // The bridge carries the recipe assignment, but nothing in Station reads
-      // it yet. Saying "not shown yet" is accurate; saying "not connected"
-      // would no longer be.
-      value.textContent = model ? "Not shown in this phase" : "—";
-      cell.append(title, value);
-      host.appendChild(cell);
-    }
   }
 
   /* Inside the application host (?view=station, marked on the body by
@@ -619,12 +600,10 @@
     if (focus && (!model || !model.layers.some(layer => layer.id === focus.layer))) focus = null;
     current = { model, resolved };
 
-    renderNav(resolved.live);
     // A plain redraw: any transition in flight lands first, then the stage
     // is drawn in the state it was heading for.
     stage.refresh(focusLayerFor());
     renderInspector(model, resolved);
-    renderRecipeStrip(model);
     renderStatus(model, resolved);
   }
 
@@ -671,7 +650,8 @@
         hopperState: resolved.hopperState,
         layerState: resolved.layerState,
         focusLayer: shown,
-        selectedHopper: focus && focus.layer === shown ? focus.hopper : null
+        selectedHopper: focus && focus.layer === shown ? focus.hopper : null,
+        hopperControls: controlsFor(resolved)
       });
       if (editorHandle) editorHandle.update({ hopperState: resolved.hopperState });
       // A patched hopper is a new element; the classes the boot file owns
@@ -679,7 +659,6 @@
       applyHighlight();
       syncSelection();
       renderInspector(model, resolved);
-      renderRecipeStrip(model);
       renderStatus(model, resolved);
       return;
     }
@@ -694,6 +673,55 @@
       const message = `Layer ${abandoned.layer} changed underneath you; what you were entering for ${abandoned.hopper} was not applied.`;
       if (editorHandle) editorHandle.note(message);
       else if (mounts.status) mounts.status.textContent = `${message} · ${mounts.status.textContent}`;
+    }
+  }
+
+  /* Where a message about a cluster control goes: the open editor's note
+   * when a layer is open - it is the one line Station already keeps for
+   * "why an edit did nothing" - and otherwise the status bar, ahead of
+   * what it was saying, until the next render says something newer. */
+  function say(message) {
+    if (editorHandle) { editorHandle.note(message); return; }
+    if (!message || !mounts.status) return;
+    mounts.status.textContent = `${message} · ${mounts.status.textContent}`;
+  }
+
+  /* A click on one of a hopper's operational controls - tracking on the
+   * body, pump on the receiver. The request is what the control's
+   * own element says (station-hopper-controls.js reads the address, the
+   * state as drawn and whether the command is on offer off it), the
+   * toggle goes to the application as one command, and the answer runs
+   * the same publish policy the editor's commands run: the hopper is
+   * redrawn from the application's snapshot, showing what it applied.
+   * Nothing here selects, opens or closes anything - the control is the
+   * whole of the click, and a hopper's focus behaviour is the hopper's
+   * own hit, untouched. `is-pending` marks the control for the answer's
+   * duration and is removed on every path out. */
+  function toggleHopperControl(element) {
+    if (!hopperControls) return;
+    const request = hopperControls.requestFrom(element);
+    if (!request) return;
+    if (!request.able) {
+      say(`${request.hopper || "This hopper"}'s ${hopperControls.LABEL[request.control]} cannot be changed here: ${hopperControls.reason(commandsFor(current.resolved), "current", request.control)}`);
+      return;
+    }
+    let result;
+    element.classList.add("is-pending");
+    try {
+      result = hopperControls.toggle(commandsFor(current.resolved), {
+        control: request.control, layer: request.layer, index: request.index, next: !request.on
+      });
+    } finally {
+      element.classList.remove("is-pending");
+    }
+    if (!result || !result.ok) {
+      say(result && result.message ? result.message : "The change could not be applied.");
+      return;
+    }
+    say("");
+    if (result.changed) {
+      lastOwnRevision = Number.isInteger(result.revision) ? result.revision : null;
+      onPublish({ own: true });
     }
   }
 
@@ -748,6 +776,7 @@
       focusLayer,
       selectedTarget: focus ? focus.target : null,
       selectedHopper,
+      hopperControls: controlsFor(current.resolved),
       workspace: editor ? editor.element : null,
       raiseLayer: extra && extra.raiseLayer
     });
@@ -805,14 +834,13 @@
     for (const name of shell.MOUNTS) {
       mounts[name] = container.querySelector(`[data-station-mount='${name}']`);
     }
-    // The boot file's own names for two of them.
-    mounts.recipeStrip = mounts["recipe-strip"];
 
     try {
-      if (new URL(root.location.href).searchParams.get("source") === "demo") {
-        sourceMode = source.MODE_DEMO;
-      }
-    } catch (error) { /* no URL to read; auto is the right default */ }
+      const params = new URL(root.location.href).searchParams;
+      if (params.get("source") === "demo") sourceMode = source.MODE_DEMO;
+      const demo = params.get("demo");
+      if (demo && demoLines.DEMO_LINES.some(line => line.id === demo)) selectedDemoId = demo;
+    } catch (error) { /* no URL to read; auto and the first demo are the right defaults */ }
 
     /* One delegated listener on the mount, for the whole machine.
      *
@@ -842,17 +870,15 @@
       const hopperEl = event.target.closest("[data-role='hopper']");
       const hopper = hopperEl ? hopperEl.getAttribute("data-hopper") : null;
 
-      /* The receiver is the pump's indicator and its eventual toggle, and it
-       * is marked as a target so it is already addressable. Toggling a pump is
-       * a WRITE, and the state bridge is a one-way window with no write API -
-       * so rather than offering a control that would silently do nothing, a
-       * click here falls through to the cluster it sits in and opens the
-       * layer, which is what clicking a hopper has always done. When a write
-       * contract exists this becomes the toggle and nothing else moves. */
-      if (target === "receiver") {
-        const cluster = hit.closest ? hit.closest("[data-station-target='cluster']") : null;
-        if (!cluster) return;
-        setFocus({ layer: cluster.getAttribute("data-layer") || layer, target: "cluster", hopper });
+      /* A hopper's operational controls - its receiver is the pump
+       * toggle, its body the tracking toggle: the toggle, and nothing
+       * else - no selection, no focus change. Resolved before anything
+       * below because the control's cell sits inside the cluster's
+       * target, and the nearest target is what the click means. The two
+       * cells never overlap, so a click on the receiver cannot toggle
+       * tracking and a click on the body cannot toggle the pump. */
+      if (target === "tracking" || target === "pump") {
+        toggleHopperControl(hit);
         return;
       }
 

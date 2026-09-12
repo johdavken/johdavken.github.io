@@ -493,3 +493,141 @@ test("an offline upload failure is reported as Offline, not Synced", async () =>
     else delete globalThis.navigator;
   }
 });
+
+/* ----------------------------------------------------------------------
+ *   Step 10: tracking and pump-off from another device
+ * -------------------------------------------------------------------- */
+
+const render = require("./station/station-render.js");
+
+/* The inbound fake DOM, with the one method the renderer's patch path
+ * needs that the editor does not: replacing a redrawn hopper in place. */
+function stageDocument() {
+  const doc = fakeDocument();
+  const make = doc.createElement;
+  doc.createElement = name => {
+    const node = make(name);
+    node.replaceChild = (fresh, old) => {
+      const at = node.children.indexOf(old);
+      node.children[at] = fresh;
+      fresh.parent = node;
+      old.parent = null;
+      return old;
+    };
+    return node;
+  };
+  return doc;
+}
+
+function hopperOn(mount, id) {
+  return mount.querySelectorAll("[data-role='hopper']").find(node => node.getAttribute("data-hopper") === id);
+}
+function controlOn(hopper, kind) {
+  return hopper.querySelectorAll(`[data-station-target='${kind}']`)[0];
+}
+const classes = node => String(node.getAttribute("class") || "").split(/\s+/);
+const haloOn = hopper => hopper.querySelectorAll("[data-role='hopper-halo']").length;
+
+test("a phone tracks B2 and pumps off B1: the change is a value change, the mounted stage is patched - halo drawn, receiver marked off - and the open editor's rows are left alone", async () => {
+  const desktop = await bootDesktop();
+  const doc = stageDocument();
+  const station = stationOver(desktop.stateBridge, "B", doc);
+  const before = station.resolved;
+  assert.equal(before.hopperState["B:2"].track, false);
+  assert.equal(before.hopperState["B:1"].pumpOff, false);
+
+  // The stage as the boot file mounts it, layer B open, editor in the workspace.
+  const mount = doc.createElement("div");
+  render.mountStage(mount, station.model, { document: doc, hopperState: before.hopperState, layerState: before.layerState, focusLayer: "B", workspace: station.editor.element, stageAspect: 1.6 });
+  const foreign = mount.querySelectorAll(".station-workspace__editor")[0];
+  const b2Before = hopperOn(mount, "B2");
+  assert.ok(!classes(b2Before).includes("is-tracking"));
+  assert.equal(haloOn(b2Before), 0, "an untracked hopper draws no halo");
+  assert.equal(controlOn(b2Before, "tracking").getAttribute("data-on"), "false");
+  const pumpCell = controlOn(hopperOn(mount, "B1"), "pump").querySelector(".station-hit");
+  const cellBox = ["x", "y", "width", "height"].map(k => pumpCell.getAttribute(k));
+
+  const after = await pushFromPhone(desktop, payload => {
+    payload.layers[1].hoppers[2].track = true;
+    payload.layers[1].hoppers[1].pumpOff = true;
+  });
+  assert.equal(desktop.state.layers[1].hoppers[2].track, true, "the application applied it");
+  assert.equal(source.classifyChange(before, after), "values", "a runtime toggle is patched, never a rebuild");
+
+  // The boot file's value path: patch the stage, update the editor.
+  const patched = render.patchStage(mount, station.model, { document: doc, hopperState: after.hopperState, layerState: after.layerState, focusLayer: "B", stageAspect: 1.6 });
+  assert.deepEqual(patched, { hoppers: 2, layers: 3 }, "exactly the two hoppers that changed were redrawn");
+  assert.equal(mount.querySelectorAll(".station-workspace__editor")[0], foreign, "the workspace and the editor in it are the same nodes");
+  const b2 = hopperOn(mount, "B2");
+  assert.ok(classes(b2).includes("is-tracking"));
+  assert.equal(haloOn(b2), 1, "the halo is drawn on the tracked hopper");
+  assert.equal(controlOn(b2, "tracking").getAttribute("data-on"), "true");
+  const b1 = hopperOn(mount, "B1");
+  assert.ok(classes(b1).includes("is-pump-off"));
+  assert.equal(haloOn(b1), 0, "B1's tracking did not move");
+  const pump = controlOn(b1, "pump");
+  assert.equal(pump.getAttribute("data-on"), "true");
+  assert.equal(pump.getAttribute("data-pump"), "off");
+  // The receiver's cell is still where it was: the operator clicks the
+  // same place to mark the pump running again.
+  assert.deepEqual(["x", "y", "width", "height"].map(k => pump.querySelector(".station-hit").getAttribute(k)), cellBox);
+
+  // The editor carries no operational controls: its rows are the recipe
+  // - resin, percentage, source - and a runtime toggle changes none of them.
+  const rowsBefore = ["B1", "B2", "B3"].map(id => row(station.editor, id));
+  station.editor.update({ hopperState: after.hopperState });
+  assert.deepEqual(["B1", "B2", "B3"].map(id => row(station.editor, id)), rowsBefore, "the rows are the same nodes");
+  assert.equal(station.editor.element.querySelectorAll(".station-editor__op").length, 0);
+  assert.equal(station.editor.element.querySelectorAll("[data-slot='tracking']").length + station.editor.element.querySelectorAll("[data-slot='pump']").length, 0);
+  assert.equal(station.editor.element.querySelector(".station-editor__note").textContent, "");
+});
+
+test("a phone toggles B1's tracking and pump while the operator is typing B2's percentage: the draft is intact, B1 is redrawn on the stage", async () => {
+  const desktop = await bootDesktop();
+  const doc = stageDocument();
+  const station = stationOver(desktop.stateBridge, "B", doc);
+  const before = station.resolved;
+  const mount = doc.createElement("div");
+  render.mountStage(mount, station.model, { document: doc, hopperState: before.hopperState, layerState: before.layerState, focusLayer: "B", workspace: station.editor.element, stageAspect: 1.6 });
+  const pct = row(station.editor, "B2").querySelector(".station-editor__pct-input");
+  pct.focus();
+  pct.dispatchEvent({ type: "focus" });
+  pct.value = "12";
+  pct.dispatchEvent({ type: "input" });
+
+  const after = await pushFromPhone(desktop, payload => {
+    payload.layers[1].hoppers[1].track = true;
+    payload.layers[1].hoppers[1].pumpOff = true;
+  });
+  assert.equal(source.classifyChange(before, after), "values");
+  const patched = render.patchStage(mount, station.model, { document: doc, hopperState: after.hopperState, layerState: after.layerState, focusLayer: "B", stageAspect: 1.6 });
+  assert.equal(patched.hoppers, 1, "only B1 was redrawn");
+  const b1 = hopperOn(mount, "B1");
+  assert.equal(haloOn(b1), 1);
+  assert.equal(controlOn(b1, "pump").getAttribute("data-on"), "true");
+  station.editor.update({ hopperState: after.hopperState });
+  assert.equal(pct.value, "12", "the percentage draft is intact");
+  assert.equal(row(station.editor, "B2").querySelector(".station-editor__pct-input"), pct, "the same field");
+  assert.ok(!row(station.editor, "B2").classList.contains("is-changed-underneath"));
+});
+
+test("a phone toggles B1's tracking while a resin search is open on B3: the search stays open with its draft", async () => {
+  const desktop = await bootDesktop();
+  const doc = fakeDocument();
+  const station = stationOver(desktop.stateBridge, "B", doc);
+  const before = station.resolved;
+  const searchRow = row(station.editor, "B3");
+  searchRow.querySelector(".station-editor__resin-value").dispatchEvent({ type: "click", bubbles: true, preventDefault() {}, stopPropagation() {} });
+  const search = searchRow.querySelector(".station-editor__search");
+  search.value = "NEW";
+  search.dispatchEvent({ type: "input" });
+
+  const after = await pushFromPhone(desktop, payload => { payload.layers[1].hoppers[1].track = true; });
+  assert.equal(source.classifyChange(before, after), "values");
+  assert.equal(after.hopperState["B:1"].track, true);
+  station.editor.update({ hopperState: after.hopperState });
+  assert.equal(searchRow.querySelector(".station-editor__search"), search, "the search is still open");
+  assert.equal(search.value, "NEW");
+  assert.ok(searchRow.classList.contains("is-searching"));
+  assert.ok(!searchRow.classList.contains("is-changed-underneath"));
+});

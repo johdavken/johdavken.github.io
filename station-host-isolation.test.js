@@ -269,8 +269,7 @@ test("the harness and the application host build the same shell from the same bu
   // Neither restates the shell's markup. Checked as class attributes rather
   // than as substrings, so the station-shell.js script tag is not mistaken for
   // a .station-shell element.
-  for (const marker of ["station-shell", "station-header", "station-sidebar",
-    "station-inspector", "station-machine", "station-status"]) {
+  for (const marker of ["station-shell", "station-header", "station-machine", "station-status"]) {
     const asClass = new RegExp(`class="[^"]*\\b${marker}\\b`);
     assert.doesNotMatch(harness, asClass, `station.html restates shell markup (.${marker})`);
     assert.doesNotMatch(codeOnly(host), new RegExp(`"${marker}"`),

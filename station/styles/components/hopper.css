@@ -246,11 +246,9 @@
   stroke-width: var(--station-line-medium);
 }
 
-.station-hopper.is-tracked .station-hopper__shell,
-.station-hopper.is-tracking .station-hopper__shell {
-  stroke: var(--station-tracking);
-  stroke-width: var(--station-line-medium);
-}
+/* Tracked is said by the halo (Operational controls, below), in the
+   layer's colour, not by the outline: two colours on one vessel would
+   fight, and the outline stays free for hover, selection and warnings. */
 
 .station-hopper.is-changed .station-hopper__shell,
 .station-hopper.is-attention .station-hopper__shell,
@@ -314,7 +312,112 @@
   fill: var(--station-steel-dark);
 }
 
+/* And so does its hose: with no material in the line the tube goes nearly
+   clear and the helix and glint fade back, so an unused hopper's hose is
+   visibly emptier than a running one's. */
+.station-hopper.is-unassigned .station-hopper__hose,
+.station-hopper.is-unassigned .station-hopper__hose-end {
+  fill: var(--station-hose-empty);
+}
+
+.station-hopper.is-unassigned .station-hopper__hose-spiral,
+.station-hopper.is-unassigned .station-hopper__hose-glint {
+  opacity: 0.45;
+}
+
+.station-hopper.is-unassigned .station-hopper__hose-spiral-far {
+  opacity: 0.15;
+}
+
 /* Deliberately NOT restyled by assignment any more. The receiver now means one
    thing - whether the pump is conveying - and an unassigned hopper whose pump
    is running is a real and visible state. Assignment is said by the caption
    and the vessel, which is where it belongs. */
+
+
+/* ---------------------------------------------------------------------
+ *   Operational controls
+ * -------------------------------------------------------------------
+ * Two cells in the hit geometry (station-machine-parts.js), each the
+ * whole of a part of the equipment: the receiver is the pump control,
+ * the body - vessel, hose, caption - is the tracking control. A click
+ * toggles one runtime flag through the application and does nothing
+ * else - it neither focuses nor selects the hopper. There is no icon:
+ * the state is the equipment itself, the amber receiver for the pump
+ * and the halo for tracking (both below), so a bank of hoppers reads
+ * at the scale it is drawn at.
+ *
+ *   data-on     the state as drawn
+ *   data-able   whether the application offers the command: a control it
+ *               does not still shows its state, and reads as equipment
+ *               rather than as a control - the same rule as the editor's
+ *               read-only values.
+ *   is-pending  the click is with the application (synchronous today; the
+ *               class is removed on every answer).
+ */
+
+.station-hopper__control[data-able="false"] .station-hit {
+  cursor: default;
+}
+
+.station-hopper__control.is-pending .station-hit {
+  fill: var(--station-accent-soft);
+}
+
+/* ---- Pump: the receiver is the control ----
+   Running, the receiver is the amber feed area drawn above ("Receiver =
+   pump state"). Off, the amber is gone - cone and cap drop to plain steel
+   there - and the whole receiver steps back, so its absence is the state
+   and no mark is needed. The cell under it does not move: the operator
+   clicks the same place to bring the pump back. */
+.station-hopper.is-pump-off .station-hopper__receiver-drawing {
+  opacity: 0.5;
+}
+
+/* The hover cue, on a receiver whose command is on offer: the cone's edge
+   lifts while running, and a stopped receiver comes part of the way back
+   - a hint of amber - so the pointer says a click will restore it. The
+   cell is in the hit subtree and the drawing is inert, so the hopper is
+   the nearest element that contains both. */
+.station-hopper:has(.station-hopper__control--pump[data-able="true"]:hover) .station-hopper__receiver-cone {
+  stroke: var(--station-text);
+  stroke-width: var(--station-line-thin);
+}
+
+.station-hopper.is-pump-off:has(.station-hopper__control--pump[data-able="true"]:hover) .station-hopper__receiver-drawing {
+  opacity: 0.8;
+}
+
+.station-hopper.is-pump-off:has(.station-hopper__control--pump[data-able="true"]:hover) .station-hopper__receiver-cone {
+  fill: color-mix(in srgb, var(--station-receiver) 40%, var(--station-steel));
+}
+
+/* ---- Tracking: the halo ----
+   Drawn only while the hopper is tracked (station-machine-parts.js): a
+   glowing ring resting on the receiver's head. Two strokes on one
+   ellipse: the glow is a wide stroke at low opacity, its width set on
+   the element in the hopper's own units, and the ring a thin crisp one
+   over it. The colour is the layer's - the
+   same accent its label, its mixer and its percentages carry - so a
+   tracked hopper belongs to its layer rather than to a separate legend.
+   Nothing here moves, so there is nothing for reduced motion to stop.
+   An untracked hopper has no halo. */
+.station-hopper__halo-glow,
+.station-hopper__halo-ring {
+  fill: none;
+  stroke: var(--station-layer-accent, var(--station-tracking));
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.station-hopper__halo-glow {
+  opacity: 0.3;
+}
+
+.station-hopper__halo-ring {
+  stroke-width: var(--station-line-thin);
+}
+
+/* The body's hover, on a hopper whose tracking command is on offer, is the
+   hopper's own outline lift ("State" above): nothing further is added, so
+   the tracked and untracked hoppers keep the one hover between them. */

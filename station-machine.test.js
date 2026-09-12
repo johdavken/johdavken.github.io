@@ -429,7 +429,7 @@ test("the hopper assembly keeps the boundaries a later phase has to drive", () =
   const hopper = allWith(svg, "data-role", "hopper")[0];
   const classes = [];
   walk(hopper, node => { if (node.getAttribute("class")) classes.push(node.getAttribute("class")); });
-  for (const part of ["station-hopper__receiver", "station-hopper__body",
+  for (const part of ["station-hopper__receiver-drawing", "station-hopper__body",
     "station-hopper__material", "station-hopper__cone", "station-hopper__feed"]) {
     assert.equal(classes.filter(one => one === part).length, 1, `missing ${part}`);
   }
@@ -439,7 +439,7 @@ test("the hopper assembly keeps the boundaries a later phase has to drive", () =
  *   Recipe readout
  * -------------------------------------------------------------------- */
 
-test("hopper artwork is inert and existing identity and receiver targets belong to hit geometry", () => {
+test("hopper artwork is inert and existing identity and receiver (pump) targets belong to hit geometry", () => {
   const svg = stageFor(literal({ layerCount: 3, hopperCount: 3 }), {
     hopperState: { "B:2": { assigned: true, track: true, pumpOff: true, resinName: "HX204", pct: 25 } }
   });
@@ -453,10 +453,10 @@ test("hopper artwork is inert and existing identity and receiver targets belong 
     assert.equal(hit.nodeName, "rect");
     assert.ok(Number(hit.getAttribute("width")) > 0);
     assert.ok(Number(hit.getAttribute("height")) > 0);
-    const receiver = allWith(interaction, "data-station-target", "receiver")[0];
+    const receiver = allWith(interaction, "data-station-target", "pump")[0];
     assert.equal(receiver.getAttribute("data-layer"), hopper.getAttribute("data-layer"));
     assert.equal(receiver.getAttribute("data-hopper"), hopper.getAttribute("data-hopper"));
-    assert.equal(receiver.children[0].nodeName, "rect");
+    assert.equal(receiver.children[1].nodeName, "rect");
     walk(drawing, n => {
       for (const attr of ["data-hopper", "data-hopper-index", "data-layer", "data-station-target", "tabindex", "draggable", "onclick", "onpointerdown"]) {
         assert.equal(n.getAttribute(attr), null, `artwork owns ${attr}`);
@@ -467,7 +467,7 @@ test("hopper artwork is inert and existing identity and receiver targets belong 
   assert.equal(b3.getAttribute("data-layer"), "B");
   assert.equal(b3.getAttribute("data-hopper-index"), "2");
   assert.match(b3.getAttribute("class"), /is-tracking/);
-  assert.equal(allWith(b3, "data-station-target", "receiver")[0].getAttribute("data-pump"), "off");
+  assert.equal(allWith(b3, "data-station-target", "pump")[0].getAttribute("data-pump"), "off");
 });
 
 test("hopper hit cells cover captions without overlapping adjacent slots at any bank scale", () => {
@@ -525,12 +525,14 @@ test("resin identity stays reachable on hover even where the code is dropped", (
   const svg = stageFor(literal({ layerCount: 5, hopperCount: 6 }), {
     hopperState: { "A:0": { assigned: true, resinName: "HX204", pct: 60, source: "SILO 3" } }
   });
-  const titles = [];
-  walk(svg, node => { if (node.nodeName === "title") titles.push(node.textContent); });
-  assert.equal(titles.length, hoppersIn(svg).length,
+  // The hopper's own title is a direct child of its group; the two
+  // controls on it carry titles of their own (tested with the controls).
+  const titles = hoppersIn(svg).map(hopper => hopper.children.filter(node => node.nodeName === "title"));
+  assert.ok(titles.every(own => own.length === 1),
     "every hopper needs a title, or hover is the only place the resin lives and it is missing");
-  assert.ok(titles.some(t => /HX204/.test(t) && /SILO 3/.test(t)));
-  assert.ok(titles.some(t => /no resin assigned/.test(t)));
+  const texts = titles.map(own => own[0].textContent);
+  assert.ok(texts.some(t => /HX204/.test(t) && /SILO 3/.test(t)));
+  assert.ok(texts.some(t => /no resin assigned/.test(t)));
 });
 
 test("the same hopper is taller when its profile says it is taller", () => {
@@ -574,13 +576,13 @@ test("with no layer state the percentage reads as unknown, never as zero or a gu
  * -------------------------------------------------------------------- */
 
 test("the documented targets exist per layer, and nothing else is declared", () => {
-  /* Three equipment targets per layer, plus one receiver target per hopper.
-   * The receiver is declared because it is the pump's indicator and its
-   * eventual toggle; it does not act yet, because acting would be a write. */
+  /* Three equipment targets per layer, plus two per hopper: its receiver
+   * is the pump control and its body the tracking control, which toggle
+   * the running job's state through the application. */
   const svg = stageFor(literal({ layerCount: 3, hopperCount: 2 }));
   const targets = allWith(svg, "data-station-target");
   const kinds = new Set(targets.map(node => node.getAttribute("data-station-target")));
-  assert.deepEqual([...kinds].sort(), ["cluster", "extruder", "mixer", "receiver"]);
+  assert.deepEqual([...kinds].sort(), ["cluster", "extruder", "mixer", "pump", "tracking"]);
 
   for (const layer of ["A", "B", "C"]) {
     const forLayer = targets.filter(node => node.getAttribute("data-layer") === layer)
@@ -588,16 +590,18 @@ test("the documented targets exist per layer, and nothing else is declared", () 
     assert.equal(forLayer.filter(t => t === "cluster").length, 1);
     assert.equal(forLayer.filter(t => t === "mixer").length, 1);
     assert.equal(forLayer.filter(t => t === "extruder").length, 1);
-    assert.equal(forLayer.filter(t => t === "receiver").length, 2, "one receiver per hopper");
+    assert.equal(forLayer.filter(t => t === "tracking").length, 2, "one tracking control (the body) per hopper");
+    assert.equal(forLayer.filter(t => t === "pump").length, 2, "one pump control (the receiver) per hopper");
   }
 });
 
-test("every receiver target sits inside its own hopper's cluster", () => {
-  // Which is what lets a click on it fall through to opening the layer while
-  // the pump has no write path.
+test("every hopper control sits inside its own hopper's cluster", () => {
+  // The controls are the nearest target under a click on a hopper; the
+  // cluster around them is what a click beside them falls through to.
   const svg = stageFor(literal({ layerCount: 1, layerAPosition: null, hopperCount: 3 }));
   const cluster = allWith(svg, "data-station-target", "cluster")[0];
-  assert.equal(allWith(cluster, "data-station-target", "receiver").length, 3);
+  assert.equal(allWith(cluster, "data-station-target", "pump").length, 3);
+  assert.equal(allWith(cluster, "data-station-target", "tracking").length, 3);
 });
 
 test("each target is the group for the equipment it names", () => {
@@ -611,8 +615,7 @@ test("each target is the group for the equipment it names", () => {
 
 test("every actionable target carries a hit area, or clicks fall through the gaps", () => {
   const svg = stageFor(literal({ layerCount: 3 }));
-  const actionable = allWith(svg, "data-station-target")
-    .filter(node => node.getAttribute("data-station-target") !== "receiver");
+  const actionable = allWith(svg, "data-station-target");
   for (const target of actionable) {
     const hits = [];
     walk(target, node => {
@@ -996,7 +999,7 @@ test("pump state reaches the receiver, which is the only thing that shows it", (
       "A:1": { assigned: true, pumpOff: true }
     }
   });
-  const receivers = allWith(svg, "data-station-target", "receiver");
+  const receivers = allWith(svg, "data-station-target", "pump");
   assert.deepEqual(receivers.map(r => r.getAttribute("data-pump")), ["on", "off", "on"]);
   // No separate pump badge was bolted onto the graphic.
   assert.equal(allWith(svg, "data-role", "pump-button").length, 0);
@@ -1287,6 +1290,25 @@ test("the discharge is a flat plate and a clear 3\" hose filling the old cone-an
       }
     }
   }
+});
+
+test("an unassigned hopper's hose is drawn emptier: clearer tube, faded helix", () => {
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const css = fs.readFileSync(path.join(__dirname, "station/styles/components/hopper.css"), "utf8");
+  const tokens = fs.readFileSync(path.join(__dirname, "station/styles/tokens.css"), "utf8");
+  // The running hose and the empty hose are two tokens, and the empty one is
+  // the more transparent of the two.
+  const alpha = name => Number(tokens.match(new RegExp(`${name}: rgba\\([^)]*, ([0-9.]+)\\);`))[1]);
+  assert.ok(alpha("--station-hose-empty") < alpha("--station-hose-clear"));
+  assert.match(css, /\.station-hopper\.is-unassigned \.station-hopper__hose,\s*\.station-hopper\.is-unassigned \.station-hopper__hose-end \{\s*fill: var\(--station-hose-empty\);/);
+  assert.match(css, /\.station-hopper\.is-unassigned \.station-hopper__hose-spiral,\s*\.station-hopper\.is-unassigned \.station-hopper__hose-glint \{\s*opacity: 0\.45;/);
+  // And the class that drives it is still set from runtime assignment.
+  const svg = stageFor(literal({ layerCount: 1, layerAPosition: null, hopperCount: 2 }),
+    { hopperState: { "A:0": { assigned: true, resinName: "HX204" }, "A:1": { assigned: false } } });
+  const [used, unused] = hoppersIn(svg);
+  assert.ok(!used.getAttribute("class").includes("is-unassigned"));
+  assert.ok(unused.getAttribute("class").includes("is-unassigned"));
 });
 
 test("only the storage body scales - receiver, cone and feed keep their proportions", () => {
@@ -1840,4 +1862,214 @@ test("the lab also shows the five-layer assembly - mixer on extruder - at actual
     assert.equal(allWith(one, "data-role", "mixer")[0].getAttribute("data-view"),
       allWith(one, "data-role", "extruder")[0].getAttribute("data-view"));
   }
+});
+
+/* ----------------------------------------------------------------------
+ *   Step 10: the hopper's operational controls - the receiver and the body
+ * -------------------------------------------------------------------- */
+
+function controlOf(hopper, kind) {
+  return allWith(hopper, "data-station-target", kind)[0];
+}
+function box(rect) {
+  return { x: Number(rect.getAttribute("x")), y: Number(rect.getAttribute("y")), width: Number(rect.getAttribute("width")), height: Number(rect.getAttribute("height")) };
+}
+const contains = (b, px, py) => px >= b.x && px <= b.x + b.width && py >= b.y && py <= b.y + b.height;
+const overlaps = (a, b) => a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+
+test("every hopper's receiver is its pump control and its body its tracking control: two cells in the hit geometry, after the hopper's own hit, never overlapping", () => {
+  const config = literal({ layerCount: 3, hopperCount: 6 });
+  const layout = layoutFor(config);
+  const svg = stageFor(config);
+  for (const hopper of hoppersIn(svg)) {
+    const interaction = allWith(hopper, "data-role", "hopper-interaction")[0];
+    assert.deepEqual(interaction.children.map(c => c.getAttribute("data-station-target")), [null, "pump", "tracking"],
+      "the hopper's hit, then the two controls - so within their cells the controls are what a click lands on");
+    const geometry = layout.banks.find(b => b.id === hopper.getAttribute("data-layer")).cluster.hoppers[Number(hopper.getAttribute("data-hopper-index"))];
+    const w = geometry.width;
+    const own = box(interaction.children[0]);
+    for (const kind of ["tracking", "pump"]) {
+      const control = controlOf(hopper, kind);
+      assert.equal(control.getAttribute("data-role"), `hopper-${kind}`);
+      assert.equal(control.getAttribute("data-layer"), hopper.getAttribute("data-layer"));
+      assert.equal(control.getAttribute("data-hopper"), hopper.getAttribute("data-hopper"));
+      assert.equal(control.getAttribute("data-hopper-index"), hopper.getAttribute("data-hopper-index"));
+      assert.equal(control.getAttribute("data-on"), "false");
+      assert.equal(control.getAttribute("data-able"), "false", "with no offer, a control cannot act");
+      const [title, cell] = control.children;
+      assert.equal(title.nodeName, "title");
+      assert.equal(cell.nodeName, "rect");
+      assert.equal(cell.getAttribute("class"), "station-hit");
+      const b = box(cell);
+      assert.ok(b.width > 0 && b.height > 0);
+      // The hopper's own column, no narrower: the whole part is the control.
+      assert.equal(b.x, own.x, `${kind} cell is narrower than the hopper`);
+      assert.equal(b.width, own.width);
+      assert.ok(b.x >= geometry.x - (geometry.pitch - w) / 2 && b.x + b.width <= geometry.x + w + (geometry.pitch - w) / 2, `${kind} cell leaves the hopper's pitch`);
+    }
+    const tracking = box(controlOf(hopper, "tracking").children[1]);
+    const pump = box(controlOf(hopper, "pump").children[1]);
+    // Pump: the receiver, top to the vessel's top.
+    assert.equal(pump.y, Math.round(geometry.receiverTop * 100) / 100);
+    assert.equal(Math.round((pump.y + pump.height) * 100) / 100, Math.round(geometry.vesselTop * 100) / 100);
+    assert.ok(contains(pump, geometry.x + w / 2, geometry.receiverTop + geometry.receiverHeight / 2), "the pump cell covers the receiver cone");
+    // Tracking: the body, vessel top through the hose to the caption's foot.
+    assert.equal(tracking.y, Math.round(geometry.vesselTop * 100) / 100);
+    assert.equal(Math.round((tracking.y + tracking.height) * 100) / 100, Math.round((geometry.captionTop + geometry.captionHeight) * 100) / 100);
+    assert.ok(contains(tracking, geometry.x + w / 2, geometry.vesselTop + geometry.vesselHeight / 2), "the tracking cell covers the vessel");
+    assert.ok(contains(tracking, geometry.x + w / 2, geometry.captionTop + 5), "the tracking cell covers the readout");
+    assert.ok(!overlaps(tracking, pump), "the two controls do not overlap: a click on the receiver cannot toggle tracking, nor the body the pump");
+    assert.ok(pump.y >= own.y, "the receiver cell is within the hopper's own hit");
+  }
+});
+
+test("the controls say the state as drawn and whether they may act, and their tooltips say what a click would do only when it would do it", () => {
+  const config = literal({ layerCount: 1, layerAPosition: null, hopperCount: 3 });
+  const state = { "A:0": { assigned: true, resinName: "HX204", pct: 60, track: true, pumpOff: false }, "A:1": { assigned: true, resinName: "LD105", pct: 40, track: false, pumpOff: true } };
+  const offered = stageFor(config, { hopperState: state, hopperControls: { tracking: true, pump: true } });
+  const [a1, a2, a3] = hoppersIn(offered);
+  assert.deepEqual([a1, a2, a3].map(h => [controlOf(h, "tracking").getAttribute("data-on"), controlOf(h, "pump").getAttribute("data-on")]),
+    [["true", "false"], ["false", "true"], ["false", "false"]]);
+  assert.deepEqual([a1, a2, a3].map(h => controlOf(h, "pump").getAttribute("data-pump")), ["on", "off", "on"]);
+  assert.ok([a1, a2, a3].every(h => controlOf(h, "tracking").getAttribute("data-able") === "true" && controlOf(h, "pump").getAttribute("data-able") === "true"));
+  assert.equal(controlOf(a1, "tracking").children[0].textContent, "A1 · tracked · click to stop tracking");
+  assert.equal(controlOf(a2, "tracking").children[0].textContent, "A2 · not tracked · click to track in the timeline");
+  assert.equal(controlOf(a1, "pump").children[0].textContent, "A1 · pump running · click to mark the pump off");
+  assert.equal(controlOf(a2, "pump").children[0].textContent, "A2 · pump off · click to mark the pump running");
+
+  // Partly offered: each control reads its own command.
+  const partly = stageFor(config, { hopperState: state, hopperControls: { tracking: true, pump: false } });
+  const p1 = hoppersIn(partly)[0];
+  assert.equal(controlOf(p1, "tracking").getAttribute("data-able"), "true");
+  assert.equal(controlOf(p1, "pump").getAttribute("data-able"), "false");
+  assert.equal(controlOf(p1, "pump").children[0].textContent, "A1 · pump running", "no action offered, none promised");
+
+  // The hopper's own title carries the state too, so hover anywhere says it.
+  const own = h => h.children.find(c => c.nodeName === "title").textContent;
+  assert.equal(own(a1), "A1 · HX204 · 60% · tracked");
+  assert.equal(own(a2), "A2 · LD105 · 40% · pump off");
+});
+
+test("the tracked state is a halo: a glowing ring resting on the receiver's head, drawn over the equipment, and only on a tracked hopper", () => {
+  const config = literal({ layerCount: 1, layerAPosition: null, hopperCount: 2 });
+  const layout = layoutFor(config);
+  const svg = stageFor(config, { hopperState: { "A:0": { assigned: true, resinName: "HX204", pct: 100, track: true, source: "Silo 4" } } });
+  const [tracked, idle] = hoppersIn(svg);
+  assert.equal(allWith(idle, "data-role", "hopper-halo").length, 0, "an untracked hopper has no halo: its absence is the state");
+  const drawing = allWith(tracked, "data-role", "hopper-drawing")[0];
+  const halo = allWith(drawing, "data-role", "hopper-halo");
+  assert.equal(halo.length, 1, "the halo lives in the inert drawing");
+  const order = drawing.children.map(c => c.getAttribute("data-role"));
+  assert.ok(order.indexOf("hopper-halo") > order.indexOf("hopper-details"), "drawn over the equipment, as a halo floats over a head");
+  assert.ok(order.indexOf("hopper-halo") < order.indexOf("hopper-caption"));
+  const [glow, ring] = halo[0].children;
+  assert.deepEqual([glow.nodeName, glow.getAttribute("class")], ["ellipse", "station-hopper__halo-glow"]);
+  assert.deepEqual([ring.nodeName, ring.getAttribute("class")], ["ellipse", "station-hopper__halo-ring"]);
+  for (const key of ["cx", "cy", "rx", "ry"]) assert.equal(glow.getAttribute(key), ring.getAttribute(key), "one shape, two strokes: the glow under the crisp ring");
+  const geometry = layout.banks[0].cluster.hoppers[0];
+  const w = geometry.width;
+  assert.ok(Number(glow.getAttribute("stroke-width")) > 0, "the glow's width is set in the hopper's own units");
+  assert.equal(ring.getAttribute("stroke-width"), null, "the ring's width is the stylesheet's");
+  // On the head: centred on the hopper, resting on the receiver's top -
+  // its centre just above the cap, its lower edge on it - and under the
+  // source label; a little flatter than round, seen from above.
+  assert.equal(Number(ring.getAttribute("cx")), Math.round((geometry.x + w / 2) * 100) / 100);
+  const cy = Number(ring.getAttribute("cy"));
+  const ry = Number(ring.getAttribute("ry"));
+  const rx = Number(ring.getAttribute("rx"));
+  assert.ok(cy < geometry.receiverTop && cy + ry > geometry.receiverTop, "the ring rests on the receiver's top");
+  assert.ok(cy - ry > geometry.sourceY, "and sits below the source label");
+  assert.ok(rx > ry * 2, "a halo seen from a little above: wider than it is tall");
+  assert.ok(rx < w / 2, "and no wider than the hopper");
+  // No icon anywhere: no clock, no power mark.
+  for (const hopper of [tracked, idle]) {
+    walk(hopper, n => assert.doesNotMatch(String(n.getAttribute("class") || ""), /clock|power|marks/));
+  }
+  walk(drawing, n => assert.equal(n.getAttribute("data-station-target"), null, "nothing in the drawing became a target"));
+});
+
+test("a patched stage draws a toggled hopper as a fresh render would: halo in, receiver marked off, controls' state and offer rewritten", () => {
+  const doc = fakeDocument();
+  const config = literal({ layerCount: 1, layerAPosition: null, hopperCount: 2 });
+  const model = require("./station/station-line-model.js").buildLineModel(config);
+  const before = { "A:0": { assigned: true, resinName: "HX204", pct: 100, track: false, pumpOff: false, usableHeight: 30 }, "A:1": { assigned: false, track: false, pumpOff: false, usableHeight: 30 } };
+  const mount = doc.createElement("div");
+  mount.ownerDocument = doc;
+  // The patch path replaces a child in place; the fake needs that one method.
+  const replaceable = node => { node.replaceChild = (fresh, old) => { node.children[node.children.indexOf(old)] = fresh; return old; }; return node; };
+  render.mountStage(mount, model, { document: doc, hopperState: before, hopperControls: { tracking: false, pump: false }, stageAspect: 1.6 });
+  walk(mount, replaceable);
+  const after = { "A:0": Object.assign({}, before["A:0"], { track: true, pumpOff: true }), "A:1": before["A:1"] };
+  const result = render.patchStage(mount, model, { document: doc, hopperState: after, hopperControls: { tracking: true, pump: true }, stageAspect: 1.6 });
+  // Both hoppers: A1 for its state, A2 because the offer moved for it too.
+  assert.deepEqual(result, { hoppers: 2, layers: 1 });
+  const a1 = hoppersIn(mount)[0];
+  assert.match(a1.getAttribute("class"), /is-tracking/);
+  assert.match(a1.getAttribute("class"), /is-pump-off/);
+  assert.equal(allWith(a1, "data-role", "hopper-halo").length, 1);
+  assert.equal(controlOf(a1, "tracking").getAttribute("data-on"), "true");
+  assert.equal(controlOf(a1, "pump").getAttribute("data-on"), "true");
+  assert.equal(controlOf(a1, "pump").getAttribute("data-pump"), "off");
+  assert.equal(controlOf(a1, "tracking").getAttribute("data-able"), "true");
+  const fresh = stageFor(config, { hopperState: after, hopperControls: { tracking: true, pump: true } });
+  const strip = node => ({ n: node.nodeName, a: node.attributes, t: node.textContent, c: node.children.map(strip) });
+  assert.deepEqual(strip(a1), strip(hoppersIn(fresh)[0]), "the patched hopper is the drawing a fresh render makes");
+  // Back to normal clears it all - and the receiver's cell is still there
+  // to be clicked, where it was.
+  const offCell = box(controlOf(a1, "pump").children[1]);
+  render.patchStage(mount, model, { document: doc, hopperState: before, hopperControls: { tracking: true, pump: true }, stageAspect: 1.6 });
+  const back = hoppersIn(mount)[0];
+  assert.doesNotMatch(back.getAttribute("class"), /is-tracking|is-pump-off/);
+  assert.equal(allWith(back, "data-role", "hopper-halo").length, 0);
+  assert.equal(controlOf(back, "pump").getAttribute("data-on"), "false");
+  assert.deepEqual(box(controlOf(back, "pump").children[1]), offCell, "the pump's cell does not move with its state");
+});
+
+test("the states are styled from tokens: the receiver steps back when the pump is off, the halo takes the layer's colour, a control that cannot act has no pointer cursor, and nothing animates", () => {
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const css = fs.readFileSync(path.join(__dirname, "station/styles/components/hopper.css"), "utf8");
+  const tokens = fs.readFileSync(path.join(__dirname, "station/styles/tokens.css"), "utf8");
+  assert.doesNotMatch(tokens, /--station-motion-clock/);
+  assert.match(css, /\.station-hopper__control\[data-able="false"\] \.station-hit \{\s*cursor: default;/);
+  assert.match(css, /\.station-hopper__control\.is-pending \.station-hit \{\s*fill: var\(--station-accent-soft\);/);
+  // Pump off: the amber is gone (cone and cap to steel, an older rule) and
+  // the receiver as a whole steps back.
+  assert.match(css, /\.station-hopper\.is-pump-off \.station-hopper__receiver-cone \{\s*fill: var\(--station-steel\);/);
+  assert.match(css, /\.station-hopper\.is-pump-off \.station-hopper__receiver-drawing \{\s*opacity: 0\.\d+;/);
+  // The hover cue is on a receiver whose command is on offer, and only there.
+  assert.match(css, /\.station-hopper:has\(\.station-hopper__control--pump\[data-able="true"\]:hover\) \.station-hopper__receiver-cone \{/);
+  assert.doesNotMatch(css, /control--pump\[data-able="false"\]:hover/);
+  // The halo: the layer's accent, glow and ring.
+  assert.match(css, /\.station-hopper__halo-glow,\s*\.station-hopper__halo-ring \{\s*fill: none;\s*stroke: var\(--station-layer-accent, var\(--station-tracking\)\);/);
+  assert.match(css, /\.station-hopper__halo-glow \{\s*opacity: 0\.\d+;/);
+  assert.match(css, /\.station-hopper__halo-ring \{\s*stroke-width: var\(--station-line-thin\);/);
+  // The outline no longer says tracked: one colour on the vessel.
+  assert.doesNotMatch(css, /is-tracking \.station-hopper__shell/);
+  // No motion: nothing for reduced motion to switch off.
+  assert.doesNotMatch(css, /@keyframes|animation:/);
+  // The readout is not touched by either state: resin and percentage stay
+  // the primary information whatever the receiver or the halo says.
+  assert.doesNotMatch(css, /is-pump-off[^{]*__(pct|resin|id)\b/);
+  assert.doesNotMatch(css, /is-tracking[^{]*__(pct|resin|id)\b/);
+});
+
+test("a change in the offer alone redraws a hopper's controls: the data-state carries the offer as well as the runtime state", () => {
+  const doc = fakeDocument();
+  const config = literal({ layerCount: 1, layerAPosition: null, hopperCount: 2 });
+  const model = require("./station/station-line-model.js").buildLineModel(config);
+  const state = { "A:0": { assigned: true, resinName: "HX204", pct: 100, track: true, pumpOff: false, usableHeight: 30 }, "A:1": { assigned: false, track: false, pumpOff: false, usableHeight: 30 } };
+  const mount = doc.createElement("div");
+  mount.ownerDocument = doc;
+  render.mountStage(mount, model, { document: doc, hopperState: state, hopperControls: null, stageAspect: 1.6 });
+  walk(mount, node => { node.replaceChild = (fresh, old) => { node.children[node.children.indexOf(old)] = fresh; return old; }; });
+  assert.deepEqual(hoppersIn(mount).map(h => controlOf(h, "tracking").getAttribute("data-able")), ["false", "false"]);
+  // Same state, the executor now on offer: every hopper is redrawn.
+  const result = render.patchStage(mount, model, { document: doc, hopperState: state, hopperControls: { tracking: true, pump: false }, stageAspect: 1.6 });
+  assert.deepEqual(result, { hoppers: 2, layers: 1 });
+  assert.deepEqual(hoppersIn(mount).map(h => [controlOf(h, "tracking").getAttribute("data-able"), controlOf(h, "pump").getAttribute("data-able")]), [["true", "false"], ["true", "false"]]);
+  // Same state, same offer: nothing is redrawn.
+  assert.deepEqual(render.patchStage(mount, model, { document: doc, hopperState: state, hopperControls: { tracking: true, pump: false }, stageAspect: 1.6 }), { hoppers: 0, layers: 1 });
+  assert.equal(parts.hopperStateKey({ track: true }, { tracking: true, pump: true }), "t|||||" + "|TP");
+  assert.equal(parts.hopperStateKey({ track: true }), "t||||||");
 });

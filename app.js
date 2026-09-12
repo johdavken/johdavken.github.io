@@ -9854,12 +9854,17 @@
     }
 
     /* The tail. `grid` is false for a source edit, which the Hookups board
-     * commits without rebuilding the recipe grid. */
-    function commit({ sync = true, immediate = false, kind = "edit", grid = true } = {}){
+     * commits without rebuilding the recipe grid - and which then redraws
+     * the board itself (`hookups`), as the board's own field does. A
+     * pump-off commit sets both false: the grid does not show pump state,
+     * and the Timeline rows that do are redrawn by validateAndCompute. A
+     * future case passing grid:false must say whether it wants the board
+     * redrawn; the default follows the source edit's need, not its own. */
+    function commit({ sync = true, immediate = false, kind = "edit", grid = true, hookups = !grid } = {}){
       if (grid) renderSplitsArea();
       validateAndCompute({ sync, immediate, kind });
       const persisted = saveSession();
-      if (!grid) renderTimelineHookups({ force: true });
+      if (hookups) renderTimelineHookups({ force: true });
       return persisted;
     }
 
@@ -10025,6 +10030,44 @@
         if (JSON.stringify(snapshotRecipeEdit(args.recipe)) === JSON.stringify(before)){ from.release(); return unchanged(); }
         const persisted = commit({ sync: true, immediate: true, kind: "rearrange-hoppers" });
         recordRecipeEdit(before, args.recipe);
+        return done(true, persisted);
+      },
+
+      /* The Recipe grid's clock button (toggleTracking), exactly: the
+       * hopper's `track` flag set, the grid rebuilt (which is where its
+       * tracked-cell state and "N hoppers tracked" status come from),
+       * synced at once as "tracking", saved. No history entry: the grid
+       * records none, because tracking is runtime state of the running
+       * job and not part of the recipe. Current only - the plan cannot
+       * carry it (next-recipe.js), and the contract refuses "next" before
+       * this is reached; the same rule is stated here so the adapter
+       * cannot be handed a plan by any other route. A command that states
+       * the flag the hopper already has is a no-op, as the grid's own
+       * button cannot be pressed to no effect. */
+      setHopperTracking(args){
+        if (args.recipe !== "current") return contract.failure("bad_argument", { field: "recipe", message: "Tracking belongs to the running job, not to the planned recipe." });
+        const at = locate(args.recipe, args.layer, args.index);
+        if (at.failure) return at.failure;
+        if (!!at.hopper.track === args.track) return unchanged();
+        at.hopper.track = args.track;
+        const persisted = commit({ sync: true, immediate: true, kind: "tracking" });
+        return done(true, persisted);
+      },
+
+      /* The Timeline row's I/O toggle, exactly: the hopper's `pumpOff`
+       * flag set, saved, synced at once as "pump-off" - validateAndCompute
+       * redraws the Timeline rows, which are the one place the floor UI
+       * shows pump state, so the grid is not rebuilt. No history entry,
+       * as the toggle records none. Current only, for the same reason as
+       * tracking. Untracking a hopper does not clear its pump state in
+       * the floor UI (only Reset tracking does), and it does not here. */
+      setPumpOff(args){
+        if (args.recipe !== "current") return contract.failure("bad_argument", { field: "recipe", message: "Pump-off belongs to the running job, not to the planned recipe." });
+        const at = locate(args.recipe, args.layer, args.index);
+        if (at.failure) return at.failure;
+        if (!!at.hopper.pumpOff === args.pumpOff) return unchanged();
+        at.hopper.pumpOff = args.pumpOff;
+        const persisted = commit({ sync: true, immediate: true, kind: "pump-off", grid: false, hookups: false });
         return done(true, persisted);
       },
 

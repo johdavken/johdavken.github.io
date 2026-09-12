@@ -70,8 +70,13 @@ test("a command's answer runs the same publish policy, marked as Station's own, 
   assert.match(committed, /onPublish\(\{ own: true \}\);/);
   // Nothing else: no patching of its own, no second render path, no note.
   assert.doesNotMatch(committed, /patchStage|renderAll|editorHandle|mountStage|note\(/);
-  // And the boot file writes lastOwnRevision there and nowhere else.
-  assert.equal((boot.match(/lastOwnRevision\s*=/g) || []).length, 2, "lastOwnRevision is written somewhere other than its declaration and onCommitted");
+  // And the boot file writes lastOwnRevision there, and in the one other
+  // place a command's answer arrives - a cluster control's toggle - which
+  // runs the identical two lines.
+  assert.equal((boot.match(/lastOwnRevision\s*=/g) || []).length, 3, "lastOwnRevision is written somewhere other than its declaration, onCommitted and toggleHopperControl");
+  const toggle = body("toggleHopperControl");
+  assert.match(toggle, /lastOwnRevision = Number\.isInteger\(result\.revision\) \? result\.revision : null;\n\s+onPublish\(\{ own: true \}\);/);
+  assert.doesNotMatch(toggle, /patchStage|renderAll|mountStage|setFocus|clearFocus/);
 });
 
 test("commands are on offer only for the live source: demo data pinned in the host stays read-only", () => {
@@ -126,7 +131,7 @@ test("the renderer's patch path leaves the workspace alone", () => {
   const patch = render.slice(at, render.indexOf("\n  }\n", at));
   assert.doesNotMatch(patch, /workspace\(|foreignObject|focus-workspace|clear\(mount\)|appendChild\(svg\)/);
   assert.match(patch, /parts\.hopper\(doc, /, "a changed hopper is drawn by the same builder that drew it");
-  assert.match(patch, /parts\.hopperStateKey\(runtime\)/);
+  assert.match(patch, /parts\.hopperStateKey\(runtime, settings\.hopperControls \|\| null\)/);
   assert.match(patch, /cluster\.replaceChild\(fresh, old\)/);
 });
 

@@ -13,7 +13,7 @@
  *
  * WHAT IT DEFINES
  *
- *   COMMANDS       the vocabulary: eight names, nothing else is a command
+ *   COMMANDS       the vocabulary: ten names, nothing else is a command
  *   ARGUMENTS      which arguments each command takes
  *   normalize*     one normalizer per argument, in the terms the application
  *                  already uses (its own resin-name trimming, its own
@@ -69,9 +69,20 @@
     "moveHopper",       // { recipe, layer, index, toLayer, toIndex }
                         //   the assignment (resin, blend) at layer:index moves to
                         //   toLayer:toIndex; an occupied destination swaps back
+    "setHopperTracking",// { recipe, layer, index, track }   track true/false
+    "setPumpOff",       // { recipe, layer, index, pumpOff } pumpOff true/false
     "undo",             // { recipe }
     "redo"              // { recipe }
   ]);
+
+  /* The two runtime commands. Tracking and pump-off are operational state
+   * of the running job - the Timeline's, not the recipe's - and the planned
+   * recipe structurally cannot carry them (next-recipe.js: a recipe payload
+   * has no track or pumpOff). So these name their recipe like every other
+   * command, and the only recipe they may name is "current". Refused here,
+   * before any executor sees the request, so a Station view addressing
+   * Next can never turn a plan into something that tracks. */
+  const RUNTIME_COMMANDS = Object.freeze(["setHopperTracking", "setPumpOff"]);
 
   const RECIPES = Object.freeze(["current", "next"]);
 
@@ -82,6 +93,8 @@
     clearHopper: Object.freeze(["recipe", "layer", "index"]),
     setSource: Object.freeze(["recipe", "layer", "index", "source"]),
     moveHopper: Object.freeze(["recipe", "layer", "index", "toLayer", "toIndex"]),
+    setHopperTracking: Object.freeze(["recipe", "layer", "index", "track"]),
+    setPumpOff: Object.freeze(["recipe", "layer", "index", "pumpOff"]),
     undo: Object.freeze(["recipe"]),
     redo: Object.freeze(["recipe"])
   });
@@ -267,6 +280,15 @@
     return { ok: true, value: hookups.normalizeSource(value) };
   }
 
+  /* A runtime flag: on or off, said as a boolean and nothing else. The
+   * grid's clock button and the Timeline's I/O toggle flip a boolean on the
+   * hopper; a command states the value it wants, so two devices toggling
+   * at once land on a state rather than on a parity. */
+  function normalizeFlag(value) {
+    if (value === true || value === false) return { ok: true, value };
+    return { ok: false, code: "bad_argument", message: "The state must be true or false." };
+  }
+
   const NORMALIZERS = Object.freeze({
     recipe: normalizeRecipe,
     layer: normalizeLayer,
@@ -275,7 +297,9 @@
     resin: normalizeResin,
     source: normalizeSource,
     toLayer: normalizeLayer,
-    toIndex: normalizeIndex
+    toIndex: normalizeIndex,
+    track: normalizeFlag,
+    pumpOff: normalizeFlag
   });
 
   /**
@@ -298,11 +322,15 @@
       if (!result.ok) return failure(result.code, { field, message: result.message });
       out[field] = result.value;
     }
+    if (RUNTIME_COMMANDS.includes(command) && out.recipe !== "current") {
+      return failure("bad_argument", { field: "recipe", message: "Tracking and pump-off belong to the running job: the recipe must be \"current\"." });
+    }
     return Object.freeze({ ok: true, command, args: Object.freeze(out) });
   }
 
   return Object.freeze({
     COMMANDS,
+    RUNTIME_COMMANDS,
     RECIPES,
     ARGUMENTS,
     ERROR_CODES,
@@ -316,6 +344,7 @@
     normalizePercentage,
     normalizeResin,
     normalizeSource,
+    normalizeFlag,
     normalizeArguments,
     success,
     failure,

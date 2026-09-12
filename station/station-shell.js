@@ -29,8 +29,16 @@
   "use strict";
 
   /* Every mount point the boot file looks for. Named here so the shell and
-   * the code that fills it cannot disagree about what exists. */
-  const MOUNTS = Object.freeze(["nav", "machine", "recipe-strip", "inspector", "status", "connection"]);
+   * the code that fills it cannot disagree about what exists.
+   *
+   * Three regions and nothing else: the header (with the line console's
+   * slot), the machine stage, and the status bar. The earlier side columns
+   * - a demo-configuration list on the left, an inspector on the right - and
+   * the Current / Next recipe strip under the stage were taken out
+   * (2026-09-12) so the stage has the whole width: configuration switching
+   * is the workspace's job now, and the recipe readout will come back in a
+   * different place and shape. Nothing here reserves space for them. */
+  const MOUNTS = Object.freeze(["machine", "status", "connection"]);
 
   function element(doc, name, className, attributes) {
     const node = doc.createElement(name);
@@ -77,23 +85,9 @@
     header.appendChild(element(doc, "div", "station-header__connection", { "data-station-mount": "connection" }));
     shell.appendChild(header);
 
-    const sidebar = element(doc, "nav", "station-sidebar", { "aria-label": "Line configuration" });
-    sidebar.appendChild(text(doc, "h2", "station-section__heading", "Demo configurations"));
-    sidebar.appendChild(element(doc, "div", "station-nav", { "data-station-mount": "nav" }));
-    shell.appendChild(sidebar);
-
     shell.appendChild(element(doc, "section", "station-machine", {
       "data-station-mount": "machine", "aria-label": "Machine stage"
     }));
-
-    shell.appendChild(element(doc, "section", "station-recipe-strip", {
-      "data-station-mount": "recipe-strip", "aria-label": "Recipe state"
-    }));
-
-    const inspector = element(doc, "aside", "station-inspector", { "aria-label": "Inspector" });
-    inspector.appendChild(text(doc, "h2", "station-section__heading", "Configuration"));
-    inspector.appendChild(element(doc, "div", "", { "data-station-mount": "inspector" }));
-    shell.appendChild(inspector);
 
     shell.appendChild(element(doc, "footer", "station-status", { "data-station-mount": "status" }));
 

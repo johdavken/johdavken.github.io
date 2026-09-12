@@ -21,7 +21,7 @@ const GOOD = { recipe: "current", layer: "A", index: 1, pct: 25, resin: "HX204",
 
 test("the approved command vocabulary, and nothing else", () => {
   assert.deepEqual([...contract.COMMANDS],
-    ["setHopperResin", "setHopperBlend", "setLayerShare", "clearHopper", "setSource", "moveHopper", "undo", "redo"]);
+    ["setHopperResin", "setHopperBlend", "setLayerShare", "clearHopper", "setSource", "moveHopper", "setHopperTracking", "setPumpOff", "undo", "redo"]);
   assert.ok(Object.isFrozen(contract.COMMANDS));
   assert.deepEqual([...contract.RECIPES], ["current", "next"]);
   for (const command of contract.COMMANDS) {
@@ -241,4 +241,45 @@ test("isResult recognizes exactly the two shapes", () => {
     { ok: false }, { ok: false, code: "made_up", message: "x" }, { ok: false, code: "busy" }, "ok", []]) {
     assert.equal(contract.isResult(bad), false, `${JSON.stringify(bad)} passed as a result`);
   }
+});
+
+/* ----------------------------------------------------------------------
+ *   Step 10: the runtime commands - tracking and pump-off
+ * -------------------------------------------------------------------- */
+
+test("the two runtime commands are declared, take a boolean flag, and are addressable to the Current recipe only", () => {
+  assert.deepEqual([...contract.RUNTIME_COMMANDS], ["setHopperTracking", "setPumpOff"]);
+  assert.ok(Object.isFrozen(contract.RUNTIME_COMMANDS));
+  assert.deepEqual([...contract.ARGUMENTS.setHopperTracking], ["recipe", "layer", "index", "track"]);
+  assert.deepEqual([...contract.ARGUMENTS.setPumpOff], ["recipe", "layer", "index", "pumpOff"]);
+
+  const on = contract.normalizeArguments("setHopperTracking", { recipe: "current", layer: "B", index: "2", track: true, extra: 1 });
+  assert.deepEqual(on, { ok: true, command: "setHopperTracking", args: { recipe: "current", layer: "B", index: 2, track: true } });
+  assert.ok(Object.isFrozen(on.args));
+  const off = contract.normalizeArguments("setPumpOff", { recipe: "current", layer: "B", index: 0, pumpOff: false });
+  assert.deepEqual(off.args, { recipe: "current", layer: "B", index: 0, pumpOff: false });
+
+  // The plan cannot carry runtime state: "next" is refused here, before
+  // any executor sees it, and the field is named.
+  for (const [command, flag] of [["setHopperTracking", "track"], ["setPumpOff", "pumpOff"]]) {
+    const refused = contract.normalizeArguments(command, { recipe: "next", layer: "B", index: 1, [flag]: true });
+    assert.equal(refused.ok, false);
+    assert.equal(refused.code, "bad_argument");
+    assert.equal(refused.field, "recipe");
+    assert.match(refused.message, /running job/);
+  }
+});
+
+test("a runtime flag is a boolean and nothing else: no strings, numbers or absence", () => {
+  assert.deepEqual(contract.normalizeFlag(true), { ok: true, value: true });
+  assert.deepEqual(contract.normalizeFlag(false), { ok: true, value: false });
+  for (const bad of ["true", "on", 1, 0, null, undefined, {}, []]) {
+    const result = contract.normalizeFlag(bad);
+    assert.equal(result.ok, false, `${JSON.stringify(bad)} was accepted as a flag`);
+    assert.equal(result.code, "bad_argument");
+  }
+  const request = contract.normalizeArguments("setPumpOff", { recipe: "current", layer: "A", index: 1, pumpOff: "true" });
+  assert.equal(request.ok, false);
+  assert.equal(request.field, "pumpOff");
+  assert.equal(contract.normalizeArguments("setHopperTracking", { recipe: "current", layer: "A", index: 1 }).field, "track");
 });

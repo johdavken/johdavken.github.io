@@ -15,13 +15,15 @@
  *
  * INTERACTION
  *
- * Three targets, and only three: the mixer and the extruder - the equipment
+ * Three equipment targets: the mixer and the extruder - the equipment
  * train - open the layer in the workspace (and inspect the blend and the
  * layer percentage respectively); the hopper cluster is the hoppers
- * themselves, where pump and tracking controls will live. They are marked
- * with data-station-target and nothing else is clickable, so the mapping
- * cannot drift. No listeners are attached here - the renderer stays
- * event-free and testable, and station.js delegates from the mount.
+ * themselves. On each hopper, two more: its receiver is the pump control
+ * and its body the tracking control, toggling the running job's
+ * operational state and nothing else (station-hopper-controls.js). They
+ * are marked with data-station-target and nothing else is clickable, so
+ * the mapping cannot drift. No listeners are attached here - the renderer
+ * stays event-free and testable, and station.js delegates from the mount.
  */
 (function (root, factory) {
   const deps = {
@@ -101,20 +103,26 @@
    *   Hopper - the one reusable material-handling component
    * ------------------------------------------------------------------ */
 
-  /* The runtime facts a hopper's drawing depends on, as one string. Carried
-   * on the group (data-state) so the renderer's patch path can tell an
-   * unchanged hopper from a changed one without reading the drawing back.
+  /* The runtime facts a hopper's drawing depends on - and the offer its
+   * controls act on - as one string. Carried on the group (data-state) so
+   * the renderer's patch path can tell an unchanged hopper from a changed
+   * one without reading the drawing back.
    * Geometry is deliberately not in it: a profile height changes the
    * layout, and that is a render, not a patch. */
-  function hopperStateKey(runtime) {
+  function hopperStateKey(runtime, controls) {
     const r = runtime || {};
+    const c = controls || {};
     return [
       r.track ? "t" : "",
       r.pumpOff ? "p" : "",
       r.assigned === false ? "u" : "",
       r.resinName || "",
       Number.isFinite(r.pct) ? r.pct : "",
-      r.source || ""
+      r.source || "",
+      // Which of the hopper's controls may act: written on the drawing, so
+      // a change in the offer alone redraws the controls as a change in
+      // state does.
+      (c.tracking ? "T" : "") + (c.pump ? "P" : "")
     ].join("|");
   }
 
@@ -151,16 +159,15 @@
       "data-hopper": geometry.id,
       "data-layer": geometry.layer,
       "data-hopper-index": geometry.index,
-      "data-state": hopperStateKey(runtime)
+      "data-state": hopperStateKey(runtime, settings.controls)
     });
 
     const x = geometry.x;
     const w = geometry.width;
     const right = x + w;
-    const capHeight = geometry.receiverHeight * 0.38;
-    const cx = x + w / 2;
     const top = geometry.vesselTop;
     const bottom = geometry.coneTop;
+    const cx = x + w / 2;
     const rim = w * 0.095;
 
     // Local drawing helpers. All dimensions follow the existing layout;
@@ -177,34 +184,78 @@
     const name = doc.createElementNS
       ? doc.createElementNS(SVG_NS, "title")
       : doc.createElement("title");
-    name.textContent = runtime && runtime.resinName
+    name.textContent = (runtime && runtime.resinName
       ? `${geometry.id} · ${runtime.resinName}${runtime.pct ? ` · ${round(runtime.pct)}%` : ""}` +
         `${runtime.source ? ` · from ${runtime.source}` : ""}`
-      : `${geometry.id} · no resin assigned`;
+      : `${geometry.id} · no resin assigned`) +
+      (runtime && runtime.track ? " · tracked" : "") + (runtime && runtime.pumpOff ? " · pump off" : "");
     g.appendChild(name);
 
     /* Interaction geometry is independent of the equipment silhouette.
-     * Keep the existing receiver target for delegated dispatch, and keep
-     * identity/index on the assembly. The drawing below is pointer-inert.
-     * The cell stops inside its pitch, so adjacent hopper targets never overlap. */
+     * The drawing below is pointer-inert; what a click means is said by
+     * the targets here, and station.js reads it off the element it hit.
+     *
+     * The hopper's own hit covers its whole column, source label to
+     * caption, and stops inside its pitch so adjacent hoppers never
+     * overlap; a click on it falls through to the cluster it sits in, as
+     * it always has. Painted over it are the two operational controls,
+     * which station.js hands to station-hopper-controls.js:
+     *
+     *   pump      the receiver - cap, cone and neck: the amber feed area
+     *             that IS the pump indicator. A click toggles pump-off.
+     *   tracking  the hopper body - vessel, hose and caption. A click
+     *             toggles tracking.
+     *
+     * The two never overlap: the receiver ends where the vessel starts.
+     * Each carries the hopper's address, the state as drawn (`data-on`)
+     * and whether the application offers the command (`data-able`), so
+     * the click needs nothing but the element it landed on and the
+     * stylesheet can quieten a control that cannot act. The cells are
+     * the same at every state: a pump that is off is still where it was,
+     * so a click there marks it running again. */
     const interaction = group(doc, "station-hopper__interaction", "hopper-interaction");
     const hitPadding = Math.min(w * 0.08, Math.max(0, ((geometry.pitch || w) - w) / 2));
     const hitTop = geometry.sourceY - 10 * scale;
     interaction.appendChild(hitArea(doc, x - hitPadding, hitTop, w + hitPadding * 2,
       geometry.captionTop + geometry.captionHeight - hitTop));
-    const receiverTarget = group(doc, "station-hopper__receiver", "hopper-receiver", {
-      "data-station-target": "receiver",
-      "data-layer": geometry.layer,
-      "data-hopper": geometry.id,
-      "data-pump": runtime && runtime.pumpOff ? "off" : "on"
-    });
-    receiverTarget.appendChild(hitArea(doc, x - hitPadding, geometry.receiverTop,
-      w + hitPadding * 2, geometry.vesselTop - geometry.receiverTop));
-    interaction.appendChild(receiverTarget);
+
+    const controls = settings.controls || null;
+    const tracked = !!(runtime && runtime.track);
+    const pumpOff = !!(runtime && runtime.pumpOff);
+    const trackingAble = !!(controls && controls.tracking);
+    const pumpAble = !!(controls && controls.pump);
+    const control = (kind, on, able, title, box, extra) => {
+      const target = group(doc, `station-hopper__control station-hopper__control--${kind}`, `hopper-${kind}`, Object.assign({
+        "data-station-target": kind,
+        "data-layer": geometry.layer,
+        "data-hopper": geometry.id,
+        "data-hopper-index": geometry.index,
+        "data-on": on ? "true" : "false",
+        "data-able": able ? "true" : "false"
+      }, extra || {}));
+      // The tooltip says the state and, when a click can act, what it does.
+      const tip = doc.createElementNS ? doc.createElementNS(SVG_NS, "title") : doc.createElement("title");
+      tip.textContent = title;
+      target.appendChild(tip);
+      target.appendChild(hitArea(doc, box.x, box.y, box.width, box.height));
+      return target;
+    };
+    interaction.appendChild(control("pump", pumpOff, pumpAble,
+      `${geometry.id} · ${pumpOff ? "pump off" : "pump running"}` +
+        (pumpAble ? ` · click to ${pumpOff ? "mark the pump running" : "mark the pump off"}` : ""),
+      { x: x - hitPadding, y: geometry.receiverTop, width: w + hitPadding * 2, height: geometry.vesselTop - geometry.receiverTop },
+      { "data-pump": pumpOff ? "off" : "on" }));
+    interaction.appendChild(control("tracking", tracked, trackingAble,
+      `${geometry.id} · ${tracked ? "tracked" : "not tracked"}` +
+        (trackingAble ? ` · click to ${tracked ? "stop tracking" : "track in the timeline"}` : ""),
+      { x: x - hitPadding, y: geometry.vesselTop, width: w + hitPadding * 2,
+        height: geometry.captionTop + geometry.captionHeight - geometry.vesselTop }));
     g.appendChild(interaction);
 
     const drawing = group(doc, "station-hopper__drawing", "hopper-drawing", { "pointer-events": "none" });
     g.appendChild(drawing);
+
+    const capHeight = geometry.receiverHeight * 0.38;
 
     /* ---- Source ----
      * Above the receiver, because that is where the material arrives from.
@@ -369,6 +420,25 @@
     }));
     drawing.appendChild(details);
 
+    /* ---- Tracking halo ----
+     * Drawn only while the hopper is tracked: a glowing ring resting on
+     * the receiver's head - an ellipse seen a little from above, its
+     * lower edge on the cap, its upper edge in the gap under the source
+     * label - in the layer's own colour (the stylesheet reads
+     * --station-layer-accent off the layer group). Two strokes on one
+     * ellipse, a wide faint one for the glow under a thin crisp one.
+     * Drawn over the equipment, as a ring rests on a head; nothing
+     * moves. An untracked hopper draws nothing here, so the halo's
+     * absence is the untracked state. */
+    if (tracked) {
+      const ring = { cx, cy: geometry.receiverTop - w * 0.05, rx: w * 0.38, ry: w * 0.12 };
+      const halo = group(doc, "station-hopper__halo", "hopper-halo");
+      halo.appendChild(node(doc, "ellipse", "station-hopper__halo-glow",
+        Object.assign({ "stroke-width": round(w * 0.14) }, ring)));
+      halo.appendChild(node(doc, "ellipse", "station-hopper__halo-ring", ring));
+      drawing.appendChild(halo);
+    }
+
     /* ---- Readout ----
      * Identity and contribution. The resin code joins them when the hopper
      * is wide enough to draw it at full size; it is never shrunk to fit,
@@ -416,7 +486,9 @@
       const runtime = hopperState ? hopperState[`${bank.id}:${geometry.index}`] : null;
       g.appendChild(hopper(doc, Object.assign({ layer: bank.id }, geometry), runtime, {
         scale: bank.scale,
-        selected: !!settings.selectedHopper && settings.selectedHopper === geometry.id
+        selected: !!settings.selectedHopper && settings.selectedHopper === geometry.id,
+        // Which of the hopper's controls may act, as the bridge offers them.
+        controls: settings.hopperControls || null
       }));
     });
     if (settings.showHint && bank.emphasis === "normal") {

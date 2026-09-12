@@ -1,5 +1,11 @@
-/* The right-hand inspector's contents. The column itself - its width,
- * background and border - belongs to shell.css.
+/* The inspector's contents: the line summary and the three focus panels.
+ *
+ * NOT ON SCREEN. The shell no longer has an inspector column (the side
+ * columns went with the 2026-09-12 cleanup, so the stage has the whole
+ * width), and station.js draws none of this without a mount. The rules are
+ * kept with the code that emits them, so the panels can come back in a new
+ * place without being restyled from memory; a mount named "inspector" and
+ * a container rule for it are all that is missing.
  */
 
 .station-inspector__list {

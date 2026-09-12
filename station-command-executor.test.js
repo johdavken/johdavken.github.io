@@ -162,7 +162,7 @@ test("unavailable until the application connects; available with exactly the imp
   const handle = h.commands.connect({ execute: h.executor.execute, capabilities: h.executor.capabilities });
   assert.equal(h.commands.isAvailable(), true);
   assert.deepEqual([...h.commands.capabilities()].sort(), [...contract.COMMANDS].sort());
-  assert.deepEqual(h.executor.capabilities, ["setHopperResin", "setHopperBlend", "setLayerShare", "clearHopper", "setSource", "moveHopper", "undo", "redo"]);
+  assert.deepEqual(h.executor.capabilities, ["setHopperResin", "setHopperBlend", "setLayerShare", "clearHopper", "setSource", "moveHopper", "setHopperTracking", "setPumpOff", "undo", "redo"]);
   assert.throws(() => h.commands.connect({ execute: () => {}, capabilities: [] }), /already connected/);
   assert.equal(handle.disconnect(), true);
   assert.equal(h.commands.isAvailable(), false);
@@ -185,7 +185,7 @@ test("app.js installs the executor once, beside the state bridge, and nothing el
   for (const file of fs.readdirSync(path.join(ROOT, "station")).filter(name => name.endsWith(".js"))) {
     const source = fs.readFileSync(path.join(ROOT, "station", file), "utf8");
     assert.doesNotMatch(source, /PolynStationCommandBridge\s*\.\s*connect|commands\.connect\s*\(/, `${file} connects a producer`);
-    if (file !== "station-focus-editor.js") assert.doesNotMatch(source, /\.dispatch\s*\(/, `${file} dispatches a command`);
+    if (!["station-focus-editor.js", "station-hopper-controls.js"].includes(file)) assert.doesNotMatch(source, /\.dispatch\s*\(/, `${file} dispatches a command`);
   }
 });
 
@@ -818,7 +818,7 @@ test("rearrangement mode and a remote apply in progress refuse every command wit
   const before = h.stateJson();
   h.setRearranging(true);
   for (const command of contract.COMMANDS) {
-    const result = h.dispatch(command, { recipe: "current", layer: "A", index: 1, pct: 10, resin: "X", source: "Y", toLayer: "B", toIndex: 2 });
+    const result = h.dispatch(command, { recipe: "current", layer: "A", index: 1, pct: 10, resin: "X", source: "Y", toLayer: "B", toIndex: 2, track: true, pumpOff: true });
     assert.equal(result.code, "rearranging", `${command} ran during rearrangement`);
   }
   h.setRearranging(false);
@@ -841,4 +841,129 @@ test("a handler that throws becomes internal and nothing escapes", () => {
   assert.doesNotThrow(() => { result = h.dispatch("setSource", Object.assign({}, CUR, { index: 0, source: "X" })); });
   assert.equal(result.code, "internal");
   assert.equal(hookups.applyGroup, original);
+});
+
+/* ----------------------------------------------------------------------
+ *   Step 10: tracking and pump-off - runtime state through the grid's and
+ *   the Timeline's own paths
+ * -------------------------------------------------------------------- */
+
+test("setHopperTracking sets the Current hopper's flag as the grid's clock button does: synced at once as tracking, the grid rebuilt, saved, no history", () => {
+  const h = boot();
+  assert.equal(h.hopper("current", "A", 2).track, false);
+  const revision = h.stationBridge.getRevision();
+  const result = h.dispatch("setHopperTracking", Object.assign({}, CUR, { index: 2, track: true }));
+  assert.equal(result.ok, true);
+  assert.equal(result.changed, true);
+  assert.equal(result.persisted, true);
+  assert.equal(h.hopper("current", "A", 2).track, true);
+  assert.deepEqual(h.log.validates, [{ sync: true, immediate: true, kind: "tracking" }]);
+  assert.deepEqual(h.log.notified, [{ immediate: true, kind: "tracking" }]);
+  assert.equal(h.log.renders, 1, "the grid is rebuilt: its tracked-cell state and tracked count live there");
+  assert.equal(h.log.hookupRenders, 0);
+  assert.equal(h.log.saves, 2, "validateAndCompute's save and the tail's, as every other command");
+  assert.ok(h.stationBridge.getRevision() > revision, "the bridge published");
+  assert.equal(result.snapshot.layers[0].hoppers[2].track, true, "the answer carries the application's own snapshot");
+  assert.equal(result.snapshot, h.stationBridge.getSnapshot());
+  // Runtime state, not a recipe edit: nothing to undo.
+  assert.equal(h.recipeEditHistory.current.undo.length, 0);
+  assert.equal(h.stationBridge.getSnapshot().history.current.canUndo, false);
+  assert.equal(h.dispatch("undo", { recipe: "current" }).code, "nothing_to_undo");
+
+  // Off again, by stating the state wanted - not by toggling.
+  const off = h.dispatch("setHopperTracking", Object.assign({}, CUR, { index: 2, track: false }));
+  assert.equal(off.changed, true);
+  assert.equal(h.hopper("current", "A", 2).track, false);
+});
+
+test("setPumpOff sets the Current hopper's flag as the Timeline's I/O toggle does: synced at once as pump-off, saved, no grid rebuild, no history", () => {
+  const h = boot();
+  const result = h.dispatch("setPumpOff", Object.assign({}, CUR, { index: 0, pumpOff: true }));
+  assert.equal(result.ok, true);
+  assert.equal(result.changed, true);
+  assert.equal(h.hopper("current", "A", 0).pumpOff, true);
+  assert.deepEqual(h.log.validates, [{ sync: true, immediate: true, kind: "pump-off" }]);
+  assert.deepEqual(h.log.notified, [{ immediate: true, kind: "pump-off" }]);
+  assert.equal(h.log.renders, 0, "the grid does not show pump state; the Timeline rows validateAndCompute redraws do");
+  assert.equal(h.log.hookupRenders, 0, "a pump-off is not a source edit: the Hookups board is not redrawn");
+  assert.equal(h.log.saves, 2);
+  assert.equal(result.snapshot.layers[0].hoppers[0].pumpOff, true);
+  assert.equal(h.recipeEditHistory.current.undo.length, 0);
+  // Tracking is untouched by a pump change, and vice versa.
+  assert.equal(h.hopper("current", "A", 0).track, true);
+  h.dispatch("setHopperTracking", Object.assign({}, CUR, { index: 0, track: false }));
+  assert.equal(h.hopper("current", "A", 0).pumpOff, true, "untracking leaves pump-off standing, as the grid's button does (only Reset tracking clears both)");
+});
+
+test("stating the flag a hopper already has is a no-op: no mutation, no save, no publish, no notification", () => {
+  const h = boot();
+  const before = h.stateJson();
+  const revision = h.stationBridge.getRevision();
+  for (const [command, args] of [
+    ["setHopperTracking", Object.assign({}, CUR, { index: 0, track: true })],
+    ["setHopperTracking", Object.assign({}, CUR, { index: 3, track: false })],
+    ["setPumpOff", Object.assign({}, CUR, { index: 0, pumpOff: false })]
+  ]) {
+    const result = h.dispatch(command, args);
+    assert.equal(result.ok, true, command);
+    assert.equal(result.changed, false, command);
+    assert.equal(result.persisted, false, command);
+  }
+  assert.equal(h.stateJson(), before);
+  assert.equal(h.log.saves, 0);
+  assert.deepEqual(h.log.validates, []);
+  assert.deepEqual(h.log.notified, []);
+  assert.equal(h.stationBridge.getRevision(), revision);
+});
+
+test("the runtime commands refuse the Next recipe at the contract and at the executor, and never materialize a plan", () => {
+  const h = boot();
+  const before = h.stateJson();
+  for (const [command, flag] of [["setHopperTracking", "track"], ["setPumpOff", "pumpOff"]]) {
+    const viaBridge = h.dispatch(command, Object.assign({}, NXT, { index: 1, [flag]: true }));
+    assert.equal(viaBridge.code, "bad_argument");
+    assert.equal(viaBridge.field, "recipe");
+    // Straight at the executor, past the contract: the same refusal.
+    const direct = h.executor.execute(command, { recipe: "next", layer: "A", index: 1, [flag]: true });
+    assert.equal(direct.code, "bad_argument");
+    assert.equal(direct.field, "recipe");
+  }
+  assert.equal(h.working(), null, "no Next working copy was created");
+  assert.equal(h.stateJson(), before);
+  assert.equal(h.log.saves, 0);
+});
+
+test("the runtime commands refuse an unknown layer or hopper with nothing touched", () => {
+  const h = boot();
+  const before = h.stateJson();
+  assert.equal(h.dispatch("setHopperTracking", { recipe: "current", layer: "Z", index: 0, track: true }).code, "unknown_layer");
+  assert.equal(h.dispatch("setPumpOff", { recipe: "current", layer: "A", index: 7, pumpOff: true }).code, "unknown_hopper");
+  assert.equal(h.dispatch("setPumpOff", { recipe: "current", layer: "A", index: 1, pumpOff: "yes" }).code, "bad_argument");
+  assert.equal(h.stateJson(), before);
+  assert.equal(h.log.saves, 0);
+  assert.deepEqual(h.log.notified, []);
+});
+
+test("the executor's runtime cases mirror the floor UI's own toggles: the same kinds, immediate, and no history recorded", () => {
+  const executor = block("  function createStationCommandExecutor(){", "\n  }\n");
+  const tracking = executor.slice(executor.indexOf("setHopperTracking(args){"), executor.indexOf("setPumpOff(args){"));
+  const pump = executor.slice(executor.indexOf("setPumpOff(args){"), executor.indexOf("undo(args){"));
+  assert.match(tracking, /at\.hopper\.track = args\.track;/);
+  assert.match(tracking, /commit\(\{ sync: true, immediate: true, kind: "tracking" \}\)/);
+  assert.match(pump, /at\.hopper\.pumpOff = args\.pumpOff;/);
+  assert.match(pump, /commit\(\{ sync: true, immediate: true, kind: "pump-off", grid: false, hookups: false \}\)/);
+  for (const source of [tracking, pump]) {
+    assert.doesNotMatch(source, /snapshotRecipeEdit|recordRecipeEdit/, "runtime state was forced into recipe history");
+    assert.match(source, /args\.recipe !== "current"/);
+  }
+  // The legacy paths these adapt: the grid's toggleTracking and the
+  // Timeline's pump toggle, with the same kinds and no history.
+  const legacyTracking = block("          function toggleTracking(){", "\n          }\n");
+  assert.match(legacyTracking, /hopper\.track = !hopper\.track;/);
+  assert.match(legacyTracking, /validateAndCompute\(\{ sync: true, immediate: true, kind: "tracking" \}\);/);
+  assert.doesNotMatch(legacyTracking, /snapshotRecipeEdit|beginRecipeEditInput|recordRecipeEdit/);
+  const legacyPump = block('        row.querySelector("[data-pump-toggle]").addEventListener("click",()=>{', "\n        });\n");
+  assert.match(legacyPump, /h\._ref\.h\.pumpOff = !h\._ref\.h\.pumpOff;/);
+  assert.match(legacyPump, /validateAndCompute\(\{ sync: true, immediate: true, kind: "pump-off" \}\);/);
+  assert.doesNotMatch(legacyPump, /snapshotRecipeEdit|recordRecipeEdit/);
 });

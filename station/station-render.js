@@ -70,6 +70,8 @@
    * @param {string} [options.focusLayer]   layer to expand, or null
    * @param {string} [options.selectedTarget] "cluster" | "mixer" | "extruder"
    * @param {string} [options.selectedHopper] the selected hopper's id, on the open layer
+   * @param {object} [options.hopperControls] { tracking, pump }: which of a hopper's
+   *        operational controls may act - the bridge's offer, read once by the caller
    * @param {Element} [options.workspace]   HTML content for the focus workspace
    * @param {string} [options.raiseLayer]    layer to paint last (in transit)
    * @param {number} [options.stageAspect]  the stage's width/height, for the focus canvas
@@ -121,7 +123,8 @@
       row.appendChild(parts.layerBank(doc, bank, settings.hopperState, settings.layerState, {
         selectedTarget: bank.id === layout.focusLayer ? settings.selectedTarget : null,
         selectedHopper: bank.id === layout.focusLayer ? settings.selectedHopper || null : null,
-        showHint: settings.showHint
+        showHint: settings.showHint,
+        hopperControls: settings.hopperControls || null
       }));
     }
     svg.appendChild(row);
@@ -197,7 +200,7 @@
    * @param {Element} mount
    * @param {object} model
    * @param {object} [options]  hopperState, layerState, focusLayer,
-   *        selectedHopper, dimensions, stageAspect - as for renderStage
+   *        selectedHopper, hopperControls, dimensions, stageAspect - as for renderStage
    */
   function patchStage(mount, model, options) {
     if (!mount || !model) return null;
@@ -240,10 +243,11 @@
         const old = drawn[String(geometry.index)];
         if (!old) return null;
         const runtime = hopperState ? hopperState[`${bank.id}:${geometry.index}`] : null;
-        if (attributeOf(old, "data-state") === parts.hopperStateKey(runtime)) continue;
+        if (attributeOf(old, "data-state") === parts.hopperStateKey(runtime, settings.hopperControls || null)) continue;
         const fresh = parts.hopper(doc, Object.assign({ layer: bank.id }, geometry), runtime, {
           scale: bank.scale,
-          selected: bank.id === layout.focusLayer && !!settings.selectedHopper && settings.selectedHopper === geometry.id
+          selected: bank.id === layout.focusLayer && !!settings.selectedHopper && settings.selectedHopper === geometry.id,
+          controls: settings.hopperControls || null
         });
         // Presentation the boot file put on the old group, carried over so
         // the pointer does not lose its place.
@@ -293,6 +297,7 @@
       focusLayer: settings.focusLayer,
       selectedTarget: settings.selectedTarget,
       selectedHopper: settings.selectedHopper,
+      hopperControls: settings.hopperControls,
       workspace: settings.workspace,
       raiseLayer: settings.raiseLayer,
       showHint: settings.showHint,

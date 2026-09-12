@@ -320,9 +320,9 @@
   fill: var(--station-accent);
 }
 
-/* Which of the three targets the inspector is currently showing. Also
-   applied the instant a target is clicked, before anything moves, so the
-   click is acknowledged on the thing that was clicked. */
+/* Which of the three targets is selected. Also applied the instant a
+   target is clicked, before anything moves, so the click is acknowledged
+   on the thing that was clicked. */
 .station-layer.is-mixer-selected .station-mixer__face--front,
 .station-layer.is-extruder-selected .station-extruder__housing,
 .station-layer.is-cluster-selected .station-hopper__shell {
