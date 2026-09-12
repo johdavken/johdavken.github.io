@@ -29,7 +29,7 @@ test("the authored sources are still the rich originals, not overwritten by thei
     const paths = (svg.match(/<path\b/g) || []).length;
     assert.ok(paths > 200, `${view}: the source has only ${paths} paths - was it replaced?`);
     assert.match(svg, /<linearGradient/, `${view}: the source lost its gradients`);
-    // The parts the derivative drops are still there to be dropped.
+    // Fine authored hardware stays available in the originals.
     for (const part of ["vent-slot", "motor-fin", "flange-bolt-hole", "leveling-bolt", "terminal-box"]) {
       assert.ok(svg.includes(`data-part="${part}"`), `${view}: source has no ${part}`);
     }
@@ -66,46 +66,40 @@ test("the tool is deterministic", () => {
  *   What was kept, what was dropped
  * -------------------------------------------------------------------- */
 
-test("the derivative keeps the parts that carry recognition and nothing that is under a pixel", () => {
-  const kept = new Set(Object.values(derive.KEEP));
-  for (const view of assets.ORDER) {
-    const parts = new Set(assets.views[view].polygons.map(p => p.part));
-    for (const part of ["housing", "feed", "outlet", "flange", "recess", "bore", "gearbox", "motor", "base", "foot"]) {
-      assert.ok(parts.has(part), `${view}: missing ${part}`);
+test("every authored path and vertex survives, with original detail and shading data", () => {
+  const { views, unit } = derive.derive();
+  for (const name of assets.ORDER) {
+    const source = derive.parseSource(read(sourceFile(name)), name);
+    const polygons = assets.views[name].polygons;
+    assert.equal(polygons.length, source.faces.length);
+    const anchorFace = source.faces.find(f => f.part === "feed-flange" && /#edf0ed/.test(f.fill));
+    const anchor = derive.centroid(anchorFace.points);
+    const byOrder = new Map(polygons.map(p => [p.sourceOrder, p]));
+    assert.equal(byOrder.size, source.faces.length, "source paths were duplicated or lost");
+    for (const face of source.faces) {
+      const p = byOrder.get(face.order);
+      assert.equal(p.sourcePart, face.part);
+      assert.deepEqual(p.points, face.points.flatMap(([x, y]) =>
+        [derive.round((x - anchor.x) * unit) || 0, derive.round((y - anchor.y) * unit) || 0]));
+      assert.equal(p.width, derive.round(face.width * unit));
+      assert.ok(p.tone >= 0 && p.tone <= 100 && p.edgeTone >= 0 && p.edgeTone <= 100);
     }
-    for (const part of parts) assert.ok(kept.has(part), `${view}: unexpected part ${part}`);
-    // The source's fine detail is gone by name.
-    const svg = read(derivedFile(view));
-    for (const dropped of ["vent-slot", "vent-lip", "motor-fin", "fan-cover", "terminal-box",
-      "gearbox-bolt", "feed-bolt", "end-panel-bolt", "flange-bolt-hole", "machined-face",
-      "housing-gasket", "lower-fold", "motor-mount", "gearbox-cover"]) {
-      assert.ok(!svg.includes(`data-part="${dropped}"`), `${view}: ${dropped} survived`);
+    assert.deepEqual(views[name].gradients, source.gradients);
+    assert.deepEqual(assets.views[name].gradients, source.gradients);
+    for (const part of ["vent-slot", "motor-fin", "terminal-box", "flange-bolt-hole", "machined-face", "foot"]) {
+      assert.ok(polygons.some(p => p.sourcePart === part), `${name}: missing ${part}`);
     }
-  }
-});
-
-test("the detail budget: a fraction of the source's paths, and no render-style shading", () => {
-  for (const view of assets.ORDER) {
-    const sourcePaths = (read(sourceFile(view)).match(/<path\b/g) || []).length;
-    const count = assets.views[view].polygons.length;
-    assert.ok(count <= 60, `${view}: ${count} polygons is not a simplification`);
-    assert.ok(count < sourcePaths / 4, `${view}: ${count} of ${sourcePaths} paths kept`);
-    const svg = read(derivedFile(view));
-    assert.doesNotMatch(svg, /<linearGradient|<radialGradient|<filter/, `${view}: gradients or filters survived`);
-    assert.doesNotMatch(svg, /<path[^>]*\b(fill|stroke|stroke-width)=/, `${view}: a path carries its own colour`);
-  }
-});
-
-test("each cylinder is one band and one cap, not two dozen facets", () => {
-  for (const view of assets.ORDER) {
-    const of = part => assets.views[view].polygons.filter(p => p.part === part);
-    for (const part of ["motor", "outlet", "flange"]) {
-      assert.deepEqual(of(part).map(p => p.face).sort(), ["cap", "round"], `${view}: ${part} is not band + cap`);
+    for (const part of ["motor", "motor-fin", "fan-cover", "terminal-box", "motor-mount"]) {
+      assert.ok(polygons.filter(p => p.sourcePart === part).every(p => p.part === "motor"),
+        `${name}: ${part} is not part of the addressable motor assembly`);
     }
-    // And no polygon is finer than the size it is drawn at needs.
-    for (const polygon of assets.views[view].polygons) {
-      assert.ok(polygon.points.length / 2 <= 40, `${view}: a ${polygon.part} polygon has ${polygon.points.length / 2} points`);
-    }
+    assert.ok(polygons.filter(p => p.part === "motor").every(p => p.material === "motor"));
+    // Fine discs are still 64-gons, and cylindrical sides are separate facets.
+    assert.ok(polygons.some(p => p.points.length === 128));
+    assert.ok(polygons.filter(p => p.part === "motor" && p.face === "round").length > 16);
+    const svg = read(derivedFile(name));
+    assert.equal((svg.match(/<linearGradient/g) || []).length, source.gradients.length);
+    assert.doesNotMatch(svg, /<path[^>]*\b(fill|stroke|stroke-width)=/);
   }
 });
 
@@ -173,13 +167,15 @@ test("every view faces the same way, so mirroring is the renderer's job", () => 
 test("the standalone derivative and the module agree, polygon for polygon", () => {
   for (const view of assets.ORDER) {
     const svg = read(derivedFile(view));
-    const paths = [...svg.matchAll(/<path class="([^"]+)" data-part="([^"]+)" data-face="([^"]+)" d="M([^"]+) Z"\/>/g)];
+    const paths = [...svg.matchAll(/<path class="([^"]+)" data-part="([^"]+)" data-face="([^"]+)" data-source-part="([^"]+)" style="([^"]+)" d="M([^"]+) Z"\/>/g)];
     assert.equal(paths.length, assets.views[view].polygons.length);
     paths.forEach((match, i) => {
       const polygon = assets.views[view].polygons[i];
       assert.equal(match[2], polygon.part);
       assert.equal(match[3], polygon.face);
-      const points = match[4].split(" L").map(pair => pair.split(",").map(Number)).flat();
+      assert.equal(match[4], polygon.sourcePart);
+      assert.equal(match[5], assets.styleFor(polygon, `station-extruder-${view}`));
+      const points = match[6].split(" L").map(pair => pair.split(",").map(Number)).flat();
       assert.deepEqual(points, polygon.points);
     });
     // The file's metadata is the module's.
@@ -193,7 +189,7 @@ test("the standalone derivative is styled by the product's own rules, with every
   for (const view of assets.ORDER) {
     const svg = read(derivedFile(view));
     const style = svg.match(/<style>([\s\S]*?)<\/style>/)[1];
-    assert.doesNotMatch(style, /var\(/, `${view}: an unresolved token reached the standalone file`);
+    assert.doesNotMatch(style, /var\(--station-(?!extruder-)/, `${view}: an unresolved palette token reached the standalone file`);
     // Every class the file uses has a rule in the file.
     for (const className of new Set(svg.match(/station-extruder__[a-z-]+/g))) {
       assert.ok(style.includes(`.${className}`), `${view}: ${className} has no rule in the standalone style`);

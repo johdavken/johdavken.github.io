@@ -236,7 +236,7 @@ test("the view is derived from distance off centre, not from the layer letter", 
   }
 });
 
-test("front for the centre, intermediate one ring out, angled from two rings out", () => {
+test("angled for a single train; front at a stack centre, then increasingly turned by ring", () => {
   /* The documented mapping of the three assets onto a stack - the masters'
    * own suggested views: 0; -30, 0, 30; -60, -30, 0, 30, 60. Stated for the
    * three supported counts and for the ones nobody has drawn yet, because
@@ -245,7 +245,7 @@ test("front for the centre, intermediate one ring out, angled from two rings out
     const facing = layoutModule.equipmentView(i, count);
     return `${facing.mirrored ? "-" : ""}${facing.view}`;
   });
-  assert.deepEqual(names(1), ["front"]);
+  assert.deepEqual(names(1), ["angled"]);
   // Three layers turn 30 degrees, not 60: the outer pair is close to the core.
   assert.deepEqual(names(3), ["-intermediate", "front", "intermediate"]);
   assert.deepEqual(names(5), ["-angled", "-intermediate", "front", "intermediate", "angled"]);
@@ -259,11 +259,23 @@ test("front for the centre, intermediate one ring out, angled from two rings out
     ["angled-left", "intermediate-left", "front", "intermediate-right", "angled-right"]);
 });
 
-test("a single layer faces straight out, because there is nothing to converge on", () => {
+test("a single layer uses one unmirrored angled view for blender and extruder", () => {
   const bank = layoutFor(literal({ layerCount: 1, layerAPosition: null })).banks[0];
-  assert.equal(bank.extruder.view, "front");
+  assert.equal(bank.mixer.view, "angled");
+  assert.equal(bank.mixer.yaw, mixerAssets.views.angled.yaw);
+  assert.equal(bank.extruder.view, "angled");
   assert.equal(bank.extruder.mirrored, false);
-  assert.equal(bank.extruder.yaw, 0);
+  assert.equal(bank.extruder.yaw, assets.views.angled.yaw);
+  assert.equal(bank.facing.view, "angled");
+
+  const svg = stageFor(literal({ layerCount: 1, layerAPosition: null }));
+  const mixer = allWith(svg, "data-role", "mixer")[0];
+  assert.equal(mixer.getAttribute("data-view"), "angled");
+  assert.equal(mixer.getAttribute("data-mirrored"), "false");
+  const extruder = allWith(svg, "data-role", "extruder")[0];
+  assert.equal(extruder.getAttribute("data-view"), "angled");
+  assert.equal(extruder.getAttribute("data-mirrored"), "false");
+  assert.equal(extruder.getAttribute("data-facing"), "right");
 });
 
 test("the turn grows with distance from the centre, and is the asset's own yaw", () => {
@@ -1046,16 +1058,19 @@ test("no presentation attribute is written into the markup", () => {
   });
 });
 
-test("the only inline styles are the two numbers the layout owns: a hopper's fill and a bank's scale", () => {
+test("inline styles carry numeric geometry/shading and local gradients, never hardcoded colours", () => {
   const svg = stageFor(literal({ layerCount: 5 }), { focusLayer: "C" });
   const styled = [];
   walk(svg, node => { if (node.getAttribute("style") !== null) styled.push(node); });
   const layers = allWith(svg, "data-role", "layer");
-  assert.equal(styled.length, hoppersIn(svg).length + layers.length);
+  const extruderFaces = allWithClassName(svg, "station-extruder__face");
+  assert.equal(styled.length, hoppersIn(svg).length + layers.length + extruderFaces.length);
   for (const node of styled) {
     if (node.getAttribute("data-role") === "layer") {
       // The bank's scale, so the type inside it is sized with the equipment.
       assert.match(node.getAttribute("style"), /^--station-bank-scale: [0-9.]+;$/);
+    } else if (extruderFaces.includes(node)) {
+      assert.match(node.getAttribute("style"), /^--station-extruder-tone: [0-9.]+%; --station-extruder-edge-tone: [0-9.]+%; --station-extruder-line: [0-9.]+;( --station-extruder-gradient: url\(#station-extruder-[A-Z]+-(lid|end|metal|drive)\);)?$/);
     } else {
       assert.match(node.getAttribute("style"), /^--station-hopper-fill:/);
     }
@@ -1285,7 +1300,8 @@ test("the extruder is the asset's polygons, every one labelled by part and face"
       assert.equal(face.getAttribute("data-face"), polygon.face);
       const classes = face.getAttribute("class").split(" ");
       assert.ok(classes.includes(`station-extruder__${polygon.part}`));
-      assert.ok(classes.includes(`station-extruder__${polygon.part}--${polygon.face}`));
+      assert.ok(classes.includes(`station-extruder__paint--${polygon.material}`));
+      assert.equal(face.getAttribute("data-source-part"), polygon.sourcePart);
       assert.match(face.getAttribute("d"), /^M [-\d.]+ [-\d.]+( L [-\d.]+ [-\d.]+)+ Z$/);
     });
   });
@@ -1300,6 +1316,41 @@ test("the parts that carry recognition are all present in every view", () => {
       assert.ok(parts.has(part), `${bank.extruder.view} view has no ${part}`);
     }
   }
+});
+
+test("extruder gradients belong to their own drawing and mirror with its geometry", () => {
+  const config = literal({ layerCount: 5 });
+  const banks = layoutFor(config).banks;
+  const svg = stageFor(config);
+  const ids = new Set();
+  allWith(svg, "data-role", "extruder").forEach((extruder, index) => {
+    const body = allWith(extruder, "data-role", "extruder-body")[0];
+    assert.equal(body.getAttribute("pointer-events"), "none");
+    const definitions = body.children[0];
+    assert.equal(definitions.nodeName, "defs");
+    const asset = assets.views[banks[index].extruder.view];
+    assert.equal(definitions.children.length, asset.gradients.length);
+    const localIds = new Set();
+    definitions.children.forEach((gradient, i) => {
+      const id = gradient.getAttribute("id");
+      assert.ok(!ids.has(id), "gradient IDs collide across machines");
+      ids.add(id);
+      localIds.add(id);
+      const source = asset.gradients[i];
+      for (const axis of ["x1", "x2"]) {
+        const expected = banks[index].extruder.mirrored ? 1 - source[axis] : source[axis];
+        assert.ok(Math.abs(Number(gradient.getAttribute(axis)) - expected) < 0.001);
+      }
+      assert.deepEqual(gradient.children.map(stop => Number(stop.getAttribute("offset"))), source.stops);
+    });
+    for (const face of allWithClassName(body, "station-extruder__face")) {
+      const reference = face.getAttribute("style").match(/url\(#([^)]+)\)/);
+      if (reference) assert.ok(localIds.has(reference[1]), "paint references another machine's gradient");
+      assert.equal(face.getAttribute("data-station-target"), null);
+      assert.equal(face.getAttribute("tabindex"), null);
+    }
+    assert.ok(extruder.children.some(child => child.getAttribute("class") === "station-hit"));
+  });
 });
 
 test("the same artwork handles both sides - a mirrored machine is the same polygons reflected", () => {

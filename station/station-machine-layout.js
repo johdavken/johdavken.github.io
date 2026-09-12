@@ -202,10 +202,10 @@
   }
 
   /**
-   * Which authored view a layer's EQUIPMENT gets - mixer and extruder both,
-   * from one answer, so the two can never face different ways - from its
-   * position in the stack. Never from the layer's letter, which is what lets
-   * it be right for a layer count nobody has drawn yet.
+   * Which authored view a layer's equipment gets from its position in the
+   * stack. A single-layer train uses the angled view to show the equipment's
+   * depth; multi-layer trains turn inward by ring. Never derive a view from
+   * the layer's letter.
    *
    * The views are discrete perspective STATES, not samples of a continuous
    * angle: a layer is either on the centreline (front), one ring out
@@ -228,6 +228,9 @@
   function equipmentView(index, layerCount) {
     if (!Number.isInteger(layerCount) || layerCount < 1 || !Number.isInteger(index)) {
       return { view: "front", mirrored: false, side: "centre", key: "front", ring: 0 };
+    }
+    if (layerCount === 1 && index === 0) {
+      return { view: "angled", mirrored: false, side: "right", key: "angled-right", ring: 2 };
     }
     const centre = (layerCount - 1) / 2;
     const offset = index - centre;
@@ -412,10 +415,8 @@
     // body height, because that is where they all feed the mixer.
     const coneTop = d.vesselBottom + move.cluster.dy;
 
-    /* One view for the whole equipment train, so mixer and extruder turn
-     * together. Both are authored artwork hung from anchors: the mixer from
-     * `mixerTop`, the extruder from the mixer's discharge. Both scale WHOLE
-     * with the bank - the multipliers arrive already scaled - never stretched. */
+    /* Mixer and extruder turn together. Both are authored artwork hung from
+     * anchors and scale whole with the bank. */
     const facing = equipmentView(index, layerCount);
     const mixerScale = d.mixerScale;
     const extruderScale = d.extruderScale;
@@ -518,7 +519,7 @@
         hopperWidth,
         hoppers
       },
-      // Which way this layer's equipment faces - mixer and extruder alike.
+      // Which way this layer's mixer and extruder face.
       facing,
       mixer,
       throat,
@@ -637,7 +638,7 @@
     /* The train column is as wide as the widest VIEW of the train, not this
      * layer's, so the columns are in the same place whichever layer opens
      * and a turned machine and a front-on one share one workspace. */
-    const trainColumn = Math.max(...Object.keys(mixerAssets.views).map(view => {
+    const trainColumn = Math.max(train.width, ...Object.keys(mixerAssets.views).map(view => {
       const m = mixerAssets.views[view].bounds;
       const e = extruderAssets.views[view].bounds;
       return Math.max(m.right * focusedD.mixerScale, e.right * focusedD.extruderScale) -

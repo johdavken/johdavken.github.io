@@ -526,13 +526,27 @@
     const pathFor = placed(e);
 
     // Painter's order is the asset's order: it was depth-sorted at source.
-    const body = group(doc, "station-extruder__body", "extruder-body");
+    const body = group(doc, "station-extruder__body", "extruder-body", { "pointer-events": "none" });
+    const gradientPrefix = `station-extruder-${bank.id}`;
+    const defs = node(doc, "defs");
+    for (const definition of asset.gradients) {
+      const gradient = node(doc, "linearGradient", null, {
+        id: `${gradientPrefix}-${definition.name}`,
+        x1: e.mirrored ? 1 - definition.x1 : definition.x1, y1: definition.y1,
+        x2: e.mirrored ? 1 - definition.x2 : definition.x2, y2: definition.y2
+      });
+      definition.stops.forEach((offset, index) => gradient.appendChild(node(doc, "stop",
+        `station-extruder__stop--${definition.name}-${index}`, { offset })));
+      defs.appendChild(gradient);
+    }
+    body.appendChild(defs);
     for (const polygon of asset.polygons) {
       body.appendChild(node(doc, "path",
-        `station-extruder__face station-extruder__${polygon.part} ` +
-        `station-extruder__${polygon.part}--${polygon.face}`, {
+        extruderAssets.classesFor(polygon), {
           "data-part": polygon.part,
           "data-face": polygon.face,
+          "data-source-part": polygon.sourcePart,
+          style: extruderAssets.styleFor(polygon, gradientPrefix, e.scale),
           d: pathFor(polygon.points)
         }));
     }

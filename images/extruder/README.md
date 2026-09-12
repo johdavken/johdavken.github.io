@@ -21,3 +21,13 @@ python tools/extruder-svg/generate.py
 ```
 
 These standalone assets do not change the station UI.
+
+Station's full-detail versions are generated with `node tools/station-extruder/derive.js`
+(`--check` verifies the checked-in outputs). The conversion preserves every
+original path and vertex, including the cylinder facets, vents, fins, hardware,
+and gradient directions and stops. Station's CSS supplies the replacement
+palette; source lightness and line widths remain numeric drawing data.
+The motor, fins, fan cover, terminal box, and mount share one semantic motor
+hook and a lifted steel range so the rear assembly remains recognizable at UI size.
+The existing feed paint-order correction keeps the mixer connection visible.
+The runtime uses per-machine gradient IDs and a separate hit area.

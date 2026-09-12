@@ -19,28 +19,12 @@
  *
  * WHAT "DERIVE" MEANS
  *
- * Nothing is redrawn. Every polygon in the output is a polygon from the
- * source, or the union of a run of adjacent source polygons (the 24-facet
- * cylinder sides become one band each). The work is subtraction and
- * relabelling:
- *
- *   - parts that do not survive Station scale are dropped (KEEP below);
- *   - every kept face is labelled with its PART and its FACE (top / side /
- *     front / round / cap), read off the source's own colour table, so
- *     Station's stylesheet can colour it and the asset carries no colour;
- *   - discs and cylinder bands are thinned to the point count that still
- *     draws a circle at the size they are actually shown;
- *   - the whole view is rescaled to stage units and translated so the FEED
- *     ANCHOR - the centre of the feed flange's top face, where the mixer
- *     neck lands - is the origin;
- *   - the feed is painted after the housing it stands on (raiseFeed) - the
- *     only departure from the source's paint order.
- *
- * The face labels depend on the source generator's colour table (a face is
- * "top" because it is painted with the generator's top colour). That
- * coupling is deliberate and total: an unrecognised fill is an error, not a
- * guess, so a regenerated source with new colours fails here rather than
- * silently arriving on the stage in the wrong shade.
+ * Every original polygon, vertex, cylinder facet and gradient is retained.
+ * Source colours become numeric lightness values and material roles, which
+ * Station CSS maps to its own palette. Coordinates are normalised around the
+ * feed anchor, with one common scale for all views. The existing feed-neck
+ * paint-order correction is retained so the mixer connection stays visible.
+ * No source paths are dropped, merged or thinned.
  *
  * Node standard library only.
  */
@@ -68,52 +52,53 @@ const VIEWS = [
  * size as well as direction. */
 const MACHINE_HEIGHT = 96;
 
-/* Polygons with more points than this are thinned by half. 64-gon discs and
- * 24-facet bands are drawn at radius ~12 stage units. */
-const THIN_ABOVE = 16;
-
-/* Which source parts survive, and what they are called on the stage.
- *
- * Dropped, and why:
- *   vent-slot, vent-lip     23 slots on the lid - a grey smear at Station size
- *   motor-fin               cooling fins - same
- *   fan-cover               the motor's far end, behind the motor
- *   terminal-box            a small box on top of the motor
- *   motor-mount             a plate under the motor, hidden by the motor
- *   gearbox-cover           a small boss on the gearbox face
- *   *-bolt, flange-bolt-hole, end-panel-bolt   hardware under one pixel
- *   machined-face           a ring between flange and recess, one tone away
- *   housing-gasket, lower-fold   thin strips between base and housing
- *   foot                    the 5-unit floor plate under each leveling bolt
- *
- * The leveling bolt is what is KEPT of each leg, together with its bracket:
- * the bolt is the pillar that reaches the floor, and without it the bracket
- * hangs in the air. */
-const KEEP = {
+/* Existing Station part names stay stable. Additional authored hardware is
+ * grouped as detail, with its exact sourcePart retained on every polygon. */
+const PART_ALIASES = {
   "housing": "housing",
+  "housing-gasket": "housing",
+  "lower-fold": "housing",
+  "end-panel-bolt": "housing",
   "vent-inset": "vent",
+  "vent-slot": "vent",
+  "vent-lip": "vent",
   "panel-seam": "seam",
   "base": "base",
   "support-bracket": "foot",
   "leveling-bolt": "foot",
+  "foot": "foot",
   "gearbox": "gearbox",
+  "gearbox-cover": "gearbox",
+  "gearbox-bolt": "gearbox",
   "motor": "motor",
+  "motor-fin": "motor",
+  "fan-cover": "motor",
+  "terminal-box": "motor",
+  "motor-mount": "motor",
   "feed-neck": "feed",
   "feed-flange": "feed",
+  "feed-bolt": "feed",
   "outlet-boss": "outlet",
   "outlet-flange": "flange",
+  "machined-face": "flange",
+  "flange-bolt-hole": "flange",
   "outlet-recess": "recess",
   "outlet-bore": "bore"
 };
 
-/* Parts drawn as many facets round a cylinder in the source. Their side
- * facets are merged into one band; their end disc is kept as one cap. */
-const CYLINDERS = new Set(["motor", "outlet-boss", "outlet-flange"]);
+/* Cylinder facets retain their source shading and vertices. */
+const CYLINDERS = new Set(["motor", "outlet-boss", "outlet-flange", "fan-cover", "gearbox-cover"]);
+const FACED_PARTS = new Set([
+  "housing", "vent-inset", "panel-seam", "base", "support-bracket",
+  "leveling-bolt", "foot", "gearbox", "motor", "feed-neck", "feed-flange",
+  "outlet-boss", "outlet-flange", "outlet-recess", "outlet-bore"
+]);
 
 /* The source generator's colour table, read back as face roles. Each box is
  * painted (front, side, top); each cylinder end is a gradient. */
 const FACE_BY_FILL = {
   // structure: base, support-bracket
+  "#343a3d": "front", "#41494c": "side", "#626b6f": "top",
   "#343b3e": "front", "#424a4e": "side", "#5b6468": "top",
   // gearbox
   "#30383c": "front", "#3f474b": "side", "#61696b": "top",
@@ -164,10 +149,24 @@ function parseSource(svg, file) {
     const d = get("d");
     const part = get("data-part");
     if (!d || !part) throw new Error(`${file}: a path without data-part or d`);
-    faces.push({ order: order++, part, fill: get("fill"), width: Number(get("stroke-width")), points: parsePolygon(d, file) });
+    faces.push({ order: order++, part, fill: get("fill"), stroke: get("stroke"), width: Number(get("stroke-width")), points: parsePolygon(d, file) });
   }
   if (!faces.length) throw new Error(`${file}: no paths`);
-  return { yaw, outlet, faces };
+  const gradients = [...svg.matchAll(/<linearGradient\b([^>]*)>([\s\S]*?)<\/linearGradient>/g)].map(m => {
+    const get = (name, fallback) => {
+      const value = m[1].match(new RegExp(`\\b${name}="([^"]*)"`));
+      return value ? value[1] : fallback;
+    };
+    const name = get("id", "").replace(/^extruder-\d+-/, "");
+    if (!FACE_BY_GRADIENT[name]) throw new Error(`${file}: unknown gradient ${name}`);
+    return { name, x1: Number(get("x1", 0)), y1: Number(get("y1", 0)),
+      x2: Number(get("x2", 1)), y2: Number(get("y2", 0)),
+      stops: [...m[2].matchAll(/<stop\b([^>]*)\/>/g)].map(stop => {
+        const offset = stop[1].match(/\boffset="([^"]*)"/);
+        return offset ? Number(offset[1]) : 0;
+      }) };
+  });
+  return { yaw, outlet, faces, gradients };
 }
 
 function parsePolygon(d, file) {
@@ -193,81 +192,43 @@ function faceRole(face, file) {
 }
 
 /* ------------------------------------------------------------------------
- *   Reduction
+ *   Material mapping
  * ---------------------------------------------------------------------- */
-
-const same = (a, b) => Math.abs(a[0] - b[0]) < 0.02 && Math.abs(a[1] - b[1]) < 0.02;
-
-/* Cylinder side facets are quads [A0, A1, B1, B0]: A and B the two angular
- * edges, 0 the near rim and 1 the far rim. Consecutive facets share an edge,
- * so the run chains up by geometry alone, and its union is the near rim
- * forward and the far rim back. */
-function mergeBand(facets, part, file) {
-  if (!facets.length) return null;
-  const remaining = facets.slice();
-  let chain = [remaining.shift()];
-  let progress = true;
-  while (progress && remaining.length) {
-    progress = false;
-    for (let i = 0; i < remaining.length; i++) {
-      const f = remaining[i];
-      const head = chain[0].points;
-      const tail = chain[chain.length - 1].points;
-      if (same(tail[3], f.points[0]) && same(tail[2], f.points[1])) {
-        chain.push(f); remaining.splice(i, 1); progress = true; break;
-      }
-      if (same(f.points[3], head[0]) && same(f.points[2], head[1])) {
-        chain.unshift(f); remaining.splice(i, 1); progress = true; break;
-      }
-    }
-  }
-  if (remaining.length) throw new Error(`${file}: ${part} side facets do not form one run`);
-  const near = [chain[0].points[0], ...chain.map(f => f.points[3])];
-  const far = [chain[chain.length - 1].points[2], ...chain.slice().reverse().map(f => f.points[1])];
-  return {
-    order: Math.min(...chain.map(f => f.order)),
-    points: near.concat(far)
-  };
-}
-
-function thin(points) {
-  if (points.length <= THIN_ABOVE) return points;
-  return points.filter((_, index) => index % 2 === 0);
-}
 
 function centroid(points) {
   const sum = points.reduce((acc, p) => [acc[0] + p[0], acc[1] + p[1]], [0, 0]);
   return { x: sum[0] / points.length, y: sum[1] / points.length };
 }
 
-function reduce(source, file) {
-  const out = [];
+function lightness(hex, file) {
+  if (!/^#[0-9a-f]{6}$/i.test(hex || "")) throw new Error(`${file}: unsupported colour ${hex}`);
+  const rgb = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+  return round((rgb[0] * 0.2126 + rgb[1] * 0.7152 + rgb[2] * 0.0722) / 255 * 100);
+}
+
+function materialFor(part) {
+  if (part === "outlet-bore") return "dark";
+  if (/^(motor|fan-cover|terminal-box)/.test(part)) return "motor";
+  if (/^(housing|vent-|panel-seam|lower-fold)/.test(part)) return "housing";
+  if (/^(feed-|outlet-|machined-face|leveling-bolt)|bolt/.test(part)) return "metal";
+  return "steel";
+}
+
+function adaptSource(source, file) {
   let anchor = null;
-  const bands = new Map();
-
-  for (const face of source.faces) {
-    const part = KEEP[face.part];
-    if (!part) continue;
-    if (CYLINDERS.has(face.part) && face.points.length === 4) {
-      if (!bands.has(face.part)) bands.set(face.part, []);
-      bands.get(face.part).push(face);
-      continue;
-    }
-    const role = faceRole(face, file);
-    if (face.part === FEED_ANCHOR.part && role === FEED_ANCHOR.face) {
-      if (anchor) throw new Error(`${file}: two feed anchors`);
-      anchor = centroid(face.points);
-    }
-    out.push({ order: face.order, part, face: role, points: thin(face.points) });
-  }
-  for (const [sourcePart, facets] of bands) {
-    const band = mergeBand(facets, sourcePart, file);
-    out.push({ order: band.order, part: KEEP[sourcePart], face: "round", points: thin(band.points) });
-  }
-  if (!anchor) throw new Error(`${file}: no feed anchor (${FEED_ANCHOR.part} ${FEED_ANCHOR.face} face)`);
-
-  out.sort((a, b) => a.order - b.order);
-  return { polygons: raiseFeed(out, file), anchor };
+  const polygons = source.faces.map(face => {
+    const part = PART_ALIASES[face.part] || "detail";
+    const gradient = face.fill.match(/^url\(#extruder-\d+-([a-z]+)\)$/);
+    const role = CYLINDERS.has(face.part) && face.points.length === 4 ? "round"
+      : FACED_PARTS.has(face.part) ? faceRole(face, file) : "detail";
+    if (face.part === FEED_ANCHOR.part && role === FEED_ANCHOR.face) anchor = centroid(face.points);
+    return { order: face.order, part, sourcePart: face.part, face: role,
+      material: materialFor(face.part), gradient: gradient ? gradient[1] : null,
+      tone: gradient ? 0 : lightness(face.fill, file), edgeTone: lightness(face.stroke, file),
+      width: face.width, points: face.points };
+  });
+  if (!anchor) throw new Error(`${file}: no feed anchor`);
+  return { polygons: raiseFeed(polygons, file), anchor };
 }
 
 /* The one place the source's paint order is not kept. The generator sorts
@@ -293,9 +254,9 @@ function raiseFeed(polygons, file) {
 
 const round = value => Math.round(value * 100) / 100;
 
-function normalise(view, reduced, unit) {
-  const map = ([x, y]) => [round((x - reduced.anchor.x) * unit), round((y - reduced.anchor.y) * unit)];
-  const polygons = reduced.polygons.map(p => ({ part: p.part, face: p.face, points: p.points.map(map) }));
+function normalise(view, adapted, unit) {
+  const map = ([x, y]) => [round((x - adapted.anchor.x) * unit), round((y - adapted.anchor.y) * unit)];
+  const polygons = adapted.polygons.map(p => ({ ...p, width: round(p.width * unit), points: p.points.map(map) }));
   const all = polygons.flatMap(p => p.points);
   const bounds = {
     left: Math.min(...all.map(p => p[0])),
@@ -306,6 +267,7 @@ function normalise(view, reduced, unit) {
   const outlet = map([view.outlet.x, view.outlet.y]);
   return {
     yaw: view.yaw,
+    gradients: view.gradients,
     feed: { x: 0, y: 0 },
     outlet: { x: outlet[0], y: outlet[1] },
     bounds,
@@ -324,17 +286,18 @@ function readTokens() {
   return tokens;
 }
 
-function resolveVars(value, tokens) {
+function resolveVars(value, tokens, preservePrefix) {
   let out = value;
   for (let guard = 0; guard < 8 && /var\(/.test(out); guard++) {
     out = out.replace(/var\(\s*(--[a-z0-9-]+)\s*(?:,\s*((?:[^()]|\([^()]*\))*))?\)/g, (_, name, fallback) =>
-      tokens[name] !== undefined ? tokens[name] : (fallback !== undefined ? fallback : "none"));
+      preservePrefix && name.startsWith(preservePrefix) ? `var(${name}${fallback !== undefined ? `, ${fallback}` : ""})` :
+        tokens[name] !== undefined ? tokens[name] : (fallback !== undefined ? fallback : "none"));
   }
   return out;
 }
 
 /* Every flat rule in layer-bank.css whose selectors all start with `prefix`,
- * with the tokens resolved - the product's own styling, inlined so a
+ * with palette tokens resolved (local shading variables stay live), so a
  * standalone derivative can be opened on its own. Shared with the mixer
  * tool. */
 function stationRules(tokens, prefix) {
@@ -348,7 +311,7 @@ function stationRules(tokens, prefix) {
     const selectors = match[1].split(",").map(s => s.trim());
     if (!selectors.every(s => s.startsWith(`.${prefix}`) && /^\.[a-z0-9_-]+$/.test(s))) continue;
     const body = match[2].split(";").map(s => s.trim()).filter(Boolean)
-      .map(declaration => resolveVars(declaration, tokens)).join("; ");
+      .map(declaration => resolveVars(declaration, tokens, `--${prefix.replace(/__$/, "-")}`)).join("; ");
     rules.push(`${selectors.join(", ")} { ${body}; }`);
   }
   if (!rules.length) throw new Error(`no .${prefix} rules found in ${path.relative(ROOT, RULES_PATH)}`);
@@ -357,10 +320,18 @@ function stationRules(tokens, prefix) {
 
 const extruderRules = tokens => stationRules(tokens, "station-extruder__");
 
-/* The same three classes the renderer emits (station-machine-parts.js):
- * every face, its part, and its part-and-face. */
+/* Shared by the standalone preview and the live renderer. Only numeric
+ * source shading/line widths and instance-local gradient references are inline;
+ * every colour is supplied by Station CSS. */
 function classesFor(polygon) {
-  return `station-extruder__face station-extruder__${polygon.part} station-extruder__${polygon.part}--${polygon.face}`;
+  return `station-extruder__face station-extruder__${polygon.part} station-extruder__paint--${polygon.material}` +
+    (polygon.gradient ? " station-extruder__gradient" : "");
+}
+
+function styleFor(polygon, prefix, scale = 1) {
+  return `--station-extruder-tone: ${polygon.tone}%; --station-extruder-edge-tone: ${polygon.edgeTone}%; ` +
+    `--station-extruder-line: ${Math.round(polygon.width * scale * 10000) / 10000};` +
+    (polygon.gradient ? ` --station-extruder-gradient: url(#${prefix}-${polygon.gradient});` : "");
 }
 
 function pathData(points) {
@@ -373,7 +344,7 @@ function standaloneSvg(name, view, rules, sourceFile) {
   const viewBox = [b.left - margin, b.top - margin, b.right - b.left + margin * 2, b.bottom - b.top + margin * 2]
     .map(round).join(" ");
   const paths = view.polygons.map(p =>
-    `  <path class="${classesFor(p)}" data-part="${p.part}" data-face="${p.face}" d="${pathData(p.points)}"/>`);
+    `  <path class="${classesFor(p)}" data-part="${p.part}" data-face="${p.face}" data-source-part="${p.sourcePart}" style="${styleFor(p, `station-extruder-${name}`)}" d="${pathData(p.points)}"/>`);
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" role="img" aria-labelledby="station-extruder-${name}-title"`,
     `     data-view="${name}" data-yaw="${view.yaw}" data-feed-x="0" data-feed-y="0" data-outlet-x="${view.outlet.x}" data-outlet-y="${view.outlet.y}">`,
@@ -385,6 +356,10 @@ function standaloneSvg(name, view, rules, sourceFile) {
     `  <style>`,
     ...rules.map(rule => `    ${rule}`),
     `  </style>`,
+    `  <defs>`,
+    ...view.gradients.map(g => `    <linearGradient id="station-extruder-${name}-${g.name}" x1="${g.x1}" y1="${g.y1}" x2="${g.x2}" y2="${g.y2}">` +
+      g.stops.map((offset, index) => `<stop offset="${offset}" class="station-extruder__stop--${g.name}-${index}"/>`).join("") + `</linearGradient>`),
+    `  </defs>`,
     ...paths,
     `</svg>`,
     ``
@@ -398,12 +373,13 @@ function standaloneSvg(name, view, rules, sourceFile) {
 function moduleSource(views, unit) {
   const literal = view => [
     `      yaw: ${view.yaw},`,
+    `      gradients: ${JSON.stringify(view.gradients)},`,
     `      feed: { x: 0, y: 0 },`,
     `      outlet: { x: ${view.outlet.x}, y: ${view.outlet.y} },`,
     `      bounds: { left: ${view.bounds.left}, top: ${view.bounds.top}, right: ${view.bounds.right}, bottom: ${view.bounds.bottom} },`,
     `      polygons: [`,
     ...view.polygons.map(p =>
-      `        { part: "${p.part}", face: "${p.face}", points: [${p.points.map(q => `${q[0]},${q[1]}`).join(", ")}] },`),
+      `        { part: "${p.part}", sourcePart: "${p.sourcePart}", sourceOrder: ${p.order}, face: "${p.face}", material: "${p.material}", gradient: ${JSON.stringify(p.gradient)}, tone: ${p.tone}, edgeTone: ${p.edgeTone}, width: ${p.width}, points: [${p.points.map(q => `${q[0]},${q[1]}`).join(", ")}] },`),
     `      ]`
   ].join("\n");
 
@@ -426,8 +402,8 @@ function moduleSource(views, unit) {
  * a machine is therefore "put the origin under the neck". \`outlet\` is the
  * die-facing bore centre, for anything that later wants to connect there.
  *
- * Each polygon carries its PART and its FACE. Colour is not here: the
- * stylesheet decides it from those two labels (layer-bank.css).
+ * Every authored path and vertex is retained. Part, sourcePart, material,
+ * lightness and line width are data; all colours come from layer-bank.css.
  */
 (function (root, factory) {
   const api = factory();
@@ -440,7 +416,12 @@ function moduleSource(views, unit) {
 ${VIEWS.map(v => `    ${v.name}: {\n${literal(views[v.name])}\n    }`).join(",\n")}
   };
 
+  ${classesFor.toString()}
+
+  ${styleFor.toString()}
+
   return Object.freeze({
+    classesFor, styleFor,
     SOURCE: "images/extruder",
     // Stage units per source unit, and the height that fixed it.
     UNIT: ${round(unit * 10000) / 10000},
@@ -461,19 +442,19 @@ function derive() {
     ...v,
     parsed: parseSource(fs.readFileSync(path.join(SOURCE_DIR, v.file), "utf8"), v.file)
   }));
-  const reduced = sources.map(s => ({ ...s, reduced: reduce(s.parsed, s.file) }));
+  const adapted = sources.map(s => ({ ...s, adapted: adaptSource(s.parsed, s.file) }));
 
   // One scale, fixed by the front view.
-  const front = reduced.find(s => s.name === "front");
-  const lowest = Math.max(...front.reduced.polygons.flatMap(p => p.points.map(q => q[1])));
-  const unit = MACHINE_HEIGHT / (lowest - front.reduced.anchor.y);
+  const front = adapted.find(s => s.name === "front");
+  const lowest = Math.max(...front.adapted.polygons.flatMap(p => p.points.map(q => q[1])));
+  const unit = MACHINE_HEIGHT / (lowest - front.adapted.anchor.y);
 
   const views = {};
-  for (const s of reduced) views[s.name] = normalise(s.parsed, s.reduced, unit);
+  for (const s of adapted) views[s.name] = normalise(s.parsed, s.adapted, unit);
 
   const rules = extruderRules(readTokens());
   const files = {};
-  for (const s of reduced) {
+  for (const s of adapted) {
     files[path.join(ASSET_DIR, s.file)] = standaloneSvg(s.name, views[s.name], rules, s.file);
   }
   files[MODULE_PATH] = moduleSource(views, unit);
@@ -505,9 +486,9 @@ function main(argv) {
 }
 
 module.exports = {
-  derive, KEEP, CYLINDERS, MACHINE_HEIGHT, VIEWS, SOURCE_DIR, ASSET_DIR, MODULE_PATH,
+  derive, parseSource, PART_ALIASES, CYLINDERS, MACHINE_HEIGHT, VIEWS, SOURCE_DIR, ASSET_DIR, MODULE_PATH,
   // Shared with tools/station-mixer/derive.js.
-  parsePolygon, readTokens, resolveVars, stationRules, round, thin, centroid, pathData
+  parsePolygon, readTokens, resolveVars, stationRules, round, centroid, pathData
 };
 
 if (require.main === module) main(process.argv.slice(2));

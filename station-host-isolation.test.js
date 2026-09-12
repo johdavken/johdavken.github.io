@@ -38,7 +38,7 @@ const STATION_ELEMENTS = ["button", "input", "h1", "h2", "p", "dl", "dt", "dd", 
   "div", "span", "section", "nav", "aside", "header", "footer",
   "table", "thead", "tbody", "tfoot", "tr", "td", "th",
   "svg", "g", "path", "rect", "circle", "line", "text", "tspan", "ellipse",
-  "polygon", "polyline", "defs", "use", "clipPath", "mask", "marker", "foreignObject"];
+  "polygon", "polyline", "defs", "linearGradient", "stop", "use", "clipPath", "mask", "marker", "foreignObject"];
 
 const VIEW_GATE = '[data-station-view="station"]';
 
