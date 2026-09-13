@@ -52,8 +52,10 @@
        then the two that wear it: the Operator Handbook (its own rule, on
        the same tokens) and the Changeover Calculator. -->
   <link rel="stylesheet" href="styles/components/glass.css?v=0.1.0">
-  <link rel="stylesheet" href="styles/components/handbook.css?v=0.6.0">
+  <link rel="stylesheet" href="styles/components/handbook.css?v=0.7.0">
   <link rel="stylesheet" href="styles/components/changeover.css?v=0.2.0">
+  <!-- Sudo: the Handbook's administrator page, in the Handbook's language. -->
+  <link rel="stylesheet" href="styles/components/sudo.css?v=0.1.0">
   <!-- The machine utility rail beside the far-right cluster: Blend Edit
        and Reset Tracking, on the same glass. -->
   <link rel="stylesheet" href="styles/components/machine-rail.css?v=0.1.0">
@@ -104,6 +106,11 @@
        Nothing connects a producer on this page, so the Handbook's Recipe
        Book says so and offers nothing. -->
   <script src="../station-recipes-bridge.js?v=0.1.1" defer></script>
+  <!-- The admin bridge: administrator access and Workspace Management as
+       Station may see them, and the admin actions as a letterbox. Nothing
+       connects a producer on this page, so the Handbook's Sudo page says
+       so and offers nothing. -->
+  <script src="../station-admin-bridge.js?v=0.1.0" defer></script>
 
   <!-- Station's own layer, in the same order the application host loads it. -->
   <script src="station-line-model.js?v=0.2.0" defer></script>
@@ -137,6 +144,10 @@
   <script src="station-resin-totals.js?v=0.2.0" defer></script>
   <script src="station-theme-preview.js?v=0.2.0" defer></script>
   <script src="station-appearance.js?v=0.2.0" defer></script>
+  <!-- Sudo: its first tool, Workspace Management, before the page that
+       hosts it. -->
+  <script src="station-sudo-workspaces.js?v=0.1.0" defer></script>
+  <script src="station-sudo.js?v=0.1.0" defer></script>
   <script src="station-handbook.js?v=0.2.1" defer></script>
   <script src="station-demo-lines.js?v=0.3.2" defer></script>
   <script src="station-source.js?v=0.6.0" defer></script>
@@ -147,7 +158,7 @@
   <!-- Development-only transition review (?transition=debug). Harness only,
        like the lab: never loaded by station-host.js. -->
   <script src="station-transition-dev.js?v=0.1.0" defer></script>
-  <script src="station.js?v=0.22.1" defer></script>
+  <script src="station.js?v=0.23.0" defer></script>
 </head>
 <body>
 

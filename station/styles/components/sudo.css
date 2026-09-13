@@ -1,0 +1,673 @@
+/* Sudo (station-sudo.js) and Workspace Management
+ * (station-sudo-workspaces.js): the Operator Handbook's administrator page.
+ *
+ * ONE MORE PAGE OF THE SAME BOOK
+ *
+ * Nothing here is a surface of its own. The frame is the Handbook's
+ * (handbook.css), the controls are its five kinds - action, utility, chip,
+ * and the danger modifier added for this page - and the type is its. What
+ * this file lays out is the page's own shape:
+ *
+ *   signed out   a short sign-in, centred on the bench: a title, a line,
+ *                two fields and one primary
+ *   signed in    a strip across the top (who is signed in, Sign out; this
+ *                device and its status), then two panes - the workspaces
+ *                as a narrow list on the left, the chosen workspace on the
+ *                right - each scrolling on its own inside the bench
+ *
+ * The right pane has three faces, drawn one at a time in the same box:
+ * the workspace (its name and counts, its linked devices, and maintenance
+ * folded under them), a name entry (Create Line, Rename Line), and a
+ * confirmation (what a change will and will not do). A face replaces the
+ * pane; nothing is stacked over it and nothing is opened beside it.
+ *
+ * Devices are rows, not cards: one line each, a hairline between, the
+ * actions at the right edge. Maintenance stays folded until asked for,
+ * and its two destructive commands read as danger only when unfolded -
+ * folded, the fold is a word and nothing under it is drawn.
+ */
+
+.station-sudo {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* ---- The gate: sign-in, or why there is none ---- */
+
+/* Centred on the bench with air around it: the one page where the bench
+   is mostly clear, on purpose. */
+.station-sudo__gate {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--station-space-3);
+  width: min(30em, 100%);
+  min-height: 0;
+  margin: 0 auto;
+  padding: var(--station-space-4) var(--station-space-5);
+}
+
+.station-sudo__gate[hidden] {
+  display: none;
+}
+
+.station-sudo__gate-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--station-space-1);
+}
+
+.station-sudo__gate-title {
+  margin: 0;
+  color: var(--station-text);
+  font-size: var(--station-text-lg);
+  font-weight: 600;
+}
+
+.station-sudo__gate-copy {
+  color: var(--station-text-muted);
+  font-size: var(--station-text-sm);
+  line-height: var(--station-line-normal);
+}
+
+/* The form: the two fields and Sign in on one line when it fits, the
+   fields taking the width between them. */
+.station-sudo__form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--station-space-2);
+  margin: 0;
+}
+
+.station-sudo__form[hidden] {
+  display: none;
+}
+
+/* A field on the bench: the editable surface with a hairline, as the
+   Recipe Book's name entry (handbook.css). */
+.station-sudo__field {
+  --station-field-padding: var(--station-space-1) var(--station-space-2);
+  --station-field-radius: var(--station-radius-sm);
+  --station-field-bg: var(--station-surface-editable);
+  --station-field-border: var(--station-stroke) solid var(--station-editable);
+  --station-field-width: 100%;
+  flex: 1 1 10em;
+  min-width: 0;
+  color: var(--station-text);
+  font-size: var(--station-text-md);
+}
+
+.station-sudo__field[aria-invalid="true"] {
+  --station-field-shadow: 0 0 0 2px var(--station-danger);
+}
+
+/* ---- The one line of feedback, on the gate and on the tool ---- */
+
+.station-sudo__note,
+.station-sudo-ws__note {
+  color: var(--station-text-muted);
+  font-size: var(--station-text-xs);
+  line-height: var(--station-line-tight);
+}
+
+.station-sudo-ws__note {
+  padding: 0 var(--station-space-4);
+}
+
+.station-sudo__note[hidden],
+.station-sudo-ws__note[hidden] {
+  display: none;
+}
+
+.station-sudo__note[data-kind="error"],
+.station-sudo-ws__note[data-kind="error"] {
+  color: var(--station-danger);
+}
+
+.station-sudo__note[data-kind="ok"],
+.station-sudo-ws__note[data-kind="ok"] {
+  color: var(--station-success);
+}
+
+/* ---- The strip: administrator, Sign out, this device ---- */
+
+/* One line, a hairline under it, no taller than a control. The identity
+   leads; the tool's status for this device takes the rest and reads to
+   the right edge. */
+.station-sudo__strip {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--station-space-3);
+  min-height: 0;
+  padding: var(--station-space-1) var(--station-space-4);
+  border-bottom: var(--station-stroke) solid var(--station-handbook-rule);
+}
+
+.station-sudo__strip[hidden] {
+  display: none;
+}
+
+.station-sudo__identity {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--station-space-2);
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.station-sudo__identity-label {
+  color: var(--station-text-faint);
+  font-family: var(--station-font-annotation);
+  font-size: var(--station-text-2xs);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.station-sudo__email {
+  overflow: hidden;
+  color: var(--station-text);
+  font-size: var(--station-text-sm);
+  font-weight: 600;
+  text-overflow: ellipsis;
+}
+
+.station-sudo__slot {
+  display: flex;
+  flex: 1 1 auto;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+/* This device, in the slot: a line of words and the diagnostics glyph.
+   Not ready reads in the warning colour; the words say what to do. */
+.station-sudo-ws__device {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--station-space-1);
+  min-width: 0;
+  color: var(--station-text-muted);
+  font-size: var(--station-text-xs);
+}
+
+.station-sudo-ws__device[data-ready="false"] .station-sudo-ws__device-text {
+  color: var(--station-warning);
+}
+
+.station-sudo-ws__device-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The diagnostics, when asked for: one mono line under the strip. */
+.station-sudo-ws__diagnostics {
+  padding: var(--station-space-1) var(--station-space-4) 0;
+  color: var(--station-text-faint);
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-xs);
+  text-align: right;
+}
+
+.station-sudo-ws__diagnostics[hidden] {
+  display: none;
+}
+
+/* ---- The tools ---- */
+
+.station-sudo__tools,
+.station-sudo__tool,
+.station-sudo-ws {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.station-sudo__tools[hidden],
+.station-sudo__tool[hidden] {
+  display: none;
+}
+
+/* ---- The two panes ---- */
+
+/* The list keeps to a narrow column - a line's name and a line of counts
+   need no more - and the chosen workspace takes the rest. One hairline
+   between them; both scroll within the bench. */
+.station-sudo-ws__columns {
+  display: grid;
+  grid-template-columns: minmax(14em, 1fr) minmax(0, 3fr);
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.station-sudo-ws__list-pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  border-right: var(--station-stroke) solid var(--station-handbook-rule);
+}
+
+/* The pane's head: the eyebrow with its count, then Create Line and
+   Refresh at the right edge. A row, not a toolbar; at Station's
+   narrowest, where the column is too tight for all three, the two
+   controls take a second line under the eyebrow. */
+.station-sudo-ws__pane-head {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--station-space-2);
+  padding: var(--station-space-2) var(--station-space-3) var(--station-space-1);
+}
+
+.station-sudo-ws__pane-head .station-sudo-ws__eyebrow {
+  flex: 1 1 auto;
+}
+
+/* The two controls move as one: a line of their own when they must. */
+.station-sudo-ws__pane-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--station-space-2);
+  margin-left: auto;
+}
+
+/* A small spaced heading, as the floor UI's admin panels label their
+   parts, in the Handbook's annotation face. The count beside it is the
+   same size and one shade lighter, so "Linked devices 3" reads as one
+   phrase and not a badge. */
+.station-sudo-ws__eyebrow {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--station-space-2);
+  min-width: 0;
+  color: var(--station-text-muted);
+  font-family: var(--station-font-annotation);
+  font-size: var(--station-text-2xs);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.station-sudo-ws__count {
+  color: var(--station-text-faint);
+  font-family: var(--station-font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+
+.station-sudo-ws__list {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 var(--station-space-2) var(--station-space-3);
+}
+
+.station-sudo-ws__empty {
+  padding: var(--station-space-3) var(--station-space-2);
+  color: var(--station-text-faint);
+  font-size: var(--station-text-sm);
+  line-height: var(--station-line-normal);
+}
+
+/* A workspace row: the name, a mark when this device is on it, and one
+   line of counts under. Chosen is a wash and a bar at the left edge, as
+   the Recipe Book marks its rows. */
+.station-root .station-sudo-ws__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  column-gap: var(--station-space-2);
+  width: 100%;
+  padding: var(--station-space-1) var(--station-space-2);
+  border-radius: var(--station-radius-sm);
+  color: var(--station-text);
+  font-size: var(--station-text-sm);
+  line-height: var(--station-line-tight);
+}
+
+.station-root .station-sudo-ws__row:hover {
+  background: var(--station-handbook-control-hover);
+}
+
+.station-root .station-sudo-ws__row[aria-pressed="true"] {
+  background: var(--station-handbook-selection);
+  box-shadow: inset calc(2 * var(--station-stroke)) 0 0 var(--station-accent);
+}
+
+.station-sudo-ws__row-name {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.station-sudo-ws__row[aria-pressed="true"] .station-sudo-ws__row-name {
+  font-weight: 700;
+}
+
+/* The mark: a dot in the success colour for a line this device is on. */
+.station-sudo-ws__row-mark {
+  color: var(--station-success);
+  font-size: var(--station-text-2xs);
+}
+
+.station-sudo-ws__row-meta {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  color: var(--station-text-faint);
+  font-size: var(--station-text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- The chosen workspace ---- */
+
+.station-sudo-ws__detail-pane {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--station-space-2) var(--station-space-4) var(--station-space-3);
+}
+
+.station-sudo-ws__detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--station-space-3);
+}
+
+/* The head: name and counts on the left, the two common actions on the
+   right, on one line. */
+.station-sudo-ws__detail-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--station-space-4);
+}
+
+.station-sudo-ws__identity {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.station-sudo-ws__detail-name {
+  margin: 0;
+  overflow: hidden;
+  font-size: var(--station-text-lg);
+  font-weight: 600;
+  line-height: var(--station-line-tight);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.station-sudo-ws__detail-meta {
+  color: var(--station-text-faint);
+  font-size: var(--station-text-xs);
+}
+
+.station-sudo-ws__detail-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--station-space-2);
+}
+
+/* This device is on the line: said in a word, in the success colour,
+   where Add This Device would otherwise stand. */
+.station-sudo-ws__connected {
+  color: var(--station-success);
+  font-size: var(--station-text-xs);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ---- Linked devices ---- */
+
+.station-sudo-ws__devices,
+.station-sudo-ws__maintenance {
+  display: flex;
+  flex-direction: column;
+  border-top: var(--station-stroke) solid var(--station-handbook-rule);
+}
+
+.station-sudo-ws__section-head {
+  display: flex;
+  align-items: center;
+  gap: var(--station-space-3);
+  padding: var(--station-space-2) 0 var(--station-space-1);
+}
+
+.station-sudo-ws__section-note {
+  flex: 1 1 auto;
+  overflow: hidden;
+  color: var(--station-text-faint);
+  font-size: var(--station-text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A device: name, role, last seen, whether it is this device, and its
+   actions at the right edge - one line, a hairline between rows. Each row
+   is its own grid, so the tracks are fixed rather than sized to content:
+   a row with one action and a row with two would otherwise set their
+   columns apart, and the list would not read as columns at all. The
+   actions track is wide enough for both commands; a row with one keeps
+   it at the right edge. */
+.station-sudo-ws__device-row {
+  display: grid;
+  grid-template-columns: minmax(6em, 1fr) 5.5em minmax(0, 1fr) 6em 15em;
+  align-items: center;
+  column-gap: var(--station-space-3);
+  padding: var(--station-space-1) 0;
+  border-top: var(--station-stroke) solid var(--station-handbook-rule);
+  font-size: var(--station-text-sm);
+  line-height: var(--station-line-tight);
+}
+
+.station-sudo-ws__device-name {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.station-sudo-ws__device-role {
+  color: var(--station-text-muted);
+  font-family: var(--station-font-annotation);
+  font-size: var(--station-text-2xs);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.station-sudo-ws__device-row[data-role-of="owner"] .station-sudo-ws__device-role {
+  color: var(--station-accent);
+}
+
+.station-sudo-ws__device-seen {
+  overflow: hidden;
+  color: var(--station-text-faint);
+  font-size: var(--station-text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.station-sudo-ws__device-self {
+  color: var(--station-success);
+  font-size: var(--station-text-xs);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.station-sudo-ws__device-actions {
+  display: inline-flex;
+  justify-content: flex-end;
+  gap: var(--station-space-1);
+}
+
+/* ---- Maintenance: folded until asked for ---- */
+
+/* The fold: a word with a mark, on a full-width line, as quiet as a
+   heading. Unfolded, its items follow. */
+.station-root .station-sudo-ws__fold {
+  display: flex;
+  align-items: baseline;
+  gap: var(--station-space-2);
+  width: 100%;
+  padding: var(--station-space-2) 0 var(--station-space-1);
+  border-radius: var(--station-radius-sm);
+}
+
+.station-sudo-ws__fold:hover .station-sudo-ws__eyebrow {
+  color: var(--station-text);
+}
+
+.station-sudo-ws__fold-mark {
+  width: 1em;
+  color: var(--station-text-faint);
+  font-size: var(--station-text-xs);
+}
+
+.station-sudo-ws__fold-note {
+  color: var(--station-text-faint);
+  font-size: var(--station-text-xs);
+}
+
+.station-sudo-ws__maintenance-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--station-space-2);
+  padding: var(--station-space-1) 0 var(--station-space-2) calc(1em + var(--station-space-2));
+}
+
+.station-sudo-ws__maintenance-body[hidden] {
+  display: none;
+}
+
+/* An item: its title, its one line of caution, its command - and the
+   merge's row of targets. The delete item's title reads in the danger
+   colour so the fold's last line is the one to look twice at. */
+.station-sudo-ws__maintenance-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--station-space-1) var(--station-space-3);
+  padding: var(--station-space-1) 0;
+  border-top: var(--station-stroke) solid var(--station-handbook-rule);
+}
+
+.station-sudo-ws__maintenance-title {
+  flex: 0 0 auto;
+  margin: 0;
+  font-size: var(--station-text-sm);
+  font-weight: 600;
+}
+
+.station-sudo-ws__maintenance-item.is-danger .station-sudo-ws__maintenance-title {
+  color: var(--station-danger);
+}
+
+.station-sudo-ws__maintenance-copy {
+  flex: 1 1 16em;
+  min-width: 0;
+  color: var(--station-text-faint);
+  font-size: var(--station-text-xs);
+  line-height: var(--station-line-tight);
+}
+
+.station-sudo-ws__targets {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--station-space-1);
+  width: 100%;
+}
+
+.station-sudo-ws__targets-label,
+.station-sudo-ws__targets-none {
+  margin-right: var(--station-space-1);
+  color: var(--station-text-faint);
+  font-size: var(--station-text-xs);
+}
+
+/* ---- The pane's other faces: a name entry, a confirmation ---- */
+
+.station-sudo-ws__entry,
+.station-sudo-ws__confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--station-space-2);
+  max-width: 44em;
+  padding: var(--station-space-2) 0;
+}
+
+.station-sudo-ws__entry-title,
+.station-sudo-ws__confirm-title {
+  margin: 0;
+  font-size: var(--station-text-md);
+  font-weight: 600;
+}
+
+/* A destructive confirmation names itself in the danger colour. */
+.station-sudo-ws__confirm[data-danger="true"] .station-sudo-ws__confirm-title {
+  color: var(--station-danger);
+}
+
+.station-sudo-ws__entry-copy {
+  color: var(--station-text-muted);
+  font-size: var(--station-text-xs);
+  line-height: var(--station-line-normal);
+}
+
+.station-sudo-ws__entry-row {
+  display: flex;
+  align-items: center;
+  gap: var(--station-space-2);
+}
+
+.station-sudo-ws__name {
+  --station-field-padding: var(--station-space-1) var(--station-space-2);
+  --station-field-radius: var(--station-radius-sm);
+  --station-field-bg: var(--station-surface-editable);
+  --station-field-border: var(--station-stroke) solid var(--station-editable);
+  --station-field-width: min(24em, 100%);
+  flex: 1 1 auto;
+  color: var(--station-text);
+  font-size: var(--station-text-md);
+}
+
+.station-sudo-ws__name[aria-invalid="true"] {
+  --station-field-shadow: 0 0 0 2px var(--station-danger);
+}
+
+/* What a change will and will not do: the floor UI's own lines, as a
+   short column of small text; an empty line is a gap. */
+.station-sudo-ws__confirm-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.station-sudo-ws__confirm-line {
+  min-height: var(--station-space-2);
+  color: var(--station-text-muted);
+  font-size: var(--station-text-xs);
+  line-height: var(--station-line-normal);
+}
+
+.station-sudo-ws__confirm-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--station-space-2);
+}

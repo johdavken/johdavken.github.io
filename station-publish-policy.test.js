@@ -109,11 +109,12 @@ test("commands are on offer only for the live source: demo data pinned in the ho
 test("a publish goes through the policy, never straight to a full render", () => {
   assert.match(boot, /bridge\?\.subscribe\(\(\) => \{ onPublish\(\); \}\);/);
   assert.doesNotMatch(boot, /subscribe\(\(\) => \{ renderAll\(\); \}\)/);
-  // Two subscriptions and no more: the state bridge, into the policy, and
-  // the recipes bridge, which only tells the Handbook its book moved -
-  // never the stage.
-  assert.equal((boot.match(/\.subscribe\(/g) || []).length, 2, "a third subscription appeared");
+  // Three subscriptions and no more: the state bridge, into the policy;
+  // the recipes bridge and the admin bridge, each of which only tells the
+  // Handbook something it shows moved - never the stage.
+  assert.equal((boot.match(/\.subscribe\(/g) || []).length, 3, "a fourth subscription appeared");
   assert.match(boot, /recipes\?\.subscribe\(\(\) => \{ if \(handbookPanel\) handbookPanel\.update\(\); \}\);/);
+  assert.match(boot, /admin\?\.subscribe\(\(\) => \{ if \(handbookPanel\) handbookPanel\.update\(\); \}\);/);
 });
 
 test("the policy classifies first, patches a value change in place, and renders only a structural one", () => {

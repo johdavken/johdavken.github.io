@@ -498,6 +498,119 @@
     renderAccess(adminInstance.getState());
   }
 
+  /* ---- Station's Sudo page ----
+   *
+   * This file is where the administrator session (the shared resin-admin
+   * instance), the Workspace Management service (workspace-recovery.js on
+   * that instance's client) and RT Sync's narrow recovery bridge
+   * (PolynRtSyncBridge) already meet, so it is where Station's admin
+   * bridge (station-admin-bridge.js) is produced: the same instance, the
+   * SAME recovery service object this panel runs (ensureRecovery), the
+   * same RT Sync closures for Create Line and the reconnect after Add This
+   * Device, and the same readings of a failed create
+   * (workspaceOperationMessage). Station's Sudo page is a second view of
+   * this panel's state and procedures; it holds none of its own, and
+   * app.js - RT Sync's side - never learns the admin instance exists.
+   *
+   * The window: the instance's public state and the recovery descriptor,
+   * projected by the bridge's own allow-list. It is announced when the
+   * instance's state moves (its subscription) and when RT Sync's does
+   * (onRecoveryDescriptorChange). Every action is guarded by the
+   * instance's own isAdmin, and an answer that says admin access is gone
+   * (the service's two messages for it) re-runs the instance's
+   * initialize() - the existing session check, which signs the instance
+   * out if its session no longer verifies - so the window follows and
+   * Station returns to its sign-in without a reload.
+   *
+   * Optional and failure-tolerant, like the bridges app.js produces. */
+  const stationAdmin = root.PolynStationAdminBridge || null;
+  let stationAdminHandle = null;
+  function connectStationAdmin(){
+    if (!stationAdmin || stationAdminHandle) return;
+    function descriptor(){ return bridge()?.getRecoveryDescriptor?.() || { ready:false, userId:"", deviceId:"", deviceLabel:"" }; }
+    const NOT_READY = { ok:false, code:"not_ready", message:"RT Sync identity not ready. Wait for RT Sync to connect, then try again." };
+    const NO_ADMIN = { ok:false, code:"not_authenticated", message:"Admin sign-in is required." };
+    function answer(result){
+      if (result?.ok) return result;
+      const message = String(result?.message || "");
+      if (message === "Admin sign-in is required."){ void admin()?.initialize?.(); return { ok:false, code:"not_authenticated", message }; }
+      if (message === "Admin access is required."){ void admin()?.initialize?.(); return { ok:false, code:"access_denied", message }; }
+      if (/no longer exists/i.test(message)) return { ok:false, code:"not_found", message };
+      if (/line name between/i.test(message)) return { ok:false, code:"invalid_name", message };
+      return { ok:false, code:result?.code || "failed", message: message || "The action could not be completed." };
+    }
+    function guarded(run){
+      return async args=>{
+        if (!admin()?.getState?.().isAdmin) return NO_ADMIN;
+        const service = ensureRecovery();
+        if (!service) return { ok:false, code:"unavailable", message:"Admin connection is unavailable." };
+        return answer(await run(service, args));
+      };
+    }
+    try{
+      stationAdminHandle = stationAdmin.connect({
+        read: ()=>stationAdmin.project(admin()?.getState?.() || null, descriptor()),
+        actions: {
+          signIn: async ({ email, password })=>{
+            const instance = admin();
+            if (!instance) return { ok:false, code:"unavailable", message:"Admin sign-in is unavailable." };
+            const result = await instance.signIn(email, password);
+            return result?.ok ? { ok:true } : { ok:false, code:"access_denied", message:result?.message || "Could not sign in." };
+          },
+          signOut: async ()=>{ await admin()?.signOut?.(); return { ok:true }; },
+          listWorkspaces: guarded(async service=>{
+            const result = await service.listWorkspaces(descriptor().userId || null);
+            if (!result.ok) return result;
+            return { ok:true, workspaces: result.workspaces.map(row=>({
+              id: row.workspace_id, name: row.workspace_name,
+              memberCount: row.member_count, recipeCount: row.recipe_count, profileCount: row.receiver_weight_profile_count,
+              createdAt: row.created_at, lastActivityAt: row.last_activity_at, thisDevice: !!row.is_current_device_member
+            })) };
+          }),
+          workspaceDevices: guarded(async (service, { id })=>{
+            const result = await service.getWorkspaceDetails(id);
+            if (!result.ok) return result;
+            const self = descriptor().userId || "";
+            return { ok:true, devices: result.members.filter(row=>row.member_user_id).map(row=>({
+              memberId: row.member_user_id, label: row.member_device_label, role: row.member_role,
+              lastSeenAt: row.member_last_seen_at, thisDevice: !!self && row.member_user_id === self
+            })) };
+          }),
+          addThisDevice: guarded(async (service, { id })=>{
+            const device = descriptor();
+            if (!device.ready) return NOT_READY;
+            const result = await service.addDeviceToWorkspace({ workspaceId:id, targetUserId:device.userId, deviceId:device.deviceId, deviceLabel:device.deviceLabel });
+            if (!result.ok) return result;
+            await bridge()?.reconnectAfterRecovery?.(id);
+            return { ok:true, alreadyMember: !!result.alreadyMember, role: result.role };
+          }),
+          createLine: guarded(async (service, { name })=>{
+            if (!descriptor().ready) return NOT_READY;
+            try{
+              const workspace = await bridge()?.createWorkspaceFromSudo?.(name);
+              return workspace ? { ok:true, id: workspace.workspace_id, name: workspace.workspace_name || name } : { ok:false, code:"not_ready", message:"RT Sync is not ready." };
+            }catch(error){
+              const message = workspaceOperationMessage(error);
+              const code = /line name/i.test(message) ? "invalid_name" : (/still starting/i.test(message) ? "not_ready" : "failed");
+              return { ok:false, code, message };
+            }
+          }),
+          renameLine: guarded(async (service, { id, name })=>{
+            const result = await service.renameWorkspace({ workspaceId:id, name });
+            return result.ok ? { ok:true, id: result.workspace?.workspace_id || id, name: result.workspace?.workspace_name || name } : result;
+          }),
+          transferOwnership: guarded((service, { id, memberId })=>service.transferOwnership({ workspaceId:id, newOwnerUserId:memberId })),
+          disconnectDevice: guarded((service, { id, memberId })=>service.removeWorkspaceMember({ workspaceId:id, memberUserId:memberId })),
+          mergeWorkspace: guarded((service, { id, targetId })=>service.mergeWorkspace({ sourceWorkspaceId:id, targetWorkspaceId:targetId })),
+          deleteWorkspace: guarded((service, { id })=>service.deleteWorkspace({ workspaceId:id }))
+        }
+      });
+      admin()?.subscribe?.(()=>stationAdminHandle?.publish());
+      bridge()?.onRecoveryDescriptorChange?.(()=>stationAdminHandle?.publish());
+    }catch(error){ stationAdminHandle = null; }
+  }
+  connectStationAdmin();
+
   $("workspaceManagementButton")?.addEventListener("click", async () => {
     if (!admin()?.getState().isAdmin) return;
     $("workspaceManagementBlock").open = true;

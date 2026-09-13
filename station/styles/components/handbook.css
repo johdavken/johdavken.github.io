@@ -1,6 +1,7 @@
 /* The Operator Handbook (station-handbook.js) and its sections: the Recipe
  * Book (station-recipe-book.js), Resin Totals (station-resin-totals.js) and
- * Appearance (station-appearance.js).
+ * Appearance (station-appearance.js). Sudo (station-sudo.js) draws its
+ * controls in the language set here and lays its own pages out in sudo.css.
  *
  * WHERE IT SITS
  *
@@ -41,7 +42,8 @@
  *   .station-handbook__tab       navigation: a word with an underline
  *   .station-handbook__action    a command; `is-primary` for the one that
  *                                completes the work at hand, `is-quiet`
- *                                for one that only steps back
+ *                                for one that only steps back, `is-danger`
+ *                                for one that takes something away
  *   .station-handbook__utility   a small icon-only command (Refresh)
  *   .station-handbook__chip      a compact stateful selector (the
  *                                Changeover Calculator's presets)
@@ -343,6 +345,30 @@
   color: var(--station-text);
 }
 
+/* Danger: a command that takes something away (Disconnect, Delete) - the
+   secondary's shape in the danger colour, never filled: the colour says
+   what it is, the hairline keeps it no louder than its neighbours. Its
+   hover is a wash of the same colour, mixed here from the token so no
+   theme has to carry a second danger value. */
+.station-root .station-handbook__action.is-danger {
+  border-color: var(--station-danger);
+  color: var(--station-danger);
+}
+
+.station-root .station-handbook__action.is-danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--station-danger) 14%, transparent);
+  border-color: var(--station-danger);
+}
+
+.station-root .station-handbook__action.is-danger:active:not(:disabled) {
+  background: color-mix(in srgb, var(--station-danger) 24%, transparent);
+}
+
+.station-root .station-handbook__action.is-danger:disabled {
+  border-color: var(--station-handbook-rule);
+  color: var(--station-text-disabled);
+}
+
 .station-root .station-handbook__action:disabled {
   color: var(--station-text-disabled);
   border-color: var(--station-handbook-rule);
@@ -575,7 +601,9 @@
 .station-book__list,
 .station-book__detail,
 .station-totals__list,
-.station-appearance {
+.station-appearance,
+.station-sudo-ws__list,
+.station-sudo-ws__detail-pane {
   scrollbar-width: thin;
   scrollbar-color: var(--station-handbook-control-border) transparent;
 }

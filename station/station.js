@@ -116,6 +116,13 @@
   const themePreview = root.PolynStationThemePreview || null;
   const theme = root.PolynStationTheme || null;
   const recipes = root.PolynStationRecipesBridge || null;
+  /* Sudo (station-sudo.js): the Handbook's administrator page, and the
+   * bridge it reads and asks through - administrator access and Workspace
+   * Management as the application publishes them (station-admin-bridge.js).
+   * Optional, as the other sections are; with no producer - the standalone
+   * harness - the page says so and offers nothing. */
+  const sudo = root.PolynStationSudo || null;
+  const admin = root.PolynStationAdminBridge || null;
 
   /* The commands Station may offer for what it is SHOWING. The executor
    * writes the application's live recipe, so it is only on offer while the
@@ -1506,7 +1513,7 @@
     }
 
     /* The Operator Handbook, in the slot laid over the stage. Built once
-     * with its sections - the Recipe Book, Resin Totals, Appearance - and
+     * with its sections - the Recipe Book, Resin Totals, Appearance, Sudo - and
      * handed what they may use: the recipes bridge (read and request;
      * never the global reached for from inside). The book redraws from
      * the recipes bridge's own notifications, as the line console does
@@ -1517,10 +1524,14 @@
       if (recipeBook) handbookSections.push(recipeBook.section);
       if (resinTotalsSection) handbookSections.push(resinTotalsSection.section);
       if (appearance) handbookSections.push(appearance.section);
+      if (sudo) handbookSections.push(sudo.section);
       handbookPanel = handbook.create(doc, {
         sections: handbookSections,
         context: {
           recipes,
+          /* Sudo reads administrator access and asks for admin actions
+           * through this bridge alone; handed in, never reached for. */
+          admin,
           /* A saved recipe's layer, accented by the side it sits on for
            * the line the stage shows: the line model's own role for that
            * letter, so the book and the banks above agree about Layer A. */
@@ -1554,6 +1565,7 @@
       });
       mounts.handbook.appendChild(handbookPanel.element);
       recipes?.subscribe(() => { if (handbookPanel) handbookPanel.update(); });
+      admin?.subscribe(() => { if (handbookPanel) handbookPanel.update(); });
     }
     feedJob(current.model, current.resolved);
   }

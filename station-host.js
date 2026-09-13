@@ -69,6 +69,7 @@
     "station/styles/components/glass.css",
     "station/styles/components/handbook.css",
     "station/styles/components/changeover.css",
+    "station/styles/components/sudo.css",
     "station/styles/components/machine-rail.css",
     "station/styles/components/theme-preview.css"
   ];
@@ -107,13 +108,17 @@
     "station/station-resin-totals.js",
     "station/station-theme-preview.js",
     "station/station-appearance.js",
+    // Sudo: its first tool, Workspace Management, before the page that
+    // hosts it; both before the Handbook that hosts the page.
+    "station/station-sudo-workspaces.js",
+    "station/station-sudo.js",
     "station/station-handbook.js",
     "station/station-demo-lines.js",
     "station/station-source.js",
     "station/station.js"
   ];
 
-  const VERSION = "0.31.0";
+  const VERSION = "0.32.0";
 
   function requested() {
     try {
