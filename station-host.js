@@ -64,6 +64,7 @@
     "station/styles/components/rundown.css",
     "station/styles/components/job-controls.css",
     "station/styles/components/sync-console.css",
+    "station/styles/components/avatar.css",
     "station/styles/components/glass.css",
     "station/styles/components/handbook.css",
     "station/styles/components/changeover.css",
@@ -92,6 +93,8 @@
     "station/station-changeover.js",
     "station/station-shell.js",
     "station/station-sync-console.js",
+    // Station's picture in the header, beside the name.
+    "station/station-avatar.js",
     // The Operator Handbook: its first section before the shell that hosts it.
     "station/station-recipe-book.js",
     "station/station-resin-totals.js",
@@ -103,7 +106,7 @@
     "station/station.js"
   ];
 
-  const VERSION = "0.28.7";
+  const VERSION = "0.29.0";
 
   function requested() {
     try {

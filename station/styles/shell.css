@@ -44,6 +44,15 @@
   border-bottom: var(--station-stroke) solid var(--station-border);
 }
 
+/* The picture's slot, before the name: no width of its own, and none
+ * of the row's height - the face inside it (avatar.css) is smaller than
+ * the row, so the header stays the height its track gives it. */
+.station-header__avatar {
+  display: flex;
+  flex: none;
+  align-items: center;
+}
+
 .station-header__title {
   font-size: var(--station-text-lg);
   font-weight: 600;

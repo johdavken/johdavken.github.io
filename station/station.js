@@ -42,6 +42,10 @@
   const transition = root.PolynStationTransition;
   const focusEditor = root.PolynStationFocusEditor;
   const syncConsole = root.PolynStationSyncConsole || null;
+  /* Station's picture (station-avatar.js): the face beside the name in the
+   * header and the larger picture it opens. Identity, not a control - it
+   * is handed nothing and reaches nothing. */
+  const avatar = root.PolynStationAvatar || null;
   const bridge = root.PolynStationStateBridge || null;
   /* The connection bridge (station-connection-bridge.js): the line this
    * desktop is attached to and how the connection stands, as the
@@ -1337,6 +1341,11 @@
     if (syncConsole && mounts.connection) {
       const lineConsole = syncConsole.create(doc, { connection });
       mounts.connection.appendChild(lineConsole.element);
+    }
+
+    /* Station's picture, in the header's first slot. */
+    if (avatar && mounts.avatar) {
+      mounts.avatar.appendChild(avatar.create(doc).element);
     }
 
     /* The run-down timeline across the foot of the workspace, and the

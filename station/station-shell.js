@@ -44,7 +44,7 @@
    * them. The timeline row is not a strip of that kind: it is an
    * operational view of the job the stage shows, one modest row deep, and
    * the stage keeps everything above it. */
-  const MOUNTS = Object.freeze(["machine", "timeline", "status", "job", "connection", "handbook", "utility"]);
+  const MOUNTS = Object.freeze(["avatar", "machine", "timeline", "status", "job", "connection", "handbook", "utility"]);
 
   function element(doc, name, className, attributes) {
     const node = doc.createElement(name);
@@ -112,6 +112,12 @@
     /* The header: identity, the way back, the job's two line-wide readouts,
      * and the connection at the far end. Nothing else lives here. */
     const header = element(doc, "header", "station-header");
+    /* Station's picture, before the name: the slot station-avatar.js fills
+     * with the face and the larger picture it opens. A slot rather than
+     * the picture itself, as the job readouts and the line console are,
+     * so the shell stays structure and the open/close behaviour stays
+     * with the module that owns it. */
+    header.appendChild(element(doc, "div", "station-header__avatar", { "data-station-mount": "avatar" }));
     header.appendChild(text(doc, "h1", "station-header__title", "Station"));
     /* Beside the name, the way back to the legacy interface: a plain link,
      * quiet by design - text, not a button, no explanation - so it is
