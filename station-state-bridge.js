@@ -190,6 +190,13 @@
           : null,
         hopperNamingMode: configuration && configuration.hopperNamingMode ? String(configuration.hopperNamingMode) : "standard",
         hopperGeometry: configuration && configuration.hopperGeometry ? String(configuration.hopperGeometry) : null,
+        // Hoppers per layer, in recipe order, as the line is configured -
+        // most layers six, the core of several lines four. Null when no
+        // line is linked or the linked line does not say: the session's
+        // own layers (six slots each) are then the only fact there is.
+        hopperCounts: configuration && Array.isArray(configuration.hopperCounts)
+          ? configuration.hopperCounts.map(nullableInteger)
+          : null,
         // False means "no line is linked, so these facts are the session's own
         // rather than the plant's" - a distinction Station has to be able to
         // show rather than quietly present as authoritative.

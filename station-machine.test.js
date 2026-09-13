@@ -153,6 +153,41 @@ test("hopper count is per layer and comes from configuration, not a constant", (
   );
 });
 
+test("a layer built to six slots keeps the six-hopper bank, cluster box and blend card whatever its count, its hoppers centred in it", () => {
+  /* The line's spacing and the layer card do not change with a layer's
+   * hopper count: a four-hopper core on a six-slot line is the same bank
+   * as its six-hopper neighbours, the four hoppers standing centred. */
+  const six = layoutFor(literal({ layers: [{ id: "B", hopperCount: 6 }] }));
+  const four = layoutFor(literal({ slotCount: 6, layers: [{ id: "B", hopperCount: 4 }] }));
+  const one = layoutFor(literal({ slotCount: 6, layers: [{ id: "B", hopperCount: 1 }] }));
+  for (const layout of [four, one]) {
+    assert.equal(layout.width, six.width, "the row is as wide");
+    layout.banks.forEach((bank, index) => {
+      const same = six.banks[index];
+      assert.deepEqual([bank.x, bank.width, bank.centerX], [same.x, same.width, same.centerX], `bank ${bank.id} stands where it did`);
+      assert.deepEqual(bank.objects.cluster, same.objects.cluster, `bank ${bank.id}'s cluster box is the same`);
+      assert.deepEqual(bank.objects.train, same.objects.train, `bank ${bank.id}'s train is the same`);
+      assert.deepEqual([bank.cluster.x, bank.cluster.width], [same.cluster.x, same.cluster.width]);
+      assert.deepEqual(parts.blendCardBox(bank), parts.blendCardBox(same), `bank ${bank.id}'s card is the same box`);
+    });
+  }
+  const core = four.banks[1];
+  assert.equal(core.cluster.hoppers.length, 4);
+  const first = core.cluster.hoppers[0];
+  const last = core.cluster.hoppers[core.cluster.hoppers.length - 1];
+  const leftGap = first.x - core.cluster.x;
+  const rightGap = core.cluster.x + core.cluster.width - (last.x + last.width);
+  assert.ok(leftGap > 0 && Math.abs(leftGap - rightGap) < 1e-9, `the four hoppers are centred (${leftGap} vs ${rightGap})`);
+  assert.ok(Math.abs((first.x + last.x + last.width) / 2 - core.centerX) < 1e-9, "over the bank's own centreline");
+  const single = one.banks[1].cluster.hoppers[0];
+  assert.ok(Math.abs(single.x + single.width / 2 - one.banks[1].centerX) < 1e-9, "one hopper stands on the centreline");
+  // Fewer hoppers than slots is drawn as fewer hoppers - the empty slots are empty.
+  assert.equal(allWith(stageFor(literal({ slotCount: 6, layers: [{ id: "B", hopperCount: 4 }] })), "data-role", "hopper").length, 16);
+  // Without a slot count, a layer's bank is its hoppers' - what a literal configuration has always drawn.
+  const literalFour = layoutFor(literal({ layers: [{ id: "B", hopperCount: 4 }] }));
+  assert.ok(literalFour.banks[1].width < six.banks[1].width);
+});
+
 test("a four-hopper layer and a six-hopper layer use the same component", () => {
   /* Same builder, same sub-groups, same classes - only the count differs. If
    * these ever diverge it will be because someone special-cased a count. */

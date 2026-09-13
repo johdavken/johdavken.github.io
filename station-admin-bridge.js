@@ -113,7 +113,7 @@
    * definition line-identity.js validates and the service saves, and
    * nothing else the row carries. */
   const LINE_FIELDS = Object.freeze([
-    "lineNumber", "displayName", "aliases", "layerCount", "layerAPosition",
+    "lineNumber", "displayName", "aliases", "layerCount", "hopperCounts", "layerAPosition",
     "hopperGeometry", "hopperNamingMode", "isActive", "metadata"
   ]);
 
@@ -240,6 +240,14 @@
     }
   }
 
+  /* Hoppers per layer as a list of integers - one per layer, in recipe
+   * order. Anything that is not a whole number is dropped here; how many
+   * there must be and what range they may hold is line-identity's rule. */
+  function integerList(value) {
+    if (!Array.isArray(value)) return [];
+    return value.map(nullableInteger).filter(number => number !== null);
+  }
+
   function aliasList(value) {
     if (!Array.isArray(value)) return [];
     const out = [];
@@ -264,6 +272,7 @@
       displayName: stringOr(item.displayName, ""),
       aliases: Object.freeze(aliasList(item.aliases)),
       layerCount: nullableInteger(item.layerCount),
+      hopperCounts: Object.freeze(integerList(item.hopperCounts)),
       layerAPosition: position,
       hopperGeometry: stringOr(item.hopperGeometry, ""),
       hopperNamingMode: stringOr(item.hopperNamingMode, ""),
@@ -366,6 +375,7 @@
     lineNumber: "A line number is required.",
     displayName: "A display name is required.",
     layerCount: "A layer count is required.",
+    hopperCounts: "Hoppers per layer must be whole numbers.",
     layerAPosition: "Layer A must be Inside, Outside, or N/A.",
     hopperGeometry: "A hopper geometry is required.",
     hopperNamingMode: "A hopper naming mode is required."
@@ -393,6 +403,11 @@
     const layerCount = nullableInteger(given.layerCount);
     if (layerCount === null) return failure("bad_argument", LINE_FIELD_MESSAGES.layerCount, { field: "layerCount" });
     out.layerCount = layerCount;
+    if (given.hopperCounts !== undefined && given.hopperCounts !== null) {
+      const counts = Array.isArray(given.hopperCounts) ? given.hopperCounts.map(nullableInteger) : null;
+      if (!counts || counts.some(count => count === null)) return failure("bad_argument", LINE_FIELD_MESSAGES.hopperCounts, { field: "hopperCounts" });
+      out.hopperCounts = counts;
+    }
     const position = given.layerAPosition === null || given.layerAPosition === undefined || given.layerAPosition === "" || given.layerAPosition === "n/a"
       ? null
       : given.layerAPosition;

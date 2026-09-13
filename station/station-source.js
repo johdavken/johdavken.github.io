@@ -232,14 +232,23 @@
   }
 
   /* The live snapshot rendered as a line configuration the model understands.
-   * Layer count and per-layer hopper counts come from the snapshot's own
-   * layers, so the machine on screen is shaped by the running job rather than
-   * by anything Station decided for itself. */
+   * Layer count comes from the snapshot's own layers, so the machine on
+   * screen is shaped by the running job rather than by anything Station
+   * decided for itself. Each layer's SLOTS are the snapshot's hoppers (the
+   * application's six); the hoppers drawn in them are the line's configured
+   * count when the linked line says (four on some cores), never more than
+   * the slots that exist, and every slot when it does not. */
   function configFromSnapshot(snapshot) {
     if (!snapshot || !snapshot.line) return null;
     const layers = Array.isArray(snapshot.layers) ? snapshot.layers : [];
     const layerCount = snapshot.line.layerCount || layers.length || null;
     if (!layerCount) return null;
+    const configured = Array.isArray(snapshot.line.hopperCounts) ? snapshot.line.hopperCounts : null;
+    const hopperCountFor = (layer, index) => {
+      const slots = layer.hoppers.length;
+      const declared = configured ? Number(configured[index]) : NaN;
+      return Number.isInteger(declared) && declared > 0 ? Math.min(declared, slots) : slots;
+    };
     return {
       lineNumber: snapshot.line.lineNumber,
       displayName: snapshot.line.displayName
@@ -248,7 +257,7 @@
       layerAPosition: snapshot.line.layerAPosition,
       hopperNamingMode: snapshot.line.hopperNamingMode,
       hopperGeometry: snapshot.line.hopperGeometry,
-      layers: layers.map(layer => ({ id: layer.name, hopperCount: layer.hoppers.length }))
+      layers: layers.map((layer, index) => ({ id: layer.name, slotCount: layer.hoppers.length, hopperCount: hopperCountFor(layer, index) }))
     };
   }
 

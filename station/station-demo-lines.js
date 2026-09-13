@@ -54,7 +54,7 @@
     Object.freeze({
       id: "mixed-hoppers",
       label: "3 layers, mixed hopper counts",
-      note: "Literal config - per-layer hopper counts, so six is a default and not a rule.",
+      note: "Literal config - per-layer hopper counts in six-slot banks, as a linked line with a four-hopper core is drawn.",
       config: Object.freeze({
         lineNumber: 0,
         displayName: "Demo line (mixed hoppers)",
@@ -62,6 +62,7 @@
         layerAPosition: "outside",
         hopperNamingMode: "standard",
         hopperGeometry: "cylindrical",
+        slotCount: 6,
         layers: Object.freeze([
           Object.freeze({ id: "A", hopperCount: 4 }),
           Object.freeze({ id: "B", hopperCount: 6 }),

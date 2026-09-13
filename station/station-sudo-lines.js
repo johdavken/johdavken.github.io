@@ -24,9 +24,11 @@
  * row, never the row's position. Choosing a side on either end row sets
  * that one fact; the rows between are read, not set.
  *
- * Hoppers are six a layer, always (the payload module's rule); what a
- * line chooses is how they are named - 1 to 6, or Main and 1 to 5. The
- * editor shows the ids that follow and does not ask for them.
+ * Hoppers are six a layer unless a layer says otherwise - most lines run
+ * six on every layer, several run four on the core - so each layer row
+ * asks for its count (1 to 6; six is the ceiling, line-identity's rule).
+ * What a line chooses besides is how they are named - 1 to 6, or Main and
+ * 1 to 5 - and the editor shows the ids that follow.
  *
  * WHERE IT READS FROM, AND WHERE IT WRITES
  *
@@ -98,7 +100,13 @@
     Object.freeze({ value: "standard", label: "Standard" }),
     Object.freeze({ value: "main-plus-five", label: "Main + 1–5" })
   ]);
-  const HOPPERS_PER_LAYER = 6;
+  /* Six per layer unless the line says otherwise; the ceiling is
+   * line-identity's (MAX_HOPPERS_PER_LAYER), read from there when loaded. */
+  const DEFAULT_HOPPERS_PER_LAYER = 6;
+  function maxHoppersPerLayer() {
+    const declared = lineIdentityModule && lineIdentityModule.MAX_HOPPERS_PER_LAYER;
+    return Number.isInteger(declared) && declared > 0 ? declared : DEFAULT_HOPPERS_PER_LAYER;
+  }
 
   function element(doc, name, className, attributes) {
     const node = doc.createElement(name);
@@ -255,14 +263,32 @@
     return side === "inside" ? "outside" : "inside";
   }
 
-  /* The hopper ids a layer gets, compactly: "A1–A6", or "AM, A1–A5". */
-  function hopperRange(layerName, namingMode) {
-    if (namingMode === "main-plus-five") return `${layerName}M, ${layerName}1–${layerName}${HOPPERS_PER_LAYER - 1}`;
-    return `${layerName}1–${layerName}${HOPPERS_PER_LAYER}`;
+  /* The hopper ids a layer gets, compactly: "A1–A6", "B1–B4", or
+   * "AM, A1–A5". A count that is not a whole number yet (mid-typing)
+   * reads as a question mark rather than as a range. */
+  function hopperRange(layerName, namingMode, hopperCount) {
+    const count = hopperCount === undefined ? DEFAULT_HOPPERS_PER_LAYER : Number(hopperCount);
+    if (!Number.isInteger(count) || count < 1) return `${layerName}?`;
+    if (namingMode === "main-plus-five") {
+      if (count === 1) return `${layerName}M`;
+      return `${layerName}M, ${layerName}1${count > 2 ? `–${layerName}${count - 1}` : ""}`;
+    }
+    return count === 1 ? `${layerName}1` : `${layerName}1–${layerName}${count}`;
   }
 
-  function hopperSummary(layerCount, namingMode) {
-    return layerNames(Number(layerCount) || 0).map(name => hopperRange(name, namingMode)).join(" · ");
+  /* `hopperCounts` is the draft's - one entry per layer, as typed. */
+  function hopperSummary(layerCount, namingMode, hopperCounts) {
+    const counts = Array.isArray(hopperCounts) ? hopperCounts : [];
+    return layerNames(Number(layerCount) || 0).map((name, index) => hopperRange(name, namingMode, counts[index] === undefined ? DEFAULT_HOPPERS_PER_LAYER : counts[index])).join(" · ");
+  }
+
+  /* The draft's counts sized to a layer count: what was typed is kept,
+   * a new layer starts at six, a dropped layer's count goes with it. */
+  function hopperCountsFor(layerCount, hopperCounts) {
+    const count = Number(layerCount);
+    if (!Number.isInteger(count) || count < 1) return [];
+    const given = Array.isArray(hopperCounts) ? hopperCounts : [];
+    return Array.from({ length: count }, (_, index) => (given[index] === undefined || given[index] === null ? String(DEFAULT_HOPPERS_PER_LAYER) : String(given[index])));
   }
 
   /* The layer counts the editor offers: the three, plus the line's own
@@ -281,6 +307,7 @@
       displayName: line ? line.displayName : "",
       aliases: line ? line.aliases.join(", ") : "",
       layerCount: line ? line.layerCount : 3,
+      hopperCounts: hopperCountsFor(line ? line.layerCount : 3, line ? line.hopperCounts : null),
       layerAPosition: line ? line.layerAPosition : "outside",
       hopperGeometry: line ? line.hopperGeometry : "cylindrical",
       hopperNamingMode: line ? line.hopperNamingMode : "standard",
@@ -299,6 +326,7 @@
       displayName: String(draft.displayName || "").trim().replace(/\s+/g, " "),
       aliases: String(draft.aliases || "").split(/[\n,]+/).map(value => value.trim()).filter(Boolean),
       layerCount: Number(draft.layerCount),
+      hopperCounts: hopperCountsFor(draft.layerCount, draft.hopperCounts).map(count => (String(count).trim() === "" ? NaN : Number(count))),
       layerAPosition: Number(draft.layerCount) === 1 ? null : (draft.layerAPosition || null),
       hopperGeometry: draft.hopperGeometry,
       hopperNamingMode: draft.hopperNamingMode,
@@ -561,6 +589,13 @@
       rows.forEach((row, recipeIndex) => {
         const line = element(doc, "div", "station-sudo-lines__layer", { "data-layer": row.id, "data-layer-role": row.role || "unknown" });
         line.appendChild(text(doc, "span", "station-sudo-lines__layer-key", row.id));
+        const counts = hopperCountsFor(draft.layerCount, draft.hopperCounts);
+        const count = element(doc, "span", "station-sudo-lines__layer-count");
+        count.appendChild(textField(`hopperCount:${recipeIndex}`, counts[recipeIndex], {
+          inputmode: "numeric", pattern: "[0-9]*", "data-width": "short", "data-role": "hopper-count", "aria-label": `Layer ${row.id} hoppers`
+        }));
+        count.appendChild(text(doc, "span", "station-sudo-lines__layer-count-unit", "hoppers"));
+        line.appendChild(count);
         if (row.end && Number(draft.layerCount) > 1) {
           const side = sideOfRow(recipeIndex, Number(draft.layerCount), draft.layerAPosition);
           const chips = chipGroup(`side:${recipeIndex}`, SIDES, side, { "aria-label": `Layer ${row.id} side` });
@@ -639,7 +674,7 @@
       const layersRow = fieldRow("Layer roles", drawLayers(draft), { "data-field-row": "layers" });
       fields.appendChild(layersRow);
       fields.appendChild(fieldRow("Hopper naming", chipGroup("hopperNamingMode", NAMING_MODES, draft.hopperNamingMode, { "aria-label": "Hopper naming mode" })));
-      fields.appendChild(fieldRow("Hoppers", text(doc, "span", "station-sudo-lines__hoppers", hopperSummary(draft.layerCount, draft.hopperNamingMode), { "data-role": "hoppers" })));
+      fields.appendChild(fieldRow("Hoppers", text(doc, "span", "station-sudo-lines__hoppers", hopperSummary(draft.layerCount, draft.hopperNamingMode, draft.hopperCounts), { "data-role": "hoppers" })));
       fields.appendChild(fieldRow("Hopper geometry", chipGroup("hopperGeometry", GEOMETRIES, draft.hopperGeometry, { "aria-label": "Hopper geometry" })));
       detail.appendChild(fields);
 
@@ -781,6 +816,19 @@
         }
       } else if (field === "displayName" || field === "aliases") {
         state.draft[field] = String(value || "");
+      } else if (field.startsWith("hopperCount:")) {
+        const recipeIndex = Number(field.slice(12));
+        const counts = hopperCountsFor(state.draft.layerCount, state.draft.hopperCounts);
+        if (!Number.isInteger(recipeIndex) || recipeIndex < 0 || recipeIndex >= counts.length) return;
+        // One digit: the last one typed wins, so typing over a count that
+        // is already there needs no selecting or deleting first.
+        counts[recipeIndex] = String(value || "").replace(/[^0-9]/g, "").slice(-1);
+        state.draft.hopperCounts = counts;
+        const input = detailPane.querySelector ? detailPane.querySelector(`[data-field='${field}']`) : null;
+        if (input && input.value !== counts[recipeIndex]) input.value = counts[recipeIndex];
+        // The ids that follow, in place - the input keeps what was typed.
+        const summary = detailPane.querySelector ? detailPane.querySelector("[data-role='hoppers']") : null;
+        if (summary) summary.textContent = hopperSummary(state.draft.layerCount, state.draft.hopperNamingMode, counts);
       }
       say("");
       // A line being added stands in the list under its name as typed.
@@ -810,6 +858,7 @@
         const count = Number(value);
         if (!Number.isInteger(count) || count < 1) return;
         state.draft.layerCount = count;
+        state.draft.hopperCounts = hopperCountsFor(count, state.draft.hopperCounts);
         // A single-layer line has no side; a multilayer one needs one, and
         // the last chosen side (or Outside) stands until it is changed.
         if (count === 1) state.draft.layerAPosition = null;
@@ -845,6 +894,16 @@
         const input = detailPane.querySelector ? detailPane.querySelector(`[data-field='${field}']`) : null;
         if (!input) continue;
         if (fields[field].test(message)) input.setAttribute("aria-invalid", "true");
+        else input.removeAttribute("aria-invalid");
+      }
+      // The counts are one rule for every layer, so every count input is
+      // marked, or none - the message does not say which layer.
+      const countInputs = detailPane.querySelectorAll ? detailPane.querySelectorAll("[data-role='hopper-count']") : [];
+      const max = maxHoppersPerLayer();
+      for (const input of countInputs) {
+        const number = Number(input.value);
+        const bad = /hoppers per layer/i.test(message) && !(Number.isInteger(number) && number >= 1 && number <= max);
+        if (bad) input.setAttribute("aria-invalid", "true");
         else input.removeAttribute("aria-invalid");
       }
     }
@@ -984,6 +1043,13 @@
       if (!field) return;
       setField(field, target.value);
     });
+    // A count field offers its digit up on focus, so the next digit typed
+    // replaces it - the way a one-character field is used.
+    rootEl.addEventListener("focusin", event => {
+      const target = event && event.target;
+      if (!target || typeof target.getAttribute !== "function" || target.getAttribute("data-role") !== "hopper-count") return;
+      if (typeof target.select === "function") target.select();
+    });
     rootEl.addEventListener("keydown", event => {
       if (!event || event.key !== "Enter") return;
       const target = event.target;
@@ -1028,7 +1094,7 @@
   return Object.freeze({
     ID, TITLE, LABEL, tool, create,
     LAYER_COUNTS, SIDES, GEOMETRIES, NAMING_MODES,
-    layerRows, sideOfRow, layerAPositionFor, hopperRange, hopperSummary, layerCountChoices,
+    layerRows, sideOfRow, layerAPositionFor, hopperRange, hopperSummary, hopperCountsFor, layerCountChoices,
     rowMeta, detailMeta, draftOf, definitionOf, validateDefinition
   });
 });

@@ -198,6 +198,31 @@ test("live per-layer hopper counts drive the rendered banks", () => {
   });
   const model = lineModel.buildLineModel(resolved.modelInput);
   assert.deepEqual(model.layers.map(layer => layer.hopperCount), [4, 6, 2]);
+  // With no configured count, a layer's slots are its hoppers.
+  assert.deepEqual(model.layers.map(layer => layer.slotCount), [4, 6, 2]);
+});
+
+test("the linked line's configured hoppers per layer draw fewer hoppers in the same six-slot banks - never more hoppers than the session has slots", () => {
+  const six = () => Array.from({ length: 6 }, () => ({ pct: 0, weight: 0, resinName: "", track: false, pumpOff: false }));
+  const state = liveState({ lineType: 3, layers: [{ name: "A", layerPct: 34, hoppers: six() }, { name: "B", layerPct: 33, hoppers: six() }, { name: "C", layerPct: 33, hoppers: six() }] });
+  const configured = Object.assign({}, LIVE_CONFIG, { hopperCounts: [6, 4, 6] });
+  const resolved = source.resolveSource({ snapshot: snapshotFor(state, { lineConfiguration: configured }), demoLines, demoId: "one-layer" });
+  assert.deepEqual(resolved.modelInput.layers, [
+    { id: "A", slotCount: 6, hopperCount: 6 }, { id: "B", slotCount: 6, hopperCount: 4 }, { id: "C", slotCount: 6, hopperCount: 6 }
+  ]);
+  const model = lineModel.buildLineModel(resolved.modelInput);
+  assert.deepEqual(model.layers.map(layer => layer.hopperCount), [6, 4, 6]);
+  assert.deepEqual(model.layers.map(layer => layer.slotCount), [6, 6, 6]);
+  // The runtime state stays keyed by slot, every slot the session holds: the
+  // model decides which are drawn, the state says nothing about it.
+  assert.deepEqual(Object.keys(resolved.hopperState).filter(key => key.startsWith("B:")), ["B:0", "B:1", "B:2", "B:3", "B:4", "B:5"]);
+  // More configured than the session holds: the session's slots cap it. A
+  // count that is not a whole number, or none, reads as every slot.
+  const over = source.resolveSource({ snapshot: snapshotFor(state, { lineConfiguration: Object.assign({}, LIVE_CONFIG, { hopperCounts: [9, null, "x"] }) }), demoLines, demoId: "one-layer" });
+  assert.deepEqual(over.modelInput.layers.map(layer => layer.hopperCount), [6, 6, 6]);
+  // A configured count change is structural: the machine is rebuilt.
+  const before = source.resolveSource({ snapshot: snapshotFor(state, { lineConfiguration: LIVE_CONFIG }), demoLines, demoId: "one-layer" });
+  assert.equal(source.classifyChange(before, resolved), "structural");
 });
 
 test("the live line's orientation reverses the physical stack - as roles on each layer, never as the order the layers are listed in", () => {

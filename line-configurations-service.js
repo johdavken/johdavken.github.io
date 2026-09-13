@@ -5,7 +5,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function(identity){
   "use strict";
 
-  const FIELDS = "id,line_number,display_name,aliases,layer_count,layer_a_position,hopper_geometry,hopper_naming_mode,is_active,metadata,created_at,updated_at";
+  const FIELDS = "id,line_number,display_name,aliases,layer_count,hopper_counts,layer_a_position,hopper_geometry,hopper_naming_mode,is_active,metadata,created_at,updated_at";
   let client = null;
   let initialized = false;
 
@@ -75,7 +75,7 @@
           p_aliases:candidate.aliases, p_layer_count:candidate.layerCount,
           p_layer_a_position:candidate.layerAPosition, p_hopper_geometry:candidate.hopperGeometry,
           p_hopper_naming_mode:candidate.hopperNamingMode, p_is_active:candidate.isActive,
-          p_metadata:candidate.metadata
+          p_metadata:candidate.metadata, p_hopper_counts:candidate.hopperCounts
         });
         if (response.error) throw response.error;
         await refresh();

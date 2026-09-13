@@ -416,9 +416,18 @@
     return out;
   }
 
-  /* A bank's width from its hopper count alone - needed before it is placed. */
+  /* The slots a bank is built to: the layer's own, or its hoppers when the
+   * model gave it none. A four-hopper core on a six-slot line keeps the
+   * six-wide bank, so the machine's spacing and the layer's card are the
+   * same whatever a layer's count. */
+  function bankSlotCount(layer) {
+    const slots = Number(layer.slotCount);
+    return Number.isInteger(slots) && slots >= layer.hopperCount ? slots : layer.hopperCount;
+  }
+
+  /* A bank's width from its slot count alone - needed before it is placed. */
   function bankWidth(layer, d) {
-    const inner = bankInnerWidth(layer.hopperCount, d.hopperWidth, d.hopperGap);
+    const inner = bankInnerWidth(bankSlotCount(layer), d.hopperWidth, d.hopperGap);
     return Math.max(inner + d.bankPadding * 2, d.bankMinWidth);
   }
 
@@ -440,7 +449,10 @@
     const scale = d.bankScale === undefined ? 1 : d.bankScale;
     const hopperWidth = d.hopperWidth;
     const hopperGap = d.hopperGap;
-    const inner = bankInnerWidth(layer.hopperCount, hopperWidth, hopperGap);
+    // The cluster's column is the bank's slots; the hoppers, fewer or as
+    // many, stand centred in it.
+    const inner = bankInnerWidth(bankSlotCount(layer), hopperWidth, hopperGap);
+    const hoppersInner = bankInnerWidth(layer.hopperCount, hopperWidth, hopperGap);
     const width = bankWidth(layer, d);
     const move = Object.assign({ cluster: { dx: 0, dy: 0 }, train: { dx: 0, dy: 0 } }, composition || {});
     const bankCenterX = x + width / 2;
@@ -451,6 +463,7 @@
     const headerY = d.headerTop + move.cluster.dy;
     const mixerTop = d.mixerTop + move.train.dy;
     const clusterX = centerX - inner / 2;
+    const hoppersX = centerX - hoppersInner / 2;
     // The discharge line: fixed for every hopper on the bank, whatever its
     // body height, because that is where they all feed the mixer.
     const coneTop = d.vesselBottom + move.cluster.dy;
@@ -511,7 +524,7 @@
         id: hopper.id,
         index: hopper.index,
         positionLabel: hopper.positionLabel,
-        x: clusterX + hopperIndex * (hopperWidth + hopperGap),
+        x: hoppersX + hopperIndex * (hopperWidth + hopperGap),
         width: hopperWidth,
         // Centre-to-centre distance to the next hopper: what a control that
         // has to be wider than its hopper is sized against.

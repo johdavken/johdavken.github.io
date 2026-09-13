@@ -56,7 +56,7 @@
   <link rel="stylesheet" href="styles/components/weights.css?v=0.2.0">
   <link rel="stylesheet" href="styles/components/changeover.css?v=0.2.0">
   <!-- Sudo: the Handbook's administrator page, in the Handbook's language. -->
-  <link rel="stylesheet" href="styles/components/sudo.css?v=0.1.1">
+  <link rel="stylesheet" href="styles/components/sudo.css?v=0.1.3">
   <!-- The machine utility rail beside the far-right cluster: Blend Edit
        and Reset Tracking, on the same glass. -->
   <link rel="stylesheet" href="styles/components/weight-cards.css?v=0.1.0">
@@ -69,7 +69,7 @@
        Station resolves layer count, Layer A's physical side, hopper naming
        and layer names through these rather than restating them. -->
   <script src="../workspace-configuration-payloads.js?v=0.20.1" defer></script>
-  <script src="../line-identity.js?v=0.5.0" defer></script>
+  <script src="../line-identity.js?v=0.6.0" defer></script>
   <script src="../hookup-sources.js?v=0.1.0" defer></script>
   <!-- The application's own changeover reading (parseChangeoverDate,
        isChangeoverStale): the run-down timeline resolves the job's clock
@@ -98,7 +98,7 @@
   <!-- The read-only state bridge. Loaded so this page runs the same code path
        the application host does; nothing connects to it here, so Station falls
        back to the demo configurations. That is the fallback working. -->
-  <script src="../station-state-bridge.js?v=0.6.0" defer></script>
+  <script src="../station-state-bridge.js?v=0.7.0" defer></script>
   <!-- The line connection bridge: the application's RT Sync state and
        actions as Station may see them. Nothing connects a producer on this
        page, so the line console stays hidden here. -->
@@ -117,15 +117,15 @@
        Station may see them, and the admin actions as a letterbox. Nothing
        connects a producer on this page, so the Handbook's Sudo page says
        so and offers nothing. -->
-  <script src="../station-admin-bridge.js?v=0.3.0" defer></script>
+  <script src="../station-admin-bridge.js?v=0.4.0" defer></script>
 
   <!-- Station's own layer, in the same order the application host loads it. -->
-  <script src="station-line-model.js?v=0.2.0" defer></script>
+  <script src="station-line-model.js?v=0.3.0" defer></script>
   <!-- Generated from images/extruder/ and images/mixer/ by the derive tools
        in tools/station-extruder/ and tools/station-mixer/. -->
   <script src="station-extruder-assets.js?v=0.3.0" defer></script>
   <script src="station-mixer-assets.js?v=0.2.0" defer></script>
-  <script src="station-machine-layout.js?v=0.16.0" defer></script>
+  <script src="station-machine-layout.js?v=0.17.0" defer></script>
   <script src="station-machine-parts.js?v=0.27.0" defer></script>
   <script src="station-render.js?v=0.11.0" defer></script>
   <script src="station-transition.js?v=0.1.0" defer></script>
@@ -167,12 +167,12 @@
   <!-- Sudo: its tools, Workspace Management, Line Configuration and Resin
        Database, before the page that hosts them. -->
   <script src="station-sudo-workspaces.js?v=0.1.1" defer></script>
-  <script src="station-sudo-lines.js?v=0.1.0" defer></script>
+  <script src="station-sudo-lines.js?v=0.2.1" defer></script>
   <script src="station-sudo-resins.js?v=0.1.0" defer></script>
   <script src="station-sudo.js?v=0.2.2" defer></script>
   <script src="station-handbook.js?v=0.3.0" defer></script>
-  <script src="station-demo-lines.js?v=0.3.3" defer></script>
-  <script src="station-source.js?v=0.9.0" defer></script>
+  <script src="station-demo-lines.js?v=0.3.4" defer></script>
+  <script src="station-source.js?v=0.10.0" defer></script>
   <!-- Development-only extruder study (?lab=extruder). Loaded by this harness
        and deliberately NOT by station-host.js, so the real application cannot
        reach it. Delete this tag and the file to remove it. -->
