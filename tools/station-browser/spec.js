@@ -441,12 +441,20 @@ async function run(browserName) {
         const p1 = new DOMPoint(Number(flow.getAttribute("x")), Number(flow.getAttribute("y"))).matrixTransform(m);
         const p2 = new DOMPoint(Number(flow.getAttribute("x")) + Number(flow.getAttribute("width")), Number(flow.getAttribute("y")) + Number(flow.getAttribute("height"))).matrixTransform(m);
         const box = { x: p1.x, y: p1.y, right: p2.x, bottom: p2.y };
-        // The readout, the receiver, the ports and the fill valve are never
-        // under the flow; the hose is below the vessel, so it cannot be.
-        for (const part of ["id", "pct", "resin", "receiver-cone", "port", "fill-valve", "hose-end"]) {
+        // The readout and the receiver are never under the flow; the hose is
+        // below the vessel, so it cannot be.
+        for (const part of ["id", "pct", "resin", "receiver-cone", "hose-end"]) {
           const el = h.querySelector(`.station-hopper__${part}`); if (!el) continue;
           const b = el.getBoundingClientRect();
           if (b.width && b.height && !(b.right <= box.x || b.x >= box.right || b.bottom <= box.y || b.y >= box.bottom)) obscured.push(`${h.getAttribute("data-hopper")}:${part}`);
+        }
+        // The hardware - ports, fill valve, clamps, bands - stands over the
+        // flow, which spans the vessel's interior: painted after it, so the
+        // chevrons pass behind and cover none of it.
+        const details = h.querySelector("[data-role='hopper-details']");
+        if (!details || !(flow.compareDocumentPosition(details) & Node.DOCUMENT_POSITION_FOLLOWING)) obscured.push(`${h.getAttribute("data-hopper")}:hardware-under-flow`);
+        for (const part of ["port", "fill-valve", "clamp", "band"]) {
+          if (!details || !details.querySelector(`.station-hopper__${part}`)) obscured.push(`${h.getAttribute("data-hopper")}:${part}`);
         }
       }
       return {

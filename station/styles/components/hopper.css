@@ -246,9 +246,8 @@
   stroke-width: var(--station-line-medium);
 }
 
-/* Tracked is said by the vessel's wash and the run-down flow (below),
-   not by the outline: the outline stays free for hover, selection and
-   warnings. */
+/* Tracked is said by the run-down flow (below), not by the outline: the
+   outline stays free for hover, selection and warnings. */
 
 .station-hopper.is-changed .station-hopper__shell,
 .station-hopper.is-attention .station-hopper__shell,
@@ -398,27 +397,29 @@
 
 /* ---- Tracking: the run-down flow ----
    Drawn only while the hopper is tracked (station-machine-parts.js): a
-   small group of downward chevrons travelling down the vessel, in the
+   column of large downward chevrons travelling down the vessel, in the
    theme's flow colour (--station-rundown-flow, themes/*.css - each
    theme's own reading of "material moving", never a fixed green), under
-   the clamp bands and beside the ports, over nothing that is read. The
-   group moves down by one period and repeats - the ONE animation on a
+   the clamp bands and the ports, over nothing that is read. The group
+   moves down by one spacing and repeats - the ONE animation on a
    hopper: slow, linear, continuous, no pulse, no glow, no bounce. The
    period and the duration are the group's own properties, set by the
    drawing in the hopper's units, so every vessel loops seamlessly at its
    own height and the chevrons travel at the one speed on all of them.
 
    THREE STATES on the vessel. Untracked: plain steel, no flow. Tracked:
-   a faint wash of the flow colour on the vessel (read from across the
-   Station) and the chevrons (read up close) - the wash is a quarter,
-   so the vessel is tinted, not coloured. Overdue (below): a strong wash of
-   the danger colour, a danger outline, and the chevrons in danger too. */
+   the chevrons, at full strength - they ARE the state, read across the
+   Station and up close alike - on a vessel that stays its own steel but
+   for the faintest tint of the flow colour, so a tracked hopper is found
+   by its flow and not by a coloured body. Overdue (below): a strong wash
+   of the danger colour, a danger outline, and the chevrons in danger too,
+   so late always stands over on-time. */
 .station-hopper__rundown {
   overflow: hidden;
 }
 
 .station-hopper.is-tracking .station-hopper__shell {
-  fill: color-mix(in srgb, var(--station-rundown-flow, var(--station-tracking)) 24%, var(--station-hopper-metal));
+  fill: color-mix(in srgb, var(--station-rundown-flow, var(--station-tracking)) 8%, var(--station-hopper-metal));
 }
 
 .station-hopper__rundown-chevrons {
@@ -426,7 +427,7 @@
   stroke: var(--station-rundown-flow, var(--station-tracking));
   stroke-linecap: round;
   stroke-linejoin: round;
-  opacity: 0.7;
+  opacity: 0.95;
 }
 
 .station-hopper__rundown-flow {
@@ -439,8 +440,9 @@
   to { transform: translateY(var(--station-rundown-period, 9px)); }
 }
 
-/* Under reduced motion the group stands: tracked is still said by the
-   wash and the chevrons, only the travel is gone. */
+/* Under reduced motion the group stands: the column tiles the vessel at
+   phase zero as at every other, so tracked is still said by the
+   chevrons, only the travel is gone. */
 @media (prefers-reduced-motion: reduce) {
   .station-hopper__rundown-flow {
     animation: none;

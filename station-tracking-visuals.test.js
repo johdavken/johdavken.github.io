@@ -1,6 +1,6 @@
 "use strict";
 
-/* The hopper's tracking visuals: the run-down flow (a column of downward
+/* The hopper's tracking visuals: the run-down flow (a column of large downward
  * chevrons inside a tracked hopper's vessel, moved by CSS) and the
  * overdue wash (the pump-off point passed with the pump still running).
  *
@@ -175,7 +175,7 @@ function drawHopper(runtime) {
   return { g: parts.hopper(doc, geometry, runtime, { scale: bank.scale }), geometry };
 }
 
-test("an untracked hopper draws no flow; a tracked one draws a group of three downward chevrons, clipped by its own box, near the vessel's centreline and over nothing that is read", () => {
+test("an untracked hopper draws no flow; a tracked one draws a column of large, bowed downward chevrons spanning the vessel's interior, tiled so every phase shows the column, clipped by its own box, under the hardware and over nothing that is read", () => {
   const plain = drawHopper({ track: false, pumpOff: false, resinName: "HX204", pct: 60, assigned: true });
   assert.equal(plain.g.querySelectorAll(".station-hopper__rundown").length, 0);
   assert.equal(plain.g.querySelectorAll("[data-role='hopper-rundown']").length, 0);
@@ -192,59 +192,111 @@ test("an untracked hopper draws no flow; a tracked one draws a group of three do
   assert.ok(flow && flow.getAttribute("data-role") === "hopper-rundown");
   const chevrons = flow.querySelector(".station-hopper__rundown-chevrons");
   assert.ok(chevrons);
-  // Downward chevrons: each segment's middle point is below its ends.
-  const segments = [...chevrons.getAttribute("d").matchAll(/M ([\d.-]+) ([\d.-]+) L ([\d.-]+) ([\d.-]+) L ([\d.-]+) ([\d.-]+)/g)];
-  assert.equal(segments.length, 3, "one group of three: all the geometry there is");
-  for (const s of segments) {
-    const [x1, y1, x2, y2, x3, y3] = s.slice(1).map(Number);
-    assert.ok(y2 > y1 && y2 > y3, "the point is below the ends");
-    assert.ok(x1 < x2 && x2 < x3);
-    assert.equal(y1, y3);
-  }
-  // One group of three, generously spaced, drawn just above the box - its
-  // last chevron's point at the top edge - and carried one period, the box
-  // and the group, so it leaves at the bottom as it re-enters at the top.
-  // Nothing stands further outside the box than the group's own height,
-  // so a client rect of the hopper is the same at every phase.
   const geometry = tracked.geometry;
-  const [, periodText, secondsText] = /^--station-rundown-period: ([\d.]+)px; --station-rundown-duration: ([\d.]+)s;$/.exec(box.getAttribute("style"));
-  const period = Number(periodText), seconds = Number(secondsText);
+  const w = geometry.width;
   const bx = Number(box.getAttribute("x")), by = Number(box.getAttribute("y"));
   const bw = Number(box.getAttribute("width")), bh = Number(box.getAttribute("height"));
-  const chevronHeight = Number(segments[0][4]) - Number(segments[0][2]);
-  const spacing = Number(segments[1][2]) - Number(segments[0][2]);
-  assert.ok(Math.abs(Number(segments[2][2]) - Number(segments[1][2]) - spacing) < 0.02, "three chevrons evenly spaced");
-  assert.ok(spacing > 3 * chevronHeight, "spaced generously: more than three chevron heights apart");
-  const groupHeight = 2 * spacing + chevronHeight;
-  assert.ok(Math.abs(Number(segments[2][4]) - 0) < 0.02, "the group ends at the box's top edge");
-  assert.ok(Math.abs(Number(segments[0][2]) + groupHeight) < 0.02, "and starts its own height above it");
-  assert.ok(Math.abs(period - (bh + groupHeight)) < 0.05, "the period is the box and the group: it leaves at the bottom as it re-enters at the top");
-  assert.ok(by - groupHeight >= geometry.receiverTop, "at the loop's start the group stands under the receiver, inside the hopper's own extent");
-  assert.ok(by + bh + groupHeight <= geometry.spoutTop + geometry.spoutHeight, "at its end, over the hose, inside it too");
+  // Each chevron is two bowed arms - a quadratic from each end down to the
+  // shared point - so it lies on the drum rather than flat on the screen:
+  // the control point sits below the arm's midpoint (steep off the edge,
+  // flatter into the point), and the point is below both ends.
+  const arm = /M ([\d.-]+) ([\d.-]+) Q ([\d.-]+) ([\d.-]+) ([\d.-]+) ([\d.-]+)/g;
+  const arms = [...chevrons.getAttribute("d").matchAll(arm)].map(m => m.slice(1).map(Number));
+  assert.ok(arms.length >= 4 && arms.length % 2 === 0, "whole chevrons, two arms each");
+  const rows = [];
+  for (let i = 0; i < arms.length; i += 2) {
+    const [lx, ly, lcx, lcy, lpx, lpy] = arms[i];
+    const [rx, ry, rcx, rcy, rpx, rpy] = arms[i + 1];
+    assert.equal(ly, ry, "the two ends are level");
+    assert.ok(lpx === rpx && lpy === rpy, "the arms meet at one point");
+    assert.ok(lpy > ly, "the point is below the ends: a DOWNWARD chevron");
+    assert.ok(lx < lpx && lpx < rx, "left end, point, right end");
+    assert.ok(Math.abs(lpx - (lx + rx) / 2) < 0.02, "the point is on the centreline");
+    assert.ok(lcy > ly + (lpy - ly) / 2 && rcy > ry + (rpy - ry) / 2, "the arms bow: steep off the edges, flatter into the point");
+    assert.ok(lcx > lx && lcx < lpx && rcx < rx && rcx > lpx, "each control lies between its end and the point");
+    rows.push({ y: ly, height: lpy - ly, left: lx, right: rx });
+  }
+  // Large and few: each chevron spans the interior between the clamps (its
+  // round caps inside the box), stands about a third of the width tall,
+  // and the next is more than a width below it.
+  const strokeWidth = Number(chevrons.getAttribute("stroke-width"));
+  assert.ok(strokeWidth >= w * 0.07 && strokeWidth <= w * 0.1, `a heavy stroke (${(strokeWidth / w).toFixed(3)}w)`);
+  const first = rows[0];
+  assert.ok(first.right - first.left >= w * 0.55, `wide: ${((first.right - first.left) / w).toFixed(2)}w from end to end`);
+  assert.ok(first.left >= strokeWidth / 2 - 0.02 && first.right <= bw - strokeWidth / 2 + 0.02, "the caps stay inside the box");
+  assert.ok(first.height >= w * 0.28 && first.height <= w * 0.4, `tall: ${(first.height / w).toFixed(2)}w`);
+  const spacing = rows[1].y - rows[0].y;
+  assert.ok(spacing > w, `widely spaced: ${(spacing / w).toFixed(2)}w apart`);
+  assert.ok(spacing > 3 * first.height, "more than three chevron heights apart: flow, not texture");
+  for (let i = 1; i < rows.length; i += 1) {
+    assert.ok(Math.abs(rows[i].y - rows[i - 1].y - spacing) < 0.02, "evenly spaced");
+    assert.ok(Math.abs(rows[i].height - first.height) < 0.02);
+    assert.equal(rows[i].left, first.left);
+    assert.equal(rows[i].right, first.right);
+  }
+  // Tiled: one chevron above the box's top edge, then one every spacing
+  // down to its bottom, and the period is the spacing - so the column is
+  // seamless at every phase, and at phase zero (reduced motion: the group
+  // stands where it was drawn) the vessel shows its full column.
+  const [, periodText, secondsText] = /^--station-rundown-period: ([\d.]+)px; --station-rundown-duration: ([\d.]+)s;$/.exec(box.getAttribute("style"));
+  const period = Number(periodText), seconds = Number(secondsText);
+  assert.ok(Math.abs(period - spacing) < 0.02, "the period is the spacing: the chevron leaving at the bottom is the one arriving at the top");
+  assert.ok(Math.abs(rows[0].y + spacing) < 0.02, "the first chevron stands one spacing above the box");
+  assert.ok(rows[rows.length - 1].y < bh && rows[rows.length - 1].y + spacing >= bh, "the column runs to the box's bottom and no further");
+  const visibleAtRest = rows.filter(r => r.y + r.height > 0 && r.y < bh).length;
+  assert.ok(visibleAtRest >= 2, `at phase zero the column is there (${visibleAtRest} chevrons in the box)`);
+  // Nothing stands further outside the box than a spacing above (phase
+  // zero) or a spacing and a chevron below (the loop's end): under the
+  // receiver, over the hose, inside the hopper's own extent.
+  assert.ok(by - spacing >= geometry.receiverTop, "at the loop's start the column stands under the receiver, inside the hopper's own extent");
+  assert.ok(by + bh + spacing + first.height <= geometry.spoutTop + geometry.spoutHeight, "at its end, over the hose, inside it too");
   // One speed on every vessel: the duration follows the period, an eighth
   // of the vessel's width a second (the width is the drawing's unit).
-  assert.ok(Math.abs(seconds - period / (geometry.width * 0.125)) < 0.05, "the duration follows the period");
-  // Inside the vessel: the box within the shell's rectangle, near its
-  // centreline, clear of the fill valve on the right (whose left edge is
-  // at 0.66 of the width), above the discharge and the caption.
+  assert.ok(Math.abs(seconds - period / (w * 0.125)) < 0.05, "the duration follows the period");
+  // Inside the vessel: the box spans the interior between the clamps
+  // (0.08-0.18w and 0.82-0.92w) and is centred on the vessel; between the
+  // top and bottom rims, above the discharge and the caption.
   const centre = bx + bw / 2 - geometry.x;
-  assert.ok(centre > geometry.width * 0.4 && centre < geometry.width * 0.5, `the lane is near the centreline (${(centre / geometry.width).toFixed(2)}w)`);
-  assert.ok(bx >= geometry.x + geometry.width * 0.2 && bx + bw <= geometry.x + geometry.width * 0.65, "clear of the clamps and of the fill valve on the vessel's right");
+  assert.ok(Math.abs(centre - w / 2) < 0.02, `the lane is centred on the vessel (${(centre / w).toFixed(2)}w)`);
+  assert.ok(bw >= w * 0.6, `and spans the interior (${(bw / w).toFixed(2)}w)`);
+  assert.ok(bx >= geometry.x + w * 0.1 && bx + bw <= geometry.x + w * 0.9, "inside the vessel's walls");
   assert.ok(by >= geometry.vesselTop && by + bh <= geometry.coneTop, "within the vessel, above the discharge");
   assert.ok(by + bh < geometry.captionTop, "above the caption");
   // The readout is untouched: id, percentage, resin as before.
   assert.equal(tracked.g.querySelector(".station-hopper__id").textContent, plain.g.querySelector(".station-hopper__id").textContent);
   assert.equal(tracked.g.querySelector(".station-hopper__pct").textContent, "60%");
-  // Drawn under the hardware (bands over the flow), after the material.
+  // Drawn under the hardware (bands, clamps, ports and the fill valve go
+  // over the flow, so it passes behind them and covers none of them),
+  // after the material.
   const order = tracked.g.querySelector(".station-hopper__drawing").children.map(c => c.getAttribute("data-role"));
   assert.ok(order.indexOf("hopper-rundown") < 0, "the flow box is the svg, not the group");
   const svgIndex = tracked.g.querySelector(".station-hopper__drawing").children.findIndex(c => c === box);
   assert.ok(svgIndex > order.indexOf("hopper-material") && svgIndex < order.indexOf("hopper-details"));
+  const details = tracked.g.querySelector("[data-role='hopper-details']");
+  assert.ok(details.querySelector(".station-hopper__port") && details.querySelector(".station-hopper__fill-valve") && details.querySelector(".station-hopper__clamp") && details.querySelector(".station-hopper__band"),
+    "the ports, the fill valve, the clamps and the bands are the hardware painted over the flow");
   // The hopper's title still says tracked; the state key still carries it.
   assert.match(tracked.g.querySelector("title").textContent, /· tracked/);
   assert.match(tracked.g.getAttribute("data-state"), /^t\|/);
   // The drawing is inert to the pointer as a whole (hopper.css covers descendants).
   assert.equal(tracked.g.querySelector(".station-hopper__drawing").getAttribute("pointer-events"), "none");
+});
+
+test("a short vessel still carries a column: the tiling follows the box's own height", () => {
+  const config = { layerCount: 1, layerAPosition: null, hopperCount: 1, hopperNamingMode: "standard", layers: [{ name: "A", layerPct: 100, hoppers: [{ index: 0 }] }] };
+  const model = lineModel.buildLineModel(config);
+  const runtime = { track: true, pumpOff: false, resinName: "EVA3", pct: 10, assigned: true, usableHeight: 12 };
+  const layout = layoutModule.computeLayout(model, { hopperState: { "A:0": runtime } });
+  const bank = layout.banks[0];
+  const geometry = Object.assign({ layer: bank.id }, bank.cluster.hoppers[0]);
+  const g = parts.hopper(fakeDocument(), geometry, runtime, { scale: bank.scale });
+  const box = g.querySelector(".station-hopper__rundown");
+  assert.ok(box);
+  const bh = Number(box.getAttribute("height"));
+  const ys = [...box.querySelector("path").getAttribute("d").matchAll(/M [\d.-]+ ([\d.-]+) Q/g)].map(m => Number(m[1])).filter((_, i) => i % 2 === 0);
+  const spacing = ys[1] - ys[0];
+  assert.ok(ys[0] < 0 && ys[ys.length - 1] < bh && ys[ys.length - 1] + spacing >= bh, `tiled to the box (${ys.join(", ")} in ${bh})`);
+  assert.ok(ys.some(y => y >= 0 && y < bh), "at least one chevron stands in the box at phase zero");
 });
 
 test("drawing a tracked hopper neither mutates the runtime it is handed nor writes anything but the drawing", () => {
@@ -387,16 +439,20 @@ test("the flow and the wash are styled from tokens, the outline's claimants stan
   const raw = read("station/styles/components/hopper.css");
   const css = raw.replace(/\/\*[\s\S]*?\*\//g, "");
   const rule = name => { const at = css.indexOf(`${name} {`); assert.ok(at >= 0, `${name} has no rule`); return css.slice(at, css.indexOf("}", at)); };
-  // The flow: the theme's flow colour, with the tracking colour behind it.
+  // The flow: the theme's flow colour, with the tracking colour behind it,
+  // at full strength - the chevrons ARE the tracked state.
   assert.match(rule(".station-hopper__rundown-chevrons"), /stroke: var\(--station-rundown-flow, var\(--station-tracking\)\);/);
-  assert.match(rule(".station-hopper__rundown-chevrons"), /opacity: 0\.\d+;/);
+  const flowOpacity = Number(/opacity: (0\.\d+|1);/.exec(rule(".station-hopper__rundown-chevrons"))[1]);
+  assert.ok(flowOpacity >= 0.9, `the chevrons are at full strength (${flowOpacity})`);
   assert.match(rule(".station-hopper__rundown"), /overflow: hidden;/);
   assert.match(rule(".station-hopper__rundown-flow"), /animation: station-rundown-flow var\(--station-rundown-duration, 2\.4s\) linear infinite;/);
-  // Tracked: a light wash of the flow colour on the vessel, a quarter - the fill only, the outline stays free.
+  // Tracked is chevron-led, not fill-led: the vessel keeps its own steel
+  // but for the faintest tint of the flow colour - the fill only, the
+  // outline stays free.
   const trackedShell = rule(".station-hopper.is-tracking .station-hopper__shell");
   assert.match(trackedShell, /\{\s*fill: color-mix\(in srgb, var\(--station-rundown-flow, var\(--station-tracking\)\) (\d+)%, var\(--station-hopper-metal\)\);\s*$/);
   const trackedShare = Number(/\) (\d+)%, var\(--station-hopper-metal\)/.exec(trackedShell)[1]);
-  assert.ok(trackedShare >= 20 && trackedShare <= 28, `a light wash (${trackedShare}%)`);
+  assert.ok(trackedShare >= 4 && trackedShare <= 12, `a faint tint, not a wash (${trackedShare}%)`);
   assert.doesNotMatch(trackedShell, /stroke/);
   assert.match(css, /@keyframes station-rundown-flow \{\s*from \{ transform: translateY\(0\); \}\s*to \{ transform: translateY\(var\(--station-rundown-period, \d+px\)\); \}/);
   // Slow, linear, continuous: no pulse, no glow, no bounce, no flash.
@@ -415,11 +471,13 @@ test("the flow and the wash are styled from tokens, the outline's claimants stan
   assert.match(overdue, /fill: color-mix\(in srgb, var\(--station-danger\) \d+%, var\(--station-hopper-metal\)\);/);
   const share = Number(/var\(--station-danger\) (\d+)%/.exec(overdue)[1]);
   assert.ok(share >= 25 && share <= 35, `a controlled wash (${share}%)`);
-  assert.ok(share > trackedShare, "stronger than the tracked wash, and in the danger family rather than the flow's");
+  assert.ok(share >= trackedShare * 2, "clearly stronger than the tracked tint, and in the danger family rather than the flow's");
   assert.match(overdue, /stroke: var\(--station-danger\);/);
   assert.match(overdue, /stroke-width: var\(--station-line-medium\);/);
   assert.doesNotMatch(css, /is-overdue[^{]*\{[^}]*--station-warning/, "overdue never borrows the warning's amber");
   assert.match(rule(".station-hopper.is-overdue .station-hopper__rundown-chevrons"), /stroke: var\(--station-danger\);/);
+  const overdueFlowOpacity = Number(/opacity: (0\.\d+|1);/.exec(rule(".station-hopper.is-overdue .station-hopper__rundown-chevrons"))[1]);
+  assert.ok(overdueFlowOpacity >= 0.85, "the danger chevrons are not weaker than the tracked ones' family");
   assert.doesNotMatch(css, /is-overdue[^{]*\{[^}]*animation/);
   assert.doesNotMatch(css, /is-overdue[^{]*__(resin|id)\b/, "the resin name and the id stay their own");
   // The outline's claimants are restated after overdue, so they win by
@@ -440,9 +498,34 @@ test("the flow and the wash are styled from tokens, the outline's claimants stan
   }
   // Blueprint's flow is its pale blue, Gruvbox's a warm tone: not one green everywhere.
   assert.match(read("station/styles/themes/blueprint.css"), /--station-rundown-flow: #a9d6f5;/);
-  assert.match(read("station/styles/themes/gruvbox-dark.css"), /--station-rundown-flow: #d79921;/);
-  assert.match(read("station/styles/themes/gruvbox-light.css"), /--station-rundown-flow: #b57614;/);
+  assert.match(read("station/styles/themes/gruvbox-dark.css"), /--station-rundown-flow: #e0a028;/);
+  assert.match(read("station/styles/themes/gruvbox-light.css"), /--station-rundown-flow: #4a4405;/);
+  // And every theme's flow holds against the vessel it is drawn on: at
+  // least 3:1 (WCAG's graphical-object floor) against the hopper metal
+  // (hopper.css: steel-light 72%, hopper-stroke 28%), the light themes
+  // included - and never the theme's danger, which overdue owns.
+  for (const theme of fs.readdirSync(path.join(ROOT, "station/styles/themes")).filter(n => n.endsWith(".css"))) {
+    const sheet = read(`station/styles/themes/${theme}`);
+    const token = name => { const m = new RegExp(`${name}: (#[0-9a-f]{6});`, "i").exec(sheet); assert.ok(m, `${theme} lacks ${name}`); return m[1]; };
+    const metal = mixHex(token("--station-steel-light"), token("--station-hopper-stroke"), 0.72);
+    const flow = token("--station-rundown-flow");
+    assert.ok(contrast(flow, metal) >= 3, `${theme}: the flow (${flow}) at ${contrast(flow, metal).toFixed(2)}:1 against the vessel`);
+    assert.notEqual(flow.toLowerCase(), token("--station-danger").toLowerCase(), `${theme}: the flow is not the danger`);
+  }
 });
+
+/* sRGB arithmetic for the contrast check above: what color-mix(in srgb)
+   does to the vessel, and WCAG's relative luminance and contrast ratio. */
+function hexChannels(hex) { return [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16)); }
+function mixHex(a, b, share) { const [ca, cb] = [hexChannels(a), hexChannels(b)]; return ca.map((v, i) => v * share + cb[i] * (1 - share)); }
+function luminance(channels) {
+  const [r, g, b] = channels.map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+function contrast(hex, channels) {
+  const [hi, lo] = [luminance(hexChannels(hex)), luminance(channels)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+}
 
 /* ----------------------------------------------------------------------
  *   Station booted for real: the marks on the stage

@@ -45,8 +45,9 @@
 
   --station-success: #296548;
   --station-tracking: #296548;
-  /* The run-down flow's chevrons (hopper.css): the tracking green, at the flow's own opacity. */
-  --station-rundown-flow: #296548;
+  /* The run-down flow's chevrons (hopper.css): the tracking green taken
+     deeper, so it holds against the light steel of the vessel. */
+  --station-rundown-flow: #14503a;
   --station-warning: #7a4f0e;
   --station-danger: #a43f3b;
   --station-info: #25658e;

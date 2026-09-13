@@ -329,52 +329,58 @@
     drawing.appendChild(material);
 
     /* ---- Run-down flow ----
-     * Drawn only while the hopper is tracked: one small group of three
-     * downward chevrons travelling down the vessel, material seen running
-     * down - a group in motion, not a patterned fill. Its lane is just
-     * left of the vessel's centreline (the vessel's own centre reads as
-     * flow; the lane stops short of the port and the fill valve on the
-     * right, whose left edge is at 0.66w, and clears the clamps at the
-     * edges), between the top and bottom rims; the clamp bands are drawn
-     * over it, so the flow reads as inside the vessel. The caption, the
-     * id and the percentage are not under it.
+     * Drawn only while the hopper is tracked: a column of large downward
+     * chevrons travelling down the vessel, material seen running down.
+     * Few and wide: each chevron spans the vessel's interior from clamp
+     * to clamp, stands a third of the width tall, and the next is more
+     * than a width below it, so a vessel shows two to four of them and
+     * they read as flow, not as a patterned fill. The arms are bowed -
+     * steep at the vessel's edges and flatter towards the point - which
+     * is how a straight mark on a cylinder foreshortens when seen from the
+     * front, so the chevrons lie on the drum rather than on the screen.
+     *
+     * The lane is the interior between the top and bottom rims. The clamp
+     * bands, the ports and the fill valve are drawn OVER it (the details
+     * group, below), so the flow passes behind the hardware and never
+     * covers it; the caption, the id and the percentage are not under it.
      *
      * A nested <svg> is the clip: an inner svg clips its content to its
      * own box by default, in every engine, without a clipPath and the
-     * document-unique id one would need. The path is the one group,
-     * drawn just above the box - its last chevron's point at the box's
-     * top edge - and the stylesheet moves it down by one period and
-     * repeats (hopper.css): the period is the box and the group, so the
-     * group's first chevron is entering at the top as its last leaves
-     * the bottom - the flow disappears near the bottom and restarts near
-     * the top, and the vessel is never empty. A CSS animation, no
+     * document-unique id one would need. The column tiles the box: one
+     * chevron above its top edge and then one every spacing down to its
+     * bottom, and the stylesheet moves the group down by one spacing and
+     * repeats (hopper.css), so the chevron leaving at the bottom is the
+     * one arriving at the top and the column is seamless at every phase.
+     * That includes phase zero: with reduced motion the group stands
+     * where it was drawn and the vessel still shows its full column, so
+     * "tracked" is said without any motion at all. A CSS animation, no
      * script, nothing rendered per frame here. The period and the
      * duration are the group's own custom properties, in the hopper's
      * units: the duration follows the period, so the chevrons travel at
      * the one speed (an eighth of the vessel's width a second) on every
      * vessel, tall or short, at every scale.
      *
-     * The group is all the geometry there is: what stands outside the
-     * box at the loop's ends is one group's height above or below it,
-     * under the receiver or over the hose, never past the cluster - a
-     * client rect of the hopper or its cluster (Chromium's counts an
-     * inner svg's clipped content) is the same whatever the phase.
-     * With reduced motion the group stands still and still says
-     * "tracked". An untracked hopper draws nothing here. */
+     * What stands outside the box at the loop's ends is one spacing above
+     * it (phase zero) or under a spacing and a chevron below it (the end),
+     * inside the receiver and the hose - never past the hopper's own
+     * extent, so a client rect of the hopper or its cluster (Chromium's
+     * counts an inner svg's clipped content) stays within the hopper
+     * whatever the phase. An untracked hopper draws nothing here. */
     if (tracked) {
-      const bayLeft = x + w * 0.24;
-      const bayWidth = w * 0.4;
+      const bayLeft = x + w * 0.16;
+      const bayWidth = w * 0.68;
       const bayTop = top + rim * 2.6;
       const bayHeight = Math.max(0, bottom - rim * 2.6 - bayTop);
       if (bayHeight > 0) {
-        const chevronWidth = bayWidth * 0.72;
-        const chevronHeight = w * 0.13;
-        const spacing = w * 0.5;
-        const left = (bayWidth - chevronWidth) / 2;
-        // The group, drawn above the box; one period carries it through
-        // and out, and the loop brings it back to the top.
-        const groupHeight = spacing * 2 + chevronHeight;
-        const period = bayHeight + groupHeight;
+        const strokeWidth = w * 0.085;
+        const chevronHeight = w * 0.34;
+        const spacing = w * 1.15;
+        // The ends sit inside the box by the cap's radius, so a round cap
+        // is never clipped flat.
+        const left = strokeWidth / 2;
+        const rightEnd = bayWidth - strokeWidth / 2;
+        const mid = bayWidth / 2;
+        const period = spacing;
         const seconds = period / (w * 0.125);
         const flowBox = node(doc, "svg", "station-hopper__rundown", {
           x: round(bayLeft), y: round(bayTop), width: round(bayWidth), height: round(bayHeight),
@@ -383,13 +389,20 @@
         flowBox.setAttribute("style",
           `--station-rundown-period: ${round(period)}px; --station-rundown-duration: ${round(seconds)}s;`);
         const flow = group(doc, "station-hopper__rundown-flow", "hopper-rundown");
+        // One arm: a quadratic from the end to the point, its control
+        // pulled down and outward, so the arm drops steeply off the edge
+        // and flattens into the point - the drum's foreshortening.
+        const arm = (fromX, cy) => {
+          const controlX = fromX + (mid - fromX) * 0.5;
+          const controlY = cy + chevronHeight * 0.62;
+          return `Q ${round(controlX)} ${round(controlY)} ${round(mid)} ${round(cy + chevronHeight)}`;
+        };
         const segments = [];
-        for (let i = 0; i < 3; i += 1) {
-          const cy = -groupHeight + spacing * i;
-          segments.push(`M ${round(left)} ${round(cy)} L ${round(bayWidth / 2)} ${round(cy + chevronHeight)} L ${round(left + chevronWidth)} ${round(cy)}`);
+        for (let cy = -spacing; cy < bayHeight; cy += spacing) {
+          segments.push(`M ${round(left)} ${round(cy)} ${arm(left, cy)} M ${round(rightEnd)} ${round(cy)} ${arm(rightEnd, cy)}`);
         }
         const chevrons = node(doc, "path", "station-hopper__rundown-chevrons", {
-          d: segments.join(" "), "stroke-width": round(w * 0.055)
+          d: segments.join(" "), "stroke-width": round(strokeWidth)
         });
         flow.appendChild(chevrons);
         flowBox.appendChild(flow);
