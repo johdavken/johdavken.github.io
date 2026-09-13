@@ -76,7 +76,15 @@ test("a command's answer runs the same publish policy, marked as Station's own, 
   // (the same editor, compact), a weight card's onCommitted, the layer
   // share editor's onCommitted, the rail's Reset Tracking and the rail's
   // Smart Hoppers switch - which run the identical two lines.
-  assert.equal((boot.match(/lastOwnRevision\s*=/g) || []).length, 10, "lastOwnRevision is written somewhere other than its declaration, the editor's, the blend cards' and the weight cards' onCommitted, toggleHopperControl, the job controls' onCommitted, the share editor's onCommitted, the Handbook's (Resin Totals' fields) onCommitted, the rail's resetTracking and the rail's toggleSmartHoppers");
+  // ... and the rail's two moves under the Next face, promoteNextRecipe
+  // and copyCurrentToNext, the same two lines again.
+  assert.equal((boot.match(/lastOwnRevision\s*=/g) || []).length, 12, "lastOwnRevision is written somewhere other than its declaration, the editor's, the blend cards' and the weight cards' onCommitted, toggleHopperControl, the job controls' onCommitted, the share editor's onCommitted, the Handbook's (Resin Totals' fields) onCommitted, the rail's resetTracking, the rail's toggleSmartHoppers, and the rail's promoteNextRecipe and copyCurrentToNext");
+  for (const name of ["promoteNextRecipe", "copyCurrentToNext"]) {
+    const move = boot.slice(boot.indexOf(`function ${name}() {`), boot.indexOf("\n  }\n", boot.indexOf(`function ${name}() {`)));
+    assert.match(move, /lastOwnRevision = Number\.isInteger\(result\.revision\) \? result\.revision : null;\s+onPublish\(\{ own: true \}\);/);
+    assert.match(move, /planControls\.(promote|copy)\(commandsFor\(current\.resolved\)\)/, `${name} does not go through the plan controls' seam`);
+    assert.doesNotMatch(move, /patchStage|renderAll|mountStage|dispatch\(/);
+  }
   const reset = boot.slice(boot.indexOf("function resetTracking() {"), boot.indexOf("\n  }\n", boot.indexOf("function resetTracking() {")));
   assert.match(reset, /lastOwnRevision = Number\.isInteger\(result\.revision\) \? result\.revision : null;\s+onPublish\(\{ own: true \}\);/);
   const cards = draw.slice(draw.indexOf("const card = blendEdit.kind === \"weights\""), draw.indexOf("cardHandles[entry.id] = card;"));

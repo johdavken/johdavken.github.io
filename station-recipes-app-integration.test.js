@@ -66,16 +66,52 @@ test("Save Current IS the Recipe Book's save: the same payload builder, the same
   assert.match(save, /finishWorkspaceConfigurationMutation\(result, "Configuration saved successfully\."\)/);
   // A duplicate is handed back for Station to resolve, not finished as a failure.
   assert.match(save, /if \(result\?\.code !== "duplicate_name"\) finishWorkspaceConfigurationMutation/);
-  // Replace: the service's update with the same payload - the Update action.
-  const replace = connect.slice(connect.indexOf("replaceRecipe: async ({ id })=>{"), connect.indexOf("refresh: async"));
-  assert.match(replace, /workspaceConfigurations\.listRecipes\(workspaceId\)\.items\.find\(item=>item\.id === id\)/);
-  assert.match(replace, /await workspaceConfigurations\.update\(workspaceId, existing\.id, payload\)/);
-  assert.match(replace, /finishWorkspaceConfigurationMutation\(result, "Configuration updated successfully\."\)/);
   // Refresh: the floor UI's own refresh, with its in-flight guard.
   const refresh = connect.slice(connect.indexOf("refresh: async ()=>{"));
   assert.match(refresh, /await refreshWorkspaceConfigurations\(\);/);
   // Never the table, never an RPC, never the transport.
   assert.doesNotMatch(connect, /\.rpc\(|\.from\(|workspace_configurations|getWorkspaceConfigurationTransport/);
+});
+
+test("Update, Rename, Duplicate and Delete ARE the floor UI's own mutation closure, on a recipe found in the service's own recipe list", () => {
+  const connect = between("function connectStationRecipes(){", "\n  function setupLineSync(){");
+  // A recipe is found in the service's OWN recipe list for the selected
+  // workspace, and only a recipe - a weight profile's id answers not_found.
+  assert.match(connect, /workspaceConfigurations\.listRecipes\(workspaceId\)\.items\.find\(item=>item\.id === id && item\.type === "recipe"\)/);
+  assert.doesNotMatch(connect, /listReceiverWeightProfiles\(/);
+  for (const [action, call] of [
+    ["replaceRecipe", 'mutateWorkspaceConfiguration("update", existing)'],
+    ["renameRecipe", 'mutateWorkspaceConfiguration("rename", existing, name)'],
+    ["duplicateRecipe", 'mutateWorkspaceConfiguration("duplicate", existing, name)'],
+    ["deleteRecipe", 'mutateWorkspaceConfiguration("delete", existing)']
+  ]) {
+    const start = connect.indexOf(`${action}: async (`);
+    assert.ok(start > -1, `${action} is not offered`);
+    const body = connect.slice(start, connect.indexOf("async (", start + action.length + 8));
+    assert.ok(body.includes(`return ${call};`), `${action} does not run the floor UI's ${call}`);
+    assert.match(body, /if \(!existing\) return GONE;/);
+    assert.match(body, /if \(!workspaceId\) return NO_WORKSPACE;/);
+  }
+  // Never the service's write methods directly - the floor UI's closure has them.
+  assert.doesNotMatch(connect, /workspaceConfigurations\.(update|rename|duplicate|delete|setFavorite)\(/);
+  // No favourite from Station this round.
+  assert.doesNotMatch(connect, /favorite/i);
+});
+
+test("Load IS the floor UI's apply, to the destination Station names - the layer-count guard, the validated write and RT Sync for Current; the plan for Next - and Station learns only whether it took", () => {
+  const connect = between("function connectStationRecipes(){", "\n  function setupLineSync(){");
+  const load = connect.slice(connect.indexOf("loadRecipe: async ({ id, destination })=>{"), connect.indexOf("refresh: async"));
+  assert.match(load, /const result = applyWorkspaceConfiguration\(existing, destination\);/);
+  assert.match(load, /code:"incompatible"/);
+  assert.doesNotMatch(load, /applyRecipePayload|applyRecipeToActivePage|renderSplitsArea|validateAndCompute|notifyActiveJobMutation|nextRecipe/, "the tail is the apply's, not repeated here");
+  // The apply now says whether it took; what it does is unchanged.
+  const apply = between("function applyWorkspaceConfiguration(item,destination=null){", "\n  }");
+  assert.match(apply, /const result=applyRecipeToActivePage\(item\.payload,\{kind:"load-workspace-configuration",destination\}\);/);
+  assert.match(apply, /workspaceConfigurationStatus\(result\.ok \? `Recipe loaded into \$\{recipePageLabel\(destination\)\}\.` : \(result\.message \|\| "This shared configuration could not be loaded\."\)\);\n[^\n]*\n[^\n]*\n\s+return result;/);
+  const into = between("function applyRecipeToActivePage(payload,{kind,lotByResin,destination}={}){", "\n  }\n");
+  assert.match(into, /const intoNext=destination \? destination==="next" : isNextRecipePage\(\);/);
+  assert.match(into, /notifyActiveJobMutation\(\{immediate:true,kind:kind\|\|"apply-recipe"\}\);/, "a Current load reaches RT Sync at once");
+  assert.match(into, /state\.nextRecipe=stored;[\s\S]*saveSession\(\);\n\s+return \{ ok:true \};/, "a Next load replaces the plan and saves");
 });
 
 test("the book is announced from the cache's own subscription, the sync render, and around a refresh - and nowhere else", () => {

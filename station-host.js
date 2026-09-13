@@ -88,6 +88,9 @@
     "station/station-transition.js",
     "station/station-focus-editor.js",
     "station/station-hopper-controls.js",
+    // The plan controls: the seam for the rail's two moves under the Next
+    // face. Beside the hopper controls, whose reset the rail asks for too.
+    "station/station-plan-controls.js",
     "station/station-layer-share.js",
     "station/station-weight-cards.js",
     // The machine utility rail: Blend Edit and Reset Tracking beside the
@@ -124,7 +127,7 @@
     "station/station.js"
   ];
 
-  const VERSION = "0.38.0";
+  const VERSION = "0.43.0";
 
   function requested() {
     try {

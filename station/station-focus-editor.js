@@ -1032,16 +1032,20 @@
     };
 
     const variant = settings.variant === "compact" ? "compact" : "full";
+    const recipe = settings.recipe === "current" || settings.recipe === "next" ? settings.recipe : null;
     const rootEl = element(doc, "div", "station-editor", {
       "data-layer": blend.layer.id,
       "data-layer-role": blend.layer.role,
       "data-role": variant === "compact" ? "blend-editor" : "focus-editor",
       "data-variant": variant,
-      "aria-label": variant === "compact" ? `Layer ${blend.layer.id} blend` : null
+      /* Which recipe the rows show and the commands address - the Next
+       * face's cards are the same editor turned to the plan, and wear it
+       * (focus-editor.css). */
+      "data-recipe": recipe,
+      "aria-label": variant === "compact" ? `Layer ${blend.layer.id} ${recipe === "next" ? "planned blend" : "blend"}` : null
     });
 
     const commands = settings.commands || null;
-    const recipe = settings.recipe === "current" || settings.recipe === "next" ? settings.recipe : null;
     const offer = abilities(commands, recipe, variant);
 
     // The note is one line under the total, updated in place; aria-live so

@@ -1,13 +1,16 @@
-/* Weights: the Operator Handbook's page for the physical hoppers.
+/* Weights: the Operator Handbook's page for the line's shared Receiver
+ * Weight Profiles.
  *
  * WHAT IT IS
  *
- * The receiver weight of every hopper on the line, by layer, each in a
- * field the operator can set; a bulk apply - pick hoppers, type one
- * weight, apply it to all of them at once; and the line's shared
- * Receiver Weight Profiles: the list, a selected profile's weights
- * against the line's, and Load, Save Current Weights, Update, Rename,
- * Duplicate and Delete. The floor UI's Weights page, on the bench.
+ * The list of profiles, a selected profile's weights against the line's,
+ * and Load, Save Current Weights, Update, Rename, Duplicate and Delete.
+ * The floor UI's Weight Profiles block, on the bench. The weights
+ * themselves are not entered here: the machine rail's Weights face turns
+ * every layer to a weight card on the stage (station-weight-cards.js),
+ * which is where a receiver weight - and, with Smart Hoppers on, a
+ * hopper's geometry - is set. This page reads the line's weights only to
+ * show a profile against them.
  *
  * A receiver weight is a fact about the physical hopper, not about the
  * recipe running in it: Hopper 1 has one like any other, an empty hopper
@@ -17,13 +20,11 @@
  *
  * WHERE IT READS FROM, AND WHERE IT WRITES
  *
- * The weights come from the boot file's resolved source (station-source.js:
- * hopperState[layer:index].weight, the application's own entered value
- * off the state bridge) and the hoppers from its line model; a publish
- * replaces both and the page is redrawn from them. A weight is written by
- * ONE command each - setHopperWeight, or setHopperWeights for the bulk
- * apply - dispatched on the command bridge this page is handed, which is
- * the application's own field tail: validated, saved, synced. The
+ * The line's weights come from the boot file's resolved source
+ * (station-source.js: hopperState[layer:index].weight, the application's
+ * own entered value off the state bridge) and the hoppers from its line
+ * model; a publish replaces both and the page is redrawn from them.
+ * Nothing here writes a weight: this page dispatches no command. The
  * profiles come from the book the application publishes through
  * station-weight-profiles-bridge.js, and every profile action goes back
  * through that bridge's request() to the application's own save, update,
@@ -34,19 +35,9 @@
  *
  * WHAT IT HOLDS
  *
- * Presentation state only, and only for this screen: the field being
- * edited and the value it started from, which hoppers are picked for the
- * bulk apply, which profile is selected, which entry or confirmation is
- * open, a request in flight, the last message.
- *
- * A REMOTE CHANGE UNDER AN OPEN FIELD
- *
- * The Handbook redraws this page on every publish - the run-down clock's
- * included - so update() patches values in place and never writes into
- * the field the operator is typing in. If that field's own value moved
- * underneath (another device set it), the field is marked and the page
- * says so; what the operator is entering is theirs until they commit or
- * cancel it. The focus editor's rule, kept here for the same reason.
+ * Presentation state only, and only for this screen: which profile is
+ * selected, which entry or confirmation is open, a request in flight, the
+ * last message.
  */
 (function (root, factory) {
   const lineModel = typeof require === "function"
@@ -69,9 +60,6 @@
   const PRIMARY = `${ACTION} is-primary`;
   const QUIET = `${ACTION} is-quiet`;
   const DANGER = `${ACTION} is-danger`;
-  const CHIP = "station-handbook__chip";
-
-  const COMMAND = Object.freeze({ one: "setHopperWeight", many: "setHopperWeights" });
 
   /* The confirmation before a profile is loaded: the floor UI's own words,
    * which say what changes and what does not. */
@@ -108,10 +96,6 @@
     else node.setAttribute("hidden", "");
   }
 
-  function pressed(node, on) {
-    node.setAttribute("aria-pressed", on ? "true" : "false");
-  }
-
   function svgNode(doc, name, className, attributes) {
     const node = doc.createElementNS ? doc.createElementNS(SVG_NS, name) : doc.createElement(name);
     if (className) node.setAttribute("class", className);
@@ -135,13 +119,6 @@
   function formatPounds(value) {
     const number = Number(value);
     return Number.isFinite(number) && number > 0 ? Math.round(number).toLocaleString("en-US") : "—";
-  }
-
-  /* A weight as the field shows it: the number as entered, blank for none.
-   * No separator - the field is for typing, the readouts are for reading. */
-  function fieldText(value) {
-    const number = Number(value);
-    return Number.isFinite(number) && number > 0 ? String(number) : "";
   }
 
   function formatWhen(iso) {
@@ -204,19 +181,6 @@
     return { ok: true, message: "" };
   }
 
-  /* Whether a command is on offer from the bridge this page was handed -
-   * the same question Resin Totals asks, asked the same way. */
-  function able(commands, name) {
-    return !!(commands && typeof commands.isAvailable === "function" && commands.isAvailable()
-      && typeof commands.capabilities === "function" && commands.capabilities().includes(name));
-  }
-
-  function reason(commands, name) {
-    if (!commands || typeof commands.isAvailable !== "function" || !commands.isAvailable()) return "no application is connected to Station commands.";
-    if (!able(commands, name)) return `the application does not support ${name}.`;
-    return "";
-  }
-
   /**
    * Build the page.
    *
@@ -228,10 +192,6 @@
    *        (station-source.js): { live, hopperState }
    * @param {function} context.model     () => the boot file's line model
    *        (station-line-model.js), or null
-   * @param {function} [context.commands]  () => the command bridge for what
-   *        is on screen, or null when nothing may be written
-   * @param {function} [context.onCommitted]  (result) => void, told of every
-   *        command that changed something
    * @param {function} [context.layerRole]  (name) => the role of that layer
    *        on the shown line, for the accents
    */
@@ -240,16 +200,10 @@
     const weightProfiles = settings.weightProfiles || null;
     const resolved = typeof settings.resolved === "function" ? settings.resolved : () => null;
     const modelOf = typeof settings.model === "function" ? settings.model : () => null;
-    const commandsFor = typeof settings.commands === "function" ? settings.commands : () => null;
-    const onCommitted = typeof settings.onCommitted === "function" ? settings.onCommitted : () => {};
     const layerRole = typeof settings.layerRole === "function" ? settings.layerRole : null;
     const lineModel = settings.lineModel || lineModelModule;
 
     const state = {
-      shape: null,         // the hoppers drawn, as a key; a change rebuilds the grid
-      editing: null,       // { key, base } while a field has focus
-      committing: null,    // the key whose value the operator just sent
-      picked: new Set(),   // hopper keys picked for the bulk apply
       selectedId: null,
       entry: null,         // { mode: "save" | "rename" | "duplicate", id }
       confirm: null,       // { kind: "load" | "update" | "delete", id }
@@ -259,9 +213,6 @@
       noteKind: "",
       duplicate: null      // { name, id } after a duplicate_name on save
     };
-    const fields = new Map();   // key -> { input, pick, layer, index, id }
-    const layerPicks = new Map();
-
     const rootEl = element(doc, "div", "station-weights", { "data-role": "weights" });
 
     /* ---- Toolbar ---- */
@@ -291,28 +242,9 @@
     const note = element(doc, "p", "station-weights__note", { role: "status", hidden: "" });
     rootEl.appendChild(note);
 
-    /* ---- The scrolling body: the grid, the bulk bar, the profiles ---- */
+    /* ---- The scrolling body: the profiles ---- */
     const body = element(doc, "div", "station-weights__body");
     rootEl.appendChild(body);
-
-    const grid = element(doc, "section", "station-weights__grid", { "aria-label": "Receiver weights" });
-    body.appendChild(grid);
-
-    const bulk = element(doc, "div", "station-weights__bulk", { role: "group", "aria-label": "Bulk apply" });
-    const allPick = text(doc, "button", CHIP, "All", { type: "button", "data-action": "pick-all", "aria-pressed": "false", title: "Pick every hopper" });
-    const bulkCount = text(doc, "span", "station-weights__bulk-count", "Pick hoppers to set them together");
-    const bulkWrap = element(doc, "span", "station-weights__field-wrap");
-    const bulkInput = element(doc, "input", "station-weights__bulk-field", {
-      type: "text", inputmode: "decimal", autocomplete: "off", spellcheck: "false", placeholder: "0",
-      "aria-label": "Weight to apply to the picked hoppers, pounds"
-    });
-    bulkWrap.appendChild(bulkInput);
-    bulkWrap.appendChild(text(doc, "span", "station-weights__unit", "lb"));
-    const applyButton = text(doc, "button", ACTION, "Apply", { type: "button", "data-action": "apply-bulk" });
-    const clearPicksButton = text(doc, "button", QUIET, "Clear", { type: "button", "data-action": "clear-picks", hidden: "" });
-    bulk.appendChild(allPick); bulk.appendChild(bulkCount); bulk.appendChild(bulkWrap);
-    bulk.appendChild(applyButton); bulk.appendChild(clearPicksButton);
-    body.appendChild(bulk);
 
     const profiles = element(doc, "section", "station-weights__profiles", { "aria-label": "Weight profiles" });
     profiles.appendChild(text(doc, "h3", "station-weights__heading", "Weight Profiles"));
@@ -380,214 +312,6 @@
         try { return lineModel.roleForStackIndex(index, count); } catch (error) { return ""; }
       }
       return "";
-    }
-
-    /* ---- The grid ---- */
-
-    function shapeOf(model) {
-      if (!model || !Array.isArray(model.layers)) return "";
-      return model.layers.map(layer => `${layer.id}:${layer.hoppers.map(h => h.id).join(",")}`).join("|");
-    }
-
-    function buildGrid(model) {
-      clearChildren(grid);
-      fields.clear();
-      layerPicks.clear();
-      state.picked.clear();
-      if (state.editing) state.editing = null;
-      if (!model || !Array.isArray(model.layers) || !model.layers.length) {
-        grid.appendChild(text(doc, "p", "station-weights__empty", "No line is shown: there are no hoppers to weigh."));
-        return;
-      }
-      for (const layer of model.layers) {
-        const row = element(doc, "div", "station-weights__layer", { "data-layer": layer.id, "data-layer-role": roleOf(layer) });
-        const layerPick = text(doc, "button", `${CHIP} station-weights__layer-id`, layer.id, {
-          type: "button", "data-pick-layer": layer.id, "aria-pressed": "false", title: `Pick every hopper of layer ${layer.id}`
-        });
-        row.appendChild(layerPick);
-        layerPicks.set(layer.id, layerPick);
-        const hoppers = element(doc, "div", "station-weights__hoppers");
-        for (const hopper of layer.hoppers) {
-          const key = `${layer.id}:${hopper.index}`;
-          const cell = element(doc, "div", "station-weights__hopper", { "data-key": key });
-          const pick = text(doc, "button", `${CHIP} station-weights__pick`, hopper.id, {
-            type: "button", "data-pick": key, "aria-pressed": "false", title: `Pick ${hopper.id} for the bulk apply`
-          });
-          const wrap = element(doc, "span", "station-weights__field-wrap");
-          const input = element(doc, "input", "station-weights__field", {
-            type: "text", inputmode: "decimal", autocomplete: "off", spellcheck: "false", placeholder: "0",
-            "data-layer": layer.id, "data-index": hopper.index, "data-key": key,
-            "aria-label": `${hopper.id} receiver weight, pounds`
-          });
-          input.value = fieldText(weightOf(key));
-          wrap.appendChild(input);
-          wrap.appendChild(text(doc, "span", "station-weights__unit", "lb"));
-          cell.appendChild(pick); cell.appendChild(wrap);
-          hoppers.appendChild(cell);
-          fields.set(key, { input, pick, cell, layer: layer.id, index: hopper.index, id: hopper.id });
-          wireField(input, key);
-        }
-        row.appendChild(hoppers);
-        grid.appendChild(row);
-      }
-    }
-
-    function wireField(input, key) {
-      input.addEventListener("focus", () => {
-        if (input.readOnly) return;
-        state.editing = { key, base: fieldText(weightOf(key)) };
-        input.classList.remove("is-changed-underneath");
-      });
-      input.addEventListener("input", () => {
-        input.removeAttribute("aria-invalid");
-      });
-      input.addEventListener("keydown", event => {
-        if (event.key === "Enter") {
-          if (typeof event.preventDefault === "function") event.preventDefault();
-          commitField(key);
-        } else if (event.key === "Escape") {
-          // The draft is the operator's to discard; the Handbook's own
-          // Escape (close) is not what a field's Escape means.
-          if (typeof event.stopPropagation === "function") event.stopPropagation();
-          if (typeof event.preventDefault === "function") event.preventDefault();
-          cancelField(key);
-        }
-      });
-      input.addEventListener("blur", () => {
-        if (state.editing && state.editing.key === key) {
-          commitField(key);
-          state.editing = null;
-          input.classList.remove("is-changed-underneath");
-        }
-      });
-    }
-
-    /* ---- Writing a weight ---- */
-
-    function send(command, args) {
-      const commands = commandsFor();
-      const result = commands && typeof commands.dispatch === "function"
-        ? commands.dispatch(command, Object.assign({ recipe: "current" }, args))
-        : { ok: false, code: "unavailable", message: "No application is connected to Station commands." };
-      return result || { ok: false, code: "failed", message: "The application did not answer." };
-    }
-
-    /* One field's value to the application, on Enter or on leaving it: the
-     * same text unchanged is nothing to send; blank is 0, as the floor
-     * UI's own field reads an emptied value; a refusal keeps the draft. */
-    function commitField(key) {
-      const field = fields.get(key);
-      if (!field || field.input.readOnly) return null;
-      const draft = String(field.input.value || "").trim();
-      const resting = fieldText(weightOf(key));
-      if (draft === resting) {
-        field.input.removeAttribute("aria-invalid");
-        return null;
-      }
-      const result = send(COMMAND.one, { layer: field.layer, index: field.index, weight: draft === "" ? 0 : draft });
-      if (!result.ok) {
-        field.input.setAttribute("aria-invalid", "true");
-        say(result.message || "The weight could not be set.", "error");
-        return result;
-      }
-      field.input.removeAttribute("aria-invalid");
-      field.input.classList.remove("is-changed-underneath");
-      if (result.changed) {
-        state.committing = key;
-        say("");
-        onCommitted(result);
-        state.committing = null;
-        // Whether or not a publish came back through update(), the field
-        // now shows the line's value and the draft starts from it.
-        field.input.value = fieldText(weightOf(key));
-        if (state.editing && state.editing.key === key) state.editing.base = field.input.value;
-      } else {
-        field.input.value = resting;
-      }
-      return result;
-    }
-
-    function cancelField(key) {
-      const field = fields.get(key);
-      if (!field) return;
-      const base = state.editing && state.editing.key === key ? state.editing.base : fieldText(weightOf(key));
-      const hadDraft = String(field.input.value || "").trim() !== base;
-      field.input.value = fieldText(weightOf(key));
-      if (state.editing && state.editing.key === key) state.editing.base = field.input.value;
-      field.input.removeAttribute("aria-invalid");
-      field.input.classList.remove("is-changed-underneath");
-      if (!hadDraft && typeof field.input.blur === "function") field.input.blur();
-    }
-
-    /* ---- The bulk apply ---- */
-
-    function pickedKeys() {
-      return [...fields.keys()].filter(key => state.picked.has(key));
-    }
-
-    function togglePick(key) {
-      if (!fields.has(key)) return;
-      if (state.picked.has(key)) state.picked.delete(key);
-      else state.picked.add(key);
-      refresh();
-    }
-
-    function pickLayer(layerId) {
-      const keys = [...fields.values()].filter(field => field.layer === layerId).map(field => `${field.layer}:${field.index}`);
-      const every = keys.length > 0 && keys.every(key => state.picked.has(key));
-      for (const key of keys) {
-        if (every) state.picked.delete(key);
-        else state.picked.add(key);
-      }
-      refresh();
-    }
-
-    function pickAll() {
-      const keys = [...fields.keys()];
-      const every = keys.length > 0 && keys.every(key => state.picked.has(key));
-      state.picked.clear();
-      if (!every) for (const key of keys) state.picked.add(key);
-      refresh();
-    }
-
-    function clearPicks() {
-      state.picked.clear();
-      refresh();
-    }
-
-    function applyBulk() {
-      const keys = pickedKeys();
-      if (!keys.length) {
-        say("Pick the hoppers to set first.", "error");
-        return null;
-      }
-      const draft = String(bulkInput.value || "").trim();
-      if (draft === "") {
-        bulkInput.setAttribute("aria-invalid", "true");
-        say("Enter the weight to apply to the picked hoppers (0 clears them).", "error");
-        return null;
-      }
-      const weights = keys.map(key => {
-        const field = fields.get(key);
-        return { layer: field.layer, index: field.index, weight: draft };
-      });
-      const result = send(COMMAND.many, { weights });
-      if (!result.ok) {
-        bulkInput.setAttribute("aria-invalid", "true");
-        say(result.message || "The weights could not be set.", "error");
-        return result;
-      }
-      bulkInput.removeAttribute("aria-invalid");
-      const count = keys.length;
-      const applied = Number(draft.replace(/,/g, ""));
-      if (result.changed) onCommitted(result);
-      state.picked.clear();
-      bulkInput.value = "";
-      say(result.changed
-        ? `Applied ${applied > 0 ? formatPounds(applied) : "0"} lb to ${count} hopper${count === 1 ? "" : "s"}.`
-        : `The picked hopper${count === 1 ? " already has" : "s already have"} that weight.`, result.changed ? "ok" : "");
-      refresh();
-      return result;
     }
 
     /* ---- The profiles ---- */
@@ -725,63 +449,11 @@
       const current = book();
       const on = connected();
       const assigned = !!(current && current.assigned);
-      const commands = commandsFor();
-      const canEdit = able(commands, COMMAND.one);
-      const canBulk = able(commands, COMMAND.many);
-
-      const shape = shapeOf(model);
-      if (shape !== state.shape) {
-        state.shape = shape;
-        buildGrid(model);
-      }
-
-      // Values in place: every field but the one being typed in.
-      for (const [key, field] of fields) {
-        const canonical = fieldText(weightOf(key));
-        const active = state.editing && state.editing.key === key;
-        if (!active) {
-          if (field.input.value !== canonical) field.input.value = canonical;
-          field.input.classList.remove("is-changed-underneath");
-        } else if (state.committing === key) {
-          field.input.value = canonical;
-          state.editing.base = canonical;
-          field.input.classList.remove("is-changed-underneath");
-        } else if (canonical !== state.editing.base) {
-          if (!field.input.classList.contains("is-changed-underneath")) {
-            field.input.classList.add("is-changed-underneath");
-            say(`${field.id}'s weight is now ${formatPounds(canonical)} lb in the application; what you are entering has not been applied.`, "");
-          }
-        }
-        field.input.readOnly = !canEdit;
-        field.input.setAttribute("aria-disabled", canEdit ? "false" : "true");
-        field.input.setAttribute("title", canEdit ? `${field.id} receiver weight, pounds` : `Weights are read-only here: ${reason(commands, COMMAND.one)}`);
-        const picked = state.picked.has(key);
-        pressed(field.pick, picked);
-        field.pick.disabled = !canBulk;
-        field.cell.classList.toggle("is-picked", picked);
-      }
-      for (const [layerId, pick] of layerPicks) {
-        const keys = [...fields.values()].filter(field => field.layer === layerId).map(field => `${field.layer}:${field.index}`);
-        pressed(pick, keys.length > 0 && keys.every(key => state.picked.has(key)));
-        pick.disabled = !canBulk;
-      }
-      const pickedCount = state.picked.size;
-      const total = fields.size;
-      pressed(allPick, total > 0 && pickedCount === total);
-      allPick.disabled = !canBulk || !total;
-      bulkCount.textContent = !canBulk
-        ? `Bulk apply is not available: ${reason(commands, COMMAND.many)}`
-        : (pickedCount ? `${pickedCount} of ${total} picked` : "Pick hoppers to set them together");
-      bulkInput.readOnly = !canBulk;
-      applyButton.disabled = !canBulk || !pickedCount || !!state.pending;
-      applyButton.classList.toggle("is-primary", canBulk && pickedCount > 0 && !state.entry && !state.confirm);
-      show(clearPicksButton, pickedCount > 0);
-
       contextLabel.textContent = assigned && current.workspace
         ? `${current.workspace.displayName} · ${current.count} profile${current.count === 1 ? "" : "s"}`
         : (on ? "No line" : "Not connected");
       saveButton.disabled = !on || !assigned || !!state.pending;
-      saveButton.classList.toggle("is-primary", !state.entry && !state.confirm && !(canBulk && pickedCount > 0));
+      saveButton.classList.toggle("is-primary", !state.entry && !state.confirm && !selectedProfile(current));
       saveButton.setAttribute("title", !on
         ? "Saving is not available: no application is connected to Station."
         : (!assigned ? "Connect this desktop to a production line to save shared weight profiles." : "Save the line's receiver weights to this line's shared profiles."));
@@ -966,12 +638,8 @@
     /* ---- Events ---- */
 
     rootEl.addEventListener("click", event => {
-      const target = event.target && event.target.closest ? event.target.closest("[data-action], [data-profile], [data-pick], [data-pick-layer]") : null;
+      const target = event.target && event.target.closest ? event.target.closest("[data-action], [data-profile]") : null;
       if (!target || target.disabled) return;
-      const pick = target.getAttribute("data-pick");
-      if (pick) { togglePick(pick); return; }
-      const pickLayerId = target.getAttribute("data-pick-layer");
-      if (pickLayerId) { pickLayer(pickLayerId); return; }
       const profileId = target.getAttribute("data-profile");
       if (profileId) {
         // Selecting shows the profile and changes nothing on the line.
@@ -990,9 +658,6 @@
         case "replace": void replaceExisting(); return;
         case "cancel-entry": closeEntry(); return;
         case "refresh": void refreshBook(); return;
-        case "pick-all": pickAll(); return;
-        case "clear-picks": clearPicks(); return;
-        case "apply-bulk": applyBulk(); return;
         case "load": if (profile) openConfirm("load", profile); return;
         case "update": if (profile) openConfirm("update", profile); return;
         case "delete": if (profile) openConfirm("delete", profile); return;
@@ -1008,14 +673,6 @@
       if (event.key === "Enter") { if (typeof event.preventDefault === "function") event.preventDefault(); void confirmEntry(); }
       else if (event.key === "Escape") { if (typeof event.stopPropagation === "function") event.stopPropagation(); closeEntry(); }
     });
-    bulkInput.addEventListener("keydown", event => {
-      if (event.key === "Enter") { if (typeof event.preventDefault === "function") event.preventDefault(); applyBulk(); }
-      else if (event.key === "Escape") {
-        if (typeof event.stopPropagation === "function") event.stopPropagation();
-        bulkInput.value = ""; bulkInput.removeAttribute("aria-invalid");
-      }
-    });
-    bulkInput.addEventListener("input", () => bulkInput.removeAttribute("aria-invalid"));
     detail.addEventListener("keydown", event => {
       if (event.key === "Escape" && state.confirm) {
         if (typeof event.stopPropagation === "function") event.stopPropagation();
@@ -1029,19 +686,12 @@
       element: rootEl,
       update: refresh,
       focus() {
-        let target = null;
-        if (state.entry) target = nameInput;
-        else {
-          const first = fields.values().next();
-          target = first && !first.done && !first.value.input.readOnly ? first.value.input : saveButton;
-        }
+        const target = state.entry ? nameInput : saveButton;
         if (target && typeof target.focus === "function" && !target.disabled) target.focus();
       },
-      /* A page of a grid and two lists, all of which scroll: the Handbook
-       * may be raised for it. */
+      /* A page of two lists, both of which scroll: the Handbook may be
+       * raised for it. */
       grows: () => true,
-      commitField,
-      applyBulk,
       confirmEntry,
       confirmAction,
       replaceExisting,
@@ -1053,8 +703,6 @@
         confirm: state.confirm ? Object.assign({}, state.confirm) : null,
         moreOpen: state.moreOpen,
         pending: state.pending,
-        picked: [...state.picked],
-        editing: state.editing ? Object.assign({}, state.editing) : null,
         note: state.note,
         noteKind: state.noteKind,
         duplicate: state.duplicate ? Object.assign({}, state.duplicate) : null

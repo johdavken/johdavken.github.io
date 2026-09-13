@@ -4,7 +4,7 @@
  *
  * WHAT IT IS
  *
- * Four controls, and nothing else for now:
+ * Five controls standing always, and two more while the Next face is on:
  *
  *   Blend Edit       the mode's one switch. On: every layer turns over to
  *                    its compact blend card (station.js owns the mode; the
@@ -21,12 +21,14 @@
  *                    computed from hopper geometry and each resin's bulk
  *                    density, or the entered weights. Not a mode of the
  *                    stage - it acts on every hopper at once, in every
- *                    view - so it stands here with the other operations
- *                    over the whole machine. The boot file asks the
- *                    application (one setSmartHoppers) and tells the rail
- *                    what the application then holds; held with the
- *                    reason when this desktop is not on an identified
- *                    line, or the command is not offered.
+ *                    view - but it is the Weights face's concern, so it
+ *                    stands as that switch's child: in a flyout to the
+ *                    right of Weights, unfolded while that face is on,
+ *                    exactly as the Next switch's two moves are. The boot
+ *                    file asks the application (one setSmartHoppers) and
+ *                    tells the rail what the application then holds; held
+ *                    with the reason when this desktop is not on an
+ *                    identified line, or the command is not offered.
  *   Reset Tracking   every hopper untracked and its pump marked running -
  *                    the floor UI's Reset tracking, as the one resetTracking
  *                    command (station-hopper-controls.js). A reset is easy
@@ -35,6 +37,24 @@
  *                    says so and waits; the second confirms. A pause, a
  *                    click anywhere else, Escape or the focus leaving all
  *                    disarm it. No dialog.
+ *   Next             the mode's third face: every layer turns over to a
+ *                    blend card of the PLANNED recipe - the Next Recipe the
+ *                    application keeps beside the running one - edited
+ *                    through the same card, addressed to the plan. A dot
+ *                    on the control says a plan exists. It stands under
+ *                    Blend Edit, the running recipe's face. While this face
+ *                    is on, two more controls unfold to its RIGHT, on a
+ *                    stem from the switch, as its children - the flyout
+ *                    (station-rail__flyout), which opens and folds with a
+ *                    short motion the stylesheet owns:
+ *   Load Next        the plan becomes the running recipe - the floor UI's
+ *                    Load Next Recipe, as one promoteNextRecipe command
+ *                    (station-plan-controls.js). Armed and confirmed
+ *                    exactly as the reset is; the armed control's title
+ *                    says what the promotion changes, in counts.
+ *   Copy Current     the running recipe becomes the plan - Load Current
+ *                    Recipe, as one copyCurrentToNext. One click: the plan
+ *                    it overwrites is a draft, and the title says so.
  *
  * WHERE IT STANDS
  *
@@ -94,7 +114,10 @@
    * is ever given. */
   const FALLBACK_SIZE = Object.freeze({ width: 36, height: 162 });
 
-  const LABEL = Object.freeze({ blend: "Blend Edit", weights: "Weights", smart: "Smart Hoppers", reset: "Reset Tracking" });
+  const LABEL = Object.freeze({
+    blend: "Blend Edit", weights: "Weights", smart: "Smart Hoppers", reset: "Reset Tracking",
+    next: "Next Recipe", promote: "Load Next into Current", copy: "Copy Current into Next"
+  });
 
   function element(doc, name, className, attributes) {
     const node = doc.createElement(name);
@@ -182,6 +205,47 @@
       svg.appendChild(svgNode(doc, "path", "station-rail__glyph-row", { d: `M ${x} ${y} L ${x + width} ${y}` }));
     }
     svg.appendChild(svgNode(doc, "path", "station-rail__glyph-stroke", { d: "M 16.4 1 L 16.4 4.2 M 14.8 2.6 L 18 2.6" }));
+    return svg;
+  }
+
+  /* Next: the card as the Blend glyph draws it, but standing alone and
+   * dog-eared - a sheet waiting its turn - with the three rows of a blend
+   * on it. */
+  function nextGlyph(doc) {
+    const svg = svgNode(doc, "svg", "station-rail__glyph", {
+      viewBox: "0 0 20 20", width: "20", height: "20", "aria-hidden": "true", focusable: "false"
+    });
+    svg.appendChild(svgNode(doc, "path", "station-rail__glyph-face", { d: "M 5 2.5 L 12 2.5 L 15.5 6 L 15.5 17.5 L 5 17.5 Z" }));
+    svg.appendChild(svgNode(doc, "path", "station-rail__glyph-stroke", { d: "M 12 2.5 L 12 6 L 15.5 6" }));
+    for (const [index, width] of [[0, 5], [1, 3.5], [2, 5]].values()) {
+      const y = 9.2 + index * 2.6;
+      svg.appendChild(svgNode(doc, "path", "station-rail__glyph-row", { d: `M 7.5 ${y} L ${7.5 + width} ${y}` }));
+    }
+    svg.appendChild(svgNode(doc, "circle", "station-rail__glyph-dot", { cx: 16.2, cy: 3.8, r: 2.2 }));
+    return svg;
+  }
+
+  /* Load Next: the sheet moving onto the machine - an arrow from a small
+   * sheet at the top right down onto a hopper at the bottom left. */
+  function promoteGlyph(doc) {
+    const svg = svgNode(doc, "svg", "station-rail__glyph", {
+      viewBox: "0 0 20 20", width: "20", height: "20", "aria-hidden": "true", focusable: "false"
+    });
+    svg.appendChild(svgNode(doc, "path", "station-rail__glyph-face", { d: "M 11.5 1.5 L 16 1.5 L 18 3.5 L 18 9 L 11.5 9 Z" }));
+    svg.appendChild(svgNode(doc, "path", "station-rail__glyph-stroke", { d: "M 12 11 L 7.5 15.5 M 7.5 11.5 L 7.5 15.5 L 11.5 15.5" }));
+    svg.appendChild(svgNode(doc, "path", "station-rail__glyph-hopper", { d: "M 1.6 10.4 L 7.2 10.4 L 5.8 14.6 L 5.2 16.6 L 3.6 16.6 L 3 14.6 Z" }));
+    return svg;
+  }
+
+  /* Copy Current: the reverse - a hopper at the top left, an arrow up
+   * onto the sheet at the bottom right. */
+  function copyGlyph(doc) {
+    const svg = svgNode(doc, "svg", "station-rail__glyph", {
+      viewBox: "0 0 20 20", width: "20", height: "20", "aria-hidden": "true", focusable: "false"
+    });
+    svg.appendChild(svgNode(doc, "path", "station-rail__glyph-hopper", { d: "M 1.6 2.4 L 7.2 2.4 L 5.8 6.6 L 5.2 8.6 L 3.6 8.6 L 3 6.6 Z" }));
+    svg.appendChild(svgNode(doc, "path", "station-rail__glyph-stroke", { d: "M 7.5 9 L 12 4.5 M 8 4.5 L 12 4.5 L 12 8.5" }));
+    svg.appendChild(svgNode(doc, "path", "station-rail__glyph-face", { d: "M 11.5 11 L 16 11 L 18 13 L 18 18.5 L 11.5 18.5 Z" }));
     return svg;
   }
 
@@ -287,6 +351,9 @@
    * @param {function} [options.onSmartHoppers] () => void; the switch's click - the
    *        boot file asks the application and tells the rail what it holds
    * @param {function} options.onResetTracking  () => void; the confirming click
+   * @param {function} [options.onNextEdit]     () => void; the Next face's switch
+   * @param {function} [options.onPromote]      () => void; Load Next's confirming click
+   * @param {function} [options.onCopy]         () => void; Copy Current's click
    * @param {function} [options.setTimeout]     for the arm timer; the host's by default
    * @param {function} [options.clearTimeout]
    * @param {number}   [options.armDuration]    ms an armed reset waits
@@ -298,6 +365,9 @@
     const onWeightsEdit = typeof settings.onWeightsEdit === "function" ? settings.onWeightsEdit : () => {};
     const onSmartHoppers = typeof settings.onSmartHoppers === "function" ? settings.onSmartHoppers : () => {};
     const onResetTracking = typeof settings.onResetTracking === "function" ? settings.onResetTracking : () => {};
+    const onNextEdit = typeof settings.onNextEdit === "function" ? settings.onNextEdit : () => {};
+    const onPromote = typeof settings.onPromote === "function" ? settings.onPromote : () => {};
+    const onCopy = typeof settings.onCopy === "function" ? settings.onCopy : () => {};
     const timers = {
       set: typeof settings.setTimeout === "function" ? settings.setTimeout : (typeof setTimeout === "function" ? setTimeout : null),
       clear: typeof settings.clearTimeout === "function" ? settings.clearTimeout : (typeof clearTimeout === "function" ? clearTimeout : null)
@@ -314,7 +384,12 @@
       weights: { active: false, available: false },
       smart: { on: false, available: false, reason: "" },
       reset: { available: false, reason: "", count: 0 },
-      armed: false,
+      next: { active: false, available: false, planned: false },
+      promote: { available: false, reason: "", summary: "" },
+      copy: { available: false, reason: "" },
+      /* Which control is armed - "reset" or "promote" - or null: one at a
+       * time, whichever was clicked last. */
+      armed: null,
       timer: null,
       placed: null
     };
@@ -337,10 +412,50 @@
       type: "button", "data-action": "reset-tracking", "aria-label": LABEL.reset, title: LABEL.reset
     });
     resetButton.appendChild(resetGlyph(doc));
+    const nextButton = element(doc, "button", "station-rail__control station-rail__control--next", {
+      type: "button", "data-action": "next-edit", "aria-pressed": "false", "aria-label": LABEL.next, title: LABEL.next
+    });
+    nextButton.appendChild(nextGlyph(doc));
+    const promoteButton = element(doc, "button", "station-rail__control station-rail__control--promote", {
+      type: "button", "data-action": "promote-next", "aria-label": LABEL.promote, title: LABEL.promote
+    });
+    promoteButton.appendChild(promoteGlyph(doc));
+    const copyButton = element(doc, "button", "station-rail__control station-rail__control--copy", {
+      type: "button", "data-action": "copy-current", "aria-label": LABEL.copy, title: LABEL.copy
+    });
+    copyButton.appendChild(copyGlyph(doc));
+    /* The Next switch and its two children as one group: the switch in
+     * the rail's column, the flyout beside it to the right - out of the
+     * column's flow, so the rail's width and placement are the column's
+     * alone. Closed, the flyout is out of the tab order and the reader's
+     * tree (inert, hidden by visibility once its motion has ended). */
+    function group(role, parent, label, children) {
+      const wrapper = element(doc, "div", `station-rail__group station-rail__group--${role}`, { "data-role": `${role}-group`, "data-open": "false" });
+      const fly = element(doc, "div", "station-rail__flyout", { role: "group", "aria-label": label, "data-open": "false", inert: "", "aria-hidden": "true" });
+      for (const child of children) fly.appendChild(child);
+      wrapper.appendChild(parent);
+      wrapper.appendChild(fly);
+      return { wrapper, fly };
+    }
+    const nextParts = group("next", nextButton, "Next Recipe actions", [promoteButton, copyButton]);
+    const nextGroup = nextParts.wrapper;
+    const flyout = nextParts.fly;
+    /* The Weights switch and Smart Hoppers the same way: the switch's one
+     * child, unfolded while the Weights face is on. */
+    const weightsParts = group("weights", weightsButton, "Weights actions", [smartButton]);
+    const weightsGroup = weightsParts.wrapper;
+    const weightsFlyout = weightsParts.fly;
     rootEl.appendChild(blendButton);
-    rootEl.appendChild(weightsButton);
-    rootEl.appendChild(smartButton);
+    rootEl.appendChild(nextGroup);
+    rootEl.appendChild(weightsGroup);
     rootEl.appendChild(resetButton);
+
+    function unfold(wrapper, fly, open) {
+      wrapper.setAttribute("data-open", open ? "true" : "false");
+      fly.setAttribute("data-open", open ? "true" : "false");
+      if (open) { fly.removeAttribute("inert"); fly.setAttribute("aria-hidden", "false"); }
+      else { fly.setAttribute("inert", ""); fly.setAttribute("aria-hidden", "true"); }
+    }
 
     /* ---- Drawing what it was told ---- */
 
@@ -350,6 +465,9 @@
       rootEl.classList.toggle("is-withdrawn", state.withdrawn);
       rootEl.classList.toggle("is-blend-active", state.blend.active);
       rootEl.classList.toggle("is-weights-active", state.weights.active);
+      rootEl.classList.toggle("is-next-active", state.next.active);
+      if (state.next.active) rootEl.setAttribute("data-face", "next");
+      else rootEl.removeAttribute("data-face");
 
       blendButton.setAttribute("aria-pressed", state.blend.active ? "true" : "false");
       blendButton.classList.toggle("is-active", state.blend.active);
@@ -374,31 +492,67 @@
           ? `${LABEL.smart} · on — weights computed from hopper geometry and each resin's bulk density; click to use the entered weights`
           : `${LABEL.smart} · off — click to compute weights from hopper geometry and each resin's bulk density`));
 
+      nextButton.setAttribute("aria-pressed", state.next.active ? "true" : "false");
+      nextButton.classList.toggle("is-active", state.next.active);
+      nextButton.classList.toggle("is-planned", state.next.planned);
+      nextButton.disabled = !state.next.available && !state.next.active;
+      nextButton.setAttribute("title", state.next.active
+        ? `${LABEL.next} · on — click to finish and show every hopper`
+        : (state.next.available
+          ? `${LABEL.next} · ${state.next.planned ? "a recipe is planned: edit it on every layer" : "nothing is planned yet: plan the next run on every layer"}`
+          : `${LABEL.next} needs a line with layers on the stage`));
+
+      // The two moves unfold beside the switch only while the Next face is
+      // on; Smart Hoppers beside Weights only while that face is.
+      unfold(nextGroup, flyout, state.next.active);
+      unfold(weightsGroup, weightsFlyout, state.weights.active);
+      const promoteArmed = state.armed === "promote";
+      promoteButton.disabled = !state.promote.available || !state.next.planned;
+      promoteButton.classList.toggle("is-armed", promoteArmed);
+      if (promoteArmed) promoteButton.setAttribute("data-armed", "true");
+      else promoteButton.removeAttribute("data-armed");
+      promoteButton.setAttribute("aria-label", promoteArmed ? `Confirm: load the planned recipe into Current · ${state.promote.summary}` : LABEL.promote);
+      promoteButton.setAttribute("title", promoteArmed
+        ? `Click again to load the plan into Current · ${state.promote.summary} · receiver weights, tracking and pump state stay with their hoppers; the plan is kept`
+        : (!state.promote.available
+          ? `${LABEL.promote} is not available: ${state.promote.reason || "no application is connected to Station commands."}`
+          : (!state.next.planned ? `${LABEL.promote} · nothing is planned` : `${LABEL.promote} · ${state.promote.summary || "the plan becomes the running recipe"}`)));
+      copyButton.disabled = !state.copy.available;
+      copyButton.setAttribute("title", !state.copy.available
+        ? `${LABEL.copy} is not available: ${state.copy.reason || "no application is connected to Station commands."}`
+        : `${LABEL.copy} · the running recipe becomes the plan${state.next.planned ? ", replacing what is planned" : ""}; the running job is untouched`);
+
       const count = state.reset.count;
       const hoppers = `${count} hopper${count === 1 ? "" : "s"}`;
+      const resetArmed = state.armed === "reset";
       resetButton.disabled = !state.reset.available || count === 0;
-      resetButton.classList.toggle("is-armed", state.armed);
-      if (state.armed) resetButton.setAttribute("data-armed", "true");
+      resetButton.classList.toggle("is-armed", resetArmed);
+      if (resetArmed) resetButton.setAttribute("data-armed", "true");
       else resetButton.removeAttribute("data-armed");
-      resetButton.setAttribute("aria-label", state.armed ? `Confirm: reset tracking for ${hoppers}` : LABEL.reset);
-      resetButton.setAttribute("title", state.armed
+      resetButton.setAttribute("aria-label", resetArmed ? `Confirm: reset tracking for ${hoppers}` : LABEL.reset);
+      resetButton.setAttribute("title", resetArmed
         ? `Click again to reset tracking · ${hoppers} untracked, pumps marked running`
         : (!state.reset.available
           ? `${LABEL.reset} is not available: ${state.reset.reason || "no application is connected to Station commands."}`
           : (count === 0 ? `${LABEL.reset} · nothing is tracked` : `${LABEL.reset} · ${hoppers}`)));
     }
 
-    /* ---- Arming the reset ---- */
+    /* ---- Arming a control: the reset, or the promotion ---- */
+
+    function armedButton() {
+      return state.armed === "promote" ? promoteButton : resetButton;
+    }
 
     function onDocumentPointerDown(event) {
       const target = event && event.target;
-      if (target && typeof resetButton.contains === "function" && resetButton.contains(target)) return;
+      const button = armedButton();
+      if (target && typeof button.contains === "function" && button.contains(target)) return;
       disarm();
     }
 
     function disarm() {
       if (!state.armed) return false;
-      state.armed = false;
+      state.armed = null;
       if (state.timer !== null && timers.clear) timers.clear(state.timer);
       state.timer = null;
       if (typeof doc.removeEventListener === "function") doc.removeEventListener("pointerdown", onDocumentPointerDown, true);
@@ -406,9 +560,10 @@
       return true;
     }
 
-    function arm() {
-      if (state.armed) return false;
-      state.armed = true;
+    function arm(which) {
+      if (state.armed === which) return false;
+      if (state.armed) disarm();
+      state.armed = which;
       if (timers.set && armDuration > 0) state.timer = timers.set(() => { state.timer = null; disarm(); }, armDuration);
       if (typeof doc.addEventListener === "function") doc.addEventListener("pointerdown", onDocumentPointerDown, true);
       draw();
@@ -430,17 +585,34 @@
     });
     resetButton.addEventListener("click", () => {
       if (resetButton.disabled) return;
-      if (!state.armed) { arm(); return; }
+      if (state.armed !== "reset") { arm("reset"); return; }
       disarm();
       onResetTracking();
     });
-    resetButton.addEventListener("keydown", event => {
-      if (event.key !== "Escape" || !state.armed) return;
-      if (typeof event.stopPropagation === "function") event.stopPropagation();
-      if (typeof event.preventDefault === "function") event.preventDefault();
+    nextButton.addEventListener("click", () => {
       disarm();
+      onNextEdit();
     });
-    resetButton.addEventListener("blur", () => { disarm(); });
+    promoteButton.addEventListener("click", () => {
+      if (promoteButton.disabled) return;
+      if (state.armed !== "promote") { arm("promote"); return; }
+      disarm();
+      onPromote();
+    });
+    copyButton.addEventListener("click", () => {
+      if (copyButton.disabled) return;
+      disarm();
+      onCopy();
+    });
+    for (const button of [resetButton, promoteButton]) {
+      button.addEventListener("keydown", event => {
+        if (event.key !== "Escape" || !state.armed) return;
+        if (typeof event.stopPropagation === "function") event.stopPropagation();
+        if (typeof event.preventDefault === "function") event.preventDefault();
+        disarm();
+      });
+      button.addEventListener("blur", () => { disarm(); });
+    }
 
     /* ---- The surface ---- */
 
@@ -454,6 +626,9 @@
      * @param {object}  [next.weights]    { active, available }
      * @param {object}  [next.smart]      { on, available, reason }
      * @param {object}  [next.reset]      { available, reason, count }
+     * @param {object}  [next.next]       { active, available, planned }
+     * @param {object}  [next.promote]    { available, reason, summary }
+     * @param {object}  [next.copy]       { available, reason }
      */
     function update(next) {
       const n = next || {};
@@ -485,8 +660,23 @@
           count: Number.isInteger(n.reset.count) && n.reset.count > 0 ? n.reset.count : 0
         };
       }
-      // A reset that stopped being possible while armed is not armed.
-      if (state.armed && (!state.reset.available || state.reset.count === 0 || state.hidden || state.withdrawn)) disarm();
+      if (n.next && typeof n.next === "object") {
+        state.next = { active: !!n.next.active, available: !!n.next.available, planned: !!n.next.planned };
+      }
+      if (n.promote && typeof n.promote === "object") {
+        state.promote = {
+          available: !!n.promote.available,
+          reason: typeof n.promote.reason === "string" ? n.promote.reason : "",
+          summary: typeof n.promote.summary === "string" ? n.promote.summary : ""
+        };
+      }
+      if (n.copy && typeof n.copy === "object") {
+        state.copy = { available: !!n.copy.available, reason: typeof n.copy.reason === "string" ? n.copy.reason : "" };
+      }
+      // A control that stopped being possible while armed is not armed.
+      const resetGone = state.armed === "reset" && (!state.reset.available || state.reset.count === 0);
+      const promoteGone = state.armed === "promote" && (!state.promote.available || !state.next.planned || !state.next.active);
+      if (state.armed && (resetGone || promoteGone || state.hidden || state.withdrawn)) disarm();
       else draw();
     }
 
@@ -523,18 +713,27 @@
       weightsButton,
       smartButton,
       resetButton,
+      nextButton,
+      nextGroup,
+      flyout,
+      weightsGroup,
+      weightsFlyout,
+      promoteButton,
+      copyButton,
       update,
       place,
       disarm,
-      isArmed: () => state.armed,
+      isArmed: () => !!state.armed,
+      armedControl: () => state.armed,
       getState: () => ({
-        hidden: state.hidden, withdrawn: state.withdrawn, armed: state.armed,
+        hidden: state.hidden, withdrawn: state.withdrawn, armed: state.armed === "reset", armedControl: state.armed,
         blend: Object.assign({}, state.blend), weights: Object.assign({}, state.weights),
         smart: Object.assign({}, state.smart), reset: Object.assign({}, state.reset),
+        next: Object.assign({}, state.next), promote: Object.assign({}, state.promote), copy: Object.assign({}, state.copy),
         placed: state.placed ? Object.assign({}, state.placed) : null
       })
     };
   }
 
-  return Object.freeze({ ARM_DURATION, GAP, EDGE, LABEL, FALLBACK_SIZE, blendGlyph, weightsGlyph, smartGlyph, resetGlyph, parseBox, readStage, anchor, create });
+  return Object.freeze({ ARM_DURATION, GAP, EDGE, LABEL, FALLBACK_SIZE, blendGlyph, weightsGlyph, smartGlyph, resetGlyph, nextGlyph, promoteGlyph, copyGlyph, parseBox, readStage, anchor, create });
 });

@@ -111,6 +111,10 @@ function producer(actions, cache) {
     actions: Object.assign({
       saveCurrentRecipe: async args => { env.calls.push(["saveCurrentRecipe", args]); return { ok: true, item: { id: "r-new", createdBy: "user-a", name: args.name } }; },
       replaceRecipe: async args => { env.calls.push(["replaceRecipe", args]); return { ok: true, item: { id: args.id } }; },
+      loadRecipe: async args => { env.calls.push(["loadRecipe", args]); return { ok: true }; },
+      renameRecipe: async args => { env.calls.push(["renameRecipe", args]); return { ok: true, item: { id: args.id, name: args.name, createdBy: "leak" } }; },
+      duplicateRecipe: async args => { env.calls.push(["duplicateRecipe", args]); return { ok: true, item: { id: "r-copy" } }; },
+      deleteRecipe: async args => { env.calls.push(["deleteRecipe", args]); return { ok: true }; },
       refresh: async args => { env.calls.push(["refresh", args]); return true; }
     }, actions || {})
   });
@@ -119,13 +123,14 @@ function producer(actions, cache) {
 }
 
 test("the vocabulary is closed, and an unknown action is refused at connect time and at request time", async () => {
-  assert.deepEqual([...bridgeModule.ACTIONS], ["saveCurrentRecipe", "replaceRecipe", "refresh"]);
+  assert.deepEqual([...bridgeModule.ACTIONS], ["saveCurrentRecipe", "replaceRecipe", "loadRecipe", "renameRecipe", "duplicateRecipe", "deleteRecipe", "refresh"]);
   assert.ok(Object.isFrozen(bridgeModule.ACTIONS));
+  assert.deepEqual([...bridgeModule.DESTINATIONS], ["current", "next"]);
   const bridge = bridgeModule.create();
-  assert.throws(() => bridge.connect({ read: () => ({}), actions: { loadRecipe: async () => ({ ok: true }) } }), /unknown action "loadRecipe"/);
+  assert.throws(() => bridge.connect({ read: () => ({}), actions: { setFavorite: async () => ({ ok: true }) } }), /unknown action "setFavorite"/);
   const env = producer();
-  const result = await env.bridge.request("loadRecipe", { id: "r-2" });
-  assert.deepEqual(result, { ok: false, code: "unknown_action", message: '"loadRecipe" is not a saved-recipe action.' });
+  const result = await env.bridge.request("setFavorite", { id: "r-2" });
+  assert.deepEqual(result, { ok: false, code: "unknown_action", message: '"setFavorite" is not a saved-recipe action.' });
   assert.deepEqual(env.calls, []);
 });
 
@@ -168,6 +173,33 @@ test("a replace names the recipe by id; a refresh carries nothing", async () => 
   assert.deepEqual(env.calls, [["replaceRecipe", { id: "r-2" }], ["refresh", {}]]);
 });
 
+test("a load names the recipe and one of the two destinations; rename and duplicate carry a normalized name; delete names the id - and each answers with no more than an id", async () => {
+  const env = producer();
+  assert.deepEqual(await env.bridge.request("loadRecipe", { id: "r-2", destination: "current" }), { ok: true });
+  assert.deepEqual(await env.bridge.request("loadRecipe", { id: "r-2", destination: "next", extra: 1 }), { ok: true });
+  for (const destination of [undefined, "", "both", "Current", 1]) {
+    const refused = await env.bridge.request("loadRecipe", { id: "r-2", destination });
+    assert.deepEqual(refused, { ok: false, code: "bad_argument", message: 'The destination must be "current" or "next".', field: "destination" });
+  }
+  assert.deepEqual(await env.bridge.request("renameRecipe", { id: "r-2", name: "  Clear  film " }), { ok: true, id: "r-2" });
+  assert.deepEqual(await env.bridge.request("duplicateRecipe", { id: "r-2", name: "Clear film copy" }), { ok: true, id: "r-copy" });
+  assert.equal((await env.bridge.request("renameRecipe", { id: "r-2", name: " " })).field, "name");
+  assert.equal((await env.bridge.request("duplicateRecipe", { name: "x" })).field, "id");
+  assert.deepEqual(await env.bridge.request("deleteRecipe", { id: "r-2", destination: "next" }), { ok: true });
+  assert.deepEqual(env.calls, [
+    ["loadRecipe", { id: "r-2", destination: "current" }],
+    ["loadRecipe", { id: "r-2", destination: "next" }],
+    ["renameRecipe", { id: "r-2", name: "Clear film" }],
+    ["duplicateRecipe", { id: "r-2", name: "Clear film copy" }],
+    ["deleteRecipe", { id: "r-2" }]
+  ]);
+  // The load's two failures of its own cross by code.
+  const gone = producer({ loadRecipe: async () => ({ ok: false, code: "not_found", message: "That saved recipe is no longer in this workspace." }) });
+  assert.deepEqual(await gone.bridge.request("loadRecipe", { id: "r-9", destination: "current" }), { ok: false, code: "not_found", message: "That saved recipe is no longer in this workspace." });
+  const wrong = producer({ loadRecipe: async () => ({ ok: false, code: "incompatible", message: "This recipe is set up for 5 layers, but this line runs 3. Nothing was changed." }) });
+  assert.equal((await wrong.bridge.request("loadRecipe", { id: "r-9", destination: "current" })).code, "incompatible");
+});
+
 test("the application's own failure - a duplicate name - crosses with its code and message, and a throw becomes a value", async () => {
   const env = producer({
     saveCurrentRecipe: async () => ({ ok: false, code: "duplicate_name", message: "A configuration with that name already exists.", item: { createdBy: "leak" } }),
@@ -200,7 +232,7 @@ test("the window is the state bridge's own: a frozen book, one notification per 
   assert.equal(env.bridge.getBook().count, 1);
   assert.notEqual(env.bridge.getBook(), first);
   assert.equal(env.bridge.publish, undefined, "publish is on the producer's handle only");
-  assert.deepEqual([...env.bridge.capabilities()].sort(), ["refresh", "replaceRecipe", "saveCurrentRecipe"]);
+  assert.deepEqual([...env.bridge.capabilities()].sort(), ["deleteRecipe", "duplicateRecipe", "loadRecipe", "refresh", "renameRecipe", "replaceRecipe", "saveCurrentRecipe"]);
   assert.throws(() => env.bridge.connect({ read: () => ({}) }), /already connected/);
   assert.equal(env.handle.disconnect(), true);
   assert.equal(env.bridge.isConnected(), false);

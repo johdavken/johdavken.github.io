@@ -750,6 +750,58 @@
   font-weight: 600;
 }
 
+/* A recipe that was saved for another layer count: said, in the warning
+   colour, above the actions that would need it. */
+.station-book__compat {
+  margin: 0 0 var(--station-space-2);
+  color: var(--station-text-muted);
+  font-size: var(--station-text-sm);
+  line-height: var(--station-line-normal);
+}
+
+.station-book__compat[data-kind="incompatible"] {
+  color: var(--station-warning);
+}
+
+/* Load, Update, More… on one line; the overflow row under it - the same
+   arrangement the Weights page draws (weights.css). */
+.station-book__actions,
+.station-book__overflow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--station-space-2);
+  margin-bottom: var(--station-space-2);
+}
+
+.station-book__overflow[hidden] {
+  display: none;
+}
+
+/* The confirmation, in place: the words, then the action(s) and Cancel. */
+.station-book__confirm {
+  margin: var(--station-space-2) 0 var(--station-space-3);
+  padding: var(--station-space-3);
+  border: var(--station-stroke) solid var(--station-handbook-rule);
+  border-radius: var(--station-radius);
+}
+
+.station-book__confirm[data-kind="delete"] {
+  border-color: var(--station-danger);
+}
+
+.station-book__confirm-text {
+  margin: 0 0 var(--station-space-2);
+  font-size: var(--station-text-sm);
+  line-height: var(--station-line-normal);
+}
+
+.station-book__confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--station-space-2);
+}
+
 /* One line per layer: its letter in the layer's accent, its share of the
    film, then its hoppers along the rest of the line. */
 .station-book__layer {

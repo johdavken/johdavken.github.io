@@ -32,6 +32,7 @@ const validation = require("./validation.js");
 const rearrangement = require("./hopper-rearrangement.js");
 const activeJob = require("./active-job.js");
 const cloudSync = require("./cloud-sync.js");
+const payloads = require("./workspace-configuration-payloads.js");
 const syncStorage = require("./sync-storage.js");
 
 /* ----------------------------------------------------------------------
@@ -55,6 +56,8 @@ const LIFTED = [
   block("    function hookupRecipePositions(){", "    function renderResultsFlat("),
   block("    function hasTrackedHoppers(){", "\n    }\n"),
   block("    function clearAllTracking(){", "\n    }\n"),
+  block("    function loadNextRecipeIntoCurrent(){", "\n    }\n"),
+  block("    function loadCurrentRecipeIntoNext(){", "\n    }\n"),
   block("  function createStationCommandExecutor(){", "\n  }\n")
 ].join("\n");
 
@@ -120,10 +123,10 @@ function layersFor(names) {
 /* The application: the executor over real state, whose tail now ends in the
  * REAL cloud-sync (as validateAndCompute({sync}) -> notifyActiveJobMutation
  * does in app.js), connected to a Line 9 workspace over the fake client. */
-async function boot() {
+async function boot(options) {
   const state = {
     lineType: 3, lineRate: 900, gauge: 0, changeoverTime: "", hopperNamingLine9: "standard",
-    layers: layersFor(["A", "B", "C"]), nextRecipe: null,
+    layers: layersFor(["A", "B", "C"]), nextRecipe: (options && options.nextRecipe) || null,
     hookupSources: { current: { "A:0": { resin: "LIVE-A0", source: "SILO 1" } }, next: {} },
     resinLots: {}, nextRecipeLots: {}
   };
@@ -170,6 +173,8 @@ async function boot() {
     function renderTimelineHookups(){}
     function syncMobileLineRateReadout(){}
     function syncChangeoverTimeDisplay(){}
+    function syncLineTypeUI(){}
+    function renderWeightsArea(){}
     const isChangeoverStale = env.scheduling.isChangeoverStale;
     // app.js's tail, with the real RT Sync notification at the end of it.
     function notifyActiveJobMutation(options){ log.notified.push(options); env.lineSync().notifyActiveJobMutation(options); }
@@ -194,7 +199,7 @@ async function boot() {
     return { commands, stationBridge, recipeEditHistory };
   `);
   const built = factory({
-    window: { PolynHookupSources: hookups, PolynNextRecipe: nextRecipe, PolynHopperRearrangement: rearrangement },
+    window: { PolynHookupSources: hookups, PolynNextRecipe: nextRecipe, PolynHopperRearrangement: rearrangement, PolynWorkspaceConfigurationPayloads: payloads },
     state, validation, contract, stateBridgeModule, commandBridgeModule, log, lineSync: () => lineSync,
     scheduling: require("./scheduling.js")
   });
@@ -469,4 +474,70 @@ test("the job controls module has no way onto the line of its own: it dispatches
   }
   const timeline = fs.readFileSync(path.join(ROOT, "station/station-rundown-timeline.js"), "utf8");
   assert.doesNotMatch(timeline, /\.dispatch\s*\(|PolynCloudSync|supabase|\.rpc\s*\(|notifyActiveJobMutation|\.publish\s*\(|saveSession|localStorage/i);
+});
+
+/* ----------------------------------------------------------------------
+ *   The plan: edits to it, promotion, and copying
+ * -------------------------------------------------------------------- */
+
+function plan() {
+  return nextRecipe.normalize({
+    schema_version: 1, line_type: 3, hopper_naming_mode: "standard",
+    layers: ["A", "B", "C"].map((name, at) => ({
+      name, layer_pct: at === 0 ? 34 : 33,
+      hoppers: Array.from({ length: 6 }, (_, i) => ({ resin_name: i === 0 ? `PLAN-${name}0` : i === 1 ? `PLAN-${name}1` : null, pct: i === 0 ? 55 : i === 1 ? 45 : 0 }))
+    }))
+  });
+}
+
+test("a Next-face edit: the running recipe is untouched, the plan is committed on save, one edit notification, one upload carrying the plan", async () => {
+  const h = await boot({ nextRecipe: plan() });
+  const layers = JSON.stringify(h.state.layers);
+  const result = h.commands.dispatch("setHopperResin", { recipe: "next", layer: "B", index: 2, resin: "PLAN-NEW" });
+  assert.equal(result.ok, true);
+  assert.equal(JSON.stringify(h.state.layers), layers);
+  assert.equal(h.state.nextRecipe.layers[1].hoppers[2].resin_name, "PLAN-NEW", "saveSession committed the working plan");
+  assert.equal(result.snapshot.nextRecipe.layers[1].hoppers[2].resinName, "PLAN-NEW");
+  const uploaded = await expectOneUpload(h, "edit", false);
+  assert.equal(uploaded.nextRecipe.layers[1].hoppers[2].resin_name, "PLAN-NEW", "the plan rides the active job");
+  assert.equal(uploaded.layers[1].hoppers[2].resinName, "", "the line's running recipe did not move");
+});
+
+test("promote: the plan becomes the running recipe once, weights and tracking stay with their positions, the plan is kept, one immediate load-next-recipe upload carrying both", async () => {
+  const h = await boot({ nextRecipe: plan() });
+  const revision = h.stationBridge.getRevision();
+  const result = h.commands.dispatch("promoteNextRecipe", {});
+  assert.equal(result.ok, true);
+  assert.equal(result.changed, true);
+  assert.ok(h.stationBridge.getRevision() > revision);
+  assert.deepEqual(h.state.layers[0].hoppers.slice(0, 2).map(x => x.resinName), ["PLAN-A0", "PLAN-A1"]);
+  assert.deepEqual(h.state.layers[0].hoppers.slice(0, 2).map(x => x.pct), [55, 45]);
+  assert.deepEqual(h.state.layers[0].hoppers.slice(0, 2).map(x => x.track), [true, false]);
+  assert.deepEqual(h.state.layers[0].hoppers.slice(0, 2).map(x => x.weight), [400, 400]);
+  assert.deepEqual(h.state.nextRecipe, plan());
+  const uploaded = await expectOneUpload(h, "load-next-recipe", true);
+  assert.equal(uploaded.layers[0].hoppers[0].resinName, "PLAN-A0");
+  assert.equal(uploaded.layers[0].hoppers[0].track, true);
+  assert.deepEqual(uploaded.nextRecipe, plan(), "the kept plan travels with the job");
+});
+
+test("copy: the running recipe becomes the plan once, the job is untouched, one immediate load-current-recipe upload; nothing planned or a matching plan refuses or no-ops with no upload", async () => {
+  const h = await boot({ nextRecipe: plan() });
+  const layers = JSON.stringify(h.state.layers);
+  const result = h.commands.dispatch("copyCurrentToNext", {});
+  assert.equal(result.ok, true);
+  assert.equal(JSON.stringify(h.state.layers), layers);
+  assert.equal(h.state.nextRecipe.layers[0].hoppers[0].resin_name, "LIVE-A0");
+  const uploaded = await expectOneUpload(h, "load-current-recipe", true);
+  assert.equal(uploaded.nextRecipe.layers[0].hoppers[0].resin_name, "LIVE-A0");
+  assert.equal(uploaded.layers[0].hoppers[0].resinName, "LIVE-A0");
+  // Again: nothing to do, nothing sent.
+  const again = h.commands.dispatch("copyCurrentToNext", {});
+  assert.equal(again.changed, false);
+  const none = await boot();
+  const refused = none.commands.dispatch("promoteNextRecipe", {});
+  assert.equal(refused.code, "no_plan");
+  await none.flush();
+  assert.deepEqual(none.uploads(), []);
+  assert.deepEqual(none.log.notified, []);
 });

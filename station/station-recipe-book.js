@@ -3,10 +3,11 @@
  * WHAT IT IS
  *
  * The saved recipes of the production line this desktop is on, as a
- * compact list; the blend of whichever one is selected; and Save Current,
- * to add the running recipe to them. That is all of it. Loading a saved
- * recipe onto the line is not here yet: selecting one shows it and
- * changes nothing.
+ * compact list; the blend of whichever one is selected, with what may be
+ * done to it - Load (into the running recipe or into the plan), Update,
+ * and behind More: Rename, Duplicate, Delete; and Save Current, to add the
+ * running recipe to them. Selecting one shows it and changes nothing;
+ * only a confirmed action asks the application for anything.
  *
  * WHERE IT READS FROM, AND WHERE IT WRITES
  *
@@ -20,8 +21,13 @@
  * state, with its own helper, and saves it along its own path, exactly as
  * its Save Current Recipe dialog does; a name already taken comes back as
  * the service's own duplicate_name, and the offer to replace goes back the
- * same way. Nothing here knows what a recipe payload looks like on the
- * wire, where it is stored, or how a name is normalized there.
+ * same way. Load, Update, Rename, Duplicate and Delete go the same way,
+ * each one request by the recipe's id - the application's own apply and
+ * its own mutation closures, with their own tails. A load into Current is
+ * the application's validated, atomic apply, told to RT Sync at once; a
+ * load into Next replaces the plan only. Nothing here knows what a recipe
+ * payload looks like on the wire, where it is stored, or how a name is
+ * normalized there.
  *
  * BLEND EDIT IS NOT HERE
  *
@@ -35,8 +41,10 @@
  * WHAT IT HOLDS
  *
  * Presentation state only, and only for this screen: which saved recipe
- * is selected, whether the name entry is open, a request in flight, the
- * last message a request produced.
+ * is selected, which name entry is open (save, rename or duplicate) and
+ * for which recipe, which confirmation is open (load, update or delete),
+ * whether the overflow is out, a request in flight, the last message a
+ * request produced.
  */
 (function (root, factory) {
   const lineModel = typeof require === "function"
@@ -67,6 +75,12 @@
   const ACTION = "station-handbook__action";
   const PRIMARY = `${ACTION} is-primary`;
   const QUIET = `${ACTION} is-quiet`;
+  const DANGER = `${ACTION} is-danger`;
+
+  /* What a load changes and what it does not - the application's own
+   * words (its load dialog), said before the operator confirms. */
+  const LOAD_CURRENT_TEXT = "Load into Current changes the line type, hopper naming mode, layer percentages and resin assignments of the RUNNING recipe, and the line is told at once. Receiver weights, tracking, pump-off state, timeline and runtime state, workspace, RT Sync identity and appearance are not changed.";
+  const LOAD_NEXT_TEXT = "Load into Next replaces only the planned Next Recipe - see and edit it on the Next Recipe face from the machine rail. The running recipe is untouched.";
 
   function element(doc, name, className, attributes) {
     const node = doc.createElement(name);
@@ -172,6 +186,9 @@
    *        subscribe, isConnected, request). Handed in, never reached for.
    * @param {object} [context.lineModel]    for hopper naming; defaults to
    *        the line model module
+   * @param {function} [context.model]      () => the line model the stage
+   *        draws (station-line-model.js), for the one compatibility the
+   *        book can read ahead of a load into Current: the layer count
    * @param {function} [context.layerRole]  (name) => the role of that layer
    *        on the line the stage shows ("outside", "core", ...), or "" - the
    *        boot file's reading of its line model. A saved recipe's layers
@@ -185,9 +202,13 @@
     const lineModel = settings.lineModel || lineModelModule;
     const layerRole = typeof settings.layerRole === "function" ? settings.layerRole : null;
 
+    const model = typeof settings.model === "function" ? settings.model : () => null;
+
     const state = {
       selectedId: null,
-      entryOpen: false,
+      entry: null,        // { mode: "save" | "rename" | "duplicate", id } while a name is asked for
+      confirm: null,      // { kind: "load" | "update" | "delete", id } while a question is open
+      moreOpen: false,    // the overflow row (Rename, Duplicate, Delete) is out
       pending: null,      // the request in flight, by action
       note: "",
       noteKind: "",
@@ -209,15 +230,16 @@
     toolbar.appendChild(saveButton); toolbar.appendChild(refreshButton); toolbar.appendChild(contextLabel);
     rootEl.appendChild(toolbar);
 
-    /* ---- Save Current: the name, asked for in place ---- */
+    /* ---- The name, asked for in place: Save Current, Rename, Duplicate ---- */
     const entry = element(doc, "div", "station-book__entry", { hidden: "" });
-    entry.appendChild(text(doc, "span", "station-book__entry-label", "Save the running recipe as"));
+    const entryLabel = text(doc, "span", "station-book__entry-label", "Save the running recipe as");
+    entry.appendChild(entryLabel);
     const nameInput = element(doc, "input", "station-book__name", {
       type: "text", autocomplete: "off", spellcheck: "false", placeholder: "Recipe name", "aria-label": "Recipe name"
     });
-    const confirmButton = text(doc, "button", PRIMARY, "Save", { type: "button", "data-action": "confirm-save" });
+    const confirmButton = text(doc, "button", PRIMARY, "Save", { type: "button", "data-action": "confirm-entry" });
     const replaceButton = text(doc, "button", ACTION, "Replace existing", { type: "button", "data-action": "replace", hidden: "" });
-    const cancelButton = text(doc, "button", QUIET, "Cancel", { type: "button", "data-action": "cancel-save" });
+    const cancelButton = text(doc, "button", QUIET, "Cancel", { type: "button", "data-action": "cancel-entry" });
     entry.appendChild(nameInput); entry.appendChild(confirmButton); entry.appendChild(replaceButton); entry.appendChild(cancelButton);
     rootEl.appendChild(entry);
 
@@ -288,6 +310,66 @@
         return;
       }
       detail.appendChild(text(doc, "h3", "station-book__detail-name", recipe.name));
+      const busy = !!state.pending;
+      const on = connected();
+      const compat = compatibility(recipe);
+      if (!compat.ok && compat.message) {
+        detail.appendChild(text(doc, "p", "station-book__compat", compat.message, { "data-kind": "incompatible" }));
+      }
+
+      /* Load leads; Update is the secondary; the rest wait behind More. */
+      const actions = element(doc, "div", "station-book__actions");
+      const loadButton = text(doc, "button", PRIMARY, "Load", { type: "button", "data-action": "load" });
+      loadButton.disabled = busy || !on;
+      loadButton.setAttribute("title", "Apply this recipe to the running recipe, or to the planned one");
+      const updateButton = text(doc, "button", ACTION, "Update", { type: "button", "data-action": "update", title: "Replace this recipe with the running recipe" });
+      updateButton.disabled = busy || !on;
+      const moreButton = text(doc, "button", QUIET, "More…", { type: "button", "data-action": "more", "aria-expanded": state.moreOpen ? "true" : "false" });
+      moreButton.disabled = busy || !on;
+      actions.appendChild(loadButton); actions.appendChild(updateButton); actions.appendChild(moreButton);
+      detail.appendChild(actions);
+
+      const overflow = element(doc, "div", "station-book__overflow", { hidden: state.moreOpen ? null : "" });
+      const renameButton = text(doc, "button", QUIET, "Rename", { type: "button", "data-action": "rename" });
+      const duplicateButton = text(doc, "button", QUIET, "Duplicate", { type: "button", "data-action": "duplicate" });
+      const deleteButton = text(doc, "button", DANGER, "Delete", { type: "button", "data-action": "delete" });
+      renameButton.disabled = busy; duplicateButton.disabled = busy; deleteButton.disabled = busy;
+      overflow.appendChild(renameButton); overflow.appendChild(duplicateButton); overflow.appendChild(deleteButton);
+      detail.appendChild(overflow);
+
+      /* The confirmation, in place, for the one action that is pending.
+       * A load asks where: the running recipe (held, with the reason,
+       * when the recipe was saved for another layer count) or the plan. */
+      if (state.confirm && state.confirm.id === recipe.id) {
+        const confirm = element(doc, "div", "station-book__confirm", { role: "group", "data-kind": state.confirm.kind });
+        const words = state.confirm.kind === "load"
+          ? `${recipe.name}. ${LOAD_CURRENT_TEXT} ${LOAD_NEXT_TEXT}`
+          : state.confirm.kind === "update"
+            ? `Replace “${recipe.name}” with the running recipe? This will save line type, layer percentages, resin assignments and hopper percentages. It will not save receiver weights, tracking, pump-off, timeline or runtime state.`
+            : `Delete “${recipe.name}” from this line's shared recipes?`;
+        confirm.appendChild(text(doc, "p", "station-book__confirm-text", words));
+        const buttons = element(doc, "div", "station-book__confirm-actions");
+        if (state.confirm.kind === "load") {
+          const intoCurrent = text(doc, "button", PRIMARY, "Load into Current", { type: "button", "data-action": "confirm-load", "data-destination": "current" });
+          intoCurrent.disabled = busy || !compat.ok;
+          intoCurrent.setAttribute("title", compat.ok ? "The recipe becomes the running recipe; the line is told at once" : compat.message);
+          const intoNext = text(doc, "button", ACTION, "Load into Next", { type: "button", "data-action": "confirm-load", "data-destination": "next" });
+          intoNext.disabled = busy;
+          intoNext.setAttribute("title", "The recipe becomes the plan; the running recipe is untouched");
+          buttons.appendChild(intoCurrent); buttons.appendChild(intoNext);
+        } else {
+          const go = text(doc, "button", state.confirm.kind === "delete" ? DANGER : PRIMARY,
+            state.confirm.kind === "update" ? "Update" : "Delete", { type: "button", "data-action": "confirm" });
+          go.disabled = busy;
+          buttons.appendChild(go);
+        }
+        const back = text(doc, "button", QUIET, "Cancel", { type: "button", "data-action": "cancel-confirm" });
+        buttons.appendChild(back);
+        confirm.appendChild(buttons);
+        detail.appendChild(confirm);
+        // The primary of the page while the question is open.
+        loadButton.classList.remove("is-primary");
+      }
       // The recipe's own order - A, B, C... - as the stage lists its banks.
       const layers = (Array.isArray(recipe.layers) ? recipe.layers : []).slice()
         .sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
@@ -311,6 +393,20 @@
         row.appendChild(hoppers);
         detail.appendChild(row);
       });
+    }
+
+    /* Whether a saved recipe fits the line the stage shows, by the one rule
+     * the application applies to a load into Current: the layer count. A
+     * recipe for another count is shown, and may be loaded into the plan
+     * (the application carries the plan to the line's structure), but the
+     * load into Current is held here with the reason the application
+     * would give - the operator reads it before asking, not after. With no
+     * line model the question is the application's alone. */
+    function compatibility(recipe) {
+      const line = model();
+      const layers = line && Array.isArray(line.layers) ? line.layers.length : 0;
+      if (!layers || !recipe || !(recipe.lineType > 0) || recipe.lineType === layers) return { ok: true, message: "" };
+      return { ok: false, message: `This recipe is set up for ${recipe.lineType} layers, but this line runs ${layers}. It can be loaded into Next, not into Current.` };
     }
 
     /* The layer's role for its accent: the line's own reading of that
@@ -338,9 +434,11 @@
         ? `${current.workspace.displayName} · ${current.count} saved`
         : (on ? "No line" : "Not connected");
       saveButton.disabled = !on || !assigned || !!state.pending;
-      // One primary at a time: while the name is being asked for, the
-      // entry's own Save is the action that completes the work.
-      saveButton.classList.toggle("is-primary", !state.entryOpen);
+      // One primary at a time: while a name is being asked for, or a
+      // question is open, the entry's or the question's own action is the
+      // one that completes the work; and a selected recipe's Load leads
+      // over Save Current.
+      saveButton.classList.toggle("is-primary", !state.entry && !state.confirm && !selected(current));
       saveButton.setAttribute("title", !on
         ? "Saving is not available: no application is connected to Station."
         : (!assigned ? "Connect this desktop to a production line to save shared recipes." : "Save the running recipe to this line's shared recipes."));
@@ -352,19 +450,30 @@
       confirmButton.disabled = !!state.pending;
       replaceButton.disabled = !!state.pending;
       show(replaceButton, !!state.duplicate);
-      show(entry, state.entryOpen);
-      // A selection that is no longer in the book is dropped, not kept as a ghost.
-      if (state.selectedId && !selected(current)) state.selectedId = null;
+      show(entry, !!state.entry);
+      // A selection that is no longer in the book is dropped, not kept as a
+      // ghost - and with it any question or entry about it.
+      if (state.selectedId && !selected(current)) {
+        state.selectedId = null;
+        state.confirm = null;
+        state.moreOpen = false;
+        if (state.entry && state.entry.mode !== "save") state.entry = null;
+      }
       drawList(current);
       drawDetail(current);
     }
 
     /* ---- Actions ---- */
 
-    function openEntry(prefill) {
-      state.entryOpen = true;
+    function openEntry(mode, recipe) {
+      state.entry = { mode, id: recipe ? recipe.id : null };
+      state.confirm = null;
       state.duplicate = null;
-      nameInput.value = prefill || "";
+      state.moreOpen = false;
+      entryLabel.textContent = mode === "save" ? "Save the running recipe as"
+        : mode === "rename" ? `Rename “${recipe.name}” to` : `Duplicate “${recipe.name}” as`;
+      confirmButton.textContent = mode === "save" ? "Save" : mode === "rename" ? "Rename" : "Duplicate";
+      nameInput.value = mode === "rename" ? recipe.name : (mode === "duplicate" ? `${recipe.name} copy` : "");
       nameInput.removeAttribute("aria-invalid");
       say("");
       refresh();
@@ -373,8 +482,24 @@
     }
 
     function closeEntry() {
-      state.entryOpen = false;
+      state.entry = null;
       state.duplicate = null;
+      refresh();
+    }
+
+    function openConfirm(kind, recipe) {
+      state.confirm = { kind, id: recipe.id };
+      state.entry = null;
+      state.duplicate = null;
+      state.moreOpen = false;
+      say("");
+      refresh();
+      const go = detail.querySelector ? detail.querySelector('[data-action="confirm"], [data-action="confirm-load"]') : null;
+      if (go && typeof go.focus === "function") go.focus();
+    }
+
+    function closeConfirm() {
+      state.confirm = null;
       refresh();
     }
 
@@ -397,7 +522,9 @@
      * A duplicate is the service's own answer; the offer to replace the
      * recipe it collides with is made here and goes back as replaceRecipe,
      * by that recipe's id - which the book already carries. */
-    async function confirmSave() {
+    async function confirmEntry() {
+      const pending = state.entry;
+      if (!pending) return null;
       const name = String(nameInput.value || "").trim().replace(/\s+/g, " ");
       if (!name) {
         nameInput.setAttribute("aria-invalid", "true");
@@ -405,10 +532,26 @@
         return null;
       }
       nameInput.removeAttribute("aria-invalid");
+      if (pending.mode === "save") return confirmSave(name);
+      const action = pending.mode === "rename" ? "renameRecipe" : "duplicateRecipe";
+      const result = await request(action, { id: pending.id, name });
+      if (result.ok) {
+        state.entry = null;
+        if (pending.mode === "duplicate" && result.id) state.selectedId = result.id;
+        say(pending.mode === "rename" ? `Renamed to “${name}”.` : `Duplicated as “${name}”.`, "ok");
+      } else {
+        if (result.code === "duplicate_name") nameInput.setAttribute("aria-invalid", "true");
+        say(result.message || (pending.mode === "rename" ? "The recipe could not be renamed." : "The recipe could not be duplicated."), "error");
+      }
+      refresh();
+      return result;
+    }
+
+    async function confirmSave(name) {
       const result = await request("saveCurrentRecipe", { name });
       if (result.ok) {
         state.selectedId = result.id || state.selectedId;
-        state.entryOpen = false;
+        state.entry = null;
         state.duplicate = null;
         say(`Saved “${name}” to this line's recipes.`, "ok");
         refresh();
@@ -437,11 +580,38 @@
       const result = await request("replaceRecipe", { id: duplicate.id });
       if (result.ok) {
         state.selectedId = duplicate.id;
-        state.entryOpen = false;
+        state.entry = null;
         state.duplicate = null;
         say(`Replaced “${duplicate.name}” with the running recipe.`, "ok");
       } else {
         say(result.message || "The recipe could not be replaced.", "error");
+      }
+      refresh();
+      return result;
+    }
+
+    /* The confirmed action: Load (to one of the two destinations), Update
+     * or Delete, by the selected recipe's id. */
+    async function confirmAction(destination) {
+      const pending = state.confirm;
+      if (!pending) return null;
+      const recipe = selected(book());
+      if (!recipe || recipe.id !== pending.id) { state.confirm = null; refresh(); return null; }
+      const action = pending.kind === "load" ? "loadRecipe" : pending.kind === "update" ? "replaceRecipe" : "deleteRecipe";
+      const args = pending.kind === "load" ? { id: recipe.id, destination: destination === "next" ? "next" : "current" } : { id: recipe.id };
+      const result = await request(action, args);
+      state.confirm = null;
+      if (result.ok) {
+        if (pending.kind === "delete") state.selectedId = null;
+        say(pending.kind === "load"
+          ? (args.destination === "next"
+            ? `Loaded “${recipe.name}” into Next: it is the planned recipe now. The running recipe is untouched.`
+            : `Loaded “${recipe.name}” into Current: it is the running recipe now.`)
+          : pending.kind === "update" ? `Updated “${recipe.name}” with the running recipe.`
+            : `Deleted “${recipe.name}”.`, "ok");
+      } else {
+        say(result.message || (pending.kind === "load" ? "The recipe could not be loaded."
+          : pending.kind === "update" ? "The recipe could not be updated." : "The recipe could not be deleted."), "error");
       }
       refresh();
       return result;
@@ -458,22 +628,39 @@
     rootEl.addEventListener("click", event => {
       const target = event.target && event.target.closest ? event.target.closest("[data-action], [data-recipe]") : null;
       if (!target) return;
+      if (target.disabled) return;
       const recipeId = target.getAttribute("data-recipe");
       if (recipeId) {
         // Selecting shows the recipe and changes nothing on the line.
         state.selectedId = state.selectedId === recipeId ? null : recipeId;
+        state.confirm = null;
+        state.moreOpen = false;
+        if (state.entry && state.entry.mode !== "save") state.entry = null;
         refresh();
         return;
       }
       const action = target.getAttribute("data-action");
-      if (action === "save-current") { openEntry(""); return; }
-      if (action === "confirm-save") { void confirmSave(); return; }
-      if (action === "replace") { void replaceExisting(); return; }
-      if (action === "cancel-save") { closeEntry(); return; }
-      if (action === "refresh") { void refreshBook(); return; }
+      const recipe = selected(book());
+      switch (action) {
+        case "save-current": openEntry("save", null); return;
+        case "confirm-entry": void confirmEntry(); return;
+        case "replace": void replaceExisting(); return;
+        case "cancel-entry": closeEntry(); return;
+        case "refresh": void refreshBook(); return;
+        case "load": if (recipe) openConfirm("load", recipe); return;
+        case "update": if (recipe) openConfirm("update", recipe); return;
+        case "delete": if (recipe) openConfirm("delete", recipe); return;
+        case "rename": if (recipe) openEntry("rename", recipe); return;
+        case "duplicate": if (recipe) openEntry("duplicate", recipe); return;
+        case "more": state.moreOpen = !state.moreOpen; refresh(); return;
+        case "confirm": void confirmAction(); return;
+        case "confirm-load": void confirmAction(target.getAttribute("data-destination")); return;
+        case "cancel-confirm": closeConfirm(); return;
+        default: return;
+      }
     });
     nameInput.addEventListener("keydown", event => {
-      if (event.key === "Enter") { if (typeof event.preventDefault === "function") event.preventDefault(); void confirmSave(); }
+      if (event.key === "Enter") { if (typeof event.preventDefault === "function") event.preventDefault(); void confirmEntry(); }
       else if (event.key === "Escape") { if (typeof event.stopPropagation === "function") event.stopPropagation(); closeEntry(); }
     });
 
@@ -483,18 +670,25 @@
       element: rootEl,
       update: refresh,
       focus() {
-        const target = state.entryOpen ? nameInput : saveButton;
+        const target = state.entry ? nameInput : saveButton;
         if (target && typeof target.focus === "function" && !target.disabled) target.focus();
       },
       /* A page of lists - the book on the left, a recipe's blend on the
        * right - both of which scroll: the Handbook may be raised for it. */
       grows: () => true,
-      confirmSave,
+      confirmEntry,
+      confirmSave: () => confirmEntry(),
       replaceExisting,
+      confirmAction,
       refreshBook,
-      select(id) { state.selectedId = id || null; refresh(); },
+      select(id) { state.selectedId = id || null; state.confirm = null; state.moreOpen = false; refresh(); },
       getState: () => ({
-        selectedId: state.selectedId, entryOpen: state.entryOpen, pending: state.pending,
+        selectedId: state.selectedId,
+        entry: state.entry ? Object.assign({}, state.entry) : null,
+        entryOpen: !!state.entry,
+        confirm: state.confirm ? Object.assign({}, state.confirm) : null,
+        moreOpen: state.moreOpen,
+        pending: state.pending,
         note: state.note, noteKind: state.noteKind, duplicate: state.duplicate ? Object.assign({}, state.duplicate) : null
       })
     };

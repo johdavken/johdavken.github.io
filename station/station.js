@@ -130,6 +130,12 @@
    * themselves it writes through the command bridge, like Resin Totals. */
   const weightsSection = root.PolynStationWeights || null;
   const weightProfiles = root.PolynStationWeightProfilesBridge || null;
+  /* The plan controls (station-plan-controls.js): the seam the rail's
+   * two moves under the Next face go through - the plan promoted over the
+   * running recipe, the running recipe copied into the plan - and the
+   * words for what a promotion would change. Optional: without it the
+   * Next face still edits the plan; the rail holds the two moves. */
+  const planControls = root.PolynStationPlanControls || null;
   /* Sudo (station-sudo.js): the Handbook's administrator page, and the
    * bridge it reads and asks through - administrator access and Workspace
    * Management as the application publishes them (station-admin-bridge.js).
@@ -159,6 +165,25 @@
    * each drawn share by the renderer. */
   function shareFor(resolved) {
     return layerShare ? layerShare.abilities(commandsFor(resolved), "current") : null;
+  }
+
+  /* Which recipe a layer's drawn header addresses: the plan, for a layer
+   * turned over on the Next face - that layer is entirely the plan's, its
+   * card and its share - and the running job otherwise. */
+  function recipeForLayer(layerId) {
+    return blendEdit.active && blendEdit.kind === "next" && !focusLayerFor() && isFlipped(layerId) ? "next" : "current";
+  }
+
+  /* The layer shares the stage draws: the running job's, with the plan's
+   * in place of them on every layer the Next face has turned over. */
+  function stageLayerState(resolved) {
+    if (!resolved) return null;
+    if (!(blendEdit.active && blendEdit.kind === "next" && !focusLayerFor())) return resolved.layerState;
+    const merged = Object.assign({}, resolved.layerState);
+    for (const id of blendEdit.flipped) {
+      merged[id] = resolved.nextLayerState && resolved.nextLayerState[id] ? resolved.nextLayerState[id] : { layerPct: 0 };
+    }
+    return merged;
   }
 
   if (!lineModel || !render || !demoLines || !source || !shell || !transition || !focusEditor) return;
@@ -272,6 +297,9 @@
    * and the one exit an operator has, with Escape on the stage as the
    * same exit); the Operator Handbook neither enters nor leaves it, so
    * the Recipe Book can be read while the cards are out. */
+  /* `kind` is the mode's face: "blend" (the running recipe's cards),
+   * "weights" (the weight cards) or "next" (the PLANNED recipe's cards -
+   * the same blend card, turned to the plan and addressed to it). */
   const blendEdit = { active: false, kind: "blend", flipped: [] };
   /* The compact editors' handles, by layer id, for the stage as drawn:
    * what a value-only publish updates in place, as editorHandle is for
@@ -467,13 +495,15 @@
    * the first thing the operator does in the mode replaces it. */
   const BLEND_EDIT_HINT = "Blend Edit: every layer is turned over to its blend card. Click a layer's mixer or extruder to show its hoppers; click Blend Edit again when done.";
   const WEIGHTS_EDIT_HINT = "Weights: every layer is turned over to its weight card. Enter receiver weights - and, with Smart Hoppers on, each hopper's geometry; click Weights again when done.";
-  const HINT = { blend: BLEND_EDIT_HINT, weights: WEIGHTS_EDIT_HINT };
+  const NEXT_EDIT_HINT = "Next Recipe: every layer is turned over to a card of the PLANNED recipe. Edits here change the plan, not the running job; Load Next on the rail makes the plan the running recipe. Click Next Recipe again when done.";
+  const HINT = { blend: BLEND_EDIT_HINT, weights: WEIGHTS_EDIT_HINT, next: NEXT_EDIT_HINT };
+  const FACES = ["blend", "weights", "next"];
 
   /* Enter the mode with one face, or switch the face while it is on:
    * either way every layer is turned over afresh to the face asked for,
    * and any field the operator was in is left along its own path. */
   function enterBlendEdit(kind) {
-    const face = kind === "weights" ? "weights" : "blend";
+    const face = FACES.includes(kind) ? kind : "blend";
     if (modeIs(face)) return false;
     if (face === "weights" ? !canEnterWeightsEdit() : !canEnterBlendEdit()) return false;
     leaveStageControl();
@@ -528,6 +558,11 @@
     return modeIs("weights") ? exitBlendEdit() : enterBlendEdit("weights");
   }
 
+  /* The rail's third switch: the same mode, turned to the plan. */
+  function toggleNextEdit() {
+    return modeIs("next") ? exitBlendEdit() : enterBlendEdit("next");
+  }
+
   /* --------------------------------------------------------------------
    *   The machine utility rail
    * ------------------------------------------------------------------
@@ -556,11 +591,24 @@
     const resetOffered = !!(hopperControls && typeof hopperControls.canReset === "function" && hopperControls.canReset(commandsNow, "current"));
     const smart = weightCards ? weightCards.smartFrom(current.resolved) : null;
     const smartOffered = !!(weightCards && weightCards.canToggleSmart(commandsNow, smart));
+    const planned = !!(current.resolved && current.resolved.plan && current.resolved.plan.planned);
+    const promoteOffered = !!(planControls && planControls.can(commandsNow, "promote"));
+    const copyOffered = !!(planControls && planControls.can(commandsNow, "copy"));
     railPanel.update({
       hidden: !canEnterBlendEdit(),
       withdrawn: !!focusLayerFor(),
       blend: { active: modeIs("blend"), available: canEnterBlendEdit() },
       weights: { active: modeIs("weights"), available: canEnterWeightsEdit() },
+      next: { active: modeIs("next"), available: canEnterBlendEdit(), planned },
+      promote: {
+        available: promoteOffered,
+        reason: promoteOffered || !planControls ? "" : planControls.reason(commandsNow, "promote"),
+        summary: planControls ? planControls.summaryText(planControls.summarize(current.resolved)) : ""
+      },
+      copy: {
+        available: copyOffered,
+        reason: copyOffered || !planControls ? "" : planControls.reason(commandsNow, "copy")
+      },
       smart: {
         on: !!(smart && smart.enabled),
         available: smartOffered,
@@ -578,6 +626,44 @@
     if (!railPanel || !mounts.machine || !mounts.rail || focusLayerFor()) return;
     const svg = typeof mounts.machine.querySelector === "function" ? mounts.machine.querySelector("svg") : null;
     if (svg) railPanel.place(svg, mounts.rail);
+  }
+
+  /* The rail's two moves under the Next face, through the plan controls'
+   * seam: the confirmed Load Next, and Copy Current. One command each;
+   * the answer through the same publish policy as every other; what the
+   * application did said on the status line either way. */
+  function promoteNextRecipe() {
+    if (!planControls) return null;
+    const result = planControls.promote(commandsFor(current.resolved));
+    if (!result || !result.ok) {
+      say(result && result.message ? result.message : "The planned recipe could not be loaded.");
+      return result || null;
+    }
+    if (!result.changed) {
+      say("The plan matches the running recipe: nothing to load.");
+      return result;
+    }
+    lastOwnRevision = Number.isInteger(result.revision) ? result.revision : null;
+    onPublish({ own: true });
+    say("Loaded: the planned recipe is now the running recipe. The plan is kept; receiver weights, tracking and pump state stayed with their hoppers.");
+    return result;
+  }
+
+  function copyCurrentToNext() {
+    if (!planControls) return null;
+    const result = planControls.copy(commandsFor(current.resolved));
+    if (!result || !result.ok) {
+      say(result && result.message ? result.message : "The running recipe could not be copied into the plan.");
+      return result || null;
+    }
+    if (!result.changed) {
+      say("The plan already matches the running recipe.");
+      return result;
+    }
+    lastOwnRevision = Number.isInteger(result.revision) ? result.revision : null;
+    onPublish({ own: true });
+    say("Copied: the plan is now the running recipe. Edit it on the cards; the running job is untouched.");
+    return result;
   }
 
   /* The rail's second click on Reset Tracking, already confirmed there:
@@ -1084,7 +1170,7 @@
       current = { model, resolved };
       render.patchStage(mounts.machine, model, {
         hopperState: resolved.hopperState,
-        layerState: resolved.layerState,
+        layerState: stageLayerState(resolved),
         focusLayer: shown,
         selectedHopper: focus && focus.layer === shown ? focus.hopper : null,
         hopperControls: controlsFor(resolved),
@@ -1093,7 +1179,12 @@
       if (editorHandle) editorHandle.update({ hopperState: resolved.hopperState });
       // The cards are editors too: the same update, around whatever
       // control is active in each.
-      for (const id of Object.keys(cardHandles)) cardHandles[id].update({ hopperState: resolved.hopperState, smartHoppers: resolved.smartHoppers });
+      for (const id of Object.keys(cardHandles)) {
+        cardHandles[id].update({
+          hopperState: blendEdit.kind === "next" ? resolved.nextHopperState : resolved.hopperState,
+          smartHoppers: resolved.smartHoppers
+        });
+      }
       // A patched hopper is a new element; the classes the boot file owns
       // are written to it again from the state that owns them.
       applyHighlight();
@@ -1196,13 +1287,13 @@
       shareHandle.focus();
       return;
     }
+    const recipe = recipeForLayer(request.layer);
     if (!request.able) {
-      say(`Layer ${request.layer}'s share cannot be changed here: ${layerShare.reason(commandsFor(current.resolved), "current")}`);
+      say(`Layer ${request.layer}'s share cannot be changed here: ${layerShare.reason(commandsFor(current.resolved), recipe)}`);
       return;
     }
     if (shareHandle && shareHandle.isOpen()) shareHandle.commit();
-    const recipe = "current";
-    const layerState = current.resolved ? current.resolved.layerState : null;
+    const layerState = stageLayerState(current.resolved);
     const handle = layerShare.open(mounts.machine.ownerDocument, {
       target: element,
       layer: request.layer,
@@ -1278,6 +1369,11 @@
     const cards = {};
     cardHandles = {};
     if (blendEdit.active && model && !focusLayer) {
+      /* The Next face: the same blend card, turned to the plan's hopper
+       * state and addressed to the plan; every command from it names
+       * "next". The running job's state never reaches these cards. */
+      const cardRecipe = blendEdit.kind === "next" ? "next" : recipe;
+      const cardHopperState = blendEdit.kind === "next" ? (current.resolved ? current.resolved.nextHopperState : null) : hopperState;
       for (const entry of model.layers) {
         if (!isFlipped(entry.id)) continue;
         /* The Weights face: the same footprint, the weight card in it,
@@ -1300,14 +1396,14 @@
           }
         }) : focusEditor.create(mounts.machine.ownerDocument, {
           layer: entry,
-          hopperState,
+          hopperState: cardHopperState,
           resins: catalogResins,
           commands: commandsFor(current.resolved),
-          recipe,
+          recipe: cardRecipe,
           variant: "compact",
           onEditing: record => {
             editing = record ? Object.assign({
-              recipe,
+              recipe: cardRecipe,
               baseRevision: current.resolved ? current.resolved.revision : null
             }, record) : null;
           },
@@ -1323,7 +1419,7 @@
     }
     const svg = render.mountStage(mounts.machine, model, {
       hopperState,
-      layerState: current.resolved ? current.resolved.layerState : null,
+      layerState: stageLayerState(current.resolved),
       focusLayer,
       selectedTarget: focus ? focus.target : null,
       selectedHopper,
@@ -1596,6 +1692,9 @@
         onWeightsEdit: toggleWeightsEdit,
         onSmartHoppers: toggleSmartHoppers,
         onResetTracking: resetTracking,
+        onNextEdit: toggleNextEdit,
+        onPromote: promoteNextRecipe,
+        onCopy: copyCurrentToNext,
         setTimeout: typeof root.setTimeout === "function" ? root.setTimeout.bind(root) : null,
         clearTimeout: typeof root.clearTimeout === "function" ? root.clearTimeout.bind(root) : null
       });

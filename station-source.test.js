@@ -460,3 +460,60 @@ test("the switch, the circumference, a usable volume and a computed weight are v
   assert.equal(source.classifyChange(base, resolvedFor(liveState(), { smartHopperGeometryMode: "volume" })), "values");
   assert.equal(source.classifyChange(base, resolvedFor(liveState(), { smartHopperGeometryMode: "cylindrical" })), "none");
 });
+
+/* ----------------------------------------------------------------------
+ *   The planned recipe
+ * -------------------------------------------------------------------- */
+
+function plannedState(overrides) {
+  return liveState(Object.assign({
+    nextRecipe: {
+      line_type: 5,
+      layers: ["A", "B", "C", "D", "E"].map(name => ({
+        name, layer_pct: 20,
+        hoppers: Array.from({ length: 6 }, (_, index) => ({ pct: index === 0 ? 70 : index === 1 ? 30 : 0, resin_name: index === 0 ? `PLAN-${name}` : index === 1 ? "PLAN-B" : "" }))
+      }))
+    },
+    hookupSources: { current: {}, next: { "A:0": { resin: "PLAN-A", source: "SILO 7" }, "A:1": { resin: "STALE", source: "SILO 8" } } }
+  }, overrides));
+}
+
+test("the plan is read beside the job, keyed by slot, recipe fields and the plan's own labels only - never tracking, pump state or a weight", () => {
+  const resolved = resolvedFor(plannedState());
+  assert.equal(resolved.plan.planned, true);
+  assert.deepEqual(resolved.nextHopperState["A:0"], { assigned: true, resinName: "PLAN-A", pct: 70, source: "SILO 7" });
+  // The label whose resin has since changed is refused, as for the job.
+  assert.deepEqual(resolved.nextHopperState["A:1"], { assigned: true, resinName: "PLAN-B", pct: 30, source: "" });
+  assert.deepEqual(resolved.nextHopperState["C:5"], { assigned: false, resinName: "", pct: 0, source: "" });
+  for (const slot of Object.values(resolved.nextHopperState)) {
+    for (const key of ["track", "pumpOff", "weight", "effectiveWeight", "usableHeight", "usableGallons", "smartWeight"]) {
+      assert.ok(!(key in slot), `a plan's hopper carries no ${key}`);
+    }
+  }
+  assert.deepEqual(resolved.nextLayerState.B, { layerPct: 20 });
+  // The running job is what it was: the plan is beside it, not over it.
+  assert.equal(resolved.hopperState["A:0"].resinName, "RESIN-X");
+  assert.equal(resolved.hopperState["A:0"].track, true);
+});
+
+test("with nothing planned the plan reads as empty, live or demo, and the fixture plans nothing", () => {
+  const live = resolvedFor(liveState());
+  assert.equal(live.plan.planned, false);
+  assert.deepEqual(live.nextHopperState, {});
+  assert.deepEqual(live.nextLayerState, {});
+  const demo = source.resolveSource({ snapshot: null, demoLines, demoId: "three-layer" });
+  assert.equal(demo.plan.planned, false);
+  assert.deepEqual(demo.nextHopperState, {});
+  assert.deepEqual(source.nextHopperStateFrom(null), {});
+  assert.deepEqual(source.nextHopperStateFrom({ nextRecipe: { layers: [null, { name: "A" }] } }), {});
+});
+
+test("a change in the plan alone is a value change - the Next face's cards are patched, the stage is not rebuilt", () => {
+  const a = resolvedFor(liveState());
+  const b = resolvedFor(plannedState());
+  assert.equal(source.classifyChange(a, b), "values");
+  const c = resolvedFor(plannedState());
+  c.nextHopperState["A:0"].pct = 71;
+  assert.equal(source.classifyChange(b, c), "values");
+  assert.equal(source.classifyChange(b, resolvedFor(plannedState())), "none");
+});

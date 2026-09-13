@@ -646,6 +646,31 @@
   font-size: var(--station-text-sm);
 }
 
+/* The Next face: the same card turned to the planned recipe. It says so
+   as the timeline says "upcoming" - that colour as a dashed inset edge,
+   and the word in the card's top corner - so a card of the plan can never
+   be read as the running blend. Nothing else about the card changes. */
+.station-editor[data-variant="compact"][data-recipe="next"] {
+  position: relative;
+  box-shadow: inset 0 0 0 var(--station-stroke) var(--station-timeline-upcoming, var(--station-info));
+  border-radius: var(--station-radius-sm);
+}
+
+.station-editor[data-variant="compact"][data-recipe="next"]::before {
+  content: "next";
+  position: absolute;
+  top: 0;
+  right: var(--station-space-2);
+  padding: 0 var(--station-space-1);
+  color: var(--station-timeline-upcoming, var(--station-info));
+  font-size: var(--station-text-2xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: var(--station-line-normal);
+  pointer-events: none;
+}
+
 .station-editor__drag-proxy[data-variant="compact"] {
   font-size: var(--station-text-sm);
 }
