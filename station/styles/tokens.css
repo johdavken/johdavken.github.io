@@ -133,6 +133,11 @@
   --station-handbook-share: 40%;
   --station-handbook-max-height: 400px;
   --station-handbook-clearance: 96px;
+  /* `headroom` is what stays clear above the frame when the operator
+   * raises it by its grip (handbook.css): the stage's top edge and the
+   * machine's crown are never covered, whatever the drag asks for. Read
+   * off the slot by station-handbook.js for the grip's own range. */
+  --station-handbook-headroom: 48px;
 
   /* ---- Header ribbon ----
    * The job readouts' powerline (job-controls.css): one row's height,

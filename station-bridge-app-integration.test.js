@@ -41,12 +41,21 @@ test("a failure inside connect cannot stop the application starting", () => {
 });
 
 /* ----------------------------------------------------------------------
- *   Exactly one publish, in the right place
+ *   Two publish sites, each in the right place
  * -------------------------------------------------------------------- */
 
-test("there is exactly one publish site, and it is the session commit point", () => {
-  assert.equal((app.match(/stationBridgeHandle\?\.publish\(\)/g) || []).length, 1,
-    "a second publish site means state changes are announced from two places");
+test("there are exactly two publish sites: the session commit point, and the line configurations being re-read", () => {
+  assert.equal((app.match(/stationBridgeHandle\?\.publish\(\)/g) || []).length, 2,
+    "a further publish site means state changes are announced from somewhere new");
+
+  // The second: the snapshot reads derivedLineConfiguration() when it is
+  // taken, so the definitions moving (a save from either Line Configuration
+  // panel, or the service's own refresh) is the snapshot moving. It is
+  // announced after the sync render has brought the layer count into line,
+  // and is not a third mechanism: nothing is pushed into Station.
+  const listener = app.slice(app.indexOf('window.addEventListener("polyn:line-configurations"'));
+  const listenerBody = listener.slice(0, listener.indexOf("\n    });"));
+  assert.match(listenerBody, /renderLineSync\(syncState\);[\s\S]*stationBridgeHandle\?\.publish\(\);/);
 
   const saveSession = app.slice(app.indexOf("function saveSession(){"));
   const body = saveSession.slice(0, saveSession.indexOf("function loadSession()"));

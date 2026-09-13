@@ -512,6 +512,16 @@
    * this panel's state and procedures; it holds none of its own, and
    * app.js - RT Sync's side - never learns the admin instance exists.
    *
+   * Line Configuration is produced here too, for the same reason: its
+   * admin service (line-configurations-service.js, createAdminService) is
+   * a thin pair of procedures over the instance's client - the same pair
+   * the floor UI's Line Configuration panel (line-configurations-ui.js)
+   * runs - and its save() validates through line-identity.js, then
+   * re-reads the shared definitions and announces them
+   * (polyn:line-configurations), which is how a saved change reaches the
+   * running application and Station. A row crosses to Station as its
+   * definition's fields; a save from Station comes back the same way.
+   *
    * The window: the instance's public state and the recovery descriptor,
    * projected by the bridge's own allow-list. It is announced when the
    * instance's state moves (its subscription) and when RT Sync's does
@@ -545,6 +555,30 @@
         const service = ensureRecovery();
         if (!service) return { ok:false, code:"unavailable", message:"Admin connection is unavailable." };
         return answer(await run(service, args));
+      };
+    }
+    // Line Configuration: the same guard, over the line service instead.
+    const lineConfigurations = root.PolynLineConfigurations || null;
+    let lineService = null;
+    function ensureLineService(){
+      const client = admin()?.getClient?.();
+      if (!client || !lineConfigurations?.createAdminService) return null;
+      if (!lineService) lineService = lineConfigurations.createAdminService(client);
+      return lineService;
+    }
+    function guardedLines(run){
+      return async args=>{
+        if (!admin()?.getState?.().isAdmin) return NO_ADMIN;
+        const service = ensureLineService();
+        if (!service) return { ok:false, code:"unavailable", message:"Line configuration service is unavailable." };
+        return answer(await run(service, args));
+      };
+    }
+    function lineRow(row){
+      return {
+        id: row?.id, lineNumber: row?.line_number, displayName: row?.display_name, aliases: row?.aliases,
+        layerCount: row?.layer_count, layerAPosition: row?.layer_a_position, hopperGeometry: row?.hopper_geometry,
+        hopperNamingMode: row?.hopper_naming_mode, isActive: row?.is_active, metadata: row?.metadata, updatedAt: row?.updated_at
       };
     }
     try{
@@ -602,7 +636,15 @@
           transferOwnership: guarded((service, { id, memberId })=>service.transferOwnership({ workspaceId:id, newOwnerUserId:memberId })),
           disconnectDevice: guarded((service, { id, memberId })=>service.removeWorkspaceMember({ workspaceId:id, memberUserId:memberId })),
           mergeWorkspace: guarded((service, { id, targetId })=>service.mergeWorkspace({ sourceWorkspaceId:id, targetWorkspaceId:targetId })),
-          deleteWorkspace: guarded((service, { id })=>service.deleteWorkspace({ workspaceId:id }))
+          deleteWorkspace: guarded((service, { id })=>service.deleteWorkspace({ workspaceId:id })),
+          listLineConfigurations: guardedLines(async service=>{
+            const result = await service.list();
+            return result.ok ? { ok:true, lines: result.lines.map(lineRow) } : result;
+          }),
+          saveLineConfiguration: guardedLines(async (service, { id, line })=>{
+            const result = await service.save(id || null, line);
+            return result.ok ? { ok:true, line: lineRow(result.line) } : result;
+          })
         }
       });
       admin()?.subscribe?.(()=>stationAdminHandle?.publish());

@@ -10210,6 +10210,12 @@
       const syncState = lineSync?.getState?.();
       if (!syncState) return;
       renderLineSync(syncState);
+      // Station draws the line's structure from the state bridge's
+      // snapshot, which reads derivedLineConfiguration() when it is taken;
+      // the definitions just moved, so say the snapshot has. The layer
+      // count, if it changed, is enforced by the render above and publishes
+      // again on its own; orientation and naming reach the stage here.
+      stationBridgeHandle?.publish();
     });
     if (window.PolynWorkspaceConfigurations){
       workspaceConfigurations = window.PolynWorkspaceConfigurations.create({

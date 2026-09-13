@@ -26,6 +26,16 @@
  * bench clear rather than shrinking the frame around itself. Switching
  * sections is turning a page, not opening a different window.
  *
+ * The one hand that sizes the frame is the operator's. The grip along
+ * the panel's top edge raises it (station-handbook.js paints the reach
+ * as `--station-handbook-reach` on the panel, and nothing else), for a
+ * page that has more to show than fits and says so; a page that has not
+ * is shown at the default with no grip. The reach is clamped here under
+ * the stage's headroom, and goes with the close: every open stands at
+ * the default. A raised frame may stand under the Changeover Calculator
+ * when both are open - the calculator is the later slot, drawn on top -
+ * and a drag down brings the frame back out from under it.
+ *
  * The slot is inert to the pointer; the launcher and the panel take it
  * back for their own boxes only.
  *
@@ -154,7 +164,9 @@
   display: flex;
   flex-direction: column;
   width: min(var(--station-handbook-width), calc(100% - 2 * var(--station-handbook-clearance)));
-  height: min(var(--station-handbook-max-height), calc(var(--station-handbook-share) - var(--station-space-3)));
+  /* The default height, or the reach the operator raised the frame to,
+     whichever is painted; neither past the stage's headroom. */
+  height: min(var(--station-handbook-reach, min(var(--station-handbook-max-height), calc(var(--station-handbook-share) - var(--station-space-3)))), calc(100% - var(--station-handbook-headroom)));
   margin: 0 auto;
   background: var(--station-handbook-glass);
   -webkit-backdrop-filter: blur(var(--station-handbook-glass-blur)) saturate(var(--station-handbook-glass-saturate));
@@ -176,6 +188,58 @@
 
 .station-handbook__panel[hidden] {
   display: none;
+}
+
+/* While the grip is held the whole frame says so, so the cursor does not
+   flicker over the head and nothing on the bench is selected by the drag. */
+.station-handbook__panel[data-resizing] {
+  cursor: ns-resize;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ---- Grip: the top edge, taken in hand ----
+ * A band astride the frame's top edge - a little outside it, a little in,
+ * short of the head's tabs - that takes the pointer for the resize alone,
+ * and a small bar at its centre that says the edge can be held: in the
+ * glass's own edge colour at rest, the accent under the pointer, on the
+ * keyboard, and while it is held. A separator to assistive tech, on the
+ * tab order, driven by the arrow keys (station-handbook.js). */
+.station-handbook__grip {
+  position: absolute;
+  top: calc(-1 * var(--station-space-2));
+  left: var(--station-radius-lg);
+  right: var(--station-radius-lg);
+  z-index: 1;
+  height: var(--station-space-3);
+  cursor: ns-resize;
+}
+
+.station-handbook__grip[hidden] {
+  display: none;
+}
+
+.station-handbook__grip::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--station-space-6);
+  height: var(--station-space-1);
+  transform: translate(-50%, -50%);
+  border-radius: var(--station-space-1);
+  background: var(--station-handbook-glass-border);
+}
+
+.station-handbook__grip:hover::before,
+.station-handbook__grip:focus-visible::before,
+.station-handbook__panel[data-resizing] .station-handbook__grip::before {
+  background: var(--station-accent);
+}
+
+.station-handbook__grip:focus-visible {
+  outline-offset: calc(-1 * var(--station-space-1));
+  border-radius: var(--station-radius-sm);
 }
 
 /* ---- Head: the title, the sections as tabs, Close at the far edge ----

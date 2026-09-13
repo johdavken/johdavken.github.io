@@ -350,6 +350,9 @@
       update,
       /* The first thing to do on this page is usually to enter the pounds. */
       focus() { if (typeof production.reading.focus === "function") production.reading.focus(); },
+      /* The sheet runs one line per hopper and scrolls past three layers:
+       * the Handbook may be raised for it. */
+      grows: () => true,
       isEditing: () => editing
     };
   }

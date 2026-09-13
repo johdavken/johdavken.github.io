@@ -40,6 +40,7 @@ function makeNode(name, ns) {
     disabled: false,
     rect: null,
     animations: [],
+    style: fakeStyle(),
     get firstChild() { return this.children[0] || null; },
     get parentNode() { return this.parent; },
     setAttribute(key, value) { this.attributes[key] = String(value); },
@@ -74,6 +75,16 @@ function makeNode(name, ns) {
     }
   };
   return node;
+}
+/* An inline style: custom properties only, which is all the shell paints. */
+function fakeStyle() {
+  const map = new Map();
+  return {
+    setProperty(name, value) { map.set(name, String(value)); },
+    removeProperty(name) { map.delete(name); },
+    getPropertyValue(name) { return map.has(name) ? map.get(name) : ""; },
+    get names() { return [...map.keys()]; }
+  };
 }
 function classSet(node) { return new Set(String(node.getAttribute("class") || "").split(/\s+/).filter(Boolean)); }
 function matchesOne(node, selector) {
@@ -253,7 +264,7 @@ test("the panel is a region over the stage: no dialog role, no backdrop, no elem
   });
   const css = fs.readFileSync(path.join(ROOT, "station/styles/components/handbook.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
   const panel = css.slice(css.indexOf(".station-handbook__panel {"), css.indexOf("}", css.indexOf(".station-handbook__panel {")));
-  assert.match(panel, /height: min\(var\(--station-handbook-max-height\), calc\(var\(--station-handbook-share\) - var\(--station-space-3\)\)\);/, "the panel's height is not the stage's share");
+  assert.match(panel, /height: min\(var\(--station-handbook-reach, min\(var\(--station-handbook-max-height\), calc\(var\(--station-handbook-share\) - var\(--station-space-3\)\)\)\), calc\(100% - var\(--station-handbook-headroom\)\)\);/, "the panel's height is not the stage's share, or the reach the operator raised it to");
   assert.match(panel, /width: min\(var\(--station-handbook-width\), calc\(100% - 2 \* var\(--station-handbook-clearance\)\)\);/, "the panel spans the window instead of its preferred width");
   assert.match(panel, /margin: 0 auto;/, "the panel is not centred");
   assert.match(panel, /bottom: var\(--station-space-3\);/);
@@ -373,20 +384,26 @@ test("motion runs through the transition module's helpers - the Handbook never a
  * it: switching sections is turning a page in one window, not opening a
  * different one. What the stylesheet promises is pinned here, the rest is
  * measured in the browser (the report of the pass that set it). */
-test("the frame is sized from the stage's tokens alone - a definite height, no maximum that content could fall under, and the sections clipped inside it", () => {
+test("the frame is sized from the stage's tokens, or the reach the operator raised it to - a definite height, no maximum that content could fall under, and the sections clipped inside it", () => {
   const raw = fs.readFileSync(path.join(ROOT, "station/styles/components/handbook.css"), "utf8");
   const css = raw.replace(/\/\*[\s\S]*?\*\//g, "");
   const rule = name => { const at = css.indexOf(`${name} {`); assert.ok(at >= 0, `${name} has no rule`); return css.slice(at, css.indexOf("}", at)); };
   const panel = rule(".station-handbook__panel");
-  assert.match(panel, /\bheight: min\(var\(--station-handbook-max-height\), calc\(var\(--station-handbook-share\) - var\(--station-space-3\)\)\);/);
+  // The default stands when no reach is painted; a painted reach replaces
+  // it; neither passes the stage's headroom. The one custom property the
+  // shell paints is the whole of the script's say in the frame's size.
+  assert.match(panel, /\bheight: min\(var\(--station-handbook-reach, min\(var\(--station-handbook-max-height\), calc\(var\(--station-handbook-share\) - var\(--station-space-3\)\)\)\), calc\(100% - var\(--station-handbook-headroom\)\)\);/);
   assert.doesNotMatch(panel, /\s(max-height|min-height):|fit-content|max-content|height: auto/, "the panel's height answers to its contents");
   assert.doesNotMatch(panel, /\d+px|\d+vh|\d+vw/, "the panel carries a raw length instead of a token");
-  // The four tokens are the stage's to define, in the one file that holds raw lengths.
+  assert.doesNotMatch(css, /--station-handbook-reach:/, "the stylesheet sets the reach; only the operator's hand does, through the shell");
+  // The five tokens are the stage's to define, in the one file that holds raw lengths.
   const tokens = fs.readFileSync(path.join(ROOT, "station/styles/tokens.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
   assert.match(tokens, /--station-handbook-width: \d+px;/);
   assert.match(tokens, /--station-handbook-share: \d+%;/);
   assert.match(tokens, /--station-handbook-max-height: \d+px;/);
   assert.match(tokens, /--station-handbook-clearance: \d+px;/);
+  assert.match(tokens, /--station-handbook-headroom: \d+px;/);
+  assert.ok(Number(/--station-handbook-headroom: (\d+)px;/.exec(tokens)[1]) >= 24, "a raised frame can stand on the stage's top edge");
   // Whatever the share, the frame never reaches the hopper bank: the drawing
   // is 740 units tall and its clusters end at unit 404 (station-machine-layout.js),
   // 55% down a height-fitted stage, so the share has to stay under 45%.
@@ -418,9 +435,10 @@ test("switching sections touches the tabs and the section hosts and nothing of t
   const { handbook, a, b } = build();
   const panel = handbook.panel;
   const frame = () => JSON.stringify({
-    tag: panel.tagName, attributes: panel.attributes, head: panel.children[0].attributes,
+    tag: panel.tagName, attributes: panel.attributes, painted: panel.style.names,
+    head: byClass(panel, "station-handbook__head").attributes,
     close: byClass(panel, "station-handbook__close").attributes,
-    body: panel.children[1].attributes, root: handbook.element.attributes,
+    body: byClass(panel, "station-handbook__body").attributes, root: handbook.element.attributes,
     launcher: handbook.launcher.attributes
   });
   handbook.open();
@@ -437,11 +455,16 @@ test("switching sections touches the tabs and the section hosts and nothing of t
   assert.deepEqual(hosts.map(hidden), [true, false]);
   assert.deepEqual(hosts.map(host => Object.keys(host.attributes).filter(k => k !== "hidden").sort()), [["class", "data-section", "role"], ["class", "data-section", "role"]]);
   // The Handbook offers a section no way to size the frame: nothing in the
-  // context or the section contract names the panel.
+  // context or the section contract names the panel. A section may only
+  // SAY it can use more bench (grows()); the operator's hand does the rest,
+  // and the shell's whole say in the frame's size is the one custom
+  // property it paints for that hand.
   assert.deepEqual(a.log[0], ["create", ["recipes", "blend"]]);
   assert.deepEqual(b.log[0], ["create", ["recipes", "blend"]]);
   const source = fs.readFileSync(path.join(ROOT, "station/station-handbook.js"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
-  assert.doesNotMatch(source, /panel\.style|\.style\.(height|width|maxHeight|minHeight)|offsetHeight|scrollHeight|clientHeight/, "the shell measures or sizes the frame in script");
+  assert.doesNotMatch(source, /\.style\.(height|width|maxHeight|minHeight)|offsetHeight|scrollHeight|clientHeight/, "the shell measures or sizes the frame in script");
+  assert.equal((source.match(/style\.setProperty\(/g) || []).length, 1, "the shell paints more than the one property");
+  assert.match(source, /style\.setProperty\("--station-handbook-reach"/);
   assert.doesNotMatch(source, /panel\.classList\.(add|toggle)\(/, "the shell marks the panel per section");
 });
 
@@ -461,6 +484,240 @@ test("opening with any section showing flies to the same frame, from the same la
     second.handbook.close();
     assert.equal(first.animations[2].keyframes[1].transform, second.animations[2].keyframes[1].transform);
   });
+});
+
+/* ----------------------------------------------------------------------
+ *   The bench, and the grip that raises it
+ * -------------------------------------------------------------------- */
+
+/* A Handbook over a stage 900px tall with 48px of headroom, whose first
+ * section says it can use more bench and whose second does not. */
+function benchBuild(options) {
+  const doc = fakeDocument();
+  const animations = [];
+  const grows = { first: true, second: false };
+  const section = (id, title, key) => ({
+    id, title,
+    create(d) {
+      const element = d.createElement("div");
+      element.setAttribute("data-test-section", id);
+      return { element, update() {}, focus() {}, grows: () => grows[key] };
+    }
+  });
+  const mount = doc.createElement("div");
+  mount.rect = { left: 0, top: 0, width: 1440, height: 900 };
+  const handbook = handbookModule.create(doc, Object.assign({
+    sections: [section("recipe-book", "Recipe Book", "first"), section("second", "Second", "second")],
+    mount,
+    computedStyle: () => ({ getPropertyValue: name => (name === "--station-handbook-headroom" ? "48px" : "") }),
+    animate: (element, keyframes, opts) => { const animation = fakeAnimation(element, keyframes, opts); animations.push(animation); return animation; },
+    measure: element => element.rect,
+    reducedMotion: () => true
+  }, options || {}));
+  handbook.launcher.rect = { left: 16, top: 820, width: 64, height: 64 };
+  handbook.panel.rect = { left: 300, top: 580, width: 880, height: 320 };
+  return { doc, handbook, animations, grows, mount };
+}
+const reach = handbook => handbook.panel.style.getPropertyValue("--station-handbook-reach");
+const pointer = (node, type, extra) => node.dispatchEvent(Object.assign({ type, bubbles: true, pointerId: 7, button: 0, clientY: 0, preventDefault() {} }, extra || {}));
+
+test("the grip is a separator along the panel's top edge: first in the panel, on the tab order, shown only while the panel is open and only for a page that says it can use more bench", () => {
+  const { handbook, grows } = benchBuild();
+  const grip = handbook.grip;
+  assert.ok(grip === handbook.panel.children[0], "the grip is not the panel's first child");
+  assert.equal(grip.getAttribute("class"), "station-handbook__grip");
+  assert.equal(grip.getAttribute("role"), "separator");
+  assert.equal(grip.getAttribute("aria-orientation"), "horizontal");
+  assert.equal(grip.getAttribute("tabindex"), "0");
+  assert.ok(hidden(grip), "the grip shows on a closed panel");
+  assert.equal(reach(handbook), "", "a closed panel carries a reach");
+  handbook.open();
+  assert.ok(!hidden(grip), "the grip is hidden on a page that grows");
+  // The range is the frame's own default up to the stage less its headroom.
+  assert.equal(grip.getAttribute("aria-valuemin"), "320");
+  assert.equal(grip.getAttribute("aria-valuemax"), "852");
+  assert.equal(grip.getAttribute("aria-valuenow"), "320");
+  assert.deepEqual(handbook.getBench(), { floor: 320, ceiling: 852, reach: null, painted: null, grows: true, dragging: false });
+  assert.equal(reach(handbook), "", "opening painted a reach");
+  // A page that cannot use the room offers no grip.
+  handbook.show("second");
+  assert.ok(hidden(grip), "the grip shows on a page that does not grow");
+  handbook.show("recipe-book");
+  assert.ok(!hidden(grip));
+  // And a page's answer is asked again on every update, so it may change
+  // with the page's own state (Sudo's gate, then its tools).
+  grows.first = false;
+  handbook.update();
+  assert.ok(hidden(grip), "the grip stayed after the page said it no longer grows");
+  grows.first = true;
+  handbook.update();
+  assert.ok(!hidden(grip));
+  handbook.close();
+  assert.ok(hidden(grip), "the grip shows on a closed panel");
+});
+
+test("a drag on the grip raises the frame - one custom property on the panel, clamped between the default and the stage's headroom - and lowers it back to the default", () => {
+  const { handbook } = benchBuild();
+  const grip = handbook.grip;
+  const panel = handbook.panel;
+  handbook.open();
+  pointer(grip, "pointerdown", { clientY: 580 });
+  assert.ok(panel.hasAttribute("data-resizing"), "the frame does not say it is being held");
+  assert.ok(handbook.getBench().dragging);
+  pointer(grip, "pointermove", { clientY: 480 });
+  assert.equal(reach(handbook), "420px", "a drag of 100px up did not raise the frame by 100px");
+  assert.equal(grip.getAttribute("aria-valuenow"), "420");
+  assert.equal(handbook.getBench().reach, 420);
+  // Another pointer's moves are not this drag's.
+  pointer(grip, "pointermove", { clientY: 100, pointerId: 9 });
+  assert.equal(reach(handbook), "420px");
+  // Past the headroom the frame stops.
+  pointer(grip, "pointermove", { clientY: -2000 });
+  assert.equal(reach(handbook), "852px");
+  assert.equal(grip.getAttribute("aria-valuemax"), "852");
+  // Under the default, it stands at the default - which is no reach at all.
+  pointer(grip, "pointermove", { clientY: 900 });
+  assert.equal(reach(handbook), "", "dragged under the default, the frame carries a reach");
+  assert.equal(handbook.getBench().reach, null);
+  assert.equal(grip.getAttribute("aria-valuenow"), "320");
+  pointer(grip, "pointermove", { clientY: 500 });
+  assert.equal(reach(handbook), "400px");
+  pointer(grip, "pointerup", { clientY: 500 });
+  assert.ok(!panel.hasAttribute("data-resizing"));
+  assert.ok(!handbook.getBench().dragging);
+  assert.equal(reach(handbook), "400px", "letting go changed the height");
+  // Moves after the release move nothing; a secondary button starts nothing.
+  pointer(grip, "pointermove", { clientY: 100 });
+  assert.equal(reach(handbook), "400px");
+  pointer(grip, "pointerdown", { clientY: 500, button: 2 });
+  assert.ok(!handbook.getBench().dragging, "a secondary button took the grip");
+  // Only the one property is ever painted on the panel.
+  assert.deepEqual(panel.style.names, ["--station-handbook-reach"]);
+  // The frame's attributes are as they were: the reach is not a class or a data attribute.
+  assert.deepEqual(Object.keys(panel.attributes).sort(), ["aria-label", "class", "role"]);
+});
+
+test("the arrow keys on the grip raise and lower the frame by a step, Home and End take it to the default and the ceiling, and the keys are spent there", () => {
+  const { handbook } = benchBuild();
+  const grip = handbook.grip;
+  handbook.open();
+  const press = k => { const event = { type: "keydown", key: k, bubbles: true, defaulted: false, stopPropagation() { this.stopped = true; }, preventDefault() { this.defaulted = true; } }; grip.dispatchEvent(event); return event; };
+  let event = press("ArrowUp");
+  assert.equal(reach(handbook), "344px");
+  assert.ok(event.defaulted && event.stopped, "the key went on to the panel and the page");
+  press("ArrowUp");
+  assert.equal(reach(handbook), "368px");
+  press("ArrowDown");
+  assert.equal(reach(handbook), "344px");
+  press("ArrowDown");
+  assert.equal(reach(handbook), "", "back at the default the frame still carries a reach");
+  press("ArrowDown");
+  assert.equal(reach(handbook), "", "the frame went under its default");
+  press("End");
+  assert.equal(reach(handbook), "852px");
+  press("Home");
+  assert.equal(reach(handbook), "");
+  event = press("a");
+  assert.ok(!event.defaulted && !event.stopped, "a key the grip does not use was spent on it");
+  // Escape on the grip is the panel's, as anywhere inside it: it closes.
+  key(grip, "Escape");
+  assert.ok(!handbook.isOpen());
+});
+
+test("the reach follows the page: a page that cannot use it stands at the default, turning back restores it, and the change settles through the transition's helper", () => {
+  const { handbook, animations } = benchBuild({ reducedMotion: () => false });
+  handbook.open();
+  animations.forEach(animation => animation.finish());
+  return tick().then(tick).then(() => {
+    const flown = animations.length;
+    handbook.setReach(500);
+    assert.equal(reach(handbook), "500px");
+    assert.equal(animations.length, flown, "a drag animates; it has to follow the hand");
+    // The frame is now 500 tall where it stands; turning to a page that
+    // does not grow returns it to the default, settling on the token.
+    handbook.panel.rect.height = 500;
+    handbook.show("second");
+    assert.equal(reach(handbook), "", "a page that does not grow was shown raised");
+    assert.equal(handbook.getBench().reach, 500, "turning the page forgot the reach");
+    assert.equal(animations.length, flown + 1);
+    assert.ok(animations[flown].element === handbook.panel);
+    assert.deepEqual(animations[flown].keyframes, [{ height: "500px" }, { height: "320px" }]);
+    assert.deepEqual(animations[flown].options, { duration: handbook.getTiming().settle, easing: "ease-out" });
+    assert.equal(animations[flown].options.fill, undefined, "the settle holds the frame at a height the stylesheet no longer gives it");
+    // And back.
+    handbook.panel.rect.height = 320;
+    handbook.show("recipe-book");
+    assert.equal(reach(handbook), "500px");
+    assert.deepEqual(animations[flown + 1].keyframes, [{ height: "320px" }, { height: "500px" }]);
+    // Turning to the same kind of page again settles nothing.
+    handbook.panel.rect.height = 500;
+    handbook.show("recipe-book");
+    assert.equal(animations.length, flown + 2);
+  });
+});
+
+test("the reach goes with the close: the next open stands at the default, with the range read afresh", () => {
+  const { handbook, mount } = benchBuild();
+  handbook.open();
+  handbook.setReach(600);
+  assert.equal(reach(handbook), "600px");
+  handbook.close();
+  assert.equal(reach(handbook), "", "a closed panel kept its reach");
+  assert.deepEqual(handbook.getBench(), { floor: null, ceiling: null, reach: null, painted: null, grows: true, dragging: false });
+  // The stage moved between opens; the range is the new stage's.
+  mount.rect.height = 700;
+  handbook.open();
+  assert.equal(reach(handbook), "", "the panel reopened raised");
+  assert.equal(handbook.grip.getAttribute("aria-valuenow"), "320");
+  assert.equal(handbook.grip.getAttribute("aria-valuemax"), "652");
+  // With motion, the same: the flight home leaves from the raised frame,
+  // and the reach is let go when it lands.
+  const flown = benchBuild({ reducedMotion: () => false });
+  flown.handbook.open();
+  flown.animations.forEach(animation => animation.finish());
+  return tick().then(tick).then(() => {
+    flown.handbook.setReach(600);
+    flown.handbook.close();
+    assert.equal(reach(flown.handbook), "600px", "the frame dropped to the default under the flight home");
+    flown.animations.forEach(animation => animation.finish());
+    return tick().then(tick);
+  }).then(() => {
+    assert.equal(reach(flown.handbook), "");
+    assert.ok(hidden(flown.handbook.panel));
+    flown.handbook.open();
+    assert.equal(reach(flown.handbook), "");
+  });
+});
+
+test("with no stage to measure the frame cannot be raised, and a section with no grows() is a page at the default", () => {
+  const { handbook } = build();
+  assert.equal(handbook.setReach(500), false, "a closed panel has no bench to raise");
+  handbook.open();
+  assert.ok(hidden(handbook.grip), "a section that never said it grows got a grip");
+  // The bench is there - the shell measured the frame - but with no stage
+  // its ceiling is its floor, so a reach asked for clamps to none.
+  assert.equal(handbook.setReach(500), true);
+  assert.equal(reach(handbook), "");
+  assert.equal(handbook.getBench().reach, null);
+  const { handbook: unmeasured } = benchBuild({ mount: undefined });
+  unmeasured.open();
+  assert.deepEqual([unmeasured.getBench().floor, unmeasured.getBench().ceiling], [320, 320]);
+  unmeasured.setReach(500);
+  assert.equal(reach(unmeasured), "", "raised past a ceiling it could not measure");
+});
+
+test("the grip is drawn in tokens on the panel's top edge, takes the pointer for the resize alone, and the held frame says so", () => {
+  const css = fs.readFileSync(path.join(ROOT, "station/styles/components/handbook.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+  const rule = name => { const at = css.indexOf(`${name} {`); assert.ok(at >= 0, `${name} has no rule`); return css.slice(at, css.indexOf("}", at)); };
+  const grip = rule(".station-handbook__grip");
+  assert.match(grip, /position: absolute;/);
+  assert.match(grip, /top: calc\(-1 \* var\(--station-space-2\)\);/, "the grip does not straddle the top edge");
+  assert.match(grip, /cursor: ns-resize;/);
+  assert.doesNotMatch(grip, /\d+px/, "the grip carries a raw length");
+  assert.match(rule(".station-handbook__grip[hidden]"), /display: none;/);
+  assert.match(rule(".station-handbook__panel[data-resizing]"), /cursor: ns-resize;[\s\S]*user-select: none;/);
+  assert.match(rule(".station-handbook__grip::before"), /background: var\(--station-handbook-glass-border\);/);
+  assert.match(css, /\.station-handbook__grip:hover::before,\s*\.station-handbook__grip:focus-visible::before,\s*\.station-handbook__panel\[data-resizing\] \.station-handbook__grip::before \{\s*background: var\(--station-accent\);/);
 });
 
 /* ----------------------------------------------------------------------

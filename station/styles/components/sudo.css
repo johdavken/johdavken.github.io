@@ -1,5 +1,6 @@
-/* Sudo (station-sudo.js) and Workspace Management
- * (station-sudo-workspaces.js): the Operator Handbook's administrator page.
+/* Sudo (station-sudo.js), Workspace Management
+ * (station-sudo-workspaces.js) and Line Configuration
+ * (station-sudo-lines.js): the Operator Handbook's administrator page.
  *
  * ONE MORE PAGE OF THE SAME BOOK
  *
@@ -10,10 +11,18 @@
  *
  *   signed out   a short sign-in, centred on the bench: a title, a line,
  *                two fields and one primary
- *   signed in    a strip across the top (who is signed in, Sign out; this
- *                device and its status), then two panes - the workspaces
- *                as a narrow list on the left, the chosen workspace on the
- *                right - each scrolling on its own inside the bench
+ *   signed in    a strip across the top (who is signed in, Sign out; the
+ *                showing tool's status), under it a row of the tools'
+ *                names with one pressed, then the tool: two panes - the
+ *                lines as a narrow list on the left, the chosen one on
+ *                the right - each scrolling on its own inside the bench
+ *
+ * The two tools share the panes' shape - the columns, the list and its
+ * rows, the detail pane, the fold, the confirmation - and Line
+ * Configuration draws them under Workspace Management's class names
+ * rather than a second set of the same rules. What is its own is the
+ * editor: short aligned field rows, the layer rows under them, and the
+ * tags on the line's name.
  *
  * The right pane has three faces, drawn one at a time in the same box:
  * the workspace (its name and counts, its linked devices, and maintenance
@@ -219,11 +228,68 @@
   display: none;
 }
 
+/* ---- The row of tools ---- */
+
+/* The tools' names in a line under the strip, one pressed: the Handbook's
+   tabs one size down, on their own rule. Shown only with two or more. */
+.station-sudo__nav {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: stretch;
+  gap: var(--station-space-3);
+  padding: 0 var(--station-space-4);
+  border-bottom: var(--station-stroke) solid var(--station-handbook-rule);
+}
+
+.station-sudo__nav[hidden] {
+  display: none;
+}
+
+.station-root .station-sudo__nav-tab {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--station-space-2) var(--station-space-1);
+  margin-bottom: calc(-1 * var(--station-stroke));
+  border-bottom: calc(2 * var(--station-stroke)) solid transparent;
+  color: var(--station-text-muted);
+  font-size: var(--station-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.station-root .station-sudo__nav-tab:hover {
+  color: var(--station-text);
+  border-bottom-color: var(--station-handbook-rule);
+}
+
+.station-root .station-sudo__nav-tab[aria-pressed="true"] {
+  color: var(--station-text);
+  border-bottom-color: var(--station-handbook-tab-active);
+}
+
+.station-root .station-sudo__nav-tab:focus-visible {
+  outline-offset: calc(-1 * var(--station-space-1));
+  border-radius: var(--station-radius-sm);
+}
+
+/* Each tool's status in the strip's slot: the showing tool's, alone. */
+.station-sudo__slot-item {
+  display: inline-flex;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.station-sudo__slot-item[hidden] {
+  display: none;
+}
+
 /* ---- The tools ---- */
 
 .station-sudo__tools,
 .station-sudo__tool,
-.station-sudo-ws {
+.station-sudo-ws,
+.station-sudo-lines {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
@@ -359,6 +425,18 @@
 .station-sudo-ws__row-mark {
   color: var(--station-success);
   font-size: var(--station-text-2xs);
+}
+
+/* An inactive line reads quieter in the list; a line being added, before
+   it is saved, reads in the accent as the row it will become. */
+.station-sudo-ws__row.is-inactive .station-sudo-ws__row-name {
+  color: var(--station-text-muted);
+  font-weight: 500;
+}
+
+.station-sudo-ws__row.is-new .station-sudo-ws__row-name {
+  color: var(--station-accent);
+  font-style: italic;
 }
 
 .station-sudo-ws__row-meta {
@@ -670,4 +748,207 @@
   display: flex;
   align-items: center;
   gap: var(--station-space-2);
+}
+
+/* ---------------------------------------------------------------------
+ *   Line Configuration
+ * ------------------------------------------------------------------- */
+
+/* The current line, in the strip: which line this desktop is on. Reads
+   in the success colour when it is on one. */
+.station-sudo-lines__current {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  color: var(--station-text-muted);
+  font-size: var(--station-text-xs);
+}
+
+.station-sudo-lines__current[data-linked="true"] .station-sudo-lines__current-text {
+  color: var(--station-success);
+}
+
+.station-sudo-lines__current-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.station-sudo-lines__detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--station-space-3);
+}
+
+/* The name and its tags on one line. */
+.station-sudo-lines__name-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--station-space-2);
+  min-width: 0;
+}
+
+/* A tag beside the name: a small spaced word. Current line in the
+   success colour, inactive in the muted, unsaved changes in the warning. */
+.station-sudo-lines__tag {
+  padding: 1px var(--station-space-1);
+  border: var(--station-stroke) solid currentColor;
+  border-radius: var(--station-radius-sm);
+  color: var(--station-text-faint);
+  font-family: var(--station-font-annotation);
+  font-size: var(--station-text-2xs);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.station-sudo-lines__tag[data-tag="current"] {
+  color: var(--station-success);
+}
+
+.station-sudo-lines__tag[data-tag="inactive"] {
+  color: var(--station-text-muted);
+}
+
+.station-sudo-lines__tag[data-tag="dirty"] {
+  color: var(--station-warning);
+}
+
+/* ---- The fields: short aligned rows ---- */
+
+/* A label track and a value track, one hairline between rows; the label
+   is the same annotation face the eyebrows use, so the editor reads as
+   a table of facts and not a form. */
+.station-sudo-lines__fields {
+  display: flex;
+  flex-direction: column;
+  max-width: 44em;
+  border-top: var(--station-stroke) solid var(--station-handbook-rule);
+}
+
+.station-sudo-lines__field {
+  display: grid;
+  grid-template-columns: 9em minmax(0, 1fr);
+  align-items: center;
+  column-gap: var(--station-space-3);
+  min-height: calc(var(--station-space-5) + var(--station-space-2));
+  padding: var(--station-space-1) 0;
+  border-bottom: var(--station-stroke) solid var(--station-handbook-rule);
+}
+
+.station-sudo-lines__field[data-field-row="layers"] {
+  align-items: start;
+}
+
+.station-sudo-lines__label {
+  color: var(--station-text-muted);
+  font-family: var(--station-font-annotation);
+  font-size: var(--station-text-2xs);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.station-sudo-lines__field[data-field-row="layers"] .station-sudo-lines__label {
+  padding-top: var(--station-space-1);
+}
+
+.station-sudo-lines__value {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--station-space-1) var(--station-space-2);
+  min-width: 0;
+}
+
+/* The inputs: the bench's editable surface, as the name entries. The
+   line number is short; the names take the row. */
+.station-sudo-lines__input {
+  --station-field-padding: var(--station-space-1) var(--station-space-2);
+  --station-field-radius: var(--station-radius-sm);
+  --station-field-bg: var(--station-surface-editable);
+  --station-field-border: var(--station-stroke) solid var(--station-editable);
+  --station-field-width: min(24em, 100%);
+  color: var(--station-text);
+  font-size: var(--station-text-sm);
+}
+
+.station-sudo-lines__input[data-width="short"] {
+  --station-field-width: 5em;
+  font-family: var(--station-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.station-sudo-lines__input[aria-invalid="true"] {
+  --station-field-shadow: 0 0 0 2px var(--station-danger);
+}
+
+.station-sudo-lines__chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--station-space-1);
+}
+
+/* ---- The layers: the letters down, the roles beside ---- */
+
+/* One row a layer, A first always. The letter is the identifier, set in
+   the mono face and never re-ordered; the role beside it is what
+   follows from Layer A's side - a pair of chips on the two ends where
+   the side is chosen, a word on the rows between, which are read. */
+.station-sudo-lines__layers {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.station-sudo-lines__layer {
+  display: grid;
+  grid-template-columns: 1.5em minmax(0, 1fr);
+  align-items: center;
+  column-gap: var(--station-space-2);
+  min-height: calc(var(--station-space-4) + var(--station-space-2));
+}
+
+.station-sudo-lines__layer-key {
+  color: var(--station-text);
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-sm);
+  font-weight: 700;
+}
+
+.station-sudo-lines__layer-role {
+  color: var(--station-text-muted);
+  font-family: var(--station-font-annotation);
+  font-size: var(--station-text-2xs);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.station-sudo-lines__layer[data-layer-role="core"] .station-sudo-lines__layer-role {
+  color: var(--station-text);
+}
+
+.station-sudo-lines__layer[data-layer-role="unknown"] .station-sudo-lines__layer-role {
+  color: var(--station-warning);
+}
+
+/* The hopper ids that follow from the count and the naming: read, not set. */
+.station-sudo-lines__hoppers {
+  color: var(--station-text-muted);
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-xs);
+  letter-spacing: 0.02em;
+}
+
+/* How far a saved change reaches: one small line under the fields. */
+.station-sudo-lines__reach {
+  max-width: 44em;
+  color: var(--station-text-faint);
+  font-size: var(--station-text-xs);
+  line-height: var(--station-line-normal);
 }

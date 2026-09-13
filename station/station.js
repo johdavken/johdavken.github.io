@@ -1530,8 +1530,11 @@
         context: {
           recipes,
           /* Sudo reads administrator access and asks for admin actions
-           * through this bridge alone; handed in, never reached for. */
+           * through this bridge alone; handed in, never reached for. Its
+           * Line Configuration reads which line this desktop is on from
+           * the connection bridge, the same way. */
           admin,
+          connection,
           /* A saved recipe's layer, accented by the side it sits on for
            * the line the stage shows: the line model's own role for that
            * letter, so the book and the banks above agree about Layer A. */

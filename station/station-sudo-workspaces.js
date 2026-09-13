@@ -46,6 +46,7 @@
 
   const ID = "workspaces";
   const TITLE = "Workspace Management";
+  const LABEL = "Workspaces";   // the word in Sudo's row of tools
   const SVG_NS = "http://www.w3.org/2000/svg";
 
   const ACTION = "station-handbook__action";
@@ -889,7 +890,7 @@
   }
 
   /* The tool as Sudo takes it. */
-  const tool = Object.freeze({ id: ID, title: TITLE, create });
+  const tool = Object.freeze({ id: ID, title: TITLE, label: LABEL, create });
 
-  return Object.freeze({ ID, TITLE, tool, create, rowMeta, detailMeta, deviceStatus });
+  return Object.freeze({ ID, TITLE, LABEL, tool, create, rowMeta, detailMeta, deviceStatus });
 });

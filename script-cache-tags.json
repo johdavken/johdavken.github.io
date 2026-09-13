@@ -40,16 +40,16 @@
     "hash": "1121a7e8348424c3"
   },
   "station-admin-bridge.js": {
-    "v": "0.1.0",
-    "hash": "853adbd9866f2c37"
+    "v": "0.2.0",
+    "hash": "0019280dc7b72a60"
   },
   "station-theme.js": {
     "v": "0.2.0",
     "hash": "45eb154879a36623"
   },
   "station-host.js": {
-    "v": "0.4.22",
-    "hash": "1491003dc99a6b01"
+    "v": "0.4.24",
+    "hash": "5a711c147e4153a2"
   },
   "workspace-configuration-payloads.js": {
     "v": "0.20.1",
@@ -176,8 +176,8 @@
     "hash": "b8efd231de7bb46f"
   },
   "app.js": {
-    "v": "0.31.1",
-    "hash": "32ad9ecfdc14a9fd"
+    "v": "0.31.2",
+    "hash": "5caffa7dcf4fc184"
   },
   "resin-admin-ui.js": {
     "v": "0.20.4",
@@ -196,8 +196,8 @@
     "hash": "13b02b513d39fbd2"
   },
   "workspace-recovery-ui.js": {
-    "v": "0.1.6",
-    "hash": "728da95eb1d323ce"
+    "v": "0.1.7",
+    "hash": "865dc45eed89a3ee"
   },
   "beta-access-ui.js": {
     "v": "0.1.0",

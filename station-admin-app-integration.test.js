@@ -125,9 +125,60 @@ test("the bridge is loaded by both pages after the state bridge and before its p
   assert.doesNotMatch(indexHtml, /station-sudo/, "index.html loads no Sudo module of its own");
   for (const page of [harness, host]) {
     assert.ok(page.indexOf("station-sudo-workspaces.js") < page.indexOf("station-sudo.js"), "the tool before the page that hosts it");
+    assert.ok(page.indexOf("station-sudo-lines.js") < page.indexOf("station-sudo.js"), "the second tool before the page that hosts it");
+    assert.ok(page.indexOf("station-line-model.js") < page.indexOf("station-sudo-lines.js"), "the line model before the tool that derives roles from it");
     assert.ok(page.indexOf("station-sudo.js") < page.indexOf("station-handbook.js"), "the page before the Handbook that hosts it");
     assert.ok(page.includes("components/sudo.css"));
   }
   // The harness loads no application UI script for it: no producer there.
   assert.doesNotMatch(harness, /resin-admin|workspace-recovery/);
+});
+
+/* ----------------------------------------------------------------------
+ *   Line Configuration: the same service the floor UI's panel runs
+ * -------------------------------------------------------------------- */
+
+test("ONE line configuration service: Station's list and save run PolynLineConfigurations.createAdminService on the instance's own client - the pair the floor UI's Line Configuration panel runs - never the transport", () => {
+  const source = connect();
+  assert.match(source, /const lineConfigurations = root\.PolynLineConfigurations \|\| null;/);
+  assert.match(source, /const client = admin\(\)\?\.getClient\?\.\(\);/);
+  assert.match(source, /if \(!lineService\) lineService = lineConfigurations\.createAdminService\(client\);/);
+  assert.match(source, /listLineConfigurations: guardedLines\(async service=>\{[\s\S]*?const result = await service\.list\(\);/);
+  assert.match(source, /saveLineConfiguration: guardedLines\(async \(service, \{ id, line \}\)=>\{[\s\S]*?const result = await service\.save\(id \|\| null, line\);/);
+  assert.match(source, /function guardedLines\(run\)\{[\s\S]*?if \(!admin\(\)\?\.getState\?\.\(\)\.isAdmin\) return NO_ADMIN;/, "the same isAdmin guard as every other action");
+  assert.doesNotMatch(source, /admin_list_line_configurations|admin_save_line_configuration|line_configurations"/);
+  // The floor UI's panel: the same factory on the same client, and the same two procedures.
+  const legacy = read("line-configurations-ui.js");
+  assert.match(legacy, /const client = admin\(\)\?\.getClient\?\.\(\);/);
+  assert.match(legacy, /if \(!service\) service = api\.createAdminService\(client\);/);
+  assert.match(legacy, /await current\.list\(\)/);
+  assert.match(legacy, /await ensureService\(\)\.save\(selected\?\.id \|\| null,nextValues\)/);
+  // And the service is where the procedures, the validation and the announcement live - once.
+  const service = read("line-configurations-service.js");
+  assert.match(service, /adminClient\.rpc\("admin_list_line_configurations"\)/);
+  assert.match(service, /adminClient\.rpc\("admin_save_line_configuration", \{/);
+  assert.match(service, /const checked = identity\.validateLineConfigurations\(\[candidate\]\);/);
+  assert.match(service, /await refresh\(\);\s*return \{ ok:true, line:/, "a save re-reads the shared definitions and announces them");
+  assert.match(service, /new CustomEvent\("polyn:line-configurations"/);
+  // The service is loaded before the producer looks for it.
+  assert.ok(indexHtml.indexOf("line-configurations-service.js") < indexHtml.indexOf("workspace-recovery-ui.js"));
+});
+
+test("a saved change reaches a running Station by the existing path: the announcement, the sync render, and the state bridge said to have moved - no second mechanism", () => {
+  const listener = between(app, 'window.addEventListener("polyn:line-configurations"', "\n    });");
+  assert.match(listener, /renderLineSync\(syncState\);/);
+  assert.match(listener, /stationBridgeHandle\?\.publish\(\);/);
+  // The sync render is where the layer count is brought into line with the
+  // definition, and the connection console is announced.
+  const renderLineSync = between(app, "function renderLineSync(syncState){", "function openRtSyncJoinFromUrl(");
+  assert.match(renderLineSync, /syncDerivedLayerCount\(syncState\);/);
+  assert.match(renderLineSync, /stationConnectionHandle\?\.publish\(\);/);
+  // The snapshot reads the derived configuration when it is taken, so a
+  // publish is enough: nothing is pushed into Station.
+  assert.match(app, /lineConfiguration: derivedLineConfiguration\(\),/);
+  assert.doesNotMatch(app, /PolynStationSudoLines|station-sudo-lines/, "app.js knows nothing of the tool");
+  // The Station tool neither reads the definitions itself nor reloads.
+  const tool = read("station/station-sudo-lines.js");
+  assert.doesNotMatch(tool, /getLineConfigurations|setConfiguredLineConfigurations|loadCachedLineConfigurations|refreshResins|PolynLineConfigurations/);
+  assert.match(tool, /lineIdentityModule\.validateLineConfigurations\(combined\)/, "it validates by line-identity's rules before asking");
 });
