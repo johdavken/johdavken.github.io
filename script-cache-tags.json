@@ -11,6 +11,10 @@
     "v": "0.1.1",
     "hash": "b9995db646744e8b"
   },
+  "resin-totals.js": {
+    "v": "0.1.0",
+    "hash": "3560bfee94e88c30"
+  },
   "storage.js": {
     "v": "0.18",
     "hash": "d1cf7b509d6864ff"
@@ -24,8 +28,8 @@
     "hash": "f66df8dc486ae51c"
   },
   "station-state-bridge.js": {
-    "v": "0.3.0",
-    "hash": "a8ea2e311f649ec8"
+    "v": "0.4.0",
+    "hash": "8bf6ba3f866cb0c1"
   },
   "station-connection-bridge.js": {
     "v": "0.1.0",
@@ -40,8 +44,8 @@
     "hash": "45eb154879a36623"
   },
   "station-host.js": {
-    "v": "0.4.11",
-    "hash": "fd9e675eebbb8612"
+    "v": "0.4.13",
+    "hash": "1e3a26a3bc807529"
   },
   "workspace-configuration-payloads.js": {
     "v": "0.20.1",
@@ -56,8 +60,8 @@
     "hash": "f7e942645b9e622d"
   },
   "station-command-contract.js": {
-    "v": "0.4.0",
-    "hash": "a1afd016b3075f65"
+    "v": "0.5.0",
+    "hash": "6a312e3e2423e656"
   },
   "station-command-bridge.js": {
     "v": "0.1.0",
@@ -168,8 +172,8 @@
     "hash": "b8efd231de7bb46f"
   },
   "app.js": {
-    "v": "0.30.1",
-    "hash": "292690e1c5862de1"
+    "v": "0.30.3",
+    "hash": "b66f4cd7d23a0625"
   },
   "resin-admin-ui.js": {
     "v": "0.20.4",

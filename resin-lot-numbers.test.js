@@ -3,6 +3,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const path = require("node:path");
 const { readStyles } = require("./css-source");
 
 const app = fs.readFileSync("app.js", "utf8");
@@ -129,7 +130,11 @@ test("restoring a payload re-normalizes both maps through rekeyLotMap - a sessio
 
 test("a scanned lot renders in the dedicated lane; a resin without one gets the desktop-only empty-lane label", () => {
   const body = functionBody("renderResinCalculator");
-  assert.match(body, /const lot = state\.resinLots\?\.\[keyName\(r\.displayName\)\] \|\| "";/);
+  // The lot arrives on the row from resin-totals.js, looked up there by
+  // keyName(displayName) exactly as this function used to do it inline
+  // (resin-totals.test.js holds that lookup to the original).
+  assert.match(body, /lots: state\.resinLots/);
+  assert.match(body, /const lot = r\.lot \|\| "";/);
   assert.match(body, /productionSummaryLotLane\$\{lot \? " hasLot" : ""\}/);
   assert.match(body, /\$\{lot \? `<div class="calcLot mono" data-resin-lot><\/div>` : `<span class="productionSummaryLotEmpty">No scanned lot<\/span>`\}/);
   assert.match(body, /if \(lot\) row\.querySelector\("\[data-resin-lot\]"\)\.textContent = lot;/);
@@ -137,25 +142,41 @@ test("a scanned lot renders in the dedicated lane; a resin without one gets the 
   assert.match(styles, /@media \(min-width:701px\)\{[\s\S]*?\.productionSummaryLotEmpty\{[\s\S]*?display:block;/);
 });
 
-test("Production Summary always describes Current, never Next - the aggregation loop itself is untouched", () => {
+/* The aggregation itself now lives in resin-totals.js (PolynResinTotals),
+ * the module the Station Handbook's Resin Totals runs too; resin-totals.
+ * test.js holds it to a verbatim copy of the loop this function carried.
+ * What stays pinned here is what this function feeds it and reads back. */
+const resinTotals = require("./resin-totals.js");
+const resinTotalsSource = fs.readFileSync(path.join(__dirname, "resin-totals.js"), "utf8");
+
+test("Production Summary always describes Current, never Next - the aggregation reads state.layers", () => {
   const body = functionBody("renderResinCalculator");
-  assert.match(body, /state\.layers\.forEach\(\(L\)=>\{/, "aggregation must read state.layers directly, not recipeLayers()");
+  assert.match(body, /layers: state\.layers,/, "aggregation must read state.layers directly, not recipeLayers()");
   assert.doesNotMatch(body, /recipeLayers\(\)/);
   assert.doesNotMatch(body, /nextRecipe/i);
+  assert.doesNotMatch(body, /state\.layers\.forEach/, "no second copy of the loop here");
 });
 
 test("the lot lookup does not touch the weight/lbs math at all", () => {
-  const body = functionBody("renderResinCalculator");
-  const beforeTotals = body.slice(0, body.indexOf("const totalEl"));
-  assert.doesNotMatch(beforeTotals, /resinLots/, "lot lookup must happen at render time, not during aggregation");
-  assert.match(beforeTotals, /const lbs = total \* layerFrac \* hopperFrac;/);
+  // In the module, the lot is attached to each finished row after the
+  // pounds are summed and sorted - never inside the loop.
+  const compute = resinTotalsSource.slice(resinTotalsSource.indexOf("function compute("));
+  const loop = compute.slice(0, compute.indexOf("const rows ="));
+  assert.doesNotMatch(loop, /lots\[/, "lot lookup must happen after aggregation, not during it");
+  assert.match(loop, /const lbs = total \* layerFrac \* hopperFrac;/);
+  const withLot = resinTotals.compute({ prodResinLb: 100, layers: [{ layerPct: 100, hoppers: [{ pct: 100, resinName: "R" }] }], lots: { R: "L" } });
+  const without = resinTotals.compute({ prodResinLb: 100, layers: [{ layerPct: 100, hoppers: [{ pct: 100, resinName: "R" }] }] });
+  assert.equal(withLot.rows[0].lbs, without.rows[0].lbs);
 });
 
 test("repeated occurrences of the same resin code still produce exactly one Production Summary row - unchanged aggregation", () => {
-  const body = functionBody("renderResinCalculator");
-  assert.match(body, /const k = keyName\(name\);/);
-  assert.match(body, /if \(!totals\.has\(k\)\) totals\.set\(k, \{ displayName: name, lbs: 0 \}\);/);
-  assert.match(body, /totals\.get\(k\)\.lbs \+= lbs;/);
+  const compute = resinTotalsSource.slice(resinTotalsSource.indexOf("function compute("));
+  assert.match(compute, /const k = keyName\(name\);/);
+  assert.match(compute, /if \(!totals\.has\(k\)\) totals\.set\(k, \{ key: k, displayName: name, lbs: 0 \}\);/);
+  assert.match(compute, /totals\.get\(k\)\.lbs \+= lbs;/);
+  const result = resinTotals.compute({ prodResinLb: 100, layers: [{ layerPct: 100, hoppers: [{ pct: 50, resinName: "ms1201" }, { pct: 50, resinName: " MS1201" }] }] });
+  assert.equal(result.rows.length, 1);
+  assert.equal(result.rows[0].lbs, 100);
 });
 
 test("fmtLb output is unchanged by this feature - the weight column still reads exactly as before", () => {

@@ -231,17 +231,38 @@ test("preferences, identity and transport state never cross the bridge", () => {
   const { bridge, handle } = connected(appState());
   const serialized = JSON.stringify(bridge.getSnapshot());
   for (const leaked of ["theme", "density", "timeFormat", "surfaceStyle", "mobileTimelineAlarm",
-    "pumpOffAlarmSoundUri", "hopperNamingLine9", "resinLots", "schema_version", "line_type",
-    "industrial-slate", "content://alarm", "LOT-9"]) {
+    "pumpOffAlarmSoundUri", "hopperNamingLine9", "schema_version", "line_type",
+    "industrial-slate", "content://alarm"]) {
     assert.ok(!serialized.includes(leaked), `the snapshot carries "${leaked}"`);
   }
   handle.disconnect();
 });
 
+test("the job's production and scrap pounds and the scanned lots cross - Resin Totals reads them", () => {
+  /* Added when the Handbook's Resin Totals needed them: job facts (the
+   * pounds run and scrapped) beside output and changeover, and the lots by
+   * resin key as the application stores them. Read by resin-totals.js
+   * through the same clampNum the application uses, so a stored string
+   * crosses as that string. */
+  const { bridge, handle } = connected(appState({ prodResinLb: 10926, scrapResinLb: "1,200", resinLots: { "RESIN-A": "LOT-9", "RESIN-B": "  ", "X": 7 } }));
+  const snapshot = bridge.getSnapshot();
+  assert.equal(snapshot.job.prodResinLb, 10926);
+  assert.equal(snapshot.job.scrapResinLb, "1,200", "an entered string is carried, not reinterpreted");
+  assert.deepEqual(snapshot.lots, { "RESIN-A": "LOT-9" }, "string lots only, blanks dropped");
+  assert.ok(Object.isFrozen(snapshot.lots));
+  handle.disconnect();
+  const bare = bridgeModule.project({ layers: [] }, {});
+  assert.equal(bare.job.prodResinLb, 0);
+  assert.equal(bare.job.scrapResinLb, 0);
+  assert.deepEqual(bare.lots, {});
+  assert.deepEqual(bridgeModule.project({ layers: [], resinLots: ["not", "a", "map"], prodResinLb: "" }, {}).lots, {});
+  assert.equal(bridgeModule.project({ layers: [], prodResinLb: "  " }, {}).job.prodResinLb, 0, "a blank string is nothing entered");
+});
+
 test("the snapshot's top level is exactly the documented blocks", () => {
   const { bridge, handle } = connected(appState());
   assert.deepEqual(Object.keys(bridge.getSnapshot()).sort(),
-    ["history", "job", "layers", "line", "nextRecipe", "revision", "sources"]);
+    ["history", "job", "layers", "line", "lots", "nextRecipe", "revision", "sources"]);
   handle.disconnect();
 });
 
