@@ -7,6 +7,10 @@
     "v": "0.18.4",
     "hash": "bd062d942a1b6049"
   },
+  "changeover-estimate.js": {
+    "v": "0.1.1",
+    "hash": "b9995db646744e8b"
+  },
   "storage.js": {
     "v": "0.18",
     "hash": "d1cf7b509d6864ff"
@@ -36,8 +40,8 @@
     "hash": "45eb154879a36623"
   },
   "station-host.js": {
-    "v": "0.4.5",
-    "hash": "e2bdd98be539820c"
+    "v": "0.4.11",
+    "hash": "fd9e675eebbb8612"
   },
   "workspace-configuration-payloads.js": {
     "v": "0.20.1",

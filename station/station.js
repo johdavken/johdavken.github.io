@@ -22,7 +22,9 @@
  *
  * Run-down timing and the changeover are read by the timeline across the
  * foot of the workspace (station-rundown-timeline.js) and set from the
- * header's job controls (station-job-controls.js). The Operator Handbook
+ * header's job controls (station-job-controls.js); the changeover readout
+ * opens the Changeover Calculator (station-changeover.js) in the utility
+ * slot over the stage's upper part. The Operator Handbook
  * (station-handbook.js) opens over the stage's lower half from the
  * launcher in its corner; its Recipe Book (station-recipe-book.js) lists
  * the line's saved recipes, saves the running one, and enters Blend Edit
@@ -78,6 +80,14 @@
    * optional, as the line console is. */
   const rundownTimeline = root.PolynStationRundownTimeline || null;
   const jobControls = root.PolynStationJobControls || null;
+  /* The Changeover Calculator (station-changeover.js): the header's
+   * changeover readout opened out into a utility surface under the
+   * header, and the application's own calculator arithmetic and records
+   * behind it (changeover-estimate.js, a shared application module, as
+   * scheduling.js is). Optional, as the Handbook is; it sets the deadline
+   * only through the job controls' apply, so it dispatches nothing. */
+  const changeoverCalculator = root.PolynStationChangeover || null;
+  const changeoverEstimate = root.PolynChangeoverEstimate || null;
   /* The Operator Handbook (station-handbook.js) and its first section, the
    * Recipe Book (station-recipe-book.js), and the bridge the book reads
    * through: the workspace's saved recipes as the application publishes
@@ -242,6 +252,9 @@
    * the bridge - so the three can never disagree about the job. */
   let timeline = null;
   let jobPanel = null;
+  /* The Changeover Calculator's handle, once mounted: fed the same job
+   * the header is, and told the clock moved. */
+  let changeoverPanel = null;
 
   function feedJob(model, resolved) {
     const inputs = {
@@ -253,6 +266,30 @@
     };
     if (timeline) timeline.update(inputs);
     if (jobPanel) jobPanel.update(inputs);
+    if (changeoverPanel) changeoverPanel.update(inputs);
+    applyRundownMarks();
+  }
+
+  /* --------------------------------------------------------------------
+   *   Operational marks on the drawn hoppers
+   * ------------------------------------------------------------------
+   * Overdue - the pump-off point has passed with the pump still running -
+   * is the timeline's projection (station-rundown.js, through the
+   * timeline's own anchors), written onto the drawn hoppers as a class
+   * the way the highlight and the selection are: from the state that owns
+   * it, to the elements as they stand, with no render. So the stage and
+   * the axis say one thing about a hopper, and the mark follows the clock
+   * on the timeline's tick without a clock of its own. No deadline is
+   * derived here; nothing is published; nothing is kept but the classes. */
+  function applyRundownMarks() {
+    const mount = mounts.machine;
+    if (!mount) return;
+    const marks = timeline && typeof timeline.getMarks === "function" ? timeline.getMarks() : {};
+    for (const el of mount.querySelectorAll(".station-hopper[data-layer][data-hopper-index]")) {
+      const key = `${el.getAttribute("data-layer")}:${el.getAttribute("data-hopper-index")}`;
+      const mark = marks[key];
+      el.classList.toggle("is-overdue", !!(mark && mark.overdue));
+    }
   }
 
   /* Which targets OPEN the layer: the equipment train - mixer or extruder.
@@ -682,7 +719,7 @@
     const able = controlsFor(resolved);
     where.textContent = able && (able.tracking || able.pump)
       ? "Click a hopper's body to track it in the timeline, and its receiver to mark the pump off or running. The application applies each change."
-      : "Tracking and pump-off are shown on each hopper - the halo around a tracked one, the amber receiver of a running pump - and are read-only here.";
+      : "Tracking and pump-off are shown on each hopper - the run-down flow through a tracked one, the amber receiver of a running pump - and are read-only here.";
     host.appendChild(where);
     if (commandsFor(resolved)) {
       const how = doc.createElement("p");
@@ -1097,7 +1134,7 @@
         cardHandles[entry.id] = card;
       }
     }
-    return render.mountStage(mounts.machine, model, {
+    const svg = render.mountStage(mounts.machine, model, {
       hopperState,
       layerState: current.resolved ? current.resolved.layerState : null,
       focusLayer,
@@ -1110,6 +1147,11 @@
       blendCards: cards,
       raiseLayer: extra && extra.raiseLayer
     });
+    // A rendered stage is new elements: the marks the boot file owns are
+    // written to it from the projection as it stands (feedJob follows
+    // with the fresh one on every path that changes the job).
+    applyRundownMarks();
+    return svg;
   }
 
   function prefersReducedMotion() {
@@ -1298,7 +1340,14 @@
     if (rundownTimeline && mounts.timeline) {
       timeline = rundownTimeline.create(doc, {
         view: root,
-        onTick: () => { if (jobPanel) jobPanel.refresh(); }
+        /* One clock for everything that follows it: the header's
+         * readout, the calculator's, and the overdue marks on the
+         * hoppers, all from the pass the timeline just made. */
+        onTick: () => {
+          if (jobPanel) jobPanel.refresh();
+          if (changeoverPanel) changeoverPanel.refresh();
+          applyRundownMarks();
+        }
       });
       mounts.timeline.appendChild(timeline.element);
     }
@@ -1308,9 +1357,32 @@
         onCommitted: result => {
           lastOwnRevision = Number.isInteger(result.revision) ? result.revision : null;
           onPublish({ own: true });
-        }
+        },
+        /* The changeover readout launches the calculator when the page
+         * has one; without it the readout keeps its own field. */
+        onChangeover: changeoverCalculator && changeoverEstimate && mounts.utility
+          ? () => { if (changeoverPanel) changeoverPanel.toggle(); }
+          : null
       });
       mounts.job.appendChild(jobPanel.element);
+    }
+
+    /* The Changeover Calculator, in the utility slot over the stage's
+     * upper part. Handed the job controls' apply for the deadline - the
+     * one write it makes, and not its own - the offer for what is on
+     * screen, and the device's storage for the wizard's records
+     * (changeover-estimate.js reads it; this file never names it). */
+    if (changeoverCalculator && changeoverEstimate && mounts.utility && jobPanel) {
+      changeoverPanel = changeoverCalculator.create(doc, {
+        apply: at => jobPanel.apply("changeover", at),
+        canApply: () => jobControls.able(commandsFor(current.resolved), "changeover"),
+        storage: changeoverEstimate.storageFrom(root),
+        anchor: jobPanel.trigger("changeover"),
+        mount: mounts.utility,
+        reducedMotion: prefersReducedMotion,
+        onOpenChange: open => jobPanel.setLaunched(open)
+      });
+      if (changeoverPanel) mounts.utility.appendChild(changeoverPanel.element);
     }
 
     /* The Operator Handbook, in the slot laid over the stage. Built once

@@ -533,9 +533,9 @@ function controlOn(hopper, kind) {
   return hopper.querySelectorAll(`[data-station-target='${kind}']`)[0];
 }
 const classes = node => String(node.getAttribute("class") || "").split(/\s+/);
-const haloOn = hopper => hopper.querySelectorAll("[data-role='hopper-halo']").length;
+const flowOn = hopper => hopper.querySelectorAll("[data-role='hopper-rundown']").length;
 
-test("a phone tracks B2 and pumps off B1: the change is a value change, the mounted stage is patched - halo drawn, receiver marked off - and the open editor's rows are left alone", async () => {
+test("a phone tracks B2 and pumps off B1: the change is a value change, the mounted stage is patched - flow drawn, receiver marked off - and the open editor's rows are left alone", async () => {
   const desktop = await bootDesktop();
   const doc = stageDocument();
   const station = stationOver(desktop.stateBridge, "B", doc);
@@ -549,7 +549,7 @@ test("a phone tracks B2 and pumps off B1: the change is a value change, the moun
   const foreign = mount.querySelectorAll(".station-workspace__editor")[0];
   const b2Before = hopperOn(mount, "B2");
   assert.ok(!classes(b2Before).includes("is-tracking"));
-  assert.equal(haloOn(b2Before), 0, "an untracked hopper draws no halo");
+  assert.equal(flowOn(b2Before), 0, "an untracked hopper draws no flow");
   assert.equal(controlOn(b2Before, "tracking").getAttribute("data-on"), "false");
   const pumpCell = controlOn(hopperOn(mount, "B1"), "pump").querySelector(".station-hit");
   const cellBox = ["x", "y", "width", "height"].map(k => pumpCell.getAttribute(k));
@@ -567,11 +567,11 @@ test("a phone tracks B2 and pumps off B1: the change is a value change, the moun
   assert.equal(mount.querySelectorAll(".station-workspace__editor")[0], foreign, "the workspace and the editor in it are the same nodes");
   const b2 = hopperOn(mount, "B2");
   assert.ok(classes(b2).includes("is-tracking"));
-  assert.equal(haloOn(b2), 1, "the halo is drawn on the tracked hopper");
+  assert.equal(flowOn(b2), 1, "the flow is drawn on the tracked hopper");
   assert.equal(controlOn(b2, "tracking").getAttribute("data-on"), "true");
   const b1 = hopperOn(mount, "B1");
   assert.ok(classes(b1).includes("is-pump-off"));
-  assert.equal(haloOn(b1), 0, "B1's tracking did not move");
+  assert.equal(flowOn(b1), 0, "B1's tracking did not move");
   const pump = controlOn(b1, "pump");
   assert.equal(pump.getAttribute("data-on"), "true");
   assert.equal(pump.getAttribute("data-pump"), "off");
@@ -610,7 +610,7 @@ test("a phone toggles B1's tracking and pump while the operator is typing B2's p
   const patched = render.patchStage(mount, station.model, { document: doc, hopperState: after.hopperState, layerState: after.layerState, focusLayer: "B", stageAspect: 1.6 });
   assert.equal(patched.hoppers, 1, "only B1 was redrawn");
   const b1 = hopperOn(mount, "B1");
-  assert.equal(haloOn(b1), 1);
+  assert.equal(flowOn(b1), 1);
   assert.equal(controlOn(b1, "pump").getAttribute("data-on"), "true");
   station.editor.update({ hopperState: after.hopperState });
   assert.equal(pct.value, "12", "the percentage draft is intact");

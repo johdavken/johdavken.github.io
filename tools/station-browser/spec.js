@@ -97,8 +97,8 @@ const hopperHitFailures = page => page.evaluate(() => {
 /* The hopper's operational controls, read through the application: the
  * bridge's snapshot, the legacy grid's own clock button, and the saved
  * session - all three must agree after a Station toggle - and the drawing:
- * the halo over a tracked hopper, the receiver stepping back when its
- * pump is off. */
+ * the run-down flow through a tracked hopper, the receiver stepping back
+ * when its pump is off. */
 const hopperSel = (layer, id) => `[data-role='layer'][data-layer='${layer}'] [data-role='hopper'][data-hopper='${id}']`;
 const controlSel = (layer, id, kind) => `${hopperSel(layer, id)} [data-station-target='${kind}'] .station-hit`;
 const opState = (page, layer, index, id) => page.evaluate(([layer, index, id, key]) => {
@@ -115,8 +115,7 @@ const opState = (page, layer, index, id) => page.evaluate(([layer, index, id, ke
     legacyTrack: legacyCell ? legacyCell.querySelector(".splitTrackButton").getAttribute("aria-pressed") : null,
     drawn: {
       tracking: hopper.classList.contains("is-tracking"), pumpOff: hopper.classList.contains("is-pump-off"),
-      halo: !!hopper.querySelector(".station-hopper__halo"), receiver: control("pump").getAttribute("data-pump"),
-      haloStroke: hopper.querySelector(".station-hopper__halo-ring") ? getComputedStyle(hopper.querySelector(".station-hopper__halo-ring")).stroke : null,
+      flow: !!hopper.querySelector(".station-hopper__rundown"), halo: !!hopper.querySelector(".station-hopper__halo"), receiver: control("pump").getAttribute("data-pump"),
       layerAccent: getComputedStyle(hopper.closest("[data-role='layer']")).getPropertyValue("--station-layer-accent").trim(),
       receiverOpacity: Number(getComputedStyle(hopper.querySelector(".station-hopper__receiver-drawing")).opacity),
       coneFill: getComputedStyle(hopper.querySelector(".station-hopper__receiver-cone")).fill,
@@ -132,24 +131,14 @@ const opState = (page, layer, index, id) => page.evaluate(([layer, index, id, ke
   };
 }, [layer, index, id, SESSION_KEY]);
 const clickCentre = async (page, selector) => { const b = await page.locator(selector).first().boundingBox(); await page.mouse.click(b.x + b.width / 2, b.y + b.height / 2); await page.waitForTimeout(120); };
-const halos = page => page.evaluate(() => ({
+const flows = page => page.evaluate(() => ({
   tracked: document.querySelectorAll(".station-layer:not(.is-dimmed) .station-hopper.is-tracking").length,
-  halos: document.querySelectorAll(".station-layer:not(.is-dimmed) .station-hopper__halo").length,
-  // Each halo in its own layer's colour: the ring's computed stroke against
-  // the accent resolved on the layer group it sits in.
-  offColour: [...document.querySelectorAll(".station-layer:not(.is-dimmed) .station-hopper__halo-ring")].filter(ring => {
-    const probe = document.createElement("span");
-    probe.style.color = getComputedStyle(ring.closest("[data-role='layer']")).getPropertyValue("--station-layer-accent").trim();
-    ring.closest("[data-role='layer']").appendChild(probe);
-    const want = getComputedStyle(probe).color;
-    probe.remove();
-    return getComputedStyle(ring).stroke !== want;
-  }).length,
-  animated: [...document.querySelectorAll(".station-layer:not(.is-dimmed) .station-hopper *")].filter(el => getComputedStyle(el).animationName !== "none").length,
-  icons: document.querySelectorAll(".station-hopper__clock, .station-hopper__power-ring, .station-hopper__marks").length,
-  glowWider: [...document.querySelectorAll(".station-layer:not(.is-dimmed) .station-hopper__halo")].every(h =>
-    parseFloat(getComputedStyle(h.querySelector(".station-hopper__halo-glow")).strokeWidth) > parseFloat(getComputedStyle(h.querySelector(".station-hopper__halo-ring")).strokeWidth) &&
-    Number(getComputedStyle(h.querySelector(".station-hopper__halo-glow")).opacity) < 1)
+  halos: document.querySelectorAll(".station-hopper__halo, [data-role='hopper-halo']").length,
+  // The one thing that moves on a hopper is a tracked hopper's run-down
+  // flow: one animated group per tracked hopper, nothing else.
+  animated: [...document.querySelectorAll(".station-layer:not(.is-dimmed) .station-hopper *")].filter(el => getComputedStyle(el).animationName !== "none" && !el.classList.contains("station-hopper__rundown-flow")).length,
+  flows: [...document.querySelectorAll(".station-layer:not(.is-dimmed) .station-hopper.is-tracking .station-hopper__rundown-flow")].filter(el => getComputedStyle(el).animationName === "station-rundown-flow").length,
+  icons: document.querySelectorAll(".station-hopper__clock, .station-hopper__power-ring, .station-hopper__marks").length
 }));
 
 async function run(browserName) {
@@ -197,7 +186,7 @@ async function run(browserName) {
      * machine, pointer-events none), so it is a child of the shell without
      * being a region of it. */
     check(browserName, `${tag} the shell is header, stage, run-down timeline and status bar across the full width - no side pane, no recipe strip, no spare track`,
-      frame.columns === 1 && frame.regions.join() === "station-header,station-machine,station-handbook-slot,station-timeline,station-status" && frame.panes === 0 && frame.headerFull && frame.machineFull && frame.timelineFull && frame.statusFull && frame.stageWide && frame.console, frame);
+      frame.columns === 1 && frame.regions.join() === "station-header,station-machine,station-handbook-slot,station-utility-slot,station-timeline,station-status" && frame.panes === 0 && frame.headerFull && frame.machineFull && frame.timelineFull && frame.statusFull && frame.stageWide && frame.console, frame);
 
     /* The header: Station's name, the way back, the two job readouts and
      * the line console - one row, no badge, no scale. Legacy is a plain
@@ -288,33 +277,170 @@ async function run(browserName) {
      * tracking toggle, the receiver the pump toggle, each a command through
      * the application and nothing else */
     let ops = await opState(page, "B", 2, "B3");
-    check(browserName, `${tag} controls are on offer and B3 starts untracked, pump running, no icon drawn`, ops.control.able.join() === "true,true" && !ops.app.track && !ops.drawn.halo && ops.control.tracking === "false" && ops.control.pump === "false" && ops.drawn.icons === 0, ops);
+    check(browserName, `${tag} controls are on offer and B3 starts untracked, pump running, no icon drawn`, ops.control.able.join() === "true,true" && !ops.app.track && !ops.drawn.flow && ops.control.tracking === "false" && ops.control.pump === "false" && ops.drawn.icons === 0, ops);
     const cellHit = await page.evaluate(sel => { const out = {}; for (const kind of ["tracking", "pump"]) { const cell = document.querySelector(`${sel} [data-station-target='${kind}'] .station-hit`); const b = cell.getBoundingClientRect(); const hit = document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2); out[kind] = !!(hit && hit.closest("[data-station-target]") && hit.closest("[data-station-target]").getAttribute("data-station-target") === kind); } return out; }, hopperSel("B", "B3"));
     check(browserName, `${tag} each control's cell hit-tests to itself`, cellHit.tracking && cellHit.pump, cellHit);
     await clickCentre(page, controlSel("B", "B3", "tracking"));
     ops = await opState(page, "B", 2, "B3");
-    check(browserName, `${tag} clicking B3's body tracks it through the application: bridge, legacy clock button and saved session agree, the halo is drawn, the pump is untouched`,
-      ops.app.track && ops.session.track && ops.legacyTrack === "true" && ops.drawn.tracking && ops.drawn.halo && ops.control.tracking === "true" && !ops.app.pumpOff && !ops.pending, ops);
+    check(browserName, `${tag} clicking B3's body tracks it through the application: bridge, legacy clock button and saved session agree, the flow is drawn, the pump is untouched`,
+      ops.app.track && ops.session.track && ops.legacyTrack === "true" && ops.drawn.tracking && ops.drawn.flow && !ops.drawn.halo && ops.control.tracking === "true" && !ops.app.pumpOff && !ops.pending, ops);
     check(browserName, `${tag} a control click neither selects the hopper nor opens the layer`, !ops.selected && ops.focus === null, ops);
-    let drawn = await halos(page);
-    check(browserName, `${tag} every tracked hopper wears one halo in its layer's colour - glow under a crisp ring - and nothing animates, no icon anywhere`,
-      drawn.tracked === drawn.halos && drawn.tracked >= 3 && drawn.offColour === 0 && drawn.animated === 0 && drawn.icons === 0 && drawn.glowWider, drawn);
+    let drawn = await flows(page);
+    check(browserName, `${tag} every tracked hopper carries one run-down flow and nothing on its head: no halo, nothing else animates, no icon anywhere`,
+      drawn.tracked >= 3 && drawn.halos === 0 && drawn.animated === 0 && drawn.flows === drawn.tracked && drawn.icons === 0, drawn);
     await clickCentre(page, controlSel("B", "B3", "tracking"));
     ops = await opState(page, "B", 2, "B3");
-    check(browserName, `${tag} clicking it again untracks B3: the halo is gone, nothing stuck`, !ops.app.track && !ops.session.track && ops.legacyTrack === "false" && !ops.drawn.halo && ops.control.tracking === "false" && !ops.pending && !ops.selected, ops);
+    check(browserName, `${tag} clicking it again untracks B3: the flow is gone, nothing stuck`, !ops.app.track && !ops.session.track && ops.legacyTrack === "false" && !ops.drawn.flow && ops.control.tracking === "false" && !ops.pending && !ops.selected, ops);
     const runningCone = ops.drawn.coneFill;
     await clickCentre(page, controlSel("B", "B1", "pump"));
     const hovered = await opState(page, "B", 0, "B1");
     await page.mouse.move(5, 5); await page.waitForTimeout(40);
     ops = await opState(page, "B", 0, "B1");
     check(browserName, `${tag} clicking B1's receiver marks its pump off through the application: bridge and session agree, the amber is gone and the receiver steps back, tracking untouched`,
-      ops.app.pumpOff && ops.session.pumpOff && ops.drawn.pumpOff && ops.drawn.receiver === "off" && ops.control.pump === "true" && ops.drawn.coneFill !== runningCone && ops.drawn.receiverOpacity <= 0.5 && ops.app.track && ops.drawn.halo && !ops.pending && !ops.selected && ops.focus === null, ops);
+      ops.app.pumpOff && ops.session.pumpOff && ops.drawn.pumpOff && ops.drawn.receiver === "off" && ops.control.pump === "true" && ops.drawn.coneFill !== runningCone && ops.drawn.receiverOpacity <= 0.5 && ops.app.track && ops.drawn.flow && !ops.pending && !ops.selected && ops.focus === null, ops);
     check(browserName, `${tag} under the pointer a stopped receiver comes part of the way back - the hover cue - and no further`, hovered.hover && hovered.drawn.receiverOpacity > ops.drawn.receiverOpacity && hovered.drawn.receiverOpacity < 1 && hovered.drawn.coneFill !== runningCone, { hovered: hovered.drawn, resting: ops.drawn });
     await clickCentre(page, controlSel("B", "B1", "pump"));
     await page.mouse.move(5, 5); await page.waitForTimeout(40);
     ops = await opState(page, "B", 0, "B1");
     check(browserName, `${tag} clicking the same place again marks the pump running: the amber is back`, !ops.app.pumpOff && !ops.session.pumpOff && !ops.drawn.pumpOff && ops.drawn.receiver === "on" && ops.control.pump === "false" && ops.drawn.coneFill === runningCone && ops.drawn.receiverOpacity === 1, ops);
     check(browserName, `${tag} no hover or pending state remains on the controls`, !ops.hover && !ops.pending, ops);
+
+    /* ---- The Changeover Calculator ----
+     * The header's CHANGEOVER readout is the launcher: a click opens the
+     * surface in the utility slot, centred under the header and bounded
+     * above the Handbook's share; Use sets the deadline through the
+     * application; Close returns to the readout. */
+    const calcState = () => page.evaluate(() => {
+      const r = sel => { const el = document.querySelector(sel); return el ? el.getBoundingClientRect() : null; };
+      const panel = document.querySelector(".station-changeover__panel");
+      const readout = document.querySelector(".station-job__trigger[data-field='changeover']");
+      const p = r(".station-changeover__panel"), header = r(".station-header"), stage = r(".station-machine"), hb = r(".station-handbook__panel");
+      const body = document.querySelector(".station-changeover__body");
+      const cs = panel ? getComputedStyle(panel) : null;
+      return {
+        open: !!panel && !panel.hidden && cs.display !== "none", expanded: readout.getAttribute("aria-expanded"), launched: readout.closest(".station-job__item").classList.contains("is-launched"),
+        inUtility: !!panel.closest("[data-station-mount='utility']"), inlineEditor: !!document.querySelector(".station-job__item.is-editing"),
+        belowHeader: p ? p.y - header.bottom : null, centred: p ? Math.abs((p.x + p.width / 2) - (stage.x + stage.width / 2)) : null,
+        width: p ? p.width : null, height: p ? p.height : null, clipped: body.scrollHeight > body.clientHeight + 1,
+        handbookOpen: !!hb && hb.width > 0, gap: hb && p ? hb.y - p.bottom : null,
+        glass: cs ? [cs.backdropFilter || cs.webkitBackdropFilter, cs.backgroundColor] : null,
+        readout: document.querySelectorAll(".station-job__value")[1].textContent,
+        app: window.PolynStationStateBridge.getSnapshot().job.changeoverTime,
+        legacy: document.getElementById("changeoverTime") ? document.getElementById("changeoverTime").value : null,
+        estimate: document.querySelector(".station-changeover__result-time").textContent, ready: document.querySelector(".station-changeover__result").classList.contains("is-ready"),
+        running: document.querySelector("[data-role='production-estimate']").textContent, note: document.querySelector(".station-changeover__note").textContent,
+        focusInside: panel.contains(document.activeElement), focusOnReadout: document.activeElement === readout,
+        stored: localStorage.getItem("resinTimer.changeoverWizard.v0.01"), record: localStorage.getItem("resinTimer.productionEstimate.v0.01")
+      };
+    });
+    let calc = await calcState();
+    check(browserName, `${tag} the calculator starts closed and the readout is its launcher`, !calc.open && calc.expanded === "false" && calc.inUtility && !calc.inlineEditor, calc);
+    await page.click(".station-job__trigger[data-field='changeover']"); await page.waitForTimeout(450);
+    calc = await calcState();
+    check(browserName, `${tag} clicking the readout opens the glass surface under the header, centred, no field in the header, focus inside`,
+      calc.open && calc.expanded === "true" && calc.launched && !calc.inlineEditor && Math.abs(calc.belowHeader - 12) < 1 && calc.centred < 1 && calc.width <= 820 && calc.height <= 308 && !calc.clipped && calc.focusInside && /blur/.test(calc.glass[0]), calc);
+    await page.click(".station-handbook__launcher"); await page.waitForTimeout(450);
+    calc = await calcState();
+    check(browserName, `${tag} the Handbook opens beside it: both open, a gap between, neither clipped`, calc.open && calc.handbookOpen && calc.gap >= 11 && !calc.clipped, calc);
+    await page.click(".station-handbook__panel [data-action='close-handbook']"); await page.waitForTimeout(450);
+    // The answers, typed; the estimate follows live.
+    const typeAnswer = async (field, value) => { const sel = `.station-changeover__form input[data-field='${field}']`; await page.fill(sel, ""); await page.type(sel, String(value)); };
+    await typeAnswer("lineSpeed", 120); await typeAnswer("footagePerRoll", 1500); await typeAnswer("rollsLeft", 18); await typeAnswer("hours", 1); await typeAnswer("minutes", 0);
+    await page.click(".station-changeover__form [data-field='numberUp'][data-value='3']");
+    await page.click(".station-changeover__form [data-field='bothWinders'][data-value='true']");
+    await page.waitForTimeout(60);
+    calc = await calcState();
+    const expectedClock = (() => { const d = new Date(Date.now() + 85 * 60000); return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }); })();
+    check(browserName, `${tag} the answers make a live estimate 85 minutes out, saved on the device under the wizard's own key`,
+      calc.ready && calc.estimate === expectedClock && calc.stored && JSON.parse(calc.stored).lineSpeed === "120" && JSON.parse(calc.stored).numberUp === 3 && JSON.parse(calc.stored).bothWinders === true, { calc, expectedClock });
+    await page.click("[data-action='use-estimate']"); await page.waitForTimeout(150);
+    calc = await calcState();
+    const hhmm = (() => { const d = new Date(Date.now() + 85 * 60000); return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; })();
+    check(browserName, `${tag} Use sets the deadline through the application: the bridge, the legacy field and the header agree; the running estimate is recorded and shown`,
+      (calc.app === hhmm || calc.app === hhmm.replace(/:(\d)(\d)$/, (m, a, b) => `:${a}${Number(b) - 1}`)) && calc.legacy === calc.app && /in 1h 2[45]m$/.test(calc.readout) && /^Est\. \d+ sets · \d+ rolls remaining$/.test(calc.running) && calc.record && /^Changeover set to /.test(calc.note), { calc, hhmm });
+    await page.click("[data-action='close-changeover']"); await page.waitForTimeout(450);
+    calc = await calcState();
+    check(browserName, `${tag} Close returns to the compact readout, with the focus`, !calc.open && calc.expanded === "false" && !calc.launched && calc.focusOnReadout, calc);
+    await page.keyboard.press("Enter"); await page.waitForTimeout(450);
+    calc = await calcState();
+    check(browserName, `${tag} Enter on the readout reopens it, answers kept`, calc.open && calc.ready, calc);
+    await page.keyboard.press("Escape"); await page.waitForTimeout(450);
+    calc = await calcState();
+    check(browserName, `${tag} Escape inside closes it`, !calc.open, calc);
+
+    /* ---- Tracking visuals ----
+     * With the deadline 85 minutes out, A1 and C1 (500 lb at 216 lb/hr, 2.3
+     * hours) are past their pump-off point; B1 (400 lb at 288 lb/hr, 1.4
+     * hours) too; B2 (400 lb at 144 lb/hr) as well. The marks agree with the
+     * application's own Timeline rows. */
+    const trackingState = () => page.evaluate(() => {
+      const hoppers = [...document.querySelectorAll(".station-layer:not(.is-dimmed) .station-hopper")];
+      // The application's own Timeline rows (hidden under Station): late is
+      // the row's class; a pumped-off row is "done" and never late.
+      const rows = Object.fromEntries([...document.querySelectorAll(".resultRow")].map(r => [r.querySelector(".resultHopper").textContent.trim(), r.classList.contains("late") && !r.classList.contains("done")]));
+      const obscured = [];
+      for (const h of hoppers.filter(h => h.querySelector(".station-hopper__rundown"))) {
+        // The flow box's own frame (its x/y/width/height, through the drawing's
+        // matrix) - a nested svg's client rect reports its clipped content too.
+        const flow = h.querySelector(".station-hopper__rundown");
+        const m = flow.parentNode.getScreenCTM();
+        const p1 = new DOMPoint(Number(flow.getAttribute("x")), Number(flow.getAttribute("y"))).matrixTransform(m);
+        const p2 = new DOMPoint(Number(flow.getAttribute("x")) + Number(flow.getAttribute("width")), Number(flow.getAttribute("y")) + Number(flow.getAttribute("height"))).matrixTransform(m);
+        const box = { x: p1.x, y: p1.y, right: p2.x, bottom: p2.y };
+        // The readout, the receiver, the ports and the fill valve are never
+        // under the flow; the hose is below the vessel, so it cannot be.
+        for (const part of ["id", "pct", "resin", "receiver-cone", "port", "fill-valve", "hose-end"]) {
+          const el = h.querySelector(`.station-hopper__${part}`); if (!el) continue;
+          const b = el.getBoundingClientRect();
+          if (b.width && b.height && !(b.right <= box.x || b.x >= box.right || b.bottom <= box.y || b.y >= box.bottom)) obscured.push(`${h.getAttribute("data-hopper")}:${part}`);
+        }
+      }
+      return {
+        overdue: hoppers.filter(h => h.classList.contains("is-overdue")).map(h => h.getAttribute("data-hopper")),
+        tracked: hoppers.filter(h => h.classList.contains("is-tracking")).map(h => h.getAttribute("data-hopper")),
+        agree: hoppers.filter(h => h.classList.contains("is-tracking") && !h.classList.contains("is-pump-off")).every(h => rows[h.getAttribute("data-hopper")] === h.classList.contains("is-overdue")),
+        rows, obscured,
+        overdueFill: hoppers.filter(h => h.classList.contains("is-overdue")).map(h => getComputedStyle(h.querySelector(".station-hopper__shell")).fill),
+        plainFill: hoppers.filter(h => !h.classList.contains("is-overdue") && h.classList.contains("is-tracking")).map(h => getComputedStyle(h.querySelector(".station-hopper__shell")).fill),
+        flowStroke: hoppers.filter(h => h.classList.contains("is-tracking")).map(h => getComputedStyle(h.querySelector(".station-hopper__rundown-chevrons")).stroke),
+        flowAnimated: hoppers.filter(h => h.classList.contains("is-tracking")).every(h => getComputedStyle(h.querySelector(".station-hopper__rundown-flow")).animationName === "station-rundown-flow"),
+        flowMoving: hoppers.filter(h => h.classList.contains("is-tracking")).map(h => getComputedStyle(h.querySelector(".station-hopper__rundown-flow")).transform)
+      };
+    });
+    await page.waitForTimeout(100);
+    let tv = await trackingState();
+    check(browserName, `${tag} the overdue hoppers are the ones the application's own Timeline marks late; the wash tints them apart from the tracked ones; the flow obscures nothing`,
+      tv.overdue.length >= 3 && tv.agree && tv.overdueFill.every(f => f !== tv.plainFill[0]) && tv.obscured.length === 0 && tv.flowAnimated, tv);
+    await page.waitForTimeout(400);
+    const flowed = await trackingState();
+    check(browserName, `${tag} the flow moves on its own (CSS), no script`, flowed.flowMoving.length > 0 && flowed.flowMoving.some((t, i) => t !== tv.flowMoving[i]), { before: tv.flowMoving, after: flowed.flowMoving });
+    // Hover over an overdue hopper: the outline lifts in the accent, the wash stays.
+    await page.hover(hopperSel("A", "A1") + " .station-hopper__shell", { force: true }); await page.waitForTimeout(40);
+    const hoveredOverdue = await page.evaluate(sel => { const h = document.querySelector(sel); const cs = getComputedStyle(h.querySelector(".station-hopper__shell")); return { overdue: h.classList.contains("is-overdue"), fill: cs.fill, stroke: cs.stroke }; }, hopperSel("A", "A1"));
+    await page.mouse.move(5, 5);
+    const restingOverdue = await page.evaluate(sel => { const h = document.querySelector(sel); const cs = getComputedStyle(h.querySelector(".station-hopper__shell")); return { fill: cs.fill, stroke: cs.stroke }; }, hopperSel("A", "A1"));
+    check(browserName, `${tag} hovering an overdue hopper lifts its outline and keeps its wash`, hoveredOverdue.overdue && hoveredOverdue.fill === restingOverdue.fill && hoveredOverdue.stroke !== restingOverdue.stroke, { hoveredOverdue, restingOverdue });
+    // Blend Edit turns layer A over and back: the marks are where they were.
+    await page.click(".station-handbook__launcher"); await page.waitForTimeout(450);
+    await page.click(".station-handbook__panel [data-action='blend-edit']"); await page.waitForTimeout(100);
+    await page.click(".station-book__layer-chip[data-layer='A']"); await page.waitForTimeout(250);
+    const flipped = await page.evaluate(() => ({ flipped: !!document.querySelector("[data-role='layer'][data-layer='A'].is-flipped"), card: !!document.querySelector("[data-role='layer'][data-layer='A'] .station-blend-card"), cardFlows: document.querySelectorAll(".station-blend-card .station-hopper__rundown").length, clusterHidden: getComputedStyle(document.querySelector("[data-role='layer'][data-layer='A'] .station-hopper-cluster")).display === "none" }));
+    await page.click(".station-handbook__panel [data-action='done']"); await page.waitForTimeout(250);
+    await page.click(".station-handbook__panel [data-action='close-handbook']"); await page.waitForTimeout(450);
+    tv = await trackingState();
+    check(browserName, `${tag} Blend Edit turns the layer over with no flow of the card's own, and back with the marks as they were`, flipped.flipped && flipped.card && flipped.cardFlows === 0 && flipped.clusterHidden && tv.overdue.includes("A1") && tv.agree, { flipped, tv });
+    // Reduced motion: the flow stands, the marks stay, the calculator opens at once.
+    await page.emulateMedia({ reducedMotion: "reduce" }); await page.waitForTimeout(60);
+    const reduced = await page.evaluate(() => ({
+      flows: document.querySelectorAll(".station-hopper.is-tracking .station-hopper__rundown").length,
+      stilled: [...document.querySelectorAll(".station-hopper__rundown-flow")].every(el => getComputedStyle(el).animationName === "none"),
+      overdue: document.querySelectorAll(".station-hopper.is-overdue").length
+    }));
+    await page.click(".station-job__trigger[data-field='changeover']"); await page.waitForTimeout(30);
+    const reducedCalc = await page.evaluate(() => { const p = document.querySelector(".station-changeover__panel"); return { open: !p.hidden, animations: p.getAnimations ? p.getAnimations().length : 0 }; });
+    await page.click("[data-action='close-changeover']"); await page.waitForTimeout(30);
+    await page.emulateMedia({ reducedMotion: "no-preference" }); await page.waitForTimeout(60);
+    check(browserName, `${tag} under reduced motion the flow stands still and stays, the marks stay, and the calculator opens without a flight`, reduced.flows >= 3 && reduced.stilled && reduced.overdue >= 3 && reducedCalc.open && reducedCalc.animations === 0, { reduced, reducedCalc });
 
     /* open / close */
     const normalCluster = await clusterAt(page, "B");
@@ -365,10 +491,10 @@ async function run(browserName) {
     check(browserName, `${tag} and the same place toggles it back`, !focusedOps.app.pumpOff && !focusedOps.drawn.pumpOff && (await stateOf(page)).focus === "B" && focusedOps.selected, focusedOps);
     await clickCentre(page, controlSel("B", "B3", "tracking"));
     focusedOps = await opState(page, "B", 2, "B3");
-    check(browserName, `${tag} the drawn body in the open layer tracks B3 and leaves the layer open`, focusedOps.app.track && focusedOps.legacyTrack === "true" && focusedOps.drawn.halo && (await stateOf(page)).focus === "B", focusedOps);
+    check(browserName, `${tag} the drawn body in the open layer tracks B3 and leaves the layer open`, focusedOps.app.track && focusedOps.legacyTrack === "true" && focusedOps.drawn.flow && (await stateOf(page)).focus === "B", focusedOps);
     await clickCentre(page, controlSel("B", "B3", "tracking"));
     focusedOps = await opState(page, "B", 2, "B3");
-    check(browserName, `${tag} and again untracks it`, !focusedOps.app.track && !focusedOps.drawn.halo, focusedOps);
+    check(browserName, `${tag} and again untracks it`, !focusedOps.app.track && !focusedOps.drawn.flow, focusedOps);
 
     /* search keyboard flow */
     await page.focus(".station-editor__item[data-hopper='B1'] .station-editor__resin-value");

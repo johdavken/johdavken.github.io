@@ -344,23 +344,31 @@ test("the machine stylesheets stay inside the token system", () => {
  *   Motion
  * -------------------------------------------------------------------- */
 
-test("the only animation is the agitator, and it is CSS with no JavaScript timer", () => {
+test("the only animations are the agitator and the run-down flow, each CSS with no JavaScript timer", () => {
   const fs_ = require("node:fs");
   const sheets = ["machine.css", "hopper.css", "layer-bank.css"]
     .map(name => ({ name, css: fs_.readFileSync(path.join(ROOT, "station/styles/components", name), "utf8") }));
 
+  /* Two sanctioned motions on the machine, each owned by one component:
+   * the mixer's agitator (layer-bank.css) and a tracked hopper's run-down
+   * flow (hopper.css). Each is one keyframes block applied to one
+   * selector, and each has its reduced-motion switch-off. A third arrives
+   * as an edit to this list. */
   const animated = sheets.filter(sheet => /@keyframes|animation:/.test(cssCode(sheet.css)));
-  assert.deepEqual(animated.map(s => s.name), ["layer-bank.css"],
-    "animation appeared outside the component that owns the agitator");
-
-  // Exactly one keyframes block, applied to exactly one selector.
-  const css = cssCode(animated[0].css);
-  assert.equal((css.match(/@keyframes/g) || []).length, 1);
-  // `animation: none` is the reduced-motion switch-off, not a second animation.
-  const applied = (css.match(/animation:\s*[^;]+;/g) || [])
-    .filter(one => !/animation:\s*none/.test(one));
-  assert.equal(applied.length, 1, "more than one thing is being animated");
-  assert.match(applied[0], /station-agitate/);
+  assert.deepEqual(animated.map(s => s.name).sort(), ["hopper.css", "layer-bank.css"],
+    "animation appeared outside the components that own the agitator and the run-down flow");
+  const expected = { "layer-bank.css": /station-agitate/, "hopper.css": /station-rundown-flow/ };
+  for (const sheet of animated) {
+    const css = cssCode(sheet.css);
+    assert.equal((css.match(/@keyframes/g) || []).length, 1, `${sheet.name} has more than one keyframes block`);
+    // `animation: none` is the reduced-motion switch-off, not a second animation.
+    const applied = (css.match(/animation:\s*[^;]+;/g) || [])
+      .filter(one => !/animation:\s*none/.test(one));
+    assert.equal(applied.length, 1, `${sheet.name}: more than one thing is being animated`);
+    assert.match(applied[0], expected[sheet.name]);
+    const reduced = css.match(/@media \(prefers-reduced-motion: reduce\)\s*\{([\s\S]*?)\n\}/);
+    assert.ok(reduced && /animation:\s*none/.test(reduced[1]), `${sheet.name} has no reduced-motion switch-off`);
+  }
 
   // No Station file spins anything from JavaScript: no timers, no frame
   // loop. The one script that animates is the transition (finite Web

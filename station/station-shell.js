@@ -33,9 +33,9 @@
    *
    * Four regions and nothing else: the header (with the job controls' slot
    * and the line console's slot), the machine stage, the run-down timeline
-   * across the foot of the workspace, and the status bar - plus one slot
-   * that is not a region: the Operator Handbook's, laid over the stage's
-   * own cell (see below). The earlier side
+   * across the foot of the workspace, and the status bar - plus two slots
+   * that are not regions: the Operator Handbook's, and the utility
+   * surfaces', both laid over the stage's own cell (see below). The earlier side
    * columns - a demo-configuration list on the left, an inspector on the
    * right - and the Current / Next recipe strip under the stage were taken
    * out (2026-09-12) so the stage has the whole width: configuration
@@ -44,7 +44,7 @@
    * them. The timeline row is not a strip of that kind: it is an
    * operational view of the job the stage shows, one modest row deep, and
    * the stage keeps everything above it. */
-  const MOUNTS = Object.freeze(["machine", "timeline", "status", "job", "connection", "handbook"]);
+  const MOUNTS = Object.freeze(["machine", "timeline", "status", "job", "connection", "handbook", "utility"]);
 
   function element(doc, name, className, attributes) {
     const node = doc.createElement(name);
@@ -143,6 +143,14 @@
      * Edit works on them while it is open. The slot itself is inert to
      * the pointer (shell.css); only what the Handbook puts in it is not. */
     shell.appendChild(element(doc, "div", "station-handbook-slot", { "data-station-mount": "handbook" }));
+
+    /* The utility surfaces' slot: the smaller focused surfaces that open
+     * out of the header's readouts - the Changeover Calculator
+     * (station-changeover.js) today - across the UPPER part of the same
+     * cell, above the Handbook's share of it, so the two are open
+     * together without meeting. The same rule as the Handbook's slot:
+     * laid over the stage, no track, inert to the pointer itself. */
+    shell.appendChild(element(doc, "div", "station-utility-slot", { "data-station-mount": "utility" }));
 
     /* The run-down timeline's row: no heading, no card - the timeline
      * itself (station-rundown-timeline.js) begins with its Now anchor. */

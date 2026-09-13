@@ -120,6 +120,21 @@
   pointer-events: none;
 }
 
+/* The utility surfaces' slot: the same cell again, for the focused
+ * surfaces the header's readouts open (the Changeover Calculator). Over
+ * the Handbook's slot in the stack only because it comes later; the two
+ * never share a pixel - the utility surface is bounded above the
+ * Handbook's share of the stage (changeover.css). Inert to the pointer
+ * itself, as the Handbook's slot is. */
+.station-utility-slot {
+  grid-area: machine;
+  position: relative;
+  z-index: 5;
+  min-width: 0;
+  min-height: 0;
+  pointer-events: none;
+}
+
 /* The timeline's row: the component inside sets its own height; the row
  * only frames it against the stage above and the status bar below. */
 .station-timeline {

@@ -64,7 +64,7 @@ test("the spec runs Firefox as well as Chromium, and every documented flow is a 
     "6H by keyboard brings the six-hour picture back exactly",
     "clicking B3's body tracks it through the application",
     "a control click neither selects the hopper nor opens the layer",
-    "every tracked hopper wears one halo in its layer's colour",
+    "every tracked hopper carries one run-down flow and nothing on its head",
     "clicking B1's receiver marks its pump off through the application",
     "under the pointer a stopped receiver comes part of the way back",
     "clicking the same place again marks the pump running",

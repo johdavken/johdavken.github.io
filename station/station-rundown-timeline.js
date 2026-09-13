@@ -94,12 +94,42 @@
     node.setAttribute("style", `--station-rundown-x: ${percent(fraction)};`);
   }
 
-  /* What a marker says in words, for its label and its detail. */
+  /* What a marker says in words, for its label and its detail: with a
+   * changeover, the pump-off point; without one, the run-empty estimate
+   * (station-rundown.js: WHERE THE MARKER STANDS). */
   function describe(entry, rundown) {
     if (entry.reason) return `${entry.id}: ${rundown.reasonLabel(entry.reason)}`;
+    if (entry.markKind === "pump-off") {
+      const by = rundown.formatClock(entry.pumpOffBy);
+      if (entry.pumpOff) return `${entry.id}: pump off, empty in ${rundown.formatRemaining(entry.remainingMs)}`;
+      if (entry.late) return `${entry.id}: late - pump off by ${by} to run empty by the changeover`;
+      return `${entry.id}: pump off in ${rundown.formatRemaining(entry.untilMs)}, by ${by}, to run empty by the changeover`;
+    }
     const when = rundown.formatClock(entry.emptyAt);
     if (entry.past) return `${entry.id}: estimated empty since ${when}`;
     return `${entry.id}: empty in ${rundown.formatRemaining(entry.remainingMs)}, at ${when}${entry.pumpOff ? ", pump off" : ""}`;
+  }
+
+  /* A hopper's run-down facts in one line, for a group's listing: the
+   * pump-off point (or the empty-at estimate, when there is no
+   * changeover), the empty-at estimate, the run-down duration. */
+  function memberFacts(entry, rundown) {
+    const facts = [];
+    if (entry.markKind === "pump-off") {
+      facts.push(entry.pumpOff ? "pump off" : `pump off by ${rundown.formatClock(entry.pumpOffBy)}${entry.late ? " · late" : ""}`);
+    }
+    facts.push(`empty ${rundown.formatClock(entry.emptyAt)}`);
+    if (Number.isFinite(entry.durationMs)) facts.push(`${rundown.formatRemaining(entry.durationMs)} run-down`);
+    return facts.join(" · ");
+  }
+
+  /* What a collapsed group says: how many, when, and who. */
+  function describeGroup(group, rundown) {
+    const first = group.entries[0];
+    const when = first.markKind === "pump-off"
+      ? (first.late ? "past their pump-off point" : `pumping off by ${rundown.formatClock(first.pumpOffBy)}`)
+      : `empty by ${rundown.formatClock(first.emptyAt)}`;
+    return `${group.entries.length} hoppers ${when}: ${group.entries.map(e => e.id).join(", ")}`;
   }
 
   /**
@@ -228,11 +258,16 @@
     function render() {
       const t = now();
       const inputs = state.inputs;
+      const changeover = inputs ? rundown.resolveChangeover(inputs.job, { now: t }) : { at: null, stale: false };
+      /* The changeover goes into the projection as the boundary the line
+       * is drawn at: each hopper's marker then stands at its pump-off
+       * point, and one that has reached Now is late (station-rundown.js).
+       * A stale deadline draws no line and bounds nothing: the markers
+       * stand at their run-empty estimates. */
       const entries = inputs ? rundown.projectEntries({
         model: inputs.model, hopperState: inputs.hopperState, layerState: inputs.layerState,
         job: inputs.job, observed: observedAt()
-      }, { now: t }) : [];
-      const changeover = inputs ? rundown.resolveChangeover(inputs.job, { now: t }) : { at: null, stale: false };
+      }, { now: t, changeoverAt: changeover.at !== null && !changeover.stale ? changeover.at : null }) : [];
       state.width = measuredWidth();
       const layout = rundown.layout({
         entries, changeover, now: t, windowMs: state.window * rundown.HOUR, width: state.width
@@ -249,7 +284,7 @@
       }
       renderTicks(layout.ticks, changeoverLabelSpan(layout.changeover));
       renderChangeover(layout.changeover);
-      renderMarkers(layout.markers);
+      renderMarkers(layout.markers, layout.groups);
       renderSide(layout);
       renderHint(entries, inputs);
       renderDetail();
@@ -305,7 +340,12 @@
       changeoverEl.setAttribute("title", `Line changeover at ${rundown.formatClock(co.at)}, in ${rundown.formatRemaining(co.remainingMs)}`);
     }
 
-    function marker(item) {
+    /* One marker per hopper: its stem and dot at its exact instant, in its
+     * layer's colour, and the label the layout gave it - its id, "N
+     * hoppers" for the first of a collapsed group, or none for the rest of
+     * one (station-rundown.js: LABELS NEVER OVERLAP). Everything else a
+     * marker knows is in the detail. */
+    function marker(item, group) {
       const entry = item.entry;
       const button = element(doc, "button", "station-rundown__marker", {
         type: "button",
@@ -315,25 +355,28 @@
         "data-layer": entry.layer,
         "data-layer-role": entry.role,
         "data-lane": String(item.lane),
-        "aria-label": describe(entry, rundown)
+        "data-group": String(item.group),
+        "aria-label": group && group.collapsed ? `${describe(entry, rundown)}; ${describeGroup(group, rundown)}` : describe(entry, rundown)
       });
       if (item.past) button.classList.add("is-past");
-      if (item.crowded) button.classList.add("is-crowded");
+      if (item.late) button.classList.add("is-late");
       if (entry.pumpOff) button.classList.add("is-pump-off");
+      if (group && group.collapsed) button.classList.add(item.label ? "is-group" : "is-grouped");
       placeAt(button, item.fraction);
       button.appendChild(element(doc, "span", "station-rundown__stem", { "aria-hidden": "true" }));
       button.appendChild(element(doc, "span", "station-rundown__dot", { "aria-hidden": "true" }));
-      const label = element(doc, "span", "station-rundown__label");
-      label.appendChild(text(doc, "span", "station-rundown__id", entry.id));
-      label.appendChild(text(doc, "span", "station-rundown__time",
-        item.past ? "Empty" : rundown.formatRemaining(entry.remainingMs)));
-      button.appendChild(label);
+      if (item.label) {
+        const label = element(doc, "span", "station-rundown__label");
+        label.appendChild(text(doc, "span", group && group.collapsed ? "station-rundown__group" : "station-rundown__id", item.label));
+        button.appendChild(label);
+      }
       return button;
     }
 
-    function renderMarkers(items) {
+    function renderMarkers(items, groups) {
       clearChildren(markers);
-      for (const item of items) markers.appendChild(marker(item));
+      const byId = new Map((groups || []).map(g => [g.id, g]));
+      for (const item of items) markers.appendChild(marker(item, byId.get(item.group)));
     }
 
     /* The right-hand column: hoppers past the window's edge, soonest
@@ -354,7 +397,7 @@
       button.appendChild(text(doc, "span", "station-rundown__id", entry.id));
       button.appendChild(text(doc, "span", "station-rundown__chip-sep", kind === "beyond" ? "→" : "·"));
       button.appendChild(text(doc, "span", kind === "beyond" ? "station-rundown__time" : "station-rundown__reason",
-        kind === "beyond" ? rundown.formatRemaining(entry.remainingMs) : rundown.reasonLabel(entry.reason)));
+        kind === "beyond" ? rundown.formatRemaining(entry.untilMs !== null && entry.untilMs !== undefined ? entry.untilMs : entry.remainingMs) : rundown.reasonLabel(entry.reason)));
       return button;
     }
 
@@ -419,6 +462,39 @@
         for (const el of rootEl.querySelectorAll("[aria-describedby]")) el.removeAttribute("aria-describedby");
         return;
       }
+      /* A member of a collapsed group opens the group: every hopper in
+       * it, each with its own facts, the hovered one first. */
+      const group = state.layout && state.layout.groups
+        ? state.layout.groups.find(g => g.collapsed && g.entries.some(e => e.key === entry.key)) || null
+        : null;
+      if (group) {
+        const head = element(doc, "div", "station-rundown__detail-head", { "data-layer-role": entry.role });
+        head.appendChild(text(doc, "span", "station-rundown__group", `${group.entries.length} hoppers`));
+        head.appendChild(text(doc, "span", "station-rundown__detail-resin",
+          entry.markKind === "pump-off" ? (entry.late ? "past their pump-off point" : `pump off by ${rundown.formatClock(entry.pumpOffBy)}`) : `empty by ${rundown.formatClock(entry.emptyAt)}`));
+        detail.appendChild(head);
+        const members = element(doc, "ul", "station-rundown__members");
+        const ordered = [entry].concat(group.entries.filter(e => e.key !== entry.key));
+        for (const member of ordered) {
+          const row = element(doc, "li", "station-rundown__member", { "data-layer-role": member.role, "data-key": member.key });
+          if (member.pumpOff) row.classList.add("is-pump-off");
+          if (member.late && !member.pumpOff) row.classList.add("is-late");
+          row.appendChild(text(doc, "span", "station-rundown__id", member.id));
+          row.appendChild(text(doc, "span", "station-rundown__member-resin", member.resin || "No resin"));
+          row.appendChild(text(doc, "span", "station-rundown__member-facts", memberFacts(member, rundown)));
+          members.appendChild(row);
+        }
+        detail.appendChild(members);
+        const item = state.layout.markers.find(m => m.entry.key === entry.key);
+        const fraction = item ? item.fraction : 1;
+        placeAt(detail, fraction);
+        detail.classList.toggle("is-end", fraction > 0.75);
+        detail.classList.toggle("is-pinned", !!state.detail.pinned);
+        show(detail, true);
+        for (const el of rootEl.querySelectorAll("[aria-describedby]")) el.removeAttribute("aria-describedby");
+        for (const el of rootEl.querySelectorAll(`[data-key='${entry.key}']`)) el.setAttribute("aria-describedby", DETAIL_ID);
+        return;
+      }
       const head = element(doc, "div", "station-rundown__detail-head", { "data-layer-role": entry.role });
       head.appendChild(text(doc, "span", "station-rundown__id", entry.id));
       head.appendChild(text(doc, "span", "station-rundown__detail-resin", entry.resin || "No resin"));
@@ -431,8 +507,15 @@
       if (entry.reason) {
         list.appendChild(detailRow("Estimate", rundown.reasonLabel(entry.reason), "is-missing"));
       } else {
+        if (entry.markKind === "pump-off") {
+          const late = entry.late && !entry.pumpOff;
+          list.appendChild(detailRow("Pump off by",
+            `${rundown.formatClock(entry.pumpOffBy)}${late ? " · late" : entry.pumpOff ? "" : ` · in ${rundown.formatRemaining(entry.untilMs)}`}`,
+            late ? "is-late" : ""));
+        }
         list.appendChild(detailRow("Time remaining", entry.past ? "Estimated empty" : rundown.formatRemaining(entry.remainingMs), entry.past ? "is-past" : ""));
         list.appendChild(detailRow("Empty at", rundown.formatClock(entry.emptyAt), entry.past ? "is-past" : ""));
+        if (Number.isFinite(entry.durationMs)) list.appendChild(detailRow("Run-down", rundown.formatRemaining(entry.durationMs)));
       }
       if (entry.pumpOff) list.appendChild(detailRow("Pump", "Pump off", "is-pump-off"));
       detail.appendChild(list);
@@ -582,6 +665,10 @@
       getWindow: () => state.window,
       getLayout: () => state.layout,
       getEntries: () => state.entries.slice(),
+      /* The drawn hoppers' operational marks - tracked, late, overdue by
+       * slot - from the same projection the markers are drawn from, so
+       * the stage and the axis can never disagree about a hopper. */
+      getMarks: () => rundown.hopperMarks(state.entries),
       getObserved: () => Object.assign({}, observedAt()),
       getDetail: () => (state.detail ? Object.assign({}, state.detail) : null),
       destroy

@@ -246,9 +246,9 @@
   stroke-width: var(--station-line-medium);
 }
 
-/* Tracked is said by the halo (Operational controls, below), in the
-   layer's colour, not by the outline: two colours on one vessel would
-   fight, and the outline stays free for hover, selection and warnings. */
+/* Tracked is said by the vessel's wash and the run-down flow (below),
+   not by the outline: the outline stays free for hover, selection and
+   warnings. */
 
 .station-hopper.is-changed .station-hopper__shell,
 .station-hopper.is-attention .station-hopper__shell,
@@ -344,7 +344,7 @@
  * toggles one runtime flag through the application and does nothing
  * else - it neither focuses nor selects the hopper. There is no icon:
  * the state is the equipment itself, the amber receiver for the pump
- * and the halo for tracking (both below), so a bank of hoppers reads
+ * and the run-down flow for tracking (both below), so a bank of hoppers reads
  * at the scale it is drawn at.
  *
  *   data-on     the state as drawn
@@ -392,35 +392,122 @@
   fill: color-mix(in srgb, var(--station-receiver) 40%, var(--station-steel));
 }
 
-/* ---- Tracking: the halo ----
-   Drawn only while the hopper is tracked (station-machine-parts.js): a
-   glowing ring resting on the receiver's head. Two strokes on one
-   ellipse: the glow is a wide stroke at low opacity, its width set on
-   the element in the hopper's own units, and the ring a thin crisp one
-   over it. The colour is the layer's - the
-   same accent its label, its mixer and its percentages carry - so a
-   tracked hopper belongs to its layer rather than to a separate legend.
-   Nothing here moves, so there is nothing for reduced motion to stop.
-   An untracked hopper has no halo. */
-.station-hopper__halo-glow,
-.station-hopper__halo-ring {
-  fill: none;
-  stroke: var(--station-layer-accent, var(--station-tracking));
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.station-hopper__halo-glow {
-  opacity: 0.3;
-}
-
-.station-hopper__halo-ring {
-  stroke-width: var(--station-line-thin);
-}
-
 /* The body's hover, on a hopper whose tracking command is on offer, is the
    hopper's own outline lift ("State" above): nothing further is added, so
    the tracked and untracked hoppers keep the one hover between them. */
+
+/* ---- Tracking: the run-down flow ----
+   Drawn only while the hopper is tracked (station-machine-parts.js): a
+   small group of downward chevrons travelling down the vessel, in the
+   theme's flow colour (--station-rundown-flow, themes/*.css - each
+   theme's own reading of "material moving", never a fixed green), under
+   the clamp bands and beside the ports, over nothing that is read. The
+   group moves down by one period and repeats - the ONE animation on a
+   hopper: slow, linear, continuous, no pulse, no glow, no bounce. The
+   period and the duration are the group's own properties, set by the
+   drawing in the hopper's units, so every vessel loops seamlessly at its
+   own height and the chevrons travel at the one speed on all of them.
+
+   THREE STATES on the vessel. Untracked: plain steel, no flow. Tracked:
+   a faint wash of the flow colour on the vessel (read from across the
+   Station) and the chevrons (read up close) - the wash is a quarter,
+   so the vessel is tinted, not coloured. Overdue (below): a strong wash of
+   the danger colour, a danger outline, and the chevrons in danger too. */
+.station-hopper__rundown {
+  overflow: hidden;
+}
+
+.station-hopper.is-tracking .station-hopper__shell {
+  fill: color-mix(in srgb, var(--station-rundown-flow, var(--station-tracking)) 24%, var(--station-hopper-metal));
+}
+
+.station-hopper__rundown-chevrons {
+  fill: none;
+  stroke: var(--station-rundown-flow, var(--station-tracking));
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.7;
+}
+
+.station-hopper__rundown-flow {
+  animation: station-rundown-flow var(--station-rundown-duration, 2.4s) linear infinite;
+  will-change: transform;
+}
+
+@keyframes station-rundown-flow {
+  from { transform: translateY(0); }
+  to { transform: translateY(var(--station-rundown-period, 9px)); }
+}
+
+/* Under reduced motion the group stands: tracked is still said by the
+   wash and the chevrons, only the travel is gone. */
+@media (prefers-reduced-motion: reduce) {
+  .station-hopper__rundown-flow {
+    animation: none;
+  }
+}
+
+/* ---- Overdue: the pump-off point has passed ----
+   The application's own judgement (station-rundown.js: the row the floor
+   UI's Timeline marks late, pump still running), written on the hopper
+   by the boot file as `is-overdue` from the same projection the timeline
+   draws. The vessel takes a strong wash of the DANGER colour - the whole
+   body, so it is read across a five-layer bank as "you have passed the
+   pump point" - its outline and hardware the danger itself, and the flow
+   runs on through it in danger, because the hopper is still running
+   down. Danger, not warning: every theme's danger is its red or coral
+   (themes/*.css), so overdue is late in every palette and never the
+   warning's amber. A controlled wash of a third, not a red slab: the
+   faces, the material colour and the readout stay legible. Nothing
+   flashes. A pumped-off hopper is never overdue (the projection says
+   so), so the two states cannot meet on one vessel.
+
+   PRECEDENCE, on the vessel's outline: hover and highlight lift it in the
+   accent, selection and the drop target claim it in the accent, focus is
+   the root's ring - all of which stand over overdue, whose own mark is
+   the FILL, which none of them touch. Blend Edit hides the cluster
+   whole (below) and leaves every class where it was; the hopper comes
+   back as it went. */
+.station-hopper.is-overdue .station-hopper__shell {
+  fill: color-mix(in srgb, var(--station-danger) 32%, var(--station-hopper-metal));
+  stroke: var(--station-danger);
+  stroke-width: var(--station-line-medium);
+}
+
+.station-hopper.is-overdue .station-hopper__metal-face {
+  fill: color-mix(in srgb, var(--station-danger) 30%, var(--station-hopper-metal-lit));
+}
+
+.station-hopper.is-overdue .station-hopper__metal-glint {
+  fill: color-mix(in srgb, var(--station-danger) 30%, var(--station-text-muted));
+}
+
+.station-hopper.is-overdue .station-hopper__bottom-plate,
+.station-hopper.is-overdue .station-hopper__band {
+  stroke: var(--station-danger);
+}
+
+.station-hopper.is-overdue .station-hopper__rundown-chevrons {
+  stroke: var(--station-danger);
+  opacity: 0.85;
+}
+
+.station-hopper.is-overdue .station-hopper__pct {
+  fill: var(--station-danger);
+}
+
+/* The outline's claimants, restated after overdue so they keep it. */
+.station-hopper.is-overdue:hover .station-hopper__shell,
+.station-hopper.is-overdue:focus-within .station-hopper__shell,
+.station-hopper.is-overdue.is-focused .station-hopper__shell,
+.station-hopper.is-overdue.is-highlighted .station-hopper__shell {
+  stroke: color-mix(in srgb, var(--station-accent-hover) 68%, var(--station-hopper-stroke));
+}
+
+.station-hopper.is-overdue.is-selected .station-hopper__shell,
+.station-hopper.is-overdue.is-drop-target .station-hopper__shell {
+  stroke: var(--station-accent);
+}
 
 /* ---------------------------------------------------------------------
  *   Blend Edit: the cluster turned over

@@ -328,6 +328,75 @@
     material.appendChild(fill);
     drawing.appendChild(material);
 
+    /* ---- Run-down flow ----
+     * Drawn only while the hopper is tracked: one small group of three
+     * downward chevrons travelling down the vessel, material seen running
+     * down - a group in motion, not a patterned fill. Its lane is just
+     * left of the vessel's centreline (the vessel's own centre reads as
+     * flow; the lane stops short of the port and the fill valve on the
+     * right, whose left edge is at 0.66w, and clears the clamps at the
+     * edges), between the top and bottom rims; the clamp bands are drawn
+     * over it, so the flow reads as inside the vessel. The caption, the
+     * id and the percentage are not under it.
+     *
+     * A nested <svg> is the clip: an inner svg clips its content to its
+     * own box by default, in every engine, without a clipPath and the
+     * document-unique id one would need. The path is the one group,
+     * drawn just above the box - its last chevron's point at the box's
+     * top edge - and the stylesheet moves it down by one period and
+     * repeats (hopper.css): the period is the box and the group, so the
+     * group's first chevron is entering at the top as its last leaves
+     * the bottom - the flow disappears near the bottom and restarts near
+     * the top, and the vessel is never empty. A CSS animation, no
+     * script, nothing rendered per frame here. The period and the
+     * duration are the group's own custom properties, in the hopper's
+     * units: the duration follows the period, so the chevrons travel at
+     * the one speed (an eighth of the vessel's width a second) on every
+     * vessel, tall or short, at every scale.
+     *
+     * The group is all the geometry there is: what stands outside the
+     * box at the loop's ends is one group's height above or below it,
+     * under the receiver or over the hose, never past the cluster - a
+     * client rect of the hopper or its cluster (Chromium's counts an
+     * inner svg's clipped content) is the same whatever the phase.
+     * With reduced motion the group stands still and still says
+     * "tracked". An untracked hopper draws nothing here. */
+    if (tracked) {
+      const bayLeft = x + w * 0.24;
+      const bayWidth = w * 0.4;
+      const bayTop = top + rim * 2.6;
+      const bayHeight = Math.max(0, bottom - rim * 2.6 - bayTop);
+      if (bayHeight > 0) {
+        const chevronWidth = bayWidth * 0.72;
+        const chevronHeight = w * 0.13;
+        const spacing = w * 0.5;
+        const left = (bayWidth - chevronWidth) / 2;
+        // The group, drawn above the box; one period carries it through
+        // and out, and the loop brings it back to the top.
+        const groupHeight = spacing * 2 + chevronHeight;
+        const period = bayHeight + groupHeight;
+        const seconds = period / (w * 0.125);
+        const flowBox = node(doc, "svg", "station-hopper__rundown", {
+          x: round(bayLeft), y: round(bayTop), width: round(bayWidth), height: round(bayHeight),
+          viewBox: `0 0 ${round(bayWidth)} ${round(bayHeight)}`, "aria-hidden": "true"
+        });
+        flowBox.setAttribute("style",
+          `--station-rundown-period: ${round(period)}px; --station-rundown-duration: ${round(seconds)}s;`);
+        const flow = group(doc, "station-hopper__rundown-flow", "hopper-rundown");
+        const segments = [];
+        for (let i = 0; i < 3; i += 1) {
+          const cy = -groupHeight + spacing * i;
+          segments.push(`M ${round(left)} ${round(cy)} L ${round(bayWidth / 2)} ${round(cy + chevronHeight)} L ${round(left + chevronWidth)} ${round(cy)}`);
+        }
+        const chevrons = node(doc, "path", "station-hopper__rundown-chevrons", {
+          d: segments.join(" "), "stroke-width": round(w * 0.055)
+        });
+        flow.appendChild(chevrons);
+        flowBox.appendChild(flow);
+        drawing.appendChild(flowBox);
+      }
+    }
+
     /* ---- Discharge: flat bottom plate and a clear spiral hose ----
      * On this floor the vessel shows no cone. It ends in a flat plate with an
      * outlet flange, and a clear 3" spiral-reinforced hose carries the
@@ -419,25 +488,6 @@
       cx: right - w * 0.2, cy: geometry.fillValveY, rx: w * 0.055, ry: w * 0.085
     }));
     drawing.appendChild(details);
-
-    /* ---- Tracking halo ----
-     * Drawn only while the hopper is tracked: a glowing ring resting on
-     * the receiver's head - an ellipse seen a little from above, its
-     * lower edge on the cap, its upper edge in the gap under the source
-     * label - in the layer's own colour (the stylesheet reads
-     * --station-layer-accent off the layer group). Two strokes on one
-     * ellipse, a wide faint one for the glow under a thin crisp one.
-     * Drawn over the equipment, as a ring rests on a head; nothing
-     * moves. An untracked hopper draws nothing here, so the halo's
-     * absence is the untracked state. */
-    if (tracked) {
-      const ring = { cx, cy: geometry.receiverTop - w * 0.05, rx: w * 0.38, ry: w * 0.12 };
-      const halo = group(doc, "station-hopper__halo", "hopper-halo");
-      halo.appendChild(node(doc, "ellipse", "station-hopper__halo-glow",
-        Object.assign({ "stroke-width": round(w * 0.14) }, ring)));
-      halo.appendChild(node(doc, "ellipse", "station-hopper__halo-ring", ring));
-      drawing.appendChild(halo);
-    }
 
     /* ---- Readout ----
      * Identity and contribution. The resin code joins them when the hopper

@@ -31,7 +31,9 @@ function makeNode(name) {
     setAttribute(key, value) { this.attributes[key] = String(value); },
     getAttribute(key) { return Object.prototype.hasOwnProperty.call(this.attributes, key) ? this.attributes[key] : null; },
     hasAttribute(key) { return Object.prototype.hasOwnProperty.call(this.attributes, key); },
-    appendChild(child) { this.children.push(child); return child; }
+    appendChild(child) { this.children.push(child); return child; },
+    listeners: {},
+    addEventListener(type, handler) { (this.listeners[type] = this.listeners[type] || []).push(handler); }
   };
 }
 
@@ -117,6 +119,24 @@ test("?view=station marks the body and creates exactly one host container", () =
   // the shell there from the shared builder.
   assert.equal(hosts[0].getAttribute("data-station-app"), "");
   assert.match(hosts[0].className, /\bstation-root\b/);
+});
+
+test("focus stops at the host's edge: focusin inside Station never reaches the application's document listeners", () => {
+  const result = run("https://resin.tools/?view=station");
+  const host = result.body.children.find(node => node.hasAttribute("data-station-host"));
+  const handlers = host.listeners.focusin || [];
+  assert.equal(handlers.length, 1, "the host stops focusin, and listens for nothing else");
+  assert.deepEqual(Object.keys(host.listeners), ["focusin"]);
+  const event = { stopped: false, stopPropagation() { this.stopped = true; } };
+  handlers[0](event);
+  assert.equal(event.stopped, true);
+  // The reason is the application's own: a deferred select-all on every
+  // focused input, which would take the focus back from a Station control.
+  const app = fs.readFileSync(path.join(__dirname, "app.js"), "utf8");
+  assert.match(app, /document\.addEventListener\("focusin",\(e\)=>\{[\s\S]{0,300}selectAllSoon\(el\);/);
+  // Normal loads register nothing.
+  const normal = run("https://resin.tools/");
+  assert.equal(normal.body.children.length, 0);
 });
 
 test("the flag still works alongside other query parameters", () => {

@@ -379,6 +379,40 @@ test("beyond-window hoppers are listed soonest first; unavailable ones stay in p
   assert.deepEqual(twelve.beyond, []);
 });
 
+test("a marker stands at the entry's pump-off point when it has one, at its empty-at estimate when it has not; a pump-off point behind Now with the pump running is late", () => {
+  const input = { track: true, pumpOff: false, effectiveWeight: 300, pct: 60, layerPct: 100, lineRate: 270, observedAt: NOW };
+  // 111 minutes to run. No changeover: the marker is the run-empty estimate.
+  const plain = rundown.hopperRundown(input, { now: NOW });
+  assert.equal(plain.markKind, "empty");
+  assert.equal(plain.markAt, plain.emptyAt);
+  assert.equal(plain.untilMs, plain.remainingMs);
+  // A changeover three hours off: the marker is the pump-off point, 69 minutes off.
+  const planned = rundown.hopperRundown(input, { now: NOW, changeoverAt: NOW + 3 * HOUR });
+  assert.equal(planned.markKind, "pump-off");
+  assert.equal(planned.markAt, planned.pumpOffBy);
+  assert.ok(Math.abs(planned.untilMs - (3 * HOUR - (300 / 162) * HOUR)) < 1);
+  const laid = rundown.layout({ entries: [Object.assign({ key: "A:0", id: "A1" }, planned)], now: NOW, windowMs: 6 * HOUR, width: 1200 });
+  assert.ok(Math.abs(laid.markers[0].fraction - planned.untilMs / (6 * HOUR)) < 1e-9);
+  assert.equal(laid.markers[0].at, planned.pumpOffBy);
+  assert.equal(laid.markers[0].late, false);
+  // A changeover in 30 minutes: the point is 81 minutes gone - on Now, late.
+  const missed = rundown.hopperRundown(input, { now: NOW, changeoverAt: NOW + 30 * MINUTE });
+  const late = rundown.layout({ entries: [Object.assign({ key: "A:0", id: "A1" }, missed)], now: NOW, windowMs: 6 * HOUR, width: 1200 });
+  assert.deepEqual([late.markers[0].fraction, late.markers[0].past, late.markers[0].late], [0, true, true]);
+  // The same with the pump off: on Now, past, not late.
+  const off = rundown.hopperRundown(Object.assign({}, input, { pumpOff: true }), { now: NOW, changeoverAt: NOW + 30 * MINUTE });
+  const done = rundown.layout({ entries: [Object.assign({ key: "A:0", id: "A1" }, off)], now: NOW, windowMs: 6 * HOUR, width: 1200 });
+  assert.deepEqual([done.markers[0].past, done.markers[0].late], [true, false]);
+  // Beyond the window by its pump-off point, though empty within it: a chip, soonest pump-off first.
+  const far = rundown.hopperRundown(input, { now: NOW, changeoverAt: NOW + 9 * HOUR });
+  const beyond = rundown.layout({ entries: [Object.assign({ key: "A:0", id: "A1" }, far)], now: NOW, windowMs: 6 * HOUR, width: 1200 });
+  assert.deepEqual(beyond.markers, []);
+  assert.deepEqual(beyond.beyond.map(e => e.key), ["A:0"]);
+  // An entry with no markAt of its own (an older caller) stands at its empty-at estimate.
+  const bare = rundown.layout({ entries: [entry("A:0", NOW + 2 * HOUR)], now: NOW, windowMs: 6 * HOUR, width: 1200 });
+  assert.equal(bare.markers[0].at, NOW + 2 * HOUR);
+});
+
 test("a past estimate sits on the Now line, flagged, and is still a marker", () => {
   const out = rundown.layout({ entries: [entry("A:0", NOW - 20 * MINUTE)], now: NOW, windowMs: 6 * HOUR, width: 1200 });
   assert.equal(out.markers.length, 1);
@@ -386,28 +420,58 @@ test("a past estimate sits on the Now line, flagged, and is still a marker", () 
   assert.equal(out.markers[0].past, true);
 });
 
-test("collision lanes are deterministic: near-identical times take successive lanes, the anchor never moves, and far-apart ones share lane 0", () => {
+test("labels never overlap: near-identical instants are one group stacked down the lanes, the anchors never move, far-apart ones share lane 0, a group the lanes cannot hold collapses, and a group with no lane free folds into the one before", () => {
+  // A minute apart at six hours across 1200px is 3.3px: one event group,
+  // two ids in two lanes; two minutes (6.7px) is the next group, in the
+  // lane still free. Every marker stands at its own exact fraction.
   const close = [entry("A:0", NOW + HOUR), entry("B:0", NOW + HOUR + MINUTE), entry("C:0", NOW + HOUR + 2 * MINUTE)];
   const out = rundown.layout({ entries: close, now: NOW, windowMs: 6 * HOUR, width: 1200 });
-  assert.deepEqual(out.markers.map(m => [m.entry.key, m.lane, m.crowded]), [["A:0", 0, false], ["B:0", 1, false], ["C:0", 2, false]]);
+  assert.deepEqual(out.markers.map(m => [m.entry.key, m.lane, m.label, m.group]), [["A:0", 0, "A0", 0], ["B:0", 1, "B0", 0], ["C:0", 2, "C0", 1]]);
   for (const m of out.markers) assert.equal(m.fraction, (m.entry.emptyAt - NOW) / (6 * HOUR), "the anchor moved");
+  assert.equal(out.groups.length, 2);
+  assert.ok(out.groups.every(g => !g.collapsed));
   // The same again, shuffled in: same answer.
   const shuffled = rundown.layout({ entries: [close[2], close[0], close[1]], now: NOW, windowMs: 6 * HOUR, width: 1200 });
   assert.deepEqual(shuffled.markers.map(m => [m.entry.key, m.lane]), out.markers.map(m => [m.entry.key, m.lane]));
   // Identical instants: key order breaks the tie, deterministically.
   const same = rundown.layout({ entries: [entry("B:0", NOW + HOUR), entry("A:0", NOW + HOUR)], now: NOW, windowMs: 6 * HOUR, width: 1200 });
   assert.deepEqual(same.markers.map(m => [m.entry.key, m.lane]), [["A:0", 0], ["B:0", 1]]);
-  // Far apart: all on lane 0.
+  // Far apart: all on lane 0, each its own group.
   const apart = rundown.layout({ entries: [entry("A:0", NOW + HOUR), entry("B:0", NOW + 2 * HOUR), entry("C:0", NOW + 3 * HOUR)], now: NOW, windowMs: 6 * HOUR, width: 1200 });
-  assert.deepEqual(apart.markers.map(m => m.lane), [0, 0, 0]);
-  // A fourth within the same span is crowded and takes the lane that frees soonest.
-  const four = rundown.layout({ entries: close.concat([entry("D:0", NOW + HOUR + 3 * MINUTE)]), now: NOW, windowMs: 6 * HOUR, width: 1200 });
-  assert.deepEqual(four.markers[3].lane, 0);
-  assert.equal(four.markers[3].crowded, true);
-  // Lanes free up once a label's width has passed.
-  const px = rundown.LABEL_WIDTH_PX / 1200 * 6 * HOUR;
-  const spaced = rundown.layout({ entries: [entry("A:0", NOW + HOUR), entry("B:0", NOW + HOUR + px + 1)], now: NOW, windowMs: 6 * HOUR, width: 1200 });
-  assert.deepEqual(spaced.markers.map(m => m.lane), [0, 0]);
+  assert.deepEqual(apart.markers.map(m => [m.lane, m.group]), [[0, 0], [0, 1], [0, 2]]);
+  // Four at one instant: more than the lanes hold - one "4 hoppers" label
+  // on the first, none on the rest, all in one lane, every anchor exact.
+  const four = rundown.layout({ entries: ["A:0", "B:0", "C:0", "D:0"].map(k => entry(k, NOW + HOUR)), now: NOW, windowMs: 6 * HOUR, width: 1200 });
+  assert.deepEqual(four.markers.map(m => [m.lane, m.label]), [[0, "4 hoppers"], [0, null], [0, null], [0, null]]);
+  assert.equal(four.groups[0].collapsed, true);
+  assert.equal(four.groups[0].label, "4 hoppers");
+  assert.deepEqual(four.groups[0].entries.map(e => e.key), ["A:0", "B:0", "C:0", "D:0"]);
+  // Two at one instant with only one lane free: the pair collapses to
+  // "2 hoppers" in that lane rather than overlapping anything.
+  const pair = rundown.layout({ entries: close.concat([entry("D:0", NOW + HOUR + 2 * MINUTE)]), now: NOW, windowMs: 6 * HOUR, width: 1200 });
+  assert.deepEqual(pair.markers.map(m => [m.entry.key, m.lane, m.label]), [["A:0", 0, "A0"], ["B:0", 1, "B0"], ["C:0", 2, "2 hoppers"], ["D:0", 2, null]]);
+  // A fourth just past a full stack, with every lane still under a label:
+  // it folds into the group before it, which collapses where it stood.
+  const stacked = ["A:0", "B:0", "C:0"].map(k => entry(k, NOW + HOUR));
+  const fold = rundown.layout({ entries: stacked.concat([entry("D:0", NOW + HOUR + 3 * MINUTE)]), now: NOW, windowMs: 6 * HOUR, width: 1200 });
+  assert.equal(fold.groups.length, 1);
+  assert.deepEqual(fold.markers.map(m => [m.entry.key, m.lane, m.label]), [["A:0", 0, "4 hoppers"], ["B:0", 0, null], ["C:0", 0, null], ["D:0", 0, null]]);
+  assert.equal(fold.markers[3].fraction, (NOW + HOUR + 3 * MINUTE - NOW) / (6 * HOUR), "folded, but standing at its own instant");
+  assert.ok(fold.groups[0].fraction === fold.markers[0].fraction, "the label stands where the first group stood");
+  // Lanes free up once a label's estimated width has passed - in pixels,
+  // so 6H and 12H lay out alike at their own scales.
+  const px = rundown.labelWidth(2);
+  const spaced = rundown.layout({ entries: [entry("A:0", NOW + HOUR), entry("B:0", NOW + HOUR + px / 1200 * 6 * HOUR + 1)], now: NOW, windowMs: 6 * HOUR, width: 1200 });
+  assert.deepEqual(spaced.markers.map(m => [m.lane, m.group]), [[0, 0], [0, 1]]);
+  const twelve = rundown.layout({ entries: [entry("A:0", NOW + HOUR), entry("B:0", NOW + HOUR + px / 1200 * 12 * HOUR + 1)], now: NOW, windowMs: 12 * HOUR, width: 1200 });
+  assert.deepEqual(twelve.markers.map(m => [m.lane, m.group]), [[0, 0], [0, 1]]);
+  const notYet = rundown.layout({ entries: [entry("A:0", NOW + HOUR), entry("B:0", NOW + HOUR + px / 1200 * 12 * HOUR - 1)], now: NOW, windowMs: 12 * HOUR, width: 1200 });
+  assert.deepEqual(notYet.markers.map(m => [m.lane, m.group]), [[0, 0], [1, 1]]);
+  // A wider label - "4 hoppers" - holds its lane longer than an id would.
+  const wide = rundown.layout({ entries: ["A:0", "B:0", "C:0", "D:0"].map(k => entry(k, NOW + HOUR)).concat([entry("E:0", NOW + HOUR + px / 1200 * 6 * HOUR + 1)]), now: NOW, windowMs: 6 * HOUR, width: 1200 });
+  assert.deepEqual(wide.markers[4].lane, 1, "lane 0 is still under '4 hoppers'");
+  assert.equal(rundown.LANES, 3);
+  assert.ok(rundown.labelWidth(9) > rundown.labelWidth(2));
 });
 
 test("the layout is pure and never invents an entry", () => {

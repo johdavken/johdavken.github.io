@@ -133,6 +133,18 @@
   --station-handbook-share: 40%;
   --station-handbook-max-height: 400px;
   --station-handbook-clearance: 96px;
+
+  /* ---- Changeover Calculator ----
+   * The utility surface that opens out of the header's CHANGEOVER
+   * readout: a smaller, fixed-capacity box centred under the header
+   * across the upper part of the stage. Its box, too, is the stage's:
+   * `width` and `height` are what its three groups of answers, the
+   * deadline line and the estimate line need at Station's type sizes,
+   * and changeover.css caps the height at what is left of the stage
+   * above the Handbook's share (less two gaps), so the two surfaces are
+   * open together at every window Station supports and never meet. */
+  --station-changeover-width: 820px;
+  --station-changeover-height: 308px;
 }
 
 /* ---------------------------------------------------------------------

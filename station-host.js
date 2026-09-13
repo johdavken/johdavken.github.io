@@ -64,7 +64,9 @@
     "station/styles/components/rundown.css",
     "station/styles/components/job-controls.css",
     "station/styles/components/sync-console.css",
+    "station/styles/components/glass.css",
     "station/styles/components/handbook.css",
+    "station/styles/components/changeover.css",
     "station/styles/components/theme-preview.css"
   ];
 
@@ -86,6 +88,8 @@
     "station/station-rundown.js",
     "station/station-rundown-timeline.js",
     "station/station-job-controls.js",
+    // The Changeover Calculator: after the job controls it applies through.
+    "station/station-changeover.js",
     "station/station-shell.js",
     "station/station-sync-console.js",
     // The Operator Handbook: its first section before the shell that hosts it.
@@ -98,7 +102,7 @@
     "station/station.js"
   ];
 
-  const VERSION = "0.27.0";
+  const VERSION = "0.28.5";
 
   function requested() {
     try {
@@ -141,6 +145,23 @@
       ? theme.initialize(host, root)
       : null;
     if (!host.stationTheme) host.setAttribute("data-theme", "industrial-dark");
+
+    /* FOCUS STOPS AT THE HOST'S EDGE
+     *
+     * host.css hides the application's shell; this is the same exclusion
+     * for the one application behaviour that reaches Station through the
+     * document rather than the stylesheet. app.js listens for `focusin`
+     * on the document and, for every input that takes the focus, defers a
+     * focus-and-select-all (selectAllSoon) - right for its own numeric
+     * fields, wrong for Station's, where a deferred refocus lands after
+     * the operator has moved on and can take the focus back from the
+     * control Station just gave it to. Station's own focus listeners sit
+     * inside the host and hear everything as before; the application's,
+     * outside it, hear nothing of Station's fields - which is the
+     * boundary host.css draws for the eye, drawn for the keyboard. */
+    if (typeof host.addEventListener === "function") {
+      host.addEventListener("focusin", event => { if (event && typeof event.stopPropagation === "function") event.stopPropagation(); });
+    }
     doc.body.appendChild(host);
 
     // Set last: the moment this lands, host.css hides the application shell,

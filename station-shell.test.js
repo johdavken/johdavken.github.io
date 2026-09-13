@@ -186,17 +186,21 @@ test("the shell sets no inline styles", () => {
 test("the shell is a header, the stage, the run-down timeline and a status bar - no side column, no recipe band under the stage", () => {
   const root = built();
   const shell = find(root, node => /\bstation-shell\b/.test(node.getAttribute("class") || ""))[0];
-  // The Handbook's slot is the one child that is not a region: it is laid
-  // over the stage's own cell (shell.css) and takes no track.
+  // The Handbook's slot and the utility surfaces' slot are the two
+  // children that are not regions: both are laid over the stage's own
+  // cell (shell.css) and take no track.
   assert.deepEqual(shell.children.map(node => [node.nodeName, node.getAttribute("class")]),
-    [["HEADER", "station-header"], ["SECTION", "station-machine"], ["DIV", "station-handbook-slot"], ["SECTION", "station-timeline"], ["FOOTER", "station-status"]]);
-  assert.deepEqual([...require("./station/station-shell.js").MOUNTS], ["machine", "timeline", "status", "job", "connection", "handbook"]);
+    [["HEADER", "station-header"], ["SECTION", "station-machine"], ["DIV", "station-handbook-slot"], ["DIV", "station-utility-slot"], ["SECTION", "station-timeline"], ["FOOTER", "station-status"]]);
+  assert.deepEqual([...require("./station/station-shell.js").MOUNTS], ["machine", "timeline", "status", "job", "connection", "handbook", "utility"]);
   const slot = shell.children[2];
   assert.equal(slot.getAttribute("data-station-mount"), "handbook");
   assert.equal(slot.children.length, 0, "the shell reserves the slot and draws nothing in it");
+  const utility = shell.children[3];
+  assert.equal(utility.getAttribute("data-station-mount"), "utility");
+  assert.equal(utility.children.length, 0, "the shell reserves the utility slot and draws nothing in it");
   // The timeline row is a mount and nothing else: no heading, no title,
   // no card - the component begins with its Now anchor.
-  const timeline = shell.children[3];
+  const timeline = shell.children[4];
   assert.equal(timeline.getAttribute("data-station-mount"), "timeline");
   assert.equal(timeline.getAttribute("aria-label"), "Run-down timeline");
   assert.equal(timeline.children.length, 0);
@@ -228,6 +232,7 @@ test("the stylesheet reserves no track for a side column or a strip: one column,
   // itself: a fifth row would be a track, and a slot that took clicks would
   // cover the hoppers Blend Edit works on.
   assert.match(css, /\.station-handbook-slot \{[^}]*grid-area: machine;[^}]*pointer-events: none;/);
+  assert.match(css, /\.station-utility-slot \{[^}]*grid-area: machine;[^}]*pointer-events: none;/);
   for (const gone of ["sidebar", "inspector", "recipe-strip", "station-nav", "section__heading", "strip"]) {
     assert.doesNotMatch(css, new RegExp(gone), `shell.css still styles ${gone}`);
   }

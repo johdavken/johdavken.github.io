@@ -2016,45 +2016,21 @@ test("the controls say the state as drawn and whether they may act, and their to
   assert.equal(own(a2), "A2 · LD105 · 40% · pump off");
 });
 
-test("the tracked state is a halo: a glowing ring resting on the receiver's head, drawn over the equipment, and only on a tracked hopper", () => {
+test("tracking draws nothing on the receiver's head: no halo, no icon - the state is the vessel's wash and its run-down flow", () => {
   const config = literal({ layerCount: 1, layerAPosition: null, hopperCount: 2 });
-  const layout = layoutFor(config);
   const svg = stageFor(config, { hopperState: { "A:0": { assigned: true, resinName: "HX204", pct: 100, track: true, source: "Silo 4" } } });
   const [tracked, idle] = hoppersIn(svg);
-  assert.equal(allWith(idle, "data-role", "hopper-halo").length, 0, "an untracked hopper has no halo: its absence is the state");
-  const drawing = allWith(tracked, "data-role", "hopper-drawing")[0];
-  const halo = allWith(drawing, "data-role", "hopper-halo");
-  assert.equal(halo.length, 1, "the halo lives in the inert drawing");
-  const order = drawing.children.map(c => c.getAttribute("data-role"));
-  assert.ok(order.indexOf("hopper-halo") > order.indexOf("hopper-details"), "drawn over the equipment, as a halo floats over a head");
-  assert.ok(order.indexOf("hopper-halo") < order.indexOf("hopper-caption"));
-  const [glow, ring] = halo[0].children;
-  assert.deepEqual([glow.nodeName, glow.getAttribute("class")], ["ellipse", "station-hopper__halo-glow"]);
-  assert.deepEqual([ring.nodeName, ring.getAttribute("class")], ["ellipse", "station-hopper__halo-ring"]);
-  for (const key of ["cx", "cy", "rx", "ry"]) assert.equal(glow.getAttribute(key), ring.getAttribute(key), "one shape, two strokes: the glow under the crisp ring");
-  const geometry = layout.banks[0].cluster.hoppers[0];
-  const w = geometry.width;
-  assert.ok(Number(glow.getAttribute("stroke-width")) > 0, "the glow's width is set in the hopper's own units");
-  assert.equal(ring.getAttribute("stroke-width"), null, "the ring's width is the stylesheet's");
-  // On the head: centred on the hopper, resting on the receiver's top -
-  // its centre just above the cap, its lower edge on it - and under the
-  // source label; a little flatter than round, seen from above.
-  assert.equal(Number(ring.getAttribute("cx")), Math.round((geometry.x + w / 2) * 100) / 100);
-  const cy = Number(ring.getAttribute("cy"));
-  const ry = Number(ring.getAttribute("ry"));
-  const rx = Number(ring.getAttribute("rx"));
-  assert.ok(cy < geometry.receiverTop && cy + ry > geometry.receiverTop, "the ring rests on the receiver's top");
-  assert.ok(cy - ry > geometry.sourceY, "and sits below the source label");
-  assert.ok(rx > ry * 2, "a halo seen from a little above: wider than it is tall");
-  assert.ok(rx < w / 2, "and no wider than the hopper");
-  // No icon anywhere: no clock, no power mark.
   for (const hopper of [tracked, idle]) {
-    walk(hopper, n => assert.doesNotMatch(String(n.getAttribute("class") || ""), /clock|power|marks/));
+    assert.equal(allWith(hopper, "data-role", "hopper-halo").length, 0, "no halo on any hopper");
+    walk(hopper, n => assert.doesNotMatch(String(n.getAttribute("class") || ""), /halo|clock|power|marks/));
   }
+  const drawing = allWith(tracked, "data-role", "hopper-drawing")[0];
+  assert.equal(allWith(drawing, "data-role", "hopper-rundown").length, 1, "the tracked hopper's flow is the drawn state");
+  assert.equal(allWith(allWith(idle, "data-role", "hopper-drawing")[0], "data-role", "hopper-rundown").length, 0);
   walk(drawing, n => assert.equal(n.getAttribute("data-station-target"), null, "nothing in the drawing became a target"));
 });
 
-test("a patched stage draws a toggled hopper as a fresh render would: halo in, receiver marked off, controls' state and offer rewritten", () => {
+test("a patched stage draws a toggled hopper as a fresh render would: flow in, receiver marked off, controls' state and offer rewritten", () => {
   const doc = fakeDocument();
   const config = literal({ layerCount: 1, layerAPosition: null, hopperCount: 2 });
   const model = require("./station/station-line-model.js").buildLineModel(config);
@@ -2072,7 +2048,7 @@ test("a patched stage draws a toggled hopper as a fresh render would: halo in, r
   const a1 = hoppersIn(mount)[0];
   assert.match(a1.getAttribute("class"), /is-tracking/);
   assert.match(a1.getAttribute("class"), /is-pump-off/);
-  assert.equal(allWith(a1, "data-role", "hopper-halo").length, 1);
+  assert.equal(allWith(a1, "data-role", "hopper-rundown").length, 1);
   assert.equal(controlOf(a1, "tracking").getAttribute("data-on"), "true");
   assert.equal(controlOf(a1, "pump").getAttribute("data-on"), "true");
   assert.equal(controlOf(a1, "pump").getAttribute("data-pump"), "off");
@@ -2086,12 +2062,12 @@ test("a patched stage draws a toggled hopper as a fresh render would: halo in, r
   render.patchStage(mount, model, { document: doc, hopperState: before, hopperControls: { tracking: true, pump: true }, stageAspect: 1.6 });
   const back = hoppersIn(mount)[0];
   assert.doesNotMatch(back.getAttribute("class"), /is-tracking|is-pump-off/);
-  assert.equal(allWith(back, "data-role", "hopper-halo").length, 0);
+  assert.equal(allWith(back, "data-role", "hopper-rundown").length, 0);
   assert.equal(controlOf(back, "pump").getAttribute("data-on"), "false");
   assert.deepEqual(box(controlOf(back, "pump").children[1]), offCell, "the pump's cell does not move with its state");
 });
 
-test("the states are styled from tokens: the receiver steps back when the pump is off, the halo takes the layer's colour, a control that cannot act has no pointer cursor, and nothing animates", () => {
+test("the states are styled from tokens: the receiver steps back when the pump is off, no halo is styled, a control that cannot act has no pointer cursor, and the one motion is the run-down flow", () => {
   const fs = require("node:fs");
   const path = require("node:path");
   const css = fs.readFileSync(path.join(__dirname, "station/styles/components/hopper.css"), "utf8");
@@ -2106,16 +2082,23 @@ test("the states are styled from tokens: the receiver steps back when the pump i
   // The hover cue is on a receiver whose command is on offer, and only there.
   assert.match(css, /\.station-hopper:has\(\.station-hopper__control--pump\[data-able="true"\]:hover\) \.station-hopper__receiver-cone \{/);
   assert.doesNotMatch(css, /control--pump\[data-able="false"\]:hover/);
-  // The halo: the layer's accent, glow and ring.
-  assert.match(css, /\.station-hopper__halo-glow,\s*\.station-hopper__halo-ring \{\s*fill: none;\s*stroke: var\(--station-layer-accent, var\(--station-tracking\)\);/);
-  assert.match(css, /\.station-hopper__halo-glow \{\s*opacity: 0\.\d+;/);
-  assert.match(css, /\.station-hopper__halo-ring \{\s*stroke-width: var\(--station-line-thin\);/);
-  // The outline no longer says tracked: one colour on the vessel.
-  assert.doesNotMatch(css, /is-tracking \.station-hopper__shell/);
-  // No motion: nothing for reduced motion to switch off.
-  assert.doesNotMatch(css, /@keyframes|animation:/);
+  // No halo anywhere: tracking is the wash and the flow.
+  assert.doesNotMatch(css, /halo/);
+  // The outline no longer says tracked: the tracked vessel takes a faint
+  // wash (station-tracking-visuals.test.js), never an outline of its own.
+  assert.doesNotMatch(css, /is-tracking \.station-hopper__shell \{[^}]*stroke/);
+  // The one motion on a hopper is the run-down flow (the chevrons of a
+  // tracked hopper, station-tracking-visuals.test.js): one keyframes
+  // block, applied once, slow and linear, and switched off under reduced
+  // motion.
+  const rules = css.replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.equal((rules.match(/@keyframes/g) || []).length, 1);
+  assert.match(rules, /@keyframes station-rundown-flow/);
+  const applied = (rules.match(/animation:\s*[^;]+;/g) || []).filter(one => !/animation:\s*none/.test(one));
+  assert.deepEqual(applied, ["animation: station-rundown-flow var(--station-rundown-duration, 2.4s) linear infinite;"]);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{\s*\.station-hopper__rundown-flow \{\s*animation: none;/);
   // The readout is not touched by either state: resin and percentage stay
-  // the primary information whatever the receiver or the halo says.
+  // the primary information whatever the receiver or the flow says.
   assert.doesNotMatch(css, /is-pump-off[^{]*__(pct|resin|id)\b/);
   assert.doesNotMatch(css, /is-tracking[^{]*__(pct|resin|id)\b/);
 });

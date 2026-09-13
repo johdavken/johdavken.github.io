@@ -44,6 +44,8 @@
 
   --station-success: #b8bb26;
   --station-tracking: #b8bb26;
+  /* The run-down flow's chevrons (hopper.css): a muted warm yellow, the palette's own, not a green. */
+  --station-rundown-flow: #d79921;
   --station-warning: #fabd2f;
   --station-danger: #fb4934;
   --station-info: #83a598;

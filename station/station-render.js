@@ -262,8 +262,12 @@
           controls: settings.hopperControls || null
         });
         // Presentation the boot file put on the old group, carried over so
-        // the pointer does not lose its place.
-        if (hasClass(old, "is-highlighted")) setClass(fresh, "is-highlighted", true);
+        // the pointer does not lose its place and an operational mark
+        // (overdue, from the run-down projection) does not blink off
+        // between the patch and the boot file writing it again.
+        for (const carried of ["is-highlighted", "is-overdue"]) {
+          if (hasClass(old, carried)) setClass(fresh, carried, true);
+        }
         cluster.replaceChild(fresh, old);
         hoppers += 1;
       }

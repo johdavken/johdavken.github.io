@@ -67,6 +67,17 @@
   color: var(--station-warning);
 }
 
+/* The changeover readout as a launcher (station-changeover.js): the
+ * calculator's closed form. While the calculator is open the readout
+ * holds the border and wash it has under the pointer, so the two read as
+ * one thing open; it stays a control whether or not the deadline may be
+ * set from here, because the calculator opens either way. */
+.station-job__item.is-launched .station-job__trigger {
+  background: var(--station-surface-selected);
+  border-color: var(--station-border-strong);
+  color: var(--station-text);
+}
+
 /* Not on offer - no application, or demo data on screen - so the readout
  * stays and the hand stays a pointer for the explanation on click. */
 .station-job__item.is-readonly .station-job__trigger {

@@ -1,0 +1,350 @@
+/* The Changeover Calculator (station-changeover.js): the header's
+ * CHANGEOVER readout, opened out into a utility surface under the header.
+ *
+ * WHERE IT SITS
+ *
+ * In the utility slot laid over the stage's cell (shell.css), centred
+ * under the header across the UPPER part of the stage. The Operator
+ * Handbook owns the lower part (its share of the stage, from the bottom
+ * up: tokens.css); this surface is bounded to what is left above that
+ * share, less a gap at each end, so the two stand open together and never
+ * meet at any window Station supports. Nothing is dimmed, nothing moves,
+ * and the hoppers around it still take the pointer.
+ *
+ * ONE BOX, FIXED CAPACITY
+ *
+ * As the Handbook's frame: the box is the stage's to give (the changeover
+ * tokens in tokens.css and the Handbook's share), never its contents'.
+ * The deadline line, the three groups of answers and the estimate line
+ * draw into it; a note under them is the one line that comes and goes,
+ * and it takes its room from the frame, not the frame from it.
+ *
+ * ON THE GLASS
+ *
+ * The material is the shared glass (glass.css). Everything on it is flat,
+ * in the Handbook's control vocabulary (handbook.css): one primary action
+ * (Use), quieter secondary ones (Set, Clear), chips for the choices, the
+ * same quiet Close. Fields are the one place a border is an affordance,
+ * as in the Recipe Book. Hierarchy is carried by weight and space: the
+ * estimated time is the largest thing on the surface; the labels are the
+ * smallest.
+ */
+
+.station-changeover {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* The frame: its preferred size from the tokens, capped by the stage -
+   width to the stage less a margin, height to what stands above the
+   Handbook's share less a gap above and a gap between. A definite
+   height, not a maximum: what is inside sizes to it. */
+.station-changeover__panel {
+  position: absolute;
+  top: var(--station-space-3);
+  left: 0;
+  right: 0;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  width: min(var(--station-changeover-width), calc(100% - 2 * var(--station-space-5)));
+  height: min(var(--station-changeover-height), calc(100% - var(--station-handbook-share) - 2 * var(--station-space-3)));
+  margin: 0 auto;
+  pointer-events: auto;
+  /* The opening flight scales the surface out of the header's readout
+     (station-changeover.js); a transform from the top-left corner is what
+     that arithmetic assumes. */
+  transform-origin: 0 0;
+  will-change: transform, opacity;
+}
+
+.station-changeover__panel[hidden] {
+  display: none;
+}
+
+/* ---- Head: the name, the readout's own words, Close ----
+ * One line, one hairline under it: the same head the Handbook has, with
+ * the readout's words - the deadline as the header states it - standing
+ * where the Handbook's tabs would, so the open surface says what its
+ * closed form says. */
+.station-changeover__head {
+  display: flex;
+  align-items: center;
+  gap: var(--station-space-4);
+  padding: var(--station-space-2) var(--station-space-4);
+  border-bottom: var(--station-stroke) solid var(--station-handbook-rule);
+}
+
+.station-changeover__title {
+  margin: 0;
+  color: var(--station-text-muted);
+  font-family: var(--station-font-annotation);
+  font-size: var(--station-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.station-changeover__readout {
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-sm);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.station-changeover__readout.is-unset {
+  color: var(--station-text-faint);
+}
+
+.station-changeover__readout.is-stale {
+  color: var(--station-warning);
+}
+
+.station-root .station-changeover__close {
+  margin-left: auto;
+}
+
+/* ---- Body ----
+ * Sized to the frame, never the other way round. At a stage too short for
+ * the whole bench under the Handbook's share - Station's shortest
+ * windows - the body scrolls within itself on the Handbook's thin bar,
+ * and the frame keeps its box. */
+.station-changeover__body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--station-space-3);
+  min-height: 0;
+  padding: var(--station-space-3) var(--station-space-4);
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--station-handbook-control-border) transparent;
+}
+
+/* The labels: the smallest thing on the surface, in small caps, muted. */
+.station-changeover__label {
+  color: var(--station-text-muted);
+  font-size: var(--station-text-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.station-changeover__unit {
+  color: var(--station-text-faint);
+  font-size: var(--station-text-xs);
+  white-space: nowrap;
+}
+
+/* The fields: bordered, editable-surfaced, compact - the Recipe Book's
+   name field at a shorter width, in the mono face the readouts use. The
+   typed answers take seven characters, the hours and minutes five - two
+   digits with air on either side, "12" and "45" never clipped - and the
+   time field its native width. */
+.station-changeover__input,
+.station-changeover__time {
+  --station-field-padding: var(--station-space-1) var(--station-space-2);
+  --station-field-radius: var(--station-radius-sm);
+  --station-field-bg: var(--station-surface-editable);
+  --station-field-border: var(--station-stroke) solid var(--station-editable);
+  color: var(--station-text);
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.station-changeover__input {
+  --station-field-width: 7ch;
+}
+
+.station-changeover__input--short {
+  --station-field-width: 5ch;
+  text-align: center;
+}
+
+.station-changeover__time {
+  --station-field-width: auto;
+  color-scheme: var(--station-color-scheme);
+}
+
+.station-changeover__input[aria-invalid="true"],
+.station-changeover__time[aria-invalid="true"] {
+  --station-field-shadow: 0 0 0 2px var(--station-danger);
+}
+
+.station-changeover__input:disabled,
+.station-changeover__time:disabled {
+  --station-field-opacity: 0.55;
+  --station-field-cursor: default;
+}
+
+/* ---- The deadline line ----
+ * Label, field, Set, Clear - and at the far end the running estimate an
+ * accepted calculation left ("Est. 3 sets · 11 rolls remaining"), in the
+ * muted face, gone once the changeover point has passed. */
+.station-changeover__deadline {
+  display: flex;
+  align-items: center;
+  gap: var(--station-space-2);
+  flex: 0 0 auto;
+}
+
+.station-changeover__deadline .station-changeover__label {
+  margin-right: var(--station-space-1);
+}
+
+.station-changeover__running {
+  margin-left: auto;
+  color: var(--station-text-muted);
+  font-size: var(--station-text-xs);
+  white-space: nowrap;
+}
+
+.station-changeover__running[hidden] {
+  display: none;
+}
+
+/* ---- The answers: three groups across ----
+ * Line, Winders, Order - a legend and two rows each, ruled from one
+ * another by a hairline. No boxes inside the box. */
+.station-changeover__form {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6.5fr) minmax(0, 5.5fr);
+  flex: 0 0 auto;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  border-top: var(--station-stroke) solid var(--station-handbook-rule);
+  border-bottom: var(--station-stroke) solid var(--station-handbook-rule);
+}
+
+.station-changeover__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--station-space-2);
+  min-width: 0;
+  margin: 0;
+  padding: var(--station-space-2) var(--station-space-4) var(--station-space-2) 0;
+  border: 0;
+}
+
+.station-changeover__group + .station-changeover__group {
+  padding-left: var(--station-space-4);
+  border-left: var(--station-stroke) solid var(--station-handbook-rule);
+}
+
+/* A group's name: the family name the Appearance gallery uses - fainter
+   and more spaced than a label, in the annotation face. */
+.station-changeover__legend {
+  padding: 0;
+  margin-bottom: var(--station-space-1);
+  color: var(--station-text-faint);
+  font-family: var(--station-font-annotation);
+  font-size: var(--station-text-2xs);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* A field row: the label leads at a set width so the fields in a group
+   line up; the field and its unit follow. */
+.station-changeover__field {
+  display: flex;
+  align-items: center;
+  gap: var(--station-space-2);
+  min-height: calc(var(--station-space-5) + var(--station-space-1));
+}
+
+.station-changeover__field > .station-changeover__label {
+  flex: 0 0 auto;
+  min-width: 7.5em;
+}
+
+/* The set-left row: two fields and their units on one line, closer set
+   so "12 h 45 m" stays inside the Order column. */
+.station-changeover__field--time {
+  gap: var(--station-space-1);
+}
+
+.station-changeover__field--time .station-changeover__label {
+  min-width: 9.5em;
+  margin-right: var(--station-space-1);
+}
+
+.station-changeover__field--chips .station-changeover__label {
+  min-width: 4.5em;
+}
+
+.station-changeover__chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--station-space-1);
+}
+
+/* ---- The estimate line ----
+ * The estimated changeover, largest on the surface; its terms beside it
+ * in the muted face; Use at the far end - the one thing filled in the
+ * accent. Until the answers make an estimate the time is a dash and the
+ * detail says what is missing. */
+.station-changeover__result {
+  display: flex;
+  align-items: baseline;
+  gap: var(--station-space-3);
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.station-changeover__result-time {
+  flex: 0 0 auto;
+  color: var(--station-text-faint);
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-xl);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  line-height: var(--station-line-tight);
+}
+
+.station-changeover__result.is-ready .station-changeover__result-time {
+  color: var(--station-text);
+}
+
+.station-changeover__result-detail {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--station-text-muted);
+  font-size: var(--station-text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.station-root .station-changeover__use {
+  flex: 0 0 auto;
+  align-self: center;
+}
+
+/* ---- The one line of feedback ---- */
+
+.station-changeover__note {
+  flex: 0 0 auto;
+  margin: 0;
+  color: var(--station-text-muted);
+  font-size: var(--station-text-xs);
+  line-height: var(--station-line-tight);
+}
+
+.station-changeover__note[hidden] {
+  display: none;
+}
+
+.station-changeover__note[data-kind="error"] {
+  color: var(--station-danger);
+}
+
+.station-changeover__note[data-kind="ok"] {
+  color: var(--station-success);
+}

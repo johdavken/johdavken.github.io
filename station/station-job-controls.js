@@ -25,6 +25,16 @@
  * time - today, or tomorrow once it has passed, scheduling.js's own
  * parseChangeoverDate - turns it into the instant, so what Station asks
  * for is what the floor UI's field would have stored.
+ *
+ * THE CHANGEOVER READOUT IS A LAUNCHER
+ *
+ * Given `onChangeover`, a click on the CHANGEOVER readout does not open
+ * a field in the header: it opens the Changeover Calculator (station-
+ * changeover.js), the surface where the deadline is edited and estimated,
+ * and the readout stays as it is - the calculator's closed form. The
+ * calculator sets the deadline back through this module's `apply`, so
+ * setChangeover is still issued from here and nowhere else. Without a
+ * launcher (a page without the calculator) the readout keeps its field.
  */
 (function (root, factory) {
   const rundown = typeof require === "function"
@@ -109,6 +119,8 @@
    * @param {function} [options.now]      () => epoch ms
    * @param {function} [options.onCommitted]  told a changed result, so the
    *        boot file can run its publish policy as it does for the editor
+   * @param {function} [options.onChangeover] the launcher: called on a
+   *        click on the CHANGEOVER readout instead of opening its field
    */
   function create(doc, options) {
     const settings = options || {};
@@ -117,6 +129,7 @@
     const commandsFor = typeof settings.commands === "function" ? settings.commands : () => null;
     const now = typeof settings.now === "function" ? settings.now : () => Date.now();
     const onCommitted = typeof settings.onCommitted === "function" ? settings.onCommitted : () => {};
+    const onChangeover = typeof settings.onChangeover === "function" ? settings.onChangeover : null;
 
     const state = {
       job: null,
@@ -170,11 +183,16 @@
       const commands = commandsFor();
       for (const field of Object.keys(fields)) {
         const can = able(commands, field);
-        fields[field].wrap.classList.toggle("is-readonly", !can);
-        fields[field].trigger.setAttribute("aria-disabled", String(!can));
-        fields[field].trigger.setAttribute("title", can
-          ? `Edit the ${LABEL[field].toLowerCase()}`
-          : `${LABEL[field]} is read-only here: ${reason(commands, field)}`);
+        /* The changeover readout with a launcher is always a control: the
+         * calculator opens whether or not the deadline may be set from
+         * here, and says itself when it may not. */
+        const launches = field === "changeover" && !!onChangeover;
+        fields[field].wrap.classList.toggle("is-readonly", !can && !launches);
+        fields[field].wrap.classList.toggle("is-launcher", launches);
+        fields[field].trigger.setAttribute("aria-disabled", String(!can && !launches));
+        fields[field].trigger.setAttribute("title", launches
+          ? "Changeover Calculator"
+          : (can ? `Edit the ${LABEL[field].toLowerCase()}` : `${LABEL[field]} is read-only here: ${reason(commands, field)}`));
       }
     }
 
@@ -230,19 +248,47 @@
       return { command: COMMAND.changeover, args: { at: date.getTime() } };
     }
 
+    /* One request to the application, and the boot file told of a
+     * change: the one path every write from this module takes. */
+    function send(request) {
+      const commands = commandsFor();
+      const result = commands && typeof commands.dispatch === "function"
+        ? commands.dispatch(request.command, request.args)
+        : { ok: false, code: "unavailable", message: "No application is connected to Station commands." };
+      if (result && result.ok && result.changed) onCommitted(result);
+      return result;
+    }
+
+    /**
+     * Set a field from a value already resolved - the calculator's
+     * estimate, or its deadline field - through the same command the
+     * header's own field issues. `value` is an instant (epoch ms) or null
+     * for the changeover, a number for the output. Returns the result.
+     */
+    function apply(field, value) {
+      if (!fields[field]) return { ok: false, code: "invalid", message: `Unknown field ${field}.` };
+      if (!able(commandsFor(), field)) {
+        return { ok: false, code: "unavailable", message: `${LABEL[field]} cannot be changed here: ${reason(commandsFor(), field)}` };
+      }
+      const request = field === "output"
+        ? requestFor("output", value)
+        : (value === null || value === undefined
+          ? { command: COMMAND.changeover, args: { at: null } }
+          : (Number.isFinite(value) ? { command: COMMAND.changeover, args: { at: value } } : { error: "The changeover must be an instant." }));
+      if (request.error) return { ok: false, code: "invalid", message: request.error };
+      return send(request);
+    }
+
     function commit(field) {
       if (state.editing !== field) return null;
       const f = fields[field];
-      const commands = commandsFor();
       const request = requestFor(field, f.input.value);
       if (request.error) {
         f.input.setAttribute("aria-invalid", "true");
         say(request.error, "error");
         return null;
       }
-      const result = commands && typeof commands.dispatch === "function"
-        ? commands.dispatch(request.command, request.args)
-        : { ok: false, code: "unavailable", message: "No application is connected to Station commands." };
+      const result = send(request);
       if (!result || !result.ok) {
         f.input.setAttribute("aria-invalid", "true");
         say(result && result.message ? result.message : "The change could not be applied.", "error");
@@ -251,7 +297,6 @@
       f.input.removeAttribute("aria-invalid");
       close();
       say("");
-      if (result.changed) onCommitted(result);
       if (typeof f.trigger.focus === "function") f.trigger.focus();
       return result;
     }
@@ -267,6 +312,7 @@
     for (const field of Object.keys(fields)) {
       const f = fields[field];
       f.trigger.addEventListener("click", () => {
+        if (field === "changeover" && onChangeover) { say(""); onChangeover(); return; }
         if (state.editing === field) { cancel(field); return; }
         open(field);
       });
@@ -297,13 +343,23 @@
 
     refresh();
 
+    /* The launcher's own state, mirrored on the readout: the calculator
+     * says when it opens and closes. */
+    function setLaunched(on) {
+      changeover.trigger.setAttribute("aria-expanded", on ? "true" : "false");
+      changeover.wrap.classList.toggle("is-launched", !!on);
+    }
+
     return {
       element: rootEl,
+      trigger: field => (fields[field] ? fields[field].trigger : null),
       update,
       refresh,
       open,
+      apply,
       commit,
       cancel,
+      setLaunched,
       isEditing: () => state.editing
     };
   }

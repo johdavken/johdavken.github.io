@@ -78,9 +78,6 @@
       d: `M ${x - 3} 24 H ${x + 3} L ${x} 28 Z`
     }));
     // The vessel, with its material at the level the recipe would put it.
-    if (state.tracked) {
-      group.appendChild(svg(doc, "rect", `${CLASS}__halo`, { x: x - 4.2, y: 26.6, width: 8.4, height: 16, rx: 1.6 }));
-    }
     group.appendChild(svg(doc, "rect", `${CLASS}__vessel${running ? "" : " is-unassigned"}`, {
       x: x - 2.6, y: 28, width: 5.2, height: 13, rx: 0.6
     }));

@@ -82,14 +82,32 @@ producer, is visited once at the end to check that it is read-only.
   its pump cell. Every drawing element remains pointer-inert.
 - **Tracking and pump-off** - a click on a hopper's body tracks it through
   the application (the bridge snapshot, the legacy grid's clock button and
-  the saved session agree), draws the halo over its receiver in the
-  layer's colour, leaves the pump alone, and neither selects the hopper
+  the saved session agree), draws the run-down flow through its vessel,
+  leaves the pump alone, and neither selects the hopper
   nor opens the layer; a click on the receiver marks the pump off the same
   way, the amber goes and the receiver steps back, tracking untouched;
-  each toggles back from the same place. Every tracked hopper wears one
-  halo, nothing animates, no icon is drawn. In the open layer the drawn
+  each toggles back from the same place. Every tracked hopper carries one
+  run-down flow (the only thing on a hopper that animates) and nothing on
+  its head - no halo, no icon. In the open layer the drawn
   hopper toggles the same state and the rows carry no operational control.
   On the harness the controls are read-only and a click says why.
+- **Changeover Calculator** - the header's Changeover readout is the
+  launcher: a click opens the glass surface in the utility slot, 12px
+  under the header, centred, with focus inside and no field opened in the
+  header; the Handbook opens beside it with a gap between and neither
+  clipped; typed answers make a live estimate saved under the wizard's own
+  key; Use sets the deadline through the application (the bridge, the
+  legacy field and the header readout agree) and records the running
+  estimate; Close returns to the readout with the focus; Enter on the
+  readout reopens it with the answers kept; Escape inside closes it.
+- **Tracking visuals** - the hoppers Station marks overdue are exactly the
+  rows the application's own Timeline marks late; the wash tints them
+  apart from merely tracked ones; the flow column covers no readout, port,
+  valve or receiver; the flow moves by CSS alone; hovering an overdue
+  hopper lifts its outline and keeps its wash; Blend Edit turns a layer
+  over with no flow of the card's own and back with the marks as they
+  were; under reduced motion the flow stands still and stays, the marks
+  stay, and the calculator opens without a flight.
 - **Percentage field** - "60", "100" and "33.33" all fit without clipping.
 - **Hopper drag** - a press on a row's surface that does not travel is not
   a drag; one that does marks the row and the row under the pointer with

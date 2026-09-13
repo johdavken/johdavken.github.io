@@ -212,7 +212,7 @@ test("each tracked hopper with an estimate is a marker at its fraction of the wi
   assert.equal(b1.tagName, "BUTTON");
   assert.equal(b1.getAttribute("type"), "button");
   assert.equal(byClass(b1, "station-rundown__id").textContent, "B1");
-  assert.equal(byClass(b1, "station-rundown__time").textContent, "1h 23m");
+  assert.equal(allByClass(b1, "station-rundown__time").length, 0, "the label is the id alone; the time is in the detail");
   assert.match(b1.getAttribute("aria-label"), /^B1: empty in 1h 23m, at /);
   // No marker was placed anywhere it cannot be.
   for (const m of markers) assert.ok(xOf(m) >= 0 && xOf(m) <= 100);
@@ -322,7 +322,7 @@ test("the page becoming visible, focused or shown runs a pass at once and restar
   const woken = xOf(root.querySelector("[data-hopper='B1']"));
   assert.equal(woken, 0, "two hours on, B1 (1h 23m) is past: on the Now line");
   assert.ok(root.querySelector("[data-hopper='B1']").classList.contains("is-past"));
-  assert.equal(byClass(root.querySelector("[data-hopper='B1']"), "station-rundown__time").textContent, "Empty");
+  assert.match(root.querySelector("[data-hopper='B1']").getAttribute("aria-label"), /estimated empty since/);
   assert.equal(clock.queue.length, 1, "the chain restarted");
   // Each of the three wake events does it.
   for (const type of ["pageshow", "focus"]) { clock.queue = []; view.fire(type); assert.equal(clock.queue.length, 1, type); }
@@ -468,7 +468,12 @@ test("the changeover is a distinct marker at its instant with its clock time and
   // Beyond six hours: a chip, not a line at the edge.
   timeline.update(inputsFor(snapshot(s => { s.job.changeoverTime = "23:00"; s.job.changeoverSetAt = NOW; })));
   assert.ok(hidden(co));
-  const chip = byClass(root, "station-rundown__chip");
+  // B1 and B2 stand at their pump-off points, hours before it, beyond the
+  // window too: chips ahead of the changeover's own, soonest pump-off
+  // first (B2's 30% share runs longer, so its point comes first).
+  const chips = allByClass(root, "station-rundown__chip");
+  assert.deepEqual(chips.map(c => c.getAttribute("data-hopper")), ["B2", "B1", null]);
+  const chip = chips[2];
   assert.ok(chip.classList.contains("is-changeover"));
   assert.match(chip.textContent, /^Changeover → 8h 56m$/);
   // Stale: not a boundary to plan by.
@@ -479,6 +484,110 @@ test("the changeover is a distinct marker at its instant with its clock time and
   timeline.update(inputsFor(snapshot()));
   assert.ok(hidden(co));
   assert.equal(allByClass(root, "station-rundown__chip").length, 0);
+});
+
+test("with a changeover, a marker stands at the hopper's pump-off point and moves with the changeover; at Now it is late, or off once the pump is; without one it stands at the run-empty estimate", () => {
+  const { root, timeline } = mount();
+  const marker = id => root.querySelector(`[data-hopper='${id}']`);
+  const label = id => byClass(marker(id), "station-rundown__id").textContent;
+  const said = id => marker(id).getAttribute("aria-label");
+  // No changeover: B1 (1h 23m to empty) stands at its empty-at estimate.
+  timeline.update(inputsFor(snapshot()));
+  const emptyX = xOf(marker("B1"));
+  assert.ok(Math.abs(emptyX - (400 / 288) / 6 * 100) < 0.01);
+  assert.equal(label("B1"), "B1");
+  assert.match(said("B1"), /empty in 1h 23m/);
+  assert.equal(timeline.getEntries().find(e => e.key === "B:0").markKind, "empty");
+  // A changeover at 16:30: the pump-off point is 15:06:40, 1h 03m off.
+  timeline.update(inputsFor(snapshot(s => { s.job.changeoverTime = "16:30"; s.job.changeoverSetAt = NOW; })));
+  const co = new Date(2026, 8, 12, 16, 30).getTime();
+  const pumpOffBy = co - (400 / 288) * HOUR;
+  assert.ok(Math.abs(xOf(marker("B1")) - (pumpOffBy - NOW) / (6 * HOUR) * 100) < 0.01, "the marker stands at the pump-off point");
+  assert.ok(xOf(marker("B1")) < emptyX);
+  assert.equal(label("B1"), "B1", "the label stays the id: the time is the detail's");
+  assert.match(said("B1"), /^B1: pump off in 1h 03m, by (3:06 PM|15:06), to run empty by the changeover$/);
+  assert.equal(timeline.getEntries().find(e => e.key === "B:0").markKind, "pump-off");
+  assert.ok(!marker("B1").classList.contains("is-late"));
+  // Moved an hour later: every marker moves the hour with it.
+  timeline.update(inputsFor(snapshot(s => { s.job.changeoverTime = "17:30"; s.job.changeoverSetAt = NOW; })));
+  assert.ok(Math.abs(xOf(marker("B1")) - (pumpOffBy + HOUR - NOW) / (6 * HOUR) * 100) < 0.01);
+  assert.match(said("B1"), /pump off in 2h 03m/);
+  // Moved to within the hour: the pump-off point has passed. The marker
+  // sits on Now, late - the hopper the stage draws overdue.
+  timeline.update(inputsFor(snapshot(s => { s.job.changeoverTime = "15:00"; s.job.changeoverSetAt = NOW; })));
+  assert.equal(xOf(marker("B1")), 0);
+  assert.ok(marker("B1").classList.contains("is-past") && marker("B1").classList.contains("is-late"));
+  assert.equal(label("B1"), "B1");
+  assert.match(said("B1"), /^B1: late - pump off by (1:36 PM|13:36) to run empty by the changeover$/);
+  assert.equal(timeline.getEntries().find(e => e.key === "B:0").overdue, true);
+  // The pump turned off: done, not late - subdued, "Off" (wherever the
+  // marker stands: a pumped-off hopper's point is done), the estimate stands.
+  timeline.update(inputsFor(snapshot(s => { s.job.changeoverTime = "15:00"; s.job.changeoverSetAt = NOW; s.layers[1].hoppers[0].pumpOff = true; })));
+  assert.ok(marker("B1").classList.contains("is-pump-off") && !marker("B1").classList.contains("is-late"));
+  assert.match(said("B1"), /^B1: pump off, empty in 1h 23m$/);
+  timeline.update(inputsFor(snapshot(s => { s.job.changeoverTime = "17:30"; s.job.changeoverSetAt = NOW; s.layers[1].hoppers[0].pumpOff = true; })));
+  assert.ok(xOf(marker("B1")) > 0 && marker("B1").classList.contains("is-pump-off"), "ahead of Now too");
+  // Cleared: back to the run-empty estimate, where it was.
+  timeline.update(inputsFor(snapshot()));
+  assert.ok(Math.abs(xOf(marker("B1")) - emptyX) < 0.01);
+  assert.match(said("B1"), /empty in 1h 23m/);
+  // Stale: not a boundary to plan by - the run-empty estimate again.
+  timeline.update(inputsFor(snapshot(s => { s.job.changeoverTime = "16:30"; s.job.changeoverSetAt = NOW - 30 * HOUR; })));
+  assert.ok(Math.abs(xOf(marker("B1")) - emptyX) < 0.01);
+  assert.equal(timeline.getEntries().find(e => e.key === "B:0").markKind, "empty");
+});
+
+test("labels never overlap: a marker's label is its id alone; hoppers at one instant stack their ids down one stem, and more than the lanes hold collapse to 'N hoppers' whose detail lists every one", () => {
+  const { root, timeline } = mount();
+  // Two identical hoppers (B1 and A1: the same weight, share and blend) at
+  // one instant: two stems at one x, ids in successive lanes.
+  timeline.update(inputsFor(snapshot(s => { s.layers[0].hoppers[0].track = true; s.layers[0].layerPct = 40; s.layers[2].layerPct = 20; })));
+  const markers = () => allByClass(root, "station-rundown__marker");
+  const of = id => markers().find(m => m.getAttribute("data-hopper") === id);
+  assert.equal(xOf(of("A1")), xOf(of("B1")));
+  assert.equal(of("A1").getAttribute("data-group"), of("B1").getAttribute("data-group"));
+  assert.deepEqual([of("A1").getAttribute("data-lane"), of("B1").getAttribute("data-lane")], ["0", "1"]);
+  assert.deepEqual([byClass(of("A1"), "station-rundown__id").textContent, byClass(of("B1"), "station-rundown__id").textContent], ["A1", "B1"]);
+  assert.equal(allByClass(root, "station-rundown__group").length, 0);
+  // Five hoppers at one instant: more than three lanes hold. One label,
+  // "5 hoppers", on the first; the rest carry a stem and a dot and no
+  // label; each is still its own marker at its own x.
+  timeline.update(inputsFor(snapshot(s => {
+    s.layers.forEach(L => { L.layerPct = 100 / 3; L.hoppers[0].track = true; L.hoppers[1].track = true; L.hoppers[1].pct = 60; L.hoppers[2].track = false; });
+    s.layers[0].hoppers[1].track = false;
+  })));
+  const group = markers().filter(m => m.getAttribute("data-group") === of("A1").getAttribute("data-group"));
+  assert.equal(group.length, 5);
+  assert.ok(group.every(m => xOf(m) === xOf(group[0])));
+  const labelled = group.filter(m => byClass(m, "station-rundown__label"));
+  assert.equal(labelled.length, 1);
+  assert.equal(byClass(labelled[0], "station-rundown__group").textContent, "5 hoppers");
+  assert.ok(labelled[0].classList.contains("is-group"));
+  assert.ok(group.filter(m => m !== labelled[0]).every(m => m.classList.contains("is-grouped") && !byClass(m, "station-rundown__label")));
+  assert.ok(group.every(m => m.getAttribute("data-lane") === group[0].getAttribute("data-lane")));
+  assert.match(labelled[0].getAttribute("aria-label"), /; 5 hoppers empty by .*: A1, B1, B2, C1, C2$/);
+  // Hovering any member opens the group's listing: every hopper, its
+  // resin, its instants and its run-down, the hovered one first.
+  const detail = byClass(root, "station-rundown__detail");
+  group[2].dispatchEvent({ type: "mouseover", bubbles: true });
+  assert.ok(!hidden(detail));
+  assert.equal(byClass(detail, "station-rundown__group").textContent, "5 hoppers");
+  const members = allByClass(detail, "station-rundown__member");
+  assert.equal(members.length, 5);
+  assert.equal(byClass(members[0], "station-rundown__id").textContent, group[2].getAttribute("data-hopper"));
+  assert.deepEqual(members.map(m => byClass(m, "station-rundown__id").textContent).sort(), ["A1", "B1", "B2", "C1", "C2"]);
+  assert.match(byClass(members[0], "station-rundown__member-resin").textContent, /^R-/);
+  assert.match(byClass(members[0], "station-rundown__member-facts").textContent, /^empty .* · \d+h \d\dm run-down$/);
+  root.dispatchEvent({ type: "mouseleave", bubbles: false });
+  // With a changeover the listing carries the pump-off point too.
+  timeline.update(inputsFor(snapshot(s => {
+    s.layers.forEach(L => { L.layerPct = 100 / 3; L.hoppers[0].track = true; L.hoppers[1].track = true; L.hoppers[1].pct = 60; L.hoppers[2].track = false; });
+    s.layers[0].hoppers[1].track = false; s.job.changeoverTime = "18:00"; s.job.changeoverSetAt = NOW;
+  })));
+  of("A1").dispatchEvent({ type: "mouseover", bubbles: true });
+  assert.match(byClass(allByClass(detail, "station-rundown__member")[0], "station-rundown__member-facts").textContent, /^pump off by .* · empty .* · \d+h \d\dm run-down$/);
+  // The row never grows: every marker sits in one of three lanes.
+  assert.ok(markers().every(m => ["0", "1", "2"].includes(m.getAttribute("data-lane"))));
 });
 
 /* ----------------------------------------------------------------------
@@ -495,12 +604,15 @@ test("a marker is inspectable by pointer, keyboard focus and click; the detail i
   assert.ok(!hidden(detail));
   assert.equal(byClass(detail, "station-rundown__detail-resin").textContent, "R-B0");
   const rows = allByClass(detail, "station-rundown__row").map(r => [byClass(r, "station-rundown__term").textContent, byClass(r, "station-rundown__value").textContent]);
-  assert.deepEqual(rows.map(r => r[0]), ["Layer", "Weight", "Blend", "Consumption", "Time remaining", "Empty at"]);
+  assert.deepEqual(rows.map(r => r[0]), ["Layer", "Weight", "Blend", "Consumption", "Pump off by", "Time remaining", "Empty at", "Run-down"]);
   assert.equal(rows[0][1], "B");
   assert.equal(rows[1][1], "400 lb");
   assert.equal(rows[2][1], "60% of layer B (40%)");
   assert.equal(rows[3][1], "288 lb/hr");
-  assert.equal(rows[4][1], "1h 23m");
+  // 16:30 less 1h 23m: 3:06 PM, 1h 03m from 14:03.
+  assert.match(rows[4][1], /^(3:06 PM|15:06) · in 1h 03m$/);
+  assert.equal(rows[5][1], "1h 23m");
+  assert.equal(rows[7][1], "1h 23m");
   assert.equal(b1.getAttribute("aria-describedby"), timelineModule.DETAIL_ID);
   assert.equal(detail.getAttribute("role"), "tooltip");
   root.dispatchEvent({ type: "mouseleave", bubbles: false });

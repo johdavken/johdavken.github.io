@@ -56,6 +56,42 @@
  *               the application)
  *   invalid     a value that is not a finite non-negative number
  *
+ * THE PUMP-OFF POINT, AND OVERDUE
+ *
+ * The application's Timeline states, for each tracked hopper, when its
+ * pump has to be turned off for it to run empty by the changeover - the
+ * row's "start by" - and marks the row late once that moment has passed
+ * (validateAndCompute in app.js: startByDate = changeover - time to empty;
+ * formatTimelineStart in scheduling.js: late = startBy < now; the row's
+ * `late` class needs the pump still running). Restated here, when the
+ * caller hands in the changeover:
+ *
+ *   pumpOffBy = changeoverAt - durationMs    (the application's startByDate)
+ *   late      = pumpOffBy < now              (scheduling's own judgement)
+ *   overdue   = late and the pump still running
+ *
+ * The pump-off point is taken from the weight AS ENTERED, not from the
+ * anchored estimate above - on purpose. The application never decrements
+ * a weight, so its "start by" stands at changeover minus the run-down
+ * time and the clock walks up to it: that is how a hopper becomes late on
+ * the floor UI's Timeline, and a hopper drawn overdue here is the row the
+ * phone marks late, at the same moment. Anchored, both instants would be
+ * fixed and nothing would ever become late by the clock.
+ *
+ * WHERE THE MARKER STANDS
+ *
+ * With a changeover to plan by, a hopper's marker stands AT ITS PUMP-OFF
+ * POINT - the instant the operator has to act on, as on the application's
+ * Timeline - so moving the changeover moves every marker with it, and the
+ * marker that has reached Now is the hopper the stage draws overdue: the
+ * axis and the stage say one thing. Without a changeover there is no
+ * pump-off point, and the marker stands at the anchored empty-at estimate
+ * instead - when the hopper runs out, the only instant there is. Each
+ * entry says which (`markAt`, `markKind`), and the renderer words it so.
+ * A stale changeover (see resolveChangeover) is not a boundary to plan
+ * by: the timeline draws no line for it, no hopper is late against it,
+ * and the markers stand at their empty-at estimates.
+ *
  * PUMP-OFF
  *
  * In the application, pump-off is an action that has been done: the
@@ -126,7 +162,13 @@
    *                                          defaults to `now`
    * @param {object}  [options]
    * @param {number}  [options.now]           epoch ms; defaults to Date.now()
-   * @returns {{tracked, pumpOff, reason, rate, durationMs, emptyAt, remainingMs, past}}
+   * @param {number}  [options.changeoverAt]  epoch ms of the changeover, when
+   *                                          one is set and not stale; gives
+   *                                          pumpOffBy, late and overdue
+   * @returns {{tracked, pumpOff, reason, rate, durationMs, emptyAt, remainingMs, past, pumpOffBy, late, overdue, markAt, markKind, untilMs}}
+   *   markAt/markKind/untilMs: where the marker stands - the pump-off
+   *   point ("pump-off") when a changeover is given, else the empty-at
+   *   estimate ("empty") - and how far off that is from now.
    */
   function hopperRundown(input, options) {
     const hopper = input || {};
@@ -139,7 +181,13 @@
       durationMs: null,
       emptyAt: null,
       remainingMs: null,
-      past: false
+      past: false,
+      pumpOffBy: null,
+      late: false,
+      overdue: false,
+      markAt: null,
+      markKind: null,
+      untilMs: null
     };
     if (!result.tracked) { result.reason = "not-tracked"; return result; }
 
@@ -164,6 +212,20 @@
     result.emptyAt = observedAt + durationMs;
     result.remainingMs = result.emptyAt - now;
     result.past = result.remainingMs < 0;
+    result.markAt = result.emptyAt;
+    result.markKind = "empty";
+
+    const changeoverAt = options && Number.isFinite(options.changeoverAt) ? options.changeoverAt : null;
+    if (changeoverAt !== null) {
+      result.pumpOffBy = changeoverAt - durationMs;
+      result.late = scheduling && typeof scheduling.formatTimelineStart === "function"
+        ? !!scheduling.formatTimelineStart(new Date(result.pumpOffBy), new Date(changeoverAt), new Date(now)).late
+        : result.pumpOffBy < now;
+      result.overdue = result.late && !result.pumpOff;
+      result.markAt = result.pumpOffBy;
+      result.markKind = "pump-off";
+    }
+    result.untilMs = result.markAt - now;
     return result;
   }
 
@@ -180,7 +242,7 @@
    * @param {object} inputs.layerState   station-source's layer state by name
    * @param {object} inputs.job          { lineRate, ... }
    * @param {object} [inputs.observed]   slot -> epoch ms the weight was last seen
-   * @param {object} [options]           { now }
+   * @param {object} [options]           { now, changeoverAt }
    */
   function projectEntries(inputs, options) {
     const settings = inputs || {};
@@ -323,10 +385,28 @@
    * ------------------------------------------------------------------ */
 
   const LANES = 3;
-  /* A marker's label is a hopper id and a time - two short words, about
-   * 64px at the timeline's type size. This is the room one needs before
-   * the next may share its lane. */
-  const LABEL_WIDTH_PX = 72;
+  /* A marker's permanent label is its hopper id alone - "B1", "C12" -
+   * or, for a collapsed group, "N hoppers". Its width on the track is
+   * estimated from the characters, at the timeline's type size, plus the
+   * label's own offset from the stem and a little air before the next;
+   * collision is worked in these pixels, not in minutes, so 6H and 12H
+   * lay out the same way at their own scales. */
+  const LABEL_CHAR_PX = 7.5;
+  const LABEL_PAD_PX = 18;
+  /* Markers within this many pixels of one another stand at effectively
+   * the same instant - one event group - and are labelled as one. */
+  const GROUP_PX = 4;
+  /* The most hopper ids a group shows stacked on the lanes; more than
+   * this, or fewer lanes free, and the group collapses to "N hoppers". */
+  const STACK_MAX = LANES;
+
+  function labelWidth(textLength) {
+    return textLength * LABEL_CHAR_PX + LABEL_PAD_PX;
+  }
+
+  function groupLabel(size) {
+    return `${size} hoppers`;
+  }
 
   /**
    * Where everything goes. Positions are fractions of the window (0 = Now,
@@ -334,8 +414,31 @@
    * the width the caller measured. Deterministic: the same inputs give the
    * same lanes, so two devices looking at one job draw the same picture.
    *
-   * @returns {{ markers, beyond, unavailable, changeover, ticks }}
-   *   markers      in the window, each { entry, fraction, lane, past }
+   * A marker's instant is the entry's `markAt` - its pump-off point when
+   * there is a changeover, its empty-at estimate when there is not (see
+   * WHERE THE MARKER STANDS above); an entry without one stands at its
+   * empty-at estimate. `past` is that instant behind Now; `late` is a
+   * pump-off point behind Now with the pump still running - the marker
+   * the stage draws overdue.
+   *
+   * LABELS NEVER OVERLAP. Every marker's stem and dot stand at its exact
+   * instant; only its label is laid out. Markers within GROUP_PX of one
+   * another are one event group. A group of up to STACK_MAX ids takes one
+   * free lane per id - stacked down the shared stem - when that many
+   * lanes are free at its x (a lane is free once the last label in it has
+   * ended, by its estimated width); otherwise, or when larger, it
+   * collapses to one "N hoppers" label in the first free lane. When no
+   * lane is free even for that, the group is folded into the group
+   * placed before it, which becomes "N hoppers" where it stood. Nothing
+   * is shrunk, nothing is moved along the axis, and the row never grows.
+   *
+   * @returns {{ markers, groups, beyond, unavailable, changeover, ticks }}
+   *   markers      in the window, each { entry, at, fraction, lane, past,
+   *                late, group, label } - `label` is the text this marker
+   *                shows (its id, "N hoppers", or null for a member of a
+   *                collapsed group whose first marker carries the label)
+   *   groups       the event groups, each { id, fraction, lane, entries,
+   *                collapsed, label }
    *   beyond       past the window's edge, soonest first
    *   unavailable  tracked with no estimate, in physical order
    *   changeover   { at, fraction, inWindow, past, stale, remainingMs } or null
@@ -347,38 +450,93 @@
     const width = Number.isFinite(settings.width) && settings.width > 0 ? settings.width : 1000;
     const entries = Array.isArray(settings.entries) ? settings.entries : [];
     const laneCount = Number.isInteger(settings.lanes) && settings.lanes > 0 ? settings.lanes : LANES;
-    const gap = Number.isFinite(settings.labelWidth) ? settings.labelWidth : LABEL_WIDTH_PX;
 
+    const at = entry => (Number.isFinite(entry.markAt) ? entry.markAt : entry.emptyAt);
     const inWindow = [];
     const beyond = [];
     const unavailable = [];
     for (const entry of entries) {
       if (!entry || !entry.tracked) continue;
-      if (entry.emptyAt === null || entry.reason) { unavailable.push(entry); continue; }
-      if (entry.emptyAt > now + windowMs) { beyond.push(entry); continue; }
+      if (at(entry) === null || at(entry) === undefined || entry.reason) { unavailable.push(entry); continue; }
+      if (at(entry) > now + windowMs) { beyond.push(entry); continue; }
       inWindow.push(entry);
     }
-    beyond.sort((a, b) => a.emptyAt - b.emptyAt || a.key.localeCompare(b.key));
+    beyond.sort((a, b) => at(a) - at(b) || a.key.localeCompare(b.key));
+    inWindow.sort((a, b) => at(a) - at(b) || a.key.localeCompare(b.key));
 
-    // Lanes: soonest first, each marker takes the first lane whose last
-    // occupant is far enough left; when none is, the lane that frees up
-    // soonest takes it and the marker is flagged crowded. The time anchor
-    // is never moved to avoid an overlap.
-    inWindow.sort((a, b) => a.emptyAt - b.emptyAt || a.key.localeCompare(b.key));
-    const laneEnds = Array.from({ length: laneCount }, () => -Infinity);
-    const markers = inWindow.map(entry => {
-      const past = entry.emptyAt < now;
-      const fraction = past ? 0 : (entry.emptyAt - now) / windowMs;
+    // Event groups: soonest first, each marker joining the group before it
+    // when it stands within GROUP_PX of that group's first marker.
+    const groups = [];
+    for (const entry of inWindow) {
+      const instant = at(entry);
+      const past = instant < now;
+      const fraction = past ? 0 : (instant - now) / windowMs;
       const x = fraction * width;
-      let lane = laneEnds.findIndex(end => end + gap <= x);
-      let crowded = false;
-      if (lane < 0) {
-        lane = laneEnds.indexOf(Math.min(...laneEnds));
-        crowded = true;
+      const item = { entry, at: instant, fraction, x, past, late: past && entry.markKind === "pump-off" && !entry.pumpOff };
+      const last = groups[groups.length - 1];
+      if (last && x - last.x <= GROUP_PX) last.items.push(item);
+      else groups.push({ id: groups.length, x, fraction, items: [item], lanes: [], collapsed: false });
+    }
+
+    // Lanes: where each lane's last label ends, from the groups placed so far.
+    const laneEnds = () => {
+      const ends = Array.from({ length: laneCount }, () => -Infinity);
+      for (const g of placed) for (const slot of g.lanes) ends[slot.lane] = Math.max(ends[slot.lane], slot.end);
+      return ends;
+    };
+    const freeLanes = (ends, x) => ends.map((end, lane) => (end <= x ? lane : -1)).filter(lane => lane >= 0);
+    const stack = group => {
+      group.collapsed = false;
+      group.lanes = group.items.map((item, i) => ({ lane: -1, end: group.x + labelWidth(String(item.entry.id).length), item }));
+    };
+    const collapse = group => {
+      group.collapsed = true;
+      group.lanes = [{ lane: -1, end: group.x + labelWidth(groupLabel(group.items.length).length), item: group.items[0] }];
+    };
+    const place = group => {
+      const ends = laneEnds();
+      const free = freeLanes(ends, group.x);
+      if (group.items.length <= STACK_MAX && free.length >= group.items.length) {
+        stack(group);
+        group.lanes.forEach((slot, i) => { slot.lane = free[i]; });
+        return true;
       }
-      laneEnds[lane] = x;
-      return { entry, fraction, lane, past, crowded };
-    });
+      if (free.length === 0) return false;
+      collapse(group);
+      group.lanes[0].lane = free[0];
+      return true;
+    };
+    const placed = [];
+    for (const group of groups) {
+      if (place(group)) { placed.push(group); continue; }
+      // Nothing free: fold into the group before it, which then stands
+      // collapsed where it was (its own lanes are free again at its x).
+      const previous = placed[placed.length - 1];
+      previous.items.push(...group.items);
+      placed.pop();
+      const ends = laneEnds();
+      collapse(previous);
+      previous.lanes[0].lane = freeLanes(ends, previous.x)[0];
+      placed.push(previous);
+    }
+
+    const markers = [];
+    const groupsOut = [];
+    for (const group of placed) {
+      const label = group.collapsed ? groupLabel(group.items.length) : null;
+      groupsOut.push({
+        id: group.id, fraction: group.fraction, lane: group.lanes[0].lane,
+        entries: group.items.map(item => item.entry), collapsed: group.collapsed, label
+      });
+      group.items.forEach((item, i) => {
+        const slot = group.collapsed ? group.lanes[0] : group.lanes[i];
+        markers.push({
+          entry: item.entry, at: item.at, fraction: item.fraction, lane: slot.lane, past: item.past, late: item.late,
+          crowded: false, group: group.id,
+          label: group.collapsed ? (i === 0 ? label : null) : String(item.entry.id)
+        });
+      });
+    }
 
     let changeover = null;
     const co = settings.changeover;
@@ -399,6 +557,7 @@
       windowMs,
       width,
       markers,
+      groups: groupsOut,
       beyond,
       unavailable,
       changeover,
@@ -439,19 +598,50 @@
     return `${rate.toLocaleString([], { maximumFractionDigits: 1 })} lb/hr`;
   }
 
+  /* --------------------------------------------------------------------
+   *   Operational marks
+   * ------------------------------------------------------------------ */
+
+  /**
+   * What the drawn hoppers need of the projection and nothing more: per
+   * slot, whether the hopper is tracked, late, and overdue. The renderer
+   * writes these as classes; it derives no deadline of its own.
+   *
+   * @param {Array} entries  projectEntries' answer
+   * @returns {Object<string, {tracked: boolean, late: boolean, overdue: boolean, pumpOff: boolean}>}
+   */
+  function hopperMarks(entries) {
+    const out = {};
+    for (const entry of Array.isArray(entries) ? entries : []) {
+      if (!entry || !entry.key) continue;
+      out[entry.key] = {
+        tracked: !!entry.tracked,
+        pumpOff: !!entry.pumpOff,
+        late: !!entry.late,
+        overdue: !!entry.overdue
+      };
+    }
+    return out;
+  }
+
   return Object.freeze({
     MINUTE,
     HOUR,
     WINDOWS,
     DEFAULT_WINDOW,
     LANES,
-    LABEL_WIDTH_PX,
+    LABEL_CHAR_PX,
+    LABEL_PAD_PX,
+    GROUP_PX,
+    STACK_MAX,
+    labelWidth,
     LABEL_EDGE_PX,
     REASONS,
     reasonLabel,
     consumptionRate,
     hopperRundown,
     projectEntries,
+    hopperMarks,
     resolveChangeover,
     tickPlan,
     ticks,

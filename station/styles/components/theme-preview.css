@@ -123,14 +123,6 @@
   fill: var(--station-pump-off);
 }
 
-/* Tracked: the halo in the layer's colour, as the drawn hopper wears it. */
-.station-theme-preview__halo {
-  fill: none;
-  stroke: var(--station-layer-accent);
-  stroke-width: var(--station-line-thin);
-  opacity: 0.9;
-}
-
 .station-theme-preview__hose {
   fill: none;
   stroke: var(--station-hose-edge);
