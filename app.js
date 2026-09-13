@@ -157,6 +157,9 @@
   let stationBridgeHandle = null;
   let stationConnectionHandle = null;
   let stationRecipesHandle = null;
+  // Listeners for PolynRtSyncBridge.onRecoveryDescriptorChange, told from
+  // renderLineSync; never handed the state, only that it may have moved.
+  const recoveryDescriptorListeners = new Set();
   const { parseChangeoverDate, formatTime, formatTimelineStart, isChangeoverStale } = window.PolynScheduling;
   const fmtTime = (date, baseDate) => formatTime(date, baseDate, state.timeFormat);
   const { writeJson } = window.PolynStorage;
@@ -9493,6 +9496,10 @@
     // And the saved recipes: which workspace's book Station shows follows
     // the selected workspace, which changes here and nowhere else.
     stationRecipesHandle?.publish();
+    // And whoever asked to be told the recovery descriptor may have moved
+    // (PolynRtSyncBridge.onRecoveryDescriptorChange): readiness and the
+    // device label are RT Sync state, and this is where it changes.
+    for (const listener of recoveryDescriptorListeners){ try{ listener(); }catch(error){} }
   }
 
   function openRtSyncJoinFromUrl(urlValue = window.location.href, requireAppLinkOrigin = false){
@@ -10320,12 +10327,23 @@
     });
 
     // Narrow bridge consumed only by workspace-recovery-ui.js: a read-only
-    // descriptor of this browser's current RT Sync identity, and a way to
-    // reconnect through established RT Sync APIs after admin-assisted
-    // recovery. No tokens, sessions, or outbox internals are exposed.
+    // descriptor of this browser's current RT Sync identity, a way to be
+    // told when that descriptor may have moved, and a way to reconnect
+    // through established RT Sync APIs after admin-assisted recovery. No
+    // tokens, sessions, or outbox internals are exposed.
     window.PolynRtSyncBridge = {
       getRecoveryDescriptor: () => lineSync?.getRecoveryDescriptor?.()
         || { ready: false, userId: "", deviceId: "", deviceLabel: "" },
+      // Every RT Sync state change arrives at renderLineSync; a listener
+      // registered here is told from there, with nothing: it re-reads the
+      // descriptor itself. Station's Sudo page (through the admin bridge
+      // workspace-recovery-ui.js produces) is what needs it - the floor
+      // UI's panel reads the descriptor when it draws and needs no call.
+      onRecoveryDescriptorChange: (listener) => {
+        if (typeof listener !== "function") return () => {};
+        recoveryDescriptorListeners.add(listener);
+        return () => recoveryDescriptorListeners.delete(listener);
+      },
       getInitialActiveJob: () => snapshotSharedActiveJob(),
       // Workspace Management is the administrative home for this action, but
       // the creation itself must keep using RT Sync's established idempotent

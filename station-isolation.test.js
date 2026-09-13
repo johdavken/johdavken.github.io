@@ -28,7 +28,8 @@ const STATION_FILES = ["station-line-model.js", "station-render.js", "station.js
   "station-focus-editor.js", "station-sync-console.js", "station-hopper-controls.js",
   "station-rundown.js", "station-rundown-timeline.js", "station-job-controls.js",
   "station-handbook.js", "station-recipe-book.js", "station-resin-totals.js", "station-appearance.js", "station-theme-preview.js",
-  "station-changeover.js", "station-avatar.js", "station-machine-rail.js", "station-logo.js"];
+  "station-changeover.js", "station-avatar.js", "station-machine-rail.js", "station-logo.js",
+  "station-sudo.js", "station-sudo-workspaces.js"];
 
 const stationHtml = fs.readFileSync(path.join(STATION, "station.html"), "utf8");
 const indexHtml = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
@@ -107,6 +108,17 @@ const allStationCss = stationStylesheets().map(file => ({
  *                                actions, each an application closure; the
  *                                Recipe Book is the one Station file that
  *                                requests through it
+ *   station-admin-bridge.js      administrator access and Workspace
+ *                                Management: the admin service's public
+ *                                state and this device's RT Sync identity
+ *                                as a projected descriptor (app.js
+ *                                publishes when either moves) and a
+ *                                letterbox for the admin actions, each an
+ *                                application closure over the SAME admin
+ *                                session and workspace procedures the
+ *                                floor UI's Sudo panel runs; Sudo and its
+ *                                Workspace Management tool are the two
+ *                                Station files that request through it
  *
  * All are inert on a normal load: the bridges only bump a revision nobody
  * reads, the host returns before touching the document, and the command
@@ -118,8 +130,9 @@ const COMMAND_CONTRACT = "station-command-contract.js";
 const COMMAND_BRIDGE = "station-command-bridge.js";
 const CONNECTION_BRIDGE = "station-connection-bridge.js";
 const RECIPES_BRIDGE = "station-recipes-bridge.js";
+const ADMIN_BRIDGE = "station-admin-bridge.js";
 const THEME = "station-theme.js";
-const INDEX_STATION_ASSETS = [SHARED_BRIDGE, STATION_HOST, COMMAND_CONTRACT, COMMAND_BRIDGE, CONNECTION_BRIDGE, RECIPES_BRIDGE, THEME].sort();
+const INDEX_STATION_ASSETS = [SHARED_BRIDGE, STATION_HOST, COMMAND_CONTRACT, COMMAND_BRIDGE, CONNECTION_BRIDGE, RECIPES_BRIDGE, ADMIN_BRIDGE, THEME].sort();
 
 /* The one Station stylesheet permitted to name an application selector, use
  * !important, or style a bare element: hiding the application's shell is
@@ -241,17 +254,40 @@ test("the recipes bridge touches no DOM, names no RT Sync internal, and knows no
     "a new saved-recipe action Station may ask for arrives as an edit to this list");
 });
 
+test("the admin bridge touches no DOM, names no RT Sync internal, and holds no session, client or procedure of its own", () => {
+  const source = fs.readFileSync(path.join(ROOT, ADMIN_BRIDGE), "utf8");
+  for (const pattern of [/\bdocument\b/, /addEventListener/, /PolynResinAdmin/, /PolynWorkspaceRecovery/, /admin_users/, /signInWithPassword/, /createClient/, ...RT_SYNC_INTERNALS]) {
+    assert.doesNotMatch(source, pattern, `${ADMIN_BRIDGE} reaches outside itself (matched ${pattern})`);
+  }
+  for (const page of [indexHtml, stationHtml]) {
+    assert.ok(page.indexOf(SHARED_BRIDGE) < page.indexOf(ADMIN_BRIDGE), "the admin bridge loads before the state bridge it requires");
+  }
+  // Its producer is the floor UI's Workspace Management file, not app.js:
+  // RT Sync's side of the application never learns the admin session exists.
+  assert.ok(indexHtml.indexOf(ADMIN_BRIDGE) < indexHtml.indexOf("workspace-recovery-ui.js"));
+  const bridge = require("./station-admin-bridge.js");
+  for (const forbidden of ["publish", "disconnect", "setAccess", "setState", "state", "signIn", "getClient"]) {
+    assert.equal(bridge[forbidden], undefined, `the module surface exposes ${forbidden}`);
+  }
+  assert.ok(Object.isFrozen(bridge));
+  assert.deepEqual([...bridge.ACTIONS], [
+    "signIn", "signOut", "listWorkspaces", "workspaceDevices", "addThisDevice", "createLine", "renameLine",
+    "transferOwnership", "disconnectDevice", "mergeWorkspace", "deleteWorkspace"
+  ], "a new administrator action Station may ask for arrives as an edit to this list");
+});
+
 test("no Station file names an RT Sync internal, subscribes to anything but the bridges, or reloads the page", () => {
   for (const file of STATION_FILES) {
     const source = fs.readFileSync(path.join(STATION, file), "utf8");
     for (const pattern of RT_SYNC_INTERNALS) {
       assert.doesNotMatch(source, pattern, `${file} reaches into RT Sync (matched ${pattern})`);
     }
-    // The only subscriptions Station holds are to the two windows the
-    // application publishes through: the state bridge and the connection
-    // bridge. Anything else would be a second live feed.
+    // The only subscriptions Station holds are to the windows the
+    // application publishes through: the state bridge, the connection
+    // bridge, the recipes bridge and the admin bridge. Anything else would
+    // be a second live feed.
     for (const match of source.matchAll(/(\w+)\??\.subscribe\s*\(/g)) {
-      assert.ok(["bridge", "connection", "recipes"].includes(match[1]),
+      assert.ok(["bridge", "connection", "recipes", "admin"].includes(match[1]),
         `${file} subscribes to "${match[1]}", which is none of the bridges`);
     }
   }
@@ -291,6 +327,23 @@ test("exactly one Station file requests a saved-recipe action - the Recipe Book 
     // key, no second list. What it lists is what the bridge published.
     assert.doesNotMatch(source, /createRecipePayload|applyRecipePayload|polyn\.workspaceConfigurations|savedRecipes\s*=\s*\[/,
       `${file} keeps a recipe list or a payload of its own`);
+  }
+});
+
+test("exactly two Station files request an administrator action - Sudo and its Workspace Management tool - and only through the bridge they are handed", () => {
+  const REQUESTS = ["station-sudo.js", "station-sudo-workspaces.js"];
+  for (const file of STATION_FILES) {
+    const source = fs.readFileSync(path.join(STATION, file), "utf8");
+    if (REQUESTS.includes(file)) {
+      assert.match(source, /admin\.request\s*\(/, `${file} no longer requests through the bridge it is handed`);
+      assert.doesNotMatch(source, /PolynStationAdminBridge/, `${file} reaches for the global bridge instead of the one it is handed`);
+    } else {
+      assert.doesNotMatch(source, /admin\.request\s*\(/, `${file} requests an administrator action`);
+    }
+    // No Station file keeps a session, a password, or an admin check of
+    // its own: a password is read from its field on submit and handed over.
+    assert.doesNotMatch(source, /isAdmin|admin_users|PolynResinAdmin|PolynWorkspaceRecovery|password\s*[:=]\s*["'`]/,
+      `${file} holds administrator state of its own`);
   }
 });
 
