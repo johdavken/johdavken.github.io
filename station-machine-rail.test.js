@@ -113,31 +113,47 @@ function build(options) {
     onWeightsEdit: () => calls.push("weights"),
     onSmartHoppers: () => calls.push("smart"),
     onResetTracking: () => calls.push("reset"),
+    onNextEdit: () => calls.push("next"),
+    onPromote: () => calls.push("promote"),
+    onCopy: () => calls.push("copy"),
     setTimeout: (fn, ms) => { timers.push({ fn, ms, cleared: false }); return timers.length; },
     clearTimeout: id => { if (timers[id - 1]) timers[id - 1].cleared = true; }
   }, options || {}));
   doc.body.appendChild(rail.element);
   const live = () => rail.update({ hidden: false, blend: { active: false, available: true }, reset: { available: true, count: 4 } });
-  return { doc, rail, calls, timers, live, blend: rail.blendButton, weights: rail.weightsButton, smart: rail.smartButton, reset: rail.resetButton };
+  return { doc, rail, calls, timers, live, blend: rail.blendButton, weights: rail.weightsButton, smart: rail.smartButton, reset: rail.resetButton, next: rail.nextButton, promote: rail.promoteButton, copy: rail.copyButton };
 }
 
 /* ----------------------------------------------------------------------
  *   What it draws
  * -------------------------------------------------------------------- */
 
-test("four controls and nothing else, each an SVG glyph in Station's own classes with its name on hover and to a reader - no text label", () => {
-  const { rail, blend, weights, smart, reset } = build();
+test("four in the column - Blend Edit, Next with its two children in a flyout beside it, Weights with Smart Hoppers beside it, Reset - each an SVG glyph in Station's own classes with its name on hover and to a reader - no text label", () => {
+  const { rail, blend, weights, smart, reset, next, promote, copy } = build();
   assert.equal(rail.element.getAttribute("data-role"), "machine-rail");
   assert.equal(rail.element.getAttribute("role"), "group");
-  assert.deepEqual(rail.element.children.map(node => [node.tagName, node.getAttribute("data-action")]),
-    [["BUTTON", "blend-edit"], ["BUTTON", "weights-edit"], ["BUTTON", "smart-hoppers"], ["BUTTON", "reset-tracking"]]);
+  assert.deepEqual(rail.element.children.map(node => [node.tagName, node.getAttribute("data-action") || node.getAttribute("data-role")]),
+    [["BUTTON", "blend-edit"], ["DIV", "next-group"], ["DIV", "weights-group"], ["BUTTON", "reset-tracking"]]);
+  assert.deepEqual(rail.weightsGroup.children.map(node => node.getAttribute("data-action") || node.getAttribute("class")), ["weights-edit", "station-rail__flyout"]);
+  assert.deepEqual(rail.weightsFlyout.children.map(node => node.getAttribute("data-action")), ["smart-hoppers"]);
+  assert.equal(rail.weightsFlyout.getAttribute("aria-label"), "Weights actions");
+  assert.equal(rail.weightsFlyout.getAttribute("data-open"), "false");
+  assert.ok(rail.weightsFlyout.hasAttribute("inert"));
+  // The group: the switch in the column, the flyout beside it holding the two moves.
+  assert.deepEqual(rail.nextGroup.children.map(node => [node.tagName, node.getAttribute("data-action") || node.getAttribute("class")]), [["BUTTON", "next-edit"], ["DIV", "station-rail__flyout"]]);
+  assert.deepEqual(rail.flyout.children.map(node => node.getAttribute("data-action")), ["promote-next", "copy-current"]);
+  assert.equal(rail.flyout.getAttribute("role"), "group");
+  assert.equal(rail.flyout.getAttribute("aria-label"), "Next Recipe actions");
   const REST_TITLE = {
     "Blend Edit": "Blend Edit needs a line with layers on the stage",
     "Weights": "Weights needs a line with layers on the stage",
+    "Next Recipe": "Next Recipe needs a line with layers on the stage",
+    "Load Next into Current": "Load Next into Current is not available: no application is connected to Station commands.",
+    "Copy Current into Next": "Copy Current into Next is not available: no application is connected to Station commands.",
     "Smart Hoppers": "Smart Hoppers is not available: no application is connected to Station commands.",
     "Reset Tracking": "Reset Tracking is not available: no application is connected to Station commands."
   };
-  for (const [button, label] of [[blend, "Blend Edit"], [weights, "Weights"], [smart, "Smart Hoppers"], [reset, "Reset Tracking"]]) {
+  for (const [button, label] of [[blend, "Blend Edit"], [weights, "Weights"], [next, "Next Recipe"], [promote, "Load Next into Current"], [copy, "Copy Current into Next"], [smart, "Smart Hoppers"], [reset, "Reset Tracking"]]) {
     assert.equal(button.getAttribute("type"), "button");
     assert.equal(button.getAttribute("aria-label"), label);
     assert.equal(button.getAttribute("title"), REST_TITLE[label]);
@@ -159,9 +175,12 @@ test("four controls and nothing else, each an SVG glyph in Station's own classes
   assert.equal(smart.getAttribute("aria-checked"), "false");
   assert.equal(smart.disabled, true, "held until the boot file says the application offers it");
   assert.equal(reset.getAttribute("aria-pressed"), null, "the reset is a command, not a switch");
+  assert.equal(next.getAttribute("aria-pressed"), "false", "Next is the third face's switch");
+  assert.equal(rail.flyout.getAttribute("data-open"), "false", "the two moves are folded until the Next face is on");
+  assert.ok(rail.flyout.hasAttribute("inert") && rail.flyout.getAttribute("aria-hidden") === "true", "folded: out of the tab order and the reader's tree");
   // Hidden until told there is a line: a rail with nothing to stand beside.
   assert.ok(rail.element.hidden);
-  assert.deepEqual(railModule.LABEL, { blend: "Blend Edit", weights: "Weights", smart: "Smart Hoppers", reset: "Reset Tracking" });
+  assert.deepEqual(railModule.LABEL, { blend: "Blend Edit", weights: "Weights", smart: "Smart Hoppers", reset: "Reset Tracking", next: "Next Recipe", promote: "Load Next into Current", copy: "Copy Current into Next" });
 });
 
 test("the Weights switch and the Smart Hoppers switch show what they are told and hand every click back as one call; a held switch takes no click", () => {
@@ -491,4 +510,149 @@ test("the stylesheet names no colour and no length of its own, sizes the control
       assert.ok(sheet.includes(token), `${theme} lacks ${token}`);
     }
   }
+});
+
+/* ----------------------------------------------------------------------
+ *   The Next face: its switch, and the two moves under it
+ * -------------------------------------------------------------------- */
+
+test("the Next switch shows the face and whether a plan exists, hands every click back as one call, and reveals the two moves only while the face is on", () => {
+  const { rail, next, promote, copy, calls, live } = build();
+  live();
+  assert.equal(next.disabled, true, "Next waits to be told there is a line");
+  rail.update({ next: { active: false, available: true, planned: false } });
+  assert.equal(next.disabled, false);
+  assert.match(next.getAttribute("title"), /nothing is planned yet/);
+  assert.ok(!next.classList.contains("is-planned"));
+  assert.equal(rail.flyout.getAttribute("data-open"), "false");
+  assert.equal(rail.element.getAttribute("data-face"), null);
+  rail.update({ next: { active: false, available: true, planned: true } });
+  assert.ok(next.classList.contains("is-planned"), "the dot: a plan exists");
+  assert.match(next.getAttribute("title"), /a recipe is planned/);
+  next.click();
+  assert.deepEqual(calls, ["next"]);
+  assert.equal(next.getAttribute("aria-pressed"), "false", "the rail does not turn the face on: the boot file tells it");
+  rail.update({ next: { active: true, available: true, planned: true } });
+  assert.equal(next.getAttribute("aria-pressed"), "true");
+  assert.ok(next.classList.contains("is-active"));
+  assert.ok(rail.element.classList.contains("is-next-active"));
+  assert.equal(rail.element.getAttribute("data-face"), "next");
+  assert.equal(rail.flyout.getAttribute("data-open"), "true", "the moves unfold beside the switch");
+  assert.equal(rail.nextGroup.getAttribute("data-open"), "true");
+  assert.ok(!rail.flyout.hasAttribute("inert") && rail.flyout.getAttribute("aria-hidden") === "false");
+  assert.match(next.getAttribute("title"), /^Next Recipe · on/);
+  next.click();
+  assert.deepEqual(calls, ["next", "next"]);
+  rail.update({ next: { active: false, available: true, planned: true } });
+  assert.equal(rail.flyout.getAttribute("data-open"), "false", "and fold with it");
+  assert.ok(rail.flyout.hasAttribute("inert"));
+  // An active face can always be left, line or no line.
+  rail.update({ next: { active: true, available: false, planned: false } });
+  assert.equal(next.disabled, false);
+});
+
+test("Load Next arms then confirms as one call, worded by the summary it was told; it is held with no plan or no offer; Copy Current is one click, worded by what it replaces", () => {
+  const { rail, promote, copy, calls, timers, live, doc } = build();
+  live();
+  rail.update({ next: { active: true, available: true, planned: false }, promote: { available: true, summary: "" }, copy: { available: true } });
+  assert.equal(promote.disabled, true, "nothing planned: nothing to load");
+  assert.equal(promote.getAttribute("title"), "Load Next into Current · nothing is planned");
+  assert.equal(copy.disabled, false);
+  assert.equal(copy.getAttribute("title"), "Copy Current into Next · the running recipe becomes the plan; the running job is untouched");
+  rail.update({ next: { active: true, available: true, planned: true }, promote: { available: true, summary: "2 resin changes · 1 percentage change" } });
+  assert.equal(promote.disabled, false);
+  assert.equal(promote.getAttribute("title"), "Load Next into Current · 2 resin changes · 1 percentage change");
+  assert.match(copy.getAttribute("title"), /replacing what is planned/);
+  promote.click();
+  assert.deepEqual(calls, [], "the first click arms, and calls nothing");
+  assert.equal(rail.isArmed(), true);
+  assert.equal(rail.armedControl(), "promote");
+  assert.equal(rail.getState().armed, false, "the reset is not the one armed");
+  assert.equal(promote.getAttribute("data-armed"), "true");
+  assert.ok(promote.classList.contains("is-armed"));
+  assert.equal(promote.getAttribute("aria-label"), "Confirm: load the planned recipe into Current · 2 resin changes · 1 percentage change");
+  assert.match(promote.getAttribute("title"), /^Click again to load the plan into Current · 2 resin changes · 1 percentage change · receiver weights, tracking and pump state stay with their hoppers; the plan is kept$/);
+  assert.equal(timers.length, 1);
+  promote.click();
+  assert.deepEqual(calls, ["promote"]);
+  assert.equal(rail.isArmed(), false);
+  assert.equal(promote.getAttribute("data-armed"), null);
+  assert.ok(timers[0].cleared, "the confirming click cleared the arm timer");
+  copy.click();
+  assert.deepEqual(calls, ["promote", "copy"]);
+  assert.equal(rail.isArmed(), false, "a copy never arms");
+  // Held: no offer.
+  rail.update({ promote: { available: false, reason: "the application does not offer Load Next into Current from Station." } });
+  assert.equal(promote.disabled, true);
+  assert.equal(promote.getAttribute("title"), "Load Next into Current is not available: the application does not offer Load Next into Current from Station.");
+  promote.click();
+  assert.deepEqual(calls, ["promote", "copy"], "a held control takes no click");
+  rail.update({ copy: { available: false, reason: "no application is connected to Station commands." } });
+  assert.equal(copy.disabled, true);
+  copy.click();
+  assert.deepEqual(calls, ["promote", "copy"]);
+  assert.equal(typeof doc, "object");
+});
+
+test("an armed promotion disarms on its timeout, a click elsewhere, Escape, the focus leaving, the plan vanishing, and the face closing - each without a call; arming one control disarms the other", () => {
+  const { rail, promote, reset, calls, timers, live, doc } = build();
+  const on = () => rail.update({ next: { active: true, available: true, planned: true }, promote: { available: true, summary: "1 resin change" } });
+  live(); on();
+  promote.click();
+  assert.equal(rail.armedControl(), "promote");
+  timers[0].fn();
+  assert.equal(rail.isArmed(), false, "the timeout disarmed it");
+  promote.click();
+  const elsewhere = doc.createElement("div");
+  doc.body.appendChild(elsewhere);
+  elsewhere.dispatchEvent(makeEvent("pointerdown", { bubbles: true }));
+  assert.equal(rail.isArmed(), false, "a click elsewhere disarmed it");
+  promote.click();
+  promote.dispatchEvent(makeEvent("pointerdown", { bubbles: true }));
+  assert.equal(rail.isArmed(), true, "a pointer down on the control itself does not");
+  const escape = makeEvent("keydown", { key: "Escape", bubbles: true });
+  promote.dispatchEvent(escape);
+  assert.equal(rail.isArmed(), false, "Escape disarmed it");
+  assert.equal(escape.stopped, true);
+  promote.focus();
+  promote.click();
+  promote.blur();
+  assert.equal(rail.isArmed(), false, "the focus leaving disarmed it");
+  promote.click();
+  rail.update({ next: { active: true, available: true, planned: false } });
+  assert.equal(rail.isArmed(), false, "the plan vanishing disarmed it");
+  on(); promote.click();
+  rail.update({ next: { active: false, available: true, planned: true } });
+  assert.equal(rail.isArmed(), false, "the face closing disarmed it");
+  on(); promote.click();
+  reset.click();
+  assert.equal(rail.armedControl(), "reset", "arming the reset disarmed the promotion");
+  assert.equal(promote.getAttribute("data-armed"), null);
+  assert.equal(reset.getAttribute("data-armed"), "true");
+  promote.click();
+  assert.equal(rail.armedControl(), "promote", "and back");
+  assert.equal(reset.getAttribute("data-armed"), null);
+  assert.deepEqual(calls, [], "none of it called anything");
+});
+
+test("Smart Hoppers is the Weights switch's child: folded until the Weights face is on, unfolded beside it while it is, and folded again with it - its own state untouched by the fold", () => {
+  const { rail, weights, smart, calls, live } = build();
+  live();
+  rail.update({ weights: { active: false, available: true }, smart: { on: true, available: true } });
+  assert.equal(rail.weightsFlyout.getAttribute("data-open"), "false");
+  assert.ok(rail.weightsFlyout.hasAttribute("inert") && rail.weightsFlyout.getAttribute("aria-hidden") === "true");
+  assert.equal(smart.getAttribute("aria-checked"), "true", "the switch shows its state whether or not it is unfolded");
+  rail.update({ weights: { active: true, available: true } });
+  assert.equal(rail.weightsGroup.getAttribute("data-open"), "true");
+  assert.equal(rail.weightsFlyout.getAttribute("data-open"), "true");
+  assert.ok(!rail.weightsFlyout.hasAttribute("inert") && rail.weightsFlyout.getAttribute("aria-hidden") === "false");
+  smart.click();
+  assert.deepEqual(calls, ["smart"]);
+  weights.click();
+  assert.deepEqual(calls, ["smart", "weights"]);
+  rail.update({ weights: { active: false, available: true } });
+  assert.equal(rail.weightsFlyout.getAttribute("data-open"), "false");
+  assert.equal(smart.getAttribute("aria-checked"), "true");
+  // The Next group is its own: unaffected by the Weights face.
+  assert.equal(rail.flyout.getAttribute("data-open"), "false");
 });

@@ -85,6 +85,57 @@
     return bySlot;
   }
 
+  /* The PLANNED recipe's hopper state - the Next Recipe as the bridge
+   * projects it (`nextRecipe`, recipe fields only) - keyed by slot exactly
+   * as the running job's is, so the same editor can be turned to either.
+   * A plan has no tracking, no pump state, no weight and no geometry: those
+   * keys are absent here by construction, not zeroed, so nothing reading
+   * this map can mistake a plan for a job. Empty when nothing is planned.
+   * The labels are the plan's own (`sources.next`). */
+  function nextHopperStateFrom(snapshot) {
+    const bySlot = {};
+    const plan = snapshot && snapshot.nextRecipe && typeof snapshot.nextRecipe === "object" ? snapshot.nextRecipe : null;
+    if (!plan || !Array.isArray(plan.layers)) return bySlot;
+    const sources = snapshot.sources && typeof snapshot.sources === "object" && snapshot.sources.next
+      && typeof snapshot.sources.next === "object"
+      ? snapshot.sources.next
+      : {};
+    for (const layer of plan.layers) {
+      if (!layer || !Array.isArray(layer.hoppers)) continue;
+      for (const hopper of layer.hoppers) {
+        if (!hopper) continue;
+        const key = `${layer.name}:${hopper.index}`;
+        bySlot[key] = {
+          assigned: !!hopper.resinName,
+          resinName: hopper.resinName || "",
+          pct: Number.isFinite(hopper.pct) ? hopper.pct : 0,
+          source: hookups && typeof hookups.sourceForPosition === "function"
+            ? hookups.sourceForPosition(sources, key, hopper.resinName || "")
+            : ""
+        };
+      }
+    }
+    return bySlot;
+  }
+
+  /* The planned recipe's layer shares, keyed as layerStateFrom keys the
+   * running job's. Empty when nothing is planned. */
+  function nextLayerStateFrom(snapshot) {
+    const byLayer = {};
+    const plan = snapshot && snapshot.nextRecipe && typeof snapshot.nextRecipe === "object" ? snapshot.nextRecipe : null;
+    if (!plan || !Array.isArray(plan.layers)) return byLayer;
+    for (const layer of plan.layers) {
+      if (!layer || !layer.name) continue;
+      byLayer[layer.name] = { layerPct: Number.isFinite(layer.layerPct) ? layer.layerPct : 0 };
+    }
+    return byLayer;
+  }
+
+  /* Whether the application holds a plan at all. */
+  function planFrom(snapshot) {
+    return { planned: !!(snapshot && snapshot.nextRecipe && typeof snapshot.nextRecipe === "object" && Array.isArray(snapshot.nextRecipe.layers)) };
+  }
+
   function smartWeightFrom(raw) {
     if (!raw || typeof raw !== "object") return null;
     const value = Number(raw.value);
@@ -210,7 +261,7 @@
    * @param {string} input.demoId          Which demo entry is selected.
    * @param {string} [input.mode]          "auto" (default) or "demo" to pin
    *        demo data even while the application is connected - the dev mode.
-   * @returns {{kind, modelInput, label, detail, hopperState, layerState, job, live}}
+   * @returns {{kind, modelInput, label, detail, hopperState, layerState, nextHopperState, nextLayerState, plan, job, live}}
    */
   function resolveSource(input) {
     const settings = input || {};
@@ -227,6 +278,11 @@
         modelInput: configFromSnapshot(snapshot),
         hopperState: hopperStateFrom(snapshot),
         layerState: layerStateFrom(snapshot),
+        /* The plan beside the job, through the same two readings; the
+         * Next face turns the editor to these. */
+        nextHopperState: nextHopperStateFrom(snapshot),
+        nextLayerState: nextLayerStateFrom(snapshot),
+        plan: planFrom(snapshot),
         job: jobStateFrom(snapshot),
         recipe: recipeFrom(snapshot),
         smartHoppers: smartHoppersFrom(snapshot),
@@ -259,6 +315,10 @@
        * state, and a demo line is not running a job. */
       hopperState: demoSnapshot ? hopperStateFrom(demoSnapshot) : {},
       layerState: demoSnapshot ? layerStateFrom(demoSnapshot) : {},
+      // A demo line plans nothing, either.
+      nextHopperState: nextHopperStateFrom(demoSnapshot),
+      nextLayerState: nextLayerStateFrom(demoSnapshot),
+      plan: planFrom(demoSnapshot),
       // A demo line runs no job: no output, no changeover, as no tracking.
       job: jobStateFrom(demoSnapshot),
       recipe: recipeFrom(demoSnapshot),
@@ -288,7 +348,8 @@
    *                 a usable volume or a computed Smart Hoppers weight,
    *                 the Smart Hoppers switch or circumference, the line's
    *                 output or changeover, the job's production,
-   *                 scrap or scanned lots. The mounted stage and
+   *                 scrap or scanned lots, or anything in the planned
+   *                 recipe. The mounted stage and
    *                 the editor are patched in place (a hopper whose drawing
    *                 reads nothing new is left alone), and the run-down
    *                 timeline re-projects.
@@ -307,7 +368,11 @@
   }
 
   function valuesKey(resolved) {
-    return JSON.stringify({ hopperState: resolved.hopperState || {}, layerState: resolved.layerState || {}, job: resolved.job || null, smartHoppers: resolved.smartHoppers || null });
+    return JSON.stringify({
+      hopperState: resolved.hopperState || {}, layerState: resolved.layerState || {},
+      nextHopperState: resolved.nextHopperState || {}, nextLayerState: resolved.nextLayerState || {},
+      job: resolved.job || null, smartHoppers: resolved.smartHoppers || null
+    });
   }
 
   function classifyChange(before, after) {
@@ -316,5 +381,5 @@
     return valuesKey(before) === valuesKey(after) ? "none" : "values";
   }
 
-  return { MODE_AUTO, MODE_DEMO, hopperStateFrom, layerStateFrom, jobStateFrom, recipeFrom, smartHoppersFrom, configFromSnapshot, resolveSource, classifyChange };
+  return { MODE_AUTO, MODE_DEMO, hopperStateFrom, layerStateFrom, nextHopperStateFrom, nextLayerStateFrom, planFrom, jobStateFrom, recipeFrom, smartHoppersFrom, configFromSnapshot, resolveSource, classifyChange };
 });

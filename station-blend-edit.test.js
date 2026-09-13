@@ -483,6 +483,45 @@ test("a percentage committed on a card is one setHopperBlend to the Current reci
   assert.equal(card.element.querySelector(".station-editor__total-value").textContent, "110%");
 });
 
+test("the Next face's card is the same card turned to the plan: it reads the plan's hopper state, says so, and every command names the next recipe - the running job never reaches it", () => {
+  const { bridge, calls } = connectedBridge();
+  const planned = snapshot();
+  planned.nextRecipe = { layers: ["A", "B", "C"].map((name, i) => ({
+    name, layerPct: 33,
+    hoppers: Array.from({ length: 6 }, (_, index) => ({ index, pct: index === 0 ? 70 : index === 2 ? 30 : 0, resinName: index === 0 ? `PLAN${i}` : index === 2 ? `PL${i}` : "" }))
+  })) };
+  planned.sources.next = { "A:0": { resin: "PLAN0", source: "SILO 3" } };
+  const r = resolved(planned);
+  const { card } = buildCard(bridge, { hopperState: r.nextHopperState, recipe: "next" });
+  assert.equal(card.element.getAttribute("data-recipe"), "next");
+  assert.equal(card.element.getAttribute("aria-label"), "Layer A planned blend");
+  const rows = card.element.querySelectorAll(".station-editor__item");
+  const resinOf = row => { const node = row.querySelector(".station-editor__resin-value"); return node ? node.textContent : ""; };
+  const pctOf = row => { const node = row.querySelector(".station-editor__pct-input"); return node ? node.value : ""; };
+  assert.deepEqual(rows.slice(0, 3).map(resinOf), ["PLAN0", "", "PL0"]);
+  assert.deepEqual([rows[0], rows[2]].map(pctOf), ["70", "30"]);
+  assert.deepEqual(rows.map(row => row.classList.contains("is-movable")), [true, false, true, false, false, false]);
+  const pct = rows[2].querySelector(".station-editor__pct-input");
+  pct.dispatchEvent({ type: "focus" });
+  pct.value = "25";
+  pct.dispatchEvent({ type: "keydown", key: "Enter", preventDefault() {} });
+  assert.deepEqual(calls, [{ command: "setHopperBlend", args: { recipe: "next", layer: "A", index: 2, pct: 25 } }]);
+  rows[1].querySelector(".station-editor__resin-value").dispatchEvent({ type: "click" });
+  const search = rows[1].querySelector(".station-editor__search");
+  search.value = "NEW";
+  search.dispatchEvent({ type: "input" });
+  search.dispatchEvent({ type: "keydown", key: "Enter", preventDefault() {} });
+  assert.deepEqual(calls[1], { command: "setHopperResin", args: { recipe: "next", layer: "A", index: 1, resin: "NEW1" } });
+  // A publish that empties the plan empties the card - never a fall back
+  // to the running job's hoppers.
+  card.update({ hopperState: resolved(snapshot()).nextHopperState });
+  assert.deepEqual(card.element.querySelectorAll(".station-editor__item").map(resinOf), ["", "", "", "", "", ""]);
+  // The running card is unchanged by any of it: no stamp of the plan.
+  const { card: running } = buildCard(bridge);
+  assert.equal(running.element.getAttribute("data-recipe"), "current");
+  assert.equal(running.element.getAttribute("aria-label"), "Layer A blend");
+});
+
 test("with no commands on offer the card is read-only and says so; it never invents a state to edit", () => {
   const { card } = buildCard(null);
   assert.equal(card.element.getAttribute("data-mode"), "read-only");
@@ -514,7 +553,9 @@ test("the mode is presentation state: two fields, no copy of a recipe, and enter
   // is being switched, the ones already out - and the face's hint said.
   assert.match(enter, /redrawForBlend\(blendEdit\.flipped\.filter\(id => !were\.includes\(id\)\)\.concat\(were\)\);/);
   assert.match(enter, /say\(HINT\[face\]\);/, "the mode says how to leave it and how to turn a layer back");
-  assert.match(boot, /const HINT = \{ blend: BLEND_EDIT_HINT, weights: WEIGHTS_EDIT_HINT \};/);
+  assert.match(boot, /const HINT = \{ blend: BLEND_EDIT_HINT, weights: WEIGHTS_EDIT_HINT, next: NEXT_EDIT_HINT \};/);
+  assert.match(boot, /const FACES = \["blend", "weights", "next"\];/);
+  assert.match(enter, /const face = FACES\.includes\(kind\) \? kind : "blend";/);
   // The rail's switch is the one toggle over the one entry and the one exit.
   const toggle = body("toggleBlendEdit");
   assert.match(toggle, /return modeIs\("blend"\) \? exitBlendEdit\(\) : enterBlendEdit\("blend"\);/);
@@ -561,12 +602,17 @@ test("the stage draws the cards from the same editor, addressed to the same reci
   // from the same builder; the blend face is the editor, as before.
   assert.match(draw, /const card = blendEdit\.kind === "weights" && weightCards \? weightCards\.create\(mounts\.machine\.ownerDocument, \{[\s\S]*?\}\) : focusEditor\.create\(mounts\.machine\.ownerDocument, \{/);
   assert.match(draw, /variant: "compact",/);
-  assert.match(draw, /recipe,\n/, "a card is not addressed to the boot file's one recipe");
+  // A card is addressed to the face's recipe: the running one, or - on
+  // the Next face - the plan, whose hopper state it then reads.
+  assert.match(draw, /const cardRecipe = blendEdit\.kind === "next" \? "next" : recipe;/);
+  assert.match(draw, /const cardHopperState = blendEdit\.kind === "next" \? \(current\.resolved \? current\.resolved\.nextHopperState : null\) : hopperState;/);
+  assert.match(draw, /recipe: cardRecipe,\n/, "a card is not addressed to the face's recipe");
+  assert.match(draw, /hopperState: cardHopperState,\n/, "a card does not read the face's hopper state");
   assert.match(draw, /blendEdit: blendEdit\.active && !focusLayer,/);
   assert.match(draw, /blendCards: cards,/);
   // The value path updates every card in place, as it does the editor.
   const publish = body("onPublish");
-  assert.match(publish, /for \(const id of Object\.keys\(cardHandles\)\) cardHandles\[id\]\.update\(\{ hopperState: resolved\.hopperState, smartHoppers: resolved\.smartHoppers \}\);/);
+  assert.match(publish, /for \(const id of Object\.keys\(cardHandles\)\) \{\n\s+cardHandles\[id\]\.update\(\{\n\s+hopperState: blendEdit\.kind === "next" \? resolved\.nextHopperState : resolved\.hopperState,\n\s+smartHoppers: resolved\.smartHoppers\n\s+\}\);\n\s+\}/);
   // A layer that vanished is dropped from the mode; a line with no layers ends it.
   const all = body("renderAll");
   assert.match(all, /blendEdit\.flipped = blendEdit\.flipped\.filter\(id => !!model && model\.layers\.some\(layer => layer\.id === id\)\);/);

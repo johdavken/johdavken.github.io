@@ -184,6 +184,123 @@
   stroke-linejoin: round;
 }
 
+/* ---- The Next face: its switch, and the two moves beside it ---- */
+
+/* A switch and its children are one group in the rail's column: the
+   switch stands in the column like its neighbours; the flyout is laid
+   beside it to the right, out of the column's flow, so the rail is no
+   wider for it and stands where it stood. Two groups: the Next switch
+   with its two moves, the Weights switch with Smart Hoppers. Each
+   group's stem, bracket and children wear the colour its switch takes
+   when on - the Next face's "upcoming", the Weights face's accent - so
+   the parent and its children read as one. */
+.station-rail__group {
+  --station-rail-stem: var(--station-accent);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.station-rail__group--next {
+  --station-rail-stem: var(--station-timeline-upcoming, var(--station-info));
+}
+
+/* The flyout: the two moves in a row, on a stem from the switch's right
+   edge - a hairline the width of the gap, and a bracket down its own
+   left edge - so they read as the switch's children, not as two more
+   controls of the rail. Folded, it sits under the switch's edge, faded
+   and a little scaled; unfolding, it grows out to the right, the second
+   child a beat behind the first. Visibility follows the motion so the
+   folded flyout is out of the tab order and the reader's tree, and
+   returns at once. */
+.station-rail__flyout {
+  position: absolute;
+  top: 0;
+  left: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--station-space-1);
+  height: 100%;
+  margin-left: var(--station-space-2);
+  padding-left: var(--station-space-2);
+  border-left: var(--station-stroke) solid var(--station-rail-stem);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateX(calc(-1 * var(--station-space-3))) scale(0.85);
+  transform-origin: left center;
+  transition:
+    opacity var(--station-motion-settle) ease-out,
+    transform var(--station-motion-settle) var(--station-motion-ease),
+    visibility 0s linear var(--station-motion-settle);
+}
+
+/* The stem: a hairline from the switch's edge to the bracket. */
+.station-rail__flyout::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 100%;
+  width: var(--station-space-2);
+  border-top: var(--station-stroke) solid var(--station-rail-stem);
+}
+
+.station-rail__flyout[data-open="true"] {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: none;
+  transition:
+    opacity var(--station-motion-settle) ease-out,
+    transform var(--station-motion-settle) var(--station-motion-ease),
+    visibility 0s linear 0s;
+}
+
+/* The children: the switch's own colour on their edges, a size down from
+   the rail's controls, each arriving a beat after the one before. */
+.station-rail__flyout .station-rail__control {
+  border-color: var(--station-rail-stem);
+  transform: translateX(calc(-1 * var(--station-space-2)));
+  opacity: 0;
+  transition: transform var(--station-motion-settle) var(--station-motion-ease), opacity var(--station-motion-settle) ease-out;
+}
+
+.station-rail__flyout .station-rail__control--copy {
+  transition-delay: var(--station-motion-lead);
+}
+
+.station-rail__flyout[data-open="true"] .station-rail__control {
+  transform: none;
+  opacity: 1;
+}
+
+/* The Next face on: the timeline's "upcoming" colour, as the cards
+   wear it (focus-editor.css), instead of the accent the other faces
+   take - so the switch, its stem and the cards say the same thing. */
+.station-root .station-rail__control--next.is-active {
+  border-color: var(--station-timeline-upcoming, var(--station-info));
+  color: var(--station-timeline-upcoming, var(--station-info));
+}
+
+/* The dot on the Next switch: a plan exists. Drawn in the switch's own
+   colour and hidden until the boot file says so - never a second
+   colour on a control at rest. */
+.station-rail__glyph-dot {
+  fill: currentColor;
+  opacity: 0;
+}
+
+.station-rail__control.is-planned .station-rail__glyph-dot {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .station-rail__flyout,
+  .station-rail__flyout .station-rail__control {
+    transition: none;
+  }
+}
+
 /* ---- Smart Hoppers on: the computed colour, as the captions wear it ---- */
 
 /* The switch on is the smart token - the colour a computed weight is

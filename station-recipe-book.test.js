@@ -128,6 +128,16 @@ function producer(overrides) {
       return { ok: true, item: { id: "r-new" } };
     },
     replaceRecipe: async ({ id }) => { env.calls.push(["replaceRecipe", id]); env.handle.publish(); return { ok: true, item: { id } }; },
+    loadRecipe: async ({ id, destination }) => { env.calls.push(["loadRecipe", id, destination]); return { ok: true }; },
+    renameRecipe: async ({ id, name }) => {
+      env.calls.push(["renameRecipe", id, name]);
+      if (env.recipes.some(recipe => recipe.normalizedName === name.toLowerCase())) return { ok: false, code: "duplicate_name", message: "A configuration with that name already exists." };
+      const existing = env.recipes.find(recipe => recipe.id === id); existing.name = name; existing.normalizedName = name.toLowerCase();
+      env.handle.publish();
+      return { ok: true, item: { id } };
+    },
+    duplicateRecipe: async ({ id, name }) => { env.calls.push(["duplicateRecipe", id, name]); env.recipes.push(item("r-copy", name)); env.handle.publish(); return { ok: true, item: { id: "r-copy" } }; },
+    deleteRecipe: async ({ id }) => { env.calls.push(["deleteRecipe", id]); env.recipes = env.recipes.filter(recipe => recipe.id !== id); env.handle.publish(); return { ok: true }; },
     refresh: async () => { env.calls.push(["refresh"]); return { ok: true }; }
   }, overrides || {});
   env.handle = bridge.connect({
@@ -241,7 +251,7 @@ test("Save Current asks for a name in place and hands the application one saveCu
   const input = root.querySelector(".station-book__name");
   assert.equal(focused, input);
   // A blank name goes nowhere.
-  click(byAction(root, "confirm-save"));
+  click(byAction(root, "confirm-entry"));
   await tick();
   assert.deepEqual(env.calls, []);
   assert.equal(input.getAttribute("aria-invalid"), "true");
@@ -258,7 +268,7 @@ test("Save Current asks for a name in place and hands the application one saveCu
   assert.equal(root.querySelector(".station-book__detail-name").textContent, "Barrier run");
   // Cancel closes the entry and asks nothing.
   click(byAction(root, "save-current"));
-  click(byAction(root, "cancel-save"));
+  click(byAction(root, "cancel-entry"));
   assert.ok(hidden(entry));
   click(byAction(root, "save-current"));
   key(input, "Escape");
@@ -272,7 +282,7 @@ test("a duplicate name is the application's answer: the book offers to replace t
   click(byAction(root, "save-current"));
   const input = root.querySelector(".station-book__name");
   input.value = "clear FILM";
-  click(byAction(root, "confirm-save"));
+  click(byAction(root, "confirm-entry"));
   await tick();
   assert.deepEqual(env.calls, [["saveCurrentRecipe", "clear FILM"]]);
   assert.equal(noteOf(root).getAttribute("data-kind"), "error");
@@ -292,10 +302,10 @@ test("a duplicate name is the application's answer: the book offers to replace t
   // Renaming instead: a new name goes as a new save.
   click(byAction(root, "save-current"));
   input.value = "Clear film";
-  click(byAction(root, "confirm-save"));
+  click(byAction(root, "confirm-entry"));
   await tick();
   input.value = "Clear film B";
-  click(byAction(root, "confirm-save"));
+  click(byAction(root, "confirm-entry"));
   await tick();
   assert.deepEqual(env.calls.slice(2), [["saveCurrentRecipe", "Clear film"], ["saveCurrentRecipe", "Clear film B"]]);
   assert.equal(book.getState().selectedId, "r-new");
@@ -309,9 +319,9 @@ test("a failed save says why and leaves the entry and the list as they were; whi
   const { root, book } = build(env);
   click(byAction(root, "save-current"));
   root.querySelector(".station-book__name").value = "New one";
-  click(byAction(root, "confirm-save"));
+  click(byAction(root, "confirm-entry"));
   assert.equal(book.getState().pending, "saveCurrentRecipe");
-  assert.equal(byAction(root, "confirm-save").disabled, true);
+  assert.equal(byAction(root, "confirm-entry").disabled, true);
   assert.equal(byAction(root, "save-current").disabled, true);
   release();
   await tick();
@@ -350,7 +360,7 @@ test("the book carries no Blend Edit control and no page for the mode: the toolb
   const { root, book } = build(env, { blend: stale });
   book.update();
   assert.deepEqual(root.querySelectorAll("[data-action]").map(node => node.getAttribute("data-action")),
-    ["save-current", "refresh", "confirm-save", "replace", "cancel-save"]);
+    ["save-current", "refresh", "confirm-entry", "replace", "cancel-entry"]);
   assert.equal(root.querySelector("[data-role='blend-controls']"), null);
   assert.equal(root.querySelectorAll(".station-book__layer-chip").length, 0);
   assert.equal(root.querySelector(".station-book__blend"), null);
@@ -375,7 +385,7 @@ test("the name entry opens and closes on its own, with nothing else on the bench
   assert.ok(!hidden(entry));
   assert.ok(!hidden(root.querySelector(".station-book__columns")), "the list stays");
   assert.ok(!hidden(root.querySelector(".station-book__toolbar")), "the toolbar stays");
-  click(byAction(root, "cancel-save"));
+  click(byAction(root, "cancel-entry"));
   assert.ok(hidden(entry));
 });
 
@@ -390,4 +400,243 @@ test("the section is what the Handbook takes: an id, a title and a builder, with
   assert.equal(build(null).book.grows(), true, "the answer is the page's kind, not its connection");
   assert.equal(bookModule.normalizedName("  Clear   FILM "), "clear film");
   assert.match(bookModule.rowMeta({ layers: [{}], updatedAt: "" }), /^1 layer$/);
+});
+
+/* ----------------------------------------------------------------------
+ *   The selected recipe's controls: Load, Update, and More
+ * -------------------------------------------------------------------- */
+
+const threeLayers = () => ({ layers: [{ id: "A" }, { id: "B" }, { id: "C" }] });
+const detailOf = root => root.querySelector(".station-book__detail");
+const confirmOf = root => root.querySelector(".station-book__confirm");
+const isPrimary = node => node.classList.contains("is-primary");
+
+test("a selected recipe offers Load first, Update second, and the rest behind More - one primary at a time, nothing sent by any of it", () => {
+  const env = producer();
+  const { root } = build(env, { model: threeLayers });
+  assert.equal(byAction(root, "load"), null, "nothing selected: no actions");
+  assert.ok(isPrimary(byAction(root, "save-current")));
+  click(rows(root)[1]);
+  const load = byAction(root, "load"), update = byAction(root, "update"), more = byAction(root, "more");
+  assert.ok(load && update && more);
+  assert.ok(isPrimary(load), "Load leads");
+  assert.ok(!isPrimary(update) && !isPrimary(more));
+  assert.ok(!isPrimary(byAction(root, "save-current")), "Save Current steps back behind the selection's Load");
+  assert.ok(hidden(root.querySelector(".station-book__overflow")));
+  assert.equal(more.getAttribute("aria-expanded"), "false");
+  click(more);
+  assert.ok(!hidden(root.querySelector(".station-book__overflow")));
+  assert.equal(byAction(root, "more").getAttribute("aria-expanded"), "true");
+  assert.deepEqual(root.querySelector(".station-book__overflow").children.map(b => b.getAttribute("data-action")), ["rename", "duplicate", "delete"]);
+  assert.ok(byAction(root, "delete").classList.contains("is-danger"));
+  // Selecting another recipe closes the overflow.
+  click(rows(root)[0]);
+  assert.ok(hidden(root.querySelector(".station-book__overflow")));
+  assert.equal(confirmOf(root), null);
+  assert.deepEqual(env.calls, []);
+});
+
+test("Load asks where, with what changes and what does not: Current (the running recipe, the line told at once) or Next (the plan only); each is one loadRecipe with that destination", async () => {
+  const env = producer();
+  const { root } = build(env, { model: threeLayers });
+  click(rows(root)[0]);
+  click(byAction(root, "load"));
+  const confirm = confirmOf(root);
+  assert.ok(confirm);
+  assert.equal(confirm.getAttribute("data-kind"), "load");
+  const words = confirm.querySelector(".station-book__confirm-text").textContent;
+  assert.match(words, /^Clear film\. Load into Current changes the line type, hopper naming mode, layer percentages and resin assignments of the RUNNING recipe, and the line is told at once\./);
+  assert.match(words, /Receiver weights, tracking, pump-off state, timeline and runtime state, workspace, RT Sync identity and appearance are not changed\./);
+  assert.match(words, /Load into Next replaces only the planned Next Recipe/);
+  const buttons = confirm.querySelectorAll("[data-action='confirm-load']");
+  assert.deepEqual(buttons.map(b => [b.textContent, b.getAttribute("data-destination"), isPrimary(b), b.disabled]), [["Load into Current", "current", true, false], ["Load into Next", "next", false, false]]);
+  assert.ok(!isPrimary(byAction(root, "load")), "the question's own action is the primary while it is open");
+  assert.deepEqual(env.calls, [], "asking sends nothing");
+  // Cancel sends nothing and closes the question.
+  click(byAction(root, "cancel-confirm"));
+  assert.equal(confirmOf(root), null);
+  assert.deepEqual(env.calls, []);
+  // Current.
+  click(byAction(root, "load"));
+  click(confirmOf(root).querySelector("[data-destination='current']"));
+  await tick();
+  assert.deepEqual(env.calls, [["loadRecipe", "r-fav", "current"]]);
+  assert.equal(confirmOf(root), null);
+  assert.equal(noteOf(root).getAttribute("data-kind"), "ok");
+  assert.match(noteOf(root).textContent, /Loaded “Clear film” into Current: it is the running recipe now\./);
+  // Next.
+  click(byAction(root, "load"));
+  click(confirmOf(root).querySelector("[data-destination='next']"));
+  await tick();
+  assert.deepEqual(env.calls[1], ["loadRecipe", "r-fav", "next"]);
+  assert.match(noteOf(root).textContent, /into Next: it is the planned recipe now\. The running recipe is untouched\./);
+  assert.equal(rows(root)[0].getAttribute("aria-pressed"), "true", "the selection stands after a load");
+});
+
+test("a recipe saved for another layer count says so, and its Load into Current is held with the reason while Load into Next stays offered; with no line model the question is the application's", async () => {
+  const env = producer();
+  env.recipes[1].payload.line_type = 5;
+  const { root } = build(env, { model: threeLayers });
+  click(rows(root)[1]);
+  const compat = root.querySelector(".station-book__compat");
+  assert.ok(compat);
+  assert.equal(compat.getAttribute("data-kind"), "incompatible");
+  assert.equal(compat.textContent, "This recipe is set up for 5 layers, but this line runs 3. It can be loaded into Next, not into Current.");
+  assert.equal(byAction(root, "load").disabled, false, "the question can still be asked: Next is open");
+  click(byAction(root, "load"));
+  const buttons = confirmOf(root).querySelectorAll("[data-action='confirm-load']");
+  assert.equal(buttons[0].disabled, true);
+  assert.match(buttons[0].getAttribute("title"), /set up for 5 layers/);
+  assert.equal(buttons[1].disabled, false);
+  click(buttons[0]);
+  await tick();
+  assert.deepEqual(env.calls, [], "a held control takes no click");
+  click(buttons[1]);
+  await tick();
+  assert.deepEqual(env.calls, [["loadRecipe", "r-2", "next"]]);
+  // No model handed in: nothing is held here; the application decides.
+  const { root: bare } = build(producer());
+  click(rows(bare)[1]);
+  assert.equal(bare.querySelector(".station-book__compat"), null);
+  // Selecting the matching recipe: no note.
+  click(rows(root)[0]);
+  assert.equal(root.querySelector(".station-book__compat"), null);
+});
+
+test("a load the application refuses is said, with its reason, and changes nothing here", async () => {
+  const env = producer({ loadRecipe: async () => ({ ok: false, code: "incompatible", message: "This recipe is set up for 5 layers, but this line runs 3. Nothing was changed." }) });
+  const { root } = build(env, { model: threeLayers });
+  click(rows(root)[0]);
+  click(byAction(root, "load"));
+  click(confirmOf(root).querySelector("[data-destination='current']"));
+  await tick();
+  assert.equal(noteOf(root).getAttribute("data-kind"), "error");
+  assert.equal(noteOf(root).textContent, "This recipe is set up for 5 layers, but this line runs 3. Nothing was changed.");
+  assert.equal(confirmOf(root), null);
+  assert.equal(rows(root)[0].getAttribute("aria-pressed"), "true");
+});
+
+test("Update asks, then is one replaceRecipe by id; Delete asks in the danger colour, then is one deleteRecipe, and the selection is dropped with the recipe", async () => {
+  const env = producer();
+  const { root } = build(env, { model: threeLayers });
+  click(rows(root)[1]);
+  click(byAction(root, "update"));
+  assert.equal(confirmOf(root).getAttribute("data-kind"), "update");
+  assert.match(confirmOf(root).querySelector(".station-book__confirm-text").textContent, /^Replace “Heavy gauge” with the running recipe\? This will save line type, layer percentages, resin assignments and hopper percentages\. It will not save receiver weights, tracking, pump-off, timeline or runtime state\.$/);
+  const go = byAction(root, "confirm");
+  assert.equal(go.textContent, "Update");
+  assert.ok(isPrimary(go));
+  click(go);
+  await tick();
+  assert.deepEqual(env.calls, [["replaceRecipe", "r-2"]]);
+  assert.match(noteOf(root).textContent, /Updated “Heavy gauge” with the running recipe\./);
+  assert.equal(rows(root)[1].getAttribute("aria-pressed"), "true");
+  // Delete.
+  click(byAction(root, "more"));
+  click(byAction(root, "delete"));
+  assert.ok(hidden(root.querySelector(".station-book__overflow")), "the overflow closes when a question opens");
+  assert.equal(confirmOf(root).getAttribute("data-kind"), "delete");
+  assert.equal(confirmOf(root).querySelector(".station-book__confirm-text").textContent, "Delete “Heavy gauge” from this line's shared recipes?");
+  const del = byAction(root, "confirm");
+  assert.equal(del.textContent, "Delete");
+  assert.ok(del.classList.contains("is-danger"));
+  click(del);
+  await tick();
+  assert.deepEqual(env.calls[1], ["deleteRecipe", "r-2"]);
+  assert.equal(rows(root).length, 1);
+  assert.equal(book(root), null);
+  assert.match(noteOf(root).textContent, /Deleted “Heavy gauge”\./);
+  assert.equal(byAction(root, "load"), null, "nothing is selected any more");
+  function book(node) { return node.querySelector("[data-recipe='r-2']"); }
+});
+
+test("Rename and Duplicate ask for a name in the same entry, prefilled, and are one request each with the id and the name; a taken name is the application's answer, said and marked", async () => {
+  const env = producer();
+  const { root } = build(env, { model: threeLayers });
+  const input = root.querySelector(".station-book__name");
+  click(rows(root)[0]);
+  click(byAction(root, "more"));
+  click(byAction(root, "rename"));
+  assert.ok(!hidden(root.querySelector(".station-book__entry")));
+  assert.equal(root.querySelector(".station-book__entry-label").textContent, "Rename “Clear film” to");
+  assert.equal(byAction(root, "confirm-entry").textContent, "Rename");
+  assert.equal(input.value, "Clear film");
+  assert.deepEqual(root.querySelectorAll("[data-action='replace']").map(hidden), [true], "no Replace offer outside a save");
+  input.value = "Heavy gauge";
+  key(input, "Enter");
+  await tick();
+  assert.deepEqual(env.calls, [["renameRecipe", "r-fav", "Heavy gauge"]]);
+  assert.equal(noteOf(root).getAttribute("data-kind"), "error");
+  assert.equal(input.getAttribute("aria-invalid"), "true");
+  assert.ok(!hidden(root.querySelector(".station-book__entry")), "the entry stays for another name");
+  input.value = "Clear film v2";
+  click(byAction(root, "confirm-entry"));
+  await tick();
+  assert.deepEqual(env.calls[1], ["renameRecipe", "r-fav", "Clear film v2"]);
+  assert.ok(hidden(root.querySelector(".station-book__entry")));
+  assert.equal(rows(root)[0].querySelector(".station-book__row-name").textContent, "Clear film v2", "the book redrew from the publish");
+  assert.match(noteOf(root).textContent, /Renamed to “Clear film v2”\./);
+  // Duplicate: prefilled as a copy, the copy selected after.
+  click(byAction(root, "more"));
+  click(byAction(root, "duplicate"));
+  assert.equal(root.querySelector(".station-book__entry-label").textContent, "Duplicate “Clear film v2” as");
+  assert.equal(input.value, "Clear film v2 copy");
+  assert.equal(byAction(root, "confirm-entry").textContent, "Duplicate");
+  key(input, "Enter");
+  await tick();
+  assert.deepEqual(env.calls[2], ["duplicateRecipe", "r-fav", "Clear film v2 copy"]);
+  assert.equal(root.querySelector("[data-recipe='r-copy']").getAttribute("aria-pressed"), "true");
+  assert.match(noteOf(root).textContent, /Duplicated as “Clear film v2 copy”\./);
+  // Escape closes a rename entry with nothing sent; a blank name is refused here.
+  click(byAction(root, "more"));
+  click(byAction(root, "rename"));
+  input.value = "  ";
+  key(input, "Enter");
+  await tick();
+  assert.equal(env.calls.length, 3);
+  assert.equal(noteOf(root).textContent, "Give the recipe a name.");
+  key(input, "Escape");
+  assert.ok(hidden(root.querySelector(".station-book__entry")));
+  assert.equal(env.calls.length, 3);
+});
+
+test("while a request runs every control is held; a publish that drops the selected recipe clears its question and overflow; selecting another recipe closes an open rename", async () => {
+  let release;
+  const env = producer({ deleteRecipe: () => new Promise(resolve => { release = resolve; }) });
+  const { root, book } = build(env, { model: threeLayers });
+  click(rows(root)[1]);
+  click(byAction(root, "more"));
+  click(byAction(root, "delete"));
+  click(byAction(root, "confirm"));
+  assert.equal(book.getState().pending, "deleteRecipe");
+  assert.ok(byAction(root, "load").disabled && byAction(root, "update").disabled && byAction(root, "more").disabled);
+  assert.ok(byAction(root, "save-current").disabled && byAction(root, "refresh").disabled);
+  assert.ok(byAction(root, "confirm").disabled);
+  release({ ok: true });
+  await tick();
+  assert.equal(book.getState().pending, null);
+  // The recipe vanishing from the book, from elsewhere.
+  click(rows(root)[0]);
+  click(byAction(root, "update"));
+  click(byAction(root, "more"));
+  assert.ok(confirmOf(root));
+  env.recipes = env.recipes.filter(recipe => recipe.id !== "r-fav");
+  env.handle.publish();
+  book.update();
+  assert.equal(book.getState().selectedId, null);
+  assert.equal(book.getState().confirm, null);
+  assert.equal(book.getState().moreOpen, false);
+  assert.equal(confirmOf(root), null);
+  // A rename entry closes when the selection moves; a save entry does not.
+  const fresh = producer();
+  const { root: r2, book: b2 } = build(fresh, { model: threeLayers });
+  click(rows(r2)[0]);
+  click(byAction(r2, "more"));
+  click(byAction(r2, "rename"));
+  click(rows(r2)[1]);
+  assert.equal(b2.getState().entry, null);
+  click(byAction(r2, "save-current"));
+  click(rows(r2)[0]);
+  assert.deepEqual(b2.getState().entry, { mode: "save", id: null });
+  assert.deepEqual(fresh.calls, []);
 });

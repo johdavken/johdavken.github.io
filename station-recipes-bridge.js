@@ -1,5 +1,5 @@
 /* Station recipes bridge - the workspace's saved recipes as Station is
- * allowed to see them, and the three things it is allowed to ask of them.
+ * allowed to see them, and the seven things it is allowed to ask of them.
  *
  * THE FOURTH BRIDGE
  *
@@ -28,8 +28,10 @@
  * deep-cloned and deeply frozen, one coalesced notification per tick. The
  * letterbox carries a fixed vocabulary of ACTIONS to functions the
  * application hands over at connect time - the application's OWN save,
- * update and refresh, the same closures the floor UI's Recipe Book runs -
- * and returns a frozen result value, never a throw.
+ * update, load, rename, duplicate, delete and refresh, the same closures
+ * the floor UI's Recipe Book runs - and returns a frozen result value,
+ * never a throw. A load names its destination: the running recipe, or
+ * the plan (the application's own two, as its load dialog offers them).
  *
  * WHAT CROSSES, AND WHAT DOES NOT
  *
@@ -56,22 +58,37 @@
    * operation the floor UI's Recipe Book already has a button for; a name
    * outside this list is refused at connect time and at request time. */
   const ACTIONS = Object.freeze([
-    "saveCurrentRecipe",  // { name }  save the running recipe under a new name
-    "replaceRecipe",      // { id }    overwrite a saved recipe with the running one
-    "refresh"             //           re-read the workspace's recipes from the cloud
+    "saveCurrentRecipe",  // { name }             save the running recipe under a new name
+    "replaceRecipe",      // { id }               overwrite a saved recipe with the running one
+    "loadRecipe",         // { id, destination }  apply a saved recipe to the running
+                          //                      recipe ("current") or the plan ("next")
+    "renameRecipe",       // { id, name }
+    "duplicateRecipe",    // { id, name }         a copy under a new name
+    "deleteRecipe",       // { id }
+    "refresh"             //                      re-read the workspace's recipes from the cloud
   ]);
+
+  /* Where a load may land: the application's two recipes. */
+  const DESTINATIONS = Object.freeze(["current", "next"]);
 
   /* The arguments each action takes, and nothing else crosses. */
   const ARGUMENTS = Object.freeze({
     saveCurrentRecipe: Object.freeze(["name"]),
     replaceRecipe: Object.freeze(["id"]),
+    loadRecipe: Object.freeze(["id", "destination"]),
+    renameRecipe: Object.freeze(["id", "name"]),
+    duplicateRecipe: Object.freeze(["id", "name"]),
+    deleteRecipe: Object.freeze(["id"]),
     refresh: Object.freeze([])
   });
 
   /* The service's own failure codes, so Station can tell a duplicate name
-   * (offer to replace) from everything else (say why). */
+   * (offer to replace) from everything else (say why); plus the two the
+   * load adds - the recipe is gone from the workspace, or it was saved
+   * for a different layer count than the line runs. */
   const ERROR_CODES = Object.freeze([
     "unknown_action", "unavailable", "bad_argument", "duplicate_name", "invalid_name",
+    "not_found", "incompatible",
     "access_denied", "not_authenticated", "network_error", "failed"
   ]);
 
@@ -181,12 +198,18 @@
 
   /* The request's arguments, checked and rebuilt: a name is text with its
    * whitespace collapsed (the server normalizes it again, by its own rule),
-   * an id is text. Anything else that was passed is dropped. */
+   * an id is text, a destination is one of the two recipes. Anything else
+   * that was passed is dropped. */
   function normalizeArguments(name, args) {
     const given = args && typeof args === "object" ? args : {};
     const out = {};
     for (const field of ARGUMENTS[name]) {
       const value = given[field];
+      if (field === "destination") {
+        if (!DESTINATIONS.includes(value)) return failure("bad_argument", 'The destination must be "current" or "next".', { field });
+        out[field] = value;
+        continue;
+      }
       if (typeof value !== "string" || !value.trim()) {
         return failure("bad_argument", field === "name" ? "A recipe name is required." : "The recipe must be named by id.", { field });
       }
@@ -270,6 +293,7 @@
 
   return Object.freeze({
     ACTIONS,
+    DESTINATIONS,
     ARGUMENTS,
     ERROR_CODES,
     project,

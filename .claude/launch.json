@@ -32,6 +32,16 @@
         "8792"
       ],
       "port": 8792
+    },
+    {
+      "name": "station-next-face",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "tools/serve.js",
+        "--port",
+        "8796"
+      ],
+      "port": 8796
     }
   ]
 }

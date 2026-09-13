@@ -21,7 +21,7 @@ const GOOD = { recipe: "current", layer: "A", index: 1, pct: 25, resin: "HX204",
 
 test("the approved command vocabulary, and nothing else", () => {
   assert.deepEqual([...contract.COMMANDS],
-    ["setHopperResin", "setHopperBlend", "setLayerShare", "clearHopper", "setSource", "moveHopper", "setHopperTracking", "setPumpOff", "resetTracking", "undo", "redo", "setLineRate", "setChangeover", "setProductionPounds", "setScrapPounds", "setHopperWeight", "setHopperWeights", "setHopperGeometry", "setHopperGeometries", "setHopperCircumference", "setSmartHoppers"]);
+    ["setHopperResin", "setHopperBlend", "setLayerShare", "clearHopper", "setSource", "moveHopper", "setHopperTracking", "setPumpOff", "resetTracking", "undo", "redo", "setLineRate", "setChangeover", "setProductionPounds", "setScrapPounds", "setHopperWeight", "setHopperWeights", "setHopperGeometry", "setHopperGeometries", "setHopperCircumference", "setSmartHoppers", "promoteNextRecipe", "copyCurrentToNext"]);
   assert.ok(Object.isFrozen(contract.COMMANDS));
   assert.deepEqual([...contract.RECIPES], ["current", "next"]);
   assert.deepEqual([...contract.JOB_COMMANDS], ["setLineRate", "setChangeover", "setProductionPounds", "setScrapPounds"]);
@@ -30,7 +30,7 @@ test("the approved command vocabulary, and nothing else", () => {
     // A recipe command names its recipe first; a job command names no
     // recipe at all - output and changeover belong to the whole job - nor
     // does the device's preference, nor the line's one circumference.
-    if (contract.JOB_COMMANDS.includes(command) || contract.PREFERENCE_COMMANDS.includes(command) || command === "setHopperCircumference") {
+    if (contract.JOB_COMMANDS.includes(command) || contract.PREFERENCE_COMMANDS.includes(command) || contract.PLAN_COMMANDS.includes(command) || command === "setHopperCircumference") {
       assert.ok(!contract.ARGUMENTS[command].includes("recipe"), `${command} names a recipe`);
     } else {
       assert.equal(contract.ARGUMENTS[command][0], "recipe", `${command} does not name its recipe first`);
@@ -83,7 +83,7 @@ test("setChangeover takes an absolute instant in epoch milliseconds, or null to 
 test("the error vocabulary is declared in full, with a default message for each code", () => {
   assert.deepEqual([...contract.ERROR_CODES], [
     "unavailable", "rearranging", "busy", "unknown_command", "bad_argument", "unknown_layer",
-    "unknown_hopper", "h1_derived", "out_of_range", "blend_total", "no_resin", "empty_hopper", "nothing_to_undo", "internal"
+    "unknown_hopper", "h1_derived", "out_of_range", "blend_total", "no_resin", "empty_hopper", "nothing_to_undo", "no_plan", "internal"
   ]);
   for (const code of contract.ERROR_CODES) {
     assert.equal(typeof contract.MESSAGES[code], "string", `${code} has no message`);
@@ -506,4 +506,21 @@ test("the circumference is the line's one value - no recipe, no position - and t
   assert.equal(contract.normalizeMeasure("").ok, false);
   assert.deepEqual(contract.normalizeDimension("volume"), { ok: true, value: "volume" });
   assert.equal(contract.normalizeDimension("Volume").ok, false);
+});
+
+test("the plan commands are the two moves between the running recipe and the planned one: no recipe, no position, no arguments at all", () => {
+  assert.deepEqual([...contract.PLAN_COMMANDS], ["promoteNextRecipe", "copyCurrentToNext"]);
+  assert.ok(Object.isFrozen(contract.PLAN_COMMANDS));
+  for (const command of contract.PLAN_COMMANDS) {
+    assert.deepEqual([...contract.ARGUMENTS[command]], []);
+    assert.ok(!contract.RUNTIME_COMMANDS.includes(command) && !contract.EQUIPMENT_COMMANDS.includes(command) && !contract.JOB_COMMANDS.includes(command));
+    // Whatever is handed over is dropped: the direction is the command.
+    const checked = contract.normalizeArguments(command, { recipe: "next", layer: "A", index: 0 });
+    assert.equal(checked.ok, true);
+    assert.deepEqual(checked.args, {});
+    assert.ok(Object.isFrozen(checked.args));
+    assert.equal(contract.normalizeArguments(command).ok, true);
+  }
+  // Its one failure of its own: nothing planned, or a plan that cannot be promoted.
+  assert.equal(contract.failure("no_plan").message, contract.MESSAGES.no_plan);
 });

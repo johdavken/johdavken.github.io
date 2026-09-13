@@ -30,6 +30,7 @@ const hookups = require("./hookup-sources.js");
 const nextRecipe = require("./next-recipe.js");
 const validation = require("./validation.js");
 const rearrangement = require("./hopper-rearrangement.js");
+const payloads = require("./workspace-configuration-payloads.js");
 
 /* ----------------------------------------------------------------------
  *   Lifting the application's own code
@@ -52,6 +53,8 @@ const LIFTED = [
   block("    function hookupRecipePositions(){", "    function renderResultsFlat("),
   block("    function hasTrackedHoppers(){", "\n    }\n"),
   block("    function clearAllTracking(){", "\n    }\n"),
+  block("    function loadNextRecipeIntoCurrent(){", "\n    }\n"),
+  block("    function loadCurrentRecipeIntoNext(){", "\n    }\n"),
   block("  function createStationCommandExecutor(){", "\n  }\n")
 ].join("\n");
 
@@ -96,6 +99,10 @@ function boot(options) {
     function renderSplitsArea(){ log.renders += 1; }
     function renderTimelineHookups(){ log.hookupRenders += 1; }
     function renderWeightsArea(){ log.weightsRenders = (log.weightsRenders || 0) + 1; }
+    function syncLineTypeUI(){ log.lineTypeSyncs = (log.lineTypeSyncs || 0) + 1; }
+    // The two whole-recipe moves notify RT Sync themselves, after their own
+    // validateAndCompute() without sync - the same log line either way.
+    function notifyActiveJobMutation({ immediate = false, kind = "edit" } = {}){ log.notified.push({ immediate, kind }); }
     /* Smart Hoppers' two helpers as app.js has them: the line's geometry
      * mode from the one resolver, and the circumference setter that keeps
      * the legacy per-hopper mirror aligned. */
@@ -142,7 +149,7 @@ function boot(options) {
     };
   `);
   const env = {
-    window: { PolynHookupSources: hookups, PolynNextRecipe: nextRecipe, PolynHopperRearrangement: rearrangement },
+    window: { PolynHookupSources: hookups, PolynNextRecipe: nextRecipe, PolynHopperRearrangement: rearrangement, PolynWorkspaceConfigurationPayloads: payloads },
     state: settings.state || {
       lineType: 3, hopperNamingLine9: "standard",
       layers: layersFor(["A", "B", "C"], "LIVE"),
@@ -182,7 +189,7 @@ test("unavailable until the application connects; available with exactly the imp
   const handle = h.commands.connect({ execute: h.executor.execute, capabilities: h.executor.capabilities });
   assert.equal(h.commands.isAvailable(), true);
   assert.deepEqual([...h.commands.capabilities()].sort(), [...contract.COMMANDS].sort());
-  assert.deepEqual(h.executor.capabilities, ["setHopperResin", "setHopperBlend", "setLayerShare", "clearHopper", "setSource", "moveHopper", "setHopperTracking", "setPumpOff", "resetTracking", "setLineRate", "setChangeover", "setProductionPounds", "setScrapPounds", "setHopperWeight", "setHopperWeights", "setHopperGeometry", "setHopperGeometries", "setHopperCircumference", "setSmartHoppers", "undo", "redo"]);
+  assert.deepEqual(h.executor.capabilities, ["setHopperResin", "setHopperBlend", "setLayerShare", "clearHopper", "setSource", "moveHopper", "setHopperTracking", "setPumpOff", "resetTracking", "setLineRate", "setChangeover", "setProductionPounds", "setScrapPounds", "setHopperWeight", "setHopperWeights", "setHopperGeometry", "setHopperGeometries", "setHopperCircumference", "setSmartHoppers", "promoteNextRecipe", "copyCurrentToNext", "undo", "redo"]);
   assert.throws(() => h.commands.connect({ execute: () => {}, capabilities: [] }), /already connected/);
   assert.equal(handle.disconnect(), true);
   assert.equal(h.commands.isAvailable(), false);
@@ -205,7 +212,7 @@ test("app.js installs the executor once, beside the state bridge, and nothing el
   for (const file of fs.readdirSync(path.join(ROOT, "station")).filter(name => name.endsWith(".js"))) {
     const source = fs.readFileSync(path.join(ROOT, "station", file), "utf8");
     assert.doesNotMatch(source, /PolynStationCommandBridge\s*\.\s*connect|commands\.connect\s*\(/, `${file} connects a producer`);
-    if (!["station-focus-editor.js", "station-hopper-controls.js", "station-job-controls.js", "station-layer-share.js", "station-resin-totals.js", "station-weights.js", "station-weight-cards.js"].includes(file)) assert.doesNotMatch(source, /\.dispatch\s*\(/, `${file} dispatches a command`);
+    if (!["station-focus-editor.js", "station-hopper-controls.js", "station-plan-controls.js", "station-job-controls.js", "station-layer-share.js", "station-resin-totals.js", "station-weights.js", "station-weight-cards.js"].includes(file)) assert.doesNotMatch(source, /\.dispatch\s*\(/, `${file} dispatches a command`);
   }
 });
 
@@ -1524,4 +1531,104 @@ test("app.js hands the state bridge its own Smart Hoppers computation and geomet
   assert.doesNotMatch(executor, /state\.hopperCircumference\s*=/, "the circumference goes through the application's own setter");
   assert.match(executor, /setWorkspaceHopperCircumference\(args\.circumference\);/);
   assert.equal((executor.match(/currentSmartHopperGeometryMode\(\)/g) || []).length, 3, "the one resolver: geometryRefusal, the circumference, the switch");
+});
+
+/* ----------------------------------------------------------------------
+ *   The plan: promote and copy
+ * -------------------------------------------------------------------- */
+
+function storedPlan(prefix) {
+  return nextRecipe.normalize({
+    schema_version: 1, line_type: 3, hopper_naming_mode: "standard",
+    layers: ["A", "B", "C"].map((name, at) => ({
+      name, layer_pct: at === 0 ? 34 : 33,
+      hoppers: Array.from({ length: 6 }, (_, i) => ({ resin_name: i === 0 ? `${prefix}-${name}0` : i === 2 ? `${prefix}-${name}2` : null, pct: i === 0 ? 75 : i === 2 ? 25 : 0 }))
+    }))
+  });
+}
+
+test("promoteNextRecipe IS Load Next Recipe: recipe fields replace the running recipe, the hopper in each position keeps its weight, tracking, pump and geometry, the plan is kept, Current's history is dropped, one immediate load-next-recipe notification", () => {
+  const h = boot({ nextRecipe: storedPlan("PLAN") });
+  h.dispatch("setHopperResin", Object.assign({}, CUR, { index: 4, resin: "TEMP" }));
+  assert.equal(h.recipeEditHistory.current.undo.length, 1);
+  const before = { saves: h.log.saves, notified: h.log.notified.length };
+  const revision = h.stationBridge.getRevision();
+  const result = h.dispatch("promoteNextRecipe", { recipe: "next" });
+  assert.equal(result.ok, true);
+  assert.equal(result.changed, true);
+  assert.ok(result.revision > revision);
+  const a = h.state.layers[0];
+  assert.equal(a.layerPct, 34);
+  assert.deepEqual(a.hoppers.map(x => x.resinName), ["PLAN-A0", "", "PLAN-A2", "", "", ""]);
+  assert.deepEqual(a.hoppers.map(x => x.pct), [75, 0, 25, 0, 0, 0]);
+  // Physical and runtime state stayed with the position.
+  assert.deepEqual(a.hoppers.map(x => x.weight), [400, 400, 0, 0, 0, 0]);
+  assert.deepEqual(a.hoppers.map(x => x.track), [true, false, false, false, false, false]);
+  assert.equal(a.hoppers[0].usableHeight, 30);
+  assert.deepEqual(h.state.nextRecipe, storedPlan("PLAN"), "the plan is kept after promotion");
+  assert.equal(h.recipeEditHistory.current.undo.length, 0, "a whole-recipe load discards Current's history");
+  assert.equal(h.log.notified.length - before.notified, 1);
+  assert.deepEqual(h.log.notified.at(-1), { immediate: true, kind: "load-next-recipe" });
+  assert.ok(h.log.saves > before.saves);
+  assert.equal(result.snapshot.layers[0].hoppers[2].resinName, "PLAN-A2");
+});
+
+test("promoteNextRecipe refuses no plan and an unpromotable plan as no_plan, and a plan that matches the running recipe is a no-op - touching nothing", () => {
+  const empty = boot();
+  const json = empty.stateJson();
+  const none = empty.dispatch("promoteNextRecipe", {});
+  assert.equal(none.ok, false);
+  assert.equal(none.code, "no_plan");
+  assert.equal(empty.stateJson(), json);
+  assert.equal(empty.log.notified.length, 0);
+  const bad = storedPlan("PLAN");
+  bad.layers[1].layer_pct = 10;
+  const off = boot({ nextRecipe: bad });
+  const refused = off.dispatch("promoteNextRecipe", {});
+  assert.equal(refused.code, "no_plan");
+  assert.match(refused.message, /total 100/);
+  assert.equal(off.log.saves, 0);
+  const same = boot();
+  same.state.layers[0].layerPct = 34; // the fixture's thirds total 99; a promotable plan totals 100
+  same.state.nextRecipe = nextRecipe.fromCurrent(same.state);
+  const noop = same.dispatch("promoteNextRecipe", {});
+  assert.equal(noop.ok, true);
+  assert.equal(noop.changed, false);
+  assert.equal(same.log.saves, 0);
+  assert.equal(same.log.notified.length, 0);
+});
+
+test("copyCurrentToNext IS Load Current Recipe: the running recipe's fields become the plan, the job is untouched, one immediate load-current-recipe notification; a matching plan is a no-op", () => {
+  const h = boot({ nextRecipe: storedPlan("OLD") });
+  h.dispatch("setHopperResin", Object.assign({}, NXT, { index: 5, resin: "DRAFT" }));
+  assert.equal(h.recipeEditHistory.next.undo.length, 1);
+  const layersBefore = JSON.stringify(h.state.layers);
+  const before = h.log.notified.length;
+  const result = h.dispatch("copyCurrentToNext", {});
+  assert.equal(result.ok, true);
+  assert.equal(result.changed, true);
+  assert.deepEqual(h.state.nextRecipe, nextRecipe.fromCurrent(h.state));
+  assert.equal(h.state.nextRecipe.layers[0].hoppers[5].resin_name, null, "the old plan's draft is gone");
+  assert.equal(JSON.stringify(h.state.layers), layersBefore, "the running recipe is untouched");
+  assert.equal(h.recipeEditHistory.next.undo.length, 0);
+  assert.equal(h.log.notified.length - before, 1);
+  assert.deepEqual(h.log.notified.at(-1), { immediate: true, kind: "load-current-recipe" });
+  assert.equal(result.snapshot.nextRecipe.layers[0].hoppers[0].resinName, "LIVE-A0");
+  const again = h.dispatch("copyCurrentToNext", {});
+  assert.equal(again.changed, false);
+  assert.equal(h.log.notified.length - before, 1);
+});
+
+test("the plan commands are refused while rearranging or applying a remote change, touching nothing", () => {
+  for (const command of ["promoteNextRecipe", "copyCurrentToNext"]) {
+    const h = boot({ nextRecipe: storedPlan("PLAN") });
+    const json = h.stateJson();
+    h.setRearranging(true);
+    assert.equal(h.dispatch(command, {}).code, "rearranging");
+    h.setRearranging(false);
+    h.setApplyingRemote(true);
+    assert.equal(h.dispatch(command, {}).code, "busy");
+    assert.equal(h.stateJson(), json);
+    assert.equal(h.log.saves, 0);
+  }
 });

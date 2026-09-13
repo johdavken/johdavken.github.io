@@ -895,7 +895,9 @@
     if(item.type==="recipe"){
       const result=applyRecipeToActivePage(item.payload,{kind:"load-workspace-configuration",destination});
       workspaceConfigurationStatus(result.ok ? `Recipe loaded into ${recipePageLabel(destination)}.` : (result.message || "This shared configuration could not be loaded."));
-      return;
+      // Said back to whoever asked (Station's Recipe Book): whether the
+      // load took, and why not. The floor UI's dialog ignores it.
+      return result;
     }
     const result=window.PolynWorkspaceConfigurationPayloads?.applyReceiverWeightProfile(state,item.payload);
     if(!result?.ok){ const message=result?.errors?.[0] || "This shared configuration could not be loaded."; workspaceConfigurationStatus(message); return { ok:false, message }; }
@@ -10163,6 +10165,33 @@
         return done(true, persisted);
       },
 
+      /* The two moves between the recipes, each the floor UI's own function
+       * with its own tail (Load Next Recipe, Load Current Recipe): the plan
+       * promoted over the running recipe - weights, tracking, pump-off and
+       * geometry carried forward by the hopper in each position, the plan
+       * kept - or the running recipe copied over the plan. A plan that is
+       * not promotable (nothing planned, or shares/blends off 100) is
+       * refused as no_plan; one that would change nothing is a no-op. */
+      promoteNextRecipe(){
+        const N = window.PolynNextRecipe;
+        if (!N?.isPromotable(state.nextRecipe)) return contract.failure("no_plan", {
+          message: N?.isMeaningful(state.nextRecipe) ? "The planned recipe cannot be loaded yet: its layer shares or a layer's hopper percentages do not total 100." : undefined
+        });
+        if (N.summarizeChange(N.fromCurrent(state), state.nextRecipe)?.unchanged) return unchanged();
+        const result = loadNextRecipeIntoCurrent();
+        if (!result?.ok) return contract.failure("internal", { message: result?.message });
+        return done(true, true);
+      },
+      copyCurrentToNext(){
+        const N = window.PolynNextRecipe;
+        const current = N?.fromCurrent(state);
+        if (!N?.isMeaningful(current)) return contract.failure("no_plan", { message: "The running recipe has nothing to copy into the plan." });
+        if (N.summarizeChange(state.nextRecipe, current)?.unchanged) return unchanged();
+        const result = loadCurrentRecipeIntoNext();
+        if (!result?.ok) return contract.failure("internal");
+        return done(true, true);
+      },
+
       /* The toolbar's Undo/Redo, addressed explicitly. Checked before the
        * helper runs so an empty stack never touches Next's working copy. */
       undo(args){
@@ -10379,6 +10408,16 @@
   function stationRecipePayload(){ return window.PolynWorkspaceConfigurationPayloads?.createRecipePayload(state) || null; }
   function connectStationRecipes(){
     if (!stationRecipes || stationRecipesHandle) return;
+    const NO_WORKSPACE = { ok:false, code:"unavailable", message:"Connect to an RT Sync workspace to use shared recipes." };
+    const GONE = { ok:false, code:"not_found", message:"That saved recipe is no longer in this workspace." };
+    // A saved recipe by id, from the service's own list for the selected
+    // workspace - never another workspace's, never a weight profile.
+    function findRecipe(id){
+      const workspaceId = lineSync?.getState?.().selectedWorkspaceId || "";
+      if (!workspaceId || !workspaceConfigurations) return { workspaceId:"", existing:null };
+      const existing = workspaceConfigurations.listRecipes(workspaceId).items.find(item=>item.id === id && item.type === "recipe") || null;
+      return { workspaceId, existing };
+    }
     try{
       stationRecipesHandle = stationRecipes.connect({
         read: ()=>{
@@ -10401,16 +10440,43 @@
             if (result?.code !== "duplicate_name") finishWorkspaceConfigurationMutation(result, "Configuration saved successfully.");
             return result;
           },
+          // Update, rename, duplicate and delete ARE the floor UI's own
+          // closures: mutateWorkspaceConfiguration, with its messages.
           replaceRecipe: async ({ id })=>{
-            const workspaceId = lineSync?.getState?.().selectedWorkspaceId || "";
-            if (!workspaceId || !workspaceConfigurations) return { ok:false, code:"unavailable", message:"Connect to an RT Sync workspace to save shared recipes." };
-            const existing = workspaceConfigurations.listRecipes(workspaceId).items.find(item=>item.id === id);
-            if (!existing) return { ok:false, code:"failed", message:"That saved recipe is no longer in this workspace." };
-            const payload = stationRecipePayload();
-            if (!payload) return { ok:false, code:"failed", message:"The running recipe could not be read." };
-            const result = await workspaceConfigurations.update(workspaceId, existing.id, payload);
-            finishWorkspaceConfigurationMutation(result, "Configuration updated successfully.");
-            return result;
+            const { workspaceId, existing } = findRecipe(id);
+            if (!workspaceId) return NO_WORKSPACE;
+            if (!existing) return GONE;
+            return mutateWorkspaceConfiguration("update", existing);
+          },
+          renameRecipe: async ({ id, name })=>{
+            const { workspaceId, existing } = findRecipe(id);
+            if (!workspaceId) return NO_WORKSPACE;
+            if (!existing) return GONE;
+            return mutateWorkspaceConfiguration("rename", existing, name);
+          },
+          duplicateRecipe: async ({ id, name })=>{
+            const { workspaceId, existing } = findRecipe(id);
+            if (!workspaceId) return NO_WORKSPACE;
+            if (!existing) return GONE;
+            return mutateWorkspaceConfiguration("duplicate", existing, name);
+          },
+          deleteRecipe: async ({ id })=>{
+            const { workspaceId, existing } = findRecipe(id);
+            if (!workspaceId) return NO_WORKSPACE;
+            if (!existing) return GONE;
+            return mutateWorkspaceConfiguration("delete", existing);
+          },
+          // The load is the floor UI's own apply, with its own two
+          // destinations and tails: into Current, the layer-count guard,
+          // the payload helper's validated atomic write, render / validate
+          // / save and RT Sync told at once; into Next, the plan replaced
+          // and the session saved. Station is told only whether it took.
+          loadRecipe: async ({ id, destination })=>{
+            const { workspaceId, existing } = findRecipe(id);
+            if (!workspaceId) return NO_WORKSPACE;
+            if (!existing) return GONE;
+            const result = applyWorkspaceConfiguration(existing, destination);
+            return result?.ok ? { ok:true } : { ok:false, code:"incompatible", message: result?.message || "This shared recipe could not be loaded." };
           },
           refresh: async ()=>{
             const workspaceId = lineSync?.getState?.().selectedWorkspaceId || "";

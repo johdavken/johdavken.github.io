@@ -95,7 +95,11 @@
     "setHopperCircumference", // { circumference } the line's one shared
                         //   hopper circumference, inches, for cylindrical
                         //   lines; 0 clears
-    "setSmartHoppers"   // { enabled }  this device's Smart Hoppers switch
+    "setSmartHoppers",  // { enabled }  this device's Smart Hoppers switch
+    "promoteNextRecipe", // {}  the planned recipe becomes the running one -
+                        //   the floor UI's Load Next Recipe; the plan is kept
+    "copyCurrentToNext" // {}  the running recipe becomes the plan - the
+                        //   floor UI's Load Current Recipe; the job is untouched
   ]);
 
   /* The three runtime commands. Tracking and pump-off are operational state
@@ -147,6 +151,16 @@
    * position. */
   const PREFERENCE_COMMANDS = Object.freeze(["setSmartHoppers"]);
 
+  /* The two plan commands. Promotion and copying are the two moves between
+   * the running recipe and the planned one, and each is a whole-recipe
+   * operation the floor UI already defines (Load Next Recipe, Load Current
+   * Recipe): recipe fields cross - layer shares, resins, blends - and
+   * nothing else can, because a recipe payload has no weights, tracking or
+   * pump state (next-recipe.js). Both name no recipe: the direction is the
+   * command. What is planned, and whether it is promotable, is the
+   * executor's question; a plan that would change nothing is a no-op. */
+  const PLAN_COMMANDS = Object.freeze(["promoteNextRecipe", "copyCurrentToNext"]);
+
   /* The two ways a line measures its hoppers for Smart Hoppers, as
    * line-identity.js names the geometry (`hopperGeometry`), so the value
    * a command sets is stated in the line's own terms. */
@@ -180,7 +194,9 @@
     setHopperGeometry: Object.freeze(["recipe", "layer", "index", "dimension", "value"]),
     setHopperGeometries: Object.freeze(["recipe", "geometries"]),
     setHopperCircumference: Object.freeze(["circumference"]),
-    setSmartHoppers: Object.freeze(["enabled"])
+    setSmartHoppers: Object.freeze(["enabled"]),
+    promoteNextRecipe: Object.freeze([]),
+    copyCurrentToNext: Object.freeze([])
   });
 
   /* The error vocabulary, complete now. The first three and the last are
@@ -203,6 +219,8 @@
     "no_resin",         // a source needs a resin in the hopper
     "empty_hopper",     // a move needs a resin or a share in the hopper it moves
     "nothing_to_undo",
+    "no_plan",          // nothing is planned, or the plan cannot be promoted
+                        //   (its shares or a layer's blends do not total 100)
     "internal"          // the producer threw or answered with something malformed
   ]);
 
@@ -223,6 +241,7 @@
     no_resin: "Assign a resin to the hopper before naming its source.",
     empty_hopper: "The hopper has no resin or share to move.",
     nothing_to_undo: "There is nothing to undo.",
+    no_plan: "There is no planned recipe to load.",
     internal: "The command could not be carried out."
   });
 
@@ -562,6 +581,7 @@
     JOB_COMMANDS,
     EQUIPMENT_COMMANDS,
     PREFERENCE_COMMANDS,
+    PLAN_COMMANDS,
     DIMENSIONS,
     RECIPES,
     ARGUMENTS,

@@ -871,10 +871,13 @@ test("the rail's switch and Escape share the one exit path: the boot file routes
   // The Weights face is the same mode with its other face: the same exit.
   assert.match(bootSource, /onWeightsEdit: toggleWeightsEdit,/);
   assert.match(bootSource, /function toggleWeightsEdit\(\) \{\n\s+return modeIs\("weights"\) \? exitBlendEdit\(\) : enterBlendEdit\("weights"\);/);
+  // The Next face is the same mode with its third face: the same exit.
+  assert.match(bootSource, /onNextEdit: toggleNextEdit,/);
+  assert.match(bootSource, /function toggleNextEdit\(\) \{\n\s+return modeIs\("next"\) \? exitBlendEdit\(\) : enterBlendEdit\("next"\);/);
   assert.doesNotMatch(bootSource, /beforeClose/, "the Handbook's close is not routed to the mode");
   assert.doesNotMatch(bootSource, /blendSurface|blend: blendSurface|context: \{\s+recipes,\s+blend/, "no surface over the mode is handed to the Handbook");
   assert.equal((bootSource.match(/blendEdit\.active = false;/g) || []).length, 2, "the mode is turned off in exitBlendEdit and by a line that lost its layers, nowhere else");
-  assert.equal((bootSource.match(/exitBlendEdit\(\)/g) || []).length, 4, "called from the two toggles, from Escape, and defined - nowhere else");
+  assert.equal((bootSource.match(/exitBlendEdit\(\)/g) || []).length, 5, "called from the three toggles, from Escape, and defined - nowhere else");
   // The Handbook module still offers beforeClose to whoever needs it; the
   // boot file simply does not.
   const handbookSource = read("station/station-handbook.js");
