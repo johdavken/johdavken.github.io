@@ -3,14 +3,12 @@
 /* Weights (station/station-weights.js), the Handbook's page for the
  * physical hoppers, driven against a small fake DOM, a real
  * weight-profiles bridge with a recording producer behind it, and a
- * recording command bridge. What is pinned: the grid is the line model's
- * hoppers with the resolved source's weights and nothing else; a field
- * commits one setHopperWeight with the field's own rules (Enter, blur,
- * Escape, blank is 0, unchanged is nothing, a refusal keeps the draft); a
- * publish never writes into the field being typed in; the bulk apply is
- * one setHopperWeights over the picked hoppers; the profiles are the
- * bridge's book, and every profile action is one request by id, behind
- * its confirmation; nothing is dispatched or requested by opening,
+ * recording command bridge (handed in as the Handbook hands it, and never
+ * used). What is pinned: the page enters no weight and dispatches nothing
+ * - the weights are the stage's, on the rail's Weights face - and reads
+ * the line's weights only to show a profile against them; the profiles
+ * are the bridge's book, and every profile action is one request by id,
+ * behind its confirmation; nothing is dispatched or requested by opening,
  * selecting or cancelling.
  */
 
@@ -226,182 +224,19 @@ function build(options) {
 }
 
 /* ----------------------------------------------------------------------
- *   The grid
+ *   No weights are entered here
  * -------------------------------------------------------------------- */
 
-test("the grid is the line model's hoppers, by layer in recipe order and accented by role, each with the resolved source's entered weight", () => {
+test("the page carries no weight field, no bulk apply and no command: the weights are the stage's (the rail's Weights face); this page reads them only to show a profile against them", () => {
   const h = build();
-  const layers = h.root.querySelectorAll(".station-weights__layer");
-  assert.deepEqual(layers.map(layer => layer.getAttribute("data-layer")), ["A", "B", "C"]);
-  assert.deepEqual(layers.map(layer => layer.getAttribute("data-layer-role")), ["outside", "core", "inside"]);
-  const fields = h.root.querySelectorAll(".station-weights__field");
-  assert.deepEqual(fields.map(field => field.getAttribute("data-key")), ["A:0", "A:1", "B:0", "B:1", "C:0", "C:1"]);
-  assert.deepEqual(fields.map(field => field.value), ["1000", "500", "1100", "", "", ""], "0 is a blank field with a 0 placeholder");
-  assert.equal(fields[0].getAttribute("aria-label"), "A1 receiver weight, pounds");
-  assert.equal(fields[1].getAttribute("aria-label"), "A2 receiver weight, pounds");
-  assert.equal(fields[1].readOnly, false, "an unassigned hopper has a weight like any other");
-  assert.deepEqual(h.root.querySelectorAll("[data-pick]").map(pick => pick.textContent), ["A1", "A2", "B1", "B2", "C1", "C2"]);
-  // Building the page asks the application for nothing.
+  assert.equal(h.root.querySelector(".station-weights__grid"), null);
+  assert.equal(h.root.querySelector(".station-weights__bulk"), null);
+  assert.equal(h.root.querySelectorAll("input").length, 1, "the one field is the profile name");
+  assert.equal(h.root.querySelector("input").getAttribute("aria-label"), "Profile name");
+  assert.deepEqual(h.root.querySelectorAll("[data-action]").map(node => node.getAttribute("data-action")), ["save-current", "refresh", "confirm-entry", "replace", "cancel-entry"]);
   assert.deepEqual(h.commands.calls, []);
-  assert.deepEqual(h.env.calls, []);
-});
-
-test("with no line there are no hoppers and the page says so; a changed line rebuilds the grid", () => {
-  const h = build({ model: null });
-  assert.equal(h.root.querySelectorAll(".station-weights__field").length, 0);
-  assert.match(h.root.querySelector(".station-weights__empty").textContent, /No line is shown/);
-  const one = build();
-  const before = one.root.querySelectorAll(".station-weights__field").length;
-  assert.equal(before, 6);
-  // The same shape again patches; a new shape rebuilds.
-  one.page.update();
-  assert.equal(one.root.querySelectorAll(".station-weights__field").length, 6);
-});
-
-test("a publish patches every field but the one being typed in, and marks that one when its own value moved underneath", () => {
-  const h = build();
-  const a1 = fieldOf(h.root, "A:0");
-  const b1 = fieldOf(h.root, "B:0");
-  a1.focus();
-  typeInto(a1, "1234");
-  // Another device sets B1 and A1.
-  h.state.hopperState["B:0"].weight = 1500;
-  h.state.hopperState["A:0"].weight = 1300;
-  h.page.update();
-  assert.equal(b1.value, "1500", "an idle field takes the line's value");
-  assert.equal(a1.value, "1234", "the field being typed in keeps its draft");
-  assert.ok(a1.classList.contains("is-changed-underneath"));
-  assert.match(noteOf(h.root).textContent, /A1's weight is now 1,300 lb in the application/);
-  assert.deepEqual(h.commands.calls, [], "nothing was sent");
-  // Escape discards the draft and shows the line's value, unmarked.
-  const escape = key(a1, "Escape");
-  assert.equal(escape.stopped, true, "the Handbook's Escape is not the field's");
-  assert.equal(a1.value, "1300");
-  assert.ok(!a1.classList.contains("is-changed-underneath"));
-  assert.deepEqual(h.commands.calls, []);
-});
-
-/* ----------------------------------------------------------------------
- *   A field's commit
- * -------------------------------------------------------------------- */
-
-test("Enter commits one setHopperWeight on the Current recipe, the field keeps focus and starts over from the new value", () => {
-  const h = build();
-  const a2 = fieldOf(h.root, "A:1");
-  a2.focus();
-  typeInto(a2, "1,250");
-  key(a2, "Enter");
-  assert.deepEqual(h.commands.calls, [{ command: "setHopperWeight", args: { recipe: "current", layer: "A", index: 1, weight: "1,250" } }]);
-  assert.equal(h.committed.length, 1, "the boot file is told of the change");
-  assert.equal(h.state.hopperState["A:1"].weight, 1250);
-  assert.equal(a2.value, "1250", "shown as the line now has it");
-  assert.ok(focused === a2, "focus stays");
-  assert.equal(a2.getAttribute("aria-invalid"), null);
-  // The same text again is nothing to send.
-  key(a2, "Enter");
-  assert.equal(h.commands.calls.length, 1);
-  // Leaving the field with a new draft commits it once.
-  typeInto(a2, "1300");
-  a2.blur();
-  assert.equal(h.commands.calls.length, 2);
-  assert.equal(h.commands.calls[1].args.weight, "1300");
-  assert.equal(h.page.getState().editing, null);
-});
-
-test("a blank field is 0 - the weight cleared - and a refusal keeps the draft with the field marked invalid and the reason said", () => {
-  const h = build({ commandOptions: { refuse: (command, args) => (args.weight === "-5" ? "Pounds cannot be less than 0." : null) } });
-  const a1 = fieldOf(h.root, "A:0");
-  a1.focus();
-  typeInto(a1, "");
-  key(a1, "Enter");
-  assert.deepEqual(h.commands.calls[0].args, { recipe: "current", layer: "A", index: 0, weight: 0 });
-  assert.equal(h.state.hopperState["A:0"].weight, 0);
-  assert.equal(a1.value, "");
-  typeInto(a1, "-5");
-  key(a1, "Enter");
-  assert.equal(a1.value, "-5", "the draft stays");
-  assert.equal(a1.getAttribute("aria-invalid"), "true");
-  assert.equal(noteOf(h.root).textContent, "Pounds cannot be less than 0.");
-  assert.equal(noteOf(h.root).getAttribute("data-kind"), "error");
-  assert.equal(h.committed.length, 1, "a refusal is not a change");
-  // Typing clears the mark; Escape restores the line's value.
-  typeInto(a1, "-");
-  assert.equal(a1.getAttribute("aria-invalid"), null);
-  key(a1, "Escape");
-  assert.equal(a1.value, "");
-});
-
-test("with no command bridge, or one without the command, the fields are read-only and say why; nothing is dispatched", () => {
-  const none = build({ commands: null });
-  for (const field of none.root.querySelectorAll(".station-weights__field")) {
-    assert.equal(field.readOnly, true);
-    assert.match(field.getAttribute("title"), /read-only here: no application is connected to Station commands/);
-  }
-  assert.equal(byAction(none.root, "apply-bulk").disabled, true);
-  assert.match(none.root.querySelector(".station-weights__bulk-count").textContent, /Bulk apply is not available/);
-  const partial = build({ commandOptions: { capabilities: ["setHopperWeight"] } });
-  assert.equal(fieldOf(partial.root, "A:0").readOnly, false);
-  assert.equal(pickOf(partial.root, "A:0").disabled, true, "no bulk command, no picking");
-  assert.match(partial.root.querySelector(".station-weights__bulk-count").textContent, /does not support setHopperWeights/);
-  const field = fieldOf(none.root, "A:0");
-  field.focus();
-  typeInto(field, "9");
-  key(field, "Enter");
-  assert.equal(none.page.getState().editing, null, "a read-only field is never an edit");
-});
-
-/* ----------------------------------------------------------------------
- *   The bulk apply
- * -------------------------------------------------------------------- */
-
-test("picked hoppers - one by one, by layer, or all - take one weight in ONE setHopperWeights, and the picks clear after", () => {
-  const h = build();
-  click(pickOf(h.root, "A:1"));
-  click(h.root.querySelector("[data-pick-layer='B']"));
-  assert.deepEqual(h.page.getState().picked, ["A:1", "B:0", "B:1"]);
-  assert.equal(pickOf(h.root, "A:1").getAttribute("aria-pressed"), "true");
-  assert.equal(h.root.querySelector("[data-pick-layer='B']").getAttribute("aria-pressed"), "true");
-  assert.equal(h.root.querySelector("[data-pick-layer='A']").getAttribute("aria-pressed"), "false", "a layer is pressed when every hopper of it is picked");
-  assert.match(h.root.querySelector(".station-weights__bulk-count").textContent, /3 of 6 picked/);
-  assert.ok(h.root.querySelector(".station-weights__hopper[data-key='A:1']").classList.contains("is-picked"));
-  const bulkField = h.root.querySelector(".station-weights__bulk-field");
-  typeInto(bulkField, "2,000");
-  click(byAction(h.root, "apply-bulk"));
-  assert.deepEqual(h.commands.calls, [{ command: "setHopperWeights", args: { recipe: "current", weights: [
-    { layer: "A", index: 1, weight: "2,000" }, { layer: "B", index: 0, weight: "2,000" }, { layer: "B", index: 1, weight: "2,000" }
-  ] } }]);
-  assert.equal(h.committed.length, 1);
-  assert.deepEqual(["A:1", "B:0", "B:1"].map(k => h.state.hopperState[k].weight), [2000, 2000, 2000]);
-  assert.equal(h.state.hopperState["A:0"].weight, 1000, "an unpicked hopper is untouched");
-  assert.deepEqual(["A:1", "B:0", "B:1"].map(k => fieldOf(h.root, k).value), ["2000", "2000", "2000"]);
-  assert.deepEqual(h.page.getState().picked, []);
-  assert.equal(bulkField.value, "");
-  assert.equal(noteOf(h.root).textContent, "Applied 2,000 lb to 3 hoppers.");
-  // All, then Clear.
-  click(byAction(h.root, "pick-all"));
-  assert.equal(h.page.getState().picked.length, 6);
-  assert.equal(byAction(h.root, "pick-all").getAttribute("aria-pressed"), "true");
-  click(byAction(h.root, "clear-picks"));
-  assert.deepEqual(h.page.getState().picked, []);
-  assert.ok(hidden(byAction(h.root, "clear-picks")));
-});
-
-test("the bulk apply refuses to run with nothing picked or nothing entered, and a refusal from the application keeps the picks", () => {
-  const h = build({ commandOptions: { refuse: command => (command === "setHopperWeights" ? "Hopper Z:0 is not on this line." : null) } });
-  assert.equal(byAction(h.root, "apply-bulk").disabled, true);
-  h.page.applyBulk();
-  assert.match(noteOf(h.root).textContent, /Pick the hoppers/);
-  click(pickOf(h.root, "C:0"));
-  h.page.applyBulk();
-  assert.match(noteOf(h.root).textContent, /Enter the weight to apply/);
-  assert.equal(h.root.querySelector(".station-weights__bulk-field").getAttribute("aria-invalid"), "true");
-  assert.deepEqual(h.commands.calls, []);
-  typeInto(h.root.querySelector(".station-weights__bulk-field"), "10");
-  key(h.root.querySelector(".station-weights__bulk-field"), "Enter");
-  assert.equal(h.commands.calls.length, 1);
-  assert.equal(noteOf(h.root).textContent, "Hopper Z:0 is not on this line.");
-  assert.deepEqual(h.page.getState().picked, ["C:0"], "the picks stay for another try");
-  assert.equal(h.committed.length, 0);
+  const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "station/station-weights.js"), "utf8");
+  assert.doesNotMatch(source, /\.dispatch\s*\(|setHopperWeight|data-pick|apply-bulk/, "the page dispatches, or names a weight command");
 });
 
 /* ----------------------------------------------------------------------
@@ -611,7 +446,6 @@ test("with no producer the profiles say so and offer nothing; with no line assig
   assert.match(textIn(none.root.querySelector(".station-weights__list")), /No application is connected to Station: weight profiles are not available/);
   assert.equal(byAction(none.root, "save-current").disabled, true);
   assert.equal(none.root.querySelector(".station-weights__context").textContent, "Not connected");
-  assert.equal(fieldOf(none.root, "A:0").readOnly, false, "the weights themselves are the command bridge's, not the profiles'");
   const env = producer();
   env.workspaceId = "";
   env.handle.publish();
@@ -620,7 +454,7 @@ test("with no producer the profiles say so and offer nothing; with no line assig
   assert.match(textIn(unassigned.root.querySelector(".station-weights__list")), /not on a production line/);
 });
 
-test("the page's shape: a section for the Handbook, growing, focusing the first field, with the helpers the words come from", () => {
+test("the page's shape: a section for the Handbook, growing, focusing Save Current Weights, with the helpers the words come from", () => {
   assert.deepEqual(Object.keys(weightsModule.section), ["id", "title", "create"]);
   assert.equal(weightsModule.section.id, "weights");
   assert.equal(weightsModule.section.title, "Weights");
@@ -628,7 +462,7 @@ test("the page's shape: a section for the Handbook, growing, focusing the first 
   const h = build();
   assert.equal(h.page.grows(), true);
   h.page.focus();
-  assert.ok(focused === fieldOf(h.root, "A:0"));
+  assert.ok(focused === byAction(h.root, "save-current"));
   assert.equal(weightsModule.formatPounds(1250.4), "1,250");
   assert.equal(weightsModule.formatPounds(0), "—");
   assert.equal(weightsModule.rowMeta({ layers: [{}, {}, {}], updatedAt: "" }), "3 layers");

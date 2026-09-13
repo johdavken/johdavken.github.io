@@ -1,6 +1,6 @@
 /* Weights (station-weights.js): the Operator Handbook's page for the
- * physical hoppers - every receiver weight in a field, the bulk apply,
- * and the line's Weight Profiles.
+ * line's Weight Profiles. The weights themselves are entered on the stage
+ * (the rail's Weights face, weight-cards.css), not here.
  *
  * WHERE IT SITS
  *
@@ -9,16 +9,13 @@
  * is one scrolling body under a fixed toolbar, so the frame keeps its
  * capacity (the Handbook's rule) and the page brings its own scrolling.
  *
- * THE GRID
+ * THE PROFILES
  *
- * One row per layer, the layer's letter leading in the layer's accent -
- * the same accent the drawing carries (layer-bank.css) and the Recipe
- * Book's detail borrows - then the layer's hoppers in a line. Each
- * hopper is a chip (its id, pressed when picked for the bulk apply) over
- * a field with its unit. The field is the one place a border is an
- * affordance, as the Recipe Book's name field is; a field whose value
- * moved underneath the operator is marked with the warning colour on the
- * same edge.
+ * The list on the left; on the right a profile's weights, hopper by
+ * hopper, against the line's - one line per layer, the layer's letter
+ * leading in the layer's accent, the same accent the drawing carries
+ * (layer-bank.css) and the Recipe Book's detail borrows. The name field
+ * is the one place a border is an affordance, as the Recipe Book's is.
  *
  * Selectors go at most two steps deep, and nothing here names a colour.
  */
@@ -126,143 +123,14 @@
   line-height: var(--station-line-normal);
 }
 
-/* ---- The grid ---- */
-
-.station-weights__layer {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: start;
-  gap: var(--station-space-3);
-  padding: var(--station-space-2) 0;
-  border-top: var(--station-stroke) solid var(--station-handbook-rule);
-}
-
-.station-weights__layer:first-child {
-  border-top: 0;
-}
-
-/* Layer identity as an accent, as the drawing carries it (layer-bank.css). */
-.station-weights__layer[data-layer-role="outside"] { --station-layer-accent: var(--station-layer-outside); }
-.station-weights__layer[data-layer-role="subskin-outside"] { --station-layer-accent: var(--station-layer-subskin); }
-.station-weights__layer[data-layer-role="core"] { --station-layer-accent: var(--station-layer-core); }
-.station-weights__layer[data-layer-role="subskin-inside"] { --station-layer-accent: var(--station-layer-subskin); }
-.station-weights__layer[data-layer-role="inside"] { --station-layer-accent: var(--station-layer-inside); }
-.station-weights__layer[data-layer-role="single"] { --station-layer-accent: var(--station-layer-core); }
-
-/* The layer's chip carries its accent as its outline and, pressed, its fill. */
-.station-root .station-weights__layer-id {
-  min-width: calc(var(--station-space-6) + var(--station-space-1));
-  margin-top: var(--station-space-1);
-  border-color: var(--station-layer-accent, var(--station-handbook-control-border));
-  color: var(--station-layer-accent, var(--station-text));
-  font-family: var(--station-font-mono);
-}
-
-.station-root .station-weights__layer-id[aria-pressed="true"] {
-  background: var(--station-layer-accent, var(--station-handbook-selector-active));
-  border-color: var(--station-layer-accent, var(--station-handbook-selector-active));
-  color: var(--station-text-on-accent);
-}
-
-.station-weights__hoppers {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--station-space-2) var(--station-space-3);
-  min-width: 0;
-}
-
-/* A hopper: its chip over its field. Picked, the cell takes the selection
-   wash so the set an apply will touch reads as one. */
-.station-weights__hopper {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: var(--station-space-1);
-  padding: var(--station-space-1);
-  border-radius: var(--station-radius-sm);
-}
-
-.station-weights__hopper.is-picked {
-  background: var(--station-handbook-selection);
-}
-
-.station-root .station-weights__pick {
-  font-family: var(--station-font-mono);
-}
-
-/* The field and its unit, on one line. */
-.station-weights__field-wrap {
-  display: inline-flex;
-  align-items: baseline;
-  gap: var(--station-space-1);
-}
-
-.station-weights__field,
-.station-weights__bulk-field {
-  --station-field-padding: var(--station-space-1) var(--station-space-2);
-  --station-field-radius: var(--station-radius-sm);
-  --station-field-bg: var(--station-surface-editable);
-  --station-field-border: var(--station-stroke) solid var(--station-editable);
-  --station-field-width: 6.5ch;
-  color: var(--station-text);
-  font-family: var(--station-font-mono);
-  font-size: var(--station-text-md);
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-}
-
-.station-weights__field[aria-invalid="true"],
-.station-weights__bulk-field[aria-invalid="true"] {
-  --station-field-shadow: 0 0 0 2px var(--station-danger);
-}
-
-/* Read-only (no application, or one without the command): the field
-   keeps its value and loses its editable surface. */
-.station-weights__field[readonly],
-.station-weights__bulk-field[readonly] {
-  --station-field-bg: transparent;
-  --station-field-border: var(--station-stroke) solid var(--station-handbook-rule);
-  --station-field-cursor: default;
-  color: var(--station-text-muted);
-}
-
-/* The value moved underneath the operator: the edge says so in the
-   warning colour until they commit or cancel what they are entering. */
-.station-weights__field.is-changed-underneath {
-  --station-field-shadow: 0 0 0 2px var(--station-warning);
-}
-
-.station-weights__unit {
-  color: var(--station-text-faint);
-  font-size: var(--station-text-xs);
-}
-
-/* ---- The bulk apply ---- */
-
-.station-weights__bulk {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--station-space-2);
-  margin-top: var(--station-space-2);
-  padding: var(--station-space-2) 0;
-  border-top: var(--station-stroke) solid var(--station-handbook-rule);
-}
-
-.station-weights__bulk-count {
-  color: var(--station-text-muted);
-  font-size: var(--station-text-sm);
-}
-
 /* ---- Weight Profiles ---- */
 
 .station-weights__profiles {
-  margin-top: var(--station-space-3);
-  border-top: var(--station-stroke) solid var(--station-handbook-rule);
+  margin-top: 0;
 }
 
 .station-weights__heading {
-  margin: var(--station-space-3) 0 var(--station-space-2);
+  margin: var(--station-space-2) 0 var(--station-space-2);
   color: var(--station-text-muted);
   font-size: var(--station-text-xs);
   font-weight: 600;

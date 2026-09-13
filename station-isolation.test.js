@@ -658,7 +658,7 @@ test("exactly seven Station files dispatch commands - the focused editor, the ho
    * The plan controls are the eighth: the rail's two moves under the Next
    * face, promote and copy, each one command on the bridge it is handed.
    * A ninth dispatching file arrives as an edit to this test. */
-  const DISPATCHES = ["station-focus-editor.js", "station-hopper-controls.js", "station-plan-controls.js", "station-job-controls.js", "station-layer-share.js", "station-resin-totals.js", "station-weights.js", "station-weight-cards.js"];
+  const DISPATCHES = ["station-focus-editor.js", "station-hopper-controls.js", "station-plan-controls.js", "station-job-controls.js", "station-layer-share.js", "station-resin-totals.js", "station-weight-cards.js"];
   for (const file of STATION_FILES) {
     const source = fs.readFileSync(path.join(STATION, file), "utf8");
     if (DISPATCHES.includes(file)) {
