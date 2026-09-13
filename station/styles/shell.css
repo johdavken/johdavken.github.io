@@ -53,7 +53,13 @@
   align-items: center;
 }
 
+/* The name: the heading holds the Station logo (station-logo.js,
+ * logo.css) in place of the word set in type; as text - a host without
+ * the module - it reads at the header's large size, which is what the
+ * mark is sized to. */
 .station-header__title {
+  display: flex;
+  align-items: center;
   font-size: var(--station-text-lg);
   font-weight: 600;
   letter-spacing: 0.01em;

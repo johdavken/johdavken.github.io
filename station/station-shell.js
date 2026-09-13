@@ -22,10 +22,13 @@
  * it. station-host-isolation.test.js pins this.
  */
 (function (root, factory) {
-  const api = factory();
+  const logo = typeof require === "function"
+    ? require("./station-logo.js")
+    : (root && root.PolynStationLogo);
+  const api = factory(logo);
   if (typeof module === "object" && module.exports) module.exports = api;
   if (root) root.PolynStationShell = api;
-})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+})(typeof globalThis !== "undefined" ? globalThis : this, function (logoModule) {
   "use strict";
 
   /* Every mount point the boot file looks for. Named here so the shell and
@@ -119,7 +122,14 @@
      * so the shell stays structure and the open/close behaviour stays
      * with the module that owns it. */
     header.appendChild(element(doc, "div", "station-header__avatar", { "data-station-mount": "avatar" }));
-    header.appendChild(text(doc, "h1", "station-header__title", "Station"));
+    /* The name, as the logo (station-logo.js): the mark and the word
+     * STATION drawn inline so they take the theme, inside the heading
+     * that names the page. Without the module (a host that did not load
+     * it) the word is set in type, as it was. */
+    const title = element(doc, "h1", "station-header__title");
+    if (logoModule && typeof logoModule.create === "function") title.appendChild(logoModule.create(doc, { label: "Station" }));
+    else title.textContent = "Station";
+    header.appendChild(title);
     /* Beside the name, the way back to the legacy interface: a plain link,
      * quiet by design - text, not a button, no explanation - so it is
      * there when wanted and never competes with the readouts. */

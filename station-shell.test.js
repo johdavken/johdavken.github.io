@@ -93,7 +93,7 @@ test("the too-small notice is part of the shell, not of a page", () => {
   assert.match(notice[0].textContent, /1100px/);
 });
 
-test("the header is identity and status only: the picture's slot, Station, the way back, the two job readouts' slot, the connection - no tag, no badge, no EXPERIMENTAL", () => {
+test("the header is identity and status only: the picture's slot, the Station logo, the way back, the two job readouts' slot, the connection - no tag, no badge, no EXPERIMENTAL", () => {
   const root = built();
   const header = find(root, node => /station-header$/.test(node.getAttribute("class") || ""))[0];
   assert.ok(header);
@@ -104,7 +104,18 @@ test("the header is identity and status only: the picture's slot, Station, the w
     ["DIV", "station-header__job"],
     ["DIV", "station-header__connection"]
   ]);
-  assert.equal(header.children[1].textContent, "Station");
+  // The heading holds the logo (station-logo.js): the mark and the word
+  // as paths, named "Station" to a reader - no word set in type beside it.
+  const title = header.children[1];
+  assert.equal(title.children.length, 1);
+  const logo = title.children[0];
+  assert.equal(logo.nodeName.toLowerCase(), "svg");
+  assert.equal(logo.getAttribute("class"), "station-logo");
+  assert.equal(logo.getAttribute("role"), "img");
+  assert.equal(logo.getAttribute("aria-label"), "Station");
+  assert.ok(find(logo, node => /station-logo__ink/.test(node.getAttribute("class") || "")).length === 1, "the word's paths");
+  assert.ok(find(logo, node => /station-logo__hopper/.test(node.getAttribute("class") || "")).length === 1, "the mark");
+  assert.equal(find(logo, node => /^(text|image)$/i.test(node.nodeName)).length, 0, "no type, no image: paths only");
   // The picture's slot is a slot: the shell draws nothing in it, and the
   // face and the popover it opens are station-avatar.js's.
   assert.equal(header.children[0].getAttribute("data-station-mount"), "avatar");

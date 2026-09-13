@@ -65,6 +65,7 @@
     "station/styles/components/job-controls.css",
     "station/styles/components/sync-console.css",
     "station/styles/components/avatar.css",
+    "station/styles/components/logo.css",
     "station/styles/components/glass.css",
     "station/styles/components/handbook.css",
     "station/styles/components/changeover.css",
@@ -95,6 +96,8 @@
     "station/station-job-controls.js",
     // The Changeover Calculator: after the job controls it applies through.
     "station/station-changeover.js",
+    // The logo before the shell that draws it into the header.
+    "station/station-logo.js",
     "station/station-shell.js",
     "station/station-sync-console.js",
     // Station's picture in the header, beside the name.
@@ -110,7 +113,7 @@
     "station/station.js"
   ];
 
-  const VERSION = "0.30.1";
+  const VERSION = "0.31.0";
 
   function requested() {
     try {
