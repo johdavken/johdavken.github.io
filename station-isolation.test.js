@@ -29,7 +29,7 @@ const STATION_FILES = ["station-line-model.js", "station-render.js", "station.js
   "station-rundown.js", "station-rundown-timeline.js", "station-job-controls.js",
   "station-handbook.js", "station-recipe-book.js", "station-resin-totals.js", "station-appearance.js", "station-theme-preview.js",
   "station-changeover.js", "station-avatar.js", "station-machine-rail.js", "station-logo.js",
-  "station-sudo.js", "station-sudo-workspaces.js"];
+  "station-sudo.js", "station-sudo-workspaces.js", "station-sudo-lines.js"];
 
 const stationHtml = fs.readFileSync(path.join(STATION, "station.html"), "utf8");
 const indexHtml = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
@@ -272,7 +272,8 @@ test("the admin bridge touches no DOM, names no RT Sync internal, and holds no s
   assert.ok(Object.isFrozen(bridge));
   assert.deepEqual([...bridge.ACTIONS], [
     "signIn", "signOut", "listWorkspaces", "workspaceDevices", "addThisDevice", "createLine", "renameLine",
-    "transferOwnership", "disconnectDevice", "mergeWorkspace", "deleteWorkspace"
+    "transferOwnership", "disconnectDevice", "mergeWorkspace", "deleteWorkspace",
+    "listLineConfigurations", "saveLineConfiguration"
   ], "a new administrator action Station may ask for arrives as an edit to this list");
 });
 
@@ -330,8 +331,8 @@ test("exactly one Station file requests a saved-recipe action - the Recipe Book 
   }
 });
 
-test("exactly two Station files request an administrator action - Sudo and its Workspace Management tool - and only through the bridge they are handed", () => {
-  const REQUESTS = ["station-sudo.js", "station-sudo-workspaces.js"];
+test("exactly three Station files request an administrator action - Sudo and its two tools, Workspace Management and Line Configuration - and only through the bridge they are handed", () => {
+  const REQUESTS = ["station-sudo.js", "station-sudo-workspaces.js", "station-sudo-lines.js"];
   for (const file of STATION_FILES) {
     const source = fs.readFileSync(path.join(STATION, file), "utf8");
     if (REQUESTS.includes(file)) {
@@ -627,10 +628,15 @@ test("exactly five Station files dispatch commands - the focused editor, the hop
   }
 });
 
-test("the application's use of the bridge is exactly one connect and one publish", () => {
+test("the application's use of the bridge is exactly one connect and two publish sites - the session save, and the line configurations being re-read", () => {
   const app = fs.readFileSync(path.join(ROOT, "app.js"), "utf8");
   assert.equal((app.match(/stationBridge\.connect\s*\(/g) || []).length, 1);
-  assert.equal((app.match(/stationBridgeHandle\?\.publish\s*\(/g) || []).length, 1);
+  assert.equal((app.match(/stationBridgeHandle\?\.publish\s*\(/g) || []).length, 2);
+  // The second site is the existing line-configuration listener: the
+  // snapshot reads the derived line configuration when it is taken, so
+  // the definitions moving is the snapshot moving. Not a third mechanism.
+  const listener = app.slice(app.indexOf('window.addEventListener("polyn:line-configurations"'));
+  assert.match(listener.slice(0, listener.indexOf("});")), /renderLineSync\(syncState\);[\s\S]*stationBridgeHandle\?\.publish\(\);/);
   // The projection is called with `state`, but only inside the read closure -
   // the state object itself is never handed to the bridge.
   assert.doesNotMatch(app, /connect\(\s*\{\s*read:\s*\(\s*\)\s*=>\s*state\b/,

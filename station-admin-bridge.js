@@ -16,7 +16,10 @@
  * and one Workspace Management service (workspace-recovery.js: the admin
  * procedures for listing workspaces, their linked devices, adding this
  * device, renaming, creating, reassigning ownership, disconnecting a
- * device, merging and deleting). None of it may be re-implemented in
+ * device, merging and deleting) and one Line Configuration service
+ * (line-configurations-service.js: the admin procedures for listing the
+ * production lines' definitions and saving one, validated by
+ * line-identity.js). None of it may be re-implemented in
  * Station: Station must never hold a second admin session, a second
  * client, a second copy of a procedure or a second list of workspaces
  * that outlives the page it draws.
@@ -42,7 +45,8 @@
  * A request's answer is rebuilt here by allow-list (normalize()): a
  * workspace is its id, name, counts and dates; a linked device is its
  * membership id, label, role, last-seen time and whether it is this
- * device. Station never learns a table, a procedure name, a session, a
+ * device; a line configuration is its definition's fields and its id.
+ * Station never learns a table, a procedure name, a session, a
  * token, a full anonymous identity of its own, or a client. A password
  * crosses the letterbox once, inward, on signIn, and is held nowhere.
  */
@@ -70,7 +74,9 @@
     "transferOwnership",  // { id, memberId }
     "disconnectDevice",   // { id, memberId }
     "mergeWorkspace",     // { id, targetId }      -> { recipesMerged, profilesMerged }
-    "deleteWorkspace"     // { id }
+    "deleteWorkspace",    // { id }
+    "listLineConfigurations",  //                  -> { lines }
+    "saveLineConfiguration"    // { id?, line }    -> { line }   create when id is empty
   ]);
 
   /* The arguments each action takes, and nothing else crosses. */
@@ -85,8 +91,20 @@
     transferOwnership: Object.freeze(["id", "memberId"]),
     disconnectDevice: Object.freeze(["id", "memberId"]),
     mergeWorkspace: Object.freeze(["id", "targetId"]),
-    deleteWorkspace: Object.freeze(["id"])
+    deleteWorkspace: Object.freeze(["id"]),
+    listLineConfigurations: Object.freeze([]),
+    // `id` is optional here - empty means create - and `line` is an object,
+    // rebuilt field by field by normalizeLineConfiguration().
+    saveLineConfiguration: Object.freeze(["id", "line"])
   });
+
+  /* A line configuration's fields, as they cross in both directions: the
+   * definition line-identity.js validates and the service saves, and
+   * nothing else the row carries. */
+  const LINE_FIELDS = Object.freeze([
+    "lineNumber", "displayName", "aliases", "layerCount", "layerAPosition",
+    "hopperGeometry", "hopperNamingMode", "isActive", "metadata"
+  ]);
 
   /* Failure codes Station may read. `not_authenticated` and `access_denied`
    * are the two that mean the administrator session is gone: the producer
@@ -179,6 +197,54 @@
     });
   }
 
+  function nullableInteger(value) {
+    if (value === null || value === undefined || value === "") return null;
+    const number = Number(value);
+    return Number.isInteger(number) ? number : null;
+  }
+
+  function plainObject(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+    try {
+      return JSON.parse(JSON.stringify(value));
+    } catch (error) {
+      return {};
+    }
+  }
+
+  function aliasList(value) {
+    if (!Array.isArray(value)) return [];
+    const out = [];
+    for (const entry of value) {
+      const alias = typeof entry === "string" ? entry.trim().replace(/\s+/g, " ") : "";
+      if (alias && !out.includes(alias)) out.push(alias);
+    }
+    return out;
+  }
+
+  /* A line configuration as Station may read it: the definition's fields,
+   * the row's id and when it last changed. Orientation is one of the two
+   * sides or null - a single-layer line has no side, and an unknown value
+   * is not a side. Metadata crosses as an opaque plain object so a save
+   * from Station carries it back unchanged, as the floor UI's editor does. */
+  function projectLineConfiguration(row) {
+    const item = row && typeof row === "object" ? row : {};
+    const position = item.layerAPosition === "inside" || item.layerAPosition === "outside" ? item.layerAPosition : null;
+    return Object.freeze({
+      id: stringOr(item.id, ""),
+      lineNumber: nullableInteger(item.lineNumber),
+      displayName: stringOr(item.displayName, ""),
+      aliases: Object.freeze(aliasList(item.aliases)),
+      layerCount: nullableInteger(item.layerCount),
+      layerAPosition: position,
+      hopperGeometry: stringOr(item.hopperGeometry, ""),
+      hopperNamingMode: stringOr(item.hopperNamingMode, ""),
+      isActive: item.isActive !== false,
+      metadata: Object.freeze(plainObject(item.metadata)),
+      updatedAt: stringOr(item.updatedAt, "")
+    });
+  }
+
   /* Whatever an action returned, as a frozen result carrying only what
    * Station may read for THAT action. The producer answers in the shapes
    * named beside ACTIONS; anything else it put in the answer is dropped. */
@@ -210,6 +276,13 @@
         out.recipesMerged = count(value.recipesMerged);
         out.profilesMerged = count(value.profilesMerged);
         break;
+      case "listLineConfigurations":
+        out.lines = Object.freeze((Array.isArray(value.lines) ? value.lines : [])
+          .map(projectLineConfiguration).filter(line => line.id));
+        break;
+      case "saveLineConfiguration":
+        out.line = projectLineConfiguration(value.line);
+        break;
       default:
         break;
     }
@@ -222,8 +295,57 @@
     name: "A line name is required.",
     id: "A workspace is required.",
     targetId: "A target workspace is required.",
-    memberId: "A linked device is required."
+    memberId: "A linked device is required.",
+    line: "A line configuration is required."
   });
+
+  const LINE_FIELD_MESSAGES = Object.freeze({
+    lineNumber: "A line number is required.",
+    displayName: "A display name is required.",
+    layerCount: "A layer count is required.",
+    layerAPosition: "Layer A must be Inside, Outside, or N/A.",
+    hopperGeometry: "A hopper geometry is required.",
+    hopperNamingMode: "A hopper naming mode is required."
+  });
+
+  /* The configuration to save, rebuilt field by field from LINE_FIELDS:
+   * numbers as integers, names as collapsed text, aliases as a list of
+   * them, orientation as a side or null (N/A crosses as null), the two
+   * modes as text, active as a boolean, metadata as a plain object.
+   * What the VALUES may be - the ranges, the orientation-versus-count
+   * rule, the name conflicts - is line-identity's to say, in the service,
+   * and is not repeated here; this only refuses a field that is not the
+   * kind of thing the definition holds. Anything else passed is dropped. */
+  function normalizeLineConfiguration(value) {
+    const given = value && typeof value === "object" && !Array.isArray(value) ? value : null;
+    if (!given) return failure("bad_argument", ARGUMENT_MESSAGES.line, { field: "line" });
+    const out = {};
+    const lineNumber = nullableInteger(given.lineNumber);
+    if (lineNumber === null) return failure("bad_argument", LINE_FIELD_MESSAGES.lineNumber, { field: "lineNumber" });
+    out.lineNumber = lineNumber;
+    const displayName = typeof given.displayName === "string" ? given.displayName.trim().replace(/\s+/g, " ") : "";
+    if (!displayName) return failure("bad_argument", LINE_FIELD_MESSAGES.displayName, { field: "displayName" });
+    out.displayName = displayName;
+    out.aliases = aliasList(given.aliases);
+    const layerCount = nullableInteger(given.layerCount);
+    if (layerCount === null) return failure("bad_argument", LINE_FIELD_MESSAGES.layerCount, { field: "layerCount" });
+    out.layerCount = layerCount;
+    const position = given.layerAPosition === null || given.layerAPosition === undefined || given.layerAPosition === "" || given.layerAPosition === "n/a"
+      ? null
+      : given.layerAPosition;
+    if (position !== null && position !== "inside" && position !== "outside") {
+      return failure("bad_argument", LINE_FIELD_MESSAGES.layerAPosition, { field: "layerAPosition" });
+    }
+    out.layerAPosition = position;
+    for (const field of ["hopperGeometry", "hopperNamingMode"]) {
+      const text = typeof given[field] === "string" ? given[field].trim() : "";
+      if (!text) return failure("bad_argument", LINE_FIELD_MESSAGES[field], { field });
+      out[field] = text;
+    }
+    out.isActive = given.isActive !== false;
+    out.metadata = plainObject(given.metadata);
+    return { ok: true, line: Object.freeze(out) };
+  }
 
   /* The request's arguments, checked and rebuilt: a name is text with its
    * whitespace collapsed (the server normalizes it again, by its own rule),
@@ -232,6 +354,14 @@
   function normalizeArguments(name, args) {
     const given = args && typeof args === "object" ? args : {};
     const out = {};
+    if (name === "saveLineConfiguration") {
+      // The one action whose arguments are not all text: an optional id
+      // (empty means create) and the configuration itself.
+      const id = given.id === null || given.id === undefined ? "" : String(given.id).trim();
+      const line = normalizeLineConfiguration(given.line);
+      if (!line.ok) return line;
+      return { ok: true, args: Object.freeze({ id, line: line.line }) };
+    }
     for (const field of ARGUMENTS[name]) {
       const value = given[field];
       const usable = field === "password" ? typeof value === "string" && value.length > 0 : typeof value === "string" && value.trim();
@@ -323,9 +453,12 @@
     ACTIONS,
     ARGUMENTS,
     ERROR_CODES,
+    LINE_FIELDS,
     project,
     normalize,
     normalizeArguments,
+    normalizeLineConfiguration,
+    projectLineConfiguration,
     connect: shared.connect,
     getAccess: shared.getAccess,
     subscribe: shared.subscribe,

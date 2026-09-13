@@ -518,12 +518,13 @@ test("the section is what the Handbook takes, and the tool is what Sudo takes; n
   assert.equal(sudoModule.section.id, "sudo");
   assert.equal(sudoModule.section.title, "Sudo");
   assert.ok(Object.isFrozen(sudoModule.section));
-  assert.deepEqual(Object.keys(workspacesModule.tool), ["id", "title", "create"]);
+  assert.deepEqual(Object.keys(workspacesModule.tool), ["id", "title", "label", "create"]);
   assert.equal(workspacesModule.tool.id, "workspaces");
+  assert.equal(workspacesModule.tool.label, "Workspaces", "the short word Sudo's row of tools uses");
   assert.ok(Object.isFrozen(workspacesModule.tool));
   const a = build(); const b = build();
   assert.ok(a.section.element !== b.section.element);
-  assert.deepEqual(a.section.tools(), ["workspaces"]);
+  assert.deepEqual(a.section.tools(), ["workspaces", "lines"], "Workspace Management first, Line Configuration second");
 });
 
 test("the page tells the Handbook it can use more bench only behind the gate: the sign-in form wants none, the tools are lists", async () => {

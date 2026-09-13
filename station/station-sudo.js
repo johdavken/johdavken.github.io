@@ -6,9 +6,12 @@
  * the same bench as the Recipe Book: a section of the Handbook, on its
  * tabs, in its frame. This file is the gate and the frame's inside; the
  * tools stand behind it. Signed out, the page is a compact sign-in.
- * Signed in, it is the first tool - Workspace Management
- * (station-sudo-workspaces.js) - with one quiet strip above it saying who
- * is signed in, and Sign out.
+ * Signed in, it is one of its tools - Workspace Management
+ * (station-sudo-workspaces.js) or Line Configuration
+ * (station-sudo-lines.js) - with one quiet strip above saying who is
+ * signed in, and Sign out, and under the strip a row of the tools' names
+ * to turn between them. The row is inside Sudo, not another Handbook tab:
+ * administrator work is one page of the book.
  *
  * WHERE ACCESS COMES FROM
  *
@@ -26,14 +29,16 @@
  *
  * A TOOL
  *
- *   { id, title, create(doc, context) -> { element, update(access), focus(), reset() } }
+ *   { id, title, label, create(doc, context) -> { element, update(access), focus(), reset() } }
  *
  * The same shape as a Handbook section, one level down: create() once
  * with the bridge and a slot in the strip for its own status; update()
  * with the current access on every publish and on showing; reset() when
- * access is lost. The page is built to hold several - Line Configuration
- * is the next - but shows the first and only one for now; there is no
- * switcher until there is something to switch to.
+ * access is lost. `label` is the short word the row uses; `title` the
+ * tool's full name. One tool shows at a time; the others are hidden with
+ * their slot contents, and a tool that loads only when on screen (both
+ * do) reads its list when it is turned to. Signing out turns the page
+ * back to the first tool.
  *
  * WHAT IT HOLDS
  *
@@ -46,10 +51,13 @@
   const workspaces = typeof require === "function"
     ? require("./station-sudo-workspaces.js")
     : (root && root.PolynStationSudoWorkspaces);
-  const api = factory(workspaces);
+  const lines = typeof require === "function"
+    ? require("./station-sudo-lines.js")
+    : (root && root.PolynStationSudoLines);
+  const api = factory(workspaces, lines);
   if (typeof module === "object" && module.exports) module.exports = api;
   if (root) root.PolynStationSudo = api;
-})(typeof globalThis !== "undefined" ? globalThis : this, function (workspacesModule) {
+})(typeof globalThis !== "undefined" ? globalThis : this, function (workspacesModule, linesModule) {
   "use strict";
 
   const ID = "sudo";
@@ -102,19 +110,26 @@
    * @param {object} context
    * @param {object|null} context.admin   the admin bridge (getAccess,
    *        isConnected, request). Handed in, never reached for.
+   * @param {object|null} [context.connection]  the connection bridge
+   *        (getStatus, subscribe), for the tools that mark the current line
    * @param {Array} [context.sudoTools]   the tools, in order; defaults to
-   *        Workspace Management alone
+   *        Workspace Management, then Line Configuration
    */
   function create(doc, context) {
     const settings = context || {};
     const admin = settings.admin || null;
+    const connection = settings.connection || null;
+    const defaultTools = [];
+    if (workspacesModule && workspacesModule.tool) defaultTools.push(workspacesModule.tool);
+    if (linesModule && linesModule.tool) defaultTools.push(linesModule.tool);
     const toolList = Array.isArray(settings.sudoTools) && settings.sudoTools.length
       ? settings.sudoTools
-      : (workspacesModule && workspacesModule.tool ? [workspacesModule.tool] : []);
+      : defaultTools;
 
     const state = {
       pending: null,   // "signIn" | "signOut" while one is in flight
       leaving: false,  // a sign-out asked for here, until it is answered
+      toolId: null,    // the tool showing
       note: "",
       noteKind: ""
     };
@@ -156,26 +171,59 @@
     strip.appendChild(slot);
     rootEl.appendChild(strip);
 
+    /* ---- The row of tools: their names, one pressed ---- */
+    const nav = element(doc, "div", "station-sudo__nav", { role: "tablist", "aria-label": "Administrator tools", hidden: "" });
+    rootEl.appendChild(nav);
+
     /* ---- The tools ---- */
     const toolHost = element(doc, "div", "station-sudo__tools", { hidden: "" });
     rootEl.appendChild(toolHost);
     const tools = [];
     for (const tool of toolList) {
       if (!tool || typeof tool.create !== "function") continue;
+      // Each tool's status in the strip: its own span in the slot, shown
+      // with the tool.
+      const toolSlot = element(doc, "span", "station-sudo__slot-item", { "data-tool": tool.id, hidden: "" });
+      slot.appendChild(toolSlot);
+      // The tool's pane, hidden until it is turned to: a tool is on screen
+      // only when its pane is, so `visible` walks up from there.
+      const host = element(doc, "div", "station-sudo__tool", { "data-tool": tool.id, hidden: "" });
+      toolHost.appendChild(host);
       let instance = null;
       try {
-        instance = tool.create(doc, { admin, statusSlot: slot, visible: () => visible(rootEl) }) || null;
+        instance = tool.create(doc, { admin, connection, statusSlot: toolSlot, visible: () => visible(host) }) || null;
       } catch (error) {
         instance = null;
       }
-      if (!instance || !instance.element) continue;
-      const host = element(doc, "div", "station-sudo__tool", { "data-tool": tool.id, hidden: "" });
+      if (!instance || !instance.element) { slot.removeChild(toolSlot); toolHost.removeChild(host); continue; }
       host.appendChild(instance.element);
-      toolHost.appendChild(host);
-      tools.push({ tool, host, instance });
+      const tab = text(doc, "button", "station-sudo__nav-tab", tool.label || tool.title, {
+        type: "button", role: "tab", "data-tool-tab": tool.id, "aria-pressed": "false", "aria-selected": "false", title: tool.title
+      });
+      nav.appendChild(tab);
+      tools.push({ tool, host, instance, slot: toolSlot, tab });
     }
-    // The first tool is the page for now; showing another is an edit here.
-    if (tools.length) show(tools[0].host, true);
+    if (tools.length) state.toolId = tools[0].tool.id;
+
+    function currentTool() {
+      return tools.find(entry => entry.tool.id === state.toolId) || tools[0] || null;
+    }
+
+    /* Show the chosen tool and no other: its pane, its slot in the strip,
+     * its name pressed in the row. The row itself is drawn only when there
+     * is something to turn between. */
+    function drawTools() {
+      const current = currentTool();
+      for (const entry of tools) {
+        const on = entry === current;
+        show(entry.host, on);
+        show(entry.slot, on);
+        entry.tab.setAttribute("aria-pressed", on ? "true" : "false");
+        entry.tab.setAttribute("aria-selected", on ? "true" : "false");
+        entry.tab.setAttribute("tabindex", on ? "0" : "-1");
+      }
+    }
+    drawTools();
 
     /* ---- Reading ---- */
 
@@ -205,6 +253,7 @@
       gate.setAttribute("data-state", gateState);
       show(gate, !signedIn);
       show(strip, signedIn);
+      show(nav, signedIn && tools.length > 1);
       show(toolHost, signedIn);
       if (!signedIn) {
         gateCopy.textContent = gateState === "unavailable"
@@ -215,8 +264,11 @@
         emailInput.disabled = !!state.pending;
         passwordInput.disabled = !!state.pending;
         if (wasSignedIn) {
-          // The session went while the page was open: nothing of it stays.
+          // The session went while the page was open: nothing of it stays,
+          // and the next sign-in opens on the first tool.
           for (const entry of tools) { if (typeof entry.instance.reset === "function") entry.instance.reset(); }
+          state.toolId = tools.length ? tools[0].tool.id : null;
+          drawTools();
           say(state.leaving ? "Signed out." : "Administrator access has ended. Sign in again to continue.", "");
         }
         wasSignedIn = false;
@@ -226,9 +278,23 @@
       wasSignedIn = true;
       email.textContent = current.access.email || "";
       signOutButton.disabled = !!state.pending;
+      drawTools();
       for (const entry of tools) {
         if (typeof entry.instance.update === "function") entry.instance.update(current);
       }
+    }
+
+    /* Turn to a tool. It is told the current access as it is shown, so a
+     * tool that reads only for a page on screen reads now. */
+    function open(id) {
+      const entry = tools.find(item => item.tool.id === id);
+      if (!entry || entry.tool.id === state.toolId) return false;
+      state.toolId = entry.tool.id;
+      drawTools();
+      const current = access();
+      if (current && current.access.signedIn && typeof entry.instance.update === "function") entry.instance.update(current);
+      if (typeof entry.instance.focus === "function") entry.instance.focus();
+      return true;
     }
 
     /* ---- Actions ---- */
@@ -286,9 +352,20 @@
       void signIn();
     });
     rootEl.addEventListener("click", event => {
-      const target = event.target && event.target.closest ? event.target.closest("[data-action='sign-out']") : null;
-      if (!target) return;
+      const target = event.target && event.target.closest ? event.target.closest("[data-action='sign-out'], [data-tool-tab]") : null;
+      if (!target || target.disabled) return;
+      const toolId = target.getAttribute("data-tool-tab");
+      if (toolId) { open(toolId); return; }
       void signOut();
+    });
+    nav.addEventListener("keydown", event => {
+      if (!event || (event.key !== "ArrowLeft" && event.key !== "ArrowRight")) return;
+      const at = tools.findIndex(entry => entry.tool.id === state.toolId);
+      if (at < 0 || tools.length < 2) return;
+      const next = tools[(at + (event.key === "ArrowRight" ? 1 : tools.length - 1)) % tools.length];
+      if (typeof event.preventDefault === "function") event.preventDefault();
+      open(next.tool.id);
+      if (typeof next.tab.focus === "function") next.tab.focus();
     });
 
     refresh();
@@ -307,17 +384,18 @@
       focus() {
         const current = access();
         if (current && current.access.signedIn) {
-          const first = tools[0];
-          if (first && typeof first.instance.focus === "function") first.instance.focus();
+          const shown = currentTool();
+          if (shown && typeof shown.instance.focus === "function") shown.instance.focus();
         } else if (typeof emailInput.focus === "function" && !emailInput.disabled) {
           emailInput.focus();
         }
       },
       signIn,
       signOut,
+      open,
       tool: id => { const found = tools.find(entry => entry.tool.id === id); return found ? found.instance : null; },
       tools: () => tools.map(entry => entry.tool.id),
-      getState: () => ({ pending: state.pending, note: state.note, noteKind: state.noteKind, gate: gate.getAttribute("data-state") })
+      getState: () => ({ pending: state.pending, note: state.note, noteKind: state.noteKind, gate: gate.getAttribute("data-state"), tool: state.toolId })
     };
   }
 

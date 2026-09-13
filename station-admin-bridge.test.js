@@ -167,3 +167,79 @@ test("the handle is the only way to publish or disconnect, and the module surfac
   handle.disconnect();
   assert.equal(handle.disconnect(), false, "a second disconnect is a no-op");
 });
+
+/* ----------------------------------------------------------------------
+ *   Line Configuration: the two actions added for Sudo's second tool
+ * -------------------------------------------------------------------- */
+
+test("a line configuration crosses outward by allow-list: the definition's fields, its id and updated time, the side as one of two or null, metadata as a plain clone - never the row", async () => {
+  const { bridge } = producer({
+    listLineConfigurations: async () => ({ ok: true, lines: [
+      { id: "l-8", line_number: 8, lineNumber: "8", displayName: "Line 8", aliases: ["Eight", " ", "Eight", 7], layerCount: "3", layerAPosition: "inside",
+        hopperGeometry: "volume", hopperNamingMode: "standard", isActive: true, metadata: { note: "kept", nested: { a: 1 } }, updatedAt: "2026-09-01T00:00:00Z",
+        created_at: "x", extra: "dropped" },
+      { id: "l-1", lineNumber: 1, displayName: "Line 1", layerCount: 1, layerAPosition: null, hopperGeometry: "volume", hopperNamingMode: "standard", isActive: false, metadata: "bad" },
+      { id: "l-x", lineNumber: 5, displayName: "Line 5", layerCount: 3, layerAPosition: "sideways", hopperGeometry: "cylindrical", hopperNamingMode: "standard" },
+      { lineNumber: 6, displayName: "no id" }
+    ] })
+  });
+  const result = await bridge.request("listLineConfigurations");
+  assert.ok(result.ok && Object.isFrozen(result) && Object.isFrozen(result.lines));
+  assert.deepEqual(result.lines.map(line => ({ ...line, aliases: [...line.aliases], metadata: { ...line.metadata } })), [
+    { id: "l-8", lineNumber: 8, displayName: "Line 8", aliases: ["Eight"], layerCount: 3, layerAPosition: "inside", hopperGeometry: "volume",
+      hopperNamingMode: "standard", isActive: true, metadata: { note: "kept", nested: { a: 1 } }, updatedAt: "2026-09-01T00:00:00Z" },
+    { id: "l-1", lineNumber: 1, displayName: "Line 1", aliases: [], layerCount: 1, layerAPosition: null, hopperGeometry: "volume",
+      hopperNamingMode: "standard", isActive: false, metadata: {}, updatedAt: "" },
+    { id: "l-x", lineNumber: 5, displayName: "Line 5", aliases: [], layerCount: 3, layerAPosition: null, hopperGeometry: "cylindrical",
+      hopperNamingMode: "standard", isActive: true, metadata: {}, updatedAt: "" }
+  ], "a row without an id is dropped; an unknown side is no side; `created_at` and `extra` do not cross");
+  assert.equal(JSON.stringify(result).includes("dropped"), false);
+});
+
+test("a save's arguments are rebuilt field by field - integers, collapsed names, an alias list, N/A as null, a boolean, a metadata clone - and a field of the wrong kind is refused before the application is asked", async () => {
+  const { bridge, env } = producer({
+    saveLineConfiguration: async ({ id, line }) => ({ ok: true, line: { id: id || "l-new", ...line, updatedAt: "2026-09-13T00:00:00Z" } })
+  });
+  const metadata = { note: "kept" };
+  const result = await bridge.request("saveLineConfiguration", { id: " l-8 ", line: {
+    lineNumber: "8", displayName: "  Line   8 ", aliases: [" Eight ", "", "Eight", "L8"], layerCount: "3", layerAPosition: "inside",
+    hopperGeometry: " volume ", hopperNamingMode: "standard", isActive: "yes", metadata, id: "smuggled", created_at: "x"
+  } });
+  assert.ok(result.ok);
+  assert.deepEqual(env.calls[0].args, { id: "l-8", line: {
+    lineNumber: 8, displayName: "Line 8", aliases: ["Eight", "L8"], layerCount: 3, layerAPosition: "inside",
+    hopperGeometry: "volume", hopperNamingMode: "standard", isActive: true, metadata: { note: "kept" }
+  } });
+  assert.ok(Object.isFrozen(env.calls[0].args.line));
+  assert.notEqual(env.calls[0].args.line.metadata, metadata, "the metadata is a clone");
+  assert.deepEqual({ ...result.line, aliases: [...result.line.aliases], metadata: { ...result.line.metadata } }, {
+    id: "l-8", lineNumber: 8, displayName: "Line 8", aliases: ["Eight", "L8"], layerCount: 3, layerAPosition: "inside",
+    hopperGeometry: "volume", hopperNamingMode: "standard", isActive: true, metadata: { note: "kept" }, updatedAt: "2026-09-13T00:00:00Z"
+  });
+  // Create: no id crosses as an empty one; N/A and "" are null.
+  await bridge.request("saveLineConfiguration", { line: { lineNumber: 1, displayName: "Line 1", layerCount: 1, layerAPosition: "n/a", hopperGeometry: "volume", hopperNamingMode: "standard", isActive: false } });
+  assert.equal(env.calls[1].args.id, "");
+  assert.equal(env.calls[1].args.line.layerAPosition, null);
+  assert.equal(env.calls[1].args.line.isActive, false);
+  assert.deepEqual(env.calls[1].args.line.metadata, {});
+  const before = env.calls.length;
+  const valid = { lineNumber: 8, displayName: "Line 8", layerCount: 3, layerAPosition: "inside", hopperGeometry: "volume", hopperNamingMode: "standard" };
+  for (const [bad, field, message] of [
+    [{ ...valid, lineNumber: "eight" }, "lineNumber", "A line number is required."],
+    [{ ...valid, displayName: "   " }, "displayName", "A display name is required."],
+    [{ ...valid, layerCount: 2.5 }, "layerCount", "A layer count is required."],
+    [{ ...valid, layerAPosition: "sideways" }, "layerAPosition", "Layer A must be Inside, Outside, or N/A."],
+    [{ ...valid, hopperGeometry: "" }, "hopperGeometry", "A hopper geometry is required."],
+    [{ ...valid, hopperNamingMode: 3 }, "hopperNamingMode", "A hopper naming mode is required."]
+  ]) {
+    assert.deepEqual(await bridge.request("saveLineConfiguration", { line: bad }), { ok: false, code: "bad_argument", message, field });
+  }
+  assert.deepEqual(await bridge.request("saveLineConfiguration", { id: "l-8" }), { ok: false, code: "bad_argument", message: "A line configuration is required.", field: "line" });
+  assert.deepEqual(await bridge.request("saveLineConfiguration", { line: [] }), { ok: false, code: "bad_argument", message: "A line configuration is required.", field: "line" });
+  assert.equal(env.calls.length, before, "nothing malformed reached the application");
+  // What the values may BE is not the bridge's to say: an out-of-range
+  // number or a count without a side crosses to the service, which
+  // validates by line-identity's rules.
+  await bridge.request("saveLineConfiguration", { line: { ...valid, lineNumber: 1000, layerAPosition: null } });
+  assert.equal(env.calls.length, before + 1);
+});
