@@ -4,21 +4,24 @@
  * WHAT IT IS
  *
  * The one place on the Station desktop for the operator-facing work that
- * does not belong permanently on the stage. Today it holds one section -
- * the Recipe Book (station-recipe-book.js), with Blend Edit's controls in
- * it - and it is built as a shell that holds sections, so the next one is
- * a section added to the list this file is handed and not a second panel
- * beside the first. That is the whole of the architecture: a launcher, a
- * panel, tabs for the sections it was given, and the body they draw into.
- * There is no registry, no plugin surface, no message bus.
+ * does not belong permanently on the stage. It holds the Recipe Book
+ * (station-recipe-book.js), Resin Totals and Appearance, and it is built
+ * as a shell that holds sections, so the next one is a section added to
+ * the list this file is handed and not a second panel beside the first.
+ * That is the whole of the architecture: a launcher, a panel, tabs for
+ * the sections it was given, and the body they draw into. There is no
+ * registry, no plugin surface, no message bus. Blend Edit is not the
+ * Handbook's: the mode is switched from the machine utility rail
+ * (station-machine-rail.js), and the Handbook opens, closes and turns its
+ * pages the same with the mode on as off.
  *
  * A SECTION
  *
  *   { id, title, create(doc, context) -> { element, update(), focus() } }
  *
  * create() is called once, when the Handbook is built, with the context
- * the boot file gave the Handbook (the bridges and the Blend Edit surface
- * it may use); update() is called whenever the Handbook is told something
+ * the boot file gave the Handbook (the bridges it may use); update() is
+ * called whenever the Handbook is told something
  * changed, and on opening; focus() when the section is shown.
  *
  * WHERE IT OPENS, AND HOW
@@ -26,7 +29,8 @@
  * Over the stage's lower half - the same grid cell as the machine, laid
  * on top (shell.css, handbook.css) - centred, at a fixed width, no taller
  * than half the stage. The hoppers in the upper half are untouched and
- * still take the pointer: Blend Edit works on them while this is open.
+ * still take the pointer: Blend Edit's cards work on them while this is
+ * open, and the Recipe Book can be read beside them.
  * Nothing is dimmed and nothing moves; opening the Handbook is not a
  * modal and changes no state but its own.
  *

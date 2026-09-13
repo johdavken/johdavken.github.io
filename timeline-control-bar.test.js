@@ -107,11 +107,15 @@ test("the settings icon is a cog, not the radial sun used by the global display 
 
 test("Reset tracking keeps its exact behaviour - same handler, same confirm", () => {
   assert.match(app, /\$\("resetTrackingBtn"\)\?\.addEventListener\("click", resetTracking\);/);
-  const start = app.indexOf("function resetTracking(");
+  const start = app.indexOf("    function resetTracking(");
   const body = app.slice(start, app.indexOf("\n    function ", start + 1));
   assert.match(body, /confirm\("Untrack all hoppers and clear their Pump off status\?"\)/);
-  assert.match(body, /h\.track = false;/);
-  assert.match(body, /h\.pumpOff = false;/);
+  // The mutation itself is clearAllTracking, shared with the Station
+  // executor's resetTracking command: the same flags cleared on every hopper.
+  assert.match(body, /clearAllTracking\(\);/);
+  const clear = app.slice(app.indexOf("    function clearAllTracking("), app.indexOf("\n    function ", app.indexOf("    function clearAllTracking(") + 1));
+  assert.match(clear, /h\.track = false;/);
+  assert.match(clear, /h\.pumpOff = false;/);
   assert.match(body, /notifyActiveJobMutation\(\{ immediate: true, kind: "reset-tracking" \}\);/);
 });
 

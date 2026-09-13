@@ -29,28 +29,34 @@
        is not inherited and then overridden, it is simply not present.
        station-isolation.test.js enforces this in both directions. -->
   <link rel="stylesheet" href="styles/tokens.css?v=0.15.1">
-  <link rel="stylesheet" href="styles/themes/industrial-light.css?v=0.4.0">
+  <link rel="stylesheet" href="styles/themes/industrial-light.css?v=0.4.1">
   <link rel="stylesheet" href="styles/themes/industrial-dark.css?v=0.4.0">
-  <link rel="stylesheet" href="styles/themes/gruvbox-light.css?v=0.2.0">
-  <link rel="stylesheet" href="styles/themes/gruvbox-dark.css?v=0.4.0">
-  <link rel="stylesheet" href="styles/themes/engineering-paper.css?v=0.2.0">
+  <link rel="stylesheet" href="styles/themes/gruvbox-light.css?v=0.2.1">
+  <link rel="stylesheet" href="styles/themes/gruvbox-dark.css?v=0.4.1">
+  <link rel="stylesheet" href="styles/themes/engineering-paper.css?v=0.2.1">
   <link rel="stylesheet" href="styles/themes/blueprint.css?v=0.2.0">
   <link rel="stylesheet" href="styles/base.css?v=0.5.0">
-  <link rel="stylesheet" href="styles/shell.css?v=0.7.0">
+  <link rel="stylesheet" href="styles/shell.css?v=0.10.0">
   <link rel="stylesheet" href="styles/components/machine.css?v=0.4.0">
-  <link rel="stylesheet" href="styles/components/hopper.css?v=0.20.0">
+  <link rel="stylesheet" href="styles/components/hopper.css?v=0.21.0">
   <link rel="stylesheet" href="styles/components/layer-bank.css?v=0.15.0">
   <link rel="stylesheet" href="styles/components/focus-editor.css?v=0.7.1">
   <link rel="stylesheet" href="styles/components/inspector.css?v=0.3.1">
   <link rel="stylesheet" href="styles/components/rundown.css?v=0.5.0">
   <link rel="stylesheet" href="styles/components/job-controls.css?v=0.3.0">
   <link rel="stylesheet" href="styles/components/sync-console.css?v=0.2.0">
+  <link rel="stylesheet" href="styles/components/avatar.css?v=0.1.0">
+  <!-- The logo in the header's heading (station-logo.js). -->
+  <link rel="stylesheet" href="styles/components/logo.css?v=0.1.0">
   <!-- The glass every surface Station opens out of itself is made of,
        then the two that wear it: the Operator Handbook (its own rule, on
        the same tokens) and the Changeover Calculator. -->
   <link rel="stylesheet" href="styles/components/glass.css?v=0.1.0">
-  <link rel="stylesheet" href="styles/components/handbook.css?v=0.5.1">
+  <link rel="stylesheet" href="styles/components/handbook.css?v=0.6.0">
   <link rel="stylesheet" href="styles/components/changeover.css?v=0.2.0">
+  <!-- The machine utility rail beside the far-right cluster: Blend Edit
+       and Reset Tracking, on the same glass. -->
+  <link rel="stylesheet" href="styles/components/machine-rail.css?v=0.1.0">
   <link rel="stylesheet" href="styles/components/theme-preview.css?v=0.2.0">
   <!-- Development-only review controls (?transition=debug). Harness only. -->
   <link rel="stylesheet" href="styles/components/dev.css?v=0.1.0">
@@ -77,7 +83,7 @@
        same way here as in the application host; nothing connects a producer
        on this page, so every command is answered "unavailable" and Station
        stays read-only. -->
-  <script src="../station-command-contract.js?v=0.5.0" defer></script>
+  <script src="../station-command-contract.js?v=0.6.0" defer></script>
   <script src="../station-command-bridge.js?v=0.1.0" defer></script>
   <!-- The shared resin catalog, for the focused editor's resin search: the
        same list Recipe Setup offers, from the same service. On this page
@@ -100,32 +106,38 @@
   <script src="../station-recipes-bridge.js?v=0.1.1" defer></script>
 
   <!-- Station's own layer, in the same order the application host loads it. -->
-  <script src="station-line-model.js?v=0.1.0" defer></script>
+  <script src="station-line-model.js?v=0.2.0" defer></script>
   <!-- Generated from images/extruder/ and images/mixer/ by the derive tools
        in tools/station-extruder/ and tools/station-mixer/. -->
   <script src="station-extruder-assets.js?v=0.2.0" defer></script>
   <script src="station-mixer-assets.js?v=0.2.0" defer></script>
   <script src="station-machine-layout.js?v=0.15.0" defer></script>
-  <script src="station-machine-parts.js?v=0.22.0" defer></script>
+  <script src="station-machine-parts.js?v=0.24.0" defer></script>
   <script src="station-render.js?v=0.11.0" defer></script>
   <script src="station-transition.js?v=0.1.0" defer></script>
   <script src="station-focus-editor.js?v=0.6.1" defer></script>
-  <script src="station-hopper-controls.js?v=0.1.1" defer></script>
+  <script src="station-hopper-controls.js?v=0.2.0" defer></script>
   <script src="station-layer-share.js?v=0.1.0" defer></script>
+  <!-- The machine utility rail: after the hopper controls, whose reset it
+       asks for. -->
+  <script src="station-machine-rail.js?v=0.1.0" defer></script>
   <script src="station-rundown.js?v=0.4.0" defer></script>
   <script src="station-rundown-timeline.js?v=0.4.0" defer></script>
   <script src="station-job-controls.js?v=0.2.0" defer></script>
   <!-- The Changeover Calculator: the header readout's open form. -->
   <script src="station-changeover.js?v=0.2.0" defer></script>
-  <script src="station-shell.js?v=0.6.0" defer></script>
+  <!-- The logo, before the shell that draws it into the header. -->
+  <script src="station-logo.js?v=0.1.0" defer></script>
+  <script src="station-shell.js?v=0.9.0" defer></script>
   <script src="station-sync-console.js?v=0.1.0" defer></script>
+  <script src="station-avatar.js?v=0.1.0" defer></script>
   <!-- The Operator Handbook: the launcher and shell, and its first section,
-       the Recipe Book (with Blend Edit's controls). -->
-  <script src="station-recipe-book.js?v=0.2.1" defer></script>
+       the Recipe Book. -->
+  <script src="station-recipe-book.js?v=0.3.1" defer></script>
   <script src="station-resin-totals.js?v=0.2.0" defer></script>
   <script src="station-theme-preview.js?v=0.2.0" defer></script>
   <script src="station-appearance.js?v=0.2.0" defer></script>
-  <script src="station-handbook.js?v=0.2.0" defer></script>
+  <script src="station-handbook.js?v=0.2.1" defer></script>
   <script src="station-demo-lines.js?v=0.3.2" defer></script>
   <script src="station-source.js?v=0.6.0" defer></script>
   <!-- Development-only extruder study (?lab=extruder). Loaded by this harness
@@ -135,7 +147,7 @@
   <!-- Development-only transition review (?transition=debug). Harness only,
        like the lab: never loaded by station-host.js. -->
   <script src="station-transition-dev.js?v=0.1.0" defer></script>
-  <script src="station.js?v=0.20.1" defer></script>
+  <script src="station.js?v=0.22.1" defer></script>
 </head>
 <body>
 

@@ -22,10 +22,13 @@
  * it. station-host-isolation.test.js pins this.
  */
 (function (root, factory) {
-  const api = factory();
+  const logo = typeof require === "function"
+    ? require("./station-logo.js")
+    : (root && root.PolynStationLogo);
+  const api = factory(logo);
   if (typeof module === "object" && module.exports) module.exports = api;
   if (root) root.PolynStationShell = api;
-})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+})(typeof globalThis !== "undefined" ? globalThis : this, function (logoModule) {
   "use strict";
 
   /* Every mount point the boot file looks for. Named here so the shell and
@@ -33,9 +36,10 @@
    *
    * Four regions and nothing else: the header (with the job controls' slot
    * and the line console's slot), the machine stage, the run-down timeline
-   * across the foot of the workspace, and the status bar - plus two slots
-   * that are not regions: the Operator Handbook's, and the utility
-   * surfaces', both laid over the stage's own cell (see below). The earlier side
+   * across the foot of the workspace, and the status bar - plus three slots
+   * that are not regions: the Operator Handbook's, the utility surfaces'
+   * and the machine utility rail's, all laid over the stage's own cell
+   * (see below). The earlier side
    * columns - a demo-configuration list on the left, an inspector on the
    * right - and the Current / Next recipe strip under the stage were taken
    * out (2026-09-12) so the stage has the whole width: configuration
@@ -44,7 +48,7 @@
    * them. The timeline row is not a strip of that kind: it is an
    * operational view of the job the stage shows, one modest row deep, and
    * the stage keeps everything above it. */
-  const MOUNTS = Object.freeze(["machine", "timeline", "status", "job", "connection", "handbook", "utility"]);
+  const MOUNTS = Object.freeze(["avatar", "machine", "timeline", "status", "job", "connection", "handbook", "utility", "rail"]);
 
   function element(doc, name, className, attributes) {
     const node = doc.createElement(name);
@@ -112,7 +116,20 @@
     /* The header: identity, the way back, the job's two line-wide readouts,
      * and the connection at the far end. Nothing else lives here. */
     const header = element(doc, "header", "station-header");
-    header.appendChild(text(doc, "h1", "station-header__title", "Station"));
+    /* Station's picture, before the name: the slot station-avatar.js fills
+     * with the face and the larger picture it opens. A slot rather than
+     * the picture itself, as the job readouts and the line console are,
+     * so the shell stays structure and the open/close behaviour stays
+     * with the module that owns it. */
+    header.appendChild(element(doc, "div", "station-header__avatar", { "data-station-mount": "avatar" }));
+    /* The name, as the logo (station-logo.js): the mark and the word
+     * STATION drawn inline so they take the theme, inside the heading
+     * that names the page. Without the module (a host that did not load
+     * it) the word is set in type, as it was. */
+    const title = element(doc, "h1", "station-header__title");
+    if (logoModule && typeof logoModule.create === "function") title.appendChild(logoModule.create(doc, { label: "Station" }));
+    else title.textContent = "Station";
+    header.appendChild(title);
     /* Beside the name, the way back to the legacy interface: a plain link,
      * quiet by design - text, not a button, no explanation - so it is
      * there when wanted and never competes with the readouts. */
@@ -151,6 +168,16 @@
      * together without meeting. The same rule as the Handbook's slot:
      * laid over the stage, no track, inert to the pointer itself. */
     shell.appendChild(element(doc, "div", "station-utility-slot", { "data-station-mount": "utility" }));
+
+    /* The machine utility rail's slot (station-machine-rail.js): the
+     * short stack of controls that stands at the outer edge of the
+     * far-right hopper cluster - Blend Edit and Reset Tracking. The same
+     * cell again, under the two slots above in the stack, so a surface
+     * laid across the stage covers the rail rather than meeting it; the
+     * rail itself is placed by script against the drawn cluster, and
+     * reserves no track and moves nothing. Inert to the pointer itself,
+     * like the others. */
+    shell.appendChild(element(doc, "div", "station-rail-slot", { "data-station-mount": "rail" }));
 
     /* The run-down timeline's row: no heading, no card - the timeline
      * itself (station-rundown-timeline.js) begins with its Now anchor. */

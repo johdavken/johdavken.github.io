@@ -531,15 +531,18 @@ function boot(options) {
     isHandbookOpen: () => launcher.getAttribute("aria-expanded") === "true",
     modeOn: () => machine.getAttribute("data-blend-edit") === "true",
     cards: () => machine.querySelectorAll("[data-role='blend-card']"),
-    flipLayer: layer => {
-      const chip = panel.querySelectorAll(".station-book__layer-chip").find(n => n.getAttribute("data-layer") === layer);
-      assert.ok(chip, `no Handbook selector for layer ${layer}`);
-      chip.click();
-    },
+    /* The mode's switch is the machine rail's; a layer is turned back or
+     * over by its own train while the mode is on. */
+    blendSwitch: () => doc.querySelector("[data-role='machine-rail'] [data-action='blend-edit']"),
+    flipLayer: layer => api.clickTarget("extruder", layer),
     enterBlendEdit() {
-      if (!api.isHandbookOpen()) launcher.click();
-      api.clickAction("blend-edit");
+      api.blendSwitch().click();
       assert.equal(api.modeOn(), true, "Blend Edit is on");
+      return api;
+    },
+    exitBlendEdit() {
+      api.blendSwitch().click();
+      assert.equal(api.modeOn(), false, "Blend Edit is off");
       return api;
     },
     escapeOnStage: () => doc.dispatchEvent(makeEvent("keydown", { key: "Escape", bubbles: true })),
@@ -715,7 +718,10 @@ test("entering Blend Edit keeps every share in its slot, editable, in the same b
   assert.deepEqual(s.labels(), ["20%", "20%", "20%", "20%", "20%"]);
   assert.deepEqual(boxes(), before, "the slot moved with the mode");
   for (const layer of LAYERS) assert.equal(s.shareOf(layer).getAttribute("data-able"), "true");
-  s.flipLayer("C");
+  // Every layer is turned over on entry; all but C are turned back by
+  // their trains, so one card stands.
+  assert.equal(s.cards().length, 5);
+  for (const layer of LAYERS) if (layer !== "C") s.flipLayer(layer);
   assert.equal(s.cards().length, 1);
   type(s.openShare("C"), "30");
   key(s.fieldOf("C"), "Enter");
@@ -731,8 +737,7 @@ test("entering Blend Edit keeps every share in its slot, editable, in the same b
   type(blend, 35);
   key(blend, "Enter");
   assert.deepEqual(s.calls.map(c => c.command), ["setLayerShare", "setHopperBlend"]);
-  s.clickAction("done");
-  assert.equal(s.modeOn(), false);
+  s.exitBlendEdit();
   assert.deepEqual(s.labels(), ["20%", "20%", "30%", "20%", "20%"]);
   assert.deepEqual(boxes(), before);
 });
@@ -747,9 +752,8 @@ test("a share field open when Blend Edit starts is committed along its own path 
   assert.equal(s.labelOf("B"), "24%");
   const again = s.openShare("D");
   type(again, "18");
-  s.clickAction("done");
+  s.exitBlendEdit();
   assert.deepEqual(s.calls.map(c => [c.args.layer, c.args.pct]), [["B", 24], ["D", 18]]);
-  assert.equal(s.modeOn(), false);
   assert.equal(s.labelOf("D"), "18%");
 });
 

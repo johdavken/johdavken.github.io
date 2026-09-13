@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 48" width="380" height="48" class="station-logo" role="img" aria-label="Station">
+  <title>Station</title>
+  <style>
+    .station-logo { color: var(--station-logo-ink, var(--station-text, #e5eaf1)); }
+    .station-logo__hopper, .station-logo__ink { fill: currentColor; }
+    .station-logo__flow { fill: none; stroke: var(--station-logo-flow, var(--station-rundown-flow, #5ca6de)); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+    .station-logo__signal { fill: var(--station-logo-accent, var(--station-accent, #5ca6de)); animation: station-logo-breathe 6s ease-in-out infinite; }
+    @keyframes station-logo-breathe { 0%, 65%, 100% { opacity: 1; } 82% { opacity: .48; } }
+    @media (prefers-reduced-motion: reduce) { .station-logo__signal { animation: none; } }
+  </style>
+  <path class="station-logo__hopper" d="M4 2 H36 L25 22 H15 Z"></path>
+  <polyline class="station-logo__flow" points="14,27 20,31.5 26,27"></polyline>
+  <polyline class="station-logo__flow station-logo__flow--2" points="14,33 20,37.5 26,33"></polyline>
+  <polyline class="station-logo__flow station-logo__flow--3" points="14,39 20,43.5 26,39"></polyline>
+  <g transform="translate(54 0)">
+    <g class="station-logo__ink">
+      <path d="M10 2H39V10H13L9 14V19H30L40 29V36L30 46H1V38H27L31 34V31L27 27H10L0 17V12Z"></path>
+      <path d="M48 2H90V10H74V46H65V10H48Z"></path>
+      <path fill-rule="evenodd" d="M112 2H123L145 46H135L130 36H105L100 46H90ZM109 28H126L117.5 11Z"></path>
+      <path d="M145 2H187V10H171V46H162V10H145Z"></path>
+      <path d="M199 2H208V46H199Z"></path>
+      <path d="M236 2H232L222 12V36L232 46H253L263 36V12L253 2H250V10L254 15V33L249 38H236L231 33V15L236 10Z"></path>
+      <path d="M277 46V2H286L317 32V2H326V46H317L286 16V46Z"></path>
+    </g>
+    <path class="station-logo__signal" d="M239 2H247V10H239Z"></path>
+  </g>
+</svg>

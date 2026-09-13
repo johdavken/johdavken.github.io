@@ -55,6 +55,11 @@ producer, is visited once at the end to check that it is read-only.
   column, the pressed segment marked by weight and a rule, and choosing
   12H halves every marker's fraction without moving the axis; 6H by
   keyboard restores the six-hour picture exactly.
+- **Station's picture** - a 32px rounded face immediately left of the name,
+  inside the 52px row and clear of everything else in it; pressing it opens
+  the larger picture under it (its full 320px width, rounded, inside the
+  window, focused) with the header unmoved; Escape, a press outside and a
+  second press on the face each close it, Escape returning focus to the face.
 - **Fast click before hover** - a click dispatched on a mixer, a hopper and
   an editor row with no preceding pointer movement lands exactly like a
   hovered one.

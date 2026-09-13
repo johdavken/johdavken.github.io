@@ -214,6 +214,60 @@ async function run(browserName) {
     check(browserName, `${tag} Legacy is a quiet link beside the name to the application without the Station flag`,
       chrome.legacy === "/" && chrome.legacyQuiet && chrome.legacyBesideName, chrome);
 
+    /* Station's picture: a 32px rounded face immediately left of the name,
+     * inside the header's row and clear of everything else in it; pressed,
+     * it opens the larger picture under itself, rounded, over the stage
+     * and inside the window; Escape and a press outside put it away. */
+    const avatarGeometry = () => page.evaluate(() => {
+      const r = el => { const b = el.getBoundingClientRect(); return { x: b.x, y: b.y, w: b.width, h: b.height, right: b.right, bottom: b.bottom }; };
+      const header = document.querySelector(".station-header");
+      const slot = header.querySelector(".station-header__avatar");
+      const trigger = header.querySelector(".station-avatar__trigger");
+      const face = header.querySelector(".station-avatar__face");
+      const panel = header.querySelector(".station-avatar__panel");
+      const portrait = header.querySelector(".station-avatar__portrait");
+      if (!slot || !trigger || !face || !panel || !portrait) return { missing: true };
+      const tcs = getComputedStyle(trigger), pcs = getComputedStyle(panel), ics = getComputedStyle(portrait);
+      const others = [".station-header__title", ".station-header__legacy", ".station-job", ".station-sync"].map(sel => header.querySelector(sel)).filter(Boolean).map(r);
+      const t = r(trigger), h = r(header), title = r(header.querySelector(".station-header__title"));
+      const overlaps = (a, b) => a.x < b.right && b.x < a.right && a.y < b.bottom && b.y < a.bottom;
+      return {
+        firstInHeader: header.firstElementChild === slot && slot.nextElementSibling === header.querySelector(".station-header__title"),
+        size: [t.w, t.h], radius: tcs.borderTopLeftRadius, overflow: tcs.overflow,
+        inRow: t.y >= h.y && t.bottom <= h.bottom, headerHeight: h.h,
+        leftOfTitle: t.right <= title.x && title.x - t.right < 24 && Math.abs((t.y + t.h / 2) - (title.y + title.h / 2)) < 4,
+        clear: others.every(o => !overlaps(t, o)),
+        faceLoaded: face.complete && face.naturalWidth === 96 && face.naturalHeight === 96,
+        expanded: trigger.getAttribute("aria-expanded"), open: pcs.display !== "none",
+        panel: r(panel), panelRadius: pcs.borderTopLeftRadius, portrait: r(portrait), portraitRadius: ics.borderTopLeftRadius,
+        portraitLoaded: portrait.complete && portrait.naturalWidth === 640 && portrait.naturalHeight === 760,
+        focused: document.activeElement === panel ? "panel" : document.activeElement === trigger ? "trigger" : document.activeElement ? document.activeElement.className : null,
+        innerW: innerWidth, innerH: innerHeight
+      };
+    });
+    let avatar = await avatarGeometry();
+    check(browserName, `${tag} the picture is a 32px rounded face immediately left of the name, inside the 52px row, clear of the title, Legacy, the readouts and the console`,
+      !avatar.missing && avatar.firstInHeader && avatar.size.join() === "32,32" && parseFloat(avatar.radius) >= 4 && avatar.overflow === "hidden" && avatar.inRow && avatar.headerHeight === 52 && avatar.leftOfTitle && avatar.clear && avatar.faceLoaded && avatar.expanded === "false" && !avatar.open, avatar);
+    await page.click(".station-avatar__trigger");
+    await page.waitForFunction(() => { const img = document.querySelector(".station-avatar__portrait"); return img && img.complete && img.naturalWidth > 0; }, null, { timeout: 5000 }).catch(() => {});
+    avatar = await avatarGeometry();
+    check(browserName, `${tag} pressing the face opens the larger picture under it: rounded, its full 320px width, inside the window, over the stage, focused, the header unmoved`,
+      avatar.open && avatar.expanded === "true" && avatar.portraitLoaded && avatar.portrait.w === 320 && avatar.portrait.h === 380 && parseFloat(avatar.panelRadius) >= 8 && parseFloat(avatar.portraitRadius) >= 4
+      && avatar.panel.y >= 52 && avatar.panel.x >= 0 && avatar.panel.right <= avatar.innerW && avatar.panel.bottom <= avatar.innerH && avatar.headerHeight === 52 && avatar.focused === "panel", avatar);
+    await page.keyboard.press("Escape"); await page.waitForTimeout(50);
+    avatar = await avatarGeometry();
+    check(browserName, `${tag} Escape closes the picture and returns focus to the face`, !avatar.open && avatar.expanded === "false" && avatar.focused === "trigger", avatar);
+    await page.click(".station-avatar__trigger"); await page.waitForTimeout(50);
+    avatar = await avatarGeometry();
+    check(browserName, `${tag} the face opens the picture again`, avatar.open, avatar);
+    await page.mouse.click(avatar.innerW / 2, avatar.innerH - 8); await page.waitForTimeout(50);
+    avatar = await avatarGeometry();
+    check(browserName, `${tag} a press outside closes the picture`, !avatar.open && avatar.expanded === "false", avatar);
+    await page.click(".station-avatar__trigger"); await page.waitForTimeout(50);
+    await page.click(".station-avatar__trigger"); await page.waitForTimeout(50);
+    avatar = await avatarGeometry();
+    check(browserName, `${tag} pressing the face again closes the picture`, !avatar.open && avatar.headerHeight === 52, avatar);
+
     /* The timeline's scale: 6H | 12H under the Now clock, in the anchor's
      * column, one pressed - and choosing the other redraws the row at the
      * new window without moving the axis a pixel. */
@@ -387,12 +441,20 @@ async function run(browserName) {
         const p1 = new DOMPoint(Number(flow.getAttribute("x")), Number(flow.getAttribute("y"))).matrixTransform(m);
         const p2 = new DOMPoint(Number(flow.getAttribute("x")) + Number(flow.getAttribute("width")), Number(flow.getAttribute("y")) + Number(flow.getAttribute("height"))).matrixTransform(m);
         const box = { x: p1.x, y: p1.y, right: p2.x, bottom: p2.y };
-        // The readout, the receiver, the ports and the fill valve are never
-        // under the flow; the hose is below the vessel, so it cannot be.
-        for (const part of ["id", "pct", "resin", "receiver-cone", "port", "fill-valve", "hose-end"]) {
+        // The readout and the receiver are never under the flow; the hose is
+        // below the vessel, so it cannot be.
+        for (const part of ["id", "pct", "resin", "receiver-cone", "hose-end"]) {
           const el = h.querySelector(`.station-hopper__${part}`); if (!el) continue;
           const b = el.getBoundingClientRect();
           if (b.width && b.height && !(b.right <= box.x || b.x >= box.right || b.bottom <= box.y || b.y >= box.bottom)) obscured.push(`${h.getAttribute("data-hopper")}:${part}`);
+        }
+        // The hardware - ports, fill valve, clamps, bands - stands over the
+        // flow, which spans the vessel's interior: painted after it, so the
+        // chevrons pass behind and cover none of it.
+        const details = h.querySelector("[data-role='hopper-details']");
+        if (!details || !(flow.compareDocumentPosition(details) & Node.DOCUMENT_POSITION_FOLLOWING)) obscured.push(`${h.getAttribute("data-hopper")}:hardware-under-flow`);
+        for (const part of ["port", "fill-valve", "clamp", "band"]) {
+          if (!details || !details.querySelector(`.station-hopper__${part}`)) obscured.push(`${h.getAttribute("data-hopper")}:${part}`);
         }
       }
       return {

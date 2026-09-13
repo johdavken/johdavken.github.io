@@ -1,5 +1,7 @@
 /* Station hopper controls - the two operational toggles a drawn hopper
- * carries: pump-off, on its receiver, and tracking, on its body.
+ * carries: pump-off, on its receiver, and tracking, on its body - and the
+ * one operation over all of them at once: Reset Tracking, on the machine
+ * utility rail (station-machine-rail.js).
  *
  * WHAT IT IS
  *
@@ -45,6 +47,10 @@
    * offer is the bridge's answer. */
   const CONTROLS = Object.freeze(["tracking", "pump"]);
   const COMMAND = Object.freeze({ tracking: "setHopperTracking", pump: "setPumpOff" });
+  /* The reset over every hopper of the job: the floor UI's Reset tracking
+   * as one command. Not a control of a hopper, so not in CONTROLS; the
+   * rail asks whether it is on offer and hands the click here. */
+  const RESET_COMMAND = "resetTracking";
   const FLAG = Object.freeze({ tracking: "track", pump: "pumpOff" });
   const LABEL = Object.freeze({ tracking: "tracking", pump: "pump-off" });
 
@@ -88,6 +94,23 @@
     if (!connected) return "no application is connected to Station commands.";
     if (recipe !== "current") return "only the running job carries tracking and pump-off.";
     return `the application does not offer ${LABEL[control] || "this"} from Station.`;
+  }
+
+  /* Whether the reset is on offer, by the same reading as abilities():
+   * a connected bridge whose producer declared the command, and the
+   * Current recipe, which is the only one that carries tracking. */
+  function canReset(commands, recipe) {
+    const connected = !!(commands && typeof commands.isAvailable === "function" && commands.isAvailable());
+    const usable = connected && typeof commands.dispatch === "function" && typeof commands.capabilities === "function";
+    const offered = usable ? commands.capabilities() : [];
+    return recipe === "current" && usable && Array.isArray(offered) && offered.includes(RESET_COMMAND);
+  }
+
+  function resetReason(commands, recipe) {
+    const connected = !!(commands && typeof commands.isAvailable === "function" && commands.isAvailable());
+    if (!connected) return "no application is connected to Station commands.";
+    if (recipe !== "current") return "only the running job carries tracking and pump-off.";
+    return "the application does not offer a tracking reset from Station.";
   }
 
   /* The request a drawn control's element describes. The renderer writes
@@ -137,5 +160,21 @@
     return commands.dispatch(COMMAND[r.control], args);
   }
 
-  return Object.freeze({ CONTROLS, COMMAND, FLAG, LABEL, STATE, stateLabel, actionLabel, abilities, reason, requestFrom, toggle });
+  /**
+   * Hand the reset to the application and return its answer: one
+   * resetTracking, addressed to Current. Whether anything was tracked is
+   * the application's to say - a job with nothing tracked answers
+   * ok/unchanged, never a refusal.
+   */
+  function resetTracking(commands) {
+    if (!commands || typeof commands.dispatch !== "function") {
+      return unavailable("No application is connected to Station commands.");
+    }
+    return commands.dispatch(RESET_COMMAND, { recipe: "current" });
+  }
+
+  return Object.freeze({
+    CONTROLS, COMMAND, RESET_COMMAND, FLAG, LABEL, STATE, stateLabel, actionLabel,
+    abilities, reason, requestFrom, toggle, canReset, resetReason, resetTracking
+  });
 });

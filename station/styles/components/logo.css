@@ -1,0 +1,44 @@
+/* The Station logo (station-logo.js): the hopper with its falling flow
+ * and the word STATION, drawn inline in the header's heading so it takes
+ * the theme - ink in the text colour, the flow in the tracked-flow colour
+ * the stage's chevrons use, the O's inset in the accent. The inset
+ * breathes once every few seconds: decoration, not live status, and
+ * still under reduced motion. The reusable file at
+ * station/assets/station-logo.svg carries the same rules as defaults.
+ */
+
+.station-logo {
+  display: block;
+  height: 18px;
+  width: auto;
+  color: var(--station-text);
+}
+
+.station-logo__hopper,
+.station-logo__ink {
+  fill: currentColor;
+}
+
+.station-logo__flow {
+  fill: none;
+  stroke: var(--station-rundown-flow);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.station-logo__signal {
+  fill: var(--station-accent);
+  animation: station-logo-breathe 6s ease-in-out infinite;
+}
+
+@keyframes station-logo-breathe {
+  0%, 65%, 100% { opacity: 1; }
+  82% { opacity: 0.48; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .station-logo__signal {
+    animation: none;
+  }
+}

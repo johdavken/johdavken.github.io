@@ -1,0 +1,185 @@
+/* The machine utility rail (station-machine-rail.js): the short stack of
+ * icon controls at the outer edge of the far-right hopper cluster.
+ *
+ * WHERE IT SITS
+ *
+ * In its own slot over the stage's cell (shell.css), positioned by script
+ * along the outer edge of the far-right bank's card box - a strip the
+ * box's own height, spaced a little off its edge, the controls stacked
+ * from its top - so it reads as a fitting on that bank. Until the script
+ * has measured (or where it cannot) the rail falls back to the cell's
+ * lower right. The slot is inert to the pointer; the rail takes it
+ * back for its own box only. It lies UNDER the Handbook and the utility
+ * surfaces in the stack, so a surface laid across the stage covers it
+ * rather than meeting it.
+ *
+ * WHAT IT LOOKS LIKE
+ *
+ * Two small squares of the console's glass, one above the other, on a
+ * hairline seam that runs the strip's full height down its inner edge:
+ * the clip that holds it to the card. No panel around them, no words on them - each says what it is
+ * on hover and to a reader. Every colour is a token; the glass is the
+ * theme's own (the --station-handbook-glass-* tokens, the console's one
+ * glass). Blend Edit on is the accent, quietly: an accent edge and glyph,
+ * a wash of the accent behind. An armed reset is the warning colour, the
+ * one moment the rail is allowed to look like something is about to
+ * happen; at rest it is as quiet as its neighbour.
+ */
+
+.station-rail {
+  position: absolute;
+  right: var(--station-space-4);
+  bottom: var(--station-space-4);
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: var(--station-space-1);
+  padding-left: var(--station-space-2);
+  border-left: var(--station-stroke) solid var(--station-border-subtle);
+  pointer-events: auto;
+  /* Stepping back fades, then hides: visibility waits for the fade so
+     the rail leaves the tab order and the reader's tree once it is gone,
+     and returns at once when it comes back. */
+  transition: opacity var(--station-motion-settle) ease-out, visibility 0s linear 0s;
+}
+
+/* Measured: the script's left, top and height replace the fallback
+   corner; the seam runs the height of the box it stands beside. */
+.station-rail.is-placed {
+  right: auto;
+  bottom: auto;
+}
+
+.station-rail[hidden] {
+  display: none;
+}
+
+/* A layer is open: the focused layout owns the stage, and the rail steps
+   back - faded, hidden from the keyboard and the reader, out of the
+   pointer's way, its place kept. */
+.station-rail.is-withdrawn {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity var(--station-motion-settle) ease-out, visibility 0s linear var(--station-motion-settle);
+}
+
+/* ---- A control: a small square of glass holding one glyph ---- */
+
+.station-root .station-rail__control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--station-space-6) + var(--station-space-1));
+  height: calc(var(--station-space-6) + var(--station-space-1));
+  border: var(--station-stroke) solid var(--station-handbook-glass-border);
+  border-radius: var(--station-radius);
+  background: var(--station-handbook-glass);
+  -webkit-backdrop-filter: blur(var(--station-handbook-glass-blur)) saturate(var(--station-handbook-glass-saturate));
+  backdrop-filter: blur(var(--station-handbook-glass-blur)) saturate(var(--station-handbook-glass-saturate));
+  box-shadow: inset 0 var(--station-stroke) 0 var(--station-handbook-glass-highlight);
+  color: var(--station-text-muted);
+  transition: color var(--station-motion-ack) ease-out, border-color var(--station-motion-ack) ease-out, background-color var(--station-motion-ack) ease-out;
+}
+
+.station-root .station-rail__control:hover:not(:disabled) {
+  border-color: var(--station-border-strong);
+  color: var(--station-text);
+}
+
+.station-root .station-rail__control:active:not(:disabled) {
+  background: var(--station-handbook-control-active);
+}
+
+.station-root .station-rail__control:focus-visible {
+  outline-offset: 2px;
+}
+
+.station-root .station-rail__control:disabled {
+  color: var(--station-text-disabled);
+  border-color: var(--station-border-subtle);
+  box-shadow: none;
+  cursor: default;
+}
+
+/* Blend Edit on: the accent, as an edge and a glyph and a wash - never
+   a filled block, which would shout across the machine. */
+.station-root .station-rail__control.is-active {
+  border-color: var(--station-accent);
+  background: var(--station-accent-soft);
+  color: var(--station-accent);
+}
+
+.station-root .station-rail__control.is-active:hover:not(:disabled) {
+  border-color: var(--station-accent-hover);
+  color: var(--station-accent-hover);
+}
+
+/* The reset, armed: the warning colour on the edge and the glyph, and a
+   pulse of the same on the edge while it waits for its second click. */
+.station-root .station-rail__control.is-armed {
+  border-color: var(--station-warning);
+  color: var(--station-warning);
+  animation: station-rail-armed 1.2s ease-in-out infinite;
+}
+
+@keyframes station-rail-armed {
+  0%, 100% { box-shadow: inset 0 var(--station-stroke) 0 var(--station-handbook-glass-highlight), 0 0 0 0 var(--station-warning); }
+  50% { box-shadow: inset 0 var(--station-stroke) 0 var(--station-handbook-glass-highlight), 0 0 0 3px transparent; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .station-root .station-rail__control.is-armed {
+    animation: none;
+  }
+  .station-rail {
+    transition: none;
+  }
+}
+
+/* ---- The glyphs, in the control's own colour ---- */
+
+.station-rail__glyph {
+  display: block;
+  flex: none;
+}
+
+.station-rail__glyph-stroke {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* The card turning over: the face behind is an outline, the face in
+   front is filled with the glass's own highlight so the two read as one
+   card's two sides. */
+.station-rail__glyph-back {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.3;
+  opacity: 0.55;
+}
+
+.station-rail__glyph-face {
+  fill: var(--station-surface);
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+
+.station-rail__glyph-row {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+}
+
+/* The hopper inside the reset's arrow: an outline, as the stage's. */
+.station-rail__glyph-hopper {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.3;
+  stroke-linejoin: round;
+}

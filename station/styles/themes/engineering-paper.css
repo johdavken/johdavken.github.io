@@ -53,8 +53,9 @@
 
   --station-success: #2f6b4f;
   --station-tracking: #2f6b4f;
-  /* The run-down flow's chevrons (hopper.css): the drafting pen's tracking green. */
-  --station-rundown-flow: #2f6b4f;
+  /* The run-down flow's chevrons (hopper.css): the drafting pen's tracking
+     green, pressed harder, so it holds against the pale sheet's steel. */
+  --station-rundown-flow: #1a5138;
   --station-warning: #a3540f;
   --station-danger: #b23a2f;
   --station-info: #2f5f8f;

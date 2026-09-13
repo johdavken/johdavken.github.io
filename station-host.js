@@ -64,9 +64,12 @@
     "station/styles/components/rundown.css",
     "station/styles/components/job-controls.css",
     "station/styles/components/sync-console.css",
+    "station/styles/components/avatar.css",
+    "station/styles/components/logo.css",
     "station/styles/components/glass.css",
     "station/styles/components/handbook.css",
     "station/styles/components/changeover.css",
+    "station/styles/components/machine-rail.css",
     "station/styles/components/theme-preview.css"
   ];
 
@@ -83,6 +86,9 @@
     "station/station-focus-editor.js",
     "station/station-hopper-controls.js",
     "station/station-layer-share.js",
+    // The machine utility rail: Blend Edit and Reset Tracking beside the
+    // far-right cluster. After the hopper controls, whose reset it asks for.
+    "station/station-machine-rail.js",
     // The run-down projection before the two that read it: the timeline
     // and the header's job controls.
     "station/station-rundown.js",
@@ -90,8 +96,12 @@
     "station/station-job-controls.js",
     // The Changeover Calculator: after the job controls it applies through.
     "station/station-changeover.js",
+    // The logo before the shell that draws it into the header.
+    "station/station-logo.js",
     "station/station-shell.js",
     "station/station-sync-console.js",
+    // Station's picture in the header, beside the name.
+    "station/station-avatar.js",
     // The Operator Handbook: its first section before the shell that hosts it.
     "station/station-recipe-book.js",
     "station/station-resin-totals.js",
@@ -103,7 +113,7 @@
     "station/station.js"
   ];
 
-  const VERSION = "0.28.7";
+  const VERSION = "0.31.0";
 
   function requested() {
     try {

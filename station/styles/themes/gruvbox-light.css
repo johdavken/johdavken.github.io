@@ -48,8 +48,9 @@
 
   --station-success: #5f5c0a;
   --station-tracking: #5f5c0a;
-  /* The run-down flow's chevrons (hopper.css): a muted warm tone from the palette, not a green. */
-  --station-rundown-flow: #b57614;
+  /* The run-down flow's chevrons (hopper.css): the palette's warm dark
+     olive, not a green - deep enough to hold against the tan steel. */
+  --station-rundown-flow: #4a4405;
   --station-warning: #7d4f0a;
   --station-danger: #9d0006;
   --station-info: #076678;

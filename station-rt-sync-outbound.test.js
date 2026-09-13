@@ -53,6 +53,8 @@ const LIFTED = [
   block("    const RECIPE_HISTORY_LIMIT = 40;", "    /* The plan's own percentage totals"),
   block("    function plannedRecipePayload(){", "\n    }\n"),
   block("    function hookupRecipePositions(){", "    function renderResultsFlat("),
+  block("    function hasTrackedHoppers(){", "\n    }\n"),
+  block("    function clearAllTracking(){", "\n    }\n"),
   block("  function createStationCommandExecutor(){", "\n  }\n")
 ].join("\n");
 
@@ -396,9 +398,34 @@ test("a runtime no-op causes no RT churn: no save, no publish, no notification, 
   assert.deepEqual(h.uploads(), []);
 });
 
+test("reset tracking from Station: every hopper's flags cleared once, one immediate reset-tracking notification through the toolbar's own kind, one upload carrying the cleared job, no history", async () => {
+  const h = await boot();
+  h.state.layers[0].hoppers[0].track = true;
+  h.state.layers[1].hoppers[2].track = true;
+  h.state.layers[2].hoppers[1].pumpOff = true;
+  const revision = h.stationBridge.getRevision();
+  const result = h.commands.dispatch("resetTracking", { recipe: "current" });
+  assert.equal(result.ok, true);
+  assert.equal(result.changed, true);
+  assert.ok(h.state.layers.every(layer => layer.hoppers.every(hopper => !hopper.track && !hopper.pumpOff)));
+  assert.ok(h.stationBridge.getRevision() > revision, "the state bridge published");
+  assert.equal(h.history.current.undo.length, 0, "runtime state records no recipe history");
+  const uploaded = await expectOneUpload(h, "reset-tracking", true);
+  assert.ok(uploaded.layers.every(layer => layer.hoppers.every(hopper => !hopper.track && !hopper.pumpOff)), "the line receives the cleared flags");
+  assert.equal(uploaded.layers[1].hoppers[2].resinName, "", "and nothing else about a hopper moved");
+  // Nothing tracked: no churn at all.
+  const saves = h.log.saves;
+  const uploads = h.uploads().length;
+  const again = h.commands.dispatch("resetTracking", { recipe: "current" });
+  assert.deepEqual([again.ok, again.changed], [true, false]);
+  assert.equal(h.log.saves, saves);
+  await h.flush();
+  assert.equal(h.uploads().length, uploads, "a no-op reset uploads nothing");
+});
+
 test("the hopper controls module has no way onto the line of its own: it dispatches on the bridge it is handed and nothing else", () => {
   const source = fs.readFileSync(path.join(ROOT, "station", "station-hopper-controls.js"), "utf8");
-  assert.equal((source.match(/commands\.dispatch\s*\(/g) || []).length, 1);
+  assert.equal((source.match(/commands\.dispatch\s*\(/g) || []).length, 2, "a hopper's toggle, and the reset over all of them");
   assert.doesNotMatch(source, /PolynStationCommandBridge\s*\.|PolynStationStateBridge|PolynCloudSync|localStorage|setTimeout|fetch\s*\(/);
 });
 

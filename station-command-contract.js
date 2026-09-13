@@ -13,7 +13,7 @@
  *
  * WHAT IT DEFINES
  *
- *   COMMANDS       the vocabulary: twelve names, nothing else is a command
+ *   COMMANDS       the vocabulary: fifteen names, nothing else is a command
  *   ARGUMENTS      which arguments each command takes
  *   normalize*     one normalizer per argument, in the terms the application
  *                  already uses (its own resin-name trimming, its own
@@ -71,6 +71,8 @@
                         //   toLayer:toIndex; an occupied destination swaps back
     "setHopperTracking",// { recipe, layer, index, track }   track true/false
     "setPumpOff",       // { recipe, layer, index, pumpOff } pumpOff true/false
+    "resetTracking",    // { recipe }  every hopper untracked and its pump marked
+                        //   running - the floor UI's Reset tracking, as one command
     "undo",             // { recipe }
     "redo",             // { recipe }
     "setLineRate",      // { lineRate }  the line's output in lb/hr; 0 clears it
@@ -80,14 +82,16 @@
     "setScrapPounds"    // { pounds }    the job's scrap resin, lb; 0 clears
   ]);
 
-  /* The two runtime commands. Tracking and pump-off are operational state
+  /* The three runtime commands. Tracking and pump-off are operational state
    * of the running job - the Timeline's, not the recipe's - and the planned
    * recipe structurally cannot carry them (next-recipe.js: a recipe payload
    * has no track or pumpOff). So these name their recipe like every other
    * command, and the only recipe they may name is "current". Refused here,
    * before any executor sees the request, so a Station view addressing
-   * Next can never turn a plan into something that tracks. */
-  const RUNTIME_COMMANDS = Object.freeze(["setHopperTracking", "setPumpOff"]);
+   * Next can never turn a plan into something that tracks. The third,
+   * resetTracking, is the two flags cleared on every hopper of the job at
+   * once - the floor UI's own Reset tracking - and names no position. */
+  const RUNTIME_COMMANDS = Object.freeze(["setHopperTracking", "setPumpOff", "resetTracking"]);
 
   /* The two job commands. Line output and the changeover deadline are
    * operational state of the running job as a whole - neither belongs to a
@@ -112,6 +116,7 @@
     moveHopper: Object.freeze(["recipe", "layer", "index", "toLayer", "toIndex"]),
     setHopperTracking: Object.freeze(["recipe", "layer", "index", "track"]),
     setPumpOff: Object.freeze(["recipe", "layer", "index", "pumpOff"]),
+    resetTracking: Object.freeze(["recipe"]),
     undo: Object.freeze(["recipe"]),
     redo: Object.freeze(["recipe"]),
     setLineRate: Object.freeze(["lineRate"]),

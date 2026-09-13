@@ -8,9 +8,10 @@
  *   the renderer   (station-render.js, station-machine-parts.js) draws the
  *                  card where a cluster was turned over - at the cluster's
  *                  own box, with the layout untouched - and nothing else
- *                  for the mode: turning a layer over is the Handbook's,
- *                  and the header above, share slot included, is the same
- *                  in the mode as out of it;
+ *                  for the mode: the mode is switched from the machine
+ *                  rail and a layer is turned back by its own train, and
+ *                  the header above, share slot included, is the same in
+ *                  the mode as out of it;
  *   the card       (station-focus-editor.js, variant "compact") is the
  *                  focused editor with its header, source line and drag
  *                  left out, committing through the same commands;
@@ -497,7 +498,7 @@ test("with no commands on offer the card is read-only and says so; it never inve
  *   The boot file: the mode as presentation state
  * -------------------------------------------------------------------- */
 
-test("the mode is presentation state: two fields, no copy of a recipe, and entering it dispatches nothing", () => {
+test("the mode is presentation state: two fields, no copy of a recipe, and entering it dispatches nothing and turns every layer over at once", () => {
   assert.match(boot, /const blendEdit = \{ active: false, flipped: \[\] \};/);
   assert.match(boot, /let cardHandles = \{\};/);
   const enter = body("enterBlendEdit");
@@ -506,24 +507,27 @@ test("the mode is presentation state: two fields, no copy of a recipe, and enter
   assert.match(enter, /leaveStageControl\(\);/);
   assert.match(enter, /focus = null;/, "the open layer is not closed on entry");
   assert.match(enter, /blendEdit\.active = true;/);
-  assert.match(enter, /blendEdit\.flipped = \[\];/, "layers are turned over on entry rather than by the operator");
-  assert.match(enter, /redrawForBlend\(\[\]\);/);
+  assert.match(enter, /blendEdit\.flipped = layerIds\(\);/, "every layer is turned over on entry: the rail's one click is Edit All");
+  assert.match(enter, /redrawForBlend\(blendEdit\.flipped\.slice\(\)\);/);
+  assert.match(enter, /say\(BLEND_EDIT_HINT\);/, "the mode says how to leave it and how to turn a layer back");
+  // The rail's switch is the one toggle over the one entry and the one exit.
+  const toggle = body("toggleBlendEdit");
+  assert.match(toggle, /return blendEdit\.active \? exitBlendEdit\(\) : enterBlendEdit\(\);/);
+  assert.equal((boot.match(/blendEdit\.active = false;/g) || []).length, 2, "the mode is turned off in exitBlendEdit and by a line that lost its layers, nowhere else");
+  assert.equal((boot.match(/blendEdit\.active = true;/g) || []).length, 1, "and turned on in enterBlendEdit only");
 });
 
-test("a layer is turned over one at a time or all at once, independently, and only while the mode is on", () => {
+test("a layer is turned over or back one at a time, only while the mode is on; there is no Edit All / Show All beside the rail's switch", () => {
   const flip = body("flipLayer");
   assert.match(flip, /if \(!blendEdit\.active \|\| !layerIds\(\)\.includes\(id\)\) return false;/);
   assert.match(flip, /const wanted = on === undefined \? !isFlipped\(id\) : !!on;/);
   assert.match(flip, /blendEdit\.flipped = wanted \? blendEdit\.flipped\.concat\(\[id\]\) : blendEdit\.flipped\.filter\(other => other !== id\);/);
   assert.match(flip, /redrawForBlend\(\[id\]\);/);
-  const all = body("flipAll");
-  assert.match(all, /if \(!blendEdit\.active\) return false;/);
-  assert.match(all, /blendEdit\.flipped = on \? ids\.slice\(\) : \[\];/);
-  assert.doesNotMatch(flip + all, /dispatch|publish|hopperState/, "a flip touches recipe state");
-  // Both leave the control the operator is in before the stage is rebuilt,
+  assert.doesNotMatch(flip, /dispatch|publish|hopperState/, "a flip touches recipe state");
+  assert.doesNotMatch(boot, /function flipAll\(/, "Edit All is entering the mode; nothing else turns every layer at once");
+  // It leaves the control the operator is in before the stage is rebuilt,
   // so a value typed on one card commits rather than vanishing.
   assert.match(flip, /leaveStageControl\(\);/);
-  assert.match(all, /leaveStageControl\(\);/);
   const leave = body("leaveStageControl");
   assert.match(leave, /mounts\.machine\.contains\(active\) && typeof active\.blur === "function"\) active\.blur\(\);/);
 });
@@ -562,12 +566,13 @@ test("the stage draws the cards from the same editor, addressed to the same reci
   assert.match(all, /if \(blendEdit\.active && \(!model \|\| !model\.layers\.length\)\) blendEdit\.active = false;/);
 });
 
-test("the header's share is its own click target, ahead of the mode's guard; a train click during the mode opens nothing and says so; ordinary clicks are untouched", () => {
+test("the header's share is its own click target, ahead of the mode's guard; a train click during the mode opens nothing and turns that layer instead; ordinary clicks are untouched", () => {
   const start = boot.slice(boot.indexOf("function start()"));
   const click = start.slice(start.indexOf('mounts.machine?.addEventListener("click"'), start.indexOf("mounts.machine?.addEventListener(\"mouseover\""));
   assert.doesNotMatch(click, /"flip"/, "the click handler still resolves a flip chip");
   assert.match(click, /if \(target === "share"\) \{\n\s+openShareEditor\(hit\);\n\s+return;\n\s+\}/);
-  assert.match(click, /if \(blendEdit\.active && opensLayer\(target\)\) \{\n\s+say\("Finish Blend Edit \(Done in the Handbook\) to open a layer's detailed editor\."\);\n\s+return;\n\s+\}/);
+  assert.match(click, /if \(blendEdit\.active && opensLayer\(target\)\) \{\n\s+flipLayer\(layer\);\n\s+return;\n\s+\}/);
+  assert.doesNotMatch(click, /Done in the Handbook/, "the mode's exit is no longer the Handbook's");
   // The controls and the focus paths that were there are there, in order:
   // controls first, then the share, then the mode's guard, then focus.
   const order = ["toggleHopperControl(hit)", 'if (target === "share")', "if (blendEdit.active && opensLayer(target))", "setFocus({ layer, target, hopper })"];
@@ -575,20 +580,25 @@ test("the header's share is its own click target, ahead of the mode's guard; a t
   assert.ok(positions.every(p => p > -1) && positions.every((p, i) => i === 0 || p > positions[i - 1]), "the click handler's order changed");
 });
 
-test("the Handbook is mounted from the shell's slot with Recipe Book, Resin Totals, Appearance, and their narrow surfaces", () => {
+test("the Handbook is mounted from the shell's slot with Recipe Book, Resin Totals, Appearance, and their narrow surfaces - and no Blend Edit surface, no exit of the mode on close", () => {
   const start = boot.slice(boot.indexOf("function start()"));
   const mount = start.slice(start.indexOf("if (handbook && mounts.handbook) {"), start.indexOf("feedJob(current.model, current.resolved);"));
   assert.match(mount, /handbookPanel = handbook\.create\(doc, \{/);
   assert.match(mount, /if \(recipeBook\) handbookSections\.push\(recipeBook\.section\);/);
   assert.match(mount, /if \(appearance\) handbookSections\.push\(appearance\.section\);/);
   assert.match(mount, /sections: handbookSections,/);
-  assert.match(mount, /recipes,\s+blend: blendSurface,[\s\S]*?theme: themeController,\s+themes: theme \? theme\.THEMES : \[\]/);
+  assert.match(mount, /recipes,\s+\/\*[\s\S]*?theme: themeController,\s+themes: theme \? theme\.THEMES : \[\]/);
+  assert.doesNotMatch(mount, /blend|beforeClose|exitBlendEdit/, "the Handbook is handed nothing of the mode and ends nothing on close");
+  assert.doesNotMatch(boot, /blendSurface/, "no surface over the mode is built for the book");
   assert.match(mount, /reducedMotion: prefersReducedMotion/);
   assert.match(mount, /mounts\.handbook\.appendChild\(handbookPanel\.element\);/);
-  // The surface: the whole of what the book may do to the stage.
-  const surface = boot.slice(boot.indexOf("const blendSurface = Object.freeze({"), boot.indexOf("});", boot.indexOf("const blendSurface = Object.freeze({")));
-  for (const key of ["available:", "isActive:", "canEnter:", "layers:", "enter:", "exit:", "flip:", "flipAll"]) assert.match(surface, new RegExp(key.replace("(", "\\(")));
-  assert.doesNotMatch(surface, /hopperState|dispatch|commands\.|snapshot/, "the surface hands recipe state to the book");
+  // The rail is mounted from its own slot, ahead of the Handbook, and
+  // handed the two callbacks and nothing else of the state.
+  const rail = start.slice(start.indexOf("if (machineRail && mounts.rail) {"), start.indexOf("if (handbook && mounts.handbook) {"));
+  assert.match(rail, /railPanel = machineRail\.create\(doc, \{\s+onBlendEdit: toggleBlendEdit,\s+onResetTracking: resetTracking,/);
+  assert.match(rail, /mounts\.rail\.appendChild\(railPanel\.element\);/);
+  assert.match(rail, /syncRail\(\);\s+placeRail\(\);/, "the rail is told and placed once the stage that was drawn before it exists");
+  assert.doesNotMatch(rail, /hopperState|commands|snapshot|blendEdit\./, "the rail is handed state to hold");
   // The boot file still never dispatches, connects or publishes.
   assert.doesNotMatch(boot, /\.dispatch\s*\(|\.connect\s*\(|\.publish\s*\(/);
 });

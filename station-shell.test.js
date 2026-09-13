@@ -93,17 +93,33 @@ test("the too-small notice is part of the shell, not of a page", () => {
   assert.match(notice[0].textContent, /1100px/);
 });
 
-test("the header is identity and status only: Station, the way back, the two job readouts' slot, the connection - no tag, no badge, no EXPERIMENTAL", () => {
+test("the header is identity and status only: the picture's slot, the Station logo, the way back, the two job readouts' slot, the connection - no tag, no badge, no EXPERIMENTAL", () => {
   const root = built();
   const header = find(root, node => /station-header$/.test(node.getAttribute("class") || ""))[0];
   assert.ok(header);
   assert.deepEqual(header.children.map(node => [node.nodeName, node.getAttribute("class")]), [
+    ["DIV", "station-header__avatar"],
     ["H1", "station-header__title"],
     ["A", "station-header__legacy"],
     ["DIV", "station-header__job"],
     ["DIV", "station-header__connection"]
   ]);
-  assert.equal(header.children[0].textContent, "Station");
+  // The heading holds the logo (station-logo.js): the mark and the word
+  // as paths, named "Station" to a reader - no word set in type beside it.
+  const title = header.children[1];
+  assert.equal(title.children.length, 1);
+  const logo = title.children[0];
+  assert.equal(logo.nodeName.toLowerCase(), "svg");
+  assert.equal(logo.getAttribute("class"), "station-logo");
+  assert.equal(logo.getAttribute("role"), "img");
+  assert.equal(logo.getAttribute("aria-label"), "Station");
+  assert.ok(find(logo, node => /station-logo__ink/.test(node.getAttribute("class") || "")).length === 1, "the word's paths");
+  assert.ok(find(logo, node => /station-logo__hopper/.test(node.getAttribute("class") || "")).length === 1, "the mark");
+  assert.equal(find(logo, node => /^(text|image)$/i.test(node.nodeName)).length, 0, "no type, no image: paths only");
+  // The picture's slot is a slot: the shell draws nothing in it, and the
+  // face and the popover it opens are station-avatar.js's.
+  assert.equal(header.children[0].getAttribute("data-station-mount"), "avatar");
+  assert.equal(header.children[0].children.length, 0);
   walk(root, node => {
     assert.doesNotMatch(String(node.textContent), /experimental/i);
     assert.doesNotMatch(String(node.getAttribute("class") || ""), /__tag|badge|pill/);
@@ -186,28 +202,32 @@ test("the shell sets no inline styles", () => {
 test("the shell is a header, the stage, the run-down timeline and a status bar - no side column, no recipe band under the stage", () => {
   const root = built();
   const shell = find(root, node => /\bstation-shell\b/.test(node.getAttribute("class") || ""))[0];
-  // The Handbook's slot and the utility surfaces' slot are the two
-  // children that are not regions: both are laid over the stage's own
-  // cell (shell.css) and take no track.
+  // The Handbook's slot, the utility surfaces' slot and the machine
+  // rail's slot are the three children that are not regions: all are
+  // laid over the stage's own cell (shell.css) and take no track.
   assert.deepEqual(shell.children.map(node => [node.nodeName, node.getAttribute("class")]),
-    [["HEADER", "station-header"], ["SECTION", "station-machine"], ["DIV", "station-handbook-slot"], ["DIV", "station-utility-slot"], ["SECTION", "station-timeline"], ["FOOTER", "station-status"]]);
-  assert.deepEqual([...require("./station/station-shell.js").MOUNTS], ["machine", "timeline", "status", "job", "connection", "handbook", "utility"]);
+    [["HEADER", "station-header"], ["SECTION", "station-machine"], ["DIV", "station-handbook-slot"], ["DIV", "station-utility-slot"], ["DIV", "station-rail-slot"], ["SECTION", "station-timeline"], ["FOOTER", "station-status"]]);
+  assert.deepEqual([...require("./station/station-shell.js").MOUNTS], ["avatar", "machine", "timeline", "status", "job", "connection", "handbook", "utility", "rail"]);
   const slot = shell.children[2];
   assert.equal(slot.getAttribute("data-station-mount"), "handbook");
   assert.equal(slot.children.length, 0, "the shell reserves the slot and draws nothing in it");
   const utility = shell.children[3];
   assert.equal(utility.getAttribute("data-station-mount"), "utility");
   assert.equal(utility.children.length, 0, "the shell reserves the utility slot and draws nothing in it");
+  const rail = shell.children[4];
+  assert.equal(rail.getAttribute("data-station-mount"), "rail");
+  assert.equal(rail.children.length, 0, "the shell reserves the rail's slot and draws nothing in it");
   // The timeline row is a mount and nothing else: no heading, no title,
   // no card - the component begins with its Now anchor.
-  const timeline = shell.children[4];
+  const timeline = shell.children[5];
   assert.equal(timeline.getAttribute("data-station-mount"), "timeline");
   assert.equal(timeline.getAttribute("aria-label"), "Run-down timeline");
   assert.equal(timeline.children.length, 0);
-  // The header carries the job controls' slot before the line console's.
+  // The header carries the picture's slot first, then the job controls'
+  // slot before the line console's.
   const header = shell.children[0];
   const slots = header.children.filter(node => node.getAttribute("data-station-mount")).map(node => node.getAttribute("data-station-mount"));
-  assert.deepEqual(slots, ["job", "connection"]);
+  assert.deepEqual(slots, ["avatar", "job", "connection"]);
   // Nothing of the old columns survives: no nav, no aside, no heading, no
   // recipe strip - and no element with nothing in it holding a place.
   walk(root, node => {
@@ -233,6 +253,9 @@ test("the stylesheet reserves no track for a side column or a strip: one column,
   // cover the hoppers Blend Edit works on.
   assert.match(css, /\.station-handbook-slot \{[^}]*grid-area: machine;[^}]*pointer-events: none;/);
   assert.match(css, /\.station-utility-slot \{[^}]*grid-area: machine;[^}]*pointer-events: none;/);
+  // The rail's slot: the same cell, under the two above in the stack, so a
+  // surface laid across the stage covers the rail rather than meeting it.
+  assert.match(css, /\.station-rail-slot \{[^}]*grid-area: machine;[^}]*z-index: 4;[^}]*pointer-events: none;/);
   for (const gone of ["sidebar", "inspector", "recipe-strip", "station-nav", "section__heading", "strip"]) {
     assert.doesNotMatch(css, new RegExp(gone), `shell.css still styles ${gone}`);
   }
