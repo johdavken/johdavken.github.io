@@ -486,6 +486,9 @@
         const target = state.entryOpen ? nameInput : saveButton;
         if (target && typeof target.focus === "function" && !target.disabled) target.focus();
       },
+      /* A page of lists - the book on the left, a recipe's blend on the
+       * right - both of which scroll: the Handbook may be raised for it. */
+      grows: () => true,
       confirmSave,
       replaceExisting,
       refreshBook,

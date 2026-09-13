@@ -525,3 +525,18 @@ test("the section is what the Handbook takes, and the tool is what Sudo takes; n
   assert.ok(a.section.element !== b.section.element);
   assert.deepEqual(a.section.tools(), ["workspaces"]);
 });
+
+test("the page tells the Handbook it can use more bench only behind the gate: the sign-in form wants none, the tools are lists", async () => {
+  const s = build();
+  assert.equal(s.section.grows(), false, "the gate offered the Handbook's grip");
+  s.env.admin = { ready: true, signedIn: true, isAdmin: true, email: "admin@example.com" };
+  s.handle.publish();
+  s.section.update();
+  await tick();
+  assert.equal(s.section.grows(), true, "a signed-in page did not offer the grip");
+  s.env.admin = { ready: true, signedIn: false, isAdmin: false, email: "" };
+  s.handle.publish();
+  s.section.update();
+  assert.equal(s.section.grows(), false, "the grip stayed after the session went");
+  assert.equal(build({ noBridge: true }).section.grows(), false, "with no producer there is nothing to raise the frame for");
+});

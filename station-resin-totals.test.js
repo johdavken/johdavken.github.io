@@ -170,6 +170,9 @@ test("it is a Handbook section: id, title, and the create/update/focus contract"
   assert.equal(typeof instance.focus, "function");
   assert.ok(instance.element);
   assert.equal(instance.element.getAttribute("data-role"), "resin-totals");
+  // One line per hopper, scrolling past three layers: the page tells the
+  // Handbook it can use more bench, so the frame's grip is offered on it.
+  assert.equal(instance.grows(), true);
 });
 
 test("the strip carries Production, Scrap and Total, in that order, as whole pounds with a thousands separator", () => {

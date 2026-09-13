@@ -17,12 +17,16 @@
  *
  * A SECTION
  *
- *   { id, title, create(doc, context) -> { element, update(), focus() } }
+ *   { id, title, create(doc, context) -> { element, update(), focus(), grows()? } }
  *
  * create() is called once, when the Handbook is built, with the context
  * the boot file gave the Handbook (the bridges it may use); update() is
  * called whenever the Handbook is told something
- * changed, and on opening; focus() when the section is shown.
+ * changed, and on opening; focus() when the section is shown. grows(),
+ * when a section has one, answers whether the page on show can use more
+ * bench than the frame opens with - a list that scrolls, say - and is
+ * asked again on every update, so the answer may change with the page's
+ * own state (Sudo's gate cannot; its tools can).
  *
  * WHERE IT OPENS, AND HOW
  *
@@ -33,6 +37,21 @@
  * open, and the Recipe Book can be read beside them.
  * Nothing is dimmed and nothing moves; opening the Handbook is not a
  * modal and changes no state but its own.
+ *
+ * THE BENCH, AND THE GRIP THAT RAISES IT
+ *
+ * The frame opens at the height the stage's tokens give it, every time.
+ * While it is open the operator may raise it - the grip along its top
+ * edge takes a drag, or the arrow keys - for a section that has more to
+ * show than fits: the reach is held for the open panel only, and goes
+ * with the close, so the next open stands at the default again. Whether
+ * a page can use the room is the section's to say (grows(), above): a
+ * page that cannot - the Appearance gallery, Sudo's gate - is shown at
+ * the default with no grip, and the reach waits for a page that can.
+ * The ceiling is the stage less its headroom (tokens.css), so a raised
+ * frame never stands on the stage's top edge; the hoppers it covers on
+ * the way up are the operator's to cover, and to uncover with a drag
+ * down.
  *
  * Opening is a flight, in the convention station-transition.js set for a
  * layer: the panel is rendered where it will stand, then placed over the
@@ -188,7 +207,12 @@
     const state = {
       open: false,
       current: sections.length ? sections[0].id : null,
-      flight: null   // { animations, closing } while the panel travels
+      flight: null,  // { animations, closing } while the panel travels
+      /* The bench while the panel is open: the default height the
+       * stylesheet gave it (floor), how high it may be raised (ceiling),
+       * the height the operator raised it to (reach; null at the floor),
+       * what the panel is painted at (painted), and a drag in progress. */
+      bench: { floor: null, ceiling: null, reach: null, painted: null, dragging: null }
     };
 
     const rootEl = element(doc, "div", "station-handbook", { "data-role": "handbook" });
@@ -208,6 +232,13 @@
     const panel = element(doc, "section", "station-handbook__panel", {
       role: "region", "aria-label": "Operator Handbook", hidden: ""
     });
+    /* The grip: a separator along the panel's top edge, first in the
+     * panel so it is where it is drawn. Shown only for a page that grows. */
+    const grip = element(doc, "div", "station-handbook__grip", {
+      role: "separator", "aria-orientation": "horizontal", "aria-label": "Handbook height",
+      tabindex: "0", title: "Drag to raise the Handbook", hidden: ""
+    });
+    panel.appendChild(grip);
     const head = element(doc, "header", "station-handbook__head");
     head.appendChild(text(doc, "h2", "station-handbook__title", "Operator Handbook"));
     const tabs = element(doc, "div", "station-handbook__tabs", { role: "tablist", "aria-label": "Handbook sections" });
@@ -251,8 +282,145 @@
       }
       const current = built[id].instance;
       if (current && typeof current.update === "function") current.update();
+      syncBench({ tween: true });
       return true;
     }
+
+    /* ---- The bench ---- */
+
+    /* One step of the arrow keys on the grip, and the headroom kept above
+     * a raised frame when the stage's token cannot be read (tests). */
+    const RESIZE_STEP = 24;
+    const DEFAULT_HEADROOM = 48;
+
+    function sectionGrows(entry) {
+      const instance = entry && entry.instance;
+      if (!instance || typeof instance.grows !== "function") return false;
+      try { return !!instance.grows(); } catch (error) { return false; }
+    }
+
+    /* The reach is painted as one custom property on the panel; the
+     * stylesheet takes it for the height and clamps it under the stage's
+     * headroom (handbook.css). Nothing else of the frame is touched. */
+    function paintReach(px) {
+      const style = panel.style;
+      if (!style || typeof style.setProperty !== "function") return;
+      if (px === null) style.removeProperty("--station-handbook-reach");
+      else style.setProperty("--station-handbook-reach", `${Math.round(px)}px`);
+    }
+
+    function headroom() {
+      const style = settings.mount && computedStyle ? computedStyle(settings.mount) : null;
+      const value = style && typeof style.getPropertyValue === "function"
+        ? parseFloat(style.getPropertyValue("--station-handbook-headroom")) : NaN;
+      return Number.isFinite(value) && value >= 0 ? value : DEFAULT_HEADROOM;
+    }
+
+    /* The floor is the frame's own height with no reach painted, read off
+     * the panel where it stands - never mid-flight, when its box is the
+     * transform's. The ceiling is the stage less its headroom; with no
+     * stage to measure the frame cannot be raised. */
+    function bounds() {
+      const bench = state.bench;
+      if (bench.floor === null && state.open && !state.flight && bench.painted === null) {
+        const rect = measure(panel);
+        if (rect && rect.height > 0) bench.floor = rect.height;
+      }
+      if (bench.floor === null) { bench.ceiling = null; return bench; }
+      const stage = settings.mount ? measure(settings.mount) : null;
+      bench.ceiling = stage && stage.height > 0 ? Math.max(bench.floor, Math.round(stage.height - headroom())) : bench.floor;
+      return bench;
+    }
+
+    /* Raise (or lower) the frame to a height, within the bench's bounds.
+     * At the floor there is no reach; the stylesheet's default stands. */
+    function setReach(px) {
+      const bench = bounds();
+      if (bench.floor === null || !Number.isFinite(px)) return false;
+      const next = Math.round(Math.max(bench.floor, Math.min(bench.ceiling, px)));
+      bench.reach = next <= bench.floor ? null : next;
+      syncBench();
+      return true;
+    }
+
+    /* Paint the bench for the page on show: the reach for a page that
+     * grows, the default for one that does not; the grip with it. A change
+     * on turning a page settles on the transition's own token, through
+     * the same helper every other motion here runs on. */
+    function syncBench(options) {
+      const bench = bounds();
+      const entry = state.current ? built[state.current] : null;
+      const grows = !!(entry && sectionGrows(entry));
+      const target = grows ? bench.reach : null;
+      show(grip, state.open && grows);
+      if (bench.floor !== null) {
+        grip.setAttribute("aria-valuemin", String(bench.floor));
+        grip.setAttribute("aria-valuemax", String(bench.ceiling));
+        grip.setAttribute("aria-valuenow", String(target === null ? bench.floor : target));
+      }
+      if (target === bench.painted) return;
+      const from = options && options.tween && state.open && !state.flight && !reducedMotion() ? measure(panel) : null;
+      bench.painted = target;
+      paintReach(target);
+      if (from && from.height > 0 && bench.floor !== null) {
+        const to = target === null ? bench.floor : target;
+        if (to !== from.height) {
+          animate(panel, [{ height: `${from.height}px` }, { height: `${to}px` }], { duration: timing.settle, easing: "ease-out" });
+        }
+      }
+    }
+
+    /* The bench goes with the close: the next open stands at the default. */
+    function resetBench() {
+      const bench = state.bench;
+      bench.floor = null; bench.ceiling = null; bench.reach = null; bench.dragging = null;
+      if (bench.painted !== null) { bench.painted = null; paintReach(null); }
+      panel.removeAttribute("data-resizing");
+      show(grip, false);
+    }
+
+    function endDrag(event) {
+      const drag = state.bench.dragging;
+      if (!drag || (event && event.pointerId !== undefined && event.pointerId !== drag.pointerId)) return;
+      state.bench.dragging = null;
+      panel.removeAttribute("data-resizing");
+    }
+
+    grip.addEventListener("pointerdown", event => {
+      if (!state.open || (event.button !== undefined && event.button !== 0)) return;
+      const bench = bounds();
+      const start = bench.floor === null ? null : measure(panel);
+      if (!start || !(start.height > 0)) return;
+      bench.dragging = { pointerId: event.pointerId, y: event.clientY, height: start.height };
+      panel.setAttribute("data-resizing", "");
+      if (typeof grip.setPointerCapture === "function" && event.pointerId !== undefined) {
+        try { grip.setPointerCapture(event.pointerId); } catch (error) { /* it drags while the pointer stays on the grip */ }
+      }
+      if (typeof event.preventDefault === "function") event.preventDefault();
+    });
+    grip.addEventListener("pointermove", event => {
+      const drag = state.bench.dragging;
+      if (!drag || (event.pointerId !== undefined && event.pointerId !== drag.pointerId)) return;
+      setReach(drag.height + (drag.y - event.clientY));
+    });
+    grip.addEventListener("pointerup", endDrag);
+    grip.addEventListener("pointercancel", endDrag);
+    grip.addEventListener("lostpointercapture", endDrag);
+    grip.addEventListener("keydown", event => {
+      const bench = bounds();
+      if (bench.floor === null) return;
+      const now = bench.reach === null ? bench.floor : bench.reach;
+      let next;
+      if (event.key === "ArrowUp") next = now + RESIZE_STEP;
+      else if (event.key === "ArrowDown") next = now - RESIZE_STEP;
+      else if (event.key === "Home") next = bench.floor;
+      else if (event.key === "End") next = bench.ceiling;
+      else return;
+      if (typeof event.preventDefault === "function") event.preventDefault();
+      if (typeof event.stopPropagation === "function") event.stopPropagation();
+      setReach(next);
+    });
+
     if (state.current) showSection(state.current);
 
     /* ---- Opening and closing ---- */
@@ -301,6 +469,10 @@
         return true;
       }
       cancelFlight();
+      // Every open stands at the default: whatever the last open was
+      // raised to went with its close (hideNow), and is not read back.
+      resetBench();
+      syncBench();
       const transform = reducedMotion() ? null : flightTransform();
       if (transform) {
         const move = { duration: timing.move, easing: timing.ease, fill: "both" };
@@ -320,6 +492,7 @@
     function hideNow() {
       show(panel, false);
       cancelFlight();
+      resetBench();
     }
 
     /* The one way out. Whatever closes the panel comes through here, so
@@ -383,6 +556,7 @@
         const instance = built[key].instance;
         if (instance && typeof instance.update === "function") instance.update();
       }
+      syncBench({ tween: true });
     }
 
     return {
@@ -398,7 +572,16 @@
       current: () => state.current,
       sections: () => sections.map(section => section.id),
       section: id => (built[id] ? built[id].instance : null),
-      getTiming: () => Object.assign({}, timing)
+      getTiming: () => Object.assign({}, timing),
+      /* The bench as it stands: for tests and the dev panel, not for
+       * sections, which are handed nothing of the frame. */
+      grip,
+      setReach,
+      getBench: () => {
+        const bench = state.bench;
+        const entry = state.current ? built[state.current] : null;
+        return { floor: bench.floor, ceiling: bench.ceiling, reach: bench.reach, painted: bench.painted, grows: !!(entry && sectionGrows(entry)), dragging: !!bench.dragging };
+      }
     };
   }
 

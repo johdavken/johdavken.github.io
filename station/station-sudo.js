@@ -296,6 +296,14 @@
     return {
       element: rootEl,
       update: refresh,
+      /* The gate is a form with air around it and wants no more bench; the
+       * tools behind it are lists, and do. Asked again on every update,
+       * so the Handbook's grip comes with the sign-in and goes with the
+       * sign-out. */
+      grows() {
+        const current = access();
+        return !!(current && current.access.signedIn);
+      },
       focus() {
         const current = access();
         if (current && current.access.signedIn) {

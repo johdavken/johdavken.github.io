@@ -384,6 +384,10 @@ test("the section is what the Handbook takes: an id, a title and a builder, with
   assert.equal(bookModule.section.id, "recipe-book");
   assert.equal(bookModule.section.title, "Recipe Book");
   assert.ok(Object.isFrozen(bookModule.section));
+  // A page of lists: it tells the Handbook it can use more bench, so the
+  // frame's grip is offered on it (station-handbook.js).
+  assert.equal(build(producer()).book.grows(), true);
+  assert.equal(build(null).book.grows(), true, "the answer is the page's kind, not its connection");
   assert.equal(bookModule.normalizedName("  Clear   FILM "), "clear film");
   assert.match(bookModule.rowMeta({ layers: [{}], updatedAt: "" }), /^1 layer$/);
 });
