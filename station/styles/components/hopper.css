@@ -226,6 +226,16 @@
   font-size: calc(var(--station-text-2xs) * var(--station-bank-scale, 1));
 }
 
+/* The unit beside the digits, smaller and always muted: it says what the
+   number is, and is not itself the value - so a computed weight's tint
+   (below) is the digits' alone. Its size is the 0.8 the renderer centres
+   the pair by (WEIGHT_TYPE in station-machine-parts.js); change both. */
+.station-hopper__unit {
+  fill: var(--station-text-muted);
+  font-family: var(--station-font-mono);
+  font-size: calc(var(--station-text-2xs) * 0.8 * var(--station-bank-scale, 1));
+}
+
 /* A weight Smart Hoppers computed from the hopper's geometry and the
    resin's bulk density, rather than one entered: the same line, in the
    computed colour, so a glance tells the two apart. The tooltip says

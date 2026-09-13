@@ -526,13 +526,76 @@ test("the readout's fourth line is the run-down's weight: whole pounds, digits o
   assert.equal(parts.shownWeight({ weight: 1250, effectiveWeight: 0 }), 1250, "no effective weight: the entered one");
   assert.equal(parts.shownWeight({ weight: 1250 }), 1250);
   assert.equal(parts.shownWeight(null), 0);
-  // Digits only: the column has room for five characters, so the unit and
-  // the separator are the tooltip's; a weight too wide is fitted, not lied about.
+  // The separator is the tooltip's; a weight too wide is fitted, not lied about.
   // The key carries both weights and whether the shown one is computed.
   assert.equal(parts.hopperStateKey({ weight: 1250 }), "|||||1250||||");
   assert.notEqual(parts.hopperStateKey({ weight: 1250 }), parts.hopperStateKey({ weight: 1300 }), "a weight change redraws the hopper");
   assert.notEqual(parts.hopperStateKey({ weight: 1250, effectiveWeight: 900 }), parts.hopperStateKey({ weight: 1250, effectiveWeight: 950 }), "an effective weight change redraws the hopper");
   assert.equal(parts.hopperStateKey({ weight: 0 }), "|||||0||||");
+});
+
+test("the weight carries its unit beside the digits - drawn smaller, the pair centred under the hopper - and a weight too wide for both is drawn alone", () => {
+  /* Two texts, not one with a tspan: the digits stay the weight element's own
+   * text, so what reads the weight reads the number. The pair is centred by
+   * the same glyph estimate fitText() judges the fit by. */
+  const svg = stageFor(literal({ layerCount: 5, hopperCount: 6 }), {
+    hopperState: {
+      "A:0": { assigned: true, resinName: "HX204", pct: 60, weight: 90 },
+      "A:1": { assigned: true, resinName: "LD105", pct: 30, weight: 147 },
+      "A:2": { assigned: true, resinName: "LD106", pct: 10, weight: 1200 },
+      "A:3": { assigned: false, resinName: "", pct: 0, weight: 0 },
+      "A:4": { assigned: true, resinName: "LD107", pct: 0, weight: 12345 },
+      "A:5": { assigned: true, resinName: "LD108", pct: 0, weight: 1234567 }
+    }
+  });
+  const hoppers = hoppersIn(svg).slice(0, 6);
+  const captionOf = h => allWith(h, "data-role", "hopper-caption")[0];
+  const weightOf = h => allWithClassName(captionOf(h), "station-hopper__weight")[0];
+  const unitOf = h => allWithClassName(captionOf(h), "station-hopper__unit")[0] || null;
+  const idOf = h => allWithClassName(captionOf(h), "station-hopper__id")[0];
+
+  assert.deepEqual(hoppers.map(h => weightOf(h).textContent), ["90", "147", "1200", "—", "12345", "1234…"]);
+  assert.deepEqual(hoppers.map(h => unitOf(h) ? unitOf(h).textContent : null), ["lb", "lb", "lb", null, null, null],
+    "up to four digits carry the unit; a dash and a wider weight do not");
+
+  const t = parts.WEIGHT_TYPE;
+  for (const h of hoppers.slice(0, 3)) {
+    const weight = weightOf(h);
+    const unit = unitOf(h);
+    const cx = Number(idOf(h).getAttribute("x"));
+    assert.equal(weight.getAttribute("text-anchor"), "end");
+    assert.equal(unit.getAttribute("text-anchor"), "start");
+    assert.equal(weight.getAttribute("y"), unit.getAttribute("y"), "the unit sits on the weight's line");
+    // Centred: the pair's estimated left edge and right edge straddle the column's centre equally.
+    const digitsWidth = weight.textContent.length * t.digitSize * t.glyph;
+    const unitWidth = t.unit.length * t.unitSize * t.glyph;
+    const left = Number(weight.getAttribute("x")) - digitsWidth;
+    const right = Number(unit.getAttribute("x")) + unitWidth;
+    assert.ok(Math.abs((left + right) / 2 - cx) < 0.02, `${weight.textContent} lb is centred under the hopper`);
+    assert.ok(Math.abs(Number(unit.getAttribute("x")) - Number(weight.getAttribute("x")) - t.unitGap) < 0.02, "a hair between digits and unit");
+    // The pair stays inside the hopper's pitch (36 units) so neighbours never collide.
+    assert.ok(right - left <= 36, `${weight.textContent} lb fits the pitch`);
+  }
+  // A bare line - dash or a wide weight - is centred at the column exactly as before.
+  for (const h of hoppers.slice(3)) {
+    const weight = weightOf(h);
+    assert.equal(weight.getAttribute("text-anchor"), "middle");
+    assert.equal(weight.getAttribute("x"), idOf(h).getAttribute("x"));
+  }
+  // The pair scales with the bank: a focused bank's unit and gap grow with its digits.
+  const doc = fakeDocument();
+  const [big, bigUnit] = parts.weightLine(doc, { weight: 90 }, 100, 50, 60, 2);
+  const [small, smallUnit] = parts.weightLine(doc, { weight: 90 }, 100, 50, 30, 1);
+  assert.ok(Math.abs((Number(bigUnit.getAttribute("x")) - Number(big.getAttribute("x"))) - 2 * (Number(smallUnit.getAttribute("x")) - Number(small.getAttribute("x")))) < 0.02);
+  assert.ok(Math.abs((100 - Number(big.getAttribute("x"))) - 2 * (100 - Number(small.getAttribute("x")))) < 0.02);
+  // The unit is the muted equipment colour and stays so under a computed weight's tint.
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const css = fs.readFileSync(path.join(__dirname, "station/styles/components/hopper.css"), "utf8");
+  assert.match(css, /\.station-hopper__unit \{[^}]*fill: var\(--station-text-muted\)/);
+  assert.match(css, /\.station-hopper__unit \{[^}]*\* 0\.8 \* var\(--station-bank-scale, 1\)/, "the unit's size is the renderer's 0.8");
+  assert.equal(t.unitSize / t.digitSize, 0.8);
+  assert.doesNotMatch(css, /\.is-smart \.station-hopper__unit/);
 });
 
 test("a weight change alone re-patches only that hopper", () => {
