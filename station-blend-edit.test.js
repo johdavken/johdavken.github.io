@@ -590,8 +590,9 @@ test("Done commits what is being entered along the editor's own path, turns ever
   const redraw = body("redrawForBlend");
   assert.match(redraw, /stage\.refresh\(focusLayerFor\(\)\);/);
   assert.match(redraw, /if \(handbookPanel\) handbookPanel\.update\(\);/);
-  // Escape with nothing open is Done.
-  assert.match(boot, /if \(focus\) \{ clearFocus\(\); return; \}\n\s+\/\/[^\n]*\n\s+\/\/[^\n]*\n\s+if \(blendEdit\.active\) exitBlendEdit\(\);/);
+  // Escape with nothing open is Done - once a Bulk Edit selection in
+  // progress has been cancelled, which is the nearer thing to leave.
+  assert.match(boot, /if \(focus\) \{ clearFocus\(\); return; \}\n\s+\/\/[^\n]*\n\s+\/\/[^\n]*\n\s+if \(bulk\.active\) \{ cancelBulk\(\); return; \}\n\s+\/\/[^\n]*\n\s+\/\/[^\n]*\n\s+if \(blendEdit\.active\) exitBlendEdit\(\);/);
 });
 
 test("the stage draws the cards from the same editor, addressed to the same recipe, and the mode never reaches the focused layout", () => {

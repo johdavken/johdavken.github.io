@@ -1724,6 +1724,16 @@
       return `${hh}h ${String(mm).padStart(2,"0")}m`;
     }
 
+    // 3-layer's B is the core layer: pasting a skin layer (A/C) into it
+    // should only carry over which resin is loaded, not that layer's blend
+    // percentages - B's own split is set independently. Keyed on the
+    // target, so it holds whichever layer the operator copied. Every other
+    // target intentionally takes both pct and resinName (the grid's
+    // copyLayer, and the Station executor's copyLayer command).
+    function isResinOnlyCopyTarget(lineType, toName){
+      return lineType === 3 && toName === "B";
+    }
+
     function recomputeAutoH1(layer){
       // Sum hoppers 2-6; H1 = 100 - sum
       let sumOthers = 0;
@@ -4808,14 +4818,8 @@
         recordRecipeEdit(historyBefore);
       }
 
-      // 3-layer's B is the core layer: pasting a skin layer (A/C) into it
-      // should only carry over which resin is loaded, not that layer's blend
-      // percentages - B's own split is set independently. Keyed on the
-      // target, so it holds whichever layer the operator copied. Every other
-      // target intentionally takes both pct and resinName via copyLayer.
-      function isResinOnlyCopyTarget(lineType, toName){
-        return lineType === 3 && toName === "B";
-      }
+      // The core-layer exception is isResinOnlyCopyTarget (module level, so
+      // the Station executor's copyLayer applies the same rule).
       function copyLayerResinOnly(fromName, toName){
         const from = recipeLayers().find(L=>L.name===fromName);
         const to = recipeLayers().find(L=>L.name===toName);
@@ -10190,6 +10194,90 @@
         const result = loadCurrentRecipeIntoNext();
         if (!result?.ok) return contract.failure("internal");
         return done(true, true);
+      },
+
+      /* The grid's per-layer Paste (copyLayer / copyLayerResinOnly in the
+       * recipe editor), addressed explicitly: every hopper's resin and
+       * blend on the source written onto the destination - resin only
+       * when the destination is a 3-layer line's core (isResinOnlyCopyTarget,
+       * the grid's one exception) - then H1 re-derived, which for a source
+       * whose blend totals is the value the grid copied verbatim. Both
+       * layers are resolved before anything is written; the same layer
+       * twice, or a destination already holding the source's assignment,
+       * changes nothing and is a no-op. One history entry, as the grid's
+       * paste records one. */
+      copyLayer(args){
+        const from = locate(args.recipe, args.layer);
+        if (from.failure) return from.failure;
+        const to = from.layers.find(L=>L.name === args.toLayer) || null;
+        if (!to){
+          from.release();
+          return contract.failure("unknown_layer", { message: `Layer ${args.toLayer} is not part of the ${args.recipe} recipe.` });
+        }
+        if (to === from.layer){ from.release(); return unchanged(); }
+        const before = snapshotRecipeEdit(args.recipe);
+        const resinOnly = isResinOnlyCopyTarget(state.lineType, to.name);
+        for (let i = 0; i < HOPPERS_PER_LAYER; i++){
+          to.hoppers[i].resinName = normName(from.layer.hoppers[i].resinName);
+          if (!resinOnly) to.hoppers[i].pct = clampNum(from.layer.hoppers[i].pct);
+        }
+        if (!resinOnly) recomputeAutoH1(to);
+        if (JSON.stringify(snapshotRecipeEdit(args.recipe)) === JSON.stringify(before)){ from.release(); return unchanged(); }
+        const persisted = commit({ sync: true });
+        recordRecipeEdit(before, args.recipe);
+        return done(true, persisted);
+      },
+
+      /* The grid's Reset all, scoped to one layer: every hopper's resin
+       * cleared and its percentage zeroed - H1 included, and not re-derived,
+       * exactly as Reset all leaves it, so an emptied layer reads as empty
+       * rather than as H1 at 100 - and its tracking and pump state cleared
+       * (the running job's; the plan has neither). Scanned lots are left
+       * alone: they are kept per resin, and a resin cleared here may still
+       * run on another layer. Synced at once as "recipe-clear", as the
+       * cell's × is; one history entry. A layer already empty is a no-op -
+       * judged without H1's percentage, which ensureLayers and the plan's
+       * working copy re-derive to the remainder (100, on an empty layer)
+       * whenever the recipe is rebuilt. */
+      clearLayer(args){
+        const at = locate(args.recipe, args.layer);
+        if (at.failure) return at.failure;
+        const clear = at.layer.hoppers.every((hopper, index)=>!normName(hopper.resinName) && (index === 0 || clampNum(hopper.pct) === 0) && !hopper.track && !hopper.pumpOff);
+        if (clear){ at.release(); return unchanged(); }
+        const before = snapshotRecipeEdit(args.recipe);
+        at.layer.hoppers.forEach(hopper=>{
+          hopper.resinName = "";
+          hopper.pct = 0;
+          hopper.track = false;
+          hopper.pumpOff = false;
+        });
+        const persisted = commit({ sync: true, immediate: true, kind: "recipe-clear" });
+        recordRecipeEdit(before, args.recipe);
+        return done(true, persisted);
+      },
+
+      /* The grid's Bulk edit apply, for the resin: several hoppers' resins
+       * written, then ONE tail - one save, one sync notification, one
+       * history entry - as the Apply button does for its selection. Every
+       * position is resolved before any is written, so an unknown hopper
+       * refuses the whole request and leaves the recipe exactly as it was;
+       * a list that changes nothing is a no-op. */
+      setHopperResins(args){
+        const writes = [];
+        let release = null;
+        for (const entry of args.resins){
+          const at = locate(args.recipe, entry.layer, entry.index);
+          if (at.failure){ if (release) release(); return at.failure; }
+          release = release || at.release;
+          const resin = normName(entry.resin);
+          if (normName(at.hopper.resinName) !== resin) writes.push({ hopper: at.hopper, resin });
+        }
+        if (!writes.length){ if (release) release(); return unchanged(); }
+        const before = snapshotRecipeEdit(args.recipe);
+        for (const write of writes) write.hopper.resinName = write.resin;
+        const persisted = commit({ sync: true });
+        recordRecipeEdit(before, args.recipe);
+        return done(true, persisted);
       },
 
       /* The toolbar's Undo/Redo, addressed explicitly. Checked before the

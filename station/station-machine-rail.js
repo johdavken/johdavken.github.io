@@ -10,7 +10,24 @@
  *                    its compact blend card (station.js owns the mode; the
  *                    rail only asks). On again: the mode ends along its one
  *                    exit, every layer back as hoppers. The control shows
- *                    the mode's state as its own.
+ *                    the mode's state as its own. While this face is on,
+ *                    one child unfolds to its RIGHT, as the Next switch's
+ *                    two do:
+ *   Bulk Edit        the Recipe grid's Bulk edit, on the stage: on, every
+ *                    card's hopper badges become selection toggles (the
+ *                    boot file keeps the selection and tells the cards).
+ *                    The control then SWAPS IN PLACE for a Confirm and a
+ *                    Cancel, and the resin field (station-bulk-field.js,
+ *                    built by the boot file and handed in) stands ABOVE
+ *                    the row, right-aligned to the two and reaching back
+ *                    across the switch - in the band between the layer
+ *                    header and the card, never to the right of the rail,
+ *                    where a far-right bank leaves no room. The boot file
+ *                    tells the rail the draft; Confirm is held until a
+ *                    hopper is selected and a resin is entered, and
+ *                    writes it as one setHopperResins
+ *                    (station-blend-actions.js). Cancel ends the
+ *                    selection without writing.
  *   Weights          the other mode's switch: every layer turns over to
  *                    its weight card (station-weight-cards.js) - the
  *                    receiver weights, and with Smart Hoppers on the
@@ -113,10 +130,18 @@
    * sets, two of them and the gap between - the least height the strip
    * is ever given. */
   const FALLBACK_SIZE = Object.freeze({ width: 36, height: 162 });
+  /* The room a two-child flyout takes to the rail's right, in screen
+   * pixels: the stem and bracket (two gaps of 8), two controls of 36 and
+   * the gap between, and a little air. With less room than this beside
+   * the far-right bank - a five-layer line fills its cell - the flyouts
+   * stand their children in a column instead (data-room="tight";
+   * machine-rail.css), one control wide. */
+  const FLYOUT_ROW_WIDTH = 96;
 
   const LABEL = Object.freeze({
     blend: "Blend Edit", weights: "Weights", smart: "Smart Hoppers", reset: "Reset Tracking",
-    next: "Next Recipe", promote: "Load Next into Current", copy: "Copy Current into Next"
+    next: "Next Recipe", promote: "Load Next into Current", copy: "Copy Current into Next",
+    bulk: "Bulk Edit", confirm: "Apply resin to selected hoppers", cancel: "Cancel bulk edit"
   });
 
   function element(doc, name, className, attributes) {
@@ -249,6 +274,39 @@
     return svg;
   }
 
+  /* Bulk Edit: three badges stacked as the card lists them, the lower two
+   * ticked - a selection of hoppers, and one thing written onto it. */
+  function bulkGlyph(doc) {
+    const svg = svgNode(doc, "svg", "station-rail__glyph", {
+      viewBox: "0 0 20 20", width: "20", height: "20", "aria-hidden": "true", focusable: "false"
+    });
+    for (const [index, ticked] of [[0, false], [1, true], [2, true]].values()) {
+      const y = 2.5 + index * 5.4;
+      svg.appendChild(svgNode(doc, "rect", ticked ? "station-rail__glyph-face" : "station-rail__glyph-back", { x: 2.5, y, width: 7, height: 4.4, rx: 1.2 }));
+      if (ticked) svg.appendChild(svgNode(doc, "path", "station-rail__glyph-stroke", { d: `M 4.4 ${y + 2.3} L 5.6 ${y + 3.4} L 7.8 ${y + 1.1}` }));
+      svg.appendChild(svgNode(doc, "path", "station-rail__glyph-row", { d: `M 11.5 ${y + 2.2} L 17.5 ${y + 2.2}` }));
+    }
+    return svg;
+  }
+
+  /* Confirm: a tick. Cancel: a cross. Drawn plain, in the control's own
+   * colour, as the two ends of one choice. */
+  function confirmGlyph(doc) {
+    const svg = svgNode(doc, "svg", "station-rail__glyph", {
+      viewBox: "0 0 20 20", width: "20", height: "20", "aria-hidden": "true", focusable: "false"
+    });
+    svg.appendChild(svgNode(doc, "path", "station-rail__glyph-stroke station-rail__glyph-stroke--bold", { d: "M 4 10.5 L 8.2 14.5 L 16 5.5" }));
+    return svg;
+  }
+
+  function cancelGlyph(doc) {
+    const svg = svgNode(doc, "svg", "station-rail__glyph", {
+      viewBox: "0 0 20 20", width: "20", height: "20", "aria-hidden": "true", focusable: "false"
+    });
+    svg.appendChild(svgNode(doc, "path", "station-rail__glyph-stroke station-rail__glyph-stroke--bold", { d: "M 5.5 5.5 L 14.5 14.5 M 14.5 5.5 L 5.5 14.5" }));
+    return svg;
+  }
+
   /* --------------------------------------------------------------------
    *   Placement
    * ------------------------------------------------------------------ */
@@ -299,8 +357,9 @@
    * @param {object} input.rail      { width, height } of the rail's controls, px
    * @param {number} [input.gap]     px between the box and the rail
    * @param {number} [input.edge]    px the rail keeps from the host's edges
-   * @returns {{ left: number, top: number, height: number }|null}  null
-   *          when there is nothing to stand beside
+   * @returns {{ left: number, top: number, height: number, roomRight: number }|null}
+   *          null when there is nothing to stand beside; roomRight is the
+   *          space left between the rail and the host's right edge
    */
   function anchor(input) {
     const settings = input || {};
@@ -333,7 +392,8 @@
     left = Math.max(left, edge);
     top = Math.max(top, edge);
     top = Math.min(top, Math.max(edge, host.height - height - edge));
-    return { left: Math.round(left), top: Math.round(top), height: Math.round(height) };
+    const roomRight = host.width - (left + rail.width) - edge;
+    return { left: Math.round(left), top: Math.round(top), height: Math.round(height), roomRight: Math.round(roomRight) };
   }
 
   /* --------------------------------------------------------------------
@@ -354,6 +414,13 @@
    * @param {function} [options.onNextEdit]     () => void; the Next face's switch
    * @param {function} [options.onPromote]      () => void; Load Next's confirming click
    * @param {function} [options.onCopy]         () => void; Copy Current's click
+   * @param {function} [options.onBulkEdit]     () => void; Bulk Edit's click - the
+   *        boot file starts the selection and tells the rail
+   * @param {function} [options.onBulkConfirm]  () => void; Confirm - the boot file
+   *        holds the draft it applies
+   * @param {function} [options.onBulkCancel]   () => void; Cancel
+   * @param {Element}  [options.bulkField]      the resin field's element, stood
+   *        above the Blend row while the selection is on
    * @param {function} [options.setTimeout]     for the arm timer; the host's by default
    * @param {function} [options.clearTimeout]
    * @param {number}   [options.armDuration]    ms an armed reset waits
@@ -368,6 +435,9 @@
     const onNextEdit = typeof settings.onNextEdit === "function" ? settings.onNextEdit : () => {};
     const onPromote = typeof settings.onPromote === "function" ? settings.onPromote : () => {};
     const onCopy = typeof settings.onCopy === "function" ? settings.onCopy : () => {};
+    const onBulkEdit = typeof settings.onBulkEdit === "function" ? settings.onBulkEdit : () => {};
+    const onBulkConfirm = typeof settings.onBulkConfirm === "function" ? settings.onBulkConfirm : () => {};
+    const onBulkCancel = typeof settings.onBulkCancel === "function" ? settings.onBulkCancel : () => {};
     const timers = {
       set: typeof settings.setTimeout === "function" ? settings.setTimeout : (typeof setTimeout === "function" ? setTimeout : null),
       clear: typeof settings.clearTimeout === "function" ? settings.clearTimeout : (typeof clearTimeout === "function" ? clearTimeout : null)
@@ -387,6 +457,10 @@
       next: { active: false, available: false, planned: false },
       promote: { available: false, reason: "", summary: "" },
       copy: { available: false, reason: "" },
+      /* The Blend face's child: whether the selection is on, whether the
+       * application offers the write, how many hoppers are selected, and
+       * the resin drafted on the cards' field. */
+      bulk: { active: false, available: false, reason: "", count: 0, resin: "" },
       /* Which control is armed - "reset" or "promote" - or null: one at a
        * time, whichever was clicked last. */
       armed: null,
@@ -424,6 +498,18 @@
       type: "button", "data-action": "copy-current", "aria-label": LABEL.copy, title: LABEL.copy
     });
     copyButton.appendChild(copyGlyph(doc));
+    const bulkButton = element(doc, "button", "station-rail__control station-rail__control--bulk", {
+      type: "button", "data-action": "bulk-edit", "aria-pressed": "false", "aria-label": LABEL.bulk, title: LABEL.bulk
+    });
+    bulkButton.appendChild(bulkGlyph(doc));
+    const confirmButton = element(doc, "button", "station-rail__control station-rail__control--confirm", {
+      type: "button", "data-action": "bulk-confirm", "aria-label": LABEL.confirm, title: LABEL.confirm
+    });
+    confirmButton.appendChild(confirmGlyph(doc));
+    const cancelButton = element(doc, "button", "station-rail__control station-rail__control--cancel", {
+      type: "button", "data-action": "bulk-cancel", "aria-label": LABEL.cancel, title: LABEL.cancel
+    });
+    cancelButton.appendChild(cancelGlyph(doc));
     /* The Next switch and its two children as one group: the switch in
      * the rail's column, the flyout beside it to the right - out of the
      * column's flow, so the rail's width and placement are the column's
@@ -445,7 +531,20 @@
     const weightsParts = group("weights", weightsButton, "Weights actions", [smartButton]);
     const weightsGroup = weightsParts.wrapper;
     const weightsFlyout = weightsParts.fly;
-    rootEl.appendChild(blendButton);
+    /* The Blend switch and its child the same way. The flyout holds the
+     * switch's one child and what it becomes: Bulk Edit at rest; Confirm
+     * and Cancel while the selection is on - two sets in one place, the
+     * stylesheet swapping them (data-bulk on the group). */
+    const blendParts = group("blend", blendButton, "Blend Edit actions", [bulkButton, confirmButton, cancelButton]);
+    const blendGroup = blendParts.wrapper;
+    const blendFlyout = blendParts.fly;
+    /* The resin field's slot: above the flyout's row, right-aligned to it
+     * (machine-rail.css). The field itself is the boot file's; the slot
+     * is hidden with it while no selection is on. */
+    const fieldSlot = element(doc, "div", "station-rail__field-slot", { "data-role": "bulk-field-slot", hidden: "" });
+    if (settings.bulkField && typeof settings.bulkField === "object") fieldSlot.appendChild(settings.bulkField);
+    blendFlyout.appendChild(fieldSlot);
+    rootEl.appendChild(blendGroup);
     rootEl.appendChild(nextGroup);
     rootEl.appendChild(weightsGroup);
     rootEl.appendChild(resetButton);
@@ -503,9 +602,12 @@
           : `${LABEL.next} needs a line with layers on the stage`));
 
       // The two moves unfold beside the switch only while the Next face is
-      // on; Smart Hoppers beside Weights only while that face is.
+      // on; Smart Hoppers beside Weights only while that face is; Bulk
+      // Edit beside Blend Edit only while that face is.
       unfold(nextGroup, flyout, state.next.active);
       unfold(weightsGroup, weightsFlyout, state.weights.active);
+      unfold(blendGroup, blendFlyout, state.blend.active);
+      drawBulk();
       const promoteArmed = state.armed === "promote";
       promoteButton.disabled = !state.promote.available || !state.next.planned;
       promoteButton.classList.toggle("is-armed", promoteArmed);
@@ -535,6 +637,39 @@
         : (!state.reset.available
           ? `${LABEL.reset} is not available: ${state.reset.reason || "no application is connected to Station commands."}`
           : (count === 0 ? `${LABEL.reset} · nothing is tracked` : `${LABEL.reset} · ${hoppers}`)));
+    }
+
+    /* The Blend face's child, in its two states. At rest Bulk Edit is the
+     * one control; on, it is hidden (out of the tab order and the reader's
+     * tree, as a folded flyout is) and Confirm and Cancel take its place. */
+    function hide(node, on) {
+      if (on) { node.setAttribute("hidden", ""); node.setAttribute("inert", ""); node.setAttribute("aria-hidden", "true"); }
+      else { node.removeAttribute("hidden"); node.removeAttribute("inert"); node.removeAttribute("aria-hidden"); }
+    }
+
+    function drawBulk() {
+      const bulk = state.bulk;
+      const on = bulk.active && state.blend.active;
+      blendGroup.setAttribute("data-bulk", on ? "true" : "false");
+      rootEl.classList.toggle("is-bulk-active", on);
+      bulkButton.setAttribute("aria-pressed", on ? "true" : "false");
+      bulkButton.disabled = !bulk.available;
+      bulkButton.setAttribute("title", !bulk.available
+        ? `${LABEL.bulk} is not available: ${bulk.reason || "no application is connected to Station commands."}`
+        : `${LABEL.bulk} · select hoppers on the cards, then write one resin onto all of them`);
+      hide(bulkButton, on);
+      hide(confirmButton, !on);
+      hide(cancelButton, !on);
+      if (on) fieldSlot.removeAttribute("hidden");
+      else fieldSlot.setAttribute("hidden", "");
+      const typed = String(bulk.resin || "").trim();
+      const hoppers = `${bulk.count} hopper${bulk.count === 1 ? "" : "s"}`;
+      confirmButton.disabled = !on || bulk.count === 0 || !typed;
+      confirmButton.setAttribute("title", bulk.count === 0
+        ? `${LABEL.confirm} · select a hopper on a card first`
+        : (!typed ? `${LABEL.confirm} · enter the resin in the card's field for ${hoppers}` : `Apply "${typed}" to ${hoppers}`));
+      confirmButton.setAttribute("aria-label", bulk.count === 0 ? LABEL.confirm : `Apply resin to ${hoppers}`);
+      cancelButton.setAttribute("title", `${LABEL.cancel} · nothing is written; the selection is cleared`);
     }
 
     /* ---- Arming a control: the reset, or the promotion ---- */
@@ -604,6 +739,21 @@
       disarm();
       onCopy();
     });
+    bulkButton.addEventListener("click", () => {
+      if (bulkButton.disabled) return;
+      disarm();
+      onBulkEdit();
+    });
+    confirmButton.addEventListener("click", () => {
+      if (confirmButton.disabled) return;
+      disarm();
+      onBulkConfirm();
+    });
+    cancelButton.addEventListener("click", () => {
+      if (cancelButton.disabled) return;
+      disarm();
+      onBulkCancel();
+    });
     for (const button of [resetButton, promoteButton]) {
       button.addEventListener("keydown", event => {
         if (event.key !== "Escape" || !state.armed) return;
@@ -629,6 +779,7 @@
      * @param {object}  [next.next]       { active, available, planned }
      * @param {object}  [next.promote]    { available, reason, summary }
      * @param {object}  [next.copy]       { available, reason }
+     * @param {object}  [next.bulk]       { active, available, reason, count, resin }
      */
     function update(next) {
       const n = next || {};
@@ -673,6 +824,15 @@
       if (n.copy && typeof n.copy === "object") {
         state.copy = { available: !!n.copy.available, reason: typeof n.copy.reason === "string" ? n.copy.reason : "" };
       }
+      if (n.bulk && typeof n.bulk === "object") {
+        state.bulk = {
+          active: !!n.bulk.active,
+          available: !!n.bulk.available,
+          reason: typeof n.bulk.reason === "string" ? n.bulk.reason : "",
+          count: Number.isInteger(n.bulk.count) && n.bulk.count > 0 ? n.bulk.count : 0,
+          resin: typeof n.bulk.resin === "string" ? n.bulk.resin : ""
+        };
+      }
       // A control that stopped being possible while armed is not armed.
       const resetGone = state.armed === "reset" && (!state.reset.available || state.reset.count === 0);
       const promoteGone = state.armed === "promote" && (!state.promote.available || !state.next.planned || !state.next.active);
@@ -702,6 +862,8 @@
       rootEl.style.top = `${at.top}px`;
       rootEl.style.height = `${at.height}px`;
       rootEl.classList.add("is-placed");
+      // The flyouts' shape follows the room beside the rail.
+      rootEl.setAttribute("data-room", at.roomRight < FLYOUT_ROW_WIDTH ? "tight" : "wide");
       return at;
     }
 
@@ -720,6 +882,12 @@
       weightsFlyout,
       promoteButton,
       copyButton,
+      blendGroup,
+      blendFlyout,
+      bulkButton,
+      confirmButton,
+      cancelButton,
+      fieldSlot,
       update,
       place,
       disarm,
@@ -730,10 +898,11 @@
         blend: Object.assign({}, state.blend), weights: Object.assign({}, state.weights),
         smart: Object.assign({}, state.smart), reset: Object.assign({}, state.reset),
         next: Object.assign({}, state.next), promote: Object.assign({}, state.promote), copy: Object.assign({}, state.copy),
+        bulk: Object.assign({}, state.bulk),
         placed: state.placed ? Object.assign({}, state.placed) : null
       })
     };
   }
 
-  return Object.freeze({ ARM_DURATION, GAP, EDGE, LABEL, FALLBACK_SIZE, blendGlyph, weightsGlyph, smartGlyph, resetGlyph, nextGlyph, promoteGlyph, copyGlyph, parseBox, readStage, anchor, create });
+  return Object.freeze({ ARM_DURATION, GAP, EDGE, FLYOUT_ROW_WIDTH, LABEL, FALLBACK_SIZE, blendGlyph, weightsGlyph, smartGlyph, resetGlyph, nextGlyph, promoteGlyph, copyGlyph, bulkGlyph, confirmGlyph, cancelGlyph, parseBox, readStage, anchor, create });
 });

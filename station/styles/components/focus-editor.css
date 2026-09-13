@@ -769,3 +769,195 @@
   font-size: var(--station-text-2xs);
   line-height: var(--station-line-tight);
 }
+
+/* ---------------------------------------------------------------------
+ *   The card's foot: the layer menu, and the copy source
+ * -------------------------------------------------------------------
+ * Six rows take under half the card; the actions slot takes the rest and
+ * holds the layer menu (station-layer-menu.js) at the card's bottom-left:
+ * three dots, no pill, faded until reached, and a short glass menu over
+ * them. A card whose layer is the copy source wears a quiet accent ring
+ * - the grid's own mark on the armed column - so the clipboard is
+ * readable without hunting for the word "Cancel".
+ */
+
+.station-editor__actions {
+  display: flex;
+  align-items: flex-end;
+  margin-top: auto;
+  padding-top: var(--station-space-1);
+}
+
+.station-editor.is-copy-source {
+  box-shadow: inset 0 0 0 var(--station-stroke) var(--station-accent), 0 0 0 var(--station-stroke) var(--station-accent-soft);
+  border-radius: var(--station-radius-sm);
+}
+
+.station-layer-menu {
+  position: relative;
+  display: inline-flex;
+}
+
+.station-root .station-layer-menu__button {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 2.2em;
+  min-height: 1.6em;
+  padding: var(--station-space-1) var(--station-space-2);
+  margin: 0 calc(-1 * var(--station-space-1));
+  border: var(--station-stroke) solid transparent;
+  border-radius: var(--station-radius-sm);
+  background: none;
+  color: var(--station-text-muted);
+  opacity: 0.45;
+  cursor: pointer;
+  transition: opacity var(--station-motion-ack) ease-out, color var(--station-motion-ack) ease-out, background-color var(--station-motion-ack) ease-out;
+}
+
+.station-editor:hover .station-layer-menu__button,
+.station-root .station-layer-menu__button:hover,
+.station-root .station-layer-menu__button:focus-visible,
+.station-layer-menu.is-open .station-layer-menu__button {
+  opacity: 1;
+  color: var(--station-text);
+}
+
+.station-root .station-layer-menu__button:hover,
+.station-layer-menu.is-open .station-layer-menu__button {
+  background: var(--station-handbook-control-active, var(--station-accent-soft));
+}
+
+/* The source's own button stays lit, in the accent the ring wears. */
+.station-layer-menu.is-source .station-layer-menu__button {
+  opacity: 1;
+  color: var(--station-accent);
+}
+
+.station-layer-menu__dot {
+  display: block;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* The menu: glass, opening upward from the button, above the rows. */
+.station-layer-menu__list {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + var(--station-space-1));
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  min-width: 12em;
+  padding: var(--station-space-1);
+  border: var(--station-stroke) solid var(--station-handbook-glass-border);
+  border-radius: var(--station-radius);
+  background: var(--station-handbook-glass);
+  -webkit-backdrop-filter: blur(var(--station-handbook-glass-blur)) saturate(var(--station-handbook-glass-saturate));
+  backdrop-filter: blur(var(--station-handbook-glass-blur)) saturate(var(--station-handbook-glass-saturate));
+  box-shadow: inset 0 var(--station-stroke) 0 var(--station-handbook-glass-highlight), var(--station-shadow-pop);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(var(--station-space-1)) scale(0.96);
+  transform-origin: left bottom;
+  transition:
+    opacity var(--station-motion-settle) ease-out,
+    transform var(--station-motion-settle) var(--station-motion-ease),
+    visibility 0s linear var(--station-motion-settle);
+}
+
+.station-layer-menu__list[data-open="true"] {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: none;
+  transition:
+    opacity var(--station-motion-settle) ease-out,
+    transform var(--station-motion-settle) var(--station-motion-ease),
+    visibility 0s linear 0s;
+}
+
+.station-root .station-layer-menu__item {
+  display: block;
+  width: 100%;
+  padding: var(--station-space-1) var(--station-space-2);
+  border: var(--station-stroke) solid transparent;
+  border-radius: var(--station-radius-sm);
+  background: none;
+  color: var(--station-text);
+  font: inherit;
+  font-size: var(--station-text-sm);
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.station-root .station-layer-menu__item:hover:not(:disabled),
+.station-root .station-layer-menu__item:focus-visible {
+  background: var(--station-handbook-control-active, var(--station-accent-soft));
+}
+
+.station-root .station-layer-menu__item:disabled {
+  color: var(--station-text-disabled);
+  cursor: default;
+}
+
+/* The reset, armed: the warning colour, and a pulse on its edge while it
+   waits for the second click - the rail's own signal. */
+.station-root .station-layer-menu__item.is-armed {
+  border-color: var(--station-warning);
+  color: var(--station-warning);
+  animation: station-rail-armed 1.2s ease-in-out infinite;
+}
+
+/* ---------------------------------------------------------------------
+ *   Bulk Edit: the badges as selection toggles
+ * -------------------------------------------------------------------
+ * While the rail's Bulk Edit is on, every badge is a button (the row's
+ * one selection toggle) and says so: a pointer, a ring on hover, and the
+ * accent as a fill while its hopper is selected - the same look the
+ * selected badge has under the open layer, so "selected" is one colour.
+ */
+
+.station-root .station-editor__badge--select {
+  font: inherit;
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: background var(--station-motion-ack) ease-out, border-color var(--station-motion-ack) ease-out, color var(--station-motion-ack) ease-out;
+}
+
+.station-editor[data-variant="compact"] .station-editor__badge--select {
+  font-size: var(--station-text-2xs);
+}
+
+.station-root .station-editor__badge--select:hover,
+.station-root .station-editor__badge--select:focus-visible {
+  border-color: var(--station-accent);
+  color: var(--station-accent);
+}
+
+.station-editor__item.is-bulk-selected .station-editor__badge {
+  border-color: var(--station-accent);
+  background: var(--station-accent);
+  color: var(--station-text-on-accent);
+}
+
+.station-editor.is-selectable .station-editor__item.is-bulk-selected {
+  background: var(--station-accent-soft);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .station-layer-menu__list,
+  .station-root .station-layer-menu__button {
+    transition: none;
+  }
+  .station-root .station-layer-menu__item.is-armed {
+    animation: none;
+  }
+}

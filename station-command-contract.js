@@ -13,7 +13,7 @@
  *
  * WHAT IT DEFINES
  *
- *   COMMANDS       the vocabulary: seventeen names, nothing else is a command
+ *   COMMANDS       the vocabulary: twenty-six names, nothing else is a command
  *   ARGUMENTS      which arguments each command takes
  *   normalize*     one normalizer per argument, in the terms the application
  *                  already uses (its own resin-name trimming, its own
@@ -98,8 +98,19 @@
     "setSmartHoppers",  // { enabled }  this device's Smart Hoppers switch
     "promoteNextRecipe", // {}  the planned recipe becomes the running one -
                         //   the floor UI's Load Next Recipe; the plan is kept
-    "copyCurrentToNext" // {}  the running recipe becomes the plan - the
+    "copyCurrentToNext", // {}  the running recipe becomes the plan - the
                         //   floor UI's Load Current Recipe; the job is untouched
+    "copyLayer",        // { recipe, layer, toLayer }  every hopper's assignment
+                        //   (resin, blend) on `layer` written onto `toLayer` -
+                        //   the Recipe grid's per-layer Paste; the executor
+                        //   applies the grid's one exception (resin only into a
+                        //   3-layer line's core)
+    "clearLayer",       // { recipe, layer }  every hopper on the layer reset -
+                        //   resin, blend, tracking and pump state - the grid's
+                        //   Reset all, scoped to one layer
+    "setHopperResins"   // { recipe, resins: [{ layer, index, resin }] }
+                        //   several hoppers' resins in one request - the
+                        //   grid's Bulk edit apply - written and saved once
   ]);
 
   /* The three runtime commands. Tracking and pump-off are operational state
@@ -161,6 +172,15 @@
    * executor's question; a plan that would change nothing is a no-op. */
   const PLAN_COMMANDS = Object.freeze(["promoteNextRecipe", "copyCurrentToNext"]);
 
+  /* The three layer commands. Each is a recipe edit over more than one
+   * hopper at once - a layer pasted onto another, a layer emptied, a resin
+   * written onto a selection - so each names its recipe like a hopper
+   * command does, may address the plan as well as the running recipe, and
+   * is carried out by the application as ONE edit: one history entry, one
+   * save, one sync notification. Which positions exist, and what the paste
+   * carries into a core layer, is the executor's. */
+  const LAYER_COMMANDS = Object.freeze(["copyLayer", "clearLayer", "setHopperResins"]);
+
   /* The two ways a line measures its hoppers for Smart Hoppers, as
    * line-identity.js names the geometry (`hopperGeometry`), so the value
    * a command sets is stated in the line's own terms. */
@@ -196,7 +216,10 @@
     setHopperCircumference: Object.freeze(["circumference"]),
     setSmartHoppers: Object.freeze(["enabled"]),
     promoteNextRecipe: Object.freeze([]),
-    copyCurrentToNext: Object.freeze([])
+    copyCurrentToNext: Object.freeze([]),
+    copyLayer: Object.freeze(["recipe", "layer", "toLayer"]),
+    clearLayer: Object.freeze(["recipe", "layer"]),
+    setHopperResins: Object.freeze(["recipe", "resins"])
   });
 
   /* The error vocabulary, complete now. The first three and the last are
@@ -511,6 +534,37 @@
     return { ok: true, value: Object.freeze(out) };
   }
 
+  /* A list of resins for the bulk apply: the weight list's rules - non-
+   * empty, capped, no position twice - over { layer, index, resin } entries
+   * read by setHopperResin's own normalizers. An empty resin clears that
+   * hopper's resin, as the single command's does. */
+  function normalizeResinList(value) {
+    if (!Array.isArray(value) || value.length === 0) {
+      return { ok: false, code: "bad_argument", message: "List the hoppers and the resin for each." };
+    }
+    if (value.length > MAX_WEIGHT_ENTRIES) {
+      return { ok: false, code: "bad_argument", message: `No more than ${MAX_WEIGHT_ENTRIES} resins can be applied at once.` };
+    }
+    const out = [];
+    const seen = new Set();
+    for (const entry of value) {
+      const given = isPlainObject(entry) ? entry : {};
+      const layer = normalizeLayer(given.layer);
+      if (!layer.ok) return layer;
+      const index = normalizeIndex(given.index);
+      if (!index.ok) return index;
+      const resin = normalizeResin(given.resin);
+      if (!resin.ok) return resin;
+      const key = `${layer.value}:${index.value}`;
+      if (seen.has(key)) {
+        return { ok: false, code: "bad_argument", message: `Hopper ${key} is listed twice.` };
+      }
+      seen.add(key);
+      out.push(Object.freeze({ layer: layer.value, index: index.value, resin: resin.value }));
+    }
+    return { ok: true, value: Object.freeze(out) };
+  }
+
   /* An absolute instant as epoch milliseconds, or null to clear. Whether
    * the instant is in the past, or further away than the application can
    * store, is the executor's question: it needs the clock. */
@@ -543,7 +597,8 @@
     value: normalizeMeasure,
     geometries: normalizeGeometryList,
     circumference: normalizeMeasure,
-    enabled: normalizeFlag
+    enabled: normalizeFlag,
+    resins: normalizeResinList
   });
 
   /**
@@ -582,6 +637,7 @@
     EQUIPMENT_COMMANDS,
     PREFERENCE_COMMANDS,
     PLAN_COMMANDS,
+    LAYER_COMMANDS,
     DIMENSIONS,
     RECIPES,
     ARGUMENTS,
@@ -604,6 +660,7 @@
     normalizeDimension,
     normalizeMeasure,
     normalizeGeometryList,
+    normalizeResinList,
     normalizeTimestamp,
     normalizeArguments,
     success,

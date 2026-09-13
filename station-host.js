@@ -91,6 +91,11 @@
     // The plan controls: the seam for the rail's two moves under the Next
     // face. Beside the hopper controls, whose reset the rail asks for too.
     "station/station-plan-controls.js",
+    // The blend actions: the seam for a card's Copy / Paste / Reset and the
+    // rail's Bulk Edit; the layer menu each blend card carries at its foot.
+    "station/station-blend-actions.js",
+    "station/station-layer-menu.js",
+    "station/station-bulk-field.js",
     "station/station-layer-share.js",
     "station/station-weight-cards.js",
     // The machine utility rail: Blend Edit and Reset Tracking beside the
@@ -129,7 +134,7 @@
     "station/station.js"
   ];
 
-  const VERSION = "0.45.0";
+  const VERSION = "0.47.1";
 
   function requested() {
     try {

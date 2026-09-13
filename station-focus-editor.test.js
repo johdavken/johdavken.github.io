@@ -2010,3 +2010,83 @@ test("the floating card is a fixed, non-interactive layer above everything else,
   const source = fs.readFileSync(path.join(ROOT, "station/station-focus-editor.js"), "utf8");
   assert.doesNotMatch(source, /cloneNode/);
 });
+
+/* ----------------------------------------------------------------------
+ *   The actions slot, and Bulk Edit's badges
+ * -------------------------------------------------------------------- */
+
+test("an actions element handed in stands last in the card, in its own slot; none handed in, no slot", () => {
+  const plain = build({ variant: "compact" });
+  assert.equal(plain.root.querySelector(".station-editor__actions"), null);
+  const doc = fakeDocument();
+  const menu = doc.createElement("div");
+  menu.setAttribute("data-role", "layer-menu");
+  const built = build({ variant: "compact", actions: menu });
+  const slot = built.root.querySelector(".station-editor__actions");
+  assert.ok(slot, "the slot exists");
+  assert.ok(slot.children[0] === menu, "and holds what was handed in");
+  assert.ok(built.root.children[built.root.children.length - 1] === slot, "last in the card, after the note");
+  assert.ok(built.root.children[built.root.children.length - 2].classList.contains("station-editor__note"));
+});
+
+test("Bulk Edit off: every badge is a static span and the card is not selectable", () => {
+  const built = build({ variant: "compact" });
+  const badges = built.root.querySelectorAll(".station-editor__badge");
+  assert.equal(badges.length, 6);
+  assert.ok(badges.every(badge => badge.tagName === "SPAN"));
+  assert.equal(built.root.classList.contains("is-selectable"), false);
+  assert.equal(built.root.querySelectorAll(".is-bulk-selected").length, 0);
+});
+
+test("Bulk Edit on: every badge is a pressed/unpressed button that asks the boot file to toggle its hopper, and never selects the row or starts a drag", () => {
+  const toggled = [];
+  const selected = [];
+  const built = build({ variant: "compact", onSelect: id => selected.push(id), bulk: { active: true, selected: ["D:1", "D:4"], onToggle: index => toggled.push(index) } });
+  assert.equal(built.root.classList.contains("is-selectable"), true);
+  const badges = built.root.querySelectorAll(".station-editor__badge");
+  assert.ok(badges.every(badge => badge.tagName === "BUTTON" && badge.getAttribute("data-action") === "select-hopper"));
+  assert.deepEqual(badges.map(badge => badge.getAttribute("aria-pressed")), ["false", "true", "false", "false", "true", "false"]);
+  const rows = built.root.querySelectorAll(".station-editor__item");
+  assert.deepEqual(rows.map(row => row.classList.contains("is-bulk-selected")), [false, true, false, false, true, false]);
+  badges[2].dispatchEvent(event("click"));
+  assert.deepEqual(toggled, [2]);
+  assert.deepEqual(selected, [], "the badge's click is the toggle, not a row selection");
+  // A button is an interactive target: a press on it is never a drag.
+  assert.equal(editor.isInteractiveTarget(badges[2], rows[2]), true);
+  const span = build({ variant: "compact" }).root.querySelector(".station-editor__badge");
+  assert.equal(editor.isInteractiveTarget(span, span.parent), false);
+});
+
+test("setBulk marks the selection in place, and turns the badges over when the mode goes on or off, without rebuilding any row", () => {
+  const toggled = [];
+  const built = build({ variant: "compact", bulk: { active: true, selected: ["D:1"], onToggle: index => toggled.push(index) } });
+  const rowsBefore = built.root.querySelectorAll(".station-editor__item");
+  const pctBefore = rowsBefore[1].querySelector("[data-slot='pct']");
+  built.setBulk({ active: true, selected: ["D:1", "D:2"] });
+  const badges = built.root.querySelectorAll(".station-editor__badge");
+  assert.deepEqual(badges.map(badge => badge.getAttribute("aria-pressed")).slice(0, 3), ["false", "true", "true"]);
+  assert.ok(built.root.querySelectorAll(".station-editor__item")[1] === rowsBefore[1], "the row is the same element");
+  assert.ok(rowsBefore[1].querySelector("[data-slot='pct']") === pctBefore, "and its controls are untouched");
+  badges[2].dispatchEvent(event("click"));
+  assert.deepEqual(toggled, [2], "the toggle callback given at build still answers");
+  // Off: spans again, nothing selected.
+  built.setBulk({ active: false });
+  const spans = built.root.querySelectorAll(".station-editor__badge");
+  assert.ok(spans.every(badge => badge.tagName === "SPAN"));
+  assert.equal(built.root.classList.contains("is-selectable"), false);
+  assert.equal(built.root.querySelectorAll(".is-bulk-selected").length, 0);
+  assert.ok(built.root.querySelectorAll(".station-editor__item")[1] === rowsBefore[1]);
+  // On again, with a fresh callback.
+  const later = [];
+  built.setBulk({ active: true, selected: ["D:0"], onToggle: index => later.push(index) });
+  const again = built.root.querySelectorAll(".station-editor__badge");
+  assert.ok(again.every(badge => badge.tagName === "BUTTON"));
+  assert.equal(again[0].getAttribute("aria-pressed"), "true");
+  again[0].dispatchEvent(event("click"));
+  assert.deepEqual(later, [0]);
+  assert.deepEqual(toggled, [2]);
+  // A publish that refills a row keeps the mode's badge.
+  built.update({ hopperState: Object.assign({}, STATE, { "D:3": { pct: 5, resinName: "NEW" } }) });
+  const refilled = built.root.querySelectorAll(".station-editor__item")[3].querySelector(".station-editor__badge");
+  assert.equal(refilled.tagName, "BUTTON");
+});

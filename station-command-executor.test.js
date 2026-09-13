@@ -45,6 +45,7 @@ function block(startAnchor, endAnchor) {
 }
 
 const LIFTED = [
+  block("    function isResinOnlyCopyTarget(lineType, toName){", "\n    }\n"),
   block("    function recomputeAutoH1(layer){", "\n    }\n"),
   block("    function recomputeAutoFirstLayerPct(layers){", "\n    }\n"),
   block("    function ensureNextRecipeWorking(){", "    function hasPlannedRecipe(){"),
@@ -189,7 +190,7 @@ test("unavailable until the application connects; available with exactly the imp
   const handle = h.commands.connect({ execute: h.executor.execute, capabilities: h.executor.capabilities });
   assert.equal(h.commands.isAvailable(), true);
   assert.deepEqual([...h.commands.capabilities()].sort(), [...contract.COMMANDS].sort());
-  assert.deepEqual(h.executor.capabilities, ["setHopperResin", "setHopperBlend", "setLayerShare", "clearHopper", "setSource", "moveHopper", "setHopperTracking", "setPumpOff", "resetTracking", "setLineRate", "setChangeover", "setProductionPounds", "setScrapPounds", "setHopperWeight", "setHopperWeights", "setHopperGeometry", "setHopperGeometries", "setHopperCircumference", "setSmartHoppers", "promoteNextRecipe", "copyCurrentToNext", "undo", "redo"]);
+  assert.deepEqual(h.executor.capabilities, ["setHopperResin", "setHopperBlend", "setLayerShare", "clearHopper", "setSource", "moveHopper", "setHopperTracking", "setPumpOff", "resetTracking", "setLineRate", "setChangeover", "setProductionPounds", "setScrapPounds", "setHopperWeight", "setHopperWeights", "setHopperGeometry", "setHopperGeometries", "setHopperCircumference", "setSmartHoppers", "promoteNextRecipe", "copyCurrentToNext", "copyLayer", "clearLayer", "setHopperResins", "undo", "redo"]);
   assert.throws(() => h.commands.connect({ execute: () => {}, capabilities: [] }), /already connected/);
   assert.equal(handle.disconnect(), true);
   assert.equal(h.commands.isAvailable(), false);
@@ -212,7 +213,7 @@ test("app.js installs the executor once, beside the state bridge, and nothing el
   for (const file of fs.readdirSync(path.join(ROOT, "station")).filter(name => name.endsWith(".js"))) {
     const source = fs.readFileSync(path.join(ROOT, "station", file), "utf8");
     assert.doesNotMatch(source, /PolynStationCommandBridge\s*\.\s*connect|commands\.connect\s*\(/, `${file} connects a producer`);
-    if (!["station-focus-editor.js", "station-hopper-controls.js", "station-plan-controls.js", "station-job-controls.js", "station-layer-share.js", "station-resin-totals.js", "station-weight-cards.js"].includes(file)) assert.doesNotMatch(source, /\.dispatch\s*\(/, `${file} dispatches a command`);
+    if (!["station-focus-editor.js", "station-hopper-controls.js", "station-plan-controls.js", "station-blend-actions.js", "station-job-controls.js", "station-layer-share.js", "station-resin-totals.js", "station-weight-cards.js"].includes(file)) assert.doesNotMatch(source, /\.dispatch\s*\(/, `${file} dispatches a command`);
   }
 });
 
@@ -845,7 +846,7 @@ test("rearrangement mode and a remote apply in progress refuse every command wit
   const before = h.stateJson();
   h.setRearranging(true);
   for (const command of contract.COMMANDS) {
-    const result = h.dispatch(command, { recipe: "current", layer: "A", index: 1, pct: 10, resin: "X", source: "Y", toLayer: "B", toIndex: 2, track: true, pumpOff: true, lineRate: 10, at: Date.now() + 3600000, pounds: 10, weight: 10, weights: [{ layer: "A", index: 1, weight: 10 }], dimension: "height", value: 10, geometries: [{ layer: "A", index: 1, dimension: "height", value: 10 }], circumference: 10, enabled: true });
+    const result = h.dispatch(command, { recipe: "current", layer: "A", index: 1, pct: 10, resin: "X", source: "Y", toLayer: "B", toIndex: 2, track: true, pumpOff: true, lineRate: 10, at: Date.now() + 3600000, pounds: 10, weight: 10, weights: [{ layer: "A", index: 1, weight: 10 }], dimension: "height", value: 10, geometries: [{ layer: "A", index: 1, dimension: "height", value: 10 }], circumference: 10, enabled: true, resins: [{ layer: "A", index: 1, resin: "X" }] });
     assert.equal(result.code, "rearranging", `${command} ran during rearrangement`);
   }
   h.setRearranging(false);
@@ -1142,7 +1143,7 @@ test("the executor's runtime cases mirror the floor UI's own toggles: the same k
   const executor = block("  function createStationCommandExecutor(){", "\n  }\n");
   const tracking = executor.slice(executor.indexOf("setHopperTracking(args){"), executor.indexOf("setPumpOff(args){"));
   const pump = executor.slice(executor.indexOf("setPumpOff(args){"), executor.indexOf("resetTracking(args){"));
-  const reset = executor.slice(executor.indexOf("resetTracking(args){"), executor.indexOf("undo(args){"));
+  const reset = executor.slice(executor.indexOf("resetTracking(args){"), executor.indexOf("setLineRate(args){"));
   assert.match(tracking, /at\.hopper\.track = args\.track;/);
   assert.match(tracking, /commit\(\{ sync: true, immediate: true, kind: "tracking" \}\)/);
   assert.match(pump, /at\.hopper\.pumpOff = args\.pumpOff;/);
@@ -1628,6 +1629,206 @@ test("the plan commands are refused while rearranging or applying a remote chang
     h.setRearranging(false);
     h.setApplyingRemote(true);
     assert.equal(h.dispatch(command, {}).code, "busy");
+    assert.equal(h.stateJson(), json);
+    assert.equal(h.log.saves, 0);
+  }
+});
+
+/* ----------------------------------------------------------------------
+ *   Layer commands: paste, reset and the bulk resin
+ * -------------------------------------------------------------------- */
+
+test("copyLayer IS the grid's per-layer Paste: every hopper's resin and blend on the source written onto the destination, H1 re-derived, one ordinary synced edit, one history entry", () => {
+  const h = boot();
+  h.state.layers[2].hoppers[2].track = true;
+  const before = h.stateJson();
+  const result = h.dispatch("copyLayer", { recipe: "current", layer: "A", toLayer: "C" });
+  assert.deepEqual([result.ok, result.changed], [true, true]);
+  for (let i = 0; i < 6; i++) {
+    assert.equal(h.hopper("current", "C", i).resinName, h.hopper("current", "A", i).resinName, `C${i + 1} resin`);
+    assert.equal(h.hopper("current", "C", i).pct, h.hopper("current", "A", i).pct, `C${i + 1} blend`);
+  }
+  assert.equal(h.hopper("current", "C", 2).track, true, "tracking stays with the physical hopper");
+  assert.equal(h.hopper("current", "C", 0).weight, 400, "weights stay with the physical hopper");
+  assert.equal(h.hopper("current", "A", 0).resinName, "LIVE-A0", "the source is untouched");
+  assert.deepEqual(h.log.validates, [{ sync: true, immediate: false, kind: "edit" }]);
+  assert.deepEqual(h.log.notified, [{ immediate: false, kind: "edit" }]);
+  assert.equal(h.log.saves, 2, "validateAndCompute saves, and the tail saves again - as the grid's paste does");
+  assert.equal(h.log.renders, 1);
+  assert.equal(h.recipeEditHistory.current.undo.length, 1);
+  assert.equal(h.dispatch("undo", { recipe: "current" }).ok, true);
+  assert.equal(h.hopper("current", "C", 0).resinName, "LIVE-C0");
+  assert.equal(h.hopper("current", "C", 2).track, true);
+  assert.equal(JSON.parse(h.stateJson()).state.layers[2].hoppers[0].pct, JSON.parse(before).state.layers[2].hoppers[0].pct);
+  // The grid's own paste copies the same two fields, and nothing else.
+  const legacy = block("      function copyLayer(fromName, toName){", "\n      }\n");
+  assert.match(legacy, /to\.hoppers\[i\]\.pct = clampNum\(from\.hoppers\[i\]\.pct\);/);
+  assert.match(legacy, /to\.hoppers\[i\]\.resinName = normName\(from\.hoppers\[i\]\.resinName\);/);
+  assert.ok(!/track|weight|pumpOff/.test(legacy));
+});
+
+test("copyLayer into a 3-layer line's core carries resin only, as the grid's one exception does; the same rule is the grid's own", () => {
+  const h = boot();
+  h.state.layers[1].hoppers[1].pct = 25;
+  h.state.layers[1].hoppers[0].pct = 75;
+  const result = h.dispatch("copyLayer", { recipe: "current", layer: "A", toLayer: "B" });
+  assert.deepEqual([result.ok, result.changed], [true, true]);
+  assert.equal(h.hopper("current", "B", 0).resinName, "LIVE-A0");
+  assert.equal(h.hopper("current", "B", 1).resinName, "LIVE-A1");
+  assert.equal(h.hopper("current", "B", 0).pct, 75, "B's own split is set independently");
+  assert.equal(h.hopper("current", "B", 1).pct, 25);
+  // Not on a 5-layer line: B there is an ordinary layer.
+  const five = boot({ state: {
+    lineType: 5, hopperNamingLine9: "standard", layers: layersFor(["A", "B", "C", "D", "E"], "LIVE"),
+    nextRecipe: null, hookupSources: { current: {}, next: {} }, resinLots: {}, nextRecipeLots: {}, smartHoppersEnabled: false, hopperCircumference: 0
+  } });
+  five.state.layers[1].hoppers[1].pct = 25;
+  five.state.layers[1].hoppers[0].pct = 75;
+  assert.equal(five.dispatch("copyLayer", { recipe: "current", layer: "A", toLayer: "B" }).ok, true);
+  assert.equal(five.hopper("current", "B", 1).pct, 40);
+  assert.equal(five.hopper("current", "B", 0).pct, 60);
+  assert.match(block("    function isResinOnlyCopyTarget(lineType, toName){", "\n    }\n"), /lineType === 3 && toName === "B"/);
+  assert.equal((app.match(/function isResinOnlyCopyTarget\(/g) || []).length, 1, "one rule, shared by the grid and the executor");
+});
+
+test("copyLayer onto itself, onto a layer already holding the same assignment, or from an unknown layer changes nothing", () => {
+  const h = boot();
+  const json = h.stateJson();
+  const same = h.dispatch("copyLayer", { recipe: "current", layer: "A", toLayer: "A" });
+  assert.deepEqual([same.ok, same.changed], [true, false]);
+  assert.equal(h.dispatch("copyLayer", { recipe: "current", layer: "A", toLayer: "C" }).changed, true);
+  const twice = h.dispatch("copyLayer", { recipe: "current", layer: "A", toLayer: "C" });
+  assert.deepEqual([twice.ok, twice.changed], [true, false]);
+  assert.equal(h.log.saves, 2, "one commit: the no-ops saved nothing");
+  assert.equal(h.recipeEditHistory.current.undo.length, 1);
+  const bad = h.dispatch("copyLayer", { recipe: "current", layer: "Z", toLayer: "C" });
+  assert.equal(bad.code, "unknown_layer");
+  const badTarget = h.dispatch("copyLayer", { recipe: "current", layer: "A", toLayer: "Z" });
+  assert.equal(badTarget.code, "unknown_layer");
+  assert.match(badTarget.message, /Layer Z/);
+  h.dispatch("undo", { recipe: "current" });
+  assert.equal(h.stateJson().replace(/"history":.*$/, ""), json.replace(/"history":.*$/, ""));
+});
+
+test("copyLayer on Next pastes within the plan only, and a no-op there never leaves a plan behind", () => {
+  const h = boot();
+  const none = h.dispatch("copyLayer", { recipe: "next", layer: "A", toLayer: "A" });
+  assert.deepEqual([none.ok, none.changed], [true, false]);
+  assert.equal(h.working(), null, "a no-op on Next materializes nothing");
+  h.dispatch("setHopperResin", Object.assign({}, NXT, { index: 1, resin: "PLAN-1" }));
+  h.dispatch("setHopperBlend", Object.assign({}, NXT, { index: 1, pct: 30 }));
+  const result = h.dispatch("copyLayer", { recipe: "next", layer: "A", toLayer: "C" });
+  assert.equal(result.changed, true);
+  assert.equal(h.working()[2].hoppers[1].resinName, "PLAN-1");
+  assert.equal(h.working()[2].hoppers[1].pct, 30);
+  assert.equal(h.working()[2].hoppers[0].pct, 70);
+  assert.equal(h.state.layers[2].hoppers[1].resinName, "LIVE-C1", "the running recipe is untouched");
+  assert.equal(h.recipeEditHistory.next.undo.length, 3);
+  assert.equal(h.recipeEditHistory.current.undo.length, 0);
+});
+
+test("clearLayer IS Reset all for one layer: every hopper's resin cleared, blend zeroed (H1 too, not re-derived), tracking and pump state off; synced at once as recipe-clear; one history entry", () => {
+  const h = boot();
+  h.state.layers[0].hoppers[1].pumpOff = true;
+  const result = h.dispatch("clearLayer", { recipe: "current", layer: "A" });
+  assert.deepEqual([result.ok, result.changed], [true, true]);
+  for (let i = 0; i < 6; i++) {
+    const hopper = h.hopper("current", "A", i);
+    assert.deepEqual([hopper.resinName, hopper.pct, hopper.track, hopper.pumpOff], ["", 0, false, false], `A${i + 1}`);
+  }
+  assert.equal(h.hopper("current", "A", 0).weight, 400, "weights stay");
+  assert.equal(h.hopper("current", "A", 0).usableHeight, 30, "geometry stays");
+  assert.equal(h.hopper("current", "B", 0).resinName, "LIVE-B0", "other layers are untouched");
+  assert.deepEqual(h.log.validates, [{ sync: true, immediate: true, kind: "recipe-clear" }]);
+  assert.deepEqual(h.log.notified, [{ immediate: true, kind: "recipe-clear" }]);
+  assert.equal(h.recipeEditHistory.current.undo.length, 1);
+  assert.equal(h.dispatch("undo", { recipe: "current" }).ok, true);
+  assert.deepEqual([h.hopper("current", "A", 0).resinName, h.hopper("current", "A", 0).pct, h.hopper("current", "A", 0).track, h.hopper("current", "A", 1).pumpOff], ["LIVE-A0", 60, true, true]);
+  const again = h.dispatch("clearLayer", { recipe: "current", layer: "A" });
+  assert.equal(again.changed, true);
+  const third = h.dispatch("clearLayer", { recipe: "current", layer: "A" });
+  assert.deepEqual([third.ok, third.changed], [true, false], "an empty layer is a no-op");
+  assert.equal(h.dispatch("clearLayer", { recipe: "current", layer: "Q" }).code, "unknown_layer");
+  // Reset all's own per-hopper wipe: the same four fields.
+  const legacy = block("        const ok = confirm(\"Reset every hopper resin, percentage, and Track setting?\");", "        recordRecipeEdit(historyBefore);");
+  for (const line of ["hopper.resinName = \"\";", "hopper.pct = 0;", "hopper.track = false;", "hopper.pumpOff = false;"]) assert.ok(legacy.includes(line), line);
+});
+
+test("clearLayer on Next empties the plan's layer only, and an empty plan layer is a no-op that materializes nothing", () => {
+  const h = boot();
+  const none = h.dispatch("clearLayer", { recipe: "next", layer: "A" });
+  assert.deepEqual([none.ok, none.changed], [true, false]);
+  assert.equal(h.working(), null);
+  h.dispatch("setHopperResin", Object.assign({}, NXT, { index: 1, resin: "PLAN-1" }));
+  assert.equal(h.dispatch("clearLayer", { recipe: "next", layer: "A" }).changed, true);
+  assert.equal(h.working()[0].hoppers[1].resinName, "");
+  assert.equal(h.state.layers[0].hoppers[1].resinName, "LIVE-A1");
+  assert.equal(h.state.layers[0].hoppers[0].track, true, "the running job's tracking is not the plan's to clear");
+});
+
+test("setHopperResins IS the Bulk edit apply for a resin: every listed hopper written, then ONE tail - one save, one notification, one history entry; unchanged hoppers are skipped", () => {
+  const h = boot();
+  const result = h.dispatch("setHopperResins", { recipe: "current", resins: [
+    { layer: "A", index: 1, resin: "  BULK  X " },
+    { layer: "B", index: 3, resin: "BULK X" },
+    { layer: "C", index: 0, resin: "LIVE-C0" }
+  ] });
+  assert.deepEqual([result.ok, result.changed], [true, true]);
+  assert.equal(h.hopper("current", "A", 1).resinName, "BULK X");
+  assert.equal(h.hopper("current", "B", 3).resinName, "BULK X");
+  assert.equal(h.hopper("current", "B", 3).pct, 0, "the blend is not touched");
+  assert.equal(h.hopper("current", "A", 1).pct, 40);
+  assert.equal(h.hopper("current", "A", 1).track, false);
+  assert.deepEqual(h.log.validates, [{ sync: true, immediate: false, kind: "edit" }]);
+  assert.deepEqual(h.log.notified, [{ immediate: false, kind: "edit" }]);
+  assert.equal(h.log.saves, 2, "one commit for the whole list");
+  assert.equal(h.recipeEditHistory.current.undo.length, 1);
+  assert.equal(h.dispatch("undo", { recipe: "current" }).ok, true);
+  assert.deepEqual([h.hopper("current", "A", 1).resinName, h.hopper("current", "B", 3).resinName], ["LIVE-A1", ""]);
+  const saves = h.log.saves;
+  const same = h.dispatch("setHopperResins", { recipe: "current", resins: [{ layer: "C", index: 0, resin: "LIVE-C0" }] });
+  assert.deepEqual([same.ok, same.changed], [true, false]);
+  assert.equal(h.log.saves, saves);
+  // An empty resin clears the hopper's resin, as setHopperResin's does.
+  assert.equal(h.dispatch("setHopperResins", { recipe: "current", resins: [{ layer: "A", index: 0, resin: "" }] }).changed, true);
+  assert.equal(h.hopper("current", "A", 0).resinName, "");
+});
+
+test("setHopperResins is atomic: one unknown position refuses the whole list and leaves every resin as it was; on Next a refusal materializes no plan", () => {
+  const h = boot();
+  const json = h.stateJson();
+  const bad = h.dispatch("setHopperResins", { recipe: "current", resins: [
+    { layer: "A", index: 1, resin: "BULK X" }, { layer: "Q", index: 1, resin: "BULK X" }
+  ] });
+  assert.equal(bad.code, "unknown_layer");
+  assert.equal(h.stateJson(), json);
+  assert.equal(h.log.saves, 0);
+  const badNext = h.dispatch("setHopperResins", { recipe: "next", resins: [
+    { layer: "A", index: 1, resin: "BULK X" }, { layer: "Q", index: 1, resin: "BULK X" }
+  ] });
+  assert.equal(badNext.code, "unknown_layer");
+  assert.equal(h.working(), null, "the plan's working copy was put back");
+  assert.equal(h.dispatch("setHopperResins", { recipe: "next", resins: [{ layer: "A", index: 1, resin: "PLAN X" }, { layer: "C", index: 4, resin: "PLAN X" }] }).changed, true);
+  assert.equal(h.working()[0].hoppers[1].resinName, "PLAN X");
+  assert.equal(h.working()[2].hoppers[4].resinName, "PLAN X");
+  assert.equal(h.state.layers[0].hoppers[1].resinName, "LIVE-A1");
+  assert.equal(h.recipeEditHistory.next.undo.length, 1);
+});
+
+test("the layer commands are refused while rearranging or applying a remote change, touching nothing", () => {
+  const requests = [
+    ["copyLayer", { recipe: "current", layer: "A", toLayer: "C" }],
+    ["clearLayer", { recipe: "current", layer: "A" }],
+    ["setHopperResins", { recipe: "current", resins: [{ layer: "A", index: 1, resin: "X" }] }]
+  ];
+  for (const [command, args] of requests) {
+    const h = boot();
+    const json = h.stateJson();
+    h.setRearranging(true);
+    assert.equal(h.dispatch(command, args).code, "rearranging");
+    h.setRearranging(false);
+    h.setApplyingRemote(true);
+    assert.equal(h.dispatch(command, args).code, "busy");
     assert.equal(h.stateJson(), json);
     assert.equal(h.log.saves, 0);
   }

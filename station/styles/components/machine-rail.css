@@ -274,6 +274,17 @@
   opacity: 1;
 }
 
+/* Tight beside the far-right bank (a five-layer line fills its cell), a
+   two-child flyout stands its children in a column, one control wide,
+   down the stem's bracket - so nothing reaches past the stage's edge.
+   The script measures the room and says which (data-room). */
+.station-rail[data-room="tight"] .station-rail__flyout {
+  flex-direction: column;
+  align-items: flex-start;
+  height: auto;
+  min-height: 100%;
+}
+
 /* The Next face on: the timeline's "upcoming" colour, as the cards
    wear it (focus-editor.css), instead of the accent the other faces
    take - so the switch, its stem and the cards say the same thing. */
@@ -314,4 +325,126 @@
 
 .station-root .station-rail__control.is-on:hover:not(:disabled) {
   border-color: var(--station-text);
+}
+
+/* ---- Bulk Edit: Blend Edit's child, and what it becomes ---- */
+
+/* The Blend group's stem is the accent, the colour the Blend switch takes
+   when on - the group's default. Its flyout holds two sets in one place:
+   Bulk Edit at rest; Confirm and Cancel while a selection is on
+   (data-bulk on the group; the resin is entered on the cards, in the
+   bulk field - focus-editor.css). The set not showing is
+   hidden outright - out of layout, the tab order and the reader's tree -
+   so the swap is a swap and not two sets side by side; the set arriving
+   settles in with a short motion. */
+.station-root .station-rail__control[hidden] {
+  display: none;
+}
+
+.station-rail__group--blend[data-bulk="true"] .station-rail__control--confirm,
+.station-rail__group--blend[data-bulk="true"] .station-rail__control--cancel {
+  animation: station-rail-arrive var(--station-motion-settle) var(--station-motion-ease) backwards;
+}
+
+.station-rail__group--blend[data-bulk="true"] .station-rail__control--cancel {
+  animation-delay: var(--station-motion-lead);
+}
+
+.station-rail__group--blend[data-bulk="false"] .station-rail__control--bulk {
+  animation: station-rail-arrive var(--station-motion-settle) var(--station-motion-ease) backwards;
+}
+
+@keyframes station-rail-arrive {
+  from { opacity: 0; transform: translateX(calc(-1 * var(--station-space-2))) scale(0.9); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Bulk Edit on shows as the Blend switch does: the accent, quietly. */
+.station-root .station-rail__control--bulk[aria-pressed="true"] {
+  border-color: var(--station-accent);
+  color: var(--station-accent);
+}
+
+/* Confirm is the one control on the rail allowed the accent as a fill
+   while it can act: the choice that writes, told apart from the one that
+   does not. Held (nothing selected, nothing typed) it is the rail's
+   disabled glass like any other. */
+.station-root .station-rail__control--confirm:not(:disabled) {
+  border-color: var(--station-accent);
+  background: var(--station-accent-soft);
+  color: var(--station-accent);
+}
+
+.station-rail__glyph-stroke--bold {
+  stroke-width: 2;
+}
+
+/* The resin field's slot: above the flyout's row, its right edge the
+   row's, reaching back across the switch - the band between the layer
+   header and the card, where nothing else stands. Out of the flyout's
+   flow, so the row is laid as it was; it folds and unfolds with the
+   flyout, and is hidden outright while no selection is on. In the tight
+   column layout the row is one control wide and the field reaches a
+   little past the rail's left edge, over the same empty band. */
+.station-rail__field-slot {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + var(--station-space-1));
+  display: flex;
+  justify-content: flex-end;
+  width: max(9rem, calc(100% + var(--station-space-6) + var(--station-space-4)));
+  pointer-events: auto;
+}
+
+.station-root .station-rail__field-slot[hidden] {
+  display: none;
+}
+
+/* The bulk field (station-bulk-field.js): a small cap label over a
+   bordered field on the editable surface, in the mono face the resin
+   values use; as wide as its slot. */
+.station-bulk-field {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 100%;
+  color: var(--station-text-muted);
+  font-size: var(--station-text-2xs);
+  line-height: var(--station-line-tight);
+}
+
+.station-root .station-bulk-field[hidden] {
+  display: none;
+}
+
+.station-bulk-field__label {
+  padding-left: var(--station-space-1);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.station-bulk-field__input {
+  --station-field-width: 100%;
+  --station-field-padding: var(--station-space-1) var(--station-space-2);
+  --station-field-radius: var(--station-radius-sm);
+  --station-field-bg: var(--station-surface-editable);
+  --station-field-border: var(--station-stroke) solid var(--station-editable);
+  color: var(--station-text);
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-sm);
+}
+
+.station-root .station-bulk-field__input:focus-visible {
+  --station-field-shadow: 0 0 0 2px var(--station-accent-soft);
+  --station-field-border: var(--station-stroke) solid var(--station-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .station-rail__group--blend[data-bulk="true"] .station-rail__control--confirm,
+  .station-rail__group--blend[data-bulk="true"] .station-rail__control--cancel,
+  .station-rail__group--blend[data-bulk="false"] .station-rail__control--bulk {
+    animation: none;
+  }
 }

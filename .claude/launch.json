@@ -52,6 +52,16 @@
         "8797"
       ],
       "port": 8797
+    },
+    {
+      "name": "station-recipe",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "tools/serve.js",
+        "--port",
+        "8798"
+      ],
+      "port": 8798
     }
   ]
 }
