@@ -216,8 +216,10 @@ test("every theme implements one matching semantic token contract and components
     assert.equal((css.match(/data-theme="([a-z-]+)"/g) || []).every(match => match.includes(`"${id}"`)), true, `${id}.css maps another theme's id`);
   }
   // The character tokens every theme must answer: line weight, the
-  // schematic outline share, the annotation face, and the canvas grid.
-  for (const token of ["line-scale", "schematic-outline", "font-annotation", "grid-major", "grid-minor", "canvas-pattern"]) {
+  // schematic outline share, the annotation face, the canvas grid, and
+  // the stage atmosphere.
+  for (const token of ["line-scale", "schematic-outline", "font-annotation", "grid-major", "grid-minor", "canvas-pattern",
+    "atmosphere-glow", "atmosphere-horizon", "atmosphere-floor", "atmosphere-vignette", "stage-atmosphere"]) {
     assert.ok(contracts[0].has(`station-${token}`), `--station-${token} is missing from the contract`);
   }
   const componentFiles = [];
@@ -299,6 +301,46 @@ test("the technical pair draws the grid and the schematic; the other four draw n
   assert.match(tokens, /--station-canvas-grid:\s*linear-gradient\([^;]*var\(--station-grid-major\)[^;]*var\(--station-grid-minor\)/);
   const base = fs.readFileSync(path.join(ROOT, "station/styles/base.css"), "utf8");
   assert.match(base, /\.station-root \{[^}]*background-image: var\(--station-canvas-pattern\);/);
+});
+
+test("the rendered dark pair stands the machine in a lit room; the other four stand it on the sheet", () => {
+  const read = id => fs.readFileSync(path.join(ROOT, "station/styles/themes", `${id}.css`), "utf8");
+  const token = (css, name) => (css.match(new RegExp(`--station-${name}:\\s*([^;]+);`)) || [])[1];
+  const alphaOf = value => Number((value.match(/rgba\([^)]*,\s*([0-9.]+)\)/) || [])[1]);
+  for (const id of ["industrial-dark", "gruvbox-dark"]) {
+    const css = read(id);
+    assert.equal(token(css, "stage-atmosphere"), "var(--station-atmosphere)", `${id} has no atmosphere`);
+    // The light, the horizon and the floor are whispers, never a wash
+    // the machine would have to read through; the vignette darkens the
+    // edges without swallowing them.
+    for (const name of ["atmosphere-glow", "atmosphere-horizon", "atmosphere-floor"]) {
+      const alpha = alphaOf(token(css, name));
+      assert.ok(alpha > 0 && alpha <= 0.15, `${id} ${name} is not faint (alpha ${alpha})`);
+    }
+    const vignette = alphaOf(token(css, "atmosphere-vignette"));
+    assert.ok(vignette > 0 && vignette <= 0.5, `${id} vignette is not a falling-away (alpha ${vignette})`);
+  }
+  // Blueprint is dark, and is a drafting sheet: a sheet has no room.
+  for (const id of ["industrial-light", "gruvbox-light", "engineering-paper", "blueprint"]) {
+    const css = read(id);
+    assert.equal(token(css, "stage-atmosphere"), "none", `${id} gained an atmosphere`);
+    for (const name of ["atmosphere-glow", "atmosphere-horizon", "atmosphere-floor", "atmosphere-vignette"]) {
+      assert.equal(token(css, name), "transparent", `${id} ${name} is not transparent`);
+    }
+  }
+  // The atmosphere is composed once, theme-independently, from the four
+  // colour tokens and the horizon's height; the stage cell spends the
+  // theme's switch, and the root does not (it keeps the drafting grid).
+  const tokens = fs.readFileSync(path.join(ROOT, "station/styles/tokens.css"), "utf8");
+  const composed = (tokens.match(/--station-atmosphere:\s*([^;]+);/) || [])[1] || "";
+  for (const name of ["atmosphere-glow", "atmosphere-horizon", "atmosphere-floor", "atmosphere-vignette", "atmosphere-horizon-y"]) {
+    assert.ok(composed.includes(`var(--station-${name})`), `--station-atmosphere does not spend --station-${name}`);
+  }
+  assert.match(tokens, /--station-atmosphere-horizon-y:\s*\d+%;/);
+  const shell = fs.readFileSync(path.join(ROOT, "station/styles/shell.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.match(shell, /\.station-machine \{[^}]*background-image: var\(--station-stage-atmosphere\);/);
+  const base = fs.readFileSync(path.join(ROOT, "station/styles/base.css"), "utf8");
+  assert.doesNotMatch(base, /stage-atmosphere/);
 });
 
 test("host and harness load every registered theme and the preview, in the same order as the registry", () => {

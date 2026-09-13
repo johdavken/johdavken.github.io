@@ -15,6 +15,13 @@
   --station-grid-major: transparent;
   --station-grid-minor: transparent;
   --station-canvas-pattern: none;
+  /* No room: the machine stands on the sheet, and the glass stands on
+     the sheet with it. */
+  --station-atmosphere-glow: transparent;
+  --station-atmosphere-horizon: transparent;
+  --station-atmosphere-floor: transparent;
+  --station-atmosphere-vignette: transparent;
+  --station-stage-atmosphere: none;
 
   --station-bg: #d8dee2;
   --station-surface: #e5e9eb;

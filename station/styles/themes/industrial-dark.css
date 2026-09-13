@@ -6,14 +6,22 @@
   --station-color-scheme: dark;
 
   /* ---- Character ----
-   * A rendered machine: shaded surfaces, ordinary line weights, no
-   * drafting grid, the same face for every label. */
+   * A rendered machine, stood in a lit room: shaded surfaces, ordinary
+   * line weights, no drafting grid, the same face for every label. */
   --station-line-scale: 1;
   --station-schematic-outline: 0%;
   --station-font-annotation: var(--station-font);
   --station-grid-major: transparent;
   --station-grid-minor: transparent;
   --station-canvas-pattern: none;
+  /* The room (tokens.css: the stage atmosphere): the light from above
+     and the horizon and floor under the machine are the text's own
+     colour at a whisper; the edges fall to black. */
+  --station-atmosphere-glow: rgba(229, 234, 241, 0.075);
+  --station-atmosphere-horizon: rgba(229, 234, 241, 0.09);
+  --station-atmosphere-floor: rgba(229, 234, 241, 0.04);
+  --station-atmosphere-vignette: rgba(0, 0, 0, 0.46);
+  --station-stage-atmosphere: var(--station-atmosphere);
 
   --station-bg: #11151c;
   --station-surface: #171d26;

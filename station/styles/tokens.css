@@ -52,6 +52,32 @@
     var(--station-grid-minor-size) var(--station-grid-minor-size),
     var(--station-grid-minor-size) var(--station-grid-minor-size);
 
+  /* ---- Stage atmosphere ----
+   * The room the rendered dark themes stand the machine in: a pool of
+   * light from above, a horizon where wall meets floor, the floor lifted
+   * a shade under it, and the edges falling away. It is what gives the
+   * console's glass (glass.css, machine-rail.css, handbook.css) something
+   * to stand against - a smoked pane over a flat canvas is a flat canvas.
+   * Composed once from the theme's four colours (--station-atmosphere-glow
+   * / -horizon / -floor / -vignette, transparent where a theme stands the
+   * machine on a sheet instead), and the theme chooses whether the stage
+   * shows it at all (--station-stage-atmosphere: none |
+   * var(--station-atmosphere)), so a theme without a room paints no
+   * gradient layers. The geometry is here, theme-independently; the
+   * horizon's height is a fraction of the stage cell (shell.css spends
+   * this on .station-machine), where the extruder's base stands. CSS
+   * gradients, not an image: nothing to download. */
+  --station-atmosphere-horizon-y: 88%;
+  --station-atmosphere:
+    radial-gradient(ellipse 62% 50% at 50% 36%, var(--station-atmosphere-glow), transparent 72%),
+    linear-gradient(to bottom,
+      transparent var(--station-atmosphere-horizon-y),
+      var(--station-atmosphere-horizon) var(--station-atmosphere-horizon-y),
+      var(--station-atmosphere-horizon) calc(var(--station-atmosphere-horizon-y) + var(--station-stroke)),
+      transparent calc(var(--station-atmosphere-horizon-y) + var(--station-stroke))),
+    linear-gradient(to bottom, transparent var(--station-atmosphere-horizon-y), var(--station-atmosphere-floor) 100%),
+    radial-gradient(ellipse 110% 95% at 50% 55%, transparent 60%, var(--station-atmosphere-vignette) 100%);
+
   /* ---- Motion ----
    * Opening and closing a layer is a window opening and closing: an
    * acknowledgement the instant it is asked for, one decelerating move,
