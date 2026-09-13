@@ -79,6 +79,8 @@
    *        can be turned over
    * @param {object} [options.blendCards]   HTML content per layer id, for the
    *        banks turned over to their compact blend editor
+   * @param {string[]} [options.flipped]   which of the carded banks show the
+   *        card rather than the cluster; omitted, every carded bank does
    * @param {string} [options.raiseLayer]    layer to paint last (in transit)
    * @param {number} [options.stageAspect]  the stage's width/height, for the focus canvas
    * @param {object} [options.dimensions]   layout overrides
@@ -135,7 +137,8 @@
         hopperControls: settings.hopperControls || null,
         layerShare: settings.layerShare || null,
         blendEdit: !!settings.blendEdit,
-        blendCard: cards[bank.id] || null
+        blendCard: cards[bank.id] || null,
+        flipped: Array.isArray(settings.flipped) ? settings.flipped.includes(bank.id) : null
       }));
     }
     svg.appendChild(row);
@@ -329,6 +332,7 @@
       workspace: settings.workspace,
       blendEdit: settings.blendEdit,
       blendCards: settings.blendCards,
+      flipped: settings.flipped,
       raiseLayer: settings.raiseLayer,
       showHint: settings.showHint,
       dimensions: settings.dimensions,

@@ -40,6 +40,10 @@
   const source = root.PolynStationSource;
   const shell = root.PolynStationShell;
   const transition = root.PolynStationTransition;
+  /* The face turn (station-face-turn.js): a layer's cluster and card
+   * trading places in place, one routine whether one layer turns or all
+   * of them. Without it a turn is instant. */
+  const faceTurn = root.PolynStationFaceTurn || null;
   const focusEditor = root.PolynStationFocusEditor;
   const syncConsole = root.PolynStationSyncConsole || null;
   /* Station's picture (station-avatar.js): the face beside the name in the
@@ -313,6 +317,10 @@
    * "weights" (the weight cards) or "next" (the PLANNED recipe's cards -
    * the same blend card, turned to the plan and addressed to it). */
   const blendEdit = { active: false, kind: "blend", flipped: [] };
+  /* How many times the stage has been drawn: a turn that must redraw
+   * once it lands compares against this, and stands down when something
+   * else drew the stage first. */
+  let drawCount = 0;
   /* LAYER COPY - the grid's per-layer Copy / Paste, as presentation state:
    * which layer of which recipe is armed as the source, or none. A live
    * reference, not a snapshot: pasting reads that layer as it stands at
@@ -481,28 +489,48 @@
     if (mounts.machine.contains(active) && typeof active.blur === "function") active.blur();
   }
 
-  /* The card face that just arrived settles in, as the focus workspace
-   * does: opacity and a little scale over the settle time, on the same
-   * tokens, and nothing when the operator asked for less motion. Which
-   * layers changed face is what the caller says; the stage has already
-   * been rendered. */
-  function settleFaces(ids) {
-    if (!mounts.machine || !ids.length || prefersReducedMotion()) return;
+  /* The layers named turn over, each from one face to the other, in
+   * place: the two faces trade over the settle time on the same tokens
+   * the focus workspace settles on (station-face-turn.js), and nothing
+   * moves when the operator asked for less motion. `from` null is a face
+   * that only arrives - the mode switching faces, the card that was there
+   * already gone. The stage is not redrawn here: both faces are built
+   * (drawStage), and the layer's class is what changes. What comes back
+   * says whether anything is still in flight, and when it is not. */
+  function turnFaces(ids, from, to) {
+    const instant = { animated: false, done: Promise.resolve() };
+    if (!mounts.machine || !ids.length) return instant;
     const timing = stage && typeof stage.getTiming === "function" ? stage.getTiming() : { settle: 120 };
+    const reduced = prefersReducedMotion();
+    const turns = [];
     for (const id of ids) {
       const layer = mounts.machine.querySelector(`[data-role='layer'][data-layer='${id}']`);
       if (!layer) continue;
-      const face = layer.querySelector(isFlipped(id) ? ".station-blend-card" : ".station-hopper-cluster");
-      if (!face) continue;
-      // Through the transition module, the one place Station animates.
-      transition.play(face, [{ opacity: 0, transform: "scaleX(0.92)" }, { opacity: 1, transform: "none" }],
-        { duration: timing.settle, easing: "ease-out", fill: "none" });
+      if (!faceTurn) {
+        // No turn module: the class alone, at once.
+        if (layer.classList) layer.classList.toggle("is-flipped", to === "card");
+        continue;
+      }
+      turns.push(faceTurn.turn(layer, {
+        to,
+        from,
+        timing,
+        reducedMotion: reduced,
+        // Through the transition module's play, the one place Station
+        // animates; the frame callback is the page's own.
+        animate: transition.play
+      }));
     }
+    const flying = turns.filter(t => t.animated);
+    if (!flying.length) return instant;
+    return { animated: true, done: Promise.all(flying.map(t => t.done)) };
   }
 
-  function redrawForBlend(changed) {
+  /* The stage drawn afresh for the mode - entering it, leaving it, a
+   * face switched - with the Handbook and the rail told. A single layer
+   * turning does not come here: that is a class change (turnFaces). */
+  function redrawForBlend() {
     stage.refresh(focusLayerFor());
-    settleFaces(changed || []);
     if (handbookPanel) handbookPanel.update();
     syncRail();
   }
@@ -549,7 +577,12 @@
     blendEdit.active = true;
     blendEdit.kind = face;
     blendEdit.flipped = layerIds();
-    redrawForBlend(blendEdit.flipped.filter(id => !were.includes(id)).concat(were));
+    // Every layer built with both faces; then the ones showing hoppers
+    // turn over to the card, and - on a face switch - the ones already
+    // turned settle their new card in.
+    redrawForBlend();
+    turnFaces(blendEdit.flipped.filter(id => !were.includes(id)), "cluster", "card");
+    turnFaces(were, null, "card");
     say(HINT[face]);
     return true;
   }
@@ -568,7 +601,18 @@
     blendEdit.active = false;
     blendEdit.kind = "blend";
     blendEdit.flipped = [];
-    redrawForBlend(were);
+    /* The cards turn back to hoppers where they stand; the stage is
+     * drawn without them once the turn has landed - at once when nothing
+     * is in flight - unless something else drew it meanwhile, in which
+     * case that drawing is already the mode-off stage. */
+    const turn = turnFaces(were, "card", "cluster");
+    const drawn = drawCount;
+    if (!turn.animated) redrawForBlend();
+    else {
+      if (handbookPanel) handbookPanel.update();
+      syncRail();
+      turn.done.then(() => { if (drawCount === drawn) redrawForBlend(); });
+    }
     // Whatever the mode refused to do is no longer refused.
     say("");
     return true;
@@ -580,7 +624,23 @@
     if (wanted === isFlipped(id)) return false;
     leaveStageControl();
     blendEdit.flipped = wanted ? blendEdit.flipped.concat([id]) : blendEdit.flipped.filter(other => other !== id);
-    redrawForBlend([id]);
+    // The layer's two faces trade in place: no redraw, the same turn the
+    // rail's switch gives every layer at once.
+    turnFaces([id], wanted ? "cluster" : "card", wanted ? "card" : "cluster");
+    /* On the Next face the header's share follows the face: the plan's
+     * value over a card, the running job's over hoppers (stageLayerState).
+     * The redraw used to write it; the value patch writes it now. */
+    if (blendEdit.kind === "next" && current.model && current.resolved) {
+      render.patchStage(mounts.machine, current.model, {
+        hopperState: current.resolved.hopperState,
+        layerState: stageLayerState(current.resolved),
+        focusLayer: null,
+        hopperControls: controlsFor(current.resolved),
+        layerShare: shareFor(current.resolved)
+      });
+    }
+    if (handbookPanel) handbookPanel.update();
+    syncRail();
     say("");
     return true;
   }
@@ -1685,8 +1745,10 @@
        * "next". The running job's state never reaches these cards. */
       const cardRecipe = blendEdit.kind === "next" ? "next" : recipe;
       const cardHopperState = blendEdit.kind === "next" ? (current.resolved ? current.resolved.nextHopperState : null) : hopperState;
+      /* One card per layer, turned over or not: a layer showing its
+       * hoppers keeps its card built and hidden under them, so turning it
+       * is a class change (turnFaces), never a redraw of the stage. */
       for (const entry of model.layers) {
-        if (!isFlipped(entry.id)) continue;
         /* The Weights face: the same footprint, the weight card in it,
          * handed the same bridge and the same two callbacks. */
         const card = blendEdit.kind === "weights" && weightCards ? weightCards.create(mounts.machine.ownerDocument, {
@@ -1745,8 +1807,10 @@
       workspace: editor ? editor.element : null,
       blendEdit: blendEdit.active && !focusLayer,
       blendCards: cards,
+      flipped: blendEdit.flipped.slice(),
       raiseLayer: extra && extra.raiseLayer
     });
+    drawCount += 1;
     // Which face the turned layers show, for the stylesheet and the tests;
     // the renderer knows only that a layer is turned over.
     if (blendEdit.active && !focusLayer) mounts.machine.setAttribute("data-edit-face", blendEdit.kind);

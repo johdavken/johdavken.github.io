@@ -555,6 +555,24 @@
   display: none;
 }
 
+/* And the other way about: while the mode is on every layer carries its
+   card as well (station.js builds one per layer), and a layer showing its
+   hoppers keeps the card hidden under them. Turning over is then the class
+   changing, not a redraw - one routine for one layer or all of them
+   (station-face-turn.js). */
+.station-layer.is-flippable:not(.is-flipped) .station-blend-card {
+  display: none;
+}
+
+/* Mid-turn both faces are shown, whichever the class names, so the one
+   leaving can fade out under the one arriving; neither takes the pointer
+   for the length of it. */
+.station-layer.is-turning .station-hopper-cluster,
+.station-layer.is-turning .station-blend-card {
+  display: inline;
+  pointer-events: none;
+}
+
 /* The card's own surface: the same sunken panel the focus workspace is,
    with a quiet edge, so the two editors read as one family. */
 .station-blend-card__frame {
@@ -567,9 +585,10 @@
   overflow: visible;
 }
 
-/* Turning over: the face that arrives settles in over the settle time,
-   as the focus workspace does; the boot file plays it (station.js) and
-   the reduced-motion rule below is respected there as everywhere. */
+/* Turning over: the two faces trade places over the settle time - the
+   arriving one settling in as the focus workspace does, the departing one
+   leaving the same way in reverse; station-face-turn.js plays it and the
+   reduced-motion rule below is respected there as everywhere. */
 .station-blend-card,
 .station-layer.is-flippable .station-hopper-cluster {
   transform-box: fill-box;

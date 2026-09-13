@@ -931,13 +931,17 @@
     if (bank.emphasis === "focused") classes.push("is-focused");
     if (bank.emphasis === "dimmed") classes.push("is-dimmed");
     /* Blend Edit: every normal bank can be turned over while the mode is
-     * on; a bank whose card was handed in is - its cluster still built,
-     * and hidden (hopper.css), so a patch finds the hoppers it expects
-     * and the layer comes back exactly as it was. */
+     * on. A bank handed a card carries it beside its cluster - both built,
+     * one shown (hopper.css) - and which one is `flipped`: the card when
+     * the caller says so, or says nothing (a card handed is a card shown);
+     * the cluster when the caller says not, the card waiting hidden under
+     * it. Either way a patch finds the hoppers it expects and the layer
+     * turns over without being redrawn (station-face-turn.js). */
     const flippable = !!settings.blendEdit && bank.emphasis === "normal";
     const card = flippable && settings.blendCard ? settings.blendCard : null;
+    const flipped = !!card && (settings.flipped === undefined || settings.flipped === null || !!settings.flipped);
     if (flippable) classes.push("is-flippable");
-    if (card) classes.push("is-flipped");
+    if (flipped) classes.push("is-flipped");
     /* "Running" means the layer has a recipe to mix. Derived from the state
      * already on screen - no new field, no timer - and it is what gates the
      * agitator's motion, so an unconfigured layer sits still. */

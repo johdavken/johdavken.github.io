@@ -372,20 +372,30 @@ test("the only animations are the agitator and the run-down flow, each CSS with 
 
   // No Station file spins anything from JavaScript: no timers, no frame
   // loop. The one script that animates is the transition (finite Web
-  // Animations, transform and opacity, run by the compositor), and only it.
+  // Animations, transform and opacity, run by the compositor), and only
+  // it calls animate. The face turn (station-face-turn.js) plays finite
+  // animations of the same two properties THROUGH the transition's play,
+  // handed in - it calls no animate of its own - and asks for exactly two
+  // frames, to start the fade after the paint it follows; that is the one
+  // frame callback in Station, and it is not a loop.
   const stationDir = path.join(ROOT, "station");
   const stationFiles = fs.readdirSync(stationDir).filter(name => name.endsWith(".js"));
   assert.ok(stationFiles.length > 4, "expected to find the Station modules");
   for (const file of stationFiles.concat(["station-host.js"])) {
     const full = file === "station-host.js" ? path.join(ROOT, file) : path.join(stationDir, file);
     const source = codeOnly(fs_.readFileSync(full, "utf8"));
-    for (const pattern of [/setInterval/, /requestAnimationFrame/]) {
-      assert.doesNotMatch(source, pattern, `${file} drives animation from JavaScript`);
+    assert.doesNotMatch(source, /setInterval/, `${file} drives animation from JavaScript`);
+    if (file !== "station-face-turn.js") {
+      assert.doesNotMatch(source, /requestAnimationFrame/, `${file} drives animation from JavaScript`);
     }
     if (file !== "station-transition.js") {
       assert.doesNotMatch(source, /\.animate\s*\(/, `${file} animates outside the transition module`);
     }
   }
+  const faceTurn = codeOnly(fs_.readFileSync(path.join(stationDir, "station-face-turn.js"), "utf8"));
+  assert.match(faceTurn, /raf\(\(\) => raf\(release\)\);/, "the face turn asks for its two frames and no more");
+  assert.equal((faceTurn.match(/requestAnimationFrame/g) || []).length, 3, "the frame callback is read once and handed in once; nothing loops on it");
+  assert.doesNotMatch(faceTurn, /\.animate\s*\(/);
 });
 
 test("reduced motion turns the agitator off", () => {

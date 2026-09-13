@@ -284,6 +284,51 @@ test("turning a layer over moves nothing: the viewBox and every bank's declared 
   for (const id of ["A", "B", "C"]) assert.ok(!layerGroup(focusedSvg, id).classList.contains("is-flippable"));
 });
 
+test("told which layers are turned over, the renderer builds every card handed in and shows only those: a layer turned back keeps its card hidden under its hoppers, in the same boxes", () => {
+  const doc = fakeDocument();
+  const cards = { A: doc.createElement("div"), B: doc.createElement("div"), C: doc.createElement("div") };
+  const { model: m, resolved: r } = model();
+  const plain = stage();
+  const svg = render.renderStage(m, { document: doc, hopperState: r.hopperState, layerState: r.layerState, blendEdit: true, blendCards: cards, flipped: ["A", "C"] });
+  // Three cards built, two layers turned over.
+  assert.equal(allWith(svg, "data-role", "blend-card").length, 3);
+  assert.ok(layerGroup(svg, "A").classList.contains("is-flipped"));
+  assert.ok(!layerGroup(svg, "B").classList.contains("is-flipped"), "B shows its hoppers");
+  assert.ok(layerGroup(svg, "B").classList.contains("is-flippable"));
+  assert.ok(layerGroup(svg, "C").classList.contains("is-flipped"));
+  // B's card is there, holding the editor it was handed, under its cluster.
+  const b = layerGroup(svg, "B");
+  const card = allWith(b, "data-role", "blend-card")[0];
+  assert.ok(card, "the turned-back layer has no card built");
+  assert.equal(card.querySelector("foreignObject").children[0], cards.B);
+  assert.ok(allWith(b, "data-role", "hopper-cluster")[0], "and its cluster");
+  // Nothing moved for it.
+  for (const id of ["A", "B", "C"]) {
+    for (const attr of ["data-object-cluster", "data-object-train", "data-object-card"]) {
+      assert.equal(layerGroup(svg, id).getAttribute(attr), layerGroup(plain.svg, id).getAttribute(attr), `${id}'s ${attr} moved`);
+    }
+  }
+  assert.equal(svg.getAttribute("viewBox"), plain.svg.getAttribute("viewBox"));
+  // An empty list turns nothing over; no list at all keeps the older
+  // contract - a card handed is a card shown.
+  const none = render.renderStage(m, { document: doc, hopperState: r.hopperState, layerState: r.layerState, blendEdit: true, blendCards: cards, flipped: [] });
+  for (const id of ["A", "B", "C"]) assert.ok(!layerGroup(none, id).classList.contains("is-flipped"));
+  assert.equal(allWith(none, "data-role", "blend-card").length, 3);
+  const all = render.renderStage(m, { document: doc, hopperState: r.hopperState, layerState: r.layerState, blendEdit: true, blendCards: cards });
+  for (const id of ["A", "B", "C"]) assert.ok(layerGroup(all, id).classList.contains("is-flipped"));
+  // A layer with no card cannot be turned over by naming it.
+  const one = render.renderStage(m, { document: doc, hopperState: r.hopperState, layerState: r.layerState, blendEdit: true, blendCards: { B: cards.B }, flipped: ["A", "B"] });
+  assert.ok(!layerGroup(one, "A").classList.contains("is-flipped"));
+  assert.ok(layerGroup(one, "B").classList.contains("is-flipped"));
+  // The mount forwards the list.
+  const mount = doc.createElement("section");
+  render.mountStage(mount, m, { document: doc, hopperState: r.hopperState, layerState: r.layerState, blendEdit: true, blendCards: cards, flipped: ["B"], stageAspect: 1.6 });
+  assert.deepEqual(["A", "B", "C"].map(id => layerGroup(mount, id).classList.contains("is-flipped")), [false, true, false]);
+  // The stylesheet hides the card the class does not show.
+  const css = fs.readFileSync(path.join(ROOT, "station/styles/components/hopper.css"), "utf8");
+  assert.match(css, /\.station-layer\.is-flippable:not\(\.is-flipped\) \.station-blend-card \{\s*display: none;/);
+});
+
 test("the mount says when the mode is on, and a value patch works through a turned-over cluster", () => {
   const doc = fakeDocument();
   const mount = doc.createElement("section");
@@ -549,9 +594,11 @@ test("the mode is presentation state: two fields, no copy of a recipe, and enter
   assert.match(enter, /focus = null;/, "the open layer is not closed on entry");
   assert.match(enter, /blendEdit\.active = true;/);
   assert.match(enter, /blendEdit\.flipped = layerIds\(\);/, "every layer is turned over on entry: the rail's one click is Edit All");
-  // Every layer is redrawn - the ones newly turned over and, when the face
-  // is being switched, the ones already out - and the face's hint said.
-  assert.match(enter, /redrawForBlend\(blendEdit\.flipped\.filter\(id => !were\.includes\(id\)\)\.concat\(were\)\);/);
+  // The stage is drawn with both faces on every layer; then the ones
+  // showing hoppers turn over to the card and, when the face is being
+  // switched, the ones already out settle their new card in - and the
+  // face's hint said.
+  assert.match(enter, /redrawForBlend\(\);\n\s+turnFaces\(blendEdit\.flipped\.filter\(id => !were\.includes\(id\)\), "cluster", "card"\);\n\s+turnFaces\(were, null, "card"\);/);
   assert.match(enter, /say\(HINT\[face\]\);/, "the mode says how to leave it and how to turn a layer back");
   assert.match(boot, /const HINT = \{ blend: BLEND_EDIT_HINT, weights: WEIGHTS_EDIT_HINT, next: NEXT_EDIT_HINT \};/);
   assert.match(boot, /const FACES = \["blend", "weights", "next"\];/);
@@ -568,8 +615,15 @@ test("a layer is turned over or back one at a time, only while the mode is on; t
   assert.match(flip, /if \(!blendEdit\.active \|\| !layerIds\(\)\.includes\(id\)\) return false;/);
   assert.match(flip, /const wanted = on === undefined \? !isFlipped\(id\) : !!on;/);
   assert.match(flip, /blendEdit\.flipped = wanted \? blendEdit\.flipped\.concat\(\[id\]\) : blendEdit\.flipped\.filter\(other => other !== id\);/);
-  assert.match(flip, /redrawForBlend\(\[id\]\);/);
-  assert.doesNotMatch(flip, /dispatch|publish|hopperState/, "a flip touches recipe state");
+  // A flip is the layer's two faces trading in place - the same turn the
+  // rail's switch gives every layer - never a redraw of the stage.
+  assert.match(flip, /turnFaces\(\[id\], wanted \? "cluster" : "card", wanted \? "card" : "cluster"\);/);
+  assert.doesNotMatch(flip, /stage\.refresh|redrawForBlend|mountStage/, "a flip redraws the stage");
+  assert.match(flip, /if \(handbookPanel\) handbookPanel\.update\(\);\n\s+syncRail\(\);/);
+  // On the Next face the header's share follows the face, by the value
+  // patch - the running job's hopper state, the face's layer state.
+  assert.match(flip, /if \(blendEdit\.kind === "next" && current\.model && current\.resolved\) \{\n\s+render\.patchStage\(mounts\.machine, current\.model, \{\n\s+hopperState: current\.resolved\.hopperState,\n\s+layerState: stageLayerState\(current\.resolved\),/);
+  assert.doesNotMatch(flip, /dispatch|publish|nextHopperState/, "a flip touches recipe state");
   assert.doesNotMatch(boot, /function flipAll\(/, "Edit All is entering the mode; nothing else turns every layer at once");
   // It leaves the control the operator is in before the stage is rebuilt,
   // so a value typed on one card commits rather than vanishing.
@@ -584,12 +638,27 @@ test("Done commits what is being entered along the editor's own path, turns ever
   assert.match(exit, /leaveStageControl\(\);/);
   assert.match(exit, /blendEdit\.active = false;/);
   assert.match(exit, /blendEdit\.flipped = \[\];/);
-  assert.match(exit, /redrawForBlend\(were\);/);
+  // The cards turn back where they stand; the stage is drawn without them
+  // once the turn lands - at once when nothing is in flight - unless
+  // something else drew it meanwhile.
+  assert.match(exit, /const turn = turnFaces\(were, "card", "cluster"\);/);
+  assert.match(exit, /if \(!turn\.animated\) redrawForBlend\(\);/);
+  assert.match(exit, /turn\.done\.then\(\(\) => \{ if \(drawCount === drawn\) redrawForBlend\(\); \}\);/);
   assert.doesNotMatch(exit, /dispatch|undo|discard|revert/, "Done applies or discards on its own");
   // And the redraw is the stage's own refresh: no second render path.
   const redraw = body("redrawForBlend");
   assert.match(redraw, /stage\.refresh\(focusLayerFor\(\)\);/);
   assert.match(redraw, /if \(handbookPanel\) handbookPanel\.update\(\);/);
+  // The turn itself is the face-turn module's, through the transition
+  // module's play, on the stage's timing; without the module the class
+  // alone changes, at once.
+  const turn = body("turnFaces");
+  assert.match(turn, /faceTurn\.turn\(layer, \{\n\s+to,\n\s+from,\n\s+timing,\n\s+reducedMotion: reduced,/);
+  assert.match(turn, /animate: transition\.play/);
+  assert.match(turn, /layer\.classList\.toggle\("is-flipped", to === "card"\)/);
+  assert.doesNotMatch(turn, /stage\.refresh|mountStage|\.animate\(/);
+  assert.match(boot, /const faceTurn = root\.PolynStationFaceTurn \|\| null;/);
+  assert.match(boot, /let drawCount = 0;/);
   // Escape with nothing open is Done - once a Bulk Edit selection in
   // progress has been cancelled, which is the nearer thing to leave.
   assert.match(boot, /if \(focus\) \{ clearFocus\(\); return; \}\n\s+\/\/[^\n]*\n\s+\/\/[^\n]*\n\s+if \(bulk\.active\) \{ cancelBulk\(\); return; \}\n\s+\/\/[^\n]*\n\s+\/\/[^\n]*\n\s+if \(blendEdit\.active\) exitBlendEdit\(\);/);
@@ -598,7 +667,12 @@ test("Done commits what is being entered along the editor's own path, turns ever
 test("the stage draws the cards from the same editor, addressed to the same recipe, and the mode never reaches the focused layout", () => {
   const draw = body("drawStage");
   assert.match(draw, /if \(blendEdit\.active && model && !focusLayer\) \{/);
-  assert.match(draw, /if \(!isFlipped\(entry\.id\)\) continue;/);
+  // One card per layer, turned over or not: the stage carries both faces
+  // and is told which to show, so a turn is a class change, not a redraw.
+  assert.doesNotMatch(draw, /if \(!isFlipped\(entry\.id\)\) continue;/);
+  assert.match(draw, /for \(const entry of model\.layers\) \{\n\s+\/\* The Weights face/);
+  assert.match(draw, /blendCards: cards,\n\s+flipped: blendEdit\.flipped\.slice\(\),/);
+  assert.match(draw, /\}\);\n\s+drawCount \+= 1;/);
   // The Weights face (station-weight-cards.js) takes the same footprint
   // from the same builder; the blend face is the editor, as before.
   assert.match(draw, /const card = blendEdit\.kind === "weights" && weightCards \? weightCards\.create\(mounts\.machine\.ownerDocument, \{[\s\S]*?\}\) : focusEditor\.create\(mounts\.machine\.ownerDocument, \{/);

@@ -385,7 +385,14 @@ function boot(options) {
     clickAction: name => { const button = api.action(name); assert.ok(button, `no action ${name}`); button.click(); return button; },
     target: (name, layer) => machine.querySelectorAll(`[data-station-target='${name}']`).find(n => n.getAttribute("data-layer") === layer) || null,
     clickTarget: (name, layer) => { const el = api.target(name, layer); assert.ok(el, `no ${name} on layer ${layer}`); el.click(); return el; },
-    cards: () => machine.querySelectorAll("[data-role='blend-card']"),
+    /* The cards SHOWN: every layer carries a card while the mode is on
+     * (hidden under its hoppers when turned back - hopper.css), and the
+     * one a layer shows is the one in a turned-over layer. */
+    cards: () => machine.querySelectorAll("[data-role='blend-card']").filter(c => {
+      const layer = machine.querySelectorAll("[data-role='layer']").find(n => n.getAttribute("data-layer") === c.getAttribute("data-layer"));
+      return !!layer && layer.classList.contains("is-flipped");
+    }),
+    builtCards: () => machine.querySelectorAll("[data-role='blend-card']"),
     chips: () => machine.querySelectorAll("[data-station-target='flip']"),
     /* Turning a layer over or back is its own train's click while the
      * mode is on: the layer's extruder, the same target an operator
@@ -649,6 +656,60 @@ test("normal interactions work at once after the exit: the train opens a layer, 
   assert.deepEqual(s.calls.map(c => c.command), ["setHopperTracking"]);
 });
 
+test("a layer turning over or back is a class change on the stage that stands, not a redraw: every card stays built, the same elements, and one turn looks like every turn", () => {
+  const s = boot().enterBlendEdit();
+  assert.equal(s.builtCards().length, 3, "every layer carries a card while the mode is on");
+  const svgBefore = s.machine.querySelector("svg");
+  const cardB = s.builtCards().find(c => c.getAttribute("data-layer") === "B");
+  const clusterB = s.machine.querySelectorAll(".station-hopper-cluster").find(c => c.getAttribute("data-layer") === "B");
+  s.flipLayer("B");
+  assert.deepEqual(s.flipped(), ["A", "C"]);
+  assert.ok(s.machine.querySelector("svg") === svgBefore, "the stage was redrawn for one layer's turn");
+  assert.equal(s.builtCards().length, 3, "the card is kept, hidden under the hoppers");
+  assert.ok(s.builtCards().find(c => c.getAttribute("data-layer") === "B") === cardB, "B's card is the same element");
+  assert.ok(s.machine.querySelectorAll(".station-hopper-cluster").find(c => c.getAttribute("data-layer") === "B") === clusterB, "and its cluster");
+  assert.equal(s.cards().length, 2, "two cards are shown");
+  // No half-turn is left on the layer: the fake nodes cannot animate, so
+  // the turn is instant.
+  assert.equal(s.machine.querySelectorAll(".is-turning").length, 0);
+  s.flipLayer("B");
+  assert.ok(s.machine.querySelector("svg") === svgBefore);
+  assert.deepEqual(s.flipped(), ["A", "B", "C"]);
+  // Out of the mode, the stage is drawn afresh and carries no card.
+  s.clickBlend();
+  assert.ok(s.machine.querySelector("svg") !== svgBefore, "leaving the mode draws the stage without the cards");
+  assert.equal(s.builtCards().length, 0);
+  assertModeCleared(s);
+});
+
+test("a draft on one card survives another layer's turn: the field it was in is left along its own path, and the card is not rebuilt around it", () => {
+  const s = boot().enterBlendEdit();
+  const input = s.draftOnCard("A", 33);
+  s.flipLayer("C");
+  // Leaving the stage's control commits the draft (leaveStageControl), as
+  // it always did; the card the operator was on is the same element.
+  assert.deepEqual(s.calls.map(c => c.command), ["setHopperBlend"]);
+  assert.equal(s.calls[0].args.pct, 33);
+  assert.ok(s.builtCards().find(c => c.getAttribute("data-layer") === "A").contains(input), "A's card - and the field in it - were rebuilt");
+});
+
+test("on the Next face the header's share follows the face when a layer turns: the plan's over a card, the running job's over hoppers - written by the value patch, on the stage that stands", () => {
+  const s = boot();
+  s.rail.querySelector("[data-action='next-edit']").click();
+  assert.equal(s.face(), "next");
+  const shareOf = layer => s.machine.querySelectorAll(".station-layer__share-value").find(n => n.parentNode && n.parentNode.getAttribute("data-layer") === layer).textContent;
+  // Nothing is planned: a turned-over layer reads the plan's empty share.
+  assert.equal(shareOf("B"), "—");
+  const svg = s.machine.querySelector("svg");
+  s.flipLayer("B");
+  assert.ok(s.machine.querySelector("svg") === svg, "the turn redrew the stage");
+  assert.equal(shareOf("B"), "40%", "B shows its hoppers, and the running job's share");
+  assert.equal(shareOf("A"), "—", "A is still the plan's");
+  s.flipLayer("B");
+  assert.equal(shareOf("B"), "—", "turned over again, B is the plan's again");
+  assert.deepEqual(s.calls, [], "nothing was dispatched for it");
+});
+
 test("Blend Edit state is fully cleared: entering again turns every layer over afresh, whatever was turned back before the exit", () => {
   const s = boot().enterBlendEdit();
   s.flipLayer("B");
@@ -896,7 +957,10 @@ test("the status line is one notice ahead of the line's own parts: said again it
   assert.doesNotMatch(bootSource, /mounts\.status\.textContent = `\$\{message\}/, "no other line prepends to the status bar either");
   assert.match(bootSource, /host\.textContent = \(notice \? \[notice\] : \[\]\)\.concat\(parts\)\.join\(" · "\);/);
   const exit = bootSource.slice(bootSource.indexOf("function exitBlendEdit() {"), bootSource.indexOf("\n  }\n", bootSource.indexOf("function exitBlendEdit() {")) + 4);
-  assert.match(exit, /redrawForBlend\(were\);\n[^\n]*\n\s+say\(""\);/, "the exit clears the notice after the stage is back");
+  // The cards turn back where they stand and the stage is drawn without
+  // them - at once when nothing animates - before the notice is cleared.
+  assert.match(exit, /const turn = turnFaces\(were, "card", "cluster"\);\n\s+const drawn = drawCount;\n\s+if \(!turn\.animated\) redrawForBlend\(\);/);
+  assert.match(exit, /turn\.done\.then\(\(\) => \{ if \(drawCount === drawn\) redrawForBlend\(\); \}\);\n\s+\}\n[^\n]*\n\s+say\(""\);/, "the exit clears the notice after the stage is back");
 });
 
 /* ----------------------------------------------------------------------

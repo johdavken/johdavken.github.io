@@ -86,6 +86,9 @@
     "station/station-machine-parts.js",
     "station/station-render.js",
     "station/station-transition.js",
+    // The face turn: a layer's cluster and card trading places in place,
+    // on the transition module's timing.
+    "station/station-face-turn.js",
     "station/station-focus-editor.js",
     "station/station-hopper-controls.js",
     // The plan controls: the seam for the rail's two moves under the Next
@@ -134,7 +137,7 @@
     "station/station.js"
   ];
 
-  const VERSION = "0.47.3";
+  const VERSION = "0.48.0";
 
   function requested() {
     try {

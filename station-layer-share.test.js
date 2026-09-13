@@ -530,7 +530,12 @@ function boot(options) {
     clickAction: name => { const button = api.action(name); assert.ok(button, `no action ${name}`); button.click(); return button; },
     isHandbookOpen: () => launcher.getAttribute("aria-expanded") === "true",
     modeOn: () => machine.getAttribute("data-blend-edit") === "true",
-    cards: () => machine.querySelectorAll("[data-role='blend-card']"),
+    // The cards shown: one per turned-over layer (every layer carries one
+    // while the mode is on, hidden under its hoppers when turned back).
+    cards: () => machine.querySelectorAll("[data-role='blend-card']").filter(c => {
+      const layer = machine.querySelectorAll("[data-role='layer']").find(n => n.getAttribute("data-layer") === c.getAttribute("data-layer"));
+      return !!layer && layer.classList.contains("is-flipped");
+    }),
     /* The mode's switch is the machine rail's; a layer is turned back or
      * over by its own train while the mode is on. */
     blendSwitch: () => doc.querySelector("[data-role='machine-rail'] [data-action='blend-edit']"),
