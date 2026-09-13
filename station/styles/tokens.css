@@ -159,6 +159,10 @@
   --station-handbook-share: 40%;
   --station-handbook-max-height: 400px;
   --station-handbook-clearance: 96px;
+  /* `launcher` is the application icon in the stage's corner, and the
+   * tile every control stacked over it is cut to (machine-rail.css): the
+   * Handbook sets the size, the rail reads it. */
+  --station-handbook-launcher: 64px;
   /* `headroom` is what stays clear above the frame when the operator
    * raises it by its grip (handbook.css): the stage's top edge and the
    * machine's crown are never covered, whatever the drag asks for. Read

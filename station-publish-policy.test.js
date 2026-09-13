@@ -89,7 +89,7 @@ test("a command's answer runs the same publish policy, marked as Station's own, 
   }
   const bulkConfirm = boot.slice(boot.indexOf("function confirmBulk() {"), boot.indexOf("\n  }\n", boot.indexOf("function confirmBulk() {")));
   assert.match(bulkConfirm, /lastOwnRevision = Number\.isInteger\(result\.revision\) \? result\.revision : null;\s+onPublish\(\{ own: true \}\);/);
-  assert.match(bulkConfirm, /blendActions\.applyResins\(commandsFor\(current\.resolved\), "current", keys, value\)/);
+  assert.match(bulkConfirm, /blendActions\.applyResins\(commandsFor\(current\.resolved\), recipe, keys, value\)/);
   assert.doesNotMatch(bulkConfirm, /patchStage|renderAll|mountStage|dispatch\(/);
   for (const name of ["promoteNextRecipe", "copyCurrentToNext"]) {
     const move = boot.slice(boot.indexOf(`function ${name}() {`), boot.indexOf("\n  }\n", boot.indexOf(`function ${name}() {`)));

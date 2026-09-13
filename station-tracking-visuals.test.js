@@ -833,7 +833,7 @@ test("the boot file writes the marks from the timeline's projection and nothing 
   // feed, the clock pass.
   assert.match(source, /onTick: \(\) => \{[^}]*applyRundownMarks\(\);/);
   assert.match(source, /if \(changeoverPanel\) changeoverPanel\.update\(inputs\);\s*applyRundownMarks\(\);/);
-  assert.match(source, /applyRundownMarks\(\);(?:\s*\/\/[^\n]*)*\s*if \(!focusLayer\) placeRail\(\);\s*return svg;/);
+  assert.match(source, /applyRundownMarks\(\);\s*return svg;/);
   for (const pattern of [/setInterval/, /requestAnimationFrame/]) assert.doesNotMatch(source, pattern);
   // The renderer derives no deadline and keeps no clock.
   const renderer = read("station/station-render.js").replace(/\/\*[\s\S]*?\*\//g, "");

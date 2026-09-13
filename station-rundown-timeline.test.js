@@ -372,7 +372,8 @@ test("the scale is chosen on the timeline: 6H | 12H under the Now clock, one pre
   const { root, timeline } = mount({ onWindow: h => windows.push(h) });
   timeline.update(inputsFor(snapshot()));
   const now = byClass(root, "station-rundown__now");
-  assert.deepEqual(now.children.map(n => n.getAttribute("class")), ["station-rundown__now-label", "station-rundown__now-clock", "station-rundown__range"], "under the label and the clock, in the anchor's column");
+  assert.deepEqual(now.children.map(n => n.getAttribute("class")), ["station-rundown__now-label", "station-rundown__now-clock", "station-rundown__tools"], "under the label and the clock, in the anchor's column");
+  assert.deepEqual(byClass(root, "station-rundown__tools").children.map(n => n.getAttribute("class")), ["station-rundown__range", "station-rundown__reset"], "the scale, and RESET under it");
   const range = byClass(root, "station-rundown__range");
   assert.equal(range.getAttribute("role"), "group");
   assert.equal(range.getAttribute("aria-label"), "Timeline range");
@@ -679,4 +680,99 @@ test("with no line at all the hint says so and nothing is projected", () => {
   assert.equal(allByClass(root, "station-rundown__marker").length, 0);
   timeline.update(null);
   assert.equal(allByClass(root, "station-rundown__marker").length, 0);
+});
+
+/* ----------------------------------------------------------------------
+ *   RESET, under the scale
+ * -------------------------------------------------------------------- */
+
+test("RESET stands under the scale in the Now column: one word, held until told the reset is offered and something is tracked, its title saying which", () => {
+  const { root, timeline } = mount();
+  const reset = byClass(root, "station-rundown__reset");
+  assert.equal(reset.tagName, "BUTTON");
+  assert.equal(reset.getAttribute("type"), "button");
+  assert.equal(reset.getAttribute("data-action"), "reset-tracking");
+  assert.equal(reset.textContent, "Reset");
+  assert.equal(reset.getAttribute("aria-label"), "Reset Tracking");
+  assert.equal(reset.disabled, true, "held until the boot file says the application offers it");
+  assert.equal(reset.getAttribute("title"), "Reset Tracking is not available: no application is connected to Station commands.");
+  assert.ok(reset === timeline.resetButton);
+  timeline.update(Object.assign(inputsFor(snapshot()), { reset: { available: false, reason: "the application does not offer a tracking reset from Station.", count: 3 } }));
+  assert.equal(reset.disabled, true);
+  assert.equal(reset.getAttribute("title"), "Reset Tracking is not available: the application does not offer a tracking reset from Station.");
+  timeline.update(Object.assign(inputsFor(snapshot()), { reset: { available: true, count: 0 } }));
+  assert.equal(reset.disabled, true);
+  assert.equal(reset.getAttribute("title"), "Reset Tracking · nothing is tracked");
+  timeline.update(Object.assign(inputsFor(snapshot()), { reset: { available: true, count: 1 } }));
+  assert.equal(reset.disabled, false);
+  assert.equal(reset.getAttribute("title"), "Reset Tracking · 1 hopper");
+  // An update without `reset` leaves the word as it was.
+  timeline.update(inputsFor(snapshot()));
+  assert.equal(reset.disabled, false);
+  assert.deepEqual(timeline.getReset(), { available: true, reason: "", count: 1 });
+  assert.deepEqual(timelineModule.RESET_TEXT, "Reset");
+  assert.deepEqual(timelineModule.RESET_LABEL, "Reset Tracking");
+});
+
+test("the first click arms RESET - the word unchanged, the colour and the name saying so - and the second confirms as one call; the timeout, a click elsewhere, Escape, the focus leaving and the reset ceasing to be possible each disarm without a call", () => {
+  const calls = [];
+  const { doc, root, timeline, clock } = mount({ onResetTracking: () => calls.push("reset") });
+  // On the document, so a pointer down elsewhere reaches the helper's
+  // click-away listener the way it does in a browser.
+  doc.appendChild(root);
+  const reset = byClass(root, "station-rundown__reset");
+  const live = count => timeline.update(Object.assign(inputsFor(snapshot()), { reset: { available: true, count } }));
+  live(4);
+  const ARM = require("./station/station-armed.js").ARM_DURATION;
+  const pending = () => clock.queue.filter(t => t.at === clock.now + ARM);
+  const before = clock.queue.length;
+  click(reset);
+  assert.deepEqual(calls, [], "the first click resets nothing");
+  assert.equal(timeline.isArmed(), true);
+  assert.equal(reset.getAttribute("data-armed"), "true");
+  assert.ok(reset.classList.contains("is-armed"));
+  assert.equal(reset.textContent, "Reset", "the word does not change");
+  assert.equal(reset.getAttribute("aria-label"), "Confirm: reset tracking for 4 hoppers");
+  assert.match(reset.getAttribute("title"), /^Click again to reset tracking · 4 hoppers untracked, pumps marked running$/);
+  assert.equal(clock.queue.length, before + 1, "the arm started its timer on the timeline's clock");
+  assert.equal(pending().length, 1);
+  click(reset);
+  assert.deepEqual(calls, ["reset"]);
+  assert.equal(timeline.isArmed(), false);
+  assert.equal(reset.getAttribute("data-armed"), null);
+  assert.equal(reset.getAttribute("aria-label"), "Reset Tracking");
+  assert.equal(clock.queue.length, before, "the confirming click cleared the timer");
+  // Timeout: the clock advanced past the arm's wait (the tick runs too).
+  click(reset);
+  clock.advance(ARM);
+  assert.equal(timeline.isArmed(), false, "the timeout disarmed it");
+  // A click elsewhere: the pointer down that precedes it, captured on the document.
+  click(reset);
+  const elsewhere = doc.createElement("div");
+  doc.appendChild(elsewhere);
+  elsewhere.dispatchEvent({ type: "pointerdown", bubbles: true });
+  assert.equal(timeline.isArmed(), false, "a click elsewhere disarmed it");
+  click(reset);
+  reset.dispatchEvent({ type: "pointerdown", bubbles: true });
+  assert.equal(timeline.isArmed(), true, "a pointer down on the word itself does not");
+  reset.dispatchEvent({ type: "keydown", key: "Escape", bubbles: true });
+  assert.equal(timeline.isArmed(), false, "Escape disarmed it");
+  click(reset);
+  reset.dispatchEvent({ type: "blur" });
+  assert.equal(timeline.isArmed(), false, "the focus leaving disarmed it");
+  click(reset);
+  live(0);
+  assert.equal(timeline.isArmed(), false, "nothing left to reset disarmed it");
+  assert.equal(reset.disabled, true);
+  click(reset);
+  assert.equal(timeline.isArmed(), false, "a held word never arms");
+  assert.deepEqual(calls, ["reset"], "none of it called anything more");
+  // The stylesheet: the word under the scale in one stretched stack,
+  // centred; armed is the warning colour with a pulse; no colour named.
+  const css = fs.readFileSync(path.join(__dirname, "station/styles/components/rundown.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.match(css, /\.station-rundown__tools \{[^}]*flex-direction: column;[^}]*align-items: stretch;/);
+  assert.match(css, /\.station-root \.station-rundown__reset \{[^}]*text-align: center;[^}]*text-transform: uppercase;/);
+  assert.match(css, /\.station-root \.station-rundown__reset\.is-armed \{[^}]*color: var\(--station-warning\);[^}]*animation: station-rundown-armed/);
+  assert.match(css, /\.station-root \.station-rundown__reset:disabled \{[^}]*color: var\(--station-text-disabled\);/);
+  assert.doesNotMatch(css, /#[0-9a-f]{3,8}\b|\brgba?\(/i);
 });

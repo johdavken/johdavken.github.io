@@ -723,9 +723,12 @@ test("the Handbook is mounted from the shell's slot with Recipe Book, Resin Tota
   // The rail is mounted from its own slot, ahead of the Handbook, and
   // handed the two callbacks and nothing else of the state.
   const rail = start.slice(start.indexOf("if (machineRail && mounts.rail) {"), start.indexOf("if (handbook && mounts.handbook) {"));
-  assert.match(rail, /railPanel = machineRail\.create\(doc, \{\s+onBlendEdit: toggleBlendEdit,\s+onWeightsEdit: toggleWeightsEdit,\s+onSmartHoppers: toggleSmartHoppers,\s+onResetTracking: resetTracking,/);
+  assert.match(rail, /railPanel = machineRail\.create\(doc, \{\s+onBlendEdit: toggleBlendEdit,\s+onWeightsEdit: toggleWeightsEdit,\s+onSmartHoppers: toggleSmartHoppers,\s+onNextEdit: toggleNextEdit,/);
+  assert.doesNotMatch(rail, /onResetTracking/, "Reset Tracking is the timeline's, not the rail's");
+  assert.match(boot, /timeline = rundownTimeline\.create\(doc, \{[^}]*onResetTracking: resetTracking,/);
   assert.match(rail, /mounts\.rail\.appendChild\(railPanel\.element\);/);
-  assert.match(rail, /syncRail\(\);\s+placeRail\(\);/, "the rail is told and placed once the stage that was drawn before it exists");
+  assert.match(rail, /syncRail\(\);\s+\}/, "the rail is told once the stage that was drawn before it exists");
+  assert.doesNotMatch(boot, /placeRail|ResizeObserver/, "the rail stands in the launcher's corner by stylesheet: nothing is measured or placed");
   assert.doesNotMatch(rail, /hopperState|commands|snapshot|blendEdit\./, "the rail is handed state to hold");
   // The boot file still never dispatches, connects or publishes.
   assert.doesNotMatch(boot, /\.dispatch\s*\(|\.connect\s*\(|\.publish\s*\(/);

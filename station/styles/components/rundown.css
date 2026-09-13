@@ -52,15 +52,25 @@
   line-height: var(--station-line-tight);
 }
 
-/* ---- The scale: 6H | 12H ---- */
+/* ---- The scale: 6H | 12H, and RESET under it ---- */
 
 /* Under the clock, in the anchor's column: two segments on one hairline in
  * the rail's own colour, the pressed one lit in the Now colour and carrying
  * a rule beneath it - weight and a mark, not colour alone. Sized to the
- * column: the mono digits of the tick labels, no box of their own. */
-.station-rundown__range {
-  display: inline-flex;
+ * column: the mono digits of the tick labels, no box of their own. The
+ * segments and the reset word stand in one narrow stack (tools) at the
+ * column's edge, each as wide as the other, so the word is centred under
+ * the segments. */
+.station-rundown__tools {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
   margin-top: var(--station-space-1);
+}
+
+.station-rundown__range {
+  display: flex;
+  justify-content: flex-end;
   border-top: var(--station-stroke) solid var(--station-timeline-rail);
 }
 
@@ -83,6 +93,50 @@
   color: var(--station-timeline-current);
   font-weight: 700;
   border-bottom-color: var(--station-timeline-current);
+}
+
+/* The reset: one small spaced word, centred under the scale, in the
+   column's muted colour until the pointer finds it. Held (nothing
+   tracked, or the command not offered) it is the disabled text and no
+   target. Armed it is the warning colour with a pulse round it - the one
+   moment this row looks like something is about to happen. */
+.station-root .station-rundown__reset {
+  margin-top: var(--station-space-1);
+  padding: 2px var(--station-space-1);
+  border-radius: var(--station-radius-sm);
+  color: var(--station-timeline-muted);
+  font-size: var(--station-text-2xs);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-align: center;
+  text-transform: uppercase;
+  line-height: var(--station-line-tight);
+  transition: color var(--station-motion-ack) ease-out;
+}
+
+.station-root .station-rundown__reset:hover:not(:disabled) {
+  color: var(--station-timeline-label);
+}
+
+.station-root .station-rundown__reset:disabled {
+  color: var(--station-text-disabled);
+  cursor: default;
+}
+
+.station-root .station-rundown__reset.is-armed {
+  color: var(--station-warning);
+  animation: station-rundown-armed 1.2s ease-in-out infinite;
+}
+
+@keyframes station-rundown-armed {
+  0%, 100% { box-shadow: 0 0 0 0 var(--station-warning); }
+  50% { box-shadow: 0 0 0 3px transparent; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .station-root .station-rundown__reset.is-armed {
+    animation: none;
+  }
 }
 
 /* ---- Track ---- */

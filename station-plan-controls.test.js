@@ -120,7 +120,7 @@ test("the module is pure: no DOM, no state, no timers, no reach for the global b
 test("the boot file routes the rail's two moves through the seam and the offer through can(); the summary words come from the module", () => {
   assert.match(boot, /const planControls = root\.PolynStationPlanControls \|\| null;/);
   assert.match(boot, /onPromote: promoteNextRecipe,\n\s+onCopy: copyCurrentToNext,/);
-  const rail = boot.slice(boot.indexOf("function syncRail() {"), boot.indexOf("function placeRail() {"));
+  const rail = boot.slice(boot.indexOf("function syncRail() {"), boot.indexOf("function promoteNextRecipe() {"));
   assert.match(rail, /const promoteOffered = !!\(planControls && planControls\.can\(commandsNow, "promote"\)\);/);
   assert.match(rail, /const copyOffered = !!\(planControls && planControls\.can\(commandsNow, "copy"\)\);/);
   assert.match(rail, /summary: planControls \? planControls\.summaryText\(planControls\.summarize\(current\.resolved\)\) : ""/);

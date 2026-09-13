@@ -4,7 +4,7 @@
  * stack of icon controls beside the far-right hopper cluster - Blend
  * Edit's and Weights' switches, Smart Hoppers and Reset Tracking.
  *
- * Tested on its own here: what it draws, how it is placed against the
+ * Tested on its own here: what it draws, where it stands over the
  * drawn stage (pure arithmetic over what the SVG declares), what each
  * click hands back, and the reset's arm-and-confirm. What the boot file
  * does with the callbacks - the mode, the command, the publish - is the
@@ -50,6 +50,7 @@ function makeNode(doc, name, ns) {
     nodeName: name, tagName: name.toUpperCase(), namespaceURI: ns || null, nodeType: 1,
     attributes: {}, children: [], parent: null, listeners: {}, style: {}, disabled: false, ownerDocument: doc,
     rect: null,
+    get parentNode() { return this.parent; },
     get textContent() { return this._text !== undefined && !this.children.length ? this._text : this.children.map(c => c.textContent).join(""); },
     set textContent(v) { this.children = []; this._text = String(v); },
     get hidden() { return this.hasAttribute("hidden"); },
@@ -112,7 +113,6 @@ function build(options) {
     onBlendEdit: () => calls.push("blend"),
     onWeightsEdit: () => calls.push("weights"),
     onSmartHoppers: () => calls.push("smart"),
-    onResetTracking: () => calls.push("reset"),
     onNextEdit: () => calls.push("next"),
     onPromote: () => calls.push("promote"),
     onCopy: () => calls.push("copy"),
@@ -120,24 +120,27 @@ function build(options) {
     clearTimeout: id => { if (timers[id - 1]) timers[id - 1].cleared = true; }
   }, options || {}));
   doc.body.appendChild(rail.element);
-  const live = () => rail.update({ hidden: false, blend: { active: false, available: true }, reset: { available: true, count: 4 } });
-  return { doc, rail, calls, timers, live, blend: rail.blendButton, weights: rail.weightsButton, smart: rail.smartButton, reset: rail.resetButton, next: rail.nextButton, promote: rail.promoteButton, copy: rail.copyButton };
+  const live = () => rail.update({ hidden: false, blend: { active: false, available: true } });
+  return { doc, rail, calls, timers, live, blend: rail.blendButton, weights: rail.weightsButton, smart: rail.smartButton, next: rail.nextButton, promote: rail.promoteButton, copy: rail.copyButton };
 }
 
 /* ----------------------------------------------------------------------
  *   What it draws
  * -------------------------------------------------------------------- */
 
-test("four in the column - Blend Edit, Next with its two children in a flyout beside it, Weights with Smart Hoppers beside it, Reset - each an SVG glyph in Station's own classes with its name on hover and to a reader - no text label", () => {
-  const { rail, blend, weights, smart, reset, next, promote, copy } = build();
+test("three in the column - Blend Edit with Bulk Edit in a flyout beside it, Next with its two children, Weights with Smart Hoppers - each an SVG glyph in Station's own classes with its name on hover and to a reader - no text label, and no Reset (the timeline's)", () => {
+  const { rail, blend, weights, smart, next, promote, copy } = build();
   assert.equal(rail.element.getAttribute("data-role"), "machine-rail");
   assert.equal(rail.element.getAttribute("role"), "group");
   assert.deepEqual(rail.element.children.map(node => [node.tagName, node.getAttribute("data-action") || node.getAttribute("data-role")]),
-    [["DIV", "blend-group"], ["DIV", "next-group"], ["DIV", "weights-group"], ["BUTTON", "reset-tracking"]]);
+    [["DIV", "blend-group"], ["DIV", "next-group"], ["DIV", "weights-group"]]);
+  assert.equal(rail.element.querySelector("[data-action='reset-tracking']"), null, "Reset Tracking stands in the timeline's Now column, not on the rail");
   // Blend Edit's group: the switch, and beside it Bulk Edit with the
   // Confirm / Cancel / field it becomes (hidden until it does).
   assert.deepEqual(rail.blendGroup.children.map(node => node.getAttribute("data-action") || node.getAttribute("class")), ["blend-edit", "station-rail__flyout"]);
-  assert.deepEqual(rail.blendFlyout.children.map(node => node.getAttribute("data-action") || node.getAttribute("data-role")), ["bulk-edit", "bulk-confirm", "bulk-cancel", "bulk-field-slot"]);
+  assert.deepEqual(rail.blendFlyout.children.map(node => node.getAttribute("data-role")), ["bulk-row"], "the Blend flyout holds the bulk row");
+  assert.deepEqual(rail.bulkRow.children.map(node => node.getAttribute("data-action") || node.getAttribute("data-role")), ["bulk-edit", "bulk-confirm", "bulk-cancel", "bulk-field-slot"]);
+  assert.equal(rail.bulkRow.getAttribute("data-bulk"), "false");
   assert.ok(rail.fieldSlot.hasAttribute("hidden"), "the field's slot is hidden until a selection is on");
   assert.equal(rail.blendFlyout.getAttribute("aria-label"), "Blend Edit actions");
   assert.equal(rail.blendFlyout.getAttribute("data-open"), "false");
@@ -153,7 +156,8 @@ test("four in the column - Blend Edit, Next with its two children in a flyout be
   assert.ok(rail.weightsFlyout.hasAttribute("inert"));
   // The group: the switch in the column, the flyout beside it holding the two moves.
   assert.deepEqual(rail.nextGroup.children.map(node => [node.tagName, node.getAttribute("data-action") || node.getAttribute("class")]), [["BUTTON", "next-edit"], ["DIV", "station-rail__flyout"]]);
-  assert.deepEqual(rail.flyout.children.map(node => node.getAttribute("data-action")), ["promote-next", "copy-current"]);
+  assert.deepEqual(rail.flyout.children.map(node => node.getAttribute("data-role")), ["moves-row"], "the Next flyout holds the two moves' row, and the bulk row only while the Next face is on");
+  assert.deepEqual(rail.movesRow.children.map(node => node.getAttribute("data-action")), ["promote-next", "copy-current"]);
   assert.equal(rail.flyout.getAttribute("role"), "group");
   assert.equal(rail.flyout.getAttribute("aria-label"), "Next Recipe actions");
   const REST_TITLE = {
@@ -163,12 +167,11 @@ test("four in the column - Blend Edit, Next with its two children in a flyout be
     "Load Next into Current": "Load Next into Current is not available: no application is connected to Station commands.",
     "Copy Current into Next": "Copy Current into Next is not available: no application is connected to Station commands.",
     "Smart Hoppers": "Smart Hoppers is not available: no application is connected to Station commands.",
-    "Reset Tracking": "Reset Tracking is not available: no application is connected to Station commands.",
     "Bulk Edit": "Bulk Edit is not available: no application is connected to Station commands.",
     "Apply resin to selected hoppers": "Apply resin to selected hoppers · select a hopper on a card first",
     "Cancel bulk edit": "Cancel bulk edit · nothing is written; the selection is cleared"
   };
-  for (const [button, label] of [[blend, "Blend Edit"], [weights, "Weights"], [next, "Next Recipe"], [promote, "Load Next into Current"], [copy, "Copy Current into Next"], [smart, "Smart Hoppers"], [reset, "Reset Tracking"], [rail.bulkButton, "Bulk Edit"], [rail.confirmButton, "Apply resin to selected hoppers"], [rail.cancelButton, "Cancel bulk edit"]]) {
+  for (const [button, label] of [[blend, "Blend Edit"], [weights, "Weights"], [next, "Next Recipe"], [promote, "Load Next into Current"], [copy, "Copy Current into Next"], [smart, "Smart Hoppers"], [rail.bulkButton, "Bulk Edit"], [rail.confirmButton, "Apply resin to selected hoppers"], [rail.cancelButton, "Cancel bulk edit"]]) {
     assert.equal(button.getAttribute("type"), "button");
     assert.equal(button.getAttribute("aria-label"), label);
     assert.equal(button.getAttribute("title"), REST_TITLE[label]);
@@ -176,9 +179,18 @@ test("four in the column - Blend Edit, Next with its two children in a flyout be
     assert.ok(button.classList.contains("station-rail__control"));
     const svg = button.children[0];
     assert.equal(svg.tagName, "SVG");
-    assert.equal(svg.getAttribute("viewBox"), "0 0 20 20");
+    // The launcher's tile: the same 64-unit space, the same plate inset
+    // the same, drawn under the glyph as station-handbook.js draws it
+    // under the book (its own test pins the launcher's).
+    assert.equal(svg.getAttribute("viewBox"), "0 0 64 64");
+    assert.equal(svg.getAttribute("width"), "64");
+    assert.equal(svg.getAttribute("height"), "64");
     assert.equal(svg.getAttribute("aria-hidden"), "true");
-    assert.ok(svg.children.length >= 1, "a drawn glyph");
+    assert.deepEqual(svg.children.map(node => [node.tagName, node.getAttribute("class")]), [["RECT", "station-rail__glyph-plate"], ["G", "station-rail__glyph-art"]]);
+    const plate = svg.children[0];
+    assert.deepEqual(["x", "y", "width", "height", "rx"].map(name => plate.getAttribute(name)), ["1.5", "1.5", "61", "61", "14"]);
+    assert.equal(svg.children[1].getAttribute("transform"), "translate(12 12) scale(2)", "the 20-unit glyph doubled and centred on the plate");
+    assert.ok(svg.children[1].children.length >= 1, "a drawn glyph");
     walk(svg, node => {
       assert.match(node.getAttribute("class") || "", /^station-rail__glyph/, `a glyph part outside the namespace: ${node.tagName}`);
       assert.ok(!["TEXT", "IMAGE", "USE"].includes(node.tagName), "a glyph from text, an image or a symbol");
@@ -189,13 +201,12 @@ test("four in the column - Blend Edit, Next with its two children in a flyout be
   assert.equal(smart.getAttribute("role"), "switch", "Smart Hoppers is a switch to a reader");
   assert.equal(smart.getAttribute("aria-checked"), "false");
   assert.equal(smart.disabled, true, "held until the boot file says the application offers it");
-  assert.equal(reset.getAttribute("aria-pressed"), null, "the reset is a command, not a switch");
   assert.equal(next.getAttribute("aria-pressed"), "false", "Next is the third face's switch");
   assert.equal(rail.flyout.getAttribute("data-open"), "false", "the two moves are folded until the Next face is on");
   assert.ok(rail.flyout.hasAttribute("inert") && rail.flyout.getAttribute("aria-hidden") === "true", "folded: out of the tab order and the reader's tree");
   // Hidden until told there is a line: a rail with nothing to stand beside.
   assert.ok(rail.element.hidden);
-  assert.deepEqual(railModule.LABEL, { blend: "Blend Edit", weights: "Weights", smart: "Smart Hoppers", reset: "Reset Tracking", next: "Next Recipe", promote: "Load Next into Current", copy: "Copy Current into Next", bulk: "Bulk Edit", confirm: "Apply resin to selected hoppers", cancel: "Cancel bulk edit" });
+  assert.deepEqual(railModule.LABEL, { blend: "Blend Edit", weights: "Weights", smart: "Smart Hoppers", next: "Next Recipe", promote: "Load Next into Current", copy: "Copy Current into Next", bulk: "Bulk Edit", confirm: "Apply resin to selected hoppers", cancel: "Cancel bulk edit" });
 });
 
 test("the Weights switch and the Smart Hoppers switch show what they are told and hand every click back as one call; a held switch takes no click", () => {
@@ -236,14 +247,12 @@ test("the Weights switch and the Smart Hoppers switch show what they are told an
   assert.deepEqual(rail.getState().weights, { active: true, available: false });
 });
 
-test("update() is what it shows: the switch's state and availability, the reset's availability and count, hidden and withdrawn", () => {
-  const { rail, blend, reset, live } = build();
+test("update() is what it shows: the switch's state and availability, hidden and withdrawn", () => {
+  const { rail, blend, live } = build();
   live();
   assert.ok(!rail.element.hidden);
   assert.equal(blend.disabled, false);
   assert.equal(blend.getAttribute("title"), "Blend Edit");
-  assert.equal(reset.disabled, false);
-  assert.equal(reset.getAttribute("title"), "Reset Tracking · 4 hoppers");
   rail.update({ blend: { active: true, available: true } });
   assert.equal(blend.getAttribute("aria-pressed"), "true");
   assert.ok(blend.classList.contains("is-active"));
@@ -255,20 +264,12 @@ test("update() is what it shows: the switch's state and availability, the reset'
   // On with no line to enter it with: the switch still lets the mode out.
   rail.update({ blend: { active: true, available: false } });
   assert.equal(blend.disabled, false, "an active mode can always be left");
-  rail.update({ reset: { available: true, count: 1 } });
-  assert.equal(reset.getAttribute("title"), "Reset Tracking · 1 hopper");
-  rail.update({ reset: { available: true, count: 0 } });
-  assert.equal(reset.disabled, true);
-  assert.equal(reset.getAttribute("title"), "Reset Tracking · nothing is tracked");
-  rail.update({ reset: { available: false, reason: "the application does not offer a tracking reset from Station.", count: 3 } });
-  assert.equal(reset.disabled, true);
-  assert.equal(reset.getAttribute("title"), "Reset Tracking is not available: the application does not offer a tracking reset from Station.");
   rail.update({ withdrawn: true });
   assert.ok(rail.element.classList.contains("is-withdrawn"));
   rail.update({ withdrawn: false, hidden: true });
   assert.ok(!rail.element.classList.contains("is-withdrawn"));
   assert.ok(rail.element.hidden);
-  assert.deepEqual(rail.getState().reset, { available: false, reason: "the application does not offer a tracking reset from Station.", count: 3 });
+  assert.ok(!("reset" in rail.getState()), "the rail holds nothing of the reset");
 });
 
 /* ----------------------------------------------------------------------
@@ -288,212 +289,6 @@ test("the switch hands every click back as one call, whichever way the mode is g
 });
 
 /* ----------------------------------------------------------------------
- *   Reset Tracking: armed, then confirmed
- * -------------------------------------------------------------------- */
-
-test("the first click arms the reset and says so; the second confirms it as one call; nothing happens on the first", () => {
-  const { rail, reset, calls, timers, live } = build();
-  live();
-  reset.click();
-  assert.deepEqual(calls, [], "the first click resets nothing");
-  assert.equal(rail.isArmed(), true);
-  assert.equal(reset.getAttribute("data-armed"), "true");
-  assert.ok(reset.classList.contains("is-armed"));
-  assert.equal(reset.getAttribute("aria-label"), "Confirm: reset tracking for 4 hoppers");
-  assert.match(reset.getAttribute("title"), /^Click again to reset tracking · 4 hoppers/);
-  assert.equal(timers.length, 1, "the arm started its timer");
-  assert.equal(timers[0].ms, railModule.ARM_DURATION);
-  assert.ok(railModule.ARM_DURATION >= 3000 && railModule.ARM_DURATION <= 8000, "a few seconds: long enough to click again, short enough to forget");
-  reset.click();
-  assert.deepEqual(calls, ["reset"]);
-  assert.equal(rail.isArmed(), false);
-  assert.equal(reset.getAttribute("data-armed"), null);
-  assert.equal(reset.getAttribute("aria-label"), "Reset Tracking");
-  assert.equal(timers[0].cleared, true, "the confirm cleared the timer");
-});
-
-test("an armed reset disarms on its timeout, on a click anywhere else, on Escape, on the focus leaving, and when it stops being possible - each without a call", () => {
-  const { doc, rail, reset, calls, timers, live } = build();
-  live();
-  // Timeout.
-  reset.click();
-  assert.equal(rail.isArmed(), true);
-  timers[0].fn();
-  assert.equal(rail.isArmed(), false);
-  // Click-away: a pointer down anywhere outside the control.
-  reset.click();
-  const elsewhere = doc.createElement("div");
-  doc.body.appendChild(elsewhere);
-  elsewhere.dispatchEvent(makeEvent("pointerdown", { bubbles: true }));
-  assert.equal(rail.isArmed(), false, "a click elsewhere disarmed it");
-  assert.equal(timers[1].cleared, true);
-  // A pointer down on the control itself (the confirming click's own) does not.
-  reset.click();
-  assert.equal(rail.isArmed(), true);
-  reset.dispatchEvent(makeEvent("pointerdown", { bubbles: true }));
-  assert.equal(rail.isArmed(), true);
-  // Escape on the control.
-  const escape = makeEvent("keydown", { key: "Escape", bubbles: true });
-  reset.dispatchEvent(escape);
-  assert.equal(rail.isArmed(), false);
-  assert.equal(escape.stopped, true, "spent on the control, not passed to the stage's Escape");
-  // Escape when not armed is not the rail's.
-  const idle = makeEvent("keydown", { key: "Escape", bubbles: true });
-  reset.dispatchEvent(idle);
-  assert.equal(idle.stopped, false);
-  // Focus leaving.
-  reset.focus();
-  reset.click();
-  assert.equal(rail.isArmed(), true);
-  reset.blur();
-  assert.equal(rail.isArmed(), false);
-  // The reset stopping being possible.
-  reset.click();
-  rail.update({ reset: { available: true, count: 0 } });
-  assert.equal(rail.isArmed(), false);
-  rail.update({ reset: { available: true, count: 2 } });
-  reset.click();
-  rail.update({ withdrawn: true });
-  assert.equal(rail.isArmed(), false, "a layer opening disarms it");
-  rail.update({ withdrawn: false });
-  reset.click();
-  rail.update({ reset: { available: false, count: 2 } });
-  assert.equal(rail.isArmed(), false);
-  assert.deepEqual(calls, [], "none of it reset anything");
-  // Disabled: a click does nothing at all.
-  reset.click();
-  assert.equal(rail.isArmed(), false);
-  // The switch's click disarms too: one thing at a time.
-  rail.update({ reset: { available: true, count: 2 } });
-  reset.click();
-  assert.equal(rail.isArmed(), true);
-  rail.blendButton.click();
-  assert.equal(rail.isArmed(), false);
-  assert.deepEqual(calls, ["blend"]);
-  // The click-away listener is gone once disarmed: nothing is left on the document.
-  assert.deepEqual(doc.listeners.pointerdown || [], []);
-});
-
-/* ----------------------------------------------------------------------
- *   Placement
- * -------------------------------------------------------------------- */
-
-const VB = { width: 1378, height: 740 };
-const CLUSTERS = [
-  { x: 48, y: 10, width: 210, height: 394 },
-  { x: 584, y: 10, width: 210, height: 394 },
-  { x: 1120, y: 10, width: 210, height: 394 }
-];
-
-test("anchor() stands the rail along the far-right box's outer edge - its top and height the box's own - through the scale-to-fit arithmetic, in the host's pixels", () => {
-  // Height-constrained: the drawing is letterboxed left and right.
-  const stage = { left: 16, top: 80, width: 1400, height: 560 };
-  const host = { left: 0, top: 64, width: 1432, height: 592 };
-  const rail = { width: 36, height: 78 };
-  const at = railModule.anchor({ viewBox: VB, clusters: CLUSTERS, stage, host, rail });
-  const scale = 560 / 740;
-  const offsetX = (1400 - 1378 * scale) / 2;
-  const right = 1330 * scale + offsetX + 16;
-  const top = 10 * scale + 80 - 64;
-  const left = Math.round(right + railModule.GAP);
-  assert.deepEqual(at, { left, top: Math.round(top), height: Math.round(394 * scale), roomRight: Math.round(1432 - (right + railModule.GAP + 36) - railModule.EDGE) });
-  assert.ok(at.height > 78, "the strip is the box's height, taller than its two controls");
-  assert.ok(at.roomRight >= railModule.FLYOUT_ROW_WIDTH, "letterboxed, there is room for a two-child flyout beside the rail");
-  // Which cluster is furthest right is read, not assumed: the order of
-  // the list does not matter (a line drawn with Layer A on the right).
-  const reversed = railModule.anchor({ viewBox: VB, clusters: CLUSTERS.slice().reverse(), stage, host, rail });
-  assert.deepEqual(reversed, at);
-  // Width-constrained: the drawing is letterboxed top and bottom instead.
-  const tall = railModule.anchor({ viewBox: VB, clusters: CLUSTERS, stage: { left: 16, top: 80, width: 1068, height: 1200 }, host: { left: 0, top: 64, width: 1100, height: 1232 }, rail });
-  const tallScale = 1068 / 1378;
-  const tallOffsetY = (1200 - 740 * tallScale) / 2;
-  assert.equal(tall.top, Math.round(10 * tallScale + tallOffsetY + 16));
-  assert.equal(tall.height, Math.round(394 * tallScale));
-  // A box drawn smaller than the controls: the strip is never shorter than them.
-  const tiny = railModule.anchor({ viewBox: VB, clusters: [{ x: 1120, y: 10, width: 210, height: 40 }], stage, host, rail });
-  assert.equal(tiny.height, 78);
-  // A cluster at the very edge of its cell: the rail stays inside the host.
-  assert.equal(tall.left, Math.min(Math.round(1330 * tallScale + 16 + railModule.GAP), 1100 - 36 - railModule.EDGE));
-  assert.ok(tall.left + 36 <= 1100);
-  assert.ok(tall.roomRight < railModule.FLYOUT_ROW_WIDTH, "against the edge, no room for a row of two beside the rail");
-  // Nothing to stand beside, or nothing drawn: null, and the rail keeps its place.
-  assert.equal(railModule.anchor({ viewBox: VB, clusters: [], stage, host, rail }), null);
-  assert.equal(railModule.anchor({ viewBox: VB, clusters: CLUSTERS, stage: { left: 0, top: 0, width: 0, height: 0 }, host, rail }), null);
-  assert.equal(railModule.anchor(null), null);
-});
-
-test("readStage() takes the viewBox and every normal bank's declared cluster box off the drawn SVG, and nothing of a focused layout", () => {
-  const doc = fakeDocument();
-  const svg = doc.createElement("svg");
-  svg.setAttribute("viewBox", "0 0 1378 740");
-  for (const [id, emphasis, box] of [["A", "normal", "48 10 210 394"], ["B", "normal", "584 10 210 394"], ["C", "normal", "1120 10 210 394"]]) {
-    const layer = doc.createElement("g");
-    layer.setAttribute("data-role", "layer");
-    layer.setAttribute("data-layer", id);
-    layer.setAttribute("data-emphasis", emphasis);
-    layer.setAttribute("data-object-cluster", box);
-    svg.appendChild(layer);
-  }
-  assert.deepEqual(railModule.readStage(svg), { viewBox: { width: 1378, height: 740 }, clusters: CLUSTERS });
-  // The card's footprint, when the drawing declares it, is what the rail
-  // stands beside: wider than the cluster, the same whichever face shows.
-  svg.children[2].setAttribute("data-object-card", "1106 40 238 364");
-  assert.deepEqual(railModule.readStage(svg).clusters[2], { x: 1106, y: 40, width: 238, height: 364 });
-  svg.children[2].removeAttribute("data-object-card");
-  for (const layer of svg.children) layer.setAttribute("data-emphasis", layer.getAttribute("data-layer") === "B" ? "focused" : "dimmed");
-  assert.deepEqual(railModule.readStage(svg).clusters, [], "a focused layout declares nothing for the rail");
-  svg.setAttribute("viewBox", "bad");
-  assert.equal(railModule.readStage(svg), null);
-  assert.equal(railModule.readStage(null), null);
-  assert.deepEqual(railModule.parseBox("1 2 3 4"), { x: 1, y: 2, width: 3, height: 4 });
-  assert.equal(railModule.parseBox("1 2 3"), null);
-});
-
-test("place() measures the stage, the host and itself, writes the anchor as the rail's own left and top, and marks the rail placed", () => {
-  const { doc, rail, live } = build();
-  live();
-  const host = doc.createElement("div");
-  host.rect = { left: 0, top: 64, width: 1432, height: 592 };
-  const svg = doc.createElement("svg");
-  svg.setAttribute("viewBox", "0 0 1378 740");
-  svg.rect = { left: 16, top: 80, width: 1400, height: 560 };
-  const layer = doc.createElement("g");
-  layer.setAttribute("data-role", "layer");
-  layer.setAttribute("data-emphasis", "normal");
-  layer.setAttribute("data-object-cluster", "1120 10 210 394");
-  svg.appendChild(layer);
-  rail.element.rect = { left: 0, top: 0, width: 36, height: 78 };
-  const at = rail.place(svg, host);
-  assert.deepEqual(at, railModule.anchor({ viewBox: VB, clusters: [CLUSTERS[2]], stage: svg.rect, host: host.rect, rail: { width: 36, height: 78 } }));
-  // The flyouts' shape follows the room beside the rail: a row with room
-  // for two children, a column against the edge.
-  assert.equal(rail.element.getAttribute("data-room"), at.roomRight < railModule.FLYOUT_ROW_WIDTH ? "tight" : "wide");
-  const edge = build();
-  edge.rail.update({ hidden: false, blend: { active: false, available: true } });
-  const narrow = edge.doc.createElement("div");
-  narrow.rect = { left: 0, top: 0, width: 1100, height: 1232 };
-  svg.rect = { left: 16, top: 16, width: 1068, height: 1200 };
-  edge.rail.element.rect = { left: 0, top: 0, width: 36, height: 78 };
-  const tight = edge.rail.place(svg, narrow);
-  assert.ok(tight && tight.roomRight < railModule.FLYOUT_ROW_WIDTH);
-  assert.equal(edge.rail.element.getAttribute("data-room"), "tight");
-  assert.equal(rail.element.style.left, `${at.left}px`);
-  assert.equal(rail.element.style.top, `${at.top}px`);
-  assert.equal(rail.element.style.height, `${at.height}px`);
-  assert.ok(rail.element.classList.contains("is-placed"));
-  assert.deepEqual(rail.getState().placed, at);
-  // A rail not yet laid out (no size of its own) is placed by its
-  // stylesheet size, so it does not land somewhere absurd.
-  rail.element.rect = null;
-  const fallback = rail.place(svg, host);
-  assert.deepEqual(fallback, railModule.anchor({ viewBox: VB, clusters: [CLUSTERS[2]], stage: svg.rect, host: host.rect, rail: railModule.FALLBACK_SIZE }));
-  // A stage with nothing to stand beside leaves the place as it was.
-  layer.setAttribute("data-emphasis", "focused");
-  assert.equal(rail.place(svg, host), null);
-  assert.equal(rail.element.style.left, `${fallback.left}px`);
-});
-
-/* ----------------------------------------------------------------------
  *   Where it lives
  * -------------------------------------------------------------------- */
 
@@ -504,42 +299,72 @@ test("the module is presentation only: no dispatch, no bridge, no job read, no r
   }
   const host = read("station-host.js");
   const html = read("station/station.html");
-  const order = (text, quote) => ["station-hopper-controls.js", "station-machine-rail.js", "station.js"].map(name => text.indexOf(quote(name)));
+  const order = (text, quote) => ["station-hopper-controls.js", "station-armed.js", "station-machine-rail.js", "station.js"].map(name => text.indexOf(quote(name)));
   for (const [text, quote] of [[host, name => `"station/${name}"`], [html, name => `src="${name}?v=`]]) {
     const at = order(text, quote);
     assert.ok(at.every(index => index > -1), "a host does not load the rail");
-    assert.ok(at[0] < at[1] && at[1] < at[2], "the rail must be evaluated after the hopper controls and before station.js");
+    assert.ok(at[0] < at[2] && at[1] < at[2] && at[2] < at[3], "the rail must be evaluated after the hopper controls and the armed helper, and before station.js");
   }
   assert.match(host, /"station\/styles\/components\/machine-rail\.css"/);
   assert.match(html, /styles\/components\/machine-rail\.css\?v=/);
   assert.doesNotMatch(read("index.html"), /machine-rail/, "index.html loads Station modules through the host only");
 });
 
-test("the stylesheet names no colour and no length of its own, sizes the controls from the spacing tokens, and wears the console's glass", () => {
+test("the stylesheet names no colour of its own, cuts every tile to the Handbook launcher's size and plate, and stands the column over the launcher", () => {
   const raw = read("station/styles/components/machine-rail.css");
   const css = raw.replace(/\/\*[\s\S]*?\*\//g, "");
   assert.doesNotMatch(css, /#[0-9a-f]{3,8}\b|\brgba?\(|\bhsla?\(/i, "machine-rail.css names a colour");
-  assert.match(css, /\.station-root \.station-rail__control \{[^}]*width: calc\(var\(--station-space-6\) \+ var\(--station-space-1\)\);/);
-  assert.match(css, /background: var\(--station-handbook-glass\);/);
-  assert.match(css, /backdrop-filter: blur\(var\(--station-handbook-glass-blur\)\)/);
-  assert.match(css, /\.station-root \.station-rail__control\.is-active \{[^}]*border-color: var\(--station-accent\);/);
-  assert.match(css, /\.station-root \.station-rail__control\.is-armed \{[^}]*border-color: var\(--station-warning\);/);
+  // The Handbook is the master of the tile: the launcher's size is one
+  // token (tokens.css), which handbook.css spends on the launcher and
+  // this sheet on every control - never a second 64px.
+  const tokens = read("station/styles/tokens.css").replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.match(tokens, /--station-handbook-launcher: 64px;/);
+  assert.match(read("station/styles/components/handbook.css"), /\.station-root \.station-handbook__launcher \{[^}]*width: var\(--station-handbook-launcher\);[^}]*height: var\(--station-handbook-launcher\);/);
+  assert.match(css, /\.station-root \.station-rail__control \{[^}]*width: var\(--station-handbook-launcher\);[^}]*height: var\(--station-handbook-launcher\);[^}]*border-radius: var\(--station-radius-lg\);/);
+  assert.doesNotMatch(css, /64px/, "a second 64px beside the token");
+  // The plate is the launcher's icon-plate over again, in the same
+  // tokens, coloured through the two properties the control sets; no
+  // glass, no border on the button itself.
+  assert.match(css, /\.station-rail__glyph-plate \{[^}]*fill: var\(--station-rail-plate\);[^}]*stroke: var\(--station-rail-plate-edge\);[^}]*stroke-width: 1\.5;/);
+  assert.match(css, /\.station-root \.station-rail__control \{[^}]*--station-rail-plate: var\(--station-surface-raised\);[^}]*--station-rail-plate-edge: var\(--station-border-strong\);/);
+  assert.match(css, /\.station-root \.station-rail__control:hover:not\(:disabled\) \{[^}]*--station-rail-plate-edge: var\(--station-accent\);/, "under the pointer, the accent on the plate's edge, as the launcher's");
+  assert.match(read("station/styles/components/handbook.css"), /\.station-handbook__icon-plate \{[^}]*fill: var\(--station-surface-raised\);[^}]*stroke: var\(--station-border-strong\);[^}]*stroke-width: 1\.5;/, "the launcher's plate, which the tile copies");
+  assert.doesNotMatch(css, /handbook-glass|backdrop-filter|border: var\(--station-stroke\) solid var\(--station-handbook/, "the tile is the launcher's plate, not the console's glass");
+  // The glyph is doubled onto the plate, so its strokes are halved back
+  // to the launcher icon's weight.
+  assert.match(css, /\.station-rail__glyph-stroke \{[^}]*stroke-width: 0\.75;/);
+  assert.match(css, /\.station-root \.station-rail__control\.is-active \{[^}]*--station-rail-plate-edge: var\(--station-accent\);/);
+  assert.match(css, /\.station-root \.station-rail__control\.is-armed \{[^}]*--station-rail-plate-edge: var\(--station-warning\);/);
   // Smart Hoppers on wears the computed colour the captions wear (hopper.css).
-  assert.match(css, /\.station-root \.station-rail__control\.is-on \{[^}]*border-color: var\(--station-smart, var\(--station-accent\)\);/);
+  assert.match(css, /\.station-root \.station-rail__control\.is-on \{[^}]*--station-rail-plate-edge: var\(--station-smart, var\(--station-accent\)\);/);
   assert.match(css, /\.station-rail\.is-withdrawn \{[^}]*opacity: 0;[^}]*visibility: hidden;[^}]*pointer-events: none;/, "a withdrawn rail leaves the tab order, not only the eye");
   assert.match(css, /\.station-rail\[hidden\] \{[^}]*display: none;/);
-  // The slot is the shell's; the rail is absolute in it, its fallback the
-  // cell's lower right until the script has measured.
-  assert.match(css, /\.station-rail \{[^}]*position: absolute;[^}]*right: var\(--station-space-4\);[^}]*bottom: var\(--station-space-4\);/);
-  assert.match(css, /\.station-rail\.is-placed \{[^}]*right: auto;[^}]*bottom: auto;/);
+  // The slot is the shell's; the rail is absolute in it, in the launcher's
+  // corner, its foot one launcher and one gap up from the launcher's own
+  // - the gap between the tiles. Nothing is measured and nothing placed.
+  assert.match(css, /\.station-rail \{[^}]*position: absolute;[^}]*left: var\(--station-space-4\);[^}]*bottom: calc\(var\(--station-space-4\) \+ var\(--station-handbook-launcher\) \+ var\(--station-space-2\)\);[^}]*flex-direction: column;[^}]*gap: var\(--station-space-2\);/);
+  assert.match(read("station/styles/components/handbook.css"), /\.station-root \.station-handbook__launcher \{[^}]*left: var\(--station-space-4\);[^}]*bottom: var\(--station-space-4\);/);
+  assert.doesNotMatch(css, /is-placed|data-room/);
+  assert.doesNotMatch(css, /station-rail__control--reset/, "no reset tile: the reset is the timeline's");
+  // The bulk field, focused, looks as it does at rest: no ring, no
+  // shadow, no accent border.
+  assert.match(css, /\.station-root \.station-bulk-field__input:focus-visible \{[^}]*outline: none;[^}]*--station-field-shadow: none;/);
+  assert.doesNotMatch(css, /bulk-field__input:focus-visible \{[^}]*--station-field-border/);
   assert.doesNotMatch(css, /@media \(max-width|min-width/, "no breakpoint: the rail is desktop only, as Station is");
   // The six themes all carry the tokens the rail spends.
   for (const theme of ["industrial-light", "industrial-dark", "gruvbox-light", "gruvbox-dark", "engineering-paper", "blueprint"]) {
     const sheet = read(`station/styles/themes/${theme}.css`);
-    for (const token of ["--station-handbook-glass:", "--station-handbook-glass-border:", "--station-accent:", "--station-accent-soft:", "--station-warning:", "--station-text-muted:", "--station-text-disabled:", "--station-border-subtle:"]) {
+    for (const token of ["--station-surface-raised:", "--station-border-strong:", "--station-accent:", "--station-accent-soft:", "--station-warning:", "--station-text-muted:", "--station-text-disabled:", "--station-border-subtle:"]) {
       assert.ok(sheet.includes(token), `${theme} lacks ${token}`);
     }
   }
+});
+
+test("the module measures nothing: no placement, no stage read, no client rects", () => {
+  const source = read("station/station-machine-rail.js").replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.doesNotMatch(source, /getBoundingClientRect|ResizeObserver|viewBox"\)|data-object-card|anchor\(|readStage|\.place\b/);
+  assert.equal(railModule.TILE, 64);
+  assert.ok(!("place" in build().rail));
 });
 
 /* ----------------------------------------------------------------------
@@ -597,7 +422,7 @@ test("Load Next arms then confirms as one call, worded by the summary it was tol
   assert.deepEqual(calls, [], "the first click arms, and calls nothing");
   assert.equal(rail.isArmed(), true);
   assert.equal(rail.armedControl(), "promote");
-  assert.equal(rail.getState().armed, false, "the reset is not the one armed");
+  assert.equal(rail.getState().armedControl, "promote");
   assert.equal(promote.getAttribute("data-armed"), "true");
   assert.ok(promote.classList.contains("is-armed"));
   assert.equal(promote.getAttribute("aria-label"), "Confirm: load the planned recipe into Current · 2 resin changes · 1 percentage change");
@@ -624,8 +449,8 @@ test("Load Next arms then confirms as one call, worded by the summary it was tol
   assert.equal(typeof doc, "object");
 });
 
-test("an armed promotion disarms on its timeout, a click elsewhere, Escape, the focus leaving, the plan vanishing, and the face closing - each without a call; arming one control disarms the other", () => {
-  const { rail, promote, reset, calls, timers, live, doc } = build();
+test("an armed promotion disarms on its timeout, a click elsewhere, Escape, the focus leaving, the plan vanishing, and the face closing - each without a call; the arming is the shared helper's", () => {
+  const { rail, promote, calls, timers, live, doc } = build();
   const on = () => rail.update({ next: { active: true, available: true, planned: true }, promote: { available: true, summary: "1 resin change" } });
   live(); on();
   promote.click();
@@ -655,14 +480,17 @@ test("an armed promotion disarms on its timeout, a click elsewhere, Escape, the 
   rail.update({ next: { active: false, available: true, planned: true } });
   assert.equal(rail.isArmed(), false, "the face closing disarmed it");
   on(); promote.click();
-  reset.click();
-  assert.equal(rail.armedControl(), "reset", "arming the reset disarmed the promotion");
-  assert.equal(promote.getAttribute("data-armed"), null);
-  assert.equal(reset.getAttribute("data-armed"), "true");
-  promote.click();
-  assert.equal(rail.armedControl(), "promote", "and back");
-  assert.equal(reset.getAttribute("data-armed"), null);
+  rail.update({ withdrawn: true });
+  assert.equal(rail.isArmed(), false, "the rail stepping back disarmed it");
   assert.deepEqual(calls, [], "none of it called anything");
+  // The arming is station-armed.js's, the same the timeline's Reset uses:
+  // one wait, one set of ways out.
+  const armed = require("./station/station-armed.js");
+  assert.equal(railModule.ARM_DURATION, armed.ARM_DURATION);
+  assert.equal(timers[0].ms, armed.ARM_DURATION);
+  const source = read("station/station-machine-rail.js").replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.match(source, /require\("\.\/station-armed\.js"\)/);
+  assert.doesNotMatch(source, /addEventListener\("pointerdown"|timers\.set|state\.armed/, "the rail keeps no arming of its own");
 });
 
 test("Smart Hoppers is the Weights switch's child: folded until the Weights face is on, unfolded beside it while it is, and folded again with it - its own state untouched by the fold", () => {
@@ -764,4 +592,49 @@ test("on, Bulk Edit swaps in place for Confirm and Cancel; Confirm waits for a s
   rail.update({ blend: { active: false, available: true } });
   assert.equal(rail.blendGroup.getAttribute("data-bulk"), "false");
   assert.equal(rail.bulkButton.hasAttribute("hidden"), false);
+});
+
+test("Bulk Edit is the Next face's child too: while that face is on the one bulk row stands in the Next flyout above the two moves, on the Next bracket, works exactly as under Blend Edit, and goes back to the Blend flyout when the face changes", () => {
+  const { rail, calls } = build({ onBulkEdit: () => calls.push("bulk"), onBulkConfirm: () => calls.push("confirm") });
+  rail.update({ hidden: false, blend: { active: false, available: true }, next: { active: true, available: true, planned: true }, bulk: { active: false, available: true } });
+  // The row moved: the Next flyout is [bulk row, moves row]; the Blend flyout is empty.
+  assert.deepEqual(rail.flyout.children.map(node => node.getAttribute("data-role")), ["bulk-row", "moves-row"]);
+  assert.deepEqual(rail.blendFlyout.children, []);
+  assert.ok(rail.flyout.contains(rail.bulkButton) && rail.flyout.contains(rail.fieldSlot));
+  assert.equal(rail.flyout.getAttribute("data-open"), "true", "unfolded with the Next face");
+  assert.equal(rail.blendFlyout.getAttribute("data-open"), "false");
+  assert.equal(rail.bulkButton.disabled, false);
+  assert.match(rail.bulkButton.getAttribute("title"), /onto all of them in the plan$/);
+  rail.bulkButton.click();
+  assert.deepEqual(calls, ["bulk"]);
+  // On: the swap, on the row, under the Next group.
+  rail.update({ bulk: { active: true, available: true, count: 2, resin: "HDPE 9" } });
+  assert.equal(rail.bulkRow.getAttribute("data-bulk"), "true");
+  assert.equal(rail.nextGroup.getAttribute("data-bulk"), "true");
+  assert.equal(rail.blendGroup.getAttribute("data-bulk"), "false");
+  assert.ok(rail.element.classList.contains("is-bulk-active"));
+  assert.ok(rail.bulkButton.hasAttribute("hidden"));
+  assert.equal(rail.confirmButton.hasAttribute("hidden"), false);
+  assert.equal(rail.fieldSlot.hasAttribute("hidden"), false);
+  assert.equal(rail.confirmButton.disabled, false);
+  rail.confirmButton.click();
+  assert.deepEqual(calls, ["bulk", "confirm"]);
+  // The face changes: the row goes back to the Blend flyout, at rest.
+  rail.update({ blend: { active: true, available: true }, next: { active: false, available: true, planned: true }, bulk: { active: false, available: true } });
+  assert.deepEqual(rail.blendFlyout.children.map(node => node.getAttribute("data-role")), ["bulk-row"]);
+  assert.deepEqual(rail.flyout.children.map(node => node.getAttribute("data-role")), ["moves-row"]);
+  assert.equal(rail.nextGroup.getAttribute("data-bulk"), "false");
+  assert.doesNotMatch(rail.bulkButton.getAttribute("title"), /in the plan/);
+  // Neither face: the row rests in the Blend flyout, folded.
+  rail.update({ blend: { active: false, available: true } });
+  assert.deepEqual(rail.blendFlyout.children.map(node => node.getAttribute("data-role")), ["bulk-row"]);
+  assert.equal(rail.blendFlyout.getAttribute("data-open"), "false");
+  // The stylesheet: a flyout grows upward from the switch's row, so the
+  // Next flyout's upper row stands where the Blend tile does; the stem
+  // stays at the switch's row; the swap is keyed on the row, not a group.
+  const css = read("station/styles/components/machine-rail.css").replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.match(css, /\.station-rail__flyout \{[^}]*bottom: 0;[^}]*flex-direction: column;[^}]*gap: var\(--station-space-2\);/);
+  assert.match(css, /\.station-rail__flyout::before \{[^}]*bottom: calc\(var\(--station-handbook-launcher\) \/ 2\);/);
+  assert.match(css, /\.station-rail__row--bulk\[data-bulk="true"\] \.station-rail__control--confirm/);
+  assert.doesNotMatch(css, /station-rail__group--blend\[data-bulk/);
 });

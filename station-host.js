@@ -103,6 +103,7 @@
     "station/station-weight-cards.js",
     // The machine utility rail: Blend Edit and Reset Tracking beside the
     // far-right cluster. After the hopper controls, whose reset it asks for.
+    "station/station-armed.js",
     "station/station-machine-rail.js",
     // The run-down projection before the two that read it: the timeline
     // and the header's job controls.
@@ -137,7 +138,7 @@
     "station/station.js"
   ];
 
-  const VERSION = "0.51.0";
+  const VERSION = "0.53.0";
 
   function requested() {
     try {

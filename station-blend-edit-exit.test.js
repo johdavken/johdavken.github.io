@@ -2,8 +2,8 @@
 
 /* Entering and leaving Blend Edit from the machine utility rail.
  *
- * The mode's one switch stands on the rail beside the far-right hopper
- * cluster (station-machine-rail.js): one click turns every layer over to
+ * The mode's one switch stands on the rail over the Handbook's launcher
+ * in the stage's corner (station-machine-rail.js): one click turns every layer over to
  * its blend card, the next turns them all back. Escape on the stage,
  * with nothing open, is the same exit. The Operator Handbook has no part
  * in it any more: it opens, closes and turns its pages the same with the
@@ -347,7 +347,8 @@ function boot(options) {
     blendSwitch: () => rail.querySelector("[data-action='blend-edit']"),
     weightsSwitch: () => rail.querySelector("[data-action='weights-edit']"),
     smartSwitch: () => rail.querySelector("[data-action='smart-hoppers']"),
-    resetControl: () => rail.querySelector("[data-action='reset-tracking']"),
+    /* RESET: the timeline's word, under the 6H | 12H scale in its Now column. */
+    resetControl: () => doc.querySelector(".station-rundown__reset"),
     clickBlend: () => { api.blendSwitch().click(); return api.blendSwitch(); },
     clickWeights: () => { api.weightsSwitch().click(); return api.weightsSwitch(); },
     clickSmart: () => { api.smartSwitch().click(); return api.smartSwitch(); },
@@ -964,12 +965,18 @@ test("the status line is one notice ahead of the line's own parts: said again it
 });
 
 /* ----------------------------------------------------------------------
- *   The rail, booted: Reset Tracking, and where the rail stands
+ *   Reset, booted: the timeline's word; and where the rail stands
  * -------------------------------------------------------------------- */
 
-test("Reset Tracking is armed by one click and confirmed by the next: one resetTracking through the executor, every hopper untracked, the stage patched, the status line saying so", () => {
+test("RESET stands in the timeline's Now column under the scale, not on the rail; armed by one click and confirmed by the next: one resetTracking through the executor, every hopper untracked, the stage patched, the status line saying so", () => {
   const s = boot();
   const reset = s.resetControl();
+  assert.ok(reset, "the timeline draws the reset");
+  assert.ok(reset.closest(".station-rundown__now"), "in the Now column");
+  assert.ok(reset.closest(".station-rundown__tools") && reset.closest(".station-rundown__tools").querySelector(".station-rundown__range"), "in one stack with the 6H | 12H scale");
+  assert.equal(s.rail.querySelector("[data-action='reset-tracking']"), null, "and not on the rail");
+  assert.equal(reset.textContent, "Reset");
+  assert.equal(reset.getAttribute("aria-label"), "Reset Tracking");
   assert.equal(reset.disabled, true, "nothing tracked: nothing to reset");
   assert.match(reset.getAttribute("title"), /nothing is tracked/);
   // Two hoppers tracked, through the drawn controls as an operator does it.
@@ -981,6 +988,8 @@ test("Reset Tracking is armed by one click and confirmed by the next: one resetT
   assert.equal(s.machine.querySelectorAll(".station-hopper.is-tracking").length, 2);
   reset.click();
   assert.equal(reset.getAttribute("data-armed"), "true");
+  assert.equal(reset.textContent, "Reset", "the word stays: the arm is the colour, the title and the name");
+  assert.equal(reset.getAttribute("aria-label"), "Confirm: reset tracking for 2 hoppers");
   assert.deepEqual(s.calls.map(c => c.command), ["setHopperTracking", "setHopperTracking"], "arming asks the application nothing");
   assert.ok(s.state().layers[0].hoppers[0].track, "and changes nothing");
   reset.click();
@@ -1011,7 +1020,7 @@ test("an armed reset that is not confirmed resets nothing: a click elsewhere on 
   assert.ok(s.state().layers[2].hoppers[0].track, "C is still tracked");
   reset.click();
   assert.equal(reset.getAttribute("data-armed"), "true");
-  const armTimer = s.timers.find(t => t.ms === s.window.PolynStationMachineRail.ARM_DURATION);
+  const armTimer = s.timers.find(t => t.ms === s.window.PolynStationArmed.ARM_DURATION);
   assert.ok(armTimer, "the arm started its timer on the host's clock");
   armTimer.fn();
   assert.equal(reset.getAttribute("data-armed"), null, "the timeout disarmed it");
@@ -1055,26 +1064,31 @@ test("the rail steps back while a layer is open and returns when it closes; ente
   assertModeCleared(s);
 });
 
-test("the rail is placed against the drawn stage on every render of the normal layout, from the far-right cluster the SVG declares, in its own slot over the stage", () => {
+test("the rail stands in the Handbook launcher's corner by stylesheet alone, in its own slot over the stage: nothing measured, nothing placed, nothing written to its style", () => {
   const s = boot();
   const rail = s.rail;
   assert.equal(rail.parent.getAttribute("data-station-mount"), "rail");
-  assert.ok(rail.classList.contains("is-placed"), "placed after the first draw");
-  const svg = s.machine.querySelector("svg");
+  assert.ok(!rail.classList.contains("is-placed"));
+  assert.equal(rail.style.left, undefined);
+  assert.equal(rail.style.top, undefined);
+  assert.equal(rail.style.height, undefined);
+  assert.ok(!rail.hasAttribute("data-room"));
   const railModule = s.window.PolynStationMachineRail;
-  const read = railModule.readStage(svg);
-  assert.equal(read.clusters.length, 3, "three normal clusters declared");
-  const expected = railModule.anchor({ viewBox: read.viewBox, clusters: read.clusters, stage: svg.getBoundingClientRect(), host: rail.parent.getBoundingClientRect(), rail: rail.getBoundingClientRect() });
-  assert.equal(rail.style.left, `${expected.left}px`);
-  assert.equal(rail.style.top, `${expected.top}px`);
-  assert.equal(rail.style.height, `${expected.height}px`);
-  // Blend Edit redraws the stage in the same geometry: the same place.
+  assert.ok(!("anchor" in railModule) && !("readStage" in railModule) && !("place" in railModule.create(s.doc, {})));
+  // Every tile is the launcher's: the same 64-unit plate under the glyph.
+  const launcherPlate = s.launcher.querySelector(".station-handbook__icon-plate");
+  for (const control of rail.querySelectorAll(".station-rail__control")) {
+    const svg = control.children[0];
+    assert.equal(svg.getAttribute("viewBox"), s.launcher.children[0].getAttribute("viewBox"));
+    const plate = svg.querySelector(".station-rail__glyph-plate");
+    for (const name of ["x", "y", "width", "height", "rx"]) assert.equal(plate.getAttribute(name), launcherPlate.getAttribute(name), `the tile's plate differs from the launcher's in ${name}`);
+  }
+  // Blend Edit redraws the stage: the rail is told, not moved.
   s.clickBlend();
-  assert.equal(rail.style.left, `${expected.left}px`);
-  assert.equal(rail.style.top, `${expected.top}px`);
-  assert.equal(rail.style.height, `${expected.height}px`);
+  assert.equal(rail.style.left, undefined);
   s.clickBlend();
   // The rail never enters the stage's SVG and the stage never grows for it.
+  const svg = s.machine.querySelector("svg");
   assert.equal(s.machine.querySelector("[data-role='machine-rail']"), null);
   assert.equal(s.machine.querySelector("svg").getAttribute("viewBox"), svg.getAttribute("viewBox"));
 });
