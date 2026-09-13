@@ -207,24 +207,44 @@ function hostScripts() {
 const SHARED = [
   "hookup-sources.js", "line-identity.js", "scheduling.js", "workspace-configuration-payloads.js",
   "station-state-bridge.js", "station-command-contract.js", "station-command-bridge.js",
-  "station-connection-bridge.js", "station-recipes-bridge.js"
+  "station-connection-bridge.js", "station-recipes-bridge.js", "station-weight-profiles-bridge.js"
 ];
 
-function snapshot(overrides) {
+function snapshot(overrides, smart) {
   const line = Object.assign({ lineNumber: 9, displayName: "Line 9", layerCount: 3, layerAPosition: "outside", hopperNamingMode: "standard", linked: true }, overrides || {});
   return {
     line,
     job: { lineRate: 900, gauge: 0, changeoverTime: "", changeoverSetAt: null },
     sources: { current: {}, next: {} },
+    /* Smart Hoppers as the bridge projects it: off, on a cylindrical line
+     * with a circumference already entered, so the switch is on offer. */
+    smartHoppers: Object.assign({ enabled: false, geometryMode: "cylindrical", circumference: 40 }, smart || {}),
     layers: ["A", "B", "C"].map((name, i) => ({
       name, layerPct: i === 1 ? 40 : 30,
       hoppers: Array.from({ length: 6 }, (_, index) => ({
         index, pct: index === 0 ? 60 : index === 1 ? 40 : 0, resinName: index === 0 ? `HX${i}` : index === 1 ? `LD${i}` : "",
-        weight: 0, usableHeight: 30, effectiveWeight: 0, track: false, pumpOff: false
+        weight: 0, usableHeight: 30, usableGallons: 0, effectiveWeight: 0, smartWeight: null, track: false, pumpOff: false
       }))
     })),
     revision: 1
   };
+}
+
+/* The fake application's Smart Hoppers: with the switch on, a hopper
+ * with a resin, a usable height and the line's circumference gets a
+ * computed weight (a made-up rule - the real one is app.js's, and
+ * Station never sees it), which is then the effective weight; anything
+ * else keeps its entered weight. Run after every command, as the
+ * application's own validateAndCompute runs. */
+function recomputeSmart(snap) {
+  const smart = snap.smartHoppers;
+  for (const layer of snap.layers) {
+    for (const h of layer.hoppers) {
+      const computed = smart.enabled && h.resinName && h.usableHeight > 0 && smart.circumference > 0;
+      h.smartWeight = computed ? { value: Math.round(h.usableHeight * smart.circumference / 10), bulkDensity: 44.9, resinCode: h.resinName } : null;
+      h.effectiveWeight = h.smartWeight ? h.smartWeight.value : h.weight;
+    }
+  }
 }
 
 function boot(options) {
@@ -264,7 +284,8 @@ function boot(options) {
    * the command bridge insists on (an unfrozen one is refused as
    * `internal`, and a refused draft never leaves its field). So a value
    * a field hands over is the value the rebuilt stage then shows. */
-  const snap = snapshot(settings.line);
+  const snap = snapshot(settings.line, settings.smart);
+  recomputeSmart(snap);
   const stateBridge = window.PolynStationStateBridge;
   const contract = window.PolynStationCommandContract;
   const calls = [];
@@ -280,6 +301,21 @@ function boot(options) {
       if (command === "setHopperBlend" && layerOf(args.layer)) layerOf(args.layer).hoppers[args.index].pct = Number(args.pct);
       else if (command === "setLayerShare" && layerOf(args.layer)) layerOf(args.layer).layerPct = Number(args.pct);
       else if (command === "setHopperTracking" && layerOf(args.layer)) layerOf(args.layer).hoppers[args.index].track = !!args.track;
+      else if (command === "setHopperWeight" && layerOf(args.layer)) {
+        const h = layerOf(args.layer).hoppers[args.index];
+        h.weight = Number(args.weight); h.effectiveWeight = h.weight;
+      } else if (command === "setHopperWeights") {
+        for (const entry of args.weights) {
+          const h = layerOf(entry.layer) && layerOf(entry.layer).hoppers[entry.index];
+          if (h) { h.weight = Number(entry.weight); h.effectiveWeight = h.weight; }
+        }
+      }
+      else if (command === "setHopperGeometry" && layerOf(args.layer)) {
+        const h = layerOf(args.layer).hoppers[args.index];
+        if (args.dimension === "height") h.usableHeight = Number(args.value);
+        else h.usableGallons = Number(args.value);
+      } else if (command === "setHopperCircumference") snap.smartHoppers.circumference = Number(args.circumference);
+      else if (command === "setSmartHoppers") snap.smartHoppers.enabled = !!args.enabled;
       else if (command === "resetTracking") {
         // The application's own reset: a job with nothing tracked answers
         // unchanged, as the executor does.
@@ -287,6 +323,7 @@ function boot(options) {
         if (!any) return contract.success({ changed: false, revision: stateBridge.getRevision(), persisted: false, snapshot: stateBridge.getSnapshot() });
         for (const layer of snap.layers) for (const h of layer.hoppers) { h.track = false; h.pumpOff = false; }
       }
+      recomputeSmart(snap);
       snap.revision += 1;
       handle.publish();
       return contract.success({ changed: true, revision: stateBridge.getRevision(), persisted: true, snapshot: stateBridge.getSnapshot() });
@@ -306,10 +343,41 @@ function boot(options) {
 
   const api = {
     doc, window, calls, machine, status, launcher, panel, rail, q, timers,
-    /* The rail's two controls, the same buttons an operator clicks. */
+    /* The rail's four controls, the same buttons an operator clicks. */
     blendSwitch: () => rail.querySelector("[data-action='blend-edit']"),
+    weightsSwitch: () => rail.querySelector("[data-action='weights-edit']"),
+    smartSwitch: () => rail.querySelector("[data-action='smart-hoppers']"),
     resetControl: () => rail.querySelector("[data-action='reset-tracking']"),
     clickBlend: () => { api.blendSwitch().click(); return api.blendSwitch(); },
+    clickWeights: () => { api.weightsSwitch().click(); return api.weightsSwitch(); },
+    clickSmart: () => { api.smartSwitch().click(); return api.smartSwitch(); },
+    /* The Weights face: its cards, and which face the mount says is showing. */
+    weightCards: () => machine.querySelectorAll("[data-role='weights-card']"),
+    face: () => machine.getAttribute("data-edit-face"),
+    /* The drawn caption's weight line for a hopper, and its mark. */
+    caption: (layer, index) => {
+      const hopper = machine.querySelectorAll(".station-hopper").find(n => n.getAttribute("data-layer") === layer && n.getAttribute("data-hopper-index") === String(index));
+      assert.ok(hopper, `hopper ${layer}:${index} is drawn`);
+      return { text: hopper.querySelector(".station-hopper__weight").textContent, smart: hopper.classList.contains("is-smart") };
+    },
+    /* A field on a weight card: the weight, the geometry or the circumference. */
+    cardField: (layer, kind, index) => {
+      const card = api.weightCards().find(c => c.getAttribute("data-layer") === layer);
+      assert.ok(card, `layer ${layer} has a weight card`);
+      if (kind === "circumference") return card.querySelector(".station-weight-card__circumference-field");
+      const className = kind === "geometry" ? "station-weight-card__geometry-field" : "station-weight-card__field";
+      return card.querySelectorAll(`.${className}`).find(i => i.getAttribute("data-index") === String(index)) || null;
+    },
+    /* Enter a value in a card's field and commit it with Enter. */
+    enterOnCard(layer, kind, index, value) {
+      const input = api.cardField(layer, kind, index);
+      assert.ok(input, `a ${kind} field for ${layer}:${index}`);
+      input.focus();
+      input.value = String(value);
+      input.dispatchEvent(makeEvent("input", { bubbles: true }));
+      input.dispatchEvent(makeEvent("keydown", { key: "Enter", bubbles: true }));
+      return input;
+    },
     /* The application's state, as the executor holds it. */
     state: () => snap,
     isHandbookOpen,
@@ -392,6 +460,9 @@ function assertModeCleared(s) {
   assert.equal(s.clusters(), 3, "every layer shows its hopper cluster");
   assert.equal(s.blendSwitch().getAttribute("aria-pressed"), "false", "the rail's switch reads off");
   assert.ok(!s.blendSwitch().classList.contains("is-active"));
+  assert.equal(s.weightsSwitch().getAttribute("aria-pressed"), "false", "and the Weights switch");
+  assert.equal(s.weightCards().length, 0, "no weight card is drawn");
+  assert.equal(s.face(), null, "the mount names no face");
   assert.equal(s.blendControls(), null, "the Handbook has no Blend Edit controls");
   assert.equal(s.action("blend-edit"), null, "nor a Blend Edit action");
   assert.doesNotMatch(s.status.textContent, /Blend Edit/, "no Blend Edit notice is left on the status line");
@@ -796,11 +867,14 @@ test("entering and leaving the mode by each exit in turn leaves nothing behind: 
 test("the rail's switch and Escape share the one exit path: the boot file routes both to exitBlendEdit, hands the Handbook no beforeClose, and defines no second", () => {
   const bootSource = read("station/station.js");
   assert.match(bootSource, /onBlendEdit: toggleBlendEdit,/);
-  assert.match(bootSource, /function toggleBlendEdit\(\) \{\n\s+return blendEdit\.active \? exitBlendEdit\(\) : enterBlendEdit\(\);/);
+  assert.match(bootSource, /function toggleBlendEdit\(\) \{\n\s+return modeIs\("blend"\) \? exitBlendEdit\(\) : enterBlendEdit\("blend"\);/);
+  // The Weights face is the same mode with its other face: the same exit.
+  assert.match(bootSource, /onWeightsEdit: toggleWeightsEdit,/);
+  assert.match(bootSource, /function toggleWeightsEdit\(\) \{\n\s+return modeIs\("weights"\) \? exitBlendEdit\(\) : enterBlendEdit\("weights"\);/);
   assert.doesNotMatch(bootSource, /beforeClose/, "the Handbook's close is not routed to the mode");
   assert.doesNotMatch(bootSource, /blendSurface|blend: blendSurface|context: \{\s+recipes,\s+blend/, "no surface over the mode is handed to the Handbook");
   assert.equal((bootSource.match(/blendEdit\.active = false;/g) || []).length, 2, "the mode is turned off in exitBlendEdit and by a line that lost its layers, nowhere else");
-  assert.equal((bootSource.match(/exitBlendEdit\(\)/g) || []).length, 3, "called from the toggle, from Escape, and defined - nowhere else");
+  assert.equal((bootSource.match(/exitBlendEdit\(\)/g) || []).length, 4, "called from the two toggles, from Escape, and defined - nowhere else");
   // The Handbook module still offers beforeClose to whoever needs it; the
   // boot file simply does not.
   const handbookSource = read("station/station-handbook.js");
@@ -1191,4 +1265,254 @@ test("a row dragged on a Blend Edit card and dropped on another row is one moveH
   s.clickAction("close-handbook");
   s.clickBlend();
   assertModeCleared(s);
+});
+
+/* ----------------------------------------------------------------------
+ *   The Weights page
+ * -------------------------------------------------------------------- */
+
+test("the Weights page lists the line's hoppers with their weights; a value entered on it is one setHopperWeight through the executor, and the stage's caption shows it at once", () => {
+  const s = boot();
+  s.launcher.click();
+  s.showSection("weights");
+  const page = s.panel.querySelector("[data-role='weights']");
+  assert.ok(page, "the Handbook turned to the Weights page");
+  const fields = page.querySelectorAll(".station-weights__field");
+  assert.equal(fields.length, 18, "three layers of six hoppers");
+  assert.deepEqual(fields.slice(0, 3).map(f => f.getAttribute("data-key")), ["A:0", "A:1", "A:2"]);
+  assert.ok(!fields[0].hasAttribute("readonly") && !fields[0].readOnly, "the executor is connected, so the field is live");
+  // The caption under A1 reads no weight yet.
+  const captionOf = id => s.machine.querySelectorAll(".station-hopper__weight")[["A1", "A2", "A3", "A4", "A5", "A6"].indexOf(id)];
+  assert.equal(captionOf("A1").textContent, "—");
+  fields[0].focus();
+  fields[0].value = "1250";
+  fields[0].dispatchEvent(makeEvent("input", { bubbles: true }));
+  fields[0].dispatchEvent(makeEvent("keydown", { key: "Enter", bubbles: true }));
+  assert.deepEqual(s.calls.map(c => [c.command, c.args, c.handbookOpen]),
+    [["setHopperWeight", { recipe: "current", layer: "A", index: 0, weight: 1250 }, true]]);
+  assert.equal(s.state().layers[0].hoppers[0].weight, 1250, "the application applied it");
+  assert.equal(captionOf("A1").textContent, "1250", "the operator's own publish redrew the hopper");
+  assert.equal(fields[0].value, "1250");
+  assert.ok(s.doc.activeElement === fields[0], "the field kept the focus");
+  // The same value again is nothing; Escape with no draft leaves the field
+  // and does not close the Handbook.
+  fields[0].dispatchEvent(makeEvent("keydown", { key: "Enter", bubbles: true }));
+  assert.equal(s.calls.length, 1);
+  fields[0].dispatchEvent(makeEvent("keydown", { key: "Escape", bubbles: true }));
+  assert.equal(s.isHandbookOpen(), true, "the field's Escape is not the Handbook's");
+  // The bulk apply: two hoppers picked, one command, one publish.
+  page.querySelector("[data-pick='B:0']").click();
+  page.querySelector("[data-pick='B:1']").click();
+  const bulk = page.querySelector(".station-weights__bulk-field");
+  bulk.value = "900";
+  bulk.dispatchEvent(makeEvent("input", { bubbles: true }));
+  page.querySelector("[data-action='apply-bulk']").click();
+  assert.deepEqual(s.calls[1].command, "setHopperWeights");
+  assert.deepEqual(s.calls[1].args, { recipe: "current", weights: [{ layer: "B", index: 0, weight: 900 }, { layer: "B", index: 1, weight: 900 }] });
+  assert.deepEqual(s.state().layers[1].hoppers.slice(0, 3).map(h => h.weight), [900, 900, 0]);
+  const b = s.machine.querySelectorAll(".station-hopper__weight").slice(6, 9).map(n => n.textContent);
+  assert.deepEqual(b, ["900", "900", "—"]);
+  // Nothing of the recipe moved.
+  assert.equal(s.state().layers[0].hoppers[0].pct, 60);
+  assert.equal(s.state().layers[0].hoppers[0].resinName, "HX0");
+  s.clickAction("close-handbook");
+  assert.equal(s.isHandbookOpen(), false);
+});
+
+test("with no producer the Weights page is read-only, and the profiles say no application is connected", () => {
+  const s = boot({ connectCommands: false });
+  s.launcher.click();
+  s.showSection("weights");
+  const page = s.panel.querySelector("[data-role='weights']");
+  const field = page.querySelector(".station-weights__field");
+  assert.equal(field.readOnly, true);
+  assert.match(field.getAttribute("title"), /read-only here/);
+  assert.match(page.querySelector(".station-weights__list").textContent, /No application is connected to Station: weight profiles are not available/);
+  assert.equal(page.querySelector("[data-action='save-current']").disabled, true);
+  assert.deepEqual(s.calls, []);
+});
+
+/* ----------------------------------------------------------------------
+ *   The Weights face, and the Smart Hoppers switch
+ * -------------------------------------------------------------------- */
+
+const WEIGHTS_HINT = "Weights: every layer is turned over to its weight card. Enter receiver weights - and, with Smart Hoppers on, each hopper's geometry; click Weights again when done.";
+
+test("one click on Weights turns every layer over to its weight card: the Weights switch reads on, Blend Edit off, the mount names the face, the hint reads once, and nothing is dispatched", () => {
+  const s = boot();
+  s.clickWeights();
+  assert.equal(s.modeOn(), true, "the same mode, its other face");
+  assert.equal(s.face(), "weights");
+  assert.deepEqual(s.flipped(), ["A", "B", "C"]);
+  assert.equal(s.weightCards().length, 3);
+  assert.deepEqual(s.weightCards().map(c => c.getAttribute("data-layer")), ["A", "B", "C"]);
+  assert.equal(s.machine.querySelectorAll("[data-role='blend-editor']").length, 0, "no blend card");
+  assert.equal(s.weightsSwitch().getAttribute("aria-pressed"), "true");
+  assert.equal(s.blendSwitch().getAttribute("aria-pressed"), "false");
+  assert.equal(count(s.status.textContent, WEIGHTS_HINT), 1);
+  assert.deepEqual(s.calls, []);
+  // Every card lists the layer's six hoppers with their resin and a weight field.
+  const card = s.weightCards()[0];
+  assert.equal(card.querySelectorAll(".station-weight-card__item").length, 6);
+  assert.deepEqual(card.querySelectorAll(".station-weight-card__resin").slice(0, 3).map(n => n.textContent), ["HX0", "LD0", "—"]);
+  assert.equal(card.querySelectorAll(".station-weight-card__field").length, 6);
+  assert.equal(card.querySelectorAll(".station-weight-card__geometry-field").length, 0, "the switch is off: no geometry");
+  // The second click is Done.
+  s.clickWeights();
+  assertModeCleared(s);
+});
+
+test("a weight entered on a weight card is one setHopperWeight through the executor; the drawn caption shows it at once and the card the applied value; the mode stays on", () => {
+  const s = boot();
+  s.clickWeights();
+  assert.equal(s.caption("B", 1).text, "—");
+  const input = s.enterOnCard("B", "weight", 1, "1250");
+  assert.deepEqual(s.calls.map(c => [c.command, c.args]), [["setHopperWeight", { recipe: "current", layer: "B", index: 1, weight: 1250 }]]);
+  assert.equal(s.state().layers[1].hoppers[1].weight, 1250);
+  assert.equal(s.caption("B", 1).text, "1250");
+  assert.equal(s.caption("B", 1).smart, false);
+  assert.equal(s.face(), "weights", "the mode is still on");
+  assert.equal(s.cardField("B", "weight", 1).value, "1250");
+  assert.ok(s.cardField("B", "weight", 1) === input, "a value publish patched the card in place; the field is the same field");
+  // A draft the application refuses stays in the field and is said on the card.
+  const refusing = boot({ refuse: (command, args) => (command === "setHopperWeight" && Number(args.weight) > 5000 ? "Too heavy." : null) });
+  refusing.clickWeights();
+  const field = refusing.enterOnCard("A", "weight", 0, "9000");
+  assert.equal(field.value, "9000");
+  assert.equal(field.getAttribute("aria-invalid"), "true");
+  assert.equal(refusing.weightCards()[0].querySelector(".station-weight-card__note").textContent, "Too heavy.");
+  assert.equal(refusing.state().layers[0].hoppers[0].weight, 0);
+});
+
+test("the rail's Smart Hoppers switch is one setSmartHoppers: the captions turn to the computed weights, marked; the cards gain the geometry fields and the shared circumference; the switch reads what the application holds; off again reverts everything", () => {
+  const s = boot();
+  assert.equal(s.smartSwitch().disabled, false, "on an identified line, with the command offered, the switch is live");
+  assert.equal(s.smartSwitch().getAttribute("aria-checked"), "false");
+  s.clickWeights();
+  s.clickSmart();
+  assert.deepEqual(s.calls.map(c => [c.command, c.args]), [["setSmartHoppers", { enabled: true }]]);
+  assert.equal(s.state().smartHoppers.enabled, true);
+  assert.equal(s.smartSwitch().getAttribute("aria-checked"), "true");
+  assert.match(s.status.textContent, /^Smart Hoppers on: /);
+  // The captions: A1 has a resin and a height -> computed (30 * 40 / 10 = 120); A3 has no resin -> entered (none).
+  assert.deepEqual(s.caption("A", 0), { text: "120", smart: true });
+  assert.deepEqual(s.caption("A", 2), { text: "—", smart: false });
+  // The cards were patched, not rebuilt, and rebuilt their own rows for the new shape.
+  assert.equal(s.face(), "weights");
+  const card = s.weightCards()[0];
+  assert.equal(card.getAttribute("data-shape"), "smart:cylindrical");
+  assert.equal(card.querySelectorAll(".station-weight-card__geometry-field").length, 6);
+  assert.equal(s.cardField("A", "geometry", 0).value, "30");
+  assert.equal(s.cardField("A", "circumference").value, "40");
+  assert.equal(card.querySelectorAll(".station-weight-card__computed")[0].textContent, "✓ 120 lb");
+  assert.equal(card.querySelectorAll(".station-weight-card__computed")[2].textContent, "no resin");
+  // Off again.
+  s.clickSmart();
+  assert.deepEqual(s.calls[1], { command: "setSmartHoppers", args: { enabled: false }, handbookOpen: false });
+  assert.equal(s.smartSwitch().getAttribute("aria-checked"), "false");
+  assert.deepEqual(s.caption("A", 0), { text: "—", smart: false });
+  assert.equal(s.weightCards()[0].getAttribute("data-shape"), "off");
+  assert.equal(s.weightCards()[0].querySelectorAll(".station-weight-card__geometry-field").length, 0);
+  assert.match(s.status.textContent, /^Smart Hoppers off: /);
+  // The switch works with no face out as well: it is the machine's, not the mode's.
+  s.clickWeights();
+  assertModeCleared(s);
+  s.clickSmart();
+  assert.equal(s.state().smartHoppers.enabled, true);
+  assert.deepEqual(s.caption("A", 0), { text: "120", smart: true });
+  assert.equal(s.modeOn(), false, "the switch enters no mode");
+});
+
+test("a height entered on a card is one setHopperGeometry naming the height; the circumference one setHopperCircumference from any card; each moves the computed captions at once", () => {
+  const s = boot({ smart: { enabled: true } });
+  assert.deepEqual(s.caption("A", 0), { text: "120", smart: true });
+  s.clickWeights();
+  s.enterOnCard("A", "geometry", 0, "40");
+  assert.deepEqual(s.calls[0], { command: "setHopperGeometry", args: { recipe: "current", layer: "A", index: 0, dimension: "height", value: 40 }, handbookOpen: false });
+  assert.equal(s.state().layers[0].hoppers[0].usableHeight, 40);
+  assert.deepEqual(s.caption("A", 0), { text: "160", smart: true });
+  assert.equal(s.face(), "weights", "a height is structural for the stage - the render kept the mode and its cards");
+  assert.equal(s.cardField("A", "geometry", 0).value, "40");
+  // The circumference, from layer C's card: every layer's computed weight moves.
+  s.enterOnCard("C", "circumference", null, "50");
+  assert.deepEqual(s.calls[1], { command: "setHopperCircumference", args: { circumference: 50 }, handbookOpen: false });
+  assert.deepEqual(s.caption("A", 0), { text: "200", smart: true });
+  assert.deepEqual(s.caption("C", 1), { text: "150", smart: true });
+  assert.equal(s.cardField("A", "circumference").value, "50", "every card shows the one circumference");
+  assert.equal(s.cardField("C", "circumference").value, "50");
+});
+
+test("Blend Edit and Weights are one mode with two faces: switching turns every layer over to the other face at once, and Escape leaves whichever is out", () => {
+  const s = boot();
+  s.enterBlendEdit();
+  assert.equal(s.face(), "blend");
+  s.clickWeights();
+  assert.equal(s.face(), "weights");
+  assert.equal(s.weightCards().length, 3);
+  assert.equal(s.machine.querySelectorAll("[data-role='blend-editor']").length, 0);
+  assert.equal(s.blendSwitch().getAttribute("aria-pressed"), "false");
+  assert.equal(s.weightsSwitch().getAttribute("aria-pressed"), "true");
+  assert.equal(count(s.status.textContent, WEIGHTS_HINT), 1);
+  assert.equal(count(s.status.textContent, HINT), 0, "the other face's hint is gone");
+  // A layer turned back by its train, then the other switch: every layer over afresh.
+  s.flipLayer("B");
+  assert.deepEqual(s.flipped(), ["A", "C"]);
+  s.clickBlend();
+  assert.equal(s.face(), "blend");
+  assert.deepEqual(s.flipped(), ["A", "B", "C"]);
+  assert.equal(s.weightCards().length, 0);
+  assert.equal(s.cards().length, 3);
+  // Escape leaves the Weights face as it leaves Blend Edit.
+  s.clickWeights();
+  s.escapeOnStage();
+  assertModeCleared(s);
+  // A draft on a weight card commits along the field's own path when the face is switched.
+  s.clickWeights();
+  const input = s.cardField("A", "weight", 2);
+  input.focus();
+  input.value = "700";
+  input.dispatchEvent(makeEvent("input", { bubbles: true }));
+  s.clickBlend();
+  assert.deepEqual(s.calls.map(c => c.command), ["setHopperWeight"]);
+  assert.equal(s.state().layers[0].hoppers[2].weight, 700);
+  assert.equal(s.face(), "blend");
+});
+
+test("off an identified line the Smart Hoppers switch is held and says why; the Weights face still edits the entered weights and carries no geometry", () => {
+  const s = boot({ smart: { geometryMode: null, circumference: 0 } });
+  assert.equal(s.smartSwitch().disabled, true);
+  assert.equal(s.smartSwitch().getAttribute("title"), "Smart Hoppers is not available: Connect this desktop to an identified line to use Smart Hoppers.");
+  s.clickSmart();
+  assert.deepEqual(s.calls, [], "a held switch dispatches nothing");
+  s.clickWeights();
+  assert.equal(s.weightCards().length, 3);
+  assert.equal(s.weightCards()[0].querySelectorAll(".station-weight-card__geometry-field").length, 0);
+  s.enterOnCard("A", "weight", 0, "800");
+  assert.equal(s.state().layers[0].hoppers[0].weight, 800);
+  assert.deepEqual(s.caption("A", 0), { text: "800", smart: false });
+});
+
+test("with no producer the rail's Weights face is read-only and the Smart Hoppers switch held, as every write is", () => {
+  const s = boot({ connectCommands: false });
+  assert.equal(s.smartSwitch().disabled, true);
+  assert.equal(s.smartSwitch().getAttribute("title"), "Smart Hoppers is not available: no application is connected to Station commands.");
+  s.clickWeights();
+  assert.equal(s.weightCards().length, 3, "the face still shows the weights");
+  assert.equal(s.weightCards()[0].getAttribute("data-mode"), "read-only");
+  for (const input of s.weightCards()[0].querySelectorAll("input")) assert.equal(input.readOnly, true);
+});
+
+test("the Handbook's Weights page is what it was: it lists the hoppers and their weights, and carries no Smart Hoppers switch of its own - the switch is the rail's", () => {
+  const s = boot();
+  s.launcher.click();
+  s.showSection("weights");
+  const page = s.panel.querySelector("[data-section='weights'][role='tabpanel']") || s.panel;
+  assert.ok(page.querySelectorAll(".station-weights__field").length >= 18, "the page lists every hopper's weight");
+  assert.equal(page.querySelectorAll(".station-weights__switch").length, 0);
+  assert.equal(page.querySelectorAll("[data-action='smart-toggle']").length, 0);
+  assert.equal(page.querySelectorAll(".station-weights__geometry-field").length, 0);
+  // And the rail's switch still works with the Handbook open.
+  s.clickSmart();
+  assert.equal(s.state().smartHoppers.enabled, true);
+  assert.equal(s.calls[0].handbookOpen, true);
 });

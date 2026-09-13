@@ -118,12 +118,34 @@
       r.assigned === false ? "u" : "",
       r.resinName || "",
       Number.isFinite(r.pct) ? r.pct : "",
+      // The entered receiver weight, and the run-down's effective one -
+      // the caption draws the effective weight, marked when computed.
+      Number.isFinite(r.weight) ? r.weight : "",
+      Number.isFinite(r.effectiveWeight) ? r.effectiveWeight : "",
+      r.smartWeight ? "s" : "",
       r.source || "",
       // Which of the hopper's controls may act: written on the drawing, so
       // a change in the offer alone redraws the controls as a change in
       // state does.
       (c.tracking ? "T" : "") + (c.pump ? "P" : "")
     ].join("|");
+  }
+
+  /* The weight the caption shows: the run-down's effective weight - Smart
+   * Hoppers' computed value when there is one, the entered receiver
+   * weight otherwise - so the drawing and the timeline never disagree.
+   * Falls back to the entered weight for a runtime that carries no
+   * effective one (a fixture, an older producer). */
+  function shownWeight(runtime) {
+    if (!runtime) return 0;
+    if (Number.isFinite(runtime.effectiveWeight) && runtime.effectiveWeight > 0) return runtime.effectiveWeight;
+    return Number.isFinite(runtime.weight) ? runtime.weight : 0;
+  }
+
+  /* The caption's weight line: whole pounds, digits only, fitted to the
+   * column; "—" when no weight is entered. */
+  function weightText(weight, width, scale) {
+    return Number.isFinite(weight) && weight > 0 ? fitText(String(Math.round(weight)), width, 9 * scale) : "—";
   }
 
   /* The layer's share of the film structure, as the layer header shows it. */
@@ -150,6 +172,8 @@
       if (runtime.track) classes.push("is-tracking");
       if (runtime.pumpOff) classes.push("is-pump-off");
       if (runtime.assigned === false) classes.push("is-unassigned");
+      // The caption's weight is Smart Hoppers' computed one, not entered.
+      if (runtime.smartWeight) classes.push("is-smart");
     }
     if (!geometry.profiled) classes.push("is-unprofiled");
     // Selected in the focused editor, or by a click on the hopper itself.
@@ -188,6 +212,8 @@
       ? `${geometry.id} · ${runtime.resinName}${runtime.pct ? ` · ${round(runtime.pct)}%` : ""}` +
         `${runtime.source ? ` · from ${runtime.source}` : ""}`
       : `${geometry.id} · no resin assigned`) +
+      (runtime && shownWeight(runtime) > 0 ? ` · ${Math.round(shownWeight(runtime)).toLocaleString("en-US")} lb` : "") +
+      (runtime && runtime.smartWeight ? ` (computed${runtime.smartWeight.resinCode ? ` from ${runtime.smartWeight.resinCode}'s bulk density` : ""}${runtime.smartWeight.bulkDensity ? `, ${runtime.smartWeight.bulkDensity} lb/ft³` : ""})` : "") +
       (runtime && runtime.track ? " · tracked" : "") + (runtime && runtime.pumpOff ? " · pump off" : "");
     g.appendChild(name);
 
@@ -503,9 +529,15 @@
     drawing.appendChild(details);
 
     /* ---- Readout ----
-     * Identity and contribution. The resin code joins them when the hopper
-     * is wide enough to draw it at full size; it is never shrunk to fit,
-     * because an unreadable code is worse than no code. */
+     * Identity, contribution, and the receiver weight. The resin code joins
+     * them when the hopper is wide enough to draw it at full size; it is
+     * never shrunk to fit, because an unreadable code is worse than no
+     * code. The weight is the run-down's effective weight - the entered
+     * receiver weight (the Weights page's value), or Smart Hoppers'
+     * computed one, marked `is-smart` and tinted - in whole pounds and
+     * digits only: the column has room for five characters, so the unit,
+     * the thousands separator and where a computed value came from are the
+     * tooltip's; "—" when there is none. */
     const caption = group(doc, "station-hopper__caption", "hopper-caption");
     let y = geometry.captionTop;
     caption.appendChild(label(doc, geometry.id, cx, y, "station-hopper__id"));
@@ -519,6 +551,8 @@
         runtime && runtime.resinName ? fitText(runtime.resinName, w, 9 * scale) : "",
         cx, y, "station-hopper__resin"));
     }
+    y += 12 * scale;
+    caption.appendChild(label(doc, weightText(shownWeight(runtime), w, scale), cx, y, "station-hopper__weight"));
     drawing.appendChild(caption);
 
     return g;
@@ -953,7 +987,7 @@
   }
 
   return {
-    SVG_NS, node, label, group, taper, hitArea, fitText, hopperStateKey, shareText,
+    SVG_NS, node, label, group, taper, hitArea, fitText, hopperStateKey, shownWeight, shareText,
     hopper, hopperCluster, mixer, throat, extruder, layerBank, workspace,
     shareSlotBox, shareTitle, layerShare, blendCardBox, blendCard
   };

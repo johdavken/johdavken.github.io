@@ -98,9 +98,10 @@
     spoutHeight: 12,
     // The hose's outside diameter, drawn on the vessel's own inch scale.
     hoseDiameterIn: 3,
-    // The compact readout under each hopper: id, blend, and resin when wide.
+    // The compact readout under each hopper: id, blend, resin when wide,
+    // and the receiver weight (four lines at 13/12/12 units).
     hopperCaptionGap: 12,
-    hopperCaptionHeight: 34,
+    hopperCaptionHeight: 46,
     /* A resin code only appears when the hopper is at least this fraction of
      * the canvas width. The canvas is scaled to fit, so this is a proxy for how
      * big the hopper will actually be drawn - which is the thing that decides
@@ -126,9 +127,10 @@
      * There is deliberately NO funnel between the bank and the blender. The
      * real connection is hose and material routing, which this view does not
      * draw; a bank-width funnel was inventing a piece of equipment to make
-     * the drawing look continuous. The hoppers simply end above the mixer.
+     * the drawing look continuous. The hoppers simply end above the mixer,
+     * with the caption's four lines and a 10-unit clearance between.
      */
-    mixerTop: 414,
+    mixerTop: 426,
     // Multiplier on the asset's native stage-unit size, for tuning.
     mixerScale: 1,
     /* The throat: the only thing drawn BETWEEN the two machines - a dark

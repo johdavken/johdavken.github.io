@@ -83,6 +83,13 @@
    * the bridge, and the rail is told what to show after each. Optional,
    * as the Handbook is; mounted only when the shell has its slot. */
   const machineRail = root.PolynStationMachineRail || null;
+  /* The weight cards (station-weight-cards.js): the cluster's third face,
+   * which the rail's Weights control turns every layer over to - the
+   * receiver weights and, with Smart Hoppers on, the geometry each is
+   * computed from - and the seam the rail's Smart Hoppers switch goes
+   * through (one setSmartHoppers). The seventh dispatching file; this
+   * file hands it the bridge and runs the publish policy on its answers. */
+  const weightCards = root.PolynStationWeightCards || null;
   /* The run-down timeline (station-rundown-timeline.js) and the header's
    * job controls (station-job-controls.js). The timeline is a reader: it
    * is fed the same resolved state the stage draws from and projects it;
@@ -116,6 +123,13 @@
   const themePreview = root.PolynStationThemePreview || null;
   const theme = root.PolynStationTheme || null;
   const recipes = root.PolynStationRecipesBridge || null;
+  /* Weights (station-weights.js): the Handbook's page for the physical
+   * hoppers - every receiver weight in a field, the bulk apply, and the
+   * line's Weight Profiles - and the bridge it reads the profiles from
+   * and asks through (station-weight-profiles-bridge.js). The weights
+   * themselves it writes through the command bridge, like Resin Totals. */
+  const weightsSection = root.PolynStationWeights || null;
+  const weightProfiles = root.PolynStationWeightProfilesBridge || null;
   /* Sudo (station-sudo.js): the Handbook's administrator page, and the
    * bridge it reads and asks through - administrator access and Workspace
    * Management as the application publishes them (station-admin-bridge.js).
@@ -240,6 +254,12 @@
    * focused editor uses - the card IS that editor, built smaller.
    *
    *   active     the mode is on
+   *   kind       which face the turned layers show: "blend" (the compact
+   *              blend editor) or "weights" (station-weight-cards.js:
+   *              receiver weights and hopper geometry). The rail has a
+   *              switch for each; the two are one mode with two faces,
+   *              never both on - switching faces turns every layer over
+   *              afresh.
    *   flipped    the ids of the layers turned over, in no particular order
    *
    * The mode and the open layer are exclusive: entering Blend Edit closes
@@ -252,7 +272,7 @@
    * and the one exit an operator has, with Escape on the stage as the
    * same exit); the Operator Handbook neither enters nor leaves it, so
    * the Recipe Book can be read while the cards are out. */
-  const blendEdit = { active: false, flipped: [] };
+  const blendEdit = { active: false, kind: "blend", flipped: [] };
   /* The compact editors' handles, by layer id, for the stage as drawn:
    * what a value-only publish updates in place, as editorHandle is for
    * the open layer. Rebuilt by every render. */
@@ -431,21 +451,40 @@
     return !!(current.model && current.model.layers.length);
   }
 
+  /* The Weights face needs its module; the harness loads it as the host
+   * does, but a page without it has the one face. */
+  function canEnterWeightsEdit() {
+    return canEnterBlendEdit() && !!weightCards;
+  }
+
+  function modeIs(kind) {
+    return blendEdit.active && blendEdit.kind === kind;
+  }
+
   /* The rail's one click: every layer turns over at once - the mode IS
    * "edit the blends", and a layer the operator wants as hoppers again is
    * one click on its train. The hint says so, on the status line, until
    * the first thing the operator does in the mode replaces it. */
   const BLEND_EDIT_HINT = "Blend Edit: every layer is turned over to its blend card. Click a layer's mixer or extruder to show its hoppers; click Blend Edit again when done.";
+  const WEIGHTS_EDIT_HINT = "Weights: every layer is turned over to its weight card. Enter receiver weights - and, with Smart Hoppers on, each hopper's geometry; click Weights again when done.";
+  const HINT = { blend: BLEND_EDIT_HINT, weights: WEIGHTS_EDIT_HINT };
 
-  function enterBlendEdit() {
-    if (blendEdit.active || !canEnterBlendEdit()) return false;
+  /* Enter the mode with one face, or switch the face while it is on:
+   * either way every layer is turned over afresh to the face asked for,
+   * and any field the operator was in is left along its own path. */
+  function enterBlendEdit(kind) {
+    const face = kind === "weights" ? "weights" : "blend";
+    if (modeIs(face)) return false;
+    if (face === "weights" ? !canEnterWeightsEdit() : !canEnterBlendEdit()) return false;
     leaveStageControl();
     // The open layer closes: the two modes do not share the stage.
     focus = null;
+    const were = blendEdit.active ? blendEdit.flipped.slice() : [];
     blendEdit.active = true;
+    blendEdit.kind = face;
     blendEdit.flipped = layerIds();
-    redrawForBlend(blendEdit.flipped.slice());
-    say(BLEND_EDIT_HINT);
+    redrawForBlend(blendEdit.flipped.filter(id => !were.includes(id)).concat(were));
+    say(HINT[face]);
     return true;
   }
 
@@ -459,6 +498,7 @@
     leaveStageControl();
     const were = blendEdit.flipped.slice();
     blendEdit.active = false;
+    blendEdit.kind = "blend";
     blendEdit.flipped = [];
     redrawForBlend(were);
     // Whatever the mode refused to do is no longer refused.
@@ -480,7 +520,12 @@
   /* The rail's switch: on when the mode is off, off when it is on. The
    * one toggle, over the one entry and the one exit above. */
   function toggleBlendEdit() {
-    return blendEdit.active ? exitBlendEdit() : enterBlendEdit();
+    return modeIs("blend") ? exitBlendEdit() : enterBlendEdit("blend");
+  }
+
+  /* The rail's other switch, over the same mode with its other face. */
+  function toggleWeightsEdit() {
+    return modeIs("weights") ? exitBlendEdit() : enterBlendEdit("weights");
   }
 
   /* --------------------------------------------------------------------
@@ -509,10 +554,18 @@
     if (!railPanel) return;
     const commandsNow = commandsFor(current.resolved);
     const resetOffered = !!(hopperControls && typeof hopperControls.canReset === "function" && hopperControls.canReset(commandsNow, "current"));
+    const smart = weightCards ? weightCards.smartFrom(current.resolved) : null;
+    const smartOffered = !!(weightCards && weightCards.canToggleSmart(commandsNow, smart));
     railPanel.update({
       hidden: !canEnterBlendEdit(),
       withdrawn: !!focusLayerFor(),
-      blend: { active: blendEdit.active, available: canEnterBlendEdit() },
+      blend: { active: modeIs("blend"), available: canEnterBlendEdit() },
+      weights: { active: modeIs("weights"), available: canEnterWeightsEdit() },
+      smart: {
+        on: !!(smart && smart.enabled),
+        available: smartOffered,
+        reason: smartOffered || !weightCards ? "" : weightCards.smartReason(commandsNow, smart)
+      },
       reset: {
         available: resetOffered,
         reason: resetOffered || !hopperControls ? "" : hopperControls.resetReason(commandsNow, "current"),
@@ -545,6 +598,29 @@
     lastOwnRevision = Number.isInteger(result.revision) ? result.revision : null;
     onPublish({ own: true });
     say("Tracking reset: every hopper is untracked and its pump marked running.");
+    return result;
+  }
+
+  /* The rail's Smart Hoppers switch: one setSmartHoppers through the
+   * weight cards' seam, stating the opposite of what the application
+   * holds, and the answer run through the same publish policy every
+   * command's is - the captions turn to the computed weights (or back),
+   * the weight cards gain or lose their geometry fields, the rail's
+   * switch shows what the application now holds. Said either way. */
+  function toggleSmartHoppers() {
+    if (!weightCards) return null;
+    const smart = weightCards.smartFrom(current.resolved);
+    const result = weightCards.toggleSmart(commandsFor(current.resolved), smart);
+    if (!result || !result.ok) {
+      say(result && result.message ? result.message : "Smart Hoppers could not be switched.");
+      return result || null;
+    }
+    if (result.changed) {
+      lastOwnRevision = Number.isInteger(result.revision) ? result.revision : null;
+      onPublish({ own: true });
+    }
+    const now = weightCards.smartFrom(current.resolved);
+    say(now.enabled ? `Smart Hoppers on: ${weightCards.SMART_ON_TEXT}` : `Smart Hoppers off: ${weightCards.SMART_OFF_TEXT}`);
     return result;
   }
 
@@ -1017,7 +1093,7 @@
       if (editorHandle) editorHandle.update({ hopperState: resolved.hopperState });
       // The cards are editors too: the same update, around whatever
       // control is active in each.
-      for (const id of Object.keys(cardHandles)) cardHandles[id].update({ hopperState: resolved.hopperState });
+      for (const id of Object.keys(cardHandles)) cardHandles[id].update({ hopperState: resolved.hopperState, smartHoppers: resolved.smartHoppers });
       // A patched hopper is a new element; the classes the boot file owns
       // are written to it again from the state that owns them.
       applyHighlight();
@@ -1204,7 +1280,25 @@
     if (blendEdit.active && model && !focusLayer) {
       for (const entry of model.layers) {
         if (!isFlipped(entry.id)) continue;
-        const card = focusEditor.create(mounts.machine.ownerDocument, {
+        /* The Weights face: the same footprint, the weight card in it,
+         * handed the same bridge and the same two callbacks. */
+        const card = blendEdit.kind === "weights" && weightCards ? weightCards.create(mounts.machine.ownerDocument, {
+          layer: entry,
+          hopperState,
+          smartHoppers: current.resolved ? current.resolved.smartHoppers : null,
+          commands: commandsFor(current.resolved),
+          recipe,
+          onEditing: record => {
+            editing = record ? Object.assign({
+              recipe,
+              baseRevision: current.resolved ? current.resolved.revision : null
+            }, record) : null;
+          },
+          onCommitted: result => {
+            lastOwnRevision = Number.isInteger(result.revision) ? result.revision : null;
+            onPublish({ own: true });
+          }
+        }) : focusEditor.create(mounts.machine.ownerDocument, {
           layer: entry,
           hopperState,
           resins: catalogResins,
@@ -1240,6 +1334,10 @@
       blendCards: cards,
       raiseLayer: extra && extra.raiseLayer
     });
+    // Which face the turned layers show, for the stylesheet and the tests;
+    // the renderer knows only that a layer is turned over.
+    if (blendEdit.active && !focusLayer) mounts.machine.setAttribute("data-edit-face", blendEdit.kind);
+    else mounts.machine.removeAttribute("data-edit-face");
     // A rendered stage is new elements: the marks the boot file owns are
     // written to it from the projection as it stands (feedJob follows
     // with the fresh one on every path that changes the job).
@@ -1488,13 +1586,15 @@
     }
 
     /* The machine utility rail, in its own slot over the stage: Blend
-     * Edit's switch and Reset Tracking. Handed the two callbacks and
-     * nothing else; told what to show by syncRail, and where to stand by
+     * Edit's and Weights' switches, Smart Hoppers and Reset Tracking.
+     * Handed the four callbacks and nothing else; told what to show by syncRail, and where to stand by
      * placeRail after each render of the normal layout and whenever the
      * stage's cell changes size. */
     if (machineRail && mounts.rail) {
       railPanel = machineRail.create(doc, {
         onBlendEdit: toggleBlendEdit,
+        onWeightsEdit: toggleWeightsEdit,
+        onSmartHoppers: toggleSmartHoppers,
         onResetTracking: resetTracking,
         setTimeout: typeof root.setTimeout === "function" ? root.setTimeout.bind(root) : null,
         clearTimeout: typeof root.clearTimeout === "function" ? root.clearTimeout.bind(root) : null
@@ -1522,6 +1622,7 @@
     if (handbook && mounts.handbook) {
       const handbookSections = [];
       if (recipeBook) handbookSections.push(recipeBook.section);
+      if (weightsSection) handbookSections.push(weightsSection.section);
       if (resinTotalsSection) handbookSections.push(resinTotalsSection.section);
       if (appearance) handbookSections.push(appearance.section);
       if (sudo) handbookSections.push(sudo.section);
@@ -1535,6 +1636,9 @@
            * the connection bridge, the same way. */
           admin,
           connection,
+          /* Weights reads the line's shared Weight Profiles and asks for
+           * the profile actions through this bridge alone. */
+          weightProfiles,
           /* A saved recipe's layer, accented by the side it sits on for
            * the line the stage shows: the line model's own role for that
            * letter, so the book and the banks above agree about Layer A. */
@@ -1545,6 +1649,9 @@
           /* Resin Totals reads the same resolved state the stage draws
            * from - through a function, since `current` is replaced on
            * every render - and the shared calculation to run over it. */
+          /* Weights lists the hoppers the stage draws: the same line
+           * model, through a function for the same reason. */
+          model: () => current.model,
           resolved: () => current.resolved,
           resinTotals,
           /* Its two fields (production and scrap pounds) write through
@@ -1568,6 +1675,7 @@
       });
       mounts.handbook.appendChild(handbookPanel.element);
       recipes?.subscribe(() => { if (handbookPanel) handbookPanel.update(); });
+      weightProfiles?.subscribe(() => { if (handbookPanel) handbookPanel.update(); });
       admin?.subscribe(() => { if (handbookPanel) handbookPanel.update(); });
     }
     feedJob(current.model, current.resolved);

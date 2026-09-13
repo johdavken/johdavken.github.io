@@ -147,6 +147,17 @@
    * @param {object} [options.history]  Undo/redo availability per recipe
    *        recipe: { current: { canUndo, canRedo }, next: { ... } }. Booleans
    *        only; absent means nothing to undo or redo.
+   * @param {string|null} [options.smartHopperGeometryMode]  How the connected
+   *        line measures its hoppers for Smart Hoppers - "cylindrical"
+   *        (usable height and a shared circumference) or "volume" (usable
+   *        gallons) - as the application's own resolver answers it. Absent
+   *        or anything else projects as null: Smart Hoppers unavailable,
+   *        never guessed from a line number here.
+   * @param {function} [options.resolveSmartHopper]  The application's own
+   *        Smart Hoppers computation for one hopper: null when nothing can
+   *        be computed, else { value, bulkDensity, resin: { resin_code } }.
+   *        Projected per hopper as `smartWeight` so Station can say WHY the
+   *        effective weight is what it is. Absent means nothing is computed.
    */
   function project(state, options) {
     if (!state || typeof state !== "object") return null;
@@ -156,6 +167,10 @@
       ? settings.resolveHopperWeight
       : hopper => finite(hopper && hopper.weight);
     const plannedRecipe = settings.plannedRecipe !== undefined ? settings.plannedRecipe : state.nextRecipe;
+    const resolveSmart = typeof settings.resolveSmartHopper === "function" ? settings.resolveSmartHopper : () => null;
+    const geometryMode = settings.smartHopperGeometryMode === "cylindrical" || settings.smartHopperGeometryMode === "volume"
+      ? settings.smartHopperGeometryMode
+      : null;
 
     // state.lineType is the live layer count of the running session - it is
     // enforced to match the connected line when there is one, and remains the
@@ -219,6 +234,18 @@
       },
       nextRecipe: projectPlannedRecipe(plannedRecipe),
       history: projectHistory(settings.history),
+      /* Smart Hoppers, as the application has it: whether THIS device has
+       * the switch on (a local display preference, saved with the session
+       * and never synced), how the connected line measures its hoppers
+       * (null = no identified line, so the feature is unavailable), and
+       * the line's one shared circumference in inches (an equipment value
+       * that does sync; 0 = not entered). The per-hopper result of the
+       * computation is on each hopper as `smartWeight`. */
+      smartHoppers: {
+        enabled: !!state.smartHoppersEnabled,
+        geometryMode,
+        circumference: finite(state.hopperCircumference)
+      },
       layers: layers.map(layer => ({
         name: String((layer && layer.name) || ""),
         layerPct: finite(layer && layer.layerPct),
@@ -234,14 +261,38 @@
            * volume-geometry line has no height and reports 0, which the drawing
            * reads as "use the default". */
           usableHeight: finite(hopper && hopper.usableHeight),
+          /* Usable volume in gallons - the volume-geometry lines' measure,
+           * the same category as usableHeight. 0 means "not entered". It
+           * does not shape the drawing. */
+          usableGallons: finite(hopper && hopper.usableGallons),
           // What the run-down formula would actually use. Separate from
           // `weight` on purpose: they differ whenever Smart Hoppers resolves a
           // value, and collapsing them would hide which one Station is showing.
           effectiveWeight: finite(resolveWeight(hopper)),
+          /* Why it is that: the Smart Hoppers computation for this hopper
+           * when there is one - the computed pounds, the bulk density it
+           * used (lb/ft³) and the catalog resin code it came from - or
+           * null when the entered weight stands. */
+          smartWeight: projectSmartWeight(resolveSmart(hopper)),
           track: !!(hopper && hopper.track),
           pumpOff: !!(hopper && hopper.pumpOff)
         }))
       }))
+    };
+  }
+
+  /* One hopper's Smart Hoppers result, or null. The application answers
+   * { value, resin, bulkDensity } or null; only the three facts Station
+   * reads cross, and a result without a positive finite value is no
+   * result. */
+  function projectSmartWeight(result) {
+    if (!result || typeof result !== "object") return null;
+    const value = Number(result.value);
+    if (!Number.isFinite(value) || value <= 0) return null;
+    return {
+      value,
+      bulkDensity: finite(result.bulkDensity),
+      resinCode: result.resin && result.resin.resin_code ? String(result.resin.resin_code) : ""
     };
   }
 

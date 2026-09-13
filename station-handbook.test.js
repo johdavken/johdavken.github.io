@@ -405,8 +405,8 @@ test("the frame is sized from the stage's tokens, or the reach the operator rais
   assert.match(tokens, /--station-handbook-headroom: \d+px;/);
   assert.ok(Number(/--station-handbook-headroom: (\d+)px;/.exec(tokens)[1]) >= 24, "a raised frame can stand on the stage's top edge");
   // Whatever the share, the frame never reaches the hopper bank: the drawing
-  // is 740 units tall and its clusters end at unit 404 (station-machine-layout.js),
-  // 55% down a height-fitted stage, so the share has to stay under 45%.
+  // is 740 units tall and its clusters end at unit 416 (station-machine-layout.js),
+  // 56% down a height-fitted stage, so the share has to stay under 44%.
   const share = Number(/--station-handbook-share: (\d+)%;/.exec(tokens)[1]);
   assert.ok(share <= 44, `a ${share}% share reaches the hopper clusters`);
   const layout = fs.readFileSync(path.join(ROOT, "station/station-machine-layout.js"), "utf8");

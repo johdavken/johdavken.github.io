@@ -153,10 +153,17 @@
   // the floor UI's own Recipe Book runs. Optional like the other three; the
   // handle is the only thing that can publish.
   const stationRecipes = window.PolynStationRecipesBridge || null;
+  // The workspace's Receiver Weight Profiles as Station may see them, and
+  // the Weight Profiles actions it may ask for - the same save, update,
+  // load, rename, duplicate, delete and refresh the floor UI's own Weight
+  // Profiles block runs. Optional like the others; the handle is the only
+  // thing that can publish.
+  const stationWeightProfiles = window.PolynStationWeightProfilesBridge || null;
   let stationCommandHandle = null;
   let stationBridgeHandle = null;
   let stationConnectionHandle = null;
   let stationRecipesHandle = null;
+  let stationWeightProfilesHandle = null;
   // Listeners for PolynRtSyncBridge.onRecoveryDescriptorChange, told from
   // renderLineSync; never handed the state, only that it may have moved.
   const recoveryDescriptorListeners = new Set();
@@ -855,9 +862,11 @@
     if(!workspaceId || !workspaceConfigurations || workspaceConfigurationRefreshInFlight) return;
     workspaceConfigurationRefreshInFlight=true; workspaceConfigurationStatus("Refreshing shared configurations…"); renderWorkspaceConfigurations(lineSync.getState());
     stationRecipesHandle?.publish();
+    stationWeightProfilesHandle?.publish();
     const result=await workspaceConfigurations.refresh(workspaceId);
     workspaceConfigurationRefreshInFlight=false;
     stationRecipesHandle?.publish();
+    stationWeightProfilesHandle?.publish();
     if(workspaceId !== lineSync?.getState?.().selectedWorkspaceId) return;
     renderWorkspaceConfigurations(lineSync.getState());
     if(!result.ok) workspaceConfigurationStatus(result.cache?.cachedAt ? "Refresh failed; showing cached shared configurations." : "Shared configurations are unavailable right now.");
@@ -889,9 +898,10 @@
       return;
     }
     const result=window.PolynWorkspaceConfigurationPayloads?.applyReceiverWeightProfile(state,item.payload);
-    if(!result?.ok){ workspaceConfigurationStatus(result?.errors?.[0] || "This shared configuration could not be loaded."); return; }
+    if(!result?.ok){ const message=result?.errors?.[0] || "This shared configuration could not be loaded."; workspaceConfigurationStatus(message); return { ok:false, message }; }
     renderWeightsArea(); renderSplitsArea(); validateAndCompute(); saveSession(); notifyActiveJobMutation({immediate:true,kind:"load-workspace-configuration"});
     workspaceConfigurationStatus("Receiver Weight Profile loaded successfully.");
+    return { ok:true };
   }
 
   /* One destination-aware entry point for every recipe-definition apply.
@@ -995,6 +1005,7 @@
     const service=workspaceConfigurations; if(!service) return;
     const result=action==="update"?await service.update(workspaceConfigurationWorkspaceId,item.id,item.type==="recipe"?window.PolynWorkspaceConfigurationPayloads.createRecipePayload(state):window.PolynWorkspaceConfigurationPayloads.createReceiverWeightProfile(state)):action==="rename"?await service.rename(workspaceConfigurationWorkspaceId,item.id,value):action==="duplicate"?await service.duplicate(workspaceConfigurationWorkspaceId,item.id,value):action==="delete"?await service.delete(workspaceConfigurationWorkspaceId,item.id):await service.setFavorite(workspaceConfigurationWorkspaceId,item.id,value);
     finishWorkspaceConfigurationMutation(result,action==="delete"?"Configuration deleted.":action==="favorite"?"Recipe favorite updated.":action==="rename"?"Configuration renamed.":action==="duplicate"?"Configuration duplicated.":"Configuration updated successfully.");
+    return result;
   }
   // Render before setting the success message, not after: renderWorkspaceConfigurations
   // re-derives each panel's own "" (no problem) status as part of its normal
@@ -9496,6 +9507,7 @@
     // And the saved recipes: which workspace's book Station shows follows
     // the selected workspace, which changes here and nowhere else.
     stationRecipesHandle?.publish();
+    stationWeightProfilesHandle?.publish();
     // And whoever asked to be told the recovery descriptor may have moved
     // (PolynRtSyncBridge.onRecoveryDescriptorChange): readiness and the
     // device label are RT Sync state, and this is where it changes.
@@ -9725,6 +9737,23 @@
     // A valid command that changes nothing: no mutation, no history, no
     // save, no publish - and so nothing persisted.
     function unchanged(){ return done(false, false); }
+
+    /* Whether a geometry stated as `dimension` is the connected line's
+     * measure. Null when it is; a failure that says which measure the
+     * line uses, or that no line is identified, when it is not. */
+    function geometryRefusal(dimension){
+      const mode = currentSmartHopperGeometryMode();
+      if (mode === null) {
+        return contract.failure("bad_argument", { field: "dimension", message: "Connect this desktop to an identified line to set hopper geometry." });
+      }
+      const wanted = dimension === "volume" ? "volume" : "cylindrical";
+      if (wanted !== mode) {
+        return contract.failure("bad_argument", { field: "dimension", message: mode === "volume"
+          ? "This line measures its hoppers by usable volume (gallons), not height."
+          : "This line measures its hoppers by usable height (inches), not volume." });
+      }
+      return null;
+    }
 
     const commands = {
       /* The grid's resin field: hopper.resinName = normName(value), then
@@ -10016,6 +10045,124 @@
         return done(true, persisted);
       },
 
+      /* The Weights page's field, exactly: the hopper's receiver weight
+       * set, then the field's own tail - validateAndCompute({ sync: true })
+       * and the session saved (buildWeightsCell), so the change is an
+       * ordinary "edit" to RT Sync, not immediate. The hidden weights grid
+       * is rebuilt so the floor UI's fields read the value, as loading a
+       * profile does. No history entry: the field records none, and a
+       * receiver weight is the hopper's, not the recipe's. Current only -
+       * the contract refuses "next" already; said again here so the
+       * executor never trusts a bridge. */
+      setHopperWeight(args){
+        if (args.recipe !== "current") return contract.failure("bad_argument", { field: "recipe", message: "Receiver weights belong to the physical hoppers, not to the planned recipe." });
+        const at = locate(args.recipe, args.layer, args.index);
+        if (at.failure) return at.failure;
+        if (clampNum(at.hopper.weight) === args.weight) return unchanged();
+        at.hopper.weight = args.weight;
+        renderWeightsArea();
+        const persisted = commit({ sync: true, grid: false, hookups: false });
+        return done(true, persisted);
+      },
+
+      /* The page's bulk apply: several hoppers' weights written, then ONE
+       * tail - one save, one sync notification - as the floor UI's Apply
+       * button does for its selection. Every position is resolved before
+       * any is written, so an unknown hopper refuses the whole request
+       * and leaves the line exactly as it was. */
+      setHopperWeights(args){
+        if (args.recipe !== "current") return contract.failure("bad_argument", { field: "recipe", message: "Receiver weights belong to the physical hoppers, not to the planned recipe." });
+        const writes = [];
+        for (const entry of args.weights) {
+          const at = locate(args.recipe, entry.layer, entry.index);
+          if (at.failure) return at.failure;
+          if (clampNum(at.hopper.weight) !== entry.weight) writes.push({ hopper: at.hopper, weight: entry.weight });
+        }
+        if (!writes.length) return unchanged();
+        for (const write of writes) write.hopper.weight = write.weight;
+        renderWeightsArea();
+        const persisted = commit({ sync: true, grid: false, hookups: false });
+        return done(true, persisted);
+      },
+
+      /* Smart Hoppers' geometry: the wrench popover's field. The measure
+       * is stated in the line's own terms, and the line decides which
+       * terms those are (currentSmartHopperGeometryMode, the one resolver
+       * every surface uses) - a height for a volume line is refused rather
+       * than stored where nothing would read it. Same tail as the weight:
+       * validated, saved, synced; the hidden weights grid rebuilt so its
+       * fields agree; no history. Current only, said again here. */
+      setHopperGeometry(args){
+        if (args.recipe !== "current") return contract.failure("bad_argument", { field: "recipe", message: "Hopper geometry belongs to the physical hoppers, not to the planned recipe." });
+        const wrong = geometryRefusal(args.dimension);
+        if (wrong) return wrong;
+        const at = locate(args.recipe, args.layer, args.index);
+        if (at.failure) return at.failure;
+        const field = args.dimension === "volume" ? "usableGallons" : "usableHeight";
+        if (clampNum(at.hopper[field]) === args.value) return unchanged();
+        at.hopper[field] = args.value;
+        renderWeightsArea();
+        const persisted = commit({ sync: true, grid: false, hookups: false });
+        return done(true, persisted);
+      },
+
+      /* The bulk apply's geometry: every position and every dimension
+       * checked before anything is written, then ONE tail. */
+      setHopperGeometries(args){
+        if (args.recipe !== "current") return contract.failure("bad_argument", { field: "recipe", message: "Hopper geometry belongs to the physical hoppers, not to the planned recipe." });
+        const writes = [];
+        for (const entry of args.geometries) {
+          const wrong = geometryRefusal(entry.dimension);
+          if (wrong) return wrong;
+          const at = locate(args.recipe, entry.layer, entry.index);
+          if (at.failure) return at.failure;
+          const field = entry.dimension === "volume" ? "usableGallons" : "usableHeight";
+          if (clampNum(at.hopper[field]) !== entry.value) writes.push({ hopper: at.hopper, field, value: entry.value });
+        }
+        if (!writes.length) return unchanged();
+        for (const write of writes) write.hopper[write.field] = write.value;
+        renderWeightsArea();
+        const persisted = commit({ sync: true, grid: false, hookups: false });
+        return done(true, persisted);
+      },
+
+      /* The shared circumference field: one value for the line's hoppers,
+       * written through setWorkspaceHopperCircumference so the legacy
+       * per-hopper mirror stays aligned, as the field itself does. Only a
+       * cylindrical line has one to set. */
+      setHopperCircumference(args){
+        const mode = currentSmartHopperGeometryMode();
+        if (mode !== "cylindrical") {
+          return contract.failure("bad_argument", { field: "circumference", message: mode === "volume"
+            ? "This line measures its hoppers by volume; it has no shared circumference."
+            : "Connect this desktop to an identified line to set a hopper circumference." });
+        }
+        if (clampNum(state.hopperCircumference) === args.circumference) return unchanged();
+        setWorkspaceHopperCircumference(args.circumference);
+        renderWeightsArea();
+        const persisted = commit({ sync: true, grid: false, hookups: false });
+        return done(true, persisted);
+      },
+
+      /* The Smart Hoppers switch: this device's preference, as the floor
+       * UI's toggle flips it - saved, and validateAndCompute({ sync:false })
+       * so every run-down and every SMART badge re-reads the effective
+       * weights (refreshSmartHopperState runs in that tail); nothing is
+       * synced, because nothing shared changed. The weights grid is
+       * rebuilt as the toggle's own setter rebuilds it, which also re-syncs
+       * the toggle's face. Unavailable off an identified line, as the
+       * floor UI offers no switch there. */
+      setSmartHoppers(args){
+        if (currentSmartHopperGeometryMode() === null) {
+          return contract.failure("unavailable", { message: "Connect this desktop to an identified line to use Smart Hoppers." });
+        }
+        if (!!state.smartHoppersEnabled === args.enabled) return unchanged();
+        state.smartHoppersEnabled = args.enabled;
+        renderWeightsArea();
+        const persisted = commit({ sync: false, grid: false, hookups: false });
+        return done(true, persisted);
+      },
+
       /* The toolbar's Undo/Redo, addressed explicitly. Checked before the
        * helper runs so an empty stack never touches Next's working copy. */
       undo(args){
@@ -10074,6 +10221,12 @@
           // The run-down formula's own weight, Smart Hoppers included, so the
           // console never has to re-derive a number this app already resolves.
           resolveHopperWeight: effectiveHopperWeight,
+          // And why: the Smart Hoppers computation itself, per hopper, and
+          // the line's geometry mode from the one resolver - so Station can
+          // show a computed weight as computed without a second reading
+          // of the line number or the catalog.
+          resolveSmartHopper: smartHopperComputation,
+          smartHopperGeometryMode: currentSmartHopperGeometryMode(),
           // The plan as this app reads it when it needs the effective one:
           // the working copy while the operator has one open, the durable
           // payload otherwise. Reading state.nextRecipe directly would show
@@ -10140,6 +10293,89 @@
    * status follow a save made from Station as they follow one made here.
    *
    * Optional and failure-tolerant like the other three bridges. */
+  function stationWeightProfilePayload(){ return window.PolynWorkspaceConfigurationPayloads?.createReceiverWeightProfile(state) || null; }
+  function connectStationWeightProfiles(){
+    if (!stationWeightProfiles || stationWeightProfilesHandle) return;
+    const NO_WORKSPACE = { ok:false, code:"unavailable", message:"Connect to an RT Sync workspace to use shared weight profiles." };
+    const GONE = { ok:false, code:"not_found", message:"That weight profile is no longer in this workspace." };
+    // A saved profile by id, from the service's own list for the selected
+    // workspace - never another workspace's, never a recipe.
+    function findWeightProfile(id){
+      const workspaceId = lineSync?.getState?.().selectedWorkspaceId || "";
+      if (!workspaceId || !workspaceConfigurations) return { workspaceId:"", existing:null };
+      const existing = workspaceConfigurations.listReceiverWeightProfiles(workspaceId).items.find(item=>item.id === id && item.type === "receiver_weight_profile") || null;
+      return { workspaceId, existing };
+    }
+    try{
+      stationWeightProfilesHandle = stationWeightProfiles.connect({
+        read: ()=>{
+          const syncState = lineSync?.getState?.() || null;
+          const workspaceId = syncState?.selectedWorkspaceId || "";
+          const configuration = derivedLineConfiguration(syncState);
+          return stationWeightProfiles.project(workspaceId && workspaceConfigurations ? workspaceConfigurations.getCached(workspaceId) : null, {
+            workspaceId,
+            displayName: configuration?.displayName || syncState?.selectedWorkspace?.name || "",
+            refreshing: workspaceConfigurationRefreshInFlight
+          });
+        },
+        actions: {
+          saveCurrentWeights: async ({ name })=>{
+            const workspaceId = lineSync?.getState?.().selectedWorkspaceId || "";
+            if (!workspaceId || !workspaceConfigurations) return NO_WORKSPACE;
+            const payload = stationWeightProfilePayload();
+            if (!payload) return { ok:false, code:"failed", message:"The line's receiver weights could not be read." };
+            const result = await workspaceConfigurations.create(workspaceId, "receiver_weight_profile", name, payload);
+            if (result?.code !== "duplicate_name") finishWorkspaceConfigurationMutation(result, "Configuration saved successfully.");
+            return result;
+          },
+          // Update, rename, duplicate and delete ARE the floor UI's own
+          // closures: mutateWorkspaceConfiguration, with its messages.
+          replaceWeightProfile: async ({ id })=>{
+            const { workspaceId, existing } = findWeightProfile(id);
+            if (!workspaceId) return NO_WORKSPACE;
+            if (!existing) return GONE;
+            return mutateWorkspaceConfiguration("update", existing);
+          },
+          renameWeightProfile: async ({ id, name })=>{
+            const { workspaceId, existing } = findWeightProfile(id);
+            if (!workspaceId) return NO_WORKSPACE;
+            if (!existing) return GONE;
+            return mutateWorkspaceConfiguration("rename", existing, name);
+          },
+          duplicateWeightProfile: async ({ id, name })=>{
+            const { workspaceId, existing } = findWeightProfile(id);
+            if (!workspaceId) return NO_WORKSPACE;
+            if (!existing) return GONE;
+            return mutateWorkspaceConfiguration("duplicate", existing, name);
+          },
+          deleteWeightProfile: async ({ id })=>{
+            const { workspaceId, existing } = findWeightProfile(id);
+            if (!workspaceId) return NO_WORKSPACE;
+            if (!existing) return GONE;
+            return mutateWorkspaceConfiguration("delete", existing);
+          },
+          // The load is the floor UI's own apply, with its own tail: the
+          // payload helper's validated, atomic write, the weights grid
+          // rebuilt, the session saved, RT Sync told at once. Station is
+          // told only whether it took, and why not.
+          loadWeightProfile: async ({ id })=>{
+            const { workspaceId, existing } = findWeightProfile(id);
+            if (!workspaceId) return NO_WORKSPACE;
+            if (!existing) return GONE;
+            const result = applyWorkspaceConfiguration(existing);
+            return result?.ok ? { ok:true } : { ok:false, code:"incompatible", message: result?.message || "This shared configuration could not be loaded." };
+          },
+          refresh: async ()=>{
+            const workspaceId = lineSync?.getState?.().selectedWorkspaceId || "";
+            if (!workspaceId || !workspaceConfigurations) return NO_WORKSPACE;
+            await refreshWorkspaceConfigurations();
+            return { ok:true };
+          }
+        }
+      });
+    }catch(error){ stationWeightProfilesHandle = null; }
+  }
+
   function stationRecipePayload(){ return window.PolynWorkspaceConfigurationPayloads?.createRecipePayload(state) || null; }
   function connectStationRecipes(){
     if (!stationRecipes || stationRecipesHandle) return;
@@ -10227,6 +10463,7 @@
         // Station's Recipe Book reads the same cache; every change to it
         // arrives here, so this is where the book is announced.
         stationRecipesHandle?.publish();
+        stationWeightProfilesHandle?.publish();
       });
       $("workspaceConfigurationsRefresh")?.addEventListener("click",()=>void refreshWorkspaceConfigurations());
       $("workspaceSaveProfile")?.addEventListener("click",()=>openWorkspaceConfigurationDialog("save-profile"));
@@ -10316,6 +10553,7 @@
       }
     });
     connectStationRecipes();
+    connectStationWeightProfiles();
     $("lineSyncLeaveBtn")?.addEventListener("click",()=>{
       if (confirm("Leave RT Sync on this device? Local Resin.Tools data will remain.")) {
         void runLineSyncAction(()=>lineSync.leaveWorkspace(), "leave");

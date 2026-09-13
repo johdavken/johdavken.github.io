@@ -68,9 +68,11 @@
     "station/styles/components/logo.css",
     "station/styles/components/glass.css",
     "station/styles/components/handbook.css",
+    "station/styles/components/weights.css",
     "station/styles/components/changeover.css",
     "station/styles/components/sudo.css",
     "station/styles/components/machine-rail.css",
+    "station/styles/components/weight-cards.css",
     "station/styles/components/theme-preview.css"
   ];
 
@@ -87,6 +89,7 @@
     "station/station-focus-editor.js",
     "station/station-hopper-controls.js",
     "station/station-layer-share.js",
+    "station/station-weight-cards.js",
     // The machine utility rail: Blend Edit and Reset Tracking beside the
     // far-right cluster. After the hopper controls, whose reset it asks for.
     "station/station-machine-rail.js",
@@ -105,6 +108,8 @@
     "station/station-avatar.js",
     // The Operator Handbook: its first section before the shell that hosts it.
     "station/station-recipe-book.js",
+    // Weights: the page for the physical hoppers and their profiles.
+    "station/station-weights.js",
     "station/station-resin-totals.js",
     "station/station-theme-preview.js",
     "station/station-appearance.js",
@@ -119,7 +124,7 @@
     "station/station.js"
   ];
 
-  const VERSION = "0.35.1";
+  const VERSION = "0.38.0";
 
   function requested() {
     try {

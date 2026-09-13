@@ -504,6 +504,51 @@ test("the compact readout leads with identity and contribution", () => {
   assert.deepEqual(textOf(svg, "station-hopper__pct").slice(0, 3), ["60%", "30%", "—"]);
 });
 
+test("the readout's fourth line is the run-down's weight: whole pounds, digits only, a dash when there is none, and the tooltip carries the unit", () => {
+  const svg = stageFor(literal({ layerCount: 5, hopperCount: 3 }), {
+    hopperState: {
+      "A:0": { assigned: true, resinName: "HX204", pct: 60, weight: 1250.4, effectiveWeight: 900 },
+      "A:1": { assigned: true, resinName: "LD105", pct: 30, weight: 0, effectiveWeight: 500 },
+      "A:2": { assigned: false, resinName: "", pct: 0, weight: 75 }
+    }
+  });
+  // The run-down's effective weight - Smart Hoppers' computed value when
+  // there is one, the entered receiver weight otherwise - so the caption
+  // and the timeline never disagree; an unassigned hopper has one too,
+  // and a runtime with no effective weight falls back to the entered one.
+  assert.deepEqual(textOf(svg, "station-hopper__weight").slice(0, 3), ["900", "500", "75"]);
+  const own = h => h.children.find(c => c.nodeName === "title").textContent;
+  const titles = hoppersIn(svg).slice(0, 3).map(own);
+  assert.match(titles[0], /· 900 lb/);
+  assert.match(titles[1], /· 500 lb/);
+  assert.match(titles[2], /no resin assigned · 75 lb/);
+  assert.equal(parts.shownWeight({ weight: 1250, effectiveWeight: 900 }), 900);
+  assert.equal(parts.shownWeight({ weight: 1250, effectiveWeight: 0 }), 1250, "no effective weight: the entered one");
+  assert.equal(parts.shownWeight({ weight: 1250 }), 1250);
+  assert.equal(parts.shownWeight(null), 0);
+  // Digits only: the column has room for five characters, so the unit and
+  // the separator are the tooltip's; a weight too wide is fitted, not lied about.
+  // The key carries both weights and whether the shown one is computed.
+  assert.equal(parts.hopperStateKey({ weight: 1250 }), "|||||1250||||");
+  assert.notEqual(parts.hopperStateKey({ weight: 1250 }), parts.hopperStateKey({ weight: 1300 }), "a weight change redraws the hopper");
+  assert.notEqual(parts.hopperStateKey({ weight: 1250, effectiveWeight: 900 }), parts.hopperStateKey({ weight: 1250, effectiveWeight: 950 }), "an effective weight change redraws the hopper");
+  assert.equal(parts.hopperStateKey({ weight: 0 }), "|||||0||||");
+});
+
+test("a weight change alone re-patches only that hopper", () => {
+  const doc = fakeDocument();
+  const mount = doc.createElement("div");
+  mount.ownerDocument = doc;
+  const config = literal({ layerCount: 3, hopperCount: 2 });
+  const lineModel = model.buildLineModel(config);
+  const state = { "A:0": { assigned: true, resinName: "HX", pct: 60, weight: 1000 }, "A:1": { assigned: true, resinName: "LD", pct: 40, weight: 500 } };
+  render.mountStage(mount, lineModel, { document: doc, hopperState: state, stageAspect: 1.6 });
+  walk(mount, node => { node.replaceChild = (fresh, old) => { node.children[node.children.indexOf(old)] = fresh; return old; }; });
+  const next = Object.assign({}, state, { "A:1": Object.assign({}, state["A:1"], { weight: 650 }) });
+  assert.deepEqual(render.patchStage(mount, lineModel, { document: doc, hopperState: next, stageAspect: 1.6 }), { hoppers: 1, layers: 3 });
+  assert.deepEqual(textOf(mount, "station-hopper__weight").slice(0, 2), ["1000", "650"]);
+});
+
 test("resin codes are dropped in the dense view and shown where there is room", () => {
   /* Never shrunk to fit: an unreadable code is worse than no code. Five layers
    * is the dense case; one layer has the width for it. */
@@ -2119,6 +2164,40 @@ test("a change in the offer alone redraws a hopper's controls: the data-state ca
   assert.deepEqual(hoppersIn(mount).map(h => [controlOf(h, "tracking").getAttribute("data-able"), controlOf(h, "pump").getAttribute("data-able")]), [["true", "false"], ["true", "false"]]);
   // Same state, same offer: nothing is redrawn.
   assert.deepEqual(render.patchStage(mount, model, { document: doc, hopperState: state, hopperControls: { tracking: true, pump: false }, stageAspect: 1.6 }), { hoppers: 0, layers: 1 });
-  assert.equal(parts.hopperStateKey({ track: true }, { tracking: true, pump: true }), "t|||||" + "|TP");
-  assert.equal(parts.hopperStateKey({ track: true }), "t||||||");
+  assert.equal(parts.hopperStateKey({ track: true }, { tracking: true, pump: true }), "t||||||||" + "|TP");
+  assert.equal(parts.hopperStateKey({ track: true }), "t|||||||||");
+});
+
+/* ----------------------------------------------------------------------
+ *   Smart Hoppers on the drawing
+ * -------------------------------------------------------------------- */
+
+test("a hopper whose weight Smart Hoppers computed is marked is-smart, shows the computed weight, and says in its tooltip what it was computed from", () => {
+  const svg = stageFor(literal({ layerCount: 5, hopperCount: 3 }), {
+    hopperState: {
+      "A:0": { assigned: true, resinName: "HX204", pct: 60, weight: 1250, effectiveWeight: 812.5, smartWeight: { value: 812.5, bulkDensity: 35, resinCode: "HX204" } },
+      "A:1": { assigned: true, resinName: "LD105", pct: 30, weight: 500, effectiveWeight: 500, smartWeight: null },
+      "A:2": { assigned: true, resinName: "LD106", pct: 10, weight: 0, effectiveWeight: 10, smartWeight: { value: 10 } }
+    }
+  });
+  const hoppers = hoppersIn(svg).slice(0, 3);
+  assert.deepEqual(hoppers.map(h => /\bis-smart\b/.test(h.getAttribute("class"))), [true, false, true]);
+  assert.deepEqual(textOf(svg, "station-hopper__weight").slice(0, 3), ["813", "500", "10"]);
+  const own = h => h.children.find(c => c.nodeName === "title").textContent;
+  assert.match(own(hoppers[0]), /· 813 lb \(computed from HX204's bulk density, 35 lb\/ft³\)/);
+  assert.doesNotMatch(own(hoppers[1]), /computed/);
+  assert.match(own(hoppers[2]), /· 10 lb \(computed\)/, "a result without its parts is still said to be computed");
+  // The key tells a computed weight from an entered one of the same value.
+  assert.notEqual(parts.hopperStateKey({ weight: 800, effectiveWeight: 800, smartWeight: { value: 800 } }), parts.hopperStateKey({ weight: 800, effectiveWeight: 800, smartWeight: null }));
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const css = fs.readFileSync(path.join(__dirname, "station/styles/components/hopper.css"), "utf8");
+  assert.match(css, /\.station-hopper\.is-smart \.station-hopper__weight \{[^}]*var\(--station-smart/);
+  for (const theme of ["industrial-light", "industrial-dark", "gruvbox-light", "gruvbox-dark", "engineering-paper", "blueprint"]) {
+    const sheet = fs.readFileSync(path.join(__dirname, `station/styles/themes/${theme}.css`), "utf8");
+    assert.match(sheet, /--station-smart: #[0-9a-f]{6};/, `${theme} defines the computed colour`);
+    const tracking = sheet.match(/--station-tracking: (#[0-9a-f]{6});/);
+    const smart = sheet.match(/--station-smart: (#[0-9a-f]{6});/);
+    assert.notEqual(smart[1], tracking[1], `${theme}: computed is not the tracking colour`);
+  }
 });

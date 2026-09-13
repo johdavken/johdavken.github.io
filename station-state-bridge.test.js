@@ -262,7 +262,7 @@ test("the job's production and scrap pounds and the scanned lots cross - Resin T
 test("the snapshot's top level is exactly the documented blocks", () => {
   const { bridge, handle } = connected(appState());
   assert.deepEqual(Object.keys(bridge.getSnapshot()).sort(),
-    ["history", "job", "layers", "line", "lots", "nextRecipe", "revision", "sources"]);
+    ["history", "job", "layers", "line", "lots", "nextRecipe", "revision", "smartHoppers", "sources"]);
   handle.disconnect();
 });
 
@@ -293,7 +293,7 @@ test("hookup sources cross per recipe document, in their own module's shape", ()
 test("the Current projection is unchanged by the Next recipe crossing", () => {
   const snapshot = bridgeModule.project(appState(), {});
   assert.deepEqual(Object.keys(snapshot.layers[0].hoppers[0]).sort(),
-    ["effectiveWeight", "index", "pct", "pumpOff", "resinName", "track", "usableHeight", "weight"]);
+    ["effectiveWeight", "index", "pct", "pumpOff", "resinName", "smartWeight", "track", "usableGallons", "usableHeight", "weight"]);
   assert.deepEqual(Object.keys(snapshot.layers[0]).sort(), ["hoppers", "layerPct", "name"]);
   assert.equal(snapshot.layers[0].hoppers[0].resinName, "RESIN-A", "Current must still read the live layers");
   assert.equal(snapshot.layers[0].layerPct, 34);
@@ -642,4 +642,49 @@ test("a malformed state is described as empty rather than throwing", () => {
 test("every projected value is JSON-safe, so the clone is complete rather than lossy", () => {
   const snapshot = bridgeModule.project(appState(), {});
   assert.deepEqual(JSON.parse(JSON.stringify(snapshot)), snapshot);
+});
+
+/* ----------------------------------------------------------------------
+ *   Smart Hoppers
+ * -------------------------------------------------------------------- */
+
+test("the smartHoppers block carries this device's switch, the line's geometry mode as the application resolves it, and the shared circumference - at rest when nothing is handed in", () => {
+  const rest = bridgeModule.project(appState(), {});
+  assert.deepEqual(rest.smartHoppers, { enabled: false, geometryMode: null, circumference: 0 });
+  const on = bridgeModule.project(appState({ smartHoppersEnabled: true, hopperCircumference: "40.5" }), { smartHopperGeometryMode: "cylindrical" });
+  assert.deepEqual(on.smartHoppers, { enabled: true, geometryMode: "cylindrical", circumference: 40.5 });
+  assert.equal(bridgeModule.project(appState(), { smartHopperGeometryMode: "volume" }).smartHoppers.geometryMode, "volume");
+  // Never guessed: an unknown mode is no mode, a line number is not asked for.
+  assert.equal(bridgeModule.project(appState(), { smartHopperGeometryMode: "spherical", lineConfiguration: { lineNumber: 9, hopperGeometry: "cylindrical" } }).smartHoppers.geometryMode, null);
+  assert.equal(bridgeModule.project(appState({ smartHoppersEnabled: "yes" }), {}).smartHoppers.enabled, true, "a boolean, as the application stores it");
+  assert.equal(bridgeModule.project(appState({ hopperCircumference: "wide" }), {}).smartHoppers.circumference, 0);
+});
+
+test("each hopper carries its usable gallons and the application's Smart Hoppers result - value, bulk density, resin code - or null when the entered weight stands", () => {
+  const state = appState();
+  state.layers[0].hoppers[0].usableGallons = 55;
+  const snapshot = bridgeModule.project(state, {
+    resolveSmartHopper: hopper => (hopper.usableHeight > 0 ? { value: 812.5, bulkDensity: 35, resin: { resin_code: hopper.resinName, extra: "dropped" } } : null),
+    resolveHopperWeight: hopper => (hopper.usableHeight > 0 ? 812.5 : hopper.weight)
+  });
+  const [a1, a2] = snapshot.layers[0].hoppers;
+  assert.equal(a1.usableGallons, 55);
+  assert.equal(a2.usableGallons, 0, "not entered");
+  assert.deepEqual(a1.smartWeight, { value: 812.5, bulkDensity: 35, resinCode: "RESIN-A" });
+  assert.equal(a1.effectiveWeight, 812.5);
+  assert.equal(a1.weight, 420, "the entered weight survives beside it");
+  assert.equal(a2.smartWeight, null);
+  // A result with no positive value is no result; missing parts read as empty.
+  assert.equal(bridgeModule.project(state, { resolveSmartHopper: () => ({ value: 0, bulkDensity: 35 }) }).layers[0].hoppers[0].smartWeight, null);
+  assert.equal(bridgeModule.project(state, { resolveSmartHopper: () => ({ value: NaN }) }).layers[0].hoppers[0].smartWeight, null);
+  assert.deepEqual(bridgeModule.project(state, { resolveSmartHopper: () => ({ value: 10 }) }).layers[0].hoppers[0].smartWeight, { value: 10, bulkDensity: 0, resinCode: "" });
+  // Without a resolver nothing is computed.
+  assert.equal(bridgeModule.project(state, {}).layers[0].hoppers[0].smartWeight, null);
+  // The plan carries none of it.
+  assert.ok(snapshot.nextRecipe.layers.every(layer => layer.hoppers.every(h => !("smartWeight" in h) && !("usableGallons" in h))));
+  // And a connected consumer holds it frozen.
+  const { bridge, handle } = connected(state, { resolveSmartHopper: () => ({ value: 10, bulkDensity: 1, resin: { resin_code: "X" } }) });
+  const held = bridge.getSnapshot();
+  assert.ok(Object.isFrozen(held.smartHoppers) && Object.isFrozen(held.layers[0].hoppers[0].smartWeight));
+  handle.disconnect();
 });

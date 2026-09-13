@@ -28,8 +28,8 @@
     "hash": "f66df8dc486ae51c"
   },
   "station-state-bridge.js": {
-    "v": "0.4.0",
-    "hash": "8bf6ba3f866cb0c1"
+    "v": "0.5.0",
+    "hash": "3617613b67de96c7"
   },
   "station-connection-bridge.js": {
     "v": "0.1.0",
@@ -38,6 +38,10 @@
   "station-recipes-bridge.js": {
     "v": "0.1.1",
     "hash": "1121a7e8348424c3"
+  },
+  "station-weight-profiles-bridge.js": {
+    "v": "0.1.0",
+    "hash": "76a56d174fbbf473"
   },
   "station-admin-bridge.js": {
     "v": "0.2.0",
@@ -48,8 +52,8 @@
     "hash": "45eb154879a36623"
   },
   "station-host.js": {
-    "v": "0.4.25",
-    "hash": "7ffb476e17c6714a"
+    "v": "0.4.27",
+    "hash": "599789ea0461f226"
   },
   "workspace-configuration-payloads.js": {
     "v": "0.20.1",
@@ -64,8 +68,8 @@
     "hash": "f7e942645b9e622d"
   },
   "station-command-contract.js": {
-    "v": "0.6.0",
-    "hash": "376af726d984e452"
+    "v": "0.8.0",
+    "hash": "591474c5bc5e6148"
   },
   "station-command-bridge.js": {
     "v": "0.1.0",
@@ -176,8 +180,8 @@
     "hash": "b8efd231de7bb46f"
   },
   "app.js": {
-    "v": "0.31.2",
-    "hash": "5caffa7dcf4fc184"
+    "v": "0.31.4",
+    "hash": "e1a64f58e8154a9c"
   },
   "resin-admin-ui.js": {
     "v": "0.20.4",
