@@ -1,0 +1,548 @@
+/* The hopper assembly, and the bank it sits in.
+ *
+ * One component, instantiated once per configured hopper. It is split into the
+ * parts the real equipment stacks in - receiver, body, material, cone, feed -
+ * because each of those will eventually be driven by something different:
+ * the receiver by loading, the material by calculated fill, the body by
+ * selection and warning state, the feed by pump-off.
+ *
+ * STATE
+ *
+ * Hopper state is expressed as `is-` classes on the assembly group, set by
+ * JavaScript from application state. There is no `.green`, no `.small`: the
+ * class says what is true about the hopper, and this file decides what that
+ * looks like. Tracking, assignment and pump state already come from runtime;
+ * dragging, drop-target, empty and attention are presentation hooks for callers.
+ */
+
+/* Identity belongs to .station-hopper; only its interaction subtree is hit.
+ * Explicitly cover descendants so new decoration cannot become a target.
+ * Do not override .station-hit's transition/ghost pointer suppression. */
+.station-hopper__drawing,
+.station-hopper__drawing * {
+  pointer-events: none;
+}
+
+.station-hopper {
+  --station-hopper-metal: color-mix(in srgb, var(--station-steel-light) 72%, var(--station-hopper-stroke));
+  --station-hopper-metal-lit: color-mix(in srgb, var(--station-steel-light) 66%, var(--station-text-muted));
+  --station-hopper-material-color: var(--station-hopper-fill);
+}
+
+/* ---------------------------------------------------------------------
+ *   Vacuum receiver
+ * ------------------------------------------------------------------- */
+
+.station-hopper__cap,
+.station-hopper__neck {
+  fill: var(--station-hopper-metal);
+  stroke: var(--station-edge);
+  stroke-width: var(--station-line-hairline);
+}
+
+/* ---------------------------------------------------------------------
+ *   Receiver = pump state
+ * -------------------------------------------------------------------
+ * The receiver is the pump indicator, and will later be the toggle. Amber is
+ * "conveying"; a pump that is off drops back to plain steel so a stopped
+ * hopper reads as stopped at a glance across a five-layer bank, without a
+ * separate light or badge being bolted onto the equipment.
+ */
+.station-hopper__receiver-cone {
+  fill: var(--station-receiver);
+  stroke: var(--station-receiver-edge);
+  stroke-width: var(--station-line-hairline);
+}
+
+.station-hopper.is-pump-off .station-hopper__receiver-cone {
+  fill: var(--station-steel);
+  stroke: var(--station-edge);
+}
+
+.station-hopper.is-pump-off .station-hopper__cap {
+  fill: var(--station-steel-dark);
+}
+
+/* ---------------------------------------------------------------------
+ *   Source, above the receiver
+ * ------------------------------------------------------------------- */
+
+.station-hopper__source {
+  fill: var(--station-text-faint);
+  font-family: var(--station-font-annotation);
+  font-size: calc(var(--station-text-2xs) * var(--station-bank-scale, 1));
+  letter-spacing: 0.04em;
+}
+
+/* A short drop from the label to the receiver, so the label reads as belonging
+   to this hopper rather than floating above the bank. */
+.station-hopper__source-drop {
+  stroke: var(--station-edge-soft);
+  stroke-width: var(--station-line-hairline);
+}
+
+/* ---------------------------------------------------------------------
+ *   Material vessel
+ * ------------------------------------------------------------------- */
+
+.station-hopper__shell {
+  fill: var(--station-hopper-metal);
+  stroke: var(--station-hopper-stroke);
+  stroke-width: var(--station-line-thin);
+}
+
+.station-hopper__band,
+.station-hopper__receiver-rim {
+  fill: none;
+  stroke: var(--station-hopper-metal-lit);
+  stroke-width: var(--station-line-hairline);
+}
+
+.station-hopper__band-shadow {
+  fill: none;
+  stroke: var(--station-steel-dark);
+  stroke-width: var(--station-line-thin);
+}
+
+.station-hopper__metal-face {
+  fill: var(--station-hopper-metal-lit);
+  opacity: 0.35;
+}
+
+.station-hopper__metal-glint {
+  fill: var(--station-text-muted);
+  opacity: 0.2;
+}
+
+.station-hopper__metal-shadow,
+.station-hopper__receiver-shade {
+  fill: var(--station-steel-dark);
+  opacity: 0.3;
+}
+
+.station-hopper__lid,
+.station-hopper__clamp,
+.station-hopper__outlet-flange {
+  fill: var(--station-hopper-metal-lit);
+  stroke: var(--station-edge);
+  stroke-width: var(--station-line-hairline);
+}
+
+.station-hopper__port,
+.station-hopper__fill-valve {
+  fill: var(--station-steel-dark);
+  stroke: var(--station-hopper-metal-lit);
+  stroke-width: var(--station-line-hairline);
+}
+
+.station-hopper__valve-core {
+  fill: var(--station-hopper-metal-lit);
+}
+
+/* The fill is the one element driven by a live number.
+ * `--station-hopper-fill` is a 0-1 fraction written as an inline custom
+ * property by the renderer; everything about how that fraction is drawn stays
+ * here. */
+.station-hopper__fill {
+  fill: var(--station-hopper-material-color);
+  transform: scaleY(var(--station-hopper-fill, 0));
+  transform-origin: bottom;
+  transform-box: fill-box;
+}
+
+/* ---------------------------------------------------------------------
+ *   Discharge
+ * ------------------------------------------------------------------- */
+
+/* The vessel ends in a flat plate; the flange under it is where the hose
+ * clamps on. Both are the vessel's own steel. */
+.station-hopper__bottom-plate {
+  fill: var(--station-hopper-metal);
+  stroke: var(--station-hopper-stroke);
+  stroke-width: var(--station-line-thin);
+}
+
+/* The clear hose. The tube is mostly the stage showing through; its edge,
+ * the helix and one glint are what make it a hose and not a gap. */
+.station-hopper__hose {
+  fill: var(--station-hose-clear);
+  stroke: var(--station-hose-edge);
+  stroke-width: var(--station-line-hairline);
+}
+
+.station-hopper__hose-spiral,
+.station-hopper__hose-spiral-far {
+  fill: none;
+  stroke: var(--station-hose-spiral);
+  stroke-width: var(--station-line-hairline);
+  stroke-linecap: round;
+}
+
+.station-hopper__hose-spiral-far {
+  opacity: 0.35;
+}
+
+.station-hopper__hose-glint {
+  fill: var(--station-hose-glint);
+}
+
+.station-hopper__hose-end {
+  fill: var(--station-hose-clear);
+  stroke: var(--station-hose-edge);
+  stroke-width: var(--station-line-hairline);
+}
+
+/* ---------------------------------------------------------------------
+ *   Compact recipe readout
+ * -------------------------------------------------------------------
+ * Sized against the bank's scale (--station-bank-scale, set by the
+ * renderer on the layer group), so a focused bank's readout is the normal
+ * readout enlarged and the hopper stays one rigid drawing at every size. */
+
+.station-hopper__id {
+  fill: var(--station-text-muted);
+  font-family: var(--station-font-mono);
+  font-size: calc(var(--station-text-2xs) * var(--station-bank-scale, 1));
+}
+
+.station-hopper__resin {
+  fill: var(--station-text);
+  font-family: var(--station-font-mono);
+  font-size: calc(var(--station-text-2xs) * var(--station-bank-scale, 1));
+}
+
+.station-hopper__pct {
+  fill: var(--station-layer-accent, var(--station-text-muted));
+  font-family: var(--station-font-mono);
+  font-size: calc(var(--station-text-2xs) * var(--station-bank-scale, 1));
+  font-weight: 600;
+}
+
+/* A hopper with no Receiver Weight Profile height is drawn at the default
+   size. The dashed outline says that size is a default and not a measurement,
+   so nobody reads it as a short hopper. */
+.station-hopper.is-unprofiled .station-hopper__shell {
+  stroke-dasharray: 4 3;
+}
+
+/* ---------------------------------------------------------------------
+ *   State
+ * ------------------------------------------------------------------- */
+
+/* Linked to the focused editor's rows (station.js applies both halves).
+   Highlighted is the pointer or keyboard focus on either side: a lifted
+   outline, no fill. Selected is the inspector's hopper: the accent, and
+   the id in it, so it is stronger than a hover without being louder. */
+.station-hopper:hover .station-hopper__shell,
+.station-hopper:focus-within .station-hopper__shell,
+.station-hopper.is-focused .station-hopper__shell,
+.station-hopper.is-highlighted .station-hopper__shell {
+  stroke: color-mix(in srgb, var(--station-accent-hover) 68%, var(--station-hopper-stroke));
+  stroke-width: var(--station-line-medium);
+}
+
+.station-hopper.is-selected .station-hopper__shell {
+  stroke: var(--station-accent);
+  stroke-width: var(--station-line-medium);
+}
+
+/* Tracked is said by the vessel's wash and the run-down flow (below),
+   not by the outline: the outline stays free for hover, selection and
+   warnings. */
+
+.station-hopper.is-changed .station-hopper__shell,
+.station-hopper.is-attention .station-hopper__shell,
+.station-hopper.is-warning .station-hopper__shell {
+  stroke: var(--station-warning);
+  stroke-width: var(--station-line-medium);
+}
+
+.station-hopper.is-empty .station-hopper__shell {
+  stroke: var(--station-danger);
+}
+
+.station-hopper.is-empty .station-hopper__fill {
+  visibility: hidden;
+}
+
+/* No gesture handling lives here. These hooks can be applied by the existing
+ * interaction owner when drag/drop is available; labels remain fully opaque. */
+.station-hopper.is-dragging .station-hopper__body,
+.station-hopper.is-dragging .station-hopper__details,
+.station-hopper.is-dragging .station-hopper__cone {
+  opacity: 0.55;
+}
+
+.station-hopper.is-dragging .station-hit {
+  cursor: grabbing;
+}
+
+.station-hopper.is-drop-target .station-hopper__shell {
+  stroke: var(--station-accent);
+  stroke-width: var(--station-line-medium);
+  stroke-dasharray: 3 2;
+}
+
+/* Keep focus legible even when another state owns the vessel outline. */
+.station-hopper:hover .station-hopper__id,
+.station-hopper:focus-within .station-hopper__id,
+.station-hopper.is-focused .station-hopper__id,
+.station-hopper.is-highlighted .station-hopper__id,
+.station-hopper.is-selected .station-hopper__id {
+  fill: var(--station-accent);
+}
+
+.station-hopper.is-pump-off .station-hopper__fill {
+  fill: var(--station-pump-off);
+}
+
+.station-hopper.is-pump-off .station-hopper__hose,
+.station-hopper.is-pump-off .station-hopper__hose-end {
+  stroke: var(--station-pump-off);
+}
+
+.station-hopper.is-unassigned .station-hopper__resin,
+.station-hopper.is-unassigned .station-hopper__pct,
+.station-hopper.is-unassigned .station-hopper__id {
+  fill: var(--station-text-faint);
+}
+
+/* An empty vessel reads as empty. */
+.station-hopper.is-unassigned .station-hopper__shell {
+  fill: var(--station-steel-dark);
+}
+
+/* And so does its hose: with no material in the line the tube goes nearly
+   clear and the helix and glint fade back, so an unused hopper's hose is
+   visibly emptier than a running one's. */
+.station-hopper.is-unassigned .station-hopper__hose,
+.station-hopper.is-unassigned .station-hopper__hose-end {
+  fill: var(--station-hose-empty);
+}
+
+.station-hopper.is-unassigned .station-hopper__hose-spiral,
+.station-hopper.is-unassigned .station-hopper__hose-glint {
+  opacity: 0.45;
+}
+
+.station-hopper.is-unassigned .station-hopper__hose-spiral-far {
+  opacity: 0.15;
+}
+
+/* Deliberately NOT restyled by assignment any more. The receiver now means one
+   thing - whether the pump is conveying - and an unassigned hopper whose pump
+   is running is a real and visible state. Assignment is said by the caption
+   and the vessel, which is where it belongs. */
+
+
+/* ---------------------------------------------------------------------
+ *   Operational controls
+ * -------------------------------------------------------------------
+ * Two cells in the hit geometry (station-machine-parts.js), each the
+ * whole of a part of the equipment: the receiver is the pump control,
+ * the body - vessel, hose, caption - is the tracking control. A click
+ * toggles one runtime flag through the application and does nothing
+ * else - it neither focuses nor selects the hopper. There is no icon:
+ * the state is the equipment itself, the amber receiver for the pump
+ * and the run-down flow for tracking (both below), so a bank of hoppers reads
+ * at the scale it is drawn at.
+ *
+ *   data-on     the state as drawn
+ *   data-able   whether the application offers the command: a control it
+ *               does not still shows its state, and reads as equipment
+ *               rather than as a control - the same rule as the editor's
+ *               read-only values.
+ *   is-pending  the click is with the application (synchronous today; the
+ *               class is removed on every answer).
+ */
+
+.station-hopper__control[data-able="false"] .station-hit {
+  cursor: default;
+}
+
+.station-hopper__control.is-pending .station-hit {
+  fill: var(--station-accent-soft);
+}
+
+/* ---- Pump: the receiver is the control ----
+   Running, the receiver is the amber feed area drawn above ("Receiver =
+   pump state"). Off, the amber is gone - cone and cap drop to plain steel
+   there - and the whole receiver steps back, so its absence is the state
+   and no mark is needed. The cell under it does not move: the operator
+   clicks the same place to bring the pump back. */
+.station-hopper.is-pump-off .station-hopper__receiver-drawing {
+  opacity: 0.5;
+}
+
+/* The hover cue, on a receiver whose command is on offer: the cone's edge
+   lifts while running, and a stopped receiver comes part of the way back
+   - a hint of amber - so the pointer says a click will restore it. The
+   cell is in the hit subtree and the drawing is inert, so the hopper is
+   the nearest element that contains both. */
+.station-hopper:has(.station-hopper__control--pump[data-able="true"]:hover) .station-hopper__receiver-cone {
+  stroke: var(--station-text);
+  stroke-width: var(--station-line-thin);
+}
+
+.station-hopper.is-pump-off:has(.station-hopper__control--pump[data-able="true"]:hover) .station-hopper__receiver-drawing {
+  opacity: 0.8;
+}
+
+.station-hopper.is-pump-off:has(.station-hopper__control--pump[data-able="true"]:hover) .station-hopper__receiver-cone {
+  fill: color-mix(in srgb, var(--station-receiver) 40%, var(--station-steel));
+}
+
+/* The body's hover, on a hopper whose tracking command is on offer, is the
+   hopper's own outline lift ("State" above): nothing further is added, so
+   the tracked and untracked hoppers keep the one hover between them. */
+
+/* ---- Tracking: the run-down flow ----
+   Drawn only while the hopper is tracked (station-machine-parts.js): a
+   small group of downward chevrons travelling down the vessel, in the
+   theme's flow colour (--station-rundown-flow, themes/*.css - each
+   theme's own reading of "material moving", never a fixed green), under
+   the clamp bands and beside the ports, over nothing that is read. The
+   group moves down by one period and repeats - the ONE animation on a
+   hopper: slow, linear, continuous, no pulse, no glow, no bounce. The
+   period and the duration are the group's own properties, set by the
+   drawing in the hopper's units, so every vessel loops seamlessly at its
+   own height and the chevrons travel at the one speed on all of them.
+
+   THREE STATES on the vessel. Untracked: plain steel, no flow. Tracked:
+   a faint wash of the flow colour on the vessel (read from across the
+   Station) and the chevrons (read up close) - the wash is a quarter,
+   so the vessel is tinted, not coloured. Overdue (below): a strong wash of
+   the danger colour, a danger outline, and the chevrons in danger too. */
+.station-hopper__rundown {
+  overflow: hidden;
+}
+
+.station-hopper.is-tracking .station-hopper__shell {
+  fill: color-mix(in srgb, var(--station-rundown-flow, var(--station-tracking)) 24%, var(--station-hopper-metal));
+}
+
+.station-hopper__rundown-chevrons {
+  fill: none;
+  stroke: var(--station-rundown-flow, var(--station-tracking));
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.7;
+}
+
+.station-hopper__rundown-flow {
+  animation: station-rundown-flow var(--station-rundown-duration, 2.4s) linear infinite;
+  will-change: transform;
+}
+
+@keyframes station-rundown-flow {
+  from { transform: translateY(0); }
+  to { transform: translateY(var(--station-rundown-period, 9px)); }
+}
+
+/* Under reduced motion the group stands: tracked is still said by the
+   wash and the chevrons, only the travel is gone. */
+@media (prefers-reduced-motion: reduce) {
+  .station-hopper__rundown-flow {
+    animation: none;
+  }
+}
+
+/* ---- Overdue: the pump-off point has passed ----
+   The application's own judgement (station-rundown.js: the row the floor
+   UI's Timeline marks late, pump still running), written on the hopper
+   by the boot file as `is-overdue` from the same projection the timeline
+   draws. The vessel takes a strong wash of the DANGER colour - the whole
+   body, so it is read across a five-layer bank as "you have passed the
+   pump point" - its outline and hardware the danger itself, and the flow
+   runs on through it in danger, because the hopper is still running
+   down. Danger, not warning: every theme's danger is its red or coral
+   (themes/*.css), so overdue is late in every palette and never the
+   warning's amber. A controlled wash of a third, not a red slab: the
+   faces, the material colour and the readout stay legible. Nothing
+   flashes. A pumped-off hopper is never overdue (the projection says
+   so), so the two states cannot meet on one vessel.
+
+   PRECEDENCE, on the vessel's outline: hover and highlight lift it in the
+   accent, selection and the drop target claim it in the accent, focus is
+   the root's ring - all of which stand over overdue, whose own mark is
+   the FILL, which none of them touch. Blend Edit hides the cluster
+   whole (below) and leaves every class where it was; the hopper comes
+   back as it went. */
+.station-hopper.is-overdue .station-hopper__shell {
+  fill: color-mix(in srgb, var(--station-danger) 32%, var(--station-hopper-metal));
+  stroke: var(--station-danger);
+  stroke-width: var(--station-line-medium);
+}
+
+.station-hopper.is-overdue .station-hopper__metal-face {
+  fill: color-mix(in srgb, var(--station-danger) 30%, var(--station-hopper-metal-lit));
+}
+
+.station-hopper.is-overdue .station-hopper__metal-glint {
+  fill: color-mix(in srgb, var(--station-danger) 30%, var(--station-text-muted));
+}
+
+.station-hopper.is-overdue .station-hopper__bottom-plate,
+.station-hopper.is-overdue .station-hopper__band {
+  stroke: var(--station-danger);
+}
+
+.station-hopper.is-overdue .station-hopper__rundown-chevrons {
+  stroke: var(--station-danger);
+  opacity: 0.85;
+}
+
+.station-hopper.is-overdue .station-hopper__pct {
+  fill: var(--station-danger);
+}
+
+/* The outline's claimants, restated after overdue so they keep it. */
+.station-hopper.is-overdue:hover .station-hopper__shell,
+.station-hopper.is-overdue:focus-within .station-hopper__shell,
+.station-hopper.is-overdue.is-focused .station-hopper__shell,
+.station-hopper.is-overdue.is-highlighted .station-hopper__shell {
+  stroke: color-mix(in srgb, var(--station-accent-hover) 68%, var(--station-hopper-stroke));
+}
+
+.station-hopper.is-overdue.is-selected .station-hopper__shell,
+.station-hopper.is-overdue.is-drop-target .station-hopper__shell {
+  stroke: var(--station-accent);
+}
+
+/* ---------------------------------------------------------------------
+ *   Blend Edit: the cluster turned over
+ * -------------------------------------------------------------------
+ * While Blend Edit is on, a bank that has been turned over (from the
+ * Handbook's A-E selectors) shows its compact blend editor
+ * (station-machine-parts.js: blendCard) where its hoppers stood. The
+ * cluster is still built under the card - hidden, not removed - so a
+ * value patch finds the hoppers it expects and the layer comes back
+ * exactly as it was. The two faces occupy one footprint: the card is
+ * sized to the cluster's own box, so nothing beside it moves. The
+ * header above, its share slot included, is the same in both modes.
+ */
+
+.station-layer.is-flipped .station-hopper-cluster {
+  display: none;
+}
+
+/* The card's own surface: the same sunken panel the focus workspace is,
+   with a quiet edge, so the two editors read as one family. */
+.station-blend-card__frame {
+  fill: var(--station-surface-editable);
+  stroke: var(--station-border-strong);
+  stroke-width: var(--station-line-thin);
+}
+
+.station-blend-card__editor {
+  overflow: visible;
+}
+
+/* Turning over: the face that arrives settles in over the settle time,
+   as the focus workspace does; the boot file plays it (station.js) and
+   the reduced-motion rule below is respected there as everywhere. */
+.station-blend-card,
+.station-layer.is-flippable .station-hopper-cluster {
+  transform-box: fill-box;
+  transform-origin: center;
+}

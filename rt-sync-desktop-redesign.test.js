@@ -32,9 +32,10 @@ test("desktop recovery hides the dashboard until a line is connected and can rec
 });
 
 test("reconnect refreshes the existing assignment without leaving, removing, or reassigning it", () => {
-  const reconnectStart = app.indexOf("const reconnectRtSync =");
-  const reconnect = app.slice(reconnectStart, app.indexOf('    , "refresh");', reconnectStart));
+  const reconnectStart = app.indexOf("const refreshRtSyncAction =");
+  const reconnect = app.slice(reconnectStart, app.indexOf('"refresh");', reconnectStart));
   assert.match(reconnect, /lineSync\.refreshSelected\(\)/);
+  assert.match(reconnect, /const reconnectRtSync = \(\)=>runLineSyncAction\(refreshRtSyncAction, /);
   assert.doesNotMatch(reconnect, /leaveWorkspace|removeMember|selectWorkspace/);
   const refresh = cloudSync.slice(cloudSync.indexOf("async function refreshSelected(){"), cloudSync.indexOf("function getWorkspaceConfigurationTransport(){"));
   assert.match(refresh, /await reconcileSelected\(\{ forceRemote: true \}\)/);
@@ -43,7 +44,11 @@ test("reconnect refreshes the existing assignment without leaving, removing, or 
 test("QR links use only the short-lived join code and feed the existing join path", () => {
   assert.match(app, /url\.search = "";/);
   assert.match(app, /url\.searchParams\.set\("rtSyncCode", code\)/);
-  assert.match(app, /QRCode\?\.toString\?\.\(rtSyncLinkUrl\(code\)/);
+  // One QR drawing (linkCodeQrSvg) over the join URL, shared by the RT Sync
+  // panel and the Station line console.
+  assert.match(app, /async function linkCodeQrSvg\(code\)\{\s*\n\s*const url = rtSyncLinkUrl\(code\);/);
+  assert.match(app, /QRCode\?\.toString\?\.\(url,/);
+  assert.equal((app.match(/QRCode\?\.toString/g) || []).length, 1);
   assert.match(app, /lineSync\.joinWorkspace\(\s*joiningCode/);
   assert.match(app, /clearRtSyncLinkCodeFromUrl\(\);/);
   assert.match(html, /id="lineSyncQrJoinDialog"/);

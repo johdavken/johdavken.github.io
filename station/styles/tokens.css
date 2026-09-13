@@ -1,0 +1,168 @@
+/* Station's theme-independent design tokens.
+ *
+ * Layout, type, shape and motion live here. Colour lives only in themes/*.css,
+ * where each registered theme maps the same semantic contract onto a palette.
+ * Component styles spend those semantic tokens and never name a theme.
+ *
+ * Station deliberately does not read the existing application's theme
+ * variables. The hosted Station root owns its own data-theme, so changing
+ * this device-local presentation preference cannot recolour the mobile/tablet
+ * application hidden behind it or become part of operational state.
+ */
+
+/* Line weights are declared for the theme-preview scope as well as the
+ * root: a theme may scale them (--station-line-scale, themes/*.css), and a
+ * miniature drawn under another theme's tokens must take that theme's
+ * weights, not inherit the live root's. */
+.station-root,
+.station-theme-scope {
+  /* ---- Machine line weights ----
+   * Multiplied by the theme's line scale (1 for a rendered machine, more
+   * for a schematic that is drawn in its edges). */
+  --station-line-hairline: calc(0.6px * var(--station-line-scale, 1));
+  /* A curved band's facet edge: stroked in its own colour, just wide enough
+   * to close the antialiasing gap between facets, never wide enough to
+   * read as a line. Not scaled: it is not a line. */
+  --station-line-seam: 0.15px;
+  --station-line-thin: calc(0.9px * var(--station-line-scale, 1));
+  --station-line-medium: calc(1.3px * var(--station-line-scale, 1));
+}
+
+.station-root {
+  --station-web-width: 13px;
+
+  /* ---- Drafting grid ----
+   * The canvas pattern the technical themes draw: a fine minor grid with a
+   * heavier major line every fifth. The colours are the theme's
+   * (--station-grid-major / --station-grid-minor, transparent where a
+   * theme has no grid) and the theme chooses whether the canvas shows it
+   * at all (--station-canvas-pattern: none | var(--station-canvas-grid)),
+   * so a theme without a grid paints no gradient layers. CSS gradients,
+   * not an image: nothing to download, nothing to tile at the wrong DPI. */
+  --station-grid-major-size: 120px;
+  --station-grid-minor-size: 24px;
+  --station-canvas-grid:
+    linear-gradient(to right, var(--station-grid-major) var(--station-stroke), transparent var(--station-stroke)),
+    linear-gradient(to bottom, var(--station-grid-major) var(--station-stroke), transparent var(--station-stroke)),
+    linear-gradient(to right, var(--station-grid-minor) var(--station-stroke), transparent var(--station-stroke)),
+    linear-gradient(to bottom, var(--station-grid-minor) var(--station-stroke), transparent var(--station-stroke));
+  --station-canvas-grid-size:
+    var(--station-grid-major-size) var(--station-grid-major-size),
+    var(--station-grid-major-size) var(--station-grid-major-size),
+    var(--station-grid-minor-size) var(--station-grid-minor-size),
+    var(--station-grid-minor-size) var(--station-grid-minor-size);
+
+  /* ---- Motion ----
+   * Opening and closing a layer is a window opening and closing: an
+   * acknowledgement the instant it is asked for, one decelerating move,
+   * and a short settle for the destination's own chrome. The curve is a
+   * desktop window's - fast off the mark, easing into place, no bounce.
+   * station-transition.js reads these; there is no second copy in script. */
+  --station-motion-ack: 80ms;
+  --station-motion-move: 300ms;
+  /* The equipment train sets off this much before its hopper bank follows,
+   * so the thing that was clicked is seen to lead; closing is the mirror,
+   * the bank leaving first and the train landing last. */
+  --station-motion-lead: 40ms;
+  --station-motion-settle: 120ms;
+  --station-motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* What the other layers fade to while one is open. They still stand where
+   * they stood, a step further out, so the way back is a real place. */
+  --station-ghost-opacity: 0;
+
+  /* ---- Space ---- */
+  --station-space-1: 4px;
+  --station-space-2: 8px;
+  --station-space-3: 12px;
+  --station-space-4: 16px;
+  --station-space-5: 24px;
+  --station-space-6: 32px;
+
+  /* ---- Shape ---- */
+  --station-radius-sm: 3px;
+  --station-radius: 6px;
+  --station-radius-lg: 10px;
+  --station-stroke: 1px;
+  /* ---- Type ---- */
+  --station-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --station-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  /* Small enough for a per-hopper readout in a six-wide bank; the only place
+   * it is used. */
+  --station-text-2xs: 9px;
+  --station-text-xs: 11px;
+  --station-text-sm: 12px;
+  --station-text-md: 14px;
+  --station-text-lg: 17px;
+  /* The focused editor's leading numbers: a hopper's blend percentage and
+   * the total under the column. Larger than any label so the number is
+   * what the eye lands on first. */
+  --station-text-xl: 22px;
+  --station-line-tight: 1.25;
+  --station-line-normal: 1.5;
+
+  /* ---- Shell layout ----
+   * The header and the status bar are the only fixed tracks; the stage
+   * takes everything between them, the full width of the window. */
+  --station-header-height: 52px;
+  --station-status-height: 32px;
+  /* The run-down timeline's row: the axis with its tick labels above and
+   * three marker lanes below. Modest on purpose - the stage is the screen. */
+  --station-timeline-height: 92px;
+  /* The Now column at the timeline's left: the anchor's label and clock. */
+  --station-timeline-now-width: 64px;
+  /* The right-hand column for what lies past the window's edge or has no
+   * estimate; capped so it can never become a side panel. */
+  --station-timeline-side-width: 168px;
+
+  /* ---- Operator Handbook ----
+   * One work surface of fixed capacity, standing across the lower part of
+   * the stage. Its box is the STAGE'S, never its contents': `share` is the
+   * part of the stage's height the panel takes, from the bottom up, chosen
+   * so its top edge clears the hopper bank. The machine's drawing is 740
+   * units tall and its hopper clusters - and the Blend Edit cards that
+   * take their place - end at unit 404, 55% of the way down, when the
+   * drawing is fitted to the stage's height; fitted to its width instead
+   * it is centred, and the bank ends higher still. So 40% from the bottom
+   * never reaches a hopper, at any window Station supports, and shrinks
+   * only as the machine above it does. `max-height` keeps a tall stage
+   * from opening a panel taller than its work needs; `width` is what a
+   * 1440px window gives it comfortably. `clearance` is the launcher's
+   * column with its margins, kept free on either side so the centred
+   * panel never lands on the launcher at Station's narrowest. */
+  --station-handbook-width: 1080px;
+  --station-handbook-share: 40%;
+  --station-handbook-max-height: 400px;
+  --station-handbook-clearance: 96px;
+
+  /* ---- Changeover Calculator ----
+   * The utility surface that opens out of the header's CHANGEOVER
+   * readout: a smaller, fixed-capacity box centred under the header
+   * across the upper part of the stage. Its box, too, is the stage's:
+   * `width` and `height` are what its three groups of answers, the
+   * deadline line and the estimate line need at Station's type sizes,
+   * and changeover.css caps the height at what is left of the stage
+   * above the Handbook's share (less two gaps), so the two surfaces are
+   * open together at every window Station supports and never meet. */
+  --station-changeover-width: 820px;
+  --station-changeover-height: 308px;
+}
+
+/* ---------------------------------------------------------------------
+ *   Breakpoints
+ * -------------------------------------------------------------------
+ * Station has exactly one, and it is documented here rather than
+ * scattered through the component files. (The compact-desktop step at
+ * 1100-1439px went with the side columns it narrowed: with the stage the
+ * whole width there is nothing left to narrow.)
+ *
+ *   >= 1100px   the supported range. The stage takes the full width and
+ *               scales the machine to fit; nothing is hidden, nothing
+ *               reflows to a different layout.
+ *   <  1100px   below Station's supported range. The shell says so rather
+ *               than degrading into a phone layout - Station is desktop-only
+ *               by design, and the existing mobile UI is where floor work
+ *               happens.
+ *
+ * A third breakpoint is not a small addition. If a component appears to need
+ * one, the layout above it is the thing to fix.
+ */

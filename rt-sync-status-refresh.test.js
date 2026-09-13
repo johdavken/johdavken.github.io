@@ -60,10 +60,12 @@ test("it runs the same action as the existing retry buttons, not a new path into
   // reconnectRtSync -> refreshSelected() when a line is selected, retry()
   // otherwise. Reusing it keeps one definition of what "refresh" means.
   assert.match(app, /\$\("lineSyncRefreshStatusBtn"\)\?\.addEventListener\("click",reconnectRtSync\);/);
-  assert.match(app, /const reconnectRtSync = \(\)=>runLineSyncAction\(\(\)=>[\s\S]*?lineSync\.refreshSelected\(\)[\s\S]*?: lineSync\.retry\(\)/);
-  // No second call site inventing its own reconcile.
+  assert.match(app, /const refreshRtSyncAction = \(\)=>lineSync\.getState\(\)\.selectedWorkspaceId\s*\?\s*lineSync\.refreshSelected\(\)\s*:\s*lineSync\.retry\(\);/);
+  assert.match(app, /const reconnectRtSync = \(\)=>runLineSyncAction\(refreshRtSyncAction, "refresh"\);/);
+  // No second call site inventing its own reconcile - the Station line
+  // console is handed refreshRtSyncAction itself, not a copy of it.
   const calls = app.match(/lineSync\.refreshSelected\(\)/g) || [];
-  assert.ok(calls.length <= 2, `refreshSelected() has ${calls.length} call sites - expected the setup button and reconnectRtSync only`);
+  assert.ok(calls.length <= 2, `refreshSelected() has ${calls.length} call sites - expected the setup button and refreshRtSyncAction only`);
 });
 
 test("it is disabled while a sync action is already running, like the other two", () => {
@@ -97,6 +99,7 @@ test("styled as an adornment on the readout, not a peer of the wizard trigger be
 
 test("app.js and desktop.css carry moved ?v= tags, so a returning desktop gets both halves", () => {
   // The button is inert without its handler, and unstyled without the CSS.
-  assert.match(html, /app\.js\?v=0\.25\.(1[5-9]|[2-9]\d)/);
+  // At least 0.25.15: any later patch, minor or major counts as moved.
+  assert.match(html, /app\.js\?v=(0\.25\.(1[5-9]|[2-9]\d)|0\.(2[6-9]|[3-9]\d)\.\d+|[1-9]\d*\.\d+\.\d+)"/);
   assert.match(html, /desktop\.css\?v=0\.1\.(29|[3-9]\d)/);
 });

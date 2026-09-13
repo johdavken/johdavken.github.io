@@ -19,11 +19,15 @@ test("Recipe history keeps Current and Next independent, bounded, and restores a
   assert.match(app,/const RECIPE_HISTORY_LIMIT = 40;/);
   assert.match(app,/const recipeEditHistory = \{ current:\{undo:\[\],redo:\[\]\}, next:\{undo:\[\],redo:\[\]\} \};/);
   assert.match(app,/function recipeEditHistoryKey\(\)\{ return isNextRecipePage\(\) \? "next" : "current"; \}/);
-  assert.match(app,/function snapshotRecipeEdit\(\)\{[\s\S]*?layers:cloneRecipeLayers\(recipeLayers\(\)\),[\s\S]*?lots:\{\.\.\.\(next \? state\.nextRecipeLots : state\.resinLots \|\| \{\}\)\}/);
+  // The functions take an optional page ("current" | "next") so a caller
+  // outside the grid can address one recipe explicitly; with none named
+  // they resolve the grid's own page as before (recipe-edit-history.test.js
+  // runs the block and proves both).
+  assert.match(app,/function snapshotRecipeEdit\(page\)\{[\s\S]*?const key = recipeHistoryPage\(page\);[\s\S]*?layers:cloneRecipeLayers\(recipeLayersForPage\(key\)\),[\s\S]*?lots:\{\.\.\.\(next \? state\.nextRecipeLots : state\.resinLots \|\| \{\}\)\}/);
   assert.match(app,/if \(history\.undo\.length > RECIPE_HISTORY_LIMIT\) history\.undo\.shift\(\);/);
   assert.match(app,/history\.redo\.length = 0;/);
-  assert.match(app,/function undoRecipeEdit\(\)\{[\s\S]*?history\.redo\.push\(snapshotRecipeEdit\(\)\);[\s\S]*?applyRecipeEditSnapshot\(previous\);/);
-  assert.match(app,/function redoRecipeEdit\(\)\{[\s\S]*?history\.undo\.push\(snapshotRecipeEdit\(\)\);[\s\S]*?applyRecipeEditSnapshot\(next\);/);
+  assert.match(app,/function undoRecipeEdit\(page\)\{[\s\S]*?history\.redo\.push\(snapshotRecipeEdit\(key\)\);[\s\S]*?applyRecipeEditSnapshot\(previous, key\);/);
+  assert.match(app,/function redoRecipeEdit\(page\)\{[\s\S]*?history\.undo\.push\(snapshotRecipeEdit\(key\)\);[\s\S]*?applyRecipeEditSnapshot\(next, key\);/);
 });
 
 test("recipe replacement drops only the history for the document being replaced",()=>{

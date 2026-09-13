@@ -1,0 +1,37 @@
+/* The machine stage: the canvas the layer equipment is drawn on, and nothing
+ * inside it.
+ *
+ * Owns `station-machine__*` and the shared invisible hit area. The equipment
+ * itself belongs to its own components - layer-bank.css owns the bank, its
+ * header, the mixer and the extruder; hopper.css owns the hopper assembly and
+ * its cluster - so a change to one has exactly one home.
+ */
+
+.station-machine__stage {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.station-machine__empty {
+  padding: var(--station-space-6);
+  color: var(--station-text-muted);
+  text-align: center;
+}
+
+/* SVG groups only receive pointer events where they are painted, so every
+ * click target carries one of these. Transparent rather than `fill: none`:
+ * `none` is not painted and would not be hit. */
+.station-hit {
+  fill: transparent;
+  cursor: pointer;
+}
+
+/* While a layer is travelling between layouts nothing on the stage is a
+   target: a click mid-flight would land on wherever the equipment happens
+   to be that frame. The transition state (station-transition.js) sets this
+   on the mount and clears it when the layout has settled. */
+.station-machine.is-transitioning .station-hit {
+  pointer-events: none;
+  cursor: default;
+}

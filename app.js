@@ -136,12 +136,37 @@
   const resinCatalog = window.PolynResinCatalog;
   const resinLookup = window.PolynLookup;
   const activeJob = window.PolynActiveJob;
+  // Read-only window onto committed state for the Station console. Optional
+  // by design: the app runs identically when it is absent.
+  const stationBridge = window.PolynStationStateBridge || null;
+  // The write direction: Station's command contract and command bridge.
+  // Both optional, like the state bridge - the floor UI must start without
+  // them. The handle is the only thing that can disconnect the executor.
+  const stationCommands = window.PolynStationCommandBridge || null;
+  const stationCommandContract = window.PolynStationCommandContract || null;
+  // The line connection as Station may see it, and the RT Sync actions it
+  // may ask for - the same closures the floor UI's own buttons call. Optional
+  // like the other two; the handle is the only thing that can publish.
+  const stationConnection = window.PolynStationConnectionBridge || null;
+  // The workspace's saved recipes as Station may see them, and the three
+  // Recipe Book actions it may ask for - the same save, replace and refresh
+  // the floor UI's own Recipe Book runs. Optional like the other three; the
+  // handle is the only thing that can publish.
+  const stationRecipes = window.PolynStationRecipesBridge || null;
+  let stationCommandHandle = null;
+  let stationBridgeHandle = null;
+  let stationConnectionHandle = null;
+  let stationRecipesHandle = null;
   const { parseChangeoverDate, formatTime, formatTimelineStart, isChangeoverStale } = window.PolynScheduling;
   const fmtTime = (date, baseDate) => formatTime(date, baseDate, state.timeFormat);
   const { writeJson } = window.PolynStorage;
   let lineSync = null;
   let lineSyncActionInFlight = false;
   let lineSyncBusyAction = "";
+  // The message the most recent failed RT Sync action produced, kept so a
+  // second presentation (Station) can report the same failure the floor UI
+  // wrote into its own panel, without reading it back out of the DOM.
+  let lastLineSyncErrorMessage = "";
   let lastRenderedLinkCodeQr = "";
   let pendingQrJoinCode = "";
   let rtSyncLinkHandlingReady = false;
@@ -826,8 +851,10 @@
     const workspaceId=lineSync?.getState?.().selectedWorkspaceId || "";
     if(!workspaceId || !workspaceConfigurations || workspaceConfigurationRefreshInFlight) return;
     workspaceConfigurationRefreshInFlight=true; workspaceConfigurationStatus("Refreshing shared configurations…"); renderWorkspaceConfigurations(lineSync.getState());
+    stationRecipesHandle?.publish();
     const result=await workspaceConfigurations.refresh(workspaceId);
     workspaceConfigurationRefreshInFlight=false;
+    stationRecipesHandle?.publish();
     if(workspaceId !== lineSync?.getState?.().selectedWorkspaceId) return;
     renderWorkspaceConfigurations(lineSync.getState());
     if(!result.ok) workspaceConfigurationStatus(result.cache?.cachedAt ? "Refresh failed; showing cached shared configurations." : "Shared configurations are unavailable right now.");
@@ -2485,6 +2512,13 @@
    * ============================ */
   function saveSession(){
       const result = writeJson(localStorage, LS_SESSION_KEY, snapshotPayload());
+      // Station bridge: say the committed state moved. Deliberately AFTER
+      // snapshotPayload(), which commits the working Next Recipe, and
+      // deliberately outside the failure branch below - state moved whether or
+      // not persisting it worked. Safe on this keystroke-rate path because
+      // publish() only increments a revision and queues at most one coalesced
+      // notification per tick; nothing is cloned unless a consumer asks.
+      stationBridgeHandle?.publish();
       if (!result.ok){
         showStorageWarning("Autosave failed. Changes may be lost when this page closes.");
         return false;
@@ -4116,16 +4150,41 @@
       }));
     }
     function recipeEditHistoryKey(){ return isNextRecipePage() ? "next" : "current"; }
-    function snapshotRecipeEdit(){
-      const next = isNextRecipePage();
+    /* Which recipe a history operation addresses. The grid's own handlers
+     * pass nothing (or, from a click listener, an Event) and get the page
+     * the grid is showing - exactly as before. A caller that names a page
+     * gets that page whatever the grid happens to be showing: the Station
+     * console addresses Current and Next explicitly and must not depend on
+     * a hidden tab. Anything that is not a page name is "not named". */
+    function recipeHistoryPage(page){
+      return page === "next" || page === "current" ? page : recipeEditHistoryKey();
+    }
+    /* The layers array a page's history reads and writes: the live recipe,
+     * or the working plan (created on first use, as visiting Next does). */
+    function recipeLayersForPage(page){
+      return page === "next" ? ensureNextRecipeWorking() : state.layers;
+    }
+    // Whether each document has anything to undo or redo, for the Station
+    // bridge: the two facts its buttons need, never the entries themselves.
+    function recipeHistoryAvailability(){
+      const of = page=>({
+        canUndo: recipeEditHistory[page].undo.length > 0,
+        canRedo: recipeEditHistory[page].redo.length > 0
+      });
+      return { current: of("current"), next: of("next") };
+    }
+    function snapshotRecipeEdit(page){
+      const key = recipeHistoryPage(page);
+      const next = key === "next";
       return {
-        layers:cloneRecipeLayers(recipeLayers()),
+        layers:cloneRecipeLayers(recipeLayersForPage(key)),
         lots:{...(next ? state.nextRecipeLots : state.resinLots || {})}
       };
     }
-    function recordRecipeEdit(before){
-      if (!before || JSON.stringify(before) === JSON.stringify(snapshotRecipeEdit())) return;
-      const history = recipeEditHistory[recipeEditHistoryKey()];
+    function recordRecipeEdit(before, page){
+      const key = recipeHistoryPage(page);
+      if (!before || JSON.stringify(before) === JSON.stringify(snapshotRecipeEdit(key))) return;
+      const history = recipeEditHistory[key];
       history.undo.push(before);
       if (history.undo.length > RECIPE_HISTORY_LIMIT) history.undo.shift();
       history.redo.length = 0;
@@ -4139,9 +4198,9 @@
       recipeEditInputSnapshot=null;
       if (pending?.page === recipeEditHistoryKey()) recordRecipeEdit(pending.state);
     }
-    function applyRecipeEditSnapshot(snapshot){
+    function applyRecipeEditSnapshot(snapshot, page){
       if (!snapshot) return;
-      if (isNextRecipePage()){
+      if (recipeHistoryPage(page) === "next"){
         nextRecipeWorking=cloneRecipeLayers(snapshot.layers);
         state.nextRecipeLots={...(snapshot.lots || {})};
       }else{
@@ -4151,21 +4210,25 @@
       recipeEditInputSnapshot=null;
       renderSplitsArea();
       validateAndCompute({sync:true,immediate:true,kind:"edit"});
-      saveSession();
+      // Whether the save landed, for a caller that reports it (the Station
+      // executor); the grid's own callers ignore it, as they always have.
+      return saveSession();
     }
-    function undoRecipeEdit(){
-      const history=recipeEditHistory[recipeEditHistoryKey()];
+    function undoRecipeEdit(page){
+      const key=recipeHistoryPage(page);
+      const history=recipeEditHistory[key];
       const previous=history.undo.pop();
       if (!previous) return;
-      history.redo.push(snapshotRecipeEdit());
-      applyRecipeEditSnapshot(previous);
+      history.redo.push(snapshotRecipeEdit(key));
+      return applyRecipeEditSnapshot(previous, key);
     }
-    function redoRecipeEdit(){
-      const history=recipeEditHistory[recipeEditHistoryKey()];
+    function redoRecipeEdit(page){
+      const key=recipeHistoryPage(page);
+      const history=recipeEditHistory[key];
       const next=history.redo.pop();
       if (!next) return;
-      history.undo.push(snapshotRecipeEdit());
-      applyRecipeEditSnapshot(next);
+      history.undo.push(snapshotRecipeEdit(key));
+      return applyRecipeEditSnapshot(next, key);
     }
     function syncRecipeEditHistoryControls(){
       const history=recipeEditHistory[recipeEditHistoryKey()];
@@ -9186,6 +9249,9 @@
     const join = $("lineSyncJoinBtn");
     if (join) join.textContent = busy && action === "join" ? "Joining…" : "Join RT Sync";
     applyLineSyncActionAvailability();
+    // Station reads busy from the connection descriptor to hold its own
+    // controls while an action runs; the flag changes here and nowhere else.
+    stationConnectionHandle?.publish();
   }
 
   function formatLineSyncTimestamp(value){
@@ -9223,17 +9289,30 @@
     window.history.replaceState(window.history.state, document.title, `${url.pathname}${url.search}${url.hash}`);
   }
 
+  // The one QR drawing in the application: the join link for a code, as an
+  // SVG string, or "" when it cannot be drawn. Both the RT Sync panel and
+  // the Station line console draw from here, so there is one link format
+  // and one set of drawing options.
+  async function linkCodeQrSvg(code){
+    const url = rtSyncLinkUrl(code);
+    if (!url) return "";
+    try{
+      const svg = await window.QRCode?.toString?.(url, {
+        type: "svg", errorCorrectionLevel: "M", margin: 4,
+        color: { dark: "#111111", light: "#ffffff" }
+      });
+      return typeof svg === "string" ? svg : "";
+    }catch{ return ""; }
+  }
+
   async function renderLinkCodeQr(code){
     const host = $("lineSyncQrCode");
     if (!host || !code || code === lastRenderedLinkCodeQr) return;
     lastRenderedLinkCodeQr = code;
-    try{
-      const svg = await window.QRCode?.toString?.(rtSyncLinkUrl(code), {
-        type: "svg", errorCorrectionLevel: "M", margin: 4,
-        color: { dark: "#111111", light: "#ffffff" }
-      });
-      if (code === lastRenderedLinkCodeQr && svg) host.innerHTML = svg;
-    }catch{
+    const svg = await linkCodeQrSvg(code);
+    if (code !== lastRenderedLinkCodeQr) return;
+    if (svg) host.innerHTML = svg;
+    else {
       lastRenderedLinkCodeQr = "";
       host.replaceChildren();
     }
@@ -9305,9 +9384,11 @@
   async function runLineSyncAction(action, actionName = ""){
     if (lineSyncActionInFlight) return;
     setLineSyncActionBusy(true, actionName);
+    lastLineSyncErrorMessage = "";
     try{ await action(); return true; }
     catch(error){
       const message = lineSyncErrorMessage(error);
+      lastLineSyncErrorMessage = message;
       const target = $("lineSyncMessage");
       if (target) target.textContent = message;
       renderMobileLineSyncStatus(lineSync?.getState?.() || {}, { status:"Error", message });
@@ -9579,6 +9660,14 @@
       syncNativeTimelineAlarms(lastTimelineFlat, lastTimelineChangeoverDate);
     }
     renderDashboard();
+    // Station's line console: every RT Sync state change already arrives
+    // here (cloud-sync's onStateChange), so this is the one place the
+    // connection descriptor is announced. Last, after the derived layer
+    // count and naming have been brought into line with the workspace.
+    stationConnectionHandle?.publish();
+    // And the saved recipes: which workspace's book Station shows follows
+    // the selected workspace, which changes here and nowhere else.
+    stationRecipesHandle?.publish();
   }
 
   function openRtSyncJoinFromUrl(urlValue = window.location.href, requireAppLinkOrigin = false){
@@ -9690,6 +9779,539 @@
     refreshConfigDropdown();
   }
 
+  /* The Station command executor: the application's side of
+   * station-command-bridge.js.
+   *
+   * WHAT IT IS
+   *
+   * An adapter. Station asks for a change through the command bridge; this
+   * carries the request into the SAME mutation paths the Recipe grid and the
+   * Hookups board use, and reports back through the contract's result
+   * shapes. There is no second recipe model, no second history, no second
+   * save path: every mutating command ends in the tail applyRecipeEditSnapshot
+   * already ends in - renderSplitsArea (the grid may be showing the document
+   * that moved), validateAndCompute (the canonical recompute: hookup labels
+   * reconciled, RT Sync notified, session saved), then saveSession whose
+   * result is what `persisted` reports - and records into the same
+   * recipeEditHistory the grid's Undo reads.
+   *
+   * WHAT REACHES IT
+   *
+   * Only requests the contract has normalized: the bridge validates the
+   * shape (recipe named, index 0..5, percentage 0..100, resin trimmed and
+   * bounded, source through hookup-sources' own rule) before calling
+   * execute(). What is checked HERE is what only live state can answer:
+   * the layer exists, the hopper exists on that layer, H1 is derived, the
+   * blend would still total, the hopper has a resin to label, the hopper
+   * has something to move. All of it before any assignment, so a failure
+   * leaves state byte-identical, with no history entry and no save.
+   *
+   * ADDRESSING
+   *
+   * Every command names its recipe. "current" is state.layers; "next" is
+   * the working plan through recipeLayersForPage() - the same explicit
+   * addressing the history helpers take - never the tab the hidden grid
+   * happens to show. Addressing Next materializes the working copy, as
+   * visiting the Next tab does; a command that then changes nothing puts
+   * it back, so a no-op cannot turn "no plan" into an empty plan on the
+   * next save.
+   *
+   * WHAT IT REFUSES
+   *
+   *   rearranging  hopper-rearrangement mode holds a baseline and applies
+   *                moves without sync until Done; a write underneath it
+   *                would corrupt that baseline.
+   *   busy         a remote active job is being applied (cloud-sync
+   *                suppresses outgoing writes while it is), so a write now
+   *                would change this device without telling the others.
+   *
+   * Nothing thrown crosses the bridge: the bridge converts a throw to an
+   * `internal` result, and execute() does the same itself.
+   */
+  function createStationCommandExecutor(){
+    const contract = stationCommandContract;
+    const H = ()=>window.PolynHookupSources || null;
+
+    function refusal(){
+      if (hopperRearrangement?.active) return contract.failure("rearranging");
+      if (lineSync?.getState?.()?.isApplyingRemote) return contract.failure("busy");
+      return null;
+    }
+
+    /* The layers a recipe addresses, and a way to undo the one side effect
+     * of looking: Next's working copy is created on first use. */
+    function resolveLayers(page){
+      const materialized = page === "next" && !nextRecipeWorking;
+      const layers = recipeLayersForPage(page);
+      return {
+        layers,
+        release(){ if (materialized) nextRecipeWorking = null; }
+      };
+    }
+
+    function locate(page, layerName, index){
+      const resolved = resolveLayers(page);
+      const layer = resolved.layers.find(L=>L.name === layerName) || null;
+      if (!layer){
+        resolved.release();
+        return { failure: contract.failure("unknown_layer", { message: `Layer ${layerName} is not part of the ${page} recipe.` }) };
+      }
+      const hopper = index === undefined ? null : (layer.hoppers[index] || null);
+      if (index !== undefined && !hopper){
+        resolved.release();
+        return { failure: contract.failure("unknown_hopper", { field: "index", message: `Layer ${layerName} has no hopper ${index + 1}.` }) };
+      }
+      return { layers: resolved.layers, layer, hopper, release: resolved.release };
+    }
+
+    /* The tail. `grid` is false for a source edit, which the Hookups board
+     * commits without rebuilding the recipe grid - and which then redraws
+     * the board itself (`hookups`), as the board's own field does. A
+     * pump-off commit sets both false: the grid does not show pump state,
+     * and the Timeline rows that do are redrawn by validateAndCompute. A
+     * future case passing grid:false must say whether it wants the board
+     * redrawn; the default follows the source edit's need, not its own. */
+    function commit({ sync = true, immediate = false, kind = "edit", grid = true, hookups = !grid } = {}){
+      if (grid) renderSplitsArea();
+      validateAndCompute({ sync, immediate, kind });
+      const persisted = saveSession();
+      if (hookups) renderTimelineHookups({ force: true });
+      return persisted;
+    }
+
+    /* The result Station reads: the revision the tail produced and the
+     * frozen snapshot at it - the same object the bridge's next notification
+     * carries, so what the command returns and what Station is told agree. */
+    function done(changed, persisted){
+      return contract.success({
+        changed,
+        revision: stationBridge ? stationBridge.getRevision() : null,
+        persisted: !!persisted,
+        snapshot: stationBridge ? stationBridge.getSnapshot() : null
+      });
+    }
+    // A valid command that changes nothing: no mutation, no history, no
+    // save, no publish - and so nothing persisted.
+    function unchanged(){ return done(false, false); }
+
+    const commands = {
+      /* The grid's resin field: hopper.resinName = normName(value), then
+       * validateAndCompute({ sync:true }) and saveSession. The grid records
+       * history when the field is left; here one entry per command. */
+      setHopperResin(args){
+        const at = locate(args.recipe, args.layer, args.index);
+        if (at.failure) return at.failure;
+        const resin = normName(args.resin);
+        if (normName(at.hopper.resinName) === resin){ at.release(); return unchanged(); }
+        const before = snapshotRecipeEdit(args.recipe);
+        at.hopper.resinName = resin;
+        const persisted = commit({ sync: true });
+        recordRecipeEdit(before, args.recipe);
+        return done(true, persisted);
+      },
+
+      /* The grid's percentage field: H1 is read-only and derived; the
+       * candidate is checked against the other hoppers' shares with the
+       * same validateHopperPercentages the field uses, then hopper.pct is
+       * set and recomputeAutoH1 keeps H1 the remainder. */
+      setHopperBlend(args){
+        if (args.index === 0) return contract.failure("h1_derived");
+        const at = locate(args.recipe, args.layer, args.index);
+        if (at.failure) return at.failure;
+        const others = at.layer.hoppers.slice(1).map((item, i)=>(i === args.index - 1 ? args.pct : item.pct));
+        const total = validation.validateHopperPercentages(others);
+        if (!total.valid){
+          at.release();
+          return contract.failure("blend_total", { total: total.total, message: total.message });
+        }
+        if (clampNum(at.hopper.pct) === args.pct){ at.release(); return unchanged(); }
+        const before = snapshotRecipeEdit(args.recipe);
+        at.hopper.pct = args.pct;
+        recomputeAutoH1(at.layer);
+        const persisted = commit({ sync: true });
+        recordRecipeEdit(before, args.recipe);
+        return done(true, persisted);
+      },
+
+      /* The layer header's percentage field: L.layerPct = value (0..100;
+       * whether the layers total 100 is an attention fact, not a block).
+       * On the compact phone layout the first layer's share is derived
+       * from the others, exactly as H1 is; that rule is honoured here so a
+       * command cannot set what the phone's field would not let anyone
+       * type. */
+      setLayerShare(args){
+        const at = locate(args.recipe, args.layer);
+        if (at.failure) return at.failure;
+        const autoFirst = autoFirstLayerPctActive() && at.layers.length > 1;
+        if (autoFirst && at.layers[0] === at.layer){
+          at.release();
+          return contract.failure("h1_derived", { message: "The first layer's share is calculated from the other layers." });
+        }
+        if (clampNum(at.layer.layerPct) === args.pct){ at.release(); return unchanged(); }
+        const before = snapshotRecipeEdit(args.recipe);
+        at.layer.layerPct = args.pct;
+        if (autoFirst) recomputeAutoFirstLayerPct(at.layers);
+        const persisted = commit({ sync: true });
+        recordRecipeEdit(before, args.recipe);
+        return done(true, persisted);
+      },
+
+      /* The cell's × button, exactly: resin cleared; percentage zeroed and
+       * H1 re-derived unless this IS H1 (whose percentage stays derived);
+       * tracking switched off - the grid unlinks a cleared hopper so it
+       * does not sit on the Timeline showing missing data; synced at once
+       * as "recipe-clear"; history recorded after the save, as there. */
+      clearHopper(args){
+        const at = locate(args.recipe, args.layer, args.index);
+        if (at.failure) return at.failure;
+        const hopper = at.hopper;
+        const alreadyClear = !normName(hopper.resinName) && !hopper.track && (args.index === 0 || clampNum(hopper.pct) === 0);
+        if (alreadyClear){ at.release(); return unchanged(); }
+        const before = snapshotRecipeEdit(args.recipe);
+        hopper.resinName = "";
+        if (args.index > 0){
+          hopper.pct = 0;
+          recomputeAutoH1(at.layer);
+        }
+        hopper.track = false;
+        const persisted = commit({ sync: true, immediate: true, kind: "recipe-clear" });
+        recordRecipeEdit(before, args.recipe);
+        return done(true, persisted);
+      },
+
+      /* The Hookups board's field, for one position: applyGroup with the
+       * hopper's resin (the label is resin-guarded), a change synced as
+       * "hookup-edit", no history entry - sources are operational job
+       * state, not recipe state, and the board records none either. */
+      setSource(args){
+        const hookups = H();
+        if (!hookups) return contract.failure("internal", { message: "Hookup sources are not available." });
+        const at = locate(args.recipe, args.layer, args.index);
+        if (at.failure) return at.failure;
+        const resin = normName(at.hopper.resinName);
+        if (!resin){ at.release(); return contract.failure("no_resin"); }
+        const key = hookups.positionKey(at.layer.name, args.index);
+        const store = hookups.normalizeStore(state.hookupSources);
+        if (hookups.sourceForPosition(store[args.recipe], key, resin) === args.source){ at.release(); return unchanged(); }
+        state.hookupSources = hookups.applyGroup(state.hookupSources, args.recipe, [key], resin, args.source);
+        const persisted = commit({ sync: true, kind: "hookup-edit", grid: false });
+        return done(true, persisted);
+      },
+
+      /* Rearrange mode's one move, done and finished in one command:
+       * PolynHopperRearrangement.move carries the assignment (resin and
+       * share - never the weight, tracking or pump-off, which belong to the
+       * physical hopper) from one position to another, swapping back
+       * whatever the destination held, across layers if the two positions
+       * are on different layers, re-deriving every H1 and refusing a
+       * blend that would not total; then the same tail as Done - synced
+       * at once as "rearrange-hoppers", and one history entry for the
+       * move, as Done records one for a whole rearrangement. Sources are
+       * not moved: the tail's reconciliation drops a label whose resin
+       * left its position, as it does for a grid rearrangement. The
+       * module's own refusals, in its own order: the same position twice
+       * is "no_change" and a no-op here; a position with nothing in it is
+       * empty_hopper; a result that would not validate is blend_total,
+       * the one way a valid recipe's move can fail. None of them touches
+       * the layers - the module works on a copy until it validates. */
+      moveHopper(args){
+        const rearrangement = window.PolynHopperRearrangement;
+        if (!rearrangement) return contract.failure("internal", { message: "Hopper rearrangement is not available." });
+        const from = locate(args.recipe, args.layer, args.index);
+        if (from.failure) return from.failure;
+        const toLayer = from.layers.find(L=>L.name === args.toLayer) || null;
+        if (!toLayer){
+          from.release();
+          return contract.failure("unknown_layer", { message: `Layer ${args.toLayer} is not part of the ${args.recipe} recipe.` });
+        }
+        if (!toLayer.hoppers[args.toIndex]){
+          from.release();
+          return contract.failure("unknown_hopper", { field: "toIndex", message: `Layer ${args.toLayer} has no hopper ${args.toIndex + 1}.` });
+        }
+        const before = snapshotRecipeEdit(args.recipe);
+        const moved = rearrangement.move(from.layers, { layer: args.layer, index: args.index }, { layer: args.toLayer, index: args.toIndex });
+        if (!moved.ok){
+          from.release();
+          if (moved.reason === "invalid") return contract.failure("blend_total", { message: "Move rejected: percentages would be invalid." });
+          if (moved.reason === "empty_source") return contract.failure("empty_hopper");
+          return unchanged();
+        }
+        // Two positions holding the same assignment swap into the same
+        // recipe: the module applied, nothing moved, and nothing is saved.
+        if (JSON.stringify(snapshotRecipeEdit(args.recipe)) === JSON.stringify(before)){ from.release(); return unchanged(); }
+        const persisted = commit({ sync: true, immediate: true, kind: "rearrange-hoppers" });
+        recordRecipeEdit(before, args.recipe);
+        return done(true, persisted);
+      },
+
+      /* The Recipe grid's clock button (toggleTracking), exactly: the
+       * hopper's `track` flag set, the grid rebuilt (which is where its
+       * tracked-cell state and "N hoppers tracked" status come from),
+       * synced at once as "tracking", saved. No history entry: the grid
+       * records none, because tracking is runtime state of the running
+       * job and not part of the recipe. Current only - the plan cannot
+       * carry it (next-recipe.js), and the contract refuses "next" before
+       * this is reached; the same rule is stated here so the adapter
+       * cannot be handed a plan by any other route. A command that states
+       * the flag the hopper already has is a no-op, as the grid's own
+       * button cannot be pressed to no effect. */
+      setHopperTracking(args){
+        if (args.recipe !== "current") return contract.failure("bad_argument", { field: "recipe", message: "Tracking belongs to the running job, not to the planned recipe." });
+        const at = locate(args.recipe, args.layer, args.index);
+        if (at.failure) return at.failure;
+        if (!!at.hopper.track === args.track) return unchanged();
+        at.hopper.track = args.track;
+        const persisted = commit({ sync: true, immediate: true, kind: "tracking" });
+        return done(true, persisted);
+      },
+
+      /* The Timeline row's I/O toggle, exactly: the hopper's `pumpOff`
+       * flag set, saved, synced at once as "pump-off" - validateAndCompute
+       * redraws the Timeline rows, which are the one place the floor UI
+       * shows pump state, so the grid is not rebuilt. No history entry,
+       * as the toggle records none. Current only, for the same reason as
+       * tracking. Untracking a hopper does not clear its pump state in
+       * the floor UI (only Reset tracking does), and it does not here. */
+      setPumpOff(args){
+        if (args.recipe !== "current") return contract.failure("bad_argument", { field: "recipe", message: "Pump-off belongs to the running job, not to the planned recipe." });
+        const at = locate(args.recipe, args.layer, args.index);
+        if (at.failure) return at.failure;
+        if (!!at.hopper.pumpOff === args.pumpOff) return unchanged();
+        at.hopper.pumpOff = args.pumpOff;
+        const persisted = commit({ sync: true, immediate: true, kind: "pump-off", grid: false, hookups: false });
+        return done(true, persisted);
+      },
+
+      /* The Output field, exactly (the gauge tile's #lineRate and the status
+       * bar's #workspaceOutputInput share this path): state.lineRate set,
+       * validateAndCompute({ sync:true }) - which re-derives every run-down
+       * and notifies RT Sync as an ordinary debounced edit - and saveSession.
+       * The two hidden inputs and the phone readout are mirrored as the
+       * status-bar handler mirrors them, so the floor UI shows the value the
+       * console set. No history entry: the field records none - line output
+       * is job state, not recipe state. Zero is "not set", as the fields
+       * read it. */
+      setLineRate(args){
+        if (clampNum(state.lineRate) === args.lineRate) return unchanged();
+        state.lineRate = args.lineRate;
+        const lineRateEl = $("lineRate");
+        if (lineRateEl) lineRateEl.value = String(state.lineRate);
+        const workspaceEl = $("workspaceOutputInput");
+        if (workspaceEl) workspaceEl.value = state.lineRate > 0 ? String(state.lineRate) : "";
+        syncMobileLineRateReadout();
+        const persisted = commit({ sync: true, grid: false, hookups: false });
+        return done(true, persisted);
+      },
+
+      /* The Changeover field, exactly: state.changeoverTime is the clock
+       * time "HH:MM" the job stores and synchronizes, changeoverSetAt the
+       * moment it was set, then the same tail as the field's input event.
+       * The command states an absolute instant; the clock time is derived
+       * from it here, in this device's local time, which is the same
+       * reading parseChangeoverDate makes of it (today, or tomorrow when
+       * the time has already passed today, with the field's one-minute
+       * grace). What the job cannot store is refused rather than stored
+       * wrongly: an instant already past, or more than a day away. Setting
+       * the same time again is a change only when the stored one has gone
+       * stale - that is the field's "confirm or update it" - and a no-op
+       * otherwise. */
+      setChangeover(args){
+        const now = Date.now();
+        let value = "";
+        if (args.at !== null){
+          if (args.at < now - 60 * 1000){
+            return contract.failure("out_of_range", { field: "at", message: "That changeover time has already passed." });
+          }
+          if (args.at > now + 24 * 60 * 60 * 1000){
+            return contract.failure("out_of_range", { field: "at", message: "The changeover must be within the next 24 hours: the job stores it as a clock time." });
+          }
+          const date = new Date(args.at);
+          value = `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+        }
+        const same = (state.changeoverTime || "") === value;
+        if (same && !(value && isChangeoverStale(state.changeoverSetAt, new Date(now)))) return unchanged();
+        state.changeoverTime = value;
+        state.changeoverSetAt = value ? now : null;
+        const changeoverEl = $("changeoverTime");
+        if (changeoverEl) changeoverEl.value = state.changeoverTime;
+        const workspaceEl = $("workspaceChangeoverInput");
+        if (workspaceEl) workspaceEl.value = state.changeoverTime;
+        syncChangeoverTimeDisplay();
+        const persisted = commit({ sync: true, grid: false, hookups: false });
+        return done(true, persisted);
+      },
+
+      /* The toolbar's Undo/Redo, addressed explicitly. Checked before the
+       * helper runs so an empty stack never touches Next's working copy. */
+      undo(args){
+        if (!recipeEditHistory[args.recipe].undo.length) return contract.failure("nothing_to_undo");
+        return done(true, undoRecipeEdit(args.recipe));
+      },
+      redo(args){
+        if (!recipeEditHistory[args.recipe].redo.length){
+          return contract.failure("nothing_to_undo", { message: "There is nothing to redo." });
+        }
+        return done(true, redoRecipeEdit(args.recipe));
+      }
+    };
+
+    function execute(command, args){
+      try{
+        const handler = Object.prototype.hasOwnProperty.call(commands, command) ? commands[command] : null;
+        if (!handler) return contract.failure("unknown_command");
+        return refusal() || handler(args);
+      }catch(error){
+        return contract.failure("internal");
+      }
+    }
+
+    return { execute, capabilities: Object.keys(commands) };
+  }
+
+  /* Install the executor: the one producer the command bridge accepts.
+   * Optional and failure-tolerant like connectStationBridge below: a floor
+   * UI whose console cannot write is still a floor UI. */
+  function connectStationCommands(){
+    if (!stationCommands || !stationCommandContract || stationCommandHandle) return;
+    try{
+      const executor = createStationCommandExecutor();
+      stationCommandHandle = stationCommands.connect({ execute: executor.execute, capabilities: executor.capabilities });
+    }catch(error){ stationCommandHandle = null; }
+  }
+
+  /* Register this application as the Station console's read-only source.
+   *
+   * `read` is a lazy projection: the bridge calls it only when a consumer
+   * actually asks for a snapshot, and deep-clones and freezes whatever comes
+   * back before handing it out. `state` itself is never passed anywhere - the
+   * projection builds a new plain object every call - so nothing here widens
+   * what the rest of the app can reach.
+   *
+   * Failure is swallowed on purpose. A console that cannot be fed is a console
+   * that shows its own empty state; it is not a reason for the floor UI to
+   * fail to start. */
+  function connectStationBridge(){
+    if (!stationBridge || stationBridgeHandle) return;
+    try{
+      stationBridgeHandle = stationBridge.connect({
+        read: ()=>stationBridge.project(state, {
+          lineConfiguration: derivedLineConfiguration(),
+          // The run-down formula's own weight, Smart Hoppers included, so the
+          // console never has to re-derive a number this app already resolves.
+          resolveHopperWeight: effectiveHopperWeight,
+          // The plan as this app reads it when it needs the effective one:
+          // the working copy while the operator has one open, the durable
+          // payload otherwise. Reading state.nextRecipe directly would show
+          // the console a plan one save behind the operator.
+          plannedRecipe: plannedRecipePayload(),
+          history: recipeHistoryAvailability()
+        })
+      });
+    }catch(error){ stationBridgeHandle = null; }
+  }
+
+  /* Register this application as the source of Station's line connection
+   * console, and hand it the RT Sync actions it may ask for.
+   *
+   * The actions are the floor UI's own closures, passed in by setupLineSync
+   * once they exist: Station's Refresh IS the status bar's refresh, Station's
+   * Add Device IS the panel's Generate Link Code. Nothing here reaches RT
+   * Sync by a second path, and nothing Station can ask for skips
+   * runLineSyncAction's in-flight guard or its error reporting.
+   *
+   * The descriptor is projected by the bridge's own allow-list (project()),
+   * from cloud-sync's public state plus the line number PolynLineIdentity
+   * resolves for the selected workspace - the same resolver the state bridge
+   * and the recipe scanners use, so there is one answer to "which line".
+   *
+   * Optional and failure-tolerant like the other two bridges. */
+  function connectStationConnection(actions){
+    if (!stationConnection || stationConnectionHandle) return;
+    try{
+      stationConnectionHandle = stationConnection.connect({
+        read: ()=>{
+          const syncState = lineSync?.getState?.() || null;
+          const workspace = syncState?.selectedWorkspaceId && syncState.selectedWorkspace?.id === syncState.selectedWorkspaceId
+            ? syncState.selectedWorkspace
+            : null;
+          const lineNumber = window.PolynLineIdentity?.workspaceLineNumber?.(workspace) ?? null;
+          const configuration = lineNumber !== null ? window.PolynLineIdentity?.getLineConfiguration?.(lineNumber) : null;
+          return stationConnection.project(syncState, {
+            lineNumber,
+            displayName: configuration?.displayName || "",
+            busy: lineSyncActionInFlight,
+            busyAction: lineSyncBusyAction,
+            joinUrl: syncState?.generatedCode ? rtSyncLinkUrl(syncState.generatedCode) : ""
+          });
+        },
+        actions
+      });
+    }catch(error){ stationConnectionHandle = null; }
+  }
+
+  /* Register this application as the source of Station's Recipe Book, and
+   * hand it the three saved-recipe actions it may ask for.
+   *
+   * The book is projected by the bridge's own allow-list (project()) from
+   * the workspace-configurations service's cached envelope for the selected
+   * workspace - the same cache the floor UI's Recipe Book lists - and the
+   * line's name from the same resolver the state bridge uses. The actions
+   * are this file's own tails: a save is the service's create with the
+   * recipe payload createRecipePayload builds from live state (exactly what
+   * the Save Current Recipe dialog submits), a replace is the service's
+   * update with that payload (the Update action), a refresh is
+   * refreshWorkspaceConfigurations. Each finishes through
+   * finishWorkspaceConfigurationMutation, so the floor UI's own lists and
+   * status follow a save made from Station as they follow one made here.
+   *
+   * Optional and failure-tolerant like the other three bridges. */
+  function stationRecipePayload(){ return window.PolynWorkspaceConfigurationPayloads?.createRecipePayload(state) || null; }
+  function connectStationRecipes(){
+    if (!stationRecipes || stationRecipesHandle) return;
+    try{
+      stationRecipesHandle = stationRecipes.connect({
+        read: ()=>{
+          const syncState = lineSync?.getState?.() || null;
+          const workspaceId = syncState?.selectedWorkspaceId || "";
+          const configuration = derivedLineConfiguration(syncState);
+          return stationRecipes.project(workspaceId && workspaceConfigurations ? workspaceConfigurations.getCached(workspaceId) : null, {
+            workspaceId,
+            displayName: configuration?.displayName || syncState?.selectedWorkspace?.name || "",
+            refreshing: workspaceConfigurationRefreshInFlight
+          });
+        },
+        actions: {
+          saveCurrentRecipe: async ({ name })=>{
+            const workspaceId = lineSync?.getState?.().selectedWorkspaceId || "";
+            if (!workspaceId || !workspaceConfigurations) return { ok:false, code:"unavailable", message:"Connect to an RT Sync workspace to save shared recipes." };
+            const payload = stationRecipePayload();
+            if (!payload) return { ok:false, code:"failed", message:"The running recipe could not be read." };
+            const result = await workspaceConfigurations.create(workspaceId, "recipe", name, payload);
+            if (result?.code !== "duplicate_name") finishWorkspaceConfigurationMutation(result, "Configuration saved successfully.");
+            return result;
+          },
+          replaceRecipe: async ({ id })=>{
+            const workspaceId = lineSync?.getState?.().selectedWorkspaceId || "";
+            if (!workspaceId || !workspaceConfigurations) return { ok:false, code:"unavailable", message:"Connect to an RT Sync workspace to save shared recipes." };
+            const existing = workspaceConfigurations.listRecipes(workspaceId).items.find(item=>item.id === id);
+            if (!existing) return { ok:false, code:"failed", message:"That saved recipe is no longer in this workspace." };
+            const payload = stationRecipePayload();
+            if (!payload) return { ok:false, code:"failed", message:"The running recipe could not be read." };
+            const result = await workspaceConfigurations.update(workspaceId, existing.id, payload);
+            finishWorkspaceConfigurationMutation(result, "Configuration updated successfully.");
+            return result;
+          },
+          refresh: async ()=>{
+            const workspaceId = lineSync?.getState?.().selectedWorkspaceId || "";
+            if (!workspaceId || !workspaceConfigurations) return { ok:false, code:"unavailable", message:"Connect to an RT Sync workspace to view shared recipes." };
+            await refreshWorkspaceConfigurations();
+            return { ok:true };
+          }
+        }
+      });
+    }catch(error){ stationRecipesHandle = null; }
+  }
+
   function setupLineSync(){
     if (!window.PolynCloudSync || !window.PolynSyncStorage) return;
     lineSync = window.PolynCloudSync.create({
@@ -9721,6 +10343,9 @@
       });
       workspaceConfigurations.subscribe(snapshot=>{
         if (snapshot.workspaceId === lineSync?.getState?.().selectedWorkspaceId) renderWorkspaceConfigurations(lineSync.getState());
+        // Station's Recipe Book reads the same cache; every change to it
+        // arrives here, so this is where the book is announced.
+        stationRecipesHandle?.publish();
       });
       $("workspaceConfigurationsRefresh")?.addEventListener("click",()=>void refreshWorkspaceConfigurations());
       $("workspaceSaveProfile")?.addEventListener("click",()=>openWorkspaceConfigurationDialog("save-profile"));
@@ -9758,7 +10383,8 @@
       if (event.target.value !== upper) event.target.value = upper;
       updateLineSyncJoinAvailability();
     });
-    const generateLinkCode = ()=>runLineSyncAction(()=>lineSync.generateLinkCode(), "generate-code");
+    const generateLinkCodeAction = ()=>lineSync.generateLinkCode();
+    const generateLinkCode = ()=>runLineSyncAction(generateLinkCodeAction, "generate-code");
     $("lineSyncGenerateCodeBtn")?.addEventListener("click",generateLinkCode);
     $("lineSyncCopyCodeBtn")?.addEventListener("click",async()=>{
       const code = lineSync.getState().generatedCode || "";
@@ -9769,25 +10395,46 @@
         window.setTimeout(()=>{ if (button) button.textContent = "Copy Code"; }, 1600);
       }
     });
-    const reconnectRtSync = ()=>runLineSyncAction(()=>
-      // refreshSelected() clears the locally-disconnected flag before
-      // reconciling, which retry() deliberately doesn't (retry() also runs
-      // automatically on tab visibility change, where silently reconnecting
-      // a line the operator explicitly disconnected would be wrong). This
-      // button is an explicit "reconnect" action on both desktop and
-      // mobile, so it must always use refreshSelected() when a line is
-      // selected - previously only mobile did, leaving desktop with no
-      // working way back into a disconnected line.
-      lineSync.getState().selectedWorkspaceId
-        ? lineSync.refreshSelected()
-        : lineSync.retry()
-    , "refresh");
+    // refreshSelected() clears the locally-disconnected flag before
+    // reconciling, which retry() deliberately doesn't (retry() also runs
+    // automatically on tab visibility change, where silently reconnecting
+    // a line the operator explicitly disconnected would be wrong). The
+    // buttons below are an explicit "reconnect" action on both desktop and
+    // mobile, so they must always use refreshSelected() when a line is
+    // selected - previously only mobile did, leaving desktop with no
+    // working way back into a disconnected line.
+    const refreshRtSyncAction = ()=>lineSync.getState().selectedWorkspaceId
+      ? lineSync.refreshSelected()
+      : lineSync.retry();
+    const reconnectRtSync = ()=>runLineSyncAction(refreshRtSyncAction, "refresh");
     $("lineSyncRetryBtn")?.addEventListener("click",reconnectRtSync);
     $("lineSyncRetryMobileBtn")?.addEventListener("click",reconnectRtSync);
     // Status-bar refresh: the desktop's only way to force a sync while the
     // connection looks healthy. Deliberately the same action as the other two
     // rather than a new code path into RT Sync.
     $("lineSyncRefreshStatusBtn")?.addEventListener("click",reconnectRtSync);
+    // Station's line console asks for these same two closures, wrapped so
+    // the answer carries the floor UI's own failure text. A refresh and a
+    // reconnect are one application action (refreshSelected clears the
+    // local-disconnect flag before reconciling); Station offers whichever
+    // name fits the state it reads, and both arrive here.
+    const stationSyncAction = async (run, name)=>{
+      if (lineSyncActionInFlight) return { ok:false, code:"busy", message:"Another RT Sync action is still running." };
+      const ok = await runLineSyncAction(run, name);
+      return ok ? { ok:true } : { ok:false, code:"failed", message: lastLineSyncErrorMessage || "RT Sync request failed." };
+    };
+    connectStationConnection({
+      refresh: ()=>stationSyncAction(refreshRtSyncAction, "refresh"),
+      reconnect: ()=>stationSyncAction(refreshRtSyncAction, "refresh"),
+      generateJoinCode: ()=>stationSyncAction(generateLinkCodeAction, "generate-code"),
+      renderJoinQr: async ()=>{
+        const code = lineSync.getState().generatedCode || "";
+        if (!code) return { ok:false, code:"failed", message:"No join code has been generated." };
+        const svg = await linkCodeQrSvg(code);
+        return svg ? { ok:true, code, svg } : { ok:false, code:"failed", message:"The QR code could not be drawn." };
+      }
+    });
+    connectStationRecipes();
     $("lineSyncLeaveBtn")?.addEventListener("click",()=>{
       if (confirm("Leave RT Sync on this device? Local Resin.Tools data will remain.")) {
         void runLineSyncAction(()=>lineSync.leaveWorkspace(), "leave");
@@ -10755,6 +11402,8 @@
       applyMobileTimelineAlarm(!!state.mobileTimelineAlarm);
       applyPumpOffAlarmSound(state.pumpOffAlarmSoundUri, state.pumpOffAlarmSoundName, state.pumpOffAlarmVibrate);
       saveSession();
+      connectStationBridge();
+      connectStationCommands();
       setupLineSync();
 
       // Timeline clock: makes card status/relative time advance with real

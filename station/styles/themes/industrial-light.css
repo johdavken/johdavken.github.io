@@ -1,0 +1,125 @@
+/* Industrial Light — cool low-glare neutrals rather than white cards on a
+ * white page. Equipment remains steel, while edit and status colours carry
+ * enough contrast for long-duration operational use. */
+.station-root[data-theme="industrial-light"],
+.station-theme-scope[data-theme="industrial-light"] {
+  color-scheme: light;
+  --station-color-scheme: light;
+
+  /* ---- Character ----
+   * A rendered machine in a light room: shaded surfaces, ordinary line
+   * weights, no drafting grid, the same face for every label. */
+  --station-line-scale: 1;
+  --station-schematic-outline: 0%;
+  --station-font-annotation: var(--station-font);
+  --station-grid-major: transparent;
+  --station-grid-minor: transparent;
+  --station-canvas-pattern: none;
+
+  --station-bg: #d8dee2;
+  --station-surface: #e5e9eb;
+  --station-surface-raised: #f0f2f2;
+  --station-surface-sunken: #cbd3d8;
+  --station-surface-interactive: #e0e5e8;
+  --station-surface-hover: #d5dde2;
+  --station-surface-selected: #c9dce7;
+  --station-surface-editable: #e8edef;
+
+  --station-text: #202a32;
+  --station-text-muted: #485762;
+  --station-text-faint: #52636f;
+  --station-text-disabled: #818c94;
+  --station-text-on-accent: #f6f8f8;
+
+  --station-border-subtle: #c6ced3;
+  --station-border: #aeb9c0;
+  --station-border-strong: #7d8c97;
+  --station-focus-ring: #225f88;
+
+  --station-accent: #245f86;
+  --station-accent-hover: #225f88;
+  --station-accent-active: #1b5175;
+  --station-accent-soft: rgba(43, 111, 153, 0.14);
+  --station-selection: rgba(43, 111, 153, 0.20);
+  --station-editable: #245f86;
+
+  --station-success: #296548;
+  --station-tracking: #296548;
+  /* The run-down flow's chevrons (hopper.css): the tracking green, at the flow's own opacity. */
+  --station-rundown-flow: #296548;
+  --station-warning: #7a4f0e;
+  --station-danger: #a43f3b;
+  --station-info: #25658e;
+  --station-inactive: #52636f;
+  --station-pump-off: #695489;
+
+  --station-steel: #aab5bd;
+  --station-steel-light: #c1c9ce;
+  --station-steel-dark: #84929c;
+  --station-frame: #929fa8;
+  --station-edge: #5f6e78;
+  --station-edge-soft: #7c8992;
+  --station-equipment-fill: #a1adb5;
+  --station-equipment-stroke: #687781;
+  --station-housing-top: #c8cfd3;
+  --station-housing-side: #adb8bf;
+  --station-housing-end: #919ea7;
+  --station-metal: #7f8e99;
+  --station-metal-light: #d2d7da;
+  --station-metal-dark: #6d7d88;
+  --station-fitting: #397592;
+  --station-hopper-body: #aab5bd;
+  --station-hopper-stroke: #657580;
+  --station-hopper-fill: #3f739f;
+  --station-hopper-loader: #7c8d98;
+  --station-receiver: #a96d18;
+  --station-receiver-edge: #7f510e;
+  --station-hose-clear: rgba(60, 78, 90, 0.12);
+  --station-hose-edge: rgba(50, 67, 78, 0.55);
+  --station-hose-spiral: #467a6b;
+  --station-hose-glint: rgba(255, 255, 255, 0.62);
+  --station-hose-empty: rgba(60, 78, 90, 0.04);
+
+  --station-layer-outside: #285f8d;
+  --station-layer-subskin: #2a654c;
+  --station-layer-core: #76520a;
+  --station-layer-inside: #704f84;
+  --station-melt: #77583d;
+  --station-bubble: rgba(50, 105, 145, 0.14);
+  --station-bubble-edge: #3d759e;
+  --station-frost: #5e8db0;
+  --station-film: #4b7da4;
+  --station-batch: #6a7a85;
+
+  --station-timeline-rail: #7d8c97;
+  --station-timeline-current: #202a32;
+  --station-timeline-upcoming: #52636f;
+  --station-timeline-transition: #7a4f0e;
+  --station-timeline-marker: #25658e;
+  --station-timeline-label: #202a32;
+  --station-timeline-muted: #485762;
+
+  --station-shadow-pop: 0 10px 28px rgba(35, 48, 58, 0.22);
+  --station-qr-surface: #ffffff;
+
+  /* ---- Operator Handbook: the glass ----
+   * The Handbook's frame is a frosted work surface over the machine, and
+   * these are its material: tint, edge, the highlight along its top edge,
+   * how far the drawing behind blurs, and the lines and washes its
+   * controls are drawn in. Light glass needs body and little blur - the
+   * steel behind is pale and would read through as noise - so the tint is
+   * nearly opaque and the blur short. */
+  --station-handbook-glass: rgba(238, 241, 242, 0.88);
+  --station-handbook-glass-border: rgba(72, 87, 98, 0.30);
+  --station-handbook-glass-highlight: rgba(255, 255, 255, 0.75);
+  --station-handbook-glass-blur: 8px;
+  --station-handbook-glass-saturate: 1;
+  --station-handbook-glass-shadow: 0 14px 36px rgba(35, 48, 58, 0.20);
+  --station-handbook-rule: rgba(32, 42, 50, 0.14);
+  --station-handbook-control-border: rgba(32, 42, 50, 0.28);
+  --station-handbook-control-hover: rgba(32, 42, 50, 0.07);
+  --station-handbook-control-active: rgba(32, 42, 50, 0.12);
+  --station-handbook-tab-active: #245f86;
+  --station-handbook-selection: rgba(43, 111, 153, 0.16);
+  --station-handbook-selector-active: #245f86;
+}

@@ -1,0 +1,244 @@
+/* The theme preview: one miniature of Station per theme, in the Appearance
+ * gallery (station-theme-preview.js).
+ *
+ * Every colour here is a semantic token, the same one the full-size part
+ * spends: the mixer's drum is the housing, the receiver is the receiver,
+ * the rail is the rail. The drawing is inside a theme scope - an element
+ * with the theme's data-theme, which themes/*.css match as they match the
+ * root - so the tokens resolve under the theme being shown, not the one
+ * the console is wearing. Nothing here names a theme; a seventh theme
+ * would get its miniature by existing.
+ *
+ * Line weights are the theme's (tokens.css declares them for the scope as
+ * for the root), so a schematic theme's heavier lines show in its tile.
+ */
+
+.station-theme-scope {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--station-radius-sm);
+  overflow: hidden;
+  /* The scope is the picture's frame: it paints the theme's canvas so
+     the drawing has no gap to the frame at any aspect. */
+  background-color: var(--station-bg);
+  /* Not a control: the tile around it is. */
+  pointer-events: none;
+}
+
+.station-theme-preview {
+  display: block;
+  width: 100%;
+  height: 100%;
+  font-family: var(--station-font);
+}
+
+/* ---- The sheet ---- */
+
+.station-theme-preview__canvas {
+  fill: var(--station-bg);
+}
+
+.station-theme-preview__grid-minor {
+  fill: none;
+  stroke: var(--station-grid-minor);
+  stroke-width: 0.4;
+}
+
+.station-theme-preview__grid-major {
+  fill: none;
+  stroke: var(--station-grid-major);
+  stroke-width: 0.5;
+}
+
+/* ---- Header and status bar ---- */
+
+.station-theme-preview__bar {
+  fill: var(--station-surface);
+  stroke: var(--station-border);
+  stroke-width: 0.5;
+}
+
+.station-theme-preview__wordmark {
+  fill: var(--station-text);
+  font-size: 5px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.station-theme-preview__pill {
+  fill: var(--station-surface-interactive);
+  stroke: var(--station-border-strong);
+  stroke-width: 0.4;
+}
+
+/* ---- Layer banks ---- */
+
+.station-theme-preview__bank[data-layer-role="outside"] { --station-layer-accent: var(--station-layer-outside); }
+.station-theme-preview__bank[data-layer-role="core"] { --station-layer-accent: var(--station-layer-core); }
+.station-theme-preview__bank[data-layer-role="inside"] { --station-layer-accent: var(--station-layer-inside); }
+
+.station-theme-preview__layer-name {
+  fill: var(--station-layer-accent);
+  font-size: 6px;
+  font-weight: 600;
+}
+
+.station-theme-preview__layer-role {
+  fill: var(--station-text-faint);
+  font-family: var(--station-font-annotation);
+  font-size: 2.6px;
+  letter-spacing: 0.12em;
+}
+
+.station-theme-preview__receiver {
+  fill: var(--station-receiver);
+  stroke: var(--station-receiver-edge);
+  stroke-width: var(--station-line-hairline);
+  stroke-linejoin: round;
+}
+
+.station-theme-preview__receiver.is-pump-off {
+  fill: var(--station-steel);
+  stroke: var(--station-edge);
+}
+
+/* The vessel is the hopper's own mix: mostly the light steel, a share of
+   its outline, as hopper.css mixes it. */
+.station-theme-preview__vessel {
+  fill: color-mix(in srgb, var(--station-steel-light) 72%, var(--station-hopper-stroke));
+  stroke: var(--station-hopper-stroke);
+  stroke-width: var(--station-line-thin);
+}
+
+.station-theme-preview__vessel.is-unassigned {
+  fill: var(--station-steel-dark);
+}
+
+.station-theme-preview__material {
+  fill: var(--station-hopper-fill);
+}
+
+.station-theme-preview__material.is-pump-off {
+  fill: var(--station-pump-off);
+}
+
+.station-theme-preview__hose {
+  fill: none;
+  stroke: var(--station-hose-edge);
+  stroke-width: var(--station-line-hairline);
+}
+
+.station-theme-preview__readout {
+  fill: var(--station-text-muted);
+  font-family: var(--station-font-mono);
+  font-size: 2.6px;
+}
+
+.station-theme-preview__mixer {
+  fill: var(--station-housing-side);
+  stroke: var(--station-edge);
+  stroke-width: var(--station-line-hairline);
+}
+
+.station-theme-preview__mixer-band {
+  fill: var(--station-layer-accent);
+}
+
+.station-theme-preview__window {
+  fill: var(--station-surface-sunken);
+  stroke: var(--station-edge);
+  stroke-width: var(--station-line-hairline);
+}
+
+.station-theme-preview__blade {
+  fill: none;
+  stroke: var(--station-edge-soft);
+  stroke-width: var(--station-line-hairline);
+}
+
+.station-theme-preview__motor {
+  fill: var(--station-metal-dark);
+  stroke: var(--station-edge);
+  stroke-width: var(--station-line-hairline);
+}
+
+.station-theme-preview__extruder {
+  fill: var(--station-housing-top);
+  stroke: var(--station-edge);
+  stroke-width: var(--station-line-hairline);
+}
+
+.station-theme-preview__pct {
+  fill: var(--station-text);
+  font-family: var(--station-font-mono);
+  font-size: 4px;
+  font-weight: 600;
+}
+
+/* ---- Run-down rail ---- */
+
+.station-theme-preview__now-label {
+  fill: var(--station-timeline-current);
+  font-size: 2.6px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.station-theme-preview__rail {
+  fill: none;
+  stroke: var(--station-timeline-rail);
+  stroke-width: 0.6;
+}
+
+.station-theme-preview__tick {
+  fill: none;
+  stroke: var(--station-timeline-muted);
+  stroke-width: 0.4;
+}
+
+.station-theme-preview__now {
+  fill: none;
+  stroke: var(--station-timeline-current);
+  stroke-width: 0.8;
+}
+
+.station-theme-preview__transition {
+  fill: none;
+  stroke: var(--station-timeline-transition);
+  stroke-width: 0.7;
+  stroke-dasharray: 1.4 1;
+}
+
+.station-theme-preview__marker {
+  fill: var(--station-timeline-marker);
+}
+
+/* ---- The Handbook's corner ---- */
+
+.station-theme-preview__glass {
+  fill: var(--station-handbook-glass);
+  stroke: var(--station-handbook-glass-border);
+  stroke-width: 0.5;
+}
+
+.station-theme-preview__glass-title {
+  fill: var(--station-text-muted);
+  font-family: var(--station-font-annotation);
+  font-size: 2.6px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+}
+
+.station-theme-preview__tab {
+  fill: var(--station-handbook-tab-active);
+}
+
+.station-theme-preview__row {
+  fill: var(--station-text-muted);
+  opacity: 0.55;
+}
+
+.station-theme-preview__action {
+  fill: var(--station-accent);
+}

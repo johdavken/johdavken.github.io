@@ -1,0 +1,222 @@
+{
+  "validation.js": {
+    "v": "0.19",
+    "hash": "9bdff8cdb2d657d8"
+  },
+  "scheduling.js": {
+    "v": "0.18.4",
+    "hash": "bd062d942a1b6049"
+  },
+  "changeover-estimate.js": {
+    "v": "0.1.1",
+    "hash": "b9995db646744e8b"
+  },
+  "storage.js": {
+    "v": "0.18",
+    "hash": "d1cf7b509d6864ff"
+  },
+  "calculators.js": {
+    "v": "0.18",
+    "hash": "e52314d599e5d207"
+  },
+  "active-job.js": {
+    "v": "0.20.0",
+    "hash": "f66df8dc486ae51c"
+  },
+  "station-state-bridge.js": {
+    "v": "0.3.0",
+    "hash": "a8ea2e311f649ec8"
+  },
+  "station-connection-bridge.js": {
+    "v": "0.1.0",
+    "hash": "c81d250017c69884"
+  },
+  "station-recipes-bridge.js": {
+    "v": "0.1.1",
+    "hash": "1121a7e8348424c3"
+  },
+  "station-theme.js": {
+    "v": "0.2.0",
+    "hash": "45eb154879a36623"
+  },
+  "station-host.js": {
+    "v": "0.4.11",
+    "hash": "fd9e675eebbb8612"
+  },
+  "workspace-configuration-payloads.js": {
+    "v": "0.20.1",
+    "hash": "c76d4cfdd0d0de1f"
+  },
+  "next-recipe.js": {
+    "v": "0.2.0",
+    "hash": "c3a9afe16f023168"
+  },
+  "hookup-sources.js": {
+    "v": "0.1.0",
+    "hash": "f7e942645b9e622d"
+  },
+  "station-command-contract.js": {
+    "v": "0.4.0",
+    "hash": "a1afd016b3075f65"
+  },
+  "station-command-bridge.js": {
+    "v": "0.1.0",
+    "hash": "5a72089311e80094"
+  },
+  "notes-store.js": {
+    "v": "0.3.0",
+    "hash": "ca7c78b5f95bdc76"
+  },
+  "notes-markdown.js": {
+    "v": "0.1.0",
+    "hash": "c6189bc4ebd1a8d3"
+  },
+  "recipe-scan-schema.js": {
+    "v": "0.4.0",
+    "hash": "0eb4d14826dff035"
+  },
+  "recipe-scan-mapping.js": {
+    "v": "0.3.0",
+    "hash": "5741b4869bd4c50a"
+  },
+  "hopper-rearrangement.js": {
+    "v": "0.22.0",
+    "hash": "affeaeba899358b8"
+  },
+  "attention-center.js": {
+    "v": "0.2.0",
+    "hash": "7451eddb1f66f7f6"
+  },
+  "mobile-nav-history.js": {
+    "v": "0.1.0",
+    "hash": "07e916ce24e9a245"
+  },
+  "vendor/supabase.min.js": {
+    "v": "2.57.4",
+    "hash": "9f73dc4c7325b9ec"
+  },
+  "vendor/qrcode.min.js": {
+    "v": "1.5.4",
+    "hash": "9e52614e31c9ec4b"
+  },
+  "android-back-button.js": {
+    "v": "0.2.0",
+    "hash": "ed66f007633e83e1"
+  },
+  "install-hint.js": {
+    "v": "0.1.0",
+    "hash": "a53abd094d25e15e"
+  },
+  "supabase-config.js": {
+    "v": "0.18",
+    "hash": "6917d8dc4835d212"
+  },
+  "sync-storage.js": {
+    "v": "0.18",
+    "hash": "a9a344ef01e06f91"
+  },
+  "cloud-sync.js": {
+    "v": "0.19.4",
+    "hash": "b42cb2f8f9337170"
+  },
+  "line-identity.js": {
+    "v": "0.5.0",
+    "hash": "cb94a7238dbd92de"
+  },
+  "line-configurations-service.js": {
+    "v": "0.1.0",
+    "hash": "a95cdf0bdac20785"
+  },
+  "workspace-configurations-service.js": {
+    "v": "0.21.0",
+    "hash": "312bca057445550d"
+  },
+  "resin-data.js": {
+    "v": "0.16.2",
+    "hash": "915b56b6f5951b66"
+  },
+  "resin-catalog-service.js": {
+    "v": "0.19.1",
+    "hash": "7948e19aa1d13a8b"
+  },
+  "resin-lookup.js": {
+    "v": "0.18.2",
+    "hash": "9896347863769779"
+  },
+  "resin-admin.js": {
+    "v": "0.20.3",
+    "hash": "03b4480a8ddc3bed"
+  },
+  "database-health.js": {
+    "v": "0.1.0",
+    "hash": "72eeabf1ef8c7c5c"
+  },
+  "conflict-storm-alerts.js": {
+    "v": "0.1.0",
+    "hash": "635695ead89dc925"
+  },
+  "bulk-density-measurement.js": {
+    "v": "0.1.0",
+    "hash": "4b0a9f5666582da0"
+  },
+  "workspace-recovery.js": {
+    "v": "0.1.2",
+    "hash": "18f22938c4d7b73f"
+  },
+  "beta-access.js": {
+    "v": "0.1.0",
+    "hash": "b8efd231de7bb46f"
+  },
+  "app.js": {
+    "v": "0.30.0",
+    "hash": "641a3f7cbe0691c7"
+  },
+  "resin-admin-ui.js": {
+    "v": "0.20.4",
+    "hash": "33adab3f193e76af"
+  },
+  "line-configurations-ui.js": {
+    "v": "0.1.0",
+    "hash": "8cd8ca1e0377baf5"
+  },
+  "database-health-ui.js": {
+    "v": "0.1.3",
+    "hash": "140abd43a4dab322"
+  },
+  "bulk-density-measurement-ui.js": {
+    "v": "0.1.0",
+    "hash": "13b02b513d39fbd2"
+  },
+  "workspace-recovery-ui.js": {
+    "v": "0.1.5",
+    "hash": "d268d3a2bde5be5e"
+  },
+  "beta-access-ui.js": {
+    "v": "0.1.0",
+    "hash": "0caccfbe55ba6598"
+  },
+  "vendor/tiptap-notes.min.js": {
+    "v": "0.1.0",
+    "hash": "61240df6a0214de8"
+  },
+  "notes-ui.js": {
+    "v": "0.6.0",
+    "hash": "359c7311197ba176"
+  },
+  "rt-cloud-crypto.js": {
+    "v": "0.1.0",
+    "hash": "3dbc0fae8c9e8d9b"
+  },
+  "rt-cloud.js": {
+    "v": "0.1.0",
+    "hash": "00e791cc295a280a"
+  },
+  "rt-cloud-ui.js": {
+    "v": "0.1.0",
+    "hash": "1e15eea6e26d8f9e"
+  },
+  "recipe-scan-ui.js": {
+    "v": "0.4.1",
+    "hash": "fdbd866ae5154740"
+  }
+}

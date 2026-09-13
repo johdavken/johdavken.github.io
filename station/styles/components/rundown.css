@@ -1,0 +1,529 @@
+/* The run-down timeline (station-rundown-timeline.js): the row across the
+ * foot of the workspace.
+ *
+ * Three columns: the Now anchor, the track, and a narrow column for what
+ * lies past the window's edge or has no estimate. The track is the whole
+ * component: a hairline axis a third of the way down, tick labels above
+ * it, tick marks hanging from it, hopper markers hanging further into
+ * three lanes, the changeover as a dashed line through the lot. No frame,
+ * no heading, no card - the shell's row gives it a top rule and that is
+ * all the framing it gets.
+ *
+ * Every positioned thing on the track is placed by ONE custom property,
+ * --station-rundown-x, which the renderer writes as a percentage of the
+ * window. Nothing here knows what an hour is.
+ */
+
+.station-rundown {
+  --station-rundown-axis-y: 30px;
+  --station-rundown-lane: 18px;
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--station-timeline-now-width) minmax(0, 1fr) auto;
+  height: var(--station-timeline-height);
+  font-size: var(--station-text-xs);
+}
+
+/* ---- Now ---- */
+
+.station-rundown__now {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-end;
+  gap: 2px;
+  padding: 6px var(--station-space-2) 0 0;
+  color: var(--station-timeline-current);
+  text-align: right;
+}
+
+.station-rundown__now-label {
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  line-height: var(--station-line-tight);
+}
+
+.station-rundown__now-clock {
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--station-timeline-label);
+  line-height: var(--station-line-tight);
+}
+
+/* ---- The scale: 6H | 12H ---- */
+
+/* Under the clock, in the anchor's column: two segments on one hairline in
+ * the rail's own colour, the pressed one lit in the Now colour and carrying
+ * a rule beneath it - weight and a mark, not colour alone. Sized to the
+ * column: the mono digits of the tick labels, no box of their own. */
+.station-rundown__range {
+  display: inline-flex;
+  margin-top: var(--station-space-1);
+  border-top: var(--station-stroke) solid var(--station-timeline-rail);
+}
+
+.station-root .station-rundown__range-option {
+  padding: 3px var(--station-space-1) 1px;
+  border-bottom: 2px solid transparent;
+  color: var(--station-timeline-muted);
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-xs);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  line-height: var(--station-line-tight);
+}
+
+.station-root .station-rundown__range-option:hover {
+  color: var(--station-timeline-label);
+}
+
+.station-root .station-rundown__range-option[aria-pressed="true"] {
+  color: var(--station-timeline-current);
+  font-weight: 700;
+  border-bottom-color: var(--station-timeline-current);
+}
+
+/* ---- Track ---- */
+
+.station-rundown__track {
+  position: relative;
+  min-width: 0;
+  height: 100%;
+}
+
+.station-rundown__axis {
+  position: absolute;
+  top: var(--station-rundown-axis-y);
+  right: 0;
+  left: 0;
+  height: var(--station-stroke);
+  background: var(--station-timeline-rail);
+}
+
+.station-rundown__now-line {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 0;
+  width: 2px;
+  background: var(--station-timeline-current);
+}
+
+/* The time after the changeover: a faint wash, so the boundary reads,
+ * and nothing more. */
+.station-rundown__zone {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: var(--station-rundown-x);
+  background: color-mix(in srgb, var(--station-timeline-transition) 7%, transparent);
+  pointer-events: none;
+}
+
+/* ---- Ticks ---- */
+
+.station-rundown__ticks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.station-rundown__tick {
+  position: absolute;
+  top: var(--station-rundown-axis-y);
+  left: var(--station-rundown-x);
+  width: var(--station-stroke);
+  height: 4px;
+  background: var(--station-timeline-rail);
+}
+
+.station-rundown__tick.is-major {
+  height: 7px;
+  background: var(--station-timeline-upcoming);
+}
+
+.station-rundown__tick.is-hour {
+  height: 10px;
+  background: var(--station-timeline-muted);
+}
+
+.station-rundown__tick-label {
+  position: absolute;
+  top: 8px;
+  left: var(--station-rundown-x);
+  transform: translateX(-50%);
+  font-family: var(--station-font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--station-timeline-muted);
+  line-height: var(--station-line-tight);
+  white-space: nowrap;
+}
+
+/* ---- Changeover ---- */
+
+.station-rundown__changeover {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: var(--station-rundown-x);
+  border-left: 2px dashed var(--station-timeline-transition);
+  pointer-events: none;
+}
+
+/* The three words sit in one box on the axis's upper band, to the right
+ * of the line - or to its left (is-end) when the line is near the track's
+ * end - with their own ground; the renderer leaves out the tick labels
+ * the box would cover. */
+.station-rundown__changeover-label {
+  position: absolute;
+  top: 2px;
+  left: var(--station-space-1);
+  display: inline-flex;
+  gap: var(--station-space-2);
+  align-items: baseline;
+  padding: 2px var(--station-space-2);
+  background: var(--station-surface);
+  border-radius: var(--station-radius-sm);
+  line-height: var(--station-line-tight);
+  white-space: nowrap;
+}
+
+.station-rundown__changeover.is-end .station-rundown__changeover-label {
+  left: auto;
+  right: var(--station-space-1);
+}
+
+.station-rundown__changeover-name {
+  color: var(--station-timeline-transition);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.station-rundown__changeover-time {
+  font-family: var(--station-font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--station-timeline-label);
+}
+
+.station-rundown__changeover-rel {
+  color: var(--station-timeline-muted);
+}
+
+/* ---- Hopper markers ---- */
+
+.station-rundown__markers {
+  position: absolute;
+  inset: 0;
+}
+
+/* Under .station-root: the base layer resets buttons at (0,1,1), and a
+ * marker wants its own box. */
+.station-root .station-rundown__marker {
+  position: absolute;
+  top: var(--station-rundown-axis-y);
+  left: var(--station-rundown-x);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  height: var(--station-rundown-lane);
+  margin-left: -4px;
+  padding: 0;
+  color: var(--station-text);
+  cursor: pointer;
+}
+
+.station-rundown__marker[data-lane="1"] { --station-rundown-lane: 34px; }
+.station-rundown__marker[data-lane="2"] { --station-rundown-lane: 50px; }
+
+.station-rundown__marker[data-layer-role="outside"],
+.station-rundown__chip[data-layer-role="outside"],
+.station-rundown__detail-head[data-layer-role="outside"] { --station-layer-accent: var(--station-layer-outside); }
+.station-rundown__marker[data-layer-role="subskin-outside"],
+.station-rundown__chip[data-layer-role="subskin-outside"],
+.station-rundown__detail-head[data-layer-role="subskin-outside"] { --station-layer-accent: var(--station-layer-subskin); }
+.station-rundown__marker[data-layer-role="core"],
+.station-rundown__chip[data-layer-role="core"],
+.station-rundown__detail-head[data-layer-role="core"] { --station-layer-accent: var(--station-layer-core); }
+.station-rundown__marker[data-layer-role="subskin-inside"],
+.station-rundown__chip[data-layer-role="subskin-inside"],
+.station-rundown__detail-head[data-layer-role="subskin-inside"] { --station-layer-accent: var(--station-layer-subskin); }
+.station-rundown__marker[data-layer-role="inside"],
+.station-rundown__chip[data-layer-role="inside"],
+.station-rundown__detail-head[data-layer-role="inside"] { --station-layer-accent: var(--station-layer-inside); }
+.station-rundown__marker[data-layer-role="single"],
+.station-rundown__chip[data-layer-role="single"],
+.station-rundown__detail-head[data-layer-role="single"] { --station-layer-accent: var(--station-layer-core); }
+
+.station-rundown__stem {
+  flex: 1 1 auto;
+  width: var(--station-stroke);
+  margin-left: 3.5px;
+  background: color-mix(in srgb, var(--station-layer-accent, var(--station-text-muted)) 60%, transparent);
+}
+
+.station-rundown__dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--station-layer-accent, var(--station-text-muted));
+  box-shadow: 0 0 0 2px var(--station-surface);
+}
+
+.station-rundown__label {
+  position: absolute;
+  bottom: -2px;
+  left: 12px;
+  display: flex;
+  gap: var(--station-space-1);
+  align-items: baseline;
+  white-space: nowrap;
+  line-height: var(--station-line-tight);
+}
+
+.station-rundown__id {
+  font-weight: 700;
+  color: var(--station-layer-accent, var(--station-text));
+}
+
+/* A collapsed group's one label, "N hoppers", on its first marker; the
+   rest of the group carry their stem and dot and no label of their own
+   (station-rundown.js: LABELS NEVER OVERLAP). */
+.station-rundown__group {
+  font-weight: 600;
+  color: var(--station-timeline-label);
+}
+
+.station-rundown__marker.is-past .station-rundown__group {
+  color: var(--station-danger);
+}
+
+.station-rundown__time {
+  font-family: var(--station-font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--station-timeline-label);
+}
+
+.station-rundown__reason {
+  color: var(--station-warning);
+}
+
+/* At Now already: a pump-off point passed with the pump running (late -
+   the hopper the stage draws overdue) or a run-empty estimate passed. The
+   marker sits on the Now line and says so, in the danger colour. A
+   pump-off point passed with the pump off is "done", subdued below. */
+.station-rundown__marker.is-past .station-rundown__time {
+  color: var(--station-danger);
+  font-weight: 700;
+}
+
+.station-rundown__marker.is-past .station-rundown__dot {
+  background: var(--station-danger);
+}
+
+.station-rundown__marker.is-past.is-pump-off .station-rundown__time {
+  color: var(--station-timeline-label);
+  font-weight: 400;
+}
+
+.station-rundown__marker.is-past.is-pump-off .station-rundown__dot {
+  background: var(--station-layer-accent, var(--station-text-muted));
+}
+
+/* Pumped off: the application's "done" - the estimate stands, subdued. */
+.station-rundown__marker.is-pump-off,
+.station-rundown__chip.is-pump-off {
+  opacity: 0.55;
+}
+
+.station-rundown__marker:hover,
+.station-rundown__marker.is-pump-off:hover {
+  opacity: 1;
+}
+
+.station-rundown__marker:hover .station-rundown__dot {
+  box-shadow: 0 0 0 2px var(--station-surface), 0 0 0 4px color-mix(in srgb, var(--station-layer-accent, var(--station-text-muted)) 45%, transparent);
+}
+
+/* Empty state - one muted line under the axis. */
+.station-rundown__hint {
+  position: absolute;
+  top: 46px;
+  left: var(--station-space-2);
+  color: var(--station-timeline-upcoming);
+}
+
+/* ---- The side column ---- */
+
+.station-rundown__side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  max-width: var(--station-timeline-side-width);
+  padding: 6px 0 0 var(--station-space-3);
+  border-left: var(--station-stroke) solid var(--station-border);
+  margin-left: var(--station-space-3);
+}
+
+.station-rundown__chip {
+  display: inline-flex;
+  gap: var(--station-space-1);
+  align-items: baseline;
+  padding: 1px var(--station-space-1);
+  border-radius: var(--station-radius-sm);
+  line-height: var(--station-line-tight);
+  white-space: nowrap;
+  color: var(--station-text-muted);
+}
+
+/* A hopper's chip is a button; the base layer resets these three on
+ * buttons at (0,1,1), so they are said again at (0,2,0). The changeover
+ * and stale chips are plain text and take the rule above as it is. */
+.station-root .station-rundown__chip {
+  padding: 1px var(--station-space-1);
+  border-radius: var(--station-radius-sm);
+  color: var(--station-text-muted);
+}
+
+.station-rundown__chip:hover {
+  background: var(--station-surface-raised);
+}
+
+.station-rundown__chip-sep {
+  color: var(--station-text-faint);
+}
+
+.station-rundown__chip.is-changeover {
+  color: var(--station-warning);
+}
+
+.station-rundown__chip.is-stale {
+  color: var(--station-warning);
+  white-space: normal;
+}
+
+.station-rundown__chip.is-more {
+  color: var(--station-text-faint);
+}
+
+/* ---- Detail ---- */
+
+.station-rundown__detail {
+  position: absolute;
+  bottom: calc(100% + var(--station-space-1));
+  left: var(--station-rundown-x);
+  z-index: 20;
+  min-width: 200px;
+  padding: var(--station-space-2) var(--station-space-3);
+  transform: translateX(-12px);
+  background: var(--station-surface-raised);
+  border: var(--station-stroke) solid var(--station-border-strong);
+  border-radius: var(--station-radius);
+  box-shadow: var(--station-shadow-pop);
+  color: var(--station-text);
+  font-size: var(--station-text-sm);
+  pointer-events: none;
+}
+
+.station-rundown__detail.is-end {
+  transform: translateX(-100%);
+}
+
+.station-rundown__detail.is-pinned {
+  border-color: var(--station-accent);
+}
+
+.station-rundown__detail-head {
+  display: flex;
+  gap: var(--station-space-2);
+  align-items: baseline;
+  margin-bottom: var(--station-space-1);
+  padding-bottom: var(--station-space-1);
+  border-bottom: var(--station-stroke) solid var(--station-border);
+  font-size: var(--station-text-md);
+}
+
+.station-rundown__detail-resin {
+  color: var(--station-text-muted);
+}
+
+.station-rundown__list {
+  display: grid;
+  gap: 2px;
+}
+
+.station-rundown__row {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: var(--station-space-2);
+}
+
+.station-rundown__term {
+  color: var(--station-text-muted);
+}
+
+.station-rundown__value {
+  font-family: var(--station-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.station-rundown__value.is-missing {
+  color: var(--station-warning);
+}
+
+.station-rundown__value.is-late,
+.station-rundown__value.is-past {
+  color: var(--station-danger);
+}
+
+/* A group's listing: one line a hopper, in its layer's colour. */
+.station-rundown__members {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.station-rundown__member {
+  display: grid;
+  grid-template-columns: 32px 72px minmax(0, 1fr);
+  gap: var(--station-space-2);
+  align-items: baseline;
+  white-space: nowrap;
+}
+
+.station-rundown__member[data-layer-role="outside"] { --station-layer-accent: var(--station-layer-outside); }
+.station-rundown__member[data-layer-role="subskin-outside"],
+.station-rundown__member[data-layer-role="subskin-inside"] { --station-layer-accent: var(--station-layer-subskin); }
+.station-rundown__member[data-layer-role="core"],
+.station-rundown__member[data-layer-role="single"] { --station-layer-accent: var(--station-layer-core); }
+.station-rundown__member[data-layer-role="inside"] { --station-layer-accent: var(--station-layer-inside); }
+
+.station-rundown__member-resin {
+  overflow: hidden;
+  color: var(--station-text-muted);
+  text-overflow: ellipsis;
+}
+
+.station-rundown__member-facts {
+  font-family: var(--station-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.station-rundown__member.is-late .station-rundown__member-facts {
+  color: var(--station-danger);
+}
+
+.station-rundown__member.is-pump-off {
+  opacity: 0.65;
+}
+
+.station-rundown__value.is-pump-off {
+  color: var(--station-pump-off);
+}

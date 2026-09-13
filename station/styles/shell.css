@@ -1,0 +1,181 @@
+/* Station shell - the page frame and nothing inside it.
+ *
+ * Owns: the grid, the header, the status bar, and the too-small notice.
+ * Everything that lives inside one of those regions is owned by its own
+ * component file.
+ *
+ * Four rows, one column. The stage takes the whole width between the
+ * window's edges: there is no side column, and no track is held for one. A
+ * five-layer line is drawn across the full window, which is what the
+ * console is for. Under the stage, one modest row carries the run-down
+ * timeline - part of the control surface, sized by its own component and
+ * never growing into the stage's share.
+ */
+
+.station-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: var(--station-header-height) minmax(0, 1fr) auto var(--station-status-height);
+  grid-template-areas:
+    "header"
+    "machine"
+    "timeline"
+    "status";
+  /* A definite height, not a minimum.
+   *
+   * The machine stage scales an SVG to fit its cell, and `height: 100%` only
+   * resolves against a parent with a definite height. Under `min-height` the
+   * row was indefinite, the SVG fell back to its intrinsic aspect ratio, and a
+   * square viewBox in a 1000px-wide cell asked for 1000px of height - which
+   * grew the row, grew the grid and put a scrollbar on a console that is meant
+   * to fit the window. Nothing here needs the page to grow. */
+  height: 100vh;
+}
+
+/* ---- Header ---- */
+
+.station-header {
+  grid-area: header;
+  display: flex;
+  align-items: center;
+  gap: var(--station-space-3);
+  padding: 0 var(--station-space-4);
+  background: var(--station-surface);
+  border-bottom: var(--station-stroke) solid var(--station-border);
+}
+
+.station-header__title {
+  font-size: var(--station-text-lg);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+/* The way back to the legacy interface, beside the name: a word in the
+ * small caps the header's readout keys use, underlined the way a link is
+ * and no more - no box, no badge - so it reads as navigation and never as
+ * a warning or a control. Focus is the root's own ring. */
+.station-header__legacy {
+  color: var(--station-text-muted);
+  font-size: var(--station-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: underline;
+  text-decoration-color: var(--station-border-strong);
+  text-decoration-thickness: var(--station-stroke);
+  text-underline-offset: 0.3em;
+  white-space: nowrap;
+}
+
+.station-header__legacy:hover {
+  color: var(--station-text);
+  text-decoration-color: currentColor;
+}
+
+/* The job readouts' slot: set off from the identity by a wider gap than
+ * the header's own, before the spare width the line console takes. */
+.station-header__job {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  margin-left: var(--station-space-5);
+}
+
+/* The line console's slot: takes the header's spare width so the console
+ * sits at the far end, and lets the popover it opens overhang the stage. */
+.station-header__connection {
+  display: flex;
+  flex: 1 1 auto;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+/* ---- Regions ---- */
+
+/* The machine is scaled to fit rather than scrolled: a schematic you have to
+ * pan around stops being readable at a glance, which is the only thing it is
+ * for. The SVG's viewBox does the fitting, so a wider machine (more layers,
+ * more hoppers) gets smaller rather than overflowing. */
+.station-machine {
+  grid-area: machine;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  padding: var(--station-space-4);
+  overflow: hidden;
+}
+
+/* The Operator Handbook's slot: the stage's own cell, laid over the
+ * machine. Two items in one grid area - the machine is drawn, the slot
+ * floats above it - so the Handbook reserves no track and moves nothing
+ * when it opens. The slot itself lets every pointer event through to the
+ * hoppers under it; the launcher and the panel (handbook.css) take them
+ * back for their own surfaces only. */
+.station-handbook-slot {
+  grid-area: machine;
+  position: relative;
+  z-index: 5;
+  min-width: 0;
+  min-height: 0;
+  pointer-events: none;
+}
+
+/* The utility surfaces' slot: the same cell again, for the focused
+ * surfaces the header's readouts open (the Changeover Calculator). Over
+ * the Handbook's slot in the stack only because it comes later; the two
+ * never share a pixel - the utility surface is bounded above the
+ * Handbook's share of the stage (changeover.css). Inert to the pointer
+ * itself, as the Handbook's slot is. */
+.station-utility-slot {
+  grid-area: machine;
+  position: relative;
+  z-index: 5;
+  min-width: 0;
+  min-height: 0;
+  pointer-events: none;
+}
+
+/* The timeline's row: the component inside sets its own height; the row
+ * only frames it against the stage above and the status bar below. */
+.station-timeline {
+  grid-area: timeline;
+  min-width: 0;
+  padding: 0 var(--station-space-4);
+  border-top: var(--station-stroke) solid var(--station-border);
+  background: var(--station-surface);
+}
+
+.station-status {
+  grid-area: status;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--station-space-4);
+  background: var(--station-surface-sunken);
+  border-top: var(--station-stroke) solid var(--station-border);
+  color: var(--station-text-muted);
+  font-size: var(--station-text-sm);
+}
+
+/* The application on the page never connected: inside the host that is a
+   cached application from before Station, and the status says so in the
+   warning colour rather than letting demo data pass for a live line. */
+.station-status.is-stale-application {
+  color: var(--station-warning);
+}
+
+/* ---- Below Station's supported width ----
+ * Station is a desktop console. Rather than reflowing into something that
+ * would compete with the existing mobile UI, it states the range it supports.
+ */
+
+.station-too-small {
+  display: none;
+  padding: var(--station-space-6) var(--station-space-4);
+  color: var(--station-text-muted);
+  text-align: center;
+}
+
+@media (max-width: 1099px) {
+  .station-shell { display: none; }
+  .station-too-small { display: block; }
+}

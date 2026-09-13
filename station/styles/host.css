@@ -1,0 +1,63 @@
+/* Station host integration - the ONE Station stylesheet allowed to know the
+ * application exists.
+ *
+ * WHY THIS FILE IS DIFFERENT FROM EVERY OTHER STATION STYLESHEET
+ *
+ * Every other Station rule is anchored to a `.station-*` class and could not
+ * match an application element if it tried. This file does the opposite on
+ * purpose: putting Station on screen inside the application means hiding the
+ * application's own shell, and that is inherently a cross-boundary act. Doing
+ * it here, in a file whose whole job is the boundary, is better than doing it
+ * in JavaScript as inline styles - inline styles are invisible to CSS review
+ * and cannot be overridden by a stylesheet when something goes wrong.
+ *
+ * WHY IT HIDES BY EXCLUSION RATHER THAN BY NAME
+ *
+ * The application has no single root element: <main>, the footer, the footer
+ * meta strip, the overlay root, the sheet backdrop and two dozen <dialog>s are
+ * all direct children of <body>. Listing them would be a list that goes stale
+ * the first time a sixth root appears, and it would name legacy selectors this
+ * file would then own. Hiding everything that is NOT the Station host says the
+ * actual rule once - "in Station mode, only Station is visible" - and stays
+ * correct as the application's DOM changes.
+ *
+ * WHY !important IS USED HERE AND NOWHERE ELSE
+ *
+ * This rule has to win against a 600KB cascade it does not own and cannot see
+ * the future of. It already out-specifies everything the application sets
+ * today, but a single new `#someId { display: block }` in the legacy sheets
+ * would silently put a legacy panel back on screen on top of Station. That is
+ * the documented integration reason the project's CSS rules reserve !important
+ * for. It is confined to this file, and station-host-isolation.test.js asserts
+ * it stays confined.
+ *
+ * WHY EVERY RULE IS GATED ON THE ATTRIBUTE
+ *
+ * Nothing in this file can affect the application unless <body> carries
+ * data-station-view="station", which only station-host.js sets and only when
+ * ?view=station is present. The file is inert by construction, not by being
+ * left unloaded - and it is also only loaded in Station mode, so it is inert
+ * twice over. A test pins the gating, because the loading half is the half a
+ * future change is likely to get wrong.
+ */
+
+/* WHY A MODAL IS THE ONE EXCEPTION
+ *
+ * The application asks questions with <dialog>.showModal(): a sync conflict,
+ * a join code, a device recovery. A modal sits in the browser's top layer
+ * and makes the rest of the document inert - and it stays that way when a
+ * stylesheet hides it. Hidden, then, it is the worst of both: the operator
+ * sees Station, unchanged, and nothing on it answers a click, because the
+ * question they cannot see is waiting. So a modal is let through - by what
+ * it IS (:modal), not by naming any dialog - and everything else the
+ * application puts on screen stays hidden. A non-modal sheet (show()) is
+ * not a question and is not let through. */
+body[data-station-view="station"] > :not([data-station-host]):not(:modal) {
+  display: none !important;
+}
+
+body[data-station-view="station"] {
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+}

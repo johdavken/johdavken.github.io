@@ -1,0 +1,35 @@
+/* The glass: the one material every surface Station opens out of itself
+ * is made of.
+ *
+ * A translucent tint over a blur of what stands behind, a hairline edge,
+ * a highlight along the top edge where light would catch it, and a soft
+ * shadow that lifts it off the machine. The material is the theme's to
+ * set - tint, edge, highlight, blur, saturation, shadow - through the
+ * `--station-handbook-glass-*` tokens in themes/*.css: named for the
+ * surface that first wore them, they are the console's one glass, and a
+ * second surface spends the same tokens rather than asking each theme
+ * for a second set. Nothing here names a colour or a length.
+ *
+ * Who wears it: the Changeover Calculator (changeover.css), and any
+ * utility surface after it. The Operator Handbook's panel restates the
+ * same material under its own rule (handbook.css), pinned there by its
+ * tests as the panel's own; bringing it onto this class is a small later
+ * step, not a change in what it looks like.
+ *
+ * What is ON the glass is flat, in the Handbook's control vocabulary
+ * (handbook.css: action, chip, utility, close). This file is the
+ * material only.
+ */
+
+.station-glass {
+  background: var(--station-handbook-glass);
+  -webkit-backdrop-filter: blur(var(--station-handbook-glass-blur)) saturate(var(--station-handbook-glass-saturate));
+  backdrop-filter: blur(var(--station-handbook-glass-blur)) saturate(var(--station-handbook-glass-saturate));
+  border: var(--station-stroke) solid var(--station-handbook-glass-border);
+  border-radius: var(--station-radius-lg);
+  box-shadow:
+    inset 0 var(--station-stroke) 0 var(--station-handbook-glass-highlight),
+    var(--station-handbook-glass-shadow);
+  color: var(--station-text);
+  font-size: var(--station-text-sm);
+}

@@ -1,0 +1,539 @@
+/* One layer's equipment train: header, mixer, extruder, and the emphasis
+ * states that make expanding a layer read as zooming in.
+ *
+ * A deliberate second machine component file rather than more rules appended
+ * to machine.css: the bank is the thing that repeats per layer, and giving it
+ * its own ownership is what keeps "adjust the mixer" from meaning "read the
+ * whole machine stylesheet".
+ *
+ * The hopper cluster inside it belongs to hopper.css.
+ */
+
+/* ---------------------------------------------------------------------
+ *   Header
+ * ------------------------------------------------------------------- */
+
+/* Type inside a bank is sized against the bank's own scale, which the
+   renderer sets as --station-bank-scale on the layer group. A focused bank
+   is the normal bank enlarged, labels included - so the transition can carry
+   it as one rigid thing and nothing re-sizes at the handoff. */
+.station-layer__name {
+  fill: var(--station-layer-accent, var(--station-text));
+  font-family: var(--station-font);
+  font-size: calc(var(--station-text-lg) * var(--station-bank-scale, 1));
+  font-weight: 600;
+}
+
+.station-layer__role {
+  fill: var(--station-text-faint);
+  font-family: var(--station-font-annotation);
+  font-size: calc(var(--station-text-xs) * var(--station-bank-scale, 1));
+  letter-spacing: 0.12em;
+}
+
+/* ---- The layer's share: the header's third line ----
+   The layer's percentage of the film structure, under the role, in one
+   fixed slot (station-machine-parts.js: shareSlotBox) that is the same
+   box in every mode - so the header never changes height and nothing
+   under it moves. Subordinate to the letter above it: the value's type,
+   not a chip's. The face under it is the pointer target, wider than the
+   digits; it is transparent at rest and lit on hover and while the
+   editor (station-layer-share.js) is in the slot, on the same surface
+   tokens the editors' fields use, so it is a control of the same family
+   in every theme rather than a browser's own grey box.
+
+     data-able     whether the application offers the command: a share it
+                   does not still shows its value, and reads as a label -
+                   the same rule as the hopper controls' and the editor's
+                   read-only values.
+     is-editing    the editor is in the slot: the label is hidden under
+                   it, the face is the field's surface. */
+.station-layer__share-value {
+  fill: var(--station-text);
+  font-family: var(--station-font-mono);
+  font-size: calc(var(--station-text-sm) * var(--station-bank-scale, 1));
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.station-layer__share-face {
+  fill: transparent;
+  stroke: none;
+  pointer-events: none;
+}
+
+.station-layer__share[data-able="false"] .station-hit {
+  cursor: default;
+}
+
+.station-layer__share[data-able="true"]:hover .station-layer__share-face {
+  fill: var(--station-surface-hover);
+}
+
+.station-layer__share[data-able="true"]:hover .station-layer__share-value {
+  fill: var(--station-accent);
+}
+
+.station-layer__share.is-editing .station-layer__share-value {
+  visibility: hidden;
+}
+
+.station-layer__share.is-editing .station-layer__share-face {
+  fill: var(--station-surface-editable);
+  stroke: var(--station-selection);
+  stroke-width: 2;
+}
+
+/* With the field in the slot, the hit under it must not take the
+   pointer from the field. */
+.station-layer__share.is-editing .station-hit {
+  pointer-events: none;
+}
+
+/* The editor's box: the slot itself. Its input is under the root's field
+   reset (base.css), so the surface, the edge and the focus ring are the
+   face's - the field itself paints nothing of its own. */
+.station-layer__share-editor {
+  overflow: visible;
+}
+
+.station-layer__share-form {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  width: 100%;
+  height: 100%;
+  color: var(--station-text);
+  font-family: var(--station-font-mono);
+  font-size: calc(var(--station-text-sm) * var(--station-bank-scale, 1));
+  font-weight: 600;
+  line-height: 1;
+}
+
+.station-layer__share-input {
+  --station-field-padding: 0;
+  --station-field-width: 2.6em;
+  --station-field-bg: transparent;
+  --station-field-cursor: text;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.station-layer__share-input[aria-invalid="true"] {
+  color: var(--station-danger);
+}
+
+.station-layer__share-unit {
+  color: var(--station-text-muted);
+}
+
+/* A refused draft: the face says so, as the editors' fields do. */
+.station-layer__share.is-editing.is-invalid .station-layer__share-face {
+  stroke: var(--station-danger);
+}
+
+/* Layer identity is an accent, never an equipment fill. Set as a custom
+ * property on the bank so every part that wants to carry the layer's colour
+ * reads one value. */
+.station-layer[data-layer-role="outside"] { --station-layer-accent: var(--station-layer-outside); }
+.station-layer[data-layer-role="subskin-outside"] { --station-layer-accent: var(--station-layer-subskin); }
+.station-layer[data-layer-role="core"] { --station-layer-accent: var(--station-layer-core); }
+.station-layer[data-layer-role="subskin-inside"] { --station-layer-accent: var(--station-layer-subskin); }
+.station-layer[data-layer-role="inside"] { --station-layer-accent: var(--station-layer-inside); }
+.station-layer[data-layer-role="single"] { --station-layer-accent: var(--station-layer-core); }
+
+/* ---------------------------------------------------------------------
+ *   Mixer
+ * -------------------------------------------------------------------
+ * Adapted artwork, like the extruder: three authored views from
+ * images/mixer/, carried whole by tools/station-mixer/derive.js into
+ * station/station-mixer-assets.js. Every path arrives with the TONE the
+ * source painted it in - front, side, top, light, dark, steel, edge, accent,
+ * window, material, hose, blue - and colour is decided here from that tone,
+ * on the same tokens the extruder's enclosure uses, so the two read as one
+ * family. The tokens ARE the masters' colours: nothing is restyled.
+ *
+ * Twelve tones and no per-part rules. The masters are drawn to be right at
+ * Station size, so the stage's job is to reproduce them, not to edit them.
+ */
+
+.station-mixer__face {
+  stroke: var(--station-edge);
+  stroke-width: var(--station-line-hairline);
+  stroke-linejoin: round;
+}
+
+.station-mixer__face--front { fill: var(--station-housing-side); }
+.station-mixer__face--side { fill: var(--station-housing-end); }
+.station-mixer__face--top { fill: var(--station-housing-top); }
+.station-mixer__face--light { fill: var(--station-metal-light); }
+.station-mixer__face--dark { fill: var(--station-steel-dark); }
+.station-mixer__face--steel { fill: var(--station-metal-dark); }
+.station-mixer__face--edge { fill: var(--station-metal); }
+.station-mixer__face--material { fill: var(--station-batch); }
+.station-mixer__face--hose { fill: var(--station-steel); }
+.station-mixer__face--blue { fill: var(--station-fitting); }
+
+/* The two swept inspection windows: the one genuinely dark thing, because
+   they are openings. Stroked in the edge tone so the rotor behind them has a
+   rim to pass under. */
+.station-mixer__face--window {
+  fill: var(--station-surface-sunken);
+  stroke: var(--station-edge);
+}
+
+/* A curved band's facets - the drum, the necks, the bowl, the valves - are
+   stroked in their own colour, as the masters stroke them: enough to close
+   the hairline gap antialiasing leaves between neighbours, and no visible
+   seam. One class for the width, one per tone for the colour, so every
+   selector stays a single class. */
+.station-mixer__seam { stroke-width: var(--station-line-seam); }
+.station-mixer__seam--front { stroke: var(--station-housing-side); }
+.station-mixer__seam--side { stroke: var(--station-housing-end); }
+.station-mixer__seam--top { stroke: var(--station-housing-top); }
+.station-mixer__seam--light { stroke: var(--station-metal-light); }
+.station-mixer__seam--dark { stroke: var(--station-steel-dark); }
+.station-mixer__seam--edge { stroke: var(--station-metal); }
+.station-mixer__seam--material { stroke: var(--station-batch); }
+.station-mixer__seam--hose { stroke: var(--station-steel); }
+.station-mixer__seam--accent { stroke: var(--station-layer-accent, var(--station-receiver-edge)); }
+
+/* The weigh hopper's rim carries the layer's colour - the one accent on the
+   machine, in the place the real one wears its amber band. */
+.station-mixer__face--accent {
+  fill: var(--station-layer-accent, var(--station-receiver));
+  stroke: var(--station-layer-accent, var(--station-receiver-edge));
+}
+
+/* The rotor paddles seen through the windows. Same tone as the chamber
+   face they are inside. */
+.station-mixer__blade {
+  fill: var(--station-housing-side);
+  stroke: var(--station-edge-soft);
+  stroke-width: var(--station-line-hairline);
+}
+
+/* ---------------------------------------------------------------------
+ *   The one piece of motion in Station
+ * -------------------------------------------------------------------
+ * The rotor turns slowly behind the inspection windows. The paddles are the
+ * asset's own "agitator glimpse" polygons (and their opposites), authored
+ * in the plane of the inspection cover; the renderer places that plane with
+ * one transform, and the rotation happens INSIDE it - so the turn is in the
+ * plane of the door on a yawed machine, not in the plane of the screen, and
+ * whatever scale the mixer is drawn at, the rotor is drawn at too. The
+ * windows clip it, so it is only ever seen where a real one would be.
+ *
+ * `transform-origin: 0 0` in view-box terms is the local origin of the
+ * element, which the placement puts at the centre of the cover. No
+ * per-state size exists anywhere.
+ */
+@keyframes station-agitate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.station-mixer__agitator {
+  transform-box: view-box;
+  transform-origin: 0 0;
+}
+
+/* Running whatever the layer's emphasis: a ghost keeps turning under its
+ * fade, so when it comes back it has not been reset, and the transition
+ * hands the rotor's phase from one render to the next (station-transition.js). */
+.station-layer.is-running .station-mixer__agitator {
+  animation: station-agitate 9s linear infinite;
+}
+
+/* An operator who has asked the system for less motion gets none: the rotor
+ * is still drawn, in its resting position, so nothing disappears. */
+@media (prefers-reduced-motion: reduce) {
+  .station-layer.is-running .station-mixer__agitator {
+    animation: none;
+  }
+}
+
+/* ---------------------------------------------------------------------
+ *   Throat
+ * -------------------------------------------------------------------
+ * The one thing drawn between the mixer and the extruder: a short dark neck
+ * and the shadow it casts on the feed flange it lands on. Darker than either
+ * machine so the eye reads mixer, down, into the extruder's rear - and
+ * nothing else, because it is a connection and not a component.
+ */
+
+.station-feed__throat {
+  fill: var(--station-steel-dark);
+  stroke: var(--station-edge-soft);
+  stroke-width: var(--station-line-hairline);
+}
+
+.station-feed__shadow {
+  fill: var(--station-surface-sunken);
+  opacity: 0.55;
+}
+
+/* ---------------------------------------------------------------------
+ *   Extruder
+ * -------------------------------------------------------------------
+ * Adapted artwork, not a procedural drawing. The three views come from the
+ * authored assets in images/extruder/, reduced and recoloured by
+ * tools/station-extruder/derive.js into station/station-extruder-assets.js;
+ * every path arrives with the part it belongs to and which face of that
+ * part it is. Colour is decided HERE, by part and face, never in the asset:
+ *
+ *   top faces are lit, side faces mid, die-facing ends dark - one light,
+ *   from above and slightly left, the same one the rest of the stage uses.
+ *
+ * Original facets and gradients are retained. Source lightness is mapped
+ * into these material palettes; no authored white/grey colours enter the UI.
+ */
+
+.station-extruder__body,
+.station-extruder__body * {
+  pointer-events: none;
+}
+
+.station-extruder__paint--housing {
+  --station-extruder-shade-dark: var(--station-housing-end);
+  --station-extruder-shade-light: var(--station-housing-top);
+}
+
+.station-extruder__paint--steel,
+.station-extruder__paint--metal {
+  --station-extruder-shade-dark: var(--station-steel-dark);
+  --station-extruder-shade-light: var(--station-metal-light);
+}
+
+/* The original motor sits behind the enclosure. It needs a narrower, lifted
+   range to keep its cylinder, cooling fins and fan cover separate from the
+   housing at Station size. Source facets still control the local shading. */
+.station-extruder__paint--motor {
+  --station-extruder-shade-dark: var(--station-steel);
+  --station-extruder-shade-light: var(--station-metal-light);
+}
+
+.station-extruder__paint--dark {
+  --station-extruder-shade-dark: var(--station-surface-sunken);
+  --station-extruder-shade-light: var(--station-steel);
+}
+
+/* A facet's edge is its own shade, lit or dark as the source drew it - or,
+   as far as the theme asks (--station-schematic-outline, 0% for a rendered
+   machine, 100% for a schematic), the stage's one edge colour, so a
+   technical theme draws the extruder in its lines and not in its
+   shading. The authored line widths scale with the theme's line weight. */
+.station-extruder__face {
+  fill: color-mix(in srgb, var(--station-extruder-shade-light) var(--station-extruder-tone, 50%), var(--station-extruder-shade-dark));
+  stroke: color-mix(in srgb, var(--station-edge) var(--station-schematic-outline, 0%), color-mix(in srgb, var(--station-extruder-shade-light) var(--station-extruder-edge-tone, 50%), var(--station-extruder-shade-dark)));
+  stroke-width: calc(var(--station-extruder-line, 0.2) * var(--station-line-scale, 1));
+}
+
+/* Semantic part hooks remain independent of the material shading. */
+.station-extruder__housing,
+.station-extruder__feed,
+.station-extruder__foot,
+.station-extruder__base,
+.station-extruder__gearbox,
+.station-extruder__motor,
+.station-extruder__outlet,
+.station-extruder__flange,
+.station-extruder__recess,
+.station-extruder__bore,
+.station-extruder__vent,
+.station-extruder__seam,
+.station-extruder__detail {
+  stroke-linejoin: round;
+}
+
+.station-extruder__gradient {
+  fill: var(--station-extruder-gradient);
+}
+
+.station-extruder__motor {
+  stroke: var(--station-metal-light);
+}
+
+/* Original gradient directions and stop positions, recoloured for Station. */
+.station-extruder__stop--lid-0 {
+  stop-color: var(--station-metal-dark);
+}
+
+.station-extruder__stop--lid-1 {
+  stop-color: var(--station-housing-top);
+}
+
+.station-extruder__stop--end-0 {
+  stop-color: var(--station-housing-side);
+}
+
+.station-extruder__stop--end-1 {
+  stop-color: var(--station-housing-end);
+}
+
+.station-extruder__stop--metal-0 {
+  stop-color: var(--station-metal-light);
+}
+
+.station-extruder__stop--metal-1 {
+  stop-color: var(--station-metal);
+}
+
+.station-extruder__stop--metal-2 {
+  stop-color: var(--station-metal-dark);
+}
+
+.station-extruder__stop--drive-0 {
+  stop-color: var(--station-metal-dark);
+}
+
+.station-extruder__stop--drive-1 {
+  stop-color: var(--station-steel-dark);
+}
+
+/* ---------------------------------------------------------------------
+ *   Emphasis
+ * ------------------------------------------------------------------- */
+
+/* Opening a layer takes the others out of the conversation: faded to the
+ * ghost opacity, and not clickable, so a click during edit cannot silently
+ * jump to a different layer. They keep standing where they stood, a step
+ * further out, which is what the closing transition returns from. */
+.station-layer.is-dimmed {
+  opacity: var(--station-ghost-opacity);
+  /* A ghost is not there to be clicked. Opacity alone would leave every
+     path in it hit-testable, and the ghosts stand exactly where the open
+     layer's editor and hoppers are drawn: an invisible receiver under a
+     row would take the click and the layer would close. The whole group
+     is inert, not only its hit rectangles. */
+  pointer-events: none;
+}
+
+.station-layer.is-dimmed .station-hit {
+  cursor: default;
+}
+
+.station-layer.is-focused .station-layer__name,
+.station-layer.is-activating .station-layer__name {
+  fill: var(--station-accent);
+}
+
+/* Which of the three targets is selected. Also applied the instant a
+   target is clicked, before anything moves, so the click is acknowledged
+   on the thing that was clicked. */
+.station-layer.is-mixer-selected .station-mixer__face--front,
+.station-layer.is-extruder-selected .station-extruder__housing,
+.station-layer.is-cluster-selected .station-hopper__shell {
+  stroke: var(--station-accent);
+  stroke-width: var(--station-line-medium);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .station-layer__name,
+  .station-mixer__face--front,
+  .station-extruder__housing,
+  .station-hopper__shell {
+    transition: stroke var(--station-motion-ack) ease-out, stroke-width var(--station-motion-ack) ease-out,
+      fill var(--station-motion-ack) ease-out;
+  }
+}
+
+/* ---------------------------------------------------------------------
+ *   Focus workspace
+ * -------------------------------------------------------------------
+ * The surface the focused editor sits on (focus-editor.css owns what is
+ * drawn inside it). A sunken panel with a quiet edge. The two labels
+ * below are drawn only when the renderer is given nothing to put in it. */
+
+.station-workspace__frame {
+  fill: var(--station-surface-sunken);
+  stroke: var(--station-border);
+  stroke-width: var(--station-line-thin);
+}
+
+.station-workspace__title {
+  fill: var(--station-text-faint);
+  font-family: var(--station-font);
+  font-size: var(--station-text-xs);
+  letter-spacing: 0.14em;
+}
+
+.station-workspace__notice {
+  fill: var(--station-warning);
+  font-family: var(--station-font);
+  font-size: var(--station-text-2xs);
+  letter-spacing: 0.1em;
+}
+
+.station-cluster__hint {
+  fill: var(--station-text-faint);
+  font-family: var(--station-font);
+  font-size: var(--station-text-xs);
+  letter-spacing: 0.06em;
+}
+
+/* ---------------------------------------------------------------------
+ *   Extruder Lab (development only)
+ * -------------------------------------------------------------------
+ * Styles for the ?lab=extruder review on the standalone harness. Scoped to
+ * `station-lab` classes that nothing in the product emits, so they are inert
+ * on the real stage. Removed along with station-extruder-lab.js.
+ */
+
+.station-lab {
+  width: 100%;
+  overflow: auto;
+  color: var(--station-text);
+  font-family: var(--station-font);
+}
+
+.station-lab__title {
+  margin: 0 0 var(--station-space-4);
+  font-size: var(--station-text-md);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.station-lab__row {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--station-space-5);
+  margin-bottom: var(--station-space-5);
+  padding-bottom: var(--station-space-4);
+  border-bottom: var(--station-stroke) solid var(--station-border);
+}
+
+.station-lab__cell {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--station-space-2);
+}
+
+/* The untouched source, shown at the same height as its derivative. It is
+   white on purpose: that contrast is the thing being reviewed. */
+.station-lab__original {
+  height: 300px;
+  width: auto;
+}
+
+.station-lab__specimen {
+  width: auto;
+  height: auto;
+}
+
+.station-lab__caption {
+  color: var(--station-text-faint);
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-sm);
+}
+
+/* The layer centreline, so the feed anchor can be seen sitting on it. */
+.station-lab__centreline {
+  stroke: var(--station-accent);
+  stroke-width: var(--station-line-hairline);
+  stroke-dasharray: 4 5;
+  opacity: 0.5;
+}
