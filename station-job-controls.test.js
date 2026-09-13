@@ -1,10 +1,12 @@
 "use strict";
 
-/* The header's job controls (station/station-job-controls.js): OUTPUT,
- * CHANGEOVER, driven against a small fake DOM and a fake
- * command bridge. What they show for a job, how an edit becomes one
- * command, what a refusal does, and that the timeline's scale is no longer
- * here (it is the timeline's own: station-rundown-timeline.test.js).
+/* The header's job controls (station/station-job-controls.js): OUTPUT and
+ * CHANGEOVER as one ribbon, driven against a small fake DOM and a fake
+ * command bridge. The ribbon's eight segments and what each carries, what
+ * they show for a job, how an edit becomes one command, what a refusal
+ * does, that the launcher takes a click on any part of the changeover,
+ * and that the timeline's scale is no longer here (it is the timeline's
+ * own: station-rundown-timeline.test.js).
  */
 
 const test = require("node:test");
@@ -96,6 +98,8 @@ function mount(options) {
     value: field => byClass(item(field), "station-job__value"),
     input: field => byClass(item(field), "station-job__input"),
     editor: field => byClass(item(field), "station-job__editor"),
+    remaining: () => byClass(item("changeover"), "station-job__remaining"),
+    seg: n => root.querySelectorAll(".station-ribbon__seg").find(node => node.getAttribute("data-seg") === String(n) && node.getAttribute("data-role") !== "editor"),
     wrap: item,
     note: () => byClass(root, "station-job__note")
   };
@@ -105,13 +109,66 @@ function mount(options) {
  *   Display
  * -------------------------------------------------------------------- */
 
-test("the two readouts, compact and in order: OUTPUT, then CHANGEOVER; nothing is a heading", () => {
+test("the two readouts as one ribbon, in order: OUTPUT, three slivers, then CHANGEOVER; nothing is a heading", () => {
   const { root } = mount();
-  assert.deepEqual(root.children.map(n => n.getAttribute("class").split(" ")[0]), ["station-job__item", "station-job__item", "station-job__note"]);
-  assert.deepEqual(root.children.slice(0, 2).map(n => n.getAttribute("data-field")), ["output", "changeover"]);
+  assert.deepEqual(root.children.map(n => n.getAttribute("class").split(" ")[0]),
+    ["station-job__item", "station-ribbon__seg", "station-ribbon__seg", "station-ribbon__seg", "station-job__item", "station-job__note"]);
+  assert.deepEqual(root.children.filter(n => n.getAttribute("data-field")).map(n => n.getAttribute("data-field")), ["output", "changeover"]);
   assert.deepEqual(root.querySelectorAll(".station-job__key").map(n => n.textContent), ["Output", "Changeover"]);
   walk(root, node => assert.ok(!/^H[1-6]$/.test(node.tagName)));
   assert.equal(root.getAttribute("role"), "group");
+  assert.ok(root.classList.contains("station-ribbon"));
+});
+
+test("the ribbon's eight segments, numbered in order: the output's name and figure, three bare slivers, the changeover's name, one sliver, its clock; the tail past the last point", () => {
+  const h = mount();
+  const segs = h.root.querySelectorAll(".station-ribbon__seg").filter(n => n.getAttribute("data-role") !== "editor");
+  assert.deepEqual(segs.map(n => n.getAttribute("data-seg")), ["1", "2", "3", "4", "5", "6", "7", "8"]);
+  assert.deepEqual(segs.map(n => n.getAttribute("data-role")), ["key", "value", "sliver", "sliver", "sliver", "key", "sliver", "value"]);
+  assert.deepEqual(controlsModule.SEGMENT, { output: { key: 1, value: 2 }, slivers: [3, 4, 5], changeover: { key: 6, sliver: 7, value: 8 } });
+  // A sliver is a bare band of colour: nothing in it, nothing said.
+  for (const n of [3, 4, 5, 7]) {
+    assert.equal(h.seg(n).children.length, 0);
+    assert.equal(h.seg(n).textContent, "");
+    assert.ok(h.seg(n).classList.contains("station-ribbon__sliver"));
+  }
+  // The output's two are its trigger's; the changeover's three and the
+  // tail are its trigger's - so one click target each, and one anchor for
+  // the calculator.
+  assert.ok(h.seg(1).closest(".station-job__trigger") === h.trigger("output"));
+  assert.ok(h.seg(2).closest(".station-job__trigger") === h.trigger("output"));
+  for (const n of [6, 7, 8]) assert.ok(h.seg(n).closest(".station-job__trigger") === h.trigger("changeover"));
+  assert.ok(h.remaining().closest(".station-job__trigger") === h.trigger("changeover"));
+  assert.ok(!h.remaining().classList.contains("station-ribbon__seg"), "the tail is outside the ribbon");
+  assert.ok(h.trigger("changeover").children.indexOf(h.remaining()) > h.trigger("changeover").children.indexOf(h.seg(8)), "the tail follows the clock");
+  // The figure's marks: a tilde before the output, a clock before the
+  // time, neither read aloud; the figure itself is the readout's value.
+  assert.equal(h.seg(2).children[0].getAttribute("class"), "station-ribbon__tilde");
+  assert.equal(h.seg(2).children[0].textContent, "~");
+  assert.equal(h.seg(2).children[0].getAttribute("aria-hidden"), "true");
+  assert.ok(h.seg(2).children[1] === h.value("output"));
+  assert.equal(h.seg(8).children[0].getAttribute("class"), "station-ribbon__clock");
+  assert.equal(h.seg(8).children[0].getAttribute("aria-hidden"), "true");
+  assert.ok(h.seg(8).children[1] === h.value("changeover"));
+  // The editors take the figures' numbers, so they wear the same colour.
+  assert.equal(h.editor("output").getAttribute("data-seg"), "2");
+  assert.equal(h.editor("changeover").getAttribute("data-seg"), "8");
+  assert.ok(h.editor("output").classList.contains("station-ribbon__seg"));
+});
+
+test("the ribbon is drawn from the theme's eight stops and four inks, in the shape the stylesheet cuts - no colour of its own, no selector deeper than a component", () => {
+  const css = fs.readFileSync(path.join(__dirname, "station/styles/components/job-controls.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+  for (let n = 1; n <= 8; n += 1) {
+    assert.match(css, new RegExp(`\\.station-ribbon__seg\\[data-seg="${n}"\\] \\{ --station-ribbon-fill: var\\(--station-ribbon-${n}\\);`), `segment ${n} takes its stop`);
+  }
+  for (const n of [1, 2, 6, 8]) assert.match(css, new RegExp(`--station-ribbon-ink: var\\(--station-ribbon-ink-${n}\\);`), `segment ${n} takes its ink`);
+  for (const n of [3, 4, 5, 7]) assert.doesNotMatch(css, new RegExp(`--station-ribbon-ink-${n}\\b`), `a sliver has no ink`);
+  assert.match(css, /clip-path: polygon\(\s*0 0,\s*calc\(100% - var\(--station-ribbon-point\)\) 0,\s*100% 50%,\s*calc\(100% - var\(--station-ribbon-point\)\) 100%,\s*0 100%,\s*var\(--station-ribbon-point\) 50%\s*\)/, "a notch and a point");
+  assert.match(css, /\.station-ribbon__seg\[data-seg="1"\] \{[^}]*margin-left: 0;[^}]*border-radius: calc\(var\(--station-ribbon-height\) \/ 2\) 0 0 calc\(var\(--station-ribbon-height\) \/ 2\);[^}]*clip-path: polygon\(\s*0 0,[^;]*?\) 100%,\s*0 100%\s*\);\s*\}/, "the head is rounded and has no notch");
+  assert.match(css, /margin-left: calc\(-1 \* var\(--station-ribbon-point\)\);/, "each segment overlaps the point before it");
+  assert.doesNotMatch(css, /#[0-9a-f]{3,8}\b|rgba?\s*\(/i);
+  const tokens = fs.readFileSync(path.join(__dirname, "station/styles/tokens.css"), "utf8");
+  for (const token of ["ribbon-height", "ribbon-point", "ribbon-sliver"]) assert.match(tokens, new RegExp(`--station-${token}: \\d+px;`));
 });
 
 test("the timeline's 6H | 12H scale is not in the header: no button, no window state, no window API", () => {
@@ -132,31 +189,41 @@ test("the timeline's 6H | 12H scale is not in the header: no button, no window s
 });
 
 test("the readouts state the job: output in lb/hr or Not set; the changeover as its clock time and how far off, or Not set, or needing confirmation", () => {
-  const { controls, value, wrap } = mount();
+  const { controls, value, wrap, remaining } = mount();
   controls.update({ job: { lineRate: 0, changeoverTime: "", changeoverSetAt: null } });
   assert.equal(value("output").textContent, "Not set");
   assert.equal(value("changeover").textContent, "Not set");
+  assert.equal(remaining().textContent, "");
+  assert.ok(hidden(remaining()), "no tail past the point when nothing is set");
   assert.ok(wrap("output").classList.contains("is-unset"));
+  assert.ok(wrap("changeover").classList.contains("is-unset"));
   controls.update({ job: { lineRate: 850, changeoverTime: "16:30", changeoverSetAt: NOW - HOUR } });
   assert.equal(value("output").textContent, "850 lb/hr");
-  assert.match(value("changeover").textContent, /^(4:30 PM|16:30) · in 2h 26m$/);
+  assert.match(value("changeover").textContent, /^(4:30 PM|16:30)$/);
+  assert.equal(remaining().textContent, "in 2h 26m");
+  assert.ok(!hidden(remaining()));
   assert.ok(!wrap("output").classList.contains("is-unset"));
   assert.ok(!wrap("changeover").classList.contains("is-stale"));
   controls.update({ job: { lineRate: 1234.5, changeoverTime: "16:30", changeoverSetAt: NOW - scheduling.CHANGEOVER_STALE_MS - 1 } });
   assert.equal(value("output").textContent, "1,234.5 lb/hr");
-  assert.match(value("changeover").textContent, /· confirm$/);
+  assert.match(value("changeover").textContent, /^(4:30 PM|16:30)$/);
+  assert.equal(remaining().textContent, "confirm");
   assert.ok(wrap("changeover").classList.contains("is-stale"));
   assert.equal(controlsModule.outputText(null), "Not set");
+  // The sentence form, for anything that wants one line.
+  const co = controlsModule.changeoverText({ lineRate: 850, changeoverTime: "16:30", changeoverSetAt: NOW - HOUR }, NOW, rundown);
+  assert.deepEqual(co, { text: `${co.clock} · in 2h 26m`, clock: co.clock, tail: "in 2h 26m", stale: false, set: true });
+  assert.deepEqual(controlsModule.changeoverText({ changeoverTime: "", changeoverSetAt: null }, NOW, rundown), { text: "Not set", clock: "Not set", tail: "", stale: false, set: false });
 });
 
 test("the changeover readout follows the clock through refresh, not a clock of its own", () => {
   let now = NOW;
-  const { controls, value } = mount({ now: () => now });
+  const { controls, remaining } = mount({ now: () => now });
   controls.update({ job: { lineRate: 850, changeoverTime: "16:30", changeoverSetAt: NOW } });
-  assert.match(value("changeover").textContent, /in 2h 26m$/);
+  assert.equal(remaining().textContent, "in 2h 26m");
   now += 30 * MINUTE;
   controls.refresh();
-  assert.match(value("changeover").textContent, /in 1h 56m$/);
+  assert.equal(remaining().textContent, "in 1h 56m");
   const src = fs.readFileSync(path.join(__dirname, "station/station-job-controls.js"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
   assert.doesNotMatch(src, /setTimeout|setInterval|requestAnimationFrame/);
 });
@@ -172,6 +239,8 @@ test("clicking OUTPUT opens an in-place field with the value; Enter commits one 
   assert.ok(hidden(h.editor("output")));
   click(h.trigger("output"));
   assert.ok(!hidden(h.editor("output")));
+  assert.ok(h.wrap("output").classList.contains("is-editing"), "the figure's segment steps aside for the field (job-controls.css); the name stays as the ribbon's head");
+  assert.ok(h.trigger("output").parent === h.wrap("output") && h.editor("output").parent === h.wrap("output"));
   assert.equal(h.input("output").value, "850");
   assert.equal(h.doc.activeElement, h.input("output"));
   assert.equal(h.input("output").selected, true);
@@ -270,6 +339,44 @@ test("a refused changeover keeps the field open with the application's own messa
   h.input("changeover").value = "soon";
   key(h.input("changeover"), "Enter");
   assert.match(h.note().textContent, /hours and minutes/);
+});
+
+/* ----------------------------------------------------------------------
+ *   The launcher
+ * -------------------------------------------------------------------- */
+
+test("with a launcher, a click on any part of the changeover - its name, its sliver, its clock, the tail - opens the calculator and never a field; setLaunched marks the readout", () => {
+  const { bridge, calls } = connected();
+  let opened = 0;
+  const h = mount({ commands: () => bridge, onChangeover: () => { opened += 1; } });
+  h.controls.update({ job: { lineRate: 850, changeoverTime: "16:30", changeoverSetAt: NOW } });
+  assert.ok(h.wrap("changeover").classList.contains("is-launcher"));
+  assert.equal(h.trigger("changeover").getAttribute("title"), "Changeover Calculator");
+  for (const target of [h.seg(6), h.seg(7), h.seg(8), h.value("changeover"), h.remaining()]) {
+    click(target);
+  }
+  assert.equal(opened, 5, "every part of the control is the launcher");
+  assert.ok(hidden(h.editor("changeover")), "no field opened");
+  assert.ok(!h.wrap("changeover").classList.contains("is-editing"));
+  assert.deepEqual(calls, [], "opening dispatches nothing");
+  assert.equal(h.controls.isEditing(), null);
+  // The output is still its own field, untouched by the launcher.
+  click(h.seg(1));
+  assert.ok(!hidden(h.editor("output")));
+  assert.equal(opened, 5);
+  h.controls.cancel("output");
+  // The calculator says when it is open; the readout mirrors it.
+  h.controls.setLaunched(true);
+  assert.ok(h.wrap("changeover").classList.contains("is-launched"));
+  assert.equal(h.trigger("changeover").getAttribute("aria-expanded"), "true");
+  h.controls.setLaunched(false);
+  assert.ok(!h.wrap("changeover").classList.contains("is-launched"));
+  // A launcher without the command is still a control, and apply still
+  // refuses: the calculator says so itself.
+  const read = mount({ commands: () => null, onChangeover: () => {} });
+  assert.ok(!read.wrap("changeover").classList.contains("is-readonly"));
+  assert.equal(read.trigger("changeover").getAttribute("aria-disabled"), "false");
+  assert.equal(read.controls.apply("changeover", NOW + HOUR).ok, false);
 });
 
 /* ----------------------------------------------------------------------

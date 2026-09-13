@@ -1,16 +1,37 @@
-/* The job controls (station-job-controls.js): OUTPUT and CHANGEOVER, as
- * two small readouts in the header.
+/* The job controls (station-job-controls.js): OUTPUT and CHANGEOVER as one
+ * ribbon in the header.
  *
- * Subordinate by design - the same small caps as the line console's
- * trigger, no border until one is being edited, and a value that reads as
- * a readout rather than a field. Nothing here claims a track of the shell.
+ *   ( Output ⟩ ~ 850 lb/hr ⟩⟩⟩⟩ Changeover ⟩⟩ ◷ 3:28 AM ⟩  in 2h 26m
+ *
+ * THE SHAPE
+ *
+ * Eight segments in a run, each a box clipped to a chevron: a notch cut
+ * from its left edge, a point on its right. Each overlaps the one before
+ * it by the point's depth, and because the notch is CLIPPED - not painted
+ * over - the earlier segment's point shows through it. No stacking order
+ * to keep, and the run crosses the two trigger buttons' edges without
+ * either knowing. The head is rounded; border-radius paints the corners
+ * before clip-path cuts, so the pill end survives the clip. Bare slivers
+ * are the same box with no text: a notch, a band of colour, a point.
+ *
+ * THE COLOUR
+ *
+ * Each segment spends the theme's stop for its number (--station-ribbon-1
+ * … -8) and, where it carries text, the ink the theme names for that stop.
+ * The fills never change with state: the ramp is the theme's identity, not
+ * a status light. State is said elsewhere - a faint figure for Not set,
+ * the warning colour on the tail for a deadline to confirm, a bar under
+ * the changeover while its calculator is open.
+ *
+ * Subordinate by design still: the ribbon is one row's height, its type
+ * the header's small caps and the readouts' mono figures, and nothing
+ * here claims a track of the shell.
  */
 
 .station-job {
   position: relative;
   display: inline-flex;
   align-items: center;
-  gap: var(--station-space-4);
   min-width: 0;
   font-size: var(--station-text-xs);
   letter-spacing: 0.08em;
@@ -22,28 +43,76 @@
   align-items: center;
 }
 
-/* Under .station-root: the base layer resets buttons at (0,1,1); a trigger
- * that wants padding and a border on edit has to say so at (0,2,0). */
+/* Under .station-root: the base layer resets buttons at (0,1,1); the
+ * trigger is a transparent group around its segments and has to say so
+ * at (0,2,0). No box of its own - the segments are the control's face. */
 .station-root .station-job__trigger {
   display: inline-flex;
-  align-items: baseline;
-  gap: var(--station-space-2);
-  padding: var(--station-space-1) var(--station-space-2);
-  border: var(--station-stroke) solid transparent;
-  border-radius: var(--station-radius-sm);
-  color: var(--station-text-muted);
+  align-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: inherit;
   white-space: nowrap;
 }
 
-.station-root .station-job__trigger:hover {
-  background: var(--station-surface-hover);
-  border-color: var(--station-border-strong);
+/* ---- The segments ---- */
+
+.station-ribbon__seg {
+  --station-ribbon-fill: var(--station-surface-raised);
+  --station-ribbon-ink: var(--station-text);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--station-space-1);
+  box-sizing: border-box;
+  height: var(--station-ribbon-height);
+  /* Room for the notch on the left and the point on the right, so the
+     text sits in the band between them. */
+  padding: 0 calc(var(--station-space-2) + var(--station-ribbon-point)) 0 calc(var(--station-space-2) + var(--station-ribbon-point));
+  margin-left: calc(-1 * var(--station-ribbon-point));
+  background: var(--station-ribbon-fill);
+  color: var(--station-ribbon-ink);
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--station-ribbon-point)) 0,
+    100% 50%,
+    calc(100% - var(--station-ribbon-point)) 100%,
+    0 100%,
+    var(--station-ribbon-point) 50%
+  );
+  white-space: nowrap;
 }
 
-.station-root .station-job__trigger:active {
-  background: var(--station-surface-selected);
-  border-color: var(--station-accent-active);
+/* The head: no notch, a rounded end, and the run's ordinary left gap. */
+.station-ribbon__seg[data-seg="1"] {
+  margin-left: 0;
+  padding-left: var(--station-space-3);
+  border-radius: calc(var(--station-ribbon-height) / 2) 0 0 calc(var(--station-ribbon-height) / 2);
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--station-ribbon-point)) 0,
+    100% 50%,
+    calc(100% - var(--station-ribbon-point)) 100%,
+    0 100%
+  );
 }
+
+.station-ribbon__sliver {
+  width: calc(var(--station-ribbon-point) * 2 + var(--station-ribbon-sliver));
+  padding: 0;
+}
+
+.station-ribbon__seg[data-seg="1"] { --station-ribbon-fill: var(--station-ribbon-1); --station-ribbon-ink: var(--station-ribbon-ink-1); }
+.station-ribbon__seg[data-seg="2"] { --station-ribbon-fill: var(--station-ribbon-2); --station-ribbon-ink: var(--station-ribbon-ink-2); }
+.station-ribbon__seg[data-seg="3"] { --station-ribbon-fill: var(--station-ribbon-3); }
+.station-ribbon__seg[data-seg="4"] { --station-ribbon-fill: var(--station-ribbon-4); }
+.station-ribbon__seg[data-seg="5"] { --station-ribbon-fill: var(--station-ribbon-5); }
+.station-ribbon__seg[data-seg="6"] { --station-ribbon-fill: var(--station-ribbon-6); --station-ribbon-ink: var(--station-ribbon-ink-6); }
+.station-ribbon__seg[data-seg="7"] { --station-ribbon-fill: var(--station-ribbon-7); }
+.station-ribbon__seg[data-seg="8"] { --station-ribbon-fill: var(--station-ribbon-8); --station-ribbon-ink: var(--station-ribbon-ink-8); }
+
+/* ---- What the segments carry ---- */
 
 .station-job__key {
   font-weight: 600;
@@ -53,64 +122,132 @@
   font-family: var(--station-font-mono);
   font-size: var(--station-text-sm);
   font-variant-numeric: tabular-nums;
-  color: var(--station-text);
   letter-spacing: normal;
   text-transform: none;
 }
 
-.station-job__item.is-unset .station-job__value {
-  color: var(--station-text-faint);
-}
-
-/* A deadline set long enough ago that it may be yesterday's. */
-.station-job__item.is-stale .station-job__value {
-  color: var(--station-warning);
-}
-
-/* The changeover readout as a launcher (station-changeover.js): the
- * calculator's closed form. While the calculator is open the readout
- * holds the border and wash it has under the pointer, so the two read as
- * one thing open; it stays a control whether or not the deadline may be
- * set from here, because the calculator opens either way. */
-.station-job__item.is-launched .station-job__trigger {
-  background: var(--station-surface-selected);
-  border-color: var(--station-border-strong);
-  color: var(--station-text);
-}
-
-/* Not on offer - no application, or demo data on screen - so the readout
- * stays and the hand stays a pointer for the explanation on click. */
-.station-job__item.is-readonly .station-job__trigger {
-  border-color: transparent;
-  cursor: default;
-}
-
-.station-job__item.is-editing .station-job__trigger {
-  display: none;
-}
-
-/* ---- The in-place editor ---- */
-
-.station-job__editor {
-  display: inline-flex;
-  align-items: baseline;
-  gap: var(--station-space-1);
-  padding: 0 var(--station-space-2);
-  border: var(--station-stroke) solid var(--station-editable);
-  border-radius: var(--station-radius-sm);
-  background: var(--station-surface-editable);
+/* The tilde before the figure: the figure's own face, a shade lighter,
+ * so it reads as the segment's mark and not as part of the number. */
+.station-ribbon__tilde {
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-sm);
   letter-spacing: normal;
   text-transform: none;
+  opacity: 0.72;
 }
 
-.station-job__input {
-  --station-field-padding: 2px 0;
-  --station-field-width: 7ch;
-  --station-field-cursor: text;
+/* The clock before the changeover's time: a ring and two hands, drawn in
+ * the segment's ink so it takes the theme with the text. */
+.station-ribbon__clock {
+  position: relative;
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+  box-sizing: border-box;
+  opacity: 0.85;
+}
+
+.station-ribbon__clock::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 0.5px;
+  width: 2.5px;
+  height: 2.5px;
+  border-left: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+}
+
+/* Past the last point: how far off the changeover is, in the header's
+ * text and outside the ribbon's colour. */
+.station-job__remaining {
+  margin-left: var(--station-space-2);
   font-family: var(--station-font-mono);
   font-size: var(--station-text-sm);
   font-variant-numeric: tabular-nums;
   color: var(--station-text);
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.station-job__remaining[hidden] {
+  display: none;
+}
+
+.station-job__item.is-unset .station-job__value {
+  opacity: 0.66;
+}
+
+/* A deadline set long enough ago that it may be yesterday's: the tail
+ * says `confirm`, in the warning colour. */
+.station-job__item.is-stale .station-job__remaining {
+  color: var(--station-warning);
+  font-weight: 600;
+}
+
+/* ---- States ---- */
+
+.station-job__trigger:hover .station-ribbon__seg {
+  filter: brightness(1.06) saturate(1.15);
+}
+
+.station-job__trigger:active .station-ribbon__seg {
+  filter: brightness(0.94);
+}
+
+/* The changeover readout as a launcher (station-changeover.js): the
+ * calculator's closed form. While the calculator is open a bar stands
+ * under the changeover's segments and tail - drawn on the trigger, which
+ * is not clipped, so it runs the control's full length - and the two
+ * read as one thing open. It stays a control whether or not the deadline
+ * may be set from here, because the calculator opens either way. */
+.station-job__item.is-launched .station-job__trigger {
+  box-shadow: 0 3px 0 0 var(--station-focus-ring);
+}
+
+/* Not on offer - no application, or demo data on screen - so the readout
+ * stays, unlit under the pointer, and the hand stays a pointer for the
+ * explanation on click. After the hover rules: the same weight, so the
+ * later one wins. */
+.station-job__item.is-readonly .station-job__trigger {
+  cursor: default;
+}
+
+.station-job__item.is-readonly .station-ribbon__seg {
+  filter: none;
+}
+
+/* ---- The in-place editor ----
+ * The field takes the figure's segment: the trigger's own figure (and the
+ * changeover's tail) step aside and the editor, the same segment in the
+ * same colour, stands in its place; the name stays as the ribbon's head. */
+
+.station-job__item.is-editing .station-ribbon__seg[data-role="value"],
+.station-job__item.is-editing .station-job__remaining {
+  display: none;
+}
+
+.station-job__editor {
+  gap: var(--station-space-1);
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.station-job__editor[hidden] {
+  display: none;
+}
+
+.station-job__input {
+  --station-field-padding: 0;
+  --station-field-width: 7ch;
+  --station-field-cursor: text;
+  --station-field-shadow: inset 0 calc(-1 * var(--station-stroke)) 0 0 currentColor;
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--station-ribbon-ink);
 }
 
 .station-job__input[type="time"] {
@@ -119,12 +256,12 @@
 }
 
 .station-job__input[aria-invalid="true"] {
-  --station-field-shadow: 0 0 0 2px var(--station-danger);
+  --station-field-shadow: inset 0 -2px 0 0 var(--station-danger);
 }
 
 .station-job__unit {
-  color: var(--station-text-muted);
   font-size: var(--station-text-xs);
+  opacity: 0.72;
 }
 
 /* ---- The one line of feedback ---- */
@@ -145,6 +282,10 @@
   letter-spacing: normal;
   text-transform: none;
   white-space: normal;
+}
+
+.station-job__note[hidden] {
+  display: none;
 }
 
 .station-job__note[data-kind="error"] {
