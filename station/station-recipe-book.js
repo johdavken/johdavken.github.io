@@ -172,11 +172,18 @@
    *        subscribe, isConnected, request). Handed in, never reached for.
    * @param {object} [context.lineModel]    for hopper naming; defaults to
    *        the line model module
+   * @param {function} [context.layerRole]  (name) => the role of that layer
+   *        on the line the stage shows ("outside", "core", ...), or "" - the
+   *        boot file's reading of its line model. A saved recipe's layers
+   *        are listed A, B, C... and accented by the side each sits on for
+   *        THIS line; without the reader, position in the list is read as
+   *        the physical stack, outside first.
    */
   function create(doc, context) {
     const settings = context || {};
     const recipes = settings.recipes || null;
     const lineModel = settings.lineModel || lineModelModule;
+    const layerRole = typeof settings.layerRole === "function" ? settings.layerRole : null;
 
     const state = {
       selectedId: null,
@@ -281,11 +288,13 @@
         return;
       }
       detail.appendChild(text(doc, "h3", "station-book__detail-name", recipe.name));
-      const layers = Array.isArray(recipe.layers) ? recipe.layers : [];
+      // The recipe's own order - A, B, C... - as the stage lists its banks.
+      const layers = (Array.isArray(recipe.layers) ? recipe.layers : []).slice()
+        .sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
       layers.forEach((layer, index) => {
         const row = element(doc, "div", "station-book__layer", {
           "data-layer": layer.name,
-          "data-layer-role": roleOf(index, layers.length)
+          "data-layer-role": roleOf(layer.name, index, layers.length)
         });
         row.appendChild(text(doc, "span", "station-book__layer-id", layer.name));
         row.appendChild(text(doc, "span", "station-book__layer-share", layer.layerPct > 0 ? `${round(layer.layerPct)}%` : "—"));
@@ -304,9 +313,17 @@
       });
     }
 
-    /* The layer's role for its accent, by position in the recipe - the
-     * same reading the line model makes (outside first). */
-    function roleOf(index, count) {
+    /* The layer's role for its accent: the line's own reading of that
+     * letter when the boot file handed one in (Layer A is the inside on
+     * some lines and the outside on others), else by position in the
+     * recipe read as the physical stack, outside first. */
+    function roleOf(name, index, count) {
+      if (layerRole) {
+        try {
+          const role = layerRole(name);
+          if (typeof role === "string" && role) return role;
+        } catch (error) { /* fall through to the positional reading */ }
+      }
       if (lineModel && typeof lineModel.roleForStackIndex === "function") {
         try { return lineModel.roleForStackIndex(index, count); } catch (error) { return ""; }
       }

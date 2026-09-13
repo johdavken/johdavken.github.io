@@ -1521,6 +1521,13 @@
         sections: handbookSections,
         context: {
           recipes,
+          /* A saved recipe's layer, accented by the side it sits on for
+           * the line the stage shows: the line model's own role for that
+           * letter, so the book and the banks above agree about Layer A. */
+          layerRole: name => {
+            const layer = current.model ? current.model.layers.find(entry => entry.id === name) : null;
+            return layer ? layer.role : "";
+          },
           /* Resin Totals reads the same resolved state the stage draws
            * from - through a function, since `current` is replaced on
            * every render - and the shared calculation to run over it. */

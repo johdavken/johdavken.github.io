@@ -200,14 +200,16 @@ test("live per-layer hopper counts drive the rendered banks", () => {
   assert.deepEqual(model.layers.map(layer => layer.hopperCount), [4, 6, 2]);
 });
 
-test("the live line's orientation reverses the physical stack, as it does anywhere else", () => {
+test("the live line's orientation reverses the physical stack - as roles on each layer, never as the order the layers are listed in", () => {
   const resolved = source.resolveSource({
     snapshot: snapshotFor(liveState({ lineType: 3, layers: ["A", "B", "C"].map(name => ({ name, layerPct: 33, hoppers: [] })) }),
       { lineConfiguration: Object.assign({}, LIVE_CONFIG, { layerAPosition: "inside" }) }),
     demoLines, demoId: "one-layer"
   });
   const model = lineModel.buildLineModel(resolved.modelInput);
-  assert.deepEqual(model.layers.map(layer => layer.id), ["C", "B", "A"]);
+  assert.deepEqual(model.layers.map(layer => layer.id), ["A", "B", "C"], "listed in the recipe's order");
+  assert.deepEqual(model.layers.map(layer => layer.role), ["inside", "core", "outside"], "A is the inside");
+  assert.deepEqual(model.layers.map(layer => layer.stackIndex), [2, 1, 0]);
 });
 
 /* ----------------------------------------------------------------------

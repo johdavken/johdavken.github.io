@@ -213,12 +213,16 @@
    * @param {object} [options]     { lineIdentity, payloads } overrides, for tests.
    * @returns {object|null}        The model, or null when the line cannot be described.
    *
-   * Layer ORDER in the returned model is physical: layers[0] is the outside
-   * of the bubble. When Layer A is on the inside, the recipe's A..E order is
-   * reversed to get there - the same derivation line-identity's layerOrderRows
-   * makes, applied to the whole stack rather than just the two ends. Each
-   * layer keeps its `recipeIndex`, so a caller that needs the recipe's own
-   * order never has to guess it back.
+   * Layer ORDER in the returned model is the recipe's: layers[0] is A,
+   * then B, C... whichever side of the bubble each sits on. The letters are
+   * the operator's identifiers, and a bank drawn left of another because it
+   * is physically further out reads as the wrong line on a line where A is
+   * the inside. Where each layer physically sits is carried on the layer
+   * instead: `stackIndex` (0 is the outside of the bubble - the recipe's
+   * order reversed when Layer A is the inside, the same derivation
+   * line-identity's layerOrderRows makes, applied to the whole stack) and
+   * the `role` derived from it. Nothing draws from the physical order;
+   * everything labels from it.
    */
   function buildLineModel(input, options) {
     const config = normalizeConfig(input, options);
@@ -226,12 +230,14 @@
 
     const names = layerNames(config.layerCount, config.payloads);
     // Recipe order is A, B, C... Physical order runs outside -> inside. They
-    // are the same list when Layer A is the outside, and reversed when it is
-    // the inside. With no known orientation we keep recipe order and say so
-    // via `orientationKnown`, rather than silently picking a side.
+    // are the same when Layer A is the outside, and reversed when it is the
+    // inside. With no known orientation we read the recipe order as the
+    // physical one and say so via `orientationKnown`, rather than silently
+    // picking a side. Either way the layers are LISTED in recipe order; the
+    // physical position is a fact on each layer, not the list's order.
     const orientationKnown = config.layerCount === 1 || config.layerAPosition !== null;
     const reversed = config.layerAPosition === "inside";
-    const stack = reversed ? names.slice().reverse() : names.slice();
+    const stackIndexOf = recipeIndex => (reversed ? config.layerCount - 1 - recipeIndex : recipeIndex);
 
     const byName = new Map();
     if (config.layers) {
@@ -241,15 +247,16 @@
       }
     }
 
-    const layers = stack.map((name, stackIndex) => {
+    const layers = names.map((name, recipeIndex) => {
       const declared = byName.get(name) || null;
       const hopperCount = positiveInteger(declared && (declared.hopperCount ?? declared.hoppers_per_layer))
         || config.defaultHopperCount;
+      const stackIndex = stackIndexOf(recipeIndex);
       const role = roleForStackIndex(stackIndex, config.layerCount);
       return {
         id: name,
         stackIndex,
-        recipeIndex: names.indexOf(name),
+        recipeIndex,
         role,
         roleLabel: roleLabel(role),
         hopperCount,

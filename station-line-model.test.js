@@ -106,27 +106,47 @@ test("Layer A on the outside keeps recipe order as the physical stack", () => {
     ["outside", "subskin-outside", "core", "subskin-inside", "inside"]);
 });
 
-test("Layer A on the inside reverses the physical stack but keeps the recipe index", () => {
+test("Layer A on the inside reverses the physical stack as each layer's stackIndex and role - the layers are still listed A, B, C", () => {
   const built = model.buildLineModel(literal({ layerCount: 3, layerAPosition: "inside" }));
-  assert.deepEqual(built.layers.map(layer => layer.id), ["C", "B", "A"]);
-  assert.deepEqual(built.layers.map(layer => layer.role), ["outside", "core", "inside"]);
-  // Physical order changed; the recipe's own order is still recoverable.
-  assert.deepEqual(built.layers.map(layer => layer.recipeIndex), [2, 1, 0]);
+  assert.deepEqual(built.layers.map(layer => layer.id), ["A", "B", "C"], "the letters are the operator's identifiers and always read in order");
+  assert.deepEqual(built.layers.map(layer => layer.role), ["inside", "core", "outside"]);
+  assert.deepEqual(built.layers.map(layer => layer.roleLabel), ["Inside", "Core", "Outside"]);
+  assert.deepEqual(built.layers.map(layer => layer.recipeIndex), [0, 1, 2]);
+  // The physical order is a fact on each layer, not the list's order.
+  assert.deepEqual(built.layers.map(layer => layer.stackIndex), [2, 1, 0]);
+  const five = model.buildLineModel(literal({ layerCount: 5, layerAPosition: "inside" }));
+  assert.deepEqual(five.layers.map(layer => layer.id), ["A", "B", "C", "D", "E"]);
+  assert.deepEqual(five.layers.map(layer => layer.role), ["inside", "subskin-inside", "core", "subskin-outside", "outside"]);
+  assert.deepEqual(five.layers.map(layer => layer.stackIndex), [4, 3, 2, 1, 0]);
 });
 
-test("the ends of the stack agree with line-identity's own layerOrder", () => {
+test("Line 8 (A inside) and Line 12 (A outside) both list A, B, C; only the roles differ - through line-identity's own configuration", () => {
+  const eight = model.buildLineModel(8);
+  assert.deepEqual(eight.layers.map(layer => [layer.id, layer.roleLabel]), [["A", "Inside"], ["B", "Core"], ["C", "Outside"]]);
+  const twelve = model.buildLineModel(12);
+  assert.deepEqual(twelve.layers.map(layer => [layer.id, layer.roleLabel]), [["A", "Outside"], ["B", "Core"], ["C", "Inside"]]);
+  // Each letter keeps its own hoppers whichever side it sits on.
+  assert.deepEqual(eight.layers.map(layer => layer.hoppers[0].id), ["A1", "B1", "C1"]);
+  assert.deepEqual(twelve.layers.map(layer => layer.hoppers[0].id), ["A1", "B1", "C1"]);
+  assert.equal(eight.hopperIndex.A1.layer, "A");
+});
+
+test("the outside and inside layers agree with line-identity's own layerOrder, read off the roles", () => {
   // Two derivations of the same physical fact must not be able to disagree.
-  for (const lineNumber of [5, 9, 11, 15]) {
+  for (const lineNumber of [5, 8, 9, 11, 12, 15]) {
     const identity = lineIdentity.getLineConfiguration(lineNumber);
     const built = model.buildLineModel(lineNumber);
+    const outside = built.layers.find(layer => layer.role === "outside");
+    const inside = built.layers.find(layer => layer.role === "inside");
     assert.deepEqual(
       [
-        { layer: built.layers[0].id, position: "outside" },
-        { layer: built.layers[built.layers.length - 1].id, position: "inside" }
+        { layer: outside.id, position: "outside" },
+        { layer: inside.id, position: "inside" }
       ].sort((a, b) => a.layer.localeCompare(b.layer)),
       identity.layerOrder.slice().sort((a, b) => a.layer.localeCompare(b.layer)),
       `line ${lineNumber} disagrees with line-identity about which layer is outside`
     );
+    assert.deepEqual(built.layers.map(layer => layer.id), built.layers.map(layer => layer.id).slice().sort(), `line ${lineNumber} is not listed alphabetically`);
   }
 });
 

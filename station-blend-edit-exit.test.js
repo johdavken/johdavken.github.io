@@ -210,9 +210,10 @@ const SHARED = [
   "station-connection-bridge.js", "station-recipes-bridge.js"
 ];
 
-function snapshot() {
+function snapshot(overrides) {
+  const line = Object.assign({ lineNumber: 9, displayName: "Line 9", layerCount: 3, layerAPosition: "outside", hopperNamingMode: "standard", linked: true }, overrides || {});
   return {
-    line: { lineNumber: 9, displayName: "Line 9", layerCount: 3, layerAPosition: "outside", hopperNamingMode: "standard", linked: true },
+    line,
     job: { lineRate: 900, gauge: 0, changeoverTime: "", changeoverSetAt: null },
     sources: { current: {}, next: {} },
     layers: ["A", "B", "C"].map((name, i) => ({
@@ -263,7 +264,7 @@ function boot(options) {
    * the command bridge insists on (an unfrozen one is refused as
    * `internal`, and a refused draft never leaves its field). So a value
    * a field hands over is the value the rebuilt stage then shows. */
-  const snap = snapshot();
+  const snap = snapshot(settings.line);
   const stateBridge = window.PolynStationStateBridge;
   const contract = window.PolynStationCommandContract;
   const calls = [];
@@ -935,6 +936,77 @@ test("the rail is placed against the drawn stage on every render of the normal l
   // The rail never enters the stage's SVG and the stage never grows for it.
   assert.equal(s.machine.querySelector("[data-role='machine-rail']"), null);
   assert.equal(s.machine.querySelector("svg").getAttribute("viewBox"), svg.getAttribute("viewBox"));
+});
+
+/* ----------------------------------------------------------------------
+ *   Layer columns read A, B, C whichever side A is on
+ * -------------------------------------------------------------------- */
+
+/* The x each bank is drawn at, in letter order as listed left to right. */
+function bankOrder(s) {
+  return s.machine.querySelectorAll("[data-role='layer']")
+    .map(node => ({ id: node.getAttribute("data-layer"), x: Number(node.getAttribute("data-object-cluster").split(" ")[0]), role: node.querySelector(".station-layer__role").textContent }))
+    .sort((a, b) => a.x - b.x);
+}
+
+test("Line 8 (A inside): the banks read A B C left to right, labelled INSIDE / CORE / OUTSIDE; Blend Edit's cards stand in the same columns; nothing in the job is touched", () => {
+  const s = boot({ line: { lineNumber: 8, displayName: "Line 8", layerAPosition: "inside" } });
+  const before = JSON.stringify(s.state());
+  assert.deepEqual(bankOrder(s).map(b => [b.id, b.role]), [["A", "INSIDE"], ["B", "CORE"], ["C", "OUTSIDE"]]);
+  // Each letter's hoppers stand under its own header.
+  for (const bank of s.machine.querySelectorAll("[data-role='layer']")) {
+    const id = bank.getAttribute("data-layer");
+    assert.ok(bank.querySelectorAll("[data-role='hopper']").every(h => h.getAttribute("data-hopper").startsWith(id)), `layer ${id} draws another letter's hoppers`);
+  }
+  const columns = bankOrder(s).map(b => b.x);
+  s.clickBlend();
+  const cards = s.cards().map(card => ({ id: card.getAttribute("data-layer"), x: Number(card.querySelector("foreignObject").getAttribute("x")) })).sort((a, b) => a.x - b.x);
+  assert.deepEqual(cards.map(c => c.id), ["A", "B", "C"], "the cards read A B C too");
+  assert.deepEqual(bankOrder(s).map(b => b.x), columns, "the mode moved no column");
+  for (const card of s.cards()) {
+    const id = card.getAttribute("data-layer");
+    assert.ok(card.querySelectorAll(".station-editor__item").every(row => row.getAttribute("data-hopper").startsWith(id)), `layer ${id}'s card lists another letter's hoppers`);
+  }
+  s.clickBlend();
+  assert.equal(JSON.stringify(s.state()), before, "presentation order changed nothing in the application's state");
+  assert.deepEqual(s.calls, []);
+});
+
+test("Line 12 (A outside) is what it was: A B C left to right, OUTSIDE / CORE / INSIDE", () => {
+  const s = boot({ line: { lineNumber: 12, displayName: "Line 12", layerAPosition: "outside" } });
+  assert.deepEqual(bankOrder(s).map(b => [b.id, b.role]), [["A", "OUTSIDE"], ["B", "CORE"], ["C", "INSIDE"]]);
+  s.clickBlend();
+  assert.deepEqual(s.cards().map(card => card.getAttribute("data-layer")), ["A", "B", "C"]);
+});
+
+test("the Recipe Book's preview lists a saved recipe's layers A, B, C whatever order they were saved in, accented by the side each sits on for THIS line", () => {
+  const s = boot({ line: { lineNumber: 8, displayName: "Line 8", layerAPosition: "inside" } });
+  const book = s.window.PolynStationRecipesBridge;
+  const handle = book.connect({
+    read: () => ({
+      assigned: true, workspace: { id: "w8", displayName: "Line 8" },
+      recipes: [{ id: "r1", name: "Shuffled", favorite: false, updatedAt: "2026-09-01T10:00:00Z", hopperNamingMode: "standard",
+        layers: [
+          { name: "C", layerPct: 30, hoppers: [{ index: 0, resinName: "OUT-C", pct: 100 }] },
+          { name: "A", layerPct: 30, hoppers: [{ index: 0, resinName: "IN-A", pct: 100 }] },
+          { name: "B", layerPct: 40, hoppers: [{ index: 0, resinName: "CORE-B", pct: 100 }] }
+        ] }]
+    }),
+    request: () => ({ ok: true })
+  });
+  handle.publish();
+  s.launcher.click();
+  s.panel.querySelector(".station-book__row").click();
+  const rows = s.panel.querySelectorAll(".station-book__layer");
+  assert.deepEqual(rows.map(r => [r.getAttribute("data-layer"), r.getAttribute("data-layer-role")]), [["A", "inside"], ["B", "core"], ["C", "outside"]]);
+  assert.deepEqual(rows.map(r => r.querySelector(".station-book__hopper-resin").textContent), ["IN-A", "CORE-B", "OUT-C"], "each row keeps its own letter's hoppers");
+  // The same recipe on a line where A is the outside: the same order,
+  // the other accents.
+  const t = boot({ line: { lineNumber: 12, displayName: "Line 12", layerAPosition: "outside" } });
+  t.window.PolynStationRecipesBridge.connect({ read: () => ({ assigned: true, workspace: { id: "w12", displayName: "Line 12" }, recipes: [{ id: "r1", name: "Shuffled", favorite: false, updatedAt: "", hopperNamingMode: "standard", layers: [{ name: "C", layerPct: 30, hoppers: [] }, { name: "A", layerPct: 30, hoppers: [] }, { name: "B", layerPct: 40, hoppers: [] }] }] }), request: () => ({ ok: true }) }).publish();
+  t.launcher.click();
+  t.panel.querySelector(".station-book__row").click();
+  assert.deepEqual(t.panel.querySelectorAll(".station-book__layer").map(r => [r.getAttribute("data-layer"), r.getAttribute("data-layer-role")]), [["A", "outside"], ["B", "core"], ["C", "inside"]]);
 });
 
 /* ----------------------------------------------------------------------
