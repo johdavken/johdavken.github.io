@@ -121,7 +121,7 @@ test("every selector keeps its leading `body` so the tuned styles.css rules stay
 test("every selector stays inside a treated panel - nothing styles buttons app-wide", () => {
   const PANELS = [
     "#splitsBlock", "#splitsArea", "#resultsBlock", "#lineSyncBlock",
-    "#toolsBlock", ".adminResinPanel", "#dashboardPanel", "#changeoverWizardDialog"
+    "#toolsBlock", ".adminResinPanel", "#changeoverWizardDialog"
   ];
   for (const line of [...selectorLines, ...touchSelectorLines]) {
     assert.ok(PANELS.some(p => line.includes(p)), `selector escapes the panels: ${line}`);
@@ -133,7 +133,7 @@ test("navigation and list rows are never restyled", () => {
   // controls; broader workspace navigation and list rows remain untouched.
   for (const line of [...selectorLines, ...touchSelectorLines]) {
     assert.ok(
-      !/\.toolsIndexButton|\.mobileToolTile|\.adminResinRow|\.workspaceRecoveryRow|\.sudoAccessAction|\.dashboardBackButton|\.workspaceNavButton/.test(line),
+      !/\.toolsIndexButton|\.mobileToolTile|\.adminResinRow|\.workspaceRecoveryRow|\.sudoAccessAction|\.workspaceNavButton/.test(line),
       `styles a nav / list row: ${line}`
     );
   }
@@ -183,12 +183,11 @@ test("Recipe's console tab bay sizes itself to its labels while remaining compac
   assert.match(buttonCss, /body #splitsBlock \.recipePageTab\{[\s\S]*?min-width: 0;[\s\S]*?overflow: hidden;[\s\S]*?text-overflow: ellipsis;[\s\S]*?white-space: nowrap;/);
 });
 
-test("RT Sync, Tools, Sudo Access, Dashboard and the changeover wizard are covered", () => {
+test("RT Sync, Tools, Sudo Access and the changeover wizard are covered", () => {
   assert.match(buttonCss, /body #lineSyncBlock \.lineSyncGeneratedCodePanel\{[\s\S]*?border-radius: 7px/);
   assert.match(buttonCss, /body #toolsBlock \.recipeScanOptions,[\s\S]*?\.bulkDensitySaveBar\{[\s\S]*?border-radius: 7px/);
   assert.match(buttonCss, /body \.adminResinPanel \.adminToolbar\{[\s\S]*?border-radius: 7px/);
   assert.match(buttonCss, /body \.adminResinPanel button\.danger:not\(:disabled\)\{[\s\S]*?background: var\(--btnstyle-danger\)/);
-  assert.match(buttonCss, /body #dashboardPanel \.dashboardChangeoverRefresh\{[\s\S]*?background: var\(--btnstyle-surface\)/);
   assert.match(buttonCss, /body #changeoverWizardDialog \.changeoverWizardActions\{[\s\S]*?border-radius: 7px/);
 });
 

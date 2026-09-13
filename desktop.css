@@ -34,7 +34,7 @@
     overflow:auto;
     /* Flex column (over the shared grid rule) so .workspaceNavFooter can take
        margin-top:auto and sit at the rail's foot: the leftover height between
-       the last working-nav item and the version/divider/Dashboard block goes
+       the last working-nav item and the version/divider/Station block goes
        into that auto margin instead of stretching rows. When the rail is too
        short for its content the auto margin collapses to 0 and the existing
        overflow:auto scrolls - nothing overlaps, nothing is clipped. */
@@ -59,7 +59,7 @@
   /* A normal flow item inside .workspaceNavFooter (never position:absolute -
      that previously anchored it to a fixed spot in the scrollport rather than
      the scroll content, so an expanded/scrolled rail rendered Sudo access's
-     caption underneath it). It sits just above the Dashboard divider; the
+     caption underneath it). It sits just above the footer divider; the
      footer's own margin-top:auto floats the whole block to the rail foot,
      and when the rail must scroll it simply scrolls with everything else. */
   .desktopRailVersion{
@@ -1041,335 +1041,40 @@
   }
 
   /* =====================================================================
-   *   Dashboard - desktop-only overview mode
+   *   Station (Beta) - the rail-foot link into the desktop console
    *   ---------------------------------------------------------------
-   *   Replaces the sidebar + status bar + working panel with a single
-   *   spacious, glanceable screen. It is a pure presentation toggle on
-   *   top of the same DOM (body.dashboardActive), not a second shell:
-   *   .workspaceNav/.workspaceContent are hidden, never rebuilt, so
-   *   Back to Line has nothing to restore beyond removing the class.
+   *   Station is the same document with ?view=station (station-host.js),
+   *   so the entry is a plain link, not a panel switch. The divider is the
+   *   message: normal working navigation above it, the way into the other
+   *   presentation below. So the entry drops the nav-row card treatment
+   *   entirely - no icon, no caption, just a centered word.
    *   ===================================================================== */
-  /* The divider is the message: normal working navigation above it, the
-     Dashboard / overview-mode switch below. So the entry drops the nav-row
-     card treatment entirely - no icon, no caption, just a centered word that
-     reads as a mode toggle, not another destination. */
-  .workspaceNavDashboardDivider{
+  .workspaceNavFooterDivider{
     height:1px;
     margin:2px 4px;
     background:var(--border);
   }
-  .workspaceNavDashboard{
+  .workspaceNavStation{
+    box-sizing:border-box;
     padding:8px 11px;
     border:1px solid transparent;
     text-align:center;
     color:var(--muted);
+    text-decoration:none;
   }
-  .workspaceNavDashboard span{
+  .workspaceNavStation span{
     justify-content:center;
     font-size:12px;
     letter-spacing:.14em;
   }
-  .workspaceNavDashboard:hover{
+  .workspaceNavStation:hover{
     background:var(--row-bg);
     color:var(--text);
   }
-  .workspaceNavDashboard:focus-visible{
+  .workspaceNavStation:focus-visible{
     outline:var(--focus-outline);
     outline-offset:1px;
   }
-
-  /* The sidebar RT logo is the third way into Dashboard (bottom link, RT
-     logo, and - once open - nothing until Back to Line). Same setDashboardActive
-     path, so it only needs to look and behave clickable; the mark itself is
-     unchanged. Desktop-only: .workspaceBrand is already display:none at mobile
-     widths (styles.css), and setDashboardActive still no-ops off desktop. */
-  #workspaceBrandDashboard{
-    cursor:pointer;
-    border-radius:var(--control-radius);
-  }
-  #workspaceBrandDashboard:hover .resinToolsSidebarIcon{ opacity:.82; }
-  #workspaceBrandDashboard:focus-visible{
-    outline:var(--focus-outline);
-    outline-offset:2px;
-  }
-
-  /* Small secondary re-open of the existing changeover calculator, sat beside
-     the CHANGEOVER label - never competes with the hero clock. It carries
-     data-changeover-wizard-trigger, so the app's one wizard-trigger listener
-     wires it with no Dashboard-specific calculator. */
-  .dashboardChangeoverHead{
-    display:flex;
-    align-items:center;
-    gap:8px;
-  }
-  .dashboardChangeoverRefresh{
-    display:grid;
-    place-items:center;
-    width:32px;
-    height:32px;
-    min-height:32px;
-    padding:8px;
-    border:0;
-    border-radius:var(--control-radius);
-    background:transparent;
-    color:var(--muted);
-    box-shadow:none;
-  }
-  .dashboardChangeoverRefresh svg{
-    width:15px;
-    height:15px;
-    fill:none;
-    stroke:currentColor;
-    stroke-width:1.8;
-    stroke-linecap:round;
-    stroke-linejoin:round;
-  }
-  .dashboardChangeoverRefresh:hover{
-    background:var(--row-bg);
-    color:var(--text);
-  }
-  .dashboardChangeoverRefresh:focus-visible{
-    outline:var(--focus-outline);
-    outline-offset:1px;
-  }
-
-  .dashboardPanel{ display:none; }
-  body.dashboardActive .workspaceNav,
-  body.dashboardActive .workspaceContent{ display:none; }
-  body.dashboardActive .dashboardPanel{
-    display:flex;
-    flex-direction:column;
-    grid-column:1 / -1;
-    grid-row:1;
-    width:100%;
-    height:calc(100dvh - 24px);
-    min-height:0;
-    padding:8px clamp(24px,6vw,96px) clamp(24px,5vh,64px);
-    overflow:auto;
-    gap:clamp(24px,4vh,48px);
-  }
-
-  .dashboardHeader{
-    display:flex;
-    align-items:flex-start;
-    justify-content:space-between;
-    gap:16px;
-    flex:0 0 auto;
-  }
-  .dashboardBackButton{
-    display:flex;
-    align-items:center;
-    gap:7px;
-    padding:9px 14px;
-    border:1px solid var(--border);
-    border-radius:var(--control-radius);
-    background:transparent;
-    color:var(--text);
-    font-size:13px;
-    font-weight:700;
-    box-shadow:none;
-  }
-  .dashboardBackButton svg{
-    width:16px;
-    height:16px;
-    fill:none;
-    stroke:currentColor;
-    stroke-width:2;
-    stroke-linecap:round;
-    stroke-linejoin:round;
-  }
-  .dashboardBackButton:hover{ background:var(--row-bg); border-color:var(--border2); }
-  .dashboardBackButton:focus-visible{ outline:var(--focus-outline); outline-offset:2px; }
-  .dashboardIdentity{
-    display:flex;
-    flex-direction:column;
-    align-items:flex-end;
-    text-align:right;
-    gap:2px;
-    min-width:0;
-  }
-  .dashboardIdentity strong{
-    font-size:15px;
-    font-weight:800;
-    letter-spacing:.05em;
-    color:var(--title);
-  }
-  .dashboardIdentity strong:empty{ display:none; }
-  .dashboardIdentity span{
-    font-size:13px;
-    font-weight:600;
-    color:var(--muted);
-    max-width:46vw;
-    overflow:hidden;
-    text-overflow:ellipsis;
-    white-space:nowrap;
-  }
-  .dashboardIdentity span:empty{ display:none; }
-
-  .dashboardLabel{
-    display:block;
-    font-size:12px;
-    font-weight:750;
-    letter-spacing:.12em;
-    text-transform:uppercase;
-    color:var(--muted);
-  }
-
-  .dashboardChangeover{
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    text-align:center;
-    gap:6px;
-    flex:1 1 auto;
-  }
-  .dashboardChangeoverClock{
-    font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-    font-size:clamp(64px,10vw,128px);
-    font-weight:800;
-    line-height:1;
-    color:var(--title);
-    font-variant-numeric:tabular-nums;
-  }
-  .dashboardChangeoverClock[data-empty="true"]{
-    font-size:clamp(28px,4vw,40px);
-    color:var(--muted);
-    font-weight:700;
-  }
-  .dashboardChangeoverRemaining{
-    font-size:18px;
-    font-weight:650;
-    color:var(--muted);
-  }
-  .dashboardChangeoverRemaining[data-stale="true"]{ color:var(--warn); }
-  .dashboardChangeoverRemaining:empty{ display:none; }
-
-  .dashboardLowerGrid{
-    display:grid;
-    grid-template-columns:minmax(0,1fr) minmax(0,1.5fr) minmax(0,1fr);
-    gap:clamp(20px,4vw,64px);
-    align-items:start;
-    flex:0 0 auto;
-    border-top:1px solid var(--surface-inner-border,var(--border));
-    padding-top:clamp(20px,3vh,32px);
-  }
-  .dashboardOutput{
-    display:flex;
-    flex-direction:column;
-    gap:6px;
-  }
-  .dashboardOutputValue{
-    font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-    font-size:clamp(40px,5vw,64px);
-    font-weight:800;
-    line-height:1.05;
-    color:var(--title);
-    font-variant-numeric:tabular-nums;
-  }
-  .dashboardOutputValue[data-empty="true"]{
-    font-size:22px;
-    color:var(--muted);
-    font-weight:700;
-  }
-  .dashboardOutputUnit{
-    font-size:15px;
-    font-weight:700;
-    letter-spacing:.04em;
-    color:var(--muted);
-  }
-  .dashboardOutputUnit[hidden]{ display:none; }
-
-  /* Centre column: label, time and the hopper block all centre-anchored over
-     the column (Output stays left, RT Sync stays right). The hopper rows keep
-     their own left-aligned label/resin layout - they stretch to the widest
-     row so the divider hairlines stay uniform - but sit as one centred group. */
-  .dashboardNextAction{
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    gap:8px;
-    min-width:0;
-  }
-  .dashboardNextActionBody{ display:flex; flex-direction:column; align-items:center; gap:10px; }
-  .dashboardNextActionTime{
-    font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-    font-size:clamp(28px,3vw,38px);
-    font-weight:800;
-    color:var(--title);
-    font-variant-numeric:tabular-nums;
-  }
-  .dashboardNextActionHoppers{
-    display:flex;
-    flex-direction:column;
-    gap:2px;
-  }
-  .dashboardNextActionHopper{
-    display:flex;
-    align-items:baseline;
-    gap:10px;
-    padding:6px 0;
-    border-top:1px solid var(--surface-inner-border,var(--border));
-    font-size:16px;
-  }
-  .dashboardNextActionHopper:first-child{ border-top:0; }
-  .dashboardNextActionHopper .dashboardHopperLabel{
-    flex:0 0 auto;
-    min-width:34px;
-    font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-    font-weight:800;
-    color:var(--title);
-  }
-  .dashboardNextActionHopper .dashboardHopperResin{
-    color:var(--muted);
-    font-weight:600;
-    overflow:hidden;
-    text-overflow:ellipsis;
-    white-space:nowrap;
-  }
-  .dashboardNextActionEmpty{
-    font-size:16px;
-    font-weight:600;
-    color:var(--muted);
-  }
-
-  /* Third column of .dashboardLowerGrid - anchored right, opposite Output,
-     label on the same top baseline as OUTPUT/NEXT ACTION (align-items:start
-     on the grid). Not a card; same column rhythm as its two siblings. */
-  .dashboardSync{
-    display:flex;
-    flex-direction:column;
-    align-items:flex-end;
-    gap:6px;
-    min-width:0;
-    text-align:right;
-  }
-  .dashboardSyncStatus{
-    display:flex;
-    align-items:center;
-    gap:9px;
-    font-size:clamp(17px,1.5vw,20px);
-    font-weight:750;
-    color:var(--text);
-  }
-  /* Reuses the app's one sync glyph (see .mobileLineSyncStatusIcon) - a
-     single icon recoloured by state via currentColor, never a per-state
-     icon set. Moderate size: present, but well below the Output/Next Action
-     values, and state is always spelled out in the adjacent word too. */
-  .dashboardSyncIcon{
-    flex:0 0 auto;
-    width:22px;
-    height:22px;
-    fill:none;
-    stroke:currentColor;
-    stroke-width:1.8;
-    stroke-linecap:round;
-    stroke-linejoin:round;
-  }
-  .dashboardSyncStatus[data-state="neutral"] .dashboardSyncIcon{ color:var(--muted); }
-  .dashboardSyncStatus[data-state="ok"]{ color:var(--ok); }
-  .dashboardSyncStatus[data-state="warn"]{ color:var(--warn); }
-  .dashboardSyncStatus[data-state="bad"]{ color:var(--bad); }
 }
 
 @media (min-width:901px) and (max-width:1180px) and (pointer: fine){

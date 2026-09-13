@@ -40,7 +40,7 @@ function iconSvgs(){
 test("every 32x32 app icon ships both glyph sets - the stroked base and its solid gruvbox twin", () => {
   const svgs = iconSvgs().filter(svg => svg.includes("baseGlyph") || svg.includes("gruvboxSolidGlyph"));
   assert.equal(svgs.length, 25,
-    "expected 8 workspace tile icons (7 + the mobile-only Notes entry) + 8 mobile section header icons (7 + Notes' panel header) + 6 mobile tool tiles + 3 Play Store banner icon copies (one per state, now converted to the same 32x32 dual-glyph style) - the mobile RT Sync shortcut was removed as a duplicate of the workspace identity bar's own RT Sync action, and the desktop-only Dashboard entry is a centered word with no tile icon");
+    "expected 8 workspace tile icons (7 + the mobile-only Notes entry) + 8 mobile section header icons (7 + Notes' panel header) + 6 mobile tool tiles + 3 Play Store banner icon copies (one per state, now converted to the same 32x32 dual-glyph style) - the mobile RT Sync shortcut was removed as a duplicate of the workspace identity bar's own RT Sync action, and the desktop-only Station (Beta) link is a centered word with no tile icon");
   for (const svg of svgs){
     assert.match(svg, /<g class="baseGlyph">/, `missing baseGlyph: ${svg.slice(0, 90)}`);
     assert.match(svg, /<g class="gruvboxSolidGlyph">/, `missing gruvboxSolidGlyph: ${svg.slice(0, 90)}`);

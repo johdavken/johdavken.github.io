@@ -12,9 +12,9 @@
  *     control bar (#resultsBlock #timelinePane .timelineControlBar),
  *     RT Sync's desktop action buttons (#lineSyncBlock), the Tools
  *     section's per-tool action buttons (#toolsBlock), the Sudo Access
- *     sub-panels (.adminResinPanel), the Dashboard's changeover-refresh
- *     button (#dashboardPanel .dashboardChangeoverRefresh), and the
- *     determine-changeover wizard dialog (#changeoverWizardDialog)
+ *     sub-panels (.adminResinPanel), and the determine-changeover
+ *     wizard dialog (#changeoverWizardDialog); nothing outside these
+ *     surfaces is touched
  *   - the toolbars, surface by surface:
  *       CMD  = #recipeHeaderActionPill's buttons (Edit/Done, Load, Print),
  *              plus the Hopper Weights page's relocated Summary/Edit toggle
@@ -442,17 +442,6 @@ body{
     color: var(--btnstyle-on-fill);
   }
 
-  /* ---- Dashboard (desktop) --------------------------------------
-     One action button: the changeover-estimate refresh (a 32px icon
-     button beside the Changeover label). "Back to Line" is navigation,
-     left alone. */
-  body #dashboardPanel .dashboardChangeoverRefresh{
-    border-radius: 4px;
-    background: var(--btnstyle-surface);
-    color: var(--btnstyle-ink);
-    box-shadow: 0 1px 0 var(--btnstyle-edge);
-  }
-
   /* ---- Changeover calculator (desktop) ------------------------
      The determine-changeover wizard dialog. Its per-step action bar
      (.changeoverWizardActions, a segmented pill in styles.css) becomes a
@@ -506,7 +495,6 @@ body{
   body .adminResinPanel button.primary:focus-visible,
   body .adminResinPanel button.secondary:focus-visible,
   body .adminResinPanel button.danger:focus-visible,
-  body #dashboardPanel .dashboardChangeoverRefresh:focus-visible,
   body #changeoverWizardDialog .changeoverWizardActions button:focus-visible,
   body #changeoverWizardDialog .changeoverWizardChoices button:focus-visible{
     outline: var(--focus-outline);
@@ -781,13 +769,6 @@ body{
     color: var(--btnstyle-on-fill);
   }
 
-  body[data-shell="touch"] #dashboardPanel .dashboardChangeoverRefresh{
-    border-radius: 4px;
-    background: var(--btnstyle-surface);
-    color: var(--btnstyle-ink);
-    box-shadow: 0 1px 0 var(--btnstyle-edge);
-  }
-
   body[data-shell="touch"] #changeoverWizardDialog .changeoverWizardActions{
     gap: 6px;
     padding: 6px;
@@ -832,7 +813,6 @@ body{
   body[data-shell="touch"] .adminResinPanel button.primary:focus-visible,
   body[data-shell="touch"] .adminResinPanel button.secondary:focus-visible,
   body[data-shell="touch"] .adminResinPanel button.danger:focus-visible,
-  body[data-shell="touch"] #dashboardPanel .dashboardChangeoverRefresh:focus-visible,
   body[data-shell="touch"] #changeoverWizardDialog .changeoverWizardActions button:focus-visible,
   body[data-shell="touch"] #changeoverWizardDialog .changeoverWizardChoices button:focus-visible{
     outline: var(--focus-outline);
