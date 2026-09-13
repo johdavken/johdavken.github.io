@@ -650,9 +650,16 @@
   font-size: var(--station-text-sm);
 }
 
+/* The card's box is the cluster's footprint (station-machine-parts.js:
+   blendCardBox), the same in every layout, and six rows take under half
+   of it; so the list is not a scroll container. Made one, it swallows
+   the result list a search hangs from a row - absolutely positioned, so
+   it counts as the list's scrollable overflow: the list grows a scrollbar
+   for it and clips it at its own bottom edge. Left to overflow, the
+   result list stands clear of the rows and is placed inside the card's
+   <foreignObject> as the full editor's is (station-focus-editor.js). */
 .station-editor[data-variant="compact"] .station-editor__list {
   margin-top: 0;
-  overflow-y: auto;
   min-height: 0;
 }
 
