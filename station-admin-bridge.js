@@ -8,7 +8,7 @@
  *   station-connection-bridge.js   both ways, narrowly      the LINE CONNECTION
  *   station-recipes-bridge.js      both ways, narrowly      SAVED RECIPES
  *   station-admin-bridge.js        both ways, narrowly      ADMIN ACCESS and
- *                                                           WORKSPACE MANAGEMENT
+ *                                                           the ADMIN TOOLS
  *
  * The application already has one administrator identity (resin-admin.js:
  * an email-and-password sign-in verified against the admin table, held by
@@ -19,7 +19,10 @@
  * device, merging and deleting) and one Line Configuration service
  * (line-configurations-service.js: the admin procedures for listing the
  * production lines' definitions and saving one, validated by
- * line-identity.js). None of it may be re-implemented in
+ * line-identity.js) and one Resin Database (resin-admin.js: the admin
+ * procedures for listing the catalog's records, active and inactive,
+ * saving one and deleting one - the same instance that holds the
+ * sign-in). None of it may be re-implemented in
  * Station: Station must never hold a second admin session, a second
  * client, a second copy of a procedure or a second list of workspaces
  * that outlives the page it draws.
@@ -45,7 +48,8 @@
  * A request's answer is rebuilt here by allow-list (normalize()): a
  * workspace is its id, name, counts and dates; a linked device is its
  * membership id, label, role, last-seen time and whether it is this
- * device; a line configuration is its definition's fields and its id.
+ * device; a line configuration is its definition's fields and its id; a
+ * resin is its code, its two densities, whether it is active, and its id.
  * Station never learns a table, a procedure name, a session, a
  * token, a full anonymous identity of its own, or a client. A password
  * crosses the letterbox once, inward, on signIn, and is held nowhere.
@@ -76,7 +80,10 @@
     "mergeWorkspace",     // { id, targetId }      -> { recipesMerged, profilesMerged }
     "deleteWorkspace",    // { id }
     "listLineConfigurations",  //                  -> { lines }
-    "saveLineConfiguration"    // { id?, line }    -> { line }   create when id is empty
+    "saveLineConfiguration",   // { id?, line }    -> { line }   create when id is empty
+    "listResins",         //                       -> { resins }  active and inactive
+    "saveResin",          // { id?, resin }        -> { resin }   create when id is empty
+    "deleteResin"         // { id }                permanent; Inactive is the usual choice
   ]);
 
   /* The arguments each action takes, and nothing else crosses. */
@@ -95,7 +102,11 @@
     listLineConfigurations: Object.freeze([]),
     // `id` is optional here - empty means create - and `line` is an object,
     // rebuilt field by field by normalizeLineConfiguration().
-    saveLineConfiguration: Object.freeze(["id", "line"])
+    saveLineConfiguration: Object.freeze(["id", "line"]),
+    listResins: Object.freeze([]),
+    // As above: an optional id and one object, rebuilt by normalizeResin().
+    saveResin: Object.freeze(["id", "resin"]),
+    deleteResin: Object.freeze(["id"])
   });
 
   /* A line configuration's fields, as they cross in both directions: the
@@ -106,12 +117,21 @@
     "hopperGeometry", "hopperNamingMode", "isActive", "metadata"
   ]);
 
+  /* A resin's fields, as they cross in both directions: the record
+   * resin-admin.js validates and saves, and nothing else the row carries.
+   * The unit is in the name so a number never crosses without one. */
+  const RESIN_FIELDS = Object.freeze([
+    "resinCode", "densityGCm3", "bulkDensityLbFt3", "isActive"
+  ]);
+
   /* Failure codes Station may read. `not_authenticated` and `access_denied`
    * are the two that mean the administrator session is gone: the producer
-   * re-checks access when it answers with either, and the window follows. */
+   * re-checks access when it answers with either, and the window follows.
+   * `duplicate_code` is a resin save refused for a code the catalog already
+   * holds, so the tool can keep the draft and point at the field. */
   const ERROR_CODES = Object.freeze([
     "unknown_action", "unavailable", "bad_argument", "not_authenticated", "access_denied",
-    "not_ready", "not_found", "invalid_name", "failed"
+    "not_ready", "not_found", "invalid_name", "duplicate_code", "failed"
   ]);
 
   const NONE = Object.freeze([]);
@@ -203,6 +223,14 @@
     return Number.isInteger(number) ? number : null;
   }
 
+  /* A number or null: blank is null, a numeric string is its number (the
+   * database's numeric columns may arrive as text), anything else is null. */
+  function nullableNumber(value) {
+    if (value === null || value === undefined || value === "") return null;
+    const number = typeof value === "number" ? value : Number(String(value).trim());
+    return Number.isFinite(number) ? number : null;
+  }
+
   function plainObject(value) {
     if (!value || typeof value !== "object" || Array.isArray(value)) return {};
     try {
@@ -245,6 +273,21 @@
     });
   }
 
+  /* A resin as Station may read it: its code, its two densities (a number
+   * or null - unknown is null, never zero), whether it is active, the
+   * row's id and when it last changed. */
+  function projectResin(row) {
+    const item = row && typeof row === "object" ? row : {};
+    return Object.freeze({
+      id: stringOr(item.id, ""),
+      resinCode: stringOr(item.resinCode, ""),
+      densityGCm3: nullableNumber(item.densityGCm3),
+      bulkDensityLbFt3: nullableNumber(item.bulkDensityLbFt3),
+      isActive: item.isActive !== false,
+      updatedAt: stringOr(item.updatedAt, "")
+    });
+  }
+
   /* Whatever an action returned, as a frozen result carrying only what
    * Station may read for THAT action. The producer answers in the shapes
    * named beside ACTIONS; anything else it put in the answer is dropped. */
@@ -283,6 +326,13 @@
       case "saveLineConfiguration":
         out.line = projectLineConfiguration(value.line);
         break;
+      case "listResins":
+        out.resins = Object.freeze((Array.isArray(value.resins) ? value.resins : [])
+          .map(projectResin).filter(resin => resin.id));
+        break;
+      case "saveResin":
+        out.resin = projectResin(value.resin);
+        break;
       default:
         break;
     }
@@ -296,7 +346,20 @@
     id: "A workspace is required.",
     targetId: "A target workspace is required.",
     memberId: "A linked device is required.",
-    line: "A line configuration is required."
+    line: "A line configuration is required.",
+    resin: "A resin is required."
+  });
+
+  /* Where an action's field means something other than the shared word
+   * above (`id` is a workspace's, unless the action is about a resin). */
+  const ACTION_ARGUMENT_MESSAGES = Object.freeze({
+    deleteResin: Object.freeze({ id: "A resin is required." })
+  });
+
+  const RESIN_FIELD_MESSAGES = Object.freeze({
+    resinCode: "A resin code is required.",
+    densityGCm3: "Density must be blank or a number.",
+    bulkDensityLbFt3: "Bulk density must be blank or a number."
   });
 
   const LINE_FIELD_MESSAGES = Object.freeze({
@@ -347,6 +410,40 @@
     return { ok: true, line: Object.freeze(out) };
   }
 
+  /* The resin to save, rebuilt field by field from RESIN_FIELDS: the code
+   * as trimmed text (trimmed only - the service and the database keep the
+   * case, and compare codes without it), each density as a number or null
+   * (blank is null: unknown), active as a boolean. What the VALUES may be
+   * - the density ranges, a code the catalog already holds - is
+   * resin-admin.js's to say, in the service, and is not repeated here;
+   * this only refuses a field that is not the kind of thing the record
+   * holds. Anything else passed is dropped. */
+  function normalizeResin(value) {
+    const given = value && typeof value === "object" && !Array.isArray(value) ? value : null;
+    if (!given) return failure("bad_argument", ARGUMENT_MESSAGES.resin, { field: "resin" });
+    const out = {};
+    const resinCode = typeof given.resinCode === "string" ? given.resinCode.trim() : "";
+    if (!resinCode) return failure("bad_argument", RESIN_FIELD_MESSAGES.resinCode, { field: "resinCode" });
+    out.resinCode = resinCode;
+    for (const field of ["densityGCm3", "bulkDensityLbFt3"]) {
+      const raw = given[field];
+      const blank = raw === null || raw === undefined || (typeof raw === "string" && !raw.trim());
+      const number = blank ? null : nullableNumber(raw);
+      if (!blank && number === null) return failure("bad_argument", RESIN_FIELD_MESSAGES[field], { field });
+      out[field] = number;
+    }
+    out.isActive = given.isActive !== false;
+    return { ok: true, resin: Object.freeze(out) };
+  }
+
+  /* The actions whose arguments are not all text: an optional id (empty
+   * means create) and one object, rebuilt field by field by its own
+   * normalizer, which answers { ok, [key] } or a bad_argument failure. */
+  const STRUCTURED = Object.freeze({
+    saveLineConfiguration: Object.freeze({ key: "line", rebuild: normalizeLineConfiguration }),
+    saveResin: Object.freeze({ key: "resin", rebuild: normalizeResin })
+  });
+
   /* The request's arguments, checked and rebuilt: a name is text with its
    * whitespace collapsed (the server normalizes it again, by its own rule),
    * an email is trimmed, a password is taken as typed, an id is text.
@@ -354,18 +451,18 @@
   function normalizeArguments(name, args) {
     const given = args && typeof args === "object" ? args : {};
     const out = {};
-    if (name === "saveLineConfiguration") {
-      // The one action whose arguments are not all text: an optional id
-      // (empty means create) and the configuration itself.
+    const structured = STRUCTURED[name];
+    if (structured) {
       const id = given.id === null || given.id === undefined ? "" : String(given.id).trim();
-      const line = normalizeLineConfiguration(given.line);
-      if (!line.ok) return line;
-      return { ok: true, args: Object.freeze({ id, line: line.line }) };
+      const built = structured.rebuild(given[structured.key]);
+      if (!built.ok) return built;
+      return { ok: true, args: Object.freeze({ id, [structured.key]: built[structured.key] }) };
     }
+    const messages = ACTION_ARGUMENT_MESSAGES[name] || null;
     for (const field of ARGUMENTS[name]) {
       const value = given[field];
       const usable = field === "password" ? typeof value === "string" && value.length > 0 : typeof value === "string" && value.trim();
-      if (!usable) return failure("bad_argument", ARGUMENT_MESSAGES[field], { field });
+      if (!usable) return failure("bad_argument", (messages && messages[field]) || ARGUMENT_MESSAGES[field], { field });
       if (field === "password") out[field] = value;
       else if (field === "name") out[field] = value.trim().replace(/\s+/g, " ");
       else out[field] = value.trim();
@@ -454,11 +551,14 @@
     ARGUMENTS,
     ERROR_CODES,
     LINE_FIELDS,
+    RESIN_FIELDS,
     project,
     normalize,
     normalizeArguments,
     normalizeLineConfiguration,
     projectLineConfiguration,
+    normalizeResin,
+    projectResin,
     connect: shared.connect,
     getAccess: shared.getAccess,
     subscribe: shared.subscribe,

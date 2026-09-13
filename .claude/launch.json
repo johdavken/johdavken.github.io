@@ -42,6 +42,16 @@
         "8796"
       ],
       "port": 8796
+    },
+    {
+      "name": "station-resins",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "tools/serve.js",
+        "--port",
+        "8797"
+      ],
+      "port": 8797
     }
   ]
 }

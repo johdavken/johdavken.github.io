@@ -116,10 +116,12 @@
     "station/station-resin-totals.js",
     "station/station-theme-preview.js",
     "station/station-appearance.js",
-    // Sudo: its tools, Workspace Management and Line Configuration, before
-    // the page that hosts them; all before the Handbook that hosts the page.
+    // Sudo: its tools, Workspace Management, Line Configuration and Resin
+    // Database, before the page that hosts them; all before the Handbook
+    // that hosts the page.
     "station/station-sudo-workspaces.js",
     "station/station-sudo-lines.js",
+    "station/station-sudo-resins.js",
     "station/station-sudo.js",
     "station/station-handbook.js",
     "station/station-demo-lines.js",
@@ -127,7 +129,7 @@
     "station/station.js"
   ];
 
-  const VERSION = "0.44.0";
+  const VERSION = "0.45.0";
 
   function requested() {
     try {

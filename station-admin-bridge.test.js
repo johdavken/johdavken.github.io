@@ -243,3 +243,81 @@ test("a save's arguments are rebuilt field by field - integers, collapsed names,
   await bridge.request("saveLineConfiguration", { line: { ...valid, lineNumber: 1000, layerAPosition: null } });
   assert.equal(env.calls.length, before + 1);
 });
+
+/* ----------------------------------------------------------------------
+ *   Resin Database: the three actions added for Sudo's third tool
+ * -------------------------------------------------------------------- */
+
+test("the failure codes are a closed list, and duplicate_code is among them so a refused resin save survives the letterbox with its own code", () => {
+  assert.deepEqual([...bridgeModule.ERROR_CODES], [
+    "unknown_action", "unavailable", "bad_argument", "not_authenticated", "access_denied",
+    "not_ready", "not_found", "invalid_name", "duplicate_code", "failed"
+  ]);
+  assert.deepEqual([...bridgeModule.RESIN_FIELDS], ["resinCode", "densityGCm3", "bulkDensityLbFt3", "isActive"]);
+});
+
+test("a resin crosses outward by allow-list: code, two densities as a number or null, active, id and updated time - never the row", async () => {
+  const { bridge } = producer({
+    listResins: async () => ({ ok: true, resins: [
+      { id: "r-1", resinCode: "LL 1001", densityGCm3: "0.92", bulkDensityLbFt3: 35.5, isActive: true, updatedAt: "2026-09-01T00:00:00Z", resin_code: "smuggled", created_at: "x", extra: "dropped" },
+      { id: "r-2", resinCode: "HD 200", densityGCm3: "", bulkDensityLbFt3: null, isActive: false },
+      { id: "r-3", resinCode: "PP 3", densityGCm3: "abc", bulkDensityLbFt3: 0 },
+      { resinCode: "no id" }
+    ] })
+  });
+  const result = await bridge.request("listResins");
+  assert.ok(result.ok && Object.isFrozen(result) && Object.isFrozen(result.resins) && Object.isFrozen(result.resins[0]));
+  assert.deepEqual(result.resins.map(resin => ({ ...resin })), [
+    { id: "r-1", resinCode: "LL 1001", densityGCm3: 0.92, bulkDensityLbFt3: 35.5, isActive: true, updatedAt: "2026-09-01T00:00:00Z" },
+    { id: "r-2", resinCode: "HD 200", densityGCm3: null, bulkDensityLbFt3: null, isActive: false, updatedAt: "" },
+    { id: "r-3", resinCode: "PP 3", densityGCm3: null, bulkDensityLbFt3: 0, isActive: true, updatedAt: "" }
+  ], "a row without an id is dropped; a non-number is null; an absent active flag reads active; the raw column names do not cross");
+  assert.equal(JSON.stringify(result).includes("dropped"), false);
+  assert.equal(JSON.stringify(result).includes("smuggled"), false);
+});
+
+test("a resin save's arguments are rebuilt field by field - trimmed code, each density a number or null, a boolean - and a field of the wrong kind is refused before the application is asked; the VALUES are the service's to judge", async () => {
+  const { bridge, env } = producer({
+    saveResin: async ({ id, resin }) => ({ ok: true, resin: { id: id || "r-new", ...resin, updatedAt: "2026-09-13T00:00:00Z" } })
+  });
+  const result = await bridge.request("saveResin", { id: " r-1 ", resin: {
+    resinCode: "  ll 1001 ", densityGCm3: "0.92", bulkDensityLbFt3: "  ", isActive: "yes", id: "smuggled", resin_code: "x", created_at: "x"
+  } });
+  assert.ok(result.ok);
+  assert.deepEqual(env.calls[0].args, { id: "r-1", resin: { resinCode: "ll 1001", densityGCm3: 0.92, bulkDensityLbFt3: null, isActive: true } },
+    "the code is trimmed and its case kept; a blank density is null; anything else is dropped");
+  assert.ok(Object.isFrozen(env.calls[0].args) && Object.isFrozen(env.calls[0].args.resin));
+  assert.deepEqual({ ...result.resin }, { id: "r-1", resinCode: "ll 1001", densityGCm3: 0.92, bulkDensityLbFt3: null, isActive: true, updatedAt: "2026-09-13T00:00:00Z" });
+  // Create: no id crosses as an empty one; a number stays a number; false stays false.
+  await bridge.request("saveResin", { resin: { resinCode: "HD 200", densityGCm3: 0.955, bulkDensityLbFt3: null, isActive: false } });
+  assert.deepEqual(env.calls[1].args, { id: "", resin: { resinCode: "HD 200", densityGCm3: 0.955, bulkDensityLbFt3: null, isActive: false } });
+  const before = env.calls.length;
+  for (const [bad, field, message] of [
+    [{ resinCode: "   ", densityGCm3: 1 }, "resinCode", "A resin code is required."],
+    [{ resinCode: 7 }, "resinCode", "A resin code is required."],
+    [{ resinCode: "X", densityGCm3: "abc" }, "densityGCm3", "Density must be blank or a number."],
+    [{ resinCode: "X", bulkDensityLbFt3: {} }, "bulkDensityLbFt3", "Bulk density must be blank or a number."]
+  ]) {
+    assert.deepEqual(await bridge.request("saveResin", { resin: bad }), { ok: false, code: "bad_argument", message, field });
+  }
+  assert.deepEqual(await bridge.request("saveResin", { id: "r-1" }), { ok: false, code: "bad_argument", message: "A resin is required.", field: "resin" });
+  assert.deepEqual(await bridge.request("saveResin", { resin: [] }), { ok: false, code: "bad_argument", message: "A resin is required.", field: "resin" });
+  assert.equal(env.calls.length, before, "nothing malformed reached the application");
+  // An out-of-range density is a VALUE: it crosses, and the service refuses it in its own words.
+  await bridge.request("saveResin", { resin: { resinCode: "X", densityGCm3: 50 } });
+  assert.equal(env.calls.length, before + 1);
+  assert.equal(env.calls[before].args.resin.densityGCm3, 50);
+});
+
+test("a delete names its resin; a duplicate-code refusal from the application keeps its code across the letterbox", async () => {
+  const { bridge, env } = producer({
+    saveResin: async () => ({ ok: false, code: "duplicate_code", message: "That resin code already exists." }),
+    deleteResin: async () => ({ ok: true, rows: 1 })
+  });
+  assert.deepEqual(await bridge.request("deleteResin", {}), { ok: false, code: "bad_argument", message: "A resin is required.", field: "id" });
+  assert.deepEqual(await bridge.request("deleteResin", { id: " r-1 " }), { ok: true }, "a delete answers ok and nothing else");
+  assert.deepEqual(env.calls[0].args, { id: "r-1" });
+  assert.deepEqual(await bridge.request("saveResin", { resin: { resinCode: "LL 1001" } }), { ok: false, code: "duplicate_code", message: "That resin code already exists." });
+  // The workspace wording stays for the workspace actions.
+  assert.deepEqual(await bridge.request("deleteWorkspace", {}), { ok: false, code: "bad_argument", message: "A workspace is required.", field: "id" });
+});

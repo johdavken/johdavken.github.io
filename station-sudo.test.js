@@ -135,7 +135,12 @@ function producer(overrides) {
     transferOwnership: async () => ({ ok: true }),
     disconnectDevice: async ({ id, memberId }) => { env.devices[id] = (env.devices[id] || []).filter(d => d.memberId !== memberId); return { ok: true }; },
     mergeWorkspace: async ({ id }) => { env.workspaces = env.workspaces.filter(x => x.id !== id); return { ok: true, recipesMerged: 2, profilesMerged: 1 }; },
-    deleteWorkspace: async ({ id }) => { env.workspaces = env.workspaces.filter(x => x.id !== id); return { ok: true }; }
+    deleteWorkspace: async ({ id }) => { env.workspaces = env.workspaces.filter(x => x.id !== id); return { ok: true }; },
+    listLineConfigurations: async () => ({ ok: true, lines: [] }),
+    saveLineConfiguration: async ({ id, line }) => ({ ok: true, line: Object.assign({ id: id || "l-new" }, line) }),
+    listResins: async () => ({ ok: true, resins: [] }),
+    saveResin: async ({ id, resin }) => ({ ok: true, resin: Object.assign({ id: id || "r-new" }, resin) }),
+    deleteResin: async () => ({ ok: true })
   };
   const actions = {};
   for (const name of bridgeModule.ACTIONS) {
@@ -524,7 +529,7 @@ test("the section is what the Handbook takes, and the tool is what Sudo takes; n
   assert.ok(Object.isFrozen(workspacesModule.tool));
   const a = build(); const b = build();
   assert.ok(a.section.element !== b.section.element);
-  assert.deepEqual(a.section.tools(), ["workspaces", "lines"], "Workspace Management first, Line Configuration second");
+  assert.deepEqual(a.section.tools(), ["workspaces", "lines", "resins"], "Workspace Management first, Line Configuration second, Resin Database third");
 });
 
 test("the page tells the Handbook it can use more bench only behind the gate: the sign-in form wants none, the tools are lists", async () => {

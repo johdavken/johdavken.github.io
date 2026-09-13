@@ -274,7 +274,8 @@ test("the admin bridge touches no DOM, names no RT Sync internal, and holds no s
   assert.deepEqual([...bridge.ACTIONS], [
     "signIn", "signOut", "listWorkspaces", "workspaceDevices", "addThisDevice", "createLine", "renameLine",
     "transferOwnership", "disconnectDevice", "mergeWorkspace", "deleteWorkspace",
-    "listLineConfigurations", "saveLineConfiguration"
+    "listLineConfigurations", "saveLineConfiguration",
+    "listResins", "saveResin", "deleteResin"
   ], "a new administrator action Station may ask for arrives as an edit to this list");
 });
 

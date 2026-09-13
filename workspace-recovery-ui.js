@@ -547,6 +547,7 @@
       if (message === "Admin access is required."){ void admin()?.initialize?.(); return { ok:false, code:"access_denied", message }; }
       if (/no longer exists/i.test(message)) return { ok:false, code:"not_found", message };
       if (/line name between/i.test(message)) return { ok:false, code:"invalid_name", message };
+      if (message === "That resin code already exists.") return { ok:false, code:"duplicate_code", message };
       return { ok:false, code:result?.code || "failed", message: message || "The action could not be completed." };
     }
     function guarded(run){
@@ -579,6 +580,30 @@
         id: row?.id, lineNumber: row?.line_number, displayName: row?.display_name, aliases: row?.aliases,
         layerCount: row?.layer_count, layerAPosition: row?.layer_a_position, hopperGeometry: row?.hopper_geometry,
         hopperNamingMode: row?.hopper_naming_mode, isActive: row?.is_active, metadata: row?.metadata, updatedAt: row?.updated_at
+      };
+    }
+    // Resin Database: the same guard, over the admin instance itself - its
+    // list, save and delete are the instance's own procedures (resin-admin.js),
+    // the ones the floor UI's Resin Database panel runs. A save or a delete
+    // refreshes the shared resin catalog inside the service; nothing is
+    // refreshed or announced here, and no window value moves.
+    function guardedResins(run){
+      return async args=>{
+        const instance = admin();
+        if (!instance?.getState?.().isAdmin) return NO_ADMIN;
+        return answer(await run(instance, args));
+      };
+    }
+    function resinRow(row){
+      return {
+        id: row?.id, resinCode: row?.resin_code, densityGCm3: row?.density_g_cm3,
+        bulkDensityLbFt3: row?.bulk_density_lb_ft3, isActive: row?.is_active, updatedAt: row?.updated_at
+      };
+    }
+    function resinValues(resin){
+      return {
+        resin_code: resin?.resinCode, density_g_cm3: resin?.densityGCm3,
+        bulk_density_lb_ft3: resin?.bulkDensityLbFt3, is_active: resin?.isActive
       };
     }
     try{
@@ -644,7 +669,16 @@
           saveLineConfiguration: guardedLines(async (service, { id, line })=>{
             const result = await service.save(id || null, line);
             return result.ok ? { ok:true, line: lineRow(result.line) } : result;
-          })
+          }),
+          listResins: guardedResins(async instance=>{
+            const result = await instance.listResins();
+            return result.ok ? { ok:true, resins: result.resins.map(resinRow) } : result;
+          }),
+          saveResin: guardedResins(async (instance, { id, resin })=>{
+            const result = await instance.saveResin(id || null, resinValues(resin));
+            return result.ok ? { ok:true, resin: resinRow(result.resin) } : result;
+          }),
+          deleteResin: guardedResins((instance, { id })=>instance.deleteResin(id))
         }
       });
       admin()?.subscribe?.(()=>stationAdminHandle?.publish());
