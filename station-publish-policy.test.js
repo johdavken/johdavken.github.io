@@ -75,7 +75,7 @@ test("a command's answer runs the same publish policy, marked as Station's own, 
   // header's job controls' onCommitted, a Blend Edit card's onCommitted
   // (the same editor, compact), and the layer share editor's onCommitted
   // - which run the identical two lines.
-  assert.equal((boot.match(/lastOwnRevision\s*=/g) || []).length, 6, "lastOwnRevision is written somewhere other than its declaration, the editor's and the cards' onCommitted, toggleHopperControl, the job controls' onCommitted and the share editor's onCommitted");
+  assert.equal((boot.match(/lastOwnRevision\s*=/g) || []).length, 7, "lastOwnRevision is written somewhere other than its declaration, the editor's and the cards' onCommitted, toggleHopperControl, the job controls' onCommitted, the share editor's onCommitted and the Handbook's (Resin Totals' fields) onCommitted");
   const cards = draw.slice(draw.indexOf("const card = focusEditor.create("), draw.indexOf("cardHandles[entry.id] = card;"));
   assert.match(cards, /onCommitted: result => \{\n\s+lastOwnRevision = Number\.isInteger\(result\.revision\) \? result\.revision : null;\n\s+onPublish\(\{ own: true \}\);/);
   assert.match(cards, /variant: "compact",/);

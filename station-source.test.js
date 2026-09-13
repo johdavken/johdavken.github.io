@@ -313,7 +313,7 @@ function edited(mutate) {
 
 test("a publish that changes no value the drawing or the timeline reads is 'none'", () => {
   const a = resolvedFor(liveState());
-  const b = resolvedFor(liveState({ prodResinLb: 999, scrapResinLb: 12, gauge: 3 }));
+  const b = resolvedFor(liveState({ gauge: 3 }));
   assert.equal(source.classifyChange(a, b), "none");
   assert.equal(source.classifyChange(a, resolvedFor(liveState())), "none");
 });
@@ -322,9 +322,32 @@ test("the job's output and changeover are values - the run-down timeline project
   const a = resolvedFor(liveState());
   assert.equal(source.classifyChange(a, resolvedFor(liveState({ lineRate: 999 }))), "values");
   assert.equal(source.classifyChange(a, resolvedFor(liveState({ changeoverTime: "03:28", changeoverSetAt: 1 }))), "values");
-  assert.deepEqual(a.job, { lineRate: 900, changeoverTime: "", changeoverSetAt: null });
+  assert.deepEqual(a.job, { lineRate: 900, changeoverTime: "", changeoverSetAt: null, prodResinLb: 0, scrapResinLb: 0, lots: {} });
   const b = resolvedFor(liveState({ lineRate: 850, changeoverTime: "03:28", changeoverSetAt: 1700000000000 }));
-  assert.deepEqual(b.job, { lineRate: 850, changeoverTime: "03:28", changeoverSetAt: 1700000000000 });
+  assert.deepEqual(b.job, { lineRate: 850, changeoverTime: "03:28", changeoverSetAt: 1700000000000, prodResinLb: 0, scrapResinLb: 0, lots: {} });
+});
+
+test("the job's production, scrap and scanned lots are values - the Handbook's Resin Totals reads them", () => {
+  const a = resolvedFor(liveState());
+  assert.equal(source.classifyChange(a, resolvedFor(liveState({ prodResinLb: 999 }))), "values");
+  assert.equal(source.classifyChange(a, resolvedFor(liveState({ scrapResinLb: 12 }))), "values");
+  assert.equal(source.classifyChange(a, resolvedFor(liveState({ resinLots: { "RESIN-X": "LOT-1" } }))), "values");
+  const b = resolvedFor(liveState({ prodResinLb: 10926, scrapResinLb: "1,200", resinLots: { "RESIN-X": "LOT-1" } }));
+  assert.equal(b.job.prodResinLb, 10926);
+  assert.equal(b.job.scrapResinLb, "1,200", "carried as the bridge carries it; resin-totals.js reads it");
+  assert.deepEqual(b.job.lots, { "RESIN-X": "LOT-1" });
+});
+
+test("the resolved source carries the recipe as Resin Totals reads it, in recipe order, recipe fields only", () => {
+  const live = resolvedFor(liveState());
+  assert.equal(live.recipe.layers.length, 5);
+  assert.deepEqual(live.recipe.layers[0].hoppers[0], { pct: 100, resinName: "RESIN-X" });
+  assert.deepEqual(Object.keys(live.recipe.layers[0]).sort(), ["hoppers", "layerPct", "name"]);
+  assert.equal(live.recipe.layers[0].layerPct, 20);
+  const demo = source.resolveSource({ snapshot: null, demoLines, demoId: "three-layer" });
+  assert.ok(Array.isArray(demo.recipe.layers) && demo.recipe.layers.length > 0, "a demo line has a recipe to total (and no pounds)");
+  assert.equal(demo.job.prodResinLb, 0);
+  assert.deepEqual(source.recipeFrom(null), { layers: [] });
 });
 
 test("a value change - resin, blend, tracking, pump, source, share - is 'values'", () => {

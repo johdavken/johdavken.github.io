@@ -6800,26 +6800,17 @@
       const scrapInput = $("scrapResinLb");
       if (scrapInput && document.activeElement !== scrapInput) scrapInput.value = scrap ? String(scrap) : "";
 
-      const div = 100;
-      const totals = new Map();
-
-      state.layers.forEach((L)=>{
-        const layerFrac = clampNum(L.layerPct) / div;
-        L.hoppers.forEach((h)=>{
-          const name = normName(h.resinName);
-          if (!name) return;
-          const hopperFrac = clampNum(h.pct) / div;
-          if (hopperFrac <= 0) return;
-          const lbs = total * layerFrac * hopperFrac;
-          if (!Number.isFinite(lbs) || lbs <= 0) return;
-
-          const k = keyName(name);
-          if (!totals.has(k)) totals.set(k, { displayName: name, lbs: 0 });
-          totals.get(k).lbs += lbs;
-        });
+      // The arithmetic itself lives in resin-totals.js (PolynResinTotals) -
+      // the same function the Station Operator Handbook's Resin Totals runs,
+      // so the two can never disagree. It returns the rows this function
+      // used to build inline: bucketed by keyName, first-seen spelling,
+      // pounds descending, each with its scanned lot (if any) attached.
+      const { rows } = window.PolynResinTotals.compute({
+        prodResinLb: state.prodResinLb,
+        scrapResinLb: state.scrapResinLb,
+        layers: state.layers,
+        lots: state.resinLots
       });
-
-      const rows = Array.from(totals.values()).sort((a,b)=>b.lbs - a.lbs);
       renderDesktopRailTotals({ prod, scrap, total, rows });
 
       const totalEl = $("resinCalcTotal");
@@ -6846,7 +6837,7 @@
         // actually running, never the plan. Absent entirely (no placeholder
         // element) unless this resin actually has a scanned lot: invisible
         // to anyone who never scanned a heat sheet.
-        const lot = state.resinLots?.[keyName(r.displayName)] || "";
+        const lot = r.lot || "";
         row.innerHTML = `
           <div class="calcLeft">
             <div class="calcName mono" data-resin-name></div>
@@ -9959,6 +9950,30 @@
         const workspaceEl = $("workspaceChangeoverInput");
         if (workspaceEl) workspaceEl.value = state.changeoverTime;
         syncChangeoverTimeDisplay();
+        const persisted = commit({ sync: true, grid: false, hookups: false });
+        return done(true, persisted);
+      },
+
+      /* Resin Totals' two fields (#prodResinLb / #scrapResinLb): the value
+       * set on state, then the same tail as the Output command - commit()
+       * runs validateAndCompute({ sync:true }), which redraws Resin Totals
+       * (renderResinCalculator, mirroring the value into the field itself
+       * unless the operator is typing in it) and notifies RT Sync as an
+       * ordinary debounced edit, then saveSession. The fields' own
+       * handlers skip the run-down recompute; here it is a harmless
+       * re-derivation, and the executor stays on the one tail every job
+       * value takes rather than reaching into the sync layer itself. No
+       * history entry: job state, not recipe state. Zero is "not
+       * entered", as the fields read an emptied value. */
+      setProductionPounds(args){
+        if (clampNum(state.prodResinLb) === args.pounds) return unchanged();
+        state.prodResinLb = args.pounds;
+        const persisted = commit({ sync: true, grid: false, hookups: false });
+        return done(true, persisted);
+      },
+      setScrapPounds(args){
+        if (clampNum(state.scrapResinLb) === args.pounds) return unchanged();
+        state.scrapResinLb = args.pounds;
         const persisted = commit({ sync: true, grid: false, hookups: false });
         return done(true, persisted);
       },

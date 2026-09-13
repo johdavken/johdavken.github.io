@@ -72,6 +72,24 @@
     return Number.isFinite(number) ? number : 0;
   }
 
+  /* A stored pounds value crosses as the application holds it: a finite
+   * number as itself, a non-empty string (an entry mid-typing, or one with
+   * a thousands separator) as that string, anything else as 0. */
+  function finiteOrString(value) {
+    if (typeof value === "string") return value.trim() ? value : 0;
+    return finite(value);
+  }
+
+  function projectLots(raw) {
+    const out = {};
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
+    for (const key of Object.keys(raw)) {
+      const value = raw[key];
+      if (key && typeof value === "string" && value.trim()) out[key] = value;
+    }
+    return out;
+  }
+
   function nullableInteger(value) {
     const number = Number(value);
     return Number.isInteger(number) && number > 0 ? number : null;
@@ -93,9 +111,10 @@
    *   identity and transport (device id, workspace id, access tokens, sync
    *     status, the outbox) - Station is a view, not a second sync client.
    *   admin/auth state - never crosses a UI boundary.
-   *   notes, saved configurations, scanned lots - real data, but nothing in
-   *     Station reads them yet. They can be added when something needs them;
-   *     a snapshot that carries everything is not a narrow bridge.
+   *   notes, saved configurations - real data, but nothing in Station reads
+   *     them yet. They can be added when something needs them; a snapshot
+   *     that carries everything is not a narrow bridge. (Scanned lots were on
+   *     this list until the Handbook's Resin Totals needed them; see `lots`.)
    *   the undo/redo stacks themselves - only whether each recipe (Current, Next)
    *     HAS something to undo or redo crosses (see `history`). A stack is a
    *     copy of past state; handing it out would be handing out a second
@@ -172,8 +191,20 @@
         // whether a deadline is still today's. Null when none is set.
         changeoverSetAt: state.changeoverTime && Number.isFinite(Number(state.changeoverSetAt))
           ? Number(state.changeoverSetAt)
-          : null
+          : null,
+        /* The job's production and scrap pounds, as entered - what Resin
+         * Totals splits across the recipe. Job facts, beside output and
+         * changeover: they describe the run, not the recipe or the
+         * equipment. Carried as the application stores them (a number, or
+         * the entered string); resin-totals.js reads both the same way. */
+        prodResinLb: finiteOrString(state.prodResinLb),
+        scrapResinLb: finiteOrString(state.scrapResinLb)
       },
+      /* Scanned lots: resin code -> lot, keyed exactly as the application
+       * keys them (keyName: trimmed, upper-cased), string values only. Read
+       * by Resin Totals to show the lot beside each material; no other
+       * Station surface reads them. Empty when nothing was scanned. */
+      lots: projectLots(state.resinLots),
       /* Hookup source labels for each recipe (Current, Next), keyed by physical
        * slot exactly as hookup-sources.js keys them ("<layer>:<index>"), and
        * carried in that module's own {resin, source} shape so Station can

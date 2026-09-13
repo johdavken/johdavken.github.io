@@ -166,7 +166,7 @@ test("unavailable until the application connects; available with exactly the imp
   const handle = h.commands.connect({ execute: h.executor.execute, capabilities: h.executor.capabilities });
   assert.equal(h.commands.isAvailable(), true);
   assert.deepEqual([...h.commands.capabilities()].sort(), [...contract.COMMANDS].sort());
-  assert.deepEqual(h.executor.capabilities, ["setHopperResin", "setHopperBlend", "setLayerShare", "clearHopper", "setSource", "moveHopper", "setHopperTracking", "setPumpOff", "setLineRate", "setChangeover", "undo", "redo"]);
+  assert.deepEqual(h.executor.capabilities, ["setHopperResin", "setHopperBlend", "setLayerShare", "clearHopper", "setSource", "moveHopper", "setHopperTracking", "setPumpOff", "setLineRate", "setChangeover", "setProductionPounds", "setScrapPounds", "undo", "redo"]);
   assert.throws(() => h.commands.connect({ execute: () => {}, capabilities: [] }), /already connected/);
   assert.equal(handle.disconnect(), true);
   assert.equal(h.commands.isAvailable(), false);
@@ -189,7 +189,7 @@ test("app.js installs the executor once, beside the state bridge, and nothing el
   for (const file of fs.readdirSync(path.join(ROOT, "station")).filter(name => name.endsWith(".js"))) {
     const source = fs.readFileSync(path.join(ROOT, "station", file), "utf8");
     assert.doesNotMatch(source, /PolynStationCommandBridge\s*\.\s*connect|commands\.connect\s*\(/, `${file} connects a producer`);
-    if (!["station-focus-editor.js", "station-hopper-controls.js", "station-job-controls.js", "station-layer-share.js"].includes(file)) assert.doesNotMatch(source, /\.dispatch\s*\(/, `${file} dispatches a command`);
+    if (!["station-focus-editor.js", "station-hopper-controls.js", "station-job-controls.js", "station-layer-share.js", "station-resin-totals.js"].includes(file)) assert.doesNotMatch(source, /\.dispatch\s*\(/, `${file} dispatches a command`);
   }
 });
 
@@ -822,7 +822,7 @@ test("rearrangement mode and a remote apply in progress refuse every command wit
   const before = h.stateJson();
   h.setRearranging(true);
   for (const command of contract.COMMANDS) {
-    const result = h.dispatch(command, { recipe: "current", layer: "A", index: 1, pct: 10, resin: "X", source: "Y", toLayer: "B", toIndex: 2, track: true, pumpOff: true, lineRate: 10, at: Date.now() + 3600000 });
+    const result = h.dispatch(command, { recipe: "current", layer: "A", index: 1, pct: 10, resin: "X", source: "Y", toLayer: "B", toIndex: 2, track: true, pumpOff: true, lineRate: 10, at: Date.now() + 3600000, pounds: 10 });
     assert.equal(result.code, "rearranging", `${command} ran during rearrangement`);
   }
   h.setRearranging(false);
@@ -1109,4 +1109,62 @@ test("the job commands mirror the floor UI's own Output and Changeover handlers,
   assert.ok(activeJob.ACTIVE_JOB_FIELDS.includes("lineRate"));
   assert.ok(activeJob.ACTIVE_JOB_FIELDS.includes("changeoverTime"));
   assert.ok(!activeJob.ACTIVE_JOB_FIELDS.includes("changeoverSetAt"), "when it was set is this device's own");
+});
+
+/* ----------------------------------------------------------------------
+ *   Job commands: production and scrap pounds (Resin Totals' fields)
+ * -------------------------------------------------------------------- */
+
+test("setProductionPounds / setScrapPounds write state through the application's own tail - validateAndCompute({ sync }) redraws Resin Totals and notifies RT Sync, saved; no grid, no history", () => {
+  const h = boot();
+  h.state.prodResinLb = 0;
+  h.state.scrapResinLb = 0;
+  const before = h.stationBridge.getRevision();
+  const result = h.dispatch("setProductionPounds", { pounds: "10,926" });
+  assert.equal(result.ok, true);
+  assert.equal(result.changed, true);
+  assert.equal(result.persisted, true);
+  assert.equal(h.state.prodResinLb, 10926);
+  assert.deepEqual(h.log.validates, [{ sync: true, immediate: false, kind: "edit" }], "the one tail every job value takes: it redraws the floor UI's Resin Totals (renderResinCalculator runs inside it) and notifies RT Sync as an ordinary edit");
+  assert.deepEqual(h.log.notified, [{ immediate: false, kind: "edit" }]);
+  assert.equal(h.log.renders, 0, "pounds are not a recipe value; the grid is not rebuilt");
+  assert.equal(h.log.hookupRenders, 0);
+  assert.equal(h.log.saves, 2);
+  assert.ok(result.revision > before);
+  assert.equal(result.snapshot.job.prodResinLb, 10926, "the snapshot carries the new figure");
+  assert.equal(h.recipeEditHistory.current.undo.length, 0, "no recipe history for a job value");
+
+  const scrap = h.dispatch("setScrapPounds", { pounds: 1200 });
+  assert.equal(scrap.changed, true);
+  assert.equal(h.state.scrapResinLb, 1200);
+  assert.equal(scrap.snapshot.job.scrapResinLb, 1200);
+  assert.equal(h.log.saves, 4);
+
+  // The same value again is a no-op; zero clears.
+  assert.equal(h.dispatch("setProductionPounds", { pounds: 10926 }).changed, false);
+  assert.equal(h.dispatch("setScrapPounds", { pounds: "1,200" }).changed, false);
+  assert.equal(h.log.saves, 4);
+  assert.equal(h.dispatch("setScrapPounds", { pounds: 0 }).changed, true);
+  assert.equal(h.state.scrapResinLb, 0);
+  assert.equal(h.dispatch("setProductionPounds", { pounds: "" }).ok, false, "an empty value is the contract's to refuse; Station sends 0 to clear");
+});
+
+test("invalid pounds never reach state: refused by the contract, nothing touched", () => {
+  const h = boot();
+  h.state.prodResinLb = 500;
+  h.state.scrapResinLb = 5;
+  const before = h.stateJson();
+  for (const [command, pounds, code] of [
+    ["setProductionPounds", -1, "out_of_range"], ["setScrapPounds", -0.5, "out_of_range"],
+    ["setProductionPounds", "abc", "bad_argument"], ["setScrapPounds", null, "bad_argument"],
+    ["setProductionPounds", NaN, "bad_argument"], ["setScrapPounds", Infinity, "bad_argument"]
+  ]) {
+    const result = h.dispatch(command, { pounds });
+    assert.equal(result.ok, false, `${command} ${pounds} accepted`);
+    assert.equal(result.code, code);
+    assert.equal(result.field, "pounds");
+  }
+  assert.equal(h.stateJson(), before);
+  assert.equal(h.log.saves, 0);
+  assert.deepEqual(h.log.validates, []);
 });

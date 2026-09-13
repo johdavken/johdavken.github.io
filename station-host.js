@@ -94,6 +94,7 @@
     "station/station-sync-console.js",
     // The Operator Handbook: its first section before the shell that hosts it.
     "station/station-recipe-book.js",
+    "station/station-resin-totals.js",
     "station/station-theme-preview.js",
     "station/station-appearance.js",
     "station/station-handbook.js",
@@ -102,7 +103,7 @@
     "station/station.js"
   ];
 
-  const VERSION = "0.28.5";
+  const VERSION = "0.28.7";
 
   function requested() {
     try {
