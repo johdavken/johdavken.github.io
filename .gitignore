@@ -27,3 +27,7 @@ tools/theme-lab/backups/
 # Station cross-browser spec (tools/station-browser/spec.js) writes its
 # editor captures here on every run.
 tools/station-browser/out/
+
+# Codex CLI project config. .codex/config.toml holds a plaintext Supabase
+# access token for the MCP server, so the whole directory stays local.
+.codex/
