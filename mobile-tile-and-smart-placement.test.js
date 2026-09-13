@@ -22,9 +22,9 @@ test("main menu keeps its primary grid while Sudo access lives under Workspace &
   // Changelog is a normal button, so it counts (RT Sync, Notes, Tools,
   // Changelog, Sudo access + the 4 pinned sections). Notes is mobile-only and
   // hidden on desktop by CSS, but it is still a real workspaceNavButton here -
-  // and Dashboard is the desktop-only mirror image, hidden on mobile because
-  // the whole rail is (see .workspaceNav{display:none} at mobile widths), but
-  // likewise still a real workspaceNavButton in the shared markup.
+  // and the Station (Beta) link is the desktop-only mirror image, hidden on
+  // mobile with the whole rail foot (.workspaceNavFooter{display:none}), but
+  // likewise a real workspaceNavButton (an <a>) in the shared markup.
   assert.equal((nav.match(/class="workspaceNavButton/g) || []).length,10);
   assert.match(nav,/data-workspace-target="productionSummaryBlock"/, "Production Summary is a first-class section, between Timeline and RT Sync");
   assert.match(nav,/id="workspaceNavSudo"[^>]*data-workspace-target="sudoAccessBlock"/);

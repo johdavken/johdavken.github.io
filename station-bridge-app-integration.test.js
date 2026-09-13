@@ -150,7 +150,7 @@ test("the bridge loads before app.js, so connect() finds it", () => {
 
 test("the application's own rendering functions are untouched by the bridge", () => {
   // Nothing that draws should know the bridge exists.
-  for (const fn of ["validateAndCompute", "renderResultsFlat", "renderDashboard",
+  for (const fn of ["validateAndCompute", "renderResultsFlat",
     "renderWeightsArea", "updateFooterNext", "renderLineSync"]) {
     const at = app.indexOf(`function ${fn}(`);
     if (at < 0) continue;

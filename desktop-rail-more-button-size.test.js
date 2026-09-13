@@ -8,7 +8,7 @@
 // pin rows to their own size. It is now a flex column instead: children are
 // flex:0 0 auto so they keep their natural size, and the single growing
 // element is .workspaceNavFooter's margin-top:auto, which floats the
-// version/divider/Dashboard block to the rail foot and absorbs the leftover
+// version/divider/Station block to the rail foot and absorbs the leftover
 // height in one place rather than spreading it across every row.
 
 const test = require("node:test");

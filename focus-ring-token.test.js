@@ -51,9 +51,12 @@ test("every focus-visible ring goes through the token", () => {
       if (match[2].includes("var(--focus-outline)")) viaToken += 1;
     }
   }
-  // 65 at the time of the change. A new focus ring should push this up, not
-  // reintroduce a literal - the test above is what catches that.
-  assert.ok(viaToken >= 65, `expected at least 65 rings via the token, found ${viaToken}`);
+  // 65 at the time of the change; 63 once the desktop Dashboard (its Back to
+  // Line button, changeover refresh, logo entry and rail-foot switch) was
+  // removed and replaced by the single Station (Beta) link. A new focus ring
+  // should push this up, not reintroduce a literal - the test above is what
+  // catches that.
+  assert.ok(viaToken >= 63, `expected at least 63 rings via the token, found ${viaToken}`);
 });
 
 test("border shorthands that happen to share the ring's value are left alone", () => {
